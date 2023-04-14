@@ -507,7 +507,7 @@ class LoadStackInst : public SingleOperandInst {
   }
 
   SideEffect getSideEffectImpl() const {
-    return SideEffect::fromSideEffectKind(SideEffectKind::MayRead);
+    return SideEffect{}.setReadStack().setIdempotent();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -553,7 +553,7 @@ class StoreStackInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return SideEffect::fromSideEffectKind(SideEffectKind::MayWrite);
+    return SideEffect{}.setWriteStack().setIdempotent();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -593,7 +593,7 @@ class LoadFrameInst : public SingleOperandInst {
   }
 
   SideEffect getSideEffectImpl() const {
-    return SideEffect::fromSideEffectKind(SideEffectKind::MayRead);
+    return SideEffect{}.setReadFrame().setIdempotent();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -639,7 +639,7 @@ class StoreFrameInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return SideEffect::fromSideEffectKind(SideEffectKind::MayWrite);
+    return SideEffect{}.setWriteFrame().setIdempotent();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -993,9 +993,9 @@ class CallIntrinsicInst : public Instruction {
 
   SideEffect getSideEffectImpl() const {
     if (getIntrinsicsIndex() >= WasmIntrinsics::__uasm_store8)
-      return SideEffect::fromSideEffectKind(SideEffectKind::MayWrite);
+      return SideEffect{}.setWriteHeap().setIdempotent();
     if (getIntrinsicsIndex() >= WasmIntrinsics::__uasm_loadi8)
-      return SideEffect::fromSideEffectKind(SideEffectKind::MayRead);
+      return SideEffect{}.setReadHeap().setIdempotent();
     return {};
   }
 
@@ -2978,7 +2978,7 @@ class HBCStoreToEnvironmentInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return SideEffect::fromSideEffectKind(SideEffectKind::MayWrite);
+    return SideEffect{}.setWriteFrame().setIdempotent();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3020,7 +3020,7 @@ class HBCLoadFromEnvironmentInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return SideEffect::fromSideEffectKind(SideEffectKind::MayRead);
+    return SideEffect{}.setReadFrame().setIdempotent();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3576,7 +3576,7 @@ class HBCReifyArgumentsInst : public SingleOperandInst {
     // This instruction could throw in theory, if there are too many arguments.
     // However, this is not a meaningful side-effect, since this instruction
     // should be freely reordered or deleted.
-    return SideEffect::fromSideEffectKind(SideEffectKind::MayWrite);
+    return SideEffect{}.setReadStack().setWriteStack().setIdempotent();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -4223,7 +4223,7 @@ class PrLoadInst : public Instruction {
     return true;
   }
   SideEffect getSideEffectImpl() const {
-    return SideEffect::fromSideEffectKind(SideEffectKind::MayRead);
+    return SideEffect{}.setReadHeap().setIdempotent();
   }
   WordBitSet<> getChangedOperandsImpl() {
     return {};
@@ -4274,7 +4274,7 @@ class PrStoreInst : public Instruction {
     return false;
   }
   SideEffect getSideEffectImpl() const {
-    return SideEffect::fromSideEffectKind(SideEffectKind::MayWrite);
+    return SideEffect{}.setWriteHeap().setIdempotent();
   }
   WordBitSet<> getChangedOperandsImpl() {
     return {};
@@ -4398,7 +4398,7 @@ class LoadParentInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return SideEffect::fromSideEffectKind(SideEffectKind::MayRead);
+    return SideEffect{}.setReadHeap().setIdempotent();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -4439,7 +4439,7 @@ class StoreParentInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return SideEffect::fromSideEffectKind(SideEffectKind::MayWrite);
+    return SideEffect{}.setWriteHeap().setIdempotent();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
