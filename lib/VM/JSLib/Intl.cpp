@@ -278,7 +278,6 @@ constexpr OptionData kDTFOptions[] = {
      platform_intl::Option::Kind::String,
      kDateRequired | kDateDefault},
     {u"day", platform_intl::Option::Kind::String, kDateRequired | kDateDefault},
-    {u"dayPeriod", platform_intl::Option::Kind::String, 0},
     {u"hour",
      platform_intl::Option::Kind::String,
      kTimeRequired | kTimeDefault},
@@ -288,10 +287,10 @@ constexpr OptionData kDTFOptions[] = {
     {u"second",
      platform_intl::Option::Kind::String,
      kTimeRequired | kTimeDefault},
-    {u"fractionalSecondDigits", platform_intl::Option::Kind::Number, 0},
     {u"timeZoneName", platform_intl::Option::Kind::String, 0},
     {u"dateStyle", platform_intl::Option::Kind::String, 0},
     {u"timeStyle", platform_intl::Option::Kind::String, 0},
+    {u"fractionalSecondDigits", platform_intl::Option::Kind::Number, 0},
 };
 
 constexpr OptionData kNumberFormatOptions[] = {
@@ -464,7 +463,7 @@ CallResult<HermesValue> intlServiceConstructor(
     return ExecutionStatus::EXCEPTION;
   }
 
-  // Service specific checks ..
+  // Service specific checks.
   if (LLVM_UNLIKELY(
           checkOptions<T>(runtime, *optionsRes) ==
           ExecutionStatus::EXCEPTION)) {
