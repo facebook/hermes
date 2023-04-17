@@ -1402,7 +1402,7 @@ namespace {
 constexpr int kDTODate = 1 << 0;
 constexpr int kDTOTime = 1 << 1;
 
-ExecutionStatus toDateTimeOptions(platform_intl::Options &options, int dtoFlags) {
+ExecutionStatus toDateTimeOptions(Runtime &runtime, platform_intl::Options &options, int dtoFlags) {
   // The behavior of format with respect to default options is to
   // check if any of a set of date and time keys are present in
   // options.  If none are, then a default set of date keys is used.
@@ -1431,10 +1431,12 @@ ExecutionStatus toDateTimeOptions(platform_intl::Options &options, int dtoFlags)
     needDefaults = false;
 
   if (!(dtoFlags & kDTOTime) && options.count(u"timeStyle") > 0)
-    return ExecutionStatus::EXCEPTION;
+      return runtime.raiseTypeError(
+              "Invalid timeStyle option");
 
   if (!(dtoFlags & kDTODate) && options.count(u"dateStyle") > 0)
-    return ExecutionStatus::EXCEPTION;
+      return runtime.raiseTypeError(
+              "Invalid dateStyle option");
 
   if (needDefaults) {
     for (const OptionData &pod : kDTFOptions) {
@@ -1471,9 +1473,8 @@ CallResult<HermesValue> intlDatePrototypeToSomeLocaleString(
     }
 
 
-    if (LLVM_UNLIKELY(toDateTimeOptions(*optionsRes, dtoFlags) == ExecutionStatus::EXCEPTION)) {
-      return runtime.raiseTypeError(
-        "Invalid option");
+    if (LLVM_UNLIKELY(toDateTimeOptions(runtime, *optionsRes, dtoFlags) == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
     }
 
     CallResult<std::unique_ptr<platform_intl::DateTimeFormat>> dtfRes =
