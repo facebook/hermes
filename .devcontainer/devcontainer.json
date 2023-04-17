@@ -1,0 +1,13 @@
+{
+	"image": "mcr.microsoft.com/devcontainers/universal:2",
+	"features": {
+		"ghcr.io/devcontainers-contrib/features/ninja-asdf:2": {
+			"version": "latest"
+		}
+	},
+	"hostRequirements": {
+		"cpus": 8,
+		"memory": "8gb",
+		"storage": "32gb"
+	 }
+}
