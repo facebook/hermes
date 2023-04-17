@@ -290,6 +290,96 @@ type A = this & T;
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+type A = B<C<typeof a>>;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "A"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "GenericTypeAnnotation",
+// CHECK-NEXT:         "id": {
+// CHECK-NEXT:           "type": "Identifier",
+// CHECK-NEXT:           "name": "B"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "typeParameters": {
+// CHECK-NEXT:           "type": "TypeParameterInstantiation",
+// CHECK-NEXT:           "params": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "GenericTypeAnnotation",
+// CHECK-NEXT:               "id": {
+// CHECK-NEXT:                 "type": "Identifier",
+// CHECK-NEXT:                 "name": "C"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "typeParameters": {
+// CHECK-NEXT:                 "type": "TypeParameterInstantiation",
+// CHECK-NEXT:                 "params": [
+// CHECK-NEXT:                   {
+// CHECK-NEXT:                     "type": "TypeofTypeAnnotation",
+// CHECK-NEXT:                     "argument": {
+// CHECK-NEXT:                       "type": "Identifier",
+// CHECK-NEXT:                       "name": "a"
+// CHECK-NEXT:                     }
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                 ]
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+
+type A = B<C<typeof a.b>>;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "A"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "GenericTypeAnnotation",
+// CHECK-NEXT:         "id": {
+// CHECK-NEXT:           "type": "Identifier",
+// CHECK-NEXT:           "name": "B"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "typeParameters": {
+// CHECK-NEXT:           "type": "TypeParameterInstantiation",
+// CHECK-NEXT:           "params": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "GenericTypeAnnotation",
+// CHECK-NEXT:               "id": {
+// CHECK-NEXT:                 "type": "Identifier",
+// CHECK-NEXT:                 "name": "C"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "typeParameters": {
+// CHECK-NEXT:                 "type": "TypeParameterInstantiation",
+// CHECK-NEXT:                 "params": [
+// CHECK-NEXT:                   {
+// CHECK-NEXT:                     "type": "TypeofTypeAnnotation",
+// CHECK-NEXT:                     "argument": {
+// CHECK-NEXT:                       "type": "QualifiedTypeofIdentifier",
+// CHECK-NEXT:                       "qualification": {
+// CHECK-NEXT:                         "type": "Identifier",
+// CHECK-NEXT:                         "name": "a"
+// CHECK-NEXT:                       },
+// CHECK-NEXT:                       "id": {
+// CHECK-NEXT:                         "type": "Identifier",
+// CHECK-NEXT:                         "name": "b"
+// CHECK-NEXT:                       }
+// CHECK-NEXT:                     }
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                 ]
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:       }
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]
