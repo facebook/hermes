@@ -79,6 +79,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapFunction(node);
       case 'IndexedAccessType':
       case 'OptionalIndexedAccessType':
+      case 'KeyofTypeAnnotation':
         return this.mapUnsupportedTypeAnnotation(node);
       case 'BigIntLiteral':
         return this.mapBigIntLiteral(node);

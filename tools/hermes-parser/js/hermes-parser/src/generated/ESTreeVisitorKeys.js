@@ -172,6 +172,7 @@ module.exports = {
   JSXSpreadAttribute: ['argument'],
   JSXSpreadChild: ['expression'],
   JSXText: [],
+  KeyofTypeAnnotation: ['argument'],
   LabeledStatement: ['label', 'body'],
   LogicalExpression: ['left', 'right'],
   MemberExpression: ['object', 'property'],

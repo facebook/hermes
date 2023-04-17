@@ -276,6 +276,7 @@ class JSParserImpl {
 #if HERMES_PARSE_FLOW
 
   UniqueString *typeofIdent_;
+  UniqueString *keyofIdent_;
   UniqueString *declareIdent_;
   UniqueString *protoIdent_;
   UniqueString *opaqueIdent_;
