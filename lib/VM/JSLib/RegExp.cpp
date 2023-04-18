@@ -468,11 +468,11 @@ static void createIndicesArray(
     Handle<JSArray> indices) {
   // If there are no capture groups, then set groups to undefined.
   if (!mappingObj) {
-    auto executionStatus = JSObject::defineNewOwnProperty(
+    auto executionStatus = JSObject::defineOwnProperty(
         indices,
         runtime,
         Predefined::getSymbolID(Predefined::groups),
-        PropertyFlags::defaultNewNamedPropertyFlags(),
+        DefinePropertyFlags::getDefaultNewPropertyFlags(),
         Runtime::getUndefinedValue());
     assert(
         executionStatus != ExecutionStatus::EXCEPTION &&
@@ -497,11 +497,11 @@ static void createIndicesArray(
         });
 
     // Add groups object to indices array.
-    auto executionStatus = JSObject::defineNewOwnProperty(
+    auto executionStatus = JSObject::defineOwnProperty(
         indices,
         runtime,
         Predefined::getSymbolID(Predefined::groups),
-        PropertyFlags::defaultNewNamedPropertyFlags(),
+        DefinePropertyFlags::getDefaultNewPropertyFlags(),
         groupsObj);
     assert(
         executionStatus != ExecutionStatus::EXCEPTION &&
@@ -509,11 +509,11 @@ static void createIndicesArray(
   }
 
   // Add indices array to result.
-  auto executionStatus = JSObject::defineNewOwnProperty(
+  auto executionStatus = JSObject::defineOwnProperty(
       matchObj,
       runtime,
       Predefined::getSymbolID(Predefined::indices),
-      PropertyFlags::defaultNewNamedPropertyFlags(),
+      DefinePropertyFlags::getDefaultNewPropertyFlags(),
       indices);
   assert(
       executionStatus != ExecutionStatus::EXCEPTION &&
