@@ -461,22 +461,22 @@ static void createGroupsObject(
   JSObject::setNamedSlotValueUnsafe(matchObj.get(), runtime, groupsDesc, shv);
 }
 
-static void createIndicesArray(
+static ExecutionStatus createIndicesArray(
     Runtime &runtime,
     Handle<JSArray> matchObj,
     Handle<JSObject> mappingObj,
     Handle<JSArray> indices) {
   // If there are no capture groups, then set groups to undefined.
   if (!mappingObj) {
-    auto executionStatus = JSObject::defineOwnProperty(
-        indices,
-        runtime,
-        Predefined::getSymbolID(Predefined::groups),
-        DefinePropertyFlags::getDefaultNewPropertyFlags(),
-        Runtime::getUndefinedValue());
-    assert(
-        executionStatus != ExecutionStatus::EXCEPTION &&
-        "failed to define .groups property inside indices array.");
+    if (LLVM_UNLIKELY(
+            JSObject::defineOwnProperty(
+                indices,
+                runtime,
+                Predefined::getSymbolID(Predefined::groups),
+                DefinePropertyFlags::getDefaultNewPropertyFlags(),
+                Runtime::getUndefinedValue()) == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
   } else {
     // Create groups object and set its prototype to null.
     auto clazzHandle = runtime.makeHandle(mappingObj->getClass(runtime));
@@ -497,27 +497,29 @@ static void createIndicesArray(
         });
 
     // Add groups object to indices array.
-    auto executionStatus = JSObject::defineOwnProperty(
-        indices,
-        runtime,
-        Predefined::getSymbolID(Predefined::groups),
-        DefinePropertyFlags::getDefaultNewPropertyFlags(),
-        groupsObj);
-    assert(
-        executionStatus != ExecutionStatus::EXCEPTION &&
-        "failed to define .groups property inside indices array.");
+    if (LLVM_UNLIKELY(
+            JSObject::defineOwnProperty(
+                indices,
+                runtime,
+                Predefined::getSymbolID(Predefined::groups),
+                DefinePropertyFlags::getDefaultNewPropertyFlags(),
+                groupsObj) == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
   }
 
   // Add indices array to result.
-  auto executionStatus = JSObject::defineOwnProperty(
-      matchObj,
-      runtime,
-      Predefined::getSymbolID(Predefined::indices),
-      DefinePropertyFlags::getDefaultNewPropertyFlags(),
-      indices);
-  assert(
-      executionStatus != ExecutionStatus::EXCEPTION &&
-      "failed to define .indices property inside result.");
+  if (LLVM_UNLIKELY(
+          JSObject::defineOwnProperty(
+              matchObj,
+              runtime,
+              Predefined::getSymbolID(Predefined::indices),
+              DefinePropertyFlags::getDefaultNewPropertyFlags(),
+              indices) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return ExecutionStatus::RETURNED;
 }
 
 // ES6 21.2.5.2.2
@@ -722,8 +724,12 @@ CallResult<Handle<JSArray>> directRegExpExec(
 
   // Create indices array and add to result.
   if (hasIndices) {
-    createIndicesArray(
-        runtime, A, regexp->getGroupNameMappings(runtime), indices);
+    if (LLVM_UNLIKELY(
+            createIndicesArray(
+                runtime, A, regexp->getGroupNameMappings(runtime), indices) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
   }
 
   createGroupsObject(runtime, A, regexp->getGroupNameMappings(runtime));
