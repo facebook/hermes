@@ -466,18 +466,7 @@ static ExecutionStatus createIndicesArray(
     Handle<JSArray> matchObj,
     Handle<JSObject> mappingObj,
     Handle<JSArray> indices) {
-  // If there are no capture groups, then set groups to undefined.
-  if (!mappingObj) {
-    if (LLVM_UNLIKELY(
-            JSObject::defineOwnProperty(
-                indices,
-                runtime,
-                Predefined::getSymbolID(Predefined::groups),
-                DefinePropertyFlags::getDefaultNewPropertyFlags(),
-                Runtime::getUndefinedValue()) == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-  } else {
+  if (mappingObj) {
     // Create groups object and set its prototype to null.
     auto clazzHandle = runtime.makeHandle(mappingObj->getClass(runtime));
     auto groupsObjRes = JSObject::create(
@@ -504,6 +493,17 @@ static ExecutionStatus createIndicesArray(
                 Predefined::getSymbolID(Predefined::groups),
                 DefinePropertyFlags::getDefaultNewPropertyFlags(),
                 groupsObj) == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  } else {
+    // If there are no capture groups, then set groups to undefined.
+    if (LLVM_UNLIKELY(
+            JSObject::defineOwnProperty(
+                indices,
+                runtime,
+                Predefined::getSymbolID(Predefined::groups),
+                DefinePropertyFlags::getDefaultNewPropertyFlags(),
+                Runtime::getUndefinedValue()) == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
   }
