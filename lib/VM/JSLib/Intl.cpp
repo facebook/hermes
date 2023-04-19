@@ -277,6 +277,7 @@ constexpr OptionData kDTFOptions[] = {
     {u"month",
      platform_intl::Option::Kind::String,
      kDateRequired | kDateDefault},
+    {u"dayPeriod", platform_intl::Option::Kind::String},
     {u"day", platform_intl::Option::Kind::String, kDateRequired | kDateDefault},
     {u"hour",
      platform_intl::Option::Kind::String,
