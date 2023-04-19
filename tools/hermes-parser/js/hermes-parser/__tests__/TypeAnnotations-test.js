@@ -12,7 +12,10 @@
 
 import type {AlignmentCase} from '../__test_utils__/alignment-utils';
 
-import {expectBabelAlignment} from '../__test_utils__/alignment-utils';
+import {
+  expectBabelAlignment,
+  expectEspreeAlignment,
+} from '../__test_utils__/alignment-utils';
 import {parse, parseForSnapshot} from '../__test_utils__/parse';
 
 describe('Literal', () => {
@@ -25,7 +28,10 @@ describe('Literal', () => {
       type T5 = 4321n;
       type T6 = 12_34n;
     `,
-    espree: {expectToFail: false},
+    espree: {
+      expectToFail: 'espree-exception',
+      expectedExceptionMessage: 'Unexpected token T1',
+    },
     babel: {expectToFail: false},
   };
 
@@ -182,7 +188,7 @@ describe('Literal', () => {
         "type": "Program",
       }
     `);
-    // types-only so no espree alignment possible
+    expectEspreeAlignment(testCase);
   });
 
   test('Babel', () => {
