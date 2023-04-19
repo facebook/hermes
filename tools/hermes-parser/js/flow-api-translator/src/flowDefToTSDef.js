@@ -19,6 +19,7 @@ import {
 } from 'hermes-transform';
 import * as TSESTree from './utils/ts-estree-ast-types';
 import {
+  buildCodeFrame,
   translationError as translationErrorBase,
   unexpectedTranslationError as unexpectedTranslationErrorBase,
 } from './utils/ErrorUtils';
@@ -42,7 +43,7 @@ function isValidReactImportOrGlobal(id: FlowESTree.Identifier): boolean {
   return VALID_REACT_IMPORTS.has(id.name) || id.name.startsWith('React$');
 }
 
-let shouldAddReactImport;
+let shouldAddReactImport: boolean | null = null;
 
 export function flowDefToTSDef(
   originalCode: string,
@@ -59,7 +60,7 @@ export function flowDefToTSDef(
       ast.docblock == null ? null : removeAtFlowFromDocblock(ast.docblock),
   };
 
-  shouldAddReactImport = false;
+  shouldAddReactImport = null;
 
   const [transform, code] = getTransforms(originalCode, scopeManager, opts);
 
@@ -83,7 +84,7 @@ export function flowDefToTSDef(
     }
   }
 
-  if (shouldAddReactImport) {
+  if (shouldAddReactImport === true) {
     tsBody.unshift({
       type: 'ImportDeclaration',
       assertions: [],
@@ -120,11 +121,11 @@ const getTransforms = (
   function unexpectedTranslationError(node: ObjectWithLoc, message: string) {
     return unexpectedTranslationErrorBase(node, message, {code});
   }
-  function unsupportedTranslationError(node: ObjectWithLoc, thing: string) {
-    return translationError(
-      node,
-      `Unsupported feature: Translating "${thing}" is currently not supported.`,
-    );
+  function unsupportedFeatureMessage(thing: string) {
+    return `Unsupported feature: Translating "${thing}" is currently not supported.`;
+  }
+  function buildCodeFrameForComment(node: ObjectWithLoc, message: string) {
+    return buildCodeFrame(node, message, code, false);
   }
   function addErrorComment(node: TSESTree.Node, message: string): void {
     const comment = {
@@ -150,17 +151,17 @@ const getTransforms = (
     node: ObjectWithLoc,
     thing: string,
   ): TSESTree.TSAnyKeyword {
-    const error = unsupportedTranslationError(node, thing);
+    const message = unsupportedFeatureMessage(thing);
     if (opts.recoverFromErrors) {
-      const message = error.getFramedMessage();
+      const codeFrame = buildCodeFrameForComment(node, message);
       const newNode = {
         type: 'TSAnyKeyword',
       };
-      addErrorComment(newNode, message);
+      addErrorComment(newNode, codeFrame);
       return newNode;
     }
 
-    throw error;
+    throw translationError(node, message);
   }
   function unsupportedDeclaration(
     node: ObjectWithLoc,
@@ -169,9 +170,9 @@ const getTransforms = (
     declare: boolean = false,
     typeParameters: FlowESTree.TypeParameterDeclaration | null = null,
   ): TSESTree.TSTypeAliasDeclaration {
-    const error = unsupportedTranslationError(node, thing);
+    const message = unsupportedFeatureMessage(thing);
     if (opts.recoverFromErrors) {
-      const message = error.getFramedMessage();
+      const codeFrame = buildCodeFrameForComment(node, message);
       const newNode = {
         type: 'TSTypeAliasDeclaration',
         declare,
@@ -184,11 +185,11 @@ const getTransforms = (
             ? undefined
             : transform.TypeParameterDeclaration(typeParameters),
       };
-      addErrorComment(newNode, message);
+      addErrorComment(newNode, codeFrame);
       return newNode;
     }
 
-    throw error;
+    throw translationError(node, message);
   }
 
   const topScope = (() => {
@@ -592,6 +593,76 @@ const getTransforms = (
     return () => `$$IMPORT_TYPEOF_${++typeof_import_count}$$`;
   })();
 
+  const transformTypeAnnotationType = (
+    node: FlowESTree.TypeAnnotationType,
+  ): TSESTree.TypeNode => {
+    switch (node.type) {
+      case 'AnyTypeAnnotation':
+        return transform.AnyTypeAnnotation(node);
+      case 'ArrayTypeAnnotation':
+        return transform.ArrayTypeAnnotation(node);
+      case 'BigIntLiteralTypeAnnotation':
+        return transform.BigIntLiteralTypeAnnotation(node);
+      case 'BigIntTypeAnnotation':
+        return transform.BigIntTypeAnnotation(node);
+      case 'BooleanLiteralTypeAnnotation':
+        return transform.BooleanLiteralTypeAnnotation(node);
+      case 'BooleanTypeAnnotation':
+        return transform.BooleanTypeAnnotation(node);
+      case 'EmptyTypeAnnotation':
+        return transform.EmptyTypeAnnotation(node);
+      case 'ExistsTypeAnnotation':
+        return transform.ExistsTypeAnnotation(node);
+      case 'FunctionTypeAnnotation':
+        return transform.FunctionTypeAnnotation(node);
+      case 'GenericTypeAnnotation':
+        return transform.GenericTypeAnnotation(node);
+      case 'IndexedAccessType':
+        return transform.IndexedAccessType(node);
+      case 'InterfaceTypeAnnotation':
+        return transform.InterfaceTypeAnnotation(node);
+      case 'IntersectionTypeAnnotation':
+        return transform.IntersectionTypeAnnotation(node);
+      case 'MixedTypeAnnotation':
+        return transform.MixedTypeAnnotation(node);
+      case 'NullLiteralTypeAnnotation':
+        return transform.NullLiteralTypeAnnotation(node);
+      case 'NullableTypeAnnotation':
+        return transform.NullableTypeAnnotation(node);
+      case 'NumberLiteralTypeAnnotation':
+        return transform.NumberLiteralTypeAnnotation(node);
+      case 'NumberTypeAnnotation':
+        return transform.NumberTypeAnnotation(node);
+      case 'ObjectTypeAnnotation':
+        return transform.ObjectTypeAnnotation(node);
+      case 'OptionalIndexedAccessType':
+        return transform.OptionalIndexedAccessType(node);
+      case 'QualifiedTypeIdentifier':
+        return transform.QualifiedTypeIdentifier(node);
+      case 'StringLiteralTypeAnnotation':
+        return transform.StringLiteralTypeAnnotation(node);
+      case 'StringTypeAnnotation':
+        return transform.StringTypeAnnotation(node);
+      case 'SymbolTypeAnnotation':
+        return transform.SymbolTypeAnnotation(node);
+      case 'ThisTypeAnnotation':
+        return transform.ThisTypeAnnotation(node);
+      case 'TupleTypeAnnotation':
+        return transform.TupleTypeAnnotation(node);
+      case 'TupleTypeLabeledElement':
+      case 'TupleTypeSpreadElement':
+        return unsupportedAnnotation(node, node.type);
+      case 'TypeofTypeAnnotation':
+        return transform.TypeofTypeAnnotation(node);
+      case 'UnionTypeAnnotation':
+        return transform.UnionTypeAnnotation(node);
+      case 'VoidTypeAnnotation':
+        return transform.VoidTypeAnnotation(node);
+      default:
+        throw unexpectedTranslationError(node, `Unhandled type ${node.type}`);
+    }
+  };
+
   const transform = {
     AnyTypeAnnotation(
       _node: FlowESTree.AnyTypeAnnotation,
@@ -605,7 +676,7 @@ const getTransforms = (
     ): TSESTree.TSArrayType {
       return {
         type: 'TSArrayType',
-        elementType: transform.TypeAnnotationType(node.elementType),
+        elementType: transformTypeAnnotationType(node.elementType),
       };
     },
     BigIntLiteral(node: FlowESTree.BigIntLiteral): TSESTree.BigIntLiteral {
@@ -1005,7 +1076,7 @@ const getTransforms = (
                       typeAnnotation: {
                         type: 'TSTypeAnnotation',
                         typeAnnotation:
-                          transform.TypeAnnotationType(declaration),
+                          transformTypeAnnotationType(declaration),
                       },
                     },
                     init: null,
@@ -1181,7 +1252,7 @@ const getTransforms = (
         type: 'TSTypeAliasDeclaration',
         declare: node.type === 'DeclareTypeAlias',
         id: transform.Identifier(node.id, false),
-        typeAnnotation: transform.TypeAnnotationType(node.right),
+        typeAnnotation: transformTypeAnnotationType(node.right),
         typeParameters:
           node.typeParameters == null
             ? undefined
@@ -1204,7 +1275,7 @@ const getTransforms = (
             ? {
                 type: 'TSUnknownKeyword',
               }
-            : transform.TypeAnnotationType(node.supertype),
+            : transformTypeAnnotationType(node.supertype),
         typeParameters:
           node.typeParameters == null
             ? undefined
@@ -1359,7 +1430,7 @@ const getTransforms = (
           name: 'this',
           typeAnnotation: {
             type: 'TSTypeAnnotation',
-            typeAnnotation: transform.TypeAnnotationType(
+            typeAnnotation: transformTypeAnnotationType(
               node.this.typeAnnotation,
             ),
           },
@@ -1378,7 +1449,7 @@ const getTransforms = (
               : transform.Identifier(rest.name, false),
           typeAnnotation: {
             type: 'TSTypeAnnotation',
-            typeAnnotation: transform.TypeAnnotationType(rest.typeAnnotation),
+            typeAnnotation: transformTypeAnnotationType(rest.typeAnnotation),
           },
         });
       }
@@ -1388,7 +1459,7 @@ const getTransforms = (
         params,
         returnType: {
           type: 'TSTypeAnnotation',
-          typeAnnotation: transform.TypeAnnotationType(node.returnType),
+          typeAnnotation: transformTypeAnnotationType(node.returnType),
         },
         typeParameters:
           node.typeParameters == null
@@ -1405,7 +1476,7 @@ const getTransforms = (
         name: node.name == null ? `$$PARAM_${idx}$$` : node.name.name,
         typeAnnotation: {
           type: 'TSTypeAnnotation',
-          typeAnnotation: transform.TypeAnnotationType(node.typeAnnotation),
+          typeAnnotation: transformTypeAnnotationType(node.typeAnnotation),
         },
         optional: node.optional,
       };
@@ -1452,7 +1523,7 @@ const getTransforms = (
 
           const res = [];
           for (const param of node.typeParameters.params) {
-            res.push(transform.TypeAnnotationType(param));
+            res.push(transformTypeAnnotationType(param));
           }
           return res;
         }
@@ -1749,9 +1820,10 @@ const getTransforms = (
         // Returns appropriate Identifier for `React` import.
         // If a global is in use, set a flag to indicate that we should add the import.
         const getReactIdentifier = () => {
-          if (!reactImport && validReactImportOrGlobal) {
-            shouldAddReactImport = true;
+          if (shouldAddReactImport !== false) {
+            shouldAddReactImport = !reactImport;
           }
+
           return {
             type: 'Identifier',
             name: `React`,
@@ -1817,9 +1889,7 @@ const getTransforms = (
               },
               typeParameters: {
                 type: 'TSTypeParameterInstantiation',
-                params: params.map(param =>
-                  transform.TypeAnnotationType(param),
-                ),
+                params: params.map(param => transformTypeAnnotationType(param)),
               },
             };
           }
@@ -1995,7 +2065,7 @@ const getTransforms = (
             let newTypeParam = {
               type: 'TSIntersectionType',
               types: [
-                transform.TypeAnnotationType(params[0]),
+                transformTypeAnnotationType(params[0]),
                 {
                   type: 'TSTypeReference',
                   typeName: {
@@ -2013,7 +2083,7 @@ const getTransforms = (
                     type: 'TSTypeParameterInstantiation',
                     params: [
                       params[1]
-                        ? transform.TypeAnnotationType(params[1])
+                        ? transformTypeAnnotationType(params[1])
                         : {
                             type: 'TSUnknownKeyword',
                           },
@@ -2158,8 +2228,8 @@ const getTransforms = (
     ): TSESTree.TSIndexedAccessType {
       return {
         type: 'TSIndexedAccessType',
-        objectType: transform.TypeAnnotationType(node.objectType),
-        indexType: transform.TypeAnnotationType(node.indexType),
+        objectType: transformTypeAnnotationType(node.objectType),
+        indexType: transformTypeAnnotationType(node.indexType),
       };
     },
     InterfaceDeclaration(
@@ -2295,7 +2365,7 @@ const getTransforms = (
     ): TSESTree.TSIntersectionType {
       return {
         type: 'TSIntersectionType',
-        types: node.types.map(transform.TypeAnnotationType),
+        types: node.types.map(transformTypeAnnotationType),
       };
     },
     Literal(node: FlowESTree.Literal): TSESTree.Literal {
@@ -2349,7 +2419,7 @@ const getTransforms = (
           {
             type: 'TSUndefinedKeyword',
           },
-          transform.TypeAnnotationType(node.typeAnnotation),
+          transformTypeAnnotationType(node.typeAnnotation),
         ],
       };
     },
@@ -2524,7 +2594,7 @@ const getTransforms = (
               );
             }
 
-            const spreadType = transform.TypeAnnotationType(property.argument);
+            const spreadType = transformTypeAnnotationType(property.argument);
             if (spreadType.type !== 'TSTypeReference') {
               return unsupportedAnnotation(
                 property,
@@ -2606,7 +2676,7 @@ const getTransforms = (
             name: node.id == null ? '$$Key$$' : node.id.name,
             typeAnnotation: {
               type: 'TSTypeAnnotation',
-              typeAnnotation: transform.TypeAnnotationType(node.key),
+              typeAnnotation: transformTypeAnnotationType(node.key),
             },
           },
         ],
@@ -2614,7 +2684,7 @@ const getTransforms = (
         static: node.static,
         typeAnnotation: {
           type: 'TSTypeAnnotation',
-          typeAnnotation: transform.TypeAnnotationType(node.value),
+          typeAnnotation: transformTypeAnnotationType(node.value),
         },
       };
     },
@@ -2671,7 +2741,7 @@ const getTransforms = (
         static: node.static,
         typeAnnotation: {
           type: 'TSTypeAnnotation',
-          typeAnnotation: transform.TypeAnnotationType(node.value),
+          typeAnnotation: transformTypeAnnotationType(node.value),
         },
       };
     },
@@ -2700,10 +2770,10 @@ const getTransforms = (
           },
           typeParameters: {
             type: 'TSTypeParameterInstantiation',
-            params: [transform.TypeAnnotationType(node.objectType)],
+            params: [transformTypeAnnotationType(node.objectType)],
           },
         },
-        indexType: transform.TypeAnnotationType(node.indexType),
+        indexType: transformTypeAnnotationType(node.indexType),
       };
     },
     QualifiedTypeIdentifier(
@@ -2790,7 +2860,7 @@ const getTransforms = (
     ): TSESTree.TSTupleType {
       return {
         type: 'TSTupleType',
-        elementTypes: node.types.map(transform.TypeAnnotationType),
+        elementTypes: node.types.map(transformTypeAnnotationType),
       };
     },
     TypeAlias(node: FlowESTree.TypeAlias): TSESTree.TSTypeAliasDeclaration {
@@ -2799,75 +2869,8 @@ const getTransforms = (
     TypeAnnotation(node: FlowESTree.TypeAnnotation): TSESTree.TSTypeAnnotation {
       return {
         type: 'TSTypeAnnotation',
-        typeAnnotation: transform.TypeAnnotationType(node.typeAnnotation),
+        typeAnnotation: transformTypeAnnotationType(node.typeAnnotation),
       };
-    },
-    TypeAnnotationType(node: FlowESTree.TypeAnnotationType): TSESTree.TypeNode {
-      switch (node.type) {
-        case 'AnyTypeAnnotation':
-          return transform.AnyTypeAnnotation(node);
-        case 'ArrayTypeAnnotation':
-          return transform.ArrayTypeAnnotation(node);
-        case 'BigIntLiteralTypeAnnotation':
-          return transform.BigIntLiteralTypeAnnotation(node);
-        case 'BigIntTypeAnnotation':
-          return transform.BigIntTypeAnnotation(node);
-        case 'BooleanLiteralTypeAnnotation':
-          return transform.BooleanLiteralTypeAnnotation(node);
-        case 'BooleanTypeAnnotation':
-          return transform.BooleanTypeAnnotation(node);
-        case 'EmptyTypeAnnotation':
-          return transform.EmptyTypeAnnotation(node);
-        case 'ExistsTypeAnnotation':
-          return transform.ExistsTypeAnnotation(node);
-        case 'FunctionTypeAnnotation':
-          return transform.FunctionTypeAnnotation(node);
-        case 'GenericTypeAnnotation':
-          return transform.GenericTypeAnnotation(node);
-        case 'IndexedAccessType':
-          return transform.IndexedAccessType(node);
-        case 'InterfaceTypeAnnotation':
-          return transform.InterfaceTypeAnnotation(node);
-        case 'IntersectionTypeAnnotation':
-          return transform.IntersectionTypeAnnotation(node);
-        case 'MixedTypeAnnotation':
-          return transform.MixedTypeAnnotation(node);
-        case 'NullLiteralTypeAnnotation':
-          return transform.NullLiteralTypeAnnotation(node);
-        case 'NullableTypeAnnotation':
-          return transform.NullableTypeAnnotation(node);
-        case 'NumberLiteralTypeAnnotation':
-          return transform.NumberLiteralTypeAnnotation(node);
-        case 'NumberTypeAnnotation':
-          return transform.NumberTypeAnnotation(node);
-        case 'ObjectTypeAnnotation':
-          return transform.ObjectTypeAnnotation(node);
-        case 'OptionalIndexedAccessType':
-          return transform.OptionalIndexedAccessType(node);
-        case 'QualifiedTypeIdentifier':
-          return transform.QualifiedTypeIdentifier(node);
-        case 'StringLiteralTypeAnnotation':
-          return transform.StringLiteralTypeAnnotation(node);
-        case 'StringTypeAnnotation':
-          return transform.StringTypeAnnotation(node);
-        case 'SymbolTypeAnnotation':
-          return transform.SymbolTypeAnnotation(node);
-        case 'ThisTypeAnnotation':
-          return transform.ThisTypeAnnotation(node);
-        case 'TupleTypeAnnotation':
-          return transform.TupleTypeAnnotation(node);
-        case 'TupleTypeLabeledElement':
-        case 'TupleTypeSpreadElement':
-          return unsupportedAnnotation(node, node.type);
-        case 'TypeofTypeAnnotation':
-          return transform.TypeofTypeAnnotation(node);
-        case 'UnionTypeAnnotation':
-          return transform.UnionTypeAnnotation(node);
-        case 'VoidTypeAnnotation':
-          return transform.VoidTypeAnnotation(node);
-        default:
-          throw unexpectedTranslationError(node, `Unhandled type ${node.type}`);
-      }
     },
     TypeofTypeAnnotation(
       node: FlowESTree.TypeofTypeAnnotation,
@@ -2918,11 +2921,11 @@ const getTransforms = (
         constraint:
           node.bound == null
             ? undefined
-            : transform.TypeAnnotationType(node.bound.typeAnnotation),
+            : transformTypeAnnotationType(node.bound.typeAnnotation),
         default:
           node.default == null
             ? undefined
-            : transform.TypeAnnotationType(node.default),
+            : transformTypeAnnotationType(node.default),
         in: false,
         out: false,
         // in: variance.has('in'),
@@ -2942,7 +2945,7 @@ const getTransforms = (
     ): TSESTree.TSTypeParameterInstantiation {
       return {
         type: 'TSTypeParameterInstantiation',
-        params: node.params.map(transform.TypeAnnotationType),
+        params: node.params.map(transformTypeAnnotationType),
       };
     },
     UnionTypeAnnotation(
@@ -2950,7 +2953,7 @@ const getTransforms = (
     ): TSESTree.TSUnionType {
       return {
         type: 'TSUnionType',
-        types: node.types.map(transform.TypeAnnotationType),
+        types: node.types.map(transformTypeAnnotationType),
       };
     },
     VoidTypeAnnotation(
