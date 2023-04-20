@@ -112,7 +112,7 @@ class SingletonType : public Type {
     assert(
         this->getKind() == other->getKind() &&
         "only the same TypeKind can be compared");
-    return true;
+    return 0;
   }
   /// Calculate the type-specific hash.
   unsigned _hashImpl() const {
