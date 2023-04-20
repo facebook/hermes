@@ -202,15 +202,12 @@ static bool canBeInlined(Function *F, Function *intoFunction) {
     return false;
   }
 
-  // If the functions have different strictness, we don't inline them.
-  // TODO: Now that we have strict/non-strict versions of instructions, this can
-  // be implemented.
-  if (F->isStrictMode() != intoFunction->isStrictMode()) {
-    LLVM_DEBUG(
-        llvh::dbgs() << "Cannot inline function '" << F->getInternalNameStr()
-                     << "': strict mode mismatch\n");
-    return false;
-  }
+  // Allow inlining between functions of different strictness,
+  // because all relevant instructions have Strict/Loose variants.
+  //
+  // The only exception is CreateArgumentsInst, which we exclude below.
+  // CreateArgumentsInst needs special handling because the two functions need
+  // their own 'arguments'.
 
   for (BasicBlock *oldBB : orderDFS(F)) {
     for (auto &I : *oldBB) {
