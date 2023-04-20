@@ -34,7 +34,10 @@ TEST(BuilderTest, SimpleSmokeTest) {
   Builder.createJSDynamicParam(F, "argc");
   Builder.createJSDynamicParam(F, "argv");
   Builder.setInsertionBlock(BB);
-  Builder.createBranchInst(BB);
+  auto *branch = Builder.createBranchInst(BB);
+
+  EXPECT_EQ(F, branch->getFunction());
+  EXPECT_EQ(&M, branch->getModule());
 
   EXPECT_TRUE(F);
   EXPECT_TRUE(BB);

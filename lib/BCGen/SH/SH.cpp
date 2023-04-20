@@ -601,8 +601,8 @@ class InstrGen {
   void generateHBCResolveEnvironment(HBCResolveEnvironment &inst) {
     llvh::Optional<int32_t> instScopeDepth =
         scopeAnalysis_.getScopeDepth(inst.getScope());
-    llvh::Optional<int32_t> curScopeDepth = scopeAnalysis_.getScopeDepth(
-        inst.getParent()->getParent()->getFunctionScope());
+    llvh::Optional<int32_t> curScopeDepth =
+        scopeAnalysis_.getScopeDepth(inst.getFunction()->getFunctionScope());
     if (!instScopeDepth || !curScopeDepth) {
       // This function did not have any CreateFunctionInst, it is dead.
       return;

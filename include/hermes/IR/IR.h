@@ -1265,6 +1265,12 @@ class Instruction
     Parent = parent;
   }
 
+  /// \return the Function to which this Instruction belongs.
+  inline Function *getFunction() const;
+
+  /// \return the Module to which this Instruction belongs.
+  inline Module *getModule() const;
+
   static bool classof(const Value *V) {
     return HERMES_IR_KIND_IN_CLASS(V->getKind(), Instruction);
   }
@@ -2317,6 +2323,13 @@ class Module : public Value {
 /// The hash of a Type is the hash of its opaque value.
 static inline llvh::hash_code hash_value(Type V) {
   return V.hash();
+}
+
+inline Function *Instruction::getFunction() const {
+  return Parent->getParent();
+}
+inline Module *Instruction::getModule() const {
+  return getFunction()->getParent();
 }
 
 } // end namespace hermes
