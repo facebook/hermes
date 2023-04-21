@@ -186,6 +186,7 @@ export default ({
   BooleanLiteralTypeAnnotation: ['Flow', 'FlowType'],
   NullLiteralTypeAnnotation: ['Flow', 'FlowType', 'FlowBaseAnnotation'],
   ClassImplements: ['Flow'],
+  ConditionalTypeAnnotation: ['Flow', 'FlowType', 'FlowBaseAnnotation'],
   DeclareClass: ['Flow', 'FlowDeclaration', 'Statement', 'Declaration'],
   DeclareFunction: ['Flow', 'FlowDeclaration', 'Statement', 'Declaration'],
   DeclareInterface: ['Flow', 'FlowDeclaration', 'Statement', 'Declaration'],

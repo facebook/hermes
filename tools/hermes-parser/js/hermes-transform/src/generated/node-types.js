@@ -46,6 +46,7 @@ import type {
   ComponentDeclaration as ComponentDeclarationType,
   ComponentParameter as ComponentParameterType,
   ConditionalExpression as ConditionalExpressionType,
+  ConditionalTypeAnnotation as ConditionalTypeAnnotationType,
   ContinueStatement as ContinueStatementType,
   DebuggerStatement as DebuggerStatementType,
   DeclareClass as DeclareClassType,
@@ -308,6 +309,13 @@ export type ConditionalExpressionProps = {
   +test: MaybeDetachedNode<ConditionalExpressionType['test']>,
   +alternate: MaybeDetachedNode<ConditionalExpressionType['alternate']>,
   +consequent: MaybeDetachedNode<ConditionalExpressionType['consequent']>,
+};
+
+export type ConditionalTypeAnnotationProps = {
+  +checkType: MaybeDetachedNode<ConditionalTypeAnnotationType['checkType']>,
+  +extendsType: MaybeDetachedNode<ConditionalTypeAnnotationType['extendsType']>,
+  +trueType: MaybeDetachedNode<ConditionalTypeAnnotationType['trueType']>,
+  +falseType: MaybeDetachedNode<ConditionalTypeAnnotationType['falseType']>,
 };
 
 export type ContinueStatementProps = {
@@ -1331,6 +1339,21 @@ export function ConditionalExpression(props: {
     test: asDetachedNodeForCodeGen(props.test),
     alternate: asDetachedNodeForCodeGen(props.alternate),
     consequent: asDetachedNodeForCodeGen(props.consequent),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function ConditionalTypeAnnotation(props: {
+  ...$ReadOnly<ConditionalTypeAnnotationProps>,
+  +parent?: ESNode,
+}): DetachedNode<ConditionalTypeAnnotationType> {
+  const node = detachedProps<ConditionalTypeAnnotationType>(props.parent, {
+    type: 'ConditionalTypeAnnotation',
+    checkType: asDetachedNodeForCodeGen(props.checkType),
+    extendsType: asDetachedNodeForCodeGen(props.extendsType),
+    trueType: asDetachedNodeForCodeGen(props.trueType),
+    falseType: asDetachedNodeForCodeGen(props.falseType),
   });
   setParentPointersInDirectChildren(node);
   return node;

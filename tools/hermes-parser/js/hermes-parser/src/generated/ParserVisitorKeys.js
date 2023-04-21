@@ -123,6 +123,12 @@ export const HERMES_AST_VISITOR_KEYS = {
     alternate: 'Node',
     consequent: 'Node',
   },
+  ConditionalTypeAnnotation: {
+    checkType: 'Node',
+    extendsType: 'Node',
+    trueType: 'Node',
+    falseType: 'Node',
+  },
   ContinueStatement: {
     label: 'Node',
   },
