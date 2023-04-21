@@ -86,12 +86,6 @@ EnterBlockScope::~EnterBlockScope() {
 
 void ESTreeIRGen::genFunctionDeclaration(
     ESTree::FunctionDeclarationNode *func) {
-  if (func->_async && func->_generator) {
-    Builder.getModule()->getContext().getSourceErrorManager().error(
-        func->getSourceRange(), Twine("async generators are unsupported"));
-    return;
-  }
-
   // Find the name of the function.
   Identifier functionName = getNameFieldFromID(func->_id);
   LLVM_DEBUG(llvh::dbgs() << "IRGen function \"" << functionName << "\".\n");
@@ -142,12 +136,6 @@ void ESTreeIRGen::hoistCreateFunctions(ESTree::Node *containingNode) {
 Value *ESTreeIRGen::genFunctionExpression(
     ESTree::FunctionExpressionNode *FE,
     Identifier nameHint) {
-  if (FE->_async && FE->_generator) {
-    Builder.getModule()->getContext().getSourceErrorManager().error(
-        FE->getSourceRange(), Twine("async generators are unsupported"));
-    return Builder.getLiteralUndefined();
-  }
-
   LLVM_DEBUG(
       llvh::dbgs()
       << "Creating anonymous closure. "

@@ -779,6 +779,10 @@ void SemanticValidator::visitFunction(
       haveActiveContext() ? curFunction()->sourceVisibility
                           : SourceVisibility::Default};
 
+  if (compile_ && ESTree::isAsync(node) && ESTree::isGenerator(node)) {
+    sm_.error(node->getSourceRange(), "async generators are unsupported");
+  }
+
   // It is a Syntax Error if UniqueFormalParameters Contains YieldExpression
   // is true.
   // NOTE: isFormalParams_ is reset to false on encountering a new function,
