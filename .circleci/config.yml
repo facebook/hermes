@@ -9,6 +9,7 @@ workflows:
             parameters:
               sanitize: ["ON", "OFF"]
               gc: ["MALLOC", "HADES"]
+      - test-linux
 
 jobs:
   test-macos:
@@ -45,3 +46,22 @@ jobs:
             cmake --build build
             cmake --build build --target check-hermes
             python3 hermes/utils/testsuite/run_testsuite.py --shermes --test-intl test262/test -b build/bin
+
+  test-linux:
+    docker:
+      - image: debian:bookworm
+    working_directory: /root
+    steps:
+      - run:
+          name: Install dependencies
+          command: |
+            apt update
+            apt install -y git openssh-client cmake build-essential \
+                libicu-dev zip python3
+      - checkout:
+          path: hermes
+      - run:
+          name: Run Hermes regression tests
+          command: |
+            cmake -S hermes -B build
+            cmake --build build --target check-hermes -j 4
