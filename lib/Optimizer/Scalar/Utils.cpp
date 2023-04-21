@@ -174,6 +174,19 @@ bool hermes::getCallSites(
   return true;
 }
 
+llvh::SmallVector<BaseCallInst *, 2> hermes::getKnownCallsites(Function *F) {
+  llvh::SmallVector<BaseCallInst *, 2> result{};
+  for (Instruction *user : F->getUsers()) {
+    if (auto *call = llvh::dyn_cast<BaseCallInst>(user)) {
+      assert(
+          call->getTarget() == F &&
+          "invalid usage of Function as operand of BaseCallInst");
+      result.push_back(call);
+    }
+  }
+  return result;
+}
+
 /// Delete all incoming arrows from \p incoming in PhiInsts in \p blockToModify.
 bool hermes::deleteIncomingBlockFromPhis(
     BasicBlock *blockToModify,

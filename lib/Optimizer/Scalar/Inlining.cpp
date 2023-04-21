@@ -55,22 +55,6 @@ static bool hasKnownCallsites(Function *F) {
   return false;
 }
 
-/// \return a list of known callsites of \p F based on its users.
-/// It is possible that \p F has additional unknown callsites,
-/// read the `allCallsitesKnown` attribute to check that.
-static llvh::SmallVector<BaseCallInst *, 2> getKnownCallsites(Function *F) {
-  llvh::SmallVector<BaseCallInst *, 2> result{};
-  for (Instruction *user : F->getUsers()) {
-    if (auto *call = llvh::dyn_cast<BaseCallInst>(user)) {
-      assert(
-          call->getTarget() == F &&
-          "invalid usage of Function as operand of BaseCallInst");
-      result.push_back(call);
-    }
-  }
-  return result;
-}
-
 /// Iterates all instructions and extracts all populated \c target operands
 /// from call instructions.
 /// The callees of a function are not stored explicitly outside the insts

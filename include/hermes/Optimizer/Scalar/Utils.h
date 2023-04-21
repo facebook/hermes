@@ -47,6 +47,11 @@ bool isConstructionSetup(Value *V, Value *closure);
 /// \returns True if all call sites are known and \p callsites is valid.
 bool getCallSites(Function *F, llvh::DenseSet<BaseCallInst *> &callsites);
 
+/// \return a list of known callsites of \p F based on its users.
+/// It is possible that \p F has additional unknown callsites, call
+/// \c F->allCallsitesKnown() to check that.
+llvh::SmallVector<BaseCallInst *, 2> getKnownCallsites(Function *F);
+
 /// Delete all incoming arrows from \p incoming in PhiInsts in \p blockToModify.
 bool deleteIncomingBlockFromPhis(
     BasicBlock *blockToModify,
