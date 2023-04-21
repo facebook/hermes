@@ -277,6 +277,7 @@ constexpr OptionData kDTFOptions[] = {
     {u"month",
      platform_intl::Option::Kind::String,
      kDateRequired | kDateDefault},
+    {u"dayPeriod", platform_intl::Option::Kind::String},
     {u"day", platform_intl::Option::Kind::String, kDateRequired | kDateDefault},
     {u"hour",
      platform_intl::Option::Kind::String,
@@ -387,6 +388,32 @@ ExecutionStatus checkOptions(Runtime &runtime, const platform_intl::Options &) {
 }
 
 template <>
+ExecutionStatus checkOptions<platform_intl::DateTimeFormat>(
+    Runtime &runtime,
+    const platform_intl::Options &options) {
+  // ECMA 402 2023 11.1.2
+  const bool hasExplicitFormatComponents = options.count(u"weekday") > 0 ||
+      options.count(u"era") > 0 || options.count(u"year") > 0 ||
+      options.count(u"month") > 0 || options.count(u"day") > 0 ||
+      options.count(u"dayPeriod") > 0 || options.count(u"hour") > 0 ||
+      options.count(u"minute") > 0 || options.count(u"second") > 0 ||
+      options.count(u"fractionalSecondDigits") > 0 ||
+      options.count(u"timeZoneName") > 0;
+  const bool hasStyle =
+      options.count(u"dateStyle") > 0 || options.count(u"timeStyle") > 0;
+
+  // 42. If dateStyle is not undefined or timeStyle is not undefined, then
+  //    a. If hasExplicitFormatComponents is true, then
+  //        i. Throw a TypeError exception.
+  if (hasStyle && hasExplicitFormatComponents) {
+    return runtime.raiseTypeError(
+        "{data/time}Style and explicit format components shouldn't be used together");
+  }
+
+  return ExecutionStatus::RETURNED;
+}
+
+template <>
 ExecutionStatus checkOptions<platform_intl::NumberFormat>(
     Runtime &runtime,
     const platform_intl::Options &options) {
@@ -434,7 +461,7 @@ CallResult<HermesValue> intlServiceConstructor(
     return ExecutionStatus::EXCEPTION;
   }
 
-  // NumberFormat has a couple extra checks to make.
+  // Service specific checks.
   if (LLVM_UNLIKELY(
           checkOptions<T>(runtime, *optionsRes) ==
           ExecutionStatus::EXCEPTION)) {
@@ -1372,7 +1399,10 @@ namespace {
 constexpr int kDTODate = 1 << 0;
 constexpr int kDTOTime = 1 << 1;
 
-void toDateTimeOptions(platform_intl::Options &options, int dtoFlags) {
+ExecutionStatus toDateTimeOptions(
+    Runtime &runtime,
+    platform_intl::Options &options,
+    int dtoFlags) {
   // The behavior of format with respect to default options is to
   // check if any of a set of date and time keys are present in
   // options.  If none are, then a default set of date keys is used.
@@ -1395,15 +1425,28 @@ void toDateTimeOptions(platform_intl::Options &options, int dtoFlags) {
       }
     }
   }
-  if (!needDefaults) {
-    return;
-  }
-  for (const OptionData &pod : kDTFOptions) {
-    if ((dtoFlags & kDTODate && pod.flags & kDateDefault) ||
-        (dtoFlags & kDTOTime && pod.flags & kTimeDefault)) {
-      options.emplace(pod.name, std::u16string(u"numeric"));
+
+  const bool hasStyle =
+      options.count(u"dateStyle") > 0 || options.count(u"timeStyle") > 0;
+  if (hasStyle)
+    needDefaults = false;
+
+  if (!(dtoFlags & kDTOTime) && options.count(u"timeStyle") > 0)
+    return runtime.raiseTypeError("Invalid timeStyle option");
+
+  if (!(dtoFlags & kDTODate) && options.count(u"dateStyle") > 0)
+    return runtime.raiseTypeError("Invalid dateStyle option");
+
+  if (needDefaults) {
+    for (const OptionData &pod : kDTFOptions) {
+      if ((dtoFlags & kDTODate && pod.flags & kDateDefault) ||
+          (dtoFlags & kDTOTime && pod.flags & kTimeDefault)) {
+        options.emplace(pod.name, std::u16string(u"numeric"));
+      }
     }
   }
+
+  return ExecutionStatus::RETURNED;
 }
 
 CallResult<HermesValue> intlDatePrototypeToSomeLocaleString(
@@ -1427,7 +1470,12 @@ CallResult<HermesValue> intlDatePrototypeToSomeLocaleString(
     if (LLVM_UNLIKELY(optionsRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    toDateTimeOptions(*optionsRes, dtoFlags);
+
+    if (LLVM_UNLIKELY(
+            toDateTimeOptions(runtime, *optionsRes, dtoFlags) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
 
     CallResult<std::unique_ptr<platform_intl::DateTimeFormat>> dtfRes =
         platform_intl::DateTimeFormat::create(
