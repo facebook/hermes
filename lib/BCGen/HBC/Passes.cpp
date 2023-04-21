@@ -703,10 +703,17 @@ bool LoadConstantValueNumbering::runOnFunction(Function *F) {
         regToInstMap.erase(reg);
       }
 
-      for (auto index : I.getChangedOperands()) {
-        auto *operand = I.getOperand(index);
-        unsigned reg = RA_.getRegister(cast<Instruction>(operand)).getIndex();
-        regToInstMap.erase(reg);
+      // If the instruction has writable stack operands, invalidate them. Note
+      // that read-only stack operands are prohibited (they should go through
+      // LoadStackInst), so all stack operands must be writable.
+      if (I.getSideEffect().getWriteStack()) {
+        for (size_t i = 0, e = I.getNumOperands(); i < e; ++i) {
+          if (auto *operand = llvh::dyn_cast<AllocStackInst>(I.getOperand(i))) {
+            unsigned reg =
+                RA_.getRegister(cast<Instruction>(operand)).getIndex();
+            regToInstMap.erase(reg);
+          }
+        }
       }
     }
   }
@@ -759,7 +766,11 @@ bool SpillRegisters::requiresShortOperand(Instruction *I, int op) {
 }
 
 bool SpillRegisters::modifiesOperandRegister(Instruction *I, int op) {
-  return I->getChangedOperands().at((unsigned)op);
+  // Check if the operand is a stack location that this instruction may write
+  // to. Note that read-only stack operands are prohibited (they should go
+  // through LoadStackInst), so any stack operands may be writable.
+  return I->getSideEffect().getWriteStack() &&
+      llvh::isa<AllocStackInst>(I->getOperand(op));
 }
 
 bool SpillRegisters::runOnFunction(Function *F) {
