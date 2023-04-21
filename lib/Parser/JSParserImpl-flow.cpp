@@ -1159,7 +1159,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAnnotationFlow(
   llvh::SaveAndRestore<bool> saveParam(
       allowAnonFunctionType_,
       allowAnonFunctionType == AllowAnonFunctionType::Yes);
-  auto optType = parseUnionTypeAnnotationFlow();
+  auto optType = parseConditionalTypeAnnotationFlow();
   if (!optType)
     return None;
   if (wrappedStart) {
@@ -1169,6 +1169,48 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAnnotationFlow(
         new (context_) ESTree::TypeAnnotationNode(*optType));
   }
   return *optType;
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseConditionalTypeAnnotationFlow() {
+  SMLoc start = tok_->getStartLoc();
+  auto optCheck = parseUnionTypeAnnotationFlow();
+  if (!optCheck)
+    return None;
+  if (!checkAndEat(TokenKind::rw_extends, JSLexer::GrammarContext::Type)) {
+    return optCheck;
+  }
+  auto optExtends = parseUnionTypeAnnotationFlow();
+  if (!optExtends)
+    return None;
+
+  if (!eat(
+          TokenKind::question,
+          JSLexer::GrammarContext::Type,
+          "in conditional type",
+          "start of type",
+          start))
+    return None;
+
+  auto optTrue = parseTypeAnnotationFlow();
+  if (!optTrue)
+    return None;
+  if (!eat(
+          TokenKind::colon,
+          JSLexer::GrammarContext::Type,
+          "in conditional type",
+          "start of type",
+          start))
+    return None;
+
+  auto optFalse = parseTypeAnnotationFlow();
+  if (!optFalse)
+    return None;
+
+  return setLocation(
+      *optCheck,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::ConditionalTypeAnnotationNode(
+          *optCheck, *optExtends, *optTrue, *optFalse));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseUnionTypeAnnotationFlow() {
