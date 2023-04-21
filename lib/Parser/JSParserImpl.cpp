@@ -1571,12 +1571,46 @@ Optional<ESTree::IfStatementNode *> JSParserImpl::parseIfStatement(
           condLoc))
     return None;
 
-  auto optConsequent = parseStatement(param.get(ParamReturn));
+  /// Parse a statement or (only in loose mode) a function declaration.
+  /// ES2022 B.3.3 allows FunctionDeclaration as consequent and alternate.
+  /// These FunctionDeclarations are supposed to be processed precisely as if
+  /// they were surrounded by BlockStatement, including function promotion.
+  /// To allow this, surround them with a synthetic BlockStatement.
+  auto parseStatementOrFunctionDeclaration =
+      [this, param]() -> Optional<ESTree::Node *> {
+    if (check(TokenKind::rw_function)) {
+      auto optFunction = parseFunctionDeclaration(Param{});
+      if (!optFunction)
+        return None;
+      if (isStrictMode()) {
+        error(
+            (*optFunction)->getStartLoc(),
+            "In strict mode, functions cannot be declared in if statements");
+      }
+      if ((*optFunction)->_generator || (*optFunction)->_async) {
+        error(
+            (*optFunction)->getStartLoc(),
+            "Functions in if statements cannot be generator/async");
+      }
+      ESTree::NodeList stmts;
+      stmts.push_back(**optFunction);
+      return setLocation(
+          *optFunction,
+          *optFunction,
+          new (context_) ESTree::BlockStatementNode(std::move(stmts)));
+    }
+    auto optStatement = parseStatement(param.get(ParamReturn));
+    if (!optStatement)
+      return None;
+    return *optStatement;
+  };
+
+  auto optConsequent = parseStatementOrFunctionDeclaration();
   if (!optConsequent)
     return None;
 
   if (checkAndEat(TokenKind::rw_else)) {
-    auto optAlternate = parseStatement(param.get(ParamReturn));
+    auto optAlternate = parseStatementOrFunctionDeclaration();
     if (!optAlternate)
       return None;
 
