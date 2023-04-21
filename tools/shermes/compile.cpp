@@ -199,6 +199,7 @@ bool invokeCC(
   std::vector<std::string> args{};
 
   args.emplace_back(program);
+  args.emplace_back(inputPath);
 
   // Select compilation to asm, obj, binary
   switch (outputLevel) {
@@ -305,7 +306,6 @@ bool invokeCC(
 
     splitArgs(cfg.ldlibs, args);
   }
-  args.emplace_back(inputPath);
   args.emplace_back("-o");
   args.emplace_back(outputPath);
 
