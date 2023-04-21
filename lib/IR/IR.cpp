@@ -505,23 +505,6 @@ bool Instruction::hasOutput() {
   }
 }
 
-WordBitSet<> Instruction::getChangedOperands() {
-  switch (getKind()) {
-    default:
-      llvm_unreachable("Invalid kind");
-
-#define DEF_VALUE(XX, PARENT)                        \
-  case ValueKind::XX##Kind:                          \
-    return cast<XX>(this)->getChangedOperandsImpl(); \
-    break;
-#define DEF_TAG(XX, PARENT)                              \
-  case ValueKind::XX##Kind:                              \
-    return cast<PARENT>(this)->getChangedOperandsImpl(); \
-    break;
-#include "hermes/IR/Instrs.def"
-  }
-}
-
 bool Instruction::acceptsEmptyType() const {
   switch (getKind()) {
     default:

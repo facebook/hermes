@@ -65,10 +65,6 @@ class SingleOperandInst : public Instruction {
     llvm_unreachable("SingleOperandInst must be inherited.");
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    llvm_unreachable("SingleOperandInst must be inherited.");
-  }
-
  private:
   static bool classof(const Value *V);
 };
@@ -97,10 +93,6 @@ class TerminatorInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    llvm_unreachable("TerminatorInst must be inherited.");
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
     llvm_unreachable("TerminatorInst must be inherited.");
   }
 
@@ -163,10 +155,6 @@ class BranchInst : public TerminatorInst {
     return {};
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::BranchInstKind;
@@ -211,10 +199,6 @@ class AddEmptyStringInst : public SingleOperandInst {
     return SideEffect::createExecute();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::AddEmptyStringInstKind;
@@ -247,10 +231,6 @@ class AsNumberInst : public SingleOperandInst {
     return SideEffect::createExecute();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::AsNumberInstKind;
@@ -277,10 +257,6 @@ class AsNumericInst : public SingleOperandInst {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createExecute();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   static bool classof(const Value *V) {
@@ -311,10 +287,6 @@ class AsInt32Inst : public SingleOperandInst {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createExecute();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   static bool classof(const Value *V) {
@@ -363,10 +335,6 @@ class CondBranchInst : public TerminatorInst {
     return {};
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::CondBranchInstKind;
@@ -410,10 +378,6 @@ class ReturnInst : public TerminatorInst {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
     return {};
   }
 
@@ -470,10 +434,6 @@ class AllocStackInst : public Instruction {
     return {};
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::AllocStackInstKind;
@@ -508,10 +468,6 @@ class LoadStackInst : public SingleOperandInst {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setReadStack().setIdempotent();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   static bool classof(const Value *V) {
@@ -556,10 +512,6 @@ class StoreStackInst : public Instruction {
     return SideEffect{}.setWriteStack().setIdempotent();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::StoreStackInstKind;
@@ -594,10 +546,6 @@ class LoadFrameInst : public SingleOperandInst {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setReadFrame().setIdempotent();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   static bool classof(const Value *V) {
@@ -642,10 +590,6 @@ class StoreFrameInst : public Instruction {
     return SideEffect{}.setWriteFrame().setIdempotent();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::StoreFrameInstKind;
@@ -681,10 +625,6 @@ class BaseCreateLexicalChildInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
     return {};
   }
 
@@ -827,10 +767,6 @@ class BaseCallInst : public Instruction {
     return SideEffect::createExecute();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     return HERMES_IR_KIND_IN_CLASS(V->getKind(), BaseCallInst);
   }
@@ -933,10 +869,6 @@ class GetBuiltinClosureInst : public Instruction {
     return SideEffect{}.setIdempotent();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   BuiltinMethod::Enum getBuiltinIndex() const {
     return static_cast<BuiltinMethod::Enum>(
         cast<LiteralNumber>(getOperand(BuiltinIndexIdx))->asInt32());
@@ -996,10 +928,6 @@ class CallIntrinsicInst : public Instruction {
       return SideEffect{}.setWriteHeap().setIdempotent();
     if (getIntrinsicsIndex() >= WasmIntrinsics::__uasm_loadi8)
       return SideEffect{}.setReadHeap().setIdempotent();
-    return {};
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
     return {};
   }
 
@@ -1074,10 +1002,6 @@ class HBCGetGlobalObjectInst : public Instruction {
     return SideEffect{}.setIdempotent();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::HBCGetGlobalObjectInstKind;
@@ -1124,10 +1048,6 @@ class BaseStorePropertyInst : public Instruction {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createExecute();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   static bool classof(const Value *V) {
@@ -1333,10 +1253,6 @@ class BaseStoreOwnPropertyInst : public Instruction {
     return SideEffect::createExecute();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     return HERMES_IR_KIND_IN_CLASS(V->getKind(), BaseStoreOwnPropertyInst);
   }
@@ -1461,10 +1377,6 @@ class StoreGetterSetterInst : public Instruction {
     return SideEffect::createExecute();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::StoreGetterSetterInstKind;
@@ -1502,10 +1414,6 @@ class DeletePropertyInst : public Instruction {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createExecute();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   static bool classof(const Value *V) {
@@ -1585,10 +1493,6 @@ class BaseLoadPropertyInst : public Instruction {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createExecute();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   static bool classof(const Value *V) {
@@ -1688,10 +1592,6 @@ class AllocObjectInst : public Instruction {
     return {};
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::AllocObjectInstKind;
@@ -1737,10 +1637,6 @@ class HBCAllocObjectFromBufferInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
     return {};
   }
 
@@ -1797,10 +1693,6 @@ class AllocObjectLiteralInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
     return {};
   }
 
@@ -1869,10 +1761,6 @@ class GetTemplateObjectInst : public Instruction {
 
   SideEffect getSideEffectImpl() const {
     // Reads/writes the template cache, but only allocates new objects.
-    return {};
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
     return {};
   }
 
@@ -1978,10 +1866,6 @@ class AllocArrayInst : public Instruction {
     return {};
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::AllocArrayInstKind;
@@ -2022,10 +1906,6 @@ class AllocFastArrayInst : public Instruction {
     return {};
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::AllocFastArrayInstKind;
   }
@@ -2054,10 +1934,6 @@ class CreateArgumentsInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
     return {};
   }
 
@@ -2104,10 +1980,6 @@ class CreateRegExpInst : public Instruction {
     return {};
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::CreateRegExpInstKind;
@@ -2147,10 +2019,6 @@ class UnaryOperatorInst : public SingleOperandInst {
   }
 
   SideEffect getSideEffectImpl() const;
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
 
   static bool classof(const Value *V) {
     return HERMES_IR_KIND_IN_CLASS(V->getKind(), UnaryOperatorInst);
@@ -2214,10 +2082,6 @@ class BinaryOperatorInst : public Instruction {
         getLeftHandSide()->getType(), getRightHandSide()->getType(), getKind());
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     return HERMES_IR_KIND_IN_CLASS(V->getKind(), BinaryOperatorInst);
   }
@@ -2243,10 +2107,6 @@ class CatchInst : public Instruction {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createUnknown().setFirstInBlock();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   static bool classof(const Value *V) {
@@ -2275,10 +2135,6 @@ class ThrowInst : public TerminatorInst {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setThrow();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   Value *getThrownValue() const {
@@ -2337,10 +2193,6 @@ class SwitchInst : public TerminatorInst {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
     return {};
   }
 
@@ -2403,14 +2255,6 @@ class GetPNamesInst : public TerminatorInst {
     return SideEffect::createExecute().setReadStack().setWriteStack();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return WordBitSet<>{}
-        .set(IteratorIdx)
-        .set(BaseIdx)
-        .set(IndexIdx)
-        .set(SizeIdx);
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::GetPNamesInstKind;
@@ -2470,15 +2314,6 @@ class GetNextPNameInst : public TerminatorInst {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createExecute().setReadStack().setWriteStack();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return WordBitSet<>{}
-        .set(IteratorIdx)
-        .set(BaseIdx)
-        .set(IndexIdx)
-        .set(SizeIdx)
-        .set(PropertyIdx);
   }
 
   static bool classof(const Value *V) {
@@ -2561,10 +2396,6 @@ class TryStartInst : public TerminatorInst {
     return {};
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::TryStartInstKind;
@@ -2596,10 +2427,6 @@ class TryEndInst : public Instruction {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createUnknown().setFirstInBlock();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   static bool classof(const Value *V) {
@@ -2651,10 +2478,6 @@ class PhiInst : public Instruction {
     return SideEffect{}.setFirstInBlock();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::PhiInstKind;
@@ -2691,10 +2514,6 @@ class MovInst : public SingleOperandInst {
     return SideEffect{}.setIdempotent();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::MovInstKind;
@@ -2722,10 +2541,6 @@ class ImplicitMovInst : public SingleOperandInst {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
     return {};
   }
 
@@ -2761,10 +2576,6 @@ class CoerceThisNSInst : public SingleOperandInst {
     return {};
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::CoerceThisNSInstKind;
@@ -2787,10 +2598,6 @@ class DebuggerInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
     return {};
   }
 
@@ -2823,10 +2630,6 @@ class GetNewTargetInst : public Instruction {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setIdempotent();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   static bool classof(const Value *V) {
@@ -2899,10 +2702,6 @@ class ThrowIfEmptyInst : public Instruction {
     return SideEffect{}.setThrow();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::ThrowIfEmptyInstKind;
@@ -2931,10 +2730,6 @@ class HBCResolveEnvironment : public SingleOperandInst {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setIdempotent();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   static bool classof(const Value *V) {
@@ -2979,10 +2774,6 @@ class HBCStoreToEnvironmentInst : public Instruction {
     return SideEffect{}.setWriteFrame().setIdempotent();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::HBCStoreToEnvironmentInstKind;
@@ -3019,10 +2810,6 @@ class HBCLoadFromEnvironmentInst : public Instruction {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setReadFrame().setIdempotent();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   static bool classof(const Value *V) {
@@ -3102,10 +2889,6 @@ class SwitchImmInst : public TerminatorInst {
     return {};
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::SwitchImmInstKind;
@@ -3149,10 +2932,6 @@ class SaveAndYieldInst : public TerminatorInst {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createExecute();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   unsigned getNumSuccessors() const {
@@ -3203,10 +2982,6 @@ class DirectEvalInst : public Instruction {
     return SideEffect::createExecute();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::DirectEvalInstKind;
@@ -3239,10 +3014,6 @@ class DeclareGlobalVarInst : public SingleOperandInst {
     return SideEffect::createExecute();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::DeclareGlobalVarInstKind;
@@ -3266,10 +3037,6 @@ class HBCCreateEnvironmentInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
     return {};
   }
 
@@ -3300,10 +3067,6 @@ class HBCProfilePointInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
     return {};
   }
 
@@ -3343,10 +3106,6 @@ class HBCLoadConstInst : public SingleOperandInst {
     return SideEffect{}.setIdempotent();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::HBCLoadConstInstKind;
@@ -3379,10 +3138,6 @@ class LoadParamInst : public SingleOperandInst {
     return {};
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::LoadParamInstKind;
@@ -3408,10 +3163,6 @@ class LIRGetThisNSInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
     return {};
   }
 
@@ -3444,10 +3195,6 @@ class HBCGetArgumentsLengthInst : public SingleOperandInst {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createExecute();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   static bool classof(const Value *V) {
@@ -3492,10 +3239,6 @@ class HBCGetArgumentsPropByValInst : public Instruction {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createExecute();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   static bool classof(const Value *V) {
@@ -3578,10 +3321,6 @@ class HBCReifyArgumentsInst : public SingleOperandInst {
     return SideEffect{}.setReadStack().setWriteStack().setIdempotent();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return WordBitSet<>{}.set(0);
-  }
-
   static bool classof(const Value *V) {
     return HERMES_IR_KIND_IN_CLASS(V->getKind(), HBCReifyArgumentsInst);
   }
@@ -3654,10 +3393,6 @@ class CreateThisInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
     return {};
   }
 
@@ -3734,10 +3469,6 @@ class GetConstructedObjectInst : public Instruction {
     return SideEffect{}.setIdempotent();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::GetConstructedObjectInstKind;
@@ -3797,10 +3528,6 @@ class HBCSpillMovInst : public SingleOperandInst {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
     return {};
   }
 
@@ -3881,10 +3608,6 @@ class CompareBranchInst : public TerminatorInst {
         getLeftHandSide()->getType(),
         getRightHandSide()->getType(),
         toBinaryOperatorValueKind());
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   static bool classof(const Value *V) {
@@ -3988,10 +3711,6 @@ class StartGeneratorInst : public Instruction {
     return SideEffect::createUnknown().setFirstInBlock();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::StartGeneratorInstKind;
@@ -4020,10 +3739,6 @@ class ResumeGeneratorInst : public Instruction {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createUnknown().setWriteStack();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return WordBitSet<>{}.set(IsReturnIdx);
   }
 
   AllocStackInst *getIsReturn() {
@@ -4060,10 +3775,6 @@ class IteratorBeginInst : public Instruction {
     return SideEffect::createExecute().setReadStack().setWriteStack();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return WordBitSet<>{}.set(SourceOrNextIdx);
-  }
-
   Value *getSourceOrNext() const {
     return getOperand(SourceOrNextIdx);
   }
@@ -4097,10 +3808,6 @@ class IteratorNextInst : public Instruction {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createExecute().setReadStack().setWriteStack();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return WordBitSet<>{}.set(IteratorIdx);
   }
 
   Value *getIterator() const {
@@ -4143,10 +3850,6 @@ class IteratorCloseInst : public Instruction {
     return SideEffect::createExecute();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   Value *getIterator() const {
     return getOperand(IteratorIdx);
   }
@@ -4179,10 +3882,6 @@ class UnreachableInst : public Instruction {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createExecute();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   static bool classof(const Value *V) {
@@ -4221,9 +3920,6 @@ class PrLoadInst : public Instruction {
   }
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setReadHeap().setIdempotent();
-  }
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   Type getCheckedType() const {
@@ -4273,9 +3969,6 @@ class PrStoreInst : public Instruction {
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setWriteHeap().setIdempotent();
   }
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
 
   Value *getStoredValue() const {
     return getOperand(StoredValueIdx);
@@ -4324,9 +4017,6 @@ class FastArrayLoadInst : public Instruction {
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setReadHeap().setThrow();
   }
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
 
   Type getCheckedType() const {
     return checkedType_;
@@ -4364,9 +4054,6 @@ class FastArrayStoreInst : public Instruction {
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setWriteHeap().setThrow();
   }
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
 
   Value *getStoredValue() const {
     return getOperand(StoredValueIdx);
@@ -4402,9 +4089,6 @@ class FastArrayPushInst : public Instruction {
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setWriteHeap().setThrow();
   }
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
 
   Value *getArray() const {
     return getOperand(ArrayIdx);
@@ -4436,9 +4120,6 @@ class FastArrayAppendInst : public Instruction {
   }
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setReadHeap().setWriteHeap().setThrow();
-  }
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   Value *getArray() const {
@@ -4474,9 +4155,6 @@ class FastArrayLengthInst : public Instruction {
   }
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setReadHeap();
-  }
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   Value *getArray() const {
@@ -4517,10 +4195,6 @@ class LoadParentInst : public Instruction {
     return SideEffect{}.setReadHeap().setIdempotent();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::LoadParentInstKind;
   }
@@ -4556,10 +4230,6 @@ class StoreParentInst : public Instruction {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setWriteHeap().setIdempotent();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   static bool classof(const Value *V) {
@@ -4602,10 +4272,6 @@ class UnionNarrowTrustedInst : public SingleOperandInst {
     return SideEffect{}.setIdempotent();
   }
 
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
-
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::UnionNarrowTrustedInstKind;
   }
@@ -4639,10 +4305,6 @@ class LIRDeadValueInst : public Instruction {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setIdempotent();
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
   }
 
   static bool classof(const Value *V) {
