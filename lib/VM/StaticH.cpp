@@ -1802,12 +1802,16 @@ fastarrayBoundsCheck(SHRuntime *shr, uint32_t length, double index) {
   if (LLVM_LIKELY(intIndex < length && intIndex == index))
     return intIndex;
 
+  _sh_throw_array_oob(shr);
+}
+
+extern "C" void _sh_throw_array_oob(SHRuntime *shr) {
   (void)getRuntime(shr).raiseRangeError("array load index out of range");
   _sh_throw_current(shr);
 }
 
 extern "C" SHLegacyValue
-_sh_fastarray_load(SHRuntime *shr, SHLegacyValue *array, double index) {
+_sh_fastarray_load_impl(SHRuntime *shr, SHLegacyValue *array, double index) {
   Runtime &runtime = getRuntime(shr);
   auto arrayHandle = Handle<FastArray>::vmcast(toPHV(array));
 
