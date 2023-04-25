@@ -690,14 +690,17 @@ class JSLexer {
           commentStorageSize_(lexer->getStoredComments().size()),
           tokenStorageSize_(lexer_->getStoredTokens().size()) {
       assert(
-          (isPunctuatorDbg(kind_) || kind_ == TokenKind::identifier) &&
-          "SavePoint can only be used for punctuators");
+          (isPunctuatorDbg(kind_) || kind_ == TokenKind::identifier ||
+           kind_ == TokenKind::rw_extends) &&
+          "SavePoint can only be used for punctuators, identifier or `extends` keyword");
     }
 
     /// Restore the state of the lexer to the originally saved state.
     void restore() {
       if (kind_ == TokenKind::identifier) {
         lexer_->unsafeSetIdentifier(ident_, loc_, range_);
+      } else if (kind_ == TokenKind::rw_extends) {
+        lexer_->unsafeSetReservedWord(kind_, loc_, range_);
       } else {
         lexer_->unsafeSetPunctuator(kind_, loc_, range_);
       }
@@ -940,6 +943,15 @@ class JSLexer {
   /// Should only be used for save point use-cases.
   void unsafeSetIdentifier(UniqueString *ident, SMLoc loc, SMRange range) {
     token_.setIdentifier(ident);
+    token_.setRange(range);
+    seek(loc);
+  }
+
+  /// Set the current token kind to \p kind without any checks and seek to
+  /// \p loc.
+  /// Should only be used for save point use-cases.
+  void unsafeSetReservedWord(TokenKind kind, SMLoc loc, SMRange range) {
+    token_.setResWord(kind, resWordIdent(kind));
     token_.setRange(range);
     seek(loc);
   }
