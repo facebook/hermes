@@ -43,10 +43,6 @@ bool isDirectCallee(Instruction *C, BaseCallInst *CI);
 /// manipulate the closure, these instructions cannot leak the closure.
 bool isConstructionSetup(Value *V, Value *closure);
 
-/// Collect the call sites for function \p F in \p callsites.
-/// \returns True if all call sites are known and \p callsites is valid.
-bool getCallSites(Function *F, llvh::DenseSet<BaseCallInst *> &callsites);
-
 /// \return a list of known callsites of \p F based on its users.
 /// It is possible that \p F has additional unknown callsites, call
 /// \c F->allCallsitesKnown() to check that.

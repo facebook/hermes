@@ -60,10 +60,10 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
 
   IRBuilder builder(F);
 
-  llvh::DenseSet<BaseCallInst *> callsites;
-  if (!getCallSites(F, callsites))
+  if (!F->allCallsitesKnown())
     return false;
 
+  auto callsites = getKnownCallsites(F);
   LLVM_DEBUG(dbgs() << "-- Has " << callsites.size() << " call sites\n");
 
   unsigned numFormalParam = F->getJSDynamicParams().size();

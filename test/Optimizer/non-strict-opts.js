@@ -38,6 +38,7 @@ function main()  {
 // CHECK:function foo(p1: any): string [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BinaryAddInst (:string) "value": string, 2: number
-// CHECK-NEXT:  %1 = ReturnInst %0: string
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %p1: any
+// CHECK-NEXT:  %1 = BinaryAddInst (:string) "value": string, %0: any
+// CHECK-NEXT:  %2 = ReturnInst %1: string
 // CHECK-NEXT:function_end
