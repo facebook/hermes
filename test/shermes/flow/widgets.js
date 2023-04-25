@@ -162,17 +162,7 @@ function arrayPrototypeConcat_VirtualEntity(
   arr1: VirtualEntity[],
   arr2: VirtualEntity[],
 ): VirtualEntity[] {
-  var i: number = 0;
-  var length: number = arr1.length;
-  var result: VirtualEntity[] = [];
-  for (i = 0; i < length; ++i) {
-    result.push(arr1[i]);
-  }
-  length = arr2.length;
-  for (i = 0; i < length; ++i) {
-    result.push(arr2[i]);
-  }
-  return result;
+  return [...arr1, ...arr2];
 }
 
 // ==> widget.js <==
