@@ -327,6 +327,9 @@ export const HERMES_AST_VISITOR_KEYS = {
     indexType: 'Node',
   },
   InferredPredicate: {},
+  InferTypeAnnotation: {
+    typeParameter: 'Node',
+  },
   InterfaceDeclaration: {
     id: 'Node',
     typeParameters: 'Node',

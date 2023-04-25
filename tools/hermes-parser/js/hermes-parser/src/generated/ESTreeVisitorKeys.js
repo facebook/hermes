@@ -159,6 +159,7 @@ module.exports = {
   ImportSpecifier: ['imported', 'local'],
   IndexedAccessType: ['objectType', 'indexType'],
   InferredPredicate: [],
+  InferTypeAnnotation: ['typeParameter'],
   InterfaceDeclaration: ['id', 'typeParameters', 'extends', 'body'],
   InterfaceExtends: ['id', 'typeParameters'],
   InterfaceTypeAnnotation: ['extends', 'body'],

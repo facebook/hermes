@@ -1025,6 +1025,13 @@ function deserializeArrayTypeAnnotation() {
     elementType: this.deserializeNode(),
   };
 }
+function deserializeInferTypeAnnotation() {
+  return {
+    type: 'InferTypeAnnotation',
+    loc: this.addEmptyLoc(),
+    typeParameter: this.deserializeNode(),
+  };
+}
 function deserializeUnionTypeAnnotation() {
   return {
     type: 'UnionTypeAnnotation',
@@ -1934,6 +1941,7 @@ module.exports = [
   deserializeTupleTypeSpreadElement,
   deserializeTupleTypeLabeledElement,
   deserializeArrayTypeAnnotation,
+  deserializeInferTypeAnnotation,
   deserializeUnionTypeAnnotation,
   deserializeIntersectionTypeAnnotation,
   deserializeGenericTypeAnnotation,

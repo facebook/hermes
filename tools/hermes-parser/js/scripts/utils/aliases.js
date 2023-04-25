@@ -214,6 +214,7 @@ export default ({
   FunctionTypeParam: ['Flow'],
   GenericTypeAnnotation: ['Flow', 'FlowType'],
   InferredPredicate: ['Flow', 'FlowPredicate'],
+  InferTypeAnnotation: ['Flow', 'FlowType', 'FlowBaseAnnotation'],
   InterfaceExtends: ['Flow'],
   InterfaceDeclaration: ['Flow', 'FlowDeclaration', 'Statement', 'Declaration'],
   InterfaceTypeAnnotation: ['Flow', 'FlowType'],

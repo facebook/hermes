@@ -93,6 +93,7 @@ import type {
   ImportSpecifier as ImportSpecifierType,
   IndexedAccessType as IndexedAccessTypeType,
   InferredPredicate as InferredPredicateType,
+  InferTypeAnnotation as InferTypeAnnotationType,
   InterfaceDeclaration as InterfaceDeclarationType,
   InterfaceExtends as InterfaceExtendsType,
   InterfaceTypeAnnotation as InterfaceTypeAnnotationType,
@@ -599,6 +600,10 @@ export type IndexedAccessTypeProps = {
 };
 
 export type InferredPredicateProps = {};
+
+export type InferTypeAnnotationProps = {
+  +typeParameter: MaybeDetachedNode<InferTypeAnnotationType['typeParameter']>,
+};
 
 export type InterfaceDeclarationProps = {
   +id: MaybeDetachedNode<InterfaceDeclarationType['id']>,
@@ -1971,6 +1976,18 @@ export function InferredPredicate(
   return detachedProps<InferredPredicateType>(props.parent, {
     type: 'InferredPredicate',
   });
+}
+
+export function InferTypeAnnotation(props: {
+  ...$ReadOnly<InferTypeAnnotationProps>,
+  +parent?: ESNode,
+}): DetachedNode<InferTypeAnnotationType> {
+  const node = detachedProps<InferTypeAnnotationType>(props.parent, {
+    type: 'InferTypeAnnotation',
+    typeParameter: asDetachedNodeForCodeGen(props.typeParameter),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
 }
 
 export function InterfaceDeclaration(props: {

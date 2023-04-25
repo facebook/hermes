@@ -349,6 +349,10 @@ export function isInferredPredicate(node: ESNode | Token): boolean %checks {
   return node.type === 'InferredPredicate';
 }
 
+export function isInferTypeAnnotation(node: ESNode | Token): boolean %checks {
+  return node.type === 'InferTypeAnnotation';
+}
+
 export function isInterfaceDeclaration(node: ESNode | Token): boolean %checks {
   return node.type === 'InterfaceDeclaration';
 }
