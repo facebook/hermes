@@ -1173,13 +1173,22 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAnnotationFlow(
 
 Optional<ESTree::Node *> JSParserImpl::parseConditionalTypeAnnotationFlow() {
   SMLoc start = tok_->getStartLoc();
+  llvh::SaveAndRestore<bool> saveParam(allowConditionalType_, true);
   auto optCheck = parseUnionTypeAnnotationFlow();
   if (!optCheck)
     return None;
   if (!checkAndEat(TokenKind::rw_extends, JSLexer::GrammarContext::Type)) {
     return optCheck;
   }
-  auto optExtends = parseUnionTypeAnnotationFlow();
+  Optional<ESTree::Node *> optExtends;
+  {
+    // We need to enter the state of parsing the extends_type disallowing
+    // conditional types not wrapped by parantheses, so that the following
+    // sequence `A extends infer B extends C ? D : E` will be interpreted
+    // as `A extends (infer B extends C) ? D : E`.
+    llvh::SaveAndRestore<bool> saveParam(allowConditionalType_, false);
+    optExtends = parseUnionTypeAnnotationFlow();
+  }
   if (!optExtends)
     return None;
 
@@ -1479,6 +1488,53 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
             *optBody,
             new (context_) ESTree::InterfaceTypeAnnotationNode(
                 std::move(extends), *optBody));
+      }
+      if (tok_->getResWordOrIdentifier() == inferIdent_) {
+        advance(JSLexer::GrammarContext::Type);
+
+        if (!need(TokenKind::identifier, "in type parameter", nullptr, {}))
+          return None;
+        UniqueString *name = tok_->getIdentifier();
+        advance(JSLexer::GrammarContext::Type);
+
+        ESTree::Node *bound = nullptr;
+        if (check(TokenKind::rw_extends)) {
+          // When we see an extends keyword,
+          // we enter the parsing logic that might need backtracking.
+          //
+          // For `infer A extends B ...`, is the `extends B` part of an infer
+          // type, or part of a larger conditional type like `infer A extends B
+          // ? C : D`?
+          //
+          // We don't know, so we assume it's part of the infer type for now,
+          // and later backtrack if the assumption is wrong.
+          JSLexer::SavePoint savePoint{&lexer_};
+          advance(JSLexer::GrammarContext::Type);
+          auto parsedBound = parseUnionTypeAnnotationFlow();
+          if ((allowConditionalType_ && check(TokenKind::question)) ||
+              !parsedBound) {
+            // If we look ahead and see `?`, it might be the case that we are
+            // parsing a conditional type like `infer A extends B ? C : D`. If
+            // the current context allow parsing conditional type, then we must
+            // backtrack so that only `infer A` is treated as part of the infer
+            // type.
+            //
+            // Of course, if we fail to parse the type after extends, we also
+            // need to backtrack.
+            savePoint.restore();
+          } else {
+            bound = *parsedBound;
+          }
+        }
+
+        return setLocation(
+            start,
+            getPrevTokenEndLoc(),
+            new (context_) ESTree::InferTypeAnnotationNode(setLocation(
+                start,
+                getPrevTokenEndLoc(),
+                new (context_)
+                    ESTree::TypeParameterNode(name, bound, nullptr, nullptr))));
       }
 
       {

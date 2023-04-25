@@ -344,6 +344,289 @@ type T = number extends (string extends number ? string : number) ? string : num
 // CHECK-NEXT:           "type": "NumberTypeAnnotation"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+type ArrayElement<T> = T extends Array<infer E> ? E : empty;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "ArrayElement"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": {
+// CHECK-NEXT:         "type": "TypeParameterDeclaration",
+// CHECK-NEXT:         "params": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "TypeParameter",
+// CHECK-NEXT:             "name": "T",
+// CHECK-NEXT:             "bound": null,
+// CHECK-NEXT:             "variance": null,
+// CHECK-NEXT:             "default": null
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ]
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "ConditionalTypeAnnotation",
+// CHECK-NEXT:         "checkType": {
+// CHECK-NEXT:           "type": "GenericTypeAnnotation",
+// CHECK-NEXT:           "id": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "T"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "typeParameters": null
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "extendsType": {
+// CHECK-NEXT:           "type": "GenericTypeAnnotation",
+// CHECK-NEXT:           "id": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "Array"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "typeParameters": {
+// CHECK-NEXT:             "type": "TypeParameterInstantiation",
+// CHECK-NEXT:             "params": [
+// CHECK-NEXT:               {
+// CHECK-NEXT:                 "type": "InferTypeAnnotation",
+// CHECK-NEXT:                 "typeParameter": {
+// CHECK-NEXT:                   "type": "TypeParameter",
+// CHECK-NEXT:                   "name": "E",
+// CHECK-NEXT:                   "bound": null,
+// CHECK-NEXT:                   "variance": null,
+// CHECK-NEXT:                   "default": null
+// CHECK-NEXT:                 }
+// CHECK-NEXT:               }
+// CHECK-NEXT:             ]
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "trueType": {
+// CHECK-NEXT:           "type": "GenericTypeAnnotation",
+// CHECK-NEXT:           "id": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "E"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "typeParameters": null
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "falseType": {
+// CHECK-NEXT:           "type": "EmptyTypeAnnotation"
+// CHECK-NEXT:         }
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+let x : number extends infer T extends number ? string : number;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "VariableDeclaration",
+// CHECK-NEXT:       "kind": "let",
+// CHECK-NEXT:       "declarations": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "type": "VariableDeclarator",
+// CHECK-NEXT:           "init": null,
+// CHECK-NEXT:           "id": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "x",
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "ConditionalTypeAnnotation",
+// CHECK-NEXT:                 "checkType": {
+// CHECK-NEXT:                   "type": "NumberTypeAnnotation"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "extendsType": {
+// CHECK-NEXT:                   "type": "InferTypeAnnotation",
+// CHECK-NEXT:                   "typeParameter": {
+// CHECK-NEXT:                     "type": "TypeParameter",
+// CHECK-NEXT:                     "name": "T",
+// CHECK-NEXT:                     "bound": {
+// CHECK-NEXT:                       "type": "NumberTypeAnnotation"
+// CHECK-NEXT:                     },
+// CHECK-NEXT:                     "variance": null,
+// CHECK-NEXT:                     "default": null
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "trueType": {
+// CHECK-NEXT:                   "type": "StringTypeAnnotation"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "falseType": {
+// CHECK-NEXT:                   "type": "NumberTypeAnnotation"
+// CHECK-NEXT:                 }
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ]
+// CHECK-NEXT:     },
+
+let x : infer T extends number ? string : number;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "VariableDeclaration",
+// CHECK-NEXT:       "kind": "let",
+// CHECK-NEXT:       "declarations": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "type": "VariableDeclarator",
+// CHECK-NEXT:           "init": null,
+// CHECK-NEXT:           "id": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "x",
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "ConditionalTypeAnnotation",
+// CHECK-NEXT:                 "checkType": {
+// CHECK-NEXT:                   "type": "InferTypeAnnotation",
+// CHECK-NEXT:                   "typeParameter": {
+// CHECK-NEXT:                     "type": "TypeParameter",
+// CHECK-NEXT:                     "name": "T",
+// CHECK-NEXT:                     "bound": null,
+// CHECK-NEXT:                     "variance": null,
+// CHECK-NEXT:                     "default": null
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "extendsType": {
+// CHECK-NEXT:                   "type": "NumberTypeAnnotation"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "trueType": {
+// CHECK-NEXT:                   "type": "StringTypeAnnotation"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "falseType": {
+// CHECK-NEXT:                   "type": "NumberTypeAnnotation"
+// CHECK-NEXT:                 }
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ]
+// CHECK-NEXT:     },
+
+let x : number extends (infer T extends number ? string : number) ? string : number;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "VariableDeclaration",
+// CHECK-NEXT:       "kind": "let",
+// CHECK-NEXT:       "declarations": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "type": "VariableDeclarator",
+// CHECK-NEXT:           "init": null,
+// CHECK-NEXT:           "id": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "x",
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "ConditionalTypeAnnotation",
+// CHECK-NEXT:                 "checkType": {
+// CHECK-NEXT:                   "type": "NumberTypeAnnotation"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "extendsType": {
+// CHECK-NEXT:                   "type": "ConditionalTypeAnnotation",
+// CHECK-NEXT:                   "checkType": {
+// CHECK-NEXT:                     "type": "InferTypeAnnotation",
+// CHECK-NEXT:                     "typeParameter": {
+// CHECK-NEXT:                       "type": "TypeParameter",
+// CHECK-NEXT:                       "name": "T",
+// CHECK-NEXT:                       "bound": null,
+// CHECK-NEXT:                       "variance": null,
+// CHECK-NEXT:                       "default": null
+// CHECK-NEXT:                     }
+// CHECK-NEXT:                   },
+// CHECK-NEXT:                   "extendsType": {
+// CHECK-NEXT:                     "type": "NumberTypeAnnotation"
+// CHECK-NEXT:                   },
+// CHECK-NEXT:                   "trueType": {
+// CHECK-NEXT:                     "type": "StringTypeAnnotation"
+// CHECK-NEXT:                   },
+// CHECK-NEXT:                   "falseType": {
+// CHECK-NEXT:                     "type": "NumberTypeAnnotation"
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "trueType": {
+// CHECK-NEXT:                   "type": "StringTypeAnnotation"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "falseType": {
+// CHECK-NEXT:                   "type": "NumberTypeAnnotation"
+// CHECK-NEXT:                 }
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ]
+// CHECK-NEXT:     },
+
+let x: infer A extends (infer B extends infer C ? infer D : infer E) ? string : number;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "VariableDeclaration",
+// CHECK-NEXT:       "kind": "let",
+// CHECK-NEXT:       "declarations": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "type": "VariableDeclarator",
+// CHECK-NEXT:           "init": null,
+// CHECK-NEXT:           "id": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "x",
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "ConditionalTypeAnnotation",
+// CHECK-NEXT:                 "checkType": {
+// CHECK-NEXT:                   "type": "InferTypeAnnotation",
+// CHECK-NEXT:                   "typeParameter": {
+// CHECK-NEXT:                     "type": "TypeParameter",
+// CHECK-NEXT:                     "name": "A",
+// CHECK-NEXT:                     "bound": null,
+// CHECK-NEXT:                     "variance": null,
+// CHECK-NEXT:                     "default": null
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "extendsType": {
+// CHECK-NEXT:                   "type": "ConditionalTypeAnnotation",
+// CHECK-NEXT:                   "checkType": {
+// CHECK-NEXT:                     "type": "InferTypeAnnotation",
+// CHECK-NEXT:                     "typeParameter": {
+// CHECK-NEXT:                       "type": "TypeParameter",
+// CHECK-NEXT:                       "name": "B",
+// CHECK-NEXT:                       "bound": null,
+// CHECK-NEXT:                       "variance": null,
+// CHECK-NEXT:                       "default": null
+// CHECK-NEXT:                     }
+// CHECK-NEXT:                   },
+// CHECK-NEXT:                   "extendsType": {
+// CHECK-NEXT:                     "type": "InferTypeAnnotation",
+// CHECK-NEXT:                     "typeParameter": {
+// CHECK-NEXT:                       "type": "TypeParameter",
+// CHECK-NEXT:                       "name": "C",
+// CHECK-NEXT:                       "bound": null,
+// CHECK-NEXT:                       "variance": null,
+// CHECK-NEXT:                       "default": null
+// CHECK-NEXT:                     }
+// CHECK-NEXT:                   },
+// CHECK-NEXT:                   "trueType": {
+// CHECK-NEXT:                     "type": "InferTypeAnnotation",
+// CHECK-NEXT:                     "typeParameter": {
+// CHECK-NEXT:                       "type": "TypeParameter",
+// CHECK-NEXT:                       "name": "D",
+// CHECK-NEXT:                       "bound": null,
+// CHECK-NEXT:                       "variance": null,
+// CHECK-NEXT:                       "default": null
+// CHECK-NEXT:                     }
+// CHECK-NEXT:                   },
+// CHECK-NEXT:                   "falseType": {
+// CHECK-NEXT:                     "type": "InferTypeAnnotation",
+// CHECK-NEXT:                     "typeParameter": {
+// CHECK-NEXT:                       "type": "TypeParameter",
+// CHECK-NEXT:                       "name": "E",
+// CHECK-NEXT:                       "bound": null,
+// CHECK-NEXT:                       "variance": null,
+// CHECK-NEXT:                       "default": null
+// CHECK-NEXT:                     }
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "trueType": {
+// CHECK-NEXT:                   "type": "StringTypeAnnotation"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "falseType": {
+// CHECK-NEXT:                   "type": "NumberTypeAnnotation"
+// CHECK-NEXT:                 }
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ]
 // CHECK-NEXT: }

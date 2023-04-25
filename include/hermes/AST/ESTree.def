@@ -758,6 +758,9 @@ ESTREE_NODE_1_ARGS(
     ArrayTypeAnnotation, Base,
     NodePtr, elementType, false)
 ESTREE_NODE_1_ARGS(
+    InferTypeAnnotation, Base,
+    NodePtr, typeParameter, false)
+ESTREE_NODE_1_ARGS(
     UnionTypeAnnotation, Base,
     NodeList, types, false)
 ESTREE_NODE_1_ARGS(
