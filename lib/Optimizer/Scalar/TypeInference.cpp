@@ -13,7 +13,7 @@
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/Instrs.h"
-#include "hermes/Optimizer/Scalar/SimpleCallGraphProvider.h"
+#include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
 #include "llvh/ADT/DenseMap.h"
@@ -26,10 +26,6 @@ using llvh::dbgs;
 using llvh::SmallPtrSetImpl;
 
 STATISTIC(NumTI, "Number of instructions type inferred");
-STATISTIC(
-    UniquePropertyValue,
-    "Number of instances of loads where there is a "
-    "unique store(own) to that value");
 
 namespace {
 
@@ -328,7 +324,7 @@ static bool inferFunctionReturnType(Function *F) {
 /// Propagate type information from call sites of F to formals of F.
 /// This assumes that all call sites of F are known.
 static void propagateArgs(
-    llvh::DenseSet<BaseCallInst *> &callSites,
+    llvh::ArrayRef<BaseCallInst *> callSites,
     Function *F) {
   // Hermes does not support using 'arguments' to modify the arguments to a
   // function in loose mode. Therefore, we can safely propagate the parameter
@@ -372,53 +368,11 @@ static void propagateArgs(
   }
 }
 
-/// Propagate the return type from potential callees for a given ConstructInst
-/// or CallInst \p inst, identified by \p cgp.
-static Type inferBaseCallInst(CallGraphProvider *cgp, BaseCallInst *CI) {
-  if (cgp->hasUnknownCallees(CI)) {
-    LLVM_DEBUG(
-        dbgs() << "Unknown callees for : " << CI->getName().str() << "\n");
-    return Type::createAnyType();
-  }
-
-  llvh::DenseSet<Function *> &funcs = cgp->getKnownCallees(CI);
-  LLVM_DEBUG(
-      dbgs() << "Found " << funcs.size()
-             << " callees for : " << CI->getName().str() << "\n");
-
-  bool first = true;
-  Type retTy = Type::createAnyType();
-
-  for (auto *F : funcs) {
-    if (first && !F->getType().isNoType()) {
-      retTy = F->getType();
-      first = false;
-    } else {
-      retTy = Type::unionTy(retTy, F->getType());
-    }
-  }
-
-  if (!first) {
-    LLVM_DEBUG(dbgs() << CI->getName().str() << " changed to ");
-    LLVM_DEBUG(retTy.print(dbgs()));
-    LLVM_DEBUG(dbgs() << "\n");
-    return retTy;
-  }
-
+/// Propagate the return type from the target of a given BaseCallInst \p CI.
+static Type inferBaseCallInst(BaseCallInst *CI) {
+  if (auto *F = llvh::dyn_cast<Function>(CI->getTarget()))
+    return F->getType();
   return Type::createAnyType();
-}
-
-/// Does a given prop belong in the owned set?
-static bool isOwnedProperty(AllocObjectInst *I, Value *prop) {
-  for (auto *J : I->getUsers()) {
-    if (auto *SOPI = llvh::dyn_cast<BaseStoreOwnPropertyInst>(J)) {
-      if (SOPI->getObject() == I) {
-        if (prop == SOPI->getProperty())
-          return true;
-      }
-    }
-  }
-  return false;
 }
 
 /// Actual implementation of type inference pass.
@@ -440,10 +394,6 @@ static bool isOwnedProperty(AllocObjectInst *I, Value *prop) {
 /// Importantly, the Phi instruction is handled separately from the usual
 /// dispatch mechanism.
 class TypeInferenceImpl {
-  /// Call graph provider to use. There could be different implementations
-  /// of the call graph provider.
-  CallGraphProvider *cgp_;
-
   /// Map from various values to their types prior to the pass.
   /// Store types for Instruction, Parameter, Variable, Function.
   llvh::DenseMap<Value *, Type> prePassTypes_{};
@@ -694,80 +644,6 @@ class TypeInferenceImpl {
     return Type::createBoolean();
   }
   Type inferLoadPropertyInst(LoadPropertyInst *inst) {
-    bool first = true;
-    Type retTy = Type::createAnyType();
-    bool unique = true;
-
-    // Bail out if there are unknown receivers.
-    if (cgp_->hasUnknownReceivers(inst)) {
-      return Type::createAnyType();
-    }
-
-    // Go over each known receiver R (can be empty)
-    for (auto *R : cgp_->getKnownReceivers(inst)) {
-      assert(llvh::isa<AllocObjectInst>(R));
-      // Note: currently Array analysis is purposely disabled.
-
-      // Bail out if there are unknown stores.
-      if (cgp_->hasUnknownStores(R)) {
-        return Type::createAnyType();
-      }
-
-      Value *prop = inst->getProperty();
-
-      // If the property being requested is NOT an owned prop, Bail out
-      if (llvh::isa<AllocObjectInst>(R)) {
-        if (!isOwnedProperty(cast<AllocObjectInst>(R), prop)) {
-          return Type::createAnyType();
-        }
-      }
-
-      // Go over each store of R (can be empty)
-      for (auto *S : cgp_->getKnownStores(R)) {
-        assert(
-            llvh::isa<BaseStoreOwnPropertyInst>(S) ||
-            llvh::isa<BaseStorePropertyInst>(S));
-        Value *storeVal = nullptr;
-
-        if (llvh::isa<AllocObjectInst>(R)) {
-          // If the property in the store is what this inst wants, skip the
-          // store.
-          if (auto *SS = llvh::dyn_cast<BaseStoreOwnPropertyInst>(S)) {
-            storeVal = SS->getStoredValue();
-            if (prop != SS->getProperty())
-              continue;
-          }
-          if (auto *SS = llvh::dyn_cast<StorePropertyInst>(S)) {
-            storeVal = SS->getStoredValue();
-            if (prop != SS->getProperty())
-              continue;
-          }
-        }
-
-        if (llvh::isa<AllocArrayInst>(R)) {
-          if (auto *SS = llvh::dyn_cast<StorePropertyInst>(S)) {
-            storeVal =
-                SS->getStoredValue(); // for arrays, no need to match prop name
-          }
-        }
-
-        assert(storeVal != nullptr);
-
-        if (first) {
-          retTy = storeVal->getType();
-          first = false;
-        } else {
-          retTy = Type::unionTy(retTy, storeVal->getType());
-          unique = false;
-        }
-      }
-    }
-    if (!first && unique) {
-      UniquePropertyValue++;
-    }
-    if (!first) {
-      return retTy;
-    }
     return Type::createAnyType();
   }
   Type inferTryLoadGlobalPropertyInst(TryLoadGlobalPropertyInst *inst) {
@@ -913,7 +789,7 @@ class TypeInferenceImpl {
   }
 
   Type inferCallInst(CallInst *inst) {
-    return inferBaseCallInst(cgp_, inst);
+    return inferBaseCallInst(inst);
   }
   Type inferCallBuiltinInst(CallBuiltinInst *inst) {
     switch (inst->getBuiltinIndex()) {
@@ -943,7 +819,7 @@ class TypeInferenceImpl {
     }
   }
   Type inferConstructInst(ConstructInst *inst) {
-    return inferBaseCallInst(cgp_, inst);
+    return inferBaseCallInst(inst);
   }
   Type inferHBCCallNInst(HBCCallNInst *inst) {
     // unimplemented
@@ -1043,7 +919,7 @@ class TypeInferenceImpl {
   /// If all call sites of this Function are known, propagate
   /// information from actuals to formals.
   void inferParams(Function *F) {
-    if (cgp_->hasUnknownCallsites(F)) {
+    if (!F->allCallsitesKnown()) {
       LLVM_DEBUG(
           dbgs() << F->getInternalName().str() << " has unknown call sites.\n");
       // If there are unknown call sites, we can't infer anything about the
@@ -1053,7 +929,7 @@ class TypeInferenceImpl {
       }
       return;
     }
-    llvh::DenseSet<BaseCallInst *> &callsites = cgp_->getKnownCallsites(F);
+    auto callsites = getKnownCallsites(F);
     LLVM_DEBUG(
         dbgs() << F->getInternalName().str() << " has " << callsites.size()
                << " call sites.\n");
@@ -1207,8 +1083,6 @@ bool TypeInferenceImpl::runOnModule(Module *M) {
   LLVM_DEBUG(dbgs() << "\nStart Type Inference on Module\n");
 
   for (auto &F : *M) {
-    SimpleCallGraphProvider scgp(&F);
-    cgp_ = &scgp;
     changed |= runOnFunction(&F);
   }
   return changed;

@@ -7,9 +7,7 @@
 
 // RUN: %hermesc -target=HBC -dump-ir -O -fno-inline -non-strict %s | %FileCheckOrRegen --match-full-lines %s
 //
-// Ensure that Hermes-specific optimizations (parameter type inference) are performed in non-strict
-// mode. We need to disable inlining because it inlines foo() completely and we can't see the
-// inference.
+// Test the effect of optimizations functions in non-strict mode, since their callsites cannot be analyzed.
 
 function main()  {
   function foo(p1) {
@@ -37,7 +35,7 @@ function main()  {
 // CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(p1: number): string [allCallsitesKnownInStrictMode]
+// CHECK:function foo(p1: any): string [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = BinaryAddInst (:string) "value": string, 2: number
