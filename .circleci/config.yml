@@ -49,7 +49,9 @@ jobs:
 
   test-linux:
     docker:
-      - image: debian:bookworm
+      - image: ubuntu:jammy
+    environment:
+      - DEBIAN_FRONTEND: noninteractive
     working_directory: /root
     steps:
       - run:
@@ -57,7 +59,7 @@ jobs:
           command: |
             apt update
             apt install -y git openssh-client cmake build-essential \
-                libicu-dev zip python3
+                libicu-dev zip python3 tzdata
       - checkout:
           path: hermes
       - run:
