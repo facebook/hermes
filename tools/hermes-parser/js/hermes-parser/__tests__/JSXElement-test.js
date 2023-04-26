@@ -16,7 +16,7 @@ import {
   expectBabelAlignment,
   expectEspreeAlignment,
 } from '../__test_utils__/alignment-utils';
-import {parse} from '../__test_utils__/parse';
+import {parseForSnapshot} from '../__test_utils__/parse';
 
 describe('JSXElement', () => {
   const testCase: AlignmentCase = {
@@ -31,77 +31,69 @@ describe('JSXElement', () => {
     },
   };
   test('ESTree', () => {
-    expect(parse(testCase.code)).toMatchObject({
-      type: 'Program',
-      body: [
-        {
-          type: 'ExpressionStatement',
-          loc: {
-            source: null,
-            start: {line: 1, column: 0},
-            end: {line: 1, column: 21},
-          },
-          range: [0, 21],
-          expression: {
-            type: 'JSXElement',
-            loc: {
-              source: null,
-              start: {line: 1, column: 0},
-              end: {line: 1, column: 21},
-            },
-            range: [0, 21],
-            openingElement: {
-              type: 'JSXOpeningElement',
-              loc: {
-                source: null,
-                start: {line: 1, column: 0},
-                end: {line: 1, column: 21},
-              },
-              range: [0, 21],
-              name: {
-                type: 'JSXIdentifier',
-                loc: {
-                  source: null,
-                  start: {line: 1, column: 1},
-                  end: {line: 1, column: 10},
+    expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
+      {
+        "body": [
+          {
+            "directive": null,
+            "expression": {
+              "children": [],
+              "closingElement": null,
+              "openingElement": {
+                "attributes": [],
+                "name": {
+                  "name": "Component",
+                  "type": "JSXIdentifier",
                 },
-                range: [1, 10],
-                name: 'Component',
-              },
-              attributes: [],
-              selfClosing: true,
-              typeArguments: {
-                type: 'TypeParameterInstantiation',
-                loc: {
-                  source: null,
-                  start: {line: 1, column: 10},
-                  end: {line: 1, column: 18},
-                },
-                range: [10, 18],
-                params: [
-                  {
-                    type: 'StringTypeAnnotation',
-                    loc: {
-                      source: null,
-                      start: {line: 1, column: 11},
-                      end: {line: 1, column: 17},
+                "selfClosing": true,
+                "type": "JSXOpeningElement",
+                "typeArguments": {
+                  "params": [
+                    {
+                      "type": "StringTypeAnnotation",
                     },
-                    range: [11, 17],
-                  },
-                ],
+                  ],
+                  "type": "TypeParameterInstantiation",
+                },
               },
+              "type": "JSXElement",
             },
-            closingElement: null,
-            children: [],
+            "type": "ExpressionStatement",
           },
-          directive: null,
-        },
-      ],
-    });
+        ],
+        "type": "Program",
+      }
+    `);
     expectEspreeAlignment(testCase);
   });
 
   test('Babel', () => {
+    expect(parseForSnapshot(testCase.code, {babel: true}))
+      .toMatchInlineSnapshot(`
+      {
+        "body": [
+          {
+            "directive": null,
+            "expression": {
+              "children": [],
+              "closingElement": null,
+              "openingElement": {
+                "attributes": [],
+                "name": {
+                  "name": "Component",
+                  "type": "JSXIdentifier",
+                },
+                "selfClosing": true,
+                "type": "JSXOpeningElement",
+              },
+              "type": "JSXElement",
+            },
+            "type": "ExpressionStatement",
+          },
+        ],
+        "type": "Program",
+      }
+    `);
     expectBabelAlignment(testCase);
   });
 });
