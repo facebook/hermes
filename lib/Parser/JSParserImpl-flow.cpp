@@ -2239,17 +2239,43 @@ bool JSParserImpl::parsePropertyTypeAnnotationFlow(
           new (context_) ESTree::ObjectTypeInternalSlotNode(
               id, value, optional, isStatic, method)));
     } else {
-      // Indexer
-      auto optIndexer = parseTypeIndexerPropertyFlow(start, variance, isStatic);
-      if (!optIndexer)
+      // Indexer or Mapped Type
+      // We can have
+      // [ Identifier : TypeAnnotation ]
+      //   ^
+      // or
+      // [ TypeAnnotation ]
+      //   ^
+      // or
+      // [ TypeParameter in TypeAnnotation ]
+      //   ^
+      // Because we cannot differentiate without looking ahead for the `in`
+      // or `:`, we call `parseTypeAnnotation`, check for the next token
+      // and then convert the TypeAnnotation to the approprate node.
+      auto optLeft = parseTypeAnnotationFlow();
+      if (!optLeft)
         return false;
+      ESTree::Node *left = *optLeft;
+
+      if (checkAndEat(TokenKind::rw_in, JSLexer::GrammarContext::Type)) {
+        auto optProp = parseTypeMappedTypePropertyFlow(start, left, variance);
+        if (!optProp)
+          return false;
+        properties.push_back(**optProp);
+      } else {
+        auto optIndexer =
+            parseTypeIndexerPropertyFlow(start, left, variance, isStatic);
+        if (!optIndexer)
+          return false;
+        indexers.push_back(**optIndexer);
+      }
+
       if (proto) {
         error(startRange, "invalid 'proto' modifier");
       }
       if (isStatic && allowStaticProperty == AllowStaticProperty::No) {
         error(startRange, "invalid 'static' modifier");
       }
-      indexers.push_back(**optIndexer);
     }
     return true;
   }
@@ -2489,29 +2515,85 @@ Optional<ESTree::Node *> JSParserImpl::parseGetOrSetTypePropertyFlow(
           key, value, method, optional, isStatic, proto, variance, kind));
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseTypeIndexerPropertyFlow(
+Optional<ESTree::Node *> JSParserImpl::parseTypeMappedTypePropertyFlow(
     SMLoc start,
-    ESTree::Node *variance,
-    bool isStatic) {
-  // We can either have
-  // [ Identifier : TypeAnnotation ]
-  //   ^
-  // or
-  // [ TypeAnnotation ]
-  //   ^
-  // Because we cannot differentiate without looking ahead for the `:`,
-  // we call `parseTypeAnnotation`, check if we have the `:`, and then
-  // pull the Identifier out of the GenericTypeAnnotation which should
-  // have been emitted, and run it again.
-  auto optLeft = parseTypeAnnotationFlow();
-  if (!optLeft)
+    ESTree::Node *left,
+    ESTree::Node *variance) {
+  auto idOpt = reparseTypeAnnotationAsIdFlow(left);
+  if (!idOpt)
+    return None;
+  UniqueString *id = *idOpt;
+  ESTree::Node *keyTparam = setLocation(
+      left,
+      left,
+      new (context_) ESTree::TypeParameterNode(id, nullptr, nullptr, nullptr));
+
+  auto optSourceType = parseTypeAnnotationFlow();
+  if (!optSourceType)
     return None;
 
+  if (!eat(
+          TokenKind::r_square,
+          JSLexer::GrammarContext::Type,
+          "in mapped type",
+          "start of mapped type",
+          start))
+    return None;
+
+  UniqueString *optional = nullptr;
+  if (checkAndEat(TokenKind::plus, JSLexer::GrammarContext::Type)) {
+    if (!eat(
+            TokenKind::question,
+            JSLexer::GrammarContext::Type,
+            "in mapped type",
+            "start of mapped type",
+            start))
+      return None;
+
+    optional = mappedTypePlusOptionalIdent_;
+  } else if (checkAndEat(TokenKind::minus, JSLexer::GrammarContext::Type)) {
+    if (!eat(
+            TokenKind::question,
+            JSLexer::GrammarContext::Type,
+            "in mapped type",
+            "start of mapped type",
+            start))
+      return None;
+
+    optional = mappedTypeMinusOptionalIdent_;
+  } else if (checkAndEat(TokenKind::question, JSLexer::GrammarContext::Type)) {
+    optional = mappedTypeOptionalIdent_;
+  }
+
+  if (!eat(
+          TokenKind::colon,
+          JSLexer::GrammarContext::Type,
+          "in mapped type",
+          "start of mapped type",
+          start))
+    return None;
+
+  auto optPropType = parseTypeAnnotationFlow();
+  if (!optPropType)
+    return None;
+
+  return setLocation(
+      start,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::ObjectTypeMappedTypePropertyNode(
+          keyTparam, *optPropType, *optSourceType, variance, optional));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseTypeIndexerPropertyFlow(
+    SMLoc start,
+    ESTree::Node *left,
+    ESTree::Node *variance,
+    bool isStatic) {
   ESTree::IdentifierNode *id = nullptr;
   ESTree::Node *key = nullptr;
 
   if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Type)) {
-    auto optId = reparseTypeAnnotationAsIdentifierFlow(*optLeft);
+    auto optId = reparseTypeAnnotationAsIdentifierFlow(left);
     if (!optId)
       return None;
     id = *optId;
@@ -2520,7 +2602,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeIndexerPropertyFlow(
       return None;
     key = *optKey;
   } else {
-    key = *optLeft;
+    key = left;
   }
 
   if (!eat(
@@ -2915,8 +2997,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePredicateFlow() {
       checksRng, checksRng, new (context_) ESTree::InferredPredicateNode());
 }
 
-Optional<ESTree::IdentifierNode *>
-JSParserImpl::reparseTypeAnnotationAsIdentifierFlow(
+Optional<UniqueString *> JSParserImpl::reparseTypeAnnotationAsIdFlow(
     ESTree::Node *typeAnnotation) {
   UniqueString *id = nullptr;
   if (isa<ESTree::AnyTypeAnnotationNode>(typeAnnotation)) {
@@ -2943,8 +3024,19 @@ JSParserImpl::reparseTypeAnnotationAsIdentifierFlow(
 
   if (!id) {
     error(typeAnnotation->getSourceRange(), "identifier expected");
+    return None;
   }
 
+  return id;
+}
+
+Optional<ESTree::IdentifierNode *>
+JSParserImpl::reparseTypeAnnotationAsIdentifierFlow(
+    ESTree::Node *typeAnnotation) {
+  auto idOpt = reparseTypeAnnotationAsIdFlow(typeAnnotation);
+  if (!idOpt)
+    return None;
+  UniqueString *id = *idOpt;
   return setLocation(
       typeAnnotation,
       typeAnnotation,

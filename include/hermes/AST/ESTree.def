@@ -918,6 +918,13 @@ ESTREE_NODE_5_ARGS(
     NodePtr, value, false,
     NodeBoolean, static, false,
     NodePtr, variance, true)
+ESTREE_NODE_5_ARGS(
+    ObjectTypeMappedTypeProperty, Base,
+    NodePtr, keyTparam, false,
+    NodePtr, propType, false,
+    NodePtr, sourceType, false,
+    NodePtr, variance, true,
+    NodeString, optional, true)
 
 ESTREE_NODE_1_ARGS(
     Variance, Base,

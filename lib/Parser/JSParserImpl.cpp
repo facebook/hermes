@@ -110,6 +110,10 @@ void JSParserImpl::initializeIdentifiers() {
   symbolIdent_ = lexer_.getIdentifier("symbol");
   bigintIdent_ = lexer_.getIdentifier("bigint");
 
+  mappedTypeOptionalIdent_ = lexer_.getIdentifier("Optional");
+  mappedTypePlusOptionalIdent_ = lexer_.getIdentifier("PlusOptional");
+  mappedTypeMinusOptionalIdent_ = lexer_.getIdentifier("MinusOptional");
+
   checksIdent_ = lexer_.getIdentifier("%checks");
 
   // Flow Component syntax

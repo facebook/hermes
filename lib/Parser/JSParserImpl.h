@@ -304,6 +304,10 @@ class JSParserImpl {
   UniqueString *symbolIdent_;
   UniqueString *bigintIdent_;
 
+  UniqueString *mappedTypeOptionalIdent_;
+  UniqueString *mappedTypePlusOptionalIdent_;
+  UniqueString *mappedTypeMinusOptionalIdent_;
+
   UniqueString *checksIdent_;
 
   UniqueString *componentIdent_;
@@ -1172,9 +1176,15 @@ class JSParserImpl {
       ESTree::NodeList &callProperties,
       ESTree::NodeList &internalSlots);
 
-  /// Current token must be immediately after opening '['.
+  /// Current token must be immediately after the left token e.g. '[T'
+  Optional<ESTree::Node *> parseTypeMappedTypePropertyFlow(
+      SMLoc start,
+      ESTree::Node *left,
+      ESTree::Node *variance);
+  /// Current token must be immediately after the left token e.g. '[T'
   Optional<ESTree::Node *> parseTypeIndexerPropertyFlow(
       SMLoc start,
+      ESTree::Node *left,
       ESTree::Node *variance,
       bool isStatic);
 
@@ -1222,6 +1232,15 @@ class JSParserImpl {
 
   Optional<ESTree::Node *> parsePredicateFlow();
 
+  /// Process a TypeAnnotation node and validate it matches the parsing rules
+  /// for an identifier.
+  /// \return identifier name equivalent of the passed TypeAnnotation node. None
+  /// indicates an error.
+  Optional<UniqueString *> reparseTypeAnnotationAsIdFlow(
+      ESTree::Node *typeAnnotation);
+  /// Process a TypeAnnotation node into a valid Identifier node.
+  /// \return identifier name equivalent of the passed TypeAnnotation node. None
+  /// indicates an error.
   Optional<ESTree::IdentifierNode *> reparseTypeAnnotationAsIdentifierFlow(
       ESTree::Node *typeAnnotation);
 
