@@ -89,6 +89,10 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapBigIntLiteralTypeAnnotation(node);
       case 'BigIntTypeAnnotation':
         return this.mapBigIntTypeAnnotation(node);
+      case 'TypeofTypeAnnotation':
+        return this.mapTypeofTypeAnnotation(node);
+      case 'QualifiedTypeofIdentifier':
+        return this.mapQualifiedTypeofIdentifier(node);
       default:
         return this.mapNodeDefault(node);
     }
@@ -489,5 +493,22 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
     };
 
     return node;
+  }
+
+  mapTypeofTypeAnnotation(nodeUnprocessed: HermesNode): HermesNode {
+    nodeUnprocessed.argument = {
+      type: 'GenericTypeAnnotation',
+      id: nodeUnprocessed.argument,
+      typeParameters: null,
+      loc: nodeUnprocessed.argument.loc,
+    };
+
+    return this.mapNodeDefault(nodeUnprocessed);
+  }
+
+  mapQualifiedTypeofIdentifier(nodeUnprocessed: HermesNode): HermesNode {
+    nodeUnprocessed.type = 'QualifiedTypeIdentifier';
+
+    return this.mapNodeDefault(nodeUnprocessed);
   }
 }
