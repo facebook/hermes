@@ -197,6 +197,7 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow() {
   if (check(TokenKind::colon)) {
     SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
     if (!check(checksIdent_)) {
+      // only stardard types are allowed, no predicates.
       auto optRet = parseTypeAnnotationFlow(annotStart);
       if (!optRet)
         return None;
@@ -589,7 +590,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFunctionFlow(SMLoc start) {
           start))
     return None;
 
-  auto optReturn = parseTypeAnnotationFlow();
+  auto optReturn = parseReturnTypeAnnotationFlow();
   if (!optReturn)
     return None;
   ESTree::Node *returnType = *optReturn;
@@ -1151,6 +1152,81 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(
       getPrevTokenEndLoc(),
       new (context_) ESTree::DeclareExportDeclarationNode(
           nullptr, std::move(specifiers), source, false));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseReturnTypeAnnotationFlow(
+    Optional<SMLoc> wrappedStart,
+    AllowAnonFunctionType allowAnonFunctionType) {
+  SMLoc start = tok_->getStartLoc();
+  ESTree::Node *returnType = nullptr;
+  if (check(assertsIdent_)) {
+    // TypePredicate (asserts = true) or TypeAnnotation:
+    //   TypeAnnotation
+    //   asserts IdentifierName
+    //   asserts IdentifierName is TypeAnnotation
+    auto optType = parseTypeAnnotationFlow(None, allowAnonFunctionType);
+    if (!optType)
+      return None;
+
+    if (check(TokenKind::identifier)) {
+      // Validate the "asserts" token was an identifier not a more complex type.
+      auto optId = reparseTypeAnnotationAsIdentifierFlow(*optType);
+      if (!optId)
+        return None;
+      ESTree::Node *id = setLocation(
+          tok_,
+          tok_,
+          new (context_)
+              ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
+      advance(JSLexer::GrammarContext::Type);
+      ESTree::Node *typeAnnotation = nullptr;
+      if (checkAndEat(isIdent_, JSLexer::GrammarContext::Type)) {
+        // assert IdentifierName is TypeAnnotation
+        //                          ^
+        auto optType = parseTypeAnnotationFlow(None, allowAnonFunctionType);
+        if (!optType)
+          return None;
+        typeAnnotation = *optType;
+      }
+      returnType = setLocation(
+          start,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::TypePredicateNode(id, typeAnnotation, true));
+    } else {
+      returnType = *optType;
+    }
+  } else {
+    // TypePredicate (asserts = false) or TypeAnnotation:
+    //   TypeAnnotation
+    //   IdentifierName is TypeAnnotation
+
+    auto optType = parseTypeAnnotationFlow(None, allowAnonFunctionType);
+    if (!optType)
+      return None;
+
+    if (checkAndEat(isIdent_, JSLexer::GrammarContext::Type)) {
+      auto optId = reparseTypeAnnotationAsIdentifierFlow(*optType);
+      if (!optId)
+        return None;
+      auto optType = parseTypeAnnotationFlow(None, allowAnonFunctionType);
+      if (!optType)
+        return None;
+      returnType = setLocation(
+          start,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::TypePredicateNode(*optId, *optType, false));
+    } else {
+      returnType = *optType;
+    }
+  }
+
+  if (wrappedStart) {
+    return setLocation(
+        *wrappedStart,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::TypeAnnotationNode(returnType));
+  }
+  return returnType;
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeAnnotationFlow(
@@ -1858,7 +1934,7 @@ JSParserImpl::parseFunctionTypeAnnotationWithParamsFlow(
   assert(check(TokenKind::equalgreater));
   advance(JSLexer::GrammarContext::Type);
 
-  auto optReturnType = parseTypeAnnotationFlow();
+  auto optReturnType = parseReturnTypeAnnotationFlow();
   if (!optReturnType)
     return None;
 
@@ -1988,7 +2064,7 @@ JSParserImpl::parseFunctionOrGroupTypeAnnotationFlow() {
     return type;
   }
 
-  auto optReturnType = parseTypeAnnotationFlow(
+  auto optReturnType = parseReturnTypeAnnotationFlow(
       None,
       allowAnonFunctionType_ ? AllowAnonFunctionType::Yes
                              : AllowAnonFunctionType::No);
