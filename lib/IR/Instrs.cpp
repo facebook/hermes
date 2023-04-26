@@ -75,13 +75,13 @@ ValueKind UnaryOperatorInst::parseOperator(llvh::StringRef op) {
 
 SideEffect UnaryOperatorInst::getSideEffectImpl() const {
   if (isSideEffectFree(getSingleOperand()->getType())) {
-    return {};
+    return SideEffect{}.setIdempotent();
   }
 
   switch (getKind()) {
     case ValueKind::UnaryVoidInstKind: // void
     case ValueKind::UnaryTypeofInstKind: // typeof
-      return {};
+      return SideEffect{}.setIdempotent();
 
     default:
       break;
@@ -122,12 +122,12 @@ SideEffect BinaryOperatorInst::getBinarySideEffect(
   // Strict equality does not throw or have other side effects (per ES5 11.9.6).
   if (op == ValueKind::BinaryStrictlyNotEqualInstKind ||
       op == ValueKind::BinaryStrictlyEqualInstKind)
-    return {};
+    return SideEffect{}.setIdempotent();
 
   // This instruction does not read/write memory if the LHS and RHS types are
   // known to be safe (number, string, null, etc).
   if (isSideEffectFree(leftTy) && isSideEffectFree(rightTy))
-    return {};
+    return SideEffect{}.setIdempotent();
 
   // This binary operation may execute arbitrary code.
   return SideEffect::createExecute();
