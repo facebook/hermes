@@ -658,6 +658,8 @@ const getTransforms = (
         return transform.UnionTypeAnnotation(node);
       case 'VoidTypeAnnotation':
         return transform.VoidTypeAnnotation(node);
+      case 'TypePredicate':
+        return unsupportedAnnotation(node, node.type);
       default:
         throw unexpectedTranslationError(node, `Unhandled type ${node.type}`);
     }

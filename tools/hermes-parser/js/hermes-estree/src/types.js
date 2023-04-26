@@ -1140,6 +1140,7 @@ export type TypeAnnotationType =
   | UnionTypeAnnotation
   | IntersectionTypeAnnotation
   | ConditionalTypeAnnotation
+  | TypePredicate
   | FunctionTypeAnnotation
   | ObjectTypeAnnotation
   | IndexedAccessType
@@ -1316,6 +1317,13 @@ export interface ConditionalTypeAnnotation extends BaseNode {
   +extendsType: TypeAnnotationType;
   +trueType: TypeAnnotationType;
   +falseType: TypeAnnotationType;
+}
+
+export interface TypePredicate extends BaseNode {
+  +type: 'TypePredicate';
+  +parameterName: Identifier;
+  +typeAnnotation: TypeAnnotationType | null;
+  +asserts: boolean;
 }
 
 export interface FunctionTypeAnnotation extends BaseNode {

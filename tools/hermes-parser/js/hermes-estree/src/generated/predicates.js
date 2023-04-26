@@ -687,6 +687,10 @@ export function isTypeParameterInstantiation(
   return node.type === 'TypeParameterInstantiation';
 }
 
+export function isTypePredicate(node: ESNode | Token): boolean %checks {
+  return node.type === 'TypePredicate';
+}
+
 export function isUnaryExpression(node: ESNode | Token): boolean %checks {
   return node.type === 'UnaryExpression';
 }

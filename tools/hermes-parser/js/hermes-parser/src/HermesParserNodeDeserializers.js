@@ -1081,6 +1081,15 @@ function deserializeConditionalTypeAnnotation() {
     falseType: this.deserializeNode(),
   };
 }
+function deserializeTypePredicate() {
+  return {
+    type: 'TypePredicate',
+    loc: this.addEmptyLoc(),
+    parameterName: this.deserializeNode(),
+    typeAnnotation: this.deserializeNode(),
+    asserts: this.deserializeBoolean(),
+  };
+}
 function deserializeInterfaceTypeAnnotation() {
   return {
     type: 'InterfaceTypeAnnotation',
@@ -1959,6 +1968,7 @@ module.exports = [
   deserializeIndexedAccessType,
   deserializeOptionalIndexedAccessType,
   deserializeConditionalTypeAnnotation,
+  deserializeTypePredicate,
   deserializeInterfaceTypeAnnotation,
   deserializeTypeAlias,
   deserializeOpaqueType,
