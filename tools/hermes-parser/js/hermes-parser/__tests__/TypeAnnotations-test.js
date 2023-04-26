@@ -193,58 +193,104 @@ describe('Literal', () => {
 
   test('Babel', () => {
     // Babel AST literal nodes
-    expect(parse(testCase.code, {babel: true})).toMatchObject({
-      type: 'File',
-      program: {
-        type: 'Program',
-        body: [
+    expect(parseForSnapshot(testCase.code, {babel: true}))
+      .toMatchInlineSnapshot(`
+      {
+        "body": [
           {
-            type: 'TypeAlias',
-            right: {
-              type: 'NumberLiteralTypeAnnotation',
-              value: 10,
+            "id": {
+              "name": "T1",
+              "optional": false,
+              "type": "Identifier",
+              "typeAnnotation": null,
             },
+            "right": {
+              "raw": "10",
+              "type": "NumberLiteralTypeAnnotation",
+              "value": 10,
+            },
+            "type": "TypeAlias",
+            "typeParameters": null,
           },
           {
-            type: 'TypeAlias',
-            right: {
-              type: 'NumberLiteralTypeAnnotation',
-              value: 0.56283,
+            "id": {
+              "name": "T2",
+              "optional": false,
+              "type": "Identifier",
+              "typeAnnotation": null,
             },
+            "right": {
+              "raw": "0.56283",
+              "type": "NumberLiteralTypeAnnotation",
+              "value": 0.56283,
+            },
+            "type": "TypeAlias",
+            "typeParameters": null,
           },
           {
-            type: 'TypeAlias',
-            right: {
-              type: 'StringLiteralTypeAnnotation',
-              value: 'test',
+            "id": {
+              "name": "T3",
+              "optional": false,
+              "type": "Identifier",
+              "typeAnnotation": null,
             },
+            "right": {
+              "raw": ""test"",
+              "type": "StringLiteralTypeAnnotation",
+              "value": "test",
+            },
+            "type": "TypeAlias",
+            "typeParameters": null,
           },
           {
-            type: 'TypeAlias',
-            right: {
-              type: 'BooleanLiteralTypeAnnotation',
-              value: true,
+            "id": {
+              "name": "T4",
+              "optional": false,
+              "type": "Identifier",
+              "typeAnnotation": null,
             },
+            "right": {
+              "raw": "true",
+              "type": "BooleanLiteralTypeAnnotation",
+              "value": true,
+            },
+            "type": "TypeAlias",
+            "typeParameters": null,
           },
           {
-            type: 'TypeAlias',
-            right: {
-              type: 'BigIntLiteralTypeAnnotation',
-              // $FlowExpectedError[cannot-resolve-name] - not supported by flow yet
-              value: BigInt(4321),
+            "id": {
+              "name": "T5",
+              "optional": false,
+              "type": "Identifier",
+              "typeAnnotation": null,
             },
+            "right": {
+              "raw": "4321n",
+              "type": "BigIntLiteralTypeAnnotation",
+              "value": 4321n,
+            },
+            "type": "TypeAlias",
+            "typeParameters": null,
           },
           {
-            type: 'TypeAlias',
-            right: {
-              type: 'BigIntLiteralTypeAnnotation',
-              // $FlowExpectedError[cannot-resolve-name] - not supported by flow yet
-              value: BigInt(1234),
+            "id": {
+              "name": "T6",
+              "optional": false,
+              "type": "Identifier",
+              "typeAnnotation": null,
             },
+            "right": {
+              "raw": "12_34n",
+              "type": "BigIntLiteralTypeAnnotation",
+              "value": 1234n,
+            },
+            "type": "TypeAlias",
+            "typeParameters": null,
           },
         ],
-      },
-    });
+        "type": "Program",
+      }
+    `);
     expectBabelAlignment(testCase);
   });
 });

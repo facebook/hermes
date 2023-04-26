@@ -16,7 +16,7 @@ import {
   expectBabelAlignment,
   expectEspreeAlignment,
 } from '../__test_utils__/alignment-utils';
-import {parse, parseForSnapshot} from '../__test_utils__/parse';
+import {parseForSnapshot} from '../__test_utils__/parse';
 
 describe('ImportDeclaration', () => {
   describe('Named', () => {
@@ -69,28 +69,41 @@ describe('ImportDeclaration', () => {
     });
 
     test('Babel', () => {
-      expect(parse(testCase.code, {babel: true})).toMatchObject({
-        type: 'File',
-        program: {
-          type: 'Program',
-          body: [
+      expect(parseForSnapshot(testCase.code, {babel: true}))
+        .toMatchInlineSnapshot(`
+        {
+          "body": [
             {
-              type: 'ImportDeclaration',
-              importKind: 'value',
-              specifiers: [
+              "assertions": [],
+              "importKind": "value",
+              "source": {
+                "type": "StringLiteral",
+                "value": "Foo",
+              },
+              "specifiers": [
                 {
-                  type: 'ImportSpecifier',
-                  local: {
-                    type: 'Identifier',
-                    name: 'Foo',
+                  "importKind": null,
+                  "imported": {
+                    "name": "Foo",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
                   },
-                  importKind: null,
+                  "local": {
+                    "name": "Foo",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
+                  },
+                  "type": "ImportSpecifier",
                 },
               ],
+              "type": "ImportDeclaration",
             },
           ],
-        },
-      });
+          "type": "Program",
+        }
+      `);
       expectBabelAlignment(testCase);
     });
   });
@@ -138,27 +151,34 @@ describe('ImportDeclaration', () => {
     });
 
     test('Babel', () => {
-      expect(parse(testCase.code, {babel: true})).toMatchObject({
-        type: 'File',
-        program: {
-          type: 'Program',
-          body: [
+      expect(parseForSnapshot(testCase.code, {babel: true}))
+        .toMatchInlineSnapshot(`
+        {
+          "body": [
             {
-              type: 'ImportDeclaration',
-              importKind: 'value',
-              specifiers: [
+              "assertions": [],
+              "importKind": "value",
+              "source": {
+                "type": "StringLiteral",
+                "value": "Foo",
+              },
+              "specifiers": [
                 {
-                  type: 'ImportDefaultSpecifier',
-                  local: {
-                    type: 'Identifier',
-                    name: 'Foo',
+                  "local": {
+                    "name": "Foo",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
                   },
+                  "type": "ImportDefaultSpecifier",
                 },
               ],
+              "type": "ImportDeclaration",
             },
           ],
-        },
-      });
+          "type": "Program",
+        }
+      `);
       expectBabelAlignment(testCase);
     });
   });
@@ -206,27 +226,34 @@ describe('ImportDeclaration', () => {
     });
 
     test('Babel', () => {
-      expect(parse(testCase.code, {babel: true})).toMatchObject({
-        type: 'File',
-        program: {
-          type: 'Program',
-          body: [
+      expect(parseForSnapshot(testCase.code, {babel: true}))
+        .toMatchInlineSnapshot(`
+        {
+          "body": [
             {
-              type: 'ImportDeclaration',
-              importKind: 'value',
-              specifiers: [
+              "assertions": [],
+              "importKind": "value",
+              "source": {
+                "type": "StringLiteral",
+                "value": "Foo",
+              },
+              "specifiers": [
                 {
-                  type: 'ImportNamespaceSpecifier',
-                  local: {
-                    type: 'Identifier',
-                    name: 'Foo',
+                  "local": {
+                    "name": "Foo",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
                   },
+                  "type": "ImportNamespaceSpecifier",
                 },
               ],
+              "type": "ImportDeclaration",
             },
           ],
-        },
-      });
+          "type": "Program",
+        }
+      `);
       expectBabelAlignment(testCase);
     });
   });
@@ -290,35 +317,50 @@ describe('ImportDeclaration', () => {
     });
 
     test('Babel', () => {
-      expect(parse(testCase.code, {babel: true})).toMatchObject({
-        type: 'File',
-        program: {
-          type: 'Program',
-          body: [
+      expect(parseForSnapshot(testCase.code, {babel: true}))
+        .toMatchInlineSnapshot(`
+        {
+          "body": [
             {
-              type: 'ImportDeclaration',
-              importKind: 'value',
-              specifiers: [
+              "assertions": [],
+              "importKind": "value",
+              "source": {
+                "type": "StringLiteral",
+                "value": "Foo",
+              },
+              "specifiers": [
                 {
-                  type: 'ImportDefaultSpecifier',
-                  local: {
-                    type: 'Identifier',
-                    name: 'Foo',
+                  "local": {
+                    "name": "Foo",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
                   },
+                  "type": "ImportDefaultSpecifier",
                 },
                 {
-                  type: 'ImportSpecifier',
-                  local: {
-                    type: 'Identifier',
-                    name: 'Bar',
+                  "importKind": null,
+                  "imported": {
+                    "name": "Bar",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
                   },
-                  importKind: null,
+                  "local": {
+                    "name": "Bar",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
+                  },
+                  "type": "ImportSpecifier",
                 },
               ],
+              "type": "ImportDeclaration",
             },
           ],
-        },
-      });
+          "type": "Program",
+        }
+      `);
       expectBabelAlignment(testCase);
     });
   });
@@ -375,34 +417,43 @@ describe('ImportDeclaration', () => {
     });
 
     test('Babel', () => {
-      expect(parse(testCase.code, {babel: true})).toMatchObject({
-        type: 'File',
-        program: {
-          type: 'Program',
-          body: [
+      expect(parseForSnapshot(testCase.code, {babel: true}))
+        .toMatchInlineSnapshot(`
+        {
+          "body": [
             {
-              type: 'ImportDeclaration',
-              importKind: 'value',
-              specifiers: [
+              "assertions": [],
+              "importKind": "value",
+              "source": {
+                "type": "StringLiteral",
+                "value": "Foo",
+              },
+              "specifiers": [
                 {
-                  type: 'ImportDefaultSpecifier',
-                  local: {
-                    type: 'Identifier',
-                    name: 'Foo',
+                  "local": {
+                    "name": "Foo",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
                   },
+                  "type": "ImportDefaultSpecifier",
                 },
                 {
-                  type: 'ImportNamespaceSpecifier',
-                  local: {
-                    type: 'Identifier',
-                    name: 'Bar',
+                  "local": {
+                    "name": "Bar",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
                   },
+                  "type": "ImportNamespaceSpecifier",
                 },
               ],
+              "type": "ImportDeclaration",
             },
           ],
-        },
-      });
+          "type": "Program",
+        }
+      `);
       expectBabelAlignment(testCase);
     });
   });
@@ -476,36 +527,57 @@ describe('ImportDeclaration', () => {
     });
 
     test('Babel', () => {
-      expect(parse(testCase.code, {babel: true})).toMatchObject({
-        type: 'File',
-        program: {
-          type: 'Program',
-          body: [
+      expect(parseForSnapshot(testCase.code, {babel: true}))
+        .toMatchInlineSnapshot(`
+        {
+          "body": [
             {
-              type: 'ImportDeclaration',
-              importKind: 'value',
-              specifiers: [
+              "assertions": [],
+              "importKind": "value",
+              "source": {
+                "type": "StringLiteral",
+                "value": "Foo",
+              },
+              "specifiers": [
                 {
-                  type: 'ImportSpecifier',
-                  local: {
-                    type: 'Identifier',
-                    name: 'Foo',
+                  "importKind": "type",
+                  "imported": {
+                    "name": "Foo",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
                   },
-                  importKind: 'type',
+                  "local": {
+                    "name": "Foo",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
+                  },
+                  "type": "ImportSpecifier",
                 },
                 {
-                  type: 'ImportSpecifier',
-                  local: {
-                    type: 'Identifier',
-                    name: 'Bar',
+                  "importKind": "typeof",
+                  "imported": {
+                    "name": "Bar",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
                   },
-                  importKind: 'typeof',
+                  "local": {
+                    "name": "Bar",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
+                  },
+                  "type": "ImportSpecifier",
                 },
               ],
+              "type": "ImportDeclaration",
             },
           ],
-        },
-      });
+          "type": "Program",
+        }
+      `);
       expectBabelAlignment(testCase);
     });
   });
@@ -556,27 +628,34 @@ describe('ImportDeclaration', () => {
     });
 
     test('Babel', () => {
-      expect(parse(testCase.code, {babel: true})).toMatchObject({
-        type: 'File',
-        program: {
-          type: 'Program',
-          body: [
+      expect(parseForSnapshot(testCase.code, {babel: true}))
+        .toMatchInlineSnapshot(`
+        {
+          "body": [
             {
-              type: 'ImportDeclaration',
-              importKind: 'type',
-              specifiers: [
+              "assertions": [],
+              "importKind": "type",
+              "source": {
+                "type": "StringLiteral",
+                "value": "Foo",
+              },
+              "specifiers": [
                 {
-                  type: 'ImportDefaultSpecifier',
-                  local: {
-                    type: 'Identifier',
-                    name: 'Foo',
+                  "local": {
+                    "name": "Foo",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
                   },
+                  "type": "ImportDefaultSpecifier",
                 },
               ],
+              "type": "ImportDeclaration",
             },
           ],
-        },
-      });
+          "type": "Program",
+        }
+      `);
       expectBabelAlignment(testCase);
     });
   });
@@ -627,27 +706,34 @@ describe('ImportDeclaration', () => {
     });
 
     test('Babel', () => {
-      expect(parse(testCase.code, {babel: true})).toMatchObject({
-        type: 'File',
-        program: {
-          type: 'Program',
-          body: [
+      expect(parseForSnapshot(testCase.code, {babel: true}))
+        .toMatchInlineSnapshot(`
+        {
+          "body": [
             {
-              type: 'ImportDeclaration',
-              importKind: 'typeof',
-              specifiers: [
+              "assertions": [],
+              "importKind": "typeof",
+              "source": {
+                "type": "StringLiteral",
+                "value": "Foo",
+              },
+              "specifiers": [
                 {
-                  type: 'ImportDefaultSpecifier',
-                  local: {
-                    type: 'Identifier',
-                    name: 'Foo',
+                  "local": {
+                    "name": "Foo",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
                   },
+                  "type": "ImportDefaultSpecifier",
                 },
               ],
+              "type": "ImportDeclaration",
             },
           ],
-        },
-      });
+          "type": "Program",
+        }
+      `);
       expectBabelAlignment(testCase);
     });
   });

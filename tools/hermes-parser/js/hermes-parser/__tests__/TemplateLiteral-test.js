@@ -16,7 +16,7 @@ import {
   expectBabelAlignment,
   expectEspreeAlignment,
 } from '../__test_utils__/alignment-utils';
-import {parse} from '../__test_utils__/parse';
+import {parse, parseForSnapshot} from '../__test_utils__/parse';
 import {loc} from '../__test_utils__/loc';
 
 describe('TemplateLiteral', () => {
@@ -78,56 +78,47 @@ describe('TemplateLiteral', () => {
 
   test('Babel', () => {
     // Babel template literals with source locations
-    expect(parse(testCase.code, {babel: true})).toMatchObject({
-      type: 'File',
-      program: {
-        type: 'Program',
-        body: [
+    expect(parseForSnapshot(testCase.code, {babel: true}))
+      .toMatchInlineSnapshot(`
+      {
+        "body": [
           {
-            type: 'ExpressionStatement',
-            expression: {
-              type: 'TemplateLiteral',
-              loc: loc(2, 6, 2, 16),
-              start: 7,
-              end: 17,
-              quasis: [
+            "directive": null,
+            "expression": {
+              "expressions": [
                 {
-                  type: 'TemplateElement',
-                  loc: loc(2, 7, 2, 9),
-                  start: 8,
-                  end: 10,
-                  tail: false,
-                  value: {
-                    cooked: 'a ',
-                    raw: 'a ',
+                  "name": "b",
+                  "optional": false,
+                  "type": "Identifier",
+                  "typeAnnotation": null,
+                },
+              ],
+              "quasis": [
+                {
+                  "tail": false,
+                  "type": "TemplateElement",
+                  "value": {
+                    "cooked": "a ",
+                    "raw": "a ",
                   },
                 },
                 {
-                  type: 'TemplateElement',
-                  loc: loc(2, 13, 2, 15),
-                  start: 14,
-                  end: 16,
-                  tail: true,
-                  value: {
-                    cooked: ' c',
-                    raw: ' c',
+                  "tail": true,
+                  "type": "TemplateElement",
+                  "value": {
+                    "cooked": " c",
+                    "raw": " c",
                   },
                 },
               ],
-              expressions: [
-                {
-                  type: 'Identifier',
-                  loc: loc(2, 11, 2, 12),
-                  start: 12,
-                  end: 13,
-                  name: 'b',
-                },
-              ],
+              "type": "TemplateLiteral",
             },
+            "type": "ExpressionStatement",
           },
         ],
-      },
-    });
+        "type": "Program",
+      }
+    `);
     expectBabelAlignment(testCase);
   });
 });

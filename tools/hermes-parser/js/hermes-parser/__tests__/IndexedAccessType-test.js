@@ -16,7 +16,7 @@ import {
   expectBabelAlignment,
   expectEspreeAlignment,
 } from '../__test_utils__/alignment-utils';
-import {parse, parseForSnapshot} from '../__test_utils__/parse';
+import {parseForSnapshot} from '../__test_utils__/parse';
 
 describe('IndexedAccessType', () => {
   describe('Basic Indexed Access Type', () => {
@@ -81,21 +81,27 @@ describe('IndexedAccessType', () => {
     });
 
     test('Babel', () => {
-      expect(parse(testCase.code, {babel: true})).toMatchObject({
-        type: 'File',
-        program: {
-          type: 'Program',
-          body: [
+      expect(parseForSnapshot(testCase.code, {babel: true}))
+        .toMatchInlineSnapshot(`
+        {
+          "body": [
             {
-              type: 'TypeAlias',
-              right: {
-                type: 'AnyTypeAnnotation',
+              "id": {
+                "name": "T",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": null,
               },
-              typeParameters: null,
+              "right": {
+                "type": "AnyTypeAnnotation",
+              },
+              "type": "TypeAlias",
+              "typeParameters": null,
             },
           ],
-        },
-      });
+          "type": "Program",
+        }
+      `);
       expectBabelAlignment(testCase);
     });
   });
@@ -163,21 +169,27 @@ describe('IndexedAccessType', () => {
     });
 
     test('Babel', () => {
-      expect(parse(testCase.code, {babel: true})).toMatchObject({
-        type: 'File',
-        program: {
-          type: 'Program',
-          body: [
+      expect(parseForSnapshot(testCase.code, {babel: true}))
+        .toMatchInlineSnapshot(`
+        {
+          "body": [
             {
-              type: 'TypeAlias',
-              right: {
-                type: 'AnyTypeAnnotation',
+              "id": {
+                "name": "T",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": null,
               },
-              typeParameters: null,
+              "right": {
+                "type": "AnyTypeAnnotation",
+              },
+              "type": "TypeAlias",
+              "typeParameters": null,
             },
           ],
-        },
-      });
+          "type": "Program",
+        }
+      `);
       expectBabelAlignment(testCase);
     });
   });
