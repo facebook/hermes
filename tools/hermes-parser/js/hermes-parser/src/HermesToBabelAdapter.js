@@ -97,6 +97,8 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapQualifiedTypeofIdentifier(node);
       case 'DeclareVariable':
         return this.mapDeclareVariable(node);
+      case 'DeclareEnum':
+        return this.mapDeclareEnum(node);
       default:
         return this.mapNodeDefault(node);
     }
@@ -520,5 +522,17 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
     delete nodeUnprocessed.kind;
 
     return this.mapNodeDefault(nodeUnprocessed);
+  }
+
+  mapDeclareEnum(nodeUnprocessed: HermesNode): HermesNode {
+    nodeUnprocessed.id.typeAnnotation = this.mapUnsupportedTypeAnnotation(
+      nodeUnprocessed.body,
+    );
+
+    delete nodeUnprocessed.body;
+
+    nodeUnprocessed.type = 'DeclareVariable';
+
+    return this.mapDeclareVariable(nodeUnprocessed);
   }
 }
