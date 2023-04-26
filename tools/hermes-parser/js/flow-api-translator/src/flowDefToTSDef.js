@@ -2492,6 +2492,14 @@ const getTransforms = (
             throw unexpectedTranslationError(property, 'Impossible state');
           }
 
+          if (property.type === 'ObjectTypeMappedTypeProperty') {
+            // TODO - Support mapped types
+            return unsupportedAnnotation(
+              property,
+              'object type with mapped type property',
+            );
+          }
+
           members.push({
             start: property.range[0],
             node: transform.ObjectTypeProperty(property),
@@ -2603,6 +2611,12 @@ const getTransforms = (
             }
 
             typesToIntersect.push(spreadType);
+          } else if (property.type === 'ObjectTypeMappedTypeProperty') {
+            // TODO - Support mapped types
+            return unsupportedAnnotation(
+              property,
+              'object type with mapped type property',
+            );
           } else {
             members.push({
               start: property.range[0],

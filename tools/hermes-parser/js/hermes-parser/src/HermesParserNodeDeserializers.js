@@ -1302,6 +1302,17 @@ function deserializeObjectTypeIndexer() {
     variance: this.deserializeNode(),
   };
 }
+function deserializeObjectTypeMappedTypeProperty() {
+  return {
+    type: 'ObjectTypeMappedTypeProperty',
+    loc: this.addEmptyLoc(),
+    keyTparam: this.deserializeNode(),
+    propType: this.deserializeNode(),
+    sourceType: this.deserializeNode(),
+    variance: this.deserializeNode(),
+    optional: this.deserializeString(),
+  };
+}
 function deserializeVariance() {
   return {
     type: 'Variance',
@@ -1972,6 +1983,7 @@ module.exports = [
   deserializeObjectTypeInternalSlot,
   deserializeObjectTypeCallProperty,
   deserializeObjectTypeIndexer,
+  deserializeObjectTypeMappedTypeProperty,
   deserializeVariance,
   deserializeTypeParameterDeclaration,
   deserializeTypeParameter,
