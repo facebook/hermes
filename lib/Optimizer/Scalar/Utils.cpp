@@ -252,7 +252,7 @@ bool hermes::deleteUnusedFunctionsAndVariables(Module *M) {
 }
 
 bool hermes::isSimpleSideEffectFreeInstruction(Instruction *I) {
-  if (I->hasSideEffect()) {
+  if (I->getSideEffect().mayReadOrWorse()) {
     return false;
   }
   if (llvh::isa<UnaryOperatorInst>(I))

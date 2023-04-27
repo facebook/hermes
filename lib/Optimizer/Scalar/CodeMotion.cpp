@@ -42,7 +42,8 @@ static Instruction *findIdenticalInWindow(
 
     // Stop the search on instructions with side effects, if the instruction
     // that we will be hoisting has side effects.
-    if (I->hasSideEffect() && copy->hasSideEffect())
+    if (I->getSideEffect().mayReadOrWorse() &&
+        copy->getSideEffect().mayReadOrWorse())
       return nullptr;
 
     searchBudget--;
@@ -59,7 +60,7 @@ static Instruction *findIdenticalInWindow(
 /// \returns true if some instructions were hoisted.
 static bool hoistCBI(CondBranchInst *CBI) {
   // Don't hoist instructions across conditional branches that can throw.
-  if (CBI->hasSideEffect())
+  if (CBI->getSideEffect().mayReadOrWorse())
     return false;
 
   BasicBlock *BB0 = CBI->getTrueDest();
@@ -178,7 +179,7 @@ static bool sinkInstructionsInBlock(
       auto *I = llvh::dyn_cast<Instruction>(inst->getOperand(i));
       // Don't touch non-instructions, special instructions, instructions that
       // have multiple uses or instructions with side effects.
-      if (!I || !I->hasOneUser() || I->hasSideEffect() ||
+      if (!I || !I->hasOneUser() || I->getSideEffect().mayReadOrWorse() ||
           llvh::isa<PhiInst>(I) || llvh::isa<TerminatorInst>(I) ||
           llvh::isa<CreateArgumentsInst>(I))
         continue;

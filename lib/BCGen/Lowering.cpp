@@ -741,7 +741,7 @@ bool LowerCondBranch::runOnFunction(Function *F) {
 
       // The condition must either be side-effect free, or it must be the
       // previous instruction.
-      if (binopInst->hasSideEffect())
+      if (binopInst->getSideEffect().mayReadOrWorse())
         if (cbInst->getPrevNode() != binopInst)
           continue;
 

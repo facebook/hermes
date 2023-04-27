@@ -1252,11 +1252,6 @@ class Instruction
   /// \returns the side effect of the instruction.
   SideEffect getSideEffect() const;
 
-  /// \returns true if the instruction has some side effect.
-  bool hasSideEffect() const {
-    return getSideEffect().mayReadOrWorse();
-  }
-
   Context &getContext() const;
   BasicBlock *getParent() const {
     return Parent;
