@@ -3093,8 +3093,10 @@ Optional<UniqueString *> JSParserImpl::reparseTypeAnnotationAsIdFlow(
   } else if (
       auto *generic =
           dyn_cast<ESTree::GenericTypeAnnotationNode>(typeAnnotation)) {
-    if (auto *genericId = dyn_cast<ESTree::IdentifierNode>(generic->_id)) {
-      id = genericId->_name;
+    if (!generic->_typeParameters) {
+      if (auto *genericId = dyn_cast<ESTree::IdentifierNode>(generic->_id)) {
+        id = genericId->_name;
+      }
     }
   }
 
