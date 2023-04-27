@@ -2040,15 +2040,31 @@ const getTransforms = (
               typeParameters: undefined,
             };
           }
+          // React.ComponentType<Config> -> React.ComponentType<Config>
+          // React$ComponentType<Config> -> React.ComponentType<Config>
+          case 'React.ComponentType':
+          case 'React$ComponentType': {
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'TSQualifiedName',
+                left: getReactIdentifier(),
+                right: {
+                  type: 'Identifier',
+                  name: 'ComponentType',
+                },
+              },
+              typeParameters: {
+                type: 'TSTypeParameterInstantiation',
+                params: assertHasExactlyNTypeParameters(1),
+              },
+            };
+          }
           // React.AbstractComponent<Config> -> React.ForwardRefExoticComponent<Config & React.RefAttributes<unknown>>
           // React.AbstractComponent<Config, Instance> -> React.ForwardRefExoticComponent<Config & React.RefAttributes<Instance>>
           // React$AbstractComponent<Config, Instance> -> React.ForwardRefExoticComponent<Config & React.RefAttributes<Instance>>
-          // React.ComponentType<Config> -> React.ForwardRefExoticComponent<Config & React.RefAttributes<unknown>>
-          // React$ComponentType<Config> -> React.ForwardRefExoticComponent<Config & React.RefAttributes<unknown>>
           case 'React.AbstractComponent':
-          case 'React$AbstractComponent':
-          case 'React.ComponentType':
-          case 'React$ComponentType': {
+          case 'React$AbstractComponent': {
             const typeParameters = node.typeParameters;
             if (typeParameters == null || typeParameters.params.length === 0) {
               throw translationError(
