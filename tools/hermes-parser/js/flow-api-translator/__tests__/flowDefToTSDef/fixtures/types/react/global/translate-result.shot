@@ -16,9 +16,7 @@ type T1 = React.ReactNode;
 type T2 = JSX.Element;
 type T3 = React.ReactElement<typeof Component>;
 type T4 = React.ElementRef<typeof Component>;
-type T5 = React.ForwardRefExoticComponent<
-  Props & React.RefAttributes<HTMLElement>
->;
+type T5 = React.ComponentType<Props & React.RefAttributes<HTMLElement>>;
 type T6 = React.Context<Foo>;
 type T7 = React.ComponentType<Props>;
 type T8 = React.Fragment;

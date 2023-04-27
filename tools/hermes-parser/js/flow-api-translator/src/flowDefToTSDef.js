@@ -2060,9 +2060,10 @@ const getTransforms = (
               },
             };
           }
-          // React.AbstractComponent<Config> -> React.ForwardRefExoticComponent<Config & React.RefAttributes<unknown>>
-          // React.AbstractComponent<Config, Instance> -> React.ForwardRefExoticComponent<Config & React.RefAttributes<Instance>>
-          // React$AbstractComponent<Config, Instance> -> React.ForwardRefExoticComponent<Config & React.RefAttributes<Instance>>
+          // React.AbstractComponent<Config> -> React.ComponentType<Config>
+          // React$AbstractComponent<Config> -> React.ComponentType<Config>
+          // React.AbstractComponent<Config, Instance> -> React.ComponentType<Config & React.RefAttributes<Instance>>
+          // React$AbstractComponent<Config, Instance> -> React.ComponentType<Config & React.RefAttributes<Instance>>
           case 'React.AbstractComponent':
           case 'React$AbstractComponent': {
             const typeParameters = node.typeParameters;
@@ -2080,36 +2081,40 @@ const getTransforms = (
               );
             }
 
-            let newTypeParam = {
-              type: 'TSIntersectionType',
-              types: [
-                transformTypeAnnotationType(params[0]),
+            const newParams = (() => {
+              if (params.length === 1) {
+                return assertHasExactlyNTypeParameters(1);
+              }
+
+              const [props, ref] = assertHasExactlyNTypeParameters(2);
+
+              return [
                 {
-                  type: 'TSTypeReference',
-                  typeName: {
-                    type: 'TSQualifiedName',
-                    left: {
-                      type: 'Identifier',
-                      name: 'React',
+                  type: 'TSIntersectionType',
+                  types: [
+                    props,
+                    {
+                      type: 'TSTypeReference',
+                      typeName: {
+                        type: 'TSQualifiedName',
+                        left: {
+                          type: 'Identifier',
+                          name: 'React',
+                        },
+                        right: {
+                          type: 'Identifier',
+                          name: 'RefAttributes',
+                        },
+                      },
+                      typeParameters: {
+                        type: 'TSTypeParameterInstantiation',
+                        params: [ref],
+                      },
                     },
-                    right: {
-                      type: 'Identifier',
-                      name: 'RefAttributes',
-                    },
-                  },
-                  typeParameters: {
-                    type: 'TSTypeParameterInstantiation',
-                    params: [
-                      params[1]
-                        ? transformTypeAnnotationType(params[1])
-                        : {
-                            type: 'TSUnknownKeyword',
-                          },
-                    ],
-                  },
+                  ],
                 },
-              ],
-            };
+              ];
+            })();
 
             return {
               type: 'TSTypeReference',
@@ -2118,12 +2123,12 @@ const getTransforms = (
                 left: getReactIdentifier(),
                 right: {
                   type: 'Identifier',
-                  name: `ForwardRefExoticComponent`,
+                  name: 'ComponentType',
                 },
               },
               typeParameters: {
                 type: 'TSTypeParameterInstantiation',
-                params: [newTypeParam],
+                params: newParams,
               },
             };
           }
