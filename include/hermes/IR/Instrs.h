@@ -2393,7 +2393,7 @@ class TryStartInst : public TerminatorInst {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
+    return SideEffect::createUnknown();
   }
 
   static bool classof(const Value *V) {
