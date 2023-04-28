@@ -125,6 +125,12 @@ export function isComponentParameter(node: ESNode | Token): boolean %checks {
   return node.type === 'ComponentParameter';
 }
 
+export function isComponentTypeAnnotation(
+  node: ESNode | Token,
+): boolean %checks {
+  return node.type === 'ComponentTypeAnnotation';
+}
+
 export function isComponentTypeParameter(
   node: ESNode | Token,
 ): boolean %checks {

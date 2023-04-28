@@ -1144,6 +1144,7 @@ export type TypeAnnotationType =
   | ConditionalTypeAnnotation
   | TypePredicate
   | FunctionTypeAnnotation
+  | ComponentTypeAnnotation
   | ObjectTypeAnnotation
   | IndexedAccessType
   | OptionalIndexedAccessType;
@@ -1344,14 +1345,23 @@ export interface FunctionTypeParam extends BaseNode {
 
   +parent: FunctionTypeAnnotation;
 }
+
+export interface ComponentTypeAnnotation extends BaseNode {
+  +type: 'ComponentTypeAnnotation';
+  +params: $ReadOnlyArray<ComponentTypeParameter>;
+  +rest: null | ComponentTypeParameter;
+  +typeParameters: null | TypeParameterDeclaration;
+  +returnType: null | TypeAnnotationType;
+}
 export interface ComponentTypeParameter extends BaseNode {
   +type: 'ComponentTypeParameter';
   +name: Identifier | StringLiteral | null;
   +typeAnnotation: TypeAnnotationType | null;
   +optional: boolean;
 
-  +parent: DeclareComponent;
+  +parent: ComponentTypeAnnotation | DeclareComponent;
 }
+
 export interface InferredPredicate extends BaseNode {
   +type: 'InferredPredicate';
 

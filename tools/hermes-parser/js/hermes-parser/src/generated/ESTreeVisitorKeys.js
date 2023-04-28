@@ -75,6 +75,7 @@ module.exports = {
     'returnType',
   ],
   ComponentParameter: ['name', 'local'],
+  ComponentTypeAnnotation: ['params', 'rest', 'typeParameters', 'returnType'],
   ComponentTypeParameter: ['name', 'typeAnnotation'],
   ConditionalExpression: ['test', 'consequent', 'alternate'],
   ConditionalTypeAnnotation: [

@@ -956,6 +956,16 @@ function deserializeFunctionTypeParam() {
     optional: this.deserializeBoolean(),
   };
 }
+function deserializeComponentTypeAnnotation() {
+  return {
+    type: 'ComponentTypeAnnotation',
+    loc: this.addEmptyLoc(),
+    params: this.deserializeNodeList(),
+    rest: this.deserializeNode(),
+    typeParameters: this.deserializeNode(),
+    returnType: this.deserializeNode(),
+  };
+}
 function deserializeComponentTypeParameter() {
   return {
     type: 'ComponentTypeParameter',
@@ -1972,6 +1982,7 @@ module.exports = [
   deserializeVoidTypeAnnotation,
   deserializeFunctionTypeAnnotation,
   deserializeFunctionTypeParam,
+  deserializeComponentTypeAnnotation,
   deserializeComponentTypeParameter,
   deserializeNullableTypeAnnotation,
   deserializeQualifiedTypeIdentifier,
