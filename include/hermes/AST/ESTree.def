@@ -723,6 +723,11 @@ ESTREE_NODE_3_ARGS(
     NodePtr, name, true,
     NodePtr, typeAnnotation, false,
     NodeBoolean, optional, false)
+ESTREE_NODE_3_ARGS(
+    ComponentTypeParameter, Base,
+    NodePtr, name, true,
+    NodePtr, typeAnnotation, true,
+    NodeBoolean, optional, false)
 ESTREE_NODE_1_ARGS(
     NullableTypeAnnotation, Base,
     NodePtr, typeAnnotation, false)
@@ -730,7 +735,6 @@ ESTREE_NODE_2_ARGS(
     QualifiedTypeIdentifier, Base,
     NodePtr, qualification, false,
     NodePtr, id, false)
-
 ESTREE_NODE_1_ARGS(
     TypeofTypeAnnotation, Base,
     NodePtr, argument, false)
@@ -844,6 +848,13 @@ ESTREE_NODE_2_ARGS(
     DeclareFunction, Base,
     NodePtr, id, false,
     NodePtr, predicate, true)
+ESTREE_NODE_5_ARGS(
+    DeclareComponent, Base,
+    NodePtr, id, false,
+    NodeList, params, false,
+    NodePtr, rest, true,
+    NodePtr, typeParameters, true,
+    NodePtr, returnType, true)
 ESTREE_NODE_2_ARGS(
     DeclareVariable, Base,
     NodePtr, id, false,
