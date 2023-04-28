@@ -36,6 +36,7 @@ const NODES_WITH_SPECIAL_HANDLING = new Set([
   'RegExpLiteral',
   'StringLiteral',
   'TemplateElement',
+  'MemberExpression',
 ]);
 
 for (const node of GetHermesESTreeJSON()) {
