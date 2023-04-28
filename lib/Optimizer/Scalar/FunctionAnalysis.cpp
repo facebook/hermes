@@ -34,6 +34,28 @@ void registerCallsite(BaseCallInst *call, BaseCreateCallableInst *callee) {
   }
 }
 
+/// Check if the call \p CI which uses the closure \p C may leak the closure
+/// through its arguments.
+/// \param C the closure being analyzed.
+/// \param F the function associated with \p C.
+/// \param CI the call instruction that uses \p C.
+/// \return true if the closure may leak through the call, false otherwise.
+bool canEscapeThroughCall(Instruction *C, Function *F, BaseCallInst *CI) {
+  // The call does not actually invoke C, so we must assume it is leaked.
+  if (CI->getCallee() != C)
+    return true;
+
+  // Check if the closure is used as any of the arguments. If it is, and the
+  // argument is actually used by F, assume that it escapes.
+  // TODO: If we know that F does not indirectly access arguments, we can refine
+  // this by looking at if/how this argument is used.
+  for (int i = 0, e = CI->getNumArguments(); i < e; i++)
+    if (C == CI->getArgument(i))
+      return true;
+
+  return false;
+}
+
 /// Find all callsites that could call a function via the closure created
 /// by the \p create instruction and register them.
 /// Looks at calls that use \p create as an operand themselves as well as
@@ -68,7 +90,7 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
     for (Instruction *closureUser : closureInst->getUsers()) {
       // Closure is used as the callee operand.
       if (auto *call = llvh::dyn_cast<BaseCallInst>(closureUser)) {
-        if (!isDirectCallee(closureInst, call)) {
+        if (canEscapeThroughCall(closureInst, F, call)) {
           // F potentially escapes.
           F->getAttributes()._allCallsitesKnownInStrictMode = false;
         }

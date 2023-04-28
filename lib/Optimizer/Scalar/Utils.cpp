@@ -70,19 +70,6 @@ Value *hermes::isStoreOnceStackLocation(AllocStackInst *AS) {
   return res;
 }
 
-bool hermes::isDirectCallee(Instruction *C, BaseCallInst *CI) {
-  if (CI->getCallee() != C)
-    return false;
-
-  for (int i = 0, e = CI->getNumArguments(); i < e; i++) {
-    // Check if C is captured.
-    if (C == CI->getArgument(i))
-      return false;
-  }
-
-  return true;
-}
-
 bool hermes::isConstructionSetup(Value *V, Value *closure) {
   // Constructor invocations access the closure, to read the "prototype"
   // property and to create the "this" argument. However, in the absence of

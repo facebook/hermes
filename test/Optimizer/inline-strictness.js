@@ -18,7 +18,6 @@ function outer(a, b) {
     return f1();
 }
 
-
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global(): undefined

@@ -34,10 +34,6 @@ Value *isStoreOnceVariable(Variable *V);
 /// whole lifetime of the variable is constant.
 Value *isStoreOnceStackLocation(AllocStackInst *AS);
 
-/// \returns True if the value \p C is the caller's callee and is not captured
-///   by any of the arguments.
-bool isDirectCallee(Instruction *C, BaseCallInst *CI);
-
 /// \return True if \p V is an instruction that may be used in a constructor
 /// invocation of the \p closure. In the absence of other instructions that
 /// manipulate the closure, these instructions cannot leak the closure.
