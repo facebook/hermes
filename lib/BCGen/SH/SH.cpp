@@ -227,6 +227,48 @@ class SHLiteralBuffers {
   }
 };
 
+/// For each unique pair of {key buffer index, number of keys}, maintain a
+/// corresponding cache index, which can be used to retrieve that pair at
+/// runtime, and access the corresponding cached hidden class.
+class ObjectLiteralClassCache {
+  /// Map from a pair of {key buffer index, number of keys} to a unique cache
+  /// index for that pair.
+  llvh::DenseMap<std::pair<uint32_t, uint32_t>, uint32_t> cacheIndices_{};
+
+ public:
+  /// Get the cache index for the given pair of \p keyBufferIndex and \p
+  /// numKeys, creating one if it does not exist.
+  uint32_t getCacheIndex(uint32_t keyBufferIndex, uint32_t numKeys) {
+    // If this pair does not exist, use the next cache index, otherwise, use
+    // the existing entry.
+    return cacheIndices_
+        .try_emplace({keyBufferIndex, numKeys}, cacheIndices_.size())
+        .first->second;
+  }
+
+  uint32_t size() const {
+    return cacheIndices_.size();
+  }
+
+  void generate(llvh::raw_ostream &os) const {
+    // Sort the keys by cache index.
+    std::vector<std::pair<uint32_t, uint32_t>> sortedKeys{cacheIndices_.size()};
+    for (auto &entry : cacheIndices_)
+      sortedKeys[entry.second] = entry.first;
+
+    // Produce storage for the cached classes.
+    os << "static SHCompressedPointer s_object_literal_class_cache["
+       << cacheIndices_.size() << "];\n";
+
+    // Produce an array containing the key information for each entry.
+    os << "static SHObjectLiteralKeyInfo s_object_literal_key_info["
+       << cacheIndices_.size() << "] = {";
+    for (auto &entry : sortedKeys)
+      os << " {" << entry.first << "," << entry.second << "},";
+    os << "};\n";
+  }
+};
+
 struct ModuleGen {
   /// Table containing uniqued strings for the current module.
   SHStringTable stringTable{};
@@ -236,6 +278,9 @@ struct ModuleGen {
 
   /// Literal buffers for objects and arrays.
   SHLiteralBuffers literalBuffers;
+
+  /// Maintain entries for the object literal class cache.
+  ObjectLiteralClassCache objectLiteralClassCache{};
 
   explicit ModuleGen() : literalBuffers{stringTable} {}
 
@@ -1605,11 +1650,14 @@ class InstrGen {
 
     auto buffIdxs = moduleGen_.literalBuffers.addObjectBuffer(
         llvh::ArrayRef<Literal *>{objKeys}, llvh::ArrayRef<Literal *>{objVals});
+
+    auto cacheIdx = moduleGen_.objectLiteralClassCache.getCacheIndex(
+        buffIdxs.first, numLiterals);
+
     os_ << " = ";
     os_ << "_sh_ljs_new_object_with_buffer(shr, &THIS_UNIT, ";
     os_ << sizeHint << ", ";
-    os_ << numLiterals << ", ";
-    os_ << buffIdxs.first << ", ";
+    os_ << cacheIdx << ", ";
     os_ << buffIdxs.second << ")";
     os_ << ";\n";
   }
@@ -1948,6 +1996,7 @@ static SHPropertyCacheEntry s_prop_cache[];
   if (options.format == DumpBytecode || options.format == EmitBundle) {
     moduleGen.stringTable.generate(OS);
     moduleGen.literalBuffers.generate(OS);
+    moduleGen.objectLiteralClassCache.generate(OS);
 
     OS << "static SHPropertyCacheEntry s_prop_cache[" << nextCacheIdx << "];\n"
        << "SHUnit THIS_UNIT = { .num_symbols = " << moduleGen.stringTable.size()
@@ -1960,6 +2009,10 @@ static SHPropertyCacheEntry s_prop_cache[];
        << moduleGen.literalBuffers.objValBuffer.size() << ", "
        << ".array_buffer = s_array_buffer, .array_buffer_size = "
        << moduleGen.literalBuffers.arrayBuffer.size() << ", "
+       << ".object_literal_key_info = s_object_literal_key_info, "
+       << ".object_literal_class_cache = s_object_literal_class_cache, "
+       << ".num_object_literal_class_cache_entries = "
+       << moduleGen.objectLiteralClassCache.size() << ", "
        << ".unit_main = _0_global, .unit_main_strict = "
        << boolStr(M->getTopLevelFunction()->isStrictMode()) << ", "
        << ".unit_name = \"sh_compiled\" };\n";

@@ -1330,13 +1330,17 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_parent(
 static Handle<HiddenClass> getHiddenClassForBuffer(
     SHRuntime *shr,
     SHUnit *unit,
+    uint32_t literalCacheID,
     uint32_t numLiterals,
     llvh::ArrayRef<unsigned char> keyBuffer,
     uint32_t keyBufferIndex) {
   Runtime &runtime = getRuntime(shr);
-  if (auto clazzOpt = _sh_find_object_literal_hidden_class(
-          shr, unit, numLiterals, keyBufferIndex))
-    return runtime.makeHandle(vmcast<HiddenClass>((GCCell *)clazzOpt));
+
+  // Check if there is an existing cache entry for this object literal.
+  auto *cacheEntry = reinterpret_cast<WeakRoot<HiddenClass> *>(
+      &unit->object_literal_class_cache[literalCacheID]);
+  if (*cacheEntry)
+    return runtime.makeHandle(cacheEntry->get(runtime, runtime.getHeap()));
 
   MutableHandle<HiddenClass> clazz =
       runtime.makeMutableHandle(*runtime.getHiddenClassForPrototype(
@@ -1389,8 +1393,7 @@ static Handle<HiddenClass> getHiddenClassForBuffer(
     assert(
         clazz->getNumProperties() < 256 &&
         "cached hidden class should have property count less than 256");
-    _sh_cache_object_literal_hidden_class(
-        shr, unit, keyBufferIndex, clazz.getHermesValue());
+    cacheEntry->set(runtime, clazz.get());
   }
 
   return {clazz};
@@ -1400,18 +1403,21 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
     SHRuntime *shr,
     SHUnit *unit,
     uint32_t sizeHint,
-    uint32_t numLiterals,
-    uint32_t keyBufferIndex,
+    uint32_t literalCacheID,
     uint32_t valBufferIndex) {
   Runtime &runtime = getRuntime(shr);
   GCScopeMarkerRAII marker{runtime};
   llvh::ArrayRef keyBuffer{unit->obj_key_buffer, unit->obj_key_buffer_size};
   llvh::ArrayRef valBuffer{unit->obj_val_buffer, unit->obj_val_buffer_size};
+
+  auto [keyBufferIndex, numLiterals] =
+      unit->object_literal_key_info[literalCacheID];
+
   // Create a new object using the built-in constructor or cached hidden class.
   // Note that the built-in constructor is empty, so we don't actually need to
   // call it.
   Handle<HiddenClass> clazz = getHiddenClassForBuffer(
-      shr, unit, numLiterals, keyBuffer, keyBufferIndex);
+      shr, unit, literalCacheID, numLiterals, keyBuffer, keyBufferIndex);
   Handle<JSObject> obj = runtime.makeHandle(JSObject::create(runtime, clazz));
 
   struct {

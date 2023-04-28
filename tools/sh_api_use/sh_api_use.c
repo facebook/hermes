@@ -38,6 +38,7 @@ static SHUnit s_this_unit = {
     .strings = s_strings,
     .symbols = s_symbols,
     .prop_cache = s_prop_cache,
+    .num_object_literal_class_cache_entries = 0,
     .unit_main = unit_main,
     .unit_main_strict = false,
     .unit_name = "sh_api_use",

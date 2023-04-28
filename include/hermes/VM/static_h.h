@@ -23,6 +23,15 @@ extern "C" {
 typedef struct SHUnitExt SHUnitExt;
 typedef uint32_t SHSymbolID;
 
+/// SHObjectLiteralKeyInfo encodes the set of keys to be used to construct an
+/// object literal.
+typedef struct SHObjectLiteralKeyInfo {
+  /// The index in the \c obj_key_buffer where keys for this object start.
+  uint32_t key_buffer_index;
+  /// The number of keys in this object literal.
+  uint32_t num_keys;
+} SHObjectLiteralKeyInfo;
+
 /// SHUnit describes a compilation unit.
 ///
 /// <h2>Restrictions</h2>
@@ -78,6 +87,19 @@ typedef struct SHUnit {
   const unsigned char *array_buffer;
   /// Size of array value buffer.
   uint32_t array_buffer_size;
+
+  /// Size of the object literal class cache.
+  uint32_t num_object_literal_class_cache_entries;
+  /// Information about the keys used to construct each cached object literal
+  /// class. Points to an array with `num_object_literal_class_cache_entries`
+  /// elements.
+  const SHObjectLiteralKeyInfo *object_literal_key_info;
+  /// Cached object literal hidden classes. Points to an array of
+  /// `num_object_literal_class_cache_entries` WeakRoots, which point to the
+  /// cached hidden class for that entry.
+  /// NOTE: These should always be treated as WeakRoots, which means a read
+  /// barrier is needed to safely read out the value.
+  SHCompressedPointer *object_literal_class_cache;
 
   /// Unit main function.
   SHLegacyValue (*unit_main)(SHRuntime *shr);
@@ -202,18 +224,6 @@ SHERMES_EXPORT void _sh_cache_template_object(
     SHUnit *unit,
     uint32_t templateObjID,
     SHLegacyValue templateObj);
-
-SHERMES_EXPORT void _sh_cache_object_literal_hidden_class(
-    SHRuntime *shr,
-    const SHUnit *unit,
-    uint32_t keyBufferIndex,
-    SHLegacyValue clazz);
-
-SHERMES_EXPORT void *_sh_find_object_literal_hidden_class(
-    SHRuntime *shr,
-    const SHUnit *unit,
-    uint32_t numLiterals,
-    uint32_t keyBufferIndex);
 
 /// Add the locals to the gc list, allocate register stack, return a pointer to
 /// the frame.
@@ -588,14 +598,13 @@ SHERMES_EXPORT SHLegacyValue
 _sh_ljs_new_object_with_parent(SHRuntime *shr, const SHLegacyValue *parent);
 
 /// \p sizeHint the eventual size of the resultant object.
-/// \p numLiterals the number of literals to read off the buffer
-///   to populate the start of the object.
+/// \p literalCacheID the entry in the literal class cache to use for creating
+/// this object.
 SHERMES_EXPORT SHLegacyValue _sh_ljs_new_object_with_buffer(
     SHRuntime *shr,
     SHUnit *unit,
     uint32_t sizeHint,
-    uint32_t numLiterals,
-    uint32_t keyBufferIndex,
+    uint32_t literalCacheID,
     uint32_t valBufferIndex);
 
 /// \p sizeHint the size of the resultant array.
