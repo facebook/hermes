@@ -723,6 +723,12 @@ ESTREE_NODE_3_ARGS(
     NodePtr, name, true,
     NodePtr, typeAnnotation, false,
     NodeBoolean, optional, false)
+ESTREE_NODE_4_ARGS(
+    ComponentTypeAnnotation, Base,
+    NodeList, params, false,
+    NodePtr, rest, true,
+    NodePtr, typeParameters, true,
+    NodePtr, returnType, true)
 ESTREE_NODE_3_ARGS(
     ComponentTypeParameter, Base,
     NodePtr, name, true,

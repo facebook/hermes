@@ -1128,6 +1128,7 @@ class JSParserImpl {
   bool parseComponentParametersFlow(Param param, ESTree::NodeList &paramList);
   Optional<ESTree::Node *> parseComponentParameterFlow(Param param);
 
+  Optional<ESTree::Node *> parseComponentTypeAnnotationFlow();
   /// Parse ComponentTypeParameters with the leading '(' and the trailing ')'.
   /// \pre the current token must be '('. \param[out] paramList populated
   /// with the ComponentTypeParameters.
