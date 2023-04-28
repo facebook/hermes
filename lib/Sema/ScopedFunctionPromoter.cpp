@@ -160,6 +160,11 @@ void ScopedFunctionPromoter::processDeclarations(Node *scope) {
   // if we want to).
   llvh::SmallVector<Node *const *, 4> foundDecls{};
 
+  // New decls with the promoted functions removed.
+  // Populated with non-candidate declarations in the first loop,
+  // and non-promoted candidate declarations in the second loop.
+  ScopeDecls newDecls{};
+
   for (auto &nodeRef : decls) {
     Node *node = nodeRef;
     if (!node)
@@ -170,9 +175,13 @@ void ScopedFunctionPromoter::processDeclarations(Node *scope) {
         // We encountered one of the candidate declarations.
         // Add it to the found_decls list and move on.
         foundDecls.push_back(&nodeRef);
+      } else {
+        newDecls.push_back(node);
       }
       continue;
     }
+
+    newDecls.push_back(node);
 
     // Extract idents, report errors.
     idents.clear();
@@ -194,8 +203,6 @@ void ScopedFunctionPromoter::processDeclarations(Node *scope) {
     // No work to do.
     return;
   }
-
-  ScopeDecls newDecls{};
 
   // Did we finally encounter one of the scoped function declarations?
   for (Node *const *funcDeclRef : foundDecls) {
