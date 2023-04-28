@@ -125,6 +125,12 @@ export function isComponentParameter(node: ESNode | Token): boolean %checks {
   return node.type === 'ComponentParameter';
 }
 
+export function isComponentTypeParameter(
+  node: ESNode | Token,
+): boolean %checks {
+  return node.type === 'ComponentTypeParameter';
+}
+
 export function isConditionalExpression(node: ESNode | Token): boolean %checks {
   return node.type === 'ConditionalExpression';
 }
@@ -145,6 +151,10 @@ export function isDebuggerStatement(node: ESNode | Token): boolean %checks {
 
 export function isDeclareClass(node: ESNode | Token): boolean %checks {
   return node.type === 'DeclareClass';
+}
+
+export function isDeclareComponent(node: ESNode | Token): boolean %checks {
+  return node.type === 'DeclareComponent';
 }
 
 export function isDeclaredPredicate(node: ESNode | Token): boolean %checks {

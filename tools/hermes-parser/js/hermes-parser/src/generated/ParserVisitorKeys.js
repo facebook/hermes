@@ -118,6 +118,10 @@ export const HERMES_AST_VISITOR_KEYS = {
     name: 'Node',
     local: 'Node',
   },
+  ComponentTypeParameter: {
+    name: 'Node',
+    typeAnnotation: 'Node',
+  },
   ConditionalExpression: {
     test: 'Node',
     alternate: 'Node',
@@ -140,6 +144,13 @@ export const HERMES_AST_VISITOR_KEYS = {
     implements: 'NodeList',
     mixins: 'NodeList',
     body: 'Node',
+  },
+  DeclareComponent: {
+    id: 'Node',
+    params: 'NodeList',
+    rest: 'Node',
+    typeParameters: 'Node',
+    returnType: 'Node',
   },
   DeclaredPredicate: {
     value: 'Node',

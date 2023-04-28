@@ -75,6 +75,7 @@ module.exports = {
     'returnType',
   ],
   ComponentParameter: ['name', 'local'],
+  ComponentTypeParameter: ['name', 'typeAnnotation'],
   ConditionalExpression: ['test', 'consequent', 'alternate'],
   ConditionalTypeAnnotation: [
     'checkType',
@@ -92,6 +93,7 @@ module.exports = {
     'mixins',
     'body',
   ],
+  DeclareComponent: ['id', 'params', 'rest', 'typeParameters', 'returnType'],
   DeclaredPredicate: ['value'],
   DeclareEnum: ['id', 'body'],
   DeclareExportAllDeclaration: ['source'],
