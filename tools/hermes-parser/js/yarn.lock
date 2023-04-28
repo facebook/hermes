@@ -2910,6 +2910,39 @@ has@^1.0.3:
   dependencies:
     function-bind "^1.1.1"
 
+hermes-eslint@0.10.1:
+  version "0.10.1"
+  resolved "https://registry.yarnpkg.com/hermes-eslint/-/hermes-eslint-0.10.1.tgz#f89ace4ccebe38c3463af27927e9c03a7937fc2b"
+  integrity sha512-3Myj2H9AsWC7kb1gqVOr0/9RXZCwawtnnGHZUDfkDE8Ta336utDgCS3dNtEjYm2UAS3/ZweWiz1Olm/HIdLThw==
+  dependencies:
+    esrecurse "^4.3.0"
+    hermes-estree "0.10.1"
+    hermes-parser "0.10.1"
+
+hermes-estree@0.10.1:
+  version "0.10.1"
+  resolved "https://registry.yarnpkg.com/hermes-estree/-/hermes-estree-0.10.1.tgz#6a5ac13e2343c19492708ad325e9e6bb12d3d76a"
+  integrity sha512-92opTqdY8y4ifTcp53/2c+qvk5r+z0qZ5zz1LuZamNtJdMeekUQpnKraLDTKLzmRoC1J/VeYx0fZLxK/+H3fMg==
+
+hermes-parser@0.10.1:
+  version "0.10.1"
+  resolved "https://registry.yarnpkg.com/hermes-parser/-/hermes-parser-0.10.1.tgz#fc037d7d3fbe29a917dc4814726dd631e1fda00a"
+  integrity sha512-3lgVZgNGzQuLjJAdDhF11pxOaA+KV9+BQ83QuhAQhkGgty1lRIYSfSzNMyD3c3U1oDObQgMYvi2Mlv7vZrQi7w==
+  dependencies:
+    hermes-estree "0.10.1"
+
+hermes-transform@0.10.1:
+  version "0.10.1"
+  resolved "https://registry.yarnpkg.com/hermes-transform/-/hermes-transform-0.10.1.tgz#b61ba584b4cc1b204880dcf57e51f94d82366f9a"
+  integrity sha512-FYDZI9XeWyVKmml7AEZlYlbS4LiN+kNZPJS6jlxGA/0Nv8mY6itoAex0xjZR4d0LqbDPv/u3tZA+O1DTLKVoGg==
+  dependencies:
+    "@babel/code-frame" "^7.16.0"
+    esquery "^1.4.0"
+    flow-enums-runtime "^0.0.6"
+    hermes-eslint "0.10.1"
+    hermes-estree "0.10.1"
+    hermes-parser "0.10.1"
+
 homedir-polyfill@^1.0.1:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/homedir-polyfill/-/homedir-polyfill-1.0.3.tgz#743298cef4e5af3e194161fbadcc2151d3a058e8"

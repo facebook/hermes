@@ -1,6 +1,6 @@
 {
   "name": "flow-api-translator",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "description": "Toolkit for creating Flow and TypeScript compatible libraries from Flow source code.",
   "main": "dist/index.js",
   "license": "MIT",
