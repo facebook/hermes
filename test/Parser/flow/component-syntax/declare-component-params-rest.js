@@ -107,15 +107,12 @@ declare component Foo4(foo: Foo, ...rest: Rest);
 // CHECK-NEXT:             "name": "foo"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "typeAnnotation": {
-// CHECK-NEXT:             "type": "TypeAnnotation",
-// CHECK-NEXT:             "typeAnnotation": {
-// CHECK-NEXT:               "type": "GenericTypeAnnotation",
-// CHECK-NEXT:               "id": {
-// CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "Foo"
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "typeParameters": null
-// CHECK-NEXT:             }
+// CHECK-NEXT:             "type": "GenericTypeAnnotation",
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "Foo"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "typeParameters": null
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "optional": false
 // CHECK-NEXT:         }

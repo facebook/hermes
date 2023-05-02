@@ -49,15 +49,12 @@ declare component Foo2(foo: Foo);
 // CHECK-NEXT:             "name": "foo"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "typeAnnotation": {
-// CHECK-NEXT:             "type": "TypeAnnotation",
-// CHECK-NEXT:             "typeAnnotation": {
-// CHECK-NEXT:               "type": "GenericTypeAnnotation",
-// CHECK-NEXT:               "id": {
-// CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "Foo"
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "typeParameters": null
-// CHECK-NEXT:             }
+// CHECK-NEXT:             "type": "GenericTypeAnnotation",
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "Foo"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "typeParameters": null
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "optional": false
 // CHECK-NEXT:         }
@@ -82,15 +79,12 @@ declare component Foo3(foo?: Foo);
 // CHECK-NEXT:             "name": "foo"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "typeAnnotation": {
-// CHECK-NEXT:             "type": "TypeAnnotation",
-// CHECK-NEXT:             "typeAnnotation": {
-// CHECK-NEXT:               "type": "GenericTypeAnnotation",
-// CHECK-NEXT:               "id": {
-// CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "Foo"
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "typeParameters": null
-// CHECK-NEXT:             }
+// CHECK-NEXT:             "type": "GenericTypeAnnotation",
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "Foo"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "typeParameters": null
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "optional": true
 // CHECK-NEXT:         }
@@ -138,15 +132,12 @@ declare component Foo5('foo': Foo);
 // CHECK-NEXT:             "value": "foo"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "typeAnnotation": {
-// CHECK-NEXT:             "type": "TypeAnnotation",
-// CHECK-NEXT:             "typeAnnotation": {
-// CHECK-NEXT:               "type": "GenericTypeAnnotation",
-// CHECK-NEXT:               "id": {
-// CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "Foo"
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "typeParameters": null
-// CHECK-NEXT:             }
+// CHECK-NEXT:             "type": "GenericTypeAnnotation",
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "Foo"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "typeParameters": null
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "optional": false
 // CHECK-NEXT:         }
@@ -171,15 +162,12 @@ declare component Foo6('foo'?: Foo);
 // CHECK-NEXT:             "value": "foo"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "typeAnnotation": {
-// CHECK-NEXT:             "type": "TypeAnnotation",
-// CHECK-NEXT:             "typeAnnotation": {
-// CHECK-NEXT:               "type": "GenericTypeAnnotation",
-// CHECK-NEXT:               "id": {
-// CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "Foo"
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "typeParameters": null
-// CHECK-NEXT:             }
+// CHECK-NEXT:             "type": "GenericTypeAnnotation",
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "Foo"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "typeParameters": null
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "optional": true
 // CHECK-NEXT:         }
@@ -204,15 +192,12 @@ declare component Foo7('foo1': Foo, foo2: Foo);
 // CHECK-NEXT:             "value": "foo1"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "typeAnnotation": {
-// CHECK-NEXT:             "type": "TypeAnnotation",
-// CHECK-NEXT:             "typeAnnotation": {
-// CHECK-NEXT:               "type": "GenericTypeAnnotation",
-// CHECK-NEXT:               "id": {
-// CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "Foo"
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "typeParameters": null
-// CHECK-NEXT:             }
+// CHECK-NEXT:             "type": "GenericTypeAnnotation",
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "Foo"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "typeParameters": null
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "optional": false
 // CHECK-NEXT:         },
@@ -223,15 +208,12 @@ declare component Foo7('foo1': Foo, foo2: Foo);
 // CHECK-NEXT:             "name": "foo2"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "typeAnnotation": {
-// CHECK-NEXT:             "type": "TypeAnnotation",
-// CHECK-NEXT:             "typeAnnotation": {
-// CHECK-NEXT:               "type": "GenericTypeAnnotation",
-// CHECK-NEXT:               "id": {
-// CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "Foo"
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "typeParameters": null
-// CHECK-NEXT:             }
+// CHECK-NEXT:             "type": "GenericTypeAnnotation",
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "Foo"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "typeParameters": null
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "optional": false
 // CHECK-NEXT:         }

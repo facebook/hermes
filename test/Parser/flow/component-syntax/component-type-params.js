@@ -38,15 +38,12 @@ type Foo1 = component(foo, bar: Bar, 'baz': Baz);
 // CHECK-NEXT:               "name": "bar"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "typeAnnotation": {
-// CHECK-NEXT:               "type": "TypeAnnotation",
-// CHECK-NEXT:               "typeAnnotation": {
-// CHECK-NEXT:                 "type": "GenericTypeAnnotation",
-// CHECK-NEXT:                 "id": {
-// CHECK-NEXT:                   "type": "Identifier",
-// CHECK-NEXT:                   "name": "Bar"
-// CHECK-NEXT:                 },
-// CHECK-NEXT:                 "typeParameters": null
-// CHECK-NEXT:               }
+// CHECK-NEXT:               "type": "GenericTypeAnnotation",
+// CHECK-NEXT:               "id": {
+// CHECK-NEXT:                 "type": "Identifier",
+// CHECK-NEXT:                 "name": "Bar"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "typeParameters": null
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "optional": false
 // CHECK-NEXT:           },
@@ -57,15 +54,12 @@ type Foo1 = component(foo, bar: Bar, 'baz': Baz);
 // CHECK-NEXT:               "value": "baz"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "typeAnnotation": {
-// CHECK-NEXT:               "type": "TypeAnnotation",
-// CHECK-NEXT:               "typeAnnotation": {
-// CHECK-NEXT:                 "type": "GenericTypeAnnotation",
-// CHECK-NEXT:                 "id": {
-// CHECK-NEXT:                   "type": "Identifier",
-// CHECK-NEXT:                   "name": "Baz"
-// CHECK-NEXT:                 },
-// CHECK-NEXT:                 "typeParameters": null
-// CHECK-NEXT:               }
+// CHECK-NEXT:               "type": "GenericTypeAnnotation",
+// CHECK-NEXT:               "id": {
+// CHECK-NEXT:                 "type": "Identifier",
+// CHECK-NEXT:                 "name": "Baz"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "typeParameters": null
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "optional": false
 // CHECK-NEXT:           }
