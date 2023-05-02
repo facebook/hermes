@@ -4304,7 +4304,7 @@ class LIRDeadValueInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return SideEffect{}.setIdempotent();
+    return SideEffect::createUnknown();
   }
 
   static bool classof(const Value *V) {
