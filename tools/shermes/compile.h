@@ -22,7 +22,6 @@ enum class OutputLevelKind {
   LIR,
   RA,
   LRA,
-  PostRA,
   C,
   Asm,
   Obj,

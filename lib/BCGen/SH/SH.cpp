@@ -1826,10 +1826,6 @@ void generateFunction(
     RA.dump();
     return;
   }
-  if (options.format == DumpPostRA) {
-    F.dump();
-    return;
-  }
 
   assert(
       (options.format == DumpBytecode || options.format == EmitBundle) &&

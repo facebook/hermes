@@ -218,10 +218,6 @@ static opt<OutputFormatKind> DumpTarget(
             DumpLRA,
             "dump-lra",
             "Dump register-allocated Lowered IR as text"),
-        clEnumValN(
-            DumpPostRA,
-            "dump-postra",
-            "Dump the Lowered IR after register allocation"),
         clEnumValN(DumpBytecode, "dump-bytecode", "Dump bytecode as text"),
         clEnumValN(EmitBundle, "emit-binary", "Emit compiled binary")),
     cat(CompilerCategory));
@@ -372,6 +368,7 @@ static opt<bool> OutputSourceMap(
 static opt<bool> DumpOperandRegisters(
     "dump-operand-registers",
     desc("Dump registers assigned to instruction operands"),
+    init(true),
     cat(CompilerCategory));
 
 static opt<bool> DumpUseList(

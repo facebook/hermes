@@ -21,7 +21,6 @@ enum OutputFormatKind {
   DumpLIR,
   DumpRA,
   DumpLRA,
-  DumpPostRA,
   DumpBytecode,
   EmitBundle,
   Execute,

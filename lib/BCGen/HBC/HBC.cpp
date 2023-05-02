@@ -312,9 +312,6 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
       if (options.format == DumpLRA)
         RA.dump();
 
-      if (options.format == DumpPostRA)
-        F.dump();
-
       funcGen =
           BytecodeFunctionGenerator::create(BMGen, RA.getMaxRegisterUsage());
       HBCISel hbciSel(&F, funcGen.get(), RA, scopeAnalysis, options);

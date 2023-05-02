@@ -54,8 +54,6 @@ OutputFormatKind toOutputFormatKind(OutputLevelKind level) {
       return OutputFormatKind::DumpRA;
     case OutputLevelKind::LRA:
       return OutputFormatKind::DumpLRA;
-    case OutputLevelKind::PostRA:
-      return OutputFormatKind::DumpPostRA;
     case OutputLevelKind::C:
     case OutputLevelKind::Asm:
     case OutputLevelKind::Obj:
@@ -191,10 +189,6 @@ cl::opt<OutputLevelKind> OutputLevel(
             OutputLevelKind::LRA,
             "dump-lra",
             "Register-allocated Lowered IR as text"),
-        clEnumValN(
-            OutputLevelKind::PostRA,
-            "dump-postra",
-            "Lowered IR after register allocation"),
         clEnumValN(OutputLevelKind::C, "emit-c", "Generated C"),
         clEnumValN(OutputLevelKind::Asm, "S", "Assembly output"),
         clEnumValN(OutputLevelKind::Obj, "c", "Object file"),
@@ -330,6 +324,7 @@ cl::opt<bool> VerifyIR(
 cl::opt<bool> DumpOperandRegisters(
     "dump-operand-registers",
     cl::desc("Dump registers for operands instead of instruction numbers"),
+    cl::init(true),
     cl::cat(CompilerCategory));
 
 cl::opt<bool> DumpUseList(
