@@ -11,9 +11,12 @@
 'use strict';
 
 import type {
+  ComponentTypeAnnotation,
+  ComponentTypeParameter,
   DeclareClass,
   DeclaredPredicate,
   DeclareExportDeclaration,
+  DeclareComponent,
   DeclareFunction,
   DeclareInterface,
   DeclareModule,
@@ -41,6 +44,7 @@ import type {Referencer} from './Referencer';
 
 import {Visitor} from './Visitor';
 import {
+  ComponentNameDefinition,
   ClassNameDefinition,
   FunctionNameDefinition,
   TypeDefinition,
@@ -81,10 +85,12 @@ class TypeVisitor extends Visitor {
 
   maybeCreateTypeScope(
     node:
+      | ComponentTypeAnnotation
       | DeclareTypeAlias
       | DeclareOpaqueType
       | DeclareInterface
       | DeclareClass
+      | DeclareComponent
       | FunctionTypeAnnotation
       | TypeAlias
       | OpaqueType
@@ -200,6 +206,23 @@ class TypeVisitor extends Visitor {
     this.visit(node.typeAnnotation);
   }
 
+  DeclareComponent(node: DeclareComponent): void {
+    this._referencer
+      .currentScope()
+      .defineIdentifier(node.id, new ComponentNameDefinition(node.id, node));
+
+    const hasTypeScope = this.maybeCreateTypeScope(node);
+
+    this.visit(node.typeParameters);
+    this.visitArray(node.params);
+    this.visit(node.rest);
+    this.visit(node.returnType);
+
+    if (hasTypeScope) {
+      this._referencer.close(node);
+    }
+  }
+
   DeclareFunction(node: DeclareFunction): void {
     this._referencer
       .currentScope()
@@ -258,6 +281,26 @@ class TypeVisitor extends Visitor {
     // Do not visit 'name' child to prevent name from being treated as a reference.
     // e.g. 'foo' is a parameter name in a type that should not be treated like a
     // definition or reference in `type T = (foo: string) => void`.
+    this.visit(node.typeAnnotation);
+  }
+
+  ComponentTypeAnnotation(node: ComponentTypeAnnotation): void {
+    const hasTypeScope = this.maybeCreateTypeScope(node);
+
+    this.visit(node.typeParameters);
+    this.visitArray(node.params);
+    this.visit(node.rest);
+    this.visit(node.returnType);
+
+    if (hasTypeScope) {
+      this._referencer.close(node);
+    }
+  }
+
+  ComponentTypeParameter(node: ComponentTypeParameter): void {
+    // Do not visit 'name' child to prevent name from being treated as a reference.
+    // e.g. 'foo' is a parameter name in a type that should not be treated like a
+    // definition or reference in `type T = component(foo: string)`.
     this.visit(node.typeAnnotation);
   }
 

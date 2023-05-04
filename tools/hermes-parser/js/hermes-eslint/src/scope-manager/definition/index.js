@@ -11,6 +11,7 @@
 'use strict';
 
 export * from './CatchClauseDefinition';
+export * from './ComponentNameDefinition';
 export * from './ClassNameDefinition';
 export * from './Definition';
 export * from './DefinitionType';
