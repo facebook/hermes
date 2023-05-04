@@ -24,13 +24,31 @@ export const parse: typeof parseOriginal = (source, options) => {
 
 export function parseForSnapshot(
   source: string,
-  options?: {preserveRange?: boolean, babel?: boolean},
+  {
+    babel,
+    preserveRange,
+    enableExperimentalComponentSyntax,
+  }: {
+    preserveRange?: boolean,
+    babel?: boolean,
+    enableExperimentalComponentSyntax?: boolean,
+  } = {},
 ): mixed {
-  if (options?.babel === true) {
-    return cleanASTForSnapshot(parse(source, {babel: true}).program, options);
+  const parseOpts = {
+    enableExperimentalComponentSyntax:
+      enableExperimentalComponentSyntax ?? false,
+  };
+  if (babel === true) {
+    return cleanASTForSnapshot(
+      parse(source, {
+        babel: true,
+        ...parseOpts,
+      }).program,
+      {babel, preserveRange},
+    );
   }
 
-  return cleanASTForSnapshot(parse(source), options);
+  return cleanASTForSnapshot(parse(source, parseOpts), {babel, preserveRange});
 }
 
 export function cleanASTForSnapshot(
