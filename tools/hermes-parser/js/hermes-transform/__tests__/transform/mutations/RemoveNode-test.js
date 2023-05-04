@@ -12,6 +12,8 @@ import type {
   PropertyDefinition,
   EnumDefaultedMember,
   FunctionTypeParam,
+  ComponentParameter,
+  ComponentTypeParameter,
   Identifier,
   ObjectTypeIndexer,
 } from 'hermes-estree';
@@ -95,6 +97,60 @@ describe('RemoveNode', () => {
             params: [
               {
                 type: 'FunctionTypeParam',
+                typeAnnotation: {
+                  type: 'StringTypeAnnotation',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+  });
+
+  it('ComponentParameter', () => {
+    const {ast, target} = parseAndGetAstAndNode<ComponentParameter>(
+      'ComponentParameter',
+      'component Foo(foo: string, bar: number) {}',
+    );
+    const mutation = createRemoveNodeMutation(target);
+    performRemoveNodeMutation(new MutationContext(''), mutation);
+    expect(ast).toMatchObject({
+      type: 'Program',
+      body: [
+        {
+          type: 'ComponentDeclaration',
+          params: [
+            {
+              type: 'ComponentParameter',
+              name: {
+                type: 'Identifier',
+                name: 'foo',
+              },
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('ComponentTypeParameter', () => {
+    const {ast, target} = parseAndGetAstAndNode<ComponentTypeParameter>(
+      'ComponentTypeParameter',
+      'type T = component(foo: string, bar: number)',
+    );
+    const mutation = createRemoveNodeMutation(target);
+    performRemoveNodeMutation(new MutationContext(''), mutation);
+    expect(ast).toMatchObject({
+      type: 'Program',
+      body: [
+        {
+          type: 'TypeAlias',
+          right: {
+            type: 'ComponentTypeAnnotation',
+            params: [
+              {
+                type: 'ComponentTypeParameter',
                 typeAnnotation: {
                   type: 'StringTypeAnnotation',
                 },

@@ -15,9 +15,8 @@ import type {
   Statement,
 } from 'hermes-estree';
 
-import {parseForESLint} from 'hermes-eslint';
-import {attachComments} from '../../../src/transform/comments/comments';
 import {traverse} from '../../../src/traverse/traverse';
+import {parse} from '../../../src/transform/parse';
 
 export type StatementTypes = Statement['type'] | ModuleDeclaration['type'];
 export const CODE_SAMPLES: $ReadOnly<{[StatementTypes]: string}> = {
@@ -81,11 +80,7 @@ export function parseAndGetAstAndNode<T: ESNode = ESNode>(
   ast: Program,
   target: T,
 } {
-  const {ast, scopeManager} = parseForESLint(code, {
-    sourceType: 'module',
-  });
-
-  attachComments(ast.comments, ast, code);
+  const {ast, scopeManager} = parse(code);
 
   let target: T | null = null;
   traverse(code, ast, scopeManager, () => ({
