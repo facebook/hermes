@@ -1025,6 +1025,7 @@ export type TypeParameterProps = {
   +bound?: ?MaybeDetachedNode<TypeParameterType['bound']>,
   +variance?: ?MaybeDetachedNode<TypeParameterType['variance']>,
   +default?: ?MaybeDetachedNode<TypeParameterType['default']>,
+  +usesExtendsBound: TypeParameterType['usesExtendsBound'],
 };
 
 export type TypeParameterDeclarationProps = {
@@ -2962,6 +2963,7 @@ export function TypeParameter(props: {
     bound: asDetachedNodeForCodeGen(props.bound),
     variance: asDetachedNodeForCodeGen(props.variance),
     default: asDetachedNodeForCodeGen(props.default),
+    usesExtendsBound: props.usesExtendsBound,
   });
   setParentPointersInDirectChildren(node);
   return node;

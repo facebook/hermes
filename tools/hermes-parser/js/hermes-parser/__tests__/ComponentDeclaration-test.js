@@ -778,6 +778,7 @@ describe('ComponentDeclaration', () => {
                     "default": null,
                     "name": "T1",
                     "type": "TypeParameter",
+                    "usesExtendsBound": false,
                     "variance": null,
                   },
                   {
@@ -785,6 +786,7 @@ describe('ComponentDeclaration', () => {
                     "default": null,
                     "name": "T2",
                     "type": "TypeParameter",
+                    "usesExtendsBound": false,
                     "variance": null,
                   },
                 ],
@@ -885,6 +887,7 @@ describe('ComponentDeclaration', () => {
                     "default": null,
                     "name": "T1",
                     "type": "TypeParameter",
+                    "usesExtendsBound": false,
                     "variance": null,
                   },
                   {
@@ -892,6 +895,7 @@ describe('ComponentDeclaration', () => {
                     "default": null,
                     "name": "T2",
                     "type": "TypeParameter",
+                    "usesExtendsBound": false,
                     "variance": null,
                   },
                 ],
