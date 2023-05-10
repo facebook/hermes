@@ -1973,9 +1973,12 @@ PERMANENT_SKIP_LIST = [
     # Flow AST features.
     "flow/comment_interning/",
     "flow/decorators/",
+    "flow/interpreter_directive/",
     "flow/types/annotations_in_comments/",
     "flow/types/annotations_in_comments_invalid/",
     "flow/types/conditional_types/",
+    "flow/types/mapped_types/",
+    "flow/type_guards/",
     "flow/ES6/template-literals/comments_in_interpolation.js",
     "flow/ES6/template-literals/comments_in_interpolation_multiline.js",
     # Flow TS syntax, unsupported so far.
