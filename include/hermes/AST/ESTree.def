@@ -955,12 +955,14 @@ ESTREE_NODE_1_ARGS(
 ESTREE_NODE_1_ARGS(
     TypeParameterDeclaration, Base,
     NodeList, params, false)
-ESTREE_NODE_4_ARGS(
+ESTREE_NODE_5_ARGS(
     TypeParameter, Base,
     NodeLabel, name, false,
     NodePtr, bound, true,
     NodePtr, variance, true,
-    NodePtr, default, true)
+    NodePtr, default, true,
+    NodeBoolean, usesExtendsBound, false)
+ESTREE_IGNORE_IF_EMPTY(TypeParameter, usesExtendsBound)
 ESTREE_NODE_1_ARGS(
     TypeParameterInstantiation, Base,
     NodeList, params, false)

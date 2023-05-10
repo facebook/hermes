@@ -141,6 +141,9 @@ class EsprimaTestRunner:
         if ast["type"] == "TupleTypeAnnotation":
             ast["elementTypes"] = ast["types"]
             del ast["types"]
+        if ast["type"] == "TypeParameter":
+            if not ast["usesExtendsBound"]:
+                del ast["usesExtendsBound"]
         if ast["type"] == "TupleTypeLabeledElement":
             if not ast["optional"]:
                 del ast["optional"]

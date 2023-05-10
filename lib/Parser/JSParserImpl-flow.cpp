@@ -1883,8 +1883,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
             new (context_) ESTree::InferTypeAnnotationNode(setLocation(
                 start,
                 getPrevTokenEndLoc(),
-                new (context_)
-                    ESTree::TypeParameterNode(name, bound, nullptr, nullptr))));
+                new (context_) ESTree::TypeParameterNode(
+                    name, bound, nullptr, nullptr, true))));
       }
 
       {
@@ -2876,7 +2876,8 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeMappedTypePropertyFlow(
   ESTree::Node *keyTparam = setLocation(
       left,
       left,
-      new (context_) ESTree::TypeParameterNode(id, nullptr, nullptr, nullptr));
+      new (context_)
+          ESTree::TypeParameterNode(id, nullptr, nullptr, nullptr, false));
 
   auto optSourceType = parseTypeAnnotationFlow();
   if (!optSourceType)
@@ -3052,7 +3053,18 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeParamFlow() {
   advance(JSLexer::GrammarContext::Type);
 
   ESTree::Node *bound = nullptr;
+  bool usesExtendsBound = false;
   if (check(TokenKind::colon)) {
+    SMLoc boundStart = advance(JSLexer::GrammarContext::Type).Start;
+    auto optType = parseTypeAnnotationFlow();
+    if (!optType)
+      return None;
+    bound = setLocation(
+        boundStart,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::TypeAnnotationNode(*optType));
+  } else if (check(TokenKind::rw_extends)) {
+    usesExtendsBound = true;
     SMLoc boundStart = advance(JSLexer::GrammarContext::Type).Start;
     auto optType = parseTypeAnnotationFlow();
     if (!optType)
@@ -3074,8 +3086,8 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeParamFlow() {
   return setLocation(
       start,
       getPrevTokenEndLoc(),
-      new (context_)
-          ESTree::TypeParameterNode(name, bound, variance, initializer));
+      new (context_) ESTree::TypeParameterNode(
+          name, bound, variance, initializer, usesExtendsBound));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeArgsFlow() {

@@ -346,7 +346,7 @@ type T = number extends (string extends number ? string : number) ? string : num
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
-type ArrayElement<T> = T extends Array<infer E> ? E : empty;
+type ArrayElement<T extends A> = T extends Array<infer E> ? E : empty;
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "TypeAlias",
 // CHECK-NEXT:       "id": {
@@ -359,9 +359,20 @@ type ArrayElement<T> = T extends Array<infer E> ? E : empty;
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "TypeParameter",
 // CHECK-NEXT:             "name": "T",
-// CHECK-NEXT:             "bound": null,
+// CHECK-NEXT:             "bound": {
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "GenericTypeAnnotation",
+// CHECK-NEXT:                 "id": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "A"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "typeParameters": null
+// CHECK-NEXT:               }
+// CHECK-NEXT:             },
 // CHECK-NEXT:             "variance": null,
-// CHECK-NEXT:             "default": null
+// CHECK-NEXT:             "default": null,
+// CHECK-NEXT:             "usesExtendsBound": true
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
@@ -391,7 +402,8 @@ type ArrayElement<T> = T extends Array<infer E> ? E : empty;
 // CHECK-NEXT:                   "name": "E",
 // CHECK-NEXT:                   "bound": null,
 // CHECK-NEXT:                   "variance": null,
-// CHECK-NEXT:                   "default": null
+// CHECK-NEXT:                   "default": null,
+// CHECK-NEXT:                   "usesExtendsBound": true
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               }
 // CHECK-NEXT:             ]
@@ -438,7 +450,8 @@ let x : number extends infer T extends number ? string : number;
 // CHECK-NEXT:                       "type": "NumberTypeAnnotation"
 // CHECK-NEXT:                     },
 // CHECK-NEXT:                     "variance": null,
-// CHECK-NEXT:                     "default": null
+// CHECK-NEXT:                     "default": null,
+// CHECK-NEXT:                     "usesExtendsBound": true
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "trueType": {
@@ -476,7 +489,8 @@ let x : infer T extends number ? string : number;
 // CHECK-NEXT:                     "name": "T",
 // CHECK-NEXT:                     "bound": null,
 // CHECK-NEXT:                     "variance": null,
-// CHECK-NEXT:                     "default": null
+// CHECK-NEXT:                     "default": null,
+// CHECK-NEXT:                     "usesExtendsBound": true
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "extendsType": {
@@ -522,7 +536,8 @@ let x : number extends (infer T extends number ? string : number) ? string : num
 // CHECK-NEXT:                       "name": "T",
 // CHECK-NEXT:                       "bound": null,
 // CHECK-NEXT:                       "variance": null,
-// CHECK-NEXT:                       "default": null
+// CHECK-NEXT:                       "default": null,
+// CHECK-NEXT:                       "usesExtendsBound": true
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   "extendsType": {
@@ -570,7 +585,8 @@ let x: infer A extends (infer B extends infer C ? infer D : infer E) ? string : 
 // CHECK-NEXT:                     "name": "A",
 // CHECK-NEXT:                     "bound": null,
 // CHECK-NEXT:                     "variance": null,
-// CHECK-NEXT:                     "default": null
+// CHECK-NEXT:                     "default": null,
+// CHECK-NEXT:                     "usesExtendsBound": true
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "extendsType": {
@@ -582,7 +598,8 @@ let x: infer A extends (infer B extends infer C ? infer D : infer E) ? string : 
 // CHECK-NEXT:                       "name": "B",
 // CHECK-NEXT:                       "bound": null,
 // CHECK-NEXT:                       "variance": null,
-// CHECK-NEXT:                       "default": null
+// CHECK-NEXT:                       "default": null,
+// CHECK-NEXT:                       "usesExtendsBound": true
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   "extendsType": {
@@ -592,7 +609,8 @@ let x: infer A extends (infer B extends infer C ? infer D : infer E) ? string : 
 // CHECK-NEXT:                       "name": "C",
 // CHECK-NEXT:                       "bound": null,
 // CHECK-NEXT:                       "variance": null,
-// CHECK-NEXT:                       "default": null
+// CHECK-NEXT:                       "default": null,
+// CHECK-NEXT:                       "usesExtendsBound": true
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   "trueType": {
@@ -602,7 +620,8 @@ let x: infer A extends (infer B extends infer C ? infer D : infer E) ? string : 
 // CHECK-NEXT:                       "name": "D",
 // CHECK-NEXT:                       "bound": null,
 // CHECK-NEXT:                       "variance": null,
-// CHECK-NEXT:                       "default": null
+// CHECK-NEXT:                       "default": null,
+// CHECK-NEXT:                       "usesExtendsBound": true
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   "falseType": {
@@ -612,7 +631,8 @@ let x: infer A extends (infer B extends infer C ? infer D : infer E) ? string : 
 // CHECK-NEXT:                       "name": "E",
 // CHECK-NEXT:                       "bound": null,
 // CHECK-NEXT:                       "variance": null,
-// CHECK-NEXT:                       "default": null
+// CHECK-NEXT:                       "default": null,
+// CHECK-NEXT:                       "usesExtendsBound": true
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 },
