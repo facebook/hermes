@@ -12,7 +12,11 @@ type INTENTIONAL_ANY = $FlowFixMe;
 type JSType = 'number' | 'string' | 'array' | 'boolean';
 type CBoolean = ?(number | boolean);
 
-type HermesParserWASM = $ReadOnly<{
+type WASMModuleOverrides = $ReadOnly<{
+  quit(status: number, toThrow: Error): void,
+}>;
+
+export type HermesParserWASM = $ReadOnly<{
   HEAP8: Int8Array,
   HEAP16: Int16Array,
   HEAP32: Int32Array,
@@ -72,4 +76,4 @@ type HermesParserWASM = $ReadOnly<{
   stackRestore(ptr: number): void,
 }>;
 
-declare module.exports: HermesParserWASM;
+declare module.exports: WASMModuleOverrides => HermesParserWASM;
