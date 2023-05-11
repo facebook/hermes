@@ -1354,7 +1354,7 @@ export interface ComponentTypeAnnotation extends BaseNode {
 export interface ComponentTypeParameter extends BaseNode {
   +type: 'ComponentTypeParameter';
   +name: Identifier | StringLiteral | null;
-  +typeAnnotation: TypeAnnotationType | null;
+  +typeAnnotation: TypeAnnotationType;
   +optional: boolean;
 
   +parent: ComponentTypeAnnotation | DeclareComponent;
