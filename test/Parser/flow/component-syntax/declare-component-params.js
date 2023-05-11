@@ -11,7 +11,7 @@
 // CHECK-NEXT:   "type": "Program",
 // CHECK-NEXT:   "body": [
 
-declare component Foo1(foo);
+declare component Foo1(foo: Foo);
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "DeclareComponent",
 // CHECK-NEXT:       "id": {
@@ -25,7 +25,14 @@ declare component Foo1(foo);
 // CHECK-NEXT:             "type": "Identifier",
 // CHECK-NEXT:             "name": "foo"
 // CHECK-NEXT:           },
-// CHECK-NEXT:           "typeAnnotation": null,
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "GenericTypeAnnotation",
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "Foo"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "typeParameters": null
+// CHECK-NEXT:           },
 // CHECK-NEXT:           "optional": false
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
@@ -34,7 +41,7 @@ declare component Foo1(foo);
 // CHECK-NEXT:       "returnType": null
 // CHECK-NEXT:     },
 
-declare component Foo2(foo: Foo);
+declare component Foo2(foo?: Foo);
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "DeclareComponent",
 // CHECK-NEXT:       "id": {
@@ -56,7 +63,7 @@ declare component Foo2(foo: Foo);
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "typeParameters": null
 // CHECK-NEXT:           },
-// CHECK-NEXT:           "optional": false
+// CHECK-NEXT:           "optional": true
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "rest": null,
@@ -64,7 +71,7 @@ declare component Foo2(foo: Foo);
 // CHECK-NEXT:       "returnType": null
 // CHECK-NEXT:     },
 
-declare component Foo3(foo?: Foo);
+declare component Foo3('foo': Foo);
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "DeclareComponent",
 // CHECK-NEXT:       "id": {
@@ -75,8 +82,8 @@ declare component Foo3(foo?: Foo);
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "type": "ComponentTypeParameter",
 // CHECK-NEXT:           "name": {
-// CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "foo"
+// CHECK-NEXT:             "type": "StringLiteral",
+// CHECK-NEXT:             "value": "foo"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "typeAnnotation": {
 // CHECK-NEXT:             "type": "GenericTypeAnnotation",
@@ -86,7 +93,7 @@ declare component Foo3(foo?: Foo);
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "typeParameters": null
 // CHECK-NEXT:           },
-// CHECK-NEXT:           "optional": true
+// CHECK-NEXT:           "optional": false
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "rest": null,
@@ -94,7 +101,7 @@ declare component Foo3(foo?: Foo);
 // CHECK-NEXT:       "returnType": null
 // CHECK-NEXT:     },
 
-declare component Foo4('foo');
+declare component Foo4('foo'?: Foo);
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "DeclareComponent",
 // CHECK-NEXT:       "id": {
@@ -108,59 +115,6 @@ declare component Foo4('foo');
 // CHECK-NEXT:             "type": "StringLiteral",
 // CHECK-NEXT:             "value": "foo"
 // CHECK-NEXT:           },
-// CHECK-NEXT:           "typeAnnotation": null,
-// CHECK-NEXT:           "optional": false
-// CHECK-NEXT:         }
-// CHECK-NEXT:       ],
-// CHECK-NEXT:       "rest": null,
-// CHECK-NEXT:       "typeParameters": null,
-// CHECK-NEXT:       "returnType": null
-// CHECK-NEXT:     },
-
-declare component Foo5('foo': Foo);
-// CHECK-NEXT:     {
-// CHECK-NEXT:       "type": "DeclareComponent",
-// CHECK-NEXT:       "id": {
-// CHECK-NEXT:         "type": "Identifier",
-// CHECK-NEXT:         "name": "Foo5"
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "params": [
-// CHECK-NEXT:         {
-// CHECK-NEXT:           "type": "ComponentTypeParameter",
-// CHECK-NEXT:           "name": {
-// CHECK-NEXT:             "type": "StringLiteral",
-// CHECK-NEXT:             "value": "foo"
-// CHECK-NEXT:           },
-// CHECK-NEXT:           "typeAnnotation": {
-// CHECK-NEXT:             "type": "GenericTypeAnnotation",
-// CHECK-NEXT:             "id": {
-// CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "Foo"
-// CHECK-NEXT:             },
-// CHECK-NEXT:             "typeParameters": null
-// CHECK-NEXT:           },
-// CHECK-NEXT:           "optional": false
-// CHECK-NEXT:         }
-// CHECK-NEXT:       ],
-// CHECK-NEXT:       "rest": null,
-// CHECK-NEXT:       "typeParameters": null,
-// CHECK-NEXT:       "returnType": null
-// CHECK-NEXT:     },
-
-declare component Foo6('foo'?: Foo);
-// CHECK-NEXT:     {
-// CHECK-NEXT:       "type": "DeclareComponent",
-// CHECK-NEXT:       "id": {
-// CHECK-NEXT:         "type": "Identifier",
-// CHECK-NEXT:         "name": "Foo6"
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "params": [
-// CHECK-NEXT:         {
-// CHECK-NEXT:           "type": "ComponentTypeParameter",
-// CHECK-NEXT:           "name": {
-// CHECK-NEXT:             "type": "StringLiteral",
-// CHECK-NEXT:             "value": "foo"
-// CHECK-NEXT:           },
 // CHECK-NEXT:           "typeAnnotation": {
 // CHECK-NEXT:             "type": "GenericTypeAnnotation",
 // CHECK-NEXT:             "id": {
@@ -177,12 +131,12 @@ declare component Foo6('foo'?: Foo);
 // CHECK-NEXT:       "returnType": null
 // CHECK-NEXT:     },
 
-declare component Foo7('foo1': Foo, foo2: Foo);
+declare component Foo5('foo1': Foo, foo2: Foo);
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "DeclareComponent",
 // CHECK-NEXT:       "id": {
 // CHECK-NEXT:         "type": "Identifier",
-// CHECK-NEXT:         "name": "Foo7"
+// CHECK-NEXT:         "name": "Foo5"
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "params": [
 // CHECK-NEXT:         {

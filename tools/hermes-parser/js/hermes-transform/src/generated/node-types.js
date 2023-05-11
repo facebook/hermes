@@ -323,7 +323,7 @@ export type ComponentTypeAnnotationProps = {
 
 export type ComponentTypeParameterProps = {
   +name?: ?MaybeDetachedNode<ComponentTypeParameterType['name']>,
-  +typeAnnotation?: ?MaybeDetachedNode<
+  +typeAnnotation: MaybeDetachedNode<
     ComponentTypeParameterType['typeAnnotation'],
   >,
   +optional: ComponentTypeParameterType['optional'],

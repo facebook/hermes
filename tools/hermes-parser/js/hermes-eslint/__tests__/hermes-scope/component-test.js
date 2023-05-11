@@ -186,7 +186,7 @@ describe('Component', () => {
 
     it('parameters should not be resolved', () => {
       const {scopeManager} = parseForESLint(`
-        declare component Foo(b);
+        declare component Foo(b: B);
       `);
 
       expect(scopeManager.scopes).toHaveLength(2); // [global, module]
@@ -194,7 +194,7 @@ describe('Component', () => {
       const scope = scopeManager.scopes[1];
 
       expect(scope.variables).toHaveLength(1); // [Foo]
-      expect(scope.references).toHaveLength(0);
+      expect(scope.references).toHaveLength(1); // [B]
     });
 
     it('type parameters should be resolved', () => {
@@ -232,7 +232,7 @@ describe('Component', () => {
   describe('Type', () => {
     it('parameters should not be resolved', () => {
       const {scopeManager} = parseForESLint(`
-        type Foo = component(b);
+        type Foo = component(b: B);
       `);
 
       expect(scopeManager.scopes).toHaveLength(2); // [global, module]
@@ -240,7 +240,7 @@ describe('Component', () => {
       const scope = scopeManager.scopes[1];
 
       expect(scope.variables).toHaveLength(1); // [Foo]
-      expect(scope.references).toHaveLength(0);
+      expect(scope.references).toHaveLength(1); // [B]
     });
 
     it('type parameters should be resolved', () => {

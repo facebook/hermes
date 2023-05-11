@@ -559,9 +559,7 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentTypeParameterFlow(
     Param param) {
   // ComponentTypeParameter:
   //   StringLiteral?: TypeParam
-  //   StringLiteral
   //   IdentifierName?: TypeParam
-  //   IdentifierName
 
   SMLoc paramStart = tok_->getStartLoc();
   ESTree::Node *nameElem;
@@ -594,35 +592,35 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentTypeParameterFlow(
     return None;
   }
 
-  ESTree::Node *type = nullptr;
   bool optional = false;
 
   // Name?: TypeParam
   //     ^
   if (checkAndEat(TokenKind::question, JSLexer::GrammarContext::Type)) {
     optional = true;
-    if (!need(
-            TokenKind::colon,
-            "in component type parameter",
-            "location of optional",
-            paramStart))
-      return None;
   }
 
   // Name?: TypeParam
   //      ^
-  if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Type)) {
-    auto optType = parseTypeAnnotation();
-    if (!optType)
-      return None;
-    type = *optType;
-  }
+  if (!eat(
+          TokenKind::colon,
+          JSLexer::GrammarContext::Type,
+          "in component type parameter",
+          "start of parameter",
+          paramStart))
+    return None;
+
+  // Name?: TypeParam
+  //        ^
+  auto optType = parseTypeAnnotation();
+  if (!optType)
+    return None;
 
   return setLocation(
       paramStart,
       getPrevTokenEndLoc(),
       new (context_)
-          ESTree::ComponentTypeParameterNode(nameElem, type, optional));
+          ESTree::ComponentTypeParameterNode(nameElem, *optType, optional));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeAliasFlow(
