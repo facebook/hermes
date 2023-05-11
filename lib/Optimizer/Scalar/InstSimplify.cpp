@@ -302,23 +302,11 @@ Value *simplifyBinOp(BinaryOperatorInst *binary) {
 }
 
 Value *simplifyPhiInst(PhiInst *P) {
-  unsigned numEntries = P->getNumEntries();
-  if (!numEntries) {
-    // This Phi has no incoming entries. This means that the entire block is
-    // unreachable and will be removed by DCE.
-    return nullptr;
-  }
-
-  // Optimize away PHI nodes with a single entry.
-  if (1 == numEntries) {
-    auto E = P->getEntry(0);
-    P->replaceAllUsesWith(E.first);
-    P->eraseFromParent();
-    return nullptr;
-  }
-
+  // Optimize PHI nodes where all incoming values that are not self-edges are
+  // the same, by replacing them with that single source value. Note that Phis
+  // that have no inputs, or where all inputs are self-edges, must be dead, and
+  // will be left untouched.
   Value *incoming = nullptr;
-  // Optimize PHI nodes that accept the same input from all directions:
   for (int i = 0, e = P->getNumEntries(); i < e; i++) {
     auto E = P->getEntry(i);
     // Ignore self edges.
