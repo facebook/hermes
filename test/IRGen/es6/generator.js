@@ -321,7 +321,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %69 = BranchInst %BB21
 // CHECK-NEXT:%BB21:
 // CHECK-NEXT:  %70 = CallBuiltinInst [HermesBuiltin.throwTypeError] : number, undefined : undefined, undefined : undefined, "yield* delegate must have a .throw() method" : string
-// CHECK-NEXT:  %71 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %71 = ThrowInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function destr#0#1()#12

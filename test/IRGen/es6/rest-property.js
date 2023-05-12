@@ -66,7 +66,7 @@ function f5(o) {
 // CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = CallBuiltinInst [HermesBuiltin.throwTypeError] : number, undefined : undefined, undefined : undefined, %3, "Cannot destructure 'undefined' or 'null'." : string
-// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %7 = ThrowInst undefined : undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = AllocObjectInst 0 : number, empty
 // CHECK-NEXT:  %9 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, undefined : undefined, %8 : object, %3, undefined : undefined

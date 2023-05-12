@@ -1159,8 +1159,8 @@ void ESTreeIRGen::emitDestructuringObject(
          Builder.getLiteralString(
              "Cannot destructure 'undefined' or 'null'.")});
     // throwTypeError will always throw.
-    // This return is here to ensure well-formed IR, and will not run.
-    Builder.createReturnInst(Builder.getLiteralUndefined());
+    // This throw is here to ensure well-formed IR, and will not run.
+    Builder.createThrowInst(Builder.getLiteralUndefined());
 
     Builder.setInsertionBlock(doneBB);
   }

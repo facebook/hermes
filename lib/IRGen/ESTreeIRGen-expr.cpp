@@ -1455,7 +1455,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
                 "yield* delegate must have a .throw() method")});
         // HermesInternal.throwTypeError will necessarily throw, but we need to
         // have a terminator on this BB to allow proper optimization.
-        Builder.createReturnInst(Builder.getLiteralUndefined());
+        Builder.createThrowInst(Builder.getLiteralUndefined());
       });
 
   Builder.setInsertionBlock(exitBlock);
