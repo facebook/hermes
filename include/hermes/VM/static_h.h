@@ -291,8 +291,9 @@ static inline void _sh_push_try(SHRuntime *shr, SHJmpBuf *buf) {
   buf->prev = shr->shCurJmpBuf;
   shr->shCurJmpBuf = buf;
 }
-static inline void _sh_end_try(SHRuntime *shr) {
-  shr->shCurJmpBuf = shr->shCurJmpBuf->prev;
+static inline void _sh_end_try(SHRuntime *shr, SHJmpBuf *buf) {
+  assert(shr->shCurJmpBuf == buf && "must pop top buffer");
+  shr->shCurJmpBuf = buf->prev;
 }
 
 /// \param frame the value that should be set to the current frame

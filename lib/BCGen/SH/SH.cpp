@@ -23,6 +23,8 @@
 #include "hermes/Support/HashString.h"
 #include "hermes/Support/UTF8.h"
 
+#include "hermes/Optimizer/Scalar/Utils.h"
+
 #include "llvh/ADT/BitVector.h"
 
 using namespace hermes;
@@ -316,7 +318,8 @@ class InstrGen {
       ModuleGen &moduleGen,
       FunctionScopeAnalysis &scopeAnalysis,
       unsigned envSize,
-      uint32_t &nextCacheIdx)
+      uint32_t &nextCacheIdx,
+      const llvh::DenseMap<BasicBlock *, size_t> &bbTryDepths)
       : os_(os),
         ra_(ra),
         bbMap_(bbMap),
@@ -324,7 +327,8 @@ class InstrGen {
         moduleGen_(moduleGen),
         scopeAnalysis_(scopeAnalysis),
         envSize_(envSize),
-        nextCacheIdx_(nextCacheIdx) {
+        nextCacheIdx_(nextCacheIdx),
+        bbTryDepths_(bbTryDepths) {
     registerIsPointer_.resize(ra_.getMaxRegisterUsage());
     if (F_.getContext().getOptimizationSettings().promoteNonPtr) {
       // Default every register to not be a pointer.
@@ -396,8 +400,8 @@ class InstrGen {
   /// Starts out at 0 and increments every time a cache index is used
   uint32_t &nextCacheIdx_;
 
-  /// Indices used to generate unique names for the jump buffers.
-  uint32_t nextJBufIdx_{0};
+  /// A map from basic blocks to their number of enclosing try statements.
+  const llvh::DenseMap<BasicBlock *, size_t> &bbTryDepths_;
 
   /// Entry \c i is true if a pointer is ever written to register \c i.
   llvh::BitVector registerIsPointer_{};
@@ -1249,10 +1253,8 @@ class InstrGen {
     os_ << ");\n";
   }
   void generateTryEndInst(TryEndInst &inst) {
-    // TODO(T132354002): Properly understand the nesting of try blocks so we can
-    // directly pass in the corresponding SHJmpBuf here instead of retrieving it
-    // from shr.
-    os_ << "  _sh_end_try(shr);\n";
+    os_ << "  _sh_end_try(shr, &jmpBuf" << bbTryDepths_.lookup(inst.getParent())
+        << ");\n";
   }
   void generateGetNewTargetInst(GetNewTargetInst &inst) {
     os_.indent(2);
@@ -1410,16 +1412,13 @@ class InstrGen {
     os_ << ";\n";
   }
   void generateTryStartInst(TryStartInst &inst) {
-    // TODO(T132354002): Properly understand the nesting of try blocks so we can
-    // reuse SHJmpBufs.
-    os_ << "  SHJmpBuf jBuf" << nextJBufIdx_ << ";\n";
-    os_ << "  if(_sh_try(shr, &jBuf" << nextJBufIdx_ << ") == 0) goto ";
+    os_ << "  if(_sh_try(shr, &jmpBuf" << bbTryDepths_.lookup(inst.getParent())
+        << ") == 0) goto ";
     generateBasicBlockLabel(inst.getTryBody(), os_, bbMap_);
     os_ << ";\n";
     os_ << "  goto ";
     generateBasicBlockLabel(inst.getCatchTarget(), os_, bbMap_);
     os_ << ";\n";
-    nextJBufIdx_++;
   }
   void generateCompareBranchInst(CompareBranchInst &inst) {
     os_ << "  if(";
@@ -1859,8 +1858,19 @@ void generateFunction(
 
   unsigned envSize = F.getFunctionScope()->getVariables().size();
 
+  // Compute the try nesting depth of each basic block.
+  llvh::DenseMap<BasicBlock *, size_t> bbTryDepths = getBlockTryDepths(&F);
+
   InstrGen instrGen(
-      OS, RA, bbMap, F, moduleGen, scopeAnalysis, envSize, nextCacheIdx);
+      OS,
+      RA,
+      bbMap,
+      F,
+      moduleGen,
+      scopeAnalysis,
+      envSize,
+      nextCacheIdx,
+      bbTryDepths);
 
   // Number of registers stored in the `locals` struct below.
   uint32_t localsSize = 0;
@@ -1908,6 +1918,13 @@ void generateFunction(
     }
     OS << i << " = _sh_ljs_undefined();\n";
   }
+
+  // Initialize SHJmpBufs for the maximum possible nesting depth.
+  size_t maxDepth = 0;
+  for (const auto &[BB, depth] : bbTryDepths)
+    maxDepth = std::max(maxDepth, depth);
+  for (size_t i = 0; i < maxDepth; ++i)
+    OS << "  SHJmpBuf jmpBuf" << i << ";\n";
 
   for (auto &B : order) {
     OS << "\n";

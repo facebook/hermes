@@ -68,5 +68,10 @@ bool deleteUnusedFunctionsAndVariables(Module *M);
 /// with identical instructions or duplicated without changing semantics, and
 /// can be placed anywhere in the middle of a basic block.
 bool isSimpleSideEffectFreeInstruction(Instruction *I);
+
+/// Construct a map from each basic block in \p F to the number of enclosing
+/// try's. Note that unreachable blocks, and blocks with a nesting depth of 0,
+/// are excluded from the map.
+llvh::DenseMap<BasicBlock *, size_t> getBlockTryDepths(Function *F);
 } // namespace hermes
 #endif // HERMES_OPTIMIZER_SCALAR_UTILS_H

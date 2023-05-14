@@ -258,4 +258,39 @@ bool hermes::isSimpleSideEffectFreeInstruction(Instruction *I) {
   llvm_unreachable("unreachable");
 }
 
+llvh::DenseMap<BasicBlock *, size_t> hermes::getBlockTryDepths(Function *F) {
+  // Map basic blocks inside a try to the number of try statements they are
+  // nested in.
+  llvh::DenseMap<BasicBlock *, size_t> blockTryDepths;
+
+  // Stack of basic blocks to visit. The second element in the pair represents
+  // the nesting depth on entry to that block.
+  llvh::SmallVector<std::pair<BasicBlock *, size_t>, 4> stack;
+
+  llvh::DenseSet<BasicBlock *> visited;
+  visited.insert(&F->front());
+  stack.push_back({&F->front(), 0});
+
+  while (!stack.empty()) {
+    auto [BB, depth] = stack.pop_back_val();
+
+    // If the block starts with a TryEndInst or CatchInst, it ends the nearest
+    // try, decrement the depth for this block and all successors.
+    if (llvh::isa<TryEndInst>(&BB->front()) ||
+        llvh::isa<CatchInst>(&BB->front()))
+      depth--;
+
+    if (depth)
+      blockTryDepths.try_emplace(BB, depth);
+
+    // If the block ends with a TryStartInst, increment the depth
+    size_t newDepth =
+        llvh::isa<TryStartInst>(BB->getTerminator()) ? depth + 1 : depth;
+    for (auto *succ : successors(BB))
+      if (visited.insert(succ).second)
+        stack.push_back({succ, newDepth});
+  }
+  return blockTryDepths;
+}
+
 #undef DEBUG_TYPE
