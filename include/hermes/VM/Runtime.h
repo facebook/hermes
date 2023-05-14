@@ -771,9 +771,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 #include "hermes/VM/RuntimeHermesValueFields.def"
 #undef RUNTIME_HV_FIELD
 
-  /// [SH] exception handler.
-  SHJmpBuf *shCurJmpBuf{};
-
   /// [SH] head of locals list.
   SHLocals *shLocals{};
 

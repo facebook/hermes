@@ -12,9 +12,16 @@
 
 #include "libhermesvm-config.h"
 
+#include <setjmp.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef struct SHJmpBuf {
+  struct SHJmpBuf *prev;
+  jmp_buf buf;
+} SHJmpBuf;
 
 /// This class represents the context of the VM that is shared between generated
 /// SH code and the VM implementation itself. It is intended to serve as the
@@ -52,6 +59,9 @@ typedef struct SHRuntime {
   /// in C and C++. Delete it once we add other fields.
   uint8_t dummy;
 #endif
+
+  /// The current top of the exception handler stack.
+  SHJmpBuf *shCurJmpBuf;
 } SHRuntime;
 
 #ifdef HERMESVM_COMPRESSED_POINTERS

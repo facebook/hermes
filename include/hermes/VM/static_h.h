@@ -118,11 +118,6 @@ typedef struct SHLocals {
   SHLegacyValue locals[0];
 } SHLocals;
 
-typedef struct SHJmpBuf {
-  struct SHJmpBuf *prev;
-  jmp_buf buf;
-} SHJmpBuf;
-
 /// Utility to concatenate a prefix with HERMESVM_MODEL.
 #define _HERMESVM_JOIN_TOKENS(x, y) _HERMESVM_JOIN_HELPER(x, y)
 /// This helper is needed due to how the preprocessor works.
@@ -292,8 +287,13 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_create_this(
     SHLegacyValue *callable);
 
 #define _sh_try(shr, jbuf) (_sh_push_try(shr, jbuf), _setjmp((jbuf)->buf))
-SHERMES_EXPORT void _sh_push_try(SHRuntime *shr, SHJmpBuf *buf);
-SHERMES_EXPORT void _sh_end_try(SHRuntime *shr);
+static inline void _sh_push_try(SHRuntime *shr, SHJmpBuf *buf) {
+  buf->prev = shr->shCurJmpBuf;
+  shr->shCurJmpBuf = buf;
+}
+static inline void _sh_end_try(SHRuntime *shr) {
+  shr->shCurJmpBuf = shr->shCurJmpBuf->prev;
+}
 
 /// \param frame the value that should be set to the current frame
 ///     (Runtime::currentFrame_).
