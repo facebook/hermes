@@ -465,7 +465,7 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
   uniqueUsers.clear();
   uniqueUsers.insert(
       createArguments->getUsers().begin(), createArguments->getUsers().end());
-  for (Value *user : uniqueUsers) {
+  for (Instruction *user : uniqueUsers) {
     if (auto *phi = llvh::dyn_cast<PhiInst>(user)) {
       // We have to insert another branch where we can reify the value.
       for (int i = 0, n = phi->getNumEntries(); i < n; i++) {
@@ -495,23 +495,21 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
           if (branch->getOperand(j) == thisBlock)
             branch->setOperand(newBlock, j);
       }
-    } else if (auto *inst = llvh::dyn_cast<Instruction>(user)) {
+    } else {
       // For other users, insert a reification so we can replace
       // the usage with this array.
-      builder.setInsertionPoint(inst);
-      builder.setLocation(inst->getLocation());
+      builder.setInsertionPoint(user);
+      builder.setLocation(user->getLocation());
       if (isStrict)
         builder.createHBCReifyArgumentsStrictInst(lazyReg);
       else
         builder.createHBCReifyArgumentsLooseInst(lazyReg);
       auto *array = builder.createLoadStackInst(lazyReg);
-      for (int i = 0, n = inst->getNumOperands(); i < n; i++) {
-        if (inst->getOperand(i) == createArguments) {
-          inst->setOperand(array, i);
+      for (int i = 0, n = user->getNumOperands(); i < n; i++) {
+        if (user->getOperand(i) == createArguments) {
+          user->setOperand(array, i);
         }
       }
-    } else {
-      hermes_fatal("CreateArguments used for a non-Instruction.");
     }
   }
 
