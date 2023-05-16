@@ -54,7 +54,7 @@ function shadow(arguments) {
 // CHECK:function cheap(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
+// CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "length": string
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) %0: object, 0: number
 // CHECK-NEXT:  %3 = BinaryAddInst (:any) %1: any, %2: any
@@ -66,7 +66,7 @@ function shadow(arguments) {
 // CHECK:function expensive(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
+// CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "length": string
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) globalObject: object, "cheap": string
 // CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, %0: object
@@ -81,7 +81,7 @@ function shadow(arguments) {
 // CHECK:function cond(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
+// CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "length": string
 // CHECK-NEXT:  %2 = CondBranchInst %1: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:

@@ -137,7 +137,6 @@ DEF_VALUE(AllocArrayInst, Instruction)
 DEF_VALUE(AllocFastArrayInst, Instruction)
 DEF_VALUE(AllocObjectLiteralInst, Instruction)
 DEF_VALUE(GetTemplateObjectInst, Instruction)
-DEF_VALUE(CreateArgumentsInst, Instruction)
 DEF_VALUE(CatchInst, Instruction)
 DEF_VALUE(DebuggerInst, Instruction)
 DEF_VALUE(CreateRegExpInst, Instruction)
@@ -152,6 +151,11 @@ DEF_VALUE(HBCStoreToEnvironmentInst, Instruction)
 DEF_VALUE(HBCLoadFromEnvironmentInst, Instruction)
 #endif
 DEF_VALUE(UnreachableInst, Instruction)
+
+MARK_FIRST(CreateArgumentsInst, Instruction)
+DEF_VALUE(CreateArgumentsLooseInst, CreateArgumentsInst)
+DEF_VALUE(CreateArgumentsStrictInst, CreateArgumentsInst)
+MARK_LAST(CreateArgumentsInst)
 
 MARK_FIRST(BaseCreateLexicalChildInst, Instruction)
 

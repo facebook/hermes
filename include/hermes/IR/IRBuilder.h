@@ -423,7 +423,8 @@ class IRBuilder {
       llvh::ArrayRef<LiteralString *> rawStrings,
       llvh::ArrayRef<Value *> cookedStrings);
 
-  CreateArgumentsInst *createCreateArgumentsInst();
+  CreateArgumentsLooseInst *createCreateArgumentsLooseInst();
+  CreateArgumentsStrictInst *createCreateArgumentsStrictInst();
 
   GetNewTargetInst *createGetNewTargetInst(Value *newTargetParam);
 

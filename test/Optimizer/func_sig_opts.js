@@ -211,7 +211,7 @@ function test_async() {
 // CHECK:function asyncFn(): any [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
+// CHECK-NEXT:  %0 = CreateArgumentsStrictInst (:object)
 // CHECK-NEXT:  %1 = LoadParamInst (:undefined) %this: undefined
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %?anon_0_asyncFn(): object
 // CHECK-NEXT:  %3 = GetBuiltinClosureInst (:object) [HermesBuiltin.spawnAsync]: number

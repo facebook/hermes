@@ -1206,8 +1206,11 @@ class InstrGen {
     // This instruction should not have reached this far.
     hermes_fatal("AllocObjectLiteralInst should have been lowered.");
   }
-  void generateCreateArgumentsInst(CreateArgumentsInst &inst) {
-    hermes_fatal("CreateArgumentsInst should have been lowered.");
+  void generateCreateArgumentsLooseInst(CreateArgumentsLooseInst &inst) {
+    hermes_fatal("CreateArgumentsLooseInst should have been lowered.");
+  }
+  void generateCreateArgumentsStrictInst(CreateArgumentsStrictInst &inst) {
+    hermes_fatal("CreateArgumentsStrictInst should have been lowered.");
   }
   void generateCatchInst(CatchInst &inst) {
     os_.indent(2);

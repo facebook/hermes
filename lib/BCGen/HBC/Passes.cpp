@@ -421,6 +421,7 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
   if (!createArguments) {
     return false;
   }
+  bool isStrict = llvh::isa<CreateArgumentsStrictInst>(createArguments);
 
   builder.setInsertionPoint(createArguments);
   AllocStackInst *lazyReg =
@@ -449,7 +450,7 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
       } else {
         // For all other property loads, get by index.
         HBCGetArgumentsPropByValInst *get;
-        if (F->isStrictMode())
+        if (isStrict)
           get = builder.createHBCGetArgumentsPropByValStrictInst(
               load->getProperty(), lazyReg);
         else
@@ -477,7 +478,7 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
 
         auto *newBlock = builder.createBasicBlock(F);
         builder.setInsertionBlock(newBlock);
-        if (F->isStrictMode())
+        if (isStrict)
           builder.createHBCReifyArgumentsStrictInst(lazyReg);
         else
           builder.createHBCReifyArgumentsLooseInst(lazyReg);
@@ -499,7 +500,7 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
       // the usage with this array.
       builder.setInsertionPoint(inst);
       builder.setLocation(inst->getLocation());
-      if (F->isStrictMode())
+      if (isStrict)
         builder.createHBCReifyArgumentsStrictInst(lazyReg);
       else
         builder.createHBCReifyArgumentsLooseInst(lazyReg);

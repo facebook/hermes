@@ -188,11 +188,6 @@ static bool canBeInlined(Function *F, Function *intoFunction) {
 
   // Allow inlining between functions of different strictness,
   // because all relevant instructions have Strict/Loose variants.
-  //
-  // The only exception is CreateArgumentsInst, which we exclude below.
-  // CreateArgumentsInst needs special handling because the two functions need
-  // their own 'arguments'.
-
   for (BasicBlock *oldBB : orderDFS(F)) {
     for (auto &I : *oldBB) {
       switch (I.getKind()) {
@@ -200,7 +195,10 @@ static bool canBeInlined(Function *F, Function *intoFunction) {
         // copied with other parameters.
         case ValueKind::LIRGetThisNSInstKind:
 
-        case ValueKind::CreateArgumentsInstKind:
+        // Creating arguments cannot be inlined because its output is dependent
+        // on the function it is executed in.
+        case ValueKind::CreateArgumentsLooseInstKind:
+        case ValueKind::CreateArgumentsStrictInstKind:
 
         // TODO: We haven't added the ability to copy inner functions to the
         // function which is being inlined into.

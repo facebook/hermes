@@ -57,7 +57,7 @@ var simpleAsyncFE = async function () {
 // CHECK:function simpleReturn(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
+// CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %this: any
 // CHECK-NEXT:  %2 = CoerceThisNSInst (:object) %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %?anon_0_simpleReturn(): any
@@ -69,7 +69,7 @@ var simpleAsyncFE = async function () {
 // CHECK:function simpleAwait(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
+// CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %this: any
 // CHECK-NEXT:  %2 = CoerceThisNSInst (:object) %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %?anon_0_simpleAwait(): any
@@ -81,7 +81,7 @@ var simpleAsyncFE = async function () {
 // CHECK:function nonSimpleArrayDestructuring(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
+// CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %this: any
 // CHECK-NEXT:  %2 = CoerceThisNSInst (:object) %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %?anon_0_nonSimpleArrayDestructuring(): any
@@ -93,7 +93,7 @@ var simpleAsyncFE = async function () {
 // CHECK:function simpleAsyncFE(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
+// CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %this: any
 // CHECK-NEXT:  %2 = CoerceThisNSInst (:object) %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %?anon_0_simpleAsyncFE(): any

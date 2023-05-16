@@ -68,7 +68,7 @@ function bar() {
 // CHECK:function normal(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
+// CHECK-NEXT:  %0 = CreateArgumentsStrictInst (:object)
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, 0: number
 // CHECK-NEXT:  %2 = StorePropertyStrictInst %1: any, globalObject: object, "dummy": string
 // CHECK-NEXT:  %3 = ReturnInst undefined: undefined
@@ -77,7 +77,7 @@ function bar() {
 // CHECK:function foo(): any
 // CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: undefined|object, ?anon_2_arguments: object, arrow1: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
+// CHECK-NEXT:  %0 = CreateArgumentsStrictInst (:object)
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %this: any
 // CHECK-NEXT:  %2 = StoreFrameInst %1: any, [?anon_0_this]: any
 // CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
@@ -98,7 +98,7 @@ function bar() {
 // CHECK:function bar(): any
 // CHECK-NEXT:frame = [inner: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
+// CHECK-NEXT:  %0 = CreateArgumentsStrictInst (:object)
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %inner(): any
 // CHECK-NEXT:  %2 = StoreFrameInst %1: object, [inner]: any
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %0: object, 0: number
@@ -127,7 +127,7 @@ function bar() {
 // CHECK:function inner(): any
 // CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: undefined|object, ?anon_2_arguments: object, arrow3: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
+// CHECK-NEXT:  %0 = CreateArgumentsStrictInst (:object)
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %this: any
 // CHECK-NEXT:  %2 = StoreFrameInst %1: any, [?anon_0_this]: any
 // CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|object) %new.target: undefined|object

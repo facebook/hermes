@@ -1916,8 +1916,7 @@ class CreateArgumentsInst : public Instruction {
   void operator=(const CreateArgumentsInst &) = delete;
 
  public:
-  explicit CreateArgumentsInst()
-      : Instruction(ValueKind::CreateArgumentsInstKind) {
+  explicit CreateArgumentsInst(ValueKind kind) : Instruction(kind) {
     setType(*getInherentTypeImpl());
   }
   explicit CreateArgumentsInst(
@@ -1938,8 +1937,43 @@ class CreateArgumentsInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), CreateArgumentsInst);
+  }
+};
+
+class CreateArgumentsLooseInst : public CreateArgumentsInst {
+  CreateArgumentsLooseInst(const CreateArgumentsLooseInst &) = delete;
+  void operator=(const CreateArgumentsLooseInst &) = delete;
+
+ public:
+  explicit CreateArgumentsLooseInst()
+      : CreateArgumentsInst(ValueKind::CreateArgumentsLooseInstKind) {}
+  explicit CreateArgumentsLooseInst(
+      const CreateArgumentsLooseInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : CreateArgumentsInst(src, operands) {}
+
+  static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::CreateArgumentsInstKind;
+    return kind == ValueKind::CreateArgumentsLooseInstKind;
+  }
+};
+
+class CreateArgumentsStrictInst : public CreateArgumentsInst {
+  CreateArgumentsStrictInst(const CreateArgumentsStrictInst &) = delete;
+  void operator=(const CreateArgumentsStrictInst &) = delete;
+
+ public:
+  explicit CreateArgumentsStrictInst()
+      : CreateArgumentsInst(ValueKind::CreateArgumentsStrictInstKind) {}
+  explicit CreateArgumentsStrictInst(
+      const CreateArgumentsStrictInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : CreateArgumentsInst(src, operands) {}
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::CreateArgumentsStrictInstKind;
   }
 };
 

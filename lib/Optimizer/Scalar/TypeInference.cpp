@@ -680,7 +680,10 @@ class TypeInferenceImpl {
   Type inferAllocObjectLiteralInst(AllocObjectLiteralInst *inst) {
     return *inst->getInherentType();
   }
-  Type inferCreateArgumentsInst(CreateArgumentsInst *inst) {
+  Type inferCreateArgumentsLooseInst(CreateArgumentsLooseInst *inst) {
+    return *inst->getInherentType();
+  }
+  Type inferCreateArgumentsStrictInst(CreateArgumentsStrictInst *inst) {
     return *inst->getInherentType();
   }
   Type inferCatchInst(CatchInst *inst) {

@@ -30,7 +30,7 @@ function foo(a = arguments) {
 // CHECK:function foo(a: any): any
 // CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
+// CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
 // CHECK-NEXT:  %1 = StoreFrameInst undefined: undefined, [a]: any
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  %3 = BinaryStrictlyNotEqualInst (:any) %2: any, undefined: undefined

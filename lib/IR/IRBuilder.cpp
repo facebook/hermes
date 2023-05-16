@@ -630,8 +630,13 @@ GetTemplateObjectInst *IRBuilder::createGetTemplateObjectInst(
   return inst;
 }
 
-CreateArgumentsInst *IRBuilder::createCreateArgumentsInst() {
-  auto CAI = new CreateArgumentsInst();
+CreateArgumentsLooseInst *IRBuilder::createCreateArgumentsLooseInst() {
+  auto *CAI = new CreateArgumentsLooseInst();
+  insert(CAI);
+  return CAI;
+}
+CreateArgumentsStrictInst *IRBuilder::createCreateArgumentsStrictInst() {
+  auto *CAI = new CreateArgumentsStrictInst();
   insert(CAI);
   return CAI;
 }

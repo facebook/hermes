@@ -436,7 +436,9 @@ void ESTreeIRGen::emitFunctionPrologue(
 
   // Always insert a CreateArgumentsInst. We will delete it later if it is
   // unused.
-  curFunction()->createArgumentsInst = Builder.createCreateArgumentsInst();
+  curFunction()->createArgumentsInst = newFunc->isStrictMode()
+      ? (CreateArgumentsInst *)Builder.createCreateArgumentsStrictInst()
+      : Builder.createCreateArgumentsLooseInst();
 
   // If "arguments" is declared in the current function, bind it to its value.
   if (semInfo->argumentsDecl.hasValue()) {

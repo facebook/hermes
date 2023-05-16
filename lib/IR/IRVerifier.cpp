@@ -94,6 +94,8 @@ class Verifier : public InstructionVisitor<Verifier, void> {
   void visitBaseStoreOwnPropertyInst(const BaseStoreOwnPropertyInst &Inst);
   void visitBaseCreateCallableInst(const BaseCreateCallableInst &Inst);
 
+  void visitCreateArgumentsInst(const CreateArgumentsInst &Inst);
+
 #define DEF_VALUE(XX, PARENT) void visit##XX(const XX &Inst);
 #define BEGIN_VALUE(XX, PARENT) DEF_VALUE(XX, PARENT)
 #include "hermes/IR/Instrs.def"
@@ -591,6 +593,15 @@ void Verifier::visitCreateArgumentsInst(const CreateArgumentsInst &Inst) {
         BB == &*F->begin(),
         "CreateArgumentsInst must be in the first basic block");
   }
+}
+
+void Verifier::visitCreateArgumentsLooseInst(
+    const CreateArgumentsLooseInst &Inst) {
+  visitCreateArgumentsInst(Inst);
+}
+void Verifier::visitCreateArgumentsStrictInst(
+    const CreateArgumentsStrictInst &Inst) {
+  visitCreateArgumentsInst(Inst);
 }
 
 void Verifier::visitCreateRegExpInst(CreateRegExpInst const &Inst) {
