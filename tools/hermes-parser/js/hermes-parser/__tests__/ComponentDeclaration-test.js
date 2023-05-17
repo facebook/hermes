@@ -51,7 +51,7 @@ describe('ComponentDeclaration', () => {
                 "typeAnnotation": null,
               },
               "params": [],
-              "returnType": null,
+              "rendersType": null,
               "type": "ComponentDeclaration",
               "typeParameters": null,
             },
@@ -255,7 +255,7 @@ describe('ComponentDeclaration', () => {
                   "type": "ComponentParameter",
                 },
               ],
-              "returnType": null,
+              "rendersType": null,
               "type": "ComponentDeclaration",
               "typeParameters": null,
             },
@@ -457,7 +457,7 @@ describe('ComponentDeclaration', () => {
                   "type": "ComponentParameter",
                 },
               ],
-              "returnType": null,
+              "rendersType": null,
               "type": "ComponentDeclaration",
               "typeParameters": null,
             },
@@ -570,7 +570,7 @@ describe('ComponentDeclaration', () => {
   describe('return type', () => {
     const testCase: AlignmentCase = {
       code: `
-        component Foo(): SpecialType {}
+        component Foo() renders SpecialType {}
       `,
       espree: {
         expectToFail: 'espree-exception',
@@ -599,7 +599,7 @@ describe('ComponentDeclaration', () => {
                 "typeAnnotation": null,
               },
               "params": [],
-              "returnType": {
+              "rendersType": {
                 "type": "TypeAnnotation",
                 "typeAnnotation": {
                   "id": {
@@ -699,7 +699,7 @@ describe('ComponentDeclaration', () => {
   describe('type parameters', () => {
     const testCase: AlignmentCase = {
       code: `
-        component Foo<T1, T2>(bar: T1): T2 {}
+        component Foo<T1, T2>(bar: T1) renders T2 {}
       `,
       espree: {
         expectToFail: 'espree-exception',
@@ -757,7 +757,7 @@ describe('ComponentDeclaration', () => {
                   "type": "ComponentParameter",
                 },
               ],
-              "returnType": {
+              "rendersType": {
                 "type": "TypeAnnotation",
                 "typeAnnotation": {
                   "id": {

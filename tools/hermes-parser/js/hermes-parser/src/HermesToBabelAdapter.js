@@ -562,7 +562,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
     delete nodeUnprocessed.params;
     delete nodeUnprocessed.rest;
     delete nodeUnprocessed.typeParameters;
-    delete nodeUnprocessed.returnType;
+    delete nodeUnprocessed.rendersType;
 
     nodeUnprocessed.type = 'DeclareVariable';
 
@@ -575,35 +575,35 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
   }
 
   mapComponentDeclaration(nodeUnprocessed: HermesNode): HermesNode {
-    let returnType = nodeUnprocessed.returnType;
-    if (returnType == null) {
+    let rendersType = nodeUnprocessed.rendersType;
+    if (rendersType == null) {
       // Create empty loc for return type annotation nodes
-      const createReturnTypeLoc = () => ({
+      const createRendersTypeLoc = () => ({
         loc: {
           start: {...nodeUnprocessed.body.loc.end},
           end: {...nodeUnprocessed.body.loc.end},
+          rangeStart: nodeUnprocessed.body.loc.rangeStart,
+          rangeEnd: nodeUnprocessed.body.loc.rangeEnd,
         },
-        start: nodeUnprocessed.body.loc.end.index,
-        end: nodeUnprocessed.body.loc.end.index,
       });
 
-      returnType = {
+      rendersType = {
         type: 'GenericTypeAnnotation',
         id: {
           type: 'QualifiedTypeIdentifier',
           qualification: {
             type: 'Identifier',
             name: 'React',
-            ...createReturnTypeLoc(),
+            ...createRendersTypeLoc(),
           },
           id: {
             type: 'Identifier',
             name: 'Node',
-            ...createReturnTypeLoc(),
+            ...createRendersTypeLoc(),
           },
         },
         typeParameters: null,
-        ...createReturnTypeLoc(),
+        ...createRendersTypeLoc(),
       };
     }
 
@@ -670,26 +670,34 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
     const paramsLoc = (() => {
       if (properties.length === 0) {
         // No props, approximate range via existing nodes.
+        const startLoc =
+          nodeUnprocessed.typeParameters != null
+            ? nodeUnprocessed.typeParameters.loc
+            : nodeUnprocessed.id.loc;
         return {
-          start:
-            nodeUnprocessed.typeParameters != null
-              ? nodeUnprocessed.typeParameters.loc.end
-              : nodeUnprocessed.id.loc.end,
-          end: returnType.loc.start,
+          start: startLoc.end,
+          end: rendersType.loc.start,
+          startRange: startLoc.endRange,
+          endRange: rendersType.loc.startRange,
         };
       }
 
       return {
         start: properties[0].loc.start,
         end: properties[properties.length - 1].loc.end,
+        startRange: properties[0].loc.startRange,
+        endRange: properties[properties.length - 1].loc.endRange,
       };
     })();
 
     // Create empty loc for type annotation nodes
     const createParamsTypeLoc = () => ({
-      loc: {start: {...paramsLoc.end}, end: {...paramsLoc.end}},
-      start: paramsLoc.end.index,
-      end: paramsLoc.end.index,
+      loc: {
+        start: {...paramsLoc.end},
+        end: {...paramsLoc.end},
+        startRange: paramsLoc.endRange,
+        endRange: paramsLoc.endRange,
+      },
     });
 
     const params = [
@@ -726,8 +734,6 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
           ...createParamsTypeLoc(),
         },
         loc: paramsLoc,
-        start: paramsLoc.start.index,
-        end: paramsLoc.end.index,
       },
     ];
 
@@ -736,14 +742,12 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
       id: nodeUnprocessed.id,
       typeParameters: nodeUnprocessed.typeParameters,
       params,
-      returnType,
+      returnType: rendersType,
       body: nodeUnprocessed.body,
       async: false,
       generator: false,
       predicate: null,
       loc: nodeUnprocessed.loc,
-      start: nodeUnprocessed.start,
-      end: nodeUnprocessed.end,
     };
 
     return this.mapNodeDefault(functionComponent);

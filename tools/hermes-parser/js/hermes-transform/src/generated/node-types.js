@@ -301,7 +301,7 @@ export type ComponentDeclarationProps = {
   +typeParameters?: ?MaybeDetachedNode<
     ComponentDeclarationType['typeParameters'],
   >,
-  +returnType?: ?MaybeDetachedNode<ComponentDeclarationType['returnType']>,
+  +rendersType?: ?MaybeDetachedNode<ComponentDeclarationType['rendersType']>,
 };
 
 export type ComponentParameterProps = {
@@ -318,7 +318,7 @@ export type ComponentTypeAnnotationProps = {
   +typeParameters?: ?MaybeDetachedNode<
     ComponentTypeAnnotationType['typeParameters'],
   >,
-  +returnType?: ?MaybeDetachedNode<ComponentTypeAnnotationType['returnType']>,
+  +rendersType?: ?MaybeDetachedNode<ComponentTypeAnnotationType['rendersType']>,
 };
 
 export type ComponentTypeParameterProps = {
@@ -370,7 +370,7 @@ export type DeclareComponentProps = {
   >,
   +rest?: ?MaybeDetachedNode<DeclareComponentType['rest']>,
   +typeParameters?: ?MaybeDetachedNode<DeclareComponentType['typeParameters']>,
-  +returnType?: ?MaybeDetachedNode<DeclareComponentType['returnType']>,
+  +rendersType?: ?MaybeDetachedNode<DeclareComponentType['rendersType']>,
 };
 
 export type DeclaredPredicateProps = {
@@ -1359,7 +1359,7 @@ export function ComponentDeclaration(props: {
     params: props.params.map(n => asDetachedNodeForCodeGen(n)),
     body: asDetachedNodeForCodeGen(props.body),
     typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
-    returnType: asDetachedNodeForCodeGen(props.returnType),
+    rendersType: asDetachedNodeForCodeGen(props.rendersType),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1388,7 +1388,7 @@ export function ComponentTypeAnnotation(props: {
     params: props.params.map(n => asDetachedNodeForCodeGen(n)),
     rest: asDetachedNodeForCodeGen(props.rest),
     typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
-    returnType: asDetachedNodeForCodeGen(props.returnType),
+    rendersType: asDetachedNodeForCodeGen(props.rendersType),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1486,7 +1486,7 @@ export function DeclareComponent(props: {
     params: props.params.map(n => asDetachedNodeForCodeGen(n)),
     rest: asDetachedNodeForCodeGen(props.rest),
     typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
-    returnType: asDetachedNodeForCodeGen(props.returnType),
+    rendersType: asDetachedNodeForCodeGen(props.rendersType),
   });
   setParentPointersInDirectChildren(node);
   return node;

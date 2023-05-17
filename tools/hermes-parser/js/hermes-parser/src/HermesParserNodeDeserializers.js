@@ -963,7 +963,7 @@ function deserializeComponentTypeAnnotation() {
     params: this.deserializeNodeList(),
     rest: this.deserializeNode(),
     typeParameters: this.deserializeNode(),
-    returnType: this.deserializeNode(),
+    rendersType: this.deserializeNode(),
   };
 }
 function deserializeComponentTypeParameter() {
@@ -1203,7 +1203,7 @@ function deserializeDeclareComponent() {
     params: this.deserializeNodeList(),
     rest: this.deserializeNode(),
     typeParameters: this.deserializeNode(),
-    returnType: this.deserializeNode(),
+    rendersType: this.deserializeNode(),
   };
 }
 function deserializeDeclareVariable() {
@@ -1485,7 +1485,7 @@ function deserializeComponentDeclaration() {
     params: this.deserializeNodeList(),
     body: this.deserializeNode(),
     typeParameters: this.deserializeNode(),
-    returnType: this.deserializeNode(),
+    rendersType: this.deserializeNode(),
   };
 }
 
