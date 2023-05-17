@@ -103,30 +103,34 @@ type ArtifactOptions = $ReadOnly<{
   file: string,
 }>;
 
-export function formatAndWriteDistArtifact(opts: ArtifactOptions): void {
-  formatAndWriteArtifact({
+export async function formatAndWriteDistArtifact(
+  opts: ArtifactOptions,
+): Promise<void> {
+  await formatAndWriteArtifact({
     ...opts,
     file: path.join('dist', opts.file),
   });
 }
-export function formatAndWriteSrcArtifact(opts: ArtifactOptions): void {
-  formatAndWriteArtifact({
+export async function formatAndWriteSrcArtifact(
+  opts: ArtifactOptions,
+): Promise<void> {
+  await formatAndWriteArtifact({
     ...opts,
     file: path.join('src', opts.file),
   });
 }
 
-function formatAndWriteArtifact({
+async function formatAndWriteArtifact({
   code: code_,
   flow = 'loose',
   package: pkg,
   file,
-}: ArtifactOptions): void {
+}: ArtifactOptions): Promise<void> {
   // make sure the code has a header
   const code = code_.slice(0, 3) === '/**' ? code_ : HEADER(flow) + code_;
 
   // Format the file
-  const formattedContents = prettier.format(code, {
+  const formattedContents = await prettier.format(code, {
     ...prettierConfig,
     parser: 'flow',
   });

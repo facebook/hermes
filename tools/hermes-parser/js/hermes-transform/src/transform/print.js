@@ -52,16 +52,51 @@ export async function print(
   // $FlowExpectedError[cannot-write]
   delete program.comments;
 
-  return prettier.format(
-    originalCode,
-    // $FlowExpectedError[incompatible-exact] - we don't want to create a dependency on the prettier types
-    {
-      ...prettierOptions,
-      parser() {
-        return program;
-      },
-    },
-  );
+  switch (getPrettierMajorVersion()) {
+    case '3': {
+      // Lazy require this module as it only exists in prettier v3.
+      const prettierFlowPlugin = require('prettier/plugins/flow');
+      return prettier.format(
+        originalCode,
+        // $FlowExpectedError[incompatible-exact] - we don't want to create a dependency on the prettier types
+        {
+          ...prettierOptions,
+          parser: 'flow',
+          requirePragma: false,
+          plugins: [
+            {
+              parsers: {
+                flow: {
+                  ...prettierFlowPlugin.parsers.flow,
+                  parse() {
+                    return program;
+                  },
+                },
+              },
+            },
+          ],
+        },
+      );
+    }
+    case '2': {
+      return prettier.format(
+        originalCode,
+        // $FlowExpectedError[incompatible-exact] - we don't want to create a dependency on the prettier types
+        {
+          ...prettierOptions,
+          parser() {
+            return program;
+          },
+        },
+      );
+    }
+    case 'UNSUPPORTED':
+    default: {
+      throw new Error(
+        `Unknown or unsupported prettier version of "${prettier.version}". Only major versions 3 or 2 of prettier are supported.`,
+      );
+    }
+  }
 }
 
 function mutateASTForPrettier(
@@ -149,6 +184,20 @@ function mutateASTForPrettier(
     leave() {},
     visitorKeys,
   });
+}
+
+function getPrettierMajorVersion(): '3' | '2' | 'UNSUPPORTED' {
+  const {version} = prettier;
+
+  if (version.startsWith('3.')) {
+    return '3';
+  }
+
+  if (version.startsWith('2.')) {
+    return '2';
+  }
+
+  return 'UNSUPPORTED';
 }
 
 // https://github.com/prettier/prettier/blob/d962466a828f8ef51435e3e8840178d90b7ec6cd/src/language-js/parse/postprocess/index.js#L161-L182

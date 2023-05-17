@@ -27,6 +27,8 @@ module.exports = {
   // An array of regexp pattern strings that are matched against all source file paths, matched files will skip transformation
   transformIgnorePatterns: ['/node_modules/', '/dist/'],
 
+  setupFiles: ['<rootDir>/scripts/jest-config/setup-mocks.js'],
+
   // These mappings tell jest how to find the source files directly instead of using the built `dist` files.
   // This allows us to run tests without first doing a build.
   //
