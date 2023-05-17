@@ -17,7 +17,7 @@ import 'jest-specific-snapshot';
 
 export function testFixtures(
   fixturesDir: string,
-  translateToString: (contents: string) => string,
+  translateToString: (contents: string) => Promise<string>,
   // Set this to the path of the test to only run that fixture
   only?: string = '',
 ) {
@@ -41,12 +41,12 @@ export function testFixtures(
   }
 
   for (const fixture of FIXTURES) {
-    (only === fixture.name ? it.only : it)(fixture.name, () => {
+    (only === fixture.name ? it.only : it)(fixture.name, async () => {
       // ensure we don't accidentally have an empty fixture
       expect(fixture.contents).not.toBe('');
 
       try {
-        const printedResult = translateToString(fixture.contents);
+        const printedResult = await translateToString(fixture.contents);
         expect(printedResult).toMatchSpecificSnapshot(
           fixture.translateSnapshotPath,
         );

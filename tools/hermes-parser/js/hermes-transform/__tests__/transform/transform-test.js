@@ -20,16 +20,16 @@ function transform(code: string, visitors: TransformVisitor) {
 }
 
 describe('transform', () => {
-  it('should do nothing (including no formatting) if no mutations are applied', () => {
+  it('should do nothing (including no formatting) if no mutations are applied', async () => {
     const code = 'const x = 1'; // no semi to ensure no formatting
-    const result = transform(code, () => ({}));
+    const result = await transform(code, () => ({}));
 
     expect(result).toBe(code);
   });
 
-  it('should format the code as well as mutate it', () => {
+  it('should format the code as well as mutate it', async () => {
     const code = 'const x = 1';
-    const result = transform(code, context => ({
+    const result = await transform(code, context => ({
       VariableDeclaration(node) {
         context.replaceStatementWithMany(node, [
           t.VariableDeclaration({
@@ -53,11 +53,11 @@ const y = null;
 
   describe('insert', () => {
     describe('insertBeforeStatement mutation', () => {
-      it('Insert before only statement', () => {
+      it('Insert before only statement', async () => {
         const code = `\
 const x = 1;
 `;
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           VariableDeclaration(node) {
             context.insertBeforeStatement(
               node,
@@ -84,12 +84,12 @@ const y = 1;
 const x = 1;
 `);
       });
-      it('Insert before first statement', () => {
+      it('Insert before first statement', async () => {
         const code = `\
 const x = 1;
 lastStatement;
 `;
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           VariableDeclaration(node) {
             context.insertBeforeStatement(
               node,
@@ -118,13 +118,13 @@ lastStatement;
 `);
       });
 
-      it('Insert before middle statement', () => {
+      it('Insert before middle statement', async () => {
         const code = `\
 firstStatement;
 const x = 1;
 lastStatement;
 `;
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           VariableDeclaration(node) {
             context.insertBeforeStatement(
               node,
@@ -154,12 +154,12 @@ lastStatement;
 `);
       });
 
-      it('Insert before last statement', () => {
+      it('Insert before last statement', async () => {
         const code = `\
 firstStatement;
 const x = 1;
 `;
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           VariableDeclaration(node) {
             context.insertBeforeStatement(
               node,
@@ -188,9 +188,9 @@ const x = 1;
 `);
       });
 
-      it('wraps statements in a BlockStatement if they were in a bodyless parent', () => {
+      it('wraps statements in a BlockStatement if they were in a bodyless parent', async () => {
         const code = 'if (condition) return true;';
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           ReturnStatement(node) {
             context.insertBeforeStatement(
               node,
@@ -221,11 +221,11 @@ if (condition) {
     });
   });
   describe('insertAfterStatement mutation', () => {
-    it('Insert after only statement', () => {
+    it('Insert after only statement', async () => {
       const code = `\
 const x = 1;
 `;
-      const result = transform(code, context => ({
+      const result = await transform(code, context => ({
         VariableDeclaration(node) {
           context.insertAfterStatement(
             node,
@@ -252,12 +252,12 @@ const x = 1;
 const y = 1;
 `);
     });
-    it('Insert after first statement', () => {
+    it('Insert after first statement', async () => {
       const code = `\
 const x = 1;
 lastStatement;
 `;
-      const result = transform(code, context => ({
+      const result = await transform(code, context => ({
         VariableDeclaration(node) {
           context.insertAfterStatement(
             node,
@@ -286,13 +286,13 @@ lastStatement;
 `);
     });
 
-    it('Insert after middle statement', () => {
+    it('Insert after middle statement', async () => {
       const code = `\
 firstStatement;
 const x = 1;
 lastStatement;
 `;
-      const result = transform(code, context => ({
+      const result = await transform(code, context => ({
         VariableDeclaration(node) {
           context.insertAfterStatement(
             node,
@@ -322,12 +322,12 @@ lastStatement;
 `);
     });
 
-    it('Insert after last statement', () => {
+    it('Insert after last statement', async () => {
       const code = `\
 firstStatement;
 const x = 1;
 `;
-      const result = transform(code, context => ({
+      const result = await transform(code, context => ({
         VariableDeclaration(node) {
           context.insertAfterStatement(
             node,
@@ -358,9 +358,9 @@ const y = 1;
   });
 
   describe('remove', () => {
-    it('works with the removeStatement mutation', () => {
+    it('works with the removeStatement mutation', async () => {
       const code = 'const x = 1; console.log("I will survive");';
-      const result = transform(code, context => ({
+      const result = await transform(code, context => ({
         VariableDeclaration(node) {
           context.removeStatement(node);
         },
@@ -371,9 +371,9 @@ console.log('I will survive');
 `);
     });
 
-    it('wraps statements in a BlockStatement if they were in a bodyless parent', () => {
+    it('wraps statements in a BlockStatement if they were in a bodyless parent', async () => {
       const code = 'if (condition) return true;';
-      const result = transform(code, context => ({
+      const result = await transform(code, context => ({
         ReturnStatement(node) {
           context.removeStatement(node);
         },
@@ -388,9 +388,9 @@ if (condition) {
 
   describe('replace', () => {
     describe('single', () => {
-      it('expression', () => {
+      it('expression', async () => {
         const code = 'const x = 1;';
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           Literal(node) {
             context.replaceNode(node, t.BooleanLiteral({value: true}));
           },
@@ -401,9 +401,9 @@ const x = true;
 `);
       });
 
-      it('statement', () => {
+      it('statement', async () => {
         const code = 'const x = 1;';
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           VariableDeclaration(node) {
             context.replaceNode(
               node,
@@ -425,9 +425,9 @@ let y = null;
 `);
       });
 
-      it('type', () => {
+      it('type', async () => {
         const code = 'const x: any = 1;';
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           AnyTypeAnnotation(node) {
             context.replaceNode(node, t.NumberTypeAnnotation());
           },
@@ -440,9 +440,9 @@ const x: number = 1;
     });
 
     describe('with many', () => {
-      it('works with array parents', () => {
+      it('works with array parents', async () => {
         const code = 'const x = 1;';
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           VariableDeclaration(node) {
             context.replaceStatementWithMany(node, [
               t.VariableDeclaration({
@@ -473,9 +473,9 @@ const z = true;
 `);
       });
 
-      it('wraps statements in a BlockStatement if they were in a bodyless parent', () => {
+      it('wraps statements in a BlockStatement if they were in a bodyless parent', async () => {
         const code = 'if (condition) return true;';
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           ReturnStatement(node) {
             context.replaceStatementWithMany(node, [
               t.VariableDeclaration({
@@ -519,7 +519,7 @@ if (condition) {
   });
 
   describe('complex transforms', () => {
-    it('should support transforms on the same subtree', () => {
+    it('should support transforms on the same subtree', async () => {
       const code = `\
 class Foo {
   method(): () => () => Foo {
@@ -535,7 +535,7 @@ class Foo {
       `;
 
       // transform which replaces all function declarations with arrow functions
-      const result = transform(code, context => ({
+      const result = await transform(code, context => ({
         'FunctionDeclaration[id]'(node) {
           context.replaceNode(
             node,
@@ -574,12 +574,12 @@ class Foo {
 `);
     });
 
-    it('should fail if you attempt to insert before a removed node', () => {
+    it('should fail if you attempt to insert before a removed node', async () => {
       const code = `\
 if (true) call();
       `;
 
-      expect(() =>
+      await expect(async () =>
         transform(code, context => ({
           ExpressionStatement(node) {
             context.replaceNode(
@@ -601,17 +601,17 @@ if (true) call();
             );
           },
         })),
-      ).toThrowErrorMatchingInlineSnapshot(
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
         `"Attempted to insert before a deleted ExpressionStatement node. This likely means that you attempted to mutate around the target after it was deleted/replaced."`,
       );
     });
 
-    it('should allow insertion before removal', () => {
+    it('should allow insertion before removal', async () => {
       const code = `\
 if (true) call();
       `;
 
-      const result = transform(code, context => ({
+      const result = await transform(code, context => ({
         ExpressionStatement(node) {
           context.insertBeforeStatement(
             node,
@@ -644,13 +644,13 @@ if (true) {
 
   describe('comments', () => {
     describe('docblock', () => {
-      it('should not attach to node', () => {
+      it('should not attach to node', async () => {
         const code = `
 /* @flow */
 statement();
 `;
 
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           Program(node) {
             expect(context.getComments(node.body[0])).toEqual([]);
             expect(node.docblock.comment.value).toBe(' @flow ');
@@ -673,13 +673,13 @@ statement();
       });
     });
     describe('attachment', () => {
-      it('should attach comments so they are maintained during an insertion', () => {
+      it('should attach comments so they are maintained during an insertion', async () => {
         const code = `
 // leading comment
 statement(); // inline comment
 `;
 
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           ExpressionStatement(node) {
             context.insertBeforeStatement(
               node,
@@ -708,7 +708,7 @@ statement(); // inline comment
 `);
       });
 
-      it('should attach comments so they are removed when the associated node is removed', () => {
+      it('should attach comments so they are removed when the associated node is removed', async () => {
         const code = `
 // this should remain leading #1
 const x = 1; // this should remain inline #1
@@ -718,7 +718,7 @@ statement(); // inline comment to be deleted
 const y = 1; // this should remain inline #2
 `;
 
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           ExpressionStatement(node) {
             context.removeStatement(node);
           },
@@ -732,13 +732,13 @@ const y = 1; // this should remain inline #2
 `);
       });
 
-      it('should clone comments when nodes are cloned', () => {
+      it('should clone comments when nodes are cloned', async () => {
         const code = `
 // leading comment to be duplicated
 statement(); // inline comment to be duplicated
 `;
 
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           ExpressionStatement(node) {
             context.insertBeforeStatement(node, node);
           },
@@ -752,7 +752,7 @@ statement(); // inline comment to be duplicated
 `);
       });
 
-      it('should attach comments so they are removed when the associated node is replaced (by default)', () => {
+      it('should attach comments so they are removed when the associated node is replaced (by default)', async () => {
         const code = `
 // this should remain leading #1
 const x = 1; // this should remain inline #1
@@ -762,7 +762,7 @@ statement(); // inline comment to be deleted
 const y = 1; // this should remain inline #2
 `;
 
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           ExpressionStatement(node) {
             context.replaceNode(
               node,
@@ -784,7 +784,7 @@ const y = 1; // this should remain inline #2
 `);
       });
 
-      it('should optionally attach comments so they are kept when the associated statement is replaced', () => {
+      it('should optionally attach comments so they are kept when the associated statement is replaced', async () => {
         const code = `
 // this should remain leading #1
 const x = 1; // this should remain inline #1
@@ -794,7 +794,7 @@ statement(); // inline comment to be deleted
 const y = 1; // this should remain inline #2
 `;
 
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           ExpressionStatement(node) {
             context.replaceStatementWithMany(
               node,
@@ -832,7 +832,7 @@ const y = 1; // this should remain inline #2
 `);
       });
 
-      it('should optionally attach comments so they are kept when the associated node is replaced', () => {
+      it('should optionally attach comments so they are kept when the associated node is replaced', async () => {
         const code = `
 // this should remain leading #1
 const x = 1; // this should remain inline #1
@@ -842,7 +842,7 @@ statement(); // inline comment to be deleted
 const y = 1; // this should remain inline #2
 `;
 
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           ExpressionStatement(node) {
             context.replaceNode(
               node,
@@ -868,12 +868,12 @@ const y = 1; // this should remain inline #2
     });
 
     describe('addition', () => {
-      it('should attach leading block comments on line before node', () => {
+      it('should attach leading block comments on line before node', async () => {
         const code = `\
 statement();
 `;
 
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           ExpressionStatement(node) {
             context.addLeadingComments(node, [
               t.BlockComment({
@@ -901,12 +901,12 @@ statement();
 `);
       });
 
-      it('should attach leading inline block comments on node line', () => {
+      it('should attach leading inline block comments on node line', async () => {
         const code = `
 statement();
 `;
 
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           ExpressionStatement(node) {
             context.addLeadingInlineComments(node, [
               t.BlockComment({
@@ -924,12 +924,12 @@ statement();
 `);
       });
 
-      it('should attach leading line comments on line before node', () => {
+      it('should attach leading line comments on line before node', async () => {
         const code = `\
 statement();
 `;
 
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           ExpressionStatement(node) {
             context.addLeadingComments(node, [
               t.LineComment({
@@ -945,12 +945,12 @@ statement();
 `);
       });
 
-      it('should attach leading inline line comments on line before node', () => {
+      it('should attach leading inline line comments on line before node', async () => {
         const code = `\
 statement();
 `;
 
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           ExpressionStatement(node) {
             context.addLeadingInlineComments(node, [
               t.LineComment({
@@ -966,12 +966,12 @@ statement();
 `);
       });
 
-      it('should attach trailing block comments on line after node', () => {
+      it('should attach trailing block comments on line after node', async () => {
         const code = `\
 statement();
 `;
 
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           ExpressionStatement(node) {
             context.addTrailingComments(node, [
               t.BlockComment({
@@ -991,12 +991,12 @@ statement();
 `);
       });
 
-      it('should attach trailing inline block comments on node line', () => {
+      it('should attach trailing inline block comments on node line', async () => {
         const code = `
 statement();
 `;
 
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           ExpressionStatement(node) {
             context.addTrailingInlineComments(node, [
               t.BlockComment({
@@ -1014,12 +1014,12 @@ statement(); /*Inline comment 1*/ /*Inline comment 2*/
 `);
       });
 
-      it('should attach trailing line comments on line after node', () => {
+      it('should attach trailing line comments on line after node', async () => {
         const code = `\
 statement();
 `;
 
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           ExpressionStatement(node) {
             context.addTrailingComments(node, [
               t.LineComment({
@@ -1035,12 +1035,12 @@ statement();
 `);
       });
 
-      it('should attach trailing inline line comments on line after node', () => {
+      it('should attach trailing inline line comments on line after node', async () => {
         const code = `\
 statement();
 `;
 
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           ExpressionStatement(node) {
             context.addTrailingInlineComments(node, [
               t.LineComment({
@@ -1055,11 +1055,11 @@ statement(); //Line trailing comment 1
 `);
       });
 
-      it('should allow leading comment addition', () => {
+      it('should allow leading comment addition', async () => {
         const code = `\
 const x = 1;
 const y = 2;`;
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           Identifier(node) {
             if (node.name === 'x') {
               context.addLeadingComments(node.parent.parent, [
@@ -1081,11 +1081,11 @@ const y = 2;
 `);
       });
 
-      it('should allow trailing comment addition', () => {
+      it('should allow trailing comment addition', async () => {
         const code = `\
 const x = 1;
 const y = 2;`;
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           Identifier(node) {
             if (node.name === 'x') {
               context.addTrailingComments(node.parent.parent, [
@@ -1107,9 +1107,9 @@ const y = 2;
 `);
       });
 
-      it('should allow comment addition to new, detached nodes', () => {
+      it('should allow comment addition to new, detached nodes', async () => {
         const code = 'const x = 1;';
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           VariableDeclaration(node) {
             const newNode = t.ExpressionStatement({
               expression: t.StringLiteral({value: 'inserted'}),
@@ -1141,13 +1141,13 @@ const x = 1;
     });
 
     describe('removal', () => {
-      it('should allow removal of leading comments', () => {
+      it('should allow removal of leading comments', async () => {
         const code = `\
 //line
 const x = 1;
 /*block*/
 const y = 2;`;
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           VariableDeclaration(node) {
             const coment = context.getComments(node)[0];
             context.removeComments(coment);
@@ -1160,11 +1160,11 @@ const y = 2;
 `);
       });
 
-      it('should allow removal of trailing comments', () => {
+      it('should allow removal of trailing comments', async () => {
         const code = `\
 const x = 1; /*block*/
 const y = 2; //line`;
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           VariableDeclaration(node) {
             const coment = context.getComments(node)[0];
             context.removeComments(coment);
@@ -1179,12 +1179,12 @@ const y = 2;
     });
 
     describe('clone', () => {
-      it('should clone line comments to new nodes', () => {
+      it('should clone line comments to new nodes', async () => {
         const code = `\
 // Leading comment
 x; // EOL comment
 y;`;
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           Program(node) {
             context.cloneCommentsTo(node.body[0], node.body[1]);
           },
@@ -1197,14 +1197,14 @@ x; // EOL comment
 y; // EOL comment
 `);
       });
-      it('should clone block comments to new nodes', () => {
+      it('should clone block comments to new nodes', async () => {
         const code = `\
 'use strict';
 /* Leading comment 1 */
 /* Leading comment 2 */
 x; /* EOL comment */
 y;`;
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           Program(node) {
             context.cloneCommentsTo(node.body[1], node.body[2]);
           },
@@ -1220,10 +1220,10 @@ x; /* EOL comment */
 y; /* EOL comment */
 `);
       });
-      it('should clone comments to newly created nodes', () => {
+      it('should clone comments to newly created nodes', async () => {
         const code = `\
 x; // EOL comment`;
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           Program(node) {
             const x = node.body[0];
             const y = t.ExpressionStatement({
@@ -1239,11 +1239,11 @@ x; // EOL comment
 y; // EOL comment
 `);
       });
-      it('should clone newly created comments to nodes', () => {
+      it('should clone newly created comments to nodes', async () => {
         const code = `\
 x;
 y;`;
-        const result = transform(code, context => ({
+        const result = await transform(code, context => ({
           Program(node) {
             const x = node.body[0];
             const y = node.body[1];
@@ -1263,13 +1263,13 @@ y; // EOL comment
     });
   });
 
-  it('should not crash on optional chaining', () => {
+  it('should not crash on optional chaining', async () => {
     const code = `\
 x?.y;
 x?.();
 foo?.[0]?.bar;
 `;
-    const result = transform(code, context => ({
+    const result = await transform(code, context => ({
       Program(node) {
         context.addTrailingInlineComments(
           node.body[0],
@@ -1284,10 +1284,10 @@ foo?.[0]?.bar;
 `);
   });
 
-  it('should correctly print method functions', () => {
+  it('should correctly print method functions', async () => {
     const code = `\
       type A = {};`;
-    const result = transform(code, context => ({
+    const result = await transform(code, context => ({
       ObjectTypeAnnotation(node) {
         const func = t.FunctionTypeAnnotation({
           params: [],

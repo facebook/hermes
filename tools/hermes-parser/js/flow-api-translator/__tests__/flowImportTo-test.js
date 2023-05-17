@@ -16,17 +16,20 @@ import {parse, print} from 'hermes-transform';
 import {trimToBeCode} from './utils/inlineCodeHelpers';
 import {flowImportTo} from '../src/flowImportTo';
 
-function translate(code: string, opts: MapperOptions): string {
-  const {ast, scopeManager} = parse(code);
+async function translate(code: string, opts: MapperOptions): Promise<string> {
+  const {ast, scopeManager} = await parse(code);
 
   const flowDefAst = flowImportTo(ast, code, scopeManager, opts);
 
   return print(flowDefAst, code, prettierConfig);
 }
 
-function expectModules(expectCode: string, toBeModules: Array<string>): void {
+async function expectModules(
+  expectCode: string,
+  toBeModules: Array<string>,
+): Promise<void> {
   const foundModules = [];
-  translate(expectCode, {
+  await translate(expectCode, {
     sourceMapper({module}) {
       foundModules.push(module);
       return module;
@@ -34,17 +37,18 @@ function expectModules(expectCode: string, toBeModules: Array<string>): void {
   });
   expect(foundModules).toEqual(toBeModules);
 }
-function expectTranslate(
+async function expectTranslate(
   expectCode: string,
   opts: MapperOptions,
   toBeCode: string,
-): void {
-  expect(translate(expectCode, opts)).toBe(trimToBeCode(toBeCode));
+): Promise<void> {
+  const expectTranslateCode = await translate(expectCode, opts);
+  expect(expectTranslateCode).toBe(trimToBeCode(toBeCode));
 }
 
 describe('flowImportTo', () => {
-  it('ImportDeclaration', () => {
-    expectModules(
+  it('ImportDeclaration', async () => {
+    await expectModules(
       `import A from 'X1';
        import * as A from 'X2';
        import {A} from 'X3';
@@ -52,22 +56,22 @@ describe('flowImportTo', () => {
        import typeof {A} from 'X5';`,
       ['X1', 'X2', 'X3', 'X4', 'X5'],
     );
-    expectTranslate(
+    await expectTranslate(
       `import A from 'X1';`,
       {sourceMapper: _ => 'A'},
       `import A from 'A';`,
     );
   });
-  it('ExportNamedDeclaration', () => {
-    expectModules(`export {A} from 'X1';`, ['X1']);
+  it('ExportNamedDeclaration', async () => {
+    await expectModules(`export {A} from 'X1';`, ['X1']);
   });
-  it('DeclareExportNamedDeclaration', () => {
-    expectModules(`declare export {A} from 'X1';`, ['X1']);
+  it('DeclareExportNamedDeclaration', async () => {
+    await expectModules(`declare export {A} from 'X1';`, ['X1']);
   });
-  it('ExportAllDeclaration', () => {
-    expectModules(`export * from 'X1';`, ['X1']);
+  it('ExportAllDeclaration', async () => {
+    await expectModules(`export * from 'X1';`, ['X1']);
   });
-  it('DeclareExportAllDeclaration', () => {
-    expectModules(`declare export * from 'X1';`, ['X1']);
+  it('DeclareExportAllDeclaration', async () => {
+    await expectModules(`declare export * from 'X1';`, ['X1']);
   });
 });

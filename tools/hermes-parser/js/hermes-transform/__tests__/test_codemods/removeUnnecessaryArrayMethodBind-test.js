@@ -80,8 +80,8 @@ function codemod(code: string) {
 }
 
 describe('remove unnecessary array method bind', () => {
-  it('should work', () => {
-    const result = codemod(`\
+  it('should work', async () => {
+    const result = await codemod(`\
 /**
  */
 
