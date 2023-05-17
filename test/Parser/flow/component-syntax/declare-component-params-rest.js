@@ -33,7 +33,7 @@ declare component Foo1(...Foo);
 // CHECK-NEXT:         "optional": false
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "typeParameters": null,
-// CHECK-NEXT:       "returnType": null
+// CHECK-NEXT:       "rendersType": null
 // CHECK-NEXT:     },
 
 declare component Foo2(...rest: Foo);
@@ -61,7 +61,7 @@ declare component Foo2(...rest: Foo);
 // CHECK-NEXT:         "optional": false
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "typeParameters": null,
-// CHECK-NEXT:       "returnType": null
+// CHECK-NEXT:       "rendersType": null
 // CHECK-NEXT:     },
 
 declare component Foo3(...rest?: Foo);
@@ -89,7 +89,7 @@ declare component Foo3(...rest?: Foo);
 // CHECK-NEXT:         "optional": true
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "typeParameters": null,
-// CHECK-NEXT:       "returnType": null
+// CHECK-NEXT:       "rendersType": null
 // CHECK-NEXT:     },
 
 declare component Foo4(foo: Foo, ...rest: Rest);
@@ -134,7 +134,7 @@ declare component Foo4(foo: Foo, ...rest: Rest);
 // CHECK-NEXT:         "optional": false
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "typeParameters": null,
-// CHECK-NEXT:       "returnType": null
+// CHECK-NEXT:       "rendersType": null
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

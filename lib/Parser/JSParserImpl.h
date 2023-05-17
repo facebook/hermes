@@ -312,6 +312,7 @@ class JSParserImpl {
   UniqueString *assertsIdent_;
 
   UniqueString *componentIdent_;
+  UniqueString *rendersIdent_;
 #endif
 
 #if HERMES_PARSE_TS

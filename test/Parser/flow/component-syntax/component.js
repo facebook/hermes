@@ -62,7 +62,7 @@ export component Foo3() {}
 // CHECK-NEXT:       "exportKind": "value"
 // CHECK-NEXT:     },
 
-component Foo1(): SomeComponent {}
+component Foo1() renders SomeComponent {}
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "ComponentDeclaration",
 // CHECK-NEXT:       "id": {
@@ -74,7 +74,7 @@ component Foo1(): SomeComponent {}
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "returnType": {
+// CHECK-NEXT:       "rendersType": {
 // CHECK-NEXT:         "type": "TypeAnnotation",
 // CHECK-NEXT:         "typeAnnotation": {
 // CHECK-NEXT:           "type": "GenericTypeAnnotation",

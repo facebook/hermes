@@ -57,7 +57,7 @@ type Foo1 = component(bar: Bar, 'baz': Baz);
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "rest": null,
 // CHECK-NEXT:         "typeParameters": null,
-// CHECK-NEXT:         "returnType": null
+// CHECK-NEXT:         "rendersType": null
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
@@ -86,7 +86,7 @@ type Foo2 = component(...Foo);
 // CHECK-NEXT:           "optional": false
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "typeParameters": null,
-// CHECK-NEXT:         "returnType": null
+// CHECK-NEXT:         "rendersType": null
 // CHECK-NEXT:       }
 // CHECK-NEXT:     }
 

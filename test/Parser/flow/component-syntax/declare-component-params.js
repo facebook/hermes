@@ -38,7 +38,7 @@ declare component Foo1(foo: Foo);
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "rest": null,
 // CHECK-NEXT:       "typeParameters": null,
-// CHECK-NEXT:       "returnType": null
+// CHECK-NEXT:       "rendersType": null
 // CHECK-NEXT:     },
 
 declare component Foo2(foo?: Foo);
@@ -68,7 +68,7 @@ declare component Foo2(foo?: Foo);
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "rest": null,
 // CHECK-NEXT:       "typeParameters": null,
-// CHECK-NEXT:       "returnType": null
+// CHECK-NEXT:       "rendersType": null
 // CHECK-NEXT:     },
 
 declare component Foo3('foo': Foo);
@@ -98,7 +98,7 @@ declare component Foo3('foo': Foo);
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "rest": null,
 // CHECK-NEXT:       "typeParameters": null,
-// CHECK-NEXT:       "returnType": null
+// CHECK-NEXT:       "rendersType": null
 // CHECK-NEXT:     },
 
 declare component Foo4('foo'?: Foo);
@@ -128,7 +128,7 @@ declare component Foo4('foo'?: Foo);
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "rest": null,
 // CHECK-NEXT:       "typeParameters": null,
-// CHECK-NEXT:       "returnType": null
+// CHECK-NEXT:       "rendersType": null
 // CHECK-NEXT:     },
 
 declare component Foo5('foo1': Foo, foo2: Foo);
@@ -174,7 +174,7 @@ declare component Foo5('foo1': Foo, foo2: Foo);
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "rest": null,
 // CHECK-NEXT:       "typeParameters": null,
-// CHECK-NEXT:       "returnType": null
+// CHECK-NEXT:       "rendersType": null
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]
