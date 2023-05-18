@@ -578,10 +578,9 @@ bool InstSimplify::runOnFunction(Function *F) {
   bool changed = false;
   IRBuilder::InstructionDestroyer destroyer;
 
-  // For all blocks in the function:
-  for (auto &blockIter : *F) {
-    BasicBlock *BB = &blockIter;
-
+  // For all reachable blocks in the function, in RPO order.
+  PostOrderAnalysis PO(F);
+  for (BasicBlock *BB : llvh::reverse(PO)) {
     // For all instructions:
     for (auto instIter = BB->begin(), e = BB->end(); instIter != e;) {
       Instruction *II = &*instIter;
