@@ -196,7 +196,7 @@ jobs:
             xcodebuild test \
               -workspace ApplePlatformsIntegrationTests.xcworkspace \
               -configuration Debug \
-              -destination 'platform=tvOS Simulator,name=Apple TV' \
+              -destination 'platform=tvOS Simulator,name=Any tvOS Simulator Device' \
               -scheme ApplePlatformsIntegrationTVTests
           working_directory: test/ApplePlatformsIntegrationTestApp
 
