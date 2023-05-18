@@ -4,6 +4,7 @@ orbs:
   win: circleci/windows@2.4.0
   android: circleci/android@2.0.3
   node: circleci/node@4.7.0
+  macos: circleci/macos@2
 
 workflows:
   version: 2
@@ -163,6 +164,14 @@ jobs:
       - checkout
       - restore_cache:
           key: v4-repo-{{ .Environment.CIRCLE_SHA1 }}
+      - macos/preboot-simulator:
+          version: "15.5"
+          platform: "iOS"
+          device: "iPhone 13"
+      - macos/preboot-simulator:
+          version: "15.4"
+          platform: "tvOS"
+          device: "Apple TV"
       - run:
           name: Install dependencies
           command: |
@@ -187,7 +196,7 @@ jobs:
             xcodebuild test \
               -workspace ApplePlatformsIntegrationTests.xcworkspace \
               -configuration Debug \
-              -destination 'platform=iOS Simulator,name=iPhone 11' \
+              -destination 'platform=iOS Simulator,name=iPhone 13' \
               -scheme ApplePlatformsIntegrationMobileTests
           working_directory: test/ApplePlatformsIntegrationTestApp
       - run:
@@ -196,7 +205,7 @@ jobs:
             xcodebuild test \
               -workspace ApplePlatformsIntegrationTests.xcworkspace \
               -configuration Debug \
-              -destination 'platform=tvOS Simulator,name=Any tvOS Simulator Device' \
+              -destination 'platform=tvOS Simulator,name=Apple TV' \
               -scheme ApplePlatformsIntegrationTVTests
           working_directory: test/ApplePlatformsIntegrationTestApp
 
@@ -225,9 +234,11 @@ jobs:
       - save_cache:
           key: v4-repo-{{ .Environment.CIRCLE_SHA1 }}
           paths:
-            - ~/hermes/build_iphoneos
             - ~/hermes/build_catalyst
+            - ~/hermes/build_iphoneos
             - ~/hermes/build_iphonesimulator
+            - ~/hermes/build_appletvos
+            - ~/hermes/build_appletvsimulator
             - ~/hermes/build_macosx
             - ~/hermes/destroot
 
