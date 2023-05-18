@@ -93,7 +93,8 @@ type Package =
   | 'hermes-estree'
   | 'hermes-parser'
   | 'hermes-transform'
-  | 'flow-api-translator';
+  | 'flow-api-translator'
+  | 'prettier-plugin-hermes-parser';
 
 type ArtifactOptions = $ReadOnly<{
   code: string,

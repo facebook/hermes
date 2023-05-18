@@ -49,6 +49,7 @@ export default function mutate(
       // certain cases can crash due to prettier infinite-looping
       // whilst naively traversing the parent property
       // https://github.com/prettier/prettier/issues/11793
+      // Note: Only needed for prettier V2, this is supported in V3
       if (node.parent) {
         // $FlowExpectedError[cannot-write]
         delete node.parent;
