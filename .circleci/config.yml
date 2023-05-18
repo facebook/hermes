@@ -199,15 +199,16 @@ jobs:
               -destination 'platform=iOS Simulator,name=iPhone 13' \
               -scheme ApplePlatformsIntegrationMobileTests
           working_directory: test/ApplePlatformsIntegrationTestApp
-      - run:
-          name: Test Apple TV application
-          command: |
-            xcodebuild test \
-              -workspace ApplePlatformsIntegrationTests.xcworkspace \
-              -configuration Debug \
-              -destination 'platform=tvOS Simulator,name=Apple TV' \
-              -scheme ApplePlatformsIntegrationTVTests
-          working_directory: test/ApplePlatformsIntegrationTestApp
+      # Uncomment TV tests once we determine why Circle CI has no TV simulator
+      # - run:
+      #     name: Test Apple TV application
+      #     command: |
+      #       xcodebuild test \
+      #         -workspace ApplePlatformsIntegrationTests.xcworkspace \
+      #         -configuration Debug \
+      #         -destination 'platform=tvOS Simulator,name=Apple TV' \
+      #         -scheme ApplePlatformsIntegrationTVTests
+      #     working_directory: test/ApplePlatformsIntegrationTestApp
 
   build-apple-runtime:
     <<: *apple_defaults
