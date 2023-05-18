@@ -34,4 +34,23 @@ using namespace std;
   }
 }
 
+- (void)testNumbersAndLoops {
+  facebook::hermes::HermesRuntime::DebugFlags flags;
+
+  auto runtime = facebook::hermes::makeHermesRuntime();
+
+  string js = "const n = 0;\n"
+              "for (const i = 0; i < 50; i++) {\n"
+              "  n = n + i;\n"
+              "}\n"
+              "throw new Error('' + n);\n";
+
+  try {
+    runtime->debugJavaScript(js, "", flags);
+  } catch (const exception &e) {
+    string errorString = string(e.what());
+    XCTAssertTrue(string(e.what()).find("1225") != string::npos);
+  }
+}
+
 @end
