@@ -368,7 +368,9 @@ public class DateTimeFormat {
             options,
             "timeZoneName",
             OptionHelpers.OptionType.STRING,
-            new String[] {"long", "short"},
+            new String[] {
+              "long", "longOffset", "longGeneric", "short", "shortOffset", "shortGeneric"
+            },
             JSObjects.Undefined());
     mTimeZoneName =
         OptionHelpers.searchEnum(IPlatformDateTimeFormatter.TimeZoneName.class, timeZoneName);
