@@ -28,7 +28,7 @@
 
 #include <TargetConditionals.h>
 
-#if !TARGET_OS_IPHONE && !TARGET_OS_TV
+#if !TARGET_OS_IPHONE
 # include <CoreFoundation/CoreFoundation.h>
 # include <ApplicationServices/ApplicationServices.h>
 #endif
@@ -37,7 +37,7 @@
 
 
 static int (*dynamic_pthread_setname_np)(const char* name);
-#if !TARGET_OS_IPHONE && !TARGET_OS_TV
+#if !TARGET_OS_IPHONE
 static CFStringRef (*pCFStringCreateWithCString)(CFAllocatorRef,
                                                  const char*,
                                                  CFStringEncoding);
@@ -82,7 +82,7 @@ void uv__set_process_title_platform_init(void) {
   *(void **)(&dynamic_pthread_setname_np) =
       dlsym(RTLD_DEFAULT, "pthread_setname_np");
 
-#if !TARGET_OS_IPHONE && !TARGET_OS_TV
+#if !TARGET_OS_IPHONE
   application_services_handle = dlopen("/System/Library/Frameworks/"
                                        "ApplicationServices.framework/"
                                        "Versions/A/ApplicationServices",
@@ -178,7 +178,7 @@ out:
 
 
 void uv__set_process_title(const char* title) {
-#if !TARGET_OS_IPHONE && !TARGET_OS_TV
+#if !TARGET_OS_IPHONE
   if (core_foundation_handle != NULL && pSetApplicationIsDaemon(1) != noErr) {
     CFTypeRef asn;
     pLSSetApplicationLaunchServicesServerConnectionStatus(0, NULL);
