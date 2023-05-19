@@ -33,7 +33,7 @@
 #include <fcntl.h>
 #include <poll.h>
 
-#if defined(__APPLE__) && !TARGET_OS_IPHONE && !TARGET_OS_TV
+#if defined(__APPLE__) && !TARGET_OS_IPHONE
 # include <crt_externs.h>
 # define environ (*_NSGetEnviron())
 #else

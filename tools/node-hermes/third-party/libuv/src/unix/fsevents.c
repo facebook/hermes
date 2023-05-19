@@ -21,7 +21,7 @@
 #include "uv.h"
 #include "internal.h"
 
-#if TARGET_OS_IPHONE || TARGET_OS_TV
+#if TARGET_OS_IPHONE
 
 /* iOS (currently) doesn't provide the FSEvents-API (nor CoreServices) */
 
