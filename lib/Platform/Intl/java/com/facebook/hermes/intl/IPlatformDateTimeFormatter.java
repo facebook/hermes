@@ -357,7 +357,11 @@ public interface IPlatformDateTimeFormatter {
 
   enum TimeZoneName {
     LONG,
+    LONGOFFSET,
+    LONGGENERIC,
     SHORT,
+    SHORTOFFSET,
+    SHORTGENERIC,
     UNDEFINED;
 
     @Override
@@ -365,8 +369,16 @@ public interface IPlatformDateTimeFormatter {
       switch (this) {
         case LONG:
           return "long";
+        case LONGOFFSET:
+          return "longOffset";
+        case LONGGENERIC:
+          return "longGeneric";
         case SHORT:
           return "short";
+        case SHORTOFFSET:
+          return "shortOffset";
+        case SHORTGENERIC:
+          return "shortGeneric";
         case UNDEFINED:
           return "";
         default:
@@ -377,9 +389,17 @@ public interface IPlatformDateTimeFormatter {
     public String getSkeleonSymbol() {
       switch (this) {
         case LONG:
-          return "VV";
+          return "zzzz";
+        case LONGOFFSET:
+          return "OOOO";
+        case LONGGENERIC:
+          return "vvvv";
         case SHORT:
+          return "z";
+        case SHORTOFFSET:
           return "O";
+        case SHORTGENERIC:
+          return "v";
         case UNDEFINED:
           return "";
         default:
