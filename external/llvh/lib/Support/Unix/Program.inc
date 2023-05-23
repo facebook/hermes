@@ -200,7 +200,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
   // If this OS has posix_spawn and there is no memory limit being implied, use
   // posix_spawn.  It is more efficient than fork/exec.
 #ifdef HAVE_POSIX_SPAWN
-#if defined(TARGET_OS_TV) && TARGET_OS_TV
+#if defined(__APPLE__) && defined(TARGET_OS_TV) && TARGET_OS_TV
   {
 #else
   if (MemoryLimit == 0) {
@@ -270,7 +270,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
   }
 #endif
 
-#if !(defined(TARGET_OS_TV) && TARGET_OS_TV)
+#if !(defined(__APPLE__) && defined(TARGET_OS_TV) && TARGET_OS_TV)
   // Create a child process.
   int child = fork();
   switch (child) {
@@ -329,8 +329,8 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
   PI.Pid = child;
   PI.Process = child;
 
-  return true;
 #endif // TARGET_OS_TV
+  return true;
 }
 
 namespace llvh {

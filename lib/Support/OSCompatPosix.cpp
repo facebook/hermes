@@ -778,7 +778,7 @@ bool unset_env(const char *name) {
 void *SigAltStackLeakSuppressor::stackRoot_{nullptr};
 
 SigAltStackLeakSuppressor::~SigAltStackLeakSuppressor() {
-#if !(defined(TARGET_OS_TV) && TARGET_OS_TV)
+#if defined(__APPLE__) && !(defined(TARGET_OS_TV) && TARGET_OS_TV)
   stack_t oldAltStack;
   if (sigaltstack(nullptr, &oldAltStack) == 0) {
     stackRoot_ = oldAltStack.ss_sp;

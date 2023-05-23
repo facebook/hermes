@@ -57,6 +57,8 @@ if(HERMES_APPLE_TARGET_PLATFORM MATCHES "catalyst")
   set(THREADS_PREFER_PTHREAD_FLAG ON)
 endif()
 
+# The build for Apple platforms is not automatically picking up TARGET_OS_TV from TargetConditionals.h
+# for Apple TV. For now, we add this define here.
 if(HERMES_APPLE_TARGET_PLATFORM MATCHES "appletvos")
   add_definitions(-DTARGET_OS_TV=1)
 endif()
