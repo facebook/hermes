@@ -9,13 +9,13 @@
 
 #if defined(HERMESVM_SAMPLING_PROFILER_WINDOWS)
 
-#ifdef HERMES_FACEBOOK_BUILD
-#define HERMESVM_ENABLE_LOOM_WINDOWS
-#endif // defined(HERMES_FACEBOOK_BUILD)
+#if defined(HERMES_FACEBOOK_BUILD) && defined(HERMESVM_ALLOW_LOOM)
+#define HERMESVM_ENABLE_LOOM
+#endif
 
-#if defined(HERMESVM_ENABLE_LOOM_WINDOWS)
+#if defined(HERMESVM_ENABLE_LOOM)
 #include <FBLoom/ExternalApi/ExternalApi.h>
-#endif // defined(HERMESVM_ENABLE_LOOM_WINDOWS)
+#endif
 
 #include "hermes/VM/Profiler/SamplingProfiler.h"
 
@@ -35,13 +35,13 @@ struct SamplingProfilerWindows : SamplingProfiler {
         false,
         GetCurrentThreadId());
 
-#if defined(HERMESVM_ENABLE_LOOM_WINDOWS)
+#if defined(HERMESVM_ENABLE_LOOM)
     fbloom_profilo_api()->fbloom_register_enable_for_loom_callback(
         FBLoomTracerType::JAVASCRIPT, enable);
     fbloom_profilo_api()->fbloom_register_disable_for_loom_callback(
         FBLoomTracerType::JAVASCRIPT, disable);
     loomDataPushEnabled_ = true;
-#endif // defined(HERMESVM_ENABLE_LOOM_WINDOWS)
+#endif // defined(HERMESVM_ENABLE_LOOM)
   }
 
   ~SamplingProfilerWindows() override {
@@ -50,7 +50,7 @@ struct SamplingProfilerWindows : SamplingProfiler {
     Sampler::get()->unregisterRuntime(this);
   }
 
-#if defined(HERMESVM_ENABLE_LOOM_WINDOWS)
+#if defined(HERMESVM_ENABLE_LOOM)
   bool shouldPushDataToLoom() const {
     auto now = std::chrono::system_clock::now();
     constexpr auto kLoomDelay = std::chrono::milliseconds(50);
@@ -119,7 +119,7 @@ struct SamplingProfilerWindows : SamplingProfiler {
   std::chrono::time_point<std::chrono::system_clock> previousPushTs;
 
   bool loomDataPushEnabled_{false};
-#endif // defined(HERMESVM_ENABLE_LOOM_WINDOWS)
+#endif // defined(HERMESVM_ENABLE_LOOM)
 
   /// Thread that this profiler instance represents. This can currently only
   /// be set from the constructor of SamplingProfiler, so we need to construct
@@ -160,12 +160,12 @@ void Sampler::platformRegisterRuntime(SamplingProfiler *profiler) {}
 void Sampler::platformUnregisterRuntime(SamplingProfiler *profiler) {}
 
 void Sampler::platformPostSampleStack(SamplingProfiler *localProfiler) {
-#if defined(HERMESVM_ENABLE_LOOM_WINDOWS)
+#if defined(HERMESVM_ENABLE_LOOM)
   auto *windowsProfiler = static_cast<SamplingProfilerWindows *>(localProfiler);
   if (windowsProfiler->shouldPushDataToLoom()) {
     windowsProfiler->pushLastSampledStackToLoom();
   }
-#endif // defined(HERMESVM_ENABLE_LOOM_WINDOWS)
+#endif // defined(HERMESVM_ENABLE_LOOM)
 }
 
 bool Sampler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
