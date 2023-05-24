@@ -91,13 +91,14 @@ function f5(o) {
 // CHECK-NEXT:  %8 = LoadPropertyInst %5, "b" : string
 // CHECK-NEXT:  %9 = StoreFrameInst %8, [b#3], %0
 // CHECK-NEXT:  %10 = AllocObjectLiteralInst "a" : string, 0 : number, "b" : string, 0 : number
-// CHECK-NEXT:  %11 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %12 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, undefined : undefined, %11 : object, %5, %10 : object
-// CHECK-NEXT:  %13 = StoreFrameInst %12, [rest#3], %0
-// CHECK-NEXT:  %14 = LoadFrameInst [rest#3], %0
-// CHECK-NEXT:  %15 = ReturnInst %14
+// CHECK-NEXT:  %11 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, undefined : undefined, %10 : object, null : null
+// CHECK-NEXT:  %12 = AllocObjectInst 0 : number, empty
+// CHECK-NEXT:  %13 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, undefined : undefined, %12 : object, %5, %10 : object
+// CHECK-NEXT:  %14 = StoreFrameInst %13, [rest#3], %0
+// CHECK-NEXT:  %15 = LoadFrameInst [rest#3], %0
+// CHECK-NEXT:  %16 = ReturnInst %15
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %16 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %17 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f3#0#1(t)#4
@@ -111,10 +112,11 @@ function f5(o) {
 // CHECK-NEXT:  %5 = LoadPropertyInst %4, "a" : string
 // CHECK-NEXT:  %6 = StoreFrameInst %5, [a#4], %0
 // CHECK-NEXT:  %7 = AllocObjectLiteralInst "a" : string, 0 : number
-// CHECK-NEXT:  %8 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %9 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, undefined : undefined, %8 : object, %4, %7 : object
-// CHECK-NEXT:  %10 = StoreFrameInst %9, [rest#4], %0
-// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %8 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, undefined : undefined, %7 : object, null : null
+// CHECK-NEXT:  %9 = AllocObjectInst 0 : number, empty
+// CHECK-NEXT:  %10 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, undefined : undefined, %9 : object, %4, %7 : object
+// CHECK-NEXT:  %11 = StoreFrameInst %10, [rest#4], %0
+// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f4#0#1(o, t)#5
@@ -129,10 +131,11 @@ function f5(o) {
 // CHECK-NEXT:  %6 = StoreFrameInst %5, [a#5], %0
 // CHECK-NEXT:  %7 = LoadFrameInst [o#5], %0
 // CHECK-NEXT:  %8 = AllocObjectLiteralInst "a" : string, 0 : number
-// CHECK-NEXT:  %9 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %10 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, undefined : undefined, %9 : object, %4, %8 : object
-// CHECK-NEXT:  %11 = StorePropertyInst %10, %7, "rest" : string
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %9 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, undefined : undefined, %8 : object, null : null
+// CHECK-NEXT:  %10 = AllocObjectInst 0 : number, empty
+// CHECK-NEXT:  %11 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, undefined : undefined, %10 : object, %4, %8 : object
+// CHECK-NEXT:  %12 = StorePropertyInst %11, %7, "rest" : string
+// CHECK-NEXT:  %13 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f5#0#1(o)#6
@@ -148,8 +151,9 @@ function f5(o) {
 // CHECK-NEXT:  %7 = LoadPropertyInst %4, "a" : string
 // CHECK-NEXT:  %8 = StoreFrameInst %7, [a#6], %0
 // CHECK-NEXT:  %9 = AllocObjectLiteralInst "a" : string, 0 : number
-// CHECK-NEXT:  %10 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %11 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, undefined : undefined, %10 : object, %4, %9 : object
-// CHECK-NEXT:  %12 = StoreFrameInst %11, [rest#6], %0
-// CHECK-NEXT:  %13 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %10 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, undefined : undefined, %9 : object, null : null
+// CHECK-NEXT:  %11 = AllocObjectInst 0 : number, empty
+// CHECK-NEXT:  %12 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, undefined : undefined, %11 : object, %4, %9 : object
+// CHECK-NEXT:  %13 = StoreFrameInst %12, [rest#6], %0
+// CHECK-NEXT:  %14 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
