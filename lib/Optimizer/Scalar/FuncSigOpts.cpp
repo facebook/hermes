@@ -169,15 +169,16 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
 
   llvh::DenseSet<Function *> toRedo;
 
-  // Replace all unused arguments with undef.
+  // Replace all unused arguments with 0 (which is cheap to create).
+  Literal *zero = builder.getLiteralPositiveZero();
   for (auto &arg : unusedParams) {
     Value *prevArg = arg.call->getArgument(arg.idx);
     if (!llvh::isa<Literal>(prevArg))
       toRedo.insert(arg.call->getParent()->getParent());
 
-    arg.call->setArgument(undef, arg.idx);
+    arg.call->setArgument(zero, arg.idx);
     if (arg.param)
-      arg.param->setType(Type::createUndefined());
+      arg.param->setType(Type::createUint32());
     NumArgsOpt++;
   }
 

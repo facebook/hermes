@@ -37,6 +37,6 @@
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:object) [f@main]: object
-// CHECK-NEXT:  %1 = CallInst (:any) %0: object, %f(): any, empty: any, undefined: undefined
+// CHECK-NEXT:  %1 = CallInst (:any) %0: object, %f(): any, empty: any, 0: number
 // CHECK-NEXT:  %2 = ReturnInst %1: any
 // CHECK-NEXT:function_end

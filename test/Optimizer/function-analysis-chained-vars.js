@@ -41,7 +41,7 @@ function main() {
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): object
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %x(): number
 // CHECK-NEXT:  %2 = StoreFrameInst %1: object, [x]: object
-// CHECK-NEXT:  %3 = CallInst (:object) %0: object, %foo(): object, empty: any, undefined: undefined
+// CHECK-NEXT:  %3 = CallInst (:object) %0: object, %foo(): object, empty: any, 0: number
 // CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -64,6 +64,6 @@ function main() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:object) [y@foo]: object
-// CHECK-NEXT:  %1 = CallInst (:number) %0: object, %x(): number, empty: any, undefined: undefined
+// CHECK-NEXT:  %1 = CallInst (:number) %0: object, %x(): number, empty: any, 0: number
 // CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

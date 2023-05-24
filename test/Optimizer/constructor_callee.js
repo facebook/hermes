@@ -60,7 +60,7 @@ function ctor_load_store_test() {
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %"use_this 1#"(): undefined
 // CHECK-NEXT:  %1 = StoreFrameInst %0: object, [use_this]: object
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %construct_use_this(): object
-// CHECK-NEXT:  %3 = CallInst (:object) %2: object, %construct_use_this(): object, empty: any, undefined: undefined
+// CHECK-NEXT:  %3 = CallInst (:object) %2: object, %construct_use_this(): object, empty: any, 0: number
 // CHECK-NEXT:  %4 = ReturnInst %3: object
 // CHECK-NEXT:function_end
 

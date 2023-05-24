@@ -70,7 +70,7 @@ function load_store_multiple_test() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): number
-// CHECK-NEXT:  %1 = CallInst (:number) %0: object, %foo(): number, empty: any, undefined: undefined, 12: number
+// CHECK-NEXT:  %1 = CallInst (:number) %0: object, %foo(): number, empty: any, 0: number, 12: number
 // CHECK-NEXT:  %2 = ReturnInst 12: number
 // CHECK-NEXT:function_end
 
@@ -80,7 +80,7 @@ function load_store_multiple_test() {
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %"foo 1#"(): number
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "prototype": string
 // CHECK-NEXT:  %2 = CreateThisInst (:object) %1: any, %0: object
-// CHECK-NEXT:  %3 = ConstructInst (:number) %0: object, %"foo 1#"(): number, empty: any, undefined: undefined, 12: number
+// CHECK-NEXT:  %3 = ConstructInst (:number) %0: object, %"foo 1#"(): number, empty: any, 0: number, 12: number
 // CHECK-NEXT:  %4 = ReturnInst %2: object
 // CHECK-NEXT:function_end
 
@@ -90,7 +90,7 @@ function load_store_multiple_test() {
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %ping(): number
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %k(): number
 // CHECK-NEXT:  %2 = StoreFrameInst %1: object, [k]: object
-// CHECK-NEXT:  %3 = CallInst (:number) %0: object, %ping(): number, empty: any, undefined: undefined
+// CHECK-NEXT:  %3 = CallInst (:number) %0: object, %ping(): number, empty: any, 0: number
 // CHECK-NEXT:  %4 = ReturnInst 123: number
 // CHECK-NEXT:function_end
 
@@ -100,7 +100,7 @@ function load_store_multiple_test() {
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %"foo 2#"(): number
 // CHECK-NEXT:  %1 = StoreFrameInst %0: object, [foo]: object
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %bar(): number
-// CHECK-NEXT:  %3 = CallInst (:number) %2: object, %bar(): number, empty: any, undefined: undefined
+// CHECK-NEXT:  %3 = CallInst (:number) %2: object, %bar(): number, empty: any, 0: number
 // CHECK-NEXT:  %4 = ReturnInst %3: number
 // CHECK-NEXT:function_end
 
@@ -120,7 +120,7 @@ function load_store_multiple_test() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:object) [k@load_store_test]: object
-// CHECK-NEXT:  %1 = CallInst (:number) %0: object, %k(): number, empty: any, undefined: undefined, 123: number
+// CHECK-NEXT:  %1 = CallInst (:number) %0: object, %k(): number, empty: any, 0: number, 123: number
 // CHECK-NEXT:  %2 = ReturnInst 123: number
 // CHECK-NEXT:function_end
 
@@ -141,8 +141,8 @@ function load_store_multiple_test() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:object) [foo@load_store_multiple_test]: object
-// CHECK-NEXT:  %1 = CallInst (:number) %0: object, %"foo 2#"(): number, empty: any, undefined: undefined, true: boolean, 7: number
-// CHECK-NEXT:  %2 = CallInst (:number) %0: object, %"foo 2#"(): number, empty: any, undefined: undefined, true: boolean, 8: number
+// CHECK-NEXT:  %1 = CallInst (:number) %0: object, %"foo 2#"(): number, empty: any, 0: number, true: boolean, 7: number
+// CHECK-NEXT:  %2 = CallInst (:number) %0: object, %"foo 2#"(): number, empty: any, 0: number, true: boolean, 8: number
 // CHECK-NEXT:  %3 = BinaryAddInst (:number) %1: number, %2: number
 // CHECK-NEXT:  %4 = ReturnInst %3: number
 // CHECK-NEXT:function_end
