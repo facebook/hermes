@@ -9,6 +9,18 @@ This document provides guidance for the kind of code that should go in to
 the Hermes project. The rules in this document will allow us to scale the
 project and ensure that the code base remains readable and maintainable.
 
+### Code Quality
+
+Code quality standards in Hermes are very strict. While we welcome and
+support community contributions, expect scrutiny on changes that do not
+meet the following standards:
+
+- Contributions must be well understood and explained in PRs. We cannot accept
+and maintain contributions that we don't fully understand.
+- Contributions should not use shortcuts or hacks in the name of expediency.
+Hermes is a critical piece of infrastructure for many apps and systems, and
+such code creates ongoing work for maintainers.
+
 ### Language Features
 
 Hermes uses C++14.
