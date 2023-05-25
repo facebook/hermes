@@ -12,11 +12,12 @@
     "hermes-parser": "0.11.1"
   },
   "peerDependencies": {
-    "prettier": "^3.0.0"
+    "prettier": "^3.0.0 || ^2.7.1"
   },
   "files": [
     "dist",
     "LICENCE",
+    "PRETTIER_LICENCE",
     "README.md"
   ]
 }
