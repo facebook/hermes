@@ -410,27 +410,27 @@ describe('flowToFlowDef', () => {
     it('basic type parameter', async () => {
       await expectTranslate(
         `export const foo: number = 1;`,
-        `declare export const foo: number;`,
+        `declare export var foo: number;`,
       );
     });
     it('basic typecast', async () => {
       await expectTranslate(
         `export const foo = (1: number);`,
-        `declare export const foo: number;`,
+        `declare export var foo: number;`,
       );
     });
     it('prefer type parameter', async () => {
       await expectTranslate(
         `export const foo: number = (1: any);`,
-        `declare export const foo: number;`,
+        `declare export var foo: number;`,
       );
     });
     it('with dependency', async () => {
       await expectTranslate(
         `const foo: number = 1;
          export const bar: typeof foo = 1;`,
-        `declare const foo: number;
-         declare export const bar: typeof foo;`,
+        `declare var foo: number;
+         declare export var bar: typeof foo;`,
       );
     });
   });
@@ -441,7 +441,7 @@ describe('flowToFlowDef', () => {
     it('local', async () => {
       await expectTranslateUnchanged(
         `enum Foo {}
-         declare export const bar: Foo;`,
+         declare export var bar: Foo;`,
       );
     });
   });
@@ -449,7 +449,7 @@ describe('flowToFlowDef', () => {
     it('basic', async () => {
       await expectTranslateUnchanged(
         `declare class Foo {}
-         declare export const bar: Foo;`,
+         declare export var bar: Foo;`,
       );
     });
     it('complex', async () => {
@@ -474,7 +474,7 @@ describe('flowToFlowDef', () => {
     ): Promise<void> {
       await expectTranslate(
         `export const expr = ${expectExprCode};`,
-        `declare export const expr: ${toBeExprCode};`,
+        `declare export var expr: ${toBeExprCode};`,
       );
     }
     describe('Identifier', () => {
