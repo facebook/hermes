@@ -1,5 +1,32 @@
 ## Unreleased
 
+## 0.12.0
+
+### `hermes-parser`
+
+- Fix `process.exitCode` being overridden when initializing WASM.
+- Add support fo parsing type parameter bounds separated by `extends` keyword in Flow.
+
+### `hermes-transform`
+
+- Add support for Prettier v3.
+
+### `hermes-eslint`
+
+- Add support for Flow AST nodes as parsed by [`hermes-parser@0.12.0`](#`hermes-parser`).
+
+### `hermes-estree`
+
+- Add support for Flow AST nodes as parsed by [`hermes-parser@0.12.0`](#`hermes-parser`).
+
+### `flow-api-translator`
+
+- Add support for Flow AST nodes as parsed by [`hermes-parser@0.12.0`](#`hermes-parser`).
+
+### `prettier-plugin-hermes-parser`
+
+- Created `prettier-plugin-hermes-parser` package. This is a plugin for Prettier to enable the use of Hermes parser. It supports Prettier v3 and v2 but always prints via the latest prettier v3 printing logic, to enable full support for all Hermes parser features.
+
 ## 0.11.1
 
 ### `flow-api-translator`
