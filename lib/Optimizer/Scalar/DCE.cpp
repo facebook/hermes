@@ -40,13 +40,9 @@ static bool performFunctionDCE(Function *F) {
       // allow us to delete the current instruction.
       ++it;
 
-      // If the instruction writes to memory then we can't remove it. Notice
-      // that it is okay to delete instructions that only read memory and are
-      // unused.
-      auto se = I->getSideEffect();
-      bool observable = se.getWriteStack() || se.getWriteHeap() ||
-          se.getWriteFrame() || se.getThrow();
-      if (observable || llvh::isa<TerminatorInst>(I))
+      // Skip if the instruction has side effects that prevent us from deleting
+      // it, or if it is a terminator.
+      if (I->getSideEffect().hasSideEffect() || llvh::isa<TerminatorInst>(I))
         continue;
 
       // If some other instruction is using the result of this instruction then

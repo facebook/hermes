@@ -432,6 +432,25 @@ class SideEffect {
     return createExecute();
   }
 
+  /// Determine whether the given instruction modifies the state of the world in
+  /// any an observable way.
+  bool hasSideEffect() const {
+    // Note that we do not check ExecuteJS here because any observable
+    // side-effect of a call requires one of these other bits to be set.
+    return getWriteStack() || getWriteHeap() || getWriteFrame() || getThrow();
+  }
+
+  /// Determine if the instruction is pure. That is, whether separate
+  /// invocations of the instruction with the same operands will always yield
+  /// the same result, and will not modify the state of the world in any
+  /// observable way. Note that this excludes instructions that allocate (e.g.
+  /// AllocObject, CreateFunction) since they produce a different reference each
+  /// time.
+  bool isPure() const {
+    return !hasSideEffect() && !getReadStack() && !getReadHeap() &&
+        !getReadFrame() && getIdempotent();
+  }
+
   /// Helper functions to expose the SideEffectKind interface.
   /// TODO: Delete these once all instructions are migrated off SideEffectKind.
   bool mayExecute() const {
