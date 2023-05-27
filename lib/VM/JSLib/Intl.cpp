@@ -269,7 +269,7 @@ constexpr OptionData kDTFOptions[] = {
     {u"hourCycle", platform_intl::Option::Kind::String, 0},
     {u"timeZone", platform_intl::Option::Kind::String, 0},
     {u"formatMatcher", platform_intl::Option::Kind::String, 0},
-    {u"weekday", platform_intl::Option::Kind::String, 0},
+    {u"weekday", platform_intl::Option::Kind::String, kDateRequired},
     {u"era", platform_intl::Option::Kind::String, 0},
     {u"year",
      platform_intl::Option::Kind::String,
