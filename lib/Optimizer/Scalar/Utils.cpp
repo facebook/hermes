@@ -238,24 +238,4 @@ bool hermes::deleteUnusedFunctionsAndVariables(Module *M) {
   return changed;
 }
 
-bool hermes::isSimpleSideEffectFreeInstruction(Instruction *I) {
-  if (I->getSideEffect().mayReadOrWorse()) {
-    return false;
-  }
-  if (llvh::isa<UnaryOperatorInst>(I))
-    return true;
-  if (llvh::isa<BinaryOperatorInst>(I))
-    return true;
-  switch (I->getKind()) {
-    case ValueKind::GetNewTargetInstKind:
-    case ValueKind::HBCResolveEnvironmentKind:
-    case ValueKind::HBCLoadConstInstKind:
-    case ValueKind::HBCGetGlobalObjectInstKind:
-      return true;
-    default:
-      return false;
-  }
-  llvm_unreachable("unreachable");
-}
-
 #undef DEBUG_TYPE

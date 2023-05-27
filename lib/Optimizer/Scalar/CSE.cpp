@@ -45,7 +45,10 @@ struct CSEValue {
 
   /// Return true if we know how to CSE this instruction.
   static bool canHandle(Instruction *Inst) {
-    return isSimpleSideEffectFreeInstruction(Inst);
+    // Check that the instruction can be freely reordered and deduplicated, and
+    // that it is not a terminator.
+    return !llvh::isa<TerminatorInst>(Inst) && Inst->getSideEffect().isPure() &&
+        !Inst->getSideEffect().getFirstInBlock();
   }
 };
 } // end anonymous namespace
