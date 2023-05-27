@@ -7,11 +7,14 @@
 
 #define DEBUG_TYPE "frameloadstoreopts"
 
+#include "hermes/IR/Analysis.h"
+#include "hermes/IR/CFG.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/Instrs.h"
 #include "hermes/Optimizer/PassManager/Pass.h"
 #include "hermes/Support/Statistic.h"
 
+#include "llvh/ADT/SetOperations.h"
 #include "llvh/Support/Debug.h"
 
 /// This pass tries to deduplicate loads and delete unobservable stores to frame
@@ -45,6 +48,33 @@ class CapturedVariables {
   llvh::DenseSet<Variable *> stores;
 };
 
+/// Take the intersection of the sets in \p values associated with the range of
+/// blocks \p range.
+template <typename RangeTy>
+llvh::DenseSet<Variable *> blockIntersect(
+    RangeTy &&range,
+    const llvh::DenseMap<BasicBlock *, llvh::DenseSet<Variable *>> &values) {
+  auto it = std::begin(range), e = std::end(range);
+  if (it == e)
+    return {};
+
+  // Copy the first set as a starting point.
+  auto res = values.lookup(*it++);
+
+  // Remove any values that are not the same in all sets.
+  for (; it != e; ++it) {
+    auto valIt = values.find(*it);
+
+    // If no entry exists for this block, bail.
+    if (valIt == values.end())
+      return {};
+
+    llvh::set_intersect(res, valIt->second);
+  }
+
+  return res;
+}
+
 class FunctionLoadStoreOptimizer {
   /// The function being optimized.
   Function *const F_;
@@ -56,14 +86,21 @@ class FunctionLoadStoreOptimizer {
   /// created for it.
   llvh::DenseMap<Variable *, AllocStackInst *> variableAllocas_;
 
+  /// Post order analysis for this function.
+  PostOrderAnalysis PO_;
+
+  /// Map from a basic block to the set of variables that have valid values in
+  /// their corresponding stack locations at the end of the block.
+  llvh::DenseMap<BasicBlock *, llvh::DenseSet<Variable *>> blockValidVariables_;
+
   /// For each variable that is loaded from in F_, create an alloca that can
   /// be used to perform load elimination, and set it in \c variableAllocas_.
   void createVariableAllocas() {
     IRBuilder builder(F_);
     builder.setInsertionPoint(&F_->front().front());
 
-    for (BasicBlock &BB : *F_) {
-      for (Instruction &I : BB) {
+    for (BasicBlock *BB : PO_) {
+      for (Instruction &I : *BB) {
         if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(&I)) {
           Variable *V = LFI->getLoadVariable();
           // If there isn't already an alloca for V, create one and insert it
@@ -138,9 +175,15 @@ class FunctionLoadStoreOptimizer {
     if (BB == &*F_->begin())
       entryCV.emplace();
 
-    // Set of variables that currently have valid values in their corresponding
-    // stack location. Loads from these variables may be eliminated.
-    llvh::DenseSet<Variable *> validVariables;
+    // Compute the set of variables that currently have valid values in their
+    // corresponding stack location. Loads from these variables may be
+    // eliminated. The stack location is only valid if it is valid in all
+    // predecessors. Note that this implementation is conservative, since some
+    // predecessors may not yet have been visited. For the best results, we
+    // should traverse the blocks in RPO order.
+    auto validVariables =
+        blockIntersect(predecessors(BB), blockValidVariables_);
+
     IRBuilder builder(BB->getParent());
     IRBuilder::InstructionDestroyer destroyer;
 
@@ -206,6 +249,11 @@ class FunctionLoadStoreOptimizer {
         }
       }
     }
+
+    // Store the valid variables for this block so subsequent blocks can use it.
+    auto [it, first] =
+        blockValidVariables_.try_emplace(BB, std::move(validVariables));
+    assert(first && "Block already visited");
 
     return changed;
   }
@@ -286,16 +334,17 @@ class FunctionLoadStoreOptimizer {
 
  public:
   FunctionLoadStoreOptimizer(Function *F, const CapturedVariables &globalCV)
-      : F_(F), globalCV_(globalCV) {}
+      : F_(F), globalCV_(globalCV), PO_(F) {}
 
   bool run() {
     // Create an alloca for each variable we want to optimize.
     createVariableAllocas();
 
     bool changed = false;
-    for (auto &BB : *F_) {
-      changed |= eliminateLoads(&BB);
-      changed |= eliminateStores(&BB);
+    // Use RPO order to improve the quality of load elimination across blocks.
+    for (auto *BB : llvh::reverse(PO_)) {
+      changed |= eliminateLoads(BB);
+      changed |= eliminateStores(BB);
     }
 
     // Delete any allocas that did not end up being useful.

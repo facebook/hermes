@@ -49,28 +49,27 @@ function outer(){
 // CHECK-NEXT:  %5 = StoreFrameInst %4: number|bigint, [x@outer]: number|bigint
 // CHECK-NEXT:  %6 = CondBranchInst %0: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = LoadFrameInst (:number|bigint) [x@outer]: number|bigint
-// CHECK-NEXT:  %8 = UnaryIncInst (:number|bigint) %7: number|bigint
-// CHECK-NEXT:  %9 = StoreFrameInst %8: number|bigint, [x@outer]: number|bigint
-// CHECK-NEXT:  %10 = BranchInst %BB2
+// CHECK-NEXT:  %7 = UnaryIncInst (:number|bigint) %4: number|bigint
+// CHECK-NEXT:  %8 = StoreFrameInst %7: number|bigint, [x@outer]: number|bigint
+// CHECK-NEXT:  %9 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %10 = PhiInst (:number|bigint) %7: number|bigint, %BB1, %4: number|bigint, %BB0
 // CHECK-NEXT:  %11 = CondBranchInst %1: any, %BB3, %BB4
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = LoadFrameInst (:number|bigint) [x@outer]: number|bigint
-// CHECK-NEXT:  %13 = UnaryIncInst (:number|bigint) %12: number|bigint
-// CHECK-NEXT:  %14 = StoreFrameInst %13: number|bigint, [x@outer]: number|bigint
-// CHECK-NEXT:  %15 = BranchInst %BB4
+// CHECK-NEXT:  %12 = UnaryIncInst (:number|bigint) %10: number|bigint
+// CHECK-NEXT:  %13 = StoreFrameInst %12: number|bigint, [x@outer]: number|bigint
+// CHECK-NEXT:  %14 = BranchInst %BB4
 // CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %15 = PhiInst (:number|bigint) %12: number|bigint, %BB3, %10: number|bigint, %BB2
 // CHECK-NEXT:  %16 = CondBranchInst %2: any, %BB5, %BB6
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %17 = LoadFrameInst (:number|bigint) [x@outer]: number|bigint
-// CHECK-NEXT:  %18 = UnaryIncInst (:number|bigint) %17: number|bigint
-// CHECK-NEXT:  %19 = StoreFrameInst %18: number|bigint, [x@outer]: number|bigint
-// CHECK-NEXT:  %20 = BranchInst %BB6
+// CHECK-NEXT:  %17 = UnaryIncInst (:number|bigint) %15: number|bigint
+// CHECK-NEXT:  %18 = StoreFrameInst %17: number|bigint, [x@outer]: number|bigint
+// CHECK-NEXT:  %19 = BranchInst %BB6
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %21 = LoadFrameInst (:number|bigint) [x@outer]: number|bigint
-// CHECK-NEXT:  %22 = AsNumericInst (:number|bigint) %21: number|bigint
-// CHECK-NEXT:  %23 = UnaryIncInst (:number|bigint) %22: number|bigint
-// CHECK-NEXT:  %24 = StoreFrameInst %23: number|bigint, [x@outer]: number|bigint
-// CHECK-NEXT:  %25 = ReturnInst %22: number|bigint
+// CHECK-NEXT:  %20 = PhiInst (:number|bigint) %17: number|bigint, %BB5, %15: number|bigint, %BB4
+// CHECK-NEXT:  %21 = AsNumericInst (:number|bigint) %20: number|bigint
+// CHECK-NEXT:  %22 = UnaryIncInst (:number|bigint) %21: number|bigint
+// CHECK-NEXT:  %23 = StoreFrameInst %22: number|bigint, [x@outer]: number|bigint
+// CHECK-NEXT:  %24 = ReturnInst %21: number|bigint
 // CHECK-NEXT:function_end
