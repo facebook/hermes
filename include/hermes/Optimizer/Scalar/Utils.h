@@ -63,10 +63,5 @@ bool deleteUnusedVariables(Module *M);
 /// remaining uses.
 /// \return true if anything was deleted, false otherwise.
 bool deleteUnusedFunctionsAndVariables(Module *M);
-
-/// \returns True if the instruction \p I has no side effects, can be combined
-/// with identical instructions or duplicated without changing semantics, and
-/// can be placed anywhere in the middle of a basic block.
-bool isSimpleSideEffectFreeInstruction(Instruction *I);
 } // namespace hermes
 #endif // HERMES_OPTIMIZER_SCALAR_UTILS_H

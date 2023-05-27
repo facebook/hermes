@@ -115,7 +115,10 @@ static bool canHoistFromLoop(
     Instruction *inst,
     Instruction *branchInst,
     const DominanceInfo &dominance) {
-  if (!isSimpleSideEffectFreeInstruction(inst)) {
+  // Check whether the instruction is pure, and whether it has restrictions on
+  // where it can be placed within a block.
+  if (llvh::isa<TerminatorInst>(inst) || !inst->getSideEffect().isPure() ||
+      inst->getSideEffect().getFirstInBlock()) {
     return false;
   }
   for (int i = 0, e = inst->getNumOperands(); i < e; ++i) {
