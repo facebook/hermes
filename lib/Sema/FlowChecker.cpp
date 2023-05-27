@@ -46,6 +46,12 @@ bool FlowChecker::run(ESTree::ProgramNode *rootNode) {
   FunctionContext globalFunc(*this, rootNode, nullptr, flowContext_.getAny());
   ScopeRAII scope(*this);
   resolveScopeTypesAndAnnotate(rootNode, rootNode->getScope());
+  if (sm_.getErrorCount()) {
+    // Avoid running the visitor to check types if the resolution failed,
+    // because the visitor relies on data populated during
+    // resolveScopeTypesAndAnnotate.
+    return false;
+  }
   visitESTreeNode(*this, rootNode);
   return sm_.getErrorCount() == 0;
 }
