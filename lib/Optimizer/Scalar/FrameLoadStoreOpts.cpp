@@ -19,7 +19,8 @@
 ///
 /// For loads, the key idea is that if there are no instructions that may write
 /// a variable between two loads or a store and a load to it, the second load
-/// may be eliminated.
+/// may be eliminated. This is accomplished by creating a mirror of the variable
+/// on the stack and invalidating it when a call may store to it.
 /// For stores, the idea is that if there are no instructions that may read a
 /// variable between two stores, then the first store is redundant.
 ///
@@ -50,6 +51,46 @@ class FunctionLoadStoreOptimizer {
 
   /// Describes whether a variable has been captured anywhere in the program.
   const CapturedVariables &globalCV_;
+
+  /// Map from each variable accessed in this function to the stack location
+  /// created for it.
+  llvh::DenseMap<Variable *, AllocStackInst *> variableAllocas_;
+
+  /// For each variable that is loaded from in F_, create an alloca that can
+  /// be used to perform load elimination, and set it in \c variableAllocas_.
+  void createVariableAllocas() {
+    IRBuilder builder(F_);
+    builder.setInsertionPoint(&F_->front().front());
+
+    for (BasicBlock &BB : *F_) {
+      for (Instruction &I : BB) {
+        if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(&I)) {
+          Variable *V = LFI->getLoadVariable();
+          // If there isn't already an alloca for V, create one and insert it
+          // into the map.
+          auto [it, first] = variableAllocas_.try_emplace(V, nullptr);
+          if (first)
+            it->second =
+                builder.createAllocStackInst(V->getName(), V->getType());
+        }
+      }
+    }
+  }
+
+  /// Delete any allocas in \p variableAllocas_ that ended up not being used to
+  /// eliminate loads. That is, delete any allocas that are only used by stores.
+  void deleteUnusedAllocas() {
+    IRBuilder::InstructionDestroyer destroyer;
+    for (auto [V, ASI] : variableAllocas_) {
+      // Skip this instruction if there are any non-store users.
+      if (!llvh::all_of(ASI->getUsers(), llvh::isa<StoreStackInst, Value *>))
+        continue;
+
+      for (auto *u : ASI->getUsers())
+        destroyer.add(u);
+      destroyer.add(ASI);
+    }
+  }
 
   /// Add the variables owned by \p src that the function \p F is capturing into
   /// \p cv. Notice that the function F may have sub-closures that capture
@@ -82,10 +123,10 @@ class FunctionLoadStoreOptimizer {
     }
   }
 
-  /// Attempts to replace loads from the frame in \p BB with values from a
-  /// previous load or store to the same variable. Uses capture information from
-  /// globalCV_ to determine whether intervening operations may store to the
-  /// variable and prevent forwarding.
+  /// Attempts to replace loads from the frame in \p BB with loads from stack
+  /// locations that have been populated by a previous load or store to the same
+  /// variable. Uses capture information from globalCV_ to determine whether
+  /// intervening operations may store to the variable and prevent forwarding.
   bool eliminateLoads(BasicBlock *BB) {
     // In the entry block, we can perform more precise analysis by tracking
     // exactly when variables owned by F_ are actually captured. Create an empty
@@ -97,34 +138,45 @@ class FunctionLoadStoreOptimizer {
     if (BB == &*F_->begin())
       entryCV.emplace();
 
-    // Map from a Variable to its current known value that can be forwarded to a
-    // load. If no entry exists, the value is unknown and must be loaded from
-    // the frame.
-    llvh::DenseMap<Variable *, Value *> knownValues;
+    // Set of variables that currently have valid values in their corresponding
+    // stack location. Loads from these variables may be eliminated.
+    llvh::DenseSet<Variable *> validVariables;
+    IRBuilder builder(BB->getParent());
     IRBuilder::InstructionDestroyer destroyer;
 
     bool changed = false;
 
     for (Instruction &I : *BB) {
       if (auto *SF = llvh::dyn_cast<StoreFrameInst>(&I)) {
-        // Record the value stored to the frame:
-        knownValues[SF->getVariable()] = SF->getValue();
+        // If a stack location exists for this variable, store to it and
+        // insert the variable into the set of valid values.
+        auto it = variableAllocas_.find(SF->getVariable());
+        if (it != variableAllocas_.end()) {
+          builder.setInsertionPoint(SF);
+          builder.createStoreStackInst(SF->getValue(), it->second);
+          validVariables.insert(SF->getVariable());
+        }
         continue;
       }
 
       // Try to replace the LoadFrame with a recently saved value.
       if (auto *LF = llvh::dyn_cast<LoadFrameInst>(&I)) {
-        // Check if we already have a known value for the load. If we do, use
-        // it, otherwise, populate it.
-        auto [it, first] = knownValues.try_emplace(LF->getLoadVariable(), LF);
-        if (first)
-          continue;
+        // Check if we already have a valid value for the load in its
+        // corresponding stack location. If so, use it, otherwise, populate it.
+        builder.setInsertionPointAfter(LF);
+        auto *V = LF->getLoadVariable();
+        auto *alloca = variableAllocas_.lookup(LF->getLoadVariable());
+        if (validVariables.insert(V).second) {
+          // No entry currently exists, store the result of this load to the
+          // stack.
+          builder.createStoreStackInst(LF, alloca);
+        } else {
+          // We already have a known value for this variable. Replace the load
+          // with it.
+          LF->replaceAllUsesWith(builder.createLoadStackInst(alloca));
+          destroyer.add(LF);
+        }
 
-        // Replace all uses of the load with the known value.
-        LF->replaceAllUsesWith(it->second);
-
-        // We have no use of this load now. Remove it.
-        destroyer.add(LF);
         changed = true;
         continue;
       }
@@ -140,16 +192,17 @@ class FunctionLoadStoreOptimizer {
       // Invalidate the variable storage if the instruction may execute
       // capturing stores that write the variable.
       if (I.getSideEffect().getExecuteJS()) {
-        for (auto it = knownValues.begin(); it != knownValues.end(); it++) {
+        for (auto it = validVariables.begin(); it != validVariables.end();
+             ++it) {
           // Use incremental capture information in the entry block for owned
           // variables, and global information for everything else.
-          bool ownedVar = it->first->getParent()->getFunction() == F_;
+          bool ownedVar = (*it)->getParent()->getFunction() == F_;
           const auto &cv = entryCV && ownedVar ? *entryCV : globalCV_;
 
           // If there are any captured stores of the variable, the value may be
-          // updated, so preceding stores cannot be propagated.
-          if (cv.stores.count(it->first))
-            knownValues.erase(it);
+          // updated, so the stack location is no longer valid.
+          if (cv.stores.count(*it))
+            validVariables.erase(it);
         }
       }
     }
@@ -233,14 +286,20 @@ class FunctionLoadStoreOptimizer {
 
  public:
   FunctionLoadStoreOptimizer(Function *F, const CapturedVariables &globalCV)
-      : globalCV_(globalCV), F_(F) {}
+      : F_(F), globalCV_(globalCV) {}
 
   bool run() {
+    // Create an alloca for each variable we want to optimize.
+    createVariableAllocas();
+
     bool changed = false;
     for (auto &BB : *F_) {
       changed |= eliminateLoads(&BB);
       changed |= eliminateStores(&BB);
     }
+
+    // Delete any allocas that did not end up being useful.
+    deleteUnusedAllocas();
     return changed;
   }
 };
