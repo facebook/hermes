@@ -816,11 +816,11 @@ CallResult<PseudoHandle<>> BoundFunction::_callImpl(
 //===----------------------------------------------------------------------===//
 // class SHLegacyFunction
 
-const CallableVTable SHLegacyFunction::vt{
+const CallableVTable NativeJSFunction::vt{
     {
         VTable(
             CellKind::SHLegacyFunctionKind,
-            cellSize<SHLegacyFunction>(),
+            cellSize<NativeJSFunction>(),
             nullptr,
             nullptr,
             nullptr,
@@ -829,46 +829,46 @@ const CallableVTable SHLegacyFunction::vt{
             ,
             VTable::HeapSnapshotMetadata {
               HeapSnapshot::NodeType::Closure,
-                  SHLegacyFunction::_snapshotNameImpl,
-                  SHLegacyFunction::_snapshotAddEdgesImpl, nullptr, nullptr
+                  NativeJSFunction::_snapshotNameImpl,
+                  NativeJSFunction::_snapshotAddEdgesImpl, nullptr, nullptr
             }
 #endif
             ),
-        SHLegacyFunction::_getOwnIndexedRangeImpl,
-        SHLegacyFunction::_haveOwnIndexedImpl,
-        SHLegacyFunction::_getOwnIndexedPropertyFlagsImpl,
-        SHLegacyFunction::_getOwnIndexedImpl,
-        SHLegacyFunction::_setOwnIndexedImpl,
-        SHLegacyFunction::_deleteOwnIndexedImpl,
-        SHLegacyFunction::_checkAllOwnIndexedImpl,
+        NativeJSFunction::_getOwnIndexedRangeImpl,
+        NativeJSFunction::_haveOwnIndexedImpl,
+        NativeJSFunction::_getOwnIndexedPropertyFlagsImpl,
+        NativeJSFunction::_getOwnIndexedImpl,
+        NativeJSFunction::_setOwnIndexedImpl,
+        NativeJSFunction::_deleteOwnIndexedImpl,
+        NativeJSFunction::_checkAllOwnIndexedImpl,
     },
-    SHLegacyFunction::_newObjectImpl,
-    SHLegacyFunction::_callImpl};
+    NativeJSFunction::_newObjectImpl,
+    NativeJSFunction::_callImpl};
 
 void SHLegacyFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<SHLegacyFunction>());
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<NativeJSFunction>());
   CallableBuildMeta(cell, mb);
-  mb.setVTable(&SHLegacyFunction::vt);
+  mb.setVTable(&NativeJSFunction::vt);
 }
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
-std::string SHLegacyFunction::_snapshotNameImpl(GCCell *cell, GC &gc) {
+std::string NativeJSFunction::_snapshotNameImpl(GCCell *cell, GC &gc) {
   return "SHLegacyFunction";
 }
 #endif
 
-Handle<SHLegacyFunction> SHLegacyFunction::create(
+Handle<NativeJSFunction> NativeJSFunction::create(
     Runtime &runtime,
     Handle<JSObject> parentHandle,
-    SHLegacyFunctionPtr functionPtr,
+    NativeJSFunctionPtr functionPtr,
     SymbolID name,
     unsigned paramCount,
     Handle<JSObject> prototypeObjectHandle,
     bool strictMode,
     unsigned additionalSlotCount) {
   size_t reservedSlots =
-      numOverlapSlots<SHLegacyFunction>() + additionalSlotCount;
-  auto *cell = runtime.makeAFixed<SHLegacyFunction>(
+      numOverlapSlots<NativeJSFunction>() + additionalSlotCount;
+  auto *cell = runtime.makeAFixed<NativeJSFunction>(
       runtime,
       parentHandle,
       runtime.getHiddenClassForPrototype(*parentHandle, reservedSlots),
@@ -894,22 +894,22 @@ Handle<SHLegacyFunction> SHLegacyFunction::create(
   return selfHandle;
 }
 
-Handle<SHLegacyFunction> SHLegacyFunction::create(
+Handle<NativeJSFunction> NativeJSFunction::create(
     Runtime &runtime,
     Handle<JSObject> parentHandle,
     Handle<Environment> parentEnvHandle,
-    SHLegacyFunctionPtr functionPtr,
+    NativeJSFunctionPtr functionPtr,
     SymbolID name,
     unsigned paramCount,
     Handle<JSObject> prototypeObjectHandle,
     bool strictMode,
     unsigned additionalSlotCount) {
-  auto *cell = runtime.makeAFixed<SHLegacyFunction>(
+  auto *cell = runtime.makeAFixed<NativeJSFunction>(
       runtime,
       parentHandle,
       runtime.getHiddenClassForPrototype(
           *parentHandle,
-          numOverlapSlots<SHLegacyFunction>() + additionalSlotCount),
+          numOverlapSlots<NativeJSFunction>() + additionalSlotCount),
       parentEnvHandle,
       functionPtr);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
@@ -932,8 +932,8 @@ Handle<SHLegacyFunction> SHLegacyFunction::create(
 /// This is a lightweight and unsafe wrapper intended to be used only by the
 /// interpreter. Its purpose is to avoid needlessly exposing the private
 /// fields.
-CallResult<PseudoHandle<>> SHLegacyFunction::_nativeCall(
-    SHLegacyFunction *self,
+CallResult<PseudoHandle<>> NativeJSFunction::_nativeCall(
+    NativeJSFunction *self,
     Runtime &runtime) {
   // ScopedNativeDepthTracker depthTracker{runtime};
   // if (LLVM_UNLIKELY(depthTracker.overflowed())) {
@@ -971,7 +971,7 @@ CallResult<PseudoHandle<>> SHLegacyFunction::_nativeCall(
   }
 }
 
-CallResult<PseudoHandle<>> SHLegacyFunction::_callImpl(
+CallResult<PseudoHandle<>> NativeJSFunction::_callImpl(
     Handle<Callable> selfHandle,
     Runtime &runtime) {
   // SHLJS code needs to run in the context of an existing GCScope:
@@ -982,7 +982,7 @@ CallResult<PseudoHandle<>> SHLegacyFunction::_callImpl(
   // - When invoked from an unknown context using this virtual call, we need
   // a GCScope to ensure safety.
   GCScope gcScope{runtime};
-  return _nativeCall(vmcast<SHLegacyFunction>(selfHandle.get()), runtime);
+  return _nativeCall(vmcast<NativeJSFunction>(selfHandle.get()), runtime);
 }
 
 //===----------------------------------------------------------------------===//

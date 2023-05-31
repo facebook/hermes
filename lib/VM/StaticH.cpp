@@ -349,9 +349,9 @@ extern "C" void _sh_throw_empty(SHRuntime *shr) {
 }
 
 static SHLegacyValue doCall(Runtime &runtime, PinnedHermesValue *callTarget) {
-  if (vmisa<SHLegacyFunction>(*callTarget)) {
-    return SHLegacyFunction::_legacyCall(
-        getSHRuntime(runtime), vmcast<SHLegacyFunction>(*callTarget));
+  if (vmisa<NativeJSFunction>(*callTarget)) {
+    return NativeJSFunction::_legacyCall(
+        getSHRuntime(runtime), vmcast<NativeJSFunction>(*callTarget));
   }
 
   // FIXME: check for register stack overflow.
@@ -518,7 +518,7 @@ static SHLegacyValue createClosure(
       runtime.makeHandle(JSObject::create(runtime, prototypeParent));
 
   SHLegacyValue res =
-      SHLegacyFunction::create(
+      NativeJSFunction::create(
           runtime,
           Handle<JSObject>::vmcast(&runtime.functionPrototype),
           _sh_ljs_is_null(*env) ? runtime.makeNullHandle<Environment>()

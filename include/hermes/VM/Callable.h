@@ -429,14 +429,14 @@ class BoundFunction final : public Callable {
 };
 
 /// A pointer to native function.
-typedef SHLegacyValue (*SHLegacyFunctionPtr)(SHRuntime *shr);
+typedef SHLegacyValue (*NativeJSFunctionPtr)(SHRuntime *shr);
 
 /// This class represents a native function callable from JavaScript with
 /// context and the JavaScript arguments.
-class SHLegacyFunction : public Callable {
+class NativeJSFunction : public Callable {
  protected:
   /// Pointer to the actual code.
-  const SHLegacyFunctionPtr functionPtr_;
+  const NativeJSFunctionPtr functionPtr_;
 
 #ifdef HERMESVM_PROFILER_NATIVECALL
   /// How many times the function was called.
@@ -456,7 +456,7 @@ class SHLegacyFunction : public Callable {
     return cell->getKind() == CellKind::SHLegacyFunctionKind;
   }
 
-  SHLegacyFunctionPtr getFunctionPtr() const {
+  NativeJSFunctionPtr getFunctionPtr() const {
     return functionPtr_;
   }
 
@@ -480,11 +480,11 @@ class SHLegacyFunction : public Callable {
   /// interpreter. Its purpose is to avoid needlessly exposing the private
   /// fields.
   static CallResult<PseudoHandle<>> _nativeCall(
-      SHLegacyFunction *self,
+      NativeJSFunction *self,
       Runtime &runtime);
 
   /// Call originating from LegacyJS.
-  static SHLegacyValue _legacyCall(SHRuntime *shr, SHLegacyFunction *self) {
+  static SHLegacyValue _legacyCall(SHRuntime *shr, NativeJSFunction *self) {
     return self->functionPtr_(shr);
   }
 
@@ -498,10 +498,10 @@ class SHLegacyFunction : public Callable {
   /// \param strictMode indicates whether the function is in strict mode.
   /// \param additionalSlotCount internal slots to reserve within the
   /// object (defaults to zero).
-  static Handle<SHLegacyFunction> create(
+  static Handle<NativeJSFunction> create(
       Runtime &runtime,
       Handle<JSObject> parentHandle,
-      SHLegacyFunctionPtr functionPtr,
+      NativeJSFunctionPtr functionPtr,
       SymbolID name,
       unsigned paramCount,
       Handle<JSObject> prototypeObjectHandle,
@@ -519,11 +519,11 @@ class SHLegacyFunction : public Callable {
   /// \param strictMode indicates whether the function is in strict mode.
   /// \param additionalSlotCount internal slots to reserve within the
   /// object (defaults to zero).
-  static Handle<SHLegacyFunction> create(
+  static Handle<NativeJSFunction> create(
       Runtime &runtime,
       Handle<JSObject> parentHandle,
       Handle<Environment> parentEnvHandle,
-      SHLegacyFunctionPtr functionPtr,
+      NativeJSFunctionPtr functionPtr,
       SymbolID name,
       unsigned paramCount,
       Handle<JSObject> prototypeObjectHandle,
@@ -539,10 +539,10 @@ class SHLegacyFunction : public Callable {
   /// \param paramCount number of parameters (excluding `this`)
   /// \param additionalSlotCount internal slots to reserve within the
   /// object (defaults to zero).
-  static Handle<SHLegacyFunction> createWithoutPrototype(
+  static Handle<NativeJSFunction> createWithoutPrototype(
       Runtime &runtime,
       Handle<JSObject> parentHandle,
-      SHLegacyFunctionPtr functionPtr,
+      NativeJSFunctionPtr functionPtr,
       SymbolID name,
       unsigned paramCount,
       unsigned additionalSlotCount = 0) {
@@ -565,9 +565,9 @@ class SHLegacyFunction : public Callable {
   /// \param paramCount number of parameters (excluding `this`)
   /// \param additionalSlotCount internal slots to reserve within the
   /// object (defaults to zero).
-  static Handle<SHLegacyFunction> createWithoutPrototype(
+  static Handle<NativeJSFunction> createWithoutPrototype(
       Runtime &runtime,
-      SHLegacyFunctionPtr functionPtr,
+      NativeJSFunctionPtr functionPtr,
       SymbolID name,
       unsigned paramCount,
       unsigned additionalSlotCount = 0) {
@@ -584,38 +584,38 @@ class SHLegacyFunction : public Callable {
   /// \param index must be less than the \c additionalSlotCount passed to
   /// the create method.
   static SmallHermesValue getAdditionalSlotValue(
-      SHLegacyFunction *self,
+      NativeJSFunction *self,
       Runtime &runtime,
       unsigned index) {
     return JSObject::getInternalProperty(
-        self, runtime, numOverlapSlots<SHLegacyFunction>() + index);
+        self, runtime, numOverlapSlots<NativeJSFunction>() + index);
   }
 
   /// Set the value in an additional slot.
   /// \param index must be less than the \c additionalSlotCount passed to
   /// the create method.
   static void setAdditionalSlotValue(
-      SHLegacyFunction *self,
+      NativeJSFunction *self,
       Runtime &runtime,
       unsigned index,
       SmallHermesValue value) {
     JSObject::setInternalProperty(
-        self, runtime, numOverlapSlots<SHLegacyFunction>() + index, value);
+        self, runtime, numOverlapSlots<NativeJSFunction>() + index, value);
   }
 
  public:
-  SHLegacyFunction(
+  NativeJSFunction(
       Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
-      SHLegacyFunctionPtr functionPtr)
+      NativeJSFunctionPtr functionPtr)
       : Callable(runtime, *parent, *clazz), functionPtr_(functionPtr) {}
-  SHLegacyFunction(
+  NativeJSFunction(
       Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       Handle<Environment> environment,
-      SHLegacyFunctionPtr functionPtr)
+      NativeJSFunctionPtr functionPtr)
       : Callable(runtime, *parent, *clazz, environment),
         functionPtr_(functionPtr) {}
 

@@ -263,11 +263,11 @@ CallResult<PseudoHandle<>> Interpreter::getArgumentsPropByValSlowPath_RJS(
 CallResult<PseudoHandle<>> Interpreter::handleCallSlowPath(
     Runtime &runtime,
     PinnedHermesValue *callTarget) {
-  if (vmisa<SHLegacyFunction>(*callTarget)) {
-    auto *legacy = vmcast<SHLegacyFunction>(*callTarget);
+  if (vmisa<NativeJSFunction>(*callTarget)) {
+    auto *legacy = vmcast<NativeJSFunction>(*callTarget);
     ++NumNativeFunctionCalls;
     // Call the native function directly
-    return SHLegacyFunction::_nativeCall(legacy, runtime);
+    return NativeJSFunction::_nativeCall(legacy, runtime);
   } else if (vmisa<NativeFunction>(*callTarget)) {
     auto *native = vmcast<NativeFunction>(*callTarget);
     ++NumNativeFunctionCalls;
