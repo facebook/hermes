@@ -54,6 +54,21 @@ typedef struct SHJSObjectAndDirectProps {
   SHGCSmallHermesValue directProps[HERMESVM_DIRECT_PROPERTY_SLOTS];
 } SHJSObjectAndDirectProps;
 
+/// Struct mirroring the layout of Callable.
+typedef struct SHCallable {
+  SHJSObject base;
+  SHCompressedPointer environment;
+} SHCallable;
+
+/// A pointer to native function.
+typedef SHLegacyValue (*NativeJSFunctionPtr)(SHRuntime *shr);
+
+/// Struct mirroring the layout of SHLegacyFunction.
+typedef struct SHNativeJSFunction {
+  SHCallable base;
+  NativeJSFunctionPtr functionPtr;
+} SHNativeJSFunction;
+
 /// Struct mirroring the layout of Environment.
 typedef struct SHEnvironment {
   SHGCCell base;

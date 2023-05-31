@@ -141,6 +141,9 @@ class Callable : public JSObject {
   /// Environment containing all captured variables for the function.
   GCPointer<Environment> environment_{};
 
+  /// Dummy function for static asserts that may need private fields.
+  static inline void staticAsserts();
+
  public:
   static bool classof(const GCCell *cell) {
     return kindInRange(
@@ -339,6 +342,12 @@ class Callable : public JSObject {
       Handle<JSObject> parentHandle);
 };
 
+void Callable::staticAsserts() {
+  static_assert(sizeof(Callable) == sizeof(SHCallable));
+  static_assert(
+      offsetof(Callable, environment_) == offsetof(SHCallable, environment));
+}
+
 /// A function produced by Function.prototype.bind(). It packages a function
 /// with values for some of its parameters.
 class BoundFunction final : public Callable {
@@ -427,9 +436,6 @@ class BoundFunction final : public Callable {
       Handle<Callable> selfHandle,
       Runtime &runtime);
 };
-
-/// A pointer to native function.
-typedef SHLegacyValue (*NativeJSFunctionPtr)(SHRuntime *shr);
 
 /// This class represents a native function callable from JavaScript with
 /// context and the JavaScript arguments.
@@ -628,6 +634,15 @@ class NativeJSFunction : public Callable {
   static CallResult<PseudoHandle<>> _callImpl(
       Handle<Callable> selfHandle,
       Runtime &runtime);
+
+ private:
+  /// Dummy function for static asserts that may need private fields.
+  static inline void staticAsserts() {
+    static_assert(sizeof(NativeJSFunction) == sizeof(SHNativeJSFunction));
+    static_assert(
+        offsetof(NativeJSFunction, functionPtr_) ==
+        offsetof(SHNativeJSFunction, functionPtr));
+  }
 };
 
 /// A pointer to native function.
