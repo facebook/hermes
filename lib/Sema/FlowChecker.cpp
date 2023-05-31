@@ -143,10 +143,15 @@ class FlowChecker::ParseClassType {
     auto *classBody = llvh::cast<ESTree::ClassBodyNode>(body);
     for (ESTree::Node &node : classBody->_body) {
       if (auto *prop = llvh::dyn_cast<ESTree::ClassPropertyNode>(&node)) {
-        parseClassProperty(prop);
+        Type *fieldType = parseClassProperty(prop);
+        outer_.setNodeType(&node, fieldType);
       } else if (
           auto *method = llvh::dyn_cast<ESTree::MethodDefinitionNode>(&node)) {
-        parseMethodDefinition(method);
+        Type *methodType = parseMethodDefinition(method);
+        // Methods have FunctionExpression values.
+        // Associate the same type with both the outer and inner nodes.
+        outer_.setNodeType(method, methodType);
+        outer_.setNodeType(method->_value, methodType);
       } else {
         outer_.sm_.error(
             node.getSourceRange(),
@@ -187,11 +192,11 @@ class FlowChecker::ParseClassType {
     return superClassConsType->getClassType();
   }
 
-  void parseClassProperty(ESTree::ClassPropertyNode *prop) {
+  Type *parseClassProperty(ESTree::ClassPropertyNode *prop) {
     if (prop->_computed || prop->_static || prop->_declare) {
       outer_.sm_.error(
           prop->getSourceRange(), "ft: unsupported property attributes");
-      return;
+      return outer_.flowContext_.getAny();
     }
 
     auto *id = llvh::cast<ESTree::IdentifierNode>(prop->_key);
@@ -232,7 +237,7 @@ class FlowChecker::ParseClassType {
       outer_.sm_.note(
           it->second->getSourceRange(),
           "ft: previous declaration of " + id->_name->str());
-      return;
+      return outer_.flowContext_.getAny();
     }
 
     if (superField) {
@@ -246,9 +251,11 @@ class FlowChecker::ParseClassType {
           fieldType,
           nextFieldLayoutSlotIR++);
     }
+
+    return fieldType;
   }
 
-  void parseMethodDefinition(ESTree::MethodDefinitionNode *method) {
+  Type *parseMethodDefinition(ESTree::MethodDefinitionNode *method) {
     auto *fe = llvh::cast<ESTree::FunctionExpressionNode>(method->_value);
 
     if (method->_kind == outer_.kw_.identConstructor) {
@@ -268,7 +275,7 @@ class FlowChecker::ParseClassType {
 
       constructorType = outer_.parseFunctionType(
           fe->_params, nullptr, false, false, outer_.flowContext_.getVoid());
-      return;
+      return constructorType;
     } else {
       // Non-constructor method
 
@@ -276,13 +283,13 @@ class FlowChecker::ParseClassType {
         outer_.sm_.error(
             method->getStartLoc(),
             "ft: computed property names in classes are unsupported");
-        return;
+        return outer_.flowContext_.getAny();
       }
       if (method->_static || fe->_async || fe->_generator) {
         outer_.sm_.error(
             method->getStartLoc(),
             "ft: static/async/generator methods unsupported");
-        return;
+        return outer_.flowContext_.getAny();
       }
 
       auto *id = llvh::cast<ESTree::IdentifierNode>(method->_key);
@@ -317,7 +324,7 @@ class FlowChecker::ParseClassType {
         outer_.sm_.note(
             it->second->getSourceRange(),
             "ft: previous declaration of " + id->_name->str());
-        return;
+        return outer_.flowContext_.getAny();
       }
 
       if (superMethod) {
@@ -333,6 +340,8 @@ class FlowChecker::ParseClassType {
             nextMethodLayoutSlotIR++,
             method);
       }
+
+      return methodType;
     }
   }
 };
