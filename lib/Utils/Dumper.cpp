@@ -215,7 +215,7 @@ void IRPrinter::printFunctionHeader(Function *F) {
   }
   os << ")";
   printTypeLabel(F);
-  os << " " << F->getAttributes().getDescriptionStr();
+  os << " " << F->getAttributes(F->getParent()).getDescriptionStr();
 }
 
 void IRPrinter::printFunctionVariables(Function *F) {
@@ -240,6 +240,10 @@ void IRPrinter::printInstruction(Instruction *I) {
   printInstructionDestination(I);
   os << " = ";
   os << I->getName();
+
+  if (!I->getAttributes(I->getModule()).isEmpty()) {
+    os << " " << I->getAttributes(I->getModule()).getDescriptionStr();
+  }
 
   // Don't print the type of instructions without output.
   if (I->hasOutput()) {

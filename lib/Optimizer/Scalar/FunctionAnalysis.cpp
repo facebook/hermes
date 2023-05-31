@@ -62,6 +62,7 @@ bool canEscapeThroughCall(Instruction *C, Function *F, BaseCallInst *CI) {
 /// calls that load \p create via a variable which is stored to once.
 void analyzeCreateCallable(BaseCreateCallableInst *create) {
   Function *F = create->getFunctionCode();
+  Module *M = F->getParent();
 
   // List of instructions whose result we know is the same closure created by
   // \p create.
@@ -92,7 +93,7 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
       if (auto *call = llvh::dyn_cast<BaseCallInst>(closureUser)) {
         if (canEscapeThroughCall(closureInst, F, call)) {
           // F potentially escapes.
-          F->getAttributes()._allCallsitesKnownInStrictMode = false;
+          F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
         }
         if (call->getCallee() == closureInst) {
           registerCallsite(call, create);
@@ -119,7 +120,7 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
         Variable *var = store->getVariable();
         if (!isStoreOnceVariable(var)) {
           // Multiple stores to the variable, give up.
-          F->getAttributes()._allCallsitesKnownInStrictMode = false;
+          F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
           continue;
         }
         for (Instruction *varUser : var->getUsers()) {
@@ -142,30 +143,32 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
           llvh::dbgs() << "Unknown user of function '"
                        << F->getInternalNameStr()
                        << "': " << closureUser->getKindStr() << '\n');
-      F->getAttributes()._allCallsitesKnownInStrictMode = false;
+      F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
     }
   }
 }
 
 /// Find and register any callsites that can be found which call \p F.
 void analyzeFunctionCallsites(Function *F) {
-  if (F->getAttributes()._allCallsitesKnownInStrictMode) {
+  Module *M = F->getParent();
+
+  if (F->getAttributesRef(M)._allCallsitesKnownInStrictMode) {
     return;
   }
 
   // Attempt to start from a position of knowing all callsites.
-  F->getAttributes()._allCallsitesKnownInStrictMode = true;
+  F->getAttributesRef(M)._allCallsitesKnownInStrictMode = true;
 
   if (F->isGlobalScope()) {
     // global function is called by the runtime, so its callsites aren't known.
-    F->getAttributes()._allCallsitesKnownInStrictMode = false;
+    F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
   }
 
   if (auto *newTargetParam = F->getNewTargetParam()) {
     // Uses of new.target can be used to leak the closure.
     // TODO: Allow certain instructions to use new.target.
     if (newTargetParam->hasUsers())
-      F->getAttributes()._allCallsitesKnownInStrictMode = false;
+      F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
   }
 
   for (Instruction *user : F->getUsers()) {
@@ -190,7 +193,7 @@ void analyzeFunctionCallsites(Function *F) {
     LLVM_DEBUG(
         llvh::dbgs() << "Unknown function user: " << user->getKindStr()
                      << '\n');
-    F->getAttributes()._allCallsitesKnownInStrictMode = false;
+    F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
   }
 }
 

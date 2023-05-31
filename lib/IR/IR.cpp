@@ -143,6 +143,30 @@ bool Value::hasUser(Value *other) {
   return std::find(Users.begin(), Users.end(), other) != Users.end();
 }
 
+std::string Attributes::getDescriptionStr() const {
+  if (isEmpty())
+    return "";
+  std::string result{"["};
+
+  bool comma = false;
+
+  /// Add \p name to the result string.
+  const auto addFlag = [&comma, &result](llvh::StringRef name) -> void {
+    if (comma)
+      result += ',';
+    comma = true;
+    result += name;
+  };
+
+#define ATTRIBUTE(_valueKind, name, string) \
+  if (name)                                 \
+    addFlag(string);
+#include "hermes/IR/Attributes.def"
+
+  result += "]";
+  return result;
+}
+
 bool VariableScope::isGlobalScope() const {
   return function_->isGlobalScope() && function_->getFunctionScope() == this;
 }
@@ -218,31 +242,6 @@ Function::~Function() {
 
 bool Function::isGlobalScope() const {
   return parent_->getTopLevelFunction() == this;
-}
-
-std::string Function::Attributes::getDescriptionStr() const {
-  if (isEmpty())
-    return "";
-  std::string result{"["};
-
-  bool comma = false;
-
-  /// Add \p name to the result string if \p value is true.
-  const auto addFlag = [&comma, &result](
-                           bool value, llvh::StringRef name) -> void {
-    if (value) {
-      if (comma)
-        result += ',';
-      comma = true;
-      result += name;
-    }
-  };
-
-  addFlag(_allCallsitesKnownInStrictMode, "allCallsitesKnownInStrictMode");
-  addFlag(pure, "pure");
-
-  result += "]";
-  return result;
 }
 
 std::string Function::getDefinitionKindStr(bool isDescriptive) const {
@@ -328,6 +327,8 @@ Instruction::Instruction(
 
   location_ = src->location_;
   statementIndex_ = src->statementIndex_;
+  Module *M = src->getModule();
+  getAttributesRef(M) = src->getAttributes(M);
 
   for (auto val : operands)
     pushOperand(val);

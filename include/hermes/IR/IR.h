@@ -337,7 +337,7 @@ class Type {
   }
 };
 
-static_assert(sizeof(Type) <= 8, "Type must not be too big");
+static_assert(sizeof(Type) == 4, "Type must not be too big");
 
 /// This lattice describes the kind of side effect that instructions have.
 /// The side effects are organized in a hierarchy, and higher levels are a
@@ -558,6 +558,37 @@ struct LazySource {
 };
 #endif
 
+/// A set of attributes to be associated with Values.
+union Attributes {
+  struct {
+#define ATTRIBUTE(_valueKind, name, _string) uint16_t name : 1;
+#include "hermes/IR/Attributes.def"
+  };
+
+  uint16_t flags_;
+
+  /// No attributes on construction.
+  explicit Attributes() : flags_(0) {
+    // Make sure the bits can fit into flags_.
+    static_assert(sizeof(Attributes) == sizeof(flags_), "too many attributes");
+  }
+
+  /// \return true if there are no attributes on the function.
+  bool isEmpty() const {
+    return flags_ == 0;
+  }
+
+  /// Clear all attributes on the function.
+  void clear() {
+    flags_ = 0;
+  }
+
+  /// \return a string describing the attributes if there are any.
+  /// If there are no attributes, returns "".
+  /// If there are attributes returns, e.g. "[allCallsitesKnownInStrictMode]".
+  std::string getDescriptionStr() const;
+};
+
 class Value {
  public:
   using UseListTy = llvh::SmallVector<Instruction *, 2>;
@@ -575,6 +606,14 @@ class Value {
   friend class IRBuilder;
 
   ValueKind Kind;
+
+  /// Bitset of the attributes associated with this value.
+  /// If this exceeds 2 bytes, the actual storage should be moved to Module,
+  /// and this field replaced with a bit which indicates whether the storage
+  /// exists.
+  /// ValueKind is 1 byte and Type is 4 bytes, so we can store one uint16_t here
+  /// without increasing the size of Value.
+  Attributes attributes_;
 
   /// The JavaScript type of the value.
   Type valueType = Type::createAnyType();
@@ -599,6 +638,11 @@ class Value {
 
  protected:
   explicit Value(ValueKind k) {
+    static_assert(sizeof(Kind) == 1, "ValueKind too big");
+    static_assert(sizeof(attributes_) == 2, "attributes_ increases Value size");
+    static_assert(
+        sizeof(valueType) == 4,
+        "Type aligning to 4 bytes allows attributes_ to not increase Value size");
     Kind = k;
   }
 
@@ -661,6 +705,21 @@ class Value {
   /// \returns the JavaScript type of the value.
   Type getType() const {
     return valueType;
+  }
+
+  /// Takes a Module parameter to allow easily moving the attributes_ storage
+  /// into Module if necessary in the future.
+  /// Will create default Attributes if they don't exist already.
+  /// \return the Attributes of this value.
+  Attributes &getAttributesRef(Module *) {
+    return attributes_;
+  }
+  /// Takes a Module parameter to allow easily moving the attributes_ storage
+  /// into Module if necessary in the future.
+  /// \return the Attributes by value, because nonexistent attributes might not
+  ///   be stored anywhere if/when we use a side table.
+  Attributes getAttributes(Module *) const {
+    return attributes_;
   }
 
   static bool classof(const Value *) {
@@ -1534,61 +1593,17 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     ES6Method,
   };
 
-  /// A set of attributes to placed on each function.
-  /// They can be populated during optimization passes, like types are.
-  union Attributes {
-    struct {
-      /// False when there might exist any unknown callsites for the Function
-      /// if it's in strict mode.
-      /// It may still be possible for callsites to be unknown if the Function's
-      /// in loose mode, due to Error structured stack trace.
-      /// However, this flag is used to indicate that it's possible to analyze
-      /// the Function in the absence of Error structured stack trace completely
-      /// and all callsites have it set as the target operand.
-      /// NOTE: This flag isn't to be read directly by optimization passes,
-      /// which is why it begins with `_`.
-      /// Passes should use the getters:
-      ///   allCallsitesKnown
-      ///   allCallsitesKnownExceptStructuredStackTrace
-      uint32_t _allCallsitesKnownInStrictMode : 1;
-
-      /// Unused.
-      /// TODO: Mark pure functions so they can be further optimized.
-      uint32_t pure : 1;
-    };
-
-    uint32_t flags_;
-
-    /// No attributes on construction.
-    explicit Attributes() : flags_(0) {}
-
-    /// \return true if there are no attributes on the function.
-    bool isEmpty() const {
-      return flags_ == 0;
-    }
-
-    /// Clear all attributes on the function.
-    void clear() {
-      flags_ = 0;
-    }
-
-    /// \return a string describing the attributes if there are any.
-    /// If there are no attributes, returns "".
-    /// If there are attributes returns, e.g. "[allCallsitesKnownInStrictMode]".
-    std::string getDescriptionStr() const;
-  };
-
   /// \return true when every callsite of this Function is absolutely known
   /// and analyzable, even in the presence of Error structured stack trace.
   bool allCallsitesKnown() const {
-    return attributes_._allCallsitesKnownInStrictMode && strictMode_;
+    return getAttributes(parent_)._allCallsitesKnownInStrictMode && strictMode_;
   }
 
   /// \return true when every callsite of this Function is absolutely known
   /// and analyzable except for perhaps the usage of Error structured stack
   /// trace in loose mode.
   bool allCallsitesKnownExceptErrorStructuredStackTrace() const {
-    return attributes_._allCallsitesKnownInStrictMode;
+    return getAttributes(parent_)._allCallsitesKnownInStrictMode;
   }
 
  private:
@@ -1622,9 +1637,6 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   SMRange SourceRange{};
   /// Information on custom directives found in this function.
   CustomDirectives customDirectives_{};
-
-  /// Attributes that have been set on this function.
-  Attributes attributes_;
 
   /// A name derived from \c originalOrInferredName_, but unique in the Module.
   /// Used only for printing and diagnostic.
@@ -1741,13 +1753,6 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   }
   BasicBlockListType &getBasicBlockList() {
     return BasicBlockList;
-  }
-
-  Attributes &getAttributes() {
-    return attributes_;
-  }
-  const Attributes &getAttributes() const {
-    return attributes_;
   }
 
   /// Erase all the basic blocks and instructions in this function.

@@ -119,6 +119,10 @@ class Verifier : public InstructionVisitor<Verifier, void> {
     }
     return users;
   }
+
+  /// Assert that the attributes of \p val are allowed to be set, based on the
+  /// kind of \p val.
+  void verifyAttributes(const Value *val, Module *M);
 };
 
 // TODO: Need to make this accept format strings
@@ -135,6 +139,14 @@ class Verifier : public InstructionVisitor<Verifier, void> {
     }                                                               \
   } while (0)
 
+void Verifier::verifyAttributes(const Value *val, Module *M) {
+  const auto &attrs = val->getAttributes(M);
+#define ATTRIBUTE(valueKind, name, _string) \
+  if (attrs.name)                           \
+    Assert(llvh::isa<valueKind>(val), #name " must be set on a " #valueKind);
+#include "hermes/IR/Attributes.def"
+}
+
 void Verifier::visitModule(const Module &M) {
   // Verify all functions are valid
   for (Module::const_iterator I = M.begin(); I != M.end(); I++) {
@@ -145,6 +157,8 @@ void Verifier::visitModule(const Module &M) {
 
 void Verifier::visitFunction(const Function &F) {
   Assert(&F.getContext() == Ctx, "Function has wrong context");
+
+  verifyAttributes(&F, F.getParent());
 
   for (Value *newTargetUser : F.getNewTargetParam()->getUsers()) {
     Assert(
@@ -221,6 +235,8 @@ void Verifier::visitBasicBlock(const BasicBlock &BB) {
 
   Assert(BB.getTerminator(), "Basic block must have a terminator.");
 
+  verifyAttributes(&BB, BB.getParent()->getParent());
+
   // Verify the mutual predecessor/successor relationship
   for (auto I = succ_begin(&BB), E = succ_end(&BB); I != E; ++I) {
     Assert(
@@ -261,6 +277,8 @@ void Verifier::beforeVisitInstruction(const Instruction &Inst) {
   Assert(&Inst.getContext() == Ctx, "Instruction has wrong context");
 
   Assert(Inst.getSideEffect().isWellFormed(), "Ill-formed side effects");
+
+  verifyAttributes(&Inst, Inst.getModule());
 
   bool const acceptsEmptyType = Inst.acceptsEmptyType();
 

@@ -4,9 +4,9 @@
 # LICENSE file in the root directory of this source tree.
 
 set(IRSources
+  AttributesTest.cpp
   BasicBlockTest.cpp
   BuilderTest.cpp
-  FunctionTest.cpp
   InstrTest.cpp
   IRUtilsTest.cpp
   IRVerifierTest.cpp

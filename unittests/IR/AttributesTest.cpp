@@ -18,8 +18,8 @@ using namespace hermes;
 
 namespace {
 
-TEST(FunctionTest, AttributesTest) {
-  Function::Attributes attr;
+TEST(AtributesTest, ToStringTest) {
+  Attributes attr;
   EXPECT_EQ("", attr.getDescriptionStr());
   EXPECT_TRUE(attr.isEmpty());
   attr._allCallsitesKnownInStrictMode = true;

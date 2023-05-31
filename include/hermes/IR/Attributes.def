@@ -1,0 +1,36 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/// ATTRIBUTE(valueKind, name, string)
+/// \param valueKind whatever ValueKind the attribute may be attached to.
+/// \param name the C++ field name of the attribute.
+/// \param string the dumped string representation of the attribute.
+#ifndef ATTRIBUTE
+#error "ATTRIBUTE must be defined"
+#endif
+
+/// False when there might exist any unknown callsites for the Function
+/// if it's in strict mode.
+/// It may still be possible for callsites to be unknown if the Function's
+/// in loose mode, due to Error structured stack trace.
+/// However, this flag is used to indicate that it's possible to analyze
+/// the Function in the absence of Error structured stack trace completely
+/// and all callsites have it set as the target operand.
+/// NOTE: This flag isn't to be read directly by optimization passes,
+/// which is why it begins with `_`.
+/// Passes should use the getters:
+///   Function::allCallsitesKnown
+///   Function::allCallsitesKnownExceptStructuredStackTrace
+ATTRIBUTE(
+    Function,
+    _allCallsitesKnownInStrictMode,
+    "allCallsitesKnownInStrictMode")
+/// Unused.
+/// TODO: Mark pure functions so they can be further optimized.
+ATTRIBUTE(Function, pure, "pure")
+
+#undef ATTRIBUTE
