@@ -1527,11 +1527,61 @@ class InstrGen {
   void generateSaveAndYieldInst(SaveAndYieldInst &inst) {
     unimplemented(inst);
   }
-  void generateCallInst(CallInst &inst) {
+  /// Populate the outgoing registers which are constants.
+  /// These aren't added by LowerCalls, they're not representable in lowered IR.
+  /// We want to set them up to be able to do the call without going through
+  /// doCall.
+  void setupCallInline(BaseCallInst &inst) {
+    auto stackReg = [maxArgsRegs = ra_.getMaxArgumentRegisters()](
+                        int32_t index) -> sh::Register {
+      return sh::Register(
+          sh::RegClass::RegStack, (sh::RegIndex)((int32_t)maxArgsRegs + index));
+    };
+
     os_.indent(2);
-    generateRegister(inst);
-    os_ << " = _sh_ljs_call(shr, frame, " << inst.getNumArguments() - 1
+    generateRegister(stackReg(hbc::StackFrameLayout::PreviousFrame));
+    os_ << " = _sh_ljs_native_pointer(frame);\n";
+
+    os_.indent(2);
+    generateRegister(stackReg(hbc::StackFrameLayout::SavedIP));
+    os_ << " = _sh_ljs_native_pointer((void*)0);\n";
+
+    os_.indent(2);
+    generateRegister(stackReg(hbc::StackFrameLayout::SavedCodeBlock));
+    os_ << " = _sh_ljs_native_pointer((void*)0);\n";
+
+    os_.indent(2);
+    generateRegister(stackReg(hbc::StackFrameLayout::ArgCount));
+    os_ << " = _sh_ljs_native_uint32(" << (inst.getNumArguments() - 1)
         << ");\n";
+
+    os_.indent(2);
+    generateRegister(stackReg(hbc::StackFrameLayout::NewTarget));
+    os_ << " = _sh_ljs_undefined();\n";
+  }
+  void generateCallInst(CallInst &inst) {
+    if (inst.getAttributes(inst.getModule()).isNativeJSFunction) {
+      // Fast paths for calling NativeJSFunction.
+      setupCallInline(inst);
+      os_.indent(2);
+      generateRegister(inst);
+      os_ << " = ";
+      if (auto *targetFunc = llvh::dyn_cast<Function>(inst.getTarget())) {
+        // Fast path, avoid all indirection and just call the function.
+        moduleGen_.generateFunctionLabel(targetFunc, os_);
+        os_ << "(shr);\n";
+      } else {
+        // Avoid doCall and perform a legacy call on the pointer.
+        os_ << "((SHNativeJSFunction *)_sh_ljs_get_pointer(";
+        generateValue(*inst.getCallee());
+        os_ << "))->functionPtr(shr);\n";
+      }
+    } else {
+      os_.indent(2);
+      generateRegister(inst);
+      os_ << " = _sh_ljs_call(shr, frame, " << inst.getNumArguments() - 1
+          << ");\n";
+    }
   }
   void generateGetBuiltinClosureInst(GetBuiltinClosureInst &inst) {
     os_.indent(2);

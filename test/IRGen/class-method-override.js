@@ -48,7 +48,7 @@ new D().override();
 // CHECK-NEXT:  %13 = ConstructInst (:undefined) %5: object, %D(): undefined, empty: any, %12: object
 // CHECK-NEXT:  %14 = LoadParentInst (:object) %12: object
 // CHECK-NEXT:  %15 = PrLoadInst (:object) %14: object, 0: number, "override": string
-// CHECK-NEXT:  %16 = CallInst (:any) %15: object, empty: any, empty: any, %12: object
+// CHECK-NEXT:  %16 = CallInst [njsf] (:any) %15: object, empty: any, empty: any, %12: object
 // CHECK-NEXT:  %17 = ReturnInst %16: any
 // CHECK-NEXT:function_end
 

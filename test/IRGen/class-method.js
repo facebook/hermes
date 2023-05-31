@@ -31,7 +31,7 @@ print(new C().method());
 // CHECK-NEXT:  %6 = AllocObjectInst (:object) 0: number, %5: any
 // CHECK-NEXT:  %7 = LoadParentInst (:object) %6: object
 // CHECK-NEXT:  %8 = PrLoadInst (:object) %7: object, 0: number, "method": string
-// CHECK-NEXT:  %9 = CallInst (:any) %8: object, empty: any, empty: any, %6: object
+// CHECK-NEXT:  %9 = CallInst [njsf] (:any) %8: object, empty: any, empty: any, %6: object
 // CHECK-NEXT:  %10 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, %9: any
 // CHECK-NEXT:  %11 = ReturnInst %10: any
 // CHECK-NEXT:function_end

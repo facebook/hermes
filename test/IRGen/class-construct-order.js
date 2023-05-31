@@ -37,7 +37,7 @@ return foo;
 // CHECK-NEXT:  %2 = StoreStackInst "use strict": string, %0: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %main(): any
 // CHECK-NEXT:  %4 = StoreFrameInst %3: object, [main]: any
-// CHECK-NEXT:  %5 = CallInst (:any) %3: object, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, empty: any, undefined: undefined
 // CHECK-NEXT:  %6 = StoreStackInst %5: any, %0: any
 // CHECK-NEXT:  %7 = LoadStackInst (:any) %0: any
 // CHECK-NEXT:  %8 = ReturnInst %7: any

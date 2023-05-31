@@ -622,7 +622,15 @@ Value *ESTreeIRGen::emitCall(
       args.push_back(genExpression(&arg));
     }
 
-    return Builder.createCallInst(callee, thisVal, args);
+    auto *callInst = Builder.createCallInst(callee, thisVal, args);
+    if (auto *functionType = llvh::dyn_cast<flow::FunctionType>(
+            flowContext_.getNodeTypeOrAny(getCallee(call)))) {
+      // Every FunctionType currently is going to be compiled to a
+      // NativeJSFunction, so always set this flag.
+      // Eventually we will have typed/legacy functions, etc.
+      callInst->getAttributesRef(Mod).isNativeJSFunction = true;
+    }
+    return callInst;
   }
 
   // Otherwise, there exists a spread argument, so the number of arguments

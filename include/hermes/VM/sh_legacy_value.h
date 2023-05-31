@@ -204,6 +204,13 @@ static inline SHLegacyValue _sh_ljs_double(double v) {
   u.d = v;
   return (SHLegacyValue){u.i};
 }
+static inline SHLegacyValue _sh_ljs_native_pointer(void *p) {
+  return (SHLegacyValue){(uintptr_t)p};
+}
+
+static inline SHLegacyValue _sh_ljs_native_uint32(uint32_t val) {
+  return _sh_ljs_encode_raw_tag((uint64_t)val, HVTag_NativeValue);
+}
 
 static inline SHLegacyValue _sh_ljs_bool(bool b) {
   return _sh_ljs_encode_raw_etag(b, HVETag_Bool);

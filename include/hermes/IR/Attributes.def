@@ -33,4 +33,11 @@ ATTRIBUTE(
 /// TODO: Mark pure functions so they can be further optimized.
 ATTRIBUTE(Function, pure, "pure")
 
+/// Whether a call is known to be calling a NativeJSFunction.
+/// This is used here because we currently know that _every_ user provided
+/// function will be compiled to a NativeJSFunction, as we don't have special
+/// calling conventions or bytecode interop in SH yet.
+/// Used a short name here to take less space in IR dumps.
+ATTRIBUTE(CallInst, isNativeJSFunction, "njsf")
+
 #undef ATTRIBUTE

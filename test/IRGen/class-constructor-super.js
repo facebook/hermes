@@ -52,6 +52,6 @@ new D();
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any
 // CHECK-NEXT:  %1 = LoadFrameInst (:object) [C@global]: object
-// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %C(): undefined, empty: any, %0: any
+// CHECK-NEXT:  %2 = CallInst [njsf] (:undefined) %1: object, %C(): undefined, empty: any, %0: any
 // CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

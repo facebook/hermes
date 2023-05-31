@@ -31,7 +31,7 @@ return [dotProduct, Vec2D];
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): object
-// CHECK-NEXT:  %1 = CallInst (:object) %0: object, %""(): object, empty: any, 0: number
+// CHECK-NEXT:  %1 = CallInst [njsf] (:object) %0: object, %""(): object, empty: any, 0: number
 // CHECK-NEXT:  %2 = ReturnInst %1: object
 // CHECK-NEXT:function_end
 
