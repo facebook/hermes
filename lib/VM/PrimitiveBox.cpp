@@ -151,16 +151,12 @@ CallResult<bool> JSString::_setOwnIndexedImpl(
 
   // Can't call defineOwnComputedPrimitive because it would infinitely recurse
   // calling JSString::_setOwnIndexedImpl.
-  auto dr = JSObject::defineOwnPropertyInternal(
+  return JSObject::defineOwnPropertyInternal(
       selfHandle,
       runtime,
       **vr,
       DefinePropertyFlags::getDefaultNewPropertyFlags(),
       valueHandle);
-  if (LLVM_UNLIKELY(dr == ExecutionStatus::EXCEPTION))
-    return ExecutionStatus::EXCEPTION;
-
-  return *dr;
 }
 
 bool JSString::_deleteOwnIndexedImpl(
