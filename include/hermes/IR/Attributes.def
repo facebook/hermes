@@ -32,6 +32,8 @@ ATTRIBUTE(
 /// Unused.
 /// TODO: Mark pure functions so they can be further optimized.
 ATTRIBUTE(Function, pure, "pure")
+/// Whether this is a typed SH function that has been checked.
+ATTRIBUTE(Function, typed, "typed")
 
 /// Whether a call is known to be calling a NativeJSFunction.
 /// This is used here because we currently know that _every_ user provided

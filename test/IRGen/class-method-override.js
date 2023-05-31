@@ -58,13 +58,13 @@ new D().override();
 // CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function override(): number
+// CHECK:function override(): number [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst 1: number
 // CHECK-NEXT:function_end
 
-// CHECK:function D(): undefined
+// CHECK:function D(): undefined [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any
@@ -73,7 +73,7 @@ new D().override();
 // CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function "override 1#"(): number
+// CHECK:function "override 1#"(): number [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst 2: number

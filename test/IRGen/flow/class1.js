@@ -35,7 +35,7 @@ return [dotProduct, Vec2D];
 // CHECK-NEXT:  %2 = ReturnInst %1: object
 // CHECK-NEXT:function_end
 
-// CHECK:function ""(): object [allCallsitesKnownInStrictMode]
+// CHECK:function ""(): object [allCallsitesKnownInStrictMode,typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %dotProduct(): number
@@ -63,7 +63,7 @@ return [dotProduct, Vec2D];
 // CHECK-NEXT:  %9 = ReturnInst %8: number
 // CHECK-NEXT:function_end
 
-// CHECK:function Vec2D(x: any, y: any): undefined
+// CHECK:function Vec2D(x: any, y: any): undefined [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any

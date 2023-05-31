@@ -43,7 +43,7 @@ return foo;
 // CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:function_end
 
-// CHECK:function main(): any
+// CHECK:function main(): any [typed]
 // CHECK-NEXT:frame = [foo: any, C: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [C]: any
@@ -75,7 +75,7 @@ return foo;
 // CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function C(x: any): any
+// CHECK:function C(x: any): any [typed]
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any

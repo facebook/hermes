@@ -42,7 +42,7 @@ print(new C().method());
 // CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function method(): number
+// CHECK:function method(): number [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst 1: number

@@ -41,13 +41,13 @@ new D();
 // CHECK-NEXT:  %11 = ReturnInst %9: object
 // CHECK-NEXT:function_end
 
-// CHECK:function C(): undefined
+// CHECK:function C(): undefined [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function D(): undefined
+// CHECK:function D(): undefined [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any

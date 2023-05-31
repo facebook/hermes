@@ -30,7 +30,7 @@ $SHBuiltin.call(foo, 11, 12, 13);
 // CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end
 
-// CHECK:function ""(): any
+// CHECK:function ""(): any [typed]
 // CHECK-NEXT:frame = [foo: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): any

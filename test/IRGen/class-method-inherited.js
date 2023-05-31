@@ -54,13 +54,13 @@ new D().inherited();
 // CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function inherited(): number
+// CHECK:function inherited(): number [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst 1: number
 // CHECK-NEXT:function_end
 
-// CHECK:function D(): undefined
+// CHECK:function D(): undefined [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any

@@ -133,6 +133,11 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
       AF->getSemInfo()->customDirectives,
       AF->getSourceRange());
 
+  if (auto *functionType = llvh::dyn_cast<flow::FunctionType>(
+          flowContext_.getNodeTypeOrAny(AF))) {
+    newFunc->getAttributesRef(Mod).typed = true;
+  }
+
   auto compileFunc = [this,
                       newFunc,
                       AF,
@@ -190,6 +195,11 @@ Function *ESTreeIRGen::genES5Function(
             functionNode->getSemInfo()->customDirectives,
             functionNode->getSourceRange(),
             /* insertBefore */ nullptr));
+
+  if (auto *functionType = llvh::dyn_cast<flow::FunctionType>(
+          flowContext_.getNodeTypeOrAny(functionNode))) {
+    newFunction->getAttributesRef(Mod).typed = true;
+  }
 
   auto compileFunc = [this,
                       newFunction,
