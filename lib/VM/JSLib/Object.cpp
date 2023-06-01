@@ -1178,6 +1178,9 @@ CallResult<HermesValue> directObjectPrototypeToString(
       tagLen.add(9);
       CallResult<StringBuilder> builder =
           StringBuilder::createStringBuilder(runtime, tagLen);
+      if (LLVM_UNLIKELY(builder == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
       // 19. Return the String that is the result of concatenating
       // "[object ", tag, and "]".
       builder->appendASCIIRef(ASCIIRef{"[object ", 8});
