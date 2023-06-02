@@ -513,7 +513,7 @@ class Parser {
             return;
           }
         }
-          // Fall-through
+          [[fallthrough]];
 
         default: {
           // Ordinary character or surrogate pair.
