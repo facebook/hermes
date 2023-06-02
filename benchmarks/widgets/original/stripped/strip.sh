@@ -14,3 +14,6 @@ for f in ../*.js; do
     echo "$f"
     "$juno" --dialect=flow --strip-flow --gen-js "$f" | prettier --no-config --parser=babel > "${nf}.js"
 done
+
+# Delete extra copy of main.mjs used by Webpack.
+rm main.js
