@@ -1501,6 +1501,15 @@ bool SemanticResolver::isLValue(ESTree::Node *node) {
     return true;
 
   if (auto *id = llvh::dyn_cast<IdentifierNode>(node)) {
+    Decl *decl = semCtx_.getExpressionDecl(id);
+    assert(decl && "Identifier must be resolved");
+
+    // Unless we are running under compliance tests, report an error on
+    // reassignment to const.
+    if (decl->kind == Decl::Kind::Const)
+      if (!astContext_.getCodeGenerationSettings().test262)
+        return false;
+
     // In strict mode, assigning to the identifier "eval" or "arguments"
     // is invalid, regardless of what they are bound to in surrounding scopes.
     // This is invalid:
@@ -1519,8 +1528,6 @@ bool SemanticResolver::isLValue(ESTree::Node *node) {
       // In loose mode it should be possible to assign to "arguments".
       // But that is a corner case that is difficult to handle, so for now
       // we are prohibiting it.
-      Decl *decl = semCtx_.getExpressionDecl(id);
-      assert(decl && "Identifier must be resolved");
       if (decl->special == Decl::Special::Arguments)
         return false;
     }
