@@ -1139,6 +1139,9 @@ class Variable : public Value {
   /// If true, this variable obeys the TDZ rules.
   bool obeysTDZ_ = false;
 
+  /// If true, this variable is const.
+  bool isConst_ = false;
+
  public:
   explicit Variable(VariableScope *scope, Identifier txt);
 
@@ -1156,6 +1159,13 @@ class Variable : public Value {
   }
   void setObeysTDZ(bool value) {
     obeysTDZ_ = value;
+  }
+
+  bool getIsConst() const {
+    return isConst_;
+  }
+  void setIsConst(bool value) {
+    isConst_ = value;
   }
 
   /// Return the index of this variable in the function's variable list.

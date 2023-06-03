@@ -975,6 +975,14 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
           Builder.createThrowIfEmptyInst(Builder.createLoadFrameInst(var));
         }
       }
+      if (var->getIsConst()) {
+        // If this is a const variable being reassigned, throw a TypeError.
+        Builder.createThrowTypeErrorInst(
+            Builder.getLiteralString("assignment to constant variable."));
+        // Create a new block, since ThrowTypeError is a terminator.
+        Builder.setInsertionBlock(
+            Builder.createBasicBlock(Builder.getFunction()));
+      }
     }
 
     return Builder.createStoreFrameInst(storedValue, var);

@@ -519,6 +519,7 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
               decl->name,
               tdz ? Type::createAnyOrEmpty() : Type::createAnyType());
           var->setObeysTDZ(tdz);
+          var->setIsConst(decl->kind == sema::Decl::Kind::Const);
           setDeclData(decl, var);
         } else {
           var = llvh::cast<Variable>(getDeclData(decl));
@@ -550,6 +551,7 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
         if (!decl->customData) {
           var = Builder.createVariable(
               func->getFunctionScope(), decl->name, Type::createAnyType());
+          var->setIsConst(decl->kind == sema::Decl::Kind::Import);
           setDeclData(decl, var);
         } else {
           var = llvh::cast<Variable>(getDeclData(decl));
