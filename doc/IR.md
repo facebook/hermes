@@ -577,6 +577,16 @@ Arguments | This instruction takes one parameter, which is the register that con
 Semantics | This instruction is a terminator instruction that will transition the control to the CatchInst that covers this instruction with closest scope.
 Effects | May read and write memory.
 
+### ThrowTypeErrorInst
+
+ThrowTypeErrorInst | _
+--- | --- |
+Description | This instruction will create and throw a TypeError.
+Example | %0 = ThrowTypeErrorInst %message
+Arguments | This instruction takes one argument, %message, which will be converted to a string and used as the message for the TypeError.
+Semantics | This instruction is a terminator instruction that will transition the control to the CatchInst that covers this instruction with closest scope.
+Effects | Will throw.
+
 ### TryStartInst
 
 TryStartInst | _

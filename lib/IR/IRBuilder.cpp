@@ -270,6 +270,12 @@ ThrowInst *IRBuilder::createThrowInst(Value *thrownValue) {
   return TI;
 }
 
+ThrowTypeErrorInst *IRBuilder::createThrowTypeErrorInst(Value *message) {
+  auto *TI = new ThrowTypeErrorInst(message);
+  insert(TI);
+  return TI;
+}
+
 TryStartInst *IRBuilder::createTryStartInst(
     BasicBlock *tryBodyBlock,
     BasicBlock *catchTargetBlock) {

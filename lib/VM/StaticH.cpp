@@ -342,6 +342,11 @@ extern "C" void _sh_throw(SHRuntime *shr, SHLegacyValue value) {
   _sh_throw_current(shr);
 }
 
+extern "C" void _sh_throw_type_error(SHRuntime *shr, SHLegacyValue *message) {
+  (void)getRuntime(shr).raiseTypeError(Handle<>(toPHV(message)));
+  _sh_throw_current(shr);
+}
+
 extern "C" void _sh_throw_empty(SHRuntime *shr) {
   Runtime &runtime = getRuntime(shr);
   (void)runtime.raiseReferenceError("accessing an uninitialized variable");

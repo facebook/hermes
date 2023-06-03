@@ -1349,6 +1349,11 @@ class InstrGen {
     generateValue(*inst.getThrownValue());
     os_ << ");\n";
   }
+  void generateThrowTypeErrorInst(ThrowTypeErrorInst &inst) {
+    os_ << "  _sh_throw_type_error(shr, ";
+    generateRegisterPtr(*inst.getMessage());
+    os_ << ");\n";
+  }
   void generateSwitchInst(SwitchInst &inst) {
     hermes_fatal("SwitchInst should have been lowered");
   }

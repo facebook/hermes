@@ -2191,6 +2191,49 @@ class ThrowInst : public TerminatorInst {
   }
 };
 
+class ThrowTypeErrorInst : public TerminatorInst {
+  ThrowTypeErrorInst(const ThrowTypeErrorInst &) = delete;
+  void operator=(const ThrowTypeErrorInst &) = delete;
+
+ public:
+  enum { MessageIdx };
+
+  explicit ThrowTypeErrorInst(Value *message)
+      : TerminatorInst(ValueKind::ThrowTypeErrorInstKind) {
+    pushOperand(message);
+  }
+  explicit ThrowTypeErrorInst(
+      const ThrowTypeErrorInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : TerminatorInst(src, operands) {}
+
+  static bool hasOutput() {
+    return false;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setThrow();
+  }
+
+  Value *getMessage() const {
+    return getOperand(MessageIdx);
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::ThrowTypeErrorInstKind;
+  }
+
+  unsigned getNumSuccessors() const {
+    return 0;
+  }
+  BasicBlock *getSuccessor(unsigned idx) const {
+    llvm_unreachable("ThrowInst has no successor!");
+  }
+  void setSuccessor(unsigned idx, BasicBlock *B) {
+    llvm_unreachable("ThrowInst has no successor!");
+  }
+};
+
 class SwitchInst : public TerminatorInst {
   SwitchInst(const SwitchInst &) = delete;
   void operator=(const SwitchInst &) = delete;

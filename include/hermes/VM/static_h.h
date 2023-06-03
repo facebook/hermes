@@ -308,6 +308,11 @@ SHERMES_EXPORT void _sh_throw_current(SHRuntime *shr) __attribute__((noreturn));
 SHERMES_EXPORT void _sh_throw(SHRuntime *shr, SHLegacyValue value)
     __attribute__((noreturn));
 
+/// Throw a TypeError with the given message.
+/// \param message will be converted to a string and used as the error message.
+SHERMES_EXPORT void _sh_throw_type_error(SHRuntime *shr, SHLegacyValue *message)
+    __attribute__((noreturn));
+
 /// Throw a ReferenceError for accessing uninitialized variable.
 SHERMES_EXPORT void _sh_throw_empty(SHRuntime *shr) __attribute__((noreturn));
 

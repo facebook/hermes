@@ -646,9 +646,14 @@ void Verifier::visitCatchInst(const CatchInst &Inst) {
 
 void Verifier::visitThrowInst(const ThrowInst &Inst) {
   Assert(isTerminator(&Inst), "ThrowInst must be a terminator");
+  Assert(Inst.getNumSuccessors() == 0, "ThrowInst should not have successors");
+}
+
+void Verifier::visitThrowTypeErrorInst(const ThrowTypeErrorInst &Inst) {
+  Assert(isTerminator(&Inst), "ThrowTypeErrorInst must be a terminator");
   Assert(
       Inst.getNumSuccessors() == 0,
-      "visitThrowInst should not have successors");
+      "ThrowTypeErrorInst should not have successors");
 }
 
 void Verifier::visitGetNextPNameInst(const GetNextPNameInst &Inst) {

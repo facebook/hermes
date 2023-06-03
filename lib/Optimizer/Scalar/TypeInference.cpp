@@ -766,6 +766,9 @@ class TypeInferenceImpl {
   Type inferThrowInst(ThrowInst *inst) {
     return Type::createNoType();
   }
+  Type inferThrowTypeErrorInst(ThrowTypeErrorInst *inst) {
+    return Type::createNoType();
+  }
   Type inferSwitchInst(SwitchInst *inst) {
     return Type::createNoType();
   }

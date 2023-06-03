@@ -308,6 +308,8 @@ class IRBuilder {
 
   ThrowInst *createThrowInst(Value *thrownValue);
 
+  ThrowTypeErrorInst *createThrowTypeErrorInst(Value *message);
+
   TryStartInst *createTryStartInst(
       BasicBlock *tryBodyBlock,
       BasicBlock *catchTargetBlock);
