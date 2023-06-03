@@ -328,8 +328,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %67 = CallBuiltinInst (:any) [HermesBuiltin.ensureObject]: number, empty: any, empty: any, undefined: undefined, %66: any, "iterator.return() did not return an object": string
 // CHECK-NEXT:  %68 = BranchInst %BB21
 // CHECK-NEXT:%BB21:
-// CHECK-NEXT:  %69 = CallBuiltinInst (:any) [HermesBuiltin.throwTypeError]: number, empty: any, empty: any, undefined: undefined, "yield* delegate must have a .throw() method": string
-// CHECK-NEXT:  %70 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %69 = ThrowTypeErrorInst "yield* delegate must have a .throw() method": string
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_destr(?anon_2_param: any): any

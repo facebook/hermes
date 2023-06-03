@@ -735,14 +735,8 @@ void ESTreeIRGen::emitDestructuringObject(
         doneBB);
 
     Builder.setInsertionBlock(throwBB);
-    genBuiltinCall(
-        BuiltinMethod::HermesBuiltin_throwTypeError,
-        {source,
-         Builder.getLiteralString(
-             "Cannot destructure 'undefined' or 'null'.")});
-    // throwTypeError will always throw.
-    // This return is here to ensure well-formed IR, and will not run.
-    Builder.createReturnInst(Builder.getLiteralUndefined());
+    Builder.createThrowTypeErrorInst(
+        Builder.getLiteralString("Cannot destructure 'undefined' or 'null'."));
 
     Builder.setInsertionBlock(doneBB);
   }

@@ -1548,13 +1548,8 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
         // iterator a chance to clean up.
         Builder.setInsertionBlock(noThrowMethodBB);
         emitIteratorCloseSlow(iteratorRecord, false);
-        genBuiltinCall(
-            BuiltinMethod::HermesBuiltin_throwTypeError,
-            {Builder.getLiteralString(
-                "yield* delegate must have a .throw() method")});
-        // HermesInternal.throwTypeError will necessarily throw, but we need to
-        // have a terminator on this BB to allow proper optimization.
-        Builder.createReturnInst(Builder.getLiteralUndefined());
+        Builder.createThrowTypeErrorInst(Builder.getLiteralString(
+            "yield* delegate must have a .throw() method"));
       });
 
   Builder.setInsertionBlock(exitBlock);

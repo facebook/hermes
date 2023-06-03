@@ -68,16 +68,15 @@ function f5(o) {
 // CHECK-NEXT:  %4 = BinaryEqualInst (:any) %3: any, null: null
 // CHECK-NEXT:  %5 = CondBranchInst %4: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = CallBuiltinInst (:any) [HermesBuiltin.throwTypeError]: number, empty: any, empty: any, undefined: undefined, %3: any, "Cannot destructure 'undefined' or 'null'.": string
-// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %6 = ThrowTypeErrorInst "Cannot destructure 'undefined' or 'null'.": string
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:  %9 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, %8: object, %3: any, undefined: undefined
-// CHECK-NEXT:  %10 = StoreFrameInst %9: any, [a]: any
-// CHECK-NEXT:  %11 = LoadFrameInst (:any) [a]: any
-// CHECK-NEXT:  %12 = ReturnInst %11: any
+// CHECK-NEXT:  %7 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %8 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, %7: object, %3: any, undefined: undefined
+// CHECK-NEXT:  %9 = StoreFrameInst %8: any, [a]: any
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) [a]: any
+// CHECK-NEXT:  %11 = ReturnInst %10: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %13 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f2(t: any): any
