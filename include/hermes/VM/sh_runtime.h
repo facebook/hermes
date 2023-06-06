@@ -12,9 +12,23 @@
 
 #include "libhermesvm-config.h"
 
+#include <setjmp.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/// This struct represents an element in the exception handler stack. This
+/// represents a try, and contains the information necessary to jump to its
+/// associated catch in the event of an exception.
+typedef struct SHJmpBuf {
+  /// The previous element in the stack.
+  struct SHJmpBuf *prev;
+
+  /// The state required to longjmp back to the point at which the try was
+  /// entered.
+  jmp_buf buf;
+} SHJmpBuf;
 
 /// This class represents the context of the VM that is shared between generated
 /// SH code and the VM implementation itself. It is intended to serve as the
@@ -52,6 +66,9 @@ typedef struct SHRuntime {
   /// in C and C++. Delete it once we add other fields.
   uint8_t dummy;
 #endif
+
+  /// The current top of the exception handler stack.
+  SHJmpBuf *shCurJmpBuf;
 } SHRuntime;
 
 #ifdef HERMESVM_COMPRESSED_POINTERS

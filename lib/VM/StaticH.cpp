@@ -298,17 +298,6 @@ extern "C" SHLegacyValue _sh_ljs_get_by_val_rjs(
   return res->getHermesValue();
 }
 
-extern "C" void _sh_push_try(SHRuntime *shr, SHJmpBuf *buf) {
-  Runtime &runtime = getRuntime(shr);
-  buf->prev = runtime.shCurJmpBuf;
-  runtime.shCurJmpBuf = buf;
-}
-
-extern "C" void _sh_end_try(SHRuntime *shr) {
-  Runtime &runtime = getRuntime(shr);
-  runtime.shCurJmpBuf = runtime.shCurJmpBuf->prev;
-}
-
 extern "C" SHLegacyValue _sh_catch(
     SHRuntime *shr,
     SHLocals *locals,

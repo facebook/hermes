@@ -211,6 +211,8 @@ RuntimeBase::RuntimeBase() {
   // Initialize the 0 entry in the segment map to be nullptr.
   segmentMap[0] = nullptr;
 #endif
+
+  shCurJmpBuf = nullptr;
 }
 
 void RuntimeBase::registerHeapSegment(unsigned idx, void *lowLim) {
