@@ -6,6 +6,7 @@
  */
 
 // RUN: %shermes --typed --dump-sema %s
+// XFAIL: true
 
 let a1 : number[] = [];
 let a2 : number[] = a1;

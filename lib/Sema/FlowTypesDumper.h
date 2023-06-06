@@ -14,13 +14,13 @@ namespace hermes {
 namespace flow {
 
 class FlowTypesDumper {
-  struct TypesDenseMapInfo : public llvh::DenseMapInfo<const Type *> {
+  struct TypesDenseMapInfo : public llvh::DenseMapInfo<const TypeInfo *> {
     // static inline T getEmptyKey();
     // static inline T getTombstoneKey();
-    static unsigned getHashValue(const Type *val) {
+    static unsigned getHashValue(const TypeInfo *val) {
       return val->hash();
     }
-    static bool isEqual(const Type *LHS, const Type *RHS) {
+    static bool isEqual(const TypeInfo *LHS, const TypeInfo *RHS) {
       if (LHS == RHS)
         return true;
       auto const EMPTY = getEmptyKey();
@@ -32,21 +32,24 @@ class FlowTypesDumper {
     }
   };
 
-  std::vector<const Type *> types_{};
+  std::vector<const TypeInfo *> types_{};
 
   /// Map a type instance to a number.
-  llvh::DenseMap<const Type *, size_t, TypesDenseMapInfo> typeNumber_{};
+  llvh::DenseMap<const TypeInfo *, size_t, TypesDenseMapInfo> typeNumber_{};
 
  public:
   /// \return the unique number associated with the type or 0 if it is a
   /// singleton.
-  size_t getNumber(const Type *type);
+  size_t getNumber(const TypeInfo *type);
 
   /// Print a reference to a type.
-  void printTypeRef(llvh::raw_ostream &os, const Type *type);
+  void printTypeRef(llvh::raw_ostream &os, const TypeInfo *type);
+  void printTypeRef(llvh::raw_ostream &os, const Type *type) {
+    return printTypeRef(os, type->info);
+  }
 
   /// Print a description of the type ending with a new line.
-  void printTypeDescription(llvh::raw_ostream &os, const Type *type);
+  void printTypeDescription(llvh::raw_ostream &os, const TypeInfo *type);
 
   /// Print the descriptions of all recorded types.
   void printAllNumberedTypes(llvh::raw_ostream &os);

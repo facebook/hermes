@@ -376,7 +376,7 @@ void ESTreeIRGen::genFastArrayPush(Value *array, ESTree::Node &arg) {
   // TODO: Support spreading non-arrays.
   assert(
       llvh::isa<flow::ArrayType>(
-          flowContext_.getNodeTypeOrAny(spread->_argument)) &&
+          flowContext_.getNodeTypeOrAny(spread->_argument)->info) &&
       "Spread argument must be an array.");
 
   auto *elems = genExpression(spread->_argument);
@@ -396,7 +396,7 @@ Value *ESTreeIRGen::genFastArrayFromElements(ESTree::NodeList &list) {
 
 Value *ESTreeIRGen::genArrayExpr(ESTree::ArrayExpressionNode *Expr) {
   // If the array literal originates in typed code, produce a fast array.
-  if (llvh::isa<flow::ArrayType>(flowContext_.getNodeTypeOrAny(Expr)))
+  if (llvh::isa<flow::ArrayType>(flowContext_.getNodeTypeOrAny(Expr)->info))
     return genFastArrayFromElements(Expr->_elements);
   return genArrayFromElements(Expr->_elements);
 }
@@ -423,7 +423,7 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
 
     // Check for builtin array.
     if (auto *arrayType = llvh::dyn_cast<flow::ArrayType>(
-            flowContext_.getNodeTypeOrAny(Mem->_object))) {
+            flowContext_.getNodeTypeOrAny(Mem->_object)->info)) {
       auto *ident = llvh::dyn_cast<ESTree::IdentifierNode>(Mem->_property);
 
       // Check if we are calling push, if so, generate a series of pushes and
@@ -624,7 +624,7 @@ Value *ESTreeIRGen::emitCall(
 
     auto *callInst = Builder.createCallInst(callee, thisVal, args);
     if (auto *functionType = llvh::dyn_cast<flow::FunctionType>(
-            flowContext_.getNodeTypeOrAny(getCallee(call)))) {
+            flowContext_.getNodeTypeOrAny(getCallee(call))->info)) {
       // Every FunctionType currently is going to be compiled to a
       // NativeJSFunction, so always set this flag.
       // Eventually we will have typed/legacy functions, etc.
@@ -662,7 +662,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
     Value *baseValue,
     Value *propValue) {
   if (auto *classType = llvh::dyn_cast<flow::ClassType>(
-          flowContext_.getNodeTypeOrAny(mem->_object))) {
+          flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
     if (!mem->_computed) {
       auto propName = Identifier::getFromPointer(
           llvh::cast<ESTree::IdentifierNode>(mem->_property)->_name);
@@ -679,7 +679,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
       }
       // Failed to find a class field, check the home object for methods.
       auto optMethodLookup =
-          classType->getHomeObjectType()->findField(propName);
+          classType->getHomeObjectTypeInfo()->findField(propName);
       assert(
           optMethodLookup && "must have typechecked as either method or field");
       size_t methodIndex = optMethodLookup->getField()->layoutSlotIR;
@@ -699,10 +699,10 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
   // NOTE: This is required for correctness, since a regular property load from
   // a FastArray will simply return undefined if it is out-of-bounds.
   if (auto *arrayType = llvh::dyn_cast<flow::ArrayType>(
-          flowContext_.getNodeTypeOrAny(mem->_object))) {
+          flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
     if (mem->_computed &&
         llvh::isa<flow::NumberType>(
-            flowContext_.getNodeTypeOrAny(mem->_property))) {
+            flowContext_.getNodeTypeOrAny(mem->_property)->info)) {
       return MemberExpressionResult{
           Builder.createFastArrayLoadInst(
               baseValue, propValue, flowTypeToIRType(arrayType->getElement())),
@@ -728,7 +728,7 @@ void ESTreeIRGen::emitMemberStore(
     Value *baseValue,
     Value *propValue) {
   if (auto *classType = llvh::dyn_cast<flow::ClassType>(
-          flowContext_.getNodeTypeOrAny(mem->_object))) {
+          flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
     if (!mem->_computed) {
       auto propName = Identifier::getFromPointer(
           llvh::cast<ESTree::IdentifierNode>(mem->_property)->_name);
@@ -748,10 +748,10 @@ void ESTreeIRGen::emitMemberStore(
   // Check if we are storing to a FastArray, and generate the specialised
   // instruction for it.
   if (auto *arrayType = llvh::dyn_cast<flow::ArrayType>(
-          flowContext_.getNodeTypeOrAny(mem->_object))) {
+          flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
     if (mem->_computed &&
         llvh::isa<flow::NumberType>(
-            flowContext_.getNodeTypeOrAny(mem->_property))) {
+            flowContext_.getNodeTypeOrAny(mem->_property)->info)) {
       Builder.createFastArrayStoreInst(storedValue, baseValue, propValue);
       return;
     }
@@ -2000,9 +2000,9 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
   }
 
   // Is this a statically typed new?
-  if (auto *consType = llvh::dyn_cast_or_null<flow::ClassConstructorType>(
-          flowContext_.findNodeType(N->_callee))) {
-    flow::ClassType *classType = consType->getClassType();
+  if (auto *consType = llvh::dyn_cast<flow::ClassConstructorType>(
+          flowContext_.getNodeTypeOrAny(N->_callee)->info)) {
+    flow::ClassType *classType = consType->getClassTypeInfo();
     assert(!hasSpread && "statically typed spread is not supported");
 
     Value *newInst = emitClassAllocation(

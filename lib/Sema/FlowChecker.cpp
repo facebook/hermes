@@ -68,18 +68,19 @@ void FlowChecker::visit(ESTree::FunctionDeclarationNode *node) {
   // If this declaration is of a global property, then it doesn't have a
   // function type, because that would be unsound. So, we have to parse the
   // function type here, to make it available inside the function.
-  FunctionType *ftype = llvh::dyn_cast<FunctionType>(declType);
+  auto *ftype = llvh::dyn_cast<FunctionType>(declType->info);
   if (!ftype) {
-    ftype = parseFunctionType(
+    declType = parseFunctionType(
         node->_params, node->_returnType, node->_async, node->_generator);
+    ftype = llvh::cast<FunctionType>(declType->info);
   }
 
-  FunctionContext functionContext(*this, node, ftype, ftype->getThisParam());
+  FunctionContext functionContext(*this, node, declType, ftype->getThisParam());
   visitFunctionLike(node, node->_body, node->_params);
 }
 
 void FlowChecker::visit(ESTree::FunctionExpressionNode *node) {
-  FunctionType *ftype = parseFunctionType(
+  Type *ftype = parseFunctionType(
       node->_params, node->_returnType, node->_async, node->_generator);
   setNodeType(node, ftype);
 
@@ -93,12 +94,16 @@ void FlowChecker::visit(ESTree::FunctionExpressionNode *node) {
     recordDecl(decl, ftype, id, node);
   }
 
-  FunctionContext functionContext(*this, node, ftype, ftype->getThisParam());
+  FunctionContext functionContext(
+      *this,
+      node,
+      ftype,
+      llvh::cast<FunctionType>(ftype->info)->getThisParam());
   visitFunctionLike(node, node->_body, node->_params);
 }
 
 void FlowChecker::visit(ESTree::ArrowFunctionExpressionNode *node) {
-  FunctionType *ftype = parseFunctionType(
+  Type *ftype = parseFunctionType(
       node->_params,
       node->_returnType,
       node->_async,
@@ -119,8 +124,8 @@ class FlowChecker::ParseClassType {
   llvh::SmallDenseMap<UniqueString *, ESTree::Node *> methodNames{};
   llvh::SmallVector<ClassType::Field, 4> methods{};
 
-  FunctionType *constructorType = nullptr;
-  ClassType *superClassType;
+  Type *constructorType = nullptr;
+  Type *superClassType;
 
   size_t nextFieldLayoutSlotIR = 0;
   size_t nextMethodLayoutSlotIR = 0;
@@ -130,14 +135,16 @@ class FlowChecker::ParseClassType {
       FlowChecker &outer,
       ESTree::Node *superClass,
       ESTree::Node *body,
-      ClassType *classType)
+      Type *classType)
       : outer_(outer), superClassType(resolveSuperClass(superClass)) {
+    ClassType *superClassTypeInfo = nullptr;
     if (superClassType) {
+      superClassTypeInfo = llvh::cast<ClassType>(superClassType->info);
       // Offset based on the superclass if necessary, to avoid overwriting
       // existing fields.
-      nextFieldLayoutSlotIR = superClassType->getFieldNameMap().size();
+      nextFieldLayoutSlotIR = superClassTypeInfo->getFieldNameMap().size();
       nextMethodLayoutSlotIR =
-          superClassType->getHomeObjectType()->getFieldNameMap().size();
+          superClassTypeInfo->getHomeObjectTypeInfo()->getFieldNameMap().size();
     }
 
     auto *classBody = llvh::cast<ESTree::ClassBodyNode>(body);
@@ -159,17 +166,21 @@ class FlowChecker::ParseClassType {
       }
     }
 
-    ClassType *homeObjectType = outer_.flowContext_.createClass(Identifier{});
-    homeObjectType->init(
-        methods,
-        /* constructorType */ nullptr,
-        /* homeObjectType */ nullptr,
-        superClassType ? superClassType->getHomeObjectType() : nullptr);
-    classType->init(fields, constructorType, homeObjectType, superClassType);
+    Type *homeObjectType = outer_.flowContext_.createType(
+        outer_.flowContext_.createClass(Identifier{}));
+    llvh::cast<ClassType>(homeObjectType->info)
+        ->init(
+            methods,
+            /* constructorType */ nullptr,
+            /* homeObjectType */ nullptr,
+            superClassTypeInfo ? superClassTypeInfo->getHomeObjectType()
+                               : nullptr);
+    llvh::cast<ClassType>(classType->info)
+        ->init(fields, constructorType, homeObjectType, superClassType);
   }
 
  private:
-  ClassType *resolveSuperClass(ESTree::Node *superClass) {
+  Type *resolveSuperClass(ESTree::Node *superClass) {
     if (!superClass)
       return nullptr;
     if (!llvh::isa<ESTree::IdentifierNode>(superClass)) {
@@ -183,7 +194,8 @@ class FlowChecker::ParseClassType {
       outer_.sm_.error(superClass->getStartLoc(), "ft: super type unknown");
       return nullptr;
     }
-    auto *superClassConsType = llvh::dyn_cast<ClassConstructorType>(superType);
+    auto *superClassConsType =
+        llvh::dyn_cast<ClassConstructorType>(superType->info);
     if (!superClassConsType) {
       outer_.sm_.error(
           superClass->getStartLoc(), "ft: super type must be a class");
@@ -215,13 +227,14 @@ class FlowChecker::ParseClassType {
     // Check if the field is inherited, and reuse the index.
     const ClassType::Field *superField = nullptr;
     if (superClassType) {
+      auto *superClassTypeInfo = llvh::cast<ClassType>(superClassType->info);
       auto superIt =
-          superClassType->findField(Identifier::getFromPointer(id->_name));
+          superClassTypeInfo->findField(Identifier::getFromPointer(id->_name));
       if (superIt) {
         // Field is inherited.
         superField = superIt->getField();
         // Fields must be the same for class properties.
-        if (!fieldType->equals(superField->type)) {
+        if (!fieldType->info->equals(superField->type->info)) {
           outer_.sm_.error(
               prop->getStartLoc(), "ft: incompatible field type for override");
         }
@@ -293,20 +306,22 @@ class FlowChecker::ParseClassType {
       }
 
       auto *id = llvh::cast<ESTree::IdentifierNode>(method->_key);
-      FunctionType *methodType = outer_.parseFunctionType(
+      Type *methodType = outer_.parseFunctionType(
           fe->_params, fe->_returnType, fe->_async, fe->_generator);
 
       // Check if the method is inherited, and reuse the index.
       const ClassType::Field *superMethod = nullptr;
       if (superClassType) {
-        auto superIt = superClassType->getHomeObjectType()->findField(
+        auto *superClassTypeInfo = llvh::cast<ClassType>(superClassType->info);
+        auto superIt = superClassTypeInfo->getHomeObjectTypeInfo()->findField(
             Identifier::getFromPointer(id->_name));
         if (superIt) {
           // Field is inherited.
           superMethod = superIt->getField();
           // Overriding method's function type must flow into the overridden
           // method's function type.
-          CanFlowResult flowRes = canAFlowIntoB(methodType, superMethod->type);
+          CanFlowResult flowRes =
+              canAFlowIntoB(methodType->info, superMethod->type->info);
           if (!flowRes.canFlow) {
             outer_.sm_.error(
                 method->getStartLoc(),
@@ -350,12 +365,11 @@ void FlowChecker::visit(ESTree::ClassExpressionNode *node) {
   visitExpression(node->_superClass, node);
 
   auto *id = llvh::cast_or_null<ESTree::IdentifierNode>(node->_id);
-  ClassType *classType = flowContext_.createClass(
-      id ? Identifier::getFromPointer(id->_name) : Identifier());
+  Type *classType = flowContext_.createType();
   ParseClassType(*this, node->_superClass, node->_body, classType);
 
-  ClassConstructorType *consType =
-      flowContext_.createClassConstructor(classType);
+  Type *consType =
+      flowContext_.createType(flowContext_.createClassConstructor(classType));
 
   setNodeType(node, consType);
 
@@ -383,7 +397,7 @@ void FlowChecker::visit(ESTree::ClassDeclarationNode *node) {
   sema::Decl *decl = getDecl(llvh::cast<ESTree::IdentifierNode>(node->_id));
   assert(decl && "class declaration must have been resolved");
   auto *classType =
-      llvh::cast<ClassConstructorType>(getDeclType(decl))->getClassType();
+      llvh::cast<ClassConstructorType>(getDeclType(decl)->info)->getClassType();
 
   ClassContext classContext(*this, classType);
   visitESTreeNode(*this, node->_body, node);
@@ -396,18 +410,18 @@ void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
     FunctionContext functionContext(
         *this,
         fe,
-        curClassContext_->classType->getConstructorType(),
+        curClassContext_->getClassTypeInfo()->getConstructorType(),
         curClassContext_->classType);
     visitFunctionLike(fe, fe->_body, fe->_params);
   } else if (node->_key) {
     auto *id = llvh::cast<ESTree::IdentifierNode>(node->_key);
     // Cast must be valid because all methods were registered as
     // FunctionType.
-    auto optField = curClassContext_->classType->getHomeObjectType()->findField(
-        Identifier::getFromPointer(id->_name));
+    auto optField = curClassContext_->getClassTypeInfo()
+                        ->getHomeObjectTypeInfo()
+                        ->findField(Identifier::getFromPointer(id->_name));
     assert(optField.hasValue() && "method must have been registered");
-    FunctionType *funcType =
-        llvh::cast<FunctionType>(optField->getField()->type);
+    Type *funcType = optField->getField()->type;
     FunctionContext functionContext(
         *this, fe, funcType, curClassContext_->classType);
     visitFunctionLike(fe, fe->_body, fe->_params);
@@ -514,7 +528,7 @@ class FlowChecker::ExprVisitor {
     Type *objType = outer_.getNodeTypeOrAny(node->_object);
     Type *resType = outer_.flowContext_.getAny();
 
-    if (auto *classType = llvh::dyn_cast<ClassType>(objType)) {
+    if (auto *classType = llvh::dyn_cast<ClassType>(objType->info)) {
       if (node->_computed) {
         outer_.sm_.error(
             node->_property->getSourceRange(),
@@ -528,13 +542,13 @@ class FlowChecker::ExprVisitor {
           resType = optField->getField()->type;
           found = true;
         } else {
-          auto optMethod = classType->getHomeObjectType()->findField(
+          auto optMethod = classType->getHomeObjectTypeInfo()->findField(
               Identifier::getFromPointer(id->_name));
           if (optMethod) {
             resType = optMethod->getField()->type;
             found = true;
             assert(
-                llvh::isa<FunctionType>(resType) &&
+                llvh::isa<FunctionType>(resType->info) &&
                 "methods must be functions");
           }
         }
@@ -546,12 +560,12 @@ class FlowChecker::ExprVisitor {
                   classType->getClassNameOrDefault());
         }
       }
-    } else if (auto *arrayType = llvh::dyn_cast<ArrayType>(objType)) {
+    } else if (auto *arrayType = llvh::dyn_cast<ArrayType>(objType->info)) {
       if (node->_computed) {
         resType = arrayType->getElement();
         Type *indexType = outer_.getNodeTypeOrAny(node->_property);
-        if (!llvh::isa<NumberType>(indexType) &&
-            !llvh::isa<AnyType>(indexType)) {
+        if (!llvh::isa<NumberType>(indexType->info) &&
+            !llvh::isa<AnyType>(indexType->info)) {
           outer_.sm_.error(
               node->_property->getSourceRange(),
               "ft: array index must be a number");
@@ -568,7 +582,7 @@ class FlowChecker::ExprVisitor {
               node->_property->getSourceRange(), "ft: unknown array property");
         }
       }
-    } else if (!llvh::isa<AnyType>(objType)) {
+    } else if (!llvh::isa<AnyType>(objType->info)) {
       outer_.sm_.error(
           node->getSourceRange(), "ft: properties not defined for type");
     }
@@ -600,7 +614,7 @@ class FlowChecker::ExprVisitor {
     visitESTreeNode(*this, node->_expression, node);
 
     auto *expTy = outer_.getNodeTypeOrAny(node->_expression);
-    auto cf = canAFlowIntoB(expTy, resTy);
+    auto cf = canAFlowIntoB(expTy->info, resTy->info);
     if (!cf.canFlow) {
       outer_.sm_.error(
           node->getSourceRange(), "ft: cast from incompatible type");
@@ -616,7 +630,7 @@ class FlowChecker::ExprVisitor {
         // The type of a spread element depends on its argument.
         auto *spreadTy = outer_.getNodeTypeOrAny(spread->_argument);
         // If we are spreading an array, use the type of the array.
-        if (auto *spreadArrTy = llvh::dyn_cast<ArrayType>(spreadTy))
+        if (auto *spreadArrTy = llvh::dyn_cast<ArrayType>(spreadTy->info))
           return spreadArrTy->getElement();
         // TODO: Handle spread of non-arrays.
         outer_.sm_.error(
@@ -635,7 +649,7 @@ class FlowChecker::ExprVisitor {
       for (auto it = elements.begin(); it != elements.end(); ++it) {
         ESTree::Node *arg = &*it;
         Type *argTy = getElementType(arg);
-        auto cf = canAFlowIntoB(argTy, elTy);
+        auto cf = canAFlowIntoB(argTy->info, elTy->info);
         if (!cf.canFlow) {
           outer_.sm_.error(
               arg->getSourceRange(), "ft: incompatible element type");
@@ -652,7 +666,7 @@ class FlowChecker::ExprVisitor {
       }
       auto *arrTy = outer_.flowContext_.createArray();
       arrTy->init(elTy);
-      outer_.setNodeType(node, arrTy);
+      outer_.setNodeType(node, outer_.flowContext_.createType(arrTy));
     };
 
     // First, try to determine the desired element type from surrounding
@@ -667,7 +681,7 @@ class FlowChecker::ExprVisitor {
       if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(declarator->_id)) {
         sema::Decl *decl = outer_.getDecl(id);
         Type *declType = outer_.getDeclType(decl);
-        if (auto *arrTy = llvh::dyn_cast<ArrayType>(declType)) {
+        if (auto *arrTy = llvh::dyn_cast<ArrayType>(declType->info)) {
           tryElementType(arrTy->getElement());
           return;
         }
@@ -678,7 +692,7 @@ class FlowChecker::ExprVisitor {
     // the type we are casting to.
     if (auto *cast = llvh::dyn_cast<ESTree::TypeCastExpressionNode>(parent)) {
       auto *resTy = outer_.getNodeTypeOrAny(cast);
-      if (auto *arrTy = llvh::dyn_cast<ArrayType>(resTy)) {
+      if (auto *arrTy = llvh::dyn_cast<ArrayType>(resTy->info)) {
         tryElementType(arrTy->getElement());
         return;
       }
@@ -705,7 +719,7 @@ class FlowChecker::ExprVisitor {
     }
     auto *arrTy = outer_.flowContext_.createArray();
     arrTy->init(elTy);
-    outer_.setNodeType(node, arrTy);
+    outer_.setNodeType(node, outer_.flowContext_.createType(arrTy));
   }
 
   void visit(ESTree::NullLiteralNode *node) {
@@ -730,21 +744,23 @@ class FlowChecker::ExprVisitor {
   void visit(ESTree::UpdateExpressionNode *node) {
     visitESTreeNode(*this, node->_argument, node);
     Type *type = outer_.getNodeTypeOrAny(node->_argument);
-    if (llvh::isa<NumberType>(type) || llvh::isa<BigIntType>(type)) {
+    if (llvh::isa<NumberType>(type->info) ||
+        llvh::isa<BigIntType>(type->info)) {
       // number and bigint don't change.
       outer_.setNodeType(node, type);
       return;
     }
-    if (auto *unionType = llvh::dyn_cast<UnionType>(type)) {
+    if (auto *unionType = llvh::dyn_cast<UnionType>(type->info)) {
       if (llvh::all_of(unionType->getTypes(), [](Type *t) -> bool {
-            return llvh::isa<NumberType>(t) || llvh::isa<BigIntType>(t);
+            return llvh::isa<NumberType>(t->info) ||
+                llvh::isa<BigIntType>(t->info);
           })) {
         // Unions of number/bigint don't change.
         outer_.setNodeType(node, type);
         return;
       }
     }
-    if (llvh::isa<AnyType>(type)) {
+    if (llvh::isa<AnyType>(type->info)) {
       // any becomes (number|bigint).
       llvh::SmallVector<Type *, 2> types{
           outer_.flowContext_.getNumber(), outer_.flowContext_.getBigInt()};
@@ -883,7 +899,9 @@ class FlowChecker::ExprVisitor {
 
     Type *res;
     if (Type *t = determineBinopType(
-            binopKind(node->_operator->str()), lt->getKind(), rt->getKind())) {
+            binopKind(node->_operator->str()),
+            lt->info->getKind(),
+            rt->info->getKind())) {
       res = t;
     } else {
       res = outer_.flowContext_.getAny();
@@ -919,7 +937,7 @@ class FlowChecker::ExprVisitor {
     Type *res;
 
     if (node->_operator->str() == "=") {
-      CanFlowResult cf = canAFlowIntoB(rt, lt);
+      CanFlowResult cf = canAFlowIntoB(rt->info, lt->info);
       if (!cf.canFlow) {
         outer_.sm_.error(
             node->getSourceRange(), "ft: incompatible assignment types");
@@ -930,9 +948,11 @@ class FlowChecker::ExprVisitor {
       }
     } else {
       res = determineBinopType(
-          assignKind(node->_operator->str()), lt->getKind(), rt->getKind());
+          assignKind(node->_operator->str()),
+          lt->info->getKind(),
+          rt->info->getKind());
 
-      if (llvh::isa<AnyType>(lt)) {
+      if (llvh::isa<AnyType>(lt->info)) {
         // If the target we are assigning to is untyped, there are no checks
         // needed.
         if (!res)
@@ -966,15 +986,15 @@ class FlowChecker::ExprVisitor {
 
     Type *calleeType = outer_.getNodeTypeOrAny(node->_callee);
     // If the callee has no type, we have nothing to do/check.
-    if (llvh::isa<AnyType>(calleeType))
+    if (llvh::isa<AnyType>(calleeType->info))
       return;
 
-    if (!llvh::isa<FunctionType>(calleeType)) {
+    if (!llvh::isa<FunctionType>(calleeType->info)) {
       outer_.sm_.error(
           node->_callee->getSourceRange(), "ft: callee is not a function");
       return;
     }
-    auto *ftype = llvh::cast<FunctionType>(calleeType);
+    auto *ftype = llvh::cast<FunctionType>(calleeType->info);
 
     outer_.setNodeType(node, ftype->getReturnType());
 
@@ -986,13 +1006,14 @@ class FlowChecker::ExprVisitor {
     if (auto *methodCallee =
             llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee)) {
       Type *thisArgType = outer_.getNodeTypeOrAny(methodCallee->_object);
-      if (!canAFlowIntoB(thisArgType, expectedThisType).canFlow) {
+      if (!canAFlowIntoB(thisArgType->info, expectedThisType->info).canFlow) {
         outer_.sm_.error(
             methodCallee->getSourceRange(), "ft: 'this' type mismatch");
         return;
       }
     } else {
-      if (!canAFlowIntoB(outer_.flowContext_.getVoid(), expectedThisType)
+      if (!canAFlowIntoB(
+               outer_.flowContext_.getVoid()->info, expectedThisType->info)
                .canFlow) {
         outer_.sm_.error(
             node->_callee->getSourceRange(), "ft: 'this' type mismatch");
@@ -1026,14 +1047,14 @@ class FlowChecker::ExprVisitor {
     ESTree::Node *callee = &*it;
     Type *calleeType = outer_.getNodeTypeOrAny(callee);
     // If the callee has no type, we have nothing to do/check.
-    if (llvh::isa<AnyType>(calleeType))
+    if (llvh::isa<AnyType>(calleeType->info))
       return;
-    if (!llvh::isa<FunctionType>(calleeType)) {
+    if (!llvh::isa<FunctionType>(calleeType->info)) {
       outer_.sm_.error(
           callee->getSourceRange(), "ft: callee is not a function");
       return;
     }
-    auto *ftype = llvh::cast<FunctionType>(calleeType);
+    auto *ftype = llvh::cast<FunctionType>(calleeType->info);
     outer_.setNodeType(call, ftype->getReturnType());
 
     ++it;
@@ -1047,7 +1068,7 @@ class FlowChecker::ExprVisitor {
         : outer_.flowContext_.getAny();
     ESTree::Node *thisArg = &*it;
     Type *thisArgType = outer_.getNodeTypeOrAny(thisArg);
-    if (!canAFlowIntoB(thisArgType, expectedThisType).canFlow) {
+    if (!canAFlowIntoB(thisArgType->info, expectedThisType->info).canFlow) {
       outer_.sm_.error(thisArg->getSourceRange(), "ft: 'this' type mismatch");
       return;
     }
@@ -1066,32 +1087,33 @@ class FlowChecker::ExprVisitor {
 
     Type *calleeType = outer_.getNodeTypeOrAny(node->_callee);
     // If the callee has no type, we have nothing to do/check.
-    if (llvh::isa<AnyType>(calleeType))
+    if (llvh::isa<AnyType>(calleeType->info))
       return;
 
-    if (!llvh::isa<ClassConstructorType>(calleeType)) {
+    if (!llvh::isa<ClassConstructorType>(calleeType->info)) {
       outer_.sm_.error(
           node->_callee->getSourceRange(),
           "ft: callee is not a class constructor");
       return;
     }
-    auto *classConsType = llvh::cast<ClassConstructorType>(calleeType);
-    ClassType *classType = classConsType->getClassType();
+    auto *classConsType = llvh::cast<ClassConstructorType>(calleeType->info);
+    Type *classType = classConsType->getClassType();
+    ClassType *classTypeInfo = classConsType->getClassTypeInfo();
 
     outer_.setNodeType(node, classType);
 
     // Does the class have an explicit constructor?
-    if (FunctionType *consFType = classType->getConstructorType()) {
+    if (Type *consFType = classTypeInfo->getConstructorType()) {
       checkArgumentTypes(
-          consFType,
+          llvh::cast<FunctionType>(consFType->info),
           node,
           node->_arguments,
-          "class " + classType->getClassNameOrDefault() + " constructor");
+          "class " + classTypeInfo->getClassNameOrDefault() + " constructor");
     } else {
       if (!node->_arguments.empty()) {
         outer_.sm_.error(
             node->getSourceRange(),
-            "ft: class " + classType->getClassNameOrDefault() +
+            "ft: class " + classTypeInfo->getClassNameOrDefault() +
                 " does not have an explicit constructor");
         return;
       }
@@ -1108,7 +1130,7 @@ class FlowChecker::ExprVisitor {
     }
 
     ClassType *superClassType =
-        outer_.curClassContext_->classType->getSuperClass();
+        outer_.curClassContext_->getClassTypeInfo()->getSuperClassInfo();
     if (!superClassType) {
       outer_.sm_.error(
           node->getSourceRange(), "ft: super requires a base class");
@@ -1209,11 +1231,12 @@ void FlowChecker::visit(ESTree::ReturnStatementNode *node) {
   // TODO: type check the return value.
   visitExpression(node->_argument, node);
 
-  FunctionType *ftype = curFunctionContext_->functionType;
+  FunctionType *ftype =
+      llvh::cast<FunctionType>(curFunctionContext_->functionType->info);
   assert(ftype && "return in global context");
 
   // Return without an argument and "void" return type is OK.
-  if (!node->_argument && llvh::isa<VoidType>(ftype->getReturnType()))
+  if (!node->_argument && llvh::isa<VoidType>(ftype->getReturnType()->info))
     return;
 
   Type *argType = node->_argument ? getNodeTypeOrAny(node->_argument)
@@ -1357,8 +1380,10 @@ class FlowChecker::DeclareScopeTypes {
         auto *id = llvh::cast<ESTree::IdentifierNode>(classNode->_id);
         if (isRedeclaration(id))
           continue;
-        ClassType *newType = outer.flowContext_.createClass(
-            Identifier::getFromPointer(id->_name));
+        Type *newType = outer.flowContext_.createType(
+            outer.flowContext_.createClass(
+                Identifier::getFromPointer(id->_name)),
+            classNode);
         forwardDecls.emplace_back(classNode, newType);
 
         localTypes.emplace_back(id->_name, declNode, newType);
@@ -1366,7 +1391,8 @@ class FlowChecker::DeclareScopeTypes {
 
         bool success = outer.recordDecl(
             outer.getDecl(id),
-            outer.flowContext_.createClassConstructor(newType),
+            outer.flowContext_.createType(
+                outer.flowContext_.createClassConstructor(newType), classNode),
             id,
             classNode);
         assert(success && "class constructor unexpectedly re-declared"),
@@ -1487,8 +1513,10 @@ class FlowChecker::DeclareScopeTypes {
     /// A nullable annotation is a simple case of a union.
     if (auto *nta =
             llvh::dyn_cast<ESTree::NullableTypeAnnotationNode>(annotation)) {
-      return outer.flowContext_.createPopulatedNullable(
-          resolveTypeAnnotation(nta->_typeAnnotation, visited, depth));
+      return outer.flowContext_.createType(
+          outer.flowContext_.createPopulatedNullable(
+              resolveTypeAnnotation(nta->_typeAnnotation, visited, depth)),
+          nta);
     }
 
     // The specified AST node represents a constructor type or a primary type,
@@ -1508,14 +1536,11 @@ class FlowChecker::DeclareScopeTypes {
 
     // Complete all forward-declared types.
     for (const ForwardDecl &fd : forwardDecls) {
-      if (llvh::isa<ClassType>(fd.type)) {
+      if (llvh::isa<ClassType>(fd.type->info)) {
         auto *classNode = llvh::cast<ESTree::ClassDeclarationNode>(fd.astNode);
         outer.visitExpression(classNode->_superClass, classNode);
         ParseClassType(
-            outer,
-            classNode->_superClass,
-            classNode->_body,
-            llvh::cast<ClassType>(fd.type));
+            outer, classNode->_superClass, classNode->_body, fd.type);
       } else {
         outer.parseTypeAnnotation(fd.astNode, fd.type, nullptr);
       }
@@ -1658,7 +1683,7 @@ bool FlowChecker::recordDecl(
   }
 };
 
-FunctionType *FlowChecker::parseFunctionType(
+Type *FlowChecker::parseFunctionType(
     ESTree::NodeList &params,
     ESTree::Node *optReturnTypeAnnotation,
     bool isAsync,
@@ -1693,7 +1718,7 @@ FunctionType *FlowChecker::parseFunctionType(
 
   FunctionType *res = flowContext_.createFunction();
   res->init(returnType, thisParamType, paramsRef, isAsync, isGenerator);
-  return res;
+  return flowContext_.createType(res);
 }
 
 Type *FlowChecker::parseOptionalTypeAnnotation(
@@ -1778,22 +1803,26 @@ Type *FlowChecker::parseUnionTypeAnnotation(
   return flowContext_.maybeCreateUnion(types);
 }
 
-UnionType *FlowChecker::parseNullableTypeAnnotation(
+Type *FlowChecker::parseNullableTypeAnnotation(
     ESTree::NullableTypeAnnotationNode *node) {
-  return flowContext_.createPopulatedNullable(
-      parseTypeAnnotation(node->_typeAnnotation, nullptr, nullptr));
+  return flowContext_.createType(
+      flowContext_.createPopulatedNullable(
+          parseTypeAnnotation(node->_typeAnnotation, nullptr, nullptr)),
+      node);
 }
 
-ArrayType *FlowChecker::parseArrayTypeAnnotation(
+Type *FlowChecker::parseArrayTypeAnnotation(
     ESTree::ArrayTypeAnnotationNode *node,
     Type *fwdType,
     llvh::SmallVectorImpl<ForwardDecl> *forwardDecls) {
-  auto *arr =
-      fwdType ? llvh::cast<ArrayType>(fwdType) : flowContext_.createArray();
+  Type *arr = fwdType
+      ? fwdType
+      : flowContext_.createType(flowContext_.createArray(), node);
   if (forwardDecls)
     forwardDecls->emplace_back(node, arr);
   else
-    arr->init(parseTypeAnnotation(node->_elementType, nullptr, nullptr));
+    llvh::cast<ArrayType>(arr->info)->init(
+        parseTypeAnnotation(node->_elementType, nullptr, nullptr));
   return arr;
 }
 
@@ -1810,7 +1839,9 @@ Type *FlowChecker::parseGenericTypeAnnotation(
   return td->type;
 }
 
-FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(Type *a, Type *b) {
+FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
+    TypeInfo *a,
+    TypeInfo *b) {
   if (a == b)
     return {.canFlow = true};
 
@@ -1826,7 +1857,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(Type *a, Type *b) {
   if (UnionType *unionA = llvh::dyn_cast<UnionType>(a)) {
     bool needCheckedCast = false;
     for (auto *aType : unionA->getTypes()) {
-      CanFlowResult tmp = canAFlowIntoB(aType, b);
+      CanFlowResult tmp = canAFlowIntoB(aType->info, b);
       if (!tmp.canFlow)
         return tmp;
       needCheckedCast |= tmp.needCheckedCast;
@@ -1844,7 +1875,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(Type *a, Type *b) {
     // Note that we know that `a` is not `any`, so there is no need for a
     // checked cast.
     for (auto *bType : unionB->getTypes())
-      if (canAFlowIntoB(a, bType).canFlow)
+      if (canAFlowIntoB(a, bType->info).canFlow)
         return {.canFlow = true};
 
     return {};
@@ -1856,7 +1887,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(Type *a, Type *b) {
     auto *arrayB = llvh::dyn_cast<ArrayType>(b);
     if (!arrayB)
       return {};
-    if (arrayA->getElement()->compare(arrayB->getElement()) == 0)
+    if (arrayA->getElement()->info->compare(arrayB->getElement()->info) == 0)
       return {.canFlow = true};
     return {};
   }
@@ -1887,7 +1918,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     // `b` is in the inheritance chain of `a`.
     if (cur == b)
       return {.canFlow = true};
-    cur = cur->getSuperClass();
+    cur = cur->getSuperClassInfo();
   }
   return {};
 }

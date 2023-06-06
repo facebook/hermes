@@ -50,7 +50,9 @@ enum class TypeKind : uint8_t {
   _LastId = ClassConstructor,
 };
 
-class Type {
+/// The backing storage for Types.
+/// Indicates the TypeKind and can be compared for equality, etc.
+class TypeInfo {
   TypeKind const kind_;
   /// Set to true once the type has been calculated.
   mutable bool hashed_ = false;
@@ -59,9 +61,9 @@ class Type {
   mutable unsigned hashValue_;
 
  public:
-  explicit Type(TypeKind kind) : kind_(kind) {}
+  explicit TypeInfo(TypeKind kind) : kind_(kind) {}
 
-  static bool classof(const Type *) {
+  static bool classof(const TypeInfo *) {
     return true;
   }
 
@@ -84,12 +86,12 @@ class Type {
   class CompareState {
    public:
     /// All visited types until we find a cycle for 'this'.
-    llvh::DenseSet<const Type *> visitedThis{};
+    llvh::DenseSet<const TypeInfo *> visitedThis{};
     /// Whether a cycle has been found for 'this'.
     bool seenThis = false;
 
     /// All visited types until we find a cycle for 'other'.
-    llvh::DenseSet<const Type *> visitedOther{};
+    llvh::DenseSet<const TypeInfo *> visitedOther{};
     /// Whether a cycle has been found for 'other'.
     bool seenOther = false;
   };
@@ -101,13 +103,13 @@ class Type {
   /// inherent "meaning".
   /// Equality however is well-defined: it compares structural types "deeply"
   /// and nominal types (subclasses of \c TypeWithId) "shallowly".
-  int compare(const Type *other) const;
+  int compare(const TypeInfo *other) const;
 
   /// \param state the state for tracking cycles through the comparison.
-  int compare(const Type *other, CompareState &state) const;
+  int compare(const TypeInfo *other, CompareState &state) const;
 
   /// Wrapper around \c compare() == 0.
-  bool equals(const Type *other) const {
+  bool equals(const TypeInfo *other) const {
     return compare(other) == 0;
   }
 
@@ -122,12 +124,36 @@ class Type {
   unsigned hash() const;
 };
 
-class SingletonType : public Type {
+/// Used when TypeInfo is the key in, e.g. std::map.
+struct TypeInfoLessThan {
+  bool operator()(const TypeInfo *lhs, const TypeInfo *rhs) const {
+    return lhs->compare(rhs) < 0;
+  }
+};
+
+/// An instance of a creation of a Type.
+/// Associates the backing storage TypeInfo with the AST node that created it.
+class Type {
  public:
-  explicit SingletonType(TypeKind kind) : Type(kind) {
+  /// Backing storage indicating the kind of the type.
+  /// nullptr before it's initialized.
+  TypeInfo *info = nullptr;
+
+  /// If non-null, the AST node used for the source location for this type.
+  /// If null, this type was created for some reason that was unassociated with
+  /// JS source.
+  ESTree::Node *node = nullptr;
+
+  explicit Type(TypeInfo *info = nullptr, ESTree::Node *node = nullptr)
+      : info(info), node(node) {}
+};
+
+class SingletonType : public TypeInfo {
+ public:
+  explicit SingletonType(TypeKind kind) : TypeInfo(kind) {
     assert(classof(this) && "Invalid SingletonType kind");
   }
-  static bool classof(const Type *t) {
+  static bool classof(const TypeInfo *t) {
     return t->getKind() >= TypeKind::_FirstSingleton &&
         t->getKind() <= TypeKind::_LastSingleton;
   }
@@ -151,7 +177,7 @@ class PrimaryType : public SingletonType {
     assert(classof(this) && "Invalid PrimaryType kind");
   }
 
-  static bool classof(const Type *t) {
+  static bool classof(const TypeInfo *t) {
     return t->getKind() >= TypeKind::_FirstPrimary &&
         t->getKind() <= TypeKind::_LastPrimary;
   }
@@ -161,7 +187,7 @@ template <TypeKind KIND, class BASE>
 class SingleType : public BASE {
  public:
   explicit SingleType() : BASE(KIND) {}
-  static bool classof(const Type *t) {
+  static bool classof(const TypeInfo *t) {
     return t->getKind() == KIND;
   }
 };
@@ -176,7 +202,7 @@ using BigIntType = SingleType<TypeKind::BigInt, PrimaryType>;
 using AnyType = SingleType<TypeKind::Any, SingletonType>;
 using MixedType = SingleType<TypeKind::Mixed, SingletonType>;
 
-class UnionType : public SingleType<TypeKind::Union, Type> {
+class UnionType : public SingleType<TypeKind::Union, TypeInfo> {
   llvh::SmallVector<Type *, 4> types_{};
   bool hasAny_ = false;
   bool hasMixed_ = false;
@@ -197,7 +223,7 @@ class UnionType : public SingleType<TypeKind::Union, Type> {
   }
   /// \return true if the union contains a "void" arm.
   bool hasVoid() const {
-    return llvh::isa<VoidType>(types_[0]);
+    return llvh::isa<VoidType>(types_[0]->info);
   }
 
   /// Compare two instances of the same TypeKind.
@@ -212,7 +238,7 @@ class UnionType : public SingleType<TypeKind::Union, Type> {
       llvh::ArrayRef<Type *> types);
 };
 
-class ArrayType : public SingleType<TypeKind::Array, Type> {
+class ArrayType : public SingleType<TypeKind::Array, TypeInfo> {
   Type *element_ = nullptr;
 
  public:
@@ -238,7 +264,7 @@ class ArrayType : public SingleType<TypeKind::Array, Type> {
   }
 };
 
-class FunctionType : public SingleType<TypeKind::Function, Type> {
+class FunctionType : public SingleType<TypeKind::Function, TypeInfo> {
  public:
   using Param = std::pair<Identifier, Type *>;
 
@@ -299,16 +325,16 @@ class FunctionType : public SingleType<TypeKind::Function, Type> {
 
 /// A complex type annotated with a unique id (for that specific kind) to allow
 /// predictable sorting without examining recursive attributes.
-class TypeWithId : public Type {
+class TypeWithId : public TypeInfo {
   /// A unique global id used for predictable sorting.
   size_t const id_;
   /// Has this type been initialized.
   bool initialized_ = false;
 
  public:
-  TypeWithId(TypeKind kind, const size_t id) : Type(kind), id_(id) {}
+  TypeWithId(TypeKind kind, const size_t id) : TypeInfo(kind), id_(id) {}
 
-  static bool classof(const Type *t) {
+  static bool classof(const TypeInfo *t) {
     return t->getKind() >= TypeKind::_FirstId &&
         t->getKind() <= TypeKind::_LastId;
   }
@@ -387,12 +413,12 @@ class ClassType : public TypeWithId {
   /// The non-inherited fields of the class, which are pointed to from
   /// the fieldNameMap_ for lookup from either this class or subclasses.
   llvh::SmallVector<Field, 4> fields_{};
-  /// The constructor function.
-  FunctionType *constructorType_ = nullptr;
+  /// The constructor function (FunctionType).
+  Type *constructorType_ = nullptr;
   /// The .prototype property ([[HomeObject]] in the spec) contains methods.
   /// This class encodes those methods.
   /// ClassTypes which represent home objects have null homeObjectType_.
-  ClassType *homeObjectType_ = nullptr;
+  Type *homeObjectType_ = nullptr;
   /// Map from field name to field lookup entry.
   /// Contains all fields in this class and all superClasses.
   /// This allows us to quickly check how many fields to allocate for the class,
@@ -401,21 +427,27 @@ class ClassType : public TypeWithId {
   llvh::SmallDenseMap<Identifier, FieldLookupEntry> fieldNameMap_{};
 
   /// Super class, nullptr if this class doesn't extend anything.
-  ClassType *superClass_ = nullptr;
+  Type *superClass_ = nullptr;
 
  public:
-  explicit ClassType(size_t id, Identifier className)
-      : TypeWithId(TypeKind::Class, id), className_(className) {}
+  explicit ClassType(size_t id, Identifier className);
+  explicit ClassType(
+      size_t id,
+      Identifier className,
+      llvh::ArrayRef<Field> fields,
+      Type *constructorType,
+      Type *homeObjectType,
+      Type *superClass);
 
   /// Initialize an empty (freshly created) instance. Note that fields are
   /// immutable after this.
   void init(
       llvh::ArrayRef<Field> fields,
-      FunctionType *constructorType,
-      ClassType *homeObjectType,
-      ClassType *superClass);
+      Type *constructorType,
+      Type *homeObjectType,
+      Type *superClass);
 
-  static bool classof(const Type *t) {
+  static bool classof(const TypeInfo *t) {
     return t->getKind() == TypeKind::Class;
   }
 
@@ -430,13 +462,22 @@ class ClassType : public TypeWithId {
     assert(isInitialized());
     return fields_;
   }
-  FunctionType *getConstructorType() const {
+  Type *getConstructorType() const {
     assert(isInitialized());
     return constructorType_;
   }
-  ClassType *getHomeObjectType() const {
+  FunctionType *getConstructorTypeInfo() const {
+    assert(isInitialized());
+    return llvh::cast_or_null<FunctionType>(constructorType_->info);
+  }
+  Type *getHomeObjectType() const {
     assert(isInitialized());
     return homeObjectType_;
+  }
+  ClassType *getHomeObjectTypeInfo() const {
+    assert(isInitialized());
+    return llvh::cast_or_null<ClassType>(
+        homeObjectType_ ? homeObjectType_->info : nullptr);
   }
   const llvh::SmallDenseMap<Identifier, FieldLookupEntry> &getFieldNameMap()
       const {
@@ -446,9 +487,14 @@ class ClassType : public TypeWithId {
   /// Return the lookup entry of a field, None if it doesn't exist.
   hermes::OptValue<FieldLookupEntry> findField(Identifier id) const;
 
-  ClassType *getSuperClass() const {
+  Type *getSuperClass() const {
     assert(isInitialized());
     return superClass_;
+  }
+  ClassType *getSuperClassInfo() const {
+    assert(isInitialized());
+    return llvh::cast_or_null<ClassType>(
+        superClass_ ? superClass_->info : nullptr);
   }
 };
 
@@ -457,20 +503,23 @@ class ClassType : public TypeWithId {
 /// statements.
 class ClassConstructorType : public TypeWithId {
   /// The class this constructor is for.
-  ClassType *const classType_;
+  Type *const classType_;
 
  public:
-  explicit ClassConstructorType(size_t id, ClassType *classType)
+  explicit ClassConstructorType(size_t id, Type *classType)
       : TypeWithId(TypeKind::ClassConstructor, id), classType_(classType) {
     markAsInitialized();
   }
 
-  static bool classof(const Type *t) {
+  static bool classof(const TypeInfo *t) {
     return t->getKind() == TypeKind::ClassConstructor;
   }
 
-  ClassType *getClassType() const {
+  Type *getClassType() const {
     return classType_;
+  }
+  ClassType *getClassTypeInfo() const {
+    return llvh::cast<ClassType>(classType_->info);
   }
 };
 
@@ -519,7 +568,10 @@ class FlowContext {
 
   // Singleton accessors
 #define _HERMES_SEMA_FLOW_DEFKIND(name) \
-  name##Type *get##name() const {       \
+  TypeInfo *get##name##Info() const {   \
+    return &name##Info_;                \
+  }                                     \
+  Type *get##name() const {             \
     return &name##Instance_;            \
   }
   _HERMES_SEMA_FLOW_SINGLETONS
@@ -543,9 +595,15 @@ class FlowContext {
   ClassType *createClass(Identifier name) {
     return &allocClass_.emplace_back(allocClass_.size(), name);
   }
-  ClassConstructorType *createClassConstructor(ClassType *classType) {
+  ClassConstructorType *createClassConstructor(Type *classType) {
     return &allocClassConstructor_.emplace_back(
         allocClassConstructor_.size(), classType);
+  }
+  Type *createType(ESTree::Node *node = nullptr) {
+    return &allocTypes_.emplace_back(nullptr, node);
+  }
+  Type *createType(TypeInfo *type, ESTree::Node *node = nullptr) {
+    return &allocTypes_.emplace_back(type, node);
   }
 
  private:
@@ -561,13 +619,17 @@ class FlowContext {
   /// Types associated with expression nodes.
   llvh::DenseMap<const ESTree::Node *, Type *> nodeTypes_{};
 
+  std::deque<Type> allocTypes_{};
+
   // Declare allocators for complex types.
 #define _HERMES_SEMA_FLOW_DEFKIND(name) std::deque<name##Type> alloc##name##_{};
   _HERMES_SEMA_FLOW_COMPLEX_TYPES
 #undef _HERMES_SEMA_FLOW_DEFKIND
 
   // Define the singletons
-#define _HERMES_SEMA_FLOW_DEFKIND(name) mutable name##Type name##Instance_{};
+#define _HERMES_SEMA_FLOW_DEFKIND(name) \
+  mutable name##Type name##Info_{};     \
+  mutable Type name##Instance_{&name##Info_};
   _HERMES_SEMA_FLOW_SINGLETONS
 #undef _HERMES_SEMA_FLOW_DEFKIND
 };

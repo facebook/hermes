@@ -212,7 +212,7 @@ class FlowChecker {
   /// \param optReturnTypeAnnotation is nullptr or ESTree::TypeAnnotationNode
   /// \param defaultReturnType optional return type if the return annotation
   ///     is missing. nullptr here is a shortcut for "any".
-  FunctionType *parseFunctionType(
+  Type *parseFunctionType(
       ESTree::NodeList &params,
       ESTree::Node *optReturnTypeAnnotation,
       bool isAsync,
@@ -241,9 +241,8 @@ class FlowChecker {
       llvh::SmallVectorImpl<ForwardDecl> *forwardDecls);
 
   Type *parseUnionTypeAnnotation(ESTree::UnionTypeAnnotationNode *node);
-  UnionType *parseNullableTypeAnnotation(
-      ESTree::NullableTypeAnnotationNode *node);
-  ArrayType *parseArrayTypeAnnotation(
+  Type *parseNullableTypeAnnotation(ESTree::NullableTypeAnnotationNode *node);
+  Type *parseArrayTypeAnnotation(
       ESTree::ArrayTypeAnnotationNode *node,
       Type *fwdType,
       llvh::SmallVectorImpl<ForwardDecl> *forwardDecls);
@@ -267,7 +266,10 @@ class FlowChecker {
 
   /// Return true if type \p a can "flow" into type \p b.
   /// TODO: generate message explaining why not.
-  static CanFlowResult canAFlowIntoB(Type *a, Type *b);
+  static CanFlowResult canAFlowIntoB(Type *a, Type *b) {
+    return canAFlowIntoB(a->info, b->info);
+  }
+  static CanFlowResult canAFlowIntoB(TypeInfo *a, TypeInfo *b);
   static CanFlowResult canAFlowIntoB(ClassType *a, ClassType *b);
   static CanFlowResult canAFlowIntoB(FunctionType *a, FunctionType *b);
 
@@ -297,7 +299,7 @@ class FlowChecker::FunctionContext {
 
   /// The external signature of the current function. If nullptr, this is the
   /// global function.
-  FunctionType *const functionType;
+  Type *const functionType;
 
   /// The type of the "this" parameter. If nullptr, this is a global function
   /// with an implicit "this" paramater. Depending on the compilation mode,
@@ -314,7 +316,7 @@ class FlowChecker::FunctionContext {
   FunctionContext(
       FlowChecker &outer,
       ESTree::FunctionLikeNode *declCollectorNode,
-      FunctionType *functionType,
+      Type *functionType,
       Type *thisParamType)
       : outer_(outer),
         prevContext_(outer.curFunctionContext_),
@@ -339,12 +341,12 @@ class FlowChecker::ClassContext {
   ClassContext *const prevContext_;
 
  public:
-  ClassType *const classType;
+  Type *const classType;
 
   ClassContext(const ClassContext &) = delete;
   void operator=(const ClassContext &) = delete;
 
-  ClassContext(FlowChecker &outer, ClassType *const classType)
+  ClassContext(FlowChecker &outer, Type *const classType)
       : outer_(outer),
         prevContext_(outer.curClassContext_),
         classType(classType) {
@@ -353,6 +355,10 @@ class FlowChecker::ClassContext {
 
   ~ClassContext() {
     outer_.curClassContext_ = prevContext_;
+  }
+
+  ClassType *getClassTypeInfo() {
+    return llvh::cast<ClassType>(classType->info);
   }
 };
 

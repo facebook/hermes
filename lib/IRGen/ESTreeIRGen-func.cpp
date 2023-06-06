@@ -134,7 +134,7 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
       AF->getSourceRange());
 
   if (auto *functionType = llvh::dyn_cast<flow::FunctionType>(
-          flowContext_.getNodeTypeOrAny(AF))) {
+          flowContext_.getNodeTypeOrAny(AF)->info)) {
     newFunc->getAttributesRef(Mod).typed = true;
   }
 
@@ -197,7 +197,7 @@ Function *ESTreeIRGen::genES5Function(
             /* insertBefore */ nullptr));
 
   if (auto *functionType = llvh::dyn_cast<flow::FunctionType>(
-          flowContext_.getNodeTypeOrAny(functionNode))) {
+          flowContext_.getNodeTypeOrAny(functionNode)->info)) {
     newFunction->getAttributesRef(Mod).typed = true;
   }
 

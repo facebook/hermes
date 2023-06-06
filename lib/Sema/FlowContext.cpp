@@ -48,12 +48,12 @@ inline int cmpHelperBool(bool a, bool b) {
 
 /// A helper for comparing nullable Type pointers, returning -1, 0, +1.
 int cmpHelper(Type *a, Type *b) {
-  return a ? b ? a->compare(b) : 1 : b ? -1 : 0;
+  return a ? b ? a->info->compare(b->info) : 1 : b ? -1 : 0;
 }
 
 } // anonymous namespace
 
-llvh::StringRef Type::getKindName() const {
+llvh::StringRef TypeInfo::getKindName() const {
   switch (kind_) {
     case TypeKind::Void:
       return "void";
@@ -85,11 +85,11 @@ llvh::StringRef Type::getKindName() const {
   llvm_unreachable("invalid TypeKind");
 }
 
-int Type::compare(const Type *other) const {
+int TypeInfo::compare(const TypeInfo *other) const {
   CompareState state{};
   return compare(other, state);
 }
-int Type::compare(const Type *other, CompareState &state) const {
+int TypeInfo::compare(const TypeInfo *other, CompareState &state) const {
   if (other == this)
     return 0;
   if (kind_ < other->kind_)
@@ -116,7 +116,7 @@ int Type::compare(const Type *other, CompareState &state) const {
   llvm_unreachable("invalid TypeKind");
 }
 
-unsigned Type::hash() const {
+unsigned TypeInfo::hash() const {
   if (LLVM_LIKELY(hashed_))
     return hashValue_;
 
@@ -141,12 +141,13 @@ unsigned Type::hash() const {
 UnionType::UnionType(llvh::SmallVector<Type *, 4> &&types)
     : types_(std::move(types)) {
   assert(types_.size() > 1 && " Single element unions are unsupported");
-  for (auto *t : types_) {
+  for (Type *t : types_) {
     assert(
-        !llvh::isa<UnionType>(t) && "nested union should have been flattened");
-    if (t->getKind() == TypeKind::Any)
+        !llvh::isa<UnionType>(t->info) &&
+        "nested union should have been flattened");
+    if (t->info->getKind() == TypeKind::Any)
       hasAny_ = true;
-    else if (t->getKind() == TypeKind::Mixed)
+    else if (t->info->getKind() == TypeKind::Mixed)
       hasMixed_ = true;
   }
 }
@@ -158,7 +159,8 @@ llvh::SmallVector<Type *, 4> UnionType::canonicalizeTypes(
   // Copy the union types to canonicalized, but flatten nested unions. Note that
   // there can't be more than one level.
   for (Type *elemType : types) {
-    if (auto *unionType = llvh::dyn_cast<UnionType>(elemType)) {
+    assert(elemType->info && "cannot canonicalize unknown type");
+    if (UnionType *unionType = llvh::dyn_cast<UnionType>(elemType->info)) {
       for (Type *nestedElem : unionType->types_) {
         canonicalized.push_back(nestedElem);
       }
@@ -169,7 +171,7 @@ llvh::SmallVector<Type *, 4> UnionType::canonicalizeTypes(
 
   // Sort for predictable order.
   std::sort(canonicalized.begin(), canonicalized.end(), [](Type *a, Type *b) {
-    return a->compare(b) < 0;
+    return a->info->compare(b->info) < 0;
   });
 
   // Remove identical union arms.
@@ -177,7 +179,7 @@ llvh::SmallVector<Type *, 4> UnionType::canonicalizeTypes(
       std::unique(
           canonicalized.begin(),
           canonicalized.end(),
-          [](Type *a, Type *b) { return a->equals(b); }),
+          [](Type *a, Type *b) { return a->info->equals(b->info); }),
       canonicalized.end());
 
   return canonicalized;
@@ -189,7 +191,7 @@ int UnionType::_compareImpl(const UnionType *other, CompareState &state) const {
       types_.end(),
       other->types_.begin(),
       other->types_.end(),
-      [&state](Type *a, Type *b) { return a->compare(b, state); });
+      [&state](Type *a, Type *b) { return a->info->compare(b->info, state); });
 }
 
 unsigned UnionType::_hashImpl() const {
@@ -197,7 +199,7 @@ unsigned UnionType::_hashImpl() const {
 }
 
 int ArrayType::_compareImpl(const ArrayType *other, CompareState &state) const {
-  return element_->compare(other->element_, state);
+  return element_->info->compare(other->element_->info, state);
 }
 
 unsigned ArrayType::_hashImpl() const {
@@ -234,11 +236,11 @@ int FunctionType::_compareImpl(const FunctionType *other, CompareState &state)
           other->params_.begin(),
           other->params_.end(),
           [&state](const Param &pa, const Param &pb) {
-            return pa.second->compare(pb.second, state);
+            return pa.second->info->compare(pb.second->info, state);
           })) {
     return tmp;
   }
-  return return_->compare(other->return_, state);
+  return return_->info->compare(other->return_->info, state);
 }
 
 /// Calculate the type-specific hash.
@@ -255,11 +257,14 @@ unsigned TypeWithId::_hashImpl() const {
   return (unsigned)llvh::hash_combine((unsigned)getKind(), getId());
 }
 
+ClassType::ClassType(size_t id, Identifier className)
+    : TypeWithId(TypeKind::Class, id), className_(className) {}
+
 void ClassType::init(
     llvh::ArrayRef<Field> fields,
-    FunctionType *constructorType,
-    ClassType *homeObjectType,
-    ClassType *superClass) {
+    Type *constructorType,
+    Type *homeObjectType,
+    Type *superClass) {
   fields_.reserve(fields.size());
   fields_.append(fields.begin(), fields.end());
 
@@ -268,10 +273,12 @@ void ClassType::init(
   superClass_ = superClass;
 
   if (superClass) {
+    auto *superClassInfo = llvh::cast_or_null<ClassType>(superClass_->info);
     // Copy the lookup table down from the superClass to avoid having to climb
     // the whole chain every time we want to typecheck a property access.
-    fieldNameMap_.reserve(fields.size() + superClass->getFieldNameMap().size());
-    for (const auto &it : superClass->getFieldNameMap()) {
+    fieldNameMap_.reserve(
+        fields.size() + superClassInfo->getFieldNameMap().size());
+    for (const auto &it : superClassInfo->getFieldNameMap()) {
       fieldNameMap_[it.first] = it.second;
     }
   } else {
@@ -346,12 +353,12 @@ Type *FlowContext::maybeCreateUnion(llvh::ArrayRef<Type *> types) {
   if (canonicalized.size() == 1)
     return canonicalized.front();
 
-  return createUnion(std::move(canonicalized));
+  return createType(createUnion(std::move(canonicalized)));
 }
 
 UnionType *FlowContext::createPopulatedNullable(Type *type) {
   // We know that there are at least 2 types, so it will be a union.
-  return llvh::cast<UnionType>(maybeCreateUnion({getVoid(), getNull(), type}));
+  return llvh::cast<UnionType>(createUnion({getVoid(), getNull(), type}));
 }
 
 } // namespace flow

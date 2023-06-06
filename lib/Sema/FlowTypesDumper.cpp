@@ -10,7 +10,7 @@
 namespace hermes {
 namespace flow {
 
-size_t FlowTypesDumper::getNumber(const Type *type) {
+size_t FlowTypesDumper::getNumber(const TypeInfo *type) {
   if (type->isSingleton())
     return 0;
 
@@ -20,7 +20,9 @@ size_t FlowTypesDumper::getNumber(const Type *type) {
   return it->second + 1;
 }
 
-void FlowTypesDumper::printTypeRef(llvh::raw_ostream &os, const Type *type) {
+void FlowTypesDumper::printTypeRef(
+    llvh::raw_ostream &os,
+    const TypeInfo *type) {
   os << type->getKindName();
   if (!type->isSingleton())
     os << " %t." << getNumber(type);
@@ -28,7 +30,7 @@ void FlowTypesDumper::printTypeRef(llvh::raw_ostream &os, const Type *type) {
 
 void FlowTypesDumper::printTypeDescription(
     llvh::raw_ostream &os,
-    const Type *type) {
+    const TypeInfo *type) {
   os << type->getKindName();
   if (type->isSingleton()) {
     os << '\n';
@@ -138,22 +140,20 @@ void FlowTypesDumper::printAllTypes(
   // The last type number printed.
   size_t lastNumber = 0;
   auto printAll = [&os, this, &lastNumber](const auto &all) {
-    for (const auto &t : all) {
+    for (const Type &t : all) {
       // Don't print duplicate types.
-      size_t number = getNumber(&t);
+      size_t number = getNumber(t.info);
       if (number <= lastNumber)
         continue;
       lastNumber = number;
 
       printTypeRef(os, &t);
       os << " = ";
-      printTypeDescription(os, &t);
+      printTypeDescription(os, t.info);
     }
   };
 
-#define _HERMES_SEMA_FLOW_DEFKIND(name) printAll(flowTypes.alloc##name##_);
-  _HERMES_SEMA_FLOW_COMPLEX_TYPES
-#undef _HERMES_SEMA_FLOW_DEFKIND
+  printAll(flowTypes.allocTypes_);
 }
 
 } // namespace flow

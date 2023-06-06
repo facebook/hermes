@@ -13,9 +13,10 @@ namespace irgen {
 void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
   auto *id = llvh::cast<ESTree::IdentifierNode>(node->_id);
   sema::Decl *decl = getIDDecl(id);
+  flow::Type *declType = flowContext_.findDeclType(decl);
   flow::ClassConstructorType *consType =
       llvh::dyn_cast_or_null<flow::ClassConstructorType>(
-          flowContext_.findDeclType(decl));
+          declType ? declType->info : nullptr);
 
   // If the class is not annotated with a type, it is legacy, and we don't
   // support that yet.
@@ -25,7 +26,7 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
     return;
   }
 
-  flow::ClassType *classType = consType->getClassType();
+  flow::ClassType *classType = consType->getClassTypeInfo();
 
   auto *classBody = ESTree::cast<ESTree::ClassBodyNode>(node->_body);
 
@@ -145,7 +146,7 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
   // Create and populate the "prototype" property (vtable).
   // Must be done even if there are no methods to enable 'instanceof'.
   auto *homeObject = emitClassAllocation(
-      classType->getHomeObjectType(),
+      classType->getHomeObjectTypeInfo(),
       superClass ? Builder.createLoadPropertyInst(
                        superClass, kw_.identPrototype->str())
                  : nullptr);
@@ -219,7 +220,7 @@ Value *ESTreeIRGen::emitClassAllocation(
 }
 
 Value *ESTreeIRGen::getDefaultInitValue(flow::Type *type) {
-  switch (type->getKind()) {
+  switch (type->info->getKind()) {
     case flow::TypeKind::Void:
       return Builder.getLiteralUndefined();
     case flow::TypeKind::Null:
@@ -238,7 +239,7 @@ Value *ESTreeIRGen::getDefaultInitValue(flow::Type *type) {
       return Builder.getLiteralUndefined();
     case flow::TypeKind::Union:
       return getDefaultInitValue(
-          llvh::cast<flow::UnionType>(type)->getTypes()[0]);
+          llvh::cast<flow::UnionType>(type->info)->getTypes()[0]);
     case flow::TypeKind::Function:
     case flow::TypeKind::Class:
     case flow::TypeKind::ClassConstructor:
@@ -248,7 +249,7 @@ Value *ESTreeIRGen::getDefaultInitValue(flow::Type *type) {
 }
 
 Type ESTreeIRGen::flowTypeToIRType(flow::Type *flowType) {
-  switch (flowType->getKind()) {
+  switch (flowType->info->getKind()) {
     case flow::TypeKind::Void:
       return Type::createUndefined();
     case flow::TypeKind::Null:
@@ -267,7 +268,7 @@ Type ESTreeIRGen::flowTypeToIRType(flow::Type *flowType) {
     case flow::TypeKind::Union: {
       Type res = Type::createNoType();
       for (flow::Type *elemType :
-           llvh::cast<flow::UnionType>(flowType)->getTypes()) {
+           llvh::cast<flow::UnionType>(flowType->info)->getTypes()) {
         res = Type::unionTy(res, flowTypeToIRType(elemType));
       }
       return res;
