@@ -10,6 +10,8 @@
 
 #include "hermes/Sema/SemContext.h"
 
+#include "llvh/ADT/DenseSet.h"
+
 namespace hermes {
 
 namespace ESTree {
@@ -74,6 +76,24 @@ class Type {
   /// Return the TypeKind as a string.
   llvh::StringRef getKindName() const;
 
+  /// Comparison stores visited sets for both 'this' and 'other'.
+  /// If the comparison diverges or terminates prior to seeing a visited pair,
+  /// it operates as if there was no visited set in the usual fashion.
+  /// However, if we see a visited pair, that must mean we haven't diverged
+  /// prior to it, and we can know that the Types must be equal.
+  class CompareState {
+   public:
+    /// All visited types until we find a cycle for 'this'.
+    llvh::DenseSet<const Type *> visitedThis{};
+    /// Whether a cycle has been found for 'this'.
+    bool seenThis = false;
+
+    /// All visited types until we find a cycle for 'other'.
+    llvh::DenseSet<const Type *> visitedOther{};
+    /// Whether a cycle has been found for 'other'.
+    bool seenOther = false;
+  };
+
   /// Compare this type and other type lexicographically and return -1, 0, 1
   /// correspondingly.
   /// The less than and greater than comparisons are, in some sense, arbitrary,
@@ -82,6 +102,9 @@ class Type {
   /// Equality however is well-defined: it compares structural types "deeply"
   /// and nominal types (subclasses of \c TypeWithId) "shallowly".
   int compare(const Type *other) const;
+
+  /// \param state the state for tracking cycles through the comparison.
+  int compare(const Type *other, CompareState &state) const;
 
   /// Wrapper around \c compare() == 0.
   bool equals(const Type *other) const {
@@ -110,7 +133,7 @@ class SingletonType : public Type {
   }
 
   /// Compare two instances of the same TypeKind.
-  int _compareImpl(const SingletonType *other) const {
+  int _compareImpl(const SingletonType *other, CompareState &state) const {
     assert(
         this->getKind() == other->getKind() &&
         "only the same TypeKind can be compared");
@@ -179,6 +202,7 @@ class UnionType : public SingleType<TypeKind::Union, Type> {
 
   /// Compare two instances of the same TypeKind.
   int _compareImpl(const UnionType *other) const;
+  int _compareImpl(const UnionType *other, CompareState &state) const;
   /// Calculate the type-specific hash.
   unsigned _hashImpl() const;
 
@@ -204,7 +228,7 @@ class ArrayType : public SingleType<TypeKind::Array, Type> {
   }
 
   /// Compare two instances of the same TypeKind.
-  int _compareImpl(const ArrayType *other) const;
+  int _compareImpl(const ArrayType *other, CompareState &state) const;
   /// Calculate the type-specific hash.
   unsigned _hashImpl() const;
 
@@ -259,7 +283,7 @@ class FunctionType : public SingleType<TypeKind::Function, Type> {
   }
 
   /// Compare two instances of the same TypeKind.
-  int _compareImpl(const FunctionType *other) const;
+  int _compareImpl(const FunctionType *other, CompareState &state) const;
   /// Calculate the type-specific hash.
   unsigned _hashImpl() const;
 
@@ -301,7 +325,7 @@ class TypeWithId : public Type {
   }
 
   /// Compare two instances of the same TypeKind.
-  int _compareImpl(const TypeWithId *other) const {
+  int _compareImpl(const TypeWithId *other, CompareState &state) const {
     return id_ < other->id_ ? -1 : id_ == other->id_ ? 0 : 1;
   }
   /// Calculate the type-specific hash.

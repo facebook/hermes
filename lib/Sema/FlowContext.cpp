@@ -86,6 +86,10 @@ llvh::StringRef Type::getKindName() const {
 }
 
 int Type::compare(const Type *other) const {
+  CompareState state{};
+  return compare(other, state);
+}
+int Type::compare(const Type *other, CompareState &state) const {
   if (other == this)
     return 0;
   if (kind_ < other->kind_)
@@ -93,11 +97,19 @@ int Type::compare(const Type *other) const {
   else if (kind_ > other->kind_)
     return 1;
 
+  state.seenThis = state.seenThis || !state.visitedThis.insert(this).second;
+  state.seenOther = state.seenOther || !state.visitedOther.insert(other).second;
+  if (state.seenThis && state.seenOther) {
+    // Already visited this pair.
+    // Because we haven't diverged yet, they must be equal.
+    return 0;
+  }
+
   switch (kind_) {
 #define _HERMES_SEMA_FLOW_DEFKIND(name)                         \
   case TypeKind::name:                                          \
     return static_cast<const name##Type *>(this)->_compareImpl( \
-        static_cast<const name##Type *>(other));
+        static_cast<const name##Type *>(other), state);
     _HERMES_SEMA_FLOW_SINGLETONS _HERMES_SEMA_FLOW_COMPLEX_TYPES
 #undef _HERMES_SEMA_FLOW_DEFKIND
   }
@@ -171,21 +183,21 @@ llvh::SmallVector<Type *, 4> UnionType::canonicalizeTypes(
   return canonicalized;
 }
 
-int UnionType::_compareImpl(const UnionType *other) const {
+int UnionType::_compareImpl(const UnionType *other, CompareState &state) const {
   return lexicographicalComparison(
       types_.begin(),
       types_.end(),
       other->types_.begin(),
       other->types_.end(),
-      [](Type *a, Type *b) { return a->compare(b); });
+      [&state](Type *a, Type *b) { return a->compare(b, state); });
 }
 
 unsigned UnionType::_hashImpl() const {
   return (unsigned)llvh::hash_combine((unsigned)TypeKind::Union, types_.size());
 }
 
-int ArrayType::_compareImpl(const ArrayType *other) const {
-  return element_->compare(other->element_);
+int ArrayType::_compareImpl(const ArrayType *other, CompareState &state) const {
+  return element_->compare(other->element_, state);
 }
 
 unsigned ArrayType::_hashImpl() const {
@@ -208,7 +220,8 @@ void FunctionType::init(
 }
 
 /// Compare two instances of the same TypeKind.
-int FunctionType::_compareImpl(const FunctionType *other) const {
+int FunctionType::_compareImpl(const FunctionType *other, CompareState &state)
+    const {
   if (auto tmp = cmpHelper(isAsync_, other->isAsync_))
     return tmp;
   if (auto tmp = cmpHelper(isGenerator_, other->isGenerator_))
@@ -220,12 +233,12 @@ int FunctionType::_compareImpl(const FunctionType *other) const {
           params_.end(),
           other->params_.begin(),
           other->params_.end(),
-          [](const Param &pa, const Param &pb) {
-            return pa.second->compare(pb.second);
+          [&state](const Param &pa, const Param &pb) {
+            return pa.second->compare(pb.second, state);
           })) {
     return tmp;
   }
-  return return_->compare(other->return_);
+  return return_->compare(other->return_, state);
 }
 
 /// Calculate the type-specific hash.
