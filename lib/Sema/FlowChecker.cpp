@@ -1906,7 +1906,12 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
   if (a->isGenerator() != b->isGenerator())
     return {};
 
-  {
+  if (!a->getThisParam() != !b->getThisParam()) {
+    // Only one of the functions is missing `this`, can't flow.
+    return {};
+  }
+  if (a->getThisParam() && b->getThisParam()) {
+    // Both functions have `this`, it must be checked.
     CanFlowResult flowRes = canAFlowIntoB(b->getThisParam(), a->getThisParam());
     if (!flowRes.canFlow || flowRes.needCheckedCast)
       return {};
