@@ -181,10 +181,7 @@ int UnionType::_compareImpl(const UnionType *other) const {
 }
 
 unsigned UnionType::_hashImpl() const {
-  return (unsigned)llvh::hash_combine(
-      (unsigned)TypeKind::Union,
-      hashTypes(
-          types_.begin(), types_.end(), [](Type *t) { return t->hash(); }));
+  return (unsigned)llvh::hash_combine((unsigned)TypeKind::Union, types_.size());
 }
 
 int ArrayType::_compareImpl(const ArrayType *other) const {
@@ -192,8 +189,7 @@ int ArrayType::_compareImpl(const ArrayType *other) const {
 }
 
 unsigned ArrayType::_hashImpl() const {
-  return (unsigned)llvh::hash_combine(
-      (unsigned)TypeKind::Array, element_->hash());
+  return (unsigned)llvh::hash_combine((unsigned)TypeKind::Array);
 }
 
 void FunctionType::init(
@@ -238,12 +234,8 @@ unsigned FunctionType::_hashImpl() const {
       (unsigned)TypeKind::Function,
       isAsync_,
       isGenerator_,
-      thisParam_ ? thisParam_->hash() : 0,
-      hashTypes(
-          params_.begin(),
-          params_.end(),
-          [](const Param &p) { return p.second->hash(); }),
-      return_->hash());
+      thisParam_ != nullptr,
+      params_.size());
 }
 
 unsigned TypeWithId::_hashImpl() const {

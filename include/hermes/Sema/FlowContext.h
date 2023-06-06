@@ -88,12 +88,14 @@ class Type {
     return compare(other) == 0;
   }
 
-  /// Calculate a hash of this type for hash tables, etc. Types that compare
-  /// equal using \c compare() must have the same hash.
-  /// Calculating the hash of a structural type needs the hashes of all of its
-  /// elements, which in term may be structural types, so this could be an
-  /// expensive operation. However, the hash of each type is cached after it is
-  /// calculated the first time, so the amortized cost should be O(1).
+  /// Calculate a shallow hash of this type for hash tables, etc.
+  /// Types that compare equal using \c compare() must have the same hash.
+  /// However, the hash of each type is cached after it is calculated the first
+  /// time, so the amortized cost should be O(1).
+  /// TODO: The cache mechanism is kept around for faster lookups and to reduce
+  /// calls to llvh::hash_value, along with the ability to make hashing slightly
+  /// more expensive and deeper even if we aren't able to hash the entire
+  /// structure always.
   unsigned hash() const;
 };
 
