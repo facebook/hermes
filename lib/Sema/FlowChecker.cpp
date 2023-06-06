@@ -1496,21 +1496,6 @@ class FlowChecker::DeclareScopeTypes {
     return outer.parseTypeAnnotation(annotation, nullptr, &forwardDecls);
   }
 
-  /// If the specified AST node represent a constructor type or a primary type,
-  /// it is resolved (shallow) and is returned.
-  /// \return the resolved type or nullptr if it is not a constructor type.
-  Type *resolveOrForwardDeclareConstructorType(ESTree::Node *annotation) {
-    // Skip all non-constuctor aliases.
-    if (llvh::isa<ESTree::GenericTypeAnnotationNode>(annotation) ||
-        llvh::isa<ESTree::UnionTypeAnnotationNode>(annotation) ||
-        llvh::isa<ESTree::NullableTypeAnnotationNode>(annotation)) {
-      return nullptr;
-    }
-
-    // Forward declare the type.
-    return outer.parseTypeAnnotation(annotation, nullptr, &forwardDecls);
-  }
-
   /// All types declared in the scope have been resolved at the first level.
   /// Resolve the remaining forward declared types.
   void completeForwardDeclarations() {
