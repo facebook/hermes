@@ -42,7 +42,7 @@ llvh::hash_code hashTypes(It first, It last, F hash) {
 }
 
 /// A helper for comparing bools, returning -1, 0, +1.
-inline int cmpHelper(bool a, bool b) {
+inline int cmpHelperBool(bool a, bool b) {
   return (int)a - (int)b;
 }
 
@@ -222,9 +222,9 @@ void FunctionType::init(
 /// Compare two instances of the same TypeKind.
 int FunctionType::_compareImpl(const FunctionType *other, CompareState &state)
     const {
-  if (auto tmp = cmpHelper(isAsync_, other->isAsync_))
+  if (auto tmp = cmpHelperBool(isAsync_, other->isAsync_))
     return tmp;
-  if (auto tmp = cmpHelper(isGenerator_, other->isGenerator_))
+  if (auto tmp = cmpHelperBool(isGenerator_, other->isGenerator_))
     return tmp;
   if (auto tmp = cmpHelper(thisParam_, other->thisParam_))
     return tmp;
