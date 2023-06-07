@@ -63,7 +63,7 @@ extern "C" ParseResult *hermesParse(
   context->setParseFlow(parseFlowSetting);
   context->setParseFlowComponentSyntax(enableExperimentalComponentSyntax);
   context->setParseJSX(true);
-  context->setUseCJSModules(true);
+  context->setTransformCJSModules(true);
   context->setAllowReturnOutsideFunction(allowReturnOutsideFunction);
 
   std::unique_ptr<parser::JSParser> jsParser =

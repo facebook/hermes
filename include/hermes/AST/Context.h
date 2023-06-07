@@ -372,10 +372,18 @@ class Context {
     return emitAsyncBreakCheck_;
   }
 
-  void setUseCJSModules(bool useCJSModules) {
+  /// A hack to disable CJS modules while preserving the same interface.
+  void setUseCJSModules(bool useCJSModules) {}
+  bool getUseCJSModules() const {
+    return false;
+  }
+  /// SemanticValidator performs some AST transformations when CommonJS modules
+  /// are enabled. This attribute allows us to continue supporting those, while
+  /// code generation for CJS modules has been disabled.
+  void setTransformCJSModules(bool useCJSModules) {
     useCJSModules_ = useCJSModules;
   }
-  bool getUseCJSModules() const {
+  bool getTransformCJSModules() const {
     return useCJSModules_;
   }
 

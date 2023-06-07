@@ -659,7 +659,7 @@ void SemanticValidator::visit(ClassPrivatePropertyNode *node) {
 
 void SemanticValidator::visit(ImportDeclarationNode *importDecl) {
   // Like variable declarations, imported names must be hoisted.
-  if (!astContext_.getUseCJSModules()) {
+  if (!astContext_.getTransformCJSModules()) {
     sm_.error(
         importDecl->getSourceRange(),
         "'import' statement requires module mode");
@@ -706,7 +706,7 @@ void SemanticValidator::visit(ImportSpecifierNode *importDecl) {
 }
 
 void SemanticValidator::visit(ExportNamedDeclarationNode *exportDecl) {
-  if (!astContext_.getUseCJSModules()) {
+  if (!astContext_.getTransformCJSModules()) {
     sm_.error(
         exportDecl->getSourceRange(),
         "'export' statement requires module mode");
@@ -716,7 +716,8 @@ void SemanticValidator::visit(ExportNamedDeclarationNode *exportDecl) {
 }
 
 void SemanticValidator::visit(ExportDefaultDeclarationNode *exportDecl) {
-  if (!astContext_.getUseCJSModules()) {
+  if (!astContext_.getTransformCJSModules() &&
+      !astContext_.getTransformCJSModules()) {
     sm_.error(
         exportDecl->getSourceRange(),
         "'export' statement requires module mode");
@@ -747,7 +748,7 @@ void SemanticValidator::visit(ExportDefaultDeclarationNode *exportDecl) {
 }
 
 void SemanticValidator::visit(ExportAllDeclarationNode *exportDecl) {
-  if (!astContext_.getUseCJSModules()) {
+  if (!astContext_.getTransformCJSModules()) {
     sm_.error(
         exportDecl->getSourceRange(),
         "'export' statement requires CommonJS module mode");

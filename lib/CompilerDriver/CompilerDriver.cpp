@@ -1181,8 +1181,8 @@ std::shared_ptr<Context> createContext(
     context->setLazyCompilation(true);
   }
 
-  if (cl::CommonJS) {
-    context->setUseCJSModules(true);
+  if (cl::CommonJS && cl::DumpTarget == DumpTransformedAST) {
+    context->setTransformCJSModules(true);
   }
 
 #if HERMES_PARSE_JSX
@@ -1923,7 +1923,7 @@ CompileResult processSourceFiles(
   Module M(context);
   sem::SemContext semCtx{};
 
-  if (context->getUseCJSModules()) {
+  if (cl::CommonJS) {
     // Allow the IR generation function to populate inputSourceMaps to ensure
     // proper source map ordering.
     if (!generateIRForSourcesAsCJSModules(
