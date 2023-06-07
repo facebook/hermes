@@ -3954,7 +3954,7 @@ Optional<ESTree::Node *> JSParserImpl::parseUnaryExpression() {
             new (context_) ESTree::AwaitExpressionNode(optExpr.getValue()));
       }
       // Fall-through to default for all other identifiers.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
 
     default:
       return parsePostfixExpression();
@@ -4676,7 +4676,7 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
           isStatic = true;
           advance();
         }
-        // intentional fallthrough
+        [[fallthrough]];
       default: {
         // ClassElement
         auto optElem = parseClassElement(
