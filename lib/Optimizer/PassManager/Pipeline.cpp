@@ -75,7 +75,6 @@ void hermes::runFullOptimizationPasses(Module &M) {
   // Run type inference before CSE so that we can better reason about binopt.
   PM.addTypeInference();
   PM.addCSE();
-  PM.addTDZDedup();
   PM.addSimplifyCFG();
 
   PM.addInstSimplify();

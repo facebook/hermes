@@ -37,7 +37,7 @@ struct CodeGenerationSettings {
   using DumpSettings = CodeGenerationSettings_DumpSettings;
 
   /// Whether we should emit TDZ checks.
-  bool enableTDZ{false};
+  bool const enableTDZ{false};
   /// Whether we can assume there are unlimited number of registers.
   /// This affects how we generate the IR, as we can decide whether
   /// to hold as many temporary values as we like.

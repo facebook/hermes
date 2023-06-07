@@ -113,16 +113,15 @@ function StrictHasParamExprs() {
 // BS-NEXT:    AsyncBreakCheck
 // BS-NEXT:    Ret               r2
 
-// BS:Function<testNotStrictNoParamExprs>(2 params, 6 registers, 2 symbols):
+// BS:Function<testNotStrictNoParamExprs>(2 params, 5 registers, 2 symbols):
 // BS-NEXT:Offset in debug table: source 0x0051, scope 0x000a, textified callees 0x0000
 // BS-NEXT:    CreateEnvironment r0
 // BS-NEXT:    LoadParam         r2, 1
 // BS-NEXT:    LoadConstUndefined r3
-// BS-NEXT:    LoadConstEmpty    r4
 // BS-NEXT:    StoreToEnvironment r0, 0, r2
 // BS-NEXT:    StoreNPToEnvironment r0, 1, r3
 // BS-NEXT:    CreateInnerEnvironment r1, r0, 1
-// BS-NEXT:    StoreToEnvironment r1, 0, r4
+// BS-NEXT:    StoreNPToEnvironment r1, 0, r3
 // BS-NEXT:    StoreNPToEnvironment r1, 0, r3
 // BS-NEXT:    AsyncBreakCheck
 // BS-NEXT:    Ret               r3
@@ -153,31 +152,30 @@ function StrictHasParamExprs() {
 // BS-NEXT:    CreateClosure     r7, r2, Function<funcParamInit>
 // BS-NEXT:    StoreToEnvironment r2, 0, r7
 // BS-NEXT:    CreateInnerEnvironment r3, r1, 1
-// BS-NEXT:    CreateClosure     r10, r3, Function<funcParamInit2>
-// BS-NEXT:    StoreToEnvironment r3, 0, r10
-// BS-NEXT:    Mov               r6, r10
+// BS-NEXT:    CreateClosure     r8, r3, Function<funcParamInit2>
+// BS-NEXT:    StoreToEnvironment r3, 0, r8
+// BS-NEXT:    Mov               r6, r8
 // BS-NEXT:L1:
 // BS-NEXT:    StoreToEnvironment r0, 0, r6
 // BS-NEXT:    LoadFromEnvironment r7, r0, 0
-// BS-NEXT:    ThrowIfEmpty      r10, r7
-// BS-NEXT:    StoreToEnvironment r0, 1, r10
+// BS-NEXT:    ThrowIfEmpty      r8, r7
+// BS-NEXT:    StoreToEnvironment r0, 1, r8
 // BS-NEXT:    CreateInnerEnvironment r4, r1, 1
 // BS-NEXT:    StoreNPToEnvironment r4, 0, r9
 // BS-NEXT:    CreateInnerEnvironment r5, r4, 1
-// BS-NEXT:    StoreToEnvironment r5, 0, r8
+// BS-NEXT:    StoreNPToEnvironment r5, 0, r9
 // BS-NEXT:    StoreNPToEnvironment r5, 0, r9
 // BS-NEXT:    Ret               r9
 
-// BS:Function<funcParamInit>(2 params, 6 registers, 2 symbols):
+// BS:Function<funcParamInit>(2 params, 5 registers, 2 symbols):
 // BS-NEXT:Offset in debug table: source 0x00d3, scope 0x0034, textified callees 0x0000
 // BS-NEXT:    CreateEnvironment r0
 // BS-NEXT:    LoadParam         r2, 1
 // BS-NEXT:    LoadConstUndefined r3
-// BS-NEXT:    LoadConstEmpty    r4
 // BS-NEXT:    StoreToEnvironment r0, 0, r2
 // BS-NEXT:    StoreNPToEnvironment r0, 1, r3
 // BS-NEXT:    CreateInnerEnvironment r1, r0, 1
-// BS-NEXT:    StoreToEnvironment r1, 0, r4
+// BS-NEXT:    StoreNPToEnvironment r1, 0, r3
 // BS-NEXT:    StoreNPToEnvironment r1, 0, r3
 // BS-NEXT:    AsyncBreakCheck
 // BS-NEXT:    Ret               r3
@@ -199,15 +197,14 @@ function StrictHasParamExprs() {
 // BS-NEXT:    AsyncBreakCheck
 // BS-NEXT:    Ret               r1
 
-// BS:Function<testStrictNoParamExprs>(2 params, 5 registers, 3 symbols):
+// BS:Function<testStrictNoParamExprs>(2 params, 4 registers, 3 symbols):
 // BS-NEXT:Offset in debug table: source 0x0112, scope 0x004c, textified callees 0x0000
 // BS-NEXT:    CreateEnvironment r0
 // BS-NEXT:    LoadParam         r1, 1
 // BS-NEXT:    LoadConstUndefined r2
-// BS-NEXT:    LoadConstEmpty    r3
 // BS-NEXT:    StoreToEnvironment r0, 0, r1
 // BS-NEXT:    StoreNPToEnvironment r0, 1, r2
-// BS-NEXT:    StoreToEnvironment r0, 2, r3
+// BS-NEXT:    StoreNPToEnvironment r0, 2, r2
 // BS-NEXT:    StoreNPToEnvironment r0, 2, r2
 // BS-NEXT:    AsyncBreakCheck
 // BS-NEXT:    Ret               r2
@@ -236,29 +233,28 @@ function StrictHasParamExprs() {
 // BS-NEXT:    CreateClosure     r5, r1, Function<funcParamInit>
 // BS-NEXT:    StoreToEnvironment r1, 0, r5
 // BS-NEXT:    CreateInnerEnvironment r2, r0, 1
-// BS-NEXT:    CreateClosure     r8, r2, Function<funcParamInit2>
-// BS-NEXT:    StoreToEnvironment r2, 0, r8
-// BS-NEXT:    Mov               r4, r8
+// BS-NEXT:    CreateClosure     r6, r2, Function<funcParamInit2>
+// BS-NEXT:    StoreToEnvironment r2, 0, r6
+// BS-NEXT:    Mov               r4, r6
 // BS-NEXT:L1:
 // BS-NEXT:    StoreToEnvironment r0, 0, r4
 // BS-NEXT:    LoadFromEnvironment r5, r0, 0
-// BS-NEXT:    ThrowIfEmpty      r8, r5
-// BS-NEXT:    StoreToEnvironment r0, 1, r8
+// BS-NEXT:    ThrowIfEmpty      r6, r5
+// BS-NEXT:    StoreToEnvironment r0, 1, r6
 // BS-NEXT:    CreateInnerEnvironment r3, r0, 2
 // BS-NEXT:    StoreNPToEnvironment r3, 0, r7
-// BS-NEXT:    StoreToEnvironment r3, 1, r6
+// BS-NEXT:    StoreNPToEnvironment r3, 1, r7
 // BS-NEXT:    StoreNPToEnvironment r3, 1, r7
 // BS-NEXT:    Ret               r7
 
-// BS:Function<funcParamInit>(2 params, 5 registers, 3 symbols):
+// BS:Function<funcParamInit>(2 params, 4 registers, 3 symbols):
 // BS-NEXT:Offset in debug table: source 0x01ab, scope 0x0070, textified callees 0x0000
 // BS-NEXT:    CreateEnvironment r0
 // BS-NEXT:    LoadParam         r1, 1
 // BS-NEXT:    LoadConstUndefined r2
-// BS-NEXT:    LoadConstEmpty    r3
 // BS-NEXT:    StoreToEnvironment r0, 0, r1
 // BS-NEXT:    StoreNPToEnvironment r0, 1, r2
-// BS-NEXT:    StoreToEnvironment r0, 2, r3
+// BS-NEXT:    StoreNPToEnvironment r0, 2, r2
 // BS-NEXT:    StoreNPToEnvironment r0, 2, r2
 // BS-NEXT:    AsyncBreakCheck
 // BS-NEXT:    Ret               r2
@@ -294,11 +290,11 @@ function StrictHasParamExprs() {
 // BS-NEXT:    bc 16: line 11 col 1 scope offset 0x0007 env r1
 // BS-NEXT:    bc 21: line 16 col 1 scope offset 0x0007 env r1
 // BS-NEXT:  0x0051  function idx 2, starts at line 12 col 5
-// BS-NEXT:    bc 9: line 12 col 5 scope offset 0x000a env r0
-// BS-NEXT:    bc 13: line 12 col 5 scope offset 0x000a env r0
-// BS-NEXT:    bc 24: line 12 col 5 scope offset 0x000f env r1
-// BS-NEXT:    bc 28: line 14 col 13 scope offset 0x000f env r1
-// BS-NEXT:    bc 33: line 15 col 5 scope offset 0x000f env r1
+// BS-NEXT:    bc 7: line 12 col 5 scope offset 0x000a env r0
+// BS-NEXT:    bc 11: line 12 col 5 scope offset 0x000a env r0
+// BS-NEXT:    bc 22: line 12 col 5 scope offset 0x000f env r1
+// BS-NEXT:    bc 26: line 14 col 13 scope offset 0x000f env r1
+// BS-NEXT:    bc 31: line 15 col 5 scope offset 0x000f env r1
 // BS-NEXT:  0x006f  function idx 3, starts at line 18 col 1
 // BS-NEXT:    bc 11: line 18 col 1 scope offset 0x0017 env r1
 // BS-NEXT:    bc 16: line 18 col 1 scope offset 0x0017 env r1
@@ -320,11 +316,11 @@ function StrictHasParamExprs() {
 // BS-NEXT:    bc 103: line 27 col 13 scope offset 0x0030 env r5
 // BS-NEXT:    bc 107: line 28 col 5 scope offset 0x0030 env r5
 // BS-NEXT:  0x00d3  function idx 5, starts at line 21 col 13
-// BS-NEXT:    bc 9: line 21 col 13 scope offset 0x0034 env r0
-// BS-NEXT:    bc 13: line 21 col 13 scope offset 0x0034 env r0
-// BS-NEXT:    bc 24: line 21 col 13 scope offset 0x003b env r1
-// BS-NEXT:    bc 28: line 23 col 21 scope offset 0x003b env r1
-// BS-NEXT:    bc 33: line 24 col 13 scope offset 0x003b env r1
+// BS-NEXT:    bc 7: line 21 col 13 scope offset 0x0034 env r0
+// BS-NEXT:    bc 11: line 21 col 13 scope offset 0x0034 env r0
+// BS-NEXT:    bc 22: line 21 col 13 scope offset 0x003b env r1
+// BS-NEXT:    bc 26: line 23 col 21 scope offset 0x003b env r1
+// BS-NEXT:    bc 31: line 24 col 13 scope offset 0x003b env r1
 // BS-NEXT:  0x00f1  function idx 6, starts at line 24 col 16
 // BS-NEXT:    bc 12: line 25 col 13 scope offset 0x0043 env r1
 // BS-NEXT:  0x00fb  function idx 7, starts at line 31 col 1
@@ -332,11 +328,11 @@ function StrictHasParamExprs() {
 // BS-NEXT:    bc 9: line 31 col 1 scope offset 0x0047 env r0
 // BS-NEXT:    bc 14: line 37 col 1 scope offset 0x0047 env r0
 // BS-NEXT:  0x0112  function idx 8, starts at line 33 col 5
-// BS-NEXT:    bc 9: line 33 col 5 scope offset 0x004c env r0
-// BS-NEXT:    bc 13: line 33 col 5 scope offset 0x004c env r0
-// BS-NEXT:    bc 17: line 33 col 5 scope offset 0x004c env r0
-// BS-NEXT:    bc 21: line 35 col 13 scope offset 0x004c env r0
-// BS-NEXT:    bc 26: line 36 col 5 scope offset 0x004c env r0
+// BS-NEXT:    bc 7: line 33 col 5 scope offset 0x004c env r0
+// BS-NEXT:    bc 11: line 33 col 5 scope offset 0x004c env r0
+// BS-NEXT:    bc 15: line 33 col 5 scope offset 0x004c env r0
+// BS-NEXT:    bc 19: line 35 col 13 scope offset 0x004c env r0
+// BS-NEXT:    bc 24: line 36 col 5 scope offset 0x004c env r0
 // BS-NEXT:  0x0135  function idx 9, starts at line 39 col 1
 // BS-NEXT:    bc 4: line 39 col 1 scope offset 0x0053 env r0
 // BS-NEXT:    bc 9: line 39 col 1 scope offset 0x0053 env r0
@@ -358,11 +354,11 @@ function StrictHasParamExprs() {
 // BS-NEXT:    bc 89: line 49 col 13 scope offset 0x006a env r3
 // BS-NEXT:    bc 93: line 50 col 5 scope offset 0x006a env r3
 // BS-NEXT:  0x01ab  function idx 11, starts at line 43 col 13
-// BS-NEXT:    bc 9: line 43 col 13 scope offset 0x0070 env r0
-// BS-NEXT:    bc 13: line 43 col 13 scope offset 0x0070 env r0
-// BS-NEXT:    bc 17: line 43 col 13 scope offset 0x0070 env r0
-// BS-NEXT:    bc 21: line 45 col 21 scope offset 0x0070 env r0
-// BS-NEXT:    bc 26: line 46 col 13 scope offset 0x0070 env r0
+// BS-NEXT:    bc 7: line 43 col 13 scope offset 0x0070 env r0
+// BS-NEXT:    bc 11: line 43 col 13 scope offset 0x0070 env r0
+// BS-NEXT:    bc 15: line 43 col 13 scope offset 0x0070 env r0
+// BS-NEXT:    bc 19: line 45 col 21 scope offset 0x0070 env r0
+// BS-NEXT:    bc 24: line 46 col 13 scope offset 0x0070 env r0
 // BS-NEXT:  0x01ce  function idx 12, starts at line 46 col 16
 // BS-NEXT:    bc 5: line 47 col 13 scope offset 0x007a env r0
 // BS-NEXT:  0x01d8  end of debug source table

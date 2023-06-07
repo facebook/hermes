@@ -578,13 +578,6 @@ static CLFlag StripFunctionNames(
     "Strip function names to reduce string table size",
     CompilerCategory);
 
-static opt<bool> EnableTDZ(
-    "Xenable-tdz",
-    init(false),
-    Hidden,
-    desc("UNSUPPORTED: Enable TDZ checks for let/const"),
-    cat(CompilerCategory));
-
 #define WARNING_CATEGORY(name, specifier, description) \
   static CLFlag name##Warning(                         \
       'W', specifier, true, description, CompilerCategory);
@@ -1105,7 +1098,6 @@ std::shared_ptr<Context> createContext(
     std::unique_ptr<Context::ResolutionTable> resolutionTable,
     std::vector<uint32_t> segments) {
   CodeGenerationSettings codeGenOpts;
-  codeGenOpts.enableTDZ = cl::EnableTDZ || cl::EnableBlockScoping;
   codeGenOpts.dumpOperandRegisters = cl::DumpOperandRegisters;
   codeGenOpts.dumpSourceLevelScope = cl::DumpSourceLevelScope;
   codeGenOpts.dumpTextifiedCallee = cl::DumpTextifiedCallee;
