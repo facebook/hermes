@@ -621,7 +621,7 @@ const Token *JSLexer::advanceInJSXChild() {
           break;
         }
         // Fall-through to start scanning text.
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
 
       default: {
         const char *start = curCharPtr_;
@@ -1808,7 +1808,7 @@ void JSLexer::scanString() {
             appendUnicodeToStorage(0);
             break;
           }
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case '1':
         case '2':
         case '3':
