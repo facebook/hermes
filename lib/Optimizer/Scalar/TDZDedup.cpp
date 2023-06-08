@@ -98,7 +98,7 @@ bool TDZDedupContext::run() {
       Value *tdzStorage;
 
       if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(checkedValue)) {
-        tdzStorage = LFI->getSingleOperand();
+        tdzStorage = LFI->getLoadVariable();
       } else if (auto *LSI = llvh::dyn_cast<LoadStackInst>(checkedValue)) {
         tdzStorage = LSI->getSingleOperand();
       } else {
@@ -130,7 +130,7 @@ bool TDZDedupContext::processNode(StackNode *SN) {
       auto *checkedValue = TIE->getCheckedValue();
 
       if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(checkedValue)) {
-        tdzStorage = LFI->getSingleOperand();
+        tdzStorage = LFI->getLoadVariable();
       } else if (auto *LSI = llvh::dyn_cast<LoadStackInst>(checkedValue)) {
         tdzStorage = LSI->getSingleOperand();
       } else {

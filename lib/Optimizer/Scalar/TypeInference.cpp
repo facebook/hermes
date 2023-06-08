@@ -574,7 +574,7 @@ class TypeInferenceImpl {
     return Type::createNoType();
   }
   Type inferLoadFrameInst(LoadFrameInst *inst) {
-    Type T = inst->getSingleOperand()->getType();
+    Type T = inst->getLoadVariable()->getType();
     return T;
   }
   Type inferHBCLoadConstInst(HBCLoadConstInst *inst) {

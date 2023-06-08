@@ -518,22 +518,25 @@ class StoreStackInst : public Instruction {
   }
 };
 
-class LoadFrameInst : public SingleOperandInst {
+class LoadFrameInst : public Instruction {
   LoadFrameInst(const LoadFrameInst &) = delete;
   void operator=(const LoadFrameInst &) = delete;
 
  public:
+  enum { VariableIdx };
+
   explicit LoadFrameInst(Variable *alloc)
-      : SingleOperandInst(ValueKind::LoadFrameInstKind, alloc) {
+      : Instruction(ValueKind::LoadFrameInstKind) {
     setType(alloc->getType());
+    pushOperand(alloc);
   }
   explicit LoadFrameInst(
       const LoadFrameInst *src,
       llvh::ArrayRef<Value *> operands)
-      : SingleOperandInst(src, operands) {}
+      : Instruction(src, operands) {}
 
   Variable *getLoadVariable() const {
-    return cast<Variable>(getSingleOperand());
+    return cast<Variable>(getOperand(VariableIdx));
   }
 
   static bool hasOutput() {
