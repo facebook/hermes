@@ -294,9 +294,11 @@ static inline void _sh_push_try(SHRuntime *shr, SHJmpBuf *buf) {
   shr->shCurJmpBuf = buf;
 }
 
-/// Pop the current top of the exception handler stack.
-static inline void _sh_end_try(SHRuntime *shr) {
-  shr->shCurJmpBuf = shr->shCurJmpBuf->prev;
+/// Pop the current top of the exception handler stack, which is known to be
+/// \p buf.
+static inline void _sh_end_try(SHRuntime *shr, SHJmpBuf *buf) {
+  assert(shr->shCurJmpBuf == buf && "must pop top buffer");
+  shr->shCurJmpBuf = buf->prev;
 }
 
 /// \param frame the value that should be set to the current frame

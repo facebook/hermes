@@ -957,7 +957,7 @@ CallResult<PseudoHandle<>> NativeJSFunction::_nativeCall(
     self->callDuration_ = HERMESVM_RDTSC() - t1;
     ++self->callCount_;
 #endif
-    _sh_end_try(getSHRuntime(runtime));
+    _sh_end_try(getSHRuntime(runtime), &jBuf);
 
     return createPseudoHandle(HermesValue::fromRaw(res.raw));
   } else {

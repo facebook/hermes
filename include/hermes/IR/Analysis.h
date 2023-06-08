@@ -281,6 +281,14 @@ class Visitor {
 
 } // namespace DomTreeDFS
 
+/// Construct a map from each basic block in \p F to the number of enclosing
+/// try's. Note that unreachable blocks, and blocks with a nesting depth of 0,
+/// are excluded from the map.
+/// \return a pair containing the map, and the maximum nesting depth of try's in
+/// this function.
+std::pair<llvh::DenseMap<BasicBlock *, size_t>, size_t> getBlockTryDepths(
+    Function *F);
+
 } // end namespace hermes
 
 #endif
