@@ -204,27 +204,23 @@ static bool eliminateStoreOnlyLocations(BasicBlock *BB) {
   return changed;
 }
 
-/// \returns true if \p ASI is used in a catch block, or is used by an
+/// \returns true if \p ASI is used in a try block, or is used by an
 /// instruction other than LoadStackInst/StoreStackInst (like GetPNamesInst).
 /// In that case it is not subject to SSA conversion.
-///
-/// "catch" blocks are special because most instructions (all throwing ones)
-/// have an implicit edge to them and we can't analyze the control flow, thus
-/// we must be conservative when dealing with variables accessed there.
 static bool isUnsafeStackLocation(
     AllocStackInst *ASI,
-    DominanceInfo *DT,
-    BlockSet &exceptionHandlingBlocks) {
+    const llvh::DenseMap<BasicBlock *, size_t> &blockTryDepths) {
   // For all users of the stack allocation:
   for (auto *U : ASI->getUsers()) {
-    if (llvh::isa<LoadStackInst>(U) || llvh::isa<StoreStackInst>(U)) {
-      // If the load/store is used inside of a catch block then we consider this
-      // variable as captured.
-      for (auto *BB : exceptionHandlingBlocks) {
-        if (DT->dominates(BB, U->getParent()))
-          return true;
-      }
-      // Instruction is not in catch blocks.
+    if (llvh::isa<LoadStackInst>(U))
+      continue;
+
+    // If the location is stored to from a try block, it cannot be safely
+    // promoted to SSA, since an exception thrown prior to the store may be
+    // caught in the same function, making the store observable.
+    if (llvh::isa<StoreStackInst>(U)) {
+      if (blockTryDepths.count(U->getParent()))
+        return true;
       continue;
     }
 
@@ -237,21 +233,13 @@ static bool isUnsafeStackLocation(
 
 /// Collect all of the allocas in the program in two lists. \p allocas that are
 /// optimizable, and \p unsafe, which are allocas that we can't optimize because
-/// they are used by catch blocks or non-load/store instructions.
+/// they are used in try blocks or non-load/store instructions.
 static void collectStackAllocations(
     Function *F,
-    DominanceInfo *DT,
     SmallVectorImpl<AllocStackInst *> &allocas,
     SmallVectorImpl<AllocStackInst *> &unsafe) {
-  // Collect all of the blocks that are roots of catch regions.
-  BlockSet exceptionHandlingBlocks;
-  for (auto &BB : *F) {
-    Instruction *I = &*BB.begin();
-    if (llvh::isa<TryStartInst>(BB.getTerminator()) ||
-        llvh::isa<CatchInst>(I)) {
-      exceptionHandlingBlocks.insert(&BB);
-    }
-  }
+  // Collect all of the basic blocks that are enclosed by try's.
+  auto [blockTryDepths, maxTryDepth] = getBlockTryDepths(F);
 
   // For each instruction in the basic block:
   for (auto &BB : *F) {
@@ -260,9 +248,8 @@ static void collectStackAllocations(
       if (!ASI)
         continue;
 
-      // Don't touch captured stack allocations that are used by non-load/store
-      // instructions directly.
-      if (isUnsafeStackLocation(ASI, DT, exceptionHandlingBlocks)) {
+      // Check if the stack location is safe for SSA conversion.
+      if (isUnsafeStackLocation(ASI, blockTryDepths)) {
         unsafe.push_back(ASI);
         continue;
       }
@@ -536,7 +523,7 @@ static bool mem2reg(Function *F) {
   // a list of stack allocations that are unsafe to optimize.
   SmallVector<AllocStackInst *, 16> unsafeAllocations;
 
-  collectStackAllocations(F, &D, allocations, unsafeAllocations);
+  collectStackAllocations(F, allocations, unsafeAllocations);
 
   LLVM_DEBUG(
       dbgs() << "Optimizing loads and stores in " << F->getInternalNameStr()
@@ -555,7 +542,7 @@ static bool mem2reg(Function *F) {
 
   allocations.clear();
   unsafeAllocations.clear();
-  collectStackAllocations(F, &D, allocations, unsafeAllocations);
+  collectStackAllocations(F, allocations, unsafeAllocations);
 
   for (auto *ASI : allocations) {
     promoteAllocStackToSSA(ASI, D, domTreeLevels);

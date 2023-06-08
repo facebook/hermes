@@ -36,31 +36,28 @@
 // CHECK:function ""(): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = [x: undefined|number, tdz: empty|undefined]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AllocStackInst (:object) $throwTDZ: any
-// CHECK-NEXT:  %1 = StoreFrameInst undefined: undefined, [x]: undefined|number
-// CHECK-NEXT:  %2 = StoreFrameInst empty: empty, [tdz]: empty|undefined
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %throwTDZ(): undefined
-// CHECK-NEXT:  %4 = StoreStackInst %3: object, %0: object
-// CHECK-NEXT:  %5 = TryStartInst %BB1, %BB2
+// CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [x]: undefined|number
+// CHECK-NEXT:  %1 = StoreFrameInst empty: empty, [tdz]: empty|undefined
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %throwTDZ(): undefined
+// CHECK-NEXT:  %3 = TryStartInst %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = CatchInst (:any)
-// CHECK-NEXT:  %7 = BranchInst %BB3
+// CHECK-NEXT:  %4 = CatchInst (:any)
+// CHECK-NEXT:  %5 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %8 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %9 = LoadFrameInst (:undefined|number) [x]: undefined|number
-// CHECK-NEXT:  %10 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, %9: undefined|number
-// CHECK-NEXT:  %11 = StoreFrameInst undefined: undefined, [tdz]: empty|undefined
-// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %7 = LoadFrameInst (:undefined|number) [x]: undefined|number
+// CHECK-NEXT:  %8 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, %7: undefined|number
+// CHECK-NEXT:  %9 = StoreFrameInst undefined: undefined, [tdz]: empty|undefined
+// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %13 = LoadStackInst (:object) %0: object
-// CHECK-NEXT:  %14 = CallInst (:any) %13: object, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %15 = BranchInst %BB4
+// CHECK-NEXT:  %11 = CallInst (:undefined) %2: object, %throwTDZ(): undefined, empty: any, undefined: undefined
+// CHECK-NEXT:  %12 = BranchInst %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %16 = TryEndInst
-// CHECK-NEXT:  %17 = BranchInst %BB3
+// CHECK-NEXT:  %13 = TryEndInst
+// CHECK-NEXT:  %14 = BranchInst %BB3
 // CHECK-NEXT:function_end
 
-// CHECK:function throwTDZ(): undefined
+// CHECK:function throwTDZ(): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst 0: number, [x@""]: undefined|number
