@@ -44,6 +44,12 @@ void serializeValueToBuffer(
 }
 } // namespace
 
+bool SerializedLiteralGenerator::isSerializableLiteral(Value *V) {
+  return V &&
+      (llvh::isa<LiteralNull>(V) || llvh::isa<LiteralBool>(V) ||
+       llvh::isa<LiteralNumber>(V) || llvh::isa<LiteralString>(V));
+}
+
 uint32_t SerializedLiteralGenerator::serializeBuffer(
     llvh::ArrayRef<Literal *> literals,
     std::vector<unsigned char> &buff,

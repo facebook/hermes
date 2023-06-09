@@ -6,6 +6,7 @@
  */
 
 #include "hermes/BCGen/Lowering.h"
+#include "hermes/BCGen/SerializedLiteralGenerator.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IR.h"
@@ -309,17 +310,9 @@ static constexpr int32_t kNonLiteralCostBytes = static_cast<int32_t>(
 // for most cases.
 static constexpr uint32_t kNonLiteralPlaceholderLimit = 3;
 
-/// Whether the given value \v V can be serialized into the object literal
-/// buffer.
-static bool isSerializableLiteral(Value *V) {
-  return V &&
-      (llvh::isa<LiteralNull>(V) || llvh::isa<LiteralBool>(V) ||
-       llvh::isa<LiteralNumber>(V) || llvh::isa<LiteralString>(V));
-}
-
 static bool canSerialize(Value *V) {
   if (auto *LCI = llvh::dyn_cast_or_null<HBCLoadConstInst>(V))
-    return isSerializableLiteral(LCI->getConst());
+    return SerializedLiteralGenerator::isSerializableLiteral(LCI->getConst());
   return false;
 }
 
@@ -491,7 +484,7 @@ uint32_t LowerAllocObjectLiteral::estimateBestNumElemsToSerialize(
     ++curSize;
     Literal *key = allocInst->getKey(i);
     Value *value = allocInst->getValue(i);
-    if (isSerializableLiteral(value)) {
+    if (SerializedLiteralGenerator::isSerializableLiteral(value)) {
       curSaving += kLiteralSavedBytes;
       if (curSaving > maxSaving) {
         maxSaving = curSaving;
@@ -546,7 +539,7 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
       propLiteral = cast<LiteralString>(key);
     }
 
-    if (isSerializableLiteral(value)) {
+    if (SerializedLiteralGenerator::isSerializableLiteral(value)) {
       propMap.push_back(std::pair<Literal *, Literal *>(
           propLiteral, llvh::cast<Literal>(value)));
     } else if (llvh::isa<LiteralString>(propLiteral)) {

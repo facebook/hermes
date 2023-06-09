@@ -14,6 +14,7 @@
 
 namespace hermes {
 class Literal;
+class Value;
 
 /// Generator of literal value buffers for object/array literals.
 /// SerializedLiteralParser.h is responsible to decode the serialized literal
@@ -80,6 +81,10 @@ class SerializedLiteralGenerator {
   static constexpr TagType TagMask = 0x70;
 
   static constexpr unsigned SequenceMax = (1 << 12) - 1;
+
+  /// Whether the given value \p V is a non-null pointer that represents a
+  /// literal that may be serialized into the object literal buffer.
+  static bool isSerializableLiteral(Value *V);
 
   /// Serialize input \p literals into \p buff.
   /// \p isKeyBuffer: whether this is generating object literal key buffer or
