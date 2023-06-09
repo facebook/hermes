@@ -1816,7 +1816,7 @@ void lowerModuleIR(Module *M, bool optimize) {
   // LowerBuiltinCalls needs to run before the rest of the lowering.
   PM.addPass(new LowerBuiltinCalls());
   PM.addPass(new LowerNumericProperties());
-  PM.addPass(new LowerAllocObjectLiteral());
+  PM.addPass(sh::createLowerAllocObjectLiteral());
   PM.addPass(new hbc::LowerArgumentsArray());
   PM.addPass(new LimitAllocArray(UINT16_MAX));
   PM.addPass(new hbc::DedupReifyArguments());

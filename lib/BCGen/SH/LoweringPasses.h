@@ -19,6 +19,8 @@ namespace hermes::sh {
 /// narrows input's type to the result type.
 Pass *createLowerNanBoxedUnionNarrowTrusted();
 
+Pass *createLowerAllocObjectLiteral();
+
 /// Lower calls into a series of parameter moves followed by a call with
 /// those moved values. Should only run once, right before MovElimination.
 Pass *createLowerCalls(SHRegisterAllocator &RA);
