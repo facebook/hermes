@@ -10,13 +10,8 @@
 
 'use strict';
 
-import type {Plugin} from 'prettier';
+import type {Plugin, AstPath, PrettierPrinterOptions} from 'prettier';
 import type {Program} from 'hermes-estree';
-
-import {
-  parse as hermesParserParse,
-  mutateESTreeASTForPrettier,
-} from 'hermes-parser';
 
 type HermesPlugin = Plugin<Program>;
 
@@ -30,6 +25,11 @@ function replaceHashbang(text: string): string {
 }
 
 function parse(originalText: string): Program {
+  const {
+    parse: hermesParserParse,
+    mutateESTreeASTForPrettier,
+  } = require('hermes-parser');
+
   const textToParse = replaceHashbang(originalText);
 
   const result = hermesParserParse(textToParse, {
@@ -50,14 +50,17 @@ function parse(originalText: string): Program {
  * hermes parser support.
  */
 function createPrettierV3HermesPlugin(): HermesPlugin {
-  // Lazy require this module as its only available in prettier v3.
-  const flowPlugin = require('prettier/plugins/flow');
   return {
-    parsers: {
-      hermes: {
-        ...flowPlugin.parsers.flow,
-        parse,
-      },
+    // $FlowExpectedError[unsafe-getters-setters]
+    get parsers() {
+      // Lazy require this module as its only available in prettier v3.
+      const flowPlugin = require('prettier/plugins/flow');
+      return {
+        hermes: {
+          ...flowPlugin.parsers.flow,
+          parse,
+        },
+      };
     },
   };
 }
@@ -69,96 +72,119 @@ function createPrettierV3HermesPlugin(): HermesPlugin {
 function createPrettierV2HermesPlugin(): HermesPlugin {
   // Lazy require custom prettier v3 internals
   const {
-    flowPlugin,
-    estreePlugin,
-    graphqlPlugin,
-    postcssPlugin,
-    htmlPlugin,
-    markdownPlugin,
+    getFlowPlugin,
+    getESTreePlugin,
+    getEmbeddedESTreePlugins,
     printAstToDoc,
   } = require('./third-party/internal-prettier-v3');
 
   return {
-    parsers: {
-      hermes: {
-        // $FlowExpectedError[incompatible-use] We know it exists
-        ...flowPlugin.parsers.flow,
+    // $FlowExpectedError[unsafe-getters-setters]
+    get parsers() {
+      return {
+        hermes: {
+          // $FlowExpectedError[incompatible-use] We know it exists
+          ...getFlowPlugin().parsers.flow,
 
-        // Switch to our own estree printer
-        astFormat: 'estree-v3',
+          // Switch to our own estree printer
+          astFormat: 'estree-v3',
 
-        parse(originalText: string): Program {
-          const ast = parse(originalText);
+          parse(originalText: string): Program {
+            const ast = parse(originalText);
 
-          // We don't want prettier v2 to try attaching these comments
-          // so we hide them under a different name.
-          if (ast.comments != null) {
-            // $FlowExpectedError[prop-missing]
-            ast.__comments = ast.comments;
-            // $FlowExpectedError[cannot-write]
-            delete ast.comments;
-          }
+            // We don't want prettier v2 to try attaching these comments
+            // so we hide them under a different name.
+            if (ast.comments != null) {
+              // $FlowExpectedError[prop-missing]
+              ast.__comments = ast.comments;
+              // $FlowExpectedError[cannot-write]
+              delete ast.comments;
+            }
 
-          return ast;
+            return ast;
+          },
         },
-      },
+      };
     },
-    printers: {
-      'estree-v3': {
-        // $FlowExpectedError[incompatible-use] We know it exists
-        ...estreePlugin.printers.estree,
 
-        // Skip prettier v2 trying to print comments for the top level node.
-        willPrintOwnComments() {
-          return true;
-        },
+    // $FlowExpectedError[unsafe-getters-setters]
+    get printers() {
+      const estreePlugin = getESTreePlugin();
+      return {
+        'estree-v3': {
+          // $FlowExpectedError[incompatible-use] We know it exists
+          ...estreePlugin.printers.estree,
 
-        // Skip prettier v2 trying to handle prettier ignore comments.
-        hasPrettierIgnore() {
-          return false;
-        },
+          // Skip prettier v2 trying to print comments for the top level node.
+          willPrintOwnComments() {
+            return true;
+          },
 
-        // Override printer and instead call the prettier v3 printing logic.
-        print(path, options) {
-          // Get top level AST node from prettier v2.
-          const ast: Program = path.getValue();
+          // Skip prettier v2 trying to handle prettier ignore comments.
+          hasPrettierIgnore() {
+            return false;
+          },
 
-          // Reattach comments to AST
-          // $FlowExpectedError[prop-missing]
-          if (ast.__comments != null) {
-            // $FlowExpectedError[cannot-write]
-            ast.comments = ast.__comments;
+          // Override printer and instead call the prettier v3 printing logic.
+          print(
+            path: AstPath<Program>,
+            options: PrettierPrinterOptions<Program>,
+          ) {
+            // Get top level AST node from prettier v2.
+            const ast: Program = path.getValue();
+
+            // Reattach comments to AST
             // $FlowExpectedError[prop-missing]
-            delete ast.__comments;
-          }
+            if (ast.__comments != null) {
+              // $FlowExpectedError[cannot-write]
+              ast.comments = ast.__comments;
+              // $FlowExpectedError[prop-missing]
+              delete ast.__comments;
+            }
 
-          // Override prettier v2 options for prettier v3.
-          const v3Options = {
-            ...options,
-            // Update plugins list to use prettier v3 plugins when processing
-            // embedded syntax found by the prettier v3 estree printer.
-            plugins: [graphqlPlugin, markdownPlugin, htmlPlugin, postcssPlugin],
+            // Collect existing V2 plugins that have not changed in V3.
+            const existingPlugins = options.plugins.filter(plugin => {
+              if (typeof plugin === 'string') {
+                return false;
+              }
+              const printers = plugin.printers;
+              if (printers == null) {
+                return false;
+              }
+              return Object.keys(printers).some(
+                printer =>
+                  // Markdown plugin
+                  printer === 'mdast' ||
+                  // HTML plugin
+                  printer === 'html',
+              );
+            });
 
-            printer: {
-              // $FlowExpectedError[prop-missing] We know it exists
-              ...options.printer,
+            // Override prettier v2 options for prettier v3.
+            const v3Options = {
+              ...options,
+              // Update plugins list to use prettier v3 plugins when processing
+              // embedded syntax found by the prettier v3 estree printer.
+              plugins: [...existingPlugins, ...getEmbeddedESTreePlugins()],
 
-              // $FlowExpectedError[incompatible-use] We know it exists
-              print: estreePlugin.printers.estree.print,
+              printer: {
+                ...options.printer,
 
-              // Rename options overridden for prettier v2 above.
-              willPrintOwnComments:
-                // $FlowExpectedError[incompatible-use] We know it exists
-                estreePlugin.printers.estree.willPrintOwnComments,
-              // $FlowExpectedError[incompatible-use] We know it exists
-              hasPrettierIgnore: estreePlugin.printers.estree.hasPrettierIgnore,
-            },
-          };
+                print: estreePlugin.printers?.estree.print,
 
-          // Call prettier v3 printing logic. This will recursively print the AST.
-          return printAstToDoc(ast, v3Options);
+                // Rename options overridden for prettier v2 above.
+                willPrintOwnComments:
+                  estreePlugin.printers?.estree.willPrintOwnComments,
+                hasPrettierIgnore:
+                  estreePlugin.printers?.estree.hasPrettierIgnore,
+              },
+            };
+
+            // Call prettier v3 printing logic. This will recursively print the AST.
+            return printAstToDoc(ast, v3Options);
+          },
         },
-      },
+      };
     },
   };
 }

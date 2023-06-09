@@ -11,21 +11,19 @@
 import type {Plugin} from 'prettier';
 import type {Program} from 'hermes-estree';
 
-import * as flowPluginUntyped from './plugins/flow';
-import * as estreePluginUntyped from './plugins/estree';
-import * as graphqlPluginUntyped from './plugins/graphql';
-import * as postcssPluginUntyped from './plugins/postcss';
-import * as htmlPluginUntyped from './plugins/html';
-import * as markdownPluginUntyped from './plugins/markdown';
-import {printAstToDoc as printAstToDocUntyped} from './ast-to-doc.js';
+export function getFlowPlugin(): Plugin<Program> {
+  return require('./plugins/flow');
+}
 
-export const flowPlugin: Plugin<Program> = flowPluginUntyped;
-export const estreePlugin: Plugin<Program> = estreePluginUntyped;
-export const graphqlPlugin: Plugin<> = graphqlPluginUntyped;
-export const postcssPlugin: Plugin<> = postcssPluginUntyped;
-export const htmlPlugin: Plugin<> = htmlPluginUntyped;
-export const markdownPlugin: Plugin<> = markdownPluginUntyped;
+export function getESTreePlugin(): Plugin<Program> {
+  return require('./plugins/estree');
+}
+
+export function getEmbeddedESTreePlugins(): $ReadOnlyArray<Plugin<>> {
+  return [require('./plugins/graphql'), require('./plugins/postcss')];
+}
 
 type Doc = mixed;
-type PrintAstToDocType = (Program, mixed) => Doc;
-export const printAstToDoc: PrintAstToDocType = printAstToDocUntyped;
+export function printAstToDoc(program: Program, options: mixed): Doc {
+  return require('./ast-to-doc').printAstToDoc(program, options);
+}
