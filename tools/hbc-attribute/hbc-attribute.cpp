@@ -16,8 +16,8 @@
 #include "llvh/Support/raw_ostream.h"
 
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
-#include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
 #include "hermes/BCGen/HBC/StringKind.h"
+#include "hermes/BCGen/SerializedLiteralGenerator.h"
 #include "hermes/Public/Buffer.h"
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/LEB128.h"
@@ -58,7 +58,7 @@ using namespace hermes::inst;
 
 using llvh::MutableArrayRef;
 using llvh::raw_fd_ostream;
-using SLG = hermes::hbc::SerializedLiteralGenerator;
+using SLG = hermes::SerializedLiteralGenerator;
 
 /* This tool is highly dependent upon the current bytecode format.
  *

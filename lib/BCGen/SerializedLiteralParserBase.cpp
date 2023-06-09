@@ -5,13 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/BCGen/HBC/SerializedLiteralParserBase.h"
-#include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
+#include "hermes/BCGen/SerializedLiteralParserBase.h"
+#include "hermes/BCGen/SerializedLiteralGenerator.h"
 
 #include "llvh/Support/Endian.h"
 
 namespace hermes {
-namespace hbc {
 
 void SerializedLiteralParserBase::parseTagAndSeqLength() {
   auto tag = buffer_[currIdx_];
@@ -30,5 +29,4 @@ void SerializedLiteralParserBase::parseTagAndSeqLength() {
   lastTag_ = tag & SerializedLiteralGenerator::TagMask;
 }
 
-} // namespace hbc
 } // namespace hermes

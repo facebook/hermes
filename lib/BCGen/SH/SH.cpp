@@ -10,12 +10,12 @@
 #include "LoweringPasses.h"
 #include "SHRegAlloc.h"
 #include "hermes/BCGen/HBC/Passes.h"
-#include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/BCGen/LowerBuiltinCalls.h"
 #include "hermes/BCGen/LowerStoreInstrs.h"
 #include "hermes/BCGen/Lowering.h"
 #include "hermes/BCGen/MovElimination.h"
+#include "hermes/BCGen/SerializedLiteralGenerator.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRVerifier.h"
@@ -167,7 +167,7 @@ class SHStringTable {
 };
 
 class SHLiteralBuffers {
-  hbc::SerializedLiteralGenerator literalGenerator_;
+  SerializedLiteralGenerator literalGenerator_;
 
  public:
   /// Table of constants used to initialize constant arrays.

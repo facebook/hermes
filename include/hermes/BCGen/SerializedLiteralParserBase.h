@@ -5,16 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_BCGEN_HBC_SERIALIZEDLITERALPARSERBASE_H
-#define HERMES_BCGEN_HBC_SERIALIZEDLITERALPARSERBASE_H
+#ifndef HERMES_BCGEN_SERIALIZEDLITERALPARSERBASE_H
+#define HERMES_BCGEN_SERIALIZEDLITERALPARSERBASE_H
 
-#include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
+#include "hermes/BCGen/SerializedLiteralGenerator.h"
 #include "hermes/Support/Conversions.h"
 #include "llvh/ADT/ArrayRef.h"
 #include "llvh/Support/Endian.h"
 
 namespace hermes {
-namespace hbc {
 
 /// SerializedLiteralParserBase is the base class for SerializedLiteralParser
 /// containing VM independent parsing logic.
@@ -148,7 +147,6 @@ class SerializedLiteralParserBase {
   }
 };
 
-} // namespace hbc
 } // namespace hermes
 
-#endif // HERMES_BCGEN_HBC_SERIALIZEDLITERALPARSERBASE_H
+#endif // HERMES_BCGEN_SERIALIZEDLITERALPARSERBASE_H

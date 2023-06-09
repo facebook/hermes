@@ -10,7 +10,7 @@
 
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
 #include "hermes/BCGen/HBC/DisassemblyOptions.h"
-#include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
+#include "hermes/BCGen/SerializedLiteralGenerator.h"
 #include "hermes/Inst/Inst.h"
 #include "hermes/Inst/InstDecode.h"
 

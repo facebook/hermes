@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
+#include "hermes/BCGen/SerializedLiteralGenerator.h"
 
-#include "hermes/BCGen/HBC/BytecodeGenerator.h"
+#include "hermes/IR/IR.h"
+
 #include "llvh/Support/Endian.h"
 
 namespace hermes {
-namespace hbc {
 
 namespace {
 void appendTagToBuffer(
@@ -179,5 +179,4 @@ uint32_t SerializedLiteralGenerator::serializeBuffer(
   return ret;
 }
 
-} // namespace hbc
 } // namespace hermes

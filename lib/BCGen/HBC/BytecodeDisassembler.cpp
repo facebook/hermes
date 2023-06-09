@@ -8,7 +8,7 @@
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 
 #include "hermes/BCGen/HBC/Bytecode.h"
-#include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
+#include "hermes/BCGen/SerializedLiteralGenerator.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/JenkinsHash.h"
@@ -24,7 +24,7 @@
 #include "llvh/Support/raw_ostream.h"
 
 using namespace hermes::inst;
-using SLG = hermes::hbc::SerializedLiteralGenerator;
+using SLG = hermes::SerializedLiteralGenerator;
 
 namespace hermes {
 namespace hbc {

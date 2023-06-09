@@ -8,7 +8,7 @@
 #ifndef HERMES_VM_SERIALIZEDLITERALPARSER_H
 #define HERMES_VM_SERIALIZEDLITERALPARSER_H
 
-#include "hermes/BCGen/HBC/SerializedLiteralParserBase.h"
+#include "hermes/BCGen/SerializedLiteralParserBase.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/VM/HermesValue.h"
 #include "llvh/ADT/ArrayRef.h"
@@ -22,7 +22,7 @@ class RuntimeModule;
 /// SerializedLiteralParser is a parser that returns HermesValues
 /// from Literals that have been serialized in a variable length format.
 /// See SerializedLiteralGenerator.h for detailed format.
-class SerializedLiteralParser : public hbc::SerializedLiteralParserBase {
+class SerializedLiteralParser : public SerializedLiteralParserBase {
   /// Stores the runtimeModule the code is running in.
   /// Used to generate String Primitives from IdentifierIDs.
   /// If the nullptr is passed as an argument, the generator knows to

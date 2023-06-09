@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_BCGEN_HBC_SERIALIZEDLITERALGENERATOR_H
-#define HERMES_BCGEN_HBC_SERIALIZEDLITERALGENERATOR_H
+#ifndef HERMES_BCGEN_SERIALIZEDLITERALGENERATOR_H
+#define HERMES_BCGEN_SERIALIZEDLITERALGENERATOR_H
 
 #include "llvh/ADT/ArrayRef.h"
 
@@ -14,10 +14,6 @@
 
 namespace hermes {
 class Literal;
-
-namespace hbc {
-
-class BytecodeModuleGenerator;
 
 /// Generator of literal value buffers for object/array literals.
 /// SerializedLiteralParser.h is responsible to decode the serialized literal
@@ -94,7 +90,6 @@ class SerializedLiteralGenerator {
       bool isKeyBuffer);
 };
 
-} // namespace hbc
 } // namespace hermes
 
-#endif // HERMES_BCGEN_HBC_SERIALIZEDLITERALGENERATOR_H
+#endif // HERMES_BCGEN_SERIALIZEDLITERALGENERATOR_H

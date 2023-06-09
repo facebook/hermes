@@ -16,8 +16,6 @@ add_hermes_library(hermesHBCBackend
   ConsecutiveStringStorage.cpp
   DebugInfo.cpp
   Passes.cpp
-  SerializedLiteralGenerator.cpp
-  SerializedLiteralParserBase.cpp
   SimpleBytecodeBuilder.cpp
   StringKind.cpp
   TraverseLiteralStrings.cpp
@@ -39,7 +37,6 @@ add_hermes_library(hermesHBCBackendLean
   BytecodeDataProvider.cpp
   ConsecutiveStringStorage.cpp
   DebugInfo.cpp
-  SerializedLiteralParserBase.cpp
   SimpleBytecodeBuilder.cpp
   UniquingFilenameTable.cpp
   LINK_OBJLIBS

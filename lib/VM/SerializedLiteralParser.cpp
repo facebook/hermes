@@ -7,7 +7,7 @@
 
 #include "hermes/VM/SerializedLiteralParser.h"
 
-#include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
+#include "hermes/BCGen/SerializedLiteralGenerator.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/RuntimeModule.h"
 
@@ -16,7 +16,7 @@
 namespace hermes {
 namespace vm {
 
-using SLG = hermes::hbc::SerializedLiteralGenerator;
+using SLG = hermes::SerializedLiteralGenerator;
 
 HermesValue SerializedLiteralParser::get(Runtime &) {
   assert(hasNext() && "Object buffer doesn't have any more values");
