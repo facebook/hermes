@@ -474,6 +474,7 @@ static CallResult<Handle<JSArray>> makeMatchIndicesIndexPairArray(
     return ExecutionStatus::EXCEPTION;
   }
   Handle<JSArray> A = runtime.makeHandle<JSArray>(*arrRes);
+  JSArray::setStorageEndIndex(A, runtime, match.size());
 
   // For each integer i starting with 0 such that i < n, in ascending order, do
   size_t idx = 0;
@@ -486,28 +487,33 @@ static CallResult<Handle<JSArray>> makeMatchIndicesIndexPairArray(
         return ExecutionStatus::EXCEPTION;
       }
       auto matchIndexPair = runtime.makeHandle<JSArray>(*matchIndexPairRes);
+      JSArray::setStorageEndIndex(matchIndexPair, runtime, 2);
 
-      JSArray::setElementAt(
-          matchIndexPair,
+      JSArray::unsafeSetExistingElementAt(
+          *matchIndexPair,
           runtime,
           0,
-          runtime.makeHandle(
-              HermesValue::encodeUntrustedNumberValue(mg->location)));
-      JSArray::setElementAt(
-          matchIndexPair,
+          SmallHermesValue::encodeNumberValue(mg->location, runtime));
+      JSArray::unsafeSetExistingElementAt(
+          *matchIndexPair,
           runtime,
           1,
-          runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(
-              mg->location + mg->length)));
+          SmallHermesValue::encodeNumberValue(
+              mg->location + mg->length, runtime));
 
       // Perform ! CreateDataPropertyOrThrow(A, ! ToString(𝔽(i)),
       // matchIndexPair).
-      JSArray::setElementAt(A, runtime, idx, matchIndexPair);
+      JSArray::unsafeSetExistingElementAt(
+          *A,
+          runtime,
+          idx,
+          SmallHermesValue::encodeObjectValue(*matchIndexPair, runtime));
     } else {
       // Let matchIndexPair be undefined.
       // Perform ! CreateDataPropertyOrThrow(A, ! ToString(𝔽(i)),
       // matchIndexPair).
-      JSArray::setElementAt(A, runtime, idx, Runtime::getUndefinedValue());
+      JSArray::unsafeSetExistingElementAt(
+          *A, runtime, idx, SmallHermesValue::encodeUndefinedValue());
     }
 
     idx++;
@@ -517,9 +523,9 @@ static CallResult<Handle<JSArray>> makeMatchIndicesIndexPairArray(
   if (hasGroups) {
     // Let groups be OrdinaryObjectCreate(null).
     auto clazzHandle = runtime.makeHandle(mappingObj->getClass(runtime));
-    auto groupsObjRes = JSObject::create(
+    auto groupsRes = JSObject::create(
         runtime, Runtime::makeNullHandle<JSObject>(), clazzHandle);
-    auto groupsObj = runtime.makeHandle(groupsObjRes.get());
+    auto groups = runtime.makeHandle(groupsRes.get());
 
     // Perform ! CreateDataPropertyOrThrow(groups, groupNames[i - 1],
     // matchIndexPair).
@@ -530,7 +536,7 @@ static CallResult<Handle<JSArray>> makeMatchIndicesIndexPairArray(
                   .getNumber(runtime);
 
           JSObject::setNamedSlotValueUnsafe(
-              *groupsObj, runtime, desc.slot, A->at(runtime, groupIdx));
+              *groups, runtime, desc.slot, A->at(runtime, groupIdx));
         });
 
     // Perform ! CreateDataPropertyOrThrow(A, "groups", groups).
@@ -540,12 +546,12 @@ static CallResult<Handle<JSArray>> makeMatchIndicesIndexPairArray(
                 runtime,
                 Predefined::getSymbolID(Predefined::groups),
                 DefinePropertyFlags::getDefaultNewPropertyFlags(),
-                groupsObj) == ExecutionStatus::EXCEPTION)) {
+                groups) == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
   } else {
     // Else, let groups be undefined.
-    auto groupsObj = Runtime::getUndefinedValue();
+    auto groups = Runtime::getUndefinedValue();
 
     // Perform ! CreateDataPropertyOrThrow(A, "groups", groups).
     if (LLVM_UNLIKELY(
@@ -554,7 +560,7 @@ static CallResult<Handle<JSArray>> makeMatchIndicesIndexPairArray(
                 runtime,
                 Predefined::getSymbolID(Predefined::groups),
                 DefinePropertyFlags::getDefaultNewPropertyFlags(),
-                groupsObj) == ExecutionStatus::EXCEPTION)) {
+                groups) == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
   }
@@ -702,8 +708,8 @@ CallResult<Handle<JSArray>> directRegExpExec(
   JSObject::setNamedSlotValueUnsafe(*A, runtime, inputDesc, inputSHV);
 
   // If R contains any GroupName, then let hasGroups be true.
-  auto groupNames = regexp->getGroupNameMappings(runtime);
-  bool hasGroups = !!groupNames;
+  Handle<JSObject> groupNames = regexp->getGroupNameMappings(runtime);
+  bool hasGroups = (bool)groupNames;
 
   // Set capture groups (including the initial full match)
   size_t idx = 0;
