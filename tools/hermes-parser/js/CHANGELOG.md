@@ -1,5 +1,12 @@
 ## Unreleased
 
+## 0.12.1
+
+### `prettier-plugin-hermes-parser`
+
+- Lazy load the plugin so it does not effect performance if its included but not used.
+- Strip Flow parser from embedded prettier v3 bundle to improve plugin initialization time.
+
 ## 0.12.0
 
 ### `hermes-parser`
