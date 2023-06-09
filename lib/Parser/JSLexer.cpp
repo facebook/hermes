@@ -1996,7 +1996,7 @@ void JSLexer::scanTemplateLiteral() {
             appendUnicodeToStorage(0);
             break;
           }
-          // fall-through
+          [[fallthrough]];
 
         case '1':
         case '2':
