@@ -8,7 +8,7 @@
  * @format
  */
 
-// RUN: %shermes -typed -exec %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -typed -exec %s | %FileCheckOrRegen --match-full-lines %s
 
 'use strict';
 
@@ -310,9 +310,9 @@ function reconcileChildren(
 ): RenderNode[] {
   const outChildren: RenderNode[] = [];
   const oldChildrenByKey: any = new Map();
-  arrayPrototypeForEach_RenderNode(oldChildren, child => $SHBuiltin.call(mapPrototypeSet, oldChildrenByKey, child.key, child));
+  arrayPrototypeForEach_RenderNode(oldChildren, (child: RenderNode) => $SHBuiltin.call(mapPrototypeSet, oldChildrenByKey, child.key, child));
 
-  arrayPrototypeForEach_RenderNode(newChildren, child => {
+  arrayPrototypeForEach_RenderNode(newChildren, (child: RenderNode) => {
     const newKey = child.key;
     const oldChild = $SHBuiltin.call(mapPrototypeGet, oldChildrenByKey, newKey);
     if (oldChild !== undefined) {
@@ -354,8 +354,14 @@ function diffTrees(
   const createdComponents: ComponentPair[] = [];
   const deletedComponents: ComponentPair[] = [];
 
-  const oldEntityIds: number[] = arrayPrototypeMap_VirtualEntity(oldEntities, entity => entity.key);
-  const newEntityIds: number[] = arrayPrototypeMap_VirtualEntity(newEntities, entity => entity.key);
+  const oldEntityIds: number[] = arrayPrototypeMap_VirtualEntity(
+    oldEntities,
+    (entity: VirtualEntity) => entity.key,
+  );
+  const newEntityIds: number[] = arrayPrototypeMap_VirtualEntity(
+    newEntities,
+    (entity: VirtualEntity) => entity.key
+  );
 
   const createdEntities: number[] = arrayPrototypeFilter_number(newEntityIds,
     (entityId: number) => !arrayPrototypeIncludes_number(oldEntityIds, entityId),
@@ -582,7 +588,7 @@ class TestApp extends ComposedWidget {
     if (sizes.length != models.length) {
       throw new Error('sizes and models must have same length');
     }
-return arrayPrototypeMap_StringWithIndexToWidget(models, (modelPath, index) => {
+    return arrayPrototypeMap_StringWithIndexToWidget(models, (modelPath: string, index: number) => {
       const buttonSize = sizes[index];
       const widget = new ButtonAndModel(new RenderData(
         modelPath,
@@ -677,7 +683,9 @@ if (printDiff) {
 
 })();
 
-// CHECK:      {
+// Auto-generated content below. Please do not modify manually.
+
+// CHECK:{
 // CHECK-NEXT:  "createdEntities": [
 // CHECK-NEXT:    64,
 // CHECK-NEXT:    61,
@@ -1440,82 +1448,82 @@ if (printDiff) {
 // CHECK-NEXT:      }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    {
-// CHECK-NEXT:       "key": 6,
-// CHECK-NEXT:       "value": {
-// CHECK-NEXT:         "x": 2.8284271247461903
-// CHECK-NEXT:       }
-// CHECK-NEXT:     },
-// CHECK-NEXT:     {
-// CHECK-NEXT:       "key": 11,
-// CHECK-NEXT:       "value": {
-// CHECK-NEXT:         "x": 13
-// CHECK-NEXT:       }
-// CHECK-NEXT:     },
-// CHECK-NEXT:     {
-// CHECK-NEXT:       "key": 8,
-// CHECK-NEXT:       "value": {
-// CHECK-NEXT:         "x": 8
-// CHECK-NEXT:       }
-// CHECK-NEXT:     },
-// CHECK-NEXT:     {
-// CHECK-NEXT:       "key": 9,
-// CHECK-NEXT:       "value": {
-// CHECK-NEXT:         "x": "jQKzwhnzYa"
-// CHECK-NEXT:       }
-// CHECK-NEXT:     },
-// CHECK-NEXT:     {
-// CHECK-NEXT:       "key": 10,
-// CHECK-NEXT:       "value": {
-// CHECK-NEXT:         "x": 2.8284271247461903
-// CHECK-NEXT:       }
-// CHECK-NEXT:     },
-// CHECK-NEXT:     {
-// CHECK-NEXT:       "key": 15,
-// CHECK-NEXT:       "value": {
-// CHECK-NEXT:         "x": 13
-// CHECK-NEXT:       }
-// CHECK-NEXT:     },
-// CHECK-NEXT:     {
-// CHECK-NEXT:       "key": 12,
-// CHECK-NEXT:       "value": {
-// CHECK-NEXT:         "x": 18
-// CHECK-NEXT:       }
-// CHECK-NEXT:     },
-// CHECK-NEXT:     {
-// CHECK-NEXT:       "key": 13,
-// CHECK-NEXT:       "value": {
-// CHECK-NEXT:         "x": "buIwVjnNDI"
-// CHECK-NEXT:       }
-// CHECK-NEXT:     },
-// CHECK-NEXT:     {
-// CHECK-NEXT:       "key": 14,
-// CHECK-NEXT:       "value": {
-// CHECK-NEXT:         "x": 4.242640687119285
-// CHECK-NEXT:       }
-// CHECK-NEXT:     },
-// CHECK-NEXT:     {
-// CHECK-NEXT:       "key": 19,
-// CHECK-NEXT:       "value": {
-// CHECK-NEXT:         "x": 13
-// CHECK-NEXT:       }
-// CHECK-NEXT:     },
-// CHECK-NEXT:     {
-// CHECK-NEXT:       "key": 16,
-// CHECK-NEXT:       "value": {
-// CHECK-NEXT:         "x": 7
-// CHECK-NEXT:       }
-// CHECK-NEXT:     },
-// CHECK-NEXT:     {
-// CHECK-NEXT:       "key": 17,
-// CHECK-NEXT:       "value": {
-// CHECK-NEXT:         "x": "goBJPxAkFf"
-// CHECK-NEXT:       }
-// CHECK-NEXT:     },
-// CHECK-NEXT:     {
-// CHECK-NEXT:       "key": 18,
-// CHECK-NEXT:       "value": {
-// CHECK-NEXT:         "x": 2.6457513110645907
-// CHECK-NEXT:       }
-// CHECK-NEXT:     }
-// CHECK-NEXT:   ]
-// CHECK-NEXT: }
+// CHECK-NEXT:      "key": 6,
+// CHECK-NEXT:      "value": {
+// CHECK-NEXT:        "x": 2.8284271247461903
+// CHECK-NEXT:      }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "key": 11,
+// CHECK-NEXT:      "value": {
+// CHECK-NEXT:        "x": 13
+// CHECK-NEXT:      }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "key": 8,
+// CHECK-NEXT:      "value": {
+// CHECK-NEXT:        "x": 8
+// CHECK-NEXT:      }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "key": 9,
+// CHECK-NEXT:      "value": {
+// CHECK-NEXT:        "x": "jQKzwhnzYa"
+// CHECK-NEXT:      }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "key": 10,
+// CHECK-NEXT:      "value": {
+// CHECK-NEXT:        "x": 2.8284271247461903
+// CHECK-NEXT:      }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "key": 15,
+// CHECK-NEXT:      "value": {
+// CHECK-NEXT:        "x": 13
+// CHECK-NEXT:      }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "key": 12,
+// CHECK-NEXT:      "value": {
+// CHECK-NEXT:        "x": 18
+// CHECK-NEXT:      }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "key": 13,
+// CHECK-NEXT:      "value": {
+// CHECK-NEXT:        "x": "buIwVjnNDI"
+// CHECK-NEXT:      }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "key": 14,
+// CHECK-NEXT:      "value": {
+// CHECK-NEXT:        "x": 4.242640687119285
+// CHECK-NEXT:      }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "key": 19,
+// CHECK-NEXT:      "value": {
+// CHECK-NEXT:        "x": 13
+// CHECK-NEXT:      }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "key": 16,
+// CHECK-NEXT:      "value": {
+// CHECK-NEXT:        "x": 7
+// CHECK-NEXT:      }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "key": 17,
+// CHECK-NEXT:      "value": {
+// CHECK-NEXT:        "x": "goBJPxAkFf"
+// CHECK-NEXT:      }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "key": 18,
+// CHECK-NEXT:      "value": {
+// CHECK-NEXT:        "x": 2.6457513110645907
+// CHECK-NEXT:      }
+// CHECK-NEXT:    }
+// CHECK-NEXT:  ]
+// CHECK-NEXT:}

@@ -586,7 +586,7 @@ class TestApp extends ComposedWidget {
     if (sizes.length != models.length) {
       throw new Error('sizes and models must have same length');
     }
-return arrayPrototypeMap_StringWithIndexToWidget(models, (modelPath, index) => {
+    return arrayPrototypeMap_StringWithIndexToWidget(models, (modelPath: string, index: number) => {
       const buttonSize = sizes[index];
       const widget = new ButtonAndModel(new RenderData(
         modelPath,
