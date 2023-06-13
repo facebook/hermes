@@ -266,8 +266,14 @@ void PhiInst::removeEntryHelper(unsigned index) {
 
 void PhiInst::recalculateResultType() {
   Type res = Type::createNoType();
-  for (unsigned i = 0, e = getNumEntries(); i != e; ++i)
-    res = Type::unionTy(res, getEntry(i).first->getType());
+  for (unsigned i = 0, e = getNumEntries(); i != e; ++i) {
+    // It's possible the Phi has a nullptr operand,
+    // e.g. if the value was erased but this Phi wasn't erased yet.
+    // setOperand handles this scenario gracefully, so Phi must as well.
+    if (getEntry(i).first) {
+      res = Type::unionTy(res, getEntry(i).first->getType());
+    }
+  }
   setType(res);
 }
 
