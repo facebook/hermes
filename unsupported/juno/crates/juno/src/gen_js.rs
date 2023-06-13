@@ -1641,6 +1641,7 @@ impl GenJS<'_, '_> {
                 optional,
                 variance,
                 type_annotation,
+                ts_modifiers: None,
             }) => {
                 if *declare {
                     out!(self, "declare ");
@@ -1687,6 +1688,7 @@ impl GenJS<'_, '_> {
                 optional,
                 variance,
                 type_annotation,
+                ts_modifiers: None,
             }) => {
                 if let Some(variance) = variance {
                     variance.visit(ctx, self, Some(Path::new(node, NodeField::variance)));
@@ -2038,9 +2040,17 @@ impl GenJS<'_, '_> {
                 name,
                 attributes,
                 self_closing,
+                type_arguments,
             }) => {
                 out!(self, "<");
                 name.visit(ctx, self, Some(Path::new(node, NodeField::name)));
+                if let Some(type_arguments) = type_arguments {
+                    type_arguments.visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::type_arguments)),
+                    );
+                }
                 for attr in attributes.iter() {
                     self.space(ForceSpace::Yes);
                     attr.visit(ctx, self, Some(Path::new(node, NodeField::attributes)));
@@ -2666,12 +2676,16 @@ impl GenJS<'_, '_> {
                     }
                 }
             }
-            Node::DeclareVariable(DeclareVariable { metadata: _, id }) => {
+            Node::DeclareVariable(DeclareVariable {
+                metadata: _,
+                id,
+                kind,
+            }) => {
                 if let Some(path) = path {
                     if !matches!(path.parent, Node::DeclareExportDeclaration(_)) {
                         out!(self, "declare ");
                     }
-                    out!(self, "var ");
+                    out!(self, "{} ", kind.as_str());
                 }
                 id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
             }
@@ -3031,6 +3045,7 @@ impl GenJS<'_, '_> {
                 bound,
                 variance,
                 default,
+                uses_extends_bound: _,
             }) => {
                 if let Some(variance) = variance {
                     variance.visit(ctx, self, Some(Path::new(node, NodeField::variance)));
