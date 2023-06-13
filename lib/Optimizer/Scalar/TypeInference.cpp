@@ -353,7 +353,7 @@ static void propagateArgs(
       }
     }
 
-    if (first) {
+    if (first || paramTy.isNoType()) {
       // No information retrieved from call sites, bail.
       P->setType(Type::createAnyType());
     } else {
