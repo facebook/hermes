@@ -209,9 +209,14 @@ bool hermes::deleteUnusedFunctionsAndVariables(Module *M) {
     llvh::SmallVector<Function *, 16> toRemove;
     localChanged = false;
     for (auto &F : *M) {
-      // Delete any functions that are unused. The top level function does not
-      // have an explicit user, so check for it directly.
-      if (&F != M->getTopLevelFunction() && !F.hasUsers()) {
+      // Delete any functions that have any uses other than in their own bodies.
+      // The top level function does not have an explicit user,
+      // so check for it directly.
+      if (&F != M->getTopLevelFunction() &&
+          llvh::all_of(F.getUsers(), [&F](Instruction *user) {
+            // Use must be from another function to be meaningful.
+            return user->getFunction() == &F;
+          })) {
         toRemove.push_back(&F);
         toDestroy.push_back(&F);
         changed = true;
