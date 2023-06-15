@@ -2854,6 +2854,10 @@ class HBCStoreToEnvironmentInst : public Instruction {
     return SideEffect{}.setWriteFrame().setIdempotent();
   }
 
+  bool acceptsEmptyTypeImpl() const {
+    return true;
+  }
+
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::HBCStoreToEnvironmentInstKind;
@@ -2890,6 +2894,10 @@ class HBCLoadFromEnvironmentInst : public Instruction {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setReadFrame().setIdempotent();
+  }
+
+  bool acceptsEmptyTypeImpl() const {
+    return true;
   }
 
   static bool classof(const Value *V) {
@@ -3184,6 +3192,10 @@ class HBCLoadConstInst : public SingleOperandInst {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setIdempotent();
+  }
+
+  bool acceptsEmptyTypeImpl() const {
+    return true;
   }
 
   static bool classof(const Value *V) {
