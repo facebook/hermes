@@ -23,9 +23,10 @@ module.name_mapper='^hermes-eslint$' -> '<PROJECT_ROOT>/hermes-eslint/src/index.
 module.name_mapper='^hermes-transform$' -> '<PROJECT_ROOT>/hermes-transform/src/index.js'
 
 enums=true
+conditional_type=true
 
 [version]
-^0.208.1
+^0.209.0
 
 [lints]
 untyped-type-import=error
