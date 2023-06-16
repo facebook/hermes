@@ -3271,8 +3271,10 @@ class HBCGetArgumentsLengthInst : public SingleOperandInst {
   void operator=(const HBCGetArgumentsLengthInst &) = delete;
 
  public:
-  explicit HBCGetArgumentsLengthInst(AllocStackInst *reg)
-      : SingleOperandInst(ValueKind::HBCGetArgumentsLengthInstKind, reg) {}
+  explicit HBCGetArgumentsLengthInst(Value *lazyRegValue)
+      : SingleOperandInst(
+            ValueKind::HBCGetArgumentsLengthInstKind,
+            lazyRegValue) {}
   explicit HBCGetArgumentsLengthInst(
       const HBCGetArgumentsLengthInst *src,
       llvh::ArrayRef<Value *> operands)

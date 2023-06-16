@@ -450,7 +450,8 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
       auto *propertyString = llvh::dyn_cast<LiteralString>(load->getProperty());
       if (propertyString && propertyString->getValue().str() == "length") {
         // For `arguments.length`, get the length.
-        auto *length = builder.createHBCGetArgumentsLengthInst(lazyReg);
+        auto *length = builder.createHBCGetArgumentsLengthInst(
+            builder.createLoadStackInst(lazyReg));
         load->replaceAllUsesWith(length);
         load->eraseFromParent();
       } else {

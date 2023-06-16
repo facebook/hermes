@@ -898,8 +898,8 @@ IRBuilder::createHBCGetArgumentsPropByValStrictInst(
   return inst;
 }
 HBCGetArgumentsLengthInst *IRBuilder::createHBCGetArgumentsLengthInst(
-    AllocStackInst *lazyReg) {
-  auto inst = new HBCGetArgumentsLengthInst(lazyReg);
+    Value *lazyRegValue) {
+  auto inst = new HBCGetArgumentsLengthInst(lazyRegValue);
   insert(inst);
   return inst;
 }
