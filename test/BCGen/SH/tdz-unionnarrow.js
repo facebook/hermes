@@ -132,8 +132,8 @@ function f2() {
 // CHKLIR-NEXT:%BB0:
 // CHKLIR-NEXT:  %0 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHKLIR-NEXT:  %1 = HBCResolveEnvironment (:environment) %f2(): any
-// CHKLIR-NEXT:  %2 = HBCLoadFromEnvironmentInst (:any) %1: environment, [x@f2]: any|empty
-// CHKLIR-NEXT:  %3 = ThrowIfEmptyInst (:any) %2: any
+// CHKLIR-NEXT:  %2 = HBCLoadFromEnvironmentInst (:any|empty) %1: environment, [x@f2]: any|empty
+// CHKLIR-NEXT:  %3 = ThrowIfEmptyInst (:any) %2: any|empty
 // CHKLIR-NEXT:  %4 = HBCLoadConstInst (:number) 10: number
 // CHKLIR-NEXT:  %5 = HBCStoreToEnvironmentInst %1: environment, %4: number, [x@f2]: any|empty
 // CHKLIR-NEXT:  %6 = HBCLoadFromEnvironmentInst (:any) %1: environment, [x@f2]: any|empty

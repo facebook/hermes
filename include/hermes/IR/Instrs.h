@@ -2873,6 +2873,7 @@ class HBCLoadFromEnvironmentInst : public Instruction {
 
   explicit HBCLoadFromEnvironmentInst(Value *env, Variable *var)
       : Instruction(ValueKind::HBCLoadFromEnvironmentInstKind) {
+    setType(var->getType());
     pushOperand(env);
     pushOperand(var);
   }
