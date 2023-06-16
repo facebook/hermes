@@ -429,8 +429,9 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
   bool isStrict = llvh::isa<CreateArgumentsStrictInst>(createArguments);
 
   builder.setInsertionPoint(createArguments);
-  AllocStackInst *lazyReg =
-      builder.createAllocStackInst("arguments", Type::createObject());
+  AllocStackInst *lazyReg = builder.createAllocStackInst(
+      "arguments",
+      Type::unionTy(Type::createObject(), Type::createUndefined()));
   builder.createStoreStackInst(builder.getLiteralUndefined(), lazyReg);
 
   // Process all LoadPropertyInst's first because they may add another user
