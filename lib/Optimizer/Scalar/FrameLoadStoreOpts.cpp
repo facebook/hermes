@@ -253,6 +253,7 @@ class FunctionLoadStoreOptimizer {
     // Store the valid variables for this block so subsequent blocks can use it.
     auto [it, first] =
         blockValidVariables_.try_emplace(BB, std::move(validVariables));
+    (void)first;
     assert(first && "Block already visited");
 
     return changed;
