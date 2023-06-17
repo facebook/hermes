@@ -3333,7 +3333,7 @@ class HBCGetArgumentsPropByValInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return SideEffect::createExecute();
+    return SideEffect::createExecute().setReadStack().setWriteStack();
   }
 
   static bool classof(const Value *V) {
