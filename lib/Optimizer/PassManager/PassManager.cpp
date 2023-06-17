@@ -26,25 +26,16 @@ void PassManager::run(Function *F) {
     return;
 
   // Optionally dump the IR after every pass if the flag is set.
-  Pass *lastPass = nullptr;
-  auto dumpLastPass = [&lastPass, F](Pass *newPass) {
-    if (!F->getContext().getCodeGenerationSettings().dumpIRBetweenPasses)
-      return;
+  bool dumpBetweenPasses =
+      F->getContext().getCodeGenerationSettings().dumpIRBetweenPasses;
 
-    if (!lastPass) {
-      llvh::dbgs() << "*** INITIAL STATE\n\n";
-    } else {
-      llvh::dbgs() << "\n*** AFTER " << lastPass->getName() << "\n\n";
-    }
-
+  if (dumpBetweenPasses) {
+    llvh::dbgs() << "*** INITIAL STATE\n\n";
     F->dump(llvh::dbgs());
-    lastPass = newPass;
-  };
+  }
 
   // For each pass:
   for (const std::unique_ptr<Pass> &P : pipeline_) {
-    dumpLastPass(P.get());
-
     auto *FP = llvh::dyn_cast<FunctionPass>(P.get());
     assert(FP && "Invalid pass kind");
     LLVM_DEBUG(llvh::dbgs() << "Running the pass " << FP->getName() << "\n");
@@ -52,8 +43,12 @@ void PassManager::run(Function *F) {
         llvh::dbgs() << "Optimizing the function " << F->getInternalNameStr()
                      << "\n");
     FP->runOnFunction(F);
+
+    if (dumpBetweenPasses) {
+      llvh::dbgs() << "\n*** AFTER " << P->getName() << "\n\n";
+      F->dump(llvh::dbgs());
+    }
   }
-  dumpLastPass(nullptr);
 }
 
 void PassManager::run(Module *M) {
@@ -64,25 +59,16 @@ void PassManager::run(Module *M) {
   }
 
   // Optionally dump the IR after every pass if the flag is set.
-  Pass *lastPass = nullptr;
-  auto dumpLastPass = [&lastPass, M](Pass *newPass) {
-    if (!M->getContext().getCodeGenerationSettings().dumpIRBetweenPasses)
-      return;
+  bool dumpBetweenPasses =
+      M->getContext().getCodeGenerationSettings().dumpIRBetweenPasses;
 
-    if (!lastPass) {
-      llvh::dbgs() << "*** INITIAL STATE\n\n";
-    } else {
-      llvh::dbgs() << "\n*** AFTER " << lastPass->getName() << "\n\n";
-    }
-
+  if (dumpBetweenPasses) {
+    llvh::dbgs() << "*** INITIAL STATE\n\n";
     M->dump(llvh::dbgs());
-    lastPass = newPass;
-  };
+  }
 
   // For each pass:
   for (std::unique_ptr<Pass> &P : pipeline_) {
-    dumpLastPass(P.get());
-
     TimeRegion timeRegion(
         timerGroup ? timers.emplace_back("", P->getName(), *timerGroup),
         &timers.back()
@@ -103,23 +89,18 @@ void PassManager::run(Module *M) {
                          << F->getInternalNameStr() << "\n");
         FP->runOnFunction(F);
       }
-
-      // Move to the next pass.
-      continue;
-    }
-
-    /// Handle module passes:
-    if (auto *MP = llvh::dyn_cast<ModulePass>(P.get())) {
+    } else {
+      auto *MP = llvh::cast<ModulePass>(P.get());
       LLVM_DEBUG(
           llvh::dbgs() << "Running the module pass " << MP->getName() << "\n");
       MP->runOnModule(M);
-      // Move to the next pass.
-      continue;
     }
 
-    llvm_unreachable("Unknown pass kind");
+    if (dumpBetweenPasses) {
+      llvh::dbgs() << "\n*** AFTER " << P->getName() << "\n\n";
+      M->dump(llvh::dbgs());
+    }
   }
-  dumpLastPass(nullptr);
 }
 } // namespace hermes
 
