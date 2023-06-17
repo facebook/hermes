@@ -83,17 +83,15 @@ bool lowerAllocObjectBuffer(AllocObjectLiteralInst *allocInst) {
     if (SerializedLiteralGenerator::isSerializableLiteral(value)) {
       propMap.push_back(std::pair<Literal *, Literal *>(
           propLiteral, llvh::cast<Literal>(value)));
-    } else if (llvh::isa<LiteralString>(propLiteral)) {
-      // LiteralString key with undefined / non-constant value.
+    } else {
+      // The key has a non-serializable value, insert a placeholder so we
+      // generate the final hidden class upfront, and then store the value
+      // later.
+      // TODO: Evaluate whether the placeholder is worthwhile for properties
+      // that are numbers, since their order is not important.
       propMap.push_back(std::pair<Literal *, Literal *>(
           propLiteral, builder.getLiteralNull()));
       builder.createStorePropertyInst(value, allocInst, key);
-    } else {
-      // LiteralNumber key with undefined / non-constant value.
-      // No need to put Null in the buffer, as numeric properties can
-      // be added in any order.
-      builder.createStoreOwnPropertyInst(
-          value, allocInst, key, IRBuilder::PropEnumerable::Yes);
     }
   }
 
