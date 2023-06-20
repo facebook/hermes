@@ -1577,17 +1577,6 @@ void HBCISel::generateCreateThisInst(CreateThisInst *Inst, BasicBlock *next) {
   auto closure = encodeValue(Inst->getClosure());
   BCFGen_->emitCreateThis(output, proto, closure);
 }
-void HBCISel::generateConstructInst(ConstructInst *Inst, BasicBlock *next) {
-  auto output = encodeValue(Inst);
-  auto function = encodeValue(Inst->getCallee());
-  verifyCall(Inst);
-
-  if (Inst->getNumArguments() <= UINT8_MAX) {
-    BCFGen_->emitConstruct(output, function, Inst->getNumArguments());
-  } else {
-    BCFGen_->emitConstructLong(output, function, Inst->getNumArguments());
-  }
-}
 void HBCISel::generateGetConstructedObjectInst(
     GetConstructedObjectInst *Inst,
     BasicBlock *next) {

@@ -85,8 +85,6 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
 
   // For each call site:
   for (BaseCallInst *caller : callsites) {
-    // For each parameter in the callee except "this" (which we can't analyze
-    // due to ConstructInst):
     for (uint32_t i = 0; i < numFormalParam; i++) {
       // Get the arg that matches the i'th parameter. Unpassed parameters are
       // converted into undefs.
@@ -120,10 +118,6 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
       }
     }
 
-    // For each argument in the call site (excluding the 'this' argument).
-    // The 'this' argument cannot be handled since ConstructInst doesn't
-    // specify a value for it and we would incorrectly believe it to be
-    // "undefined".
     for (unsigned i = 0, e = caller->getNumArguments(); i < e; i++) {
       // Remember which arguments are unused by the callee (parameters with no
       // users and undeclared parameters).

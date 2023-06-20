@@ -41,7 +41,7 @@ new D().inherited();
 // CHECK-NEXT:  %10 = StorePropertyStrictInst %8: object, %5: object, "prototype": string
 // CHECK-NEXT:  %11 = LoadPropertyInst (:any) %5: object, "prototype": string
 // CHECK-NEXT:  %12 = AllocObjectInst (:object) 0: number, %11: any
-// CHECK-NEXT:  %13 = ConstructInst (:undefined) %5: object, %D(): undefined, empty: any, %5: object, %12: object
+// CHECK-NEXT:  %13 = CallInst (:undefined) %5: object, %D(): undefined, empty: any, %5: object, %12: object
 // CHECK-NEXT:  %14 = LoadParentInst (:object) %12: object
 // CHECK-NEXT:  %15 = PrLoadInst (:object) %14: object, 0: number, "inherited": string
 // CHECK-NEXT:  %16 = CallInst [njsf] (:any) %15: object, empty: any, empty: any, undefined: undefined, %12: object

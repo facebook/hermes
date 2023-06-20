@@ -924,19 +924,9 @@ CreateThisInst *IRBuilder::createCreateThisInst(
   insert(inst);
   return inst;
 }
-ConstructInst *IRBuilder::createConstructInst(
-    Value *closure,
-    Value *target,
-    Value *env,
-    Value *thisValue,
-    ArrayRef<Value *> arguments) {
-  auto inst = new ConstructInst(closure, target, env, thisValue, arguments);
-  insert(inst);
-  return inst;
-}
 GetConstructedObjectInst *IRBuilder::createGetConstructedObjectInst(
     CreateThisInst *thisValue,
-    ConstructInst *constructorReturnValue) {
+    CallInst *constructorReturnValue) {
   auto inst = new GetConstructedObjectInst(thisValue, constructorReturnValue);
   insert(inst);
   return inst;

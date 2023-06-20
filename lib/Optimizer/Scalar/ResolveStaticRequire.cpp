@@ -179,19 +179,20 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
       if (fail)
         continue;
 
-      if (llvh::isa<ConstructInst>(call)) {
-        EM_.warning(
-            Warning::UnresolvedStaticRequire,
-            call->getLocation(),
-            "'require' used as a constructor");
-        canResolve_ = false;
-        continue;
-      }
       if (!llvh::isa<CallInst>(call)) {
         EM_.warning(
             Warning::UnresolvedStaticRequire,
             call->getLocation(),
             "'require' used in unexpected way");
+        canResolve_ = false;
+        continue;
+      }
+
+      if (!llvh::isa<LiteralUndefined>(call->getNewTarget())) {
+        EM_.warning(
+            Warning::UnresolvedStaticRequire,
+            call->getLocation(),
+            "'require' used as a constructor");
         canResolve_ = false;
         continue;
       }

@@ -1610,12 +1610,6 @@ class InstrGen {
     os_ << " = _sh_ljs_call_builtin(shr, frame, " << inst.getNumArguments() - 1
         << ", " << (uint32_t)inst.getBuiltinIndex() << ");\n";
   }
-  void generateConstructInst(ConstructInst &inst) {
-    os_.indent(2);
-    generateRegister(inst);
-    os_ << " = _sh_ljs_construct(shr, frame, " << inst.getNumArguments() - 1
-        << ");\n";
-  }
   void generateHBCCallNInst(HBCCallNInst &inst) {
     unimplemented(inst);
   }

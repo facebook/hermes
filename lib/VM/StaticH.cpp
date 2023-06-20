@@ -385,17 +385,6 @@ _sh_ljs_call(SHRuntime *shr, SHLegacyValue *frame, uint32_t argCount) {
   return doCall(runtime, &newFrame.getCalleeClosureOrCBRef());
 }
 
-extern "C" SHLegacyValue
-_sh_ljs_construct(SHRuntime *shr, SHLegacyValue *frame, uint32_t argCount) {
-  Runtime &runtime = getRuntime(shr);
-  StackFramePtr newFrame(runtime.getStackPointer());
-  newFrame.getPreviousFrameRef() = HermesValue::encodeNativePointer(frame);
-  newFrame.getSavedIPRef() = HermesValue::encodeNativePointer(nullptr);
-  newFrame.getSavedCodeBlockRef() = HermesValue::encodeNativePointer(nullptr);
-  newFrame.getArgCountRef() = HermesValue::encodeNativeUInt32(argCount);
-  return doCall(runtime, &newFrame.getCalleeClosureOrCBRef());
-}
-
 extern "C" SHLegacyValue _sh_ljs_call_builtin(
     SHRuntime *shr,
     SHLegacyValue *frame,

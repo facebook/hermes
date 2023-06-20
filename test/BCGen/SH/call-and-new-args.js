@@ -68,7 +68,7 @@ function test_builtin(a) {
 // CHECK-NEXT:  $stack[6]  = MovInst (:any) $loc5
 // CHECK-NEXT:  $stack[5]  = MovInst (:any) $loc5
 // CHECK-NEXT:  $stack[4]  = MovInst (:object) $loc1
-// CHECK-NEXT:  $loc0      = ConstructInst (:any) $stack[5], empty: any, empty: any, $loc5, $stack[4], $stack[3], $stack[2], $stack[1], $stack[0]
+// CHECK-NEXT:  $loc0      = CallInst (:any) $stack[5], empty: any, empty: any, $loc5, $stack[4], $stack[3], $stack[2], $stack[1], $stack[0]
 // CHECK-NEXT:  $loc0      = GetConstructedObjectInst (:object) $loc1, $loc0
 // CHECK-NEXT:  $loc0      = ReturnInst $loc0
 // CHECK-NEXT:function_end

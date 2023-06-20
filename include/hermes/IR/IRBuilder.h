@@ -547,22 +547,9 @@ class IRBuilder {
 
   CreateThisInst *createCreateThisInst(Value *prototype, Value *closure);
 
-  ConstructInst *createConstructInst(
-      Value *closure,
-      Value *target,
-      Value *env,
-      Value *thisValue,
-      ArrayRef<Value *> arguments);
-  ConstructInst *createConstructInst(
-      Value *constructor,
-      Value *thisValue,
-      ArrayRef<Value *> args) {
-    return createConstructInst(
-        constructor, getEmptySentinel(), getEmptySentinel(), thisValue, args);
-  }
   GetConstructedObjectInst *createGetConstructedObjectInst(
       CreateThisInst *thisValue,
-      ConstructInst *constructorReturnValue);
+      CallInst *constructorReturnValue);
 
   HBCProfilePointInst *createHBCProfilePointInst(uint16_t pointIndex);
 

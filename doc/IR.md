@@ -339,16 +339,6 @@ Arguments | %callee is the closure to execute. %target is either the Function or
 Semantics | The instruction passes the control to the callee, that must be of closure type. The arguments are mapped to the parameters. Unmapped parameters are initialized to 'undefined'.
 Effects | May read and write memory.
 
-### ConstructInst
-
-ConstructInst | _
---- | --- |
-Description | Construct a new object with a constructor
-Example | %0 = ConstructInst %constructor, %target, %env, %newtarget, %this, %arg0, %arg1, %arg2, ...
-Arguments | %constructor is the constructor function to execute. %target is either the Function or EmptySentinel. %env is the environment for the function or EmptySentinel. %newtarget is the new.target value to use for the call. %arg0 ... %argN are the arguments passed to the constructor function.
-Semantics | The instruction performs the steps defined in ES5.1 sec-11.2.2 and sec-13.2.2. It allocates the object and calls the constructor function with the new object and the supplied arguments.
-Effects | May read and write memory.
-
 ### CallBuiltinInst
 
 CallBuiltinInst | _

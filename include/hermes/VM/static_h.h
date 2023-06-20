@@ -328,11 +328,6 @@ SHERMES_EXPORT SHLegacyValue
 _sh_ljs_call(SHRuntime *shr, SHLegacyValue *frame, uint32_t argCount);
 
 /// Performs a function call. The new frame is at the top of the stack.
-/// Arguments, this, callee, and "new.target" must be populated.
-SHERMES_EXPORT SHLegacyValue
-_sh_ljs_construct(SHRuntime *shr, SHLegacyValue *frame, uint32_t argCount);
-
-/// Performs a function call. The new frame is at the top of the stack.
 /// The arguments (excluding 'this') must be populated.
 SHERMES_EXPORT SHLegacyValue _sh_ljs_call_builtin(
     SHRuntime *shr,

@@ -2023,38 +2023,38 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
     // always a dummy one, which we even loaded (for TDZ), but there is no need
     // to invoke it.
     if (classType->getConstructorType()) {
-      ConstructInst::ArgumentList args;
+      CallInst::ArgumentList args;
       for (auto &arg : N->_arguments)
         args.push_back(genExpression(&arg));
 
       // If we know the ClassType but it hasn't been populated in
       // classConstructors_ yet, then it must occur later in the same function.
       // If it was created in a surrounding function and captured, the function
-      // queueing mechanism would result in compiling this ConstructInst after
+      // queueing mechanism would result in compiling this CallInst after
       // it anyway.
       // So populate the target when we've already made the Function for the
       // corresponding ClassType.
       auto it = classConstructors_.find(classType);
       if (it != classConstructors_.end()) {
         Value *target = it->second;
-        Builder.createConstructInst(
-            callee, target, Builder.getEmptySentinel(), newInst, args);
+        Builder.createCallInst(
+            callee, target, Builder.getEmptySentinel(), callee, newInst, args);
       } else {
-        Builder.createConstructInst(callee, newInst, args);
+        Builder.createCallInst(callee, callee, newInst, args);
       }
     }
     return newInst;
   }
 
   if (!hasSpread) {
-    ConstructInst::ArgumentList args;
+    CallInst::ArgumentList args;
     for (auto &arg : N->_arguments) {
       args.push_back(genExpression(&arg));
     }
     auto *prototype = Builder.createLoadPropertyInst(
         callee, Builder.getLiteralString("prototype"));
     auto *thisArg = Builder.createCreateThisInst(prototype, callee);
-    auto *res = Builder.createConstructInst(callee, thisArg, args);
+    auto *res = Builder.createCallInst(callee, callee, thisArg, args);
     return Builder.createGetConstructedObjectInst(thisArg, res);
   }
 

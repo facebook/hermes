@@ -110,7 +110,7 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
     // Use the compiledEntities_ cache even though we're not enqueuing a
     // function compilation (because the function is trivial).
     // This way we avoid making multiple implicit constructors for the same
-    // classType, allowing us to populate the target operand of ConstructInsts.
+    // classType, allowing us to populate the target operand of CallInsts.
     if (Value *found =
             findCompiledEntity(node, ExtraKey::ImplicitClassConstructor)) {
       func = llvh::cast<Function>(found);

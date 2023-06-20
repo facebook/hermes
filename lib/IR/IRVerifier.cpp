@@ -884,7 +884,6 @@ void Verifier::visitHBCReifyArgumentsStrictInst(
     const HBCReifyArgumentsStrictInst &Inst) {
   // Nothing to verify at this point.
 }
-void Verifier::visitConstructInst(const ConstructInst &Inst) {}
 void Verifier::visitCreateThisInst(const CreateThisInst &Inst) {}
 void Verifier::visitGetConstructedObjectInst(
     const GetConstructedObjectInst &Inst) {}

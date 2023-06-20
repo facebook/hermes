@@ -368,13 +368,6 @@ static void propagateArgs(
   }
 }
 
-/// Propagate the return type from the target of a given BaseCallInst \p CI.
-static Type inferBaseCallInst(BaseCallInst *CI) {
-  if (auto *F = llvh::dyn_cast<Function>(CI->getTarget()))
-    return F->getType();
-  return Type::createAnyType();
-}
-
 /// Actual implementation of type inference pass.
 /// Contains the ability to infer types per-instruction.
 ///
@@ -795,7 +788,10 @@ class TypeInferenceImpl {
   }
 
   Type inferCallInst(CallInst *inst) {
-    return inferBaseCallInst(inst);
+    // If the target of this call is known, propagate its return type.
+    if (auto *F = llvh::dyn_cast<Function>(inst->getTarget()))
+      return F->getType();
+    return Type::createAnyType();
   }
   Type inferCallBuiltinInst(CallBuiltinInst *inst) {
     switch (inst->getBuiltinIndex()) {
@@ -823,9 +819,6 @@ class TypeInferenceImpl {
       default:
         return Type::createAnyType();
     }
-  }
-  Type inferConstructInst(ConstructInst *inst) {
-    return inferBaseCallInst(inst);
   }
   Type inferHBCCallNInst(HBCCallNInst *inst) {
     // unimplemented

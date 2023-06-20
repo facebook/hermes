@@ -3510,37 +3510,6 @@ class CreateThisInst : public Instruction {
   }
 };
 
-/// Call a constructor. thisValue can be created with CreateThisInst.
-class ConstructInst : public BaseCallInst {
-  ConstructInst(const ConstructInst &) = delete;
-  void operator=(const ConstructInst &) = delete;
-
- public:
-  explicit ConstructInst(
-      Value *callee,
-      Value *target,
-      Value *env,
-      Value *thisValue,
-      ArrayRef<Value *> args)
-      : BaseCallInst(
-            ValueKind::ConstructInstKind,
-            callee,
-            target,
-            env,
-            callee,
-            thisValue,
-            args) {}
-  explicit ConstructInst(
-      const ConstructInst *src,
-      llvh::ArrayRef<Value *> operands)
-      : BaseCallInst(src, operands) {}
-
-  static bool classof(const Value *V) {
-    ValueKind kind = V->getKind();
-    return kind == ValueKind::ConstructInstKind;
-  }
-};
-
 /// Choose between 'this' and the object returned by a constructor.
 class GetConstructedObjectInst : public Instruction {
   GetConstructedObjectInst(const GetConstructedObjectInst &) = delete;
@@ -3551,7 +3520,7 @@ class GetConstructedObjectInst : public Instruction {
 
   explicit GetConstructedObjectInst(
       CreateThisInst *thisValue,
-      ConstructInst *constructorReturnValue)
+      CallInst *constructorReturnValue)
       : Instruction(ValueKind::GetConstructedObjectInstKind) {
     pushOperand(thisValue);
     pushOperand(constructorReturnValue);

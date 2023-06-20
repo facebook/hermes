@@ -43,9 +43,8 @@ static bool lowerCalls(Function *F, SHRegisterAllocator &RA) {
             stackReg(hbc::StackFrameLayout::CalleeClosureOrCB));
       }
 
-      // If this is a normal or constructor call, populate the callee and
-      // new.target.
-      if (llvh::isa<ConstructInst>(call) || llvh::isa<CallInst>(call)) {
+      // If this is a normal call, populate the callee and new.target.
+      if (llvh::isa<CallInst>(call)) {
         RA.updateRegister(
             builder.createMovInst(call->getNewTarget()),
             stackReg(hbc::StackFrameLayout::NewTarget));
