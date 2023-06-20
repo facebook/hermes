@@ -366,9 +366,10 @@ CallInst *IRBuilder::createCallInst(
     Value *callee,
     Value *target,
     Value *env,
+    Value *newTarget,
     Value *thisValue,
     ArrayRef<Value *> args) {
-  auto CI = new CallInst(callee, target, env, thisValue, args);
+  auto CI = new CallInst(callee, target, env, newTarget, thisValue, args);
   insert(CI);
   return CI;
 }
@@ -377,9 +378,10 @@ HBCCallNInst *IRBuilder::createHBCCallNInst(
     Value *callee,
     Value *target,
     Value *env,
+    Value *newTarget,
     Value *thisValue,
     ArrayRef<Value *> args) {
-  auto CI = new HBCCallNInst(callee, target, env, thisValue, args);
+  auto CI = new HBCCallNInst(callee, target, env, newTarget, thisValue, args);
   insert(CI);
   return CI;
 }

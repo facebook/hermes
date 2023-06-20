@@ -49,7 +49,7 @@ function baz() {
 // CHECK-NEXT:  %3 = DirectEvalInst (:any) "1 + 1": string, false: boolean
 // CHECK-NEXT:  %4 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "1 + 1": string
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "1 + 1": string
 // CHECK-NEXT:  %6 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %7 = PhiInst (:any) %3: any, %BB1, %5: any, %BB2
@@ -64,14 +64,14 @@ function baz() {
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "eval": string
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Math": string
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %4 = GetBuiltinClosureInst (:object) [globalThis.eval]: number
 // CHECK-NEXT:  %5 = CmpBrStrictlyEqualInst %0: any, %4: object, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = DirectEvalInst (:any) "2 + 2": string, false: boolean
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "2 + 2": string, %1: any, %3: any
+// CHECK-NEXT:  %8 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "2 + 2": string, %1: any, %3: any
 // CHECK-NEXT:  %9 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %10 = PhiInst (:any) %6: any, %BB1, %8: any, %BB2
@@ -90,7 +90,7 @@ function baz() {
 // CHECK-NEXT:  %3 = DirectEvalInst (:any) undefined: undefined, false: boolean
 // CHECK-NEXT:  %4 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %6 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %7 = PhiInst (:any) %3: any, %BB1, %5: any, %BB2

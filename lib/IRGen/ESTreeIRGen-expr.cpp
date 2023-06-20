@@ -602,7 +602,8 @@ Value *ESTreeIRGen::genSHBuiltinCall(ESTree::CallExpressionNode *call) {
     return Builder.getLiteralUndefined();
   }
 
-  return Builder.createCallInst(callee, thisValue, args);
+  return Builder.createCallInst(
+      callee, /* newTarget */ Builder.getLiteralUndefined(), thisValue, args);
 }
 
 Value *ESTreeIRGen::emitCall(
@@ -622,7 +623,8 @@ Value *ESTreeIRGen::emitCall(
       args.push_back(genExpression(&arg));
     }
 
-    auto *callInst = Builder.createCallInst(callee, thisVal, args);
+    auto *callInst = Builder.createCallInst(
+        callee, /* newTarget */ Builder.getLiteralUndefined(), thisVal, args);
     if (auto *functionType = llvh::dyn_cast<flow::FunctionType>(
             flowContext_.getNodeTypeOrAny(getCallee(call))->info)) {
       // Every FunctionType currently is going to be compiled to a
@@ -875,8 +877,11 @@ Value *ESTreeIRGen::genCallEvalExpr(ESTree::CallExpressionNode *call) {
 
   // Perform a normal call.
   Builder.setInsertionBlock(callBlock);
-  Value *callRes =
-      Builder.createCallInst(callee, Builder.getLiteralUndefined(), args);
+  Value *callRes = Builder.createCallInst(
+      callee,
+      /* newTarget */ Builder.getLiteralUndefined(),
+      /* thisValue */ Builder.getLiteralUndefined(),
+      args);
   Builder.createBranchInst(nextBlock);
 
   Builder.setInsertionBlock(nextBlock);
@@ -1386,6 +1391,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
   Builder.setInsertionBlock(getNextBlock);
   auto *nextResult = Builder.createCallInst(
       iteratorRecord.nextMethod,
+      /* newTarget */ Builder.getLiteralUndefined(),
       iteratorRecord.iterator,
       {Builder.createLoadStackInst(received)});
   emitEnsureObject(nextResult, "iterator.next() did not return an object");
@@ -1440,6 +1446,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
                 // ? Call(return, iterator, received.[[Value]]).
                 auto *innerReturnResult = Builder.createCallInst(
                     returnMethod,
+                    /* newTarget */ Builder.getLiteralUndefined(),
                     iteratorRecord.iterator,
                     {Builder.createLoadStackInst(received)});
                 // vi. If Type(innerReturnResult) is not Object,
@@ -1524,7 +1531,10 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
         // propagated. Normal completions from an inner throw method are
         // processed similarly to an inner next.
         auto *innerResult = Builder.createCallInst(
-            throwMethod, iteratorRecord.iterator, {catchReg});
+            throwMethod,
+            /* newTarget */ Builder.getLiteralUndefined(),
+            iteratorRecord.iterator,
+            {catchReg});
         // ii. 4. If Type(innerResult) is not Object,
         //        throw a TypeError exception.
         emitEnsureObject(
@@ -2266,7 +2276,11 @@ Value *ESTreeIRGen::genTaggedTemplateExpr(
     callee = genExpression(Expr->_tag);
   }
 
-  return Builder.createCallInst(callee, thisVal, tagFuncArgList);
+  return Builder.createCallInst(
+      callee,
+      /* newTarget */ Builder.getLiteralUndefined(),
+      thisVal,
+      tagFuncArgList);
 }
 
 } // namespace irgen

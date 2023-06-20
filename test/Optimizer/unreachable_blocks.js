@@ -40,9 +40,9 @@ bar();
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %bar(): undefined
 // CHECK-NEXT:  %5 = StorePropertyLooseInst %4: object, globalObject: object, "bar": string
 // CHECK-NEXT:  %6 = LoadPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) globalObject: object, "bar": string
-// CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %10 = ReturnInst %9: any
 // CHECK-NEXT:function_end
 

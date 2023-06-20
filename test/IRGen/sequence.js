@@ -80,11 +80,11 @@ function test2(x,y) {
 // CHECK-NEXT:  %4 = LoadPropertyInst (:any) globalObject: object, "sink0": string
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %7 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, %5: any, %6: any
+// CHECK-NEXT:  %7 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %5: any, %6: any
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) globalObject: object, "sink1": string
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %11 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, %9: any, %10: any
+// CHECK-NEXT:  %11 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %9: any, %10: any
 // CHECK-NEXT:  %12 = ReturnInst %11: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %13 = ReturnInst undefined: undefined

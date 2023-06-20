@@ -66,7 +66,7 @@ function test_member_access(obj, param) {
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [y]: any
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) [z]: any
-// CHECK-NEXT:  %10 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, %7: any, %8: any, %9: any
+// CHECK-NEXT:  %10 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %7: any, %8: any, %9: any
 // CHECK-NEXT:  %11 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -80,6 +80,6 @@ function test_member_access(obj, param) {
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [obj]: any
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %4: any, "foo": string
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [param]: any
-// CHECK-NEXT:  %7 = CallInst (:any) %5: any, empty: any, empty: any, %4: any, %6: any
+// CHECK-NEXT:  %7 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, %4: any, %6: any
 // CHECK-NEXT:  %8 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -69,7 +69,7 @@ function shadow(arguments) {
 // CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "length": string
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) globalObject: object, "cheap": string
-// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, %0: object
+// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: object
 // CHECK-NEXT:  %4 = BinaryAddInst (:any) %1: any, %3: any
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %0: object, 0: number
 // CHECK-NEXT:  %6 = BinaryAddInst (:any) %4: any, %5: any

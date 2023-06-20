@@ -73,13 +73,13 @@ function outer() {
 // CHECK-NEXT:frame = [k1: any, k2: any, k3: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadPropertyInst (:any) globalObject: object, "bar": string
-// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %2 = StoreFrameInst %1: any, [k1]: any
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "bar": string
-// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %5 = StoreFrameInst %4: any, [k2]: any
 // CHECK-NEXT:  %6 = LoadPropertyInst (:any) globalObject: object, "bar": string
-// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %8 = StoreFrameInst %7: any, [k3]: any
 // CHECK-NEXT:  %9 = CreateFunctionInst (:object) %""(): string|number|bigint
 // CHECK-NEXT:  %10 = ReturnInst %9: object
@@ -141,7 +141,7 @@ function outer() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %o: any
 // CHECK-NEXT:  %1 = StoreFrameInst 42: number, [envVar@outer]: any
-// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %3 = StoreFrameInst 87: number, [envVar@outer]: any
 // CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

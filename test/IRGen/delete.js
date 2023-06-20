@@ -91,7 +91,7 @@ function delete_expr() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadPropertyInst (:any) globalObject: object, "sink": string
-// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %2 = ReturnInst true: boolean
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = ReturnInst undefined: undefined

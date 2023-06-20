@@ -65,7 +65,7 @@ function load_dedup(foo){
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [foo]: any
 // CHECK-NEXT:  %2 = StoreFrameInst undefined: undefined, [x]: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %bar(): any
-// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %5 = StoreFrameInst %4: any, [x]: any
 // CHECK-NEXT:  %6 = ReturnInst %3: object
 // CHECK-NEXT:function_end
@@ -82,6 +82,6 @@ function load_dedup(foo){
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [foo@load_dedup]: any
 // CHECK-NEXT:  %1 = LoadFrameInst (:any) [x@load_dedup]: any
-// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, %1: any
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = ReturnInst %1: any
 // CHECK-NEXT:function_end

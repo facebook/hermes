@@ -28,7 +28,7 @@ function main() {
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) globalObject: object, "main": string
-// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %7 = StoreStackInst %6: any, %3: any
 // CHECK-NEXT:  %8 = LoadStackInst (:any) %3: any
 // CHECK-NEXT:  %9 = ReturnInst %8: any

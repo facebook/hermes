@@ -63,6 +63,6 @@ function foo(x) {
 // CHECK-NEXT:  %25 = BranchInst %BB6
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %26 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %27 = CallInst (:any) %26: any, empty: any, empty: any, undefined: undefined, %12: any, %20: any
+// CHECK-NEXT:  %27 = CallInst (:any) %26: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: any, %20: any
 // CHECK-NEXT:  %28 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

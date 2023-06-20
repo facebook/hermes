@@ -115,7 +115,7 @@ function f9(a) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %8 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %9 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %10 = ReturnInst undefined: undefined
@@ -157,7 +157,7 @@ function f9(a) {
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) %2: any, "b": string
-// CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, %2: any
+// CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, %2: any
 // CHECK-NEXT:  %10 = LoadPropertyInst (:any) %9: any, "c": string
 // CHECK-NEXT:  %11 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
@@ -178,7 +178,7 @@ function f9(a) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %8 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %9 = LoadPropertyInst (:any) %8: any, "b": string
 // CHECK-NEXT:  %10 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
@@ -225,7 +225,7 @@ function f9(a) {
 // CHECK-NEXT:  %9 = BinaryEqualInst (:any) %8: any, null: null
 // CHECK-NEXT:  %10 = CondBranchInst %9: any, %BB1, %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %11 = CallInst (:any) %8: any, empty: any, empty: any, %2: any
+// CHECK-NEXT:  %11 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, %2: any
 // CHECK-NEXT:  %12 = LoadPropertyInst (:any) %11: any, "c": string
 // CHECK-NEXT:  %13 = BranchInst %BB3
 // CHECK-NEXT:%BB5:
@@ -254,7 +254,7 @@ function f9(a) {
 // CHECK-NEXT:  %12 = BinaryEqualInst (:any) %11: any, null: null
 // CHECK-NEXT:  %13 = CondBranchInst %12: any, %BB1, %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %14 = CallInst (:any) %11: any, empty: any, empty: any, %8: any
+// CHECK-NEXT:  %14 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, %8: any
 // CHECK-NEXT:  %15 = BranchInst %BB3
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %16 = ReturnInst undefined: undefined

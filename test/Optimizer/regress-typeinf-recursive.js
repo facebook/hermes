@@ -38,6 +38,6 @@
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = LoadFrameInst (:object) [bar@main]: object
-// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %bar(): undefined, empty: any, 0: number, %0: any
+// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %bar(): undefined, empty: any, undefined: undefined, 0: number, %0: any
 // CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

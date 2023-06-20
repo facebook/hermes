@@ -35,7 +35,7 @@ try {
 // CHECK-NEXT:  %10 = ReturnInst %9: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %13 = StoreStackInst %12: any, %1: any
 // CHECK-NEXT:  %14 = BranchInst %BB4
 // CHECK-NEXT:%BB4:

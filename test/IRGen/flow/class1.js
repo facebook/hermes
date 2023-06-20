@@ -31,7 +31,7 @@ return [dotProduct, Vec2D];
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): object
-// CHECK-NEXT:  %1 = CallInst [njsf] (:object) %0: object, %""(): object, empty: any, 0: number
+// CHECK-NEXT:  %1 = CallInst [njsf] (:object) %0: object, %""(): object, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %2 = ReturnInst %1: object
 // CHECK-NEXT:function_end
 
@@ -70,7 +70,7 @@ return [dotProduct, Vec2D];
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %y: any
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Math": string
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: any, "sqrt": string
-// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, %2: any, 10: number
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, %2: any, 10: number
 // CHECK-NEXT:  %5 = PrStoreInst %4: any, %0: any, 0: number, "x": string, true: boolean
 // CHECK-NEXT:  %6 = PrStoreInst %1: any, %0: any, 1: number, "y": string, true: boolean
 // CHECK-NEXT:  %7 = ReturnInst undefined: undefined

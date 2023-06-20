@@ -338,11 +338,10 @@ static Value *inlineFunction(
         continue;
       }
 
-      // For constructor calls, replace GetNewTargetInst with the closure.
+      // GetNewTargetInst is translated to a direct usage of the call's
+      // new.target value.
       if (llvh::isa<GetNewTargetInst>(&I)) {
-        operandMap[&I] = llvh::isa<ConstructInst>(CI)
-            ? CI->getCallee()
-            : builder.getLiteralUndefined();
+        operandMap[&I] = CI->getNewTarget();
         continue;
       }
       assert(!llvh::isa<LIRGetThisNSInst>(I) && "Not allowed during inlining");

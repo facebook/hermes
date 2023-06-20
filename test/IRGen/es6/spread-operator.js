@@ -38,7 +38,7 @@ function foo(a, b, c) {
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [a]: any
 // CHECK-NEXT:  %8 = StoreNewOwnPropertyInst %7: any, %6: object, "a": string, true: boolean
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) [b]: any
-// CHECK-NEXT:  %10 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, %6: object, %9: any
+// CHECK-NEXT:  %10 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %6: object, %9: any
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) [c]: any
 // CHECK-NEXT:  %12 = StoreOwnPropertyInst %11: any, %6: object, "c": string, true: boolean
 // CHECK-NEXT:  %13 = ReturnInst %6: object

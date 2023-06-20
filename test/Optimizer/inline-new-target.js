@@ -45,7 +45,7 @@ function outer2(){
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f1(): undefined|object
-// CHECK-NEXT:  %1 = CallInst (:undefined|object) %0: object, %f1(): undefined|object, empty: any, undefined: undefined
+// CHECK-NEXT:  %1 = CallInst (:undefined|object) %0: object, %f1(): undefined|object, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %2 = ReturnInst %1: undefined|object
 // CHECK-NEXT:function_end
 

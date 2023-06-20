@@ -37,7 +37,7 @@ function foo(sink){
 // CHECK-NEXT:  %3 = CondBranchInst %2: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = StoreFrameInst 1: number, [x]: number|bigint
-// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 0: number
 // CHECK-NEXT:  %6 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "b": string
@@ -47,7 +47,7 @@ function foo(sink){
 // CHECK-NEXT:  %10 = AsNumericInst (:number|bigint) %9: number|bigint
 // CHECK-NEXT:  %11 = UnaryIncInst (:number|bigint) %10: number|bigint
 // CHECK-NEXT:  %12 = StoreFrameInst %11: number|bigint, [x]: number|bigint
-// CHECK-NEXT:  %13 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, %10: number|bigint
+// CHECK-NEXT:  %13 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %10: number|bigint
 // CHECK-NEXT:  %14 = BranchInst %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %15 = TryLoadGlobalPropertyInst (:any) globalObject: object, "c": string
@@ -57,7 +57,7 @@ function foo(sink){
 // CHECK-NEXT:  %18 = AsNumericInst (:number|bigint) %17: number|bigint
 // CHECK-NEXT:  %19 = UnaryIncInst (:number|bigint) %18: number|bigint
 // CHECK-NEXT:  %20 = StoreFrameInst %19: number|bigint, [x]: number|bigint
-// CHECK-NEXT:  %21 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, %18: number|bigint
+// CHECK-NEXT:  %21 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %18: number|bigint
 // CHECK-NEXT:  %22 = BranchInst %BB6
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %23 = CreateFunctionInst (:object) %""(): number|bigint

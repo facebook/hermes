@@ -30,6 +30,6 @@ print('done');
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %module: any
 // CHECK-NEXT:  %5 = StoreFrameInst %4: any, [module]: any
 // CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, "done": string
+// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "done": string
 // CHECK-NEXT:  %8 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

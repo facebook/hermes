@@ -26,7 +26,7 @@ process = null;
 // CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) globalObject: object, "a": string
 // CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "process": string
-// CHECK-NEXT:  %7 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, %5: any, %6: any
+// CHECK-NEXT:  %7 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %5: any, %6: any
 // CHECK-NEXT:  %8 = StoreStackInst %7: any, %1: any
 // CHECK-NEXT:  %9 = TryStoreGlobalPropertyStrictInst null: null, globalObject: object, "process": string
 // CHECK-NEXT:  %10 = StoreStackInst null: null, %1: any
@@ -42,7 +42,7 @@ process = null;
 // OPT-CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // OPT-CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "a": string
 // OPT-CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "process": string
-// OPT-CHECK-NEXT:  %5 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, %3: any, %4: any
+// OPT-CHECK-NEXT:  %5 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: any, %4: any
 // OPT-CHECK-NEXT:  %6 = TryStoreGlobalPropertyStrictInst null: null, globalObject: object, "process": string
 // OPT-CHECK-NEXT:  %7 = ReturnInst null: null
 // OPT-CHECK-NEXT:function_end
@@ -55,7 +55,7 @@ process = null;
 // OPT-NONSTRICT-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // OPT-NONSTRICT-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "a": string
 // OPT-NONSTRICT-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "process": string
-// OPT-NONSTRICT-NEXT:  %5 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, %3: any, %4: any
+// OPT-NONSTRICT-NEXT:  %5 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: any, %4: any
 // OPT-NONSTRICT-NEXT:  %6 = StorePropertyLooseInst null: null, globalObject: object, "process": string
 // OPT-NONSTRICT-NEXT:  %7 = ReturnInst null: null
 // OPT-NONSTRICT-NEXT:function_end

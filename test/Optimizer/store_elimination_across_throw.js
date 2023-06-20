@@ -29,7 +29,7 @@
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): undefined
-// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %""(): undefined, empty: any, undefined: undefined
+// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %""(): undefined, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -46,11 +46,11 @@
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %7 = LoadFrameInst (:undefined|number) [x]: undefined|number
-// CHECK-NEXT:  %8 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, %7: undefined|number
+// CHECK-NEXT:  %8 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %7: undefined|number
 // CHECK-NEXT:  %9 = StoreFrameInst undefined: undefined, [tdz]: empty|undefined
 // CHECK-NEXT:  %10 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %11 = CallInst (:undefined) %2: object, %throwTDZ(): undefined, empty: any, undefined: undefined
+// CHECK-NEXT:  %11 = CallInst (:undefined) %2: object, %throwTDZ(): undefined, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %12 = BranchInst %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %13 = TryEndInst

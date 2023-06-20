@@ -74,7 +74,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [func]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [func]: any
-// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %4 = AllocObjectInst (:object) 2: number, %3: any
 // CHECK-NEXT:  %5 = StoreOwnPropertyInst null: null, %4: object, "__proto__": string, true: boolean
 // CHECK-NEXT:  %6 = StoreOwnPropertyInst 42: number, %4: object, "a": string, true: boolean
@@ -89,7 +89,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [func]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [func]: any
-// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %4 = AllocObjectInst (:object) 2: number, %3: any
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %__proto__(): any
 // CHECK-NEXT:  %6 = StoreNewOwnPropertyInst %5: object, %4: object, "__proto__": string, true: boolean
@@ -108,8 +108,8 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %"__proto__ 1#"(): any
 // CHECK-NEXT:  %4 = StoreNewOwnPropertyInst %3: object, %2: object, "__proto__": string, true: boolean
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [func]: any
-// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %7 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, %2: object, %6: any
+// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %7 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %2: object, %6: any
 // CHECK-NEXT:  %8 = StoreNewOwnPropertyInst 42: number, %2: object, "a": string, true: boolean
 // CHECK-NEXT:  %9 = ReturnInst %2: object
 // CHECK-NEXT:%BB1:
@@ -122,7 +122,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [func]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [func]: any
-// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %4 = AllocObjectInst (:object) 1: number, %3: any
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %"get __proto__"(): any
 // CHECK-NEXT:  %6 = StoreGetterSetterInst %5: object, undefined: undefined, %4: object, "__proto__": string, true: boolean
@@ -137,7 +137,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [func]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [func]: any
-// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %4 = AllocObjectInst (:object) 1: number, %3: any
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %"set __proto__"(): any
 // CHECK-NEXT:  %6 = StoreGetterSetterInst undefined: undefined, %5: object, %4: object, "__proto__": string, true: boolean
@@ -156,8 +156,8 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %"set __proto__ 1#"(): any
 // CHECK-NEXT:  %5 = StoreGetterSetterInst %3: object, %4: object, %2: object, "__proto__": string, true: boolean
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [func]: any
-// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %8 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, %2: object, %7: any
+// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %8 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %2: object, %7: any
 // CHECK-NEXT:  %9 = ReturnInst %2: object
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %10 = ReturnInst undefined: undefined

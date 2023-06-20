@@ -326,7 +326,8 @@ Function *ESTreeIRGen::genGeneratorFunction(
       // If there are non-simple params, step the inner function once to
       // initialize them.
       Value *next = Builder.createLoadPropertyInst(gen, "next");
-      Builder.createCallInst(next, gen, {});
+      Builder.createCallInst(
+          next, /* newTarget */ Builder.getLiteralUndefined(), gen, {});
     }
 
     emitFunctionEpilogue(gen);
@@ -387,7 +388,8 @@ Function *ESTreeIRGen::genAsyncFunction(
 
     auto *res = Builder.createCallInst(
         spawnAsyncClosure,
-        Builder.getLiteralUndefined(),
+        /* newTarget */ Builder.getLiteralUndefined(),
+        /* thisValue */ Builder.getLiteralUndefined(),
         {genClosure, thisArg, argumentsList});
 
     emitFunctionEpilogue(res);
@@ -757,7 +759,8 @@ Function *ESTreeIRGen::genSyntaxErrorFunction(
 
   Builder.createThrowInst(Builder.createCallInst(
       emitLoad(Builder.createGlobalObjectProperty("SyntaxError", false), false),
-      Builder.getLiteralUndefined(),
+      /* newTarget */ Builder.getLiteralUndefined(),
+      /* thisValue */ Builder.getLiteralUndefined(),
       Builder.getLiteralString(error)));
 
   return function;

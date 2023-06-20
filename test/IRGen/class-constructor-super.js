@@ -37,7 +37,7 @@ new D();
 // CHECK-NEXT:  %7 = StorePropertyStrictInst %6: object, %4: object, "prototype": string
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) %4: object, "prototype": string
 // CHECK-NEXT:  %9 = AllocObjectInst (:object) 0: number, %8: any
-// CHECK-NEXT:  %10 = ConstructInst (:undefined) %4: object, %D(): undefined, empty: any, %9: object
+// CHECK-NEXT:  %10 = ConstructInst (:undefined) %4: object, %D(): undefined, empty: any, %4: object, %9: object
 // CHECK-NEXT:  %11 = ReturnInst %9: object
 // CHECK-NEXT:function_end
 
@@ -52,6 +52,6 @@ new D();
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any
 // CHECK-NEXT:  %1 = LoadFrameInst (:object) [C@global]: object
-// CHECK-NEXT:  %2 = CallInst [njsf] (:undefined) %1: object, %C(): undefined, empty: any, %0: any
+// CHECK-NEXT:  %2 = CallInst [njsf] (:undefined) %1: object, %C(): undefined, empty: any, undefined: undefined, %0: any
 // CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

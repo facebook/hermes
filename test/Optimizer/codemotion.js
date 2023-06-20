@@ -191,7 +191,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = PhiInst (:number) 0: number, %BB0, %6: number, %BB1
 // CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, %3: number
+// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: number
 // CHECK-NEXT:  %6 = UnaryIncInst (:number) %3: number
 // CHECK-NEXT:  %7 = BinaryLessThanInst (:boolean) %6: number, %0: any
 // CHECK-NEXT:  %8 = CondBranchInst %7: boolean, %BB1, %BB2
@@ -212,7 +212,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  %6 = UnaryMinusInst (:number) %3: number
 // CHECK-NEXT:  %7 = BinaryAddInst (:number) %4: number, 7: number
 // CHECK-NEXT:  %8 = BinaryMultiplyInst (:number) %6: number, %7: number
-// CHECK-NEXT:  %9 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, %8: number
+// CHECK-NEXT:  %9 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %8: number
 // CHECK-NEXT:  %10 = BranchInst %BB1
 // CHECK-NEXT:function_end
 
@@ -226,12 +226,12 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %4 = BinaryMultiplyInst (:number) 3: number, %1: number
 // CHECK-NEXT:  %5 = BinaryMultiplyInst (:number) %4: number, %1: number
-// CHECK-NEXT:  %6 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, %5: number
+// CHECK-NEXT:  %6 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %5: number
 // CHECK-NEXT:  %7 = BinarySubtractInst (:number) %1: number, 1: number
 // CHECK-NEXT:  %8 = CondBranchInst %7: number, %BB2, %BB1
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, %5: number
+// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %5: number
 // CHECK-NEXT:  %11 = BranchInst %BB1
 // CHECK-NEXT:function_end
 
@@ -250,7 +250,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %8 = BinarySubtractInst (:number) %4: number, 3: number
-// CHECK-NEXT:  %9 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, %8: number
+// CHECK-NEXT:  %9 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %8: number
 // CHECK-NEXT:  %10 = BranchInst %BB1
 // CHECK-NEXT:function_end
 

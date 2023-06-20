@@ -55,7 +55,7 @@ function check_for_let() {
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %17 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %18 = LoadFrameInst (:any) [i#1]: any
-// CHECK-NEXT:  %19 = CallInst (:any) %17: any, empty: any, empty: any, undefined: undefined, %18: any
+// CHECK-NEXT:  %19 = CallInst (:any) %17: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %18: any
 // CHECK-NEXT:  %20 = BranchInst %BB6
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %21 = LoadFrameInst (:any) [i#1]: any

@@ -28,7 +28,7 @@
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): undefined
-// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %""(): undefined, empty: any, undefined: undefined
+// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %""(): undefined, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -36,10 +36,10 @@
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): number|bigint
-// CHECK-NEXT:  %1 = CallInst (:number|bigint) %0: object, %foo(): number|bigint, empty: any, undefined: undefined
+// CHECK-NEXT:  %1 = CallInst (:number|bigint) %0: object, %foo(): number|bigint, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %3 = UnaryTypeofInst (:string) %1: number|bigint
-// CHECK-NEXT:  %4 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, %3: string, %1: number|bigint
+// CHECK-NEXT:  %4 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: string, %1: number|bigint
 // CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

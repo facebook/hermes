@@ -927,8 +927,11 @@ void ESTreeIRGen::genImportDeclaration(
       "CJS module second parameter must be 'require'");
   Value *require = curFunction()->jsParams[2];
   auto *source = genExpression(importDecl->_source);
-  auto *exports =
-      Builder.createCallInst(require, Builder.getLiteralUndefined(), {source});
+  auto *exports = Builder.createCallInst(
+      require,
+      /* newTarget */ Builder.getLiteralUndefined(),
+      /* thisValue */ Builder.getLiteralUndefined(),
+      {source});
   // An import declaration is a list of import specifiers.
   for (ESTree::Node &spec : importDecl->_specifiers) {
     if (auto *ids = llvh::dyn_cast<ESTree::ImportDefaultSpecifierNode>(&spec)) {
@@ -1025,11 +1028,13 @@ void ESTreeIRGen::genExportNamedDeclaration(
     return;
   }
 
-  auto *source = exportDecl->_source ? Builder.createCallInst(
-                                           require,
-                                           Builder.getLiteralUndefined(),
-                                           {genExpression(exportDecl->_source)})
-                                     : nullptr;
+  auto *source = exportDecl->_source
+      ? Builder.createCallInst(
+            require,
+            /* newTarget */ Builder.getLiteralUndefined(),
+            /* thisValue */ Builder.getLiteralUndefined(),
+            {genExpression(exportDecl->_source)})
+      : nullptr;
 
   for (ESTree::Node &spec : exportDecl->_specifiers) {
     auto *es = cast<ESTree::ExportSpecifierNode>(&spec);
@@ -1098,7 +1103,8 @@ void ESTreeIRGen::genExportAllDeclaration(
   // export * from 'file.js';
   auto *source = Builder.createCallInst(
       require,
-      Builder.getLiteralUndefined(),
+      /* newTarget */ Builder.getLiteralUndefined(),
+      /* thisValue */ Builder.getLiteralUndefined(),
       {genExpression(exportDecl->_source)});
   // Copy all the re-exported properties from the source to the exports object.
   genBuiltinCall(BuiltinMethod::HermesBuiltin_exportAll, {exports, source});

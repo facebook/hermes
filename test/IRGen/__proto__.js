@@ -64,7 +64,7 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [func]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [func]: any
-// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %4 = AllocObjectInst (:object) 2: number, %3: any
 // CHECK-NEXT:  %5 = StoreNewOwnPropertyInst 2: number, %4: object, "a": string, true: boolean
 // CHECK-NEXT:  %6 = StoreNewOwnPropertyInst 3: number, %4: object, "b": string, true: boolean
@@ -112,12 +112,12 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:  %3 = StoreFrameInst %2: any, [getParent]: any
 // CHECK-NEXT:  %4 = AllocObjectInst (:object) 2: number, empty: any
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [func]: any
-// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %7 = StoreNewOwnPropertyInst %6: any, %4: object, "a": string, true: boolean
 // CHECK-NEXT:  %8 = StoreNewOwnPropertyInst 10: number, %4: object, "b": string, true: boolean
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) [getParent]: any
-// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %11 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, %4: object, %10: any
+// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %11 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object, %10: any
 // CHECK-NEXT:  %12 = ReturnInst %4: object
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %13 = ReturnInst undefined: undefined

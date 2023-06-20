@@ -42,7 +42,7 @@
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %main(): object
-// CHECK-NEXT:  %1 = CallInst (:object) %0: object, %main(): object, empty: any, 0: number
+// CHECK-NEXT:  %1 = CallInst (:object) %0: object, %main(): object, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %2 = ReturnInst %1: object
 // CHECK-NEXT:function_end
 

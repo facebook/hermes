@@ -58,7 +58,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): any
-// CHECK-NEXT:  %1 = CallInst (:any) %0: object, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %1 = CallInst (:any) %0: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -68,7 +68,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [x]: any
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %" 1#"(): any
-// CHECK-NEXT:  %3 = CallInst (:any) %2: object, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %3 = CallInst (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -78,7 +78,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [x]: any
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %" 2#"(): any
-// CHECK-NEXT:  %3 = CallInst (:any) %2: object, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %3 = CallInst (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -87,7 +87,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %some_local_name(): any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: object, [some_local_name]: any
-// CHECK-NEXT:  %2 = CallInst (:any) %0: object, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %2 = CallInst (:any) %0: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -112,7 +112,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %" 3#"(): any
-// CHECK-NEXT:  %1 = CallInst (:any) %0: object, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %1 = CallInst (:any) %0: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

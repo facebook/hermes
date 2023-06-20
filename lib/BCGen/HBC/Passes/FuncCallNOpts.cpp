@@ -49,6 +49,7 @@ bool FuncCallNOpts::runOnFunction(Function *F) {
               call->getCallee(),
               call->getTarget(),
               call->getEnvironment(),
+              call->getNewTarget(),
               call->getThis(),
               getArgumentsWithoutThis(call));
           call->replaceAllUsesWith(newCall);

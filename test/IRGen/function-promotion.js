@@ -53,7 +53,7 @@ function foo() {
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [y]: any
 // CHECK-NEXT:  %14 = LoadFrameInst (:any) [z]: any
-// CHECK-NEXT:  %15 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, %12: any, %13: any, %14: any
+// CHECK-NEXT:  %15 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: any, %13: any, %14: any
 // CHECK-NEXT:  %16 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

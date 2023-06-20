@@ -35,16 +35,16 @@ import 'bar.js';
 // CHECK-NEXT:  %3 = StoreFrameInst %2: any, [require]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %module: any
 // CHECK-NEXT:  %5 = StoreFrameInst %4: any, [module]: any
-// CHECK-NEXT:  %6 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, "foo.js": string
+// CHECK-NEXT:  %6 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "foo.js": string
 // CHECK-NEXT:  %7 = StoreFrameInst %6: any, [Foo]: any
-// CHECK-NEXT:  %8 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, "foo.js": string
+// CHECK-NEXT:  %8 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "foo.js": string
 // CHECK-NEXT:  %9 = LoadPropertyInst (:any) %8: any, "?default": string
 // CHECK-NEXT:  %10 = StoreFrameInst %9: any, [defaultFoo]: any
-// CHECK-NEXT:  %11 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, "foo.js": string
+// CHECK-NEXT:  %11 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "foo.js": string
 // CHECK-NEXT:  %12 = LoadPropertyInst (:any) %11: any, "x": string
 // CHECK-NEXT:  %13 = StoreFrameInst %12: any, [x]: any
 // CHECK-NEXT:  %14 = LoadPropertyInst (:any) %11: any, "y": string
 // CHECK-NEXT:  %15 = StoreFrameInst %14: any, [z]: any
-// CHECK-NEXT:  %16 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, "bar.js": string
+// CHECK-NEXT:  %16 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "bar.js": string
 // CHECK-NEXT:  %17 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

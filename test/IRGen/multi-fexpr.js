@@ -95,7 +95,7 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %fexpr(): any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: object, [fexpr]: any
-// CHECK-NEXT:  %2 = CallInst (:any) %0: object, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %2 = CallInst (:any) %0: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %3 = CondBranchInst %2: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = BranchInst %BB3
@@ -104,7 +104,7 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %6 = CreateFunctionInst (:object) %fexpr(): any
 // CHECK-NEXT:  %7 = StoreFrameInst %6: object, [fexpr]: any
-// CHECK-NEXT:  %8 = CallInst (:any) %6: object, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %8 = CallInst (:any) %6: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %9 = CondBranchInst %8: any, %BB1, %BB2
 // CHECK-NEXT:function_end
 
@@ -116,19 +116,19 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:  %1 = CatchInst (:any)
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %"fexpr 1#"(): any
 // CHECK-NEXT:  %3 = StoreFrameInst %2: object, [fexpr]: any
-// CHECK-NEXT:  %4 = CallInst (:any) %2: object, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %4 = CallInst (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %5 = ThrowInst %1: any
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %9 = BranchInst %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %10 = TryEndInst
 // CHECK-NEXT:  %11 = CreateFunctionInst (:object) %"fexpr 1#"(): any
 // CHECK-NEXT:  %12 = StoreFrameInst %11: object, [fexpr]: any
-// CHECK-NEXT:  %13 = CallInst (:any) %11: object, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %13 = CallInst (:any) %11: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %14 = BranchInst %BB3
 // CHECK-NEXT:function_end
 

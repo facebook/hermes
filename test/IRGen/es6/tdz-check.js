@@ -102,7 +102,7 @@ function check4() {
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %check3_inner(): any
 // CHECK-NEXT:  %3 = StoreFrameInst %2: object, [check3_inner]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [check3_inner]: any
-// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %6 = StoreFrameInst %5: any, [x]: any|empty
 // CHECK-NEXT:  %7 = LoadFrameInst (:any|empty) [x]: any|empty
 // CHECK-NEXT:  %8 = UnionNarrowTrustedInst (:any) %7: any|empty

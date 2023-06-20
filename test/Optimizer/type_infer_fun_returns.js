@@ -32,15 +32,15 @@ function g14(z) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %z: any
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %w(): number
 // CHECK-NEXT:  %2 = StoreFrameInst %1: object, [w]: object
-// CHECK-NEXT:  %3 = CallInst (:number) %1: object, %w(): number, empty: any, undefined: undefined
+// CHECK-NEXT:  %3 = CallInst (:number) %1: object, %w(): number, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %4 = BinaryGreaterThanInst (:boolean) %0: any, %3: number
 // CHECK-NEXT:  %5 = CondBranchInst %4: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %7 = LoadFrameInst (:object) [w]: object
-// CHECK-NEXT:  %8 = CallInst (:any) %7: object, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %8 = CallInst (:any) %7: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %9 = BinaryAddInst (:string|number) %8: any, 1: number
-// CHECK-NEXT:  %10 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, %9: string|number
+// CHECK-NEXT:  %10 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %9: string|number
 // CHECK-NEXT:  %11 = CreateFunctionInst (:object) %m(): undefined
 // CHECK-NEXT:  %12 = AllocObjectLiteralInst (:object) "m": string, %11: object
 // CHECK-NEXT:  %13 = ReturnInst %12: object

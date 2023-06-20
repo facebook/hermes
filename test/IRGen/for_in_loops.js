@@ -99,7 +99,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %15 = StoreFrameInst %14: any, [prop]: any
 // CHECK-NEXT:  %16 = LoadPropertyInst (:any) globalObject: object, "sink": string
 // CHECK-NEXT:  %17 = LoadFrameInst (:any) [prop]: any
-// CHECK-NEXT:  %18 = CallInst (:any) %16: any, empty: any, empty: any, undefined: undefined, %17: any
+// CHECK-NEXT:  %18 = CallInst (:any) %16: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %17: any
 // CHECK-NEXT:  %19 = BranchInst %BB2
 // CHECK-NEXT:function_end
 
@@ -127,7 +127,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %15 = StoreFrameInst %14: any, [prop]: any
 // CHECK-NEXT:  %16 = LoadPropertyInst (:any) globalObject: object, "sink": string
 // CHECK-NEXT:  %17 = LoadFrameInst (:any) [prop]: any
-// CHECK-NEXT:  %18 = CallInst (:any) %16: any, empty: any, empty: any, undefined: undefined, %17: any
+// CHECK-NEXT:  %18 = CallInst (:any) %16: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %17: any
 // CHECK-NEXT:  %19 = BranchInst %BB1
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %20 = BranchInst %BB2
@@ -161,7 +161,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %16 = StoreFrameInst %15: any, [prop]: any
 // CHECK-NEXT:  %17 = LoadPropertyInst (:any) globalObject: object, "sink": string
 // CHECK-NEXT:  %18 = LoadFrameInst (:any) [prop]: any
-// CHECK-NEXT:  %19 = CallInst (:any) %17: any, empty: any, empty: any, undefined: undefined, %18: any
+// CHECK-NEXT:  %19 = CallInst (:any) %17: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %18: any
 // CHECK-NEXT:  %20 = BranchInst %BB1
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %21 = BranchInst %BB2
@@ -190,7 +190,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %14 = StoreFrameInst %13: any, [prop]: any
 // CHECK-NEXT:  %15 = LoadPropertyInst (:any) globalObject: object, "sink": string
 // CHECK-NEXT:  %16 = LoadFrameInst (:any) [prop]: any
-// CHECK-NEXT:  %17 = CallInst (:any) %15: any, empty: any, empty: any, undefined: undefined, %16: any
+// CHECK-NEXT:  %17 = CallInst (:any) %15: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %16: any
 // CHECK-NEXT:  %18 = BranchInst %BB2
 // CHECK-NEXT:function_end
 
@@ -212,7 +212,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %11 = LoadPropertyInst (:any) globalObject: object, "sink": string
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %13 = LoadPropertyInst (:any) %12: any, "y": string
-// CHECK-NEXT:  %14 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, %13: any
+// CHECK-NEXT:  %14 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %13: any
 // CHECK-NEXT:  %15 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %16 = GetNextPNameInst %9: any, %4: any, %5: number, %6: number, %3: any, %BB1, %BB3
@@ -223,6 +223,6 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %20 = LoadPropertyInst (:any) globalObject: object, "sink": string
 // CHECK-NEXT:  %21 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %22 = LoadPropertyInst (:any) %21: any, "y": string
-// CHECK-NEXT:  %23 = CallInst (:any) %20: any, empty: any, empty: any, undefined: undefined, %22: any
+// CHECK-NEXT:  %23 = CallInst (:any) %20: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %22: any
 // CHECK-NEXT:  %24 = BranchInst %BB2
 // CHECK-NEXT:function_end

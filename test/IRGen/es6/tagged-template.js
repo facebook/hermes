@@ -115,7 +115,7 @@ function helloWorld() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetTemplateObjectInst (:any) 0: number, true: boolean, "": string
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "dummy": string
-// CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, %0: any
+// CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any
 // CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = ReturnInst undefined: undefined
@@ -126,7 +126,7 @@ function helloWorld() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetTemplateObjectInst (:any) 1: number, true: boolean, "hello": string
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "dummy": string
-// CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, %0: any
+// CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any
 // CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = ReturnInst undefined: undefined
@@ -137,7 +137,7 @@ function helloWorld() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetTemplateObjectInst (:any) 2: number, true: boolean, "": string, "": string
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "dummy": string
-// CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, %0: any, 666: number
+// CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any, 666: number
 // CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = ReturnInst undefined: undefined
@@ -149,7 +149,7 @@ function helloWorld() {
 // CHECK-NEXT:  %0 = GetTemplateObjectInst (:any) 3: number, true: boolean, "hello world": string, "!!!": string
 // CHECK-NEXT:  %1 = BinaryAddInst (:any) 1: number, 2: number
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) globalObject: object, "dummy": string
-// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, %0: any, %1: any
+// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any, %1: any
 // CHECK-NEXT:  %4 = ReturnInst %3: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = ReturnInst undefined: undefined
@@ -161,7 +161,7 @@ function helloWorld() {
 // CHECK-NEXT:  %0 = GetTemplateObjectInst (:any) 4: number, false: boolean, "hello\\\\nworld": string, "!!!": string, "hello\\nworld": string, "!!!": string
 // CHECK-NEXT:  %1 = BinaryAddInst (:any) 1: number, 2: number
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) globalObject: object, "dummy": string
-// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, %0: any, %1: any
+// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any, %1: any
 // CHECK-NEXT:  %4 = ReturnInst %3: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = ReturnInst undefined: undefined
@@ -177,7 +177,7 @@ function helloWorld() {
 // CHECK-NEXT:  %4 = GetTemplateObjectInst (:any) 5: number, true: boolean, "hello world!": string
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [obj]: any
 // CHECK-NEXT:  %6 = LoadPropertyInst (:any) %5: any, "func": string
-// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, %5: any, %4: any
+// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, %5: any, %4: any
 // CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %9 = ReturnInst undefined: undefined
@@ -191,8 +191,8 @@ function helloWorld() {
 // CHECK-NEXT:  %2 = StoreFrameInst %1: object, [func]: any
 // CHECK-NEXT:  %3 = GetTemplateObjectInst (:any) 5: number, true: boolean, "hello world!": string
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [func]: any
-// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, %3: any
+// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: any
 // CHECK-NEXT:  %7 = ReturnInst %6: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %8 = ReturnInst undefined: undefined
@@ -204,7 +204,7 @@ function helloWorld() {
 // CHECK-NEXT:  %0 = GetTemplateObjectInst (:any) 3: number, true: boolean, "hello world": string, "!!!": string
 // CHECK-NEXT:  %1 = BinaryAddInst (:any) 1: number, 2: number
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) globalObject: object, "dummy": string
-// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, %0: any, %1: any
+// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any, %1: any
 // CHECK-NEXT:  %4 = ReturnInst %3: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = ReturnInst undefined: undefined
@@ -215,7 +215,7 @@ function helloWorld() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetTemplateObjectInst (:any) 3: number, true: boolean, "hello world": string, "!!!": string
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "dummy": string
-// CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, %0: any, 7: number
+// CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any, 7: number
 // CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = ReturnInst undefined: undefined
@@ -226,7 +226,7 @@ function helloWorld() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetTemplateObjectInst (:any) 6: number, true: boolean, "hello": string, " world!!!": string
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "dummy": string
-// CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, %0: any, 0: number
+// CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any, 0: number
 // CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = ReturnInst undefined: undefined

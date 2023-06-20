@@ -39,10 +39,10 @@ delete_test()
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %7 = StoreStackInst undefined: undefined, %6: any
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) globalObject: object, "unary_operator_test": string
-// CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %10 = StoreStackInst %9: any, %6: any
 // CHECK-NEXT:  %11 = LoadPropertyInst (:any) globalObject: object, "delete_test": string
-// CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %13 = StoreStackInst %12: any, %6: any
 // CHECK-NEXT:  %14 = LoadStackInst (:any) %6: any
 // CHECK-NEXT:  %15 = ReturnInst %14: any

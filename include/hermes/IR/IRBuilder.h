@@ -289,18 +289,28 @@ class IRBuilder {
       Value *callee,
       Value *target,
       Value *env,
+      Value *newTarget,
       Value *thisValue,
       ArrayRef<Value *> args);
-  CallInst *
-  createCallInst(Value *callee, Value *thisValue, ArrayRef<Value *> args) {
+  CallInst *createCallInst(
+      Value *callee,
+      Value *newTarget,
+      Value *thisValue,
+      ArrayRef<Value *> args) {
     return createCallInst(
-        callee, getEmptySentinel(), getEmptySentinel(), thisValue, args);
+        callee,
+        getEmptySentinel(),
+        getEmptySentinel(),
+        newTarget,
+        thisValue,
+        args);
   }
 
   HBCCallNInst *createHBCCallNInst(
       Value *callee,
       Value *target,
       Value *env,
+      Value *newTarget,
       Value *thisValue,
       ArrayRef<Value *> args);
 

@@ -104,7 +104,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) globalObject: object, "sink": string
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %7 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, %6: any
+// CHECK-NEXT:  %7 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %6: any
 // CHECK-NEXT:  %8 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %9 = ReturnInst undefined: undefined
@@ -239,27 +239,27 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:  %10 = LoadParamInst (:any) %f: any
 // CHECK-NEXT:  %11 = StoreFrameInst %10: any, [f]: any
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [a]: any
-// CHECK-NEXT:  %13 = CallInst (:any) %12: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %13 = CallInst (:any) %12: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %14 = LoadFrameInst (:any) [b]: any
-// CHECK-NEXT:  %15 = CallInst (:any) %14: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %15 = CallInst (:any) %14: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %16 = CondBranchInst %15: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %17 = LoadFrameInst (:any) [d]: any
-// CHECK-NEXT:  %18 = CallInst (:any) %17: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %18 = CallInst (:any) %17: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %19 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %20 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %21 = LoadFrameInst (:any) [b]: any
-// CHECK-NEXT:  %22 = CallInst (:any) %21: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %22 = CallInst (:any) %21: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %23 = CondBranchInst %22: any, %BB1, %BB2
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %24 = LoadFrameInst (:any) [c]: any
-// CHECK-NEXT:  %25 = CallInst (:any) %24: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %25 = CallInst (:any) %24: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %26 = BranchInst %BB3
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %27 = LoadFrameInst (:any) [e]: any
-// CHECK-NEXT:  %28 = CallInst (:any) %27: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %28 = CallInst (:any) %27: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %29 = BranchInst %BB4
 // CHECK-NEXT:function_end
 

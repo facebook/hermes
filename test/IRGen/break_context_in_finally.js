@@ -57,7 +57,7 @@ function foo() {
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %6 = CatchInst (:any)
 // CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "finally1": string
-// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %9 = BranchInst %BB5
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:  %10 = BranchInst %BB7
@@ -65,11 +65,11 @@ function foo() {
 // CHECK-NEXT:  %11 = BranchInst %BB9
 // CHECK-NEXT:%BB9:
 // CHECK-NEXT:  %12 = TryLoadGlobalPropertyInst (:any) globalObject: object, "bar2": string
-// CHECK-NEXT:  %13 = CallInst (:any) %12: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %13 = CallInst (:any) %12: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %14 = BranchInst %BB10
 // CHECK-NEXT:%BB11:
 // CHECK-NEXT:  %15 = TryLoadGlobalPropertyInst (:any) globalObject: object, "bar3": string
-// CHECK-NEXT:  %16 = CallInst (:any) %15: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %16 = CallInst (:any) %15: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %17 = BranchInst %BB12
 // CHECK-NEXT:%BB13:
 // CHECK-NEXT:  %18 = BranchInst %BB9
@@ -78,7 +78,7 @@ function foo() {
 // CHECK-NEXT:%BB10:
 // CHECK-NEXT:  %20 = TryEndInst
 // CHECK-NEXT:  %21 = TryLoadGlobalPropertyInst (:any) globalObject: object, "finally1": string
-// CHECK-NEXT:  %22 = CallInst (:any) %21: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %22 = CallInst (:any) %21: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %23 = BranchInst %BB5
 // CHECK-NEXT:%BB15:
 // CHECK-NEXT:  %24 = BranchInst %BB5
@@ -87,7 +87,7 @@ function foo() {
 // CHECK-NEXT:%BB12:
 // CHECK-NEXT:  %26 = TryEndInst
 // CHECK-NEXT:  %27 = TryLoadGlobalPropertyInst (:any) globalObject: object, "finally1": string
-// CHECK-NEXT:  %28 = CallInst (:any) %27: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %28 = CallInst (:any) %27: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %29 = BranchInst %BB5
 // CHECK-NEXT:%BB17:
 // CHECK-NEXT:  %30 = BranchInst %BB8

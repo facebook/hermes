@@ -31,7 +31,7 @@ function main()  {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): string
-// CHECK-NEXT:  %1 = CallInst (:string) %0: object, %foo(): string, empty: any, undefined: undefined, 2: number
+// CHECK-NEXT:  %1 = CallInst (:string) %0: object, %foo(): string, empty: any, undefined: undefined, undefined: undefined, 2: number
 // CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

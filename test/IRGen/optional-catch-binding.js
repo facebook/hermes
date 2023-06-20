@@ -40,13 +40,13 @@ function foo(f, g) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = CatchInst (:any)
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [g]: any
-// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [f]: any
-// CHECK-NEXT:  %11 = CallInst (:any) %10: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %11 = CallInst (:any) %10: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %12 = BranchInst %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %13 = TryEndInst

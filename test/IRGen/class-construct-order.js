@@ -37,7 +37,7 @@ return foo;
 // CHECK-NEXT:  %2 = StoreStackInst "use strict": string, %0: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %main(): any
 // CHECK-NEXT:  %4 = StoreFrameInst %3: object, [main]: any
-// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %6 = StoreStackInst %5: any, %0: any
 // CHECK-NEXT:  %7 = LoadStackInst (:any) %0: any
 // CHECK-NEXT:  %8 = ReturnInst %7: any
@@ -69,7 +69,7 @@ return foo;
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) "x": string, 0: number
 // CHECK-NEXT:  %5 = StoreParentInst %3: any, %4: object
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %7 = ConstructInst (:any) %2: any, %C(): any, empty: any, %4: object, %6: any
+// CHECK-NEXT:  %7 = ConstructInst (:any) %2: any, %C(): any, empty: any, %2: any, %4: object, %6: any
 // CHECK-NEXT:  %8 = ReturnInst %4: object
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %9 = ReturnInst undefined: undefined

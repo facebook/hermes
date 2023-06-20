@@ -696,12 +696,14 @@ class BaseCallInst : public Instruction {
       Value *callee,
       Value *target,
       Value *env,
+      Value *newTarget,
       Value *thisValue,
       ArrayRef<Value *> args)
       : Instruction(kind) {
     pushOperand(callee);
     pushOperand(target);
     pushOperand(env);
+    pushOperand(newTarget);
     pushOperand(thisValue);
     for (const auto &arg : args) {
       pushOperand(arg);
@@ -717,7 +719,7 @@ class BaseCallInst : public Instruction {
   using Instruction::getOperand;
 
  public:
-  enum { CalleeIdx, TargetIdx, EnvIdx, ThisIdx };
+  enum { CalleeIdx, TargetIdx, EnvIdx, NewTargetIdx, ThisIdx };
 
   using ArgumentList = llvh::SmallVector<Value *, 2>;
 
@@ -744,6 +746,12 @@ class BaseCallInst : public Instruction {
   /// Set the environment to \p env.
   void setEnvironment(Value *env) {
     setOperand(env, EnvIdx);
+  }
+  Value *getNewTarget() const {
+    return getOperand(NewTargetIdx);
+  }
+  void setNewTarget(Value *newTarget) {
+    return setOperand(newTarget, NewTargetIdx);
   }
   /// Get argument 0, the value for 'this'.
   Value *getThis() const {
@@ -784,6 +792,7 @@ class CallInst : public BaseCallInst {
       Value *callee,
       Value *target,
       Value *env,
+      Value *newTarget,
       Value *thisValue,
       ArrayRef<Value *> args)
       : BaseCallInst(
@@ -791,6 +800,7 @@ class CallInst : public BaseCallInst {
             callee,
             target,
             env,
+            newTarget,
             thisValue,
             args) {}
   explicit CallInst(const CallInst *src, llvh::ArrayRef<Value *> operands)
@@ -812,14 +822,15 @@ class CallBuiltinInst : public BaseCallInst {
       LiteralNumber *callee,
       EmptySentinel *target,
       EmptySentinel *env,
-      LiteralUndefined *thisValue,
+      LiteralUndefined *undefined,
       ArrayRef<Value *> args)
       : BaseCallInst(
             ValueKind::CallBuiltinInstKind,
             callee,
             target,
             env,
-            thisValue,
+            /* newTarget */ undefined,
+            /* thisValue */ undefined,
             args) {
     assert(
         callee->getValue() == (int)callee->getValue() &&
@@ -954,6 +965,7 @@ class HBCCallNInst : public BaseCallInst {
       Value *callee,
       Value *target,
       Value *env,
+      Value *newTarget,
       Value *thisValue,
       ArrayRef<Value *> args)
       : BaseCallInst(
@@ -961,6 +973,7 @@ class HBCCallNInst : public BaseCallInst {
             callee,
             target,
             env,
+            newTarget,
             thisValue,
             args) {
     // +1 for 'this'.
@@ -3514,6 +3527,7 @@ class ConstructInst : public BaseCallInst {
             callee,
             target,
             env,
+            callee,
             thisValue,
             args) {}
   explicit ConstructInst(

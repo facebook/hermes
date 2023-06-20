@@ -44,7 +44,7 @@ function foo(x = () => this) {
 // CHECK-NEXT:  %11 = PhiInst (:any) %6: any, %BB0, %9: object, %BB2
 // CHECK-NEXT:  %12 = StoreFrameInst %11: any, [x]: any
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %14 = CallInst (:any) %13: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %14 = CallInst (:any) %13: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %15 = ReturnInst %14: any
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %16 = ReturnInst undefined: undefined

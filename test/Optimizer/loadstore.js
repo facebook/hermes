@@ -42,7 +42,7 @@ function test2(p1, p2) {
 // OPT-CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test2(): undefined
 // OPT-CHECK-NEXT:  %5 = StorePropertyStrictInst %4: object, globalObject: object, "test2": string
 // OPT-CHECK-NEXT:  %6 = LoadPropertyInst (:any) globalObject: object, "foo": string
-// OPT-CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined
+// OPT-CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // OPT-CHECK-NEXT:  %8 = ReturnInst %7: any
 // OPT-CHECK-NEXT:function_end
 
@@ -66,7 +66,7 @@ function test2(p1, p2) {
 // OPT-CHECK-NEXT:  %7 = BinaryAddInst (:string|number) %2: string|number|bigint, 4: number
 // OPT-CHECK-NEXT:  %8 = BinaryAddInst (:string|number) %2: string|number|bigint, 5: number
 // OPT-CHECK-NEXT:  %9 = BinaryAddInst (:string|number) %2: string|number|bigint, 6: number
-// OPT-CHECK-NEXT:  %10 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, %4: string|number, %5: string|number, %6: string|number, %7: string|number, %8: string|number, %9: string|number
+// OPT-CHECK-NEXT:  %10 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: string|number, %5: string|number, %6: string|number, %7: string|number, %8: string|number, %9: string|number
 // OPT-CHECK-NEXT:  %11 = ReturnInst undefined: undefined
 // OPT-CHECK-NEXT:function_end
 
@@ -82,7 +82,7 @@ function test2(p1, p2) {
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %7 = StoreStackInst undefined: undefined, %6: any
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %10 = StoreStackInst %9: any, %6: any
 // CHECK-NEXT:  %11 = LoadStackInst (:any) %6: any
 // CHECK-NEXT:  %12 = ReturnInst %11: any
@@ -136,6 +136,6 @@ function test2(p1, p2) {
 // CHECK-NEXT:  %19 = BinaryAddInst (:any) %18: any, 5: number
 // CHECK-NEXT:  %20 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %21 = BinaryAddInst (:any) %20: any, 6: number
-// CHECK-NEXT:  %22 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, %11: any, %13: any, %15: any, %17: any, %19: any, %21: any
+// CHECK-NEXT:  %22 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %11: any, %13: any, %15: any, %17: any, %19: any, %21: any
 // CHECK-NEXT:  %23 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
