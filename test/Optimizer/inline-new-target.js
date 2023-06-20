@@ -7,66 +7,72 @@
 
 // RUN: %hermesc -O -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
 
+'use strict'
+
 function outer(a, b) {
-    'use strict'
+    // This can be inlined even though it uses new.target, since it is never
+    // invoked as a constructor.
     function f1() {
-        // new.target leaks the closure, so it may prevent inlining.
         return new.target;
     }
     return f1();
 }
 
 function outer2(){
+    // This will be inlined even though the closure escapes, since it is marked
+    // 'inline'.
     function foo(){
       'inline'
       return new.target;
     }
     function bar(){
-      return foo();
+      return new foo();
     }
     return new bar();
 }
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global(): undefined
+// CHECK:function global(): string
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "outer": string
 // CHECK-NEXT:  %1 = DeclareGlobalVarInst "outer2": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %outer(): undefined|object
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: object, globalObject: object, "outer": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %outer(): undefined
+// CHECK-NEXT:  %3 = StorePropertyStrictInst %2: object, globalObject: object, "outer": string
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %outer2(): object
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: object, globalObject: object, "outer2": string
-// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %5 = StorePropertyStrictInst %4: object, globalObject: object, "outer2": string
+// CHECK-NEXT:  %6 = ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
-// CHECK:function outer(a: any, b: any): undefined|object
+// CHECK:function outer(a: any, b: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f1(): undefined|object
-// CHECK-NEXT:  %1 = CallInst (:undefined|object) %0: object, %f1(): undefined|object, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %2 = ReturnInst %1: undefined|object
+// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function outer2(): object
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:frame = [foo: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %bar(): undefined
-// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "prototype": string
-// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: any, %0: object
-// CHECK-NEXT:  %3 = ReturnInst %2: object
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): undefined|object
+// CHECK-NEXT:  %1 = StoreFrameInst %0: object, [foo]: object
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %bar(): object
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: object, "prototype": string
+// CHECK-NEXT:  %4 = LoadPropertyInst (:any) %0: object, "prototype": string
+// CHECK-NEXT:  %5 = ReturnInst %0: object
 // CHECK-NEXT:function_end
 
-// CHECK:function f1(): undefined|object
+// CHECK:function foo(): undefined|object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
 // CHECK-NEXT:  %1 = ReturnInst %0: undefined|object
 // CHECK-NEXT:function_end
 
-// CHECK:function bar(): undefined [allCallsitesKnownInStrictMode]
+// CHECK:function bar(): object [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %0 = LoadFrameInst (:object) [foo@outer2]: object
+// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "prototype": string
+// CHECK-NEXT:  %2 = ReturnInst %0: object
 // CHECK-NEXT:function_end

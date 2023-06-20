@@ -43,7 +43,7 @@
 // CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(): number|bigint
+// CHECK:function foo(): number|bigint [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %o(): undefined

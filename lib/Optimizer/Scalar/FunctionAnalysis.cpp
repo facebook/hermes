@@ -57,6 +57,12 @@ bool canEscapeThroughCall(Instruction *C, Function *F, BaseCallInst *CI) {
     if (C == CI->getArgument(i))
       return true;
 
+  // Check if the closure is passed as the new.target argument, and the function
+  // actually uses it.
+  // TODO: Allow certain instructions to use new.target.
+  if (C == CI->getNewTarget() && F->getNewTargetParam()->hasUsers())
+    return true;
+
   return false;
 }
 
@@ -166,13 +172,6 @@ void analyzeFunctionCallsites(Function *F) {
   if (F->isGlobalScope()) {
     // global function is called by the runtime, so its callsites aren't known.
     F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
-  }
-
-  if (auto *newTargetParam = F->getNewTargetParam()) {
-    // Uses of new.target can be used to leak the closure.
-    // TODO: Allow certain instructions to use new.target.
-    if (newTargetParam->hasUsers())
-      F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
   }
 
   for (Instruction *user : F->getUsers()) {

@@ -15,7 +15,7 @@ function main() {
   x = function f() {
     sink(new.target);
   };
-  return x();
+  return new x();
 }
 
 // Auto-generated content below. Please do not modify manually.
@@ -24,17 +24,19 @@ function main() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): undefined
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): object
 // CHECK-NEXT:  %2 = StorePropertyStrictInst %1: object, globalObject: object, "main": string
 // CHECK-NEXT:  %3 = ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
-// CHECK:function main(): undefined
+// CHECK:function main(): object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f(): undefined
-// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %f(): undefined, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "prototype": string
+// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: any, %0: object
+// CHECK-NEXT:  %3 = ConstructInst (:undefined) %0: object, %f(): undefined, empty: any, %0: object, %2: object
+// CHECK-NEXT:  %4 = ReturnInst %2: object
 // CHECK-NEXT:function_end
 
 // CHECK:function f(): undefined
