@@ -33,17 +33,7 @@ static bool lowerCalls(Function *F, SHRegisterAllocator &RA) {
       builder.setInsertionPoint(call);
       changed = true;
 
-      if (llvh::isa<ConstructInst>(call)) {
-        // If this is a constructor call, setup new.target.
-        RA.updateRegister(
-            builder.createMovInst(call->getCallee()),
-            stackReg(hbc::StackFrameLayout::NewTarget));
-      } else if (llvh::isa<CallInst>(call)) {
-        // If this is a normal call, invalidate new.target.
-        RA.updateRegister(
-            builder.createImplicitMovInst(builder.getLiteralUndefined()),
-            stackReg(hbc::StackFrameLayout::NewTarget));
-      } else if (llvh::isa<CallBuiltinInst>(call)) {
+      if (llvh::isa<CallBuiltinInst>(call)) {
         // If this is a CallBuiltin, invalidate new.target and the callee.
         RA.updateRegister(
             builder.createImplicitMovInst(builder.getLiteralUndefined()),
@@ -53,8 +43,12 @@ static bool lowerCalls(Function *F, SHRegisterAllocator &RA) {
             stackReg(hbc::StackFrameLayout::CalleeClosureOrCB));
       }
 
-      // If this is a normal or constructor call, populate the callee.
+      // If this is a normal or constructor call, populate the callee and
+      // new.target.
       if (llvh::isa<ConstructInst>(call) || llvh::isa<CallInst>(call)) {
+        RA.updateRegister(
+            builder.createMovInst(call->getNewTarget()),
+            stackReg(hbc::StackFrameLayout::NewTarget));
         auto *mov = builder.createMovInst(call->getCallee());
         RA.updateRegister(
             mov, stackReg(hbc::StackFrameLayout::CalleeClosureOrCB));

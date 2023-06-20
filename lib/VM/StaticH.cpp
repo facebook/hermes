@@ -382,7 +382,6 @@ _sh_ljs_call(SHRuntime *shr, SHLegacyValue *frame, uint32_t argCount) {
   newFrame.getSavedIPRef() = HermesValue::encodeNativePointer(nullptr);
   newFrame.getSavedCodeBlockRef() = HermesValue::encodeNativePointer(nullptr);
   newFrame.getArgCountRef() = HermesValue::encodeNativeUInt32(argCount);
-  newFrame.getNewTargetRef() = HermesValue::encodeUndefinedValue();
   return doCall(runtime, &newFrame.getCalleeClosureOrCBRef());
 }
 
@@ -394,8 +393,6 @@ _sh_ljs_construct(SHRuntime *shr, SHLegacyValue *frame, uint32_t argCount) {
   newFrame.getSavedIPRef() = HermesValue::encodeNativePointer(nullptr);
   newFrame.getSavedCodeBlockRef() = HermesValue::encodeNativePointer(nullptr);
   newFrame.getArgCountRef() = HermesValue::encodeNativeUInt32(argCount);
-  // Must be initialized by the caller:
-  // newFrame.getNewTargetRef() = HermesValue::encodeUndefinedValue();
   return doCall(runtime, &newFrame.getCalleeClosureOrCBRef());
 }
 

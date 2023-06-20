@@ -49,7 +49,7 @@ function test_builtin(a) {
 // CHECK-NEXT:  $stack[2]  = HBCLoadConstInst (:number) 11: number
 // CHECK-NEXT:  $stack[1]  = HBCLoadConstInst (:number) 12: number
 // CHECK-NEXT:  $stack[0]  = HBCLoadConstInst (:number) 13: number
-// CHECK-NEXT:  $stack[6]  = ImplicitMovInst (:undefined) undefined: undefined
+// CHECK-NEXT:  $stack[6]  = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  $stack[4]  = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  $loc0      = CallInst (:any) $stack[5], empty: any, empty: any, $loc4, $stack[4], $stack[3], $stack[2], $stack[1], $stack[0]
 // CHECK-NEXT:  $loc0      = ReturnInst $loc0
@@ -76,12 +76,11 @@ function test_builtin(a) {
 // CHECK:function test_builtin(a: any): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $loc2      = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  $stack[1]  = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  $stack[0]  = HBCLoadConstInst (:number) 3: number
 // CHECK-NEXT:  $stack[4]  = ImplicitMovInst (:undefined) undefined: undefined
 // CHECK-NEXT:  $stack[3]  = ImplicitMovInst (:empty) empty: empty
 // CHECK-NEXT:  $stack[2]  = ImplicitMovInst (:undefined) undefined: undefined
-// CHECK-NEXT:  $loc0      = CallBuiltinInst (:any) [HermesBuiltin.exponentiationOperator]: number, empty: any, empty: any, $loc2, undefined: undefined, $stack[1], $stack[0]
+// CHECK-NEXT:  $loc0      = CallBuiltinInst (:any) [HermesBuiltin.exponentiationOperator]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, $stack[1], $stack[0]
 // CHECK-NEXT:  $loc0      = ReturnInst $loc0
 // CHECK-NEXT:function_end

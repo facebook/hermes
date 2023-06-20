@@ -184,9 +184,10 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
        opIndex >= SwitchImmInst::FirstCaseIdx))
     return true;
 
-  /// CallBuiltin's callee and "this" should always be literals.
+  /// CallBuiltin's callee, new.target, "this" should always be literals.
   if (llvh::isa<CallBuiltinInst>(Inst) &&
       (opIndex == CallBuiltinInst::CalleeIdx ||
+       opIndex == CallBuiltinInst::NewTargetIdx ||
        opIndex == CallBuiltinInst::ThisIdx))
     return true;
 

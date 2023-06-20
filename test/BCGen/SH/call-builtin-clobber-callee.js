@@ -31,18 +31,18 @@ function test_call_after_builtin() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $loc0      = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  $loc2      = TryLoadGlobalPropertyInst (:any) $loc0, "print": string
-// CHECK-NEXT:  $loc3      = HBCAllocObjectFromBufferInst (:object) 1: number, "valueOf": string, null: null
+// CHECK-NEXT:  $loc1      = HBCAllocObjectFromBufferInst (:object) 1: number, "valueOf": string, null: null
 // CHECK-NEXT:  $loc0      = HBCCreateEnvironmentInst (:environment)
 // CHECK-NEXT:  $loc0      = HBCCreateFunctionInst (:object) %valueOf(): number, $loc0
-// CHECK-NEXT:  $loc0      = StorePropertyLooseInst $loc0, $loc3, "valueOf": string
-// CHECK-NEXT:  $loc0      = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  $loc0      = StorePropertyLooseInst $loc0, $loc1, "valueOf": string
 // CHECK-NEXT:  $stack[0]  = HBCLoadConstInst (:number) 3: number
 // CHECK-NEXT:  $stack[4]  = ImplicitMovInst (:undefined) undefined: undefined
 // CHECK-NEXT:  $stack[3]  = ImplicitMovInst (:empty) empty: empty
 // CHECK-NEXT:  $stack[2]  = ImplicitMovInst (:undefined) undefined: undefined
-// CHECK-NEXT:  $stack[1]  = MovInst (:object) $loc3
-// CHECK-NEXT:  $stack[1]  = CallBuiltinInst (:any) [HermesBuiltin.exponentiationOperator]: number, empty: any, empty: any, $loc0, undefined: undefined, $stack[1], $stack[0]
-// CHECK-NEXT:  $stack[4]  = ImplicitMovInst (:undefined) undefined: undefined
+// CHECK-NEXT:  $stack[1]  = MovInst (:object) $loc1
+// CHECK-NEXT:  $stack[1]  = CallBuiltinInst (:any) [HermesBuiltin.exponentiationOperator]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, $stack[1], $stack[0]
+// CHECK-NEXT:  $loc0      = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  $stack[4]  = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  $stack[3]  = MovInst (:any) $loc2
 // CHECK-NEXT:  $stack[2]  = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  $loc1      = CallInst (:any) $stack[3], empty: any, empty: any, $loc0, $stack[2], $stack[1]
