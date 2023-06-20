@@ -1301,8 +1301,6 @@ HadesGC::HadesGC(
           2 * AlignedStorage::size())},
       provider_(std::move(provider)),
       oldGen_{*this},
-      backgroundExecutor_{
-          kConcurrentGC ? std::make_unique<Executor>() : nullptr},
       promoteYGToOG_{!gcConfig.getAllocInYoung()},
       revertToYGAtTTI_{gcConfig.getRevertToYGAtTTI()},
       overwriteDeadYGObjects_{gcConfig.getOverwriteDeadYGObjects()},
@@ -1640,7 +1638,7 @@ void HadesGC::collectOGInBackground() {
   backgroundTaskActive_ = true;
 #endif
 
-  ogThreadStatus_ = backgroundExecutor_->add([this]() {
+  ogThreadStatus_ = getBackgroundExecutor().add([this]() {
     std::unique_lock<Mutex> lk(gcMutex_);
     while (true) {
       // If the mutator has requested the background task to stop and yield
@@ -2159,7 +2157,7 @@ void HadesGC::ttiReached() {
 bool HadesGC::calledByBackgroundThread() const {
   // If the background thread is active, check if this thread matches the
   // background thread.
-  return kConcurrentGC &&
+  return kConcurrentGC && backgroundExecutor_ &&
       backgroundExecutor_->getThreadId() == std::this_thread::get_id();
 }
 
@@ -2177,6 +2175,16 @@ bool HadesGC::needsWriteBarrier(void *loc, GCCell *value) {
   return !inYoungGen(loc);
 }
 #endif
+
+HadesGC::Executor &HadesGC::getBackgroundExecutor() {
+  if (LLVM_UNLIKELY(!backgroundExecutor_))
+    backgroundExecutor_ = std::make_unique<Executor>();
+  return *backgroundExecutor_;
+}
+
+void HadesGC::joinBackgroundThread() {
+  backgroundExecutor_.reset();
+}
 
 void *HadesGC::allocSlow(uint32_t sz) {
   AllocResult res;

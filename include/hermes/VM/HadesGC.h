@@ -141,6 +141,8 @@ class HadesGC final : public GCBase {
   /// (Part of general GC API defined in GCBase.h).
   void debitExternalMemory(GCCell *alloc, uint32_t size) override;
 
+  void joinBackgroundThread();
+
   /// \name Write Barriers
   /// \{
 
@@ -872,6 +874,8 @@ class HadesGC final : public GCBase {
   /// Allocate directly in the old generation (doing a full collection if
   /// necessary to create room).
   void *allocLongLived(uint32_t sz);
+
+  Executor &getBackgroundExecutor();
 
   /// Perform a YG garbage collection. All live objects in YG will be evacuated
   /// to the OG.
