@@ -33,7 +33,7 @@ function main() {
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f(): undefined
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "prototype": string
 // CHECK-NEXT:  %2 = CreateThisInst (:object) %1: any, %0: object
-// CHECK-NEXT:  %3 = CallInst (:undefined) %0: object, %f(): undefined, empty: any, %0: object, 0: number
+// CHECK-NEXT:  %3 = CallInst (:undefined) %0: object, %f(): undefined, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %4 = ReturnInst %2: object
 // CHECK-NEXT:function_end
 

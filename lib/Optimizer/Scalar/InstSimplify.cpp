@@ -412,17 +412,30 @@ Value *getKnownReturnValue(Function *F, CallInst *callSite) {
 }
 
 Value *simplifyCallInst(CallInst *CI) {
-  if (!CI->hasUsers())
-    return nullptr;
-
+  bool changed = false;
   if (Function *F = llvh::dyn_cast<Function>(CI->getTarget())) {
-    if (Value *V = getKnownReturnValue(F, CI)) {
-      CI->replaceAllUsesWith(V);
-      return CI;
+    if (CI->hasUsers()) {
+      if (Value *V = getKnownReturnValue(F, CI)) {
+        CI->replaceAllUsesWith(V);
+        changed = true;
+      }
+    }
+    if (!F->getNewTargetParam()->hasUsers() &&
+        !llvh::isa<LiteralUndefined>(CI->getNewTarget())) {
+      // The function does not use the supplied new.target param, replace it
+      // with undefined. This has two advantages:
+      // 1. It removes a usage of the closure, making it easier to analyze and
+      // potentially eliminate in the future.
+      // 2. It turns constructor calls into the same form as ordinary calls,
+      // potentially allowing for better codegen. This is particularly true for
+      // super() calls, where the callee and new.target are not the same.
+      IRBuilder builder(CI->getParent()->getParent());
+      CI->setNewTarget(builder.getLiteralUndefined());
+      changed = true;
     }
   }
 
-  return nullptr;
+  return changed ? CI : nullptr;
 }
 
 Value *simplifyGetConstructedObjectInst(GetConstructedObjectInst *GCOI) {

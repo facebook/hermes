@@ -35,7 +35,7 @@ function ctor_this_test() {
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %use_this(): object
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "prototype": string
 // CHECK-NEXT:  %2 = CreateThisInst (:object) %1: any, %0: object
-// CHECK-NEXT:  %3 = CallInst (:object) %0: object, %use_this(): object, empty: any, %0: object, %2: object, 12: number
+// CHECK-NEXT:  %3 = CallInst (:object) %0: object, %use_this(): object, empty: any, undefined: undefined, %2: object, 12: number
 // CHECK-NEXT:  %4 = ReturnInst %3: object
 // CHECK-NEXT:function_end
 

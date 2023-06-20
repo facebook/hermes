@@ -37,7 +37,7 @@ new D();
 // CHECK-NEXT:  %7 = StorePropertyStrictInst %6: object, %4: object, "prototype": string
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) %4: object, "prototype": string
 // CHECK-NEXT:  %9 = AllocObjectInst (:object) 0: number, %8: any
-// CHECK-NEXT:  %10 = CallInst (:undefined) %4: object, %D(): undefined, empty: any, %4: object, %9: object
+// CHECK-NEXT:  %10 = CallInst (:undefined) %4: object, %D(): undefined, empty: any, undefined: undefined, %9: object
 // CHECK-NEXT:  %11 = ReturnInst %9: object
 // CHECK-NEXT:function_end
 
