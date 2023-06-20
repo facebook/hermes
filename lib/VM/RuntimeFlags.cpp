@@ -28,6 +28,7 @@ vm::RuntimeConfig buildRuntimeConfig(const RuntimeFlags &flags) {
                         .withAllocInYoung(flags.GCAllocYoung)
                         .withRevertToYGAtTTI(flags.GCRevertToYGAtTTI)
                         .build())
+      .withMaxNumRegisters(flags.MaxNumRegisters)
       .withEnableEval(flags.EnableEval)
       .withVerifyEvalIR(flags.VerifyIR)
       .withOptimizedEval(flags.OptimizedEval)

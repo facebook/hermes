@@ -127,6 +127,7 @@ int main(int argc, char **argv) {
                   .withShouldReleaseUnused(vm::kReleaseUnusedNone)
                   .withName("hvm")
                   .build())
+          .withMaxNumRegisters(flags.MaxNumRegisters)
           .withES6Promise(flags.ES6Promise)
           .withES6Proxy(flags.ES6Proxy)
           .withIntl(flags.Intl)

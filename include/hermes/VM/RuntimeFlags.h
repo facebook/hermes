@@ -96,7 +96,13 @@ struct VMOnlyRuntimeFlags {
       "gc-max-heap",
       llvh::cl::desc("Max heap size.  Format: <unsigned>{K,M,G}{iB}"),
       llvh::cl::cat(GCCategory),
-      llvh::cl::init(MemorySize{vm::GCConfig::getDefaultInitHeapSize()})};
+      llvh::cl::init(MemorySize{vm::GCConfig::getDefaultMaxHeapSize()})};
+
+  llvh::cl::opt<uint64_t> MaxNumRegisters{
+      "max-register-stack",
+      llvh::cl::desc("Max number of registers in the register stack."),
+      llvh::cl::cat(RuntimeCategory),
+      llvh::cl::init(vm::RuntimeConfig::getDefaultMaxNumRegisters())};
 
   llvh::cl::opt<bool> ES6Promise{
       "Xes6-promise",

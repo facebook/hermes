@@ -83,6 +83,7 @@ static int executeHBCBytecodeFromCL(
                             .withAllocInYoung(flags.GCAllocYoung)
                             .withRevertToYGAtTTI(flags.GCRevertToYGAtTTI)
                             .build())
+          .withMaxNumRegisters(flags.MaxNumRegisters)
           .withEnableEval(cl::EnableEval)
           .withVerifyEvalIR(cl::VerifyIR)
           .withOptimizedEval(cl::OptimizedEval)
