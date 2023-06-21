@@ -81,36 +81,7 @@ describe('ComponentDeclaration', () => {
                 "type": "Identifier",
                 "typeAnnotation": null,
               },
-              "params": [
-                {
-                  "properties": [],
-                  "type": "ObjectPattern",
-                  "typeAnnotation": {
-                    "type": "TypeAnnotation",
-                    "typeAnnotation": {
-                      "id": {
-                        "name": "$ReadOnly",
-                        "type": "Identifier",
-                      },
-                      "type": "GenericTypeAnnotation",
-                      "typeParameters": {
-                        "params": [
-                          {
-                            "callProperties": [],
-                            "exact": false,
-                            "indexers": [],
-                            "inexact": true,
-                            "internalSlots": [],
-                            "properties": [],
-                            "type": "ObjectTypeAnnotation",
-                          },
-                        ],
-                        "type": "TypeParameterInstantiation",
-                      },
-                    },
-                  },
-                },
-              ],
+              "params": [],
               "predicate": null,
               "returnType": {
                 "id": {
@@ -641,36 +612,7 @@ describe('ComponentDeclaration', () => {
                 "type": "Identifier",
                 "typeAnnotation": null,
               },
-              "params": [
-                {
-                  "properties": [],
-                  "type": "ObjectPattern",
-                  "typeAnnotation": {
-                    "type": "TypeAnnotation",
-                    "typeAnnotation": {
-                      "id": {
-                        "name": "$ReadOnly",
-                        "type": "Identifier",
-                      },
-                      "type": "GenericTypeAnnotation",
-                      "typeParameters": {
-                        "params": [
-                          {
-                            "callProperties": [],
-                            "exact": false,
-                            "indexers": [],
-                            "inexact": true,
-                            "internalSlots": [],
-                            "properties": [],
-                            "type": "ObjectTypeAnnotation",
-                          },
-                        ],
-                        "type": "TypeParameterInstantiation",
-                      },
-                    },
-                  },
-                },
-              ],
+              "params": [],
               "predicate": null,
               "returnType": {
                 "type": "TypeAnnotation",

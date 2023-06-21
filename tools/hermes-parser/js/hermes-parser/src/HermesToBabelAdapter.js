@@ -621,121 +621,111 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
       }
     }
 
-    const properties = nodeUnprocessed.params.map(param => {
-      switch (param.type) {
-        case 'RestElement': {
-          delete param.typeAnnotation;
-          return param;
-        }
-        case 'ComponentParameter': {
-          if (getParamName(param.name) === 'ref') {
+    const params = (() => {
+      if (nodeUnprocessed.params.length === 0) {
+        return [];
+      }
+
+      const properties = nodeUnprocessed.params.map(param => {
+        switch (param.type) {
+          case 'RestElement': {
+            delete param.typeAnnotation;
+            return param;
+          }
+          case 'ComponentParameter': {
+            if (getParamName(param.name) === 'ref') {
+              throw createSyntaxError(
+                param,
+                'Component parameters named "ref" are currently not supported',
+              );
+            }
+
+            if (param.name.type === 'Identifier') {
+              delete param.name.typeAnnotation;
+            }
+            if (param.local.type === 'AssignmentPattern') {
+              delete param.local.left.typeAnnotation;
+              delete param.local.left.optional;
+            } else {
+              delete param.local.typeAnnotation;
+              delete param.local.optional;
+            }
+
+            return {
+              type: 'ObjectProperty',
+              key: param.name,
+              value: param.local,
+              method: false,
+              shorthand: param.shorthand,
+              computed: false,
+              loc: param.loc,
+              start: param.start,
+              end: param.end,
+            };
+          }
+          default: {
             throw createSyntaxError(
               param,
-              'Component parameters named "ref" are currently not supported',
+              `Unknown Component parameter type of "${param.type}"`,
             );
           }
-
-          if (param.name.type === 'Identifier') {
-            delete param.name.typeAnnotation;
-          }
-          if (param.local.type === 'AssignmentPattern') {
-            delete param.local.left.typeAnnotation;
-            delete param.local.left.optional;
-          } else {
-            delete param.local.typeAnnotation;
-            delete param.local.optional;
-          }
-
-          return {
-            type: 'ObjectProperty',
-            key: param.name,
-            value: param.local,
-            method: false,
-            shorthand: param.shorthand,
-            computed: false,
-            loc: param.loc,
-            start: param.start,
-            end: param.end,
-          };
         }
-        default: {
-          throw createSyntaxError(
-            param,
-            `Unknown Component parameter type of "${param.type}"`,
-          );
-        }
-      }
-    });
+      });
 
-    const paramsLoc = (() => {
-      if (properties.length === 0) {
-        // No props, approximate range via existing nodes.
-        const startLoc =
-          nodeUnprocessed.typeParameters != null
-            ? nodeUnprocessed.typeParameters.loc
-            : nodeUnprocessed.id.loc;
-        return {
-          start: startLoc.end,
-          end: rendersType.loc.start,
-          startRange: startLoc.endRange,
-          endRange: rendersType.loc.startRange,
-        };
-      }
-
-      return {
+      const paramsLoc = {
         start: properties[0].loc.start,
         end: properties[properties.length - 1].loc.end,
         startRange: properties[0].loc.startRange,
         endRange: properties[properties.length - 1].loc.endRange,
       };
-    })();
 
-    // Create empty loc for type annotation nodes
-    const createParamsTypeLoc = () => ({
-      loc: {
-        start: {...paramsLoc.end},
-        end: {...paramsLoc.end},
-        startRange: paramsLoc.endRange,
-        endRange: paramsLoc.endRange,
-      },
-    });
+      // Create empty loc for type annotation nodes
+      const createParamsTypeLoc = () => ({
+        loc: {
+          start: {...paramsLoc.end},
+          end: {...paramsLoc.end},
+          startRange: paramsLoc.endRange,
+          endRange: paramsLoc.endRange,
+        },
+      });
 
-    const params = [
-      {
-        type: 'ObjectPattern',
-        properties,
-        typeAnnotation: {
-          type: 'TypeAnnotation',
+      return [
+        {
+          type: 'ObjectPattern',
+          properties,
           typeAnnotation: {
-            type: 'GenericTypeAnnotation',
-            id: {
-              type: 'Identifier',
-              name: '$ReadOnly',
-              ...createParamsTypeLoc(),
-            },
-            typeParameters: {
-              type: 'TypeParameterInstantiation',
-              params: [
-                {
-                  type: 'ObjectTypeAnnotation',
-                  callProperties: [],
-                  properties: [],
-                  indexers: [],
-                  internalSlots: [],
-                  exact: false,
-                  inexact: true,
-                  ...createParamsTypeLoc(),
-                },
-              ],
+            type: 'TypeAnnotation',
+            typeAnnotation: {
+              type: 'GenericTypeAnnotation',
+              id: {
+                type: 'Identifier',
+                name: '$ReadOnly',
+                ...createParamsTypeLoc(),
+              },
+              typeParameters: {
+                type: 'TypeParameterInstantiation',
+                params: [
+                  {
+                    type: 'ObjectTypeAnnotation',
+                    callProperties: [],
+                    properties: [],
+                    indexers: [],
+                    internalSlots: [],
+                    exact: false,
+                    inexact: true,
+                    ...createParamsTypeLoc(),
+                  },
+                ],
+                ...createParamsTypeLoc(),
+              },
               ...createParamsTypeLoc(),
             },
             ...createParamsTypeLoc(),
           },
-          ...createParamsTypeLoc(),
+          loc: paramsLoc,
         },
-        loc: paramsLoc,
-      },
-    ];
+      ];
+    })();
 
     const functionComponent = {
       type: 'FunctionDeclaration',
