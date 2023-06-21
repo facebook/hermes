@@ -84,19 +84,22 @@ describe('ComponentDeclaration', () => {
               "params": [],
               "predicate": null,
               "returnType": {
-                "id": {
+                "type": "TypeAnnotation",
+                "typeAnnotation": {
                   "id": {
-                    "name": "Node",
-                    "type": "Identifier",
+                    "id": {
+                      "name": "Node",
+                      "type": "Identifier",
+                    },
+                    "qualification": {
+                      "name": "React",
+                      "type": "Identifier",
+                    },
+                    "type": "QualifiedTypeIdentifier",
                   },
-                  "qualification": {
-                    "name": "React",
-                    "type": "Identifier",
-                  },
-                  "type": "QualifiedTypeIdentifier",
+                  "type": "GenericTypeAnnotation",
+                  "typeParameters": null,
                 },
-                "type": "GenericTypeAnnotation",
-                "typeParameters": null,
               },
               "type": "FunctionDeclaration",
               "typeParameters": null,
@@ -333,19 +336,22 @@ describe('ComponentDeclaration', () => {
               ],
               "predicate": null,
               "returnType": {
-                "id": {
+                "type": "TypeAnnotation",
+                "typeAnnotation": {
                   "id": {
-                    "name": "Node",
-                    "type": "Identifier",
+                    "id": {
+                      "name": "Node",
+                      "type": "Identifier",
+                    },
+                    "qualification": {
+                      "name": "React",
+                      "type": "Identifier",
+                    },
+                    "type": "QualifiedTypeIdentifier",
                   },
-                  "qualification": {
-                    "name": "React",
-                    "type": "Identifier",
-                  },
-                  "type": "QualifiedTypeIdentifier",
+                  "type": "GenericTypeAnnotation",
+                  "typeParameters": null,
                 },
-                "type": "GenericTypeAnnotation",
-                "typeParameters": null,
               },
               "type": "FunctionDeclaration",
               "typeParameters": null,
@@ -513,19 +519,22 @@ describe('ComponentDeclaration', () => {
               ],
               "predicate": null,
               "returnType": {
-                "id": {
+                "type": "TypeAnnotation",
+                "typeAnnotation": {
                   "id": {
-                    "name": "Node",
-                    "type": "Identifier",
+                    "id": {
+                      "name": "Node",
+                      "type": "Identifier",
+                    },
+                    "qualification": {
+                      "name": "React",
+                      "type": "Identifier",
+                    },
+                    "type": "QualifiedTypeIdentifier",
                   },
-                  "qualification": {
-                    "name": "React",
-                    "type": "Identifier",
-                  },
-                  "type": "QualifiedTypeIdentifier",
+                  "type": "GenericTypeAnnotation",
+                  "typeParameters": null,
                 },
-                "type": "GenericTypeAnnotation",
-                "typeParameters": null,
               },
               "type": "FunctionDeclaration",
               "typeParameters": null,
