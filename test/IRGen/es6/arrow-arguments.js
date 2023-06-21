@@ -78,7 +78,7 @@ function bar() {
 // CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: undefined|object, ?anon_2_arguments: object, arrow1: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsStrictInst (:object)
-// CHECK-NEXT:  %1 = LoadParamInst (:any) %this: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %2 = StoreFrameInst %1: any, [?anon_0_this]: any
 // CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
 // CHECK-NEXT:  %4 = StoreFrameInst %3: undefined|object, [?anon_1_new.target]: undefined|object
@@ -128,7 +128,7 @@ function bar() {
 // CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: undefined|object, ?anon_2_arguments: object, arrow3: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsStrictInst (:object)
-// CHECK-NEXT:  %1 = LoadParamInst (:any) %this: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %2 = StoreFrameInst %1: any, [?anon_0_this]: any
 // CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
 // CHECK-NEXT:  %4 = StoreFrameInst %3: undefined|object, [?anon_1_new.target]: undefined|object

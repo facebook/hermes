@@ -67,7 +67,7 @@ function ctor_load_store_test() {
 // CHECK:function use_this(k: number): object [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:object) %this: object
+// CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = StorePropertyStrictInst 12: number, %0: object, "k": string
 // CHECK-NEXT:  %2 = ReturnInst %0: object
 // CHECK-NEXT:function_end
@@ -75,7 +75,7 @@ function ctor_load_store_test() {
 // CHECK:function "use_this 1#"(k: number): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:object) %this: object
+// CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = StorePropertyStrictInst 12: number, %0: object, "k": string
 // CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -42,7 +42,7 @@ function ctor_this_test() {
 // CHECK:function use_this(k: number): object [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:object) %this: object
+// CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = StorePropertyStrictInst 12: number, %0: object, "k": string
 // CHECK-NEXT:  %2 = CreateRegExpInst (:object) "regexp": string, "": string
 // CHECK-NEXT:  %3 = ReturnInst %2: object

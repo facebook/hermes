@@ -592,7 +592,8 @@ JSDynamicParam *Function::addJSDynamicParam(Identifier name) {
 }
 JSDynamicParam *Function::addJSThisParam() {
   assert(jsDynamicParams_.empty() && "'this' must be the first js parameter");
-  auto *param = addJSDynamicParam(parent_->getContext().getIdentifier("this"));
+  auto *param =
+      addJSDynamicParam(parent_->getContext().getIdentifier("<this>"));
   jsThisAdded_ = true;
   return param;
 }

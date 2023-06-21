@@ -212,7 +212,7 @@ function test_async() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsStrictInst (:object)
-// CHECK-NEXT:  %1 = LoadParamInst (:undefined) %this: undefined
+// CHECK-NEXT:  %1 = LoadParamInst (:undefined) %<this>: undefined
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %?anon_0_asyncFn(): object
 // CHECK-NEXT:  %3 = GetBuiltinClosureInst (:object) [HermesBuiltin.spawnAsync]: number
 // CHECK-NEXT:  %4 = CallInst (:any) %3: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %2: object, %1: undefined, %0: object

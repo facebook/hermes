@@ -44,7 +44,7 @@ function outer2() {
 // CHECK:function outer1(): any
 // CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: undefined|object, innerArrow1: any, innerArrow2: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
 // CHECK-NEXT:  %2 = StoreFrameInst %1: object, [?anon_0_this]: any
 // CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
@@ -61,7 +61,7 @@ function outer2() {
 // CHECK:function outer2(): any
 // CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: undefined|object, inner3: any, innerArrow4: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
 // CHECK-NEXT:  %2 = StoreFrameInst %1: object, [?anon_0_this]: any
 // CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
@@ -98,7 +98,7 @@ function outer2() {
 // CHECK:function inner3(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) %1: object, "a": string
 // CHECK-NEXT:  %3 = ReturnInst %2: any

@@ -28,7 +28,7 @@ function foo(x = () => this) {
 // CHECK:function foo(x: any): any
 // CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: undefined|object, x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
 // CHECK-NEXT:  %2 = StoreFrameInst %1: object, [?anon_0_this]: any
 // CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|object) %new.target: undefined|object

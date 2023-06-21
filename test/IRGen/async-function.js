@@ -58,7 +58,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
-// CHECK-NEXT:  %1 = LoadParamInst (:any) %this: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %2 = CoerceThisNSInst (:object) %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %?anon_0_simpleReturn(): any
 // CHECK-NEXT:  %4 = GetBuiltinClosureInst (:object) [HermesBuiltin.spawnAsync]: number
@@ -70,7 +70,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
-// CHECK-NEXT:  %1 = LoadParamInst (:any) %this: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %2 = CoerceThisNSInst (:object) %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %?anon_0_simpleAwait(): any
 // CHECK-NEXT:  %4 = GetBuiltinClosureInst (:object) [HermesBuiltin.spawnAsync]: number
@@ -82,7 +82,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
-// CHECK-NEXT:  %1 = LoadParamInst (:any) %this: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %2 = CoerceThisNSInst (:object) %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %?anon_0_nonSimpleArrayDestructuring(): any
 // CHECK-NEXT:  %4 = GetBuiltinClosureInst (:object) [HermesBuiltin.spawnAsync]: number
@@ -94,7 +94,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
-// CHECK-NEXT:  %1 = LoadParamInst (:any) %this: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %2 = CoerceThisNSInst (:object) %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %?anon_0_simpleAsyncFE(): any
 // CHECK-NEXT:  %4 = GetBuiltinClosureInst (:object) [HermesBuiltin.spawnAsync]: number

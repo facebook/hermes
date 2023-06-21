@@ -45,7 +45,7 @@ function test_simple_call() {
 // CHECK:function Car(model: any, year: any): any
 // CHECK-NEXT:frame = [model: any, year: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %model: any
 // CHECK-NEXT:  %3 = StoreFrameInst %2: any, [model]: any
