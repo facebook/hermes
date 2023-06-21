@@ -632,7 +632,7 @@ var _isWeb = false;
 var _isIOS = false;
 var _locale = undefined;
 var _language = (/* unused pure expression or super */ null && (LANGUAGE_DEFAULT));
-var _translationsConfigFile = undefined;
+var _translationsConfigFile = (/* unused pure expression or super */ null && (undefined));
 var _userAgent = undefined;
 var isElectronRenderer = (typeof process !== 'undefined' && typeof process.versions !== 'undefined' && typeof process.versions.electron !== 'undefined' && process.type === 'renderer');
 // OS detection
