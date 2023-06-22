@@ -83,8 +83,9 @@ export class SimpleTraverser {
 
     const keys = getVisitorKeys(node, options.visitorKeys);
     for (const key of keys) {
-      // $FlowExpectedError[prop-missing]
-      const child = node[key];
+      const child: ESNode | $ReadOnlyArray<ESNode> = (node[
+        (key: $FlowFixMe)
+      ]: $FlowFixMe);
 
       if (Array.isArray(child)) {
         for (let j = 0; j < child.length; ++j) {
