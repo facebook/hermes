@@ -138,11 +138,15 @@ class IRBuilder {
       llvh::StringRef name,
       bool declared);
 
-  /// Add a new parameter to function \p Parent.
+  /// Add a new non-this parameter to function \p Parent.
   Parameter *createParameter(Function *Parent, Identifier Name);
 
-  /// Add a new parameter to function \p Parent.
+  /// Add a new non-this parameter to function \p Parent.
   Parameter *createParameter(Function *Parent, llvh::StringRef Name);
+
+  /// Add the 'this' parameter to function \p Parent.
+  /// Must only be done once per function.
+  Parameter *createThisParameter(Function *Parent);
 
   /// Add a new variable to scope \p Parent.
   Variable *createVariable(

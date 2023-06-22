@@ -671,7 +671,7 @@ class Parameter : public Value {
   Identifier Name;
 
  public:
-  explicit Parameter(Function *parent, Identifier name);
+  explicit Parameter(Function *parent, Identifier name, bool isThisParameter);
 
   void removeFromParent();
 

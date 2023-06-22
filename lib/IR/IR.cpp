@@ -445,10 +445,10 @@ WordBitSet<> Instruction::getChangedOperands() {
   }
 }
 
-Parameter::Parameter(Function *parent, Identifier name)
+Parameter::Parameter(Function *parent, Identifier name, bool isThisParameter)
     : Value(ValueKind::ParameterKind), Parent(parent), Name(name) {
   assert(Parent && "Invalid parent");
-  if (name.str() == "this") {
+  if (isThisParameter) {
     Parent->setThisParameter(this);
   } else {
     Parent->addParameter(this);

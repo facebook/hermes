@@ -576,7 +576,7 @@ void ESTreeIRGen::emitFunctionPreamble(BasicBlock *entry) {
 
   // Always create the "this" parameter. It needs to be created before we
   // initialized the ES5 capture state.
-  Builder.createParameter(newFunc, "this");
+  Builder.createThisParameter(newFunc);
 }
 
 void ESTreeIRGen::emitTopLevelDeclarations(
@@ -944,7 +944,7 @@ void ESTreeIRGen::emitFunctionEpilogue(Value *returnValue) {
 void ESTreeIRGen::genDummyFunction(Function *dummy) {
   IRBuilder builder{dummy};
 
-  builder.createParameter(dummy, "this");
+  builder.createThisParameter(dummy);
   BasicBlock *firstBlock = builder.createBasicBlock(dummy);
   builder.setInsertionBlock(firstBlock);
   builder.createUnreachableInst();
@@ -970,7 +970,7 @@ Function *ESTreeIRGen::genSyntaxErrorFunction(
       sourceRange,
       false);
 
-  builder.createParameter(function, "this");
+  builder.createThisParameter(function);
   BasicBlock *firstBlock = builder.createBasicBlock(function);
   builder.setInsertionBlock(firstBlock);
   builder.createCreateScopeInst(scopeDesc);

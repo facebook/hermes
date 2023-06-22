@@ -171,11 +171,15 @@ GlobalObjectProperty *IRBuilder::createGlobalObjectProperty(
 }
 
 Parameter *IRBuilder::createParameter(Function *Parent, Identifier Name) {
-  return new Parameter(Parent, Name);
+  return new Parameter(Parent, Name, false);
 }
 
 Parameter *IRBuilder::createParameter(Function *Parent, llvh::StringRef Name) {
   return createParameter(Parent, createIdentifier(Name));
+}
+
+Parameter *IRBuilder::createThisParameter(Function *Parent) {
+  return new Parameter(Parent, createIdentifier("this"), true);
 }
 
 Variable *IRBuilder::createVariable(
