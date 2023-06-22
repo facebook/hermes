@@ -1068,6 +1068,10 @@ class HERMES_EMPTY_BASES Runtime : public PointerBase,
 
   /// Enumerate all public native builtin methods, and invoke the callback on
   /// each method.
+  /// If the properties on the global object which are supposed to contain the
+  /// public native builtin methods no longer are objects, throws TypeError
+  /// instead of calling the callback.
+  /// e.g. if globalThis.Object is not an object, it'll throw.
   ExecutionStatus forEachPublicNativeBuiltin(
       const std::function<ForEachPublicNativeBuiltinCallback> &callback);
 

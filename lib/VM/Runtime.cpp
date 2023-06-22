@@ -1608,13 +1608,30 @@ ExecutionStatus Runtime::forEachPublicNativeBuiltin(
     auto objectName = (Predefined::Str)publicNativeBuiltins[methodIndex].object;
     if (objectName != lastObjectName) {
       auto objectID = Predefined::getSymbolID(objectName);
-      auto cr = JSObject::getNamed_RJS(getGlobal(), *this, objectID);
-      assert(
-          cr.getStatus() != ExecutionStatus::EXCEPTION &&
-          "getNamed() of builtin object failed");
-      assert(
-          vmisa<JSObject>(cr->get()) &&
-          "getNamed() of builtin object must be an object");
+      // Avoid running any JS here to avoid modifying the builtins while
+      // iterating them.
+      NamedPropertyDescriptor desc;
+      // Check if the builtin is overridden.
+      if (!JSObject::getOwnNamedDescriptor(
+              getGlobal(), *this, objectID, desc)) {
+        return raiseTypeError(
+            TwineChar16{
+                "Cannot execute a bytecode compiled with -fstatic-builtins: "} +
+            getPredefinedString(objectName) + " was deleted");
+      }
+      // Doesn't run accessors.
+      auto cr = JSObject::getNamedSlotValue(getGlobal(), *this, desc);
+      if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      // This is known to not be PropertyAccessor, so check that casting it to
+      // JSObject is allowed.
+      if (LLVM_UNLIKELY(!vmisa<JSObject>(cr->get()))) {
+        return raiseTypeError(
+            TwineChar16{
+                "Cannot execute a bytecode compiled with -fstatic-builtins: "} +
+            getPredefinedString(objectName) + " is not an object");
+      }
 
       lastObject = vmcast<JSObject>(cr->get());
       lastObjectName = objectName;
@@ -1697,21 +1714,38 @@ void Runtime::initJSBuiltins(
 ExecutionStatus Runtime::assertBuiltinsUnmodified() {
   assert(!builtinsFrozen_ && "Builtins are already frozen.");
   GCScope gcScope(*this);
+  NoRJSScope noRJS{*this};
 
   return forEachPublicNativeBuiltin([this](
                                         unsigned methodIndex,
-                                        Predefined::Str /* objectName */,
+                                        Predefined::Str objectName,
                                         Handle<JSObject> &currentObject,
                                         SymbolID methodID) {
-    auto cr = JSObject::getNamed_RJS(currentObject, *this, methodID);
-    assert(
-        cr.getStatus() != ExecutionStatus::EXCEPTION &&
-        "getNamed() of builtin method failed");
+    // Avoid running any JS here to avoid modifying the builtins while iterating
+    // them.
+    NamedPropertyDescriptor desc;
     // Check if the builtin is overridden.
+    // Need to check for flags which could result in JS execution.
+    if (!JSObject::getOwnNamedDescriptor(
+            currentObject, *this, methodID, desc) ||
+        desc.flags.proxyObject || desc.flags.hostObject) {
+      return raiseTypeError(
+          TwineChar16{
+              "Cannot execute a bytecode compiled with -fstatic-builtins: "} +
+          getPredefinedString(objectName) + "." +
+          getStringPrimFromSymbolID(methodID) + " has been modified");
+    }
+    auto cr = JSObject::getNamedSlotValue(currentObject, *this, desc);
+    if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
     auto currentBuiltin = dyn_vmcast<NativeFunction>(std::move(cr->get()));
     if (!currentBuiltin || currentBuiltin != builtins_[methodIndex]) {
       return raiseTypeError(
-          "Cannot execute a bytecode compiled with -fstatic-builtins when builtin functions are overriden.");
+          TwineChar16{
+              "Cannot execute a bytecode compiled with -fstatic-builtins: "} +
+          getPredefinedString(objectName) + "." +
+          getStringPrimFromSymbolID(methodID) + " has been modified");
     }
     return ExecutionStatus::RETURNED;
   });
