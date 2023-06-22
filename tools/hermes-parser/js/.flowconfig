@@ -21,6 +21,7 @@ module.name_mapper='^hermes-parser$' -> '<PROJECT_ROOT>/hermes-parser/src/index.
 module.name_mapper='^hermes-estree$' -> '<PROJECT_ROOT>/hermes-estree/src/index.js'
 module.name_mapper='^hermes-eslint$' -> '<PROJECT_ROOT>/hermes-eslint/src/index.js'
 module.name_mapper='^hermes-transform$' -> '<PROJECT_ROOT>/hermes-transform/src/index.js'
+module.name_mapper='^prettier-plugin-hermes-parser$' -> '<PROJECT_ROOT>/prettier-plugin-hermes-parser/src/index.js'
 
 enums=true
 conditional_type=true
