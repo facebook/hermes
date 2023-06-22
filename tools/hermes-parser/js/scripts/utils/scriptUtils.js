@@ -179,3 +179,11 @@ export const NODES_WITHOUT_TRANSFORM_NODE_TYPES: $ReadOnlySet<string> = new Set(
     'Program',
   ],
 );
+
+export const EXCLUDE_PROPERTIES_FROM_NODE: $ReadOnlyMap<
+  string,
+  $ReadOnlySet<string>,
+> = new Map([
+  // This property is only needed for TS
+  ['PropertyDefinition', new Set(['tsModifiers'])],
+]);

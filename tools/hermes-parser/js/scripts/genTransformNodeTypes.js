@@ -13,6 +13,7 @@ import {
   formatAndWriteSrcArtifact,
   LITERAL_TYPES,
   NODES_WITHOUT_TRANSFORM_NODE_TYPES,
+  EXCLUDE_PROPERTIES_FROM_NODE,
 } from './utils/scriptUtils';
 
 const imports: Array<string> = [];
@@ -72,6 +73,9 @@ export function ${node.name}(props: {
 export type ${node.name}Props = {
   ${node.arguments
     .map(arg => {
+      if (EXCLUDE_PROPERTIES_FROM_NODE.get(node.name)?.has(arg.name)) {
+        return null;
+      }
       const baseType = `${node.name}Type['${arg.name}']`;
       let type = baseType;
       if (arg.type === 'NodePtr') {
@@ -85,6 +89,7 @@ export type ${node.name}Props = {
       }
       return `+${arg.name}: ${type}`;
     })
+    .filter(Boolean)
     .join(',\n')},
 };
 `,
@@ -99,6 +104,9 @@ export function ${node.name}(props: {
     type: '${type}',
     ${node.arguments
       .map(arg => {
+        if (EXCLUDE_PROPERTIES_FROM_NODE.get(node.name)?.has(arg.name)) {
+          return null;
+        }
         switch (arg.type) {
           case 'NodePtr':
             return `${arg.name}: asDetachedNodeForCodeGen(props.${arg.name})`;
@@ -110,6 +118,7 @@ export function ${node.name}(props: {
             return `${arg.name}: props.${arg.name}`;
         }
       })
+      .filter(Boolean)
       .join(',\n')},
   });
   setParentPointersInDirectChildren(node);

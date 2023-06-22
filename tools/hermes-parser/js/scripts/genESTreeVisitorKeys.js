@@ -14,6 +14,7 @@ import {
   GetHermesESTreeJSON,
   formatAndWriteSrcArtifact,
   LITERAL_TYPES,
+  EXCLUDE_PROPERTIES_FROM_NODE,
 } from './utils/scriptUtils';
 
 const ALLOWED_ARG_TYPES = new Set(['NodePtr', 'NodeList']);
@@ -22,7 +23,11 @@ const ALLOWED_ARG_TYPES = new Set(['NodePtr', 'NodeList']);
 const visitorKeys: {[string]: Array<string>} = Object.create(null);
 for (const node of GetHermesESTreeJSON()) {
   visitorKeys[node.name] = node.arguments
-    .filter(arg => ALLOWED_ARG_TYPES.has(arg.type))
+    .filter(
+      arg =>
+        ALLOWED_ARG_TYPES.has(arg.type) &&
+        EXCLUDE_PROPERTIES_FROM_NODE.get(node.name)?.has(arg.name) !== true,
+    )
     .map(arg => arg.name);
 }
 
