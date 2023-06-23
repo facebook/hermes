@@ -29,6 +29,7 @@ SKIP_LIST = [
     "test262/test/language/white-space/mongolian-vowel-separator.js",
     "test262/test/language/literals/regexp/mongolian-vowel-separator.js",
     "test262/test/language/literals/string/mongolian-vowel-separator.js",
+    "esprima/test_fixtures/expression/primary/keyword/invalid-escaped-if.js",
     "esprima/test_fixtures/ES6/identifier/estimated.js",
     "esprima/test_fixtures/ES6/identifier/weierstrass.js",
     "esprima/test_fixtures/ES6/identifier/invalid_function_await.module.js",

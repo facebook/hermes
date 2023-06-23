@@ -1709,7 +1709,17 @@ void JSLexer::scanIdentifierFastPath(const char *start) {
 template <JSLexer::IdentifierMode Mode>
 void JSLexer::scanIdentifierParts() {
   consumeIdentifierParts<Mode>();
-  token_.setIdentifier(getIdentifier(tmpStorage_.str()));
+  auto rw =
+      scanReservedWord(tmpStorage_.str().begin(), tmpStorage_.str().size());
+  if (rw != TokenKind::identifier) {
+    token_.setResWord(rw, resWordIdent(rw));
+    sm_.warning(
+        {token_.getStartLoc(), SMLoc::getFromPointer(curCharPtr_)},
+        "scanning identifier with unicode escape as reserved word",
+        Subsystem::Lexer);
+  } else {
+    token_.setIdentifier(getIdentifier(tmpStorage_.str()));
+  }
 }
 
 bool JSLexer::scanPrivateIdentifier() {
