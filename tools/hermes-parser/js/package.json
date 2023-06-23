@@ -41,7 +41,8 @@
     "hermes-eslint",
     "hermes-estree",
     "hermes-parser",
-    "hermes-transform"
+    "hermes-transform",
+    "babel-plugin-syntax-hermes-parser"
   ],
   "dependencies": {}
 }

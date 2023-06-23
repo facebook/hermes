@@ -94,7 +94,8 @@ type Package =
   | 'hermes-parser'
   | 'hermes-transform'
   | 'flow-api-translator'
-  | 'prettier-plugin-hermes-parser';
+  | 'prettier-plugin-hermes-parser'
+  | 'babel-plugin-syntax-hermes-parser';
 
 type ArtifactOptions = $ReadOnly<{
   code: string,

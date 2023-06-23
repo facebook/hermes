@@ -8,7 +8,15 @@ set -xe -o pipefail
 
 THIS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-PACKAGES=(hermes-estree hermes-parser hermes-eslint hermes-transform flow-api-translator prettier-plugin-hermes-parser)
+PACKAGES=(
+  hermes-estree
+  hermes-parser
+  hermes-eslint
+  hermes-transform
+  flow-api-translator
+  prettier-plugin-hermes-parser
+  babel-plugin-syntax-hermes-parser
+)
 
 # Yarn install all packages
 yarn install
