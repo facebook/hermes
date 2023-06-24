@@ -135,8 +135,30 @@ describe('ComponentDeclaration', () => {
 
     test('Babel', async () => {
       expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(
+        `"function Foo(props: $ReadOnly<{...}>): React.Node {}"`,
+      );
+    });
+  });
+
+  describe('normal and rest params', () => {
+    const code = `
+      component Foo(param1: string, ...{param2}: Props) {}
+    `;
+
+    test('ESTree', async () => {
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
       expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
-        "function Foo({ ...props
+        "function Foo({
+          param1,
+          ...{
+            param2
+          }
         }: $ReadOnly<{...}>): React.Node {}"
       `);
     });
