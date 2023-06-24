@@ -102,8 +102,8 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
       case 'IndexedAccessType':
       case 'OptionalIndexedAccessType':
       case 'KeyofTypeAnnotation':
-      case 'ConditionalType':
-      case 'InferType':
+      case 'ConditionalTypeAnnotation':
+      case 'InferTypeAnnotation':
       case 'TupleTypeLabeledElement':
       case 'TupleTypeSpreadElement':
       case 'ObjectTypeMappedTypeProperty':
