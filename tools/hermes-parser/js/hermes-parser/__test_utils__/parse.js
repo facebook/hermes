@@ -14,9 +14,21 @@ import type {ESNode} from 'hermes-estree';
 
 import {SimpleTraverser} from '../src/traverse/SimpleTraverser';
 import {parse as parseOriginal} from '../src/index';
+import {print as printAST} from 'hermes-transform';
 
 // $FlowExpectedError[untyped-import]
 import {VISITOR_KEYS as babelVisitorKeys} from '@babel/types';
+// $FlowExpectedError[untyped-import]
+import generate from '@babel/generator';
+
+const prettierConfig = Object.freeze({
+  arrowParens: 'avoid',
+  singleQuote: true,
+  trailingComma: 'all',
+  bracketSpacing: false,
+  bracketSameLine: true,
+  parser: 'hermes',
+});
 
 export const parse: typeof parseOriginal = (source, options) => {
   return parseOriginal(source, {flow: 'all', ...options});
@@ -48,7 +60,37 @@ export function parseForSnapshot(
     );
   }
 
-  return cleanASTForSnapshot(parse(source, parseOpts), {babel, preserveRange});
+  return cleanASTForSnapshot(parse(source, parseOpts), {
+    babel,
+    preserveRange,
+  });
+}
+
+export async function printForSnapshot(
+  source: string,
+  {
+    babel,
+    enableExperimentalComponentSyntax,
+  }: {
+    babel?: boolean,
+    enableExperimentalComponentSyntax?: boolean,
+  } = {},
+): Promise<string> {
+  const parseOpts = {
+    enableExperimentalComponentSyntax:
+      enableExperimentalComponentSyntax ?? false,
+  };
+  if (babel === true) {
+    const ast = parse(source, {
+      babel: true,
+      ...parseOpts,
+    }).program;
+    return generate(ast).code;
+  }
+
+  const ast = parse(source, parseOpts);
+  const output = await printAST(ast, source, prettierConfig);
+  return output.trim();
 }
 
 export function cleanASTForSnapshot(
