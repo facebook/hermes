@@ -79,7 +79,6 @@ static Type inferMemoryLocationType(Value *addr) {
     switch (U->getKind()) {
       case ValueKind::StoreFrameInstKind: {
         auto *SF = cast<StoreFrameInst>(U);
-
         storedVal = SF->getValue();
         break;
       }
@@ -90,9 +89,16 @@ static Type inferMemoryLocationType(Value *addr) {
         break;
       }
 
+      case ValueKind::HBCStoreToEnvironmentInstKind: {
+        auto *SE = cast<HBCStoreToEnvironmentInst>(U);
+        storedVal = SE->getStoredValue();
+        break;
+      }
+
       // Loads do not change the type of the memory location.
       case ValueKind::LoadFrameInstKind:
       case ValueKind::LoadStackInstKind:
+      case ValueKind::HBCLoadFromEnvironmentInstKind:
         continue;
 
       default:
@@ -722,7 +728,7 @@ class TypeInferenceImpl {
     return Type::createNoType();
   }
   Type inferHBCLoadFromEnvironmentInst(HBCLoadFromEnvironmentInst *inst) {
-    return Type::createAnyOrEmpty();
+    return inst->getResolvedName()->getType();
   }
   Type inferUnreachableInst(UnreachableInst *inst) {
     return Type::createNoType();
