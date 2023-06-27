@@ -301,13 +301,21 @@ if (HERMES_STATIC_LINK)
   set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_STATIC_LIBRARY_SUFFIX}")
 endif()
 
-# Check if the linker supports --gc-sections and ICF.
+# Check if the linker supports deleting unused sections and ICF.
 # We can't simply CHECK_CXX_COMPILER_FLAG("-Wl,--gc-sections" ..) because CMake
 # will compile and link separately and only passes the flag during compilation.
 # TODO: Use check_linker_flag once we have CMake 3.18.
 set(OLD_CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
 set(CMAKE_EXE_LINKER_FLAGS "${OLD_CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections")
 CHECK_CXX_COMPILER_FLAG("" HAVE_GC_SECTIONS)
+
+# Only check for -dead_strip on Apple because some linkers may interpret it
+# as "-d -e ad_strip".
+if(APPLE)
+  set(CMAKE_EXE_LINKER_FLAGS "${OLD_CMAKE_EXE_LINKER_FLAGS} -Wl,-dead_strip")
+  CHECK_CXX_COMPILER_FLAG("" HAVE_DEAD_STRIP)
+endif()
+
 set(CMAKE_EXE_LINKER_FLAGS "${OLD_CMAKE_EXE_LINKER_FLAGS} -Wl,--icf=safe")
 CHECK_CXX_COMPILER_FLAG("" HAVE_ICF)
 set(CMAKE_EXE_LINKER_FLAGS "${OLD_CMAKE_EXE_LINKER_FLAGS}")
@@ -316,6 +324,9 @@ if(HAVE_GC_SECTIONS)
   add_flag_if_supported("-ffunction-sections" FUNCTION_SECTIONS)
   add_flag_if_supported("-fdata-sections" DATA_SECTIONS)
   list(APPEND HERMES_EXTRA_LINKER_FLAGS "LINKER:--gc-sections")
+elseif(HAVE_DEAD_STRIP)
+  # This is similar to the above, but for macOS.
+  list(APPEND HERMES_EXTRA_LINKER_FLAGS "LINKER:-dead_strip")
 endif()
 
 if(HAVE_ICF)
