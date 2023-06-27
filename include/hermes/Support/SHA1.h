@@ -9,6 +9,7 @@
 #define HERMES_SUPPORT_SHA1_H
 
 #include <array>
+#include <cstdint>
 #include <string>
 
 namespace hermes {

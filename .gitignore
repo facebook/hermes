@@ -31,3 +31,6 @@ android/intltest/java/com/facebook/hermes/test/assets/**
 # VS Code and Visual Studio
 .vs
 .vscode
+
+# clangd cache
+.cache/
