@@ -342,11 +342,6 @@ bool LowerLoadStoreFrameInst::runOnFunction(Function *F) {
           Instruction *scope = getScope(builder, var, captureScope);
           Instruction *newInst =
               builder.createHBCLoadFromEnvironmentInst(scope, var);
-          // The type of the load may have been narrowed, so make sure we retain
-          // that type.
-          // TODO(T155912625): Revisit this once we have a side table for type
-          // overrides.
-          newInst->setType(LFI->getType());
 
           Inst->replaceAllUsesWith(newInst);
           Inst->eraseFromParent();

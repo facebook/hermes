@@ -104,7 +104,7 @@ function f2() {
 // CHKLIR-NEXT:  %2 = HBCLoadConstInst (:empty) empty: empty
 // CHKLIR-NEXT:  %3 = HBCStoreToEnvironmentInst %0: environment, %2: empty, [x]: empty|undefined
 // CHKLIR-NEXT:  %4 = ThrowIfEmptyInst (:any) %2: empty
-// CHKLIR-NEXT:  %5 = LIRDeadValueInst (:any)
+// CHKLIR-NEXT:  %5 = UnionNarrowTrustedInst (:any) %2: empty
 // CHKLIR-NEXT:  %6 = HBCLoadConstInst (:number) 1: number
 // CHKLIR-NEXT:  %7 = BinaryAddInst (:string|number) %5: any, %6: number
 // CHKLIR-NEXT:  %8 = ReturnInst %7: string|number
@@ -136,8 +136,9 @@ function f2() {
 // CHKLIR-NEXT:  %3 = ThrowIfEmptyInst (:undefined|number) %2: empty|undefined|number
 // CHKLIR-NEXT:  %4 = HBCLoadConstInst (:number) 10: number
 // CHKLIR-NEXT:  %5 = HBCStoreToEnvironmentInst %1: environment, %4: number, [x@f2]: empty|undefined|number
-// CHKLIR-NEXT:  %6 = HBCLoadFromEnvironmentInst (:undefined|number) %1: environment, [x@f2]: empty|undefined|number
-// CHKLIR-NEXT:  %7 = ReturnInst %6: undefined|number
+// CHKLIR-NEXT:  %6 = HBCLoadFromEnvironmentInst (:empty|undefined|number) %1: environment, [x@f2]: empty|undefined|number
+// CHKLIR-NEXT:  %7 = UnionNarrowTrustedInst (:undefined|number) %6: empty|undefined|number
+// CHKLIR-NEXT:  %8 = ReturnInst %7: undefined|number
 // CHKLIR-NEXT:%BB1:
-// CHKLIR-NEXT:  %8 = ReturnInst %0: undefined
+// CHKLIR-NEXT:  %9 = ReturnInst %0: undefined
 // CHKLIR-NEXT:function_end

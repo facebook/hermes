@@ -1743,7 +1743,19 @@ class InstrGen {
     os_ << ");\n";
   }
   void generateUnionNarrowTrustedInst(UnionNarrowTrustedInst &inst) {
-    hermes_fatal("UnionNarrowTrusted should have been lowered.");
+    // Since all values are currently NaN-boxed, narrowing is just a move.
+    // TODO(T155912625): Revisit this once union narrow lowering is fixed.
+    sh::Register dstReg = ra_.getRegister(&inst);
+    if (ra_.isAllocated(inst.getSingleOperand()) &&
+        dstReg == ra_.getRegister(inst.getSingleOperand())) {
+      return;
+    }
+
+    os_.indent(2);
+    generateRegister(dstReg);
+    os_ << " = ";
+    generateValue(*inst.getSingleOperand());
+    os_ << ";\n";
   }
   void generateLIRDeadValueInst(LIRDeadValueInst &inst) {
     os_.indent(2);
@@ -1803,7 +1815,6 @@ class InstrGen {
 void lowerModuleIR(Module *M, bool optimize) {
   PassManager PM;
   PM.addPass(createLIRPeephole());
-  PM.addPass(sh::createLowerNanBoxedUnionNarrowTrusted());
   // LowerExponentiationOperator needs to run before LowerBuiltinCalls because
   // it introduces calls to HermesInternal.
   PM.addPass(new LowerExponentiationOperator());
