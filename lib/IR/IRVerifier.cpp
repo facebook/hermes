@@ -554,12 +554,17 @@ void Verifier::visitStoreNewOwnPropertyInst(
     const StoreNewOwnPropertyInst &Inst) {
   visitBaseStoreOwnPropertyInst(Inst);
   Assert(
-      llvh::isa<LiteralString>(
-          Inst.getOperand(StoreOwnPropertyInst::PropertyIdx)),
-      "StoreNewOwnPropertyInst::Property must be a string literal");
-  Assert(
       Inst.getObject()->getType().isObjectType(),
       "StoreNewOwnPropertyInst::Object must be known to be an object");
+  if (auto *LN = llvh::dyn_cast<LiteralNumber>(Inst.getProperty())) {
+    Assert(
+        LN->convertToArrayIndex().hasValue(),
+        "StoreNewOwnPropertyInst::Property can only be an index-like number");
+  } else {
+    Assert(
+        llvh::isa<LiteralString>(Inst.getProperty()),
+        "StoreNewOwnPropertyInst::Property must be a string or number literal");
+  }
 }
 
 void Verifier::visitStoreGetterSetterInst(const StoreGetterSetterInst &Inst) {
