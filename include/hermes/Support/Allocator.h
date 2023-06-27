@@ -67,7 +67,7 @@ class BacktrackingBumpPtrAllocator {
   State *state_;
 
   /// Allocate memory that can't fit within a single slab.
-  void *allocateHuge(int size) {
+  void *allocateHuge(size_t size) {
     auto *ptr = checkedMalloc(size);
     state_->hugeAllocs.push_back(
         std::unique_ptr<void, decltype(free) *>(ptr, free));
@@ -112,7 +112,11 @@ class BacktrackingBumpPtrAllocator {
   /// Allocate space for N elements of type T.
   template <typename T>
   inline T *Allocate(size_t num = 1, size_t alignment = sizeof(double)) {
-    int size = sizeof(T) * num;
+    // Calculate the maximum value for num that will not overflow.
+    constexpr size_t maxNum = std::numeric_limits<size_t>::max() / sizeof(T);
+    if (LLVM_UNLIKELY(num > maxNum))
+      hermes_fatal("Allocation size overflow.");
+    size_t size = sizeof(T) * num;
     return static_cast<T *>(Allocate(size, alignment));
   }
 
