@@ -1730,7 +1730,7 @@ class InstrGen {
     if (propType.isNumberType()) {
       suffix = "_number";
     } else if (propType.isBooleanType()) {
-      suffix = "_boolean";
+      suffix = "_bool";
     } else if (propType.isObjectType()) {
       suffix = "_object";
     } else if (propType.isStringType()) {
