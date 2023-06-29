@@ -108,6 +108,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
       case 'TupleTypeSpreadElement':
       case 'ObjectTypeMappedTypeProperty':
       case 'ComponentTypeAnnotation':
+      case 'TypePredicate':
         return this.mapUnsupportedTypeAnnotation(node);
       case 'BigIntLiteral':
         return this.mapBigIntLiteral(node);
