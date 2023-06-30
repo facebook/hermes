@@ -462,7 +462,7 @@ endif()
 
 if (GCC_COMPATIBLE)
   # Don't export symbols unless we explicitly say so
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
+  append("-fvisibility=hidden" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
   # C4068 unknown pragma
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4068")
