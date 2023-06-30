@@ -1,3 +1,20 @@
+## 0.14.0
+
+### `hermes-estree`
+
+### `hermes-parser`
+* Added support for Flow's new type guards
+
+### `hermes-eslint`
+
+### `hermes-transform`
+
+### `flow-api-translator`
+
+### `prettier-plugin-hermes-parser`
+
+### `babel-plugin-syntax-hermes-parser`
+
 ## 0.13.1
 
 ### `hermes-estree`
