@@ -327,31 +327,7 @@ class InstrGen {
         scopeAnalysis_(scopeAnalysis),
         envSize_(envSize),
         nextCacheIdx_(nextCacheIdx),
-        bbTryDepths_(bbTryDepths) {
-    registerIsPointer_.resize(ra_.getMaxRegisterUsage(sh::RegClass::LocalPtr));
-    if (F_.getContext().getOptimizationSettings().promoteNonPtr) {
-      // Default every register to not be a pointer.
-      registerIsPointer_.reset();
-      // Check each register to see if it's a non-pointer.
-      for (auto &BB : F_) {
-        for (auto &I : BB) {
-          if (ra_.isAllocated(&I) && I.hasOutput()) {
-            sh::Register reg = ra_.getRegister(&I);
-            if (reg.getClass() != hermes::sh::RegClass::LocalPtr)
-              continue;
-            if (!I.getType().isNonPtr()) {
-              // Set the bit if I sets the register to a pointer type.
-              // Numbers might be pointers, but the stack doesn't use HV32.
-              registerIsPointer_.set(reg.getIndex());
-            }
-          }
-        }
-      }
-    } else {
-      // Optimization is not enabled, everything is a pointer.
-      registerIsPointer_.set();
-    }
-  }
+        bbTryDepths_(bbTryDepths) {}
 
   /// Converts Instruction \p I into valid C code and outputs it through the
   /// ostream.
@@ -368,10 +344,6 @@ class InstrGen {
       default:
         llvm_unreachable("Invalid kind");
     }
-  }
-
-  bool registerIsPointer(uint32_t r) const {
-    return registerIsPointer_[r];
   }
 
  private:
@@ -403,9 +375,6 @@ class InstrGen {
   /// (if non-zero).
   const llvh::DenseMap<BasicBlock *, size_t> &bbTryDepths_;
 
-  /// Entry \c i is true if a pointer is ever written to register \c i.
-  llvh::BitVector registerIsPointer_{};
-
   void unimplemented(Instruction &inst) {
     std::string err{"Unimplemented "};
     err += inst.getName();
@@ -419,10 +388,7 @@ class InstrGen {
   void generateRegister(sh::Register reg) {
     switch (reg.getClass()) {
       case sh::RegClass::LocalPtr:
-        if (registerIsPointer(reg.getIndex()))
-          os_ << "locals.t" << reg.getIndex();
-        else
-          os_ << "r" << reg.getIndex();
+        os_ << "locals.t" << reg.getIndex();
         break;
 
       case sh::RegClass::LocalNonPtr:
@@ -1947,7 +1913,7 @@ void generateFunction(
       bbTryDepths);
 
   // Number of registers stored in the `locals` struct below.
-  uint32_t localsSize = 0;
+  uint32_t localsSize = RA.getMaxRegisterUsage(sh::RegClass::LocalPtr);
 
   OS << "static SHLegacyValue ";
   moduleGen.generateFunctionLabel(&F, OS);
@@ -1960,11 +1926,8 @@ void generateFunction(
 
   OS << "  struct {\n    SHLocals head;\n";
 
-  for (size_t i = 0; i < RA.getMaxRegisterUsage(sh::RegClass::LocalPtr); ++i) {
-    if (instrGen.registerIsPointer(i)) {
-      OS << "    SHLegacyValue t" << i << ";\n";
-      ++localsSize;
-    }
+  for (size_t i = 0; i < localsSize; ++i) {
+    OS << "    SHLegacyValue t" << i << ";\n";
   }
 
   OS << "  } locals;\n";
@@ -1984,14 +1947,8 @@ void generateFunction(
      << "  locals.head.count =" << localsSize << ";\n";
 
   // Initialize all registers to undefined.
-  for (size_t i = 0, e = RA.getMaxRegisterUsage(sh::RegClass::LocalPtr); i < e;
-       ++i) {
-    if (instrGen.registerIsPointer(i)) {
-      OS << "  locals.t";
-    } else {
-      OS << "  SHLegacyValue r";
-    }
-    OS << i << " = _sh_ljs_undefined();\n";
+  for (size_t i = 0; i < localsSize; ++i) {
+    OS << "  locals.t" << i << " = _sh_ljs_undefined();\n";
   }
   for (size_t i = 0, e = RA.getMaxRegisterUsage(sh::RegClass::LocalNonPtr);
        i < e;

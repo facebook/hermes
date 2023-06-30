@@ -360,13 +360,6 @@ cl::opt<bool> IncludeRawASTProp(
     cl::Hidden,
     cl::cat(CompilerCategory));
 
-cl::opt<bool> PromoteNonPtr(
-    "Xpromote-non-ptr",
-    cl::desc("Promote non-pointer registers to local variables"),
-    cl::init(true),
-    cl::Hidden,
-    cl::cat(CompilerCategory));
-
 CLFlag UseUnsafeIntrinsics(
     'f',
     "unsafe-intrinsics",
@@ -476,7 +469,6 @@ std::shared_ptr<Context> createContext() {
   // optimizationOpts.staticRequire = cl::StaticRequire;
   //
   optimizationOpts.useUnsafeIntrinsics = cli::UseUnsafeIntrinsics;
-  optimizationOpts.promoteNonPtr = cli::PromoteNonPtr;
 
   auto context = std::make_shared<Context>(codeGenOpts, optimizationOpts);
 
