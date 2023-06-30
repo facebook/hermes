@@ -24,7 +24,7 @@
 namespace hermes::sh {
 
 bool RegisterFile::isUsed(Register r) {
-  return !registers.test(r.getIndex());
+  return !registers(r.getClass()).test(r.getIndex());
 }
 
 bool RegisterFile::isFree(Register r) {
@@ -35,7 +35,7 @@ void RegisterFile::killRegister(Register reg) {
   LLVM_DEBUG(llvh::dbgs() << "-- Releasing the register " << reg << "\n");
 
   assert(isUsed(reg) && "Killing an unused register!");
-  registers.set(reg.getIndex());
+  registers(reg.getClass()).set(reg.getIndex());
   assert(isFree(reg) && "Error freeing register!");
 }
 
@@ -43,42 +43,44 @@ void RegisterFile::verify() {}
 
 void RegisterFile::dump() {
   llvh::outs() << "\n";
-  for (unsigned i = 0; i < registers.size(); i++) {
-    llvh::outs() << (int)!registers.test(i);
+  for (size_t c = 0; c < (size_t)RegClass::_last; ++c) {
+    for (size_t i = 0, e = registers((RegClass)c).size(); i < e; ++i) {
+      llvh::outs() << (int)!registers((RegClass)c).test(i);
+    }
   }
   llvh::outs() << "\n";
 }
 
-Register RegisterFile::allocateRegister() {
+Register RegisterFile::allocateRegister(RegClass regClass) {
   // We first check for the 'all' case because we usually have a small number of
   // active bits (<64), so this operation is actually faster than the linear
   // scan.
-  if (registers.none()) {
+  if (registers(regClass).none()) {
     // If all bits are set, create a new register and return it.
-    unsigned numRegs = registers.size();
-    registers.resize(numRegs + 1, false);
-    Register R = Register(RegClass::Local, numRegs);
+    unsigned numRegs = registers(regClass).size();
+    registers(regClass).resize(numRegs + 1, false);
+    Register R = Register(regClass, numRegs);
     assert(isUsed(R) && "Error allocating a new register.");
     LLVM_DEBUG(llvh::dbgs() << "-- Creating the new register " << R << "\n");
     return R;
   }
 
   // Search for a free register to use.
-  int i = registers.find_first();
+  int i = registers(regClass).find_first();
   assert(i >= 0 && "Unexpected failure to allocate a register");
-  Register R(RegClass::Local, (RegIndex)i);
+  Register R(regClass, (RegIndex)i);
   LLVM_DEBUG(llvh::dbgs() << "-- Assigning the free register " << R << "\n");
   assert(isFree(R) && "Error finding a free register");
-  registers.reset(i);
+  registers(regClass).reset(i);
   return R;
 }
 
-Register RegisterFile::tailAllocateConsecutive(unsigned n) {
+Register RegisterFile::tailAllocateConsecutive(RegClass regClass, unsigned n) {
   assert(n > 0 && "Can't request zero registers");
 
-  int lastUsed = registers.size() - 1;
+  int lastUsed = registers(regClass).size() - 1;
   while (lastUsed >= 0) {
-    if (!registers.test(lastUsed))
+    if (!registers(regClass).test(lastUsed))
       break;
 
     lastUsed--;
@@ -89,14 +91,15 @@ Register RegisterFile::tailAllocateConsecutive(unsigned n) {
   LLVM_DEBUG(
       llvh::dbgs() << "-- Found the last set bit at offset " << lastUsed
                    << "\n");
-  registers.resize(std::max(registers.size(), firstClear + n), true);
-  registers.reset(firstClear, firstClear + n);
+  registers(regClass).resize(
+      std::max(registers(regClass).size(), firstClear + n), true);
+  registers(regClass).reset(firstClear, firstClear + n);
 
   LLVM_DEBUG(
       llvh::dbgs() << "-- Allocated tail consecutive registers of length " << n
-                   << ", starting at " << Register(RegClass::Local, firstClear)
+                   << ", starting at " << Register(regClass, firstClear)
                    << "\n");
-  return Register(RegClass::Local, firstClear);
+  return Register(regClass, firstClear);
 }
 
 /// \returns true if the PHI node has an external user (that requires a
@@ -505,7 +508,7 @@ void RegisterAllocator::allocateFastPass(ArrayRef<BasicBlock *> order) {
     for (auto &inst : *bb) {
       handleInstruction(&inst);
       if (auto *phi = llvh::dyn_cast<PhiInst>(&inst)) {
-        auto reg = file.allocateRegister();
+        auto reg = file.allocateRegister(RegClass::LocalPtr);
         updateRegister(phi, reg);
         for (int i = 0, e = phi->getNumEntries(); i < e; i++) {
           updateRegister(phi->getEntry(i).first, reg);
@@ -521,7 +524,7 @@ void RegisterAllocator::allocateFastPass(ArrayRef<BasicBlock *> order) {
   for (auto *bb : order) {
     for (auto &inst : *bb) {
       if (!isAllocated(&inst)) {
-        Register R = file.allocateRegister();
+        Register R = file.allocateRegister(RegClass::LocalPtr);
         updateRegister(&inst, R);
         if (inst.getNumUsers() == 0) {
           file.killRegister(R);
@@ -683,7 +686,7 @@ void RegisterAllocator::allocate(ArrayRef<BasicBlock *> order) {
 
     // Allocate a register for the live interval that we are currently handling.
     if (!isAllocated(inst)) {
-      Register R = file.allocateRegister();
+      Register R = file.allocateRegister(RegClass::LocalPtr);
       updateRegister(inst, R);
     }
 
@@ -867,13 +870,15 @@ bool RegisterAllocator::isAllocated(Value *I) {
   return allocated.count(I);
 }
 
-Register RegisterAllocator::reserve(unsigned count) {
-  return file.tailAllocateConsecutive(count);
+Register RegisterAllocator::reserve(RegClass regClass, unsigned count) {
+  return file.tailAllocateConsecutive(regClass, count);
 }
 
-Register RegisterAllocator::reserve(ArrayRef<Value *> values) {
+Register RegisterAllocator::reserve(
+    RegClass regClass,
+    ArrayRef<Value *> values) {
   assert(!values.empty() && "Can't reserve zero registers");
-  Register first = file.tailAllocateConsecutive(values.size());
+  Register first = file.tailAllocateConsecutive(regClass, values.size());
 
   Register T = first;
   for (auto *v : values) {
@@ -908,8 +913,11 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, Register reg) {
     OS << "invalid";
   } else {
     switch (reg.getClass()) {
-      case RegClass::Local:
+      case RegClass::LocalPtr:
         OS << "loc" << reg.getIndex();
+        break;
+      case RegClass::LocalNonPtr:
+        OS << "np" << reg.getIndex();
         break;
       case RegClass::RegStack:
         OS << "stack[" << reg.getIndex() << ']';

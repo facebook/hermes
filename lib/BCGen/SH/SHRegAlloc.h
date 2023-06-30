@@ -20,8 +20,10 @@ namespace hermes::sh {
 
 /// A register class identifies a set of registers with similar properties.
 enum class RegClass : uint8_t {
-  /// A native local.
-  Local,
+  /// A native local that may be a pointer.
+  LocalPtr,
+  /// A native local that is guaranteed to not be a pointer.
+  LocalNonPtr,
   /// An entry in the VM register stack.
   RegStack,
   /// The last entry.
@@ -136,7 +138,7 @@ class RegisterFile {
   // can only grow (and not shrink). This is how we keep track of the max number
   // of allocated register. There is no need to shrink the register file because
   // the compile time wins are negligable.
-  llvh::BitVector registers;
+  llvh::BitVector registers_[(size_t)sh::RegClass::_last]{};
 
  public:
   RegisterFile(const RegisterFile &) = delete;
@@ -150,23 +152,32 @@ class RegisterFile {
   bool isFree(Register r);
 
   /// \returns a register that's currently unused.
-  Register allocateRegister();
+  Register allocateRegister(RegClass regClass);
 
   /// Reserves \p n consecutive registers at the end of the register file.
   /// 'n' consecutive registers will be allocated and the first one is returned.
-  Register tailAllocateConsecutive(unsigned n);
+  Register tailAllocateConsecutive(RegClass regClass, unsigned n);
 
   /// Free the register \p reg and make it available for re-allocation.
   void killRegister(Register reg);
 
   /// \returns the number of currently allocated registers.
-  unsigned getNumLiveRegisters() {
-    return registers.size() - registers.count();
+  unsigned getNumLiveRegisters(RegClass regClass) {
+    return registers(regClass).size() - registers(regClass).count();
   }
 
   /// \returns the number of registers that were ever created.
-  unsigned getMaxRegisterUsage() {
-    return registers.size();
+  unsigned getMaxRegisterUsage(RegClass regClass) {
+    return registers(regClass).size();
+  }
+
+  /// \return the BitVector tracking registers of \p regClass.
+  llvh::BitVector &registers(RegClass regClass) {
+    return registers_[(size_t)regClass];
+  }
+  /// \return the BitVector tracking registers of \p regClass.
+  const llvh::BitVector &registers(RegClass regClass) const {
+    return registers_[(size_t)regClass];
   }
 
   /// Verify the internal state of the register file.
@@ -440,10 +451,10 @@ class RegisterAllocator {
   /// \p values is a list of values to be assigned consecutive registers.
   ///  nullptr values are also allocated a register but not registered.
   /// \returns the first register in the sequence.
-  Register reserve(llvh::ArrayRef<Value *> values);
+  Register reserve(RegClass regClass, llvh::ArrayRef<Value *> values);
 
   /// Reserves \n count registers that will be manually managed by the user.
-  Register reserve(unsigned count = 1);
+  Register reserve(RegClass regClass, unsigned count = 1);
 
   /// Free a register that was allocated with 'reserve'.
   void free(Register reg);
@@ -461,8 +472,8 @@ class RegisterAllocator {
   /// In here we assume that the registers are allocated consecutively
   /// and that allocating this number of registers will cover all of the
   /// registers that were allocated during the lifetime of the program.
-  virtual unsigned getMaxRegisterUsage() {
-    return file.getMaxRegisterUsage();
+  virtual unsigned getMaxRegisterUsage(RegClass regClass) {
+    return file.getMaxRegisterUsage(regClass);
   }
 };
 

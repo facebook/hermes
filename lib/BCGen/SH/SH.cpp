@@ -328,7 +328,7 @@ class InstrGen {
         envSize_(envSize),
         nextCacheIdx_(nextCacheIdx),
         bbTryDepths_(bbTryDepths) {
-    registerIsPointer_.resize(ra_.getMaxRegisterUsage());
+    registerIsPointer_.resize(ra_.getMaxRegisterUsage(sh::RegClass::LocalPtr));
     if (F_.getContext().getOptimizationSettings().promoteNonPtr) {
       // Default every register to not be a pointer.
       registerIsPointer_.reset();
@@ -337,7 +337,7 @@ class InstrGen {
         for (auto &I : BB) {
           if (ra_.isAllocated(&I) && I.hasOutput()) {
             sh::Register reg = ra_.getRegister(&I);
-            if (reg.getClass() != hermes::sh::RegClass::Local)
+            if (reg.getClass() != hermes::sh::RegClass::LocalPtr)
               continue;
             if (!I.getType().isNonPtr()) {
               // Set the bit if I sets the register to a pointer type.
@@ -417,14 +417,25 @@ class InstrGen {
 
   /// Helper to generate a value in a register,
   void generateRegister(sh::Register reg) {
-    if (reg.getClass() == sh::RegClass::Local) {
-      if (registerIsPointer(reg.getIndex()))
-        os_ << "locals.t" << reg.getIndex();
-      else
-        os_ << "r" << reg.getIndex();
-    } else {
-      os_ << "frame[" << (hbc::StackFrameLayout::FirstLocal + reg.getIndex())
-          << ']';
+    switch (reg.getClass()) {
+      case sh::RegClass::LocalPtr:
+        if (registerIsPointer(reg.getIndex()))
+          os_ << "locals.t" << reg.getIndex();
+        else
+          os_ << "r" << reg.getIndex();
+        break;
+
+      case sh::RegClass::LocalNonPtr:
+        os_ << "np" << reg.getIndex();
+        break;
+
+      case sh::RegClass::RegStack:
+        os_ << "frame[" << (hbc::StackFrameLayout::FirstLocal + reg.getIndex())
+            << ']';
+        break;
+
+      default:
+        hermes_fatal("unimplemented reg class");
     }
   }
 
@@ -1949,7 +1960,7 @@ void generateFunction(
 
   OS << "  struct {\n    SHLocals head;\n";
 
-  for (size_t i = 0; i < RA.getMaxRegisterUsage(); ++i) {
+  for (size_t i = 0; i < RA.getMaxRegisterUsage(sh::RegClass::LocalPtr); ++i) {
     if (instrGen.registerIsPointer(i)) {
       OS << "    SHLegacyValue t" << i << ";\n";
       ++localsSize;
@@ -1973,13 +1984,19 @@ void generateFunction(
      << "  locals.head.count =" << localsSize << ";\n";
 
   // Initialize all registers to undefined.
-  for (size_t i = 0; i < RA.getMaxRegisterUsage(); ++i) {
+  for (size_t i = 0, e = RA.getMaxRegisterUsage(sh::RegClass::LocalPtr); i < e;
+       ++i) {
     if (instrGen.registerIsPointer(i)) {
       OS << "  locals.t";
     } else {
       OS << "  SHLegacyValue r";
     }
     OS << i << " = _sh_ljs_undefined();\n";
+  }
+  for (size_t i = 0, e = RA.getMaxRegisterUsage(sh::RegClass::LocalNonPtr);
+       i < e;
+       ++i) {
+    OS << "  SHLegacyValue np" << i << " = _sh_ljs_undefined();\n";
   }
 
   // Initialize SHJmpBufs for the maximum possible try nesting depth.
