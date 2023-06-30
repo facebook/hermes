@@ -36,39 +36,39 @@ function test_builtin(a) {
 // CHECK-NEXT:  $loc2      = StorePropertyLooseInst $loc2, $loc1, "test_new": string
 // CHECK-NEXT:  $loc0      = HBCCreateFunctionInst (:object) %test_builtin(): number, $loc0
 // CHECK-NEXT:  $loc0      = StorePropertyLooseInst $loc0, $loc1, "test_builtin": string
-// CHECK-NEXT:  $loc0      = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  $loc0      = ReturnInst $loc0
+// CHECK-NEXT:  $np0       = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  $loc0      = ReturnInst $np0
 // CHECK-NEXT:function_end
 
 // CHECK:function test_call(bar: any): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $stack[5]  = LoadParamInst (:any) %bar: any
-// CHECK-NEXT:  $loc4      = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  $np4       = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  $stack[3]  = HBCLoadConstInst (:number) 10: number
 // CHECK-NEXT:  $stack[2]  = HBCLoadConstInst (:number) 11: number
 // CHECK-NEXT:  $stack[1]  = HBCLoadConstInst (:number) 12: number
 // CHECK-NEXT:  $stack[0]  = HBCLoadConstInst (:number) 13: number
 // CHECK-NEXT:  $stack[6]  = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  $stack[4]  = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  $loc0      = CallInst (:any) $stack[5], empty: any, empty: any, $loc4, $stack[4], $stack[3], $stack[2], $stack[1], $stack[0]
+// CHECK-NEXT:  $loc0      = CallInst (:any) $stack[5], empty: any, empty: any, $np4, $stack[4], $stack[3], $stack[2], $stack[1], $stack[0]
 // CHECK-NEXT:  $loc0      = ReturnInst $loc0
 // CHECK-NEXT:function_end
 
 // CHECK:function test_new(bar: any): object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $loc5      = LoadParamInst (:any) %bar: any
-// CHECK-NEXT:  $loc0      = LoadPropertyInst (:any) $loc5, "prototype": string
-// CHECK-NEXT:  $loc1      = CreateThisInst (:object) $loc0, $loc5
+// CHECK-NEXT:  $loc0      = LoadParamInst (:any) %bar: any
+// CHECK-NEXT:  $loc1      = LoadPropertyInst (:any) $loc0, "prototype": string
+// CHECK-NEXT:  $loc1      = CreateThisInst (:object) $loc1, $loc0
 // CHECK-NEXT:  $stack[3]  = HBCLoadConstInst (:number) 10: number
 // CHECK-NEXT:  $stack[2]  = HBCLoadConstInst (:number) 11: number
 // CHECK-NEXT:  $stack[1]  = HBCLoadConstInst (:number) 12: number
 // CHECK-NEXT:  $stack[0]  = HBCLoadConstInst (:number) 13: number
-// CHECK-NEXT:  $stack[6]  = MovInst (:any) $loc5
-// CHECK-NEXT:  $stack[5]  = MovInst (:any) $loc5
+// CHECK-NEXT:  $stack[6]  = MovInst (:any) $loc0
+// CHECK-NEXT:  $stack[5]  = MovInst (:any) $loc0
 // CHECK-NEXT:  $stack[4]  = MovInst (:object) $loc1
-// CHECK-NEXT:  $loc0      = CallInst (:any) $stack[5], empty: any, empty: any, $loc5, $stack[4], $stack[3], $stack[2], $stack[1], $stack[0]
+// CHECK-NEXT:  $loc0      = CallInst (:any) $stack[5], empty: any, empty: any, $loc0, $stack[4], $stack[3], $stack[2], $stack[1], $stack[0]
 // CHECK-NEXT:  $loc0      = GetConstructedObjectInst (:object) $loc1, $loc0
 // CHECK-NEXT:  $loc0      = ReturnInst $loc0
 // CHECK-NEXT:function_end

@@ -475,6 +475,13 @@ class RegisterAllocator {
   virtual unsigned getMaxRegisterUsage(RegClass regClass) {
     return file.getMaxRegisterUsage(regClass);
   }
+
+ private:
+  /// \return the RegClass in which \p inst should be allocated.
+  static RegClass getRegClass(Instruction *inst);
+
+  /// Allocate a register for \p inst in the class specified by getRegClass.
+  Register allocateInstruction(Instruction *inst);
 };
 
 /// Record the number of outgoing register stack entries needed for calls.

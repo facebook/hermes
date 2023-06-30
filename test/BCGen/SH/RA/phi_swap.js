@@ -27,8 +27,8 @@ function foo (a, b) {
 // CHECK-NEXT:  $loc1      = HBCCreateFunctionInst (:object) %foo(): any, $loc0
 // CHECK-NEXT:  $loc0      = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  $loc0      = StorePropertyLooseInst $loc1, $loc0, "foo": string
-// CHECK-NEXT:  $loc0      = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  $loc0      = ReturnInst $loc0
+// CHECK-NEXT:  $np0       = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  $loc0      = ReturnInst $np0
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(a: any, b: any): any

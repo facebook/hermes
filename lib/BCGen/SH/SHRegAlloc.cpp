@@ -502,13 +502,22 @@ bool isBlockLocal(Instruction *inst) {
 }
 } // namespace
 
+RegClass RegisterAllocator::getRegClass(Instruction *inst) {
+  return inst->getType().isNonPtr() ? RegClass::LocalNonPtr
+                                    : RegClass::LocalPtr;
+}
+
+Register RegisterAllocator::allocateInstruction(Instruction *inst) {
+  return file.allocateRegister(getRegClass(inst));
+}
+
 void RegisterAllocator::allocateFastPass(ArrayRef<BasicBlock *> order) {
   // Make sure Phis and related Movs get the same register
   for (auto *bb : order) {
     for (auto &inst : *bb) {
       handleInstruction(&inst);
       if (auto *phi = llvh::dyn_cast<PhiInst>(&inst)) {
-        auto reg = file.allocateRegister(RegClass::LocalPtr);
+        auto reg = allocateInstruction(&inst);
         updateRegister(phi, reg);
         for (int i = 0, e = phi->getNumEntries(); i < e; i++) {
           updateRegister(phi->getEntry(i).first, reg);
@@ -524,7 +533,7 @@ void RegisterAllocator::allocateFastPass(ArrayRef<BasicBlock *> order) {
   for (auto *bb : order) {
     for (auto &inst : *bb) {
       if (!isAllocated(&inst)) {
-        Register R = file.allocateRegister(RegClass::LocalPtr);
+        Register R = allocateInstruction(&inst);
         updateRegister(&inst, R);
         if (inst.getNumUsers() == 0) {
           file.killRegister(R);
@@ -686,7 +695,7 @@ void RegisterAllocator::allocate(ArrayRef<BasicBlock *> order) {
 
     // Allocate a register for the live interval that we are currently handling.
     if (!isAllocated(inst)) {
-      Register R = file.allocateRegister(RegClass::LocalPtr);
+      Register R = allocateInstruction(inst);
       updateRegister(inst, R);
     }
 
