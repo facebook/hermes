@@ -9,7 +9,7 @@
 
 (function() {
 
-function foo(x: number|string): number { return x+1; }
+function foo(x: number|string): number { return 2; }
 function bar(x: number): number|string { return x; }
 
 // Ensure foo flows into bar.
