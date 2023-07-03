@@ -17,17 +17,6 @@
 const mapPrototypeGet: any = Map.prototype.get;
 const mapPrototypeSet: any = Map.prototype.set;
 
-function arrayPrototypeMap_number(arr: number[], cb: any): any {
-  'inline';
-  var length: number = arr.length;
-  var result: number[] = [];
-  for (var i: number = 0; i < length; ++i) {
-    var elem: number = arr[i];
-    result.push(cb(elem));
-  }
-  return result;
-}
-
 function arrayPrototypeMap_Widget(arr: Widget[], cb: any): any {
   'inline';
   var length: number = arr.length;
