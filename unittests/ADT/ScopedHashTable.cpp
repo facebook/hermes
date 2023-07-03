@@ -99,6 +99,19 @@ TEST(ScopedHashTable, SetInCurrentScope) {
   EXPECT_EQ("true", table.lookup("foo"));
 }
 
+TEST(ScopedHashTable, FindInCurrentScope) {
+  Table table;
+  Scope outer(table);
+  table.insert("foo", "true");
+  {
+    Scope inner(table);
+    table.insert("bar", "true");
+    EXPECT_EQ(nullptr, table.findInCurrentScope("foo"));
+    EXPECT_EQ("true", *table.findInCurrentScope("bar"));
+  }
+  EXPECT_EQ("true", *table.findInCurrentScope("foo"));
+}
+
 TEST(ScopedHashTable, EraseFromCurrentScope) {
   Table table{};
 

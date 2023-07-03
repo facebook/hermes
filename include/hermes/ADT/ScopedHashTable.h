@@ -220,6 +220,20 @@ class ScopedHashTable {
     return result;
   }
 
+  /// \return a pointer to the value for a key if it exists in the current
+  /// scope, or nullptr if none.
+  V *findInCurrentScope(const K &key) {
+    auto result = map_.find(key);
+    if (result == map_.end())
+      return nullptr;
+
+    // Result is not in the current scope.
+    if (result->second->depth_ != scope_->depth_)
+      return nullptr;
+
+    return &result->second->value_;
+  }
+
   // Gets keys in each scope. This may correspond to a \p ScopeChain.
   // Shadowed keys are ignored. 0 is innermost.
   std::unique_ptr<std::vector<std::vector<K>>> getKeysByScope() const {
