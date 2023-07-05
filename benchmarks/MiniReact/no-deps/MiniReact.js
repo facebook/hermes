@@ -77,7 +77,7 @@ const renderPhaseUpdateQueue: Array<Update<mixed>> = [];
  * Public API to create a new "root", this is where React attaches rendering to a host element.
  * In our case we don't actually have a real host, and currently only "render" to strings.
  */
-export function createRoot(): Root {
+function createRoot(): Root {
   return new Root();
 }
 
@@ -86,7 +86,7 @@ export function createRoot(): Root {
  * call within the component as the identity. Thus conditionally calling this API can cause state to
  * be lost.
  */
-export function useState<T>(
+function useState<T>(
   /**
    * Initial value of the state
    */
@@ -153,7 +153,7 @@ type Updater<T> = T | ((prev: T) => T);
 /**
  * The type of the setState function (second element of the array returned by useState).
  */
-export type SetState<T> = (value: Updater<T>) => void;
+type SetState<T> = (value: Updater<T>) => void;
 
 /**
  * A queued state update.
