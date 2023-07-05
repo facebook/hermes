@@ -69,9 +69,11 @@ void SwitchLowering::lowerSwitchIntoIfs(SwitchInst *switchInst) {
     // Update any phis in the destination block.
     copyPhiTarget(caseEntry.second, currentBlock, ifBlock);
 
-    if (next == defaultDest) {
-      // If this block is responsible for jumps to the default block,
-      // update phi nodes there too (true on the first iteration).
+    if (next == defaultDest && caseEntry.second != next) {
+      // If this block is responsible for jumps to the default block (true on
+      // the first iteration), and the default block is distinct from the
+      // destination of this block (which we have already updated) update phi
+      // nodes in the default block too.
       copyPhiTarget(next, currentBlock, ifBlock);
     }
 
