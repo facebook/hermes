@@ -714,7 +714,7 @@ void Verifier::visitPhiInst(const hermes::PhiInst &Inst) {
   // We verify the dominance property when we scan the whole function. In here
   // we only verify local properties.
 
-  llvh::DenseMap<BasicBlock *, Value *> entries(8);
+  llvh::SmallDenseSet<BasicBlock *, 8> entries;
 
   // Check that every input block enters only once:
   for (int i = 0, e = Inst.getNumEntries(); i < e; ++i) {
@@ -727,15 +727,12 @@ void Verifier::visitPhiInst(const hermes::PhiInst &Inst) {
         succ_contains(block, Inst.getParent()),
         "Phi node should be Successor!");
 
-    Value *value = pair.first;
-    auto result = entries.find(block);
-    if (result == entries.end()) {
-      entries[block] = value;
-    } else {
-      Assert(
-          value == result->second,
-          "Phi node has different inputs for the same block.");
-    }
+    // In theory, it is legitimate for a Phi to have multiple entries for a
+    // block as long as all the associated values are the same. However, such an
+    // invariant would be more complicated, and requires care to maintain when
+    // updating operands of the Phi.
+    auto [it, first] = entries.insert(block);
+    Assert(first, "Phi node has multiple entries for the same block");
   }
 
   Assert(
