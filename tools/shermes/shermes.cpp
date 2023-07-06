@@ -784,6 +784,8 @@ bool compileFromCommandLineOptions() {
   genOptions.staticBuiltinsEnabled = context->getStaticBuiltinOptimization();
   // genOptions.padFunctionBodiesPercent = cl::PadFunctionBodiesPercent;
 
+  genOptions.verifyIR = cli::VerifyIR;
+
   // If the user requests to output a source map, then do not also emit debug
   // info into the bytecode.
   // genOptions.stripDebugInfoSection =
