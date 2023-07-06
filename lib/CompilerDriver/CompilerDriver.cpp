@@ -1970,6 +1970,7 @@ CompileResult processSourceFiles(
   // options parsing and js parsing. Set the bytecode header flag here.
   genOptions.staticBuiltinsEnabled = context->getStaticBuiltinOptimization();
   genOptions.padFunctionBodiesPercent = cl::PadFunctionBodiesPercent;
+  genOptions.verifyIR = cl::VerifyIR;
 
   // If the user requests to output a source map, then do not also emit debug
   // info into the bytecode.
