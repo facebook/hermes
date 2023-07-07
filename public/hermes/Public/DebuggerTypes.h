@@ -8,6 +8,7 @@
 #ifndef HERMES_PUBLIC_DEBUGGERTYPES_H
 #define HERMES_PUBLIC_DEBUGGERTYPES_H
 
+#include <cstdint>
 #include <string>
 #include <vector>
 #pragma GCC diagnostic push
