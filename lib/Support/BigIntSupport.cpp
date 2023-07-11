@@ -2106,19 +2106,18 @@ OperationStatus exponentiate(
     return OperationStatus::NEGATIVE_EXPONENT;
   }
 
-  // |rhs| is limited to the BigInt's maximum number of digits when |lhs| >= 2.
-  // Therefore, to simplify the code, a copy of rhs' first digit is made on a
-  // scalar that's large enough to fit said max exponent.
-  static constexpr auto maxExponent = BigIntMaxSizeInBits;
-  const uint32_t exponent = rhs.numDigits ? rhs.digits[0] : 0;
-  // sanity-check: ensure the max bigint exponent when |lhs| >= 2 first
-  // exponent.
-  static_assert(
-      maxExponent <= std::numeric_limits<decltype(exponent)>::max(),
-      "exponent is too large");
+  const BigIntDigitType firstExponentDigit = rhs.numDigits ? rhs.digits[0] : 0;
 
-  // Avoid exponentiate's slow path by special handling the easy cases (e.g.,
-  // 0 ** y, x ** 0, x ** 1, 1 ** x).
+  // Handle cases in the following order:
+
+  // 1. If rhs is zero, the result is 1.
+  // 2. If |lhs| < 2, we can efficiently calculate the result and permit
+  //    arbitrarily large exponents.
+  // 3. Ensure that the exponent fits in an uint32, which is required by helper
+  //    functions used in subsequent cases, since larger exponents are
+  //    guaranteed to produce a BigInt larger than the max size.
+  // 4. If |lhs| == 2, use a fast-path for that.
+  // 5. Fall back to the slow path.
   OperationStatus res = OperationStatus::RETURNED;
   if (compare(rhs, 0) == 0) {
     // lhs ** 0 => 1, for all lhs
@@ -2146,25 +2145,30 @@ OperationStatus exponentiate(
     assert(rhs.numDigits > 0 && "should have handled 0n");
     dst.numDigits = 1;
     // Note that rhs > 0, therefore rhs % 2n === exponent % 2.
-    dst.digits[0] = (exponent % 2 == 0) ? 1ull : -1ull;
-  } else if (rhs.numDigits > 1 || exponent >= maxExponent) {
-    // Exponent is too large, hence the result would be too big.
+    dst.digits[0] = (firstExponentDigit % 2 == 0) ? 1ull : -1ull;
+  } else if (rhs.numDigits > 1 || firstExponentDigit >= BigIntMaxSizeInBits) {
+    // At this point, we know that |lhs| >= 2, so any rhs >= BigIntMaxSizeInBits
+    // will result in a BigInt that is too large.
+    // The above check, together with the static_assert below, also guarantees
+    // that later cases will receive an exponent that fits in a uint32, since
+    // exponentiation helper functions only accept uint32 exponents.
+    static_assert(BigIntMaxSizeInBits <= std::numeric_limits<uint32_t>::max());
     res = OperationStatus::TOO_MANY_DIGITS;
-  } else if (exponent == 1) {
+  } else if (firstExponentDigit == 1) {
     // lhs ** 1n => lhs, for any lhs
     res = initWithDigits(dst, lhs);
   } else if (compare(lhs, 2) == 0) {
     // Fast-path for 2n ** rhs
-    res = exponentiatePowerOf2(dst, exponent);
+    res = exponentiatePowerOf2(dst, firstExponentDigit);
   } else if (compare(lhs, -2) == 0) {
     // Fast-path for -2n ** rhs
-    res = exponentiatePowerOf2(dst, exponent);
-    if (exponent % 2 != 0) {
+    res = exponentiatePowerOf2(dst, firstExponentDigit);
+    if (firstExponentDigit % 2 != 0) {
       llvh::APInt::tcNegate(dst.digits, dst.numDigits);
     }
   } else {
     // Slow path
-    res = exponentiateSlowPath(dst, lhs, exponent);
+    res = exponentiateSlowPath(dst, lhs, firstExponentDigit);
   }
 
   if (LLVM_UNLIKELY(res != OperationStatus::RETURNED)) {
