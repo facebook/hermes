@@ -1974,7 +1974,7 @@ jsi::Array HermesRuntimeImpl::createArray(size_t length) {
   vm::GCScope gcScope(runtime_);
   auto result = vm::JSArray::create(runtime_, length, length);
   checkStatus(result.getStatus());
-  return add<jsi::Object>(result->getHermesValue()).getArray(*this);
+  return add<jsi::Array>(result->getHermesValue());
 }
 
 jsi::ArrayBuffer HermesRuntimeImpl::createArrayBuffer(
@@ -1992,7 +1992,7 @@ jsi::ArrayBuffer HermesRuntimeImpl::createArrayBuffer(
   auto res = vm::JSArrayBuffer::setExternalDataBlock(
       runtime_, buf, data, size, ctx, finalize);
   checkStatus(res);
-  return add<jsi::Object>(buf.getHermesValue()).getArrayBuffer(*this);
+  return add<jsi::ArrayBuffer>(buf.getHermesValue());
 }
 
 size_t HermesRuntimeImpl::size(const jsi::Array &arr) {
@@ -2075,7 +2075,7 @@ jsi::Function HermesRuntimeImpl::createFunctionFromHostFunction(
       nameID,
       paramCount);
   checkStatus(funcRes.getStatus());
-  jsi::Function ret = add<jsi::Object>(*funcRes).getFunction(*this);
+  jsi::Function ret = add<jsi::Function>(*funcRes);
   return ret;
 }
 
