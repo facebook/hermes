@@ -22,6 +22,7 @@ type T11 = React$Key; // React.Key
 type T12 = React$Component<Props, {}>; // React.Component<Props, {}>
 type T13 = React$ElementType; // React.ElementType
 type T14 = React$ChildrenArray<T>; // T | ReadonlyArray<T>
+type T15 = React$ElementProps<T>; // React.ComponentProps<T>
 
 type Props = {A: string};
 declare function Component(props: Props): React$Node;
