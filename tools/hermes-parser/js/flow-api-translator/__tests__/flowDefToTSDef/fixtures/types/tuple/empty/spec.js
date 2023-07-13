@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  *
  * @flow strict-local
- * TODO: re-enable Prettier once it has been updated to understand this syntax
+ * @format
  */
 
- type T = [...a: string];
+type T = [];

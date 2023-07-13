@@ -8,14 +8,9 @@ exports[`flowDefToTSDef types/tuple/spread/label 1`] = `
  * LICENSE file in the root directory of this source tree.
  *
  *
+ * TODO: re-enable Prettier once it has been updated to understand this syntax
  */
 
-type T = [
-  /**
-   * > 10 |  type T = [...a: string];
-   *      |            ^^^^^^^^^^^^ Unsupported feature: Translating "TupleTypeSpreadElement" is currently not supported.
-   **/
-  any,
-];
+type T = [...a: string];
 "
 `;
