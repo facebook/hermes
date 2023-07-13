@@ -1747,22 +1747,6 @@ const getTransforms = (
           };
         }
 
-        case '$Shape':
-        case '$Partial': {
-          // `$Partial<T>` => `Partial<T>`
-          return {
-            type: 'TSTypeReference',
-            typeName: {
-              type: 'Identifier',
-              name: 'Partial',
-            },
-            typeParameters: {
-              type: 'TSTypeParameterInstantiation',
-              params: assertHasExactlyNTypeParameters(1),
-            },
-          };
-        }
-
         case '$Values': {
           // `$Values<T>` => `T[keyof T]`
           const transformedType = assertHasExactlyNTypeParameters(1)[0];
