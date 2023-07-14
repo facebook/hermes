@@ -53,6 +53,7 @@ void DummyObject::setPointer(GC &gc, DummyObject *obj) {
 
 DummyObject *DummyObject::create(GC &gc, PointerBase &base) {
   auto *cell = gc.makeAFixed<DummyObject, HasFinalizer::Yes>(gc);
+  cell->finalizerCallback.set(gc, nullptr);
   cell->weak.emplace(base, gc, cell);
   return cell;
 }
@@ -66,9 +67,13 @@ bool DummyObject::classof(const GCCell *cell) {
 
 void DummyObject::_finalizeImpl(GCCell *cell, GC &gc) {
   auto *self = vmcast<DummyObject>(cell);
-  if (self->finalizerCallback)
-    (*self->finalizerCallback)();
+  auto callback = self->finalizerCallback.get(gc);
+  if (callback)
+    (*callback)();
   self->releaseExtMem(gc);
+
+  // Callback is assumed to point to allocated memory
+  delete callback;
   self->~DummyObject();
 }
 
