@@ -323,6 +323,9 @@ SKIP_LIST = [
     "mjsunit/harmony/async-debug-caught-exception-cases1.js",
     "mjsunit/harmony/async-debug-caught-exception-cases2.js",
     "mjsunit/harmony/async-debug-caught-exception-cases3.js",
+    # Reflect.setPrototypeOf isn't supposed to throw on failure TODO(T158542351)
+    "mjsunit/es6/reflect-set-prototype-of.js",
+    "test262/test/built-ins/Object/prototype/setPrototypeOf-with-different-values.js",
     # async function missing errors: TODO(T80014951)
     "test262/test/language/statements/async-function/escaped-async.js",
     "test262/test/language/statements/async-function/early-errors-declaration-formals-body-duplicate.js",

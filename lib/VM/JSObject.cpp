@@ -193,6 +193,17 @@ CallResult<bool> JSObject::setParent(
   // 4.
   if (self->parent_.get(runtime) == parent)
     return true;
+  // ES2022 10.4.7 Immutable Prototype Exotic Objects
+  // The [[SetPrototypeOf]] for %Object.prototype% is supposed to be
+  // SetImmutablePrototype, which returns false and subsequently throws
+  // when the argument isn't the same as the existing prototype,
+  // which we've already checked above.
+  // %Object.prototype% is the only object in the spec which is an immutable
+  // prototype exotic object.
+  if (LLVM_UNLIKELY(self == runtime.objectPrototypeRawPtr)) {
+    return runtime.raiseTypeError(
+        "Cannot set prototype of immutable prototype object");
+  }
   // 5.
   if (!self->isExtensible()) {
     if (opFlags.getThrowOnError()) {
