@@ -4,3 +4,4 @@
 # LICENSE file in the root directory of this source tree.
 
 add_subdirectory(hermes)
+add_subdirectory(hermes_abi)
