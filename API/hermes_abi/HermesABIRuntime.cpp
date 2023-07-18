@@ -16,6 +16,28 @@ using namespace facebook::jsi;
 using namespace facebook::hermes;
 
 namespace {
+class BufferWrapper : public HermesABIBuffer {
+  std::shared_ptr<const Buffer> buf_;
+
+  static size_t size(const HermesABIBuffer *buf) {
+    return static_cast<const BufferWrapper *>(buf)->buf_->size();
+  }
+  static const uint8_t *data(const HermesABIBuffer *buf) {
+    return static_cast<const BufferWrapper *>(buf)->buf_->data();
+  }
+  static void release(HermesABIBuffer *buf) {
+    delete static_cast<const BufferWrapper *>(buf);
+  }
+  static constexpr HermesABIBufferVTable vt{
+      size,
+      data,
+      release,
+  };
+
+ public:
+  explicit BufferWrapper(std::shared_ptr<const Buffer> buf)
+      : HermesABIBuffer{&vt}, buf_(std::move(buf)) {}
+};
 
 [[noreturn]] void throwJSINativeException(std::string err) {
   throw JSINativeException(err);
@@ -298,7 +320,8 @@ class HermesABIRuntime : public Runtime {
   Value evaluateJavaScript(
       const std::shared_ptr<const Buffer> &buffer,
       const std::string &sourceURL) override {
-    throwUnimplemented();
+    return toJSIValue(vtable_->evaluate_javascript(
+        ctx_, new BufferWrapper(buffer), sourceURL.c_str()));
   }
 
   std::shared_ptr<const PreparedJavaScript> prepareJavaScript(

@@ -118,6 +118,18 @@ struct HermesABIValue {
   } data;
 };
 
+/// Define the structure for buffers containing JS source or bytecode. This is
+/// designed to fully mirror the functionality of jsi::Buffer.
+struct HermesABIBuffer;
+struct HermesABIBufferVTable {
+  size_t (*size)(const HermesABIBuffer *);
+  const uint8_t *(*data)(const HermesABIBuffer *);
+  void (*release)(HermesABIBuffer *);
+};
+struct HermesABIBuffer {
+  const HermesABIBufferVTable *vtable;
+};
+
 struct HermesABIContext;
 
 struct HermesABIVTable {
@@ -138,6 +150,16 @@ struct HermesABIVTable {
   /// Clear the stored native exception message. This should be called exactly
   /// once after the message is retrieved.
   void (*clear_native_exception_message)(HermesABIContext *);
+
+  /// Check if the given buffer contains Hermes bytecode.
+  bool (*is_hermes_bytecode)(const uint8_t *, size_t);
+
+  /// Evaluate the given JavaScript buffer with an associated source URL in the
+  /// given context, and return the result.
+  HermesABIValue (*evaluate_javascript)(
+      HermesABIContext *,
+      HermesABIBuffer *,
+      const char *);
 };
 
 HERMES_EXPORT const HermesABIVTable *get_hermes_abi_vtable();

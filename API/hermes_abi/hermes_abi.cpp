@@ -21,6 +21,21 @@ using namespace facebook::hermes;
 
 namespace {
 
+class BufferWrapper : public hermes::Buffer {
+  HermesABIBuffer *buffer_;
+
+ public:
+  explicit BufferWrapper(HermesABIBuffer *buffer)
+      : hermes::Buffer(
+            buffer->vtable->data(buffer),
+            buffer->vtable->size(buffer)),
+        buffer_(buffer) {}
+
+  ~BufferWrapper() override {
+    buffer_->vtable->release(buffer_);
+  }
+};
+
 /// A ManagedChunkedList element that indicates whether it's occupied based on
 /// a refcount.
 template <typename T>
@@ -279,6 +294,51 @@ void clear_native_exception_message(HermesABIContext *ctx) {
   ctx->nativeExceptionMessage.shrink_to_fit();
 }
 
+bool is_hermes_bytecode(const uint8_t *data, size_t len) {
+  return hbc::BCProviderFromBuffer::isBytecodeStream(
+      llvh::ArrayRef<uint8_t>(data, len));
+}
+
+HermesABIValue evaluate_javascript(
+    HermesABIContext *ctx,
+    HermesABIBuffer *source,
+    const char *sourceURL) {
+  auto &runtime = *ctx->rt;
+  auto buffer = std::make_unique<BufferWrapper>(source);
+  llvh::StringRef sourceURLRef(sourceURL);
+  std::pair<std::unique_ptr<hbc::BCProvider>, std::string> bcErr{};
+  vm::RuntimeModuleFlags runtimeFlags{};
+  bool isBytecode = is_hermes_bytecode(buffer->data(), buffer->size());
+  if (isBytecode) {
+    bcErr = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+        std::move(buffer));
+  } else {
+#if defined(HERMESVM_LEAN)
+    bcErr.second = "prepareJavaScript source compilation not supported";
+#else
+    bcErr = hbc::BCProviderFromSrc::createBCProviderFromSrc(
+        std::move(buffer),
+        sourceURLRef,
+        /* sourceMap */ {},
+        /* compileFlags */ {});
+#endif
+  }
+  if (!bcErr.first) {
+    ctx->nativeExceptionMessage = std::move(bcErr.second);
+    return abi::createErrorValue(HermesABIErrorCodeJSINativeException);
+  }
+  vm::GCScope gcScope(runtime);
+  auto res = runtime.runBytecode(
+      std::move(bcErr.first),
+      runtimeFlags,
+      sourceURLRef,
+      vm::Runtime::makeNullHandle<vm::Environment>());
+  if (res == vm::ExecutionStatus::EXCEPTION)
+    return abi::createErrorValue(HermesABIErrorCodeJSError);
+
+  return ctx->toABIValue(*res);
+}
+
 extern "C" const HermesABIVTable *get_hermes_abi_vtable() {
   static const HermesABIVTable abiVtable = {
       make_hermes_runtime,
@@ -286,6 +346,7 @@ extern "C" const HermesABIVTable *get_hermes_abi_vtable() {
       get_and_clear_js_error_value,
       get_native_exception_message,
       clear_native_exception_message,
-  };
+      is_hermes_bytecode,
+      evaluate_javascript};
   return &abiVtable;
 }
