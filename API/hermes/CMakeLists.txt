@@ -3,6 +3,18 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+# compileJS uses neither exceptions nor RTTI
+add_hermes_library(compileJS CompileJS.cpp LINK_LIBS hermesPublic)
+
+set(HERMES_ENABLE_EH ON)
+
+# synthTraceParser uses exceptions but not RTTI.
+# TODO(T127739425): Switch it to either use both exceptions and RTTI or neither.
+add_hermes_library(synthTraceParser SynthTraceParser.cpp LINK_LIBS hermesSupport hermesParser synthTrace)
+
+# All remaining targets in this file use both exceptions and RTTI.
+set(HERMES_ENABLE_RTTI ON)
+
 set(api_sources
   hermes.cpp
   DebuggerAPI.cpp
@@ -30,21 +42,6 @@ add_hermes_library(traceInterpreter TraceInterpreter.cpp
   LINK_LIBS hermesapi hermesInstrumentation synthTrace synthTraceParser)
 
 set(HERMES_LINK_COMPONENTS LLVHSupport)
-set(HERMES_ENABLE_RTTI OFF)
-
-# synthTraceParser uses exceptions but not rtti
-add_hermes_library(synthTraceParser SynthTraceParser.cpp LINK_LIBS hermesSupport hermesParser synthTrace)
-
-set(HERMES_ENABLE_EH OFF)
-
-# compileJS uses neither exceptions nor RTTI
-add_hermes_library(compileJS STATIC CompileJS.cpp LINK_LIBS hermesPublic)
-
-# Restore EH and RTTI (Note: At the time of writing, there is no usage of
-# add_hermes_library either after this line in this file or in a sub directory.
-# However, the values are restored anyways for the sake of sanity.)
-set(HERMES_ENABLE_EH ON)
-set(HERMES_ENABLE_RTTI ON)
 
 add_library(libhermes SHARED ${api_sources})
 
