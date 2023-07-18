@@ -39,7 +39,8 @@ if(CXX_SUPPORTS_COVERED_SWITCH_DEFAULT_FLAG)
 endif()
 
 set(HERMES_ENABLE_RTTI 1)
-add_definitions( -DGTEST_HAS_RTTI=0 )
+set(HERMES_ENABLE_EH 1)
+#add_definitions( -DGTEST_HAS_RTTI=0 )
 
 if (NOT LLVM_ENABLE_THREADS)
   add_definitions( -DGTEST_HAS_PTHREAD=0 )
