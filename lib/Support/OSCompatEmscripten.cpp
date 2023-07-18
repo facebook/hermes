@@ -99,44 +99,11 @@ llvh::ErrorOr<void *> vm_allocate(size_t sz, void * /* hint */) {
 
 llvh::ErrorOr<void *>
 vm_allocate_aligned(size_t sz, size_t alignment, void * /* hint */) {
-  assert(sz > 0 && sz % page_size() == 0);
-  assert(alignment > 0 && alignment % page_size() == 0);
-
-  // Opportunistically allocate without alignment constraint,
-  // and see if the memory happens to be aligned.
-  // While this may be unlikely on the first allocation request,
-  // subsequent allocation requests have a good chance.
-  auto result = vm_allocate_impl(sz);
-  if (!result) {
-    return result;
-  }
-  void *mem = *result;
-  if (mem == alignAlloc(mem, alignment)) {
-    return mem;
-  }
-
-  // Free the oppotunistic allocation.
-  oscompat::vm_free(mem, sz);
-
-  // This time, allocate a larger section to ensure that it contains
-  // a subsection that satisfies the request.
-  // Use *real* page size here since that's what vm_allocate_impl guarantees.
-  const size_t excessSize = sz + alignment - page_size_real();
-  result = vm_allocate_impl(excessSize);
-  if (!result)
-    return result;
-
-  void *raw = *result;
-  char *aligned = alignAlloc(raw, alignment);
-  size_t excessAtFront = aligned - static_cast<char *>(raw);
-  size_t excessAtBack = excessSize - excessAtFront - sz;
-
-  if (excessAtFront)
-    oscompat::vm_free(raw, excessAtFront);
-  if (excessAtBack)
-    oscompat::vm_free(aligned + sz, excessAtBack);
-
-  return aligned;
+  auto *p = std::aligned_alloc(alignment, sz);
+  if (!p)
+    return std::error_code(errno, std::generic_category());
+  memset(p, 0, sz);
+  return p;
 }
 
 void vm_free(void *p, size_t sz) {
@@ -153,7 +120,7 @@ void vm_free(void *p, size_t sz) {
 }
 
 void vm_free_aligned(void *p, size_t sz) {
-  vm_free(p, sz);
+  free(p, sz);
 }
 
 void vm_hugepage(void *p, size_t sz) {
