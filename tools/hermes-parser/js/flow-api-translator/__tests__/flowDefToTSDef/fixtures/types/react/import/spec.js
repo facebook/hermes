@@ -22,6 +22,7 @@ type T9 = React.Fragment; // React.Fragment
 type T10 = React.ElementConfig<typeof Component>; // JSX.LibraryManagedAttributes<typeof Component, React.ComponentProps<typeof Component>>
 type T11 = React.Ref<typeof Component>; // NonNullable<React.Ref<typeof Component> | string | number>
 type T12 = React.Key; // React.Key
+type T13 = React.Component<Props, {}>; // React.Component<Props, {}>
 
 type Props = {A: string};
 declare function Component(props: Props): React.Node;
