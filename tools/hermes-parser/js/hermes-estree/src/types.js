@@ -1137,6 +1137,7 @@ export type TypeAnnotationType =
   | InterfaceTypeAnnotation
   | UnionTypeAnnotation
   | IntersectionTypeAnnotation
+  | ConditionalTypeAnnotation
   | FunctionTypeAnnotation
   | ObjectTypeAnnotation
   | IndexedAccessType
@@ -1300,6 +1301,14 @@ export interface UnionTypeAnnotation extends BaseNode {
 export interface IntersectionTypeAnnotation extends BaseNode {
   +type: 'IntersectionTypeAnnotation';
   +types: $ReadOnlyArray<TypeAnnotationType>;
+}
+
+export interface ConditionalTypeAnnotation extends BaseNode {
+  +type: 'ConditionalTypeAnnotation';
+  +checkType: TypeAnnotationType;
+  +extendsType: TypeAnnotationType;
+  +trueType: TypeAnnotationType;
+  +falseType: TypeAnnotationType;
 }
 
 export interface FunctionTypeAnnotation extends BaseNode {

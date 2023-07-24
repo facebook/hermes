@@ -76,6 +76,12 @@ module.exports = {
   ],
   ComponentParameter: ['name', 'local'],
   ConditionalExpression: ['test', 'consequent', 'alternate'],
+  ConditionalTypeAnnotation: [
+    'checkType',
+    'extendsType',
+    'trueType',
+    'falseType',
+  ],
   ContinueStatement: ['label'],
   DebuggerStatement: [],
   DeclareClass: [

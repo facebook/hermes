@@ -129,6 +129,12 @@ export function isConditionalExpression(node: ESNode | Token): boolean %checks {
   return node.type === 'ConditionalExpression';
 }
 
+export function isConditionalTypeAnnotation(
+  node: ESNode | Token,
+): boolean %checks {
+  return node.type === 'ConditionalTypeAnnotation';
+}
+
 export function isContinueStatement(node: ESNode | Token): boolean %checks {
   return node.type === 'ContinueStatement';
 }
