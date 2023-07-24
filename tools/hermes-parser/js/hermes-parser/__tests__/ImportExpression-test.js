@@ -16,7 +16,7 @@ import {
   expectBabelAlignment,
   expectEspreeAlignment,
 } from '../__test_utils__/alignment-utils';
-import {parse, parseForSnapshot} from '../__test_utils__/parse';
+import {parseForSnapshot} from '../__test_utils__/parse';
 
 describe('ImportExpression', () => {
   const testCase: AlignmentCase = {
@@ -54,24 +54,30 @@ describe('ImportExpression', () => {
 
   test('Babel', () => {
     // Babel converts ImportExpression to CallExpression with Import callee
-    expect(parse(testCase.code, {babel: true})).toMatchObject({
-      type: 'File',
-      program: {
-        type: 'Program',
-        body: [
+    expect(parseForSnapshot(testCase.code, {babel: true}))
+      .toMatchInlineSnapshot(`
+      {
+        "body": [
           {
-            type: 'ExpressionStatement',
-            expression: {
-              type: 'CallExpression',
-              callee: {
-                type: 'Import',
+            "directive": null,
+            "expression": {
+              "arguments": [
+                {
+                  "type": "StringLiteral",
+                  "value": "foo",
+                },
+              ],
+              "callee": {
+                "type": "Import",
               },
-              arguments: [{type: 'StringLiteral', value: 'foo'}],
+              "type": "CallExpression",
             },
+            "type": "ExpressionStatement",
           },
         ],
-      },
-    });
+        "type": "Program",
+      }
+    `);
     expectBabelAlignment(testCase);
   });
 });

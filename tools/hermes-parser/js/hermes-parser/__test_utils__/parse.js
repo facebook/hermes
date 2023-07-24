@@ -15,21 +15,27 @@ import type {ESNode} from 'hermes-estree';
 import {SimpleTraverser} from '../src/traverse/SimpleTraverser';
 import {parse as parseOriginal} from '../src/index';
 
+// $FlowExpectedError[untyped-import]
+import {VISITOR_KEYS as babelVisitorKeys} from '@babel/types';
+
 export const parse: typeof parseOriginal = (source, options) => {
-  // $FlowExpectedError[incompatible-call] - the overloads confuse flow
   return parseOriginal(source, {flow: 'all', ...options});
 };
 
 export function parseForSnapshot(
   source: string,
-  options?: {preserveRange?: boolean},
+  options?: {preserveRange?: boolean, babel?: boolean},
 ): mixed {
+  if (options?.babel === true) {
+    return cleanASTForSnapshot(parse(source, {babel: true}).program, options);
+  }
+
   return cleanASTForSnapshot(parse(source), options);
 }
 
 export function cleanASTForSnapshot(
   ast: ESNode,
-  options?: {preserveRange?: boolean},
+  options?: {preserveRange?: boolean, babel?: boolean},
 ): mixed {
   SimpleTraverser.traverse(ast, {
     enter(node) {
@@ -41,8 +47,19 @@ export function cleanASTForSnapshot(
         // $FlowExpectedError[cannot-write]
         delete node.range;
       }
+
+      if (options?.babel === true) {
+        // $FlowExpectedError[prop-missing]
+        delete node.start;
+        // $FlowExpectedError[prop-missing]
+        delete node.end;
+      }
     },
     leave() {},
+    visitorKeys:
+      options?.babel === true
+        ? {...babelVisitorKeys, BigIntLiteralTypeAnnotation: []}
+        : null,
   });
 
   if (ast.type === 'Program') {
