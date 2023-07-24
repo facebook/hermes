@@ -1978,6 +1978,48 @@ const getTransforms = (
               },
             };
           }
+          // React.Ref<C> -> NonNullable<React.Ref<C> | string | number>
+          // React$Ref<C> -> NonNullable<React.Ref<C> | string | number>
+          case 'React.Ref':
+          case 'React$Ref':
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'Identifier',
+                name: 'NonNullable',
+              },
+              typeParameters: {
+                type: 'TSTypeParameterInstantiation',
+                params: [
+                  {
+                    type: 'TSUnionType',
+                    types: [
+                      {
+                        type: 'TSTypeReference',
+                        typeName: {
+                          type: 'TSQualifiedName',
+                          left: getReactIdentifier(),
+                          right: {
+                            type: 'Identifier',
+                            name: 'Ref',
+                          },
+                        },
+                        typeParameters: {
+                          type: 'TSTypeParameterInstantiation',
+                          params: assertHasExactlyNTypeParameters(1),
+                        },
+                      },
+                      {
+                        type: 'TSStringKeyword',
+                      },
+                      {
+                        type: 'TSNumberKeyword',
+                      },
+                    ],
+                  },
+                ],
+              },
+            };
           default:
             return unsupportedAnnotation(node, fullTypeName);
         }

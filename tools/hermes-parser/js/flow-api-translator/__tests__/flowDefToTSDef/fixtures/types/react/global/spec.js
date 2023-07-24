@@ -17,6 +17,7 @@ type T6 = React$Context<Foo>; // React.Context<Foo>
 type T7 = React$ComponentType<Props>; // React.ForwardRefExoticComponent<Props & React.RefAttributes<unknown>>;
 type T8 = React$FragmentType; // React.Fragment
 type T9 = React$ElementConfig<typeof Component>; // JSX.LibraryManagedAttributes<typeof Component, React.ComponentProps<typeof Component>>
+type T10 = React$Ref<typeof Component>; // NonNullable<React.Ref<typeof Component> | string | number>
 
 type Props = {A: string};
 declare function Component(props: Props): React$Node;

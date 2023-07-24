@@ -27,6 +27,7 @@ type T10 = JSX.LibraryManagedAttributes<
   typeof Component,
   React.ComponentProps<typeof Component>
 >;
+type T11 = NonNullable<React.Ref<typeof Component> | string | number>;
 type Props = {A: string};
 declare function Component(props: Props): React.ReactNode;
 "
