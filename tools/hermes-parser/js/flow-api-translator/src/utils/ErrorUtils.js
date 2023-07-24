@@ -30,7 +30,6 @@ export function flowFixMeOrError(
 
 class TranslationErrorBase extends Error {
   name: string = 'TranslationError';
-  framedMessage: string;
   constructor(
     node: ObjectWithLoc,
     message: string,
@@ -51,12 +50,6 @@ class TranslationErrorBase extends Error {
       //      | ^^^^ error]
       process.env.JEST_WORKER_ID == null ? framedMessage : `\n${framedMessage}`,
     );
-
-    this.framedMessage = framedMessage;
-  }
-
-  getFramedMessage(): string {
-    return this.framedMessage;
   }
 }
 
@@ -82,10 +75,11 @@ export function unexpectedTranslationError(
   return new UnexpectedTranslationError(node, message, context);
 }
 
-function buildCodeFrame(
+export function buildCodeFrame(
   node: ObjectWithLoc,
   message: string,
   code: string,
+  highlightCode: boolean = process.env.NODE_ENV !== 'test',
 ): string {
   // babel uses 1-indexed columns
   const locForBabel = {
@@ -101,7 +95,7 @@ function buildCodeFrame(
   return codeFrameColumns(code, locForBabel, {
     linesAbove: 0,
     linesBelow: 0,
-    highlightCode: process.env.NODE_ENV !== 'test',
+    highlightCode,
     message: message,
   });
 }
