@@ -346,7 +346,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
     } = value;
 
     return {
-      type: 'ClassMethod',
+      type: key.type === 'PrivateName' ? 'ClassPrivateMethod' : 'ClassMethod',
       loc: node.loc,
       start: node.start,
       end: node.end,
