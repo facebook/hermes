@@ -20,7 +20,7 @@ type T5 = React.ForwardRefExoticComponent<
   Props & React.RefAttributes<HTMLElement>
 >;
 type T6 = React.Context<Foo>;
-type T7 = React.ForwardRefExoticComponent<Props & React.RefAttributes<unknown>>;
+type T7 = React.ComponentType<Props>;
 type T8 = React.Fragment;
 type T9 = JSX.LibraryManagedAttributes<
   typeof Component,
