@@ -86,6 +86,7 @@ void JSParserImpl::initializeIdentifiers() {
 #if HERMES_PARSE_FLOW
 
   typeofIdent_ = lexer_.getIdentifier("typeof");
+  keyofIdent_ = lexer_.getIdentifier("keyof");
   declareIdent_ = lexer_.getIdentifier("declare");
   protoIdent_ = lexer_.getIdentifier("proto");
   opaqueIdent_ = lexer_.getIdentifier("opaque");

@@ -734,6 +734,9 @@ ESTREE_NODE_2_ARGS(
 ESTREE_NODE_1_ARGS(
     TypeofTypeAnnotation, Base,
     NodePtr, argument, false)
+ESTREE_NODE_1_ARGS(
+    KeyofTypeAnnotation, Base,
+    NodePtr, argument, false)
 ESTREE_NODE_2_ARGS(
     QualifiedTypeofIdentifier, Base,
     NodePtr, qualification, false,
