@@ -25,7 +25,12 @@ TEST(GCFragmentationTest, TestCoalescing) {
   // defragmentation code.
   static const size_t kNumSegments = 4;
   static const size_t kNumOGSegments = kNumSegments - 1;
-  static const size_t kHeapSize = AlignedHeapSegment::maxSize() * kNumSegments;
+  // This test is a bit flaky and can sometimes OOM. Therefore, ensure the real
+  // heap size is one segment larger than what the test case should actually
+  // allocate.
+  static const size_t kNumAvailableSegments = kNumSegments + 1;
+  static const size_t kHeapSize =
+      AlignedHeapSegment::maxSize() * kNumAvailableSegments;
   static const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSize);
 
   auto runtime = DummyRuntime::create(kGCConfig);
