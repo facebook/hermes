@@ -1334,6 +1334,19 @@ const getTransforms = (
       // It's also super deprecated - so let's not ever worry
       return unsupportedAnnotation(node, 'existential type');
     },
+    ExportAllDeclaration(
+      node: FlowESTree.ExportAllDeclaration,
+    ): TSESTree.ExportAllDeclaration {
+      return {
+        type: 'ExportAllDeclaration',
+        // flow does not currently support import/export assertions
+        assertions: [],
+        exportKind: node.exportKind,
+        source: transform.StringLiteral(node.source),
+        exported:
+          node.exported == null ? null : transform.Identifier(node.exported),
+      };
+    },
     ExportNamedDeclaration(
       node: FlowESTree.ExportNamedDeclaration,
     ):
