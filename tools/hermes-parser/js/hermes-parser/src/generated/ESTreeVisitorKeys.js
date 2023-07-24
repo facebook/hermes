@@ -74,6 +74,7 @@ module.exports = {
     'typeParameters',
     'returnType',
   ],
+  ComponentParameter: ['name', 'local'],
   ConditionalExpression: ['test', 'consequent', 'alternate'],
   ContinueStatement: ['label'],
   DebuggerStatement: [],

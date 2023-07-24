@@ -1411,6 +1411,15 @@ function deserializeComponentDeclaration() {
   };
 }
 
+function deserializeComponentParameter() {
+  return {
+    type: 'ComponentParameter',
+    loc: this.addEmptyLoc(),
+    name: this.deserializeNode(),
+    local: this.deserializeNode(),
+    shorthand: this.deserializeBoolean(),
+  };
+}
 function deserializeTSTypeAnnotation() {
   return {
     type: 'TSTypeAnnotation',
@@ -1944,6 +1953,7 @@ module.exports = [
   deserializeEnumBooleanMember,
   deserializeComponentDeclaration,
 
+  deserializeComponentParameter,
   deserializeTSTypeAnnotation,
   deserializeTSAnyKeyword,
   deserializeTSNumberKeyword,

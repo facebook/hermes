@@ -186,6 +186,7 @@ export type ESNode =
   | TypeParameter
   | TypeParameterInstantiation
   | ComponentDeclaration
+  | ComponentParameter
   | EnumDeclaration
   | EnumNumberBody
   | EnumStringBody
@@ -380,12 +381,20 @@ export interface DebuggerStatement extends BaseNode {
   +type: 'DebuggerStatement';
 }
 
+type ComponentParameterAndRestElement = ComponentParameter | RestElement;
+
+export interface ComponentParameter extends BaseNode {
+  +type: 'ComponentParameter';
+  +name: Identifier | StringLiteral;
+  +local: BindingName | AssignmentPattern;
+  +shorthand: boolean;
+}
+
 export interface ComponentDeclaration extends BaseNode {
   +type: 'ComponentDeclaration';
   +body: BlockStatement;
   +id: Identifier;
-  // TODO: The next diff will change this from being a function parameter
-  +params: $ReadOnlyArray<FunctionParameter>;
+  +params: $ReadOnlyArray<ComponentParameterAndRestElement>;
   +returnType: null | TypeAnnotation;
   +typeParameters: null | TypeParameterDeclaration;
 }

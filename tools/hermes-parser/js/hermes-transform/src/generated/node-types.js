@@ -44,6 +44,7 @@ import type {
   ClassExpression as ClassExpressionType,
   ClassImplements as ClassImplementsType,
   ComponentDeclaration as ComponentDeclarationType,
+  ComponentParameter as ComponentParameterType,
   ConditionalExpression as ConditionalExpressionType,
   ContinueStatement as ContinueStatementType,
   DebuggerStatement as DebuggerStatementType,
@@ -294,6 +295,12 @@ export type ComponentDeclarationProps = {
     ComponentDeclarationType['typeParameters'],
   >,
   +returnType?: ?MaybeDetachedNode<ComponentDeclarationType['returnType']>,
+};
+
+export type ComponentParameterProps = {
+  +name: MaybeDetachedNode<ComponentParameterType['name']>,
+  +local: MaybeDetachedNode<ComponentParameterType['local']>,
+  +shorthand: ComponentParameterType['shorthand'],
 };
 
 export type ConditionalExpressionProps = {
@@ -1290,6 +1297,20 @@ export function ComponentDeclaration(props: {
     body: asDetachedNodeForCodeGen(props.body),
     typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
     returnType: asDetachedNodeForCodeGen(props.returnType),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function ComponentParameter(props: {
+  ...$ReadOnly<ComponentParameterProps>,
+  +parent?: ESNode,
+}): DetachedNode<ComponentParameterType> {
+  const node = detachedProps<ComponentParameterType>(props.parent, {
+    type: 'ComponentParameter',
+    name: asDetachedNodeForCodeGen(props.name),
+    local: asDetachedNodeForCodeGen(props.local),
+    shorthand: props.shorthand,
   });
   setParentPointersInDirectChildren(node);
   return node;
