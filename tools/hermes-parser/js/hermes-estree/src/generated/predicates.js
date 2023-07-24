@@ -517,6 +517,12 @@ export function isObjectTypeInternalSlot(
   return node.type === 'ObjectTypeInternalSlot';
 }
 
+export function isObjectTypeMappedTypeProperty(
+  node: ESNode | Token,
+): boolean %checks {
+  return node.type === 'ObjectTypeMappedTypeProperty';
+}
+
 export function isObjectTypeProperty(node: ESNode | Token): boolean %checks {
   return node.type === 'ObjectTypeProperty';
 }

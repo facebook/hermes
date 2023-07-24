@@ -131,6 +131,7 @@ import type {
   ObjectTypeCallProperty as ObjectTypeCallPropertyType,
   ObjectTypeIndexer as ObjectTypeIndexerType,
   ObjectTypeInternalSlot as ObjectTypeInternalSlotType,
+  ObjectTypeMappedTypeProperty as ObjectTypeMappedTypePropertyType,
   ObjectTypeSpreadProperty as ObjectTypeSpreadPropertyType,
   OpaqueType as OpaqueTypeType,
   OptionalIndexedAccessType as OptionalIndexedAccessTypeType,
@@ -813,6 +814,16 @@ export type ObjectTypeInternalSlotProps = {
   +optional: ObjectTypeInternalSlotType['optional'],
   +static: ObjectTypeInternalSlotType['static'],
   +method: ObjectTypeInternalSlotType['method'],
+};
+
+export type ObjectTypeMappedTypePropertyProps = {
+  +keyTparam: MaybeDetachedNode<ObjectTypeMappedTypePropertyType['keyTparam']>,
+  +propType: MaybeDetachedNode<ObjectTypeMappedTypePropertyType['propType']>,
+  +sourceType: MaybeDetachedNode<
+    ObjectTypeMappedTypePropertyType['sourceType'],
+  >,
+  +variance?: ?MaybeDetachedNode<ObjectTypeMappedTypePropertyType['variance']>,
+  +optional?: ?ObjectTypeMappedTypePropertyType['optional'],
 };
 
 export type ObjectTypeSpreadPropertyProps = {
@@ -2460,6 +2471,22 @@ export function ObjectTypeInternalSlot(props: {
     optional: props.optional,
     static: props.static,
     method: props.method,
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function ObjectTypeMappedTypeProperty(props: {
+  ...$ReadOnly<ObjectTypeMappedTypePropertyProps>,
+  +parent?: ESNode,
+}): DetachedNode<ObjectTypeMappedTypePropertyType> {
+  const node = detachedProps<ObjectTypeMappedTypePropertyType>(props.parent, {
+    type: 'ObjectTypeMappedTypeProperty',
+    keyTparam: asDetachedNodeForCodeGen(props.keyTparam),
+    propType: asDetachedNodeForCodeGen(props.propType),
+    sourceType: asDetachedNodeForCodeGen(props.sourceType),
+    variance: asDetachedNodeForCodeGen(props.variance),
+    optional: props.optional,
   });
   setParentPointersInDirectChildren(node);
   return node;

@@ -202,6 +202,12 @@ module.exports = {
   ObjectTypeCallProperty: ['value'],
   ObjectTypeIndexer: ['id', 'key', 'value', 'variance'],
   ObjectTypeInternalSlot: ['id', 'value'],
+  ObjectTypeMappedTypeProperty: [
+    'keyTparam',
+    'propType',
+    'sourceType',
+    'variance',
+  ],
   ObjectTypeProperty: ['key', 'value', 'variance'],
   ObjectTypeSpreadProperty: ['argument'],
   OpaqueType: ['id', 'typeParameters', 'impltype', 'supertype'],

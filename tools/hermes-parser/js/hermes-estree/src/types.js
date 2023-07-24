@@ -179,6 +179,7 @@ export type ESNode =
   | ObjectTypeCallProperty
   | ObjectTypeIndexer
   | ObjectTypeSpreadProperty
+  | ObjectTypeMappedTypeProperty
   | InterfaceExtends
   | ClassImplements
   | Decorator
@@ -1343,7 +1344,11 @@ export interface ObjectTypeAnnotation extends BaseNode {
   +type: 'ObjectTypeAnnotation';
   +inexact: false;
   +exact: boolean;
-  +properties: $ReadOnlyArray<ObjectTypeProperty | ObjectTypeSpreadProperty>;
+  +properties: $ReadOnlyArray<
+    | ObjectTypeProperty
+    | ObjectTypeSpreadProperty
+    | ObjectTypeMappedTypeProperty,
+  >;
   +indexers: $ReadOnlyArray<ObjectTypeIndexer>;
   +callProperties: $ReadOnlyArray<ObjectTypeCallProperty>;
   +internalSlots: $ReadOnlyArray<ObjectTypeInternalSlot>;
@@ -1413,6 +1418,17 @@ export interface ObjectTypeIndexer extends BaseNode {
 
   +parent: ObjectTypeAnnotation;
 }
+export interface ObjectTypeMappedTypeProperty extends BaseNode {
+  +type: 'ObjectTypeMappedTypeProperty';
+  +keyTparam: TypeParameter;
+  +propType: TypeAnnotationType;
+  +sourceType: TypeAnnotationType;
+  +variance: null | Variance;
+  +optional: null | 'PlusOptional' | 'MinusOptional' | 'Optional';
+
+  +parent: ObjectTypeAnnotation;
+}
+
 export interface ObjectTypeSpreadProperty extends BaseNode {
   +type: 'ObjectTypeSpreadProperty';
   +argument: TypeAnnotationType;

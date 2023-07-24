@@ -454,6 +454,12 @@ export const HERMES_AST_VISITOR_KEYS = {
     id: 'Node',
     value: 'Node',
   },
+  ObjectTypeMappedTypeProperty: {
+    keyTparam: 'Node',
+    propType: 'Node',
+    sourceType: 'Node',
+    variance: 'Node',
+  },
   ObjectTypeProperty: {
     key: 'Node',
     value: 'Node',
