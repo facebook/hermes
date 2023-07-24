@@ -1551,7 +1551,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeofTypeAnnotationFlow() {
       tok_,
       new (context_)
           ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
-  advance();
+  advance(JSLexer::GrammarContext::Type);
 
   while (checkAndEat(TokenKind::period)) {
     if (!check(TokenKind::identifier) && !tok_->isResWord()) {
@@ -1567,7 +1567,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeofTypeAnnotationFlow() {
         tok_,
         new (context_) ESTree::IdentifierNode(
             tok_->getResWordOrIdentifier(), nullptr, false));
-    advance();
+    advance(JSLexer::GrammarContext::Type);
     ident = setLocation(
         ident,
         next,
