@@ -1134,6 +1134,7 @@ export type TypeAnnotationType =
   | TupleTypeAnnotation
   | TupleTypeSpreadElement
   | TupleTypeLabeledElement
+  | InferTypeAnnotation
   | InterfaceTypeAnnotation
   | UnionTypeAnnotation
   | IntersectionTypeAnnotation
@@ -1276,6 +1277,11 @@ export interface TupleTypeLabeledElement extends BaseNode {
   +elementType: TypeAnnotationType;
   +optional: boolean;
   +variance: Variance | null;
+}
+
+export interface InferTypeAnnotation extends BaseNode {
+  +type: 'InferTypeAnnotation';
+  +typeParameter: TypeParameter;
 }
 
 // type T = { [[foo]]: number };
