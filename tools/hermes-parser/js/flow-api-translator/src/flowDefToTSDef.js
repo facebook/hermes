@@ -42,7 +42,7 @@ function isValidReactImportOrGlobal(id: FlowESTree.Identifier): boolean {
   return VALID_REACT_IMPORTS.has(id.name) || id.name.startsWith('React$');
 }
 
-let shouldAddReactImport;
+let shouldAddReactImport: boolean | null = null;
 
 export function flowDefToTSDef(
   originalCode: string,
@@ -59,7 +59,7 @@ export function flowDefToTSDef(
       ast.docblock == null ? null : removeAtFlowFromDocblock(ast.docblock),
   };
 
-  shouldAddReactImport = false;
+  shouldAddReactImport = null;
 
   const [transform, code] = getTransforms(originalCode, scopeManager, opts);
 
@@ -83,7 +83,7 @@ export function flowDefToTSDef(
     }
   }
 
-  if (shouldAddReactImport) {
+  if (shouldAddReactImport === true) {
     tsBody.unshift({
       type: 'ImportDeclaration',
       assertions: [],
@@ -1749,9 +1749,10 @@ const getTransforms = (
         // Returns appropriate Identifier for `React` import.
         // If a global is in use, set a flag to indicate that we should add the import.
         const getReactIdentifier = () => {
-          if (!reactImport && validReactImportOrGlobal) {
-            shouldAddReactImport = true;
+          if (shouldAddReactImport !== false) {
+            shouldAddReactImport = !reactImport;
           }
+
           return {
             type: 'Identifier',
             name: `React`,
