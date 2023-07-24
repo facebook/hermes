@@ -117,6 +117,10 @@ export function isClassImplements(node: ESNode | Token): boolean %checks {
   return node.type === 'ClassImplements';
 }
 
+export function isComponentDeclaration(node: ESNode | Token): boolean %checks {
+  return node.type === 'ComponentDeclaration';
+}
+
 export function isConditionalExpression(node: ESNode | Token): boolean %checks {
   return node.type === 'ConditionalExpression';
 }

@@ -67,6 +67,13 @@ module.exports = {
     'body',
   ],
   ClassImplements: ['id', 'typeParameters'],
+  ComponentDeclaration: [
+    'id',
+    'params',
+    'body',
+    'typeParameters',
+    'returnType',
+  ],
   ConditionalExpression: ['test', 'consequent', 'alternate'],
   ContinueStatement: ['label'],
   DebuggerStatement: [],

@@ -185,6 +185,7 @@ export type ESNode =
   | TypeParameterDeclaration
   | TypeParameter
   | TypeParameterInstantiation
+  | ComponentDeclaration
   | EnumDeclaration
   | EnumNumberBody
   | EnumStringBody
@@ -227,6 +228,7 @@ export type Statement =
   | BlockStatement
   | BreakStatement
   | ClassDeclaration
+  | ComponentDeclaration
   | ContinueStatement
   | DebuggerStatement
   | DeclareClass
@@ -376,6 +378,16 @@ export interface ForOfStatement extends BaseForXStatement {
 
 export interface DebuggerStatement extends BaseNode {
   +type: 'DebuggerStatement';
+}
+
+export interface ComponentDeclaration extends BaseNode {
+  +type: 'ComponentDeclaration';
+  +body: BlockStatement;
+  +id: Identifier;
+  // TODO: The next diff will change this from being a function parameter
+  +params: $ReadOnlyArray<FunctionParameter>;
+  +returnType: null | TypeAnnotation;
+  +typeParameters: null | TypeParameterDeclaration;
 }
 
 export interface FunctionDeclaration extends BaseFunction {
@@ -1022,7 +1034,10 @@ export interface ImportNamespaceSpecifier extends BaseNode {
   +parent: ImportDeclaration;
 }
 
-export type DefaultDeclaration = FunctionDeclaration | ClassDeclaration;
+export type DefaultDeclaration =
+  | FunctionDeclaration
+  | ClassDeclaration
+  | ComponentDeclaration;
 export type NamedDeclaration =
   | DefaultDeclaration
   | VariableDeclaration
