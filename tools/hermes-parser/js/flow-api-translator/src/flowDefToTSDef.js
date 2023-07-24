@@ -1775,6 +1775,22 @@ const getTransforms = (
                 params: assertHasExactlyNTypeParameters(1),
               },
             };
+          // React.Key -> React.Key
+          // React$Key -> React.Key
+          case 'React.Key':
+          case 'React$Key':
+            assertHasExactlyNTypeParameters(0);
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'TSQualifiedName',
+                left: getReactIdentifier(),
+                right: {
+                  type: 'Identifier',
+                  name: 'Key',
+                },
+              },
+            };
           // React.Node -> React.ReactNode
           case 'React$Node':
           case 'React.Node': {
