@@ -525,3 +525,179 @@ describe('Keyword Types', () => {
     expectBabelAlignment(testCase);
   });
 });
+
+describe('TypeofTypeAnnotation', () => {
+  describe('Identifier', () => {
+    const testCase: AlignmentCase = {
+      code: `
+        type T1 = typeof a;
+      `,
+      espree: {
+        expectToFail: 'espree-exception',
+        expectedExceptionMessage: 'Unexpected token T1',
+      },
+      babel: {expectToFail: false},
+    };
+
+    test('ESTree', () => {
+      expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
+        {
+          "body": [
+            {
+              "id": {
+                "name": "T1",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": null,
+              },
+              "right": {
+                "argument": {
+                  "name": "a",
+                  "optional": false,
+                  "type": "Identifier",
+                  "typeAnnotation": null,
+                },
+                "type": "TypeofTypeAnnotation",
+              },
+              "type": "TypeAlias",
+              "typeParameters": null,
+            },
+          ],
+          "type": "Program",
+        }
+      `);
+      expectEspreeAlignment(testCase);
+    });
+
+    test('Babel', () => {
+      expect(parseForSnapshot(testCase.code, {babel: true}))
+        .toMatchInlineSnapshot(`
+        {
+          "body": [
+            {
+              "id": {
+                "name": "T1",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": null,
+              },
+              "right": {
+                "argument": {
+                  "id": {
+                    "name": "a",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
+                  },
+                  "type": "GenericTypeAnnotation",
+                  "typeParameters": null,
+                },
+                "type": "TypeofTypeAnnotation",
+              },
+              "type": "TypeAlias",
+              "typeParameters": null,
+            },
+          ],
+          "type": "Program",
+        }
+      `);
+      expectBabelAlignment(testCase);
+    });
+  });
+
+  describe('QualifiedTypeofIdentifier', () => {
+    const testCase: AlignmentCase = {
+      code: `
+        type T1 = typeof a.a;
+      `,
+      espree: {
+        expectToFail: 'espree-exception',
+        expectedExceptionMessage: 'Unexpected token T1',
+      },
+      babel: {expectToFail: false},
+    };
+
+    test('ESTree', () => {
+      expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
+        {
+          "body": [
+            {
+              "id": {
+                "name": "T1",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": null,
+              },
+              "right": {
+                "argument": {
+                  "id": {
+                    "name": "a",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
+                  },
+                  "qualification": {
+                    "name": "a",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
+                  },
+                  "type": "QualifiedTypeofIdentifier",
+                },
+                "type": "TypeofTypeAnnotation",
+              },
+              "type": "TypeAlias",
+              "typeParameters": null,
+            },
+          ],
+          "type": "Program",
+        }
+      `);
+      expectEspreeAlignment(testCase);
+    });
+
+    test('Babel', () => {
+      expect(parseForSnapshot(testCase.code, {babel: true}))
+        .toMatchInlineSnapshot(`
+        {
+          "body": [
+            {
+              "id": {
+                "name": "T1",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": null,
+              },
+              "right": {
+                "argument": {
+                  "id": {
+                    "id": {
+                      "name": "a",
+                      "optional": false,
+                      "type": "Identifier",
+                      "typeAnnotation": null,
+                    },
+                    "qualification": {
+                      "name": "a",
+                      "optional": false,
+                      "type": "Identifier",
+                      "typeAnnotation": null,
+                    },
+                    "type": "QualifiedTypeIdentifier",
+                  },
+                  "type": "GenericTypeAnnotation",
+                  "typeParameters": null,
+                },
+                "type": "TypeofTypeAnnotation",
+              },
+              "type": "TypeAlias",
+              "typeParameters": null,
+            },
+          ],
+          "type": "Program",
+        }
+      `);
+      expectBabelAlignment(testCase);
+    });
+  });
+});
