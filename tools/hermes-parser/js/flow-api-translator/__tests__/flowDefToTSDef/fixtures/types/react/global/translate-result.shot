@@ -22,6 +22,10 @@ type T5 = React.ForwardRefExoticComponent<
 type T6 = React.Context<Foo>;
 type T7 = React.ForwardRefExoticComponent<Props & React.RefAttributes<unknown>>;
 type T8 = React.Fragment;
+type T9 = JSX.LibraryManagedAttributes<
+  typeof Component,
+  React.ComponentProps<typeof Component>
+>;
 type Props = {A: string};
 declare function Component(props: Props): React.ReactNode;
 "

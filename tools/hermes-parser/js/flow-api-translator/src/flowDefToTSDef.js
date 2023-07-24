@@ -1937,6 +1937,47 @@ const getTransforms = (
               },
             };
           }
+          // React.ElementConfig<A> ->  JSX.LibraryManagedAttributes<A, React.ComponentProps<A>>
+          // React$ElementConfig<A> ->  JSX.LibraryManagedAttributes<A, React.ComponentProps<A>>
+          case 'React.ElementConfig':
+          case 'React$ElementConfig': {
+            const [param] = assertHasExactlyNTypeParameters(1);
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'TSQualifiedName',
+                left: {
+                  type: 'Identifier',
+                  name: 'JSX',
+                },
+                right: {
+                  type: 'Identifier',
+                  name: 'LibraryManagedAttributes',
+                },
+              },
+              typeParameters: {
+                type: 'TSTypeParameterInstantiation',
+                params: [
+                  param,
+                  {
+                    type: 'TSTypeReference',
+                    typeName: {
+                      type: 'TSQualifiedName',
+                      left: getReactIdentifier(),
+                      right: {
+                        type: 'Identifier',
+                        name: `ComponentProps`,
+                      },
+                    },
+                    typeParameters: {
+                      type: 'TSTypeParameterInstantiation',
+                      params: [param],
+                    },
+                  },
+                ],
+              },
+            };
+          }
           default:
             return unsupportedAnnotation(node, fullTypeName);
         }
