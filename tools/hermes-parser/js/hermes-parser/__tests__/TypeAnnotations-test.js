@@ -701,3 +701,254 @@ describe('TypeofTypeAnnotation', () => {
     });
   });
 });
+
+describe('TupleTypeAnnotation', () => {
+  describe('normal', () => {
+    const testCase: AlignmentCase = {
+      code: `
+        type T1 = [string];
+      `,
+      espree: {
+        expectToFail: 'espree-exception',
+        expectedExceptionMessage: 'Unexpected token T1',
+      },
+      babel: {
+        expectToFail: false,
+      },
+    };
+
+    test('ESTree', () => {
+      expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
+        {
+          "body": [
+            {
+              "id": {
+                "name": "T1",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": null,
+              },
+              "right": {
+                "type": "TupleTypeAnnotation",
+                "types": [
+                  {
+                    "type": "StringTypeAnnotation",
+                  },
+                ],
+              },
+              "type": "TypeAlias",
+              "typeParameters": null,
+            },
+          ],
+          "type": "Program",
+        }
+      `);
+      expectEspreeAlignment(testCase);
+    });
+
+    test('Babel', () => {
+      expect(parseForSnapshot(testCase.code, {babel: true}))
+        .toMatchInlineSnapshot(`
+        {
+          "body": [
+            {
+              "id": {
+                "name": "T1",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": null,
+              },
+              "right": {
+                "type": "TupleTypeAnnotation",
+                "types": [
+                  {
+                    "type": "StringTypeAnnotation",
+                  },
+                ],
+              },
+              "type": "TypeAlias",
+              "typeParameters": null,
+            },
+          ],
+          "type": "Program",
+        }
+      `);
+      expectBabelAlignment(testCase);
+    });
+  });
+
+  describe('TupleTypeSpreadElement', () => {
+    const testCase: AlignmentCase = {
+      code: `
+        type T1 = [...b];
+      `,
+      espree: {
+        expectToFail: 'espree-exception',
+        expectedExceptionMessage: 'Unexpected token T1',
+      },
+      babel: {
+        expectToFail: 'babel-exception',
+        expectedExceptionMessage: 'Unexpected token',
+      },
+    };
+
+    test('ESTree', () => {
+      expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
+        {
+          "body": [
+            {
+              "id": {
+                "name": "T1",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": null,
+              },
+              "right": {
+                "type": "TupleTypeAnnotation",
+                "types": [
+                  {
+                    "label": null,
+                    "type": "TupleTypeSpreadElement",
+                    "typeAnnotation": {
+                      "id": {
+                        "name": "b",
+                        "optional": false,
+                        "type": "Identifier",
+                        "typeAnnotation": null,
+                      },
+                      "type": "GenericTypeAnnotation",
+                      "typeParameters": null,
+                    },
+                  },
+                ],
+              },
+              "type": "TypeAlias",
+              "typeParameters": null,
+            },
+          ],
+          "type": "Program",
+        }
+      `);
+      expectEspreeAlignment(testCase);
+    });
+
+    test('Babel', () => {
+      expect(parseForSnapshot(testCase.code, {babel: true}))
+        .toMatchInlineSnapshot(`
+        {
+          "body": [
+            {
+              "id": {
+                "name": "T1",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": null,
+              },
+              "right": {
+                "type": "TupleTypeAnnotation",
+                "types": [
+                  {
+                    "type": "AnyTypeAnnotation",
+                  },
+                ],
+              },
+              "type": "TypeAlias",
+              "typeParameters": null,
+            },
+          ],
+          "type": "Program",
+        }
+      `);
+      expectBabelAlignment(testCase);
+    });
+  });
+
+  describe('TupleTypeLabelledElement', () => {
+    const testCase: AlignmentCase = {
+      code: `
+        type T1 = [+a?: number];
+      `,
+      espree: {
+        expectToFail: 'espree-exception',
+        expectedExceptionMessage: 'Unexpected token T1',
+      },
+      babel: {
+        expectToFail: 'babel-exception',
+        expectedExceptionMessage: 'Unexpected token',
+      },
+    };
+
+    test('ESTree', () => {
+      expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
+        {
+          "body": [
+            {
+              "id": {
+                "name": "T1",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": null,
+              },
+              "right": {
+                "type": "TupleTypeAnnotation",
+                "types": [
+                  {
+                    "elementType": {
+                      "type": "NumberTypeAnnotation",
+                    },
+                    "label": {
+                      "name": "a",
+                      "optional": false,
+                      "type": "Identifier",
+                      "typeAnnotation": null,
+                    },
+                    "optional": true,
+                    "type": "TupleTypeLabeledElement",
+                    "variance": {
+                      "kind": "plus",
+                      "type": "Variance",
+                    },
+                  },
+                ],
+              },
+              "type": "TypeAlias",
+              "typeParameters": null,
+            },
+          ],
+          "type": "Program",
+        }
+      `);
+      expectEspreeAlignment(testCase);
+    });
+
+    test('Babel', () => {
+      expect(parseForSnapshot(testCase.code, {babel: true}))
+        .toMatchInlineSnapshot(`
+        {
+          "body": [
+            {
+              "id": {
+                "name": "T1",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": null,
+              },
+              "right": {
+                "type": "TupleTypeAnnotation",
+                "types": [
+                  {
+                    "type": "AnyTypeAnnotation",
+                  },
+                ],
+              },
+              "type": "TypeAlias",
+              "typeParameters": null,
+            },
+          ],
+          "type": "Program",
+        }
+      `);
+      expectBabelAlignment(testCase);
+    });
+  });
+});
