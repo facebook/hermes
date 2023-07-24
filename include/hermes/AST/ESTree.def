@@ -984,6 +984,11 @@ ESTREE_NODE_5_ARGS(
     NodePtr, returnType, true)
 ESTREE_IGNORE_IF_EMPTY(ComponentDeclaration, typeParameters)
 ESTREE_IGNORE_IF_EMPTY(ComponentDeclaration, returnType)
+ESTREE_NODE_3_ARGS(
+    ComponentParameter, Base,
+    NodePtr, name, false,
+    NodePtr, local, false,
+    NodeBoolean, shorthand, false)
 
 #endif
 
