@@ -1130,6 +1130,7 @@ export type TypeAnnotationType =
   | QualifiedTypeIdentifier
   | QualifiedTypeofIdentifier
   | TypeofTypeAnnotation
+  | KeyofTypeAnnotation
   | TupleTypeAnnotation
   | TupleTypeSpreadElement
   | TupleTypeLabeledElement
@@ -1254,6 +1255,10 @@ export interface QualifiedTypeofIdentifier extends BaseNode {
 export interface TypeofTypeAnnotation extends BaseNode {
   +type: 'TypeofTypeAnnotation';
   +argument: QualifiedTypeofIdentifier | Identifier;
+}
+export interface KeyofTypeAnnotation extends BaseNode {
+  +type: 'KeyofTypeAnnotation';
+  +argument: TypeAnnotationType;
 }
 export interface TupleTypeAnnotation extends BaseNode {
   +type: 'TupleTypeAnnotation';

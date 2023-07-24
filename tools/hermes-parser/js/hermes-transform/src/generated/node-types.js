@@ -111,6 +111,7 @@ import type {
   JSXSpreadAttribute as JSXSpreadAttributeType,
   JSXSpreadChild as JSXSpreadChildType,
   JSXText as JSXTextType,
+  KeyofTypeAnnotation as KeyofTypeAnnotationType,
   LabeledStatement as LabeledStatementType,
   LogicalExpression as LogicalExpressionType,
   MemberExpression as MemberExpressionType,
@@ -689,6 +690,10 @@ export type JSXSpreadChildProps = {
 export type JSXTextProps = {
   +value: JSXTextType['value'],
   +raw: JSXTextType['raw'],
+};
+
+export type KeyofTypeAnnotationProps = {
+  +argument: MaybeDetachedNode<KeyofTypeAnnotationType['argument']>,
 };
 
 export type LabeledStatementProps = {
@@ -2177,6 +2182,18 @@ export function JSXText(props: {
     type: 'JSXText',
     value: props.value,
     raw: props.raw,
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function KeyofTypeAnnotation(props: {
+  ...$ReadOnly<KeyofTypeAnnotationProps>,
+  +parent?: ESNode,
+}): DetachedNode<KeyofTypeAnnotationType> {
+  const node = detachedProps<KeyofTypeAnnotationType>(props.parent, {
+    type: 'KeyofTypeAnnotation',
+    argument: asDetachedNodeForCodeGen(props.argument),
   });
   setParentPointersInDirectChildren(node);
   return node;
