@@ -24,7 +24,7 @@ Optional<ESTree::Node *> JSParserImpl::parseFlowDeclaration() {
 
   if (context_.getParseFlowComponentSyntax() &&
       checkComponentDeclarationFlow()) {
-    return parseComponentDeclarationFlow();
+    return parseComponentDeclarationFlow(start, /* declare */ false);
   }
 
   if (check(TokenKind::rw_enum)) {
@@ -94,6 +94,10 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFLow(
   if (check(TokenKind::rw_function)) {
     return parseDeclareFunctionFlow(start);
   }
+  if (context_.getParseFlowComponentSyntax() &&
+      checkComponentDeclarationFlow()) {
+    return parseComponentDeclarationFlow(start, /* declare */ true);
+  }
   if (check(TokenKind::rw_enum)) {
     return parseEnumDeclarationFlow(start, /* declare */ true);
   }
@@ -153,10 +157,12 @@ bool JSParserImpl::checkComponentDeclarationFlow() {
   return optNext.hasValue() && *optNext == TokenKind::identifier;
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow() {
+Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow(
+    SMLoc start,
+    bool declare) {
   // component
   assert(check(componentIdent_));
-  SMLoc startLoc = advance().Start;
+  advance();
 
   // identifier
   auto optId = parseBindingIdentifier(Param{});
@@ -167,7 +173,7 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow() {
         TokenKind::identifier,
         "after 'component'",
         "location of 'component'",
-        startLoc);
+        start);
     return None;
   }
 
@@ -184,14 +190,22 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow() {
           TokenKind::l_paren,
           "at start of component parameter list",
           "component declaration starts here",
-          startLoc)) {
+          start)) {
     return None;
   }
 
   ESTree::NodeList paramList;
+  ESTree::Node *rest = nullptr;
 
-  if (!parseComponentParameters(Param{}, paramList))
-    return None;
+  if (declare) {
+    auto restOpt = parseComponentTypeParametersFlow(Param{}, paramList);
+    if (!restOpt)
+      return None;
+    rest = *restOpt;
+  } else {
+    if (!parseComponentParametersFlow(Param{}, paramList))
+      return None;
+  }
 
   ESTree::Node *returnType = nullptr;
   if (check(TokenKind::colon)) {
@@ -205,11 +219,22 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow() {
     }
   }
 
+  if (declare) {
+    if (!eatSemi())
+      return None;
+
+    return setLocation(
+        start,
+        tok_->getEndLoc(),
+        new (context_) ESTree::DeclareComponentNode(
+            *optId, std::move(paramList), rest, typeParams, returnType));
+  }
+
   if (!need(
           TokenKind::l_brace,
           "in component declaration",
           "start of component declaration",
-          startLoc)) {
+          start)) {
     return None;
   }
 
@@ -222,13 +247,13 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow() {
   auto *body = parsedBody.getValue();
 
   return setLocation(
-      startLoc,
+      start,
       body,
       new (context_) ESTree::ComponentDeclarationNode(
           *optId, std::move(paramList), body, typeParams, returnType));
 }
 
-bool JSParserImpl::parseComponentParameters(
+bool JSParserImpl::parseComponentParametersFlow(
     Param param,
     ESTree::NodeList &paramList) {
   assert(
@@ -247,7 +272,7 @@ bool JSParserImpl::parseComponentParameters(
     }
 
     // ComponentParameter.
-    auto optParam = parseComponentParameter(param);
+    auto optParam = parseComponentParameterFlow(param);
     if (!optParam)
       return false;
 
@@ -262,7 +287,7 @@ bool JSParserImpl::parseComponentParameters(
           TokenKind::r_paren,
           JSLexer::AllowRegExp,
           "at end of component parameter list",
-          "start of parameter list",
+          "start of component parameter list",
           lparenLoc)) {
     return false;
   }
@@ -270,7 +295,8 @@ bool JSParserImpl::parseComponentParameters(
   return true;
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseComponentParameter(Param param) {
+Optional<ESTree::Node *> JSParserImpl::parseComponentParameterFlow(
+    Param param) {
   // ComponentParameter:
   //   StringLiteral as BindingElement
   //   IdentifierName
@@ -381,6 +407,168 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentParameter(Param param) {
       tok_->getStartLoc(),
       "identifier or string literal expected in component parameter name");
   return None;
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseComponentTypeParametersFlow(
+    Param param,
+    ESTree::NodeList &paramList) {
+  assert(
+      check(TokenKind::l_paren) &&
+      "ComponentTypeParameters must start with '('");
+  // (
+  SMLoc lparenLoc = advance(JSLexer::GrammarContext::Type).Start;
+  ESTree::Node *rest = nullptr;
+
+  while (!check(TokenKind::r_paren)) {
+    if (check(TokenKind::dotdotdot)) {
+      // ComponentTypeRestParameter.
+      auto optRest = parseComponentTypeRestParameterFlow(param);
+      if (!optRest)
+        return None;
+      rest = *optRest;
+      break;
+    }
+
+    // ComponentTypeParameter.
+    auto optParam = parseComponentTypeParameterFlow(param);
+    if (!optParam)
+      return None;
+
+    paramList.push_back(*optParam.getValue());
+
+    if (!checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type))
+      break;
+  }
+
+  // )
+  if (!eat(
+          TokenKind::r_paren,
+          JSLexer::GrammarContext::Type,
+          "at end of component type parameter list",
+          "start of component type parameter list",
+          lparenLoc)) {
+    return None;
+  }
+
+  return rest;
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseComponentTypeRestParameterFlow(
+    Param param) {
+  // ComponentTypeRestParameter:
+  //   ...IdentifierName: TypeParam
+  //   ...IdentifierName?: TypeParam
+  //   ...TypeParam
+
+  assert(check(TokenKind::dotdotdot));
+
+  SMLoc start = advance(JSLexer::GrammarContext::Type).Start;
+
+  auto optLeft = parseTypeAnnotationFlow();
+  if (!optLeft)
+    return None;
+
+  ESTree::Node *name = nullptr;
+  ESTree::Node *typeAnnotation = nullptr;
+  bool optional = false;
+
+  if (check(TokenKind::colon, TokenKind::question)) {
+    // The node is actually supposed to be an identifier, not a TypeAnnotation.
+    auto optName = reparseTypeAnnotationAsIdentifierFlow(*optLeft);
+    if (!optName)
+      return None;
+    name = *optName;
+    optional = checkAndEat(TokenKind::question, JSLexer::GrammarContext::Type);
+    if (!eat(
+            TokenKind::colon,
+            JSLexer::GrammarContext::Type,
+            "in component parameter type annotation",
+            "start of parameter",
+            start))
+      return None;
+    auto optType = parseTypeAnnotationFlow();
+    if (!optType)
+      return None;
+    typeAnnotation = *optType;
+  } else {
+    typeAnnotation = *optLeft;
+  }
+
+  return setLocation(
+      start,
+      getPrevTokenEndLoc(),
+      new (context_)
+          ESTree::ComponentTypeParameterNode(name, typeAnnotation, optional));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseComponentTypeParameterFlow(
+    Param param) {
+  // ComponentTypeParameter:
+  //   StringLiteral?: TypeParam
+  //   StringLiteral
+  //   IdentifierName?: TypeParam
+  //   IdentifierName
+
+  SMLoc paramStart = tok_->getStartLoc();
+  ESTree::Node *nameElem;
+  if (check(TokenKind::string_literal)) {
+    // StringLiteral: TypeParam
+    // ^
+    nameElem = setLocation(
+        tok_,
+        tok_,
+        new (context_) ESTree::StringLiteralNode(tok_->getStringLiteral()));
+    advance(JSLexer::GrammarContext::Type);
+  } else if (check(TokenKind::identifier) || tok_->isResWord()) {
+    // IdentifierName: TypeParam
+    // ^
+    nameElem = setLocation(
+        tok_,
+        tok_,
+        new (context_) ESTree::IdentifierNode(
+            tok_->getResWordOrIdentifier(), nullptr, false));
+    advance(JSLexer::GrammarContext::Type);
+  } else {
+    error(
+        tok_->getStartLoc(),
+        "identifier or string literal expected in component type parameter name");
+    return None;
+  }
+
+  if (check(asIdent_)) {
+    error(tok_->getStartLoc(), "'as' not allowed in component type parameter");
+    return None;
+  }
+
+  ESTree::Node *type = nullptr;
+  bool optional = false;
+
+  // Name?: TypeParam
+  //     ^
+  if (checkAndEat(TokenKind::question, JSLexer::GrammarContext::Type)) {
+    optional = true;
+    if (!need(
+            TokenKind::colon,
+            "in component type parameter",
+            "location of optional",
+            paramStart))
+      return None;
+  }
+
+  // Name?: TypeParam
+  //      ^
+  if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Type)) {
+    auto optType = parseTypeAnnotation(tok_->getStartLoc());
+    if (!optType)
+      return None;
+    type = *optType;
+  }
+
+  return setLocation(
+      paramStart,
+      getPrevTokenEndLoc(),
+      new (context_)
+          ESTree::ComponentTypeParameterNode(nameElem, type, optional));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeAliasFlow(
@@ -978,6 +1166,18 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(
           new (context_) ESTree::DeclareExportDeclarationNode(
               *optFunc, {}, nullptr, true));
     }
+    if (context_.getParseFlowComponentSyntax() &&
+        checkComponentDeclarationFlow()) {
+      auto optComponent =
+          parseComponentDeclarationFlow(start, /* declare */ true);
+      if (!optComponent)
+        return None;
+      return setLocation(
+          start,
+          *optComponent,
+          new (context_) ESTree::DeclareExportDeclarationNode(
+              *optComponent, {}, nullptr, true));
+    }
     if (check(TokenKind::rw_class)) {
       auto optClass = parseDeclareClassFlow(declareStart);
       if (!optClass)
@@ -1020,6 +1220,19 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(
         *optClass,
         new (context_) ESTree::DeclareExportDeclarationNode(
             *optClass, {}, nullptr, false));
+  }
+
+  if (context_.getParseFlowComponentSyntax() &&
+      checkComponentDeclarationFlow()) {
+    auto optComponent =
+        parseComponentDeclarationFlow(start, /* declare */ true);
+    if (!optComponent)
+      return None;
+    return setLocation(
+        start,
+        *optComponent,
+        new (context_) ESTree::DeclareExportDeclarationNode(
+            *optComponent, {}, nullptr, false));
   }
 
   if (check(TokenKind::rw_enum)) {

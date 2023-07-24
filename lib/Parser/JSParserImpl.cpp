@@ -6629,7 +6629,8 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
     } else if (
         context_.getParseFlow() && context_.getParseFlowComponentSyntax() &&
         checkComponentDeclarationFlow()) {
-      auto optComponent = parseComponentDeclarationFlow();
+      auto optComponent = parseComponentDeclarationFlow(
+          tok_->getStartLoc(), /* declare */ false);
       if (!optComponent) {
         return None;
       }

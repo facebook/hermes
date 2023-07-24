@@ -1118,13 +1118,26 @@ class JSParserImpl {
       SMLoc start,
       AllowDeclareExportType allowDeclareExportType);
   bool checkComponentDeclarationFlow();
-  Optional<ESTree::Node *> parseComponentDeclarationFlow();
+  Optional<ESTree::Node *> parseComponentDeclarationFlow(
+      SMLoc start,
+      bool declare);
 
   /// Parse ComponentParameters with the leading '(' and the trailing ')'.
   /// \pre the current token must be '('. \param[out] paramList populated
-  // with the ComponentParameters. \return true on success, false on failure.
-  bool parseComponentParameters(Param param, ESTree::NodeList &paramList);
-  Optional<ESTree::Node *> parseComponentParameter(Param param);
+  /// with the ComponentParameters. \return true on success, false on failure.
+  bool parseComponentParametersFlow(Param param, ESTree::NodeList &paramList);
+  Optional<ESTree::Node *> parseComponentParameterFlow(Param param);
+
+  /// Parse ComponentTypeParameters with the leading '(' and the trailing ')'.
+  /// \pre the current token must be '('. \param[out] paramList populated
+  /// with the ComponentTypeParameters.
+  /// \return the rest parameter if it exists, nullptr otherwise. None still
+  /// indicates an error.
+  Optional<ESTree::Node *> parseComponentTypeParametersFlow(
+      Param param,
+      ESTree::NodeList &paramList);
+  Optional<ESTree::Node *> parseComponentTypeRestParameterFlow(Param param);
+  Optional<ESTree::Node *> parseComponentTypeParameterFlow(Param param);
 
   enum class TypeAliasKind { None, Declare, Opaque, DeclareOpaque };
   Optional<ESTree::Node *> parseTypeAliasFlow(SMLoc start, TypeAliasKind kind);
