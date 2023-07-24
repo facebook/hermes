@@ -975,6 +975,16 @@ ESTREE_NODE_2_ARGS(
     NodePtr, id, false,
     NodePtr, init, false)
 
+ESTREE_NODE_5_ARGS(
+    ComponentDeclaration, Base,
+    NodePtr, id, false,
+    NodeList, params, false,
+    NodePtr, body, false,
+    NodePtr, typeParameters, true,
+    NodePtr, returnType, true)
+ESTREE_IGNORE_IF_EMPTY(ComponentDeclaration, typeParameters)
+ESTREE_IGNORE_IF_EMPTY(ComponentDeclaration, returnType)
+
 #endif
 
 #if HERMES_PARSE_TS

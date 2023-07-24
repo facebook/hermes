@@ -443,6 +443,13 @@ static opt<bool> ParseFlow(
     desc("Parse Flow"),
     init(false),
     cat(CompilerCategory));
+
+static opt<bool> ParseFlowComponentSyntax(
+    "Xparse-component-syntax",
+    desc("Parse Component syntax"),
+    init(false),
+    Hidden,
+    cat(CompilerCategory));
 #endif
 
 #if HERMES_PARSE_TS
@@ -1120,6 +1127,7 @@ std::shared_ptr<Context> createContext(
   if (cl::ParseFlow) {
     context->setParseFlow(ParseFlowSetting::ALL);
   }
+  context->setParseFlowComponentSyntax(cl::ParseFlowComponentSyntax);
 #endif
 
 #if HERMES_PARSE_TS

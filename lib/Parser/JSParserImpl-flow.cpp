@@ -22,6 +22,11 @@ Optional<ESTree::Node *> JSParserImpl::parseFlowDeclaration() {
   assert(checkDeclaration());
   SMLoc start = tok_->getStartLoc();
 
+  if (context_.getParseFlowComponentSyntax() &&
+      checkComponentDeclarationFlow()) {
+    return parseComponentDeclarationFlow();
+  }
+
   if (check(TokenKind::rw_enum)) {
     auto optEnum = parseEnumDeclarationFlow(start, /* declare */ false);
     if (!optEnum)
@@ -134,6 +139,92 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFLow(
   }
 
   return parseDeclareExportFlow(start, allowDeclareExportType);
+}
+
+bool JSParserImpl::checkComponentDeclarationFlow() {
+  if (!check(componentIdent_))
+    return false;
+
+  // Don't pass an `expectedToken` so we don't advance on a match. This allows
+  // `parseComponentDeclarationFlow` to reparse the token and store useful
+  // information. Additionally to be used within `checkDeclaration` this
+  // function must be idempotent.
+  OptValue<TokenKind> optNext = lexer_.lookahead1(None);
+  return optNext.hasValue() && *optNext == TokenKind::identifier;
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow() {
+  // component
+  assert(check(componentIdent_));
+  SMLoc startLoc = advance().Start;
+
+  // identifier
+  auto optId = parseBindingIdentifier(Param{});
+
+  // Components always require a name identifier
+  if (!optId) {
+    errorExpected(
+        TokenKind::identifier,
+        "after 'component'",
+        "location of 'component'",
+        startLoc);
+    return None;
+  }
+
+  ESTree::Node *typeParams = nullptr;
+
+  if (check(TokenKind::less)) {
+    auto optTypeParams = parseTypeParamsFlow();
+    if (!optTypeParams)
+      return None;
+    typeParams = *optTypeParams;
+  }
+
+  if (!need(
+          TokenKind::l_paren,
+          "at start of component parameter list",
+          "component declaration starts here",
+          startLoc)) {
+    return None;
+  }
+
+  ESTree::NodeList paramList;
+
+  if (!parseFormalParameters(Param{}, paramList))
+    return None;
+
+  ESTree::Node *returnType = nullptr;
+  if (check(TokenKind::colon)) {
+    SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
+    if (!check(checksIdent_)) {
+      auto optRet = parseTypeAnnotationFlow(annotStart);
+      if (!optRet)
+        return None;
+      returnType = *optRet;
+    }
+  }
+
+  if (!need(
+          TokenKind::l_brace,
+          "in component declaration",
+          "start of component declaration",
+          startLoc)) {
+    return None;
+  }
+
+  SaveStrictModeAndSeenDirectives saveStrictModeAndSeenDirectives{this};
+
+  auto parsedBody = parseFunctionBody(
+      Param{}, false, false, false, JSLexer::AllowRegExp, true);
+  if (!parsedBody)
+    return None;
+  auto *body = parsedBody.getValue();
+
+  return setLocation(
+      startLoc,
+      body,
+      new (context_) ESTree::ComponentDeclarationNode(
+          *optId, std::move(paramList), body, typeParams, returnType));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeAliasFlow(

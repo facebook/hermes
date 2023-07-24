@@ -302,6 +302,7 @@ class JSParserImpl {
 
   UniqueString *checksIdent_;
 
+  UniqueString *componentIdent_;
 #endif
 
 #if HERMES_PARSE_TS
@@ -512,6 +513,10 @@ class JSParserImpl {
 
 #if HERMES_PARSE_FLOW
     if (context_.getParseFlow()) {
+      if (context_.getParseFlowComponentSyntax() &&
+          checkComponentDeclarationFlow()) {
+        return true;
+      }
       if (check(opaqueIdent_)) {
         auto optNext = lexer_.lookahead1(llvh::None);
         return optNext.hasValue() && (*optNext == TokenKind::identifier);
@@ -1076,6 +1081,8 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseDeclareFLow(
       SMLoc start,
       AllowDeclareExportType allowDeclareExportType);
+  bool checkComponentDeclarationFlow();
+  Optional<ESTree::Node *> parseComponentDeclarationFlow();
 
   enum class TypeAliasKind { None, Declare, Opaque, DeclareOpaque };
   Optional<ESTree::Node *> parseTypeAliasFlow(SMLoc start, TypeAliasKind kind);
