@@ -24,6 +24,7 @@ type T11 = React.Ref<typeof Component>; // NonNullable<React.Ref<typeof Componen
 type T12 = React.Key; // React.Key
 type T13 = React.Component<Props, {}>; // React.Component<Props, {}>
 type T14 = React.ElementType; // React.ElementType
+type T15 = React.ChildrenArray<T>; // T | ReadonlyArray<T>
 
 type Props = {A: string};
 declare function Component(props: Props): React.Node;
