@@ -95,6 +95,8 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapTypeofTypeAnnotation(node);
       case 'QualifiedTypeofIdentifier':
         return this.mapQualifiedTypeofIdentifier(node);
+      case 'DeclareVariable':
+        return this.mapDeclareVariable(node);
       default:
         return this.mapNodeDefault(node);
     }
@@ -510,6 +512,12 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
 
   mapQualifiedTypeofIdentifier(nodeUnprocessed: HermesNode): HermesNode {
     nodeUnprocessed.type = 'QualifiedTypeIdentifier';
+
+    return this.mapNodeDefault(nodeUnprocessed);
+  }
+
+  mapDeclareVariable(nodeUnprocessed: HermesNode): HermesNode {
+    delete nodeUnprocessed.kind;
 
     return this.mapNodeDefault(nodeUnprocessed);
   }
