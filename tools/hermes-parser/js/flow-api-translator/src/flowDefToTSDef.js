@@ -13,17 +13,28 @@
 import type {ObjectWithLoc} from 'hermes-estree';
 import * as FlowESTree from 'hermes-estree';
 import type {ScopeManager} from 'hermes-eslint';
-import {cloneJSDocCommentsToNewNode as cloneJSDocCommentsToNewNodeOriginal} from 'hermes-transform';
+import {
+  cloneJSDocCommentsToNewNode as cloneJSDocCommentsToNewNodeOriginal,
+  makeCommentOwnLine as makeCommentOwnLineOriginal,
+} from 'hermes-transform';
 import * as TSESTree from './utils/ts-estree-ast-types';
 import {
   translationError as translationErrorBase,
   unexpectedTranslationError as unexpectedTranslationErrorBase,
 } from './utils/ErrorUtils';
 import {removeAtFlowFromDocblock} from './utils/DocblockUtils';
+import type {TranslationOptions} from './utils/TranslationUtils';
+import {EOL} from 'os';
+
+type DeclarationOrUnsupported<T> = T | TSESTree.TSTypeAliasDeclaration;
 
 const cloneJSDocCommentsToNewNode =
   // $FlowExpectedError[incompatible-cast] - trust me this re-type is 100% safe
   (cloneJSDocCommentsToNewNodeOriginal: (mixed, mixed) => void);
+
+const makeCommentOwnLine =
+  // $FlowExpectedError[incompatible-cast] - trust me this re-type is 100% safe
+  (makeCommentOwnLineOriginal: (string, mixed) => string);
 
 const VALID_REACT_IMPORTS = new Set<string>(['React', 'react']);
 
@@ -31,7 +42,8 @@ export function flowDefToTSDef(
   originalCode: string,
   ast: FlowESTree.Program,
   scopeManager: ScopeManager,
-): TSESTree.Program {
+  opts: TranslationOptions,
+): [TSESTree.Program, string] {
   const tsBody: Array<TSESTree.ProgramStatement> = [];
   const tsProgram: TSESTree.Program = {
     type: 'Program',
@@ -41,7 +53,7 @@ export function flowDefToTSDef(
       ast.docblock == null ? null : removeAtFlowFromDocblock(ast.docblock),
   };
 
-  const transform = getTransforms(originalCode, scopeManager);
+  const [transform, code] = getTransforms(originalCode, scopeManager, opts);
 
   for (const node of ast.body) {
     if (node.type in transform) {
@@ -58,15 +70,20 @@ export function flowDefToTSDef(
       throw unexpectedTranslationErrorBase(
         node,
         `Unexpected node type ${node.type}`,
-        {code: originalCode},
+        {code},
       );
     }
   }
 
-  return tsProgram;
+  return [tsProgram, code];
 }
 
-const getTransforms = (code: string, scopeManager: ScopeManager) => {
+const getTransforms = (
+  originalCode: string,
+  scopeManager: ScopeManager,
+  opts: TranslationOptions,
+) => {
+  let code = originalCode;
   function translationError(node: ObjectWithLoc, message: string) {
     return translationErrorBase(node, message, {code});
   }
@@ -78,6 +95,70 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
       node,
       `Unsupported feature: Translating "${thing}" is currently not supported.`,
     );
+  }
+  function addErrorComment(node: TSESTree.Node, message: string): void {
+    const comment = {
+      type: 'Block',
+      value: `*${EOL} * ${message.replace(
+        new RegExp(EOL, 'g'),
+        `${EOL} * `,
+      )}${EOL}*`,
+      leading: true,
+      printed: false,
+    };
+
+    code = makeCommentOwnLine(code, comment);
+
+    // $FlowExpectedError[prop-missing]
+    // $FlowExpectedError[cannot-write]
+    node.comments ??= [];
+    // $FlowExpectedError[prop-missing]
+    // $FlowExpectedError[incompatible-cast]
+    (node.comments: Array<TSESTree.Comment>).push(comment);
+  }
+  function unsupportedAnnotation(
+    node: ObjectWithLoc,
+    thing: string,
+  ): TSESTree.TSAnyKeyword {
+    const error = unsupportedTranslationError(node, thing);
+    if (opts.recoverFromErrors) {
+      const message = error.getFramedMessage();
+      const newNode = {
+        type: 'TSAnyKeyword',
+      };
+      addErrorComment(newNode, message);
+      return newNode;
+    }
+
+    throw error;
+  }
+  function unsupportedDeclaration(
+    node: ObjectWithLoc,
+    thing: string,
+    id: FlowESTree.Identifier,
+    declare: boolean = false,
+    typeParameters: FlowESTree.TypeParameterDeclaration | null = null,
+  ): TSESTree.TSTypeAliasDeclaration {
+    const error = unsupportedTranslationError(node, thing);
+    if (opts.recoverFromErrors) {
+      const message = error.getFramedMessage();
+      const newNode = {
+        type: 'TSTypeAliasDeclaration',
+        declare,
+        id: transform.Identifier(id, false),
+        typeAnnotation: {
+          type: 'TSAnyKeyword',
+        },
+        typeParameters:
+          typeParameters == null
+            ? undefined
+            : transform.TypeParameterDeclaration(typeParameters),
+      };
+      addErrorComment(newNode, message);
+      return newNode;
+    }
+
+    throw error;
   }
 
   const topScope = (() => {
@@ -140,7 +221,9 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
 
   function EnumImpl(
     node: FlowESTree.EnumDeclaration | FlowESTree.DeclareEnum,
-  ): [TSESTree.TSEnumDeclaration, TSESTree.TSModuleDeclaration] {
+  ): DeclarationOrUnsupported<
+    [TSESTree.TSEnumDeclaration, TSESTree.TSModuleDeclaration],
+  > {
     const body = node.body;
     if (body.type === 'EnumSymbolBody') {
       /*
@@ -169,7 +252,12 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
 
       Considering how rarely used symbol enums are ATM, let's just put a pin in it for now.
       */
-      throw unsupportedTranslationError(node, 'symbol enums');
+      return unsupportedDeclaration(
+        node,
+        'symbol enums',
+        node.id,
+        FlowESTree.isDeclareEnum(node),
+      );
     }
     if (body.type === 'EnumBooleanBody') {
       /*
@@ -190,7 +278,12 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
       But it's pretty clunky and ugly.
       Considering how rarely used boolean enums are ATM, let's just put a pin in it for now.
       */
-      throw unsupportedTranslationError(node, 'boolean enums');
+      return unsupportedDeclaration(
+        node,
+        'boolean enums',
+        node.id,
+        FlowESTree.isDeclareEnum(node),
+      );
     }
 
     const members: Array<TSESTree.TSEnumMemberNonComputedName> = [];
@@ -545,13 +638,16 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
     },
     DeclareClass(
       node: FlowESTree.DeclareClass,
-    ): TSESTree.ClassDeclarationWithName {
+    ): DeclarationOrUnsupported<TSESTree.ClassDeclarationWithName> {
       const classMembers: Array<TSESTree.ClassElement> = [];
       const transformedBody = transform.ObjectTypeAnnotation(node.body);
       if (transformedBody.type !== 'TSTypeLiteral') {
-        throw translationError(
+        return unsupportedDeclaration(
           node.body,
           'Spreads in declare class are not allowed',
+          node.id,
+          true,
+          node.typeParameters,
         );
       }
       for (const member of transformedBody.members) {
@@ -671,9 +767,12 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
             ```
             Let's put a pin in it for now and deal with it later if the need arises.
             */
-            throw unsupportedTranslationError(
+            return unsupportedDeclaration(
               node.body.callProperties[0] ?? node.body,
               'call signatures on classes',
+              node.id,
+              true,
+              node.typeParameters,
             );
           }
 
@@ -725,6 +824,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
             | TSESTree.VariableDeclaration
             | TSESTree.ClassDeclaration
             | TSESTree.TSDeclareFunction
+            | TSESTree.TSTypeAliasDeclaration
           ),
           TSESTree.ExportDefaultDeclaration,
         ] {
@@ -931,18 +1031,19 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
                   },
                 ];
               case 'DeclareEnum': {
-                const [enumDeclaration, moduleDeclaration] =
-                  transform.DeclareEnum(node.declaration);
-                return [
-                  {
-                    declaration: enumDeclaration,
-                    exportKind: 'type',
-                  },
-                  {
-                    declaration: moduleDeclaration,
-                    exportKind: 'type',
-                  },
-                ];
+                const result = transform.DeclareEnum(node.declaration);
+                return Array.isArray(result)
+                  ? [
+                      {
+                        declaration: result[0],
+                        exportKind: 'type',
+                      },
+                      {
+                        declaration: result[1],
+                        exportKind: 'type',
+                      },
+                    ]
+                  : [{declaration: result, exportKind: 'type'}];
               }
             }
           })();
@@ -1080,7 +1181,9 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
     },
     DeclareEnum(
       node: FlowESTree.DeclareEnum,
-    ): [TSESTree.TSEnumDeclaration, TSESTree.TSModuleDeclaration] {
+    ): DeclarationOrUnsupported<
+      [TSESTree.TSEnumDeclaration, TSESTree.TSModuleDeclaration],
+    > {
       return EnumImpl(node);
     },
     EmptyTypeAnnotation(
@@ -1090,11 +1193,13 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
       // The closest is `never`, but `never` has a number of different semantics
       // In reality no human code should ever directly use the `empty` type in flow
       // So let's put a pin in it for now
-      throw unsupportedTranslationError(node, 'empty type');
+      return unsupportedAnnotation(node, 'empty type');
     },
     EnumDeclaration(
       node: FlowESTree.EnumDeclaration,
-    ): [TSESTree.TSEnumDeclaration, TSESTree.TSModuleDeclaration] {
+    ): DeclarationOrUnsupported<
+      [TSESTree.TSEnumDeclaration, TSESTree.TSModuleDeclaration],
+    > {
       return EnumImpl(node);
     },
     DeclareModuleExports(
@@ -1107,7 +1212,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
     ): TSESTree.TypeNode {
       // The existential type does not map to any types in TS
       // It's also super deprecated - so let's not ever worry
-      throw unsupportedTranslationError(node, 'exestential type');
+      return unsupportedAnnotation(node, 'existential type');
     },
     ExportNamedDeclaration(
       node: FlowESTree.ExportNamedDeclaration,
@@ -1144,8 +1249,10 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
               `Unexpected named declaration found ${node.declaration.type}`,
             );
 
-          case 'EnumDeclaration':
-            return transform.EnumDeclaration(node.declaration);
+          case 'EnumDeclaration': {
+            const result = transform.EnumDeclaration(node.declaration);
+            return Array.isArray(result) ? result : [result, null];
+          }
           case 'InterfaceDeclaration':
             return [transform.InterfaceDeclaration(node.declaration), null];
           case 'OpaqueType':
@@ -1338,7 +1445,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
           type PropType = ReturnType<ExtractPropType<Obj>>; // number
           ```
           */
-          throw unsupportedTranslationError(node, fullTypeName);
+          return unsupportedAnnotation(node, fullTypeName);
         }
 
         case '$Diff':
@@ -1774,7 +1881,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
             };
           }
           default:
-            throw unsupportedTranslationError(node, fullTypeName);
+            return unsupportedAnnotation(node, fullTypeName);
         }
       }
 
@@ -1832,11 +1939,11 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
     },
     ImportDeclaration(
       node: FlowESTree.ImportDeclaration,
-    ): TSESTree.ImportDeclaration {
+    ): Array<DeclarationOrUnsupported<TSESTree.ImportDeclaration>> {
       if (node.importKind === 'typeof') {
         /*
         TODO - this is a complicated change to support because TS
-        does not have typeof imports.
+      does not have typeof imports.
         Making it a `type` import would change the meaning!
         The only way to truly support this is to prefix all **usages** with `typeof T`.
         eg:
@@ -1856,43 +1963,61 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
         This seems simple, but will actually be super complicated for us to do with
         our current translation architecture
         */
-        throw unsupportedTranslationError(node, 'typeof imports');
+        return node.specifiers.map(spec =>
+          unsupportedDeclaration(node, 'typeof imports', spec.local),
+        );
       }
       const importKind = node.importKind;
 
-      return {
-        type: 'ImportDeclaration',
-        assertions: node.assertions.map(transform.ImportAttribute),
-        importKind: importKind ?? 'value',
-        source: transform.StringLiteral(node.source),
-        specifiers: node.specifiers.map(spec => {
-          switch (spec.type) {
-            case 'ImportDefaultSpecifier':
-              return {
-                type: 'ImportDefaultSpecifier',
-                local: transform.Identifier(spec.local, false),
-              };
+      const specifiers = [];
+      const unsupportedSpecifiers = [];
 
-            case 'ImportNamespaceSpecifier':
-              return {
-                type: 'ImportNamespaceSpecifier',
-                local: transform.Identifier(spec.local, false),
-              };
+      node.specifiers.forEach(spec => {
+        switch (spec.type) {
+          case 'ImportDefaultSpecifier':
+            specifiers.push({
+              type: 'ImportDefaultSpecifier',
+              local: transform.Identifier(spec.local, false),
+            });
+            return;
 
-            case 'ImportSpecifier':
-              if (spec.importKind === 'typeof') {
-                // see above
-                throw unsupportedTranslationError(node, 'typeof imports');
-              }
-              return {
-                type: 'ImportSpecifier',
-                importKind: spec.importKind === 'type' ? 'type' : null,
-                imported: transform.Identifier(spec.imported, false),
-                local: transform.Identifier(spec.local, false),
-              };
-          }
-        }),
-      };
+          case 'ImportNamespaceSpecifier':
+            specifiers.push({
+              type: 'ImportNamespaceSpecifier',
+              local: transform.Identifier(spec.local, false),
+            });
+            return;
+
+          case 'ImportSpecifier':
+            if (spec.importKind === 'typeof') {
+              // see above
+              unsupportedSpecifiers.push(
+                unsupportedDeclaration(node, 'typeof imports', spec.local),
+              );
+            }
+            specifiers.push({
+              type: 'ImportSpecifier',
+              importKind: spec.importKind === 'type' ? 'type' : null,
+              imported: transform.Identifier(spec.imported, false),
+              local: transform.Identifier(spec.local, false),
+            });
+            return;
+        }
+      });
+
+      const out = specifiers.length
+        ? [
+            {
+              type: 'ImportDeclaration',
+              assertions: node.assertions.map(transform.ImportAttribute),
+              importKind: importKind ?? 'value',
+              source: transform.StringLiteral(node.source),
+              specifiers,
+            },
+          ]
+        : [];
+
+      return [...out, ...unsupportedSpecifiers];
     },
     InterfaceExtends(
       node: FlowESTree.InterfaceExtends,
@@ -2022,7 +2147,10 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
     },
     ObjectTypeAnnotation(
       node: FlowESTree.ObjectTypeAnnotation,
-    ): TSESTree.TSTypeLiteral | TSESTree.TSIntersectionType {
+    ):
+      | TSESTree.TSTypeLiteral
+      | TSESTree.TSIntersectionType
+      | TSESTree.TSAnyKeyword {
       // we want to preserve the source order of the members
       // unfortunately flow has unordered properties storing things
       // so store all elements with their start index and sort the
@@ -2049,10 +2177,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
       They're really rarely used (if ever) - so let's just ignore them for now
       */
       if (node.internalSlots.length > 0) {
-        throw unsupportedTranslationError(
-          node.internalSlots[0],
-          'internal slots',
-        );
+        return unsupportedAnnotation(node.internalSlots[0], 'internal slots');
       }
 
       if (!node.properties.find(FlowESTree.isObjectTypeSpreadProperty)) {
@@ -2149,7 +2274,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
         */
 
         if (members.length > 0) {
-          throw unsupportedTranslationError(
+          return unsupportedAnnotation(
             node,
             'object types with spreads, indexers and/or call properties at the same time',
           );
@@ -2159,7 +2284,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
         for (const property of node.properties) {
           if (property.type === 'ObjectTypeSpreadProperty') {
             if (members.length > 0) {
-              throw unsupportedTranslationError(
+              return unsupportedAnnotation(
                 property,
                 'object types with spreads in the middle or at the end',
               );
@@ -2167,7 +2292,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
 
             const spreadType = transform.TypeAnnotationType(property.argument);
             if (spreadType.type !== 'TSTypeReference') {
-              throw unsupportedTranslationError(
+              return unsupportedAnnotation(
                 property,
                 'object types with complex spreads',
               );
@@ -2499,7 +2624,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
           return transform.TupleTypeAnnotation(node);
         case 'TupleTypeLabeledElement':
         case 'TupleTypeSpreadElement':
-          throw unsupportedTranslationError(node, node.type);
+          return unsupportedAnnotation(node, node.type);
         case 'TypeofTypeAnnotation':
           return transform.TypeofTypeAnnotation(node);
         case 'UnionTypeAnnotation':
@@ -2620,5 +2745,5 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
     };
   }
 
-  return transform;
+  return [transform, code];
 };
