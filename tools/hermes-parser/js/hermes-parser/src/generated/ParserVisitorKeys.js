@@ -583,6 +583,10 @@ export const HERMES_AST_VISITOR_KEYS = {
   TypeParameterInstantiation: {
     params: 'NodeList',
   },
+  TypePredicate: {
+    parameterName: 'Node',
+    typeAnnotation: 'Node',
+  },
   UnaryExpression: {
     argument: 'Node',
   },

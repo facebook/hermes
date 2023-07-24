@@ -245,6 +245,7 @@ module.exports = {
   TypeParameter: ['bound', 'variance', 'default'],
   TypeParameterDeclaration: ['params'],
   TypeParameterInstantiation: ['params'],
+  TypePredicate: ['parameterName', 'typeAnnotation'],
   UnaryExpression: ['argument'],
   UnionTypeAnnotation: ['types'],
   UpdateExpression: ['argument'],

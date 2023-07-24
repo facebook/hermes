@@ -166,6 +166,7 @@ import type {
   TypeParameter as TypeParameterType,
   TypeParameterDeclaration as TypeParameterDeclarationType,
   TypeParameterInstantiation as TypeParameterInstantiationType,
+  TypePredicate as TypePredicateType,
   UnaryExpression as UnaryExpressionType,
   UnionTypeAnnotation as UnionTypeAnnotationType,
   UpdateExpression as UpdateExpressionType,
@@ -1010,6 +1011,12 @@ export type TypeParameterInstantiationProps = {
   +params: $ReadOnlyArray<
     MaybeDetachedNode<TypeParameterInstantiationType['params'][number]>,
   >,
+};
+
+export type TypePredicateProps = {
+  +parameterName: MaybeDetachedNode<TypePredicateType['parameterName']>,
+  +typeAnnotation?: ?MaybeDetachedNode<TypePredicateType['typeAnnotation']>,
+  +asserts: TypePredicateType['asserts'],
 };
 
 export type UnaryExpressionProps = {
@@ -2922,6 +2929,20 @@ export function TypeParameterInstantiation(props: {
   const node = detachedProps<TypeParameterInstantiationType>(props.parent, {
     type: 'TypeParameterInstantiation',
     params: props.params.map(n => asDetachedNodeForCodeGen(n)),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function TypePredicate(props: {
+  ...$ReadOnly<TypePredicateProps>,
+  +parent?: ESNode,
+}): DetachedNode<TypePredicateType> {
+  const node = detachedProps<TypePredicateType>(props.parent, {
+    type: 'TypePredicate',
+    parameterName: asDetachedNodeForCodeGen(props.parameterName),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
+    asserts: props.asserts,
   });
   setParentPointersInDirectChildren(node);
   return node;
