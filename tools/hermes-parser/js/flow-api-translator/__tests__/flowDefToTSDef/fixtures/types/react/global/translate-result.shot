@@ -11,6 +11,7 @@ exports[`flowDefToTSDef types/react/global 1`] = `
  * @format
  */
 
+import * as React from 'react';
 type T1 = React.ReactNode;
 type T2 = JSX.Element;
 type T3 = React.ReactElement<typeof Component>;

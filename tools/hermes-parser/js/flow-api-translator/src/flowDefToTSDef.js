@@ -38,6 +38,12 @@ const makeCommentOwnLine =
 
 const VALID_REACT_IMPORTS = new Set<string>(['React', 'react']);
 
+function isValidReactImportOrGlobal(id: FlowESTree.Identifier): boolean {
+  return VALID_REACT_IMPORTS.has(id.name) || id.name.startsWith('React$');
+}
+
+let shouldAddReactImport;
+
 export function flowDefToTSDef(
   originalCode: string,
   ast: FlowESTree.Program,
@@ -52,6 +58,8 @@ export function flowDefToTSDef(
     docblock:
       ast.docblock == null ? null : removeAtFlowFromDocblock(ast.docblock),
   };
+
+  shouldAddReactImport = false;
 
   const [transform, code] = getTransforms(originalCode, scopeManager, opts);
 
@@ -73,6 +81,28 @@ export function flowDefToTSDef(
         {code},
       );
     }
+  }
+
+  if (shouldAddReactImport) {
+    tsBody.unshift({
+      type: 'ImportDeclaration',
+      assertions: [],
+      source: {
+        type: 'Literal',
+        value: 'react',
+        raw: "'react'",
+      },
+      specifiers: [
+        {
+          type: 'ImportNamespaceSpecifier',
+          local: {
+            type: 'Identifier',
+            name: 'React',
+          },
+        },
+      ],
+      importKind: 'value',
+    });
   }
 
   return [tsProgram, code];
@@ -199,9 +229,10 @@ const getTransforms = (
       }
     })();
 
-    // No variable found, it must be global. Using the `React` variable is enough in this case.
+    // No variable found, it is not imported.
+    // It could be a global though if isValidReactImportOrGlobal returns true.
     if (variableDef == null) {
-      return VALID_REACT_IMPORTS.has(id.name) || id.name.startsWith('React$');
+      return false;
     }
 
     const def = variableDef.defs[0];
@@ -1711,10 +1742,19 @@ const getTransforms = (
       }
 
       // React special conversion:
-      if (isReactImport(baseId)) {
-        const reactId = {
-          type: 'Identifier',
-          name: `React`,
+      const validReactImportOrGlobal = isValidReactImportOrGlobal(baseId);
+      const reactImport = isReactImport(baseId);
+      if (validReactImportOrGlobal || reactImport) {
+        // Returns appropriate Identifier for `React` import.
+        // If a global is in use, set a flag to indicate that we should add the import.
+        const getReactIdentifier = () => {
+          if (!reactImport && validReactImportOrGlobal) {
+            shouldAddReactImport = true;
+          }
+          return {
+            type: 'Identifier',
+            name: `React`,
+          };
         };
 
         switch (fullTypeName) {
@@ -1724,7 +1764,7 @@ const getTransforms = (
               type: 'TSTypeReference',
               typeName: {
                 type: 'TSQualifiedName',
-                left: reactId,
+                left: getReactIdentifier(),
                 right: {
                   type: 'Identifier',
                   name: `Context`,
@@ -1743,7 +1783,7 @@ const getTransforms = (
               type: 'TSTypeReference',
               typeName: {
                 type: 'TSQualifiedName',
-                left: reactId,
+                left: getReactIdentifier(),
                 right: {
                   type: 'Identifier',
                   name: `ReactNode`,
@@ -1759,7 +1799,7 @@ const getTransforms = (
               type: 'TSTypeReference',
               typeName: {
                 type: 'TSQualifiedName',
-                left: reactId,
+                left: getReactIdentifier(),
                 right: {
                   type: 'Identifier',
                   name: `ReactElement`,
@@ -1779,7 +1819,7 @@ const getTransforms = (
               type: 'TSTypeReference',
               typeName: {
                 type: 'TSQualifiedName',
-                left: reactId,
+                left: getReactIdentifier(),
                 right: {
                   type: 'Identifier',
                   name: `ElementRef`,
@@ -1799,7 +1839,7 @@ const getTransforms = (
               type: 'TSTypeReference',
               typeName: {
                 type: 'TSQualifiedName',
-                left: reactId,
+                left: getReactIdentifier(),
                 right: {
                   type: 'Identifier',
                   name: `Fragment`,
@@ -1886,7 +1926,7 @@ const getTransforms = (
               type: 'TSTypeReference',
               typeName: {
                 type: 'TSQualifiedName',
-                left: reactId,
+                left: getReactIdentifier(),
                 right: {
                   type: 'Identifier',
                   name: `ForwardRefExoticComponent`,
