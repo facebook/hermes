@@ -32,6 +32,20 @@ export function getOriginalNode(node: MaybeDetachedNode<ESNode>): ?ESNode {
   return node[ORIGINAL_NODE];
 }
 
+/* $FlowExpectedError[unclear-type] Type safety is not needed for generated
+ * code, this avoids us always having to pass a generic property within codegen */
+export function asDetachedNodeForCodeGen(node: any): ?DetachedNode<any> {
+  if (node == null) {
+    return null;
+  }
+
+  if (isDetachedNode(node)) {
+    return node;
+  }
+
+  return shallowCloneNode<ESNode>(node, {});
+}
+
 export const asDetachedNode: {
   <T: ESNode>(
     node: MaybeDetachedNode<T>,

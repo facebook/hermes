@@ -97,20 +97,14 @@ export function ${node.name}(props: {
   const node = detachedProps<${node.name}Type>(props.parent, {
     type: '${type}',
     ${node.arguments
-      .flatMap(arg => {
+      .map(arg => {
         switch (arg.type) {
           case 'NodePtr':
-            return [
-              '// $FlowFixMe[incompatible-call]',
-              `${arg.name}: asDetachedNode(props.${arg.name})`,
-            ];
+            return `${arg.name}: asDetachedNodeForCodeGen(props.${arg.name})`;
           case 'NodeList':
-            return [
-              '// $FlowFixMe[incompatible-call]',
-              `${arg.name}: props.${arg.name}${
-                arg.optional ? '?.' : '.'
-              }map(n => asDetachedNode(n))`,
-            ];
+            return `${arg.name}: props.${arg.name}${
+              arg.optional ? '?.' : '.'
+            }map(n => asDetachedNodeForCodeGen(n))`;
           default:
             return `${arg.name}: props.${arg.name}`;
         }
@@ -133,7 +127,7 @@ ${imports.map(imp => `${imp} as ${imp}Type`).join(',\n')}
 import type {DetachedNode, MaybeDetachedNode} from '../detachedNode';
 
 import {
-  asDetachedNode,
+  asDetachedNodeForCodeGen,
   detachedProps,
   setParentPointersInDirectChildren,
 } from '../detachedNode';
