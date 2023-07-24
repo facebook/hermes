@@ -126,6 +126,10 @@ void JSParserImpl::initializeIdentifiers() {
 
 #endif
 
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+  inferIdent_ = lexer_.getIdentifier("infer");
+#endif
+
   // Generate the string representation of all tokens.
   for (unsigned i = 0; i != NUM_JS_TOKENS; ++i)
     tokenIdent_[i] = lexer_.getIdentifier(tokenKindStr((TokenKind)i));

@@ -238,6 +238,9 @@ class JSParserImpl {
 #if HERMES_PARSE_FLOW
   bool allowAnonFunctionType_{false};
 #endif
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+  bool allowConditionalType_{false};
+#endif
 
   // Certain known identifiers which we need to use when constructing the
   // ESTree or when parsing;
@@ -310,6 +313,10 @@ class JSParserImpl {
   UniqueString *namespaceIdent_;
   UniqueString *readonlyIdent_;
   UniqueString *isIdent_;
+#endif
+
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+  UniqueString *inferIdent_;
 #endif
 
   /// String representation of all tokens.
