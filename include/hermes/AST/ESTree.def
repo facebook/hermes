@@ -776,6 +776,12 @@ ESTREE_NODE_3_ARGS(
     NodePtr, objectType, false,
     NodePtr, indexType, false,
     NodeBoolean, optional, false)
+ESTREE_NODE_4_ARGS(
+    ConditionalTypeAnnotation, Base,
+    NodePtr, checkType, false,
+    NodePtr, extendsType, false,
+    NodePtr, trueType, false,
+    NodePtr, falseType, false)
 
 ESTREE_NODE_2_ARGS(
     InterfaceTypeAnnotation, Base,

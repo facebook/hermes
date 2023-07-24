@@ -1116,6 +1116,7 @@ class JSParserImpl {
 
   Optional<ESTree::Node *> parseExportTypeDeclarationFlow(SMLoc start);
 
+  Optional<ESTree::Node *> parseConditionalTypeAnnotationFlow();
   Optional<ESTree::Node *> parseUnionTypeAnnotationFlow();
   Optional<ESTree::Node *> parseIntersectionTypeAnnotationFlow();
   Optional<ESTree::Node *> parseAnonFunctionWithoutParensTypeAnnotationFlow();
