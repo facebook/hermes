@@ -954,6 +954,15 @@ function deserializeFunctionTypeParam() {
     optional: this.deserializeBoolean(),
   };
 }
+function deserializeComponentTypeParameter() {
+  return {
+    type: 'ComponentTypeParameter',
+    loc: this.addEmptyLoc(),
+    name: this.deserializeNode(),
+    typeAnnotation: this.deserializeNode(),
+    optional: this.deserializeBoolean(),
+  };
+}
 function deserializeNullableTypeAnnotation() {
   return {
     type: 'NullableTypeAnnotation',
@@ -1172,6 +1181,17 @@ function deserializeDeclareFunction() {
     loc: this.addEmptyLoc(),
     id: this.deserializeNode(),
     predicate: this.deserializeNode(),
+  };
+}
+function deserializeDeclareComponent() {
+  return {
+    type: 'DeclareComponent',
+    loc: this.addEmptyLoc(),
+    id: this.deserializeNode(),
+    params: this.deserializeNodeList(),
+    rest: this.deserializeNode(),
+    typeParameters: this.deserializeNode(),
+    returnType: this.deserializeNode(),
   };
 }
 function deserializeDeclareVariable() {
@@ -1942,6 +1962,7 @@ module.exports = [
   deserializeVoidTypeAnnotation,
   deserializeFunctionTypeAnnotation,
   deserializeFunctionTypeParam,
+  deserializeComponentTypeParameter,
   deserializeNullableTypeAnnotation,
   deserializeQualifiedTypeIdentifier,
   deserializeTypeofTypeAnnotation,
@@ -1968,6 +1989,7 @@ module.exports = [
   deserializeDeclareInterface,
   deserializeDeclareClass,
   deserializeDeclareFunction,
+  deserializeDeclareComponent,
   deserializeDeclareVariable,
   deserializeDeclareEnum,
   deserializeDeclareExportDeclaration,

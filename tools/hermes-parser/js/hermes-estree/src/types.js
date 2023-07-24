@@ -174,6 +174,7 @@ export type ESNode =
   | TypeAnnotationType
   | Variance
   | FunctionTypeParam
+  | ComponentTypeParameter
   | InferredPredicate
   | ObjectTypeProperty
   | ObjectTypeCallProperty
@@ -234,6 +235,7 @@ export type Statement =
   | ContinueStatement
   | DebuggerStatement
   | DeclareClass
+  | DeclareComponent
   | DeclareVariable
   | DeclareEnum
   | DeclareFunction
@@ -1342,6 +1344,14 @@ export interface FunctionTypeParam extends BaseNode {
 
   +parent: FunctionTypeAnnotation;
 }
+export interface ComponentTypeParameter extends BaseNode {
+  +type: 'ComponentTypeParameter';
+  +name: Identifier | StringLiteral | null;
+  +typeAnnotation: TypeAnnotationType | null;
+  +optional: boolean;
+
+  +parent: DeclareComponent;
+}
 export interface InferredPredicate extends BaseNode {
   +type: 'InferredPredicate';
 
@@ -1600,6 +1610,7 @@ export interface EnumDefaultedMember extends BaseNode {
 
 export type DeclaredNode =
   | DeclareClass
+  | DeclareComponent
   | DeclareVariable
   | DeclareEnum
   | DeclareFunction
@@ -1620,6 +1631,15 @@ export interface DeclareClass extends BaseNode {
   +implements: $ReadOnlyArray<ClassImplements>;
   +body: ObjectTypeAnnotation;
   +mixins: $ReadOnlyArray<InterfaceExtends>;
+}
+
+export interface DeclareComponent extends BaseNode {
+  +type: 'DeclareComponent';
+  +id: Identifier;
+  +params: Array<ComponentTypeParameter>;
+  +rest: null | ComponentTypeParameter;
+  +typeParameters: null | TypeParameterDeclaration;
+  +returnType: null | TypeAnnotation;
 }
 
 export interface DeclareVariable extends BaseNode {

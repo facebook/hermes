@@ -45,11 +45,13 @@ import type {
   ClassImplements as ClassImplementsType,
   ComponentDeclaration as ComponentDeclarationType,
   ComponentParameter as ComponentParameterType,
+  ComponentTypeParameter as ComponentTypeParameterType,
   ConditionalExpression as ConditionalExpressionType,
   ConditionalTypeAnnotation as ConditionalTypeAnnotationType,
   ContinueStatement as ContinueStatementType,
   DebuggerStatement as DebuggerStatementType,
   DeclareClass as DeclareClassType,
+  DeclareComponent as DeclareComponentType,
   DeclaredPredicate as DeclaredPredicateType,
   DeclareEnum as DeclareEnumType,
   DeclareExportAllDeclaration as DeclareExportAllDeclarationType,
@@ -308,6 +310,14 @@ export type ComponentParameterProps = {
   +shorthand: ComponentParameterType['shorthand'],
 };
 
+export type ComponentTypeParameterProps = {
+  +name?: ?MaybeDetachedNode<ComponentTypeParameterType['name']>,
+  +typeAnnotation?: ?MaybeDetachedNode<
+    ComponentTypeParameterType['typeAnnotation'],
+  >,
+  +optional: ComponentTypeParameterType['optional'],
+};
+
 export type ConditionalExpressionProps = {
   +test: MaybeDetachedNode<ConditionalExpressionType['test']>,
   +alternate: MaybeDetachedNode<ConditionalExpressionType['alternate']>,
@@ -340,6 +350,16 @@ export type DeclareClassProps = {
     MaybeDetachedNode<DeclareClassType['mixins'][number]>,
   >,
   +body: MaybeDetachedNode<DeclareClassType['body']>,
+};
+
+export type DeclareComponentProps = {
+  +id: MaybeDetachedNode<DeclareComponentType['id']>,
+  +params: $ReadOnlyArray<
+    MaybeDetachedNode<DeclareComponentType['params'][number]>,
+  >,
+  +rest?: ?MaybeDetachedNode<DeclareComponentType['rest']>,
+  +typeParameters?: ?MaybeDetachedNode<DeclareComponentType['typeParameters']>,
+  +returnType?: ?MaybeDetachedNode<DeclareComponentType['returnType']>,
 };
 
 export type DeclaredPredicateProps = {
@@ -1352,6 +1372,20 @@ export function ComponentParameter(props: {
   return node;
 }
 
+export function ComponentTypeParameter(props: {
+  ...$ReadOnly<ComponentTypeParameterProps>,
+  +parent?: ESNode,
+}): DetachedNode<ComponentTypeParameterType> {
+  const node = detachedProps<ComponentTypeParameterType>(props.parent, {
+    type: 'ComponentTypeParameter',
+    name: asDetachedNodeForCodeGen(props.name),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
+    optional: props.optional,
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
 export function ConditionalExpression(props: {
   ...$ReadOnly<ConditionalExpressionProps>,
   +parent?: ESNode,
@@ -1415,6 +1449,22 @@ export function DeclareClass(props: {
     implements: props.implements.map(n => asDetachedNodeForCodeGen(n)),
     mixins: props.mixins.map(n => asDetachedNodeForCodeGen(n)),
     body: asDetachedNodeForCodeGen(props.body),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function DeclareComponent(props: {
+  ...$ReadOnly<DeclareComponentProps>,
+  +parent?: ESNode,
+}): DetachedNode<DeclareComponentType> {
+  const node = detachedProps<DeclareComponentType>(props.parent, {
+    type: 'DeclareComponent',
+    id: asDetachedNodeForCodeGen(props.id),
+    params: props.params.map(n => asDetachedNodeForCodeGen(n)),
+    rest: asDetachedNodeForCodeGen(props.rest),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    returnType: asDetachedNodeForCodeGen(props.returnType),
   });
   setParentPointersInDirectChildren(node);
   return node;
