@@ -99,6 +99,8 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapDeclareVariable(node);
       case 'DeclareEnum':
         return this.mapDeclareEnum(node);
+      case 'JSXElement':
+        return this.mapJSXElement(node);
       default:
         return this.mapNodeDefault(node);
     }
@@ -534,5 +536,10 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
     nodeUnprocessed.type = 'DeclareVariable';
 
     return this.mapDeclareVariable(nodeUnprocessed);
+  }
+
+  mapJSXElement(nodeUnprocessed: HermesNode): HermesNode {
+    delete nodeUnprocessed.openingElement.typeArguments;
+    return this.mapNodeDefault(nodeUnprocessed);
   }
 }
