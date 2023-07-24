@@ -116,6 +116,7 @@ void JSParserImpl::initializeIdentifiers() {
   mappedTypeMinusOptionalIdent_ = lexer_.getIdentifier("MinusOptional");
 
   checksIdent_ = lexer_.getIdentifier("%checks");
+  assertsIdent_ = lexer_.getIdentifier("asserts");
 
   // Flow Component syntax
   componentIdent_ = lexer_.getIdentifier("component");
@@ -126,6 +127,11 @@ void JSParserImpl::initializeIdentifiers() {
 
   namespaceIdent_ = lexer_.getIdentifier("namespace");
   readonlyIdent_ = lexer_.getIdentifier("readonly");
+
+#endif
+
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+
   isIdent_ = lexer_.getIdentifier("is");
 
 #endif
@@ -447,7 +453,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
   if (context_.getParseFlow() && check(TokenKind::colon)) {
     SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
     if (!check(checksIdent_)) {
-      auto optRet = parseTypeAnnotationFlow(annotStart);
+      auto optRet = parseReturnTypeAnnotationFlow(annotStart);
       if (!optRet)
         return None;
       returnType = *optRet;
@@ -2701,7 +2707,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
 #if HERMES_PARSE_FLOW || HERMES_PARSE_TS
       if (context_.getParseTypes() && check(TokenKind::colon)) {
         SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-        auto optRet = parseTypeAnnotation(annotStart);
+        auto optRet = parseReturnTypeAnnotation(annotStart);
         if (!optRet)
           return None;
         returnType = *optRet;
@@ -2814,7 +2820,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
 #if HERMES_PARSE_FLOW || HERMES_PARSE_TS
       if (context_.getParseTypes() && check(TokenKind::colon)) {
         SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-        auto optRet = parseTypeAnnotation(annotStart);
+        auto optRet = parseReturnTypeAnnotation(annotStart);
         if (!optRet)
           return None;
         returnType = *optRet;
@@ -2999,7 +3005,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
 #if HERMES_PARSE_FLOW || HERMES_PARSE_TS
     if (context_.getParseTypes() && check(TokenKind::colon)) {
       SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-      auto optRet = parseTypeAnnotation(annotStart);
+      auto optRet = parseReturnTypeAnnotation(annotStart);
       if (!optRet)
         return None;
       returnType = *optRet;
@@ -5023,7 +5029,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
 #if HERMES_PARSE_FLOW || HERMES_PARSE_TS
   if (context_.getParseTypes() && check(TokenKind::colon)) {
     SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-    auto optRet = parseTypeAnnotation(annotStart);
+    auto optRet = parseReturnTypeAnnotation(annotStart);
     if (!optRet)
       return None;
     returnType = *optRet;
@@ -5619,8 +5625,8 @@ Optional<ESTree::Node *> JSParserImpl::tryParseTypedAsyncArrowFunction(
     if (check(TokenKind::colon)) {
       SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
       if (!check(checksIdent_)) {
-        auto optType =
-            parseTypeAnnotationFlow(annotStart, AllowAnonFunctionType::No);
+        auto optType = parseReturnTypeAnnotationFlow(
+            annotStart, AllowAnonFunctionType::No);
         if (!optType) {
           savePoint.restore();
           return None;
@@ -5791,7 +5797,8 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
         bool startsWithPredicate = check(checksIdent_);
         auto optType = startsWithPredicate
             ? llvh::None
-            : parseTypeAnnotationFlow(annotStart, AllowAnonFunctionType::No);
+            : parseReturnTypeAnnotationFlow(
+                  annotStart, AllowAnonFunctionType::No);
         if (optType)
           returnType = *optType;
         if (optType || startsWithPredicate) {

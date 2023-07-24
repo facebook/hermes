@@ -785,6 +785,11 @@ ESTREE_NODE_4_ARGS(
     NodePtr, extendsType, false,
     NodePtr, trueType, false,
     NodePtr, falseType, false)
+ESTREE_NODE_3_ARGS(
+    TypePredicate, Base,
+    NodePtr, parameterName, false,
+    NodePtr, typeAnnotation, true,
+    NodeBoolean, asserts, false)
 
 ESTREE_NODE_2_ARGS(
     InterfaceTypeAnnotation, Base,

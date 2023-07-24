@@ -309,6 +309,7 @@ class JSParserImpl {
   UniqueString *mappedTypeMinusOptionalIdent_;
 
   UniqueString *checksIdent_;
+  UniqueString *assertsIdent_;
 
   UniqueString *componentIdent_;
 #endif
@@ -316,6 +317,9 @@ class JSParserImpl {
 #if HERMES_PARSE_TS
   UniqueString *namespaceIdent_;
   UniqueString *readonlyIdent_;
+#endif
+
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
   UniqueString *isIdent_;
 #endif
 
@@ -1076,6 +1080,20 @@ class JSParserImpl {
     return parseTypeAnnotationTS(wrappedStart);
 #endif
   }
+
+  Optional<ESTree::Node *> parseReturnTypeAnnotation(
+      Optional<SMLoc> wrappedStart = None,
+      AllowAnonFunctionType allowAnonFunctionType =
+          AllowAnonFunctionType::Yes) {
+    assert(context_.getParseFlow() || context_.getParseTS());
+#if HERMES_PARSE_FLOW
+    if (context_.getParseFlow())
+      return parseReturnTypeAnnotationFlow(wrappedStart, allowAnonFunctionType);
+#endif
+#if HERMES_PARSE_TS
+    return parseTypeAnnotationTS(wrappedStart);
+#endif
+  }
 #endif
 
 #if HERMES_PARSE_FLOW
@@ -1083,6 +1101,12 @@ class JSParserImpl {
   /// TypeAnnotationNode starting at this location. If not set, the type
   /// annotation should not be wrapped in a TypeAnnotationNode.
   Optional<ESTree::Node *> parseTypeAnnotationFlow(
+      Optional<SMLoc> wrappedStart = None,
+      AllowAnonFunctionType allowAnonFunctionType = AllowAnonFunctionType::Yes);
+  /// \param wrappedStart if set, the type annotation should be wrapped in a
+  /// TypeAnnotationNode starting at this location. If not set, the type
+  /// annotation should not be wrapped in a TypeAnnotationNode.
+  Optional<ESTree::Node *> parseReturnTypeAnnotationFlow(
       Optional<SMLoc> wrappedStart = None,
       AllowAnonFunctionType allowAnonFunctionType = AllowAnonFunctionType::Yes);
 
