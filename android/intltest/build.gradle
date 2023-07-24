@@ -102,7 +102,7 @@ android {
     androidTestImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-    androidTestImplementation 'org.easytesting:fest-assert-core:2.0M10'
+    androidTestImplementation 'org.assertj:assertj-core:2.9.1'
     androidTestImplementation 'com.facebook.soloader:soloader:0.10.4'
     androidTestImplementation 'com.facebook.yoga:proguard-annotations:1.19.0'
 
