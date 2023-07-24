@@ -20,6 +20,7 @@ type T9 = React$ElementConfig<typeof Component>; // JSX.LibraryManagedAttributes
 type T10 = React$Ref<typeof Component>; // NonNullable<React.Ref<typeof Component> | string | number>
 type T11 = React$Key; // React.Key
 type T12 = React$Component<Props, {}>; // React.Component<Props, {}>
+type T13 = React$ElementType; // React.ElementType
 
 type Props = {A: string};
 declare function Component(props: Props): React$Node;
