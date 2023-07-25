@@ -440,10 +440,11 @@ TEST(HermesTriggerAsyncTimeoutTest, TriggerAsyncTimeout) {
   {
     // Single runtime with ~20 minute limit that will not be reached.
     auto rt = makeHermesRuntime();
-    std::thread t([rt]() {
+    std::thread t([&]() {
       std::this_thread::sleep_for(std::chrono::milliseconds(ShortTimeoutMS));
       rt->asyncTriggerTimeout();
     });
+    t.detach();
     ASSERT_THROW(
         rt->evaluateJavaScript(std::make_unique<StringBuffer>(forEver), ""),
         JSIException);
