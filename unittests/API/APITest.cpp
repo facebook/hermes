@@ -434,7 +434,7 @@ TEST(HermesWatchTimeLimitTest, WatchTimeLimit) {
 }
 
 TEST(HermesTriggerAsyncTimeoutTest, TriggerAsyncTimeout) {
-  // Some code that exercies the async break checks.
+  // Some code that loops forever to exercise the async interrupt.
   const char *forEver = "for (;;){}";
   uint32_t ShortTimeoutMS = 123;
   {
