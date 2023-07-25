@@ -1,3 +1,26 @@
+## 0.15.0
+
+### `hermes-estree`
+
+### `hermes-parser`
+* Correctly convert `MethodDefinition` to `ClassPrivateMethod` when `babel: true` is set and the key is `PrivateName`.
+
+### `hermes-eslint`
+
+### `hermes-transform`
+* Ensure the prettier `print` cache key is unique even if there is more than one instance of `hermes-transform`.
+* Add peer dependency on `prettier-plugin-hermes-parser`.
+
+### `flow-api-translator`
+* Remove support for now removed `$Shape` and `$Partial` Flow utilities.
+* Add support for tuple labeled and spread elements.
+* Support translating `React.ElementProps` from Flow to TS.
+* Support `ExportAllDeclaration` in TS translation.
+
+### `prettier-plugin-hermes-parser`
+
+### `babel-plugin-syntax-hermes-parser`
+
 ## 0.14.0
 
 ### `hermes-estree`
