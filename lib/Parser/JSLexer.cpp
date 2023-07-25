@@ -1091,7 +1091,7 @@ void JSLexer::consumeIdentifierParts() {
         errorRange(
             startLoc,
             "Unicode escape \\u" + Twine::utohexstr(cp) +
-                "is not a valid identifier codepoint");
+                " is not a valid identifier codepoint");
       } else {
         appendUnicodeToStorage(cp);
       }
