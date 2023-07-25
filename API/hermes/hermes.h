@@ -188,16 +188,17 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   /// Unregister this runtime for sampling profiler.
   void unregisterForProfiling();
 
-  /// Asynchronously terminates the current execution.
+  /// Asynchronously terminates the current execution. This can be called on
+  /// any thread.
   /// All JS compiled to bytecode via prepareJS, or evaluateJS, will support the
   /// time limit monitoring.  If JS prepared in other ways is executed, care
   /// must be taken to ensure that it is compiled in a mode that supports the
   /// monitoring (i.e., the emitted code contains async break checks).
-  void notifyNeedsTermination();
+  void asyncTriggerTimeout();
 
   /// Register this runtime for execution time limit monitoring, with a time
   /// limit of \p timeoutInMs milliseconds.
-  /// See compilation notes for notifyNeedsTermination.
+  /// See compilation notes for asyncTriggerTimeout.
   void watchTimeLimit(uint32_t timeoutInMs);
   /// Unregister this runtime for execution time limit monitoring.
   void unwatchTimeLimit();

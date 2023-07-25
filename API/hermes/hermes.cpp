@@ -1332,7 +1332,7 @@ void HermesRuntime::unregisterForProfiling() {
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 }
 
-void HermesRuntime::notifyNeedsTermination() {
+void HermesRuntime::asyncTriggerTimeout() {
   impl(this)->runtime_.triggerTimeoutAsyncBreak();
 }
 
