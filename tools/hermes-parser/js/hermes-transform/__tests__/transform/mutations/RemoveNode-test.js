@@ -12,6 +12,8 @@ import type {
   PropertyDefinition,
   EnumDefaultedMember,
   FunctionTypeParam,
+  ComponentParameter,
+  ComponentTypeParameter,
   Identifier,
   ObjectTypeIndexer,
 } from 'hermes-estree';
@@ -24,8 +26,8 @@ import {MutationContext} from '../../../src/transform/MutationContext';
 import {parseAndGetAstAndNode} from './test-utils';
 
 describe('RemoveNode', () => {
-  it('PropertyDefinition', () => {
-    const {ast, target} = parseAndGetAstAndNode<PropertyDefinition>(
+  it('PropertyDefinition', async () => {
+    const {ast, target} = await parseAndGetAstAndNode<PropertyDefinition>(
       'PropertyDefinition',
       'class Foo { prop = 1; method() {} }',
     );
@@ -49,8 +51,8 @@ describe('RemoveNode', () => {
     });
   });
 
-  it('EnumDefaultedMember', () => {
-    const {ast, target} = parseAndGetAstAndNode<EnumDefaultedMember>(
+  it('EnumDefaultedMember', async () => {
+    const {ast, target} = await parseAndGetAstAndNode<EnumDefaultedMember>(
       'EnumDefaultedMember',
       'enum Foo { A, B }',
     );
@@ -78,8 +80,8 @@ describe('RemoveNode', () => {
     });
   });
 
-  it('FunctionTypeParam', () => {
-    const {ast, target} = parseAndGetAstAndNode<FunctionTypeParam>(
+  it('FunctionTypeParam', async () => {
+    const {ast, target} = await parseAndGetAstAndNode<FunctionTypeParam>(
       'FunctionTypeParam',
       'type T = (string, number) => void',
     );
@@ -106,8 +108,62 @@ describe('RemoveNode', () => {
     });
   });
 
-  it('ObjectTypeIndexer', () => {
-    const {ast, target} = parseAndGetAstAndNode<ObjectTypeIndexer>(
+  it('ComponentParameter', async () => {
+    const {ast, target} = await parseAndGetAstAndNode<ComponentParameter>(
+      'ComponentParameter',
+      'component Foo(foo: string, bar: number) {}',
+    );
+    const mutation = createRemoveNodeMutation(target);
+    performRemoveNodeMutation(new MutationContext(''), mutation);
+    expect(ast).toMatchObject({
+      type: 'Program',
+      body: [
+        {
+          type: 'ComponentDeclaration',
+          params: [
+            {
+              type: 'ComponentParameter',
+              name: {
+                type: 'Identifier',
+                name: 'foo',
+              },
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('ComponentTypeParameter', async () => {
+    const {ast, target} = await parseAndGetAstAndNode<ComponentTypeParameter>(
+      'ComponentTypeParameter',
+      'type T = component(foo: string, bar: number)',
+    );
+    const mutation = createRemoveNodeMutation(target);
+    performRemoveNodeMutation(new MutationContext(''), mutation);
+    expect(ast).toMatchObject({
+      type: 'Program',
+      body: [
+        {
+          type: 'TypeAlias',
+          right: {
+            type: 'ComponentTypeAnnotation',
+            params: [
+              {
+                type: 'ComponentTypeParameter',
+                typeAnnotation: {
+                  type: 'StringTypeAnnotation',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+  });
+
+  it('ObjectTypeIndexer', async () => {
+    const {ast, target} = await parseAndGetAstAndNode<ObjectTypeIndexer>(
       'ObjectTypeIndexer',
       'type T = {prop: string, [number]: string, [string]: number};',
     );
@@ -143,8 +199,8 @@ describe('RemoveNode', () => {
   });
 
   describe('Identifier', () => {
-    it('valid', () => {
-      const {ast, target} = parseAndGetAstAndNode<Identifier>(
+    it('valid', async () => {
+      const {ast, target} = await parseAndGetAstAndNode<Identifier>(
         'Identifier',
         '[1, a, 3];',
       );
@@ -173,8 +229,8 @@ describe('RemoveNode', () => {
       });
     });
 
-    it('invalid', () => {
-      const {target} = parseAndGetAstAndNode<Identifier>(
+    it('invalid', async () => {
+      const {target} = await parseAndGetAstAndNode<Identifier>(
         'Identifier',
         'const x = 1;',
       );

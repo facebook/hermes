@@ -101,8 +101,8 @@ function codemod(code: string, useCodeFrame: boolean = true) {
 }
 
 describe('React to react', () => {
-  it('should transform valid cases correctly', () => {
-    const result = codemod(`\
+  it('should transform valid cases correctly', async () => {
+    const result = await codemod(`\
 a = function y() {
   console.log(this.getMessage());
 }.bind(this);
@@ -162,8 +162,8 @@ e = function y() {
 f = function y() {}.bind(foo);
 `;
 
-  it('should ignore invalid cases correctly', () => {
-    const result = codemod(ignoredExamples);
+  it('should ignore invalid cases correctly', async () => {
+    const result = await codemod(ignoredExamples);
 
     expect(result).toBe(`\
 a = function y() {
@@ -188,10 +188,10 @@ f = function y() {}.bind(foo);
 `);
   });
 
-  it('should log with codeframe when using logWithNode', () => {
+  it('should log with codeframe when using logWithNode', async () => {
     const logSpy = ((console.log: $FlowFixMe): JestMockFn<Array<mixed>, mixed>);
 
-    codemod(ignoredExamples, true);
+    await codemod(ignoredExamples, true);
 
     expect(logSpy).toHaveBeenCalledTimes(5);
     expect(logSpy.mock.calls[0][0]).toMatchInlineSnapshot(`
@@ -224,10 +224,10 @@ f = function y() {}.bind(foo);
     `);
   });
 
-  it('should log with a prefix when using logWithNode', () => {
+  it('should log with a prefix when using logWithNode', async () => {
     const logSpy = ((console.log: $FlowFixMe): JestMockFn<Array<mixed>, mixed>);
 
-    codemod(ignoredExamples, false);
+    await codemod(ignoredExamples, false);
 
     expect(logSpy).toHaveBeenCalledTimes(5);
     expect(logSpy.mock.calls).toMatchInlineSnapshot(`

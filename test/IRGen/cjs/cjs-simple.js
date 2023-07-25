@@ -12,7 +12,7 @@ print('done');
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = AllocStackInst $?anon_0_ret
@@ -22,13 +22,13 @@ print('done');
 // CHECK-NEXT:function_end
 
 // CHECK:function cjs_module#0#1(exports, require, module)#2
-// CHECK-NEXT:frame = [exports#2, require#2, module#2]
+// CHECK-NEXT:S{cjs_module#0#1()#2} = [exports#2, require#2, module#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{cjs_module#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %exports, [exports#2], %0
 // CHECK-NEXT:  %2 = StoreFrameInst %require, [require#2], %0
 // CHECK-NEXT:  %3 = StoreFrameInst %module, [module#2], %0
 // CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %5 = CallInst %4, undefined : undefined, "done" : string
+// CHECK-NEXT:  %5 = CallInst %4, undefined : undefined, undefined : undefined, "done" : string
 // CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

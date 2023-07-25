@@ -38,21 +38,6 @@ StackFramePtrT<isConst>::getCalleeCodeBlock(Runtime &runtime) const {
   }
 }
 
-template <bool isConst>
-inline Handle<Environment> StackFramePtrT<isConst>::getDebugEnvironmentHandle()
-    const {
-  return getDebugEnvironmentRef().isUndefined()
-      ? HandleRootOwner::makeNullHandle<Environment>()
-      : Handle<Environment>::vmcast_or_null(&getDebugEnvironmentRef());
-}
-
-template <bool isConst>
-inline Environment *StackFramePtrT<isConst>::getDebugEnvironment() const {
-  return getDebugEnvironmentRef().isUndefined()
-      ? nullptr
-      : vmcast_or_null<Environment>(getDebugEnvironmentRef());
-}
-
 } // namespace vm
 } // namespace hermes
 

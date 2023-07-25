@@ -60,6 +60,13 @@ class TypeInferenceImpl {
   bool runOnModule(Module *M);
 };
 
+/// \return if the given \p type is a BigInt|ObjectOrSubtype, which used to
+/// determine if unary/binary operations may have a BigInt result. Objects (and
+/// its subtypes) may have a valueOf method that returns a BigInt.
+static bool isBigIntOrObject(Type type) {
+  return type.canBeBigInt() || type.canBeObjectSubtype();
+}
+
 static bool inferUnaryArith(UnaryOperatorInst *UOI, Type numberResultType) {
   Value *op = UOI->getSingleOperand();
 
@@ -73,10 +80,11 @@ static bool inferUnaryArith(UnaryOperatorInst *UOI, Type numberResultType) {
     return true;
   }
 
-  Type mayBeBigInt =
-      op->getType().canBeBigInt() ? Type::createBigInt() : Type::createNoType();
+  Type mayBeBigInt = isBigIntOrObject(op->getType()) ? Type::createBigInt()
+                                                     : Type::createNoType();
 
-  // - ?? => Number|?BigInt. BigInt is only possible if op.Type canBeBigInt.
+  // - ?? => Number|?BigInt. BigInt is only possible if op.Type is
+  // BigInt|Object.
   UOI->setType(Type::unionTy(numberResultType, mayBeBigInt));
   return true;
 }
@@ -298,12 +306,12 @@ static bool inferBinaryArith(
     return true;
   }
 
-  Type mayBeBigInt = LeftTy.canBeBigInt() && RightTy.canBeBigInt()
+  Type mayBeBigInt = (isBigIntOrObject(LeftTy) && isBigIntOrObject(RightTy))
       ? Type::createBigInt()
       : Type::createNoType();
 
-  // ?? - ?? => Number|?BigInt. BigInt is only possible if both operands can be
-  // BigInt due to the no automatic BigInt conversion.
+  // ?? - ?? => Number|?BigInt. BigInt is only possible if both operands are
+  // BigInt|Object due to the no automatic BigInt conversion.
   BOI->setType(Type::unionTy(numberType, mayBeBigInt));
   return true;
 }
@@ -312,12 +320,12 @@ static bool inferBinaryBitwise(BinaryOperatorInst *BOI) {
   Type LeftTy = BOI->getLeftHandSide()->getType();
   Type RightTy = BOI->getRightHandSide()->getType();
 
-  Type mayBeBigInt = LeftTy.canBeBigInt() && RightTy.canBeBigInt()
+  Type mayBeBigInt = (isBigIntOrObject(LeftTy) && isBigIntOrObject(RightTy))
       ? Type::createBigInt()
       : Type::createNoType();
 
-  // ?? - ?? => Int32|?BigInt. BigInt is only possible if both operands can be
-  // BigInt due to the no automatic BigInt conversion.
+  // ?? - ?? => Int32|?BigInt. BigInt is only possible if both operands are
+  // BigInt|Object due to the no automatic BigInt conversion.
   BOI->setType(Type::unionTy(Type::createInt32(), mayBeBigInt));
   return true;
 }
@@ -391,7 +399,7 @@ static bool inferBinaryInst(BinaryOperatorInst *BOI) {
       // ?BigInt + ?BigInt => ?BigInt. Both operands need to "may be a BigInt"
       // for a possible BigInt result from this operator. This is true because
       // there's no automative BigInt type conversion.
-      Type mayBeBigInt = (LeftTy.canBeBigInt() && RightTy.canBeBigInt())
+      Type mayBeBigInt = (isBigIntOrObject(LeftTy) && isBigIntOrObject(RightTy))
           ? Type::createBigInt()
           : Type::createNoType();
 

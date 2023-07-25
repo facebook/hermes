@@ -58,6 +58,7 @@ CallResult<HermesValue> evalInEnvironment(
     Handle<Environment> environment,
     const ScopeChain &scopeChain,
     Handle<> thisArg,
+    bool isStrict,
     bool singleFunction);
 
 /// If the target CJS module is not initialized, execute it.

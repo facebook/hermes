@@ -130,6 +130,7 @@ BCProviderFromSrc::createBCProviderFromSrcImpl(
   CodeGenerationSettings codeGenOpts{};
   codeGenOpts.unlimitedRegisters = false;
   codeGenOpts.instrumentIR = compileFlags.instrumentIR;
+  codeGenOpts.enableBlockScoping = compileFlags.enableBlockScoping;
 
   OptimizationSettings optSettings;
   // If the optional value is not set, the parser will automatically detect

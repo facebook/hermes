@@ -400,6 +400,8 @@ CallResult<bool> JSProxy::isExtensible(
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
+  bool booleanTrapResult = toBoolean(res->get());
+  res->invalidate();
   // 8. Let targetResult be ? target.[[IsExtensible]]().
   CallResult<bool> targetRes = JSObject::isExtensible(target, runtime);
   if (targetRes == ExecutionStatus::EXCEPTION) {
@@ -407,7 +409,6 @@ CallResult<bool> JSProxy::isExtensible(
   }
   // 9. If SameValue(booleanTrapResult, targetResult) is false, throw
   //    a TypeError exception.
-  bool booleanTrapResult = toBoolean(res->get());
   if (booleanTrapResult != *targetRes) {
     return runtime.raiseTypeError(
         "isExtensible trap returned different value than target");
@@ -943,8 +944,12 @@ CallResult<PseudoHandle<>> JSProxy::getNamed(
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
     return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
-  Handle<JSObject> target =
-      runtime.makeHandle(detail::slots(*selfHandle).target);
+  // Make sure to retrieve the target and handler before calling findTrap, as
+  // that may result in these fields being erased if the proxy is revoked in the
+  // handler.
+  auto &slots = detail::slots(*selfHandle);
+  Handle<JSObject> target = runtime.makeHandle(slots.target);
+  Handle<JSObject> handler = runtime.makeHandle(slots.handler);
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::get);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -961,7 +966,7 @@ CallResult<PseudoHandle<>> JSProxy::getNamed(
                              runtime.getStringPrimFromSymbolID(name)))
                        : runtime.makeHandle(name),
       *trapRes,
-      runtime.makeHandle(detail::slots(*selfHandle).handler),
+      handler,
       target,
       receiver);
 }
@@ -1393,7 +1398,8 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   // Symbol »)
   // 9. If trapResult contains any duplicate entries, throw a TypeError
   // exception.
-  CallResult<uint64_t> countRes = getArrayLikeLength(trapResultArray, runtime);
+  CallResult<uint64_t> countRes =
+      getArrayLikeLength_RJS(trapResultArray, runtime);
   if (LLVM_UNLIKELY(countRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1414,7 +1420,7 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   }
   Handle<OrderedHashMap> dupcheck = runtime.makeHandle(std::move(*dupcheckRes));
   if (LLVM_UNLIKELY(
-          createListFromArrayLike(
+          createListFromArrayLike_RJS(
               trapResultArray,
               runtime,
               count,

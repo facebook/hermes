@@ -330,6 +330,7 @@ export function getTransformContext(): TransformContextAdditions {
   }
 
   const cloneAPIs: TransformCloneAPIs = {
+    // $FlowFixMe[incompatible-exact]
     shallowCloneNode: ((
       node: ?ESNode,
     ): // $FlowExpectedError[incompatible-cast]
@@ -354,6 +355,7 @@ export function getTransformContext(): TransformContextAdditions {
       return shallowCloneNode(node, newProps);
     }: TransformCloneAPIs['shallowCloneNodeWithOverrides']),
 
+    // $FlowFixMe[incompatible-exact]
     shallowCloneArray: (<T: ESNode>(
       nodes: ?$ReadOnlyArray<?T>,
     ): // $FlowExpectedError[incompatible-cast]
@@ -362,15 +364,16 @@ export function getTransformContext(): TransformContextAdditions {
         return null;
       }
 
-      return nodes.map(node => {
+      return nodes.map((node): DetachedNode<?ESNode> => {
         if (node == null) {
-          // $FlowExpectedError[incompatible-call]
+          // $FlowExpectedError[incompatible-return]
           return node;
         }
         return shallowCloneNode<T>(node, {});
       });
     }: TransformCloneAPIs['shallowCloneArray']),
 
+    // $FlowFixMe[incompatible-exact]
     deepCloneNode: ((
       node: ?ESNode,
     ): // $FlowExpectedError[incompatible-cast]
@@ -501,6 +504,7 @@ export function getTransformContext(): TransformContextAdditions {
     }: TransformRemoveAPIs['removeStatement']),
   };
   const replaceAPIs: TransformReplaceAPIs = {
+    // $FlowFixMe[incompatible-exact]
     replaceNode: ((
       target: ESNode,
       nodeToReplaceWith: MaybeDetachedNode<ESNode>,

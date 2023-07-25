@@ -17,7 +17,7 @@
 
 // lint directives to let us do some basic validation of generated files
 /* eslint no-undef: 'error', no-unused-vars: ['error', {vars: "local"}], no-redeclare: 'error' */
-/* global $NonMaybeType, $Partial, $ReadOnly, $ReadOnlyArray */
+/* global $NonMaybeType, Partial, $ReadOnly, $ReadOnlyArray */
 
 'use strict';
 
@@ -43,11 +43,18 @@ import type {
   ClassBody as ClassBodyType,
   ClassExpression as ClassExpressionType,
   ClassImplements as ClassImplementsType,
+  ComponentDeclaration as ComponentDeclarationType,
+  ComponentParameter as ComponentParameterType,
+  ComponentTypeAnnotation as ComponentTypeAnnotationType,
+  ComponentTypeParameter as ComponentTypeParameterType,
   ConditionalExpression as ConditionalExpressionType,
+  ConditionalTypeAnnotation as ConditionalTypeAnnotationType,
   ContinueStatement as ContinueStatementType,
   DebuggerStatement as DebuggerStatementType,
   DeclareClass as DeclareClassType,
+  DeclareComponent as DeclareComponentType,
   DeclaredPredicate as DeclaredPredicateType,
+  DeclareEnum as DeclareEnumType,
   DeclareExportAllDeclaration as DeclareExportAllDeclarationType,
   DeclareInterface as DeclareInterfaceType,
   DeclareModule as DeclareModuleType,
@@ -89,6 +96,7 @@ import type {
   ImportSpecifier as ImportSpecifierType,
   IndexedAccessType as IndexedAccessTypeType,
   InferredPredicate as InferredPredicateType,
+  InferTypeAnnotation as InferTypeAnnotationType,
   InterfaceDeclaration as InterfaceDeclarationType,
   InterfaceExtends as InterfaceExtendsType,
   InterfaceTypeAnnotation as InterfaceTypeAnnotationType,
@@ -108,9 +116,9 @@ import type {
   JSXSpreadAttribute as JSXSpreadAttributeType,
   JSXSpreadChild as JSXSpreadChildType,
   JSXText as JSXTextType,
+  KeyofTypeAnnotation as KeyofTypeAnnotationType,
   LabeledStatement as LabeledStatementType,
   LogicalExpression as LogicalExpressionType,
-  MemberExpression as MemberExpressionType,
   MetaProperty as MetaPropertyType,
   MethodDefinition as MethodDefinitionType,
   MixedTypeAnnotation as MixedTypeAnnotationType,
@@ -125,6 +133,7 @@ import type {
   ObjectTypeCallProperty as ObjectTypeCallPropertyType,
   ObjectTypeIndexer as ObjectTypeIndexerType,
   ObjectTypeInternalSlot as ObjectTypeInternalSlotType,
+  ObjectTypeMappedTypeProperty as ObjectTypeMappedTypePropertyType,
   ObjectTypeSpreadProperty as ObjectTypeSpreadPropertyType,
   OpaqueType as OpaqueTypeType,
   OptionalIndexedAccessType as OptionalIndexedAccessTypeType,
@@ -132,6 +141,7 @@ import type {
   Property as PropertyType,
   PropertyDefinition as PropertyDefinitionType,
   QualifiedTypeIdentifier as QualifiedTypeIdentifierType,
+  QualifiedTypeofIdentifier as QualifiedTypeofIdentifierType,
   RestElement as RestElementType,
   ReturnStatement as ReturnStatementType,
   SequenceExpression as SequenceExpressionType,
@@ -149,6 +159,8 @@ import type {
   ThrowStatement as ThrowStatementType,
   TryStatement as TryStatementType,
   TupleTypeAnnotation as TupleTypeAnnotationType,
+  TupleTypeLabeledElement as TupleTypeLabeledElementType,
+  TupleTypeSpreadElement as TupleTypeSpreadElementType,
   TypeAlias as TypeAliasType,
   TypeAnnotation as TypeAnnotationType,
   TypeCastExpression as TypeCastExpressionType,
@@ -156,6 +168,7 @@ import type {
   TypeParameter as TypeParameterType,
   TypeParameterDeclaration as TypeParameterDeclarationType,
   TypeParameterInstantiation as TypeParameterInstantiationType,
+  TypePredicate as TypePredicateType,
   UnaryExpression as UnaryExpressionType,
   UnionTypeAnnotation as UnionTypeAnnotationType,
   UpdateExpression as UpdateExpressionType,
@@ -170,7 +183,7 @@ import type {
 import type {DetachedNode, MaybeDetachedNode} from '../detachedNode';
 
 import {
-  asDetachedNode,
+  asDetachedNodeForCodeGen,
   detachedProps,
   setParentPointersInDirectChildren,
 } from '../detachedNode';
@@ -279,10 +292,54 @@ export type ClassImplementsProps = {
   +typeParameters?: ?MaybeDetachedNode<ClassImplementsType['typeParameters']>,
 };
 
+export type ComponentDeclarationProps = {
+  +id: MaybeDetachedNode<ComponentDeclarationType['id']>,
+  +params: $ReadOnlyArray<
+    MaybeDetachedNode<ComponentDeclarationType['params'][number]>,
+  >,
+  +body: MaybeDetachedNode<ComponentDeclarationType['body']>,
+  +typeParameters?: ?MaybeDetachedNode<
+    ComponentDeclarationType['typeParameters'],
+  >,
+  +rendersType?: ?MaybeDetachedNode<ComponentDeclarationType['rendersType']>,
+};
+
+export type ComponentParameterProps = {
+  +name: MaybeDetachedNode<ComponentParameterType['name']>,
+  +local: MaybeDetachedNode<ComponentParameterType['local']>,
+  +shorthand: ComponentParameterType['shorthand'],
+};
+
+export type ComponentTypeAnnotationProps = {
+  +params: $ReadOnlyArray<
+    MaybeDetachedNode<ComponentTypeAnnotationType['params'][number]>,
+  >,
+  +rest?: ?MaybeDetachedNode<ComponentTypeAnnotationType['rest']>,
+  +typeParameters?: ?MaybeDetachedNode<
+    ComponentTypeAnnotationType['typeParameters'],
+  >,
+  +rendersType?: ?MaybeDetachedNode<ComponentTypeAnnotationType['rendersType']>,
+};
+
+export type ComponentTypeParameterProps = {
+  +name?: ?MaybeDetachedNode<ComponentTypeParameterType['name']>,
+  +typeAnnotation: MaybeDetachedNode<
+    ComponentTypeParameterType['typeAnnotation'],
+  >,
+  +optional: ComponentTypeParameterType['optional'],
+};
+
 export type ConditionalExpressionProps = {
   +test: MaybeDetachedNode<ConditionalExpressionType['test']>,
   +alternate: MaybeDetachedNode<ConditionalExpressionType['alternate']>,
   +consequent: MaybeDetachedNode<ConditionalExpressionType['consequent']>,
+};
+
+export type ConditionalTypeAnnotationProps = {
+  +checkType: MaybeDetachedNode<ConditionalTypeAnnotationType['checkType']>,
+  +extendsType: MaybeDetachedNode<ConditionalTypeAnnotationType['extendsType']>,
+  +trueType: MaybeDetachedNode<ConditionalTypeAnnotationType['trueType']>,
+  +falseType: MaybeDetachedNode<ConditionalTypeAnnotationType['falseType']>,
 };
 
 export type ContinueStatementProps = {
@@ -306,8 +363,23 @@ export type DeclareClassProps = {
   +body: MaybeDetachedNode<DeclareClassType['body']>,
 };
 
+export type DeclareComponentProps = {
+  +id: MaybeDetachedNode<DeclareComponentType['id']>,
+  +params: $ReadOnlyArray<
+    MaybeDetachedNode<DeclareComponentType['params'][number]>,
+  >,
+  +rest?: ?MaybeDetachedNode<DeclareComponentType['rest']>,
+  +typeParameters?: ?MaybeDetachedNode<DeclareComponentType['typeParameters']>,
+  +rendersType?: ?MaybeDetachedNode<DeclareComponentType['rendersType']>,
+};
+
 export type DeclaredPredicateProps = {
   +value: MaybeDetachedNode<DeclaredPredicateType['value']>,
+};
+
+export type DeclareEnumProps = {
+  +id: MaybeDetachedNode<DeclareEnumType['id']>,
+  +body: MaybeDetachedNode<DeclareEnumType['body']>,
 };
 
 export type DeclareExportAllDeclarationProps = {
@@ -350,6 +422,7 @@ export type DeclareTypeAliasProps = {
 
 export type DeclareVariableProps = {
   +id: MaybeDetachedNode<DeclareVariableType['id']>,
+  +kind: DeclareVariableType['kind'],
 };
 
 export type DoWhileStatementProps = {
@@ -561,6 +634,10 @@ export type IndexedAccessTypeProps = {
 
 export type InferredPredicateProps = {};
 
+export type InferTypeAnnotationProps = {
+  +typeParameter: MaybeDetachedNode<InferTypeAnnotationType['typeParameter']>,
+};
+
 export type InterfaceDeclarationProps = {
   +id: MaybeDetachedNode<InterfaceDeclarationType['id']>,
   +typeParameters?: ?MaybeDetachedNode<
@@ -643,6 +720,7 @@ export type JSXOpeningElementProps = {
     MaybeDetachedNode<JSXOpeningElementType['attributes'][number]>,
   >,
   +selfClosing: JSXOpeningElementType['selfClosing'],
+  +typeArguments?: ?MaybeDetachedNode<JSXOpeningElementType['typeArguments']>,
 };
 
 export type JSXOpeningFragmentProps = {};
@@ -660,6 +738,10 @@ export type JSXTextProps = {
   +raw: JSXTextType['raw'],
 };
 
+export type KeyofTypeAnnotationProps = {
+  +argument: MaybeDetachedNode<KeyofTypeAnnotationType['argument']>,
+};
+
 export type LabeledStatementProps = {
   +label: MaybeDetachedNode<LabeledStatementType['label']>,
   +body: MaybeDetachedNode<LabeledStatementType['body']>,
@@ -669,12 +751,6 @@ export type LogicalExpressionProps = {
   +left: MaybeDetachedNode<LogicalExpressionType['left']>,
   +right: MaybeDetachedNode<LogicalExpressionType['right']>,
   +operator: LogicalExpressionType['operator'],
-};
-
-export type MemberExpressionProps = {
-  +object: MaybeDetachedNode<MemberExpressionType['object']>,
-  +property: MaybeDetachedNode<MemberExpressionType['property']>,
-  +computed: MemberExpressionType['computed'],
 };
 
 export type MetaPropertyProps = {
@@ -766,6 +842,16 @@ export type ObjectTypeInternalSlotProps = {
   +method: ObjectTypeInternalSlotType['method'],
 };
 
+export type ObjectTypeMappedTypePropertyProps = {
+  +keyTparam: MaybeDetachedNode<ObjectTypeMappedTypePropertyType['keyTparam']>,
+  +propType: MaybeDetachedNode<ObjectTypeMappedTypePropertyType['propType']>,
+  +sourceType: MaybeDetachedNode<
+    ObjectTypeMappedTypePropertyType['sourceType'],
+  >,
+  +variance?: ?MaybeDetachedNode<ObjectTypeMappedTypePropertyType['variance']>,
+  +optional?: ?ObjectTypeMappedTypePropertyType['optional'],
+};
+
 export type ObjectTypeSpreadPropertyProps = {
   +argument: MaybeDetachedNode<ObjectTypeSpreadPropertyType['argument']>,
 };
@@ -807,7 +893,6 @@ export type PropertyDefinitionProps = {
   +typeAnnotation?: ?MaybeDetachedNode<
     PropertyDefinitionType['typeAnnotation'],
   >,
-  +tsModifiers?: ?MaybeDetachedNode<PropertyDefinitionType['tsModifiers']>,
 };
 
 export type QualifiedTypeIdentifierProps = {
@@ -815,6 +900,13 @@ export type QualifiedTypeIdentifierProps = {
     QualifiedTypeIdentifierType['qualification'],
   >,
   +id: MaybeDetachedNode<QualifiedTypeIdentifierType['id']>,
+};
+
+export type QualifiedTypeofIdentifierProps = {
+  +qualification: MaybeDetachedNode<
+    QualifiedTypeofIdentifierType['qualification'],
+  >,
+  +id: MaybeDetachedNode<QualifiedTypeofIdentifierType['id']>,
 };
 
 export type RestElementProps = {
@@ -894,6 +986,20 @@ export type TupleTypeAnnotationProps = {
   >,
 };
 
+export type TupleTypeLabeledElementProps = {
+  +label: MaybeDetachedNode<TupleTypeLabeledElementType['label']>,
+  +elementType: MaybeDetachedNode<TupleTypeLabeledElementType['elementType']>,
+  +optional: TupleTypeLabeledElementType['optional'],
+  +variance?: ?MaybeDetachedNode<TupleTypeLabeledElementType['variance']>,
+};
+
+export type TupleTypeSpreadElementProps = {
+  +label?: ?MaybeDetachedNode<TupleTypeSpreadElementType['label']>,
+  +typeAnnotation: MaybeDetachedNode<
+    TupleTypeSpreadElementType['typeAnnotation'],
+  >,
+};
+
 export type TypeAliasProps = {
   +id: MaybeDetachedNode<TypeAliasType['id']>,
   +typeParameters?: ?MaybeDetachedNode<TypeAliasType['typeParameters']>,
@@ -918,6 +1024,7 @@ export type TypeParameterProps = {
   +bound?: ?MaybeDetachedNode<TypeParameterType['bound']>,
   +variance?: ?MaybeDetachedNode<TypeParameterType['variance']>,
   +default?: ?MaybeDetachedNode<TypeParameterType['default']>,
+  +usesExtendsBound: TypeParameterType['usesExtendsBound'],
 };
 
 export type TypeParameterDeclarationProps = {
@@ -930,6 +1037,12 @@ export type TypeParameterInstantiationProps = {
   +params: $ReadOnlyArray<
     MaybeDetachedNode<TypeParameterInstantiationType['params'][number]>,
   >,
+};
+
+export type TypePredicateProps = {
+  +parameterName: MaybeDetachedNode<TypePredicateType['parameterName']>,
+  +typeAnnotation?: ?MaybeDetachedNode<TypePredicateType['typeAnnotation']>,
+  +asserts: TypePredicateType['asserts'],
 };
 
 export type UnaryExpressionProps = {
@@ -999,7 +1112,7 @@ export function ArrayExpression(props: {
 }): DetachedNode<ArrayExpressionType> {
   const node = detachedProps<ArrayExpressionType>(props.parent, {
     type: 'ArrayExpression',
-    elements: props.elements.map(n => asDetachedNode(n)),
+    elements: props.elements.map(n => asDetachedNodeForCodeGen(n)),
     trailingComma: props.trailingComma,
   });
   setParentPointersInDirectChildren(node);
@@ -1012,8 +1125,8 @@ export function ArrayPattern(props: {
 }): DetachedNode<ArrayPatternType> {
   const node = detachedProps<ArrayPatternType>(props.parent, {
     type: 'ArrayPattern',
-    elements: props.elements.map(n => asDetachedNode(n)),
-    typeAnnotation: asDetachedNode(props.typeAnnotation),
+    elements: props.elements.map(n => asDetachedNodeForCodeGen(n)),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1025,7 +1138,7 @@ export function ArrayTypeAnnotation(props: {
 }): DetachedNode<ArrayTypeAnnotationType> {
   const node = detachedProps<ArrayTypeAnnotationType>(props.parent, {
     type: 'ArrayTypeAnnotation',
-    elementType: asDetachedNode(props.elementType),
+    elementType: asDetachedNodeForCodeGen(props.elementType),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1038,8 +1151,8 @@ export function AssignmentExpression(props: {
   const node = detachedProps<AssignmentExpressionType>(props.parent, {
     type: 'AssignmentExpression',
     operator: props.operator,
-    left: asDetachedNode(props.left),
-    right: asDetachedNode(props.right),
+    left: asDetachedNodeForCodeGen(props.left),
+    right: asDetachedNodeForCodeGen(props.right),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1051,8 +1164,8 @@ export function AssignmentPattern(props: {
 }): DetachedNode<AssignmentPatternType> {
   const node = detachedProps<AssignmentPatternType>(props.parent, {
     type: 'AssignmentPattern',
-    left: asDetachedNode(props.left),
-    right: asDetachedNode(props.right),
+    left: asDetachedNodeForCodeGen(props.left),
+    right: asDetachedNodeForCodeGen(props.right),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1064,7 +1177,7 @@ export function AwaitExpression(props: {
 }): DetachedNode<AwaitExpressionType> {
   const node = detachedProps<AwaitExpressionType>(props.parent, {
     type: 'AwaitExpression',
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1098,8 +1211,8 @@ export function BinaryExpression(props: {
 }): DetachedNode<BinaryExpressionType> {
   const node = detachedProps<BinaryExpressionType>(props.parent, {
     type: 'BinaryExpression',
-    left: asDetachedNode(props.left),
-    right: asDetachedNode(props.right),
+    left: asDetachedNodeForCodeGen(props.left),
+    right: asDetachedNodeForCodeGen(props.right),
     operator: props.operator,
   });
   setParentPointersInDirectChildren(node);
@@ -1112,7 +1225,7 @@ export function BlockStatement(props: {
 }): DetachedNode<BlockStatementType> {
   const node = detachedProps<BlockStatementType>(props.parent, {
     type: 'BlockStatement',
-    body: props.body.map(n => asDetachedNode(n)),
+    body: props.body.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1147,7 +1260,7 @@ export function BreakStatement(props: {
 }): DetachedNode<BreakStatementType> {
   const node = detachedProps<BreakStatementType>(props.parent, {
     type: 'BreakStatement',
-    label: asDetachedNode(props.label),
+    label: asDetachedNodeForCodeGen(props.label),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1159,9 +1272,9 @@ export function CallExpression(props: {
 }): DetachedNode<CallExpressionType> {
   const node = detachedProps<CallExpressionType>(props.parent, {
     type: 'CallExpression',
-    callee: asDetachedNode(props.callee),
-    typeArguments: asDetachedNode(props.typeArguments),
-    arguments: props.arguments.map(n => asDetachedNode(n)),
+    callee: asDetachedNodeForCodeGen(props.callee),
+    typeArguments: asDetachedNodeForCodeGen(props.typeArguments),
+    arguments: props.arguments.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1173,8 +1286,8 @@ export function CatchClause(props: {
 }): DetachedNode<CatchClauseType> {
   const node = detachedProps<CatchClauseType>(props.parent, {
     type: 'CatchClause',
-    param: asDetachedNode(props.param),
-    body: asDetachedNode(props.body),
+    param: asDetachedNodeForCodeGen(props.param),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1186,7 +1299,7 @@ export function ChainExpression(props: {
 }): DetachedNode<ChainExpressionType> {
   const node = detachedProps<ChainExpressionType>(props.parent, {
     type: 'ChainExpression',
-    expression: asDetachedNode(props.expression),
+    expression: asDetachedNodeForCodeGen(props.expression),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1198,7 +1311,7 @@ export function ClassBody(props: {
 }): DetachedNode<ClassBodyType> {
   const node = detachedProps<ClassBodyType>(props.parent, {
     type: 'ClassBody',
-    body: props.body.map(n => asDetachedNode(n)),
+    body: props.body.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1210,13 +1323,13 @@ export function ClassExpression(props: {
 }): DetachedNode<ClassExpressionType> {
   const node = detachedProps<ClassExpressionType>(props.parent, {
     type: 'ClassExpression',
-    id: asDetachedNode(props.id),
-    typeParameters: asDetachedNode(props.typeParameters),
-    superClass: asDetachedNode(props.superClass),
-    superTypeParameters: asDetachedNode(props.superTypeParameters),
-    implements: props.implements.map(n => asDetachedNode(n)),
-    decorators: props.decorators.map(n => asDetachedNode(n)),
-    body: asDetachedNode(props.body),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    superClass: asDetachedNodeForCodeGen(props.superClass),
+    superTypeParameters: asDetachedNodeForCodeGen(props.superTypeParameters),
+    implements: props.implements.map(n => asDetachedNodeForCodeGen(n)),
+    decorators: props.decorators.map(n => asDetachedNodeForCodeGen(n)),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1228,8 +1341,67 @@ export function ClassImplements(props: {
 }): DetachedNode<ClassImplementsType> {
   const node = detachedProps<ClassImplementsType>(props.parent, {
     type: 'ClassImplements',
-    id: asDetachedNode(props.id),
-    typeParameters: asDetachedNode(props.typeParameters),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function ComponentDeclaration(props: {
+  ...$ReadOnly<ComponentDeclarationProps>,
+  +parent?: ESNode,
+}): DetachedNode<ComponentDeclarationType> {
+  const node = detachedProps<ComponentDeclarationType>(props.parent, {
+    type: 'ComponentDeclaration',
+    id: asDetachedNodeForCodeGen(props.id),
+    params: props.params.map(n => asDetachedNodeForCodeGen(n)),
+    body: asDetachedNodeForCodeGen(props.body),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    rendersType: asDetachedNodeForCodeGen(props.rendersType),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function ComponentParameter(props: {
+  ...$ReadOnly<ComponentParameterProps>,
+  +parent?: ESNode,
+}): DetachedNode<ComponentParameterType> {
+  const node = detachedProps<ComponentParameterType>(props.parent, {
+    type: 'ComponentParameter',
+    name: asDetachedNodeForCodeGen(props.name),
+    local: asDetachedNodeForCodeGen(props.local),
+    shorthand: props.shorthand,
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function ComponentTypeAnnotation(props: {
+  ...$ReadOnly<ComponentTypeAnnotationProps>,
+  +parent?: ESNode,
+}): DetachedNode<ComponentTypeAnnotationType> {
+  const node = detachedProps<ComponentTypeAnnotationType>(props.parent, {
+    type: 'ComponentTypeAnnotation',
+    params: props.params.map(n => asDetachedNodeForCodeGen(n)),
+    rest: asDetachedNodeForCodeGen(props.rest),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    rendersType: asDetachedNodeForCodeGen(props.rendersType),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function ComponentTypeParameter(props: {
+  ...$ReadOnly<ComponentTypeParameterProps>,
+  +parent?: ESNode,
+}): DetachedNode<ComponentTypeParameterType> {
+  const node = detachedProps<ComponentTypeParameterType>(props.parent, {
+    type: 'ComponentTypeParameter',
+    name: asDetachedNodeForCodeGen(props.name),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
+    optional: props.optional,
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1241,9 +1413,24 @@ export function ConditionalExpression(props: {
 }): DetachedNode<ConditionalExpressionType> {
   const node = detachedProps<ConditionalExpressionType>(props.parent, {
     type: 'ConditionalExpression',
-    test: asDetachedNode(props.test),
-    alternate: asDetachedNode(props.alternate),
-    consequent: asDetachedNode(props.consequent),
+    test: asDetachedNodeForCodeGen(props.test),
+    alternate: asDetachedNodeForCodeGen(props.alternate),
+    consequent: asDetachedNodeForCodeGen(props.consequent),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function ConditionalTypeAnnotation(props: {
+  ...$ReadOnly<ConditionalTypeAnnotationProps>,
+  +parent?: ESNode,
+}): DetachedNode<ConditionalTypeAnnotationType> {
+  const node = detachedProps<ConditionalTypeAnnotationType>(props.parent, {
+    type: 'ConditionalTypeAnnotation',
+    checkType: asDetachedNodeForCodeGen(props.checkType),
+    extendsType: asDetachedNodeForCodeGen(props.extendsType),
+    trueType: asDetachedNodeForCodeGen(props.trueType),
+    falseType: asDetachedNodeForCodeGen(props.falseType),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1255,7 +1442,7 @@ export function ContinueStatement(props: {
 }): DetachedNode<ContinueStatementType> {
   const node = detachedProps<ContinueStatementType>(props.parent, {
     type: 'ContinueStatement',
-    label: asDetachedNode(props.label),
+    label: asDetachedNodeForCodeGen(props.label),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1277,12 +1464,28 @@ export function DeclareClass(props: {
 }): DetachedNode<DeclareClassType> {
   const node = detachedProps<DeclareClassType>(props.parent, {
     type: 'DeclareClass',
-    id: asDetachedNode(props.id),
-    typeParameters: asDetachedNode(props.typeParameters),
-    extends: props.extends.map(n => asDetachedNode(n)),
-    implements: props.implements.map(n => asDetachedNode(n)),
-    mixins: props.mixins.map(n => asDetachedNode(n)),
-    body: asDetachedNode(props.body),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    extends: props.extends.map(n => asDetachedNodeForCodeGen(n)),
+    implements: props.implements.map(n => asDetachedNodeForCodeGen(n)),
+    mixins: props.mixins.map(n => asDetachedNodeForCodeGen(n)),
+    body: asDetachedNodeForCodeGen(props.body),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function DeclareComponent(props: {
+  ...$ReadOnly<DeclareComponentProps>,
+  +parent?: ESNode,
+}): DetachedNode<DeclareComponentType> {
+  const node = detachedProps<DeclareComponentType>(props.parent, {
+    type: 'DeclareComponent',
+    id: asDetachedNodeForCodeGen(props.id),
+    params: props.params.map(n => asDetachedNodeForCodeGen(n)),
+    rest: asDetachedNodeForCodeGen(props.rest),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    rendersType: asDetachedNodeForCodeGen(props.rendersType),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1294,7 +1497,20 @@ export function DeclaredPredicate(props: {
 }): DetachedNode<DeclaredPredicateType> {
   const node = detachedProps<DeclaredPredicateType>(props.parent, {
     type: 'DeclaredPredicate',
-    value: asDetachedNode(props.value),
+    value: asDetachedNodeForCodeGen(props.value),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function DeclareEnum(props: {
+  ...$ReadOnly<DeclareEnumProps>,
+  +parent?: ESNode,
+}): DetachedNode<DeclareEnumType> {
+  const node = detachedProps<DeclareEnumType>(props.parent, {
+    type: 'DeclareEnum',
+    id: asDetachedNodeForCodeGen(props.id),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1306,7 +1522,7 @@ export function DeclareExportAllDeclaration(props: {
 }): DetachedNode<DeclareExportAllDeclarationType> {
   const node = detachedProps<DeclareExportAllDeclarationType>(props.parent, {
     type: 'DeclareExportAllDeclaration',
-    source: asDetachedNode(props.source),
+    source: asDetachedNodeForCodeGen(props.source),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1318,10 +1534,10 @@ export function DeclareInterface(props: {
 }): DetachedNode<DeclareInterfaceType> {
   const node = detachedProps<DeclareInterfaceType>(props.parent, {
     type: 'DeclareInterface',
-    id: asDetachedNode(props.id),
-    typeParameters: asDetachedNode(props.typeParameters),
-    extends: props.extends.map(n => asDetachedNode(n)),
-    body: asDetachedNode(props.body),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    extends: props.extends.map(n => asDetachedNodeForCodeGen(n)),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1333,8 +1549,8 @@ export function DeclareModule(props: {
 }): DetachedNode<DeclareModuleType> {
   const node = detachedProps<DeclareModuleType>(props.parent, {
     type: 'DeclareModule',
-    id: asDetachedNode(props.id),
-    body: asDetachedNode(props.body),
+    id: asDetachedNodeForCodeGen(props.id),
+    body: asDetachedNodeForCodeGen(props.body),
     kind: props.kind,
   });
   setParentPointersInDirectChildren(node);
@@ -1347,7 +1563,7 @@ export function DeclareModuleExports(props: {
 }): DetachedNode<DeclareModuleExportsType> {
   const node = detachedProps<DeclareModuleExportsType>(props.parent, {
     type: 'DeclareModuleExports',
-    typeAnnotation: asDetachedNode(props.typeAnnotation),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1359,10 +1575,10 @@ export function DeclareOpaqueType(props: {
 }): DetachedNode<DeclareOpaqueTypeType> {
   const node = detachedProps<DeclareOpaqueTypeType>(props.parent, {
     type: 'DeclareOpaqueType',
-    id: asDetachedNode(props.id),
-    typeParameters: asDetachedNode(props.typeParameters),
-    impltype: asDetachedNode(props.impltype),
-    supertype: asDetachedNode(props.supertype),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    impltype: asDetachedNodeForCodeGen(props.impltype),
+    supertype: asDetachedNodeForCodeGen(props.supertype),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1374,9 +1590,9 @@ export function DeclareTypeAlias(props: {
 }): DetachedNode<DeclareTypeAliasType> {
   const node = detachedProps<DeclareTypeAliasType>(props.parent, {
     type: 'DeclareTypeAlias',
-    id: asDetachedNode(props.id),
-    typeParameters: asDetachedNode(props.typeParameters),
-    right: asDetachedNode(props.right),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    right: asDetachedNodeForCodeGen(props.right),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1388,7 +1604,8 @@ export function DeclareVariable(props: {
 }): DetachedNode<DeclareVariableType> {
   const node = detachedProps<DeclareVariableType>(props.parent, {
     type: 'DeclareVariable',
-    id: asDetachedNode(props.id),
+    id: asDetachedNodeForCodeGen(props.id),
+    kind: props.kind,
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1400,8 +1617,8 @@ export function DoWhileStatement(props: {
 }): DetachedNode<DoWhileStatementType> {
   const node = detachedProps<DoWhileStatementType>(props.parent, {
     type: 'DoWhileStatement',
-    body: asDetachedNode(props.body),
-    test: asDetachedNode(props.test),
+    body: asDetachedNodeForCodeGen(props.body),
+    test: asDetachedNodeForCodeGen(props.test),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1433,7 +1650,7 @@ export function EnumBooleanBody(props: {
 }): DetachedNode<EnumBooleanBodyType> {
   const node = detachedProps<EnumBooleanBodyType>(props.parent, {
     type: 'EnumBooleanBody',
-    members: props.members.map(n => asDetachedNode(n)),
+    members: props.members.map(n => asDetachedNodeForCodeGen(n)),
     explicitType: props.explicitType,
     hasUnknownMembers: props.hasUnknownMembers,
   });
@@ -1447,8 +1664,8 @@ export function EnumBooleanMember(props: {
 }): DetachedNode<EnumBooleanMemberType> {
   const node = detachedProps<EnumBooleanMemberType>(props.parent, {
     type: 'EnumBooleanMember',
-    id: asDetachedNode(props.id),
-    init: asDetachedNode(props.init),
+    id: asDetachedNodeForCodeGen(props.id),
+    init: asDetachedNodeForCodeGen(props.init),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1460,8 +1677,8 @@ export function EnumDeclaration(props: {
 }): DetachedNode<EnumDeclarationType> {
   const node = detachedProps<EnumDeclarationType>(props.parent, {
     type: 'EnumDeclaration',
-    id: asDetachedNode(props.id),
-    body: asDetachedNode(props.body),
+    id: asDetachedNodeForCodeGen(props.id),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1473,7 +1690,7 @@ export function EnumDefaultedMember(props: {
 }): DetachedNode<EnumDefaultedMemberType> {
   const node = detachedProps<EnumDefaultedMemberType>(props.parent, {
     type: 'EnumDefaultedMember',
-    id: asDetachedNode(props.id),
+    id: asDetachedNodeForCodeGen(props.id),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1485,7 +1702,7 @@ export function EnumNumberBody(props: {
 }): DetachedNode<EnumNumberBodyType> {
   const node = detachedProps<EnumNumberBodyType>(props.parent, {
     type: 'EnumNumberBody',
-    members: props.members.map(n => asDetachedNode(n)),
+    members: props.members.map(n => asDetachedNodeForCodeGen(n)),
     explicitType: props.explicitType,
     hasUnknownMembers: props.hasUnknownMembers,
   });
@@ -1499,8 +1716,8 @@ export function EnumNumberMember(props: {
 }): DetachedNode<EnumNumberMemberType> {
   const node = detachedProps<EnumNumberMemberType>(props.parent, {
     type: 'EnumNumberMember',
-    id: asDetachedNode(props.id),
-    init: asDetachedNode(props.init),
+    id: asDetachedNodeForCodeGen(props.id),
+    init: asDetachedNodeForCodeGen(props.init),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1512,7 +1729,7 @@ export function EnumStringBody(props: {
 }): DetachedNode<EnumStringBodyType> {
   const node = detachedProps<EnumStringBodyType>(props.parent, {
     type: 'EnumStringBody',
-    members: props.members.map(n => asDetachedNode(n)),
+    members: props.members.map(n => asDetachedNodeForCodeGen(n)),
     explicitType: props.explicitType,
     hasUnknownMembers: props.hasUnknownMembers,
   });
@@ -1526,8 +1743,8 @@ export function EnumStringMember(props: {
 }): DetachedNode<EnumStringMemberType> {
   const node = detachedProps<EnumStringMemberType>(props.parent, {
     type: 'EnumStringMember',
-    id: asDetachedNode(props.id),
-    init: asDetachedNode(props.init),
+    id: asDetachedNodeForCodeGen(props.id),
+    init: asDetachedNodeForCodeGen(props.init),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1539,7 +1756,7 @@ export function EnumSymbolBody(props: {
 }): DetachedNode<EnumSymbolBodyType> {
   const node = detachedProps<EnumSymbolBodyType>(props.parent, {
     type: 'EnumSymbolBody',
-    members: props.members.map(n => asDetachedNode(n)),
+    members: props.members.map(n => asDetachedNodeForCodeGen(n)),
     hasUnknownMembers: props.hasUnknownMembers,
   });
   setParentPointersInDirectChildren(node);
@@ -1562,8 +1779,8 @@ export function ExportAllDeclaration(props: {
 }): DetachedNode<ExportAllDeclarationType> {
   const node = detachedProps<ExportAllDeclarationType>(props.parent, {
     type: 'ExportAllDeclaration',
-    exported: asDetachedNode(props.exported),
-    source: asDetachedNode(props.source),
+    exported: asDetachedNodeForCodeGen(props.exported),
+    source: asDetachedNodeForCodeGen(props.source),
     exportKind: props.exportKind,
   });
   setParentPointersInDirectChildren(node);
@@ -1576,7 +1793,7 @@ export function ExportDefaultDeclaration(props: {
 }): DetachedNode<ExportDefaultDeclarationType> {
   const node = detachedProps<ExportDefaultDeclarationType>(props.parent, {
     type: 'ExportDefaultDeclaration',
-    declaration: asDetachedNode(props.declaration),
+    declaration: asDetachedNodeForCodeGen(props.declaration),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1588,8 +1805,8 @@ export function ExportSpecifier(props: {
 }): DetachedNode<ExportSpecifierType> {
   const node = detachedProps<ExportSpecifierType>(props.parent, {
     type: 'ExportSpecifier',
-    exported: asDetachedNode(props.exported),
-    local: asDetachedNode(props.local),
+    exported: asDetachedNodeForCodeGen(props.exported),
+    local: asDetachedNodeForCodeGen(props.local),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1601,7 +1818,7 @@ export function ExpressionStatement(props: {
 }): DetachedNode<ExpressionStatementType> {
   const node = detachedProps<ExpressionStatementType>(props.parent, {
     type: 'ExpressionStatement',
-    expression: asDetachedNode(props.expression),
+    expression: asDetachedNodeForCodeGen(props.expression),
     directive: props.directive,
   });
   setParentPointersInDirectChildren(node);
@@ -1614,9 +1831,9 @@ export function ForInStatement(props: {
 }): DetachedNode<ForInStatementType> {
   const node = detachedProps<ForInStatementType>(props.parent, {
     type: 'ForInStatement',
-    left: asDetachedNode(props.left),
-    right: asDetachedNode(props.right),
-    body: asDetachedNode(props.body),
+    left: asDetachedNodeForCodeGen(props.left),
+    right: asDetachedNodeForCodeGen(props.right),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1628,9 +1845,9 @@ export function ForOfStatement(props: {
 }): DetachedNode<ForOfStatementType> {
   const node = detachedProps<ForOfStatementType>(props.parent, {
     type: 'ForOfStatement',
-    left: asDetachedNode(props.left),
-    right: asDetachedNode(props.right),
-    body: asDetachedNode(props.body),
+    left: asDetachedNodeForCodeGen(props.left),
+    right: asDetachedNodeForCodeGen(props.right),
+    body: asDetachedNodeForCodeGen(props.body),
     await: props.await,
   });
   setParentPointersInDirectChildren(node);
@@ -1643,10 +1860,10 @@ export function ForStatement(props: {
 }): DetachedNode<ForStatementType> {
   const node = detachedProps<ForStatementType>(props.parent, {
     type: 'ForStatement',
-    init: asDetachedNode(props.init),
-    test: asDetachedNode(props.test),
-    update: asDetachedNode(props.update),
-    body: asDetachedNode(props.body),
+    init: asDetachedNodeForCodeGen(props.init),
+    test: asDetachedNodeForCodeGen(props.test),
+    update: asDetachedNodeForCodeGen(props.update),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1658,12 +1875,12 @@ export function FunctionDeclaration(props: {
 }): DetachedNode<FunctionDeclarationType> {
   const node = detachedProps<FunctionDeclarationType>(props.parent, {
     type: 'FunctionDeclaration',
-    id: asDetachedNode(props.id),
-    params: props.params.map(n => asDetachedNode(n)),
-    body: asDetachedNode(props.body),
-    typeParameters: asDetachedNode(props.typeParameters),
-    returnType: asDetachedNode(props.returnType),
-    predicate: asDetachedNode(props.predicate),
+    id: asDetachedNodeForCodeGen(props.id),
+    params: props.params.map(n => asDetachedNodeForCodeGen(n)),
+    body: asDetachedNodeForCodeGen(props.body),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    returnType: asDetachedNodeForCodeGen(props.returnType),
+    predicate: asDetachedNodeForCodeGen(props.predicate),
     generator: props.generator,
     async: props.async,
   });
@@ -1677,12 +1894,12 @@ export function FunctionExpression(props: {
 }): DetachedNode<FunctionExpressionType> {
   const node = detachedProps<FunctionExpressionType>(props.parent, {
     type: 'FunctionExpression',
-    id: asDetachedNode(props.id),
-    params: props.params.map(n => asDetachedNode(n)),
-    body: asDetachedNode(props.body),
-    typeParameters: asDetachedNode(props.typeParameters),
-    returnType: asDetachedNode(props.returnType),
-    predicate: asDetachedNode(props.predicate),
+    id: asDetachedNodeForCodeGen(props.id),
+    params: props.params.map(n => asDetachedNodeForCodeGen(n)),
+    body: asDetachedNodeForCodeGen(props.body),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    returnType: asDetachedNodeForCodeGen(props.returnType),
+    predicate: asDetachedNodeForCodeGen(props.predicate),
     generator: props.generator,
     async: props.async,
   });
@@ -1696,11 +1913,11 @@ export function FunctionTypeAnnotation(props: {
 }): DetachedNode<FunctionTypeAnnotationType> {
   const node = detachedProps<FunctionTypeAnnotationType>(props.parent, {
     type: 'FunctionTypeAnnotation',
-    params: props.params.map(n => asDetachedNode(n)),
-    this: asDetachedNode(props.this),
-    returnType: asDetachedNode(props.returnType),
-    rest: asDetachedNode(props.rest),
-    typeParameters: asDetachedNode(props.typeParameters),
+    params: props.params.map(n => asDetachedNodeForCodeGen(n)),
+    this: asDetachedNodeForCodeGen(props.this),
+    returnType: asDetachedNodeForCodeGen(props.returnType),
+    rest: asDetachedNodeForCodeGen(props.rest),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1712,8 +1929,8 @@ export function FunctionTypeParam(props: {
 }): DetachedNode<FunctionTypeParamType> {
   const node = detachedProps<FunctionTypeParamType>(props.parent, {
     type: 'FunctionTypeParam',
-    name: asDetachedNode(props.name),
-    typeAnnotation: asDetachedNode(props.typeAnnotation),
+    name: asDetachedNodeForCodeGen(props.name),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
     optional: props.optional,
   });
   setParentPointersInDirectChildren(node);
@@ -1726,8 +1943,8 @@ export function GenericTypeAnnotation(props: {
 }): DetachedNode<GenericTypeAnnotationType> {
   const node = detachedProps<GenericTypeAnnotationType>(props.parent, {
     type: 'GenericTypeAnnotation',
-    id: asDetachedNode(props.id),
-    typeParameters: asDetachedNode(props.typeParameters),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1739,9 +1956,9 @@ export function IfStatement(props: {
 }): DetachedNode<IfStatementType> {
   const node = detachedProps<IfStatementType>(props.parent, {
     type: 'IfStatement',
-    test: asDetachedNode(props.test),
-    consequent: asDetachedNode(props.consequent),
-    alternate: asDetachedNode(props.alternate),
+    test: asDetachedNodeForCodeGen(props.test),
+    consequent: asDetachedNodeForCodeGen(props.consequent),
+    alternate: asDetachedNodeForCodeGen(props.alternate),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1753,8 +1970,8 @@ export function ImportAttribute(props: {
 }): DetachedNode<ImportAttributeType> {
   const node = detachedProps<ImportAttributeType>(props.parent, {
     type: 'ImportAttribute',
-    key: asDetachedNode(props.key),
-    value: asDetachedNode(props.value),
+    key: asDetachedNodeForCodeGen(props.key),
+    value: asDetachedNodeForCodeGen(props.value),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1766,9 +1983,9 @@ export function ImportDeclaration(props: {
 }): DetachedNode<ImportDeclarationType> {
   const node = detachedProps<ImportDeclarationType>(props.parent, {
     type: 'ImportDeclaration',
-    specifiers: props.specifiers.map(n => asDetachedNode(n)),
-    source: asDetachedNode(props.source),
-    assertions: props.assertions?.map(n => asDetachedNode(n)),
+    specifiers: props.specifiers.map(n => asDetachedNodeForCodeGen(n)),
+    source: asDetachedNodeForCodeGen(props.source),
+    assertions: props.assertions?.map(n => asDetachedNodeForCodeGen(n)),
     importKind: props.importKind,
   });
   setParentPointersInDirectChildren(node);
@@ -1781,7 +1998,7 @@ export function ImportDefaultSpecifier(props: {
 }): DetachedNode<ImportDefaultSpecifierType> {
   const node = detachedProps<ImportDefaultSpecifierType>(props.parent, {
     type: 'ImportDefaultSpecifier',
-    local: asDetachedNode(props.local),
+    local: asDetachedNodeForCodeGen(props.local),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1793,8 +2010,8 @@ export function ImportExpression(props: {
 }): DetachedNode<ImportExpressionType> {
   const node = detachedProps<ImportExpressionType>(props.parent, {
     type: 'ImportExpression',
-    source: asDetachedNode(props.source),
-    attributes: asDetachedNode(props.attributes),
+    source: asDetachedNodeForCodeGen(props.source),
+    attributes: asDetachedNodeForCodeGen(props.attributes),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1806,7 +2023,7 @@ export function ImportNamespaceSpecifier(props: {
 }): DetachedNode<ImportNamespaceSpecifierType> {
   const node = detachedProps<ImportNamespaceSpecifierType>(props.parent, {
     type: 'ImportNamespaceSpecifier',
-    local: asDetachedNode(props.local),
+    local: asDetachedNodeForCodeGen(props.local),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1818,8 +2035,8 @@ export function ImportSpecifier(props: {
 }): DetachedNode<ImportSpecifierType> {
   const node = detachedProps<ImportSpecifierType>(props.parent, {
     type: 'ImportSpecifier',
-    imported: asDetachedNode(props.imported),
-    local: asDetachedNode(props.local),
+    imported: asDetachedNodeForCodeGen(props.imported),
+    local: asDetachedNodeForCodeGen(props.local),
     importKind: props.importKind,
   });
   setParentPointersInDirectChildren(node);
@@ -1832,8 +2049,8 @@ export function IndexedAccessType(props: {
 }): DetachedNode<IndexedAccessTypeType> {
   const node = detachedProps<IndexedAccessTypeType>(props.parent, {
     type: 'IndexedAccessType',
-    objectType: asDetachedNode(props.objectType),
-    indexType: asDetachedNode(props.indexType),
+    objectType: asDetachedNodeForCodeGen(props.objectType),
+    indexType: asDetachedNodeForCodeGen(props.indexType),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1849,16 +2066,28 @@ export function InferredPredicate(
   });
 }
 
+export function InferTypeAnnotation(props: {
+  ...$ReadOnly<InferTypeAnnotationProps>,
+  +parent?: ESNode,
+}): DetachedNode<InferTypeAnnotationType> {
+  const node = detachedProps<InferTypeAnnotationType>(props.parent, {
+    type: 'InferTypeAnnotation',
+    typeParameter: asDetachedNodeForCodeGen(props.typeParameter),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
 export function InterfaceDeclaration(props: {
   ...$ReadOnly<InterfaceDeclarationProps>,
   +parent?: ESNode,
 }): DetachedNode<InterfaceDeclarationType> {
   const node = detachedProps<InterfaceDeclarationType>(props.parent, {
     type: 'InterfaceDeclaration',
-    id: asDetachedNode(props.id),
-    typeParameters: asDetachedNode(props.typeParameters),
-    extends: props.extends.map(n => asDetachedNode(n)),
-    body: asDetachedNode(props.body),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    extends: props.extends.map(n => asDetachedNodeForCodeGen(n)),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1870,8 +2099,8 @@ export function InterfaceExtends(props: {
 }): DetachedNode<InterfaceExtendsType> {
   const node = detachedProps<InterfaceExtendsType>(props.parent, {
     type: 'InterfaceExtends',
-    id: asDetachedNode(props.id),
-    typeParameters: asDetachedNode(props.typeParameters),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1883,8 +2112,8 @@ export function InterfaceTypeAnnotation(props: {
 }): DetachedNode<InterfaceTypeAnnotationType> {
   const node = detachedProps<InterfaceTypeAnnotationType>(props.parent, {
     type: 'InterfaceTypeAnnotation',
-    extends: props.extends.map(n => asDetachedNode(n)),
-    body: asDetachedNode(props.body),
+    extends: props.extends.map(n => asDetachedNodeForCodeGen(n)),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1896,7 +2125,7 @@ export function IntersectionTypeAnnotation(props: {
 }): DetachedNode<IntersectionTypeAnnotationType> {
   const node = detachedProps<IntersectionTypeAnnotationType>(props.parent, {
     type: 'IntersectionTypeAnnotation',
-    types: props.types.map(n => asDetachedNode(n)),
+    types: props.types.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1908,8 +2137,8 @@ export function JSXAttribute(props: {
 }): DetachedNode<JSXAttributeType> {
   const node = detachedProps<JSXAttributeType>(props.parent, {
     type: 'JSXAttribute',
-    name: asDetachedNode(props.name),
-    value: asDetachedNode(props.value),
+    name: asDetachedNodeForCodeGen(props.name),
+    value: asDetachedNodeForCodeGen(props.value),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1921,7 +2150,7 @@ export function JSXClosingElement(props: {
 }): DetachedNode<JSXClosingElementType> {
   const node = detachedProps<JSXClosingElementType>(props.parent, {
     type: 'JSXClosingElement',
-    name: asDetachedNode(props.name),
+    name: asDetachedNodeForCodeGen(props.name),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1943,9 +2172,9 @@ export function JSXElement(props: {
 }): DetachedNode<JSXElementType> {
   const node = detachedProps<JSXElementType>(props.parent, {
     type: 'JSXElement',
-    openingElement: asDetachedNode(props.openingElement),
-    children: props.children.map(n => asDetachedNode(n)),
-    closingElement: asDetachedNode(props.closingElement),
+    openingElement: asDetachedNodeForCodeGen(props.openingElement),
+    children: props.children.map(n => asDetachedNodeForCodeGen(n)),
+    closingElement: asDetachedNodeForCodeGen(props.closingElement),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1967,7 +2196,7 @@ export function JSXExpressionContainer(props: {
 }): DetachedNode<JSXExpressionContainerType> {
   const node = detachedProps<JSXExpressionContainerType>(props.parent, {
     type: 'JSXExpressionContainer',
-    expression: asDetachedNode(props.expression),
+    expression: asDetachedNodeForCodeGen(props.expression),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1979,9 +2208,9 @@ export function JSXFragment(props: {
 }): DetachedNode<JSXFragmentType> {
   const node = detachedProps<JSXFragmentType>(props.parent, {
     type: 'JSXFragment',
-    openingFragment: asDetachedNode(props.openingFragment),
-    children: props.children.map(n => asDetachedNode(n)),
-    closingFragment: asDetachedNode(props.closingFragment),
+    openingFragment: asDetachedNodeForCodeGen(props.openingFragment),
+    children: props.children.map(n => asDetachedNodeForCodeGen(n)),
+    closingFragment: asDetachedNodeForCodeGen(props.closingFragment),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2005,8 +2234,8 @@ export function JSXMemberExpression(props: {
 }): DetachedNode<JSXMemberExpressionType> {
   const node = detachedProps<JSXMemberExpressionType>(props.parent, {
     type: 'JSXMemberExpression',
-    object: asDetachedNode(props.object),
-    property: asDetachedNode(props.property),
+    object: asDetachedNodeForCodeGen(props.object),
+    property: asDetachedNodeForCodeGen(props.property),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2018,8 +2247,8 @@ export function JSXNamespacedName(props: {
 }): DetachedNode<JSXNamespacedNameType> {
   const node = detachedProps<JSXNamespacedNameType>(props.parent, {
     type: 'JSXNamespacedName',
-    namespace: asDetachedNode(props.namespace),
-    name: asDetachedNode(props.name),
+    namespace: asDetachedNodeForCodeGen(props.namespace),
+    name: asDetachedNodeForCodeGen(props.name),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2031,9 +2260,10 @@ export function JSXOpeningElement(props: {
 }): DetachedNode<JSXOpeningElementType> {
   const node = detachedProps<JSXOpeningElementType>(props.parent, {
     type: 'JSXOpeningElement',
-    name: asDetachedNode(props.name),
-    attributes: props.attributes.map(n => asDetachedNode(n)),
+    name: asDetachedNodeForCodeGen(props.name),
+    attributes: props.attributes.map(n => asDetachedNodeForCodeGen(n)),
     selfClosing: props.selfClosing,
+    typeArguments: asDetachedNodeForCodeGen(props.typeArguments),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2055,7 +2285,7 @@ export function JSXSpreadAttribute(props: {
 }): DetachedNode<JSXSpreadAttributeType> {
   const node = detachedProps<JSXSpreadAttributeType>(props.parent, {
     type: 'JSXSpreadAttribute',
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2067,7 +2297,7 @@ export function JSXSpreadChild(props: {
 }): DetachedNode<JSXSpreadChildType> {
   const node = detachedProps<JSXSpreadChildType>(props.parent, {
     type: 'JSXSpreadChild',
-    expression: asDetachedNode(props.expression),
+    expression: asDetachedNodeForCodeGen(props.expression),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2086,14 +2316,26 @@ export function JSXText(props: {
   return node;
 }
 
+export function KeyofTypeAnnotation(props: {
+  ...$ReadOnly<KeyofTypeAnnotationProps>,
+  +parent?: ESNode,
+}): DetachedNode<KeyofTypeAnnotationType> {
+  const node = detachedProps<KeyofTypeAnnotationType>(props.parent, {
+    type: 'KeyofTypeAnnotation',
+    argument: asDetachedNodeForCodeGen(props.argument),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
 export function LabeledStatement(props: {
   ...$ReadOnly<LabeledStatementProps>,
   +parent?: ESNode,
 }): DetachedNode<LabeledStatementType> {
   const node = detachedProps<LabeledStatementType>(props.parent, {
     type: 'LabeledStatement',
-    label: asDetachedNode(props.label),
-    body: asDetachedNode(props.body),
+    label: asDetachedNodeForCodeGen(props.label),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2105,23 +2347,9 @@ export function LogicalExpression(props: {
 }): DetachedNode<LogicalExpressionType> {
   const node = detachedProps<LogicalExpressionType>(props.parent, {
     type: 'LogicalExpression',
-    left: asDetachedNode(props.left),
-    right: asDetachedNode(props.right),
+    left: asDetachedNodeForCodeGen(props.left),
+    right: asDetachedNodeForCodeGen(props.right),
     operator: props.operator,
-  });
-  setParentPointersInDirectChildren(node);
-  return node;
-}
-
-export function MemberExpression(props: {
-  ...$ReadOnly<MemberExpressionProps>,
-  +parent?: ESNode,
-}): DetachedNode<MemberExpressionType> {
-  const node = detachedProps<MemberExpressionType>(props.parent, {
-    type: 'MemberExpression',
-    object: asDetachedNode(props.object),
-    property: asDetachedNode(props.property),
-    computed: props.computed,
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2133,8 +2361,8 @@ export function MetaProperty(props: {
 }): DetachedNode<MetaPropertyType> {
   const node = detachedProps<MetaPropertyType>(props.parent, {
     type: 'MetaProperty',
-    meta: asDetachedNode(props.meta),
-    property: asDetachedNode(props.property),
+    meta: asDetachedNodeForCodeGen(props.meta),
+    property: asDetachedNodeForCodeGen(props.property),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2146,8 +2374,8 @@ export function MethodDefinition(props: {
 }): DetachedNode<MethodDefinitionType> {
   const node = detachedProps<MethodDefinitionType>(props.parent, {
     type: 'MethodDefinition',
-    key: asDetachedNode(props.key),
-    value: asDetachedNode(props.value),
+    key: asDetachedNodeForCodeGen(props.key),
+    value: asDetachedNodeForCodeGen(props.value),
     kind: props.kind,
     computed: props.computed,
     static: props.static,
@@ -2172,9 +2400,9 @@ export function NewExpression(props: {
 }): DetachedNode<NewExpressionType> {
   const node = detachedProps<NewExpressionType>(props.parent, {
     type: 'NewExpression',
-    callee: asDetachedNode(props.callee),
-    typeArguments: asDetachedNode(props.typeArguments),
-    arguments: props.arguments.map(n => asDetachedNode(n)),
+    callee: asDetachedNodeForCodeGen(props.callee),
+    typeArguments: asDetachedNodeForCodeGen(props.typeArguments),
+    arguments: props.arguments.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2186,7 +2414,7 @@ export function NullableTypeAnnotation(props: {
 }): DetachedNode<NullableTypeAnnotationType> {
   const node = detachedProps<NullableTypeAnnotationType>(props.parent, {
     type: 'NullableTypeAnnotation',
-    typeAnnotation: asDetachedNode(props.typeAnnotation),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2231,7 +2459,7 @@ export function ObjectExpression(props: {
 }): DetachedNode<ObjectExpressionType> {
   const node = detachedProps<ObjectExpressionType>(props.parent, {
     type: 'ObjectExpression',
-    properties: props.properties.map(n => asDetachedNode(n)),
+    properties: props.properties.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2243,8 +2471,8 @@ export function ObjectPattern(props: {
 }): DetachedNode<ObjectPatternType> {
   const node = detachedProps<ObjectPatternType>(props.parent, {
     type: 'ObjectPattern',
-    properties: props.properties.map(n => asDetachedNode(n)),
-    typeAnnotation: asDetachedNode(props.typeAnnotation),
+    properties: props.properties.map(n => asDetachedNodeForCodeGen(n)),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2256,10 +2484,10 @@ export function ObjectTypeAnnotation(props: {
 }): DetachedNode<ObjectTypeAnnotationType> {
   const node = detachedProps<ObjectTypeAnnotationType>(props.parent, {
     type: 'ObjectTypeAnnotation',
-    properties: props.properties.map(n => asDetachedNode(n)),
-    indexers: props.indexers.map(n => asDetachedNode(n)),
-    callProperties: props.callProperties.map(n => asDetachedNode(n)),
-    internalSlots: props.internalSlots.map(n => asDetachedNode(n)),
+    properties: props.properties.map(n => asDetachedNodeForCodeGen(n)),
+    indexers: props.indexers.map(n => asDetachedNodeForCodeGen(n)),
+    callProperties: props.callProperties.map(n => asDetachedNodeForCodeGen(n)),
+    internalSlots: props.internalSlots.map(n => asDetachedNodeForCodeGen(n)),
     inexact: props.inexact,
     exact: props.exact,
   });
@@ -2273,7 +2501,7 @@ export function ObjectTypeCallProperty(props: {
 }): DetachedNode<ObjectTypeCallPropertyType> {
   const node = detachedProps<ObjectTypeCallPropertyType>(props.parent, {
     type: 'ObjectTypeCallProperty',
-    value: asDetachedNode(props.value),
+    value: asDetachedNodeForCodeGen(props.value),
     static: props.static,
   });
   setParentPointersInDirectChildren(node);
@@ -2286,11 +2514,11 @@ export function ObjectTypeIndexer(props: {
 }): DetachedNode<ObjectTypeIndexerType> {
   const node = detachedProps<ObjectTypeIndexerType>(props.parent, {
     type: 'ObjectTypeIndexer',
-    id: asDetachedNode(props.id),
-    key: asDetachedNode(props.key),
-    value: asDetachedNode(props.value),
+    id: asDetachedNodeForCodeGen(props.id),
+    key: asDetachedNodeForCodeGen(props.key),
+    value: asDetachedNodeForCodeGen(props.value),
     static: props.static,
-    variance: asDetachedNode(props.variance),
+    variance: asDetachedNodeForCodeGen(props.variance),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2302,11 +2530,27 @@ export function ObjectTypeInternalSlot(props: {
 }): DetachedNode<ObjectTypeInternalSlotType> {
   const node = detachedProps<ObjectTypeInternalSlotType>(props.parent, {
     type: 'ObjectTypeInternalSlot',
-    id: asDetachedNode(props.id),
-    value: asDetachedNode(props.value),
+    id: asDetachedNodeForCodeGen(props.id),
+    value: asDetachedNodeForCodeGen(props.value),
     optional: props.optional,
     static: props.static,
     method: props.method,
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function ObjectTypeMappedTypeProperty(props: {
+  ...$ReadOnly<ObjectTypeMappedTypePropertyProps>,
+  +parent?: ESNode,
+}): DetachedNode<ObjectTypeMappedTypePropertyType> {
+  const node = detachedProps<ObjectTypeMappedTypePropertyType>(props.parent, {
+    type: 'ObjectTypeMappedTypeProperty',
+    keyTparam: asDetachedNodeForCodeGen(props.keyTparam),
+    propType: asDetachedNodeForCodeGen(props.propType),
+    sourceType: asDetachedNodeForCodeGen(props.sourceType),
+    variance: asDetachedNodeForCodeGen(props.variance),
+    optional: props.optional,
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2318,7 +2562,7 @@ export function ObjectTypeSpreadProperty(props: {
 }): DetachedNode<ObjectTypeSpreadPropertyType> {
   const node = detachedProps<ObjectTypeSpreadPropertyType>(props.parent, {
     type: 'ObjectTypeSpreadProperty',
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2330,10 +2574,10 @@ export function OpaqueType(props: {
 }): DetachedNode<OpaqueTypeType> {
   const node = detachedProps<OpaqueTypeType>(props.parent, {
     type: 'OpaqueType',
-    id: asDetachedNode(props.id),
-    typeParameters: asDetachedNode(props.typeParameters),
-    impltype: asDetachedNode(props.impltype),
-    supertype: asDetachedNode(props.supertype),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    impltype: asDetachedNodeForCodeGen(props.impltype),
+    supertype: asDetachedNodeForCodeGen(props.supertype),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2345,8 +2589,8 @@ export function OptionalIndexedAccessType(props: {
 }): DetachedNode<OptionalIndexedAccessTypeType> {
   const node = detachedProps<OptionalIndexedAccessTypeType>(props.parent, {
     type: 'OptionalIndexedAccessType',
-    objectType: asDetachedNode(props.objectType),
-    indexType: asDetachedNode(props.indexType),
+    objectType: asDetachedNodeForCodeGen(props.objectType),
+    indexType: asDetachedNodeForCodeGen(props.indexType),
     optional: props.optional,
   });
   setParentPointersInDirectChildren(node);
@@ -2371,8 +2615,8 @@ export function Property(props: {
 }): DetachedNode<PropertyType> {
   const node = detachedProps<PropertyType>(props.parent, {
     type: 'Property',
-    key: asDetachedNode(props.key),
-    value: asDetachedNode(props.value),
+    key: asDetachedNodeForCodeGen(props.key),
+    value: asDetachedNodeForCodeGen(props.value),
     kind: props.kind,
     computed: props.computed,
     method: props.method,
@@ -2388,15 +2632,14 @@ export function PropertyDefinition(props: {
 }): DetachedNode<PropertyDefinitionType> {
   const node = detachedProps<PropertyDefinitionType>(props.parent, {
     type: 'PropertyDefinition',
-    key: asDetachedNode(props.key),
-    value: asDetachedNode(props.value),
+    key: asDetachedNodeForCodeGen(props.key),
+    value: asDetachedNodeForCodeGen(props.value),
     computed: props.computed,
     static: props.static,
     declare: props.declare,
     optional: props.optional,
-    variance: asDetachedNode(props.variance),
-    typeAnnotation: asDetachedNode(props.typeAnnotation),
-    tsModifiers: asDetachedNode(props.tsModifiers),
+    variance: asDetachedNodeForCodeGen(props.variance),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2408,8 +2651,21 @@ export function QualifiedTypeIdentifier(props: {
 }): DetachedNode<QualifiedTypeIdentifierType> {
   const node = detachedProps<QualifiedTypeIdentifierType>(props.parent, {
     type: 'QualifiedTypeIdentifier',
-    qualification: asDetachedNode(props.qualification),
-    id: asDetachedNode(props.id),
+    qualification: asDetachedNodeForCodeGen(props.qualification),
+    id: asDetachedNodeForCodeGen(props.id),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function QualifiedTypeofIdentifier(props: {
+  ...$ReadOnly<QualifiedTypeofIdentifierProps>,
+  +parent?: ESNode,
+}): DetachedNode<QualifiedTypeofIdentifierType> {
+  const node = detachedProps<QualifiedTypeofIdentifierType>(props.parent, {
+    type: 'QualifiedTypeofIdentifier',
+    qualification: asDetachedNodeForCodeGen(props.qualification),
+    id: asDetachedNodeForCodeGen(props.id),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2421,7 +2677,7 @@ export function RestElement(props: {
 }): DetachedNode<RestElementType> {
   const node = detachedProps<RestElementType>(props.parent, {
     type: 'RestElement',
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2433,7 +2689,7 @@ export function ReturnStatement(props: {
 }): DetachedNode<ReturnStatementType> {
   const node = detachedProps<ReturnStatementType>(props.parent, {
     type: 'ReturnStatement',
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2445,7 +2701,7 @@ export function SequenceExpression(props: {
 }): DetachedNode<SequenceExpressionType> {
   const node = detachedProps<SequenceExpressionType>(props.parent, {
     type: 'SequenceExpression',
-    expressions: props.expressions.map(n => asDetachedNode(n)),
+    expressions: props.expressions.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2457,7 +2713,7 @@ export function SpreadElement(props: {
 }): DetachedNode<SpreadElementType> {
   const node = detachedProps<SpreadElementType>(props.parent, {
     type: 'SpreadElement',
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2502,8 +2758,8 @@ export function SwitchCase(props: {
 }): DetachedNode<SwitchCaseType> {
   const node = detachedProps<SwitchCaseType>(props.parent, {
     type: 'SwitchCase',
-    test: asDetachedNode(props.test),
-    consequent: props.consequent.map(n => asDetachedNode(n)),
+    test: asDetachedNodeForCodeGen(props.test),
+    consequent: props.consequent.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2515,8 +2771,8 @@ export function SwitchStatement(props: {
 }): DetachedNode<SwitchStatementType> {
   const node = detachedProps<SwitchStatementType>(props.parent, {
     type: 'SwitchStatement',
-    discriminant: asDetachedNode(props.discriminant),
-    cases: props.cases.map(n => asDetachedNode(n)),
+    discriminant: asDetachedNodeForCodeGen(props.discriminant),
+    cases: props.cases.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2538,8 +2794,8 @@ export function TaggedTemplateExpression(props: {
 }): DetachedNode<TaggedTemplateExpressionType> {
   const node = detachedProps<TaggedTemplateExpressionType>(props.parent, {
     type: 'TaggedTemplateExpression',
-    tag: asDetachedNode(props.tag),
-    quasi: asDetachedNode(props.quasi),
+    tag: asDetachedNodeForCodeGen(props.tag),
+    quasi: asDetachedNodeForCodeGen(props.quasi),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2551,8 +2807,8 @@ export function TemplateLiteral(props: {
 }): DetachedNode<TemplateLiteralType> {
   const node = detachedProps<TemplateLiteralType>(props.parent, {
     type: 'TemplateLiteral',
-    quasis: props.quasis.map(n => asDetachedNode(n)),
-    expressions: props.expressions.map(n => asDetachedNode(n)),
+    quasis: props.quasis.map(n => asDetachedNodeForCodeGen(n)),
+    expressions: props.expressions.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2584,7 +2840,7 @@ export function ThrowStatement(props: {
 }): DetachedNode<ThrowStatementType> {
   const node = detachedProps<ThrowStatementType>(props.parent, {
     type: 'ThrowStatement',
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2596,9 +2852,9 @@ export function TryStatement(props: {
 }): DetachedNode<TryStatementType> {
   const node = detachedProps<TryStatementType>(props.parent, {
     type: 'TryStatement',
-    block: asDetachedNode(props.block),
-    handler: asDetachedNode(props.handler),
-    finalizer: asDetachedNode(props.finalizer),
+    block: asDetachedNodeForCodeGen(props.block),
+    handler: asDetachedNodeForCodeGen(props.handler),
+    finalizer: asDetachedNodeForCodeGen(props.finalizer),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2610,7 +2866,35 @@ export function TupleTypeAnnotation(props: {
 }): DetachedNode<TupleTypeAnnotationType> {
   const node = detachedProps<TupleTypeAnnotationType>(props.parent, {
     type: 'TupleTypeAnnotation',
-    types: props.types.map(n => asDetachedNode(n)),
+    types: props.types.map(n => asDetachedNodeForCodeGen(n)),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function TupleTypeLabeledElement(props: {
+  ...$ReadOnly<TupleTypeLabeledElementProps>,
+  +parent?: ESNode,
+}): DetachedNode<TupleTypeLabeledElementType> {
+  const node = detachedProps<TupleTypeLabeledElementType>(props.parent, {
+    type: 'TupleTypeLabeledElement',
+    label: asDetachedNodeForCodeGen(props.label),
+    elementType: asDetachedNodeForCodeGen(props.elementType),
+    optional: props.optional,
+    variance: asDetachedNodeForCodeGen(props.variance),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function TupleTypeSpreadElement(props: {
+  ...$ReadOnly<TupleTypeSpreadElementProps>,
+  +parent?: ESNode,
+}): DetachedNode<TupleTypeSpreadElementType> {
+  const node = detachedProps<TupleTypeSpreadElementType>(props.parent, {
+    type: 'TupleTypeSpreadElement',
+    label: asDetachedNodeForCodeGen(props.label),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2622,9 +2906,9 @@ export function TypeAlias(props: {
 }): DetachedNode<TypeAliasType> {
   const node = detachedProps<TypeAliasType>(props.parent, {
     type: 'TypeAlias',
-    id: asDetachedNode(props.id),
-    typeParameters: asDetachedNode(props.typeParameters),
-    right: asDetachedNode(props.right),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    right: asDetachedNodeForCodeGen(props.right),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2636,7 +2920,7 @@ export function TypeAnnotation(props: {
 }): DetachedNode<TypeAnnotationType> {
   const node = detachedProps<TypeAnnotationType>(props.parent, {
     type: 'TypeAnnotation',
-    typeAnnotation: asDetachedNode(props.typeAnnotation),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2648,8 +2932,8 @@ export function TypeCastExpression(props: {
 }): DetachedNode<TypeCastExpressionType> {
   const node = detachedProps<TypeCastExpressionType>(props.parent, {
     type: 'TypeCastExpression',
-    expression: asDetachedNode(props.expression),
-    typeAnnotation: asDetachedNode(props.typeAnnotation),
+    expression: asDetachedNodeForCodeGen(props.expression),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2661,7 +2945,7 @@ export function TypeofTypeAnnotation(props: {
 }): DetachedNode<TypeofTypeAnnotationType> {
   const node = detachedProps<TypeofTypeAnnotationType>(props.parent, {
     type: 'TypeofTypeAnnotation',
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2674,9 +2958,10 @@ export function TypeParameter(props: {
   const node = detachedProps<TypeParameterType>(props.parent, {
     type: 'TypeParameter',
     name: props.name,
-    bound: asDetachedNode(props.bound),
-    variance: asDetachedNode(props.variance),
-    default: asDetachedNode(props.default),
+    bound: asDetachedNodeForCodeGen(props.bound),
+    variance: asDetachedNodeForCodeGen(props.variance),
+    default: asDetachedNodeForCodeGen(props.default),
+    usesExtendsBound: props.usesExtendsBound,
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2688,7 +2973,7 @@ export function TypeParameterDeclaration(props: {
 }): DetachedNode<TypeParameterDeclarationType> {
   const node = detachedProps<TypeParameterDeclarationType>(props.parent, {
     type: 'TypeParameterDeclaration',
-    params: props.params.map(n => asDetachedNode(n)),
+    params: props.params.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2700,7 +2985,21 @@ export function TypeParameterInstantiation(props: {
 }): DetachedNode<TypeParameterInstantiationType> {
   const node = detachedProps<TypeParameterInstantiationType>(props.parent, {
     type: 'TypeParameterInstantiation',
-    params: props.params.map(n => asDetachedNode(n)),
+    params: props.params.map(n => asDetachedNodeForCodeGen(n)),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function TypePredicate(props: {
+  ...$ReadOnly<TypePredicateProps>,
+  +parent?: ESNode,
+}): DetachedNode<TypePredicateType> {
+  const node = detachedProps<TypePredicateType>(props.parent, {
+    type: 'TypePredicate',
+    parameterName: asDetachedNodeForCodeGen(props.parameterName),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
+    asserts: props.asserts,
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2713,7 +3012,7 @@ export function UnaryExpression(props: {
   const node = detachedProps<UnaryExpressionType>(props.parent, {
     type: 'UnaryExpression',
     operator: props.operator,
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
     prefix: props.prefix,
   });
   setParentPointersInDirectChildren(node);
@@ -2726,7 +3025,7 @@ export function UnionTypeAnnotation(props: {
 }): DetachedNode<UnionTypeAnnotationType> {
   const node = detachedProps<UnionTypeAnnotationType>(props.parent, {
     type: 'UnionTypeAnnotation',
-    types: props.types.map(n => asDetachedNode(n)),
+    types: props.types.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2739,7 +3038,7 @@ export function UpdateExpression(props: {
   const node = detachedProps<UpdateExpressionType>(props.parent, {
     type: 'UpdateExpression',
     operator: props.operator,
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
     prefix: props.prefix,
   });
   setParentPointersInDirectChildren(node);
@@ -2753,7 +3052,7 @@ export function VariableDeclaration(props: {
   const node = detachedProps<VariableDeclarationType>(props.parent, {
     type: 'VariableDeclaration',
     kind: props.kind,
-    declarations: props.declarations.map(n => asDetachedNode(n)),
+    declarations: props.declarations.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2765,8 +3064,8 @@ export function VariableDeclarator(props: {
 }): DetachedNode<VariableDeclaratorType> {
   const node = detachedProps<VariableDeclaratorType>(props.parent, {
     type: 'VariableDeclarator',
-    init: asDetachedNode(props.init),
-    id: asDetachedNode(props.id),
+    init: asDetachedNodeForCodeGen(props.init),
+    id: asDetachedNodeForCodeGen(props.id),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2800,8 +3099,8 @@ export function WhileStatement(props: {
 }): DetachedNode<WhileStatementType> {
   const node = detachedProps<WhileStatementType>(props.parent, {
     type: 'WhileStatement',
-    body: asDetachedNode(props.body),
-    test: asDetachedNode(props.test),
+    body: asDetachedNodeForCodeGen(props.body),
+    test: asDetachedNodeForCodeGen(props.test),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2813,8 +3112,8 @@ export function WithStatement(props: {
 }): DetachedNode<WithStatementType> {
   const node = detachedProps<WithStatementType>(props.parent, {
     type: 'WithStatement',
-    object: asDetachedNode(props.object),
-    body: asDetachedNode(props.body),
+    object: asDetachedNodeForCodeGen(props.object),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2826,7 +3125,7 @@ export function YieldExpression(props: {
 }): DetachedNode<YieldExpressionType> {
   const node = detachedProps<YieldExpressionType>(props.parent, {
     type: 'YieldExpression',
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
     delegate: props.delegate,
   });
   setParentPointersInDirectChildren(node);

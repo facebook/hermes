@@ -18,7 +18,8 @@ function foo(x) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [foo]
+// CHECK-NEXT:globals = [foo]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2 : undefined, %0
@@ -27,7 +28,7 @@ function foo(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1(x)#2 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{foo#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
 // CHECK-NEXT:  %1 = AllocStackInst $?anon_0_iter
@@ -60,6 +61,6 @@ function foo(x) {
 // CHECK-NEXT:  %22 = BranchInst %BB6
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %23 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %24 = CallInst %23, undefined : undefined, %11, %18
+// CHECK-NEXT:  %24 = CallInst %23, undefined : undefined, undefined : undefined, %11, %18
 // CHECK-NEXT:  %25 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

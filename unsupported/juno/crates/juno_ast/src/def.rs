@@ -68,6 +68,13 @@ macro_rules! nodekind_defs {
                 generator: bool,
                 is_async: bool,
             },
+            ComponentDeclaration[Declaration] {
+                id: &'a Node<'a>[Identifier],
+                params: NodeList<'a>[Pattern],
+                body: &'a Node<'a>[BlockStatement],
+                type_parameters: Option<&'a Node<'a>>[TypeParameterDeclaration],
+                renders_type: Option<&'a Node<'a>>[TypeAnnotation],
+            },
             WhileStatement[Statement] {
                 body: &'a Node<'a>[Statement],
                 test: &'a Node<'a>[Expression],
@@ -321,6 +328,7 @@ macro_rules! nodekind_defs {
                 optional: bool,
                 variance: Option<&'a Node<'a>>[Variance],
                 type_annotation: Option<&'a Node<'a>>[TypeAnnotation],
+                ts_modifiers: Option<&'a Node<'a>>[TSModifiers],
             },
             ClassPrivateProperty {
                 key: &'a Node<'a>[PrivateName],
@@ -330,6 +338,7 @@ macro_rules! nodekind_defs {
                 optional: bool,
                 variance: Option<&'a Node<'a>>[Variance],
                 type_annotation: Option<&'a Node<'a>>[TypeAnnotation],
+                ts_modifiers: Option<&'a Node<'a>>[TSModifiers],
             },
             MethodDefinition {
                 key: &'a Node<'a>[Expression],
@@ -417,6 +426,7 @@ macro_rules! nodekind_defs {
                 name: &'a Node<'a>[JSXIdentifier, JSXMemberExpression, JSXNamespacedName],
                 attributes: NodeList<'a>[JSXAttribute, JSXSpreadAttribute],
                 self_closing: bool,
+                type_arguments: Option<&'a Node<'a>>[TypeParameterInstantiation],
             },
             JSXClosingElement {
                 name: &'a Node<'a>[JSXIdentifier, JSXMemberExpression, JSXNamespacedName],
@@ -487,6 +497,17 @@ macro_rules! nodekind_defs {
                 type_annotation: &'a Node<'a>[FlowType],
                 optional: bool,
             },
+            ComponentTypeAnnotation[FlowType] {
+                params: NodeList<'a>[FunctionTypeParam],
+                rest: Option<&'a Node<'a>>[FunctionTypeParam],
+                type_parameters: Option<&'a Node<'a>>[TypeParameterDeclaration],
+                renders_type: Option<&'a Node<'a>>[TypeAnnotation],
+            },
+            ComponentTypeParameter[FlowType] {
+                name: Option<&'a Node<'a>>[Identifier],
+                type_annotation: &'a Node<'a>[FlowType],
+                optional: bool,
+            },
             NullableTypeAnnotation[FlowType] {
                 type_annotation: &'a Node<'a>[FlowType],
             },
@@ -497,11 +518,31 @@ macro_rules! nodekind_defs {
             TypeofTypeAnnotation[FlowType] {
                 argument: &'a Node<'a>[FlowType],
             },
+            KeyofTypeAnnotation[FlowType] {
+                argument: &'a Node<'a>[FlowType],
+            },
+            QualifiedTypeofIdentifier[Flow] {
+                qualification: &'a Node<'a>[Identifier, QualifiedTypeIdentifier],
+                id: &'a Node<'a>[Identifier],
+            },
             TupleTypeAnnotation[FlowType] {
                 types: NodeList<'a>[FlowType],
             },
+            TupleTypeSpreadElement[FlowType] {
+                label: Option<&'a Node<'a>>[Identifier],
+                type_annotation: &'a Node<'a>[FlowType],
+            },
+            TupleTypeLabeledElement[FlowType] {
+                label: &'a Node<'a>[Identifier],
+                element_type: &'a Node<'a>[FlowType],
+                optional: bool,
+                variance: Option<&'a Node<'a>>[Variance],
+            },
             ArrayTypeAnnotation[FlowType] {
                 element_type: &'a Node<'a>[FlowType],
+            },
+            InferTypeAnnotation[FlowType] {
+                type_parameter: &'a Node<'a>[FlowType],
             },
             UnionTypeAnnotation[FlowType] {
                 types: NodeList<'a>[FlowType],
@@ -521,6 +562,17 @@ macro_rules! nodekind_defs {
                 object_type: &'a Node<'a>[FlowType],
                 index_type: &'a Node<'a>[FlowType],
                 optional: bool,
+            },
+            ConditionalTypeAnnotation[FlowType] {
+                check_type: &'a Node<'a>[FlowType],
+                extends_type: &'a Node<'a>[FlowType],
+                true_type: &'a Node<'a>[FlowType],
+                false_type: &'a Node<'a>[FlowType],
+            },
+            TypePredicate[FlowType] {
+                parameter_name: &'a Node<'a>[Identifier],
+                type_annotation: Option<&'a Node<'a>>[FlowType],
+                asserts: bool,
             },
             InterfaceTypeAnnotation[FlowType] {
                 extends: NodeList<'a>[InterfaceExtends],
@@ -572,8 +624,20 @@ macro_rules! nodekind_defs {
                 id: &'a Node<'a>[Identifier],
                 predicate: Option<&'a Node<'a>>[DeclaredPredicate],
             },
+            DeclareComponent[Declaration] {
+                id: &'a Node<'a>[Identifier],
+                params: NodeList<'a>[Pattern],
+                rest: Option<&'a Node<'a>>[FunctionTypeParam],
+                type_parameters: Option<&'a Node<'a>>[TypeParameterDeclaration],
+                renders_type: Option<&'a Node<'a>>[TypeAnnotation],
+            },
             DeclareVariable[FlowDeclaration] {
                 id: &'a Node<'a>[Identifier],
+                kind: VariableDeclarationKind,
+            },
+            DeclareEnum[FlowDeclaration] {
+                id: &'a Node<'a>[Identifier],
+                body: &'a Node<'a>[FlowEnumBody],
             },
             DeclareExportDeclaration[FlowDeclaration] {
                 declaration: Option<&'a Node<'a>>[Flow, FlowDeclaration],
@@ -642,6 +706,13 @@ macro_rules! nodekind_defs {
                 is_static: bool,
                 variance: Option<&'a Node<'a>>[Variance],
             },
+            ObjectTypeMappedTypeProperty[Flow] {
+                key_tparam: &'a Node<'a>[FlowType],
+                prop_type: &'a Node<'a>[FlowType],
+                source_type: &'a Node<'a>[FlowType],
+                variance: Option<&'a Node<'a>>[Variance],
+                optional: Option<NodeString>,
+            },
             Variance[Flow] {
                 kind: NodeLabel,
             },
@@ -653,6 +724,7 @@ macro_rules! nodekind_defs {
                 bound: Option<&'a Node<'a>>[TypeAnnotation],
                 variance: Option<&'a Node<'a>>[Variance],
                 default: Option<&'a Node<'a>>[FlowType],
+                uses_extends_bound: bool,
             },
             TypeParameterInstantiation[Flow] {
                 params: NodeList<'a>[FlowType],
@@ -702,6 +774,11 @@ macro_rules! nodekind_defs {
             EnumBooleanMember {
                 id: &'a Node<'a>[Identifier],
                 init: &'a Node<'a>[BooleanLiteral],
+            },
+            ComponentParameter {
+                name: &'a Node<'a>[Identifier],
+                local: &'a Node<'a>[Identifier],
+                shorthand: bool,
             },
 
             TSTypeAnnotation {
@@ -825,7 +902,7 @@ macro_rules! nodekind_defs {
                 extends_type: &'a Node<'a>,
                 check_type: &'a Node<'a>,
                 true_type: &'a Node<'a>,
-                false_t_ype: &'a Node<'a>,
+                false_type: &'a Node<'a>,
             },
             TSTypeLiteral {
                 members: NodeList<'a>,
@@ -853,7 +930,11 @@ macro_rules! nodekind_defs {
             TSCallSignatureDeclaration {
                 params: NodeList<'a>,
                 return_type: Option<&'a Node<'a>>,
-            }
+            },
+            TSModifiers {
+                accessibility: NodeLabel,
+                readonly: bool,
+            },
         }
         }
     };

@@ -71,9 +71,9 @@ TEST_F(HandleTest, AddAndRemoveTest) {
 }
 
 TEST_F(HandleTest, ValueAddAndRemoveTest) {
-  auto str1 = Handle<>(runtime, HermesValue::encodeNumberValue(1));
-  auto str2 = Handle<>(runtime, HermesValue::encodeNumberValue(2));
-  auto str3 = Handle<>(runtime, HermesValue::encodeNumberValue(3));
+  auto str1 = Handle<>(runtime, HermesValue::encodeTrustedNumberValue(1));
+  auto str2 = Handle<>(runtime, HermesValue::encodeTrustedNumberValue(2));
+  auto str3 = Handle<>(runtime, HermesValue::encodeTrustedNumberValue(3));
 
   {
     MutableHandle<> h1(runtime, str1.get());
@@ -123,22 +123,22 @@ TEST_F(HandleTest, ValueAddAndRemoveTest) {
 
 TEST_F(HandleTest, MarkTest) {
   GCScope gcScope{runtime};
-  Handle<> v1(runtime, HermesValue::encodeNumberValue(1));
+  Handle<> v1(runtime, HermesValue::encodeTrustedNumberValue(1));
   (void)v1;
-  Handle<> v2(runtime, HermesValue::encodeNumberValue(2));
+  Handle<> v2(runtime, HermesValue::encodeTrustedNumberValue(2));
   (void)v2;
   ASSERT_EQ(2u, gcScope.getHandleCountDbg());
 
   auto marker = gcScope.createMarker();
 
-  Handle<> v3(runtime, HermesValue::encodeNumberValue(3));
+  Handle<> v3(runtime, HermesValue::encodeTrustedNumberValue(3));
   (void)v3;
   ASSERT_EQ(3u, gcScope.getHandleCountDbg());
 
   gcScope.flushToMarker(marker);
   ASSERT_EQ(2u, gcScope.getHandleCountDbg());
 
-  Handle<> v4(runtime, HermesValue::encodeNumberValue(4));
+  Handle<> v4(runtime, HermesValue::encodeTrustedNumberValue(4));
   (void)v4;
   ASSERT_EQ(3u, gcScope.getHandleCountDbg());
 

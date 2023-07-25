@@ -26,7 +26,8 @@ function testComplex(x, y, z) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [testAnd, testOr, testNullish, testComplex]
+// CHECK-NEXT:globals = [testAnd, testOr, testNullish, testComplex]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %testAnd#0#1()#2, %0
@@ -44,7 +45,7 @@ function testComplex(x, y, z) {
 // CHECK-NEXT:function_end
 
 // CHECK:function testAnd#0#1(x, y)#2
-// CHECK-NEXT:frame = [x#2, y#2]
+// CHECK-NEXT:S{testAnd#0#1()#2} = [x#2, y#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{testAnd#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#2], %0
@@ -64,7 +65,7 @@ function testComplex(x, y, z) {
 // CHECK-NEXT:function_end
 
 // CHECK:function testOr#0#1(x, y)#3
-// CHECK-NEXT:frame = [x#3, y#3]
+// CHECK-NEXT:S{testOr#0#1()#3} = [x#3, y#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{testOr#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#3], %0
@@ -84,7 +85,7 @@ function testComplex(x, y, z) {
 // CHECK-NEXT:function_end
 
 // CHECK:function testNullish#0#1(x, y)#4
-// CHECK-NEXT:frame = [x#4, y#4]
+// CHECK-NEXT:S{testNullish#0#1()#4} = [x#4, y#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{testNullish#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#4], %0
@@ -105,7 +106,7 @@ function testComplex(x, y, z) {
 // CHECK-NEXT:function_end
 
 // CHECK:function testComplex#0#1(x, y, z)#5
-// CHECK-NEXT:frame = [x#5, y#5, z#5]
+// CHECK-NEXT:S{testComplex#0#1()#5} = [x#5, y#5, z#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{testComplex#0#1()#5}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#5], %0

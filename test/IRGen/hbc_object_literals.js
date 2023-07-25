@@ -69,7 +69,8 @@ var obj4 = {
 // Auto-generated content below. Please do not modify manually.
 
 // IRGEN:function global#0()#1 : undefined
-// IRGEN-NEXT:frame = [], globals = [obj1, obj2, obj3, obj4]
+// IRGEN-NEXT:globals = [obj1, obj2, obj3, obj4]
+// IRGEN-NEXT:S{global#0()#1} = []
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst 7 : number, "a" : string, "hello" : string, "b" : string, 1 : number, "c" : string, null : null, "d" : string, null : null, "e" : string, true : boolean, "f" : string, null : null, "g" : string, 2 : number
 // IRGEN-NEXT:  %1 = HBCLoadConstInst undefined : undefined
@@ -110,15 +111,15 @@ var obj4 = {
 // IRGEN-NEXT:function_end
 
 // IRGEN:function f#0#1()#2 : undefined
-// IRGEN-NEXT:frame = []
+// IRGEN-NEXT:S{f#0#1()#2} = []
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCLoadConstInst undefined : undefined
 // IRGEN-NEXT:  %1 = ReturnInst %0 : undefined
 // IRGEN-NEXT:function_end
 
 // BCGEN:Bytecode File Information:
-// BCGEN-NEXT:  Bytecode version number: 93
-// BCGEN-NEXT:  Source hash: 0000000000000000000000000000000000000000
+// BCGEN-NEXT:  Bytecode version number: {{.*}}
+// BCGEN-NEXT:  Source hash: {{.*}}
 // BCGEN-NEXT:  Function count: 2
 // BCGEN-NEXT:  String count: 24
 // BCGEN-NEXT:  BigInt count: 0
@@ -199,7 +200,7 @@ var obj4 = {
 // BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:Function<global>(1 params, 5 registers, 0 symbols):
-// BCGEN-NEXT:Offset in debug table: source 0x0000, lexical 0x0000, textified callees 0x0000
+// BCGEN-NEXT:Offset in debug table: source 0x0000, scope 0x0000, textified callees 0x0000
 // BCGEN-NEXT:    DeclareGlobalVar  "obj1"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj2"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj3"
@@ -253,37 +254,37 @@ var obj4 = {
 
 // BCGEN:Debug source table:
 // BCGEN-NEXT:  0x0000  function idx 0, starts at line 11 col 1
-// BCGEN-NEXT:    bc 32: line 11 col 12
-// BCGEN-NEXT:    bc 45: line 11 col 12
-// BCGEN-NEXT:    bc 53: line 11 col 10
-// BCGEN-NEXT:    bc 61: line 15 col 12
-// BCGEN-NEXT:    bc 65: line 15 col 12
-// BCGEN-NEXT:    bc 69: line 15 col 12
-// BCGEN-NEXT:    bc 73: line 15 col 12
-// BCGEN-NEXT:    bc 77: line 15 col 12
-// BCGEN-NEXT:    bc 81: line 15 col 12
-// BCGEN-NEXT:    bc 88: line 15 col 12
-// BCGEN-NEXT:    bc 92: line 15 col 12
-// BCGEN-NEXT:    bc 96: line 15 col 12
-// BCGEN-NEXT:    bc 100: line 15 col 12
-// BCGEN-NEXT:    bc 104: line 15 col 12
-// BCGEN-NEXT:    bc 108: line 15 col 12
-// BCGEN-NEXT:    bc 112: line 15 col 12
-// BCGEN-NEXT:    bc 116: line 15 col 12
-// BCGEN-NEXT:    bc 120: line 15 col 12
-// BCGEN-NEXT:    bc 124: line 15 col 12
-// BCGEN-NEXT:    bc 128: line 15 col 12
-// BCGEN-NEXT:    bc 132: line 15 col 12
-// BCGEN-NEXT:    bc 136: line 15 col 10
-// BCGEN-NEXT:    bc 152: line 37 col 12
-// BCGEN-NEXT:    bc 156: line 37 col 10
-// BCGEN-NEXT:    bc 172: line 53 col 12
-// BCGEN-NEXT:    bc 176: line 53 col 10
-// BCGEN-NEXT:  0x0052  end of debug source table
+// BCGEN-NEXT:    bc 32: line 11 col 12 scope offset 0x0000 env r2
+// BCGEN-NEXT:    bc 45: line 11 col 12 scope offset 0x0000 env r2
+// BCGEN-NEXT:    bc 53: line 11 col 10 scope offset 0x0000 env r1
+// BCGEN-NEXT:    bc 61: line 15 col 12 scope offset 0x0000 env r3
+// BCGEN-NEXT:    bc 65: line 15 col 12 scope offset 0x0000 env r3
+// BCGEN-NEXT:    bc 69: line 15 col 12 scope offset 0x0000 env r3
+// BCGEN-NEXT:    bc 73: line 15 col 12 scope offset 0x0000 env r3
+// BCGEN-NEXT:    bc 77: line 15 col 12 scope offset 0x0000 env r3
+// BCGEN-NEXT:    bc 81: line 15 col 12 scope offset 0x0000 env r3
+// BCGEN-NEXT:    bc 88: line 15 col 12 scope offset 0x0000 env r4
+// BCGEN-NEXT:    bc 92: line 15 col 12 scope offset 0x0000 env r4
+// BCGEN-NEXT:    bc 96: line 15 col 12 scope offset 0x0000 env r4
+// BCGEN-NEXT:    bc 100: line 15 col 12 scope offset 0x0000 env r4
+// BCGEN-NEXT:    bc 104: line 15 col 12 scope offset 0x0000 env r4
+// BCGEN-NEXT:    bc 108: line 15 col 12 scope offset 0x0000 env r4
+// BCGEN-NEXT:    bc 112: line 15 col 12 scope offset 0x0000 env r4
+// BCGEN-NEXT:    bc 116: line 15 col 12 scope offset 0x0000 env r4
+// BCGEN-NEXT:    bc 120: line 15 col 12 scope offset 0x0000 env r4
+// BCGEN-NEXT:    bc 124: line 15 col 12 scope offset 0x0000 env r4
+// BCGEN-NEXT:    bc 128: line 15 col 12 scope offset 0x0000 env r4
+// BCGEN-NEXT:    bc 132: line 15 col 12 scope offset 0x0000 env r3
+// BCGEN-NEXT:    bc 136: line 15 col 10 scope offset 0x0000 env r1
+// BCGEN-NEXT:    bc 152: line 37 col 12 scope offset 0x0000 env r3
+// BCGEN-NEXT:    bc 156: line 37 col 10 scope offset 0x0000 env r1
+// BCGEN-NEXT:    bc 172: line 53 col 12 scope offset 0x0000 env r3
+// BCGEN-NEXT:    bc 176: line 53 col 10 scope offset 0x0000 env r1
+// BCGEN-NEXT:  0x0086  end of debug source table
 
-// BCGEN:Debug lexical table:
-// BCGEN-NEXT:  0x0000  lexical parent: none, variable count: 0
-// BCGEN-NEXT:  0x0002  end of debug lexical table
+// BCGEN:Debug scope descriptor table:
+// BCGEN-NEXT:  0x0000  lexical parent:   none, flags:    , variable count: 0
+// BCGEN-NEXT:  0x0003  end of debug scope descriptor table
 
 // BCGEN:Textified callees table:
 // BCGEN-NEXT:  0x0000  entries: 0

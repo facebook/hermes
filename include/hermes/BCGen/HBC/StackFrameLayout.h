@@ -24,11 +24,10 @@ namespace hbc {
 ///
 /// \verbatim
 ///   -----------------------------------------------
-///    2+N  callee localN    : HermesValue               -- stackPtr
+///    1+N  callee localN    : HermesValue               -- stackPtr
 ///    ...
-///    2    callee local0    : HermesValue
-///    1    scratch          : HermesValue
-///    0    debugEnvironment : Environment*
+///    1    callee local0    : HermesValue
+///    0    scratch          : HermesValue
 ///    ----------------------------------------------
 ///   -1    previousFrame    : NativeValue(HermesValue*) -- calleeFramePtr
 ///   -2    savedIP          : NativeValue(void*)
@@ -44,7 +43,6 @@ namespace hbc {
 ///    ...
 ///         caller local 0   : HermesValue
 ///         scratch          : HermesValue
-///         debugEnvironment : Environment*
 ///    ----------------------------------------------
 ///                                                      -- callerFramePtr
 /// \endverbatim
@@ -66,8 +64,6 @@ namespace hbc {
 /// - The caller populates calleeClosureOrCB, newTarget and argCount.
 /// - The caller saves the current CodeBlock, IP and frame offset in the
 /// corresponding fields.
-/// - "debugEnvironment" is initialized to "undefined". (It will be populated
-/// later by the callee.)
 /// - Execution is transferred to callee.
 /// - The callee updates the global "frame" register to point to the top of the
 /// stack, i.e. the row labelled "0" in the table.
@@ -83,17 +79,9 @@ namespace hbc {
 struct StackFrameLayout {
   enum {
     /// Offset of the first local register.
-    FirstLocal = 2,
+    FirstLocal = 1,
     /// A scratch register for use by the VM.
-    Scratch = 1,
-    /// The environment associated with the callee's stack frame, that is, the
-    /// Environment created by the last CreateEnvironment instruction to execute
-    /// in the callee's stack frame. It is null if debugging support is not
-    /// present, or if no CreateEnvironment instruction has executed, which is
-    /// possible if we are early in the code block, or with optimized code. This
-    /// is stored in the call frame so that the debugger can gain access to the
-    /// Environment at arbitrary frames. Note this is managed by the GC.
-    DebugEnvironment = 0,
+    Scratch = 0,
     /// Saved value of the caller's "frame" register, which points to the first
     /// register of the caller's stack frame.
     PreviousFrame = -1,
@@ -128,7 +116,7 @@ struct StackFrameLayout {
 
     /// The number of additional registers the callee needs to allocate in the
     /// beginning of its frame.
-    CalleeExtraRegistersAtStart = Scratch - DebugEnvironment + 1,
+    CalleeExtraRegistersAtStart = Scratch + 1,
   };
 
   /// Calculate the number of register slots needed for an outgoing call: it

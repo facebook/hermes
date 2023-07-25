@@ -10,7 +10,7 @@
 // Make sure we can remove all trampolines from our code.
 
 //CHECK-LABEL:function test_one#0#1(x, y, z)#2 : string
-//CHECK-NEXT:frame = []
+//CHECK-NEXT:S{test_one#0#1()#2} = []
 //CHECK-NEXT:  %BB0:
 
 
@@ -51,7 +51,7 @@ function test_one(x,y,z) {
 }
 
 //CHECK-LABEL:function test_two#0#1(x, y, z)#3 : undefined
-//CHECK-NEXT:frame = []
+//CHECK-NEXT:S{test_two#0#1()#3} = []
 //CHECK-NEXT:  %BB0:
 //CHECK-NEXT:    %0 = CreateScopeInst %S{test_two#0#1()#3}
 //CHECK-NEXT:    %1 = ReturnInst undefined : undefined

@@ -16,6 +16,7 @@ import type {Scope} from './scope/Scope';
 import {
   BlockScope,
   CatchScope,
+  ComponentScope,
   ClassScope,
   DeclareModuleScope,
   ForScope,
@@ -223,6 +224,12 @@ class ScopeManager {
   ): FunctionExpressionNameScope {
     return this._nestScope(
       new FunctionExpressionNameScope(this, this._assertCurrentScope(), node),
+    );
+  }
+
+  nestComponentScope(node: ComponentScope['block']): ComponentScope {
+    return this._nestScope(
+      new ComponentScope(this, this._assertCurrentScope(), node),
     );
   }
 

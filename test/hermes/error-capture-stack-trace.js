@@ -27,7 +27,7 @@ function a(arg) {
 
 // Does not skip frames by default
 print(a());
-//CHECK: [object Object]
+//CHECK: Error
 //CHECK-NEXT:  at c ({{.*/error-capture-stack-trace.js}}:13:26)
 //CHECK-NEXT:  at f ({{.*/error-capture-stack-trace.js}}:19:13)
 //CHECK-NEXT:  at b ({{.*/error-capture-stack-trace.js}}:21:11)
@@ -36,7 +36,7 @@ print(a());
 
 // Skips the top frame (`c`)
 print(a(c));
-//CHECK-NEXT: [object Object]
+//CHECK-NEXT: Error
 //CHECK-NEXT:  at f ({{.*/error-capture-stack-trace.js}}:19:13)
 //CHECK-NEXT:  at b ({{.*/error-capture-stack-trace.js}}:21:11)
 //CHECK-NEXT:  at a ({{.*/error-capture-stack-trace.js}}:25:11)
@@ -44,28 +44,28 @@ print(a(c));
 
 // Skips everything down to `b`
 print(a(b));
-//CHECK-NEXT: [object Object]
+//CHECK-NEXT: Error
 //CHECK-NEXT:  at a ({{.*/error-capture-stack-trace.js}}:25:11)
 //CHECK-NEXT:  at global ({{.*/error-capture-stack-trace.js}}:46:8)
 
 // Skips everything down to `a`
 print(a(a));
-//CHECK-NEXT: [object Object]
+//CHECK-NEXT: Error
 //CHECK-NEXT:  at global ({{.*/error-capture-stack-trace.js}}:52:8)
 
 // Drills through a bound sentinel function to reach the underlying JSFunction
 var bound_a = a.bind(null);
 print(bound_a(bound_a));
-//CHECK-NEXT: [object Object]
+//CHECK-NEXT: Error
 //CHECK-NEXT:  at global ({{.*}})
 
 // Skips the entire stack if the sentinel is a function that's not found
 print(a(() => {}));
-//CHECK: [object Object]
+//CHECK: Error
 //CHECK-EMPTY
 
 // Calls toString() on the target object
-var err = {toString() { return 'Foo'; }};
+var err = {get name() { return 'Foo'; }};
 Error.captureStackTrace(err);
 print(err.stack);
 //CHECK-NEXT: Foo
@@ -99,10 +99,10 @@ captureOnInvalid(true)
 
 // Formats the stack trace lazily and caches the result
 var description = 'Foo';
-var toStringCalled = false;
-var err = {toString() { toStringCalled = true; return description; }};
+var getNameCalled = false;
+var err = {get name() { getNameCalled = true; return description; }};
 Error.captureStackTrace(err);
-print(toStringCalled);
+print(getNameCalled);
 //CHECK: false
 print(err.stack);
 //CHECK: Foo
@@ -142,10 +142,10 @@ print(Object.getOwnPropertySymbols(target).length);
 //CHECK: 0
 
 // Captures a new stack with each call.
-// Does not cache values of target.toString() between stacks
-// Also, calls target.toString() whenever a new stack needs to be rendered.
+// Does not cache values of target.name between stacks
+// Also, calls target.name whenever a new stack needs to be rendered.
 var description = 'First uncached getter call';
-var target = {toString() { return description; }};
+var target = {get name() { return description; }};
 (function firstCapture() { Error.captureStackTrace(target); })();
 (function secondCapture() { Error.captureStackTrace(target); })();
 print(target.stack);

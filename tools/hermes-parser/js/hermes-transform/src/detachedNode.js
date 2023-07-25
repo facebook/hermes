@@ -32,15 +32,30 @@ export function getOriginalNode(node: MaybeDetachedNode<ESNode>): ?ESNode {
   return node[ORIGINAL_NODE];
 }
 
+/* $FlowExpectedError[unclear-type] Type safety is not needed for generated
+ * code, this avoids us always having to pass a generic property within codegen */
+export function asDetachedNodeForCodeGen(node: any): ?DetachedNode<any> {
+  if (node == null) {
+    return null;
+  }
+
+  if (isDetachedNode(node)) {
+    return node;
+  }
+
+  return shallowCloneNode<ESNode>(node, {});
+}
+
 export const asDetachedNode: {
   <T: ESNode>(
     node: MaybeDetachedNode<T>,
     config?: {useDeepClone: boolean},
   ): DetachedNode<T>,
-  <T: ESNode>(
+  <T: ?ESNode>(
     node: ?MaybeDetachedNode<T>,
     config?: {useDeepClone: boolean},
   ): ?DetachedNode<T>,
+  // $FlowFixMe[incompatible-exact]
 } = <T: ESNode>(
   node: ?MaybeDetachedNode<T>,
   {useDeepClone}: {useDeepClone: boolean} = {useDeepClone: false},
@@ -62,7 +77,7 @@ export const asDetachedNode: {
 // used by the node type function codegen
 export function detachedProps<T: BaseNode>(
   parent: ?ESNode,
-  props: $ReadOnly<$Partial<{...}>>,
+  props: $ReadOnly<Partial<{...}>>,
   config: DetachConfig = {},
 ): DetachedNode<T> {
   // $FlowExpectedError[incompatible-type]
@@ -129,7 +144,7 @@ export function detachedProps<T: BaseNode>(
  */
 export function shallowCloneNode<T: ESNode>(
   node: T,
-  newProps: $ReadOnly<$Partial<{...}>>,
+  newProps: $ReadOnly<Partial<{...}>>,
   config?: DetachConfig = {},
 ): DetachedNode<T> {
   return detachedProps(
@@ -148,7 +163,7 @@ export function shallowCloneNode<T: ESNode>(
  */
 export function deepCloneNode<T: ESNode>(
   node: T,
-  newProps: $ReadOnly<$Partial<{...}>>,
+  newProps: $ReadOnly<Partial<{...}>>,
 ): DetachedNode<T> {
   const clone: DetachedNode<T> = Object.assign(
     JSON.parse(

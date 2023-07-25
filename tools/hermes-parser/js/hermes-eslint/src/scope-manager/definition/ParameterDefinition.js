@@ -10,14 +10,19 @@
 
 'use strict';
 
-import type {AFunction, Identifier} from 'hermes-estree';
+import type {
+  AFunction,
+  Identifier,
+  ComponentDeclaration,
+  DeclareComponent,
+} from 'hermes-estree';
 
 import {DefinitionType} from './DefinitionType';
 import {DefinitionBase} from './DefinitionBase';
 
 class ParameterDefinition extends DefinitionBase<
   typeof DefinitionType.Parameter,
-  AFunction,
+  AFunction | ComponentDeclaration | DeclareComponent,
   null,
   Identifier,
 > {

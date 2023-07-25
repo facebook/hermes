@@ -22,7 +22,8 @@ function f2(a, b) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [f1, f2]
+// CHECK-NEXT:globals = [f1, f2]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %f1#0#1()#2, %0
@@ -36,7 +37,7 @@ function f2(a, b) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f1#0#1(a, b)#2
-// CHECK-NEXT:frame = [a#2, b#2]
+// CHECK-NEXT:S{f1#0#1()#2} = [a#2, b#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{f1#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %a, [a#2], %0
@@ -58,7 +59,7 @@ function f2(a, b) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f2#0#1(a, b)#3
-// CHECK-NEXT:frame = [a#3, b#3]
+// CHECK-NEXT:S{f2#0#1()#3} = [a#3, b#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{f2#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %a, [a#3], %0

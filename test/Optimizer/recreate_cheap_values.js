@@ -16,7 +16,7 @@ function poszero(f) {
 // CHECK-NEXT:  %{{[0-9]+}}    = ImplicitMovInst %[[_1:[0-9]+]] : undefined
 // CHECK-NEXT:  %{{[0-9]+}}    = ImplicitMovInst %[[_2]] : number
 // CHECK-NEXT:  %{{[0-9]+}}    = ImplicitMovInst %[[_2]] : number
-// CHECK-NEXT:  %[[_6:[0-9]+]] = HBCCallNInst %{{[0-9]+}}, %[[_1]] : undefined, %[[_2]] : number, %[[_2]] : number
+// CHECK-NEXT:  %[[_6:[0-9]+]] = HBCCallNInst %{{[0-9]+}}, undefined : undefined, %[[_1]] : undefined, %[[_2]] : number, %[[_2]] : number
 // CHECK-NEXT:  %{{[0-9]+}}    = ReturnInst %[[_6]]
 
 // Negative zero is NOT 'cheap'.

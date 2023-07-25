@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @flow strict-local
+ * @flow strict
  * @format
  */
 
@@ -16,6 +16,7 @@ import type {ParserOptions} from './ParserOptions';
 import * as HermesParser from './HermesParser';
 import HermesToBabelAdapter from './HermesToBabelAdapter';
 import HermesToESTreeAdapter from './HermesToESTreeAdapter';
+import FlowVisitorKeys from './generated/ESTreeVisitorKeys';
 
 const DEFAULTS = {
   flow: 'detect',
@@ -83,8 +84,11 @@ export function parse(
 }
 
 export type {ParserOptions} from './ParserOptions';
+export * from './ParserOptions';
 export * from './traverse/SimpleTraverser';
 export * from './transform/SimpleTransform';
 export * from './traverse/getVisitorKeys';
+export {FlowVisitorKeys};
 export * as astArrayMutationHelpers from './transform/astArrayMutationHelpers';
 export * as astNodeMutationHelpers from './transform/astNodeMutationHelpers';
+export {default as mutateESTreeASTForPrettier} from './utils/mutateESTreeASTForPrettier';

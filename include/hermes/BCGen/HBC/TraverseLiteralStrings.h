@@ -33,6 +33,7 @@ void traverseFunctions(
     Module *M,
     std::function<bool(Function *)> shouldVisitFunction,
     std::function<void(llvh::StringRef)> traversal,
+    std::function<void(llvh::StringRef)> functionSourceTraversal,
     bool stripFunctionNames);
 
 /// Calls \p traversal with the name of the CommonJS module of every function

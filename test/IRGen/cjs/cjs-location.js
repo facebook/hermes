@@ -12,7 +12,7 @@ x = 10;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:source location: [<global>:1:1 ... <global>:1:1)
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:; <global>:1:1
@@ -28,7 +28,7 @@ x = 10;
 // CHECK-NEXT:function_end
 
 // CHECK:function cjs_module#0#1(exports, require, module)#2
-// CHECK-NEXT:frame = [exports#2, require#2, module#2]
+// CHECK-NEXT:S{cjs_module#0#1()#2} = [exports#2, require#2, module#2]
 // CHECK-NEXT:source location: [<stdin>:10:1 ... <stdin>:10:8)
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:; <stdin>:10:1

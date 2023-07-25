@@ -16,14 +16,14 @@
     "eslint-plugin-fb-flow": "^0.0.4",
     "eslint-plugin-flowtype": "^8.0.3",
     "eslint-plugin-jest": "^25.2.4",
-    "eslint-plugin-prettier": "^4.0.0",
-    "flow-bin": "^0.201.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "flow-bin": "^0.213.0",
     "glob": "^8.0.3",
     "jest": "^29.2.2",
     "jest-specific-snapshot": "^5.0.0",
     "mkdirp": "^1.0.4",
     "patch-package": "^6.5.0",
-    "prettier": "2.7.1"
+    "prettier": "2.8.8"
   },
   "resolutions": {
     "jest-snapshot": "^29.2.2"
@@ -37,11 +37,12 @@
     "test": "jest"
   },
   "workspaces": [
+    "flow-api-translator",
     "hermes-eslint",
     "hermes-estree",
+    "hermes-parser",
     "hermes-transform",
-    "hermes-translate",
-    "hermes-parser"
+    "babel-plugin-syntax-hermes-parser"
   ],
   "dependencies": {}
 }

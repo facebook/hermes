@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import static org.fest.assertions.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import android.content.res.AssetManager;
 import android.test.InstrumentationTestCase;
@@ -159,26 +159,19 @@ public class HermesIntlTest262 extends InstrumentationTestCase {
         Arrays.asList(
             "test262/test/intl402/DateTimeFormat/taint-Object-prototype-date-time-components.js",
             "test262/test/intl402/DateTimeFormat/constructor-options-order.js",
-            "test262/test/intl402/DateTimeFormat/constructor-options-style-conflict.js",
+            "test262/test/intl402/DateTimeFormat/constructor-options-order-timedate-style.js",
             "test262/test/intl402/DateTimeFormat/timezone-canonicalized.js",
             "test262/test/intl402/DateTimeFormat/timezone-utc.js",
-            // We dont' support dateStyle, timeStyle, dayPeriod, and fractionalSecondDigits.
-            "test262/test/intl402/DateTimeFormat/constructor-options-throwing-getters-timedate-style.js",
+            // We dont' support dayPeriod, and fractionalSecondDigits.
             "test262/test/intl402/DateTimeFormat/constructor-options-throwing-getters-dayPeriod.js",
             "test262/test/intl402/DateTimeFormat/constructor-options-fractionalSecondDigits-valid.js",
             "test262/test/intl402/DateTimeFormat/constructor-options-fractionalSecondDigits-invalid.js",
             "test262/test/intl402/DateTimeFormat/constructor-options-dayPeriod-valid.js",
             "test262/test/intl402/DateTimeFormat/constructor-options-order-fractionalSecondDigits.js",
             "test262/test/intl402/DateTimeFormat/constructor-options-throwing-getters-fractionalSecondDigits.js",
-            "test262/test/intl402/DateTimeFormat/constructor-options-order-timedate-style.js",
             "test262/test/intl402/DateTimeFormat/constructor-options-dayPeriod-invalid.js",
             "test262/test/intl402/DateTimeFormat/constructor-options-order-dayPeriod.js",
-            "test262/test/intl402/DateTimeFormat/constructor-options-dateStyle-invalid.js",
-            "test262/test/intl402/DateTimeFormat/constructor-options-dateStyle-valid.js",
-            "test262/test/intl402/DateTimeFormat/constructor-options-timeStyle-invalid.js",
-            "test262/test/intl402/DateTimeFormat/constructor-options-timeStyle-valid.js",
             "test262/test/intl402/DateTimeFormat/constructor-options-timeZoneName-valid.js",
-            "test262/test/intl402/DateTimeFormat/prototype/format/timedatestyle-en.js",
             "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-narrow-en.js",
             "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-short-en.js",
             "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-long-en.js",

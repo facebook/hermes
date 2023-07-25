@@ -59,7 +59,8 @@ function test_async() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : string
-// CHECK-NEXT:frame = [], globals = [main, return_types, test_unused_and_duplicate_params, test_rest_arguments, test_generator, test_async]
+// CHECK-NEXT:globals = [main, return_types, test_unused_and_duplicate_params, test_rest_arguments, test_generator, test_async]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %main#0#1()#2 : string|number, %0
@@ -78,20 +79,20 @@ function test_async() {
 // CHECK-NEXT:function_end
 
 // CHECK:function main#0#1(p)#2 : string|number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{main#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{main#0#1()#2}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#1#2()#3 : number, %0
 // CHECK-NEXT:  %2 = CreateFunctionInst %bar#1#2()#4 : string|number|bigint, %0
 // CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, %p, "p" : string
-// CHECK-NEXT:  %4 = CallInst %1 : closure, undefined : undefined, 1 : number, 2 : number
-// CHECK-NEXT:  %5 = CallInst %2 : closure, undefined : undefined, 1 : number, 2 : number
+// CHECK-NEXT:  %4 = CallInst %1 : closure, undefined : undefined, undefined : undefined, 1 : number, 2 : number
+// CHECK-NEXT:  %5 = CallInst %2 : closure, undefined : undefined, undefined : undefined, 1 : number, 2 : number
 // CHECK-NEXT:  %6 = BinaryOperatorInst '+', %4 : number, %5 : string|number|bigint
 // CHECK-NEXT:  %7 = ReturnInst %6 : string|number
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#1#2(x : number, y : number)#3 : number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{foo#1#2()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#1#2()#3}
 // CHECK-NEXT:  %1 = BinaryOperatorInst '+', 1 : number, 2 : number
@@ -99,7 +100,7 @@ function test_async() {
 // CHECK-NEXT:function_end
 
 // CHECK:function bar#1#2(x, y)#4 : string|number|bigint
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{bar#1#2()#4} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{bar#1#2()#4}
 // CHECK-NEXT:  %1 = BinaryOperatorInst '+', %x, %y
@@ -107,18 +108,18 @@ function test_async() {
 // CHECK-NEXT:function_end
 
 // CHECK:function return_types#0#1(p)#5 : number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{return_types#0#1()#5} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{return_types#0#1()#5}
 // CHECK-NEXT:  %1 = CreateFunctionInst %builder#1#5()#6 : number, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined
-// CHECK-NEXT:  %3 = CallInst %1 : closure, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %1 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %4 = BinaryOperatorInst '+', %2 : number, %3 : number
 // CHECK-NEXT:  %5 = ReturnInst %4 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function builder#1#5()#6 : number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{builder#1#5()#6} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{builder#1#5()#6}
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "k" : string
@@ -127,7 +128,7 @@ function test_async() {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_unused_and_duplicate_params#0#1()#7 : object
-// CHECK-NEXT:frame = [foo2#7 : closure]
+// CHECK-NEXT:S{test_unused_and_duplicate_params#0#1()#7} = [foo2#7 : closure]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_unused_and_duplicate_params#0#1()#7}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo2#1#7()#8 : string|number, %0
@@ -141,7 +142,7 @@ function test_async() {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo2#1#7(a, b, c, d)#8 : string|number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{foo2#1#7()#8} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo2#1#7()#8}
 // CHECK-NEXT:  %1 = BinaryOperatorInst '+', %a, 2 : number
@@ -150,51 +151,51 @@ function test_async() {
 // CHECK-NEXT:function_end
 
 // CHECK:function bar1#1#7(e)#9 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{bar1#1#7()#9} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{bar1#1#7()#9}
 // CHECK-NEXT:  %1 = LoadFrameInst [foo2#7@test_unused_and_duplicate_params] : closure, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, %e, 2 : number, 1 : number, undefined : undefined, undefined : undefined, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined, %e, 2 : number, 1 : number, undefined : undefined, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function bar2#1#7(e)#10 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{bar2#1#7()#10} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{bar2#1#7()#10}
 // CHECK-NEXT:  %1 = LoadFrameInst [foo2#7@test_unused_and_duplicate_params] : closure, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, %e, 2 : number, 3 : number, undefined : undefined, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined, %e, 2 : number, 3 : number, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_rest_arguments#0#1()#11
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{test_rest_arguments#0#1()#11} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_rest_arguments#0#1()#11}
 // CHECK-NEXT:  %1 = CreateFunctionInst %baz#1#11()#12, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, 100 : number
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined, 100 : number
 // CHECK-NEXT:  %3 = ReturnInst %2
 // CHECK-NEXT:function_end
 
 // CHECK:function baz#1#11()#12
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{baz#1#11()#12} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{baz#1#11()#12}
-// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.copyRestArgs] : number, undefined : undefined, 0 : number
+// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.copyRestArgs] : number, undefined : undefined, undefined : undefined, 0 : number
 // CHECK-NEXT:  %2 = ReturnInst %1
 // CHECK-NEXT:function_end
 
 // CHECK:function test_generator#0#1()#13 : object
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{test_generator#0#1()#13} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_generator#0#1()#13}
 // CHECK-NEXT:  %1 = CreateFunctionInst %gen#1#13()#14 : object, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, 1 : number
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined, 1 : number
 // CHECK-NEXT:  %3 = ReturnInst %2 : object
 // CHECK-NEXT:function_end
 
 // CHECK:function gen#1#13()#14 : object
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{gen#1#13()#14} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{gen#1#13()#14}
 // CHECK-NEXT:  %1 = CreateGeneratorInst %?anon_0_gen#13#14()#15, %0
@@ -202,7 +203,7 @@ function test_async() {
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_gen#13#14(x)#15
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{?anon_0_gen#13#14()#15} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StartGeneratorInst
 // CHECK-NEXT:  %1 = CreateScopeInst %S{?anon_0_gen#13#14()#15}
@@ -217,27 +218,27 @@ function test_async() {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_async#0#1()#16
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{test_async#0#1()#16} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_async#0#1()#16}
 // CHECK-NEXT:  %1 = CreateFunctionInst %asyncFn#1#16()#17, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, 1 : number
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined, 1 : number
 // CHECK-NEXT:  %3 = ReturnInst %2
 // CHECK-NEXT:function_end
 
 // CHECK:function asyncFn#1#16()#17
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{asyncFn#1#16()#17} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{asyncFn#1#16()#17}
 // CHECK-NEXT:  %1 = CreateArgumentsInst
 // CHECK-NEXT:  %2 = CreateFunctionInst %?anon_0_asyncFn#16#17()#18 : object, %0
 // CHECK-NEXT:  %3 = GetBuiltinClosureInst [HermesBuiltin.spawnAsync] : number
-// CHECK-NEXT:  %4 = CallInst %3 : closure, undefined : undefined, %2 : closure, %this, %1 : object
+// CHECK-NEXT:  %4 = CallInst %3 : closure, undefined : undefined, undefined : undefined, %2 : closure, %this, %1 : object
 // CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_asyncFn#16#17()#18 : object
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{?anon_0_asyncFn#16#17()#18} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_asyncFn#16#17()#18}
 // CHECK-NEXT:  %1 = CreateGeneratorInst %?anon_0_?anon_0_asyncFn#17#18()#19, %0
@@ -245,7 +246,7 @@ function test_async() {
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_?anon_0_asyncFn#17#18(x)#19
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{?anon_0_?anon_0_asyncFn#17#18()#19} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StartGeneratorInst
 // CHECK-NEXT:  %1 = CreateScopeInst %S{?anon_0_?anon_0_asyncFn#17#18()#19}

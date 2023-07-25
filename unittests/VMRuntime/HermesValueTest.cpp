@@ -139,7 +139,7 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
   for (int i = 0; i < 1000; i++) {
     // Check that we can encode the whole range of doubles.
     double value = getRandomDouble(DBL_MIN, DBL_MAX);
-    auto V = HermesValue::encodeDoubleValue(value);
+    auto V = HermesValue::encodeUntrustedNumberValue(value);
     EXPECT_TRUE(V.isDouble());
     EXPECT_TRUE(V.isNumber());
     EXPECT_FALSE(V.isUndefined());
@@ -159,7 +159,7 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
   for (int i = 0; i < 1000; i++) {
     // Check that we can encode the whole range of ints.
     int32_t value = getRandomInt32(INT32_MIN, INT32_MAX);
-    auto V = HermesValue::encodeNumberValue(value);
+    auto V = HermesValue::encodeTrustedNumberValue(value);
     EXPECT_TRUE(V.isNumber());
     EXPECT_TRUE(V.isDouble());
     EXPECT_FALSE(V.isNativeValue());
@@ -306,9 +306,9 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
 
 TEST(HermesValueTest, NanTest) {
   double v1 = HermesValue::encodeNaNValue().getDouble();
-  double v2 =
-      HermesValue::encodeDoubleValue(std::numeric_limits<double>::quiet_NaN())
-          .getDouble();
+  double v2 = HermesValue::encodeUntrustedNumberValue(
+                  std::numeric_limits<double>::quiet_NaN())
+                  .getDouble();
   EXPECT_TRUE(std::isnan(v1));
   EXPECT_TRUE(std::isnan(v2));
   int64_t v1_int = llvh::DoubleToBits(v1);
@@ -320,9 +320,9 @@ TEST(HermesValueTest, HVConstantsTest) {
   auto A = HVConstants::kZero;
   auto B = HVConstants::kOne;
   auto C = HVConstants::kNegOne;
-  auto D = HermesValue::encodeDoubleValue(0);
-  auto E = HermesValue::encodeDoubleValue(1);
-  auto F = HermesValue::encodeNumberValue(-1);
+  auto D = HermesValue::encodeUntrustedNumberValue(0);
+  auto E = HermesValue::encodeUntrustedNumberValue(1);
+  auto F = HermesValue::encodeTrustedNumberValue(-1);
 
   EXPECT_TRUE(A == D);
   EXPECT_TRUE(B == E);
@@ -333,10 +333,10 @@ TEST(HermesValueTest, EqualityTest) {
   auto A = HermesValue::encodeNullValue();
   auto B = HermesValue::encodeUndefinedValue();
   auto C = HermesValue::encodeUndefinedValue();
-  auto D = HermesValue::encodeDoubleValue(1.23);
-  auto E = HermesValue::encodeDoubleValue(1.23);
-  auto F = HermesValue::encodeNumberValue(274);
-  auto G = HermesValue::encodeNumberValue(274);
+  auto D = HermesValue::encodeUntrustedNumberValue(1.23);
+  auto E = HermesValue::encodeUntrustedNumberValue(1.23);
+  auto F = HermesValue::encodeTrustedNumberValue(274);
+  auto G = HermesValue::encodeTrustedNumberValue(274);
 
   EXPECT_TRUE(A == A);
   EXPECT_FALSE(A == B);
@@ -364,7 +364,7 @@ TEST(HermesValueTest, OutputStreamTest) {
   EXPECT_EQ("[String :0 0x00000000]", OS.str());
 
   result.clear();
-  OS << HermesValue::encodeNumberValue(123);
+  OS << HermesValue::encodeTrustedNumberValue(123);
   EXPECT_EQ("[double 123]", OS.str());
 
   result.clear();
@@ -384,7 +384,7 @@ TEST(HermesValueTest, OutputStreamTest) {
   EXPECT_EQ("undefined", OS.str());
 
   result.clear();
-  OS << HermesValue::encodeDoubleValue(1.23);
+  OS << HermesValue::encodeUntrustedNumberValue(1.23);
   EXPECT_EQ("[double 1.230000e+00]", OS.str());
 
   result.clear();

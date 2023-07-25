@@ -400,6 +400,7 @@ class SerializedScope {
   struct Declaration {
     Identifier name;
     JavaScriptDeclKind declKind;
+    bool strictImmutableBinding;
   };
   /// Parent scope, if any.
   Ptr parentScope;
@@ -450,6 +451,7 @@ class Value {
   friend class Module;
   friend class IRBuilder;
   friend class ScopeDesc;
+  friend class Variable;
 
   ValueKind Kind;
 
@@ -585,6 +587,17 @@ class ScopeDesc : public Value {
     return parent_;
   }
 
+  void relocateTo(ScopeDesc *newParent) {
+    assert(
+        newParent == parent_->getParent() &&
+        "multi-level scope nesting change");
+    parent_ = newParent;
+  }
+
+  ScopeListTy &getMutableInnerScopes() {
+    return innerScopes_;
+  }
+
   const ScopeListTy &getInnerScopes() const {
     return innerScopes_;
   }
@@ -621,6 +634,14 @@ class ScopeDesc : public Value {
     return serializedScope_;
   }
 
+  void setDynamic(bool v) {
+    dynamic_ = v;
+  }
+
+  bool getDynamic() const {
+    return dynamic_;
+  }
+
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::ScopeDescKind;
   }
@@ -634,6 +655,8 @@ class ScopeDesc : public Value {
   Function *function_{};
 
   VariableListType variables_;
+
+  bool dynamic_{};
 };
 
 /// This represents a function parameter.
@@ -1000,6 +1023,14 @@ class Variable : public Value {
   /// The scope that owns the variable.
   ScopeDesc *parent;
 
+  /// If true, this Variable represents a strict immutable binding as created by
+  ///
+  ///   ES2023 9.1.1.1.3 CreateImmutableBinding ( N, S )
+  ///
+  /// when S is true. By default, all DeclKind::Const Variables are strict
+  /// immutable bindings.
+  bool strictImmutableBinding_{};
+
  protected:
   explicit Variable(
       ValueKind k,
@@ -1024,12 +1055,30 @@ class Variable : public Value {
     return parent;
   }
 
+  void setParent(ScopeDesc *S) {
+    assert(parent->getParent() == S && "multi-level re-home not expected.");
+    parent = S;
+  }
+
   bool getObeysTDZ() const {
     return declKind != DeclKind::Var;
   }
 
+  bool getStrictImmutableBinding() const {
+    return strictImmutableBinding_;
+  }
+  void setStrictImmutableBinding(bool value) {
+    assert(
+        declKind == DeclKind::Const &&
+        "strict immutable binding is only meaningful for const Variables.");
+    strictImmutableBinding_ = value;
+  }
+
   /// Return the index of this variable in the function's variable list.
   int getIndexInVariableList() const;
+
+  /// Creates and \return a copy of this Variable in \p newScope.
+  Variable *cloneIntoNewScope(ScopeDesc *newScope);
 
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::VariableKind;
@@ -1471,6 +1520,19 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   Variable *lazyClosureAlias_{};
 #endif
 
+  template <typename H>
+  void forEachScopeImpl(Function *F, ScopeDesc *scopeDesc, H handler) {
+    if (scopeDesc->getFunction() != F) {
+      return;
+    }
+
+    handler(scopeDesc);
+
+    for (ScopeDesc *inner : scopeDesc->getInnerScopes()) {
+      forEachScopeImpl(F, inner, handler);
+    }
+  }
+
  protected:
   explicit Function(
       ValueKind kind,
@@ -1738,6 +1800,12 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   }
 
   void viewGraph();
+
+  /// Invokes \p handler for each scope belonging to this function.
+  template <typename H>
+  void forEachScope(H handler) {
+    forEachScopeImpl(this, this->getFunctionScopeDesc(), handler);
+  }
 
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::FunctionKind);

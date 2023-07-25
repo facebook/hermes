@@ -31,7 +31,8 @@ bar();
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [foo, bar]
+// CHECK-NEXT:globals = [foo, bar]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2 : undefined, %0
@@ -39,21 +40,21 @@ bar();
 // CHECK-NEXT:  %3 = CreateFunctionInst %bar#0#1()#3 : undefined, %0
 // CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "bar" : string
 // CHECK-NEXT:  %5 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %6 = CallInst %5, undefined : undefined
+// CHECK-NEXT:  %6 = CallInst %5, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %7 = LoadPropertyInst globalObject : object, "bar" : string
-// CHECK-NEXT:  %8 = CallInst %7, undefined : undefined
+// CHECK-NEXT:  %8 = CallInst %7, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %9 = ReturnInst %8
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1()#2 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{foo#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
 // CHECK-NEXT:  %1 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function bar#0#1()#3 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{bar#0#1()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{bar#0#1()#3}
 // CHECK-NEXT:  %1 = TryStartInst %BB1, %BB2

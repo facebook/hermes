@@ -18,7 +18,8 @@ function outer1() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [outer1]
+// CHECK-NEXT:globals = [outer1]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %outer1#0#1()#2, %0
@@ -27,18 +28,18 @@ function outer1() {
 // CHECK-NEXT:function_end
 
 // CHECK:function outer1#0#1()#2
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{outer1#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{outer1#0#1()#2}
 // CHECK-NEXT:  %1 = CreateFunctionInst %dontInline#1#2()#3, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, 1 : number
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined, 1 : number
 // CHECK-NEXT:  %3 = ReturnInst %2
 // CHECK-NEXT:function_end
 
 // CHECK:function dontInline#1#2()#3
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{dontInline#1#2()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{dontInline#1#2()#3}
-// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.copyRestArgs] : number, undefined : undefined, 0 : number
+// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.copyRestArgs] : number, undefined : undefined, undefined : undefined, 0 : number
 // CHECK-NEXT:  %2 = ReturnInst %1
 // CHECK-NEXT:function_end

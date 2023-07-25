@@ -59,7 +59,7 @@ CallResult<Handle<JSString>> JSString::create(
               runtime,
               Predefined::getSymbolID(Predefined::length),
               pf,
-              runtime.makeHandle(HermesValue::encodeDoubleValue(
+              runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(
                   value->getStringLength()))) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -143,23 +143,20 @@ CallResult<bool> JSString::_setOwnIndexedImpl(
   // Property indexes beyond the end of the string must be added as named
   // properties.
   auto vr = valueToSymbolID(
-      runtime, runtime.makeHandle(HermesValue::encodeNumberValue(index)));
+      runtime,
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(index)));
   assert(
       vr != ExecutionStatus::EXCEPTION &&
       "valueToIdentifier() failed for uint32_t value");
 
   // Can't call defineOwnComputedPrimitive because it would infinitely recurse
   // calling JSString::_setOwnIndexedImpl.
-  auto dr = JSObject::defineOwnPropertyInternal(
+  return JSObject::defineOwnPropertyInternal(
       selfHandle,
       runtime,
       **vr,
       DefinePropertyFlags::getDefaultNewPropertyFlags(),
       valueHandle);
-  assert(
-      dr != ExecutionStatus::EXCEPTION &&
-      "defineOwnProperty() threw in JSString::_setOwnIndexedImpl()");
-  return *dr;
 }
 
 bool JSString::_deleteOwnIndexedImpl(

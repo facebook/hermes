@@ -16,7 +16,8 @@ function foo(x) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [sink, foo]
+// CHECK-NEXT:globals = [sink, foo]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0           	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
 // CHECK-NEXT:  $Reg1           	%1 = HBCGetGlobalObjectInst
@@ -32,7 +33,7 @@ function foo(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function sink#0#1(x, y, z)#2
-// CHECK-NEXT:frame = [x#2, y#2, z#2]
+// CHECK-NEXT:S{sink#0#1()#2} = [x#2, y#2, z#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0           	%0 = HBCCreateEnvironmentInst %S{sink#0#1()#2}
 // CHECK-NEXT:  $Reg1           	%1 = HBCLoadParamInst 1 : number
@@ -46,7 +47,7 @@ function foo(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1(x)#2
-// CHECK-NEXT:frame = [x#2]
+// CHECK-NEXT:S{foo#0#1()#2} = [x#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0           	%0 = HBCCreateEnvironmentInst %S{foo#0#1()#2}
 // CHECK-NEXT:  $Reg1           	%1 = HBCLoadParamInst 1 : number
@@ -57,6 +58,6 @@ function foo(x) {
 // CHECK-NEXT:  $Reg6           	%6 = HBCStoreToEnvironmentInst %0, %1, [x#2]
 // CHECK-NEXT:  $Reg6           	%7 = HBCLoadFromEnvironmentInst %0, [x#2]
 // CHECK-NEXT:  $Reg7           	%8 = LoadPropertyInst %7, "sink" : string
-// CHECK-NEXT:  $Reg8           	%9 = CallInst %8, %7, %2 : number, %3 : number, %4 : number
+// CHECK-NEXT:  $Reg8           	%9 = CallInst %8, undefined : undefined, %7, %2 : number, %3 : number, %4 : number
 // CHECK-NEXT:  $Reg8           	%10 = ReturnInst %5 : undefined
 // CHECK-NEXT:function_end

@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @flow strict-local
+ * @flow strict
  * @format
  */
 
@@ -35,7 +35,7 @@ export type TransformOptions = $ReadOnly<{
   /** The callback function which is called on entering each node. */
   transform: TransformCallback,
 
-  /** The set of visitor keys to use for traversal. Defaults to the `hermes-eslint` visitor keys */
+  /** The set of visitor keys to use for traversal. Defaults to the Flow ESTree visitor keys */
   visitorKeys?: ?VisitorKeysType,
 }>;
 
@@ -74,6 +74,7 @@ export class SimpleTransform {
         }
       },
       leave(_node: ESNode) {},
+      visitorKeys: options.visitorKeys,
     });
     return resultRootNode;
   }
@@ -98,7 +99,7 @@ export class SimpleTransform {
    * @return Either the orginal node if the properties matched the existing node or a new node with
    *         the new properties.
    */
-  static nodeWith<T: ESNode>(node: T, overrideProps: $Partial<T>): T {
+  static nodeWith<T: ESNode>(node: T, overrideProps: Partial<T>): T {
     return nodeWith<T>(node, overrideProps);
   }
 }

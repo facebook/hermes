@@ -41,7 +41,8 @@ function loop_member_expr_lhs() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [sink, simple_for_in_loop, for_in_loop_with_break_continue, for_in_loop_with_named_break, check_var_decl_for_in_loop, loop_member_expr_lhs]
+// CHECK-NEXT:globals = [sink, simple_for_in_loop, for_in_loop_with_break_continue, for_in_loop_with_named_break, check_var_decl_for_in_loop, loop_member_expr_lhs]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %sink#0#1()#2, %0
@@ -63,7 +64,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:function_end
 
 // CHECK:function sink#0#1(a)#2
-// CHECK-NEXT:frame = [a#2]
+// CHECK-NEXT:S{sink#0#1()#2} = [a#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{sink#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %a, [a#2], %0
@@ -71,7 +72,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_for_in_loop#0#1(obj)#3
-// CHECK-NEXT:frame = [obj#3, prop#3]
+// CHECK-NEXT:S{simple_for_in_loop#0#1()#3} = [obj#3, prop#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simple_for_in_loop#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj#3], %0
@@ -94,12 +95,12 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %15 = StoreFrameInst %14, [prop#3], %0
 // CHECK-NEXT:  %16 = LoadPropertyInst globalObject : object, "sink" : string
 // CHECK-NEXT:  %17 = LoadFrameInst [prop#3], %0
-// CHECK-NEXT:  %18 = CallInst %16, undefined : undefined, %17
+// CHECK-NEXT:  %18 = CallInst %16, undefined : undefined, undefined : undefined, %17
 // CHECK-NEXT:  %19 = BranchInst %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function for_in_loop_with_break_continue#0#1(obj)#4
-// CHECK-NEXT:frame = [obj#4, prop#4]
+// CHECK-NEXT:S{for_in_loop_with_break_continue#0#1()#4} = [obj#4, prop#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{for_in_loop_with_break_continue#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj#4], %0
@@ -122,7 +123,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %15 = StoreFrameInst %14, [prop#4], %0
 // CHECK-NEXT:  %16 = LoadPropertyInst globalObject : object, "sink" : string
 // CHECK-NEXT:  %17 = LoadFrameInst [prop#4], %0
-// CHECK-NEXT:  %18 = CallInst %16, undefined : undefined, %17
+// CHECK-NEXT:  %18 = CallInst %16, undefined : undefined, undefined : undefined, %17
 // CHECK-NEXT:  %19 = BranchInst %BB1
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %20 = BranchInst %BB2
@@ -131,7 +132,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:function_end
 
 // CHECK:function for_in_loop_with_named_break#0#1(obj)#5
-// CHECK-NEXT:frame = [obj#5, prop#5]
+// CHECK-NEXT:S{for_in_loop_with_named_break#0#1()#5} = [obj#5, prop#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{for_in_loop_with_named_break#0#1()#5}
 // CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj#5], %0
@@ -156,14 +157,14 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %16 = StoreFrameInst %15, [prop#5], %0
 // CHECK-NEXT:  %17 = LoadPropertyInst globalObject : object, "sink" : string
 // CHECK-NEXT:  %18 = LoadFrameInst [prop#5], %0
-// CHECK-NEXT:  %19 = CallInst %17, undefined : undefined, %18
+// CHECK-NEXT:  %19 = CallInst %17, undefined : undefined, undefined : undefined, %18
 // CHECK-NEXT:  %20 = BranchInst %BB1
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %21 = BranchInst %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function check_var_decl_for_in_loop#0#1(obj)#6
-// CHECK-NEXT:frame = [obj#6, prop#6]
+// CHECK-NEXT:S{check_var_decl_for_in_loop#0#1()#6} = [obj#6, prop#6]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{check_var_decl_for_in_loop#0#1()#6}
 // CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj#6], %0
@@ -185,12 +186,12 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %14 = StoreFrameInst %13, [prop#6], %0
 // CHECK-NEXT:  %15 = LoadPropertyInst globalObject : object, "sink" : string
 // CHECK-NEXT:  %16 = LoadFrameInst [prop#6], %0
-// CHECK-NEXT:  %17 = CallInst %15, undefined : undefined, %16
+// CHECK-NEXT:  %17 = CallInst %15, undefined : undefined, undefined : undefined, %16
 // CHECK-NEXT:  %18 = BranchInst %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function loop_member_expr_lhs#0#1()#7
-// CHECK-NEXT:frame = [x#7]
+// CHECK-NEXT:S{loop_member_expr_lhs#0#1()#7} = [x#7]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{loop_member_expr_lhs#0#1()#7}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x#7], %0
@@ -208,7 +209,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %12 = LoadPropertyInst globalObject : object, "sink" : string
 // CHECK-NEXT:  %13 = LoadFrameInst [x#7], %0
 // CHECK-NEXT:  %14 = LoadPropertyInst %13, "y" : string
-// CHECK-NEXT:  %15 = CallInst %12, undefined : undefined, %14
+// CHECK-NEXT:  %15 = CallInst %12, undefined : undefined, undefined : undefined, %14
 // CHECK-NEXT:  %16 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %17 = GetNextPNameInst %10, %5, %6, %7, %4, %BB1, %BB3
@@ -219,6 +220,6 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %21 = LoadPropertyInst globalObject : object, "sink" : string
 // CHECK-NEXT:  %22 = LoadFrameInst [x#7], %0
 // CHECK-NEXT:  %23 = LoadPropertyInst %22, "y" : string
-// CHECK-NEXT:  %24 = CallInst %21, undefined : undefined, %23
+// CHECK-NEXT:  %24 = CallInst %21, undefined : undefined, undefined : undefined, %23
 // CHECK-NEXT:  %25 = BranchInst %BB2
 // CHECK-NEXT:function_end

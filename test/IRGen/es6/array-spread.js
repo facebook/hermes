@@ -15,7 +15,8 @@ function foo(x) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [foo]
+// CHECK-NEXT:globals = [foo]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2, %0
@@ -27,7 +28,7 @@ function foo(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1(x)#2
-// CHECK-NEXT:frame = [x#2]
+// CHECK-NEXT:S{foo#0#1()#2} = [x#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#2], %0
@@ -42,7 +43,7 @@ function foo(x) {
 // CHECK-NEXT:  %10 = LoadFrameInst [x#2], %0
 // CHECK-NEXT:  %11 = AllocArrayInst 4 : number, 1 : number, 2 : number
 // CHECK-NEXT:  %12 = LoadStackInst %2
-// CHECK-NEXT:  %13 = CallBuiltinInst [HermesBuiltin.arraySpread] : number, undefined : undefined, %11 : object, %10, %12
+// CHECK-NEXT:  %13 = CallBuiltinInst [HermesBuiltin.arraySpread] : number, undefined : undefined, undefined : undefined, %11 : object, %10, %12
 // CHECK-NEXT:  %14 = StoreStackInst %13, %2
 // CHECK-NEXT:  %15 = LoadStackInst %2
 // CHECK-NEXT:  %16 = StoreOwnPropertyInst 3 : number, %11 : object, %15, true : boolean
@@ -60,7 +61,8 @@ function foo(x) {
 // CHECK-NEXT:function_end
 
 // OPT:function global#0()#1 : undefined
-// OPT-NEXT:frame = [], globals = [foo]
+// OPT-NEXT:globals = [foo]
+// OPT-NEXT:S{global#0()#1} = []
 // OPT-NEXT:%BB0:
 // OPT-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // OPT-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2 : object, %0
@@ -69,11 +71,11 @@ function foo(x) {
 // OPT-NEXT:function_end
 
 // OPT:function foo#0#1(x)#2 : object
-// OPT-NEXT:frame = []
+// OPT-NEXT:S{foo#0#1()#2} = []
 // OPT-NEXT:%BB0:
 // OPT-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
 // OPT-NEXT:  %1 = AllocArrayInst 4 : number, 1 : number, 2 : number
-// OPT-NEXT:  %2 = CallBuiltinInst [HermesBuiltin.arraySpread] : number, undefined : undefined, %1 : object, %x, 2 : number
+// OPT-NEXT:  %2 = CallBuiltinInst [HermesBuiltin.arraySpread] : number, undefined : undefined, undefined : undefined, %1 : object, %x, 2 : number
 // OPT-NEXT:  %3 = StoreOwnPropertyInst 3 : number, %1 : object, %2, true : boolean
 // OPT-NEXT:  %4 = BinaryOperatorInst '+', %2, 1 : number
 // OPT-NEXT:  %5 = StoreOwnPropertyInst 4 : number, %1 : object, %4 : string|number, true : boolean

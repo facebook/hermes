@@ -29,6 +29,7 @@ bool isIdOperand(Instruction *I, unsigned idx) {
     CASE_WITH_PROP_IDX(StorePropertyInst);
     CASE_WITH_PROP_IDX(TryLoadGlobalPropertyInst);
     CASE_WITH_PROP_IDX(TryStoreGlobalPropertyInst);
+    CASE_WITH_PROP_IDX(ThrowIfHasRestrictedGlobalPropertyInst);
 
     case ValueKind::HBCAllocObjectFromBufferInstKind:
       // AllocObjectFromBuffer stores the keys and values as alternating
@@ -50,6 +51,7 @@ void traverseFunctions(
     Module *M,
     std::function<bool(Function *)> shouldVisitFunction,
     std::function<void(llvh::StringRef)> traversal,
+    std::function<void(llvh::StringRef)> functionSourceTraversal,
     bool stripFunctionNames) {
   for (auto &F : *M) {
     if (!shouldVisitFunction(&F)) {
@@ -64,7 +66,7 @@ void traverseFunctions(
     if (!F.isGlobalScope()) {
       // Only add non-default source representation to the string table.
       if (auto source = F.getSourceRepresentationStr()) {
-        traversal(*source);
+        functionSourceTraversal(*source);
       }
     }
   }

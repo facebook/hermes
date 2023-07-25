@@ -220,6 +220,7 @@ Runtime::Runtime(
       verifyEvalIR(runtimeConfig.getVerifyEvalIR()),
       optimizedEval(runtimeConfig.getOptimizedEval()),
       asyncBreakCheckInEval(runtimeConfig.getAsyncBreakCheckInEval()),
+      enableBlockScopingInEval(runtimeConfig.getEnableBlockScoping()),
       heapStorage_(
           *this,
           *this,

@@ -341,10 +341,27 @@ AddEmptyStringInst *IRBuilder::createAddEmptyStringInst(Value *val) {
   return I;
 }
 
+ThrowIfHasRestrictedGlobalPropertyInst *
+IRBuilder::createThrowIfHasRestrictedGlobalPropertyInst(
+    llvh::StringRef property) {
+  auto *HRGP =
+      new ThrowIfHasRestrictedGlobalPropertyInst(getLiteralString(property));
+  insert(HRGP);
+  return HRGP;
+}
+
 CreateScopeInst *IRBuilder::createCreateScopeInst(ScopeDesc *scopeDesc) {
   auto CII = new CreateScopeInst(scopeDesc);
   insert(CII);
   return CII;
+}
+
+CreateInnerScopeInst *IRBuilder::createCreateInnerScopeInst(
+    ScopeCreationInst *parentScope,
+    ScopeDesc *scopeDesc) {
+  auto CISI = new CreateInnerScopeInst(parentScope, scopeDesc);
+  insert(CISI);
+  return CISI;
 }
 
 CreateFunctionInst *IRBuilder::createCreateFunctionInst(
@@ -391,8 +408,8 @@ CallInst *IRBuilder::createCallInst(
     Value *callee,
     Value *thisValue,
     ArrayRef<Value *> args) {
-  auto CI = new CallInst(
-      ValueKind::CallInstKind, textifiedCallee, callee, thisValue, args);
+  LiteralUndefined *newTarget = getLiteralUndefined();
+  auto CI = new CallInst(textifiedCallee, callee, newTarget, thisValue, args);
   insert(CI);
   return CI;
 }
@@ -402,15 +419,19 @@ HBCCallNInst *IRBuilder::createHBCCallNInst(
     Value *callee,
     Value *thisValue,
     ArrayRef<Value *> args) {
-  auto CI = new HBCCallNInst(textifiedCallee, callee, thisValue, args);
+  LiteralUndefined *newTarget = getLiteralUndefined();
+  auto CI =
+      new HBCCallNInst(textifiedCallee, callee, newTarget, thisValue, args);
   insert(CI);
   return CI;
 }
 
 ConstructInst *IRBuilder::createConstructInst(
     Value *constructor,
+    Value *newTarget,
     ArrayRef<Value *> args) {
-  auto *inst = new ConstructInst(constructor, getLiteralUndefined(), args);
+  LiteralUndefined *thisValue = getLiteralUndefined();
+  auto *inst = new ConstructInst(constructor, newTarget, thisValue, args);
   insert(inst);
   return inst;
 }
@@ -802,8 +823,10 @@ SwitchImmInst *IRBuilder::createSwitchImmInst(
   return inst;
 }
 
-DirectEvalInst *IRBuilder::createDirectEvalInst(Value *operand) {
-  auto *inst = new DirectEvalInst(operand);
+DirectEvalInst *IRBuilder::createDirectEvalInst(
+    Value *operand,
+    LiteralBool *isStrict) {
+  auto *inst = new DirectEvalInst(operand, isStrict);
   insert(inst);
   return inst;
 }
@@ -823,6 +846,14 @@ HBCLoadParamInst *IRBuilder::createHBCLoadParamInst(LiteralNumber *value) {
 HBCCreateEnvironmentInst *IRBuilder::createHBCCreateEnvironmentInst(
     ScopeDesc *scopeDesc) {
   auto inst = new HBCCreateEnvironmentInst(scopeDesc);
+  insert(inst);
+  return inst;
+}
+
+HBCCreateInnerEnvironmentInst *IRBuilder::createHBCCreateInnerEnvironmentInst(
+    ScopeCreationInst *parentScope,
+    ScopeDesc *scopeDesc) {
+  auto inst = new HBCCreateInnerEnvironmentInst(parentScope, scopeDesc);
   insert(inst);
   return inst;
 }
@@ -860,9 +891,10 @@ HBCCreateThisInst *IRBuilder::createHBCCreateThisInst(
 }
 HBCConstructInst *IRBuilder::createHBCConstructInst(
     Value *closure,
+    Value *newTarget,
     Value *thisValue,
     ArrayRef<Value *> arguments) {
-  auto inst = new HBCConstructInst(closure, thisValue, arguments);
+  auto inst = new HBCConstructInst(closure, newTarget, thisValue, arguments);
   insert(inst);
   return inst;
 }
@@ -884,8 +916,11 @@ HBCProfilePointInst *IRBuilder::createHBCProfilePointInst(uint16_t pointIndex) {
 CallBuiltinInst *IRBuilder::createCallBuiltinInst(
     BuiltinMethod::Enum builtinIndex,
     ArrayRef<Value *> arguments) {
+  LiteralUndefined *undefined = getLiteralUndefined();
+  LiteralUndefined *newTarget = undefined;
+  LiteralUndefined *thisValue = undefined;
   auto *inst = new CallBuiltinInst(
-      getLiteralNumber(builtinIndex), getLiteralUndefined(), arguments);
+      getLiteralNumber(builtinIndex), newTarget, thisValue, arguments);
   insert(inst);
   return inst;
 }
@@ -913,8 +948,9 @@ HBCCallDirectInst *IRBuilder::createHBCCallDirectInst(
     Function *callee,
     Value *thisValue,
     ArrayRef<Value *> arguments) {
-  auto *inst =
-      new HBCCallDirectInst(textifiedCallee, callee, thisValue, arguments);
+  LiteralUndefined *newTarget = getLiteralUndefined();
+  auto *inst = new HBCCallDirectInst(
+      textifiedCallee, callee, newTarget, thisValue, arguments);
   insert(inst);
   return inst;
 }

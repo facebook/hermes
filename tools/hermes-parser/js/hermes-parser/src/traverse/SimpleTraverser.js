@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @flow strict-local
+ * @flow strict
  * @format
  */
 
@@ -21,7 +21,7 @@ export type TraverserOptions = $ReadOnly<{
   enter: TraverserCallback,
   /** The callback function which is called on leaving each node. */
   leave: TraverserCallback,
-  /** The set of visitor keys to use for traversal. Defaults to the `hermes-eslint` visitor keys */
+  /** The set of visitor keys to use for traversal. Defaults to the Flow ESTree visitor keys */
   visitorKeys?: ?VisitorKeysType,
 }>;
 
@@ -83,8 +83,9 @@ export class SimpleTraverser {
 
     const keys = getVisitorKeys(node, options.visitorKeys);
     for (const key of keys) {
-      // $FlowExpectedError[prop-missing]
-      const child = node[key];
+      const child: ESNode | $ReadOnlyArray<ESNode> = (node[
+        (key: $FlowFixMe)
+      ]: $FlowFixMe);
 
       if (Array.isArray(child)) {
         for (let j = 0; j < child.length; ++j) {

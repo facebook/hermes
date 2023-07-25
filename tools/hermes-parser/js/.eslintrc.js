@@ -75,5 +75,11 @@ module.exports = {
       },
     },
   ],
-  ignorePatterns: ['flow-typed', 'node_modules', 'dist', 'fixtures/'],
+  ignorePatterns: [
+    'flow-typed',
+    'node_modules',
+    'dist',
+    'fixtures/',
+    'internal-prettier-v3/',
+  ],
 };

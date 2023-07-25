@@ -15,6 +15,7 @@ import type {CatchScope} from './CatchScope';
 import type {ClassFieldInitializerScope} from './ClassFieldInitializerScope';
 import type {ClassScope} from './ClassScope';
 import type {ClassStaticBlockScope} from './ClassStaticBlockScope';
+import type {ComponentScope} from './ComponentScope';
 import type {DeclareModuleScope} from './DeclareModuleScope';
 import type {ForScope} from './ForScope';
 import type {FunctionExpressionNameScope} from './FunctionExpressionNameScope';
@@ -28,6 +29,7 @@ import type {WithScope} from './WithScope';
 type Scope =
   | BlockScope
   | CatchScope
+  | ComponentScope
   | ClassFieldInitializerScope
   | ClassScope
   | ClassStaticBlockScope

@@ -150,8 +150,8 @@ function codemod(code: string) {
 }
 
 describe('React to react', () => {
-  it('should transform valid cases correctly', () => {
-    const result = codemod(`\
+  it('should transform valid cases correctly', async () => {
+    const result = await codemod(`\
 export function foo() {}
 
 export function bar() {
@@ -182,8 +182,8 @@ export function baz() {
 `);
   });
 
-  it('should ignore invalid cases correctly', () => {
-    const result = codemod(`\
+  it('should ignore invalid cases correctly', async () => {
+    const result = await codemod(`\
 function foo() {}
 type Type = {};
 

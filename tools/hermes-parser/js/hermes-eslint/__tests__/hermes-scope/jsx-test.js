@@ -701,6 +701,55 @@ describe('jsx', () => {
     });
   });
 
+  describe('Component generic references', () => {
+    verifyHasScopes(
+      `
+          import React from 'react';
+          type A = string;
+          function Component<T>(){}
+          <Component<A> />;
+        `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'React',
+              type: DefinitionType.ImportBinding,
+              referenceCount: 0,
+              eslintUsed: true,
+            },
+            {
+              name: 'A',
+              type: DefinitionType.Type,
+              referenceCount: 1,
+            },
+            {
+              name: 'Component',
+              type: DefinitionType.FunctionName,
+              referenceCount: 1,
+            },
+          ],
+        },
+        {
+          type: ScopeType.Function,
+          variables: [
+            {
+              name: 'arguments',
+              type: null,
+              referenceCount: 0,
+            },
+            {
+              name: 'T',
+              type: DefinitionType.TypeParameter,
+              referenceCount: 0,
+            },
+          ],
+        },
+      ],
+    );
+  });
+
   describe('reference prior to the import should be correctly resolved', () => {
     verifyHasScopes(
       `

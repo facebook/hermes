@@ -66,7 +66,10 @@ export function cloneJSDocCommentsToNewNode(
       comment.value.startsWith('*')
     );
   });
-  setCommentsOnNode(newNode, comments.map(cloneCommentWithMarkers));
+  setCommentsOnNode(newNode, [
+    ...getCommentsForNode(newNode),
+    ...comments.map(cloneCommentWithMarkers),
+  ]);
 }
 
 export function setCommentsOnNode(
@@ -172,6 +175,25 @@ function getFirstNonWhitespaceIndex(code: string): number {
   return code.search(/\S/);
 }
 
+export function makeCommentOwnLine(code: string, comment: Comment): string {
+  let newCode = code;
+  // Since we always want a line break we need to ensure a newline is found when
+  // searching out from either side of the comment range.
+  let firstNewline = getFirstNewlineIndex(code);
+  if (firstNewline === -1) {
+    // No newline in file, lets add one.
+    newCode += EOL;
+    firstNewline = newCode.length;
+  }
+
+  // Prettier only uses these ranges for detecting whitespace, so this nonsensical
+  // range is safe.
+  // $FlowExpectedError[cannot-write]
+  comment.range = [firstNewline + 1, firstNewline];
+
+  return newCode;
+}
+
 export function appendCommentToSource(
   code: string,
   comment: Comment,
@@ -188,18 +210,7 @@ export function appendCommentToSource(
       switch (placement) {
         case CommentPlacement.LEADING_OWN_LINE:
         case CommentPlacement.TRAILING_OWN_LINE: {
-          // Since we always want a line break we need to ensure a newline is found when
-          // searching out from either side of the comment range.
-          let firstNewline = getFirstNewlineIndex(code);
-          if (firstNewline === -1) {
-            // No newline in file, lets add one.
-            newCode += EOL;
-            firstNewline = newCode.length;
-          }
-          // Prettier only uses these ranges for detecting whitespace, so this nonsensical
-          // range is safe.
-          // $FlowExpectedError[cannot-write]
-          comment.range = [firstNewline + 1, firstNewline];
+          newCode = makeCommentOwnLine(code, comment);
           break;
         }
         case CommentPlacement.LEADING_INLINE:

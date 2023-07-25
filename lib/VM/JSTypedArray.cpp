@@ -363,7 +363,7 @@ CallResult<Handle<JSTypedArrayBase>> JSTypedArray<T, C>::allocateSpecies(
   auto callRes = Callable::executeConstruct1(
       *possibleCons,
       runtime,
-      runtime.makeHandle(HermesValue::encodeNumberValue(length)));
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(length)));
   if (callRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -450,7 +450,7 @@ uint64_t JSTypedArray<uint64_t, CellKind::BigUint64ArrayKind>::toDestType(
 template <typename T>
 struct _getOwnRetEncoder {
   static HermesValue encodeMayAlloc(Runtime &, T element) {
-    return SafeNumericEncoder<T>::encode(element);
+    return HermesValue::encodeUntrustedNumberValue(element);
   }
 };
 

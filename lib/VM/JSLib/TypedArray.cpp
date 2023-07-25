@@ -55,7 +55,7 @@ CallResult<Handle<JSTypedArrayBase>> typedArrayCreate(
   auto callRes = Callable::executeConstruct1(
       constructor,
       runtime,
-      runtime.makeHandle(HermesValue::encodeNumberValue(length)));
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(length)));
   if (callRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -203,11 +203,13 @@ CallResult<HermesValue> typedArrayConstructorFromObject(
   }
   GCScope scope(runtime);
   // 8. Let k be 0.
-  MutableHandle<HermesValue> i(runtime, HermesValue::encodeNumberValue(0));
+  MutableHandle<HermesValue> i(
+      runtime, HermesValue::encodeUntrustedNumberValue(0));
   auto marker = scope.createMarker();
   // 9. Repeat, while k < len.
   for (; i->getNumberAs<uint64_t>() < len;
-       i = HermesValue::encodeNumberValue(i->getNumberAs<uint64_t>() + 1)) {
+       i = HermesValue::encodeUntrustedNumberValue(
+           i->getNumberAs<uint64_t>() + 1)) {
     // a. Let Pk be ! ToString(k).
     // b. Let kValue be ? Get(arrayLike, Pk).
     // c. Perform ? Set(O, Pk, kValue, true).
@@ -277,7 +279,7 @@ Handle<JSObject> createTypedArrayConstructor(Runtime &runtime) {
   dpf.writable = 0;
 
   auto bytesPerElement =
-      runtime.makeHandle(HermesValue::encodeNumberValue(sizeof(T)));
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(sizeof(T)));
   // %TypedArray%.prototype.xxx.
   defineProperty(
       runtime,
@@ -322,7 +324,7 @@ CallResult<HermesValue> mapFilterLoop(
         runtime,
         thisArg,
         *val,
-        HermesValue::encodeNumberValue(i),
+        HermesValue::encodeUntrustedNumberValue(i),
         self.getHermesValue());
     if (callRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -337,7 +339,7 @@ CallResult<HermesValue> mapFilterLoop(
     }
     marker.flush();
   }
-  return HermesValue::encodeNumberValue(insert);
+  return HermesValue::encodeUntrustedNumberValue(insert);
 }
 
 /// This is the sort model for use with TypedArray.prototype.sort.
@@ -489,10 +491,11 @@ CallResult<HermesValue> typedArrayPrototypeSetObject(
   // Read everything from the other array and write it into self starting from
   // offset.
   GCScope scope(runtime);
-  MutableHandle<> k(runtime, HermesValue::encodeNumberValue(0));
+  MutableHandle<> k(runtime, HermesValue::encodeUntrustedNumberValue(0));
   auto marker = scope.createMarker();
   for (; k->getNumberAs<uint64_t>() < srcLength;
-       k = HermesValue::encodeNumberValue(k->getNumberAs<uint64_t>() + 1)) {
+       k = HermesValue::encodeUntrustedNumberValue(
+           k->getNumberAs<uint64_t>() + 1)) {
     if ((propRes = JSObject::getComputed_RJS(src, runtime, k)) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -643,10 +646,11 @@ typedArrayFrom(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   // 9. Let k be 0.
-  MutableHandle<> k(runtime, HermesValue::encodeNumberValue(0));
+  MutableHandle<> k(runtime, HermesValue::encodeUntrustedNumberValue(0));
   // 10. Repeat, while k < len.
   for (; k->getNumberAs<uint64_t>() < len;
-       k = HermesValue::encodeNumberValue(k->getNumberAs<uint64_t>() + 1)) {
+       k = HermesValue::encodeUntrustedNumberValue(
+           k->getNumberAs<uint64_t>() + 1)) {
     GCScopeMarkerRAII marker{runtime};
     // a - b. Get the value of the property at k.
     if ((propRes = JSObject::getComputed_RJS(arrayLike, runtime, k)) ==
@@ -703,12 +707,13 @@ typedArrayOf(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   // 6. Let k be 0.
-  MutableHandle<> k(runtime, HermesValue::encodeNumberValue(0));
+  MutableHandle<> k(runtime, HermesValue::encodeUntrustedNumberValue(0));
   GCScope scope(runtime);
   auto marker = scope.createMarker();
   // 7. Repeat, while k < len.
   for (; k->getNumberAs<uint64_t>() < len;
-       k = HermesValue::encodeNumberValue(k->getNumberAs<uint64_t>() + 1)) {
+       k = HermesValue::encodeUntrustedNumberValue(
+           k->getNumberAs<uint64_t>() + 1)) {
     // a. Let kValue be items[k].
     auto kValue = args.getArg(k->getNumberAs<uint64_t>());
     // b. Let Pk be ! ToString(k).
@@ -747,7 +752,7 @@ typedArrayPrototypeByteLength(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto self = args.vmcastThis<JSTypedArrayBase>();
-  return HermesValue::encodeNumberValue(
+  return HermesValue::encodeUntrustedNumberValue(
       self->attached(runtime) ? self->getByteLength() : 0);
 }
 
@@ -759,7 +764,7 @@ typedArrayPrototypeByteOffset(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto self = args.vmcastThis<JSTypedArrayBase>();
-  return HermesValue::encodeNumberValue(
+  return HermesValue::encodeUntrustedNumberValue(
       self->attached(runtime) && self->getLength() != 0 ? self->getByteOffset()
                                                         : 0);
 }
@@ -817,7 +822,7 @@ typedArrayPrototypeAt(void *, Runtime &runtime, NativeArgs args) {
     if (!arr->attached(runtime)) {                                         \
       return runtime.raiseTypeError("Underlying ArrayBuffer detached");    \
     }                                                                      \
-    return HermesValue::encodeNumberValue(arr->at(runtime, k));            \
+    return HermesValue::encodeUntrustedNumberValue(arr->at(runtime, k));   \
   }
   switch (O->getKind()) {
 #include "hermes/VM/TypedArrays.def"
@@ -957,7 +962,7 @@ typedArrayPrototypeEverySome(void *ctx, Runtime &runtime, NativeArgs args) {
         runtime,
         thisArg,
         val,
-        HermesValue::encodeNumberValue(i),
+        HermesValue::encodeUntrustedNumberValue(i),
         self.getHermesValue());
     if (callRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -1080,7 +1085,7 @@ typedFindHelper(void *ctx, bool reverse, Runtime &runtime, NativeArgs args) {
   for (JSTypedArrayBase::size_type counter = 0; counter < len; counter++) {
     auto i = reverse ? (len - counter - 1) : counter;
     val = JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, i);
-    auto idx = HermesValue::encodeNumberValue(i);
+    auto idx = HermesValue::encodeUntrustedNumberValue(i);
     auto callRes = Callable::executeCall3(
         callbackfn, runtime, thisArg, *val, idx, self.getHermesValue());
     if (callRes == ExecutionStatus::EXCEPTION) {
@@ -1092,7 +1097,7 @@ typedFindHelper(void *ctx, bool reverse, Runtime &runtime, NativeArgs args) {
     }
     gcScope.flushToMarker(marker);
   }
-  return index ? HermesValue::encodeNumberValue(-1)
+  return index ? HermesValue::encodeUntrustedNumberValue(-1)
                : HermesValue::encodeUndefinedValue();
 }
 
@@ -1133,7 +1138,7 @@ typedArrayPrototypeForEach(void *, Runtime &runtime, NativeArgs args) {
             runtime,
             thisArg,
             val,
-            HermesValue::encodeNumberValue(i),
+            HermesValue::encodeUntrustedNumberValue(i),
             self.getHermesValue()) == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1153,7 +1158,7 @@ typedArrayPrototypeIndexOf(void *ctx, Runtime &runtime, NativeArgs args) {
       case IndexOfMode::includes:
         return HermesValue::encodeBoolValue(x);
       default:
-        return HermesValue::encodeNumberValue(y);
+        return HermesValue::encodeUntrustedNumberValue(y);
     }
   };
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
@@ -1301,7 +1306,7 @@ typedArrayPrototypeLength(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto self = args.vmcastThis<JSTypedArrayBase>();
-  return HermesValue::encodeNumberValue(
+  return HermesValue::encodeUntrustedNumberValue(
       self->attached(runtime) ? self->getLength() : 0);
 }
 
@@ -1442,7 +1447,7 @@ typedArrayPrototypeReduce(void *ctx, Runtime &runtime, NativeArgs args) {
         undefinedThis,
         accumulator.getHermesValue(),
         val,
-        HermesValue::encodeNumberValue(i),
+        HermesValue::encodeUntrustedNumberValue(i),
         self.getHermesValue());
     if (callRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -1525,7 +1530,7 @@ typedArrayPrototypeSet(void *, Runtime &runtime, NativeArgs args) {
   // Default to zero if unspecified.
   auto offset = runtime.makeHandle(
       args.getArgCount() >= 2 ? args.getArg(1)
-                              : HermesValue::encodeNumberValue(0));
+                              : HermesValue::encodeUntrustedNumberValue(0));
   auto res = toIntegerOrInfinity(runtime, offset);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;

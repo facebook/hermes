@@ -60,7 +60,8 @@ function test_could_be_int(func) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [test_int_int, test_int_uint, test_uint_uint, test_could_be_int]
+// CHECK-NEXT:globals = [test_int_int, test_int_uint, test_uint_uint, test_could_be_int]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %test_int_int#0#1()#2 : undefined|number, %0
@@ -75,7 +76,7 @@ function test_could_be_int(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_int_int#0#1(x, y)#2 : undefined|number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{test_int_int#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_int_int#0#1()#2}
 // CHECK-NEXT:  %1 = AsInt32Inst %x
@@ -89,7 +90,7 @@ function test_could_be_int(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_int_uint#0#1(x, y)#3 : undefined|number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{test_int_uint#0#1()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_int_uint#0#1()#3}
 // CHECK-NEXT:  %1 = AsInt32Inst %x
@@ -103,7 +104,7 @@ function test_could_be_int(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_uint_uint#0#1(x, y)#4 : undefined|number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{test_uint_uint#0#1()#4} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_uint_uint#0#1()#4}
 // CHECK-NEXT:  %1 = BinaryOperatorInst '>>>', %x, 0 : number
@@ -117,12 +118,12 @@ function test_could_be_int(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_could_be_int#0#1(func)#5 : undefined|number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{test_could_be_int#0#1()#5} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_could_be_int#0#1()#5}
-// CHECK-NEXT:  %1 = CallInst %func, undefined : undefined
+// CHECK-NEXT:  %1 = CallInst %func, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %2 = BinaryOperatorInst '*', %1, 100 : number
-// CHECK-NEXT:  %3 = CallInst %func, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %func, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = AsInt32Inst %2 : number

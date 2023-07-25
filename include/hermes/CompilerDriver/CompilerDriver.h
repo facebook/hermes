@@ -95,11 +95,11 @@ void printHermesCompilerVersion(llvh::raw_ostream &s);
 namespace cl {
 /// The following flags are used by both the compiler and the VM driver.
 extern llvh::cl::opt<bool> BasicBlockProfiling;
-extern llvh::cl::opt<bool> EnableEval;
-extern llvh::cl::opt<bool> VerifyIR;
 extern llvh::cl::opt<bool> EmitAsyncBreakCheck;
+extern llvh::cl::opt<bool> EnableBlockScoping;
+extern llvh::cl::opt<bool> EnableEval;
 extern llvh::cl::list<std::string> InputFilenames;
 extern llvh::cl::opt<bool> OptimizedEval;
-extern llvh::cl::opt<bool> EmitAsyncBreakCheck;
+extern llvh::cl::opt<bool> VerifyIR;
 } // namespace cl
 #endif

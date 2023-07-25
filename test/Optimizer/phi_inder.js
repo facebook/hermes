@@ -30,7 +30,8 @@ function recursive_phi(x) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [sink, recursive_phi]
+// CHECK-NEXT:globals = [sink, recursive_phi]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %sink#0#1()#2 : undefined, %0
@@ -41,14 +42,14 @@ function recursive_phi(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function sink#0#1()#2 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{sink#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{sink#0#1()#2}
 // CHECK-NEXT:  %1 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function recursive_phi#0#1(x)#3 : string|number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{recursive_phi#0#1()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{recursive_phi#0#1()#3}
 // CHECK-NEXT:  %1 = BranchInst %BB1

@@ -25,6 +25,7 @@ HERMES_LITERAL_NODE_TYPES = {
     "BooleanLiteral",
     "StringLiteral",
     "NumericLiteral",
+    "BigIntLiteral",
     "RegExpLiteral",
     "JSXStringLiteral",
 }
@@ -126,7 +127,24 @@ class EsprimaTestRunner:
                 del ast["directive"]
         if ast["type"] == "Identifier" and ast["name"] == "this":
             del ast["optional"]
+        if ast["type"] == "PrivateName":
+            ast = ast["id"]
+            ast["type"] = "PrivateIdentifier"
+        if ast["type"] == "ClassPrivateProperty":
+            ast["key"]["type"] = "PrivateIdentifier"
+            ast["computed"] = False
+            ast["static"] = False
         if ast["type"] == "ClassProperty" or ast["type"] == "ClassPrivateProperty":
+            if not ast["optional"]:
+                del ast["optional"]
+            ast["type"] = "PropertyDefinition"
+        if ast["type"] == "TupleTypeAnnotation":
+            ast["elementTypes"] = ast["types"]
+            del ast["types"]
+        if ast["type"] == "TypeParameter":
+            if not ast["usesExtendsBound"]:
+                del ast["usesExtendsBound"]
+        if ast["type"] == "TupleTypeLabeledElement":
             if not ast["optional"]:
                 del ast["optional"]
         # convert the literal node types to ESTree standard form
@@ -137,6 +155,9 @@ class EsprimaTestRunner:
                 ast["regex"] = {"pattern": ast["pattern"], "flags": ast["flags"]}
                 del ast["pattern"]
                 del ast["flags"]
+            if ast["type"] == "BigIntLiteral":
+                ast["bigint"] = ast["bigint"][:-1]
+                ast["value"] = None
             ast["type"] = "Literal"
         return ast
 
@@ -162,6 +183,7 @@ class EsprimaTestRunner:
                 if (
                     ast["type"] == "ClassProperty"
                     or ast["type"] == "ClassPrivateProperty"
+                    or ast["type"] == "PropertyDefinition"
                 ):
                     if "declare" not in ast:
                         ast["declare"] = False

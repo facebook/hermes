@@ -24,6 +24,7 @@ function ctor_test() {
     return k
   }
 
+  // can't optimize this callsite due to foo being referenced in new.target.
   return new foo(12)
 }
 
@@ -41,7 +42,8 @@ function load_store_test() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : string
-// CHECK-NEXT:frame = [], globals = [fuzz, ctor_test, load_store_test]
+// CHECK-NEXT:globals = [fuzz, ctor_test, load_store_test]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %fuzz#0#1()#2 : number, %0
@@ -54,59 +56,59 @@ function load_store_test() {
 // CHECK-NEXT:function_end
 
 // CHECK:function fuzz#0#1()#2 : number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{fuzz#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{fuzz#0#1()#2}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#1#2()#3 : number, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, 12 : number
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined, 12 : number
 // CHECK-NEXT:  %3 = ReturnInst 12 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#1#2(k : number)#3 : number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{foo#1#2()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#1#2()#3}
 // CHECK-NEXT:  %1 = ReturnInst 12 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function ctor_test#0#1()#4 : object
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{ctor_test#0#1()#4} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{ctor_test#0#1()#4}
-// CHECK-NEXT:  %1 = CreateFunctionInst %"foo 1#"#1#4()#5 : number, %0
-// CHECK-NEXT:  %2 = ConstructInst %1 : closure, undefined : undefined, 12 : number
+// CHECK-NEXT:  %1 = CreateFunctionInst %"foo 1#"#1#4()#5, %0
+// CHECK-NEXT:  %2 = ConstructInst %1 : closure, %1 : closure, undefined : undefined, 12 : number
 // CHECK-NEXT:  %3 = ReturnInst %2 : object
 // CHECK-NEXT:function_end
 
-// CHECK:function "foo 1#"#1#4(k : number)#5 : number
-// CHECK-NEXT:frame = []
+// CHECK:function "foo 1#"#1#4(k)#5
+// CHECK-NEXT:S{"foo 1#"#1#4()#5} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{"foo 1#"#1#4()#5}
-// CHECK-NEXT:  %1 = ReturnInst 12 : number
+// CHECK-NEXT:  %1 = ReturnInst %k
 // CHECK-NEXT:function_end
 
 // CHECK:function load_store_test#0#1()#6 : number
-// CHECK-NEXT:frame = [k#6 : closure]
+// CHECK-NEXT:S{load_store_test#0#1()#6} = [k#6 : closure]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{load_store_test#0#1()#6}
 // CHECK-NEXT:  %1 = CreateFunctionInst %ping#1#6()#7 : number, %0
 // CHECK-NEXT:  %2 = CreateFunctionInst %k#1#6()#8 : number, %0
 // CHECK-NEXT:  %3 = StoreFrameInst %2 : closure, [k#6] : closure, %0
-// CHECK-NEXT:  %4 = CallInst %1 : closure, undefined : undefined
+// CHECK-NEXT:  %4 = CallInst %1 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %5 = ReturnInst 123 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function ping#1#6()#7 : number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{ping#1#6()#7} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{ping#1#6()#7}
 // CHECK-NEXT:  %1 = LoadFrameInst [k#6@load_store_test] : closure, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, 123 : number
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined, 123 : number
 // CHECK-NEXT:  %3 = ReturnInst 123 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function k#1#6(k)#8 : number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{k#1#6()#8} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{k#1#6()#8}
 // CHECK-NEXT:  %1 = ReturnInst 123 : number

@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -strict -target=HBC -dump-bytecode --basic-block-profiling -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -bs -strict -target=HBC -dump-bytecode --basic-block-profiling -O %s | %FileCheck --match-full-lines %s
 
 var condition = false;
 try {

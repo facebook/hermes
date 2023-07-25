@@ -10,7 +10,7 @@
 function b(d=([[[[{z:[{}]}]]]]=arguments)) {}
 
 //CHKRA-LABEL:function b#0#1(d)#2 : undefined
-//CHKRA-NEXT:frame = []
+//CHKRA-NEXT:S{b#0#1()#2} = []
 //CHKRA-LABEL:%BB1:
 //CHKRA-NEXT:  {{.*}}  %17 = ReturnInst %1 : undefined
 //CHKRA-LABEL:%BB68:

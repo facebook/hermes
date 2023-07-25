@@ -83,6 +83,7 @@ TEST(HBCBytecodeGen, IntegrationTest) {
 
   BytecodeModuleGenerator BMG;
   BMG.initializeStringTable(stringsForTest({"f1"}));
+  uint32_t scopeDescId = BMG.addScopeDesc(nullptr);
   BMG.addFilename("main.js");
 
   Function *globalFunction = Builder.createTopLevelFunction(
@@ -98,8 +99,10 @@ TEST(HBCBytecodeGen, IntegrationTest) {
       Function::DefinitionKind::ES5Function,
       true);
   auto BFG2 = BytecodeFunctionGenerator::create(BMG, 10);
-  BFG2->setSourceLocation(DebugSourceLocation(0, 0, 1, 1, 0));
-  const DebugSourceLocation debugSourceLoc(0, 1, 20, 300, 0);
+  BFG2->setSourceLocation(DebugSourceLocation(
+      0, 0, 1, 1, 0, scopeDescId, DebugSourceLocation::NO_REG));
+  const DebugSourceLocation debugSourceLoc(
+      0, 1, 20, 300, 0, scopeDescId, DebugSourceLocation::NO_REG);
   BFG2->addDebugSourceLocation(debugSourceLoc);
   BFG2->emitCall(9, 8, 7);
   BMG.addFunction(f1);
@@ -134,8 +137,8 @@ TEST(HBCBytecodeGen, IntegrationTest) {
       oldF1.getDebugOffsets()->sourceLocations,
       bytecode->getDebugOffsets(f1Index)->sourceLocations);
   EXPECT_EQ(
-      oldF1.getDebugOffsets()->lexicalData,
-      bytecode->getDebugOffsets(f1Index)->lexicalData);
+      oldF1.getDebugOffsets()->scopeDescData,
+      bytecode->getDebugOffsets(f1Index)->scopeDescData);
   auto optionalSourceLoc = bytecode->getDebugInfo()->getLocationForAddress(
       bytecode->getDebugOffsets(f1Index)->sourceLocations, 0);
   EXPECT_TRUE(optionalSourceLoc.hasValue());
@@ -161,11 +164,13 @@ TEST(HBCBytecodeGen, StripDebugInfo) {
 
   BytecodeModuleGenerator BMG;
   BMG.initializeStringTable(stringsForTest());
+  uint32_t scopeDescId = BMG.addScopeDesc(nullptr);
 
   Function *globalFunction = Builder.createTopLevelFunction(
       M.getInitialScope()->createInnerScope(), {});
   auto BFG1 = BytecodeFunctionGenerator::create(BMG, 3);
-  BFG1->addDebugSourceLocation(DebugSourceLocation{0, 1, 20, 300, 0});
+  BFG1->addDebugSourceLocation(DebugSourceLocation{
+      0, 1, 20, 300, 0, scopeDescId, DebugSourceLocation::NO_REG});
   BFG1->emitMov(1, 2);
   BMG.setEntryPointIndex(BMG.addFunction(globalFunction));
   BMG.setFunctionGenerator(globalFunction, std::move(BFG1));
@@ -210,6 +215,7 @@ TEST(HBCBytecodeGen, StringTableTest) {
   BytecodeModuleGenerator BMG;
   BMG.initializeStringTable(
       stringsForTest({"foo", "bar", /* Ā */ "\xc4\x80", /* å */ "\xc3\xa5"}));
+  BMG.addScopeDesc(nullptr);
 
   Function *F = Builder.createTopLevelFunction(
       M.getInitialScope()->createInnerScope(), true);
@@ -286,6 +292,7 @@ TEST(HBCBytecodeGen, ExceptionTableTest) {
 
   BytecodeModuleGenerator BMG;
   BMG.initializeStringTable(stringsForTest());
+  BMG.addScopeDesc(nullptr);
 
   Function *F = Builder.createTopLevelFunction(
       M.getInitialScope()->createInnerScope(), true);

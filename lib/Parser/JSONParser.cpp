@@ -214,7 +214,7 @@ llvh::Optional<JSONValue *> JSONParser::parseValue() {
         error("No numeric literal following minus (-) token in value");
         return llvh::None;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case TokenKind::numeric_literal: {
       auto numericValue = lexer_.getCurToken()->getNumericLiteral();
       auto res =

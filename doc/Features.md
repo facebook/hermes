@@ -57,6 +57,5 @@ Hermes plans to target ECMAScript 2015 (ES6), with some carefully considered exc
 
 - `arguments` changes in non-strict mode will not sync with named parameters
 - `Function.prototype.toString` cannot show source because Hermes executes from bytecode
-- `Promise` is implemented by pre-compiling [the JS polyfill from RN](https://github.com/facebook/react-native/blob/HEAD/Libraries/Promise.js) as the [internal bytecode](https://github.com/facebook/hermes/blob/HEAD/lib/InternalBytecode/Promise.js) to preserve the current interoperation, hence its conformance to the spec is up to conformance of the polyfill.
+- `Promise` is implemented by pre-compiling [the JS polyfill from RN](https://github.com/facebook/hermes/blob/HEAD/utils/promise/index.js) as the [internal bytecode](https://github.com/facebook/hermes/blob/HEAD/lib/InternalBytecode/01-Promise.js) to preserve the current interoperation, hence its conformance to the spec is up to conformance of the polyfill.
   - In case you want to bring in your own Promise and opt-out Hermes', you can turn it off by passing `-Xes6-promise=0` in CLI or setting `withES6Promise(false)` in the runtime configs.
-  - N.B. ES6 Promise does not include `Promise.allSettled` (ES2020) and `Promise.any` (Stage 4).

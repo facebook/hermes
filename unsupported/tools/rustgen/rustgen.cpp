@@ -451,6 +451,7 @@ static void genConvert() {
               (cls.name == "LogicalExpression" && fld.name == "operator") ||
               (cls.name == "UpdateExpression" && fld.name == "operator") ||
               (cls.name == "VariableDeclaration" && fld.name == "kind") ||
+              (cls.name == "DeclareVariable" && fld.name == "kind") ||
               (cls.name == "Property" && fld.name == "kind") ||
               (cls.name == "MethodDefinition" && fld.name == "kind") ||
               (cls.name == "ImportDeclaration" && fld.name == "importKind") ||

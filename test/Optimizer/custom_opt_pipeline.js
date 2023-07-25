@@ -15,7 +15,8 @@ function test_two(x,y,z) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [test_two]
+// CHECK-NEXT:globals = [test_two]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %test_two#0#1()#2, %0
@@ -24,7 +25,7 @@ function test_two(x,y,z) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_two#0#1(x, y, z)#2
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{test_two#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_two#0#1()#2}
 // CHECK-NEXT:  %1 = ReturnInst undefined : undefined

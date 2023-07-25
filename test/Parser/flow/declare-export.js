@@ -127,7 +127,52 @@ declare export var x: number;
 // CHECK-NEXT:                 "type": "NumberTypeAnnotation"
 // CHECK-NEXT:               }
 // CHECK-NEXT:             }
-// CHECK-NEXT:           }
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "kind": "var"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "specifiers": [],
+// CHECK-NEXT:         "source": null,
+// CHECK-NEXT:         "default": false
+// CHECK-NEXT:       },
+
+declare export let x: number;
+// CHECK-NEXT:       {
+// CHECK-NEXT:         "type": "DeclareExportDeclaration",
+// CHECK-NEXT:         "declaration": {
+// CHECK-NEXT:           "type": "DeclareVariable",
+// CHECK-NEXT:           "id": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "x",
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "NumberTypeAnnotation"
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "kind": "let"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "specifiers": [],
+// CHECK-NEXT:         "source": null,
+// CHECK-NEXT:         "default": false
+// CHECK-NEXT:       },
+
+declare export const x: number;
+// CHECK-NEXT:       {
+// CHECK-NEXT:         "type": "DeclareExportDeclaration",
+// CHECK-NEXT:         "declaration": {
+// CHECK-NEXT:           "type": "DeclareVariable",
+// CHECK-NEXT:           "id": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "x",
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "NumberTypeAnnotation"
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "kind": "const"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "specifiers": [],
 // CHECK-NEXT:         "source": null,

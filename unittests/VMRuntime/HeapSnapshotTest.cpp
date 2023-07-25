@@ -930,13 +930,13 @@ TEST_F(HeapSnapshotRuntimeTest, PropertyUpdatesTest) {
       runtime,
       fooSym,
       dpf,
-      runtime.makeHandle(HermesValue::encodeNumberValue(100)))));
+      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(100)))));
   ASSERT_FALSE(isException(JSObject::defineOwnProperty(
       obj,
       runtime,
       barSym,
       dpf,
-      runtime.makeHandle(HermesValue::encodeNumberValue(200)))));
+      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(200)))));
   // Trigger update transitions for both properties.
   dpf.writable = false;
   ASSERT_FALSE(isException(JSObject::defineOwnProperty(
@@ -944,13 +944,13 @@ TEST_F(HeapSnapshotRuntimeTest, PropertyUpdatesTest) {
       runtime,
       fooSym,
       dpf,
-      runtime.makeHandle(HermesValue::encodeNumberValue(100)))));
+      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(100)))));
   ASSERT_FALSE(isException(JSObject::defineOwnProperty(
       obj,
       runtime,
       barSym,
       dpf,
-      runtime.makeHandle(HermesValue::encodeNumberValue(200)))));
+      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(200)))));
   // Forcibly clear the final hidden class's property map.
   auto *clazz = obj->getClass(runtime);
   clazz->clearPropertyMap(runtime.getHeap());
@@ -1008,7 +1008,8 @@ TEST_F(HeapSnapshotRuntimeTest, ArrayElements) {
   auto cr = JSObject::getComputed_RJS(
       array,
       runtime,
-      runtime.makeHandle(HermesValue::encodeNumberValue((1 << 20) + 1000)));
+      runtime.makeHandle(
+          HermesValue::encodeTrustedNumberValue((1 << 20) + 1000)));
   ASSERT_FALSE(isException(cr));
   Handle<JSObject> thirdElement = runtime.makeHandle<JSObject>(std::move(*cr));
   const auto arrayID = runtime.getHeap().getObjectID(array.get());

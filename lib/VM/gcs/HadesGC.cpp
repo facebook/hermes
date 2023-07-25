@@ -38,6 +38,11 @@ static const char *kCompacteeNameForCrashMgr = "COMPACT";
 // We have a target max pause time of 50ms.
 static constexpr size_t kTargetMaxPauseMs = 50;
 
+// Assert that it is always safe to construct a cell that is as large as the
+// entire segment. This lets us always assume that contiguous regions in a
+// segment can be safely turned into a single FreelistCell.
+static_assert(HadesGC::HeapSegment::maxSize() <= HadesGC::maxAllocationSize());
+
 // A free list cell is always variable-sized.
 const VTable HadesGC::OldGen::FreelistCell::vt{
     CellKind::FreelistKind,

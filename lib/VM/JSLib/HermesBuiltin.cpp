@@ -8,6 +8,7 @@
 #include "JSLibInternal.h"
 
 #include "hermes/FrontEndDefs/Builtins.h"
+#include "hermes/FrontEndDefs/NativeErrorTypes.h"
 #include "hermes/Support/Base64vlq.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSArray.h"
@@ -115,7 +116,7 @@ hermesBuiltinGetTemplateObject(void *, Runtime &runtime, NativeArgs args) {
   uint32_t cookedBegin = dup ? 2 : 2 + count;
   auto marker = gcScope.createMarker();
   for (uint32_t i = 0; i < count; ++i) {
-    idx = HermesValue::encodeNumberValue(i);
+    idx = HermesValue::encodeUntrustedNumberValue(i);
 
     cookedValue = args.getArg(cookedBegin + i);
     auto putRes = JSObject::defineOwnComputedPrimitive(
@@ -406,7 +407,7 @@ hermesBuiltinCopyDataProperties(void *, Runtime &runtime, NativeArgs args) {
         if (!desc.flags.enumerable)
           return true;
 
-        nameHandle = HermesValue::encodeNumberValue(index);
+        nameHandle = HermesValue::encodeUntrustedNumberValue(index);
 
         if (excludedItems) {
           assert(
@@ -572,7 +573,7 @@ hermesBuiltinArraySpread(void *, Runtime &runtime, NativeArgs args) {
           if (LLVM_UNLIKELY(nextValue->isEmpty())) {
             // Slow path, just run the full getComputed_RJS path.
             // Runs when there is a hole, accessor, non-regular property, etc.
-            idxHandle = HermesValue::encodeNumberValue(i);
+            idxHandle = HermesValue::encodeUntrustedNumberValue(i);
             CallResult<PseudoHandle<>> valueRes =
                 JSObject::getComputed_RJS(arr, runtime, idxHandle);
             if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
@@ -597,7 +598,7 @@ hermesBuiltinArraySpread(void *, Runtime &runtime, NativeArgs args) {
           return ExecutionStatus::EXCEPTION;
         }
 
-        return HermesValue::encodeNumberValue(nextIndex);
+        return HermesValue::encodeUntrustedNumberValue(nextIndex);
       }
     }
   }
@@ -646,7 +647,8 @@ hermesBuiltinArraySpread(void *, Runtime &runtime, NativeArgs args) {
     }
 
     // f. Let nextIndex be nextIndex + 1.
-    nextIndex = HermesValue::encodeNumberValue(nextIndex->getNumber() + 1);
+    nextIndex =
+        HermesValue::encodeUntrustedNumberValue(nextIndex->getNumber() + 1);
   }
 
   return nextIndex.getHermesValue();
@@ -682,7 +684,7 @@ hermesBuiltinApply(void *, Runtime &runtime, NativeArgs args) {
 
   MutableHandle<> thisVal{runtime};
   if (isConstructor) {
-    auto thisValRes = Callable::createThisForConstruct(fn, runtime);
+    auto thisValRes = Callable::createThisForConstruct_RJS(fn, runtime);
     if (LLVM_UNLIKELY(thisValRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -787,7 +789,8 @@ hermesBuiltinExponentiate(void *ctx, Runtime &runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    return HermesValue::encodeNumberValue(expOp(left, res->getNumber()));
+    return HermesValue::encodeUntrustedNumberValue(
+        expOp(left, res->getNumber()));
   }
 
   Handle<BigIntPrimitive> lhs = runtime.makeHandle(res->getBigInt());
@@ -815,6 +818,31 @@ CallResult<HermesValue> hermesBuiltinInitRegexNamedGroups(
   auto *groupsObj = dyn_vmcast<JSObject>(args.getArg(1));
   regexp->setGroupNameMappings(runtime, groupsObj);
   return HermesValue::encodeUndefinedValue();
+}
+
+CallResult<HermesValue> hermesBuiltinGetOriginalNativeErrorConstructor(
+    void *ctx,
+    Runtime &runtime,
+    NativeArgs args) {
+  CallResult<HermesValue> res = toInt32_RJS(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  uint32_t errorId = res->getNumberAs<uint32_t>();
+  switch (static_cast<NativeErrorTypes>(errorId)) {
+    default:
+      return runtime.raiseRangeError(
+          "Invalid error ID passed to getOriginalNativeErrorConstructor");
+
+    case NativeErrorTypes::Error:
+      return runtime.errorConstructor;
+
+#define NATIVE_ERROR_TYPE(name) \
+  case NativeErrorTypes::name:  \
+    return runtime.name##Constructor;
+#include "hermes/FrontEndDefs/NativeErrorTypes.def"
+  }
 }
 
 void createHermesBuiltins(
@@ -892,6 +920,11 @@ void createHermesBuiltins(
       B::HermesBuiltin_initRegexNamedGroups,
       P::initRegexNamedGroups,
       hermesBuiltinInitRegexNamedGroups);
+
+  defineInternMethod(
+      B::HermesBuiltin_getOriginalNativeErrorConstructor,
+      P::getOriginalNativeErrorConstructor,
+      hermesBuiltinGetOriginalNativeErrorConstructor);
 
   // Define the 'requireFast' function, which takes a number argument.
   defineInternMethod(

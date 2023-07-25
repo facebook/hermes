@@ -193,70 +193,80 @@ describe('Literal', () => {
 
   test('Babel', () => {
     // Babel AST literal nodes
-    expect(parse(testCase.code, {babel: true})).toMatchObject({
-      type: 'File',
-      program: {
-        type: 'Program',
-        body: [
+    expect(parseForSnapshot(testCase.code, {babel: true}))
+      .toMatchInlineSnapshot(`
+      {
+        "body": [
           {
-            type: 'ExpressionStatement',
-            expression: {
-              type: 'NullLiteral',
+            "directive": null,
+            "expression": {
+              "type": "NullLiteral",
             },
+            "type": "ExpressionStatement",
           },
           {
-            type: 'ExpressionStatement',
-            expression: {
-              type: 'NumericLiteral',
-              value: 10,
+            "directive": null,
+            "expression": {
+              "type": "NumericLiteral",
+              "value": 10,
             },
+            "type": "ExpressionStatement",
           },
           {
-            type: 'ExpressionStatement',
-            expression: {
-              type: 'NumericLiteral',
-              value: 0.56283,
+            "directive": null,
+            "expression": {
+              "type": "NumericLiteral",
+              "value": 0.56283,
             },
+            "type": "ExpressionStatement",
           },
           {
-            type: 'ExpressionStatement',
-            expression: {
-              type: 'StringLiteral',
-              value: 'test',
+            "directive": null,
+            "expression": {
+              "type": "StringLiteral",
+              "value": "test",
             },
+            "type": "ExpressionStatement",
           },
           {
-            type: 'ExpressionStatement',
-            expression: {
-              type: 'BooleanLiteral',
-              value: true,
+            "directive": null,
+            "expression": {
+              "type": "BooleanLiteral",
+              "value": true,
             },
+            "type": "ExpressionStatement",
           },
           {
-            type: 'ExpressionStatement',
-            expression: {
-              type: 'RegExpLiteral',
-              pattern: 'foo',
-              flags: 'g',
+            "directive": null,
+            "expression": {
+              "flags": "g",
+              "pattern": "foo",
+              "type": "RegExpLiteral",
             },
+            "type": "ExpressionStatement",
           },
           {
-            type: 'ExpressionStatement',
-            expression: {
-              type: 'BigIntLiteral',
-              bigint: '4321n',
+            "directive": null,
+            "expression": {
+              "bigint": "4321n",
+              "type": "BigIntLiteral",
+              "value": 4321n,
             },
+            "type": "ExpressionStatement",
           },
           {
-            type: 'ExpressionStatement',
-            expression: {
-              type: 'BigIntLiteral',
-              bigint: '12_34n',
+            "directive": null,
+            "expression": {
+              "bigint": "12_34n",
+              "type": "BigIntLiteral",
+              "value": 1234n,
             },
+            "type": "ExpressionStatement",
           },
         ],
-      },
-    });
+        "type": "Program",
+      }
+    `);
     expectBabelAlignment(testCase);
   });
 

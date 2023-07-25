@@ -57,55 +57,94 @@ static std::string getFileNameAsUTF8(
   return debugInfo->getFilenameByID(filenameId);
 }
 
-/// \return a scope chain containing the block and all its lexical parents,
-/// including the global scope.
-/// \return none if the scope chain is unavailable.
-static llvh::Optional<ScopeChain> scopeChainForBlock(
-    Runtime &runtime,
-    const CodeBlock *cb) {
-  OptValue<uint32_t> lexicalDataOffset = cb->getDebugLexicalDataOffset();
-  if (!lexicalDataOffset)
-    return llvh::None;
+/// \returns the IP in \p cb, which is the given \p frame (0 being the top most
+/// frame). This is either the current program IP, or the return IP following a
+/// call instruction.
+static unsigned
+getIPOffsetInBlock(Runtime &runtime, const CodeBlock *cb, uint32_t frame) {
+  if (frame == 0) {
+    // The current IP in cb is the current program IP if this is top most frame.
+    return cb->getOffsetOf(runtime.getCurrentIP());
+  }
 
-  ScopeChain scopeChain;
+  // Otherwise, IP for frame N is stored in frame N - 1.
+  auto prevFrameInfo = runtime.stackFrameInfoByIndex(frame - 1);
+  return cb->getOffsetOf(prevFrameInfo->frame->getSavedIP());
+}
+
+/// Used when accessing the scope descriptor information for a particular
+/// bytecode.
+struct ScopeRegAndDescriptorChain {
+  /// Which register contains the Environment.
+  unsigned reg;
+
+  /// All scope descriptor chain.
+  llvh::SmallVector<hbc::DebugScopeDescriptor, 4> scopeDescs;
+};
+
+/// \return a pair with its first element being the number of register that
+/// holds the Environment at the runtime's current IP, and its second, the scope
+/// chain containing the block and all its lexical parents, including the global
+/// scope. \return none if the scope chain is unavailable.
+static llvh::Optional<ScopeRegAndDescriptorChain>
+scopeDescChainForBlock(Runtime &runtime, const CodeBlock *cb, uint32_t frame) {
+  OptValue<hbc::DebugSourceLocation> locationOpt =
+      cb->getSourceLocation(getIPOffsetInBlock(runtime, cb, frame));
+
+  if (!locationOpt) {
+    return llvh::None;
+  }
+
+  unsigned envReg = locationOpt->envReg;
+  if (envReg == hbc::DebugSourceLocation::NO_REG) {
+    // The debug information doesn't know where the environment is stored.
+    return llvh::None;
+  }
+
+  ScopeRegAndDescriptorChain ret;
+  ret.reg = envReg;
   RuntimeModule *runtimeModule = cb->getRuntimeModule();
   const hbc::BCProvider *bytecode = runtimeModule->getBytecode();
   const hbc::DebugInfo *debugInfo = bytecode->getDebugInfo();
-  while (lexicalDataOffset) {
-    GCScopeMarkerRAII marker{runtime};
-    scopeChain.functions.emplace_back();
-    auto &scopeItem = scopeChain.functions.back();
-    // Append a new list to the chain.
-    auto names = debugInfo->getVariableNames(*lexicalDataOffset);
-    scopeItem.variables.insert(
-        scopeItem.variables.end(), names.begin(), names.end());
 
-    // Get the parent item.
-    // Stop at the global block.
-    auto parentId = debugInfo->getParentFunctionId(*lexicalDataOffset);
-    if (!parentId)
-      break;
+  OptValue<unsigned> currentScopeDescOffset = locationOpt->scopeAddress;
+  while (currentScopeDescOffset) {
+    ret.scopeDescs.push_back(
+        debugInfo->getScopeDescriptor(*currentScopeDescOffset));
 
-    lexicalDataOffset = runtimeModule->getCodeBlockMayAllocate(*parentId)
-                            ->getDebugLexicalDataOffset();
-
-    if (!lexicalDataOffset) {
-      // The function has a parent, but the parent doesn't have debug info.
-      // This could happen when the parent is global.
-      // "global" doesn't have a lexical parent.
-      // "global" may have 0 variables, and may have no lexical info
-      // (which is the case for synthesized parent scopes in lazy compilation).
-      // In such case, BytecodeFunctionGenerator::hasDebugInfo returns false,
-      // resulting in no debug offset for global in the bytecode.
-      // Note that assert "*parentId == bytecode->getGlobalFunctionIndex()"
-      // will fail because the getGlobalFunctionIndex() function returns
-      // the entry point instead of the global function. The entry point
-      // is not the same as the global function in the context of
-      // lazy compilation.
-      scopeChain.functions.emplace_back();
-    }
+    currentScopeDescOffset = ret.scopeDescs.back().parentOffset;
   }
-  return {std::move(scopeChain)};
+
+  return ret;
+}
+
+/// \return the first (inner-most) scope descriptor in \p frame.
+static OptValue<uint32_t> getScopeDescIndexForFrame(
+    const llvh::SmallVectorImpl<hbc::DebugScopeDescriptor> &scopeDescs,
+    uint32_t frame) {
+  // newFrame is a flag indicating that the next scope descriptor belongs to a
+  // new frame in the call stack. The default value (true) represents the fact
+  // that the top most scope should always be included in the result.
+  bool newFrame = true;
+
+  // counts the number of new frames see in the scope descriptor chain.
+  uint32_t numSeenFrames = 0;
+  for (uint32_t i = 0, end = scopeDescs.size(); i < end; ++i) {
+    const hbc::DebugScopeDescriptor &currScopeDesc = scopeDescs[i];
+    if (newFrame) {
+      // currScopeDesc is the top-most scope descriptor in a new frame. The
+      // search is over if numSeenFrames equals frame.
+      if (numSeenFrames == frame) {
+        return i;
+      }
+      ++numSeenFrames;
+    }
+    // A new frame is found if currScopeDesc is not an inner scope (i.e., it is
+    // the first scope in its function).
+    newFrame = !currScopeDesc.flags.isInnerScope;
+  }
+
+  return llvh::None;
 }
 
 void Debugger::triggerAsyncPause(AsyncPauseKind kind) {
@@ -893,6 +932,20 @@ ExecutionStatus Debugger::stepInstruction(InterpreterState &state) {
   return status;
 }
 
+/// Starting from scope \p i, add and \p return the number of variables in the
+/// frame. The frame ends in the first scope that's not an inner scope.
+static unsigned getFrameSize(
+    const llvh::SmallVector<hbc::DebugScopeDescriptor, 4> &scopeDescs,
+    uint32_t i) {
+  unsigned frameSize = 0;
+
+  do {
+    frameSize += scopeDescs[i].names.size();
+  } while (scopeDescs[i--].flags.isInnerScope);
+
+  return frameSize;
+}
+
 auto Debugger::getLexicalInfoInFrame(uint32_t frame) const -> LexicalInfo {
   auto frameInfo = runtime_.stackFrameInfoByIndex(frame);
   assert(frameInfo && "Invalid frame");
@@ -911,15 +964,19 @@ auto Debugger::getLexicalInfoInFrame(uint32_t frame) const -> LexicalInfo {
     return result;
   }
 
-  auto scopeChain = scopeChainForBlock(runtime_, cb);
-  if (!scopeChain) {
+  llvh::Optional<ScopeRegAndDescriptorChain> envRegAndDescChain =
+      scopeDescChainForBlock(runtime_, cb, frame);
+  if (!envRegAndDescChain) {
     // Binary was compiled without variable debug info.
     result.variableCountsByScope_.push_back(0);
     return result;
   }
 
-  for (const auto &func : scopeChain->functions) {
-    result.variableCountsByScope_.push_back(func.variables.size());
+  const llvh::SmallVector<hbc::DebugScopeDescriptor, 4> &scopeDescs =
+      envRegAndDescChain->scopeDescs;
+  uint32_t currFrame = 0;
+  while (auto idx = getScopeDescIndexForFrame(scopeDescs, currFrame++)) {
+    result.variableCountsByScope_.push_back(getFrameSize(scopeDescs, *idx));
   }
   return result;
 }
@@ -946,25 +1003,68 @@ HermesValue Debugger::getVariableInFrame(
   }
   const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock(runtime_);
   assert(cb && "Unexpectedly null code block");
-  auto scopeChain = scopeChainForBlock(runtime_, cb);
-  if (!scopeChain) {
+  llvh::Optional<ScopeRegAndDescriptorChain> envRegAndDescChain =
+      scopeDescChainForBlock(runtime_, cb, frame);
+  if (!envRegAndDescChain) {
     // Binary was compiled without variable debug info.
     return undefined;
   }
 
-  const ScopeChainItem &item = scopeChain->functions.at(scopeDepth);
-  if (outName)
-    *outName = item.variables.at(variableIndex);
+  const llvh::SmallVector<hbc::DebugScopeDescriptor, 4> &scopeDescs =
+      envRegAndDescChain->scopeDescs;
 
-  // Descend the environment chain to the desired depth, or stop at null.
-  // We may get a null environment if it has not been created.
-  MutableHandle<Environment> env(
-      runtime_, frameInfo->frame->getDebugEnvironment());
-  for (uint32_t i = 0; env && i < scopeDepth; i++)
+  // Find the scope desc for the requested scope. This is the inner most scope
+  // in the given frame.
+  auto idx = getScopeDescIndexForFrame(scopeDescs, scopeDepth);
+  if (!idx) {
+    // Invalid scope frame.
+    return undefined;
+  }
+
+  // Find the first (top most) scope in the scope chain.
+  const PinnedHermesValue &envPHV =
+      (&frameInfo->frame.getFirstLocalRef())[envRegAndDescChain->reg];
+  assert(envPHV.isObject() && dyn_vmcast<Environment>(envPHV));
+
+  // Descend the environment chain to the desired depth, or stop at null. We may
+  // get a null environment if it has not been created.
+  MutableHandle<Environment> env(runtime_, vmcast<Environment>(envPHV));
+  unsigned varScopeIndex = *idx;
+  for (uint32_t i = varScopeIndex; env && i > 0; --i) {
+    env = env->getParentEnvironment(runtime_);
+  }
+
+  // Now find variableIndex in the current frame. variableIndex could be
+  // indexing into an outer scope, thus we need to find the real target scope
+  // within the current frame.
+  bool newFrame = false;
+  while (env && env->getSize() <= variableIndex) {
+    // If newFrame was set to true on the previous iteration, then this
+    // iteration is now accessing variables in an Environment that doesn't
+    // belong to the requested frame.
+    assert(!newFrame && "accessing variables from another frame");
+    (void)newFrame;
+
+    // Adjust the variableIndex to take into account the current environment.
+    variableIndex -= env->getSize();
     env = env->getParentEnvironment(runtime_);
 
+    // Sanity-check: ensuring that this loop doesn't cross the frame boundary,
+    // i.e., the current scopeDescs[varScopeIndex] os an inner scope.
+    newFrame = !scopeDescs[varScopeIndex++].flags.isInnerScope;
+  }
+
+  if (!env) {
+    return undefined;
+  }
+  assert(varScopeIndex < scopeDescs.size() && "OOB scope desc access");
+
+  // If the caller needs the variable name, populate it.
+  if (outName)
+    *outName = scopeDescs[varScopeIndex].names[variableIndex];
+
   // Now we can get the variable, or undefined if we have no environment.
-  return env ? env->slot(variableIndex) : undefined;
+  return env->slot(variableIndex);
 }
 
 HermesValue Debugger::getThisValue(uint32_t frame) const {
@@ -1030,36 +1130,47 @@ HermesValue Debugger::evalInFrame(
   MutableHandle<> resultHandle(runtime_);
   bool singleFunction = false;
 
-  // Environment may be undefined if it has not been created yet.
-  Handle<Environment> env = frameInfo->frame->getDebugEnvironmentHandle();
-  if (!env) {
-    // TODO: this comes about when we break in a function before its environment
-    // has been created. What we would like to do here is synthesize an
-    // environment with undefined for all locals, since no variables can have
-    // been defined yet, and link it to the parent scope. For now we just bail
-    // out.
-    return HermesValue::encodeUndefinedValue();
-  }
-
   const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock(runtime_);
-  auto scopeChain = scopeChainForBlock(runtime_, cb);
-  if (!scopeChain) {
-    // Binary was compiled without variable debug info.
-    return HermesValue::encodeUndefinedValue();
-  }
+  llvh::Optional<ScopeRegAndDescriptorChain> envRegAndScopeChain =
+      scopeDescChainForBlock(runtime_, cb, frame);
 
   // Interpreting code requires that the `thrownValue_` is empty.
   // Save it temporarily so we can restore it after the evalInEnvironment.
   Handle<> savedThrownValue = runtime_.makeHandle(runtime_.getThrownValue());
   runtime_.clearThrownValue();
 
-  CallResult<HermesValue> result = evalInEnvironment(
-      runtime_,
-      src,
-      env,
-      *scopeChain,
-      Handle<>(&frameInfo->frame->getThisArgRef()),
-      singleFunction);
+  CallResult<HermesValue> result{ExecutionStatus::EXCEPTION};
+
+  if (!envRegAndScopeChain) {
+    result = runtime_.raiseError("Can't evalInFrame: Environment not found");
+  } else {
+    // Use the Environment for the current instruction.
+    const PinnedHermesValue &env =
+        (&frameInfo->frame.getFirstLocalRef())[envRegAndScopeChain->reg];
+    assert(env.isObject() && dyn_vmcast<Environment>(env));
+
+    // Create the scope chain. The scope chain should represent each
+    // Scope/Environment's names (without any accessible name from other
+    // scopes).
+    ScopeChain chain;
+    for (const hbc::DebugScopeDescriptor &scopeDesc :
+         envRegAndScopeChain->scopeDescs) {
+      chain.scopes.emplace_back();
+      ScopeChainItem &scopeItem = chain.scopes.back();
+      for (const llvh::StringRef &name : scopeDesc.names) {
+        scopeItem.variables.push_back(name);
+      }
+    }
+
+    result = evalInEnvironment(
+        runtime_,
+        src,
+        Handle<Environment>::vmcast(runtime_, env),
+        chain,
+        Handle<>(&frameInfo->frame->getThisArgRef()),
+        false,
+        singleFunction);
+  }
 
   // Check if an exception was thrown.
   if (result.getStatus() == ExecutionStatus::EXCEPTION) {

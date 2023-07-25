@@ -41,7 +41,7 @@ dataViewPrototypeByteLength(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "DataView.prototype.byteLength called on a non DataView object");
   }
-  return HermesValue::encodeNumberValue(self->byteLength());
+  return HermesValue::encodeUntrustedNumberValue(self->byteLength());
 }
 
 // ES6 24.2.4.3
@@ -52,14 +52,14 @@ dataViewPrototypeByteOffset(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "DataView.prototype.byteOffset called on a non DataView object");
   }
-  return HermesValue::encodeNumberValue(self->byteOffset());
+  return HermesValue::encodeUntrustedNumberValue(self->byteOffset());
 }
 
 // ES6 24.2.4.5 - 22.2.4.20 && ES 2018 24.3.1.1
 namespace {
 template <typename T>
 CallResult<HermesValue> dataViewPrototypeGetEncoder(Runtime &, T value) {
-  return SafeNumericEncoder<T>::encode(value);
+  return HermesValue::encodeUntrustedNumberValue(value);
 }
 
 CallResult<HermesValue> dataViewPrototypeGetEncoder(

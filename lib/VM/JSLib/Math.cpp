@@ -107,7 +107,7 @@ runContextFunc1Arg(void *ctx, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   double arg = res->getNumber();
-  return HermesValue::encodeDoubleValue(func(arg));
+  return HermesValue::encodeUntrustedNumberValue(func(arg));
 }
 
 // Implementation of 2-arg Math functions like pow and atan2
@@ -139,7 +139,7 @@ runContextFunc2Arg(void *ctx, Runtime &runtime, NativeArgs args) {
   }
   double arg1 = res->getNumber();
 
-  return HermesValue::encodeDoubleValue(func(arg0, arg1));
+  return HermesValue::encodeUntrustedNumberValue(func(arg0, arg1));
 }
 
 // ES5.1 15.8.2.11
@@ -162,7 +162,7 @@ CallResult<HermesValue> mathMax(void *, Runtime &runtime, NativeArgs args) {
       result = arg;
     }
   }
-  return HermesValue::encodeDoubleValue(result);
+  return HermesValue::encodeUntrustedNumberValue(result);
 }
 
 // ES5.1 15.8.2.12
@@ -185,7 +185,7 @@ CallResult<HermesValue> mathMin(void *, Runtime &runtime, NativeArgs args) {
       result = arg;
     }
   }
-  return HermesValue::encodeDoubleValue(result);
+  return HermesValue::encodeUntrustedNumberValue(result);
 }
 
 // ES9.0 20.2.2.26
@@ -202,7 +202,7 @@ CallResult<HermesValue> mathPow(void *, Runtime &runtime, NativeArgs args) {
   }
   const double y = res->getNumber();
 
-  return HermesValue::encodeNumberValue(expOp(x, y));
+  return HermesValue::encodeUntrustedNumberValue(expOp(x, y));
 }
 
 // ES5.1 15.8.2.14
@@ -216,7 +216,7 @@ CallResult<HermesValue> mathRandom(void *, Runtime &runtime, NativeArgs) {
     storage->randomEngineSeeded_ = true;
   }
   std::uniform_real_distribution<> dist(0.0, 1.0);
-  return HermesValue::encodeDoubleValue(dist(storage->randomEngine_));
+  return HermesValue::encodeUntrustedNumberValue(dist(storage->randomEngine_));
 }
 
 CallResult<HermesValue> mathFround(void *, Runtime &runtime, NativeArgs args)
@@ -235,7 +235,7 @@ CallResult<HermesValue> mathFround(void *, Runtime &runtime, NativeArgs args) {
   // our current compilers.
   // TODO(T43892577): Find an alternative that doesn't use UB (or validate that
   // the UB is ok).
-  return HermesValue::encodeNumberValue(
+  return HermesValue::encodeUntrustedNumberValue(
       static_cast<double>(static_cast<float>(x)));
 }
 
@@ -271,7 +271,7 @@ CallResult<HermesValue> mathHypot(void *, Runtime &runtime, NativeArgs args) {
   // 3. For each element number of coerced, do
   //   a. If number is +∞𝔽 or number is -∞𝔽, return +∞𝔽.
   if (hasInf)
-    return HermesValue::encodeNumberValue(
+    return HermesValue::encodeUntrustedNumberValue(
         std::numeric_limits<double>::infinity());
   // 5. For each element number of coerced, do
   //   a. If number is NaN, return NaN.
@@ -281,7 +281,7 @@ CallResult<HermesValue> mathHypot(void *, Runtime &runtime, NativeArgs args) {
   assert(!(max < 0) && "max must not be negative (max(abs(value))");
   // 6. If onlyZero is true, return +0𝔽.
   if (max == 0) {
-    return HermesValue::encodeNumberValue(+0);
+    return HermesValue::encodeUntrustedNumberValue(+0);
   }
 
   // 7. Return an implementation-approximated Number value representing the
@@ -305,7 +305,7 @@ CallResult<HermesValue> mathHypot(void *, Runtime &runtime, NativeArgs args) {
   }
   double result = std::sqrt(sum) * max;
 
-  return HermesValue::encodeNumberValue(result);
+  return HermesValue::encodeUntrustedNumberValue(result);
 }
 
 // ES6.0 20.2.2.19
@@ -326,7 +326,7 @@ CallResult<HermesValue> mathImul(void *, Runtime &runtime, NativeArgs args) {
   uint32_t product = a * b;
 
   // If product >= 2^31, return product - 2^32, else return product.
-  return HermesValue::encodeNumberValue(static_cast<int32_t>(product));
+  return HermesValue::encodeUntrustedNumberValue(static_cast<int32_t>(product));
 }
 
 // ES6.0 20.2.2.11
@@ -338,7 +338,7 @@ CallResult<HermesValue> mathClz32(void *, Runtime &runtime, NativeArgs args) {
   }
   uint32_t n = res->getNumberAs<uint32_t>();
   uint32_t p = llvh::countLeadingZeros(n);
-  return HermesValue::encodeNumberValue(p);
+  return HermesValue::encodeUntrustedNumberValue(p);
 }
 
 // ES6.0 20.2.2.29
@@ -355,10 +355,10 @@ CallResult<HermesValue> mathSign(void *, Runtime &runtime, NativeArgs args) {
   }
   if (x == 0) {
     // Preserve sign bit: return -0 for x == -0 and +0 for x == +0.
-    return HermesValue::encodeNumberValue(x);
+    return HermesValue::encodeUntrustedNumberValue(x);
   }
 
-  return HermesValue::encodeNumberValue(std::signbit(x) ? -1 : +1);
+  return HermesValue::encodeUntrustedNumberValue(std::signbit(x) ? -1 : +1);
 }
 
 Handle<JSObject> createMathObject(Runtime &runtime) {
@@ -377,7 +377,7 @@ Handle<JSObject> createMathObject(Runtime &runtime) {
 
   // ES5.1 15.8.1, Math value properties
   auto setMathValueProperty = [&](SymbolID name, double value) {
-    numberHandle = HermesValue::encodeNumberValue(value);
+    numberHandle = HermesValue::encodeUntrustedNumberValue(value);
     auto result = JSObject::defineOwnProperty(
         math, runtime, name, constantDPF, numberHandle);
     assert(

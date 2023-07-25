@@ -34,7 +34,8 @@ var simpleAsyncFE = async function () {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [simpleAsyncFE, simpleReturn, simpleAwait, nonSimpleArrayDestructuring]
+// CHECK-NEXT:globals = [simpleAsyncFE, simpleReturn, simpleAwait, nonSimpleArrayDestructuring]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %simpleReturn#0#1()#2, %0
@@ -52,18 +53,18 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:function_end
 
 // CHECK:function simpleReturn#0#1()#2
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{simpleReturn#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simpleReturn#0#1()#2}
 // CHECK-NEXT:  %1 = CreateArgumentsInst
 // CHECK-NEXT:  %2 = CreateFunctionInst %?anon_0_simpleReturn#1#2()#3, %0
 // CHECK-NEXT:  %3 = GetBuiltinClosureInst [HermesBuiltin.spawnAsync] : number
-// CHECK-NEXT:  %4 = CallInst %3 : closure, undefined : undefined, %2 : closure, %this, %1 : object
+// CHECK-NEXT:  %4 = CallInst %3 : closure, undefined : undefined, undefined : undefined, %2 : closure, %this, %1 : object
 // CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_simpleReturn#1#2()#3
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{?anon_0_simpleReturn#1#2()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_simpleReturn#1#2()#3}
 // CHECK-NEXT:  %1 = CreateGeneratorInst %?anon_0_?anon_0_simpleReturn#2#3()#4, %0
@@ -71,7 +72,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_?anon_0_simpleReturn#2#3()#4
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{?anon_0_?anon_0_simpleReturn#2#3()#4} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_?anon_0_simpleReturn#2#3()#4}
 // CHECK-NEXT:  %1 = StartGeneratorInst
@@ -88,19 +89,19 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:function_end
 
 // CHECK:function simpleAwait#0#1()#5
-// CHECK-NEXT:frame = [x#5]
+// CHECK-NEXT:S{simpleAwait#0#1()#5} = [x#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simpleAwait#0#1()#5}
 // CHECK-NEXT:  %1 = CreateArgumentsInst
 // CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [x#5], %0
 // CHECK-NEXT:  %3 = CreateFunctionInst %?anon_0_simpleAwait#1#5()#6, %0
 // CHECK-NEXT:  %4 = GetBuiltinClosureInst [HermesBuiltin.spawnAsync] : number
-// CHECK-NEXT:  %5 = CallInst %4 : closure, undefined : undefined, %3 : closure, %this, %1 : object
+// CHECK-NEXT:  %5 = CallInst %4 : closure, undefined : undefined, undefined : undefined, %3 : closure, %this, %1 : object
 // CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_simpleAwait#1#5()#6
-// CHECK-NEXT:frame = [x#6]
+// CHECK-NEXT:S{?anon_0_simpleAwait#1#5()#6} = [x#6]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_simpleAwait#1#5()#6}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x#6], %0
@@ -109,7 +110,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_?anon_0_simpleAwait#5#6()#7
-// CHECK-NEXT:frame = [x#7]
+// CHECK-NEXT:S{?anon_0_?anon_0_simpleAwait#5#6()#7} = [x#7]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_?anon_0_simpleAwait#5#6()#7}
 // CHECK-NEXT:  %1 = StartGeneratorInst
@@ -138,30 +139,30 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:function_end
 
 // CHECK:function nonSimpleArrayDestructuring#0#1()#8
-// CHECK-NEXT:frame = [x#8]
+// CHECK-NEXT:S{nonSimpleArrayDestructuring#0#1()#8} = [x#8]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{nonSimpleArrayDestructuring#0#1()#8}
 // CHECK-NEXT:  %1 = CreateArgumentsInst
 // CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [x#8], %0
 // CHECK-NEXT:  %3 = CreateFunctionInst %?anon_0_nonSimpleArrayDestructuring#1#8()#9, %0
 // CHECK-NEXT:  %4 = GetBuiltinClosureInst [HermesBuiltin.spawnAsync] : number
-// CHECK-NEXT:  %5 = CallInst %4 : closure, undefined : undefined, %3 : closure, %this, %1 : object
+// CHECK-NEXT:  %5 = CallInst %4 : closure, undefined : undefined, undefined : undefined, %3 : closure, %this, %1 : object
 // CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_nonSimpleArrayDestructuring#1#8()#9
-// CHECK-NEXT:frame = [x#9]
+// CHECK-NEXT:S{?anon_0_nonSimpleArrayDestructuring#1#8()#9} = [x#9]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_nonSimpleArrayDestructuring#1#8()#9}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x#9], %0
 // CHECK-NEXT:  %2 = CreateGeneratorInst %?anon_0_?anon_0_nonSimpleArrayDestructuring#8#9()#10, %0
 // CHECK-NEXT:  %3 = LoadPropertyInst %2 : object, "next" : string
-// CHECK-NEXT:  %4 = CallInst %3, %2 : object
+// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, %2 : object
 // CHECK-NEXT:  %5 = ReturnInst %2 : object
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_?anon_0_nonSimpleArrayDestructuring#8#9(?anon_2_param)#10
-// CHECK-NEXT:frame = [x#10]
+// CHECK-NEXT:S{?anon_0_?anon_0_nonSimpleArrayDestructuring#8#9()#10} = [x#10]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_?anon_0_nonSimpleArrayDestructuring#8#9()#10}
 // CHECK-NEXT:  %1 = StartGeneratorInst
@@ -227,19 +228,19 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:function_end
 
 // CHECK:function simpleAsyncFE#0#1()#11
-// CHECK-NEXT:frame = [x#11]
+// CHECK-NEXT:S{simpleAsyncFE#0#1()#11} = [x#11]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simpleAsyncFE#0#1()#11}
 // CHECK-NEXT:  %1 = CreateArgumentsInst
 // CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [x#11], %0
 // CHECK-NEXT:  %3 = CreateFunctionInst %?anon_0_simpleAsyncFE#1#11()#12, %0
 // CHECK-NEXT:  %4 = GetBuiltinClosureInst [HermesBuiltin.spawnAsync] : number
-// CHECK-NEXT:  %5 = CallInst %4 : closure, undefined : undefined, %3 : closure, %this, %1 : object
+// CHECK-NEXT:  %5 = CallInst %4 : closure, undefined : undefined, undefined : undefined, %3 : closure, %this, %1 : object
 // CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_simpleAsyncFE#1#11()#12
-// CHECK-NEXT:frame = [x#12]
+// CHECK-NEXT:S{?anon_0_simpleAsyncFE#1#11()#12} = [x#12]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_simpleAsyncFE#1#11()#12}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x#12], %0
@@ -248,7 +249,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_?anon_0_simpleAsyncFE#11#12()#13
-// CHECK-NEXT:frame = [x#13]
+// CHECK-NEXT:S{?anon_0_?anon_0_simpleAsyncFE#11#12()#13} = [x#13]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_?anon_0_simpleAsyncFE#11#12()#13}
 // CHECK-NEXT:  %1 = StartGeneratorInst

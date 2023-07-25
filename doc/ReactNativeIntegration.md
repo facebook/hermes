@@ -92,18 +92,43 @@ You can now develop your app in the normal way.
 
 ## Reporting native crashes
 
-If Hermes causes a native crash in your application, a stack trace is critical for us to be able to understand where the crash occurred.  If you have a native crash to report, please be aware that in most cases, it is not feasible for us to debug crashes in earlier versions of Hermes.  Please update your app to a hermes-engine npm versions 0.5.1, 0.5.2-rc1, or later.  Version 0.5.0 is too old.  This may require you to update React Native as well.
+If Hermes causes a native crash in your application, a stack trace is critical for us to be able to understand where the crash occurred. 
 
-At a minimum, you should include in your bug report the native stack trace as described in the [the `ndk-stack` documentation.](https://developer.android.com/ndk/guides/ndk-stack) documentation
-
-Including 10-20 lines from the logs before the line of asterisks can also help us understand what went wrong.
-
-Additionally, you can also symbolicate the stack trace in order to indicate where in the Hermes source the failure is occurring. Symbolication will only work with the newer versions of Hermes listed above.  It will not work with 0.5.0 or any earlier version.
-
-The necessary unstripped libraries can be found in the [GitHub release](https://github.com/facebook/hermes/releases) corresponding to the Hermes NPM you used to build your application.  Download the `hermes-runtime-android-vX.Y.Z.tar.gz` file for your version.  Unpack the tar file, then run `ndk-stack` using the contained directory corresponding to the build flavor and architecture for your app.  For example, for a release arm64 build:
-
-```
-$ANDROID_NDK/ndk-stack -sym .../unstripped-release/0/lib/arm64-v8a < crash.txt
-```
+If you have a native crash to report, please be aware that in most cases, it is not feasible for us to debug crashes in earlier versions of Hermes. Please update your app to the latest React Native version, as that contains the latest hermes-engine versions. Specifically since React Native 0.69, Hermes is now coming [bundled together with React Native](https://reactnative.dev/architecture/bundled-hermes).
 
 Including the symbolicated stack trace will make it easier for us to address your bug report more quickly.
+
+### How to symbolicate a native crash on Android
+
+To symbolicate a native crash on Android, you need to use the [`ndk-stack`](https://developer.android.com/ndk/guides/ndk-stack) command.
+This command is part of the Android SDK and you should be able to access with `$ANDROID_HOME/ndk/<ndk_version>/ndk-stack` (provided you replace the URL with your NDK version like `$ANDROID_HOME/ndk/21.4.7075529/ndk-stack`).
+
+To use the `ndk-stack` command you will need the debug symbols (check the paragraph below to see where to find them).
+
+You can then symbolicate a stacktrace as follows:
+
+```bash
+$ANDROID_HOME/ndk/21.4.7075529/ndk-stack -sym ./<path-to-debug-symbols>/obj/local/arm64-v8a < crash.txt
+```
+
+provided that `crash.txt` contains your stacktrace in plain text, and you replace `armeabi-v7a` with the correct architecture you used when the native crash was recorded.
+
+As an alternative, you can trigger a crash and have a symbolicated logcat in real time with the following command:
+
+```bash
+adb logcat | $ANDROID_HOME/ndk/21.4.7075529/ndk-stack -sym ./<path-to-debug-symbols>/obj/local/arm64-v8a
+```
+
+### Where to find the debug symbols
+
+#### React Native < 0.69
+
+For React Native versions before 0.69 (i.e. hermes-engine 0.11.0 and previous versions), you can find the debug symbols in the [GitHub release](https://github.com/facebook/hermes/releases) corresponding to the Hermes NPM you used to build your application. 
+
+Download the `hermes-runtime-android-vX.Y.Z.tar.gz` file for your version, unpack the tar file, then run `ndk-stack` using the contained directory as described in the paragraph above.
+
+#### React Native >= 0.69
+
+For React Native versions after and including 0.69, you can find the debug symbols in the [GitHub release](https://github.com/facebook/react-native/releases) corresponding to the React Native version you used to build your application. 
+
+For instance for [React Native 0.70.6](https://github.com/facebook/react-native/releases/tag/v0.70.6), you can find the `hermes-native-symbols-v0.70.6.zip` file with the debug symbols inside.

@@ -8,8 +8,8 @@
 // Auto-generated content below. Please do not modify manually.
 
 // CHK-BCG0:Bytecode File Information:
-// CHK-BCG0-NEXT:  Bytecode version number: 93
-// CHK-BCG0-NEXT:  Source hash: 0000000000000000000000000000000000000000
+// CHK-BCG0-NEXT:  Bytecode version number: {{.*}}
+// CHK-BCG0-NEXT:  Source hash: {{.*}}
 // CHK-BCG0-NEXT:  Function count: 18
 // CHK-BCG0-NEXT:  String count: 19
 // CHK-BCG0-NEXT:  BigInt count: 0
@@ -46,7 +46,7 @@
 
 // CHK-BCG0:Array Buffer:
 // CHK-BCG0-NEXT:Function<global>(1 params, 13 registers, 0 symbols):
-// CHK-BCG0-NEXT:Offset in debug table: source 0x0000, lexical 0x0000, textified callees 0x0000
+// CHK-BCG0-NEXT:Offset in debug table: source 0x0000, scope 0x0000, textified callees 0x0000
 // CHK-BCG0-NEXT:    DeclareGlobalVar  "a"
 // CHK-BCG0-NEXT:    DeclareGlobalVar  "test"
 // CHK-BCG0-NEXT:    CreateEnvironment r0
@@ -106,7 +106,7 @@
 // CHK-BCG0-NEXT:    Ret               r0
 
 // CHK-BCG0:Function<test>(2 params, 15 registers, 0 symbols):
-// CHK-BCG0-NEXT:Offset in debug table: source 0x0067, lexical 0x0000, textified callees 0x0000
+// CHK-BCG0-NEXT:Offset in debug table: source 0x00a9, scope 0x0000, textified callees 0x0000
 // CHK-BCG0-NEXT:L4:
 // CHK-BCG0-NEXT:    LoadParam         r1, 1
 // CHK-BCG0-NEXT:    LoadConstUndefined r0
@@ -134,7 +134,7 @@
 // CHK-BCG0-NEXT:0: start = L4, end = L5, target = L1
 
 // CHK-BCG0:NCFunction<b>(1 params, 2 registers, 0 symbols):
-// CHK-BCG0-NEXT:Offset in debug table: source 0x0089, lexical 0x0000, textified callees 0x0000
+// CHK-BCG0-NEXT:Offset in debug table: source 0x0107, scope 0x0000, textified callees 0x0000
 // CHK-BCG0-NEXT:    NewArray          r0, 1
 // CHK-BCG0-NEXT:    CreateEnvironment r1
 // CHK-BCG0-NEXT:    CreateClosure     r1, r1, NCFunction<>
@@ -146,7 +146,7 @@
 // CHK-BCG0-NEXT:    Ret               r0
 
 // CHK-BCG0:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG0-NEXT:Offset in debug table: source 0x0090, lexical 0x0000, textified callees 0x0000
+// CHK-BCG0-NEXT:Offset in debug table: source 0x0110, scope 0x0000, textified callees 0x0000
 // CHK-BCG0-NEXT:    GetGlobalObject   r0
 // CHK-BCG0-NEXT:    GetByIdShort      r1, r0, 1, "a"
 // CHK-BCG0-NEXT:    LoadConstUndefined r0
@@ -154,7 +154,7 @@
 // CHK-BCG0-NEXT:    Ret               r0
 
 // CHK-BCG0:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG0-NEXT:Offset in debug table: source 0x009a, lexical 0x0000, textified callees 0x0000
+// CHK-BCG0-NEXT:Offset in debug table: source 0x0126, scope 0x0000, textified callees 0x0000
 // CHK-BCG0-NEXT:    GetGlobalObject   r0
 // CHK-BCG0-NEXT:    GetByIdShort      r1, r0, 1, "a"
 // CHK-BCG0-NEXT:    GetByIdShort      r0, r1, 2, "z"
@@ -162,49 +162,49 @@
 // CHK-BCG0-NEXT:    Ret               r0
 
 // CHK-BCG0:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG0-NEXT:Offset in debug table: source 0x00a8, lexical 0x0000, textified callees 0x0000
+// CHK-BCG0-NEXT:Offset in debug table: source 0x0146, scope 0x0000, textified callees 0x0000
 // CHK-BCG0-NEXT:    LoadConstNull     r1
 // CHK-BCG0-NEXT:    LoadConstUndefined r0
 // CHK-BCG0-NEXT:    Call1             r0, r1, r0
 // CHK-BCG0-NEXT:    Ret               r0
 
 // CHK-BCG0:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG0-NEXT:Offset in debug table: source 0x00b0, lexical 0x0000, textified callees 0x0000
+// CHK-BCG0-NEXT:Offset in debug table: source 0x0154, scope 0x0000, textified callees 0x0000
 // CHK-BCG0-NEXT:    LoadConstTrue     r1
 // CHK-BCG0-NEXT:    LoadConstUndefined r0
 // CHK-BCG0-NEXT:    Call1             r0, r1, r0
 // CHK-BCG0-NEXT:    Ret               r0
 
 // CHK-BCG0:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG0-NEXT:Offset in debug table: source 0x00b8, lexical 0x0000, textified callees 0x0000
+// CHK-BCG0-NEXT:Offset in debug table: source 0x0162, scope 0x0000, textified callees 0x0000
 // CHK-BCG0-NEXT:    LoadConstFalse    r1
 // CHK-BCG0-NEXT:    LoadConstUndefined r0
 // CHK-BCG0-NEXT:    Call1             r0, r1, r0
 // CHK-BCG0-NEXT:    Ret               r0
 
 // CHK-BCG0:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG0-NEXT:Offset in debug table: source 0x00c0, lexical 0x0000, textified callees 0x0000
+// CHK-BCG0-NEXT:Offset in debug table: source 0x0170, scope 0x0000, textified callees 0x0000
 // CHK-BCG0-NEXT:    LoadConstString   r1, "str"
 // CHK-BCG0-NEXT:    LoadConstUndefined r0
 // CHK-BCG0-NEXT:    Call1             r0, r1, r0
 // CHK-BCG0-NEXT:    Ret               r0
 
 // CHK-BCG0:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG0-NEXT:Offset in debug table: source 0x00c8, lexical 0x0000, textified callees 0x0000
+// CHK-BCG0-NEXT:Offset in debug table: source 0x017e, scope 0x0000, textified callees 0x0000
 // CHK-BCG0-NEXT:    LoadConstUInt8    r1, 1
 // CHK-BCG0-NEXT:    LoadConstUndefined r0
 // CHK-BCG0-NEXT:    Call1             r0, r1, r0
 // CHK-BCG0-NEXT:    Ret               r0
 
 // CHK-BCG0:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG0-NEXT:Offset in debug table: source 0x00d0, lexical 0x0000, textified callees 0x0000
+// CHK-BCG0-NEXT:Offset in debug table: source 0x018c, scope 0x0000, textified callees 0x0000
 // CHK-BCG0-NEXT:    LoadConstDouble   r1, 3.14
 // CHK-BCG0-NEXT:    LoadConstUndefined r0
 // CHK-BCG0-NEXT:    Call1             r0, r1, r0
 // CHK-BCG0-NEXT:    Ret               r0
 
 // CHK-BCG0:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG0-NEXT:Offset in debug table: source 0x00d8, lexical 0x0000, textified callees 0x0000
+// CHK-BCG0-NEXT:Offset in debug table: source 0x019a, scope 0x0000, textified callees 0x0000
 // CHK-BCG0-NEXT:    GetGlobalObject   r0
 // CHK-BCG0-NEXT:    GetByIdShort      r1, r0, 1, "a"
 // CHK-BCG0-NEXT:    GetByIdShort      r0, r1, 2, "b"
@@ -217,7 +217,7 @@
 // CHK-BCG0-NEXT:    Ret               r0
 
 // CHK-BCG0:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG0-NEXT:Offset in debug table: source 0x00ef, lexical 0x0000, textified callees 0x0000
+// CHK-BCG0-NEXT:Offset in debug table: source 0x01d5, scope 0x0000, textified callees 0x0000
 // CHK-BCG0-NEXT:    GetGlobalObject   r0
 // CHK-BCG0-NEXT:    GetByIdShort      r1, r0, 1, "a"
 // CHK-BCG0-NEXT:    GetByIdShort      r0, r1, 2, "a0000000111111111"...
@@ -225,7 +225,7 @@
 // CHK-BCG0-NEXT:    Ret               r0
 
 // CHK-BCG0:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG0-NEXT:Offset in debug table: source 0x00fe, lexical 0x0000, textified callees 0x0000
+// CHK-BCG0-NEXT:Offset in debug table: source 0x01f6, scope 0x0000, textified callees 0x0000
 // CHK-BCG0-NEXT:    GetGlobalObject   r0
 // CHK-BCG0-NEXT:    GetByIdShort      r1, r0, 1, "a"
 // CHK-BCG0-NEXT:    GetByIdShort      r0, r1, 2, "a0000000111111111"...
@@ -233,14 +233,14 @@
 // CHK-BCG0-NEXT:    Ret               r0
 
 // CHK-BCG0:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG0-NEXT:Offset in debug table: source 0x010d, lexical 0x0000, textified callees 0x0000
+// CHK-BCG0-NEXT:Offset in debug table: source 0x0217, scope 0x0000, textified callees 0x0000
 // CHK-BCG0-NEXT:    LoadConstString   r1, "\x0a\x0ac\u00e0ll"...
 // CHK-BCG0-NEXT:    LoadConstUndefined r0
 // CHK-BCG0-NEXT:    Call1             r0, r1, r0
 // CHK-BCG0-NEXT:    Ret               r0
 
 // CHK-BCG0:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG0-NEXT:Offset in debug table: source 0x0115, lexical 0x0000, textified callees 0x0000
+// CHK-BCG0-NEXT:Offset in debug table: source 0x0225, scope 0x0000, textified callees 0x0000
 // CHK-BCG0-NEXT:    GetGlobalObject   r0
 // CHK-BCG0-NEXT:    GetByIdShort      r1, r0, 1, "a"
 // CHK-BCG0-NEXT:    GetByIdShort      r0, r1, 2, "\u00e0\u00e0\u00e0"...
@@ -248,7 +248,7 @@
 // CHK-BCG0-NEXT:    Ret               r0
 
 // CHK-BCG0:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG0-NEXT:Offset in debug table: source 0x0124, lexical 0x0000, textified callees 0x0000
+// CHK-BCG0-NEXT:Offset in debug table: source 0x0246, scope 0x0000, textified callees 0x0000
 // CHK-BCG0-NEXT:    GetGlobalObject   r0
 // CHK-BCG0-NEXT:    GetByIdShort      r1, r0, 1, "a"
 // CHK-BCG0-NEXT:    GetByIdShort      r0, r1, 2, "\u00e0\u00e0\u00e0"...
@@ -263,101 +263,101 @@
 
 // CHK-BCG0:Debug source table:
 // CHK-BCG0-NEXT:  0x0000  function idx 0, starts at line 42 col 1
-// CHK-BCG0-NEXT:    bc 19: line 42 col 1
-// CHK-BCG0-NEXT:    bc 25: line 44 col 1
-// CHK-BCG0-NEXT:    bc 37: line 44 col 6
-// CHK-BCG0-NEXT:    bc 49: line 47 col 9
-// CHK-BCG0-NEXT:    bc 53: line 47 col 7
-// CHK-BCG0-NEXT:    bc 59: line 60 col 1
-// CHK-BCG0-NEXT:    bc 69: line 60 col 5
-// CHK-BCG0-NEXT:    bc 74: line 64 col 1
-// CHK-BCG0-NEXT:    bc 84: line 64 col 5
-// CHK-BCG0-NEXT:    bc 89: line 68 col 1
-// CHK-BCG0-NEXT:    bc 99: line 68 col 5
-// CHK-BCG0-NEXT:    bc 104: line 72 col 1
-// CHK-BCG0-NEXT:    bc 114: line 72 col 5
-// CHK-BCG0-NEXT:    bc 119: line 76 col 1
-// CHK-BCG0-NEXT:    bc 129: line 76 col 5
-// CHK-BCG0-NEXT:    bc 134: line 80 col 1
-// CHK-BCG0-NEXT:    bc 144: line 80 col 5
-// CHK-BCG0-NEXT:    bc 149: line 84 col 1
-// CHK-BCG0-NEXT:    bc 159: line 84 col 5
-// CHK-BCG0-NEXT:    bc 164: line 88 col 1
-// CHK-BCG0-NEXT:    bc 174: line 88 col 5
-// CHK-BCG0-NEXT:    bc 179: line 92 col 1
-// CHK-BCG0-NEXT:    bc 189: line 92 col 5
-// CHK-BCG0-NEXT:    bc 194: line 96 col 1
-// CHK-BCG0-NEXT:    bc 204: line 96 col 5
-// CHK-BCG0-NEXT:    bc 209: line 100 col 1
-// CHK-BCG0-NEXT:    bc 219: line 100 col 5
-// CHK-BCG0-NEXT:    bc 224: line 104 col 1
-// CHK-BCG0-NEXT:    bc 234: line 104 col 5
-// CHK-BCG0-NEXT:    bc 239: line 129 col 1
-// CHK-BCG0-NEXT:    bc 249: line 129 col 5
-// CHK-BCG0-NEXT:    bc 254: line 133 col 1
-// CHK-BCG0-NEXT:    bc 264: line 133 col 5
-// CHK-BCG0-NEXT:  0x0067  function idx 1, starts at line 51 col 1
-// CHK-BCG0-NEXT:    bc 5: line 54 col 10
-// CHK-BCG0-NEXT:    bc 9: line 55 col 5
-// CHK-BCG0-NEXT:    bc 11: line 55 col 7
-// CHK-BCG0-NEXT:    bc 15: line 56 col 9
-// CHK-BCG0-NEXT:    bc 21: line 56 col 19
-// CHK-BCG0-NEXT:    bc 26: line 56 col 15
-// CHK-BCG0-NEXT:    bc 32: line 56 col 15
-// CHK-BCG0-NEXT:    bc 45: line 56 col 15
-// CHK-BCG0-NEXT:    bc 51: line 56 col 30
-// CHK-BCG0-NEXT:    bc 58: line 56 col 14
-// CHK-BCG0-NEXT:  0x0089  function idx 2, starts at line 48 col 9
-// CHK-BCG0-NEXT:    bc 11: line 48 col 15
-// CHK-BCG0-NEXT:  0x0090  function idx 4, starts at line 60 col 6
-// CHK-BCG0-NEXT:    bc 2: line 60 col 12
-// CHK-BCG0-NEXT:    bc 9: line 60 col 13
-// CHK-BCG0-NEXT:  0x009a  function idx 5, starts at line 64 col 6
-// CHK-BCG0-NEXT:    bc 2: line 64 col 12
-// CHK-BCG0-NEXT:    bc 7: line 64 col 15
-// CHK-BCG0-NEXT:    bc 12: line 64 col 15
-// CHK-BCG0-NEXT:  0x00a8  function idx 6, starts at line 68 col 6
-// CHK-BCG0-NEXT:    bc 4: line 68 col 16
-// CHK-BCG0-NEXT:  0x00b0  function idx 7, starts at line 72 col 6
-// CHK-BCG0-NEXT:    bc 4: line 72 col 16
-// CHK-BCG0-NEXT:  0x00b8  function idx 8, starts at line 76 col 6
-// CHK-BCG0-NEXT:    bc 4: line 76 col 17
-// CHK-BCG0-NEXT:  0x00c0  function idx 9, starts at line 80 col 6
-// CHK-BCG0-NEXT:    bc 6: line 80 col 17
-// CHK-BCG0-NEXT:  0x00c8  function idx 10, starts at line 84 col 6
-// CHK-BCG0-NEXT:    bc 5: line 84 col 13
-// CHK-BCG0-NEXT:  0x00d0  function idx 11, starts at line 88 col 6
-// CHK-BCG0-NEXT:    bc 12: line 88 col 18
-// CHK-BCG0-NEXT:  0x00d8  function idx 12, starts at line 92 col 6
-// CHK-BCG0-NEXT:    bc 2: line 92 col 12
-// CHK-BCG0-NEXT:    bc 7: line 92 col 15
-// CHK-BCG0-NEXT:    bc 12: line 92 col 15
-// CHK-BCG0-NEXT:    bc 18: line 92 col 20
-// CHK-BCG0-NEXT:    bc 22: line 92 col 20
-// CHK-BCG0-NEXT:    bc 28: line 92 col 22
-// CHK-BCG0-NEXT:  0x00ef  function idx 13, starts at line 96 col 6
-// CHK-BCG0-NEXT:    bc 2: line 96 col 12
-// CHK-BCG0-NEXT:    bc 7: line 96 col 76
-// CHK-BCG0-NEXT:    bc 12: line 96 col 76
-// CHK-BCG0-NEXT:  0x00fe  function idx 14, starts at line 100 col 6
-// CHK-BCG0-NEXT:    bc 2: line 100 col 12
-// CHK-BCG0-NEXT:    bc 7: line 100 col 117
-// CHK-BCG0-NEXT:    bc 12: line 100 col 117
-// CHK-BCG0-NEXT:  0x010d  function idx 15, starts at line 104 col 6
-// CHK-BCG0-NEXT:    bc 6: line 111 col 2
-// CHK-BCG0-NEXT:  0x0115  function idx 16, starts at line 129 col 6
-// CHK-BCG0-NEXT:    bc 2: line 129 col 12
-// CHK-BCG0-NEXT:    bc 7: line 129 col 138
-// CHK-BCG0-NEXT:    bc 12: line 129 col 138
-// CHK-BCG0-NEXT:  0x0124  function idx 17, starts at line 133 col 6
-// CHK-BCG0-NEXT:    bc 2: line 133 col 12
-// CHK-BCG0-NEXT:    bc 7: line 133 col 184
-// CHK-BCG0-NEXT:    bc 12: line 133 col 184
-// CHK-BCG0-NEXT:  0x0133  end of debug source table
+// CHK-BCG0-NEXT:    bc 19: line 42 col 1 scope offset 0x0000 env r2
+// CHK-BCG0-NEXT:    bc 25: line 44 col 1 scope offset 0x0000 env r4
+// CHK-BCG0-NEXT:    bc 37: line 44 col 6 scope offset 0x0000 env r3
+// CHK-BCG0-NEXT:    bc 49: line 47 col 9 scope offset 0x0000 env r4
+// CHK-BCG0-NEXT:    bc 53: line 47 col 7 scope offset 0x0000 env r3
+// CHK-BCG0-NEXT:    bc 59: line 60 col 1 scope offset 0x0000 env r4
+// CHK-BCG0-NEXT:    bc 69: line 60 col 5 scope offset 0x0000 env r3
+// CHK-BCG0-NEXT:    bc 74: line 64 col 1 scope offset 0x0000 env r4
+// CHK-BCG0-NEXT:    bc 84: line 64 col 5 scope offset 0x0000 env r3
+// CHK-BCG0-NEXT:    bc 89: line 68 col 1 scope offset 0x0000 env r4
+// CHK-BCG0-NEXT:    bc 99: line 68 col 5 scope offset 0x0000 env r3
+// CHK-BCG0-NEXT:    bc 104: line 72 col 1 scope offset 0x0000 env r4
+// CHK-BCG0-NEXT:    bc 114: line 72 col 5 scope offset 0x0000 env r3
+// CHK-BCG0-NEXT:    bc 119: line 76 col 1 scope offset 0x0000 env r4
+// CHK-BCG0-NEXT:    bc 129: line 76 col 5 scope offset 0x0000 env r3
+// CHK-BCG0-NEXT:    bc 134: line 80 col 1 scope offset 0x0000 env r4
+// CHK-BCG0-NEXT:    bc 144: line 80 col 5 scope offset 0x0000 env r3
+// CHK-BCG0-NEXT:    bc 149: line 84 col 1 scope offset 0x0000 env r4
+// CHK-BCG0-NEXT:    bc 159: line 84 col 5 scope offset 0x0000 env r3
+// CHK-BCG0-NEXT:    bc 164: line 88 col 1 scope offset 0x0000 env r4
+// CHK-BCG0-NEXT:    bc 174: line 88 col 5 scope offset 0x0000 env r3
+// CHK-BCG0-NEXT:    bc 179: line 92 col 1 scope offset 0x0000 env r4
+// CHK-BCG0-NEXT:    bc 189: line 92 col 5 scope offset 0x0000 env r3
+// CHK-BCG0-NEXT:    bc 194: line 96 col 1 scope offset 0x0000 env r4
+// CHK-BCG0-NEXT:    bc 204: line 96 col 5 scope offset 0x0000 env r3
+// CHK-BCG0-NEXT:    bc 209: line 100 col 1 scope offset 0x0000 env r4
+// CHK-BCG0-NEXT:    bc 219: line 100 col 5 scope offset 0x0000 env r3
+// CHK-BCG0-NEXT:    bc 224: line 104 col 1 scope offset 0x0000 env r4
+// CHK-BCG0-NEXT:    bc 234: line 104 col 5 scope offset 0x0000 env r3
+// CHK-BCG0-NEXT:    bc 239: line 129 col 1 scope offset 0x0000 env r4
+// CHK-BCG0-NEXT:    bc 249: line 129 col 5 scope offset 0x0000 env r3
+// CHK-BCG0-NEXT:    bc 254: line 133 col 1 scope offset 0x0000 env r1
+// CHK-BCG0-NEXT:    bc 264: line 133 col 5 scope offset 0x0000 env r0
+// CHK-BCG0-NEXT:  0x00a9  function idx 1, starts at line 51 col 1
+// CHK-BCG0-NEXT:    bc 5: line 54 col 10 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 9: line 55 col 5 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 11: line 55 col 7 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 15: line 56 col 9 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 21: line 56 col 19 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 26: line 56 col 15 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 32: line 56 col 15 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 45: line 56 col 15 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 51: line 56 col 30 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 58: line 56 col 14 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:  0x0107  function idx 2, starts at line 48 col 9
+// CHK-BCG0-NEXT:    bc 11: line 48 col 15 scope offset 0x0000 env r1
+// CHK-BCG0-NEXT:  0x0110  function idx 4, starts at line 60 col 6
+// CHK-BCG0-NEXT:    bc 2: line 60 col 12 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 9: line 60 col 13 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:  0x0126  function idx 5, starts at line 64 col 6
+// CHK-BCG0-NEXT:    bc 2: line 64 col 12 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 7: line 64 col 15 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 12: line 64 col 15 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:  0x0146  function idx 6, starts at line 68 col 6
+// CHK-BCG0-NEXT:    bc 4: line 68 col 16 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:  0x0154  function idx 7, starts at line 72 col 6
+// CHK-BCG0-NEXT:    bc 4: line 72 col 16 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:  0x0162  function idx 8, starts at line 76 col 6
+// CHK-BCG0-NEXT:    bc 4: line 76 col 17 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:  0x0170  function idx 9, starts at line 80 col 6
+// CHK-BCG0-NEXT:    bc 6: line 80 col 17 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:  0x017e  function idx 10, starts at line 84 col 6
+// CHK-BCG0-NEXT:    bc 5: line 84 col 13 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:  0x018c  function idx 11, starts at line 88 col 6
+// CHK-BCG0-NEXT:    bc 12: line 88 col 18 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:  0x019a  function idx 12, starts at line 92 col 6
+// CHK-BCG0-NEXT:    bc 2: line 92 col 12 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 7: line 92 col 15 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 12: line 92 col 15 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 18: line 92 col 20 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 22: line 92 col 20 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 28: line 92 col 22 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:  0x01d5  function idx 13, starts at line 96 col 6
+// CHK-BCG0-NEXT:    bc 2: line 96 col 12 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 7: line 96 col 76 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 12: line 96 col 76 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:  0x01f6  function idx 14, starts at line 100 col 6
+// CHK-BCG0-NEXT:    bc 2: line 100 col 12 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 7: line 100 col 117 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 12: line 100 col 117 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:  0x0217  function idx 15, starts at line 104 col 6
+// CHK-BCG0-NEXT:    bc 6: line 111 col 2 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:  0x0225  function idx 16, starts at line 129 col 6
+// CHK-BCG0-NEXT:    bc 2: line 129 col 12 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 7: line 129 col 138 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 12: line 129 col 138 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:  0x0246  function idx 17, starts at line 133 col 6
+// CHK-BCG0-NEXT:    bc 2: line 133 col 12 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 7: line 133 col 184 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:    bc 12: line 133 col 184 scope offset 0x0000 env none
+// CHK-BCG0-NEXT:  0x0267  end of debug source table
 
-// CHK-BCG0:Debug lexical table:
-// CHK-BCG0-NEXT:  0x0000  lexical parent: none, variable count: 0
-// CHK-BCG0-NEXT:  0x0002  end of debug lexical table
+// CHK-BCG0:Debug scope descriptor table:
+// CHK-BCG0-NEXT:  0x0000  lexical parent:   none, flags:    , variable count: 0
+// CHK-BCG0-NEXT:  0x0003  end of debug scope descriptor table
 
 // CHK-BCG0:Textified callees table:
 // CHK-BCG0-NEXT:  0x0000  entries: 0

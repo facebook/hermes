@@ -100,7 +100,7 @@ TEST_F(SmallHermesValueRuntimeTest, DoubleTest) {
   // Encode doubles.
   auto verifyDouble = [&](double d) {
     auto SHV = SmallHermesValue::encodeHermesValue(
-        HermesValue::encodeNumberValue(d), runtime);
+        HermesValue::encodeTrustedNumberValue(d), runtime);
     auto HV = SHV.unboxToHV(runtime);
     EXPECT_TRUE(HV.isNumber()) << "double not encoded as number: " << d;
     // Check for bitwise equality so we can test things like NaN and -0.
@@ -123,7 +123,7 @@ TEST_F(SmallHermesValueRuntimeTest, SmiTest) {
   // Encode SMIs.
   auto verifySmi = [&](int32_t i) {
     auto SHV = SmallHermesValue::encodeHermesValue(
-        HermesValue::encodeNumberValue(i), runtime);
+        HermesValue::encodeTrustedNumberValue(i), runtime);
 // When Handle-SAN is enabled, we put all numbers on the heap.
 #ifndef HERMESVM_SANITIZE_HANDLES
     EXPECT_FALSE(SHV.isPointer());

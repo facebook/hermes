@@ -9,6 +9,8 @@
 
 #include "llvh/Support/SaveAndRestore.h"
 
+#include <variant>
+
 namespace hermes {
 namespace irgen {
 
@@ -33,13 +35,15 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
               tryStmt,
               tryStmt->_finalizer->getDebugLoc(),
               [this](ESTree::Node *node, ControlFlowChange, BasicBlock *) {
-                genStatement(cast<ESTree::TryStatementNode>(node)->_finalizer);
+                genStatement(
+                    cast<ESTree::TryStatementNode>(node)->_finalizer,
+                    IsLoopBody::No);
               });
         } else {
           thisTry.emplace(curFunction(), tryStmt);
         }
 
-        genStatement(tryStmt->_block);
+        genStatement(tryStmt->_block, IsLoopBody::No);
 
         Builder.setLocation(SourceErrorManager::convertEndToLocation(
             tryStmt->_block->getSourceRange()));
@@ -47,7 +51,7 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
       // emitNormalCleanup.
       [this, tryStmt]() {
         if (tryStmt->_finalizer) {
-          genStatement(tryStmt->_finalizer);
+          genStatement(tryStmt->_finalizer, IsLoopBody::No);
           Builder.setLocation(SourceErrorManager::convertEndToLocation(
               tryStmt->_finalizer->getSourceRange()));
         }
@@ -60,13 +64,26 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
               llvh::dyn_cast<ESTree::CatchClauseNode>(tryStmt->_handler);
 
           // Catch takes a exception variable, hence we need to create a new
-          // scope for it.
-          NameTableScopeTy newScope(nameTable_);
+          // scope for it. The --block-scoping flag controls how the catch
+          // variable will be created. N.B.: newScope isn't used directly after
+          // its contents are emplaced, but the constructors/destructors of its
+          // payload have important side-effects (named, pushing/popping the
+          // scope information from the IR generation).
+          std::variant<std::monostate, NameTableScopeTy, EnterBlockScope>
+              newScope;
+
+          if (!Mod->getContext()
+                   .getCodeGenerationSettings()
+                   .enableBlockScoping) {
+            newScope.emplace<NameTableScopeTy>(nameTable_);
+          } else {
+            newScope.emplace<EnterBlockScope>(curFunction());
+          }
 
           Builder.setLocation(tryStmt->_handler->getDebugLoc());
-          prepareCatch(catchClauseNode->_param);
+          prepareCatch(catchClauseNode);
 
-          genStatement(catchClauseNode->_body);
+          genCatchHandler(catchClauseNode->_body);
 
           Builder.setLocation(SourceErrorManager::convertEndToLocation(
               tryStmt->_handler->getSourceRange()));
@@ -76,7 +93,7 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
           Builder.setLocation(tryStmt->_finalizer->getDebugLoc());
           auto *catchReg = Builder.createCatchInst();
 
-          genStatement(tryStmt->_finalizer);
+          genStatement(tryStmt->_finalizer, IsLoopBody::No);
 
           Builder.setLocation(SourceErrorManager::convertEndToLocation(
               tryStmt->_finalizer->getSourceRange()));
@@ -87,9 +104,16 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
   Builder.setInsertionBlock(nextBlock);
 }
 
-CatchInst *ESTreeIRGen::prepareCatch(ESTree::NodePtr catchParam) {
+CatchInst *ESTreeIRGen::prepareCatch(ESTree::CatchClauseNode *catchHandler) {
   auto *catchInst = Builder.createCatchInst();
 
+  if (Mod->getContext().getCodeGenerationSettings().enableBlockScoping) {
+    // Create the catch scope after the Catch instruction so it is part of the
+    // Catch handler range in the exception tables.
+    blockDeclarationInstantiation(catchHandler);
+  }
+
+  ESTree::NodePtr catchParam = catchHandler->_param;
   if (!catchParam) {
     // Optional catch binding allows us to emit no extra code for the catch.
     return catchInst;
@@ -102,27 +126,42 @@ CatchInst *ESTreeIRGen::prepareCatch(ESTree::NodePtr catchParam) {
     return nullptr;
   }
 
-  auto catchVariableName =
-      getNameFieldFromID(cast<ESTree::IdentifierNode>(catchParam));
+  Variable *errorVar{};
 
-  // Generate a unique catch variable name and use this name for IRGen purpose
-  // only. The variable lookup in the catch clause will continue to be done
-  // using the declared name.
-  auto uniquedCatchVariableName =
-      genAnonymousLabelName(catchVariableName.str());
+  if (!Mod->getContext().getCodeGenerationSettings().enableBlockScoping) {
+    auto catchVariableName =
+        getNameFieldFromID(cast<ESTree::IdentifierNode>(catchParam));
 
-  auto errorVar = Builder.createVariable(
-      curFunction()->function->getFunctionScopeDesc(),
-      Variable::DeclKind::Var,
-      uniquedCatchVariableName);
+    // Generate a unique catch variable name and use this name for IRGen purpose
+    // only. The variable lookup in the catch clause will continue to be done
+    // using the declared name.
+    auto uniquedCatchVariableName =
+        genAnonymousLabelName(catchVariableName.str());
 
-  /// Insert the synthesized variable into the function name table, so it can
-  /// be looked up internally.
-  nameTable_.insertIntoScope(
-      &curFunction()->scope, errorVar->getName(), errorVar);
+    errorVar = Builder.createVariable(
+        curFunction()->function->getFunctionScopeDesc(),
+        Variable::DeclKind::Var,
+        uniquedCatchVariableName);
 
-  // Alias the lexical name to the synthesized variable.
-  nameTable_.insert(catchVariableName, errorVar);
+    /// Insert the synthesized variable into the function name table, so it can
+    /// be looked up internally.
+    nameTable_.insertIntoScope(
+        curFunction()->functionScope, errorVar->getName(), errorVar);
+
+    // Alias the lexical name to the synthesized variable.
+    nameTable_.insert(catchVariableName, errorVar);
+  } else {
+    auto catchVariableName =
+        getNameFieldFromID(cast<ESTree::IdentifierNode>(catchParam));
+
+    errorVar = Builder.createVariable(
+        currentIRScopeDesc_, Variable::DeclKind::Var, catchVariableName);
+
+    /// Insert the synthesized variable into the function name table, so it can
+    /// be looked up internally.
+    nameTable_.insertIntoScope(
+        curFunction()->blockScope, errorVar->getName(), errorVar);
+  }
 
   emitStore(catchInst, errorVar, true);
   return catchInst;

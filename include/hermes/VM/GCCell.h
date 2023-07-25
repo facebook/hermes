@@ -55,6 +55,7 @@ class KindAndSize {
   KindAndSize(CellKind kind, size_t sz)
       : size_(sz), kind_(static_cast<uint8_t>(kind)) {
     assert((sz & 1) == 0 && "LSB of size must always be zero.");
+    assert(sz <= maxSize() && "Size is too large.");
   }
 
   static constexpr uint32_t maxSize() {

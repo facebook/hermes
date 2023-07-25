@@ -1,6 +1,9 @@
 # Contributing to Hermes
 We want to make contributing to this project simple and convenient.
 
+This document provides a high level overview of the contribution process,
+please also review our [Coding Standards](doc/CodingStandards.md).
+
 ## Code of Conduct
 Facebook has adopted a Code of Conduct that we expect project participants to
 adhere to. Please [read the full text](https://code.fb.com/codeofconduct/) so

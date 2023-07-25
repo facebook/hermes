@@ -81,7 +81,7 @@ function HEADER(flow: FlowStyle): string {
 
 // lint directives to let us do some basic validation of generated files
 /* eslint no-undef: 'error', no-unused-vars: ['error', {vars: "local"}], no-redeclare: 'error' */
-/* global $NonMaybeType, $Partial, $ReadOnly, $ReadOnlyArray */
+/* global $NonMaybeType, Partial, $ReadOnly, $ReadOnlyArray */
 
 'use strict';
 
@@ -92,7 +92,10 @@ type Package =
   | 'hermes-eslint'
   | 'hermes-estree'
   | 'hermes-parser'
-  | 'hermes-transform';
+  | 'hermes-transform'
+  | 'flow-api-translator'
+  | 'prettier-plugin-hermes-parser'
+  | 'babel-plugin-syntax-hermes-parser';
 
 type ArtifactOptions = $ReadOnly<{
   code: string,
@@ -102,30 +105,34 @@ type ArtifactOptions = $ReadOnly<{
   file: string,
 }>;
 
-export function formatAndWriteDistArtifact(opts: ArtifactOptions): void {
-  formatAndWriteArtifact({
+export async function formatAndWriteDistArtifact(
+  opts: ArtifactOptions,
+): Promise<void> {
+  await formatAndWriteArtifact({
     ...opts,
     file: path.join('dist', opts.file),
   });
 }
-export function formatAndWriteSrcArtifact(opts: ArtifactOptions): void {
-  formatAndWriteArtifact({
+export async function formatAndWriteSrcArtifact(
+  opts: ArtifactOptions,
+): Promise<void> {
+  await formatAndWriteArtifact({
     ...opts,
     file: path.join('src', opts.file),
   });
 }
 
-function formatAndWriteArtifact({
+async function formatAndWriteArtifact({
   code: code_,
   flow = 'loose',
   package: pkg,
   file,
-}: ArtifactOptions): void {
+}: ArtifactOptions): Promise<void> {
   // make sure the code has a header
   const code = code_.slice(0, 3) === '/**' ? code_ : HEADER(flow) + code_;
 
   // Format the file
-  const formattedContents = prettier.format(code, {
+  const formattedContents = await prettier.format(code, {
     ...prettierConfig,
     parser: 'flow',
   });
@@ -173,3 +180,11 @@ export const NODES_WITHOUT_TRANSFORM_NODE_TYPES: $ReadOnlySet<string> = new Set(
     'Program',
   ],
 );
+
+export const EXCLUDE_PROPERTIES_FROM_NODE: $ReadOnlyMap<
+  string,
+  $ReadOnlySet<string>,
+> = new Map([
+  // This property is only needed for TS
+  ['PropertyDefinition', new Set(['tsModifiers'])],
+]);

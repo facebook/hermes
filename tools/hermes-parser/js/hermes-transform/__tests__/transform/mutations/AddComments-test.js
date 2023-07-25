@@ -20,8 +20,8 @@ import {
 import {parseAndGetAstAndNode} from './test-utils';
 
 describe('AddComments', () => {
-  it('Add line comment', () => {
-    const {ast, target} = parseAndGetAstAndNode<VariableDeclaration>(
+  it('Add line comment', async () => {
+    const {ast, target} = await parseAndGetAstAndNode<VariableDeclaration>(
       'VariableDeclaration',
       `\
 const x = 1;`,
@@ -55,8 +55,8 @@ const x = 1;`,
     });
   });
 
-  it('Add block comment', () => {
-    const {ast, target} = parseAndGetAstAndNode<VariableDeclaration>(
+  it('Add block comment', async () => {
+    const {ast, target} = await parseAndGetAstAndNode<VariableDeclaration>(
       'VariableDeclaration',
       `\
 const x = 1;`,

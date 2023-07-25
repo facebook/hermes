@@ -24,12 +24,12 @@ import type {
 
 type CallExpressionModifySignature = (
   node: CallExpression,
-  newProps: $Partial<CallExpressionProps>,
+  newProps: Partial<CallExpressionProps>,
 ) => void;
 
 type ObjectTypeAnnotationModifySignature = (
   node: ObjectTypeAnnotation,
-  newProps: $Partial<ObjectTypeAnnotationProps>,
+  newProps: Partial<ObjectTypeAnnotationProps>,
 ) => void;
 
 export type TransformModifySignatures = CallExpressionModifySignature &

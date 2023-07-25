@@ -70,7 +70,7 @@ fn declare() {
             type T = string;
 
             declare export opaque type B;
-            declare export var x;
+            declare export var x: number;
             declare export function x(): void;
             declare export default T;
             ;

@@ -121,6 +121,15 @@ Optional<ESTree::JSXOpeningElementNode *> JSParserImpl::parseJSXOpeningElement(
     return None;
   ESTree::Node *name = *optName;
 
+  ESTree::Node *typeArgs = nullptr;
+  if (check(TokenKind::less)) {
+    auto optTypeArgs = parseTypeArgsFlow();
+    if (!optTypeArgs) {
+      return None;
+    }
+    typeArgs = *optTypeArgs;
+  }
+
   ESTree::NodeList attributes{};
   while (!check(TokenKind::slash, TokenKind::greater)) {
     if (check(TokenKind::l_brace)) {
@@ -155,7 +164,7 @@ Optional<ESTree::JSXOpeningElementNode *> JSParserImpl::parseJSXOpeningElement(
       start,
       end,
       new (context_) ESTree::JSXOpeningElementNode(
-          name, std::move(attributes), selfClosing));
+          name, std::move(attributes), selfClosing, typeArgs));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseJSXFragment(SMLoc start) {

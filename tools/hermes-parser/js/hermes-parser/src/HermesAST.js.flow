@@ -10,12 +10,12 @@
 
 // flowlint unclear-type:off
 
-export interface HermesPosition {
+export type HermesPosition = {
   /** >= 1 */
-  +line: number;
+  +line: number,
   /** >= 0 */
-  +column: number;
-}
+  +column: number,
+};
 export type HermesSourceLocation = {
   start?: HermesPosition,
   end?: HermesPosition,

@@ -25,7 +25,8 @@ function simple_test1() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [simple_test0, simple_test1]
+// CHECK-NEXT:globals = [simple_test0, simple_test1]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %simple_test0#0#1()#2, %0
@@ -39,7 +40,7 @@ function simple_test1() {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_test0#0#1()#2
-// CHECK-NEXT:frame = [re#2, str#2, newstr#2]
+// CHECK-NEXT:S{simple_test0#0#1()#2} = [re#2, str#2, newstr#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simple_test0#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [re#2], %0
@@ -51,13 +52,13 @@ function simple_test1() {
 // CHECK-NEXT:  %7 = LoadFrameInst [str#2], %0
 // CHECK-NEXT:  %8 = LoadPropertyInst %7, "replace" : string
 // CHECK-NEXT:  %9 = LoadFrameInst [re#2], %0
-// CHECK-NEXT:  %10 = CallInst %8, %7, %9, "$2, $1" : string
+// CHECK-NEXT:  %10 = CallInst %8, undefined : undefined, %7, %9, "$2, $1" : string
 // CHECK-NEXT:  %11 = StoreFrameInst %10, [newstr#2], %0
 // CHECK-NEXT:  %12 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_test1#0#1()#3
-// CHECK-NEXT:frame = [re0#3, re1#3, re2#3, re3#3, re4#3]
+// CHECK-NEXT:S{simple_test1#0#1()#3} = [re0#3, re1#3, re2#3, re3#3, re4#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simple_test1#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [re0#3], %0

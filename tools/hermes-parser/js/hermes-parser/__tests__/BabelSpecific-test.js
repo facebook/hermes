@@ -10,57 +10,46 @@
 
 'use strict';
 
-import {parse} from '../__test_utils__/parse';
-import {loc} from '../__test_utils__/loc';
+import {parseForSnapshot} from '../__test_utils__/parse';
 
 describe('Babel-Specific Tests', () => {
   test('Babel root File node', () => {
-    expect(parse('test', {babel: true})).toMatchObject({
-      type: 'File',
-      loc: loc(1, 0, 1, 4),
-      start: 0,
-      end: 4,
-      program: {
-        type: 'Program',
-        loc: loc(1, 0, 1, 4),
-        start: 0,
-        end: 4,
-        body: [
+    expect(parseForSnapshot('test', {babel: true})).toMatchInlineSnapshot(`
+      {
+        "body": [
           {
-            type: 'ExpressionStatement',
+            "directive": null,
+            "expression": {
+              "name": "test",
+              "optional": false,
+              "type": "Identifier",
+              "typeAnnotation": null,
+            },
+            "type": "ExpressionStatement",
           },
         ],
-        directives: [],
-      },
-      comments: [],
-    });
+        "type": "Program",
+      }
+    `);
   });
 
   test('Babel identifierName', () => {
-    expect(parse('test', {babel: true})).toMatchObject({
-      type: 'File',
-      loc: loc(1, 0, 1, 4),
-      start: 0,
-      end: 4,
-      program: {
-        type: 'Program',
-        loc: loc(1, 0, 1, 4),
-        start: 0,
-        end: 4,
-        body: [
+    expect(parseForSnapshot('test', {babel: true})).toMatchInlineSnapshot(`
+      {
+        "body": [
           {
-            type: 'ExpressionStatement',
-            expression: {
-              type: 'Identifier',
-              loc: {
-                identifierName: 'test',
-              },
+            "directive": null,
+            "expression": {
+              "name": "test",
+              "optional": false,
+              "type": "Identifier",
+              "typeAnnotation": null,
             },
+            "type": "ExpressionStatement",
           },
         ],
-        directives: [],
-      },
-      comments: [],
-    });
+        "type": "Program",
+      }
+    `);
   });
 });

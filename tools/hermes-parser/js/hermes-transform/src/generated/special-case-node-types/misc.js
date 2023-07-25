@@ -15,11 +15,13 @@ import type {
   ESNode,
   FunctionTypeAnnotation as FunctionTypeAnnotationType,
   Identifier as IdentifierType,
+  InterpreterDirective as InterpreterDirectiveType,
   Token as TokenType,
   Comment as CommentType,
   TemplateElement as TemplateElementType,
   Program as ProgramType,
   DocblockMetadata as DocblockMetadataType,
+  MemberExpression as MemberExpressionType,
 } from 'hermes-estree';
 import type {DetachedNode, MaybeDetachedNode} from '../../detachedNode';
 
@@ -165,7 +167,8 @@ export function Program(props: {
     comments: props.comments,
     interpreter:
       props.interpreter != null
-        ? asDetachedNode({
+        ? // $FlowFixMe[incompatible-call]
+          asDetachedNode<InterpreterDirectiveType>({
             type: 'InterpreterDirective',
             value: props.interpreter,
           })
@@ -197,6 +200,28 @@ export function DeclareFunction(props: {
       }),
     }),
     predicate: asDetachedNode(props.predicate),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export type MemberExpressionProps = {
+  +object: MaybeDetachedNode<MemberExpressionType['object']>,
+  +property: MaybeDetachedNode<MemberExpressionType['property']>,
+  +computed: MemberExpressionType['computed'],
+  +optional?: MemberExpressionType['optional'],
+};
+
+export function MemberExpression(props: {
+  ...$ReadOnly<MemberExpressionProps>,
+  +parent?: ESNode,
+}): DetachedNode<MemberExpressionType> {
+  const node = detachedProps<MemberExpressionType>(props.parent, {
+    type: 'MemberExpression',
+    object: asDetachedNode(props.object),
+    property: asDetachedNode(props.property),
+    computed: props.computed,
+    optional: props.optional ?? false,
   });
   setParentPointersInDirectChildren(node);
   return node;
