@@ -172,6 +172,9 @@ Literal *hermes::evalBinaryOperator(
   auto leftNaN = isNaN(lhs);
   auto rightNaN = isNaN(rhs);
 
+  auto leftIsNullOrUndef = leftNull || leftUndef;
+  auto rightIsNullOrUndef = rightNull || rightUndef;
+
   auto &ctx = builder.getModule()->getContext();
 
   using OpKind = BinaryOperatorInst::OpKind;
@@ -246,6 +249,11 @@ Literal *hermes::evalBinaryOperator(
         return builder.getLiteralBool(true);
       }
 
+      // `null` and `undefined` are only equal to themselves.
+      if (leftIsNullOrUndef || rightIsNullOrUndef) {
+        return builder.getLiteralBool(leftIsNullOrUndef && rightIsNullOrUndef);
+      }
+
       // Handle numeric comparisons:
       if (numericOrder.hasValue()) {
         switch (numericOrder.getValue()) {
@@ -271,6 +279,12 @@ Literal *hermes::evalBinaryOperator(
       // Identical operands can't be non-equal.
       if (lhs == rhs) {
         return builder.getLiteralBool(false);
+      }
+
+      // `null` and `undefined` are only equal to themselves.
+      if (leftIsNullOrUndef || rightIsNullOrUndef) {
+        return builder.getLiteralBool(
+            !(leftIsNullOrUndef && rightIsNullOrUndef));
       }
 
       // Handle numeric comparisons:

@@ -249,12 +249,20 @@ LowerAllocObjectFuncContext::collectInstructions() const {
         continue;
       }
       auto *SI = llvh::dyn_cast<StoreNewOwnPropertyInst>(&I);
-      if (!SI || SI->getObject() != allocInst_) {
+      if (!SI || SI->getStoredValue() == allocInst_) {
         // A user that's not a StoreNewOwnPropertyInst storing into the object
-        // created by allocInst_. We have to stop processing here.
+        // created by allocInst_. We have to stop processing here. Note that we
+        // check the stored value instead of the target object so that we omit
+        // the case where an object is stored into itself. While it should
+        // technically be safe, this maintains the invariant that stop as soon
+        // the allocated object is used as something other than the target of a
+        // StoreNewOwnPropertyInst.
         terminate = true;
         break;
       }
+      assert(
+          SI->getObject() == allocInst_ &&
+          "SNOP using allocInst_ must use it as object or value");
       instrs.push_back(SI);
     }
     if (terminate) {

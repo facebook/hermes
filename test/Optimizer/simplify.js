@@ -316,6 +316,27 @@ function undef_test(x, y) {
   var sink = print;
   sink(undefined >= undefined)
   sink(undefined == undefined)
+  sink(undefined != undefined)
+  sink(undefined == null)
+  sink(null == undefined)
+  sink(undefined != null)
+  sink(null != undefined)
+  sink(undefined == 0)
+  sink(null == 0)
+  sink("" == null)
+  sink("" == undefined)
+  sink(undefined == false)
+  sink(null == false)
+  sink(true == undefined)
+  sink(true == null)
+  sink(undefined != 0)
+  sink(null != 0)
+  sink("" != undefined)
+  sink("" != null)
+  sink(undefined != false)
+  sink(null != false)
+  sink(true != undefined)
+  sink(true != null)
 }
 
 function foo(y) {
@@ -851,7 +872,28 @@ function objectCond() {
 // CHECK-NEXT:  %2 = BinaryOperatorInst '>=', undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %3 = CallInst %1, undefined : undefined, undefined : undefined, %2 : boolean
 // CHECK-NEXT:  %4 = CallInst %1, undefined : undefined, undefined : undefined, true : boolean
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %5 = CallInst %1, undefined : undefined, undefined : undefined, false : boolean
+// CHECK-NEXT:  %6 = CallInst %1, undefined : undefined, undefined : undefined, true : boolean
+// CHECK-NEXT:  %7 = CallInst %1, undefined : undefined, undefined : undefined, true : boolean
+// CHECK-NEXT:  %8 = CallInst %1, undefined : undefined, undefined : undefined, false : boolean
+// CHECK-NEXT:  %9 = CallInst %1, undefined : undefined, undefined : undefined, false : boolean
+// CHECK-NEXT:  %10 = CallInst %1, undefined : undefined, undefined : undefined, false : boolean
+// CHECK-NEXT:  %11 = CallInst %1, undefined : undefined, undefined : undefined, false : boolean
+// CHECK-NEXT:  %12 = CallInst %1, undefined : undefined, undefined : undefined, false : boolean
+// CHECK-NEXT:  %13 = CallInst %1, undefined : undefined, undefined : undefined, false : boolean
+// CHECK-NEXT:  %14 = CallInst %1, undefined : undefined, undefined : undefined, false : boolean
+// CHECK-NEXT:  %15 = CallInst %1, undefined : undefined, undefined : undefined, false : boolean
+// CHECK-NEXT:  %16 = CallInst %1, undefined : undefined, undefined : undefined, false : boolean
+// CHECK-NEXT:  %17 = CallInst %1, undefined : undefined, undefined : undefined, false : boolean
+// CHECK-NEXT:  %18 = CallInst %1, undefined : undefined, undefined : undefined, true : boolean
+// CHECK-NEXT:  %19 = CallInst %1, undefined : undefined, undefined : undefined, true : boolean
+// CHECK-NEXT:  %20 = CallInst %1, undefined : undefined, undefined : undefined, true : boolean
+// CHECK-NEXT:  %21 = CallInst %1, undefined : undefined, undefined : undefined, true : boolean
+// CHECK-NEXT:  %22 = CallInst %1, undefined : undefined, undefined : undefined, true : boolean
+// CHECK-NEXT:  %23 = CallInst %1, undefined : undefined, undefined : undefined, true : boolean
+// CHECK-NEXT:  %24 = CallInst %1, undefined : undefined, undefined : undefined, true : boolean
+// CHECK-NEXT:  %25 = CallInst %1, undefined : undefined, undefined : undefined, true : boolean
+// CHECK-NEXT:  %26 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1(y)#25 : number

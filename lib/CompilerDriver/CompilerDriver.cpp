@@ -981,6 +981,8 @@ bool validateFlags() {
   if (cl::LazyCompilation) {
     if (cl::BytecodeFormat != cl::BytecodeFormatKind::HBC)
       err("-lazy only works with -target=HBC");
+    if (cl::DumpTarget != Execute)
+      err("-lazy only works when executing");
     if (cl::OptimizationLevel > cl::OptLevel::Og)
       err("-lazy does not work with -O");
     if (cl::BytecodeMode) {
@@ -1167,7 +1169,7 @@ std::shared_ptr<Context> createContext(
         defaultFlags.preemptiveFunctionCompilationThreshold);
   }
 
-  if (cl::EagerCompilation || cl::DumpTarget == EmitBundle ||
+  if (cl::EagerCompilation || cl::DumpTarget != Execute ||
       cl::OptimizationLevel > cl::OptLevel::Og) {
     // Make sure nothing is lazy
     context->setLazyCompilation(false);
