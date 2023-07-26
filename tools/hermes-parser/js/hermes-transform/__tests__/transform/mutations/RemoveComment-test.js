@@ -21,8 +21,8 @@ import {performReplaceNodeMutation} from '../../../src/transform/mutations/Repla
 import {parseAndGetAstAndNode} from './test-utils';
 
 describe('RemoveComment', () => {
-  it('removes the comment', () => {
-    const {ast, target} = parseAndGetAstAndNode<VariableDeclaration>(
+  it('removes the comment', async () => {
+    const {ast, target} = await parseAndGetAstAndNode<VariableDeclaration>(
       'VariableDeclaration',
       `\
 // leading comment
@@ -43,8 +43,8 @@ const x = 1;`,
     });
   });
 
-  it('removes the comment if the comment is transferred via node replacement', () => {
-    const {ast, target} = parseAndGetAstAndNode<VariableDeclaration>(
+  it('removes the comment if the comment is transferred via node replacement', async () => {
+    const {ast, target} = await parseAndGetAstAndNode<VariableDeclaration>(
       'VariableDeclaration',
       `\
 // leading comment

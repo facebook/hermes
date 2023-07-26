@@ -45,7 +45,9 @@ enum class JSONTokenKind {
 class JSONToken {
   JSONTokenKind kind_{JSONTokenKind::None};
   double numberValue_{};
+  // A string token can be represented as either a StringPrimitive or SymbolID.
   MutableHandle<StringPrimitive> stringValue_;
+  MutableHandle<SymbolID> symbolValue_;
 
   /// The starting character of this token.
   char16_t firstChar_{};
@@ -54,7 +56,8 @@ class JSONToken {
   const JSONToken &operator=(const JSONToken &) = delete;
 
  public:
-  explicit JSONToken(Runtime &runtime) : stringValue_(runtime) {}
+  explicit JSONToken(Runtime &runtime)
+      : stringValue_(runtime), symbolValue_(runtime) {}
 
   JSONTokenKind getKind() const {
     return kind_;
@@ -65,9 +68,14 @@ class JSONToken {
     return numberValue_;
   }
 
-  Handle<StringPrimitive> getString() const {
+  Handle<StringPrimitive> getStrAsPrim() const {
     assert(getKind() == JSONTokenKind::String);
     return stringValue_;
+  }
+
+  Handle<SymbolID> getStrAsSymbol() const {
+    assert(getKind() == JSONTokenKind::String);
+    return symbolValue_;
   }
 
   char16_t getFirstChar() const {
@@ -96,6 +104,10 @@ class JSONToken {
     kind_ = JSONTokenKind::String;
     stringValue_ = str.get();
   }
+  void setSymbol(Handle<SymbolID> sym) {
+    kind_ = JSONTokenKind::String;
+    symbolValue_ = sym;
+  }
 };
 
 class JSONLexer {
@@ -105,6 +117,8 @@ class JSONLexer {
   Runtime &runtime_;
 
   JSONToken token_;
+  using StrAsSymbol = std::true_type;
+  using StrAsValue = std::false_type;
 
  public:
   JSONLexer(Runtime &runtime, UTF16Stream &&stream)
@@ -123,6 +137,10 @@ class JSONLexer {
   /// All whitespace is skipped before the new token.
   LLVM_NODISCARD ExecutionStatus advance();
 
+  /// Same as advance, except if a string is encountered, it will parse it into
+  /// the current token's symbol field.
+  LLVM_NODISCARD ExecutionStatus advanceStrAsSymbol();
+
   /// Raise a JSON parse exception with message \p msg.
   /// token_ will also be invalidated.
   LLVM_NODISCARD ExecutionStatus error(const TwineChar16 &msg) {
@@ -138,11 +156,27 @@ class JSONLexer {
     return error(msg.concat(UTF16Ref(&ch, 1)));
   }
 
+  /// Raise a JSON parse unexpected character error.
+  LLVM_NODISCARD ExecutionStatus errorUnexpectedChar() {
+    if (token_.getKind() == JSONTokenKind::Eof) {
+      return error("Unexpected end of input");
+    }
+    return errorWithChar(
+        u"Unexpected character: ", getCurToken()->getFirstChar());
+  }
+
  private:
+  /// Advance the lexer by a single token. The parameter forKey determines how
+  /// strings are stored in the lexer.
+  LLVM_NODISCARD ExecutionStatus advanceHelper(bool forKey);
+
   /// Parse a JSONNumber.
   LLVM_NODISCARD ExecutionStatus scanNumber();
 
-  /// Parse a JSONString.
+  /// Parse a JSONString. If ForKey is std::true_type, then the string will be
+  /// parsed into a symbol. If ForKey is std::false_type, the scanned string
+  /// will be turned into a new StringPrimitive.
+  template <typename ForKey>
   LLVM_NODISCARD ExecutionStatus scanString();
 
   /// Parse a reserved keyword.

@@ -19,7 +19,7 @@ add_hermes_library(hermesOptimizer
   Optimizer/Scalar/InstSimplify.cpp
   Optimizer/Scalar/Auditor.cpp
   Optimizer/Wasm/WasmSimplify.cpp
-  Optimizer/Scalar/SimpleCallGraphProvider.cpp
+  Optimizer/Scalar/ScopeTransformations.cpp
   Optimizer/Scalar/ResolveStaticRequire.cpp
   Optimizer/Scalar/SimpleCallGraphProvider.cpp
   Optimizer/Scalar/FuncSigOpts.cpp

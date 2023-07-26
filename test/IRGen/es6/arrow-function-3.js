@@ -14,7 +14,8 @@ function foo(x = () => this) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [foo]
+// CHECK-NEXT:globals = [foo]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2, %0
@@ -26,7 +27,7 @@ function foo(x = () => this) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1(x)#2
-// CHECK-NEXT:frame = [?anon_0_this#2, ?anon_1_new.target#2, x#2]
+// CHECK-NEXT:S{foo#0#1()#2} = [?anon_0_this#2, ?anon_1_new.target#2, x#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %this, [?anon_0_this#2], %0
@@ -41,14 +42,14 @@ function foo(x = () => this) {
 // CHECK-NEXT:  %8 = PhiInst %x, %BB0, %6 : closure, %BB2
 // CHECK-NEXT:  %9 = StoreFrameInst %8, [x#2], %0
 // CHECK-NEXT:  %10 = LoadFrameInst [x#2], %0
-// CHECK-NEXT:  %11 = CallInst %10, undefined : undefined
+// CHECK-NEXT:  %11 = CallInst %10, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %12 = ReturnInst %11
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %13 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow x#1#2()#3
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{x#1#2()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{x#1#2()#3}
 // CHECK-NEXT:  %1 = LoadFrameInst [?anon_0_this#2@foo], %0

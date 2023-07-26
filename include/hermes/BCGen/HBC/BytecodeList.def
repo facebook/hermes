@@ -245,10 +245,21 @@ DEFINE_OPCODE_1(GetNewTarget, Reg8)
 /// Create a new environment, to store values captured by closures.
 DEFINE_OPCODE_1(CreateEnvironment, Reg8)
 
+/// Create a new inner environment, to store values captured by closures.
+/// Arg1 is the destination.
+/// Arg2 is the parent environment.
+/// Arg3 is the number of slots in the environment.
+DEFINE_OPCODE_3(CreateInnerEnvironment, Reg8, Reg8, UInt32)
+
 /// Declare a global variable by string table index.
 /// The variable will be set to undefined.
 DEFINE_OPCODE_1(DeclareGlobalVar, UInt32)
 OPERAND_STRING_ID(DeclareGlobalVar, 1)
+
+/// Checks if globalThis has a restricted global property with the given name.
+/// Arg1 is the name to check.
+DEFINE_OPCODE_1(ThrowIfHasRestrictedGlobalProperty, UInt32)
+OPERAND_STRING_ID(ThrowIfHasRestrictedGlobalProperty, 1)
 
 /// Get an object property by string table index.
 /// Arg1 = Arg2[stringtable[Arg4]]
@@ -511,7 +522,8 @@ DEFINE_OPCODE_1(Catch, Reg8)
 /// ES6 18.2.1.1 PerformEval(Arg2, evalRealm, strictCaller=true, direct=true)
 /// Arg1 is the destination of the return value.
 /// Arg2 is the value to eval.
-DEFINE_OPCODE_2(DirectEval, Reg8, Reg8)
+/// Arg3 is a boolean which is true if the eval should be performed in strict mode.
+DEFINE_OPCODE_3(DirectEval, Reg8, Reg8, UInt8)
 
 /// Throw an exception.
 /// throw Arg1;

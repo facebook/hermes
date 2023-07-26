@@ -85,6 +85,7 @@ void JSParserImpl::initializeIdentifiers() {
 #if HERMES_PARSE_FLOW
 
   typeofIdent_ = lexer_.getIdentifier("typeof");
+  keyofIdent_ = lexer_.getIdentifier("keyof");
   declareIdent_ = lexer_.getIdentifier("declare");
   protoIdent_ = lexer_.getIdentifier("proto");
   opaqueIdent_ = lexer_.getIdentifier("opaque");
@@ -109,7 +110,16 @@ void JSParserImpl::initializeIdentifiers() {
   symbolIdent_ = lexer_.getIdentifier("symbol");
   bigintIdent_ = lexer_.getIdentifier("bigint");
 
+  mappedTypeOptionalIdent_ = lexer_.getIdentifier("Optional");
+  mappedTypePlusOptionalIdent_ = lexer_.getIdentifier("PlusOptional");
+  mappedTypeMinusOptionalIdent_ = lexer_.getIdentifier("MinusOptional");
+
   checksIdent_ = lexer_.getIdentifier("%checks");
+  assertsIdent_ = lexer_.getIdentifier("asserts");
+
+  // Flow Component syntax
+  componentIdent_ = lexer_.getIdentifier("component");
+  rendersIdent_ = lexer_.getIdentifier("renders");
 
 #endif
 
@@ -117,8 +127,17 @@ void JSParserImpl::initializeIdentifiers() {
 
   namespaceIdent_ = lexer_.getIdentifier("namespace");
   readonlyIdent_ = lexer_.getIdentifier("readonly");
+
+#endif
+
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+
   isIdent_ = lexer_.getIdentifier("is");
 
+#endif
+
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+  inferIdent_ = lexer_.getIdentifier("infer");
 #endif
 
   // Generate the string representation of all tokens.
@@ -434,7 +453,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
   if (context_.getParseFlow() && check(TokenKind::colon)) {
     SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
     if (!check(checksIdent_)) {
-      auto optRet = parseTypeAnnotationFlow(annotStart);
+      auto optRet = parseReturnTypeAnnotationFlow(annotStart);
       if (!optRet)
         return None;
       returnType = *optRet;
@@ -822,8 +841,10 @@ bool JSParserImpl::parseStatementListItem(
     // 'import' can indicate an import declaration, but it's also possible a
     // Statement begins with a call to `import()`, so do a lookahead to see if
     // the next token is '('.
+    // It can also be import.meta, so check for '.'.
     auto optNext = lexer_.lookahead1(None);
-    if (optNext.hasValue() && *optNext == TokenKind::l_paren) {
+    if (optNext.hasValue() &&
+        (*optNext == TokenKind::l_paren || *optNext == TokenKind::period)) {
       auto stmt = parseStatement(param.get(ParamReturn));
       if (!stmt)
         return false;
@@ -1568,12 +1589,46 @@ Optional<ESTree::IfStatementNode *> JSParserImpl::parseIfStatement(
           condLoc))
     return None;
 
-  auto optConsequent = parseStatement(param.get(ParamReturn));
+  /// Parse a statement or (only in loose mode) a function declaration.
+  /// ES2022 B.3.3 allows FunctionDeclaration as consequent and alternate.
+  /// These FunctionDeclarations are supposed to be processed precisely as if
+  /// they were surrounded by BlockStatement, including function promotion.
+  /// To allow this, surround them with a synthetic BlockStatement.
+  auto parseStatementOrFunctionDeclaration =
+      [this, param]() -> Optional<ESTree::Node *> {
+    if (check(TokenKind::rw_function)) {
+      auto optFunction = parseFunctionDeclaration(Param{});
+      if (!optFunction)
+        return None;
+      if (isStrictMode()) {
+        error(
+            (*optFunction)->getStartLoc(),
+            "In strict mode, functions cannot be declared in if statements");
+      }
+      if ((*optFunction)->_generator || (*optFunction)->_async) {
+        error(
+            (*optFunction)->getStartLoc(),
+            "Functions in if statements cannot be generator/async");
+      }
+      ESTree::NodeList stmts;
+      stmts.push_back(**optFunction);
+      return setLocation(
+          *optFunction,
+          *optFunction,
+          new (context_) ESTree::BlockStatementNode(std::move(stmts)));
+    }
+    auto optStatement = parseStatement(param.get(ParamReturn));
+    if (!optStatement)
+      return None;
+    return *optStatement;
+  };
+
+  auto optConsequent = parseStatementOrFunctionDeclaration();
   if (!optConsequent)
     return None;
 
   if (checkAndEat(TokenKind::rw_else)) {
-    auto optAlternate = parseStatement(param.get(ParamReturn));
+    auto optAlternate = parseStatementOrFunctionDeclaration();
     if (!optAlternate)
       return None;
 
@@ -2652,7 +2707,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
 #if HERMES_PARSE_FLOW || HERMES_PARSE_TS
       if (context_.getParseTypes() && check(TokenKind::colon)) {
         SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-        auto optRet = parseTypeAnnotation(annotStart);
+        auto optRet = parseReturnTypeAnnotation(annotStart);
         if (!optRet)
           return None;
         returnType = *optRet;
@@ -2765,7 +2820,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
 #if HERMES_PARSE_FLOW || HERMES_PARSE_TS
       if (context_.getParseTypes() && check(TokenKind::colon)) {
         SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-        auto optRet = parseTypeAnnotation(annotStart);
+        auto optRet = parseReturnTypeAnnotation(annotStart);
         if (!optRet)
           return None;
         returnType = *optRet;
@@ -2950,7 +3005,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
 #if HERMES_PARSE_FLOW || HERMES_PARSE_TS
     if (context_.getParseTypes() && check(TokenKind::colon)) {
       SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-      auto optRet = parseTypeAnnotation(annotStart);
+      auto optRet = parseReturnTypeAnnotation(annotStart);
       if (!optRet)
         return None;
       returnType = *optRet;
@@ -4974,7 +5029,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
 #if HERMES_PARSE_FLOW || HERMES_PARSE_TS
   if (context_.getParseTypes() && check(TokenKind::colon)) {
     SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-    auto optRet = parseTypeAnnotation(annotStart);
+    auto optRet = parseReturnTypeAnnotation(annotStart);
     if (!optRet)
       return None;
     returnType = *optRet;
@@ -5570,8 +5625,8 @@ Optional<ESTree::Node *> JSParserImpl::tryParseTypedAsyncArrowFunction(
     if (check(TokenKind::colon)) {
       SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
       if (!check(checksIdent_)) {
-        auto optType =
-            parseTypeAnnotationFlow(annotStart, AllowAnonFunctionType::No);
+        auto optType = parseReturnTypeAnnotationFlow(
+            annotStart, AllowAnonFunctionType::No);
         if (!optType) {
           savePoint.restore();
           return None;
@@ -5742,7 +5797,8 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
         bool startsWithPredicate = check(checksIdent_);
         auto optType = startsWithPredicate
             ? llvh::None
-            : parseTypeAnnotationFlow(annotStart, AllowAnonFunctionType::No);
+            : parseReturnTypeAnnotationFlow(
+                  annotStart, AllowAnonFunctionType::No);
         if (optType)
           returnType = *optType;
         if (optType || startsWithPredicate) {
@@ -6570,8 +6626,21 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
           *optClassDecl,
           new (context_) ESTree::ExportDefaultDeclarationNode(*optClassDecl));
 #if HERMES_PARSE_FLOW
+    } else if (
+        context_.getParseFlow() && context_.getParseFlowComponentSyntax() &&
+        checkComponentDeclarationFlow()) {
+      auto optComponent = parseComponentDeclarationFlow(
+          tok_->getStartLoc(), /* declare */ false);
+      if (!optComponent) {
+        return None;
+      }
+      return setLocation(
+          startLoc,
+          *optComponent,
+          new (context_) ESTree::ExportDefaultDeclarationNode(*optComponent));
     } else if (context_.getParseFlow() && check(TokenKind::rw_enum)) {
-      auto optEnum = parseEnumDeclarationFlow();
+      auto optEnum =
+          parseEnumDeclarationFlow(tok_->getStartLoc(), /* declare */ false);
       if (!optEnum) {
         return None;
       }

@@ -294,34 +294,28 @@
         "loc":{"source":null,"start":{"line":7,"column":32},"end":{"line":7,"column":60}},
         "range":[393,421],
         "argument":{
-          "type":"GenericTypeAnnotation",
+          "type":"Identifier",
+          "trailingComments":[
+            {
+              "type":"Block",
+              "loc":{"source":null,"start":{"line":7,"column":61},"end":{"line":7,"column":80}},
+              "range":[422,441],
+              "value":" 4.3 T generic "
+            }
+          ],
+          "leadingComments":[
+            {
+              "type":"Block",
+              "loc":{"source":null,"start":{"line":7,"column":39},"end":{"line":7,"column":58}},
+              "range":[400,419],
+              "value":" 4.2 L generic "
+            }
+          ],
           "loc":{"source":null,"start":{"line":7,"column":59},"end":{"line":7,"column":60}},
           "range":[420,421],
-          "id":{
-            "type":"Identifier",
-            "trailingComments":[
-              {
-                "type":"Block",
-                "loc":{"source":null,"start":{"line":7,"column":61},"end":{"line":7,"column":80}},
-                "range":[422,441],
-                "value":" 4.3 T generic "
-              }
-            ],
-            "leadingComments":[
-              {
-                "type":"Block",
-                "loc":{"source":null,"start":{"line":7,"column":39},"end":{"line":7,"column":58}},
-                "range":[400,419],
-                "value":" 4.2 L generic "
-              }
-            ],
-            "loc":{"source":null,"start":{"line":7,"column":59},"end":{"line":7,"column":60}},
-            "range":[420,421],
-            "name":"T",
-            "typeAnnotation":null,
-            "optional":false
-          },
-          "typeParameters":null
+          "name":"T",
+          "typeAnnotation":null,
+          "optional":false
         }
       }
     },
@@ -358,7 +352,7 @@
         ],
         "loc":{"source":null,"start":{"line":9,"column":31},"end":{"line":9,"column":76}},
         "range":[475,520],
-        "types":[
+        "elementTypes":[
           {
             "type":"GenericTypeAnnotation",
             "loc":{"source":null,"start":{"line":9,"column":53},"end":{"line":9,"column":54}},
@@ -674,8 +668,8 @@
             "value":" 12.1 L union "
           }
         ],
-        "loc":{"source":null,"start":{"line":25,"column":25},"end":{"line":26,"column":26}},
-        "range":[1018,1067],
+        "loc":{"source":null,"start":{"line":25,"column":2},"end":{"line":26,"column":26}},
+        "range":[995,1067],
         "types":[
           {
             "type":"GenericTypeAnnotation",
@@ -763,8 +757,8 @@
             "value":" 13.1 L intersection "
           }
         ],
-        "loc":{"source":null,"start":{"line":30,"column":25},"end":{"line":31,"column":26}},
-        "range":[1158,1207],
+        "loc":{"source":null,"start":{"line":30,"column":2},"end":{"line":31,"column":26}},
+        "range":[1135,1207],
         "types":[
           {
             "type":"GenericTypeAnnotation",

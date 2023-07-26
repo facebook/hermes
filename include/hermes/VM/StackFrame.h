@@ -101,7 +101,6 @@ class StackFramePtrT {
   // Declare convenience accessors to the underlying HermesValue slots.
   _HERMESVM_DEFINE_STACKFRAME_REF(FirstLocal)
   _HERMESVM_DEFINE_STACKFRAME_REF(Scratch)
-  _HERMESVM_DEFINE_STACKFRAME_REF(DebugEnvironment)
   _HERMESVM_DEFINE_STACKFRAME_REF(PreviousFrame)
   _HERMESVM_DEFINE_STACKFRAME_REF(SavedIP)
   _HERMESVM_DEFINE_STACKFRAME_REF(SavedCodeBlock)
@@ -135,26 +134,6 @@ class StackFramePtrT {
   QualifiedCB *getSavedCodeBlock() const {
     return getSavedCodeBlockRef().template getNativePointer<CodeBlock>();
   }
-
-  /// \return a handle holding the callee debug environment.
-  /// The environment associated with the callee's stack frame, that is, the
-  /// Environment created by the last CreateEnvironment instruction to execute
-  /// in the callee's stack frame. It is null if debugging support is not
-  /// present, or if no CreateEnvironment instruction has executed, which is
-  /// possible if we are early in the code block, or with optimized code. This
-  /// is stored in the call frame so that the debugger can gain access to the
-  /// Environment at arbitrary frames. Note this is managed by the GC.
-  inline Handle<Environment> getDebugEnvironmentHandle() const;
-
-  /// \return the callee debug environment.
-  /// The environment associated with the callee's stack frame, that is, the
-  /// Environment created by the last CreateEnvironment instruction to execute
-  /// in the callee's stack frame. It is null if debugging support is not
-  /// present, or if no CreateEnvironment instruction has executed, which is
-  /// possible if we are early in the code block, or with optimized code. This
-  /// is stored in the call frame so that the debugger can gain access to the
-  /// Environment at arbitrary frames. Note this is managed by the GC.
-  inline Environment *getDebugEnvironment() const;
 
   /// \return the number of JavaScript arguments passed to the callee excluding
   /// \c "this".

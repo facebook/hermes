@@ -34,7 +34,8 @@ function test_hoisting_of_func_expr() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [test0, test1, test2, test_hoisting_of_func_expr]
+// CHECK-NEXT:globals = [test0, test1, test2, test_hoisting_of_func_expr]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %test0#0#1()#2, %0
@@ -52,16 +53,16 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:function_end
 
 // CHECK:function test0#0#1()#2
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{test0#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test0#0#1()#2}
 // CHECK-NEXT:  %1 = CreateFunctionInst %""#1#2()#3, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function ""#1#2()#3
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{""#1#2()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{""#1#2()#3}
 // CHECK-NEXT:  %1 = ReturnInst 1 : number
@@ -70,17 +71,17 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:function_end
 
 // CHECK:function test1#0#1(x)#4
-// CHECK-NEXT:frame = [x#4]
+// CHECK-NEXT:S{test1#0#1()#4} = [x#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test1#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#4], %0
 // CHECK-NEXT:  %2 = CreateFunctionInst %" 1#"#1#4()#5, %0
-// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function " 1#"#1#4()#5
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{" 1#"#1#4()#5} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{" 1#"#1#4()#5}
 // CHECK-NEXT:  %1 = LoadFrameInst [x#4@test1], %0
@@ -90,26 +91,26 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:function_end
 
 // CHECK:function test2#0#1(x)#6
-// CHECK-NEXT:frame = [x#6]
+// CHECK-NEXT:S{test2#0#1()#6} = [x#6]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test2#0#1()#6}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#6], %0
 // CHECK-NEXT:  %2 = CreateFunctionInst %" 2#"#1#6()#7, %0
-// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function " 2#"#1#6()#7
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{" 2#"#1#6()#7} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{" 2#"#1#6()#7}
 // CHECK-NEXT:  %1 = CreateFunctionInst %" 3#"#6#7()#8, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function " 3#"#6#7()#8
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{" 3#"#6#7()#8} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{" 3#"#6#7()#8}
 // CHECK-NEXT:  %1 = ReturnInst 2 : number
@@ -118,17 +119,17 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_hoisting_of_func_expr#0#1()#9
-// CHECK-NEXT:frame = [?anon_0_closure#9]
+// CHECK-NEXT:S{test_hoisting_of_func_expr#0#1()#9} = [?anon_0_closure#9]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_hoisting_of_func_expr#0#1()#9}
 // CHECK-NEXT:  %1 = CreateFunctionInst %some_local_name#1#9()#10, %0
 // CHECK-NEXT:  %2 = StoreFrameInst %1 : closure, [?anon_0_closure#9], %0
-// CHECK-NEXT:  %3 = CallInst %1 : closure, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %1 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function some_local_name#1#9()#10
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{some_local_name#1#9()#10} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{some_local_name#1#9()#10}
 // CHECK-NEXT:  %1 = LoadFrameInst [?anon_0_closure#9@test_hoisting_of_func_expr], %0

@@ -72,7 +72,12 @@ class GCCell;
 #endif
 
 /// Used by XorPtr to separate encryption keys between uses.
-enum XorPtrKeyID { ArrayBufferData, JSFunctionCodeBlock, _NumKeys };
+enum XorPtrKeyID {
+  ArrayBufferData,
+  JSFunctionCodeBlock,
+  DummyObjectFinalizerCallback,
+  _NumKeys
+};
 
 // A specific GC class extend GCBase, and override its virtual functions.
 // In addition, it must implement the following methods:

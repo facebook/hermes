@@ -233,7 +233,7 @@ CallResult<HermesValue> directObjectPrototypeToString(
 /// the native error constructors. Populate the instance and prototype methods.
 #define ALL_ERROR_TYPE(name) \
   Handle<JSObject> create##name##Constructor(Runtime &runtime);
-#include "hermes/VM/NativeErrorTypes.def"
+#include "hermes/FrontEndDefs/NativeErrorTypes.def"
 
 /// Populate the internal CallSite.prototype.
 void populateCallSitePrototype(Runtime &runtime);
@@ -444,7 +444,8 @@ CallResult<HermesValue> directEval(
     Runtime &runtime,
     Handle<StringPrimitive> str,
     const ScopeChain &scopeChain,
-    bool singleFunction = false);
+    bool isStrict,
+    bool singleFunction);
 
 /// ES10 23.1.1.2 AddEntriesFromIterable
 /// Calls a callback with each pair of [key, value] from an iterable.

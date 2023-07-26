@@ -513,7 +513,8 @@ CallResult<HermesValue> stringRaw(void *, Runtime &runtime, NativeArgs args) {
   llvh::SmallVector<char16_t, 32> stringElements{};
 
   // 11. Let nextIndex be 0.
-  MutableHandle<> nextIndex{runtime, HermesValue::encodeNumberValue(0)};
+  MutableHandle<> nextIndex{
+      runtime, HermesValue::encodeUntrustedNumberValue(0)};
 
   MutableHandle<> tmpHandle{runtime};
   MutableHandle<StringPrimitive> nextSeg{runtime};
@@ -568,8 +569,8 @@ CallResult<HermesValue> stringRaw(void *, Runtime &runtime, NativeArgs args) {
     // Omitted because nothing happens.
 
     // 12. k. Let nextIndex be nextIndex + 1.
-    nextIndex =
-        HermesValue::encodeNumberValue(nextIndex->getNumberAs<int64_t>() + 1);
+    nextIndex = HermesValue::encodeUntrustedNumberValue(
+        nextIndex->getNumberAs<int64_t>() + 1);
   }
 }
 
@@ -670,7 +671,7 @@ stringPrototypeCharCodeAt(void *, Runtime &runtime, NativeArgs args) {
   if (position < 0 || position >= size) {
     return HermesValue::encodeNaNValue();
   }
-  return HermesValue::encodeDoubleValue(
+  return HermesValue::encodeTrustedNumberValue(
       StringPrimitive::createStringView(runtime, S)[position]);
 }
 
@@ -713,7 +714,7 @@ stringPrototypeCodePointAt(void *, Runtime &runtime, NativeArgs args) {
 
   // 9. If first < 0xD800 or first > 0xDBFF or position+1 = size, return first.
   if (first < 0xD800 || first > 0xDBFF || position + 1 == size) {
-    return HermesValue::encodeNumberValue(first);
+    return HermesValue::encodeUntrustedNumberValue(first);
   }
 
   // 10. Let second be the code unit value of the element at index position+1 in
@@ -723,11 +724,11 @@ stringPrototypeCodePointAt(void *, Runtime &runtime, NativeArgs args) {
 
   // 11. If second < 0xDC00 or second > 0xDFFF, return first.
   if (second < 0xDC00 || second > 0xDFFF) {
-    return HermesValue::encodeNumberValue(first);
+    return HermesValue::encodeUntrustedNumberValue(first);
   }
 
   // 12. Return UTF16Decode(first, second).
-  return HermesValue::encodeNumberValue(utf16Decode(first, second));
+  return HermesValue::encodeUntrustedNumberValue(utf16Decode(first, second));
 }
 
 CallResult<HermesValue>
@@ -1168,7 +1169,7 @@ stringPrototypeLocaleCompare(void *ctx, Runtime &runtime, NativeArgs args) {
   StringPrimitive::createStringView(runtime, T).appendUTF16String(right);
   int comparisonResult = platform_unicode::localeCompare(left, right);
   assert(comparisonResult >= -1 && comparisonResult <= 1);
-  return HermesValue::encodeNumberValue(comparisonResult);
+  return HermesValue::encodeUntrustedNumberValue(comparisonResult);
 #endif
 }
 
@@ -1509,7 +1510,7 @@ static CallResult<HermesValue> stringDirectedIndexOf(
   // Therefore, it's safe to early return -1 for the case of StringIndexOf
   // (i.e. clampPosition=false) as soon as pos > len is observed.
   if (!clampPosition && pos > len) {
-    return HermesValue::encodeNumberValue(-1);
+    return HermesValue::encodeUntrustedNumberValue(-1);
   }
 
   // Let start be min(max(pos, 0), len).
@@ -1543,7 +1544,7 @@ static CallResult<HermesValue> stringDirectedIndexOf(
       ret = foundIter - SView.begin();
     }
   }
-  return HermesValue::encodeDoubleValue(ret);
+  return HermesValue::encodeUntrustedNumberValue(ret);
 }
 
 /// ES12 6.1.4.1 Runtime Semantics: StringIndexOf ( string, searchValue,
@@ -1563,7 +1564,7 @@ static CallResult<HermesValue> stringIndexOf(
       runtime,
       string,
       searchValue,
-      runtime.makeHandle(HermesValue::encodeDoubleValue(fromIndex)),
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(fromIndex)),
       false,
       false);
 }
@@ -1726,7 +1727,7 @@ stringPrototypeReplaceAll(void *, Runtime &runtime, NativeArgs args) {
                          runtime,
                          Runtime::getUndefinedValue(),
                          searchString.getHermesValue(),
-                         HermesValue::encodeNumberValue(position),
+                         HermesValue::encodeUntrustedNumberValue(position),
                          string.getHermesValue())
                          .toCallResultHermesValue();
       if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
@@ -2045,7 +2046,7 @@ stringPrototypeReplace(void *, Runtime &runtime, NativeArgs args) {
         runtime,
         Runtime::getUndefinedValue(),
         searchString.getHermesValue(),
-        HermesValue::encodeNumberValue(pos),
+        HermesValue::encodeUntrustedNumberValue(pos),
         string.getHermesValue());
     if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;

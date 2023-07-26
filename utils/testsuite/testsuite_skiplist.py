@@ -323,6 +323,9 @@ SKIP_LIST = [
     "mjsunit/harmony/async-debug-caught-exception-cases1.js",
     "mjsunit/harmony/async-debug-caught-exception-cases2.js",
     "mjsunit/harmony/async-debug-caught-exception-cases3.js",
+    # Reflect.setPrototypeOf isn't supposed to throw on failure TODO(T158542351)
+    "mjsunit/es6/reflect-set-prototype-of.js",
+    "test262/test/built-ins/Object/prototype/setPrototypeOf-with-different-values.js",
     # async function missing errors: TODO(T80014951)
     "test262/test/language/statements/async-function/escaped-async.js",
     "test262/test/language/statements/async-function/early-errors-declaration-formals-body-duplicate.js",
@@ -1081,8 +1084,12 @@ SKIP_LIST = [
     "test262/test/built-ins/String/prototype/toLocaleLowerCase/special_casing_conditional.js",
     "test262/test/built-ins/String/prototype/toLowerCase/special_casing_conditional.js",
     # Intl
+    "test262/test/intl402/BigInt/prototype/toLocaleString/de-DE.js",
     "test262/test/intl402/BigInt/prototype/toLocaleString/default-options-object-prototype.js",
+    "test262/test/intl402/BigInt/prototype/toLocaleString/en-US.js",
     "test262/test/intl402/BigInt/prototype/toLocaleString/length.js",
+    "test262/test/intl402/BigInt/prototype/toLocaleString/returns-same-results-as-NumberFormat.js",
+    "test262/test/intl402/BigInt/prototype/toLocaleString/throws-same-exceptions-as-NumberFormat.js",
     "test262/test/intl402/Collator/subclassing.js",
     "test262/test/intl402/Collator/unicode-ext-value-collation.js",
     "test262/test/intl402/Collator/ignore-invalid-unicode-ext-values.js",
@@ -1775,17 +1782,21 @@ SKIP_LIST = [
     # Destructuring identifier validation
     "flow/ES6/binding-pattern/object-pattern/yield-prop-alias-assignment-strict.js",
     # flow compiler "options" which disable features
+    "flow/JSX/jsx_type_args_types_disabled.js",
     "flow/async_arrow_functions/with_type_parameters_types_disabled.js",
     "flow/class_properties/migrated_0003.js",
     "flow/class_properties/migrated_0008.js",
     "flow/class_properties/migrated_0026.js",
+    "flow/enums/declare-enum-option-off.js",
     "flow/nullish_coalescing/missing-plugin.js",
     "flow/optional_chaining/missing-plugin.js",
     "flow/typeapp_call/disabled_ambiguous_call.js",
     "flow/typeapp_call/disabled_ambiguous_new.js",
     "flow/typeapp_call/function_call_optional.js",
     "flow/typeapp_call/method_call_optional2.js",
+    "flow/types/declare_module_with_exports/enums-off.js",
     # Semantic validation
+    "flow/async_await/await_id_in_async_param_default.js",
     "flow/ES6/super-property/super-call-in-static-constructor.js",
     "flow/class_properties/super-call-in-arrow.js",
     "flow/enums/enum-duplicate-member-name.js",
@@ -1797,6 +1808,7 @@ SKIP_LIST = [
     "flow/uninitialized_const_bindings_invalid/migrated_0000.js",
     "flow/this_param/class_constructor.js",
     # Reserved type names
+    "flow/types/aliases/invalid_keyword_symbol.js",
     "flow/types/aliases/reserved_type.js",
     "flow/types/annotations/static_is_reserved_param.js",
     "flow/types/annotations/static_is_reserved_type.js",
@@ -1814,6 +1826,7 @@ SKIP_LIST = [
     "flow/types/invalid_keywords/migrated_0001.js",
     "flow/types/opaque_aliases/invalid/reserved_type.js",
     "flow/types/opaque_aliases/valid/reserved_value.js",
+    "flow/types/reserved/function.js",
     # Potentially invalid JSX that is inconsistent across implementations.
     "flow/JSX/invalid_unpaired_gt.js",
     "flow/JSX/invalid_unpaired_rcurly.js",
@@ -1938,8 +1951,10 @@ PERMANENT_SKIP_LIST = [
     "test262/test/built-ins/SharedArrayBuffer/",
     "test262/test/intl402/DisplayNames/",
     "test262/test/intl402/Intl/supportedValuesOf/",
+    "test262/test/intl402/Intl/getCanonicalLocales/grandfathered.js",
     "test262/test/intl402/Intl/getCanonicalLocales/has-property.js",
     "test262/test/intl402/Intl/getCanonicalLocales/Locale-object.js",
+    "test262/test/intl402/Intl/getCanonicalLocales/non-iana-canon.js",
     "test262/test/intl402/ListFormat/",
     "test262/test/intl402/Locale/",
     "test262/test/intl402/PluralRules/",
@@ -1953,10 +1968,22 @@ PERMANENT_SKIP_LIST = [
     # Flow AST features.
     "flow/comment_interning/",
     "flow/decorators/",
+    "flow/interpreter_directive/",
     "flow/types/annotations_in_comments/",
     "flow/types/annotations_in_comments_invalid/",
+    "flow/types/conditional_types/",
+    "flow/types/mapped_types/",
+    "flow/type_guards/",
+    "flow/ES6/template-literals/comments_in_interpolation.js",
+    "flow/ES6/template-literals/comments_in_interpolation_multiline.js",
+    # Flow TS syntax, unsupported so far.
+    "flow/ts_syntax/",
+    # More escaped identifiers
+    "flow/for_of_loops/for_async_of_escaped.js",
     # Flow bug
     "flow/JSX_invalid/migrated_0000.js",
+    # Flow has a very different way of representing namespace exports.
+    "flow/ES6/modules/migrated_0008.js",
 ]
 
 HANDLESAN_SKIP_LIST = [

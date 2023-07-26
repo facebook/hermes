@@ -10,6 +10,8 @@
 
 import type {
   ESNode,
+  ComponentParameter,
+  ComponentTypeParameter,
   ClassMember,
   EnumBooleanMember,
   EnumDefaultedMember,
@@ -37,6 +39,8 @@ export type RemoveNodeMutation = $ReadOnly<{
   type: 'removeNode',
   node:
     | ClassMember
+    | ComponentParameter
+    | ComponentTypeParameter
     | EnumBooleanMember
     | EnumDefaultedMember
     | EnumNumberMember
@@ -78,6 +82,10 @@ const VALID_PROPERTY_PARENTS: $ReadOnlyArray<string> = [
   'ObjectExpression',
   'ObjectPattern',
 ];
+const VALID_COMPONENT_TYPE_PARAMETER_PARENTS: $ReadOnlyArray<string> = [
+  'DeclareComponent',
+  'ComponentTypeAnnotation',
+];
 function getRemovalParent(node: RemoveNodeMutation['node']): $ReadOnly<{
   type: 'array',
   parent: ESNode,
@@ -117,6 +125,15 @@ function getRemovalParent(node: RemoveNodeMutation['node']): $ReadOnly<{
       case 'EnumStringMember':
         assertParent(VALID_ENUM_MEMBER_PARENTS);
         return 'members';
+
+      // Components
+      case 'ComponentParameter':
+        assertParent('ComponentDeclaration');
+        return 'params';
+
+      case 'ComponentTypeParameter':
+        assertParent(VALID_COMPONENT_TYPE_PARAMETER_PARENTS);
+        return 'params';
 
       // FunctionParameter
       case 'AssignmentPattern':
@@ -188,6 +205,7 @@ function getRemovalParent(node: RemoveNodeMutation['node']): $ReadOnly<{
           case 'ArrowFunctionExpression':
           case 'FunctionDeclaration':
           case 'FunctionExpression':
+          case 'ComponentDeclaration':
             return 'params';
 
           case 'ArrayPattern':
@@ -207,6 +225,7 @@ function getRemovalParent(node: RemoveNodeMutation['node']): $ReadOnly<{
                 'ArrowFunctionExpression',
                 'FunctionDeclaration',
                 'FunctionExpression',
+                'ComponentDeclaration',
                 'ArrayPattern',
                 'ObjectPattern',
                 'CallExpression',

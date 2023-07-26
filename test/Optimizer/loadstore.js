@@ -33,7 +33,8 @@ function test2(p1, p2) {
 // Auto-generated content below. Please do not modify manually.
 
 // OPT-CHECK:function global#0()#1
-// OPT-CHECK-NEXT:frame = [], globals = [foo, test2]
+// OPT-CHECK-NEXT:globals = [foo, test2]
+// OPT-CHECK-NEXT:S{global#0()#1} = []
 // OPT-CHECK-NEXT:%BB0:
 // OPT-CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // OPT-CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2, %0
@@ -41,19 +42,19 @@ function test2(p1, p2) {
 // OPT-CHECK-NEXT:  %3 = CreateFunctionInst %test2#0#1()#3 : undefined, %0
 // OPT-CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "test2" : string
 // OPT-CHECK-NEXT:  %5 = LoadPropertyInst globalObject : object, "foo" : string
-// OPT-CHECK-NEXT:  %6 = CallInst %5, undefined : undefined
+// OPT-CHECK-NEXT:  %6 = CallInst %5, undefined : undefined, undefined : undefined
 // OPT-CHECK-NEXT:  %7 = ReturnInst %6
 // OPT-CHECK-NEXT:function_end
 
 // OPT-CHECK:function foo#0#1(p1)#2
-// OPT-CHECK-NEXT:frame = []
+// OPT-CHECK-NEXT:S{foo#0#1()#2} = []
 // OPT-CHECK-NEXT:%BB0:
 // OPT-CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
 // OPT-CHECK-NEXT:  %1 = ReturnInst %p1
 // OPT-CHECK-NEXT:function_end
 
 // OPT-CHECK:function test2#0#1(p1, p2)#3 : undefined
-// OPT-CHECK-NEXT:frame = []
+// OPT-CHECK-NEXT:S{test2#0#1()#3} = []
 // OPT-CHECK-NEXT:%BB0:
 // OPT-CHECK-NEXT:  %0 = CreateScopeInst %S{test2#0#1()#3}
 // OPT-CHECK-NEXT:  %1 = BinaryOperatorInst '+', %p1, %p2
@@ -64,12 +65,13 @@ function test2(p1, p2) {
 // OPT-CHECK-NEXT:  %6 = BinaryOperatorInst '+', %1 : string|number|bigint, 4 : number
 // OPT-CHECK-NEXT:  %7 = BinaryOperatorInst '+', %1 : string|number|bigint, 5 : number
 // OPT-CHECK-NEXT:  %8 = BinaryOperatorInst '+', %1 : string|number|bigint, 6 : number
-// OPT-CHECK-NEXT:  %9 = CallInst %2, undefined : undefined, %3 : string|number, %4 : string|number, %5 : string|number, %6 : string|number, %7 : string|number, %8 : string|number
+// OPT-CHECK-NEXT:  %9 = CallInst %2, undefined : undefined, undefined : undefined, %3 : string|number, %4 : string|number, %5 : string|number, %6 : string|number, %7 : string|number, %8 : string|number
 // OPT-CHECK-NEXT:  %10 = ReturnInst undefined : undefined
 // OPT-CHECK-NEXT:function_end
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [foo, test2]
+// CHECK-NEXT:globals = [foo, test2]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2, %0
@@ -79,14 +81,14 @@ function test2(p1, p2) {
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %6 = StoreStackInst undefined : undefined, %5
 // CHECK-NEXT:  %7 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %8 = CallInst %7, undefined : undefined
+// CHECK-NEXT:  %8 = CallInst %7, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %9 = StoreStackInst %8, %5
 // CHECK-NEXT:  %10 = LoadStackInst %5
 // CHECK-NEXT:  %11 = ReturnInst %10
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1(p1)#2
-// CHECK-NEXT:frame = [p1#2, t#2, k#2, z#2, y#2]
+// CHECK-NEXT:S{foo#0#1()#2} = [p1#2, t#2, k#2, z#2, y#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %p1, [p1#2], %0
@@ -109,7 +111,7 @@ function test2(p1, p2) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test2#0#1(p1, p2)#3
-// CHECK-NEXT:frame = [p1#3, p2#3, x#3]
+// CHECK-NEXT:S{test2#0#1()#3} = [p1#3, p2#3, x#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test2#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %p1, [p1#3], %0
@@ -132,6 +134,6 @@ function test2(p1, p2) {
 // CHECK-NEXT:  %18 = BinaryOperatorInst '+', %17, 5 : number
 // CHECK-NEXT:  %19 = LoadFrameInst [x#3], %0
 // CHECK-NEXT:  %20 = BinaryOperatorInst '+', %19, 6 : number
-// CHECK-NEXT:  %21 = CallInst %8, undefined : undefined, %10, %12, %14, %16, %18, %20
+// CHECK-NEXT:  %21 = CallInst %8, undefined : undefined, undefined : undefined, %10, %12, %14, %16, %18, %20
 // CHECK-NEXT:  %22 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

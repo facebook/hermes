@@ -512,21 +512,12 @@ Value *ESTreeIRGen::genOptionalCallExpr(
 ///  textified callee: "aaaaaaaaaa(...)bbbbbbbbbb"
 static LiteralString *getTextifiedCallExpr(
     IRBuilder &builder,
-    ESTree::CallExpressionLikeNode *call) {
+    ESTree::Node *callee) {
   constexpr uint32_t kMaxTextifiedCalleeSizeUTF8Chars = 64;
   // Pessimizing the maximum buffer size for the textified callee as if all
   // characters were 4 bytes.
   llvh::SmallVector<char, kMaxTextifiedCalleeSizeUTF8Chars * 4> textifiedCallee;
   llvh::raw_svector_ostream OS(textifiedCallee);
-  ESTree::Node *callee{};
-  if (auto *C = llvh::dyn_cast<ESTree::CallExpressionNode>(call)) {
-    callee = C->_callee;
-  } else if (
-      auto *O = llvh::dyn_cast<ESTree::OptionalCallExpressionNode>(call)) {
-    callee = O->_callee;
-  } else {
-    llvm_unreachable("Unhandled CallExpressionLikeNode sub-type.");
-  }
 
   // Count of how many UTF8 character are on the textified callee string.
   uint32_t numUTF8Chars = 0;
@@ -652,7 +643,7 @@ Value *ESTreeIRGen::emitCall(
     }
 
     return Builder.createCallInst(
-        getTextifiedCallExpr(Builder, call), callee, thisVal, args);
+        getTextifiedCallExpr(Builder, getCallee(call)), callee, thisVal, args);
   }
 
   // Otherwise, there exists a spread argument, so the number of arguments
@@ -787,7 +778,9 @@ Value *ESTreeIRGen::genCallEvalExpr(ESTree::CallExpressionNode *call) {
         call->getSourceRange(), "Extra eval() arguments are ignored");
   }
 
-  return Builder.createDirectEvalInst(args[0]);
+  bool isStrict = Builder.getInsertionBlock()->getParent()->isStrictMode();
+  return Builder.createDirectEvalInst(
+      args[0], Builder.getLiteralBool(isStrict));
 }
 
 /// Convert a property key node to its JavaScript string representation.
@@ -1462,7 +1455,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
                 "yield* delegate must have a .throw() method")});
         // HermesInternal.throwTypeError will necessarily throw, but we need to
         // have a terminator on this BB to allow proper optimization.
-        Builder.createReturnInst(Builder.getLiteralUndefined());
+        Builder.createThrowInst(Builder.getLiteralUndefined());
       });
 
   Builder.setInsertionBlock(exitBlock);
@@ -1915,7 +1908,7 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
       args.push_back(genExpression(&arg));
     }
 
-    return Builder.createConstructInst(callee, args);
+    return Builder.createConstructInst(callee, callee, args);
   }
 
   // Otherwise, there exists a spread argument, so the number of arguments

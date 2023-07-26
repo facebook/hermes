@@ -9,7 +9,19 @@ import Fuzzilli
 
 let hermesProfile = Profile(
     getProcessArguments:  { (randomizingArguments: Bool) -> [String] in
-      return ["--reprl"]
+      var args = ["--reprl"]
+
+      guard randomizingArguments else { return args }
+
+      if probability(0.5) { args.append("--compile") }
+      if probability(0.5) { args.append("--lazy-compilation") }
+      if probability(0.5) { args.append("--eager-compilation") }
+      if probability(0.5) { args.append("--optimize") }
+      if probability(0.5) { args.append("--async-break") }
+      if probability(0.5) { args.append("--block-scoping") }
+      if probability(0.5) { args.append("--random-mem-layout") }
+
+      return args
     },
 
     processEnv: ["UBSAN_OPTIONS": "handle_segv=0"],
@@ -34,7 +46,7 @@ let hermesProfile = Profile(
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
 
-    disabledCodeGenerators: ["AsyncArrowFunctionGenerator", "AsyncGeneratorFunctionGenerator", "ClassGenerator", "WithStatementGenerator"],
+    disabledCodeGenerators: ["AsyncArrowFunctionGenerator", "AsyncGeneratorFunctionGenerator", "ClassGenerator", "WithStatementGenerator", "JITFunctionGenerator", "GrowableSharedArrayBufferGenerator"],
 
     additionalBuiltins: [
         "gc"                                             : .function([] => .undefined),

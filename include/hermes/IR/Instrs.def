@@ -23,6 +23,8 @@
 #define INCLUDE_HBC_BACKEND
 #endif
 
+DEF_VALUE(ThrowIfHasRestrictedGlobalPropertyInst, Instruction)
+
 MARK_FIRST(ScopeCreationInst)
 DEF_VALUE(ScopeCreationInst, Instruction)
 DEF_VALUE(CreateScopeInst, ScopeCreationInst)
@@ -30,6 +32,13 @@ DEF_VALUE(CreateScopeInst, ScopeCreationInst)
 DEF_VALUE(HBCCreateEnvironmentInst, ScopeCreationInst)
 DEF_VALUE(HBCResolveEnvironment, ScopeCreationInst)
 #endif
+MARK_FIRST(NestedScopeCreationInst)
+DEF_VALUE(NestedScopeCreationInst, ScopeCreationInst)
+DEF_VALUE(CreateInnerScopeInst, NestedScopeCreationInst)
+#ifdef INCLUDE_HBC_BACKEND
+DEF_VALUE(HBCCreateInnerEnvironmentInst, NestedScopeCreationInst)
+#endif
+MARK_LAST(NestedScopeCreationInst)
 MARK_LAST(ScopeCreationInst)
 
 MARK_FIRST(SingleOperandInst)
@@ -43,7 +52,6 @@ DEF_VALUE(MovInst, SingleOperandInst)
 DEF_VALUE(ImplicitMovInst, Instruction)
 DEF_VALUE(CoerceThisNSInst, SingleOperandInst)
 DEF_VALUE(UnaryOperatorInst, SingleOperandInst)
-DEF_VALUE(DirectEvalInst, SingleOperandInst)
 #ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCLoadConstInst, SingleOperandInst)
 DEF_VALUE(HBCLoadParamInst, SingleOperandInst)
@@ -81,6 +89,7 @@ DEF_VALUE(AllocObjectLiteralInst, Instruction)
 DEF_VALUE(CreateArgumentsInst, Instruction)
 DEF_VALUE(CatchInst, Instruction)
 DEF_VALUE(DebuggerInst, Instruction)
+DEF_VALUE(DirectEvalInst, Instruction)
 DEF_VALUE(CreateRegExpInst, Instruction)
 DEF_VALUE(TryEndInst, Instruction)
 DEF_VALUE(GetNewTargetInst, Instruction)

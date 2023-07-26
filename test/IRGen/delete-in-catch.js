@@ -18,7 +18,8 @@ try {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [?anon_1_e#1], globals = [result]
+// CHECK-NEXT:globals = [result]
+// CHECK-NEXT:S{global#0()#1} = [?anon_1_e#1]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = AllocStackInst $?anon_0_ret
@@ -35,7 +36,7 @@ try {
 // CHECK-NEXT:  %10 = ReturnInst %9
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %12 = CallInst %11, undefined : undefined
+// CHECK-NEXT:  %12 = CallInst %11, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %13 = StoreStackInst %12, %1
 // CHECK-NEXT:  %14 = BranchInst %BB4
 // CHECK-NEXT:%BB4:

@@ -85,6 +85,7 @@ public class DateTimeFormat {
   private boolean useDefaultNumberSystem;
   private String mNumberingSystem;
 
+  private Object mHour12;
   private IPlatformDateTimeFormatter.HourCycle mHourCycle;
 
   private IPlatformDateTimeFormatter.FormatMatcher mFormatMatcher;
@@ -97,6 +98,8 @@ public class DateTimeFormat {
   private IPlatformDateTimeFormatter.Minute mMinute;
   private IPlatformDateTimeFormatter.Second mSecond;
   private IPlatformDateTimeFormatter.TimeZoneName mTimeZoneName;
+  private IPlatformDateTimeFormatter.DateStyle mDateStyle;
+  private IPlatformDateTimeFormatter.TimeStyle mTimeStyle;
 
   private Object mTimeZone = null;
 
@@ -123,6 +126,9 @@ public class DateTimeFormat {
         if (!JSObjects.isUndefined(JSObjects.Get(options, property))) needDefaults = false;
       }
     }
+
+    if (!JSObjects.isUndefined(JSObjects.Get(options, "dateStyle"))
+        || !JSObjects.isUndefined(JSObjects.Get(options, "timeStyle"))) needDefaults = false;
 
     if (needDefaults && (defaults.equals("date") || defaults.equals("all"))) {
       for (String property : new String[] {"year", "month", "day"}) {
@@ -362,13 +368,33 @@ public class DateTimeFormat {
             options,
             "timeZoneName",
             OptionHelpers.OptionType.STRING,
-            new String[] {"long", "short"},
+            new String[] {
+              "long", "longOffset", "longGeneric", "short", "shortOffset", "shortGeneric"
+            },
             JSObjects.Undefined());
     mTimeZoneName =
         OptionHelpers.searchEnum(IPlatformDateTimeFormatter.TimeZoneName.class, timeZoneName);
 
+    Object dateStyle =
+        OptionHelpers.GetOption(
+            options,
+            "dateStyle",
+            OptionHelpers.OptionType.STRING,
+            new String[] {"full", "long", "medium", "short"},
+            JSObjects.Undefined());
+    mDateStyle = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.DateStyle.class, dateStyle);
+
+    Object timeStyle =
+        OptionHelpers.GetOption(
+            options,
+            "timeStyle",
+            OptionHelpers.OptionType.STRING,
+            new String[] {"full", "long", "medium", "short"},
+            JSObjects.Undefined());
+    mTimeStyle = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.TimeStyle.class, timeStyle);
+
     // 36
-    if (JSObjects.isUndefined(hour)) {
+    if (JSObjects.isUndefined(hour) && JSObjects.isUndefined(timeStyle)) {
       mHourCycle = IPlatformDateTimeFormatter.HourCycle.UNDEFINED;
     } else {
       IPlatformDateTimeFormatter.HourCycle hcDefault =
@@ -395,9 +421,10 @@ public class DateTimeFormat {
           else hc = IPlatformDateTimeFormatter.HourCycle.H24;
         }
       }
-
       mHourCycle = hc;
     }
+
+    mHour12 = hour12;
   }
 
   @DoNotStrip
@@ -425,7 +452,10 @@ public class DateTimeFormat {
         mSecond,
         mTimeZoneName,
         mHourCycle,
-        mTimeZone);
+        mTimeZone,
+        mDateStyle,
+        mTimeStyle,
+        mHour12);
   }
 
   // options are localeMatcher:string
@@ -508,6 +538,14 @@ public class DateTimeFormat {
 
     if (mTimeZoneName != IPlatformDateTimeFormatter.TimeZoneName.UNDEFINED) {
       finalResolvedOptions.put("timeZoneName", mTimeZoneName.toString());
+    }
+
+    if (mDateStyle != IPlatformDateTimeFormatter.DateStyle.UNDEFINED) {
+      finalResolvedOptions.put("dateStyle", mDateStyle.toString());
+    }
+
+    if (mTimeStyle != IPlatformDateTimeFormatter.TimeStyle.UNDEFINED) {
+      finalResolvedOptions.put("timeStyle", mTimeStyle.toString());
     }
 
     return finalResolvedOptions;

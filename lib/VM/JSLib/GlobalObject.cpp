@@ -128,7 +128,7 @@ CallResult<HermesValue> parseInt(void *, Runtime &runtime, NativeArgs args) {
     return HermesValue::encodeNaNValue();
   }
 
-  return HermesValue::encodeDoubleValue(
+  return HermesValue::encodeUntrustedNumberValue(
       sign * parseIntWithRadix(strView.slice(begin, realEnd), radix));
 }
 
@@ -177,21 +177,21 @@ CallResult<HermesValue> parseFloat(void *, Runtime &runtime, NativeArgs args) {
           idTable.getStringView(
               runtime, Predefined::getSymbolID(Predefined::Infinity)),
           str16))) {
-    return HermesValue::encodeDoubleValue(
+    return HermesValue::encodeUntrustedNumberValue(
         std::numeric_limits<double>::infinity());
   }
   if (LLVM_UNLIKELY(isPrefix(
           idTable.getStringView(
               runtime, Predefined::getSymbolID(Predefined::PositiveInfinity)),
           str16))) {
-    return HermesValue::encodeDoubleValue(
+    return HermesValue::encodeUntrustedNumberValue(
         std::numeric_limits<double>::infinity());
   }
   if (LLVM_UNLIKELY(isPrefix(
           idTable.getStringView(
               runtime, Predefined::getSymbolID(Predefined::NegativeInfinity)),
           str16))) {
-    return HermesValue::encodeDoubleValue(
+    return HermesValue::encodeUntrustedNumberValue(
         -std::numeric_limits<double>::infinity());
   }
   if (LLVM_UNLIKELY(isPrefix(
@@ -233,7 +233,7 @@ CallResult<HermesValue> parseFloat(void *, Runtime &runtime, NativeArgs args) {
   }
   // Now we know the prefix untill endPtr is a valid int.
   *endPtr = '\0';
-  return HermesValue::encodeDoubleValue(
+  return HermesValue::encodeUntrustedNumberValue(
       ::hermes_g_strtod(str8.data(), &endPtr));
 }
 
@@ -311,7 +311,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       runtime,
       Predefined::getSymbolID(Predefined::Infinity),
       constantDPF,
-      runtime.makeHandle(HermesValue::encodeDoubleValue(
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(
           std::numeric_limits<double>::infinity()))));
 
   // 15.1.1.2 undefined.
@@ -342,7 +342,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
           runtime, Handle<JSObject>::vmcast(&runtime.ErrorPrototype)) \
           .getHermesValue();
 #define AGGREGATE_ERROR_TYPE(name) NATIVE_ERROR_TYPE(name)
-#include "hermes/VM/NativeErrorTypes.def"
+#include "hermes/FrontEndDefs/NativeErrorTypes.def"
 
   // "Forward declaration" of the internal CallSite prototype. Its properties
   // will be populated later.
@@ -385,9 +385,8 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       Predefined::getSymbolID(Predefined::length),
       clearConfigurableDPF,
       Runtime::getUndefinedValue()));
-  runtime.throwTypeErrorAccessor =
-      runtime.ignoreAllocationFailure(PropertyAccessor::create(
-          runtime, throwTypeErrorFunction, throwTypeErrorFunction));
+  runtime.throwTypeErrorAccessor = PropertyAccessor::create(
+      runtime, throwTypeErrorFunction, throwTypeErrorFunction);
 
   // Define the 'parseInt' function.
   runtime.parseIntFunction =
@@ -572,11 +571,12 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   runtime.errorConstructor = createErrorConstructor(runtime).getHermesValue();
 
 // All Native Error constructors.
-#define NATIVE_ERROR_TYPE(name)       \
-  create##name##Constructor(runtime); \
+#define NATIVE_ERROR_TYPE(name)                            \
+  runtime.name##Constructor =                              \
+      create##name##Constructor(runtime).getHermesValue(); \
   gcScope.clearAllHandles();
 #define AGGREGATE_ERROR_TYPE(name) NATIVE_ERROR_TYPE(name)
-#include "hermes/VM/NativeErrorTypes.def"
+#include "hermes/FrontEndDefs/NativeErrorTypes.def"
 
   // Populate the internal CallSite prototype.
   populateCallSitePrototype(runtime);

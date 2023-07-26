@@ -299,6 +299,26 @@ Arguments | %x and %y are the operands of the binary operation, %BB1 is the 'Tru
 Semantics | The instruction follows the rules of JavaScript for each one of the binary operators defined in the instruction. If the condition is evaluated as 'True' the program jumps to the 'True' block. Otherwise the program jumps to the 'False' block.
 Effects | May read and write memory.
 
+### CreateScopeInst
+
+CreateScopeInst | _
+--- | --- |
+Description | Create a new function top-level scope.
+Example | %0 = CreateScopeInst %desc
+Arguments | %desc describes the function's top-level scope.
+Semantics | Creates the top-level scope for its function.
+Effects | Does not read or write to memory.
+
+### CreateInnerScopeInst
+
+CreateInnerScopeInst | _
+--- | --- |
+Description | Creates a new scope with the given parent
+Example | %0 = CreateInnerScopeInst %parent, %desc
+Arguments | %parent is the inner scope's parent scope, and %desc describes the scope that is being created.
+Semantics | Creates a new inner scope within the given parent.
+Effects | Does not read or write to memory.
+
 ### CreateFunction
 
 CreateFunction | _
@@ -456,6 +476,15 @@ Example |   %4 = StoreGetterSetterInst %getter, %setter, %object, %property, %en
 Arguments | %getter is a getter accessor, or undefined. %setter is a setter accessor, or undefined. %object is the object where the field %property will be created or modified. %enumerable determines whether a new property will be created as enumerable or not.
 Semantics | The instruction follows the rules of JavaScript property access. The property is created or updated in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain. It replaces both accessors even if one or both of the parameters are undefined.
 Effects | May read and write memory.
+
+### ThrowIfHasRestrictedGlobalPropertyInst
+ThrowIfHasRestrictedGlobalPropertyInst | _
+--- | --- |
+Description | Raises an exception if the given name is a restricted global property.
+Example |   ThrowIfHasRestrictedGlobalPropertyInst %name : string
+Arguments | %name is the name to be checked agains global restricted properties.
+Semantics | Implements the semantics of ES2023 9.1.1.4.14 followed by a throw if %name is a restricted global property.
+Effects | Unknown.
 
 ### AllocObjectInst
 
@@ -772,6 +801,27 @@ Description | Obtain the "global" object
 Example |  %0 = HBCGetGlobalObjectInst
 Arguments | None.
 Semantics | The instruction returns a reference to the "global" object.
+Effects | Does not read or write to memory.
+
+
+### HBCCreateEnvironment
+
+HBCCreateEnvironment | _
+--- | --- |
+Description | Create a new function top-level environment.
+Example | %0 = HBCCreateEnvironment %desc
+Arguments | %desc describes the function's top-level environment.
+Semantics | Creates the top-level environment for its function.
+Effects | Does not read or write to memory.
+
+### HBCCreateInnerEnvironment
+
+HBCCreateInnerEnvironment | _
+--- | --- |
+Description | Creates a new environment with the given parent
+Example | %0 = HBCCreateInnerEnvironment %parent, %desc
+Arguments | %parent is the inner environment's parent environment, and %desc describes the environment that is being created.
+Semantics | Creates a new inner environment within the given parent.
 Effects | Does not read or write to memory.
 
 ### HBCCreateFunction

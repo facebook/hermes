@@ -19,7 +19,8 @@ function fibonacci(n) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [fibonacci]
+// CHECK-NEXT:globals = [fibonacci]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %fibonacci#0#1()#2, %0
@@ -31,7 +32,7 @@ function fibonacci(n) {
 // CHECK-NEXT:function_end
 
 // CHECK:function fibonacci#0#1(n)#2
-// CHECK-NEXT:frame = [n#2]
+// CHECK-NEXT:S{fibonacci#0#1()#2} = [n#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{fibonacci#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %n, [n#2], %0
@@ -43,7 +44,7 @@ function fibonacci(n) {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %6 = LoadPropertyInst globalObject : object, "fibonacci" : string
 // CHECK-NEXT:  %7 = LoadFrameInst [n#2], %0
-// CHECK-NEXT:  %8 = CallInst %6, undefined : undefined, %7
+// CHECK-NEXT:  %8 = CallInst %6, undefined : undefined, undefined : undefined, %7
 // CHECK-NEXT:  %9 = ReturnInst %8
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %10 = ReturnInst undefined : undefined

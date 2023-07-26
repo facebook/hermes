@@ -17,6 +17,7 @@ int main(void) {
 
 #include <hermes/DebuggerAPI.h>
 #include <hermes/Support/OSCompat.h>
+#include <hermes/Support/OptValue.h>
 #include <hermes/hermes.h>
 #include <jsi/jsi.h>
 #include <signal.h>
@@ -133,8 +134,12 @@ std::string chompToken(std::string *str, const char *separators = " \t") {
 }
 
 void printUsageAndExit() {
-  std::cerr
-      << "USAGE: hdb [--break-at-start] [--break-after <secs>] [--lazy|--eager|--smart] <input JS file>\n";
+  std::cerr << "USAGE: hdb"
+               " [--break-at-start]"
+               " [--break-after <secs>]"
+               " [--lazy|--eager|--smart]"
+               " [--[no-]bs] [--[no-]block-scope]"
+               " <input JS file>\n";
   exit(EXIT_FAILURE);
 }
 
@@ -144,6 +149,7 @@ struct Options {
   hermes::vm::CompilationMode compilationMode{
       hermes::vm::ForceEagerCompilation};
   double breakAfterDelay{-1.}; // -1 disables breakAfterDelay
+  hermes::OptValue<bool> enableBlockScoping{};
 };
 
 Options getCommandLineOptions(int argc, char **argv) {
@@ -173,6 +179,11 @@ Options getCommandLineOptions(int argc, char **argv) {
       result.compilationMode = hermes::vm::ForceEagerCompilation;
     } else if (strcmp(arg, "--smart") == 0) {
       result.compilationMode = hermes::vm::SmartCompilation;
+    } else if (strcmp(arg, "-bs") == 0 || strcmp(arg, "--block-scope") == 0) {
+      result.enableBlockScoping = true;
+    } else if (
+        strcmp(arg, "-no-bs") == 0 || strcmp(arg, "--no-block-scope") == 0) {
+      result.enableBlockScoping = false;
     } else if (strcmp(arg, "--break-after") == 0) {
       char *endptr = nullptr;
       char *strValue = nextArg();
@@ -770,7 +781,12 @@ int main(int argc, char **argv) {
       (std::istreambuf_iterator<char>(fileStream)),
       std::istreambuf_iterator<char>());
 
-  std::unique_ptr<HermesRuntime> runtime = makeHermesRuntime();
+  hermes::vm::RuntimeConfig::Builder optsBuilder;
+  if (options.enableBlockScoping) {
+    optsBuilder.withEnableBlockScoping(*options.enableBlockScoping);
+  }
+  std::unique_ptr<HermesRuntime> runtime =
+      makeHermesRuntime(optsBuilder.build());
   HDBDebugger debugger(*runtime);
   runtime->getDebugger().setEventObserver(&debugger);
   runtime->getDebugger().setShouldPauseOnScriptLoad(options.breakAtStart);

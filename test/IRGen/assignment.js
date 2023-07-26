@@ -16,7 +16,8 @@ function test_assignment_expr() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [test_assignment_expr]
+// CHECK-NEXT:globals = [test_assignment_expr]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %test_assignment_expr#0#1()#2, %0
@@ -28,7 +29,7 @@ function test_assignment_expr() {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_assignment_expr#0#1()#2
-// CHECK-NEXT:frame = [y#2, x#2]
+// CHECK-NEXT:S{test_assignment_expr#0#1()#2} = [y#2, x#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_assignment_expr#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [y#2], %0

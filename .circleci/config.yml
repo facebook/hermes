@@ -531,7 +531,7 @@ jobs:
   test-e2e:
     executor:
       name: android/android-machine
-      tag: 2022.04.1
+      tag: 2023.06.1
     working_directory: /home/circleci
     environment:
       REACT_NATIVE_OVERRIDE_HERMES_DIR: /home/circleci/hermes
@@ -543,6 +543,7 @@ jobs:
           name: Setup dependencies
           command: |
             (yes | sdkmanager "cmake;3.22.1" --verbose) || true
+            sudo apt update && sudo apt install -y openjdk-11-jdk
       - checkout:
           path: hermes
       - run:

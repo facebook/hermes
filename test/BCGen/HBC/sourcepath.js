@@ -11,5 +11,5 @@ function func() {
   print("func");
 }
 
-//CHECK:   {{.*}}/sourcepath.js[10:1]
-//CHECK:   {{.*}}/sourcepath.js[10:1]
+//CHECK:   {{.*}}/sourcepath.js:10:1
+//CHECK:   {{.*}}/sourcepath.js:10:1

@@ -21,7 +21,8 @@ function sink(x, y) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [y, sink]
+// CHECK-NEXT:globals = [y, sink]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %sink#0#1()#2, %0
@@ -34,14 +35,14 @@ function sink(x, y) {
 // CHECK-NEXT:  %8 = StoreStackInst 3 : number, %3
 // CHECK-NEXT:  %9 = LoadPropertyInst globalObject : object, "sink" : string
 // CHECK-NEXT:  %10 = LoadPropertyInst globalObject : object, "y" : string
-// CHECK-NEXT:  %11 = CallInst %9, undefined : undefined, %10
+// CHECK-NEXT:  %11 = CallInst %9, undefined : undefined, undefined : undefined, %10
 // CHECK-NEXT:  %12 = StoreStackInst %11, %3
 // CHECK-NEXT:  %13 = LoadStackInst %3
 // CHECK-NEXT:  %14 = ReturnInst %13
 // CHECK-NEXT:function_end
 
 // CHECK:function sink#0#1(x, y)#2
-// CHECK-NEXT:frame = [x#2, y#2]
+// CHECK-NEXT:S{sink#0#1()#2} = [x#2, y#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{sink#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#2], %0

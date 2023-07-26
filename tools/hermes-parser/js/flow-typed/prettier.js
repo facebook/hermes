@@ -73,7 +73,9 @@ declare module 'prettier' {
     options: Options,
   ) => AST;
 
-  declare export type Options = $Partial<RequiredOptions>;
+  declare type CustomParserName = string;
+
+  declare export type Options = Partial<RequiredOptions>;
   declare export type RequiredOptions = {
     ...DocPrinterOptions,
     /**
@@ -126,7 +128,7 @@ declare module 'prettier' {
     /**
      * Specify which parser to use.
      */
-    parser: BuiltInParserName | CustomParser,
+    parser: BuiltInParserName | CustomParserName | CustomParser,
     /**
      * Specify the input filepath. This will be used to do parser inference.
      */
@@ -198,6 +200,11 @@ declare module 'prettier' {
     originalText: string,
   };
 
+  declare export type PrettierPrinterOptions<T = any> = {
+    ...PrettierParserOptions<T>,
+    printer: Printer<T>,
+  };
+
   declare export type Plugin<T = any> = {
     languages?: Array<SupportLanguage> | void,
     parsers?: {[parserName: string]: Parser<T>} | void,
@@ -224,7 +231,7 @@ declare module 'prettier' {
   declare export type Printer<T = any> = {
     print: (
       path: AstPath<T>,
-      options: PrettierParserOptions<T>,
+      options: PrettierPrinterOptions<T>,
       print: (path: AstPath<T>) => Doc,
     ) => Doc,
     embed?:
@@ -232,7 +239,7 @@ declare module 'prettier' {
           path: AstPath<T>,
           print: (path: AstPath<T>) => Doc,
           textToDoc: (text: string, options: Options) => Doc,
-          options: PrettierParserOptions<T>,
+          options: PrettierPrinterOptions<T>,
         ) => Doc | null)
       | void,
     insertPragma?: ((text: string) => string) | void,
@@ -297,13 +304,19 @@ declare module 'prettier' {
   /**
    * `format` is used to format text using Prettier. [Options](https://prettier.io/docs/en/options.html) may be provided to override the defaults.
    */
-  declare export function format(source: string, options?: Options): string;
+  declare export function format(
+    source: string,
+    options?: Options,
+  ): Promise<string> | string;
 
   /**
    * `check` checks to see if the file has been formatted with Prettier given those options and returns a `Boolean`.
    * This is similar to the `--list-different` parameter in the CLI and is useful for running Prettier in CI scenarios.
    */
-  declare export function check(source: string, options?: Options): boolean;
+  declare export function check(
+    source: string,
+    options?: Options,
+  ): Promise<boolean> | boolean;
 
   /**
    * `formatWithCursor` both formats the code, and translates a cursor position from unformatted code to formatted code.
@@ -314,7 +327,7 @@ declare module 'prettier' {
   declare export function formatWithCursor(
     source: string,
     options: CursorOptions,
-  ): CursorResult;
+  ): Promise<CursorResult> | CursorResult;
 
   declare export type ResolveConfigOptions = {
     /**
@@ -831,6 +844,21 @@ declare module 'prettier' {
         shouldTraverseConditionalGroups?: boolean,
       ): void,
       willBreak(doc: Doc): boolean,
+    },
+  };
+}
+
+declare module 'prettier/plugins/flow' {
+  declare type AST = any;
+
+  declare export var parsers: {
+    flow: {
+      astFormat: string,
+      parse(text: string, parsers: any, options: any): AST,
+      hasPragma?: ((text: string) => boolean) | void,
+      locStart: (node: AST) => number,
+      locEnd: (node: AST) => number,
+      preprocess?: ((text: string, options: any) => string) | void,
     },
   };
 }

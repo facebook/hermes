@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @flow strict-local
+ * @flow strict
  * @format
  */
 
@@ -115,13 +115,8 @@ export function removeNodeOnParent(
  * Corrects the parent pointers in direct children of the given node.
  */
 export function setParentPointersInDirectChildren(node: ESNode): void {
-  for (const key of getVisitorKeys(node)) {
-    if (
-      isNode(
-        // $FlowExpectedError[prop-missing]
-        node[key],
-      )
-    ) {
+  for (const key: $FlowFixMe of getVisitorKeys(node)) {
+    if (isNode(node[key])) {
       node[key].parent = node;
     } else if (Array.isArray(node[key])) {
       for (const child of node[key]) {
@@ -149,9 +144,10 @@ export function updateAllParentPointers(node: ESNode) {
  *
  * This will only create a new object if the overrides actually result in a change.
  */
-export function nodeWith<T: ESNode>(node: T, overrideProps: $Partial<T>): T {
+export function nodeWith<T: ESNode>(node: T, overrideProps: Partial<T>): T {
   // Check if this will actually result in a change, maintaining referential equality is important.
   const willBeUnchanged = Object.entries(overrideProps).every(([key, value]) =>
+    // $FlowExpectedError[incompatible-call]
     // $FlowExpectedError[prop-missing]
     Array.isArray(value) ? arrayIsEqual(node[key], value) : node[key] === value,
   );

@@ -25,7 +25,8 @@ function bar(a,b,c,d,e,f,g,h) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [foo, bar]
+// CHECK-NEXT:globals = [foo, bar]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 @0 [1...5) 	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
 // CHECK-NEXT:  $Reg2 @1 [2...4) 	%1 = HBCCreateFunctionInst %foo#0#1()#2 : number, %0
@@ -38,14 +39,14 @@ function bar(a,b,c,d,e,f,g,h) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1()#2 : number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{foo#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCLoadConstInst 0 : number
 // CHECK-NEXT:  $Reg0 @1 [empty]	%1 = ReturnInst %0 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function bar#0#1(a, b, c, d, e, f, g, h)#2 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{bar#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg9 @0 [1...19) 	%0 = HBCLoadParamInst 1 : number
 // CHECK-NEXT:  $Reg0 @1 [2...3) 	%1 = HBCLoadParamInst 2 : number
@@ -65,6 +66,6 @@ function bar(a,b,c,d,e,f,g,h) {
 // CHECK-NEXT:  $Reg0 @15 [16...17) 	%15 = HBCGetGlobalObjectInst
 // CHECK-NEXT:  $Reg1 @16 [17...19) 	%16 = LoadPropertyInst %15 : object, "foo" : string
 // CHECK-NEXT:  $Reg0 @17 [18...20) 	%17 = HBCLoadConstInst undefined : undefined
-// CHECK-NEXT:  $Reg1 @18 [empty]	%18 = CallInst %16, %17 : undefined, %14 : string|number|bigint, %12 : string|number|bigint, %10 : string|number|bigint, %8 : string|number|bigint, %6 : string|number|bigint, %4 : string|number|bigint, %2 : string|number|bigint, %0
+// CHECK-NEXT:  $Reg1 @18 [empty]	%18 = CallInst %16, undefined : undefined, %17 : undefined, %14 : string|number|bigint, %12 : string|number|bigint, %10 : string|number|bigint, %8 : string|number|bigint, %6 : string|number|bigint, %4 : string|number|bigint, %2 : string|number|bigint, %0
 // CHECK-NEXT:  $Reg0 @19 [empty]	%19 = ReturnInst %17 : undefined
 // CHECK-NEXT:function_end

@@ -17,7 +17,8 @@ process = null;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [a]
+// CHECK-NEXT:globals = [a]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = AllocStackInst $?anon_0_ret
@@ -26,7 +27,7 @@ process = null;
 // CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
 // CHECK-NEXT:  %5 = LoadPropertyInst globalObject : object, "a" : string
 // CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst globalObject : object, "process" : string
-// CHECK-NEXT:  %7 = CallInst %4, undefined : undefined, %5, %6
+// CHECK-NEXT:  %7 = CallInst %4, undefined : undefined, undefined : undefined, %5, %6
 // CHECK-NEXT:  %8 = StoreStackInst %7, %1
 // CHECK-NEXT:  %9 = TryStoreGlobalPropertyInst null : null, globalObject : object, "process" : string
 // CHECK-NEXT:  %10 = StoreStackInst null : null, %1
@@ -35,27 +36,29 @@ process = null;
 // CHECK-NEXT:function_end
 
 // OPT-CHECK:function global#0()#1 : null
-// OPT-CHECK-NEXT:frame = [], globals = [a]
+// OPT-CHECK-NEXT:globals = [a]
+// OPT-CHECK-NEXT:S{global#0()#1} = []
 // OPT-CHECK-NEXT:%BB0:
 // OPT-CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // OPT-CHECK-NEXT:  %1 = StorePropertyInst 10 : number, globalObject : object, "a" : string
 // OPT-CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
 // OPT-CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "a" : string
 // OPT-CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst globalObject : object, "process" : string
-// OPT-CHECK-NEXT:  %5 = CallInst %2, undefined : undefined, %3, %4
+// OPT-CHECK-NEXT:  %5 = CallInst %2, undefined : undefined, undefined : undefined, %3, %4
 // OPT-CHECK-NEXT:  %6 = TryStoreGlobalPropertyInst null : null, globalObject : object, "process" : string
 // OPT-CHECK-NEXT:  %7 = ReturnInst null : null
 // OPT-CHECK-NEXT:function_end
 
 // OPT-NONSTRICT:function global#0()#1 : null
-// OPT-NONSTRICT-NEXT:frame = [], globals = [a]
+// OPT-NONSTRICT-NEXT:globals = [a]
+// OPT-NONSTRICT-NEXT:S{global#0()#1} = []
 // OPT-NONSTRICT-NEXT:%BB0:
 // OPT-NONSTRICT-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // OPT-NONSTRICT-NEXT:  %1 = StorePropertyInst 10 : number, globalObject : object, "a" : string
 // OPT-NONSTRICT-NEXT:  %2 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
 // OPT-NONSTRICT-NEXT:  %3 = LoadPropertyInst globalObject : object, "a" : string
 // OPT-NONSTRICT-NEXT:  %4 = TryLoadGlobalPropertyInst globalObject : object, "process" : string
-// OPT-NONSTRICT-NEXT:  %5 = CallInst %2, undefined : undefined, %3, %4
+// OPT-NONSTRICT-NEXT:  %5 = CallInst %2, undefined : undefined, undefined : undefined, %3, %4
 // OPT-NONSTRICT-NEXT:  %6 = StorePropertyInst null : null, globalObject : object, "process" : string
 // OPT-NONSTRICT-NEXT:  %7 = ReturnInst null : null
 // OPT-NONSTRICT-NEXT:function_end

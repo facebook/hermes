@@ -18,6 +18,8 @@ import type {
   BreakStatement,
   CallExpression,
   CatchClause,
+  ComponentDeclaration,
+  DeclareComponent,
   ClassDeclaration,
   ClassExpression,
   ContinueStatement,
@@ -30,6 +32,7 @@ import type {
   DeclareOpaqueType,
   DeclareTypeAlias,
   DeclareVariable,
+  DeclareEnum,
   EnumDeclaration,
   ESNode,
   ExportAllDeclaration,
@@ -85,6 +88,7 @@ import {
   CatchClauseDefinition,
   EnumDefinition,
   FunctionNameDefinition,
+  ComponentNameDefinition,
   ParameterDefinition,
   VariableDefinition,
 } from '../definition';
@@ -140,6 +144,7 @@ class Referencer extends Visitor {
   currentScope: {
     (): Scope,
     (throwOnNull: true): Scope | null,
+    // $FlowFixMe[incompatible-exact]
   } = (dontThrowOnNull?: boolean) => {
     if (dontThrowOnNull !== true) {
       if (this.scopeManager.currentScope == null) {
@@ -508,6 +513,53 @@ class Referencer extends Visitor {
     this.close(node);
   }
 
+  ComponentDeclaration(node: ComponentDeclaration): void {
+    const id = node.id;
+    // id is defined in upper scope
+    this.currentScope().defineIdentifier(
+      id,
+      new ComponentNameDefinition(id, node),
+    );
+
+    this.scopeManager.nestComponentScope(node);
+
+    // component type parameters can be referenced by component params, so have to be declared first
+    this.visitType(node.typeParameters);
+    // Renders type may reference type parameters but not component parameters, so visit it before the parameters
+    this.visitType(node.rendersType);
+
+    // Process parameter declarations.
+    for (const param of node.params) {
+      const paramPattern = (() => {
+        switch (param.type) {
+          case 'ComponentParameter':
+            return param.local;
+          case 'RestElement':
+            return param;
+        }
+      })();
+      this.visitPattern(
+        paramPattern,
+        (pattern, info) => {
+          this.currentScope().defineIdentifier(
+            pattern,
+            new ParameterDefinition(pattern, node, info.rest),
+          );
+
+          this.referencingDefaultValue(pattern, info.assignments, null, true);
+        },
+        typeAnnotation => {
+          this.visitType(typeAnnotation);
+        },
+        {processRightHandNodes: true},
+      );
+    }
+
+    this.visitChildren(node.body);
+
+    this.close(node);
+  }
+
   FunctionDeclaration(node: FunctionDeclaration): void {
     this.visitFunction(node);
   }
@@ -593,6 +645,8 @@ class Referencer extends Visitor {
         }
         break;
     }
+
+    this.visitType(node.typeArguments);
 
     for (const attr of node.attributes) {
       this.visit(attr);
@@ -752,6 +806,19 @@ class Referencer extends Visitor {
   }
 
   DeclareVariable(node: DeclareVariable): void {
+    this.visitType(node);
+  }
+
+  DeclareEnum(node: DeclareEnum): void {
+    this.currentScope().defineIdentifier(
+      node.id,
+      new EnumDefinition(node.id, node),
+    );
+
+    // Enum body cannot contain identifier references, so no need to visit body.
+  }
+
+  DeclareComponent(node: DeclareComponent): void {
     this.visitType(node);
   }
 

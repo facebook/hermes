@@ -50,11 +50,11 @@ HermesValue HermesValue32::unboxToHV(PointerBase &pb) const {
       return HermesValue::encodeStringValue(getString(pb));
     case ETag::BoxedDouble1:
     case ETag::BoxedDouble2:
-      return HermesValue::encodeNumberValue(
+      return HermesValue::encodeUntrustedNumberValue(
           vmcast<BoxedDouble>(getPointer(pb))->get());
     case ETag::SmallInt1:
     case ETag::SmallInt2:
-      return HermesValue::encodeNumberValue(getSmallInt());
+      return HermesValue::encodeTrustedNumberValue(getSmallInt());
     case ETag::Symbol1:
     case ETag::Symbol2:
       return HermesValue::encodeSymbolValue(SymbolID::unsafeCreate(getValue()));

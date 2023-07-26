@@ -513,7 +513,7 @@ class Parser {
             return;
           }
         }
-          // Fall-through
+          [[fallthrough]];
 
         default: {
           // Ordinary character or surrogate pair.
@@ -841,7 +841,7 @@ class Parser {
             if ((flags_.unicode) && tryConsume('-')) {
               return ClassAtom('-');
             }
-            LLVM_FALLTHROUGH;
+            [[fallthrough]];
 
           default: {
             return ClassAtom(consumeCharacterEscape());

@@ -76,7 +76,8 @@
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [foo, assignment_test, member_test, binary_ops]
+// CHECK-NEXT:globals = [foo, assignment_test, member_test, binary_ops]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2, %0
@@ -94,7 +95,7 @@
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1(x, y)#2
-// CHECK-NEXT:frame = [x#2, y#2]
+// CHECK-NEXT:S{foo#0#1()#2} = [x#2, y#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#2], %0
@@ -307,7 +308,7 @@
 // CHECK-NEXT:function_end
 
 // CHECK:function assignment_test#0#1(x, y)#3
-// CHECK-NEXT:frame = [x#3, y#3]
+// CHECK-NEXT:S{assignment_test#0#1()#3} = [x#3, y#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{assignment_test#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#3], %0
@@ -322,7 +323,7 @@
 // CHECK-NEXT:function_end
 
 // CHECK:function member_test#0#1(x, y)#4
-// CHECK-NEXT:frame = [x#4, y#4]
+// CHECK-NEXT:S{member_test#0#1()#4} = [x#4, y#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{member_test#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#4], %0
@@ -336,7 +337,7 @@
 // CHECK-NEXT:function_end
 
 // CHECK:function binary_ops#0#1(x, y)#5
-// CHECK-NEXT:frame = [x#5, y#5]
+// CHECK-NEXT:S{binary_ops#0#1()#5} = [x#5, y#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{binary_ops#0#1()#5}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#5], %0

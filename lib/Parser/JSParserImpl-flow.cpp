@@ -22,8 +22,13 @@ Optional<ESTree::Node *> JSParserImpl::parseFlowDeclaration() {
   assert(checkDeclaration());
   SMLoc start = tok_->getStartLoc();
 
+  if (context_.getParseFlowComponentSyntax() &&
+      checkComponentDeclarationFlow()) {
+    return parseComponentDeclarationFlow(start, /* declare */ false);
+  }
+
   if (check(TokenKind::rw_enum)) {
-    auto optEnum = parseEnumDeclarationFlow();
+    auto optEnum = parseEnumDeclarationFlow(start, /* declare */ false);
     if (!optEnum)
       return None;
     return *optEnum;
@@ -89,10 +94,19 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFLow(
   if (check(TokenKind::rw_function)) {
     return parseDeclareFunctionFlow(start);
   }
+  if (context_.getParseFlowComponentSyntax() &&
+      checkComponentDeclarationFlow()) {
+    return parseComponentDeclarationFlow(start, /* declare */ true);
+  }
+  if (check(TokenKind::rw_enum)) {
+    return parseEnumDeclarationFlow(start, /* declare */ true);
+  }
   if (check(moduleIdent_)) {
     return parseDeclareModuleFlow(start);
   }
-  if (checkAndEat(TokenKind::rw_var)) {
+  if (check(TokenKind::rw_var, TokenKind::rw_const) || check(letIdent_)) {
+    ESTree::NodeLabel kind = tok_->getResWordOrIdentifier();
+    advance();
     auto optIdent = parseBindingIdentifier(Param{});
     if (!optIdent) {
       errorExpected(
@@ -102,12 +116,17 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFLow(
           start);
       return None;
     }
+    if (!(*optIdent)->_typeAnnotation) {
+      error(
+          (*optIdent)->getSourceRange(),
+          "expected type annotation on declared var");
+    }
     if (!eatSemi())
       return None;
     return setLocation(
         start,
         getPrevTokenEndLoc(),
-        new (context_) ESTree::DeclareVariableNode(*optIdent));
+        new (context_) ESTree::DeclareVariableNode(*optIdent, kind));
   }
 
   if (!check(TokenKind::rw_export)) {
@@ -124,6 +143,480 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFLow(
   }
 
   return parseDeclareExportFlow(start, allowDeclareExportType);
+}
+
+bool JSParserImpl::checkComponentDeclarationFlow() {
+  if (!check(componentIdent_))
+    return false;
+
+  // Don't pass an `expectedToken` so we don't advance on a match. This allows
+  // `parseComponentDeclarationFlow` to reparse the token and store useful
+  // information. Additionally to be used within `checkDeclaration` this
+  // function must be idempotent.
+  OptValue<TokenKind> optNext = lexer_.lookahead1(None);
+  return optNext.hasValue() && *optNext == TokenKind::identifier;
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow(
+    SMLoc start,
+    bool declare) {
+  // component
+  assert(check(componentIdent_));
+  advance();
+
+  // identifier
+  auto optId = parseBindingIdentifier(Param{});
+
+  // Components always require a name identifier
+  if (!optId) {
+    errorExpected(
+        TokenKind::identifier,
+        "after 'component'",
+        "location of 'component'",
+        start);
+    return None;
+  }
+
+  ESTree::Node *typeParams = nullptr;
+
+  if (check(TokenKind::less)) {
+    auto optTypeParams = parseTypeParamsFlow();
+    if (!optTypeParams)
+      return None;
+    typeParams = *optTypeParams;
+  }
+
+  if (!need(
+          TokenKind::l_paren,
+          "at start of component parameter list",
+          "component declaration starts here",
+          start)) {
+    return None;
+  }
+
+  ESTree::NodeList paramList;
+  ESTree::Node *rest = nullptr;
+
+  if (declare) {
+    auto restOpt = parseComponentTypeParametersFlow(Param{}, paramList);
+    if (!restOpt)
+      return None;
+    rest = *restOpt;
+  } else {
+    if (!parseComponentParametersFlow(Param{}, paramList))
+      return None;
+  }
+
+  ESTree::Node *rendersType = nullptr;
+  if (check(rendersIdent_)) {
+    SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
+    // only stardard types are allowed, no predicates.
+    auto optRenders = parseTypeAnnotationFlow(annotStart);
+    if (!optRenders)
+      return None;
+    rendersType = *optRenders;
+  }
+
+  if (declare) {
+    if (!eatSemi())
+      return None;
+
+    return setLocation(
+        start,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::DeclareComponentNode(
+            *optId, std::move(paramList), rest, typeParams, rendersType));
+  }
+
+  if (!need(
+          TokenKind::l_brace,
+          "in component declaration",
+          "start of component declaration",
+          start)) {
+    return None;
+  }
+
+  SaveStrictModeAndSeenDirectives saveStrictModeAndSeenDirectives{this};
+
+  auto parsedBody = parseFunctionBody(
+      Param{}, false, false, false, JSLexer::AllowRegExp, true);
+  if (!parsedBody)
+    return None;
+  auto *body = parsedBody.getValue();
+
+  return setLocation(
+      start,
+      body,
+      new (context_) ESTree::ComponentDeclarationNode(
+          *optId, std::move(paramList), body, typeParams, rendersType));
+}
+
+bool JSParserImpl::parseComponentParametersFlow(
+    Param param,
+    ESTree::NodeList &paramList) {
+  assert(
+      check(TokenKind::l_paren) && "ComponentParameters must start with '('");
+  // (
+  SMLoc lparenLoc = advance().Start;
+
+  while (!check(TokenKind::r_paren)) {
+    if (check(TokenKind::dotdotdot)) {
+      // BindingRestElement.
+      auto optRestElem = parseBindingRestElement(param);
+      if (!optRestElem)
+        return false;
+      paramList.push_back(*optRestElem.getValue());
+      break;
+    }
+
+    // ComponentParameter.
+    auto optParam = parseComponentParameterFlow(param);
+    if (!optParam)
+      return false;
+
+    paramList.push_back(*optParam.getValue());
+
+    if (!checkAndEat(TokenKind::comma))
+      break;
+  }
+
+  // )
+  if (!eat(
+          TokenKind::r_paren,
+          JSLexer::AllowRegExp,
+          "at end of component parameter list",
+          "start of component parameter list",
+          lparenLoc)) {
+    return false;
+  }
+
+  return true;
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseComponentParameterFlow(
+    Param param) {
+  // ComponentParameter:
+  //   StringLiteral as BindingElement
+  //   IdentifierName
+  //   IdentifierName as BindingElement
+
+  SMLoc paramStart = tok_->getStartLoc();
+  ESTree::Node *nameElem;
+  if (check(TokenKind::string_literal)) {
+    // StringLiteral as BindingElement
+    // ^
+    nameElem = setLocation(
+        tok_,
+        tok_,
+        new (context_) ESTree::StringLiteralNode(tok_->getStringLiteral()));
+    advance();
+
+    if (!checkAndEat(asIdent_)) {
+      error(
+          nameElem->getSourceRange(),
+          "string literal names require a local via `as`");
+      return None;
+    }
+
+    auto optBinding = parseBindingElement(Param{});
+    if (!optBinding)
+      return None;
+
+    return setLocation(
+        paramStart,
+        getPrevTokenEndLoc(),
+        new (context_)
+            ESTree::ComponentParameterNode(nameElem, *optBinding, false));
+  }
+
+  if (check(TokenKind::identifier) || tok_->isResWord()) {
+    UniqueString *id = tok_->getResWordOrIdentifier();
+    SMRange identRng = tok_->getSourceRange();
+    TokenKind identKind = tok_->getKind();
+    nameElem = setLocation(
+        identRng,
+        identRng,
+        new (context_) ESTree::IdentifierNode(id, nullptr, false));
+
+    advance();
+    if (checkAndEat(asIdent_)) {
+      // IdentifierName as BindingElement
+      //                   ^
+      auto optBinding = parseBindingElement(Param{});
+      if (!optBinding)
+        return None;
+
+      return setLocation(
+          paramStart,
+          getPrevTokenEndLoc(),
+          new (context_)
+              ESTree::ComponentParameterNode(nameElem, *optBinding, false));
+    }
+
+    if (!validateBindingIdentifier(Param{}, identRng, id, identKind)) {
+      error(identRng, "Invalid local name for component");
+    }
+
+    ESTree::Node *type = nullptr;
+    bool optional = false;
+
+    // IdentifierName?: TypeParam
+    //               ^
+    if (check(TokenKind::question)) {
+      optional = true;
+      advance(JSLexer::GrammarContext::Type);
+    }
+
+    // IdentifierName?: TypeParam
+    //                ^
+    if (check(TokenKind::colon)) {
+      SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
+      auto optType = parseTypeAnnotation(annotStart);
+      if (!optType)
+        return None;
+      type = *optType;
+    }
+
+    auto elem = setLocation(
+        identRng,
+        identRng,
+        new (context_) ESTree::IdentifierNode(id, type, optional));
+    ESTree::Node *localElem;
+
+    // IdentifierName?: TypeParam = expr
+    //                            ^
+    if (check(TokenKind::equal)) {
+      auto optInit = parseBindingInitializer(param, elem);
+      if (!optInit)
+        return None;
+      localElem = *optInit;
+    } else {
+      localElem = elem;
+    }
+
+    return setLocation(
+        paramStart,
+        getPrevTokenEndLoc(),
+        new (context_)
+            ESTree::ComponentParameterNode(nameElem, localElem, true));
+  }
+
+  error(
+      tok_->getStartLoc(),
+      "identifier or string literal expected in component parameter name");
+  return None;
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseComponentTypeAnnotationFlow() {
+  // component
+  assert(check(componentIdent_));
+  SMLoc start = advance(JSLexer::GrammarContext::Type).Start;
+
+  // identifier
+  if (check(TokenKind::identifier)) {
+    error(
+        tok_->getSourceRange(),
+        "component type annotations should not contain a name");
+    advance(JSLexer::GrammarContext::Type);
+  }
+
+  ESTree::Node *typeParams = nullptr;
+
+  if (check(TokenKind::less)) {
+    auto optTypeParams = parseTypeParamsFlow();
+    if (!optTypeParams)
+      return None;
+    typeParams = *optTypeParams;
+  }
+
+  if (!need(
+          TokenKind::l_paren,
+          "at start of component parameter list",
+          "component type annotation starts here",
+          start)) {
+    return None;
+  }
+
+  ESTree::NodeList paramList;
+  auto restOpt = parseComponentTypeParametersFlow(Param{}, paramList);
+  if (!restOpt)
+    return None;
+  ESTree::Node *rest = *restOpt;
+
+  ESTree::Node *rendersType = nullptr;
+  if (check(rendersIdent_)) {
+    SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
+    auto optRenders = parseTypeAnnotationFlow(annotStart);
+    if (!optRenders)
+      return None;
+    rendersType = *optRenders;
+  }
+
+  return setLocation(
+      start,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::ComponentTypeAnnotationNode(
+          std::move(paramList), rest, typeParams, rendersType));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseComponentTypeParametersFlow(
+    Param param,
+    ESTree::NodeList &paramList) {
+  assert(
+      check(TokenKind::l_paren) &&
+      "ComponentTypeParameters must start with '('");
+  // (
+  SMLoc lparenLoc = advance(JSLexer::GrammarContext::Type).Start;
+  ESTree::Node *rest = nullptr;
+
+  while (!check(TokenKind::r_paren)) {
+    if (check(TokenKind::dotdotdot)) {
+      // ComponentTypeRestParameter.
+      auto optRest = parseComponentTypeRestParameterFlow(param);
+      if (!optRest)
+        return None;
+      rest = *optRest;
+      break;
+    }
+
+    // ComponentTypeParameter.
+    auto optParam = parseComponentTypeParameterFlow(param);
+    if (!optParam)
+      return None;
+
+    paramList.push_back(*optParam.getValue());
+
+    if (!checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type))
+      break;
+  }
+
+  // )
+  if (!eat(
+          TokenKind::r_paren,
+          JSLexer::GrammarContext::Type,
+          "at end of component type parameter list",
+          "start of component type parameter list",
+          lparenLoc)) {
+    return None;
+  }
+
+  return rest;
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseComponentTypeRestParameterFlow(
+    Param param) {
+  // ComponentTypeRestParameter:
+  //   ...IdentifierName: TypeParam
+  //   ...IdentifierName?: TypeParam
+  //   ...TypeParam
+
+  assert(check(TokenKind::dotdotdot));
+
+  SMLoc start = advance(JSLexer::GrammarContext::Type).Start;
+
+  auto optLeft = parseTypeAnnotationFlow();
+  if (!optLeft)
+    return None;
+
+  ESTree::Node *name = nullptr;
+  ESTree::Node *typeAnnotation = nullptr;
+  bool optional = false;
+
+  if (check(TokenKind::colon, TokenKind::question)) {
+    // The node is actually supposed to be an identifier, not a TypeAnnotation.
+    auto optName = reparseTypeAnnotationAsIdentifierFlow(*optLeft);
+    if (!optName)
+      return None;
+    name = *optName;
+    optional = checkAndEat(TokenKind::question, JSLexer::GrammarContext::Type);
+    if (!eat(
+            TokenKind::colon,
+            JSLexer::GrammarContext::Type,
+            "in component parameter type annotation",
+            "start of parameter",
+            start))
+      return None;
+    auto optType = parseTypeAnnotationFlow();
+    if (!optType)
+      return None;
+    typeAnnotation = *optType;
+  } else {
+    typeAnnotation = *optLeft;
+  }
+
+  return setLocation(
+      start,
+      getPrevTokenEndLoc(),
+      new (context_)
+          ESTree::ComponentTypeParameterNode(name, typeAnnotation, optional));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseComponentTypeParameterFlow(
+    Param param) {
+  // ComponentTypeParameter:
+  //   StringLiteral?: TypeParam
+  //   IdentifierName?: TypeParam
+
+  SMLoc paramStart = tok_->getStartLoc();
+  ESTree::Node *nameElem;
+  if (check(TokenKind::string_literal)) {
+    // StringLiteral: TypeParam
+    // ^
+    nameElem = setLocation(
+        tok_,
+        tok_,
+        new (context_) ESTree::StringLiteralNode(tok_->getStringLiteral()));
+    advance(JSLexer::GrammarContext::Type);
+  } else if (check(TokenKind::identifier) || tok_->isResWord()) {
+    // IdentifierName: TypeParam
+    // ^
+    nameElem = setLocation(
+        tok_,
+        tok_,
+        new (context_) ESTree::IdentifierNode(
+            tok_->getResWordOrIdentifier(), nullptr, false));
+    advance(JSLexer::GrammarContext::Type);
+  } else {
+    error(
+        tok_->getStartLoc(),
+        "identifier or string literal expected in component type parameter name");
+    return None;
+  }
+
+  if (check(asIdent_)) {
+    error(tok_->getStartLoc(), "'as' not allowed in component type parameter");
+    return None;
+  }
+
+  bool optional = false;
+
+  // Name?: TypeParam
+  //     ^
+  if (checkAndEat(TokenKind::question, JSLexer::GrammarContext::Type)) {
+    optional = true;
+  }
+
+  // Name?: TypeParam
+  //      ^
+  if (!eat(
+          TokenKind::colon,
+          JSLexer::GrammarContext::Type,
+          "in component type parameter",
+          "start of parameter",
+          paramStart))
+    return None;
+
+  // Name?: TypeParam
+  //        ^
+  auto optType = parseTypeAnnotation();
+  if (!optType)
+    return None;
+
+  return setLocation(
+      paramStart,
+      getPrevTokenEndLoc(),
+      new (context_)
+          ESTree::ComponentTypeParameterNode(nameElem, *optType, optional));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeAliasFlow(
@@ -333,7 +826,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFunctionFlow(SMLoc start) {
           start))
     return None;
 
-  auto optReturn = parseTypeAnnotationFlow();
+  auto optReturn = parseReturnTypeAnnotationFlow();
   if (!optReturn)
     return None;
   ESTree::Node *returnType = *optReturn;
@@ -721,6 +1214,18 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(
           new (context_) ESTree::DeclareExportDeclarationNode(
               *optFunc, {}, nullptr, true));
     }
+    if (context_.getParseFlowComponentSyntax() &&
+        checkComponentDeclarationFlow()) {
+      auto optComponent =
+          parseComponentDeclarationFlow(start, /* declare */ true);
+      if (!optComponent)
+        return None;
+      return setLocation(
+          start,
+          *optComponent,
+          new (context_) ESTree::DeclareExportDeclarationNode(
+              *optComponent, {}, nullptr, true));
+    }
     if (check(TokenKind::rw_class)) {
       auto optClass = parseDeclareClassFlow(declareStart);
       if (!optClass)
@@ -765,7 +1270,32 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(
             *optClass, {}, nullptr, false));
   }
 
-  if (check(TokenKind::rw_var)) {
+  if (context_.getParseFlowComponentSyntax() &&
+      checkComponentDeclarationFlow()) {
+    auto optComponent =
+        parseComponentDeclarationFlow(start, /* declare */ true);
+    if (!optComponent)
+      return None;
+    return setLocation(
+        start,
+        *optComponent,
+        new (context_) ESTree::DeclareExportDeclarationNode(
+            *optComponent, {}, nullptr, false));
+  }
+
+  if (check(TokenKind::rw_enum)) {
+    auto optEnum = parseEnumDeclarationFlow(start, /* declare */ true);
+    if (!optEnum)
+      return None;
+    return setLocation(
+        start,
+        *optEnum,
+        new (context_)
+            ESTree::DeclareExportDeclarationNode(*optEnum, {}, nullptr, false));
+  }
+
+  if (check(TokenKind::rw_var, TokenKind::rw_const) || check(letIdent_)) {
+    ESTree::NodeLabel kind = tok_->getResWordOrIdentifier();
     SMLoc varStart = advance(JSLexer::GrammarContext::Type).Start;
     auto optIdent = parseBindingIdentifier(Param{});
     if (!optIdent) {
@@ -775,6 +1305,11 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(
           "start of declaration",
           start);
       return None;
+    }
+    if (!(*optIdent)->_typeAnnotation) {
+      error(
+          (*optIdent)->getSourceRange(),
+          "expected type annotation on declared var");
     }
     if (!eatSemi())
       return None;
@@ -787,7 +1322,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(
             setLocation(
                 varStart,
                 end,
-                new (context_) ESTree::DeclareVariableNode(*optIdent)),
+                new (context_) ESTree::DeclareVariableNode(*optIdent, kind)),
             {},
             nullptr,
             false));
@@ -880,13 +1415,88 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(
           nullptr, std::move(specifiers), source, false));
 }
 
+Optional<ESTree::Node *> JSParserImpl::parseReturnTypeAnnotationFlow(
+    Optional<SMLoc> wrappedStart,
+    AllowAnonFunctionType allowAnonFunctionType) {
+  SMLoc start = tok_->getStartLoc();
+  ESTree::Node *returnType = nullptr;
+  if (check(assertsIdent_)) {
+    // TypePredicate (asserts = true) or TypeAnnotation:
+    //   TypeAnnotation
+    //   asserts IdentifierName
+    //   asserts IdentifierName is TypeAnnotation
+    auto optType = parseTypeAnnotationFlow(None, allowAnonFunctionType);
+    if (!optType)
+      return None;
+
+    if (check(TokenKind::identifier)) {
+      // Validate the "asserts" token was an identifier not a more complex type.
+      auto optId = reparseTypeAnnotationAsIdentifierFlow(*optType);
+      if (!optId)
+        return None;
+      ESTree::Node *id = setLocation(
+          tok_,
+          tok_,
+          new (context_)
+              ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
+      advance(JSLexer::GrammarContext::Type);
+      ESTree::Node *typeAnnotation = nullptr;
+      if (checkAndEat(isIdent_, JSLexer::GrammarContext::Type)) {
+        // assert IdentifierName is TypeAnnotation
+        //                          ^
+        auto optType = parseTypeAnnotationFlow(None, allowAnonFunctionType);
+        if (!optType)
+          return None;
+        typeAnnotation = *optType;
+      }
+      returnType = setLocation(
+          start,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::TypePredicateNode(id, typeAnnotation, true));
+    } else {
+      returnType = *optType;
+    }
+  } else {
+    // TypePredicate (asserts = false) or TypeAnnotation:
+    //   TypeAnnotation
+    //   IdentifierName is TypeAnnotation
+
+    auto optType = parseTypeAnnotationFlow(None, allowAnonFunctionType);
+    if (!optType)
+      return None;
+
+    if (checkAndEat(isIdent_, JSLexer::GrammarContext::Type)) {
+      auto optId = reparseTypeAnnotationAsIdentifierFlow(*optType);
+      if (!optId)
+        return None;
+      auto optType = parseTypeAnnotationFlow(None, allowAnonFunctionType);
+      if (!optType)
+        return None;
+      returnType = setLocation(
+          start,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::TypePredicateNode(*optId, *optType, false));
+    } else {
+      returnType = *optType;
+    }
+  }
+
+  if (wrappedStart) {
+    return setLocation(
+        *wrappedStart,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::TypeAnnotationNode(returnType));
+  }
+  return returnType;
+}
+
 Optional<ESTree::Node *> JSParserImpl::parseTypeAnnotationFlow(
     Optional<SMLoc> wrappedStart,
     AllowAnonFunctionType allowAnonFunctionType) {
   llvh::SaveAndRestore<bool> saveParam(
       allowAnonFunctionType_,
       allowAnonFunctionType == AllowAnonFunctionType::Yes);
-  auto optType = parseUnionTypeAnnotationFlow();
+  auto optType = parseConditionalTypeAnnotationFlow();
   if (!optType)
     return None;
   if (wrappedStart) {
@@ -896,6 +1506,57 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAnnotationFlow(
         new (context_) ESTree::TypeAnnotationNode(*optType));
   }
   return *optType;
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseConditionalTypeAnnotationFlow() {
+  SMLoc start = tok_->getStartLoc();
+  llvh::SaveAndRestore<bool> saveParam(allowConditionalType_, true);
+  auto optCheck = parseUnionTypeAnnotationFlow();
+  if (!optCheck)
+    return None;
+  if (!checkAndEat(TokenKind::rw_extends, JSLexer::GrammarContext::Type)) {
+    return optCheck;
+  }
+  Optional<ESTree::Node *> optExtends;
+  {
+    // We need to enter the state of parsing the extends_type disallowing
+    // conditional types not wrapped by parantheses, so that the following
+    // sequence `A extends infer B extends C ? D : E` will be interpreted
+    // as `A extends (infer B extends C) ? D : E`.
+    llvh::SaveAndRestore<bool> saveParam(allowConditionalType_, false);
+    optExtends = parseUnionTypeAnnotationFlow();
+  }
+  if (!optExtends)
+    return None;
+
+  if (!eat(
+          TokenKind::question,
+          JSLexer::GrammarContext::Type,
+          "in conditional type",
+          "start of type",
+          start))
+    return None;
+
+  auto optTrue = parseTypeAnnotationFlow();
+  if (!optTrue)
+    return None;
+  if (!eat(
+          TokenKind::colon,
+          JSLexer::GrammarContext::Type,
+          "in conditional type",
+          "start of type",
+          start))
+    return None;
+
+  auto optFalse = parseTypeAnnotationFlow();
+  if (!optFalse)
+    return None;
+
+  return setLocation(
+      *optCheck,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::ConditionalTypeAnnotationNode(
+          *optCheck, *optExtends, *optTrue, *optFalse));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseUnionTypeAnnotationFlow() {
@@ -1086,16 +1747,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
           new (context_) ESTree::InterfaceTypeAnnotationNode(
               std::move(extends), *optBody));
     }
-    case TokenKind::rw_typeof: {
-      advance(JSLexer::GrammarContext::Type);
-      auto optPrimary = parsePrimaryTypeAnnotationFlow();
-      if (!optPrimary)
-        return None;
-      return setLocation(
-          start,
-          getPrevTokenEndLoc(),
-          new (context_) ESTree::TypeofTypeAnnotationNode(*optPrimary));
-    }
+    case TokenKind::rw_typeof:
+      return parseTypeofTypeAnnotationFlow();
 
     case TokenKind::l_square:
       return parseTupleTypeAnnotationFlow();
@@ -1151,6 +1804,23 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
             advance(JSLexer::GrammarContext::Type).End,
             new (context_) ESTree::BigIntTypeAnnotationNode());
       }
+      if (tok_->getResWordOrIdentifier() == keyofIdent_) {
+        advance(JSLexer::GrammarContext::Type);
+        auto optBody = parseTypeAnnotationFlow();
+        if (!optBody)
+          return None;
+        return setLocation(
+            start,
+            getPrevTokenEndLoc(),
+            new (context_) ESTree::KeyofTypeAnnotationNode(*optBody));
+      }
+      if (context_.getParseFlowComponentSyntax() &&
+          tok_->getResWordOrIdentifier() == componentIdent_) {
+        auto optComponent = parseComponentTypeAnnotationFlow();
+        if (!optComponent)
+          return None;
+        return *optComponent;
+      }
       if (tok_->getResWordOrIdentifier() == interfaceIdent_) {
         advance(JSLexer::GrammarContext::Type);
         ESTree::NodeList extends{};
@@ -1162,6 +1832,53 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
             *optBody,
             new (context_) ESTree::InterfaceTypeAnnotationNode(
                 std::move(extends), *optBody));
+      }
+      if (tok_->getResWordOrIdentifier() == inferIdent_) {
+        advance(JSLexer::GrammarContext::Type);
+
+        if (!need(TokenKind::identifier, "in type parameter", nullptr, {}))
+          return None;
+        UniqueString *name = tok_->getIdentifier();
+        advance(JSLexer::GrammarContext::Type);
+
+        ESTree::Node *bound = nullptr;
+        if (check(TokenKind::rw_extends)) {
+          // When we see an extends keyword,
+          // we enter the parsing logic that might need backtracking.
+          //
+          // For `infer A extends B ...`, is the `extends B` part of an infer
+          // type, or part of a larger conditional type like `infer A extends B
+          // ? C : D`?
+          //
+          // We don't know, so we assume it's part of the infer type for now,
+          // and later backtrack if the assumption is wrong.
+          JSLexer::SavePoint savePoint{&lexer_};
+          advance(JSLexer::GrammarContext::Type);
+          auto parsedBound = parseUnionTypeAnnotationFlow();
+          if ((allowConditionalType_ && check(TokenKind::question)) ||
+              !parsedBound) {
+            // If we look ahead and see `?`, it might be the case that we are
+            // parsing a conditional type like `infer A extends B ? C : D`. If
+            // the current context allow parsing conditional type, then we must
+            // backtrack so that only `infer A` is treated as part of the infer
+            // type.
+            //
+            // Of course, if we fail to parse the type after extends, we also
+            // need to backtrack.
+            savePoint.restore();
+          } else {
+            bound = *parsedBound;
+          }
+        }
+
+        return setLocation(
+            start,
+            getPrevTokenEndLoc(),
+            new (context_) ESTree::InferTypeAnnotationNode(setLocation(
+                start,
+                getPrevTokenEndLoc(),
+                new (context_) ESTree::TypeParameterNode(
+                    name, bound, nullptr, nullptr, true))));
       }
 
       {
@@ -1260,6 +1977,62 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
   }
 }
 
+Optional<ESTree::Node *> JSParserImpl::parseTypeofTypeAnnotationFlow() {
+  assert(check(TokenKind::rw_typeof));
+  SMLoc startLoc = advance().Start;
+  uint32_t parenCount = 0;
+
+  while (checkAndEat(TokenKind::l_paren))
+    ++parenCount;
+
+  if (!need(TokenKind::identifier, "in typeof type", "start of type", startLoc))
+    return None;
+
+  ESTree::Node *ident = setLocation(
+      tok_,
+      tok_,
+      new (context_)
+          ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
+  advance(JSLexer::GrammarContext::Type);
+
+  while (checkAndEat(TokenKind::period)) {
+    if (!check(TokenKind::identifier) && !tok_->isResWord()) {
+      errorExpected(
+          TokenKind::identifier,
+          "in qualified typeof type",
+          "start of type",
+          startLoc);
+      return None;
+    }
+    ESTree::Node *next = setLocation(
+        tok_,
+        tok_,
+        new (context_) ESTree::IdentifierNode(
+            tok_->getResWordOrIdentifier(), nullptr, false));
+    advance(JSLexer::GrammarContext::Type);
+    ident = setLocation(
+        ident,
+        next,
+        new (context_) ESTree::QualifiedTypeofIdentifierNode(ident, next));
+  }
+
+  for (; parenCount > 0; --parenCount) {
+    if (!eat(
+            TokenKind::r_paren,
+            JSLexer::GrammarContext::Type,
+            "in typeof type",
+            "start of type",
+            startLoc))
+      return None;
+    ident->incParens();
+  }
+
+  return setLocation(
+      startLoc,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::TypeofTypeAnnotationNode(ident));
+}
+
 Optional<ESTree::Node *> JSParserImpl::parseTupleTypeAnnotationFlow() {
   assert(check(TokenKind::l_square));
   SMLoc start = advance(JSLexer::GrammarContext::Type).Start;
@@ -1267,7 +2040,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTupleTypeAnnotationFlow() {
   ESTree::NodeList types{};
 
   while (!check(TokenKind::r_square)) {
-    auto optType = parseTypeAnnotationFlow();
+    auto optType = parseTupleElementFlow();
     if (!optType)
       return None;
     types.push_back(**optType);
@@ -1287,6 +2060,100 @@ Optional<ESTree::Node *> JSParserImpl::parseTupleTypeAnnotationFlow() {
       start,
       advance(JSLexer::GrammarContext::Type).End,
       new (context_) ESTree::TupleTypeAnnotationNode(std::move(types)));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseTupleElementFlow() {
+  SMLoc startLoc = tok_->getStartLoc();
+
+  ESTree::Node *label = nullptr;
+  ESTree::Node *elementType = nullptr;
+  ESTree::Node *variance = nullptr;
+
+  // ...Identifier : Type
+  // ...Type
+  // ^
+  if (checkAndEat(TokenKind::dotdotdot, JSLexer::GrammarContext::Type)) {
+    auto optType = parseTypeAnnotationFlow();
+    if (!optType)
+      return None;
+    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Type)) {
+      auto optLabel = reparseTypeAnnotationAsIdentifierFlow(*optType);
+      if (!optLabel)
+        return None;
+      label = *optLabel;
+      auto optType = parseTypeAnnotationFlow();
+      if (!optType)
+        return None;
+      elementType = *optType;
+      return setLocation(
+          startLoc,
+          getPrevTokenEndLoc(),
+          new (context_)
+              ESTree::TupleTypeSpreadElementNode(label, elementType));
+    }
+
+    return setLocation(
+        startLoc,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::TupleTypeSpreadElementNode(label, *optType));
+  }
+
+  /// +Identifier : Type
+  /// -Identifier : Type
+  /// ^
+  if (check(TokenKind::plus, TokenKind::minus)) {
+    variance = setLocation(
+        tok_,
+        tok_,
+        new (context_) ESTree::VarianceNode(
+            check(TokenKind::plus) ? plusIdent_ : minusIdent_));
+    advance(JSLexer::GrammarContext::Type);
+  }
+
+  /// Identifier [?] : Type
+  /// Type
+  /// ^
+  auto optType = parseTypeAnnotationFlow();
+  if (!optType)
+    return None;
+
+  /// Identifier [?] : Type
+  ///             ^
+  if (check(TokenKind::colon, TokenKind::question)) {
+    bool optional =
+        checkAndEat(TokenKind::question, JSLexer::GrammarContext::Type);
+
+    if (!eat(
+            TokenKind::colon,
+            JSLexer::GrammarContext::Type,
+            "in labeled tuple type element",
+            "location of tuple",
+            startLoc))
+      return None;
+
+    auto optLabel = reparseTypeAnnotationAsIdentifierFlow(*optType);
+    if (!optLabel)
+      return None;
+    label = *optLabel;
+    auto optType = parseTypeAnnotationFlow();
+    if (!optType)
+      return None;
+    elementType = *optType;
+
+    return setLocation(
+        startLoc,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::TupleTypeLabeledElementNode(
+            label, elementType, optional, variance));
+  }
+
+  if (variance) {
+    error(
+        variance->getSourceRange(),
+        "Variance can only be used with labeled tuple elements");
+  }
+
+  return *optType;
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseFunctionTypeAnnotationFlow() {
@@ -1335,7 +2202,7 @@ JSParserImpl::parseFunctionTypeAnnotationWithParamsFlow(
   assert(check(TokenKind::equalgreater));
   advance(JSLexer::GrammarContext::Type);
 
-  auto optReturnType = parseTypeAnnotationFlow();
+  auto optReturnType = parseReturnTypeAnnotationFlow();
   if (!optReturnType)
     return None;
 
@@ -1465,7 +2332,7 @@ JSParserImpl::parseFunctionOrGroupTypeAnnotationFlow() {
     return type;
   }
 
-  auto optReturnType = parseTypeAnnotationFlow(
+  auto optReturnType = parseReturnTypeAnnotationFlow(
       None,
       allowAnonFunctionType_ ? AllowAnonFunctionType::Yes
                              : AllowAnonFunctionType::No);
@@ -1716,17 +2583,43 @@ bool JSParserImpl::parsePropertyTypeAnnotationFlow(
           new (context_) ESTree::ObjectTypeInternalSlotNode(
               id, value, optional, isStatic, method)));
     } else {
-      // Indexer
-      auto optIndexer = parseTypeIndexerPropertyFlow(start, variance, isStatic);
-      if (!optIndexer)
+      // Indexer or Mapped Type
+      // We can have
+      // [ Identifier : TypeAnnotation ]
+      //   ^
+      // or
+      // [ TypeAnnotation ]
+      //   ^
+      // or
+      // [ TypeParameter in TypeAnnotation ]
+      //   ^
+      // Because we cannot differentiate without looking ahead for the `in`
+      // or `:`, we call `parseTypeAnnotation`, check for the next token
+      // and then convert the TypeAnnotation to the approprate node.
+      auto optLeft = parseTypeAnnotationFlow();
+      if (!optLeft)
         return false;
+      ESTree::Node *left = *optLeft;
+
+      if (checkAndEat(TokenKind::rw_in, JSLexer::GrammarContext::Type)) {
+        auto optProp = parseTypeMappedTypePropertyFlow(start, left, variance);
+        if (!optProp)
+          return false;
+        properties.push_back(**optProp);
+      } else {
+        auto optIndexer =
+            parseTypeIndexerPropertyFlow(start, left, variance, isStatic);
+        if (!optIndexer)
+          return false;
+        indexers.push_back(**optIndexer);
+      }
+
       if (proto) {
         error(startRange, "invalid 'proto' modifier");
       }
       if (isStatic && allowStaticProperty == AllowStaticProperty::No) {
         error(startRange, "invalid 'static' modifier");
       }
-      indexers.push_back(**optIndexer);
     }
     return true;
   }
@@ -1966,29 +2859,86 @@ Optional<ESTree::Node *> JSParserImpl::parseGetOrSetTypePropertyFlow(
           key, value, method, optional, isStatic, proto, variance, kind));
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseTypeIndexerPropertyFlow(
+Optional<ESTree::Node *> JSParserImpl::parseTypeMappedTypePropertyFlow(
     SMLoc start,
-    ESTree::Node *variance,
-    bool isStatic) {
-  // We can either have
-  // [ Identifier : TypeAnnotation ]
-  //   ^
-  // or
-  // [ TypeAnnotation ]
-  //   ^
-  // Because we cannot differentiate without looking ahead for the `:`,
-  // we call `parseTypeAnnotation`, check if we have the `:`, and then
-  // pull the Identifier out of the GenericTypeAnnotation which should
-  // have been emitted, and run it again.
-  auto optLeft = parseTypeAnnotationFlow();
-  if (!optLeft)
+    ESTree::Node *left,
+    ESTree::Node *variance) {
+  auto idOpt = reparseTypeAnnotationAsIdFlow(left);
+  if (!idOpt)
+    return None;
+  UniqueString *id = *idOpt;
+  ESTree::Node *keyTparam = setLocation(
+      left,
+      left,
+      new (context_)
+          ESTree::TypeParameterNode(id, nullptr, nullptr, nullptr, false));
+
+  auto optSourceType = parseTypeAnnotationFlow();
+  if (!optSourceType)
     return None;
 
+  if (!eat(
+          TokenKind::r_square,
+          JSLexer::GrammarContext::Type,
+          "in mapped type",
+          "start of mapped type",
+          start))
+    return None;
+
+  UniqueString *optional = nullptr;
+  if (checkAndEat(TokenKind::plus, JSLexer::GrammarContext::Type)) {
+    if (!eat(
+            TokenKind::question,
+            JSLexer::GrammarContext::Type,
+            "in mapped type",
+            "start of mapped type",
+            start))
+      return None;
+
+    optional = mappedTypePlusOptionalIdent_;
+  } else if (checkAndEat(TokenKind::minus, JSLexer::GrammarContext::Type)) {
+    if (!eat(
+            TokenKind::question,
+            JSLexer::GrammarContext::Type,
+            "in mapped type",
+            "start of mapped type",
+            start))
+      return None;
+
+    optional = mappedTypeMinusOptionalIdent_;
+  } else if (checkAndEat(TokenKind::question, JSLexer::GrammarContext::Type)) {
+    optional = mappedTypeOptionalIdent_;
+  }
+
+  if (!eat(
+          TokenKind::colon,
+          JSLexer::GrammarContext::Type,
+          "in mapped type",
+          "start of mapped type",
+          start))
+    return None;
+
+  auto optPropType = parseTypeAnnotationFlow();
+  if (!optPropType)
+    return None;
+
+  return setLocation(
+      start,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::ObjectTypeMappedTypePropertyNode(
+          keyTparam, *optPropType, *optSourceType, variance, optional));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseTypeIndexerPropertyFlow(
+    SMLoc start,
+    ESTree::Node *left,
+    ESTree::Node *variance,
+    bool isStatic) {
   ESTree::IdentifierNode *id = nullptr;
   ESTree::Node *key = nullptr;
 
   if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Type)) {
-    auto optId = reparseTypeAnnotationAsIdentifierFlow(*optLeft);
+    auto optId = reparseTypeAnnotationAsIdentifierFlow(left);
     if (!optId)
       return None;
     id = *optId;
@@ -1997,7 +2947,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeIndexerPropertyFlow(
       return None;
     key = *optKey;
   } else {
-    key = *optLeft;
+    key = left;
   }
 
   if (!eat(
@@ -2097,7 +3047,18 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeParamFlow() {
   advance(JSLexer::GrammarContext::Type);
 
   ESTree::Node *bound = nullptr;
+  bool usesExtendsBound = false;
   if (check(TokenKind::colon)) {
+    SMLoc boundStart = advance(JSLexer::GrammarContext::Type).Start;
+    auto optType = parseTypeAnnotationFlow();
+    if (!optType)
+      return None;
+    bound = setLocation(
+        boundStart,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::TypeAnnotationNode(*optType));
+  } else if (check(TokenKind::rw_extends)) {
+    usesExtendsBound = true;
     SMLoc boundStart = advance(JSLexer::GrammarContext::Type).Start;
     auto optType = parseTypeAnnotationFlow();
     if (!optType)
@@ -2119,8 +3080,8 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeParamFlow() {
   return setLocation(
       start,
       getPrevTokenEndLoc(),
-      new (context_)
-          ESTree::TypeParameterNode(name, bound, variance, initializer));
+      new (context_) ESTree::TypeParameterNode(
+          name, bound, variance, initializer, usesExtendsBound));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeArgsFlow() {
@@ -2392,8 +3353,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePredicateFlow() {
       checksRng, checksRng, new (context_) ESTree::InferredPredicateNode());
 }
 
-Optional<ESTree::IdentifierNode *>
-JSParserImpl::reparseTypeAnnotationAsIdentifierFlow(
+Optional<UniqueString *> JSParserImpl::reparseTypeAnnotationAsIdFlow(
     ESTree::Node *typeAnnotation) {
   UniqueString *id = nullptr;
   if (isa<ESTree::AnyTypeAnnotationNode>(typeAnnotation)) {
@@ -2413,24 +3373,39 @@ JSParserImpl::reparseTypeAnnotationAsIdentifierFlow(
   } else if (
       auto *generic =
           dyn_cast<ESTree::GenericTypeAnnotationNode>(typeAnnotation)) {
-    if (auto *genericId = dyn_cast<ESTree::IdentifierNode>(generic->_id)) {
-      id = genericId->_name;
+    if (!generic->_typeParameters) {
+      if (auto *genericId = dyn_cast<ESTree::IdentifierNode>(generic->_id)) {
+        id = genericId->_name;
+      }
     }
   }
 
   if (!id) {
     error(typeAnnotation->getSourceRange(), "identifier expected");
+    return None;
   }
 
+  return id;
+}
+
+Optional<ESTree::IdentifierNode *>
+JSParserImpl::reparseTypeAnnotationAsIdentifierFlow(
+    ESTree::Node *typeAnnotation) {
+  auto idOpt = reparseTypeAnnotationAsIdFlow(typeAnnotation);
+  if (!idOpt)
+    return None;
+  UniqueString *id = *idOpt;
   return setLocation(
       typeAnnotation,
       typeAnnotation,
       new (context_) ESTree::IdentifierNode(id, nullptr, false));
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseEnumDeclarationFlow() {
+Optional<ESTree::Node *> JSParserImpl::parseEnumDeclarationFlow(
+    SMLoc start,
+    bool declare) {
   assert(check(TokenKind::rw_enum));
-  SMLoc start = advance().Start;
+  advance();
 
   if (!check(TokenKind::identifier)) {
     errorExpected(
@@ -2474,6 +3449,9 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumDeclarationFlow() {
   if (!optBody)
     return None;
 
+  if (declare)
+    return setLocation(
+        start, *optBody, new (context_) ESTree::DeclareEnumNode(id, *optBody));
   return setLocation(
       start,
       *optBody,

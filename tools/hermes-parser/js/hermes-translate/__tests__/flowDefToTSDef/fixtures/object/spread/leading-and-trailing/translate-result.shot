@@ -1,7 +1,0 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
-
-exports[`flowDefToTSDef object/spread/leading-and-trailing 1`] = `
-[ExpectedTranslationError: 
-> 14 |   ...T2,
-     |   ^^^^^ Unsupported feature: Translating "object types with spreads in the middle or at the end" is currently not supported.]
-`;

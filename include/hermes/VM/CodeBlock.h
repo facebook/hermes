@@ -210,7 +210,7 @@ class CodeBlock final
   /// with the current function if an entry is found, or llvh::None if not.
   OptValue<uint32_t> getFunctionSourceID() const;
 
-  OptValue<uint32_t> getDebugLexicalDataOffset() const;
+  OptValue<uint32_t> getScopeDescDataOffset() const;
 
   OptValue<uint32_t> getTextifiedCalleeOffset() const;
 

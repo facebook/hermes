@@ -22,9 +22,10 @@ export type ParseResult = {
   code: string,
 };
 
-export function parse(code: string): ParseResult {
+export async function parse(code: string): Promise<ParseResult> {
   const {ast, scopeManager} = parseForESLint(code, {
     sourceType: 'module',
+    enableExperimentalComponentSyntax: true,
   });
 
   // Don't include the docblock comment in the comment list as we don't want to attach it

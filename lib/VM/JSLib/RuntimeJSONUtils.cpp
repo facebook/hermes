@@ -269,8 +269,7 @@ CallResult<HermesValue> RuntimeJSONParser::parse() {
 
   // Make sure the next token must be EOF.
   if (LLVM_UNLIKELY(lexer_.getCurToken()->getKind() != JSONTokenKind::Eof)) {
-    return lexer_.errorWithChar(
-        "Unexpected token: ", lexer_.getCurToken()->getFirstChar());
+    return lexer_.errorUnexpectedChar();
   }
 
   if (reviver_.get()) {
@@ -291,11 +290,11 @@ CallResult<HermesValue> RuntimeJSONParser::parseValue() {
   MutableHandle<> returnValue{runtime_};
   switch (lexer_.getCurToken()->getKind()) {
     case JSONTokenKind::String:
-      returnValue = lexer_.getCurToken()->getString().getHermesValue();
+      returnValue = lexer_.getCurToken()->getStrAsPrim().getHermesValue();
       break;
     case JSONTokenKind::Number:
-      returnValue =
-          HermesValue::encodeDoubleValue(lexer_.getCurToken()->getNumber());
+      returnValue = HermesValue::encodeUntrustedNumberValue(
+          lexer_.getCurToken()->getNumber());
       break;
     case JSONTokenKind::LBrace: {
       auto parRes = parseObject();
@@ -324,11 +323,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseValue() {
       break;
 
     default:
-      if (lexer_.getCurToken()->getKind() == JSONTokenKind::Eof) {
-        return lexer_.error("Unexpected end of input");
-      }
-      return lexer_.errorWithChar(
-          "Unexpected token: ", lexer_.getCurToken()->getFirstChar());
+      return lexer_.errorUnexpectedChar();
   }
 
   if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
@@ -364,7 +359,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseArray() {
         return ExecutionStatus::EXCEPTION;
       }
 
-      indexValue = HermesValue::encodeDoubleValue(index);
+      indexValue = HermesValue::encodeUntrustedNumberValue(index);
       (void)JSObject::defineOwnComputedPrimitive(
           array,
           runtime_,
@@ -380,7 +375,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseArray() {
       } else if (lexer_.getCurToken()->getKind() == JSONTokenKind::RSquare) {
         break;
       } else {
-        return lexer_.error("Expect ']'");
+        return lexer_.errorUnexpectedChar();
       }
     }
     assert(
@@ -397,62 +392,67 @@ CallResult<HermesValue> RuntimeJSONParser::parseObject() {
       "Wrong entrance to parseObject");
   auto object = runtime_.makeHandle(JSObject::create(runtime_));
 
-  if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+  // If the lexer encounters a string in this context, it should treat it as a
+  // key string, which means it will store the string as a symbol.
+  if (LLVM_UNLIKELY(
+          lexer_.advanceStrAsSymbol() == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  if (lexer_.getCurToken()->getKind() != JSONTokenKind::RBrace) {
-    MutableHandle<StringPrimitive> key{runtime_};
-    GCScope gcScope{runtime_};
-    auto marker = gcScope.createMarker();
-    for (;;) {
-      gcScope.flushToMarker(marker);
-
-      if (LLVM_UNLIKELY(
-              lexer_.getCurToken()->getKind() != JSONTokenKind::String)) {
-        return lexer_.error("Expect a string key in JSON object");
-      }
-      key = lexer_.getCurToken()->getString().get();
-
-      if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-
-      if (lexer_.getCurToken()->getKind() != JSONTokenKind::Colon) {
-        return lexer_.error("Expect ':' after the key in JSON object");
-      }
-
-      if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-
-      auto parRes = parseValue();
-      if (LLVM_UNLIKELY(parRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-
-      (void)JSObject::defineOwnComputedPrimitive(
-          object,
-          runtime_,
-          key,
-          DefinePropertyFlags::getDefaultNewPropertyFlags(),
-          runtime_.makeHandle(*parRes));
-
-      if (lexer_.getCurToken()->getKind() == JSONTokenKind::Comma) {
-        if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
-          return ExecutionStatus::EXCEPTION;
-        }
-        continue;
-      } else if (lexer_.getCurToken()->getKind() == JSONTokenKind::RBrace) {
-        break;
-      } else {
-        return lexer_.error("Expect '}'");
-      }
-    }
-    assert(
-        lexer_.getCurToken()->getKind() == JSONTokenKind::RBrace &&
-        "Unexpected stop for object parse");
+  if (lexer_.getCurToken()->getKind() == JSONTokenKind::RBrace) {
+    return object.getHermesValue();
   }
 
+  MutableHandle<SymbolID> key{runtime_};
+  GCScope gcScope{runtime_};
+  auto marker = gcScope.createMarker();
+  for (;;) {
+    gcScope.flushToMarker(marker);
+
+    if (LLVM_UNLIKELY(
+            lexer_.getCurToken()->getKind() != JSONTokenKind::String)) {
+      return lexer_.error("Expect a string key in JSON object");
+    }
+    key = lexer_.getCurToken()->getStrAsSymbol().get();
+
+    if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    if (lexer_.getCurToken()->getKind() != JSONTokenKind::Colon) {
+      return lexer_.error("Expect ':' after the key in JSON object");
+    }
+
+    if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    auto parRes = parseValue();
+    if (LLVM_UNLIKELY(parRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    (void)JSObject::defineOwnComputedPrimitive(
+        object,
+        runtime_,
+        key,
+        DefinePropertyFlags::getDefaultNewPropertyFlags(),
+        runtime_.makeHandle(*parRes));
+
+    if (lexer_.getCurToken()->getKind() == JSONTokenKind::Comma) {
+      if (LLVM_UNLIKELY(
+              lexer_.advanceStrAsSymbol() == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      continue;
+    } else if (lexer_.getCurToken()->getKind() == JSONTokenKind::RBrace) {
+      break;
+    } else {
+      return lexer_.errorUnexpectedChar();
+    }
+  }
+  assert(
+      lexer_.getCurToken()->getKind() == JSONTokenKind::RBrace &&
+      "Unexpected stop for object parse");
   return object.getHermesValue();
 }
 
@@ -497,14 +497,14 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
   auto valHandle = runtime_.makeHandle(std::move(*propRes));
   if (*isArrayRes) {
     Handle<JSObject> objHandle = Handle<JSObject>::vmcast(valHandle);
-    CallResult<uint64_t> lenRes = getArrayLikeLength(objHandle, runtime_);
+    CallResult<uint64_t> lenRes = getArrayLikeLength_RJS(objHandle, runtime_);
     if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
 
     GCScopeMarkerRAII marker(runtime_);
     for (uint64_t index = 0, e = *lenRes; index < e; ++index) {
-      tmpHandle = HermesValue::encodeDoubleValue(index);
+      tmpHandle = HermesValue::encodeUntrustedNumberValue(index);
       // Note that deleting elements doesn't affect array length.
       if (LLVM_UNLIKELY(
               filter(objHandle, tmpHandle) == ExecutionStatus::EXCEPTION)) {
@@ -615,7 +615,7 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
     return ExecutionStatus::RETURNED;
   // replacer is arrayish
 
-  CallResult<uint64_t> lenRes = getArrayLikeLength(replacerArray, runtime_);
+  CallResult<uint64_t> lenRes = getArrayLikeLength_RJS(replacerArray, runtime_);
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -636,7 +636,7 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
     gcScope.flushToMarker(marker);
 
     // Get the property value.
-    tmpHandle_ = HermesValue::encodeDoubleValue(i);
+    tmpHandle_ = HermesValue::encodeUntrustedNumberValue(i);
     auto propRes =
         JSObject::getComputed_RJS(replacerArray, runtime_, tmpHandle_);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
@@ -931,7 +931,7 @@ ExecutionStatus JSONStringifyer::operationJA() {
   }
   depthCount_++;
   output_.push_back(u'[');
-  CallResult<uint64_t> lenRes = getArrayLikeLength(
+  CallResult<uint64_t> lenRes = getArrayLikeLength_RJS(
       runtime_.makeHandle(vmcast<JSObject>(
           stackValue_->at(stackValue_->size() - 1).getObject(runtime_))),
       runtime_);
@@ -954,7 +954,7 @@ ExecutionStatus JSONStringifyer::operationJA() {
         stackValue_->at(stackValue_->size() - 1).getObject(runtime_));
     // Flush just before the recursion in case any handles were created.
     marker.flush();
-    auto status = operationStr(HermesValue::encodeDoubleValue(index));
+    auto status = operationStr(HermesValue::encodeUntrustedNumberValue(index));
     if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

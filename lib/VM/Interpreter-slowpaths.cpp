@@ -37,6 +37,7 @@ ExecutionStatus Interpreter::caseDirectEval(
     const Inst *ip) {
   auto *result = &O1REG(DirectEval);
   auto *input = &O2REG(DirectEval);
+  bool isStrict = ip->iDirectEval.op3;
 
   GCScopeMarkerRAII gcMarker{runtime};
 
@@ -79,10 +80,14 @@ ExecutionStatus Interpreter::caseDirectEval(
   // (as per the spec for strict callers, which is the only thing we support).
 
   ScopeChain scopeChain{};
-  scopeChain.functions.emplace_back();
+  scopeChain.scopes.emplace_back();
 
   auto cr = vm::directEval(
-      runtime, Handle<StringPrimitive>::vmcast(input), scopeChain, false);
+      runtime,
+      Handle<StringPrimitive>::vmcast(input),
+      scopeChain,
+      isStrict,
+      false);
   if (cr == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
 
@@ -129,11 +134,8 @@ ExecutionStatus Interpreter::casePutOwnGetterSetterByVal(
       (dpFlags.setSetter || dpFlags.setGetter) &&
       "No accessor set in PutOwnGetterSetterByVal");
 
-  auto res = PropertyAccessor::create(runtime, getter, setter);
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
-    return ExecutionStatus::EXCEPTION;
-
-  auto accessor = runtime.makeHandle<PropertyAccessor>(*res);
+  auto accessor = runtime.makeHandle<PropertyAccessor>(
+      PropertyAccessor::create(runtime, getter, setter));
 
   return JSObject::defineOwnComputed(
              Handle<JSObject>::vmcast(&O1REG(PutOwnGetterSetterByVal)),
@@ -165,7 +167,7 @@ ExecutionStatus Interpreter::caseIteratorBegin(
       PseudoHandle<> slotValue = std::move(*slotValueRes);
       if (LLVM_LIKELY(
               slotValue->getRaw() == runtime.arrayPrototypeValues.getRaw())) {
-        O1REG(IteratorBegin) = HermesValue::encodeNumberValue(0);
+        O1REG(IteratorBegin) = HermesValue::encodeUntrustedNumberValue(0);
         return ExecutionStatus::RETURNED;
       }
     }
@@ -208,7 +210,7 @@ ExecutionStatus Interpreter::caseIteratorNext(
       SmallHermesValue value = arr->at(runtime, i);
       if (LLVM_LIKELY(!value.isEmpty())) {
         O1REG(IteratorNext) = value.unboxToHV(runtime);
-        O2REG(IteratorNext) = HermesValue::encodeNumberValue(i + 1);
+        O2REG(IteratorNext) = HermesValue::encodeUntrustedNumberValue(i + 1);
         return ExecutionStatus::RETURNED;
       }
     }
@@ -221,7 +223,7 @@ ExecutionStatus Interpreter::caseIteratorNext(
       return ExecutionStatus::EXCEPTION;
     }
     O1REG(IteratorNext) = valueRes->get();
-    O2REG(IteratorNext) = HermesValue::encodeNumberValue(i + 1);
+    O2REG(IteratorNext) = HermesValue::encodeUntrustedNumberValue(i + 1);
     return ExecutionStatus::RETURNED;
   }
   if (LLVM_UNLIKELY(O2REG(IteratorNext).isUndefined())) {
@@ -298,8 +300,8 @@ ExecutionStatus Interpreter::caseGetPNameList(
   }
   auto arr = *cr;
   O1REG(GetPNameList) = arr.getHermesValue();
-  O3REG(GetPNameList) = HermesValue::encodeNumberValue(beginIndex);
-  O4REG(GetPNameList) = HermesValue::encodeNumberValue(endIndex);
+  O3REG(GetPNameList) = HermesValue::encodeUntrustedNumberValue(beginIndex);
+  O4REG(GetPNameList) = HermesValue::encodeUntrustedNumberValue(endIndex);
   return ExecutionStatus::RETURNED;
 }
 
@@ -369,6 +371,18 @@ ExecutionStatus Interpreter::declareGlobalVarImpl(
       return ExecutionStatus::EXCEPTION;
     }
     runtime.clearThrownValue();
+  }
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus Interpreter::throwIfHasRestrictedGlobalPropertyImpl(
+    Runtime &runtime,
+    CodeBlock *curCodeBlock,
+    const Inst *ip) {
+  GCScopeMarkerRAII mark{runtime};
+  if (LLVM_UNLIKELY(hasRestrictedGlobalProperty(
+          runtime, ID(ip->iThrowIfHasRestrictedGlobalProperty.op1)))) {
+    return runtime.raiseSyntaxError("Name is a restricted global identifier");
   }
   return ExecutionStatus::RETURNED;
 }
@@ -456,7 +470,8 @@ doOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    return HermesValue::encodeDoubleValue(Oper(left, res->getDouble()));
+    return HermesValue::encodeUntrustedNumberValue(
+        Oper(left, res->getDouble()));
   }
   return doBigIntBinOp(
       runtime, BigIntOper<Oper>, runtime.makeHandle(res->getBigInt()), rhs);
@@ -492,7 +507,7 @@ doBitOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    return HermesValue::encodeNumberValue(
+    return HermesValue::encodeUntrustedNumberValue(
         Oper(left, res->getNumberAs<int32_t>()));
   }
   return doBigIntBinOp(
@@ -547,7 +562,7 @@ doShiftOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
       return ExecutionStatus::EXCEPTION;
     }
     auto rnum = static_cast<uint32_t>(res->getNumber()) & 0x1f;
-    return HermesValue::encodeDoubleValue((*Oper)(lnum, rnum));
+    return HermesValue::encodeUntrustedNumberValue((*Oper)(lnum, rnum));
   }
   return doBigIntBinOp(
       runtime,
@@ -578,7 +593,7 @@ CallResult<HermesValue> doIncDecOperSlowPath(Runtime &runtime, Handle<> src) {
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    return HermesValue::encodeNumberValue(Oper(res->getNumber()));
+    return HermesValue::encodeUntrustedNumberValue(Oper(res->getNumber()));
   }
 
   return BigIntOper<Oper>(runtime, runtime.makeHandle(res->getBigInt()));
@@ -600,7 +615,7 @@ CallResult<HermesValue> doBitNotSlowPath(Runtime &runtime, Handle<> src) {
   // Test for BigInt since it is cheaper than testing for number. If it is a
   // number, truncate it and perform bitwise not.
   if (LLVM_LIKELY(!numRes->isBigInt()))
-    return HermesValue::encodeDoubleValue(
+    return HermesValue::encodeUntrustedNumberValue(
         ~hermes::truncateToInt32(numRes->getNumber()));
 
   // The result is a BigInt, perform a BigInt bitwise not.
@@ -616,7 +631,7 @@ CallResult<HermesValue> doNegateSlowPath(Runtime &runtime, Handle<> src) {
   // Test for BigInt since it is cheaper than testing for number. If it is a
   // number, negate it and return.
   if (LLVM_LIKELY(!numRes->isBigInt()))
-    return HermesValue::encodeDoubleValue(-numRes->getNumber());
+    return HermesValue::encodeUntrustedNumberValue(-numRes->getNumber());
 
   // The result is a BigInt, perform a BigInt unary minus.
   auto bigint = runtime.makeHandle(numRes->getBigInt());

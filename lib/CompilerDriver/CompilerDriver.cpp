@@ -285,6 +285,18 @@ opt<bool> BasicBlockProfiling(
     init(false),
     desc("Enable basic block profiling (HBC only)"));
 
+opt<bool> EnableBlockScoping(
+    "block-scoping",
+    desc("Enables block scoping support."),
+    init(false),
+    Hidden,
+    cat(CompilerCategory));
+static llvh::cl::alias _EnableBlockScoping(
+    "bs",
+    desc("Alias for --block-scoping"),
+    Hidden,
+    llvh::cl::aliasopt(EnableBlockScoping));
+
 opt<bool>
     EnableEval("enable-eval", init(true), desc("Enable support for eval()"));
 
@@ -393,7 +405,7 @@ static opt<bool> DumpUseList(
 
 static opt<LocationDumpMode> DumpSourceLocation(
     "dump-source-location",
-    desc("Print source location information in IR or AST dumps."),
+    desc("Print source location information in IR/AST/bytecode dumps."),
     init(LocationDumpMode::None),
     values(
         clEnumValN(
@@ -490,6 +502,13 @@ static opt<bool> ParseFlow(
     desc("Parse Flow"),
     init(false),
     cat(CompilerCategory));
+
+static opt<bool> ParseFlowComponentSyntax(
+    "Xparse-component-syntax",
+    desc("Parse Component syntax"),
+    init(false),
+    Hidden,
+    cat(CompilerCategory));
 #endif
 
 #if HERMES_PARSE_TS
@@ -558,13 +577,6 @@ static CLFlag StripFunctionNames(
     false,
     "Strip function names to reduce string table size",
     CompilerCategory);
-
-static opt<bool> EnableTDZ(
-    "Xenable-tdz",
-    init(false),
-    Hidden,
-    desc("UNSUPPORTED: Enable TDZ checks for let/const"),
-    cat(CompilerCategory));
 
 #define WARNING_CATEGORY(name, specifier, description) \
   static CLFlag name##Warning(                         \
@@ -969,6 +981,8 @@ bool validateFlags() {
   if (cl::LazyCompilation) {
     if (cl::BytecodeFormat != cl::BytecodeFormatKind::HBC)
       err("-lazy only works with -target=HBC");
+    if (cl::DumpTarget != Execute)
+      err("-lazy only works when executing");
     if (cl::OptimizationLevel > cl::OptLevel::Og)
       err("-lazy does not work with -O");
     if (cl::BytecodeMode) {
@@ -1086,7 +1100,6 @@ std::shared_ptr<Context> createContext(
     std::unique_ptr<Context::ResolutionTable> resolutionTable,
     std::vector<uint32_t> segments) {
   CodeGenerationSettings codeGenOpts;
-  codeGenOpts.enableTDZ = cl::EnableTDZ;
   codeGenOpts.dumpOperandRegisters = cl::DumpOperandRegisters;
   codeGenOpts.dumpSourceLevelScope = cl::DumpSourceLevelScope;
   codeGenOpts.dumpTextifiedCallee = cl::DumpTextifiedCallee;
@@ -1103,6 +1116,7 @@ std::shared_ptr<Context> createContext(
     codeGenOpts.unlimitedRegisters = false;
   }
   codeGenOpts.instrumentIR = cl::InstrumentIR;
+  codeGenOpts.enableBlockScoping = cl::EnableBlockScoping;
 
   OptimizationSettings optimizationOpts;
 
@@ -1155,7 +1169,7 @@ std::shared_ptr<Context> createContext(
         defaultFlags.preemptiveFunctionCompilationThreshold);
   }
 
-  if (cl::EagerCompilation || cl::DumpTarget == EmitBundle ||
+  if (cl::EagerCompilation || cl::DumpTarget != Execute ||
       cl::OptimizationLevel > cl::OptLevel::Og) {
     // Make sure nothing is lazy
     context->setLazyCompilation(false);
@@ -1169,8 +1183,8 @@ std::shared_ptr<Context> createContext(
     context->setLazyCompilation(true);
   }
 
-  if (cl::CommonJS) {
-    context->setUseCJSModules(true);
+  if (cl::CommonJS && cl::DumpTarget == DumpTransformedAST) {
+    context->setTransformCJSModules(true);
   }
 
 #if HERMES_PARSE_JSX
@@ -1183,6 +1197,7 @@ std::shared_ptr<Context> createContext(
   if (cl::ParseFlow) {
     context->setParseFlow(ParseFlowSetting::ALL);
   }
+  context->setParseFlowComponentSyntax(cl::ParseFlowComponentSyntax);
 #endif
 
 #if HERMES_PARSE_TS
@@ -1710,6 +1725,10 @@ CompileResult disassembleBytecode(std::unique_ptr<hbc::BCProvider> bytecode) {
   hbc::DisassemblyOptions disassemblyOptions = cl::Pretty
       ? hbc::DisassemblyOptions::Pretty
       : hbc::DisassemblyOptions::None;
+  if (cl::DumpSourceLocation != LocationDumpMode::None) {
+    disassemblyOptions =
+        disassemblyOptions | hbc::DisassemblyOptions::IncludeSource;
+  }
   hbc::BytecodeDisassembler disassembler(std::move(bytecode));
   disassembler.setOptions(disassemblyOptions);
   disassembler.disassemble(fileOS.os());
@@ -1818,8 +1837,11 @@ CompileResult generateBytecodeForSerialization(
     }
 
     if (cl::DumpTarget == DumpBytecode) {
-      disassembleBytecode(hbc::BCProviderFromSrc::createBCProviderFromSrc(
-          std::move(bytecodeModule)));
+      std::unique_ptr<hbc::BCProviderFromSrc> provider =
+          hbc::BCProviderFromSrc::createBCProviderFromSrc(
+              std::move(bytecodeModule));
+      provider->setSourceHash(sourceHash);
+      disassembleBytecode(std::move(provider));
     }
   } else {
     llvm_unreachable("Invalid bytecode kind");
@@ -1903,7 +1925,7 @@ CompileResult processSourceFiles(
   Module M(context);
   sem::SemContext semCtx{};
 
-  if (context->getUseCJSModules()) {
+  if (cl::CommonJS) {
     // Allow the IR generation function to populate inputSourceMaps to ensure
     // proper source map ordering.
     if (!generateIRForSourcesAsCJSModules(

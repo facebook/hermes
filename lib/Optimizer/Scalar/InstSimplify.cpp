@@ -302,23 +302,11 @@ Value *simplifyBinOp(BinaryOperatorInst *binary) {
 }
 
 Value *simplifyPhiInst(PhiInst *P) {
-  unsigned numEntries = P->getNumEntries();
-  if (!numEntries) {
-    // This Phi has no incoming entries. This means that the entire block is
-    // unreachable and will be removed by DCE.
-    return nullptr;
-  }
-
-  // Optimize away PHI nodes with a single entry.
-  if (1 == numEntries) {
-    auto E = P->getEntry(0);
-    P->replaceAllUsesWith(E.first);
-    P->eraseFromParent();
-    return nullptr;
-  }
-
+  // Optimize PHI nodes where all incoming values that are not self-edges are
+  // the same, by replacing them with that single source value. Note that Phis
+  // that have no inputs, or where all inputs are self-edges, must be dead, and
+  // will be left untouched.
   Value *incoming = nullptr;
-  // Optimize PHI nodes that accept the same input from all directions:
   for (int i = 0, e = P->getNumEntries(); i < e; i++) {
     auto E = P->getEntry(i);
     // Ignore self edges.
@@ -437,42 +425,6 @@ Value *simplifyCallInst(CallInst *CI) {
   }
 
   return nullptr;
-}
-
-Value *simplifySwitchInst(SwitchInst *SI) {
-  auto *thisBlock = SI->getParent();
-  IRBuilder builder(thisBlock->getParent());
-  builder.setInsertionBlock(thisBlock);
-
-  Value *input = SI->getInputValue();
-  auto *litInput = llvh::dyn_cast<Literal>(input);
-
-  // If input of switch is not literal, nothing can be done.
-  if (!litInput) {
-    return nullptr;
-  }
-
-  auto *destination = SI->getDefaultDestination();
-
-  for (unsigned i = 0, e = SI->getNumCasePair(); i < e; i++) {
-    auto switchCase = SI->getCasePair(i);
-
-    // Look for a case which matches input.
-    if (switchCase.first == litInput) {
-      destination = switchCase.second;
-      break;
-    }
-  }
-
-  // Rewrite all phi nodes that no longer have incoming arrows from this block.
-  for (unsigned i = 0, e = SI->getNumSuccessors(); i < e; i++) {
-    auto *successor = SI->getSuccessor(i);
-    if (successor == destination)
-      continue;
-    deleteIncomingBlockFromPhis(successor, thisBlock);
-  }
-
-  return builder.createBranchInst(destination);
 }
 
 Value *simplifyAsNumber(AsNumberInst *asNumber) {
@@ -595,8 +547,6 @@ OptValue<Value *> simplifyInstruction(Instruction *I) {
       return simplifyPhiInst(cast<PhiInst>(I));
     case ValueKind::CondBranchInstKind:
       return simplifyCondBranchInst(cast<CondBranchInst>(I));
-    case ValueKind::SwitchInstKind:
-      return simplifySwitchInst(cast<SwitchInst>(I));
     case ValueKind::CallInstKind:
       return simplifyCallInst(cast<CallInst>(I));
     case ValueKind::CoerceThisNSInstKind:
@@ -616,10 +566,9 @@ bool InstSimplify::runOnFunction(Function *F) {
   bool changed = false;
   IRBuilder::InstructionDestroyer destroyer;
 
-  // For all blocks in the function:
-  for (auto &blockIter : *F) {
-    BasicBlock *BB = &blockIter;
-
+  // For all reachable blocks in the function, in RPO order.
+  PostOrderAnalysis PO(F);
+  for (BasicBlock *BB : llvh::reverse(PO)) {
     // For all instructions:
     for (auto instIter = BB->begin(), e = BB->end(); instIter != e;) {
       Instruction *II = &*instIter;

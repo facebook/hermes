@@ -196,3 +196,28 @@ return 1
     ],
   });
 });
+
+test('Allow component syntax', () => {
+  expect(() => parse('component Foo() {}')).toThrow(
+    new SyntaxError(
+      `';' expected (1:10)
+component Foo() {}
+          ^`,
+    ),
+  );
+
+  expect(
+    parse('component Foo() {}', {enableExperimentalComponentSyntax: true}),
+  ).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'ComponentDeclaration',
+        id: {
+          type: 'Identifier',
+          name: 'Foo',
+        },
+      },
+    ],
+  });
+});

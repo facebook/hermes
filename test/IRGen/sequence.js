@@ -22,7 +22,8 @@ function test2(x,y) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [sink0, sink1, test1, test2]
+// CHECK-NEXT:globals = [sink0, sink1, test1, test2]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %sink0#0#1()#2, %0
@@ -40,7 +41,7 @@ function test2(x,y) {
 // CHECK-NEXT:function_end
 
 // CHECK:function sink0#0#1(a)#2
-// CHECK-NEXT:frame = [a#2]
+// CHECK-NEXT:S{sink0#0#1()#2} = [a#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{sink0#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %a, [a#2], %0
@@ -48,7 +49,7 @@ function test2(x,y) {
 // CHECK-NEXT:function_end
 
 // CHECK:function sink1#0#1(a)#3
-// CHECK-NEXT:frame = [a#3]
+// CHECK-NEXT:S{sink1#0#1()#3} = [a#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{sink1#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %a, [a#3], %0
@@ -56,7 +57,7 @@ function test2(x,y) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test1#0#1(x, y)#4
-// CHECK-NEXT:frame = [x#4, y#4]
+// CHECK-NEXT:S{test1#0#1()#4} = [x#4, y#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test1#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#4], %0
@@ -67,7 +68,7 @@ function test2(x,y) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test2#0#1(x, y)#5
-// CHECK-NEXT:frame = [x#5, y#5]
+// CHECK-NEXT:S{test2#0#1()#5} = [x#5, y#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test2#0#1()#5}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#5], %0
@@ -75,11 +76,11 @@ function test2(x,y) {
 // CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "sink0" : string
 // CHECK-NEXT:  %4 = LoadFrameInst [x#5], %0
 // CHECK-NEXT:  %5 = LoadFrameInst [y#5], %0
-// CHECK-NEXT:  %6 = CallInst %3, undefined : undefined, %4, %5
+// CHECK-NEXT:  %6 = CallInst %3, undefined : undefined, undefined : undefined, %4, %5
 // CHECK-NEXT:  %7 = LoadPropertyInst globalObject : object, "sink1" : string
 // CHECK-NEXT:  %8 = LoadFrameInst [x#5], %0
 // CHECK-NEXT:  %9 = LoadFrameInst [y#5], %0
-// CHECK-NEXT:  %10 = CallInst %7, undefined : undefined, %8, %9
+// CHECK-NEXT:  %10 = CallInst %7, undefined : undefined, undefined : undefined, %8, %9
 // CHECK-NEXT:  %11 = ReturnInst %10
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %12 = ReturnInst undefined : undefined

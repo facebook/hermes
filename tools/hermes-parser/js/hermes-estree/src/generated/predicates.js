@@ -17,7 +17,7 @@
 
 // lint directives to let us do some basic validation of generated files
 /* eslint no-undef: 'error', no-unused-vars: ['error', {vars: "local"}], no-redeclare: 'error' */
-/* global $NonMaybeType, $Partial, $ReadOnly, $ReadOnlyArray */
+/* global $NonMaybeType, Partial, $ReadOnly, $ReadOnlyArray */
 
 'use strict';
 
@@ -117,8 +117,34 @@ export function isClassImplements(node: ESNode | Token): boolean %checks {
   return node.type === 'ClassImplements';
 }
 
+export function isComponentDeclaration(node: ESNode | Token): boolean %checks {
+  return node.type === 'ComponentDeclaration';
+}
+
+export function isComponentParameter(node: ESNode | Token): boolean %checks {
+  return node.type === 'ComponentParameter';
+}
+
+export function isComponentTypeAnnotation(
+  node: ESNode | Token,
+): boolean %checks {
+  return node.type === 'ComponentTypeAnnotation';
+}
+
+export function isComponentTypeParameter(
+  node: ESNode | Token,
+): boolean %checks {
+  return node.type === 'ComponentTypeParameter';
+}
+
 export function isConditionalExpression(node: ESNode | Token): boolean %checks {
   return node.type === 'ConditionalExpression';
+}
+
+export function isConditionalTypeAnnotation(
+  node: ESNode | Token,
+): boolean %checks {
+  return node.type === 'ConditionalTypeAnnotation';
 }
 
 export function isContinueStatement(node: ESNode | Token): boolean %checks {
@@ -133,8 +159,16 @@ export function isDeclareClass(node: ESNode | Token): boolean %checks {
   return node.type === 'DeclareClass';
 }
 
+export function isDeclareComponent(node: ESNode | Token): boolean %checks {
+  return node.type === 'DeclareComponent';
+}
+
 export function isDeclaredPredicate(node: ESNode | Token): boolean %checks {
   return node.type === 'DeclaredPredicate';
+}
+
+export function isDeclareEnum(node: ESNode | Token): boolean %checks {
+  return node.type === 'DeclareEnum';
 }
 
 export function isDeclareExportAllDeclaration(
@@ -331,6 +365,10 @@ export function isInferredPredicate(node: ESNode | Token): boolean %checks {
   return node.type === 'InferredPredicate';
 }
 
+export function isInferTypeAnnotation(node: ESNode | Token): boolean %checks {
+  return node.type === 'InferTypeAnnotation';
+}
+
 export function isInterfaceDeclaration(node: ESNode | Token): boolean %checks {
   return node.type === 'InterfaceDeclaration';
 }
@@ -413,6 +451,10 @@ export function isJSXText(node: ESNode | Token): boolean %checks {
   return node.type === 'JSXText';
 }
 
+export function isKeyofTypeAnnotation(node: ESNode | Token): boolean %checks {
+  return node.type === 'KeyofTypeAnnotation';
+}
+
 export function isLabeledStatement(node: ESNode | Token): boolean %checks {
   return node.type === 'LabeledStatement';
 }
@@ -491,6 +533,12 @@ export function isObjectTypeInternalSlot(
   return node.type === 'ObjectTypeInternalSlot';
 }
 
+export function isObjectTypeMappedTypeProperty(
+  node: ESNode | Token,
+): boolean %checks {
+  return node.type === 'ObjectTypeMappedTypeProperty';
+}
+
 export function isObjectTypeProperty(node: ESNode | Token): boolean %checks {
   return node.type === 'ObjectTypeProperty';
 }
@@ -527,6 +575,12 @@ export function isQualifiedTypeIdentifier(
   node: ESNode | Token,
 ): boolean %checks {
   return node.type === 'QualifiedTypeIdentifier';
+}
+
+export function isQualifiedTypeofIdentifier(
+  node: ESNode | Token,
+): boolean %checks {
+  return node.type === 'QualifiedTypeofIdentifier';
 }
 
 export function isRestElement(node: ESNode | Token): boolean %checks {
@@ -605,6 +659,18 @@ export function isTupleTypeAnnotation(node: ESNode | Token): boolean %checks {
   return node.type === 'TupleTypeAnnotation';
 }
 
+export function isTupleTypeLabeledElement(
+  node: ESNode | Token,
+): boolean %checks {
+  return node.type === 'TupleTypeLabeledElement';
+}
+
+export function isTupleTypeSpreadElement(
+  node: ESNode | Token,
+): boolean %checks {
+  return node.type === 'TupleTypeSpreadElement';
+}
+
 export function isTypeAlias(node: ESNode | Token): boolean %checks {
   return node.type === 'TypeAlias';
 }
@@ -635,6 +701,10 @@ export function isTypeParameterInstantiation(
   node: ESNode | Token,
 ): boolean %checks {
   return node.type === 'TypeParameterInstantiation';
+}
+
+export function isTypePredicate(node: ESNode | Token): boolean %checks {
+  return node.type === 'TypePredicate';
 }
 
 export function isUnaryExpression(node: ESNode | Token): boolean %checks {

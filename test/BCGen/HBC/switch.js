@@ -96,7 +96,8 @@ function switch_uint32(x) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [f, regress1, jump_table, string_switch, switch_uint32]
+// CHECK-NEXT:globals = [f, regress1, jump_table, string_switch, switch_uint32]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 @0 [1...11) 	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
 // CHECK-NEXT:  $Reg2 @1 [2...4) 	%1 = HBCCreateFunctionInst %f#0#1()#2 : string, %0
@@ -115,7 +116,7 @@ function switch_uint32(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f#0#1(x)#2 : string
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{f#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg3 @0 [1...15) 	%0 = HBCLoadParamInst 1 : number
 // CHECK-NEXT:  $Reg0 @1 [2...18) 	%1 = HBCLoadConstInst "fall" : string
@@ -157,7 +158,7 @@ function switch_uint32(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function regress1#0#1(w)#2 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{regress1#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg6 @0 [1...17) 	%0 = HBCLoadParamInst 1 : number
 // CHECK-NEXT:  $Reg5 @1 [2...17) 	%1 = HBCLoadConstInst 0 : number
@@ -170,7 +171,7 @@ function switch_uint32(x) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  $Reg0 @8 [7...15) [16...17) 	%8 = PhiInst %6 : number, %BB0, %12 : number, %BB2, %14 : number, %BB3
 // CHECK-NEXT:  $Reg7 @9 [10...11) 	%9 = TryLoadGlobalPropertyInst %3 : object, "print" : string
-// CHECK-NEXT:  $Reg7 @10 [empty]	%10 = HBCCallNInst %9, %4 : undefined, %8 : number
+// CHECK-NEXT:  $Reg7 @10 [empty]	%10 = HBCCallNInst %9, undefined : undefined, %4 : undefined, %8 : number
 // CHECK-NEXT:  $Reg7 @11 [empty]	%11 = BranchInst %BB4
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  $Reg0 @15 [16...17) 	%12 = MovInst %2 : number
@@ -183,7 +184,7 @@ function switch_uint32(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function jump_table#0#1(x)#2 : undefined|string
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{jump_table#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCLoadParamInst 1 : number
 // CHECK-NEXT:  $Reg0 @1 [empty]	%1 = SwitchImmInst %0, %BB1, 0 : number, 11 : number, 0 : number, %BB2, 1 : number, %BB3, 2 : number, %BB4, 3 : number, %BB5, 4 : number, %BB6, 5 : number, %BB7, 6 : number, %BB8, 8 : number, %BB9, 9 : number, %BB10, 10 : number, %BB11
@@ -223,7 +224,7 @@ function switch_uint32(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function string_switch#0#1(x)#2 : undefined|number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{string_switch#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg1 @0 [1...8) 	%0 = HBCLoadParamInst 1 : number
 // CHECK-NEXT:  $Reg0 @1 [empty]	%1 = BranchInst %BB1
@@ -251,7 +252,7 @@ function switch_uint32(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function switch_uint32#0#1(x)#2 : number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{switch_uint32#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCLoadParamInst 1 : number
 // CHECK-NEXT:  $Reg0 @1 [empty]	%1 = SwitchImmInst %0, %BB1, 2147483648 : number, 10 : number, 2147483648 : number, %BB2, 2147483649 : number, %BB2, 2147483650 : number, %BB2, 2147483651 : number, %BB2, 2147483652 : number, %BB2, 2147483653 : number, %BB2, 2147483654 : number, %BB2, 2147483655 : number, %BB2, 2147483656 : number, %BB2, 2147483657 : number, %BB2

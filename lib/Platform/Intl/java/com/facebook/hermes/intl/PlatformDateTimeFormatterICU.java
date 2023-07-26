@@ -7,8 +7,11 @@
 
 package com.facebook.hermes.intl;
 
+import static com.facebook.hermes.intl.IPlatformDateTimeFormatter.DateStyle.UNDEFINED;
+
 import android.icu.text.DateFormat;
 import android.icu.text.NumberingSystem;
+import android.icu.text.SimpleDateFormat;
 import android.icu.util.Calendar;
 import android.icu.util.TimeZone;
 import android.icu.util.ULocale;
@@ -17,6 +20,7 @@ import androidx.annotation.RequiresApi;
 import java.text.AttributedCharacterIterator;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 
 public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter {
   private DateFormat mDateFormat = null;
@@ -163,7 +167,85 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
     return NumberingSystem.getInstance((ULocale) localeObject.getLocale()).getName();
   }
 
+  @RequiresApi(api = Build.VERSION_CODES.N)
+  static int toICUDateStyle(DateStyle dateStyle) throws JSRangeErrorException {
+    switch (dateStyle) {
+      case FULL:
+        return DateFormat.FULL;
+      case LONG:
+        return DateFormat.LONG;
+      case MEDIUM:
+        return DateFormat.MEDIUM;
+      case SHORT:
+        return DateFormat.SHORT;
+      case UNDEFINED:
+      default:
+        throw new JSRangeErrorException("Invalid DateStyle: " + dateStyle.toString());
+    }
+  }
+
+  @RequiresApi(api = Build.VERSION_CODES.N)
+  static int toICUTimeStyle(TimeStyle timeStyle) throws JSRangeErrorException {
+    switch (timeStyle) {
+      case FULL:
+        return DateFormat.FULL;
+      case LONG:
+        return DateFormat.LONG;
+      case MEDIUM:
+        return DateFormat.MEDIUM;
+      case SHORT:
+        return DateFormat.SHORT;
+      case UNDEFINED:
+      default:
+        throw new JSRangeErrorException("Invalid DateStyle: " + timeStyle.toString());
+    }
+  }
+
+  private static void replaceChars(StringBuilder builder, String from, String to) {
+    int index = builder.indexOf(from);
+    if (index != -1) {
+      builder.replace(index, index + from.length(), to);
+    }
+  }
+
+  @RequiresApi(api = Build.VERSION_CODES.N)
+  private static String getPatternForStyle(
+      ILocaleObject<?> resolvedLocaleObject, DateStyle dateStyle, TimeStyle timeStyle)
+      throws JSRangeErrorException {
+    if (dateStyle == UNDEFINED) {
+      return ((SimpleDateFormat)
+              DateFormat.getTimeInstance(
+                  toICUTimeStyle(timeStyle), (ULocale) resolvedLocaleObject.getLocale()))
+          .toLocalizedPattern();
+    } else if (timeStyle == TimeStyle.UNDEFINED) {
+      return ((SimpleDateFormat)
+              DateFormat.getDateInstance(
+                  toICUDateStyle(dateStyle), (ULocale) resolvedLocaleObject.getLocale()))
+          .toLocalizedPattern();
+    } else {
+      return ((SimpleDateFormat)
+              DateFormat.getDateTimeInstance(
+                  toICUDateStyle(dateStyle),
+                  toICUTimeStyle(timeStyle),
+                  (ULocale) resolvedLocaleObject.getLocale()))
+          .toLocalizedPattern();
+    }
+  }
+
+  private static void replacePatternChars(StringBuilder skeletonBuffer, char[] fromSet, char to) {
+    for (int idx = 0; idx < skeletonBuffer.length(); idx++) {
+      for (char fromChar : fromSet) {
+        if (skeletonBuffer.charAt(idx) == fromChar) {
+          skeletonBuffer.setCharAt(idx, to);
+          break; // we don't expect more than once fromChar to be present in the pattern.
+        }
+      }
+    }
+  }
+
+  @RequiresApi(api = Build.VERSION_CODES.N)
   private static String getSkeleton(
+      ILocaleObject<?> resolvedLocaleObject,
       WeekDay weekDay,
       Era era,
       Year year,
@@ -173,21 +255,59 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
       Minute minute,
       Second second,
       TimeZoneName timeZoneName,
-      boolean hour12) {
+      HourCycle hourCycle,
+      DateStyle dateStyle,
+      TimeStyle timeStyle,
+      Object hour12)
+      throws JSRangeErrorException {
 
     StringBuilder skeletonBuffer = new StringBuilder();
-    skeletonBuffer.append(weekDay.getSkeleonSymbol());
-    skeletonBuffer.append(era.getSkeleonSymbol());
-    skeletonBuffer.append(year.getSkeleonSymbol());
-    skeletonBuffer.append(month.getSkeleonSymbol());
-    skeletonBuffer.append(day.getSkeleonSymbol());
 
-    if (hour12) skeletonBuffer.append(hour.getSkeleonSymbol12());
-    else skeletonBuffer.append(hour.getSkeleonSymbol24());
+    // For reference on patterns/skleleton:
+    // https://docs.oracle.com/javase/8/docs/api/java/text/SimpleDateFormat.html
 
-    skeletonBuffer.append(minute.getSkeleonSymbol());
-    skeletonBuffer.append(second.getSkeleonSymbol());
-    skeletonBuffer.append(timeZoneName.getSkeleonSymbol());
+    if (dateStyle != UNDEFINED || timeStyle != TimeStyle.UNDEFINED) {
+      skeletonBuffer.append(getPatternForStyle(resolvedLocaleObject, dateStyle, timeStyle));
+
+      // Apply customizations based on additional options.
+      HashMap<String, String> exts = resolvedLocaleObject.getUnicodeExtensions();
+      if (exts.containsKey("hc")) {
+        String hourCycleExt = exts.get("hc");
+        if (hourCycleExt == "h11" || hourCycleExt == "h12") {
+          replacePatternChars(skeletonBuffer, new char[] {'H', 'K', 'k'}, 'h');
+        } else if (hourCycleExt == "h23" || hourCycleExt == "h24") {
+          replacePatternChars(skeletonBuffer, new char[] {'h', 'H', 'K'}, 'k');
+        }
+      }
+
+      if (hourCycle == HourCycle.H11 || hourCycle == HourCycle.H12) {
+        replacePatternChars(skeletonBuffer, new char[] {'H', 'K', 'k'}, 'h');
+      } else if (hourCycle == HourCycle.H23 || hourCycle == HourCycle.H24) {
+        replacePatternChars(skeletonBuffer, new char[] {'h', 'H', 'K'}, 'k');
+      }
+
+      if (!JSObjects.isUndefined(hour12) && !JSObjects.isNull(hour12)) {
+        if (JSObjects.getJavaBoolean(hour12)) { // true
+          replacePatternChars(skeletonBuffer, new char[] {'H', 'K', 'k'}, 'h');
+        } else {
+          replacePatternChars(skeletonBuffer, new char[] {'h', 'H', 'K'}, 'k');
+        }
+      }
+    } else {
+      skeletonBuffer.append(weekDay.getSkeleonSymbol());
+      skeletonBuffer.append(era.getSkeleonSymbol());
+      skeletonBuffer.append(year.getSkeleonSymbol());
+      skeletonBuffer.append(month.getSkeleonSymbol());
+      skeletonBuffer.append(day.getSkeleonSymbol());
+
+      if (hourCycle == HourCycle.H11 || hourCycle == HourCycle.H12)
+        skeletonBuffer.append(hour.getSkeleonSymbol12());
+      else skeletonBuffer.append(hour.getSkeleonSymbol24());
+
+      skeletonBuffer.append(minute.getSkeleonSymbol());
+      skeletonBuffer.append(second.getSkeleonSymbol());
+      skeletonBuffer.append(timeZoneName.getSkeleonSymbol());
+    }
 
     return skeletonBuffer.toString();
   }
@@ -208,10 +328,14 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
       Second second,
       TimeZoneName timeZoneName,
       HourCycle hourCycle,
-      Object timeZone)
+      Object timeZone,
+      DateStyle dateStyle,
+      TimeStyle timeStyle,
+      Object hour12)
       throws JSRangeErrorException {
     String skeleton =
         getSkeleton(
+            resolvedLocaleObject,
             weekDay,
             era,
             year,
@@ -221,7 +345,10 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
             minute,
             second,
             timeZoneName,
-            hourCycle == HourCycle.H11 || hourCycle == HourCycle.H12);
+            hourCycle,
+            dateStyle,
+            timeStyle,
+            hour12);
 
     Calendar calendarInstance = null;
     if (!calendar.isEmpty()) {

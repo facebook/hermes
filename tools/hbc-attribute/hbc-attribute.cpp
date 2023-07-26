@@ -203,15 +203,18 @@ class UsageCounter : public BytecodeVisitor {
           offset - offsets->sourceLocations);
     }
 
-    if (offsets->lexicalData &&
-        offsets->lexicalData != DebugOffsets::NO_OFFSET) {
+    if (offsets->scopeDescData &&
+        offsets->scopeDescData != DebugOffsets::NO_OFFSET) {
       auto data = bcProvider_->getDebugInfo()->viewData().getData();
-      unsigned start = offsets->lexicalData +
-          bcProvider_->getDebugInfo()->lexicalDataOffset();
+      unsigned start = offsets->scopeDescData +
+          bcProvider_->getDebugInfo()->scopeDescDataOffset();
       unsigned offset = start;
       int64_t trash;
 
       // Read parent id
+      offset += readSignedLEB128(data, offset, &trash);
+
+      // read flags
       offset += readSignedLEB128(data, offset, &trash);
 
       // Read variable count
@@ -224,7 +227,7 @@ class UsageCounter : public BytecodeVisitor {
         offset += stringLength;
       }
       appendRecord(
-          "debuginfo:lexicaldata", offsets->lexicalData, offset - start);
+          "debuginfo:scopedescdata", offsets->scopeDescData, offset - start);
     }
 
     if (offsets->textifiedCallees &&

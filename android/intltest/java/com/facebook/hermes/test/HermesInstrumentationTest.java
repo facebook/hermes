@@ -7,7 +7,7 @@
 
 package com.facebook.hermes.test;
 
-import static org.fest.assertions.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import android.test.InstrumentationTestCase;
 import java.util.Locale;

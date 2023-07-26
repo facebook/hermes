@@ -61,7 +61,10 @@ static void populateScopeFromChainLink(
     ScopeDesc *scope,
     const SerializedScope &chainLink) {
   for (const auto &var : chainLink.variables) {
-    builder.createVariable(scope, var.declKind, var.name);
+    Variable *V = builder.createVariable(scope, var.declKind, var.name);
+    if (var.declKind == Variable::DeclKind::Const) {
+      V->setStrictImmutableBinding(var.strictImmutableBinding);
+    }
   }
 }
 
@@ -336,11 +339,9 @@ void ESTreeIRGen::doIt() {
     }
   }
 
-  emitFunctionPrologue(
-      Program,
-      Builder.createBasicBlock(topLevelFunction),
-      InitES5CaptureState::Yes,
-      DoEmitParameters::Yes);
+  emitFunctionPreamble(Builder.createBasicBlock(topLevelFunction));
+  initCaptureStateInES5Function();
+  emitTopLevelDeclarations(Program, Program, DoEmitParameters::Yes);
 
   Value *retVal;
   {
@@ -349,6 +350,9 @@ void ESTreeIRGen::doIt() {
         Builder.createAllocStackInst(genAnonymousLabelName("ret"));
     Builder.createStoreStackInst(
         Builder.getLiteralUndefined(), curFunction()->globalReturnRegister);
+
+    // Emit all CreateFunctionInsts for all global functions.
+    hoistCreateFunctions(Program);
 
     genBody(Program->_body);
 
@@ -458,7 +462,7 @@ std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
 }
 
 std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(
-    Function *inFunc,
+    ScopeDesc *inScope,
     VarDecl::Kind declKind,
     Identifier name) {
   Value *found = nameTable_.lookup(name);
@@ -467,20 +471,34 @@ std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(
   // second instance.
   if (found) {
     if (auto *var = llvh::dyn_cast<Variable>(found)) {
-      if (var->getParent()->getFunction() == inFunc)
+      if (var->getParent() == inScope)
         return {found, false};
     } else {
       assert(
           llvh::isa<GlobalObjectProperty>(found) &&
           "Invalid value found in name table");
-      if (inFunc->isGlobalScope())
+      if (inScope->isGlobalScope() &&
+          (declKind == VarDecl::Kind::Var ||
+           !Mod->getContext().getCodeGenerationSettings().enableBlockScoping)) {
+        // Only return the global property that was found if this is the global
+        // scope and the JS source is declaring a "var" global (i.e., a
+        // GlobalObjectProperty). This causes code like
+        //
+        // let undefined;
+        //
+        // to define a global variable, which will then, at runtime, be checked
+        // with ThrowIfHasRestrictedGlobalProperty to ensure it is a valid
+        // lexically scoped name for the given program.
         return {found, false};
+      }
     }
   }
 
   // Create a property if global scope, variable otherwise.
   Value *res;
-  if (inFunc->isGlobalScope() && declKind == VarDecl::Kind::Var) {
+  NameTableScopeTy *nameTableScope;
+  if (inScope->isGlobalScope() && declKind == VarDecl::Kind::Var) {
+    nameTableScope = topLevelContext->functionScope;
     res = Builder.createGlobalObjectProperty(name, true);
   } else {
     if (!Mod->getContext().getCodeGenerationSettings().enableTDZ) {
@@ -488,12 +506,12 @@ std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(
       declKind = Variable::DeclKind::Var;
     }
 
-    res =
-        Builder.createVariable(inFunc->getFunctionScopeDesc(), declKind, name);
+    nameTableScope = curFunction()->blockScope;
+    res = Builder.createVariable(inScope, declKind, name);
   }
 
   // Register the variable in the scoped hash table.
-  nameTable_.insert(name, res);
+  nameTable_.insertIntoScope(nameTableScope, name, res);
   return {res, true};
 }
 
@@ -509,7 +527,7 @@ GlobalObjectProperty *ESTreeIRGen::declareAmbientGlobalProperty(
                    << name.getUnderlyingPointer() << "\n");
 
   prop = Builder.createGlobalObjectProperty(name, false);
-  nameTable_.insertIntoScope(&topLevelContext->scope, name, prop);
+  nameTable_.insertIntoScope(topLevelContext->functionScope, name, prop);
   return prop;
 }
 
@@ -1141,8 +1159,8 @@ void ESTreeIRGen::emitDestructuringObject(
          Builder.getLiteralString(
              "Cannot destructure 'undefined' or 'null'.")});
     // throwTypeError will always throw.
-    // This return is here to ensure well-formed IR, and will not run.
-    Builder.createReturnInst(Builder.getLiteralUndefined());
+    // This throw is here to ensure well-formed IR, and will not run.
+    Builder.createThrowInst(Builder.getLiteralUndefined());
 
     Builder.setInsertionBlock(doneBB);
   }
@@ -1172,15 +1190,17 @@ void ESTreeIRGen::emitDestructuringObject(
         !propNode->_computed) {
       Identifier key = getNameFieldFromID(propNode->_key);
       excludedItems.push_back(Builder.getLiteralString(key));
-      auto *loadedValue = Builder.createLoadPropertyInst(source, key);
-      createLRef(valueNode, declInit)
-          .emitStore(emitOptionalInitialization(loadedValue, init, nameHint));
+      LReference lref = createLRef(valueNode, declInit);
+      Value *propLoad = Builder.createLoadPropertyInst(source, key);
+      Value *optInit = emitOptionalInitialization(propLoad, init, nameHint);
+      lref.emitStore(optInit);
     } else {
       Value *key = genExpression(propNode->_key);
       excludedItems.push_back(key);
-      auto *loadedValue = Builder.createLoadPropertyInst(source, key);
-      createLRef(valueNode, declInit)
-          .emitStore(emitOptionalInitialization(loadedValue, init, nameHint));
+      LReference lref = createLRef(valueNode, declInit);
+      Value *propLoad = Builder.createLoadPropertyInst(source, key);
+      Value *optInit = emitOptionalInitialization(propLoad, init, nameHint);
+      lref.emitStore(optInit);
     }
   }
 }
@@ -1221,10 +1241,16 @@ void ESTreeIRGen::emitRestProperty(
     // This size is only a hint as the true size may change if there are
     // duplicates when computedExcludedItems is processed at run-time.
     auto excludedSizeHint = exMap.size() + computedExcludedItems.size();
+    // Explicitly set the prototype for the object created here so it isn't
+    // initialized to Object.prototype, which may be modified by the user.
     if (exMap.empty()) {
-      excludedObj = Builder.createAllocObjectInst(excludedSizeHint);
+      excludedObj = Builder.createAllocObjectInst(
+          excludedSizeHint, Builder.getLiteralNull());
     } else {
       excludedObj = Builder.createAllocObjectLiteralInst(exMap);
+      genBuiltinCall(
+          BuiltinMethod::HermesBuiltin_silentSetPrototypeOf,
+          {excludedObj, Builder.getLiteralNull()});
     }
     for (Value *key : computedExcludedItems) {
       Builder.createStorePropertyInst(zeroValue, excludedObj, key);
@@ -1275,14 +1301,16 @@ Value *ESTreeIRGen::emitOptionalInitialization(
 SerializedScopePtr ESTreeIRGen::resolveScopeIdentifiers(
     const ScopeChain &chain) {
   SerializedScopePtr current{};
-  for (auto it = chain.functions.rbegin(), end = chain.functions.rend();
-       it < end;
+  for (auto it = chain.scopes.rbegin(), end = chain.scopes.rend(); it < end;
        it++) {
     auto next = std::make_shared<SerializedScope>();
     next->variables.reserve(it->variables.size());
     for (auto var : it->variables) {
+      constexpr bool immutableBinding = false;
       next->variables.push_back(SerializedScope::Declaration{
-          Builder.createIdentifier(var), Variable::DeclKind::Var});
+          Builder.createIdentifier(var),
+          Variable::DeclKind::Var,
+          immutableBinding});
     }
     next->parentScope = current;
     current = next;
@@ -1310,8 +1338,8 @@ SerializedScopePtr ESTreeIRGen::serializeScope(
     }
   }
   for (auto *var : S->getVariables()) {
-    scope->variables.push_back(
-        SerializedScope::Declaration{var->getName(), var->getDeclKind()});
+    scope->variables.push_back(SerializedScope::Declaration{
+        var->getName(), var->getDeclKind(), var->getStrictImmutableBinding()});
   }
   scope->parentScope = serializeScope(S->getParent(), false);
   return scope;
@@ -1337,6 +1365,28 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
       // Must verify whether the variable is initialized.
       Builder.createThrowIfEmptyInst(
           Builder.createLoadFrameInst(var, currentIRScope_));
+      if (var->getDeclKind() == Variable::DeclKind::Const) {
+        if (!var->getStrictImmutableBinding() &&
+            !curFunction()->function->isStrictMode()) {
+          // Ignore stores to non-strict immutable bindings in non-strict mode.
+          return nullptr;
+        }
+
+        // Assignment to const-declared variables should result in a runtime
+        // TypeError exception, so raise it here.
+        Builder.getModule()->getContext().getSourceErrorManager().warning(
+            Builder.getLocation(), "Assignment to constant variable");
+        genRaiseNativeError(
+            Builder, NativeErrorTypes::TypeError, "can't modify const value");
+        // genRaiseNativeError emits a ThrowInst, which is itself a terminator;
+        // thus we can't append more instructions to the current basic block.
+        // Create another basic block, and set it as the insertion pointer. The
+        // newly-created basic block is unreachable, and will thus be removed
+        // during optimization.
+        BasicBlock *unlinked =
+            Builder.createBasicBlock(curFunction()->function);
+        Builder.setInsertionBlock(unlinked);
+      }
     }
     return Builder.createStoreFrameInst(storedValue, var, currentIRScope_);
   } else if (auto *globalProp = llvh::dyn_cast<GlobalObjectProperty>(ptr)) {
@@ -1349,5 +1399,35 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
     llvm_unreachable("unvalid value to load from");
   }
 }
+
+void ESTreeIRGen::newDeclarativeEnvironment() {
+  ScopeDesc *blockScopeDesc = currentIRScopeDesc_->createInnerScope();
+  blockScopeDesc->setFunction(curFunction()->function);
+  currentIRScopeDesc_ = blockScopeDesc;
+  currentIRScope_ =
+      Builder.createCreateInnerScopeInst(currentIRScope_, blockScopeDesc);
+  Builder.setCurrentSourceLevelScope(currentIRScopeDesc_);
+}
+
+void ESTreeIRGen::blockDeclarationInstantiation(ESTree::Node *containingNode) {
+  newDeclarativeEnvironment();
+  createScopeBindings(currentIRScopeDesc_, containingNode);
+  genFunctionDeclarations(containingNode);
+  hoistCreateFunctions(containingNode);
+}
+
+Instruction *ESTreeIRGen::genRaiseNativeError(
+    IRBuilder &builder,
+    NativeErrorTypes id,
+    llvh::StringRef msg) {
+  return builder.createThrowInst(builder.createCallInst(
+      CallInst::kNoTextifiedCallee,
+      builder.createCallBuiltinInst(
+          BuiltinMethod::HermesBuiltin_getOriginalNativeErrorConstructor,
+          builder.getLiteralNumber(static_cast<unsigned>(id))),
+      builder.getLiteralUndefined(),
+      builder.getLiteralString(msg)));
+}
+
 } // namespace irgen
 } // namespace hermes

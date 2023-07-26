@@ -28,7 +28,8 @@ delete_test()
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [unary_operator_test, delete_test]
+// CHECK-NEXT:globals = [unary_operator_test, delete_test]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %unary_operator_test#0#1()#2, %0
@@ -38,17 +39,17 @@ delete_test()
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %6 = StoreStackInst undefined : undefined, %5
 // CHECK-NEXT:  %7 = LoadPropertyInst globalObject : object, "unary_operator_test" : string
-// CHECK-NEXT:  %8 = CallInst %7, undefined : undefined
+// CHECK-NEXT:  %8 = CallInst %7, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %9 = StoreStackInst %8, %5
 // CHECK-NEXT:  %10 = LoadPropertyInst globalObject : object, "delete_test" : string
-// CHECK-NEXT:  %11 = CallInst %10, undefined : undefined
+// CHECK-NEXT:  %11 = CallInst %10, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %12 = StoreStackInst %11, %5
 // CHECK-NEXT:  %13 = LoadStackInst %5
 // CHECK-NEXT:  %14 = ReturnInst %13
 // CHECK-NEXT:function_end
 
 // CHECK:function unary_operator_test#0#1(x)#2
-// CHECK-NEXT:frame = [x#2]
+// CHECK-NEXT:S{unary_operator_test#0#1()#2} = [x#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{unary_operator_test#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#2], %0
@@ -76,7 +77,7 @@ delete_test()
 // CHECK-NEXT:function_end
 
 // CHECK:function delete_test#0#1(o)#3
-// CHECK-NEXT:frame = [o#3]
+// CHECK-NEXT:S{delete_test#0#1()#3} = [o#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{delete_test#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %o, [o#3], %0

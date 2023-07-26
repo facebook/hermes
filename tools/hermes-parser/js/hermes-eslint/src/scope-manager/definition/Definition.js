@@ -12,6 +12,7 @@
 
 import type {CatchClauseDefinition} from './CatchClauseDefinition';
 import type {ClassNameDefinition} from './ClassNameDefinition';
+import type {ComponentNameDefinition} from './ComponentNameDefinition';
 import type {EnumDefinition} from './EnumDefinition';
 import type {FunctionNameDefinition} from './FunctionNameDefinition';
 import type {ImplicitGlobalVariableDefinition} from './ImplicitGlobalVariableDefinition';
@@ -25,6 +26,7 @@ type Definition =
   | CatchClauseDefinition
   | ClassNameDefinition
   | FunctionNameDefinition
+  | ComponentNameDefinition
   | ImplicitGlobalVariableDefinition
   | ImportBindingDefinition
   | ParameterDefinition

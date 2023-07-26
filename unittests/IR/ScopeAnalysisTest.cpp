@@ -76,15 +76,6 @@ TEST(IRVerifierTest, ScopeAnalysisTest) {
   EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan2->getFunctionScopeDesc()));
   EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan21->getFunctionScopeDesc()));
 
-  EXPECT_EQ(nullptr, fsa.getLexicalParent(ES5));
-  EXPECT_EQ(ES5, fsa.getLexicalParent(ES4));
-  EXPECT_EQ(ES4, fsa.getLexicalParent(ES3));
-  EXPECT_EQ(ES3, fsa.getLexicalParent(ES2));
-  EXPECT_EQ(ES2, fsa.getLexicalParent(ES1));
-  EXPECT_EQ(ES1, fsa.getLexicalParent(G));
-  EXPECT_EQ(G, fsa.getLexicalParent(F1));
-  EXPECT_EQ(G, fsa.getLexicalParent(F2));
-  EXPECT_EQ(F1, fsa.getLexicalParent(F11));
   EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan->getFunctionScopeDesc()));
   EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan1->getFunctionScopeDesc()));
   EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan2->getFunctionScopeDesc()));

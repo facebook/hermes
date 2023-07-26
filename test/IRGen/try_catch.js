@@ -154,7 +154,8 @@ function finally_with_break_continue_test() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [simple_try_catch_test, simple_try_catch_finally_test, simple_try_finally_test, try_catch_finally_with_return_test, nested_try_test, nested_catch_test, finally_with_break_continue_test]
+// CHECK-NEXT:globals = [simple_try_catch_test, simple_try_catch_finally_test, simple_try_finally_test, try_catch_finally_with_return_test, nested_try_test, nested_catch_test, finally_with_break_continue_test]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %simple_try_catch_test#0#1()#2, %0
@@ -178,7 +179,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_try_catch_test#0#1()#2
-// CHECK-NEXT:frame = [i#2, ?anon_0_e#2]
+// CHECK-NEXT:S{simple_try_catch_test#0#1()#2} = [i#2, ?anon_0_e#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simple_try_catch_test#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i#2], %0
@@ -236,7 +237,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_try_catch_finally_test#0#1()#3
-// CHECK-NEXT:frame = [i#3, ?anon_0_e#3]
+// CHECK-NEXT:S{simple_try_catch_finally_test#0#1()#3} = [i#3, ?anon_0_e#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simple_try_catch_finally_test#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i#3], %0
@@ -282,7 +283,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_try_finally_test#0#1()#4
-// CHECK-NEXT:frame = [i#4]
+// CHECK-NEXT:S{simple_try_finally_test#0#1()#4} = [i#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simple_try_finally_test#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i#4], %0
@@ -314,7 +315,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:function_end
 
 // CHECK:function try_catch_finally_with_return_test#0#1()#5
-// CHECK-NEXT:frame = [i#5, ?anon_0_e#5]
+// CHECK-NEXT:S{try_catch_finally_with_return_test#0#1()#5} = [i#5, ?anon_0_e#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{try_catch_finally_with_return_test#0#1()#5}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i#5], %0
@@ -389,7 +390,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:function_end
 
 // CHECK:function nested_try_test#0#1()#6
-// CHECK-NEXT:frame = [i#6, ?anon_0_e#6, ?anon_1_e#6, ?anon_2_e#6]
+// CHECK-NEXT:S{nested_try_test#0#1()#6} = [i#6, ?anon_0_e#6, ?anon_1_e#6, ?anon_2_e#6]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{nested_try_test#0#1()#6}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i#6], %0
@@ -530,7 +531,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:function_end
 
 // CHECK:function nested_catch_test#0#1()#7
-// CHECK-NEXT:frame = [i#7, ?anon_0_e#7, ?anon_1_e#7, ?anon_2_e#7, ?anon_3_e#7]
+// CHECK-NEXT:S{nested_catch_test#0#1()#7} = [i#7, ?anon_0_e#7, ?anon_1_e#7, ?anon_2_e#7, ?anon_3_e#7]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{nested_catch_test#0#1()#7}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i#7], %0
@@ -675,7 +676,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:function_end
 
 // CHECK:function finally_with_break_continue_test#0#1()#8
-// CHECK-NEXT:frame = [i#8, ?anon_0_e#8]
+// CHECK-NEXT:S{finally_with_break_continue_test#0#1()#8} = [i#8, ?anon_0_e#8]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{finally_with_break_continue_test#0#1()#8}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i#8], %0

@@ -264,7 +264,8 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     // In this case, we should just treat the index access as
     // a property access.
     auto vr = valueToSymbolID(
-        runtime, runtime.makeHandle(HermesValue::encodeNumberValue(index)));
+        runtime,
+        runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(index)));
     assert(
         vr != ExecutionStatus::EXCEPTION &&
         "valueToIdentifier() failed for uint32_t value");
@@ -432,13 +433,16 @@ CallResult<Handle<Arguments>> Arguments::create(
   DEFINE_PROP(
       selfHandle,
       P::length,
-      runtime.makeHandle(HermesValue::encodeDoubleValue(length)));
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(length)));
 
   DEFINE_PROP(
       selfHandle, P::SymbolIterator, Handle<>(&runtime.arrayPrototypeValues));
 
-  if (strictMode) {
-    // Define .callee and .caller properties: throw always in strict mode.
+  if (strictMode ||
+      LLVM_UNLIKELY(vmisa<GeneratorInnerFunction>(*curFunction))) {
+    // Define .callee and .caller properties: throw always in strict mode
+    // or for GeneratorInnerFunction, because GeneratorInnerFunction isn't
+    // visible to users.
     auto accessor =
         Handle<PropertyAccessor>::vmcast(&runtime.throwTypeErrorAccessor);
 
@@ -601,25 +605,46 @@ CallResult<bool> JSArray::setLength(
     Runtime &runtime,
     Handle<> newLength,
     PropOpFlags opFlags) {
-  // Convert the value to uint32_t.
-  double d;
-  if (newLength->isNumber()) {
-    d = newLength->getNumber();
-  } else {
-    auto res = toNumber_RJS(runtime, newLength);
-    if (res == ExecutionStatus::EXCEPTION)
-      return ExecutionStatus::EXCEPTION;
-    d = res->getNumber();
-  }
-
-  // NOTE: in theory this produces UB, however in practice it is well defined.
-  // Regardless what happens in the conversion, 'ulen' can never compare equal
-  // to 'd' unless 'd' is really an uint32 number, in which case the conversion
-  // would have succeeded.
+  // About the truncation of double to uint32: in theory this produces UB,
+  // however in practice it is well-defined.
+  // Regardless of what happens in the conversion, 'ulen' can never compare
+  // equal to 'd' unless 'd' is really an uint32 number, in which case the
+  // conversion would have succeeded.
   // The only way this could fail is if the conversion throws an exception or
   // aborts the application, which is not the case on any platform we are
   // targeting.
-  uint32_t ulen = (uint32_t)d;
+
+  uint32_t ulen;
+  double d;
+  if (LLVM_LIKELY(newLength->isNumber())) {
+    d = newLength->getNumber();
+    ulen = (uint32_t)d;
+  } else {
+    // According to the spec, toNumber() has to be called twice.
+    // https://tc39.es/ecma262/multipage/ordinary-and-exotic-objects-behaviours.html#sec-arraysetlength
+    // There is a note that says:
+    // "In steps 3 and 4, if Desc.[[Value]] is an object then its valueOf method
+    // is called twice. This is legacy behaviour that was specified with this
+    // effect starting with the 2nd Edition of this specification."
+    auto res = toNumber_RJS(runtime, newLength);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    d = res->getNumber();
+    ulen = (uint32_t)d;
+    // If it is a string, no need to convert again, since it is pretty
+    // expensive. Other types are not so important, since their conversions are
+    // either fast (bool) or slow (object).
+    // We could do the inverse check here - for object - but that is more risky,
+    // since calling toNumber() twice is always correct, but calling it once
+    // might be incorrect.
+    if (!newLength->isString()) {
+      res = toNumber_RJS(runtime, newLength);
+      if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      d = res->getNumber();
+    }
+  }
+
   if (ulen != d)
     return runtime.raiseRangeError("Invalid array length");
 
@@ -832,7 +857,8 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
   // index+1.
   ++self->nextIndex_;
 
-  auto indexHandle = runtime.makeHandle(HermesValue::encodeNumberValue(index));
+  auto indexHandle =
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(index));
 
   if (self->iterationKind_ == IterationKind::Key) {
     // 12. If itemKind is "key", return CreateIterResultObject(index, false).

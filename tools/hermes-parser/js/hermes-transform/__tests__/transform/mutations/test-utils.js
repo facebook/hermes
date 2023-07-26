@@ -15,9 +15,8 @@ import type {
   Statement,
 } from 'hermes-estree';
 
-import {parseForESLint} from 'hermes-eslint';
-import {attachComments} from '../../../src/transform/comments/comments';
 import {traverse} from '../../../src/traverse/traverse';
+import {parse} from '../../../src/transform/parse';
 
 export type StatementTypes = Statement['type'] | ModuleDeclaration['type'];
 export const CODE_SAMPLES: $ReadOnly<{[StatementTypes]: string}> = {
@@ -74,23 +73,19 @@ export const DEFAULT_SKIP_STATEMENTS: $ReadOnlyArray<StatementTypes> = [
   ...LOOP_ONLY_STATEMENTS,
 ];
 
-export function parseAndGetAstAndNode<T: ESNode = ESNode>(
+export async function parseAndGetAstAndNode<T: ESNode = ESNode>(
   type: ESNode['type'],
   code: string,
-): {
+): Promise<{
   ast: Program,
   target: T,
-} {
-  const {ast, scopeManager} = parseForESLint(code, {
-    sourceType: 'module',
-  });
-
-  attachComments(ast.comments, ast, code);
+}> {
+  const {ast, scopeManager} = await parse(code);
 
   let target: T | null = null;
   traverse(code, ast, scopeManager, () => ({
     // $FlowExpectedError[invalid-computed-prop] - this is guaranteed safe
-    [type](node) {
+    [type](node: T | null) {
       target = node;
     },
   }));
@@ -118,8 +113,8 @@ export function testStatementMutation({
       continue;
     }
 
-    it(type, () => {
-      const {ast, target} = parseAndGetAstAndNode<
+    it(type, async () => {
+      const {ast, target} = await parseAndGetAstAndNode<
         Statement | ModuleDeclaration,
       >(type, wrapCode(CODE_SAMPLES[type]));
       mutateAndAssert(ast, target);

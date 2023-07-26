@@ -14,7 +14,8 @@ var func2 = () => { return 11; }
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [?anon_0_this#1, ?anon_1_new.target#1], globals = [func1, func2]
+// CHECK-NEXT:globals = [func1, func2]
+// CHECK-NEXT:S{global#0()#1} = [?anon_0_this#1, ?anon_1_new.target#1]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = StoreFrameInst %this, [?anon_0_this#1], %0
@@ -31,7 +32,7 @@ var func2 = () => { return 11; }
 // CHECK-NEXT:function_end
 
 // CHECK:arrow func1#0#1()#2
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{func1#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{func1#0#1()#2}
 // CHECK-NEXT:  %1 = ReturnInst 10 : number
@@ -40,7 +41,7 @@ var func2 = () => { return 11; }
 // CHECK-NEXT:function_end
 
 // CHECK:arrow func2#0#1()#3
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{func2#0#1()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{func2#0#1()#3}
 // CHECK-NEXT:  %1 = ReturnInst 11 : number

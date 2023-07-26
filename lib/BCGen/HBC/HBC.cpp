@@ -394,6 +394,29 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
       std::move(baseBCProvider));
 }
 
+/// Encode a Unicode codepoint into a UTF8 sequence and append it to \p
+/// storage. Code points above 0xFFFF are encoded into UTF16, and the
+/// resulting surrogate pair values are encoded individually into UTF8.
+static inline void appendUnicodeToStorage(
+    uint32_t cp,
+    llvh::SmallVectorImpl<char> &storage) {
+  // Sized to allow for two 16-bit values to be encoded.
+  // A 16-bit value takes up to three bytes encoded in UTF-8.
+  char buf[8];
+  char *d = buf;
+  // We need to normalize code points which would be encoded with a surrogate
+  // pair. Note that this produces technically invalid UTF-8.
+  if (LLVM_LIKELY(cp < 0x10000)) {
+    hermes::encodeUTF8(d, cp);
+  } else {
+    assert(cp <= UNICODE_MAX_VALUE && "invalid Unicode value");
+    cp -= 0x10000;
+    hermes::encodeUTF8(d, UTF16_HIGH_SURROGATE + ((cp >> 10) & 0x3FF));
+    hermes::encodeUTF8(d, UTF16_LOW_SURROGATE + (cp & 0x3FF));
+  }
+  storage.append(buf, d);
+}
+
 std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
     Module *M,
     Function *lexicalTopLevel,
@@ -429,6 +452,18 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
     shouldGenerate = [](const Function *) { return true; };
   }
 
+  /// Mapping of the source text UTF-8 to the modified UTF-16-like
+  /// representation used by string literal encoding.
+  /// See appendUnicodeToStorage.
+  /// If a function source isn't in this map, then it's entirely ASCII and can
+  /// be added to the string table unmodified.
+  /// This allows us to add strings to the StringLiteralTable,
+  /// which will convert actual UTF-8 to UTF-16 automatically if it's detected,
+  /// meaning we'd not be able to directly look up the original function source
+  /// in the table.
+  llvh::DenseMap<llvh::StringRef, llvh::SmallVector<char, 32>>
+      unicodeFunctionSources{};
+
   { // Collect all the strings in the bytecode module into a storage.
     // If we are in delta optimizing mode, start with the string storage from
     // our base bytecode provider.
@@ -449,7 +484,48 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
     if (options.stripFunctionNames) {
       addString(kStrippedFunctionName);
     }
-    traverseFunctions(M, shouldGenerate, addString, options.stripFunctionNames);
+
+    /// Add the original function source \p str to the \c strings table.
+    /// If it's not ASCII, re-encode it using the string table's string literal
+    /// encoding and map from the original source to the newly encoded source in
+    /// unicodeFunctionSources,so it can be reused below.
+    auto addFunctionSource = [&strings,
+                              &unicodeFunctionSources](llvh::StringRef str) {
+      if (hermes::isAllASCII(str.begin(), str.end())) {
+        // Fast path, no re-encoding needed.
+        strings.addString(str, /* isIdentifier */ false);
+      } else {
+        auto &storage = unicodeFunctionSources[str];
+        if (!storage.empty())
+          return;
+        for (const char *cur = str.begin(), *e = str.end(); cur != e;
+             /* increment in body */) {
+          if (LLVM_UNLIKELY(isUTF8Start(*cur))) {
+            // Decode and re-encode the character and append it to the string
+            // storage
+            appendUnicodeToStorage(
+                hermes::_decodeUTF8SlowPath<false>(
+                    cur, [](const llvh::Twine &) {}),
+                storage);
+          } else {
+            storage.push_back(*cur);
+            ++cur;
+          }
+        }
+        strings.addString(
+            llvh::StringRef{storage.begin(), storage.size()},
+            /* isIdentifier */ false);
+      }
+    };
+
+    // Populate strings table and if the source of a function contains unicode,
+    // add an entry to the unicodeFunctionSources.
+    traverseFunctions(
+        M,
+        shouldGenerate,
+        addString,
+        addFunctionSource,
+        options.stripFunctionNames);
 
     if (!M->getCJSModulesResolved()) {
       traverseCJSModuleNames(M, shouldGenerate, addString);
@@ -489,7 +565,18 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
     // Add entries to function source table for non-default source.
     if (!F.isGlobalScope()) {
       if (auto source = F.getSourceRepresentationStr()) {
-        BMGen.addFunctionSource(index, BMGen.getStringID(*source));
+        auto it = unicodeFunctionSources.find(*source);
+        // If the original source was mapped to a re-encoded one in
+        // unicodeFunctionSources, then use the re-encoded source to lookup the
+        // string ID. Otherwise it's ASCII and can be used directly.
+        if (it != unicodeFunctionSources.end()) {
+          BMGen.addFunctionSource(
+              index,
+              BMGen.getStringID(
+                  llvh::StringRef{it->second.begin(), it->second.size()}));
+        } else {
+          BMGen.addFunctionSource(index, BMGen.getStringID(*source));
+        }
       }
     }
   }

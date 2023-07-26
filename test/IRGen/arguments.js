@@ -31,7 +31,8 @@ function shadow(arguments) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [cheap, expensive, cond, shadow]
+// CHECK-NEXT:globals = [cheap, expensive, cond, shadow]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %cheap#0#1()#2, %0
@@ -49,7 +50,7 @@ function shadow(arguments) {
 // CHECK-NEXT:function_end
 
 // CHECK:function cheap#0#1()#2
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{cheap#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{cheap#0#1()#2}
 // CHECK-NEXT:  %1 = CreateArgumentsInst
@@ -62,13 +63,13 @@ function shadow(arguments) {
 // CHECK-NEXT:function_end
 
 // CHECK:function expensive#0#1()#3
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{expensive#0#1()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{expensive#0#1()#3}
 // CHECK-NEXT:  %1 = CreateArgumentsInst
 // CHECK-NEXT:  %2 = LoadPropertyInst %1 : object, "length" : string
 // CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "cheap" : string
-// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, %1 : object
+// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, undefined : undefined, %1 : object
 // CHECK-NEXT:  %5 = BinaryOperatorInst '+', %2, %4
 // CHECK-NEXT:  %6 = LoadPropertyInst %1 : object, 0 : number
 // CHECK-NEXT:  %7 = BinaryOperatorInst '+', %5, %6
@@ -78,7 +79,7 @@ function shadow(arguments) {
 // CHECK-NEXT:function_end
 
 // CHECK:function cond#0#1()#4
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{cond#0#1()#4} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{cond#0#1()#4}
 // CHECK-NEXT:  %1 = CreateArgumentsInst
@@ -96,7 +97,7 @@ function shadow(arguments) {
 // CHECK-NEXT:function_end
 
 // CHECK:function shadow#0#1(arguments)#5
-// CHECK-NEXT:frame = [arguments#5]
+// CHECK-NEXT:S{shadow#0#1()#5} = [arguments#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{shadow#0#1()#5}
 // CHECK-NEXT:  %1 = StoreFrameInst %arguments, [arguments#5], %0

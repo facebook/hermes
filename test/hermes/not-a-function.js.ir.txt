@@ -8,63 +8,64 @@
 // Auto-generated content below. Please do not modify manually.
 
 // CHKIR:function global#0()#1
-// CHKIR-NEXT:frame = [], globals = [a, test]
+// CHKIR-NEXT:globals = [a, test]
+// CHKIR-NEXT:S{global#0()#1} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHKIR-NEXT:  %1 = CreateFunctionInst %test#0#1()#2 : undefined, %0
 // CHKIR-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "test" : string
 // CHKIR-NEXT:  %3 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHKIR-NEXT:  %4 = CallInst %3, undefined : undefined, "errors" : string // textified callee: "print"
+// CHKIR-NEXT:  %4 = CallInst %3, undefined : undefined, undefined : undefined, "errors" : string // textified callee: "print"
 // CHKIR-NEXT:  %5 = CreateFunctionInst %b#0#1()#3 : object, %0
 // CHKIR-NEXT:  %6 = AllocObjectLiteralInst "b" : string, %5 : closure
 // CHKIR-NEXT:  %7 = StorePropertyInst %6 : object, globalObject : object, "a" : string
 // CHKIR-NEXT:  %8 = LoadPropertyInst globalObject : object, "test" : string
 // CHKIR-NEXT:  %9 = CreateFunctionInst %" 1#"#0#1()#5, %0
-// CHKIR-NEXT:  %10 = CallInst %8, undefined : undefined, %9 : closure // textified callee: "test"
+// CHKIR-NEXT:  %10 = CallInst %8, undefined : undefined, undefined : undefined, %9 : closure // textified callee: "test"
 // CHKIR-NEXT:  %11 = LoadPropertyInst globalObject : object, "test" : string
 // CHKIR-NEXT:  %12 = CreateFunctionInst %" 2#"#0#1()#6, %0
-// CHKIR-NEXT:  %13 = CallInst %11, undefined : undefined, %12 : closure // textified callee: "test"
+// CHKIR-NEXT:  %13 = CallInst %11, undefined : undefined, undefined : undefined, %12 : closure // textified callee: "test"
 // CHKIR-NEXT:  %14 = LoadPropertyInst globalObject : object, "test" : string
 // CHKIR-NEXT:  %15 = CreateFunctionInst %" 3#"#0#1()#7, %0
-// CHKIR-NEXT:  %16 = CallInst %14, undefined : undefined, %15 : closure // textified callee: "test"
+// CHKIR-NEXT:  %16 = CallInst %14, undefined : undefined, undefined : undefined, %15 : closure // textified callee: "test"
 // CHKIR-NEXT:  %17 = LoadPropertyInst globalObject : object, "test" : string
 // CHKIR-NEXT:  %18 = CreateFunctionInst %" 4#"#0#1()#8, %0
-// CHKIR-NEXT:  %19 = CallInst %17, undefined : undefined, %18 : closure // textified callee: "test"
+// CHKIR-NEXT:  %19 = CallInst %17, undefined : undefined, undefined : undefined, %18 : closure // textified callee: "test"
 // CHKIR-NEXT:  %20 = LoadPropertyInst globalObject : object, "test" : string
 // CHKIR-NEXT:  %21 = CreateFunctionInst %" 5#"#0#1()#9, %0
-// CHKIR-NEXT:  %22 = CallInst %20, undefined : undefined, %21 : closure // textified callee: "test"
+// CHKIR-NEXT:  %22 = CallInst %20, undefined : undefined, undefined : undefined, %21 : closure // textified callee: "test"
 // CHKIR-NEXT:  %23 = LoadPropertyInst globalObject : object, "test" : string
 // CHKIR-NEXT:  %24 = CreateFunctionInst %" 6#"#0#1()#10, %0
-// CHKIR-NEXT:  %25 = CallInst %23, undefined : undefined, %24 : closure // textified callee: "test"
+// CHKIR-NEXT:  %25 = CallInst %23, undefined : undefined, undefined : undefined, %24 : closure // textified callee: "test"
 // CHKIR-NEXT:  %26 = LoadPropertyInst globalObject : object, "test" : string
 // CHKIR-NEXT:  %27 = CreateFunctionInst %" 7#"#0#1()#11, %0
-// CHKIR-NEXT:  %28 = CallInst %26, undefined : undefined, %27 : closure // textified callee: "test"
+// CHKIR-NEXT:  %28 = CallInst %26, undefined : undefined, undefined : undefined, %27 : closure // textified callee: "test"
 // CHKIR-NEXT:  %29 = LoadPropertyInst globalObject : object, "test" : string
 // CHKIR-NEXT:  %30 = CreateFunctionInst %" 8#"#0#1()#12, %0
-// CHKIR-NEXT:  %31 = CallInst %29, undefined : undefined, %30 : closure // textified callee: "test"
+// CHKIR-NEXT:  %31 = CallInst %29, undefined : undefined, undefined : undefined, %30 : closure // textified callee: "test"
 // CHKIR-NEXT:  %32 = LoadPropertyInst globalObject : object, "test" : string
 // CHKIR-NEXT:  %33 = CreateFunctionInst %" 9#"#0#1()#13, %0
-// CHKIR-NEXT:  %34 = CallInst %32, undefined : undefined, %33 : closure // textified callee: "test"
+// CHKIR-NEXT:  %34 = CallInst %32, undefined : undefined, undefined : undefined, %33 : closure // textified callee: "test"
 // CHKIR-NEXT:  %35 = LoadPropertyInst globalObject : object, "test" : string
 // CHKIR-NEXT:  %36 = CreateFunctionInst %" 10#"#0#1()#14, %0
-// CHKIR-NEXT:  %37 = CallInst %35, undefined : undefined, %36 : closure // textified callee: "test"
+// CHKIR-NEXT:  %37 = CallInst %35, undefined : undefined, undefined : undefined, %36 : closure // textified callee: "test"
 // CHKIR-NEXT:  %38 = LoadPropertyInst globalObject : object, "test" : string
 // CHKIR-NEXT:  %39 = CreateFunctionInst %" 11#"#0#1()#15, %0
-// CHKIR-NEXT:  %40 = CallInst %38, undefined : undefined, %39 : closure // textified callee: "test"
+// CHKIR-NEXT:  %40 = CallInst %38, undefined : undefined, undefined : undefined, %39 : closure // textified callee: "test"
 // CHKIR-NEXT:  %41 = LoadPropertyInst globalObject : object, "test" : string
 // CHKIR-NEXT:  %42 = CreateFunctionInst %" 12#"#0#1()#16, %0
-// CHKIR-NEXT:  %43 = CallInst %41, undefined : undefined, %42 : closure // textified callee: "test"
+// CHKIR-NEXT:  %43 = CallInst %41, undefined : undefined, undefined : undefined, %42 : closure // textified callee: "test"
 // CHKIR-NEXT:  %44 = LoadPropertyInst globalObject : object, "test" : string
 // CHKIR-NEXT:  %45 = CreateFunctionInst %" 13#"#0#1()#17, %0
-// CHKIR-NEXT:  %46 = CallInst %44, undefined : undefined, %45 : closure // textified callee: "test"
+// CHKIR-NEXT:  %46 = CallInst %44, undefined : undefined, undefined : undefined, %45 : closure // textified callee: "test"
 // CHKIR-NEXT:  %47 = LoadPropertyInst globalObject : object, "test" : string
 // CHKIR-NEXT:  %48 = CreateFunctionInst %" 14#"#0#1()#18, %0
-// CHKIR-NEXT:  %49 = CallInst %47, undefined : undefined, %48 : closure // textified callee: "test"
+// CHKIR-NEXT:  %49 = CallInst %47, undefined : undefined, undefined : undefined, %48 : closure // textified callee: "test"
 // CHKIR-NEXT:  %50 = ReturnInst %49
 // CHKIR-NEXT:function_end
 
 // CHKIR:function test#0#1(f)#2 : undefined
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{test#0#1()#2} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{test#0#1()#2}
 // CHKIR-NEXT:  %1 = TryStartInst %BB1, %BB2
@@ -74,14 +75,14 @@
 // CHKIR-NEXT:  %4 = LoadPropertyInst %2, "name" : string
 // CHKIR-NEXT:  %5 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
 // CHKIR-NEXT:  %6 = LoadPropertyInst %5, "concat" : string
-// CHKIR-NEXT:  %7 = CallInst %6, "" : string, %4, ":" : string
+// CHKIR-NEXT:  %7 = CallInst %6, undefined : undefined, "" : string, %4, ":" : string
 // CHKIR-NEXT:  %8 = LoadPropertyInst %2, "message" : string
-// CHKIR-NEXT:  %9 = CallInst %3, undefined : undefined, %7, %8 // textified callee: "print"
+// CHKIR-NEXT:  %9 = CallInst %3, undefined : undefined, undefined : undefined, %7, %8 // textified callee: "print"
 // CHKIR-NEXT:  %10 = BranchInst %BB3
 // CHKIR-NEXT:%BB3:
 // CHKIR-NEXT:  %11 = ReturnInst undefined : undefined
 // CHKIR-NEXT:%BB2:
-// CHKIR-NEXT:  %12 = CallInst %f, undefined : undefined // textified callee: "f"
+// CHKIR-NEXT:  %12 = CallInst %f, undefined : undefined, undefined : undefined // textified callee: "f"
 // CHKIR-NEXT:  %13 = BranchInst %BB4
 // CHKIR-NEXT:%BB4:
 // CHKIR-NEXT:  %14 = TryEndInst
@@ -89,7 +90,7 @@
 // CHKIR-NEXT:function_end
 
 // CHKIR:arrow b#0#1()#3 : object
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{b#0#1()#3} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{b#0#1()#3}
 // CHKIR-NEXT:  %1 = CreateFunctionInst %""#1#3()#4 : boolean, %0
@@ -99,136 +100,136 @@
 // CHKIR-NEXT:function_end
 
 // CHKIR:arrow ""#1#3()#4 : boolean
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{""#1#3()#4} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{""#1#3()#4}
 // CHKIR-NEXT:  %1 = ReturnInst false : boolean
 // CHKIR-NEXT:function_end
 
 // CHKIR:arrow " 1#"#0#1()#5
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{" 1#"#0#1()#5} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{" 1#"#0#1()#5}
 // CHKIR-NEXT:  %1 = LoadPropertyInst globalObject : object, "a" : string
-// CHKIR-NEXT:  %2 = CallInst %1, undefined : undefined // textified callee: "a"
+// CHKIR-NEXT:  %2 = CallInst %1, undefined : undefined, undefined : undefined // textified callee: "a"
 // CHKIR-NEXT:  %3 = ReturnInst %2
 // CHKIR-NEXT:function_end
 
 // CHKIR:arrow " 2#"#0#1()#6
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{" 2#"#0#1()#6} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{" 2#"#0#1()#6}
 // CHKIR-NEXT:  %1 = LoadPropertyInst globalObject : object, "a" : string
 // CHKIR-NEXT:  %2 = LoadPropertyInst %1, "z" : string
-// CHKIR-NEXT:  %3 = CallInst %2, %1 // textified callee: "a.z"
+// CHKIR-NEXT:  %3 = CallInst %2, undefined : undefined, %1 // textified callee: "a.z"
 // CHKIR-NEXT:  %4 = ReturnInst %3
 // CHKIR-NEXT:function_end
 
 // CHKIR:arrow " 3#"#0#1()#7
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{" 3#"#0#1()#7} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{" 3#"#0#1()#7}
-// CHKIR-NEXT:  %1 = CallInst null : null, undefined : undefined // textified callee: "null"
+// CHKIR-NEXT:  %1 = CallInst null : null, undefined : undefined, undefined : undefined // textified callee: "null"
 // CHKIR-NEXT:  %2 = ReturnInst %1
 // CHKIR-NEXT:function_end
 
 // CHKIR:arrow " 4#"#0#1()#8
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{" 4#"#0#1()#8} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{" 4#"#0#1()#8}
-// CHKIR-NEXT:  %1 = CallInst true : boolean, undefined : undefined // textified callee: "true"
+// CHKIR-NEXT:  %1 = CallInst true : boolean, undefined : undefined, undefined : undefined // textified callee: "true"
 // CHKIR-NEXT:  %2 = ReturnInst %1
 // CHKIR-NEXT:function_end
 
 // CHKIR:arrow " 5#"#0#1()#9
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{" 5#"#0#1()#9} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{" 5#"#0#1()#9}
-// CHKIR-NEXT:  %1 = CallInst false : boolean, undefined : undefined // textified callee: "false"
+// CHKIR-NEXT:  %1 = CallInst false : boolean, undefined : undefined, undefined : undefined // textified callee: "false"
 // CHKIR-NEXT:  %2 = ReturnInst %1
 // CHKIR-NEXT:function_end
 
 // CHKIR:arrow " 6#"#0#1()#10
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{" 6#"#0#1()#10} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{" 6#"#0#1()#10}
-// CHKIR-NEXT:  %1 = CallInst "str" : string, undefined : undefined // textified callee: "\\\"str\\\""
+// CHKIR-NEXT:  %1 = CallInst "str" : string, undefined : undefined, undefined : undefined // textified callee: "\\\"str\\\""
 // CHKIR-NEXT:  %2 = ReturnInst %1
 // CHKIR-NEXT:function_end
 
 // CHKIR:arrow " 7#"#0#1()#11
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{" 7#"#0#1()#11} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{" 7#"#0#1()#11}
-// CHKIR-NEXT:  %1 = CallInst 1 : number, undefined : undefined // textified callee: "1"
+// CHKIR-NEXT:  %1 = CallInst 1 : number, undefined : undefined, undefined : undefined // textified callee: "1"
 // CHKIR-NEXT:  %2 = ReturnInst %1
 // CHKIR-NEXT:function_end
 
 // CHKIR:arrow " 8#"#0#1()#12
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{" 8#"#0#1()#12} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{" 8#"#0#1()#12}
-// CHKIR-NEXT:  %1 = CallInst 3.14 : number, undefined : undefined // textified callee: "3.14"
+// CHKIR-NEXT:  %1 = CallInst 3.14 : number, undefined : undefined, undefined : undefined // textified callee: "3.14"
 // CHKIR-NEXT:  %2 = ReturnInst %1
 // CHKIR-NEXT:function_end
 
 // CHKIR:arrow " 9#"#0#1()#13
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{" 9#"#0#1()#13} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{" 9#"#0#1()#13}
 // CHKIR-NEXT:  %1 = LoadPropertyInst globalObject : object, "a" : string
 // CHKIR-NEXT:  %2 = LoadPropertyInst %1, "b" : string
-// CHKIR-NEXT:  %3 = CallInst %2, %1 // textified callee: "a.b"
+// CHKIR-NEXT:  %3 = CallInst %2, undefined : undefined, %1 // textified callee: "a.b"
 // CHKIR-NEXT:  %4 = LoadPropertyInst %3, 0 : number
-// CHKIR-NEXT:  %5 = CallInst %4, %3 // textified callee: "a.b()[0]"
-// CHKIR-NEXT:  %6 = CallInst %5, undefined : undefined // textified callee: "a.b()[0]()"
+// CHKIR-NEXT:  %5 = CallInst %4, undefined : undefined, %3 // textified callee: "a.b()[0]"
+// CHKIR-NEXT:  %6 = CallInst %5, undefined : undefined, undefined : undefined // textified callee: "a.b()[0]()"
 // CHKIR-NEXT:  %7 = ReturnInst %6
 // CHKIR-NEXT:function_end
 
 // CHKIR:arrow " 10#"#0#1()#14
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{" 10#"#0#1()#14} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{" 10#"#0#1()#14}
 // CHKIR-NEXT:  %1 = LoadPropertyInst globalObject : object, "a" : string
 // CHKIR-NEXT:  %2 = LoadPropertyInst %1, "a0000000111111111122222222223333333333444444444455555555556666" : string
-// CHKIR-NEXT:  %3 = CallInst %2, %1 // textified callee: "a.a0000000111111111122222222223333333333444444444455555555556666"
+// CHKIR-NEXT:  %3 = CallInst %2, undefined : undefined, %1 // textified callee: "a.a0000000111111111122222222223333333333444444444455555555556666"
 // CHKIR-NEXT:  %4 = ReturnInst %3
 // CHKIR-NEXT:function_end
 
 // CHKIR:arrow " 11#"#0#1()#15
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{" 11#"#0#1()#15} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{" 11#"#0#1()#15}
 // CHKIR-NEXT:  %1 = LoadPropertyInst globalObject : object, "a" : string
 // CHKIR-NEXT:  %2 = LoadPropertyInst %1, "a00000001111111111222222222233ThisShouldNotShowUpAtInTheTextifiedCallee33333333444444444455555555556666" : string
-// CHKIR-NEXT:  %3 = CallInst %2, %1 // textified callee: "a.a00000001111111111222222222233(...)33333333444444444455555555556666"
+// CHKIR-NEXT:  %3 = CallInst %2, undefined : undefined, %1 // textified callee: "a.a00000001111111111222222222233(...)33333333444444444455555555556666"
 // CHKIR-NEXT:  %4 = ReturnInst %3
 // CHKIR-NEXT:function_end
 
 // CHKIR:arrow " 12#"#0#1()#16
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{" 12#"#0#1()#16} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{" 12#"#0#1()#16}
-// CHKIR-NEXT:  %1 = CallInst "\\n\\nc\\xC3\\xA0ll\\n  T     \\xC3\\xB4     \\xC3\\x9C\\n\\n n d e f i n \\xC3\\xA8 d\\n\\n" : string, undefined : undefined // textified callee: "`c\\xC3\\xA0llT     \\xC3\\xB4     \\xC3\\x9Cn d e f i n \\xC3\\xA8 d`"
+// CHKIR-NEXT:  %1 = CallInst "\\n\\nc\\xC3\\xA0ll\\n  T     \\xC3\\xB4     \\xC3\\x9C\\n\\n n d e f i n \\xC3\\xA8 d\\n\\n" : string, undefined : undefined, undefined : undefined // textified callee: "`c\\xC3\\xA0llT     \\xC3\\xB4     \\xC3\\x9Cn d e f i n \\xC3\\xA8 d`"
 // CHKIR-NEXT:  %2 = ReturnInst %1
 // CHKIR-NEXT:function_end
 
 // CHKIR:arrow " 13#"#0#1()#17
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{" 13#"#0#1()#17} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{" 13#"#0#1()#17}
 // CHKIR-NEXT:  %1 = LoadPropertyInst globalObject : object, "a" : string
 // CHKIR-NEXT:  %2 = LoadPropertyInst %1, "\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xAA\\xC3\\xAA\\xC3\\xAA\\xC3\\xAA" : string
-// CHKIR-NEXT:  %3 = CallInst %2, %1 // textified callee: "a.\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xAA\\xC3\\xAA\\xC3\\xAA\\xC3\\xAA"
+// CHKIR-NEXT:  %3 = CallInst %2, undefined : undefined, %1 // textified callee: "a.\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xAA\\xC3\\xAA\\xC3\\xAA\\xC3\\xAA"
 // CHKIR-NEXT:  %4 = ReturnInst %3
 // CHKIR-NEXT:function_end
 
 // CHKIR:arrow " 14#"#0#1()#18
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{" 14#"#0#1()#18} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{" 14#"#0#1()#18}
 // CHKIR-NEXT:  %1 = LoadPropertyInst globalObject : object, "a" : string
 // CHKIR-NEXT:  %2 = LoadPropertyInst %1, "\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xB2\\xC3\\xB2\\xC3\\xBCThisShouldNotShowUpAtInTh\\xC3\\xA8TextifiedCallee\\xC3\\xBC\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xAA\\xC3\\xAA\\xC3\\xAA\\xC3\\xAA" : string
-// CHKIR-NEXT:  %3 = CallInst %2, %1 // textified callee: "a.\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xB2\\xC3\\xB2(...)\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xAA\\xC3\\xAA\\xC3\\xAA\\xC3\\xAA"
+// CHKIR-NEXT:  %3 = CallInst %2, undefined : undefined, %1 // textified callee: "a.\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA0\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xA8\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xAC\\xC3\\xB2\\xC3\\xB2(...)\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB2\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xB9\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xA2\\xC3\\xAA\\xC3\\xAA\\xC3\\xAA\\xC3\\xAA"
 // CHKIR-NEXT:  %4 = ReturnInst %3
 // CHKIR-NEXT:function_end

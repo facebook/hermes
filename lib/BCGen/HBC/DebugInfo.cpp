@@ -38,6 +38,8 @@ struct FunctionDebugInfoDeserializer {
     // Presence of the statement delta is LSB of line delta.
     int64_t lineDelta = decode1Int();
     int64_t columnDelta = decode1Int();
+    int64_t scopeAddress = decode1Int();
+    int64_t envReg = decode1Int();
     int64_t statementDelta = 0;
     if (lineDelta & 1)
       statementDelta = decode1Int();
@@ -47,6 +49,8 @@ struct FunctionDebugInfoDeserializer {
     current_.line += lineDelta;
     current_.column += columnDelta;
     current_.statement += statementDelta;
+    current_.scopeAddress = scopeAddress;
+    current_.envReg = envReg;
     return current_;
   }
 
@@ -80,6 +84,38 @@ struct FunctionDebugInfoDeserializer {
   DebugSourceLocation current_;
 };
 } // namespace
+
+DebugScopeDescriptor::Flags::Flags(uint32_t bits) {
+  uint32_t mask = 1;
+  assert(
+      mask == (1 << static_cast<uint32_t>(Bits::InnerScope)) &&
+      "mask is not Bits::InnerScope");
+  isInnerScope = (bits & mask) != 0;
+
+  mask <<= 1;
+  assert(
+      mask == (1 << static_cast<uint32_t>(Bits::Dynamic)) &&
+      "mask is not Bits::Dynamic");
+  isDynamic = (bits & mask) != 0;
+}
+
+uint32_t DebugScopeDescriptor::Flags::toUint32() const {
+  uint32_t bits = 0;
+
+  uint32_t mask = 1;
+  assert(
+      mask == (1 << static_cast<uint32_t>(Bits::InnerScope)) &&
+      "mask is not Bits::InnerScope");
+  bits |= isInnerScope ? mask : 0;
+
+  mask <<= 1;
+  assert(
+      mask == (1 << static_cast<uint32_t>(Bits::Dynamic)) &&
+      "mask is not Bits::Dynamic");
+  bits |= isDynamic ? mask : 0;
+
+  return bits;
+}
 
 /// Decodes a string at offset \p offset in \p data, updating offset in-place.
 /// \return the decoded string.
@@ -200,7 +236,7 @@ OptValue<DebugSearchResult> DebugInfo::getAddressForLocation(
     if (cur.filenameId == filenameId) {
       foundFile = true;
       start = cur.fromAddress;
-      end = lexicalDataOffset_;
+      end = scopeDescDataOffset_;
     }
   }
   if (!foundFile) {
@@ -267,36 +303,31 @@ OptValue<llvh::StringRef> DebugInfo::getTextifiedCalleeUTF8(
   return llvh::None;
 }
 
-/// Read \p count variable names from \p offset into the variable name section
-/// of the debug info. \return the list of variable names.
-llvh::SmallVector<llvh::StringRef, 4> DebugInfo::getVariableNames(
-    uint32_t offset) const {
+DebugScopeDescriptor DebugInfo::getScopeDescriptor(uint32_t offset) const {
   // Incoming offset is given relative to our lexical region.
-  llvh::ArrayRef<uint8_t> data = lexicalData();
+  llvh::ArrayRef<uint8_t> data = scopeDescData();
   int64_t parentId;
+  int64_t flags;
   int64_t signedCount;
   offset += readSignedLEB128(data, offset, &parentId);
+  offset += readSignedLEB128(data, offset, &flags);
   offset += readSignedLEB128(data, offset, &signedCount);
   (void)parentId;
   assert(signedCount >= 0 && "Invalid variable name count");
-  size_t count = size_t(signedCount);
+  const auto numAccessibleNames = static_cast<size_t>(signedCount);
 
-  llvh::SmallVector<llvh::StringRef, 4> result;
-  result.reserve(count);
-  for (size_t i = 0; i < count; i++)
-    result.push_back(decodeString(&offset, data));
-  return result;
-}
+  DebugScopeDescriptor desc;
+  if ((int32_t)parentId >= 0) {
+    desc.parentOffset = parentId;
+  }
+  desc.flags = DebugScopeDescriptor::Flags{static_cast<uint32_t>(flags)};
 
-OptValue<uint32_t> DebugInfo::getParentFunctionId(uint32_t offset) const {
-  // Incoming offset is given relative to our lexical region.
-  llvh::ArrayRef<uint8_t> data = lexicalData();
-  int64_t parentId;
-  readSignedLEB128(data, offset, &parentId);
-  if (parentId < 0)
-    return llvh::None;
-  assert(parentId <= UINT32_MAX && "Parent ID out of bounds");
-  return uint32_t(parentId);
+  desc.names.reserve(numAccessibleNames);
+  for (size_t i = 0; i < numAccessibleNames; i++) {
+    llvh::StringRef name = decodeString(&offset, data);
+    desc.names.push_back(name);
+  }
+  return desc;
 }
 
 void DebugInfo::disassembleFilenames(llvh::raw_ostream &os) const {
@@ -334,7 +365,14 @@ void DebugInfo::disassembleFilesAndOffsets(llvh::raw_ostream &OS) const {
     uint32_t count = 0;
     while (auto loc = fdid.next()) {
       OS << "    bc " << loc->address << ": line " << loc->line << " col "
-         << loc->column << "\n";
+         << loc->column << " scope offset "
+         << llvh::format_hex(loc->scopeAddress, 6) << " env ";
+      if (loc->envReg != DebugSourceLocation::NO_REG) {
+        OS << "r" << loc->envReg;
+      } else {
+        OS << "none";
+      }
+      OS << "\n";
       count++;
     }
     if (count == 0) {
@@ -346,38 +384,42 @@ void DebugInfo::disassembleFilesAndOffsets(llvh::raw_ostream &OS) const {
      << "  end of debug source table\n\n";
 }
 
-void DebugInfo::disassembleLexicalData(llvh::raw_ostream &OS) const {
+void DebugInfo::disassembleScopeDescData(llvh::raw_ostream &OS) const {
   uint32_t offset = 0;
-  llvh::ArrayRef<uint8_t> lexData = lexicalData();
+  llvh::ArrayRef<uint8_t> scopeData = scopeDescData();
 
-  OS << "Debug lexical table:\n";
+  OS << "Debug scope descriptor table:\n";
   auto next = [&]() {
     int64_t result;
-    offset += readSignedLEB128(lexData, offset, &result);
+    offset += readSignedLEB128(scopeData, offset, &result);
     return (int32_t)result;
   };
-  while (offset < lexData.size()) {
+  while (offset < scopeData.size()) {
     OS << "  " << llvh::format_hex(offset, 6);
     int64_t parentId = next();
+    DebugScopeDescriptor::Flags flags{static_cast<uint32_t>(next())};
     int64_t varNamesCount = next();
     OS << "  lexical parent: ";
-    if (parentId < 0) {
-      OS << "none";
+    if (parentId == -1) {
+      OS << "  none";
     } else {
-      OS << parentId;
+      OS << llvh::format_hex(parentId, 6);
     }
+    OS << ", flags: ";
+    OS << (flags.isInnerScope ? "Is" : "  ");
+    OS << (flags.isDynamic ? "D" : " ");
     OS << ", variable count: " << varNamesCount;
     OS << '\n';
     for (int64_t i = 0; i < varNamesCount; i++) {
-      llvh::StringRef name = decodeString(&offset, lexData);
+      llvh::StringRef name = decodeString(&offset, scopeData);
       OS << "    \"";
       OS.write_escaped(name);
-      OS << '"' << '\n';
+      OS << "\"\n";
     }
   }
-  assert(offset == lexData.size());
+  assert(offset == scopeData.size());
   OS << "  " << llvh::format_hex(offset, 6)
-     << "  end of debug lexical table\n\n";
+     << "  end of debug scope descriptor table\n\n";
 }
 
 void DebugInfo::disassembleTextifiedCallee(llvh::raw_ostream &OS) const {
@@ -511,6 +553,8 @@ uint32_t DebugInfoGenerator::appendSourceLocations(
     appendSignedLEB128(sourcesData_, adelta);
     appendSignedLEB128(sourcesData_, ldelta);
     appendSignedLEB128(sourcesData_, cdelta);
+    appendSignedLEB128(sourcesData_, next.scopeAddress);
+    appendSignedLEB128(sourcesData_, next.envReg);
     if (sdelta)
       appendSignedLEB128(sourcesData_, sdelta);
     previous = &next;
@@ -523,35 +567,21 @@ uint32_t DebugInfoGenerator::appendSourceLocations(
 DebugInfoGenerator::DebugInfoGenerator(UniquingFilenameTable &&filenameTable)
     : filenameStrings_(
           UniquingFilenameTable::toStorage(std::move(filenameTable))) {
-  // Initialize the empty data entry in debug lexical table.
-  assert(
-      lexicalData_.size() == kMostCommonEntryOffset &&
-      "Lexical data should initially be kMostCommonEntryOffset");
   assert(
       textifiedCallees_.size() == kMostCommonEntryOffset &&
       "Textified callee should initially be kMostCommonEntryOffset");
+  assert(
+      scopeDescData_.size() == kMostCommonEntryOffset &&
+      "Scope desc data should initially be kMostCommonEntryOffset");
 
-  // Lexical data table.
-  appendSignedLEB128(lexicalData_, -1); // parent function
-  appendSignedLEB128(lexicalData_, 0); // name count
+  // Initialize the empty data entry in debug lexical table.
+  // Initialize the empty data entry in debug lexical table.
+  appendSignedLEB128(scopeDescData_, -1); // parent function
+  appendSignedLEB128(scopeDescData_, 0); // flags
+  appendSignedLEB128(scopeDescData_, 0); // name count
 
   // Textified callee table.
   appendSignedLEB128(textifiedCallees_, 0);
-}
-
-uint32_t DebugInfoGenerator::appendLexicalData(
-    OptValue<uint32_t> parentFunc,
-    llvh::ArrayRef<Identifier> namesUTF8) {
-  assert(validData && "DebugInfoGenerator not valid");
-  if (!parentFunc.hasValue() && namesUTF8.empty()) {
-    return kMostCommonEntryOffset;
-  }
-  const uint32_t startOffset = lexicalData_.size();
-  appendSignedLEB128(lexicalData_, parentFunc ? *parentFunc : int64_t(-1));
-  appendSignedLEB128(lexicalData_, namesUTF8.size());
-  for (Identifier name : namesUTF8)
-    appendString(lexicalData_, name);
-  return startOffset;
 }
 
 uint32_t DebugInfoGenerator::appendTextifiedCalleeData(
@@ -568,6 +598,25 @@ uint32_t DebugInfoGenerator::appendTextifiedCalleeData(
   return startOffset;
 }
 
+uint32_t DebugInfoGenerator::appendScopeDesc(
+    OptValue<uint32_t> parentScopeOffset,
+    DebugScopeDescriptor::Flags flags,
+    llvh::ArrayRef<Identifier> names) {
+  assert(validData && "DebugInfoGenerator not valid");
+  if (!parentScopeOffset.hasValue() && names.empty()) {
+    return kMostCommonEntryOffset;
+  }
+  const uint32_t startOffset = scopeDescData_.size();
+  appendSignedLEB128(
+      scopeDescData_, !parentScopeOffset.hasValue() ? -1 : *parentScopeOffset);
+  appendSignedLEB128(scopeDescData_, flags.toUint32());
+  appendSignedLEB128(scopeDescData_, names.size());
+  for (Identifier name : names) {
+    appendString(scopeDescData_, name);
+  }
+  return startOffset;
+}
+
 DebugInfo DebugInfoGenerator::serializeWithMove() {
   assert(validData);
   validData = false;
@@ -575,12 +624,12 @@ DebugInfo DebugInfoGenerator::serializeWithMove() {
   auto combinedData = std::move(sourcesData_);
 
   combinedData.reserve(
-      combinedData.size() + lexicalData_.size() + textifiedCallees_.size() +
+      combinedData.size() + scopeDescData_.size() + textifiedCallees_.size() +
       stringTable_.size());
 
-  uint32_t lexicalStart = combinedData.size();
+  uint32_t scopeDescStart = combinedData.size();
   combinedData.insert(
-      combinedData.end(), lexicalData_.begin(), lexicalData_.end());
+      combinedData.end(), scopeDescData_.begin(), scopeDescData_.end());
 
   uint32_t textifiedCalleeStart = combinedData.size();
   combinedData.insert(
@@ -594,7 +643,7 @@ DebugInfo DebugInfoGenerator::serializeWithMove() {
   return DebugInfo(
       std::move(filenameStrings_),
       std::move(files_),
-      lexicalStart,
+      scopeDescStart,
       textifiedCalleeStart,
       stringTableStart,
       StreamVector<uint8_t>(std::move(combinedData)));

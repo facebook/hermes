@@ -1,0 +1,36 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`flowDefToTSDef types/react/global 1`] = `
+"/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ *
+ * @format
+ */
+
+import * as React from 'react';
+type T1 = React.ReactNode;
+type T2 = JSX.Element;
+type T3 = React.ReactElement<typeof Component>;
+type T4 = React.ElementRef<typeof Component>;
+type T5 = React.ComponentType<Props & React.RefAttributes<HTMLElement>>;
+type T6 = React.Context<Foo>;
+type T7 = React.ComponentType<Props>;
+type T8 = React.Fragment;
+type T9 = JSX.LibraryManagedAttributes<
+  typeof Component,
+  React.ComponentProps<typeof Component>
+>;
+type T10 = NonNullable<React.Ref<typeof Component> | string | number>;
+type T11 = React.Key;
+type T12 = React.Component<Props, {}>;
+type T13 = React.ElementType;
+type T14 = T | ReadonlyArray<T>;
+type T15 = React.ComponentProps<T>;
+type Props = {A: string};
+declare function Component(props: Props): React.ReactNode;
+"
+`;

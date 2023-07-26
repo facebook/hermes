@@ -301,7 +301,7 @@ class Callable : public JSObject {
   /// Retrieves the "prototype" property from \p selfHandle,
   /// and calls newObject() on it if it's an object,
   /// else calls newObject() on the built-in Object prototype object.
-  static CallResult<PseudoHandle<JSObject>> createThisForConstruct(
+  static CallResult<PseudoHandle<JSObject>> createThisForConstruct_RJS(
       Handle<Callable> selfHandle,
       Runtime &runtime);
 
@@ -376,7 +376,7 @@ class BoundFunction final : public Callable {
 
   /// Initialize the length and name and property of a lazily created bound
   /// function.
-  static ExecutionStatus initializeLengthAndName(
+  static ExecutionStatus initializeLengthAndName_RJS(
       Handle<Callable> selfHandle,
       Runtime &runtime,
       Handle<Callable> target,
@@ -406,7 +406,7 @@ class BoundFunction final : public Callable {
   }
 
   /// Create an instance of the object using the bound constructor.
-  static CallResult<PseudoHandle<JSObject>> _newObjectImpl(
+  static CallResult<PseudoHandle<JSObject>> _newObjectImpl_RJS(
       Handle<Callable> selfHandle,
       Runtime &runtime,
       Handle<JSObject> parentHandle);

@@ -121,7 +121,7 @@ class BytecodeFunction {
 
   bool hasDebugInfo() const {
     return debugOffsets_.sourceLocations != DebugOffsets::NO_OFFSET ||
-        debugOffsets_.lexicalData != DebugOffsets::NO_OFFSET;
+        debugOffsets_.scopeDescData != DebugOffsets::NO_OFFSET;
   }
 
   const DebugOffsets *getDebugOffsets() const {

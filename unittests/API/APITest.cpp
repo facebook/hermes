@@ -434,11 +434,10 @@ TEST(HermesWatchTimeLimitTest, WatchTimeLimit) {
 }
 
 TEST(HermesTriggerAsyncTimeoutTest, TriggerAsyncTimeout) {
-  // Some code that exercies the async break checks.
+  // Some code that loops forever to exercise the async interrupt.
   const char *forEver = "for (;;){}";
   uint32_t ShortTimeoutMS = 123;
   {
-    // Single runtime with ~20 minute limit that will not be reached.
     auto rt = makeHermesRuntime();
     std::thread t([&]() {
       std::this_thread::sleep_for(std::chrono::milliseconds(ShortTimeoutMS));

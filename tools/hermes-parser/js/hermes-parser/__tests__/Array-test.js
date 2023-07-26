@@ -16,7 +16,7 @@ import {
   expectBabelAlignment,
   expectEspreeAlignment,
 } from '../__test_utils__/alignment-utils';
-import {parse, parseForSnapshot} from '../__test_utils__/parse';
+import {parseForSnapshot} from '../__test_utils__/parse';
 
 const testCase: AlignmentCase = {
   code: 'const [a,,b] = [1,,2];',
@@ -85,50 +85,57 @@ describe('Array', () => {
 
   test('Babel', () => {
     // Babel AST array nodes
-    expect(parse(testCase.code, {babel: true})).toMatchObject({
-      type: 'File',
-      program: {
-        type: 'Program',
-        body: [
+    expect(parseForSnapshot(testCase.code, {babel: true}))
+      .toMatchInlineSnapshot(`
+      {
+        "body": [
           {
-            type: 'VariableDeclaration',
-            declarations: [
+            "declarations": [
               {
-                type: 'VariableDeclarator',
-                id: {
-                  type: 'ArrayPattern',
-                  elements: [
+                "id": {
+                  "elements": [
                     {
-                      type: 'Identifier',
-                      name: 'a',
+                      "name": "a",
+                      "optional": false,
+                      "type": "Identifier",
+                      "typeAnnotation": null,
                     },
                     null,
                     {
-                      type: 'Identifier',
-                      name: 'b',
+                      "name": "b",
+                      "optional": false,
+                      "type": "Identifier",
+                      "typeAnnotation": null,
                     },
                   ],
+                  "type": "ArrayPattern",
+                  "typeAnnotation": null,
                 },
-                init: {
-                  type: 'ArrayExpression',
-                  elements: [
+                "init": {
+                  "elements": [
                     {
-                      type: 'NumericLiteral',
-                      value: 1,
+                      "type": "NumericLiteral",
+                      "value": 1,
                     },
                     null,
                     {
-                      type: 'NumericLiteral',
-                      value: 2,
+                      "type": "NumericLiteral",
+                      "value": 2,
                     },
                   ],
+                  "trailingComma": false,
+                  "type": "ArrayExpression",
                 },
+                "type": "VariableDeclarator",
               },
             ],
+            "kind": "const",
+            "type": "VariableDeclaration",
           },
         ],
-      },
-    });
+        "type": "Program",
+      }
+    `);
     expectBabelAlignment(testCase);
   });
 });

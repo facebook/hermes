@@ -205,9 +205,8 @@ void defineAccessor(
     setter = funcRes.get();
   }
 
-  auto crtRes = PropertyAccessor::create(runtime, getter, setter);
-  assert(crtRes != ExecutionStatus::EXCEPTION && "unable to define accessor");
-  auto accessor = runtime.makeHandle<PropertyAccessor>(*crtRes);
+  auto accessor = runtime.makeHandle<PropertyAccessor>(
+      PropertyAccessor::create(runtime, getter, setter));
 
   DefinePropertyFlags dpf{};
   dpf.setEnumerable = 1;
@@ -445,7 +444,8 @@ CallResult<HermesValue> createDynamicFunction(
   builder->appendStringPrim(body);
   builder->appendASCIIRef(functionFooter);
 
-  auto evalRes = directEval(runtime, builder->getStringPrimitive(), {}, true);
+  auto evalRes =
+      directEval(runtime, builder->getStringPrimitive(), {}, false, true);
   if (evalRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }

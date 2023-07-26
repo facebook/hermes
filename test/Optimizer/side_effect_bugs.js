@@ -15,7 +15,8 @@ function test0() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [test0]
+// CHECK-NEXT:globals = [test0]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %test0#0#1()#2 : undefined, %0
@@ -24,7 +25,7 @@ function test0() {
 // CHECK-NEXT:function_end
 
 // CHECK:function test0#0#1()#2 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{test0#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test0#0#1()#2}
 // CHECK-NEXT:  %1 = BinaryOperatorInst 'in', "foo" : string, true : boolean

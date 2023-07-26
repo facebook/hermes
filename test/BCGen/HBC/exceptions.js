@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -target=HBC -dump-bytecode -pretty-disassemble=false -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -bs -target=HBC -dump-bytecode -pretty-disassemble=false -O %s | %FileCheck --match-full-lines %s
 
 function foo(a) {
   try {

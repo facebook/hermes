@@ -24,7 +24,8 @@ function test_member_access(obj, param) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [foo, bar, test_member_access]
+// CHECK-NEXT:globals = [foo, bar, test_member_access]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2, %0
@@ -40,7 +41,7 @@ function test_member_access(obj, param) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1(a, b, c)#2
-// CHECK-NEXT:frame = [a#2, b#2, c#2]
+// CHECK-NEXT:S{foo#0#1()#2} = [a#2, b#2, c#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %a, [a#2], %0
@@ -50,7 +51,7 @@ function test_member_access(obj, param) {
 // CHECK-NEXT:function_end
 
 // CHECK:function bar#0#1(x, y, z)#3
-// CHECK-NEXT:frame = [x#3, y#3, z#3]
+// CHECK-NEXT:S{bar#0#1()#3} = [x#3, y#3, z#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{bar#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#3], %0
@@ -60,12 +61,12 @@ function test_member_access(obj, param) {
 // CHECK-NEXT:  %5 = LoadFrameInst [x#3], %0
 // CHECK-NEXT:  %6 = LoadFrameInst [y#3], %0
 // CHECK-NEXT:  %7 = LoadFrameInst [z#3], %0
-// CHECK-NEXT:  %8 = CallInst %4, undefined : undefined, %5, %6, %7
+// CHECK-NEXT:  %8 = CallInst %4, undefined : undefined, undefined : undefined, %5, %6, %7
 // CHECK-NEXT:  %9 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_member_access#0#1(obj, param)#4
-// CHECK-NEXT:frame = [obj#4, param#4]
+// CHECK-NEXT:S{test_member_access#0#1()#4} = [obj#4, param#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_member_access#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj#4], %0
@@ -73,6 +74,6 @@ function test_member_access(obj, param) {
 // CHECK-NEXT:  %3 = LoadFrameInst [obj#4], %0
 // CHECK-NEXT:  %4 = LoadPropertyInst %3, "foo" : string
 // CHECK-NEXT:  %5 = LoadFrameInst [param#4], %0
-// CHECK-NEXT:  %6 = CallInst %4, %3, %5
+// CHECK-NEXT:  %6 = CallInst %4, undefined : undefined, %3, %5
 // CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

@@ -621,7 +621,7 @@ const Token *JSLexer::advanceInJSXChild() {
           break;
         }
         // Fall-through to start scanning text.
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
 
       default: {
         const char *start = curCharPtr_;
@@ -1091,7 +1091,7 @@ void JSLexer::consumeIdentifierParts() {
         errorRange(
             startLoc,
             "Unicode escape \\u" + Twine::utohexstr(cp) +
-                "is not a valid identifier codepoint");
+                " is not a valid identifier codepoint");
       } else {
         appendUnicodeToStorage(cp);
       }
@@ -1807,7 +1807,7 @@ void JSLexer::scanString() {
             appendUnicodeToStorage(0);
             break;
           }
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case '1':
         case '2':
         case '3':
@@ -1996,7 +1996,7 @@ void JSLexer::scanTemplateLiteral() {
             appendUnicodeToStorage(0);
             break;
           }
-          // fall-through
+          [[fallthrough]];
 
         case '1':
         case '2':

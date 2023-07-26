@@ -17,7 +17,8 @@ function thisUndefined () {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [thisUndefined]
+// CHECK-NEXT:globals = [thisUndefined]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %thisUndefined#0#1()#2 : object, %0
@@ -26,7 +27,7 @@ function thisUndefined () {
 // CHECK-NEXT:function_end
 
 // CHECK:function thisUndefined#0#1()#2 : object
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{thisUndefined#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{thisUndefined#0#1()#2}
 // CHECK-NEXT:  %1 = ReturnInst globalObject : object

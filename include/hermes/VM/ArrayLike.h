@@ -22,7 +22,7 @@ namespace vm {
 
 /// ES9 7.3.17 CreateListFromArrayLike
 /// Returns the length of the List
-inline CallResult<uint64_t> getArrayLikeLength(
+inline CallResult<uint64_t> getArrayLikeLength_RJS(
     Handle<JSObject> arrayLikeHandle,
     Runtime &runtime) {
   auto propRes = JSObject::getNamed_RJS(
@@ -40,14 +40,14 @@ inline CallResult<uint64_t> getArrayLikeLength(
 /// however it likes.  It is permitted to allocate, and it must return
 /// ExecutionStatus.
 template <typename ElementCB>
-ExecutionStatus createListFromArrayLike(
+ExecutionStatus createListFromArrayLike_RJS(
     Handle<JSObject> arrayLikeHandle,
     Runtime &runtime,
     uint64_t length,
     const ElementCB &elementCB) {
   GCScope gcScope(runtime);
   Handle<ArrayImpl> elemArray = Handle<ArrayImpl>::dyn_vmcast(arrayLikeHandle);
-  MutableHandle<> iHandle{runtime, HermesValue::encodeNumberValue(0)};
+  MutableHandle<> iHandle{runtime, HermesValue::encodeTrustedNumberValue(0)};
   auto marker = gcScope.createMarker();
   if (LLVM_LIKELY(elemArray)) {
     for (uint64_t elemIdx = 0; elemIdx < length; ++elemIdx) {
@@ -67,7 +67,7 @@ ExecutionStatus createListFromArrayLike(
       }
       // Slow path fallback: the actual getComputed on this,
       // because the real value could be up the prototype chain.
-      iHandle = HermesValue::encodeNumberValue(elemIdx);
+      iHandle = HermesValue::encodeTrustedNumberValue(elemIdx);
       CallResult<PseudoHandle<>> propRes =
           JSObject::getComputed_RJS(arrayLikeHandle, runtime, iHandle);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
@@ -83,7 +83,7 @@ ExecutionStatus createListFromArrayLike(
     // Not an array. Use this slow path.
     for (uint64_t elemIdx = 0; elemIdx < length; ++elemIdx) {
       gcScope.flushToMarker(marker);
-      iHandle = HermesValue::encodeNumberValue(elemIdx);
+      iHandle = HermesValue::encodeTrustedNumberValue(elemIdx);
       CallResult<PseudoHandle<>> propRes =
           JSObject::getComputed_RJS(arrayLikeHandle, runtime, iHandle);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {

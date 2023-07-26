@@ -10,6 +10,7 @@
 #include "hermes/Optimizer/PassManager/PassManager.h"
 #include "hermes/Optimizer/Scalar/Auditor.h"
 #include "hermes/Optimizer/Scalar/DCE.h"
+#include "hermes/Optimizer/Scalar/ScopeTransformations.h"
 #include "hermes/Optimizer/Scalar/SimplifyCFG.h"
 #include "hermes/Optimizer/Scalar/StackPromotion.h"
 #include "hermes/Optimizer/Scalar/TypeInference.h"
@@ -43,6 +44,9 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PassManager PM{M.getContext().getCodeGenerationSettings()};
 
   // Add the optimization passes.
+  if (M.getContext().getCodeGenerationSettings().enableBlockScoping) {
+    PM.addPass<ScopeMerger>();
+  }
 
   // We need to fold constant strings before staticrequire.
   PM.addInstSimplify();
@@ -71,7 +75,6 @@ void hermes::runFullOptimizationPasses(Module &M) {
   // Run type inference before CSE so that we can better reason about binopt.
   PM.addTypeInference();
   PM.addCSE();
-  PM.addTDZDedup();
   PM.addSimplifyCFG();
 
   PM.addInstSimplify();

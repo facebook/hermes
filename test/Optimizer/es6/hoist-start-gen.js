@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -O -Xflow-parser -dump-ir %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -O -Xflow-parser -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
 // REQUIRES: flowparser
 
 function *foo() {
@@ -17,7 +17,7 @@ function *foo() {
 }
 
 // CHECK-LABEL: function foo#0#1()#2 : object
-// CHECK-NEXT: frame = []
+// CHECK-NEXT: S{foo#0#1()#2} = []
 // CHECK-NEXT: %BB0:
 // CHECK-NEXT:   %0 = CreateScopeInst %S{foo#0#1()#2}
 // CHECK-NEXT:   %1 = CreateGeneratorInst %?anon_0_foo#1#2()#3, %0
@@ -25,7 +25,7 @@ function *foo() {
 // CHECK-NEXT: function_end
 
 // CHECK-LABEL: function ?anon_0_foo#1#2()#3
-// CHECK-NEXT: frame = []
+// CHECK-NEXT: S{?anon_0_foo#1#2()#3} = []
 // CHECK-NEXT: %BB0:
 // CHECK-NEXT:   %0 = StartGeneratorInst
 // CHECK-NEXT:   %1 = AllocStackInst $count
