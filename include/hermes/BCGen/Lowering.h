@@ -48,6 +48,9 @@ class LowerAllocObject : public FunctionPass {
   bool runOnFunction(Function *F) override;
 
  private:
+  /// Define a type for managing lists of StoreNewOwnPropertyInsts.
+  using StoreList = llvh::SmallVector<StoreNewOwnPropertyInst *, 4>;
+
   /// Perform a series of lowerings for a given allocInst.
   bool lowerAlloc(AllocObjectInst *allocInst);
   /// Serialize AllocObjects with literal property and value sets into object
@@ -55,12 +58,11 @@ class LowerAllocObject : public FunctionPass {
   /// overwritten by PutByIds.
   bool lowerAllocObjectBuffer(
       AllocObjectInst *allocInst,
-      llvh::SmallVectorImpl<StoreNewOwnPropertyInst *> &users,
+      const StoreList &users,
       uint32_t maxSize);
   /// Estimate best number of elements to serialize into the buffer.
   /// Try optimizing for max bytecode size saving.
-  uint32_t estimateBestNumElemsToSerialize(
-      llvh::SmallVectorImpl<StoreNewOwnPropertyInst *> &users);
+  uint32_t estimateBestNumElemsToSerialize(const StoreList &users);
 };
 
 /// Lowers AllocObjectLiterals which target object literals with
