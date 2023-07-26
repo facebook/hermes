@@ -444,10 +444,10 @@ TEST(HermesTriggerAsyncTimeoutTest, TriggerAsyncTimeout) {
       std::this_thread::sleep_for(std::chrono::milliseconds(ShortTimeoutMS));
       rt->asyncTriggerTimeout();
     });
-    t.detach();
     ASSERT_THROW(
         rt->evaluateJavaScript(std::make_unique<StringBuffer>(forEver), ""),
         JSIException);
+    t.join();
   }
 }
 
