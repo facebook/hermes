@@ -20,6 +20,7 @@ if (EMSCRIPTEN)
   target_link_options(hermes-parser-wasm PRIVATE "SHELL: -s ALLOW_MEMORY_GROWTH=1")
   target_link_options(hermes-parser-wasm PRIVATE
     "SHELL: -s EXTRA_EXPORTED_RUNTIME_METHODS=[cwrap,ccall]")
+  target_link_options(hermes-parser-wasm PRIVATE "SHELL: -s MODULARIZE=1")
   target_link_options(hermes-parser-wasm PRIVATE "SHELL: -s EXPORT_NAME=hermes_parser_wasm")
   target_link_options(hermes-parser-wasm PRIVATE
     "SHELL: -s BINARYEN_ASYNC_COMPILATION=0 -s SINGLE_FILE=1 -s WASM_ASYNC_COMPILATION=0")

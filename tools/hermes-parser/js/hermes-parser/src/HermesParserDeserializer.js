@@ -16,7 +16,7 @@ import type {
   HermesToken,
   HermesComment,
 } from './HermesAST';
-import typeof HermesParserWASM from './HermesParserWASM';
+import type {HermesParserWASM} from './HermesParserWASM';
 import type {ParserOptions} from './ParserOptions';
 
 import HermesParserDecodeUTF8String from './HermesParserDecodeUTF8String';
