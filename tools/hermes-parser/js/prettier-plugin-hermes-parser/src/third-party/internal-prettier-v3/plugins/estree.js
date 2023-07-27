@@ -257,7 +257,7 @@
   function getDocErrorMessage(doc) {
     const type = doc === null ? "null" : typeof doc;
     if (type !== "string" && type !== "object") {
-      return `Unexpected doc '${type}', 
+      return `Unexpected doc '${type}',
 Expected it to be 'string' or 'object'.`;
     }
     if (get_doc_type_default(doc)) {
@@ -5036,9 +5036,18 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }, {
     originalText: text
   }) {
-    const skipComment = (idx) => skip_inline_comment_default(text, skip_trailing_comment_default(text, idx));
-    const skipToComma = (currentIdx) => text[currentIdx] === "," ? currentIdx : skipToComma(skipComment(currentIdx + 1));
-    return is_next_line_empty_default(text, skipToComma(locEnd(node)));
+    let currentIdx = locEnd(node);
+    if (currentIdx === locStart(node)) {
+      return false;
+    }
+    const length = text.length;
+    while (currentIdx < length) {
+      if (text[currentIdx] === ",") {
+        break;
+      }
+      currentIdx = skip_inline_comment_default(text, skip_trailing_comment_default(text, currentIdx + 1));
+    }
+    return is_next_line_empty_default(text, currentIdx);
   }
   function printArrayElements(path, options2, elementsProperty, print3) {
     const parts = [];
@@ -6304,7 +6313,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         (node, key) => key === "typeAnnotation" && (node.type === "TSJSDocNullableType" || node.type === "TSJSDocNonNullableType" || node.type === "TSTypePredicate")
       ) || /*
           Flow
-      
+
           ```js
           declare function foo(): void;
                               ^^^^^^^^ `TypeAnnotation`
@@ -6316,7 +6325,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         (node, key) => key === "id" && node.type === "DeclareFunction"
       ) || /*
           Flow
-      
+
           ```js
           type A = () => infer R extends string;
                                          ^^^^^^ `TypeAnnotation`
