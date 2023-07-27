@@ -17,3 +17,13 @@ export type ParserOptions = {
   sourceType?: 'module' | 'script' | 'unambiguous',
   tokens?: boolean,
 };
+
+export const ParserOptionsKeys: $ReadOnlySet<$Keys<ParserOptions>> = new Set([
+  'allowReturnOutsideFunction',
+  'babel',
+  'flow',
+  'enableExperimentalComponentSyntax',
+  'sourceFilename',
+  'sourceType',
+  'tokens',
+]);
