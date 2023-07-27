@@ -449,42 +449,6 @@ Value *simplifyGetConstructedObjectInst(GetConstructedObjectInst *GCOI) {
   return nullptr;
 }
 
-Value *simplifySwitchInst(SwitchInst *SI) {
-  auto *thisBlock = SI->getParent();
-  IRBuilder builder(thisBlock->getParent());
-  builder.setInsertionBlock(thisBlock);
-
-  Value *input = SI->getInputValue();
-  auto *litInput = llvh::dyn_cast<Literal>(input);
-
-  // If input of switch is not literal, nothing can be done.
-  if (!litInput) {
-    return nullptr;
-  }
-
-  auto *destination = SI->getDefaultDestination();
-
-  for (unsigned i = 0, e = SI->getNumCasePair(); i < e; i++) {
-    auto switchCase = SI->getCasePair(i);
-
-    // Look for a case which matches input.
-    if (switchCase.first == litInput) {
-      destination = switchCase.second;
-      break;
-    }
-  }
-
-  // Rewrite all phi nodes that no longer have incoming arrows from this block.
-  for (unsigned i = 0, e = SI->getNumSuccessors(); i < e; i++) {
-    auto *successor = SI->getSuccessor(i);
-    if (successor == destination)
-      continue;
-    deleteIncomingBlockFromPhis(successor, thisBlock);
-  }
-
-  return builder.createBranchInst(destination);
-}
-
 Value *simplifyAsNumber(AsNumberInst *asNumber) {
   Value *reduced = reduceAsNumber(asNumber);
   return reduced == asNumber ? nullptr : reduced;
@@ -615,8 +579,6 @@ OptValue<Value *> simplifyInstruction(Instruction *I) {
       return simplifyPhiInst(cast<PhiInst>(I));
     case ValueKind::CondBranchInstKind:
       return simplifyCondBranchInst(cast<CondBranchInst>(I));
-    case ValueKind::SwitchInstKind:
-      return simplifySwitchInst(cast<SwitchInst>(I));
     case ValueKind::CallInstKind:
       return simplifyCallInst(cast<CallInst>(I));
     case ValueKind::GetConstructedObjectInstKind:
