@@ -522,7 +522,7 @@ endif()
 
 if (GCC_COMPATIBLE)
   # Don't export symbols unless we explicitly say so
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
+  append("-fvisibility=hidden" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
   # We depend on reading/writing certain properties in C++ objects in generated
   # C code through C structs that mirror those C++ objects. This means that
   # unrelated types may alias in our code, and we must disable strict aliasing.
