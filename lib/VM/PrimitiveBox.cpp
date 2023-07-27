@@ -157,9 +157,9 @@ CallResult<bool> JSString::_setOwnIndexedImpl(
       **vr,
       DefinePropertyFlags::getDefaultNewPropertyFlags(),
       valueHandle);
-  assert(
-      dr != ExecutionStatus::EXCEPTION &&
-      "defineOwnProperty() threw in JSString::_setOwnIndexedImpl()");
+  if (LLVM_UNLIKELY(dr == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+
   return *dr;
 }
 
