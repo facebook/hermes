@@ -1,3 +1,31 @@
+## 0.13.0
+
+### `hermes-estree`
+
+### `hermes-parser`
+
+- Strip TS only `tsModifiers` property from `PropertyDefinition` nodes
+- Fix issue with `ConditionalTypeAnnotation` not being correctly stripped with `babel: true` mode.
+
+### `hermes-eslint`
+
+### `hermes-transform`
+
+- Switched the printer to always use `prettier-plugin-hermes-parser` to ensure it can support the latest Flow syntax.
+
+### `flow-api-translator`
+
+- Switched the printer to always use `prettier-plugin-hermes-parser` to ensure it can support the latest Flow syntax.
+
+### `prettier-plugin-hermes-parser`
+
+- Patched issue in prettier that caused infinite recursion when printing array produced by `hermes-transform`.
+  - See https://github.com/prettier/prettier/pull/14963 for upstream patch.
+
+### `babel-plugin-syntax-hermes-parser`
+
+- Created new package which creates a Hermes parser plugin for [Babel](https://babeljs.io/). This plugin switches Babel to use `hermes-parser` instead of the `@babel/parser`. Since Hermes parser uses C++ compiled to WASM it is significantly faster and provides full syntax support for Flow.
+
 ## 0.12.1
 
 ### `prettier-plugin-hermes-parser`
