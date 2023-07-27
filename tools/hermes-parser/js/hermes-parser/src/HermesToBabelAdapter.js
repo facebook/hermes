@@ -96,6 +96,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
       case 'TupleTypeLabeledElement':
       case 'TupleTypeSpreadElement':
       case 'ObjectTypeMappedTypeProperty':
+      case 'ComponentTypeAnnotation':
         return this.mapUnsupportedTypeAnnotation(node);
       case 'BigIntLiteral':
         return this.mapBigIntLiteral(node);
@@ -111,6 +112,8 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapDeclareVariable(node);
       case 'DeclareEnum':
         return this.mapDeclareEnum(node);
+      case 'DeclareComponent':
+        return this.mapDeclareComponent(node);
       case 'JSXElement':
         return this.mapJSXElement(node);
       case 'ComponentDeclaration':
@@ -546,6 +549,20 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
     );
 
     delete nodeUnprocessed.body;
+
+    nodeUnprocessed.type = 'DeclareVariable';
+
+    return this.mapDeclareVariable(nodeUnprocessed);
+  }
+
+  mapDeclareComponent(nodeUnprocessed: HermesNode): HermesNode {
+    nodeUnprocessed.id.typeAnnotation =
+      this.mapUnsupportedTypeAnnotation(nodeUnprocessed);
+
+    delete nodeUnprocessed.params;
+    delete nodeUnprocessed.rest;
+    delete nodeUnprocessed.typeParameters;
+    delete nodeUnprocessed.returnType;
 
     nodeUnprocessed.type = 'DeclareVariable';
 
