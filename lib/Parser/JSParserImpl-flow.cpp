@@ -409,6 +409,60 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentParameterFlow(
   return None;
 }
 
+Optional<ESTree::Node *> JSParserImpl::parseComponentTypeAnnotationFlow() {
+  // component
+  assert(check(componentIdent_));
+  SMLoc start = advance(JSLexer::GrammarContext::Type).Start;
+
+  // identifier
+  if (check(TokenKind::identifier)) {
+    error(
+        tok_->getSourceRange(),
+        "component type annotations should not contain a name");
+    advance(JSLexer::GrammarContext::Type);
+  }
+
+  ESTree::Node *typeParams = nullptr;
+
+  if (check(TokenKind::less)) {
+    auto optTypeParams = parseTypeParamsFlow();
+    if (!optTypeParams)
+      return None;
+    typeParams = *optTypeParams;
+  }
+
+  if (!need(
+          TokenKind::l_paren,
+          "at start of component parameter list",
+          "component type annotation starts here",
+          start)) {
+    return None;
+  }
+
+  ESTree::NodeList paramList;
+  auto restOpt = parseComponentTypeParametersFlow(Param{}, paramList);
+  if (!restOpt)
+    return None;
+  ESTree::Node *rest = *restOpt;
+
+  ESTree::Node *returnType = nullptr;
+  if (check(TokenKind::colon)) {
+    SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
+    if (!check(checksIdent_)) {
+      auto optRet = parseTypeAnnotationFlow(annotStart);
+      if (!optRet)
+        return None;
+      returnType = *optRet;
+    }
+  }
+
+  return setLocation(
+      start,
+      tok_->getEndLoc(),
+      new (context_) ESTree::ComponentTypeAnnotationNode(
+          std::move(paramList), rest, typeParams, returnType));
+}
+
 Optional<ESTree::Node *> JSParserImpl::parseComponentTypeParametersFlow(
     Param param,
     ESTree::NodeList &paramList) {
@@ -1765,6 +1819,13 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
             start,
             getPrevTokenEndLoc(),
             new (context_) ESTree::KeyofTypeAnnotationNode(*optBody));
+      }
+      if (context_.getParseFlowComponentSyntax() &&
+          tok_->getResWordOrIdentifier() == componentIdent_) {
+        auto optComponent = parseComponentTypeAnnotationFlow();
+        if (!optComponent)
+          return None;
+        return *optComponent;
       }
       if (tok_->getResWordOrIdentifier() == interfaceIdent_) {
         advance(JSLexer::GrammarContext::Type);
