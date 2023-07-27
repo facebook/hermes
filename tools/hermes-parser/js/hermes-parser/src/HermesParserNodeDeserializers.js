@@ -82,6 +82,18 @@ function deserializeFunctionDeclaration() {
   };
 }
 
+function deserializeComponentDeclaration() {
+  return {
+    type: 'ComponentDeclaration',
+    loc: this.addEmptyLoc(),
+    id: this.deserializeNode(),
+    params: this.deserializeNodeList(),
+    body: this.deserializeNode(),
+    typeParameters: this.deserializeNode(),
+    rendersType: this.deserializeNode(),
+  };
+}
+
 function deserializeFunctionLikeLast() {
   throw new Error('FunctionLike' + ' should not appear in program buffer');
 }
@@ -1475,18 +1487,6 @@ function deserializeEnumBooleanMember() {
     init: this.deserializeNode(),
   };
 }
-function deserializeComponentDeclaration() {
-  return {
-    type: 'ComponentDeclaration',
-    loc: this.addEmptyLoc(),
-    id: this.deserializeNode(),
-    params: this.deserializeNodeList(),
-    body: this.deserializeNode(),
-    typeParameters: this.deserializeNode(),
-    rendersType: this.deserializeNode(),
-  };
-}
-
 function deserializeComponentParameter() {
   return {
     type: 'ComponentParameter',
@@ -1842,6 +1842,8 @@ module.exports = [
 
   deserializeFunctionDeclaration,
 
+  deserializeComponentDeclaration,
+
   deserializeFunctionLikeLast,
   deserializeStatementFirst,
   deserializeLoopStatementFirst,
@@ -2036,8 +2038,6 @@ module.exports = [
   deserializeEnumStringMember,
   deserializeEnumNumberMember,
   deserializeEnumBooleanMember,
-  deserializeComponentDeclaration,
-
   deserializeComponentParameter,
   deserializeTSTypeAnnotation,
   deserializeTSAnyKeyword,

@@ -152,6 +152,17 @@ void SemanticValidator::visit(ArrowFunctionExpressionNode *arrowFunc) {
       arrowFunc->getSemInfo()->usesArguments;
 }
 
+#if HERMES_PARSE_FLOW
+/// Process a component declaration by creating a new FunctionContext.
+void SemanticValidator::visit(ComponentDeclarationNode *componentDecl) {
+  visitFunction(
+      componentDecl,
+      componentDecl->_id,
+      componentDecl->_params,
+      componentDecl->_body);
+}
+#endif
+
 /// Ensure that the left side of for-in is an l-value.
 void SemanticValidator::visit(ForInStatementNode *forIn) {
   visitForInOf(forIn, forIn->_left);
@@ -708,16 +719,24 @@ void SemanticValidator::visitFunction(
   }
 #endif
 
-  // Set to false if the parameter list contains binding patterns.
-  bool simpleParameterList = true;
   for (auto &param : params) {
-    simpleParameterList &= !isa<PatternNode>(param);
+#if HERMES_PARSE_FLOW
+    if (isa<ComponentParameterNode>(param)) {
+      validateDeclarationNames(
+          FunctionInfo::VarDecl::Kind::Var,
+          dyn_cast<ComponentParameterNode>(&param)->_local,
+          &newFuncCtx.semInfo->paramNames,
+          nullptr);
+      continue;
+    }
+#endif
     validateDeclarationNames(
         FunctionInfo::VarDecl::Kind::Var,
         &param,
         &newFuncCtx.semInfo->paramNames);
   }
 
+  bool simpleParameterList = ESTree::hasSimpleParams(node);
   if (!simpleParameterList && useStrictNode) {
     sm_.error(
         useStrictNode->getSourceRange(),
@@ -775,6 +794,19 @@ void SemanticValidator::visitParamsAndBody(FunctionLikeNode *node) {
       visitESTreeNode(*this, fe->_returnType, fe);
       break;
     }
+#if HERMES_PARSE_FLOW
+    case NodeKind::ComponentDeclaration: {
+      auto *fe = cast<ESTree::ComponentDeclarationNode>(node);
+      visitESTreeNode(*this, fe->_id, fe);
+      for (auto &param : fe->_params) {
+        llvh::SaveAndRestore<bool> oldIsFormalParams{isFormalParams_, true};
+        visitESTreeNode(*this, &param, fe);
+      }
+      visitBody(fe->_body, fe);
+      visitESTreeNode(*this, fe->_rendersType, fe);
+      break;
+    }
+#endif
     default:
       visitESTreeChildren(*this, node);
   }

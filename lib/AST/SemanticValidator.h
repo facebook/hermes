@@ -177,6 +177,7 @@ class SemanticValidator {
   void visit(CoverRestElementNode *R);
 #if HERMES_PARSE_FLOW
   void visit(CoverTypedIdentifierNode *R);
+  void visit(ComponentDeclarationNode *componentDecl);
 #endif
 
  private:

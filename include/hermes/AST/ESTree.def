@@ -74,6 +74,21 @@ ESTREE_NODE_8_ARGS(
 ESTREE_IGNORE_IF_EMPTY(FunctionDeclaration, typeParameters)
 ESTREE_IGNORE_IF_EMPTY(FunctionDeclaration, returnType)
 ESTREE_IGNORE_IF_EMPTY(FunctionDeclaration, predicate)
+
+#if HERMES_PARSE_FLOW
+
+ESTREE_NODE_5_ARGS(
+    ComponentDeclaration, FunctionLike,
+    NodePtr, id, false,
+    NodeList, params, false,
+    NodePtr, body, false,
+    NodePtr, typeParameters, true,
+    NodePtr, rendersType, true)
+ESTREE_IGNORE_IF_EMPTY(ComponentDeclaration, typeParameters)
+ESTREE_IGNORE_IF_EMPTY(ComponentDeclaration, rendersType)
+
+#endif
+
 ESTREE_LAST(FunctionLike)
 
 ESTREE_FIRST(Statement, Base)
@@ -1017,16 +1032,6 @@ ESTREE_NODE_2_ARGS(
     EnumBooleanMember, Base,
     NodePtr, id, false,
     NodePtr, init, false)
-
-ESTREE_NODE_5_ARGS(
-    ComponentDeclaration, Base,
-    NodePtr, id, false,
-    NodeList, params, false,
-    NodePtr, body, false,
-    NodePtr, typeParameters, true,
-    NodePtr, rendersType, true)
-ESTREE_IGNORE_IF_EMPTY(ComponentDeclaration, typeParameters)
-ESTREE_IGNORE_IF_EMPTY(ComponentDeclaration, rendersType)
 ESTREE_NODE_3_ARGS(
     ComponentParameter, Base,
     NodePtr, name, false,
