@@ -28,21 +28,15 @@
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:function global(): undefined
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = BranchInst %BB1
+// CHECK-NEXT:  %0 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = PhiInst 0 : number, %BB0, %10 : number|bigint, %BB2
-// CHECK-NEXT:  %3 = PhiInst undefined : undefined, %BB0, %7 : undefined, %BB2
-// CHECK-NEXT:  %4 = PhiInst undefined : undefined, %BB0, %8 : undefined, %BB2
-// CHECK-NEXT:  %5 = PhiInst undefined : undefined, %BB0, %9 : undefined, %BB2
-// CHECK-NEXT:  %6 = BranchInst %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = PhiInst %3 : undefined, %BB1
-// CHECK-NEXT:  %8 = PhiInst %4 : undefined, %BB1
-// CHECK-NEXT:  %9 = PhiInst %5 : undefined, %BB1
-// CHECK-NEXT:  %10 = UnaryOperatorInst '++', %2 : number|bigint
-// CHECK-NEXT:  %11 = BranchInst %BB1
+// CHECK-NEXT:  %1 = PhiInst (:number) 0: number, %BB0, %5: number, %BB1
+// CHECK-NEXT:  %2 = PhiInst (:undefined) undefined: undefined, %BB0, %2: undefined, %BB1
+// CHECK-NEXT:  %3 = PhiInst (:undefined) undefined: undefined, %BB0, %3: undefined, %BB1
+// CHECK-NEXT:  %4 = PhiInst (:undefined) undefined: undefined, %BB0, %4: undefined, %BB1
+// CHECK-NEXT:  %5 = UnaryIncInst (:number) %1: number
+// CHECK-NEXT:  %6 = BranchInst %BB1
 // CHECK-NEXT:function_end
