@@ -1,5 +1,11 @@
 ## Unreleased
 
+## 0.11.1
+
+### `flow-api-translator`
+
+- Fix dependency versions.
+
 ## 0.11.0
 
 ### `hermes-parser`
