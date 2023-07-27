@@ -8,11 +8,22 @@
  * @format
  */
 
-import type {HermesNode} from './HermesAST';
+import type {
+  HermesNode,
+  HermesSourceLocation,
+  HermesPosition,
+} from './HermesAST';
 
 import HermesASTAdapter from './HermesASTAdapter';
 
 declare var BigInt: ?(value: $FlowFixMe) => mixed;
+
+function createDefaultPosition(): HermesPosition {
+  return {
+    line: 1,
+    column: 0,
+  };
+}
 
 function createSyntaxError(node: HermesNode, err: string): SyntaxError {
   const syntaxError = new SyntaxError(err);
@@ -625,9 +636,67 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
       }
     }
 
+    function createPropsTypeAnnotation(loc: HermesSourceLocation) {
+      // Create empty loc for type annotation nodes
+      const createParamsTypeLoc = () => ({
+        loc: {
+          start: loc.start != null ? {...loc.start} : createDefaultPosition(),
+          end: loc.end != null ? {...loc.end} : createDefaultPosition(),
+          rangeStart: loc.rangeStart,
+          rangeEnd: loc.rangeEnd,
+        },
+      });
+
+      return {
+        type: 'TypeAnnotation',
+        typeAnnotation: {
+          type: 'GenericTypeAnnotation',
+          id: {
+            type: 'Identifier',
+            name: '$ReadOnly',
+            ...createParamsTypeLoc(),
+          },
+          typeParameters: {
+            type: 'TypeParameterInstantiation',
+            params: [
+              {
+                type: 'ObjectTypeAnnotation',
+                callProperties: [],
+                properties: [],
+                indexers: [],
+                internalSlots: [],
+                exact: false,
+                inexact: true,
+                ...createParamsTypeLoc(),
+              },
+            ],
+            ...createParamsTypeLoc(),
+          },
+          ...createParamsTypeLoc(),
+        },
+        ...createParamsTypeLoc(),
+      };
+    }
+
     const params = (() => {
       if (nodeUnprocessed.params.length === 0) {
         return [];
+      }
+
+      // Optimize `component Foo(...props: Props) {}` to `function Foo(props: Props) {}
+      if (
+        nodeUnprocessed.params.length === 1 &&
+        nodeUnprocessed.params[0].type === 'RestElement'
+      ) {
+        const restElement = nodeUnprocessed.params[0];
+        return [
+          {
+            ...restElement.argument,
+            typeAnnotation: createPropsTypeAnnotation(
+              restElement.argument.typeAnnotation.loc,
+            ),
+          },
+        ];
       }
 
       const properties = nodeUnprocessed.params.map(param => {
@@ -679,53 +748,19 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
       const paramsLoc = {
         start: properties[0].loc.start,
         end: properties[properties.length - 1].loc.end,
-        startRange: properties[0].loc.startRange,
-        endRange: properties[properties.length - 1].loc.endRange,
+        rangeStart: properties[0].loc.rangeStart,
+        rangeEnd: properties[properties.length - 1].loc.rangeEnd,
       };
-
-      // Create empty loc for type annotation nodes
-      const createParamsTypeLoc = () => ({
-        loc: {
-          start: {...paramsLoc.end},
-          end: {...paramsLoc.end},
-          startRange: paramsLoc.endRange,
-          endRange: paramsLoc.endRange,
-        },
-      });
 
       return [
         {
           type: 'ObjectPattern',
           properties,
-          typeAnnotation: {
-            type: 'TypeAnnotation',
-            typeAnnotation: {
-              type: 'GenericTypeAnnotation',
-              id: {
-                type: 'Identifier',
-                name: '$ReadOnly',
-                ...createParamsTypeLoc(),
-              },
-              typeParameters: {
-                type: 'TypeParameterInstantiation',
-                params: [
-                  {
-                    type: 'ObjectTypeAnnotation',
-                    callProperties: [],
-                    properties: [],
-                    indexers: [],
-                    internalSlots: [],
-                    exact: false,
-                    inexact: true,
-                    ...createParamsTypeLoc(),
-                  },
-                ],
-                ...createParamsTypeLoc(),
-              },
-              ...createParamsTypeLoc(),
-            },
-            ...createParamsTypeLoc(),
-          },
+          typeAnnotation: createPropsTypeAnnotation({
+            ...paramsLoc,
+            start: paramsLoc.end,
+            rangeStart: paramsLoc.rangeEnd,
+          }),
           loc: paramsLoc,
         },
       ];
