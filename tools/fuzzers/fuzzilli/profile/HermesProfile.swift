@@ -15,6 +15,7 @@ let hermesProfile = Profile(
 
     if probability(0.5) { args.append("--compile") }
     if probability(0.5) { args.append("--lazy-compilation") }
+    if probability(0.5) { args.append("--eager-compilation") }
     if probability(0.5) { args.append("--optimize") }
     if probability(0.5) { args.append("--async-break") }
     if probability(0.5) { args.append("--block-scoping") }
