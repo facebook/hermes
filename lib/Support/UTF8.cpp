@@ -75,8 +75,8 @@ bool convertUTF16ToUTF8WithReplacements(
     // Condition checks are easier if this number is set to the max value.
     maxCharacters = std::numeric_limits<size_t>::max();
   }
-  for (auto cur = input.begin(), end = input.end();
-       cur < end && currNumCharacters < maxCharacters;
+  auto cur = input.begin(), end = input.end();
+  for (; cur < end && currNumCharacters < maxCharacters;
        ++cur, ++currNumCharacters) {
     char16_t c = cur[0];
     // ASCII fast-path.
@@ -109,7 +109,7 @@ bool convertUTF16ToUTF8WithReplacements(
     encodeUTF8(ptr, c32);
     out.insert(out.end(), buff, ptr);
   }
-  return currNumCharacters < maxCharacters;
+  return cur == end;
 }
 
 void convertUTF16ToUTF8WithSingleSurrogates(

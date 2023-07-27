@@ -107,6 +107,11 @@ TEST(StringTest, UTF16ToUTF8StringWithReplacements) {
   strAndFullyWritten = convertWithMaxChars({0xD83D, 0xDE39, 0xD83D, 0xDE39}, 1);
   EXPECT_EQ(bytes({0xF0, 0x9F, 0x98, 0xB9}), strAndFullyWritten.first);
   EXPECT_EQ(false, strAndFullyWritten.second);
+
+  // Check that strings equal to the max length are correctly reported.
+  strAndFullyWritten = convertWithMaxChars({'a', 'b', 'c'}, 3);
+  EXPECT_EQ(bytes({'a', 'b', 'c'}), strAndFullyWritten.first);
+  EXPECT_EQ(true, strAndFullyWritten.second);
 }
 
 TEST(StringTest, IsAllASCIITest) {
