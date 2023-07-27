@@ -900,6 +900,16 @@ void SemanticResolver::visit(TypeCastExpressionNode *node) {
   // Visit the expression, but not the type annotation.
   visitESTreeNode(*this, node->_expression, node);
 }
+
+/// Process a component declaration by creating a new FunctionContext.
+void SemanticResolver::visit(ComponentDeclarationNode *componentDecl) {
+  visitFunctionLike(
+      componentDecl,
+      llvh::cast<ESTree::IdentifierNode>(componentDecl->_id),
+      componentDecl->_body,
+      componentDecl->_params);
+}
+
 #endif
 
 void SemanticResolver::visitFunctionLike(
@@ -1295,6 +1305,10 @@ bool SemanticResolver::extractDeclaredIdentsFromID(
       }
     }
     return containsExpr;
+  }
+
+  if (auto *param = llvh::dyn_cast<ComponentParameterNode>(node)) {
+    return extractDeclaredIdentsFromID(param->_name, idents);
   }
 
   sm_.error(node->getSourceRange(), "invalid destructuring target");

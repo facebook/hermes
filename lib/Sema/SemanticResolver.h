@@ -235,6 +235,7 @@ class SemanticResolver {
   void visit(ESTree::CoverTypedIdentifierNode *node);
   void visit(ESTree::TypeAliasNode *node);
   void visit(ESTree::TypeCastExpressionNode *node);
+  void visit(ESTree::ComponentDeclarationNode *componentDecl);
 #endif
 
   /// This method implements the first part of the protocol defined by
