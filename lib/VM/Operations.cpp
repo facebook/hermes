@@ -1164,7 +1164,7 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
       // the mathematical value of y, return true; otherwise return false.
       CASE_M_S(BigInt, NUMBER_TAG) {
         std::swap(x, y);
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       }
       CASE_S_M(NUMBER_TAG, BigInt) {
         if (!isIntegralNumber(x->getNumber())) {
