@@ -21,12 +21,12 @@ import {
 } from './comments/comments';
 import type {VisitorKeysType} from 'hermes-parser';
 
-export function print(
+export async function print(
   ast: MaybeDetachedNode<Program>,
   originalCode: string,
   prettierOptions: {...} = {},
   visitorKeys?: ?VisitorKeysType,
-): string {
+): Promise<string> {
   // $FlowExpectedError[incompatible-type] This is now safe to access.
   const program: Program = ast;
 

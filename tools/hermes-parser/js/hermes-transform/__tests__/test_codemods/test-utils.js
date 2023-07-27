@@ -14,7 +14,10 @@ import {transform as transformOriginal} from '../../src/transform/transform';
 // $FlowExpectedError[cannot-resolve-module]
 import prettierConfig from '../../../.prettierrc.json';
 
-export function transform(code: string, visitors: TransformVisitor): string {
+export async function transform(
+  code: string,
+  visitors: TransformVisitor,
+): Promise<string> {
   return transformOriginal(code, visitors, prettierConfig);
 }
 

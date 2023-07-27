@@ -36,8 +36,8 @@ function codemod(code: string) {
 }
 
 describe('React to react', () => {
-  it('should transform files correctly', () => {
-    const result = codemod(`\
+  it('should transform files correctly', async () => {
+    const result = await codemod(`\
 /**
  * LICENCE GOES HERE
  *

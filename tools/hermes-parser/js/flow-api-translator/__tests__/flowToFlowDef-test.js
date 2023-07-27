@@ -14,8 +14,8 @@ import prettierConfig from '../../.prettierrc.json';
 import {parse, print} from 'hermes-transform';
 import {trimToBeCode} from './utils/inlineCodeHelpers';
 
-function translate(code: string): string {
-  const {ast, scopeManager} = parse(code);
+async function translate(code: string): Promise<string> {
+  const {ast, scopeManager} = await parse(code);
 
   const [flowDefAst, mutatedCode] = flowToFlowDef(ast, code, scopeManager, {
     recoverFromErrors: false,
@@ -24,25 +24,30 @@ function translate(code: string): string {
   return print(flowDefAst, mutatedCode, prettierConfig);
 }
 
-function expectTranslate(expectCode: string, toBeCode: string): void {
-  expect(translate(expectCode)).toBe(trimToBeCode(toBeCode));
+async function expectTranslate(
+  expectCode: string,
+  toBeCode: string,
+): Promise<void> {
+  const expectTranslateCode = await translate(expectCode);
+  expect(expectTranslateCode).toBe(trimToBeCode(toBeCode));
 }
-function expectTranslateUnchanged(expectCode: string): void {
-  expect(translate(expectCode)).toBe(trimToBeCode(expectCode));
+async function expectTranslateUnchanged(expectCode: string): Promise<void> {
+  const expectTranslateCode = await translate(expectCode);
+  expect(expectTranslateCode).toBe(trimToBeCode(expectCode));
 }
 
 describe('flowToFlowDef', () => {
   describe('Comments', () => {
-    it('maintain docblock', () => {
-      expectTranslateUnchanged(
+    it('maintain docblock', async () => {
+      await expectTranslateUnchanged(
         `/**
           * @flow
           */
          export type Bar = string;`,
       );
     });
-    it('maintain toplevel statement comments', () => {
-      expectTranslate(
+    it('maintain toplevel statement comments', async () => {
+      await expectTranslate(
         `/**
           * @flow
           */
@@ -65,35 +70,35 @@ describe('flowToFlowDef', () => {
     });
   });
   describe('dependency walking', () => {
-    it('strip unused function', () => {
-      expectTranslate(
+    it('strip unused function', async () => {
+      await expectTranslate(
         `function foo(): void {}
          export function bar(): void { foo(); }`,
         `declare export function bar(): void;`,
       );
     });
-    it('keep used TypeAlias', () => {
-      expectTranslateUnchanged(
+    it('keep used TypeAlias', async () => {
+      await expectTranslateUnchanged(
         `type Foo = string;
          export type Bar = Foo;`,
       );
     });
-    it('keep chain of used TypeAliases', () => {
-      expectTranslateUnchanged(
+    it('keep chain of used TypeAliases', async () => {
+      await expectTranslateUnchanged(
         `type Foo = string;
          type Bar = Foo;
          type Baz = Bar;
          export type Boo = Baz;`,
       );
     });
-    it('keep used TypeAlias with many references', () => {
-      expectTranslateUnchanged(
+    it('keep used TypeAlias with many references', async () => {
+      await expectTranslateUnchanged(
         `type Foo = string;
          export type Bar = Foo;
          export type Baz = [Bar, Foo];`,
       );
     });
-    it('strip unused but shadowed deps', () => {
+    it('strip unused but shadowed deps', async () => {
       // These should never be referenced by anything
       const neverReferenced = `
         type Foo = string;`;
@@ -104,9 +109,9 @@ describe('flowToFlowDef', () => {
           prop1: Foo;
           prop2: Bar;
         }`;
-      expectTranslate(neverReferenced + expectedOutput, expectedOutput);
+      await expectTranslate(neverReferenced + expectedOutput, expectedOutput);
     });
-    it('strip unused but shadowed deps (complex)', () => {
+    it('strip unused but shadowed deps (complex)', async () => {
       // These should never be referenced by anything
       const neverReferenced = `
         type T = 1;`;
@@ -149,12 +154,12 @@ describe('flowToFlowDef', () => {
           // this should create a (circular) reference to the containing Foo
           constructor(): Foo;
         }`;
-      expectTranslate(neverReferenced + expectedOutput, expectedOutput);
+      await expectTranslate(neverReferenced + expectedOutput, expectedOutput);
     });
   });
   describe('optimization pass', () => {
-    it('strip unused import defs', () => {
-      expectTranslate(
+    it('strip unused import defs', async () => {
+      await expectTranslate(
         `import type {Foo, Bar} from 'Foo';
          export type Baz = Foo;`,
         `import type {Foo} from 'Foo';
@@ -163,43 +168,45 @@ describe('flowToFlowDef', () => {
     });
   });
   describe('ExportNamedDeclaration', () => {
-    it('type specifier', () => {
-      expectTranslateUnchanged(
+    it('type specifier', async () => {
+      await expectTranslateUnchanged(
         `type Bar = string;
          export type {Foo, Bar as Baz};`,
       );
     });
-    it('type specifier with source', () => {
-      expectTranslateUnchanged(`export type {Foo, Bar as Baz} from 'Baz';`);
+    it('type specifier with source', async () => {
+      await expectTranslateUnchanged(
+        `export type {Foo, Bar as Baz} from 'Baz';`,
+      );
     });
-    it('value specifier with source', () => {
-      expectTranslateUnchanged(`export {Foo, Bar as Baz} from 'Baz';`);
+    it('value specifier with source', async () => {
+      await expectTranslateUnchanged(`export {Foo, Bar as Baz} from 'Baz';`);
     });
-    it('all with source', () => {
-      expectTranslateUnchanged(`export * as Foo from 'Foo';`);
+    it('all with source', async () => {
+      await expectTranslateUnchanged(`export * as Foo from 'Foo';`);
     });
   });
   describe('ExportDefaultDeclaration', () => {
-    it('export default function', () => {
-      expectTranslate(
+    it('export default function', async () => {
+      await expectTranslate(
         `export default function Foo() {}`,
         `declare export default function Foo(): void;`,
       );
     });
-    it('export default class', () => {
-      expectTranslate(
+    it('export default class', async () => {
+      await expectTranslate(
         `export default class Foo {}`,
         `declare export default class Foo {}`,
       );
     });
-    it('export default expression', () => {
-      expectTranslate(
+    it('export default expression', async () => {
+      await expectTranslate(
         `export default (1: number);`,
         `declare export default number;`,
       );
     });
-    it('export default var', () => {
-      expectTranslate(
+    it('export default var', async () => {
+      await expectTranslate(
         `function foo() {}
          export default foo;`,
         `declare function foo(): void;
@@ -208,24 +215,27 @@ describe('flowToFlowDef', () => {
     });
   });
   describe('ExportAllDeclaration', () => {
-    it('export basic', () => {
-      expectTranslateUnchanged(`export * from 'Foo';`);
+    it('export basic', async () => {
+      await expectTranslateUnchanged(`export * from 'Foo';`);
     });
   });
   describe('module.exports', () => {
-    it('export basic', () => {
-      expectTranslate(`module.exports = 1;`, `declare module.exports: 1;`);
+    it('export basic', async () => {
+      await expectTranslate(
+        `module.exports = 1;`,
+        `declare module.exports: 1;`,
+      );
     });
   });
   describe('exports.*', () => {
-    it('export basic', () => {
-      expect(() => translate(`exports.A = 1;`))
+    it('export basic', async () => {
+      await expect(async () => translate(`exports.A = 1;`)).rejects
         .toThrowErrorMatchingInlineSnapshot(`
         "
         > 1 | exports.A = 1;
             | ^^^^^^^^^^^^^^ convertExport: Named CommonJS exports not supported. Use either \`module.exports = {...}\` or ES6 exports."
       `);
-      expect(() => translate(`module.exports.A = 1;`))
+      await expect(async () => translate(`module.exports.A = 1;`)).rejects
         .toThrowErrorMatchingInlineSnapshot(`
         "
         > 1 | module.exports.A = 1;
@@ -234,44 +244,44 @@ describe('flowToFlowDef', () => {
     });
   });
   describe('FunctionDeclation', () => {
-    it('basic', () => {
-      expectTranslate(
+    it('basic', async () => {
+      await expectTranslate(
         `export function foo(): void {}`,
         `declare export function foo(): void;`,
       );
     });
-    it('without return type', () => {
-      expectTranslate(
+    it('without return type', async () => {
+      await expectTranslate(
         `export function foo() {}`,
         `declare export function foo(): void;`,
       );
     });
-    it('with type params', () => {
-      expectTranslate(
+    it('with type params', async () => {
+      await expectTranslate(
         `export function foo<T>(): T {}`,
         `declare export function foo<T>(): T;`,
       );
     });
-    it('with params', () => {
-      expectTranslate(
+    it('with params', async () => {
+      await expectTranslate(
         `export function foo(bar: string, baz: number): void {}`,
         `declare export function foo(bar: string, baz: number): void;`,
       );
     });
-    it('with rest params', () => {
-      expectTranslate(
+    it('with rest params', async () => {
+      await expectTranslate(
         `export function foo(bar: string, ...baz: Array<number>): void {}`,
         `declare export function foo(bar: string, ...baz: Array<number>): void;`,
       );
     });
-    it('with default params', () => {
-      expectTranslate(
+    it('with default params', async () => {
+      await expectTranslate(
         `export function foo(bar: string = 'hello'): void {}`,
         `declare export function foo(bar: string): void;`,
       );
     });
-    it('with predicates', () => {
-      expectTranslate(
+    it('with predicates', async () => {
+      await expectTranslate(
         `function bar(baz: string): boolean %checks {
           return baz === '';
          }
@@ -284,22 +294,24 @@ describe('flowToFlowDef', () => {
     });
   });
   describe('TypeAlias', () => {
-    it('basic', () => {
-      expectTranslateUnchanged(`export type Foo = string;`);
+    it('basic', async () => {
+      await expectTranslateUnchanged(`export type Foo = string;`);
     });
-    it('with type params', () => {
-      expectTranslateUnchanged(`export type Foo<Bar: Baz, Boo> = string;`);
+    it('with type params', async () => {
+      await expectTranslateUnchanged(
+        `export type Foo<Bar: Baz, Boo> = string;`,
+      );
     });
   });
   describe('OpaqueType', () => {
-    it('basic', () => {
-      expectTranslate(
+    it('basic', async () => {
+      await expectTranslate(
         `export opaque type Foo = string;`,
         `declare export opaque type Foo;`,
       );
     });
-    it('basic local', () => {
-      expectTranslate(
+    it('basic local', async () => {
+      await expectTranslate(
         `type Foo = string;
          opaque type Bar = Foo;
          export type Baz = Bar;`,
@@ -307,42 +319,42 @@ describe('flowToFlowDef', () => {
          export type Baz = Bar;`,
       );
     });
-    it('with type params', () => {
-      expectTranslate(
+    it('with type params', async () => {
+      await expectTranslate(
         `export opaque type Foo<Bar: Baz, Boo> = string;`,
         `declare export opaque type Foo<Bar: Baz, Boo>;`,
       );
     });
-    it('with super type', () => {
-      expectTranslate(
+    it('with super type', async () => {
+      await expectTranslate(
         `export opaque type Foo: Bar = string;`,
         `declare export opaque type Foo: Bar;`,
       );
     });
-    it('with super type and type params', () => {
-      expectTranslate(
+    it('with super type and type params', async () => {
+      await expectTranslate(
         `export opaque type Foo<Bar: Baz, Boo>: Boa = string;`,
         `declare export opaque type Foo<Bar: Baz, Boo>: Boa;`,
       );
     });
   });
   describe('ImportDeclaration', () => {
-    it('basic', () => {
-      expectTranslateUnchanged(
+    it('basic', async () => {
+      await expectTranslateUnchanged(
         `import type {Foo} from 'foo';
          export type {Foo};`,
       );
     });
-    it('type specifiers', () => {
-      expectTranslateUnchanged(
+    it('type specifiers', async () => {
+      await expectTranslateUnchanged(
         `import {type Foo} from 'foo';
          export type {Foo};`,
       );
     });
   });
   describe('ClassDeclaration', () => {
-    it('property', () => {
-      expectTranslate(
+    it('property', async () => {
+      await expectTranslate(
         `export class A {
            foo: string = '';
          }`,
@@ -351,8 +363,8 @@ describe('flowToFlowDef', () => {
          }`,
       );
     });
-    it('method', () => {
-      expectTranslate(
+    it('method', async () => {
+      await expectTranslate(
         `export class A {
            foo() {}
            static bar() {}
@@ -365,8 +377,8 @@ describe('flowToFlowDef', () => {
     });
   });
   describe('InterfaceDeclaration', () => {
-    it('property', () => {
-      expectTranslate(
+    it('property', async () => {
+      await expectTranslate(
         `export interface A {
            foo: string;
          }`,
@@ -375,8 +387,8 @@ describe('flowToFlowDef', () => {
          }`,
       );
     });
-    it('method', () => {
-      expectTranslate(
+    it('method', async () => {
+      await expectTranslate(
         `export interface A {
            foo(): void;
          }`,
@@ -385,8 +397,8 @@ describe('flowToFlowDef', () => {
          }`,
       );
     });
-    it('local', () => {
-      expectTranslate(
+    it('local', async () => {
+      await expectTranslate(
         `interface Foo {}
          export type Bar = Foo;`,
         `interface Foo {}
@@ -395,26 +407,26 @@ describe('flowToFlowDef', () => {
     });
   });
   describe('VariableDeclaration', () => {
-    it('basic type parameter', () => {
-      expectTranslate(
+    it('basic type parameter', async () => {
+      await expectTranslate(
         `export const foo: number = 1;`,
         `declare export var foo: number;`,
       );
     });
-    it('basic typecast', () => {
-      expectTranslate(
+    it('basic typecast', async () => {
+      await expectTranslate(
         `export const foo = (1: number);`,
         `declare export var foo: number;`,
       );
     });
-    it('prefer type parameter', () => {
-      expectTranslate(
+    it('prefer type parameter', async () => {
+      await expectTranslate(
         `export const foo: number = (1: any);`,
         `declare export var foo: number;`,
       );
     });
-    it('with dependency', () => {
-      expectTranslate(
+    it('with dependency', async () => {
+      await expectTranslate(
         `const foo: number = 1;
          export const bar: typeof foo = 1;`,
         `declare var foo: number;
@@ -423,25 +435,25 @@ describe('flowToFlowDef', () => {
     });
   });
   describe('EnumDeclaration', () => {
-    it('basic', () => {
-      expectTranslateUnchanged(`export enum Foo {}`);
+    it('basic', async () => {
+      await expectTranslateUnchanged(`export enum Foo {}`);
     });
-    it('local', () => {
-      expectTranslateUnchanged(
+    it('local', async () => {
+      await expectTranslateUnchanged(
         `enum Foo {}
          declare export var bar: Foo;`,
       );
     });
   });
   describe('DeclareClass', () => {
-    it('basic', () => {
-      expectTranslateUnchanged(
+    it('basic', async () => {
+      await expectTranslateUnchanged(
         `declare class Foo {}
          declare export var bar: Foo;`,
       );
     });
-    it('complex', () => {
-      expectTranslateUnchanged(
+    it('complex', async () => {
+      await expectTranslateUnchanged(
         `declare export class Foo<T>
            extends TClass<T>
            mixins TMixin<T>
@@ -456,75 +468,75 @@ describe('flowToFlowDef', () => {
     });
   });
   describe('Expression', () => {
-    function expectTranslateExpression(
+    async function expectTranslateExpression(
       expectExprCode: string,
       toBeExprCode: string,
-    ): void {
-      expectTranslate(
+    ): Promise<void> {
+      await expectTranslate(
         `export const expr = ${expectExprCode};`,
         `declare export var expr: ${toBeExprCode};`,
       );
     }
     describe('Identifier', () => {
-      it('basic', () => {
-        expectTranslateExpression(`foo`, `foo`);
+      it('basic', async () => {
+        await expectTranslateExpression(`foo`, `foo`);
       });
     });
     describe('ObjectExpression', () => {
-      it('empty', () => {
-        expectTranslateExpression(`{}`, `{}`);
+      it('empty', async () => {
+        await expectTranslateExpression(`{}`, `{}`);
       });
-      it('methods', () => {
-        expectTranslateExpression(`{foo() {}}`, `{foo(): void}`);
-        expectTranslateExpression(`{get foo() {}}`, `{get foo(): void}`);
-        expectTranslateExpression(
+      it('methods', async () => {
+        await expectTranslateExpression(`{foo() {}}`, `{foo(): void}`);
+        await expectTranslateExpression(`{get foo() {}}`, `{get foo(): void}`);
+        await expectTranslateExpression(
           `{set foo(bar: string) {}}`,
           `{set foo(bar: string): void}`,
         );
       });
-      it('properties', () => {
-        expectTranslateExpression(`{FOO: 1}`, `{FOO: 1}`);
+      it('properties', async () => {
+        await expectTranslateExpression(`{FOO: 1}`, `{FOO: 1}`);
       });
-      it('spread', () => {
-        expectTranslateExpression(`{...a}`, `{...a}`);
+      it('spread', async () => {
+        await expectTranslateExpression(`{...a}`, `{...a}`);
       });
     });
     describe('Literals', () => {
-      it('number', () => {
-        expectTranslateExpression(`1`, `1`);
-        expectTranslateExpression(`1.99`, `1.99`);
+      it('number', async () => {
+        await expectTranslateExpression(`1`, `1`);
+        await expectTranslateExpression(`1.99`, `1.99`);
       });
-      it('string', () => {
-        expectTranslateExpression(`'s'`, `'s'`);
+      it('string', async () => {
+        await expectTranslateExpression(`'s'`, `'s'`);
       });
-      it('boolean', () => {
-        expectTranslateExpression(`true`, `true`);
+      it('boolean', async () => {
+        await expectTranslateExpression(`true`, `true`);
       });
-      it('regex', () => {
-        expectTranslateExpression(`/a/`, `RegExp`);
+      it('regex', async () => {
+        await expectTranslateExpression(`/a/`, `RegExp`);
       });
-      it('null', () => {
-        expectTranslateExpression(`null`, `null`);
+      it('null', async () => {
+        await expectTranslateExpression(`null`, `null`);
       });
     });
     describe('TypeCastExpression', () => {
-      it('basic', () => {
-        expectTranslateExpression(`(1: number)`, `number`);
+      it('basic', async () => {
+        await expectTranslateExpression(`(1: number)`, `number`);
       });
     });
     describe('FunctionExpression', () => {
-      it('basic', () => {
-        expectTranslateExpression(`function foo() {}`, `() => void`);
-        expectTranslateExpression(
+      it('basic', async () => {
+        await expectTranslateExpression(`function foo() {}`, `() => void`);
+        await expectTranslateExpression(
           `function foo<T>(baz: T, bar: string) {}`,
           `<T>(baz: T, bar: string) => void`,
         );
       });
     });
     describe('ArrowFunctionExpression', () => {
-      it('basic', () => {
-        expectTranslateExpression(`() => {}`, `() => void`);
-        expectTranslateExpression(
+      it('basic', async () => {
+        await expectTranslateExpression(`() => {}`, `() => void`);
+        await expectTranslateExpression(
           `<T>(baz: T, bar: string) => {}`,
           `<T>(baz: T, bar: string) => void`,
         );

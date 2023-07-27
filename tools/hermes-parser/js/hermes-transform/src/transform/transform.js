@@ -19,12 +19,12 @@ import {print} from './print';
 
 export type TransformVisitor = Visitor<TransformContextAdditions>;
 
-export function transform(
+export async function transform(
   originalCode: string,
   visitors: TransformVisitor,
   prettierOptions: {...} = {},
-): string {
-  const parseResult = parse(originalCode);
+): Promise<string> {
+  const parseResult = await parse(originalCode);
 
   const {ast, astWasMutated, mutatedCode} = transformAST(parseResult, visitors);
   if (!astWasMutated) {

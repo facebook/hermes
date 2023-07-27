@@ -23,8 +23,8 @@ import {MutationContext} from '../../../src/transform/MutationContext';
 import {parseAndGetAstAndNode} from './test-utils';
 
 describe('ReplaceNode', () => {
-  it('Identifier', () => {
-    const {ast, target} = parseAndGetAstAndNode<Identifier>(
+  it('Identifier', async () => {
+    const {ast, target} = await parseAndGetAstAndNode<Identifier>(
       'Identifier',
       'const x = 1;',
     );
@@ -52,8 +52,8 @@ describe('ReplaceNode', () => {
     });
   });
 
-  it('AnyTypeAnnotation', () => {
-    const {ast, target} = parseAndGetAstAndNode<AnyTypeAnnotation>(
+  it('AnyTypeAnnotation', async () => {
+    const {ast, target} = await parseAndGetAstAndNode<AnyTypeAnnotation>(
       'AnyTypeAnnotation',
       'const x: any = 1;',
     );
@@ -87,8 +87,8 @@ describe('ReplaceNode', () => {
     });
   });
 
-  it('VariableDeclaration', () => {
-    const {ast, target} = parseAndGetAstAndNode<VariableDeclaration>(
+  it('VariableDeclaration', async () => {
+    const {ast, target} = await parseAndGetAstAndNode<VariableDeclaration>(
       'VariableDeclaration',
       'const x = 1, y = 2;',
     );

@@ -29,8 +29,8 @@ describe('function parameter spacing', () => {
     }));
   }
 
-  it('should not add newlines between params that fit on one line', () => {
-    const result = codemod(`\
+  it('should not add newlines between params that fit on one line', async () => {
+    const result = await codemod(`\
 /**
  */
 
@@ -52,8 +52,8 @@ const foo = (a, b, c, d, e, f) => {
 `);
   });
 
-  it("should not add newlines between params that don't fit on one line", () => {
-    const result = codemod(`\
+  it("should not add newlines between params that don't fit on one line", async () => {
+    const result = await codemod(`\
 /**
  */
 
@@ -100,8 +100,8 @@ describe('call argument spacing', () => {
     }));
   }
 
-  it('should not add newlines between arguments that fit on one line', () => {
-    const result = codemod(`\
+  it('should not add newlines between arguments that fit on one line', async () => {
+    const result = await codemod(`\
 /**
  */
 
@@ -122,8 +122,8 @@ throw Foo(a, b, c, d, e, f);
 `);
   });
 
-  it("should not add newlines between arguments that don't fit on one line", () => {
-    const result = codemod(`\
+  it("should not add newlines between arguments that don't fit on one line", async () => {
+    const result = await codemod(`\
 /**
  */
 
@@ -174,8 +174,8 @@ describe('call with function spacing', () => {
     }));
   }
 
-  it('should not add newlines between params that fit on one line within a call expression', () => {
-    const result = codemod(`\
+  it('should not add newlines between params that fit on one line within a call expression', async () => {
+    const result = await codemod(`\
 /**
  */
 
@@ -197,8 +197,8 @@ const foo = [].forEach((a, b, c) => {
 `);
   });
 
-  it("should not add newlines between params that don't fit on one line within a call expression", () => {
-    const result = codemod(`\
+  it("should not add newlines between params that don't fit on one line within a call expression", async () => {
+    const result = await codemod(`\
 /**
  */
 
@@ -253,8 +253,8 @@ describe('class member spacing', () => {
     }));
   }
 
-  it('should not add or remove spaces between class members', () => {
-    const result = codemod(`\
+  it('should not add or remove spaces between class members', async () => {
+    const result = await codemod(`\
 /**
  */
 

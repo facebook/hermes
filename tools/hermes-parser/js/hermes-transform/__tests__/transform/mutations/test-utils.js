@@ -73,14 +73,14 @@ export const DEFAULT_SKIP_STATEMENTS: $ReadOnlyArray<StatementTypes> = [
   ...LOOP_ONLY_STATEMENTS,
 ];
 
-export function parseAndGetAstAndNode<T: ESNode = ESNode>(
+export async function parseAndGetAstAndNode<T: ESNode = ESNode>(
   type: ESNode['type'],
   code: string,
-): {
+): Promise<{
   ast: Program,
   target: T,
-} {
-  const {ast, scopeManager} = parse(code);
+}> {
+  const {ast, scopeManager} = await parse(code);
 
   let target: T | null = null;
   traverse(code, ast, scopeManager, () => ({
@@ -113,8 +113,8 @@ export function testStatementMutation({
       continue;
     }
 
-    it(type, () => {
-      const {ast, target} = parseAndGetAstAndNode<
+    it(type, async () => {
+      const {ast, target} = await parseAndGetAstAndNode<
         Statement | ModuleDeclaration,
       >(type, wrapCode(CODE_SAMPLES[type]));
       mutateAndAssert(ast, target);
