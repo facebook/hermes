@@ -225,7 +225,7 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow(
 
     return setLocation(
         start,
-        tok_->getEndLoc(),
+        getPrevTokenEndLoc(),
         new (context_) ESTree::DeclareComponentNode(
             *optId, std::move(paramList), rest, typeParams, returnType));
   }
@@ -458,7 +458,7 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentTypeAnnotationFlow() {
 
   return setLocation(
       start,
-      tok_->getEndLoc(),
+      getPrevTokenEndLoc(),
       new (context_) ESTree::ComponentTypeAnnotationNode(
           std::move(paramList), rest, typeParams, returnType));
 }
