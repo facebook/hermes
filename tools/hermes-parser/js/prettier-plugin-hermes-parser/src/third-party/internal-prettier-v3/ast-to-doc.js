@@ -3791,7 +3791,7 @@ ${frame}`;
   function getDocErrorMessage(doc) {
     const type = doc === null ? "null" : typeof doc;
     if (type !== "string" && type !== "object") {
-      return `Unexpected doc '${type}',
+      return `Unexpected doc '${type}', 
 Expected it to be 'string' or 'object'.`;
     }
     if (get_doc_type_default(doc)) {

@@ -198,6 +198,11 @@ declare module 'prettier' {
     originalText: string,
   };
 
+  declare export type PrettierPrinterOptions<T = any> = {
+    ...PrettierParserOptions<T>,
+    printer: Printer<T>,
+  };
+
   declare export type Plugin<T = any> = {
     languages?: Array<SupportLanguage> | void,
     parsers?: {[parserName: string]: Parser<T>} | void,
@@ -224,7 +229,7 @@ declare module 'prettier' {
   declare export type Printer<T = any> = {
     print: (
       path: AstPath<T>,
-      options: PrettierParserOptions<T>,
+      options: PrettierPrinterOptions<T>,
       print: (path: AstPath<T>) => Doc,
     ) => Doc,
     embed?:
@@ -232,7 +237,7 @@ declare module 'prettier' {
           path: AstPath<T>,
           print: (path: AstPath<T>) => Doc,
           textToDoc: (text: string, options: Options) => Doc,
-          options: PrettierParserOptions<T>,
+          options: PrettierPrinterOptions<T>,
         ) => Doc | null)
       | void,
     insertPragma?: ((text: string) => string) | void,
