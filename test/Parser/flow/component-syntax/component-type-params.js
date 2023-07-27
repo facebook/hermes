@@ -11,7 +11,7 @@
 // CHECK-NEXT:   "type": "Program",
 // CHECK-NEXT:   "body": [
 
-type Foo1 = component(foo, bar: Bar, 'baz': Baz);
+type Foo1 = component(bar: Bar, 'baz': Baz);
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "TypeAlias",
 // CHECK-NEXT:       "id": {
@@ -22,15 +22,6 @@ type Foo1 = component(foo, bar: Bar, 'baz': Baz);
 // CHECK-NEXT:       "right": {
 // CHECK-NEXT:         "type": "ComponentTypeAnnotation",
 // CHECK-NEXT:         "params": [
-// CHECK-NEXT:           {
-// CHECK-NEXT:             "type": "ComponentTypeParameter",
-// CHECK-NEXT:             "name": {
-// CHECK-NEXT:               "type": "Identifier",
-// CHECK-NEXT:               "name": "foo"
-// CHECK-NEXT:             },
-// CHECK-NEXT:             "typeAnnotation": null,
-// CHECK-NEXT:             "optional": false
-// CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "ComponentTypeParameter",
 // CHECK-NEXT:             "name": {
