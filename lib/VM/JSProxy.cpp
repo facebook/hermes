@@ -395,6 +395,8 @@ CallResult<bool> JSProxy::isExtensible(
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
+  bool booleanTrapResult = toBoolean(res->get());
+  res->invalidate();
   // 8. Let targetResult be ? target.[[IsExtensible]]().
   CallResult<bool> targetRes = JSObject::isExtensible(target, runtime);
   if (targetRes == ExecutionStatus::EXCEPTION) {
@@ -402,7 +404,6 @@ CallResult<bool> JSProxy::isExtensible(
   }
   // 9. If SameValue(booleanTrapResult, targetResult) is false, throw
   //    a TypeError exception.
-  bool booleanTrapResult = toBoolean(res->get());
   if (booleanTrapResult != *targetRes) {
     return runtime.raiseTypeError(
         "isExtensible trap returned different value than target");
