@@ -1,3 +1,21 @@
+## 0.13.1
+
+### `hermes-estree`
+
+### `hermes-parser`
+
+### `hermes-eslint`
+
+### `hermes-transform`
+
+### `flow-api-translator`
+
+### `prettier-plugin-hermes-parser`
+- The previous release did not build properly for release. This release fixes the issue.
+
+### `babel-plugin-syntax-hermes-parser`
+- The previous release did not build properly for release. This release fixes the issue.
+
 ## 0.13.0
 
 ### `hermes-estree`
