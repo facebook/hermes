@@ -216,7 +216,7 @@ class TypeVisitor extends Visitor {
     this.visit(node.typeParameters);
     this.visitArray(node.params);
     this.visit(node.rest);
-    this.visit(node.returnType);
+    this.visit(node.rendersType);
 
     if (hasTypeScope) {
       this._referencer.close(node);
@@ -290,7 +290,7 @@ class TypeVisitor extends Visitor {
     this.visit(node.typeParameters);
     this.visitArray(node.params);
     this.visit(node.rest);
-    this.visit(node.returnType);
+    this.visit(node.rendersType);
 
     if (hasTypeScope) {
       this._referencer.close(node);

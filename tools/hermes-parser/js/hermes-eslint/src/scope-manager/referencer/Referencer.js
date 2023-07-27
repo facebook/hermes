@@ -525,8 +525,8 @@ class Referencer extends Visitor {
 
     // component type parameters can be referenced by component params, so have to be declared first
     this.visitType(node.typeParameters);
-    // Return type may reference type parameters but not component parameters, so visit it before the parameters
-    this.visitType(node.returnType);
+    // Renders type may reference type parameters but not component parameters, so visit it before the parameters
+    this.visitType(node.rendersType);
 
     // Process parameter declarations.
     for (const param of node.params) {

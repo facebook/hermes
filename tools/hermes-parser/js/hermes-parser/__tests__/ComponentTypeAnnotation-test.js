@@ -46,8 +46,8 @@ describe('ComponentTypeAnnotation', () => {
             },
             "right": {
               "params": [],
+              "rendersType": null,
               "rest": null,
-              "returnType": null,
               "type": "ComponentTypeAnnotation",
               "typeParameters": null,
             },

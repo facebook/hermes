@@ -112,7 +112,7 @@ export const HERMES_AST_VISITOR_KEYS = {
     params: 'NodeList',
     body: 'Node',
     typeParameters: 'Node',
-    returnType: 'Node',
+    rendersType: 'Node',
   },
   ComponentParameter: {
     name: 'Node',
@@ -122,7 +122,7 @@ export const HERMES_AST_VISITOR_KEYS = {
     params: 'NodeList',
     rest: 'Node',
     typeParameters: 'Node',
-    returnType: 'Node',
+    rendersType: 'Node',
   },
   ComponentTypeParameter: {
     name: 'Node',
@@ -156,7 +156,7 @@ export const HERMES_AST_VISITOR_KEYS = {
     params: 'NodeList',
     rest: 'Node',
     typeParameters: 'Node',
-    returnType: 'Node',
+    rendersType: 'Node',
   },
   DeclaredPredicate: {
     value: 'Node',
