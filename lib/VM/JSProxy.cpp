@@ -939,8 +939,12 @@ CallResult<PseudoHandle<>> JSProxy::getNamed(
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
     return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
-  Handle<JSObject> target =
-      runtime.makeHandle(detail::slots(*selfHandle).target);
+  // Make sure to retrieve the target and handler before calling findTrap, as
+  // that may result in these fields being erased if the proxy is revoked in the
+  // handler.
+  auto &slots = detail::slots(*selfHandle);
+  Handle<JSObject> target = runtime.makeHandle(slots.target);
+  Handle<JSObject> handler = runtime.makeHandle(slots.handler);
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::get);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -957,7 +961,7 @@ CallResult<PseudoHandle<>> JSProxy::getNamed(
                              runtime.getStringPrimFromSymbolID(name)))
                        : runtime.makeHandle(name),
       *trapRes,
-      runtime.makeHandle(detail::slots(*selfHandle).handler),
+      handler,
       target,
       receiver);
 }
