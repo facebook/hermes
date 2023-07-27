@@ -210,6 +210,10 @@ set(HERMES_FUZZING_FLAG "-fsanitize=fuzzer" CACHE STRING
 set(HERMES_SLOW_DEBUG ON CACHE BOOL
   "Enable slow checks in Debug builds")
 
+# Build with -DHERMES_HARDENED for hardened builds
+set(HERMES_HARDENED OFF CACHE BOOL
+  "Enable compile-time security mitigations")
+
 # On CentOS:
 #   sudo yum install zlib-static glibc-static ncurses-static readline-static
 set(HERMES_STATIC_LINK OFF CACHE BOOL
@@ -504,6 +508,10 @@ if(HERMES_SLOW_DEBUG)
   # Enable HERMES_SLOW_DEBUG in Debug mode
   set_property(DIRECTORY APPEND PROPERTY
       COMPILE_DEFINITIONS $<$<CONFIG:Debug>:HERMES_SLOW_DEBUG>)
+endif()
+
+if (HERMES_HARDENED)
+  add_definitions(-DHERMES_HARDENED)
 endif()
 
 if ((NOT GENERATOR_IS_MULTI_CONFIG) AND (CMAKE_BUILD_TYPE STREQUAL Debug))
