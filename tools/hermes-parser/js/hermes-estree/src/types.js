@@ -644,7 +644,6 @@ export type MemberExpression =
   | MemberExpressionWithNonComputedName;
 export interface MemberExpressionWithComputedName extends BaseNode {
   +type: 'MemberExpression';
-  +computed: true;
   +object: Expression | Super;
   +property: Expression;
   +computed: true;
@@ -652,7 +651,6 @@ export interface MemberExpressionWithComputedName extends BaseNode {
 }
 export interface MemberExpressionWithNonComputedName extends BaseNode {
   +type: 'MemberExpression';
-  +computed: false;
   +object: Expression | Super;
   +property: Identifier | PrivateIdentifier;
   +computed: false;

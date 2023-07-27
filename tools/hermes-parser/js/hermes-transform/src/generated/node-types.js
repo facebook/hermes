@@ -119,7 +119,6 @@ import type {
   KeyofTypeAnnotation as KeyofTypeAnnotationType,
   LabeledStatement as LabeledStatementType,
   LogicalExpression as LogicalExpressionType,
-  MemberExpression as MemberExpressionType,
   MetaProperty as MetaPropertyType,
   MethodDefinition as MethodDefinitionType,
   MixedTypeAnnotation as MixedTypeAnnotationType,
@@ -752,12 +751,6 @@ export type LogicalExpressionProps = {
   +left: MaybeDetachedNode<LogicalExpressionType['left']>,
   +right: MaybeDetachedNode<LogicalExpressionType['right']>,
   +operator: LogicalExpressionType['operator'],
-};
-
-export type MemberExpressionProps = {
-  +object: MaybeDetachedNode<MemberExpressionType['object']>,
-  +property: MaybeDetachedNode<MemberExpressionType['property']>,
-  +computed: MemberExpressionType['computed'],
 };
 
 export type MetaPropertyProps = {
@@ -2356,20 +2349,6 @@ export function LogicalExpression(props: {
     left: asDetachedNodeForCodeGen(props.left),
     right: asDetachedNodeForCodeGen(props.right),
     operator: props.operator,
-  });
-  setParentPointersInDirectChildren(node);
-  return node;
-}
-
-export function MemberExpression(props: {
-  ...$ReadOnly<MemberExpressionProps>,
-  +parent?: ESNode,
-}): DetachedNode<MemberExpressionType> {
-  const node = detachedProps<MemberExpressionType>(props.parent, {
-    type: 'MemberExpression',
-    object: asDetachedNodeForCodeGen(props.object),
-    property: asDetachedNodeForCodeGen(props.property),
-    computed: props.computed,
   });
   setParentPointersInDirectChildren(node);
   return node;
