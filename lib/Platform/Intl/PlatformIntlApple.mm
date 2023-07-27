@@ -1425,35 +1425,33 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
   static constexpr std::u16string_view weekdayValues[] = {
       u"narrow", u"short", u"long"};
   auto weekdayRes =
-      getOptionString(runtime, inputOptions, u"weekday", weekdayValues, {});
+      getOptionString(runtime, options, u"weekday", weekdayValues, {});
   if (LLVM_UNLIKELY(weekdayRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   weekday_ = *weekdayRes;
 
   static constexpr std::u16string_view eraValues[] = {
       u"narrow", u"short", u"long"};
-  auto eraRes = getOptionString(runtime, inputOptions, u"era", eraValues, {});
+  auto eraRes = getOptionString(runtime, options, u"era", eraValues, {});
   if (LLVM_UNLIKELY(eraRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   era_ = *eraRes;
 
   static constexpr std::u16string_view yearValues[] = {u"2-digit", u"numeric"};
-  auto yearRes =
-      getOptionString(runtime, inputOptions, u"year", yearValues, {});
+  auto yearRes = getOptionString(runtime, options, u"year", yearValues, {});
   if (LLVM_UNLIKELY(yearRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   year_ = *yearRes;
 
   static constexpr std::u16string_view monthValues[] = {
       u"2-digit", u"numeric", u"narrow", u"short", u"long"};
-  auto monthRes =
-      getOptionString(runtime, inputOptions, u"month", monthValues, {});
+  auto monthRes = getOptionString(runtime, options, u"month", monthValues, {});
   if (LLVM_UNLIKELY(monthRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   month_ = *monthRes;
 
   static constexpr std::u16string_view dayValues[] = {u"2-digit", u"numeric"};
-  auto dayRes = getOptionString(runtime, inputOptions, u"day", dayValues, {});
+  auto dayRes = getOptionString(runtime, options, u"day", dayValues, {});
   if (LLVM_UNLIKELY(dayRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   day_ = *dayRes;
@@ -1461,14 +1459,13 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
   static constexpr std::u16string_view dayPeriodValues[] = {
       u"narrow", u"short", u"long"};
   auto dayPeriodRes =
-      getOptionString(runtime, inputOptions, u"dayPeriod", dayPeriodValues, {});
+      getOptionString(runtime, options, u"dayPeriod", dayPeriodValues, {});
   if (LLVM_UNLIKELY(dayPeriodRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   dayPeriod_ = *dayPeriodRes;
 
   static constexpr std::u16string_view hourValues[] = {u"2-digit", u"numeric"};
-  auto hourRes =
-      getOptionString(runtime, inputOptions, u"hour", hourValues, {});
+  auto hourRes = getOptionString(runtime, options, u"hour", hourValues, {});
   if (LLVM_UNLIKELY(hourRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   hour_ = *hourRes;
@@ -1476,7 +1473,7 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
   static constexpr std::u16string_view minuteValues[] = {
       u"2-digit", u"numeric"};
   auto minuteRes =
-      getOptionString(runtime, inputOptions, u"minute", minuteValues, {});
+      getOptionString(runtime, options, u"minute", minuteValues, {});
   if (LLVM_UNLIKELY(minuteRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   minute_ = *minuteRes;
@@ -1484,13 +1481,13 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
   static constexpr std::u16string_view secondValues[] = {
       u"2-digit", u"numeric"};
   auto secondRes =
-      getOptionString(runtime, inputOptions, u"second", secondValues, {});
+      getOptionString(runtime, options, u"second", secondValues, {});
   if (LLVM_UNLIKELY(secondRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   second_ = *secondRes;
 
-  auto fractionalSecondDigitsRes = getNumberOption(
-      runtime, inputOptions, u"fractionalSecondDigits", 1, 3, {});
+  auto fractionalSecondDigitsRes =
+      getNumberOption(runtime, options, u"fractionalSecondDigits", 1, 3, {});
   if (LLVM_UNLIKELY(
           fractionalSecondDigitsRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
@@ -1509,7 +1506,7 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
       u"shortGeneric",
       u"longGeneric"};
   auto timeZoneNameRes = getOptionString(
-      runtime, inputOptions, u"timeZoneName", timeZoneNameValues, {});
+      runtime, options, u"timeZoneName", timeZoneNameValues, {});
   if (LLVM_UNLIKELY(timeZoneNameRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   timeZoneName_ = *timeZoneNameRes;
@@ -1719,7 +1716,7 @@ void DateTimeFormatApple::initializeNSDateFormatter() noexcept {
     if (*era_ == kNarrow) {
       [customFormattedDate appendString:@"GGGGG"];
     } else if (*era_ == kShort) {
-      [customFormattedDate appendString:@"G"];
+      [customFormattedDate appendString:@"GGG"];
     } else {
       assert(*era_ == kLong && "No other valid era.");
       [customFormattedDate appendString:@"GGGG"];

@@ -16,22 +16,22 @@ const date = new Date(Date.UTC(2020, 0, 2, 3, 45, 00, 30));
 const oldDate = new Date(Date.UTC(1952, 0, 9, 8, 04, 03, 05));
 
 print(new Intl.DateTimeFormat('en-US').format(date));
-// CHECK-NEXT: 1/2/20
+// CHECK-NEXT: 1/2/2020
 
 print(new Intl.DateTimeFormat('en-GB').format(date));
 // CHECK-NEXT: 02/01/2020
 
 print(new Intl.DateTimeFormat('de-DE').format(date));
-// CHECK-NEXT: 02.01.20
+// CHECK-NEXT: 2.1.2020
 
 print(new Intl.DateTimeFormat('en-US').format(oldDate));
-// CHECK-NEXT: 1/9/52
+// CHECK-NEXT: 1/9/1952
 
 print(new Intl.DateTimeFormat('en-GB').format(oldDate));
 // CHECK-NEXT: 09/01/1952
 
 print(new Intl.DateTimeFormat('de-DE').format(oldDate));
-// CHECK-NEXT: 09.01.52
+// CHECK-NEXT: 9.1.1952
 
 print(new Intl.DateTimeFormat('en-US', { timeStyle: 'long', timeZone: 'PST'}).format(date));
 // CHECK-NEXT: 7:45:00 PM PST
@@ -76,9 +76,9 @@ lengthOptions.forEach(element => print(new Intl.DateTimeFormat('hi-IN', {weekday
 // CHECK-NEXT: गुरुवार
 
 lengthOptions.forEach(element => print(new Intl.DateTimeFormat('en-US', {era: element}).format(date)));
-// CHECK-NEXT: A
-// CHECK-NEXT: AD
-// CHECK-NEXT: Anno Domini
+// CHECK-NEXT: 1/2/2020 A
+// CHECK-NEXT: 1/2/2020 AD
+// CHECK-NEXT: 1/2/2020 Anno Domini
 
 numericOptions.forEach(element => print(new Intl.DateTimeFormat('de-DE', {year: element}).format(date)));
 // CHECK-NEXT: 2020
@@ -107,13 +107,28 @@ lengthOptions.concat(numericOptions).forEach(element => print(new Intl.DateTimeF
 // CHECK-NEXT: 1
 // CHECK-NEXT: 01
 
-lengthOptions.slice(1).forEach(element => print(new Intl.DateTimeFormat('en-GB', {timeZoneName: element}).format(date)));
-// CHECK-NEXT: GMT
-// CHECK-NEXT: Greenwich Mean Time
-
 numericOptions.forEach(element => print(new Intl.DateTimeFormat('ja-JP', {hour: element, minute: element}).format(date)));
 // CHECK-NEXT: 午前3:45
 // CHECK-NEXT: 午前3:45
+
+var timeZoneNameOptions = [
+  'short',
+  'shortOffset',
+  'shortGeneric',
+  'long',
+  'longOffset',
+  'longGeneric',
+];
+
+for(var tzn of timeZoneNameOptions) {
+  print(new Intl.DateTimeFormat("en-US", {timeZone: "PST", timeZoneName: tzn}).format(date));
+}
+// CHECK-NEXT: 1/1/2020, PST
+// CHECK-NEXT: 1/1/2020, GMT-8
+// CHECK-NEXT: 1/1/2020, PT
+// CHECK-NEXT: 1/1/2020, Pacific Standard Time
+// CHECK-NEXT: 1/1/2020, GMT-08:00
+// CHECK-NEXT: 1/1/2020, Pacific Time
 
 print(new Intl.DateTimeFormat('en-US').resolvedOptions().locale);
 // CHECK-NEXT: en-US
@@ -128,7 +143,7 @@ print(new Intl.DateTimeFormat('en-US', { timeZone: 'SGT'}).resolvedOptions().tim
 // CHECK-NEXT: SGT
 
 print(JSON.stringify(new Intl.DateTimeFormat('en-US').formatToParts(date)));
-// CHECK-NEXT: [{"value":"1","type":"month"},{"value":"/","type":"literal"},{"value":"2","type":"day"},{"value":"/","type":"literal"},{"value":"20","type":"year"}]
+// CHECK-NEXT: [{"value":"1","type":"month"},{"value":"/","type":"literal"},{"value":"2","type":"day"},{"value":"/","type":"literal"},{"value":"2020","type":"year"}]
 
 print(JSON.stringify(new Intl.DateTimeFormat('en-GB').formatToParts(date)));
 // CHECK-NEXT: [{"value":"02","type":"day"},{"value":"/","type":"literal"},{"value":"01","type":"month"},{"value":"/","type":"literal"},{"value":"2020","type":"year"}]
