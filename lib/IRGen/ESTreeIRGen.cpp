@@ -829,10 +829,16 @@ void ESTreeIRGen::emitRestProperty(
     // This size is only a hint as the true size may change if there are
     // duplicates when computedExcludedItems is processed at run-time.
     auto excludedSizeHint = exMap.size() + computedExcludedItems.size();
+    // Explicitly set the prototype for the object created here so it isn't
+    // initialized to Object.prototype, which may be modified by the user.
     if (exMap.empty()) {
-      excludedObj = Builder.createAllocObjectInst(excludedSizeHint);
+      excludedObj = Builder.createAllocObjectInst(
+          excludedSizeHint, Builder.getLiteralNull());
     } else {
       excludedObj = Builder.createAllocObjectLiteralInst(exMap);
+      genBuiltinCall(
+          BuiltinMethod::HermesBuiltin_silentSetPrototypeOf,
+          {excludedObj, Builder.getLiteralNull()});
     }
     for (Value *key : computedExcludedItems) {
       Builder.createStorePropertyInst(zeroValue, excludedObj, key);
