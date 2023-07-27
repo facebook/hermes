@@ -72,6 +72,7 @@ export function flowDefToTSDef(
       ](
         // $FlowExpectedError[incompatible-type]
         // $FlowExpectedError[prop-missing]
+        // $FlowFixMe[incompatible-call]
         node,
       );
       tsBody.push(...(Array.isArray(result) ? result : [result]));
