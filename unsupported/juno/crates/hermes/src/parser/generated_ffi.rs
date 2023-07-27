@@ -20,6 +20,7 @@ pub enum NodeKind {
     FunctionExpression,
     ArrowFunctionExpression,
     FunctionDeclaration,
+    ComponentDeclaration,
     _FunctionLikeLast,
     _StatementFirst,
     _LoopStatementFirst,
@@ -141,16 +142,25 @@ pub enum NodeKind {
     VoidTypeAnnotation,
     FunctionTypeAnnotation,
     FunctionTypeParam,
+    ComponentTypeAnnotation,
+    ComponentTypeParameter,
     NullableTypeAnnotation,
     QualifiedTypeIdentifier,
     TypeofTypeAnnotation,
+    KeyofTypeAnnotation,
+    QualifiedTypeofIdentifier,
     TupleTypeAnnotation,
+    TupleTypeSpreadElement,
+    TupleTypeLabeledElement,
     ArrayTypeAnnotation,
+    InferTypeAnnotation,
     UnionTypeAnnotation,
     IntersectionTypeAnnotation,
     GenericTypeAnnotation,
     IndexedAccessType,
     OptionalIndexedAccessType,
+    ConditionalTypeAnnotation,
+    TypePredicate,
     InterfaceTypeAnnotation,
     TypeAlias,
     OpaqueType,
@@ -160,7 +170,9 @@ pub enum NodeKind {
     DeclareInterface,
     DeclareClass,
     DeclareFunction,
+    DeclareComponent,
     DeclareVariable,
+    DeclareEnum,
     DeclareExportDeclaration,
     DeclareExportAllDeclaration,
     DeclareModule,
@@ -174,6 +186,7 @@ pub enum NodeKind {
     ObjectTypeInternalSlot,
     ObjectTypeCallProperty,
     ObjectTypeIndexer,
+    ObjectTypeMappedTypeProperty,
     Variance,
     TypeParameterDeclaration,
     TypeParameter,
@@ -190,6 +203,7 @@ pub enum NodeKind {
     EnumStringMember,
     EnumNumberMember,
     EnumBooleanMember,
+    ComponentParameter,
     TSTypeAnnotation,
     TSAnyKeyword,
     TSNumberKeyword,
@@ -231,6 +245,7 @@ pub enum NodeKind {
     TSMethodSignature,
     TSIndexSignature,
     TSCallSignatureDeclaration,
+    TSModifiers,
     _CoverFirst,
     CoverEmptyArgs,
     CoverTrailingComma,
@@ -270,6 +285,12 @@ extern "C" {
     pub fn hermes_get_FunctionDeclaration_predicate(node: NodePtr) -> NodePtrOpt;
     pub fn hermes_get_FunctionDeclaration_generator(node: NodePtr) -> bool;
     pub fn hermes_get_FunctionDeclaration_async(node: NodePtr) -> bool;
+    // ComponentDeclaration
+    pub fn hermes_get_ComponentDeclaration_id(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_ComponentDeclaration_params(node: NodePtr) -> NodeListRef;
+    pub fn hermes_get_ComponentDeclaration_body(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_ComponentDeclaration_typeParameters(node: NodePtr) -> NodePtrOpt;
+    pub fn hermes_get_ComponentDeclaration_rendersType(node: NodePtr) -> NodePtrOpt;
     // WhileStatement
     pub fn hermes_get_WhileStatement_body(node: NodePtr) -> NodePtr;
     pub fn hermes_get_WhileStatement_test(node: NodePtr) -> NodePtr;
@@ -463,6 +484,7 @@ extern "C" {
     pub fn hermes_get_ClassProperty_optional(node: NodePtr) -> bool;
     pub fn hermes_get_ClassProperty_variance(node: NodePtr) -> NodePtrOpt;
     pub fn hermes_get_ClassProperty_typeAnnotation(node: NodePtr) -> NodePtrOpt;
+    pub fn hermes_get_ClassProperty_tsModifiers(node: NodePtr) -> NodePtrOpt;
     // ClassPrivateProperty
     pub fn hermes_get_ClassPrivateProperty_key(node: NodePtr) -> NodePtr;
     pub fn hermes_get_ClassPrivateProperty_value(node: NodePtr) -> NodePtrOpt;
@@ -471,6 +493,7 @@ extern "C" {
     pub fn hermes_get_ClassPrivateProperty_optional(node: NodePtr) -> bool;
     pub fn hermes_get_ClassPrivateProperty_variance(node: NodePtr) -> NodePtrOpt;
     pub fn hermes_get_ClassPrivateProperty_typeAnnotation(node: NodePtr) -> NodePtrOpt;
+    pub fn hermes_get_ClassPrivateProperty_tsModifiers(node: NodePtr) -> NodePtrOpt;
     // MethodDefinition
     pub fn hermes_get_MethodDefinition_key(node: NodePtr) -> NodePtr;
     pub fn hermes_get_MethodDefinition_value(node: NodePtr) -> NodePtr;
@@ -535,6 +558,7 @@ extern "C" {
     pub fn hermes_get_JSXOpeningElement_name(node: NodePtr) -> NodePtr;
     pub fn hermes_get_JSXOpeningElement_attributes(node: NodePtr) -> NodeListRef;
     pub fn hermes_get_JSXOpeningElement_selfClosing(node: NodePtr) -> bool;
+    pub fn hermes_get_JSXOpeningElement_typeArguments(node: NodePtr) -> NodePtrOpt;
     // JSXClosingElement
     pub fn hermes_get_JSXClosingElement_name(node: NodePtr) -> NodePtr;
     // JSXAttribute
@@ -577,6 +601,15 @@ extern "C" {
     pub fn hermes_get_FunctionTypeParam_name(node: NodePtr) -> NodePtrOpt;
     pub fn hermes_get_FunctionTypeParam_typeAnnotation(node: NodePtr) -> NodePtr;
     pub fn hermes_get_FunctionTypeParam_optional(node: NodePtr) -> bool;
+    // ComponentTypeAnnotation
+    pub fn hermes_get_ComponentTypeAnnotation_params(node: NodePtr) -> NodeListRef;
+    pub fn hermes_get_ComponentTypeAnnotation_rest(node: NodePtr) -> NodePtrOpt;
+    pub fn hermes_get_ComponentTypeAnnotation_typeParameters(node: NodePtr) -> NodePtrOpt;
+    pub fn hermes_get_ComponentTypeAnnotation_rendersType(node: NodePtr) -> NodePtrOpt;
+    // ComponentTypeParameter
+    pub fn hermes_get_ComponentTypeParameter_name(node: NodePtr) -> NodePtrOpt;
+    pub fn hermes_get_ComponentTypeParameter_typeAnnotation(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_ComponentTypeParameter_optional(node: NodePtr) -> bool;
     // NullableTypeAnnotation
     pub fn hermes_get_NullableTypeAnnotation_typeAnnotation(node: NodePtr) -> NodePtr;
     // QualifiedTypeIdentifier
@@ -584,10 +617,25 @@ extern "C" {
     pub fn hermes_get_QualifiedTypeIdentifier_id(node: NodePtr) -> NodePtr;
     // TypeofTypeAnnotation
     pub fn hermes_get_TypeofTypeAnnotation_argument(node: NodePtr) -> NodePtr;
+    // KeyofTypeAnnotation
+    pub fn hermes_get_KeyofTypeAnnotation_argument(node: NodePtr) -> NodePtr;
+    // QualifiedTypeofIdentifier
+    pub fn hermes_get_QualifiedTypeofIdentifier_qualification(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_QualifiedTypeofIdentifier_id(node: NodePtr) -> NodePtr;
     // TupleTypeAnnotation
     pub fn hermes_get_TupleTypeAnnotation_types(node: NodePtr) -> NodeListRef;
+    // TupleTypeSpreadElement
+    pub fn hermes_get_TupleTypeSpreadElement_label(node: NodePtr) -> NodePtrOpt;
+    pub fn hermes_get_TupleTypeSpreadElement_typeAnnotation(node: NodePtr) -> NodePtr;
+    // TupleTypeLabeledElement
+    pub fn hermes_get_TupleTypeLabeledElement_label(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_TupleTypeLabeledElement_elementType(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_TupleTypeLabeledElement_optional(node: NodePtr) -> bool;
+    pub fn hermes_get_TupleTypeLabeledElement_variance(node: NodePtr) -> NodePtrOpt;
     // ArrayTypeAnnotation
     pub fn hermes_get_ArrayTypeAnnotation_elementType(node: NodePtr) -> NodePtr;
+    // InferTypeAnnotation
+    pub fn hermes_get_InferTypeAnnotation_typeParameter(node: NodePtr) -> NodePtr;
     // UnionTypeAnnotation
     pub fn hermes_get_UnionTypeAnnotation_types(node: NodePtr) -> NodeListRef;
     // IntersectionTypeAnnotation
@@ -602,6 +650,15 @@ extern "C" {
     pub fn hermes_get_OptionalIndexedAccessType_objectType(node: NodePtr) -> NodePtr;
     pub fn hermes_get_OptionalIndexedAccessType_indexType(node: NodePtr) -> NodePtr;
     pub fn hermes_get_OptionalIndexedAccessType_optional(node: NodePtr) -> bool;
+    // ConditionalTypeAnnotation
+    pub fn hermes_get_ConditionalTypeAnnotation_checkType(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_ConditionalTypeAnnotation_extendsType(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_ConditionalTypeAnnotation_trueType(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_ConditionalTypeAnnotation_falseType(node: NodePtr) -> NodePtr;
+    // TypePredicate
+    pub fn hermes_get_TypePredicate_parameterName(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_TypePredicate_typeAnnotation(node: NodePtr) -> NodePtrOpt;
+    pub fn hermes_get_TypePredicate_asserts(node: NodePtr) -> bool;
     // InterfaceTypeAnnotation
     pub fn hermes_get_InterfaceTypeAnnotation_extends(node: NodePtr) -> NodeListRef;
     pub fn hermes_get_InterfaceTypeAnnotation_body(node: NodePtr) -> NodePtrOpt;
@@ -643,8 +700,18 @@ extern "C" {
     // DeclareFunction
     pub fn hermes_get_DeclareFunction_id(node: NodePtr) -> NodePtr;
     pub fn hermes_get_DeclareFunction_predicate(node: NodePtr) -> NodePtrOpt;
+    // DeclareComponent
+    pub fn hermes_get_DeclareComponent_id(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_DeclareComponent_params(node: NodePtr) -> NodeListRef;
+    pub fn hermes_get_DeclareComponent_rest(node: NodePtr) -> NodePtrOpt;
+    pub fn hermes_get_DeclareComponent_typeParameters(node: NodePtr) -> NodePtrOpt;
+    pub fn hermes_get_DeclareComponent_rendersType(node: NodePtr) -> NodePtrOpt;
     // DeclareVariable
     pub fn hermes_get_DeclareVariable_id(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_DeclareVariable_kind(node: NodePtr) -> NodeLabel;
+    // DeclareEnum
+    pub fn hermes_get_DeclareEnum_id(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_DeclareEnum_body(node: NodePtr) -> NodePtr;
     // DeclareExportDeclaration
     pub fn hermes_get_DeclareExportDeclaration_declaration(node: NodePtr) -> NodePtrOpt;
     pub fn hermes_get_DeclareExportDeclaration_specifiers(node: NodePtr) -> NodeListRef;
@@ -699,6 +766,12 @@ extern "C" {
     pub fn hermes_get_ObjectTypeIndexer_value(node: NodePtr) -> NodePtr;
     pub fn hermes_get_ObjectTypeIndexer_static(node: NodePtr) -> bool;
     pub fn hermes_get_ObjectTypeIndexer_variance(node: NodePtr) -> NodePtrOpt;
+    // ObjectTypeMappedTypeProperty
+    pub fn hermes_get_ObjectTypeMappedTypeProperty_keyTparam(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_ObjectTypeMappedTypeProperty_propType(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_ObjectTypeMappedTypeProperty_sourceType(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_ObjectTypeMappedTypeProperty_variance(node: NodePtr) -> NodePtrOpt;
+    pub fn hermes_get_ObjectTypeMappedTypeProperty_optional(node: NodePtr) -> NodeStringOpt;
     // Variance
     pub fn hermes_get_Variance_kind(node: NodePtr) -> NodeLabel;
     // TypeParameterDeclaration
@@ -708,6 +781,7 @@ extern "C" {
     pub fn hermes_get_TypeParameter_bound(node: NodePtr) -> NodePtrOpt;
     pub fn hermes_get_TypeParameter_variance(node: NodePtr) -> NodePtrOpt;
     pub fn hermes_get_TypeParameter_default(node: NodePtr) -> NodePtrOpt;
+    pub fn hermes_get_TypeParameter_usesExtendsBound(node: NodePtr) -> bool;
     // TypeParameterInstantiation
     pub fn hermes_get_TypeParameterInstantiation_params(node: NodePtr) -> NodeListRef;
     // TypeCastExpression
@@ -744,6 +818,10 @@ extern "C" {
     // EnumBooleanMember
     pub fn hermes_get_EnumBooleanMember_id(node: NodePtr) -> NodePtr;
     pub fn hermes_get_EnumBooleanMember_init(node: NodePtr) -> NodePtr;
+    // ComponentParameter
+    pub fn hermes_get_ComponentParameter_name(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_ComponentParameter_local(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_ComponentParameter_shorthand(node: NodePtr) -> bool;
     // TSTypeAnnotation
     pub fn hermes_get_TSTypeAnnotation_typeAnnotation(node: NodePtr) -> NodePtr;
     // TSLiteralType
@@ -827,10 +905,10 @@ extern "C" {
     // TSTypeQuery
     pub fn hermes_get_TSTypeQuery_exprName(node: NodePtr) -> NodePtr;
     // TSConditionalType
-    pub fn hermes_get_TSConditionalType_extendsType(node: NodePtr) -> NodePtr;
     pub fn hermes_get_TSConditionalType_checkType(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_TSConditionalType_extendsType(node: NodePtr) -> NodePtr;
     pub fn hermes_get_TSConditionalType_trueType(node: NodePtr) -> NodePtr;
-    pub fn hermes_get_TSConditionalType_falseTYpe(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_TSConditionalType_falseType(node: NodePtr) -> NodePtr;
     // TSTypeLiteral
     pub fn hermes_get_TSTypeLiteral_members(node: NodePtr) -> NodeListRef;
     // TSPropertySignature
@@ -853,6 +931,9 @@ extern "C" {
     // TSCallSignatureDeclaration
     pub fn hermes_get_TSCallSignatureDeclaration_params(node: NodePtr) -> NodeListRef;
     pub fn hermes_get_TSCallSignatureDeclaration_returnType(node: NodePtr) -> NodePtrOpt;
+    // TSModifiers
+    pub fn hermes_get_TSModifiers_accessibility(node: NodePtr) -> NodeLabel;
+    pub fn hermes_get_TSModifiers_readonly(node: NodePtr) -> bool;
     // CoverInitializer
     pub fn hermes_get_CoverInitializer_init(node: NodePtr) -> NodePtr;
     // CoverRestElement
