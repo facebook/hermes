@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "hermes-estree": "0.12.1",
-    "hermes-parser": "0.12.1"
+    "hermes-parser": "0.12.1",
+    "prettier-plugin-hermes-parser": "0.12.1"
   },
   "peerDependencies": {
     "prettier": "^3.0.0 || ^2.7.1"

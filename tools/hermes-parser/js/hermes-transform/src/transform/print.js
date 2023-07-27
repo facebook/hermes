@@ -21,6 +21,8 @@ import {
 } from './comments/comments';
 import type {VisitorKeysType} from 'hermes-parser';
 
+let cache = 1;
+
 export async function print(
   ast: MaybeDetachedNode<Program>,
   originalCode: string,
@@ -79,14 +81,39 @@ export async function print(
       );
     }
     case '2': {
+      const hermesPlugin = require('prettier-plugin-hermes-parser');
+      const hermesParser = hermesPlugin.parsers?.hermes;
+      if (hermesParser == null) {
+        throw new Error('Hermes parser plugin not found');
+      }
+
       return prettier.format(
         originalCode,
         // $FlowExpectedError[incompatible-exact] - we don't want to create a dependency on the prettier types
         {
           ...prettierOptions,
-          parser() {
-            return program;
-          },
+          parser: 'hermes',
+          requirePragma: false,
+          plugins: [
+            // $FlowExpectedError[incompatible-call] Cache value is not expected but needed in this case.
+            {
+              parsers: {
+                hermes: {
+                  ...hermesParser,
+
+                  // Prettier caches the plugin, by making this key always unique we ensure the new `parse`
+                  // function with the correct AST is always called.
+                  cache: cache++,
+
+                  // Provide the passed AST to prettier
+                  parse() {
+                    return program;
+                  },
+                },
+              },
+              printers: hermesPlugin.printers,
+            },
+          ],
         },
       );
     }

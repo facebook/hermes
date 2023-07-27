@@ -73,6 +73,8 @@ declare module 'prettier' {
     options: Options,
   ) => AST;
 
+  declare type CustomParserName = string;
+
   declare export type Options = Partial<RequiredOptions>;
   declare export type RequiredOptions = {
     ...DocPrinterOptions,
@@ -126,7 +128,7 @@ declare module 'prettier' {
     /**
      * Specify which parser to use.
      */
-    parser: BuiltInParserName | CustomParser,
+    parser: BuiltInParserName | CustomParserName | CustomParser,
     /**
      * Specify the input filepath. This will be used to do parser inference.
      */
