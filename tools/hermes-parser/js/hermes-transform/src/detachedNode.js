@@ -55,6 +55,7 @@ export const asDetachedNode: {
     node: ?MaybeDetachedNode<T>,
     config?: {useDeepClone: boolean},
   ): ?DetachedNode<T>,
+  // $FlowFixMe[incompatible-exact]
 } = <T: ESNode>(
   node: ?MaybeDetachedNode<T>,
   {useDeepClone}: {useDeepClone: boolean} = {useDeepClone: false},

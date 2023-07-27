@@ -141,6 +141,7 @@ class Referencer extends Visitor {
   currentScope: {
     (): Scope,
     (throwOnNull: true): Scope | null,
+    // $FlowFixMe[incompatible-exact]
   } = (dontThrowOnNull?: boolean) => {
     if (dontThrowOnNull !== true) {
       if (this.scopeManager.currentScope == null) {

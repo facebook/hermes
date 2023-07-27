@@ -25,7 +25,7 @@ module.name_mapper='^hermes-transform$' -> '<PROJECT_ROOT>/hermes-transform/src/
 enums=true
 
 [version]
-^0.204.1
+^0.205.0
 
 [lints]
 untyped-type-import=error
