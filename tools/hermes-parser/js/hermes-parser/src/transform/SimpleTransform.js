@@ -74,6 +74,7 @@ export class SimpleTransform {
         }
       },
       leave(_node: ESNode) {},
+      visitorKeys: options.visitorKeys,
     });
     return resultRootNode;
   }

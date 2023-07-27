@@ -90,3 +90,4 @@ export * from './traverse/getVisitorKeys';
 export {FlowVisitorKeys};
 export * as astArrayMutationHelpers from './transform/astArrayMutationHelpers';
 export * as astNodeMutationHelpers from './transform/astNodeMutationHelpers';
+export {default as mutateESTreeASTForPrettier} from './utils/mutateESTreeASTForPrettier';
