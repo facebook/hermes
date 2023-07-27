@@ -2098,8 +2098,7 @@ jsi::Value HermesRuntimeImpl::call(
   vm::GCScope gcScope(runtime_);
   vm::Handle<vm::Callable> handle =
       vm::Handle<vm::Callable>::vmcast(&phv(func));
-  if (count > std::numeric_limits<uint32_t>::max() ||
-      !runtime_.checkAvailableStack((uint32_t)count)) {
+  if (count > std::numeric_limits<uint32_t>::max()) {
     LOG_EXCEPTION_CAUSE(
         "HermesRuntimeImpl::call: Unable to call function: stack overflow");
     throw jsi::JSINativeException(
@@ -2134,8 +2133,7 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
   vm::Handle<vm::Callable> funcHandle =
       vm::Handle<vm::Callable>::vmcast(&phv(func));
 
-  if (count > std::numeric_limits<uint32_t>::max() ||
-      !runtime_.checkAvailableStack((uint32_t)count)) {
+  if (count > std::numeric_limits<uint32_t>::max()) {
     LOG_EXCEPTION_CAUSE(
         "HermesRuntimeImpl::call: Unable to call function: stack overflow");
     throw jsi::JSINativeException(
