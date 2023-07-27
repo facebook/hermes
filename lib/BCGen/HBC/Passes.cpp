@@ -223,6 +223,13 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
   return false;
 }
 
+bool isInstructionIndifferentToNullUndefined(Instruction *it) {
+  auto *binaryOp = llvh::dyn_cast<BinaryOperatorInst>(it);
+  return binaryOp &&
+      BinaryOperatorInst::looseToStrictEqualityOperator(
+             binaryOp->getOperatorKind());
+}
+
 bool LoadConstants::runOnFunction(Function *F) {
   IRBuilder builder(F);
   bool changed = false;
@@ -237,16 +244,32 @@ bool LoadConstants::runOnFunction(Function *F) {
   // because doing this now interefers with code motion.
   const bool uniqueLiterals = !optimizationEnabled_;
 
-  auto createLoadLiteral = [&builder](Literal *literal) -> Instruction * {
+  std::function<Instruction *(Literal *)> createLoadLiteral =
+      [&builder](Literal *literal) -> Instruction * {
     return llvh::isa<GlobalObject>(literal)
         ? cast<Instruction>(builder.createHBCGetGlobalObjectInst())
         : cast<Instruction>(builder.createHBCLoadConstInst(literal));
   };
 
+  auto getLoadEntry = uniqueLiterals ? [&](Literal *literal) -> Instruction * {
+    auto &entry = constMap[literal];
+    if (!entry)
+      entry = createLoadLiteral(literal);
+    return entry;
+  }
+  : createLoadLiteral;
+
+  Literal *firstUnequivocalNullUndefined = nullptr;
+  Literal *latestUnequivocalNullUndefined = nullptr;
+  llvh::SmallVector<std::pair<Instruction *, unsigned>, 2>
+      unresolvedIndifferentOperands;
+
   updateToEntryInsertionPoint(builder, F);
 
   for (BasicBlock &bbit : F->getBasicBlockList()) {
     for (auto &it : bbit.getInstList()) {
+      bool isIndifferentToNullUndefined =
+          isInstructionIndifferentToNullUndefined(&it);
       for (unsigned i = 0, n = it.getNumOperands(); i < n; i++) {
         if (operandMustBeLiteral(&it, i))
           continue;
@@ -255,21 +278,47 @@ bool LoadConstants::runOnFunction(Function *F) {
         if (!operand)
           continue;
 
-        Instruction *load = nullptr;
-        if (uniqueLiterals) {
-          auto &entry = constMap[operand];
-          if (!entry)
-            entry = createLoadLiteral(operand);
-          load = entry;
-        } else {
-          load = createLoadLiteral(operand);
+        if (optimizationEnabled_) {
+          // This logic reduces constant loading for instructions that are
+          // indifferent to null & undefined. For example, `x != undefined ?
+          // x : null` is semantically equivalent to `x != null ? x : null`,
+          // evading the need to load `undefined`. We keep track of any such
+          // "unequivocal" operands for which the distinction *does* matter
+          // and re-utilize them for "indifferent" operands where it doesn't.
+          if (llvh::isa<LiteralUndefined>(operand) ||
+              llvh::isa<LiteralNull>(operand)) {
+            if (isIndifferentToNullUndefined) {
+              if (latestUnequivocalNullUndefined) {
+                operand = latestUnequivocalNullUndefined;
+              } else {
+                // revisit after scanning rest of function for unequivocals
+                unresolvedIndifferentOperands.push_back(std::pair{&it, i});
+              }
+            } else {
+              if (!firstUnequivocalNullUndefined)
+                firstUnequivocalNullUndefined = operand;
+              latestUnequivocalNullUndefined = operand;
+            }
+          }
         }
 
-        it.setOperand(load, i);
+        it.setOperand(getLoadEntry(operand), i);
         changed = true;
       }
     }
   }
+
+  // if the function does not contain an unequivocal null or undefined then
+  // later optimization passes will at least benefit from a consistent value
+  if (!firstUnequivocalNullUndefined)
+    // we choose undefined over null as undefined is more common in byte-code
+    firstUnequivocalNullUndefined = builder.getLiteralUndefined();
+
+  for (auto [instruction, operandIndex] : unresolvedIndifferentOperands) {
+    instruction->setOperand(
+        getLoadEntry(firstUnequivocalNullUndefined), operandIndex);
+  }
+
   return changed;
 }
 

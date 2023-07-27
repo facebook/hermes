@@ -1936,6 +1936,9 @@ class BinaryOperatorInst : public Instruction {
   // assert fail if the string is invalud.
   static OpKind parseAssignmentOperator(llvh::StringRef op);
 
+  // Convert == to === and != to !==.
+  static llvh::Optional<OpKind> looseToStrictEqualityOperator(OpKind op);
+
   // Get the operator that allows you to swap the operands, if one exists.
   // >= becomes <= and + becomes +.
   static llvh::Optional<OpKind> tryGetReverseOperator(OpKind op);

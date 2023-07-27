@@ -445,10 +445,18 @@ function objectCond() {
   return 2;
 }
 
+function nullCoaelseToUndefined(a) {
+  return  a ?? undefined;
+}
+
+function nullCoalesceToNull(a) {
+  return  a ?? null;
+}
+
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:globals = [add_sub_num, modulo_num, logic_ops_test, add_str, add_empty_str, add_empty_str_simplify, add_null, mul_null, left_shift_num, left_shift_null, left_shift_undefined, right_shift_num, right_shift_null, right_shift_undefined, right_shift_bool, unsigned_right_shift_bool, unsigned_right_shift_compound_assgmt, unsigned_right_shift_num, add_undef, comp_num, equality, arith, undef_test, foo, strip_bang, turn_unary_plus_into_as_number, turn_unary_plus_on_literal_into_result, turn_bitor_into_as_int32, unary_ops, test_phi, if_inline, simplify_switch, objectCond]
+// CHECK-NEXT:globals = [add_sub_num, modulo_num, logic_ops_test, add_str, add_empty_str, add_empty_str_simplify, add_null, mul_null, left_shift_num, left_shift_null, left_shift_undefined, right_shift_num, right_shift_null, right_shift_undefined, right_shift_bool, unsigned_right_shift_bool, unsigned_right_shift_compound_assgmt, unsigned_right_shift_num, add_undef, comp_num, equality, arith, undef_test, foo, strip_bang, turn_unary_plus_into_as_number, turn_unary_plus_on_literal_into_result, turn_bitor_into_as_int32, unary_ops, test_phi, if_inline, simplify_switch, objectCond, nullCoaelseToUndefined, nullCoalesceToNull]
 // CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
@@ -518,7 +526,11 @@ function objectCond() {
 // CHECK-NEXT:  %64 = StorePropertyInst %63 : closure, globalObject : object, "simplify_switch" : string
 // CHECK-NEXT:  %65 = CreateFunctionInst %objectCond#0#1()#35 : number, %0
 // CHECK-NEXT:  %66 = StorePropertyInst %65 : closure, globalObject : object, "objectCond" : string
-// CHECK-NEXT:  %67 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %67 = CreateFunctionInst %nullCoaelseToUndefined#0#1()#36, %0
+// CHECK-NEXT:  %68 = StorePropertyInst %67 : closure, globalObject : object, "nullCoaelseToUndefined" : string
+// CHECK-NEXT:  %69 = CreateFunctionInst %nullCoalesceToNull#0#1()#37, %0
+// CHECK-NEXT:  %70 = StorePropertyInst %69 : closure, globalObject : object, "nullCoalesceToNull" : string
+// CHECK-NEXT:  %71 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function add_sub_num#0#1(x, y)#2 : undefined
@@ -990,4 +1002,30 @@ function objectCond() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{objectCond#0#1()#35}
 // CHECK-NEXT:  %1 = ReturnInst 1 : number
+// CHECK-NEXT:function_end
+
+// CHECK:function nullCoaelseToUndefined#0#1(a)#36
+// CHECK-NEXT:S{nullCoaelseToUndefined#0#1()#36} = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{nullCoaelseToUndefined#0#1()#36}
+// CHECK-NEXT:  %1 = BinaryOperatorInst '==', %a, undefined : undefined
+// CHECK-NEXT:  %2 = CondBranchInst %1 : boolean, %BB1, %BB2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %3 = BranchInst %BB2
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %4 = PhiInst %a, %BB0, undefined : undefined, %BB1
+// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:function_end
+
+// CHECK:function nullCoalesceToNull#0#1(a)#37
+// CHECK-NEXT:S{nullCoalesceToNull#0#1()#37} = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{nullCoalesceToNull#0#1()#37}
+// CHECK-NEXT:  %1 = BinaryOperatorInst '==', %a, undefined : undefined
+// CHECK-NEXT:  %2 = CondBranchInst %1 : boolean, %BB1, %BB2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %3 = BranchInst %BB2
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %4 = PhiInst %a, %BB0, null : null, %BB1
+// CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:function_end

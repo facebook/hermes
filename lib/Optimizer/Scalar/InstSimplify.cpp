@@ -184,9 +184,10 @@ Value *simplifyBinOp(BinaryOperatorInst *binary) {
 
   switch (kind) {
     case OpKind::EqualKind: // ==
+    case OpKind::NotEqualKind: // !=
       // Identical operands must be equal.
       if (identicalOperands) {
-        return builder.getLiteralBool(true);
+        return builder.getLiteralBool(kind == OpKind::EqualKind);
       }
 
       // Promote equality to strict equality if we know that the types are
@@ -194,22 +195,22 @@ Value *simplifyBinOp(BinaryOperatorInst *binary) {
       if (leftTy.isKnownPrimitiveType() && rightTy == leftTy) {
         builder.setInsertionPoint(binary);
         return builder.createBinaryOperatorInst(
-            lhs, rhs, OpKind::StrictlyEqualKind);
-      }
-      break;
-
-    case OpKind::NotEqualKind: // !=
-      // Identical operands can't be non-equal.
-      if (identicalOperands) {
-        return builder.getLiteralBool(false);
+            lhs, rhs, *BinaryOperatorInst::looseToStrictEqualityOperator(kind));
       }
 
-      // Promote inequality to strict inequality if we know that the types are
-      // identical primitive types.
-      if (leftTy.isKnownPrimitiveType() && rightTy == leftTy) {
+      // Comparisons to null and undefined are loosely equivalent but using
+      // undefined consistently presents more opportunity for optimization.
+      if (lhs->getKind() == ValueKind::LiteralNullKind ||
+          rhs->getKind() == ValueKind::LiteralNullKind) {
         builder.setInsertionPoint(binary);
         return builder.createBinaryOperatorInst(
-            lhs, rhs, OpKind::StrictlyNotEqualKind);
+            lhs->getKind() == ValueKind::LiteralNullKind
+                ? builder.getLiteralUndefined()
+                : lhs,
+            rhs->getKind() == ValueKind::LiteralNullKind
+                ? builder.getLiteralUndefined()
+                : rhs,
+            kind);
       }
       break;
 
