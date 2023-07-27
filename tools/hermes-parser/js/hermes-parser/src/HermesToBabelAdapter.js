@@ -14,6 +14,17 @@ import HermesASTAdapter from './HermesASTAdapter';
 
 declare var BigInt: ?(value: $FlowFixMe) => mixed;
 
+function createSyntaxError(node: HermesNode, err: string): SyntaxError {
+  const syntaxError = new SyntaxError(err);
+  // $FlowExpectedError[prop-missing]
+  syntaxError.loc = {
+    line: node.loc.start.line,
+    column: node.loc.start.column,
+  };
+
+  return syntaxError;
+}
+
 export default class HermesToBabelAdapter extends HermesASTAdapter {
   fixSourceLocation(node: HermesNode): void {
     const loc = node.loc;
@@ -102,6 +113,8 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapDeclareEnum(node);
       case 'JSXElement':
         return this.mapJSXElement(node);
+      case 'ComponentDeclaration':
+        return this.mapComponentDeclaration(node);
       default:
         return this.mapNodeDefault(node);
     }
@@ -542,5 +555,180 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
   mapJSXElement(nodeUnprocessed: HermesNode): HermesNode {
     delete nodeUnprocessed.openingElement.typeArguments;
     return this.mapNodeDefault(nodeUnprocessed);
+  }
+
+  mapComponentDeclaration(nodeUnprocessed: HermesNode): HermesNode {
+    let returnType = nodeUnprocessed.returnType;
+    if (returnType == null) {
+      // Create empty loc for return type annotation nodes
+      const createReturnTypeLoc = () => ({
+        loc: {
+          start: {...nodeUnprocessed.body.loc.end},
+          end: {...nodeUnprocessed.body.loc.end},
+        },
+        start: nodeUnprocessed.body.loc.end.index,
+        end: nodeUnprocessed.body.loc.end.index,
+      });
+
+      returnType = {
+        type: 'GenericTypeAnnotation',
+        id: {
+          type: 'QualifiedTypeIdentifier',
+          qualification: {
+            type: 'Identifier',
+            name: 'React',
+            ...createReturnTypeLoc(),
+          },
+          id: {
+            type: 'Identifier',
+            name: 'Node',
+            ...createReturnTypeLoc(),
+          },
+        },
+        typeParameters: null,
+        ...createReturnTypeLoc(),
+      };
+    }
+
+    function getParamName(paramName: HermesNode): string {
+      switch (paramName.type) {
+        case 'Identifier':
+          return paramName.name;
+        case 'StringLiteral':
+          return paramName.value;
+        default:
+          throw createSyntaxError(
+            paramName,
+            `Unknown Component parameter name type of "${paramName.type}"`,
+          );
+      }
+    }
+
+    const properties = nodeUnprocessed.params.map(param => {
+      switch (param.type) {
+        case 'RestElement': {
+          delete param.typeAnnotation;
+          return param;
+        }
+        case 'ComponentParameter': {
+          if (getParamName(param.name) === 'ref') {
+            throw createSyntaxError(
+              param,
+              'Component parameters named "ref" are currently not supported',
+            );
+          }
+
+          if (param.name.type === 'Identifier') {
+            delete param.name.typeAnnotation;
+          }
+          if (param.local.type === 'AssignmentPattern') {
+            delete param.local.left.typeAnnotation;
+            delete param.local.left.optional;
+          } else {
+            delete param.local.typeAnnotation;
+            delete param.local.optional;
+          }
+
+          return {
+            type: 'ObjectProperty',
+            key: param.name,
+            value: param.local,
+            method: false,
+            shorthand: param.shorthand,
+            computed: false,
+            loc: param.loc,
+            start: param.start,
+            end: param.end,
+          };
+        }
+        default: {
+          throw createSyntaxError(
+            param,
+            `Unknown Component parameter type of "${param.type}"`,
+          );
+        }
+      }
+    });
+
+    const paramsLoc = (() => {
+      if (properties.length === 0) {
+        // No props, approximate range via existing nodes.
+        return {
+          start:
+            nodeUnprocessed.typeParameters != null
+              ? nodeUnprocessed.typeParameters.loc.end
+              : nodeUnprocessed.id.loc.end,
+          end: returnType.loc.start,
+        };
+      }
+
+      return {
+        start: properties[0].loc.start,
+        end: properties[properties.length - 1].loc.end,
+      };
+    })();
+
+    // Create empty loc for type annotation nodes
+    const createParamsTypeLoc = () => ({
+      loc: {start: {...paramsLoc.end}, end: {...paramsLoc.end}},
+      start: paramsLoc.end.index,
+      end: paramsLoc.end.index,
+    });
+
+    const params = [
+      {
+        type: 'ObjectPattern',
+        properties,
+        typeAnnotation: {
+          type: 'TypeAnnotation',
+          typeAnnotation: {
+            type: 'GenericTypeAnnotation',
+            id: {
+              type: 'Identifier',
+              name: '$ReadOnly',
+              ...createParamsTypeLoc(),
+            },
+            typeParameters: {
+              type: 'TypeParameterInstantiation',
+              params: [
+                {
+                  type: 'ObjectTypeAnnotation',
+                  callProperties: [],
+                  properties: [],
+                  indexers: [],
+                  internalSlots: [],
+                  exact: false,
+                  inexact: true,
+                  ...createParamsTypeLoc(),
+                },
+              ],
+              ...createParamsTypeLoc(),
+            },
+            ...createParamsTypeLoc(),
+          },
+          ...createParamsTypeLoc(),
+        },
+        loc: paramsLoc,
+        start: paramsLoc.start.index,
+        end: paramsLoc.end.index,
+      },
+    ];
+
+    const functionComponent = {
+      type: 'FunctionDeclaration',
+      id: nodeUnprocessed.id,
+      typeParameters: nodeUnprocessed.typeParameters,
+      params,
+      returnType,
+      body: nodeUnprocessed.body,
+      async: false,
+      generator: false,
+      predicate: null,
+      loc: nodeUnprocessed.loc,
+      start: nodeUnprocessed.start,
+      end: nodeUnprocessed.end,
+    };
+
+    return this.mapNodeDefault(functionComponent);
   }
 }
