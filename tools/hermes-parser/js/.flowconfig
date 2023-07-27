@@ -29,7 +29,7 @@ mapped_type=true
 type_guards=true
 
 [version]
-^0.211.0
+^0.212.0
 
 [lints]
 untyped-type-import=error
