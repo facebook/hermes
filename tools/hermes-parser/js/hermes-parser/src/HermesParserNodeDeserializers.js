@@ -1372,8 +1372,10 @@ function deserializeTypeParameter() {
     bound: this.deserializeNode(),
     variance: this.deserializeNode(),
     default: this.deserializeNode(),
+    usesExtendsBound: this.deserializeBoolean(),
   };
 }
+
 function deserializeTypeParameterInstantiation() {
   return {
     type: 'TypeParameterInstantiation',
@@ -2020,6 +2022,7 @@ module.exports = [
   deserializeVariance,
   deserializeTypeParameterDeclaration,
   deserializeTypeParameter,
+
   deserializeTypeParameterInstantiation,
   deserializeTypeCastExpression,
   deserializeInferredPredicate,
