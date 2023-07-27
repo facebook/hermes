@@ -952,3 +952,155 @@ describe('TupleTypeAnnotation', () => {
     });
   });
 });
+
+describe('TypePredicate', () => {
+  const testCase: AlignmentCase = {
+    code: `
+      function predicate(x: mixed): x is T {
+         return x;
+      }
+    `,
+    espree: {
+      expectToFail: 'espree-exception',
+      expectedExceptionMessage: 'Unexpected token :',
+    },
+    babel: {
+      expectToFail: 'babel-exception',
+      expectedExceptionMessage: 'Unexpected token',
+    },
+  };
+
+  test('ESTree', () => {
+    expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
+      {
+        "body": [
+          {
+            "async": false,
+            "body": {
+              "body": [
+                {
+                  "argument": {
+                    "name": "x",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
+                  },
+                  "type": "ReturnStatement",
+                },
+              ],
+              "type": "BlockStatement",
+            },
+            "expression": false,
+            "generator": false,
+            "id": {
+              "name": "predicate",
+              "optional": false,
+              "type": "Identifier",
+              "typeAnnotation": null,
+            },
+            "params": [
+              {
+                "name": "x",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": {
+                  "type": "TypeAnnotation",
+                  "typeAnnotation": {
+                    "type": "MixedTypeAnnotation",
+                  },
+                },
+              },
+            ],
+            "predicate": null,
+            "returnType": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "asserts": false,
+                "parameterName": {
+                  "name": "x",
+                  "optional": false,
+                  "type": "Identifier",
+                  "typeAnnotation": null,
+                },
+                "type": "TypePredicate",
+                "typeAnnotation": {
+                  "id": {
+                    "name": "T",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
+                  },
+                  "type": "GenericTypeAnnotation",
+                  "typeParameters": null,
+                },
+              },
+            },
+            "type": "FunctionDeclaration",
+            "typeParameters": null,
+          },
+        ],
+        "type": "Program",
+      }
+    `);
+    expectEspreeAlignment(testCase);
+  });
+
+  test('Babel', () => {
+    expect(parseForSnapshot(testCase.code, {babel: true}))
+      .toMatchInlineSnapshot(`
+      {
+        "body": [
+          {
+            "async": false,
+            "body": {
+              "body": [
+                {
+                  "argument": {
+                    "name": "x",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
+                  },
+                  "type": "ReturnStatement",
+                },
+              ],
+              "directives": [],
+              "type": "BlockStatement",
+            },
+            "generator": false,
+            "id": {
+              "name": "predicate",
+              "optional": false,
+              "type": "Identifier",
+              "typeAnnotation": null,
+            },
+            "params": [
+              {
+                "name": "x",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": {
+                  "type": "TypeAnnotation",
+                  "typeAnnotation": {
+                    "type": "MixedTypeAnnotation",
+                  },
+                },
+              },
+            ],
+            "predicate": null,
+            "returnType": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "type": "AnyTypeAnnotation",
+              },
+            },
+            "type": "FunctionDeclaration",
+            "typeParameters": null,
+          },
+        ],
+        "type": "Program",
+      }
+    `);
+    expectBabelAlignment(testCase);
+  });
+});
