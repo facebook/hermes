@@ -612,7 +612,7 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentTypeParameterFlow(
   // Name?: TypeParam
   //      ^
   if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Type)) {
-    auto optType = parseTypeAnnotation(tok_->getStartLoc());
+    auto optType = parseTypeAnnotation();
     if (!optType)
       return None;
     type = *optType;
