@@ -2114,6 +2114,26 @@ const getTransforms = (
               },
             };
           }
+          // React.ElementProps<A> -> React.ComponentProps<A>
+          // React$ElementProps<A> -> React.ComponentProps<A>
+          case 'React.ElementProps':
+          case 'React$ElementProps': {
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'TSQualifiedName',
+                left: getReactIdentifier(),
+                right: {
+                  type: 'Identifier',
+                  name: 'ComponentProps',
+                },
+              },
+              typeParameters: {
+                type: 'TSTypeParameterInstantiation',
+                params: assertHasExactlyNTypeParameters(1),
+              },
+            };
+          }
           // React.ElementConfig<A> ->  JSX.LibraryManagedAttributes<A, React.ComponentProps<A>>
           // React$ElementConfig<A> ->  JSX.LibraryManagedAttributes<A, React.ComponentProps<A>>
           case 'React.ElementConfig':
