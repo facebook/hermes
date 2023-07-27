@@ -207,16 +207,14 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow(
       return None;
   }
 
-  ESTree::Node *returnType = nullptr;
-  if (check(TokenKind::colon)) {
+  ESTree::Node *rendersType = nullptr;
+  if (check(rendersIdent_)) {
     SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-    if (!check(checksIdent_)) {
-      // only stardard types are allowed, no predicates.
-      auto optRet = parseTypeAnnotationFlow(annotStart);
-      if (!optRet)
-        return None;
-      returnType = *optRet;
-    }
+    // only stardard types are allowed, no predicates.
+    auto optRenders = parseTypeAnnotationFlow(annotStart);
+    if (!optRenders)
+      return None;
+    rendersType = *optRenders;
   }
 
   if (declare) {
@@ -227,7 +225,7 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow(
         start,
         getPrevTokenEndLoc(),
         new (context_) ESTree::DeclareComponentNode(
-            *optId, std::move(paramList), rest, typeParams, returnType));
+            *optId, std::move(paramList), rest, typeParams, rendersType));
   }
 
   if (!need(
@@ -250,7 +248,7 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow(
       start,
       body,
       new (context_) ESTree::ComponentDeclarationNode(
-          *optId, std::move(paramList), body, typeParams, returnType));
+          *optId, std::move(paramList), body, typeParams, rendersType));
 }
 
 bool JSParserImpl::parseComponentParametersFlow(
@@ -445,22 +443,20 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentTypeAnnotationFlow() {
     return None;
   ESTree::Node *rest = *restOpt;
 
-  ESTree::Node *returnType = nullptr;
-  if (check(TokenKind::colon)) {
+  ESTree::Node *rendersType = nullptr;
+  if (check(rendersIdent_)) {
     SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-    if (!check(checksIdent_)) {
-      auto optRet = parseTypeAnnotationFlow(annotStart);
-      if (!optRet)
-        return None;
-      returnType = *optRet;
-    }
+    auto optRenders = parseTypeAnnotationFlow(annotStart);
+    if (!optRenders)
+      return None;
+    rendersType = *optRenders;
   }
 
   return setLocation(
       start,
       getPrevTokenEndLoc(),
       new (context_) ESTree::ComponentTypeAnnotationNode(
-          std::move(paramList), rest, typeParams, returnType));
+          std::move(paramList), rest, typeParams, rendersType));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseComponentTypeParametersFlow(

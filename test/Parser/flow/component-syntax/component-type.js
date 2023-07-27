@@ -24,11 +24,11 @@ type Foo1 = component();
 // CHECK-NEXT:         "params": [],
 // CHECK-NEXT:         "rest": null,
 // CHECK-NEXT:         "typeParameters": null,
-// CHECK-NEXT:         "returnType": null
+// CHECK-NEXT:         "rendersType": null
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
-type Foo2 = component(): SomeComponent;
+type Foo2 = component() renders SomeComponent;
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "TypeAlias",
 // CHECK-NEXT:       "id": {
@@ -41,7 +41,7 @@ type Foo2 = component(): SomeComponent;
 // CHECK-NEXT:         "params": [],
 // CHECK-NEXT:         "rest": null,
 // CHECK-NEXT:         "typeParameters": null,
-// CHECK-NEXT:         "returnType": {
+// CHECK-NEXT:         "rendersType": {
 // CHECK-NEXT:           "type": "TypeAnnotation",
 // CHECK-NEXT:           "typeAnnotation": {
 // CHECK-NEXT:             "type": "GenericTypeAnnotation",
@@ -79,7 +79,7 @@ type Foo3 = component<T>();
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "returnType": null
+// CHECK-NEXT:         "rendersType": null
 // CHECK-NEXT:       }
 // CHECK-NEXT:     }
 

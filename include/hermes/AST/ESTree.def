@@ -728,7 +728,7 @@ ESTREE_NODE_4_ARGS(
     NodeList, params, false,
     NodePtr, rest, true,
     NodePtr, typeParameters, true,
-    NodePtr, returnType, true)
+    NodePtr, rendersType, true)
 ESTREE_NODE_3_ARGS(
     ComponentTypeParameter, Base,
     NodePtr, name, true,
@@ -860,7 +860,7 @@ ESTREE_NODE_5_ARGS(
     NodeList, params, false,
     NodePtr, rest, true,
     NodePtr, typeParameters, true,
-    NodePtr, returnType, true)
+    NodePtr, rendersType, true)
 ESTREE_NODE_2_ARGS(
     DeclareVariable, Base,
     NodePtr, id, false,
@@ -1024,9 +1024,9 @@ ESTREE_NODE_5_ARGS(
     NodeList, params, false,
     NodePtr, body, false,
     NodePtr, typeParameters, true,
-    NodePtr, returnType, true)
+    NodePtr, rendersType, true)
 ESTREE_IGNORE_IF_EMPTY(ComponentDeclaration, typeParameters)
-ESTREE_IGNORE_IF_EMPTY(ComponentDeclaration, returnType)
+ESTREE_IGNORE_IF_EMPTY(ComponentDeclaration, rendersType)
 ESTREE_NODE_3_ARGS(
     ComponentParameter, Base,
     NodePtr, name, false,

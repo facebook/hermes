@@ -21,7 +21,7 @@ declare component Foo1();
 // CHECK-NEXT:       "params": [],
 // CHECK-NEXT:       "rest": null,
 // CHECK-NEXT:       "typeParameters": null,
-// CHECK-NEXT:       "returnType": null
+// CHECK-NEXT:       "rendersType": null
 // CHECK-NEXT:     },
 
 declare export default component Foo2();
@@ -36,7 +36,7 @@ declare export default component Foo2();
 // CHECK-NEXT:         "params": [],
 // CHECK-NEXT:         "rest": null,
 // CHECK-NEXT:         "typeParameters": null,
-// CHECK-NEXT:         "returnType": null
+// CHECK-NEXT:         "rendersType": null
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "specifiers": [],
 // CHECK-NEXT:       "source": null,
@@ -55,14 +55,14 @@ declare export component Foo3();
 // CHECK-NEXT:         "params": [],
 // CHECK-NEXT:         "rest": null,
 // CHECK-NEXT:         "typeParameters": null,
-// CHECK-NEXT:         "returnType": null
+// CHECK-NEXT:         "rendersType": null
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "specifiers": [],
 // CHECK-NEXT:       "source": null,
 // CHECK-NEXT:       "default": false
 // CHECK-NEXT:     },
 
-declare component Foo1(): SomeComponent;
+declare component Foo1() renders SomeComponent;
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "DeclareComponent",
 // CHECK-NEXT:       "id": {
@@ -72,7 +72,7 @@ declare component Foo1(): SomeComponent;
 // CHECK-NEXT:       "params": [],
 // CHECK-NEXT:       "rest": null,
 // CHECK-NEXT:       "typeParameters": null,
-// CHECK-NEXT:       "returnType": {
+// CHECK-NEXT:       "rendersType": {
 // CHECK-NEXT:         "type": "TypeAnnotation",
 // CHECK-NEXT:         "typeAnnotation": {
 // CHECK-NEXT:           "type": "GenericTypeAnnotation",
@@ -106,7 +106,7 @@ declare component Foo1<T>();
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "returnType": null
+// CHECK-NEXT:       "rendersType": null
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

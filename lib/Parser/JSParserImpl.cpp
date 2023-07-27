@@ -120,6 +120,7 @@ void JSParserImpl::initializeIdentifiers() {
 
   // Flow Component syntax
   componentIdent_ = lexer_.getIdentifier("component");
+  rendersIdent_ = lexer_.getIdentifier("renders");
 
 #endif
 
