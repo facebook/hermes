@@ -27,7 +27,7 @@ enums=true
 conditional_type=true
 
 [version]
-^0.209.0
+^0.210.0
 
 [lints]
 untyped-type-import=error
