@@ -8,4 +8,4 @@
  * TODO: re-enable Prettier once it has been updated to understand this syntax
  */
 
- type T = [...a: string];
+ type T = [+a: string, +b: string, +c: string];

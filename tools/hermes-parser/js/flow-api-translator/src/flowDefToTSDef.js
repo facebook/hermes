@@ -650,9 +650,6 @@ const getTransforms = (
         return transform.ThisTypeAnnotation(node);
       case 'TupleTypeAnnotation':
         return transform.TupleTypeAnnotation(node);
-      case 'TupleTypeLabeledElement':
-      case 'TupleTypeSpreadElement':
-        return unsupportedAnnotation(node, node.type);
       case 'TypeofTypeAnnotation':
         return transform.TypeofTypeAnnotation(node);
       case 'UnionTypeAnnotation':
@@ -2879,11 +2876,59 @@ const getTransforms = (
     },
     TupleTypeAnnotation(
       node: FlowESTree.TupleTypeAnnotation,
-    ): TSESTree.TSTupleType {
-      return {
+    ): TSESTree.TSTupleType | TSESTree.TSTypeOperator {
+      const allReadOnly =
+        node.types.length > 0 &&
+        node.types.every(
+          element =>
+            element.type === 'TupleTypeLabeledElement' &&
+            element.variance != null &&
+            element.variance.kind === 'plus',
+        );
+      const tupleAnnot = {
         type: 'TSTupleType',
-        elementTypes: node.types.map(transformTypeAnnotationType),
+        elementTypes: node.types.map(element => {
+          switch (element.type) {
+            case 'TupleTypeLabeledElement':
+              if (!allReadOnly && element.variance != null) {
+                return unsupportedAnnotation(
+                  element,
+                  'tuple type element variance annotations',
+                );
+              }
+              return {
+                type: 'TSNamedTupleMember',
+                label: transform.Identifier(element.label),
+                optional: element.optional,
+                elementType: transformTypeAnnotationType(element.elementType),
+              };
+            case 'TupleTypeSpreadElement': {
+              const annot = transformTypeAnnotationType(element.typeAnnotation);
+              return {
+                type: 'TSRestType',
+                typeAnnotation:
+                  element.label != null
+                    ? {
+                        type: 'TSNamedTupleMember',
+                        label: transform.Identifier(element.label),
+                        optional: false,
+                        elementType: annot,
+                      }
+                    : annot,
+              };
+            }
+            default:
+              return transformTypeAnnotationType(element);
+          }
+        }),
       };
+      return allReadOnly
+        ? {
+            type: 'TSTypeOperator',
+            operator: 'readonly',
+            typeAnnotation: tupleAnnot,
+          }
+        : tupleAnnot;
     },
     TypeAlias(node: FlowESTree.TypeAlias): TSESTree.TSTypeAliasDeclaration {
       return transform.DeclareTypeAlias(node);
