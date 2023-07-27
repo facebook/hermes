@@ -2060,8 +2060,12 @@ void HermesRuntimeImpl::setValueAtIndexImpl(
         ")");
   }
 
-  auto h = arrayHandle(arr);
-  h->setElementAt(h, runtime_, i, vmHandleFromValue(value));
+  auto res = vm::JSObject::putComputed_RJS(
+      arrayHandle(arr),
+      runtime_,
+      runtime_.makeHandle(vm::HermesValue::encodeTrustedNumberValue(i)),
+      vmHandleFromValue(value));
+  checkStatus(res.getStatus());
 }
 
 jsi::Function HermesRuntimeImpl::createFunctionFromHostFunction(
