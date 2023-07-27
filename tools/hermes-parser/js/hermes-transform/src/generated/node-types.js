@@ -2640,7 +2640,6 @@ export function PropertyDefinition(props: {
     optional: props.optional,
     variance: asDetachedNodeForCodeGen(props.variance),
     typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
-    tsModifiers: asDetachedNodeForCodeGen(props.tsModifiers),
   });
   setParentPointersInDirectChildren(node);
   return node;

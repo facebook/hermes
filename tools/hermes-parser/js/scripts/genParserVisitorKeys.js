@@ -11,6 +11,7 @@
 'use strict';
 
 import {
+  EXCLUDE_PROPERTIES_FROM_NODE,
   GetHermesESTreeJSON,
   formatAndWriteSrcArtifact,
 } from './utils/scriptUtils';
@@ -22,6 +23,9 @@ const visitorKeys: {[string]: $ReadOnly<{[string]: 'Node' | 'NodeList'}>} =
 for (const node of GetHermesESTreeJSON()) {
   const nodeVisitorKeys: {[string]: 'Node' | 'NodeList'} = {};
   for (const arg of node.arguments) {
+    if (EXCLUDE_PROPERTIES_FROM_NODE.get(node.name)?.has(arg.name)) {
+      continue;
+    }
     switch (arg.type) {
       case 'NodeList':
         nodeVisitorKeys[arg.name] = 'NodeList';
