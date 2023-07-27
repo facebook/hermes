@@ -11,39 +11,28 @@
 'use strict';
 
 import type {
-  AFunction,
-  Identifier,
   ComponentDeclaration,
   DeclareComponent,
+  Identifier,
 } from 'hermes-estree';
 
 import {DefinitionType} from './DefinitionType';
 import {DefinitionBase} from './DefinitionBase';
 
-class ParameterDefinition extends DefinitionBase<
-  typeof DefinitionType.Parameter,
-  AFunction | ComponentDeclaration | DeclareComponent,
+class ComponentNameDefinition extends DefinitionBase<
+  typeof DefinitionType.ComponentName,
+  ComponentDeclaration | DeclareComponent,
   null,
   Identifier,
 > {
-  declare +type: typeof DefinitionType.Parameter;
+  declare +type: typeof DefinitionType.ComponentName;
 
-  /**
-   * Whether the parameter definition is a part of a rest parameter.
-   */
-  +rest: boolean;
-
-  constructor(
-    name: Identifier,
-    node: ParameterDefinition['node'],
-    rest: boolean,
-  ) {
-    super(DefinitionType.Parameter, name, node, null);
-    this.rest = rest;
+  constructor(name: Identifier, node: ComponentNameDefinition['node']) {
+    super(DefinitionType.ComponentName, name, node, null);
   }
 
   +isTypeDefinition: boolean = false;
   +isVariableDefinition: boolean = true;
 }
 
-export {ParameterDefinition};
+export {ComponentNameDefinition};

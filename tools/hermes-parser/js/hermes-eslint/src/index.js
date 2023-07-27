@@ -27,6 +27,8 @@ function parse(code: string, options?: ParseForESLintOptions): Program {
     flow: 'all',
     sourceType: options?.sourceType ?? 'module',
     tokens: true,
+    enableExperimentalComponentSyntax:
+      options?.enableExperimentalComponentSyntax ?? false,
   };
 
   try {
@@ -55,11 +57,7 @@ type ParseForESLintReturn = {
 function parseForESLint(
   code: string,
   options?: ParseForESLintOptions,
-): {
-  ast: Program,
-  scopeManager: ScopeManager,
-  visitorKeys: VisitorKeysType,
-} {
+): ParseForESLintReturn {
   const ast = parse(code, options);
 
   // set the parent pointers

@@ -13,6 +13,7 @@
 const ScopeType = ({
   Block: 'block',
   Catch: 'catch',
+  Component: 'component',
   Class: 'class',
   ClassFieldInitializer: 'class-field-initializer',
   ClassStaticBlock: 'class-static-block',
@@ -28,6 +29,7 @@ const ScopeType = ({
 }: $ReadOnly<{
   Block: 'block',
   Catch: 'catch',
+  Component: 'component',
   Class: 'class',
   ClassFieldInitializer: 'class-field-initializer',
   ClassStaticBlock: 'class-static-block',

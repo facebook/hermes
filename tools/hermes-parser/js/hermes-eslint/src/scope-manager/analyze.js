@@ -54,6 +54,11 @@ type AnalyzeOptions = $ReadOnly<{
    * https://facebook.github.io/fbt/
    */
   fbt: boolean,
+
+  /**
+   * Support experimental component syntax
+   */
+  enableExperimentalComponentSyntax?: boolean,
 }>;
 type PartialAnalyzeOptions = $ReadOnly<Partial<AnalyzeOptions>>;
 

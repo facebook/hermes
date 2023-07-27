@@ -20,6 +20,7 @@ import type {
 import type {ClassFieldInitializerScope} from './ClassFieldInitializerScope';
 import type {ClassStaticBlockScope} from './ClassStaticBlockScope';
 import type {DeclareModuleScope} from './DeclareModuleScope';
+import type {ComponentScope} from './ComponentScope';
 import type {FunctionScope} from './FunctionScope';
 import type {GlobalScope} from './GlobalScope';
 import type {ModuleScope} from './ModuleScope';
@@ -130,6 +131,7 @@ const generator = createIdGenerator();
 type VariableScope =
   | ClassFieldInitializerScope
   | ClassStaticBlockScope
+  | ComponentScope
   | FunctionScope
   | GlobalScope
   | ModuleScope

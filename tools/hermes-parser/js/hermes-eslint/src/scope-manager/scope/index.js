@@ -12,6 +12,7 @@
 
 export * from './BlockScope';
 export * from './CatchScope';
+export * from './ComponentScope';
 export * from './ClassFieldInitializerScope';
 export * from './ClassScope';
 export * from './DeclareModuleScope';

@@ -11,6 +11,7 @@
 'use strict';
 
 import type {
+  ComponentTypeAnnotation,
   FunctionDeclaration,
   FunctionExpression,
   ArrowFunctionExpression,
@@ -18,6 +19,7 @@ import type {
   DeclareOpaqueType,
   DeclareInterface,
   DeclareClass,
+  DeclareComponent,
   FunctionTypeAnnotation,
   TypeAlias,
   OpaqueType,
@@ -31,6 +33,7 @@ import {ScopeType} from './ScopeType';
 
 class TypeScope extends ScopeBase<
   typeof ScopeType.Type,
+  | ComponentTypeAnnotation
   | FunctionDeclaration
   | FunctionExpression
   | ArrowFunctionExpression
@@ -38,6 +41,7 @@ class TypeScope extends ScopeBase<
   | DeclareOpaqueType
   | DeclareInterface
   | DeclareClass
+  | DeclareComponent
   | FunctionTypeAnnotation
   | TypeAlias
   | OpaqueType
