@@ -190,7 +190,7 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
 
   /// Define methods to interrupt JS execution and set time limits.
   /// All JS compiled to bytecode via prepareJS, or evaluateJS, will support interruption and
-  /// time limit monitoring.  If JS prepared in other ways is executed, care
+  /// time limit monitoring if the runtime is configured with AsyncBreakCheckInEval.  If JS prepared in other ways is executed, care
   /// must be taken to ensure that it is compiled in a mode that supports it
   /// (i.e., the emitted code contains async break checks).
   

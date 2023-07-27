@@ -438,7 +438,7 @@ TEST(HermesTriggerAsyncTimeoutTest, TriggerAsyncTimeout) {
   const char *forEver = "for (;;){}";
   uint32_t ShortTimeoutMS = 123;
   {
-    auto rt = makeHermesRuntime();
+    auto rt = makeHermesRuntime(hermes::vm::RuntimeConfig::Builder().withAsyncBreakCheckInEval(true).build());
     std::thread t([&]() {
       std::this_thread::sleep_for(std::chrono::milliseconds(ShortTimeoutMS));
       rt->asyncTriggerTimeout();
