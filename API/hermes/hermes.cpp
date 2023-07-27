@@ -1996,8 +1996,7 @@ jsi::ArrayBuffer HermesRuntimeImpl::createArrayBuffer(
 }
 
 size_t HermesRuntimeImpl::size(const jsi::Array &arr) {
-  vm::GCScope gcScope(runtime_);
-  return getLength(arrayHandle(arr));
+  return vm::JSArray::getLength(*arrayHandle(arr), runtime_);
 }
 
 size_t HermesRuntimeImpl::size(const jsi::ArrayBuffer &arr) {
@@ -2272,16 +2271,6 @@ vm::HermesValue HermesRuntimeImpl::stringHVFromUtf8(
       runtime_, llvh::makeArrayRef(utf8, length), IgnoreInputErrors);
   checkStatus(strRes.getStatus());
   return *strRes;
-}
-
-size_t HermesRuntimeImpl::getLength(vm::Handle<vm::ArrayImpl> arr) {
-  auto res = vm::JSObject::getNamed_RJS(
-      arr, runtime_, vm::Predefined::getSymbolID(vm::Predefined::length));
-  checkStatus(res.getStatus());
-  if (!(*res)->isNumber()) {
-    throw jsi::JSError(*this, "getLength: property 'length' is not a number");
-  }
-  return static_cast<size_t>((*res)->getDouble());
 }
 
 size_t HermesRuntimeImpl::getByteLength(vm::Handle<vm::JSArrayBuffer> arr) {
