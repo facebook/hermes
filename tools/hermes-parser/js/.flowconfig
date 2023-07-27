@@ -25,6 +25,7 @@ module.name_mapper='^prettier-plugin-hermes-parser$' -> '<PROJECT_ROOT>/prettier
 
 enums=true
 conditional_type=true
+mapped_type=true
 type_guards=true
 
 [version]
