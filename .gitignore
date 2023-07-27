@@ -35,3 +35,6 @@ android/intltest/java/com/facebook/hermes/test/assets/**
 .git/
 .idea/
 cmake-build*/
+
+# clangd cache
+.cache/
