@@ -588,21 +588,25 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
       });
 
       rendersType = {
-        type: 'GenericTypeAnnotation',
-        id: {
-          type: 'QualifiedTypeIdentifier',
-          qualification: {
-            type: 'Identifier',
-            name: 'React',
-            ...createRendersTypeLoc(),
-          },
+        type: 'TypeAnnotation',
+        typeAnnotation: {
+          type: 'GenericTypeAnnotation',
           id: {
-            type: 'Identifier',
-            name: 'Node',
-            ...createRendersTypeLoc(),
+            type: 'QualifiedTypeIdentifier',
+            qualification: {
+              type: 'Identifier',
+              name: 'React',
+              ...createRendersTypeLoc(),
+            },
+            id: {
+              type: 'Identifier',
+              name: 'Node',
+              ...createRendersTypeLoc(),
+            },
           },
+          typeParameters: null,
+          ...createRendersTypeLoc(),
         },
-        typeParameters: null,
         ...createRendersTypeLoc(),
       };
     }
