@@ -3,29 +3,28 @@ id: intl
 title: Internationalization APIs
 ---
 
-This document describes the current state of Android implementation of the [ECMAScript Internationalization API Specification](https://tc39.es/ecma402/) (ECMA-402, or `Intl`). ECMA-402 is still evolving and the latest iteration is [7th edition](https://402.ecma-international.org/7.0/) which was published in June 2020. Each new edition is built on top of the last one and adds new capabilities typically as,
+This document describes the current state of the Android and iOS implementation of the [ECMAScript Internationalization API Specification](https://tc39.es/ecma402/) (ECMA-402, or `Intl`). ECMA-402 is still evolving and the latest iteration that was taken into account is [7th edition](https://402.ecma-international.org/7.0/) which was published in June 2020. Each new edition is built on top of the last one and adds new capabilities typically as,
 - New `Intl` service constructors (e.g. `Intl.Collator`, `Intl.NumberFormat` etc.) or extending existing ones by accepting more parameters
 - New functions or properties in `Intl` objects (e.g. `Intl.Collator.prototype.compare`)
 - New locale aware functions in standard Javascript object prototypes (e.g. `String.prototype.localeCompare`)
 
-One popular implementation strategy followed by other engines, is to bundle an internationalization framework (typically [ICU](http://site.icu-project.org/)) along with the application package. This guarantees deterministic behaviours at the cost of applications package bloat. We decided to consume the Android platform provided facilities for space efficiency, but at the cost of some variance in behaviours across Android platforms.
+One popular implementation strategy followed by other engines, is to bundle an internationalization framework (typically [ICU](http://site.icu-project.org/)) along with the application package. This guarantees deterministic behaviours at the cost of applications package bloat. We decided to consume the Android and iOS platform provided facilities for space efficiency, but at the cost of some variance in behaviours across Android and iOS platforms. This also includes behavioural variations between different versions of Android.
 
 # ECMA-402 Compliance
 
-## Supported
+## Supported on both platforms
 
 - `Intl.Collator`
   - `Intl.Collator.supportedLocalesOf`
   - `Intl.Collator.prototype.compare`
   - `Intl.Collator.prototype.resolvedOptions`
 
-- `Intl.NumberFormat`
+- `Intl.NumberFormat`*
   - `Intl.NumberFormat.supportedLocalesOf`
   - `Intl.NumberFormat.prototype.format`
-  - `Intl.NumberFormat.prototype.formatToParts`
   - `Intl.NumberFormat.prototype.resolvedOptions`
 
-- `Intl.DateTimeFormat`
+- `Intl.DateTimeFormat`*
   - `Intl.DateTimeFormat.supportedLocalesOf`
   - `Intl.DateTimeFormat.prototype.format`
   - `Intl.DateTimeFormat.prototype.formatToParts`
@@ -49,27 +48,29 @@ One popular implementation strategy followed by other engines, is to bundle an i
   - `toLocaleDateString`
   - `toLocaleTimeString`
 
-## Not yet supported
+## Supported on Android only
+- `Intl.NumberFormat`
+  - `Intl.NumberFormat.prototype.formatToParts`
 
-- [`Intl.PluralRules`](https://tc39.es/ecma402/#pluralrules-objects)
+## * Limitations on property support
 
-- [`Intl.RelativeTimeFormat`](https://tc39.es/ecma402/#relativetimeformat-objects)
+### Limited iOS property support
+- `Intl.NumberFormat` implementation does not support the following properties,
+  - `notation`: 'compact'
+  - `notation`: 'engineering'
+  - `compactDisplay`
+  - `signDisplay`
 
-- [`Intl.DisplayNames`](https://tc39.es/proposal-intl-displaynames/#sec-intl-displaynames-constructor)
+- `Intl.DateTimeFormat` implementation does not support the following properties,
+  - `numberingSystem`
+  - [`formatMatcher`](https://tc39.es/ecma402/#sec-basicformatmatcher)
 
-- [`Intl.ListFormat`](https://tc39.es/proposal-intl-list-format/#sec-intl-listformat-constructor)
+### Limited Android property support
 
-- [`Intl.Locale`](https://tc39.es/ecma402/#sec-intl-locale-constructor)
-
-- `Intl.DateTimeFormat` properties
-   - [`dateStyle/timeStyle`](https://tc39.es/proposal-intl-datetime-style/)
+- `Intl.DateTimeFormat` implementation does not support the following properties,
    - [`dayPeriod`](https://github.com/tc39/ecma402/issues/29)
    - [`fractionalSecondDigits`](https://github.com/tc39/ecma402/pull/347)
-- [`BigInt.prototype.toLocaleString`](https://tc39.es/ecma402/#sup-bigint.prototype.tolocalestring)
-
-## Excluded
-
-- `Intl.DateTimeFormat`: [`formatMatcher`](https://tc39.es/ecma402/#sec-basicformatmatcher) parameter is not respected. The parameter enables the implementation to pick the best display format when it supports only a subset of all possible formats. ICU library in Android platform and hence our implementation allows all subsets and formats which makes this `formatMatcher` property unnecessary.
+   - [`formatMatcher`](https://tc39.es/ecma402/#sec-basicformatmatcher) The property enables the implementation to pick the best display format when it supports only a subset of all possible formats. ICU library in Android platform and hence our implementation allows all subsets and formats which makes this `formatMatcher` property unnecessary.
 
 ## Limitations across Android SDKs
 
@@ -111,6 +112,7 @@ One popular implementation strategy followed by other engines, is to bundle an i
 - `Intl.NumberFormat`: Unit style does not work.
 - `Intl.NumberFormat`: There are issues in the precision configuration due to lack of APIs.
 - `Intl.DateFormat`: There are issues with the calendar configuration which needs to be dug into.
+   - [`dateStyle/timeStyle`](https://tc39.es/proposal-intl-datetime-style/) is not implemented.
 
 ### SDK < 21 and older
 
@@ -157,7 +159,7 @@ In summary,
 
 4. Platform 30 has introduced classes under [`android.icu.number`](https://developer.android.com/reference/android/icu/util/package-summary) namespace which will majorly improve our `Intl.NumberFormat` implementation
 
-# Impact on Application Size
+# Impact on Android Application Size
 
 The following numbers are measured using a test application which takes dependency on the Hermes library to evaluate a JavaScript snippet. Essentially, enabling Intl APIs adds 57-62K per ABI.
 
