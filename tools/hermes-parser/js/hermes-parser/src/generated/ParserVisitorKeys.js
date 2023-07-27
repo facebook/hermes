@@ -118,6 +118,12 @@ export const HERMES_AST_VISITOR_KEYS = {
     name: 'Node',
     local: 'Node',
   },
+  ComponentTypeAnnotation: {
+    params: 'NodeList',
+    rest: 'Node',
+    typeParameters: 'Node',
+    returnType: 'Node',
+  },
   ComponentTypeParameter: {
     name: 'Node',
     typeAnnotation: 'Node',

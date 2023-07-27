@@ -45,6 +45,7 @@ import type {
   ClassImplements as ClassImplementsType,
   ComponentDeclaration as ComponentDeclarationType,
   ComponentParameter as ComponentParameterType,
+  ComponentTypeAnnotation as ComponentTypeAnnotationType,
   ComponentTypeParameter as ComponentTypeParameterType,
   ConditionalExpression as ConditionalExpressionType,
   ConditionalTypeAnnotation as ConditionalTypeAnnotationType,
@@ -308,6 +309,17 @@ export type ComponentParameterProps = {
   +name: MaybeDetachedNode<ComponentParameterType['name']>,
   +local: MaybeDetachedNode<ComponentParameterType['local']>,
   +shorthand: ComponentParameterType['shorthand'],
+};
+
+export type ComponentTypeAnnotationProps = {
+  +params: $ReadOnlyArray<
+    MaybeDetachedNode<ComponentTypeAnnotationType['params'][number]>,
+  >,
+  +rest?: ?MaybeDetachedNode<ComponentTypeAnnotationType['rest']>,
+  +typeParameters?: ?MaybeDetachedNode<
+    ComponentTypeAnnotationType['typeParameters'],
+  >,
+  +returnType?: ?MaybeDetachedNode<ComponentTypeAnnotationType['returnType']>,
 };
 
 export type ComponentTypeParameterProps = {
@@ -1367,6 +1379,21 @@ export function ComponentParameter(props: {
     name: asDetachedNodeForCodeGen(props.name),
     local: asDetachedNodeForCodeGen(props.local),
     shorthand: props.shorthand,
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function ComponentTypeAnnotation(props: {
+  ...$ReadOnly<ComponentTypeAnnotationProps>,
+  +parent?: ESNode,
+}): DetachedNode<ComponentTypeAnnotationType> {
+  const node = detachedProps<ComponentTypeAnnotationType>(props.parent, {
+    type: 'ComponentTypeAnnotation',
+    params: props.params.map(n => asDetachedNodeForCodeGen(n)),
+    rest: asDetachedNodeForCodeGen(props.rest),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    returnType: asDetachedNodeForCodeGen(props.returnType),
   });
   setParentPointersInDirectChildren(node);
   return node;
