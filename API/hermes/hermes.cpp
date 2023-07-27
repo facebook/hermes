@@ -2215,8 +2215,7 @@ bool HermesRuntimeImpl::instanceOf(
     const jsi::Object &o,
     const jsi::Function &f) {
   vm::GCScope gcScope(runtime_);
-  auto result = vm::instanceOfOperator_RJS(
-      runtime_, runtime_.makeHandle(phv(o)), runtime_.makeHandle(phv(f)));
+  auto result = vm::instanceOfOperator_RJS(runtime_, handle(o), handle(f));
   checkStatus(result.getStatus());
   return *result;
 }
