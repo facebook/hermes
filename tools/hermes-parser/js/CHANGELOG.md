@@ -1,5 +1,49 @@
 ## Unreleased
 
+## 0.11.0
+
+### `hermes-parser`
+
+- Update Flow AST representation for `typeof` types. `TypeofTypeAnnotation` now can have `QualifiedTypeofIdentifier` and `Identifiers` as arguments directly.
+- Add support for parsing `TupleTypeSpreadElement` and `TupleTypeLabeledElement` in Flow.
+- `DeclareVariable` in Flow now has a `kind` property, which can be `var`, `let`, or `const`.
+- Add support for parsing `DeclareEnum` in Flow.
+- Add support for parsing type arguments in `JSXElement` in Flow.
+- Fixes typo in parsed TypeScript `TSConditionalType` nodes. The `falseTYpe` property has been renamed to `falseType`.
+- Add support for parsing `keyof` types in Flow.
+- Add support for parsing `ConditionalTypeAnnotation` in Flow.
+- Add support for parsing `InferTypeAnnotation` in Flow.
+- Add support for parsing `ObjectTypeMappedTypeProperty` in Flow.
+- Add support for parsing `TypePredicate` in Flow.
+
+### `hermes-transform`
+- Add support for Flow AST nodes as parsed by [`hermes-parser@0.11.0`](#`hermes-parser`).
+- Exports `makeCommentOwnLine` function which makes added comments print on their own line.
+- Add support for corrected `MemberExpression` representation with `optional` property from [`hermes-estree@0.11.0`](#`hermes-estree`).
+
+### `hermes-eslint`
+- Add support for Flow AST nodes as parsed by [`hermes-parser@0.11.0`](#`hermes-parser`).
+
+### `hermes-estree`
+- Add support for Flow AST nodes as parsed by [`hermes-parser@0.11.0`](#`hermes-parser`).
+- Fix `MemberExpression` to properly expose `optional` property in Flow.
+
+### `flow-api-translator`
+- Add handling for updated `typeof` type representation.
+- Add handling for `DeclareVariable` with `kind` property.
+- Add handling for `DeclareEnum`.
+- Adds error recovery for unsupported Flow syntax in TypeScript translation. Instead of exiting, most errors will now be printed as comments in the output TypeScript code with appropriate type fallbacks.
+- Add handling for Flow `typeof` imports.
+- Improve scope resolution of `React` imports.
+- Add `React.ElementConfig` handling.
+- Add `React.Key` handling.
+- Add `React.Ref` handling.
+- Add `React.Component` handling.
+- Add `React.ElementType` handling.
+- Add `React.ChildrenArray` handling.
+- Improve `React.ComponentType` handling.
+- Improve `React.AbstractComponent` handling.
+
 ## 0.10.1
 
 ### `hermes-parser`
