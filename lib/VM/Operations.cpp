@@ -1626,7 +1626,8 @@ CallResult<Handle<JSArray>> iterableToArray(
   // CreateArrayFromList: 2. Let n be 0.
   size_t n = 0;
 
-  for (;;) {
+  GCScopeMarkerRAII marker{runtime};
+  for (;; marker.flush()) {
     // IterableToList: 5.a. Set next to ? IteratorStep(iteratorRecord).
     CallResult<Handle<JSObject>> nextRes =
         iteratorStep(runtime, iteratorRecord);
