@@ -164,6 +164,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
       std::move(baseBCProvider));
 }
 
+#if 0
 /// Encode a Unicode codepoint into a UTF8 sequence and append it to \p
 /// storage. Code points above 0xFFFF are encoded into UTF16, and the
 /// resulting surrogate pair values are encoded individually into UTF8.
@@ -186,6 +187,7 @@ static inline void appendUnicodeToStorage(
   }
   storage.append(buf, d);
 }
+#endif
 
 std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
     Module *M,
