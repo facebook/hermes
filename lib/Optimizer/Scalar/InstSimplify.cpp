@@ -101,13 +101,6 @@ Value *simplifyUnOp(UnaryOperatorInst *unary) {
   auto *op = unary->getSingleOperand();
   Type t = op->getType();
 
-  // If the operand is a literal, try to evaluate the expression.
-  if (auto *lit = llvh::dyn_cast<Literal>(op)) {
-    if (auto result = evalUnaryOperator(kind, builder, lit)) {
-      return result;
-    }
-  }
-
   using OpKind = UnaryOperatorInst::OpKind;
 
   // Try to simplify based on type information.
@@ -154,21 +147,17 @@ Value *simplifyUnOp(UnaryOperatorInst *unary) {
   return nullptr;
 }
 
+bool isEmptyString(Value *value) {
+  auto *literalString = llvh::dyn_cast<LiteralString>(value);
+  return literalString && literalString->getValue().str().empty();
+}
+
 Value *simplifyBinOp(BinaryOperatorInst *binary) {
   IRBuilder builder(binary->getParent()->getParent());
 
   Value *lhs = binary->getLeftHandSide();
   Value *rhs = binary->getRightHandSide();
   auto kind = binary->getOperatorKind();
-
-  // Try simplifying without replacing the instruction.
-  auto *litLhs = llvh::dyn_cast<Literal>(lhs);
-  auto *litRhs = llvh::dyn_cast<Literal>(rhs);
-  if (litLhs && litRhs) {
-    if (auto result = evalBinaryOperator(kind, builder, litLhs, litRhs)) {
-      return result;
-    }
-  }
 
   // In some cases, the instruction can be replaced with a faster version
   // or type information can be used to simplify some non-constant expressions.
@@ -263,33 +252,19 @@ Value *simplifyBinOp(BinaryOperatorInst *binary) {
       break;
 
     case OpKind::AddKind:
-      // Convert ("" + x) or (x + "") as AsString(x).
-      if (llvh::isa<LiteralString>(lhs) &&
-          cast<LiteralString>(lhs)->getValue().str() == "") {
-        builder.setInsertionPoint(binary);
-        return builder.createAddEmptyStringInst(rhs);
-      } else if (
-          llvh::isa<LiteralString>(rhs) &&
-          cast<LiteralString>(rhs)->getValue().str() == "") {
+      // Convert (x + "") to as AsString(x).
+      if (isEmptyString(rhs)) {
         builder.setInsertionPoint(binary);
         return builder.createAddEmptyStringInst(lhs);
       }
       break;
 
     case OpKind::OrKind: { // |
-      // Convert (x | 0) of (0 | x) to AsInt32.
-      Value *nonzeroOp = nullptr;
-      if (llvh::isa<LiteralNumber>(lhs) &&
-          cast<LiteralNumber>(lhs)->getValue() == 0) {
-        nonzeroOp = rhs;
-      } else if (
-          llvh::isa<LiteralNumber>(rhs) &&
-          cast<LiteralNumber>(rhs)->getValue() == 0) {
-        nonzeroOp = lhs;
-      }
-      if (nonzeroOp) {
+      // Convert (x | 0) to AsInt32.
+      auto literalNumber = llvh::dyn_cast<LiteralNumber>(rhs);
+      if (literalNumber && literalNumber->getValue() == 0) {
         builder.setInsertionPoint(binary);
-        return reduceAsInt32(builder.createAsInt32Inst(nonzeroOp));
+        return reduceAsInt32(builder.createAsInt32Inst(lhs));
       }
       break;
     }

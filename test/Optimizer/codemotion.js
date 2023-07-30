@@ -184,7 +184,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  $Reg1 @2 [3...12) 	%2 = HBCGetGlobalObjectInst
 // CHECK-NEXT:  $Reg0 @3 [4...13) 	%3 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  $Reg2 @4 [5...7) 	%4 = MovInst %1 : number
-// CHECK-NEXT:  $Reg4 @5 [empty]	%5 = CompareBranchInst '<', %4 : number, %0, %BB1, %BB2
+// CHECK-NEXT:  $Reg4 @5 [empty]	%5 = CompareBranchInst '>', %0, %4 : number, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  $Reg2 @6 [2...12) 	%6 = PhiInst %4 : number, %BB0, %10 : number|bigint, %BB1
 // CHECK-NEXT:  $Reg4 @7 [8...9) 	%7 = TryLoadGlobalPropertyInst %2 : object, "print" : string
@@ -223,7 +223,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  $Reg0 @2 [3...4) 	%2 = HBCLoadParamInst 1 : number
 // CHECK-NEXT:  $Reg4 @3 [4...9) 	%3 = AsNumberInst %2
 // CHECK-NEXT:  $Reg0 @4 [5...6) 	%4 = HBCLoadConstInst 3 : number
-// CHECK-NEXT:  $Reg0 @5 [6...7) 	%5 = BinaryOperatorInst '*', %4 : number, %3 : number
+// CHECK-NEXT:  $Reg0 @5 [6...7) 	%5 = BinaryOperatorInst '*', %3 : number, %4 : number
 // CHECK-NEXT:  $Reg1 @6 [7...16) 	%6 = BinaryOperatorInst '*', %5 : number, %3 : number
 // CHECK-NEXT:  $Reg0 @7 [8...9) 	%7 = HBCLoadConstInst 1 : number
 // CHECK-NEXT:  $Reg0 @8 [9...16) 	%8 = BinaryOperatorInst '-', %3 : number, %7 : number

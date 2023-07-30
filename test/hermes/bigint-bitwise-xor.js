@@ -62,7 +62,7 @@ print(typeAndValue(BigInt("0xffffffffffffffff") ^ BigInt("0x8080808080808080")))
 
 // CHKIR-LABEL: function numberPlusBigInt#0#1()#{{[0-9]+}} {{.*}}
 // CHKIR:  %[[N:[0-9]+]] = BinaryOperatorInst '^', %{{[0-9]+}}
-// CHKIR:  %{{[0-9]+}}   = BinaryOperatorInst '+', 1 : number, %[[N]] : number|bigint
+// CHKIR:  %{{[0-9]+}}   = BinaryOperatorInst '+', %[[N]] : number|bigint, 1 : number
 
 function numberPlusBigInt() {
   return (1+(BigInt(2)^BigInt(1)));
