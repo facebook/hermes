@@ -9,6 +9,7 @@
 
 #include "llvh/ADT/SmallString.h"
 #include "llvh/Support/CommandLine.h"
+#include "llvh/Support/ConvertUTF.h"
 #include "llvh/Support/FileSystem.h"
 #include "llvh/Support/Path.h"
 #include "llvh/Support/PrettyStackTrace.h"
@@ -307,6 +308,16 @@ static std::error_code loadHistoryFile(llvh::SmallString<128> &historyFile) {
 }
 #endif
 
+/// Print \p message to stderr. \p hasColors indicates whether colors should
+/// be used (and reset after use).
+static void printError(const char *message, bool hasColors) {
+  llvh::raw_ostream &errs = hasColors
+      ? llvh::errs().changeColor(llvh::raw_ostream::Colors::RED)
+      : llvh::errs();
+  errs << message;
+  llvh::errs().resetColor();
+}
+
 // This is the vm driver.
 int repl(const vm::RuntimeConfig &config) {
   std::shared_ptr<vm::Runtime> runtime = vm::Runtime::create(config);
@@ -340,13 +351,10 @@ int repl(const vm::RuntimeConfig &config) {
       vm::StringPrimitive::createNoThrow(*runtime, evaluateLineString)
           .getHermesValue());
   if (callRes == vm::ExecutionStatus::EXCEPTION) {
-    llvh::raw_ostream &errs = hasColors
-        ? llvh::errs().changeColor(llvh::raw_ostream::Colors::RED)
-        : llvh::errs();
+    printError("Unable to get REPL util function: evaluateLine.\n", hasColors);
     llvh::raw_ostream &outs = hasColors
         ? llvh::outs().changeColor(llvh::raw_ostream::Colors::RED)
         : llvh::outs();
-    errs << "Unable to get REPL util function: evaluateLine.\n";
     runtime->printException(
         outs, runtime->makeHandle(runtime->getThrownValue()));
     return 1;
@@ -399,6 +407,16 @@ int repl(const vm::RuntimeConfig &config) {
       continue;
     }
 
+    llvh::SmallVector<llvh::UTF16, 16> utf16Buf;
+    if (!llvh::convertUTF8ToUTF16String(code, utf16Buf)) {
+      code.clear();
+      printError("Input not valid UTF-8\n", hasColors);
+      continue;
+    }
+    static_assert(sizeof(llvh::UTF16) == sizeof(char16_t));
+    llvh::ArrayRef<char16_t> utf16Code = llvh::makeArrayRef(
+        reinterpret_cast<const char16_t *>(utf16Buf.data()), utf16Buf.size());
+
     // Ensure we don't keep accumulating handles.
     vm::GCScopeMarkerRAII gcMarker{*runtime};
 
@@ -408,7 +426,7 @@ int repl(const vm::RuntimeConfig &config) {
              evaluateLineFn,
              *runtime,
              global,
-             vm::StringPrimitive::createNoThrow(*runtime, code)
+             vm::StringPrimitive::createNoThrow(*runtime, utf16Code)
                  .getHermesValue(),
              vm::HermesValue::encodeBoolValue(hasColors))) ==
         vm::ExecutionStatus::EXCEPTION) {
