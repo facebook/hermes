@@ -16,7 +16,7 @@
 
 #include <hermes/hermes.h>
 #include <hermes/inspector/RuntimeAdapter.h>
-#include <jsinspector/InspectorInterfaces.h>
+#include <hermes/jsinspector/InspectorInterfaces.h>
 
 namespace facebook {
 namespace hermes {

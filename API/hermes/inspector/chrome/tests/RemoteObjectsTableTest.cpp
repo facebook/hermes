@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <hermes/inspector/chrome/RemoteObjectsTable.h>
-
 #include <gtest/gtest.h>
+
+#include <hermes/inspector/chrome/RemoteObjectsTable.h>
 
 namespace facebook {
 namespace hermes {
