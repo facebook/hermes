@@ -56,7 +56,7 @@ export function parseForSnapshot(
         babel: true,
         ...parseOpts,
       }).program,
-      {babel, preserveRange},
+      {babel, preserveRange, enforceLocationInformation: true},
     );
   }
 
@@ -95,25 +95,61 @@ export async function printForSnapshot(
 
 export function cleanASTForSnapshot(
   ast: ESNode,
-  options?: {preserveRange?: boolean, babel?: boolean},
+  options?: {
+    preserveRange?: boolean,
+    babel?: boolean,
+    enforceLocationInformation?: boolean,
+  },
 ): mixed {
   SimpleTraverser.traverse(ast, {
     enter(node) {
+      if (options?.enforceLocationInformation === true && node.loc == null) {
+        throw new Error(
+          `AST node of type "${node.type}" is missing "loc" property`,
+        );
+      }
       // $FlowExpectedError[cannot-write]
       delete node.loc;
-      // $FlowExpectedError[cannot-write]
-      delete node.parent;
-      if (options?.preserveRange !== true) {
-        // $FlowExpectedError[cannot-write]
-        delete node.range;
-      }
 
       if (options?.babel === true) {
+        if (
+          options?.enforceLocationInformation === true &&
+          // $FlowExpectedError[prop-missing]
+          node.start == null
+        ) {
+          throw new Error(
+            `AST node of type "${node.type}" is missing "start" property`,
+          );
+        }
         // $FlowExpectedError[prop-missing]
         delete node.start;
+
+        // $FlowExpectedError[prop-missing]
+        if (options?.enforceLocationInformation === true && node.end == null) {
+          throw new Error(
+            `AST node of type "${node.type}" is missing "end" property`,
+          );
+        }
         // $FlowExpectedError[prop-missing]
         delete node.end;
+      } else {
+        if (
+          options?.enforceLocationInformation === true &&
+          node.range == null
+        ) {
+          throw new Error(
+            `AST node of type "${node.type}" is missing "range" property`,
+          );
+        }
+
+        if (options?.preserveRange !== true) {
+          // $FlowExpectedError[cannot-write]
+          delete node.range;
+        }
       }
+
+      // $FlowExpectedError[cannot-write]
+      delete node.parent;
     },
     leave() {},
     visitorKeys:

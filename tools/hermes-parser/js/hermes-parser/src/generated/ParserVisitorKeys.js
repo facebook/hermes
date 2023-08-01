@@ -679,4 +679,7 @@ export const HERMES_AST_VISITOR_KEYS = {
     object: 'Node',
     property: 'Node',
   },
+  ExportNamespaceSpecifier: {
+    exported: 'Node',
+  },
 };
