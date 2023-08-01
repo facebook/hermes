@@ -433,6 +433,25 @@ TEST(HermesWatchTimeLimitTest, WatchTimeLimit) {
   }
 }
 
+TEST(HermesTriggerAsyncTimeoutTest, TriggerAsyncTimeout) {
+  // Some code that loops forever to exercise the async interrupt.
+  const char *forEver = "for (;;){}";
+  uint32_t ShortTimeoutMS = 123;
+  {
+    auto rt = makeHermesRuntime(hermes::vm::RuntimeConfig::Builder()
+                                    .withAsyncBreakCheckInEval(true)
+                                    .build());
+    std::thread t([&]() {
+      std::this_thread::sleep_for(std::chrono::milliseconds(ShortTimeoutMS));
+      rt->asyncTriggerTimeout();
+    });
+    ASSERT_THROW(
+        rt->evaluateJavaScript(std::make_unique<StringBuffer>(forEver), ""),
+        JSIException);
+    t.join();
+  }
+}
+
 TEST(HermesRuntimeCrashManagerTest, CrashGetStackTrace) {
   class CrashManagerImpl : public hermes::vm::CrashManager {
    public:
