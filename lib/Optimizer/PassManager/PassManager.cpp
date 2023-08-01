@@ -8,6 +8,7 @@
 #include "hermes/Optimizer/PassManager/PassManager.h"
 
 #include "hermes/IR/IR.h"
+#include "hermes/IR/IRVerifier.h"
 #include "hermes/Support/Statistic.h"
 #include "hermes/Support/Timer.h"
 #include "llvh/Support/Debug.h"
@@ -28,6 +29,8 @@ void PassManager::run(Function *F) {
   // Optionally dump the IR after every pass if the flag is set.
   bool dumpBetweenPasses =
       F->getContext().getCodeGenerationSettings().dumpIRBetweenPasses;
+  // TODO(T156009366): Run the IRVerifier between passes once we can run it on
+  // individual functions.
 
   if (dumpBetweenPasses) {
     llvh::dbgs() << "*** INITIAL STATE\n\n";
@@ -61,6 +64,9 @@ void PassManager::run(Module *M) {
   // Optionally dump the IR after every pass if the flag is set.
   bool dumpBetweenPasses =
       M->getContext().getCodeGenerationSettings().dumpIRBetweenPasses;
+  // Run the IRVerifier after every pass if the flag is set.
+  bool verifyBetweenPasses =
+      M->getContext().getCodeGenerationSettings().verifyIRBetweenPasses;
 
   if (dumpBetweenPasses) {
     llvh::dbgs() << "*** INITIAL STATE\n\n";
@@ -100,6 +106,13 @@ void PassManager::run(Module *M) {
       llvh::dbgs() << "\n*** AFTER " << P->getName() << "\n\n";
       M->dump(llvh::dbgs());
     }
+
+    if (verifyBetweenPasses)
+      if (!verifyModule(*M, &llvh::errs()))
+        M->getContext().getSourceErrorManager().error(
+            {},
+            {},
+            llvh::Twine("IRVerifier failed after pass ") + P->getName());
   }
 }
 } // namespace hermes

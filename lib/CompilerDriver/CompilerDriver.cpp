@@ -1049,6 +1049,7 @@ std::shared_ptr<Context> createContext(
   codeGenOpts.dumpSourceLocation =
       cl::DumpSourceLocation != LocationDumpMode::None;
   codeGenOpts.dumpIRBetweenPasses = cl::DumpBetweenPasses;
+  codeGenOpts.verifyIRBetweenPasses = cl::VerifyIR;
   codeGenOpts.instrumentIR = cl::InstrumentIR;
 
   OptimizationSettings optimizationOpts;

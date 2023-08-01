@@ -318,7 +318,7 @@ cl::opt<bool> VerifyIR(
     cl::init(false),
     cl::Hidden,
 #endif
-    cl::desc("Verify the IR after creating it"),
+    cl::desc("Verify the IR after each pass."),
     cl::cat(CompilerCategory));
 
 cl::opt<bool> DumpOperandRegisters(
@@ -449,6 +449,7 @@ std::shared_ptr<Context> createContext() {
   codeGenOpts.dumpSourceLocation =
       cli::DumpSourceLocation != LocationDumpMode::None;
   codeGenOpts.dumpIRBetweenPasses = cli::DumpBetweenPasses;
+  codeGenOpts.verifyIRBetweenPasses = cli::VerifyIR;
   // codeGenOpts.instrumentIR = cl::InstrumentIR;
 
   OptimizationSettings optimizationOpts;
