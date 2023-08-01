@@ -97,7 +97,12 @@ class FunctionLoadStoreOptimizer {
   /// be used to perform load elimination, and set it in \c variableAllocas_.
   void createVariableAllocas() {
     IRBuilder builder(F_);
-    builder.setInsertionPoint(&F_->front().front());
+    // Insert the alloca at the start of the function, after any FirstInBlock
+    // instructions.
+    auto insertAt = F_->begin()->begin();
+    while (insertAt->getSideEffect().getFirstInBlock())
+      ++insertAt;
+    builder.setInsertionPoint(&*insertAt);
 
     for (BasicBlock *BB : PO_) {
       for (Instruction &I : *BB) {

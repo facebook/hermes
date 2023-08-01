@@ -81,8 +81,12 @@ bool tryCopyToStack(Variable *var) {
 
   IRBuilder builder(func->getParent());
 
-  // AllocStack will be inserted at the very start of the function.
-  builder.setInsertionPoint(&*func->begin()->begin());
+  // AllocStack will be inserted at the very start of the function, after any
+  // FirstInBlock instructions.
+  auto insertAt = func->begin()->begin();
+  while (insertAt->getSideEffect().getFirstInBlock())
+    ++insertAt;
+  builder.setInsertionPoint(&*insertAt);
   auto *stackVar = builder.createAllocStackInst(var->getName(), var->getType());
 
   IRBuilder::InstructionDestroyer destroyer;
