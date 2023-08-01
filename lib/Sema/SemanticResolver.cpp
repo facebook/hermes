@@ -928,6 +928,10 @@ void SemanticResolver::visitFunctionLike(
     newFuncCtx.isConstructor = method->_kind == kw_.identConstructor;
   }
 
+  if (compile_ && ESTree::isAsync(node) && ESTree::isGenerator(node)) {
+    sm_.error(node->getSourceRange(), "async generators are unsupported");
+  }
+
   FoundDirectives directives{};
 
   // Note that body might be empty (for lazy functions)
