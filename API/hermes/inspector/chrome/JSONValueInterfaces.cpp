@@ -6,7 +6,6 @@
  */
 
 #include "JSONValueInterfaces.h"
-#include "hermes/include/hermes/Parser/JSONParser.h"
 
 namespace facebook {
 namespace hermes {

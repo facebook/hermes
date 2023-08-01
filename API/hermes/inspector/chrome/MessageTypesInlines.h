@@ -13,7 +13,6 @@
 #include <memory>
 #include <optional>
 #include <type_traits>
-#include "hermes/external/llvh/include/llvh/Support/Casting.h"
 #include "hermes/include/hermes/Parser/JSONParser.h"
 
 namespace facebook {

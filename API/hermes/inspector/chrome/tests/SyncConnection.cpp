@@ -10,7 +10,6 @@
 #include <functional>
 #include <stdexcept>
 
-#include <folly/json.h>
 #include <glog/logging.h>
 
 #include <hermes/Parser/JSONParser.h>

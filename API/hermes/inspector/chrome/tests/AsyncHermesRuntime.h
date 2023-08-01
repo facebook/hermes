@@ -13,11 +13,6 @@
 
 #include "SerialExecutor.h"
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-#include <folly/futures/Future.h>
-#pragma clang diagnostic pop
-
 #include <hermes/hermes.h>
 #include <jsi/jsi.h>
 

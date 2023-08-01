@@ -13,9 +13,6 @@
 #include <unordered_map>
 #include <variant>
 
-#include <folly/dynamic.h>
-#include <folly/json.h>
-
 #include <hermes/Parser/JSONParser.h>
 
 namespace facebook {
