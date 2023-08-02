@@ -137,15 +137,17 @@ void FlowTypesDumper::printAllNumberedTypes(llvh::raw_ostream &os) {
 void FlowTypesDumper::printAllTypes(
     llvh::raw_ostream &os,
     const FlowContext &flowTypes) {
-  // The last type number printed.
-  size_t lastNumber = 0;
-  auto printAll = [&os, this, &lastNumber](const auto &all) {
+  // The type numbers that have been printed.
+  llvh::DenseSet<size_t> printed{};
+  // Ignore singletons, which have number 0.
+  printed.insert(0);
+  auto printAll = [&os, this, &printed](const auto &all) {
     for (const Type &t : all) {
       // Don't print duplicate types.
       size_t number = getNumber(t.info);
-      if (number <= lastNumber)
+      auto [it, inserted] = printed.insert(number);
+      if (!inserted)
         continue;
-      lastNumber = number;
 
       printTypeRef(os, &t);
       os << " = ";
