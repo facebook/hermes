@@ -1122,6 +1122,13 @@ void CDPHandler::Impl::handle(const m::runtime::EnableRequest &req) {
     runtimeEnabled_ = true;
     sendResponseToClient(m::makeOkResponse(req.id));
 
+    // Per CDP spec, when reporting is enabled, immediately send an
+    // executionContextCreated event for each existing execution context.
+    m::runtime::ExecutionContextCreatedNotification note;
+    note.context.id = CDPHandler::Impl::kHermesExecutionContextId;
+    note.context.name = "hermes";
+    sendNotificationToClient(note);
+
     for (auto &msg : pendingConsoleMessages_) {
       emitConsoleAPICalledEvent(std::move(msg));
     }
@@ -1681,10 +1688,6 @@ void CDPHandler::Impl::processPendingDesiredAttachments() {
 
 void CDPHandler::Impl::enableDebugger() {
   getDebugger().setIsDebuggerAttached(true);
-  m::runtime::ExecutionContextCreatedNotification note;
-  note.context.id = CDPHandler::Impl::kHermesExecutionContextId;
-  note.context.name = "hermes";
-  sendNotificationToClient(note);
   if (currentExecution_ == Execution::Paused) {
     sendPausedNotificationToClient();
   }

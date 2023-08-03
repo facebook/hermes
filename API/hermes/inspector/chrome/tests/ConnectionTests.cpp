@@ -491,7 +491,6 @@ TEST_F(ConnectionTests, testRespondsErrorToUnknownRequests) {
   )");
 
   send<m::debugger::EnableRequest>(conn, 1);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   conn.send(R"({"id": 2, "method": "Debugger.foo"})");
@@ -513,7 +512,6 @@ TEST_F(ConnectionTests, testDebuggerStatement) {
   )");
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // [1] (line 2) hit debugger statement, resume
@@ -537,7 +535,6 @@ TEST_F(ConnectionTests, testDebuggerStatementFromPausedWaitEnable) {
   std::this_thread::sleep_for(250ms);
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // [1] (line 2) hit debugger statement, resume
@@ -557,7 +554,6 @@ TEST_F(ConnectionTests, testIsDebuggerAttached) {
   )");
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // [1] (line 2) hit debugger statement
@@ -585,7 +581,6 @@ TEST_F(ConnectionTests, testStepOver) {
   )");
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // [1] (line 2): hit debugger statement, step over
@@ -622,7 +617,6 @@ TEST_F(ConnectionTests, testStepIn) {
   )");
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // [1] (line 6): hit debugger statement, step over
@@ -657,7 +651,6 @@ TEST_F(ConnectionTests, testStepOut) {
   )");
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // [1] (line 3) hit debugger statement, step over
@@ -691,7 +684,6 @@ TEST_F(ConnectionTests, testSetBreakpoint) {
   )");
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // [1] (line 2) hit debugger statement, set breakpoint on line 6
@@ -728,7 +720,6 @@ TEST_F(ConnectionTests, testSetBreakpointById) {
   )");
 
   send<m::debugger::EnableRequest>(conn, ++msgId);
-  expectExecutionContextCreated(conn);
   auto script = expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   expectPaused(conn, "other", {{"global", 1, 1}});
@@ -764,7 +755,6 @@ TEST_F(ConnectionTests, testActivateBreakpoints) {
   )");
 
   send<m::debugger::EnableRequest>(conn, ++msgId);
-  expectExecutionContextCreated(conn);
   auto script = expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   expectPaused(conn, "other", {{"global", 1, 1}});
@@ -823,7 +813,6 @@ TEST_F(ConnectionTests, testSetBreakpointByIdWithColumnInIndenting) {
   )");
 
   send<m::debugger::EnableRequest>(conn, ++msgId);
-  expectExecutionContextCreated(conn);
   auto script = expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   expectPaused(conn, "other", {{"global", 1, 1}});
@@ -873,7 +862,6 @@ TEST_F(ConnectionTests, testSetLazyBreakpoint) {
       "url");
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // [1] (line 2) hit debugger statement, set breakpoint on line 6
@@ -915,7 +903,6 @@ TEST_F(ConnectionTests, testSetBreakpointWhileRunning) {
   )");
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // set breakpoint on line 4: "var c = ..."
@@ -959,7 +946,6 @@ TEST_F(ConnectionTests, testSetBreakpointConditional) {
   )");
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // [1] (line 2) hit debugger statement,
@@ -1021,7 +1007,6 @@ TEST_F(ConnectionTests, testRemoveBreakpoint) {
   )");
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // [1] (line 2) hit debugger statement, set breakpoint on line 7
@@ -1072,7 +1057,6 @@ TEST_F(ConnectionTests, testAsyncPauseWhileRunning) {
   )");
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // send some number of async pauses, make sure that we always stop before
@@ -1130,8 +1114,10 @@ TEST_F(ConnectionTests, testEvalOnCallFrame) {
     func1(func2, "tau");
   )");
 
-  send<m::debugger::EnableRequest>(conn, msgId++);
+  send<m::runtime::EnableRequest>(conn, msgId++);
   expectExecutionContextCreated(conn);
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // [1] (line 25) hit debugger statement
@@ -1201,6 +1187,13 @@ TEST_F(ConnectionTests, testEvalOnCallFrame) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
+TEST_F(ConnectionTests, testRuntimeEnable) {
+  int msgId = 1;
+
+  send<m::runtime::EnableRequest>(conn, msgId++);
+  expectExecutionContextCreated(conn);
+}
+
 TEST_F(ConnectionTests, testRuntimeEvaluate) {
   int msgId = 1;
 
@@ -1216,8 +1209,10 @@ TEST_F(ConnectionTests, testRuntimeEvaluate) {
     }
   )");
 
-  send<m::debugger::EnableRequest>(conn, msgId++);
+  send<m::runtime::EnableRequest>(conn, msgId++);
   expectExecutionContextCreated(conn);
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // [1] (line 6) hit infinite loop
@@ -1251,8 +1246,10 @@ TEST_F(ConnectionTests, testRuntimeEvaluateReturnByValue) {
 
   asyncRuntime.executeScriptAsync("while(!shouldStop());");
 
-  send<m::debugger::EnableRequest>(conn, msgId++);
+  send<m::runtime::EnableRequest>(conn, msgId++);
   expectExecutionContextCreated(conn);
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // We expect this JSON object to be evaluated and return by value, so
@@ -1290,8 +1287,10 @@ TEST_F(ConnectionTests, testRuntimeCompileScript) {
 
   asyncRuntime.executeScriptAsync("while(!shouldStop());");
 
-  send<m::debugger::EnableRequest>(conn, msgId++);
+  send<m::runtime::EnableRequest>(conn, msgId++);
   expectExecutionContextCreated(conn);
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   m::runtime::CompileScriptRequest req;
@@ -1301,7 +1300,7 @@ TEST_F(ConnectionTests, testRuntimeCompileScript) {
   req.expression = "1+1";
   conn.send(req.toJsonStr());
 
-  auto resp = expectResponse<m::runtime::CompileScriptResponse>(conn, 2);
+  auto resp = expectResponse<m::runtime::CompileScriptResponse>(conn, 3);
   EXPECT_EQ(resp.scriptId, "userScript0");
 
   asyncRuntime.stop();
@@ -1332,7 +1331,6 @@ TEST_F(ConnectionTests, testEvalOnCallFrameException) {
   )");
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // [1] (line 12) hit debugger statement
@@ -1386,8 +1384,6 @@ TEST_F(ConnectionTests, testLoadMultipleScripts) {
       "url1");
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-
-  expectExecutionContextCreated(conn);
 
   m::debugger::ScriptParsedNotification script1 =
       expectScriptParsed(conn, "url1", "/foo/bar/url1.js.map");
@@ -1446,8 +1442,10 @@ TEST_F(ConnectionTests, testGetProperties) {
     foo();
   )");
 
-  send<m::debugger::EnableRequest>(conn, msgId++);
+  send<m::runtime::EnableRequest>(conn, msgId++);
   expectExecutionContextCreated(conn);
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   auto pausedNote = expectPaused(
@@ -1528,8 +1526,10 @@ TEST_F(ConnectionTests, testGetPropertiesOnlyOwnProperties) {
     foo();
   )");
 
-  send<m::debugger::EnableRequest>(conn, msgId++);
+  send<m::runtime::EnableRequest>(conn, msgId++);
   expectExecutionContextCreated(conn);
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // wait for a pause on debugger statement and get object ID from the local
@@ -1588,7 +1588,6 @@ TEST_F(ConnectionTests, testDisable) {
   )");
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // set breakpoint on line 4: "var c = ..."
@@ -1623,7 +1622,6 @@ TEST_F(ConnectionTests, testDisableWhileRunning) {
   )");
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // [1] initial pause to set the breakpoint on line 6
@@ -1666,7 +1664,6 @@ TEST_F(ConnectionTests, testSetPauseOnExceptionsAll) {
   )");
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // [1] (line 1) initial pause, set throw on exceptions to 'All'
@@ -1714,7 +1711,6 @@ TEST_F(ConnectionTests, testSetPauseOnExceptionsNone) {
   )");
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // [1] (line 1) initial pause, set throw on exceptions to 'None'
@@ -1753,7 +1749,6 @@ TEST_F(ConnectionTests, testSetPauseOnExceptionsUncaught) {
   )");
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // [1] (line 1) initial pause, set throw on exceptions to 'Uncaught'
@@ -1798,7 +1793,6 @@ TEST_F(ConnectionTests, testShouldPauseOnThrow) {
   )");
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   auto shouldPauseOnThrowEvalMsg =
@@ -1864,8 +1858,10 @@ TEST_F(ConnectionTests, testScopeVariables) {
     func(); // line 12
   )");
 
-  send<m::debugger::EnableRequest>(conn, msgId++);
+  send<m::runtime::EnableRequest>(conn, msgId++);
   expectExecutionContextCreated(conn);
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // [1] (line 7) hit debugger statement
@@ -1951,8 +1947,10 @@ TEST_F(ConnectionTests, testRuntimeCallFunctionOnObject) {
       debugger;
   )");
 
-  send<m::debugger::EnableRequest>(conn, msgId++);
+  send<m::runtime::EnableRequest>(conn, msgId++);
   expectExecutionContextCreated(conn);
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // create a new Object() that will be used as "this" below.
@@ -2080,8 +2078,10 @@ TEST_F(ConnectionTests, testRuntimeCallFunctionOnExecutionContext) {
     return properties;
   };
 
-  send<m::debugger::EnableRequest>(conn, msgId++);
+  send<m::runtime::EnableRequest>(conn, msgId++);
   expectExecutionContextCreated(conn);
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // globalThisId is the inspector's object Id for globalThis.
@@ -2172,8 +2172,6 @@ TEST_F(ConnectionTests, testRuntimeCallFunctionOnExecutionContext) {
 TEST_F(ConnectionTests, testConsoleLog) {
   int msgId = 1;
 
-  send<m::runtime::EnableRequest>(conn, msgId++);
-
   asyncRuntime.executeScriptAsync(R"(
     debugger; [1]
     var object1 = {number1: 1, bool1: false};
@@ -2184,8 +2182,10 @@ TEST_F(ConnectionTests, testConsoleLog) {
               // api notification before VM gets destroyed.
   )");
 
-  send<m::debugger::EnableRequest>(conn, msgId++);
+  send<m::runtime::EnableRequest>(conn, msgId++);
   expectExecutionContextCreated(conn);
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
   // [1] (line 1) hit debugger statement
   expectPaused(conn, "other", {{"global", 1, 1}});
@@ -2256,8 +2256,6 @@ TEST_F(ConnectionTests, testConsoleLog) {
 TEST_F(ConnectionTests, testConsoleGroup) {
   int msgId = 1;
 
-  send<m::runtime::EnableRequest>(conn, msgId++);
-
   asyncRuntime.executeScriptAsync(R"(
     debugger;
 
@@ -2271,8 +2269,10 @@ TEST_F(ConnectionTests, testConsoleGroup) {
               // api notification before VM gets destroyed.
   )");
 
-  send<m::debugger::EnableRequest>(conn, msgId++);
+  send<m::runtime::EnableRequest>(conn, msgId++);
   expectExecutionContextCreated(conn);
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
   expectPaused(conn, "other", {{"global", 1, 1}});
   send<m::debugger::ResumeRequest>(conn, msgId++);
@@ -2374,6 +2374,7 @@ TEST_F(ConnectionTests, testConsoleBuffer) {
   asyncRuntime.wait();
 
   send<m::runtime::EnableRequest>(conn, msgId++);
+  expectExecutionContextCreated(conn);
 
   bool receivedWarning = false;
   std::array<bool, kExpectedMaxBufferSize> received;
@@ -2438,8 +2439,10 @@ TEST_F(ConnectionTests, testThisObject) {
     object.foo(); // (line 11)
   )");
 
-  send<m::debugger::EnableRequest>(conn, msgId++);
+  send<m::runtime::EnableRequest>(conn, msgId++);
   expectExecutionContextCreated(conn);
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // [1] (line 1) hit debugger statement
@@ -2498,7 +2501,6 @@ TEST_F(ConnectionTests, testSetBreakpointsMultipleScripts) {
   )",
       url1);
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   auto scriptParsed1 =
       expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
@@ -2580,7 +2582,6 @@ TEST_F(ConnectionTests, testSetBreakpointByUrlRegex) {
   )",
       url1);
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   auto scriptParsed1 =
       expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
@@ -2661,7 +2662,6 @@ function foo(){x=1}debugger;foo();
 )",
       "url");
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // Hit debugger statement.
@@ -2694,7 +2694,6 @@ TEST_F(ConnectionTests, canBreakOnScriptsWithSourceMap) {
   int msgId = 1;
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
 
   m::debugger::SetInstrumentationBreakpointRequest req;
   req.id = msgId++;
@@ -2735,7 +2734,6 @@ TEST_F(ConnectionTests, wontStopOnFilesWithoutSourceMaps) {
   int msgId = 1;
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
 
   m::debugger::SetInstrumentationBreakpointRequest req;
   req.id = msgId++;
@@ -2773,8 +2771,10 @@ TEST_F(WaitForDebuggerTests, runIfWaitingForDebugger) {
      storeValue(1);  debugger;
     )");
 
-  send<m::debugger::EnableRequest>(conn, ++msgId);
+  send<m::runtime::EnableRequest>(conn, msgId++);
   expectExecutionContextCreated(conn);
+
+  send<m::debugger::EnableRequest>(conn, ++msgId);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
   expectNotification<m::debugger::PausedNotification>(conn);
 
@@ -2805,7 +2805,6 @@ TEST_F(ConnectionTests, heapProfilerSampling) {
   int msgId = 1;
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
 
   asyncRuntime.executeScriptAsync(R"(
       debugger;
@@ -2860,7 +2859,6 @@ TEST_F(ConnectionTests, heapSnapshotRemoteObject) {
   int msgId = 1;
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
 
   asyncRuntime.executeScriptAsync(R"(
     storeValue([1, 2, 3]);
@@ -2941,7 +2939,6 @@ TEST_F(ConnectionTests, DISABLED_testBasicProfilerOperation) {
   )");
 
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // Start the sampling profiler. At this point it is not safe to manipulate the
@@ -2957,7 +2954,6 @@ TEST_F(ConnectionTests, DISABLED_testBasicProfilerOperation) {
 
   // Finally, re-enable the debugger in order to stop profiling.
   send<m::debugger::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
 
   // Being re-attached to the VM, send the stop sampling profile request.
   {
@@ -3000,8 +2996,11 @@ TEST_F(ConnectionTests, testGlobalLexicalScopeNames) {
 
     func1();
   )");
-  send<m::debugger::EnableRequest>(conn, msgId++);
+
+  send<m::runtime::EnableRequest>(conn, msgId++);
   expectExecutionContextCreated(conn);
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
   expectNotification<m::debugger::PausedNotification>(conn);
 
