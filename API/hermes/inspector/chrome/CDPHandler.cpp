@@ -12,15 +12,15 @@
 #include <cstdlib>
 #include <iostream>
 #include <mutex>
+#include <optional>
 #include <queue>
 #include <sstream>
 #include <string>
 #include <thread>
 #include <unordered_set>
-#include "hermes/include/hermes/Parser/JSONParser.h"
 
-#include <glog/logging.h>
 #include <hermes/DebuggerAPI.h>
+#include <hermes/Parser/JSONParser.h>
 #include <hermes/hermes.h>
 #include <hermes/inspector/AsyncPauseState.h>
 #include <hermes/inspector/Exceptions.h>
@@ -29,7 +29,6 @@
 #include <hermes/inspector/chrome/MessageConverters.h>
 #include <hermes/inspector/chrome/RemoteObjectsTable.h>
 #include <jsi/instrumentation.h>
-#include <optional>
 
 namespace facebook {
 namespace hermes {
@@ -432,8 +431,6 @@ void CDPHandler::Impl::sendMessage(std::string str) {
   // If parsing failed, then the value of ParseResult will be a string
   // containing the error message. Silently log this error message.
   if (std::holds_alternative<std::string>(maybeReq)) {
-    LOG(ERROR) << "Invalid request `" << str
-               << "`: " << std::get<std::string>(maybeReq);
     return;
   }
 
@@ -774,7 +771,6 @@ void CDPHandler::Impl::handle(const m::profiler::StopRequest &req) {
           parseStrAsJsonObj(std::move(profileStream).str(), factory));
       sendResponseToClient(resp);
     } catch (const std::exception &) {
-      LOG(ERROR) << "Failed to parse Sampling Profiler output";
       sendResponseToClient(m::makeErrorResponse(
           req.id,
           m::ErrorCode::InternalError,

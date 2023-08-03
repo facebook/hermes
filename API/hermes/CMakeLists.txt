@@ -143,3 +143,6 @@ if(HERMES_BUILD_APPLE_DSYM)
     install(DIRECTORY ${DSYM_PATH} DESTINATION lib)
   endif()
 endif()
+
+add_subdirectory(inspector)
+add_subdirectory(jsinspector)

@@ -10,9 +10,9 @@
 #include <regex>
 #include <string>
 #include <vector>
-#include "hermes/include/hermes/Parser/JSONParser.h"
 
 #include <hermes/DebuggerAPI.h>
+#include <hermes/Parser/JSONParser.h>
 #include <hermes/hermes.h>
 #include <hermes/inspector/chrome/MessageTypes.h>
 #include <hermes/inspector/chrome/RemoteObjectsTable.h>
