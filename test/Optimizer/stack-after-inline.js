@@ -28,7 +28,7 @@ function f1(num) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f1#0#1(num)#2
-// CHECK-NEXT:S{f1#0#1()#2} = [num#2]
+// CHECK-NEXT:S{f1#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{f1#0#1()#2}
 // CHECK-NEXT:  %1 = ReturnInst %num

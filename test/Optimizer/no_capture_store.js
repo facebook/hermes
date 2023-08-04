@@ -95,42 +95,37 @@ function outer() {
 // CHECK-NEXT:function_end
 
 // CHECK:function outer#0#1()#5 : object
-// CHECK-NEXT:S{outer#0#1()#5} = [envVar#5]
+// CHECK-NEXT:S{outer#0#1()#5} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{outer#0#1()#5}
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [envVar#5], %0
-// CHECK-NEXT:  %2 = CreateFunctionInst %setValue#1#5()#6 : undefined, %0
-// CHECK-NEXT:  %3 = CreateFunctionInst %test1#1#5()#7 : undefined, %0
-// CHECK-NEXT:  %4 = CreateFunctionInst %test2#1#5()#8 : undefined, %0
-// CHECK-NEXT:  %5 = AllocArrayInst 3 : number
-// CHECK-NEXT:  %6 = StoreOwnPropertyInst %2 : closure, %5 : object, 0 : number, true : boolean
-// CHECK-NEXT:  %7 = StoreOwnPropertyInst %3 : closure, %5 : object, 1 : number, true : boolean
-// CHECK-NEXT:  %8 = StoreOwnPropertyInst %4 : closure, %5 : object, 2 : number, true : boolean
-// CHECK-NEXT:  %9 = ReturnInst %5 : object
+// CHECK-NEXT:  %1 = CreateFunctionInst %setValue#1#5()#6 : undefined, %0
+// CHECK-NEXT:  %2 = CreateFunctionInst %test1#1#5()#7 : undefined, %0
+// CHECK-NEXT:  %3 = CreateFunctionInst %test2#1#5()#8 : undefined, %0
+// CHECK-NEXT:  %4 = AllocArrayInst 3 : number
+// CHECK-NEXT:  %5 = StoreOwnPropertyInst %1 : closure, %4 : object, 0 : number, true : boolean
+// CHECK-NEXT:  %6 = StoreOwnPropertyInst %2 : closure, %4 : object, 1 : number, true : boolean
+// CHECK-NEXT:  %7 = StoreOwnPropertyInst %3 : closure, %4 : object, 2 : number, true : boolean
+// CHECK-NEXT:  %8 = ReturnInst %4 : object
 // CHECK-NEXT:function_end
 
 // CHECK:function setValue#1#5(v)#6 : undefined
 // CHECK-NEXT:S{setValue#1#5()#6} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{setValue#1#5()#6}
-// CHECK-NEXT:  %1 = StoreFrameInst %v, [envVar#5@outer], %0
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test1#1#5()#7 : undefined
 // CHECK-NEXT:S{test1#1#5()#7} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test1#1#5()#7}
-// CHECK-NEXT:  %1 = StoreFrameInst 87 : number, [envVar#5@outer], %0
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test2#1#5(o)#8 : undefined
 // CHECK-NEXT:S{test2#1#5()#8} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test2#1#5()#8}
-// CHECK-NEXT:  %1 = StoreFrameInst 42 : number, [envVar#5@outer], %0
-// CHECK-NEXT:  %2 = CallInst %o, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %3 = StoreFrameInst 87 : number, [envVar#5@outer], %0
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %1 = CallInst %o, undefined : undefined, undefined : undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

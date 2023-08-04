@@ -99,60 +99,51 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function store_x_not_captured#0#1()#2 : number
-// CHECK-NEXT:S{store_x_not_captured#0#1()#2} = [y#2 : number]
+// CHECK-NEXT:S{store_x_not_captured#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{store_x_not_captured#0#1()#2}
-// CHECK-NEXT:  %1 = StoreFrameInst 3 : number, [y#2] : number, %0
-// CHECK-NEXT:  %2 = CreateFunctionInst %foo#1#2()#3 : undefined, %0
-// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %4 = ReturnInst 9 : number
+// CHECK-NEXT:  %1 = CreateFunctionInst %foo#1#2()#3 : undefined, %0
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined
+// CHECK-NEXT:  %3 = ReturnInst 9 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#1#2()#3 : undefined
 // CHECK-NEXT:S{foo#1#2()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#1#2()#3}
-// CHECK-NEXT:  %1 = StoreFrameInst 12 : number, [y#2@store_x_not_captured] : number, %0
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function store_x_is_captured#0#1()#4 : number
-// CHECK-NEXT:S{store_x_is_captured#0#1()#4} = [y#4 : number, x#4 : number]
+// CHECK-NEXT:S{store_x_is_captured#0#1()#4} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{store_x_is_captured#0#1()#4}
-// CHECK-NEXT:  %1 = StoreFrameInst 3 : number, [y#4] : number, %0
-// CHECK-NEXT:  %2 = StoreFrameInst 4 : number, [x#4] : number, %0
-// CHECK-NEXT:  %3 = CreateFunctionInst %"foo 1#"#1#4()#5 : undefined, %0
-// CHECK-NEXT:  %4 = CallInst %3 : closure, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %5 = StoreFrameInst 9 : number, [x#4] : number, %0
-// CHECK-NEXT:  %6 = ReturnInst 9 : number
+// CHECK-NEXT:  %1 = CreateFunctionInst %"foo 1#"#1#4()#5 : undefined, %0
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined
+// CHECK-NEXT:  %3 = ReturnInst 9 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function "foo 1#"#1#4()#5 : undefined
 // CHECK-NEXT:S{"foo 1#"#1#4()#5} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{"foo 1#"#1#4()#5}
-// CHECK-NEXT:  %1 = LoadFrameInst [x#4@store_x_is_captured] : number, %0
-// CHECK-NEXT:  %2 = StoreFrameInst %1 : number, [y#4@store_x_is_captured] : number, %0
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function load_x_not_captured#0#1()#6 : number
-// CHECK-NEXT:S{load_x_not_captured#0#1()#6} = [y#6 : number]
+// CHECK-NEXT:S{load_x_not_captured#0#1()#6} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{load_x_not_captured#0#1()#6}
-// CHECK-NEXT:  %1 = StoreFrameInst 3 : number, [y#6] : number, %0
-// CHECK-NEXT:  %2 = CreateFunctionInst %"foo 2#"#1#6()#7 : undefined, %0
-// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %4 = ReturnInst 4 : number
+// CHECK-NEXT:  %1 = CreateFunctionInst %"foo 2#"#1#6()#7 : undefined, %0
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined
+// CHECK-NEXT:  %3 = ReturnInst 4 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function "foo 2#"#1#6()#7 : undefined
 // CHECK-NEXT:S{"foo 2#"#1#6()#7} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{"foo 2#"#1#6()#7}
-// CHECK-NEXT:  %1 = StoreFrameInst 12 : number, [y#6@load_x_not_captured] : number, %0
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function load_x_is_captured#0#1()#8 : number

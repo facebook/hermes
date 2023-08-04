@@ -67,26 +67,29 @@
 // CHKIR:function test#0#1(f)#2 : undefined
 // CHKIR-NEXT:S{test#0#1()#2} = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = CreateScopeInst %S{test#0#1()#2}
-// CHKIR-NEXT:  %1 = TryStartInst %BB1, %BB2
+// CHKIR-NEXT:  %0 = AllocStackInst $f
+// CHKIR-NEXT:  %1 = CreateScopeInst %S{test#0#1()#2}
+// CHKIR-NEXT:  %2 = StoreStackInst %f, %0
+// CHKIR-NEXT:  %3 = TryStartInst %BB1, %BB2
 // CHKIR-NEXT:%BB1:
-// CHKIR-NEXT:  %2 = CatchInst
-// CHKIR-NEXT:  %3 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHKIR-NEXT:  %4 = LoadPropertyInst %2, "name" : string
-// CHKIR-NEXT:  %5 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
-// CHKIR-NEXT:  %6 = LoadPropertyInst %5, "concat" : string
-// CHKIR-NEXT:  %7 = CallInst %6, undefined : undefined, "" : string, %4, ":" : string
-// CHKIR-NEXT:  %8 = LoadPropertyInst %2, "message" : string
-// CHKIR-NEXT:  %9 = CallInst %3, undefined : undefined, undefined : undefined, %7, %8 // textified callee: "print"
-// CHKIR-NEXT:  %10 = BranchInst %BB3
+// CHKIR-NEXT:  %4 = CatchInst
+// CHKIR-NEXT:  %5 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
+// CHKIR-NEXT:  %6 = LoadPropertyInst %4, "name" : string
+// CHKIR-NEXT:  %7 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
+// CHKIR-NEXT:  %8 = LoadPropertyInst %7, "concat" : string
+// CHKIR-NEXT:  %9 = CallInst %8, undefined : undefined, "" : string, %6, ":" : string
+// CHKIR-NEXT:  %10 = LoadPropertyInst %4, "message" : string
+// CHKIR-NEXT:  %11 = CallInst %5, undefined : undefined, undefined : undefined, %9, %10 // textified callee: "print"
+// CHKIR-NEXT:  %12 = BranchInst %BB3
 // CHKIR-NEXT:%BB3:
-// CHKIR-NEXT:  %11 = ReturnInst undefined : undefined
+// CHKIR-NEXT:  %13 = ReturnInst undefined : undefined
 // CHKIR-NEXT:%BB2:
-// CHKIR-NEXT:  %12 = CallInst %f, undefined : undefined, undefined : undefined // textified callee: "f"
-// CHKIR-NEXT:  %13 = BranchInst %BB4
+// CHKIR-NEXT:  %14 = LoadStackInst %0
+// CHKIR-NEXT:  %15 = CallInst %14, undefined : undefined, undefined : undefined // textified callee: "f"
+// CHKIR-NEXT:  %16 = BranchInst %BB4
 // CHKIR-NEXT:%BB4:
-// CHKIR-NEXT:  %14 = TryEndInst
-// CHKIR-NEXT:  %15 = BranchInst %BB3
+// CHKIR-NEXT:  %17 = TryEndInst
+// CHKIR-NEXT:  %18 = BranchInst %BB3
 // CHKIR-NEXT:function_end
 
 // CHKIR:arrow b#0#1()#3 : object

@@ -13,7 +13,7 @@
 // were not being properly updated.
 function decrementArguments() {
     for (var i = 0; i < 2; i++) {
-        var var1 = () => var3;
+        var var1 = () => var3 = 0;
         var var3 = arguments;
     }
     return var3 - 1;

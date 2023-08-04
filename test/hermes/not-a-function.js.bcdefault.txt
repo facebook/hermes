@@ -107,8 +107,9 @@
 
 // CHK-BCDEFAULT:Function<test>(2 params, 15 registers, 0 symbols):
 // CHK-BCDEFAULT-NEXT:Offset in debug table: source 0x00a9, scope 0x0000, textified callees 0x0000
+// CHK-BCDEFAULT-NEXT:    LoadParam         r0, 1
 // CHK-BCDEFAULT-NEXT:L4:
-// CHK-BCDEFAULT-NEXT:    LoadParam         r1, 1
+// CHK-BCDEFAULT-NEXT:    Mov               r1, r0
 // CHK-BCDEFAULT-NEXT:    LoadConstUndefined r0
 // CHK-BCDEFAULT-NEXT:    Call1             r0, r1, r0
 // CHK-BCDEFAULT-NEXT:L5:
@@ -297,16 +298,16 @@
 // CHK-BCDEFAULT-NEXT:    bc 254: line 133 col 1 scope offset 0x0000 env r1
 // CHK-BCDEFAULT-NEXT:    bc 264: line 133 col 5 scope offset 0x0000 env r0
 // CHK-BCDEFAULT-NEXT:  0x00a9  function idx 1, starts at line 51 col 1
-// CHK-BCDEFAULT-NEXT:    bc 5: line 54 col 10 scope offset 0x0000 env none
-// CHK-BCDEFAULT-NEXT:    bc 9: line 55 col 5 scope offset 0x0000 env none
-// CHK-BCDEFAULT-NEXT:    bc 11: line 55 col 7 scope offset 0x0000 env none
-// CHK-BCDEFAULT-NEXT:    bc 15: line 56 col 9 scope offset 0x0000 env none
-// CHK-BCDEFAULT-NEXT:    bc 21: line 56 col 19 scope offset 0x0000 env none
-// CHK-BCDEFAULT-NEXT:    bc 26: line 56 col 15 scope offset 0x0000 env none
-// CHK-BCDEFAULT-NEXT:    bc 32: line 56 col 15 scope offset 0x0000 env none
-// CHK-BCDEFAULT-NEXT:    bc 45: line 56 col 15 scope offset 0x0000 env none
-// CHK-BCDEFAULT-NEXT:    bc 51: line 56 col 30 scope offset 0x0000 env none
-// CHK-BCDEFAULT-NEXT:    bc 58: line 56 col 14 scope offset 0x0000 env none
+// CHK-BCDEFAULT-NEXT:    bc 8: line 54 col 10 scope offset 0x0000 env none
+// CHK-BCDEFAULT-NEXT:    bc 12: line 55 col 5 scope offset 0x0000 env none
+// CHK-BCDEFAULT-NEXT:    bc 14: line 55 col 7 scope offset 0x0000 env none
+// CHK-BCDEFAULT-NEXT:    bc 18: line 56 col 9 scope offset 0x0000 env none
+// CHK-BCDEFAULT-NEXT:    bc 24: line 56 col 19 scope offset 0x0000 env none
+// CHK-BCDEFAULT-NEXT:    bc 29: line 56 col 15 scope offset 0x0000 env none
+// CHK-BCDEFAULT-NEXT:    bc 35: line 56 col 15 scope offset 0x0000 env none
+// CHK-BCDEFAULT-NEXT:    bc 48: line 56 col 15 scope offset 0x0000 env none
+// CHK-BCDEFAULT-NEXT:    bc 54: line 56 col 30 scope offset 0x0000 env none
+// CHK-BCDEFAULT-NEXT:    bc 61: line 56 col 14 scope offset 0x0000 env none
 // CHK-BCDEFAULT-NEXT:  0x0107  function idx 2, starts at line 48 col 9
 // CHK-BCDEFAULT-NEXT:    bc 11: line 48 col 15 scope offset 0x0000 env r1
 // CHK-BCDEFAULT-NEXT:  0x0110  function idx 4, starts at line 60 col 6

@@ -108,9 +108,10 @@
 
 // CHK-BCG3:Function<test>(2 params, 15 registers, 0 symbols):
 // CHK-BCG3-NEXT:Offset in debug table: source 0x0114, scope 0x0003, textified callees 0x002e
+// CHK-BCG3-NEXT:    LoadParam         r0, 1
 // CHK-BCG3-NEXT:    AsyncBreakCheck
 // CHK-BCG3-NEXT:L4:
-// CHK-BCG3-NEXT:    LoadParam         r1, 1
+// CHK-BCG3-NEXT:    Mov               r1, r0
 // CHK-BCG3-NEXT:    LoadConstUndefined r0
 // CHK-BCG3-NEXT:    Call1             r0, r1, r0
 // CHK-BCG3-NEXT:L5:
@@ -334,19 +335,19 @@
 // CHK-BCG3-NEXT:    bc 264: line 133 col 5 scope offset 0x0000 env r0
 // CHK-BCG3-NEXT:    bc 270: line 133 col 187 scope offset 0x0000 env r0
 // CHK-BCG3-NEXT:  0x0114  function idx 1, starts at line 51 col 1
-// CHK-BCG3-NEXT:    bc 1: line 52 col 5 scope offset 0x0000 env none
-// CHK-BCG3-NEXT:    bc 6: line 54 col 10 scope offset 0x0000 env none
-// CHK-BCG3-NEXT:    bc 10: line 55 col 5 scope offset 0x0000 env none
-// CHK-BCG3-NEXT:    bc 12: line 55 col 7 scope offset 0x0000 env none
-// CHK-BCG3-NEXT:    bc 16: line 56 col 9 scope offset 0x0000 env none
-// CHK-BCG3-NEXT:    bc 22: line 56 col 19 scope offset 0x0000 env none
-// CHK-BCG3-NEXT:    bc 27: line 56 col 15 scope offset 0x0000 env none
-// CHK-BCG3-NEXT:    bc 33: line 56 col 15 scope offset 0x0000 env none
-// CHK-BCG3-NEXT:    bc 46: line 56 col 15 scope offset 0x0000 env none
-// CHK-BCG3-NEXT:    bc 52: line 56 col 30 scope offset 0x0000 env none
-// CHK-BCG3-NEXT:    bc 59: line 56 col 14 scope offset 0x0000 env none
-// CHK-BCG3-NEXT:    bc 65: line 57 col 5 scope offset 0x0000 env none
-// CHK-BCG3-NEXT:    bc 67: line 58 col 1 scope offset 0x0000 env none
+// CHK-BCG3-NEXT:    bc 4: line 52 col 5 scope offset 0x0000 env none
+// CHK-BCG3-NEXT:    bc 9: line 54 col 10 scope offset 0x0000 env none
+// CHK-BCG3-NEXT:    bc 13: line 55 col 5 scope offset 0x0000 env none
+// CHK-BCG3-NEXT:    bc 15: line 55 col 7 scope offset 0x0000 env none
+// CHK-BCG3-NEXT:    bc 19: line 56 col 9 scope offset 0x0000 env none
+// CHK-BCG3-NEXT:    bc 25: line 56 col 19 scope offset 0x0000 env none
+// CHK-BCG3-NEXT:    bc 30: line 56 col 15 scope offset 0x0000 env none
+// CHK-BCG3-NEXT:    bc 36: line 56 col 15 scope offset 0x0000 env none
+// CHK-BCG3-NEXT:    bc 49: line 56 col 15 scope offset 0x0000 env none
+// CHK-BCG3-NEXT:    bc 55: line 56 col 30 scope offset 0x0000 env none
+// CHK-BCG3-NEXT:    bc 62: line 56 col 14 scope offset 0x0000 env none
+// CHK-BCG3-NEXT:    bc 68: line 57 col 5 scope offset 0x0000 env none
+// CHK-BCG3-NEXT:    bc 70: line 58 col 1 scope offset 0x0000 env none
 // CHK-BCG3-NEXT:  0x0190  function idx 2, starts at line 48 col 9
 // CHK-BCG3-NEXT:    bc 0: line 48 col 15 scope offset 0x0006 env r0
 // CHK-BCG3-NEXT:    bc 6: line 48 col 16 scope offset 0x0006 env r0
@@ -454,8 +455,8 @@
 // CHK-BCG3-NEXT:    bc 249 calls test
 // CHK-BCG3-NEXT:    bc 264 calls test
 // CHK-BCG3-NEXT:  0x002e  entries: 2
-// CHK-BCG3-NEXT:    bc 6 calls f
-// CHK-BCG3-NEXT:    bc 59 calls print
+// CHK-BCG3-NEXT:    bc 9 calls f
+// CHK-BCG3-NEXT:    bc 62 calls print
 // CHK-BCG3-NEXT:  0x0033  entries: 1
 // CHK-BCG3-NEXT:    bc 9 calls a
 // CHK-BCG3-NEXT:  0x0036  entries: 1

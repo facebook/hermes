@@ -28,31 +28,40 @@ function foo(a) {
 
 //CHECK-LABEL:Function<foo>(2 params, 11 registers, 0 symbols):
 //CHECK-NEXT:Offset in debug table: {{.*}}
-//CHECK-NEXT:{{.*}} LoadParam 2<Reg8>, 1<UInt8>
-//CHECK-NEXT:{{.*}} LoadConstUndefined 1<Reg8>
-//CHECK-NEXT:{{.*}} LoadConstUndefined 3<Reg8>
-//CHECK-NEXT:{{.*}} Call1 0<Reg8>, 2<Reg8>, 1<Reg8>
-//CHECK-NEXT:{{.*}} Jmp 26<Addr8>
+//CHECK-NEXT:{{.*}} LoadParam 1<Reg8>, 1<UInt8>
+//CHECK-NEXT:{{.*}} Mov 3<Reg8>, 1<Reg8>
+//CHECK-NEXT:{{.*}} LoadConstUndefined 0<Reg8>
+//CHECK-NEXT:{{.*}} Call1 0<Reg8>, 3<Reg8>, 0<Reg8>
+//CHECK-NEXT:{{.*}} Jmp 32<Addr8>
+//CHECK-NEXT:{{.*}} Catch 2<Reg8>
+//CHECK-NEXT:{{.*}} Mov 3<Reg8>, 2<Reg8>
+//CHECK-NEXT:{{.*}} LoadConstUndefined 0<Reg8>
+//CHECK-NEXT:{{.*}} Call1 0<Reg8>, 3<Reg8>, 0<Reg8>
+//CHECK-NEXT:{{.*}} Jmp 10<Addr8>
 //CHECK-NEXT:{{.*}} Catch 3<Reg8>
-//CHECK-NEXT:{{.*}} Mov 0<Reg8>, 3<Reg8>
-//CHECK-NEXT:{{.*}} Call1 0<Reg8>, 0<Reg8>, 1<Reg8>
-//CHECK-NEXT:{{.*}} Jmp 8<Addr8>
+//CHECK-NEXT:{{.*}} LoadConstUndefined 0<Reg8>
+//CHECK-NEXT:{{.*}} Call1 0<Reg8>, 3<Reg8>, 0<Reg8>
+//CHECK-NEXT:{{.*}} Mov 3<Reg8>, 2<Reg8>
+//CHECK-NEXT:{{.*}} LoadConstUndefined 0<Reg8>
+//CHECK-NEXT:{{.*}} Call1 0<Reg8>, 3<Reg8>, 0<Reg8>
+//CHECK-NEXT:{{.*}} Mov 3<Reg8>, 1<Reg8>
+//CHECK-NEXT:{{.*}} LoadConstUndefined 0<Reg8>
+//CHECK-NEXT:{{.*}} Call1 3<Reg8>, 3<Reg8>, 0<Reg8>
+//CHECK-NEXT:{{.*}} Ret 0<Reg8>
 //CHECK-NEXT:{{.*}} Catch 0<Reg8>
-//CHECK-NEXT:{{.*}} Call1 0<Reg8>, 0<Reg8>, 1<Reg8>
-//CHECK-NEXT:{{.*}} Mov 0<Reg8>, 3<Reg8>
-//CHECK-NEXT:{{.*}} Call1 0<Reg8>, 0<Reg8>, 1<Reg8>
-//CHECK-NEXT:{{.*}} Call1 0<Reg8>, 2<Reg8>, 1<Reg8>
-//CHECK-NEXT:{{.*}} Ret 1<Reg8>
-//CHECK-NEXT:{{.*}} Catch 0<Reg8>
-//CHECK-NEXT:{{.*}} Call1 3<Reg8>, 3<Reg8>, 1<Reg8>
+//CHECK-NEXT:{{.*}} Mov 3<Reg8>, 2<Reg8>
+//CHECK-NEXT:{{.*}} LoadConstUndefined 2<Reg8>
+//CHECK-NEXT:{{.*}} Call1 2<Reg8>, 3<Reg8>, 2<Reg8>
 //CHECK-NEXT:{{.*}} Throw 0<Reg8>
 //CHECK-NEXT:{{.*}} Catch 0<Reg8>
+//CHECK-NEXT:{{.*}} Mov 2<Reg8>, 1<Reg8>
+//CHECK-NEXT:{{.*}} LoadConstUndefined 1<Reg8>
 //CHECK-NEXT:{{.*}} Call1 1<Reg8>, 2<Reg8>, 1<Reg8>
 //CHECK-NEXT:{{.*}} Throw 0<Reg8>
 
 //CHECK-LABEL: Exception Handlers:
-//CHECK-NEXT: 0: start = 15, end = 22, target = 24
-//CHECK-NEXT: 1: start = 7, end = 11, target = 13
-//CHECK-NEXT: 2: start = 15, end = 30, target = 43
-//CHECK-NEXT: 3: start = 7, end = 37, target = 51
-//CHECK-NEXT: 4: start = 43, end = 51, target = 51
+//CHECK-NEXT: 0: start = 16, end = 25, target = 27
+//CHECK-NEXT: 1: start = 3, end = 12, target = 14
+//CHECK-NEXT: 2: start = 16, end = 35, target = 55
+//CHECK-NEXT: 3: start = 3, end = 44, target = 68
+//CHECK-NEXT: 4: start = 55, end = 68, target = 68

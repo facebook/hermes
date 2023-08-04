@@ -32,11 +32,11 @@ function g14(z) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{g14#0#1()#2}
 // CHECK-NEXT:  %1 = CreateFunctionInst %w#1#2()#3 : number, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %3 = BinaryOperatorInst '>', %z, %2 : number
-// CHECK-NEXT:  %4 = CondBranchInst %3 : boolean, %BB1, %BB2
+// CHECK-NEXT:  %2 = StoreFrameInst %1 : closure, [w#2] : closure, %0
+// CHECK-NEXT:  %3 = CallInst %1 : closure, undefined : undefined, undefined : undefined
+// CHECK-NEXT:  %4 = BinaryOperatorInst '>', %z, %3 : number
+// CHECK-NEXT:  %5 = CondBranchInst %4 : boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = StoreFrameInst %1 : closure, [w#2] : closure, %0
 // CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
 // CHECK-NEXT:  %7 = LoadFrameInst [w#2] : closure, %0
 // CHECK-NEXT:  %8 = CallInst %7 : closure, undefined : undefined, undefined : undefined

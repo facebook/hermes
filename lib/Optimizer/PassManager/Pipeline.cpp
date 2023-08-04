@@ -12,7 +12,6 @@
 #include "hermes/Optimizer/Scalar/DCE.h"
 #include "hermes/Optimizer/Scalar/ScopeTransformations.h"
 #include "hermes/Optimizer/Scalar/SimplifyCFG.h"
-#include "hermes/Optimizer/Scalar/StackPromotion.h"
 #include "hermes/Optimizer/Scalar/TypeInference.h"
 
 #include "llvh/Support/Debug.h"
@@ -57,13 +56,14 @@ void hermes::runFullOptimizationPasses(Module &M) {
 
   PM.addTypeInference();
   PM.addSimplifyCFG();
-  PM.addStackPromotion();
+  PM.addSimpleStackPromotion();
   PM.addMem2Reg();
-  PM.addStackPromotion();
+  PM.addSimpleStackPromotion();
   PM.addInlining();
-  PM.addStackPromotion();
+  PM.addSimpleStackPromotion();
   PM.addInstSimplify();
   PM.addDCE();
+  PM.addSimpleStackPromotion();
 
 #ifdef HERMES_RUN_WASM
   if (M.getContext().getUseUnsafeIntrinsics()) {
