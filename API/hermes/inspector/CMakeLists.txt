@@ -15,7 +15,3 @@ add_library(hermes_inspector
 target_link_libraries(hermes_inspector
   hermesapi
 )
-
-if(HERMES_ENABLE_TOOLS AND NOT WIN32)
-  add_subdirectory(chrome/cli)
-endif()
