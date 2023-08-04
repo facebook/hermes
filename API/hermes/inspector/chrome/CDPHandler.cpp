@@ -1129,11 +1129,6 @@ void CDPHandler::Impl::handle(const m::runtime::EnableRequest &req) {
     note.context.name = "hermes";
     sendNotificationToClient(note);
 
-    for (auto &msg : pendingConsoleMessages_) {
-      emitConsoleAPICalledEvent(std::move(msg));
-    }
-    pendingConsoleMessages_.clear();
-
     if (numPendingConsoleMessagesDiscarded_ != 0) {
       jsi::Runtime &rt = getRuntime();
       std::ostringstream oss;
@@ -1145,10 +1140,17 @@ void CDPHandler::Impl::handle(const m::runtime::EnableRequest &req) {
       jsi::Array argsArray(rt, 1);
       argsArray.setValueAtIndex(rt, 0, oss.str());
       emitConsoleAPICalledEvent(ConsoleMessageInfo{
-          currentTimestampMs(), "warning", std::move(argsArray)});
+          pendingConsoleMessages_.front().timestamp - 0.1,
+          "warning",
+          std::move(argsArray)});
 
       numPendingConsoleMessagesDiscarded_ = 0;
     }
+
+    for (auto &msg : pendingConsoleMessages_) {
+      emitConsoleAPICalledEvent(std::move(msg));
+    }
+    pendingConsoleMessages_.clear();
   });
 }
 
