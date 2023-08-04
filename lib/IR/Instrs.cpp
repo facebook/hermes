@@ -126,7 +126,6 @@ BinaryOperatorInst::tryGetReverseOperator(BinaryOperatorInst::OpKind op) {
     case OpKind::NotEqualKind:
     case OpKind::StrictlyEqualKind:
     case OpKind::StrictlyNotEqualKind:
-    case OpKind::AddKind:
     case OpKind::MultiplyKind:
     case OpKind::OrKind:
     case OpKind::XorKind:
@@ -142,6 +141,12 @@ BinaryOperatorInst::tryGetReverseOperator(BinaryOperatorInst::OpKind op) {
       return OpKind::LessThanKind;
     case OpKind::GreaterThanOrEqualKind:
       return OpKind::LessThanOrEqualKind;
+
+    // Counter examples
+    case OpKind::AddKind:
+      // `+` is *not* a reversible operator when in string
+      // coercing/concatenation mode.
+      return llvh::None;
 
     default:
       return llvh::None;

@@ -49,6 +49,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
   }
 
   // We need to fold constant strings before staticrequire.
+  PM.addInstCanonicalize();
   PM.addInstSimplify();
   PM.addResolveStaticRequire();
   // staticrequire creates some dead instructions (namely frame loads) which
@@ -62,6 +63,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addStackPromotion();
   PM.addInlining();
   PM.addStackPromotion();
+  PM.addInstCanonicalize();
   PM.addInstSimplify();
   PM.addDCE();
 
@@ -72,11 +74,14 @@ void hermes::runFullOptimizationPasses(Module &M) {
   }
 #endif // HERMES_RUN_WASM
 
+  // Canonicalize again before CSE
+  PM.addInstCanonicalize();
   // Run type inference before CSE so that we can better reason about binopt.
   PM.addTypeInference();
   PM.addCSE();
   PM.addSimplifyCFG();
 
+  PM.addInstCanonicalize();
   PM.addInstSimplify();
   PM.addFuncSigOpts();
   PM.addDCE();
@@ -104,6 +109,7 @@ void hermes::runDebugOptimizationPasses(Module &M) {
   LLVM_DEBUG(dbgs() << "Running -Og optimizations...\n");
   PassManager PM{M.getContext().getCodeGenerationSettings()};
 
+  PM.addInstCanonicalize();
   PM.addInstSimplify();
   PM.addResolveStaticRequire();
 

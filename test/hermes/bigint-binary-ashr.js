@@ -78,4 +78,4 @@ print(typeAndValue((-BigInt("0x8000000000000000")) >> BigInt(1)));
 
 // CHKIR-LABEL: function numberPlusBigInt#0#1()#{{[0-9]+}} {{.*}}
 // CHKIR:  %[[N:[0-9]+]] = BinaryOperatorInst '>>', %{{[0-9]+}}
-// CHKIR:  %{{[0-9]+}}   = BinaryOperatorInst '+', 1 : number, %[[N]] : number|bigint
+// CHKIR:  %{{[0-9]+}}   = BinaryOperatorInst '+', %[[N]] : number|bigint, 1 : number
