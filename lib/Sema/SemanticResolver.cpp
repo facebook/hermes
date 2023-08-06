@@ -246,12 +246,14 @@ void SemanticResolver::visit(ESTree::UnaryExpressionNode *node) {
   visitESTreeChildren(*this, node);
 }
 
-void SemanticResolver::visit(ESTree::BlockStatementNode *node) {
+void SemanticResolver::visit(
+    ESTree::BlockStatementNode *node,
+    ESTree::Node *parent) {
   // Some nodes with attached BlockStatement have already dealt with the scope.
-  if (llvh::isa<FunctionDeclarationNode>(node) ||
-      llvh::isa<FunctionExpressionNode>(node) ||
-      llvh::isa<ArrowFunctionExpressionNode>(node) ||
-      llvh::isa<CatchClauseNode>(node)) {
+  if (llvh::isa<FunctionDeclarationNode>(parent) ||
+      llvh::isa<FunctionExpressionNode>(parent) ||
+      llvh::isa<ArrowFunctionExpressionNode>(parent) ||
+      llvh::isa<CatchClauseNode>(parent)) {
     return visitESTreeChildren(*this, node);
   }
 

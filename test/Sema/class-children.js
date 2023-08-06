@@ -24,7 +24,6 @@ class Cls {
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.2 'arguments' Var Arguments
-// CHECK-NEXT:            Scope %s.3
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ClassDeclaration
@@ -35,4 +34,4 @@ class Cls {
 // CHECK-NEXT:            MethodDefinition
 // CHECK-NEXT:                Id 'method'
 // CHECK-NEXT:                FunctionExpression
-// CHECK-NEXT:                    BlockStatement Scope %s.3
+// CHECK-NEXT:                    BlockStatement

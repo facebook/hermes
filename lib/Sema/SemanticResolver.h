@@ -173,7 +173,7 @@ class SemanticResolver {
   void visit(ESTree::UpdateExpressionNode *node);
   void visit(ESTree::UnaryExpressionNode *node);
 
-  void visit(ESTree::BlockStatementNode *node);
+  void visit(ESTree::BlockStatementNode *node, ESTree::Node *parent);
 
   void visit(ESTree::SwitchStatementNode *node);
 

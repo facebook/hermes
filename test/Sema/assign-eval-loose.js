@@ -24,7 +24,6 @@ function good() {
 // CHECK-NEXT:    Func loose
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
-// CHECK-NEXT:            Scope %s.3
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    VariableDeclaration
@@ -32,7 +31,7 @@ function good() {
 // CHECK-NEXT:            Id 'eval' [D:E:%d.1 'eval']
 // CHECK-NEXT:    FunctionDeclaration
 // CHECK-NEXT:        Id 'good' [D:E:%d.2 'good']
-// CHECK-NEXT:        BlockStatement Scope %s.3
+// CHECK-NEXT:        BlockStatement
 // CHECK-NEXT:            ExpressionStatement
 // CHECK-NEXT:                AssignmentExpression
 // CHECK-NEXT:                    Id 'eval' [D:E:%d.1 'eval']

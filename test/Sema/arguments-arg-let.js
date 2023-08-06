@@ -28,7 +28,6 @@ function foo(a=arguments[1]) {
 // CHECK-NEXT:            Decl %d.3 'a' Parameter
 // CHECK-NEXT:            Decl %d.4 'arguments' Var Arguments
 // CHECK-NEXT:            Decl %d.5 'arguments' Let
-// CHECK-NEXT:            Scope %s.3
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    FunctionDeclaration
@@ -38,7 +37,7 @@ function foo(a=arguments[1]) {
 // CHECK-NEXT:            MemberExpression
 // CHECK-NEXT:                Id 'arguments' [D:E:%d.4 'arguments']
 // CHECK-NEXT:                NumericLiteral
-// CHECK-NEXT:        BlockStatement Scope %s.3
+// CHECK-NEXT:        BlockStatement
 // CHECK-NEXT:            VariableDeclaration
 // CHECK-NEXT:                VariableDeclarator
 // CHECK-NEXT:                    Id 'arguments' [D:E:%d.5 'arguments']

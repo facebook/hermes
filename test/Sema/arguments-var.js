@@ -35,16 +35,14 @@ function f2() {
 // CHECK-NEXT:    Func loose
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.3 'arguments' Var
-// CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:    Func loose
-// CHECK-NEXT:        Scope %s.4
+// CHECK-NEXT:        Scope %s.3
 // CHECK-NEXT:            Decl %d.4 'arguments' Var
-// CHECK-NEXT:            Scope %s.5
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    FunctionDeclaration
 // CHECK-NEXT:        Id 'f1' [D:E:%d.1 'f1']
-// CHECK-NEXT:        BlockStatement Scope %s.3
+// CHECK-NEXT:        BlockStatement
 // CHECK-NEXT:            VariableDeclaration
 // CHECK-NEXT:                VariableDeclarator
 // CHECK-NEXT:                    NumericLiteral
@@ -53,7 +51,7 @@ function f2() {
 // CHECK-NEXT:                Id 'arguments' [D:E:%d.3 'arguments']
 // CHECK-NEXT:    FunctionDeclaration
 // CHECK-NEXT:        Id 'f2' [D:E:%d.2 'f2']
-// CHECK-NEXT:        BlockStatement Scope %s.5
+// CHECK-NEXT:        BlockStatement
 // CHECK-NEXT:            VariableDeclaration
 // CHECK-NEXT:                VariableDeclarator
 // CHECK-NEXT:                    Id 'arguments' [D:E:%d.4 'arguments']
