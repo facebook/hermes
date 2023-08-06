@@ -1314,33 +1314,25 @@ void FlowChecker::visitFunctionLike(
 /// they can be mutually self recursive. We need to declare types in stages,
 /// first the "direct" ones, then resolve the aliases and unions.
 ///
-/// 1. Iterate all scope types. Forward-declare classes and record aliases.
-/// 2. Resolve the aliases recursively, checking for self-references.
+/// 1. Iterate all scope types. Forward-declare all declared types as Type *.
+/// 2. Resolve the aliases, checking for self-references.
 /// 3. Complete all forward declared types. They can now refer to the newly
 /// declared local types.
 class FlowChecker::DeclareScopeTypes {
-  // Keep track of type declarations in this scope.
-  struct LocalType {
-    /// Name of the local type.
-    UniqueString *const name;
-    /// The AST node of the declaration.
-    ESTree::Node *const astNode;
-    /// The forward-declared type if it is a class, nullptr if alias.
-    Type *type;
-    LocalType(UniqueString *name, ESTree::Node *astNode, Type *type)
-        : name(name), astNode(astNode), type(type) {}
-  };
-
   /// Surrounding class.
   FlowChecker &outer;
   /// Declarations collected by the semantic validator.
   const sema::ScopeDecls &decls;
   /// The current lexical scope.
   sema::LexicalScope *const scope;
-  /// Types declared locally.
-  llvh::SmallVector<LocalType, 4> localTypes{};
-  /// Map from name to index in localTypes.
-  llvh::SmallDenseMap<UniqueString *, size_t> localNames{};
+  /// Type aliases declared in this scope.
+  llvh::SmallVector<Type *, 4> localTypeAliases{};
+  /// Mapping from the LHS to the RHS type of a Type alias.
+  /// e.g. type A = B;
+  /// maps from the Type representing 'A' to the type representing 'B'.
+  /// Used for populating the LHS after resolving the RHS with
+  /// resolveTypeAnnotation.
+  llvh::SmallDenseMap<Type *, Type *> typeAliasResolutions{};
   /// Keep track of all forward declarations, so they can be completed.
   llvh::SmallVector<ForwardDecl, 4> forwardDecls{};
 
@@ -1361,14 +1353,15 @@ class FlowChecker::DeclareScopeTypes {
   // \return true if this is a redeclaration (i.e. it is an error).
   bool isRedeclaration(ESTree::IdentifierNode *id) const {
     UniqueString *name = id->_name;
-    auto it = localNames.find(name);
-    if (it == localNames.end())
+    TypeDecl *typeDecl = outer.bindingTable_.findInCurrentScope(name);
+    if (!typeDecl)
       return false;
 
     outer.sm_.error(
-        id->getStartLoc(), "ft: type " + name->str() + " already declared");
+        id->getStartLoc(),
+        "ft: type " + name->str() + " already declared in this scope");
     outer.sm_.note(
-        localTypes[it->second].astNode->getSourceRange(),
+        typeDecl->astNode->getSourceRange(),
         "ft: previous declaration of " + name->str());
     return true;
   };
@@ -1395,8 +1388,8 @@ class FlowChecker::DeclareScopeTypes {
             classNode);
         forwardDecls.emplace_back(classNode, newType);
 
-        localTypes.emplace_back(id->_name, declNode, newType);
-        localNames[id->_name] = localTypes.size() - 1;
+        outer.bindingTable_.insert(
+            id->_name, TypeDecl(newType, scope, declNode));
 
         bool success = outer.recordDecl(
             outer.getDecl(id),
@@ -1413,8 +1406,10 @@ class FlowChecker::DeclareScopeTypes {
         auto *id = llvh::cast<ESTree::IdentifierNode>(aliasNode->_id);
         if (isRedeclaration(id))
           continue;
-        localTypes.emplace_back(id->_name, declNode, nullptr);
-        localNames[id->_name] = localTypes.size() - 1;
+        Type *newType = outer.flowContext_.createType(declNode);
+        localTypeAliases.push_back(newType);
+        outer.bindingTable_.insert(
+            id->_name, TypeDecl(newType, scope, declNode));
       } else {
         outer.sm_.error(
             declNode->getSourceRange(),
@@ -1427,20 +1422,33 @@ class FlowChecker::DeclareScopeTypes {
   /// resolve to something: a primary type, a type in a surrounding scope, a
   /// local forward declared class, or a union of any of these.
   void resolveAllAliases() {
-    for (LocalType &localType : localTypes) {
+    for (Type *localType : localTypeAliases) {
       // Skip already resolved types.
-      if (localType.type)
+      if (localType->info)
         continue;
 
-      auto *aliasNode = llvh::cast<ESTree::TypeAliasNode>(localType.astNode);
+      // If it's not resolved already it must be an alias.
+      auto *aliasNode = llvh::cast<ESTree::TypeAliasNode>(localType->node);
 
       // Recursion can occur through generic annotations and name aliases.
       // Keep track of visited aliases to detect it.
       llvh::SmallDenseSet<ESTree::TypeAliasNode *> visited{};
       visited.insert(aliasNode);
 
+      // Copy the resolved TypeInfo to the alias.
+      // The alias Type is different than the Type on the right side.
       Type *resolvedType = resolveTypeAnnotation(aliasNode->_right, visited, 0);
-      localType.type = resolvedType;
+      typeAliasResolutions[localType] = resolvedType;
+    }
+
+    // Transfer TypeInfo from the resolved Type to the alias Type.
+    // This has to be done in a second pass because resolved Types
+    // might still have nullptr TypeInfos until the first pass completes.
+    for (Type *localType : localTypeAliases) {
+      if (!localType->info) {
+        populateTypeAlias(localType);
+        assert(localType->info && "populateTypeAlias should populate the info");
+      }
     }
   }
 
@@ -1477,37 +1485,20 @@ class FlowChecker::DeclareScopeTypes {
             llvh::dyn_cast<ESTree::GenericTypeAnnotationNode>(annotation)) {
       auto *id = llvh::cast<ESTree::IdentifierNode>(gta->_id);
 
-      // Not declared locally?
-      auto it = localNames.find(id->_name);
-      if (it == localNames.end()) {
-        // Is it declared in surrounding scopes?
-        if (TypeDecl *typeDecl = outer.bindingTable_.find(id->_name))
-          return typeDecl->type;
-
-        // It isn't declared anywhere!
+      // Is it declared anywhere?
+      // If so, find its innermost declaration.
+      TypeDecl *typeDecl = outer.bindingTable_.find(id->_name);
+      if (!typeDecl) {
+        // Not declared anywhere!
         outer.sm_.error(
             id->getStartLoc(), "ft: undefined type " + id->_name->str());
         return outer.flowContext_.getAny();
       }
 
-      LocalType *localType = &localTypes[it->second];
-      // Resolve it, if not already resolved.
-      if (!localType->type) {
-        auto *aliasNode = llvh::cast<ESTree::TypeAliasNode>(localType->astNode);
-        // Check for self-recursion.
-        if (visited.insert(aliasNode).second) {
-          localType->type =
-              resolveTypeAnnotation(aliasNode->_right, visited, depth);
-        } else {
-          outer.sm_.error(
-              id->getStartLoc(),
-              "ft: type " + id->_name->str() +
-                  " contains a circular reference to itself");
-          localType->type = outer.flowContext_.getAny();
-        }
-      }
-
-      return localType->type;
+      // No need to recurse here because any references to this name will
+      // correctly resolve to the forward-declared Type.
+      assert(typeDecl->type && "all types are populated at fwd declaration");
+      return typeDecl->type;
     }
 
     /// Union types require resolving every union "arm".
@@ -1533,25 +1524,75 @@ class FlowChecker::DeclareScopeTypes {
     return outer.parseTypeAnnotation(annotation, nullptr, &forwardDecls);
   }
 
+  /// Populate the TypeInfo of \p aliasType with its corresponding resolvedType,
+  /// based on the information in the typeAliases map.
+  /// Detects reference cycles using \p visited, and reports an error and sets
+  /// 'any' when a cycle is detected.
+  /// Populates TypeInfo for all aliases along an alias chain to avoid
+  /// repeating all the lookups.
+  /// \post aliasType->info is non-null.
+  void populateTypeAlias(Type *aliasType) {
+    if (aliasType->info)
+      return;
+
+    // Recursion can occur through generic annotations and name aliases.
+    // Keep track of visited aliases to detect it.
+    llvh::SmallSetVector<Type *, 4> visited{};
+
+    // Resolved TypeInfo to assign to all aliases in the chain.
+    TypeInfo *resolvedInfo = nullptr;
+
+    Type *curType = aliasType;
+    visited.insert(curType);
+    while (!resolvedInfo) {
+      // Find the resolved type via map lookup.
+      auto it = typeAliasResolutions.find(curType);
+      assert(
+          it != typeAliasResolutions.end() &&
+          "all type aliases have a resolved type");
+      Type *nextType = it->second;
+
+      bool inserted = visited.insert(nextType);
+      if (!inserted) {
+        // Found a cycle.
+        outer.sm_.error(
+            nextType->node->getStartLoc(),
+            "ft: type contains a circular reference to itself");
+        // Set the info to 'any' to make it non-null and allow the checker to
+        // continue.
+        resolvedInfo = outer.flowContext_.getAnyInfo();
+        break;
+      }
+
+      // Continue down the alias chain.
+      resolvedInfo = nextType->info;
+      curType = nextType;
+    }
+
+    // Set the info for all the Types in the chain.
+    for (Type *t : visited) {
+      t->info = resolvedInfo;
+    }
+  }
+
   /// All types declared in the scope have been resolved at the first level.
   /// Resolve the remaining forward declared types.
   void completeForwardDeclarations() {
-    // First, move all declarations to the binding table so they can be
-    // resolved normally.
-    for (const LocalType &localType : localTypes) {
-      outer.bindingTable_.insert(
-          localType.name, TypeDecl(localType.type, scope, localType.astNode));
-    }
-
     // Complete all forward-declared types.
     for (const ForwardDecl &fd : forwardDecls) {
-      if (llvh::isa<ClassType>(fd.type->info)) {
-        auto *classNode = llvh::cast<ESTree::ClassDeclarationNode>(fd.astNode);
+      if (auto *classNode =
+              llvh::dyn_cast<ESTree::ClassDeclarationNode>(fd.astNode)) {
+        // This is necessary because we need to defer parsing the class to allow
+        // using types defined after the class inside the class:
+        //     class C {
+        //       x: D
+        //     };
+        //     type D = number;
         outer.visitExpression(classNode->_superClass, classNode);
         ParseClassType(
             outer, classNode->_superClass, classNode->_body, fd.type);
       } else {
-        outer.parseTypeAnnotation(fd.astNode, fd.type, nullptr);
+        outer.parseTypeAnnotation(fd.astNode, nullptr, nullptr);
       }
     }
   }
