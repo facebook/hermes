@@ -217,9 +217,7 @@ class FlowChecker::ParseClassType {
     if (prop->_typeAnnotation) {
       fieldType = outer_.parseTypeAnnotation(
           llvh::cast<ESTree::TypeAnnotationNode>(prop->_typeAnnotation)
-              ->_typeAnnotation,
-          nullptr,
-          nullptr);
+              ->_typeAnnotation);
     } else {
       fieldType = outer_.flowContext_.getAny();
     }
@@ -602,9 +600,7 @@ class FlowChecker::ExprVisitor {
   void visit(ESTree::TypeCastExpressionNode *node) {
     auto *resTy = outer_.parseTypeAnnotation(
         llvh::cast<ESTree::TypeAnnotationNode>(node->_typeAnnotation)
-            ->_typeAnnotation,
-        nullptr,
-        nullptr);
+            ->_typeAnnotation);
     // Populate the type of this node before visiting the expression, since it
     // is already known. This also allows the result type to be used as context
     // while we are visiting the expression being cast. For instance, if we are
@@ -1333,8 +1329,9 @@ class FlowChecker::DeclareScopeTypes {
   /// Used for populating the LHS after resolving the RHS with
   /// resolveTypeAnnotation.
   llvh::SmallDenseMap<Type *, Type *> typeAliasResolutions{};
-  /// Keep track of all forward declarations, so they can be completed.
-  llvh::SmallVector<ForwardDecl, 4> forwardDecls{};
+  /// Keep track of all forward declarations of classes, so they can be
+  /// completed.
+  llvh::SmallVector<Type *, 4> forwardClassDecls{};
 
  public:
   DeclareScopeTypes(
@@ -1386,7 +1383,7 @@ class FlowChecker::DeclareScopeTypes {
             outer.flowContext_.createClass(
                 Identifier::getFromPointer(id->_name)),
             classNode);
-        forwardDecls.emplace_back(classNode, newType);
+        forwardClassDecls.push_back(newType);
 
         outer.bindingTable_.insert(
             id->_name, TypeDecl(newType, scope, declNode));
@@ -1521,7 +1518,7 @@ class FlowChecker::DeclareScopeTypes {
 
     // The specified AST node represents a constructor type or a primary type,
     // so forward declare (if constructor) and return the type.
-    return outer.parseTypeAnnotation(annotation, nullptr, &forwardDecls);
+    return outer.parseTypeAnnotation(annotation);
   }
 
   /// Populate the TypeInfo of \p aliasType with its corresponding resolvedType,
@@ -1579,21 +1576,16 @@ class FlowChecker::DeclareScopeTypes {
   /// Resolve the remaining forward declared types.
   void completeForwardDeclarations() {
     // Complete all forward-declared types.
-    for (const ForwardDecl &fd : forwardDecls) {
-      if (auto *classNode =
-              llvh::dyn_cast<ESTree::ClassDeclarationNode>(fd.astNode)) {
-        // This is necessary because we need to defer parsing the class to allow
-        // using types defined after the class inside the class:
-        //     class C {
-        //       x: D
-        //     };
-        //     type D = number;
-        outer.visitExpression(classNode->_superClass, classNode);
-        ParseClassType(
-            outer, classNode->_superClass, classNode->_body, fd.type);
-      } else {
-        outer.parseTypeAnnotation(fd.astNode, nullptr, nullptr);
-      }
+    for (Type *type : forwardClassDecls) {
+      // This is necessary because we need to defer parsing the class to allow
+      // using types defined after the class inside the class:
+      //     class C {
+      //       x: D
+      //     };
+      //     type D = number;
+      auto *classNode = llvh::cast<ESTree::ClassDeclarationNode>(type->node);
+      outer.visitExpression(classNode->_superClass, classNode);
+      ParseClassType(outer, classNode->_superClass, classNode->_body, type);
     }
   }
 };
@@ -1810,63 +1802,41 @@ Type *FlowChecker::parseOptionalTypeAnnotation(
   if (!optAnnotation)
     return defaultType ? defaultType : flowContext_.getAny();
   return parseTypeAnnotation(
-      llvh::cast<ESTree::TypeAnnotationNode>(optAnnotation)->_typeAnnotation,
-      nullptr,
-      nullptr);
+      llvh::cast<ESTree::TypeAnnotationNode>(optAnnotation)->_typeAnnotation);
 }
 
-Type *FlowChecker::parseTypeAnnotation(
-    ESTree::Node *node,
-    Type *fwdType,
-    llvh::SmallVectorImpl<ForwardDecl> *forwardDecls) {
-  assert(
-      !(fwdType && forwardDecls) &&
-      "fwdType and forwardDecls can't both be true");
-
+Type *FlowChecker::parseTypeAnnotation(ESTree::Node *node) {
   if (!node)
     return flowContext_.getAny();
 
   switch (node->getKind()) {
     case ESTree::NodeKind::VoidTypeAnnotation:
-      assert(!fwdType && "primary type cannot be forward declared");
       return flowContext_.getVoid();
     case ESTree::NodeKind::NullLiteralTypeAnnotation:
-      assert(!fwdType && "primary type cannot be forward declared");
       return flowContext_.getNull();
     case ESTree::NodeKind::BooleanTypeAnnotation:
-      assert(!fwdType && "primary type cannot be forward declared");
       return flowContext_.getBoolean();
     case ESTree::NodeKind::StringTypeAnnotation:
-      assert(!fwdType && "primary type cannot be forward declared");
       return flowContext_.getString();
     case ESTree::NodeKind::NumberTypeAnnotation:
-      assert(!fwdType && "primary type cannot be forward declared");
       return flowContext_.getNumber();
     case ESTree::NodeKind::BigIntTypeAnnotation:
-      assert(!fwdType && "primary type cannot be forward declared");
       return flowContext_.getBigInt();
     case ESTree::NodeKind::AnyTypeAnnotation:
-      assert(!fwdType && "primary type cannot be forward declared");
       return flowContext_.getAny();
     case ESTree::NodeKind::MixedTypeAnnotation:
-      assert(!fwdType && "primary type cannot be forward declared");
       return flowContext_.getMixed();
     case ESTree::NodeKind::UnionTypeAnnotation:
-      assert(!fwdType && "union cannot be forward declared");
       return parseUnionTypeAnnotation(
           llvh::cast<ESTree::UnionTypeAnnotationNode>(node));
     case ESTree::NodeKind::NullableTypeAnnotation:
-      assert(!fwdType && "nullable cannot be forward declared");
       return parseNullableTypeAnnotation(
           llvh::cast<ESTree::NullableTypeAnnotationNode>(node));
     // TODO: function, etc.
     case ESTree::NodeKind::ArrayTypeAnnotation:
       return parseArrayTypeAnnotation(
-          llvh::cast<ESTree::ArrayTypeAnnotationNode>(node),
-          fwdType,
-          forwardDecls);
+          llvh::cast<ESTree::ArrayTypeAnnotationNode>(node));
     case ESTree::NodeKind::GenericTypeAnnotation:
-      assert(!fwdType && "generic cannot be forward declared");
       return parseGenericTypeAnnotation(
           llvh::cast<ESTree::GenericTypeAnnotationNode>(node));
 
@@ -1882,7 +1852,7 @@ Type *FlowChecker::parseUnionTypeAnnotation(
     ESTree::UnionTypeAnnotationNode *node) {
   llvh::SmallVector<Type *, 4> types{};
   for (auto &n : node->_types)
-    types.push_back(parseTypeAnnotation(&n, nullptr, nullptr));
+    types.push_back(parseTypeAnnotation(&n));
   return flowContext_.maybeCreateUnion(types);
 }
 
@@ -1890,22 +1860,15 @@ Type *FlowChecker::parseNullableTypeAnnotation(
     ESTree::NullableTypeAnnotationNode *node) {
   return flowContext_.createType(
       flowContext_.createPopulatedNullable(
-          parseTypeAnnotation(node->_typeAnnotation, nullptr, nullptr)),
+          parseTypeAnnotation(node->_typeAnnotation)),
       node);
 }
 
 Type *FlowChecker::parseArrayTypeAnnotation(
-    ESTree::ArrayTypeAnnotationNode *node,
-    Type *fwdType,
-    llvh::SmallVectorImpl<ForwardDecl> *forwardDecls) {
-  Type *arr = fwdType
-      ? fwdType
-      : flowContext_.createType(flowContext_.createArray(), node);
-  if (forwardDecls)
-    forwardDecls->emplace_back(node, arr);
-  else
-    llvh::cast<ArrayType>(arr->info)->init(
-        parseTypeAnnotation(node->_elementType, nullptr, nullptr));
+    ESTree::ArrayTypeAnnotationNode *node) {
+  Type *arr = flowContext_.createType(flowContext_.createArray(), node);
+  llvh::cast<ArrayType>(arr->info)->init(
+      parseTypeAnnotation(node->_elementType));
   return arr;
 }
 

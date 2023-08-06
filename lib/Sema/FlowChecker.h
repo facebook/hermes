@@ -202,15 +202,6 @@ class FlowChecker {
     return flowContext_.getNodeTypeOrAny(node);
   }
 
-  /// Stores information about a "forward" type declaration, which can then
-  /// be used to complete the declaration.
-  struct ForwardDecl {
-    ESTree::Node *astNode;
-    Type *type;
-    ForwardDecl(ESTree::Node *astNode, Type *type)
-        : astNode(astNode), type(type) {}
-  };
-
   /// \param optReturnTypeAnnotation is nullptr or ESTree::TypeAnnotationNode
   /// \param defaultReturnType optional return type if the return annotation
   ///     is missing. nullptr here is a shortcut for "any".
@@ -232,22 +223,11 @@ class FlowChecker {
   /// Parse a type annotation into a type.
   ///
   /// \param node the type annotation AST (ESTree::TypeAnnotationNode).
-  /// \param fwdType if not null, there is an associated forward-declared type,
-  ///     that should now be completed.
-  /// \param forwardDecls if not null, parsing should end at a complex type
-  ///     which should then be recorded in `forwardDecls` so it can be completed
-  ///     later.
-  Type *parseTypeAnnotation(
-      ESTree::Node *node,
-      Type *fwdType,
-      llvh::SmallVectorImpl<ForwardDecl> *forwardDecls);
+  Type *parseTypeAnnotation(ESTree::Node *node);
 
   Type *parseUnionTypeAnnotation(ESTree::UnionTypeAnnotationNode *node);
   Type *parseNullableTypeAnnotation(ESTree::NullableTypeAnnotationNode *node);
-  Type *parseArrayTypeAnnotation(
-      ESTree::ArrayTypeAnnotationNode *node,
-      Type *fwdType,
-      llvh::SmallVectorImpl<ForwardDecl> *forwardDecls);
+  Type *parseArrayTypeAnnotation(ESTree::ArrayTypeAnnotationNode *node);
   Type *parseGenericTypeAnnotation(ESTree::GenericTypeAnnotationNode *node);
 
   /// Parse a class type into an already created (but empty) class.
