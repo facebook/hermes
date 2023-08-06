@@ -140,6 +140,8 @@ class FlowChecker {
   void visit(ESTree::BlockStatementNode *node);
   void visit(ESTree::VariableDeclarationNode *node);
 
+  void visit(ESTree::CatchClauseNode *node);
+
  private:
   /// A RAII object automatic scopes.
   class ScopeRAII {

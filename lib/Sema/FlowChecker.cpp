@@ -1282,6 +1282,14 @@ void FlowChecker::visit(ESTree::VariableDeclarationNode *node) {
   }
 }
 
+void FlowChecker::visit(ESTree::CatchClauseNode *node) {
+  ScopeRAII scope(*this);
+  resolveScopeTypesAndAnnotate(node, node->getScope());
+  visitESTreeNode(*this, node->_param, node);
+  // Process body's declarations, skip visiting it, visit its children.
+  visitESTreeChildren(*this, node->_body);
+}
+
 void FlowChecker::visitFunctionLike(
     ESTree::FunctionLikeNode *node,
     ESTree::Node *body,
@@ -1370,6 +1378,7 @@ class FlowChecker::DeclareScopeTypes {
     for (ESTree::Node *declNode : decls) {
       if (llvh::isa<ESTree::VariableDeclarationNode>(declNode) ||
           llvh::isa<ESTree::ImportDeclarationNode>(declNode) ||
+          llvh::isa<ESTree::CatchClauseNode>(declNode) ||
           llvh::isa<ESTree::FunctionDeclarationNode>(declNode)) {
         continue;
       }
@@ -1571,6 +1580,12 @@ class FlowChecker::AnnotateScopeDecls {
         // ImportDeclaration.
         //
         outer.sm_.error(id->getStartLoc(), "ft: import not implemented yet");
+      } else if (
+          auto *catchClause =
+              llvh::dyn_cast<ESTree::CatchClauseNode>(declNode)) {
+        // CatchClause.
+        //
+        annotateCatchClause(catchClause);
       } else {
         // All the rest.
         //
@@ -1645,6 +1660,33 @@ class FlowChecker::AnnotateScopeDecls {
     }
 
     outer.recordDecl(decl, type, id, funcDecl);
+  }
+
+  /// Annotate the type of the catch parameter if it exists.
+  void annotateCatchClause(ESTree::CatchClauseNode *catchClause) {
+    if (!catchClause->_param)
+      return;
+
+    if (auto *id =
+            llvh::dyn_cast<ESTree::IdentifierNode>(catchClause->_param)) {
+      sema::Decl *decl = outer.getDecl(id);
+      Type *type = outer.parseOptionalTypeAnnotation(id->_typeAnnotation);
+      if (!type)
+        type = outer.flowContext_.getAny();
+
+      if (!llvh::isa<AnyType>(type->info) &&
+          !llvh::isa<MixedType>(type->info)) {
+        outer.sm_.error(
+            catchClause->_param->getSourceRange(),
+            "ft: catch parameter must be 'any' or 'mixed'");
+      }
+
+      outer.recordDecl(decl, type, id, catchClause);
+    } else {
+      outer.sm_.warning(
+          catchClause->_param->getSourceRange(),
+          "ft: typing of pattern declarators not implemented, :any assumed");
+    }
   }
 };
 

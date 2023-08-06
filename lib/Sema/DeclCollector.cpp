@@ -135,6 +135,17 @@ void DeclCollector::visit(ESTree::ForOfStatementNode *node) {
   visitESTreeChildren(*this, node);
   closeScope(node);
 }
+void DeclCollector::visit(ESTree::CatchClauseNode *node) {
+  newScope();
+  if (node->_param) {
+    addToCur(node);
+    visitESTreeNode(*this, node->_param, node);
+  }
+  // Declarations in the catch body are associated with CatchClauseNode,
+  // not BlockStatementNode.
+  visitESTreeChildren(*this, node->_body);
+  closeScope(node);
+}
 void DeclCollector::visit(ESTree::SwitchStatementNode *node) {
   newScope();
   visitESTreeChildren(*this, node);

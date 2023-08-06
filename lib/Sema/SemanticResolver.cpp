@@ -560,26 +560,16 @@ void SemanticResolver::visit(ESTree::TryStatementNode *tryStatement) {
 
 void SemanticResolver::visit(ESTree::CatchClauseNode *node) {
   ScopeRAII scope{*this, node};
-
-  if (auto *id = llvh::dyn_cast_or_null<IdentifierNode>(node->_param)) {
-    // For compatibility with ES5,
-    // we need to treat a single catch variable specially, see:
-    // B.3.5 VariableStatements in Catch Blocks
-    // https://www.ecma-international.org/ecma-262/10.0/index.html#sec-variablestatements-in-catch-blocks
-    validateAndDeclareIdentifier(Decl::Kind::ES5Catch, id);
-  } else {
-    llvh::SmallVector<IdentifierNode *, 4> idents{};
-    extractDeclaredIdentsFromID(node->_param, idents);
-    for (IdentifierNode *id : idents) {
-      validateAndDeclareIdentifier(Decl::Kind::Let, id);
-    }
-  }
-
+  // Process body's declarations, skip visiting the block, visit its children.
+  processCollectedDeclarations(node);
   // Visit the catch param, in case there is destructuring.
   visitESTreeNode(*this, node->_param, node);
-  // Process body's declarations, skip visiting it, visit its children.
-  processCollectedDeclarations(node->_body);
+  // The scope declarations are associated with the CatchClauseNode in the
+  // DeclCollector.
   visitESTreeChildren(*this, node->_body);
+  assert(
+      !functionContext()->decls->getScopeDeclsForNode(node->_body) &&
+      "CatchClause body block shouldn't have any decls associated");
 }
 
 void SemanticResolver::visit(RegExpLiteralNode *regexp) {
@@ -1248,6 +1238,20 @@ Decl::Kind SemanticResolver::extractIdentsFromDecl(
   if (auto *classDecl = llvh::dyn_cast<ClassDeclarationNode>(node)) {
     extractDeclaredIdentsFromID(classDecl->_id, idents);
     return Decl::Kind::Class;
+  }
+
+  if (auto *catchClause = llvh::dyn_cast<CatchClauseNode>(node)) {
+    extractDeclaredIdentsFromID(catchClause->_param, idents);
+    if (auto *id =
+            llvh::dyn_cast_or_null<IdentifierNode>(catchClause->_param)) {
+      // For compatibility with ES5,
+      // we need to treat a single catch variable specially, see:
+      // B.3.5 VariableStatements in Catch Blocks
+      // https://www.ecma-international.org/ecma-262/10.0/index.html#sec-variablestatements-in-catch-blocks
+      return Decl::Kind::ES5Catch;
+    } else {
+      return Decl::Kind::Let;
+    }
   }
 
   if (auto *importDecl = llvh::dyn_cast<ImportDeclarationNode>(node)) {

@@ -95,6 +95,8 @@ class DeclCollector {
   void visit(ESTree::ForOfStatementNode *node);
   void visit(ESTree::SwitchStatementNode *node);
 
+  void visit(ESTree::CatchClauseNode *node);
+
   /// Don't descend, to avoid recursion overflow.
   void visit(ESTree::BinaryExpressionNode *) {}
   /// Don't descend, to avoid recursion overflow.
