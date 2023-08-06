@@ -512,6 +512,10 @@ class FlowChecker::ExprVisitor {
 
     // The type is either the type of the identifier or "any".
     Type *type = outer_.flowContext_.findDeclType(decl);
+    if (!type && !sema::Decl::isKindGlobal(decl->kind)) {
+      outer_.sm_.error(
+          node->getSourceRange(), "local variable used prior to declaration");
+    }
     outer_.setNodeType(node, type ? type : outer_.flowContext_.getAny());
   }
 
@@ -682,10 +686,13 @@ class FlowChecker::ExprVisitor {
             llvh::dyn_cast<ESTree::VariableDeclaratorNode>(parent)) {
       if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(declarator->_id)) {
         sema::Decl *decl = outer_.getDecl(id);
-        Type *declType = outer_.getDeclType(decl);
-        if (auto *arrTy = llvh::dyn_cast<ArrayType>(declType->info)) {
-          tryElementType(arrTy->getElement());
-          return;
+        // It's possible we're just trying to infer the type of the declarator
+        // right now, so it's possible `findDeclType` returns nullptr.
+        if (Type *declType = outer_.flowContext_.findDeclType(decl)) {
+          if (auto *arrTy = llvh::dyn_cast<ArrayType>(declType->info)) {
+            tryElementType(arrTy->getElement());
+            return;
+          }
         }
       }
     }
@@ -1264,7 +1271,9 @@ void FlowChecker::visit(ESTree::BlockStatementNode *node) {
 void FlowChecker::visit(ESTree::VariableDeclarationNode *node) {
   for (ESTree::Node &n : node->_declarations) {
     auto *declarator = llvh::cast<ESTree::VariableDeclaratorNode>(&n);
-    visitExpression(declarator->_init, declarator);
+    if (!flowContext_.findNodeType(declarator->_init)) {
+      visitExpression(declarator->_init, declarator);
+    }
     if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(declarator->_id)) {
       if (!declarator->_init)
         continue;
@@ -1652,26 +1661,14 @@ class FlowChecker::AnnotateScopeDecls {
                 "ft: global property type annotations are unsound and are ignored");
           }
         } else if (!id->_typeAnnotation && declarator->_init) {
-          // Very simply type inference for literals.
-          TypeKind inferredKind = TypeKind::Any;
-          switch (declarator->_init->getKind()) {
-            case ESTree::NodeKind::BooleanLiteral:
-              inferredKind = TypeKind::Boolean;
-              break;
-            case ESTree::NodeKind::StringLiteral:
-              inferredKind = TypeKind::String;
-              break;
-            case ESTree::NodeKind::NumericLiteral:
-              inferredKind = TypeKind::Number;
-              break;
-            case ESTree::NodeKind::BigIntLiteral:
-              inferredKind = TypeKind::BigInt;
-              break;
-            default:
-              break;
+          // Attempt to infer the RHS of the declarator by calling the typecheck
+          // visitor on it to see if it's able to associate a type with the init
+          // node.
+          outer.visitExpression(declarator->_init, declarator);
+          if (Type *inferred =
+                  outer.flowContext_.findNodeType(declarator->_init)) {
+            type = inferred;
           }
-          if (inferredKind != TypeKind::Any)
-            type = outer.flowContext_.getSingletonType(inferredKind);
         }
 
         outer.recordDecl(decl, type, id, declarator);
