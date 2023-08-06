@@ -504,6 +504,12 @@ class FlowChecker::ExprVisitor {
     auto *decl = outer_.getDecl(node);
     assert(decl && "unresolved identifier in expression context");
 
+    if (sema::Decl::isKindGlobal(decl->kind) &&
+        decl->name.getUnderlyingPointer() == outer_.kw_.identUndefined) {
+      outer_.setNodeType(node, outer_.flowContext_.getVoid());
+      return;
+    }
+
     // The type is either the type of the identifier or "any".
     Type *type = outer_.flowContext_.findDeclType(decl);
     outer_.setNodeType(node, type ? type : outer_.flowContext_.getAny());
