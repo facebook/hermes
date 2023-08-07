@@ -7,7 +7,7 @@
 
 package com.facebook.hermes.test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Java6Assertions.assertThat;
 
 import android.content.res.AssetManager;
 import android.test.InstrumentationTestCase;

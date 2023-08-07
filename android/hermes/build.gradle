@@ -15,6 +15,7 @@ android {
 
   defaultConfig {
     minSdkVersion rootProject.ext.minSdkVersion
+    namespace "com.facebook.hermes"
 
     externalNativeBuild {
       cmake {
