@@ -1,3 +1,21 @@
+## 0.15.1
+
+### `hermes-estree`
+
+### `hermes-parser`
+* Ensure `ExportNamespaceSpecifier` has location information.
+
+### `hermes-eslint`
+
+### `hermes-transform`
+* Update `prettier-plugin-hermes-parser` peer dependency version.
+
+### `flow-api-translator`
+
+### `prettier-plugin-hermes-parser`
+
+### `babel-plugin-syntax-hermes-parser`
+
 ## 0.15.0
 
 ### `hermes-estree`
