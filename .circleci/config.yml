@@ -589,7 +589,8 @@ jobs:
           post-emulator-launch-assemble-command: ''
           run-tests-working-directory: hermes/android
           run-logcat: true
-          additional-emulator-args: -timezone Europe/Paris
+          additional-emulator-args: -timezone Europe/Paris -partition-size 2048
+          additional-avd-args: "-c 2048M"
           test-command: ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
 
   test-macos-test262:
