@@ -1969,6 +1969,14 @@ void generateFunction(
        << "  ;\n";
 
     for (auto &I : *B) {
+      if (options.emitSourceLocations) {
+        SMLoc loc = I.getLocation();
+        if (loc.isValid()) {
+          OS << "// ";
+          F.getContext().getSourceErrorManager().dumpCoords(OS, loc);
+          OS << '\n';
+        }
+      }
       instrGen.generate(I);
     }
   }

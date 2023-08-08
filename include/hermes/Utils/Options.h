@@ -77,6 +77,9 @@ struct BytecodeGenerationOptions {
   /// Strip the source map URL.
   bool stripSourceMappingURL = false;
 
+  // Emit source locations in the resulting output.
+  bool emitSourceLocations = false;
+
   /* implicit */ BytecodeGenerationOptions(OutputFormatKind format)
       : format(format) {}
 

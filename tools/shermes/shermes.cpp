@@ -799,6 +799,9 @@ bool compileFromCommandLineOptions() {
   if (!cli::ExportedUnit.empty())
     genOptions.unitName = cli::ExportedUnit;
 
+  genOptions.emitSourceLocations =
+      cli::DumpSourceLocation != LocationDumpMode::None;
+
   return shermesCompile(
       context.get(),
       M,
