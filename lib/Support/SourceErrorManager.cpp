@@ -109,7 +109,7 @@ void SourceErrorManager::dumpCoords(
     llvh::raw_ostream &OS,
     const SourceCoords &coords) {
   if (coords.isValid()) {
-    OS << getSourceUrl(coords.bufId) << ":" << coords.line << "," << coords.col;
+    OS << getSourceUrl(coords.bufId) << ":" << coords.line << ":" << coords.col;
   } else {
     OS << "none:0,0";
   }
