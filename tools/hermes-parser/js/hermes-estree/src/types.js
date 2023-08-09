@@ -544,8 +544,8 @@ export interface DestructuringObjectPropertyWithShorthandStaticName
   +computed: false;
   // shorthand keys *must* be identifiers
   +key: Identifier;
-  // shorthand values *must* be identifiers (that look the same as the key)
-  +value: Identifier;
+  // shorthand values *must* be identifiers or assignments (that look the same as the key)
+  +value: Identifier | AssignmentPattern;
   +shorthand: true;
 }
 export interface DestructuringObjectPropertyWithComputedName
@@ -1067,7 +1067,7 @@ export interface ExportNamedDeclarationWithSpecifiers
   extends ExportNamedDeclarationBase {
   +type: 'ExportNamedDeclaration';
   +declaration: null;
-  +source: null;
+  +source?: StringLiteral | null;
   +specifiers: $ReadOnlyArray<ExportSpecifier>;
 }
 export interface ExportNamedDeclarationWithDeclaration
@@ -1368,7 +1368,7 @@ export interface InferredPredicate extends BaseNode {
 
 export interface ObjectTypeAnnotation extends BaseNode {
   +type: 'ObjectTypeAnnotation';
-  +inexact: false;
+  +inexact: boolean;
   +exact: boolean;
   +properties: $ReadOnlyArray<
     | ObjectTypeProperty
