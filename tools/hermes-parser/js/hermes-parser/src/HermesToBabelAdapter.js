@@ -113,7 +113,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
       case 'ObjectTypeMappedTypeProperty':
       case 'ComponentTypeAnnotation':
       case 'TypePredicate':
-        return this.mapUnsupportedTypeAnnotation(node);
+        return this.mapUnsupportedTypeAnnotationType(node);
       case 'BigIntLiteral':
         return this.mapBigIntLiteral(node);
       case 'BigIntLiteralTypeAnnotation':
@@ -446,9 +446,19 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
    * If Babel (the version we target) does not support a type annotation we
    * parse, we need to return some other valid type annotation in its place.
    */
-  mapUnsupportedTypeAnnotation(node: HermesNode): HermesNode {
+  mapUnsupportedTypeAnnotationType(node: HermesNode): HermesNode {
     return {
       type: 'AnyTypeAnnotation',
+      loc: node.loc,
+      start: node.start,
+      end: node.end,
+    };
+  }
+
+  mapUnsupportedTypeAnnotation(node: HermesNode): HermesNode {
+    return {
+      type: 'TypeAnnotation',
+      typeAnnotation: this.mapUnsupportedTypeAnnotationType(node),
       loc: node.loc,
       start: node.start,
       end: node.end,
