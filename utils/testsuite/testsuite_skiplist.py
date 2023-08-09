@@ -1876,9 +1876,6 @@ PERMANENT_SKIP_LIST = [
     "mjsunit/regress/regress-585775.js",
     "test262/test/annexB/built-ins/RegExp/prototype/compile/",
     "test262/test/annexB/built-ins/RegExp/prototype/flags/order-after-compile",
-    # Tests long regexes that exceed our regex stack limit
-    "mjsunit/regress/regress-231.js",
-    "mjsunit/third_party/regexp-pcre/regexp-pcre.js",
     # annexB
     "mjsunit/es6/string-html.js",
     "mjsunit/function-names.js",
