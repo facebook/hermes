@@ -150,7 +150,6 @@ DEF_VALUE(IteratorCloseInst, Instruction)
 DEF_VALUE(HBCStoreToEnvironmentInst, Instruction)
 DEF_VALUE(HBCLoadFromEnvironmentInst, Instruction)
 #endif
-DEF_VALUE(UnreachableInst, Instruction)
 
 MARK_FIRST(CreateArgumentsInst, Instruction)
 DEF_VALUE(CreateArgumentsLooseInst, CreateArgumentsInst)
@@ -186,6 +185,7 @@ TERMINATOR(CondBranchInst, TerminatorInst)
 TERMINATOR(GetPNamesInst, TerminatorInst)
 TERMINATOR(GetNextPNameInst, TerminatorInst)
 TERMINATOR(TryStartInst, TerminatorInst)
+TERMINATOR(UnreachableInst, TerminatorInst)
 
 BEGIN_TERMINATOR(CompareBranchInst, TerminatorInst)
 // NOTE: the ordering here matches BinaryOperatorInst!

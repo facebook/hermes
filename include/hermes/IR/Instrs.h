@@ -3943,16 +3943,16 @@ class IteratorCloseInst : public Instruction {
 };
 
 /// A bytecode version of llvm_unreachable, for use in stubs and similar.
-class UnreachableInst : public Instruction {
+class UnreachableInst : public TerminatorInst {
   UnreachableInst(const UnreachableInst &) = delete;
   void operator=(const UnreachableInst &) = delete;
 
  public:
-  explicit UnreachableInst() : Instruction(ValueKind::UnreachableInstKind) {}
+  explicit UnreachableInst() : TerminatorInst(ValueKind::UnreachableInstKind) {}
   explicit UnreachableInst(
       const UnreachableInst *src,
       llvh::ArrayRef<Value *> operands)
-      : Instruction(src, operands) {}
+      : TerminatorInst(src, operands) {}
 
   static bool hasOutput() {
     return false;

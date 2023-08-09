@@ -731,7 +731,6 @@ void ESTreeIRGen::genDummyFunction(Function *dummy) {
   BasicBlock *firstBlock = builder.createBasicBlock(dummy);
   builder.setInsertionBlock(firstBlock);
   builder.createUnreachableInst();
-  builder.createReturnInst(builder.getLiteralUndefined());
 }
 
 /// Generate a function which immediately throws the specified SyntaxError
