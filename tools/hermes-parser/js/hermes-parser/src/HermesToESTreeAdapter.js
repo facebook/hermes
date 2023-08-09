@@ -215,7 +215,10 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
   mapProperty(nodeUnprocessed: HermesNode): HermesNode {
     const node = this.mapNodeDefault(nodeUnprocessed);
 
-    if (node.value.type === 'FunctionExpression') {
+    if (
+      node.value.type === 'FunctionExpression' &&
+      (node.method || node.kind !== 'init')
+    ) {
       node.value.loc.start = node.key.loc.end;
       node.value.range[0] = node.key.range[1];
     }
@@ -237,6 +240,8 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
     const node = this.mapNodeDefault(nodeUnprocessed);
 
     switch (node.type) {
+      // This prop should ideally only live on `ArrowFunctionExpression` but to
+      // match espree output we place it on all functions types.
       case 'FunctionDeclaration':
       case 'FunctionExpression':
         node.expression = false;
@@ -286,7 +291,7 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
         i)   unwrap the child (`node.object = child.expression`)
       b) convert this node to a `MemberExpression[optional = true]`
       c) wrap this node (`node = ChainExpression[expression = node]`)
-    3) if the current node is a `MembedExpression`:
+    3) if the current node is a `MemberExpression`:
       a) convert this node to a `MemberExpression[optional = true]`
     */
 
