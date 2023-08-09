@@ -95,7 +95,7 @@ export interface AwaitExpression extends BaseNode {
 }
 export interface BigIntLiteral extends LiteralBase {
   +type: 'Literal';
-  +value: /*bigint |*/ null;
+  +value: bigint;
   +bigint: string;
 }
 export interface BinaryExpression extends BaseNode {
@@ -784,7 +784,7 @@ export type Literal =
 interface LiteralBase extends BaseNode {
   +type: 'Literal';
   +raw: string;
-  +value: RegExp | /*bigint |*/ boolean | number | string | null;
+  +value: RegExp | bigint | boolean | number | string | null;
 }
 export type LiteralExpression = Literal | TemplateLiteral;
 export interface LogicalExpression extends BaseNode {
