@@ -400,6 +400,9 @@ struct Context {
   /// This is effectively a timeout on the regexp execution.
   uint32_t backtracksRemaining_ = kBacktrackLimit;
 
+  /// How many remaining native recursions are allowed.
+  int32_t recursiveCallsRemaining_ = kRecursionLimit;
+
   Context(
       llvh::ArrayRef<uint8_t> bytecodeStream,
       constants::MatchFlagType flags,
@@ -990,6 +993,12 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
       (c.forwards() || locsToCheckCount == 1) &&
       "Can only check one location when cursor is backwards");
 
+  // Make sure we are not exceeding the set limit of the amount of times we can
+  // recurse.
+  if (recursiveCallsRemaining_-- <= 0) {
+    return ExecutionStatus::STACK_OVERFLOW;
+  }
+
   // Macro used when a state fails to match.
 #define BACKTRACK()                            \
   do {                                         \
@@ -1317,9 +1326,13 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
             // anything.
             s->ip_ += sizeof(LookaroundInsn);
             auto match = this->match(s, true /* onlyAtStart */);
-            // There were no errors and we matched something (so non-null
-            // return)
-            matched = match && match.getValue();
+            // If the match errored out due to stack overflow, then we need to
+            // return an error here as well.
+            if (LLVM_UNLIKELY(!match)) {
+              return match.getStatus();
+            }
+            // We got a match if the value is non-null.
+            matched = match.getValue() != nullptr;
             c.setCurrentPointer(savedState.cursor_.currentPointer());
             c.setForwards(savedState.cursor_.forwards());
 

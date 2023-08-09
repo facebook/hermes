@@ -35,6 +35,9 @@ constexpr uint32_t kNotMatched = UINT32_MAX;
 /// The maximum number of times we will backtrack.
 constexpr uint32_t kBacktrackLimit = 1u << 30;
 
+/// The maximum number of times we will natively recurse.
+constexpr uint32_t kRecursionLimit = 64;
+
 /// A CapturedRange represents a range of the input string captured by a capture
 /// group. A CaptureGroup may also not have matched, in which case its start is
 /// set to kNotMatched. Note that an unmatched capture group is different than a
