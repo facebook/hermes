@@ -11,7 +11,7 @@
 'use strict';
 
 import type {VisitorKeysType} from '../traverse/getVisitorKeys';
-import type {ESNode} from 'hermes-estree';
+import type {ESNode, Program} from 'hermes-estree';
 
 import {SimpleTraverser} from '../traverse/SimpleTraverser';
 import {
@@ -91,6 +91,17 @@ export class SimpleTransform {
    */
   static transform(node: ESNode, options: TransformOptions): ESNode | null {
     return new SimpleTransform().transform(node, options);
+  }
+
+  static transformProgram(
+    program: Program,
+    options: TransformOptions,
+  ): Program {
+    const result = SimpleTransform.transform(program, options);
+    if (result?.type === 'Program') {
+      return result;
+    }
+    throw new Error('SimpleTransform.transformProgram: Expected program node.');
   }
 
   /**
