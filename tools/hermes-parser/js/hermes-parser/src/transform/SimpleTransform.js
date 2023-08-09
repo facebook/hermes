@@ -65,9 +65,14 @@ export class SimpleTransform {
             }
             resultRootNode = traversedResultNode;
           } else if (traversedResultNode == null) {
-            removeNodeOnParent(node, parent);
+            removeNodeOnParent(node, parent, options.visitorKeys);
           } else {
-            replaceNodeOnParent(node, parent, traversedResultNode);
+            replaceNodeOnParent(
+              node,
+              parent,
+              traversedResultNode,
+              options.visitorKeys,
+            );
           }
 
           throw SimpleTraverser.Skip;
@@ -99,7 +104,11 @@ export class SimpleTransform {
    * @return Either the orginal node if the properties matched the existing node or a new node with
    *         the new properties.
    */
-  static nodeWith<T: ESNode>(node: T, overrideProps: Partial<T>): T {
-    return nodeWith<T>(node, overrideProps);
+  static nodeWith<T: ESNode>(
+    node: T,
+    overrideProps: Partial<T>,
+    visitorKeys?: VisitorKeysType,
+  ): T {
+    return nodeWith<T>(node, overrideProps, visitorKeys);
   }
 }
