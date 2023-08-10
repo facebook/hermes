@@ -1968,14 +1968,28 @@ void generateFunction(
        // expression (as opposed to a declaration).
        << "  ;\n";
 
+    SMLoc prevLoc{};
+    // The first instruction in the function should always have its line info
+    // printed, since it has no previous instruction that it could be a
+    // duplicate of.
+    bool firstInst = true;
     for (auto &I : *B) {
       if (options.emitSourceLocations) {
-        SMLoc loc = I.getLocation();
-        if (loc.isValid()) {
-          OS << "// ";
-          F.getContext().getSourceErrorManager().dumpCoords(OS, loc);
+        SMLoc curLoc = I.getLocation();
+        // We only print out a line comment if the source location has changed
+        // from the previous line comment printed.
+        if (curLoc != prevLoc || firstInst) {
+          OS << "  // ";
+          if (curLoc.isValid()) {
+            F.getContext().getSourceErrorManager().dumpCoords(OS, curLoc);
+          } else {
+            // If we don't find any source location info, explicitly state that.
+            OS << "no-src-info";
+          }
           OS << '\n';
         }
+        prevLoc = curLoc;
+        firstInst = false;
       }
       instrGen.generate(I);
     }
