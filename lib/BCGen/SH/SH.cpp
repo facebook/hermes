@@ -518,6 +518,7 @@ class InstrGen {
     sh::Register dstReg = ra_.getRegister(&inst);
     if (ra_.isAllocated(inst.getSingleOperand()) &&
         dstReg == ra_.getRegister(inst.getSingleOperand())) {
+      os_ << "  // MovInst\n";
       return;
     }
     os_.indent(2);
@@ -529,6 +530,7 @@ class InstrGen {
   void generateImplicitMovInst(ImplicitMovInst &inst) {
     // ImplicitMovs produce no bytecode, they only express that a subsequent
     // instruction will perform the equivalent of a 'Mov'.
+    os_ << "  // ImplicitMovInst\n";
   }
   void generateUnaryOperatorInst(UnaryOperatorInst &inst) {
     os_.indent(2);
@@ -665,6 +667,7 @@ class InstrGen {
   void generatePhiInst(PhiInst &inst) {
     // PhiInst has been translated into a sequence of MOVs in RegAlloc
     // Nothing to do here.
+    os_ << "  // PhiInst\n";
   }
   void generateBinaryOperatorInst(BinaryOperatorInst &inst) {
     os_.indent(2);
@@ -1113,6 +1116,7 @@ class InstrGen {
   }
   void generateAllocStackInst(AllocStackInst &inst) {
     // This is a no-op.
+    os_ << "  // AllockStackInst\n";
   }
   void generateAllocObjectInst(AllocObjectInst &inst) {
     os_.indent(2);
