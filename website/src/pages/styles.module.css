@@ -62,3 +62,8 @@
   padding: 0 0;
   background-color: black;
 }
+
+iframe {
+  width: 100%;
+  max-width: 560px;
+}

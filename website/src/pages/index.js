@@ -7,18 +7,18 @@
  * @format
  */
 
-import React from 'react';
-import classnames from 'classnames';
-import Layout from '@theme/Layout';
-import Link from '@docusaurus/Link';
-import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
-import useBaseUrl from '@docusaurus/useBaseUrl';
-import styles from './styles.module.css';
+import React from "react";
+import classnames from "classnames";
+import Layout from "@theme/Layout";
+import Link from "@docusaurus/Link";
+import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import styles from "./styles.module.css";
 
 const features = [
   {
     title: <>Faster App Launch</>,
-    imageUrl: 'img/undraw_fast_loading.svg',
+    imageUrl: "img/undraw_fast_loading.svg",
     description: (
       <>
         Hermes-powered apps launch faster, thanks to build-time precompilation
@@ -28,7 +28,7 @@ const features = [
   },
   {
     title: <>Optimized for Mobile</>,
-    imageUrl: 'img/undraw_order_confirmed.svg',
+    imageUrl: "img/undraw_order_confirmed.svg",
     description: (
       <>
         Hermes is small in APK size, lean on memory, and starts instantly. It
@@ -38,7 +38,7 @@ const features = [
   },
   {
     title: <>Easy Integration</>,
-    imageUrl: 'img/undraw_product_teardown.svg',
+    imageUrl: "img/undraw_product_teardown.svg",
     description: (
       <>
         It's simple to get started with Hermes in React Native apps. Hermes is
@@ -54,15 +54,14 @@ function VideoContainer() {
       <div className="row">
         <div className="col">
           <h2>Check it out in the intro video</h2>
-            <iframe
-              width="560"
-              height="315"
-              src="https://www.youtube.com/embed/JsppO1HUYx4"
-              title="Explain Like I'm 5: Hermes"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
+          <iframe
+            height="315"
+            src="https://www.youtube.com/embed/JsppO1HUYx4"
+            title="Explain Like I'm 5: Hermes"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
         </div>
       </div>
     </div>
@@ -71,11 +70,12 @@ function VideoContainer() {
 
 function Home() {
   const context = useDocusaurusContext();
-  const {siteConfig = {}} = context;
+  const { siteConfig = {} } = context;
   return (
     <Layout
       title="Hermes"
-      description="JavaScript engine optimized for React Native">
+      description="JavaScript engine optimized for React Native"
+    >
       <div className={styles.bannerWrapper}>
         <div className={styles.banner}>
           Support Ukraine 🇺🇦{" "}
