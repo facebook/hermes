@@ -3020,6 +3020,28 @@ TEST_F(ConnectionTests, testGlobalLexicalScopeNames) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
+TEST_F(ConnectionTests, testInvalidExecutionContext) {
+  int msgId = 1;
+  send<m::runtime::EnableRequest>(conn, msgId++);
+  send<m::debugger::EnableRequest>(conn, msgId++);
+  auto executionContextNotification = expectExecutionContextCreated(conn);
+
+  asyncRuntime.executeScriptAsync(R"(debugger;)");
+  expectNotification<m::debugger::ScriptParsedNotification>(conn);
+  expectNotification<m::debugger::PausedNotification>(conn);
+
+  m::runtime::GlobalLexicalScopeNamesRequest req;
+  req.id = msgId;
+  // Chose an execution context ID other than what was returned as the current
+  // execution context ID.
+  req.executionContextId = ~executionContextNotification.context.id;
+  conn.send(req.toJsonStr());
+  expectResponse<m::ErrorResponse>(conn, msgId++);
+
+  send<m::debugger::ResumeRequest>(conn, msgId++);
+  expectNotification<m::debugger::ResumedNotification>(conn);
+}
+
 } // namespace chrome
 } // namespace inspector
 } // namespace hermes

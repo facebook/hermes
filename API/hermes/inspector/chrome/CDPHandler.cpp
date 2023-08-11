@@ -273,6 +273,10 @@ class CDPHandler::Impl : public message::RequestHandler,
   void sendResponseToClient(const m::Response &resp);
   void sendNotificationToClient(const m::Notification &resp);
 
+  bool validateExecutionContext(
+      int id,
+      std::optional<m::runtime::ExecutionContextId> context);
+
   // Emit a Runtime.consoleAPICalled event to the debug client.
   void emitConsoleAPICalledEvent(ConsoleMessageInfo info);
   void storePendingConsoleMessage(ConsoleMessageInfo info);
@@ -1081,9 +1085,8 @@ void CDPHandler::Impl::handle(const m::runtime::CallFunctionOnRequest &req) {
 void CDPHandler::Impl::handle(const m::runtime::CompileScriptRequest &req) {
   // TODO: formerly IfEnabled
   enqueueFunc([this, req]() {
-    if (req.executionContextId.has_value() &&
-        req.executionContextId.value() != kHermesExecutionContextId) {
-      throw std::invalid_argument("Invalid execution context");
+    if (!validateExecutionContext(req.id, req.executionContextId)) {
+      return;
     }
 
     m::runtime::CompileScriptResponse resp;
@@ -1506,9 +1509,8 @@ void CDPHandler::Impl::handle(
     m::runtime::GlobalLexicalScopeNamesResponse resp;
     resp.id = req.id;
 
-    if (req.executionContextId.has_value() &&
-        req.executionContextId.value() != kHermesExecutionContextId) {
-      throw std::invalid_argument("Invalid execution context");
+    if (!validateExecutionContext(req.id, req.executionContextId)) {
+      return;
     }
 
     const debugger::LexicalInfo &lexicalInfo = state.getLexicalInfo(0);
@@ -1563,6 +1565,17 @@ void CDPHandler::Impl::sendResponseToClient(const m::Response &resp) {
 
 void CDPHandler::Impl::sendNotificationToClient(const m::Notification &note) {
   sendToClient(note.toJsonStr());
+}
+
+bool CDPHandler::Impl::validateExecutionContext(
+    int id,
+    std::optional<m::runtime::ExecutionContextId> context) {
+  if (context.has_value() && context.value() != kHermesExecutionContextId) {
+    sendErrorToClient(id, "Invalid execution context");
+    return false;
+  }
+
+  return true;
 }
 
 /*
