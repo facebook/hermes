@@ -3958,6 +3958,16 @@ class UnreachableInst : public TerminatorInst {
     return false;
   }
 
+  unsigned getNumSuccessors() const {
+    return 0;
+  }
+  BasicBlock *getSuccessor(unsigned idx) const {
+    llvm_unreachable("unreachable has no successors");
+  }
+  void setSuccessor(unsigned idx, BasicBlock *B) {
+    llvm_unreachable("unreachable has no successors");
+  }
+
   SideEffect getSideEffectImpl() const {
     return SideEffect::createExecute();
   }
