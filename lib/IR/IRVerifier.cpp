@@ -216,6 +216,13 @@ void Verifier::visitFunction(const Function &F) {
         continue;
       }
 
+      if (llvh::isa<UnreachableInst>(&*II)) {
+        Assert(
+            !D.isReachableFromEntry(II->getParent()),
+            "UnreachableInst must not be reachable from entry");
+        continue;
+      }
+
       // Check that all instructions are dominated by their operands.
       for (unsigned i = 0; i < II->getNumOperands(); i++) {
         auto Operand = II->getOperand(i);
