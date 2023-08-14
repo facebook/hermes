@@ -48,7 +48,7 @@ BlockStatementNode *getBlockStatement(FunctionLikeNode *node) {
           cast<FunctionDeclarationNode>(node)->_body);
     case NodeKind::ArrowFunctionExpression:
       return dyn_cast<BlockStatementNode>(
-          cast<FunctionDeclarationNode>(node)->_body);
+          cast<ArrowFunctionExpressionNode>(node)->_body);
 #if HERMES_PARSE_FLOW
     case NodeKind::ComponentDeclaration:
       return cast<BlockStatementNode>(
