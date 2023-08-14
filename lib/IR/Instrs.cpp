@@ -23,7 +23,7 @@ unsigned TerminatorInst::getNumSuccessors() const {
 #undef TERMINATOR
 #define TERMINATOR(CLASS, PARENT)           \
   if (auto I = llvh::dyn_cast<CLASS>(this)) \
-    return I->getNumSuccessors();
+    return I->getNumSuccessorsImpl();
 #define BEGIN_TERMINATOR(NAME, PARENT) TERMINATOR(NAME, PARENT)
 #include "hermes/IR/Instrs.def"
   llvm_unreachable("not a terminator?!");
@@ -33,7 +33,7 @@ BasicBlock *TerminatorInst::getSuccessor(unsigned idx) const {
 #undef TERMINATOR
 #define TERMINATOR(CLASS, PARENT)           \
   if (auto I = llvh::dyn_cast<CLASS>(this)) \
-    return I->getSuccessor(idx);
+    return I->getSuccessorImpl(idx);
 #define BEGIN_TERMINATOR(NAME, PARENT) TERMINATOR(NAME, PARENT)
 #include "hermes/IR/Instrs.def"
   llvm_unreachable("not a terminator?!");
@@ -43,7 +43,7 @@ void TerminatorInst::setSuccessor(unsigned idx, BasicBlock *B) {
 #undef TERMINATOR
 #define TERMINATOR(CLASS, PARENT)           \
   if (auto I = llvh::dyn_cast<CLASS>(this)) \
-    return I->setSuccessor(idx, B);
+    return I->setSuccessorImpl(idx, B);
 #define BEGIN_TERMINATOR(NAME, PARENT) TERMINATOR(NAME, PARENT)
 #include "hermes/IR/Instrs.def"
   llvm_unreachable("not a terminator?!");
@@ -167,15 +167,15 @@ std::pair<Literal *, BasicBlock *> SwitchInst::getCasePair(unsigned i) const {
       cast<Literal>(getOperand(base)), cast<BasicBlock>(getOperand(base + 1)));
 }
 
-BasicBlock *SwitchInst::getSuccessor(unsigned idx) const {
-  assert(idx < getNumSuccessors() && "getSuccessor out of bound!");
+BasicBlock *SwitchInst::getSuccessorImpl(unsigned idx) const {
+  assert(idx < getNumSuccessorsImpl() && "getSuccessor out of bound!");
   if (idx == 0)
     return getDefaultDestination();
   return getCasePair(idx - 1).second;
 }
 
-void SwitchInst::setSuccessor(unsigned idx, BasicBlock *B) {
-  assert(idx < getNumSuccessors() && "setSuccessor out of bound!");
+void SwitchInst::setSuccessorImpl(unsigned idx, BasicBlock *B) {
+  assert(idx < getNumSuccessorsImpl() && "setSuccessor out of bound!");
   if (idx == 0) {
     setOperand(B, DefaultBlockIdx);
     return;
@@ -343,15 +343,15 @@ SwitchImmInst::SwitchImmInst(
   }
 }
 
-BasicBlock *SwitchImmInst::getSuccessor(unsigned idx) const {
-  assert(idx < getNumSuccessors() && "getSuccessor out of bound!");
+BasicBlock *SwitchImmInst::getSuccessorImpl(unsigned idx) const {
+  assert(idx < getNumSuccessorsImpl() && "getSuccessor out of bound!");
   if (idx == 0)
     return getDefaultDestination();
   return getCasePair(idx - 1).second;
 }
 
-void SwitchImmInst::setSuccessor(unsigned idx, BasicBlock *B) {
-  assert(idx < getNumSuccessors() && "setSuccessor out of bound!");
+void SwitchImmInst::setSuccessorImpl(unsigned idx, BasicBlock *B) {
+  assert(idx < getNumSuccessorsImpl() && "setSuccessor out of bound!");
   if (idx == 0) {
     setOperand(B, DefaultBlockIdx);
     return;

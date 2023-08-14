@@ -160,14 +160,14 @@ class BranchInst : public TerminatorInst {
     return kind == ValueKind::BranchInstKind;
   }
 
-  unsigned getNumSuccessors() const {
+  unsigned getNumSuccessorsImpl() const {
     return 1;
   }
-  BasicBlock *getSuccessor(unsigned idx) const {
+  BasicBlock *getSuccessorImpl(unsigned idx) const {
     assert(idx == 0 && "BranchInst only have 1 successor!");
     return getBranchDest();
   }
-  void setSuccessor(unsigned idx, BasicBlock *B) {
+  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
     assert(idx == 0 && "BranchInst only have 1 successor!");
     setOperand(B, idx);
   }
@@ -340,17 +340,17 @@ class CondBranchInst : public TerminatorInst {
     return kind == ValueKind::CondBranchInstKind;
   }
 
-  unsigned getNumSuccessors() const {
+  unsigned getNumSuccessorsImpl() const {
     return 2;
   }
-  BasicBlock *getSuccessor(unsigned idx) const {
+  BasicBlock *getSuccessorImpl(unsigned idx) const {
     if (idx == 0)
       return getTrueDest();
     if (idx == 1)
       return getFalseDest();
     llvm_unreachable("CondBranchInst only have 2 successors!");
   }
-  void setSuccessor(unsigned idx, BasicBlock *B) {
+  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
     assert(idx <= 1 && "CondBranchInst only have 2 successors!");
     setOperand(B, idx + TrueBlockIdx);
   }
@@ -386,13 +386,13 @@ class ReturnInst : public TerminatorInst {
     return kind == ValueKind::ReturnInstKind;
   }
 
-  unsigned getNumSuccessors() const {
+  unsigned getNumSuccessorsImpl() const {
     return 0;
   }
-  BasicBlock *getSuccessor(unsigned idx) const {
+  BasicBlock *getSuccessorImpl(unsigned idx) const {
     llvm_unreachable("ReturnInst has no successor!");
   }
-  void setSuccessor(unsigned idx, BasicBlock *B) {
+  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
     llvm_unreachable("ReturnInst has no successor!");
   }
 };
@@ -2196,13 +2196,13 @@ class ThrowInst : public TerminatorInst {
     return kind == ValueKind::ThrowInstKind;
   }
 
-  unsigned getNumSuccessors() const {
+  unsigned getNumSuccessorsImpl() const {
     return 0;
   }
-  BasicBlock *getSuccessor(unsigned idx) const {
+  BasicBlock *getSuccessorImpl(unsigned idx) const {
     llvm_unreachable("ThrowInst has no successor!");
   }
-  void setSuccessor(unsigned idx, BasicBlock *B) {
+  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
     llvm_unreachable("ThrowInst has no successor!");
   }
 };
@@ -2239,13 +2239,13 @@ class ThrowTypeErrorInst : public TerminatorInst {
     return V->getKind() == ValueKind::ThrowTypeErrorInstKind;
   }
 
-  unsigned getNumSuccessors() const {
+  unsigned getNumSuccessorsImpl() const {
     return 0;
   }
-  BasicBlock *getSuccessor(unsigned idx) const {
+  BasicBlock *getSuccessorImpl(unsigned idx) const {
     llvm_unreachable("ThrowInst has no successor!");
   }
-  void setSuccessor(unsigned idx, BasicBlock *B) {
+  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
     llvm_unreachable("ThrowInst has no successor!");
   }
 };
@@ -2294,11 +2294,11 @@ class SwitchInst : public TerminatorInst {
     return kind == ValueKind::SwitchInstKind;
   }
 
-  unsigned getNumSuccessors() const {
+  unsigned getNumSuccessorsImpl() const {
     return getNumCasePair() + 1;
   }
-  BasicBlock *getSuccessor(unsigned idx) const;
-  void setSuccessor(unsigned idx, BasicBlock *B);
+  BasicBlock *getSuccessorImpl(unsigned idx) const;
+  void setSuccessorImpl(unsigned idx, BasicBlock *B);
 };
 
 class GetPNamesInst : public TerminatorInst {
@@ -2353,17 +2353,17 @@ class GetPNamesInst : public TerminatorInst {
     return kind == ValueKind::GetPNamesInstKind;
   }
 
-  unsigned getNumSuccessors() const {
+  unsigned getNumSuccessorsImpl() const {
     return 2;
   }
-  BasicBlock *getSuccessor(unsigned idx) const {
+  BasicBlock *getSuccessorImpl(unsigned idx) const {
     if (idx == 0)
       return getOnEmptyDest();
     if (idx == 1)
       return getOnSomeDest();
     llvm_unreachable("GetPNamesInst only have 2 successors!");
   }
-  void setSuccessor(unsigned idx, BasicBlock *B) {
+  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
     if (idx == 0)
       return setOperand(B, OnEmptyIdx);
     if (idx == 1)
@@ -2436,17 +2436,17 @@ class GetNextPNameInst : public TerminatorInst {
     return cast<BasicBlock>(getOperand(OnSomeIdx));
   }
 
-  unsigned getNumSuccessors() const {
+  unsigned getNumSuccessorsImpl() const {
     return 2;
   }
-  BasicBlock *getSuccessor(unsigned idx) const {
+  BasicBlock *getSuccessorImpl(unsigned idx) const {
     if (idx == 0)
       return getOnLastDest();
     if (idx == 1)
       return getOnSomeDest();
     llvm_unreachable("GetNextPNameInst only have 2 successors!");
   }
-  void setSuccessor(unsigned idx, BasicBlock *B) {
+  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
     if (idx == 0)
       return setOperand(B, OnLastIdx);
     if (idx == 1)
@@ -2494,13 +2494,13 @@ class TryStartInst : public TerminatorInst {
     return kind == ValueKind::TryStartInstKind;
   }
 
-  unsigned getNumSuccessors() const {
+  unsigned getNumSuccessorsImpl() const {
     return 2;
   }
-  BasicBlock *getSuccessor(unsigned idx) const {
+  BasicBlock *getSuccessorImpl(unsigned idx) const {
     return cast<BasicBlock>(getOperand(idx));
   }
-  void setSuccessor(unsigned idx, BasicBlock *B) {
+  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
     setOperand(B, idx);
   }
 };
@@ -2996,11 +2996,11 @@ class SwitchImmInst : public TerminatorInst {
     return kind == ValueKind::SwitchImmInstKind;
   }
 
-  unsigned getNumSuccessors() const {
+  unsigned getNumSuccessorsImpl() const {
     return getNumCasePair() + 1;
   }
-  BasicBlock *getSuccessor(unsigned idx) const;
-  void setSuccessor(unsigned idx, BasicBlock *B);
+  BasicBlock *getSuccessorImpl(unsigned idx) const;
+  void setSuccessorImpl(unsigned idx, BasicBlock *B);
 };
 
 class SaveAndYieldInst : public TerminatorInst {
@@ -3036,13 +3036,16 @@ class SaveAndYieldInst : public TerminatorInst {
     return SideEffect::createExecute();
   }
 
-  unsigned getNumSuccessors() const {
+  unsigned getNumSuccessorsImpl() const {
     return 1;
   }
-
-  BasicBlock *getSuccessor(unsigned idx) const {
+  BasicBlock *getSuccessorImpl(unsigned idx) const {
     assert(idx == 0 && "SaveAndYieldInst should only have 1 successor");
     return getNextBlock();
+  }
+  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
+    assert(idx == 0 && "CompareBranchInst only have 2 successors!");
+    setOperand(B, NextBlockIdx);
   }
 
   static bool classof(const Value *V) {
@@ -3692,17 +3695,17 @@ class CompareBranchInst : public TerminatorInst {
     return HERMES_IR_KIND_IN_CLASS(V->getKind(), CompareBranchInst);
   }
 
-  unsigned getNumSuccessors() const {
+  unsigned getNumSuccessorsImpl() const {
     return 2;
   }
-  BasicBlock *getSuccessor(unsigned idx) const {
+  BasicBlock *getSuccessorImpl(unsigned idx) const {
     if (idx == 0)
       return getTrueDest();
     if (idx == 1)
       return getFalseDest();
     llvm_unreachable("CompareBranchInst only have 2 successors!");
   }
-  void setSuccessor(unsigned idx, BasicBlock *B) {
+  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
     assert(idx <= 1 && "CompareBranchInst only have 2 successors!");
     setOperand(B, idx + TrueBlockIdx);
   }
@@ -3958,13 +3961,13 @@ class UnreachableInst : public TerminatorInst {
     return false;
   }
 
-  unsigned getNumSuccessors() const {
+  unsigned getNumSuccessorsImpl() const {
     return 0;
   }
-  BasicBlock *getSuccessor(unsigned idx) const {
+  BasicBlock *getSuccessorImpl(unsigned idx) const {
     llvm_unreachable("unreachable has no successors");
   }
-  void setSuccessor(unsigned idx, BasicBlock *B) {
+  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
     llvm_unreachable("unreachable has no successors");
   }
 
