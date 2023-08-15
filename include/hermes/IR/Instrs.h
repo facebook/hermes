@@ -2566,6 +2566,9 @@ class PhiInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
+  bool acceptsEmptyTypeImpl() const {
+    return true;
+  }
 
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setFirstInBlock();
