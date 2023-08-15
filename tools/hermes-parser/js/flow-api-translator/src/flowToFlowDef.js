@@ -744,6 +744,20 @@ function convertExportDefaultDeclaration(
   stmt: ExportDefaultDeclaration,
   context: TranslationContext,
 ): TranslatedResult<ProgramStatement> {
+  const expr = stmt.declaration;
+  if (isExpression(expr) && (expr: Expression).type === 'Identifier') {
+    const name = ((expr: $FlowFixMe): Identifier).name;
+    const [declDecl, deps] = [
+      t.TypeofTypeAnnotation({argument: t.Identifier({name})}),
+      analyzeTypeDependencies(expr, context),
+    ];
+    return [
+      t.DeclareExportDefaultDeclaration({
+        declaration: declDecl,
+      }),
+      deps,
+    ];
+  }
   return convertExportDeclaration(stmt.declaration, {default: true}, context);
 }
 
@@ -811,6 +825,13 @@ function convertVariableDeclaration(
           context,
         ),
         [],
+      ];
+    }
+
+    if (init.type === 'Identifier') {
+      return [
+        t.TypeofTypeAnnotation({argument: t.Identifier({name: init.name})}),
+        analyzeTypeDependencies(init, context),
       ];
     }
 
