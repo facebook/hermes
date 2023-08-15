@@ -657,7 +657,7 @@ const getTransforms = (
       case 'VoidTypeAnnotation':
         return transform.VoidTypeAnnotation(node);
       case 'TypePredicate':
-        return unsupportedAnnotation(node, node.type);
+        return transform.TypePredicateAnnotation(node);
       case 'ConditionalTypeAnnotation':
         return transform.ConditionalTypeAnnotation(node);
       default:
@@ -3102,6 +3102,19 @@ const getTransforms = (
         extendsType: transformTypeAnnotationType(node.extendsType),
         trueType: transformTypeAnnotationType(node.trueType),
         falseType: transformTypeAnnotationType(node.falseType),
+      };
+    },
+    TypePredicateAnnotation(
+      node: FlowESTree.TypePredicate,
+    ): TSESTree.TSTypePredicate {
+      return {
+        type: 'TSTypePredicate',
+        asserts: node.asserts,
+        parameterName: transform.Identifier(node.parameterName, false),
+        typeAnnotation: node.typeAnnotation && {
+          type: 'TSTypeAnnotation',
+          typeAnnotation: transformTypeAnnotationType(node.typeAnnotation),
+        },
       };
     },
   };
