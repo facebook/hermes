@@ -18,6 +18,8 @@
 #include <hermes/inspector/chrome/MessageConverters.h>
 #include <hermes/jsinspector/InspectorInterfaces.h>
 
+#include "TestHelpers.h"
+
 namespace facebook {
 namespace hermes {
 namespace inspector {
@@ -107,7 +109,7 @@ void SyncConnection::waitForNotification(
 void SyncConnection::onReply(const std::string &message) {
   JSLexer::Allocator jsonAlloc;
   JSONFactory factory(jsonAlloc);
-  JSONObject *obj = parseStrAsJsonObj(message, factory);
+  JSONObject *obj = mustParseStrAsJsonObj(message, factory);
   LOG(INFO) << "SyncConnection::onReply got message: " << jsonValToStr(obj);
 
   std::lock_guard<std::mutex> lock(mutex_);

@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <optional>
 #include <string>
 
 #include <hermes/Parser/JSONParser.h>
@@ -18,12 +19,17 @@ namespace inspector {
 namespace chrome {
 using namespace ::hermes::parser;
 
-/// Convert a string to a JSONValue. Will throw if the parse is not completed.
-JSONValue *parseStr(const std::string &str, JSONFactory &factory);
+/// Convert a string to a JSONValue. Will return nullopt if parsing is not
+/// successful.
+std::optional<JSONValue *> parseStr(
+    const std::string &str,
+    JSONFactory &factory);
 
-/// Convert a string to a JSON object. Will throw if the parse is not completed,
-/// or the resulting JSON value is not an object.
-JSONObject *parseStrAsJsonObj(const std::string &str, JSONFactory &factory);
+/// Convert a string to a JSON object. Will return nullopt if parsing is not
+/// successful, or the resulting JSON value is not an object.
+std::optional<JSONObject *> parseStrAsJsonObj(
+    const std::string &str,
+    JSONFactory &factory);
 
 /// Convert a JSONValue to a string.
 std::string jsonValToStr(const JSONValue *v);
@@ -31,7 +37,7 @@ std::string jsonValToStr(const JSONValue *v);
 /// get(obj, key) is a wrapper for:
 ///   obj[key]
 /// This function will throw if key is not found.
-JSONValue *get(const JSONObject *obj, const std::string &key);
+std::optional<JSONValue *> get(const JSONObject *obj, const std::string &key);
 
 /// safeGet(obj, key) is a wrapper for:
 ///   obj[key]

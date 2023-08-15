@@ -128,7 +128,11 @@ valueFromJson(JSONValue *v) {
 
 template <typename T, typename U>
 void assign(T &lhs, const JSONObject *obj, const U &key) {
-  lhs = valueFromJson<T>(get(obj, key));
+  JSONValue *v = obj->get(key);
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  lhs = valueFromJson<T>(v);
 }
 
 template <typename T, typename U>

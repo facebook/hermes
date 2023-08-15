@@ -1,0 +1,41 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+#pragma once
+
+#include <gtest/gtest.h>
+
+#include <hermes/Parser/JSONParser.h>
+#include <hermes/inspector/chrome/JSONValueInterfaces.h>
+#include <hermes/inspector/chrome/MessageTypes.h>
+#include <hermes/inspector/chrome/MessageTypesInlines.h>
+
+namespace facebook {
+namespace hermes {
+namespace inspector {
+namespace chrome {
+
+using namespace ::hermes::parser;
+
+inline JSONValue *mustParseStr(const std::string &str, JSONFactory &factory) {
+  std::optional<JSONValue *> v = parseStr(str, factory);
+  EXPECT_TRUE(v.has_value());
+  return v.value();
+}
+
+inline JSONObject *mustParseStrAsJsonObj(
+    const std::string &str,
+    JSONFactory &factory) {
+  std::optional<JSONObject *> obj = parseStrAsJsonObj(str, factory);
+  EXPECT_TRUE(obj.has_value());
+  return obj.value();
+}
+
+} // namespace chrome
+} // namespace inspector
+} // namespace hermes
+} // namespace facebook

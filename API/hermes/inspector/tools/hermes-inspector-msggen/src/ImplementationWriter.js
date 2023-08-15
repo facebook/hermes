@@ -144,8 +144,11 @@ function emitRequestParser(stream: Writable, commands: Array<Command>) {
         JSONFactory &factory) {
       if (blob.has_value()) {
         JSONString *jsStr = factory.getString(key);
-        JSONValue *jsVal = parseStr(*blob, factory);
-        props.push_back({jsStr, jsVal});
+        std::optional<JSONValue *> jsVal = parseStr(*blob, factory);
+        if (!jsVal) {
+          throw std::runtime_error("Failed to parse string to JSONValue");
+        }
+        props.push_back({jsStr, *jsVal});
       }
     }
 
@@ -167,7 +170,11 @@ function emitRequestParser(stream: Writable, commands: Array<Command>) {
 
     JSLexer::Allocator alloc;
     JSONFactory factory(alloc);
-    auto *jsonObj = parseStrAsJsonObj(str, factory);
+    std::optional<JSONObject *> parseResult = parseStrAsJsonObj(str, factory);
+    if (!parseResult) {
+      throw std::runtime_error("Failed to parse string to JSONObject");
+    }
+    JSONObject *jsonObj = *parseResult;
 
     std::string method;
     assign(method, jsonObj, "method");
@@ -237,7 +244,12 @@ function emitErrorResponseDef(stream: Writable) {
   stream.write(`ErrorResponse::ErrorResponse(const JSONObject *obj) {
     assign(id, obj, "id");
 
-    auto *error = valueFromJson<JSONObject*>(get(obj, "error"));\n
+    JSONValue *v = obj->get("error");
+    if (v == nullptr) {
+      throw std::runtime_error("Key not found in JSONObject");
+    }
+    auto *error = valueFromJson<JSONObject*>(v);
+
     assign(code, error, "code");
     assign(message, error, "message");
     assignJsonBlob(data, error, "data");
@@ -318,9 +330,12 @@ export function emitRequestDef(stream: Writable, command: Command) {
           auto *params = valueFromJson<JSONObject*>(p);
       `);
     } else {
-      stream.write(
-        'auto *params = valueFromJson<JSONObject*>(get(obj, "params"));\n',
-      );
+      stream.write(`JSONValue *v = obj->get("params");
+      if (v == nullptr) {
+        throw std::runtime_error("Key not found in JSONObject");
+      }
+      auto *params = valueFromJson<JSONObject*>(v);
+      `);
     }
 
     for (const prop of props) {
@@ -381,9 +396,12 @@ export function emitResponseDef(stream: Writable, command: Command) {
 
   const props = command.returns || [];
   if (props.length > 0) {
-    stream.write(
-      'auto *res = valueFromJson<JSONObject*>(get(obj, "result"));\n',
-    );
+    stream.write(`JSONValue *v = obj->get("result");
+    if (v == nullptr) {
+      throw std::runtime_error("Key not found in JSONObject");
+    }
+    auto *res = valueFromJson<JSONObject*>(v);
+    `);
 
     for (const prop of props) {
       emitPropAssign(stream, prop, "res");
@@ -429,9 +447,12 @@ export function emitNotificationDef(stream: Writable, event: Event) {
     assign(method, obj, "method");\n\n`);
 
   if (props.length > 0) {
-    stream.write(
-      'auto *params = valueFromJson<JSONObject*>(get(obj, "params"));\n',
-    );
+    stream.write(`JSONValue *v = obj->get("params");
+    if (v == nullptr) {
+      throw std::runtime_error("Key not found in JSONObject");
+    }
+    auto *params = valueFromJson<JSONObject*>(v);
+    `);
 
     for (const prop of props) {
       emitPropAssign(stream, prop, "params");

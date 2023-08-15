@@ -21,6 +21,7 @@
 #include <jsi/instrumentation.h>
 
 #include "SyncConnection.h"
+#include "TestHelpers.h"
 
 namespace facebook {
 namespace hermes {
@@ -62,7 +63,7 @@ ResponseType expectResponse(SyncConnection &conn, int id) {
   conn.waitForResponse([id, &resp](const std::string &str) {
     JSLexer::Allocator jsonAlloc;
     JSONFactory factory(jsonAlloc);
-    resp = ResponseType(parseStrAsJsonObj(str, factory));
+    resp = ResponseType(mustParseStrAsJsonObj(str, factory));
     EXPECT_EQ(resp.id, id);
   });
 
@@ -79,7 +80,7 @@ NotificationType expectNotification(SyncConnection &conn) {
     try {
       JSLexer::Allocator jsonAlloc;
       JSONFactory factory(jsonAlloc);
-      note = NotificationType(parseStrAsJsonObj(str, factory));
+      note = NotificationType(mustParseStrAsJsonObj(str, factory));
     } catch (const std::exception &e) {
       parseError = e.what();
       parseError += " (json: " + str + ")";
@@ -423,8 +424,8 @@ std::unordered_map<std::string, std::string> expectProps(
         JSLexer::Allocator jsonAlloc;
         JSONFactory factory(jsonAlloc);
         EXPECT_TRUE(jsonValsEQ(
-            parseStr(remoteObj.value.value(), factory),
-            parseStr(info.value.value(), factory)));
+            mustParseStr(remoteObj.value.value(), factory),
+            mustParseStr(info.value.value(), factory)));
       }
 
       if (info.unserializableValue.has_value()) {
@@ -1273,10 +1274,10 @@ TEST_F(ConnectionTests, testRuntimeEvaluateReturnByValue) {
   EXPECT_EQ(resp.result.preview->type, "object");
   ASSERT_TRUE(jsonValsEQ(
       (resp.result.preview->toJsonVal(factory)),
-      parseStrAsJsonObj(preview, factory)));
+      mustParseStrAsJsonObj(preview, factory)));
   ASSERT_TRUE(jsonValsEQ(
-      parseStrAsJsonObj(resp.result.value.value(), factory),
-      parseStrAsJsonObj(object, factory)));
+      mustParseStrAsJsonObj(resp.result.value.value(), factory),
+      mustParseStrAsJsonObj(object, factory)));
 
   // [3] exit run loop
   asyncRuntime.stop();
@@ -2150,7 +2151,7 @@ TEST_F(ConnectionTests, testRuntimeCallFunctionOnExecutionContext) {
         auto expected = test.callArg.value;
         ASSERT_TRUE(expected.has_value()) << test.propName;
         ASSERT_TRUE(jsonValsEQ(
-            parseStr(*actual, factory), parseStr(*expected, factory)))
+            mustParseStr(*actual, factory), mustParseStr(*expected, factory)))
             << test.propName;
       } else if (it->second->unserializableValue.has_value()) {
         // the property has an unserializable value, so make sure that's what's
@@ -2202,8 +2203,9 @@ TEST_F(ConnectionTests, testConsoleLog) {
                               &receivedConsoleNotification,
                               &receivedPausedNotification,
                               &msgId](const std::string &str) {
-      auto parsedNote = parseStrAsJsonObj(str, factory);
-      message::JSONValue *methodRes = get(parsedNote, "method");
+      auto parsedNote = mustParseStrAsJsonObj(str, factory);
+      message::JSONValue *methodRes = parsedNote->get("method");
+      EXPECT_TRUE(methodRes != nullptr);
       std::string method = message::valueFromJson<std::string>(methodRes);
       if (method == "Runtime.consoleAPICalled") {
         receivedConsoleNotification = true;
@@ -2294,7 +2296,7 @@ TEST_F(ConnectionTests, testConsoleGroup) {
                               &msgId,
                               kNewYears2023,
                               kNewYears3023](const std::string &str) {
-      auto parsedNote = parseStrAsJsonObj(str, factory);
+      auto parsedNote = mustParseStrAsJsonObj(str, factory);
       std::string method;
       message::assign(method, parsedNote, "method");
       if (method == "Runtime.consoleAPICalled") {
@@ -2387,8 +2389,9 @@ TEST_F(ConnectionTests, testConsoleBuffer) {
                               kNumLogsToTest,
                               &receivedWarning,
                               &received](const std::string &str) {
-      auto parsedNote = parseStrAsJsonObj(str, factory);
-      message::JSONValue *methodRes = get(parsedNote, "method");
+      auto parsedNote = mustParseStrAsJsonObj(str, factory);
+      message::JSONValue *methodRes = parsedNote->get("method");
+      EXPECT_TRUE(methodRes != nullptr);
       std::string method = message::valueFromJson<std::string>(methodRes);
       EXPECT_EQ(method, "Runtime.consoleAPICalled");
 
