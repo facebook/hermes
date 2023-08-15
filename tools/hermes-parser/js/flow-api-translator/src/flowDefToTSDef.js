@@ -1759,6 +1759,34 @@ const getTransforms = (
           };
         }
 
+        case '$ReadOnlyMap': {
+          return {
+            type: 'TSTypeReference',
+            typeName: {
+              type: 'Identifier',
+              name: 'ReadonlyMap',
+            },
+            typeParameters: {
+              type: 'TSTypeParameterInstantiation',
+              params: assertHasExactlyNTypeParameters(1),
+            },
+          };
+        }
+
+        case '$ReadOnlySet': {
+          return {
+            type: 'TSTypeReference',
+            typeName: {
+              type: 'Identifier',
+              name: 'ReadonlySet',
+            },
+            typeParameters: {
+              type: 'TSTypeParameterInstantiation',
+              params: assertHasExactlyNTypeParameters(1),
+            },
+          };
+        }
+
         case '$Values': {
           // `$Values<T>` => `T[keyof T]`
           const transformedType = assertHasExactlyNTypeParameters(1)[0];
