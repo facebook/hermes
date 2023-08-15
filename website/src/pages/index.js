@@ -55,7 +55,7 @@ function VideoContainer() {
         <div className="col">
           <h2>Check it out in the intro video</h2>
           <iframe
-            height="315"
+            className={styles.videoIframe}
             src="https://www.youtube.com/embed/JsppO1HUYx4"
             title="Explain Like I'm 5: Hermes"
             frameBorder="0"

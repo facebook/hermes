@@ -63,7 +63,8 @@
   background-color: black;
 }
 
-iframe {
-  width: 100%;
+.videoIframe{
+  height: 315px;
   max-width: 560px;
+  width: 100%;
 }
