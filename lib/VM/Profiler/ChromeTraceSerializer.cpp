@@ -376,7 +376,7 @@ static void emitProfileNode(
 
   json.openDict();
   json.emitKeyValue("functionName", name);
-  json.emitKeyValue("scriptId", scriptId);
+  json.emitKeyValue("scriptId", std::to_string(scriptId));
   json.emitKeyValue("url", url);
   json.emitKeyValue("lineNumber", lineNumber);
   json.emitKeyValue("columnNumber", columnNumber);
