@@ -27,6 +27,7 @@
 #include <hermes/inspector/RuntimeAdapter.h>
 #include <hermes/inspector/chrome/CallbackOStream.h>
 #include <hermes/inspector/chrome/MessageConverters.h>
+#include <hermes/inspector/chrome/RemoteObjectConverters.h>
 #include <hermes/inspector/chrome/RemoteObjectsTable.h>
 #include <jsi/instrumentation.h>
 
