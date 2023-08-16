@@ -39,7 +39,7 @@ workflows:
 apple_defaults: &apple_defaults
   macos:
     xcode: 13.4.1
-  resource_class: macos.x86.medium.gen2
+  resource_class: macos.m1.medium.gen1
   working_directory: ~/hermes
   environment:
     - TERM: dumb
