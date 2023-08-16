@@ -660,6 +660,8 @@ const getTransforms = (
         return transform.TypePredicateAnnotation(node);
       case 'ConditionalTypeAnnotation':
         return transform.ConditionalTypeAnnotation(node);
+      case 'InferTypeAnnotation':
+        return transform.InferTypeAnnotation(node);
       default:
         throw unexpectedTranslationError(node, `Unhandled type ${node.type}`);
     }
@@ -3115,6 +3117,14 @@ const getTransforms = (
           type: 'TSTypeAnnotation',
           typeAnnotation: transformTypeAnnotationType(node.typeAnnotation),
         },
+      };
+    },
+    InferTypeAnnotation(
+      node: FlowESTree.InferTypeAnnotation,
+    ): TSESTree.TSInferType {
+      return {
+        type: 'TSInferType',
+        typeParameter: transform.TypeParameter(node.typeParameter),
       };
     },
   };
