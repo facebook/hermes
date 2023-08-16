@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<138fb0845fa92c88cd0c638914eea38f>>
+// @generated SignedSource<<3778821d0b372a8b71976eb9abb50708>>
 
 #include "MessageTypes.h"
 
@@ -16,8 +16,12 @@ using RequestBuilder = std::unique_ptr<Request> (*)(const JSONObject *obj);
 namespace {
 
 template <typename T>
-std::unique_ptr<Request> makeUnique(const JSONObject *obj) {
-  return std::make_unique<T>(obj);
+std::unique_ptr<Request> tryMake(const JSONObject *obj) {
+  std::unique_ptr<T> t = T::tryMake(obj);
+  if (t == nullptr) {
+    return nullptr;
+  }
+  return t;
 }
 
 #define TRY_ASSIGN(lhs, obj, key) \
@@ -61,55 +65,53 @@ void putJsonBlob(
 
 std::unique_ptr<Request> Request::fromJson(const std::string &str) {
   static std::unordered_map<std::string, RequestBuilder> builders = {
-      {"Debugger.disable", makeUnique<debugger::DisableRequest>},
-      {"Debugger.enable", makeUnique<debugger::EnableRequest>},
+      {"Debugger.disable", tryMake<debugger::DisableRequest>},
+      {"Debugger.enable", tryMake<debugger::EnableRequest>},
       {"Debugger.evaluateOnCallFrame",
-       makeUnique<debugger::EvaluateOnCallFrameRequest>},
-      {"Debugger.pause", makeUnique<debugger::PauseRequest>},
-      {"Debugger.removeBreakpoint",
-       makeUnique<debugger::RemoveBreakpointRequest>},
-      {"Debugger.resume", makeUnique<debugger::ResumeRequest>},
-      {"Debugger.setBreakpoint", makeUnique<debugger::SetBreakpointRequest>},
+       tryMake<debugger::EvaluateOnCallFrameRequest>},
+      {"Debugger.pause", tryMake<debugger::PauseRequest>},
+      {"Debugger.removeBreakpoint", tryMake<debugger::RemoveBreakpointRequest>},
+      {"Debugger.resume", tryMake<debugger::ResumeRequest>},
+      {"Debugger.setBreakpoint", tryMake<debugger::SetBreakpointRequest>},
       {"Debugger.setBreakpointByUrl",
-       makeUnique<debugger::SetBreakpointByUrlRequest>},
+       tryMake<debugger::SetBreakpointByUrlRequest>},
       {"Debugger.setBreakpointsActive",
-       makeUnique<debugger::SetBreakpointsActiveRequest>},
+       tryMake<debugger::SetBreakpointsActiveRequest>},
       {"Debugger.setInstrumentationBreakpoint",
-       makeUnique<debugger::SetInstrumentationBreakpointRequest>},
+       tryMake<debugger::SetInstrumentationBreakpointRequest>},
       {"Debugger.setPauseOnExceptions",
-       makeUnique<debugger::SetPauseOnExceptionsRequest>},
-      {"Debugger.stepInto", makeUnique<debugger::StepIntoRequest>},
-      {"Debugger.stepOut", makeUnique<debugger::StepOutRequest>},
-      {"Debugger.stepOver", makeUnique<debugger::StepOverRequest>},
+       tryMake<debugger::SetPauseOnExceptionsRequest>},
+      {"Debugger.stepInto", tryMake<debugger::StepIntoRequest>},
+      {"Debugger.stepOut", tryMake<debugger::StepOutRequest>},
+      {"Debugger.stepOver", tryMake<debugger::StepOverRequest>},
       {"HeapProfiler.collectGarbage",
-       makeUnique<heapProfiler::CollectGarbageRequest>},
+       tryMake<heapProfiler::CollectGarbageRequest>},
       {"HeapProfiler.getHeapObjectId",
-       makeUnique<heapProfiler::GetHeapObjectIdRequest>},
+       tryMake<heapProfiler::GetHeapObjectIdRequest>},
       {"HeapProfiler.getObjectByHeapObjectId",
-       makeUnique<heapProfiler::GetObjectByHeapObjectIdRequest>},
+       tryMake<heapProfiler::GetObjectByHeapObjectIdRequest>},
       {"HeapProfiler.startSampling",
-       makeUnique<heapProfiler::StartSamplingRequest>},
+       tryMake<heapProfiler::StartSamplingRequest>},
       {"HeapProfiler.startTrackingHeapObjects",
-       makeUnique<heapProfiler::StartTrackingHeapObjectsRequest>},
-      {"HeapProfiler.stopSampling",
-       makeUnique<heapProfiler::StopSamplingRequest>},
+       tryMake<heapProfiler::StartTrackingHeapObjectsRequest>},
+      {"HeapProfiler.stopSampling", tryMake<heapProfiler::StopSamplingRequest>},
       {"HeapProfiler.stopTrackingHeapObjects",
-       makeUnique<heapProfiler::StopTrackingHeapObjectsRequest>},
+       tryMake<heapProfiler::StopTrackingHeapObjectsRequest>},
       {"HeapProfiler.takeHeapSnapshot",
-       makeUnique<heapProfiler::TakeHeapSnapshotRequest>},
-      {"Profiler.start", makeUnique<profiler::StartRequest>},
-      {"Profiler.stop", makeUnique<profiler::StopRequest>},
-      {"Runtime.callFunctionOn", makeUnique<runtime::CallFunctionOnRequest>},
-      {"Runtime.compileScript", makeUnique<runtime::CompileScriptRequest>},
-      {"Runtime.disable", makeUnique<runtime::DisableRequest>},
-      {"Runtime.enable", makeUnique<runtime::EnableRequest>},
-      {"Runtime.evaluate", makeUnique<runtime::EvaluateRequest>},
-      {"Runtime.getHeapUsage", makeUnique<runtime::GetHeapUsageRequest>},
-      {"Runtime.getProperties", makeUnique<runtime::GetPropertiesRequest>},
+       tryMake<heapProfiler::TakeHeapSnapshotRequest>},
+      {"Profiler.start", tryMake<profiler::StartRequest>},
+      {"Profiler.stop", tryMake<profiler::StopRequest>},
+      {"Runtime.callFunctionOn", tryMake<runtime::CallFunctionOnRequest>},
+      {"Runtime.compileScript", tryMake<runtime::CompileScriptRequest>},
+      {"Runtime.disable", tryMake<runtime::DisableRequest>},
+      {"Runtime.enable", tryMake<runtime::EnableRequest>},
+      {"Runtime.evaluate", tryMake<runtime::EvaluateRequest>},
+      {"Runtime.getHeapUsage", tryMake<runtime::GetHeapUsageRequest>},
+      {"Runtime.getProperties", tryMake<runtime::GetPropertiesRequest>},
       {"Runtime.globalLexicalScopeNames",
-       makeUnique<runtime::GlobalLexicalScopeNamesRequest>},
+       tryMake<runtime::GlobalLexicalScopeNamesRequest>},
       {"Runtime.runIfWaitingForDebugger",
-       makeUnique<runtime::RunIfWaitingForDebuggerRequest>},
+       tryMake<runtime::RunIfWaitingForDebuggerRequest>},
   };
 
   JSLexer::Allocator alloc;
@@ -126,7 +128,7 @@ std::unique_ptr<Request> Request::fromJson(const std::string &str) {
 
   auto it = builders.find(method);
   if (it == builders.end()) {
-    return std::make_unique<UnknownRequest>(jsonObj);
+    return UnknownRequest::tryMake(jsonObj);
   }
 
   auto builder = it->second;

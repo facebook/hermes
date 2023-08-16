@@ -120,8 +120,12 @@ function emitRequestParser(stream: Writable, commands: Array<Command>) {
     namespace {
 
     template <typename T>
-    std::unique_ptr<Request> makeUnique(const JSONObject *obj) {
-      return std::make_unique<T>(obj);
+    std::unique_ptr<Request> tryMake(const JSONObject *obj) {
+      std::unique_ptr<T> t = T::tryMake(obj);
+      if (t == nullptr) {
+        return nullptr;
+      }
+      return t;
     }
 
     #define TRY_ASSIGN(lhs, obj, key) \
@@ -173,7 +177,7 @@ function emitRequestParser(stream: Writable, commands: Array<Command>) {
     const cppType = command.getRequestCppType();
     const dbgName = command.getDebuggerName();
 
-    stream.write(`{"${dbgName}", makeUnique<${cppNs}::${cppType}>},\n`);
+    stream.write(`{"${dbgName}", tryMake<${cppNs}::${cppType}>},\n`);
   }
 
   stream.write(`};
@@ -192,7 +196,7 @@ function emitRequestParser(stream: Writable, commands: Array<Command>) {
 
     auto it = builders.find(method);
     if (it == builders.end()) {
-      return std::make_unique<UnknownRequest>(jsonObj);
+      return UnknownRequest::tryMake(jsonObj);
     }
 
     auto builder = it->second;
