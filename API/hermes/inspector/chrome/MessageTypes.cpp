@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<488072d3c60d2115a97f9d316269a8b8>>
+// @generated SignedSource<<138fb0845fa92c88cd0c638914eea38f>>
 
 #include "MessageTypes.h"
 
@@ -19,6 +19,15 @@ template <typename T>
 std::unique_ptr<Request> makeUnique(const JSONObject *obj) {
   return std::make_unique<T>(obj);
 }
+
+#define TRY_ASSIGN(lhs, obj, key) \
+  if (!assign(lhs, obj, key)) {   \
+    return nullptr;               \
+  }
+#define TRY_ASSIGN_JSON_BLOB(lhs, obj, key) \
+  if (!assignJsonBlob(lhs, obj, key)) {     \
+    return nullptr;                         \
+  }
 
 bool assignJsonBlob(
     optional<std::string> &field,
@@ -112,9 +121,8 @@ std::unique_ptr<Request> Request::fromJson(const std::string &str) {
   JSONObject *jsonObj = *parseResult;
 
   std::string method;
-  if (!assign(method, jsonObj, "method")) {
-    return nullptr;
-  }
+
+  TRY_ASSIGN(method, jsonObj, "method");
 
   auto it = builders.find(method);
   if (it == builders.end()) {
@@ -136,6 +144,16 @@ debugger::Location::Location(const JSONObject *obj) {
   if (!assign(columnNumber, obj, "columnNumber")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<debugger::Location> debugger::Location::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<debugger::Location> type =
+      std::make_unique<debugger::Location>();
+  TRY_ASSIGN(type->scriptId, obj, "scriptId");
+  TRY_ASSIGN(type->lineNumber, obj, "lineNumber");
+  TRY_ASSIGN(type->columnNumber, obj, "columnNumber");
+  return type;
 }
 
 JSONValue *debugger::Location::toJsonVal(JSONFactory &factory) const {
@@ -165,6 +183,18 @@ runtime::PropertyPreview::PropertyPreview(const JSONObject *obj) {
   }
 }
 
+std::unique_ptr<runtime::PropertyPreview> runtime::PropertyPreview::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<runtime::PropertyPreview> type =
+      std::make_unique<runtime::PropertyPreview>();
+  TRY_ASSIGN(type->name, obj, "name");
+  TRY_ASSIGN(type->type, obj, "type");
+  TRY_ASSIGN(type->value, obj, "value");
+  TRY_ASSIGN(type->valuePreview, obj, "valuePreview");
+  TRY_ASSIGN(type->subtype, obj, "subtype");
+  return type;
+}
+
 JSONValue *runtime::PropertyPreview::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 5> props;
 
@@ -183,6 +213,15 @@ runtime::EntryPreview::EntryPreview(const JSONObject *obj) {
   if (!assign(value, obj, "value")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<runtime::EntryPreview> runtime::EntryPreview::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<runtime::EntryPreview> type =
+      std::make_unique<runtime::EntryPreview>();
+  TRY_ASSIGN(type->key, obj, "key");
+  TRY_ASSIGN(type->value, obj, "value");
+  return type;
 }
 
 JSONValue *runtime::EntryPreview::toJsonVal(JSONFactory &factory) const {
@@ -214,6 +253,19 @@ runtime::ObjectPreview::ObjectPreview(const JSONObject *obj) {
   }
 }
 
+std::unique_ptr<runtime::ObjectPreview> runtime::ObjectPreview::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<runtime::ObjectPreview> type =
+      std::make_unique<runtime::ObjectPreview>();
+  TRY_ASSIGN(type->type, obj, "type");
+  TRY_ASSIGN(type->subtype, obj, "subtype");
+  TRY_ASSIGN(type->description, obj, "description");
+  TRY_ASSIGN(type->overflow, obj, "overflow");
+  TRY_ASSIGN(type->properties, obj, "properties");
+  TRY_ASSIGN(type->entries, obj, "entries");
+  return type;
+}
+
 JSONValue *runtime::ObjectPreview::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 6> props;
 
@@ -233,6 +285,15 @@ runtime::CustomPreview::CustomPreview(const JSONObject *obj) {
   if (!assign(bodyGetterId, obj, "bodyGetterId")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<runtime::CustomPreview> runtime::CustomPreview::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<runtime::CustomPreview> type =
+      std::make_unique<runtime::CustomPreview>();
+  TRY_ASSIGN(type->header, obj, "header");
+  TRY_ASSIGN(type->bodyGetterId, obj, "bodyGetterId");
+  return type;
 }
 
 JSONValue *runtime::CustomPreview::toJsonVal(JSONFactory &factory) const {
@@ -273,6 +334,22 @@ runtime::RemoteObject::RemoteObject(const JSONObject *obj) {
   }
 }
 
+std::unique_ptr<runtime::RemoteObject> runtime::RemoteObject::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<runtime::RemoteObject> type =
+      std::make_unique<runtime::RemoteObject>();
+  TRY_ASSIGN(type->type, obj, "type");
+  TRY_ASSIGN(type->subtype, obj, "subtype");
+  TRY_ASSIGN(type->className, obj, "className");
+  TRY_ASSIGN_JSON_BLOB(type->value, obj, "value");
+  TRY_ASSIGN(type->unserializableValue, obj, "unserializableValue");
+  TRY_ASSIGN(type->description, obj, "description");
+  TRY_ASSIGN(type->objectId, obj, "objectId");
+  TRY_ASSIGN(type->preview, obj, "preview");
+  TRY_ASSIGN(type->customPreview, obj, "customPreview");
+  return type;
+}
+
 JSONValue *runtime::RemoteObject::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 9> props;
 
@@ -306,6 +383,18 @@ runtime::CallFrame::CallFrame(const JSONObject *obj) {
   }
 }
 
+std::unique_ptr<runtime::CallFrame> runtime::CallFrame::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<runtime::CallFrame> type =
+      std::make_unique<runtime::CallFrame>();
+  TRY_ASSIGN(type->functionName, obj, "functionName");
+  TRY_ASSIGN(type->scriptId, obj, "scriptId");
+  TRY_ASSIGN(type->url, obj, "url");
+  TRY_ASSIGN(type->lineNumber, obj, "lineNumber");
+  TRY_ASSIGN(type->columnNumber, obj, "columnNumber");
+  return type;
+}
+
 JSONValue *runtime::CallFrame::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 5> props;
 
@@ -327,6 +416,16 @@ runtime::StackTrace::StackTrace(const JSONObject *obj) {
   if (!assign(parent, obj, "parent")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<runtime::StackTrace> runtime::StackTrace::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<runtime::StackTrace> type =
+      std::make_unique<runtime::StackTrace>();
+  TRY_ASSIGN(type->description, obj, "description");
+  TRY_ASSIGN(type->callFrames, obj, "callFrames");
+  TRY_ASSIGN(type->parent, obj, "parent");
+  return type;
 }
 
 JSONValue *runtime::StackTrace::toJsonVal(JSONFactory &factory) const {
@@ -368,6 +467,22 @@ runtime::ExceptionDetails::ExceptionDetails(const JSONObject *obj) {
   }
 }
 
+std::unique_ptr<runtime::ExceptionDetails> runtime::ExceptionDetails::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<runtime::ExceptionDetails> type =
+      std::make_unique<runtime::ExceptionDetails>();
+  TRY_ASSIGN(type->exceptionId, obj, "exceptionId");
+  TRY_ASSIGN(type->text, obj, "text");
+  TRY_ASSIGN(type->lineNumber, obj, "lineNumber");
+  TRY_ASSIGN(type->columnNumber, obj, "columnNumber");
+  TRY_ASSIGN(type->scriptId, obj, "scriptId");
+  TRY_ASSIGN(type->url, obj, "url");
+  TRY_ASSIGN(type->stackTrace, obj, "stackTrace");
+  TRY_ASSIGN(type->exception, obj, "exception");
+  TRY_ASSIGN(type->executionContextId, obj, "executionContextId");
+  return type;
+}
+
 JSONValue *runtime::ExceptionDetails::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 9> props;
 
@@ -399,6 +514,17 @@ debugger::Scope::Scope(const JSONObject *obj) {
   if (!assign(endLocation, obj, "endLocation")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<debugger::Scope> debugger::Scope::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<debugger::Scope> type = std::make_unique<debugger::Scope>();
+  TRY_ASSIGN(type->type, obj, "type");
+  TRY_ASSIGN(type->object, obj, "object");
+  TRY_ASSIGN(type->name, obj, "name");
+  TRY_ASSIGN(type->startLocation, obj, "startLocation");
+  TRY_ASSIGN(type->endLocation, obj, "endLocation");
+  return type;
 }
 
 JSONValue *debugger::Scope::toJsonVal(JSONFactory &factory) const {
@@ -439,6 +565,21 @@ debugger::CallFrame::CallFrame(const JSONObject *obj) {
   }
 }
 
+std::unique_ptr<debugger::CallFrame> debugger::CallFrame::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<debugger::CallFrame> type =
+      std::make_unique<debugger::CallFrame>();
+  TRY_ASSIGN(type->callFrameId, obj, "callFrameId");
+  TRY_ASSIGN(type->functionName, obj, "functionName");
+  TRY_ASSIGN(type->functionLocation, obj, "functionLocation");
+  TRY_ASSIGN(type->location, obj, "location");
+  TRY_ASSIGN(type->url, obj, "url");
+  TRY_ASSIGN(type->scopeChain, obj, "scopeChain");
+  TRY_ASSIGN(type->thisObj, obj, "this");
+  TRY_ASSIGN(type->returnValue, obj, "returnValue");
+  return type;
+}
+
 JSONValue *debugger::CallFrame::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 8> props;
 
@@ -469,6 +610,17 @@ heapProfiler::SamplingHeapProfileNode::SamplingHeapProfileNode(
   }
 }
 
+std::unique_ptr<heapProfiler::SamplingHeapProfileNode>
+heapProfiler::SamplingHeapProfileNode::tryMake(const JSONObject *obj) {
+  std::unique_ptr<heapProfiler::SamplingHeapProfileNode> type =
+      std::make_unique<heapProfiler::SamplingHeapProfileNode>();
+  TRY_ASSIGN(type->callFrame, obj, "callFrame");
+  TRY_ASSIGN(type->selfSize, obj, "selfSize");
+  TRY_ASSIGN(type->id, obj, "id");
+  TRY_ASSIGN(type->children, obj, "children");
+  return type;
+}
+
 JSONValue *heapProfiler::SamplingHeapProfileNode::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 4> props;
@@ -493,6 +645,16 @@ heapProfiler::SamplingHeapProfileSample::SamplingHeapProfileSample(
   }
 }
 
+std::unique_ptr<heapProfiler::SamplingHeapProfileSample>
+heapProfiler::SamplingHeapProfileSample::tryMake(const JSONObject *obj) {
+  std::unique_ptr<heapProfiler::SamplingHeapProfileSample> type =
+      std::make_unique<heapProfiler::SamplingHeapProfileSample>();
+  TRY_ASSIGN(type->size, obj, "size");
+  TRY_ASSIGN(type->nodeId, obj, "nodeId");
+  TRY_ASSIGN(type->ordinal, obj, "ordinal");
+  return type;
+}
+
 JSONValue *heapProfiler::SamplingHeapProfileSample::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 3> props;
@@ -512,6 +674,15 @@ heapProfiler::SamplingHeapProfile::SamplingHeapProfile(const JSONObject *obj) {
   }
 }
 
+std::unique_ptr<heapProfiler::SamplingHeapProfile>
+heapProfiler::SamplingHeapProfile::tryMake(const JSONObject *obj) {
+  std::unique_ptr<heapProfiler::SamplingHeapProfile> type =
+      std::make_unique<heapProfiler::SamplingHeapProfile>();
+  TRY_ASSIGN(type->head, obj, "head");
+  TRY_ASSIGN(type->samples, obj, "samples");
+  return type;
+}
+
 JSONValue *heapProfiler::SamplingHeapProfile::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 2> props;
@@ -528,6 +699,15 @@ profiler::PositionTickInfo::PositionTickInfo(const JSONObject *obj) {
   if (!assign(ticks, obj, "ticks")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<profiler::PositionTickInfo> profiler::PositionTickInfo::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<profiler::PositionTickInfo> type =
+      std::make_unique<profiler::PositionTickInfo>();
+  TRY_ASSIGN(type->line, obj, "line");
+  TRY_ASSIGN(type->ticks, obj, "ticks");
+  return type;
 }
 
 JSONValue *profiler::PositionTickInfo::toJsonVal(JSONFactory &factory) const {
@@ -557,6 +737,19 @@ profiler::ProfileNode::ProfileNode(const JSONObject *obj) {
   if (!assign(positionTicks, obj, "positionTicks")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<profiler::ProfileNode> profiler::ProfileNode::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<profiler::ProfileNode> type =
+      std::make_unique<profiler::ProfileNode>();
+  TRY_ASSIGN(type->id, obj, "id");
+  TRY_ASSIGN(type->callFrame, obj, "callFrame");
+  TRY_ASSIGN(type->hitCount, obj, "hitCount");
+  TRY_ASSIGN(type->children, obj, "children");
+  TRY_ASSIGN(type->deoptReason, obj, "deoptReason");
+  TRY_ASSIGN(type->positionTicks, obj, "positionTicks");
+  return type;
 }
 
 JSONValue *profiler::ProfileNode::toJsonVal(JSONFactory &factory) const {
@@ -589,6 +782,18 @@ profiler::Profile::Profile(const JSONObject *obj) {
   }
 }
 
+std::unique_ptr<profiler::Profile> profiler::Profile::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<profiler::Profile> type =
+      std::make_unique<profiler::Profile>();
+  TRY_ASSIGN(type->nodes, obj, "nodes");
+  TRY_ASSIGN(type->startTime, obj, "startTime");
+  TRY_ASSIGN(type->endTime, obj, "endTime");
+  TRY_ASSIGN(type->samples, obj, "samples");
+  TRY_ASSIGN(type->timeDeltas, obj, "timeDeltas");
+  return type;
+}
+
 JSONValue *profiler::Profile::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 5> props;
 
@@ -610,6 +815,16 @@ runtime::CallArgument::CallArgument(const JSONObject *obj) {
   if (!assign(objectId, obj, "objectId")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<runtime::CallArgument> runtime::CallArgument::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<runtime::CallArgument> type =
+      std::make_unique<runtime::CallArgument>();
+  TRY_ASSIGN_JSON_BLOB(type->value, obj, "value");
+  TRY_ASSIGN(type->unserializableValue, obj, "unserializableValue");
+  TRY_ASSIGN(type->objectId, obj, "objectId");
+  return type;
 }
 
 JSONValue *runtime::CallArgument::toJsonVal(JSONFactory &factory) const {
@@ -635,6 +850,17 @@ runtime::ExecutionContextDescription::ExecutionContextDescription(
   if (!assignJsonBlob(auxData, obj, "auxData")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<runtime::ExecutionContextDescription>
+runtime::ExecutionContextDescription::tryMake(const JSONObject *obj) {
+  std::unique_ptr<runtime::ExecutionContextDescription> type =
+      std::make_unique<runtime::ExecutionContextDescription>();
+  TRY_ASSIGN(type->id, obj, "id");
+  TRY_ASSIGN(type->origin, obj, "origin");
+  TRY_ASSIGN(type->name, obj, "name");
+  TRY_ASSIGN_JSON_BLOB(type->auxData, obj, "auxData");
+  return type;
 }
 
 JSONValue *runtime::ExecutionContextDescription::toJsonVal(
@@ -681,6 +907,23 @@ runtime::PropertyDescriptor::PropertyDescriptor(const JSONObject *obj) {
   }
 }
 
+std::unique_ptr<runtime::PropertyDescriptor>
+runtime::PropertyDescriptor::tryMake(const JSONObject *obj) {
+  std::unique_ptr<runtime::PropertyDescriptor> type =
+      std::make_unique<runtime::PropertyDescriptor>();
+  TRY_ASSIGN(type->name, obj, "name");
+  TRY_ASSIGN(type->value, obj, "value");
+  TRY_ASSIGN(type->writable, obj, "writable");
+  TRY_ASSIGN(type->get, obj, "get");
+  TRY_ASSIGN(type->set, obj, "set");
+  TRY_ASSIGN(type->configurable, obj, "configurable");
+  TRY_ASSIGN(type->enumerable, obj, "enumerable");
+  TRY_ASSIGN(type->wasThrown, obj, "wasThrown");
+  TRY_ASSIGN(type->isOwn, obj, "isOwn");
+  TRY_ASSIGN(type->symbol, obj, "symbol");
+  return type;
+}
+
 JSONValue *runtime::PropertyDescriptor::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 10> props;
 
@@ -707,6 +950,15 @@ runtime::InternalPropertyDescriptor::InternalPropertyDescriptor(
   }
 }
 
+std::unique_ptr<runtime::InternalPropertyDescriptor>
+runtime::InternalPropertyDescriptor::tryMake(const JSONObject *obj) {
+  std::unique_ptr<runtime::InternalPropertyDescriptor> type =
+      std::make_unique<runtime::InternalPropertyDescriptor>();
+  TRY_ASSIGN(type->name, obj, "name");
+  TRY_ASSIGN(type->value, obj, "value");
+  return type;
+}
+
 JSONValue *runtime::InternalPropertyDescriptor::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 2> props;
@@ -729,6 +981,14 @@ UnknownRequest::UnknownRequest(const JSONObject *obj) {
   if (!assignJsonBlob(params, obj, "params")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<UnknownRequest> UnknownRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<UnknownRequest> req = std::make_unique<UnknownRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+  TRY_ASSIGN_JSON_BLOB(req->params, obj, "params");
+  return req;
 }
 
 JSONValue *UnknownRequest::toJsonVal(JSONFactory &factory) const {
@@ -755,6 +1015,16 @@ debugger::DisableRequest::DisableRequest(const JSONObject *obj)
   }
 }
 
+std::unique_ptr<debugger::DisableRequest> debugger::DisableRequest::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<debugger::DisableRequest> req =
+      std::make_unique<debugger::DisableRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  return req;
+}
+
 JSONValue *debugger::DisableRequest::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 1> props;
   put(props, "id", id, factory);
@@ -776,6 +1046,16 @@ debugger::EnableRequest::EnableRequest(const JSONObject *obj)
   if (!assign(method, obj, "method")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<debugger::EnableRequest> debugger::EnableRequest::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<debugger::EnableRequest> req =
+      std::make_unique<debugger::EnableRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  return req;
 }
 
 JSONValue *debugger::EnableRequest::toJsonVal(JSONFactory &factory) const {
@@ -837,6 +1117,33 @@ debugger::EvaluateOnCallFrameRequest::EvaluateOnCallFrameRequest(
   }
 }
 
+std::unique_ptr<debugger::EvaluateOnCallFrameRequest>
+debugger::EvaluateOnCallFrameRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<debugger::EvaluateOnCallFrameRequest> req =
+      std::make_unique<debugger::EvaluateOnCallFrameRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(req->callFrameId, params, "callFrameId");
+  TRY_ASSIGN(req->expression, params, "expression");
+  TRY_ASSIGN(req->objectGroup, params, "objectGroup");
+  TRY_ASSIGN(req->includeCommandLineAPI, params, "includeCommandLineAPI");
+  TRY_ASSIGN(req->silent, params, "silent");
+  TRY_ASSIGN(req->returnByValue, params, "returnByValue");
+  TRY_ASSIGN(req->generatePreview, params, "generatePreview");
+  TRY_ASSIGN(req->throwOnSideEffect, params, "throwOnSideEffect");
+  return req;
+}
+
 JSONValue *debugger::EvaluateOnCallFrameRequest::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 8> paramsProps;
@@ -876,6 +1183,16 @@ debugger::PauseRequest::PauseRequest(const JSONObject *obj)
   }
 }
 
+std::unique_ptr<debugger::PauseRequest> debugger::PauseRequest::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<debugger::PauseRequest> req =
+      std::make_unique<debugger::PauseRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  return req;
+}
+
 JSONValue *debugger::PauseRequest::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 1> props;
   put(props, "id", id, factory);
@@ -912,6 +1229,26 @@ debugger::RemoveBreakpointRequest::RemoveBreakpointRequest(
   if (!assign(breakpointId, params, "breakpointId")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<debugger::RemoveBreakpointRequest>
+debugger::RemoveBreakpointRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<debugger::RemoveBreakpointRequest> req =
+      std::make_unique<debugger::RemoveBreakpointRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(req->breakpointId, params, "breakpointId");
+  return req;
 }
 
 JSONValue *debugger::RemoveBreakpointRequest::toJsonVal(
@@ -955,6 +1292,25 @@ debugger::ResumeRequest::ResumeRequest(const JSONObject *obj)
       throw std::runtime_error("Failed assign");
     }
   }
+}
+
+std::unique_ptr<debugger::ResumeRequest> debugger::ResumeRequest::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<debugger::ResumeRequest> req =
+      std::make_unique<debugger::ResumeRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *p = obj->get("params");
+  if (p != nullptr) {
+    auto convertResult = valueFromJson<JSONObject *>(p);
+    if (!convertResult) {
+      return nullptr;
+    }
+    auto *params = *convertResult;
+    TRY_ASSIGN(req->terminateOnResume, params, "terminateOnResume");
+  }
+  return req;
 }
 
 JSONValue *debugger::ResumeRequest::toJsonVal(JSONFactory &factory) const {
@@ -1002,6 +1358,27 @@ debugger::SetBreakpointRequest::SetBreakpointRequest(const JSONObject *obj)
   if (!assign(condition, params, "condition")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<debugger::SetBreakpointRequest>
+debugger::SetBreakpointRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<debugger::SetBreakpointRequest> req =
+      std::make_unique<debugger::SetBreakpointRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(req->location, params, "location");
+  TRY_ASSIGN(req->condition, params, "condition");
+  return req;
 }
 
 JSONValue *debugger::SetBreakpointRequest::toJsonVal(
@@ -1066,6 +1443,31 @@ debugger::SetBreakpointByUrlRequest::SetBreakpointByUrlRequest(
   }
 }
 
+std::unique_ptr<debugger::SetBreakpointByUrlRequest>
+debugger::SetBreakpointByUrlRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<debugger::SetBreakpointByUrlRequest> req =
+      std::make_unique<debugger::SetBreakpointByUrlRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(req->lineNumber, params, "lineNumber");
+  TRY_ASSIGN(req->url, params, "url");
+  TRY_ASSIGN(req->urlRegex, params, "urlRegex");
+  TRY_ASSIGN(req->scriptHash, params, "scriptHash");
+  TRY_ASSIGN(req->columnNumber, params, "columnNumber");
+  TRY_ASSIGN(req->condition, params, "condition");
+  return req;
+}
+
 JSONValue *debugger::SetBreakpointByUrlRequest::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 6> paramsProps;
@@ -1118,6 +1520,26 @@ debugger::SetBreakpointsActiveRequest::SetBreakpointsActiveRequest(
   }
 }
 
+std::unique_ptr<debugger::SetBreakpointsActiveRequest>
+debugger::SetBreakpointsActiveRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<debugger::SetBreakpointsActiveRequest> req =
+      std::make_unique<debugger::SetBreakpointsActiveRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(req->active, params, "active");
+  return req;
+}
+
 JSONValue *debugger::SetBreakpointsActiveRequest::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 1> paramsProps;
@@ -1164,6 +1586,26 @@ debugger::SetInstrumentationBreakpointRequest::
   if (!assign(instrumentation, params, "instrumentation")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<debugger::SetInstrumentationBreakpointRequest>
+debugger::SetInstrumentationBreakpointRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<debugger::SetInstrumentationBreakpointRequest> req =
+      std::make_unique<debugger::SetInstrumentationBreakpointRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(req->instrumentation, params, "instrumentation");
+  return req;
 }
 
 JSONValue *debugger::SetInstrumentationBreakpointRequest::toJsonVal(
@@ -1213,6 +1655,26 @@ debugger::SetPauseOnExceptionsRequest::SetPauseOnExceptionsRequest(
   }
 }
 
+std::unique_ptr<debugger::SetPauseOnExceptionsRequest>
+debugger::SetPauseOnExceptionsRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<debugger::SetPauseOnExceptionsRequest> req =
+      std::make_unique<debugger::SetPauseOnExceptionsRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(req->state, params, "state");
+  return req;
+}
+
 JSONValue *debugger::SetPauseOnExceptionsRequest::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 1> paramsProps;
@@ -1245,6 +1707,16 @@ debugger::StepIntoRequest::StepIntoRequest(const JSONObject *obj)
   }
 }
 
+std::unique_ptr<debugger::StepIntoRequest> debugger::StepIntoRequest::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<debugger::StepIntoRequest> req =
+      std::make_unique<debugger::StepIntoRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  return req;
+}
+
 JSONValue *debugger::StepIntoRequest::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 1> props;
   put(props, "id", id, factory);
@@ -1266,6 +1738,16 @@ debugger::StepOutRequest::StepOutRequest(const JSONObject *obj)
   if (!assign(method, obj, "method")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<debugger::StepOutRequest> debugger::StepOutRequest::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<debugger::StepOutRequest> req =
+      std::make_unique<debugger::StepOutRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  return req;
 }
 
 JSONValue *debugger::StepOutRequest::toJsonVal(JSONFactory &factory) const {
@@ -1291,6 +1773,16 @@ debugger::StepOverRequest::StepOverRequest(const JSONObject *obj)
   }
 }
 
+std::unique_ptr<debugger::StepOverRequest> debugger::StepOverRequest::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<debugger::StepOverRequest> req =
+      std::make_unique<debugger::StepOverRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  return req;
+}
+
 JSONValue *debugger::StepOverRequest::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 1> props;
   put(props, "id", id, factory);
@@ -1314,6 +1806,16 @@ heapProfiler::CollectGarbageRequest::CollectGarbageRequest(
   if (!assign(method, obj, "method")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<heapProfiler::CollectGarbageRequest>
+heapProfiler::CollectGarbageRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<heapProfiler::CollectGarbageRequest> req =
+      std::make_unique<heapProfiler::CollectGarbageRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  return req;
 }
 
 JSONValue *heapProfiler::CollectGarbageRequest::toJsonVal(
@@ -1354,6 +1856,26 @@ heapProfiler::GetHeapObjectIdRequest::GetHeapObjectIdRequest(
   if (!assign(objectId, params, "objectId")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<heapProfiler::GetHeapObjectIdRequest>
+heapProfiler::GetHeapObjectIdRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<heapProfiler::GetHeapObjectIdRequest> req =
+      std::make_unique<heapProfiler::GetHeapObjectIdRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(req->objectId, params, "objectId");
+  return req;
 }
 
 JSONValue *heapProfiler::GetHeapObjectIdRequest::toJsonVal(
@@ -1404,6 +1926,27 @@ heapProfiler::GetObjectByHeapObjectIdRequest::GetObjectByHeapObjectIdRequest(
   if (!assign(objectGroup, params, "objectGroup")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<heapProfiler::GetObjectByHeapObjectIdRequest>
+heapProfiler::GetObjectByHeapObjectIdRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<heapProfiler::GetObjectByHeapObjectIdRequest> req =
+      std::make_unique<heapProfiler::GetObjectByHeapObjectIdRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(req->objectId, params, "objectId");
+  TRY_ASSIGN(req->objectGroup, params, "objectGroup");
+  return req;
 }
 
 JSONValue *heapProfiler::GetObjectByHeapObjectIdRequest::toJsonVal(
@@ -1464,6 +2007,33 @@ heapProfiler::StartSamplingRequest::StartSamplingRequest(const JSONObject *obj)
   }
 }
 
+std::unique_ptr<heapProfiler::StartSamplingRequest>
+heapProfiler::StartSamplingRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<heapProfiler::StartSamplingRequest> req =
+      std::make_unique<heapProfiler::StartSamplingRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *p = obj->get("params");
+  if (p != nullptr) {
+    auto convertResult = valueFromJson<JSONObject *>(p);
+    if (!convertResult) {
+      return nullptr;
+    }
+    auto *params = *convertResult;
+    TRY_ASSIGN(req->samplingInterval, params, "samplingInterval");
+    TRY_ASSIGN(
+        req->includeObjectsCollectedByMajorGC,
+        params,
+        "includeObjectsCollectedByMajorGC");
+    TRY_ASSIGN(
+        req->includeObjectsCollectedByMinorGC,
+        params,
+        "includeObjectsCollectedByMinorGC");
+  }
+  return req;
+}
+
 JSONValue *heapProfiler::StartSamplingRequest::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 3> paramsProps;
@@ -1517,6 +2087,25 @@ heapProfiler::StartTrackingHeapObjectsRequest::StartTrackingHeapObjectsRequest(
   }
 }
 
+std::unique_ptr<heapProfiler::StartTrackingHeapObjectsRequest>
+heapProfiler::StartTrackingHeapObjectsRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<heapProfiler::StartTrackingHeapObjectsRequest> req =
+      std::make_unique<heapProfiler::StartTrackingHeapObjectsRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *p = obj->get("params");
+  if (p != nullptr) {
+    auto convertResult = valueFromJson<JSONObject *>(p);
+    if (!convertResult) {
+      return nullptr;
+    }
+    auto *params = *convertResult;
+    TRY_ASSIGN(req->trackAllocations, params, "trackAllocations");
+  }
+  return req;
+}
+
 JSONValue *heapProfiler::StartTrackingHeapObjectsRequest::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 1> paramsProps;
@@ -1548,6 +2137,16 @@ heapProfiler::StopSamplingRequest::StopSamplingRequest(const JSONObject *obj)
   if (!assign(method, obj, "method")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<heapProfiler::StopSamplingRequest>
+heapProfiler::StopSamplingRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<heapProfiler::StopSamplingRequest> req =
+      std::make_unique<heapProfiler::StopSamplingRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  return req;
 }
 
 JSONValue *heapProfiler::StopSamplingRequest::toJsonVal(
@@ -1593,6 +2192,28 @@ heapProfiler::StopTrackingHeapObjectsRequest::StopTrackingHeapObjectsRequest(
       throw std::runtime_error("Failed assign");
     }
   }
+}
+
+std::unique_ptr<heapProfiler::StopTrackingHeapObjectsRequest>
+heapProfiler::StopTrackingHeapObjectsRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<heapProfiler::StopTrackingHeapObjectsRequest> req =
+      std::make_unique<heapProfiler::StopTrackingHeapObjectsRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *p = obj->get("params");
+  if (p != nullptr) {
+    auto convertResult = valueFromJson<JSONObject *>(p);
+    if (!convertResult) {
+      return nullptr;
+    }
+    auto *params = *convertResult;
+    TRY_ASSIGN(req->reportProgress, params, "reportProgress");
+    TRY_ASSIGN(
+        req->treatGlobalObjectsAsRoots, params, "treatGlobalObjectsAsRoots");
+    TRY_ASSIGN(req->captureNumericValue, params, "captureNumericValue");
+  }
+  return req;
 }
 
 JSONValue *heapProfiler::StopTrackingHeapObjectsRequest::toJsonVal(
@@ -1653,6 +2274,28 @@ heapProfiler::TakeHeapSnapshotRequest::TakeHeapSnapshotRequest(
   }
 }
 
+std::unique_ptr<heapProfiler::TakeHeapSnapshotRequest>
+heapProfiler::TakeHeapSnapshotRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<heapProfiler::TakeHeapSnapshotRequest> req =
+      std::make_unique<heapProfiler::TakeHeapSnapshotRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *p = obj->get("params");
+  if (p != nullptr) {
+    auto convertResult = valueFromJson<JSONObject *>(p);
+    if (!convertResult) {
+      return nullptr;
+    }
+    auto *params = *convertResult;
+    TRY_ASSIGN(req->reportProgress, params, "reportProgress");
+    TRY_ASSIGN(
+        req->treatGlobalObjectsAsRoots, params, "treatGlobalObjectsAsRoots");
+    TRY_ASSIGN(req->captureNumericValue, params, "captureNumericValue");
+  }
+  return req;
+}
+
 JSONValue *heapProfiler::TakeHeapSnapshotRequest::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 3> paramsProps;
@@ -1690,6 +2333,16 @@ profiler::StartRequest::StartRequest(const JSONObject *obj)
   }
 }
 
+std::unique_ptr<profiler::StartRequest> profiler::StartRequest::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<profiler::StartRequest> req =
+      std::make_unique<profiler::StartRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  return req;
+}
+
 JSONValue *profiler::StartRequest::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 1> props;
   put(props, "id", id, factory);
@@ -1711,6 +2364,16 @@ profiler::StopRequest::StopRequest(const JSONObject *obj)
   if (!assign(method, obj, "method")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<profiler::StopRequest> profiler::StopRequest::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<profiler::StopRequest> req =
+      std::make_unique<profiler::StopRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  return req;
 }
 
 JSONValue *profiler::StopRequest::toJsonVal(JSONFactory &factory) const {
@@ -1777,6 +2440,35 @@ runtime::CallFunctionOnRequest::CallFunctionOnRequest(const JSONObject *obj)
   }
 }
 
+std::unique_ptr<runtime::CallFunctionOnRequest>
+runtime::CallFunctionOnRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<runtime::CallFunctionOnRequest> req =
+      std::make_unique<runtime::CallFunctionOnRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(req->functionDeclaration, params, "functionDeclaration");
+  TRY_ASSIGN(req->objectId, params, "objectId");
+  TRY_ASSIGN(req->arguments, params, "arguments");
+  TRY_ASSIGN(req->silent, params, "silent");
+  TRY_ASSIGN(req->returnByValue, params, "returnByValue");
+  TRY_ASSIGN(req->generatePreview, params, "generatePreview");
+  TRY_ASSIGN(req->userGesture, params, "userGesture");
+  TRY_ASSIGN(req->awaitPromise, params, "awaitPromise");
+  TRY_ASSIGN(req->executionContextId, params, "executionContextId");
+  TRY_ASSIGN(req->objectGroup, params, "objectGroup");
+  return req;
+}
+
 JSONValue *runtime::CallFunctionOnRequest::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 10> paramsProps;
@@ -1840,6 +2532,29 @@ runtime::CompileScriptRequest::CompileScriptRequest(const JSONObject *obj)
   }
 }
 
+std::unique_ptr<runtime::CompileScriptRequest>
+runtime::CompileScriptRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<runtime::CompileScriptRequest> req =
+      std::make_unique<runtime::CompileScriptRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(req->expression, params, "expression");
+  TRY_ASSIGN(req->sourceURL, params, "sourceURL");
+  TRY_ASSIGN(req->persistScript, params, "persistScript");
+  TRY_ASSIGN(req->executionContextId, params, "executionContextId");
+  return req;
+}
+
 JSONValue *runtime::CompileScriptRequest::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 4> paramsProps;
@@ -1874,6 +2589,16 @@ runtime::DisableRequest::DisableRequest(const JSONObject *obj)
   }
 }
 
+std::unique_ptr<runtime::DisableRequest> runtime::DisableRequest::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<runtime::DisableRequest> req =
+      std::make_unique<runtime::DisableRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  return req;
+}
+
 JSONValue *runtime::DisableRequest::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 1> props;
   put(props, "id", id, factory);
@@ -1895,6 +2620,16 @@ runtime::EnableRequest::EnableRequest(const JSONObject *obj)
   if (!assign(method, obj, "method")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<runtime::EnableRequest> runtime::EnableRequest::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<runtime::EnableRequest> req =
+      std::make_unique<runtime::EnableRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  return req;
 }
 
 JSONValue *runtime::EnableRequest::toJsonVal(JSONFactory &factory) const {
@@ -1957,6 +2692,34 @@ runtime::EvaluateRequest::EvaluateRequest(const JSONObject *obj)
   }
 }
 
+std::unique_ptr<runtime::EvaluateRequest> runtime::EvaluateRequest::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<runtime::EvaluateRequest> req =
+      std::make_unique<runtime::EvaluateRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(req->expression, params, "expression");
+  TRY_ASSIGN(req->objectGroup, params, "objectGroup");
+  TRY_ASSIGN(req->includeCommandLineAPI, params, "includeCommandLineAPI");
+  TRY_ASSIGN(req->silent, params, "silent");
+  TRY_ASSIGN(req->contextId, params, "contextId");
+  TRY_ASSIGN(req->returnByValue, params, "returnByValue");
+  TRY_ASSIGN(req->generatePreview, params, "generatePreview");
+  TRY_ASSIGN(req->userGesture, params, "userGesture");
+  TRY_ASSIGN(req->awaitPromise, params, "awaitPromise");
+  return req;
+}
+
 JSONValue *runtime::EvaluateRequest::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 9> paramsProps;
   put(paramsProps, "expression", expression, factory);
@@ -1994,6 +2757,16 @@ runtime::GetHeapUsageRequest::GetHeapUsageRequest(const JSONObject *obj)
   if (!assign(method, obj, "method")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<runtime::GetHeapUsageRequest>
+runtime::GetHeapUsageRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<runtime::GetHeapUsageRequest> req =
+      std::make_unique<runtime::GetHeapUsageRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  return req;
 }
 
 JSONValue *runtime::GetHeapUsageRequest::toJsonVal(JSONFactory &factory) const {
@@ -2037,6 +2810,28 @@ runtime::GetPropertiesRequest::GetPropertiesRequest(const JSONObject *obj)
   if (!assign(generatePreview, params, "generatePreview")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<runtime::GetPropertiesRequest>
+runtime::GetPropertiesRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<runtime::GetPropertiesRequest> req =
+      std::make_unique<runtime::GetPropertiesRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(req->objectId, params, "objectId");
+  TRY_ASSIGN(req->ownProperties, params, "ownProperties");
+  TRY_ASSIGN(req->generatePreview, params, "generatePreview");
+  return req;
 }
 
 JSONValue *runtime::GetPropertiesRequest::toJsonVal(
@@ -2086,6 +2881,25 @@ runtime::GlobalLexicalScopeNamesRequest::GlobalLexicalScopeNamesRequest(
   }
 }
 
+std::unique_ptr<runtime::GlobalLexicalScopeNamesRequest>
+runtime::GlobalLexicalScopeNamesRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<runtime::GlobalLexicalScopeNamesRequest> req =
+      std::make_unique<runtime::GlobalLexicalScopeNamesRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *p = obj->get("params");
+  if (p != nullptr) {
+    auto convertResult = valueFromJson<JSONObject *>(p);
+    if (!convertResult) {
+      return nullptr;
+    }
+    auto *params = *convertResult;
+    TRY_ASSIGN(req->executionContextId, params, "executionContextId");
+  }
+  return req;
+}
+
 JSONValue *runtime::GlobalLexicalScopeNamesRequest::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 1> paramsProps;
@@ -2118,6 +2932,16 @@ runtime::RunIfWaitingForDebuggerRequest::RunIfWaitingForDebuggerRequest(
   if (!assign(method, obj, "method")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<runtime::RunIfWaitingForDebuggerRequest>
+runtime::RunIfWaitingForDebuggerRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<runtime::RunIfWaitingForDebuggerRequest> req =
+      std::make_unique<runtime::RunIfWaitingForDebuggerRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  return req;
 }
 
 JSONValue *runtime::RunIfWaitingForDebuggerRequest::toJsonVal(
@@ -2160,6 +2984,27 @@ ErrorResponse::ErrorResponse(const JSONObject *obj) {
   }
 }
 
+std::unique_ptr<ErrorResponse> ErrorResponse::tryMake(const JSONObject *obj) {
+  std::unique_ptr<ErrorResponse> resp = std::make_unique<ErrorResponse>();
+  TRY_ASSIGN(resp->id, obj, "id");
+
+  JSONValue *v = obj->get("error");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *error = *convertResult;
+
+  TRY_ASSIGN(resp->code, error, "code");
+  TRY_ASSIGN(resp->message, error, "message");
+  TRY_ASSIGN_JSON_BLOB(resp->data, error, "data");
+
+  return resp;
+}
+
 JSONValue *ErrorResponse::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 3> errProps;
   put(errProps, "code", code, factory);
@@ -2179,6 +3024,12 @@ OkResponse::OkResponse(const JSONObject *obj) {
   if (!assign(id, obj, "id")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<OkResponse> OkResponse::tryMake(const JSONObject *obj) {
+  std::unique_ptr<OkResponse> resp = std::make_unique<OkResponse>();
+  TRY_ASSIGN(resp->id, obj, "id");
+  return resp;
 }
 
 JSONValue *OkResponse::toJsonVal(JSONFactory &factory) const {
@@ -2216,6 +3067,26 @@ debugger::EvaluateOnCallFrameResponse::EvaluateOnCallFrameResponse(
   }
 }
 
+std::unique_ptr<debugger::EvaluateOnCallFrameResponse>
+debugger::EvaluateOnCallFrameResponse::tryMake(const JSONObject *obj) {
+  std::unique_ptr<debugger::EvaluateOnCallFrameResponse> resp =
+      std::make_unique<debugger::EvaluateOnCallFrameResponse>();
+  TRY_ASSIGN(resp->id, obj, "id");
+
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *res = *convertResult;
+  TRY_ASSIGN(resp->result, res, "result");
+  TRY_ASSIGN(resp->exceptionDetails, res, "exceptionDetails");
+  return resp;
+}
+
 JSONValue *debugger::EvaluateOnCallFrameResponse::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 2> resProps;
@@ -2251,6 +3122,26 @@ debugger::SetBreakpointResponse::SetBreakpointResponse(const JSONObject *obj) {
   if (!assign(actualLocation, res, "actualLocation")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<debugger::SetBreakpointResponse>
+debugger::SetBreakpointResponse::tryMake(const JSONObject *obj) {
+  std::unique_ptr<debugger::SetBreakpointResponse> resp =
+      std::make_unique<debugger::SetBreakpointResponse>();
+  TRY_ASSIGN(resp->id, obj, "id");
+
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *res = *convertResult;
+  TRY_ASSIGN(resp->breakpointId, res, "breakpointId");
+  TRY_ASSIGN(resp->actualLocation, res, "actualLocation");
+  return resp;
 }
 
 JSONValue *debugger::SetBreakpointResponse::toJsonVal(
@@ -2291,6 +3182,26 @@ debugger::SetBreakpointByUrlResponse::SetBreakpointByUrlResponse(
   }
 }
 
+std::unique_ptr<debugger::SetBreakpointByUrlResponse>
+debugger::SetBreakpointByUrlResponse::tryMake(const JSONObject *obj) {
+  std::unique_ptr<debugger::SetBreakpointByUrlResponse> resp =
+      std::make_unique<debugger::SetBreakpointByUrlResponse>();
+  TRY_ASSIGN(resp->id, obj, "id");
+
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *res = *convertResult;
+  TRY_ASSIGN(resp->breakpointId, res, "breakpointId");
+  TRY_ASSIGN(resp->locations, res, "locations");
+  return resp;
+}
+
 JSONValue *debugger::SetBreakpointByUrlResponse::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 2> resProps;
@@ -2324,6 +3235,25 @@ debugger::SetInstrumentationBreakpointResponse::
   if (!assign(breakpointId, res, "breakpointId")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<debugger::SetInstrumentationBreakpointResponse>
+debugger::SetInstrumentationBreakpointResponse::tryMake(const JSONObject *obj) {
+  std::unique_ptr<debugger::SetInstrumentationBreakpointResponse> resp =
+      std::make_unique<debugger::SetInstrumentationBreakpointResponse>();
+  TRY_ASSIGN(resp->id, obj, "id");
+
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *res = *convertResult;
+  TRY_ASSIGN(resp->breakpointId, res, "breakpointId");
+  return resp;
 }
 
 JSONValue *debugger::SetInstrumentationBreakpointResponse::toJsonVal(
@@ -2360,6 +3290,25 @@ heapProfiler::GetHeapObjectIdResponse::GetHeapObjectIdResponse(
   }
 }
 
+std::unique_ptr<heapProfiler::GetHeapObjectIdResponse>
+heapProfiler::GetHeapObjectIdResponse::tryMake(const JSONObject *obj) {
+  std::unique_ptr<heapProfiler::GetHeapObjectIdResponse> resp =
+      std::make_unique<heapProfiler::GetHeapObjectIdResponse>();
+  TRY_ASSIGN(resp->id, obj, "id");
+
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *res = *convertResult;
+  TRY_ASSIGN(resp->heapSnapshotObjectId, res, "heapSnapshotObjectId");
+  return resp;
+}
+
 JSONValue *heapProfiler::GetHeapObjectIdResponse::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 1> resProps;
@@ -2392,6 +3341,25 @@ heapProfiler::GetObjectByHeapObjectIdResponse::GetObjectByHeapObjectIdResponse(
   if (!assign(result, res, "result")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<heapProfiler::GetObjectByHeapObjectIdResponse>
+heapProfiler::GetObjectByHeapObjectIdResponse::tryMake(const JSONObject *obj) {
+  std::unique_ptr<heapProfiler::GetObjectByHeapObjectIdResponse> resp =
+      std::make_unique<heapProfiler::GetObjectByHeapObjectIdResponse>();
+  TRY_ASSIGN(resp->id, obj, "id");
+
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *res = *convertResult;
+  TRY_ASSIGN(resp->result, res, "result");
+  return resp;
 }
 
 JSONValue *heapProfiler::GetObjectByHeapObjectIdResponse::toJsonVal(
@@ -2428,6 +3396,25 @@ heapProfiler::StopSamplingResponse::StopSamplingResponse(
   }
 }
 
+std::unique_ptr<heapProfiler::StopSamplingResponse>
+heapProfiler::StopSamplingResponse::tryMake(const JSONObject *obj) {
+  std::unique_ptr<heapProfiler::StopSamplingResponse> resp =
+      std::make_unique<heapProfiler::StopSamplingResponse>();
+  TRY_ASSIGN(resp->id, obj, "id");
+
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *res = *convertResult;
+  TRY_ASSIGN(resp->profile, res, "profile");
+  return resp;
+}
+
 JSONValue *heapProfiler::StopSamplingResponse::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 1> resProps;
@@ -2459,6 +3446,25 @@ profiler::StopResponse::StopResponse(const JSONObject *obj) {
   if (!assign(profile, res, "profile")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<profiler::StopResponse> profiler::StopResponse::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<profiler::StopResponse> resp =
+      std::make_unique<profiler::StopResponse>();
+  TRY_ASSIGN(resp->id, obj, "id");
+
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *res = *convertResult;
+  TRY_ASSIGN(resp->profile, res, "profile");
+  return resp;
 }
 
 JSONValue *profiler::StopResponse::toJsonVal(JSONFactory &factory) const {
@@ -2494,6 +3500,26 @@ runtime::CallFunctionOnResponse::CallFunctionOnResponse(const JSONObject *obj) {
   if (!assign(exceptionDetails, res, "exceptionDetails")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<runtime::CallFunctionOnResponse>
+runtime::CallFunctionOnResponse::tryMake(const JSONObject *obj) {
+  std::unique_ptr<runtime::CallFunctionOnResponse> resp =
+      std::make_unique<runtime::CallFunctionOnResponse>();
+  TRY_ASSIGN(resp->id, obj, "id");
+
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *res = *convertResult;
+  TRY_ASSIGN(resp->result, res, "result");
+  TRY_ASSIGN(resp->exceptionDetails, res, "exceptionDetails");
+  return resp;
 }
 
 JSONValue *runtime::CallFunctionOnResponse::toJsonVal(
@@ -2533,6 +3559,26 @@ runtime::CompileScriptResponse::CompileScriptResponse(const JSONObject *obj) {
   }
 }
 
+std::unique_ptr<runtime::CompileScriptResponse>
+runtime::CompileScriptResponse::tryMake(const JSONObject *obj) {
+  std::unique_ptr<runtime::CompileScriptResponse> resp =
+      std::make_unique<runtime::CompileScriptResponse>();
+  TRY_ASSIGN(resp->id, obj, "id");
+
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *res = *convertResult;
+  TRY_ASSIGN(resp->scriptId, res, "scriptId");
+  TRY_ASSIGN(resp->exceptionDetails, res, "exceptionDetails");
+  return resp;
+}
+
 JSONValue *runtime::CompileScriptResponse::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 2> resProps;
@@ -2570,6 +3616,26 @@ runtime::EvaluateResponse::EvaluateResponse(const JSONObject *obj) {
   }
 }
 
+std::unique_ptr<runtime::EvaluateResponse> runtime::EvaluateResponse::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<runtime::EvaluateResponse> resp =
+      std::make_unique<runtime::EvaluateResponse>();
+  TRY_ASSIGN(resp->id, obj, "id");
+
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *res = *convertResult;
+  TRY_ASSIGN(resp->result, res, "result");
+  TRY_ASSIGN(resp->exceptionDetails, res, "exceptionDetails");
+  return resp;
+}
+
 JSONValue *runtime::EvaluateResponse::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 2> resProps;
   put(resProps, "result", result, factory);
@@ -2604,6 +3670,26 @@ runtime::GetHeapUsageResponse::GetHeapUsageResponse(const JSONObject *obj) {
   if (!assign(totalSize, res, "totalSize")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<runtime::GetHeapUsageResponse>
+runtime::GetHeapUsageResponse::tryMake(const JSONObject *obj) {
+  std::unique_ptr<runtime::GetHeapUsageResponse> resp =
+      std::make_unique<runtime::GetHeapUsageResponse>();
+  TRY_ASSIGN(resp->id, obj, "id");
+
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *res = *convertResult;
+  TRY_ASSIGN(resp->usedSize, res, "usedSize");
+  TRY_ASSIGN(resp->totalSize, res, "totalSize");
+  return resp;
 }
 
 JSONValue *runtime::GetHeapUsageResponse::toJsonVal(
@@ -2646,6 +3732,27 @@ runtime::GetPropertiesResponse::GetPropertiesResponse(const JSONObject *obj) {
   }
 }
 
+std::unique_ptr<runtime::GetPropertiesResponse>
+runtime::GetPropertiesResponse::tryMake(const JSONObject *obj) {
+  std::unique_ptr<runtime::GetPropertiesResponse> resp =
+      std::make_unique<runtime::GetPropertiesResponse>();
+  TRY_ASSIGN(resp->id, obj, "id");
+
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *res = *convertResult;
+  TRY_ASSIGN(resp->result, res, "result");
+  TRY_ASSIGN(resp->internalProperties, res, "internalProperties");
+  TRY_ASSIGN(resp->exceptionDetails, res, "exceptionDetails");
+  return resp;
+}
+
 JSONValue *runtime::GetPropertiesResponse::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 3> resProps;
@@ -2680,6 +3787,25 @@ runtime::GlobalLexicalScopeNamesResponse::GlobalLexicalScopeNamesResponse(
   if (!assign(names, res, "names")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<runtime::GlobalLexicalScopeNamesResponse>
+runtime::GlobalLexicalScopeNamesResponse::tryMake(const JSONObject *obj) {
+  std::unique_ptr<runtime::GlobalLexicalScopeNamesResponse> resp =
+      std::make_unique<runtime::GlobalLexicalScopeNamesResponse>();
+  TRY_ASSIGN(resp->id, obj, "id");
+
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *res = *convertResult;
+  TRY_ASSIGN(resp->names, res, "names");
+  return resp;
 }
 
 JSONValue *runtime::GlobalLexicalScopeNamesResponse::toJsonVal(
@@ -2722,6 +3848,26 @@ debugger::BreakpointResolvedNotification::BreakpointResolvedNotification(
   if (!assign(location, params, "location")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<debugger::BreakpointResolvedNotification>
+debugger::BreakpointResolvedNotification::tryMake(const JSONObject *obj) {
+  std::unique_ptr<debugger::BreakpointResolvedNotification> notif =
+      std::make_unique<debugger::BreakpointResolvedNotification>();
+  TRY_ASSIGN(notif->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(notif->breakpointId, params, "breakpointId");
+  TRY_ASSIGN(notif->location, params, "location");
+  return notif;
 }
 
 JSONValue *debugger::BreakpointResolvedNotification::toJsonVal(
@@ -2774,6 +3920,29 @@ debugger::PausedNotification::PausedNotification(const JSONObject *obj)
   }
 }
 
+std::unique_ptr<debugger::PausedNotification>
+debugger::PausedNotification::tryMake(const JSONObject *obj) {
+  std::unique_ptr<debugger::PausedNotification> notif =
+      std::make_unique<debugger::PausedNotification>();
+  TRY_ASSIGN(notif->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(notif->callFrames, params, "callFrames");
+  TRY_ASSIGN(notif->reason, params, "reason");
+  TRY_ASSIGN_JSON_BLOB(notif->data, params, "data");
+  TRY_ASSIGN(notif->hitBreakpoints, params, "hitBreakpoints");
+  TRY_ASSIGN(notif->asyncStackTrace, params, "asyncStackTrace");
+  return notif;
+}
+
 JSONValue *debugger::PausedNotification::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 5> paramsProps;
   put(paramsProps, "callFrames", callFrames, factory);
@@ -2799,6 +3968,15 @@ debugger::ResumedNotification::ResumedNotification(const JSONObject *obj)
   if (!assign(method, obj, "method")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<debugger::ResumedNotification>
+debugger::ResumedNotification::tryMake(const JSONObject *obj) {
+  std::unique_ptr<debugger::ResumedNotification> notif =
+      std::make_unique<debugger::ResumedNotification>();
+  TRY_ASSIGN(notif->method, obj, "method");
+
+  return notif;
 }
 
 JSONValue *debugger::ResumedNotification::toJsonVal(
@@ -2869,6 +4047,38 @@ debugger::ScriptParsedNotification::ScriptParsedNotification(
   }
 }
 
+std::unique_ptr<debugger::ScriptParsedNotification>
+debugger::ScriptParsedNotification::tryMake(const JSONObject *obj) {
+  std::unique_ptr<debugger::ScriptParsedNotification> notif =
+      std::make_unique<debugger::ScriptParsedNotification>();
+  TRY_ASSIGN(notif->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(notif->scriptId, params, "scriptId");
+  TRY_ASSIGN(notif->url, params, "url");
+  TRY_ASSIGN(notif->startLine, params, "startLine");
+  TRY_ASSIGN(notif->startColumn, params, "startColumn");
+  TRY_ASSIGN(notif->endLine, params, "endLine");
+  TRY_ASSIGN(notif->endColumn, params, "endColumn");
+  TRY_ASSIGN(notif->executionContextId, params, "executionContextId");
+  TRY_ASSIGN(notif->hash, params, "hash");
+  TRY_ASSIGN_JSON_BLOB(
+      notif->executionContextAuxData, params, "executionContextAuxData");
+  TRY_ASSIGN(notif->sourceMapURL, params, "sourceMapURL");
+  TRY_ASSIGN(notif->hasSourceURL, params, "hasSourceURL");
+  TRY_ASSIGN(notif->isModule, params, "isModule");
+  TRY_ASSIGN(notif->length, params, "length");
+  return notif;
+}
+
 JSONValue *debugger::ScriptParsedNotification::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 13> paramsProps;
@@ -2921,6 +4131,25 @@ heapProfiler::AddHeapSnapshotChunkNotification::
   }
 }
 
+std::unique_ptr<heapProfiler::AddHeapSnapshotChunkNotification>
+heapProfiler::AddHeapSnapshotChunkNotification::tryMake(const JSONObject *obj) {
+  std::unique_ptr<heapProfiler::AddHeapSnapshotChunkNotification> notif =
+      std::make_unique<heapProfiler::AddHeapSnapshotChunkNotification>();
+  TRY_ASSIGN(notif->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(notif->chunk, params, "chunk");
+  return notif;
+}
+
 JSONValue *heapProfiler::AddHeapSnapshotChunkNotification::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 1> paramsProps;
@@ -2957,6 +4186,25 @@ heapProfiler::HeapStatsUpdateNotification::HeapStatsUpdateNotification(
   if (!assign(statsUpdate, params, "statsUpdate")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<heapProfiler::HeapStatsUpdateNotification>
+heapProfiler::HeapStatsUpdateNotification::tryMake(const JSONObject *obj) {
+  std::unique_ptr<heapProfiler::HeapStatsUpdateNotification> notif =
+      std::make_unique<heapProfiler::HeapStatsUpdateNotification>();
+  TRY_ASSIGN(notif->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(notif->statsUpdate, params, "statsUpdate");
+  return notif;
 }
 
 JSONValue *heapProfiler::HeapStatsUpdateNotification::toJsonVal(
@@ -2998,6 +4246,26 @@ heapProfiler::LastSeenObjectIdNotification::LastSeenObjectIdNotification(
   if (!assign(timestamp, params, "timestamp")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<heapProfiler::LastSeenObjectIdNotification>
+heapProfiler::LastSeenObjectIdNotification::tryMake(const JSONObject *obj) {
+  std::unique_ptr<heapProfiler::LastSeenObjectIdNotification> notif =
+      std::make_unique<heapProfiler::LastSeenObjectIdNotification>();
+  TRY_ASSIGN(notif->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(notif->lastSeenObjectId, params, "lastSeenObjectId");
+  TRY_ASSIGN(notif->timestamp, params, "timestamp");
+  return notif;
 }
 
 JSONValue *heapProfiler::LastSeenObjectIdNotification::toJsonVal(
@@ -3044,6 +4312,28 @@ heapProfiler::ReportHeapSnapshotProgressNotification::
   if (!assign(finished, params, "finished")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<heapProfiler::ReportHeapSnapshotProgressNotification>
+heapProfiler::ReportHeapSnapshotProgressNotification::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<heapProfiler::ReportHeapSnapshotProgressNotification> notif =
+      std::make_unique<heapProfiler::ReportHeapSnapshotProgressNotification>();
+  TRY_ASSIGN(notif->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(notif->done, params, "done");
+  TRY_ASSIGN(notif->total, params, "total");
+  TRY_ASSIGN(notif->finished, params, "finished");
+  return notif;
 }
 
 JSONValue *heapProfiler::ReportHeapSnapshotProgressNotification::toJsonVal(
@@ -3098,6 +4388,29 @@ runtime::ConsoleAPICalledNotification::ConsoleAPICalledNotification(
   }
 }
 
+std::unique_ptr<runtime::ConsoleAPICalledNotification>
+runtime::ConsoleAPICalledNotification::tryMake(const JSONObject *obj) {
+  std::unique_ptr<runtime::ConsoleAPICalledNotification> notif =
+      std::make_unique<runtime::ConsoleAPICalledNotification>();
+  TRY_ASSIGN(notif->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(notif->type, params, "type");
+  TRY_ASSIGN(notif->args, params, "args");
+  TRY_ASSIGN(notif->executionContextId, params, "executionContextId");
+  TRY_ASSIGN(notif->timestamp, params, "timestamp");
+  TRY_ASSIGN(notif->stackTrace, params, "stackTrace");
+  return notif;
+}
+
 JSONValue *runtime::ConsoleAPICalledNotification::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 5> paramsProps;
@@ -3139,6 +4452,25 @@ runtime::ExecutionContextCreatedNotification::
   if (!assign(context, params, "context")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<runtime::ExecutionContextCreatedNotification>
+runtime::ExecutionContextCreatedNotification::tryMake(const JSONObject *obj) {
+  std::unique_ptr<runtime::ExecutionContextCreatedNotification> notif =
+      std::make_unique<runtime::ExecutionContextCreatedNotification>();
+  TRY_ASSIGN(notif->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(notif->context, params, "context");
+  return notif;
 }
 
 JSONValue *runtime::ExecutionContextCreatedNotification::toJsonVal(
