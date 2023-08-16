@@ -8,6 +8,8 @@
  * @format
  */
 
+(function() {
+
 function invariant(condition: boolean, format: string) {
   if (!condition) {
     var error = new Error(format);
@@ -34,9 +36,7 @@ type React$ElementType =
  * Type of a React element. React elements are commonly created using JSX
  * literals, which desugar to React.createElement calls (see below).
  */
-type React$Element<
-  ElementType: React$ElementType,
-> = {|
+type React$Element<ElementType: React$ElementType> = {|
   type: ElementType,
   props: Props,
   key: React$Key | null,
@@ -626,3 +626,39 @@ class Fiber {
 function UNSAFE_CAST<T>(value: mixed): T {
   return (value: $FlowFixMe);
 }
+
+function createElement(
+  type: React$ElementType,
+  props: Props,
+  key: React$Key | null
+): React$MixedElement {
+  return {
+    type: type,
+    props: props,
+    key: key,
+    ref: null,
+  };
+}
+
+function run(): void {
+  var N = 1000000;
+  for (var i = 0; i < N; ++i) {
+    var root = createRoot();
+    var rendered = root.render(
+      createElement('div', {
+        children: [
+          createElement('h1', {
+            children: ['Hello'],
+          }),
+          ' world!',
+        ],
+      })
+    );
+  }
+  if (rendered !== `<div><h1>Hello</h1> world!</div>`)
+    throw Error('failed: ' + rendered);
+}
+
+run();
+
+})();
