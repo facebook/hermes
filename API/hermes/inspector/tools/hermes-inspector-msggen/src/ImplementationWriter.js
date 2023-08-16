@@ -124,7 +124,7 @@ function emitRequestParser(stream: Writable, commands: Array<Command>) {
       return std::make_unique<T>(obj);
     }
 
-    void assignJsonBlob(
+    bool assignJsonBlob(
         optional<std::string> &field,
         const JSONObject *obj,
         const std::string &key) {
@@ -134,6 +134,7 @@ function emitRequestParser(stream: Writable, commands: Array<Command>) {
       } else {
         field.reset();
       }
+      return true;
     }
 
 
@@ -177,7 +178,9 @@ function emitRequestParser(stream: Writable, commands: Array<Command>) {
     JSONObject *jsonObj = *parseResult;
 
     std::string method;
-    assign(method, jsonObj, "method");
+    if (!assign(method, jsonObj, "method")) {
+      return nullptr;
+    }
 
     auto it = builders.find(method);
     if (it == builders.end()) {
@@ -191,12 +194,15 @@ function emitRequestParser(stream: Writable, commands: Array<Command>) {
   stream.write('\n');
 }
 
-function emitPropAssign(stream: Writable, prop: Array<Property>, objName: string = 'obj'){
+function emitPropAssign(stream: Writable, prop: Array<Property>, objName: string = 'obj') {
   const id = prop.getCppIdentifier();
   const name = prop.name;
   const type = prop.getFullCppType();
   const assignMethod = type == 'std::optional<JSONBlob>' ? 'assignJsonBlob' : 'assign';
-  stream.write(`${assignMethod}(${id}, ${objName}, "${name}");\n`);
+  stream.write(`if (!${assignMethod}(${id}, ${objName}, "${name}")) {
+    throw std::runtime_error("Failed assign");
+  }
+  `);
 }
 
 function emitPropPut(stream: Writable, prop: Array<Property>, propsName: string = 'props'){
@@ -234,17 +240,29 @@ export function emitTypeDef(stream: Writable, type: PropsType) {
 
 function emitErrorResponseDef(stream: Writable) {
   stream.write(`ErrorResponse::ErrorResponse(const JSONObject *obj) {
-    assign(id, obj, "id");
+    if (!assign(id, obj, "id")) {
+      throw std::runtime_error("Failed assign");
+    }
 
     JSONValue *v = obj->get("error");
     if (v == nullptr) {
       throw std::runtime_error("Key not found in JSONObject");
     }
-    auto *error = valueFromJson<JSONObject*>(v);
+    auto convertResult = valueFromJson<JSONObject*>(v);
+    if (convertResult == nullptr) {
+      throw std::runtime_error("Failed to convert to JSONObject");
+    }
+    auto *error = *convertResult;
 
-    assign(code, error, "code");
-    assign(message, error, "message");
-    assignJsonBlob(data, error, "data");
+    if (!assign(code, error, "code")) {
+      throw std::runtime_error("Failed assign");
+    }
+    if (!assign(message, error, "message")) {
+      throw std::runtime_error("Failed assign");
+    }
+    if (!assignJsonBlob(data, error, "data")) {
+      throw std::runtime_error("Failed assign");
+    }
   }
 
   JSONValue *ErrorResponse::toJsonVal(JSONFactory &factory) const {
@@ -262,7 +280,9 @@ function emitErrorResponseDef(stream: Writable) {
 
 function emitOkResponseDef(stream: Writable) {
   stream.write(`OkResponse::OkResponse(const JSONObject *obj) {
-    assign(id, obj, "id");
+    if (!assign(id, obj, "id")) {
+      throw std::runtime_error("Failed assign");
+    }
   }
 
   JSONValue *OkResponse::toJsonVal(JSONFactory &factory) const {
@@ -279,9 +299,15 @@ function emitUnknownRequestDef(stream: Writable) {
   stream.write(`UnknownRequest::UnknownRequest() {}
 
 UnknownRequest::UnknownRequest(const JSONObject *obj) {
-  assign(id, obj, "id");
-  assign(method, obj, "method");
-  assignJsonBlob(params, obj, "params");
+  if (!assign(id, obj, "id")) {
+    throw std::runtime_error("Failed assign");
+  }
+  if (!assign(method, obj, "method")) {
+    throw std::runtime_error("Failed assign");
+  }
+  if (!assignJsonBlob(params, obj, "params")) {
+    throw std::runtime_error("Failed assign");
+  }
 }
 
 JSONValue *UnknownRequest::toJsonVal(JSONFactory &factory) const {
@@ -310,8 +336,12 @@ export function emitRequestDef(stream: Writable, command: Command) {
   // From-dynamic constructor
   stream.write(`${cppNs}::${cppType}::${cppType}(const JSONObject *obj)
       : Request("${dbgName}") {
-    assign(id, obj, "id");
-    assign(method, obj, "method");\n\n`);
+    if (!assign(id, obj, "id")) {
+      throw std::runtime_error("Failed assign");
+    }
+    if (!assign(method, obj, "method")) {
+      throw std::runtime_error("Failed assign");
+    }\n\n`);
 
   if (props.length > 0) {
     const optionalParams = props.every(p => p.optional);
@@ -319,14 +349,22 @@ export function emitRequestDef(stream: Writable, command: Command) {
       stream.write(`
         JSONValue *p = obj->get("params");
         if (p != nullptr) {
-          auto *params = valueFromJson<JSONObject*>(p);
+          auto convertResult = valueFromJson<JSONObject*>(p);
+          if (convertResult == nullptr) {
+            throw std::runtime_error("Failed to convert to JSONObject");
+          }
+          auto *params = *convertResult;
       `);
     } else {
       stream.write(`JSONValue *v = obj->get("params");
       if (v == nullptr) {
         throw std::runtime_error("Key not found in JSONObject");
       }
-      auto *params = valueFromJson<JSONObject*>(v);
+      auto convertResult = valueFromJson<JSONObject*>(v);
+      if (convertResult == nullptr) {
+        throw std::runtime_error("Failed to convert to JSONObject");
+      }
+      auto *params = *convertResult;
       `);
     }
 
@@ -384,7 +422,9 @@ export function emitResponseDef(stream: Writable, command: Command) {
 
   // From-dynamic constructor
   stream.write(`${cppNs}::${cppType}::${cppType}(const JSONObject *obj) {
-    assign(id, obj, "id");\n\n`);
+    if (!assign(id, obj, "id")) {
+      throw std::runtime_error("Failed assign");
+    }\n\n`);
 
   const props = command.returns || [];
   if (props.length > 0) {
@@ -392,7 +432,11 @@ export function emitResponseDef(stream: Writable, command: Command) {
     if (v == nullptr) {
       throw std::runtime_error("Key not found in JSONObject");
     }
-    auto *res = valueFromJson<JSONObject*>(v);
+    auto convertResult = valueFromJson<JSONObject*>(v);
+    if (convertResult == nullptr) {
+      throw std::runtime_error("Failed to convert to JSONObject");
+    }
+    auto *res = *convertResult;
     `);
 
     for (const prop of props) {
@@ -436,14 +480,20 @@ export function emitNotificationDef(stream: Writable, event: Event) {
   // From-dynamic constructor
   stream.write(`${cppNs}::${cppType}::${cppType}(const JSONObject *obj)
       : Notification("${dbgName}") {
-    assign(method, obj, "method");\n\n`);
+    if (!assign(method, obj, "method")) {
+      throw std::runtime_error("Failed assign");
+    }\n\n`);
 
   if (props.length > 0) {
     stream.write(`JSONValue *v = obj->get("params");
     if (v == nullptr) {
       throw std::runtime_error("Key not found in JSONObject");
     }
-    auto *params = valueFromJson<JSONObject*>(v);
+    auto convertResult = valueFromJson<JSONObject*>(v);
+    if (convertResult == nullptr) {
+      throw std::runtime_error("Failed to convert to JSONObject");
+    }
+    auto *params = *convertResult;
     `);
 
     for (const prop of props) {

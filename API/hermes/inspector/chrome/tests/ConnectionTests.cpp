@@ -2206,8 +2206,10 @@ TEST_F(ConnectionTests, testConsoleLog) {
       auto parsedNote = mustParseStrAsJsonObj(str, factory);
       message::JSONValue *methodRes = parsedNote->get("method");
       EXPECT_TRUE(methodRes != nullptr);
-      std::string method = message::valueFromJson<std::string>(methodRes);
-      if (method == "Runtime.consoleAPICalled") {
+      std::unique_ptr<std::string> method =
+          message::valueFromJson<std::string>(methodRes);
+      EXPECT_TRUE(method != nullptr);
+      if (*method == "Runtime.consoleAPICalled") {
         receivedConsoleNotification = true;
         auto note = m::runtime::ConsoleAPICalledNotification(parsedNote);
         EXPECT_EQ(note.type, "warning");
@@ -2233,7 +2235,7 @@ TEST_F(ConnectionTests, testConsoleLog) {
             {{"number2", PropInfo("number").setValue("2")},
              {"bool2", PropInfo("boolean").setValue("true")},
              {"__proto__", PropInfo("object")}});
-      } else if (method == "Debugger.paused") {
+      } else if (*method == "Debugger.paused") {
         receivedPausedNotification = true;
         auto note = m::debugger::PausedNotification(parsedNote);
         EXPECT_EQ(note.reason, "other");
@@ -2298,7 +2300,7 @@ TEST_F(ConnectionTests, testConsoleGroup) {
                               kNewYears3023](const std::string &str) {
       auto parsedNote = mustParseStrAsJsonObj(str, factory);
       std::string method;
-      message::assign(method, parsedNote, "method");
+      EXPECT_TRUE(message::assign(method, parsedNote, "method"));
       if (method == "Runtime.consoleAPICalled") {
         if (!receivedGroupStartNotification) {
           auto note = m::runtime::ConsoleAPICalledNotification(parsedNote);
@@ -2392,8 +2394,10 @@ TEST_F(ConnectionTests, testConsoleBuffer) {
       auto parsedNote = mustParseStrAsJsonObj(str, factory);
       message::JSONValue *methodRes = parsedNote->get("method");
       EXPECT_TRUE(methodRes != nullptr);
-      std::string method = message::valueFromJson<std::string>(methodRes);
-      EXPECT_EQ(method, "Runtime.consoleAPICalled");
+      std::unique_ptr<std::string> method =
+          message::valueFromJson<std::string>(methodRes);
+      EXPECT_TRUE(method != nullptr);
+      EXPECT_EQ(*method, "Runtime.consoleAPICalled");
 
       auto note = m::runtime::ConsoleAPICalledNotification(parsedNote);
       EXPECT_EQ(note.args[0].type, "string");
