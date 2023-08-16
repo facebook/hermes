@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<46c5c6626a2d7558109bbcf6faabd2f3>>
+// @generated SignedSource<<0b86795a95f79faf9e03980fb2551101>>
 
 #include "MessageTypes.h"
 
@@ -54,9 +54,11 @@ void putJsonBlob(
   if (blob.has_value()) {
     JSONString *jsStr = factory.getString(key);
     std::optional<JSONValue *> jsVal = parseStr(*blob, factory);
-    if (!jsVal) {
-      throw std::runtime_error("Failed to parse string to JSONValue");
-    }
+
+    // Expecting the conversion from string to JSONValue to succeed because
+    // it was originally parsed via assignJsonBlob.
+    assert(jsVal);
+
     props.push_back({jsStr, *jsVal});
   }
 }

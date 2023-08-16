@@ -159,9 +159,11 @@ function emitRequestParser(stream: Writable, commands: Array<Command>) {
       if (blob.has_value()) {
         JSONString *jsStr = factory.getString(key);
         std::optional<JSONValue *> jsVal = parseStr(*blob, factory);
-        if (!jsVal) {
-          throw std::runtime_error("Failed to parse string to JSONValue");
-        }
+
+        // Expecting the conversion from string to JSONValue to succeed because
+        // it was originally parsed via assignJsonBlob.
+        assert(jsVal);
+
         props.push_back({jsStr, *jsVal});
       }
     }
