@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<3778821d0b372a8b71976eb9abb50708>>
+// @generated SignedSource<<46c5c6626a2d7558109bbcf6faabd2f3>>
 
 #include "MessageTypes.h"
 
@@ -136,18 +136,6 @@ std::unique_ptr<Request> Request::fromJson(const std::string &str) {
 }
 
 /// Types
-debugger::Location::Location(const JSONObject *obj) {
-  if (!assign(scriptId, obj, "scriptId")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(lineNumber, obj, "lineNumber")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(columnNumber, obj, "columnNumber")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<debugger::Location> debugger::Location::tryMake(
     const JSONObject *obj) {
   std::unique_ptr<debugger::Location> type =
@@ -165,24 +153,6 @@ JSONValue *debugger::Location::toJsonVal(JSONFactory &factory) const {
   put(props, "lineNumber", lineNumber, factory);
   put(props, "columnNumber", columnNumber, factory);
   return factory.newObject(props.begin(), props.end());
-}
-
-runtime::PropertyPreview::PropertyPreview(const JSONObject *obj) {
-  if (!assign(name, obj, "name")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(type, obj, "type")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(value, obj, "value")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(valuePreview, obj, "valuePreview")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(subtype, obj, "subtype")) {
-    throw std::runtime_error("Failed assign");
-  }
 }
 
 std::unique_ptr<runtime::PropertyPreview> runtime::PropertyPreview::tryMake(
@@ -208,15 +178,6 @@ JSONValue *runtime::PropertyPreview::toJsonVal(JSONFactory &factory) const {
   return factory.newObject(props.begin(), props.end());
 }
 
-runtime::EntryPreview::EntryPreview(const JSONObject *obj) {
-  if (!assign(key, obj, "key")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(value, obj, "value")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<runtime::EntryPreview> runtime::EntryPreview::tryMake(
     const JSONObject *obj) {
   std::unique_ptr<runtime::EntryPreview> type =
@@ -232,27 +193,6 @@ JSONValue *runtime::EntryPreview::toJsonVal(JSONFactory &factory) const {
   put(props, "key", key, factory);
   put(props, "value", value, factory);
   return factory.newObject(props.begin(), props.end());
-}
-
-runtime::ObjectPreview::ObjectPreview(const JSONObject *obj) {
-  if (!assign(type, obj, "type")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(subtype, obj, "subtype")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(description, obj, "description")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(overflow, obj, "overflow")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(properties, obj, "properties")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(entries, obj, "entries")) {
-    throw std::runtime_error("Failed assign");
-  }
 }
 
 std::unique_ptr<runtime::ObjectPreview> runtime::ObjectPreview::tryMake(
@@ -280,15 +220,6 @@ JSONValue *runtime::ObjectPreview::toJsonVal(JSONFactory &factory) const {
   return factory.newObject(props.begin(), props.end());
 }
 
-runtime::CustomPreview::CustomPreview(const JSONObject *obj) {
-  if (!assign(header, obj, "header")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(bodyGetterId, obj, "bodyGetterId")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<runtime::CustomPreview> runtime::CustomPreview::tryMake(
     const JSONObject *obj) {
   std::unique_ptr<runtime::CustomPreview> type =
@@ -304,36 +235,6 @@ JSONValue *runtime::CustomPreview::toJsonVal(JSONFactory &factory) const {
   put(props, "header", header, factory);
   put(props, "bodyGetterId", bodyGetterId, factory);
   return factory.newObject(props.begin(), props.end());
-}
-
-runtime::RemoteObject::RemoteObject(const JSONObject *obj) {
-  if (!assign(type, obj, "type")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(subtype, obj, "subtype")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(className, obj, "className")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assignJsonBlob(value, obj, "value")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(unserializableValue, obj, "unserializableValue")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(description, obj, "description")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(objectId, obj, "objectId")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(preview, obj, "preview")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(customPreview, obj, "customPreview")) {
-    throw std::runtime_error("Failed assign");
-  }
 }
 
 std::unique_ptr<runtime::RemoteObject> runtime::RemoteObject::tryMake(
@@ -367,24 +268,6 @@ JSONValue *runtime::RemoteObject::toJsonVal(JSONFactory &factory) const {
   return factory.newObject(props.begin(), props.end());
 }
 
-runtime::CallFrame::CallFrame(const JSONObject *obj) {
-  if (!assign(functionName, obj, "functionName")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(scriptId, obj, "scriptId")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(url, obj, "url")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(lineNumber, obj, "lineNumber")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(columnNumber, obj, "columnNumber")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<runtime::CallFrame> runtime::CallFrame::tryMake(
     const JSONObject *obj) {
   std::unique_ptr<runtime::CallFrame> type =
@@ -408,18 +291,6 @@ JSONValue *runtime::CallFrame::toJsonVal(JSONFactory &factory) const {
   return factory.newObject(props.begin(), props.end());
 }
 
-runtime::StackTrace::StackTrace(const JSONObject *obj) {
-  if (!assign(description, obj, "description")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(callFrames, obj, "callFrames")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(parent, obj, "parent")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<runtime::StackTrace> runtime::StackTrace::tryMake(
     const JSONObject *obj) {
   std::unique_ptr<runtime::StackTrace> type =
@@ -437,36 +308,6 @@ JSONValue *runtime::StackTrace::toJsonVal(JSONFactory &factory) const {
   put(props, "callFrames", callFrames, factory);
   put(props, "parent", parent, factory);
   return factory.newObject(props.begin(), props.end());
-}
-
-runtime::ExceptionDetails::ExceptionDetails(const JSONObject *obj) {
-  if (!assign(exceptionId, obj, "exceptionId")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(text, obj, "text")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(lineNumber, obj, "lineNumber")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(columnNumber, obj, "columnNumber")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(scriptId, obj, "scriptId")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(url, obj, "url")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(stackTrace, obj, "stackTrace")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(exception, obj, "exception")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(executionContextId, obj, "executionContextId")) {
-    throw std::runtime_error("Failed assign");
-  }
 }
 
 std::unique_ptr<runtime::ExceptionDetails> runtime::ExceptionDetails::tryMake(
@@ -500,24 +341,6 @@ JSONValue *runtime::ExceptionDetails::toJsonVal(JSONFactory &factory) const {
   return factory.newObject(props.begin(), props.end());
 }
 
-debugger::Scope::Scope(const JSONObject *obj) {
-  if (!assign(type, obj, "type")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(object, obj, "object")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(name, obj, "name")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(startLocation, obj, "startLocation")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(endLocation, obj, "endLocation")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<debugger::Scope> debugger::Scope::tryMake(
     const JSONObject *obj) {
   std::unique_ptr<debugger::Scope> type = std::make_unique<debugger::Scope>();
@@ -538,33 +361,6 @@ JSONValue *debugger::Scope::toJsonVal(JSONFactory &factory) const {
   put(props, "startLocation", startLocation, factory);
   put(props, "endLocation", endLocation, factory);
   return factory.newObject(props.begin(), props.end());
-}
-
-debugger::CallFrame::CallFrame(const JSONObject *obj) {
-  if (!assign(callFrameId, obj, "callFrameId")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(functionName, obj, "functionName")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(functionLocation, obj, "functionLocation")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(location, obj, "location")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(url, obj, "url")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(scopeChain, obj, "scopeChain")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(thisObj, obj, "this")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(returnValue, obj, "returnValue")) {
-    throw std::runtime_error("Failed assign");
-  }
 }
 
 std::unique_ptr<debugger::CallFrame> debugger::CallFrame::tryMake(
@@ -596,22 +392,6 @@ JSONValue *debugger::CallFrame::toJsonVal(JSONFactory &factory) const {
   return factory.newObject(props.begin(), props.end());
 }
 
-heapProfiler::SamplingHeapProfileNode::SamplingHeapProfileNode(
-    const JSONObject *obj) {
-  if (!assign(callFrame, obj, "callFrame")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(selfSize, obj, "selfSize")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(children, obj, "children")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<heapProfiler::SamplingHeapProfileNode>
 heapProfiler::SamplingHeapProfileNode::tryMake(const JSONObject *obj) {
   std::unique_ptr<heapProfiler::SamplingHeapProfileNode> type =
@@ -634,19 +414,6 @@ JSONValue *heapProfiler::SamplingHeapProfileNode::toJsonVal(
   return factory.newObject(props.begin(), props.end());
 }
 
-heapProfiler::SamplingHeapProfileSample::SamplingHeapProfileSample(
-    const JSONObject *obj) {
-  if (!assign(size, obj, "size")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(nodeId, obj, "nodeId")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(ordinal, obj, "ordinal")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<heapProfiler::SamplingHeapProfileSample>
 heapProfiler::SamplingHeapProfileSample::tryMake(const JSONObject *obj) {
   std::unique_ptr<heapProfiler::SamplingHeapProfileSample> type =
@@ -667,15 +434,6 @@ JSONValue *heapProfiler::SamplingHeapProfileSample::toJsonVal(
   return factory.newObject(props.begin(), props.end());
 }
 
-heapProfiler::SamplingHeapProfile::SamplingHeapProfile(const JSONObject *obj) {
-  if (!assign(head, obj, "head")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(samples, obj, "samples")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<heapProfiler::SamplingHeapProfile>
 heapProfiler::SamplingHeapProfile::tryMake(const JSONObject *obj) {
   std::unique_ptr<heapProfiler::SamplingHeapProfile> type =
@@ -694,15 +452,6 @@ JSONValue *heapProfiler::SamplingHeapProfile::toJsonVal(
   return factory.newObject(props.begin(), props.end());
 }
 
-profiler::PositionTickInfo::PositionTickInfo(const JSONObject *obj) {
-  if (!assign(line, obj, "line")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(ticks, obj, "ticks")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<profiler::PositionTickInfo> profiler::PositionTickInfo::tryMake(
     const JSONObject *obj) {
   std::unique_ptr<profiler::PositionTickInfo> type =
@@ -718,27 +467,6 @@ JSONValue *profiler::PositionTickInfo::toJsonVal(JSONFactory &factory) const {
   put(props, "line", line, factory);
   put(props, "ticks", ticks, factory);
   return factory.newObject(props.begin(), props.end());
-}
-
-profiler::ProfileNode::ProfileNode(const JSONObject *obj) {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(callFrame, obj, "callFrame")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(hitCount, obj, "hitCount")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(children, obj, "children")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(deoptReason, obj, "deoptReason")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(positionTicks, obj, "positionTicks")) {
-    throw std::runtime_error("Failed assign");
-  }
 }
 
 std::unique_ptr<profiler::ProfileNode> profiler::ProfileNode::tryMake(
@@ -766,24 +494,6 @@ JSONValue *profiler::ProfileNode::toJsonVal(JSONFactory &factory) const {
   return factory.newObject(props.begin(), props.end());
 }
 
-profiler::Profile::Profile(const JSONObject *obj) {
-  if (!assign(nodes, obj, "nodes")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(startTime, obj, "startTime")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(endTime, obj, "endTime")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(samples, obj, "samples")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(timeDeltas, obj, "timeDeltas")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<profiler::Profile> profiler::Profile::tryMake(
     const JSONObject *obj) {
   std::unique_ptr<profiler::Profile> type =
@@ -807,18 +517,6 @@ JSONValue *profiler::Profile::toJsonVal(JSONFactory &factory) const {
   return factory.newObject(props.begin(), props.end());
 }
 
-runtime::CallArgument::CallArgument(const JSONObject *obj) {
-  if (!assignJsonBlob(value, obj, "value")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(unserializableValue, obj, "unserializableValue")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(objectId, obj, "objectId")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<runtime::CallArgument> runtime::CallArgument::tryMake(
     const JSONObject *obj) {
   std::unique_ptr<runtime::CallArgument> type =
@@ -836,22 +534,6 @@ JSONValue *runtime::CallArgument::toJsonVal(JSONFactory &factory) const {
   put(props, "unserializableValue", unserializableValue, factory);
   put(props, "objectId", objectId, factory);
   return factory.newObject(props.begin(), props.end());
-}
-
-runtime::ExecutionContextDescription::ExecutionContextDescription(
-    const JSONObject *obj) {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(origin, obj, "origin")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(name, obj, "name")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assignJsonBlob(auxData, obj, "auxData")) {
-    throw std::runtime_error("Failed assign");
-  }
 }
 
 std::unique_ptr<runtime::ExecutionContextDescription>
@@ -874,39 +556,6 @@ JSONValue *runtime::ExecutionContextDescription::toJsonVal(
   put(props, "name", name, factory);
   putJsonBlob(props, "auxData", auxData, factory);
   return factory.newObject(props.begin(), props.end());
-}
-
-runtime::PropertyDescriptor::PropertyDescriptor(const JSONObject *obj) {
-  if (!assign(name, obj, "name")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(value, obj, "value")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(writable, obj, "writable")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(get, obj, "get")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(set, obj, "set")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(configurable, obj, "configurable")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(enumerable, obj, "enumerable")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(wasThrown, obj, "wasThrown")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(isOwn, obj, "isOwn")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(symbol, obj, "symbol")) {
-    throw std::runtime_error("Failed assign");
-  }
 }
 
 std::unique_ptr<runtime::PropertyDescriptor>
@@ -942,16 +591,6 @@ JSONValue *runtime::PropertyDescriptor::toJsonVal(JSONFactory &factory) const {
   return factory.newObject(props.begin(), props.end());
 }
 
-runtime::InternalPropertyDescriptor::InternalPropertyDescriptor(
-    const JSONObject *obj) {
-  if (!assign(name, obj, "name")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(value, obj, "value")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<runtime::InternalPropertyDescriptor>
 runtime::InternalPropertyDescriptor::tryMake(const JSONObject *obj) {
   std::unique_ptr<runtime::InternalPropertyDescriptor> type =
@@ -972,18 +611,6 @@ JSONValue *runtime::InternalPropertyDescriptor::toJsonVal(
 
 /// Requests
 UnknownRequest::UnknownRequest() {}
-
-UnknownRequest::UnknownRequest(const JSONObject *obj) {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assignJsonBlob(params, obj, "params")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
 
 std::unique_ptr<UnknownRequest> UnknownRequest::tryMake(const JSONObject *obj) {
   std::unique_ptr<UnknownRequest> req = std::make_unique<UnknownRequest>();
@@ -1006,16 +633,6 @@ void UnknownRequest::accept(RequestHandler &handler) const {
 }
 
 debugger::DisableRequest::DisableRequest() : Request("Debugger.disable") {}
-
-debugger::DisableRequest::DisableRequest(const JSONObject *obj)
-    : Request("Debugger.disable") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
 
 std::unique_ptr<debugger::DisableRequest> debugger::DisableRequest::tryMake(
     const JSONObject *obj) {
@@ -1040,16 +657,6 @@ void debugger::DisableRequest::accept(RequestHandler &handler) const {
 
 debugger::EnableRequest::EnableRequest() : Request("Debugger.enable") {}
 
-debugger::EnableRequest::EnableRequest(const JSONObject *obj)
-    : Request("Debugger.enable") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<debugger::EnableRequest> debugger::EnableRequest::tryMake(
     const JSONObject *obj) {
   std::unique_ptr<debugger::EnableRequest> req =
@@ -1073,51 +680,6 @@ void debugger::EnableRequest::accept(RequestHandler &handler) const {
 
 debugger::EvaluateOnCallFrameRequest::EvaluateOnCallFrameRequest()
     : Request("Debugger.evaluateOnCallFrame") {}
-
-debugger::EvaluateOnCallFrameRequest::EvaluateOnCallFrameRequest(
-    const JSONObject *obj)
-    : Request("Debugger.evaluateOnCallFrame") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(callFrameId, params, "callFrameId")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(expression, params, "expression")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(objectGroup, params, "objectGroup")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(includeCommandLineAPI, params, "includeCommandLineAPI")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(silent, params, "silent")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(returnByValue, params, "returnByValue")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(generatePreview, params, "generatePreview")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(throwOnSideEffect, params, "throwOnSideEffect")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
 
 std::unique_ptr<debugger::EvaluateOnCallFrameRequest>
 debugger::EvaluateOnCallFrameRequest::tryMake(const JSONObject *obj) {
@@ -1175,16 +737,6 @@ void debugger::EvaluateOnCallFrameRequest::accept(
 
 debugger::PauseRequest::PauseRequest() : Request("Debugger.pause") {}
 
-debugger::PauseRequest::PauseRequest(const JSONObject *obj)
-    : Request("Debugger.pause") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<debugger::PauseRequest> debugger::PauseRequest::tryMake(
     const JSONObject *obj) {
   std::unique_ptr<debugger::PauseRequest> req =
@@ -1208,30 +760,6 @@ void debugger::PauseRequest::accept(RequestHandler &handler) const {
 
 debugger::RemoveBreakpointRequest::RemoveBreakpointRequest()
     : Request("Debugger.removeBreakpoint") {}
-
-debugger::RemoveBreakpointRequest::RemoveBreakpointRequest(
-    const JSONObject *obj)
-    : Request("Debugger.removeBreakpoint") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(breakpointId, params, "breakpointId")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
 
 std::unique_ptr<debugger::RemoveBreakpointRequest>
 debugger::RemoveBreakpointRequest::tryMake(const JSONObject *obj) {
@@ -1274,28 +802,6 @@ void debugger::RemoveBreakpointRequest::accept(RequestHandler &handler) const {
 
 debugger::ResumeRequest::ResumeRequest() : Request("Debugger.resume") {}
 
-debugger::ResumeRequest::ResumeRequest(const JSONObject *obj)
-    : Request("Debugger.resume") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *p = obj->get("params");
-  if (p != nullptr) {
-    auto convertResult = valueFromJson<JSONObject *>(p);
-    if (convertResult == nullptr) {
-      throw std::runtime_error("Failed to convert to JSONObject");
-    }
-    auto *params = *convertResult;
-    if (!assign(terminateOnResume, params, "terminateOnResume")) {
-      throw std::runtime_error("Failed assign");
-    }
-  }
-}
-
 std::unique_ptr<debugger::ResumeRequest> debugger::ResumeRequest::tryMake(
     const JSONObject *obj) {
   std::unique_ptr<debugger::ResumeRequest> req =
@@ -1335,32 +841,6 @@ void debugger::ResumeRequest::accept(RequestHandler &handler) const {
 
 debugger::SetBreakpointRequest::SetBreakpointRequest()
     : Request("Debugger.setBreakpoint") {}
-
-debugger::SetBreakpointRequest::SetBreakpointRequest(const JSONObject *obj)
-    : Request("Debugger.setBreakpoint") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(location, params, "location")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(condition, params, "condition")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
 
 std::unique_ptr<debugger::SetBreakpointRequest>
 debugger::SetBreakpointRequest::tryMake(const JSONObject *obj) {
@@ -1405,45 +885,6 @@ void debugger::SetBreakpointRequest::accept(RequestHandler &handler) const {
 
 debugger::SetBreakpointByUrlRequest::SetBreakpointByUrlRequest()
     : Request("Debugger.setBreakpointByUrl") {}
-
-debugger::SetBreakpointByUrlRequest::SetBreakpointByUrlRequest(
-    const JSONObject *obj)
-    : Request("Debugger.setBreakpointByUrl") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(lineNumber, params, "lineNumber")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(url, params, "url")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(urlRegex, params, "urlRegex")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(scriptHash, params, "scriptHash")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(columnNumber, params, "columnNumber")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(condition, params, "condition")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
 
 std::unique_ptr<debugger::SetBreakpointByUrlRequest>
 debugger::SetBreakpointByUrlRequest::tryMake(const JSONObject *obj) {
@@ -1498,30 +939,6 @@ void debugger::SetBreakpointByUrlRequest::accept(
 debugger::SetBreakpointsActiveRequest::SetBreakpointsActiveRequest()
     : Request("Debugger.setBreakpointsActive") {}
 
-debugger::SetBreakpointsActiveRequest::SetBreakpointsActiveRequest(
-    const JSONObject *obj)
-    : Request("Debugger.setBreakpointsActive") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(active, params, "active")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<debugger::SetBreakpointsActiveRequest>
 debugger::SetBreakpointsActiveRequest::tryMake(const JSONObject *obj) {
   std::unique_ptr<debugger::SetBreakpointsActiveRequest> req =
@@ -1566,30 +983,6 @@ debugger::SetInstrumentationBreakpointRequest::
     SetInstrumentationBreakpointRequest()
     : Request("Debugger.setInstrumentationBreakpoint") {}
 
-debugger::SetInstrumentationBreakpointRequest::
-    SetInstrumentationBreakpointRequest(const JSONObject *obj)
-    : Request("Debugger.setInstrumentationBreakpoint") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(instrumentation, params, "instrumentation")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<debugger::SetInstrumentationBreakpointRequest>
 debugger::SetInstrumentationBreakpointRequest::tryMake(const JSONObject *obj) {
   std::unique_ptr<debugger::SetInstrumentationBreakpointRequest> req =
@@ -1633,30 +1026,6 @@ void debugger::SetInstrumentationBreakpointRequest::accept(
 debugger::SetPauseOnExceptionsRequest::SetPauseOnExceptionsRequest()
     : Request("Debugger.setPauseOnExceptions") {}
 
-debugger::SetPauseOnExceptionsRequest::SetPauseOnExceptionsRequest(
-    const JSONObject *obj)
-    : Request("Debugger.setPauseOnExceptions") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(state, params, "state")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<debugger::SetPauseOnExceptionsRequest>
 debugger::SetPauseOnExceptionsRequest::tryMake(const JSONObject *obj) {
   std::unique_ptr<debugger::SetPauseOnExceptionsRequest> req =
@@ -1699,16 +1068,6 @@ void debugger::SetPauseOnExceptionsRequest::accept(
 
 debugger::StepIntoRequest::StepIntoRequest() : Request("Debugger.stepInto") {}
 
-debugger::StepIntoRequest::StepIntoRequest(const JSONObject *obj)
-    : Request("Debugger.stepInto") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<debugger::StepIntoRequest> debugger::StepIntoRequest::tryMake(
     const JSONObject *obj) {
   std::unique_ptr<debugger::StepIntoRequest> req =
@@ -1731,16 +1090,6 @@ void debugger::StepIntoRequest::accept(RequestHandler &handler) const {
 }
 
 debugger::StepOutRequest::StepOutRequest() : Request("Debugger.stepOut") {}
-
-debugger::StepOutRequest::StepOutRequest(const JSONObject *obj)
-    : Request("Debugger.stepOut") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
 
 std::unique_ptr<debugger::StepOutRequest> debugger::StepOutRequest::tryMake(
     const JSONObject *obj) {
@@ -1765,16 +1114,6 @@ void debugger::StepOutRequest::accept(RequestHandler &handler) const {
 
 debugger::StepOverRequest::StepOverRequest() : Request("Debugger.stepOver") {}
 
-debugger::StepOverRequest::StepOverRequest(const JSONObject *obj)
-    : Request("Debugger.stepOver") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<debugger::StepOverRequest> debugger::StepOverRequest::tryMake(
     const JSONObject *obj) {
   std::unique_ptr<debugger::StepOverRequest> req =
@@ -1798,17 +1137,6 @@ void debugger::StepOverRequest::accept(RequestHandler &handler) const {
 
 heapProfiler::CollectGarbageRequest::CollectGarbageRequest()
     : Request("HeapProfiler.collectGarbage") {}
-
-heapProfiler::CollectGarbageRequest::CollectGarbageRequest(
-    const JSONObject *obj)
-    : Request("HeapProfiler.collectGarbage") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
 
 std::unique_ptr<heapProfiler::CollectGarbageRequest>
 heapProfiler::CollectGarbageRequest::tryMake(const JSONObject *obj) {
@@ -1835,30 +1163,6 @@ void heapProfiler::CollectGarbageRequest::accept(
 
 heapProfiler::GetHeapObjectIdRequest::GetHeapObjectIdRequest()
     : Request("HeapProfiler.getHeapObjectId") {}
-
-heapProfiler::GetHeapObjectIdRequest::GetHeapObjectIdRequest(
-    const JSONObject *obj)
-    : Request("HeapProfiler.getHeapObjectId") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(objectId, params, "objectId")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
 
 std::unique_ptr<heapProfiler::GetHeapObjectIdRequest>
 heapProfiler::GetHeapObjectIdRequest::tryMake(const JSONObject *obj) {
@@ -1902,33 +1206,6 @@ void heapProfiler::GetHeapObjectIdRequest::accept(
 
 heapProfiler::GetObjectByHeapObjectIdRequest::GetObjectByHeapObjectIdRequest()
     : Request("HeapProfiler.getObjectByHeapObjectId") {}
-
-heapProfiler::GetObjectByHeapObjectIdRequest::GetObjectByHeapObjectIdRequest(
-    const JSONObject *obj)
-    : Request("HeapProfiler.getObjectByHeapObjectId") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(objectId, params, "objectId")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(objectGroup, params, "objectGroup")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
 
 std::unique_ptr<heapProfiler::GetObjectByHeapObjectIdRequest>
 heapProfiler::GetObjectByHeapObjectIdRequest::tryMake(const JSONObject *obj) {
@@ -1974,40 +1251,6 @@ void heapProfiler::GetObjectByHeapObjectIdRequest::accept(
 
 heapProfiler::StartSamplingRequest::StartSamplingRequest()
     : Request("HeapProfiler.startSampling") {}
-
-heapProfiler::StartSamplingRequest::StartSamplingRequest(const JSONObject *obj)
-    : Request("HeapProfiler.startSampling") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *p = obj->get("params");
-  if (p != nullptr) {
-    auto convertResult = valueFromJson<JSONObject *>(p);
-    if (convertResult == nullptr) {
-      throw std::runtime_error("Failed to convert to JSONObject");
-    }
-    auto *params = *convertResult;
-    if (!assign(samplingInterval, params, "samplingInterval")) {
-      throw std::runtime_error("Failed assign");
-    }
-    if (!assign(
-            includeObjectsCollectedByMajorGC,
-            params,
-            "includeObjectsCollectedByMajorGC")) {
-      throw std::runtime_error("Failed assign");
-    }
-    if (!assign(
-            includeObjectsCollectedByMinorGC,
-            params,
-            "includeObjectsCollectedByMinorGC")) {
-      throw std::runtime_error("Failed assign");
-    }
-  }
-}
 
 std::unique_ptr<heapProfiler::StartSamplingRequest>
 heapProfiler::StartSamplingRequest::tryMake(const JSONObject *obj) {
@@ -2066,29 +1309,6 @@ void heapProfiler::StartSamplingRequest::accept(RequestHandler &handler) const {
 heapProfiler::StartTrackingHeapObjectsRequest::StartTrackingHeapObjectsRequest()
     : Request("HeapProfiler.startTrackingHeapObjects") {}
 
-heapProfiler::StartTrackingHeapObjectsRequest::StartTrackingHeapObjectsRequest(
-    const JSONObject *obj)
-    : Request("HeapProfiler.startTrackingHeapObjects") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *p = obj->get("params");
-  if (p != nullptr) {
-    auto convertResult = valueFromJson<JSONObject *>(p);
-    if (convertResult == nullptr) {
-      throw std::runtime_error("Failed to convert to JSONObject");
-    }
-    auto *params = *convertResult;
-    if (!assign(trackAllocations, params, "trackAllocations")) {
-      throw std::runtime_error("Failed assign");
-    }
-  }
-}
-
 std::unique_ptr<heapProfiler::StartTrackingHeapObjectsRequest>
 heapProfiler::StartTrackingHeapObjectsRequest::tryMake(const JSONObject *obj) {
   std::unique_ptr<heapProfiler::StartTrackingHeapObjectsRequest> req =
@@ -2131,16 +1351,6 @@ void heapProfiler::StartTrackingHeapObjectsRequest::accept(
 heapProfiler::StopSamplingRequest::StopSamplingRequest()
     : Request("HeapProfiler.stopSampling") {}
 
-heapProfiler::StopSamplingRequest::StopSamplingRequest(const JSONObject *obj)
-    : Request("HeapProfiler.stopSampling") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<heapProfiler::StopSamplingRequest>
 heapProfiler::StopSamplingRequest::tryMake(const JSONObject *obj) {
   std::unique_ptr<heapProfiler::StopSamplingRequest> req =
@@ -2165,36 +1375,6 @@ void heapProfiler::StopSamplingRequest::accept(RequestHandler &handler) const {
 
 heapProfiler::StopTrackingHeapObjectsRequest::StopTrackingHeapObjectsRequest()
     : Request("HeapProfiler.stopTrackingHeapObjects") {}
-
-heapProfiler::StopTrackingHeapObjectsRequest::StopTrackingHeapObjectsRequest(
-    const JSONObject *obj)
-    : Request("HeapProfiler.stopTrackingHeapObjects") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *p = obj->get("params");
-  if (p != nullptr) {
-    auto convertResult = valueFromJson<JSONObject *>(p);
-    if (convertResult == nullptr) {
-      throw std::runtime_error("Failed to convert to JSONObject");
-    }
-    auto *params = *convertResult;
-    if (!assign(reportProgress, params, "reportProgress")) {
-      throw std::runtime_error("Failed assign");
-    }
-    if (!assign(
-            treatGlobalObjectsAsRoots, params, "treatGlobalObjectsAsRoots")) {
-      throw std::runtime_error("Failed assign");
-    }
-    if (!assign(captureNumericValue, params, "captureNumericValue")) {
-      throw std::runtime_error("Failed assign");
-    }
-  }
-}
 
 std::unique_ptr<heapProfiler::StopTrackingHeapObjectsRequest>
 heapProfiler::StopTrackingHeapObjectsRequest::tryMake(const JSONObject *obj) {
@@ -2246,36 +1426,6 @@ void heapProfiler::StopTrackingHeapObjectsRequest::accept(
 heapProfiler::TakeHeapSnapshotRequest::TakeHeapSnapshotRequest()
     : Request("HeapProfiler.takeHeapSnapshot") {}
 
-heapProfiler::TakeHeapSnapshotRequest::TakeHeapSnapshotRequest(
-    const JSONObject *obj)
-    : Request("HeapProfiler.takeHeapSnapshot") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *p = obj->get("params");
-  if (p != nullptr) {
-    auto convertResult = valueFromJson<JSONObject *>(p);
-    if (convertResult == nullptr) {
-      throw std::runtime_error("Failed to convert to JSONObject");
-    }
-    auto *params = *convertResult;
-    if (!assign(reportProgress, params, "reportProgress")) {
-      throw std::runtime_error("Failed assign");
-    }
-    if (!assign(
-            treatGlobalObjectsAsRoots, params, "treatGlobalObjectsAsRoots")) {
-      throw std::runtime_error("Failed assign");
-    }
-    if (!assign(captureNumericValue, params, "captureNumericValue")) {
-      throw std::runtime_error("Failed assign");
-    }
-  }
-}
-
 std::unique_ptr<heapProfiler::TakeHeapSnapshotRequest>
 heapProfiler::TakeHeapSnapshotRequest::tryMake(const JSONObject *obj) {
   std::unique_ptr<heapProfiler::TakeHeapSnapshotRequest> req =
@@ -2325,16 +1475,6 @@ void heapProfiler::TakeHeapSnapshotRequest::accept(
 
 profiler::StartRequest::StartRequest() : Request("Profiler.start") {}
 
-profiler::StartRequest::StartRequest(const JSONObject *obj)
-    : Request("Profiler.start") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<profiler::StartRequest> profiler::StartRequest::tryMake(
     const JSONObject *obj) {
   std::unique_ptr<profiler::StartRequest> req =
@@ -2357,16 +1497,6 @@ void profiler::StartRequest::accept(RequestHandler &handler) const {
 }
 
 profiler::StopRequest::StopRequest() : Request("Profiler.stop") {}
-
-profiler::StopRequest::StopRequest(const JSONObject *obj)
-    : Request("Profiler.stop") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
 
 std::unique_ptr<profiler::StopRequest> profiler::StopRequest::tryMake(
     const JSONObject *obj) {
@@ -2391,56 +1521,6 @@ void profiler::StopRequest::accept(RequestHandler &handler) const {
 
 runtime::CallFunctionOnRequest::CallFunctionOnRequest()
     : Request("Runtime.callFunctionOn") {}
-
-runtime::CallFunctionOnRequest::CallFunctionOnRequest(const JSONObject *obj)
-    : Request("Runtime.callFunctionOn") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(functionDeclaration, params, "functionDeclaration")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(objectId, params, "objectId")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(arguments, params, "arguments")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(silent, params, "silent")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(returnByValue, params, "returnByValue")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(generatePreview, params, "generatePreview")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(userGesture, params, "userGesture")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(awaitPromise, params, "awaitPromise")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(executionContextId, params, "executionContextId")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(objectGroup, params, "objectGroup")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
 
 std::unique_ptr<runtime::CallFunctionOnRequest>
 runtime::CallFunctionOnRequest::tryMake(const JSONObject *obj) {
@@ -2502,38 +1582,6 @@ void runtime::CallFunctionOnRequest::accept(RequestHandler &handler) const {
 runtime::CompileScriptRequest::CompileScriptRequest()
     : Request("Runtime.compileScript") {}
 
-runtime::CompileScriptRequest::CompileScriptRequest(const JSONObject *obj)
-    : Request("Runtime.compileScript") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(expression, params, "expression")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(sourceURL, params, "sourceURL")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(persistScript, params, "persistScript")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(executionContextId, params, "executionContextId")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<runtime::CompileScriptRequest>
 runtime::CompileScriptRequest::tryMake(const JSONObject *obj) {
   std::unique_ptr<runtime::CompileScriptRequest> req =
@@ -2581,16 +1629,6 @@ void runtime::CompileScriptRequest::accept(RequestHandler &handler) const {
 
 runtime::DisableRequest::DisableRequest() : Request("Runtime.disable") {}
 
-runtime::DisableRequest::DisableRequest(const JSONObject *obj)
-    : Request("Runtime.disable") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<runtime::DisableRequest> runtime::DisableRequest::tryMake(
     const JSONObject *obj) {
   std::unique_ptr<runtime::DisableRequest> req =
@@ -2614,16 +1652,6 @@ void runtime::DisableRequest::accept(RequestHandler &handler) const {
 
 runtime::EnableRequest::EnableRequest() : Request("Runtime.enable") {}
 
-runtime::EnableRequest::EnableRequest(const JSONObject *obj)
-    : Request("Runtime.enable") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<runtime::EnableRequest> runtime::EnableRequest::tryMake(
     const JSONObject *obj) {
   std::unique_ptr<runtime::EnableRequest> req =
@@ -2646,53 +1674,6 @@ void runtime::EnableRequest::accept(RequestHandler &handler) const {
 }
 
 runtime::EvaluateRequest::EvaluateRequest() : Request("Runtime.evaluate") {}
-
-runtime::EvaluateRequest::EvaluateRequest(const JSONObject *obj)
-    : Request("Runtime.evaluate") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(expression, params, "expression")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(objectGroup, params, "objectGroup")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(includeCommandLineAPI, params, "includeCommandLineAPI")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(silent, params, "silent")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(contextId, params, "contextId")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(returnByValue, params, "returnByValue")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(generatePreview, params, "generatePreview")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(userGesture, params, "userGesture")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(awaitPromise, params, "awaitPromise")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
 
 std::unique_ptr<runtime::EvaluateRequest> runtime::EvaluateRequest::tryMake(
     const JSONObject *obj) {
@@ -2751,16 +1732,6 @@ void runtime::EvaluateRequest::accept(RequestHandler &handler) const {
 runtime::GetHeapUsageRequest::GetHeapUsageRequest()
     : Request("Runtime.getHeapUsage") {}
 
-runtime::GetHeapUsageRequest::GetHeapUsageRequest(const JSONObject *obj)
-    : Request("Runtime.getHeapUsage") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<runtime::GetHeapUsageRequest>
 runtime::GetHeapUsageRequest::tryMake(const JSONObject *obj) {
   std::unique_ptr<runtime::GetHeapUsageRequest> req =
@@ -2784,35 +1755,6 @@ void runtime::GetHeapUsageRequest::accept(RequestHandler &handler) const {
 
 runtime::GetPropertiesRequest::GetPropertiesRequest()
     : Request("Runtime.getProperties") {}
-
-runtime::GetPropertiesRequest::GetPropertiesRequest(const JSONObject *obj)
-    : Request("Runtime.getProperties") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(objectId, params, "objectId")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(ownProperties, params, "ownProperties")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(generatePreview, params, "generatePreview")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
 
 std::unique_ptr<runtime::GetPropertiesRequest>
 runtime::GetPropertiesRequest::tryMake(const JSONObject *obj) {
@@ -2860,29 +1802,6 @@ void runtime::GetPropertiesRequest::accept(RequestHandler &handler) const {
 runtime::GlobalLexicalScopeNamesRequest::GlobalLexicalScopeNamesRequest()
     : Request("Runtime.globalLexicalScopeNames") {}
 
-runtime::GlobalLexicalScopeNamesRequest::GlobalLexicalScopeNamesRequest(
-    const JSONObject *obj)
-    : Request("Runtime.globalLexicalScopeNames") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *p = obj->get("params");
-  if (p != nullptr) {
-    auto convertResult = valueFromJson<JSONObject *>(p);
-    if (convertResult == nullptr) {
-      throw std::runtime_error("Failed to convert to JSONObject");
-    }
-    auto *params = *convertResult;
-    if (!assign(executionContextId, params, "executionContextId")) {
-      throw std::runtime_error("Failed assign");
-    }
-  }
-}
-
 std::unique_ptr<runtime::GlobalLexicalScopeNamesRequest>
 runtime::GlobalLexicalScopeNamesRequest::tryMake(const JSONObject *obj) {
   std::unique_ptr<runtime::GlobalLexicalScopeNamesRequest> req =
@@ -2925,17 +1844,6 @@ void runtime::GlobalLexicalScopeNamesRequest::accept(
 runtime::RunIfWaitingForDebuggerRequest::RunIfWaitingForDebuggerRequest()
     : Request("Runtime.runIfWaitingForDebugger") {}
 
-runtime::RunIfWaitingForDebuggerRequest::RunIfWaitingForDebuggerRequest(
-    const JSONObject *obj)
-    : Request("Runtime.runIfWaitingForDebugger") {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<runtime::RunIfWaitingForDebuggerRequest>
 runtime::RunIfWaitingForDebuggerRequest::tryMake(const JSONObject *obj) {
   std::unique_ptr<runtime::RunIfWaitingForDebuggerRequest> req =
@@ -2960,32 +1868,6 @@ void runtime::RunIfWaitingForDebuggerRequest::accept(
 }
 
 /// Responses
-ErrorResponse::ErrorResponse(const JSONObject *obj) {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("error");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *error = *convertResult;
-
-  if (!assign(code, error, "code")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(message, error, "message")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assignJsonBlob(data, error, "data")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<ErrorResponse> ErrorResponse::tryMake(const JSONObject *obj) {
   std::unique_ptr<ErrorResponse> resp = std::make_unique<ErrorResponse>();
   TRY_ASSIGN(resp->id, obj, "id");
@@ -3022,12 +1904,6 @@ JSONValue *ErrorResponse::toJsonVal(JSONFactory &factory) const {
   return factory.newObject(props.begin(), props.end());
 }
 
-OkResponse::OkResponse(const JSONObject *obj) {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<OkResponse> OkResponse::tryMake(const JSONObject *obj) {
   std::unique_ptr<OkResponse> resp = std::make_unique<OkResponse>();
   TRY_ASSIGN(resp->id, obj, "id");
@@ -3044,29 +1920,6 @@ JSONValue *OkResponse::toJsonVal(JSONFactory &factory) const {
       factory.newObject(resProps.begin(), resProps.end()),
       factory);
   return factory.newObject(props.begin(), props.end());
-}
-
-debugger::EvaluateOnCallFrameResponse::EvaluateOnCallFrameResponse(
-    const JSONObject *obj) {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("result");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *res = *convertResult;
-  if (!assign(result, res, "result")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(exceptionDetails, res, "exceptionDetails")) {
-    throw std::runtime_error("Failed assign");
-  }
 }
 
 std::unique_ptr<debugger::EvaluateOnCallFrameResponse>
@@ -3104,28 +1957,6 @@ JSONValue *debugger::EvaluateOnCallFrameResponse::toJsonVal(
   return factory.newObject(props.begin(), props.end());
 }
 
-debugger::SetBreakpointResponse::SetBreakpointResponse(const JSONObject *obj) {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("result");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *res = *convertResult;
-  if (!assign(breakpointId, res, "breakpointId")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(actualLocation, res, "actualLocation")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<debugger::SetBreakpointResponse>
 debugger::SetBreakpointResponse::tryMake(const JSONObject *obj) {
   std::unique_ptr<debugger::SetBreakpointResponse> resp =
@@ -3159,29 +1990,6 @@ JSONValue *debugger::SetBreakpointResponse::toJsonVal(
       factory.newObject(resProps.begin(), resProps.end()),
       factory);
   return factory.newObject(props.begin(), props.end());
-}
-
-debugger::SetBreakpointByUrlResponse::SetBreakpointByUrlResponse(
-    const JSONObject *obj) {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("result");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *res = *convertResult;
-  if (!assign(breakpointId, res, "breakpointId")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(locations, res, "locations")) {
-    throw std::runtime_error("Failed assign");
-  }
 }
 
 std::unique_ptr<debugger::SetBreakpointByUrlResponse>
@@ -3219,26 +2027,6 @@ JSONValue *debugger::SetBreakpointByUrlResponse::toJsonVal(
   return factory.newObject(props.begin(), props.end());
 }
 
-debugger::SetInstrumentationBreakpointResponse::
-    SetInstrumentationBreakpointResponse(const JSONObject *obj) {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("result");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *res = *convertResult;
-  if (!assign(breakpointId, res, "breakpointId")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<debugger::SetInstrumentationBreakpointResponse>
 debugger::SetInstrumentationBreakpointResponse::tryMake(const JSONObject *obj) {
   std::unique_ptr<debugger::SetInstrumentationBreakpointResponse> resp =
@@ -3270,26 +2058,6 @@ JSONValue *debugger::SetInstrumentationBreakpointResponse::toJsonVal(
       factory.newObject(resProps.begin(), resProps.end()),
       factory);
   return factory.newObject(props.begin(), props.end());
-}
-
-heapProfiler::GetHeapObjectIdResponse::GetHeapObjectIdResponse(
-    const JSONObject *obj) {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("result");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *res = *convertResult;
-  if (!assign(heapSnapshotObjectId, res, "heapSnapshotObjectId")) {
-    throw std::runtime_error("Failed assign");
-  }
 }
 
 std::unique_ptr<heapProfiler::GetHeapObjectIdResponse>
@@ -3325,26 +2093,6 @@ JSONValue *heapProfiler::GetHeapObjectIdResponse::toJsonVal(
   return factory.newObject(props.begin(), props.end());
 }
 
-heapProfiler::GetObjectByHeapObjectIdResponse::GetObjectByHeapObjectIdResponse(
-    const JSONObject *obj) {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("result");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *res = *convertResult;
-  if (!assign(result, res, "result")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<heapProfiler::GetObjectByHeapObjectIdResponse>
 heapProfiler::GetObjectByHeapObjectIdResponse::tryMake(const JSONObject *obj) {
   std::unique_ptr<heapProfiler::GetObjectByHeapObjectIdResponse> resp =
@@ -3376,26 +2124,6 @@ JSONValue *heapProfiler::GetObjectByHeapObjectIdResponse::toJsonVal(
       factory.newObject(resProps.begin(), resProps.end()),
       factory);
   return factory.newObject(props.begin(), props.end());
-}
-
-heapProfiler::StopSamplingResponse::StopSamplingResponse(
-    const JSONObject *obj) {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("result");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *res = *convertResult;
-  if (!assign(profile, res, "profile")) {
-    throw std::runtime_error("Failed assign");
-  }
 }
 
 std::unique_ptr<heapProfiler::StopSamplingResponse>
@@ -3431,25 +2159,6 @@ JSONValue *heapProfiler::StopSamplingResponse::toJsonVal(
   return factory.newObject(props.begin(), props.end());
 }
 
-profiler::StopResponse::StopResponse(const JSONObject *obj) {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("result");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *res = *convertResult;
-  if (!assign(profile, res, "profile")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<profiler::StopResponse> profiler::StopResponse::tryMake(
     const JSONObject *obj) {
   std::unique_ptr<profiler::StopResponse> resp =
@@ -3480,28 +2189,6 @@ JSONValue *profiler::StopResponse::toJsonVal(JSONFactory &factory) const {
       factory.newObject(resProps.begin(), resProps.end()),
       factory);
   return factory.newObject(props.begin(), props.end());
-}
-
-runtime::CallFunctionOnResponse::CallFunctionOnResponse(const JSONObject *obj) {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("result");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *res = *convertResult;
-  if (!assign(result, res, "result")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(exceptionDetails, res, "exceptionDetails")) {
-    throw std::runtime_error("Failed assign");
-  }
 }
 
 std::unique_ptr<runtime::CallFunctionOnResponse>
@@ -3539,28 +2226,6 @@ JSONValue *runtime::CallFunctionOnResponse::toJsonVal(
   return factory.newObject(props.begin(), props.end());
 }
 
-runtime::CompileScriptResponse::CompileScriptResponse(const JSONObject *obj) {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("result");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *res = *convertResult;
-  if (!assign(scriptId, res, "scriptId")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(exceptionDetails, res, "exceptionDetails")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<runtime::CompileScriptResponse>
 runtime::CompileScriptResponse::tryMake(const JSONObject *obj) {
   std::unique_ptr<runtime::CompileScriptResponse> resp =
@@ -3594,28 +2259,6 @@ JSONValue *runtime::CompileScriptResponse::toJsonVal(
       factory.newObject(resProps.begin(), resProps.end()),
       factory);
   return factory.newObject(props.begin(), props.end());
-}
-
-runtime::EvaluateResponse::EvaluateResponse(const JSONObject *obj) {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("result");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *res = *convertResult;
-  if (!assign(result, res, "result")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(exceptionDetails, res, "exceptionDetails")) {
-    throw std::runtime_error("Failed assign");
-  }
 }
 
 std::unique_ptr<runtime::EvaluateResponse> runtime::EvaluateResponse::tryMake(
@@ -3652,28 +2295,6 @@ JSONValue *runtime::EvaluateResponse::toJsonVal(JSONFactory &factory) const {
   return factory.newObject(props.begin(), props.end());
 }
 
-runtime::GetHeapUsageResponse::GetHeapUsageResponse(const JSONObject *obj) {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("result");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *res = *convertResult;
-  if (!assign(usedSize, res, "usedSize")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(totalSize, res, "totalSize")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<runtime::GetHeapUsageResponse>
 runtime::GetHeapUsageResponse::tryMake(const JSONObject *obj) {
   std::unique_ptr<runtime::GetHeapUsageResponse> resp =
@@ -3707,31 +2328,6 @@ JSONValue *runtime::GetHeapUsageResponse::toJsonVal(
       factory.newObject(resProps.begin(), resProps.end()),
       factory);
   return factory.newObject(props.begin(), props.end());
-}
-
-runtime::GetPropertiesResponse::GetPropertiesResponse(const JSONObject *obj) {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("result");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *res = *convertResult;
-  if (!assign(result, res, "result")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(internalProperties, res, "internalProperties")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(exceptionDetails, res, "exceptionDetails")) {
-    throw std::runtime_error("Failed assign");
-  }
 }
 
 std::unique_ptr<runtime::GetPropertiesResponse>
@@ -3771,26 +2367,6 @@ JSONValue *runtime::GetPropertiesResponse::toJsonVal(
   return factory.newObject(props.begin(), props.end());
 }
 
-runtime::GlobalLexicalScopeNamesResponse::GlobalLexicalScopeNamesResponse(
-    const JSONObject *obj) {
-  if (!assign(id, obj, "id")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("result");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *res = *convertResult;
-  if (!assign(names, res, "names")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<runtime::GlobalLexicalScopeNamesResponse>
 runtime::GlobalLexicalScopeNamesResponse::tryMake(const JSONObject *obj) {
   std::unique_ptr<runtime::GlobalLexicalScopeNamesResponse> resp =
@@ -3827,30 +2403,6 @@ JSONValue *runtime::GlobalLexicalScopeNamesResponse::toJsonVal(
 /// Notifications
 debugger::BreakpointResolvedNotification::BreakpointResolvedNotification()
     : Notification("Debugger.breakpointResolved") {}
-
-debugger::BreakpointResolvedNotification::BreakpointResolvedNotification(
-    const JSONObject *obj)
-    : Notification("Debugger.breakpointResolved") {
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(breakpointId, params, "breakpointId")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(location, params, "location")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
 
 std::unique_ptr<debugger::BreakpointResolvedNotification>
 debugger::BreakpointResolvedNotification::tryMake(const JSONObject *obj) {
@@ -3889,38 +2441,6 @@ JSONValue *debugger::BreakpointResolvedNotification::toJsonVal(
 
 debugger::PausedNotification::PausedNotification()
     : Notification("Debugger.paused") {}
-
-debugger::PausedNotification::PausedNotification(const JSONObject *obj)
-    : Notification("Debugger.paused") {
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(callFrames, params, "callFrames")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(reason, params, "reason")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assignJsonBlob(data, params, "data")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(hitBreakpoints, params, "hitBreakpoints")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(asyncStackTrace, params, "asyncStackTrace")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
 
 std::unique_ptr<debugger::PausedNotification>
 debugger::PausedNotification::tryMake(const JSONObject *obj) {
@@ -3965,13 +2485,6 @@ JSONValue *debugger::PausedNotification::toJsonVal(JSONFactory &factory) const {
 debugger::ResumedNotification::ResumedNotification()
     : Notification("Debugger.resumed") {}
 
-debugger::ResumedNotification::ResumedNotification(const JSONObject *obj)
-    : Notification("Debugger.resumed") {
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<debugger::ResumedNotification>
 debugger::ResumedNotification::tryMake(const JSONObject *obj) {
   std::unique_ptr<debugger::ResumedNotification> notif =
@@ -3990,64 +2503,6 @@ JSONValue *debugger::ResumedNotification::toJsonVal(
 
 debugger::ScriptParsedNotification::ScriptParsedNotification()
     : Notification("Debugger.scriptParsed") {}
-
-debugger::ScriptParsedNotification::ScriptParsedNotification(
-    const JSONObject *obj)
-    : Notification("Debugger.scriptParsed") {
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(scriptId, params, "scriptId")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(url, params, "url")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(startLine, params, "startLine")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(startColumn, params, "startColumn")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(endLine, params, "endLine")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(endColumn, params, "endColumn")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(executionContextId, params, "executionContextId")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(hash, params, "hash")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assignJsonBlob(
-          executionContextAuxData, params, "executionContextAuxData")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(sourceMapURL, params, "sourceMapURL")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(hasSourceURL, params, "hasSourceURL")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(isModule, params, "isModule")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(length, params, "length")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
 
 std::unique_ptr<debugger::ScriptParsedNotification>
 debugger::ScriptParsedNotification::tryMake(const JSONObject *obj) {
@@ -4112,27 +2567,6 @@ heapProfiler::AddHeapSnapshotChunkNotification::
     AddHeapSnapshotChunkNotification()
     : Notification("HeapProfiler.addHeapSnapshotChunk") {}
 
-heapProfiler::AddHeapSnapshotChunkNotification::
-    AddHeapSnapshotChunkNotification(const JSONObject *obj)
-    : Notification("HeapProfiler.addHeapSnapshotChunk") {
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(chunk, params, "chunk")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<heapProfiler::AddHeapSnapshotChunkNotification>
 heapProfiler::AddHeapSnapshotChunkNotification::tryMake(const JSONObject *obj) {
   std::unique_ptr<heapProfiler::AddHeapSnapshotChunkNotification> notif =
@@ -4169,27 +2603,6 @@ JSONValue *heapProfiler::AddHeapSnapshotChunkNotification::toJsonVal(
 heapProfiler::HeapStatsUpdateNotification::HeapStatsUpdateNotification()
     : Notification("HeapProfiler.heapStatsUpdate") {}
 
-heapProfiler::HeapStatsUpdateNotification::HeapStatsUpdateNotification(
-    const JSONObject *obj)
-    : Notification("HeapProfiler.heapStatsUpdate") {
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(statsUpdate, params, "statsUpdate")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
-
 std::unique_ptr<heapProfiler::HeapStatsUpdateNotification>
 heapProfiler::HeapStatsUpdateNotification::tryMake(const JSONObject *obj) {
   std::unique_ptr<heapProfiler::HeapStatsUpdateNotification> notif =
@@ -4225,30 +2638,6 @@ JSONValue *heapProfiler::HeapStatsUpdateNotification::toJsonVal(
 
 heapProfiler::LastSeenObjectIdNotification::LastSeenObjectIdNotification()
     : Notification("HeapProfiler.lastSeenObjectId") {}
-
-heapProfiler::LastSeenObjectIdNotification::LastSeenObjectIdNotification(
-    const JSONObject *obj)
-    : Notification("HeapProfiler.lastSeenObjectId") {
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(lastSeenObjectId, params, "lastSeenObjectId")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(timestamp, params, "timestamp")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
 
 std::unique_ptr<heapProfiler::LastSeenObjectIdNotification>
 heapProfiler::LastSeenObjectIdNotification::tryMake(const JSONObject *obj) {
@@ -4288,33 +2677,6 @@ JSONValue *heapProfiler::LastSeenObjectIdNotification::toJsonVal(
 heapProfiler::ReportHeapSnapshotProgressNotification::
     ReportHeapSnapshotProgressNotification()
     : Notification("HeapProfiler.reportHeapSnapshotProgress") {}
-
-heapProfiler::ReportHeapSnapshotProgressNotification::
-    ReportHeapSnapshotProgressNotification(const JSONObject *obj)
-    : Notification("HeapProfiler.reportHeapSnapshotProgress") {
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(done, params, "done")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(total, params, "total")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(finished, params, "finished")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
 
 std::unique_ptr<heapProfiler::ReportHeapSnapshotProgressNotification>
 heapProfiler::ReportHeapSnapshotProgressNotification::tryMake(
@@ -4356,39 +2718,6 @@ JSONValue *heapProfiler::ReportHeapSnapshotProgressNotification::toJsonVal(
 
 runtime::ConsoleAPICalledNotification::ConsoleAPICalledNotification()
     : Notification("Runtime.consoleAPICalled") {}
-
-runtime::ConsoleAPICalledNotification::ConsoleAPICalledNotification(
-    const JSONObject *obj)
-    : Notification("Runtime.consoleAPICalled") {
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(type, params, "type")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(args, params, "args")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(executionContextId, params, "executionContextId")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(timestamp, params, "timestamp")) {
-    throw std::runtime_error("Failed assign");
-  }
-  if (!assign(stackTrace, params, "stackTrace")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
 
 std::unique_ptr<runtime::ConsoleAPICalledNotification>
 runtime::ConsoleAPICalledNotification::tryMake(const JSONObject *obj) {
@@ -4434,27 +2763,6 @@ JSONValue *runtime::ConsoleAPICalledNotification::toJsonVal(
 runtime::ExecutionContextCreatedNotification::
     ExecutionContextCreatedNotification()
     : Notification("Runtime.executionContextCreated") {}
-
-runtime::ExecutionContextCreatedNotification::
-    ExecutionContextCreatedNotification(const JSONObject *obj)
-    : Notification("Runtime.executionContextCreated") {
-  if (!assign(method, obj, "method")) {
-    throw std::runtime_error("Failed assign");
-  }
-
-  JSONValue *v = obj->get("params");
-  if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
-  }
-  auto convertResult = valueFromJson<JSONObject *>(v);
-  if (convertResult == nullptr) {
-    throw std::runtime_error("Failed to convert to JSONObject");
-  }
-  auto *params = *convertResult;
-  if (!assign(context, params, "context")) {
-    throw std::runtime_error("Failed assign");
-  }
-}
 
 std::unique_ptr<runtime::ExecutionContextCreatedNotification>
 runtime::ExecutionContextCreatedNotification::tryMake(const JSONObject *obj) {
