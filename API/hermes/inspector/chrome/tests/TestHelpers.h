@@ -35,6 +35,16 @@ inline JSONObject *mustParseStrAsJsonObj(
   return obj.value();
 }
 
+namespace message {
+
+inline std::unique_ptr<Request> mustGetRequestFromJson(const std::string &str) {
+  std::unique_ptr<Request> req = Request::fromJson(str);
+  EXPECT_TRUE(req != nullptr);
+  return req;
+}
+
+} // namespace message
+
 } // namespace chrome
 } // namespace inspector
 } // namespace hermes

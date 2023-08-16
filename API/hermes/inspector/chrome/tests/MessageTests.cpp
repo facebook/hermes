@@ -401,7 +401,7 @@ TEST_F(MessageTests, TestDeserializeAsyncStackTrace) {
 }
 
 TEST_F(MessageTests, TestRequestFromJson) {
-  std::unique_ptr<Request> baseReq1 = Request::fromJsonThrowOnError(R"({
+  std::unique_ptr<Request> baseReq1 = mustGetRequestFromJson(R"({
     "id": 1,
     "method": "Debugger.enable"
   })");
@@ -409,7 +409,7 @@ TEST_F(MessageTests, TestRequestFromJson) {
   EXPECT_EQ(req1->id, 1);
   EXPECT_EQ(req1->method, "Debugger.enable");
 
-  std::unique_ptr<Request> baseReq2 = Request::fromJsonThrowOnError(R"({
+  std::unique_ptr<Request> baseReq2 = mustGetRequestFromJson(R"({
     "id": 2,
     "method": "Debugger.removeBreakpoint",
     "params": {
@@ -421,12 +421,12 @@ TEST_F(MessageTests, TestRequestFromJson) {
   EXPECT_EQ(req2->method, "Debugger.removeBreakpoint");
   EXPECT_EQ(req2->breakpointId, "foobar");
 
-  Request::ParseResult invalidReq = Request::fromJson("invalid");
-  EXPECT_TRUE(std::holds_alternative<std::string>(invalidReq));
+  std::unique_ptr<Request> invalidReq = Request::fromJson("invalid");
+  EXPECT_TRUE(invalidReq == nullptr);
 }
 
 TEST_F(MessageTests, TestBreakpointRequestFromJSON) {
-  std::unique_ptr<Request> baseReq = Request::fromJsonThrowOnError(R"({
+  std::unique_ptr<Request> baseReq = mustGetRequestFromJson(R"({
     "id": 1,
     "method": "Debugger.setBreakpoint",
     "params": {
@@ -459,7 +459,7 @@ struct MyHandler : public NoopRequestHandler {
 TEST_F(MessageTests, TestRequestHandler) {
   MyHandler handler;
 
-  std::unique_ptr<Request> enableReq = Request::fromJsonThrowOnError(R"({
+  std::unique_ptr<Request> enableReq = mustGetRequestFromJson(R"({
     "id": 1,
     "method": "Debugger.enable"
   })");
@@ -468,7 +468,7 @@ TEST_F(MessageTests, TestRequestHandler) {
   EXPECT_EQ(handler.enableReq.id, 1);
   EXPECT_EQ(handler.enableReq.method, "Debugger.enable");
 
-  std::unique_ptr<Request> removeReq = Request::fromJsonThrowOnError(R"({
+  std::unique_ptr<Request> removeReq = mustGetRequestFromJson(R"({
     "id": 2,
     "method": "Debugger.removeBreakpoint",
     "params": {
@@ -491,7 +491,7 @@ TEST_F(MessageTests, testEnableRequest) {
   )";
 
   // Builder does not throw
-  auto req = Request::fromJsonThrowOnError(message);
+  auto req = mustGetRequestFromJson(message);
   debugger::EnableRequest *resolvedReq =
       dynamic_cast<debugger::EnableRequest *>(req.get());
 
@@ -520,7 +520,7 @@ TEST_F(MessageTests, testDisableRequest) {
   )";
 
   // Builder does not throw
-  auto req = Request::fromJsonThrowOnError(message);
+  auto req = mustGetRequestFromJson(message);
   debugger::DisableRequest *resolvedReq =
       dynamic_cast<debugger::DisableRequest *>(req.get());
 
@@ -553,7 +553,7 @@ TEST_F(MessageTests, testEvaluateOnCallFrameRequestMinimal) {
   )";
 
   // Builder does not throw
-  auto req = Request::fromJsonThrowOnError(message);
+  auto req = mustGetRequestFromJson(message);
   debugger::EvaluateOnCallFrameRequest *resolvedReq =
       dynamic_cast<debugger::EvaluateOnCallFrameRequest *>(req.get());
 
@@ -603,7 +603,7 @@ TEST_F(MessageTests, testEvaluateOnCallFrameRequestFull) {
   )";
 
   // Builder does not throw
-  auto req = Request::fromJsonThrowOnError(message);
+  auto req = mustGetRequestFromJson(message);
   debugger::EvaluateOnCallFrameRequest *resolvedReq =
       dynamic_cast<debugger::EvaluateOnCallFrameRequest *>(req.get());
 
@@ -664,7 +664,7 @@ TEST_F(MessageTests, testPauseRequest) {
   )";
 
   // Builder does not throw
-  auto req = Request::fromJsonThrowOnError(message);
+  auto req = mustGetRequestFromJson(message);
   debugger::PauseRequest *resolvedReq =
       dynamic_cast<debugger::PauseRequest *>(req.get());
 
@@ -696,7 +696,7 @@ TEST_F(MessageTests, testRemoveBreakpointRequest) {
   )";
 
   // Builder does not throw
-  auto req = Request::fromJsonThrowOnError(message);
+  auto req = mustGetRequestFromJson(message);
   debugger::RemoveBreakpointRequest *resolvedReq =
       dynamic_cast<debugger::RemoveBreakpointRequest *>(req.get());
 
@@ -730,7 +730,7 @@ TEST_F(MessageTests, testResumeRequest) {
   )";
 
   // Builder does not throw
-  auto req = Request::fromJsonThrowOnError(message);
+  auto req = mustGetRequestFromJson(message);
   debugger::ResumeRequest *resolvedReq =
       dynamic_cast<debugger::ResumeRequest *>(req.get());
 
@@ -767,7 +767,7 @@ TEST_F(MessageTests, testSetBreakpointRequestMinimal) {
   )";
 
   // Builder does not throw
-  auto req = Request::fromJsonThrowOnError(message);
+  auto req = mustGetRequestFromJson(message);
   debugger::SetBreakpointRequest *resolvedReq =
       dynamic_cast<debugger::SetBreakpointRequest *>(req.get());
 
@@ -821,7 +821,7 @@ TEST_F(MessageTests, testSetBreakpointRequestFull) {
   )";
 
   // Builder does not throw
-  auto req = Request::fromJsonThrowOnError(message);
+  auto req = mustGetRequestFromJson(message);
   debugger::SetBreakpointRequest *resolvedReq =
       dynamic_cast<debugger::SetBreakpointRequest *>(req.get());
 
@@ -866,7 +866,7 @@ TEST_F(MessageTests, testSetBreakpointByUrlRequestMinimal) {
   )";
 
   // Builder does not throw
-  auto req = Request::fromJsonThrowOnError(message);
+  auto req = mustGetRequestFromJson(message);
   debugger::SetBreakpointByUrlRequest *resolvedReq =
       dynamic_cast<debugger::SetBreakpointByUrlRequest *>(req.get());
 
@@ -909,7 +909,7 @@ TEST_F(MessageTests, testSetBreakpointByUrlRequestFull) {
   )";
 
   // Builder does not throw
-  auto req = Request::fromJsonThrowOnError(message);
+  auto req = mustGetRequestFromJson(message);
   debugger::SetBreakpointByUrlRequest *resolvedReq =
       dynamic_cast<debugger::SetBreakpointByUrlRequest *>(req.get());
 
@@ -957,7 +957,7 @@ TEST_F(MessageTests, testSetBreakpointsActiveRequest) {
   )";
 
   // Builder does not throw
-  auto req = Request::fromJsonThrowOnError(message);
+  auto req = mustGetRequestFromJson(message);
   debugger::SetBreakpointsActiveRequest *resolvedReq =
       dynamic_cast<debugger::SetBreakpointsActiveRequest *>(req.get());
 
@@ -991,7 +991,7 @@ TEST_F(MessageTests, testSetInstrumentationBreakpointRequest) {
   )";
 
   // Builder does not throw
-  auto req = Request::fromJsonThrowOnError(message);
+  auto req = mustGetRequestFromJson(message);
   debugger::SetInstrumentationBreakpointRequest *resolvedReq =
       dynamic_cast<debugger::SetInstrumentationBreakpointRequest *>(req.get());
 
@@ -1026,7 +1026,7 @@ TEST_F(MessageTests, testSetPauseOnExceptionsRequest) {
   )";
 
   // Builder does not throw
-  auto req = Request::fromJsonThrowOnError(message);
+  auto req = mustGetRequestFromJson(message);
   debugger::SetPauseOnExceptionsRequest *resolvedReq =
       dynamic_cast<debugger::SetPauseOnExceptionsRequest *>(req.get());
 
@@ -1057,7 +1057,7 @@ TEST_F(MessageTests, testStepIntoRequest) {
   )";
 
   // Builder does not throw
-  auto req = Request::fromJsonThrowOnError(message);
+  auto req = mustGetRequestFromJson(message);
   debugger::StepIntoRequest *resolvedReq =
       dynamic_cast<debugger::StepIntoRequest *>(req.get());
 
@@ -1086,7 +1086,7 @@ TEST_F(MessageTests, testStepOutRequest) {
   )";
 
   // Builder does not throw
-  auto req = Request::fromJsonThrowOnError(message);
+  auto req = mustGetRequestFromJson(message);
   debugger::StepOutRequest *resolvedReq =
       dynamic_cast<debugger::StepOutRequest *>(req.get());
 
@@ -1115,7 +1115,7 @@ TEST_F(MessageTests, testStepOverRequest) {
   )";
 
   // Builder does not throw
-  auto req = Request::fromJsonThrowOnError(message);
+  auto req = mustGetRequestFromJson(message);
   debugger::StepOverRequest *resolvedReq =
       dynamic_cast<debugger::StepOverRequest *>(req.get());
 

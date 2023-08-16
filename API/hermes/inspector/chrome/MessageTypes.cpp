@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<3f1456a80ae1a6e3d56ed9c70fe27d07>>
+// @generated SignedSource<<c51617476479f6bfa943b66ae88557b7>>
 
 #include "MessageTypes.h"
 
@@ -49,7 +49,7 @@ void putJsonBlob(
 
 } // namespace
 
-std::unique_ptr<Request> Request::fromJsonThrowOnError(const std::string &str) {
+std::unique_ptr<Request> Request::fromJson(const std::string &str) {
   static std::unordered_map<std::string, RequestBuilder> builders = {
       {"Debugger.disable", makeUnique<debugger::DisableRequest>},
       {"Debugger.enable", makeUnique<debugger::EnableRequest>},
@@ -106,7 +106,7 @@ std::unique_ptr<Request> Request::fromJsonThrowOnError(const std::string &str) {
   JSONFactory factory(alloc);
   std::optional<JSONObject *> parseResult = parseStrAsJsonObj(str, factory);
   if (!parseResult) {
-    throw std::runtime_error("Failed to parse string to JSONObject");
+    return nullptr;
   }
   JSONObject *jsonObj = *parseResult;
 
@@ -120,14 +120,6 @@ std::unique_ptr<Request> Request::fromJsonThrowOnError(const std::string &str) {
 
   auto builder = it->second;
   return builder(jsonObj);
-}
-
-Request::ParseResult Request::fromJson(const std::string &str) {
-  try {
-    return Request::fromJsonThrowOnError(str);
-  } catch (const std::exception &e) {
-    return e.what();
-  }
 }
 
 /// Types
