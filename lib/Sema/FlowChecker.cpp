@@ -1278,23 +1278,23 @@ void FlowChecker::visit(ESTree::VariableDeclarationNode *node) {
       visitedInits_.erase(it);
     else
       visitExpression(declarator->_init, declarator);
-  }
-  if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(declarator->_id)) {
-    if (!declarator->_init)
-      continue;
+    if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(declarator->_id)) {
+      if (!declarator->_init)
+        continue;
 
-    sema::Decl *decl = getDecl(id);
-    Type *lt = getDeclType(decl);
-    Type *rt = getNodeTypeOrAny(declarator->_init);
-    CanFlowResult cf = canAFlowIntoB(rt, lt);
-    if (!cf.canFlow) {
-      sm_.error(
-          declarator->getSourceRange(), "ft: incompatible initialization type");
-    } else {
-      declarator->_init = implicitCheckedCast(declarator->_init, lt, cf);
+      sema::Decl *decl = getDecl(id);
+      Type *lt = getDeclType(decl);
+      Type *rt = getNodeTypeOrAny(declarator->_init);
+      CanFlowResult cf = canAFlowIntoB(rt, lt);
+      if (!cf.canFlow) {
+        sm_.error(
+            declarator->getSourceRange(),
+            "ft: incompatible initialization type");
+      } else {
+        declarator->_init = implicitCheckedCast(declarator->_init, lt, cf);
+      }
     }
   }
-}
 }
 
 void FlowChecker::visit(ESTree::CatchClauseNode *node) {
