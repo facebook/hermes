@@ -6,6 +6,9 @@
 # compileJS uses neither exceptions nor RTTI
 add_hermes_library(compileJS CompileJS.cpp LINK_LIBS hermesPublic)
 
+add_subdirectory(inspector)
+add_subdirectory(jsinspector)
+
 set(HERMES_ENABLE_EH ON)
 
 # synthTraceParser uses exceptions but not RTTI.
@@ -143,6 +146,3 @@ if(HERMES_BUILD_APPLE_DSYM)
     install(DIRECTORY ${DSYM_PATH} DESTINATION lib)
   endif()
 endif()
-
-add_subdirectory(inspector)
-add_subdirectory(jsinspector)
