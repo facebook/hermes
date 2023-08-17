@@ -84,7 +84,7 @@ class JSINSPECTOR_EXPORT IInspector : public IDestructible {
 
 /// getInspectorInstance retrieves the singleton inspector that tracks all
 /// debuggable pages in this process.
-extern IInspector &getInspectorInstance();
+extern JSINSPECTOR_EXPORT IInspector &getInspectorInstance();
 
 /// makeTestInspectorInstance creates an independent inspector instance that
 /// should only be used in tests.

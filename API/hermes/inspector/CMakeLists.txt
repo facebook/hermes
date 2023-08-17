@@ -26,8 +26,8 @@ set(rtti_exception_SRC
   )
 
 add_hermes_library(hermesInspector_rtti_exception
-        ${rtti_exception_SRC}
-        LINK_LIBS hermesInspector_no_rtti_no_exception hermesapi)
+  ${rtti_exception_SRC}
+  LINK_LIBS hermesInspector_no_rtti_no_exception hermesapi)
 
 if(HERMES_ENABLE_TOOLS AND NOT WIN32)
   add_subdirectory(chrome/cli)
