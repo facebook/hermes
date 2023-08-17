@@ -6,12 +6,29 @@
 cmake_minimum_required(VERSION 3.13)
 set(CMAKE_VERBOSE_MAKEFILE on)
 
-file(GLOB hermesinspector_SRC CONFIGURE_DEPENDS *.cpp chrome/*.cpp)
+set(no_rtti_no_exception_SRC
+  chrome/JSONValueInterfaces.cpp
+  chrome/MessageConverters.cpp
+  chrome/MessageInterfaces.cpp
+  chrome/MessageTypes.cpp
+  )
 
-add_library(hermes_inspector
-        STATIC
-        ${hermesinspector_SRC})
+add_hermes_library(hermesInspector_no_rtti_no_exception ${no_rtti_no_exception_SRC} LINK_LIBS jsi hermesapi)
 
-target_link_libraries(hermes_inspector
-  hermesapi
-)
+set(HERMES_ENABLE_EH ON)
+set(HERMES_ENABLE_RTTI ON)
+set(rtti_exception_SRC
+  RuntimeAdapter.cpp
+  chrome/CDPHandler.cpp
+  chrome/CallbackOStream.cpp
+  chrome/RemoteObjectConverters.cpp
+  chrome/RemoteObjectsTable.cpp
+  )
+
+add_hermes_library(hermesInspector_rtti_exception
+        ${rtti_exception_SRC}
+        LINK_LIBS hermesInspector_no_rtti_no_exception hermesapi)
+
+if(HERMES_ENABLE_TOOLS AND NOT WIN32)
+  add_subdirectory(chrome/cli)
+endif()
