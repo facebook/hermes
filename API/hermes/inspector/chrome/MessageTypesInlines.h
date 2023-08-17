@@ -55,10 +55,11 @@ valueFromJson(const JSONValue *v) {
   return std::make_unique<T>(res->getValue());
 }
 
-/// Convert JSONValue to an int.
+/// Convert JSONValue to a long long.
 template <typename T>
-typename std::enable_if<std::is_same<T, int>::value, std::unique_ptr<T>>::type
-valueFromJson(const JSONValue *v) {
+typename std::enable_if<std::is_same<T, long long>::value, std::unique_ptr<T>>::
+    type
+    valueFromJson(const JSONValue *v) {
   auto res = llvh::dyn_cast_or_null<JSONNumber>(v);
   if (!res) {
     return nullptr;
@@ -210,8 +211,8 @@ inline JSONValue *valueToJson(bool b, JSONFactory &factory) {
   return factory.getBoolean(b);
 }
 
-// Convert a int to JSONValue.
-inline JSONValue *valueToJson(int num, JSONFactory &factory) {
+// Convert a long long to JSONValue.
+inline JSONValue *valueToJson(long long num, JSONFactory &factory) {
   return factory.getNumber(num);
 }
 
