@@ -1271,26 +1271,30 @@ void FlowChecker::visit(ESTree::BlockStatementNode *node) {
 void FlowChecker::visit(ESTree::VariableDeclarationNode *node) {
   for (ESTree::Node &n : node->_declarations) {
     auto *declarator = llvh::cast<ESTree::VariableDeclaratorNode>(&n);
-    if (!flowContext_.findNodeType(declarator->_init)) {
+    // Avoid visiting the initializer if it was already visited while inferring
+    // the type of the declaration. Remove the entry from the set.
+    auto it = visitedInits_.find(declarator->_init);
+    if (it != visitedInits_.end())
+      visitedInits_.erase(it);
+    else
       visitExpression(declarator->_init, declarator);
-    }
-    if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(declarator->_id)) {
-      if (!declarator->_init)
-        continue;
+  }
+  if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(declarator->_id)) {
+    if (!declarator->_init)
+      continue;
 
-      sema::Decl *decl = getDecl(id);
-      Type *lt = getDeclType(decl);
-      Type *rt = getNodeTypeOrAny(declarator->_init);
-      CanFlowResult cf = canAFlowIntoB(rt, lt);
-      if (!cf.canFlow) {
-        sm_.error(
-            declarator->getSourceRange(),
-            "ft: incompatible initialization type");
-      } else {
-        declarator->_init = implicitCheckedCast(declarator->_init, lt, cf);
-      }
+    sema::Decl *decl = getDecl(id);
+    Type *lt = getDeclType(decl);
+    Type *rt = getNodeTypeOrAny(declarator->_init);
+    CanFlowResult cf = canAFlowIntoB(rt, lt);
+    if (!cf.canFlow) {
+      sm_.error(
+          declarator->getSourceRange(), "ft: incompatible initialization type");
+    } else {
+      declarator->_init = implicitCheckedCast(declarator->_init, lt, cf);
     }
   }
+}
 }
 
 void FlowChecker::visit(ESTree::CatchClauseNode *node) {
@@ -1665,6 +1669,7 @@ class FlowChecker::AnnotateScopeDecls {
           // visitor on it to see if it's able to associate a type with the init
           // node.
           outer.visitExpression(declarator->_init, declarator);
+          outer.visitedInits_.insert(declarator->_init);
           if (Type *inferred =
                   outer.flowContext_.findNodeType(declarator->_init)) {
             type = inferred;

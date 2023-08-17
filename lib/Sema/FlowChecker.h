@@ -81,6 +81,10 @@ class FlowChecker {
   /// The AST node for every declaration. Used for reporting re-declarations.
   llvh::DenseMap<sema::Decl *, ESTree::Node *> declNodes_{};
 
+  /// Record the variable initializers visited when attempting to infer the
+  /// types of declarations in order to avoid visiting them again.
+  llvh::DenseSet<ESTree::Node *> visitedInits_{};
+
   /// True if we are preparing the AST to be compiled by Hermes, including
   /// erroring on features which we parse but don't compile and transforming
   /// the AST. False if we just want to validate the AST.
