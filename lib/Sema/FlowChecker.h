@@ -234,6 +234,12 @@ class FlowChecker {
   Type *parseArrayTypeAnnotation(ESTree::ArrayTypeAnnotationNode *node);
   Type *parseGenericTypeAnnotation(ESTree::GenericTypeAnnotationNode *node);
 
+  // Temporarily support TS as an intermediate step.
+#if HERMES_PARSE_TS
+  Type *parseTSArrayType(ESTree::TSArrayTypeNode *node);
+  Type *parseTSTypeReference(ESTree::TSTypeReferenceNode *node);
+#endif
+
   /// Parse a class type into an already created (but empty) class.
   class ParseClassType;
 

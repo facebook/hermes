@@ -516,7 +516,7 @@ std::shared_ptr<Context> createContext() {
     context->setParseTS(true);
 #endif
 
-  if (!cli::ParseFlow && cli::ParseTS && cli::Typed) {
+  if (!cli::ParseFlow && !cli::ParseTS && cli::Typed) {
     llvh::errs() << "error: no typed dialect parser is configured\n";
     return nullptr;
   }

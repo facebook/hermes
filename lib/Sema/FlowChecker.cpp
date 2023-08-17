@@ -1848,6 +1848,18 @@ Type *FlowChecker::parseTypeAnnotation(ESTree::Node *node) {
       return parseGenericTypeAnnotation(
           llvh::cast<ESTree::GenericTypeAnnotationNode>(node));
 
+#if HERMES_PARSE_TS
+    case ESTree::NodeKind::TSVoidKeyword:
+      return flowContext_.getVoid();
+    case ESTree::NodeKind::TSNumberKeyword:
+      return flowContext_.getNumber();
+    case ESTree::NodeKind::TSArrayType:
+      return parseTSArrayType(llvh::cast<ESTree::TSArrayTypeNode>(node));
+    case ESTree::NodeKind::TSTypeReference:
+      return parseTSTypeReference(
+          llvh::cast<ESTree::TSTypeReferenceNode>(node));
+#endif
+
     default:
       sm_.error(
           node->getSourceRange(),
@@ -1892,6 +1904,27 @@ Type *FlowChecker::parseGenericTypeAnnotation(
 
   return td->type;
 }
+
+#if HERMES_PARSE_TS
+Type *FlowChecker::parseTSArrayType(ESTree::TSArrayTypeNode *node) {
+  Type *arr = flowContext_.createType(flowContext_.createArray(), node);
+  llvh::cast<ArrayType>(arr->info)->init(
+      parseTypeAnnotation(node->_elementType));
+  return arr;
+}
+
+Type *FlowChecker::parseTSTypeReference(ESTree::TSTypeReferenceNode *node) {
+  auto *id = llvh::cast<ESTree::IdentifierNode>(node->_typeName);
+  TypeDecl *td = bindingTable_.find(id->_name);
+
+  if (!td) {
+    sm_.error(id->getSourceRange(), "ft: undefined type " + id->_name->str());
+    return flowContext_.getAny();
+  }
+
+  return td->type;
+}
+#endif // HERMES_PARSE_TS
 
 FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     TypeInfo *a,
