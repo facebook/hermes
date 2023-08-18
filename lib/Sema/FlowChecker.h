@@ -90,6 +90,9 @@ class FlowChecker {
   /// the AST. False if we just want to validate the AST.
   bool const compile_;
 
+  /// Counter for creating anonymous labels during typechecking.
+  uint32_t anonymousLabelCounter_{0};
+
  public:
   explicit FlowChecker(
       Context &astContext,
@@ -239,6 +242,7 @@ class FlowChecker {
   Type *parseNullableTypeAnnotation(ESTree::NullableTypeAnnotationNode *node);
   Type *parseArrayTypeAnnotation(ESTree::ArrayTypeAnnotationNode *node);
   Type *parseGenericTypeAnnotation(ESTree::GenericTypeAnnotationNode *node);
+  Type *parseFunctionTypeAnnotation(ESTree::FunctionTypeAnnotationNode *node);
 
   /// Parse a class type into an already created (but empty) class.
   class ParseClassType;
@@ -246,6 +250,14 @@ class FlowChecker {
   /// Resolve a superClass node for a class into a ClassType if possible.
   /// \return nullptr on failure, reporting errors if any.
   ClassType *resolveSuperClass(ESTree::Node *superClass);
+
+  /// Visit the \p node for either resolution or parsing and call \p cb on each
+  /// of the type annotations in it.
+  /// \return the constructed FunctionType.
+  template <typename AnnotationCB>
+  inline Type *processFunctionTypeAnnotation(
+      ESTree::FunctionTypeAnnotationNode *node,
+      AnnotationCB cb);
 
   /// Result indicating whether a type can flow into another type. If it can,
   /// additionally indicates whether a checked cast is needed.

@@ -9,6 +9,7 @@
 
 #include "llvh/ADT/ScopeExit.h"
 #include "llvh/ADT/SetVector.h"
+#include "llvh/ADT/Twine.h"
 
 #define DEBUG_TYPE "FlowChecker"
 
@@ -1657,11 +1658,12 @@ class FlowChecker::DeclareScopeTypes {
           annotation);
     }
 
-    // FIXME: Function types must also be resolved as structural types in the
-    // same way as Array.
     if (auto *func =
             llvh::dyn_cast<ESTree::FunctionTypeAnnotationNode>(annotation)) {
-      hermes_fatal("function type alias unimplemented");
+      return outer.processFunctionTypeAnnotation(
+          func, [this, &visited, depth](ESTree::Node *annotation) {
+            return resolveTypeAnnotation(annotation, visited, depth);
+          });
     }
 
     // The specified AST node represents a nominal type, so return the type.
@@ -2009,8 +2011,8 @@ Type *FlowChecker::parseFunctionType(
     paramsRef = paramsRef.drop_front();
   }
 
-  FunctionType *res = flowContext_.createFunction();
-  res->init(returnType, thisParamType, paramsRef, isAsync, isGenerator);
+  FunctionType *res = flowContext_.createFunction(
+      returnType, thisParamType, paramsRef, isAsync, isGenerator);
   return flowContext_.createType(res);
 }
 
@@ -2057,6 +2059,9 @@ Type *FlowChecker::parseTypeAnnotation(ESTree::Node *node) {
     case ESTree::NodeKind::GenericTypeAnnotation:
       return parseGenericTypeAnnotation(
           llvh::cast<ESTree::GenericTypeAnnotationNode>(node));
+    case ESTree::NodeKind::FunctionTypeAnnotation:
+      return parseFunctionTypeAnnotation(
+          llvh::cast<ESTree::FunctionTypeAnnotationNode>(node));
 
     default:
       sm_.error(
@@ -2099,6 +2104,14 @@ Type *FlowChecker::parseGenericTypeAnnotation(
   }
 
   return td->type;
+}
+
+Type *FlowChecker::parseFunctionTypeAnnotation(
+    ESTree::FunctionTypeAnnotationNode *node) {
+  return processFunctionTypeAnnotation(
+      node, [this](ESTree::Node *annotation) -> Type * {
+        return parseTypeAnnotation(annotation);
+      });
 }
 
 FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
@@ -2255,6 +2268,52 @@ ESTree::Node *FlowChecker::implicitCheckedCast(
   cast->copyLocationFrom(argument);
   setNodeType(cast, toType);
   return cast;
+}
+
+template <typename AnnotationCB>
+Type *FlowChecker::processFunctionTypeAnnotation(
+    ESTree::FunctionTypeAnnotationNode *node,
+    AnnotationCB cb) {
+  if (node->_rest || node->_typeParameters) {
+    sm_.error(node->getSourceRange(), "unsupported function type params");
+  }
+
+  Type *thisType = node->_this
+      ? cb(llvh::cast<ESTree::FunctionTypeParamNode>(node->_this)
+               ->_typeAnnotation)
+      : nullptr;
+  Type *returnType = cb(node->_returnType);
+
+  llvh::SmallVector<FunctionType::Param, 4> paramsList{};
+  for (ESTree::Node &n : node->_params) {
+    if (auto *param = llvh::dyn_cast<ESTree::FunctionTypeParamNode>(&n)) {
+      auto *id = llvh::cast_or_null<ESTree::IdentifierNode>(param->_name);
+      if (param->_optional) {
+        sm_.error(param->getSourceRange(), "unsupported optional parameter");
+      }
+      paramsList.emplace_back(
+          Identifier::getFromPointer(id ? id->_name : nullptr),
+          param->_typeAnnotation ? cb(param->_typeAnnotation) : nullptr);
+    } else {
+      sm_.warning(
+          n.getSourceRange(),
+          "ft: typing of pattern parameters not implemented, :any assumed");
+      size_t idx = paramsList.size();
+      paramsList.emplace_back(
+          astContext_.getIdentifier(
+              (llvh::Twine("?param_") + llvh::Twine(idx)).str()),
+          flowContext_.getAny());
+    }
+  }
+
+  return flowContext_.createType(
+      flowContext_.createFunction(
+          returnType,
+          thisType,
+          paramsList,
+          /* isAsync */ false,
+          /* isGenerator */ false),
+      node);
 }
 
 } // namespace flow

@@ -391,21 +391,6 @@ unsigned ArrayType::_hashImpl() const {
   return (unsigned)llvh::hash_combine((unsigned)TypeKind::Array);
 }
 
-void FunctionType::init(
-    Type *returnType,
-    Type *thisParam,
-    llvh::ArrayRef<Param> params,
-    bool isAsync,
-    bool isGenerator) {
-  assert(!isInitialized() && "FunctionType already initialized");
-  return_ = returnType;
-  thisParam_ = thisParam;
-  params_.append(params.begin(), params.end());
-  isAsync_ = isAsync;
-  isGenerator_ = isGenerator;
-  markAsInitialized();
-}
-
 /// Compare two instances of the same TypeKind.
 int FunctionType::_compareImpl(const FunctionType *other, CompareState &state)
     const {

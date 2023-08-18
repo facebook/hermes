@@ -378,28 +378,29 @@ class FunctionType : public SingleType<TypeKind::Function, TypeInfo> {
   llvh::SmallVector<Param, 2> params_{};
   bool isAsync_ = false;
   bool isGenerator_ = false;
-  /// Type has been initialized flag.
-  bool initialized_ = false;
 
  public:
   /// Initialize a new instance.
-  void init(
+  explicit FunctionType(
       Type *returnType,
       Type *thisParam,
       llvh::ArrayRef<Param> params,
       bool isAsync,
-      bool isGenerator);
+      bool isGenerator)
+      : return_(returnType),
+        thisParam_(thisParam),
+        isAsync_(isAsync),
+        isGenerator_(isGenerator) {
+    params_.append(params.begin(), params.end());
+  }
 
   Type *getReturnType() const {
-    assert(isInitialized());
     return return_;
   }
   Type *getThisParam() const {
-    assert(isInitialized());
     return thisParam_;
   }
   const llvh::ArrayRef<Param> getParams() const {
-    assert(isInitialized());
     return params_;
   }
   bool isAsync() const {
@@ -415,15 +416,6 @@ class FunctionType : public SingleType<TypeKind::Function, TypeInfo> {
   bool _equalsImpl(const FunctionType *other, CompareState &state) const;
   /// Calculate the type-specific hash.
   unsigned _hashImpl() const;
-
- private:
-  bool isInitialized() const {
-    return initialized_;
-  }
-  /// Mark the type as initialized.
-  void markAsInitialized() {
-    initialized_ = true;
-  }
 };
 
 /// A complex type annotated with a unique id (for that specific kind) to allow
@@ -702,8 +694,14 @@ class FlowContext {
     assert(element);
     return &allocArray_.emplace_back(element);
   }
-  FunctionType *createFunction() {
-    return &allocFunction_.emplace_back();
+  FunctionType *createFunction(
+      Type *returnType,
+      Type *thisParam,
+      llvh::ArrayRef<FunctionType::Param> params,
+      bool isAsync,
+      bool isGenerator) {
+    return &allocFunction_.emplace_back(
+        returnType, thisParam, params, isAsync, isGenerator);
   }
   ClassType *createClass(Identifier name) {
     return &allocClass_.emplace_back(allocClass_.size(), name);
