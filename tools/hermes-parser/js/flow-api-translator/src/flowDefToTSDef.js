@@ -662,6 +662,8 @@ const getTransforms = (
         return transform.ConditionalTypeAnnotation(node);
       case 'InferTypeAnnotation':
         return transform.InferTypeAnnotation(node);
+      case 'KeyofTypeAnnotation':
+        return transform.KeyofTypeAnnotation(node);
       default:
         throw unexpectedTranslationError(node, `Unhandled type ${node.type}`);
     }
@@ -2524,7 +2526,36 @@ const getTransforms = (
     ):
       | TSESTree.TSTypeLiteral
       | TSESTree.TSIntersectionType
-      | TSESTree.TSAnyKeyword {
+      | TSESTree.TSAnyKeyword
+      | TSESTree.TSMappedType {
+      if (
+        node.properties.length === 1 &&
+        node.properties[0].type === 'ObjectTypeMappedTypeProperty'
+      ) {
+        // Mapped Object Object types must not have other object properties.
+        const prop: FlowESTree.ObjectTypeMappedTypeProperty =
+          node.properties[0];
+        const tsProp: TSESTree.TSMappedType = {
+          type: 'TSMappedType',
+          typeParameter: {
+            type: 'TSTypeParameter',
+            name: {
+              type: 'Identifier',
+              name: prop.keyTparam.name,
+            },
+            constraint: transformTypeAnnotationType(prop.sourceType),
+            in: false,
+            out: false,
+          },
+          readonly: prop.variance?.kind === 'plus',
+          optional: prop.optional === 'Optional',
+          typeAnnotation: transformTypeAnnotationType(prop.propType),
+          nameType: null,
+        };
+
+        return tsProp;
+      }
+
       // we want to preserve the source order of the members
       // unfortunately flow has unordered properties storing things
       // so store all elements with their start index and sort the
@@ -2563,10 +2594,9 @@ const getTransforms = (
           }
 
           if (property.type === 'ObjectTypeMappedTypeProperty') {
-            // TODO - Support mapped types
             return unsupportedAnnotation(
               property,
-              'object type with mapped type property',
+              'object type with mapped type property along with other properties',
             );
           }
 
@@ -3125,6 +3155,15 @@ const getTransforms = (
       return {
         type: 'TSInferType',
         typeParameter: transform.TypeParameter(node.typeParameter),
+      };
+    },
+    KeyofTypeAnnotation(
+      node: FlowESTree.KeyofTypeAnnotation,
+    ): TSESTree.TSTypeOperator {
+      return {
+        type: 'TSTypeOperator',
+        operator: 'keyof',
+        typeAnnotation: transformTypeAnnotationType(node.argument),
       };
     },
   };
