@@ -746,6 +746,9 @@ class FlowChecker::ExprVisitor {
   void visit(ESTree::StringLiteralNode *node) {
     outer_.setNodeType(node, outer_.flowContext_.getString());
   }
+  void visit(ESTree::TemplateLiteralNode *node) {
+    outer_.setNodeType(node, outer_.flowContext_.getString());
+  }
   void visit(ESTree::NumericLiteralNode *node) {
     outer_.setNodeType(node, outer_.flowContext_.getNumber());
   }
