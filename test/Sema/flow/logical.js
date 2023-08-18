@@ -45,7 +45,7 @@
 // CHECK-NEXT:    ExpressionStatement
 // CHECK-NEXT:        FunctionExpression : untyped function %t.1
 // CHECK-NEXT:            BlockStatement
-// CHECK-NEXT:                FunctionDeclaration
+// CHECK-NEXT:                FunctionDeclaration : function %t.4
 // CHECK-NEXT:                    Id 'foo' [D:E:%d.1 'foo']
 // CHECK-NEXT:                    Id 'x' [D:E:%d.3 'x']
 // CHECK-NEXT:                    Id 'y' [D:E:%d.4 'y']

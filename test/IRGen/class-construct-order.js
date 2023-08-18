@@ -59,7 +59,7 @@ return foo;
 // CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(x: any): any
+// CHECK:function foo(x: any): any [typed]
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any

@@ -48,7 +48,7 @@ return [dotProduct, Vec2D];
 // CHECK-NEXT:  %7 = ReturnInst %4: object
 // CHECK-NEXT:function_end
 
-// CHECK:function dotProduct(a: any, b: any): number
+// CHECK:function dotProduct(a: any, b: any): number [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any

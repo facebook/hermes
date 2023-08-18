@@ -36,7 +36,7 @@ function foo() {
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
 // CHECK-NEXT:        StringLiteral : string
-// CHECK-NEXT:    FunctionDeclaration
+// CHECK-NEXT:    FunctionDeclaration : untyped function %t.1
 // CHECK-NEXT:        Id 'foo' [D:E:%d.1 'foo']
 // CHECK-NEXT:        BlockStatement
 // CHECK-NEXT:            TypeAlias

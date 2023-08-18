@@ -39,7 +39,7 @@
 // CHECK-NEXT:  %1 = ReturnInst %0: object
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(x: any, sink: any): undefined
+// CHECK:function foo(x: any, sink: any): undefined [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any

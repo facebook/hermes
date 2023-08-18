@@ -81,6 +81,7 @@ void FlowChecker::visit(ESTree::FunctionDeclarationNode *node) {
   if (auto *typed = llvh::dyn_cast<TypedFunctionType>(ftype))
     thisType = typed->getThisParam();
 
+  setNodeType(node, declType);
   FunctionContext functionContext(*this, node, declType, thisType);
   visitFunctionLike(node, node->_body, node->_params);
 }
