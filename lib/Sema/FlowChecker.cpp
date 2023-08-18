@@ -1194,6 +1194,20 @@ class FlowChecker::ExprVisitor {
     outer_.setNodeType(node, res);
   }
 
+  void visit(ESTree::ConditionalExpressionNode *node) {
+    visitESTreeChildren(*this, node);
+
+    Type *types[2]{
+        outer_.getNodeTypeOrAny(node->_consequent),
+        outer_.getNodeTypeOrAny(node->_alternate)};
+
+    // The result of a conditional is the union of the two types.
+    outer_.setNodeType(
+        node,
+        outer_.flowContext_.createType(
+            outer_.flowContext_.maybeCreateUnion(types)));
+  }
+
   void visit(ESTree::CallExpressionNode *node) {
     visitESTreeChildren(*this, node);
 
