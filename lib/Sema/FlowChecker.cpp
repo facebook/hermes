@@ -2117,8 +2117,10 @@ Type *FlowChecker::parseOptionalTypeAnnotation(
 }
 
 Type *FlowChecker::parseTypeAnnotation(ESTree::Node *node) {
-  if (!node)
-    return flowContext_.getAny();
+  assert(
+      node &&
+      "parseTypeAnnotation requires an annotation, "
+      "use parseOptionalTypeAnnotation otherwise");
 
   switch (node->getKind()) {
     case ESTree::NodeKind::VoidTypeAnnotation:

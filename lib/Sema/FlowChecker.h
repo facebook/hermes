@@ -234,8 +234,7 @@ class FlowChecker {
       Type *defaultType = nullptr);
 
   /// Parse a type annotation into a type.
-  ///
-  /// \param node the type annotation AST (ESTree::TypeAnnotationNode).
+  /// \param node the non-null type annotation AST node.
   Type *parseTypeAnnotation(ESTree::Node *node);
 
   Type *parseUnionTypeAnnotation(ESTree::UnionTypeAnnotationNode *node);
