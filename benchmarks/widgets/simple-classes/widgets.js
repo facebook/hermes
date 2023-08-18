@@ -109,39 +109,44 @@ function arrayPrototypeIncludes_Component(arr: Component[], x: any) {
   return false;
 }
 
-function arrayPrototypeForEach_number(arr: number[], cb: any) {
+// forEach overloads take callbacks which return 'any' for now,
+// but eventually we'd probably want to make that return type generic in order
+// to avoid unnecessary conversions to 'any.
+// Note that Flow's type definitions have the callbacks return 'mixed'.
+
+function arrayPrototypeForEach_number(arr: number[], cb: number => any) {
   'inline';
   var length: number = arr.length;
   for (var i: number = 0; i < length; ++i) {
     var elem: number = arr[i];
-    cb(elem, i);
+    cb(elem);
   }
 }
 
-function arrayPrototypeForEach_RenderNode(arr: RenderNode[], cb: any) {
+function arrayPrototypeForEach_RenderNode(arr: RenderNode[], cb: RenderNode => any) {
   'inline';
   var length: number = arr.length;
   for (var i: number = 0; i < length; ++i) {
     var elem: RenderNode = arr[i];
-    cb(elem, i);
+    cb(elem);
   }
 }
 
-function arrayPrototypeForEach_VirtualEntity(arr: VirtualEntity[], cb: any) {
+function arrayPrototypeForEach_VirtualEntity(arr: VirtualEntity[], cb: VirtualEntity => any) {
   'inline';
   var length: number = arr.length;
   for (var i: number = 0; i < length; ++i) {
     var elem: VirtualEntity = arr[i];
-    cb(elem, i);
+    cb(elem);
   }
 }
 
-function arrayPrototypeForEach_Component(arr: Component[], cb: any) {
+function arrayPrototypeForEach_Component(arr: Component[], cb: Component => any) {
   'inline';
   var length: number = arr.length;
   for (var i: number = 0; i < length; ++i) {
     var elem: Component = arr[i];
-    cb(elem, i);
+    cb(elem);
   }
 }
 
