@@ -190,6 +190,9 @@ llvh::ErrorOr<void *>
 vm_allocate_aligned(size_t sz, size_t alignment, void *hint) {
   assert(sz > 0 && sz % page_size() == 0);
   assert(alignment > 0 && alignment % page_size() == 0);
+  // While not specifically required for the posix implementation, check the
+  // alignment requirement here to avoid creating bugs on other platforms.
+  assert(llvh::isPowerOf2_64(alignment));
 
   // Opportunistically allocate without alignment constraint,
   // and see if the memory happens to be aligned.
