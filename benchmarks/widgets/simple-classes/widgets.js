@@ -87,7 +87,7 @@ function arrayPrototypeFilter_Component(arr: Component[], cb: any): Component[] 
   return result;
 }
 
-function arrayPrototypeIncludes_number(arr: number[], x: any) {
+function arrayPrototypeIncludes_number(arr: number[], x: number): bool {
   'inline';
   var length: number = arr.length;
   for (var i: number = 0; i < length; ++i) {
@@ -98,7 +98,7 @@ function arrayPrototypeIncludes_number(arr: number[], x: any) {
   return false;
 }
 
-function arrayPrototypeIncludes_Component(arr: Component[], x: any) {
+function arrayPrototypeIncludes_Component(arr: Component[], x: Component): bool {
   'inline';
   var length: number = arr.length;
   for (var i: number = 0; i < length; ++i) {
@@ -114,7 +114,7 @@ function arrayPrototypeIncludes_Component(arr: Component[], x: any) {
 // to avoid unnecessary conversions to 'any.
 // Note that Flow's type definitions have the callbacks return 'mixed'.
 
-function arrayPrototypeForEach_number(arr: number[], cb: number => any) {
+function arrayPrototypeForEach_number(arr: number[], cb: number => any): void {
   'inline';
   var length: number = arr.length;
   for (var i: number = 0; i < length; ++i) {
@@ -123,7 +123,7 @@ function arrayPrototypeForEach_number(arr: number[], cb: number => any) {
   }
 }
 
-function arrayPrototypeForEach_RenderNode(arr: RenderNode[], cb: RenderNode => any) {
+function arrayPrototypeForEach_RenderNode(arr: RenderNode[], cb: RenderNode => any): void {
   'inline';
   var length: number = arr.length;
   for (var i: number = 0; i < length; ++i) {
@@ -132,7 +132,7 @@ function arrayPrototypeForEach_RenderNode(arr: RenderNode[], cb: RenderNode => a
   }
 }
 
-function arrayPrototypeForEach_VirtualEntity(arr: VirtualEntity[], cb: VirtualEntity => any) {
+function arrayPrototypeForEach_VirtualEntity(arr: VirtualEntity[], cb: VirtualEntity => any): void {
   'inline';
   var length: number = arr.length;
   for (var i: number = 0; i < length; ++i) {
@@ -141,7 +141,7 @@ function arrayPrototypeForEach_VirtualEntity(arr: VirtualEntity[], cb: VirtualEn
   }
 }
 
-function arrayPrototypeForEach_Component(arr: Component[], cb: Component => any) {
+function arrayPrototypeForEach_Component(arr: Component[], cb: Component => any): void {
   'inline';
   var length: number = arr.length;
   for (var i: number = 0; i < length; ++i) {
