@@ -6,8 +6,10 @@
 # compileJS uses neither exceptions nor RTTI
 add_hermes_library(compileJS CompileJS.cpp LINK_LIBS hermesPublic)
 
-add_subdirectory(inspector)
-add_subdirectory(jsinspector)
+if(HERMES_ENABLE_DEBUGGER)
+  add_subdirectory(inspector)
+  add_subdirectory(jsinspector)
+endif()
 
 set(HERMES_ENABLE_EH ON)
 
@@ -46,7 +48,20 @@ add_hermes_library(traceInterpreter TraceInterpreter.cpp
 
 set(HERMES_LINK_COMPONENTS LLVHSupport)
 
-add_library(libhermes SHARED ${api_sources})
+set(LIBHERMES_INSPECTOR_OBJS)
+if(HERMES_ENABLE_DEBUGGER)
+  set(LIBHERMES_INSPECTOR_OBJS
+    $<TARGET_OBJECTS:hermesInspector_no_rtti_no_exception_obj>
+    $<TARGET_OBJECTS:hermesInspector_rtti_exception_obj>
+    $<TARGET_OBJECTS:jsinspector_obj>
+  )
+endif()
+
+add_library(libhermes
+  SHARED
+  ${api_sources}
+  ${LIBHERMES_INSPECTOR_OBJS}
+)
 
 # This is configured using a cmake flag instead of a separate target, because
 # we need the output to be named "libhermes.so".
