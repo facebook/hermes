@@ -11,6 +11,7 @@
 #include "hermes/Sema/SemContext.h"
 
 #include "llvh/ADT/DenseSet.h"
+#include "llvh/ADT/SetVector.h"
 
 namespace hermes {
 
@@ -78,22 +79,19 @@ class TypeInfo {
   /// Return the TypeKind as a string.
   llvh::StringRef getKindName() const;
 
-  /// Comparison stores visited sets for both 'this' and 'other'.
+  /// Comparison stores visited set for a pair of (this, other).
   /// If the comparison diverges or terminates prior to seeing a visited pair,
   /// it operates as if there was no visited set in the usual fashion.
   /// However, if we see a visited pair, that must mean we haven't diverged
   /// prior to it, and we can know that the Types must be equal.
+  /// The kinds must have been checked somewhere else, or are being checked up
+  /// the callstack.
+  /// If we see the same pair again, we can't perform any new work because we
+  /// have no new information at that point.
   class CompareState {
    public:
-    /// All visited types until we find a cycle for 'this'.
-    llvh::DenseSet<const TypeInfo *> visitedThis{};
-    /// Whether a cycle has been found for 'this'.
-    bool seenThis = false;
-
-    /// All visited types until we find a cycle for 'other'.
-    llvh::DenseSet<const TypeInfo *> visitedOther{};
-    /// Whether a cycle has been found for 'other'.
-    bool seenOther = false;
+    /// Pairs of (this, other) that we have visited.
+    llvh::SetVector<std::pair<const TypeInfo *, const TypeInfo *>> visited{};
   };
 
   /// Compare this type and other type lexicographically and return -1, 0, 1
@@ -103,15 +101,24 @@ class TypeInfo {
   /// inherent "meaning".
   /// Equality however is well-defined: it compares structural types "deeply"
   /// and nominal types (subclasses of \c TypeWithId) "shallowly".
+  ///
+  /// The types must be known to be non-looping; looping unions
+  /// are not comparable because we have no good way to order cycles.
+  /// This restriction isn't enforced - the caller must know the types are
+  /// non-looping and breaking this precondition will result in unpredictable
+  /// behavior.
   int compare(const TypeInfo *other) const;
 
   /// \param state the state for tracking cycles through the comparison.
   int compare(const TypeInfo *other, CompareState &state) const;
 
-  /// Wrapper around \c compare() == 0.
-  bool equals(const TypeInfo *other) const {
-    return compare(other) == 0;
-  }
+  /// Check whether types are equal.
+  /// May be used on looping types (with known looping union arms).
+  bool equals(const TypeInfo *other) const;
+
+  /// \param state the state for tracking cycles through the comparison.
+  ///   The state is restored to its pre-call state when the function returns.
+  bool equals(const TypeInfo *other, CompareState &state) const;
 
   /// Calculate a shallow hash of this type for hash tables, etc.
   /// Types that compare equal using \c compare() must have the same hash.
@@ -165,6 +172,10 @@ class SingletonType : public TypeInfo {
         "only the same TypeKind can be compared");
     return 0;
   }
+  /// Compare two instances of the same TypeKind.
+  bool _equalsImpl(const SingletonType *other, CompareState &state) const {
+    return _compareImpl(other, state) == 0;
+  }
   /// Calculate the type-specific hash.
   unsigned _hashImpl() const {
     return (unsigned)getKind();
@@ -202,40 +213,131 @@ using BigIntType = SingleType<TypeKind::BigInt, PrimaryType>;
 using AnyType = SingleType<TypeKind::Any, SingletonType>;
 using MixedType = SingleType<TypeKind::Mixed, SingletonType>;
 
+/// Unions are handled specially because their existence and layout is dependent
+/// on their arms.
+///
+/// Some of the union arms may be "looping":
+/// they may point to types which eventually point back to themselves,
+/// meaning there's no end point to the recursive comparison.
+/// Comparable union arms are non-looping.
+///
+/// For unions which may be looping (e.g. via type aliases but not via
+/// nominal types), they are first populated with unordered arms.
+/// The arms are sorted and uniqued during type alias resolution,
+/// with the looping types split from canonicalized types (sorted, uniqued).
+/// Looping types can be uniqued slowly using \c TypeInfo::equals.
+/// Once canonicalization happens, they are registered as canonicalized in
+/// UnionType.
+///
+/// Unions can also be created with known non-looping/looping types.
+///
+/// In either case, UnionType will not be used when it is known to only have one
+/// type following canonicalization.
+/// It will be replaced with the single type.
 class UnionType : public SingleType<TypeKind::Union, TypeInfo> {
+  /// When numNonLoopingTypes_ is non-negative:
+  ///   The first numNonLoopingTypes_ are canonical (sorted, uniqued).
+  ///   The other types are recursive.
+  /// When numNonLoopingTypes_ is -1:
+  ///   No types have been checked for canonicalization.
   llvh::SmallVector<Type *, 4> types_{};
+
+  /// Number of types at the start of types_ that are known to be non-recursive,
+  /// sorted, and uniqued.
+  /// -1 prior to any processing (if the types have no known information yet).
+  int32_t numNonLoopingTypes_ = -1;
+
   bool hasAny_ = false;
   bool hasMixed_ = false;
 
  public:
+  /// Create a UnionType with an unknown list of types to be canonicalized
+  /// later.
   explicit UnionType(llvh::SmallVector<Type *, 4> &&types);
+  /// Create a UnionType already knowing the canonical and recursive types.
+  explicit UnionType(
+      llvh::SmallVector<Type *, 4> &&nonLoopingTypes,
+      llvh::SmallVector<Type *, 4> &&loopingTypes) {
+    setCanonicalTypes(std::move(nonLoopingTypes), std::move(loopingTypes));
+  }
 
-  /// Return the members of the union.
+  /// Set the type arms for the union after the canonical representation is
+  /// known.
+  void setCanonicalTypes(
+      llvh::SmallVector<Type *, 4> &&nonLoopingTypes,
+      llvh::SmallVector<Type *, 4> &&loopingTypes);
+
+  /// \return the number of known non-looping types if that has been determined,
+  /// -1 if it hasn't.
+  /// The number will have been calculated during FlowChecker,
+  /// so callers after the FlowChecker has run generally don't have to worry
+  /// about it being -1.
+  int32_t getNumNonLoopingTypes() const {
+    return numNonLoopingTypes_;
+  }
+
+  /// \return the members of the union.
   llvh::ArrayRef<Type *> getTypes() const {
     return types_;
   }
+  /// \return the non-looping members of the union.
+  llvh::ArrayRef<Type *> getNonLoopingTypes() const {
+    assert(numNonLoopingTypes_ >= 0 && "types haven't been canonicalized yet");
+    return getTypes().take_front(numNonLoopingTypes_);
+  }
+  /// \return the looping members of the union.
+  llvh::ArrayRef<Type *> getLoopingTypes() const {
+    assert(numNonLoopingTypes_ >= 0 && "types haven't been canonicalized yet");
+    return getTypes().drop_front(numNonLoopingTypes_);
+  }
 
   bool hasAny() const {
+    assert(numNonLoopingTypes_ >= 0 && "types haven't been canonicalized yet");
     return hasAny_;
   }
   bool hasMixed() const {
+    assert(numNonLoopingTypes_ >= 0 && "types haven't been canonicalized yet");
     return hasMixed_;
   }
   /// \return true if the union contains a "void" arm.
   bool hasVoid() const {
+    assert(numNonLoopingTypes_ >= 0 && "types haven't been canonicalized yet");
     return llvh::isa<VoidType>(types_[0]->info);
   }
 
   /// Compare two instances of the same TypeKind.
-  int _compareImpl(const UnionType *other) const;
   int _compareImpl(const UnionType *other, CompareState &state) const;
+  /// Compare two instances of the same TypeKind.
+  bool _equalsImpl(const UnionType *other, CompareState &state) const;
   /// Calculate the type-specific hash.
   unsigned _hashImpl() const;
 
-  /// Canonicalize the given \p types, by collapsing nested unions, removing
-  /// duplicates, and deterministically sorting types.
-  static llvh::SmallVector<Type *, 4> canonicalizeTypes(
-      llvh::ArrayRef<Type *> types);
+  /// Collapse nested unions, remove duplicates,
+  /// and deterministically sort the types.
+  /// Categorize the resulting types into non-looping and looping.
+  /// NOTE: This function isn't to be used on type aliases, which can have
+  /// union-only cycles, multiple layers of nested unions, etc. Those are to be
+  /// resolved in the FlowChecker's DeclareScopeTypes call.
+  /// This function only works when every element of \p types has itself already
+  /// been correctly resolved, with nested unions collapsed and no duplicates.
+  static void canonicalizeTypes(
+      llvh::ArrayRef<Type *> types,
+      llvh::SmallVectorImpl<Type *> &nonLoopingTypes,
+      llvh::SmallVectorImpl<Type *> &loopingTypes);
+
+  /// Unique types and sort them according to \c TypeInfo::compare.
+  /// \param types the types that are known to be non-recursive.
+  static void sortAndUniqueNonLoopingTypes(
+      llvh::SmallVectorImpl<Type *> &types);
+
+  /// Remove all the duplicates in the list of looping \p types.
+  /// Runs in quadratic time on the length of the types because they can't be
+  /// sorted.
+  static void uniqueLoopingTypesSlow(llvh::SmallVectorImpl<Type *> &types);
+
+ private:
+  // Iterate types_ and set the hasAny_ and hasMixed_ flags.
+  void setHasAnyMixed();
 };
 
 class ArrayType : public SingleType<TypeKind::Array, TypeInfo> {
@@ -243,10 +345,7 @@ class ArrayType : public SingleType<TypeKind::Array, TypeInfo> {
 
  public:
   /// Initialize a new instance.
-  void init(Type *element) {
-    assert(!isInitialized() && "ArrayType already initilized");
-    element_ = element;
-  }
+  explicit ArrayType(Type *element) : element_(element) {}
 
   Type *getElement() const {
     assert(isInitialized());
@@ -255,6 +354,8 @@ class ArrayType : public SingleType<TypeKind::Array, TypeInfo> {
 
   /// Compare two instances of the same TypeKind.
   int _compareImpl(const ArrayType *other, CompareState &state) const;
+  /// Compare two instances of the same TypeKind.
+  bool _equalsImpl(const ArrayType *other, CompareState &state) const;
   /// Calculate the type-specific hash.
   unsigned _hashImpl() const;
 
@@ -310,6 +411,8 @@ class FunctionType : public SingleType<TypeKind::Function, TypeInfo> {
 
   /// Compare two instances of the same TypeKind.
   int _compareImpl(const FunctionType *other, CompareState &state) const;
+  /// Compare two instances of the same TypeKind.
+  bool _equalsImpl(const FunctionType *other, CompareState &state) const;
   /// Calculate the type-specific hash.
   unsigned _hashImpl() const;
 
@@ -353,6 +456,10 @@ class TypeWithId : public TypeInfo {
   /// Compare two instances of the same TypeKind.
   int _compareImpl(const TypeWithId *other, CompareState &state) const {
     return id_ < other->id_ ? -1 : id_ == other->id_ ? 0 : 1;
+  }
+  /// Compare two instances of the same TypeKind.
+  int _equalsImpl(const TypeWithId *other, CompareState &state) const {
+    return _compareImpl(other, state) == 0;
   }
   /// Calculate the type-specific hash.
   unsigned _hashImpl() const;
@@ -580,14 +687,20 @@ class FlowContext {
   /// Get a singleton type by index.
   Type *getSingletonType(TypeKind kind) const;
 
+  /// Allocate a union from the given \p types.
+  /// The types may contain duplicates or other unions.
+  UnionType *createNonCanonicalizedUnion(llvh::SmallVector<Type *, 4> &&types) {
+    return &allocUnion_.emplace_back(std::move(types));
+  }
   /// Canonicalize the given \p types, and create a union from them if more than
   /// one type remains. Otherwise, just return the single type.
-  Type *maybeCreateUnion(llvh::ArrayRef<Type *> types);
+  TypeInfo *maybeCreateUnion(llvh::ArrayRef<Type *> types);
   /// Create an initialized "maybe" type (void | null | type).
   UnionType *createPopulatedNullable(Type *type);
 
-  ArrayType *createArray() {
-    return &allocArray_.emplace_back();
+  ArrayType *createArray(Type *element) {
+    assert(element);
+    return &allocArray_.emplace_back(element);
   }
   FunctionType *createFunction() {
     return &allocFunction_.emplace_back();
@@ -609,8 +722,11 @@ class FlowContext {
  private:
   /// Allocate a union from the given \p types. The types may not contain
   /// duplicates or other unions.
-  UnionType *createUnion(llvh::SmallVector<Type *, 4> &&types) {
-    return &allocUnion_.emplace_back(std::move(types));
+  UnionType *createCanonicalizedUnion(
+      llvh::SmallVector<Type *, 4> &&nonLoopingTypes,
+      llvh::SmallVector<Type *, 4> &&loopingTypes) {
+    return &allocUnion_.emplace_back(
+        std::move(nonLoopingTypes), std::move(loopingTypes));
   }
 
   /// Types associated with declarations.

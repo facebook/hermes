@@ -6,7 +6,6 @@
  */
 
 // RUN: (! %shermes -typed -dump-sema %s 2>&1) | %FileCheck --match-full-lines %s
-// XFAIL: true
 
 (function() {
 ([1, "", false]: (number | bool)[])

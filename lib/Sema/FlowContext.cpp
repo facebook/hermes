@@ -8,6 +8,8 @@
 #include "hermes/Sema/FlowContext.h"
 
 #include "llvh/ADT/Hashing.h"
+#include "llvh/ADT/STLExtras.h"
+#include "llvh/ADT/ScopeExit.h"
 
 namespace hermes {
 namespace flow {
@@ -49,6 +51,39 @@ inline int cmpHelperBool(bool a, bool b) {
 /// A helper for comparing nullable Type pointers, returning -1, 0, +1.
 int cmpHelper(Type *a, Type *b) {
   return a ? b ? a->info->compare(b->info) : 1 : b ? -1 : 0;
+}
+
+/// Compare recursive lists of types on the left and right.
+/// Runs in quadratic time, checks for each pair of (left, right) types.
+/// \return true if every element of \p left has a corresponding entry on \p
+///   right and vice versa.
+static bool listsMatchSlow(
+    llvh::ArrayRef<Type *> left,
+    llvh::ArrayRef<Type *> right,
+    TypeInfo::CompareState &state) {
+  // matched[i] indicates whether right[i] has a match on the left.
+  llvh::BitVector matched{};
+  matched.resize(right.size(), false);
+
+  // First check all left entries for matches on the right, marking the
+  // matched bit.
+  for (Type *l : left) {
+    bool found = false;
+    for (size_t j = 0, e = right.size(); j < e; ++j) {
+      Type *r = right[j];
+      if (l->info->equals(r->info, state)) {
+        matched.set(j);
+        found = true;
+        // Don't break here, we want to check all entries on the right.
+      }
+    }
+    // Missed one entry on the left, no point continuing.
+    if (!found)
+      return false;
+  }
+
+  // Only return true if all the right entries have been matched.
+  return matched.all();
 }
 
 } // anonymous namespace
@@ -97,18 +132,89 @@ int TypeInfo::compare(const TypeInfo *other, CompareState &state) const {
   else if (kind_ > other->kind_)
     return 1;
 
-  state.seenThis = state.seenThis || !state.visitedThis.insert(this).second;
-  state.seenOther = state.seenOther || !state.visitedOther.insert(other).second;
-  if (state.seenThis && state.seenOther) {
-    // Already visited this pair.
+  if (!state.visited.insert({this, other})) {
+    // Failed to insert, already visited this pair.
     // Because we haven't diverged yet, they must be equal.
     return 0;
   }
+
+  // Remove this entry in the visited list after we finish this call.
+  auto popOnExit =
+      llvh::make_scope_exit([&state]() { state.visited.pop_back(); });
 
   switch (kind_) {
 #define _HERMES_SEMA_FLOW_DEFKIND(name)                         \
   case TypeKind::name:                                          \
     return static_cast<const name##Type *>(this)->_compareImpl( \
+        static_cast<const name##Type *>(other), state);
+    _HERMES_SEMA_FLOW_SINGLETONS _HERMES_SEMA_FLOW_COMPLEX_TYPES
+#undef _HERMES_SEMA_FLOW_DEFKIND
+  }
+  llvm_unreachable("invalid TypeKind");
+}
+
+bool TypeInfo::equals(const TypeInfo *other) const {
+  CompareState state{};
+  return equals(other, state);
+}
+bool TypeInfo::equals(const TypeInfo *other, CompareState &state) const {
+  if (other == this)
+    return true;
+
+  if (!state.visited.insert({this, other})) {
+    // Failed to insert, already visited this pair.
+    // Because we haven't diverged yet, they must be equal.
+    return true;
+  }
+
+  // Remove this entry in the visited list after we finish this call.
+  auto popOnExit =
+      llvh::make_scope_exit([&state]() { state.visited.pop_back(); });
+
+  // Need to account for either left or right not being completed unions yet.
+  bool thisIncomplete = false;
+  if (auto *thisUnion = llvh::dyn_cast<UnionType>(this)) {
+    if (thisUnion->getNumNonLoopingTypes() == -1) {
+      thisIncomplete = true;
+    }
+  }
+  bool otherIncomplete = false;
+  if (auto *otherUnion = llvh::dyn_cast<UnionType>(other)) {
+    if (otherUnion->getNumNonLoopingTypes() == -1) {
+      otherIncomplete = true;
+    }
+  }
+
+  // If the kinds are different, the types can still be the same if one of them
+  // is an incomplete union type. This is because union arms can be
+  // deduplicated, resulting in any other type.
+  if (kind_ != other->kind_ && !thisIncomplete && !otherIncomplete)
+    return false;
+
+  // Handle two unions when at least one of them is incomplete.
+  if ((thisIncomplete || otherIncomplete) && llvh::isa<UnionType>(this) &&
+      llvh::isa<UnionType>(this)) {
+    return listsMatchSlow(
+        llvh::cast<UnionType>(this)->getTypes(),
+        llvh::cast<UnionType>(other)->getTypes(),
+        state);
+  }
+  // Handle the cases of one incomplete union and a non-union.
+  if (thisIncomplete) {
+    return llvh::all_of(
+        llvh::cast<UnionType>(this)->getTypes(),
+        [&state, other](Type *t) { return t->info->equals(other, state); });
+  }
+  if (otherIncomplete) {
+    return llvh::all_of(
+        llvh::cast<UnionType>(other)->getTypes(),
+        [&state, this](Type *t) { return t->info->equals(this, state); });
+  }
+
+  switch (kind_) {
+#define _HERMES_SEMA_FLOW_DEFKIND(name)                        \
+  case TypeKind::name:                                         \
+    return static_cast<const name##Type *>(this)->_equalsImpl( \
         static_cast<const name##Type *>(other), state);
     _HERMES_SEMA_FLOW_SINGLETONS _HERMES_SEMA_FLOW_COMPLEX_TYPES
 #undef _HERMES_SEMA_FLOW_DEFKIND
@@ -138,68 +244,147 @@ unsigned TypeInfo::hash() const {
   return hashValue_ = hv;
 }
 
-UnionType::UnionType(llvh::SmallVector<Type *, 4> &&types)
-    : types_(std::move(types)) {
-  assert(types_.size() > 1 && " Single element unions are unsupported");
-  for (Type *t : types_) {
-    assert(
-        !llvh::isa<UnionType>(t->info) &&
-        "nested union should have been flattened");
-    if (t->info->getKind() == TypeKind::Any)
-      hasAny_ = true;
-    else if (t->info->getKind() == TypeKind::Mixed)
-      hasMixed_ = true;
-  }
+UnionType::UnionType(llvh::SmallVector<Type *, 4> &&uncanonicalizedTypes)
+    : types_(std::move(uncanonicalizedTypes)) {
+  setHasAnyMixed();
 }
 
-llvh::SmallVector<Type *, 4> UnionType::canonicalizeTypes(
-    llvh::ArrayRef<Type *> types) {
-  llvh::SmallVector<Type *, 4> canonicalized;
+void UnionType::setCanonicalTypes(
+    llvh::SmallVector<Type *, 4> &&canonicalTypes,
+    llvh::SmallVector<Type *, 4> &&recursiveTypes) {
+  numNonLoopingTypes_ = canonicalTypes.size();
+  types_ = std::move(canonicalTypes);
+  types_.append(recursiveTypes.begin(), recursiveTypes.end());
+  recursiveTypes.clear();
+  assert(types_.size() > 1 && " Single element unions are unsupported");
+  setHasAnyMixed();
+}
 
+void UnionType::canonicalizeTypes(
+    llvh::ArrayRef<Type *> types,
+    llvh::SmallVectorImpl<Type *> &canonicalTypes,
+    llvh::SmallVectorImpl<Type *> &loopingTypes) {
   // Copy the union types to canonicalized, but flatten nested unions. Note that
   // there can't be more than one level.
+  // The types won't cycle back to the parent because that's checked in
+  // DeclareScopeTypes and this function is intended to be used after union-only
+  // cycles have been detected (and errored on) in FlowChecker.
   for (Type *elemType : types) {
     assert(elemType->info && "cannot canonicalize unknown type");
     if (UnionType *unionType = llvh::dyn_cast<UnionType>(elemType->info)) {
-      for (Type *nestedElem : unionType->types_) {
-        canonicalized.push_back(nestedElem);
+      assert(
+          unionType->getNumNonLoopingTypes() >= 0 &&
+          "canonicalizeTypes children must have nested unions collapsed "
+          "prior to call");
+      for (Type *nestedElem : unionType->getNonLoopingTypes()) {
+        canonicalTypes.push_back(nestedElem);
+      }
+      for (Type *nestedElem : unionType->getLoopingTypes()) {
+        loopingTypes.push_back(nestedElem);
       }
     } else {
-      canonicalized.push_back(elemType);
+      canonicalTypes.push_back(elemType);
     }
   }
 
+  sortAndUniqueNonLoopingTypes(canonicalTypes);
+  uniqueLoopingTypesSlow(loopingTypes);
+}
+
+void UnionType::sortAndUniqueNonLoopingTypes(
+    llvh::SmallVectorImpl<Type *> &types) {
   // Sort for predictable order.
-  std::sort(canonicalized.begin(), canonicalized.end(), [](Type *a, Type *b) {
+  std::sort(types.begin(), types.end(), [](Type *a, Type *b) {
     return a->info->compare(b->info) < 0;
   });
 
   // Remove identical union arms.
-  canonicalized.erase(
+  types.erase(
       std::unique(
-          canonicalized.begin(),
-          canonicalized.end(),
+          types.begin(),
+          types.end(),
           [](Type *a, Type *b) { return a->info->equals(b->info); }),
-      canonicalized.end());
+      types.end());
+}
 
-  return canonicalized;
+void UnionType::uniqueLoopingTypesSlow(llvh::SmallVectorImpl<Type *> &types) {
+  // If any pair of types is equal, set the first to nullptr for easy
+  // deletion.
+  for (size_t i = 0, e = types.size(); i < e; ++i) {
+    for (size_t j = i + 1; j < e; ++j) {
+      if (types[i]->info->equals(types[j]->info)) {
+        types[i] = nullptr;
+        break;
+      }
+    }
+  }
+
+  // Remove the marked duplicates.
+  llvh::erase_if(types, [](Type *type) { return type == nullptr; });
+}
+
+// Iterate types_ and set the hasAny_ and hasMixed_ flags.
+void UnionType::setHasAnyMixed() {
+  hasAny_ = false;
+  hasMixed_ = false;
+  for (Type *t : types_) {
+    if (!t->info)
+      continue;
+    if (llvh::isa<AnyType>(t->info))
+      hasAny_ = true;
+    if (llvh::isa<MixedType>(t->info))
+      hasMixed_ = true;
+  }
 }
 
 int UnionType::_compareImpl(const UnionType *other, CompareState &state) const {
+  assert(numNonLoopingTypes_ >= 0 && "uninitialized union");
+  assert(other->numNonLoopingTypes_ >= 0 && "uninitialized union");
+  assert(getLoopingTypes().empty() && "recursive unions are not comparable");
+  assert(
+      other->getLoopingTypes().empty() &&
+      "recursive unions are not comparable");
   return lexicographicalComparison(
-      types_.begin(),
-      types_.end(),
-      other->types_.begin(),
-      other->types_.end(),
+      getNonLoopingTypes().begin(),
+      getNonLoopingTypes().end(),
+      other->getNonLoopingTypes().begin(),
+      other->getNonLoopingTypes().end(),
       [&state](Type *a, Type *b) { return a->info->compare(b->info, state); });
 }
 
+bool UnionType::_equalsImpl(const UnionType *other, CompareState &state) const {
+  assert(
+      numNonLoopingTypes_ >= 0 && other->numNonLoopingTypes_ >= 0 &&
+      "uninitialized unions handled in TypeInfo::equals");
+
+  if (numNonLoopingTypes_ != other->numNonLoopingTypes_)
+    return false;
+
+  if (lexicographicalComparison(
+          getNonLoopingTypes().begin(),
+          getNonLoopingTypes().end(),
+          other->getNonLoopingTypes().begin(),
+          other->getNonLoopingTypes().end(),
+          [&state](Type *a, Type *b) {
+            return a->info->compare(b->info, state);
+          }))
+    return false;
+
+  return listsMatchSlow(getLoopingTypes(), other->getLoopingTypes(), state);
+}
+
 unsigned UnionType::_hashImpl() const {
-  return (unsigned)llvh::hash_combine((unsigned)TypeKind::Union, types_.size());
+  assert(numNonLoopingTypes_ >= 0 && "types haven't been canonicalized yet");
+  return (unsigned)llvh::hash_combine(
+      (unsigned)TypeKind::Union, numNonLoopingTypes_);
 }
 
 int ArrayType::_compareImpl(const ArrayType *other, CompareState &state) const {
   return element_->info->compare(other->element_->info, state);
+}
+
+bool ArrayType::_equalsImpl(const ArrayType *other, CompareState &state) const {
+  return element_->info->equals(other->element_->info, state);
 }
 
 unsigned ArrayType::_hashImpl() const {
@@ -241,6 +426,28 @@ int FunctionType::_compareImpl(const FunctionType *other, CompareState &state)
     return tmp;
   }
   return return_->info->compare(other->return_->info, state);
+}
+
+/// Compare two instances of the same TypeKind.
+bool FunctionType::_equalsImpl(const FunctionType *other, CompareState &state)
+    const {
+  if (auto tmp = cmpHelperBool(isAsync_, other->isAsync_))
+    return false;
+  if (auto tmp = cmpHelperBool(isGenerator_, other->isGenerator_))
+    return false;
+  if (auto tmp = cmpHelper(thisParam_, other->thisParam_))
+    return false;
+  if (auto tmp = lexicographicalComparison(
+          params_.begin(),
+          params_.end(),
+          other->params_.begin(),
+          other->params_.end(),
+          [&state](const Param &pa, const Param &pb) {
+            return pa.second->info->compare(pb.second->info, state);
+          })) {
+    return false;
+  }
+  return return_->info->equals(other->return_->info, state);
 }
 
 /// Calculate the type-specific hash.
@@ -345,20 +552,32 @@ Type *FlowContext::getSingletonType(TypeKind kind) const {
   }
 }
 
-Type *FlowContext::maybeCreateUnion(llvh::ArrayRef<Type *> types) {
+TypeInfo *FlowContext::maybeCreateUnion(llvh::ArrayRef<Type *> types) {
   assert(!types.empty() && "types must not be empty");
-  auto canonicalized = UnionType::canonicalizeTypes(types);
+  llvh::SmallVector<Type *, 4> canonicalTypes{};
+  llvh::SmallVector<Type *, 4> recursiveTypes{};
+
+  UnionType::canonicalizeTypes(types, canonicalTypes, recursiveTypes);
 
   // The types collapsed to a single type, so return that.
-  if (canonicalized.size() == 1)
-    return canonicalized.front();
+  if (canonicalTypes.size() == 1 && recursiveTypes.empty())
+    return canonicalTypes.front()->info;
+  if (canonicalTypes.empty() && recursiveTypes.size() == 1)
+    return recursiveTypes.front()->info;
 
-  return createType(createUnion(std::move(canonicalized)));
+  return createCanonicalizedUnion(
+      std::move(canonicalTypes), std::move(recursiveTypes));
 }
 
 UnionType *FlowContext::createPopulatedNullable(Type *type) {
+  llvh::SmallVector<Type *, 4> canonicalTypes{};
+  llvh::SmallVector<Type *, 4> recursiveTypes{};
+  UnionType::canonicalizeTypes(
+      {getVoid(), getNull(), type}, canonicalTypes, recursiveTypes);
+
   // We know that there are at least 2 types, so it will be a union.
-  return llvh::cast<UnionType>(createUnion({getVoid(), getNull(), type}));
+  return createCanonicalizedUnion(
+      std::move(canonicalTypes), std::move(recursiveTypes));
 }
 
 } // namespace flow

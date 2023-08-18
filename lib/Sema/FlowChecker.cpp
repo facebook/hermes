@@ -7,6 +7,7 @@
 
 #include "FlowChecker.h"
 
+#include "llvh/ADT/ScopeExit.h"
 #include "llvh/ADT/SetVector.h"
 
 #define DEBUG_TYPE "FlowChecker"
@@ -670,8 +671,7 @@ class FlowChecker::ExprVisitor {
           it = newIt;
         }
       }
-      auto *arrTy = outer_.flowContext_.createArray();
-      arrTy->init(elTy);
+      auto *arrTy = outer_.flowContext_.createArray(elTy);
       outer_.setNodeType(node, outer_.flowContext_.createType(arrTy));
     };
 
@@ -724,10 +724,10 @@ class FlowChecker::ExprVisitor {
       for (const auto &arg : node->_elements)
         elTypes.insert(getElementType(&arg));
 
-      elTy = outer_.flowContext_.maybeCreateUnion(elTypes.getArrayRef());
+      elTy = outer_.flowContext_.createType(
+          outer_.flowContext_.maybeCreateUnion(elTypes.getArrayRef()), node);
     }
-    auto *arrTy = outer_.flowContext_.createArray();
-    arrTy->init(elTy);
+    auto *arrTy = outer_.flowContext_.createArray(elTy);
     outer_.setNodeType(node, outer_.flowContext_.createType(arrTy));
   }
 
@@ -773,7 +773,10 @@ class FlowChecker::ExprVisitor {
       // any becomes (number|bigint).
       llvh::SmallVector<Type *, 2> types{
           outer_.flowContext_.getNumber(), outer_.flowContext_.getBigInt()};
-      outer_.setNodeType(node, outer_.flowContext_.maybeCreateUnion(types));
+      outer_.setNodeType(
+          node,
+          outer_.flowContext_.createType(
+              outer_.flowContext_.maybeCreateUnion(types)));
       return;
     }
     outer_.sm_.error(
@@ -1325,6 +1328,94 @@ void FlowChecker::visitFunctionLike(
   visitESTreeNode(*this, body, node);
 }
 
+class FlowChecker::FindLoopingTypes {
+  /// Output set to store the looping types in.
+  llvh::SmallDenseSet<Type *> &loopingTypes;
+
+  /// Visited set for the types so far.
+  /// Use a SetVector so it can be quickly iterated to copy the types into
+  /// loopingTypes set when a looping type is found.
+  llvh::SmallSetVector<Type *, 4> visited{};
+
+ public:
+  /// Finds looping types reachable from \p type.
+  /// \param loopingTypes[in/out] set to populate with looping types.
+  FindLoopingTypes(llvh::SmallDenseSet<Type *> &loopingTypes, Type *type)
+      : loopingTypes(loopingTypes) {
+    isTypeLooping(type);
+  }
+
+ private:
+  bool isTypeLooping(Type *type) {
+    bool inserted = visited.insert(type);
+    if (!inserted) {
+      // Found a cycle.
+      // Copy all visited types to loopingTypes.
+      loopingTypes.insert(visited.begin(), visited.end());
+      return true;
+    }
+
+    auto popOnExit = llvh::make_scope_exit([this]() { visited.pop_back(); });
+
+    if (loopingTypes.count(type)) {
+      // Found a type that's already known to be looping.
+      // Copy all visited types to loopingTypes.
+      // This is necessary because we might have taken another path to end at
+      // the known looping type, so we have to insert everything along that
+      // second path.
+      loopingTypes.insert(visited.begin(), visited.end());
+      return true;
+    }
+
+    switch (type->info->getKind()) {
+#define _HERMES_SEMA_FLOW_DEFKIND(name)                   \
+  case TypeKind::name:                                    \
+    return isLooping(llvh::cast<name##Type>(type->info)); \
+    break;
+      _HERMES_SEMA_FLOW_SINGLETONS _HERMES_SEMA_FLOW_COMPLEX_TYPES
+#undef _HERMES_SEMA_FLOW_DEFKIND
+    }
+  }
+
+  bool isLooping(SingletonType *) {
+    // Nothing to do for singleton types.
+    return false;
+  }
+
+  bool isLooping(TypeWithId *type) {
+    // Nominal type. Stop checking for recursion.
+    return false;
+  }
+
+  bool isLooping(UnionType *type) {
+    bool result = false;
+    for (Type *t : type->getTypes()) {
+      if (isTypeLooping(t)) {
+        // Don't return here, have to run on all the union arms
+        // so that if there's multiple looping arms they get registered.
+        result = true;
+      }
+    }
+    return result;
+  }
+
+  bool isLooping(ArrayType *type) {
+    return isTypeLooping(type->getElement());
+  }
+
+  bool isLooping(FunctionType *type) {
+    bool result = false;
+    result |= isTypeLooping(type->getReturnType());
+    if (type->getThisParam()) {
+      result |= isTypeLooping(type->getThisParam());
+    }
+    for (const auto &[name, paramType] : type->getParams()) {
+      result |= isTypeLooping(paramType);
+    }
+    return result;
+  }
+};
+
 /// Type aliases combined with unions create a **dramatic complication**, since
 /// they can be mutually self recursive. We need to declare types in stages,
 /// first the "direct" ones, then resolve the aliases and unions.
@@ -1351,6 +1442,11 @@ class FlowChecker::DeclareScopeTypes {
   /// Keep track of all forward declarations of classes, so they can be
   /// completed.
   llvh::SmallVector<Type *, 4> forwardClassDecls{};
+  /// Keep track of all union types, so they can be canonicalized.
+  llvh::SmallSetVector<Type *, 4> forwardUnions{};
+  /// All the recursive union arms, which need to be canonicalized and uniqued
+  /// independently of the non-recursive arms.
+  llvh::SmallDenseSet<Type *> loopingUnionArms{};
 
  public:
   DeclareScopeTypes(
@@ -1465,6 +1561,12 @@ class FlowChecker::DeclareScopeTypes {
         populateTypeAlias(localType);
         assert(localType->info && "populateTypeAlias should populate the info");
       }
+
+      // If it's a union, we'll have to resolve it as well.
+      // Unions can turn into single types if they only contain 1 unique type.
+      if (llvh::isa<UnionType>(localType->info)) {
+        forwardUnions.insert(localType);
+      }
     }
   }
 
@@ -1523,20 +1625,46 @@ class FlowChecker::DeclareScopeTypes {
       llvh::SmallVector<Type *, 4> types{};
       for (ESTree::Node &node : uta->_types)
         types.push_back(resolveTypeAnnotation(&node, visited, depth));
-      return outer.flowContext_.maybeCreateUnion(types);
+      // Make a non-canonicalized UnionType to be resolved with the rest of the
+      // forwardUnions later.
+      Type *result = outer.flowContext_.createType(
+          outer.flowContext_.createNonCanonicalizedUnion(std::move(types)),
+          annotation);
+      forwardUnions.insert(result);
+      return result;
     }
 
     /// A nullable annotation is a simple case of a union.
     if (auto *nta =
             llvh::dyn_cast<ESTree::NullableTypeAnnotationNode>(annotation)) {
-      return outer.flowContext_.createType(
-          outer.flowContext_.createPopulatedNullable(
-              resolveTypeAnnotation(nta->_typeAnnotation, visited, depth)),
-          nta);
+      Type *result = outer.flowContext_.createType(
+          outer.flowContext_.createNonCanonicalizedUnion({
+              outer.flowContext_.getVoid(),
+              outer.flowContext_.getNull(),
+              resolveTypeAnnotation(nta->_typeAnnotation, visited, depth),
+          }),
+          annotation);
+      forwardUnions.insert(result);
+      return result;
     }
 
-    // The specified AST node represents a constructor type or a primary type,
-    // so forward declare (if constructor) and return the type.
+    // Array types require resolving the array element.
+    if (auto *arr =
+            llvh::dyn_cast<ESTree::ArrayTypeAnnotationNode>(annotation)) {
+      return outer.flowContext_.createType(
+          outer.flowContext_.createArray(
+              resolveTypeAnnotation(arr->_elementType, visited, depth)),
+          annotation);
+    }
+
+    // FIXME: Function types must also be resolved as structural types in the
+    // same way as Array.
+    if (auto *func =
+            llvh::dyn_cast<ESTree::FunctionTypeAnnotationNode>(annotation)) {
+      hermes_fatal("function type alias unimplemented");
+    }
+
+    // The specified AST node represents a nominal type, so return the type.
     return outer.parseTypeAnnotation(annotation);
   }
 
@@ -1592,7 +1720,8 @@ class FlowChecker::DeclareScopeTypes {
   }
 
   /// All types declared in the scope have been resolved at the first level.
-  /// Resolve the remaining forward declared types.
+  /// Resolve the remaining forward declared types and canonicalize forward
+  /// unions as much as possible.
   void completeForwardDeclarations() {
     // Complete all forward-declared types.
     for (Type *type : forwardClassDecls) {
@@ -1605,6 +1734,87 @@ class FlowChecker::DeclareScopeTypes {
       auto *classNode = llvh::cast<ESTree::ClassDeclarationNode>(type->node);
       outer.visitExpression(classNode->_superClass, classNode);
       ParseClassType(outer, classNode->_superClass, classNode->_body, type);
+    }
+
+    // Complete all forward-declared unions.
+    // First find all the recursive union arms.
+    for (Type *type : forwardUnions) {
+      FindLoopingTypes(loopingUnionArms, type);
+    }
+    // Now simplify and canonicalize as many union arms as possible.
+    for (Type *type : forwardUnions) {
+      completeForwardUnion(type, {});
+    }
+  }
+
+  /// DFS through unions starting at \p type so they get canonicalized in the
+  /// right order when possible.
+  /// After this function completes, the \c info field of \p type will contain
+  /// either a UnionType with canonicalized arms or a single type (if everything
+  /// has been deduplicated).
+  void completeForwardUnion(Type *type, llvh::SetVector<Type *> visited) {
+    // The union might have been turned into a single type by now.
+    UnionType *unionType = llvh::dyn_cast<UnionType>(type->info);
+    if (!unionType || unionType->getNumNonLoopingTypes() >= 0) {
+      // Already been completed.
+      return;
+    }
+
+    if (!visited.insert(type)) {
+      // Already attempting to complete this type,
+      // but hit a cycle on this branch.
+      outer.sm_.error(
+          type->node->getSourceRange(),
+          "ft: type contains a circular reference to itself");
+      type->info = outer.flowContext_.getAnyInfo();
+      return;
+    }
+
+    auto popOnExit =
+        llvh::make_scope_exit([&visited]() { visited.pop_back(); });
+
+    llvh::SmallVector<Type *, 4> nonLoopingTypes{};
+    llvh::SmallVector<Type *, 4> loopingTypes{};
+
+    for (Type *unionArm : unionType->getTypes()) {
+      // Union contains a union, complete it so it can be flattened.
+      if (forwardUnions.count(unionArm)) {
+        completeForwardUnion(unionArm, visited);
+      }
+
+      // Looping arms are separated for slow uniquing.
+      if (loopingUnionArms.count(unionArm)) {
+        loopingTypes.push_back(unionArm);
+        continue;
+      }
+
+      // We know now that this arm is non-looping.
+      if (auto *unionArmInfo = llvh::dyn_cast<UnionType>(unionArm->info)) {
+        // Flatten nested unions.
+        for (Type *nestedElem : unionArmInfo->getNonLoopingTypes()) {
+          nonLoopingTypes.push_back(nestedElem);
+        }
+        for (Type *nestedElem : unionArmInfo->getLoopingTypes()) {
+          loopingTypes.push_back(nestedElem);
+        }
+      } else {
+        nonLoopingTypes.push_back(unionArm);
+      }
+    }
+
+    // Non-Looping types can be sorted the fast way.
+    UnionType::sortAndUniqueNonLoopingTypes(nonLoopingTypes);
+    // Looping types are uniqued in a slow path.
+    UnionType::uniqueLoopingTypesSlow(loopingTypes);
+
+    // Only one type? Just use it, otherwise we still need a union.
+    if (nonLoopingTypes.size() == 1 && loopingTypes.empty()) {
+      type->info = nonLoopingTypes.front()->info;
+    } else if (nonLoopingTypes.empty() && loopingTypes.size() == 1) {
+      type->info = loopingTypes.front()->info;
+    } else {
+      unionType->setCanonicalTypes(
+          std::move(nonLoopingTypes), std::move(loopingTypes));
     }
   }
 };
@@ -1861,7 +2071,7 @@ Type *FlowChecker::parseUnionTypeAnnotation(
   llvh::SmallVector<Type *, 4> types{};
   for (auto &n : node->_types)
     types.push_back(parseTypeAnnotation(&n));
-  return flowContext_.maybeCreateUnion(types);
+  return flowContext_.createType(flowContext_.maybeCreateUnion(types), node);
 }
 
 Type *FlowChecker::parseNullableTypeAnnotation(
@@ -1874,10 +2084,8 @@ Type *FlowChecker::parseNullableTypeAnnotation(
 
 Type *FlowChecker::parseArrayTypeAnnotation(
     ESTree::ArrayTypeAnnotationNode *node) {
-  Type *arr = flowContext_.createType(flowContext_.createArray(), node);
-  llvh::cast<ArrayType>(arr->info)->init(
-      parseTypeAnnotation(node->_elementType));
-  return arr;
+  return flowContext_.createType(
+      flowContext_.createArray(parseTypeAnnotation(node->_elementType)), node);
 }
 
 Type *FlowChecker::parseGenericTypeAnnotation(
@@ -1941,6 +2149,9 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     auto *arrayB = llvh::dyn_cast<ArrayType>(b);
     if (!arrayB)
       return {};
+    assert(
+        arrayA->getElement()->info && arrayB->getElement()->info &&
+        "uninitialized elements");
     if (arrayA->getElement()->info->compare(arrayB->getElement()->info) == 0)
       return {.canFlow = true};
     return {};

@@ -170,6 +170,12 @@ class FlowChecker {
   /// Resolve and declare all types named in a scope.
   class DeclareScopeTypes;
 
+  /// Check whether a type contains loops (even indirectly).
+  /// Determines whether it is considered "unsortable" in union arms.
+  /// Recurses through all structural types, stops on nominal types because they
+  /// can be compared easily, and don't count as looping union arms.
+  class FindLoopingTypes;
+
   /// Parse all sema declarations type annotations and associate them
   /// with the declarations.
   class AnnotateScopeDecls;
@@ -253,6 +259,7 @@ class FlowChecker {
   /// Return true if type \p a can "flow" into type \p b.
   /// TODO: generate message explaining why not.
   static CanFlowResult canAFlowIntoB(Type *a, Type *b) {
+    assert(a->info && b->info && "types haven't been populated yet");
     return canAFlowIntoB(a->info, b->info);
   }
   static CanFlowResult canAFlowIntoB(TypeInfo *a, TypeInfo *b);
