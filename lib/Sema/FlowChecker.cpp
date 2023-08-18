@@ -818,6 +818,25 @@ class FlowChecker::ExprVisitor {
         .Case("instanceof", BinopKind::instanceOf);
   }
 
+  enum class UnopKind : uint8_t {
+    // clang-format off
+    del, voidOp, typeof, plus, minus, tilde, bang, inc, dec
+    // clang-format on
+  };
+
+  static UnopKind unopKind(llvh::StringRef str) {
+    return llvh::StringSwitch<UnopKind>(str)
+        .Case("delete", UnopKind::del)
+        .Case("void", UnopKind::voidOp)
+        .Case("typeof", UnopKind::typeof)
+        .Case("+", UnopKind::plus)
+        .Case("-", UnopKind::minus)
+        .Case("~", UnopKind::tilde)
+        .Case("!", UnopKind::bang)
+        .Case("++", UnopKind::inc)
+        .Case("--", UnopKind::dec);
+  }
+
   static BinopKind assignKind(llvh::StringRef str) {
     return llvh::StringSwitch<BinopKind>(str)
         .Case("<<=", BinopKind::shl)
@@ -917,6 +936,78 @@ class FlowChecker::ExprVisitor {
             rt->info->getKind())) {
       res = t;
     } else {
+      res = outer_.flowContext_.getAny();
+    }
+
+    outer_.setNodeType(node, res);
+  }
+
+  Type *determineUnopType(
+      ESTree::UnaryExpressionNode *node,
+      UnopKind op,
+      TypeKind argKind) {
+    struct UnTypes {
+      UnopKind op;
+      TypeKind res;
+      // None indicates a wildcard, Any indicates the actual 'any' type.
+      OptValue<TypeKind> arg;
+    };
+
+    static const UnTypes s_types[] = {
+        // clang-format off
+        {UnopKind::del, TypeKind::Void, llvh::None},
+        {UnopKind::voidOp, TypeKind::Void, llvh::None},
+        {UnopKind::typeof, TypeKind::String, llvh::None},
+        {UnopKind::plus, TypeKind::Number, TypeKind::Number},
+        {UnopKind::plus, TypeKind::Number, TypeKind::Any},
+        {UnopKind::minus, TypeKind::BigInt, TypeKind::BigInt},
+        {UnopKind::minus, TypeKind::Number, TypeKind::Number},
+        {UnopKind::minus, TypeKind::Any, TypeKind::Any},
+        {UnopKind::tilde, TypeKind::Number, TypeKind::Number},
+        {UnopKind::tilde, TypeKind::BigInt, TypeKind::BigInt},
+        {UnopKind::tilde, TypeKind::Any, TypeKind::Any},
+        {UnopKind::bang, TypeKind::Boolean, llvh::None},
+        {UnopKind::inc, TypeKind::Number, TypeKind::Number},
+        {UnopKind::inc, TypeKind::BigInt, TypeKind::BigInt},
+        {UnopKind::inc, TypeKind::Any, TypeKind::Any},
+        {UnopKind::dec, TypeKind::Number, TypeKind::Number},
+        {UnopKind::dec, TypeKind::BigInt, TypeKind::BigInt},
+        {UnopKind::dec, TypeKind::Any, TypeKind::Any},
+        // clang-format on
+    };
+    static const UnTypes *const s_types_end =
+        s_types + sizeof(s_types) / sizeof(s_types[0]);
+
+    // Find the start of the section for this operator.
+    auto it = std::lower_bound(
+        s_types, s_types_end, op, [](const UnTypes &bt, UnopKind op) {
+          return bt.op < op;
+        });
+
+    // Search for a match.
+    for (; it != s_types_end && it->op == op; ++it) {
+      if (!it->arg || *it->arg == argKind) {
+        return outer_.flowContext_.getSingletonType(it->res);
+      }
+    }
+
+    return nullptr;
+  }
+
+  void visit(ESTree::UnaryExpressionNode *node) {
+    visitESTreeNode(*this, node->_argument, node);
+    Type *argType = outer_.getNodeTypeOrAny(node->_argument);
+
+    Type *res;
+    if (Type *t = determineUnopType(
+            node, unopKind(node->_operator->str()), argType->info->getKind())) {
+      res = t;
+    } else {
+      outer_.sm_.error(
+          node->getSourceRange(),
+          llvh::Twine("ft: incompatible unary operation: ") +
+              node->_operator->str() + " cannot be applied to " +
+              argType->info->getKindName());
       res = outer_.flowContext_.getAny();
     }
 
