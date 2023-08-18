@@ -571,12 +571,26 @@ Type *FlowContext::getSingletonType(TypeKind kind) const {
   }
 }
 
-TypeInfo *FlowContext::maybeCreateUnion(llvh::ArrayRef<Type *> types) {
+TypeInfo *FlowContext::maybeCreateUnion(
+    llvh::ArrayRef<Type *> types,
+    UnionExcludes excludes) {
   assert(!types.empty() && "types must not be empty");
   llvh::SmallVector<Type *, 4> canonicalTypes{};
   llvh::SmallVector<Type *, 4> recursiveTypes{};
 
   UnionType::canonicalizeTypes(types, canonicalTypes, recursiveTypes);
+
+  if (excludes.excludeVoid || excludes.excludeNull) {
+    // Only look at the first two elements and get the new ending.
+    auto searchEnd = std::min(canonicalTypes.end(), canonicalTypes.begin() + 2);
+    auto removedEnd =
+        std::remove_if(canonicalTypes.begin(), searchEnd, [&excludes](Type *t) {
+          return (llvh::isa<VoidType>(t->info) && excludes.excludeVoid) ||
+              (llvh::isa<NullType>(t->info) && excludes.excludeNull);
+        });
+    // Erase the removed elements from the container.
+    canonicalTypes.erase(removedEnd, searchEnd);
+  }
 
   // The types collapsed to a single type, so return that.
   if (canonicalTypes.size() == 1 && recursiveTypes.empty())

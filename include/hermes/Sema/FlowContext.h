@@ -307,6 +307,17 @@ class UnionType : public SingleType<TypeKind::Union, TypeInfo> {
     assert(numNonLoopingTypes_ >= 0 && "types haven't been canonicalized yet");
     return llvh::isa<VoidType>(types_[0]->info);
   }
+  /// \return true if the union contains a "null" arm.
+  bool hasNull() const {
+    assert(numNonLoopingTypes_ >= 0 && "types haven't been canonicalized yet");
+    static_assert(
+        (int)TypeKind::Null == (int)TypeKind::Void + 1,
+        "null and void aren't adjacent");
+    // Null must be either in the first or second slot.
+    if (llvh::isa<NullType>(types_[0]->info))
+      return true;
+    return types_.size() > 1 && llvh::isa<NullType>(types_[1]->info);
+  }
 
   /// Compare two instances of the same TypeKind.
   int _compareImpl(const UnionType *other, CompareState &state) const;
@@ -717,6 +728,16 @@ class FlowContext {
   /// Get a singleton type by index.
   Type *getSingletonType(TypeKind kind) const;
 
+  /// Options on which arms to exclude from a created union.
+  struct UnionExcludes {
+    /// Whether to remove 'void' from the result.
+    bool excludeVoid = false;
+    /// Whether to remove 'null' from the result.
+    bool excludeNull = false;
+
+    UnionExcludes() {}
+  };
+
   /// Allocate a union from the given \p types.
   /// The types may contain duplicates or other unions.
   UnionType *createNonCanonicalizedUnion(llvh::SmallVector<Type *, 4> &&types) {
@@ -724,7 +745,12 @@ class FlowContext {
   }
   /// Canonicalize the given \p types, and create a union from them if more than
   /// one type remains. Otherwise, just return the single type.
-  TypeInfo *maybeCreateUnion(llvh::ArrayRef<Type *> types);
+  /// \param excludes a set of TypeKinds to erase from the final type.
+  /// \pre the unified list of types must include at least one element not in \p
+  ///   excludes.
+  TypeInfo *maybeCreateUnion(
+      llvh::ArrayRef<Type *> types,
+      UnionExcludes excludes = {});
   /// Create an initialized "maybe" type (void | null | type).
   UnionType *createPopulatedNullable(Type *type);
 

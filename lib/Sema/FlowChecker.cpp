@@ -1084,6 +1084,51 @@ class FlowChecker::ExprVisitor {
     outer_.setNodeType(node, res);
   }
 
+  void visit(ESTree::LogicalExpressionNode *node) {
+    visitESTreeNode(*this, node->_left, node);
+    visitESTreeNode(*this, node->_right, node);
+    Type *left = outer_.flowContext_.getNodeTypeOrAny(node->_left);
+    Type *right = outer_.flowContext_.getNodeTypeOrAny(node->_right);
+
+    auto hasNull = [](TypeInfo *t) -> bool {
+      if (llvh::isa<NullType>(t))
+        return true;
+      if (auto *u = llvh::dyn_cast<UnionType>(t))
+        return u->hasNull();
+      return false;
+    };
+
+    auto hasVoid = [](TypeInfo *t) -> bool {
+      if (llvh::isa<VoidType>(t))
+        return true;
+      if (auto *u = llvh::dyn_cast<UnionType>(t))
+        return u->hasVoid();
+      return false;
+    };
+
+    // The result of a logical expression is the union of both sides,
+    // however if the operator is ?? or ||, then we can discard any null/void
+    // that only appears on the left, because those can never be returned via
+    // the left.
+    FlowContext::UnionExcludes excludes{};
+    if (node->_operator == outer_.kw_.identLogicalOr ||
+        node->_operator == outer_.kw_.identNullishCoalesce) {
+      if (hasVoid(left->info) && !hasVoid(right->info))
+        excludes.excludeVoid = true;
+      if (hasNull(left->info) && !hasNull(right->info))
+        excludes.excludeNull = true;
+    }
+
+    Type *types[2]{
+        outer_.flowContext_.getNodeTypeOrAny(node->_left),
+        outer_.flowContext_.getNodeTypeOrAny(node->_right)};
+
+    Type *unionType = outer_.flowContext_.createType(
+        outer_.flowContext_.maybeCreateUnion(types, excludes));
+
+    outer_.setNodeType(node, unionType);
+  }
+
   enum class LogicalAssignmentOp : uint8_t {
     ShortCircuitOrKind, // ||=
     ShortCircuitAndKind, // &&=
