@@ -275,7 +275,7 @@ class FlowChecker {
   }
   static CanFlowResult canAFlowIntoB(TypeInfo *a, TypeInfo *b);
   static CanFlowResult canAFlowIntoB(ClassType *a, ClassType *b);
-  static CanFlowResult canAFlowIntoB(FunctionType *a, FunctionType *b);
+  static CanFlowResult canAFlowIntoB(BaseFunctionType *a, BaseFunctionType *b);
 
   /// If \c canFlow.needCheckedCast is set and \c compile_ is set, allocate an
   /// implicit checked cast node from the specified \p argument to

@@ -12,7 +12,7 @@
 'use strict';
 
 (function () {
-  function foo(x: number[], sink: any) {
+  function foo(x: number[], sink: any): void {
     sink(x[0]);
     x[3] = 42;
     for(var i = 0, e = x.length; i < e; i++)
@@ -32,7 +32,7 @@
 // CHECK-NEXT:  %2 = ReturnInst %1: object
 // CHECK-NEXT:function_end
 
-// CHECK:function ""(): object [allCallsitesKnownInStrictMode,typed]
+// CHECK:function ""(): object [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): undefined

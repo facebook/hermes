@@ -108,8 +108,10 @@ llvh::StringRef TypeInfo::getKindName() const {
       return "mixed";
     case TypeKind::Union:
       return "union";
-    case TypeKind::Function:
+    case TypeKind::TypedFunction:
       return "function";
+    case TypeKind::UntypedFunction:
+      return "untyped function";
     case TypeKind::Class:
       return "class";
     case TypeKind::ClassConstructor:
@@ -392,11 +394,12 @@ unsigned ArrayType::_hashImpl() const {
 }
 
 /// Compare two instances of the same TypeKind.
-int FunctionType::_compareImpl(const FunctionType *other, CompareState &state)
-    const {
-  if (auto tmp = cmpHelperBool(isAsync_, other->isAsync_))
+int TypedFunctionType::_compareImpl(
+    const TypedFunctionType *other,
+    CompareState &state) const {
+  if (auto tmp = cmpHelperBool(isAsync(), other->isAsync()))
     return tmp;
-  if (auto tmp = cmpHelperBool(isGenerator_, other->isGenerator_))
+  if (auto tmp = cmpHelperBool(isGenerator(), other->isGenerator()))
     return tmp;
   if (auto tmp = cmpHelper(thisParam_, other->thisParam_))
     return tmp;
@@ -410,15 +413,16 @@ int FunctionType::_compareImpl(const FunctionType *other, CompareState &state)
           })) {
     return tmp;
   }
-  return return_->info->compare(other->return_->info, state);
+  return cmpHelper(return_, other->return_);
 }
 
 /// Compare two instances of the same TypeKind.
-bool FunctionType::_equalsImpl(const FunctionType *other, CompareState &state)
-    const {
-  if (auto tmp = cmpHelperBool(isAsync_, other->isAsync_))
+bool TypedFunctionType::_equalsImpl(
+    const TypedFunctionType *other,
+    CompareState &state) const {
+  if (auto tmp = cmpHelperBool(isAsync(), other->isAsync()))
     return false;
-  if (auto tmp = cmpHelperBool(isGenerator_, other->isGenerator_))
+  if (auto tmp = cmpHelperBool(isGenerator(), other->isGenerator()))
     return false;
   if (auto tmp = cmpHelper(thisParam_, other->thisParam_))
     return false;
@@ -432,17 +436,47 @@ bool FunctionType::_equalsImpl(const FunctionType *other, CompareState &state)
           })) {
     return false;
   }
-  return return_->info->equals(other->return_->info, state);
+  if (auto tmp = cmpHelper(return_, other->return_))
+    return false;
+  return true;
 }
 
 /// Calculate the type-specific hash.
-unsigned FunctionType::_hashImpl() const {
+unsigned TypedFunctionType::_hashImpl() const {
   return (unsigned)llvh::hash_combine(
-      (unsigned)TypeKind::Function,
-      isAsync_,
-      isGenerator_,
+      (unsigned)TypeKind::TypedFunction,
+      isAsync(),
+      isGenerator(),
       thisParam_ != nullptr,
       params_.size());
+}
+
+/// Compare two instances of the same TypeKind.
+int UntypedFunctionType::_compareImpl(
+    const UntypedFunctionType *other,
+    CompareState &state) const {
+  if (auto tmp = cmpHelperBool(isAsync(), other->isAsync()))
+    return tmp;
+  if (auto tmp = cmpHelperBool(isGenerator(), other->isGenerator()))
+    return tmp;
+  return 0;
+}
+
+/// Compare two instances of the same TypeKind.
+bool UntypedFunctionType::_equalsImpl(
+    const UntypedFunctionType *other,
+    CompareState &state) const {
+  if (auto tmp = cmpHelperBool(isAsync(), other->isAsync()))
+    return false;
+  if (auto tmp = cmpHelperBool(isGenerator(), other->isGenerator()))
+    return false;
+  return true;
+}
+
+/// Calculate the type-specific hash.
+unsigned UntypedFunctionType::_hashImpl() const {
+  return (unsigned)llvh::hash_combine(
+      (unsigned)TypeKind::UntypedFunction, isAsync(), isGenerator());
 }
 
 unsigned TypeWithId::_hashImpl() const {

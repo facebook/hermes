@@ -20,7 +20,7 @@ function foo() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function %t.1 = function (): any
+// CHECK:untyped function %t.1 = untyped function ()
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict

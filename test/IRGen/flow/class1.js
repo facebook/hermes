@@ -35,7 +35,7 @@ return [dotProduct, Vec2D];
 // CHECK-NEXT:  %2 = ReturnInst %1: object
 // CHECK-NEXT:function_end
 
-// CHECK:function ""(): object [allCallsitesKnownInStrictMode,typed]
+// CHECK:function ""(): object [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %dotProduct(): number

@@ -70,14 +70,18 @@ void FlowChecker::visit(ESTree::FunctionDeclarationNode *node) {
   // If this declaration is of a global property, then it doesn't have a
   // function type, because that would be unsound. So, we have to parse the
   // function type here, to make it available inside the function.
-  auto *ftype = llvh::dyn_cast<FunctionType>(declType->info);
+  auto *ftype = llvh::dyn_cast<BaseFunctionType>(declType->info);
   if (!ftype) {
     declType = parseFunctionType(
         node->_params, node->_returnType, node->_async, node->_generator);
-    ftype = llvh::cast<FunctionType>(declType->info);
+    ftype = llvh::cast<BaseFunctionType>(declType->info);
   }
 
-  FunctionContext functionContext(*this, node, declType, ftype->getThisParam());
+  Type *thisType = nullptr;
+  if (auto *typed = llvh::dyn_cast<TypedFunctionType>(ftype))
+    thisType = typed->getThisParam();
+
+  FunctionContext functionContext(*this, node, declType, thisType);
   visitFunctionLike(node, node->_body, node->_params);
 }
 
@@ -96,11 +100,11 @@ void FlowChecker::visit(ESTree::FunctionExpressionNode *node) {
     recordDecl(decl, ftype, id, node);
   }
 
-  FunctionContext functionContext(
-      *this,
-      node,
-      ftype,
-      llvh::cast<FunctionType>(ftype->info)->getThisParam());
+  Type *thisType = nullptr;
+  if (auto *typed = llvh::dyn_cast<TypedFunctionType>(ftype->info))
+    thisType = typed->getThisParam();
+
+  FunctionContext functionContext(*this, node, ftype, thisType);
   visitFunctionLike(node, node->_body, node->_params);
 }
 
@@ -558,7 +562,7 @@ class FlowChecker::ExprVisitor {
             resType = optMethod->getField()->type;
             found = true;
             assert(
-                llvh::isa<FunctionType>(resType->info) &&
+                llvh::isa<BaseFunctionType>(resType->info) &&
                 "methods must be functions");
           }
         }
@@ -961,7 +965,7 @@ class FlowChecker::ExprVisitor {
 
         {BinopKind::in, TypeKind::Boolean, llvh::None, TypeKind::Any},
         {BinopKind::instanceOf, TypeKind::Boolean, llvh::None, TypeKind::ClassConstructor},
-        {BinopKind::instanceOf, TypeKind::Boolean, llvh::None, TypeKind::Function},
+        {BinopKind::instanceOf, TypeKind::Boolean, llvh::None, TypeKind::UntypedFunction},
         {BinopKind::instanceOf, TypeKind::Boolean, llvh::None, TypeKind::Any},
         // clang-format on
     };
@@ -1159,12 +1163,18 @@ class FlowChecker::ExprVisitor {
     if (llvh::isa<AnyType>(calleeType->info))
       return;
 
-    if (!llvh::isa<FunctionType>(calleeType->info)) {
+    if (!llvh::isa<BaseFunctionType>(calleeType->info)) {
       outer_.sm_.error(
           node->_callee->getSourceRange(), "ft: callee is not a function");
       return;
     }
-    auto *ftype = llvh::cast<FunctionType>(calleeType->info);
+    auto *ftype = llvh::dyn_cast<TypedFunctionType>(calleeType->info);
+
+    // If the callee is an untyped function, we have nothing to check.
+    if (!ftype) {
+      outer_.setNodeType(node, outer_.flowContext_.getAny());
+      return;
+    }
 
     outer_.setNodeType(node, ftype->getReturnType());
 
@@ -1219,12 +1229,19 @@ class FlowChecker::ExprVisitor {
     // If the callee has no type, we have nothing to do/check.
     if (llvh::isa<AnyType>(calleeType->info))
       return;
-    if (!llvh::isa<FunctionType>(calleeType->info)) {
+    if (!llvh::isa<BaseFunctionType>(calleeType->info)) {
       outer_.sm_.error(
           callee->getSourceRange(), "ft: callee is not a function");
       return;
     }
-    auto *ftype = llvh::cast<FunctionType>(calleeType->info);
+    auto *ftype = llvh::dyn_cast<TypedFunctionType>(calleeType->info);
+
+    // If the callee is an untyped function, we have nothing to check.
+    if (!ftype) {
+      outer_.setNodeType(call, outer_.flowContext_.getAny());
+      return;
+    }
+
     outer_.setNodeType(call, ftype->getReturnType());
 
     ++it;
@@ -1275,7 +1292,7 @@ class FlowChecker::ExprVisitor {
     // Does the class have an explicit constructor?
     if (Type *consFType = classTypeInfo->getConstructorType()) {
       checkArgumentTypes(
-          llvh::cast<FunctionType>(consFType->info),
+          llvh::cast<TypedFunctionType>(consFType->info),
           node,
           node->_arguments,
           "class " + classTypeInfo->getClassNameOrDefault() + " constructor");
@@ -1314,7 +1331,7 @@ class FlowChecker::ExprVisitor {
   /// \param offset the number of arguments to ignore at the front of \p
   ///   arguments. Used for $SHBuiltin.call, which has extra args at the front.
   bool checkArgumentTypes(
-      FunctionType *ftype,
+      TypedFunctionType *ftype,
       ESTree::Node *callNode,
       ESTree::NodeList &arguments,
       const llvh::Twine &calleeName,
@@ -1344,7 +1361,7 @@ class FlowChecker::ExprVisitor {
         return false;
       }
 
-      const FunctionType::Param &param = ftype->getParams()[argIndex];
+      const TypedFunctionType::Param &param = ftype->getParams()[argIndex];
       Type *expectedType = param.second;
       CanFlowResult cf =
           canAFlowIntoB(outer_.getNodeTypeOrAny(arg), expectedType);
@@ -1401,9 +1418,13 @@ void FlowChecker::visit(ESTree::ReturnStatementNode *node) {
   // TODO: type check the return value.
   visitExpression(node->_argument, node);
 
-  FunctionType *ftype =
-      llvh::cast<FunctionType>(curFunctionContext_->functionType->info);
-  assert(ftype && "return in global context");
+  auto *ftype = llvh::dyn_cast<TypedFunctionType>(
+      curFunctionContext_->functionType->info);
+
+  // Untyped function, can't check the return type.
+  if (!ftype) {
+    return;
+  }
 
   // Return without an argument and "void" return type is OK.
   if (!node->_argument && llvh::isa<VoidType>(ftype->getReturnType()->info))
@@ -1561,7 +1582,7 @@ class FlowChecker::FindLoopingTypes {
     return isTypeLooping(type->getElement());
   }
 
-  bool isLooping(FunctionType *type) {
+  bool isLooping(TypedFunctionType *type) {
     bool result = false;
     result |= isTypeLooping(type->getReturnType());
     if (type->getThisParam()) {
@@ -1571,6 +1592,10 @@ class FlowChecker::FindLoopingTypes {
       result |= isTypeLooping(paramType);
     }
     return result;
+  }
+
+  bool isLooping(UntypedFunctionType *type) {
+    return false;
   }
 };
 
@@ -2066,6 +2091,11 @@ class FlowChecker::AnnotateScopeDecls {
     // Global properties don't have sound types, since they can be
     // overwritten without our knowledge and control.
     if (decl->kind == sema::Decl::Kind::GlobalProperty) {
+      if (llvh::isa<TypedFunctionType>(type->info)) {
+        outer.sm_.warning(
+            funcDecl->getStartLoc(),
+            "ft: global property type annotations are unsound and are ignored");
+      }
       type = outer.flowContext_.getAny();
     }
 
@@ -2141,13 +2171,18 @@ Type *FlowChecker::parseFunctionType(
     bool isAsync,
     bool isGenerator,
     Type *defaultReturnType) {
-  llvh::SmallVector<FunctionType::Param, 4> paramsList{};
+  llvh::SmallVector<TypedFunctionType::Param, 4> paramsList{};
+
+  // If the default return type is expected, then we are parsing a typed
+  // function, even if it doesn't have any explicit type annotations.
+  bool isTyped = (defaultReturnType != nullptr);
 
   for (ESTree::Node &n : params) {
     if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(&n)) {
       paramsList.emplace_back(
           Identifier::getFromPointer(id->_name),
           parseOptionalTypeAnnotation(id->_typeAnnotation));
+      isTyped |= (id->_typeAnnotation != nullptr);
     } else {
       sm_.warning(
           n.getSourceRange(),
@@ -2158,8 +2193,10 @@ Type *FlowChecker::parseFunctionType(
 
   Type *returnType =
       parseOptionalTypeAnnotation(optReturnTypeAnnotation, defaultReturnType);
+  isTyped |= (optReturnTypeAnnotation != nullptr);
+
   Type *thisParamType = nullptr;
-  llvh::ArrayRef<FunctionType::Param> paramsRef(paramsList);
+  llvh::ArrayRef<TypedFunctionType::Param> paramsRef(paramsList);
 
   // Check if the first parameter is "this", since it is treated specially.
   if (!paramsRef.empty() &&
@@ -2168,8 +2205,10 @@ Type *FlowChecker::parseFunctionType(
     paramsRef = paramsRef.drop_front();
   }
 
-  FunctionType *res = flowContext_.createFunction(
-      returnType, thisParamType, paramsRef, isAsync, isGenerator);
+  BaseFunctionType *res = isTyped
+      ? static_cast<BaseFunctionType *>(flowContext_.createFunction(
+            returnType, thisParamType, paramsRef, isAsync, isGenerator))
+      : flowContext_.createUntypedFunction(isAsync, isGenerator);
   return flowContext_.createType(res);
 }
 
@@ -2336,8 +2375,8 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     return canAFlowIntoB(classA, classB);
   }
 
-  if (FunctionType *funcA = llvh::dyn_cast<FunctionType>(a)) {
-    FunctionType *funcB = llvh::dyn_cast<FunctionType>(b);
+  if (BaseFunctionType *funcA = llvh::dyn_cast<BaseFunctionType>(a)) {
+    BaseFunctionType *funcB = llvh::dyn_cast<BaseFunctionType>(b);
     if (!funcB)
       return {};
     return canAFlowIntoB(funcA, funcB);
@@ -2361,8 +2400,8 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
 }
 
 FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
-    FunctionType *a,
-    FunctionType *b) {
+    BaseFunctionType *a,
+    BaseFunctionType *b) {
   // Function a can flow into b when:
   // * they're the same kind of function (async, generator, etc)
   // * all parameters of b can flow into parameters of a
@@ -2374,13 +2413,27 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
   if (a->isGenerator() != b->isGenerator())
     return {};
 
-  if (!a->getThisParam() != !b->getThisParam()) {
+  // Typed and untyped functions are incompatible types.
+  if (a->getKind() != b->getKind())
+    return {};
+
+  auto *aType = llvh::dyn_cast<TypedFunctionType>(a);
+  auto *bType = llvh::dyn_cast<TypedFunctionType>(b);
+
+  // Untyped functions can flow into each other.
+  if (!aType && !bType)
+    return {.canFlow = true};
+
+  assert(aType && bType);
+
+  if (!aType->getThisParam() != !bType->getThisParam()) {
     // Only one of the functions is missing `this`, can't flow.
     return {};
   }
-  if (a->getThisParam() && b->getThisParam()) {
+  if (aType->getThisParam() && bType->getThisParam()) {
     // Both functions have `this`, it must be checked.
-    CanFlowResult flowRes = canAFlowIntoB(b->getThisParam(), a->getThisParam());
+    CanFlowResult flowRes =
+        canAFlowIntoB(bType->getThisParam(), aType->getThisParam());
     if (!flowRes.canFlow || flowRes.needCheckedCast)
       return {};
   }
@@ -2389,18 +2442,18 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     // TODO: Handle default arguments, which will allow for a changing number of
     // parameters. Example:
     //   let funcB : (a: number) => number;
-    //   function funcA(a: number, b: number = 10) : number {
+    //   function funcA(a: number, bType: number = 10) : number {
     //     return 0;
     //   }
     //   funcB = funcA;
     // funcA flows into funcA here because the default argument allows the
     // caller to change the number of parameters.
-    if (a->getParams().size() != b->getParams().size())
+    if (aType->getParams().size() != bType->getParams().size())
       return {};
 
-    for (size_t i = 0, e = a->getParams().size(); i < e; ++i) {
-      Type *paramA = a->getParams()[i].second;
-      Type *paramB = b->getParams()[i].second;
+    for (size_t i = 0, e = aType->getParams().size(); i < e; ++i) {
+      Type *paramA = aType->getParams()[i].second;
+      Type *paramB = bType->getParams()[i].second;
       CanFlowResult flowRes = canAFlowIntoB(paramB, paramA);
       if (!flowRes.canFlow || flowRes.needCheckedCast)
         return {};
@@ -2409,7 +2462,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
 
   {
     CanFlowResult flowRes =
-        canAFlowIntoB(a->getReturnType(), b->getReturnType());
+        canAFlowIntoB(aType->getReturnType(), bType->getReturnType());
     if (!flowRes.canFlow || flowRes.needCheckedCast)
       return {};
   }
@@ -2443,7 +2496,7 @@ Type *FlowChecker::processFunctionTypeAnnotation(
       : nullptr;
   Type *returnType = cb(node->_returnType);
 
-  llvh::SmallVector<FunctionType::Param, 4> paramsList{};
+  llvh::SmallVector<TypedFunctionType::Param, 4> paramsList{};
   for (ESTree::Node &n : node->_params) {
     if (auto *param = llvh::dyn_cast<ESTree::FunctionTypeParamNode>(&n)) {
       auto *id = llvh::cast_or_null<ESTree::IdentifierNode>(param->_name);

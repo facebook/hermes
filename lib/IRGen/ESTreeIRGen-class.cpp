@@ -240,7 +240,8 @@ Value *ESTreeIRGen::getDefaultInitValue(flow::Type *type) {
     case flow::TypeKind::Union:
       return getDefaultInitValue(
           llvh::cast<flow::UnionType>(type->info)->getTypes()[0]);
-    case flow::TypeKind::Function:
+    case flow::TypeKind::TypedFunction:
+    case flow::TypeKind::UntypedFunction:
     case flow::TypeKind::Class:
     case flow::TypeKind::ClassConstructor:
     case flow::TypeKind::Array:
@@ -273,7 +274,8 @@ Type ESTreeIRGen::flowTypeToIRType(flow::Type *flowType) {
       }
       return res;
     }
-    case flow::TypeKind::Function:
+    case flow::TypeKind::TypedFunction:
+    case flow::TypeKind::UntypedFunction:
       return Type::createObject();
     case flow::TypeKind::Class:
       return Type::createObject();

@@ -31,11 +31,12 @@ namespace flow {
   _HERMES_SEMA_FLOW_DEFKIND(Any)     \
   _HERMES_SEMA_FLOW_DEFKIND(Mixed)
 
-#define _HERMES_SEMA_FLOW_COMPLEX_TYPES \
-  _HERMES_SEMA_FLOW_DEFKIND(Union)      \
-  _HERMES_SEMA_FLOW_DEFKIND(Array)      \
-  _HERMES_SEMA_FLOW_DEFKIND(Function)   \
-  _HERMES_SEMA_FLOW_DEFKIND(Class)      \
+#define _HERMES_SEMA_FLOW_COMPLEX_TYPES      \
+  _HERMES_SEMA_FLOW_DEFKIND(Union)           \
+  _HERMES_SEMA_FLOW_DEFKIND(Array)           \
+  _HERMES_SEMA_FLOW_DEFKIND(TypedFunction)   \
+  _HERMES_SEMA_FLOW_DEFKIND(UntypedFunction) \
+  _HERMES_SEMA_FLOW_DEFKIND(Class)           \
   _HERMES_SEMA_FLOW_DEFKIND(ClassConstructor)
 
 enum class TypeKind : uint8_t {
@@ -49,6 +50,8 @@ enum class TypeKind : uint8_t {
   _LastSingleton = Mixed,
   _FirstId = Class,
   _LastId = ClassConstructor,
+  _FirstFunction = TypedFunction,
+  _LastFunction = UntypedFunction,
 };
 
 /// The backing storage for Types.
@@ -365,7 +368,30 @@ class ArrayType : public SingleType<TypeKind::Array, TypeInfo> {
   }
 };
 
-class FunctionType : public SingleType<TypeKind::Function, TypeInfo> {
+class BaseFunctionType : public TypeInfo {
+ private:
+  bool isAsync_ = false;
+  bool isGenerator_ = false;
+
+ public:
+  /// Initialize a new typed function instance.
+  explicit BaseFunctionType(TypeKind kind, bool isAsync, bool isGenerator)
+      : TypeInfo(kind), isAsync_(isAsync), isGenerator_(isGenerator) {}
+
+  bool isAsync() const {
+    return isAsync_;
+  }
+  bool isGenerator() const {
+    return isGenerator_;
+  }
+
+  static bool classof(const TypeInfo *t) {
+    return t->getKind() >= TypeKind::_FirstFunction &&
+        t->getKind() <= TypeKind::_LastFunction;
+  }
+};
+
+class TypedFunctionType : public BaseFunctionType {
  public:
   using Param = std::pair<Identifier, Type *>;
 
@@ -376,21 +402,18 @@ class FunctionType : public SingleType<TypeKind::Function, TypeInfo> {
   Type *thisParam_ = nullptr;
   /// Parameter types.
   llvh::SmallVector<Param, 2> params_{};
-  bool isAsync_ = false;
-  bool isGenerator_ = false;
 
  public:
-  /// Initialize a new instance.
-  explicit FunctionType(
+  /// Initialize a new typed function instance.
+  explicit TypedFunctionType(
       Type *returnType,
       Type *thisParam,
       llvh::ArrayRef<Param> params,
       bool isAsync,
       bool isGenerator)
-      : return_(returnType),
-        thisParam_(thisParam),
-        isAsync_(isAsync),
-        isGenerator_(isGenerator) {
+      : BaseFunctionType(TypeKind::TypedFunction, isAsync, isGenerator),
+        return_(returnType),
+        thisParam_(thisParam) {
     params_.append(params.begin(), params.end());
   }
 
@@ -403,19 +426,34 @@ class FunctionType : public SingleType<TypeKind::Function, TypeInfo> {
   const llvh::ArrayRef<Param> getParams() const {
     return params_;
   }
-  bool isAsync() const {
-    return isAsync_;
-  }
-  bool isGenerator() const {
-    return isGenerator_;
-  }
 
   /// Compare two instances of the same TypeKind.
-  int _compareImpl(const FunctionType *other, CompareState &state) const;
+  int _compareImpl(const TypedFunctionType *other, CompareState &state) const;
   /// Compare two instances of the same TypeKind.
-  bool _equalsImpl(const FunctionType *other, CompareState &state) const;
+  bool _equalsImpl(const TypedFunctionType *other, CompareState &state) const;
   /// Calculate the type-specific hash.
   unsigned _hashImpl() const;
+
+  static bool classof(const TypeInfo *t) {
+    return t->getKind() == TypeKind::TypedFunction;
+  }
+};
+
+class UntypedFunctionType : public BaseFunctionType {
+ public:
+  explicit UntypedFunctionType(bool isAsync, bool isGenerator)
+      : BaseFunctionType(TypeKind::UntypedFunction, isAsync, isGenerator) {}
+
+  /// Compare two instances of the same TypeKind.
+  int _compareImpl(const UntypedFunctionType *other, CompareState &state) const;
+  /// Compare two instances of the same TypeKind.
+  bool _equalsImpl(const UntypedFunctionType *other, CompareState &state) const;
+  /// Calculate the type-specific hash.
+  unsigned _hashImpl() const;
+
+  static bool classof(const TypeInfo *t) {
+    return t->getKind() == TypeKind::UntypedFunction;
+  }
 };
 
 /// A complex type annotated with a unique id (for that specific kind) to allow
@@ -565,9 +603,9 @@ class ClassType : public TypeWithId {
     assert(isInitialized());
     return constructorType_;
   }
-  FunctionType *getConstructorTypeInfo() const {
+  TypedFunctionType *getConstructorTypeInfo() const {
     assert(isInitialized());
-    return llvh::cast_or_null<FunctionType>(constructorType_->info);
+    return llvh::cast_or_null<TypedFunctionType>(constructorType_->info);
   }
   Type *getHomeObjectType() const {
     assert(isInitialized());
@@ -694,14 +732,17 @@ class FlowContext {
     assert(element);
     return &allocArray_.emplace_back(element);
   }
-  FunctionType *createFunction(
+  TypedFunctionType *createFunction(
       Type *returnType,
       Type *thisParam,
-      llvh::ArrayRef<FunctionType::Param> params,
+      llvh::ArrayRef<TypedFunctionType::Param> params,
       bool isAsync,
       bool isGenerator) {
-    return &allocFunction_.emplace_back(
+    return &allocTypedFunction_.emplace_back(
         returnType, thisParam, params, isAsync, isGenerator);
+  }
+  UntypedFunctionType *createUntypedFunction(bool isAsync, bool isGenerator) {
+    return &allocUntypedFunction_.emplace_back(isAsync, isGenerator);
   }
   ClassType *createClass(Identifier name) {
     return &allocClass_.emplace_back(allocClass_.size(), name);

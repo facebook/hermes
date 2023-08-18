@@ -7,7 +7,7 @@
 
 // RUN: (! %shermes -typed -exec %s 2>&1) | %FileCheck --match-full-lines %s
 
-(function() {
+(function(): void {
 
 function foo(x: number|string): number { return 2; }
 function bar(x: number): number|string { return x; }

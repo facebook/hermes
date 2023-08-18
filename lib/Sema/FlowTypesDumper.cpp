@@ -61,8 +61,8 @@ void FlowTypesDumper::printTypeDescription(
       }
     } break;
 
-    case TypeKind::Function: {
-      auto *funcType = llvh::cast<FunctionType>(type);
+    case TypeKind::TypedFunction: {
+      auto *funcType = llvh::cast<TypedFunctionType>(type);
       if (funcType->isAsync())
         os << "async ";
       if (funcType->isGenerator())
@@ -75,7 +75,7 @@ void FlowTypesDumper::printTypeDescription(
         printTypeRef(os, thisType);
         first = false;
       }
-      for (const FunctionType::Param &param : funcType->getParams()) {
+      for (const TypedFunctionType::Param &param : funcType->getParams()) {
         if (!first)
           os << ", ";
         first = false;
@@ -87,6 +87,10 @@ void FlowTypesDumper::printTypeDescription(
       os << "): ";
       printTypeRef(os, funcType->getReturnType());
     } break;
+
+    case TypeKind::UntypedFunction:
+      os << "()";
+      break;
 
     case TypeKind::Class: {
       auto *classType = llvh::cast<ClassType>(type);

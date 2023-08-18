@@ -133,7 +133,7 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
       AF->getSemInfo()->customDirectives,
       AF->getSourceRange());
 
-  if (auto *functionType = llvh::dyn_cast<flow::FunctionType>(
+  if (auto *functionType = llvh::dyn_cast<flow::TypedFunctionType>(
           flowContext_.getNodeTypeOrAny(AF)->info)) {
     newFunc->getAttributesRef(Mod).typed = true;
   }
@@ -196,7 +196,7 @@ Function *ESTreeIRGen::genES5Function(
             functionNode->getSourceRange(),
             /* insertBefore */ nullptr));
 
-  if (auto *functionType = llvh::dyn_cast<flow::FunctionType>(
+  if (auto *functionType = llvh::dyn_cast<flow::TypedFunctionType>(
           flowContext_.getNodeTypeOrAny(functionNode)->info)) {
     newFunction->getAttributesRef(Mod).typed = true;
   }

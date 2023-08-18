@@ -43,7 +43,7 @@ return foo;
 // CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:function_end
 
-// CHECK:function main(): any [typed]
+// CHECK:function main(): any
 // CHECK-NEXT:frame = [foo: any, C: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [C]: any
