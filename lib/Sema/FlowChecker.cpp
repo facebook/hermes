@@ -856,51 +856,113 @@ class FlowChecker::ExprVisitor {
   Type *determineBinopType(BinopKind op, TypeKind lk, TypeKind rk) {
     struct BinTypes {
       BinopKind op;
-      TypeKind res, left, right;
+      TypeKind res;
+      // None indicates a wildcard, Any indicates the actual 'any' type.
+      OptValue<TypeKind> left;
+      OptValue<TypeKind> right;
     };
 
     static const BinTypes s_types[] = {
         // clang-format off
-        {BinopKind::eq, TypeKind::Boolean, TypeKind::Any, TypeKind::Any},
-        {BinopKind::ne, TypeKind::Boolean, TypeKind::Any, TypeKind::Any},
-        {BinopKind::strictEq, TypeKind::Boolean, TypeKind::Any, TypeKind::Any},
-        {BinopKind::strictNe, TypeKind::Boolean, TypeKind::Any, TypeKind::Any},
-        {BinopKind::lt, TypeKind::Boolean, TypeKind::Any, TypeKind::Any},
-        {BinopKind::le, TypeKind::Boolean, TypeKind::Any, TypeKind::Any},
-        {BinopKind::gt, TypeKind::Boolean, TypeKind::Any, TypeKind::Any},
-        {BinopKind::ge, TypeKind::Boolean, TypeKind::Any, TypeKind::Any},
+        {BinopKind::eq, TypeKind::Boolean, llvh::None, llvh::None},
+        {BinopKind::ne, TypeKind::Boolean, llvh::None, llvh::None},
+        {BinopKind::strictEq, TypeKind::Boolean, llvh::None, llvh::None},
+        {BinopKind::strictNe, TypeKind::Boolean, llvh::None, llvh::None},
+
+        {BinopKind::lt, TypeKind::Boolean, TypeKind::Number, TypeKind::Number},
+        {BinopKind::lt, TypeKind::Boolean, TypeKind::BigInt, TypeKind::BigInt},
+        {BinopKind::lt, TypeKind::Boolean, TypeKind::String, TypeKind::String},
+        {BinopKind::lt, TypeKind::Boolean, TypeKind::Any, llvh::None},
+        {BinopKind::lt, TypeKind::Boolean, llvh::None, TypeKind::Any},
+
+        {BinopKind::le, TypeKind::Boolean, TypeKind::Number, TypeKind::Number},
+        {BinopKind::le, TypeKind::Boolean, TypeKind::BigInt, TypeKind::BigInt},
+        {BinopKind::le, TypeKind::Boolean, TypeKind::String, TypeKind::String},
+        {BinopKind::le, TypeKind::Boolean, TypeKind::Any, llvh::None},
+        {BinopKind::le, TypeKind::Boolean, llvh::None, TypeKind::Any},
+
+        {BinopKind::gt, TypeKind::Boolean, TypeKind::Number, TypeKind::Number},
+        {BinopKind::gt, TypeKind::Boolean, TypeKind::BigInt, TypeKind::BigInt},
+        {BinopKind::gt, TypeKind::Boolean, TypeKind::String, TypeKind::String},
+        {BinopKind::gt, TypeKind::Boolean, TypeKind::Any, llvh::None},
+        {BinopKind::gt, TypeKind::Boolean, llvh::None, TypeKind::Any},
+
+        {BinopKind::ge, TypeKind::Boolean, TypeKind::Number, TypeKind::Number},
+        {BinopKind::ge, TypeKind::Boolean, TypeKind::BigInt, TypeKind::BigInt},
+        {BinopKind::ge, TypeKind::Boolean, TypeKind::String, TypeKind::String},
+        {BinopKind::ge, TypeKind::Boolean, TypeKind::Any, llvh::None},
+        {BinopKind::ge, TypeKind::Boolean, llvh::None, TypeKind::Any},
 
         {BinopKind::shl, TypeKind::Number, TypeKind::Number, TypeKind::Number},
         {BinopKind::shl, TypeKind::BigInt, TypeKind::BigInt, TypeKind::BigInt},
+        {BinopKind::shl, TypeKind::Any, TypeKind::Any, llvh::None},
+        {BinopKind::shl, TypeKind::Any, llvh::None, TypeKind::Any},
         {BinopKind::sshr, TypeKind::Number, TypeKind::Number, TypeKind::Number},
         {BinopKind::sshr, TypeKind::BigInt, TypeKind::BigInt, TypeKind::BigInt},
+        {BinopKind::sshr, TypeKind::Any, TypeKind::Any, llvh::None},
+        {BinopKind::sshr, TypeKind::Any, llvh::None, TypeKind::Any},
         {BinopKind::ushr, TypeKind::Number, TypeKind::Number, TypeKind::Number},
         {BinopKind::ushr, TypeKind::BigInt, TypeKind::BigInt, TypeKind::BigInt},
+        {BinopKind::ushr, TypeKind::Any, TypeKind::Any, llvh::None},
+        {BinopKind::ushr, TypeKind::Any, llvh::None, TypeKind::Any},
 
-        {BinopKind::plus, TypeKind::String, TypeKind::String, TypeKind::Any},
-        {BinopKind::plus, TypeKind::String, TypeKind::Any, TypeKind::String},
+        {BinopKind::plus, TypeKind::String, TypeKind::String, TypeKind::String},
         {BinopKind::plus, TypeKind::Number, TypeKind::Number, TypeKind::Number},
         {BinopKind::plus, TypeKind::BigInt, TypeKind::BigInt, TypeKind::BigInt},
+        {BinopKind::plus, TypeKind::String, TypeKind::Any, TypeKind::String},
+        {BinopKind::plus, TypeKind::String, TypeKind::String, TypeKind::Any},
+        {BinopKind::plus, TypeKind::Any, TypeKind::Any, llvh::None},
+        {BinopKind::plus, TypeKind::Any, llvh::None, TypeKind::Any},
 
         {BinopKind::minus, TypeKind::Number, TypeKind::Number, TypeKind::Number},
         {BinopKind::minus, TypeKind::BigInt, TypeKind::BigInt, TypeKind::BigInt},
+        {BinopKind::minus, TypeKind::Any, llvh::None, TypeKind::Any},
+        {BinopKind::minus, TypeKind::Any, TypeKind::Any, llvh::None},
         {BinopKind::mul, TypeKind::Number, TypeKind::Number, TypeKind::Number},
         {BinopKind::mul, TypeKind::BigInt, TypeKind::BigInt, TypeKind::BigInt},
+        {BinopKind::mul, TypeKind::Any, llvh::None, TypeKind::Any},
+        {BinopKind::mul, TypeKind::Any, TypeKind::Any, llvh::None},
         {BinopKind::div, TypeKind::Number, TypeKind::Number, TypeKind::Number},
         {BinopKind::div, TypeKind::BigInt, TypeKind::BigInt, TypeKind::BigInt},
+        {BinopKind::div, TypeKind::Any, llvh::None, TypeKind::Any},
+        {BinopKind::div, TypeKind::Any, TypeKind::Any, llvh::None},
         {BinopKind::rem, TypeKind::Number, TypeKind::Number, TypeKind::Number},
         {BinopKind::rem, TypeKind::BigInt, TypeKind::BigInt, TypeKind::BigInt},
+        {BinopKind::rem, TypeKind::Any, llvh::None, TypeKind::Any},
+        {BinopKind::rem, TypeKind::Any, TypeKind::Any, llvh::None},
         {BinopKind::binOr, TypeKind::Number, TypeKind::Number, TypeKind::Number},
+        {BinopKind::binOr, TypeKind::Number, TypeKind::Any, TypeKind::Number},
+        {BinopKind::binOr, TypeKind::Number, TypeKind::Number, TypeKind::Any},
         {BinopKind::binOr, TypeKind::BigInt, TypeKind::BigInt, TypeKind::BigInt},
+        {BinopKind::binOr, TypeKind::BigInt, TypeKind::Any, TypeKind::BigInt},
+        {BinopKind::binOr, TypeKind::BigInt, TypeKind::BigInt, TypeKind::Any},
+        {BinopKind::binOr, TypeKind::Any, llvh::None, TypeKind::Any},
+        {BinopKind::binOr, TypeKind::Any, TypeKind::Any, llvh::None},
         {BinopKind::binXor, TypeKind::Number, TypeKind::Number, TypeKind::Number},
+        {BinopKind::binXor, TypeKind::Number, TypeKind::Any, TypeKind::Number},
+        {BinopKind::binXor, TypeKind::Number, TypeKind::Number, TypeKind::Any},
         {BinopKind::binXor, TypeKind::BigInt, TypeKind::BigInt, TypeKind::BigInt},
+        {BinopKind::binXor, TypeKind::BigInt, TypeKind::Any, TypeKind::BigInt},
+        {BinopKind::binXor, TypeKind::BigInt, TypeKind::BigInt, TypeKind::Any},
+        {BinopKind::binXor, TypeKind::Any, llvh::None, TypeKind::Any},
+        {BinopKind::binXor, TypeKind::Any, TypeKind::Any, llvh::None},
         {BinopKind::binAnd, TypeKind::Number, TypeKind::Number, TypeKind::Number},
+        {BinopKind::binAnd, TypeKind::Number, TypeKind::Any, TypeKind::Number},
+        {BinopKind::binAnd, TypeKind::Number, TypeKind::Number, TypeKind::Any},
         {BinopKind::binAnd, TypeKind::BigInt, TypeKind::BigInt, TypeKind::BigInt},
+        {BinopKind::binAnd, TypeKind::BigInt, TypeKind::Any, TypeKind::BigInt},
+        {BinopKind::binAnd, TypeKind::BigInt, TypeKind::BigInt, TypeKind::Any},
+        {BinopKind::binAnd, TypeKind::Any, llvh::None, TypeKind::Any},
+        {BinopKind::binAnd, TypeKind::Any, TypeKind::Any, llvh::None},
         {BinopKind::exp, TypeKind::Number, TypeKind::Number, TypeKind::Number},
         {BinopKind::exp, TypeKind::BigInt, TypeKind::BigInt, TypeKind::BigInt},
+        {BinopKind::exp, TypeKind::Any, llvh::None, TypeKind::Any},
+        {BinopKind::exp, TypeKind::Any, TypeKind::Any, llvh::None},
 
-        {BinopKind::in, TypeKind::Boolean, TypeKind::Any, TypeKind::Any},
-        {BinopKind::instanceOf, TypeKind::Boolean, TypeKind::Any, TypeKind::Any},
+        {BinopKind::in, TypeKind::Boolean, llvh::None, TypeKind::Any},
+        {BinopKind::instanceOf, TypeKind::Boolean, llvh::None, TypeKind::ClassConstructor},
+        {BinopKind::instanceOf, TypeKind::Boolean, llvh::None, TypeKind::Function},
+        {BinopKind::instanceOf, TypeKind::Boolean, llvh::None, TypeKind::Any},
         // clang-format on
     };
     static const BinTypes *const s_types_end =
@@ -914,8 +976,7 @@ class FlowChecker::ExprVisitor {
 
     // Search for a match.
     for (; it != s_types_end && it->op == op; ++it) {
-      if ((it->left == TypeKind::Any || it->left == lk) &&
-          (it->right == TypeKind::Any || it->right == rk)) {
+      if ((!it->left || *it->left == lk) && (!it->right || *it->right == rk)) {
         return outer_.flowContext_.getSingletonType(it->res);
       }
     }
@@ -936,6 +997,11 @@ class FlowChecker::ExprVisitor {
             rt->info->getKind())) {
       res = t;
     } else {
+      outer_.sm_.error(
+          node->getSourceRange(),
+          llvh::Twine("ft: incompatible binary operation: ") +
+              node->_operator->str() + " cannot be applied to " +
+              lt->info->getKindName() + " and " + rt->info->getKindName());
       res = outer_.flowContext_.getAny();
     }
 
