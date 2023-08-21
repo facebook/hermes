@@ -350,7 +350,7 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            choco install --no-progress cmake --version 3.14.7 --installargs 'ADD_CMAKE_TO_PATH=System'
+            choco install --no-progress cmake --version 3.24.3 --installargs 'ADD_CMAKE_TO_PATH=System'
             if (-not $?) { throw "Failed to install CMake" }
             choco install --no-progress python3
             if (-not $?) { throw "Failed to install Python" }
