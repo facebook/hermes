@@ -16,7 +16,6 @@
 #include <hermes/inspector/RuntimeAdapter.h>
 #include <hermes/inspector/chrome/JSONValueInterfaces.h>
 #include <hermes/inspector/chrome/MessageConverters.h>
-#include <hermes/jsinspector/InspectorInterfaces.h>
 
 #include "TestHelpers.h"
 
@@ -26,40 +25,34 @@ namespace inspector {
 namespace chrome {
 
 using namespace std::placeholders;
-using ::facebook::react::IRemoteConnection;
 
 void ExecutorRuntimeAdapter::tickleJs() {
   runtime_.tickleJsAsync();
 }
 
-class SyncConnection::RemoteConnnection : public IRemoteConnection {
- public:
-  RemoteConnnection(SyncConnection &conn) : conn_(conn) {}
-
-  void onMessage(std::string message) override {
-    conn_.onReply(message);
-  }
-
-  void onDisconnect() override {}
-
- private:
-  SyncConnection &conn_;
-};
-
 SyncConnection::SyncConnection(
     AsyncHermesRuntime &runtime,
     bool waitForDebugger)
-    : connection_(
+    : cdpHandler_(
           std::make_unique<ExecutorRuntimeAdapter>(runtime),
           "testConn",
           waitForDebugger) {
-  connection_.connect(std::make_unique<RemoteConnnection>(*this));
+  registerCallback();
+}
+
+bool SyncConnection::registerCallback() {
+  return cdpHandler_.registerCallback(
+      std::bind(&SyncConnection::onReply, this, std::placeholders::_1));
+}
+
+void SyncConnection::unregisterCallback() {
+  cdpHandler_.unregisterCallback();
 }
 
 void SyncConnection::send(const std::string &str) {
   LOG(INFO) << "SyncConnection::send sending " << str;
 
-  connection_.sendMessage(str);
+  cdpHandler_.handle(str);
 }
 
 void SyncConnection::waitForResponse(

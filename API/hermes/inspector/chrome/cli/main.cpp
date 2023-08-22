@@ -20,8 +20,6 @@
 #include <hermes/inspector/RuntimeAdapter.h>
 #include <hermes/inspector/chrome/CDPHandler.h>
 
-using ::facebook::react::IRemoteConnection;
-
 namespace fbhermes = ::facebook::hermes;
 
 static const char *usageMessage = R"(hermes-chrome-debug-server script.js
@@ -112,24 +110,15 @@ static std::string getUrl(const char *path) {
   return std::string("file://") + absPath;
 }
 
-class RemoteConnection : public IRemoteConnection {
- public:
-  void onMessage(std::string message) override {
-    sendResponse(message);
-  }
-
-  void onDisconnect() override {}
-};
-
 static void runDebuggerLoop(
-    fbhermes::inspector::chrome::CDPHandler &conn,
+    fbhermes::inspector::chrome::CDPHandler &cdpHandler,
     std::string scriptSource) {
-  conn.connect(std::make_unique<RemoteConnection>());
+  cdpHandler.registerCallback(&sendResponse);
 
   std::string line;
   while (std::getline(std::cin, line)) {
     logRequest(line);
-    conn.sendMessage(line);
+    cdpHandler.handle(line);
   }
 }
 
@@ -140,9 +129,9 @@ static void runScript(const std::string &scriptSource, const std::string &url) {
                                       .build()));
   auto adapter =
       std::make_unique<fbhermes::inspector::SharedRuntimeAdapter>(runtime);
-  fbhermes::inspector::chrome::CDPHandler conn(
+  fbhermes::inspector::chrome::CDPHandler cdpHandler(
       std::move(adapter), "hermes-chrome-debug-server");
-  std::thread debuggerLoop(runDebuggerLoop, std::ref(conn), scriptSource);
+  std::thread debuggerLoop(runDebuggerLoop, std::ref(cdpHandler), scriptSource);
 
   fbhermes::HermesRuntime::DebugFlags flags{};
   runtime->debugJavaScript(scriptSource, url, flags);

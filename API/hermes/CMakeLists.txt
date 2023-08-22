@@ -8,7 +8,6 @@ add_hermes_library(compileJS CompileJS.cpp LINK_LIBS hermesPublic)
 
 if(HERMES_ENABLE_DEBUGGER)
   add_subdirectory(inspector)
-  add_subdirectory(jsinspector)
 endif()
 
 set(HERMES_ENABLE_EH ON)
@@ -53,7 +52,6 @@ if(HERMES_ENABLE_DEBUGGER)
   set(LIBHERMES_INSPECTOR_OBJS
     $<TARGET_OBJECTS:hermesInspector_no_rtti_no_exception_obj>
     $<TARGET_OBJECTS:hermesInspector_rtti_exception_obj>
-    $<TARGET_OBJECTS:jsinspector_obj>
   )
 endif()
 

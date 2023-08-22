@@ -13,7 +13,6 @@ add_hermes_tool(hcds
 target_link_libraries(hcds
   hermesapi
   hermesInspector_rtti_exception
-  jsinspector
 )
 
 install(TARGETS hcds
