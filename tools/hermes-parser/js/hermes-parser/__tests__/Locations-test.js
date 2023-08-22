@@ -22,7 +22,6 @@ describe('Locations', () => {
         {
           type: 'ExpressionStatement',
           loc: {
-            source: null,
             start: {
               line: 1,
               column: 0,
@@ -46,7 +45,6 @@ describe('Locations', () => {
           {
             type: 'ExpressionStatement',
             loc: {
-              source: null,
               start: {
                 line: 1,
                 column: 0,

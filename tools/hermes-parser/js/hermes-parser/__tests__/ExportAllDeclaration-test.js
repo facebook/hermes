@@ -58,6 +58,10 @@ describe('ExportAllDeclaration', () => {
             {
               "exportKind": "value",
               "source": {
+                "extra": {
+                  "raw": "'z'",
+                  "rawValue": "z",
+                },
                 "type": "StringLiteral",
                 "value": "z",
               },
@@ -113,9 +117,12 @@ describe('ExportAllDeclaration', () => {
         {
           "body": [
             {
-              "declaration": null,
               "exportKind": "value",
               "source": {
+                "extra": {
+                  "raw": "'z'",
+                  "rawValue": "z",
+                },
                 "type": "StringLiteral",
                 "value": "z",
               },
@@ -123,9 +130,7 @@ describe('ExportAllDeclaration', () => {
                 {
                   "exported": {
                     "name": "y",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
                   "type": "ExportNamespaceSpecifier",
                 },

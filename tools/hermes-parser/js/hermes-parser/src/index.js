@@ -12,11 +12,14 @@
 
 import type {Program as ESTreeProgram} from 'hermes-estree';
 import type {ParserOptions} from './ParserOptions';
+import type {BabelFile} from './babel/TransformESTreeToBabel';
 
 import * as HermesParser from './HermesParser';
-import HermesToBabelAdapter from './HermesToBabelAdapter';
 import HermesToESTreeAdapter from './HermesToESTreeAdapter';
 import FlowVisitorKeys from './generated/ESTreeVisitorKeys';
+import * as TransformReactScriptForBabel from './babel/TransformReactScriptForBabel';
+import * as TransformFlowTypesForBabel from './babel/TransformFlowTypesForBabel';
+import * as TransformESTreeToBabel from './babel/TransformESTreeToBabel';
 
 const DEFAULTS = {
   flow: 'detect',
@@ -51,18 +54,10 @@ function getOptions(options?: ParserOptions = {...DEFAULTS}) {
   return options;
 }
 
-function getAdapter(options: ParserOptions, code: string) {
-  return options.babel === true
-    ? new HermesToBabelAdapter(options)
-    : new HermesToESTreeAdapter(options, code);
-}
-
-// $FlowExpectedError[unclear-type]
-type BabelProgram = Object;
 declare function parse(
   code: string,
   opts: {...ParserOptions, babel: true},
-): BabelProgram;
+): BabelFile;
 // eslint-disable-next-line no-redeclare
 declare function parse(
   code: string,
@@ -75,12 +70,23 @@ declare function parse(
 export function parse(
   code: string,
   opts?: ParserOptions,
-): BabelProgram | ESTreeProgram {
+): BabelFile | ESTreeProgram {
   const options = getOptions(opts);
   const ast = HermesParser.parse(code, options);
-  const adapter = getAdapter(options, code);
 
-  return adapter.transform(ast);
+  const estreeAdapter = new HermesToESTreeAdapter(options, code);
+  const estreeAST = estreeAdapter.transform(ast);
+
+  if (options.babel !== true) {
+    return estreeAST;
+  }
+
+  const loweredESTreeAST = [
+    TransformReactScriptForBabel.transformProgram,
+    TransformFlowTypesForBabel.transformProgram,
+  ].reduce((ast, transform) => transform(ast, options), estreeAST);
+
+  return TransformESTreeToBabel.transformProgram(loweredESTreeAST, options);
 }
 
 export type {ParserOptions} from './ParserOptions';

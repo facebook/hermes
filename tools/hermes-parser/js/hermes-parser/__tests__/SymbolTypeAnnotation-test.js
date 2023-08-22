@@ -62,9 +62,7 @@ describe('Symbol type annotation', () => {
           {
             "id": {
               "name": "T",
-              "optional": false,
               "type": "Identifier",
-              "typeAnnotation": null,
             },
             "right": {
               "id": {

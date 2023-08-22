@@ -74,9 +74,12 @@ describe('ImportDeclaration', () => {
         {
           "body": [
             {
-              "assertions": [],
               "importKind": "value",
               "source": {
+                "extra": {
+                  "raw": "'Foo'",
+                  "rawValue": "Foo",
+                },
                 "type": "StringLiteral",
                 "value": "Foo",
               },
@@ -85,15 +88,11 @@ describe('ImportDeclaration', () => {
                   "importKind": null,
                   "imported": {
                     "name": "Foo",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
                   "local": {
                     "name": "Foo",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
                   "type": "ImportSpecifier",
                 },
@@ -156,9 +155,12 @@ describe('ImportDeclaration', () => {
         {
           "body": [
             {
-              "assertions": [],
               "importKind": "value",
               "source": {
+                "extra": {
+                  "raw": "'Foo'",
+                  "rawValue": "Foo",
+                },
                 "type": "StringLiteral",
                 "value": "Foo",
               },
@@ -166,9 +168,7 @@ describe('ImportDeclaration', () => {
                 {
                   "local": {
                     "name": "Foo",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
                   "type": "ImportDefaultSpecifier",
                 },
@@ -231,9 +231,12 @@ describe('ImportDeclaration', () => {
         {
           "body": [
             {
-              "assertions": [],
               "importKind": "value",
               "source": {
+                "extra": {
+                  "raw": "'Foo'",
+                  "rawValue": "Foo",
+                },
                 "type": "StringLiteral",
                 "value": "Foo",
               },
@@ -241,9 +244,7 @@ describe('ImportDeclaration', () => {
                 {
                   "local": {
                     "name": "Foo",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
                   "type": "ImportNamespaceSpecifier",
                 },
@@ -322,9 +323,12 @@ describe('ImportDeclaration', () => {
         {
           "body": [
             {
-              "assertions": [],
               "importKind": "value",
               "source": {
+                "extra": {
+                  "raw": "'Foo'",
+                  "rawValue": "Foo",
+                },
                 "type": "StringLiteral",
                 "value": "Foo",
               },
@@ -332,9 +336,7 @@ describe('ImportDeclaration', () => {
                 {
                   "local": {
                     "name": "Foo",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
                   "type": "ImportDefaultSpecifier",
                 },
@@ -342,15 +344,11 @@ describe('ImportDeclaration', () => {
                   "importKind": null,
                   "imported": {
                     "name": "Bar",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
                   "local": {
                     "name": "Bar",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
                   "type": "ImportSpecifier",
                 },
@@ -422,9 +420,12 @@ describe('ImportDeclaration', () => {
         {
           "body": [
             {
-              "assertions": [],
               "importKind": "value",
               "source": {
+                "extra": {
+                  "raw": "'Foo'",
+                  "rawValue": "Foo",
+                },
                 "type": "StringLiteral",
                 "value": "Foo",
               },
@@ -432,18 +433,14 @@ describe('ImportDeclaration', () => {
                 {
                   "local": {
                     "name": "Foo",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
                   "type": "ImportDefaultSpecifier",
                 },
                 {
                   "local": {
                     "name": "Bar",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
                   "type": "ImportNamespaceSpecifier",
                 },
@@ -532,9 +529,12 @@ describe('ImportDeclaration', () => {
         {
           "body": [
             {
-              "assertions": [],
               "importKind": "value",
               "source": {
+                "extra": {
+                  "raw": "'Foo'",
+                  "rawValue": "Foo",
+                },
                 "type": "StringLiteral",
                 "value": "Foo",
               },
@@ -543,15 +543,11 @@ describe('ImportDeclaration', () => {
                   "importKind": "type",
                   "imported": {
                     "name": "Foo",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
                   "local": {
                     "name": "Foo",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
                   "type": "ImportSpecifier",
                 },
@@ -559,15 +555,11 @@ describe('ImportDeclaration', () => {
                   "importKind": "typeof",
                   "imported": {
                     "name": "Bar",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
                   "local": {
                     "name": "Bar",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
                   "type": "ImportSpecifier",
                 },
@@ -633,9 +625,12 @@ describe('ImportDeclaration', () => {
         {
           "body": [
             {
-              "assertions": [],
               "importKind": "type",
               "source": {
+                "extra": {
+                  "raw": "'Foo'",
+                  "rawValue": "Foo",
+                },
                 "type": "StringLiteral",
                 "value": "Foo",
               },
@@ -643,9 +638,7 @@ describe('ImportDeclaration', () => {
                 {
                   "local": {
                     "name": "Foo",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
                   "type": "ImportDefaultSpecifier",
                 },
@@ -711,9 +704,12 @@ describe('ImportDeclaration', () => {
         {
           "body": [
             {
-              "assertions": [],
               "importKind": "typeof",
               "source": {
+                "extra": {
+                  "raw": "'Foo'",
+                  "rawValue": "Foo",
+                },
                 "type": "StringLiteral",
                 "value": "Foo",
               },
@@ -721,9 +717,7 @@ describe('ImportDeclaration', () => {
                 {
                   "local": {
                     "name": "Foo",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
                   "type": "ImportDefaultSpecifier",
                 },

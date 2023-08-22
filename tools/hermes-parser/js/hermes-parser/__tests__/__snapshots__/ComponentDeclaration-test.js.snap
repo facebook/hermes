@@ -14,12 +14,9 @@ exports[`ComponentDeclaration Basic Babel 1`] = `
       "generator": false,
       "id": {
         "name": "Foo",
-        "optional": false,
         "type": "Identifier",
-        "typeAnnotation": null,
       },
       "params": [],
-      "predicate": null,
       "returnType": {
         "type": "TypeAnnotation",
         "typeAnnotation": {
@@ -39,7 +36,6 @@ exports[`ComponentDeclaration Basic Babel 1`] = `
         },
       },
       "type": "FunctionDeclaration",
-      "typeParameters": null,
     },
   ],
   "type": "Program",
@@ -84,9 +80,7 @@ exports[`ComponentDeclaration Complex params Babel 1`] = `
       "generator": false,
       "id": {
         "name": "Foo",
-        "optional": false,
         "type": "Identifier",
-        "typeAnnotation": null,
       },
       "params": [
         {
@@ -95,7 +89,6 @@ exports[`ComponentDeclaration Complex params Babel 1`] = `
               "computed": false,
               "key": {
                 "name": "bar",
-                "optional": false,
                 "type": "Identifier",
               },
               "method": false,
@@ -110,7 +103,6 @@ exports[`ComponentDeclaration Complex params Babel 1`] = `
               "computed": false,
               "key": {
                 "name": "baz",
-                "optional": false,
                 "type": "Identifier",
               },
               "method": false,
@@ -124,6 +116,10 @@ exports[`ComponentDeclaration Complex params Babel 1`] = `
             {
               "computed": false,
               "key": {
+                "extra": {
+                  "raw": "'data-bav'",
+                  "rawValue": "data-bav",
+                },
                 "type": "StringLiteral",
                 "value": "data-bav",
               },
@@ -163,7 +159,6 @@ exports[`ComponentDeclaration Complex params Babel 1`] = `
           },
         },
       ],
-      "predicate": null,
       "returnType": {
         "type": "TypeAnnotation",
         "typeAnnotation": {
@@ -183,7 +178,6 @@ exports[`ComponentDeclaration Complex params Babel 1`] = `
         },
       },
       "type": "FunctionDeclaration",
-      "typeParameters": null,
     },
   ],
   "type": "Program",
@@ -313,9 +307,7 @@ exports[`ComponentDeclaration default params Babel 1`] = `
       "generator": false,
       "id": {
         "name": "Foo",
-        "optional": false,
         "type": "Identifier",
-        "typeAnnotation": null,
       },
       "params": [
         {
@@ -324,7 +316,6 @@ exports[`ComponentDeclaration default params Babel 1`] = `
               "computed": false,
               "key": {
                 "name": "bar",
-                "optional": false,
                 "type": "Identifier",
               },
               "method": false,
@@ -336,6 +327,10 @@ exports[`ComponentDeclaration default params Babel 1`] = `
                   "type": "Identifier",
                 },
                 "right": {
+                  "extra": {
+                    "raw": "''",
+                    "rawValue": "",
+                  },
                   "type": "StringLiteral",
                   "value": "",
                 },
@@ -370,7 +365,6 @@ exports[`ComponentDeclaration default params Babel 1`] = `
           },
         },
       ],
-      "predicate": null,
       "returnType": {
         "type": "TypeAnnotation",
         "typeAnnotation": {
@@ -390,7 +384,6 @@ exports[`ComponentDeclaration default params Babel 1`] = `
         },
       },
       "type": "FunctionDeclaration",
-      "typeParameters": null,
     },
   ],
   "type": "Program",
@@ -473,9 +466,7 @@ exports[`ComponentDeclaration normal and rest params Babel 1`] = `
       "generator": false,
       "id": {
         "name": "Foo",
-        "optional": false,
         "type": "Identifier",
-        "typeAnnotation": null,
       },
       "params": [
         {
@@ -484,7 +475,6 @@ exports[`ComponentDeclaration normal and rest params Babel 1`] = `
               "computed": false,
               "key": {
                 "name": "param1",
-                "optional": false,
                 "type": "Identifier",
               },
               "method": false,
@@ -502,39 +492,21 @@ exports[`ComponentDeclaration normal and rest params Babel 1`] = `
                     "computed": false,
                     "key": {
                       "name": "param2",
-                      "optional": false,
                       "type": "Identifier",
-                      "typeAnnotation": null,
                     },
-                    "kind": "init",
                     "method": false,
                     "shorthand": true,
                     "type": "ObjectProperty",
                     "value": {
                       "name": "param2",
-                      "optional": false,
                       "type": "Identifier",
-                      "typeAnnotation": null,
                     },
                   },
                 ],
                 "type": "ObjectPattern",
-                "typeAnnotation": null,
               },
               "type": "RestElement",
-              "typeAnnotation": {
-                "type": "TypeAnnotation",
-                "typeAnnotation": {
-                  "id": {
-                    "name": "Props",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "type": "GenericTypeAnnotation",
-                  "typeParameters": null,
-                },
-              },
+              "typeAnnotation": null,
             },
           ],
           "type": "ObjectPattern",
@@ -564,7 +536,6 @@ exports[`ComponentDeclaration normal and rest params Babel 1`] = `
           },
         },
       ],
-      "predicate": null,
       "returnType": {
         "type": "TypeAnnotation",
         "typeAnnotation": {
@@ -584,7 +555,6 @@ exports[`ComponentDeclaration normal and rest params Babel 1`] = `
         },
       },
       "type": "FunctionDeclaration",
-      "typeParameters": null,
     },
   ],
   "type": "Program",
@@ -691,14 +661,11 @@ exports[`ComponentDeclaration rest params Babel 1`] = `
       "generator": false,
       "id": {
         "name": "Foo",
-        "optional": false,
         "type": "Identifier",
-        "typeAnnotation": null,
       },
       "params": [
         {
           "name": "props",
-          "optional": false,
           "type": "Identifier",
           "typeAnnotation": {
             "type": "TypeAnnotation",
@@ -726,7 +693,6 @@ exports[`ComponentDeclaration rest params Babel 1`] = `
           },
         },
       ],
-      "predicate": null,
       "returnType": {
         "type": "TypeAnnotation",
         "typeAnnotation": {
@@ -746,7 +712,6 @@ exports[`ComponentDeclaration rest params Babel 1`] = `
         },
       },
       "type": "FunctionDeclaration",
-      "typeParameters": null,
     },
   ],
   "type": "Program",
@@ -813,27 +778,21 @@ exports[`ComponentDeclaration return type Babel 1`] = `
       "generator": false,
       "id": {
         "name": "Foo",
-        "optional": false,
         "type": "Identifier",
-        "typeAnnotation": null,
       },
       "params": [],
-      "predicate": null,
       "returnType": {
         "type": "TypeAnnotation",
         "typeAnnotation": {
           "id": {
             "name": "SpecialType",
-            "optional": false,
             "type": "Identifier",
-            "typeAnnotation": null,
           },
           "type": "GenericTypeAnnotation",
           "typeParameters": null,
         },
       },
       "type": "FunctionDeclaration",
-      "typeParameters": null,
     },
   ],
   "type": "Program",
@@ -890,9 +849,7 @@ exports[`ComponentDeclaration type parameters Babel 1`] = `
       "generator": false,
       "id": {
         "name": "Foo",
-        "optional": false,
         "type": "Identifier",
-        "typeAnnotation": null,
       },
       "params": [
         {
@@ -901,7 +858,6 @@ exports[`ComponentDeclaration type parameters Babel 1`] = `
               "computed": false,
               "key": {
                 "name": "bar",
-                "optional": false,
                 "type": "Identifier",
               },
               "method": false,
@@ -940,15 +896,12 @@ exports[`ComponentDeclaration type parameters Babel 1`] = `
           },
         },
       ],
-      "predicate": null,
       "returnType": {
         "type": "TypeAnnotation",
         "typeAnnotation": {
           "id": {
             "name": "T2",
-            "optional": false,
             "type": "Identifier",
-            "typeAnnotation": null,
           },
           "type": "GenericTypeAnnotation",
           "typeParameters": null,

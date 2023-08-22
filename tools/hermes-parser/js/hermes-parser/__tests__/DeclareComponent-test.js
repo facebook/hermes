@@ -65,7 +65,6 @@ describe('DeclareComponent', () => {
           {
             "id": {
               "name": "Foo",
-              "optional": false,
               "type": "Identifier",
               "typeAnnotation": {
                 "type": "TypeAnnotation",

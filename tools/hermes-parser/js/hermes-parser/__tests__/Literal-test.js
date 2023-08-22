@@ -198,38 +198,45 @@ describe('Literal', () => {
       {
         "body": [
           {
-            "directive": null,
             "expression": {
               "type": "NullLiteral",
             },
             "type": "ExpressionStatement",
           },
           {
-            "directive": null,
             "expression": {
+              "extra": {
+                "raw": "10",
+                "rawValue": 10,
+              },
               "type": "NumericLiteral",
               "value": 10,
             },
             "type": "ExpressionStatement",
           },
           {
-            "directive": null,
             "expression": {
+              "extra": {
+                "raw": "0.56283",
+                "rawValue": 0.56283,
+              },
               "type": "NumericLiteral",
               "value": 0.56283,
             },
             "type": "ExpressionStatement",
           },
           {
-            "directive": null,
             "expression": {
+              "extra": {
+                "raw": ""test"",
+                "rawValue": "test",
+              },
               "type": "StringLiteral",
               "value": "test",
             },
             "type": "ExpressionStatement",
           },
           {
-            "directive": null,
             "expression": {
               "type": "BooleanLiteral",
               "value": true,
@@ -237,8 +244,10 @@ describe('Literal', () => {
             "type": "ExpressionStatement",
           },
           {
-            "directive": null,
             "expression": {
+              "extra": {
+                "raw": "/foo/g",
+              },
               "flags": "g",
               "pattern": "foo",
               "type": "RegExpLiteral",
@@ -246,20 +255,24 @@ describe('Literal', () => {
             "type": "ExpressionStatement",
           },
           {
-            "directive": null,
             "expression": {
-              "bigint": "4321n",
+              "extra": {
+                "raw": "4321n",
+                "rawValue": "4321",
+              },
               "type": "BigIntLiteral",
-              "value": 4321n,
+              "value": "4321",
             },
             "type": "ExpressionStatement",
           },
           {
-            "directive": null,
             "expression": {
-              "bigint": "12_34n",
+              "extra": {
+                "raw": "12_34n",
+                "rawValue": "1234",
+              },
               "type": "BigIntLiteral",
-              "value": 1234n,
+              "value": "1234",
             },
             "type": "ExpressionStatement",
           },

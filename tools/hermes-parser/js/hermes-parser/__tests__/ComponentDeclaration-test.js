@@ -59,7 +59,7 @@ describe('ComponentDeclaration', () => {
         "function Foo({
           bar,
           baz: boo,
-          "data-bav": bav
+          'data-bav': bav
         }: $ReadOnly<{...}>): React.Node {}"
       `);
     });
@@ -79,7 +79,7 @@ describe('ComponentDeclaration', () => {
       expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
       expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
         "function Foo({
-          bar = ""
+          bar = ''
         }: $ReadOnly<{...}>): React.Node {}"
       `);
     });

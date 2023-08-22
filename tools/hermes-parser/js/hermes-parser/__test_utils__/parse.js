@@ -10,7 +10,11 @@
 
 'use strict';
 
+import type {Program as ESTreeProgram} from 'hermes-estree';
 import type {ESNode} from 'hermes-estree';
+import type {ParserOptions} from '../src/ParserOptions';
+import type {BabelFile} from '../src/babel/TransformESTreeToBabel';
+import type {VisitorKeys} from '../src/generated/ESTreeVisitorKeys';
 
 import {SimpleTraverser} from '../src/traverse/SimpleTraverser';
 import {parse as parseOriginal} from '../src/index';
@@ -21,6 +25,11 @@ import {VISITOR_KEYS as babelVisitorKeys} from '@babel/types';
 // $FlowExpectedError[untyped-import]
 import generate from '@babel/generator';
 
+export const BABEL_VISITOR_KEYS: VisitorKeys = {
+  ...babelVisitorKeys,
+  BigIntLiteralTypeAnnotation: [],
+};
+
 const prettierConfig = Object.freeze({
   arrowParens: 'avoid',
   singleQuote: true,
@@ -30,9 +39,25 @@ const prettierConfig = Object.freeze({
   parser: 'hermes',
 });
 
-export const parse: typeof parseOriginal = (source, options) => {
-  return parseOriginal(source, {flow: 'all', ...options});
-};
+declare function parse(
+  code: string,
+  opts: {...ParserOptions, babel: true},
+): BabelFile;
+// eslint-disable-next-line no-redeclare
+declare function parse(
+  code: string,
+  opts?:
+    | {...ParserOptions, babel?: false | void}
+    | {...ParserOptions, babel: false},
+): ESTreeProgram;
+// eslint-disable-next-line no-redeclare
+export function parse(code: string, options: ParserOptions) {
+  if (options?.babel === true) {
+    return parseOriginal(code, {flow: 'all', ...options, babel: true});
+  }
+
+  return parseOriginal(code, {flow: 'all', ...options, babel: false});
+}
 
 export function parseForSnapshot(
   source: string,
@@ -104,6 +129,7 @@ export function cleanASTForSnapshot(
   SimpleTraverser.traverse(ast, {
     enter(node) {
       if (options?.enforceLocationInformation === true && node.loc == null) {
+        console.log(node);
         throw new Error(
           `AST node of type "${node.type}" is missing "loc" property`,
         );
@@ -132,6 +158,24 @@ export function cleanASTForSnapshot(
         }
         // $FlowExpectedError[prop-missing]
         delete node.end;
+
+        if (
+          options?.enforceLocationInformation === true &&
+          node.parent != null
+        ) {
+          throw new Error(
+            `AST node of type "${node.type}" has "parent" property`,
+          );
+        }
+
+        if (
+          options?.enforceLocationInformation === true &&
+          node.range != null
+        ) {
+          throw new Error(
+            `AST node of type "${node.type}" has "range" property`,
+          );
+        }
       } else {
         if (
           options?.enforceLocationInformation === true &&
@@ -146,16 +190,13 @@ export function cleanASTForSnapshot(
           // $FlowExpectedError[cannot-write]
           delete node.range;
         }
-      }
 
-      // $FlowExpectedError[cannot-write]
-      delete node.parent;
+        // $FlowExpectedError[cannot-write]
+        delete node.parent;
+      }
     },
     leave() {},
-    visitorKeys:
-      options?.babel === true
-        ? {...babelVisitorKeys, BigIntLiteralTypeAnnotation: []}
-        : null,
+    visitorKeys: options?.babel === true ? BABEL_VISITOR_KEYS : null,
   });
 
   if (ast.type === 'Program') {

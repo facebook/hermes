@@ -120,25 +120,18 @@ describe('RestElement', () => {
             "generator": false,
             "id": {
               "name": "test1",
-              "optional": false,
               "type": "Identifier",
-              "typeAnnotation": null,
             },
             "params": [
               {
                 "argument": {
                   "name": "rest",
-                  "optional": false,
                   "type": "Identifier",
-                  "typeAnnotation": null,
                 },
                 "type": "RestElement",
               },
             ],
-            "predicate": null,
-            "returnType": null,
             "type": "FunctionDeclaration",
-            "typeParameters": null,
           },
           {
             "async": false,
@@ -150,9 +143,7 @@ describe('RestElement', () => {
             "generator": false,
             "id": {
               "name": "test2",
-              "optional": false,
               "type": "Identifier",
-              "typeAnnotation": null,
             },
             "params": [
               {
@@ -160,21 +151,15 @@ describe('RestElement', () => {
                   {
                     "argument": {
                       "name": "rest",
-                      "optional": false,
                       "type": "Identifier",
-                      "typeAnnotation": null,
                     },
                     "type": "RestElement",
                   },
                 ],
                 "type": "ArrayPattern",
-                "typeAnnotation": null,
               },
             ],
-            "predicate": null,
-            "returnType": null,
             "type": "FunctionDeclaration",
-            "typeParameters": null,
           },
         ],
         "type": "Program",
@@ -298,17 +283,13 @@ describe('RestElement', () => {
               "generator": false,
               "id": {
                 "name": "test1",
-                "optional": false,
                 "type": "Identifier",
-                "typeAnnotation": null,
               },
               "params": [
                 {
                   "argument": {
                     "name": "rest",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
                   "type": "RestElement",
                   "typeAnnotation": {
@@ -319,10 +300,7 @@ describe('RestElement', () => {
                   },
                 },
               ],
-              "predicate": null,
-              "returnType": null,
               "type": "FunctionDeclaration",
-              "typeParameters": null,
             },
             {
               "async": false,
@@ -334,9 +312,7 @@ describe('RestElement', () => {
               "generator": false,
               "id": {
                 "name": "test2",
-                "optional": false,
                 "type": "Identifier",
-                "typeAnnotation": null,
               },
               "params": [
                 {
@@ -344,9 +320,7 @@ describe('RestElement', () => {
                     {
                       "argument": {
                         "name": "rest",
-                        "optional": false,
                         "type": "Identifier",
-                        "typeAnnotation": null,
                       },
                       "type": "RestElement",
                       "typeAnnotation": {
@@ -358,13 +332,9 @@ describe('RestElement', () => {
                     },
                   ],
                   "type": "ArrayPattern",
-                  "typeAnnotation": null,
                 },
               ],
-              "predicate": null,
-              "returnType": null,
               "type": "FunctionDeclaration",
-              "typeParameters": null,
             },
           ],
           "type": "Program",
@@ -490,16 +460,13 @@ describe('RestElement', () => {
               "generator": false,
               "id": {
                 "name": "test1",
-                "optional": false,
                 "type": "Identifier",
-                "typeAnnotation": null,
               },
               "params": [
                 {
                   "argument": {
                     "elements": [],
                     "type": "ArrayPattern",
-                    "typeAnnotation": null,
                   },
                   "type": "RestElement",
                   "typeAnnotation": {
@@ -510,10 +477,7 @@ describe('RestElement', () => {
                   },
                 },
               ],
-              "predicate": null,
-              "returnType": null,
               "type": "FunctionDeclaration",
-              "typeParameters": null,
             },
             {
               "async": false,
@@ -525,9 +489,7 @@ describe('RestElement', () => {
               "generator": false,
               "id": {
                 "name": "test2",
-                "optional": false,
                 "type": "Identifier",
-                "typeAnnotation": null,
               },
               "params": [
                 {
@@ -536,7 +498,6 @@ describe('RestElement', () => {
                       "argument": {
                         "elements": [],
                         "type": "ArrayPattern",
-                        "typeAnnotation": null,
                       },
                       "type": "RestElement",
                       "typeAnnotation": {
@@ -548,13 +509,9 @@ describe('RestElement', () => {
                     },
                   ],
                   "type": "ArrayPattern",
-                  "typeAnnotation": null,
                 },
               ],
-              "predicate": null,
-              "returnType": null,
               "type": "FunctionDeclaration",
-              "typeParameters": null,
             },
           ],
           "type": "Program",

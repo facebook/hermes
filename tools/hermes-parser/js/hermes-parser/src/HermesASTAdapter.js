@@ -8,6 +8,7 @@
  * @format
  */
 
+import type {Program} from 'hermes-estree';
 import type {HermesNode} from './HermesAST';
 import type {ParserOptions} from './ParserOptions';
 
@@ -34,7 +35,7 @@ export default class HermesASTAdapter {
    * Transform the input Hermes AST to the desired output format.
    * This modifies the input AST in place instead of constructing a new AST.
    */
-  transform(program: HermesNode): ?HermesNode {
+  transform(program: HermesNode): Program {
     // Comments are not traversed via visitor keys
     const comments = program.comments;
     for (let i = 0; i < comments.length; i++) {
@@ -57,7 +58,15 @@ export default class HermesASTAdapter {
       }
     }
 
-    return this.mapNode(program);
+    const resultNode = this.mapNode(program);
+    if (resultNode.type !== 'Program') {
+      throw new Error(
+        `HermesToESTreeAdapter: Must return a Program node, instead of "${resultNode.type}". `,
+      );
+    }
+
+    // $FlowExpectedError[incompatible-return] We know this is a program at this point.
+    return resultNode;
   }
 
   /**

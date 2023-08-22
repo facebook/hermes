@@ -96,34 +96,36 @@ describe('Array', () => {
                   "elements": [
                     {
                       "name": "a",
-                      "optional": false,
                       "type": "Identifier",
-                      "typeAnnotation": null,
                     },
                     null,
                     {
                       "name": "b",
-                      "optional": false,
                       "type": "Identifier",
-                      "typeAnnotation": null,
                     },
                   ],
                   "type": "ArrayPattern",
-                  "typeAnnotation": null,
                 },
                 "init": {
                   "elements": [
                     {
+                      "extra": {
+                        "raw": "1",
+                        "rawValue": 1,
+                      },
                       "type": "NumericLiteral",
                       "value": 1,
                     },
                     null,
                     {
+                      "extra": {
+                        "raw": "2",
+                        "rawValue": 2,
+                      },
                       "type": "NumericLiteral",
                       "value": 2,
                     },
                   ],
-                  "trailingComma": false,
                   "type": "ArrayExpression",
                 },
                 "type": "VariableDeclarator",

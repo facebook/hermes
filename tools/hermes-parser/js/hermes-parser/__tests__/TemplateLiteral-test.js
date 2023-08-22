@@ -83,14 +83,11 @@ describe('TemplateLiteral', () => {
       {
         "body": [
           {
-            "directive": null,
             "expression": {
               "expressions": [
                 {
                   "name": "b",
-                  "optional": false,
                   "type": "Identifier",
-                  "typeAnnotation": null,
                 },
               ],
               "quasis": [
