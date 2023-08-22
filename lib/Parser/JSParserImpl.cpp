@@ -274,10 +274,10 @@ bool JSParserImpl::checkAssign() const {
       TokenKind::pipeequal);
 }
 
-bool JSParserImpl::checkEndAssignmentExpression() const {
+bool JSParserImpl::checkEndAssignmentExpression(
+    OfEndsAssignment ofEndsAssignment) const {
   return checkN(
              TokenKind::rw_in,
-             ofIdent_,
              TokenKind::r_paren,
              TokenKind::r_brace,
              TokenKind::r_square,
@@ -285,6 +285,7 @@ bool JSParserImpl::checkEndAssignmentExpression() const {
              TokenKind::semi,
              TokenKind::colon,
              TokenKind::eof) ||
+      (ofEndsAssignment == OfEndsAssignment::Yes && check(ofIdent_)) ||
       lexer_.isNewLineBeforeCurrentToken();
 }
 
@@ -4373,11 +4374,17 @@ Optional<ESTree::YieldExpressionNode *> JSParserImpl::parseYieldExpression(
       "yield expression must start with 'yield'");
   SMRange yieldLoc = advance();
 
-  if (check(TokenKind::semi) || checkEndAssignmentExpression())
+  if (check(TokenKind::semi) ||
+      checkEndAssignmentExpression(OfEndsAssignment::No)) {
+    // 'of' doesn't end the assignment expression in a yield.
+    //    yield of;
+    //          ^
+    // is a valid position here and should simply yield a variable called 'of'.
     return setLocation(
         yieldLoc,
         yieldLoc,
         new (context_) ESTree::YieldExpressionNode(nullptr, false));
+  }
 
   bool delegate = checkAndEat(TokenKind::star);
 
