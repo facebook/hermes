@@ -5145,6 +5145,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
 
 bool JSParserImpl::reparseArrowParameters(
     ESTree::Node *node,
+    bool hasNewLine,
     ESTree::NodeList &paramList,
     bool &isAsync) {
   // Empty argument list "()".
@@ -5169,10 +5170,11 @@ bool JSParserImpl::reparseArrowParameters(
     // It must have no surrounding parens and the name must be 'async'.
     // It must also not already be `async`, because the CallExpression
     // determines whether it is `async`.
+    // It must not have a newline between 'async' and the parameters.
     // Set `isAsync = true` to indicate that this was async.
     auto *callee = dyn_cast<ESTree::IdentifierNode>(callNode->_callee);
     if (!isAsync && callNode->getParens() == 0 && callee &&
-        callee->_name == asyncIdent_) {
+        callee->_name == asyncIdent_ && !hasNewLine) {
       nodeList = std::move(callNode->_arguments);
       isAsync = true;
     } else {
@@ -5280,6 +5282,7 @@ bool JSParserImpl::reparseArrowParameters(
 Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
     Param param,
     ESTree::Node *leftExpr,
+    bool hasNewLine,
     ESTree::Node *typeParams,
     ESTree::Node *returnType,
     ESTree::Node *predicate,
@@ -5303,7 +5306,7 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
 
   bool isAsync = forceAsync;
   ESTree::NodeList paramList;
-  if (!reparseArrowParameters(leftExpr, paramList, isAsync))
+  if (!reparseArrowParameters(leftExpr, hasNewLine, paramList, isAsync))
     return None;
 
   SaveStrictModeAndSeenDirectives saveStrictModeAndSeenDirectives{this};
@@ -5601,6 +5604,7 @@ Optional<ESTree::Node *> JSParserImpl::tryParseTypedAsyncArrowFunction(
   SMLoc start = advance().Start;
 
   ESTree::Node *leftExpr = nullptr;
+  bool hasNewLine = false;
   ESTree::Node *typeParams = nullptr;
   ESTree::Node *returnType = nullptr;
   ESTree::Node *predicate = nullptr;
@@ -5621,6 +5625,7 @@ Optional<ESTree::Node *> JSParserImpl::tryParseTypedAsyncArrowFunction(
       return None;
     }
 
+    hasNewLine = lexer_.isNewLineBeforeCurrentToken();
     auto optLeftExpr =
         parseConditionalExpression(param, CoverTypedParameters::Yes);
     if (!optLeftExpr) {
@@ -5659,6 +5664,7 @@ Optional<ESTree::Node *> JSParserImpl::tryParseTypedAsyncArrowFunction(
   return parseArrowFunctionExpression(
       param,
       leftExpr,
+      hasNewLine,
       typeParams,
       returnType,
       predicate,
@@ -5676,6 +5682,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
   struct State {
     SMLoc leftStartLoc = {};
     Optional<ESTree::Node *> optLeftExpr = llvh::None;
+    bool hasNewLine = false;
     UniqueString *op = nullptr;
     SMLoc debugLoc = {};
 
@@ -5773,6 +5780,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
 #endif
 
     state.leftStartLoc = tok_->getStartLoc();
+    state.hasNewLine = lexer_.isNewLineBeforeCurrentToken();
     state.optLeftExpr = parseConditionalExpression(param, coverTypedParameters);
     if (!state.optLeftExpr)
       return None;
@@ -5888,6 +5896,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
       return parseArrowFunctionExpression(
           param,
           *state.optLeftExpr,
+          state.hasNewLine,
           typeParams,
           returnType,
           predicate,

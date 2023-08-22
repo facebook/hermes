@@ -943,21 +943,26 @@ class JSParserImpl {
   /// Reparse the specified node as arrow function parameter list and store the
   /// parameter list in \p paramList. Print an error and return false on error,
   /// otherwise return true.
+  /// \param hasNewLine whether the parameters had a newline before them.
   /// \param[in/out] isAsync the arrow function is async. The caller may already
   /// know this prior to calling this function, in which case `true` should be
   /// passed. Otherwise, this function will try to reparse a call expression
   /// into an async arrow function.
   bool reparseArrowParameters(
       ESTree::Node *node,
+      bool hasNewLine,
       ESTree::NodeList &paramList,
       bool &isAsync);
 
+  /// \param hasNewLine whether the leftExpr to be reparsed
+  ///   has a newline immediately before it.
   /// \param forceAsync set to true when it is already known that the arrow
   ///   function expression is 'async'. This occurs when there are no parens
   ///   around the argument list.
   Optional<ESTree::Node *> parseArrowFunctionExpression(
       Param param,
       ESTree::Node *leftExpr,
+      bool hasNewLine,
       ESTree::Node *typeParams,
       ESTree::Node *returnType,
       ESTree::Node *predicate,
