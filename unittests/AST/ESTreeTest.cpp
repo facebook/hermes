@@ -71,4 +71,28 @@ TEST(ESTreeTest, EmptyTest) {
   EXPECT_STREQ("my_name_is_foo", Name->c_str());
 }
 
+#if HERMES_PARSE_JSX
+TEST(ESTreeTest, JSXInheritanceTest) {
+  Context context;
+  auto *node = new (context) ESTree::JSXOpeningFragmentNode();
+  EXPECT_TRUE(llvh::isa<ESTree::JSXNode>(node));
+}
+#endif
+
+#if HERMES_PARSE_FLOW
+TEST(ESTreeTest, FlowInheritanceTest) {
+  Context context;
+  auto *node = new (context) ESTree::NumberTypeAnnotationNode();
+  EXPECT_TRUE(llvh::isa<ESTree::FlowNode>(node));
+}
+#endif
+
+#if HERMES_PARSE_TS
+TEST(ESTreeTest, TSInheritanceTest) {
+  Context context;
+  auto *node = new (context) ESTree::TSNumberKeywordNode();
+  EXPECT_TRUE(llvh::isa<ESTree::TSNode>(node));
+}
+#endif
+
 } // end anonymous namespace
