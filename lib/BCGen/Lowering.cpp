@@ -222,52 +222,62 @@ LowerAllocObject::StoreList LowerAllocObject::collectStores(
       });
 
   // Iterate over the sorted blocks to collect StoreNewOwnPropertyInst users
-  // until we encounter the first user that is not a StoreNewOwnPropertyInst.
+  // until we encounter a nullptr indicating we should stop.
   StoreList instrs;
   for (BasicBlock *BB : sortedBlocks) {
-    for (Instruction &I : *BB) {
-      if (!userBasicBlockMap.find(BB)->second.count(&I)) {
-        // I is not a user of allocInst, ignore it.
-        continue;
-      }
-      auto *SI = llvh::dyn_cast<StoreNewOwnPropertyInst>(&I);
-      if (!SI || SI->getStoredValue() == allocInst) {
-        // A user that's not a StoreNewOwnPropertyInst storing into the object
-        // created by allocInst. We have to stop processing here. Note that we
-        // check the stored value instead of the target object so that we omit
-        // the case where an object is stored into itself. While it should
-        // technically be safe, this maintains the invariant that stop as soon
-        // the allocated object is used as something other than the target of a
-        // StoreNewOwnPropertyInst.
+    for (StoreNewOwnPropertyInst *I : userBasicBlockMap.find(BB)->second) {
+      // If I is null, we cannot consider additional stores.
+      if (!I)
         return instrs;
-      }
-      assert(
-          SI->getObject() == allocInst &&
-          "SNOP using allocInst must use it as object or value");
-      instrs.push_back(SI);
+      instrs.push_back(I);
     }
   }
   return instrs;
 }
 
 bool LowerAllocObject::runOnFunction(Function *F) {
-  bool changed = false;
-  llvh::SmallVector<AllocObjectInst *, 4> allocs;
-  // Collect all AllocObject instructions.
-  for (BasicBlock &BB : *F)
-    for (auto &it : BB) {
-      if (auto *A = llvh::dyn_cast<AllocObjectInst>(&it))
-        if (llvh::isa<EmptySentinel>(A->getParentObject()))
-          allocs.push_back(A);
+  /// If we can still append to \p stores, check if the user \p U is an eligible
+  /// store to \p A. If so, append it to \p stores, if not, append nullptr to
+  /// indicate that subsequent users in the basic block should not be
+  /// considered.
+  auto tryAdd = [](AllocObjectInst *A, Instruction *U, StoreList &stores) {
+    // If the store list has been terminated by a nullptr, we have already
+    // encountered a non-SNOP user of A in this block. Ignore this user.
+    if (!stores.empty() && !stores.back())
+      return;
+    auto *SI = llvh::dyn_cast<StoreNewOwnPropertyInst>(U);
+    if (!SI || SI->getStoredValue() == A) {
+      // A user that's not a StoreNewOwnPropertyInst storing into the object
+      // created by allocInst. We have to stop processing here. Note that we
+      // check the stored value instead of the target object so that we omit
+      // the case where an object is stored into itself. While it should
+      // technically be safe, this maintains the invariant that stop as soon
+      // the allocated object is used as something other than the target of a
+      // StoreNewOwnPropertyInst.
+      stores.push_back(nullptr);
+    } else {
+      assert(
+          SI->getObject() == A &&
+          "SNOP using allocInst must use it as object or value");
+      stores.push_back(SI);
     }
+  };
 
+  // For each basic block, collect an ordered list of stores into
+  // AllocObjectInsts that should be considered for lowering into a buffer.
+  llvh::DenseMap<AllocObjectInst *, BlockUserMap> allocUsers;
+  for (BasicBlock &BB : *F)
+    for (Instruction &I : BB)
+      for (size_t i = 0; i < I.getNumOperands(); ++i)
+        if (auto *A = llvh::dyn_cast<AllocObjectInst>(I.getOperand(i)))
+          if (llvh::isa<EmptySentinel>(A->getParentObject()))
+            tryAdd(A, &I, allocUsers[A][&BB]);
+
+  bool changed = false;
   DominanceInfo DI(F);
-  for (auto *A : allocs) {
-    // A map containing the set of instructions that use A for each basic block.
-    BlockUserMap userBasicBlockMap;
-    for (Instruction *I : A->getUsers())
-      userBasicBlockMap[I->getParent()].insert(I);
-
+  for (const auto &[A, userBasicBlockMap] : allocUsers) {
+    // Collect the stores that are guaranteed to execute before any other user
+    // of this object.
     auto stores = collectStores(A, userBasicBlockMap, DI);
     changed |= lowerAllocObjectBuffer(A, stores, UINT16_MAX);
   }

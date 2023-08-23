@@ -50,10 +50,9 @@ class LowerAllocObject : public FunctionPass {
  private:
   /// Define a type for managing lists of StoreNewOwnPropertyInsts.
   using StoreList = llvh::SmallVector<StoreNewOwnPropertyInst *, 4>;
-  /// Define a type for mapping a given basic block to the users of a given
+  /// Define a type for mapping a given basic block to the stores to a given
   /// AllocObjectInst in that basic block.
-  using BlockUserMap =
-      llvh::DenseMap<BasicBlock *, llvh::DenseSet<Instruction *>>;
+  using BlockUserMap = llvh::DenseMap<BasicBlock *, StoreList>;
 
   /// Construct an ordered list of stores to \p allocInst that are known to
   /// always execute without any other intervening users.
