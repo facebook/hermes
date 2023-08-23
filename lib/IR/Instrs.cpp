@@ -119,6 +119,19 @@ BinaryOperatorInst::OpKind BinaryOperatorInst::parseAssignmentOperator(
 }
 
 llvh::Optional<BinaryOperatorInst::OpKind>
+BinaryOperatorInst::looseToStrictEqualityOperator(
+    BinaryOperatorInst::OpKind op) {
+  switch (op) {
+    case OpKind::EqualKind:
+      return OpKind::StrictlyEqualKind;
+    case OpKind::NotEqualKind:
+      return OpKind::StrictlyNotEqualKind;
+    default:
+      return llvh::None;
+  }
+}
+
+llvh::Optional<BinaryOperatorInst::OpKind>
 BinaryOperatorInst::tryGetReverseOperator(BinaryOperatorInst::OpKind op) {
   switch (op) {
     // Commutative operators
