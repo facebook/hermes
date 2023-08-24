@@ -35,9 +35,13 @@ import type {
   Range,
   RestElement,
   DestructuringObjectProperty,
+  VariableDeclaration,
+  ModuleDeclaration,
+  Statement,
 } from 'hermes-estree';
 
 import {SimpleTransform} from '../transform/SimpleTransform';
+import {shallowCloneNode} from '../transform/astNodeMutationHelpers';
 
 const nodeWith = SimpleTransform.nodeWith;
 
@@ -151,9 +155,12 @@ function createPropsTypeAnnotation(
 
 function mapComponentParameters(
   params: $ReadOnlyArray<ComponentParameter | RestElement>,
-): $ReadOnlyArray<ObjectPattern | Identifier> {
+): $ReadOnly<{
+  props: ?(ObjectPattern | Identifier),
+  ref: ?Identifier,
+}> {
   if (params.length === 0) {
-    return [];
+    return {props: null, ref: null};
   }
 
   // Optimize `component Foo(...props: Props) {}` to `function Foo(props: Props) {}
@@ -163,39 +170,100 @@ function mapComponentParameters(
     params[0].argument.type === 'Identifier'
   ) {
     const restElementArgument = params[0].argument;
-    return [
-      nodeWith(restElementArgument, {
+    return {
+      props: nodeWith(restElementArgument, {
         typeAnnotation: createPropsTypeAnnotation(
           restElementArgument.typeAnnotation?.loc,
           restElementArgument.typeAnnotation?.range,
         ),
       }),
-    ];
+      ref: null,
+    };
   }
 
-  const properties = params.map(mapComponentParameter);
+  // Filter out any ref param and capture it's details.
+  let refParam = null;
+  const paramsWithoutRef = params.filter(param => {
+    if (
+      param.type === 'ComponentParameter' &&
+      getComponentParameterName(param.name) === 'ref'
+    ) {
+      refParam = param;
+      return false;
+    }
 
-  const lastProperty = properties[properties.length - 1];
+    return true;
+  });
 
-  return [
-    {
+  const propsProperties = paramsWithoutRef.map(mapComponentParameter);
+
+  let props = null;
+  if (propsProperties.length === 0) {
+    if (refParam == null) {
+      throw new Error(
+        'TransformReactScriptForBabel: Invalid state, ref should always be set at this point if props are empty',
+      );
+    }
+    const emptyParamsLoc = {
+      start: refParam.loc.start,
+      end: refParam.loc.start,
+    };
+    const emptyParamsRange = [refParam.range[0], refParam.range[0]];
+    // no properties provided (must have had a single ref)
+    props = {
+      type: 'Identifier',
+      name: '_$$empty_props_placeholder$$',
+      optional: false,
+      typeAnnotation: createPropsTypeAnnotation(
+        emptyParamsLoc,
+        emptyParamsRange,
+      ),
+      loc: emptyParamsLoc,
+      range: emptyParamsRange,
+      parent: EMPTY_PARENT,
+    };
+  } else {
+    const lastPropsProperty = propsProperties[propsProperties.length - 1];
+    props = {
       type: 'ObjectPattern',
-      properties,
+      properties: propsProperties,
       typeAnnotation: createPropsTypeAnnotation(
         {
-          start: lastProperty.loc.end,
-          end: lastProperty.loc.end,
+          start: lastPropsProperty.loc.end,
+          end: lastPropsProperty.loc.end,
         },
-        [lastProperty.range[1], lastProperty.range[1]],
+        [lastPropsProperty.range[1], lastPropsProperty.range[1]],
       ),
       loc: {
-        start: properties[0].loc.start,
-        end: lastProperty.loc.end,
+        start: propsProperties[0].loc.start,
+        end: lastPropsProperty.loc.end,
       },
-      range: [properties[0].range[0], lastProperty.range[1]],
+      range: [propsProperties[0].range[0], lastPropsProperty.range[1]],
       parent: EMPTY_PARENT,
-    },
-  ];
+    };
+  }
+
+  let ref = null;
+  if (refParam != null) {
+    const refType = refParam.local;
+    ref = {
+      type: 'Identifier',
+      name: 'ref',
+      optional: false,
+      typeAnnotation:
+        refType.type === 'AssignmentPattern'
+          ? refType.left.typeAnnotation
+          : refType.typeAnnotation,
+      loc: refParam.loc,
+      range: refParam.range,
+      parent: EMPTY_PARENT,
+    };
+  }
+
+  return {
+    props,
+    ref,
+  };
 }
 
 function mapComponentParameter(
@@ -275,9 +343,85 @@ function mapComponentParameter(
   }
 }
 
-function mapComponentDeclaration(
-  node: ComponentDeclaration,
-): FunctionDeclaration {
+type ForwardRefDetails = {
+  forwardRefStatement: VariableDeclaration,
+  internalCompId: Identifier,
+  forwardRefCompId: Identifier,
+};
+
+function createForwardRefWrapper(
+  originalComponent: ComponentDeclaration,
+): ForwardRefDetails {
+  const internalCompId = {
+    type: 'Identifier',
+    name: `${originalComponent.id.name}_withRef`,
+    optional: false,
+    typeAnnotation: null,
+    loc: originalComponent.id.loc,
+    range: originalComponent.id.range,
+    parent: EMPTY_PARENT,
+  };
+  return {
+    forwardRefStatement: {
+      type: 'VariableDeclaration',
+      kind: 'const',
+      declarations: [
+        {
+          type: 'VariableDeclarator',
+          id: shallowCloneNode(originalComponent.id),
+          init: {
+            type: 'CallExpression',
+            callee: {
+              type: 'MemberExpression',
+              object: {
+                type: 'Identifier',
+                name: 'React',
+                optional: false,
+                typeAnnotation: null,
+                loc: originalComponent.loc,
+                range: originalComponent.range,
+                parent: EMPTY_PARENT,
+              },
+              property: {
+                type: 'Identifier',
+                name: 'forwardRef',
+                optional: false,
+                typeAnnotation: null,
+                loc: originalComponent.loc,
+                range: originalComponent.range,
+                parent: EMPTY_PARENT,
+              },
+              computed: false,
+              optional: false,
+              loc: originalComponent.loc,
+              range: originalComponent.range,
+              parent: EMPTY_PARENT,
+            },
+            arguments: [shallowCloneNode(internalCompId)],
+            typeArguments: null,
+            optional: false,
+            loc: originalComponent.loc,
+            range: originalComponent.range,
+            parent: EMPTY_PARENT,
+          },
+          loc: originalComponent.loc,
+          range: originalComponent.range,
+          parent: EMPTY_PARENT,
+        },
+      ],
+      loc: originalComponent.loc,
+      range: originalComponent.range,
+      parent: originalComponent.parent,
+    },
+    internalCompId: internalCompId,
+    forwardRefCompId: originalComponent.id,
+  };
+}
+
+function mapComponentDeclaration(node: ComponentDeclaration): {
+  comp: FunctionDeclaration,
+  forwardRefDetails: ?ForwardRefDetails,
+} {
   let rendersType = node.rendersType;
   if (rendersType == null) {
     // Create empty loc for return type annotation nodes
@@ -319,14 +463,23 @@ function mapComponentDeclaration(
     };
   }
 
-  const params = mapComponentParameters(node.params);
+  const {props, ref} = mapComponentParameters(node.params);
 
-  return {
+  let forwardRefDetails: ?ForwardRefDetails = null;
+
+  if (ref != null) {
+    forwardRefDetails = createForwardRefWrapper(node);
+  }
+
+  const comp = {
     type: 'FunctionDeclaration',
-    id: node.id,
+    id:
+      forwardRefDetails != null
+        ? shallowCloneNode(forwardRefDetails.internalCompId)
+        : shallowCloneNode(node.id),
     __componentDeclaration: true,
     typeParameters: node.typeParameters,
-    params,
+    params: props == null ? [] : ref == null ? [props] : [props, ref],
     returnType: rendersType,
     body: node.body,
     async: false,
@@ -336,6 +489,100 @@ function mapComponentDeclaration(
     range: node.range,
     parent: node.parent,
   };
+
+  return {comp, forwardRefDetails};
+}
+
+function mapComponentDeclarationIntoList(
+  node: ComponentDeclaration,
+  newBody: Array<Statement | ModuleDeclaration>,
+  insertExport?: (Identifier | FunctionDeclaration) => ModuleDeclaration,
+) {
+  const {comp, forwardRefDetails} = mapComponentDeclaration(node);
+  if (forwardRefDetails != null) {
+    newBody.push(forwardRefDetails.forwardRefStatement);
+    newBody.push(comp);
+    if (insertExport != null) {
+      newBody.push(insertExport(forwardRefDetails.forwardRefCompId));
+    }
+    return;
+  }
+
+  newBody.push(insertExport != null ? insertExport(comp) : comp);
+}
+
+function mapStatementList(
+  stmts: $ReadOnlyArray<Statement | ModuleDeclaration>,
+) {
+  const newBody: Array<Statement | ModuleDeclaration> = [];
+  for (const node of stmts) {
+    switch (node.type) {
+      case 'ComponentDeclaration': {
+        mapComponentDeclarationIntoList(node, newBody);
+        break;
+      }
+      case 'ExportNamedDeclaration': {
+        if (node.declaration?.type === 'ComponentDeclaration') {
+          mapComponentDeclarationIntoList(
+            node.declaration,
+            newBody,
+            componentOrRef => {
+              switch (componentOrRef.type) {
+                case 'FunctionDeclaration': {
+                  // No ref, so we can export the component directly.
+                  return nodeWith(node, {declaration: componentOrRef});
+                }
+                case 'Identifier': {
+                  // If a ref is inserted, we should just export that id.
+                  return {
+                    type: 'ExportNamedDeclaration',
+                    declaration: null,
+                    specifiers: [
+                      {
+                        type: 'ExportSpecifier',
+                        exported: shallowCloneNode(componentOrRef),
+                        local: shallowCloneNode(componentOrRef),
+                        loc: node.loc,
+                        range: node.range,
+                        parent: EMPTY_PARENT,
+                      },
+                    ],
+                    exportKind: 'value',
+                    source: null,
+                    loc: node.loc,
+                    range: node.range,
+                    parent: node.parent,
+                  };
+                }
+              }
+            },
+          );
+          break;
+        }
+
+        newBody.push(node);
+        break;
+      }
+      case 'ExportDefaultDeclaration': {
+        if (node.declaration?.type === 'ComponentDeclaration') {
+          mapComponentDeclarationIntoList(
+            node.declaration,
+            newBody,
+            componentOrRef => nodeWith(node, {declaration: componentOrRef}),
+          );
+          break;
+        }
+
+        newBody.push(node);
+        break;
+      }
+      default: {
+        newBody.push(node);
+      }
+    }
+  }
+
+  return newBody;
 }
 
 export function transformProgram(
@@ -348,8 +595,23 @@ export function transformProgram(
         case 'DeclareComponent': {
           return mapDeclareComponent(node);
         }
+        case 'Program':
+        case 'BlockStatement': {
+          return nodeWith(node, {body: mapStatementList(node.body)});
+        }
+        case 'SwitchCase': {
+          return nodeWith(node, {
+            /* $FlowExpectedError[incompatible-call] We know `mapStatementList` will
+               not return `ModuleDeclaration` nodes if it is not passed any */
+            consequent: mapStatementList(node.consequent),
+          });
+        }
         case 'ComponentDeclaration': {
-          return mapComponentDeclaration(node);
+          throw createSyntaxError(
+            node,
+            `Components must be defined at the top level of a module or within a ` +
+              `BlockStatement, instead got parent of "${node.parent?.type}".`,
+          );
         }
         default: {
           return node;
