@@ -13,6 +13,7 @@ To then use the parser you will need to instruct Prettier to use `hermes` as the
 ```
 // .prettierrc
 {
+  "plugins": ["prettier-plugin-hermes-parser"],
   "overrides": [
     {
       "files": ["*.js", "*.jsx", "*.flow"],
