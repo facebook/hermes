@@ -118,43 +118,43 @@ function switch_uint32(x) {
 // CHECK:function f#0#1(x)#2 : string
 // CHECK-NEXT:S{f#0#1()#2} = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg3 @0 [1...15) 	%0 = HBCLoadParamInst 1 : number
-// CHECK-NEXT:  $Reg0 @1 [2...18) 	%1 = HBCLoadConstInst "fall" : string
-// CHECK-NEXT:  $Reg1 @2 [3...14) 	%2 = HBCLoadConstInst "" : string
-// CHECK-NEXT:  $Reg2 @3 [empty]	%3 = BranchInst %BB1
+// CHECK-NEXT:  $Reg2 @0 [1...14) 	%0 = HBCLoadParamInst 1 : number
+// CHECK-NEXT:  $Reg0 @1 [empty]	%1 = BranchInst %BB1
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  $Reg0 @25 [26...27) 	%4 = HBCLoadConstInst "regular" : string
-// CHECK-NEXT:  $Reg0 @26 [empty]	%5 = ReturnInst %4 : string
+// CHECK-NEXT:  $Reg0 @25 [26...27) 	%2 = HBCLoadConstInst "regular" : string
+// CHECK-NEXT:  $Reg0 @26 [empty]	%3 = ReturnInst %2 : string
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  $Reg0 @23 [24...25) 	%6 = HBCLoadConstInst "multicase" : string
-// CHECK-NEXT:  $Reg0 @24 [empty]	%7 = ReturnInst %6 : string
+// CHECK-NEXT:  $Reg0 @23 [24...25) 	%4 = HBCLoadConstInst "multicase" : string
+// CHECK-NEXT:  $Reg0 @24 [empty]	%5 = ReturnInst %4 : string
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  $Reg1 @17 [18...20) 	%8 = MovInst %1 : string
-// CHECK-NEXT:  $Reg0 @18 [empty]	%9 = BranchInst %BB5
+// CHECK-NEXT:  $Reg0 @16 [17...18) 	%6 = HBCLoadConstInst "fall" : string
+// CHECK-NEXT:  $Reg1 @17 [18...20) 	%7 = MovInst %6 : string
+// CHECK-NEXT:  $Reg0 @18 [empty]	%8 = BranchInst %BB5
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  $Reg1 @19 [3...22) 	%10 = PhiInst %8 : string, %BB4, %17 : string, %BB6
-// CHECK-NEXT:  $Reg0 @20 [21...22) 	%11 = HBCLoadConstInst "through" : string
-// CHECK-NEXT:  $Reg0 @21 [22...23) 	%12 = BinaryOperatorInst '+', %10 : string, %11 : string
-// CHECK-NEXT:  $Reg0 @22 [empty]	%13 = ReturnInst %12 : string
+// CHECK-NEXT:  $Reg1 @19 [11...22) 	%9 = PhiInst %7 : string, %BB4, %17 : string, %BB6
+// CHECK-NEXT:  $Reg0 @20 [21...22) 	%10 = HBCLoadConstInst "through" : string
+// CHECK-NEXT:  $Reg0 @21 [22...23) 	%11 = BinaryOperatorInst '+', %9 : string, %10 : string
+// CHECK-NEXT:  $Reg0 @22 [empty]	%12 = ReturnInst %11 : string
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  $Reg2 @15 [16...17) 	%14 = HBCLoadConstInst "default" : string
-// CHECK-NEXT:  $Reg2 @16 [empty]	%15 = ReturnInst %14 : string
+// CHECK-NEXT:  $Reg0 @14 [15...16) 	%13 = HBCLoadConstInst "default" : string
+// CHECK-NEXT:  $Reg0 @15 [empty]	%14 = ReturnInst %13 : string
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  $Reg2 @12 [13...15) 	%16 = HBCLoadConstInst 4 : number
-// CHECK-NEXT:  $Reg1 @13 [14...20) 	%17 = MovInst %2 : string
-// CHECK-NEXT:  $Reg2 @14 [empty]	%18 = CompareBranchInst '===', %16 : number, %0, %BB5, %BB7
+// CHECK-NEXT:  $Reg1 @10 [11...13) 	%15 = HBCLoadConstInst "" : string
+// CHECK-NEXT:  $Reg0 @11 [12...14) 	%16 = HBCLoadConstInst 4 : number
+// CHECK-NEXT:  $Reg1 @12 [13...20) 	%17 = MovInst %15 : string
+// CHECK-NEXT:  $Reg0 @13 [empty]	%18 = CompareBranchInst '===', %16 : number, %0, %BB5, %BB7
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  $Reg2 @10 [11...12) 	%19 = HBCLoadConstInst 3 : number
-// CHECK-NEXT:  $Reg2 @11 [empty]	%20 = CompareBranchInst '===', %19 : number, %0, %BB4, %BB6
+// CHECK-NEXT:  $Reg0 @8 [9...10) 	%19 = HBCLoadConstInst 3 : number
+// CHECK-NEXT:  $Reg0 @9 [empty]	%20 = CompareBranchInst '===', %19 : number, %0, %BB4, %BB6
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:  $Reg2 @8 [9...10) 	%21 = HBCLoadConstInst 2 : number
-// CHECK-NEXT:  $Reg2 @9 [empty]	%22 = CompareBranchInst '===', %21 : number, %0, %BB3, %BB8
+// CHECK-NEXT:  $Reg0 @6 [7...8) 	%21 = HBCLoadConstInst 2 : number
+// CHECK-NEXT:  $Reg0 @7 [empty]	%22 = CompareBranchInst '===', %21 : number, %0, %BB3, %BB8
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:  $Reg2 @6 [7...8) 	%23 = HBCLoadConstInst 1 : number
-// CHECK-NEXT:  $Reg2 @7 [empty]	%24 = CompareBranchInst '===', %23 : number, %0, %BB3, %BB9
+// CHECK-NEXT:  $Reg0 @4 [5...6) 	%23 = HBCLoadConstInst 1 : number
+// CHECK-NEXT:  $Reg0 @5 [empty]	%24 = CompareBranchInst '===', %23 : number, %0, %BB3, %BB9
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  $Reg2 @4 [5...6) 	%25 = HBCLoadConstInst 0 : number
-// CHECK-NEXT:  $Reg2 @5 [empty]	%26 = CompareBranchInst '===', %25 : number, %0, %BB2, %BB10
+// CHECK-NEXT:  $Reg0 @2 [3...4) 	%25 = HBCLoadConstInst 0 : number
+// CHECK-NEXT:  $Reg0 @3 [empty]	%26 = CompareBranchInst '===', %25 : number, %0, %BB2, %BB10
 // CHECK-NEXT:function_end
 
 // CHECK:function regress1#0#1(w)#2 : undefined
@@ -163,15 +163,15 @@ function switch_uint32(x) {
 // CHECK-NEXT:  $Reg6 @0 [1...17) 	%0 = HBCLoadParamInst 1 : number
 // CHECK-NEXT:  $Reg5 @1 [2...17) 	%1 = HBCLoadConstInst 0 : number
 // CHECK-NEXT:  $Reg4 @2 [3...17) 	%2 = HBCLoadConstInst 2 : number
-// CHECK-NEXT:  $Reg3 @3 [4...17) 	%3 = HBCGetGlobalObjectInst
-// CHECK-NEXT:  $Reg2 @4 [5...17) 	%4 = HBCLoadConstInst undefined : undefined
-// CHECK-NEXT:  $Reg1 @5 [6...17) 	%5 = HBCLoadConstInst 1 : number
+// CHECK-NEXT:  $Reg3 @3 [4...17) 	%3 = HBCLoadConstInst 1 : number
+// CHECK-NEXT:  $Reg2 @4 [5...17) 	%4 = HBCGetGlobalObjectInst
+// CHECK-NEXT:  $Reg1 @5 [6...17) 	%5 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  $Reg0 @6 [7...9) 	%6 = MovInst %1 : number
 // CHECK-NEXT:  $Reg7 @7 [empty]	%7 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  $Reg0 @8 [7...15) [16...17) 	%8 = PhiInst %6 : number, %BB0, %12 : number, %BB2, %14 : number, %BB3
-// CHECK-NEXT:  $Reg7 @9 [10...11) 	%9 = TryLoadGlobalPropertyInst %3 : object, "print" : string
-// CHECK-NEXT:  $Reg7 @10 [empty]	%10 = HBCCallNInst %9, undefined : undefined, %4 : undefined, %8 : number
+// CHECK-NEXT:  $Reg7 @9 [10...11) 	%9 = TryLoadGlobalPropertyInst %4 : object, "print" : string
+// CHECK-NEXT:  $Reg7 @10 [empty]	%10 = HBCCallNInst %9, undefined : undefined, %5 : undefined, %8 : number
 // CHECK-NEXT:  $Reg7 @11 [empty]	%11 = BranchInst %BB4
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  $Reg0 @15 [16...17) 	%12 = MovInst %2 : number
@@ -180,7 +180,7 @@ function switch_uint32(x) {
 // CHECK-NEXT:  $Reg0 @13 [14...15) 	%14 = MovInst %8 : number
 // CHECK-NEXT:  $Reg7 @14 [empty]	%15 = CompareBranchInst '===', %1 : number, %0, %BB2, %BB1
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  $Reg7 @12 [empty]	%16 = CompareBranchInst '===', %5 : number, %0, %BB2, %BB3
+// CHECK-NEXT:  $Reg7 @12 [empty]	%16 = CompareBranchInst '===', %3 : number, %0, %BB2, %BB3
 // CHECK-NEXT:function_end
 
 // CHECK:function jump_table#0#1(x)#2 : undefined|string

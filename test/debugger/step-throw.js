@@ -16,6 +16,7 @@ try {
 }
 
 // CHECK: Break on 'debugger' statement in global: {{.*}}:11:1
+// CHECK-NEXT: Stepped to global: {{.*}}:12:1
 // CHECK-NEXT: Stepped to global: {{.*}}:13:3
 // CHECK-NEXT: Stepped to global: {{.*}}:15:3
 // CHECK-NEXT: caught

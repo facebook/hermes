@@ -12,40 +12,42 @@ function foo(fn, x) {
   new fn(...x);
 }
 
-// CHECK-LABEL: Function<foo>(3 params, 28 registers, 2 symbols):
+// CHECK-LABEL: Function<foo>(3 params, 30 registers, 2 symbols):
 // CHECK-NEXT: Offset in debug table: source 0x{{.*}}, scope 0x{{.*}}
 // CHECK-NEXT:     CreateEnvironment r0
 // CHECK-NEXT:     LoadParam         r1, 1
 // CHECK-NEXT:     LoadParam         r2, 2
-// CHECK-NEXT:     LoadConstZero     r3
-// CHECK-NEXT:     LoadConstUndefined r4
 // CHECK-NEXT:     StoreToEnvironment r0, 0, r1
 // CHECK-NEXT:     StoreToEnvironment r0, 1, r2
-// CHECK-NEXT:     LoadFromEnvironment r5, r0, 0
-// CHECK-NEXT:     Mov               r6, r3
-// CHECK-NEXT:     LoadFromEnvironment r7, r0, 1
-// CHECK-NEXT:     NewArray          r8, 0
-// CHECK-NEXT:     Mov               r9, r6
+// CHECK-NEXT:     LoadFromEnvironment r3, r0, 0
+// CHECK-NEXT:     LoadConstZero     r5
+// CHECK-NEXT:     Mov               r4, r5
+// CHECK-NEXT:     LoadFromEnvironment r6, r0, 1
+// CHECK-NEXT:     NewArray          r7, 0
+// CHECK-NEXT:     Mov               r8, r4
+// CHECK-NEXT:     Mov               r22, r7
+// CHECK-NEXT:     Mov               r21, r6
 // CHECK-NEXT:     Mov               r20, r8
-// CHECK-NEXT:     Mov               r19, r7
-// CHECK-NEXT:     Mov               r18, r9
-// CHECK-NEXT:     CallBuiltin       r10, "HermesBuiltin.arraySpread", 4
-// CHECK-NEXT:     Mov               r6, r10
-// CHECK-NEXT:     Mov               r20, r5
-// CHECK-NEXT:     Mov               r19, r8
-// CHECK-NEXT:     Mov               r18, r4
+// CHECK-NEXT:     CallBuiltin       r9, "HermesBuiltin.arraySpread", 4
+// CHECK-NEXT:     Mov               r4, r9
+// CHECK-NEXT:     LoadConstUndefined r10
+// CHECK-NEXT:     Mov               r22, r3
+// CHECK-NEXT:     Mov               r21, r7
+// CHECK-NEXT:     Mov               r20, r10
 // CHECK-NEXT:     CallBuiltin       r11, "HermesBuiltin.apply", 4
 // CHECK-NEXT:     LoadFromEnvironment r11, r0, 0
-// CHECK-NEXT:     Mov               r12, r3
-// CHECK-NEXT:     LoadFromEnvironment r13, r0, 1
-// CHECK-NEXT:     NewArray          r14, 0
-// CHECK-NEXT:     Mov               r15, r12
-// CHECK-NEXT:     Mov               r20, r14
-// CHECK-NEXT:     Mov               r19, r13
-// CHECK-NEXT:     Mov               r18, r15
-// CHECK-NEXT:     CallBuiltin       r16, "HermesBuiltin.arraySpread", 4
-// CHECK-NEXT:     Mov               r12, r16
-// CHECK-NEXT:     Mov               r20, r11
-// CHECK-NEXT:     Mov               r19, r14
-// CHECK-NEXT:     CallBuiltin       r17, "HermesBuiltin.apply", 3
-// CHECK-NEXT:     Ret               r4
+// CHECK-NEXT:     LoadConstZero     r13
+// CHECK-NEXT:     Mov               r12, r13
+// CHECK-NEXT:     LoadFromEnvironment r14, r0, 1
+// CHECK-NEXT:     NewArray          r15, 0
+// CHECK-NEXT:     Mov               r16, r12
+// CHECK-NEXT:     Mov               r22, r15
+// CHECK-NEXT:     Mov               r21, r14
+// CHECK-NEXT:     Mov               r20, r16
+// CHECK-NEXT:     CallBuiltin       r17, "HermesBuiltin.arraySpread", 4
+// CHECK-NEXT:     Mov               r12, r17
+// CHECK-NEXT:     Mov               r22, r11
+// CHECK-NEXT:     Mov               r21, r15
+// CHECK-NEXT:     CallBuiltin       r18, "HermesBuiltin.apply", 3
+// CHECK-NEXT:     LoadConstUndefined r18
+// CHECK-NEXT:     Ret               r18

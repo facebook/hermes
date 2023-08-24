@@ -22,13 +22,13 @@ function foo() {
 // CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = HBCCreateEnvironmentInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = HBCGetGlobalObjectInst
-// CHECK-NEXT:  %2 = HBCLoadConstInst undefined : undefined
-// CHECK-NEXT:  %3 = HBCCreateFunctionInst %foo#0#1()#2, %0
-// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, %1 : object, "foo" : string
-// CHECK-NEXT:  %5 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %6 = StoreStackInst %2 : undefined, %5
-// CHECK-NEXT:  %7 = LoadStackInst %5
+// CHECK-NEXT:  %1 = HBCCreateFunctionInst %foo#0#1()#2, %0
+// CHECK-NEXT:  %2 = HBCGetGlobalObjectInst
+// CHECK-NEXT:  %3 = StorePropertyInst %1 : closure, %2 : object, "foo" : string
+// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %5 = HBCLoadConstInst undefined : undefined
+// CHECK-NEXT:  %6 = StoreStackInst %5 : undefined, %4
+// CHECK-NEXT:  %7 = LoadStackInst %4
 // CHECK-NEXT:  %8 = ReturnInst %7
 // CHECK-NEXT:function_end
 
@@ -36,19 +36,19 @@ function foo() {
 // CHECK-NEXT:S{foo#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = HBCCreateEnvironmentInst %S{foo#0#1()#2}
-// CHECK-NEXT:  %1 = HBCLoadConstInst 1 : number
-// CHECK-NEXT:  %2 = HBCLoadConstInst 2 : number
-// CHECK-NEXT:  %3 = HBCLoadConstInst 3 : number
-// CHECK-NEXT:  %4 = HBCLoadConstInst 4 : number
-// CHECK-NEXT:  %5 = HBCLoadConstInst 5 : number
-// CHECK-NEXT:  %6 = HBCLoadConstInst undefined : undefined
-// CHECK-NEXT:  %7 = AllocObjectInst 5 : number, empty
-// CHECK-NEXT:  %8 = StoreNewOwnPropertyInst %1 : number, %7 : object, "a" : string, true : boolean
-// CHECK-NEXT:  %9 = StoreNewOwnPropertyInst %2 : number, %7 : object, 10 : number, true : boolean
-// CHECK-NEXT:  %10 = StoreNewOwnPropertyInst %3 : number, %7 : object, 11 : number, true : boolean
-// CHECK-NEXT:  %11 = StoreNewOwnPropertyInst %4 : number, %7 : object, "999999999999999999999999" : string, true : boolean
-// CHECK-NEXT:  %12 = StoreOwnPropertyInst %5 : number, %7 : object, 42 : number, true : boolean
-// CHECK-NEXT:  %13 = ReturnInst %7 : object
+// CHECK-NEXT:  %1 = AllocObjectInst 5 : number, empty
+// CHECK-NEXT:  %2 = HBCLoadConstInst 1 : number
+// CHECK-NEXT:  %3 = StoreNewOwnPropertyInst %2 : number, %1 : object, "a" : string, true : boolean
+// CHECK-NEXT:  %4 = HBCLoadConstInst 2 : number
+// CHECK-NEXT:  %5 = StoreNewOwnPropertyInst %4 : number, %1 : object, 10 : number, true : boolean
+// CHECK-NEXT:  %6 = HBCLoadConstInst 3 : number
+// CHECK-NEXT:  %7 = StoreNewOwnPropertyInst %6 : number, %1 : object, 11 : number, true : boolean
+// CHECK-NEXT:  %8 = HBCLoadConstInst 4 : number
+// CHECK-NEXT:  %9 = StoreNewOwnPropertyInst %8 : number, %1 : object, "999999999999999999999999" : string, true : boolean
+// CHECK-NEXT:  %10 = HBCLoadConstInst 5 : number
+// CHECK-NEXT:  %11 = StoreOwnPropertyInst %10 : number, %1 : object, 42 : number, true : boolean
+// CHECK-NEXT:  %12 = ReturnInst %1 : object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %14 = ReturnInst %6 : undefined
+// CHECK-NEXT:  %13 = HBCLoadConstInst undefined : undefined
+// CHECK-NEXT:  %14 = ReturnInst %13 : undefined
 // CHECK-NEXT:function_end

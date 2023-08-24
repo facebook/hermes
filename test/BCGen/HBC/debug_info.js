@@ -31,7 +31,7 @@ function Fc() {
 }
 // CHECK: Function<Fc>{{.*}}
 // CHECK-NEXT: Offset in debug table: {{.*}}
-// CHECK: Function<Fcc>(1 params, 4 registers, 1 symbols):
+// CHECK: Function<Fcc>(1 params, 5 registers, 1 symbols):
 // CHECK-NEXT: Offset in debug table: {{.*}}
 
 // CHECK:      Debug filename table:

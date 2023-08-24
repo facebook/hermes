@@ -227,46 +227,43 @@ bool LoadConstants::runOnFunction(Function *F) {
   IRBuilder builder(F);
   bool changed = false;
 
-  llvh::SmallDenseMap<Literal *, Instruction *, 8> constMap{};
-
-  // This is a bit counter-intuitive because the logic appears reversed.
-  // We only want to unique the generated literals if optimization is disabled.
-  // That is the case when it causes too many registers to be generated (one
-  // per literal).
-  // If optimization is enabled, that is not necessary because of CSE and
-  // because doing this now interefers with code motion.
-  const bool uniqueLiterals = !optimizationEnabled_;
-
-  auto createLoadLiteral = [&builder](Literal *literal) -> Instruction * {
+  /// Inserts and returns a load instruction for \p literal before \p where.
+  auto createLoadLiteral = [&builder](Literal *literal, Instruction *where) {
+    builder.setInsertionPoint(where);
     return llvh::isa<GlobalObject>(literal)
         ? cast<Instruction>(builder.createHBCGetGlobalObjectInst())
         : cast<Instruction>(builder.createHBCLoadConstInst(literal));
   };
 
-  updateToEntryInsertionPoint(builder, F);
-
-  for (BasicBlock &bbit : F->getBasicBlockList()) {
-    for (auto &it : bbit.getInstList()) {
-      for (unsigned i = 0, n = it.getNumOperands(); i < n; i++) {
-        if (operandMustBeLiteral(&it, i))
-          continue;
-
-        auto *operand = llvh::dyn_cast<Literal>(it.getOperand(i));
-        if (!operand)
-          continue;
-
-        Instruction *load = nullptr;
-        if (uniqueLiterals) {
-          auto &entry = constMap[operand];
-          if (!entry)
-            entry = createLoadLiteral(operand);
-          load = entry;
-        } else {
-          load = createLoadLiteral(operand);
+  for (BasicBlock &BB : *F) {
+    for (auto &I : BB) {
+      if (auto *phi = llvh::dyn_cast<PhiInst>(&I)) {
+        // Since PhiInsts must always be at the start of a basic block, we have
+        // to insert the load instruction in the predecessor. This lowering is
+        // sub-optimal: for conditional branches, the load constant operation
+        // will be performed before the branch decides which path to take.
+        for (unsigned i = 0, e = phi->getNumEntries(); i < e; ++i) {
+          auto [val, bb] = phi->getEntry(i);
+          if (auto *literal = llvh::dyn_cast<Literal>(val)) {
+            auto *load = createLoadLiteral(literal, bb->getTerminator());
+            phi->updateEntry(i, load, bb);
+            changed = true;
+          }
         }
-
-        it.setOperand(load, i);
-        changed = true;
+        continue;
+      }
+      // For all other instructions, insert load constants right before the they
+      // are needed. This minimizes their live range and therefore reduces
+      // register pressure. CodeMotion and CSE can later hoist and deduplicate
+      // them.
+      for (unsigned i = 0, e = I.getNumOperands(); i < e; ++i) {
+        if (auto *literal = llvh::dyn_cast<Literal>(I.getOperand(i))) {
+          if (!operandMustBeLiteral(&I, i)) {
+            auto *load = createLoadLiteral(literal, &I);
+            I.setOperand(load, i);
+            changed = true;
+          }
+        }
       }
     }
   }

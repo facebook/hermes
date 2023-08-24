@@ -68,7 +68,7 @@ print(g(10));
 // BC:      [@ {{[0-9]+}}] CreateEnvironment [[ENV:[0-9]+]]<Reg8>
 // BC:      [@ {{[0-9]+}}] CreateInnerEnvironment {{[0-9]+}}<Reg8>, [[ENV]]<Reg8>, 1<UInt32>
 
-// BC-LABEL: Function<g>(2 params, 17 registers, 1 symbols):
+// BC-LABEL: Function<g>(2 params, 16 registers, 1 symbols):
 // BC: Offset in debug table: source 0x{{[0-9a-f]+}}, scope 0x{{[0-9a-f]+}}
 // BC:      [@ {{[0-9]+}}] CreateEnvironment [[ENV:[0-9]+]]<Reg8>
 // BC-NOT: CreateInnerEnvironment

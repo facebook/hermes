@@ -31,7 +31,7 @@ print('finished');
 // CHECK-NEXT: bar1
 // CHECK-NEXT: Break on 'debugger' statement in bar: {{.*}}:17:3
 // CHECK-NEXT: bar2
-// CHECK-NEXT: Stepped to foo: {{.*}}:24:3
+// CHECK-NEXT: Stepped to foo: {{.*}}:23:6
 // CHECK-NEXT: foo2
 // CHECK-NEXT: Stepped to global: {{.*}}:27:4
 // CHECK-NEXT: finished

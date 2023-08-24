@@ -23,8 +23,6 @@ try {
 //CHECK-NEXT:Offset in debug table:{{.*}}
 //CHECK-NEXT:    DeclareGlobalVar  "condition"
 //CHECK-NEXT:    ProfilePoint      10
-//CHECK-NEXT:    LoadConstString   r5, "yes"
-//CHECK-NEXT:    LoadConstString   r4, "no"
 //CHECK-NEXT:    LoadConstUndefined r3
 //CHECK-NEXT:    LoadConstUndefined r0
 //CHECK-NEXT:    LoadConstFalse    r1
@@ -34,14 +32,15 @@ try {
 //CHECK-NEXT:    ProfilePoint      7
 //CHECK-NEXT:L6:
 //CHECK-NEXT:    ProfilePoint      5
-//CHECK-NEXT:    TryGetById        r1, r2, 1, "print"
-//CHECK-NEXT:    GetByIdShort      r6, r2, 2, "condition"
-//CHECK-NEXT:    JmpFalse          L1, r6
+//CHECK-NEXT:    TryGetById        r4, r2, 1, "print"
+//CHECK-NEXT:    GetByIdShort      r5, r2, 2, "condition"
+//CHECK-NEXT:    LoadConstString   r1, "no"
+//CHECK-NEXT:    JmpFalse          L1, r5
 //CHECK-NEXT:    ProfilePoint      4
-//CHECK-NEXT:    Mov               r4, r5
+//CHECK-NEXT:    LoadConstString   r1, "yes"
 //CHECK-NEXT:L1:
 //CHECK-NEXT:    ProfilePoint      3
-//CHECK-NEXT:    Call2             r0, r1, r3, r4
+//CHECK-NEXT:    Call2             r0, r4, r3, r1
 //CHECK-NEXT:L7:
 //CHECK-NEXT:    ProfilePoint      2
 //CHECK-NEXT:    TryGetById        r4, r2, 1, "print"

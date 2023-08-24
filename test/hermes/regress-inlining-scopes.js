@@ -49,8 +49,8 @@ function testForOfFunction() {
 
 // CHECK:Function<testForOfFunction>(1 params, 19 registers, 0 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x0009, scope 0x0000, textified callees 0x0000
-// CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    CreateEnvironment r3
+// CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    LoadConstUndefined r4
 // CHECK-NEXT:    NewArray          r1, 0
 // CHECK-NEXT:    IteratorBegin     r2, r1

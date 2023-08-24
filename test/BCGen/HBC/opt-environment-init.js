@@ -111,33 +111,33 @@ function foo(o) {
 // CHKLIR:function ""#1#2()#3 : number|bigint
 // CHKLIR-NEXT:S{""#1#2()#3} = []
 // CHKLIR-NEXT:%BB0:
-// CHKLIR-NEXT:  %0 = HBCLoadConstInst true : boolean
-// CHKLIR-NEXT:  %1 = HBCLoadConstInst 1 : number
-// CHKLIR-NEXT:  %2 = HBCLoadConstInst 2 : number
-// CHKLIR-NEXT:  %3 = HBCResolveEnvironment %S{foo#0#1()#2}, %S{""#1#2()#3}
-// CHKLIR-NEXT:  %4 = HBCLoadFromEnvironmentInst %3, [flag#2@foo]
-// CHKLIR-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
+// CHKLIR-NEXT:  %0 = HBCResolveEnvironment %S{foo#0#1()#2}, %S{""#1#2()#3}
+// CHKLIR-NEXT:  %1 = HBCLoadFromEnvironmentInst %0, [flag#2@foo]
+// CHKLIR-NEXT:  %2 = CondBranchInst %1, %BB1, %BB2
 // CHKLIR-NEXT:%BB2:
-// CHKLIR-NEXT:  %6 = BranchInst %BB1
+// CHKLIR-NEXT:  %3 = HBCLoadConstInst true : boolean
+// CHKLIR-NEXT:  %4 = BranchInst %BB1
 // CHKLIR-NEXT:%BB1:
-// CHKLIR-NEXT:  %7 = PhiInst %4, %BB0, %0 : boolean, %BB2
-// CHKLIR-NEXT:  %8 = HBCStoreToEnvironmentInst %3, %7, [flag#2@foo]
-// CHKLIR-NEXT:  %9 = HBCLoadFromEnvironmentInst %3, [flag1#2@foo]
-// CHKLIR-NEXT:  %10 = CondBranchInst %9, %BB3, %BB4
+// CHKLIR-NEXT:  %5 = PhiInst %1, %BB0, %3 : boolean, %BB2
+// CHKLIR-NEXT:  %6 = HBCStoreToEnvironmentInst %0, %5, [flag#2@foo]
+// CHKLIR-NEXT:  %7 = HBCLoadFromEnvironmentInst %0, [flag1#2@foo]
+// CHKLIR-NEXT:  %8 = CondBranchInst %7, %BB3, %BB4
 // CHKLIR-NEXT:%BB4:
-// CHKLIR-NEXT:  %11 = BranchInst %BB3
+// CHKLIR-NEXT:  %9 = HBCLoadConstInst 1 : number
+// CHKLIR-NEXT:  %10 = BranchInst %BB3
 // CHKLIR-NEXT:%BB3:
-// CHKLIR-NEXT:  %12 = PhiInst %9, %BB1, %1 : number, %BB4
-// CHKLIR-NEXT:  %13 = HBCStoreToEnvironmentInst %3, %12, [flag1#2@foo]
-// CHKLIR-NEXT:  %14 = HBCLoadFromEnvironmentInst %3, [flag2#2@foo]
-// CHKLIR-NEXT:  %15 = CondBranchInst %14, %BB5, %BB6
+// CHKLIR-NEXT:  %11 = PhiInst %7, %BB1, %9 : number, %BB4
+// CHKLIR-NEXT:  %12 = HBCStoreToEnvironmentInst %0, %11, [flag1#2@foo]
+// CHKLIR-NEXT:  %13 = HBCLoadFromEnvironmentInst %0, [flag2#2@foo]
+// CHKLIR-NEXT:  %14 = CondBranchInst %13, %BB5, %BB6
 // CHKLIR-NEXT:%BB6:
+// CHKLIR-NEXT:  %15 = HBCLoadConstInst 2 : number
 // CHKLIR-NEXT:  %16 = BranchInst %BB5
 // CHKLIR-NEXT:%BB5:
-// CHKLIR-NEXT:  %17 = PhiInst %14, %BB3, %2 : number, %BB6
-// CHKLIR-NEXT:  %18 = HBCStoreToEnvironmentInst %3, %17, [flag2#2@foo]
-// CHKLIR-NEXT:  %19 = HBCLoadFromEnvironmentInst %3, [cnt#2@foo] : number|bigint
+// CHKLIR-NEXT:  %17 = PhiInst %13, %BB3, %15 : number, %BB6
+// CHKLIR-NEXT:  %18 = HBCStoreToEnvironmentInst %0, %17, [flag2#2@foo]
+// CHKLIR-NEXT:  %19 = HBCLoadFromEnvironmentInst %0, [cnt#2@foo] : number|bigint
 // CHKLIR-NEXT:  %20 = UnaryOperatorInst '++', %19
-// CHKLIR-NEXT:  %21 = HBCStoreToEnvironmentInst %3, %20 : number|bigint, [cnt#2@foo] : number|bigint
+// CHKLIR-NEXT:  %21 = HBCStoreToEnvironmentInst %0, %20 : number|bigint, [cnt#2@foo] : number|bigint
 // CHKLIR-NEXT:  %22 = ReturnInst %20 : number|bigint
 // CHKLIR-NEXT:function_end

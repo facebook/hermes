@@ -29,15 +29,10 @@ class LoadConstants : public FunctionPass {
   bool operandMustBeLiteral(Instruction *Inst, unsigned opIndex);
 
  public:
-  explicit LoadConstants(bool optimizationEnabled)
-      : FunctionPass("LoadConstants"),
-        optimizationEnabled_(optimizationEnabled) {}
+  explicit LoadConstants() : FunctionPass("LoadConstants") {}
   ~LoadConstants() override = default;
 
   bool runOnFunction(Function *F) override;
-
- private:
-  bool const optimizationEnabled_;
 };
 
 class LoadParameters : public FunctionPass {

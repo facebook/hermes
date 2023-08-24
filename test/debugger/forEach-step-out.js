@@ -30,12 +30,11 @@ print("finish");
 //CHECK: Stepped to anonymous: {{.*}}:21:3
 //CHECK: Stepped to anonymous: {{.*}}:17:11
 //CHECK: Stepped to anonymous: {{.*}}:18:7
-//CHECK: Stepped to anonymous: {{.*}}:19:5
+//CHECK: Stepped to anonymous: {{.*}}:18:3
 //CHECK: Stepped to funky: {{.*}}:12:3
 //CHECK: funky
 //CHECK: Stepped to anonymous: {{.*}}:21:3
 //CHECK: Stepped to anonymous: {{.*}}:17:11
-//CHECK: Stepped to anonymous: {{.*}}:18:7
 //CHECK: Stepped to global: {{.*}}:17:10
 //CHECK: Stepped to global: {{.*}}:23:1
 //CHECK: finish

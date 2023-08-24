@@ -74,7 +74,7 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
   PM.addPass<DedupReifyArguments>();
   PM.addPass<LowerSwitchIntoJumpTables>();
   PM.addPass<SwitchLowering>();
-  PM.addPass<LoadConstants>(options.optimizationEnabled);
+  PM.addPass<LoadConstants>();
   PM.addPass<LoadParameters>();
   if (options.optimizationEnabled) {
     // Lowers AllocObjects and its sequential literal properties into a single
