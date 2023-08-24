@@ -62,6 +62,15 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
   PM.addPass<LowerExponentiationOperator>();
   // LowerBuiltinCalls needs to run before the rest of the lowering.
   PM.addPass<LowerBuiltinCalls>();
+  // Run optimization pass after LowerBuiltinCalls to materialize wins 
+  if (options.optimizationEnabled) {
+    // use new built-in type information to evaluate expressions
+    PM.addInstSimplify();
+    // remove dead branches
+    PM.addSimplifyCFG();
+    // we run again to remove any now-orphaned LoadPropertyInst(s)
+    PM.addPass<LowerBuiltinCalls>();
+  }
   // It is important to run LowerNumericProperties before LoadConstants
   // as LowerNumericProperties could generate new constants.
   PM.addPass<LowerNumericProperties>();

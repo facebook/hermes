@@ -683,7 +683,7 @@ LiteralBool *hermes::evalToBoolean(IRBuilder &builder, Value *operand) {
   }
 
   Type OpTY = operand->getType();
-  if (OpTY.isObjectType()) {
+  if (OpTY.isObjectType() || OpTY.isClosureType() || OpTY.isRegExpType()) {
     return builder.getLiteralBool(true);
   }
   if (OpTY.isNullType() || OpTY.isUndefinedType()) {

@@ -101,17 +101,19 @@ static bool run(Function *F) {
       auto *inst = &*it++;
 
       // Look for an instruction sequence of the kind:
-      //    (Call
+      //    (?Call
       //        (LoadProperty
       //            (LoadProperty globalObject, "objectLiteral")
       //            Prop)
       //        ...)
       // where \c Object.Prop is a pre-defined builtin.
-      // Note: we only want to check for call. Not for construct.
-      if (inst->getKind() != ValueKind::CallInstKind)
-        continue;
-      auto *callInst = cast<CallInst>(inst);
-      auto *loadProp = llvh::dyn_cast<LoadPropertyInst>(callInst->getCallee());
+      Value *possibleBuiltIn = inst;
+
+      auto *callInst = llvh::dyn_cast<CallInst>(inst);
+      if (callInst)
+        possibleBuiltIn = callInst->getCallee();
+
+      auto *loadProp = llvh::dyn_cast<LoadPropertyInst>(possibleBuiltIn);
       if (!loadProp)
         continue;
       auto propLit = llvh::dyn_cast<LiteralString>(loadProp->getProperty());
@@ -149,29 +151,48 @@ static bool run(Function *F) {
         continue;
       }
 
-      changed = true;
-      builder.setInsertionPoint(callInst);
-      builder.setLocation(callInst->getLocation());
-      builder.setCurrentSourceLevelScope(callInst->getSourceLevelScope());
+      auto changedInThisPass = false;
 
-      llvh::SmallVector<Value *, 8> args{};
-      unsigned numArgsExcludingThis = callInst->getNumArguments() - 1;
-      args.reserve(numArgsExcludingThis);
-      for (unsigned i = 0; i < numArgsExcludingThis; ++i)
-        args.push_back(callInst->getArgument(i + 1));
+      // setting type info allows `CondBranchInst` to reduce in
+      // follow-up optimization paths
+      if (!loadProp->getType().isClosureType()) {
+        loadProp->setType(Type::createClosure());
+        changedInThisPass = true;
+      }
 
-      auto *callBuiltin = builder.createCallBuiltinInst(*builtinIndex, args);
-      callInst->replaceAllUsesWith(callBuiltin);
-      callInst->eraseFromParent();
+      if (callInst){
+        changedInThisPass = true;
+        builder.setInsertionPoint(callInst);
+        builder.setLocation(callInst->getLocation());
+        builder.setCurrentSourceLevelScope(callInst->getSourceLevelScope());
+
+        llvh::SmallVector<Value *, 8> args{};
+        unsigned numArgsExcludingThis = callInst->getNumArguments() - 1;
+        args.reserve(numArgsExcludingThis);
+        for (unsigned i = 0; i < numArgsExcludingThis; ++i)
+          args.push_back(callInst->getArgument(i + 1));
+
+        auto *callBuiltin = builder.createCallBuiltinInst(*builtinIndex, args);
+        callInst->replaceAllUsesWith(callBuiltin);
+        callInst->eraseFromParent();
+      }
 
       // The property access instructions are not normally optimizable since
       // they have side effects, but in this case it is safe to remove them.
-      if (!loadProp->hasUsers())
+      if (!loadProp->hasUsers()) {
         loadProp->eraseFromParent();
-      if (!loadGlobalProp->hasUsers())
+        changedInThisPass = true;
+      }
+      if (!loadGlobalProp->hasUsers()) {
         loadGlobalProp->eraseFromParent();
+        changedInThisPass = true;
+      }
 
+      if (!changedInThisPass)
+        continue;
+        
       ++NumLowered;
+      changed = true;
     }
   }
 
