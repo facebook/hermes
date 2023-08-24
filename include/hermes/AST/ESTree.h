@@ -344,6 +344,9 @@ class BlockStatementDecoration {
   bool paramAwait{false};
 };
 
+class JSXDecoration {};
+class FlowDecoration {};
+class TSDecoration {};
 class PatternDecoration {};
 class CoverDecoration {};
 
