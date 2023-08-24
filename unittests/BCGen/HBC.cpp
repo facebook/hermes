@@ -335,7 +335,9 @@ TEST(HBCBytecodeGen, ObjectBufferTest) {
   auto src = R"(
 var obj = {a:1, b:2, c:3};
 )";
-  auto BM = bytecodeModuleForSource(src);
+  auto opts = BytecodeGenerationOptions::defaults();
+  opts.optimizationEnabled = true;
+  auto BM = bytecodeModuleForSource(src, opts);
   ASSERT_EQ(BM->getObjectKeyBufferSize(), 4u);
   ASSERT_EQ(BM->getObjectValueBufferSize(), 13u);
 }
@@ -402,23 +404,6 @@ var s = arr1[0] + arr2[1];
   // The bytecode module which performed optimizations should have a smaller
   // buffer size than the one that didn't.
   ASSERT_LT(dedupBM->getArrayBufferSize(), dupBM->getArrayBufferSize());
-}
-
-TEST(HBCBytecodeGen, HardObjectDedupBufferTest) {
-  auto almostDupCode = R"(
-var obj1 = {a:10,b:11,c:12,1:null,2:true,3:false};
-var obj2 = {a:10,b:11,c:12};
-var s = obj1.a + obj2.a;
-)";
-  auto dupBM = bytecodeModuleForSource(almostDupCode);
-  auto dedupOpts = BytecodeGenerationOptions::defaults();
-  dedupOpts.optimizationEnabled = true;
-  auto dedupBM = bytecodeModuleForSource(almostDupCode, dedupOpts);
-  // The bytecode module which performed optimizations should have a smaller
-  // buffer size than the one that didn't.
-  ASSERT_LT(dedupBM->getObjectKeyBufferSize(), dupBM->getObjectKeyBufferSize());
-  ASSERT_LT(
-      dedupBM->getObjectValueBufferSize(), dupBM->getObjectValueBufferSize());
 }
 
 TEST(SpillRegisterTest, SpillsParameters) {
