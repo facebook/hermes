@@ -38,5 +38,5 @@ function simple_test0(x, y) {
 // CHECK-NEXT:  %6 = BinaryInstanceOfInst (:any) %4: any, %5: any
 // CHECK-NEXT:  %7 = ReturnInst %6: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %8 = UnreachableInst
 // CHECK-NEXT:function_end

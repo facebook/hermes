@@ -96,7 +96,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst 1: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %1 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function " 1#"(): any
@@ -105,7 +105,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [x@test1]: any
 // CHECK-NEXT:  %1 = ReturnInst %0: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %2 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function " 2#"(): any
@@ -122,7 +122,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [some_local_name@test_hoisting_of_func_expr]: any
 // CHECK-NEXT:  %1 = ReturnInst %0: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %2 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function " 3#"(): any
@@ -130,5 +130,5 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst 2: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %1 = UnreachableInst
 // CHECK-NEXT:function_end

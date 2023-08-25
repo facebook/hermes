@@ -43,5 +43,5 @@ function foo(a, b) {
 // CHECK-NEXT:  %11 = BinaryMultiplyInst (:any) %9: any, %10: any // users: %12
 // CHECK-NEXT:  %12 = ReturnInst %11: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %13 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %13 = UnreachableInst
 // CHECK-NEXT:function_end

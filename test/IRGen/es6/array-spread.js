@@ -56,7 +56,7 @@ function foo(x) {
 // CHECK-NEXT:  %24 = StoreStackInst %23: any, %2: number
 // CHECK-NEXT:  %25 = ReturnInst %11: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %26 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %26 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // OPT:function global(): undefined

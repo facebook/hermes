@@ -42,7 +42,7 @@ function three() { return z; return z;}
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "s": string
 // CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %4 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function two(): any
@@ -54,7 +54,7 @@ function three() { return z; return z;}
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "t": string
 // CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %4 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function three(): any
@@ -66,5 +66,5 @@ function three() { return z; return z;}
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "z": string
 // CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %4 = UnreachableInst
 // CHECK-NEXT:function_end

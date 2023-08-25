@@ -43,5 +43,5 @@ function foo(a, b, c) {
 // CHECK-NEXT:  %12 = StoreOwnPropertyInst %11: any, %6: object, "c": string, true: boolean
 // CHECK-NEXT:  %13 = ReturnInst %6: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %14 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %14 = UnreachableInst
 // CHECK-NEXT:function_end

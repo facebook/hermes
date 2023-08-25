@@ -51,7 +51,7 @@ function f2() {
 // CHKIR-NEXT:  %4 = ReturnInst %3: any
 // CHKIR-NEXT:%BB1:
 // CHKIR-NEXT:  %5 = StoreFrameInst undefined: undefined, [x]: any|empty
-// CHKIR-NEXT:  %6 = ReturnInst undefined: undefined
+// CHKIR-NEXT:  %6 = UnreachableInst
 // CHKIR-NEXT:function_end
 
 // CHKIR:function f2(): any
@@ -75,7 +75,7 @@ function f2() {
 // CHKIR-NEXT:  %4 = UnionNarrowTrustedInst (:any) %3: any|empty
 // CHKIR-NEXT:  %5 = ReturnInst %4: any
 // CHKIR-NEXT:%BB1:
-// CHKIR-NEXT:  %6 = ReturnInst undefined: undefined
+// CHKIR-NEXT:  %6 = UnreachableInst
 // CHKIR-NEXT:function_end
 
 // CHKLIR:function global(): undefined
@@ -84,7 +84,7 @@ function f2() {
 // CHKLIR-NEXT:  %0 = HBCCreateEnvironmentInst (:environment)
 // CHKLIR-NEXT:  %1 = DeclareGlobalVarInst "f1": string
 // CHKLIR-NEXT:  %2 = DeclareGlobalVarInst "f2": string
-// CHKLIR-NEXT:  %3 = HBCCreateFunctionInst (:object) %f1(): undefined|string|number, %0: environment
+// CHKLIR-NEXT:  %3 = HBCCreateFunctionInst (:object) %f1(): string|number, %0: environment
 // CHKLIR-NEXT:  %4 = HBCGetGlobalObjectInst (:object)
 // CHKLIR-NEXT:  %5 = StorePropertyLooseInst %3: object, %4: object, "f1": string
 // CHKLIR-NEXT:  %6 = HBCCreateFunctionInst (:object) %f2(): undefined, %0: environment
@@ -96,7 +96,7 @@ function f2() {
 // CHKLIR-NEXT:  %12 = ReturnInst %11: undefined
 // CHKLIR-NEXT:function_end
 
-// CHKLIR:function f1(): undefined|string|number
+// CHKLIR:function f1(): string|number
 // CHKLIR-NEXT:frame = [x: empty|undefined]
 // CHKLIR-NEXT:%BB0:
 // CHKLIR-NEXT:  %0 = HBCCreateEnvironmentInst (:environment)
@@ -110,7 +110,7 @@ function f2() {
 // CHKLIR-NEXT:  %8 = ReturnInst %7: string|number
 // CHKLIR-NEXT:%BB1:
 // CHKLIR-NEXT:  %9 = HBCStoreToEnvironmentInst %0: environment, %1: undefined, [x]: empty|undefined
-// CHKLIR-NEXT:  %10 = ReturnInst %1: undefined
+// CHKLIR-NEXT:  %10 = UnreachableInst
 // CHKLIR-NEXT:function_end
 
 // CHKLIR:function f2(): undefined
@@ -130,15 +130,14 @@ function f2() {
 // CHKLIR:function inner(): undefined|number
 // CHKLIR-NEXT:frame = []
 // CHKLIR-NEXT:%BB0:
-// CHKLIR-NEXT:  %0 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHKLIR-NEXT:  %1 = HBCResolveEnvironment (:environment) %f2(): any
-// CHKLIR-NEXT:  %2 = HBCLoadFromEnvironmentInst (:empty|undefined|number) %1: environment, [x@f2]: empty|undefined|number
-// CHKLIR-NEXT:  %3 = ThrowIfEmptyInst (:undefined|number) %2: empty|undefined|number
-// CHKLIR-NEXT:  %4 = HBCLoadConstInst (:number) 10: number
-// CHKLIR-NEXT:  %5 = HBCStoreToEnvironmentInst %1: environment, %4: number, [x@f2]: empty|undefined|number
-// CHKLIR-NEXT:  %6 = HBCLoadFromEnvironmentInst (:empty|undefined|number) %1: environment, [x@f2]: empty|undefined|number
-// CHKLIR-NEXT:  %7 = UnionNarrowTrustedInst (:undefined|number) %6: empty|undefined|number
-// CHKLIR-NEXT:  %8 = ReturnInst %7: undefined|number
+// CHKLIR-NEXT:  %0 = HBCResolveEnvironment (:environment) %f2(): any
+// CHKLIR-NEXT:  %1 = HBCLoadFromEnvironmentInst (:empty|undefined|number) %0: environment, [x@f2]: empty|undefined|number
+// CHKLIR-NEXT:  %2 = ThrowIfEmptyInst (:undefined|number) %1: empty|undefined|number
+// CHKLIR-NEXT:  %3 = HBCLoadConstInst (:number) 10: number
+// CHKLIR-NEXT:  %4 = HBCStoreToEnvironmentInst %0: environment, %3: number, [x@f2]: empty|undefined|number
+// CHKLIR-NEXT:  %5 = HBCLoadFromEnvironmentInst (:empty|undefined|number) %0: environment, [x@f2]: empty|undefined|number
+// CHKLIR-NEXT:  %6 = UnionNarrowTrustedInst (:undefined|number) %5: empty|undefined|number
+// CHKLIR-NEXT:  %7 = ReturnInst %6: undefined|number
 // CHKLIR-NEXT:%BB1:
-// CHKLIR-NEXT:  %9 = ReturnInst %0: undefined
+// CHKLIR-NEXT:  %8 = UnreachableInst
 // CHKLIR-NEXT:function_end

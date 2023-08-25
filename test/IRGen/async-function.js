@@ -145,7 +145,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = ReturnInst %2: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %7 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_?anon_0_simpleAwait(): any
@@ -173,7 +173,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %15 = ReturnInst %9: any
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %16 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %16 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_?anon_0_nonSimpleArrayDestructuring(?anon_2_param: any): any
@@ -242,7 +242,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:%BB12:
 // CHECK-NEXT:  %48 = ReturnInst %42: any
 // CHECK-NEXT:%BB14:
-// CHECK-NEXT:  %49 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %49 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_?anon_0_simpleAsyncFE(): any
@@ -270,5 +270,5 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %15 = ReturnInst %9: any
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %16 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %16 = UnreachableInst
 // CHECK-NEXT:function_end

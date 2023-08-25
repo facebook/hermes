@@ -55,7 +55,7 @@ function baz() {
 // CHECK-NEXT:  %7 = PhiInst (:any) %3: any, %BB1, %5: any, %BB2
 // CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %9 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): any
@@ -77,7 +77,7 @@ function baz() {
 // CHECK-NEXT:  %10 = PhiInst (:any) %6: any, %BB1, %8: any, %BB2
 // CHECK-NEXT:  %11 = ReturnInst %10: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %12 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function baz(): any
@@ -96,5 +96,5 @@ function baz() {
 // CHECK-NEXT:  %7 = PhiInst (:any) %3: any, %BB1, %5: any, %BB2
 // CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %9 = UnreachableInst
 // CHECK-NEXT:function_end

@@ -176,7 +176,7 @@ function fallthrough(b) {
 // CHECK-NEXT:%BB22:
 // CHECK-NEXT:  %44 = BranchInst %BB15
 // CHECK-NEXT:%BB23:
-// CHECK-NEXT:  %45 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %45 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_xor(b: any): any
@@ -197,7 +197,7 @@ function fallthrough(b) {
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %8 = BranchInst %BB1
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %9 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_xor2(b: any): any
@@ -208,7 +208,7 @@ function fallthrough(b) {
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [b]: any
 // CHECK-NEXT:  %3 = SwitchInst %2: any, %BB1, 1: number, %BB2, 0: number, %BB3
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %4 = UnreachableInst
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = ReturnInst 0: number
 // CHECK-NEXT:%BB5:
@@ -233,7 +233,7 @@ function fallthrough(b) {
 // CHECK-NEXT:  %4 = BinaryStrictlyEqualInst (:any) %3: any, %2: any
 // CHECK-NEXT:  %5 = CondBranchInst %4: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %6 = UnreachableInst
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BinaryAddInst (:any) 4: number, 5: number
 // CHECK-NEXT:  %8 = ReturnInst %7: any

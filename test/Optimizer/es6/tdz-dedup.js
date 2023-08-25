@@ -60,7 +60,7 @@ function check_after_check() {
 // CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "inner": string
 // CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %9 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function check_after_check(): any
@@ -74,7 +74,7 @@ function check_after_check() {
 // CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "inner": string
 // CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %7 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function inner1(): any
@@ -96,7 +96,7 @@ function check_after_check() {
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %10 = BranchInst %BB3
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %11 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %11 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function inner2(p: any): any
@@ -127,7 +127,7 @@ function check_after_check() {
 // CHECK-NEXT:  %19 = ThrowIfEmptyInst (:any) %18: any|empty
 // CHECK-NEXT:  %20 = ReturnInst %19: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %21 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %21 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHKOPT:function global(): undefined
@@ -158,7 +158,7 @@ function check_after_check() {
 // CHKOPT-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "inner": string
 // CHKOPT-NEXT:  %8 = ReturnInst %7: any
 // CHKOPT-NEXT:%BB1:
-// CHKOPT-NEXT:  %9 = ReturnInst undefined: undefined
+// CHKOPT-NEXT:  %9 = UnreachableInst
 // CHKOPT-NEXT:function_end
 
 // CHKOPT:function check_after_check(): any
@@ -172,7 +172,7 @@ function check_after_check() {
 // CHKOPT-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "inner": string
 // CHKOPT-NEXT:  %6 = ReturnInst %5: any
 // CHKOPT-NEXT:%BB1:
-// CHKOPT-NEXT:  %7 = ReturnInst undefined: undefined
+// CHKOPT-NEXT:  %7 = UnreachableInst
 // CHKOPT-NEXT:function_end
 
 // CHKOPT:function inner1(): undefined|number
@@ -194,7 +194,7 @@ function check_after_check() {
 // CHKOPT-NEXT:%BB4:
 // CHKOPT-NEXT:  %10 = BranchInst %BB3
 // CHKOPT-NEXT:%BB5:
-// CHKOPT-NEXT:  %11 = ReturnInst undefined: undefined
+// CHKOPT-NEXT:  %11 = UnreachableInst
 // CHKOPT-NEXT:function_end
 
 // CHKOPT:function inner2(p: any): any
@@ -221,5 +221,5 @@ function check_after_check() {
 // CHKOPT-NEXT:  %15 = UnionNarrowTrustedInst (:any) %14: any|empty
 // CHKOPT-NEXT:  %16 = ReturnInst %15: any
 // CHKOPT-NEXT:%BB4:
-// CHKOPT-NEXT:  %17 = ReturnInst undefined: undefined
+// CHKOPT-NEXT:  %17 = UnreachableInst
 // CHKOPT-NEXT:function_end

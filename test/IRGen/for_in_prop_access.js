@@ -121,7 +121,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %23 = StoreFrameInst %22: any, [ret]: any
 // CHECK-NEXT:  %24 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %25 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %25 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function different_prop(obj: any): any
@@ -159,7 +159,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %26 = StoreFrameInst %25: any, [ret]: any
 // CHECK-NEXT:  %27 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %28 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %28 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function different_obj(obj: any): any
@@ -197,7 +197,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %26 = StoreFrameInst %25: any, [ret]: any
 // CHECK-NEXT:  %27 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %28 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %28 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function modify_prop(obj: any): any
@@ -233,7 +233,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %24 = StoreFrameInst %23: any, [ret]: any
 // CHECK-NEXT:  %25 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %26 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %26 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function modify_value(obj: any): any
@@ -274,7 +274,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %29 = StoreFrameInst %28: any, [ret]: any
 // CHECK-NEXT:  %30 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %31 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %31 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function expression_prop(obj: any): any
@@ -308,5 +308,5 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %22 = StoreFrameInst %21: any, [ret]: any
 // CHECK-NEXT:  %23 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %24 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %24 = UnreachableInst
 // CHECK-NEXT:function_end

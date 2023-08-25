@@ -44,7 +44,7 @@ function foo (a, b, c) {
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %9 = ReturnInst 2: number
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %10 = UnreachableInst
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) [b]: any
 // CHECK-NEXT:  %12 = CondBranchInst %11: any, %BB6, %BB3

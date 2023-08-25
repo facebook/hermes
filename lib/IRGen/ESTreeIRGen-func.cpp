@@ -269,7 +269,12 @@ Function *ESTreeIRGen::genES5Function(
     }
 
     genStatement(body);
-    emitFunctionEpilogue(Builder.getLiteralUndefined());
+    if (functionNode->getSemInfo()->mayReachImplicitReturn) {
+      emitFunctionEpilogue(Builder.getLiteralUndefined());
+    } else {
+      // Don't implicitly return any value.
+      emitFunctionEpilogue(nullptr);
+    }
   };
 
   enqueueCompilation(functionNode, ExtraKey::Normal, newFunction, compileFunc);
@@ -695,10 +700,12 @@ uint32_t ESTreeIRGen::countExpectedArgumentsIncludingThis(
 }
 
 void ESTreeIRGen::emitFunctionEpilogue(Value *returnValue) {
+  Builder.setLocation(SourceErrorManager::convertEndToLocation(
+      Builder.getFunction()->getSourceRange()));
   if (returnValue) {
-    Builder.setLocation(SourceErrorManager::convertEndToLocation(
-        Builder.getFunction()->getSourceRange()));
     Builder.createReturnInst(returnValue);
+  } else {
+    Builder.createUnreachableInst();
   }
 
   // Delete CreateArgumentsInst if it is unused.

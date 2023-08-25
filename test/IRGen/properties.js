@@ -61,5 +61,5 @@ function sink(x, y) {
 // CHECK-NEXT:  %12 = LoadPropertyInst (:any) %10: any, %11: any
 // CHECK-NEXT:  %13 = ReturnInst %12: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %14 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %14 = UnreachableInst
 // CHECK-NEXT:function_end

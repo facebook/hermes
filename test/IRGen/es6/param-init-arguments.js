@@ -43,5 +43,5 @@ function foo(a = arguments) {
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [a]: any
 // CHECK-NEXT:  %9 = ReturnInst %8: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %10 = UnreachableInst
 // CHECK-NEXT:function_end

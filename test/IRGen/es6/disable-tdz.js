@@ -55,7 +55,7 @@ function check1() {
 // CHECK-NEXT:  %15 = BinaryAddInst (:any) %12: any, %14: any
 // CHECK-NEXT:  %16 = ReturnInst %15: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %17 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %17 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function inner(): any
@@ -71,7 +71,7 @@ function check1() {
 // CHECK-NEXT:  %7 = ThrowIfEmptyInst (:any) %6: any|empty
 // CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %9 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHKDIS:function global(): any
@@ -106,7 +106,7 @@ function check1() {
 // CHKDIS-NEXT:  %13 = BinaryAddInst (:any) %11: any, %12: any
 // CHKDIS-NEXT:  %14 = ReturnInst %13: any
 // CHKDIS-NEXT:%BB2:
-// CHKDIS-NEXT:  %15 = ReturnInst undefined: undefined
+// CHKDIS-NEXT:  %15 = UnreachableInst
 // CHKDIS-NEXT:function_end
 
 // CHKDIS:function inner(): any
@@ -118,5 +118,5 @@ function check1() {
 // CHKDIS-NEXT:  %3 = LoadFrameInst (:any) [y@check1]: any
 // CHKDIS-NEXT:  %4 = ReturnInst %3: any
 // CHKDIS-NEXT:%BB1:
-// CHKDIS-NEXT:  %5 = ReturnInst undefined: undefined
+// CHKDIS-NEXT:  %5 = UnreachableInst
 // CHKDIS-NEXT:function_end

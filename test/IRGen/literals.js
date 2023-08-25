@@ -54,5 +54,5 @@ foo()
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %6 = ReturnInst null: null
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %7 = UnreachableInst
 // CHECK-NEXT:function_end

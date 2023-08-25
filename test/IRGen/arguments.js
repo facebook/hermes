@@ -60,7 +60,7 @@ function shadow(arguments) {
 // CHECK-NEXT:  %3 = BinaryAddInst (:any) %1: any, %2: any
 // CHECK-NEXT:  %4 = ReturnInst %3: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %5 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function expensive(): any
@@ -75,7 +75,7 @@ function shadow(arguments) {
 // CHECK-NEXT:  %6 = BinaryAddInst (:any) %4: any, %5: any
 // CHECK-NEXT:  %7 = ReturnInst %6: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %8 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function cond(): any
@@ -104,5 +104,5 @@ function shadow(arguments) {
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: any, "length": string
 // CHECK-NEXT:  %4 = ReturnInst %3: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %5 = UnreachableInst
 // CHECK-NEXT:function_end

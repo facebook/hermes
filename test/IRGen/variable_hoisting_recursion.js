@@ -46,7 +46,7 @@ function fibonacci(n) {
 // CHECK-NEXT:  %8 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %7: any
 // CHECK-NEXT:  %9 = ReturnInst %8: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %10 = UnreachableInst
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %11 = BranchInst %BB3
 // CHECK-NEXT:%BB5:

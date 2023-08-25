@@ -92,7 +92,7 @@ function bar() {
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [arrow1]: any
 // CHECK-NEXT:  %13 = ReturnInst %12: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %14 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %14 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): any
@@ -106,7 +106,7 @@ function bar() {
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [inner]: any
 // CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %7 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:arrow arrow1(): any
@@ -142,7 +142,7 @@ function bar() {
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [arrow3]: any
 // CHECK-NEXT:  %13 = ReturnInst %12: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %14 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %14 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:arrow arrow2(): any

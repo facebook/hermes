@@ -57,5 +57,5 @@ function foo(obj) {
 // CHECK-NEXT:  %19 = CallInst (:any) %17: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %18: any
 // CHECK-NEXT:  %20 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %21 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %21 = UnreachableInst
 // CHECK-NEXT:function_end

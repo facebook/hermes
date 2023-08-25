@@ -307,7 +307,7 @@
 // CHECK-NEXT:  %186 = BinaryInstanceOfInst (:any) %184: any, %185: any
 // CHECK-NEXT:  %187 = ReturnInst %186: any
 // CHECK-NEXT:%BB20:
-// CHECK-NEXT:  %188 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %188 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function assignment_test(x: any, y: any): any
@@ -353,5 +353,5 @@
 // CHECK-NEXT:  %6 = BinaryUnsignedRightShiftInst (:any) %4: any, %5: any
 // CHECK-NEXT:  %7 = ReturnInst %6: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %8 = UnreachableInst
 // CHECK-NEXT:function_end

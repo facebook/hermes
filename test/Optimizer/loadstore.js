@@ -108,7 +108,7 @@ function test2(p1, p2) {
 // CHECK-NEXT:  %14 = LoadFrameInst (:any) [y]: any
 // CHECK-NEXT:  %15 = ReturnInst %14: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %16 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %16 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function test2(p1: any, p2: any): any

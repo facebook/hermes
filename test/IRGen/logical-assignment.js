@@ -64,7 +64,7 @@ function testComplex(x, y, z) {
 // CHECK-NEXT:  %10 = PhiInst (:any) %5: any, %BB0, %7: any, %BB1
 // CHECK-NEXT:  %11 = ReturnInst %10: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %12 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function testOr(x: any, y: any): any
@@ -85,7 +85,7 @@ function testComplex(x, y, z) {
 // CHECK-NEXT:  %10 = PhiInst (:any) %5: any, %BB0, %7: any, %BB2
 // CHECK-NEXT:  %11 = ReturnInst %10: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %12 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function testNullish(x: any, y: any): any
@@ -107,7 +107,7 @@ function testComplex(x, y, z) {
 // CHECK-NEXT:  %11 = PhiInst (:any) %5: any, %BB0, %8: any, %BB1
 // CHECK-NEXT:  %12 = ReturnInst %11: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %13 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %13 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function testComplex(x: any, y: any, z: any): any
@@ -138,5 +138,5 @@ function testComplex(x, y, z) {
 // CHECK-NEXT:  %18 = StoreFrameInst %17: any, [x]: any
 // CHECK-NEXT:  %19 = BranchInst %BB1
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %20 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %20 = UnreachableInst
 // CHECK-NEXT:function_end

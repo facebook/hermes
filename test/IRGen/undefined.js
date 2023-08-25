@@ -45,5 +45,5 @@ undefined;
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [undefined]: any
 // CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %4 = UnreachableInst
 // CHECK-NEXT:function_end

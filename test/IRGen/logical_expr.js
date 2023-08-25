@@ -58,7 +58,7 @@ function logical_and_or(y, x, z) { return x && (y || z) }
 // CHECK-NEXT:  %11 = LoadStackInst (:any) %4: any
 // CHECK-NEXT:  %12 = ReturnInst %11: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %13 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %13 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function logical_or(y: any, x: any): any
@@ -80,7 +80,7 @@ function logical_and_or(y, x, z) { return x && (y || z) }
 // CHECK-NEXT:  %11 = LoadStackInst (:any) %4: any
 // CHECK-NEXT:  %12 = ReturnInst %11: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %13 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %13 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function logical_and_and(y: any, x: any, z: any): any
@@ -113,7 +113,7 @@ function logical_and_or(y, x, z) { return x && (y || z) }
 // CHECK-NEXT:  %20 = StoreStackInst %19: any, %6: any
 // CHECK-NEXT:  %21 = CondBranchInst %19: any, %BB3, %BB4
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %22 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %22 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function logical_and_or(y: any, x: any, z: any): any
@@ -146,5 +146,5 @@ function logical_and_or(y, x, z) { return x && (y || z) }
 // CHECK-NEXT:  %20 = StoreStackInst %19: any, %6: any
 // CHECK-NEXT:  %21 = BranchInst %BB2
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %22 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %22 = UnreachableInst
 // CHECK-NEXT:function_end

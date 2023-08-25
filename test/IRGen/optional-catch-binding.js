@@ -43,7 +43,7 @@ function foo(f, g) {
 // CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %9 = UnreachableInst
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [f]: any
 // CHECK-NEXT:  %11 = CallInst (:any) %10: any, empty: any, empty: any, undefined: undefined, undefined: undefined

@@ -47,7 +47,7 @@ function foo(x = () => this) {
 // CHECK-NEXT:  %14 = CallInst (:any) %13: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %15 = ReturnInst %14: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %16 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %16 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:arrow x(): any

@@ -76,7 +76,7 @@ function f5(o) {
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [a]: any
 // CHECK-NEXT:  %11 = ReturnInst %10: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %12 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function f2(t: any): any
@@ -100,7 +100,7 @@ function f5(o) {
 // CHECK-NEXT:  %15 = LoadFrameInst (:any) [rest]: any
 // CHECK-NEXT:  %16 = ReturnInst %15: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %17 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %17 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function f3(t: any): any

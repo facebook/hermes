@@ -43,7 +43,7 @@
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst 42: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %1 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function " 1#"(val: any): any
@@ -59,5 +59,5 @@
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst 100: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %1 = UnreachableInst
 // CHECK-NEXT:function_end

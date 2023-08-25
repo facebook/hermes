@@ -66,7 +66,7 @@ function test_three(x, one, two) {
 // CHECK-NEXT:  %12 = PhiInst (:any) %10: any, %BB1, %8: any, %BB2
 // CHECK-NEXT:  %13 = ReturnInst %12: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %14 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %14 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function test_two(): any
@@ -89,7 +89,7 @@ function test_three(x, one, two) {
 // CHECK-NEXT:  %11 = PhiInst (:boolean|number) 2: number, %BB1, true: boolean, %BB2
 // CHECK-NEXT:  %12 = ReturnInst %11: boolean|number
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %13 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %13 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function test_three(x: any, one: any, two: any): any
@@ -115,5 +115,5 @@ function test_three(x, one, two) {
 // CHECK-NEXT:  %14 = PhiInst (:any) %12: any, %BB1, %9: any, %BB2
 // CHECK-NEXT:  %15 = ReturnInst %14: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %16 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %16 = UnreachableInst
 // CHECK-NEXT:function_end

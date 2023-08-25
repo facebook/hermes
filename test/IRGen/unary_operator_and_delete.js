@@ -73,7 +73,7 @@ delete_test()
 // CHECK-NEXT:  %15 = UnaryTypeofInst (:any) %14: any
 // CHECK-NEXT:  %16 = ReturnInst %15: any
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %17 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %17 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function delete_test(o: any): any

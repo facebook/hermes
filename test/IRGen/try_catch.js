@@ -235,7 +235,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %37 = TryEndInst
 // CHECK-NEXT:  %38 = BranchInst %BB3
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:  %39 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %39 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_try_catch_finally_test(): any
@@ -385,7 +385,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:%BB17:
 // CHECK-NEXT:  %49 = ThrowInst %3: any
 // CHECK-NEXT:%BB18:
-// CHECK-NEXT:  %50 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %50 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function nested_try_test(): any

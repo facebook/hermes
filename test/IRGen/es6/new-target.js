@@ -64,7 +64,7 @@ function func4() {
 // CHECK-NEXT:  %0 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
 // CHECK-NEXT:  %1 = ReturnInst %0: undefined|object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %2 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function func2(a: any): any
@@ -114,7 +114,7 @@ function func4() {
 // CHECK-NEXT:  %19 = StoreOwnPropertyInst %18: any, %16: object, 1: number, true: boolean
 // CHECK-NEXT:  %20 = ReturnInst %16: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %21 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %21 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function func4(): any
@@ -124,7 +124,7 @@ function func4() {
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: undefined|object, "prototype": string
 // CHECK-NEXT:  %2 = ReturnInst %1: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %3 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function innerFunction(): any
@@ -133,7 +133,7 @@ function func4() {
 // CHECK-NEXT:  %0 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
 // CHECK-NEXT:  %1 = ReturnInst %0: undefined|object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %2 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:arrow innerArrow1(): any

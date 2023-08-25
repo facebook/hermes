@@ -896,6 +896,8 @@ class ESTreeIRGen {
   /// and the next block in order to create less "noise".
   /// \param returnValue if non-nullptr, a return instruction for it is emitted
   ///   with debug location at the end of the source range.
+  ///   If nullptr, there is no implicit return and UnreachableInst is emitted
+  ///   instead.
   void emitFunctionEpilogue(Value *returnValue);
 
   /// Generate a body for a dummy function so that it doesn't crash the

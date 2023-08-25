@@ -87,7 +87,7 @@ function test5() {
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %13 = BranchInst %BB3
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %14 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %14 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function test1(x: any, y: any): any
@@ -149,7 +149,7 @@ function test5() {
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %11 = ReturnInst %10: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %12 = UnreachableInst
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %13 = BranchInst %BB4
 // CHECK-NEXT:%BB6:
@@ -175,7 +175,7 @@ function test5() {
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %11 = ReturnInst %10: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %12 = UnreachableInst
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %13 = BranchInst %BB4
 // CHECK-NEXT:%BB6:
@@ -187,5 +187,5 @@ function test5() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %1 = UnreachableInst
 // CHECK-NEXT:function_end

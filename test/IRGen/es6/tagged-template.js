@@ -107,7 +107,7 @@ function helloWorld() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %1 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function emptyString(): any
@@ -118,7 +118,7 @@ function helloWorld() {
 // CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any
 // CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %4 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function oneString(): any
@@ -129,7 +129,7 @@ function helloWorld() {
 // CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any
 // CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %4 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function oneSub(): any
@@ -140,7 +140,7 @@ function helloWorld() {
 // CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any, 666: number
 // CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %4 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function dup(): any
@@ -152,7 +152,7 @@ function helloWorld() {
 // CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any, %1: any
 // CHECK-NEXT:  %4 = ReturnInst %3: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %5 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function notDup(): any
@@ -164,7 +164,7 @@ function helloWorld() {
 // CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any, %1: any
 // CHECK-NEXT:  %4 = ReturnInst %3: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %5 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function memberExpr(): any
@@ -180,7 +180,7 @@ function helloWorld() {
 // CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, %5: any, %4: any
 // CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %9 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function callExpr(): any
@@ -195,7 +195,7 @@ function helloWorld() {
 // CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: any
 // CHECK-NEXT:  %7 = ReturnInst %6: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %8 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function dup2(): any
@@ -207,7 +207,7 @@ function helloWorld() {
 // CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any, %1: any
 // CHECK-NEXT:  %4 = ReturnInst %3: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %5 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function dup3(): any
@@ -218,7 +218,7 @@ function helloWorld() {
 // CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any, 7: number
 // CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %4 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function helloWorld(): any
@@ -229,7 +229,7 @@ function helloWorld() {
 // CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any, 0: number
 // CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %4 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function func(): any
@@ -238,7 +238,7 @@ function helloWorld() {
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): any
 // CHECK-NEXT:  %1 = ReturnInst %0: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %2 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): any
@@ -246,5 +246,5 @@ function helloWorld() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %1 = UnreachableInst
 // CHECK-NEXT:function_end

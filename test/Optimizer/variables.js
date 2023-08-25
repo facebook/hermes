@@ -75,5 +75,5 @@ function foo(p1, p2, p3) {
 // CHECK-NEXT:  %20 = StoreFrameInst %19: any, [k]: any
 // CHECK-NEXT:  %21 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %22 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %22 = UnreachableInst
 // CHECK-NEXT:function_end

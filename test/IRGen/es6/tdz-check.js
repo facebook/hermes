@@ -72,7 +72,7 @@ function check4() {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = StoreFrameInst 10: number, [x]: any|empty
 // CHECK-NEXT:  %7 = StoreFrameInst 1: number, [y]: any|empty
-// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %8 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function check2(p: any): any
@@ -91,7 +91,7 @@ function check4() {
 // CHECK-NEXT:  %10 = BinaryAddInst (:any) %8: any, %9: any
 // CHECK-NEXT:  %11 = ReturnInst %10: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %12 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function check3(): any
@@ -108,7 +108,7 @@ function check4() {
 // CHECK-NEXT:  %8 = UnionNarrowTrustedInst (:any) %7: any|empty
 // CHECK-NEXT:  %9 = ReturnInst %8: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %10 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function check4(): any
@@ -122,7 +122,7 @@ function check4() {
 // CHECK-NEXT:  %5 = UnionNarrowTrustedInst (:any) %4: any|empty
 // CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %7 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function check3_inner(): any
@@ -133,5 +133,5 @@ function check4() {
 // CHECK-NEXT:  %2 = BinaryAddInst (:any) %1: any, 1: number
 // CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %4 = UnreachableInst
 // CHECK-NEXT:function_end

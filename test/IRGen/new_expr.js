@@ -57,7 +57,7 @@ function test_simple_call() {
 // CHECK-NEXT:  %9 = StorePropertyLooseInst %8: any, %1: object, "year": string
 // CHECK-NEXT:  %10 = ReturnInst "wat": string
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %11 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %11 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function test_simple_new(): any

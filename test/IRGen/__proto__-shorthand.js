@@ -70,7 +70,7 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:  %5 = AllocObjectLiteralInst (:object) "__proto__": string, %4: any, "a": string, 2: number, "b": string, 3: number
 // CHECK-NEXT:  %6 = ReturnInst %5: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %7 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function protoShorthandDup(func: any): any
@@ -87,7 +87,7 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:  %8 = StoreOwnPropertyInst %7: any, %4: object, "__proto__": string, true: boolean
 // CHECK-NEXT:  %9 = ReturnInst %4: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %10 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function protoShorthandMix1(func: any): any
@@ -104,7 +104,7 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:  %8 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object, %7: object
 // CHECK-NEXT:  %9 = ReturnInst %4: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %10 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function protoShorthandMix2(func: any): any
@@ -120,5 +120,5 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:  %7 = StoreNewOwnPropertyInst %6: any, %5: object, "__proto__": string, true: boolean
 // CHECK-NEXT:  %8 = ReturnInst %5: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %9 = UnreachableInst
 // CHECK-NEXT:function_end

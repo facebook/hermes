@@ -45,7 +45,7 @@ var x = {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst "a": string
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %1 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function "get 1"(): any
@@ -53,7 +53,7 @@ var x = {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst 21: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %1 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function "set 1"(x: any): any

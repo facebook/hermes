@@ -70,7 +70,7 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:  %6 = StoreNewOwnPropertyInst 3: number, %4: object, "b": string, true: boolean
 // CHECK-NEXT:  %7 = ReturnInst %4: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %8 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function protoIsConst1(): any
@@ -80,7 +80,7 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:  %1 = StoreNewOwnPropertyInst 2: number, %0: object, "a": string, true: boolean
 // CHECK-NEXT:  %2 = ReturnInst %0: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %3 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function protoIsConst2(): any
@@ -90,7 +90,7 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:  %1 = StoreNewOwnPropertyInst 3: number, %0: object, "b": string, true: boolean
 // CHECK-NEXT:  %2 = ReturnInst %0: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %3 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function protoIsConst3(): any
@@ -100,7 +100,7 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:  %1 = StoreNewOwnPropertyInst 4: number, %0: object, "c": string, true: boolean
 // CHECK-NEXT:  %2 = ReturnInst %0: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %3 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function protoIsDynamic(func: any, getParent: any): any
@@ -120,5 +120,5 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:  %11 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object, %10: any
 // CHECK-NEXT:  %12 = ReturnInst %4: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %13 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %13 = UnreachableInst
 // CHECK-NEXT:function_end

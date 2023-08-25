@@ -60,7 +60,7 @@ function baz({a, b}) {
 // CHECK-NEXT:  %13 = BinaryAddInst (:any) %11: any, %12: any
 // CHECK-NEXT:  %14 = ReturnInst %13: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %15 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %15 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(a: any, b: any): any
@@ -90,7 +90,7 @@ function baz({a, b}) {
 // CHECK-NEXT:  %17 = BinaryAddInst (:any) %15: any, %16: any
 // CHECK-NEXT:  %18 = ReturnInst %17: any
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %19 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %19 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function baz(?anon_0_param: any): any
@@ -108,5 +108,5 @@ function baz({a, b}) {
 // CHECK-NEXT:  %9 = BinaryAddInst (:any) %7: any, %8: any
 // CHECK-NEXT:  %10 = ReturnInst %9: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %11 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %11 = UnreachableInst
 // CHECK-NEXT:function_end

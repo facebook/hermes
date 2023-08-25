@@ -56,7 +56,7 @@ return foo;
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [foo]: any
 // CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %9 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(x: any): any [typed]
@@ -72,7 +72,7 @@ return foo;
 // CHECK-NEXT:  %7 = CallInst (:any) %2: any, %C(): any, empty: any, %2: any, %4: object, %6: any
 // CHECK-NEXT:  %8 = ReturnInst %4: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %9 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function C(x: any): any [typed]

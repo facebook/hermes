@@ -147,7 +147,7 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %33 = TryEndInst
 // CHECK-NEXT:  %34 = BranchInst %BB1
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %35 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %35 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function forof_break(seq: any): any
@@ -207,7 +207,7 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %40 = TryEndInst
 // CHECK-NEXT:  %41 = BranchInst %BB1
 // CHECK-NEXT:%BB12:
-// CHECK-NEXT:  %42 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %42 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function forof_continue(seq: any): any
@@ -265,5 +265,5 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %38 = TryEndInst
 // CHECK-NEXT:  %39 = BranchInst %BB1
 // CHECK-NEXT:%BB12:
-// CHECK-NEXT:  %40 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %40 = UnreachableInst
 // CHECK-NEXT:function_end

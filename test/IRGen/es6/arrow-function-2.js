@@ -103,7 +103,7 @@ function outer2() {
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) %1: object, "a": string
 // CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %4 = UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:arrow innerArrow4(): any
