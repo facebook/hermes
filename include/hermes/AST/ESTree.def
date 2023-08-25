@@ -769,6 +769,10 @@ ESTREE_NODE_1_ARGS(
     KeyofTypeAnnotation, Flow,
     NodePtr, argument, false)
 ESTREE_NODE_2_ARGS(
+    TypeOperator, Flow,
+    NodeLabel, operator, false,
+    NodePtr, typeAnnotation, false)
+ESTREE_NODE_2_ARGS(
     QualifiedTypeofIdentifier, Flow,
     NodePtr, qualification, false,
     NodePtr, id, false)

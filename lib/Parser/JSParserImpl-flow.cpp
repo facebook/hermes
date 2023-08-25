@@ -1815,6 +1815,17 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
             new (context_) ESTree::KeyofTypeAnnotationNode(*optBody));
       }
       if (context_.getParseFlowComponentSyntax() &&
+          tok_->getResWordOrIdentifier() == rendersIdent_) {
+        advance(JSLexer::GrammarContext::Type);
+        auto optBody = parseTypeAnnotationFlow();
+        if (!optBody)
+          return None;
+        return setLocation(
+            start,
+            getPrevTokenEndLoc(),
+            new (context_) ESTree::TypeOperatorNode(rendersIdent_, *optBody));
+      }
+      if (context_.getParseFlowComponentSyntax() &&
           tok_->getResWordOrIdentifier() == componentIdent_) {
         auto optComponent = parseComponentTypeAnnotationFlow();
         if (!optComponent)
