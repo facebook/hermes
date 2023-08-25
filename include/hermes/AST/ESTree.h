@@ -1187,6 +1187,9 @@ BlockStatementNode *getBlockStatement(FunctionLikeNode *node);
 /// \return the name of the function.
 Node *getIdentifier(FunctionLikeNode *node);
 
+/// \return the return type of the function.
+Node *getReturnType(FunctionLikeNode *node);
+
 /// \return the object of the member expression node.
 Node *getObject(MemberExpressionLikeNode *node);
 

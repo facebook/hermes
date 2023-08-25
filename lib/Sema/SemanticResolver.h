@@ -518,6 +518,13 @@ class Unresolver {
   uint32_t depth_;
 };
 
+/// Runs a conservative check to determine whether there are any possible paths
+/// through the function which end in an implicit 'undefined' return.
+/// \param root the function, which has already been successfully run through
+///   SemanticResolver's function visitor.
+/// \return true if \p root can run the implicit 'return undefined'.
+bool mayReachImplicitReturn(ESTree::FunctionLikeNode *root);
+
 } // namespace sema
 } // namespace hermes
 

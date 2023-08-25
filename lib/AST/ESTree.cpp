@@ -72,6 +72,21 @@ Node *getIdentifier(FunctionLikeNode *node) {
   }
 }
 
+Node *getReturnType(FunctionLikeNode *node) {
+  switch (node->getKind()) {
+    default:
+      assert(
+          node->getKind() == NodeKind::Program && "invalid FunctionLikeNode");
+      return nullptr;
+    case NodeKind::FunctionExpression:
+      return cast<FunctionExpressionNode>(node)->_returnType;
+    case NodeKind::ArrowFunctionExpression:
+      return cast<ArrowFunctionExpressionNode>(node)->_returnType;
+    case NodeKind::FunctionDeclaration:
+      return cast<FunctionDeclarationNode>(node)->_returnType;
+  }
+}
+
 Node *getObject(MemberExpressionLikeNode *node) {
   switch (node->getKind()) {
     case NodeKind::MemberExpression:

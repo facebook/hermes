@@ -189,6 +189,13 @@ class FunctionInfo {
   /// Arguments object.
   bool containsArrowFunctionsUsingArguments = false;
 
+  /// Whether the function might execute the implicit 'undefined' return at the
+  /// end.
+  /// This is determined conservatively, so there may be some functions that in
+  /// reality can't reach the implicit return, but this bool is set to 'true'
+  /// anyway.
+  bool mayReachImplicitReturn = true;
+
   /// How many labels have been allocated in this function so far.
   uint32_t numLabels{0};
 

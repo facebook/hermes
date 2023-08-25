@@ -1072,6 +1072,13 @@ void SemanticResolver::visitFunctionLike(
     uint32_t depth = lexScope->depth;
     Unresolver::run(semCtx_, depth, node);
   }
+
+  // Determine whether the function can run the implicit return.
+  if (!sm_.getErrorCount()) {
+    // CheckImplicitReturn relies on break and continue being properly resolved,
+    // and if there's errors during resolution they might not be.
+    curFunctionInfo()->mayReachImplicitReturn = mayReachImplicitReturn(node);
+  }
 }
 
 void SemanticResolver::visitFunctionExpression(

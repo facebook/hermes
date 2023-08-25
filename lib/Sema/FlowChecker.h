@@ -170,6 +170,10 @@ class FlowChecker {
       ESTree::Node *body,
       ESTree::NodeList &params);
 
+  /// Check that the implicit return at the end of the function is valid if it
+  /// may be reached. Report an error if it isn't valid.
+  void checkImplicitReturnType(ESTree::FunctionLikeNode *node);
+
   /// Resolve and declare all types named in a scope.
   class DeclareScopeTypes;
 

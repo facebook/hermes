@@ -1568,6 +1568,34 @@ void FlowChecker::visitFunctionLike(
 
   resolveScopeTypesAndAnnotate(node, node->getSemInfo()->getFunctionScope());
   visitESTreeNode(*this, body, node);
+  checkImplicitReturnType(node);
+}
+
+void FlowChecker::checkImplicitReturnType(ESTree::FunctionLikeNode *node) {
+  // Function body isn't known to terminate.
+  // Typecheck the implicit 'return;' at the end of the block.
+  auto *ftype = llvh::dyn_cast<TypedFunctionType>(
+      curFunctionContext_->functionType->info);
+
+  // Untyped function, can't check the return type.
+  if (!ftype) {
+    return;
+  }
+
+  // No implicit return, no need to check anything.
+  if (!node->getSemInfo()->mayReachImplicitReturn) {
+    return;
+  }
+
+  // Check that the implicit "undefined" (void type) can flow into the return
+  // type.
+  CanFlowResult cf =
+      canAFlowIntoB(flowContext_.getVoid(), ftype->getReturnType());
+  if (!cf.canFlow) {
+    sm_.error(
+        ESTree::getReturnType(node)->getSourceRange(),
+        "ft: implicitly-returned 'undefined' incompatible with return type");
+  }
 }
 
 class FlowChecker::FindLoopingTypes {
