@@ -17,27 +17,22 @@ namespace ESTree {
 
 namespace detail {
 
-/// Call the method v.visit(N *node) or v.visit(N *node, Node *parent).
-template <typename V, typename N, typename U = void>
-struct VisitCaller {
-  static void call(V &v, N *node, Node *) {
-    v.visit(node);
-  }
-};
-
-// decltype((void)&...) is either SFINAE, or void.
-// So, if SFINAE does not happen for V, then this specialization exists
-// for VisitCaller<V, N, void>, and always applies.  If not, only the
-// default above exists, and that is used instead.
 template <typename V, typename N>
-struct VisitCaller<
-    V,
-    N,
-    decltype((void)static_cast<void (V::*)(N *, Node *)>(&V::visit))> {
-  static void call(V &v, N *node, Node *parent) {
+constexpr auto has_parent_param(V *v, N *n) -> decltype(v->visit(n, n), true) {
+  return true;
+}
+template <typename V, typename N>
+constexpr bool has_parent_param(...) {
+  return false;
+}
+
+template <typename V, typename N>
+void visitCaller(V &v, N *node, Node *parent) {
+  if constexpr (has_parent_param<V, N>(nullptr, nullptr))
     v.visit(node, parent);
-  }
-};
+  else
+    v.visit(node);
+}
 
 } // namespace detail
 
@@ -93,10 +88,9 @@ struct RecursiveVisitorDispatch {
       default:
         llvm_unreachable("invalid node kind");
 
-#define VISIT(NAME)                                 \
-  case NodeKind::NAME:                              \
-    detail::VisitCaller<Visitor, NAME##Node>::call( \
-        v, cast<NAME##Node>(node), parent);         \
+#define VISIT(NAME)                                         \
+  case NodeKind::NAME:                                      \
+    detail::visitCaller(v, cast<NAME##Node>(node), parent); \
     break;
 
 #define ESTREE_NODE_0_ARGS(NAME, ...) VISIT(NAME)

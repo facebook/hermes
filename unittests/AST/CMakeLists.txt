@@ -7,6 +7,7 @@ set(ASTSources
   JSONTest.cpp
   ESTreeTest.cpp
   ResolverTest.cpp
+  VisitorTest.cpp
   )
 
 add_hermes_unittest(HermesASTTests
