@@ -4207,10 +4207,6 @@ class UnreachableInst : public TerminatorInst {
 };
 
 class PrLoadInst : public Instruction {
-  // TODO: remove checkedType_ when TypeInference starts preserving it.
-  /// Type provided by the type checker.
-  Type const checkedType_;
-
  public:
   enum { ObjectIdx, PropIndexIdx, PropNameIdx };
 
@@ -4219,14 +4215,14 @@ class PrLoadInst : public Instruction {
       LiteralNumber *propIndex,
       LiteralString *propName,
       Type checkedType)
-      : Instruction(ValueKind::PrLoadInstKind), checkedType_(checkedType) {
+      : Instruction(ValueKind::PrLoadInstKind) {
     setType(checkedType);
     pushOperand(object);
     pushOperand(propIndex);
     pushOperand(propName);
   }
   explicit PrLoadInst(const PrLoadInst *src, llvh::ArrayRef<Value *> operands)
-      : Instruction(src, operands), checkedType_(src->checkedType_) {}
+      : Instruction(src, operands) {}
 
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::PrLoadInstKind;
@@ -4239,10 +4235,6 @@ class PrLoadInst : public Instruction {
   }
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setReadHeap().setIdempotent();
-  }
-
-  Type getCheckedType() const {
-    return checkedType_;
   }
 
   Value *getObject() const {
@@ -4312,16 +4304,11 @@ class PrStoreInst : public Instruction {
 };
 
 class FastArrayLoadInst : public Instruction {
-  // TODO: remove checkedType_ when TypeInference starts preserving it.
-  /// Type provided by the type checker.
-  Type const checkedType_;
-
  public:
   enum { ArrayIdx, IndexIdx };
 
   explicit FastArrayLoadInst(Value *array, Value *index, Type checkedType)
-      : Instruction(ValueKind::FastArrayLoadInstKind),
-        checkedType_(checkedType) {
+      : Instruction(ValueKind::FastArrayLoadInstKind) {
     setType(checkedType);
     pushOperand(array);
     pushOperand(index);
@@ -4329,7 +4316,7 @@ class FastArrayLoadInst : public Instruction {
   explicit FastArrayLoadInst(
       const FastArrayLoadInst *src,
       llvh::ArrayRef<Value *> operands)
-      : Instruction(src, operands), checkedType_(src->checkedType_) {}
+      : Instruction(src, operands) {}
 
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::FastArrayLoadInstKind;
@@ -4342,10 +4329,6 @@ class FastArrayLoadInst : public Instruction {
   }
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setReadHeap().setThrow();
-  }
-
-  Type getCheckedType() const {
-    return checkedType_;
   }
 
   Value *getArray() const {
