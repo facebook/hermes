@@ -1290,7 +1290,8 @@ class InstrGen {
     os_ << ", " << inst.getResolvedName()->getIndexInVariableList() << ");\n";
   }
   void generateUnreachableInst(UnreachableInst &inst) {
-    unimplemented(inst);
+    os_.indent(2);
+    os_ << "abort();\n";
   }
   void generateCreateFunctionInst(CreateFunctionInst &inst) {
     hermes_fatal("CreateFunctionInst should have been lowered.");
@@ -2048,6 +2049,8 @@ void generateModule(
     // conflicts.
     OS << "#define THIS_UNIT sh_export_" << options.unitName << R"(
 #include "hermes/VM/static_h.h"
+
+#include <stdlib.h>
 
 SHUnit THIS_UNIT;
 
