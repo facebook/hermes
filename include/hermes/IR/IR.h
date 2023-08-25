@@ -1286,6 +1286,10 @@ class Instruction
   /// \return whether this instruction has an output value.
   bool hasOutput();
 
+  /// \return whether this instruction is a typed instruction and should not,
+  /// e.g. have its type inferred by TypeInference.
+  bool isTyped() const;
+
   /// Returns true if any of the operands can have an "empty" type.
   bool acceptsEmptyType() const;
 

@@ -506,6 +506,20 @@ bool Instruction::hasOutput() {
   }
 }
 
+bool Instruction::isTyped() const {
+  switch (getKind()) {
+    default:
+      llvm_unreachable("Invalid kind");
+#define DEF_VALUE(XX, PARENT) \
+  case ValueKind::XX##Kind:   \
+    return XX::isTyped();
+#define DEF_TAG(XX, PARENT) \
+  case ValueKind::XX##Kind: \
+    return PARENT::isTyped();
+#include "hermes/IR/Instrs.def"
+  }
+}
+
 bool Instruction::acceptsEmptyType() const {
   switch (getKind()) {
     default:

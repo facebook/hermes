@@ -60,6 +60,9 @@ class SingleOperandInst : public Instruction {
   static bool hasOutput() {
     llvm_unreachable("SingleOperandInst must be inherited.");
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     llvm_unreachable("SingleOperandInst must be inherited.");
@@ -90,6 +93,9 @@ class TerminatorInst : public Instruction {
 
   static bool hasOutput() {
     llvm_unreachable("TerminatorInst must be inherited.");
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -150,6 +156,9 @@ class BranchInst : public TerminatorInst {
   static bool hasOutput() {
     return false;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return {};
@@ -194,6 +203,9 @@ class AddEmptyStringInst : public SingleOperandInst {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createExecute();
@@ -226,6 +238,9 @@ class AsNumberInst : public SingleOperandInst {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createExecute();
@@ -253,6 +268,9 @@ class AsNumericInst : public SingleOperandInst {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -283,6 +301,9 @@ class AsInt32Inst : public SingleOperandInst {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -330,6 +351,9 @@ class CondBranchInst : public TerminatorInst {
   static bool hasOutput() {
     return false;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return {};
@@ -374,6 +398,9 @@ class ReturnInst : public TerminatorInst {
       : TerminatorInst(src, operands) {}
 
   static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
     return false;
   }
 
@@ -425,6 +452,9 @@ class AllocStackInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   bool acceptsEmptyTypeImpl() const {
     return true;
@@ -460,6 +490,9 @@ class LoadStackInst : public SingleOperandInst {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   bool acceptsEmptyTypeImpl() const {
@@ -503,6 +536,9 @@ class StoreStackInst : public Instruction {
   static bool hasOutput() {
     return false;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   bool acceptsEmptyTypeImpl() const {
     return true;
@@ -541,6 +577,9 @@ class LoadFrameInst : public Instruction {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   bool acceptsEmptyTypeImpl() const {
@@ -584,6 +623,9 @@ class StoreFrameInst : public Instruction {
   static bool hasOutput() {
     return false;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   bool acceptsEmptyTypeImpl() const {
     return true;
@@ -625,6 +667,9 @@ class BaseCreateLexicalChildInst : public Instruction {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -773,6 +818,9 @@ class BaseCallInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createExecute();
@@ -878,6 +926,9 @@ class GetBuiltinClosureInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setIdempotent();
@@ -935,6 +986,9 @@ class CallIntrinsicInst : public Instruction {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -1013,6 +1067,9 @@ class HBCGetGlobalObjectInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setIdempotent();
@@ -1059,6 +1116,9 @@ class BaseStorePropertyInst : public Instruction {
   }
 
   static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
     return false;
   }
 
@@ -1264,6 +1324,9 @@ class BaseStoreOwnPropertyInst : public Instruction {
   static bool hasOutput() {
     return false;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createExecute();
@@ -1388,6 +1451,9 @@ class StoreGetterSetterInst : public Instruction {
   static bool hasOutput() {
     return false;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createExecute();
@@ -1426,6 +1492,9 @@ class DeletePropertyInst : public Instruction {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -1505,6 +1574,9 @@ class BaseLoadPropertyInst : public Instruction {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -1603,6 +1675,9 @@ class AllocObjectInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return {};
@@ -1650,6 +1725,9 @@ class HBCAllocObjectFromBufferInst : public Instruction {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -1706,6 +1784,9 @@ class AllocObjectLiteralInst : public Instruction {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -1773,6 +1854,9 @@ class GetTemplateObjectInst : public Instruction {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -1877,6 +1961,9 @@ class AllocArrayInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return {};
@@ -1917,6 +2004,9 @@ class AllocFastArrayInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return {};
@@ -1946,6 +2036,9 @@ class CreateArgumentsInst : public Instruction {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -2025,6 +2118,9 @@ class CreateRegExpInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return {};
@@ -2066,6 +2162,9 @@ class UnaryOperatorInst : public SingleOperandInst {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const;
@@ -2126,6 +2225,9 @@ class BinaryOperatorInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return getBinarySideEffect(
@@ -2154,6 +2256,9 @@ class CatchInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createUnknown().setFirstInBlock();
@@ -2180,6 +2285,9 @@ class ThrowInst : public TerminatorInst {
       : TerminatorInst(src, operands) {}
 
   static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
     return false;
   }
 
@@ -2224,6 +2332,9 @@ class ThrowTypeErrorInst : public TerminatorInst {
       : TerminatorInst(src, operands) {}
 
   static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
     return false;
   }
 
@@ -2282,6 +2393,9 @@ class SwitchInst : public TerminatorInst {
       : TerminatorInst(src, operands) {}
 
   static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
     return false;
   }
 
@@ -2343,6 +2457,9 @@ class GetPNamesInst : public TerminatorInst {
   static bool hasOutput() {
     return false;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createExecute().setReadStack().setWriteStack();
@@ -2402,6 +2519,9 @@ class GetNextPNameInst : public TerminatorInst {
       : TerminatorInst(src, operands) {}
 
   static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
     return false;
   }
 
@@ -2484,6 +2604,9 @@ class TryStartInst : public TerminatorInst {
   static bool hasOutput() {
     return false;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createUnknown();
@@ -2515,6 +2638,9 @@ class TryEndInst : public Instruction {
       : Instruction(src, operands) {}
 
   static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
     return false;
   }
 
@@ -2566,6 +2692,9 @@ class PhiInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
   bool acceptsEmptyTypeImpl() const {
     return true;
   }
@@ -2602,6 +2731,9 @@ class MovInst : public SingleOperandInst {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
   bool acceptsEmptyTypeImpl() const {
     return true;
   }
@@ -2635,6 +2767,9 @@ class ImplicitMovInst : public SingleOperandInst {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return {};
@@ -2667,6 +2802,9 @@ class CoerceThisNSInst : public SingleOperandInst {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return {};
@@ -2690,6 +2828,9 @@ class DebuggerInst : public Instruction {
       : Instruction(src, operands) {}
 
   static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
     return false;
   }
 
@@ -2722,6 +2863,9 @@ class GetNewTargetInst : public Instruction {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -2789,6 +2933,9 @@ class ThrowIfEmptyInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   bool acceptsEmptyTypeImpl() const {
     return true;
@@ -2822,6 +2969,9 @@ class HBCResolveEnvironment : public SingleOperandInst {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -2863,6 +3013,9 @@ class HBCStoreToEnvironmentInst : public Instruction {
   }
 
   static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
     return false;
   }
 
@@ -2907,6 +3060,9 @@ class HBCLoadFromEnvironmentInst : public Instruction {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -2989,6 +3145,9 @@ class SwitchImmInst : public TerminatorInst {
   static bool hasOutput() {
     return false;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return {};
@@ -3032,6 +3191,9 @@ class SaveAndYieldInst : public TerminatorInst {
       : TerminatorInst(src, operands) {}
 
   static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
     return false;
   }
 
@@ -3084,6 +3246,9 @@ class DirectEvalInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     // This is equivalent to executing an inner function.
@@ -3117,6 +3282,9 @@ class DeclareGlobalVarInst : public SingleOperandInst {
   static bool hasOutput() {
     return false;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createExecute();
@@ -3142,6 +3310,9 @@ class HBCCreateEnvironmentInst : public Instruction {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -3171,6 +3342,9 @@ class HBCProfilePointInst : public Instruction {
       : Instruction(src, operands), pointIndex_(src->pointIndex_) {}
 
   static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
     return false;
   }
 
@@ -3209,6 +3383,9 @@ class HBCLoadConstInst : public SingleOperandInst {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setIdempotent();
@@ -3245,6 +3422,9 @@ class LoadParamInst : public SingleOperandInst {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return {};
@@ -3272,6 +3452,9 @@ class LIRGetThisNSInst : public Instruction {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -3305,6 +3488,9 @@ class HBCGetArgumentsLengthInst : public SingleOperandInst {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -3349,6 +3535,9 @@ class HBCGetArgumentsPropByValInst : public Instruction {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -3425,6 +3614,9 @@ class HBCReifyArgumentsInst : public SingleOperandInst {
   }
 
   static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
     return false;
   }
 
@@ -3505,6 +3697,9 @@ class CreateThisInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return {};
@@ -3547,6 +3742,9 @@ class GetConstructedObjectInst : public Instruction {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -3610,6 +3808,9 @@ class HBCSpillMovInst : public SingleOperandInst {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return {};
@@ -3666,6 +3867,9 @@ class CompareBranchInst : public TerminatorInst {
       : TerminatorInst(src, operands) {}
 
   static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
     return false;
   }
 
@@ -3790,6 +3994,9 @@ class StartGeneratorInst : public Instruction {
   static bool hasOutput() {
     return false;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createUnknown().setFirstInBlock();
@@ -3819,6 +4026,9 @@ class ResumeGeneratorInst : public Instruction {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -3854,6 +4064,9 @@ class IteratorBeginInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createExecute().setReadStack().setWriteStack();
@@ -3888,6 +4101,9 @@ class IteratorNextInst : public Instruction {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -3929,6 +4145,9 @@ class IteratorCloseInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return false;
+  }
 
   SideEffect getSideEffectImpl() const {
     return SideEffect::createExecute();
@@ -3961,6 +4180,9 @@ class UnreachableInst : public TerminatorInst {
       : TerminatorInst(src, operands) {}
 
   static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
     return false;
   }
 
@@ -4012,6 +4234,9 @@ class PrLoadInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return true;
+  }
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setReadHeap().setIdempotent();
   }
@@ -4045,6 +4270,7 @@ class PrStoreInst : public Instruction {
       LiteralString *propName,
       LiteralBool *nonPointer)
       : Instruction(ValueKind::PrStoreInstKind) {
+    setType(Type::createNoType());
     pushOperand(storedValue);
     pushOperand(object);
     pushOperand(propIndex);
@@ -4059,6 +4285,9 @@ class PrStoreInst : public Instruction {
   }
   static bool hasOutput() {
     return false;
+  }
+  static bool isTyped() {
+    return true;
   }
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setWriteHeap().setIdempotent();
@@ -4108,6 +4337,9 @@ class FastArrayLoadInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return true;
+  }
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setReadHeap().setThrow();
   }
@@ -4130,6 +4362,7 @@ class FastArrayStoreInst : public Instruction {
 
   explicit FastArrayStoreInst(Value *storedValue, Value *array, Value *index)
       : Instruction(ValueKind::FastArrayStoreInstKind) {
+    setType(Type::createNoType());
     pushOperand(storedValue);
     pushOperand(array);
     pushOperand(index);
@@ -4144,6 +4377,9 @@ class FastArrayStoreInst : public Instruction {
   }
   static bool hasOutput() {
     return false;
+  }
+  static bool isTyped() {
+    return true;
   }
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setWriteHeap().setThrow();
@@ -4166,6 +4402,7 @@ class FastArrayPushInst : public Instruction {
 
   explicit FastArrayPushInst(Value *pushedValue, Value *array)
       : Instruction(ValueKind::FastArrayPushInstKind) {
+    setType(Type::createNoType());
     pushOperand(pushedValue);
     pushOperand(array);
   }
@@ -4179,6 +4416,9 @@ class FastArrayPushInst : public Instruction {
   }
   static bool hasOutput() {
     return false;
+  }
+  static bool isTyped() {
+    return true;
   }
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setWriteHeap().setThrow();
@@ -4198,6 +4438,7 @@ class FastArrayAppendInst : public Instruction {
 
   explicit FastArrayAppendInst(Value *other, Value *array)
       : Instruction(ValueKind::FastArrayAppendInstKind) {
+    setType(Type::createNoType());
     pushOperand(other);
     pushOperand(array);
   }
@@ -4211,6 +4452,9 @@ class FastArrayAppendInst : public Instruction {
   }
   static bool hasOutput() {
     return false;
+  }
+  static bool isTyped() {
+    return true;
   }
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setReadHeap().setWriteHeap().setThrow();
@@ -4242,6 +4486,9 @@ class FastArrayLengthInst : public Instruction {
     return V->getKind() == ValueKind::FastArrayLengthInstKind;
   }
   static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
     return true;
   }
   static llvh::Optional<Type> getInherentTypeImpl() {
@@ -4284,6 +4531,9 @@ class LoadParentInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
+  static bool isTyped() {
+    return true;
+  }
 
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setReadHeap().setIdempotent();
@@ -4303,6 +4553,7 @@ class StoreParentInst : public Instruction {
 
   explicit StoreParentInst(Value *storedValue, Value *object)
       : Instruction(ValueKind::StoreParentInstKind) {
+    setType(Type::createNoType());
     pushOperand(storedValue);
     pushOperand(object);
   }
@@ -4320,6 +4571,9 @@ class StoreParentInst : public Instruction {
 
   static bool hasOutput() {
     return false;
+  }
+  static bool isTyped() {
+    return true;
   }
 
   SideEffect getSideEffectImpl() const {
@@ -4356,6 +4610,11 @@ class UnionNarrowTrustedInst : public SingleOperandInst {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    // UnionNarrowTrusted participates in TypeInference because its type is
+    // based on the input type when possible.
+    return false;
   }
 
   bool acceptsEmptyTypeImpl() const {
@@ -4395,6 +4654,9 @@ class LIRDeadValueInst : public Instruction {
 
   static bool hasOutput() {
     return true;
+  }
+  static bool isTyped() {
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
