@@ -33,7 +33,11 @@ template <typename V, typename N>
 struct VisitCaller<
     V,
     N,
-    decltype((void)static_cast<void (V::*)(N *, Node *)>(&V::visit))> {
+    std::enable_if_t<std::is_same<
+        void,
+        decltype(std::declval<V>().visit(
+            std::declval<N *>(),
+            std::declval<Node *>()))>::value>> {
   static void call(V &v, N *node, Node *parent) {
     v.visit(node, parent);
   }
