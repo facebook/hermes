@@ -460,12 +460,14 @@ class TypeInferenceImpl {
     }
 
     // Only return true if the type actually changed.
+    inst->setType(inferredTy);
+    checkAndSetPrePassType(inst);
+    inferredTy = inst->getType();
     bool changed = inferredTy != originalTy;
 
     // For debugging, only output if things changed.
     if (changed) {
       ++NumTI;
-      inst->setType(inferredTy);
       LLVM_DEBUG(
           dbgs() << "Inferred " << inst->getName() << ": " << inst->getType()
                  << "\n");
@@ -1061,14 +1063,10 @@ bool TypeInferenceImpl::runOnFunction(Function *F) {
   } while (localChanged);
 
   // Ensure that no types were widened.
-  // Do this as a post-process step at the end to avoid possible infinite loops
-  // when the inferInstruction types widen past the pre-pass types and they keep
-  // moving back and forth.
-  for (auto &BB : *F) {
-    for (auto &I : BB) {
-      checkAndSetPrePassType(&I);
-    }
-  }
+  // No need to check instructions here, as they are handled every iteration.
+  // An infinite loop due to widening/narrowing won't occur, because if the
+  // checkAndSetPrePassType call results in no change from the original type,
+  // changed=false.
   checkAndSetPrePassType(F);
   for (auto *param : F->getJSDynamicParams()) {
     checkAndSetPrePassType(param);
