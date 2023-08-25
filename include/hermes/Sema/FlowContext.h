@@ -95,6 +95,14 @@ class TypeInfo {
    public:
     /// Pairs of (this, other) that we have visited.
     llvh::SetVector<std::pair<const TypeInfo *, const TypeInfo *>> visited{};
+
+    /// Cache for memoizing computation that could otherwise be slow.
+    /// Pairs of (this, other) and the result of the comparison/equality.
+    /// Note that for equals(), the value is a bool stored as int, so it can be
+    /// cast directly to bool for returning.
+    /// Never gets elements popped during comparison, unlike the visited set.
+    llvh::SmallDenseMap<std::pair<const TypeInfo *, const TypeInfo *>, int>
+        cache{};
   };
 
   /// Compare this type and other type lexicographically and return -1, 0, 1

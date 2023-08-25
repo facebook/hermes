@@ -134,6 +134,11 @@ int TypeInfo::compare(const TypeInfo *other, CompareState &state) const {
   else if (kind_ > other->kind_)
     return 1;
 
+  auto cached = state.cache.find({this, other});
+  if (cached != state.cache.end()) {
+    return cached->second;
+  }
+
   if (!state.visited.insert({this, other})) {
     // Failed to insert, already visited this pair.
     // Because we haven't diverged yet, they must be equal.
@@ -144,15 +149,21 @@ int TypeInfo::compare(const TypeInfo *other, CompareState &state) const {
   auto popOnExit =
       llvh::make_scope_exit([&state]() { state.visited.pop_back(); });
 
+  int result;
   switch (kind_) {
-#define _HERMES_SEMA_FLOW_DEFKIND(name)                         \
-  case TypeKind::name:                                          \
-    return static_cast<const name##Type *>(this)->_compareImpl( \
-        static_cast<const name##Type *>(other), state);
-    _HERMES_SEMA_FLOW_SINGLETONS _HERMES_SEMA_FLOW_COMPLEX_TYPES
+#define _HERMES_SEMA_FLOW_DEFKIND(name)                           \
+  case TypeKind::name:                                            \
+    result = static_cast<const name##Type *>(this)->_compareImpl( \
+        static_cast<const name##Type *>(other), state);           \
+    break;
+    _HERMES_SEMA_FLOW_SINGLETONS
+    _HERMES_SEMA_FLOW_COMPLEX_TYPES
 #undef _HERMES_SEMA_FLOW_DEFKIND
+    default:
+      hermes_fatal("invalid TypeKind");
   }
-  llvm_unreachable("invalid TypeKind");
+  state.cache[{this, other}] = result;
+  return result;
 }
 
 bool TypeInfo::equals(const TypeInfo *other) const {
@@ -162,6 +173,11 @@ bool TypeInfo::equals(const TypeInfo *other) const {
 bool TypeInfo::equals(const TypeInfo *other, CompareState &state) const {
   if (other == this)
     return true;
+
+  auto cached = state.cache.find({this, other});
+  if (cached != state.cache.end()) {
+    return cached->second;
+  }
 
   if (!state.visited.insert({this, other})) {
     // Failed to insert, already visited this pair.
@@ -190,38 +206,52 @@ bool TypeInfo::equals(const TypeInfo *other, CompareState &state) const {
   // If the kinds are different, the types can still be the same if one of them
   // is an incomplete union type. This is because union arms can be
   // deduplicated, resulting in any other type.
-  if (kind_ != other->kind_ && !thisIncomplete && !otherIncomplete)
+  if (kind_ != other->kind_ && !thisIncomplete && !otherIncomplete) {
+    state.cache[{this, other}] = false;
     return false;
+  }
 
   // Handle two unions when at least one of them is incomplete.
   if ((thisIncomplete || otherIncomplete) && llvh::isa<UnionType>(this) &&
       llvh::isa<UnionType>(this)) {
-    return listsMatchSlow(
+    bool result = listsMatchSlow(
         llvh::cast<UnionType>(this)->getTypes(),
         llvh::cast<UnionType>(other)->getTypes(),
         state);
+    state.cache[{this, other}] = result;
+    return result;
   }
   // Handle the cases of one incomplete union and a non-union.
   if (thisIncomplete) {
-    return llvh::all_of(
+    bool result = llvh::all_of(
         llvh::cast<UnionType>(this)->getTypes(),
         [&state, other](Type *t) { return t->info->equals(other, state); });
+    state.cache[{this, other}] = result;
+    return result;
   }
   if (otherIncomplete) {
-    return llvh::all_of(
+    bool result = llvh::all_of(
         llvh::cast<UnionType>(other)->getTypes(),
         [&state, this](Type *t) { return t->info->equals(this, state); });
+    state.cache[{this, other}] = result;
+    return result;
   }
 
+  bool result;
   switch (kind_) {
-#define _HERMES_SEMA_FLOW_DEFKIND(name)                        \
-  case TypeKind::name:                                         \
-    return static_cast<const name##Type *>(this)->_equalsImpl( \
-        static_cast<const name##Type *>(other), state);
-    _HERMES_SEMA_FLOW_SINGLETONS _HERMES_SEMA_FLOW_COMPLEX_TYPES
+#define _HERMES_SEMA_FLOW_DEFKIND(name)                          \
+  case TypeKind::name:                                           \
+    result = static_cast<const name##Type *>(this)->_equalsImpl( \
+        static_cast<const name##Type *>(other), state);          \
+    break;
+    _HERMES_SEMA_FLOW_SINGLETONS
+    _HERMES_SEMA_FLOW_COMPLEX_TYPES
 #undef _HERMES_SEMA_FLOW_DEFKIND
+    default:
+      hermes_fatal("invalid TypeKind");
   }
-  llvm_unreachable("invalid TypeKind");
+  state.cache[{this, other}] = result;
+  return result;
 }
 
 unsigned TypeInfo::hash() const {
