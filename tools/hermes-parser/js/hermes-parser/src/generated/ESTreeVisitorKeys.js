@@ -245,6 +245,7 @@ module.exports = {
   TypeAnnotation: ['typeAnnotation'],
   TypeCastExpression: ['expression', 'typeAnnotation'],
   TypeofTypeAnnotation: ['argument'],
+  TypeOperator: ['typeAnnotation'],
   TypeParameter: ['bound', 'variance', 'default'],
   TypeParameterDeclaration: ['params'],
   TypeParameterInstantiation: ['params'],

@@ -1025,6 +1025,14 @@ function deserializeKeyofTypeAnnotation() {
     argument: this.deserializeNode(),
   };
 }
+function deserializeTypeOperator() {
+  return {
+    type: 'TypeOperator',
+    loc: this.addEmptyLoc(),
+    operator: this.deserializeString(),
+    typeAnnotation: this.deserializeNode(),
+  };
+}
 function deserializeQualifiedTypeofIdentifier() {
   return {
     type: 'QualifiedTypeofIdentifier',
@@ -2013,6 +2021,7 @@ module.exports = [
   deserializeQualifiedTypeIdentifier,
   deserializeTypeofTypeAnnotation,
   deserializeKeyofTypeAnnotation,
+  deserializeTypeOperator,
   deserializeQualifiedTypeofIdentifier,
   deserializeTupleTypeAnnotation,
   deserializeTupleTypeSpreadElement,

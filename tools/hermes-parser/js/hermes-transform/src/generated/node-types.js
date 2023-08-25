@@ -165,6 +165,7 @@ import type {
   TypeAnnotation as TypeAnnotationType,
   TypeCastExpression as TypeCastExpressionType,
   TypeofTypeAnnotation as TypeofTypeAnnotationType,
+  TypeOperator as TypeOperatorType,
   TypeParameter as TypeParameterType,
   TypeParameterDeclaration as TypeParameterDeclarationType,
   TypeParameterInstantiation as TypeParameterInstantiationType,
@@ -1017,6 +1018,11 @@ export type TypeCastExpressionProps = {
 
 export type TypeofTypeAnnotationProps = {
   +argument: MaybeDetachedNode<TypeofTypeAnnotationType['argument']>,
+};
+
+export type TypeOperatorProps = {
+  +operator: TypeOperatorType['operator'],
+  +typeAnnotation: MaybeDetachedNode<TypeOperatorType['typeAnnotation']>,
 };
 
 export type TypeParameterProps = {
@@ -2946,6 +2952,19 @@ export function TypeofTypeAnnotation(props: {
   const node = detachedProps<TypeofTypeAnnotationType>(props.parent, {
     type: 'TypeofTypeAnnotation',
     argument: asDetachedNodeForCodeGen(props.argument),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function TypeOperator(props: {
+  ...$ReadOnly<TypeOperatorProps>,
+  +parent?: ESNode,
+}): DetachedNode<TypeOperatorType> {
+  const node = detachedProps<TypeOperatorType>(props.parent, {
+    type: 'TypeOperator',
+    operator: props.operator,
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
   return node;
