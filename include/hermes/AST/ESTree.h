@@ -372,6 +372,9 @@ class ForOfStatementDecoration : public ScopeDecorationBase {};
 
 class CatchClauseDecoration : public ScopeDecorationBase {};
 
+class JSXDecoration {};
+class FlowDecoration {};
+class TSDecoration {};
 class PatternDecoration {};
 class CoverDecoration {};
 

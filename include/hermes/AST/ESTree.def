@@ -627,70 +627,74 @@ ESTREE_LAST(Pattern)
 
 #if HERMES_PARSE_JSX
 
+ESTREE_FIRST(JSX, Base)
+
 ESTREE_NODE_1_ARGS(
-    JSXIdentifier, Base,
+    JSXIdentifier, JSX,
     NodeLabel, name, false)
 ESTREE_NODE_2_ARGS(
-    JSXMemberExpression, Base,
+    JSXMemberExpression, JSX,
     NodePtr, object, false,
     NodePtr, property, false)
 ESTREE_NODE_2_ARGS(
-    JSXNamespacedName, Base,
+    JSXNamespacedName, JSX,
     NodePtr, namespace, false,
     NodePtr, name, false)
 
 ESTREE_NODE_0_ARGS(
-    JSXEmptyExpression, Base)
+    JSXEmptyExpression, JSX)
 ESTREE_NODE_1_ARGS(
-    JSXExpressionContainer, Base,
+    JSXExpressionContainer, JSX,
     NodePtr, expression, false)
 ESTREE_NODE_1_ARGS(
-    JSXSpreadChild, Base,
+    JSXSpreadChild, JSX,
     NodePtr, expression, false)
 
 ESTREE_NODE_4_ARGS(
-    JSXOpeningElement, Base,
+    JSXOpeningElement, JSX,
     NodePtr, name, false,
     NodeList, attributes, false,
     NodeBoolean, selfClosing, false,
     NodePtr, typeArguments, true)
 ESTREE_IGNORE_IF_EMPTY(JSXOpeningElement, typeArguments)
 ESTREE_NODE_1_ARGS(
-    JSXClosingElement, Base,
+    JSXClosingElement, JSX,
     NodePtr, name, false)
 
 ESTREE_NODE_2_ARGS(
-    JSXAttribute, Base,
+    JSXAttribute, JSX,
     NodePtr, name, false,
     NodePtr, value, true)
 ESTREE_NODE_1_ARGS(
-    JSXSpreadAttribute, Base,
+    JSXSpreadAttribute, JSX,
     NodePtr, argument, false)
 ESTREE_NODE_2_ARGS(
-    JSXStringLiteral, Base,
+    JSXStringLiteral, JSX,
     NodeString, value, false,
     NodeLabel, raw, false)
 
 ESTREE_NODE_2_ARGS(
-    JSXText, Base,
+    JSXText, JSX,
     NodeString, value, false,
     NodeLabel, raw, false)
 
 ESTREE_NODE_3_ARGS(
-    JSXElement, Base,
+    JSXElement, JSX,
     NodePtr, openingElement, false,
     NodeList, children, false,
     NodePtr, closingElement, true)
 
 ESTREE_NODE_3_ARGS(
-    JSXFragment, Base,
+    JSXFragment, JSX,
     NodePtr, openingFragment, false,
     NodeList, children, false,
     NodePtr, closingFragment, false)
 ESTREE_NODE_0_ARGS(
-    JSXOpeningFragment, Base)
+    JSXOpeningFragment, JSX)
 ESTREE_NODE_0_ARGS(
-    JSXClosingFragment, Base)
+    JSXClosingFragment, JSX)
+
+ESTREE_LAST(JSX)
 
 #endif
 
@@ -700,165 +704,167 @@ ESTREE_NODE_0_ARGS(
 
 #if HERMES_PARSE_FLOW
 
-ESTREE_NODE_0_ARGS(ExistsTypeAnnotation, Base)
-ESTREE_NODE_0_ARGS(EmptyTypeAnnotation, Base)
-ESTREE_NODE_0_ARGS(StringTypeAnnotation, Base)
-ESTREE_NODE_0_ARGS(NumberTypeAnnotation, Base)
+ESTREE_FIRST(Flow, Base)
+
+ESTREE_NODE_0_ARGS(ExistsTypeAnnotation, Flow)
+ESTREE_NODE_0_ARGS(EmptyTypeAnnotation, Flow)
+ESTREE_NODE_0_ARGS(StringTypeAnnotation, Flow)
+ESTREE_NODE_0_ARGS(NumberTypeAnnotation, Flow)
 ESTREE_NODE_2_ARGS(
-    StringLiteralTypeAnnotation, Base,
+    StringLiteralTypeAnnotation, Flow,
     NodeString, value, false,
     NodeString, raw, false)
 ESTREE_NODE_2_ARGS(
-    NumberLiteralTypeAnnotation, Base,
+    NumberLiteralTypeAnnotation, Flow,
     NodeNumber, value, false,
     NodeLabel, raw, false)
 ESTREE_NODE_1_ARGS(
-    BigIntLiteralTypeAnnotation, Base,
+    BigIntLiteralTypeAnnotation, Flow,
     NodeLabel, raw, false)
-ESTREE_NODE_0_ARGS(BooleanTypeAnnotation, Base)
+ESTREE_NODE_0_ARGS(BooleanTypeAnnotation, Flow)
 ESTREE_NODE_2_ARGS(
-    BooleanLiteralTypeAnnotation, Base,
+    BooleanLiteralTypeAnnotation, Flow,
     NodeBoolean, value, false,
     NodeLabel, raw, false)
-ESTREE_NODE_0_ARGS(NullLiteralTypeAnnotation, Base)
-ESTREE_NODE_0_ARGS(SymbolTypeAnnotation, Base)
-ESTREE_NODE_0_ARGS(AnyTypeAnnotation, Base)
-ESTREE_NODE_0_ARGS(MixedTypeAnnotation, Base)
-ESTREE_NODE_0_ARGS(BigIntTypeAnnotation, Base)
-ESTREE_NODE_0_ARGS(VoidTypeAnnotation, Base)
+ESTREE_NODE_0_ARGS(NullLiteralTypeAnnotation, Flow)
+ESTREE_NODE_0_ARGS(SymbolTypeAnnotation, Flow)
+ESTREE_NODE_0_ARGS(AnyTypeAnnotation, Flow)
+ESTREE_NODE_0_ARGS(MixedTypeAnnotation, Flow)
+ESTREE_NODE_0_ARGS(BigIntTypeAnnotation, Flow)
+ESTREE_NODE_0_ARGS(VoidTypeAnnotation, Flow)
 ESTREE_NODE_5_ARGS(
-    FunctionTypeAnnotation, Base,
+    FunctionTypeAnnotation, Flow,
     NodeList, params, false,
     NodePtr, this, true,
     NodePtr, returnType, false,
     NodePtr, rest, true,
     NodePtr, typeParameters, true)
 ESTREE_NODE_3_ARGS(
-    FunctionTypeParam, Base,
+    FunctionTypeParam, Flow,
     NodePtr, name, true,
     NodePtr, typeAnnotation, false,
     NodeBoolean, optional, false)
 ESTREE_NODE_4_ARGS(
-    ComponentTypeAnnotation, Base,
+    ComponentTypeAnnotation, Flow,
     NodeList, params, false,
     NodePtr, rest, true,
     NodePtr, typeParameters, true,
     NodePtr, rendersType, true)
 ESTREE_NODE_3_ARGS(
-    ComponentTypeParameter, Base,
+    ComponentTypeParameter, Flow,
     NodePtr, name, true,
     NodePtr, typeAnnotation, false,
     NodeBoolean, optional, false)
 ESTREE_NODE_1_ARGS(
-    NullableTypeAnnotation, Base,
+    NullableTypeAnnotation, Flow,
     NodePtr, typeAnnotation, false)
 ESTREE_NODE_2_ARGS(
-    QualifiedTypeIdentifier, Base,
+    QualifiedTypeIdentifier, Flow,
     NodePtr, qualification, false,
     NodePtr, id, false)
 ESTREE_NODE_1_ARGS(
-    TypeofTypeAnnotation, Base,
+    TypeofTypeAnnotation, Flow,
     NodePtr, argument, false)
 ESTREE_NODE_1_ARGS(
-    KeyofTypeAnnotation, Base,
+    KeyofTypeAnnotation, Flow,
     NodePtr, argument, false)
 ESTREE_NODE_2_ARGS(
-    QualifiedTypeofIdentifier, Base,
+    QualifiedTypeofIdentifier, Flow,
     NodePtr, qualification, false,
     NodePtr, id, false)
 ESTREE_NODE_1_ARGS(
-    TupleTypeAnnotation, Base,
+    TupleTypeAnnotation, Flow,
     NodeList, types, false)
 ESTREE_NODE_2_ARGS(
-    TupleTypeSpreadElement, Base,
+    TupleTypeSpreadElement, Flow,
     NodePtr, label, true,
     NodePtr, typeAnnotation, false)
 ESTREE_NODE_4_ARGS(
-    TupleTypeLabeledElement, Base,
+    TupleTypeLabeledElement, Flow,
     NodePtr, label, false,
     NodePtr, elementType, false,
     NodeBoolean, optional, false,
     NodePtr, variance, true)
 ESTREE_NODE_1_ARGS(
-    ArrayTypeAnnotation, Base,
+    ArrayTypeAnnotation, Flow,
     NodePtr, elementType, false)
 ESTREE_NODE_1_ARGS(
-    InferTypeAnnotation, Base,
+    InferTypeAnnotation, Flow,
     NodePtr, typeParameter, false)
 ESTREE_NODE_1_ARGS(
-    UnionTypeAnnotation, Base,
+    UnionTypeAnnotation, Flow,
     NodeList, types, false)
 ESTREE_NODE_1_ARGS(
-    IntersectionTypeAnnotation, Base,
+    IntersectionTypeAnnotation, Flow,
     NodeList, types, false)
 ESTREE_NODE_2_ARGS(
-    GenericTypeAnnotation, Base,
+    GenericTypeAnnotation, Flow,
     NodePtr, id, false,
     NodePtr, typeParameters, true)
 ESTREE_NODE_2_ARGS(
-    IndexedAccessType, Base,
+    IndexedAccessType, Flow,
     NodePtr, objectType, false,
     NodePtr, indexType, false)
 ESTREE_NODE_3_ARGS(
-    OptionalIndexedAccessType, Base,
+    OptionalIndexedAccessType, Flow,
     NodePtr, objectType, false,
     NodePtr, indexType, false,
     NodeBoolean, optional, false)
 ESTREE_NODE_4_ARGS(
-    ConditionalTypeAnnotation, Base,
+    ConditionalTypeAnnotation, Flow,
     NodePtr, checkType, false,
     NodePtr, extendsType, false,
     NodePtr, trueType, false,
     NodePtr, falseType, false)
 ESTREE_NODE_3_ARGS(
-    TypePredicate, Base,
+    TypePredicate, Flow,
     NodePtr, parameterName, false,
     NodePtr, typeAnnotation, true,
     NodeBoolean, asserts, false)
 
 ESTREE_NODE_2_ARGS(
-    InterfaceTypeAnnotation, Base,
+    InterfaceTypeAnnotation, Flow,
     NodeList, extends, false,
     NodePtr, body, true)
 
 ESTREE_NODE_3_ARGS(
-    TypeAlias, Base,
+    TypeAlias, Flow,
     NodePtr, id, false,
     NodePtr, typeParameters, true,
     NodePtr, right, false)
 ESTREE_NODE_4_ARGS(
-    OpaqueType, Base,
+    OpaqueType, Flow,
     NodePtr, id, false,
     NodePtr, typeParameters, true,
     NodePtr, impltype, false,
     NodePtr, supertype, true)
 
 ESTREE_NODE_4_ARGS(
-    InterfaceDeclaration, Base,
+    InterfaceDeclaration, Flow,
     NodePtr, id, false,
     NodePtr, typeParameters, true,
     NodeList, extends, false,
     NodePtr, body, false)
 
 ESTREE_NODE_3_ARGS(
-    DeclareTypeAlias, Base,
+    DeclareTypeAlias, Flow,
     NodePtr, id, false,
     NodePtr, typeParameters, true,
     NodePtr, right, false)
 ESTREE_NODE_4_ARGS(
-    DeclareOpaqueType, Base,
+    DeclareOpaqueType, Flow,
     NodePtr, id, false,
     NodePtr, typeParameters, true,
     NodePtr, impltype, true,
     NodePtr, supertype, true)
 ESTREE_NODE_4_ARGS(
-    DeclareInterface, Base,
+    DeclareInterface, Flow,
     NodePtr, id, false,
     NodePtr, typeParameters, true,
     NodeList, extends, false,
     NodePtr, body, false)
 ESTREE_NODE_6_ARGS(
-    DeclareClass, Base,
+    DeclareClass, Flow,
     NodePtr, id, false,
     NodePtr, typeParameters, true,
     NodeList, extends, false,
@@ -866,58 +872,58 @@ ESTREE_NODE_6_ARGS(
     NodeList, mixins, false,
     NodePtr, body, false)
 ESTREE_NODE_2_ARGS(
-    DeclareFunction, Base,
+    DeclareFunction, Flow,
     NodePtr, id, false,
     NodePtr, predicate, true)
 ESTREE_NODE_5_ARGS(
-    DeclareComponent, Base,
+    DeclareComponent, Flow,
     NodePtr, id, false,
     NodeList, params, false,
     NodePtr, rest, true,
     NodePtr, typeParameters, true,
     NodePtr, rendersType, true)
 ESTREE_NODE_2_ARGS(
-    DeclareVariable, Base,
+    DeclareVariable, Flow,
     NodePtr, id, false,
     NodeLabel, kind, false)
 ESTREE_NODE_2_ARGS(
-    DeclareEnum, Base,
+    DeclareEnum, Flow,
     NodePtr, id, false,
     NodePtr, body, false)
 ESTREE_NODE_4_ARGS(
-    DeclareExportDeclaration, Base,
+    DeclareExportDeclaration, Flow,
     NodePtr, declaration, true,
     NodeList, specifiers, false,
     NodePtr, source, true,
     NodeBoolean, default, false)
 ESTREE_NODE_1_ARGS(
-    DeclareExportAllDeclaration, Base,
+    DeclareExportAllDeclaration, Flow,
     NodePtr, source, false)
 ESTREE_NODE_3_ARGS(
-    DeclareModule, Base,
+    DeclareModule, Flow,
     NodePtr, id, false,
     NodePtr, body, false,
     NodeLabel, kind, false)
 ESTREE_NODE_1_ARGS(
-    DeclareModuleExports, Base,
+    DeclareModuleExports, Flow,
     NodePtr, typeAnnotation, false)
 
 ESTREE_NODE_2_ARGS(
-    InterfaceExtends, Base,
+    InterfaceExtends, Flow,
     NodePtr, id, false,
     NodePtr, typeParameters, true)
 
 ESTREE_NODE_2_ARGS(
-    ClassImplements, Base,
+    ClassImplements, Flow,
     NodePtr, id, false,
     NodePtr, typeParameters, true)
 
 ESTREE_NODE_1_ARGS(
-    TypeAnnotation, Base,
+    TypeAnnotation, Flow,
     NodePtr, typeAnnotation, false)
 
 ESTREE_NODE_6_ARGS(
-    ObjectTypeAnnotation, Base,
+    ObjectTypeAnnotation, Flow,
     NodeList, properties, false,
     NodeList, indexers, false,
     NodeList, callProperties, false,
@@ -925,7 +931,7 @@ ESTREE_NODE_6_ARGS(
     NodeBoolean, inexact, false,
     NodeBoolean, exact, false)
 ESTREE_NODE_8_ARGS(
-    ObjectTypeProperty, Base,
+    ObjectTypeProperty, Flow,
     NodePtr, key, false,
     NodePtr, value, false,
     NodeBoolean, method, false,
@@ -935,28 +941,28 @@ ESTREE_NODE_8_ARGS(
     NodePtr, variance, true,
     NodeLabel, kind, false)
 ESTREE_NODE_1_ARGS(
-    ObjectTypeSpreadProperty, Base,
+    ObjectTypeSpreadProperty, Flow,
     NodePtr, argument, false)
 ESTREE_NODE_5_ARGS(
-    ObjectTypeInternalSlot, Base,
+    ObjectTypeInternalSlot, Flow,
     NodePtr, id, false,
     NodePtr, value, false,
     NodeBoolean, optional, false,
     NodeBoolean, static, false,
     NodeBoolean, method, false)
 ESTREE_NODE_2_ARGS(
-    ObjectTypeCallProperty, Base,
+    ObjectTypeCallProperty, Flow,
     NodePtr, value, false,
     NodeBoolean, static, false)
 ESTREE_NODE_5_ARGS(
-    ObjectTypeIndexer, Base,
+    ObjectTypeIndexer, Flow,
     NodePtr, id, true,
     NodePtr, key, false,
     NodePtr, value, false,
     NodeBoolean, static, false,
     NodePtr, variance, true)
 ESTREE_NODE_5_ARGS(
-    ObjectTypeMappedTypeProperty, Base,
+    ObjectTypeMappedTypeProperty, Flow,
     NodePtr, keyTparam, false,
     NodePtr, propType, false,
     NodePtr, sourceType, false,
@@ -964,14 +970,14 @@ ESTREE_NODE_5_ARGS(
     NodeString, optional, true)
 
 ESTREE_NODE_1_ARGS(
-    Variance, Base,
+    Variance, Flow,
     NodeLabel, kind, false)
 
 ESTREE_NODE_1_ARGS(
-    TypeParameterDeclaration, Base,
+    TypeParameterDeclaration, Flow,
     NodeList, params, false)
 ESTREE_NODE_5_ARGS(
-    TypeParameter, Base,
+    TypeParameter, Flow,
     NodeLabel, name, false,
     NodePtr, bound, true,
     NodePtr, variance, true,
@@ -979,71 +985,75 @@ ESTREE_NODE_5_ARGS(
     NodeBoolean, usesExtendsBound, false)
 ESTREE_IGNORE_IF_EMPTY(TypeParameter, usesExtendsBound)
 ESTREE_NODE_1_ARGS(
-    TypeParameterInstantiation, Base,
+    TypeParameterInstantiation, Flow,
     NodeList, params, false)
 
 ESTREE_NODE_2_ARGS(
-    TypeCastExpression, Base,
+    TypeCastExpression, Flow,
     NodePtr, expression, false,
     NodePtr, typeAnnotation, false)
 
-ESTREE_NODE_0_ARGS(InferredPredicate, Base)
+ESTREE_NODE_0_ARGS(InferredPredicate, Flow)
 ESTREE_NODE_1_ARGS(
-    DeclaredPredicate, Base,
+    DeclaredPredicate, Flow,
     NodePtr, value, false)
 
 ESTREE_NODE_2_ARGS(
-    EnumDeclaration, Base,
+    EnumDeclaration, Flow,
     NodePtr, id, false,
     NodePtr, body, false)
 
 ESTREE_NODE_3_ARGS(
-    EnumStringBody, Base,
+    EnumStringBody, Flow,
     NodeList, members, false,
     NodeBoolean, explicitType, false,
     NodeBoolean, hasUnknownMembers, false)
 ESTREE_NODE_3_ARGS(
-    EnumNumberBody, Base,
+    EnumNumberBody, Flow,
     NodeList, members, false,
     NodeBoolean, explicitType, false,
     NodeBoolean, hasUnknownMembers, false)
 ESTREE_NODE_3_ARGS(
-    EnumBooleanBody, Base,
+    EnumBooleanBody, Flow,
     NodeList, members, false,
     NodeBoolean, explicitType, false,
     NodeBoolean, hasUnknownMembers, false)
 ESTREE_NODE_2_ARGS(
-    EnumSymbolBody, Base,
+    EnumSymbolBody, Flow,
     NodeList, members, false,
     NodeBoolean, hasUnknownMembers, false)
 
 ESTREE_NODE_1_ARGS(
-    EnumDefaultedMember, Base,
+    EnumDefaultedMember, Flow,
     NodePtr, id, false)
 ESTREE_NODE_2_ARGS(
-    EnumStringMember, Base,
+    EnumStringMember, Flow,
     NodePtr, id, false,
     NodePtr, init, false)
 ESTREE_NODE_2_ARGS(
-    EnumNumberMember, Base,
+    EnumNumberMember, Flow,
     NodePtr, id, false,
     NodePtr, init, false)
 ESTREE_NODE_2_ARGS(
-    EnumBooleanMember, Base,
+    EnumBooleanMember, Flow,
     NodePtr, id, false,
     NodePtr, init, false)
 ESTREE_NODE_3_ARGS(
-    ComponentParameter, Base,
+    ComponentParameter, Flow,
     NodePtr, name, false,
     NodePtr, local, false,
     NodeBoolean, shorthand, false)
+
+ESTREE_LAST(Flow)
 
 #endif
 
 #if HERMES_PARSE_TS
 
+ESTREE_FIRST(TS, Base)
+
 ESTREE_NODE_1_ARGS(
-    TSTypeAnnotation, Base,
+    TSTypeAnnotation, TS,
     NodePtr, typeAnnotation, false)
 
 ESTREE_NODE_0_ARGS(TSAnyKeyword, Base)
@@ -1054,54 +1064,54 @@ ESTREE_NODE_0_ARGS(TSSymbolKeyword, Base)
 ESTREE_NODE_0_ARGS(TSVoidKeyword, Base)
 ESTREE_NODE_0_ARGS(TSThisType, Base)
 ESTREE_NODE_1_ARGS(
-    TSLiteralType, Base,
+    TSLiteralType, TS,
     NodePtr, literal, false)
 ESTREE_NODE_2_ARGS(
-    TSIndexedAccessType, Base,
+    TSIndexedAccessType, TS,
     NodePtr, objectType, false,
     NodePtr, indexType, false)
 ESTREE_NODE_1_ARGS(
-    TSArrayType, Base,
+    TSArrayType, TS,
     NodePtr, elementType, false)
 ESTREE_NODE_2_ARGS(
-    TSTypeReference, Base,
+    TSTypeReference, TS,
     NodePtr, typeName, false,
     NodePtr, typeParameters, true)
 ESTREE_NODE_2_ARGS(
-    TSQualifiedName, Base,
+    TSQualifiedName, TS,
     NodePtr, left, false,
     NodePtr, right, true)
 
 ESTREE_NODE_3_ARGS(
-    TSFunctionType, Base,
+    TSFunctionType, TS,
     NodeList, params, false,
     NodePtr, returnType, false,
     NodePtr, typeParameters, true)
 ESTREE_NODE_3_ARGS(
-    TSConstructorType, Base,
+    TSConstructorType, TS,
     NodeList, params, false,
     NodePtr, returnType, false,
     NodePtr, typeParameters, true)
 ESTREE_NODE_2_ARGS(
-    TSTypePredicate, Base,
+    TSTypePredicate, TS,
     NodePtr, parameterName, false,
     NodePtr, typeAnnotation, false)
 
 ESTREE_NODE_1_ARGS(
-    TSTupleType, Base,
+    TSTupleType, TS,
     NodeList, elementTypes, false)
 
 ESTREE_NODE_2_ARGS(
-    TSTypeAssertion, Base,
+    TSTypeAssertion, TS,
     NodePtr, typeAnnotation, false,
     NodePtr, expression, false)
 ESTREE_NODE_2_ARGS(
-    TSAsExpression, Base,
+    TSAsExpression, TS,
     NodePtr, expression, false,
     NodePtr, typeAnnotation, false)
 
 ESTREE_NODE_5_ARGS(
-    TSParameterProperty, Base,
+    TSParameterProperty, TS,
     NodePtr, parameter, false,
     NodeLabel, accessibility, true,
     NodeBoolean, readonly, false,
@@ -1109,80 +1119,80 @@ ESTREE_NODE_5_ARGS(
     NodeBoolean, export, false)
 
 ESTREE_NODE_3_ARGS(
-    TSTypeAliasDeclaration, Base,
+    TSTypeAliasDeclaration, TS,
     NodePtr, id, false,
     NodePtr, typeParameters, true,
     NodePtr, typeAnnotation, false)
 
 ESTREE_NODE_4_ARGS(
-    TSInterfaceDeclaration, Base,
+    TSInterfaceDeclaration, TS,
     NodePtr, id, false,
     NodePtr, body, false,
     NodeList, extends, false,
     NodePtr, typeParameters, true)
 ESTREE_NODE_2_ARGS(
-    TSInterfaceHeritage, Base,
+    TSInterfaceHeritage, TS,
     NodePtr, expression, false,
     NodePtr, typeParameters, true)
 ESTREE_NODE_1_ARGS(
-    TSInterfaceBody, Base,
+    TSInterfaceBody, TS,
     NodeList, body, false)
 
 ESTREE_NODE_2_ARGS(
-    TSEnumDeclaration, Base,
+    TSEnumDeclaration, TS,
     NodePtr, id, false,
     NodeList, members, false)
 ESTREE_NODE_2_ARGS(
-    TSEnumMember, Base,
+    TSEnumMember, TS,
     NodePtr, id, false,
     NodePtr, initializer, true)
 
 ESTREE_NODE_2_ARGS(
-    TSModuleDeclaration, Base,
+    TSModuleDeclaration, TS,
     NodePtr, id, false,
     NodePtr, body, false)
 ESTREE_NODE_1_ARGS(
-    TSModuleBlock, Base,
+    TSModuleBlock, TS,
     NodeList, body, false)
 ESTREE_NODE_2_ARGS(
-    TSModuleMember, Base,
+    TSModuleMember, TS,
     NodePtr, id, false,
     NodePtr, initializer, true)
 
 ESTREE_NODE_1_ARGS(
-    TSTypeParameterDeclaration, Base,
+    TSTypeParameterDeclaration, TS,
     NodeList, params, false)
 ESTREE_NODE_3_ARGS(
-    TSTypeParameter, Base,
+    TSTypeParameter, TS,
     NodePtr, name, false,
     NodePtr, constraint, true,
     NodePtr, default, true)
 
 ESTREE_NODE_1_ARGS(
-    TSTypeParameterInstantiation, Base,
+    TSTypeParameterInstantiation, TS,
     NodeList, params, false)
 
 ESTREE_NODE_1_ARGS(
-    TSUnionType, Base,
+    TSUnionType, TS,
     NodeList, types, false)
 ESTREE_NODE_1_ARGS(
-    TSIntersectionType, Base,
+    TSIntersectionType, TS,
     NodeList, types, false)
 ESTREE_NODE_1_ARGS(
-    TSTypeQuery, Base,
+    TSTypeQuery, TS,
     NodePtr, exprName, false)
 ESTREE_NODE_4_ARGS(
-    TSConditionalType, Base,
+    TSConditionalType, TS,
     NodePtr, checkType, false,
     NodePtr, extendsType, false,
     NodePtr, trueType, false,
     NodePtr, falseType, false)
 
 ESTREE_NODE_1_ARGS(
-    TSTypeLiteral, Base,
+    TSTypeLiteral, TS,
     NodeList, members, false)
 ESTREE_NODE_8_ARGS(
-    TSPropertySignature, Base,
+    TSPropertySignature, TS,
     NodePtr, key, false,
     NodePtr, typeAnnotation, true,
     NodePtr, initializer, true,
@@ -1192,24 +1202,27 @@ ESTREE_NODE_8_ARGS(
     NodeBoolean, static, false,
     NodeBoolean, export, false)
 ESTREE_NODE_4_ARGS(
-    TSMethodSignature, Base,
+    TSMethodSignature, TS,
     NodePtr, key, false,
     NodeList, params, false,
     NodePtr, returnType, true,
     NodeBoolean, computed, false)
 ESTREE_NODE_2_ARGS(
-    TSIndexSignature, Base,
+    TSIndexSignature, TS,
     NodeList, parameters, false,
     NodePtr, typeAnnotation, true)
 ESTREE_NODE_2_ARGS(
-    TSCallSignatureDeclaration, Base,
+    TSCallSignatureDeclaration, TS,
     NodeList, params, false,
     NodePtr, returnType, true)
 
 ESTREE_NODE_2_ARGS(
-    TSModifiers, Base,
+    TSModifiers, TS,
     NodeLabel, accessibility, false,
     NodeBoolean, readonly, false)
+
+ESTREE_LAST(TS)
+
 #endif
 
 // ================================================
