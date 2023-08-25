@@ -91,7 +91,7 @@ function accessorObjectLiteral(func) {
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst 4 : number, "a" : string, 10 : number, "c" : string, "hello" : string, "d" : string, null : null
 // IRGEN-NEXT:  %1 = HBCAllocObjectFromBufferInst 2 : number, 1 : number, 100 : number, 2 : number, 200 : number
-// IRGEN-NEXT:  %2 = StoreOwnPropertyInst %1 : object, %0 : object, 42 : number, true : boolean
+// IRGEN-NEXT:  %2 = StoreNewOwnPropertyInst %1 : object, %0 : object, 42 : number, true : boolean
 // IRGEN-NEXT:  %3 = ReturnInst %0 : object
 // IRGEN-NEXT:function_end
 

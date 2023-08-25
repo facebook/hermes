@@ -42,11 +42,12 @@ function g14(z) {
 // CHECK-NEXT:  %8 = CallInst %7 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %9 = BinaryOperatorInst '+', %8 : boolean|number, 1 : number
 // CHECK-NEXT:  %10 = CallInst %6, undefined : undefined, undefined : undefined, %9 : number
-// CHECK-NEXT:  %11 = CreateFunctionInst %m#1#2()#4 : undefined, %0
-// CHECK-NEXT:  %12 = AllocObjectLiteralInst "m" : string, %11 : closure
-// CHECK-NEXT:  %13 = ReturnInst %12 : object
+// CHECK-NEXT:  %11 = AllocObjectInst 1 : number, empty
+// CHECK-NEXT:  %12 = CreateFunctionInst %m#1#2()#4 : undefined, %0
+// CHECK-NEXT:  %13 = StoreNewOwnPropertyInst %12 : closure, %11 : object, "m" : string, true : boolean
+// CHECK-NEXT:  %14 = ReturnInst %11 : object
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %14 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %15 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function w#1#2()#3 : number

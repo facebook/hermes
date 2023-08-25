@@ -65,15 +65,15 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA:function shadows#0#1()#2 : undefined
 // CHKRA-NEXT:S{shadows#0#1()#2} = []
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  %0 = HBCGetGlobalObjectInst
-// CHKRA-NEXT:  %1 = TryLoadGlobalPropertyInst %0 : object, "print" : string
-// CHKRA-NEXT:  %2 = AllocObjectInst 1 : number, empty
-// CHKRA-NEXT:  %3 = StoreNewOwnPropertyInst %1, %2 : object, "keys" : string, true : boolean
-// CHKRA-NEXT:  %4 = LoadPropertyInst %2 : object, "keys" : string
+// CHKRA-NEXT:  %0 = AllocObjectInst 1 : number, empty
+// CHKRA-NEXT:  %1 = HBCGetGlobalObjectInst
+// CHKRA-NEXT:  %2 = TryLoadGlobalPropertyInst %1 : object, "print" : string
+// CHKRA-NEXT:  %3 = StoreNewOwnPropertyInst %2, %0 : object, "keys" : string, true : boolean
+// CHKRA-NEXT:  %4 = LoadPropertyInst %0 : object, "keys" : string
 // CHKRA-NEXT:  %5 = HBCLoadConstInst "evil" : string
-// CHKRA-NEXT:  %6 = ImplicitMovInst %2 : object
+// CHKRA-NEXT:  %6 = ImplicitMovInst %0 : object
 // CHKRA-NEXT:  %7 = ImplicitMovInst %5 : string
-// CHKRA-NEXT:  %8 = HBCCallNInst %4, undefined : undefined, %2 : object, %5 : string
+// CHKRA-NEXT:  %8 = HBCCallNInst %4, undefined : undefined, %0 : object, %5 : string
 // CHKRA-NEXT:  %9 = HBCLoadConstInst undefined : undefined
 // CHKRA-NEXT:  %10 = ReturnInst %9 : undefined
 // CHKRA-NEXT:function_end
@@ -162,9 +162,9 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 
 // CHKBC:Function<shadows>(1 params, 11 registers, 0 symbols):
 // CHKBC-NEXT:Offset in debug table: source 0x0034, scope 0x0000, textified callees 0x0000
+// CHKBC-NEXT:    NewObject         r2
 // CHKBC-NEXT:    GetGlobalObject   r0
 // CHKBC-NEXT:    TryGetById        r0, r0, 1, "print"
-// CHKBC-NEXT:    NewObject         r2
 // CHKBC-NEXT:    PutNewOwnByIdShort r2, r0, "keys"
 // CHKBC-NEXT:    GetByIdShort      r1, r2, 2, "keys"
 // CHKBC-NEXT:    LoadConstString   r0, "evil"
@@ -200,7 +200,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:  0x0027  function idx 1, starts at line 12 col 1
 // CHKBC-NEXT:    bc 3: line 13 col 23 scope offset 0x0000 env none
 // CHKBC-NEXT:  0x0034  function idx 2, starts at line 17 col 1
-// CHKBC-NEXT:    bc 2: line 18 col 25 scope offset 0x0000 env none
+// CHKBC-NEXT:    bc 4: line 18 col 25 scope offset 0x0000 env none
 // CHKBC-NEXT:    bc 10: line 18 col 18 scope offset 0x0000 env none
 // CHKBC-NEXT:    bc 14: line 19 col 16 scope offset 0x0000 env none
 // CHKBC-NEXT:    bc 23: line 19 col 16 scope offset 0x0000 env none

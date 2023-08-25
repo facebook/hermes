@@ -1225,8 +1225,8 @@ foo(8) @ test.js(2):3:20)#");
 (root)(0) @ (0):0:0
 global(1) @ test.js(2):2:1
 global(2) @ test.js(2):11:4
-baz(4) @ test.js(2):9:31
-bar(5) @ test.js(2):6:20)#");
+baz(3) @ test.js(2):9:31
+bar(4) @ test.js(2):6:20)#");
 
   const JSONArray &samples = *llvh::cast<JSONArray>(root->at("samples"));
   // Must have at least one sample
