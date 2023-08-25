@@ -66,6 +66,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
   // to ensure unused functions aren't capturing vars.
   PM.addSimpleStackPromotion();
   PM.addFrameLoadStoreOpts();
+  PM.addFunctionAnalysis();
   PM.addMem2Reg();
 
 #ifdef HERMES_RUN_WASM
