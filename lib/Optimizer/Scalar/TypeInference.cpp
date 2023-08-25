@@ -409,6 +409,11 @@ class TypeInferenceImpl {
   ///   type of this instruction (either the type has changed or it hasn't been
   ///   fully resolved yet).
   bool inferInstruction(Instruction *inst) {
+    if (inst->isTyped()) {
+      // Typed instructions are excluded from TypeInference.
+      return false;
+    }
+
     LLVM_DEBUG(dbgs() << "Inferring " << inst->getName() << "\n");
     Type originalTy = inst->getType();
 
@@ -461,7 +466,9 @@ class TypeInferenceImpl {
     if (changed) {
       ++NumTI;
       inst->setType(inferredTy);
-      LLVM_DEBUG(dbgs() << "Inferred " << inst->getName() << "\n");
+      LLVM_DEBUG(
+          dbgs() << "Inferred " << inst->getName() << ": " << inst->getType()
+                 << "\n");
     }
 
     return changed;
@@ -879,31 +886,31 @@ class TypeInferenceImpl {
     return Type::createNoType();
   }
   Type inferPrLoadInst(PrLoadInst *inst) {
-    return inst->getCheckedType();
+    hermes_fatal("typed instruction");
   }
   Type inferPrStoreInst(PrStoreInst *inst) {
-    return Type::createNoType();
+    hermes_fatal("typed instruction");
   }
   Type inferFastArrayLoadInst(FastArrayLoadInst *inst) {
-    return inst->getCheckedType();
+    hermes_fatal("typed instruction");
   }
   Type inferFastArrayStoreInst(FastArrayStoreInst *inst) {
-    return Type::createNoType();
+    hermes_fatal("typed instruction");
   }
   Type inferFastArrayPushInst(FastArrayPushInst *inst) {
-    return Type::createNoType();
+    hermes_fatal("typed instruction");
   }
   Type inferFastArrayAppendInst(FastArrayAppendInst *inst) {
-    return Type::createNoType();
+    hermes_fatal("typed instruction");
   }
   Type inferFastArrayLengthInst(FastArrayLengthInst *inst) {
-    return *inst->getInherentType();
+    hermes_fatal("typed instruction");
   }
   Type inferLoadParentInst(LoadParentInst *inst) {
-    return *inst->getInherentType();
+    hermes_fatal("typed instruction");
   }
   Type inferStoreParentInst(StoreParentInst *inst) {
-    return Type::createNoType();
+    hermes_fatal("typed instruction");
   }
   Type inferUnionNarrowTrustedInst(UnionNarrowTrustedInst *inst) {
     auto res = Type::intersectTy(
@@ -949,6 +956,11 @@ class TypeInferenceImpl {
     for (auto &bbit : *f) {
       for (auto &it : bbit) {
         Instruction *inst = &it;
+        if (inst->isTyped()) {
+          // Typed instructions preserve their types in TypeInference.
+          // Don't modify them.
+          continue;
+        }
         llvh::Optional<Type> inherent = inst->getInherentType();
         prePassTypes_.try_emplace(inst, inst->getType());
         // Clear to the inherent type if possible.
