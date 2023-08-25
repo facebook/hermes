@@ -63,8 +63,8 @@
   background-color: black;
 }
 
-.videoIframe{
-  height: 315px;
-  max-width: 560px;
+.video {
   width: 100%;
+  max-width: 560px;
+  aspect-ratio: 1.777;
 }
