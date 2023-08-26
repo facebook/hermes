@@ -8,6 +8,7 @@ add_hermes_library(hermesAST
     ESTree.cpp
     ESTreeJSONDumper.cpp
     CommonJS.cpp
+    TS2Flow.cpp
     LINK_OBJLIBS
     hermesRegex
     hermesSupport

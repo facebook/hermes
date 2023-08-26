@@ -9,6 +9,7 @@
 #include "compile.h"
 
 #include "hermes/AST/ESTreeJSONDumper.h"
+#include "hermes/AST/TS2Flow.h"
 #include "hermes/IR/IRVerifier.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Optimizer/PassManager/PassManager.h"
@@ -516,7 +517,7 @@ std::shared_ptr<Context> createContext() {
     context->setParseTS(true);
 #endif
 
-  if (!cli::ParseFlow && cli::ParseTS && cli::Typed) {
+  if (!cli::ParseFlow && !cli::ParseTS && cli::Typed) {
     llvh::errs() << "error: no typed dialect parser is configured\n";
     return nullptr;
   }
@@ -607,6 +608,16 @@ ESTree::NodePtr parseJS(
 
   if (cli::StaticBuiltins == cli::StaticBuiltinSetting::AutoDetect) {
     context->setStaticBuiltinOptimization(useStaticBuiltinDetected);
+  }
+
+  // Convert TS AST to Flow AST as an intermediate step until we have a separate
+  // TS type checker.
+  if (flowContext && context->getParseTS()) {
+    parsedAST =
+        hermes::convertTSToFlow(*context, cast<ESTree::ProgramNode>(parsedAST));
+    if (!parsedAST) {
+      return nullptr;
+    }
   }
 
   assert(!wrapCJSModule && "unsupported");
