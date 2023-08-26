@@ -33,7 +33,7 @@ type A = renders B;
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
-type A = renders (B | C);
+type A = renders (B | C) | null;
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "TypeAlias",
 // CHECK-NEXT:       "id": {
@@ -42,29 +42,37 @@ type A = renders (B | C);
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "typeParameters": null,
 // CHECK-NEXT:       "right": {
-// CHECK-NEXT:         "type": "TypeOperator",
-// CHECK-NEXT:         "operator": "renders",
-// CHECK-NEXT:         "typeAnnotation": {
-// CHECK-NEXT:           "type": "UnionTypeAnnotation",
-// CHECK-NEXT:           "types": [
-// CHECK-NEXT:             {
-// CHECK-NEXT:               "type": "GenericTypeAnnotation",
-// CHECK-NEXT:               "id": {
-// CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "B"
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "typeParameters": null
-// CHECK-NEXT:             },
-// CHECK-NEXT:             {
-// CHECK-NEXT:               "type": "GenericTypeAnnotation",
-// CHECK-NEXT:               "id": {
-// CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "C"
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "typeParameters": null
+// CHECK-NEXT:         "type": "UnionTypeAnnotation",
+// CHECK-NEXT:         "types": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "TypeOperator",
+// CHECK-NEXT:             "operator": "renders",
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "UnionTypeAnnotation",
+// CHECK-NEXT:               "types": [
+// CHECK-NEXT:                 {
+// CHECK-NEXT:                   "type": "GenericTypeAnnotation",
+// CHECK-NEXT:                   "id": {
+// CHECK-NEXT:                     "type": "Identifier",
+// CHECK-NEXT:                     "name": "B"
+// CHECK-NEXT:                   },
+// CHECK-NEXT:                   "typeParameters": null
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 {
+// CHECK-NEXT:                   "type": "GenericTypeAnnotation",
+// CHECK-NEXT:                   "id": {
+// CHECK-NEXT:                     "type": "Identifier",
+// CHECK-NEXT:                     "name": "C"
+// CHECK-NEXT:                   },
+// CHECK-NEXT:                   "typeParameters": null
+// CHECK-NEXT:                 }
+// CHECK-NEXT:               ]
 // CHECK-NEXT:             }
-// CHECK-NEXT:           ]
-// CHECK-NEXT:         }
+// CHECK-NEXT:           },
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "NullLiteralTypeAnnotation"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ]
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
