@@ -853,7 +853,7 @@
     }
     return firstArg;
   }
-  var GraphQLError = class extends Error {
+  var GraphQLError = class _GraphQLError extends Error {
     /**
      * An array of `{ line, column }` locations within the source GraphQL document
      * which correspond to this error.
@@ -940,7 +940,7 @@
           configurable: true
         });
       } else if (Error.captureStackTrace) {
-        Error.captureStackTrace(this, GraphQLError);
+        Error.captureStackTrace(this, _GraphQLError);
       } else {
         Object.defineProperty(this, "stack", {
           value: Error().stack,
@@ -1740,8 +1740,7 @@
   var instanceOf = (
     /* c8 ignore next 6 */
     // FIXME: https://github.com/graphql/graphql-js/issues/2317
-    // eslint-disable-next-line no-undef
-    true ? function instanceOf2(value, constructor) {
+    globalThis.process && globalThis.process.env.NODE_ENV === "production" ? function instanceOf2(value, constructor) {
       return value instanceof constructor;
     } : function instanceOf3(value, constructor) {
       if (value instanceof constructor) {

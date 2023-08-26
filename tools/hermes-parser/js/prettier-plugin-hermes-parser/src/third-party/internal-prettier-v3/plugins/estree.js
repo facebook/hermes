@@ -257,7 +257,7 @@
   function getDocErrorMessage(doc) {
     const type = doc === null ? "null" : typeof doc;
     if (type !== "string" && type !== "object") {
-      return `Unexpected doc '${type}',
+      return `Unexpected doc '${type}', 
 Expected it to be 'string' or 'object'.`;
     }
     if (get_doc_type_default(doc)) {
@@ -1237,7 +1237,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       "typeParameters",
       "superTypeParameters",
       "implements",
-      "decorators"
+      "decorators",
+      "superTypeArguments"
     ],
     "ClassDeclaration": [
       "id",
@@ -1247,12 +1248,14 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       "typeParameters",
       "superTypeParameters",
       "implements",
-      "decorators"
+      "decorators",
+      "superTypeArguments"
     ],
     "ExportAllDeclaration": [
       "source",
-      "exported",
-      "assertions"
+      "attributes",
+      "assertions",
+      "exported"
     ],
     "ExportDefaultDeclaration": [
       "declaration"
@@ -1261,6 +1264,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       "declaration",
       "specifiers",
       "source",
+      "attributes",
       "assertions"
     ],
     "ExportSpecifier": [
@@ -1275,6 +1279,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     "ImportDeclaration": [
       "specifiers",
       "source",
+      "attributes",
       "assertions"
     ],
     "ImportDefaultSpecifier": [
@@ -1311,7 +1316,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     "TaggedTemplateExpression": [
       "tag",
       "quasi",
-      "typeParameters"
+      "typeParameters",
+      "typeArguments"
     ],
     "TemplateElement": [],
     "TemplateLiteral": [
@@ -1623,6 +1629,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     "JSXOpeningElement": [
       "name",
       "attributes",
+      "typeArguments",
       "typeParameters"
     ],
     "JSXSpreadAttribute": [
@@ -1757,7 +1764,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     ],
     "TSTypeReference": [
       "typeName",
-      "typeParameters"
+      "typeParameters",
+      "typeArguments"
     ],
     "TSTypePredicate": [
       "parameterName",
@@ -1765,7 +1773,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     ],
     "TSTypeQuery": [
       "exprName",
-      "typeParameters"
+      "typeParameters",
+      "typeArguments"
     ],
     "TSTypeLiteral": [
       "members"
@@ -1839,7 +1848,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     ],
     "TSInstantiationExpression": [
       "expression",
-      "typeParameters"
+      "typeParameters",
+      "typeArguments"
     ],
     "TSAsExpression": [
       "expression",
@@ -1872,7 +1882,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       "argument",
       "qualifier",
       "typeParameters",
-      "parameter"
+      "typeArguments"
     ],
     "TSImportEqualsDeclaration": [
       "id",
@@ -1959,6 +1969,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     "TSAsyncKeyword": [],
     "TSClassImplements": [
       "expression",
+      "typeArguments",
       "typeParameters"
     ],
     "TSDeclareKeyword": [],
@@ -1971,6 +1982,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     "TSExportKeyword": [],
     "TSInterfaceHeritage": [
       "expression",
+      "typeArguments",
       "typeParameters"
     ],
     "TSPrivateKeyword": [],
@@ -2045,6 +2057,9 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     ],
     "TupleTypeSpreadElement": [
       "label",
+      "typeAnnotation"
+    ],
+    "TypeOperator": [
       "typeAnnotation"
     ],
     "TypePredicate": [
@@ -3015,13 +3030,19 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return parent.type === "TSArrayType" || parent.type === "TSOptionalType" || parent.type === "TSRestType" || key === "objectType" && parent.type === "TSIndexedAccessType" || parent.type === "TSTypeOperator" || parent.type === "TSTypeAnnotation" && path.grandparent.type.startsWith("TSJSDoc");
       case "TSTypeQuery":
         return key === "objectType" && parent.type === "TSIndexedAccessType" || key === "elementType" && parent.type === "TSArrayType";
+      case "TypeOperator":
+        return parent.type === "ArrayTypeAnnotation" || parent.type === "NullableTypeAnnotation" || key === "objectType" && (parent.type === "IndexedAccessType" || parent.type === "OptionalIndexedAccessType") || parent.type === "TypeOperator";
       case "TypeofTypeAnnotation":
         return key === "objectType" && (parent.type === "IndexedAccessType" || parent.type === "OptionalIndexedAccessType") || key === "elementType" && parent.type === "ArrayTypeAnnotation";
       case "ArrayTypeAnnotation":
         return parent.type === "NullableTypeAnnotation";
       case "IntersectionTypeAnnotation":
       case "UnionTypeAnnotation":
-        return parent.type === "ArrayTypeAnnotation" || parent.type === "NullableTypeAnnotation" || parent.type === "IntersectionTypeAnnotation" || parent.type === "UnionTypeAnnotation" || key === "objectType" && (parent.type === "IndexedAccessType" || parent.type === "OptionalIndexedAccessType");
+        return parent.type === "TypeOperator" || parent.type === "ArrayTypeAnnotation" || parent.type === "NullableTypeAnnotation" || parent.type === "IntersectionTypeAnnotation" || parent.type === "UnionTypeAnnotation" || key === "objectType" && (parent.type === "IndexedAccessType" || parent.type === "OptionalIndexedAccessType") || path.match(
+          void 0,
+          (node2, key2) => node2.type === "TypeAnnotation",
+          (node2, key2) => key2 === "rendersType" && (node2.type === "ComponentDeclaration" || node2.type === "ComponentTypeAnnotation" || node2.type === "DeclareComponent")
+        );
       case "InferTypeAnnotation":
       case "NullableTypeAnnotation":
         return parent.type === "ArrayTypeAnnotation" || key === "objectType" && (parent.type === "IndexedAccessType" || parent.type === "OptionalIndexedAccessType");
@@ -3786,7 +3807,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         const isSingleLineComment = comment.type === "SingleLine" || comment.loc.start.line === comment.loc.end.line;
         const isSameLineComment = comment.loc.start.line === precedingNode.loc.start.line;
         if (isSingleLineComment && isSameLineComment) {
-          addDanglingComment(precedingNode, comment, markerForIfWithoutBlockAndSameLineComment);
+          addDanglingComment(precedingNode, comment, precedingNode.type === "ExpressionStatement" ? markerForIfWithoutBlockAndSameLineComment : void 0);
         } else {
           addDanglingComment(enclosingNode, comment);
         }
@@ -4909,7 +4930,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     const shouldInline = shouldInlineLogicalExpression(node);
     const lineBeforeOperator = (node.operator === "|>" || node.type === "NGPipeExpression" || isVueFilterSequenceExpression(path, options2)) && !hasLeadingOwnLineComment(options2.originalText, node.right);
     const operator = node.type === "NGPipeExpression" ? "|" : node.operator;
-    const rightSuffix = node.type === "NGPipeExpression" && node.arguments.length > 0 ? group(indent([line, ": ", join([line, ": "], path.map(() => align(2, group(print3())), "arguments"))])) : "";
+    const rightSuffix = node.type === "NGPipeExpression" && node.arguments.length > 0 ? group(indent([softline, ": ", join([line, ": "], path.map(() => align(2, group(print3())), "arguments"))])) : "";
     let right;
     if (shouldInline) {
       right = [operator, " ", print3("right"), rightSuffix];
@@ -4964,6 +4985,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
 
   // src/common/errors.js
   var ArgExpansionBailout = class extends Error {
+    name = "ArgExpansionBailout";
   };
 
   // src/language-js/print/array.js
@@ -5552,7 +5574,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       return false;
     }
     if (node.callee.name === "require") {
-      return true;
+      const args = getCallArguments(node);
+      return args.length === 1 && isStringLiteral(args[0]) || args.length > 1;
     }
     if (node.callee.name === "define") {
       const args = getCallArguments(node);
@@ -5786,7 +5809,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     let node = rightNode;
     const propertiesForPath = [];
     for (; ; ) {
-      if (node.type === "UnaryExpression") {
+      if (node.type === "UnaryExpression" || node.type === "AwaitExpression" || node.type === "YieldExpression" && node.argument !== null) {
         node = node.argument;
         propertiesForPath.push("argument");
       } else if (node.type === "TSNonNullExpression") {
@@ -5997,7 +6020,9 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       }
       return group([removeLines(typeParams), "(", removeLines(printed), ")"]);
     }
-    const hasNotParameterDecorator = parameters.every((node) => !node.decorators);
+    const hasNotParameterDecorator = parameters.every(
+      (node) => !is_non_empty_array_default(node.decorators)
+    );
     if (shouldHugParameters && hasNotParameterDecorator) {
       return [typeParams, "(", ...printed, ")"];
     }
@@ -6313,7 +6338,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         (node, key) => key === "typeAnnotation" && (node.type === "TSJSDocNullableType" || node.type === "TSJSDocNonNullableType" || node.type === "TSTypePredicate")
       ) || /*
           Flow
-
+      
           ```js
           declare function foo(): void;
                               ^^^^^^^^ `TypeAnnotation`
@@ -6325,7 +6350,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         (node, key) => key === "id" && node.type === "DeclareFunction"
       ) || /*
           Flow
-
+      
           ```js
           type A = () => infer R extends string;
                                          ^^^^^^ `TypeAnnotation`
@@ -6506,7 +6531,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       printImportKind(node),
       printModuleSpecifiers(path, options2, print3),
       printModuleSource(path, options2, print3),
-      printImportAssertions(path, options2, print3),
+      printImportAttributes(path, options2, print3),
       options2.semi ? ";" : ""
     ];
   }
@@ -6540,7 +6565,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       }
       parts.push(
         printModuleSource(path, options2, print3),
-        printImportAssertions(path, options2, print3)
+        printImportAttributes(path, options2, print3)
       );
     }
     parts.push(printSemicolonAfterExportDeclaration(node, options2));
@@ -6646,15 +6671,18 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       options2.originalText.slice(locStart(node), locStart(source))
     );
   }
-  function printImportAssertions(path, options2, print3) {
+  function printImportAttributes(path, options2, print3) {
+    var _a;
     const { node } = path;
-    if (!is_non_empty_array_default(node.assertions)) {
+    const property = is_non_empty_array_default(node.attributes) ? "attributes" : is_non_empty_array_default(node.assertions) ? "assertions" : void 0;
+    if (!property) {
       return "";
     }
+    const keyword = property === "assertions" || ((_a = node.extra) == null ? void 0 : _a.deprecatedAssertSyntax) ? "assert" : "with";
     return [
-      " assert {",
+      ` ${keyword} {`,
       options2.bracketSpacing ? " " : "",
-      join(", ", path.map(print3, "assertions")),
+      join(", ", path.map(print3, property)),
       options2.bracketSpacing ? " " : "",
       "}"
     ];
@@ -7790,7 +7818,13 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       parts.push(printTypeAnnotationProperty(path, print3, "bound"));
     }
     if (node.constraint) {
-      parts.push(" extends", indent([line, print3("constraint")]));
+      const groupId = Symbol("constraint");
+      parts.push(
+        " extends",
+        group(indent(line), { id: groupId }),
+        lineSuffixBoundary,
+        indentIfBreak(print3("constraint"), { groupId })
+      );
     }
     if (node.default) {
       parts.push(" = ", print3("default"));
@@ -7799,10 +7833,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }
 
   // scripts/build/shims/assert.js
-  var assert = () => {
-  };
-  assert.ok = assert;
-  assert.strictEqual = assert;
+  var assert = new Proxy(() => {
+  }, { get: () => assert });
   var assert_default = assert;
 
   // src/language-js/print/property.js
@@ -8014,7 +8046,15 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return ["throw", printReturnOrThrowArgument(path, options2, print3)];
   }
   function returnArgumentHasLeadingComment(options2, argument) {
-    if (hasLeadingOwnLineComment(options2.originalText, argument)) {
+    if (hasLeadingOwnLineComment(options2.originalText, argument) || hasComment(
+      argument,
+      CommentCheckFlags.Leading,
+      (comment) => has_newline_in_range_default(
+        options2.originalText,
+        locStart(comment),
+        locEnd(comment)
+      )
+    ) && !isJsxElement(argument)) {
       return true;
     }
     if (hasNakedLeftSide(argument)) {
@@ -8339,7 +8379,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     } else {
       content = [isFlowInterfaceLikeBody && is_non_empty_array_default(node.properties) ? printHardlineAfterHeritage(parent) : "", leftBrace, indent([options2.bracketSpacing ? line : softline, ...props]), ifBreak(canHaveTrailingSeparator && (separator !== "," || shouldPrintComma(options2)) ? separator : ""), options2.bracketSpacing ? line : softline, rightBrace, printOptionalToken(path), printTypeAnnotationProperty(path, print3)];
     }
-    if (path.match((node2) => node2.type === "ObjectPattern" && !node2.decorators, shouldHugTheOnlyParameter) || isObjectType(node) && (path.match(void 0, (node2, name) => name === "typeAnnotation", (node2, name) => name === "typeAnnotation", shouldHugTheOnlyParameter) || path.match(void 0, (node2, name) => node2.type === "FunctionTypeParam" && name === "typeAnnotation", shouldHugTheOnlyParameter)) || // Assignment printing logic (printAssignment) is responsible
+    if (path.match((node2) => node2.type === "ObjectPattern" && !is_non_empty_array_default(node2.decorators), shouldHugTheOnlyParameter) || isObjectType(node) && (path.match(void 0, (node2, name) => name === "typeAnnotation", (node2, name) => name === "typeAnnotation", shouldHugTheOnlyParameter) || path.match(void 0, (node2, name) => node2.type === "FunctionTypeParam" && name === "typeAnnotation", shouldHugTheOnlyParameter)) || // Assignment printing logic (printAssignment) is responsible
     // for adding a group if needed
     !shouldBreak && path.match((node2) => node2.type === "ObjectPattern", (node2) => node2.type === "AssignmentExpression" || node2.type === "VariableDeclarator")) {
       return content;
@@ -8735,6 +8775,17 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       }
       const doc = join([",", line], parameterDocs);
       return options2.__isVueForBindingLeft ? ["(", indent([softline, group(doc)]), softline, ")"] : doc;
+    }
+    if (options2.__isEmbeddedTypescriptGenericParameters) {
+      const parameterDocs = path.map(
+        print3,
+        "program",
+        "body",
+        0,
+        "typeParameters",
+        "params"
+      );
+      return join([",", line], parameterDocs);
     }
   }
 
@@ -9663,6 +9714,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         ];
       case "TypePredicate":
         return printTypePredicate(path, print3);
+      case "TypeOperator":
+        return [node.operator, " ", print3("typeAnnotation")];
       case "TypeParameterDeclaration":
       case "TypeParameterInstantiation":
         return printTypeParameters(path, options2, print3, "params");
@@ -9814,10 +9867,15 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return [
           !node.isTypeOf ? "" : "typeof ",
           "import(",
-          print3(node.parameter ? "parameter" : "argument"),
+          print3("argument"),
           ")",
           !node.qualifier ? "" : [".", print3("qualifier")],
-          printTypeParameters(path, options2, print3, "typeParameters")
+          printTypeParameters(
+            path,
+            options2,
+            print3,
+            node.typeArguments ? "typeArguments" : "typeParameters"
+          )
         ];
       case "TSLiteralType":
         return print3("literal");
@@ -10396,7 +10454,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     if ((ast.type === "Property" || ast.type === "ObjectProperty" || ast.type === "MethodDefinition" || ast.type === "ClassProperty" || ast.type === "ClassMethod" || ast.type === "PropertyDefinition" || ast.type === "TSDeclareMethod" || ast.type === "TSPropertySignature" || ast.type === "ObjectTypeProperty") && typeof ast.key === "object" && ast.key && (ast.key.type === "Literal" || ast.key.type === "NumericLiteral" || ast.key.type === "StringLiteral" || ast.key.type === "Identifier")) {
       delete newObj.key;
     }
-    if (ast.type === "JSXElement" && ast.openingElement.name.name === "style" && ast.openingElement.attributes.some((attr) => attr.name.name === "jsx")) {
+    if (ast.type === "JSXElement" && ast.openingElement.name.name === "style" && ast.openingElement.attributes.some((attr) => attr.type === "JSXAttribute" && attr.name.name === "jsx")) {
       for (const {
         type,
         expression: expression2
@@ -10898,6 +10956,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         ".yyp"
       ],
       "filenames": [
+        ".all-contributorsrc",
         ".arcconfig",
         ".auto-changelog",
         ".c8rc",
@@ -10909,6 +10968,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         ".watchmanconfig",
         "Pipfile.lock",
         "composer.lock",
+        "flake.lock",
         "mcmod.info"
       ],
       "parsers": [
@@ -10955,14 +11015,14 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         ".jscsrc",
         ".jshintrc",
         ".jslintrc",
+        ".swcrc",
         "api-extractor.json",
         "devcontainer.json",
         "jsconfig.json",
         "language-configuration.json",
         "tsconfig.json",
         "tslint.json",
-        ".eslintrc",
-        ".swcrc"
+        ".eslintrc"
       ],
       "parsers": [
         "json"

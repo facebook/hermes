@@ -11,12 +11,11 @@ exports[`flowDefToTSDef object/mapped-objects 1`] = `
  */
 
 export type FlattenTokens<
-  T extends
-    {
-      readonly [$$Key$$: string]:
-        | string
-        | {readonly default: string; readonly [$$Key$$: string]: string};
-    },
+  T extends {
+    readonly [$$Key$$: string]:
+      | string
+      | {readonly default: string; readonly [$$Key$$: string]: string};
+  },
 > = {
   readonly [Key in keyof T]: T[Key] extends {
     readonly default: infer X;

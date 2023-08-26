@@ -3035,6 +3035,176 @@ exports[`ComponentDeclaration ref param ESTree 1`] = `
 }
 `;
 
+exports[`ComponentDeclaration renders type (complex) Babel 1`] = `
+{
+  "body": [
+    {
+      "__componentDeclaration": true,
+      "async": false,
+      "body": {
+        "body": [],
+        "directives": [],
+        "type": "BlockStatement",
+      },
+      "generator": false,
+      "id": {
+        "name": "Foo",
+        "type": "Identifier",
+      },
+      "params": [],
+      "returnType": {
+        "type": "TypeAnnotation",
+        "typeAnnotation": {
+          "type": "UnionTypeAnnotation",
+          "types": [
+            {
+              "id": {
+                "name": "SpecialType",
+                "type": "Identifier",
+              },
+              "type": "GenericTypeAnnotation",
+              "typeParameters": null,
+            },
+            {
+              "id": {
+                "name": "OtherSpecialType",
+                "type": "Identifier",
+              },
+              "type": "GenericTypeAnnotation",
+              "typeParameters": null,
+            },
+          ],
+        },
+      },
+      "type": "FunctionDeclaration",
+    },
+  ],
+  "type": "Program",
+}
+`;
+
+exports[`ComponentDeclaration renders type (complex) ESTree 1`] = `
+{
+  "body": [
+    {
+      "body": {
+        "body": [],
+        "type": "BlockStatement",
+      },
+      "id": {
+        "name": "Foo",
+        "optional": false,
+        "type": "Identifier",
+        "typeAnnotation": null,
+      },
+      "params": [],
+      "rendersType": {
+        "type": "TypeAnnotation",
+        "typeAnnotation": {
+          "type": "UnionTypeAnnotation",
+          "types": [
+            {
+              "id": {
+                "name": "SpecialType",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": null,
+              },
+              "type": "GenericTypeAnnotation",
+              "typeParameters": null,
+            },
+            {
+              "id": {
+                "name": "OtherSpecialType",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": null,
+              },
+              "type": "GenericTypeAnnotation",
+              "typeParameters": null,
+            },
+          ],
+        },
+      },
+      "type": "ComponentDeclaration",
+      "typeParameters": null,
+    },
+  ],
+  "type": "Program",
+}
+`;
+
+exports[`ComponentDeclaration renders type Babel 1`] = `
+{
+  "body": [
+    {
+      "__componentDeclaration": true,
+      "async": false,
+      "body": {
+        "body": [],
+        "directives": [],
+        "type": "BlockStatement",
+      },
+      "generator": false,
+      "id": {
+        "name": "Foo",
+        "type": "Identifier",
+      },
+      "params": [],
+      "returnType": {
+        "type": "TypeAnnotation",
+        "typeAnnotation": {
+          "id": {
+            "name": "SpecialType",
+            "type": "Identifier",
+          },
+          "type": "GenericTypeAnnotation",
+          "typeParameters": null,
+        },
+      },
+      "type": "FunctionDeclaration",
+    },
+  ],
+  "type": "Program",
+}
+`;
+
+exports[`ComponentDeclaration renders type ESTree 1`] = `
+{
+  "body": [
+    {
+      "body": {
+        "body": [],
+        "type": "BlockStatement",
+      },
+      "id": {
+        "name": "Foo",
+        "optional": false,
+        "type": "Identifier",
+        "typeAnnotation": null,
+      },
+      "params": [],
+      "rendersType": {
+        "type": "TypeAnnotation",
+        "typeAnnotation": {
+          "id": {
+            "name": "SpecialType",
+            "optional": false,
+            "type": "Identifier",
+            "typeAnnotation": null,
+          },
+          "type": "GenericTypeAnnotation",
+          "typeParameters": null,
+        },
+      },
+      "type": "ComponentDeclaration",
+      "typeParameters": null,
+    },
+  ],
+  "type": "Program",
+}
+`;
+
 exports[`ComponentDeclaration rest params Babel 1`] = `
 {
   "body": [
@@ -3144,77 +3314,6 @@ exports[`ComponentDeclaration rest params ESTree 1`] = `
         },
       ],
       "rendersType": null,
-      "type": "ComponentDeclaration",
-      "typeParameters": null,
-    },
-  ],
-  "type": "Program",
-}
-`;
-
-exports[`ComponentDeclaration return type Babel 1`] = `
-{
-  "body": [
-    {
-      "__componentDeclaration": true,
-      "async": false,
-      "body": {
-        "body": [],
-        "directives": [],
-        "type": "BlockStatement",
-      },
-      "generator": false,
-      "id": {
-        "name": "Foo",
-        "type": "Identifier",
-      },
-      "params": [],
-      "returnType": {
-        "type": "TypeAnnotation",
-        "typeAnnotation": {
-          "id": {
-            "name": "SpecialType",
-            "type": "Identifier",
-          },
-          "type": "GenericTypeAnnotation",
-          "typeParameters": null,
-        },
-      },
-      "type": "FunctionDeclaration",
-    },
-  ],
-  "type": "Program",
-}
-`;
-
-exports[`ComponentDeclaration return type ESTree 1`] = `
-{
-  "body": [
-    {
-      "body": {
-        "body": [],
-        "type": "BlockStatement",
-      },
-      "id": {
-        "name": "Foo",
-        "optional": false,
-        "type": "Identifier",
-        "typeAnnotation": null,
-      },
-      "params": [],
-      "rendersType": {
-        "type": "TypeAnnotation",
-        "typeAnnotation": {
-          "id": {
-            "name": "SpecialType",
-            "optional": false,
-            "type": "Identifier",
-            "typeAnnotation": null,
-          },
-          "type": "GenericTypeAnnotation",
-          "typeParameters": null,
-        },
-      },
       "type": "ComponentDeclaration",
       "typeParameters": null,
     },
