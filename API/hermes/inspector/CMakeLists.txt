@@ -13,24 +13,19 @@ set(no_rtti_no_exception_SRC
   chrome/MessageTypes.cpp
   )
 
-add_hermes_library(hermesInspector_no_rtti_no_exception OBJECT
-  ${no_rtti_no_exception_SRC}
-  LINK_LIBS jsi hermesapi)
+add_hermes_library(hermesInspector_no_rtti_no_exception ${no_rtti_no_exception_SRC} LINK_LIBS jsi hermesapi)
 
 set(HERMES_ENABLE_EH ON)
 set(HERMES_ENABLE_RTTI ON)
 set(rtti_exception_SRC
-  RuntimeAdapter.cpp
-  chrome/CDPHandler.cpp
-  chrome/CallbackOStream.cpp
-  chrome/RemoteObjectConverters.cpp
-  chrome/RemoteObjectsTable.cpp
-  )
+        chrome/CallbackOStream.cpp
+        chrome/RemoteObjectConverters.cpp
+        chrome/RemoteObjectsTable.cpp
+        )
 
-add_hermes_library(hermesInspector_rtti_exception OBJECT
-  ${rtti_exception_SRC}
-  LINK_OBJLIBS hermesInspector_no_rtti_no_exception
-  LINK_LIBS hermesapi)
+add_hermes_library(hermesInspector_rtti_exception
+        ${rtti_exception_SRC}
+        LINK_LIBS hermesInspector_no_rtti_no_exception hermesapi)
 
 if(HERMES_ENABLE_TOOLS AND NOT WIN32)
   add_subdirectory(chrome/cli)

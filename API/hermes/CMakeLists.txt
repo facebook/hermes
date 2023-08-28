@@ -6,10 +6,6 @@
 # compileJS uses neither exceptions nor RTTI
 add_hermes_library(compileJS CompileJS.cpp LINK_LIBS hermesPublic)
 
-if(HERMES_ENABLE_DEBUGGER)
-  add_subdirectory(inspector)
-endif()
-
 set(HERMES_ENABLE_EH ON)
 
 # synthTraceParser uses exceptions but not RTTI.
@@ -19,9 +15,18 @@ add_hermes_library(synthTraceParser SynthTraceParser.cpp LINK_LIBS hermesSupport
 # All remaining targets in this file use both exceptions and RTTI.
 set(HERMES_ENABLE_RTTI ON)
 
+if(HERMES_ENABLE_DEBUGGER)
+  add_subdirectory(inspector)
+  set(INSPECTOR_API_SOURCES inspector/RuntimeAdapter.cpp inspector/chrome/CDPHandler.cpp)
+  set(INSPECTOR_DEPS hermesInspector_rtti_exception)
+endif()
+
+# List the files that define exported functions explicitly, and they can link
+# against the internal functionality they need.
 set(api_sources
   hermes.cpp
   DebuggerAPI.cpp
+  ${INSPECTOR_API_SOURCES}
   )
 
 file(GLOB api_headers ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
@@ -29,7 +34,7 @@ file(GLOB api_public_headers ${PROJECT_SOURCE_DIR}/public/hermes/Public/*.h)
 
 add_hermes_library(hermesapi
         ${api_sources}
-        LINK_LIBS jsi hermesVMRuntime)
+        LINK_LIBS jsi hermesVMRuntime ${INSPECTOR_DEPS})
 target_include_directories(hermesapi PUBLIC ..)
 
 add_hermes_library(hermesapiLean
@@ -47,19 +52,7 @@ add_hermes_library(traceInterpreter TraceInterpreter.cpp
 
 set(HERMES_LINK_COMPONENTS LLVHSupport)
 
-set(LIBHERMES_INSPECTOR_OBJS)
-if(HERMES_ENABLE_DEBUGGER)
-  set(LIBHERMES_INSPECTOR_OBJS
-    $<TARGET_OBJECTS:hermesInspector_no_rtti_no_exception_obj>
-    $<TARGET_OBJECTS:hermesInspector_rtti_exception_obj>
-  )
-endif()
-
-add_library(libhermes
-  SHARED
-  ${api_sources}
-  ${LIBHERMES_INSPECTOR_OBJS}
-)
+add_library(libhermes SHARED ${api_sources})
 
 # This is configured using a cmake flag instead of a separate target, because
 # we need the output to be named "libhermes.so".
@@ -72,6 +65,7 @@ target_link_libraries(libhermes
   PRIVATE
   jsi
   ${LIBHERMES_VM_DEP}
+  ${INSPECTOR_DEPS}
 )
 target_link_options(libhermes PRIVATE ${HERMES_EXTRA_LINKER_FLAGS})
 

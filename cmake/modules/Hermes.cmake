@@ -119,48 +119,14 @@ function(hermes_update_compile_flags name)
 endfunction()
 
 function(add_hermes_library name)
-  cmake_parse_arguments(ARG "OBJECT;STATIC;SHARED" "" "LINK_OBJLIBS;LINK_LIBS" ${ARGN})
-
-  if(NOT ARG_OBJECT)
-    if(ARG_SHARED)
-      add_library(${name} SHARED ${ARG_UNPARSED_ARGUMENTS})
-    else()
-      add_library(${name} STATIC ${ARG_UNPARSED_ARGUMENTS})
-    endif()
-    target_link_libraries(${name} ${ARG_LINK_LIBS} ${HERMES_LINK_COMPONENTS})
-    set_property(TARGET ${name} PROPERTY POSITION_INDEPENDENT_CODE ON)
-    hermes_update_compile_flags(${name})
-    if (HERMES_ENABLE_BITCODE)
-      target_compile_options(${name} PUBLIC "-fembed-bitcode")
-    endif ()
-  else()
-    # When asking to link an OBJECT library, we create an OBJECT library with a
-    # suffix _obj, which depends on all object libraries in LINK_OBJLIBS with
-    # added suffixes and the static libraries in LINK_LIBS. Then we create a
-    # static library which depends on name_obj and the libraries in
-    # LINK_OBJLIBS, but without the suffixes.
-    #
-    # In this way, "name_obj" pulls in all interface settings from the other _obj
-    # libraries, while "name.a" contains the files from "name_obj" and depends
-    # on the other *static* libraries.
-    #
-    # The static library "name.a" can be used as before. Note that all this
-    # avoids compiling an object file more than once (ordinarily an object file
-    # is compiled for every target that includes it).
-    add_library(${name}_obj OBJECT ${ARG_UNPARSED_ARGUMENTS})
-    foreach(lib ${ARG_LINK_OBJLIBS})
-      target_link_libraries(${name}_obj ${lib}_obj)
-    endforeach(lib)
-    target_link_libraries(${name}_obj ${ARG_LINK_LIBS})
-    set_property(TARGET ${name}_obj PROPERTY POSITION_INDEPENDENT_CODE ON)
-    hermes_update_compile_flags(${name}_obj)
-    if (HERMES_ENABLE_BITCODE)
-      target_compile_options(${name}_obj PUBLIC "-fembed-bitcode")
-    endif ()
-
-    add_library(${name} STATIC ${PROJECT_SOURCE_DIR}/lib/dummy.cpp)
-    target_link_libraries(${name} ${name}_obj ${ARG_LINK_OBJLIBS})
-  endif()
+  cmake_parse_arguments(ARG "" "" "LINK_LIBS" ${ARGN})
+  add_library(${name} STATIC ${ARG_UNPARSED_ARGUMENTS})
+  target_link_libraries(${name} ${ARG_LINK_LIBS} ${HERMES_LINK_COMPONENTS})
+  set_property(TARGET ${name} PROPERTY POSITION_INDEPENDENT_CODE ON)
+  hermes_update_compile_flags(${name})
+  if (HERMES_ENABLE_BITCODE)
+    target_compile_options(${name} PUBLIC "-fembed-bitcode")
+  endif ()
 endfunction(add_hermes_library)
 
 function(add_hermes_executable name)
