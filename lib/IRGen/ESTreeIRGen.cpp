@@ -7,6 +7,7 @@
 
 #include "ESTreeIRGen.h"
 
+#include "llvh/ADT/SetVector.h"
 #include "llvh/ADT/StringSet.h"
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/SaveAndRestore.h"
@@ -1213,23 +1214,21 @@ void ESTreeIRGen::emitRestProperty(
   auto lref = createLRef(rest->_argument, declInit);
 
   // Construct the excluded items.
-  AllocObjectLiteralInst::ObjectPropertyMap exMap{};
   llvh::SmallVector<Value *, 4> computedExcludedItems{};
-  // Keys need de-duping so we don't create a dummy exclusion object with
-  // duplicate keys.
-  llvh::DenseSet<Literal *> keyDeDupeSet;
+  // Keys must be deduplicated so we don't create StoreNewOwnProperty with the
+  // same key twice. Use a SetVector for deterministic ordering.
+  llvh::SetVector<Literal *> literalExcludedItems;
   auto *zeroValue = Builder.getLiteralPositiveZero();
 
   for (Value *key : excludedItems) {
     if (auto *lit = llvh::dyn_cast<LiteralString>(key)) {
-      // If the key is a literal string, we can place it in the
-      // AllocObjectLiteralInst buffer.
-      if (keyDeDupeSet.insert(lit).second) {
-        exMap.emplace_back(std::make_pair(lit, zeroValue));
-      }
+      // If the key is a literal string, we can use StoreNewOwnProperty which
+      // will allow us to create the object with a single instruction after
+      // optimization.
+      literalExcludedItems.insert(lit);
     } else {
       // If the key is not a supported literal, then we have to dynamically
-      // populate the excluded object with it after creation from the buffer.
+      // populate the excluded object with regular stores.
       computedExcludedItems.push_back(key);
     }
   }
@@ -1240,18 +1239,17 @@ void ESTreeIRGen::emitRestProperty(
   } else {
     // This size is only a hint as the true size may change if there are
     // duplicates when computedExcludedItems is processed at run-time.
-    auto excludedSizeHint = exMap.size() + computedExcludedItems.size();
+    auto excludedSizeHint =
+        literalExcludedItems.size() + computedExcludedItems.size();
     // Explicitly set the prototype for the object created here so it isn't
     // initialized to Object.prototype, which may be modified by the user.
-    if (exMap.empty()) {
-      excludedObj = Builder.createAllocObjectInst(
-          excludedSizeHint, Builder.getLiteralNull());
-    } else {
-      excludedObj = Builder.createAllocObjectLiteralInst(exMap);
-      genBuiltinCall(
-          BuiltinMethod::HermesBuiltin_silentSetPrototypeOf,
-          {excludedObj, Builder.getLiteralNull()});
-    }
+    excludedObj = Builder.createAllocObjectInst(
+        excludedSizeHint, Builder.getLiteralNull());
+
+    for (Literal *key : literalExcludedItems)
+      Builder.createStoreNewOwnPropertyInst(
+          zeroValue, excludedObj, key, IRBuilder::PropEnumerable::Yes);
+
     for (Value *key : computedExcludedItems) {
       Builder.createStorePropertyInst(zeroValue, excludedObj, key);
     }
