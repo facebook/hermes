@@ -6,6 +6,12 @@
 # compileJS uses neither exceptions nor RTTI
 add_hermes_library(compileJS CompileJS.cpp LINK_LIBS hermesPublic)
 
+if(HERMES_ENABLE_DEBUGGER)
+  add_subdirectory(inspector)
+  set(INSPECTOR_API_SOURCES inspector/RuntimeAdapter.cpp inspector/chrome/CDPHandler.cpp)
+  set(INSPECTOR_DEPS hermesInspector_rtti_exception)
+endif()
+
 set(HERMES_ENABLE_EH ON)
 
 # synthTraceParser uses exceptions but not RTTI.
@@ -14,12 +20,6 @@ add_hermes_library(synthTraceParser SynthTraceParser.cpp LINK_LIBS hermesSupport
 
 # All remaining targets in this file use both exceptions and RTTI.
 set(HERMES_ENABLE_RTTI ON)
-
-if(HERMES_ENABLE_DEBUGGER)
-  add_subdirectory(inspector)
-  set(INSPECTOR_API_SOURCES inspector/RuntimeAdapter.cpp inspector/chrome/CDPHandler.cpp)
-  set(INSPECTOR_DEPS hermesInspector_rtti_exception)
-endif()
 
 # List the files that define exported functions explicitly, and they can link
 # against the internal functionality they need.
