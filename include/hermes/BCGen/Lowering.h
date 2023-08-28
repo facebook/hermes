@@ -69,7 +69,9 @@ class LowerAllocObject : public FunctionPass {
       uint32_t maxSize);
   /// Estimate best number of elements to serialize into the buffer.
   /// Try optimizing for max bytecode size saving.
-  uint32_t estimateBestNumElemsToSerialize(const StoreList &users);
+  uint32_t estimateBestNumElemsToSerialize(
+      const StoreList &users,
+      bool hasParent);
 };
 
 /// Lowers AllocObjectLiterals which target object literals with
