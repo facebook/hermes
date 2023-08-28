@@ -54,15 +54,14 @@ function VideoContainer() {
       <div className="row">
         <div className="col">
           <h2>Check it out in the intro video</h2>
-            <iframe
-              width="560"
-              height="315"
-              src="https://www.youtube.com/embed/JsppO1HUYx4"
-              title="Explain Like I'm 5: Hermes"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
+          <iframe
+            className={styles.video}
+            src="https://www.youtube.com/embed/JsppO1HUYx4"
+            title="Explain Like I'm 5: Hermes"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
         </div>
       </div>
     </div>
