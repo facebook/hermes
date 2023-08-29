@@ -191,6 +191,22 @@ Handle<JSObject> createRegExpConstructor(Runtime &runtime) {
   return cons;
 }
 
+/// ES2022 22.2.5.2.4 GetStringIndex ( S, e )
+static uint32_t getStringIndex(Handle<StringPrimitive> S, uint32_t e) {
+  // Relevant spec: Let eUTF be the smallest index into S that corresponds to
+  // the character at element e of codepoints. If e is greater than or equal to
+  // the number of elements in codepoints, then eUTF is the number of code units
+  // in S.
+  // This is a longwinded way of saying that we don't set e to match the
+  // trailing member of a surrogate pair.
+  if (e > 0 && e < S->getStringLength()) {
+    if (isHighSurrogate(S->at(e - 1)) && isLowSurrogate(S->at(e))) {
+      e -= 1;
+    }
+  }
+  return e;
+}
+
 /// 21.2.3.2.1 Runtime Semantics: RegExpAlloc ( newTarget )
 // TODO: This is currently a wrapper around JSRegExp::create, and always creates
 // an object with RegExp.prototype as its prototype. After supporting
@@ -617,7 +633,7 @@ CallResult<Handle<JSArray>> directRegExpExec(
 
   if (LLVM_UNLIKELY(matchResult == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
-  const RegExpMatch &match = *matchResult;
+  RegExpMatch &match = *matchResult;
   if (match.empty()) {
     // No match. The following implements both:
     //   If lastIndex > length, then
@@ -645,24 +661,22 @@ CallResult<Handle<JSArray>> directRegExpExec(
   // e, true)."
   // Here 'e' is the end of the total match.
   assert(!match.empty() && "Match should not be empty");
+
+  // If using unicode, ensure that no indices can be set to a trailing
+  // surrogate.
+  if (fullUnicode) {
+    for (auto &mg : match) {
+      if (!mg)
+        continue;
+      auto captureStart = getStringIndex(S, mg->location);
+      auto captureEnd = getStringIndex(S, mg->location + mg->length);
+      mg = RegExpMatchRange{captureStart, captureEnd - captureStart};
+    }
+  }
+
   if (global || sticky) {
     auto totalMatch = *match.front();
     uint32_t e = totalMatch.location + totalMatch.length;
-
-    // If fullUnicode is true, then:
-    // a. e is an index into the Input character list, derived from S, matched
-    // by matcher. Let eUTF be the smallest index into S that corresponds to the
-    // character at element e of Input. If e is greater than or equal to the
-    // number of elements in Input, then eUTF is the number of code units in S.
-    // b. set e to eUTF.
-    // This is a longwinded way of saying that we don't set lastIndex to match
-    // the trailing member of a surrogate pair.
-    if (fullUnicode && e > 0 && e < S->getStringLength()) {
-      if (isHighSurrogate(S->at(e - 1)) && isLowSurrogate(S->at(e))) {
-        e -= 1;
-      }
-    }
-
     if (LLVM_UNLIKELY(
             setLastIndex(regexp, runtime, e) == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;

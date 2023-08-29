@@ -421,7 +421,14 @@ print(indicesRegexRes3.indices.groups.a_letter);
 print(indicesRegexRes3.indices.groups.h_letter);
 // CHECK-NEXT: undefined
 
-
+// Don't split surrogate pairs
+re = RegExp(".", "duy");
+re.lastIndex = 1;
+var res = re.exec("\u{1F600}");
+print(res.indices[0][0], res.indices[0][1]);
+// CHECK-NEXT: 0 2
+print(res[0].charCodeAt(0), res[0].charCodeAt(1));
+// CHECK-NEXT: 55357 56832
 
 // Source support
 print(/abc/.source);
