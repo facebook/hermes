@@ -291,7 +291,7 @@ class CDPHandler::Impl : public message::RequestHandler,
       const std::string &chromeTypeDefault = "");
   double currentTimestampMs();
 
-  std::shared_ptr<RuntimeAdapter> runtimeAdapter_;
+  std::unique_ptr<RuntimeAdapter> runtimeAdapter_;
   std::string title_;
 
   // preparedScripts_ stores user-entered scripts that have been prepared for
