@@ -188,14 +188,14 @@ print(re.lastIndex);
 (function() {
 "use strict";
 re = RegExp("abc", "")
-print(re.global, re.ignoreCase, re.multiline, re.sticky, re.lastIndex);
-// CHECK-NEXT: false false false false 0
-re = RegExp("abc", "igym")
-print(re.global, re.ignoreCase, re.multiline, re.sticky, re.lastIndex);
-// CHECK-NEXT: true true true true 0
+print(re.global, re.ignoreCase, re.multiline, re.sticky, re.hasIndices, re.lastIndex);
+// CHECK-NEXT: false false false false false 0
+re = RegExp("abc", "igymd")
+print(re.global, re.ignoreCase, re.multiline, re.sticky, re.hasIndices, re.lastIndex);
+// CHECK-NEXT: true true true true true 0
 re = RegExp("abc", "gi")
-print(re.global, re.ignoreCase, re.multiline, re.sticky, re.lastIndex);
-// CHECK-NEXT: true true false false 0
+print(re.global, re.ignoreCase, re.multiline, re.sticky, re.hasIndices, re.lastIndex);
+// CHECK-NEXT: true true false false false 0
 try { re.global = false; } catch (err) { print(err.name); } // not writable
 // CHECK-NEXT: TypeError
 try { re.ignoreCase = false; } catch (err) { print(err.name); } // not writable
@@ -203,6 +203,8 @@ try { re.ignoreCase = false; } catch (err) { print(err.name); } // not writable
 try { re.multiline = false; } catch (err) { print(err.name); } // not writable
 // CHECK-NEXT: TypeError
 try { re.sticky = false; } catch (err) { print(err.name); } // not writable
+// CHECK-NEXT: TypeError
+try { re.hasIndices = false; } catch (err) { print(err.name); } // not writable
 // CHECK-NEXT: TypeError
 re.lastIndex = 42; // yes writable
 print(re.global, re.ignoreCase, re.multiline, re.lastIndex);
@@ -216,6 +218,7 @@ var ignoreCaseGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'ignore
 var multilineGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'multiline').get;
 var stickyGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'sticky').get;
 var dotAllGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'dotAll').get;
+var hasIndicesGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'hasIndices').get;
 print(globalGetter.call(/abc/g), globalGetter.call(/abc/), globalGetter.call(RegExp.prototype));
 // CHECK-NEXT: true false undefined
 print(ignoreCaseGetter.call(/abc/i), ignoreCaseGetter.call(/abc/), ignoreCaseGetter.call(RegExp.prototype));
@@ -225,6 +228,8 @@ print(multilineGetter.call(/abc/m), multilineGetter.call(/abc/), multilineGetter
 print(stickyGetter.call(/abc/y), stickyGetter.call(/abc/), stickyGetter.call(RegExp.prototype));
 // CHECK-NEXT: true false undefined
 print(dotAllGetter.call(/abc/s), dotAllGetter.call(/abc/), dotAllGetter.call(RegExp.prototype));
+// CHECK-NEXT: true false undefined
+print(hasIndicesGetter.call(/abc/d), hasIndicesGetter.call(/abc/), hasIndicesGetter.call(RegExp.prototype));
 // CHECK-NEXT: true false undefined
 try { multilineGetter.call({}); } catch (err) { print(err.name); }
 // CHECK-NEXT: TypeError
@@ -237,8 +242,8 @@ print(/aaa/.flags.length);
 // CHECK-NEXT: 0
 print(/aaa/mi.flags, /aaa/im.flags, /aaa/ig.flags, /aaa/gi.flags, /aaa/gim.flags, /aaa/mgi.flags, /aaa/m.flags, /aaa/g.flags, /aaa/i.flags, /aaa/y.flags, /aaa/s.flags);
 // CHECK-NEXT: im im gi gi gim gim m g i y s
-print(/aaa/igsmyu.flags);
-// CHECK-NEXT: gimsuy
+print(/aaa/igsdmyu.flags);
+// CHECK-NEXT: dgimsuy
 
 var flagsGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'flags').get;
 print(flagsGetter.call({multiline: 1, global: 0, ignoreCase: "yep"}));
@@ -386,6 +391,35 @@ print(JSON.stringify(/|/.exec("abc")));
 // CHECK-NEXT: [""]
 print("X".match(/(A{9999999999}B|X)*/ ));
 // CHECK-NEXT: X,X
+
+
+
+// hasIndices support
+var indicesRegexRes1 = /(a).(c)/d.exec("abcdef")
+print(indicesRegexRes1.indices);
+// CHECK-NEXT: 0,3,0,1,2,3
+print(indicesRegexRes1.indices.groups);
+// CHECK-NEXT: undefined
+
+var indicesRegexRes2 = /(?<a_letter>a).(?<c_letter>c)/d.exec("abcdef")
+print(indicesRegexRes2.indices);
+// CHECK-NEXT: 0,3,0,1,2,3
+print(Object.getOwnPropertyNames(indicesRegexRes2.indices.groups));
+// CHECK-NEXT: a_letter,c_letter
+print(indicesRegexRes2.indices.groups.a_letter);
+// CHECK-NEXT: 0,1
+print(indicesRegexRes2.indices.groups.c_letter);
+// CHECK-NEXT: 2,3
+
+var indicesRegexRes3 = /(?<a_letter>a)(?<h_letter>h)*/d.exec("abcdef")
+print(indicesRegexRes3.indices);
+// CHECK-NEXT: 0,1,0,1,
+print(Object.getOwnPropertyNames(indicesRegexRes3.indices.groups));
+// CHECK-NEXT: a_letter,h_letter
+print(indicesRegexRes3.indices.groups.a_letter);
+// CHECK-NEXT: 0,1
+print(indicesRegexRes3.indices.groups.h_letter);
+// CHECK-NEXT: undefined
 
 
 
