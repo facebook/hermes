@@ -105,7 +105,7 @@ class CDPHandler::Impl : public message::RequestHandler,
   std::string getTitle() const;
 
   bool registerCallback(CallbackFunction callback);
-  void unregisterCallback();
+  bool unregisterCallback();
   void handle(std::string str);
 
   /* RequestHandler overrides */
@@ -399,9 +399,11 @@ bool CDPHandler::Impl::registerCallback(CallbackFunction callback) {
   return true;
 }
 
-void CDPHandler::Impl::unregisterCallback() {
+bool CDPHandler::Impl::unregisterCallback() {
   std::lock_guard<std::mutex> lock(callbackMutex_);
+  bool hadCallback = callback_ != nullptr;
   callback_ = nullptr;
+  return hadCallback;
 }
 
 static bool isDebuggerRequest(const m::Request &req) {
@@ -1573,7 +1575,7 @@ bool CDPHandler::registerCallback(CallbackFunction callback) {
   return impl_->registerCallback(callback);
 }
 
-void CDPHandler::unregisterCallback() {
+bool CDPHandler::unregisterCallback() {
   return impl_->unregisterCallback();
 }
 

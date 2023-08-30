@@ -68,7 +68,7 @@ class SyncConnection {
       std::chrono::milliseconds timeout = std::chrono::milliseconds(2500));
 
   bool registerCallback();
-  void unregisterCallback();
+  bool unregisterCallback();
 
  private:
   void onReply(const std::string &message);

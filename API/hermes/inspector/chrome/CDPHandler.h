@@ -44,10 +44,12 @@ class INSPECTOR_EXPORT CDPHandler {
   std::string getTitle() const;
 
   /// Provide a callback to receive replies and notifications from the debugger.
+  /// \return true if there wasn't a previously registered callback
   bool registerCallback(CallbackFunction callback);
 
   /// Unregister any previously registered callback.
-  void unregisterCallback();
+  /// \return true if there was a previously registered callback.
+  bool unregisterCallback();
 
   /// Process a JSON-encoded Chrome DevTools Protocol request.
   void handle(std::string str);
