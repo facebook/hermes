@@ -450,6 +450,32 @@ class RecursionDepthTracker {
   }
 };
 
+/// This class implements the recursion depth control protocol for visitors that
+/// execute nested in a parent visitor. To decrease the coupling, it takes a
+/// current recursion depth and a callback to invoke when we exceed the maximum.
+template <class Derived>
+class NestedRecursionDepthTracker
+    : public RecursionDepthTracker<NestedRecursionDepthTracker<Derived>> {
+  /// We call this when we exceed the maximum recursion depth.
+  const std::function<void(ESTree::Node *)> &recursionDepthExceeded_;
+
+ public:
+  /// \param recursionDepth remaining recursion depth
+  /// \param recursionDepthExceeded handler to invoke when we transition fron
+  ///     non-zero to zero remaining recursion depth.
+  explicit NestedRecursionDepthTracker(
+      unsigned recursionDepth,
+      const std::function<void(ESTree::Node *)> &recursionDepthExceeded)
+      : RecursionDepthTracker<NestedRecursionDepthTracker<Derived>>(
+            recursionDepth),
+        recursionDepthExceeded_(recursionDepthExceeded) {}
+
+  /// We call this when we exceed the maximum recursion depth.
+  void recursionDepthExceeded(ESTree::Node *n) {
+    recursionDepthExceeded_(n);
+  }
+};
+
 }; // namespace ESTree
 } // namespace hermes
 
