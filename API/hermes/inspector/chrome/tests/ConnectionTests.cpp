@@ -485,13 +485,14 @@ TEST_F(ConnectionTests, testUnregisteringCallback) {
   send<m::debugger::EnableRequest>(conn, 1);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
-  EXPECT_TRUE(conn.unregisterCallback());
-  EXPECT_FALSE(conn.unregisterCallback());
+  EXPECT_TRUE(conn.unregisterCallbacks());
+  EXPECT_TRUE(conn.onUnregisterWasCalled());
+  EXPECT_FALSE(conn.unregisterCallbacks());
 
   conn.send(R"({"id": 2, "method": "Debugger.foo"})");
   expectNothing(conn);
 
-  EXPECT_TRUE(conn.registerCallback());
+  EXPECT_TRUE(conn.registerCallbacks());
 }
 
 TEST_F(ConnectionTests, testRespondsErrorToUnknownRequests) {

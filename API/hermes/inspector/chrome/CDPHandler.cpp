@@ -104,8 +104,10 @@ class CDPHandler::Impl : public message::RequestHandler,
   HermesRuntime &getRuntime();
   std::string getTitle() const;
 
-  bool registerCallback(CallbackFunction callback);
-  bool unregisterCallback();
+  bool registerCallbacks(
+      CDPMessageCallbackFunction msgCallback,
+      OnUnregisterFunction onUnregister);
+  bool unregisterCallbacks();
   void handle(std::string str);
 
   /* RequestHandler overrides */
@@ -311,9 +313,10 @@ class CDPHandler::Impl : public message::RequestHandler,
   std::unordered_map<std::string, std::unordered_set<std::string>>
       virtualBreakpoints_;
 
-  // callback_ is protected by callbackMutex_.
+  // msgCallback_ and onUnregister_ are protected by callbackMutex_.
   std::mutex callbackMutex_;
-  CallbackFunction callback_;
+  CDPMessageCallbackFunction msgCallback_;
+  OnUnregisterFunction onUnregister_;
 
   // objTable_ is protected by the inspector lock. It should only be accessed
   // when the VM is paused, e.g. in an InspectorObserver callback or in an
@@ -373,7 +376,7 @@ CDPHandler::Impl::Impl(
 }
 
 CDPHandler::Impl::~Impl() {
-  unregisterCallback();
+  unregisterCallbacks();
 
   // TODO(T161620474): Properly clean up all the other variables being protected
   // by other mutex
@@ -387,22 +390,29 @@ std::string CDPHandler::Impl::getTitle() const {
   return title_;
 }
 
-bool CDPHandler::Impl::registerCallback(CallbackFunction callback) {
-  assert(callback);
+bool CDPHandler::Impl::registerCallbacks(
+    CDPMessageCallbackFunction msgCallback,
+    OnUnregisterFunction onUnregister) {
+  assert(msgCallback);
   std::lock_guard<std::mutex> lock(callbackMutex_);
 
-  if (callback_) {
+  if (msgCallback_ || onUnregister_) {
     return false;
   }
 
-  callback_ = callback;
+  msgCallback_ = msgCallback;
+  onUnregister_ = onUnregister;
   return true;
 }
 
-bool CDPHandler::Impl::unregisterCallback() {
+bool CDPHandler::Impl::unregisterCallbacks() {
   std::lock_guard<std::mutex> lock(callbackMutex_);
-  bool hadCallback = callback_ != nullptr;
-  callback_ = nullptr;
+  bool hadCallback = msgCallback_ != nullptr;
+  msgCallback_ = nullptr;
+  if (onUnregister_) {
+    onUnregister_();
+  }
+  onUnregister_ = nullptr;
   return hadCallback;
 }
 
@@ -1527,8 +1537,8 @@ void CDPHandler::Impl::handle(
 
 void CDPHandler::Impl::sendToClient(const std::string &str) {
   std::lock_guard<std::mutex> lock(callbackMutex_);
-  if (callback_) {
-    callback_(str);
+  if (msgCallback_) {
+    msgCallback_(str);
   }
 }
 
@@ -1571,12 +1581,14 @@ std::string CDPHandler::getTitle() const {
   return impl_->getTitle();
 }
 
-bool CDPHandler::registerCallback(CallbackFunction callback) {
-  return impl_->registerCallback(callback);
+bool CDPHandler::registerCallbacks(
+    CDPMessageCallbackFunction msgCallback,
+    OnUnregisterFunction onUnregister) {
+  return impl_->registerCallbacks(msgCallback, onUnregister);
 }
 
-bool CDPHandler::unregisterCallback() {
-  return impl_->unregisterCallback();
+bool CDPHandler::unregisterCallbacks() {
+  return impl_->unregisterCallbacks();
 }
 
 void CDPHandler::handle(std::string str) {

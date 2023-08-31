@@ -113,7 +113,7 @@ static std::string getUrl(const char *path) {
 static void runDebuggerLoop(
     fbhermes::inspector::chrome::CDPHandler &cdpHandler,
     std::string scriptSource) {
-  cdpHandler.registerCallback(&sendResponse);
+  cdpHandler.registerCallbacks(&sendResponse, {});
 
   std::string line;
   while (std::getline(std::cin, line)) {

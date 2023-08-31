@@ -22,7 +22,8 @@ namespace hermes {
 namespace inspector {
 namespace chrome {
 
-using CallbackFunction = std::function<void(const std::string &)>;
+using CDPMessageCallbackFunction = std::function<void(const std::string &)>;
+using OnUnregisterFunction = std::function<void()>;
 
 /// CDPHandler processes CDP messages between the client and the debugger.
 /// It performs no networking or connection logic itself.
@@ -43,13 +44,21 @@ class INSPECTOR_EXPORT CDPHandler {
   /// to users in the CDP frontend (e.g. Chrome DevTools).
   std::string getTitle() const;
 
-  /// Provide a callback to receive replies and notifications from the debugger.
+  /// Provide a callback to receive replies and notifications from the debugger,
+  /// and optionally provide a function to be called during
+  /// unregisterCallbacks().
+  /// \param msgCallback Function to receive replies and notifications from the
+  ///     debugger
+  /// \param onDisconnect Function that will be invoked upon calling
+  ///     unregisterCallbacks
   /// \return true if there wasn't a previously registered callback
-  bool registerCallback(CallbackFunction callback);
+  bool registerCallbacks(
+      CDPMessageCallbackFunction msgCallback,
+      OnUnregisterFunction onUnregister);
 
-  /// Unregister any previously registered callback.
-  /// \return true if there was a previously registered callback.
-  bool unregisterCallback();
+  /// Unregister any previously registered callbacks.
+  /// \return true if there were previously registered callbacks
+  bool unregisterCallbacks();
 
   /// Process a JSON-encoded Chrome DevTools Protocol request.
   void handle(std::string str);

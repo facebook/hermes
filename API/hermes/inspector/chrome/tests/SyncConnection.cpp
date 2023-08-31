@@ -37,16 +37,25 @@ SyncConnection::SyncConnection(
           std::make_unique<ExecutorRuntimeAdapter>(runtime),
           "testConn",
           waitForDebugger) {
-  registerCallback();
+  registerCallbacks();
 }
 
-bool SyncConnection::registerCallback() {
-  return cdpHandler_.registerCallback(
-      std::bind(&SyncConnection::onReply, this, std::placeholders::_1));
+bool SyncConnection::registerCallbacks() {
+  bool registered = cdpHandler_.registerCallbacks(
+      std::bind(&SyncConnection::onReply, this, std::placeholders::_1),
+      std::bind(&SyncConnection::onUnregister, this));
+  if (registered) {
+    onUnregisterCalled_ = false;
+  }
+  return registered;
 }
 
-bool SyncConnection::unregisterCallback() {
-  return cdpHandler_.unregisterCallback();
+bool SyncConnection::unregisterCallbacks() {
+  return cdpHandler_.unregisterCallbacks();
+}
+
+bool SyncConnection::onUnregisterWasCalled() {
+  return onUnregisterCalled_;
 }
 
 void SyncConnection::send(const std::string &str) {
@@ -113,6 +122,10 @@ void SyncConnection::onReply(const std::string &message) {
     notifications_.push(message);
     hasNotification_.notify_one();
   }
+}
+
+void SyncConnection::onUnregister() {
+  onUnregisterCalled_ = true;
 }
 
 } // namespace chrome
