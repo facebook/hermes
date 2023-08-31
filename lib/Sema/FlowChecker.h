@@ -22,7 +22,7 @@ namespace flow {
 
 /// Class the performs all resolution.
 /// Reports errors if validation fails.
-class FlowChecker {
+class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// AST context.
   Context &astContext_;
 
@@ -106,15 +106,8 @@ class FlowChecker {
   /// \return false on error.
   bool run(ESTree::ProgramNode *rootNode);
 
-  /// This method implements the first part of the stack overflow protection
-  /// protocol defined by RecursiveVisitor. We don't need to do anything because
-  /// the AST depth has been checked by prior passes.
-  bool incRecursionDepth(ESTree::Node *) {
-    return true;
-  }
-
-  /// This is the second part of the protocol defined by RecursiveVisitor.
-  void decRecursionDepth() {}
+  /// We call this when we exceed the maximum recursion depth.
+  void recursionDepthExceeded(ESTree::Node *n);
 
   /// Default case for all ignored nodes, we still want to visit their children.
   void visit(ESTree::Node *node) {

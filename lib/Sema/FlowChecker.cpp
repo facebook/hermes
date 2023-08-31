@@ -58,6 +58,12 @@ bool FlowChecker::run(ESTree::ProgramNode *rootNode) {
   return sm_.getErrorCount() == 0;
 }
 
+void FlowChecker::recursionDepthExceeded(ESTree::Node *n) {
+  sm_.error(
+      n->getEndLoc(),
+      "ft: too many nested expressions/statements/declarations");
+}
+
 void FlowChecker::visit(ESTree::ProgramNode *node) {
   visitESTreeChildren(*this, node);
 }
