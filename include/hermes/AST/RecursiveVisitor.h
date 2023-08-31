@@ -393,7 +393,64 @@ void visitESTreeChildren(Visitor &v, Node *node) {
   RecursiveVisitorDispatch<Visitor>::visitChildren(v, node);
 }
 
-} // namespace ESTree
+/// The maximum AST nesting level. Once we reach it, we report an error and
+/// stop.
+static constexpr unsigned kASTMaxRecursionDepth =
+#if defined(HERMES_LIMIT_STACK_DEPTH) || defined(_MSC_VER)
+    512
+#else
+    1024
+#endif
+    ;
+
+/// This class implements the recursion depth control protocol defined by
+/// RecursiveVisitor. It is intended to be subclassed by visitors that need
+/// to enforce a maximum AST nesting level. They need to provide a method
+/// with the following signature:
+/// \code
+///     void recursionDepthExceeded(Node *);
+/// \endcode
+template <class Derived>
+class RecursionDepthTracker {
+ protected:
+  /// \c ESTree::kASTMaxRecursionDepth minus the current AST nesting level. Once
+  /// it reaches 0, we report an error and stop modifying it.
+  unsigned recursionDepth_;
+
+  explicit RecursionDepthTracker(unsigned recursionDepth)
+      : recursionDepth_(recursionDepth) {}
+
+ public:
+  explicit RecursionDepthTracker()
+      : RecursionDepthTracker(kASTMaxRecursionDepth) {}
+
+  /// This method implements the first part of the protocol defined by
+  /// RecursiveVisitor. It is supposed to return true if everything is normal,
+  /// and false if we should not visit the current node.
+  /// It maintains the current AST nesting level, and generates an error the
+  /// first time it exceeds the maximum nesting level. Once that happens, it
+  /// always returns false.
+  bool incRecursionDepth(ESTree::Node *n) {
+    if (LLVM_UNLIKELY(recursionDepth_ == 0))
+      return false;
+    --recursionDepth_;
+    if (LLVM_UNLIKELY(recursionDepth_ == 0)) {
+      static_cast<Derived *>(this)->recursionDepthExceeded(n);
+      return false;
+    }
+    return true;
+  }
+
+  /// This is the second part of the protocol defined by RecursiveVisitor.
+  /// Once we have reached the maximum nesting level, it does nothing. Otherwise
+  /// it decrements the nesting level.
+  void decRecursionDepth() {
+    if (LLVM_LIKELY(recursionDepth_ != 0))
+      ++recursionDepth_;
+  }
+};
+
+}; // namespace ESTree
 } // namespace hermes
 
 #endif // HERMES_AST_RECURSIVEVISITOR_H

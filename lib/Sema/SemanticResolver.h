@@ -24,7 +24,8 @@ class SemContext;
 
 /// Class the performs all resolution.
 /// Reports errors if validation fails.
-class SemanticResolver {
+class SemanticResolver
+    : public ESTree::RecursionDepthTracker<SemanticResolver> {
   Context &astContext_;
   /// A copy of Context::getSM() for easier access.
   SourceErrorManager &sm_;
@@ -89,19 +90,6 @@ class SemanticResolver {
   /// erroring on features which we parse but don't compile and transforming
   /// the AST. False if we just want to validate the AST.
   bool compile_;
-
-  /// The maximum AST nesting level. Once we reach it, we report an error and
-  /// stop.
-  static constexpr unsigned MAX_RECURSION_DEPTH =
-#if defined(HERMES_LIMIT_STACK_DEPTH) || defined(_MSC_VER)
-      512
-#else
-      1024
-#endif
-      ;
-  /// MAX_RECURSION_DEPTH minus the current AST nesting level. Once it reaches
-  /// 0, we report an error and stop modifying it.
-  unsigned recursionDepth_ = MAX_RECURSION_DEPTH;
 
  public:
   /// \param semCtx the result of resolution will be stored here.
@@ -238,32 +226,8 @@ class SemanticResolver {
   void visit(ESTree::ComponentDeclarationNode *componentDecl);
 #endif
 
-  /// This method implements the first part of the protocol defined by
-  /// RecursiveVisitor. It is supposed to return true if everything is normal,
-  /// and false if we should not visit the current node.
-  /// It maintains the current AST nesting level, and generates an error the
-  /// first time it exceeds the maximum nesting level. Once that happens, it
-  /// always returns false.
-  bool incRecursionDepth(ESTree::Node *n) {
-    if (LLVM_UNLIKELY(recursionDepth_ == 0))
-      return false;
-    --recursionDepth_;
-    if (LLVM_UNLIKELY(recursionDepth_ == 0)) {
-      recursionDepthExceeded(n);
-      return false;
-    }
-    return true;
-  }
-
-  /// This is the second part of the protocol defined by RecursiveVisitor.
-  /// Once we have reached the maximum nesting level, it does nothing. Otherwise
-  /// it decrements the nesting level.
-  void decRecursionDepth() {
-    if (LLVM_LIKELY(recursionDepth_ != 0))
-      ++recursionDepth_;
-  }
-
   friend class FunctionContext;
+  friend class ESTree::RecursionDepthTracker<SemanticResolver>;
 
  private:
   /// A RAII object automatic scopes.
