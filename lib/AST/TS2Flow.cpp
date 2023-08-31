@@ -59,7 +59,8 @@ class TS2FlowValidator {
 };
 
 /// Class to convert TS AST to Flow AST.
-class TS2FlowConverter {
+class TS2FlowConverter
+    : public ESTree::RecursionDepthTracker<TS2FlowConverter> {
  public:
   TS2FlowConverter(Context &context)
       : context_(context), sm_(context.getSourceErrorManager()) {}
@@ -74,17 +75,15 @@ class TS2FlowConverter {
 
     visitESTreeNode(*this, program);
 
+    if (sm_.getErrorCount())
+      return nullptr;
+
     if (!TS2FlowValidator(context_).validate(program)) {
       return nullptr;
     }
 
     return program;
   }
-
-  bool incRecursionDepth(ESTree::Node *) {
-    return true;
-  }
-  void decRecursionDepth() {}
 
   /// Base case: visit the node's children.
   void visit(ESTree::Node *node) {
@@ -113,6 +112,12 @@ class TS2FlowConverter {
   void visit(ESTree::FunctionDeclarationNode *node) {
     node->_returnType = convertTSNode(node->_returnType);
     visitESTreeChildren(*this, node);
+  }
+
+  void recursionDepthExceeded(ESTree::Node *n) {
+    sm_.error(
+        n->getEndLoc(),
+        "ts2flow: too many nested expressions/statements/declarations");
   }
 
  private:
