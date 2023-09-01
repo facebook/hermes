@@ -575,6 +575,9 @@ class ESTreeIRGen {
   Value *genObjectExpr(ESTree::ObjectExpressionNode *Expr);
   Value *genArrayExpr(ESTree::ArrayExpressionNode *Expr);
   Value *genCallExpr(ESTree::CallExpressionNode *call);
+  Value *emitNativeCall(
+      ESTree::CallExpressionNode *call,
+      flow::NativeFunctionType *natFuncType);
 
   /// Generates a call expression in an optional chain.
   /// \param shortCircuitBB the block to jump to upon short circuiting,
@@ -593,6 +596,10 @@ class ESTreeIRGen {
   /// $SHBuiltin.call(fn, thisVal, arg1, arg2, ...)
   /// Calls \c fn with \c thisVal and the specified args.
   Value *genSHBuiltinCall(ESTree::CallExpressionNode *call);
+
+  /// $SHBuiltin.externC({}, function fopen(path: c_ptr, mode: c_ptr): c_ptr)
+  /// Import an external C function.
+  Value *genSHBuiltinExternC(ESTree::CallExpressionNode *call);
 
   /// Emits the actual call for \p call, and is used as a helper function for
   /// genCallExpr and genOptionalCallExpr.

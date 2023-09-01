@@ -404,6 +404,12 @@ Value *ESTreeIRGen::genArrayExpr(ESTree::ArrayExpressionNode *Expr) {
 Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
   LLVM_DEBUG(llvh::dbgs() << "IRGen 'call' statement/expression.\n");
 
+  // Handle native calls separately.
+  if (auto *natFuncType = llvh::dyn_cast<flow::NativeFunctionType>(
+          flowContext_.getNodeTypeOrAny(call->_callee)->info)) {
+    return emitNativeCall(call, natFuncType);
+  }
+
   // Check for a direct call to eval().
   if (auto *identNode = llvh::dyn_cast<ESTree::IdentifierNode>(call->_callee)) {
     if (identNode->_name == kw_.identEval)
@@ -573,6 +579,9 @@ Value *ESTreeIRGen::genSHBuiltin(
   if (builtin->_name == kw_.identCNull) {
     return Builder.getLiteralPositiveZero();
   }
+  if (builtin->_name == kw_.identExternC) {
+    return genSHBuiltinExternC(call);
+  }
 
   Mod->getContext().getSourceErrorManager().error(
       call->getSourceRange(), "unknown SH builtin call");
@@ -607,6 +616,43 @@ Value *ESTreeIRGen::genSHBuiltinCall(ESTree::CallExpressionNode *call) {
 
   return Builder.createCallInst(
       callee, /* newTarget */ Builder.getLiteralUndefined(), thisValue, args);
+}
+
+Value *ESTreeIRGen::genSHBuiltinExternC(ESTree::CallExpressionNode *call) {
+  // $SHBuiltin.externC({}, function fopen(path: c_ptr, mode: c_ptr): c_ptr)
+
+  flow::Type *type = flowContext_.findNodeType(call);
+  if (!type) {
+    Mod->getContext().getSourceErrorManager().error(
+        call->getSourceRange(), "extern_c cannot be used in legacy mode");
+    return Builder.getLiteralUndefined();
+  }
+  // Extract the native function type and signature from the call expression
+  // but only in debug mode.
+#ifndef NDEBUG
+  assert(type && "type not found for extern_c");
+  NativeSignature *signature =
+      llvh::cast<flow::NativeFunctionType>(type->info)->getSignature();
+#else
+  NativeSignature *signature = nullptr;
+  (void)signature;
+#endif
+
+  // Extract the name from the function expression.
+  UniqueString *name = llvh::cast<ESTree::IdentifierNode>(
+                           llvh::cast<ESTree::FunctionExpressionNode>(
+                               &*std::next(call->_arguments.begin(), 1))
+                               ->_id)
+                           ->_name;
+
+  // Lookup the extern declaration.
+  auto *nativeExtern =
+      Mod->getContext().getNativeContext().getExistingExtern(name);
+  assert(
+      nativeExtern->signature() == signature &&
+      "extern_c signature mismatch with the expression type");
+
+  return Builder.getLiteralNativeExtern(nativeExtern);
 }
 
 Value *ESTreeIRGen::emitCall(
@@ -645,6 +691,31 @@ Value *ESTreeIRGen::emitCall(
   auto *args = genArrayFromElements(getArguments(call));
   return genBuiltinCall(
       BuiltinMethod::HermesBuiltin_apply, {callee, args, thisVal});
+}
+
+Value *ESTreeIRGen::emitNativeCall(
+    ESTree::CallExpressionNode *call,
+    flow::NativeFunctionType *natFuncType) {
+  Value *callee = genExpression(call->_callee);
+
+  llvh::SmallVector<Value *, 4> args{};
+  for (auto &arg : getArguments(call)) {
+    if (llvh::isa<ESTree::SpreadElementNode>(&arg)) {
+      // TODO: this should have been rejected by the typechecker.
+      Mod->getContext().getSourceErrorManager().error(
+          call->getSourceRange(),
+          "spread arguments are not supported for native functions");
+      return Builder.getLiteralUndefined();
+    }
+
+    args.push_back(genExpression(&arg));
+  }
+
+  return Builder.createNativeCallInst(
+      flowTypeToIRType(natFuncType->getReturnType()),
+      callee,
+      natFuncType->getSignature(),
+      args);
 }
 
 ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
