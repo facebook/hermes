@@ -19,6 +19,8 @@
 namespace hermes {
 
 class BackendContext;
+class NativeContext;
+struct NativeSettings;
 
 #ifdef HERMES_RUN_WASM
 class EmitWasmIntrinsicsContext;
@@ -233,6 +235,9 @@ class Context {
   /// on its destructor.
   std::shared_ptr<BackendContext> hbcBackendContext_{};
 
+  /// The separate native context. It is automatically created on construction.
+  std::unique_ptr<NativeContext> nativeContext_;
+
 #ifdef HERMES_RUN_WASM
   std::shared_ptr<EmitWasmIntrinsicsContext> wasmIntrinsicsContext_{};
 #endif // HERMES_RUN_WASM
@@ -242,28 +247,21 @@ class Context {
       SourceErrorManager &sm,
       CodeGenerationSettings codeGenOpts = CodeGenerationSettings(),
       OptimizationSettings optimizationOpts = OptimizationSettings(),
+      const NativeSettings *nativeSettings = nullptr,
       std::unique_ptr<ResolutionTable> resolutionTable = nullptr,
-      std::vector<uint32_t> segments = {})
-      : sm_(sm),
-        resolutionTable_(std::move(resolutionTable)),
-        segments_(std::move(segments)),
-        codeGenerationSettings_(std::move(codeGenOpts)),
-        optimizationSettings_(std::move(optimizationOpts)) {}
+      std::vector<uint32_t> segments = {});
 
   explicit Context(
       CodeGenerationSettings codeGenOpts = CodeGenerationSettings(),
       OptimizationSettings optimizationOpts = OptimizationSettings(),
+      const NativeSettings *nativeSettings = nullptr,
       std::unique_ptr<ResolutionTable> resolutionTable = nullptr,
-      std::vector<uint32_t> segments = {})
-      : ownSm_(new SourceErrorManager()),
-        sm_(*ownSm_),
-        resolutionTable_(std::move(resolutionTable)),
-        segments_(std::move(segments)),
-        codeGenerationSettings_(std::move(codeGenOpts)),
-        optimizationSettings_(std::move(optimizationOpts)) {}
+      std::vector<uint32_t> segments = {});
 
   Context(const Context &) = delete;
   void operator=(const Context &) = delete;
+
+  ~Context();
 
   Allocator &getAllocator() {
     return allocator_;
@@ -479,6 +477,11 @@ class Context {
 
   void setBackendContext(std::shared_ptr<BackendContext> hbcBackendContext) {
     hbcBackendContext_ = std::move(hbcBackendContext);
+  }
+
+  /// \return the native context.
+  NativeContext &getNativeContext() {
+    return *nativeContext_;
   }
 
 #ifdef HERMES_RUN_WASM

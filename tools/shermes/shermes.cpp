@@ -9,6 +9,7 @@
 #include "compile.h"
 
 #include "hermes/AST/ESTreeJSONDumper.h"
+#include "hermes/AST/NativeContext.h"
 #include "hermes/AST/TS2Flow.h"
 #include "hermes/IR/IRVerifier.h"
 #include "hermes/IRGen/IRGen.h"
@@ -375,6 +376,12 @@ CLFlag CheckNativeStack(
     "Emit stack overflow checks for native stack",
     CompilerCategory);
 
+cl::opt<std::string> XNativeTarget(
+    "Xnative-target",
+    cl::desc("Specify the native target triple"),
+    cl::Hidden,
+    cl::cat(CompilerCategory));
+
 } // namespace cli
 
 namespace {
@@ -472,7 +479,12 @@ std::shared_ptr<Context> createContext() {
   //
   optimizationOpts.useUnsafeIntrinsics = cli::UseUnsafeIntrinsics;
 
-  auto context = std::make_shared<Context>(codeGenOpts, optimizationOpts);
+  NativeSettings nativeSettings{};
+  // TODO: error checking, etc.
+  nativeSettings.targetTriple = llvh::Triple(cli::XNativeTarget);
+
+  auto context =
+      std::make_shared<Context>(codeGenOpts, optimizationOpts, &nativeSettings);
 
   // Typed mode forces strict mode.
   if (cli::Typed && !cli::StrictMode && cli::StrictMode.getNumOccurrences()) {

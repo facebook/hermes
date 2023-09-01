@@ -1070,6 +1070,7 @@ std::shared_ptr<Context> createContext(
   auto context = std::make_shared<Context>(
       codeGenOpts,
       optimizationOpts,
+      nullptr,
       std::move(resolutionTable),
       std::move(segments));
 
