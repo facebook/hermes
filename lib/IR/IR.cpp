@@ -614,31 +614,6 @@ JSDynamicParam *Function::addJSThisParam() {
 
 Module::~Module() {
   FunctionList.clear();
-
-  // Free global properties.
-  globalPropertyMap_.clear();
-  for (auto *prop : globalPropertyList_) {
-    Value::destroy(prop);
-  }
-
-  llvh::SmallVector<Literal *, 32> toDelete;
-
-  // Collect all literals.
-  // Note that we cannot delete while iterating due to the implementation
-  // of FoldingSet.
-  for (auto &L : literalNumbers) {
-    toDelete.push_back(&L);
-  }
-  for (auto &L : literalBigInts) {
-    toDelete.push_back(&L);
-  }
-  for (auto &L : literalStrings) {
-    toDelete.push_back(&L);
-  }
-  // Free the literals.
-  for (auto *L : toDelete) {
-    Value::destroy(L);
-  }
 }
 
 void Module::push_back(Function *F) {
@@ -647,36 +622,6 @@ void Module::push_back(Function *F) {
 
 void Module::insert(iterator position, Function *F) {
   FunctionList.insert(position, F);
-}
-
-GlobalObjectProperty *Module::findGlobalProperty(Identifier name) {
-  auto it = globalPropertyMap_.find(name);
-  return it != globalPropertyMap_.end() ? it->second : nullptr;
-}
-
-GlobalObjectProperty *Module::addGlobalProperty(
-    Identifier name,
-    bool declared) {
-  auto &ref = globalPropertyMap_[name];
-
-  if (!ref) {
-    ref = new GlobalObjectProperty(this, getLiteralString(name), declared);
-    globalPropertyList_.push_back(ref);
-  } else {
-    ref->orDeclared(declared);
-  }
-
-  return ref;
-}
-
-void Module::eraseGlobalProperty(GlobalObjectProperty *prop) {
-  globalPropertyMap_.erase(prop->getName()->getValue());
-  auto it =
-      std::find(globalPropertyList_.begin(), globalPropertyList_.end(), prop);
-  if (it != globalPropertyList_.end()) {
-    Value::destroy(*it);
-    globalPropertyList_.erase(it);
-  }
 }
 
 void Module::populateCJSModuleUseGraph() {
@@ -830,57 +775,30 @@ void Module::dump(llvh::raw_ostream &os) const {
 }
 
 LiteralNumber *Module::getLiteralNumber(double value) {
-  // Check to see if we've already seen this tuple before.
-  llvh::FoldingSetNodeID ID;
-
-  LiteralNumber::Profile(ID, value);
-
-  // If this is not the first time we see this tuple then return the old copy.
-  void *InsertPos = nullptr;
-  if (LiteralNumber *LN = literalNumbers.FindNodeOrInsertPos(ID, InsertPos))
-    return LN;
-
-  auto New = new LiteralNumber(value);
-  literalNumbers.InsertNode(New, InsertPos);
-  return New;
+  return literalNumbers_.getOrEmplaceWithNew(value).first;
 }
 
 LiteralBigInt *Module::getLiteralBigInt(UniqueString *value) {
-  // Check to see if we've already seen this tuple before.
-  llvh::FoldingSetNodeID ID;
-
-  LiteralBigInt::Profile(ID, value);
-
-  // If this is not the first time we see this tuple then return the old copy.
-  void *InsertPos = nullptr;
-  if (LiteralBigInt *LN = literalBigInts.FindNodeOrInsertPos(ID, InsertPos))
-    return LN;
-
-  auto New = new LiteralBigInt(value);
-  literalBigInts.InsertNode(New, InsertPos);
-  return New;
+  return literalBigInts_.getOrEmplaceWithNew(value).first;
 }
 
 LiteralString *Module::getLiteralString(Identifier value) {
-  // Check to see if we've already seen this tuple before.
-  llvh::FoldingSetNodeID ID;
-
-  LiteralString::Profile(ID, value);
-
-  // If this is not the first time we see this tuple then return the old copy.
-  void *InsertPos = nullptr;
-  if (LiteralString *LS = literalStrings.FindNodeOrInsertPos(ID, InsertPos))
-    return LS;
-
-  auto New = new LiteralString(value);
-  literalStrings.InsertNode(New, InsertPos);
-  return New;
+  return literalStrings_.getOrEmplaceWithNew(value).first;
 }
 
 LiteralBool *Module::getLiteralBool(bool value) {
   if (value)
     return &literalTrue;
   return &literalFalse;
+}
+
+GlobalObjectProperty *Module::addGlobalProperty(
+    Identifier name,
+    bool declared) {
+  auto *res =
+      globalProperties_.getOrEmplaceWithNew(getLiteralString(name)).first;
+  res->orDeclared(declared);
+  return res;
 }
 
 void Type::print(llvh::raw_ostream &OS) const {

@@ -8,6 +8,7 @@
 #ifndef HERMES_IR_IR_H
 #define HERMES_IR_IR_H
 
+#include "hermes/ADT/OwningFoldingSet.h"
 #include "hermes/ADT/WordBitSet.h"
 #include "hermes/AST/Context.h"
 #include "hermes/Support/Conversions.h"
@@ -17,7 +18,6 @@
 #include "hermes/AST/ESTree.h"
 #endif
 
-#include "llvh/ADT/FoldingSet.h"
 #include "llvh/ADT/Hashing.h"
 #include "llvh/ADT/SmallPtrSet.h"
 #include "llvh/ADT/SmallVector.h"
@@ -743,6 +743,13 @@ class Value {
   }
 };
 
+/// Deleter for Values.
+struct ValueDeleter {
+  void operator()(Value *V) {
+    Value::destroy(V);
+  }
+};
+
 /// This represents a function parameter.
 class Parameter : public Value {
   friend class Function;
@@ -1177,29 +1184,19 @@ class Variable : public Value {
 };
 
 /// A property of the global object.
-class GlobalObjectProperty : public Value {
-  /// The module that owns it.
-  Module *parent_;
-
+class GlobalObjectProperty : public Value, public llvh::FoldingSetNode {
   /// The variable name.
   LiteralString *name_;
 
   /// Was it explicitly declared (which means that it is non-configurable).
-  bool declared_;
+  bool declared_ = false;
 
  public:
-  GlobalObjectProperty(Module *parent, LiteralString *name, bool declared)
-      : Value(ValueKind::GlobalObjectPropertyKind),
-        parent_(parent),
-        name_(name),
-        declared_(declared) {}
+  GlobalObjectProperty(LiteralString *name)
+      : Value(ValueKind::GlobalObjectPropertyKind), name_(name) {}
 
   static bool classof(const Value *v) {
     return v->getKind() == ValueKind::GlobalObjectPropertyKind;
-  }
-
-  Module *getParent() const {
-    return parent_;
   }
 
   LiteralString *getName() const {
@@ -1212,6 +1209,13 @@ class GlobalObjectProperty : public Value {
 
   void orDeclared(bool declared) {
     declared_ |= declared;
+  }
+
+  static void Profile(llvh::FoldingSetNodeID &ID, LiteralString *name) {
+    ID.AddPointer(name);
+  }
+  void Profile(llvh::FoldingSetNodeID &ID) const {
+    Profile(ID, name_);
   }
 };
 
@@ -2053,18 +2057,11 @@ class Module : public Value {
   };
 
  private:
-  using GlobalObjectPropertyList = std::vector<GlobalObjectProperty *>;
-
   std::shared_ptr<Context> Ctx;
   /// Optionally specify the top level function, if it isn't the first one.
   Function *topLevelFunction_{};
 
   FunctionListType FunctionList{};
-
-  /// A list of all global properties, in the order of declaration.
-  GlobalObjectPropertyList globalPropertyList_{};
-  /// Mapping global property names to instances in the list.
-  llvh::DenseMap<Identifier, GlobalObjectProperty *> globalPropertyMap_{};
 
   GlobalObject globalObject_{};
   LiteralEmpty literalEmpty{};
@@ -2074,13 +2071,12 @@ class Module : public Value {
   LiteralBool literalTrue{true};
   EmptySentinel emptySentinel_{};
 
-  using LiteralNumberFoldingSet = llvh::FoldingSet<LiteralNumber>;
-  using LiteralBigIntFoldingSet = llvh::FoldingSet<LiteralBigInt>;
-  using LiteralStringFoldingSet = llvh::FoldingSet<LiteralString>;
+  // Uniqued values.
 
-  LiteralNumberFoldingSet literalNumbers{};
-  LiteralBigIntFoldingSet literalBigInts{};
-  LiteralStringFoldingSet literalStrings{};
+  OwningFoldingSet<LiteralNumber, ValueDeleter> literalNumbers_{};
+  OwningFoldingSet<LiteralBigInt, ValueDeleter> literalBigInts_{};
+  OwningFoldingSet<LiteralString, ValueDeleter> literalStrings_{};
+  OwningFoldingSet<GlobalObjectProperty, ValueDeleter> globalProperties_{};
 
   /// Map from an identifier to a number indicating how many times it has been
   /// used. This allows to construct unique internal names derived from regular
@@ -2181,15 +2177,9 @@ class Module : public Value {
     return topLevelFunction_;
   }
 
-  /// Find the specified global property and return a pointer to it or nullptr.
-  GlobalObjectProperty *findGlobalProperty(Identifier name);
-
   /// Create the specified global property if it doesn't exist. If it does
   /// exist, its declared property is updated by a logical OR.
   GlobalObjectProperty *addGlobalProperty(Identifier name, bool declared);
-
-  /// Remove the specified property from the list and free it.
-  void eraseGlobalProperty(GlobalObjectProperty *prop);
 
   /// Create a new literal number of value \p value.
   LiteralNumber *getLiteralNumber(double value);
