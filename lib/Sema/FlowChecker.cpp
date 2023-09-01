@@ -1777,9 +1777,11 @@ class FlowChecker::DeclareScopeTypes {
     outer.sm_.error(
         id->getStartLoc(),
         "ft: type " + name->str() + " already declared in this scope");
-    outer.sm_.note(
-        typeDecl->astNode->getSourceRange(),
-        "ft: previous declaration of " + name->str());
+    if (typeDecl->astNode && typeDecl->astNode->getSourceRange().isValid()) {
+      outer.sm_.note(
+          typeDecl->astNode->getSourceRange(),
+          "ft: previous declaration of " + name->str());
+    }
     return true;
   };
 
