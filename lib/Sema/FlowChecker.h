@@ -47,13 +47,19 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     /// nullptr is used to indicate a forward declaration. This is a temporary
     /// state while declaring all types in a scope.
     Type *type;
+    /// The lexical scope in which the type was declared.
+    /// TODO: this is not used, should we remove it?
     sema::LexicalScope *scope;
+    /// Optional AST node for reporting re-declarations.
     ESTree::Node *astNode;
     explicit TypeDecl(
         Type *type,
         sema::LexicalScope *scope,
         ESTree::Node *astNode)
-        : type(type), scope(scope), astNode(astNode) {}
+        : type(type), scope(scope), astNode(astNode) {
+      assert(type && "type must be non-null");
+      assert(scope && "scope must be non-null");
+    }
   };
 
   /// The scoped binding table mapping from string to binding.
