@@ -318,6 +318,10 @@ SHERMES_EXPORT void _sh_throw(SHRuntime *shr, SHLegacyValue value)
 /// \param message will be converted to a string and used as the error message.
 SHERMES_EXPORT void _sh_throw_type_error(SHRuntime *shr, SHLegacyValue *message)
     __attribute__((noreturn));
+/// Throw a TypeError with the given ASCII message.
+SHERMES_EXPORT void _sh_throw_type_error_ascii(
+    SHRuntime *shr,
+    const char *message) __attribute__((noreturn));
 
 /// Throw a ReferenceError for accessing uninitialized variable.
 SHERMES_EXPORT void _sh_throw_empty(SHRuntime *shr) __attribute__((noreturn));
@@ -953,6 +957,77 @@ SHERMES_EXPORT void _sh_store_parent(
     SHRuntime *shr,
     const SHLegacyValue *storedValue,
     const SHLegacyValue *object);
+
+/// If the double value is within representable integer range, convert it,
+/// otherwise throw.
+static inline uint64_t _sh_to_uint64_double_or_throw(SHRuntime *shr, double d) {
+  if (__builtin_expect(d >= 0 && d <= (double)(1LL << 53), true)) {
+    return (uint64_t)d;
+  }
+  _sh_throw_type_error_ascii(shr, "number not representable as uint64_t");
+}
+
+/// If the double value is within representable integer range, convert it,
+/// otherwise throw.
+static inline int64_t _sh_to_int64_double_or_throw(SHRuntime *shr, double d) {
+  if (__builtin_expect(
+          d >= (double)(int64_t)(-1ULL << 53) && d <= (double)(1LL << 53),
+          true)) {
+    return (int64_t)d;
+  }
+  _sh_throw_type_error_ascii(shr, "number not representable as int64_t");
+}
+
+/// If the int64 value is within representable integer range, convert it,
+/// otherwise throw
+static inline double _sh_to_double_int64_or_throw(SHRuntime *shr, int64_t i) {
+  if (__builtin_expect(i >= (int64_t)(-1ULL << 53) && i <= (1LL << 53), true)) {
+    return (double)i;
+  }
+  _sh_throw_type_error_ascii(shr, "int64_t not representable as number");
+}
+/// If the uint64 value is within representable integer range, convert it,
+/// otherwise throw
+static inline double _sh_to_double_uint64_or_throw(SHRuntime *shr, uint64_t i) {
+  if (__builtin_expect(i <= 1ULL << 53, true)) {
+    // On x86_64 there is no instruction to convert uint64_t to double, making
+    // it a bit slower. Fortunately, we know that `i` is in range for int64_t,
+    // so we can just pretend it is signed.
+    return (double)(int64_t)i;
+  }
+  _sh_throw_type_error_ascii(shr, "uint64_t not representable as number");
+}
+
+/// Encode a pointer as SHLegacyValue or throw if it can't be encoded (if the
+/// bit pattern would repersent a NaN).
+static inline SHLegacyValue _sh_ljs_native_pointer_or_throw(
+    SHRuntime *shr,
+    void *p) {
+#if HERMESVM_SIZEOF_VOID_P == 8
+  // Check that the bit pattern is not a NaN. A NaN is encoded when the exponent
+  // (bits 52-62) are all 1s and the mantissa is not 0. For this check we ignore
+  // the mantissa and just look at the exponent.
+  // It is faster to check if all 11 bits are 1s if we invert the number and
+  // check for 0 instead.
+  if (__builtin_expect(((~(uint64_t)(uintptr_t)p >> 52) & 0x7ff) != 0, true)) {
+    return _sh_ljs_native_pointer(p);
+  }
+  _sh_throw_type_error_ascii(shr, "pointer not representable as number");
+#else
+  (void)shr;
+  return _sh_ljs_double((double)(uint32_t)(uintptr_t)p);
+#endif
+}
+
+/// \return the C errno value.
+SHERMES_EXPORT int _sh_errno(void);
+
+static inline void _sh_ptr_write_char(char *ptr, int offset, char c) {
+  ptr[offset] = c;
+}
+static inline unsigned char _sh_ptr_read_uchar(unsigned char *ptr, int offset) {
+  return ptr[offset];
+}
 
 #ifdef __cplusplus
 }

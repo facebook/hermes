@@ -101,6 +101,7 @@
 #define HERMES_SH_LEGACY_VALUE_H
 
 #include <assert.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -204,6 +205,12 @@ static inline SHLegacyValue _sh_ljs_double(double v) {
   u.d = v;
   return (SHLegacyValue){u.i};
 }
+static inline SHLegacyValue _sh_ljs_untrusted_double(double v) {
+  if (__builtin_expect(v != v, false))
+    return _sh_ljs_double(NAN);
+  return _sh_ljs_double(v);
+}
+
 static inline SHLegacyValue _sh_ljs_native_pointer(void *p) {
   return (SHLegacyValue){(uintptr_t)p};
 }
@@ -265,6 +272,9 @@ static inline double _sh_ljs_get_double(SHLegacyValue v) {
 static inline void *_sh_ljs_get_pointer(SHLegacyValue v) {
   // Mask out the tag.
   return (void *)(v.raw & kHV_DataMask);
+}
+static inline void *_sh_ljs_get_native_pointer(SHLegacyValue v) {
+  return (void *)(uintptr_t)v.raw;
 }
 
 #ifdef __cplusplus

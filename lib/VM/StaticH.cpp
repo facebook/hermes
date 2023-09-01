@@ -336,6 +336,13 @@ extern "C" void _sh_throw_type_error(SHRuntime *shr, SHLegacyValue *message) {
   _sh_throw_current(shr);
 }
 
+extern "C" void _sh_throw_type_error_ascii(
+    SHRuntime *shr,
+    const char *message) {
+  (void)getRuntime(shr).raiseTypeError(TwineChar16(message));
+  _sh_throw_current(shr);
+}
+
 extern "C" void _sh_throw_empty(SHRuntime *shr) {
   Runtime &runtime = getRuntime(shr);
   (void)runtime.raiseReferenceError("accessing an uninitialized variable");
@@ -1843,4 +1850,8 @@ extern "C" void _sh_fastarray_append(
 
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
+}
+
+extern "C" int _sh_errno(void) {
+  return errno;
 }
