@@ -1792,6 +1792,9 @@ class InstrGen {
     generateRegisterPtr(*inst.getArray());
     os_ << ");\n";
   }
+  void generateNativeCallInst(NativeCallInst &inst) {
+    unimplemented(inst);
+  }
 };
 
 /// Lower module IR to LIR, so it is suitable for register allocation.

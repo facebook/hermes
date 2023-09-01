@@ -914,6 +914,9 @@ class TypeInferenceImpl {
   Type inferStoreParentInst(StoreParentInst *inst) {
     hermes_fatal("typed instruction");
   }
+  Type inferNativeCallInst(NativeCallInst *inst) {
+    hermes_fatal("typed instruction");
+  }
   Type inferUnionNarrowTrustedInst(UnionNarrowTrustedInst *inst) {
     auto res = Type::intersectTy(
         inst->getSavedResultType(), inst->getSingleOperand()->getType());

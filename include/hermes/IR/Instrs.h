@@ -4656,6 +4656,60 @@ class LIRDeadValueInst : public Instruction {
   }
 };
 
+class NativeCallInst : public Instruction {
+  NativeCallInst(const NativeCallInst &) = delete;
+  void operator=(const NativeCallInst &) = delete;
+
+ public:
+  enum { CalleeIdx, SignatureIdx, FirstArgIdx };
+
+  explicit NativeCallInst(
+      Type type,
+      Value *callee,
+      LiteralNativeSignature *signature,
+      llvh::ArrayRef<Value *> args)
+      : Instruction(ValueKind::NativeCallInstKind) {
+    setType(type);
+    // FIXME: this should be added when types are propagated.
+    // assert(callee->getType().isNumberType() && "callee must be a number");
+    pushOperand(callee);
+    pushOperand(signature);
+    for (auto arg : args)
+      pushOperand(arg);
+  }
+  explicit NativeCallInst(
+      const NativeCallInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return true;
+  }
+  SideEffect getSideEffectImpl() const {
+    return SideEffect::createUnknown();
+  }
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::NativeCallInstKind;
+  }
+
+  Value *getCallee() const {
+    return getOperand(CalleeIdx);
+  }
+  LiteralNativeSignature *getSignature() const {
+    return llvh::cast<LiteralNativeSignature>(getOperand(SignatureIdx));
+  }
+  unsigned getNumArgs() const {
+    return getNumOperands() - FirstArgIdx;
+  }
+  Value *getArg(unsigned i) const {
+    assert(i < getNumArgs() && "invalid arg index");
+    return getOperand(FirstArgIdx + i);
+  }
+};
+
 } // end namespace hermes
 
 #endif

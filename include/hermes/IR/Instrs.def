@@ -249,6 +249,8 @@ DEF_VALUE(StoreParentInst, Instruction)
 DEF_VALUE(UnionNarrowTrustedInst, Instruction)
 DEF_VALUE(LIRDeadValueInst, Instruction)
 
+DEF_VALUE(NativeCallInst, Instruction)
+
 #undef INCLUDE_HBC_BACKEND
 
 // Don't undef these if this file is being included in ValueKinds.def, since

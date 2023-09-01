@@ -924,6 +924,16 @@ Arguments | %operand is the input value
 Semantics | Narrow the type, but doesn't change the value.
 Effects | None
 
+### NativeCall
+
+NativeCall | _
+--- |-----------------------------------------------|
+Description | Call a native function.
+Example | NativeCall (:type) %nativeFunctionPtr, %nativeSignature, %arg1, %arg2, ...
+Arguments | %nativeFunctionPtr is the pointer to the native function. %nativeSignature is the signature of the native function. Arguments %arg1 ... %argN are the arguments passed to the function encoded as JS values.
+Semantics | The JS arguments are converted to native types. The result is converted to the JS type.
+Effects | Unknown.
+
 ### LIRDeadValue
 
 LIRDeadValue | _

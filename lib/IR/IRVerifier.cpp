@@ -948,6 +948,13 @@ void Verifier::visitUnionNarrowTrustedInst(const UnionNarrowTrustedInst &Inst) {
 }
 void Verifier::visitLIRDeadValueInst(const LIRDeadValueInst &Inst) {}
 
+void Verifier::visitNativeCallInst(const hermes::NativeCallInst &Inst) {
+  // FIXM: this should be added when types are propagated.
+  //  Assert(
+  //      Inst.getCallee()->getType().isNumberType(),
+  //      "NativeCallInst callee must be a number");
+}
+
 } // namespace
 
 #endif

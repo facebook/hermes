@@ -633,6 +633,12 @@ class IRBuilder {
 
   LiteralNativeExtern *getLiteralNativeExtern(NativeExtern *nativeExtern);
 
+  NativeCallInst *createNativeCallInst(
+      Type type,
+      Value *callee,
+      NativeSignature *sig,
+      ArrayRef<Value *> args);
+
   /// This is an RAII object that saves and restores the source location of the
   /// IRBuilder.
   class ScopedLocationChange {

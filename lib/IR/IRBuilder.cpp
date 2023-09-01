@@ -1151,6 +1151,17 @@ LiteralNativeExtern *IRBuilder::getLiteralNativeExtern(
   return M->getLiteralNativeExtern(nativeExtern);
 }
 
+NativeCallInst *IRBuilder::createNativeCallInst(
+    Type type,
+    Value *callee,
+    NativeSignature *sig,
+    ArrayRef<Value *> args) {
+  auto *inst =
+      new NativeCallInst(type, callee, getLiteralNativeSignature(sig), args);
+  insert(inst);
+  return inst;
+}
+
 inline void IRBuilder::justInsert(Instruction *Inst) {
   assert(!Inst->getParent() && "Instr that's already inserted elsewhere");
   Inst->setParent(Block);
