@@ -99,6 +99,10 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// Counter for creating anonymous labels during typechecking.
   uint32_t anonymousLabelCounter_{0};
 
+  /// Mapping from native type names to their enum code. Populated by
+  /// \c declareNativeTypes()
+  llvh::DenseMap<UniqueString *, NativeCType> nativeTypes_;
+
  public:
   explicit FlowChecker(
       Context &astContext,
@@ -111,6 +115,10 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// \param rootNode the top-level program/JS module node to run resolution on.
   /// \return false on error.
   bool run(ESTree::ProgramNode *rootNode);
+
+  /// Executed once at the top scope to define all native types. This is a hack.
+  /// Eventually we should have a proper module system.
+  void declareNativeTypes(sema::LexicalScope *rootScope);
 
   /// We call this when we exceed the maximum recursion depth.
   void recursionDepthExceeded(ESTree::Node *n);

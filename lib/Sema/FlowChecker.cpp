@@ -47,6 +47,7 @@ bool FlowChecker::run(ESTree::ProgramNode *rootNode) {
 
   FunctionContext globalFunc(*this, rootNode, nullptr, flowContext_.getAny());
   ScopeRAII scope(*this);
+  declareNativeTypes(rootNode->getScope());
   resolveScopeTypesAndAnnotate(rootNode, rootNode->getScope());
   if (sm_.getErrorCount()) {
     // Avoid running the visitor to check types if the resolution failed,
@@ -56,6 +57,28 @@ bool FlowChecker::run(ESTree::ProgramNode *rootNode) {
   }
   visitESTreeNode(*this, rootNode);
   return sm_.getErrorCount() == 0;
+}
+
+void FlowChecker::declareNativeTypes(sema::LexicalScope *rootScope) {
+  Type *const number = flowContext_.getNumber();
+  Type *const cptr = flowContext_.getCPtr();
+
+  /// Declare a native type as an alias for \p type.
+  auto declare = [this, rootScope](
+                     llvh::StringRef name, NativeCType ctype, Type *type) {
+    UniqueString *ident =
+        astContext_.getIdentifier(name).getUnderlyingPointer();
+    bindingTable_.insert(ident, TypeDecl(type, rootScope, nullptr));
+    nativeTypes_.try_emplace(ident, ctype);
+  };
+
+#define NATIVE_TYPE(name, str) \
+  declare(llvh::StringLiteral("c_" #name), NativeCType::name, number);
+#define NATIVE_PTR(name, str) \
+  declare(llvh::StringLiteral("c_" #name), NativeCType::name, cptr);
+#define NATIVE_CTYPE(name, str) \
+  declare(llvh::StringLiteral("c_" #name), NativeCType::c_##name, number);
+#include "hermes/AST/NativeTypes.def"
 }
 
 void FlowChecker::recursionDepthExceeded(ESTree::Node *n) {
