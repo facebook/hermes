@@ -1290,6 +1290,10 @@ class FlowChecker::ExprVisitor {
       checkSHBuiltinCall(call);
       return;
     }
+    if (builtin->_name == outer_.kw_.identCNull) {
+      checkSHBuiltinCNull(call);
+      return;
+    }
 
     outer_.sm_.error(call->getSourceRange(), "unknown SH builtin call");
   }
@@ -1348,6 +1352,16 @@ class FlowChecker::ExprVisitor {
     checkArgumentTypes(
         ftype->getParams(), call, call->_arguments, "function", 2);
     return;
+  }
+
+  /// SHBuiltin.c_null().
+  void checkSHBuiltinCNull(ESTree::CallExpressionNode *call) {
+    // Check the number and types of arguments.
+    if (call->_arguments.size() != 0) {
+      outer_.sm_.error(call->getSourceRange(), "ft: c_null takes no arguments");
+      return;
+    }
+    outer_.setNodeType(call, outer_.flowContext_.getCPtr());
   }
 
   void visit(ESTree::OptionalCallExpressionNode *node) {

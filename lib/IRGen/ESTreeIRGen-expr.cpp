@@ -570,6 +570,9 @@ Value *ESTreeIRGen::genSHBuiltin(
   if (builtin->_name == kw_.identCall) {
     return genSHBuiltinCall(call);
   }
+  if (builtin->_name == kw_.identCNull) {
+    return Builder.getLiteralPositiveZero();
+  }
 
   Mod->getContext().getSourceErrorManager().error(
       call->getSourceRange(), "unknown SH builtin call");
