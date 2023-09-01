@@ -187,6 +187,17 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
       os << "@" << quoteStr(scopeName);
     }
     os << "]";
+  } else if (auto *NS = llvh::dyn_cast<LiteralNativeSignature>(V)) {
+    os << '"';
+    NS->getData()->format(os);
+    os << '"';
+  } else if (auto *NE = llvh::dyn_cast<LiteralNativeExtern>(V)) {
+    NativeExtern *ne = NE->getData();
+    os << "extern_c(";
+    ne->signature()->format(os, ne->name()->c_str());
+    if (ne->declared())
+      os << " /*declared*/";
+    os << ")";
   } else {
     llvm_unreachable("Invalid value");
   }

@@ -11,6 +11,7 @@
 #include "hermes/ADT/OwningFoldingSet.h"
 #include "hermes/ADT/WordBitSet.h"
 #include "hermes/AST/Context.h"
+#include "hermes/AST/NativeContext.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/ScopeChain.h"
 
@@ -1130,6 +1131,47 @@ class GlobalObject : public Literal {
   }
 };
 
+template <class T, ValueKind K, Type typer() = Type::createAnyType>
+class LiteralWrapper : public Literal, public llvh::FoldingSetNode {
+ protected:
+  T data_;
+
+ public:
+  explicit LiteralWrapper(T data) : Literal(K), data_(data) {
+    setType(typer());
+  }
+
+  T getData() const {
+    return data_;
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == K;
+  }
+
+  static void Profile(llvh::FoldingSetNodeID &ID, T data) {
+    if constexpr (std::is_integral_v<T>)
+      ID.AddInteger(data);
+    else if constexpr (std::is_enum_v<T>)
+      ID.AddInteger(static_cast<std::underlying_type_t<T>>(data));
+    else if constexpr (std::is_pointer_v<T>)
+      ID.AddPointer(data);
+    else
+      ID.Add(data);
+  }
+
+  void Profile(llvh::FoldingSetNodeID &ID) const {
+    Profile(ID, data_);
+  }
+};
+
+using LiteralNativeSignature =
+    LiteralWrapper<NativeSignature *, ValueKind::LiteralNativeSignatureKind>;
+using LiteralNativeExtern = LiteralWrapper<
+    NativeExtern *,
+    ValueKind::LiteralNativeExternKind,
+    Type::createNumber>;
+
 /// This represents a JavaScript variable, that's allocated in the function.
 class Variable : public Value {
  public:
@@ -2077,6 +2119,8 @@ class Module : public Value {
   OwningFoldingSet<LiteralBigInt, ValueDeleter> literalBigInts_{};
   OwningFoldingSet<LiteralString, ValueDeleter> literalStrings_{};
   OwningFoldingSet<GlobalObjectProperty, ValueDeleter> globalProperties_{};
+  OwningFoldingSet<LiteralNativeSignature, ValueDeleter> nativeSignatures_{};
+  OwningFoldingSet<LiteralNativeExtern, ValueDeleter> nativeExterns_{};
 
   /// Map from an identifier to a number indicating how many times it has been
   /// used. This allows to construct unique internal names derived from regular
@@ -2192,6 +2236,12 @@ class Module : public Value {
 
   /// Create a new literal bool of value \p value.
   LiteralBool *getLiteralBool(bool value);
+
+  /// Create a new LiteralNativeSignature.
+  LiteralNativeSignature *getLiteralNativeSignature(NativeSignature *data);
+
+  /// Create a new LiteralNativeExtern.
+  LiteralNativeExtern *getLiteralNativeExtern(NativeExtern *data);
 
   /// Create a new literal 'empty'.
   LiteralEmpty *getLiteralEmpty() {

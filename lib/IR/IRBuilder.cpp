@@ -1142,6 +1142,15 @@ LIRDeadValueInst *IRBuilder::createLIRDeadValueInst(Type type) {
   return inst;
 }
 
+LiteralNativeSignature *IRBuilder::getLiteralNativeSignature(
+    NativeSignature *sig) {
+  return M->getLiteralNativeSignature(sig);
+}
+LiteralNativeExtern *IRBuilder::getLiteralNativeExtern(
+    NativeExtern *nativeExtern) {
+  return M->getLiteralNativeExtern(nativeExtern);
+}
+
 inline void IRBuilder::justInsert(Instruction *Inst) {
   assert(!Inst->getParent() && "Instr that's already inserted elsewhere");
   Inst->setParent(Block);

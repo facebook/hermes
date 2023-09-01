@@ -629,6 +629,10 @@ class IRBuilder {
 
   LIRDeadValueInst *createLIRDeadValueInst(Type type);
 
+  LiteralNativeSignature *getLiteralNativeSignature(NativeSignature *sig);
+
+  LiteralNativeExtern *getLiteralNativeExtern(NativeExtern *nativeExtern);
+
   /// This is an RAII object that saves and restores the source location of the
   /// IRBuilder.
   class ScopedLocationChange {

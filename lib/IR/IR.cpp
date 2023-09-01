@@ -801,6 +801,15 @@ GlobalObjectProperty *Module::addGlobalProperty(
   return res;
 }
 
+LiteralNativeSignature *Module::getLiteralNativeSignature(
+    NativeSignature *data) {
+  return nativeSignatures_.getOrEmplaceWithNew(data).first;
+}
+
+LiteralNativeExtern *Module::getLiteralNativeExtern(NativeExtern *data) {
+  return nativeExterns_.getOrEmplaceWithNew(data).first;
+}
+
 void Type::print(llvh::raw_ostream &OS) const {
   bool first = true;
   if (isNoType()) {

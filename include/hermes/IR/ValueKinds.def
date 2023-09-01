@@ -33,6 +33,8 @@ DEF_VALUE(LiteralBigInt, Literal)
 DEF_VALUE(LiteralString, Literal)
 DEF_VALUE(LiteralBool, Literal)
 DEF_VALUE(GlobalObject, Literal)
+DEF_VALUE(LiteralNativeSignature, Value)
+DEF_VALUE(LiteralNativeExtern, Value)
 MARK_LAST(Literal)
 
 DEF_VALUE(EmptySentinel, Value)
