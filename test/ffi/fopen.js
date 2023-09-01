@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -typed -dump-ir %s
+// RUN: %shermes -typed -emit-c %s
 
 "use strict";
 

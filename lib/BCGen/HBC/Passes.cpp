@@ -236,6 +236,12 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     return true;
   }
 
+  if (llvh::isa<NativeCallInst>(Inst) &&
+      (opIndex == NativeCallInst::CalleeIdx ||
+       opIndex == NativeCallInst::SignatureIdx)) {
+    return true;
+  }
+
   return false;
 }
 

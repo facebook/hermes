@@ -26,6 +26,7 @@
 #include "hermes/Support/UTF8.h"
 
 #include "llvh/ADT/BitVector.h"
+#include "llvh/ADT/SetVector.h"
 
 using namespace hermes;
 
@@ -324,6 +325,7 @@ class InstrGen {
         ra_(ra),
         bbMap_(bbMap),
         F_(F),
+        nativeContext_(F.getContext().getNativeContext()),
         moduleGen_(moduleGen),
         scopeAnalysis_(scopeAnalysis),
         envSize_(envSize),
@@ -359,6 +361,9 @@ class InstrGen {
 
   // The function being compiled.
   Function &F_;
+
+  // Info related to native compilation.
+  NativeContext &nativeContext_;
 
   /// The state for the module currently being emitted.
   ModuleGen &moduleGen_;
@@ -462,6 +467,8 @@ class InstrGen {
       os_ << ")";
     } else if (llvh::isa<Instruction>(&val)) {
       generateRegister(val);
+    } else if (auto *NE = llvh::dyn_cast<LiteralNativeExtern>(&val)) {
+      os_ << "_sh_ljs_native_pointer(" << NE->getData()->name()->str() << ")";
     } else {
       hermes_fatal("Unknown value");
     }
@@ -1793,7 +1800,122 @@ class InstrGen {
     os_ << ");\n";
   }
   void generateNativeCallInst(NativeCallInst &inst) {
-    unimplemented(inst);
+    NativeSignature *sig = inst.getSignature()->getData();
+    unsigned parens = 0;
+
+    os_.indent(2);
+    if (sig->result() != NativeCType::c_void) {
+      generateValue(inst);
+      os_ << " = ";
+      convertFromNativeResult(sig->result(), parens);
+    }
+
+    // If the callee is a literal, generate simpler code.
+    if (auto *ne = llvh::dyn_cast<LiteralNativeExtern>(inst.getCallee())) {
+      os_ << ne->getData()->name()->str();
+    } else {
+      os_ << "((";
+      sig->format(os_);
+      os_ << ")_sh_ljs_get_native_pointer(";
+      generateValue(*inst.getCallee());
+      os_ << "))";
+    }
+    os_ << '(';
+    for (unsigned i = 0, e = inst.getNumArgs(); i != e; ++i) {
+      if (i)
+        os_ << ", ";
+      convertToNativeArg(sig->params()[i], inst.getArg(i));
+    }
+    // End of argument list.
+    os_ << ')';
+    while (parens--)
+      os_ << ')';
+
+    os_ << ";\n";
+
+    // If the function returns void, we must synthesize an 'undefined'.
+    if (sig->result() == NativeCType::c_void) {
+      os_.indent(2);
+      generateValue(inst);
+      os_ << " = _sh_ljs_undefined();\n";
+    }
+  }
+  /// Print code to convert the result of a native call to its corresponding
+  /// JS type.
+  ///
+  /// \param ctype the native type of the result.
+  /// \param parens the number of closing parentheses to print after. This
+  ///     value is in-out.
+  void convertFromNativeResult(NativeCType ctype, unsigned &parens) {
+    MachineType mt = nativeContext_.md.mapCType(ctype);
+    const MachineDesc::MTD &mtd = nativeContext_.md.getMTD(mt);
+
+    ++parens;
+    switch (mtd.cat) {
+      case MachineDesc::Category::Int:
+        // Integer types with sizes of 6 bytes or fewer can always fit in a
+        // double.
+        if (mtd.size <= 6) {
+          os_ << "_sh_ljs_double((double)(" << ctype << ')';
+        } else {
+          ++parens;
+          if (mtd.sign)
+            os_ << "_sh_ljs_double(_sh_to_double_int64_or_throw(shr, ";
+          else
+            os_ << "_sh_ljs_double(_sh_to_double_uint64_or_throw(shr, ";
+        }
+        break;
+      case MachineDesc::Category::FP:
+        // Note that we treat floats as untrusted, because it is not defined
+        // how the bit pattern of a float is transferred to a double.
+        os_ << "_sh_ljs_untrusted_double(";
+        break;
+      case MachineDesc::Category::Ptr:
+        os_ << "_sh_ljs_native_pointer_or_throw(shr, ";
+        break;
+    }
+  }
+  /// Convert a JS value to its corresponding native argument type.
+  void convertToNativeArg(NativeCType ctype, Value *arg) {
+    MachineType mt = nativeContext_.md.mapCType(ctype);
+    const MachineDesc::MTD &mtd = nativeContext_.md.getMTD(mt);
+    int parens = 1;
+
+    switch (mtd.cat) {
+      case MachineDesc::Category::Int:
+        // If the integer value fits in int32, use the normal truncating
+        // machinery.
+        if (mtd.size <= 4) {
+          os_ << '(' << ctype << ")_sh_to_int32_double(_sh_ljs_get_double(";
+          ++parens;
+        } else {
+          // If the integer value is larger than 32 bits, we must check whether
+          // it is within the integer range that can be safely represented in
+          // a double, and throw otherwise.
+          assert(mtd.size == 8 && "Invalid integer size");
+          if (mtd.sign)
+            os_ << "_sh_to_int64_double_or_throw(shr, _sh_ljs_get_double(";
+          else
+            os_ << "_sh_to_uint64_double_or_throw(shr, _sh_ljs_get_double(";
+          ++parens;
+        }
+        break;
+      case MachineDesc::Category::FP:
+        assert(
+            (mt == MachineType::f32 || mt == MachineType::f64) &&
+            "invalid FP type");
+        if (mt == MachineType::f32)
+          os_ << "(float)";
+        os_ << "_sh_ljs_get_double(";
+        break;
+      case MachineDesc::Category::Ptr:
+        os_ << "_sh_ljs_get_native_pointer(";
+        break;
+    }
+
+    generateValue(*arg);
+    while (parens--)
+      os_ << ')';
   }
 };
 
@@ -2010,6 +2132,38 @@ void generateFunction(
   OS << "}\n";
 }
 
+/// Generate the include statements requested by native externs.
+void generateExternCIncludes(Module *M, llvh::raw_ostream &OS) {
+  llvh::SmallSetVector<UniqueString *, 4> includes;
+  for (NativeExtern *ne : M->getContext().getNativeContext().getAllExterns()) {
+    if (auto *inc = ne->include())
+      includes.insert(inc);
+  }
+  for (auto *inc : includes) {
+    OS << "#include <";
+    OS.write_escaped(inc->c_str());
+    OS << ">\n";
+  }
+  if (!includes.empty())
+    OS << "\n";
+}
+
+/// Generate the external C declarations for native externs.
+void generateExternC(Module *M, llvh::raw_ostream &OS) {
+  size_t count = 0;
+  for (NativeExtern *ne : M->getContext().getNativeContext().getAllExterns()) {
+    if (!ne->declared() && !ne->include()) {
+      ++count;
+      if (count == 1)
+        OS << '\n';
+      ne->signature()->format(OS, ne->name()->c_str());
+      OS << ";\n";
+    }
+  }
+  if (count != 0)
+    OS << '\n';
+}
+
 /// Converts Module \p M into valid C code and outputs it through \p OS.
 /// Returns the cache size necessary to store all the cache indexes used.
 void generateModule(
@@ -2059,11 +2213,18 @@ void generateModule(
 
 #include <stdlib.h>
 
-SHUnit THIS_UNIT;
+)";
+
+    generateExternCIncludes(M, OS);
+
+    OS << R"(SHUnit THIS_UNIT;
 
 static SHSymbolID s_symbols[];
 static SHPropertyCacheEntry s_prop_cache[];
 )";
+
+    // Declare extern functions.
+    generateExternC(M, OS);
 
     // Forward declare every JS function.
     for (auto &F : *M) {
