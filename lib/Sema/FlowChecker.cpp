@@ -7,6 +7,7 @@
 
 #include "FlowChecker.h"
 
+#include "llvh/ADT/MapVector.h"
 #include "llvh/ADT/ScopeExit.h"
 #include "llvh/ADT/SetVector.h"
 #include "llvh/ADT/Twine.h"
@@ -1317,6 +1318,10 @@ class FlowChecker::ExprVisitor {
       checkSHBuiltinCNull(call);
       return;
     }
+    if (builtin->_name == outer_.kw_.identExternC) {
+      checkSHBuiltinExternC(call);
+      return;
+    }
 
     outer_.sm_.error(call->getSourceRange(), "unknown SH builtin call");
   }
@@ -1386,6 +1391,267 @@ class FlowChecker::ExprVisitor {
     }
     outer_.setNodeType(call, outer_.flowContext_.getCPtr());
   }
+
+  /// $SHBuiltin.extern_c({options}, function name():result {...})
+  void checkSHBuiltinExternC(ESTree::CallExpressionNode *call) {
+    // Check the number and types of arguments.
+    if (call->_arguments.size() != 2) {
+      outer_.sm_.error(
+          call->getSourceRange(),
+          "ft: extern_c requires exactly two arguments");
+      return;
+    }
+
+    // Check arg 1.
+    auto arg = call->_arguments.begin();
+    auto *options = llvh::dyn_cast<ESTree::ObjectExpressionNode>(&*arg);
+    if (!options) {
+      outer_.sm_.error(
+          arg->getSourceRange(),
+          "ft: extern_c requires an object literal as the first argument");
+      return;
+    }
+    // Parse the options.
+    bool declaredOption = false;
+    UniqueString *includeOption = nullptr;
+    if (!parseExternCOptions(options, &declaredOption, &includeOption))
+      return;
+
+    // Check arg 2.
+    UniqueString *name;
+    Type *funcType;
+    TypedFunctionType *funcInfo;
+
+    ++arg;
+    auto *func = llvh::dyn_cast<ESTree::FunctionExpressionNode>(&*arg);
+    if (!func) {
+      outer_.sm_.error(
+          arg->getSourceRange(),
+          "ft: extern_c requires a function as the second argument");
+      return;
+    }
+    if (!func->_id) {
+      outer_.sm_.error(
+          arg->getSourceRange(),
+          "ft: extern_c requires a named function as the second argument");
+      return;
+    }
+    name = llvh::cast<ESTree::IdentifierNode>(func->_id)->_name;
+    funcType = outer_.flowContext_.findNodeType(func);
+    assert(funcType && "function expression type must be set");
+    if (!llvh::isa<TypedFunctionType>(funcType->info)) {
+      outer_.sm_.error(
+          arg->getSourceRange(),
+          "ft: extern_c requires a typed function as the second argument");
+      return;
+    }
+    funcInfo = llvh::cast<TypedFunctionType>(funcType->info);
+    if (funcInfo->isAsync() || funcInfo->isGenerator()) {
+      outer_.sm_.error(
+          arg->getSourceRange(),
+          "ft: extern_c does not support async or generator functions");
+      return;
+    }
+    if (funcInfo->getThisParam()) {
+      outer_.sm_.error(
+          arg->getSourceRange(),
+          "ft: extern_c does not support 'this' parameters");
+      return;
+    }
+
+    // Extract the function signature.
+    NativeSignature *signature;
+
+    if (!func->_returnType) {
+      outer_.sm_.error(
+          func->getSourceRange(),
+          "ft: extern_c requires a return type annotation");
+      return;
+    }
+    llvh::SmallVector<NativeCType, 4> natParamTypes{};
+    NativeCType natReturnType;
+
+    // The return type, where we allow void.
+    if (llvh::isa<VoidType>(funcInfo->getReturnType()->info))
+      natReturnType = NativeCType::c_void;
+    else if (!parseNativeAnnotation(
+                 llvh::cast<ESTree::TypeAnnotationNode>(func->_returnType),
+                 &natReturnType))
+      return;
+
+    for (auto &node : func->_params) {
+      auto *param = llvh::cast<ESTree::IdentifierNode>(&node);
+      if (!param->_typeAnnotation) {
+        outer_.sm_.error(
+            param->getSourceRange(),
+            "ft: extern_c requires type annotations for all parameters");
+        return;
+      }
+      NativeCType natParamType;
+      if (!parseNativeAnnotation(
+              llvh::cast<ESTree::TypeAnnotationNode>(param->_typeAnnotation),
+              &natParamType))
+        return;
+      natParamTypes.push_back(natParamType);
+    }
+
+    signature = outer_.astContext_.getNativeContext().getSignature(
+        natReturnType, natParamTypes);
+
+    // Now that we have the signature, declare the extern and check for invalid
+    // redeclaration.
+    NativeExtern *ne = outer_.astContext_.getNativeContext().getExtern(
+        name, signature, call->getStartLoc(), declaredOption, includeOption);
+    if (ne->signature() != signature) {
+      outer_.sm_.error(
+          call->getSourceRange(),
+          "ft: invalid redeclaration of native extern '" + name->str() + "'");
+      if (ne->loc().isValid()) {
+        outer_.sm_.note(ne->loc(), "ft: original declaration here");
+      }
+      return;
+    }
+
+    TypeInfo *nativeFuncInfo = outer_.flowContext_.createNativeFunction(
+        funcInfo->getReturnType(), funcInfo->getParams(), signature);
+
+    outer_.setNodeType(call, outer_.flowContext_.createType(nativeFuncInfo));
+  }
+
+  /// Extract the options from the options object literal. On error print an
+  /// an error message and return false.
+  bool parseExternCOptions(
+      ESTree::ObjectExpressionNode *options,
+      bool *declaredOption,
+      UniqueString **includeOption) {
+    *declaredOption = false;
+    *includeOption = nullptr;
+
+    auto parseObjRes = parseExternCObjectLiteral(options);
+    if (!parseObjRes)
+      return false;
+    auto &map = *parseObjRes;
+    bool success = true;
+
+    // NOTE: Whenever we find a supported option, we erase it.
+
+    // declared: boolean.
+    auto it = map.find(
+        outer_.astContext_.getIdentifier("declared").getUnderlyingPointer());
+    if (it != map.end()) {
+      auto *declared =
+          llvh::dyn_cast<ESTree::BooleanLiteralNode>(it->second->_value);
+      if (declared) {
+        *declaredOption = declared->_value;
+      } else {
+        outer_.sm_.error(
+            it->second->getSourceRange(),
+            "ft: extern_c option 'declared' must be a boolean literal");
+        success = false;
+      }
+      map.erase(it);
+    }
+
+    // include: string.
+    it = map.find(
+        outer_.astContext_.getIdentifier("include").getUnderlyingPointer());
+    if (it != map.end()) {
+      auto *include =
+          llvh::dyn_cast<ESTree::StringLiteralNode>(it->second->_value);
+      if (include) {
+        *includeOption = include->_value;
+      } else {
+        outer_.sm_.error(
+            it->second->getSourceRange(),
+            "ft: extern_c option 'include' must be a string literal");
+        success = false;
+      }
+      map.erase(it);
+    }
+
+    // Check for unsupported properties.
+    for (auto &prop : map) {
+      outer_.sm_.error(
+          prop.second->getSourceRange(),
+          "ft: extern_c does not support option '" + prop.first->str() + "'");
+      success = false;
+    }
+
+    return success;
+  }
+
+  /// Helper to parse the options object literal used in extern_c. Ensures that
+  /// only "normal" properties are present, and that the values are literals or
+  /// object literals. On error prints an error message and returns None.
+  /// On success returns a map of property names to PropertyNodes. The caller
+  /// can quickly scan the names. It can also use the same function to scan
+  /// nested object literals.
+  ///
+  /// \return None on error, otherwise a map of property names to
+  ///     EStree::PropertyNode.
+  llvh::Optional<
+      llvh::SmallMapVector<UniqueString *, ESTree::PropertyNode *, 4>>
+  parseExternCObjectLiteral(ESTree::ObjectExpressionNode *objLitNode) {
+    llvh::SmallMapVector<UniqueString *, ESTree::PropertyNode *, 4> res{};
+
+    for (ESTree::Node &n : objLitNode->_properties) {
+      // The dyn_cast could perhaps be a cast, but just to be safe.
+      auto *prop = llvh::dyn_cast<ESTree::PropertyNode>(&n);
+      if (!prop || prop->_kind != outer_.kw_.identInit || prop->_computed ||
+          prop->_method || prop->_shorthand) {
+        outer_.sm_.error(
+            n.getSourceRange(), "ft: extern_c: unsupported property format");
+        return llvh::None;
+      }
+
+      // Check that the value is a literal, another object, or an array.
+      auto *value = prop->_value;
+      if (!(llvh::isa<ESTree::NullLiteralNode>(value) ||
+            llvh::isa<ESTree::BooleanLiteralNode>(value) ||
+            llvh::isa<ESTree::StringLiteralNode>(value) ||
+            llvh::isa<ESTree::NumericLiteralNode>(value) ||
+            llvh::isa<ESTree::BigIntLiteralNode>(value) ||
+            llvh::isa<ESTree::ObjectExpressionNode>(value))) {
+        outer_.sm_.error(
+            value->getSourceRange(), "ft: extern_c: unsupported property type");
+        return llvh::None;
+      }
+
+      // Note that we don't care about duplicates, we just want to use the last
+      // one.
+      res[llvh::cast<ESTree::IdentifierNode>(prop->_key)->_name] = prop;
+    }
+
+    // Note that we have to use std::move() since we are returning an optional.
+    return std::move(res);
+  }
+
+  /// Parse a native type annotation. Return true on success and store the
+  /// value in \p res. On error print an error message and return false.
+  ///
+  /// \param node The node to parse.
+  /// \param res Output parameter for the parsed type.
+  bool parseNativeAnnotation(
+      ESTree::TypeAnnotationNode *node,
+      NativeCType *res) {
+    auto *ann = llvh::dyn_cast<ESTree::GenericTypeAnnotationNode>(
+        node->_typeAnnotation);
+    if (!ann || ann->_typeParameters) {
+      outer_.sm_.error(
+          node->getSourceRange(), "ft: unsupported native type annotation");
+      return false;
+    }
+    UniqueString *name = llvh::cast<ESTree::IdentifierNode>(ann->_id)->_name;
+    auto it = outer_.nativeTypes_.find(name);
+    if (it == outer_.nativeTypes_.end()) {
+      outer_.sm_.error(
+          ann->_id->getSourceRange(),
+          "ft: '" + name->str() + "' is not a native type");
+      return false;
+    }
+    *res = it->second;
+    return true;
+  };
 
   void visit(ESTree::OptionalCallExpressionNode *node) {
     outer_.sm_.error(

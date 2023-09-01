@@ -56,6 +56,11 @@ class FlowTypesDumper {
 
   /// Print all existing types.
   void printAllTypes(llvh::raw_ostream &os, const FlowContext &flowTypes);
+
+  /// Print all native externs.
+  void printNativeExterns(
+      llvh::raw_ostream &os,
+      const NativeContext &nativeContext);
 };
 
 } // namespace flow

@@ -38,6 +38,8 @@ HERMES_KEYWORD(Prototype, "prototype")
 HERMES_KEYWORD(Undefined, "undefined")
 HERMES_KEYWORD(SHBuiltin, "$SHBuiltin")
 HERMES_KEYWORD(Call, "call")
+HERMES_KEYWORD(ExternC, "extern_c")
+HERMES_KEYWORD(Init, "init")
 HERMES_KEYWORD(CNull, "c_null")
 
 #undef HERMES_KEYWORD

@@ -182,5 +182,18 @@ void FlowTypesDumper::printAllTypes(
   printAll(flowTypes.allocTypes_);
 }
 
+void FlowTypesDumper::printNativeExterns(
+    llvh::raw_ostream &os,
+    const NativeContext &nativeContext) {
+  for (NativeExtern *ne : nativeContext.getAllExterns()) {
+    os << "extern \"C\" ";
+    ne->signature()->format(os, ne->name()->c_str());
+    os << ';';
+    if (ne->declared())
+      os << " //declared";
+    os << '\n';
+  }
+}
+
 } // namespace flow
 } // namespace hermes

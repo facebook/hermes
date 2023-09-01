@@ -84,6 +84,7 @@ bool resolveASTForParser(
 /// the annotated AST.
 void semDump(
     llvh::raw_ostream &os,
+    Context &astContext,
     SemContext &semCtx,
     flow::FlowContext *flowContext,
     ESTree::Node *root);

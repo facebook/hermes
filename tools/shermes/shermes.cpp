@@ -676,7 +676,7 @@ ESTree::NodePtr parseJS(
                                : ESTreeRawProp::Exclude);
   }
   if (cli::OutputLevel == OutputLevelKind::Sema) {
-    sema::semDump(llvh::outs(), semCtx, flowContext, parsedAST);
+    sema::semDump(llvh::outs(), *context, semCtx, flowContext, parsedAST);
   }
 
   return parsedAST;

@@ -186,6 +186,7 @@ bool resolveCommonJSAST(
 
 void semDump(
     llvh::raw_ostream &os,
+    Context &astContext,
     SemContext &semCtx,
     flow::FlowContext *flowContext,
     ESTree::Node *root) {
@@ -199,6 +200,10 @@ void semDump(
     flow::FlowTypesDumper flowDumper{};
     flowDumper.printAllTypes(os, *flowContext);
     os << '\n';
+    if (!astContext.getNativeContext().getAllExterns().empty()) {
+      flowDumper.printNativeExterns(os, astContext.getNativeContext());
+      os << '\n';
+    }
 
     AnnotateDecl annotateDecl(*flowContext, flowDumper);
     SemContextDumper semDumper(
