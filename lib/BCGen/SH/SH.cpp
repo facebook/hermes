@@ -9,6 +9,7 @@
 
 #include "LoweringPasses.h"
 #include "SHRegAlloc.h"
+#include "hermes/AST/NativeContext.h"
 #include "hermes/BCGen/HBC/Passes.h"
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/BCGen/LowerBuiltinCalls.h"
@@ -1938,7 +1939,10 @@ void generateFunction(
   OS << "  } locals;\n";
 
   // Emit the stack check if necessary.
-  if (F.getParent()->getContext().getEmitCheckNativeStack()) {
+  if (F.getParent()
+          ->getContext()
+          .getNativeContext()
+          .settings.emitCheckNativeStack) {
     // This call contains the fast path out of line for now,
     // but _sh_check_native_stack_overflow can be updated to contain inline
     // code and avoid the function call in the future, when SHRuntime

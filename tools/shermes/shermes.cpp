@@ -480,6 +480,7 @@ std::shared_ptr<Context> createContext() {
   optimizationOpts.useUnsafeIntrinsics = cli::UseUnsafeIntrinsics;
 
   NativeSettings nativeSettings{};
+  nativeSettings.emitCheckNativeStack = cli::CheckNativeStack;
   // TODO: error checking, etc.
   nativeSettings.targetTriple = llvh::Triple(cli::XNativeTarget);
 
@@ -543,8 +544,6 @@ std::shared_ptr<Context> createContext() {
   //   context->setDebugInfoSetting(DebugInfoSetting::THROWING);
   // }
   // context->setEmitAsyncBreakCheck(cl::EmitAsyncBreakCheck);
-
-  context->setEmitCheckNativeStack(cli::CheckNativeStack);
 
   return context;
 }

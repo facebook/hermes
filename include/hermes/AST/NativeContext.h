@@ -233,6 +233,9 @@ class NativeExtern : public llvh::FoldingSetNode {
 
 struct NativeSettings {
   llvh::Triple targetTriple{};
+
+  /// Emit the Static Hermes native stack check.
+  bool emitCheckNativeStack = true;
 };
 
 /// Holder for information related to native compilation, deliberately kept

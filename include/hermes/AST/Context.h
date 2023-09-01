@@ -228,9 +228,6 @@ class Context {
 
   OptimizationSettings optimizationSettings_;
 
-  /// Emit the Static Hermes native stack check.
-  bool emitCheckNativeStack_{false};
-
   /// The HBC backend context. We use a shared pointer to avoid any dependencies
   /// on its destructor.
   std::shared_ptr<BackendContext> hbcBackendContext_{};
@@ -348,13 +345,6 @@ class Context {
   }
   bool getEmitAsyncBreakCheck() const {
     return emitAsyncBreakCheck_;
-  }
-
-  void setEmitCheckNativeStack(bool check) {
-    emitCheckNativeStack_ = check;
-  }
-  bool getEmitCheckNativeStack() const {
-    return emitCheckNativeStack_;
   }
 
   void setUseCJSModules(bool useCJSModules) {
