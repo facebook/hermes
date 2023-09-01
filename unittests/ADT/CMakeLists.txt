@@ -10,6 +10,7 @@ set(ADTSources
   SafeIntTest.cpp
   ScopedHashTable.cpp
   WordBitSet.cpp
+  OwningFoldingSet.cpp
   )
 
 add_hermes_unittest(HermesADTTests
