@@ -229,6 +229,7 @@ Value *ESTreeIRGen::getDefaultInitValue(flow::Type *type) {
       return Builder.getLiteralBool(false);
     case flow::TypeKind::String:
       return Builder.getLiteralString("");
+    case flow::TypeKind::CPtr:
     case flow::TypeKind::Number:
       return Builder.getLiteralPositiveZero();
     case flow::TypeKind::BigInt:
@@ -241,6 +242,7 @@ Value *ESTreeIRGen::getDefaultInitValue(flow::Type *type) {
       return getDefaultInitValue(
           llvh::cast<flow::UnionType>(type->info)->getTypes()[0]);
     case flow::TypeKind::TypedFunction:
+    case flow::TypeKind::NativeFunction:
     case flow::TypeKind::UntypedFunction:
     case flow::TypeKind::Class:
     case flow::TypeKind::ClassConstructor:
@@ -259,6 +261,7 @@ Type ESTreeIRGen::flowTypeToIRType(flow::Type *flowType) {
       return Type::createBoolean();
     case flow::TypeKind::String:
       return Type::createString();
+    case flow::TypeKind::CPtr:
     case flow::TypeKind::Number:
       return Type::createNumber();
     case flow::TypeKind::BigInt:
@@ -274,6 +277,8 @@ Type ESTreeIRGen::flowTypeToIRType(flow::Type *flowType) {
       }
       return res;
     }
+    case flow::TypeKind::NativeFunction:
+      return Type::createNumber();
     case flow::TypeKind::TypedFunction:
     case flow::TypeKind::UntypedFunction:
       return Type::createObject();

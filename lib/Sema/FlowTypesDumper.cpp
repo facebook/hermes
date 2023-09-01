@@ -44,6 +44,7 @@ void FlowTypesDumper::printTypeDescription(
     case TypeKind::Null:
     case TypeKind::Boolean:
     case TypeKind::String:
+    case TypeKind::CPtr:
     case TypeKind::Number:
     case TypeKind::BigInt:
     case TypeKind::Any:
@@ -86,6 +87,25 @@ void FlowTypesDumper::printTypeDescription(
       }
       os << "): ";
       printTypeRef(os, funcType->getReturnType());
+    } break;
+
+    case TypeKind::NativeFunction: {
+      auto *nfuncType = llvh::cast<NativeFunctionType>(type);
+      os << '(';
+
+      bool first = true;
+      for (const TypedFunctionType::Param &param : nfuncType->getParams()) {
+        if (!first)
+          os << ", ";
+        first = false;
+        if (param.first.isValid())
+          os << param.first;
+        os << ": ";
+        printTypeRef(os, param.second);
+      }
+      os << "): ";
+      printTypeRef(os, nfuncType->getReturnType());
+      os << ", (" << *nfuncType->getSignature() << ")";
     } break;
 
     case TypeKind::UntypedFunction:

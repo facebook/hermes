@@ -98,6 +98,8 @@ llvh::StringRef TypeInfo::getKindName() const {
       return "boolean";
     case TypeKind::String:
       return "string";
+    case TypeKind::CPtr:
+      return "c_ptr";
     case TypeKind::Number:
       return "number";
     case TypeKind::BigInt:
@@ -110,6 +112,8 @@ llvh::StringRef TypeInfo::getKindName() const {
       return "union";
     case TypeKind::TypedFunction:
       return "function";
+    case TypeKind::NativeFunction:
+      return "native function";
     case TypeKind::UntypedFunction:
       return "untyped function";
     case TypeKind::Class:
@@ -479,6 +483,29 @@ unsigned TypedFunctionType::_hashImpl() const {
       isGenerator(),
       thisParam_ != nullptr,
       params_.size());
+}
+
+int NativeFunctionType::_compareImpl(
+    const NativeFunctionType *other,
+    CompareState &) const {
+  // If the native signatures are different, there is no point comparing the
+  // JS signatures. If the native signatures are the same, then by definition
+  // the JS ones must also be the same.
+  return signature_->compare(other->signature_);
+}
+
+bool NativeFunctionType::_equalsImpl(
+    const NativeFunctionType *other,
+    CompareState &) const {
+  // If the native signatures are different, there is no point comparing the
+  // JS signatures. If the native signatures are the same, then by definition
+  // the JS ones must also be the same.
+  return signature_ == other->signature_;
+}
+
+unsigned NativeFunctionType::_hashImpl() const {
+  return (unsigned)llvh::hash_combine(
+      (unsigned)TypeKind::NativeFunction, signature_->hash());
 }
 
 /// Compare two instances of the same TypeKind.

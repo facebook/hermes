@@ -8,6 +8,7 @@
 #ifndef HERMES_SEMA_FLOWCONTEXT_H
 #define HERMES_SEMA_FLOWCONTEXT_H
 
+#include "hermes/AST/NativeContext.h"
 #include "hermes/Sema/SemContext.h"
 
 #include "llvh/ADT/DenseSet.h"
@@ -26,6 +27,7 @@ namespace flow {
   _HERMES_SEMA_FLOW_DEFKIND(Null)    \
   _HERMES_SEMA_FLOW_DEFKIND(Boolean) \
   _HERMES_SEMA_FLOW_DEFKIND(String)  \
+  _HERMES_SEMA_FLOW_DEFKIND(CPtr)    \
   _HERMES_SEMA_FLOW_DEFKIND(Number)  \
   _HERMES_SEMA_FLOW_DEFKIND(BigInt)  \
   _HERMES_SEMA_FLOW_DEFKIND(Any)     \
@@ -34,8 +36,9 @@ namespace flow {
 #define _HERMES_SEMA_FLOW_COMPLEX_TYPES      \
   _HERMES_SEMA_FLOW_DEFKIND(Union)           \
   _HERMES_SEMA_FLOW_DEFKIND(Array)           \
-  _HERMES_SEMA_FLOW_DEFKIND(TypedFunction)   \
   _HERMES_SEMA_FLOW_DEFKIND(UntypedFunction) \
+  _HERMES_SEMA_FLOW_DEFKIND(TypedFunction)   \
+  _HERMES_SEMA_FLOW_DEFKIND(NativeFunction)  \
   _HERMES_SEMA_FLOW_DEFKIND(Class)           \
   _HERMES_SEMA_FLOW_DEFKIND(ClassConstructor)
 
@@ -50,8 +53,8 @@ enum class TypeKind : uint8_t {
   _LastSingleton = Mixed,
   _FirstId = Class,
   _LastId = ClassConstructor,
-  _FirstFunction = TypedFunction,
-  _LastFunction = UntypedFunction,
+  _FirstFunction = UntypedFunction,
+  _LastFunction = NativeFunction,
 };
 
 /// The backing storage for Types.
@@ -218,6 +221,7 @@ using VoidType = SingleType<TypeKind::Void, PrimaryType>;
 using NullType = SingleType<TypeKind::Null, PrimaryType>;
 using BooleanType = SingleType<TypeKind::Boolean, PrimaryType>;
 using StringType = SingleType<TypeKind::String, PrimaryType>;
+using CPtrType = SingleType<TypeKind::CPtr, PrimaryType>;
 using NumberType = SingleType<TypeKind::Number, PrimaryType>;
 using BigIntType = SingleType<TypeKind::BigInt, PrimaryType>;
 
@@ -455,6 +459,53 @@ class TypedFunctionType : public BaseFunctionType {
 
   static bool classof(const TypeInfo *t) {
     return t->getKind() == TypeKind::TypedFunction;
+  }
+};
+
+class NativeFunctionType : public BaseFunctionType {
+ public:
+  using Param = TypedFunctionType::Param;
+
+ private:
+  /// Result type.
+  Type *return_ = nullptr;
+  /// Parameter types.
+  llvh::SmallVector<Param, 2> params_{};
+  /// The signature of the native function.
+  NativeSignature *signature_;
+
+ public:
+  /// Initialize a new native function instance.
+  explicit NativeFunctionType(
+      Type *returnType,
+      llvh::ArrayRef<TypedFunctionType::Param> params,
+      NativeSignature *signature)
+      : BaseFunctionType(TypeKind::NativeFunction, false, false),
+        return_(returnType),
+        signature_(signature) {
+    assert(signature && "signature must be non-null");
+    params_.append(params.begin(), params.end());
+  }
+
+  Type *getReturnType() const {
+    return return_;
+  }
+  const llvh::ArrayRef<Param> getParams() const {
+    return params_;
+  }
+  NativeSignature *getSignature() const {
+    return signature_;
+  }
+
+  /// Compare two instances of the same TypeKind.
+  int _compareImpl(const NativeFunctionType *other, CompareState &state) const;
+  /// Compare two instances of the same TypeKind.
+  bool _equalsImpl(const NativeFunctionType *other, CompareState &state) const;
+  /// Calculate the type-specific hash.
+  unsigned _hashImpl() const;
+
+  static bool classof(const TypeInfo *t) {
+    return t->getKind() == TypeKind::NativeFunction;
   }
 };
 
@@ -774,6 +825,12 @@ class FlowContext {
       bool isGenerator) {
     return &allocTypedFunction_.emplace_back(
         returnType, thisParam, params, isAsync, isGenerator);
+  }
+  NativeFunctionType *createNativeFunction(
+      Type *returnType,
+      llvh::ArrayRef<TypedFunctionType::Param> params,
+      NativeSignature *signature) {
+    return &allocNativeFunction_.emplace_back(returnType, params, signature);
   }
   UntypedFunctionType *createUntypedFunction(bool isAsync, bool isGenerator) {
     return &allocUntypedFunction_.emplace_back(isAsync, isGenerator);

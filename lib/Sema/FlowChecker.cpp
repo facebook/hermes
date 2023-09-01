@@ -1237,40 +1237,50 @@ class FlowChecker::ExprVisitor {
           node->_callee->getSourceRange(), "ft: callee is not a function");
       return;
     }
-    auto *ftype = llvh::dyn_cast<TypedFunctionType>(calleeType->info);
 
     // If the callee is an untyped function, we have nothing to check.
-    if (!ftype) {
+    if (llvh::isa<UntypedFunctionType>(calleeType->info)) {
       outer_.setNodeType(node, outer_.flowContext_.getAny());
       return;
     }
 
-    outer_.setNodeType(node, ftype->getReturnType());
+    Type *returnType;
+    llvh::ArrayRef<TypedFunctionType::Param> params{};
 
-    Type *expectedThisType = ftype->getThisParam()
-        ? ftype->getThisParam()
-        : outer_.flowContext_.getAny();
+    if (auto *ftype = llvh::dyn_cast<TypedFunctionType>(calleeType->info)) {
+      returnType = ftype->getReturnType();
+      params = ftype->getParams();
 
-    // Check the type of "this".
-    if (auto *methodCallee =
-            llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee)) {
-      Type *thisArgType = outer_.getNodeTypeOrAny(methodCallee->_object);
-      if (!canAFlowIntoB(thisArgType->info, expectedThisType->info).canFlow) {
-        outer_.sm_.error(
-            methodCallee->getSourceRange(), "ft: 'this' type mismatch");
-        return;
+      Type *expectedThisType = ftype->getThisParam()
+          ? ftype->getThisParam()
+          : outer_.flowContext_.getAny();
+
+      // Check the type of "this".
+      if (auto *methodCallee =
+              llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee)) {
+        Type *thisArgType = outer_.getNodeTypeOrAny(methodCallee->_object);
+        if (!canAFlowIntoB(thisArgType->info, expectedThisType->info).canFlow) {
+          outer_.sm_.error(
+              methodCallee->getSourceRange(), "ft: 'this' type mismatch");
+          return;
+        }
+      } else {
+        if (!canAFlowIntoB(
+                 outer_.flowContext_.getVoid()->info, expectedThisType->info)
+                 .canFlow) {
+          outer_.sm_.error(
+              node->_callee->getSourceRange(), "ft: 'this' type mismatch");
+          return;
+        }
       }
     } else {
-      if (!canAFlowIntoB(
-               outer_.flowContext_.getVoid()->info, expectedThisType->info)
-               .canFlow) {
-        outer_.sm_.error(
-            node->_callee->getSourceRange(), "ft: 'this' type mismatch");
-        return;
-      }
+      auto *nftype = llvh::cast<NativeFunctionType>(calleeType->info);
+      returnType = nftype->getReturnType();
+      params = nftype->getParams();
     }
 
-    checkArgumentTypes(ftype, node, node->_arguments, "function");
+    outer_.setNodeType(node, returnType);
+    checkArgumentTypes(params, node, node->_arguments, "function");
   }
 
   void checkSHBuiltin(
@@ -1303,6 +1313,12 @@ class FlowChecker::ExprVisitor {
           callee->getSourceRange(), "ft: callee is not a function");
       return;
     }
+    if (llvh::isa<NativeFunctionType>(calleeType->info)) {
+      outer_.sm_.error(
+          callee->getSourceRange(),
+          "ft: callee is a native function, cannot use $SHBuiltin.call");
+      return;
+    }
     auto *ftype = llvh::dyn_cast<TypedFunctionType>(calleeType->info);
 
     // If the callee is an untyped function, we have nothing to check.
@@ -1329,7 +1345,8 @@ class FlowChecker::ExprVisitor {
       return;
     }
 
-    checkArgumentTypes(ftype, call, call->_arguments, "function", 2);
+    checkArgumentTypes(
+        ftype->getParams(), call, call->_arguments, "function", 2);
     return;
   }
 
@@ -1361,7 +1378,7 @@ class FlowChecker::ExprVisitor {
     // Does the class have an explicit constructor?
     if (Type *consFType = classTypeInfo->getConstructorType()) {
       checkArgumentTypes(
-          llvh::cast<TypedFunctionType>(consFType->info),
+          llvh::cast<TypedFunctionType>(consFType->info)->getParams(),
           node,
           node->_arguments,
           "class " + classTypeInfo->getClassNameOrDefault() + " constructor");
@@ -1400,19 +1417,18 @@ class FlowChecker::ExprVisitor {
   /// \param offset the number of arguments to ignore at the front of \p
   ///   arguments. Used for $SHBuiltin.call, which has extra args at the front.
   bool checkArgumentTypes(
-      TypedFunctionType *ftype,
+      llvh::ArrayRef<TypedFunctionType::Param> params,
       ESTree::Node *callNode,
       ESTree::NodeList &arguments,
       const llvh::Twine &calleeName,
       uint32_t offset = 0) {
     size_t numArgs = arguments.size() - offset;
     // FIXME: default arguments.
-    if (ftype->getParams().size() != numArgs) {
+    if (params.size() != numArgs) {
       outer_.sm_.error(
           callNode->getSourceRange(),
-          "ft: " + calleeName + " expects " +
-              llvh::Twine(ftype->getParams().size()) + " arguments, but " +
-              llvh::Twine(numArgs) + " supplied");
+          "ft: " + calleeName + " expects " + llvh::Twine(params.size()) +
+              " arguments, but " + llvh::Twine(numArgs) + " supplied");
       return false;
     }
 
@@ -1430,7 +1446,7 @@ class FlowChecker::ExprVisitor {
         return false;
       }
 
-      const TypedFunctionType::Param &param = ftype->getParams()[argIndex];
+      const TypedFunctionType::Param &param = params[argIndex];
       Type *expectedType = param.second;
       CanFlowResult cf =
           canAFlowIntoB(outer_.getNodeTypeOrAny(arg), expectedType);
@@ -1685,6 +1701,15 @@ class FlowChecker::FindLoopingTypes {
     if (type->getThisParam()) {
       result |= isTypeLooping(type->getThisParam());
     }
+    for (const auto &[name, paramType] : type->getParams()) {
+      result |= isTypeLooping(paramType);
+    }
+    return result;
+  }
+
+  bool isLooping(NativeFunctionType *type) {
+    bool result = false;
+    result |= isTypeLooping(type->getReturnType());
     for (const auto &[name, paramType] : type->getParams()) {
       result |= isTypeLooping(paramType);
     }
@@ -2510,18 +2535,30 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
   if (a->isGenerator() != b->isGenerator())
     return {};
 
-  // Typed and untyped functions are incompatible types.
+  // Typed, untyped and native functions are incompatible types.
   if (a->getKind() != b->getKind())
     return {};
 
-  auto *aType = llvh::dyn_cast<TypedFunctionType>(a);
-  auto *bType = llvh::dyn_cast<TypedFunctionType>(b);
-
-  // Untyped functions can flow into each other.
-  if (!aType && !bType)
+  if (llvh::isa<UntypedFunctionType>(a)) {
+    assert(
+        llvh::isa<UntypedFunctionType>(b) &&
+        "we already checked that the kinds are the same!");
+    // Untyped functions can flow into each other.
     return {.canFlow = true};
+  }
 
-  assert(aType && bType);
+  if (llvh::isa<NativeFunctionType>(a)) {
+    auto *nativeA = llvh::cast<NativeFunctionType>(a);
+    auto *nativeB = llvh::cast<NativeFunctionType>(b);
+    // Native functions can flow into each other only if their signatures are
+    // the same.
+    if (nativeA->getSignature() != nativeB->getSignature())
+      return {};
+    return {.canFlow = true};
+  }
+
+  auto *aType = llvh::cast<TypedFunctionType>(a);
+  auto *bType = llvh::cast<TypedFunctionType>(b);
 
   if (!aType->getThisParam() != !bType->getThisParam()) {
     // Only one of the functions is missing `this`, can't flow.
@@ -2561,6 +2598,13 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     CanFlowResult flowRes =
         canAFlowIntoB(aType->getReturnType(), bType->getReturnType());
     if (!flowRes.canFlow || flowRes.needCheckedCast)
+      return {};
+  }
+
+  // If these are native functions, their signatures must match exactly.
+  if (auto *nativeA = llvh::dyn_cast<NativeFunctionType>(a)) {
+    auto *nativeB = llvh::cast<NativeFunctionType>(b);
+    if (nativeA->getSignature()->compare(nativeB->getSignature()) != 0)
       return {};
   }
 
