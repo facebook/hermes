@@ -440,9 +440,10 @@ class AllocStackInst : public Instruction {
   explicit AllocStackInst(
       const AllocStackInst *src,
       llvh::ArrayRef<Value *> operands)
-      : AllocStackInst(cast<Label>(operands[0])->get()) {
+      : Instruction(src, {}), variableName(src->getVariableName()) {
     // NOTE: we are playing a little trick here since the Label is not heap
-    // allocated.
+    // allocated. We can't use the normal machinery to copy the operands.
+    pushOperand(&variableName);
   }
 
   Identifier getVariableName() const {
