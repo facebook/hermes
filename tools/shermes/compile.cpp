@@ -262,6 +262,11 @@ bool invokeCC(
   // Append the library paths and library.
   if (outputLevel == OutputLevelKind::Executable ||
       outputLevel == OutputLevelKind::SharedObj) {
+    for (const auto &s : params.libSearchPaths)
+      args.push_back("-L" + s);
+    for (const auto &s : params.libs)
+      args.push_back("-l" + s);
+
     if (cfg.ldflags.empty()) {
       for (const auto &s : cfg.hermesLibPath)
         args.push_back("-L" + s);

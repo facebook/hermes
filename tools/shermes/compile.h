@@ -39,35 +39,23 @@ enum class OptLevel {
 
 struct ShermesCompileParams {
   const hermes::BytecodeGenerationOptions &genOptions;
-  OptLevel nativeOptimize;
+  OptLevel nativeOptimize = OptLevel::OMax;
   enum class EnableAsserts { off, on };
-  EnableAsserts enableAsserts;
+  EnableAsserts enableAsserts = EnableAsserts::off;
   enum class Lean { off, on };
   Lean lean = Lean::off;
   enum class StaticLink { off, on };
   StaticLink staticLink = StaticLink::off;
   llvh::ArrayRef<std::string> extraCCOptions{};
+  llvh::ArrayRef<std::string> libs{};
+  llvh::ArrayRef<std::string> libSearchPaths{};
   enum class KeepTemp { off, on };
   KeepTemp keepTemp = KeepTemp::off;
-  int verbosity;
+  int verbosity = 0;
 
-  ShermesCompileParams(
-      hermes::BytecodeGenerationOptions const &genOptions,
-      OptLevel nativeOptimize,
-      EnableAsserts enableAsserts,
-      Lean lean,
-      StaticLink staticLink,
-      llvh::ArrayRef<std::string> extraCCOptions,
-      KeepTemp keepTemp,
-      int verbosity)
-      : genOptions(genOptions),
-        nativeOptimize(nativeOptimize),
-        enableAsserts(enableAsserts),
-        lean(lean),
-        staticLink(staticLink),
-        extraCCOptions(extraCCOptions),
-        keepTemp(keepTemp),
-        verbosity(verbosity) {}
+  explicit ShermesCompileParams(
+      hermes::BytecodeGenerationOptions const &genOptions)
+      : genOptions(genOptions) {}
 };
 
 /// Compile the input to the specified output level.

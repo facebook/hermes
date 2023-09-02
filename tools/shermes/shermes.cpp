@@ -97,6 +97,11 @@ cl::list<std::string> ExtraCCOptions(
     cl::Prefix,
     cl::CommaSeparated);
 
+cl::list<std::string>
+    Libs("l", cl::desc("Link with the given library"), cl::Prefix);
+cl::list<std::string>
+    LibSearchPaths("L", cl::desc("Add to the library search path"), cl::Prefix);
+
 cl::opt<OptLevel> OptimizationLevel(
     cl::desc("Choose optimization level:"),
     cl::init(OptLevel::OMax),
@@ -824,22 +829,27 @@ bool compileFromCommandLineOptions() {
   genOptions.emitSourceLocations =
       cli::DumpSourceLocation != LocationDumpMode::None;
 
+  ShermesCompileParams params(genOptions);
+  // Populate all fields of ShermesCompileParams.
+  params.nativeOptimize = cli::OptimizationLevel;
+  params.enableAsserts = cli::EnableAsserts
+      ? ShermesCompileParams::EnableAsserts::on
+      : ShermesCompileParams::EnableAsserts::off;
+  params.lean = cli::Lean ? ShermesCompileParams::Lean::on
+                          : ShermesCompileParams::Lean::off;
+  params.staticLink = cli::StaticLink ? ShermesCompileParams::StaticLink::on
+                                      : ShermesCompileParams::StaticLink::off;
+  params.extraCCOptions = cli::ExtraCCOptions;
+  params.libs = cli::Libs;
+  params.libSearchPaths = cli::LibSearchPaths;
+  params.keepTemp = cli::KeepTemp ? ShermesCompileParams::KeepTemp::on
+                                  : ShermesCompileParams::KeepTemp::off;
+  params.verbosity = cli::Verbose.getNumOccurrences();
+
   return shermesCompile(
       context.get(),
       M,
-      ShermesCompileParams(
-          genOptions,
-          cli::OptimizationLevel,
-          cli::EnableAsserts ? ShermesCompileParams::EnableAsserts::on
-                             : ShermesCompileParams::EnableAsserts::off,
-          cli::Lean ? ShermesCompileParams::Lean::on
-                    : ShermesCompileParams::Lean::off,
-          cli::StaticLink ? ShermesCompileParams::StaticLink::on
-                          : ShermesCompileParams::StaticLink::off,
-          cli::ExtraCCOptions,
-          cli::KeepTemp ? ShermesCompileParams::KeepTemp::on
-                        : ShermesCompileParams::KeepTemp::off,
-          cli::Verbose.getNumOccurrences()),
+      params,
       cli::OutputLevel,
       cli::InputFilename,
       cli::OutputFilename,
