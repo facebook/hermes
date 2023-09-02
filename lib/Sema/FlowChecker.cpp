@@ -1789,6 +1789,26 @@ void FlowChecker::visit(ESTree::IfStatementNode *node) {
   visitESTreeNode(*this, node->_consequent, node);
   visitESTreeNode(*this, node->_alternate, node);
 }
+void FlowChecker::visit(ESTree::WhileStatementNode *node) {
+  visitExpression(node->_test, node);
+  visitESTreeNode(*this, node->_body, node);
+}
+void FlowChecker::visit(ESTree::DoWhileStatementNode *node) {
+  visitESTreeNode(*this, node->_body, node);
+  visitExpression(node->_test, node);
+}
+void FlowChecker::visit(ESTree::ForOfStatementNode *node) {
+  resolveScopeTypesAndAnnotate(node, node->getScope());
+  visitESTreeNode(*this, node->_left, node);
+  visitExpression(node->_right, node);
+  visitESTreeNode(*this, node->_body, node);
+}
+void FlowChecker::visit(ESTree::ForInStatementNode *node) {
+  resolveScopeTypesAndAnnotate(node, node->getScope());
+  visitESTreeNode(*this, node->_left, node);
+  visitExpression(node->_right, node);
+  visitESTreeNode(*this, node->_body, node);
+}
 void FlowChecker::visit(ESTree::ForStatementNode *node) {
   resolveScopeTypesAndAnnotate(node, node->getScope());
   if (node->_init) {
