@@ -1029,6 +1029,61 @@ static inline unsigned char _sh_ptr_read_uchar(unsigned char *ptr, int offset) {
   return ptr[offset];
 }
 
+//===----------------------------------------------------------------------===//
+/// \section Type punning
+///
+/// These functions access arbitrary values from arbitrary locations, with the
+/// only requirement being that the location is aligned to the size of the
+/// value. This should be generally safe with strict aliasing disabled, but we
+/// still want to be extra safe, so we use \c __builtin_memcpy().
+///
+/// The main limitation of the memcpy() approach is that in the general case it
+/// doesn't preserve alignment information, so it theoretically can emit
+/// suboptimal instructions when we know the address is aligned. We do our best
+/// to give the compiler the alignment, both by using a typed pointer, and by
+/// using \c __builtin_assume_aligned().
+///
+/// This is actually unnecessary in most cases, because in practice all
+/// architectures that we target have efficient unaligned access of most types,
+/// with the only exception being ARM32 with 64-bit values.
+///
+/// The situation on ARM32 is interesting, because it differs between int64_t
+/// and double, between armv7-a and prior architectures, as well as between
+/// GCC and Clang/LLVM.
+/// - armv7-a can efficiently access unaligned double values. So, on armv7-a
+/// the only case where we need to be careful is int64_t.
+/// - GCC utilizes the alignment information we give it, resulting in the best
+/// possible code on all architectures.
+/// - Clang/LLVM loses the alignment information, except in very simple cases
+/// where the offset is zero.
+///
+/// Given that in practice we target armv7-a and later and Clang/LLVM, the net
+/// result is that accesses to int64_t on Arm32 are slightly suboptimal when
+/// the offset is non-zero (at compile time). This is unfortunate, but it's not
+/// really a critical problem.
+//===----------------------------------------------------------------------===//
+
+/// Write the supplied \p value to the given \p dest at the given \p offset.
+/// Note that the offset is in sizeof(void *) units. It is required that the
+/// destination pointer is correctly aligned (which is implied by its type).
+static inline void _sh_ptr_write_ptr(void **dest, int offset, void *value) {
+  __builtin_memcpy(
+      __builtin_assume_aligned(&dest[offset], sizeof(value)),
+      &value,
+      sizeof(value));
+}
+/// Read a pointer from the given \p src at the given \p offset.
+/// Note that the offset is in sizeof(void *) units. It is required that the
+/// source pointer is correctly aligned (which is implied by its type).
+static inline void *_sh_ptr_read_ptr(void **src, int offset) {
+  void *value;
+  __builtin_memcpy(
+      &value,
+      __builtin_assume_aligned(&src[offset], sizeof(value)),
+      sizeof(value));
+  return value;
+}
+
 #ifdef __cplusplus
 }
 #endif
