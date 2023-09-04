@@ -14,7 +14,7 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 
 class AlreadyEnabledException : public std::runtime_error {
  public:
@@ -53,7 +53,7 @@ class UserCallbackException : public std::runtime_error {
       : std::runtime_error(std::string("callback exception: ") + e.what()) {}
 };
 
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook
 

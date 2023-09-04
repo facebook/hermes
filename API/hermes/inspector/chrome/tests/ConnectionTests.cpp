@@ -25,10 +25,10 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 namespace chrome {
 
-namespace m = ::facebook::hermes::inspector::chrome::message;
+namespace m = ::facebook::hermes::inspector_modern::chrome::message;
 
 using namespace std::chrono_literals;
 
@@ -3135,6 +3135,6 @@ TEST_F(ConnectionTests, testInvalidExecutionContext) {
 }
 
 } // namespace chrome
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

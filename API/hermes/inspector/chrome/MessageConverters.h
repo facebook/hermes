@@ -17,7 +17,7 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 namespace chrome {
 namespace message {
 
@@ -84,6 +84,6 @@ std::unique_ptr<Profile> makeProfile(const std::string &value);
 
 } // namespace message
 } // namespace chrome
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

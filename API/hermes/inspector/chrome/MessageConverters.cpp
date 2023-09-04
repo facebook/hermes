@@ -14,11 +14,11 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 namespace chrome {
 
 namespace h = ::facebook::hermes;
-namespace m = ::facebook::hermes::inspector::chrome::message;
+namespace m = ::facebook::hermes::inspector_modern::chrome::message;
 
 m::ErrorResponse
 m::makeErrorResponse(int id, m::ErrorCode code, const std::string &message) {
@@ -126,6 +126,6 @@ std::unique_ptr<m::profiler::Profile> m::profiler::makeProfile(
 }
 
 } // namespace chrome
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

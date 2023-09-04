@@ -18,7 +18,7 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 namespace chrome {
 
 // Simple executor that guarantees serial execution of tasks. If there are
@@ -59,6 +59,6 @@ class SerialExecutor {
   void add(std::function<void()> task);
 };
 } // namespace chrome
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

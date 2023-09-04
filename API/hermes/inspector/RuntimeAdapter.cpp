@@ -9,7 +9,7 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 
 RuntimeAdapter::~RuntimeAdapter() = default;
 
@@ -25,6 +25,6 @@ HermesRuntime &SharedRuntimeAdapter::getRuntime() {
   return *runtime_;
 }
 
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

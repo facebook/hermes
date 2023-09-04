@@ -16,7 +16,7 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 namespace chrome {
 
 /// Well-known object group names
@@ -119,6 +119,6 @@ class RemoteObjectsTable {
 };
 
 } // namespace chrome
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

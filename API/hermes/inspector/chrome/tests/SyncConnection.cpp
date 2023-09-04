@@ -21,7 +21,7 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 namespace chrome {
 
 using namespace std::placeholders;
@@ -129,6 +129,6 @@ void SyncConnection::onUnregister() {
 }
 
 } // namespace chrome
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

@@ -16,7 +16,7 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 namespace chrome {
 
 using namespace ::hermes::parser;
@@ -53,6 +53,6 @@ inline std::unique_ptr<Request> mustGetRequestFromJson(const std::string &str) {
 } // namespace message
 
 } // namespace chrome
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

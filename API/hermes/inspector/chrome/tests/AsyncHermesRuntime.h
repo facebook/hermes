@@ -18,7 +18,7 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 namespace chrome {
 
 /**
@@ -145,6 +145,6 @@ struct SamplingProfilerRAII {
   AsyncHermesRuntime &runtime_;
 };
 } // namespace chrome
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

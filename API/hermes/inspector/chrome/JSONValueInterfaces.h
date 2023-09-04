@@ -14,7 +14,7 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 namespace chrome {
 using namespace ::hermes::parser;
 
@@ -37,6 +37,6 @@ std::string jsonValToStr(const JSONValue *v);
 bool jsonValsEQ(const JSONValue *A, const JSONValue *B);
 
 }; // namespace chrome
-}; // namespace inspector
+}; // namespace inspector_modern
 }; // namespace hermes
 }; // namespace facebook
