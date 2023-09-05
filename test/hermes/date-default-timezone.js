@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: TZ="MST+7MDT,M3.2.0/2,M11.1.0/2" %hermes -O %s | %FileCheck --match-full-lines %s
+// RUN: TZ="MST7MDT" %hermes -O %s | %FileCheck --match-full-lines %s
 "use strict";
 
 // Tests are being run under Mountain Time, with DST changes enabled (TZ var).
