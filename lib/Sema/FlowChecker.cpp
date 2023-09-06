@@ -191,7 +191,7 @@ class FlowChecker::ParseClassType {
         outer_.setNodeType(&node, fieldType);
       } else if (
           auto *method = llvh::dyn_cast<ESTree::MethodDefinitionNode>(&node)) {
-        Type *methodType = parseMethodDefinition(method);
+        Type *methodType = parseMethodDefinition(classType, method);
         // Methods have FunctionExpression values.
         // Associate the same type with both the outer and inner nodes.
         outer_.setNodeType(method, methodType);
@@ -303,7 +303,9 @@ class FlowChecker::ParseClassType {
     return fieldType;
   }
 
-  Type *parseMethodDefinition(ESTree::MethodDefinitionNode *method) {
+  Type *parseMethodDefinition(
+      Type *classType,
+      ESTree::MethodDefinitionNode *method) {
     auto *fe = llvh::cast<ESTree::FunctionExpressionNode>(method->_value);
 
     if (method->_kind == outer_.kw_.identConstructor) {
@@ -322,7 +324,13 @@ class FlowChecker::ParseClassType {
       }
 
       constructorType = outer_.parseFunctionType(
-          fe->_params, nullptr, false, false, outer_.flowContext_.getVoid());
+          fe->_params,
+          nullptr,
+          false,
+          false,
+          outer_.flowContext_.getVoid(),
+          classType);
+
       return constructorType;
     } else {
       // Non-constructor method
@@ -342,7 +350,12 @@ class FlowChecker::ParseClassType {
 
       auto *id = llvh::cast<ESTree::IdentifierNode>(method->_key);
       Type *methodType = outer_.parseFunctionType(
-          fe->_params, fe->_returnType, fe->_async, fe->_generator);
+          fe->_params,
+          fe->_returnType,
+          fe->_async,
+          fe->_generator,
+          nullptr,
+          classType);
 
       // Check if the method is inherited, and reuse the index.
       const ClassType::Field *superMethod = nullptr;
@@ -1301,6 +1314,23 @@ class FlowChecker::ExprVisitor {
         if (!canAFlowIntoB(thisArgType->info, expectedThisType->info).canFlow) {
           outer_.sm_.error(
               methodCallee->getSourceRange(), "ft: 'this' type mismatch");
+          return;
+        }
+      } else if (
+          auto *superNode = llvh::dyn_cast<ESTree::SuperNode>(node->_callee)) {
+        // 'super' calls implicitly pass the current class as 'this'.
+        if (!outer_.curClassContext_->classType) {
+          outer_.sm_.error(
+              node->_callee->getSourceRange(),
+              "ft: 'super' call outside class");
+          return;
+        }
+        if (!canAFlowIntoB(
+                 outer_.curClassContext_->classType->info,
+                 expectedThisType->info)
+                 .canFlow) {
+          outer_.sm_.error(
+              node->_callee->getSourceRange(), "ft: 'this' type mismatch");
           return;
         }
       } else {
@@ -2632,7 +2662,8 @@ Type *FlowChecker::parseFunctionType(
     ESTree::Node *optReturnTypeAnnotation,
     bool isAsync,
     bool isGenerator,
-    Type *defaultReturnType) {
+    Type *defaultReturnType,
+    Type *defaultThisType) {
   llvh::SmallVector<TypedFunctionType::Param, 4> paramsList{};
 
   // If the default return type is expected, then we are parsing a typed
@@ -2657,12 +2688,21 @@ Type *FlowChecker::parseFunctionType(
       parseOptionalTypeAnnotation(optReturnTypeAnnotation, defaultReturnType);
   isTyped |= (optReturnTypeAnnotation != nullptr);
 
-  Type *thisParamType = nullptr;
+  Type *thisParamType = defaultThisType;
   llvh::ArrayRef<TypedFunctionType::Param> paramsRef(paramsList);
 
   // Check if the first parameter is "this", since it is treated specially.
   if (!paramsRef.empty() &&
       paramsRef.front().first.getUnderlyingPointer() == kw_.identThis) {
+    // User is allowed to specify a "this" on a method where it's already known,
+    // but it must be the same type as the given type.
+    if (thisParamType &&
+        !thisParamType->info->equals(paramsRef.front().second->info)) {
+      sm_.error(
+          paramsRef.front().second->node->getSourceRange(),
+          "ft: incompatible 'this' type annotation");
+    }
+
     thisParamType = paramsRef.front().second;
     paramsRef = paramsRef.drop_front();
   }

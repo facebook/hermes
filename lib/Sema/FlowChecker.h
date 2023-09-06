@@ -233,12 +233,14 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// \param optReturnTypeAnnotation is nullptr or ESTree::TypeAnnotationNode
   /// \param defaultReturnType optional return type if the return annotation
   ///     is missing. nullptr here is a shortcut for "any".
+  /// \param defaultThisType optional this type if the annotation is missing.
   Type *parseFunctionType(
       ESTree::NodeList &params,
       ESTree::Node *optReturnTypeAnnotation,
       bool isAsync,
       bool isGenerator,
-      Type *defaultReturnType = nullptr);
+      Type *defaultReturnType = nullptr,
+      Type *defaultThisType = nullptr);
 
   /// Parse an optional type annotation. If it is nullptr, return any, otherwise
   /// parse the inner annotation (which cannot be null).

@@ -78,10 +78,10 @@ return foo;
 // CHECK:function C(x: any): any [typed]
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
+// CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %2 = StoreFrameInst %1: any, [x]: any
 // CHECK-NEXT:  %3 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %4 = PrStoreInst %3: any, %0: any, 0: number, "x": string, true: boolean
+// CHECK-NEXT:  %4 = PrStoreInst %3: any, %0: object, 0: number, "x": string, true: boolean
 // CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

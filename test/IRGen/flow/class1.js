@@ -66,12 +66,12 @@ return [dotProduct, Vec2D];
 // CHECK:function Vec2D(x: number, y: number): undefined [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
+// CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = LoadParamInst (:number) %y: number
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Math": string
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: any, "sqrt": string
 // CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, %2: any, 10: number
-// CHECK-NEXT:  %5 = PrStoreInst %4: any, %0: any, 0: number, "x": string, true: boolean
-// CHECK-NEXT:  %6 = PrStoreInst %1: number, %0: any, 1: number, "y": string, true: boolean
+// CHECK-NEXT:  %5 = PrStoreInst %4: any, %0: object, 0: number, "x": string, true: boolean
+// CHECK-NEXT:  %6 = PrStoreInst %1: number, %0: object, 1: number, "y": string, true: boolean
 // CHECK-NEXT:  %7 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
