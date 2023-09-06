@@ -31,6 +31,7 @@ workflows:
             - macos
       - emscripten
       - test-linux
+      - test-windows
       - test-e2e
       - test-e2e-intl
       - test-macos-test262
@@ -313,6 +314,23 @@ jobs:
             cmake -S hermes -B build -GXcode
             cmake --build ./build
             cmake --build ./build --target check-hermes
+
+  test-windows:
+    executor:
+      name: win/default
+    steps:
+      - checkout:
+          path: hermes
+      - run:
+          name: Set up dependencies
+          command: |
+            choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
+            ln -s C:\tools\miniconda3\python C:\tools\miniconda3\python3
+      - run:
+          name: Run Hermes regression tests
+          command: |
+            cmake -S hermes -B build -G 'Visual Studio 16 2019'
+            cmake --build build --target check-hermes
 
   windows:
     executor:
