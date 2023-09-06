@@ -32,6 +32,18 @@ typedef struct SHObjectLiteralKeyInfo {
   uint32_t num_keys;
 } SHObjectLiteralKeyInfo;
 
+/// This represents a source JS location. This is only valid in a particular
+/// SHUnit, since the filename is stored as an index into the SHUnit's global
+/// string table.
+typedef struct SHSrcLoc {
+  /// Index into the global string table to get the filename for this location.
+  uint32_t filename_idx;
+  /// Line in the source file. 1-based.
+  uint32_t line;
+  /// Column in the source file. 1-based.
+  uint32_t column;
+} SHSrcLoc;
+
 /// SHUnit describes a compilation unit.
 ///
 /// <h2>Restrictions</h2>
@@ -100,6 +112,11 @@ typedef struct SHUnit {
   /// NOTE: These should always be treated as WeakRoots, which means a read
   /// barrier is needed to safely read out the value.
   SHCompressedPointer *object_literal_class_cache;
+
+  /// List of source locations.
+  const SHSrcLoc *source_locations;
+  /// Size of source locations array.
+  uint32_t source_locations_size;
 
   /// Unit main function.
   SHLegacyValue (*unit_main)(SHRuntime *shr);

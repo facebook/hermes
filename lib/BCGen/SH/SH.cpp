@@ -22,6 +22,7 @@
 #include "hermes/IR/IRVerifier.h"
 #include "hermes/IR/Instrs.h"
 #include "hermes/Support/BigIntSupport.h"
+#include "hermes/Support/DenseMapInfoSpecializations.h"
 #include "hermes/Support/HashString.h"
 #include "hermes/Support/UTF8.h"
 
@@ -272,6 +273,114 @@ class ObjectLiteralClassCache {
   }
 };
 
+/// For each unique SourceCoords, maintain a corresponding index, which can be
+/// used to retrieve that source location information at runtime. Invalid
+/// coordinates have an index of 0.
+class SHSrcLocationTable {
+ public:
+  /// The type of the index.
+  using IdxTy = uint32_t;
+  /// Index representing an invalid or unknown location.
+  static constexpr IdxTy kInvalidLocIdx = 0;
+
+  SHSrcLocationTable(SHStringTable &stringTable) : stringTable_(stringTable) {
+    // This first element in the table is reserved for invalid locations.
+    insert({stringTable_.add(""), 0, 0});
+  }
+
+  /// Get the source location index for the given \p coords, creating one if it
+  /// does not exist.
+  IdxTy getIndex(
+      const SourceErrorManager &sm,
+      const hermes::SourceErrorManager::SourceCoords &coords) {
+    if (!coords.isValid())
+      return kInvalidLocIdx;
+    // If this source location has not been seen before, use the next
+    // index. Otherwise, use the existing entry.
+    uint32_t fileIdx = getFileIdx(sm, coords.bufId);
+    return insert({fileIdx, coords.line, coords.col});
+  }
+
+  /// \return how many unique source locations exist in the table.
+  uint32_t size() const {
+    return indicesMap_.size();
+  }
+
+  /// Turn the table of source locations into the corresponding SH C data
+  /// structures.
+  void generate(llvh::raw_ostream &OS, const SourceErrorManager &sm) const {
+    OS << "\nstatic const SHSrcLoc s_source_locations[] = {\n";
+    for (const auto &loc : locations_) {
+      auto [fileIdx, line, col] = loc;
+      OS.indent(2);
+      OS << "{ .filename_idx = " << fileIdx << ", .line = " << line
+         << ", .column = " << col << " },\n";
+    }
+    OS << "};\n";
+  }
+
+ private:
+  /// Tuple type of <filenameStringID, line, column>. The filenameStringID is
+  /// the index into the global string table to find the name of the file of a
+  /// location.
+  using LocationTy = std::tuple<uint32_t, uint32_t, uint32_t>;
+  /// A type for a cache that maps from source coordinate buffer id to index in
+  /// the global string table.
+  using FileIdxCacheTy = llvh::DenseMap<uint32_t, uint32_t>;
+  /// Map a tuple type to a unique index into the source location table.
+  llvh::DenseMap<LocationTy, IdxTy> indicesMap_;
+  /// This contains all the keys of indicesMap_, in insertion order.
+  std::vector<LocationTy> locations_;
+  /// A cache mapping buffer id to filename index into the global string table.
+  FileIdxCacheTy fileIdxCache_{};
+  /// To avoid performing a hash lookup in most cases, cache the last found
+  /// entry in the file index cache.
+  FileIdxCacheTy::value_type *lastFileIdxEntry_;
+
+  /// A reference to the global string table. Used for filenames.
+  SHStringTable &stringTable_;
+
+  /// Insert a source location and \return its index into this location table.
+  IdxTy insert(LocationTy loc) {
+    uint32_t nextID = indicesMap_.size();
+    const auto [iter, success] = indicesMap_.insert({loc, nextID});
+    // If we successfully inserted, that means the element hasn't been seen
+    // before. We should also append to the sorted vector.
+    if (success) {
+      locations_.push_back(loc);
+    }
+    return iter->second;
+  }
+
+  /// \return the index into the global string table for the corresponding name
+  /// of \p bufId. The \p bufId *must* come from a valid source coordinate
+  /// location.
+  uint32_t getFileIdx(const SourceErrorManager &sm, uint32_t bufId) {
+    // Fast path- we are probably comparing the same bufId repeatedly.
+    if (LLVM_LIKELY(lastFileIdxEntry_ && lastFileIdxEntry_->first == bufId)) {
+      return lastFileIdxEntry_->second;
+    }
+
+    // Slower path- check our cache to see if we already have this bufId's
+    // string table index.
+    auto it = fileIdxCache_.find(bufId);
+    if (LLVM_LIKELY(it != fileIdxCache_.end())) {
+      lastFileIdxEntry_ = &*it;
+      return it->second;
+    }
+
+    // Slowest path- ask the global string table for the ID of the buffer
+    // filename. This is potentially a very expensive operation since looking up
+    // the filename in the string table potentially requires scanning it three
+    // times.
+    llvh::StringRef filename = sm.getSourceUrl(bufId);
+    auto stringTableIdx = stringTable_.add(filename);
+    it = fileIdxCache_.try_emplace(bufId, stringTableIdx).first;
+    lastFileIdxEntry_ = &*it;
+    return it->second;
+  }
+};
+
 struct ModuleGen {
   /// Table containing uniqued strings for the current module.
   SHStringTable stringTable{};
@@ -285,7 +394,12 @@ struct ModuleGen {
   /// Maintain entries for the object literal class cache.
   ObjectLiteralClassCache objectLiteralClassCache{};
 
-  explicit ModuleGen() : literalBuffers{stringTable} {}
+  /// Maintain a table of all unique source file locations used by throwing
+  /// instructions.
+  SHSrcLocationTable srcLocationTable;
+
+  explicit ModuleGen()
+      : literalBuffers{stringTable}, srcLocationTable{stringTable} {}
 
   /// Generates the correct label for BasicBlock \p B based on \p bbMap and
   /// outputs it through \p OS. If the JS function name contains characters
@@ -2037,9 +2151,9 @@ void generateFunction(
     bbCounter++;
   }
 
+  auto &srcMgr = F.getContext().getSourceErrorManager();
   OS << "// ";
-  F.getContext().getSourceErrorManager().dumpCoords(
-      OS, F.getSourceRange().Start);
+  srcMgr.dumpCoords(OS, F.getSourceRange().Start);
   OS << '\n';
 
   unsigned envSize = F.getFunctionScope()->getVariables().size();
@@ -2109,6 +2223,24 @@ void generateFunction(
   for (size_t i = 0; i < maxTryDepth; ++i)
     OS << "  SHJmpBuf jmpBuf" << i << ";\n";
 
+  // Emit instructions for native stack traces if the debug info level is set to
+  // at least throwing.
+  bool emitNativeTraces =
+      F.getContext().getDebugInfoSetting() >= DebugInfoSetting::THROWING;
+  if (emitNativeTraces) {
+    // Initialize the current SHUnit ptr for this frame.
+    OS << "  frame[" << hbc::StackFrameLayout::SHUnit
+       << "] = _sh_ljs_native_pointer(&THIS_UNIT);\n";
+    // Initialize the current source location to invalid.
+    OS << "  frame[" << hbc::StackFrameLayout::SrcLocationIdx
+       << "] = _sh_ljs_native_uint32(" << SHSrcLocationTable::kInvalidLocIdx
+       << ");\n";
+  }
+
+  // The most recent index into the source location table that was used by a
+  // throwing instruction.
+  SHSrcLocationTable::IdxTy prevSrcLocationIdx =
+      SHSrcLocationTable::kInvalidLocIdx;
   for (auto &B : order) {
     OS << "\n";
     generateBasicBlockLabel(B, OS, bbMap);
@@ -2117,7 +2249,9 @@ void generateFunction(
        // expression (as opposed to a declaration).
        << "  ;\n";
 
-    SMLoc prevLoc{};
+    // The most recent location of an instruction that was printed as line
+    // comments in the C file.
+    SMLoc prevCommentLoc{};
     // The first instruction in the function should always have its line info
     // printed, since it has no previous instruction that it could be a
     // duplicate of.
@@ -2127,18 +2261,42 @@ void generateFunction(
         SMLoc curLoc = I.getLocation();
         // We only print out a line comment if the source location has changed
         // from the previous line comment printed.
-        if (curLoc != prevLoc || firstInst) {
+        if (curLoc != prevCommentLoc || firstInst) {
           OS << "  // ";
           if (curLoc.isValid()) {
-            F.getContext().getSourceErrorManager().dumpCoords(OS, curLoc);
+            srcMgr.dumpCoords(OS, curLoc);
           } else {
             // If we don't find any source location info, explicitly state that.
             OS << "no-src-info";
           }
           OS << '\n';
         }
-        prevLoc = curLoc;
+        prevCommentLoc = curLoc;
         firstInst = false;
+      }
+      if (emitNativeTraces) {
+        // If the instruction we are about to generate can throw, then we must
+        // update the current source line we are executing in preparation.
+        auto sideEffect = I.getSideEffect();
+        if (sideEffect.getThrow()) {
+          // If the instruction has no source location information, then just
+          // use the invalid location.
+          SHSrcLocationTable::IdxTy idx = SHSrcLocationTable::kInvalidLocIdx;
+          SMLoc curLoc = I.getLocation();
+          if (curLoc.isValid()) {
+            hermes::SourceErrorManager::SourceCoords coords;
+            if (srcMgr.findBufferLineAndLoc(curLoc, coords)) {
+              idx = moduleGen.srcLocationTable.getIndex(srcMgr, coords);
+            }
+          }
+          if (idx != prevSrcLocationIdx) {
+            // We update the source location if the source location index of the
+            // current instruction has changed from the previous update.
+            OS << "  frame[" << hbc::StackFrameLayout::SrcLocationIdx
+               << "] = _sh_ljs_native_uint32(" << idx << ");\n";
+          }
+          prevSrcLocationIdx = idx;
+        }
       }
       instrGen.generate(I);
     }
@@ -2236,6 +2394,7 @@ void generateModule(
 
 static SHSymbolID s_symbols[];
 static SHPropertyCacheEntry s_prop_cache[];
+static const SHSrcLoc s_source_locations[];
 )";
 
     // Declare extern functions.
@@ -2256,6 +2415,8 @@ static SHPropertyCacheEntry s_prop_cache[];
     moduleGen.stringTable.generate(OS);
     moduleGen.literalBuffers.generate(OS);
     moduleGen.objectLiteralClassCache.generate(OS);
+    moduleGen.srcLocationTable.generate(
+        OS, M->getContext().getSourceErrorManager());
 
     OS << "static SHPropertyCacheEntry s_prop_cache[" << nextCacheIdx << "];\n"
        << "SHUnit THIS_UNIT = { .num_symbols = " << moduleGen.stringTable.size()
@@ -2272,6 +2433,9 @@ static SHPropertyCacheEntry s_prop_cache[];
        << ".object_literal_class_cache = s_object_literal_class_cache, "
        << ".num_object_literal_class_cache_entries = "
        << moduleGen.objectLiteralClassCache.size() << ", "
+       << ".source_locations = s_source_locations, "
+       << ".source_locations_size = " << moduleGen.srcLocationTable.size()
+       << ", "
        << ".unit_main = _0_global, .unit_main_strict = "
        << boolStr(M->getTopLevelFunction()->isStrictMode()) << ", "
        << ".unit_name = \"sh_compiled\" };\n";

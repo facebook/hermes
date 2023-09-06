@@ -112,6 +112,20 @@ cl::opt<OptLevel> OptimizationLevel(
         clEnumValN(OptLevel::OMax, "O", "Expensive optimizations")),
     cl::cat(CompilerCategory));
 
+cl::opt<DebugLevel> DebugInfoLevel(
+    cl::desc("Choose debug info level:"),
+    cl::init(DebugLevel::g0),
+    cl::values(
+        clEnumValN(DebugLevel::g0, "g0", "Do not emit debug info"),
+        clEnumValN(DebugLevel::g1, "g1", "Emit location info for backtraces"),
+        clEnumValN(
+            DebugLevel::g2,
+            "g2",
+            "Emit location info for all instructions"),
+        clEnumValN(DebugLevel::g3, "g3", "Emit full info for debugging"),
+        clEnumValN(DebugLevel::g3, "g", "Equivalent to -g3")),
+    cl::cat(CompilerCategory));
+
 static cl::list<std::string> CustomOptimize(
     "custom-opt",
     cl::desc("Custom optimzations"),
@@ -540,14 +554,16 @@ std::shared_ptr<Context> createContext() {
     return nullptr;
   }
 
-  // if (cl::DebugInfoLevel >= cl::DebugLevel::g3) {
-  //   context->setDebugInfoSetting(DebugInfoSetting::ALL);
-  // } else if (cl::DebugInfoLevel == cl::DebugLevel::g2) {
-  //   context->setDebugInfoSetting(DebugInfoSetting::SOURCE_MAP);
-  // } else {
-  //   // -g1 or -g0. If -g0, we'll strip debug info later.
-  //   context->setDebugInfoSetting(DebugInfoSetting::THROWING);
-  // }
+  if (cli::DebugInfoLevel >= DebugLevel::g3) {
+    context->setDebugInfoSetting(DebugInfoSetting::ALL);
+  } else if (cli::DebugInfoLevel == DebugLevel::g2) {
+    context->setDebugInfoSetting(DebugInfoSetting::SOURCE_MAP);
+  } else if (cli::DebugInfoLevel == DebugLevel::g1) {
+    // -g1 or -g0. If -g0, we'll strip debug info later.
+    context->setDebugInfoSetting(DebugInfoSetting::THROWING);
+  } else {
+    context->setDebugInfoSetting(DebugInfoSetting::NONE);
+  }
   // context->setEmitAsyncBreakCheck(cl::EmitAsyncBreakCheck);
 
   return context;

@@ -37,6 +37,8 @@ enum class OptLevel {
   OMax,
 };
 
+enum class DebugLevel { g0, g1, g2, g3 };
+
 struct ShermesCompileParams {
   const hermes::BytecodeGenerationOptions &genOptions;
   OptLevel nativeOptimize = OptLevel::OMax;

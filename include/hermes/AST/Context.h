@@ -64,6 +64,9 @@ struct OptimizationSettings {
 };
 
 enum class DebugInfoSetting {
+  /// Don't emit any source locations info.
+  NONE,
+
   /// Only emit source locations for instructions that may throw, as required
   /// for generating error stack traces.
   THROWING,
