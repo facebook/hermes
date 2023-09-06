@@ -13,6 +13,9 @@ class C {
   override(): number {
     return 1;
   }
+  override2(x: number): number|string {
+    return 1;
+  }
 }
 
 class D extends C {
@@ -21,6 +24,9 @@ class D extends C {
     super();
   }
   override(): number {
+    return 2;
+  }
+  override2(x: number|string): number {
     return 2;
   }
 }
@@ -34,28 +40,36 @@ new D().override();
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %C(): undefined
 // CHECK-NEXT:  %1 = StoreFrameInst %0: object, [C]: object
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %override(): number
-// CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) "override": string, %2: object
-// CHECK-NEXT:  %4 = StorePropertyStrictInst %3: object, %0: object, "prototype": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %D(): undefined
-// CHECK-NEXT:  %6 = LoadPropertyInst (:any) %0: object, "prototype": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %"override 1#"(): number
-// CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) "override": string, %7: object
-// CHECK-NEXT:  %9 = StoreParentInst %6: any, %8: object
-// CHECK-NEXT:  %10 = StorePropertyStrictInst %8: object, %5: object, "prototype": string
-// CHECK-NEXT:  %11 = LoadPropertyInst (:any) %5: object, "prototype": string
-// CHECK-NEXT:  %12 = AllocObjectInst (:object) 0: number, %11: any
-// CHECK-NEXT:  %13 = CallInst (:undefined) %5: object, %D(): undefined, empty: any, undefined: undefined, %12: object
-// CHECK-NEXT:  %14 = LoadParentInst (:object) %12: object
-// CHECK-NEXT:  %15 = PrLoadInst (:object) %14: object, 0: number, "override": string
-// CHECK-NEXT:  %16 = CallInst [njsf] (:any) %15: object, empty: any, empty: any, undefined: undefined, %12: object
-// CHECK-NEXT:  %17 = ReturnInst %16: any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %override2(): number
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %override(): number
+// CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) "override": string, %3: object, "override2": string, %2: object
+// CHECK-NEXT:  %5 = StorePropertyStrictInst %4: object, %0: object, "prototype": string
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %D(): undefined
+// CHECK-NEXT:  %7 = LoadPropertyInst (:any) %0: object, "prototype": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %"override2 1#"(): number
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %"override 1#"(): number
+// CHECK-NEXT:  %10 = AllocObjectLiteralInst (:object) "override": string, %9: object, "override2": string, %8: object
+// CHECK-NEXT:  %11 = StoreParentInst %7: any, %10: object
+// CHECK-NEXT:  %12 = StorePropertyStrictInst %10: object, %6: object, "prototype": string
+// CHECK-NEXT:  %13 = LoadPropertyInst (:any) %6: object, "prototype": string
+// CHECK-NEXT:  %14 = AllocObjectInst (:object) 0: number, %13: any
+// CHECK-NEXT:  %15 = CallInst (:undefined) %6: object, %D(): undefined, empty: any, undefined: undefined, %14: object
+// CHECK-NEXT:  %16 = LoadParentInst (:object) %14: object
+// CHECK-NEXT:  %17 = PrLoadInst (:object) %16: object, 0: number, "override": string
+// CHECK-NEXT:  %18 = CallInst [njsf] (:any) %17: object, empty: any, empty: any, undefined: undefined, %14: object
+// CHECK-NEXT:  %19 = ReturnInst %18: any
 // CHECK-NEXT:function_end
 
 // CHECK:function C(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function override2(x: number): number [typed]
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = ReturnInst 1: number
 // CHECK-NEXT:function_end
 
 // CHECK:function override(): number [typed]
@@ -71,6 +85,12 @@ new D().override();
 // CHECK-NEXT:  %1 = LoadFrameInst (:object) [C@global]: object
 // CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %C(): undefined, empty: any, undefined: undefined, %0: any
 // CHECK-NEXT:  %3 = ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function "override2 1#"(x: string|number): number [typed]
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = ReturnInst 2: number
 // CHECK-NEXT:function_end
 
 // CHECK:function "override 1#"(): number [typed]

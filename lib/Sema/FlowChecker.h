@@ -290,7 +290,30 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   }
   static CanFlowResult canAFlowIntoB(TypeInfo *a, TypeInfo *b);
   static CanFlowResult canAFlowIntoB(ClassType *a, ClassType *b);
-  static CanFlowResult canAFlowIntoB(BaseFunctionType *a, BaseFunctionType *b);
+
+  /// How to handle 'this' parameters when checking if function types can flow.
+  enum class ThisFlowDirection {
+    /// Supertype this parameters flow into subtype this parameters.
+    Default,
+    /// Subtype this parameters flow into supertype this parameters.
+    MethodOverride,
+  };
+
+  /// \param thisFlow how to handle 'this' parameter.
+  static CanFlowResult canAFlowIntoB(
+      BaseFunctionType *a,
+      BaseFunctionType *b,
+      ThisFlowDirection thisFlow = ThisFlowDirection::Default);
+
+  /// Different from regular function type flowing, because 'this' parameters
+  /// must be handled specially in the method override scenario.
+  /// In only this case, 'this' in \p a must be a subtype of \p b.
+  /// In canAFlowIntoB, having a parameter in \p a that is a subtype of \p b
+  /// would fail to typecheck.
+  /// \return whether \p a can be a method override for \p b.
+  static bool canAOverrideB(BaseFunctionType *a, BaseFunctionType *b) {
+    return canAFlowIntoB(a, b, ThisFlowDirection::MethodOverride).canFlow;
+  }
 
   /// If \c canFlow.needCheckedCast is set and \c compile_ is set, allocate an
   /// implicit checked cast node from the specified \p argument to

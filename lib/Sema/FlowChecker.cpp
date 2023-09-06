@@ -353,15 +353,8 @@ class FlowChecker::ParseClassType {
         if (superIt) {
           // Field is inherited.
           superMethod = superIt->getField();
-          // Overriding method's function type must flow into the overridden
-          // method's function type.
-          CanFlowResult flowRes =
-              canAFlowIntoB(methodType->info, superMethod->type->info);
-          if (!flowRes.canFlow) {
-            outer_.sm_.error(
-                method->getStartLoc(),
-                "ft: incompatible method type for override");
-          }
+          // Actually check the type of the method later,
+          // because we have to wait for the class to be initialized.
         }
       }
 
@@ -457,6 +450,28 @@ void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
                         ->findField(Identifier::getFromPointer(id->_name));
     assert(optField.hasValue() && "method must have been registered");
     Type *funcType = optField->getField()->type;
+
+    // Typecheck overriding methods.
+    Type *superClassType =
+        curClassContext_->getClassTypeInfo()->getSuperClass();
+    if (superClassType) {
+      auto *superClassTypeInfo = llvh::cast<ClassType>(superClassType->info);
+      auto superIt = superClassTypeInfo->getHomeObjectTypeInfo()->findField(
+          Identifier::getFromPointer(id->_name));
+      if (superIt) {
+        auto *superMethod = superIt->getField();
+        // Overriding method's function type must flow into the overridden
+        // method's function type.
+        bool canOverride = canAOverrideB(
+            llvh::cast<BaseFunctionType>(funcType->info),
+            llvh::cast<BaseFunctionType>(superMethod->type->info));
+        if (!canOverride) {
+          sm_.error(
+              node->getStartLoc(), "ft: incompatible method type for override");
+        }
+      }
+    }
+
     FunctionContext functionContext(
         *this, fe, funcType, curClassContext_->classType);
     visitFunctionLike(fe, fe->_body, fe->_params);
@@ -2848,7 +2863,8 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
 
 FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     BaseFunctionType *a,
-    BaseFunctionType *b) {
+    BaseFunctionType *b,
+    ThisFlowDirection thisFlow) {
   // Function a can flow into b when:
   // * they're the same kind of function (async, generator, etc)
   // * all parameters of b can flow into parameters of a
@@ -2891,8 +2907,9 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
   }
   if (aType->getThisParam() && bType->getThisParam()) {
     // Both functions have `this`, it must be checked.
-    CanFlowResult flowRes =
-        canAFlowIntoB(bType->getThisParam(), aType->getThisParam());
+    CanFlowResult flowRes = thisFlow == ThisFlowDirection::Default
+        ? canAFlowIntoB(bType->getThisParam(), aType->getThisParam())
+        : canAFlowIntoB(aType->getThisParam(), bType->getThisParam());
     if (!flowRes.canFlow || flowRes.needCheckedCast)
       return {};
   }
