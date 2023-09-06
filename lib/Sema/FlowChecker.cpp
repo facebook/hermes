@@ -1222,11 +1222,10 @@ class FlowChecker::ExprVisitor {
       if (!cf.canFlow) {
         outer_.sm_.error(
             node->getSourceRange(), "ft: incompatible assignment types");
-        res = lt;
       } else {
-        node->_right = outer_.implicitCheckedCast(node->_right, rt, cf);
-        res = rt;
+        node->_right = outer_.implicitCheckedCast(node->_right, lt, cf);
       }
+      res = lt;
     } else {
       res = determineBinopType(
           assignKind(node->_operator->str()),
