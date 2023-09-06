@@ -45,11 +45,11 @@ new D().override();
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) "override": string, %3: object, "override2": string, %2: object
 // CHECK-NEXT:  %5 = StorePropertyStrictInst %4: object, %0: object, "prototype": string
 // CHECK-NEXT:  %6 = CreateFunctionInst (:object) %D(): undefined
-// CHECK-NEXT:  %7 = LoadPropertyInst (:any) %0: object, "prototype": string
+// CHECK-NEXT:  %7 = LoadPropertyInst (:object) %0: object, "prototype": string
 // CHECK-NEXT:  %8 = CreateFunctionInst (:object) %"override2 1#"(): number
 // CHECK-NEXT:  %9 = CreateFunctionInst (:object) %"override 1#"(): number
 // CHECK-NEXT:  %10 = AllocObjectLiteralInst (:object) "override": string, %9: object, "override2": string, %8: object
-// CHECK-NEXT:  %11 = StoreParentInst %7: any, %10: object
+// CHECK-NEXT:  %11 = StoreParentInst %7: object, %10: object
 // CHECK-NEXT:  %12 = StorePropertyStrictInst %10: object, %6: object, "prototype": string
 // CHECK-NEXT:  %13 = LoadPropertyInst (:any) %6: object, "prototype": string
 // CHECK-NEXT:  %14 = AllocObjectInst (:object) 0: number, %13: any

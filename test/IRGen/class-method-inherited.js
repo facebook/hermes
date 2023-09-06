@@ -34,10 +34,10 @@ new D().inherited();
 // CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) "inherited": string, %2: object
 // CHECK-NEXT:  %4 = StorePropertyStrictInst %3: object, %0: object, "prototype": string
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %D(): undefined
-// CHECK-NEXT:  %6 = LoadPropertyInst (:any) %0: object, "prototype": string
-// CHECK-NEXT:  %7 = PrLoadInst (:object) %6: any, 0: number, "inherited": string
+// CHECK-NEXT:  %6 = LoadPropertyInst (:object) %0: object, "prototype": string
+// CHECK-NEXT:  %7 = PrLoadInst (:object) %6: object, 0: number, "inherited": string
 // CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) "inherited": string, %7: object
-// CHECK-NEXT:  %9 = StoreParentInst %6: any, %8: object
+// CHECK-NEXT:  %9 = StoreParentInst %6: object, %8: object
 // CHECK-NEXT:  %10 = StorePropertyStrictInst %8: object, %5: object, "prototype": string
 // CHECK-NEXT:  %11 = LoadPropertyInst (:any) %5: object, "prototype": string
 // CHECK-NEXT:  %12 = AllocObjectInst (:object) 0: number, %11: any

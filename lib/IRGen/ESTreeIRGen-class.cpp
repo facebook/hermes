@@ -145,11 +145,17 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
 
   // Create and populate the "prototype" property (vtable).
   // Must be done even if there are no methods to enable 'instanceof'.
-  auto *homeObject = emitClassAllocation(
-      classType->getHomeObjectTypeInfo(),
-      superClass ? Builder.createLoadPropertyInst(
-                       superClass, kw_.identPrototype->str())
-                 : nullptr);
+  Value *vtable = nullptr;
+  if (superClass) {
+    vtable =
+        Builder.createLoadPropertyInst(superClass, kw_.identPrototype->str());
+    // TODO: This will be known to be the actual type when we properly use an
+    // instruction for class creation, but for now we need an object here
+    // because we want to use PrLoad on it.
+    vtable->setType(Type::createObject());
+  }
+  auto *homeObject =
+      emitClassAllocation(classType->getHomeObjectTypeInfo(), vtable);
 
   // The 'prototype' property is initially set as non-configurable,
   // and we're overwriting it with our own.

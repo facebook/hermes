@@ -32,8 +32,8 @@ new D();
 // CHECK-NEXT:  %2 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %3 = StorePropertyStrictInst %2: object, %0: object, "prototype": string
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %D(): undefined
-// CHECK-NEXT:  %5 = LoadPropertyInst (:any) %0: object, "prototype": string
-// CHECK-NEXT:  %6 = AllocObjectInst (:object) 0: number, %5: any
+// CHECK-NEXT:  %5 = LoadPropertyInst (:object) %0: object, "prototype": string
+// CHECK-NEXT:  %6 = AllocObjectInst (:object) 0: number, %5: object
 // CHECK-NEXT:  %7 = StorePropertyStrictInst %6: object, %4: object, "prototype": string
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) %4: object, "prototype": string
 // CHECK-NEXT:  %9 = AllocObjectInst (:object) 0: number, %8: any
