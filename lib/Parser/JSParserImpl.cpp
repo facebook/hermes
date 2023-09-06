@@ -128,6 +128,9 @@ void JSParserImpl::initializeIdentifiers() {
 
   namespaceIdent_ = lexer_.getIdentifier("namespace");
   readonlyIdent_ = lexer_.getIdentifier("readonly");
+  neverIdent_ = lexer_.getIdentifier("never");
+  undefinedIdent_ = lexer_.getIdentifier("undefined");
+  unknownIdent_ = lexer_.getIdentifier("unknown");
 
 #endif
 
