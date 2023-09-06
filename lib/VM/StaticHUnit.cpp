@@ -133,14 +133,14 @@ static SHLegacyValue sh_unit_run(SHRuntime *shr, SHUnit *unit) {
         shr,
         &locals.env,
         unit->unit_main,
-        Predefined::getSymbolID(Predefined::Str::emptyString).unsafeGetRaw(),
+        Predefined::getSymbolID(Predefined::Str::global).unsafeGetRaw(),
         0);
   } else {
     closure = _sh_ljs_create_closure_loose(
         shr,
         &locals.env,
         unit->unit_main,
-        Predefined::getSymbolID(Predefined::Str::emptyString).unsafeGetRaw(),
+        Predefined::getSymbolID(Predefined::Str::global).unsafeGetRaw(),
         0);
   }
 
