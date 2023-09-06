@@ -1111,6 +1111,27 @@ class JSParserImpl {
 #endif
 
 #if HERMES_PARSE_FLOW
+  /// Allow parsing the initial part of an identifier + type annotation pair.
+  /// Used for the following syntax structure:
+  ///   IdentifierName: TypeAnnotation
+  ///   IdentifierName?: TypeAnnotation
+  ///   TypeAnnotation
+  ///   ^
+  /// This will try parsing as a TypeAnnotation unless a known type ident is
+  /// found. In this case it will lookahead to see if a colon is present to
+  /// ensure the type annotation does not fail to parse. e.g.
+  ///   type T = (component()) => void;
+  ///             ^
+  ///   type T = (component: component()) => void;
+  ///             ^
+  /// In the above example the second case would fail when calling
+  /// `parseTypeAnnotationFlow` as it is not a valid Flow type annotation,
+  /// whereas `parseTypeAnnotationBeforeColonFlow` would lookahead for a colon
+  /// to know if a `GenericTypeAnnotation` is valid in this position instead.
+  /// \return A type annotation, if its known a colon is the preceding token a
+  /// GenericTypeAnnotation will be returned for unwrapping by
+  /// reparseTypeAnnotationAsIdentifierFlow.
+  Optional<ESTree::Node *> parseTypeAnnotationBeforeColonFlow();
   /// \param wrappedStart if set, the type annotation should be wrapped in a
   /// TypeAnnotationNode starting at this location. If not set, the type
   /// annotation should not be wrapped in a TypeAnnotationNode.
