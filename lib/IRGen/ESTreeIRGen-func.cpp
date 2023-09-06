@@ -466,6 +466,11 @@ void ESTreeIRGen::emitFunctionPrologue(
   // Always create the "this" parameter. It needs to be created before we
   // initialized the ES5 capture state.
   JSDynamicParam *thisParam = newFunc->addJSThisParam();
+  if (flow::TypedFunctionType *ftype = llvh::dyn_cast<flow::TypedFunctionType>(
+          flowContext_.getNodeTypeOrAny(funcNode)->info);
+      ftype && ftype->getThisParam()) {
+    thisParam->setType(flowTypeToIRType(ftype->getThisParam()));
+  }
 
   // Save the "this" parameter. We will delete it later if unused.
   // In strict mode just use param 0 directly. In non-strict, we must coerce
@@ -676,8 +681,14 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
           param->getSourceRange(), "too many parameters");
       break;
     }
-    Instruction *formalParam = Builder.createLoadParamInst(
-        newFunc->addJSDynamicParam(formalParamName));
+    auto *jsParam = newFunc->addJSDynamicParam(formalParamName);
+    if (flow::TypedFunctionType *ftype =
+            llvh::dyn_cast<flow::TypedFunctionType>(
+                flowContext_.getNodeTypeOrAny(funcNode)->info);
+        ftype && paramIndex < ftype->getParams().size()) {
+      jsParam->setType(flowTypeToIRType(ftype->getParams()[paramIndex].second));
+    }
+    Instruction *formalParam = Builder.createLoadParamInst(jsParam);
     curFunction()->jsParams.push_back(formalParam);
     createLRef(param, true)
         .emitStore(

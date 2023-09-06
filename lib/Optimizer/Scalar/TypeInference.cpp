@@ -327,53 +327,6 @@ static bool inferFunctionReturnType(Function *F) {
   return false;
 }
 
-/// Propagate type information from call sites of F to formals of F.
-/// This assumes that all call sites of F are known.
-static void propagateArgs(
-    llvh::ArrayRef<BaseCallInst *> callSites,
-    Function *F) {
-  // Hermes does not support using 'arguments' to modify the arguments to a
-  // function in loose mode. Therefore, we can safely propagate the parameter
-  // types to their usage regardless of the function's strictness.
-  IRBuilder builder(F);
-  for (uint32_t i = 0, e = F->getJSDynamicParams().size(); i < e; ++i) {
-    auto *P = F->getJSDynamicParam(i);
-    Type paramTy = Type::createAnyType();
-    bool first = true;
-
-    // For each call sites.
-    for (auto *call : callSites) {
-      // The argument default value is undefined.
-      Value *arg = builder.getLiteralUndefined();
-
-      // Load the argument that's passed in.
-      if (i < call->getNumArguments()) {
-        arg = call->getArgument(i);
-      }
-
-      if (first) {
-        paramTy = arg->getType();
-        first = false;
-      } else {
-        paramTy = Type::unionTy(paramTy, arg->getType());
-      }
-    }
-
-    if (first || paramTy.isNoType()) {
-      // No information retrieved from call sites, bail.
-      P->setType(Type::createAnyType());
-    } else {
-      // Update the type if we have new information.
-      P->setType(paramTy);
-      LLVM_DEBUG(
-          dbgs() << F->getInternalName().c_str() << "::" << P->getName().c_str()
-                 << " changed to ");
-      LLVM_DEBUG(paramTy.print(dbgs()));
-      LLVM_DEBUG(dbgs() << "\n");
-    }
-  }
-}
-
 /// Actual implementation of type inference pass.
 /// Contains the ability to infer types per-instruction.
 ///
@@ -943,6 +896,7 @@ class TypeInferenceImpl {
       // parameters.
       for (auto *param : F->getJSDynamicParams()) {
         param->setType(Type::createAnyType());
+        checkAndSetPrePassType(param);
       }
       return;
     }
@@ -951,6 +905,58 @@ class TypeInferenceImpl {
         dbgs() << F->getInternalName().str() << " has " << callsites.size()
                << " call sites.\n");
     propagateArgs(callsites, F);
+  }
+
+  /// Propagate type information from call sites of F to formals of F.
+  /// This assumes that all call sites of F are known.
+  void propagateArgs(llvh::ArrayRef<BaseCallInst *> callSites, Function *F) {
+    // Hermes does not support using 'arguments' to modify the arguments to a
+    // function in loose mode. Therefore, we can safely propagate the parameter
+    // types to their usage regardless of the function's strictness.
+    IRBuilder builder(F);
+    for (uint32_t i = 0, e = F->getJSDynamicParams().size(); i < e; ++i) {
+      auto *P = F->getJSDynamicParam(i);
+      Type paramTy = Type::createAnyType();
+      bool first = true;
+
+      // For each call sites.
+      for (auto *call : callSites) {
+        // The argument default value is undefined.
+        Value *arg = builder.getLiteralUndefined();
+
+        // Load the argument that's passed in.
+        if (i < call->getNumArguments()) {
+          arg = call->getArgument(i);
+        }
+
+        if (first) {
+          paramTy = arg->getType();
+          first = false;
+        } else {
+          paramTy = Type::unionTy(paramTy, arg->getType());
+        }
+      }
+
+      Type originalTy = P->getType();
+
+      if (first || paramTy.isNoType()) {
+        // No information retrieved from call sites, bail.
+        P->setType(Type::createAnyType());
+      } else {
+        // Update the type if we have new information.
+        P->setType(paramTy);
+      }
+
+      checkAndSetPrePassType(P);
+
+      if (P->getType() != originalTy) {
+        LLVM_DEBUG(
+            dbgs() << F->getInternalName().c_str()
+                   << "::" << P->getName().c_str() << " changed to ");
+        LLVM_DEBUG(paramTy.print(dbgs()));
+        LLVM_DEBUG(dbgs() << "\n");
+      }
+    }
   }
 
   /// Clear every type for instructions, return types, parameters and variables
@@ -1071,9 +1077,6 @@ bool TypeInferenceImpl::runOnFunction(Function *F) {
   // checkAndSetPrePassType call results in no change from the original type,
   // changed=false.
   checkAndSetPrePassType(F);
-  for (auto *param : F->getJSDynamicParams()) {
-    checkAndSetPrePassType(param);
-  }
   if (!F->isGlobalScope()) {
     for (auto *V : F->getFunctionScope()->getVariables()) {
       checkAndSetPrePassType(V);

@@ -39,20 +39,20 @@
 // CHECK-NEXT:  %1 = ReturnInst %0: object
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(x: any, sink: any): undefined [typed]
+// CHECK:function foo(x: object, sink: any): undefined [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %0 = LoadParamInst (:object) %x: object
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %sink: any
-// CHECK-NEXT:  %2 = FastArrayLoadInst (:number) %0: any, 0: number
+// CHECK-NEXT:  %2 = FastArrayLoadInst (:number) %0: object, 0: number
 // CHECK-NEXT:  %3 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %2: number
-// CHECK-NEXT:  %4 = FastArrayStoreInst 42: number, %0: any, 3: number
-// CHECK-NEXT:  %5 = FastArrayLengthInst (:number) %0: any
+// CHECK-NEXT:  %4 = FastArrayStoreInst 42: number, %0: object, 3: number
+// CHECK-NEXT:  %5 = FastArrayLengthInst (:number) %0: object
 // CHECK-NEXT:  %6 = BinaryLessThanInst (:boolean) 0: number, %5: number
 // CHECK-NEXT:  %7 = CondBranchInst %6: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %8 = PhiInst (:number) 0: number, %BB0, %11: number, %BB1
-// CHECK-NEXT:  %9 = FastArrayLoadInst (:number) %0: any, %8: number
+// CHECK-NEXT:  %9 = FastArrayLoadInst (:number) %0: object, %8: number
 // CHECK-NEXT:  %10 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %9: number
 // CHECK-NEXT:  %11 = UnaryIncInst (:number) %8: number
 // CHECK-NEXT:  %12 = BinaryLessThanInst (:boolean) %11: number, %5: number

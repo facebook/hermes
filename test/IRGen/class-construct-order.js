@@ -59,11 +59,11 @@ return foo;
 // CHECK-NEXT:  %9 = UnreachableInst
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(x: any): any [typed]
+// CHECK:function foo(x: number): any [typed]
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [x]: any
+// CHECK-NEXT:  %0 = LoadParamInst (:number) %x: number
+// CHECK-NEXT:  %1 = StoreFrameInst %0: number, [x]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [C@main]: any
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: any, "prototype": string
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) "x": string, 0: number

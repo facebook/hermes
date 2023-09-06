@@ -3410,7 +3410,9 @@ class LoadParamInst : public SingleOperandInst {
 
  public:
   explicit LoadParamInst(JSDynamicParam *param)
-      : SingleOperandInst(ValueKind::LoadParamInstKind, param) {}
+      : SingleOperandInst(ValueKind::LoadParamInstKind, param) {
+    setType(param->getType());
+  }
   explicit LoadParamInst(
       const LoadParamInst *src,
       llvh::ArrayRef<Value *> operands)
