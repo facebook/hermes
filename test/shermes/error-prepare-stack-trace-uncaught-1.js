@@ -8,9 +8,9 @@
 // RUN: (%shermes -exec %s 2>&1 || true) | %FileCheck --match-full-lines %s
 "use strict";
 
-Error.prepareStackTrace = (e, callSites) => callSites;
+Error.prepareStackTrace = (e, callSites) => "hello"
 
 // Uncaught errors are formatted with prepareStackTrace
 throw new Error('foo');
-// CHECK: Uncaught [object CallSite]
+// CHECK: Uncaught hello
 // CHECK-EMPTY

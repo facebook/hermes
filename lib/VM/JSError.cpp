@@ -19,6 +19,7 @@
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringView.h"
 
+#include "hermes/VM/static_h.h"
 #include "llvh/ADT/ScopeExit.h"
 
 namespace hermes {
@@ -83,7 +84,7 @@ errorStackGetter(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto errorHandle = *errorHandleRes;
-  if (!errorHandle->stacktrace_) {
+  if (!errorHandle->nativeStacktrace_ && !errorHandle->stacktrace_) {
     // Stacktrace has not been set, we simply return empty string.
     // This is different from other VMs where stacktrace is created when
     // the error object is created. We only set it when the error
@@ -135,10 +136,18 @@ errorStackGetter(void *, Runtime &runtime, NativeArgs args) {
     }
     stackTraceFormatted = std::move(*prepareRes);
   } else {
-    if (JSError::constructStackTraceString_RJS(
-            runtime, errorHandle, targetHandle, stack) ==
-        ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
+    if (errorHandle->nativeStacktrace_) {
+      if (JSError::constructNativeStackTraceString_RJS(
+              runtime, errorHandle, targetHandle, stack) ==
+          ExecutionStatus::EXCEPTION) {
+        return ExecutionStatus::EXCEPTION;
+      }
+    } else {
+      if (JSError::constructStackTraceString_RJS(
+              runtime, errorHandle, targetHandle, stack) ==
+          ExecutionStatus::EXCEPTION) {
+        return ExecutionStatus::EXCEPTION;
+      }
     }
 
     auto strRes = StringPrimitive::create(runtime, stack);
@@ -545,6 +554,43 @@ ExecutionStatus JSError::recordStackTrace(
   return ExecutionStatus::RETURNED;
 }
 
+void JSError::recordNativeStackTrace(
+    Handle<JSError> selfHandle,
+    Runtime &runtime,
+    bool skipTopFrame) {
+  selfHandle->nativeStacktrace_ = std::make_unique<NativeStackTrace>();
+  bool skip = skipTopFrame;
+  for (StackFramePtr cf : runtime.getStackFrames()) {
+    if (skip) {
+      skip = false;
+      continue;
+    }
+    // If the SHUnit is null, that means no location was set. This means
+    // this is probably a NativeFunction, e.g. JSLib. If the function does have
+    // source information, but the source location index is 0, then the current
+    // instruction has no source info.
+    if (!cf.getSHUnit() || cf.getSrcLocationIdx() == 0) {
+      selfHandle->nativeStacktrace_->push_back({nullptr, {}});
+    } else {
+      const SHUnit *unit = cf.getSHUnit();
+      uint32_t curLocIdx = cf.getSrcLocationIdx();
+      assert(
+          curLocIdx < unit->source_locations_size &&
+          "out of bounds access on source locations table");
+      SHSrcLoc curLoc = unit->source_locations[curLocIdx];
+      selfHandle->nativeStacktrace_->push_back({unit, curLoc});
+    }
+  }
+
+  auto funcNames = getCallStackFunctionNames(
+      runtime, skipTopFrame, selfHandle->nativeStacktrace_->size());
+  assert(
+      (!funcNames ||
+       funcNames->size() == selfHandle->nativeStacktrace_->size()) &&
+      "Function names and stack trace must have same size.");
+  selfHandle->funcNames_.set(runtime, *funcNames, runtime.getHeap());
+}
+
 /// Given a codeblock and opcode offset, \returns the debug information.
 OptValue<hbc::DebugSourceLocation> JSError::getDebugInfo(
     CodeBlock *codeBlock,
@@ -578,7 +624,7 @@ Handle<StringPrimitive> JSError::getFunctionNameAtIndex(
             runtime));
   }
 
-  if (!name || name->getStringLength() == 0) {
+  if ((!name || name->getStringLength() == 0) && selfHandle->stacktrace_) {
     // We did not have an explicit function name, or it was not a nonempty
     // string. If we have a code block, try its debug info.
     if (const CodeBlock *codeBlock =
@@ -613,6 +659,7 @@ ExecutionStatus JSError::constructStackTraceString_RJS(
     Handle<JSError> selfHandle,
     Handle<JSObject> targetHandle,
     SmallU16String<32> &stack) {
+  assert(selfHandle->stacktrace_ && "stacktrace not constructed");
   // This method potentially runs javascript, so we need to protect it agains
   // stack overflow.
   ScopedNativeDepthTracker depthTracker(runtime);
@@ -783,9 +830,139 @@ ExecutionStatus JSError::constructStackTraceString_RJS(
   return ExecutionStatus::RETURNED;
 }
 
+ExecutionStatus JSError::constructNativeStackTraceString_RJS(
+    Runtime &runtime,
+    Handle<JSError> selfHandle,
+    Handle<JSObject> targetHandle,
+    SmallU16String<32> &stack) {
+  assert(selfHandle->nativeStacktrace_ && "native stacktrace not constructed");
+  // This method potentially runs javascript, so we need to protect it agains
+  // stack overflow.
+  ScopedNativeDepthTracker depthTracker(runtime);
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
+
+  GCScope gcScope(runtime);
+  // First of all, the stacktrace string starts with
+  // %Error.prototype.toString%(target).
+  CallResult<Handle<StringPrimitive>> res =
+      JSError::toString(targetHandle, runtime);
+  // Keep track whether targetHandle.toString() threw. If it did, the error
+  // message will contain a string letting the user know that something went
+  // awry.
+  const bool targetHandleToStringThrew = res == ExecutionStatus::EXCEPTION;
+
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    // target.toString() threw an exception; if it is a catchable error try to
+    // toString() it so the user has some indication of what went wrong.
+    if (!isUncatchableError(runtime.getThrownValue())) {
+      HermesValue thrownValue = runtime.getThrownValue();
+      if (thrownValue.isObject()) {
+        // Clear the pending exception, and try to convert thrownValue to string
+        // with %Error.prototype.toString%(thrownValue).
+        runtime.clearThrownValue();
+        res = JSError::toString(
+            runtime.makeHandle<JSObject>(thrownValue), runtime);
+      }
+    }
+  }
+
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    // An exception happened while trying to get the description for the error.
+    if (isUncatchableError(runtime.getThrownValue())) {
+      // If JSError::toString throws an uncatchable exception, bubble it up.
+      return ExecutionStatus::EXCEPTION;
+    }
+    // Clear the pending exception so the caller doesn't observe this side
+    // effect.
+    runtime.clearThrownValue();
+    // Append a generic <error> string and move on.
+    stack.append(u"<error>");
+  } else {
+    if (targetHandleToStringThrew) {
+      stack.append(u"<while converting error to string: ");
+    }
+    res->get()->appendUTF16String(stack);
+    if (targetHandleToStringThrew) {
+      stack.append(u">");
+    }
+  }
+
+  // Append each function location in the call stack to stack trace.
+  auto marker = gcScope.createMarker();
+  for (size_t index = 0, max = selfHandle->nativeStacktrace_->size();
+       index < max;
+       index++) {
+    char buf[NUMBER_TO_STRING_BUF_SIZE];
+
+    // If the trace contains more than 100 entries, limit the string to the
+    // first 50 and the last 50 entries and include a line about the truncation.
+    static constexpr unsigned PRINT_HEAD = 50;
+    static constexpr unsigned PRINT_TAIL = 50;
+    if (LLVM_UNLIKELY(max > PRINT_HEAD + PRINT_TAIL)) {
+      if (index == PRINT_HEAD) {
+        stack.append("\n    ... skipping ");
+        numberToString(max - PRINT_HEAD - PRINT_TAIL, buf, sizeof(buf));
+        stack.append(buf);
+        stack.append(" frames");
+        continue;
+      }
+
+      // Skip the middle frames.
+      if (index > PRINT_HEAD && index < max - PRINT_TAIL) {
+        index = max - PRINT_TAIL;
+      }
+    }
+
+    const auto &pair = selfHandle->nativeStacktrace_->at(index);
+    const SHSrcLoc &loc = pair.second;
+    const SHUnit *unit = pair.first;
+    gcScope.flushToMarker(marker);
+    // For each stacktrace entry, we add a line with the following format:
+    // at <functionName> (<fileName>:<lineNo>:<columnNo>)
+
+    stack.append(u"\n    at ");
+
+    if (!appendFunctionNameAtIndex(runtime, selfHandle, index, stack))
+      stack.append(u"anonymous");
+
+    int32_t lineNo = loc.line;
+    int32_t columnNo = loc.column;
+
+    stack.append(u" (");
+
+    // If unit is nonnull then we have a valid location and can use the fields
+    // in loc. Otherwise, it is an unknown location.
+    if (unit) {
+      SymbolID fnameSym =
+          SymbolID::unsafeCreate(unit->symbols[loc.filename_idx]);
+      const StringPrimitive *prim = runtime.getStringPrimFromSymbolID(fnameSym);
+      prim->appendUTF16String(stack);
+
+      stack.push_back(u':');
+
+      numberToString(lineNo, buf, NUMBER_TO_STRING_BUF_SIZE);
+      stack.append(buf);
+
+      stack.push_back(u':');
+
+      numberToString(columnNo, buf, NUMBER_TO_STRING_BUF_SIZE);
+      stack.append(buf);
+    } else {
+      stack.append(u"<anonymous>");
+    }
+
+    stack.push_back(u')');
+  }
+  return ExecutionStatus::RETURNED;
+}
+
 CallResult<HermesValue> JSError::constructCallSitesArray(
     Runtime &runtime,
     Handle<JSError> selfHandle) {
+  // For now, JSCallSites are only supported with regular stack traces, not
+  // native traces.
   auto max = selfHandle->stacktrace_
       ? selfHandle->stacktrace_->size() - selfHandle->firstExposedFrameIndex_
       : 0;

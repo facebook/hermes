@@ -11,6 +11,7 @@
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/NativeArgs.h"
 #include "hermes/VM/SmallXString.h"
+#include "hermes/VM/static_h.h"
 
 namespace hermes {
 namespace vm {
@@ -38,6 +39,10 @@ struct StackTraceInfo {
 };
 using StackTrace = std::vector<StackTraceInfo>;
 using StackTracePtr = std::unique_ptr<StackTrace>;
+
+// Each trace consists of a source location and an associated SHUnit.
+using NativeStackTrace = std::vector<std::pair<const SHUnit *, SHSrcLoc>>;
+using NativeStackTracePtr = std::unique_ptr<NativeStackTrace>;
 
 /// Error Object.
 class JSError final : public JSObject {
@@ -81,6 +86,18 @@ class JSError final : public JSObject {
       bool skipTopFrame = false,
       CodeBlock *codeBlock = nullptr,
       const Inst *ip = nullptr);
+
+  /// If the stack trace is not set, attempt to record it by walking the runtime
+  /// stack. If the top call frame indicates a JS callee, but the codeBlock and
+  /// ip are not supplied, return without doing anything. This handles the case
+  /// when an exception is thrown from within the current code block.
+  ///
+  /// \param skipTopFrame don't record the topmost frame. This is used when
+  ///   we want to skip the Error() constructor itself.
+  static void recordNativeStackTrace(
+      Handle<JSError> selfHandle,
+      Runtime &runtime,
+      bool skipTopFrame = false);
 
   /// Define the stack setter and getter, for later stack trace creation.
   /// May be used on JSError instances, or on any JSObject that has a
@@ -157,6 +174,9 @@ class JSError final : public JSObject {
   /// A pointer to the stack trace, or nullptr if it has not been set.
   StackTracePtr stacktrace_;
 
+  /// A pointer to the native stack trace, or nullptr if it has not been set.
+  NativeStackTracePtr nativeStacktrace_;
+
   /// The index of the stack frame to start from when converting the stack
   /// trace to a string or otherwise exposing it to user code.
   /// This can only be changed while stacktrace_ is non-null.
@@ -188,6 +208,23 @@ class JSError final : public JSObject {
   /// In the `target = {}; Error.captureErrorStack(target); target.stack` case,
   /// selfHandle will be the value of `target`'s [[CapturedError]] slot.
   static ExecutionStatus constructStackTraceString_RJS(
+      Runtime &runtime,
+      Handle<JSError> selfHandle,
+      Handle<JSObject> targetHandle,
+      SmallU16String<32> &stack);
+
+  /// Construct the stacktrace string, append to \p stack.
+  /// If the construction of the stack throws an uncatchable error, this
+  /// function returns prematurely.
+  ///
+  /// \param selfHandle supplies the call stack for the trace.
+  /// \param targetHandle supplies the error name and message for the trace.
+  ///
+  /// In the `(new Error).stack` case, selfHandle and targetHandle will both
+  /// refer to the same object.
+  /// In the `target = {}; Error.captureErrorStack(target); target.stack` case,
+  /// selfHandle will be the value of `target`'s [[CapturedError]] slot.
+  static ExecutionStatus constructNativeStackTraceString_RJS(
       Runtime &runtime,
       Handle<JSError> selfHandle,
       Handle<JSObject> targetHandle,
