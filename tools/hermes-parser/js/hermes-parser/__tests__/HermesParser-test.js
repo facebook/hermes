@@ -198,7 +198,9 @@ return 1
 });
 
 test('Allow component syntax', () => {
-  expect(() => parse('component Foo() {}')).toThrow(
+  expect(() =>
+    parse('component Foo() {}', {enableExperimentalComponentSyntax: false}),
+  ).toThrow(
     new SyntaxError(
       `';' expected (1:10)
 component Foo() {}
@@ -206,9 +208,7 @@ component Foo() {}
     ),
   );
 
-  expect(
-    parse('component Foo() {}', {enableExperimentalComponentSyntax: true}),
-  ).toMatchObject({
+  expect(parse('component Foo() {}')).toMatchObject({
     type: 'Program',
     body: [
       {

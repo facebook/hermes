@@ -10,18 +10,17 @@
 
 import {parseForSnapshot, printForSnapshot} from '../__test_utils__/parse';
 
-const parserOpts = {enableExperimentalComponentSyntax: true};
 async function printForSnapshotESTree(code: string) {
-  return printForSnapshot(code, parserOpts);
+  return printForSnapshot(code);
 }
 async function parseForSnapshotESTree(code: string) {
-  return parseForSnapshot(code, parserOpts);
+  return parseForSnapshot(code);
 }
 async function printForSnapshotBabel(code: string) {
-  return printForSnapshot(code, {babel: true, ...parserOpts});
+  return printForSnapshot(code, {babel: true});
 }
 async function parseForSnapshotBabel(code: string) {
-  return parseForSnapshot(code, {babel: true, ...parserOpts});
+  return parseForSnapshot(code, {babel: true});
 }
 
 describe('TypeOperator', () => {

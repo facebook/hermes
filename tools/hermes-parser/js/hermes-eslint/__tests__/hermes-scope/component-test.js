@@ -10,16 +10,8 @@
 
 'use strict';
 
-import type {ParseForESLintReturn} from '../../src';
-
 import {DefinitionType, ScopeType} from '../../src';
-import {parseForESLint as parseForESLintWithOptions} from '../../src';
-
-function parseForESLint(str: string): ParseForESLintReturn {
-  return parseForESLintWithOptions(str, {
-    enableExperimentalComponentSyntax: true,
-  });
-}
+import {parseForESLint} from '../../src';
 
 describe('Component', () => {
   describe('Declaration', () => {
