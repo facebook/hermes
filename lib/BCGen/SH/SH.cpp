@@ -1545,6 +1545,14 @@ class InstrGen {
     os_ << " = _sh_ljs_native_pointer((void*)0);\n";
 
     os_.indent(2);
+    generateRegister(stackReg(hbc::StackFrameLayout::SHUnit));
+    os_ << " = _sh_ljs_native_pointer((void*)0);\n";
+
+    os_.indent(2);
+    generateRegister(stackReg(hbc::StackFrameLayout::SrcLocationIdx));
+    os_ << " = _sh_ljs_native_uint32(0);\n";
+
+    os_.indent(2);
     generateRegister(stackReg(hbc::StackFrameLayout::ArgCount));
     os_ << " = _sh_ljs_native_uint32(" << (inst.getNumArguments() - 1)
         << ");\n";

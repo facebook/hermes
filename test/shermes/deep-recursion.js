@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
+// Make sure to run with a large register stack so we exhaust the native stack first.
+// RUN: %shermes -exec %s -- -max-register-stack=1048576 | %FileCheck --match-full-lines %s
 
 function f() {
     f.apply();

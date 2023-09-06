@@ -289,7 +289,15 @@ ExecutionStatus Interpreter::implCallBuiltin(
   NativeFunction *nf = vmcast<NativeFunction>(callable);
 
   auto newFrame = StackFramePtr::initFrame(
-      runtime.stackPointer_, FRAME, ip, curCodeBlock, op3 - 1, nf, false);
+      runtime.stackPointer_,
+      FRAME,
+      ip,
+      curCodeBlock,
+      nullptr,
+      0,
+      op3 - 1,
+      nf,
+      false);
   // "thisArg" is implicitly assumed to "undefined".
   newFrame.getThisArgRef() = HermesValue::encodeUndefinedValue();
 

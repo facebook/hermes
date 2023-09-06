@@ -765,6 +765,8 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
         runtime.getCurrentFrame(),
         ip,
         nullptr,
+        nullptr,
+        0,
         totalArgCount,
         HermesValue::encodeObjectValue(self->getTarget(runtime)),
         originalNewTarget);
@@ -794,6 +796,8 @@ bail:
       StackFramePtr{},
       ip,
       nullptr,
+      nullptr,
+      0,
       0,
       HermesValue::encodeEmptyValue(),
       HermesValue::encodeEmptyValue());

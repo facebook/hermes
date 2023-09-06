@@ -33,13 +33,15 @@ namespace hbc {
 ///   -1    previousFrame    : NativeValue(HermesValue*) -- calleeFramePtr
 ///   -2    savedIP          : NativeValue(void*)
 ///   -3    savedCodeBlock   : NativeValue(CodeBlock*)
-///   -4    argCount         : NativeValue(uint32_t)
-///   -5    newTarget        : Callable* | undefined
-///   -6    calleeClosureOrCB: Callable* | NativeValue(CodeBlock*)
-///   -7    this             : HermesValue
-///   -8    arg0             : HermesValue
+///   -4    SHUnit           : NativeValue(SHUnit*)
+///   -5    srcLocationIdx   : NativeValue(uint32_t)
+///   -6    argCount         : NativeValue(uint32_t)
+///   -7    newTarget        : Callable* | undefined
+///   -8    calleeClosureOrCB: Callable* | NativeValue(CodeBlock*)
+///   -9    this             : HermesValue
+///   -10   arg0             : HermesValue
 ///    ...
-///   -8-N  argN             : HermesValue
+///   -10-N argN             : HermesValue
 ///    ...
 ///    ...
 ///         caller local 0   : HermesValue
@@ -105,20 +107,24 @@ struct StackFrameLayout {
     /// found using CalleeClosureOrCB on the previous call frame, but the
     /// SavedIP should have been saved by the bound call in the current frame.
     SavedCodeBlock = -3,
+    /// Pointer to the current SHUnit.
+    SHUnit = -4,
+    /// Index into the SHUnit's source location table.
+    SrcLocationIdx = -5,
     /// Number of JavaScript arguments passed to the callee excluding "this".
-    ArgCount = -4,
+    ArgCount = -6,
     /// The value of `new.target`. If constructing, it contains the callable of
     /// the constructor invoked by `new`, otherwise `undefined`.
-    NewTarget = -5,
+    NewTarget = -7,
     /// The JavaScript Function object representing the callee, or a CodeBlock *
     /// representing the callee when CallDirect is used. The latter is ONLY
     /// valid if it is known at compile time that the callee doesn't need to
     /// access its closure (i.e. no non-strict Arguments.callee, etc).
-    CalleeClosureOrCB = -6,
+    CalleeClosureOrCB = -8,
     /// The "this" argument.
-    ThisArg = -7,
+    ThisArg = -9,
     /// The first explicit argument.
-    FirstArg = -8,
+    FirstArg = -10,
 
     /// The number of registers the caller needs to allocate at the end of its
     /// frame in addition to its locals and the explicit argument registers. In
