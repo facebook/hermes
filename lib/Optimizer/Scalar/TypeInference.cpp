@@ -290,43 +290,6 @@ static Type inferBinaryInst(BinaryOperatorInst *BOI) {
   }
 }
 
-/// Infer the return type of \p F and register it.
-/// \return true if the return type was changed.
-static bool inferFunctionReturnType(Function *F) {
-  Type originalTy = F->getType();
-  Type returnTy = Type::createAnyType();
-  bool first = true;
-
-  if (llvh::isa<GeneratorInnerFunction>(F)) {
-    // GeneratorInnerFunctions may be called with `.return()` at the start,
-    // with any value of any type.
-    returnTy = Type::createAnyType();
-    if (returnTy != originalTy) {
-      F->setType(returnTy);
-      return true;
-    }
-    return false;
-  }
-
-  for (auto &bbit : *F) {
-    if (auto *returnInst =
-            llvh::dyn_cast_or_null<ReturnInst>(bbit.getTerminator())) {
-      Type T = returnInst->getValue()->getType();
-      if (first && !T.isNoType()) {
-        returnTy = T;
-        first = false;
-      } else {
-        returnTy = Type::unionTy(returnTy, T);
-      }
-    }
-  }
-  if (returnTy != originalTy) {
-    F->setType(returnTy);
-    return true;
-  }
-  return false;
-}
-
 /// Actual implementation of type inference pass.
 /// Contains the ability to infer types per-instruction.
 ///
@@ -962,6 +925,38 @@ class TypeInferenceImpl {
     }
   }
 
+  /// Infer the return type of \p F and register it.
+  /// \return true if the return type was changed.
+  bool inferFunctionReturnType(Function *F) {
+    Type originalTy = F->getType();
+    Type returnTy = Type::createAnyType();
+    bool first = true;
+
+    if (llvh::isa<GeneratorInnerFunction>(F)) {
+      // GeneratorInnerFunctions may be called with `.return()` at the start,
+      // with any value of any type.
+      F->setType(Type::createAnyType());
+      checkAndSetPrePassType(F);
+      return F->getType() != originalTy;
+    }
+
+    for (auto &bbit : *F) {
+      if (auto *returnInst =
+              llvh::dyn_cast_or_null<ReturnInst>(bbit.getTerminator())) {
+        Type T = returnInst->getValue()->getType();
+        if (first && !T.isNoType()) {
+          returnTy = T;
+          first = false;
+        } else {
+          returnTy = Type::unionTy(returnTy, T);
+        }
+      }
+    }
+    F->setType(returnTy);
+    checkAndSetPrePassType(F);
+    return F->getType() != originalTy;
+  }
+
   /// Clear every type for instructions, return types, parameters and variables
   /// in the function provided.
   /// Store the pre-pass types in prePassTypes_.
@@ -1079,7 +1074,6 @@ bool TypeInferenceImpl::runOnFunction(Function *F) {
   // An infinite loop due to widening/narrowing won't occur, because if the
   // checkAndSetPrePassType call results in no change from the original type,
   // changed=false.
-  checkAndSetPrePassType(F);
   if (!F->isGlobalScope()) {
     for (auto *V : F->getFunctionScope()->getVariables()) {
       checkAndSetPrePassType(V);
