@@ -1136,6 +1136,14 @@ UnionNarrowTrustedInst *IRBuilder::createUnionNarrowTrustedInst(
   return inst;
 }
 
+CheckedTypeCastInst *IRBuilder::createCheckedTypeCastInst(
+    Value *value,
+    Type type) {
+  auto *inst = new CheckedTypeCastInst(value, type);
+  insert(inst);
+  return inst;
+}
+
 LIRDeadValueInst *IRBuilder::createLIRDeadValueInst(Type type) {
   auto *inst = new LIRDeadValueInst(type);
   insert(inst);

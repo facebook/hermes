@@ -924,6 +924,16 @@ Arguments | %operand is the input value
 Semantics | Narrow the type, but doesn't change the value.
 Effects | None
 
+### CheckedTypeCast
+
+CheckedTypeCast | _
+--- |-----------------------------------------------|
+Description | Attempt to cast to the result type, throw if unable.
+Example | CheckedTypeCast (:U), %operand (:T)
+Arguments | %operand is the value to cast
+Semantics | Cast from type `T` to `U`, throw when the cast is not valid.
+Effects | May throw.
+
 ### NativeCall
 
 NativeCall | _

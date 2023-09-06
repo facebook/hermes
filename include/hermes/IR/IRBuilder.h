@@ -626,6 +626,7 @@ class IRBuilder {
   StoreParentInst *createStoreParentInst(Value *storedValue, Value *object);
 
   UnionNarrowTrustedInst *createUnionNarrowTrustedInst(Value *value, Type type);
+  CheckedTypeCastInst *createCheckedTypeCastInst(Value *value, Type type);
 
   LIRDeadValueInst *createLIRDeadValueInst(Type type);
 

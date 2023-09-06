@@ -946,6 +946,7 @@ void Verifier::visitStoreParentInst(const StoreParentInst &Inst) {}
 
 void Verifier::visitUnionNarrowTrustedInst(const UnionNarrowTrustedInst &Inst) {
 }
+void Verifier::visitCheckedTypeCastInst(const CheckedTypeCastInst &Inst) {}
 void Verifier::visitLIRDeadValueInst(const LIRDeadValueInst &Inst) {}
 
 void Verifier::visitNativeCallInst(const hermes::NativeCallInst &Inst) {

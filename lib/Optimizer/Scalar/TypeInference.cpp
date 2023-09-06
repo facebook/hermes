@@ -882,6 +882,9 @@ class TypeInferenceImpl {
     }
     return res;
   }
+  Type inferCheckedTypeCastInst(CheckedTypeCastInst *inst) {
+    hermes_fatal("typed instruction");
+  }
   Type inferLIRDeadValueInst(LIRDeadValueInst *inst) {
     return inst->getSavedResultType();
   }

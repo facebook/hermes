@@ -1019,6 +1019,12 @@ static inline SHLegacyValue _sh_ljs_native_pointer_or_throw(
 #endif
 }
 
+/// Checked type cast from one type to another, throws if cast is not valid.
+/// TODO: We don't have the runtime type representation yet, so this can only be
+/// a no-op right now, but we include it to indicate that computation may occur.
+SHERMES_EXPORT SHLegacyValue
+_sh_type_cast_or_throw(SHRuntime *shr, const SHLegacyValue *value);
+
 /// \return the C errno value.
 SHERMES_EXPORT int _sh_errno(void);
 

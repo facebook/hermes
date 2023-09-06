@@ -71,7 +71,8 @@ return [dotProduct, Vec2D];
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Math": string
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: any, "sqrt": string
 // CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, %2: any, 10: number
-// CHECK-NEXT:  %5 = PrStoreInst %4: any, %0: object, 0: number, "x": string, true: boolean
-// CHECK-NEXT:  %6 = PrStoreInst %1: number, %0: object, 1: number, "y": string, true: boolean
-// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %5 = CheckedTypeCastInst (:number) %4: any
+// CHECK-NEXT:  %6 = PrStoreInst %5: number, %0: object, 0: number, "x": string, true: boolean
+// CHECK-NEXT:  %7 = PrStoreInst %1: number, %0: object, 1: number, "y": string, true: boolean
+// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

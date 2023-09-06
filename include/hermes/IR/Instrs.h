@@ -4621,6 +4621,36 @@ class UnionNarrowTrustedInst : public SingleOperandInst {
   }
 };
 
+class CheckedTypeCastInst : public SingleOperandInst {
+  CheckedTypeCastInst(const CheckedTypeCastInst &) = delete;
+  void operator=(const CheckedTypeCastInst &) = delete;
+
+ public:
+  explicit CheckedTypeCastInst(Value *src, Type type)
+      : SingleOperandInst(ValueKind::CheckedTypeCastInstKind, src) {
+    setType(type);
+  }
+  explicit CheckedTypeCastInst(
+      const CheckedTypeCastInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : SingleOperandInst(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return true;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setThrow();
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::CheckedTypeCastInstKind;
+  }
+};
+
 class LIRDeadValueInst : public Instruction {
   LIRDeadValueInst(const LIRDeadValueInst &) = delete;
   void operator=(const LIRDeadValueInst &) = delete;

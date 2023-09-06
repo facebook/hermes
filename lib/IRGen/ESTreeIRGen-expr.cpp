@@ -183,12 +183,15 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
 
   if (auto *ICK = llvh::dyn_cast<ESTree::ImplicitCheckedCastNode>(expr)) {
     // FIXME: emit something.
-    return genExpression(ICK->_argument, nameHint);
+    return Builder.createCheckedTypeCastInst(
+        genExpression(ICK->_argument, nameHint),
+        flowTypeToIRType(flowContext_.getNodeTypeOrAny(ICK)));
   }
 
   if (auto *TC = llvh::dyn_cast<ESTree::TypeCastExpressionNode>(expr)) {
-    // FIXME: emit something.
-    return genExpression(TC->_expression, nameHint);
+    return Builder.createCheckedTypeCastInst(
+        genExpression(TC->_expression, nameHint),
+        flowTypeToIRType(flowContext_.getNodeTypeOrAny(TC)));
   }
 
   Builder.getModule()->getContext().getSourceErrorManager().error(

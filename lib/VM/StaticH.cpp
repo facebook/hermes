@@ -440,9 +440,9 @@ extern "C" void _sh_ljs_create_environment(
         size);
     result->raw = res.getRaw();
   }
-  //#ifdef HERMES_ENABLE_DEBUGGER
-  //  framePtr.getDebugEnvironmentRef() = *res;
-  //#endif
+  // #ifdef HERMES_ENABLE_DEBUGGER
+  //   framePtr.getDebugEnvironmentRef() = *res;
+  // #endif
 }
 
 extern "C" SHLegacyValue
@@ -1785,6 +1785,12 @@ extern "C" void _sh_store_parent(
   Handle<JSObject> parentHandle = Handle<JSObject>::vmcast(toPHV(storedValue));
   JSObject::unsafeSetParentInternal(
       objectHandle.get(), runtime, parentHandle.get());
+}
+
+extern "C" SHLegacyValue _sh_type_cast_or_throw(
+    SHRuntime *shr,
+    const SHLegacyValue *value) {
+  return *value;
 }
 
 /// Check that \p index is an unsigned integer smaller than \p length. If it is,

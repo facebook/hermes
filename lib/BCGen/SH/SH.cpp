@@ -1747,6 +1747,13 @@ class InstrGen {
     generateValue(*inst.getSingleOperand());
     os_ << ";\n";
   }
+  void generateCheckedTypeCastInst(CheckedTypeCastInst &inst) {
+    os_.indent(2);
+    generateValue(inst);
+    os_ << " = _sh_type_cast_or_throw(shr, ";
+    generateRegisterPtr(*inst.getSingleOperand());
+    os_ << ");\n";
+  }
   void generateLIRDeadValueInst(LIRDeadValueInst &inst) {
     os_.indent(2);
     os_ << "__builtin_unreachable();\n";
