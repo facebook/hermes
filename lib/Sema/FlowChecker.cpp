@@ -795,6 +795,11 @@ class FlowChecker::ExprVisitor {
     outer_.setNodeType(node, outer_.flowContext_.createType(arrTy));
   }
 
+  void visit(ESTree::SpreadElementNode *node) {
+    // Do nothing for the spread element itself, handled by the parent.
+    visitESTreeChildren(*this, node);
+  }
+
   void visit(ESTree::NullLiteralNode *node) {
     outer_.setNodeType(node, outer_.flowContext_.getNull());
   }
@@ -815,6 +820,10 @@ class FlowChecker::ExprVisitor {
   }
   void visit(ESTree::BigIntLiteralNode *node) {
     outer_.setNodeType(node, outer_.flowContext_.getBigInt());
+  }
+  void visit(ESTree::SHBuiltinNode *node) {
+    // SHBuiltin handled at the call expression level.
+    visitESTreeChildren(*this, node);
   }
 
   void visit(ESTree::UpdateExpressionNode *node) {
