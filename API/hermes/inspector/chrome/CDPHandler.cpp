@@ -92,8 +92,14 @@ enum Execution {
  * CDPHandler::Impl
  */
 
+/// Impl inherits from enable_shared_from_this in order to properly support
+/// console logging. We will insert host functions which may outlive the
+/// lifetime of an instance of Impl. In order to guard against using class
+/// members of an instance that has been de-allocated, we use weak pointers
+/// constructed from this.
 class CDPHandler::Impl : public message::RequestHandler,
-                         public debugger::EventObserver {
+                         public debugger::EventObserver,
+                         public std::enable_shared_from_this<CDPHandler::Impl> {
  public:
   Impl(
       std::unique_ptr<RuntimeAdapter> adapter,
@@ -109,6 +115,11 @@ class CDPHandler::Impl : public message::RequestHandler,
       OnUnregisterFunction onUnregister);
   bool unregisterCallbacks();
   void handle(std::string str);
+  /// Install console log handler. This is to detect console.XXX methods, and
+  /// then emit the corresponding Runtime.consoleAPICalled event. Callers of
+  /// this function must ensure that the instance has already had a shared_ptr
+  /// constructed to hold this instance.
+  void installLogHandler();
 
   /* RequestHandler overrides */
   void handle(const m::UnknownRequest &req) override;
@@ -280,17 +291,18 @@ class CDPHandler::Impl : public message::RequestHandler,
   // Emit a Runtime.consoleAPICalled event to the debug client.
   void emitConsoleAPICalledEvent(ConsoleMessageInfo info);
   void storePendingConsoleMessage(ConsoleMessageInfo info);
-  // Install console log handler. This is to detect console.XXX methods, and
-  // then emit the corresponding Runtime.consoleAPICalled event.
-  void installLogHandler();
-  // Install a host function for a particular console method. This takes a
-  // reference to the original console object, so calls can still be forwarded
-  // to that object.
+
+  // The original global console object is cached here. When we overwrite the
+  // console object, we use this cached value to forward function calls through.
+  std::shared_ptr<jsi::Object> originalConsole_;
+  // Install a host function for a particular console method.
   void installConsoleFunction(
       jsi::Object &console,
-      std::shared_ptr<jsi::Object> &originalConsole,
       const std::string &name,
       const std::string &chromeTypeDefault = "");
+  // Restore the global console object to the cached originalConsole_.
+  void cleanupLogHandler();
+
   double currentTimestampMs();
 
   std::unique_ptr<RuntimeAdapter> runtimeAdapter_;
@@ -370,7 +382,6 @@ CDPHandler::Impl::Impl(
   std::string src = "function __tickleJs() { return Math.random(); }";
   runtimeAdapter_->getRuntime().evaluateJavaScript(
       std::make_shared<jsi::StringBuffer>(src), "__tickleJsHackUrl");
-  installLogHandler();
   runtimeAdapter_->getRuntime().getDebugger().setShouldPauseOnScriptLoad(true);
   runtimeAdapter_->getRuntime().getDebugger().setEventObserver(this);
 }
@@ -379,6 +390,7 @@ CDPHandler::Impl::~Impl() {
   unregisterCallbacks();
 
   runtimeAdapter_->getRuntime().getDebugger().setEventObserver(nullptr);
+  cleanupLogHandler();
 
   // TODO(T161620474): Properly clean up all the other variables being protected
   // by other mutex
@@ -1566,12 +1578,23 @@ bool CDPHandler::Impl::validateExecutionContext(
 /*
  * CDPHandler
  */
+std::shared_ptr<CDPHandler> CDPHandler::create(
+    std::unique_ptr<RuntimeAdapter> adapter,
+    const std::string &title,
+    bool waitForDebugger) {
+  // Can't use make_shared here since the constructor is private.
+  return std::shared_ptr<CDPHandler>(
+      new CDPHandler(std::move(adapter), title, waitForDebugger));
+}
+
 CDPHandler::CDPHandler(
     std::unique_ptr<RuntimeAdapter> adapter,
     const std::string &title,
     bool waitForDebugger)
     : impl_(
-          std::make_unique<Impl>(std::move(adapter), title, waitForDebugger)) {}
+          std::make_shared<Impl>(std::move(adapter), title, waitForDebugger)) {
+  impl_->installLogHandler();
+}
 
 CDPHandler::~CDPHandler() = default;
 
@@ -1956,38 +1979,38 @@ void CDPHandler::Impl::installLogHandler() {
   jsi::Runtime &rt = getRuntime();
   auto console = jsi::Object(rt);
   auto val = rt.global().getProperty(rt, "console");
-  std::shared_ptr<jsi::Object> originalConsole;
   if (val.isObject()) {
-    originalConsole = std::make_shared<jsi::Object>(val.getObject(rt));
+    originalConsole_ = std::make_shared<jsi::Object>(val.getObject(rt));
   }
-  installConsoleFunction(console, originalConsole, "assert");
-  installConsoleFunction(console, originalConsole, "clear");
-  installConsoleFunction(console, originalConsole, "debug");
-  installConsoleFunction(console, originalConsole, "dir");
-  installConsoleFunction(console, originalConsole, "dirxml");
-  installConsoleFunction(console, originalConsole, "error");
-  installConsoleFunction(console, originalConsole, "group", "startGroup");
-  installConsoleFunction(
-      console, originalConsole, "groupCollapsed", "startGroupCollapsed");
-  installConsoleFunction(console, originalConsole, "groupEnd", "endGroup");
-  installConsoleFunction(console, originalConsole, "info");
-  installConsoleFunction(console, originalConsole, "log");
-  installConsoleFunction(console, originalConsole, "profile");
-  installConsoleFunction(console, originalConsole, "profileEnd");
-  installConsoleFunction(console, originalConsole, "table");
-  installConsoleFunction(console, originalConsole, "trace");
-  installConsoleFunction(console, originalConsole, "warn", "warning");
+  installConsoleFunction(console, "assert");
+  installConsoleFunction(console, "clear");
+  installConsoleFunction(console, "debug");
+  installConsoleFunction(console, "dir");
+  installConsoleFunction(console, "dirxml");
+  installConsoleFunction(console, "error");
+  installConsoleFunction(console, "group", "startGroup");
+  installConsoleFunction(console, "groupCollapsed", "startGroupCollapsed");
+  installConsoleFunction(console, "groupEnd", "endGroup");
+  installConsoleFunction(console, "info");
+  installConsoleFunction(console, "log");
+  installConsoleFunction(console, "profile");
+  installConsoleFunction(console, "profileEnd");
+  installConsoleFunction(console, "table");
+  installConsoleFunction(console, "trace");
+  installConsoleFunction(console, "warn", "warning");
   rt.global().setProperty(rt, "console", console);
 }
 
 void CDPHandler::Impl::installConsoleFunction(
     jsi::Object &console,
-    std::shared_ptr<jsi::Object> &originalConsole,
     const std::string &name,
     const std::string &chromeTypeDefault) {
   jsi::Runtime &rt = getRuntime();
   auto chromeType = chromeTypeDefault == "" ? name : chromeTypeDefault;
   auto nameID = jsi::PropNameID::forUtf8(rt, name);
+  // We cannot capture `this` in the HostFunction, since it may outlive this
+  // Impl instance. Instead, we pass it a weak_ptr.
+  auto weakThis = std::weak_ptr<CDPHandler::Impl>(shared_from_this());
   console.setProperty(
       rt,
       nameID,
@@ -1995,7 +2018,10 @@ void CDPHandler::Impl::installConsoleFunction(
           rt,
           nameID,
           1,
-          [this, originalConsole, name, chromeType](
+          [weakThis = std::move(weakThis),
+           originalConsole = originalConsole_,
+           name,
+           chromeType](
               jsi::Runtime &runtime,
               const jsi::Value &thisVal,
               const jsi::Value *args,
@@ -2011,33 +2037,56 @@ void CDPHandler::Impl::installConsoleFunction(
               }
             }
 
-            if (name != "assert") {
-              // All cases other than assert just log a simple message.
-              jsi::Array argsArray(runtime, count);
-              for (size_t index = 0; index < count; ++index)
-                argsArray.setValueAtIndex(runtime, index, args[index]);
-              emitConsoleAPICalledEvent(ConsoleMessageInfo{
-                  currentTimestampMs(), chromeType, std::move(argsArray)});
-              return jsi::Value::undefined();
-            }
-            // console.assert needs to check the first parameter before
-            // logging.
-            if (count == 0) {
-              // No parameters, throw a blank assertion failed message.
-              emitConsoleAPICalledEvent(ConsoleMessageInfo{
-                  currentTimestampMs(), chromeType, jsi::Array(runtime, 0)});
-            } else if (!toBoolean(runtime, args[0])) {
-              // Shift the message array down by one to not include the
-              // condition.
-              jsi::Array argsArray(runtime, count - 1);
-              for (size_t index = 1; index < count; ++index)
-                argsArray.setValueAtIndex(runtime, index, args[index]);
-              emitConsoleAPICalledEvent(ConsoleMessageInfo{
-                  currentTimestampMs(), chromeType, std::move(argsArray)});
+            // If the Impl instance that created this HostFunction is still
+            // around, then we can use its instance methods to emit the proper
+            // CDP server event.
+            if (auto strongThis = weakThis.lock()) {
+              if (name != "assert") {
+                // All cases other than assert just log a simple message.
+                jsi::Array argsArray(runtime, count);
+                for (size_t index = 0; index < count; ++index)
+                  argsArray.setValueAtIndex(runtime, index, args[index]);
+                strongThis->emitConsoleAPICalledEvent(ConsoleMessageInfo{
+                    strongThis->currentTimestampMs(),
+                    chromeType,
+                    std::move(argsArray)});
+                return jsi::Value::undefined();
+              }
+              // console.assert needs to check the first parameter before
+              // logging.
+              if (count == 0) {
+                // No parameters, throw a blank assertion failed message.
+                strongThis->emitConsoleAPICalledEvent(ConsoleMessageInfo{
+                    strongThis->currentTimestampMs(),
+                    chromeType,
+                    jsi::Array(runtime, 0)});
+              } else if (!toBoolean(runtime, args[0])) {
+                // Shift the message array down by one to not include the
+                // condition.
+                jsi::Array argsArray(runtime, count - 1);
+                for (size_t index = 1; index < count; ++index)
+                  argsArray.setValueAtIndex(runtime, index, args[index]);
+                strongThis->emitConsoleAPICalledEvent(ConsoleMessageInfo{
+                    strongThis->currentTimestampMs(),
+                    chromeType,
+                    std::move(argsArray)});
+              }
             }
 
+            // These console functions always return undefined.
             return jsi::Value::undefined();
           }));
+}
+
+void CDPHandler::Impl::cleanupLogHandler() {
+  jsi::Runtime &rt = getRuntime();
+  // If the global console property was populated at the time of initialization,
+  // then restore its value. Otherwise, set it to undefined.
+  if (originalConsole_) {
+    rt.global().setProperty(rt, "console", *originalConsole_);
+  } else {
+    rt.global().setProperty(rt, "console", jsi::Value::undefined());
+  }
 }
 
 } // namespace chrome

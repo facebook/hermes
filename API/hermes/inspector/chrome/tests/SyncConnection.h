@@ -83,7 +83,7 @@ class SyncConnection {
   /// unregisterCallbacks call
   void onUnregister();
 
-  CDPHandler cdpHandler_;
+  std::shared_ptr<CDPHandler> cdpHandler_;
 
   bool onUnregisterCalled_ = false;
 

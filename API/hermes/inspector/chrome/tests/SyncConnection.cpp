@@ -33,15 +33,15 @@ void ExecutorRuntimeAdapter::tickleJs() {
 SyncConnection::SyncConnection(
     AsyncHermesRuntime &runtime,
     bool waitForDebugger)
-    : cdpHandler_(
+    : cdpHandler_(CDPHandler::create(
           std::make_unique<ExecutorRuntimeAdapter>(runtime),
           "testConn",
-          waitForDebugger) {
+          waitForDebugger)) {
   registerCallbacks();
 }
 
 bool SyncConnection::registerCallbacks() {
-  bool registered = cdpHandler_.registerCallbacks(
+  bool registered = cdpHandler_->registerCallbacks(
       std::bind(&SyncConnection::onReply, this, std::placeholders::_1),
       std::bind(&SyncConnection::onUnregister, this));
   if (registered) {
@@ -51,7 +51,7 @@ bool SyncConnection::registerCallbacks() {
 }
 
 bool SyncConnection::unregisterCallbacks() {
-  return cdpHandler_.unregisterCallbacks();
+  return cdpHandler_->unregisterCallbacks();
 }
 
 bool SyncConnection::onUnregisterWasCalled() {
@@ -61,7 +61,7 @@ bool SyncConnection::onUnregisterWasCalled() {
 void SyncConnection::send(const std::string &str) {
   LOG(INFO) << "SyncConnection::send sending " << str;
 
-  cdpHandler_.handle(str);
+  cdpHandler_->handle(str);
 }
 
 void SyncConnection::waitForResponse(
