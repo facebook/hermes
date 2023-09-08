@@ -8,20 +8,12 @@
  * @format
  */
 
-import {parseForSnapshot, printForSnapshot} from '../__test_utils__/parse';
-
-async function printForSnapshotESTree(code: string) {
-  return printForSnapshot(code);
-}
-async function parseForSnapshotESTree(code: string) {
-  return parseForSnapshot(code);
-}
-async function printForSnapshotBabel(code: string) {
-  return printForSnapshot(code, {babel: true});
-}
-async function parseForSnapshotBabel(code: string) {
-  return parseForSnapshot(code, {babel: true});
-}
+import {
+  printForSnapshotESTree,
+  parseForSnapshotESTree,
+  printForSnapshotBabel,
+  parseForSnapshotBabel,
+} from '../__test_utils__/parse';
 
 describe('ComponentDeclaration', () => {
   describe('Basic', () => {

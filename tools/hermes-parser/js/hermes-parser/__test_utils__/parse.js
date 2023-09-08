@@ -91,6 +91,19 @@ export function parseForSnapshot(
   });
 }
 
+export function printForSnapshotESTree(code: string): Promise<string> {
+  return printForSnapshot(code);
+}
+export function parseForSnapshotESTree(code: string): mixed {
+  return parseForSnapshot(code);
+}
+export function printForSnapshotBabel(code: string): Promise<string> {
+  return printForSnapshot(code, {babel: true});
+}
+export function parseForSnapshotBabel(code: string): mixed {
+  return parseForSnapshot(code, {babel: true});
+}
+
 export async function printForSnapshot(
   source: string,
   {
