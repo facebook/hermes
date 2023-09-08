@@ -50,7 +50,7 @@ class SyncConnection {
   explicit SyncConnection(
       AsyncHermesRuntime &runtime,
       bool waitForDebugger = false);
-  ~SyncConnection() = default;
+  ~SyncConnection();
 
   /// sends a message to the debugger
   void send(const std::string &str);
@@ -83,7 +83,7 @@ class SyncConnection {
   /// unregisterCallbacks call
   void onUnregister();
 
-  CDPHandler cdpHandler_;
+  std::shared_ptr<CDPHandler> cdpHandler_;
 
   bool onUnregisterCalled_ = false;
 

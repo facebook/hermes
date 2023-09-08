@@ -83,6 +83,15 @@ void AsyncHermesRuntime::executeScriptAsync(
   });
 }
 
+void AsyncHermesRuntime::executeScriptSync(
+    const std::string &script,
+    const std::string &url,
+    HermesRuntime::DebugFlags flags,
+    std::chrono::milliseconds timeout) {
+  executeScriptAsync(script, url, flags);
+  wait(timeout);
+}
+
 void AsyncHermesRuntime::start() {
   LOG(INFO) << "AsyncHermesRuntime: set stop flag false";
   stopFlag_.store(false);

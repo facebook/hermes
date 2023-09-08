@@ -28,10 +28,19 @@ using OnUnregisterFunction = std::function<void()>;
 /// CDPHandler processes CDP messages between the client and the debugger.
 /// It performs no networking or connection logic itself.
 class INSPECTOR_EXPORT CDPHandler {
- public:
-  /// CDPHandler constructor enables the debugger on the provided runtime. This
-  /// should generally called before you start running any JS in the runtime.
+  /// Hide the constructor so users can only construct via static create
+  /// methods.
   CDPHandler(
+      std::unique_ptr<RuntimeAdapter> adapter,
+      const std::string &title,
+      bool waitForDebugger = false);
+
+ public:
+  /// Creating a CDPHandler enables the debugger on the provided runtime. This
+  /// should generally called before you start running any JS in the runtime.
+  /// This should also be called on the runtime thread, as methods are invoked
+  /// on the given \p adapter.
+  static std::shared_ptr<CDPHandler> create(
       std::unique_ptr<RuntimeAdapter> adapter,
       const std::string &title,
       bool waitForDebugger = false);
@@ -65,7 +74,7 @@ class INSPECTOR_EXPORT CDPHandler {
 
  private:
   class Impl;
-  std::unique_ptr<Impl> impl_;
+  std::shared_ptr<Impl> impl_;
 };
 
 } // namespace chrome
