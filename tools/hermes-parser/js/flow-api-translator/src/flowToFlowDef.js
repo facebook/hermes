@@ -18,7 +18,11 @@ import type {
   ClassMember,
   ClassPropertyNameComputed,
   ClassPropertyNameNonComputed,
+  ComponentDeclaration,
+  ComponentParameter,
+  ComponentTypeParameter,
   DeclareClass,
+  DeclareComponent,
   DeclareFunction,
   DeclareOpaqueType,
   DeclareVariable,
@@ -43,6 +47,7 @@ import type {
   ObjectTypeProperty,
   OpaqueType,
   Program,
+  RestElement,
   Statement,
   StringLiteral,
   TypeAlias,
@@ -356,8 +361,12 @@ function convertStatement(
   context: TranslationContext,
 ): TranslatedResult<ProgramStatement> {
   switch (stmt.type) {
+    case 'ComponentDeclaration': {
+      const [result, deps] = convertComponentDeclaration(stmt, context);
+      return [result, deps];
+    }
     case 'FunctionDeclaration': {
-      const [result, deps] = convertFunctionDeclation(stmt, context);
+      const [result, deps] = convertFunctionDeclaration(stmt, context);
       return [result, deps];
     }
     case 'ClassDeclaration': {
@@ -608,8 +617,21 @@ function convertExportDeclaration(
   context: TranslationContext,
 ): TranslatedResult<ProgramStatement> {
   switch (decl.type) {
+    case 'ComponentDeclaration': {
+      const [declDecl, deps] = convertComponentDeclaration(decl, context);
+      return [
+        opts.default
+          ? t.DeclareExportDefaultDeclaration({
+              declaration: declDecl,
+            })
+          : t.DeclareExportDeclarationNamedWithDeclaration({
+              declaration: declDecl,
+            }),
+        deps,
+      ];
+    }
     case 'FunctionDeclaration': {
-      const [declDecl, deps] = convertFunctionDeclation(decl, context);
+      const [declDecl, deps] = convertFunctionDeclaration(decl, context);
       return [
         opts.default
           ? t.DeclareExportDefaultDeclaration({
@@ -1069,8 +1091,126 @@ function convertClassMember(
     }
   }
 }
+function convertComponentDeclaration(
+  comp: ComponentDeclaration,
+  context: TranslationContext,
+): TranslatedResult<DeclareComponent> {
+  const [resultTypeParams, typeParamsDeps] =
+    convertTypeParameterDeclarationOrNull(comp.typeParameters, context);
 
-function convertFunctionDeclation(
+  const [resultParams, resultRestParam, paramsAndRestDeps] =
+    convertComponentParameters(comp.params, context);
+
+  const [resultRendersType, rendersTypeDeps] = (() => {
+    const rendersType = comp.rendersType;
+    if (rendersType == null) {
+      return EMPTY_TRANSLATION_RESULT;
+    }
+
+    return [
+      asDetachedNode<TypeAnnotation>(rendersType),
+      analyzeTypeDependencies(rendersType, context),
+    ];
+  })();
+
+  return [
+    t.DeclareComponent({
+      id: comp.id,
+      params: resultParams,
+      rest: resultRestParam,
+      typeParameters: resultTypeParams,
+      rendersType: resultRendersType,
+    }),
+    [...typeParamsDeps, ...paramsAndRestDeps, ...rendersTypeDeps],
+  ];
+}
+
+type TranslatedComponentParametersResults = [
+  $ReadOnlyArray<DetachedNode<ComponentTypeParameter>>,
+  ?DetachedNode<ComponentTypeParameter>,
+  TranslatedDeps,
+];
+
+function convertComponentParameters(
+  params: $ReadOnlyArray<ComponentParameter | RestElement>,
+  context: TranslationContext,
+): TranslatedComponentParametersResults {
+  return params.reduce<TranslatedComponentParametersResults>(
+    ([resultParams, restParam, paramsDeps], param) => {
+      switch (param.type) {
+        case 'ComponentParameter': {
+          let optional = false;
+          let local = param.local;
+          if (local.type === 'AssignmentPattern') {
+            local = local.left;
+            optional = true;
+          }
+          if (!optional && local.type === 'Identifier') {
+            optional = local.optional;
+          }
+
+          const [typeAnnotationType, typeDeps] = convertTypeAnnotation(
+            local.typeAnnotation,
+            param,
+            context,
+          );
+
+          const resultParam = t.ComponentTypeParameter({
+            name: asDetachedNode(param.name),
+            typeAnnotation: typeAnnotationType,
+            optional,
+          });
+
+          return [
+            [...resultParams, resultParam],
+            restParam,
+            [...paramsDeps, ...typeDeps],
+          ];
+        }
+        case 'RestElement': {
+          if (restParam != null) {
+            throw translationError(
+              param,
+              `ComponentParameter: Multiple rest elements found`,
+              context,
+            );
+          }
+          const argument = param.argument;
+          if (
+            argument.type === 'AssignmentPattern' ||
+            argument.type === 'ArrayPattern' ||
+            argument.type === 'RestElement'
+          ) {
+            throw translationError(
+              param,
+              `ComponentParameter: Invalid RestElement usage`,
+              context,
+            );
+          }
+          const [typeAnnotationType, typeDeps] = convertTypeAnnotation(
+            argument.typeAnnotation,
+            argument,
+            context,
+          );
+
+          const resultRestParam = t.ComponentTypeParameter({
+            name: t.Identifier({
+              name: argument.type === 'Identifier' ? argument.name : 'rest',
+            }),
+            typeAnnotation: typeAnnotationType,
+            optional:
+              argument.type === 'Identifier' ? argument.optional : false,
+          });
+
+          return [resultParams, resultRestParam, [...paramsDeps, ...typeDeps]];
+        }
+      }
+    },
+    [[], null, []],
+  );
+}
+
+function convertFunctionDeclaration(
   func: FunctionDeclaration,
   context: TranslationContext,
 ): TranslatedResult<DeclareFunction> {
