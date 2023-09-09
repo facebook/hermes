@@ -301,15 +301,12 @@ static constexpr uint32_t kNonLiteralPlaceholderLimit = 3;
 
 /// Whether the given value \v V can be serialized into the object literal
 /// buffer.
-static bool isSerializableLiteral(Value *V) {
-  return V &&
-      (llvh::isa<LiteralNull>(V) || llvh::isa<LiteralBool>(V) ||
-       llvh::isa<LiteralNumber>(V) || llvh::isa<LiteralString>(V));
-}
-
 static bool canSerialize(Value *V) {
-  if (auto *LCI = llvh::dyn_cast_or_null<HBCLoadConstInst>(V))
-    return isSerializableLiteral(LCI->getConst());
+  if (auto *LCI = llvh::dyn_cast_or_null<HBCLoadConstInst>(V)) {
+    Literal *L = LCI->getConst();
+    return llvh::isa<LiteralNull>(L) || llvh::isa<LiteralBool>(L) ||
+        llvh::isa<LiteralNumber>(L) || llvh::isa<LiteralString>(L);
+  }
   return false;
 }
 
@@ -444,155 +441,6 @@ bool LowerAllocObject::lowerAllocObjectBuffer(
   return true;
 }
 
-bool LowerAllocObjectLiteral::runOnFunction(Function *F) {
-  bool changed = false;
-  llvh::SmallVector<AllocObjectLiteralInst *, 4> allocs;
-  for (BasicBlock &BB : *F) {
-    // We need to increase the iterator before calling lowerAllocObjectBuffer.
-    // Otherwise deleting the instruction will invalidate the iterator.
-    for (auto it = BB.begin(), e = BB.end(); it != e;) {
-      if (auto *A = llvh::dyn_cast<AllocObjectLiteralInst>(&*it++)) {
-        changed |= lowerAllocObjectBuffer(A);
-      }
-    }
-  }
-
-  return changed;
-}
-
-bool LowerAllocObjectLiteral::lowerAlloc(AllocObjectLiteralInst *allocInst) {
-  Function *F = allocInst->getParent()->getParent();
-  IRBuilder builder(F);
-
-  auto size = allocInst->getKeyValuePairCount();
-
-  // Replace AllocObjectLiteral with a regular AllocObject
-  builder.setLocation(allocInst->getLocation());
-  builder.setCurrentSourceLevelScope(allocInst->getSourceLevelScope());
-  builder.setInsertionPoint(allocInst);
-  auto *Obj = builder.createAllocObjectInst(size, nullptr);
-
-  for (unsigned i = 0; i < allocInst->getKeyValuePairCount(); i++) {
-    Literal *key = allocInst->getKey(i);
-    Value *value = allocInst->getValue(i);
-    builder.createStoreNewOwnPropertyInst(
-        value, allocInst, key, IRBuilder::PropEnumerable::Yes);
-  }
-  allocInst->replaceAllUsesWith(Obj);
-  allocInst->eraseFromParent();
-
-  return true;
-}
-
-uint32_t LowerAllocObjectLiteral::estimateBestNumElemsToSerialize(
-    AllocObjectLiteralInst *allocInst) {
-  // Reuse calc logic from LowerAllocObject.
-  int32_t curSaving = static_cast<int32_t>(sizeof(inst::NewObjectInst)) -
-      static_cast<int32_t>(sizeof(inst::NewObjectWithBufferInst));
-  int32_t maxSaving = 0;
-  uint32_t optimumStopIndex = 0;
-  uint32_t nonLiteralPlaceholderCount = 0;
-
-  uint32_t curSize = 0;
-  for (unsigned i = 0; i < allocInst->getKeyValuePairCount(); i++) {
-    ++curSize;
-    Literal *key = allocInst->getKey(i);
-    Value *value = allocInst->getValue(i);
-    if (isSerializableLiteral(value)) {
-      curSaving += kLiteralSavedBytes;
-      if (curSaving > maxSaving) {
-        maxSaving = curSaving;
-        optimumStopIndex = curSize;
-      }
-    } else {
-      if (llvh::isa<LiteralNumber>(key)) {
-        continue;
-      }
-      if (nonLiteralPlaceholderCount == kNonLiteralPlaceholderLimit) {
-        // We have reached the maximum number of place holders we can put.
-        break;
-      }
-      nonLiteralPlaceholderCount++;
-      curSaving -= kNonLiteralCostBytes;
-    }
-  }
-  return optimumStopIndex;
-}
-
-bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
-    AllocObjectLiteralInst *allocInst) {
-  Function *F = allocInst->getParent()->getParent();
-  IRBuilder builder(F);
-
-  auto maxSize = (unsigned)UINT16_MAX;
-  auto size = estimateBestNumElemsToSerialize(allocInst);
-  size = std::min(maxSize, size);
-
-  // Should not create HBCAllocObjectFromBufferInst.
-  if (size == 0) {
-    return lowerAlloc(allocInst);
-  }
-
-  // Replace AllocObjectLiteral with HBCAllocObjectFromBufferInst
-  builder.setLocation(allocInst->getLocation());
-  builder.setCurrentSourceLevelScope(allocInst->getSourceLevelScope());
-  builder.setInsertionPointAfter(allocInst);
-  HBCAllocObjectFromBufferInst::ObjectPropertyMap propMap;
-
-  unsigned i = 0;
-  for (; i < size; i++) {
-    Literal *key = allocInst->getKey(i);
-    Value *value = allocInst->getValue(i);
-    Literal *propLiteral = nullptr;
-    // Property name can be either a LiteralNumber or a LiteralString.
-    if (auto *LN = llvh::dyn_cast<LiteralNumber>(key)) {
-      assert(
-          LN->convertToArrayIndex() &&
-          "LiteralNumber can be a property name only if it can be converted to array index.");
-      propLiteral = LN;
-    } else {
-      propLiteral = cast<LiteralString>(key);
-    }
-
-    if (isSerializableLiteral(value)) {
-      propMap.push_back(std::pair<Literal *, Literal *>(
-          propLiteral, llvh::cast<Literal>(value)));
-    } else if (llvh::isa<LiteralString>(propLiteral)) {
-      // LiteralString key with undefined / non-constant value.
-      propMap.push_back(std::pair<Literal *, Literal *>(
-          propLiteral, builder.getLiteralNull()));
-      builder.createStorePropertyInst(value, allocInst, key);
-    } else {
-      // LiteralNumber key with undefined / non-constant value.
-      // No need to put Null in the buffer, as numeric properties can
-      // be added in any order.
-      builder.createStoreOwnPropertyInst(
-          value, allocInst, key, IRBuilder::PropEnumerable::Yes);
-    }
-  }
-
-  // Handle properties beyond best num of properties or that cannot fit in
-  // maxSize.
-  for (; i < allocInst->getKeyValuePairCount(); i++) {
-    Literal *key = allocInst->getKey(i);
-    Value *value = allocInst->getValue(i);
-    builder.createStoreNewOwnPropertyInst(
-        value, allocInst, key, IRBuilder::PropEnumerable::Yes);
-  }
-
-  // Emit HBCAllocObjectFromBufferInst.
-  // First, we reset insertion location.
-  builder.setLocation(allocInst->getLocation());
-  builder.setCurrentSourceLevelScope(allocInst->getSourceLevelScope());
-  builder.setInsertionPoint(allocInst);
-  auto *alloc = builder.createHBCAllocObjectFromBufferInst(
-      propMap, allocInst->getKeyValuePairCount());
-  allocInst->replaceAllUsesWith(alloc);
-  allocInst->eraseFromParent();
-
-  return true;
-}
-
 bool LowerStoreInstrs::runOnFunction(Function *F) {
   IRBuilder builder(F);
   IRBuilder::InstructionDestroyer destroyer;
@@ -661,11 +509,6 @@ bool LowerNumericProperties::runOnFunction(Function *F) {
       } else if (llvh::isa<StoreGetterSetterInst>(&Inst)) {
         changed |= stringToNumericProperty(
             builder, Inst, StoreGetterSetterInst::PropertyIdx);
-      } else if (llvh::isa<AllocObjectLiteralInst>(&Inst)) {
-        auto allocInst = cast<AllocObjectLiteralInst>(&Inst);
-        for (unsigned i = 0; i < allocInst->getKeyValuePairCount(); i++) {
-          changed |= stringToNumericProperty(builder, Inst, i * 2);
-        }
       }
     }
   }

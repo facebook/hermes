@@ -808,12 +808,6 @@ void HBCISel::generateAllocObjectInst(AllocObjectInst *Inst, BasicBlock *next) {
     BCFGen_->emitNewObjectWithParent(result, parentReg);
   }
 }
-void HBCISel::generateAllocObjectLiteralInst(
-    AllocObjectLiteralInst *,
-    BasicBlock *) {
-  // This instruction should not have reached this far.
-  llvm_unreachable("AllocObjectLiteralInst should have been lowered.");
-}
 void HBCISel::generateAllocArrayInst(AllocArrayInst *Inst, BasicBlock *next) {
   auto dstReg = encodeValue(Inst);
   auto elementCount = Inst->getElementCount();

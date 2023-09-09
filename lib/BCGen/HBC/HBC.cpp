@@ -65,9 +65,6 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
   // It is important to run LowerNumericProperties before LoadConstants
   // as LowerNumericProperties could generate new constants.
   PM.addPass<LowerNumericProperties>();
-  // Lower AllocObjectLiteral into a mixture of HBCAllocObjectFromBufferInst,
-  // AllocObjectInst, StoreNewOwnPropertyInst and StorePropertyInst.
-  PM.addPass<LowerAllocObjectLiteral>();
   PM.addPass<LowerConstruction>();
   PM.addPass<LowerArgumentsArray>();
   PM.addPass<LimitAllocArray>(UINT16_MAX);

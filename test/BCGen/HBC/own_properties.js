@@ -9,7 +9,6 @@
 
 // Test that StoreNewOwnPropertyInst is lowered to StoreOwnPropertyInst when
 // the property name is a valid array index.
-// We use a computed key to avoid emitting AllocObjectLiteral.
 
 function foo() {
     return {a: 1, "10": 2, 11: 3, "999999999999999999999999": 4, ['42']: 5};
