@@ -454,13 +454,6 @@ if (HERMES_HARDENED)
   add_definitions(-DHERMES_HARDENED)
 endif()
 
-# Assume dbg for multi-config generators to avoid running slow tests.
-if (GENERATOR_IS_MULTI_CONFIG OR (CMAKE_BUILD_TYPE STREQUAL Debug))
-    set(HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST "dbg")
-else()
-    set(HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST "opt")
-endif()
-
 if (GCC_COMPATIBLE)
   # Don't export symbols unless we explicitly say so
   append("-fvisibility=hidden" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
@@ -716,7 +709,7 @@ if(HERMES_ENABLE_TEST_SUITE)
     hbcdump=${HERMES_TOOLS_OUTPUT_DIR}/hbcdump
     hbc-deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
     hbc_diff=${HERMES_TOOLS_OUTPUT_DIR}/hbc-diff
-    build_mode=${HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST}
+    build_mode="$<IF:$<CONFIG:Debug>,dbg,opt>"
     exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
     node_hermes_enabled_flag=${HERMES_BUILD_NODE_HERMES}
     node-hermes=${HERMES_TOOLS_OUTPUT_DIR}/node-hermes
