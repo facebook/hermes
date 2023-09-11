@@ -43,10 +43,14 @@ function outer() {
 // CHECK:function Point(x: any, y: any, z: any): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StorePropertyStrictInst undefined: undefined, undefined: undefined, "x": string
-// CHECK-NEXT:  %1 = StorePropertyStrictInst undefined: undefined, undefined: undefined, "y": string
-// CHECK-NEXT:  %2 = StorePropertyStrictInst undefined: undefined, undefined: undefined, "z": string
-// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  %3 = LoadParamInst (:any) %z: any
+// CHECK-NEXT:  %4 = StorePropertyStrictInst %1: any, %0: any, "x": string
+// CHECK-NEXT:  %5 = StorePropertyStrictInst %2: any, %0: any, "y": string
+// CHECK-NEXT:  %6 = StorePropertyStrictInst %3: any, %0: any, "z": string
+// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function makePoint(x: any, y: any, z: any): object

@@ -66,6 +66,16 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
   auto callsites = getKnownCallsites(F);
   LLVM_DEBUG(dbgs() << "-- Has " << callsites.size() << " call sites\n");
 
+  if (callsites.empty()) {
+    // If we don't have any callsites, don't change any arguments.
+    // This is necessary for us to ensure that we're not replacing arguments
+    // with default values despite no callsites actually passing them in,
+    // because for typed functions, the new value might not be compatible
+    // with the typed instructions which use the parameter as an operand.
+    // The function should be deleted in the future anyway.
+    return false;
+  }
+
   unsigned numFormalParam = F->getJSDynamicParams().size();
 
   // This vector saves the union of all callees for each parameter.
