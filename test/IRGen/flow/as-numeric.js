@@ -36,13 +36,13 @@ function main() {
 // CHECK-NEXT:function_end
 
 // CHECK:function baz(x: number): any [typed]
-// CHECK-NEXT:frame = [x: number]
+// CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:number) %x: number
-// CHECK-NEXT:  %1 = StoreFrameInst %0: number, [x]: number
-// CHECK-NEXT:  %2 = LoadFrameInst (:number) [x]: number
-// CHECK-NEXT:  %3 = AsNumericInst (:number) %2: number
-// CHECK-NEXT:  %4 = UnaryIncInst (:any) %3: number
-// CHECK-NEXT:  %5 = StoreFrameInst %4: any, [x]: number
+// CHECK-NEXT:  %1 = StoreFrameInst %0: number, [x]: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %3 = AsNumericInst (:number|bigint) %2: any
+// CHECK-NEXT:  %4 = UnaryIncInst (:any) %3: number|bigint
+// CHECK-NEXT:  %5 = StoreFrameInst %4: any, [x]: any
 // CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

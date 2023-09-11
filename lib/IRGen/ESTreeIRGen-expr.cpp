@@ -315,6 +315,7 @@ Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
       auto *newNextIndex = genBuiltinCall(
           BuiltinMethod::HermesBuiltin_arraySpread,
           {allocArrayInst, value, Builder.createLoadStackInst(nextIndex)});
+      newNextIndex->setType(Type::createNumber());
       Builder.createStoreStackInst(newNextIndex, nextIndex);
       continue;
     }

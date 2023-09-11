@@ -40,8 +40,8 @@ function foo(fn, x) {
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %8 = AllocArrayInst (:object) 0: number
 // CHECK-NEXT:  %9 = LoadStackInst (:number) %5: number
-// CHECK-NEXT:  %10 = CallBuiltinInst (:any) [HermesBuiltin.arraySpread]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %8: object, %7: any, %9: number
-// CHECK-NEXT:  %11 = StoreStackInst %10: any, %5: number
+// CHECK-NEXT:  %10 = CallBuiltinInst (:number) [HermesBuiltin.arraySpread]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %8: object, %7: any, %9: number
+// CHECK-NEXT:  %11 = StoreStackInst %10: number, %5: number
 // CHECK-NEXT:  %12 = CallBuiltinInst (:any) [HermesBuiltin.apply]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: any, %8: object, undefined: undefined
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [fn]: any
 // CHECK-NEXT:  %14 = AllocStackInst (:number) $nextIndex: any
@@ -49,8 +49,8 @@ function foo(fn, x) {
 // CHECK-NEXT:  %16 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %17 = AllocArrayInst (:object) 0: number
 // CHECK-NEXT:  %18 = LoadStackInst (:number) %14: number
-// CHECK-NEXT:  %19 = CallBuiltinInst (:any) [HermesBuiltin.arraySpread]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %17: object, %16: any, %18: number
-// CHECK-NEXT:  %20 = StoreStackInst %19: any, %14: number
+// CHECK-NEXT:  %19 = CallBuiltinInst (:number) [HermesBuiltin.arraySpread]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %17: object, %16: any, %18: number
+// CHECK-NEXT:  %20 = StoreStackInst %19: number, %14: number
 // CHECK-NEXT:  %21 = CallBuiltinInst (:any) [HermesBuiltin.apply]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %13: any, %17: object
 // CHECK-NEXT:  %22 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -70,10 +70,10 @@ function foo(fn, x) {
 // OPT-NEXT:  %0 = LoadParamInst (:any) %fn: any
 // OPT-NEXT:  %1 = LoadParamInst (:any) %x: any
 // OPT-NEXT:  %2 = AllocArrayInst (:object) 0: number
-// OPT-NEXT:  %3 = CallBuiltinInst (:any) [HermesBuiltin.arraySpread]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %2: object, %1: any, 0: number
+// OPT-NEXT:  %3 = CallBuiltinInst (:number) [HermesBuiltin.arraySpread]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %2: object, %1: any, 0: number
 // OPT-NEXT:  %4 = CallBuiltinInst (:any) [HermesBuiltin.apply]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any, %2: object, undefined: undefined
 // OPT-NEXT:  %5 = AllocArrayInst (:object) 0: number
-// OPT-NEXT:  %6 = CallBuiltinInst (:any) [HermesBuiltin.arraySpread]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %5: object, %1: any, 0: number
+// OPT-NEXT:  %6 = CallBuiltinInst (:number) [HermesBuiltin.arraySpread]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %5: object, %1: any, 0: number
 // OPT-NEXT:  %7 = CallBuiltinInst (:any) [HermesBuiltin.apply]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any, %5: object
 // OPT-NEXT:  %8 = ReturnInst undefined: undefined
 // OPT-NEXT:function_end
