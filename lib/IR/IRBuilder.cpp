@@ -1140,6 +1140,13 @@ IRBuilder::createFBinaryMathInst(ValueKind kind, Value *left, Value *right) {
   return inst;
 }
 
+FCompareInst *
+IRBuilder::createFCompareInst(ValueKind kind, Value *left, Value *right) {
+  auto *inst = new FCompareInst(kind, left, right);
+  insert(inst);
+  return inst;
+}
+
 UnionNarrowTrustedInst *IRBuilder::createUnionNarrowTrustedInst(
     Value *value,
     Type type) {

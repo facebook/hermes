@@ -1284,6 +1284,40 @@ class InstrGen {
     generateValue(*inst.getRight());
     os_ << "));\n";
   }
+  void generateFCompareInst(FCompareInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+
+    os_ << "_sh_ljs_bool(_sh_ljs_get_double(";
+    generateValue(*inst.getLeft());
+    os_ << ") ";
+    switch (inst.getKind()) {
+      case ValueKind::FEqualInstKind:
+        os_ << "==";
+        break;
+      case ValueKind::FNotEqualInstKind:
+        os_ << "!=";
+        break;
+      case ValueKind::FLessThanInstKind:
+        os_ << "<";
+        break;
+      case ValueKind::FLessThanOrEqualInstKind:
+        os_ << "<=";
+        break;
+      case ValueKind::FGreaterThanInstKind:
+        os_ << ">";
+        break;
+      case ValueKind::FGreaterThanOrEqualInstKind:
+        os_ << ">=";
+        break;
+      default:
+        llvm_unreachable("invalid FBinaryMath");
+    }
+    os_ << " _sh_ljs_get_double(";
+    generateValue(*inst.getRight());
+    os_ << "));\n";
+  }
   void generateStoreStackInst(StoreStackInst &inst) {
     hermes_fatal("StoreStackInst should have been lowered.");
   }

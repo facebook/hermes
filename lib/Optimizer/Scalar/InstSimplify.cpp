@@ -586,6 +586,40 @@ OptValue<Value *> simplifyFBinaryMath(FBinaryMathInst *inst) {
   return nullptr;
 }
 
+/// Try to simplify FCompare
+/// \returns one of:
+///   - nullptr if the instruction cannot be simplified.
+///   - the instruction itself, if it was changed inplace.
+///   - a new instruction to replace the original one
+///   - llvh::None if the instruction should be deleted.
+OptValue<Value *> simplifyFCompare(FCompareInst *inst) {
+  IRBuilder builder(inst->getFunction());
+
+  // If the arg is a literal, try to evaluate the expression.
+  if (auto *l = llvh::dyn_cast<LiteralNumber>(inst->getLeft())) {
+    if (auto *r = llvh::dyn_cast<LiteralNumber>(inst->getRight())) {
+      switch (inst->getKind()) {
+        case ValueKind::FEqualInstKind:
+          return builder.getLiteralBool(l->getValue() == r->getValue());
+        case ValueKind::FNotEqualInstKind:
+          return builder.getLiteralBool(l->getValue() != r->getValue());
+        case ValueKind::FLessThanInstKind:
+          return builder.getLiteralBool(l->getValue() < r->getValue());
+        case ValueKind::FLessThanOrEqualInstKind:
+          return builder.getLiteralBool(l->getValue() <= r->getValue());
+        case ValueKind::FGreaterThanInstKind:
+          return builder.getLiteralBool(l->getValue() > r->getValue());
+        case ValueKind::FGreaterThanOrEqualInstKind:
+          return builder.getLiteralBool(l->getValue() >= r->getValue());
+        default:
+          break;
+      }
+    }
+  }
+
+  return nullptr;
+}
+
 /// Try to simplify UnionNarrowTrustedInst
 /// \returns one of:
 ///   - nullptr if the instruction cannot be simplified.
@@ -612,6 +646,8 @@ OptValue<Value *> simplifyInstruction(Instruction *I) {
     return simplifyFUnaryMath(llvh::cast<FUnaryMathInst>(I));
   if (llvh::isa<FBinaryMathInst>(I))
     return simplifyFBinaryMath(llvh::cast<FBinaryMathInst>(I));
+  if (llvh::isa<FCompareInst>(I))
+    return simplifyFCompare(llvh::cast<FCompareInst>(I));
   switch (I->getKind()) {
     case ValueKind::AsNumberInstKind:
       return simplifyAsNumber(cast<AsNumberInst>(I));

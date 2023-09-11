@@ -934,6 +934,16 @@ Arguments | %left and %right are the input values
 Semantics | Perform the specified op on two floating point numbers (same type), return a number.
 Effects | None
 
+### FCompare
+
+FCompare | _
+--- |-----------------------------------------------|
+Description | Instruction class for comparing floating point numbers
+Example | FLessThan (:bool), %left (:number), %right (:number)
+Arguments | %left and %right are the input values
+Semantics | Perform the specified compare on two floating point numbers (same type), return bool. Note that if any operand is NaN, comparison always returns false.
+Effects | None
+
 ### UnionNarrowTrusted
 
 UnionNarrowTrusted | _

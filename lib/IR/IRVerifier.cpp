@@ -956,6 +956,13 @@ void Verifier::visitFBinaryMathInst(const FBinaryMathInst &Inst) {
           Inst.getType().isNumberType(),
       "FBinaryMathInst wrong type");
 }
+void Verifier::visitFCompareInst(const FCompareInst &Inst) {
+  Assert(
+      Inst.getLeft()->getType().isNumberType() &&
+          Inst.getRight()->getType().isNumberType() &&
+          Inst.getType().isBooleanType(),
+      "FCompare wrong type");
+}
 
 void Verifier::visitUnionNarrowTrustedInst(const UnionNarrowTrustedInst &Inst) {
 }
