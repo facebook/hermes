@@ -914,6 +914,16 @@ Arguments | %object is an instance of a typed class, %storedValue is stored as t
 Semantics | Store the parent without any checks.
 Effects | May write memory.
 
+### FUnaryMath
+
+FUnaryMath | _
+--- |-----------------------------------------------|
+Description | Instruction class for a floating point unary math operation.
+Example | FNegate (:number), %operand (:number)
+Arguments | %operand is the input value
+Semantics | Perform the specified op on a floating point number, return a number.
+Effects | None
+
 ### UnionNarrowTrusted
 
 UnionNarrowTrusted | _

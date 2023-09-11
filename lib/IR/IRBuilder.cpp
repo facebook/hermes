@@ -1128,6 +1128,11 @@ StoreParentInst *IRBuilder::createStoreParentInst(
   return inst;
 }
 
+FUnaryMathInst *IRBuilder::createFUnaryMathInst(ValueKind kind, Value *arg) {
+  auto *inst = new FUnaryMathInst(kind, arg);
+  insert(inst);
+  return inst;
+}
 UnionNarrowTrustedInst *IRBuilder::createUnionNarrowTrustedInst(
     Value *value,
     Type type) {

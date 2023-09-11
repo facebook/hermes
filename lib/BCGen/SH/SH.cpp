@@ -1230,6 +1230,21 @@ class InstrGen {
     generateRegisterPtr(*inst.getObject());
     os_ << ");\n";
   }
+  void generateFUnaryMathInst(FUnaryMathInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_double(";
+    switch (inst.getKind()) {
+      case ValueKind::FNegateKind:
+        os_ << "-_sh_ljs_get_double(";
+        generateValue(*inst.getArg());
+        os_ << ")";
+        break;
+      default:
+        llvm_unreachable("invalid FUnaryMath");
+    }
+    os_ << ");\n";
+  }
   void generateStoreStackInst(StoreStackInst &inst) {
     hermes_fatal("StoreStackInst should have been lowered.");
   }

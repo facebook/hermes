@@ -532,6 +532,27 @@ OptValue<Value *> simplifyThrowIfEmpty(ThrowIfEmptyInst *TIE) {
   return nullptr;
 }
 
+/// Try to simplify FUnaryMath
+/// \returns one of:
+///   - nullptr if the instruction cannot be simplified.
+///   - the instruction itself, if it was changed inplace.
+///   - a new instruction to replace the original one
+///   - llvh::None if the instruction should be deleted.
+OptValue<Value *> simplifyFUnaryMath(FUnaryMathInst *inst) {
+  IRBuilder builder(inst->getFunction());
+
+  // If the arg is a literal, try to evaluate the expression.
+  if (auto *lit = llvh::dyn_cast<LiteralNumber>(inst->getArg())) {
+    switch (inst->getKind()) {
+      case ValueKind::FNegateKind:
+        return builder.getLiteralNumber(-lit->getValue());
+      default:
+        break;
+    }
+  }
+
+  return nullptr;
+}
 /// Try to simplify UnionNarrowTrustedInst
 /// \returns one of:
 ///   - nullptr if the instruction cannot be simplified.
@@ -554,6 +575,8 @@ OptValue<Value *> simplifyInstruction(Instruction *I) {
     return simplifyUnOp(llvh::cast<UnaryOperatorInst>(I));
   if (llvh::isa<BinaryOperatorInst>(I))
     return simplifyBinOp(llvh::cast<BinaryOperatorInst>(I));
+  if (llvh::isa<FUnaryMathInst>(I))
+    return simplifyFUnaryMath(llvh::cast<FUnaryMathInst>(I));
   switch (I->getKind()) {
     case ValueKind::AsNumberInstKind:
       return simplifyAsNumber(cast<AsNumberInst>(I));

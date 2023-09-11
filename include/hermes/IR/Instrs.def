@@ -246,6 +246,10 @@ DEF_VALUE(FastArrayLengthInst, Instruction)
 DEF_VALUE(LoadParentInst, Instruction)
 DEF_VALUE(StoreParentInst, Instruction)
 
+BEGIN_VALUE(FUnaryMathInst, Instruction)
+DEF_TAG(FNegate, FUnaryMathInst)
+END_VALUE(FUnaryMathInst)
+
 DEF_VALUE(UnionNarrowTrustedInst, Instruction)
 DEF_VALUE(CheckedTypeCastInst, Instruction)
 DEF_VALUE(LIRDeadValueInst, Instruction)

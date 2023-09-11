@@ -4571,6 +4571,46 @@ class StoreParentInst : public Instruction {
   }
 };
 
+class FUnaryMathInst : public Instruction {
+  FUnaryMathInst(const FUnaryMathInst &) = delete;
+  void operator=(const FUnaryMathInst &) = delete;
+
+ public:
+  enum { ArgIdx };
+
+  explicit FUnaryMathInst(ValueKind kind, Value *arg) : Instruction(kind) {
+    assert(arg->getType().isNumberType() && "invalid input FUnaryMathInst");
+    setType(Type::createNumber());
+    pushOperand(arg);
+  }
+  explicit FUnaryMathInst(
+      const FUnaryMathInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  Value *getArg() {
+    return getOperand(ArgIdx);
+  }
+  const Value *getArg() const {
+    return getOperand(ArgIdx);
+  }
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return true;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setIdempotent();
+  }
+
+  static bool classof(const Value *V) {
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), FUnaryMathInst);
+  }
+};
+
 class UnionNarrowTrustedInst : public SingleOperandInst {
   UnionNarrowTrustedInst(const UnionNarrowTrustedInst &) = delete;
   void operator=(const UnionNarrowTrustedInst &) = delete;
