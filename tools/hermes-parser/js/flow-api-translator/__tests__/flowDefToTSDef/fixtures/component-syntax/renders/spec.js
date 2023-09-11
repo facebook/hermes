@@ -13,3 +13,5 @@ declare export component Foo() renders T;
 declare export component Foo(foo: renders Bar) renders T;
 
 type T = renders Bar;
+
+type T = component() renders Bar;

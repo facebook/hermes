@@ -687,6 +687,8 @@ const getTransforms = (
         return transform.KeyofTypeAnnotation(node);
       case 'TypeOperator':
         return transform.TypeOperator(node);
+      case 'ComponentTypeAnnotation':
+        return transform.ComponentTypeAnnotation(node);
       default:
         throw unexpectedTranslationError(node, `Unhandled type ${node.type}`);
     }
@@ -1250,89 +1252,17 @@ const getTransforms = (
     DeclareComponent(
       node: FlowESTree.DeclareComponent,
     ): TSESTree.TSDeclareFunction {
-      const hasReactImport = isReactImport(node, 'React');
-
       const id = transform.Identifier(node.id, false);
 
-      const tsProps = (() => {
-        if (node.params.length === 0 && node.rest != null) {
-          return {
-            type: 'Identifier',
-            name: 'props',
-            typeAnnotation: {
-              type: 'TSTypeAnnotation',
-              typeAnnotation: transformTypeAnnotationType(
-                node.rest.typeAnnotation,
-              ),
-            },
-            optional: false,
-          };
-        }
+      const typeParameters =
+        node.typeParameters == null
+          ? undefined
+          : transform.TypeParameterDeclaration(node.typeParameters);
 
-        const flowPropsType: Array<
-          FlowESTree.ObjectTypeProperty | FlowESTree.ObjectTypeSpreadProperty,
-        > = [];
-
-        const rest = node.rest;
-        if (rest != null) {
-          flowPropsType.push(
-            constructFlowNode<FlowESTree.ObjectTypeSpreadProperty>({
-              type: 'ObjectTypeSpreadProperty',
-              argument: rest.typeAnnotation,
-              range: rest.range,
-              loc: rest.loc,
-            }),
-          );
-        }
-
-        for (let i = 0; i < node.params.length; i++) {
-          const param = node.params[i];
-          flowPropsType.push(
-            constructFlowNode<FlowESTree.ObjectTypePropertySignature>({
-              type: 'ObjectTypeProperty',
-              kind: 'init',
-              method: false,
-              optional: param.optional,
-              variance: null,
-              proto: false,
-              static: false,
-              key:
-                param.name ??
-                constructFlowNode<FlowESTree.Identifier>({
-                  type: 'Identifier',
-                  name: `$$PARAM_${i}$$`,
-                  optional: false,
-                  typeAnnotation: null,
-                }),
-              value: param.typeAnnotation,
-              range: param.range,
-              loc: param.loc,
-            }),
-          );
-        }
-        const tsPropsObjectType = transform.ObjectTypeAnnotation(
-          constructFlowNode<FlowESTree.ObjectTypeAnnotation>({
-            type: 'ObjectTypeAnnotation',
-            inexact: false,
-            exact: true,
-            properties: flowPropsType,
-            indexers: [],
-            callProperties: [],
-            internalSlots: [],
-          }),
-        );
-        return {
-          type: 'Identifier',
-          name: 'props',
-          typeAnnotation: {
-            type: 'TSTypeAnnotation',
-            typeAnnotation: tsPropsObjectType,
-          },
-          optional: false,
-        };
-      })();
+      const params = transform.ComponentTypeParameters(node.params, node.rest);
 
       // TS cannot support `renderType` so we always use ReactNode as the return type.
+      const hasReactImport = isReactImport(node, 'React');
       const returnType = {
         type: 'TSTypeAnnotation',
         // If no rendersType we assume its ReactNode type.
@@ -1350,11 +1280,6 @@ const getTransforms = (
         },
       };
 
-      const typeParameters =
-        node.typeParameters == null
-          ? undefined
-          : transform.TypeParameterDeclaration(node.typeParameters);
-
       return {
         type: 'TSDeclareFunction',
         async: false,
@@ -1366,10 +1291,91 @@ const getTransforms = (
           type: 'Identifier',
           name: id.name,
         },
-        params: [tsProps],
+        params,
         returnType: returnType,
         typeParameters: typeParameters,
       };
+    },
+    ComponentTypeParameters(
+      params: $ReadOnlyArray<FlowESTree.ComponentTypeParameter>,
+      rest: FlowESTree.ComponentTypeParameter | null,
+    ): $ReadOnlyArray<TSESTree.Parameter> {
+      if (params.length === 0 && rest != null) {
+        return [
+          {
+            type: 'Identifier',
+            name: 'props',
+            typeAnnotation: {
+              type: 'TSTypeAnnotation',
+              typeAnnotation: transformTypeAnnotationType(rest.typeAnnotation),
+            },
+            optional: false,
+          },
+        ];
+      }
+
+      const flowPropsType: Array<
+        FlowESTree.ObjectTypeProperty | FlowESTree.ObjectTypeSpreadProperty,
+      > = [];
+
+      if (rest != null) {
+        flowPropsType.push(
+          constructFlowNode<FlowESTree.ObjectTypeSpreadProperty>({
+            type: 'ObjectTypeSpreadProperty',
+            argument: rest.typeAnnotation,
+            range: rest.range,
+            loc: rest.loc,
+          }),
+        );
+      }
+
+      for (let i = 0; i < params.length; i++) {
+        const param = params[i];
+        flowPropsType.push(
+          constructFlowNode<FlowESTree.ObjectTypePropertySignature>({
+            type: 'ObjectTypeProperty',
+            kind: 'init',
+            method: false,
+            optional: param.optional,
+            variance: null,
+            proto: false,
+            static: false,
+            key:
+              param.name ??
+              constructFlowNode<FlowESTree.Identifier>({
+                type: 'Identifier',
+                name: `$$PARAM_${i}$$`,
+                optional: false,
+                typeAnnotation: null,
+              }),
+            value: param.typeAnnotation,
+            range: param.range,
+            loc: param.loc,
+          }),
+        );
+      }
+      const tsPropsObjectType = transform.ObjectTypeAnnotation(
+        constructFlowNode<FlowESTree.ObjectTypeAnnotation>({
+          type: 'ObjectTypeAnnotation',
+          inexact: false,
+          exact: true,
+          properties: flowPropsType,
+          indexers: [],
+          callProperties: [],
+          internalSlots: [],
+        }),
+      );
+      return [
+        {
+          type: 'Identifier',
+          name: 'props',
+          typeAnnotation: {
+            type: 'TSTypeAnnotation',
+            typeAnnotation: tsPropsObjectType,
+          },
+          optional: false,
+        },
+      ];
     },
     DeclareFunction(
       node: FlowESTree.DeclareFunction,
@@ -3342,6 +3348,42 @@ const getTransforms = (
           };
         }
       }
+    },
+    ComponentTypeAnnotation(
+      node: FlowESTree.ComponentTypeAnnotation,
+    ): TSESTree.TSFunctionType {
+      const typeParameters =
+        node.typeParameters == null
+          ? undefined
+          : transform.TypeParameterDeclaration(node.typeParameters);
+
+      const params = transform.ComponentTypeParameters(node.params, node.rest);
+
+      // TS cannot support `renderType` so we always use ReactNode as the return type.
+      const hasReactImport = isReactImport(node, 'React');
+      const returnType = {
+        type: 'TSTypeAnnotation',
+        // If no rendersType we assume its ReactNode type.
+        typeAnnotation: {
+          type: 'TSTypeReference',
+          typeName: {
+            type: 'TSQualifiedName',
+            left: getReactIdentifier(hasReactImport),
+            right: {
+              type: 'Identifier',
+              name: `ReactNode`,
+            },
+          },
+          typeParameters: undefined,
+        },
+      };
+
+      return {
+        type: 'TSFunctionType',
+        typeParameters,
+        params,
+        returnType,
+      };
     },
   };
 
