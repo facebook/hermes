@@ -115,7 +115,7 @@ function badThrow() {
 // CHECK-NEXT:  %3 = CondBranchInst %1: any, %BB1, %BB3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = PhiInst (:number) 4: number, %BB3, 19: number, %BB0, 15: number, %BB2
-// CHECK-NEXT:  %5 = BinaryAddInst (:number) %4: number, 1: number
+// CHECK-NEXT:  %5 = FAddInst (:number) %4: number, 1: number
 // CHECK-NEXT:  %6 = BinarySubtractInst (:number) %0: any, 1: number
 // CHECK-NEXT:  %7 = CondBranchInst %6: number, %BB4, %BB5
 // CHECK-NEXT:%BB3:
@@ -168,7 +168,7 @@ function badThrow() {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %3 = PhiInst (:number) 19: number, %BB1, 9: number, %BB0
 // CHECK-NEXT:  %4 = PhiInst (:number) 19: number, %BB1, 9: number, %BB0
-// CHECK-NEXT:  %5 = BinaryAddInst (:number) %3: number, %4: number
+// CHECK-NEXT:  %5 = FAddInst (:number) %3: number, %4: number
 // CHECK-NEXT:  %6 = ReturnInst %5: number
 // CHECK-NEXT:function_end
 

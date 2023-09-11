@@ -31,6 +31,6 @@ function main() {
 // CHECK-NEXT:  %2 = FastArrayPushInst 2: number, %0: object
 // CHECK-NEXT:  %3 = FastArrayPushInst 3: number, %0: object
 // CHECK-NEXT:  %4 = FastArrayLoadInst (:number) %0: object, 0: number
-// CHECK-NEXT:  %5 = BinaryAddInst (:number) %4: number, 1: number
+// CHECK-NEXT:  %5 = FAddInst (:number) %4: number, 1: number
 // CHECK-NEXT:  %6 = ReturnInst %5: number
 // CHECK-NEXT:function_end

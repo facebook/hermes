@@ -75,7 +75,7 @@ function foo(x) {
 // OPT-NEXT:  %1 = AllocArrayInst (:object) 4: number, 1: number, 2: number
 // OPT-NEXT:  %2 = CallBuiltinInst (:number) [HermesBuiltin.arraySpread]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %1: object, %0: any, 2: number
 // OPT-NEXT:  %3 = StoreOwnPropertyInst 3: number, %1: object, %2: number, true: boolean
-// OPT-NEXT:  %4 = BinaryAddInst (:number) %2: number, 1: number
+// OPT-NEXT:  %4 = FAddInst (:number) %2: number, 1: number
 // OPT-NEXT:  %5 = StoreOwnPropertyInst 4: number, %1: object, %4: number, true: boolean
 // OPT-NEXT:  %6 = ReturnInst %1: object
 // OPT-NEXT:function_end

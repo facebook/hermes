@@ -49,7 +49,7 @@ function load_dedup(foo){
 // CHECK-NEXT:  %5 = PhiInst (:number) 0: number, %BB0, %8: number, %BB1
 // CHECK-NEXT:  %6 = CreateFunctionInst (:object) %""(): number
 // CHECK-NEXT:  %7 = StorePropertyLooseInst %6: object, %0: any, "k": string
-// CHECK-NEXT:  %8 = UnaryIncInst (:number) %5: number
+// CHECK-NEXT:  %8 = FAddInst (:number) %5: number, 1: number
 // CHECK-NEXT:  %9 = StoreFrameInst %8: number, [i]: number
 // CHECK-NEXT:  %10 = BinaryLessThanInst (:boolean) %8: number, %1: any
 // CHECK-NEXT:  %11 = CondBranchInst %10: boolean, %BB1, %BB2
