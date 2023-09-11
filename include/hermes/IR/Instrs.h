@@ -259,7 +259,13 @@ class AsNumericInst : public SingleOperandInst {
  public:
   explicit AsNumericInst(Value *value)
       : SingleOperandInst(ValueKind::AsNumericInstKind, value) {
-    setType(Type::createNumeric());
+    if (value->getType().isNumberType()) {
+      setType(Type::createNumber());
+    } else if (value->getType().isBigIntType()) {
+      setType(Type::createBigInt());
+    } else {
+      setType(Type::createNumeric());
+    }
   }
   explicit AsNumericInst(
       const AsNumericInst *src,
