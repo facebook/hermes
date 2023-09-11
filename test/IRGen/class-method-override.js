@@ -40,15 +40,15 @@ new D().override();
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %C(): undefined
 // CHECK-NEXT:  %1 = StoreFrameInst %0: object, [C]: object
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %override2(): number
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %override(): number
-// CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) "override": string, %3: object, "override2": string, %2: object
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %override(): number
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %override2(): number
+// CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) "override": string, %2: object, "override2": string, %3: object
 // CHECK-NEXT:  %5 = StorePropertyStrictInst %4: object, %0: object, "prototype": string
 // CHECK-NEXT:  %6 = CreateFunctionInst (:object) %D(): undefined
 // CHECK-NEXT:  %7 = LoadPropertyInst (:object) %0: object, "prototype": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %"override2 1#"(): number
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %"override 1#"(): number
-// CHECK-NEXT:  %10 = AllocObjectLiteralInst (:object) "override": string, %9: object, "override2": string, %8: object
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %"override 1#"(): number
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %"override2 1#"(): number
+// CHECK-NEXT:  %10 = AllocObjectLiteralInst (:object) "override": string, %8: object, "override2": string, %9: object
 // CHECK-NEXT:  %11 = StoreParentInst %7: object, %10: object
 // CHECK-NEXT:  %12 = StorePropertyStrictInst %10: object, %6: object, "prototype": string
 // CHECK-NEXT:  %13 = LoadPropertyInst (:any) %6: object, "prototype": string
@@ -66,13 +66,13 @@ new D().override();
 // CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function override2(x: number): number [typed]
+// CHECK:function override(): number [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst 1: number
 // CHECK-NEXT:function_end
 
-// CHECK:function override(): number [typed]
+// CHECK:function override2(x: number): number [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst 1: number
@@ -87,13 +87,13 @@ new D().override();
 // CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function "override2 1#"(x: string|number): number [typed]
+// CHECK:function "override 1#"(): number [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst 2: number
 // CHECK-NEXT:function_end
 
-// CHECK:function "override 1#"(): number [typed]
+// CHECK:function "override2 1#"(x: string|number): number [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst 2: number
