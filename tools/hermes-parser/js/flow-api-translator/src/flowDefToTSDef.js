@@ -685,6 +685,8 @@ const getTransforms = (
         return transform.InferTypeAnnotation(node);
       case 'KeyofTypeAnnotation':
         return transform.KeyofTypeAnnotation(node);
+      case 'TypeOperator':
+        return transform.TypeOperator(node);
       default:
         throw unexpectedTranslationError(node, `Unhandled type ${node.type}`);
     }
@@ -1330,25 +1332,22 @@ const getTransforms = (
         };
       })();
 
-      const rendersType = node.rendersType;
+      // TS cannot support `renderType` so we always use ReactNode as the return type.
       const returnType = {
         type: 'TSTypeAnnotation',
-        typeAnnotation:
-          rendersType != null
-            ? transformTypeAnnotationType(rendersType.typeAnnotation)
-            : // If no rendersType we assume its ReactNode type.
-              {
-                type: 'TSTypeReference',
-                typeName: {
-                  type: 'TSQualifiedName',
-                  left: getReactIdentifier(hasReactImport),
-                  right: {
-                    type: 'Identifier',
-                    name: `ReactNode`,
-                  },
-                },
-                typeParameters: undefined,
-              },
+        // If no rendersType we assume its ReactNode type.
+        typeAnnotation: {
+          type: 'TSTypeReference',
+          typeName: {
+            type: 'TSQualifiedName',
+            left: getReactIdentifier(hasReactImport),
+            right: {
+              type: 'Identifier',
+              name: `ReactNode`,
+            },
+          },
+          typeParameters: undefined,
+        },
       };
 
       const typeParameters =
@@ -3324,6 +3323,25 @@ const getTransforms = (
         operator: 'keyof',
         typeAnnotation: transformTypeAnnotationType(node.argument),
       };
+    },
+    TypeOperator(node: FlowESTree.TypeOperator): TSESTree.TypeNode {
+      switch (node.operator) {
+        case 'renders': {
+          const hasReactImport = isReactImport(node, 'React');
+          return {
+            type: 'TSTypeReference',
+            typeName: {
+              type: 'TSQualifiedName',
+              left: getReactIdentifier(hasReactImport),
+              right: {
+                type: 'Identifier',
+                name: `ReactNode`,
+              },
+            },
+            typeParameters: undefined,
+          };
+        }
+      }
     },
   };
 

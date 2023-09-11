@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`flowDefToTSDef component-syntax 1`] = `
+exports[`flowDefToTSDef component-syntax/component-declaration 1`] = `
 "/**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -22,11 +22,7 @@ type ExtraPropsBar = {bar: string};
 export declare function Foo(
   props: Omit<ExtraPropsBar, keyof ({foo: string})> & {foo: string},
 ): React.ReactNode;
-export declare function Foo(props: {
-  foo: string;
-  ref: Ref<HTMLElement>;
-}): React.ReactNode;
 type T = Bar;
-export declare function Foo(props: {}): T;
+export declare function Foo(props: {}): React.ReactNode;
 "
 `;
