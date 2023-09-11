@@ -1245,6 +1245,45 @@ class InstrGen {
     }
     os_ << ");\n";
   }
+  void generateFBinaryMathInst(FBinaryMathInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+
+    // Handle FModuloInst separately because it needs a function call
+    // and doesn't fit neatly into a C binary operator.
+    if (inst.getKind() == ValueKind::FModuloInstKind) {
+      os_ << "_sh_ljs_double(_sh_mod_double(_sh_ljs_get_double(";
+      generateValue(*inst.getLeft());
+      os_ << "), _sh_ljs_get_double(";
+      generateValue(*inst.getRight());
+      os_ << ")));\n";
+      return;
+    }
+
+    os_ << "_sh_ljs_double(_sh_ljs_get_double(";
+    generateValue(*inst.getLeft());
+    os_ << ") ";
+    switch (inst.getKind()) {
+      case ValueKind::FAddInstKind:
+        os_ << "+";
+        break;
+      case ValueKind::FSubtractInstKind:
+        os_ << "-";
+        break;
+      case ValueKind::FMultiplyInstKind:
+        os_ << "*";
+        break;
+      case ValueKind::FDivideInstKind:
+        os_ << "/";
+        break;
+      default:
+        llvm_unreachable("invalid FBinaryMath");
+    }
+    os_ << " _sh_ljs_get_double(";
+    generateValue(*inst.getRight());
+    os_ << "));\n";
+  }
   void generateStoreStackInst(StoreStackInst &inst) {
     hermes_fatal("StoreStackInst should have been lowered.");
   }

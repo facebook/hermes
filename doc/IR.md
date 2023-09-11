@@ -924,6 +924,16 @@ Arguments | %operand is the input value
 Semantics | Perform the specified op on a floating point number, return a number.
 Effects | None
 
+### FBinaryMath
+
+FBinaryMath | _
+--- |-----------------------------------------------|
+Description | Instruction class for a floating point binary math operation.
+Example | FAdd (:number), %left (:number), %right (:number)
+Arguments | %left and %right are the input values
+Semantics | Perform the specified op on two floating point numbers (same type), return a number.
+Effects | None
+
 ### UnionNarrowTrusted
 
 UnionNarrowTrusted | _

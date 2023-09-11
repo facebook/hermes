@@ -1133,6 +1133,13 @@ FUnaryMathInst *IRBuilder::createFUnaryMathInst(ValueKind kind, Value *arg) {
   insert(inst);
   return inst;
 }
+FBinaryMathInst *
+IRBuilder::createFBinaryMathInst(ValueKind kind, Value *left, Value *right) {
+  auto *inst = new FBinaryMathInst(kind, left, right);
+  insert(inst);
+  return inst;
+}
+
 UnionNarrowTrustedInst *IRBuilder::createUnionNarrowTrustedInst(
     Value *value,
     Type type) {

@@ -553,6 +553,39 @@ OptValue<Value *> simplifyFUnaryMath(FUnaryMathInst *inst) {
 
   return nullptr;
 }
+/// Try to simplify FBinaryMath
+/// \returns one of:
+///   - nullptr if the instruction cannot be simplified.
+///   - the instruction itself, if it was changed inplace.
+///   - a new instruction to replace the original one
+///   - llvh::None if the instruction should be deleted.
+OptValue<Value *> simplifyFBinaryMath(FBinaryMathInst *inst) {
+  IRBuilder builder(inst->getFunction());
+
+  // If the arg is a literal, try to evaluate the expression.
+  if (auto *l = llvh::dyn_cast<LiteralNumber>(inst->getLeft())) {
+    if (auto *r = llvh::dyn_cast<LiteralNumber>(inst->getRight())) {
+      switch (inst->getKind()) {
+        case ValueKind::FAddInstKind:
+          return builder.getLiteralNumber(l->getValue() + r->getValue());
+        case ValueKind::FSubtractInstKind:
+          return builder.getLiteralNumber(l->getValue() - r->getValue());
+        case ValueKind::FMultiplyInstKind:
+          return builder.getLiteralNumber(l->getValue() * r->getValue());
+        case ValueKind::FDivideInstKind:
+          return builder.getLiteralNumber(l->getValue() / r->getValue());
+        case ValueKind::FModuloInstKind:
+          return builder.getLiteralNumber(
+              std::fmod(l->getValue(), r->getValue()));
+        default:
+          break;
+      }
+    }
+  }
+
+  return nullptr;
+}
+
 /// Try to simplify UnionNarrowTrustedInst
 /// \returns one of:
 ///   - nullptr if the instruction cannot be simplified.
@@ -577,6 +610,8 @@ OptValue<Value *> simplifyInstruction(Instruction *I) {
     return simplifyBinOp(llvh::cast<BinaryOperatorInst>(I));
   if (llvh::isa<FUnaryMathInst>(I))
     return simplifyFUnaryMath(llvh::cast<FUnaryMathInst>(I));
+  if (llvh::isa<FBinaryMathInst>(I))
+    return simplifyFBinaryMath(llvh::cast<FBinaryMathInst>(I));
   switch (I->getKind()) {
     case ValueKind::AsNumberInstKind:
       return simplifyAsNumber(cast<AsNumberInst>(I));

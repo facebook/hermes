@@ -4611,6 +4611,56 @@ class FUnaryMathInst : public Instruction {
   }
 };
 
+class FBinaryMathInst : public Instruction {
+  FBinaryMathInst(const FBinaryMathInst &) = delete;
+  void operator=(const FBinaryMathInst &) = delete;
+
+ public:
+  enum { LeftIdx, RightIdx };
+
+  explicit FBinaryMathInst(ValueKind kind, Value *left, Value *right)
+      : Instruction(kind) {
+    assert(left->getType().isNumberType() && "invalid input FBinaryMathInst");
+    assert(right->getType().isNumberType() && "invalid input FBinaryMathInst");
+    setType(Type::createNumber());
+    pushOperand(left);
+    pushOperand(right);
+  }
+  explicit FBinaryMathInst(
+      const FBinaryMathInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  Value *getLeft() {
+    return getOperand(LeftIdx);
+  }
+  const Value *getLeft() const {
+    return getOperand(LeftIdx);
+  }
+
+  Value *getRight() {
+    return getOperand(RightIdx);
+  }
+  const Value *getRight() const {
+    return getOperand(RightIdx);
+  }
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return true;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setIdempotent();
+  }
+
+  static bool classof(const Value *V) {
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), FBinaryMathInst);
+  }
+};
+
 class UnionNarrowTrustedInst : public SingleOperandInst {
   UnionNarrowTrustedInst(const UnionNarrowTrustedInst &) = delete;
   void operator=(const UnionNarrowTrustedInst &) = delete;
