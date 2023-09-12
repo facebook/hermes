@@ -16,6 +16,7 @@
 #include "hermes/VM/ArrayLike.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Operations.h"
+#include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringView.h"
 
@@ -79,6 +80,32 @@ Handle<JSObject> createFunctionConstructor(Runtime &runtime) {
       functionPrototypeSymbolHasInstance,
       1,
       dpf);
+
+  // Define .callee and .arguments properties to throw always. In accordance
+  // with ES2023 10.2.4 AddRestrictedFunctionProperties.
+  auto accessor =
+      Handle<PropertyAccessor>::vmcast(&runtime.throwTypeErrorAccessor);
+  PropertyFlags pf;
+  pf.clear();
+  pf.enumerable = 0;
+  pf.configurable = 0;
+  pf.accessor = 1;
+  auto res = JSObject::defineNewOwnProperty(
+      functionPrototype,
+      runtime,
+      Predefined::getSymbolID(Predefined::caller),
+      pf,
+      accessor);
+  (void)res;
+  assert(res != ExecutionStatus::EXCEPTION && "defineNewOwnProperty() failed");
+  res = JSObject::defineNewOwnProperty(
+      functionPrototype,
+      runtime,
+      Predefined::getSymbolID(Predefined::arguments),
+      pf,
+      accessor);
+  (void)res;
+  assert(res != ExecutionStatus::EXCEPTION && "defineNewOwnProperty() failed");
 
   return cons;
 }
