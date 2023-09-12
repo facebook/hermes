@@ -16,7 +16,6 @@
 #include "hermes/BCGen/RegAlloc.h"
 #include "hermes/BCGen/SH/SH.h"
 #include "hermes/ConsoleHost/ConsoleHost.h"
-#include "hermes/FlowParser/FlowParser.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
@@ -243,13 +242,6 @@ static llvh::cl::alias _PrettyDisassemble(
 static opt<bool> unused_HermesParser(
     "hermes-parser",
     desc("Treat the input as JavaScript"),
-    Hidden,
-    cat(CompilerCategory));
-
-static opt<bool> FlowParser(
-    "Xflow-parser",
-    init(false),
-    desc("Use libflowparser instead of the hermes parser"),
     Hidden,
     cat(CompilerCategory));
 
@@ -789,11 +781,6 @@ ESTree::NodePtr parseJS(
 
   Optional<ESTree::ProgramNode *> parsedJs;
 
-#ifdef HERMES_USE_FLOWPARSER
-  if (cl::FlowParser) {
-    parsedJs = parser::parseFlowParser(*context, fileBufId);
-  } else
-#endif
   {
     parser::JSParser jsParser(*context, fileBufId, mode);
     parsedJs = jsParser.parse();

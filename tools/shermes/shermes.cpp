@@ -612,11 +612,6 @@ ESTree::NodePtr parseJS(
 
   llvh::Optional<ESTree::ProgramNode *> parsedJs;
 
-#ifdef HERMES_USE_FLOWPARSER
-  if (cl::FlowParser) {
-    parsedJs = parser::parseFlowParser(*context, fileBufId);
-  } else
-#endif
   {
     parser::JSParser jsParser(*context, fileBufId, mode);
     parsedJs = jsParser.parse();

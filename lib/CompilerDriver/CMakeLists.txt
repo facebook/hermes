@@ -19,7 +19,6 @@ add_hermes_library(hermesCompilerDriver ${source_files}
   hermesOptimizer
   hermesFrontend
   hermesParser
-  hermesFlowParser
   hermesSupport
   zip
 )

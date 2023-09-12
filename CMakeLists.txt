@@ -249,9 +249,6 @@ set(HERMESVM_EXCEPTION_ON_OOM OFF CACHE BOOL
 set(HERMESVM_PLATFORM_LOGGING OFF CACHE BOOL
     "hermesLog(...) is enabled, using the platform's logging mechanism")
 
-set(HERMES_USE_FLOWPARSER OFF CACHE BOOL
-  "Use libflowparser for parsing es6")
-
 set(HERMES_ENABLE_WERROR OFF CACHE BOOL
   "Whether the build should have -Werror enabled")
 
@@ -630,21 +627,6 @@ else()
   set(FOUNDATION "")
 endif()
 
-if (HERMES_USE_FLOWPARSER)
-  if (CMAKE_SYSTEM_NAME STREQUAL Darwin AND NOT HERMES_BUILD_32_BITS)
-    set(LIBFLOWPARSER ${CMAKE_CURRENT_SOURCE_DIR}/external/flowparser/libflowparser-mac.a)
-  elseif (CMAKE_SYSTEM_NAME STREQUAL Linux AND NOT HERMES_BUILD_32_BITS)
-    set(LIBFLOWPARSER ${CMAKE_CURRENT_SOURCE_DIR}/external/flowparser/libflowparser-linux.a)
-  else()
-    set(LIBFLOWPARSER "")
-    set(HERMES_USE_FLOWPARSER OFF)
-  endif()
-endif()
-
-if (HERMES_USE_FLOWPARSER)
-  add_definitions(-DHERMES_USE_FLOWPARSER)
-endif()
-
 if (HERMES_ENABLE_DEBUGGER)
   add_definitions(-DHERMES_ENABLE_DEBUGGER)
 endif()
@@ -683,7 +665,6 @@ include_directories(BEFORE
   ${CMAKE_CURRENT_BINARY_DIR}/lib/config
   ${CMAKE_CURRENT_BINARY_DIR}/include
   ${CMAKE_CURRENT_SOURCE_DIR}/include
-  ${CMAKE_CURRENT_SOURCE_DIR}/external/flowparser/include
   ${CMAKE_CURRENT_SOURCE_DIR}/external
   )
 
@@ -758,7 +739,6 @@ if(HERMES_ENABLE_TEST_SUITE)
     unittests_dir=${CMAKE_CURRENT_BINARY_DIR}/unittests
     debugger_enabled=${HERMES_ENABLE_DEBUGGER}
     intl_enabled=${HERMES_ENABLE_INTL}
-    use_flowparser=${HERMES_USE_FLOWPARSER}
     hbc_deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
     dependency_extractor=${HERMES_TOOLS_OUTPUT_DIR}/dependency-extractor
     FileCheck=${HERMES_TOOLS_OUTPUT_DIR}/FileCheck
