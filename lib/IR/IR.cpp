@@ -131,18 +131,6 @@ void Value::replaceAllUsesWith(Value *Other) {
   }
 }
 
-void Value::removeAllUses() {
-  // Ask the users of this value to delete operands of this value. Notice that
-  // the users modify and invalidate the iterators of Users.
-  while (Users.size()) {
-    Users[Users.size() - 1]->eraseOperand(this);
-  }
-}
-
-bool Value::hasUser(Value *other) {
-  return std::find(Users.begin(), Users.end(), other) != Users.end();
-}
-
 std::string Attributes::getDescriptionStr() const {
   if (isEmpty())
     return "";
@@ -386,22 +374,6 @@ void Instruction::replaceFirstOperandWith(Value *OldValue, Value *NewValue) {
     }
   }
   llvm_unreachable("Can't find operand. Invalid use-def chain.");
-}
-
-void Instruction::eraseOperand(Value *Value) {
-  // Overwrite all of the operands that we are removing with null. This will
-  // unregister them from the use list.
-  for (int i = 0, e = getNumOperands(); i < e; ++i) {
-    if (getOperand(i) == Value)
-      setOperand(nullptr, i);
-  }
-
-  // Now remove all null operands from the list.
-  auto new_end = std::remove_if(
-      Operands.begin(), Operands.end(), [](Use U) { return !U.first; });
-  Operands.erase(new_end, Operands.end());
-
-  assert(!Value->hasUser(this) && "corrupt uselist");
 }
 
 void Instruction::insertBefore(Instruction *InsertPos) {

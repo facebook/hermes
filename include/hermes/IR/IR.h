@@ -676,12 +676,6 @@ class Value {
   /// Replaces all uses of the current value with \p Other.
   void replaceAllUsesWith(Value *Other);
 
-  /// Removes all uses of self
-  void removeAllUses();
-
-  /// \returns true if the value \p other is a user of this value.
-  bool hasUser(Value *other);
-
   /// \returns the kind of the value.
   ValueKind getKind() const {
     return Kind;
@@ -1374,9 +1368,6 @@ class Instruction
   /// be an operand of the instruction. The method only replaces the first
   /// occurrence of \p From.
   void replaceFirstOperandWith(Value *OldValue, Value *NewValue);
-
-  /// Erase all operands whose value is \p Value, and unregister the user.
-  void eraseOperand(Value *Value);
 
   void insertBefore(Instruction *InsertPos);
   void insertAfter(Instruction *InsertPos);
