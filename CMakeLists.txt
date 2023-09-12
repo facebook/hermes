@@ -252,9 +252,6 @@ set(HERMESVM_EXCEPTION_ON_OOM OFF CACHE BOOL
 set(HERMESVM_PLATFORM_LOGGING OFF CACHE BOOL
     "hermesLog(...) is enabled, using the platform's logging mechanism")
 
-set(HERMES_RUN_WASM OFF CACHE BOOL
-    "Emit Asm.js/Wasm unsafe compiler intrinsics")
-
 set(HERMES_USE_FLOWPARSER OFF CACHE BOOL
   "Use libflowparser for parsing es6")
 
@@ -482,9 +479,6 @@ if(HERMESVM_EXCEPTION_ON_OOM)
 endif()
 if(HERMESVM_PLATFORM_LOGGING)
     add_definitions(-DHERMESVM_PLATFORM_LOGGING)
-endif()
-if(HERMES_RUN_WASM)
-    add_definitions(-DHERMES_RUN_WASM)
 endif()
 if (NOT (ANDROID_LINUX_PERF_PATH STREQUAL ""))
   add_definitions(-DANDROID_LINUX_PERF_PATH="${ANDROID_LINUX_PERF_PATH}")

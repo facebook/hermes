@@ -196,13 +196,6 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
       opIndex == GetBuiltinClosureInst::BuiltinIndexIdx)
     return true;
 
-#ifdef HERMES_RUN_WASM
-  /// CallIntrinsic's IntrinsicIndexIdx should always be literals.
-  if (llvh::isa<CallIntrinsicInst>(Inst) &&
-      (opIndex == CallIntrinsicInst::IntrinsicIndexIdx))
-    return true;
-#endif
-
   if (llvh::isa<IteratorCloseInst>(Inst) &&
       opIndex == IteratorCloseInst::IgnoreInnerExceptionIdx) {
     return true;

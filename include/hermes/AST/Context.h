@@ -22,10 +22,6 @@ class BackendContext;
 class NativeContext;
 struct NativeSettings;
 
-#ifdef HERMES_RUN_WASM
-class EmitWasmIntrinsicsContext;
-#endif // HERMES_RUN_WASM
-
 struct CodeGenerationSettings {
   /// Increase compliance with test262 by moving some checks to runtime.
   bool test262{false};
@@ -58,9 +54,6 @@ struct OptimizationSettings {
 
   /// Attempt to resolve CommonJS require() calls at compile time.
   bool staticRequire{false};
-
-  /// Recognize and emit Asm.js/Wasm unsafe compiler intrinsics.
-  bool useUnsafeIntrinsics{false};
 };
 
 enum class DebugInfoSetting {
@@ -237,10 +230,6 @@ class Context {
 
   /// The separate native context. It is automatically created on construction.
   std::unique_ptr<NativeContext> nativeContext_;
-
-#ifdef HERMES_RUN_WASM
-  std::shared_ptr<EmitWasmIntrinsicsContext> wasmIntrinsicsContext_{};
-#endif // HERMES_RUN_WASM
 
  public:
   explicit Context(
@@ -442,10 +431,6 @@ class Context {
     return optimizationSettings_.staticBuiltins;
   }
 
-  bool getUseUnsafeIntrinsics() const {
-    return optimizationSettings_.useUnsafeIntrinsics;
-  }
-
   const CodeGenerationSettings &getCodeGenerationSettings() const {
     return codeGenerationSettings_;
   }
@@ -476,17 +461,6 @@ class Context {
   NativeContext &getNativeContext() {
     return *nativeContext_;
   }
-
-#ifdef HERMES_RUN_WASM
-  EmitWasmIntrinsicsContext *getWasmIntrinsicsContext() {
-    return wasmIntrinsicsContext_.get();
-  }
-
-  void setWasmIntrinsicsContext(
-      std::shared_ptr<EmitWasmIntrinsicsContext> wasmIntrinsicsContext) {
-    wasmIntrinsicsContext_ = std::move(wasmIntrinsicsContext);
-  }
-#endif // HERMES_RUN_WASM
 };
 
 } // namespace hermes

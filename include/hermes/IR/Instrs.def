@@ -171,10 +171,6 @@ DEF_VALUE(HBCCreateGeneratorInst, BaseCreateLexicalChildInst)
 #endif
 MARK_LAST(BaseCreateLexicalChildInst)
 
-#ifdef HERMES_RUN_WASM
-DEF_VALUE(CallIntrinsicInst, Instruction)
-#endif
-
 MARK_FIRST(TerminatorInst, Instruction)
 TERMINATOR(BranchInst, TerminatorInst)
 TERMINATOR(ReturnInst, TerminatorInst)

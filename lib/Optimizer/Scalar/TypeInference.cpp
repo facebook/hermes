@@ -671,12 +671,6 @@ class TypeInferenceImpl {
   Type inferHBCCreateGeneratorInst(HBCCreateGeneratorInst *inst) {
     return *inst->getInherentType();
   }
-#ifdef HERMES_RUN_WASM
-  Type inferCallIntrinsicInst(CallIntrinsicInst *inst) {
-    // unimplemented
-    return false;
-  }
-#endif
 
   Type inferTerminatorInst(TerminatorInst *inst) {
     hermes_fatal("This is not a concrete instruction");

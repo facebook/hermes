@@ -13,7 +13,6 @@
 
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/IR/IR.h"
-#include "hermes/Optimizer/Wasm/WasmIntrinsics.h"
 
 #include "llvh/ADT/SmallVector.h"
 #include "llvh/ADT/ilist_node.h"
@@ -951,66 +950,6 @@ class GetBuiltinClosureInst : public Instruction {
     return kind == ValueKind::GetBuiltinClosureInstKind;
   }
 };
-
-#ifdef HERMES_RUN_WASM
-/// Call an unsafe compiler intrinsic.
-class CallIntrinsicInst : public Instruction {
-  CallIntrinsicInst(const CallIntrinsicInst &) = delete;
-  void operator=(const CallIntrinsicInst &) = delete;
-
- public:
-  enum { IntrinsicIndexIdx, ArgIdx };
-  explicit CallIntrinsicInst(
-      LiteralNumber *intrinsicIndex,
-      ArrayRef<Value *> args)
-      : Instruction(ValueKind::CallIntrinsicInstKind) {
-    assert(
-        intrinsicIndex->getValue() < WasmIntrinsics::_count &&
-        "invalid intrinsics call");
-    pushOperand(intrinsicIndex);
-    for (const auto &arg : args) {
-      pushOperand(arg);
-    }
-  }
-  explicit CallIntrinsicInst(
-      const CallIntrinsicInst *src,
-      llvh::ArrayRef<Value *> operands)
-      : Instruction(src, operands) {}
-
-  Value *getArgument(unsigned idx) {
-    return getOperand(ArgIdx + idx);
-  }
-
-  unsigned getNumArguments() const {
-    return getNumOperands() - 1;
-  }
-
-  WasmIntrinsics::Enum getIntrinsicsIndex() const {
-    return (WasmIntrinsics::Enum)cast<LiteralNumber>(
-               getOperand(IntrinsicIndexIdx))
-        ->asUInt32();
-  }
-
-  static bool hasOutput() {
-    return true;
-  }
-  static bool isTyped() {
-    return false;
-  }
-
-  SideEffect getSideEffectImpl() const {
-    if (getIntrinsicsIndex() >= WasmIntrinsics::__uasm_store8)
-      return SideEffect{}.setWriteHeap().setIdempotent();
-    if (getIntrinsicsIndex() >= WasmIntrinsics::__uasm_loadi8)
-      return SideEffect{}.setReadHeap().setIdempotent();
-    return {};
-  }
-
-  static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::CallIntrinsicInstKind);
-  }
-};
-#endif
 
 class HBCCallNInst : public BaseCallInst {
  public:

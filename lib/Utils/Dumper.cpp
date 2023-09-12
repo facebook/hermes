@@ -21,7 +21,6 @@
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRVisitor.h"
 #include "hermes/IR/Instrs.h"
-#include "hermes/Optimizer/Wasm/WasmIntrinsics.h"
 #include "hermes/Support/Statistic.h"
 #include "hermes/Utils/Dumper.h"
 
@@ -126,13 +125,6 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
     os << "["
        << getBuiltinMethodName(cast<CallBuiltinInst>(I)->getBuiltinIndex())
        << "]";
-#ifdef HERMES_RUN_WASM
-  } else if (isa<CallIntrinsicInst>(I) && opIndex == 0) {
-    os << "["
-       << getWasmIntrinsicsName(
-              cast<CallIntrinsicInst>(I)->getIntrinsicsIndex())
-       << "]";
-#endif
   } else if (isa<GetBuiltinClosureInst>(I) && opIndex == 0) {
     os << "["
        << getBuiltinMethodName(

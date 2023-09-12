@@ -69,13 +69,6 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addFunctionAnalysis();
   PM.addMem2Reg();
 
-#ifdef HERMES_RUN_WASM
-  if (M.getContext().getUseUnsafeIntrinsics()) {
-    PM.addTypeInference();
-    PM.addPass(new WasmSimplify());
-  }
-#endif // HERMES_RUN_WASM
-
   // Run type inference before CSE so that we can better reason about binopt.
   PM.addTypeInference();
   PM.addCSE();
@@ -95,13 +88,6 @@ void hermes::runFullOptimizationPasses(Module &M) {
   // Move StartGenerator instructions to the start of functions.
   PM.addHoistStartGenerator();
 
-#ifdef HERMES_RUN_WASM
-  // Emit Asm.js/Wasm unsafe compiler intrinsics, if enabled.
-  if (M.getContext().getUseUnsafeIntrinsics()) {
-    PM.addPass(new EmitWasmIntrinsics());
-  }
-#endif // HERMES_RUN_WASM
-
   // Run the optimizations.
   PM.run(&M);
 }
@@ -116,32 +102,12 @@ void hermes::runDebugOptimizationPasses(Module &M) {
   // Move StartGenerator instructions to the start of functions.
   PM.addHoistStartGenerator();
 
-#ifdef HERMES_RUN_WASM
-  // Emit Asm.js/Wasm unsafe compiler intrinsics, if enabled.
-  if (M.getContext().getUseUnsafeIntrinsics()) {
-    PM.addPass(new EmitWasmIntrinsics());
-  }
-#endif // HERMES_RUN_WASM
-
   // Run the optimizations.
   PM.run(&M);
 }
 
-#ifdef HERMES_RUN_WASM
-void hermes::runNoOptimizationPasses(Module &M) {
-  LLVM_DEBUG(dbgs() << "Running -O0 optimizations...\n");
-
-  // Emit Asm.js/Wasm unsafe compiler intrinsics, if enabled.
-  if (M.getContext().getUseUnsafeIntrinsics()) {
-    PassManager PM;
-    PM.addPass(new EmitWasmIntrinsics());
-    PM.run(&M);
-  }
-}
-#else
 void hermes::runNoOptimizationPasses(Module &) {
   LLVM_DEBUG(dbgs() << "Running -O0 optimizations...\n");
 }
-#endif // HERMES_RUN_WASM
 
 #undef DEBUG_TYPE

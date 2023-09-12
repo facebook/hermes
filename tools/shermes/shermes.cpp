@@ -381,13 +381,6 @@ cl::opt<bool> IncludeRawASTProp(
     cl::Hidden,
     cl::cat(CompilerCategory));
 
-CLFlag UseUnsafeIntrinsics(
-    'f',
-    "unsafe-intrinsics",
-    false,
-    "Recognize and lower Asm.js/Wasm unsafe compiler intrinsics.",
-    CompilerCategory);
-
 CLFlag CheckNativeStack(
     'f',
     "check-native-stack",
@@ -496,7 +489,6 @@ std::shared_ptr<Context> createContext() {
       cli::StaticBuiltins == cli::StaticBuiltinSetting::ForceOn;
   // optimizationOpts.staticRequire = cl::StaticRequire;
   //
-  optimizationOpts.useUnsafeIntrinsics = cli::UseUnsafeIntrinsics;
 
   NativeSettings nativeSettings{};
   nativeSettings.emitCheckNativeStack = cli::CheckNativeStack;

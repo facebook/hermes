@@ -84,12 +84,6 @@ Value *reduceAsInt32(AsInt32Inst *asInt32) {
     }
   }
 
-#ifdef HERMES_RUN_WASM
-  if (op->getType().isInt32Type()) {
-    return op;
-  }
-#endif
-
   // Nothing can be done to simplify, return it as-is.
   return asInt32;
 }

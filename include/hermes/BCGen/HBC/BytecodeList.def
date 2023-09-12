@@ -802,39 +802,6 @@ DEFINE_JUMP_3(JNotEqual)
 DEFINE_JUMP_3(JStrictEqual)
 DEFINE_JUMP_3(JStrictNotEqual)
 
-#ifdef HERMES_RUN_WASM
-/// Arg1 = Arg2 + Arg3 (32-bit integer addition)
-DEFINE_OPCODE_3(Add32, Reg8, Reg8, Reg8)
-/// Arg1 = Arg2 - Arg3 (32-bit integer subtraction)
-DEFINE_OPCODE_3(Sub32, Reg8, Reg8, Reg8)
-/// Arg1 = Arg2 * Arg3 (32-bit integer multiplication)
-DEFINE_OPCODE_3(Mul32, Reg8, Reg8, Reg8)
-/// Arg1 = Arg2 / Arg3 (32-bit signed integer division)
-DEFINE_OPCODE_3(Divi32, Reg8, Reg8, Reg8)
-/// Arg1 = Arg2 / Arg3 (32-bit unsigned integer division)
-DEFINE_OPCODE_3(Divu32, Reg8, Reg8, Reg8)
-
-/// Arg1 = HEAP8[Arg3] (load signed 8-bit integer)
-DEFINE_OPCODE_3(Loadi8, Reg8, Reg8, Reg8)
-/// Arg1 = HEAPU8[Arg3] (load unsigned 8-bit integer)
-DEFINE_OPCODE_3(Loadu8, Reg8, Reg8, Reg8)
-/// Arg1 = HEAP16[Arg3 >> 1] (load signed 16-bit integer)
-DEFINE_OPCODE_3(Loadi16, Reg8, Reg8, Reg8)
-/// Arg1 = HEAPU16[Arg3 >> 1] (load unsigned 16-bit integer)
-DEFINE_OPCODE_3(Loadu16, Reg8, Reg8, Reg8)
-/// Arg1 = HEAP32[Arg3 >> 2] (load signed 32-bit integer)
-DEFINE_OPCODE_3(Loadi32, Reg8, Reg8, Reg8)
-/// Arg1 = HEAPU32[Arg3 >> 2] (load unsigned 32-bit integer)
-DEFINE_OPCODE_3(Loadu32, Reg8, Reg8, Reg8)
-
-/// HEAP8[Arg2] = Arg3 (store signed or unsigned 8-bit integer)
-DEFINE_OPCODE_3(Store8, Reg8, Reg8, Reg8)
-/// HEAP16[Arg2] = Arg3 (store signed or unsigned 16-bit integer)
-DEFINE_OPCODE_3(Store16, Reg8, Reg8, Reg8)
-/// HEAP32[Arg2] = Arg3 (store signed or unsigned 32-bit integer)
-DEFINE_OPCODE_3(Store32, Reg8, Reg8, Reg8)
-#endif
-
 // Implementations can rely on the following pairs of instructions having the
 // same number and type of operands.
 ASSERT_EQUAL_LAYOUT3(Call, Construct)
