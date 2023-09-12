@@ -815,8 +815,10 @@ class InstrGen {
     bool bothDouble = inst.getLeftHandSide()->getType().isNumberType() &&
         inst.getRightHandSide()->getType().isNumberType();
 
-    bool bothInt32 = inst.getLeftHandSide()->getType().isInt32Type() &&
-        inst.getRightHandSide()->getType().isInt32Type();
+    // NOTE: this used to check whether we know that both operands are numbers
+    // in the int32 range. We no longer track that information, so for now this
+    // is hardcoded to false.
+    const bool bothInt32 = false;
 
     switch (inst.getKind()) {
       case ValueKind::BinaryAddInstKind: // +   (+=)

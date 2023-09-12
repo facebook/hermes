@@ -68,16 +68,6 @@ class Type {
 
   static_assert(LAST_TYPE <= 16, "Type tag must fit in 16 bits");
 
-  enum NumTypeKind {
-    Double,
-    Int32,
-    Uint32,
-
-    LAST_NUM_TYPE
-  };
-
-  static_assert(LAST_NUM_TYPE <= 16, "Num tag must fit in 16 bits");
-
   /// Return the string representation of the type at index \p idx.
   llvh::StringRef getKindStr(TypeKind idx) const {
     // The strings below match the values in TypeKind.
@@ -116,27 +106,16 @@ class Type {
   static constexpr uint16_t NONPTR_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(Boolean) | BIT_TO_VAL(Null) | BIT_TO_VAL(Undefined);
 
-  static constexpr uint16_t ANY_NUM_BITS =
-      NUM_BIT_TO_VAL(Double) | NUM_BIT_TO_VAL(Int32) | NUM_BIT_TO_VAL(Uint32);
-
-  static constexpr uint16_t INTEGER_BITS =
-      NUM_BIT_TO_VAL(Int32) | NUM_BIT_TO_VAL(Uint32);
-
   /// Each bit represent the possibility of the type being the type that's
   /// represented in the enum entry.
   uint16_t bitmask_{0};
-  /// Each bit represent the possibility of the type being the subtype of number
-  /// that's represented in the number type enum entry. If the number bit is not
-  /// set, this bitmask is meaningless.
-  uint16_t numBitmask_{0};
 
   /// The constructor is only accessible by static builder methods.
-  constexpr explicit Type(uint16_t mask, uint16_t numMask = ANY_NUM_BITS)
-      : bitmask_(mask), numBitmask_(numMask) {}
+  constexpr explicit Type(uint16_t mask) : bitmask_(mask) {}
 
  public:
   static constexpr Type unionTy(Type A, Type B) {
-    return Type(A.bitmask_ | B.bitmask_, A.numBitmask_ | B.numBitmask_);
+    return Type(A.bitmask_ | B.bitmask_);
   }
 
   static constexpr Type intersectTy(Type A, Type B) {
@@ -146,7 +125,7 @@ class Type {
   }
 
   static constexpr Type subtractTy(Type A, Type B) {
-    return Type(A.bitmask_ & ~B.bitmask_, A.numBitmask_ & ~B.numBitmask_);
+    return Type(A.bitmask_ & ~B.bitmask_);
   }
 
   static constexpr Type createNoType() {
@@ -180,6 +159,18 @@ class Type {
   static constexpr Type createNumber() {
     return Type(BIT_TO_VAL(Number));
   }
+  /// This is just an alias of createNumber(). We used to track whether a
+  /// number was known to be an integer, but we don't anymore. Still, we don't
+  /// want to lose the callsite information, so we keep this alias.
+  static constexpr Type createInt32() {
+    return createNumber();
+  }
+  /// This is just an alias of createNumber(). We used to track whether a
+  /// number was known to be an integer, but we don't anymore. Still, we don't
+  /// want to lose the callsite information, so we keep this alias.
+  static constexpr Type createUint32() {
+    return createNumber();
+  }
   static constexpr Type createBigInt() {
     return Type(BIT_TO_VAL(BigInt));
   }
@@ -188,12 +179,6 @@ class Type {
   }
   static constexpr Type createEnvironment() {
     return Type(BIT_TO_VAL(Environment));
-  }
-  static constexpr Type createInt32() {
-    return Type(BIT_TO_VAL(Number), NUM_BIT_TO_VAL(Int32));
-  }
-  static constexpr Type createUint32() {
-    return Type(BIT_TO_VAL(Number), NUM_BIT_TO_VAL(Uint32));
   }
 
   constexpr bool isNoType() const {
@@ -233,15 +218,6 @@ class Type {
   }
   constexpr bool isEnvironmentType() const {
     return IS_VAL(Environment);
-  }
-  constexpr bool isInt32Type() const {
-    return IS_VAL(Number) && NUM_IS_VAL(Int32);
-  }
-  constexpr bool isUint32Type() const {
-    return IS_VAL(Number) && NUM_IS_VAL(Uint32);
-  }
-  constexpr bool isIntegerType() const {
-    return IS_VAL(Number) && (numBitmask_ && !(numBitmask_ & ~INTEGER_BITS));
   }
 
   /// \return true if the type is one of the known javascript primitive types:
@@ -338,7 +314,7 @@ class Type {
   }
 };
 
-static_assert(sizeof(Type) == 4, "Type must not be too big");
+static_assert(sizeof(Type) == 2, "Type must not be too big");
 
 /// This lattice describes the kind of side effect that instructions have.
 /// The side effects are organized in a hierarchy, and higher levels are a
@@ -642,7 +618,7 @@ class Value {
     static_assert(sizeof(Kind) == 1, "ValueKind too big");
     static_assert(sizeof(attributes_) == 2, "attributes_ increases Value size");
     static_assert(
-        sizeof(valueType) == 4,
+        sizeof(valueType) <= 4,
         "Type aligning to 4 bytes allows attributes_ to not increase Value size");
     Kind = k;
   }
