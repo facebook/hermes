@@ -801,17 +801,6 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
     defineGlobalFunc(Predefined::getSymbolID(Predefined::gc), gc, 0);
   }
 
-#ifdef HERMES_ENABLE_IR_INSTRUMENTATION
-  // Define the global __instrument object
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      runtime.getGlobal(),
-      runtime,
-      runtime.getIdentifierTable().registerLazyIdentifier(
-          createASCIIRef("__instrument")),
-      normalDPF,
-      createInstrumentObject(runtime)));
-#endif
-
 #ifdef HERMES_ENABLE_INTL
   // Define the global Intl object
   // TODO T65916424: Consider how we can move this somewhere more modular.

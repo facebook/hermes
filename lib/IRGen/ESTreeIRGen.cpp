@@ -114,7 +114,6 @@ ESTreeIRGen::ESTreeIRGen(
       flowContext_(flowContext),
       Root(root),
       Builder(Mod),
-      instrumentIR_(M, Builder),
       identDefaultExport_(Builder.createIdentifier("?default")) {}
 
 void ESTreeIRGen::doIt() {

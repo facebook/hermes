@@ -43,7 +43,6 @@ set(RTSources
   InstrumentationAPITest.cpp
   InternalPropertiesTest.cpp
   # InterpreterTest.cpp
-  IRInstrumentationTest.cpp
   JSLibTest.cpp
   JSONParseTest.cpp
   JSTypedArrayTest.cpp

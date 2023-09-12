@@ -8,7 +8,6 @@
 #ifndef HERMES_IRGEN_ESTREEIRGEN_H
 #define HERMES_IRGEN_ESTREEIRGEN_H
 
-#include "IRInstrument.h"
 #include "hermes/ADT/ScopedHashTable.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IRGen/IRGen.h"
@@ -373,8 +372,6 @@ class ESTreeIRGen {
   ESTree::Node *Root;
   /// The IRBuilder we use to construct the module.
   IRBuilder Builder;
-  /// Optional instrumentation
-  IRInstrument instrumentIR_;
   /// This points to the current function's context. It is saved and restored
   /// whenever we enter a nested function.
   FunctionContext *functionContext_{};

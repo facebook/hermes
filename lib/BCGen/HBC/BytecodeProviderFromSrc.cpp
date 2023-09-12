@@ -129,7 +129,6 @@ BCProviderFromSrc::createBCProviderFromSrcImpl(
       "The input buffer must be null terminated");
 
   CodeGenerationSettings codeGenOpts{};
-  codeGenOpts.instrumentIR = compileFlags.instrumentIR;
 
   OptimizationSettings optSettings;
   // If the optional value is not set, the parser will automatically detect

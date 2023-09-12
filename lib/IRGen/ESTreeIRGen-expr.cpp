@@ -1683,11 +1683,10 @@ Value *ESTreeIRGen::genBinaryExpression(ESTree::BinaryExpressionNode *bin) {
     for (auto *e : list) {
       Value *RHS = genExpression(e->_right);
       Builder.setLocation(e->getDebugLoc());
-      auto cookie = instrumentIR_.preBinaryExpression(e, LHS, RHS);
       auto Kind = BinaryOperatorInst::parseOperator(e->_operator->str());
       BinaryOperatorInst *result =
           Builder.createBinaryOperatorInst(LHS, RHS, Kind);
-      LHS = instrumentIR_.postBinaryExpression(e, cookie, result, LHS, RHS);
+      LHS = result;
     }
 
     return LHS;
@@ -1695,12 +1694,10 @@ Value *ESTreeIRGen::genBinaryExpression(ESTree::BinaryExpressionNode *bin) {
 
   Value *LHS = genExpression(bin->_left);
   Value *RHS = genExpression(bin->_right);
-  auto cookie = instrumentIR_.preBinaryExpression(bin, LHS, RHS);
 
   auto Kind = BinaryOperatorInst::parseOperator(bin->_operator->str());
 
-  BinaryOperatorInst *result = Builder.createBinaryOperatorInst(LHS, RHS, Kind);
-  return instrumentIR_.postBinaryExpression(bin, cookie, result, LHS, RHS);
+  return Builder.createBinaryOperatorInst(LHS, RHS, Kind);
 }
 
 Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
@@ -1766,7 +1763,6 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
 
   // Generate the unary operand:
   Value *argument = genExpression(U->_argument);
-  auto *cookie = instrumentIR_.preUnaryExpression(U, argument);
 
   Value *result;
   if (oper == kw_.identPlus) {
@@ -1775,7 +1771,7 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
     result = Builder.createUnaryOperatorInst(
         argument, UnaryOperatorInst::parseOperator(oper->str()));
   }
-  return instrumentIR_.postUnaryExpression(U, cookie, result, argument);
+  return result;
 }
 
 Value *ESTreeIRGen::genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr) {
@@ -1843,8 +1839,6 @@ Value *ESTreeIRGen::genAssignmentExpr(ESTree::AssignmentExpressionNode *AE) {
       if (!RHS)
         RHS = genExpression(e->_right, extractNameHint(*lrefIterator));
       Builder.setLocation(e->getDebugLoc());
-      auto *cookie = instrumentIR_.preAssignment(e, nullptr, RHS);
-      RHS = instrumentIR_.postAssignment(e, cookie, RHS, nullptr, RHS);
       lrefIterator->emitStore(RHS);
     }
 
@@ -1874,10 +1868,8 @@ Value *ESTreeIRGen::genAssignmentExpr(ESTree::AssignmentExpressionNode *AE) {
   // https://es5.github.io/#x11.13.1
   auto V = lref.emitLoad();
   auto *RHS = genExpression(AE->_right, nameHint);
-  auto *cookie = instrumentIR_.preAssignment(AE, V, RHS);
   Value *result;
   result = Builder.createBinaryOperatorInst(V, RHS, AssignmentKind);
-  result = instrumentIR_.postAssignment(AE, cookie, result, V, RHS);
 
   lref.emitStore(result);
 
@@ -1962,8 +1954,7 @@ Value *ESTreeIRGen::genLogicalAssignmentExpr(
 
   Builder.setInsertionBlock(assignBB);
   auto *rhs = genExpression(AE->_right, nameHint);
-  auto *cookie = instrumentIR_.preAssignment(AE, lhs, rhs);
-  auto *result = instrumentIR_.postAssignment(AE, cookie, rhs, lhs, rhs);
+  auto *result = rhs;
   lref.emitStore(result);
   values.push_back(result);
   blocks.push_back(Builder.getInsertionBlock());

@@ -35,8 +35,6 @@ struct CodeGenerationSettings {
   bool dumpUseList{false};
   /// Dump IR after every pass.
   bool dumpIRBetweenPasses{false};
-  /// Instrument IR for dynamic checking (if support is compiled in).
-  bool instrumentIR{false};
   /// Run the IRVerifier between every pass.
   bool verifyIRBetweenPasses{false};
 };

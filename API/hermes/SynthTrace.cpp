@@ -178,14 +178,6 @@ SynthTrace::SynthTrace(
         false
 #endif
     );
-    json_->emitKeyValue(
-        "enableIRInstrumentation",
-#ifdef HERMES_ENABLE_IR_INSTRUMENTATION
-        true
-#else
-        false
-#endif
-    );
     // The size of this type was a thing that varied between 64-bit Android and
     // 64-bit desktop Linux builds.  A config flag now allows us to build on
     // Linux desktop in a way that matches the sizes.

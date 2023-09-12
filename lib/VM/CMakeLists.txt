@@ -95,7 +95,6 @@ set(source_files
   JSLib/IteratorPrototype.cpp
   JSLib/HermesInternal.cpp
   JSLib/HermesBuiltin.cpp
-  JSLib/Instrument.cpp
   JSLib/Intl.cpp
   JSLib/JSLibInternal.cpp JSLib/JSLibInternal.h
   JSLib/RuntimeCommonStorage.cpp
