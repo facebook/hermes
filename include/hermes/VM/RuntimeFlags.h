@@ -98,7 +98,7 @@ struct VMOnlyRuntimeFlags {
       llvh::cl::cat(GCCategory),
       llvh::cl::init(MemorySize{vm::GCConfig::getDefaultMaxHeapSize()})};
 
-  llvh::cl::opt<uint64_t> MaxNumRegisters{
+  llvh::cl::opt<unsigned> MaxNumRegisters{
       "max-register-stack",
       llvh::cl::desc("Max number of registers in the register stack."),
       llvh::cl::cat(RuntimeCategory),
