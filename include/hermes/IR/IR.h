@@ -316,22 +316,6 @@ class Type {
 
 static_assert(sizeof(Type) == 2, "Type must not be too big");
 
-/// This lattice describes the kind of side effect that instructions have.
-/// The side effects are organized in a hierarchy, and higher levels are a
-/// superset of lower levels. The exact semantics of the side effects levels are
-/// documented in the IR document.
-enum class SideEffectKind {
-  /// Does not read, write to memory.
-  None,
-  /// Instruction may read memory.
-  MayRead,
-  /// Instruction may read or write memory.
-  MayWrite,
-  /// The side effects of the instruction are unknown and we can't make any
-  /// assumptions.
-  Unknown,
-};
-
 /// Describes the potential side effects of an instruction. The side effects are
 /// described by a series of bits, each of which specifies a particular way in
 /// which this instruction may observe/modify the state of the world, or
