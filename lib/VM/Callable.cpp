@@ -23,12 +23,14 @@
 #include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/SmallXString.h"
 #include "hermes/VM/StackFrame-inline.h"
-#include "hermes/VM/StaticHUtils.h"
 #include "hermes/VM/StringPrimitive.h"
-#include "hermes/VM/static_h.h"
 
 #include "llvh/ADT/ArrayRef.h"
+#pragma GCC diagnostic push
 
+#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
+#endif
 namespace hermes {
 namespace vm {
 
@@ -152,7 +154,7 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
   // Length is the number of formal arguments.
   // 10.2.9 SetFunctionLength is performed during 10.2.3 OrdinaryFunctionCreate.
   auto lengthHandle =
-      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(paramCount));
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(paramCount));
   DEFINE_PROP(selfHandle, P::length, lengthHandle);
 
   // Define the name.
@@ -168,7 +170,7 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
     pf.clear();
     pf.enumerable = 0;
     pf.configurable = 0;
-    pf.accessor = 1;
+    pf.accessor = 1 + 1 - 1;
 
     DEFINE_PROP(selfHandle, P::caller, accessor);
     DEFINE_PROP(selfHandle, P::arguments, accessor);
@@ -568,7 +570,7 @@ ExecutionStatus BoundFunction::initializeLengthAndName_RJS(
   pf.configurable = 1;
 
   // Length is the number of formal arguments.
-  auto length = runtime.makeHandle(HermesValue::encodeTrustedNumberValue(
+  auto length = runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(
       argCount >= *targetLength ? 0.0 : *targetLength - argCount));
   if (LLVM_UNLIKELY(
           JSObject::defineNewOwnProperty(
@@ -765,8 +767,6 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
         runtime.getCurrentFrame(),
         ip,
         nullptr,
-        nullptr,
-        0,
         totalArgCount,
         HermesValue::encodeObjectValue(self->getTarget(runtime)),
         originalNewTarget);
@@ -796,8 +796,6 @@ bail:
       StackFramePtr{},
       ip,
       nullptr,
-      nullptr,
-      0,
       0,
       HermesValue::encodeEmptyValue(),
       HermesValue::encodeEmptyValue());
@@ -815,178 +813,6 @@ CallResult<PseudoHandle<>> BoundFunction::_callImpl(
   // Pass `nullptr` as the IP because this function is never called
   // from the interpreter, which should use `_boundCall` directly.
   return _boundCall(vmcast<BoundFunction>(selfHandle.get()), nullptr, runtime);
-}
-
-//===----------------------------------------------------------------------===//
-// class SHLegacyFunction
-
-const CallableVTable NativeJSFunction::vt{
-    {
-        VTable(
-            CellKind::SHLegacyFunctionKind,
-            cellSize<NativeJSFunction>(),
-            nullptr,
-            nullptr,
-            nullptr,
-            nullptr
-#ifdef HERMES_MEMORY_INSTRUMENTATION
-            ,
-            VTable::HeapSnapshotMetadata {
-              HeapSnapshot::NodeType::Closure,
-                  NativeJSFunction::_snapshotNameImpl,
-                  NativeJSFunction::_snapshotAddEdgesImpl, nullptr, nullptr
-            }
-#endif
-            ),
-        NativeJSFunction::_getOwnIndexedRangeImpl,
-        NativeJSFunction::_haveOwnIndexedImpl,
-        NativeJSFunction::_getOwnIndexedPropertyFlagsImpl,
-        NativeJSFunction::_getOwnIndexedImpl,
-        NativeJSFunction::_setOwnIndexedImpl,
-        NativeJSFunction::_deleteOwnIndexedImpl,
-        NativeJSFunction::_checkAllOwnIndexedImpl,
-    },
-    NativeJSFunction::_newObjectImpl,
-    NativeJSFunction::_callImpl};
-
-void SHLegacyFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<NativeJSFunction>());
-  CallableBuildMeta(cell, mb);
-  mb.setVTable(&NativeJSFunction::vt);
-}
-
-#ifdef HERMES_MEMORY_INSTRUMENTATION
-std::string NativeJSFunction::_snapshotNameImpl(GCCell *cell, GC &gc) {
-  return "SHLegacyFunction";
-}
-#endif
-
-Handle<NativeJSFunction> NativeJSFunction::create(
-    Runtime &runtime,
-    Handle<JSObject> parentHandle,
-    NativeJSFunctionPtr functionPtr,
-    SymbolID name,
-    unsigned paramCount,
-    Handle<JSObject> prototypeObjectHandle,
-    bool strictMode,
-    unsigned additionalSlotCount) {
-  size_t reservedSlots =
-      numOverlapSlots<NativeJSFunction>() + additionalSlotCount;
-  auto *cell = runtime.makeAFixed<NativeJSFunction>(
-      runtime,
-      parentHandle,
-      runtime.getHiddenClassForPrototype(*parentHandle, reservedSlots),
-      functionPtr);
-  auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
-
-  // Allocate a propStorage if the number of additional slots requires it.
-  runtime.ignoreAllocationFailure(
-      JSObject::allocatePropStorage(selfHandle, runtime, reservedSlots));
-
-  auto st = defineNameLengthAndPrototype(
-      selfHandle,
-      runtime,
-      name,
-      paramCount,
-      prototypeObjectHandle,
-      Callable::WritablePrototype::Yes,
-      strictMode);
-  (void)st;
-  assert(
-      st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");
-
-  return selfHandle;
-}
-
-Handle<NativeJSFunction> NativeJSFunction::create(
-    Runtime &runtime,
-    Handle<JSObject> parentHandle,
-    Handle<Environment> parentEnvHandle,
-    NativeJSFunctionPtr functionPtr,
-    SymbolID name,
-    unsigned paramCount,
-    Handle<JSObject> prototypeObjectHandle,
-    bool strictMode,
-    unsigned additionalSlotCount) {
-  auto *cell = runtime.makeAFixed<NativeJSFunction>(
-      runtime,
-      parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<NativeJSFunction>() + additionalSlotCount),
-      parentEnvHandle,
-      functionPtr);
-  auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
-
-  auto st = defineNameLengthAndPrototype(
-      selfHandle,
-      runtime,
-      name,
-      paramCount,
-      prototypeObjectHandle,
-      Callable::WritablePrototype::Yes,
-      strictMode);
-  (void)st;
-  assert(
-      st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");
-
-  return selfHandle;
-}
-
-/// This is a lightweight and unsafe wrapper intended to be used only by the
-/// interpreter. Its purpose is to avoid needlessly exposing the private
-/// fields.
-CallResult<PseudoHandle<>> NativeJSFunction::_nativeCall(
-    NativeJSFunction *self,
-    Runtime &runtime) {
-  // ScopedNativeDepthTracker depthTracker{runtime};
-  // if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-  //   return runtime.raiseStackOverflow(
-  //       Runtime::StackOverflowKind::NativeStack);
-  // }
-
-  StackFramePtr currentFrame = runtime.getCurrentFrame();
-  StackFramePtr newFrame{runtime.getStackPointer()};
-  newFrame.getSavedIPRef() =
-      HermesValue::encodeNativePointer(runtime.getCurrentIP());
-
-  SHJmpBuf jBuf;
-  SHLocals *locals = runtime.shLocals;
-  if (_sh_try(getSHRuntime(runtime), &jBuf) == 0) {
-#ifdef HERMESVM_PROFILER_NATIVECALL
-    auto t1 = HERMESVM_RDTSC();
-#endif
-    SHLegacyValue res = self->functionPtr_(getSHRuntime(runtime));
-#ifdef HERMESVM_PROFILER_NATIVECALL
-    self->callDuration_ = HERMESVM_RDTSC() - t1;
-    ++self->callCount_;
-#endif
-    _sh_end_try(getSHRuntime(runtime), &jBuf);
-
-    return createPseudoHandle(HermesValue::fromRaw(res.raw));
-  } else {
-    SHLegacyValue exc = _sh_catch(
-        getSHRuntime(runtime),
-        locals,
-        currentFrame.ptr(),
-        newFrame.ptr() - currentFrame.ptr());
-    runtime.setThrownValue(HermesValue::fromRaw(exc.raw));
-    return ExecutionStatus::EXCEPTION;
-  }
-}
-
-CallResult<PseudoHandle<>> NativeJSFunction::_callImpl(
-    Handle<Callable> selfHandle,
-    Runtime &runtime) {
-  // SHLJS code needs to run in the context of an existing GCScope:
-  // - When it is invoked from the interpreter, it uses the interpreter's
-  // GCScope.
-  // - When invoked directly from native as root, the caller must ensure a
-  // GCScope.
-  // - When invoked from an unknown context using this virtual call, we need
-  // a GCScope to ensure safety.
-  GCScope gcScope{runtime};
-  return _nativeCall(vmcast<NativeJSFunction>(selfHandle.get()), runtime);
 }
 
 //===----------------------------------------------------------------------===//
