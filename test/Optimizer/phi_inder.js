@@ -64,8 +64,8 @@ function recursive_phi(x) {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %9 = PhiInst (:string|number) %3: string|number, %BB3, %2: string|number, %BB1
 // CHECK-NEXT:  %10 = PhiInst (:string|number) %2: string|number, %BB3, %3: string|number, %BB1
-// CHECK-NEXT:  %11 = UnaryIncInst (:number) %4: number
-// CHECK-NEXT:  %12 = BinaryLessThanInst (:boolean) %11: number, 10: number
+// CHECK-NEXT:  %11 = FAddInst (:number) %4: number, 1: number
+// CHECK-NEXT:  %12 = FLessThanInst (:boolean) %11: number, 10: number
 // CHECK-NEXT:  %13 = CondBranchInst %12: boolean, %BB1, %BB4
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %14 = BranchInst %BB2

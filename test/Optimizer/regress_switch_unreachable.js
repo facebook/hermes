@@ -37,6 +37,6 @@
 // CHECK-NEXT:  %2 = PhiInst (:undefined) undefined: undefined, %BB0, %2: undefined, %BB1
 // CHECK-NEXT:  %3 = PhiInst (:undefined) undefined: undefined, %BB0, %3: undefined, %BB1
 // CHECK-NEXT:  %4 = PhiInst (:undefined) undefined: undefined, %BB0, %4: undefined, %BB1
-// CHECK-NEXT:  %5 = UnaryIncInst (:number) %1: number
+// CHECK-NEXT:  %5 = FAddInst (:number) %1: number, 1: number
 // CHECK-NEXT:  %6 = BranchInst %BB1
 // CHECK-NEXT:function_end

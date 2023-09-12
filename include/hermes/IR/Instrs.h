@@ -259,7 +259,13 @@ class AsNumericInst : public SingleOperandInst {
  public:
   explicit AsNumericInst(Value *value)
       : SingleOperandInst(ValueKind::AsNumericInstKind, value) {
-    setType(Type::createNumeric());
+    if (value->getType().isNumberType()) {
+      setType(Type::createNumber());
+    } else if (value->getType().isBigIntType()) {
+      setType(Type::createBigInt());
+    } else {
+      setType(Type::createNumeric());
+    }
   }
   explicit AsNumericInst(
       const AsNumericInst *src,
@@ -4568,6 +4574,146 @@ class StoreParentInst : public Instruction {
 
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::StoreParentInstKind;
+  }
+};
+
+class FUnaryMathInst : public Instruction {
+  FUnaryMathInst(const FUnaryMathInst &) = delete;
+  void operator=(const FUnaryMathInst &) = delete;
+
+ public:
+  enum { ArgIdx };
+
+  explicit FUnaryMathInst(ValueKind kind, Value *arg) : Instruction(kind) {
+    assert(arg->getType().isNumberType() && "invalid input FUnaryMathInst");
+    setType(Type::createNumber());
+    pushOperand(arg);
+  }
+  explicit FUnaryMathInst(
+      const FUnaryMathInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  Value *getArg() {
+    return getOperand(ArgIdx);
+  }
+  const Value *getArg() const {
+    return getOperand(ArgIdx);
+  }
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return true;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setIdempotent();
+  }
+
+  static bool classof(const Value *V) {
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), FUnaryMathInst);
+  }
+};
+
+class FBinaryMathInst : public Instruction {
+  FBinaryMathInst(const FBinaryMathInst &) = delete;
+  void operator=(const FBinaryMathInst &) = delete;
+
+ public:
+  enum { LeftIdx, RightIdx };
+
+  explicit FBinaryMathInst(ValueKind kind, Value *left, Value *right)
+      : Instruction(kind) {
+    assert(left->getType().isNumberType() && "invalid input FBinaryMathInst");
+    assert(right->getType().isNumberType() && "invalid input FBinaryMathInst");
+    setType(Type::createNumber());
+    pushOperand(left);
+    pushOperand(right);
+  }
+  explicit FBinaryMathInst(
+      const FBinaryMathInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  Value *getLeft() {
+    return getOperand(LeftIdx);
+  }
+  const Value *getLeft() const {
+    return getOperand(LeftIdx);
+  }
+
+  Value *getRight() {
+    return getOperand(RightIdx);
+  }
+  const Value *getRight() const {
+    return getOperand(RightIdx);
+  }
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return true;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setIdempotent();
+  }
+
+  static bool classof(const Value *V) {
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), FBinaryMathInst);
+  }
+};
+
+class FCompareInst : public Instruction {
+  FCompareInst(const FCompareInst &) = delete;
+  void operator=(const FCompareInst &) = delete;
+
+ public:
+  enum { LeftIdx, RightIdx };
+
+  explicit FCompareInst(ValueKind kind, Value *left, Value *right)
+      : Instruction(kind) {
+    assert(left->getType().isNumberType() && "invalid input FCompareInst");
+    assert(right->getType().isNumberType() && "invalid input FCompareInst");
+    setType(Type::createBoolean());
+    pushOperand(left);
+    pushOperand(right);
+  }
+  explicit FCompareInst(
+      const FCompareInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  Value *getLeft() {
+    return getOperand(LeftIdx);
+  }
+  const Value *getLeft() const {
+    return getOperand(LeftIdx);
+  }
+
+  Value *getRight() {
+    return getOperand(RightIdx);
+  }
+  const Value *getRight() const {
+    return getOperand(RightIdx);
+  }
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return true;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setIdempotent();
+  }
+
+  static bool classof(const Value *V) {
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), FCompareInst);
   }
 };
 

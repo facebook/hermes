@@ -914,6 +914,36 @@ Arguments | %object is an instance of a typed class, %storedValue is stored as t
 Semantics | Store the parent without any checks.
 Effects | May write memory.
 
+### FUnaryMath
+
+FUnaryMath | _
+--- |-----------------------------------------------|
+Description | Instruction class for a floating point unary math operation.
+Example | FNegate (:number), %operand (:number)
+Arguments | %operand is the input value
+Semantics | Perform the specified op on a floating point number, return a number.
+Effects | None
+
+### FBinaryMath
+
+FBinaryMath | _
+--- |-----------------------------------------------|
+Description | Instruction class for a floating point binary math operation.
+Example | FAdd (:number), %left (:number), %right (:number)
+Arguments | %left and %right are the input values
+Semantics | Perform the specified op on two floating point numbers (same type), return a number.
+Effects | None
+
+### FCompare
+
+FCompare | _
+--- |-----------------------------------------------|
+Description | Instruction class for comparing floating point numbers
+Example | FLessThan (:bool), %left (:number), %right (:number)
+Arguments | %left and %right are the input values
+Semantics | Perform the specified compare on two floating point numbers (same type), return bool. Note that if any operand is NaN, comparison always returns false.
+Effects | None
+
 ### UnionNarrowTrusted
 
 UnionNarrowTrusted | _

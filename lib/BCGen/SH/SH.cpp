@@ -1230,6 +1230,94 @@ class InstrGen {
     generateRegisterPtr(*inst.getObject());
     os_ << ");\n";
   }
+  void generateFUnaryMathInst(FUnaryMathInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_double(";
+    switch (inst.getKind()) {
+      case ValueKind::FNegateKind:
+        os_ << "-_sh_ljs_get_double(";
+        generateValue(*inst.getArg());
+        os_ << ")";
+        break;
+      default:
+        llvm_unreachable("invalid FUnaryMath");
+    }
+    os_ << ");\n";
+  }
+  void generateFBinaryMathInst(FBinaryMathInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+
+    // Handle FModuloInst separately because it needs a function call
+    // and doesn't fit neatly into a C binary operator.
+    if (inst.getKind() == ValueKind::FModuloInstKind) {
+      os_ << "_sh_ljs_double(_sh_mod_double(_sh_ljs_get_double(";
+      generateValue(*inst.getLeft());
+      os_ << "), _sh_ljs_get_double(";
+      generateValue(*inst.getRight());
+      os_ << ")));\n";
+      return;
+    }
+
+    os_ << "_sh_ljs_double(_sh_ljs_get_double(";
+    generateValue(*inst.getLeft());
+    os_ << ") ";
+    switch (inst.getKind()) {
+      case ValueKind::FAddInstKind:
+        os_ << "+";
+        break;
+      case ValueKind::FSubtractInstKind:
+        os_ << "-";
+        break;
+      case ValueKind::FMultiplyInstKind:
+        os_ << "*";
+        break;
+      case ValueKind::FDivideInstKind:
+        os_ << "/";
+        break;
+      default:
+        llvm_unreachable("invalid FBinaryMath");
+    }
+    os_ << " _sh_ljs_get_double(";
+    generateValue(*inst.getRight());
+    os_ << "));\n";
+  }
+  void generateFCompareInst(FCompareInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+
+    os_ << "_sh_ljs_bool(_sh_ljs_get_double(";
+    generateValue(*inst.getLeft());
+    os_ << ") ";
+    switch (inst.getKind()) {
+      case ValueKind::FEqualInstKind:
+        os_ << "==";
+        break;
+      case ValueKind::FNotEqualInstKind:
+        os_ << "!=";
+        break;
+      case ValueKind::FLessThanInstKind:
+        os_ << "<";
+        break;
+      case ValueKind::FLessThanOrEqualInstKind:
+        os_ << "<=";
+        break;
+      case ValueKind::FGreaterThanInstKind:
+        os_ << ">";
+        break;
+      case ValueKind::FGreaterThanOrEqualInstKind:
+        os_ << ">=";
+        break;
+      default:
+        llvm_unreachable("invalid FBinaryMath");
+    }
+    os_ << " _sh_ljs_get_double(";
+    generateValue(*inst.getRight());
+    os_ << "));\n";
+  }
   void generateStoreStackInst(StoreStackInst &inst) {
     hermes_fatal("StoreStackInst should have been lowered.");
   }

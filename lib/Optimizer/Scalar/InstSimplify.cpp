@@ -94,6 +94,34 @@ Value *reduceAsInt32(AsInt32Inst *asInt32) {
   return asInt32;
 }
 
+/// Attempt to simplify \p unary and return a typed instruction if possible.
+/// \return the new instruction, nullptr if it can't be simplified.
+Instruction *simplifyTypedUnaryExpression(
+    IRBuilder &builder,
+    UnaryOperatorInst *unary) {
+  auto kind = unary->getKind();
+  auto *op = unary->getSingleOperand();
+  Type t = op->getType();
+
+  if (t.isNumberType()) {
+    builder.setInsertionPoint(unary);
+    switch (kind) {
+      case ValueKind::UnaryMinusInstKind:
+        return builder.createFUnaryMathInst(ValueKind::FNegateKind, op);
+      case ValueKind::UnaryIncInstKind:
+        return builder.createFBinaryMathInst(
+            ValueKind::FAddInstKind, op, builder.getLiteralNumber(1));
+      case ValueKind::UnaryDecInstKind:
+        return builder.createFBinaryMathInst(
+            ValueKind::FSubtractInstKind, op, builder.getLiteralNumber(1));
+      default:
+        break;
+    }
+  }
+
+  return nullptr;
+}
+
 Value *simplifyUnOp(UnaryOperatorInst *unary) {
   IRBuilder builder(unary->getParent()->getParent());
 
@@ -141,6 +169,69 @@ Value *simplifyUnOp(UnaryOperatorInst *unary) {
 
     default:
       break;
+  }
+
+  if (Instruction *typed = simplifyTypedUnaryExpression(builder, unary))
+    return typed;
+
+  return nullptr;
+}
+
+/// Attempt to simplify \p binary and return a typed instruction if possible.
+/// \return the new instruction, nullptr if it can't be simplified.
+Instruction *simplifyTypedBinaryExpression(
+    IRBuilder &builder,
+    BinaryOperatorInst *binary) {
+  Value *lhs = binary->getLeftHandSide();
+  Value *rhs = binary->getRightHandSide();
+  auto kind = binary->getKind();
+
+  bool bothNumber =
+      lhs->getType().isNumberType() && rhs->getType().isNumberType();
+
+  if (bothNumber) {
+    builder.setInsertionPoint(binary);
+    switch (kind) {
+      // Double math.
+      case ValueKind::BinaryAddInstKind:
+        return builder.createFBinaryMathInst(ValueKind::FAddInstKind, lhs, rhs);
+      case ValueKind::BinarySubtractInstKind:
+        return builder.createFBinaryMathInst(
+            ValueKind::FSubtractInstKind, lhs, rhs);
+      case ValueKind::BinaryMultiplyInstKind:
+        return builder.createFBinaryMathInst(
+            ValueKind::FMultiplyInstKind, lhs, rhs);
+      case ValueKind::BinaryDivideInstKind:
+        return builder.createFBinaryMathInst(
+            ValueKind::FDivideInstKind, lhs, rhs);
+      case ValueKind::BinaryModuloInstKind:
+        return builder.createFBinaryMathInst(
+            ValueKind::FModuloInstKind, lhs, rhs);
+
+      // Double comparisons.
+      case ValueKind::BinaryEqualInstKind:
+      case ValueKind::BinaryStrictlyEqualInstKind:
+        return builder.createFCompareInst(ValueKind::FEqualInstKind, lhs, rhs);
+      case ValueKind::BinaryNotEqualInstKind:
+      case ValueKind::BinaryStrictlyNotEqualInstKind:
+        return builder.createFCompareInst(
+            ValueKind::FNotEqualInstKind, lhs, rhs);
+      case ValueKind::BinaryLessThanInstKind:
+        return builder.createFCompareInst(
+            ValueKind::FLessThanInstKind, lhs, rhs);
+      case ValueKind::BinaryLessThanOrEqualInstKind:
+        return builder.createFCompareInst(
+            ValueKind::FLessThanOrEqualInstKind, lhs, rhs);
+      case ValueKind::BinaryGreaterThanInstKind:
+        return builder.createFCompareInst(
+            ValueKind::FGreaterThanInstKind, lhs, rhs);
+      case ValueKind::BinaryGreaterThanOrEqualInstKind:
+        return builder.createFCompareInst(
+            ValueKind::FGreaterThanOrEqualInstKind, lhs, rhs);
+
+      default:
+        break;
+    }
   }
 
   return nullptr;
@@ -287,6 +378,9 @@ Value *simplifyBinOp(BinaryOperatorInst *binary) {
     default:
       break;
   }
+
+  if (Instruction *typed = simplifyTypedBinaryExpression(builder, binary))
+    return typed;
 
   return nullptr;
 }
@@ -532,6 +626,94 @@ OptValue<Value *> simplifyThrowIfEmpty(ThrowIfEmptyInst *TIE) {
   return nullptr;
 }
 
+/// Try to simplify FUnaryMath
+/// \returns one of:
+///   - nullptr if the instruction cannot be simplified.
+///   - the instruction itself, if it was changed inplace.
+///   - a new instruction to replace the original one
+///   - llvh::None if the instruction should be deleted.
+OptValue<Value *> simplifyFUnaryMath(FUnaryMathInst *inst) {
+  IRBuilder builder(inst->getFunction());
+
+  // If the arg is a literal, try to evaluate the expression.
+  if (auto *lit = llvh::dyn_cast<LiteralNumber>(inst->getArg())) {
+    switch (inst->getKind()) {
+      case ValueKind::FNegateKind:
+        return builder.getLiteralNumber(-lit->getValue());
+      default:
+        break;
+    }
+  }
+
+  return nullptr;
+}
+/// Try to simplify FBinaryMath
+/// \returns one of:
+///   - nullptr if the instruction cannot be simplified.
+///   - the instruction itself, if it was changed inplace.
+///   - a new instruction to replace the original one
+///   - llvh::None if the instruction should be deleted.
+OptValue<Value *> simplifyFBinaryMath(FBinaryMathInst *inst) {
+  IRBuilder builder(inst->getFunction());
+
+  // If the arg is a literal, try to evaluate the expression.
+  if (auto *l = llvh::dyn_cast<LiteralNumber>(inst->getLeft())) {
+    if (auto *r = llvh::dyn_cast<LiteralNumber>(inst->getRight())) {
+      switch (inst->getKind()) {
+        case ValueKind::FAddInstKind:
+          return builder.getLiteralNumber(l->getValue() + r->getValue());
+        case ValueKind::FSubtractInstKind:
+          return builder.getLiteralNumber(l->getValue() - r->getValue());
+        case ValueKind::FMultiplyInstKind:
+          return builder.getLiteralNumber(l->getValue() * r->getValue());
+        case ValueKind::FDivideInstKind:
+          return builder.getLiteralNumber(l->getValue() / r->getValue());
+        case ValueKind::FModuloInstKind:
+          return builder.getLiteralNumber(
+              std::fmod(l->getValue(), r->getValue()));
+        default:
+          break;
+      }
+    }
+  }
+
+  return nullptr;
+}
+
+/// Try to simplify FCompare
+/// \returns one of:
+///   - nullptr if the instruction cannot be simplified.
+///   - the instruction itself, if it was changed inplace.
+///   - a new instruction to replace the original one
+///   - llvh::None if the instruction should be deleted.
+OptValue<Value *> simplifyFCompare(FCompareInst *inst) {
+  IRBuilder builder(inst->getFunction());
+
+  // If the arg is a literal, try to evaluate the expression.
+  if (auto *l = llvh::dyn_cast<LiteralNumber>(inst->getLeft())) {
+    if (auto *r = llvh::dyn_cast<LiteralNumber>(inst->getRight())) {
+      switch (inst->getKind()) {
+        case ValueKind::FEqualInstKind:
+          return builder.getLiteralBool(l->getValue() == r->getValue());
+        case ValueKind::FNotEqualInstKind:
+          return builder.getLiteralBool(l->getValue() != r->getValue());
+        case ValueKind::FLessThanInstKind:
+          return builder.getLiteralBool(l->getValue() < r->getValue());
+        case ValueKind::FLessThanOrEqualInstKind:
+          return builder.getLiteralBool(l->getValue() <= r->getValue());
+        case ValueKind::FGreaterThanInstKind:
+          return builder.getLiteralBool(l->getValue() > r->getValue());
+        case ValueKind::FGreaterThanOrEqualInstKind:
+          return builder.getLiteralBool(l->getValue() >= r->getValue());
+        default:
+          break;
+      }
+    }
+  }
+
+  return nullptr;
+}
+
 /// Try to simplify UnionNarrowTrustedInst
 /// \returns one of:
 ///   - nullptr if the instruction cannot be simplified.
@@ -554,6 +736,12 @@ OptValue<Value *> simplifyInstruction(Instruction *I) {
     return simplifyUnOp(llvh::cast<UnaryOperatorInst>(I));
   if (llvh::isa<BinaryOperatorInst>(I))
     return simplifyBinOp(llvh::cast<BinaryOperatorInst>(I));
+  if (llvh::isa<FUnaryMathInst>(I))
+    return simplifyFUnaryMath(llvh::cast<FUnaryMathInst>(I));
+  if (llvh::isa<FBinaryMathInst>(I))
+    return simplifyFBinaryMath(llvh::cast<FBinaryMathInst>(I));
+  if (llvh::isa<FCompareInst>(I))
+    return simplifyFCompare(llvh::cast<FCompareInst>(I));
   switch (I->getKind()) {
     case ValueKind::AsNumberInstKind:
       return simplifyAsNumber(cast<AsNumberInst>(I));

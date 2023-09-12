@@ -833,6 +833,15 @@ class TypeInferenceImpl {
   Type inferNativeCallInst(NativeCallInst *inst) {
     hermes_fatal("typed instruction");
   }
+  Type inferFUnaryMathInst(FUnaryMathInst *inst) {
+    hermes_fatal("typed instruction");
+  }
+  Type inferFBinaryMathInst(FBinaryMathInst *inst) {
+    hermes_fatal("typed instruction");
+  }
+  Type inferFCompareInst(FCompareInst *inst) {
+    hermes_fatal("typed instruction");
+  }
   Type inferUnionNarrowTrustedInst(UnionNarrowTrustedInst *inst) {
     auto res = Type::intersectTy(
         inst->getSavedResultType(), inst->getSingleOperand()->getType());

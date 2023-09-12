@@ -27,9 +27,11 @@ IdentifierTable::LookupEntry::LookupEntry(
       isNotUniqued_(isNotUniqued),
       num_(NON_LAZY_STRING_PRIM_TAG) {
   assert(str && "Invalid string primitive pointer");
-  llvh::SmallVector<char16_t, 32> storage{};
-  str->appendUTF16String(storage);
-  hash_ = hermes::hashString(llvh::ArrayRef<char16_t>(storage));
+  if (str->isASCII()) {
+    hash_ = hermes::hashString(str->castToASCIIRef());
+  } else {
+    hash_ = hermes::hashString(str->castToUTF16Ref());
+  }
 }
 
 IdentifierTable::IdentifierTable() {

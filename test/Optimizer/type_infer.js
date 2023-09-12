@@ -79,11 +79,11 @@ function test_unary(x) {
 // CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 4: number
 // CHECK-NEXT:  %5 = BinaryMultiplyInst (:number) %0: any, 2: number
 // CHECK-NEXT:  %6 = BinaryMultiplyInst (:number) %0: any, 2: number
-// CHECK-NEXT:  %7 = BinaryAddInst (:number) %5: number, %6: number
+// CHECK-NEXT:  %7 = FAddInst (:number) %5: number, %6: number
 // CHECK-NEXT:  %8 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %7: number
 // CHECK-NEXT:  %9 = AsInt32Inst (:number) %0: any
 // CHECK-NEXT:  %10 = AsInt32Inst (:number) %0: any
-// CHECK-NEXT:  %11 = BinaryAddInst (:number) %9: number, %10: number
+// CHECK-NEXT:  %11 = FAddInst (:number) %9: number, %10: number
 // CHECK-NEXT:  %12 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %11: number
 // CHECK-NEXT:  %13 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "hibye": string
 // CHECK-NEXT:  %14 = BinaryAddInst (:string|number|bigint) %0: any, %1: any

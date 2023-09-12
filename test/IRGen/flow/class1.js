@@ -55,11 +55,11 @@ return [dotProduct, Vec2D];
 // CHECK-NEXT:  %1 = LoadParamInst (:object) %b: object
 // CHECK-NEXT:  %2 = PrLoadInst (:number) %0: object, 0: number, "x": string
 // CHECK-NEXT:  %3 = PrLoadInst (:number) %1: object, 0: number, "x": string
-// CHECK-NEXT:  %4 = BinaryMultiplyInst (:number) %2: number, %3: number
+// CHECK-NEXT:  %4 = FMultiplyInst (:number) %2: number, %3: number
 // CHECK-NEXT:  %5 = PrLoadInst (:number) %0: object, 1: number, "y": string
 // CHECK-NEXT:  %6 = PrLoadInst (:number) %1: object, 1: number, "y": string
-// CHECK-NEXT:  %7 = BinaryMultiplyInst (:number) %5: number, %6: number
-// CHECK-NEXT:  %8 = BinaryAddInst (:number) %4: number, %7: number
+// CHECK-NEXT:  %7 = FMultiplyInst (:number) %5: number, %6: number
+// CHECK-NEXT:  %8 = FAddInst (:number) %4: number, %7: number
 // CHECK-NEXT:  %9 = ReturnInst %8: number
 // CHECK-NEXT:function_end
 

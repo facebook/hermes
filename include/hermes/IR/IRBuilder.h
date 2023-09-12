@@ -625,6 +625,11 @@ class IRBuilder {
   LoadParentInst *createLoadParentInst(Value *object);
   StoreParentInst *createStoreParentInst(Value *storedValue, Value *object);
 
+  FUnaryMathInst *createFUnaryMathInst(ValueKind kind, Value *arg);
+  FBinaryMathInst *
+  createFBinaryMathInst(ValueKind kind, Value *left, Value *right);
+  FCompareInst *createFCompareInst(ValueKind kind, Value *left, Value *right);
+
   UnionNarrowTrustedInst *createUnionNarrowTrustedInst(Value *value, Type type);
   CheckedTypeCastInst *createCheckedTypeCastInst(Value *value, Type type);
 

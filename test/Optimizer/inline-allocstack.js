@@ -64,12 +64,12 @@
 // CHECK-NEXT:  %10 = CondBranchInst %9: boolean, %BB4, %BB5
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %11 = LoadStackInst (:number) %0: number
-// CHECK-NEXT:  %12 = UnaryIncInst (:number) %11: number
+// CHECK-NEXT:  %12 = FAddInst (:number) %11: number, 1: number
 // CHECK-NEXT:  %13 = StoreStackInst %12: number, %0: number
 // CHECK-NEXT:  %14 = BranchInst %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %15 = LoadStackInst (:number) %0: number
-// CHECK-NEXT:  %16 = BinaryLessThanInst (:boolean) %15: number, 100: number
+// CHECK-NEXT:  %16 = FLessThanInst (:boolean) %15: number, 100: number
 // CHECK-NEXT:  %17 = CondBranchInst %16: boolean, %BB6, %BB7
 // CHECK-NEXT:%BB7:
 // CHECK-NEXT:  %18 = BranchInst %BB8

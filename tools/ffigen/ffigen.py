@@ -19,7 +19,7 @@ def read_xml_from_castxml(filename):
     # Read the file and look for #define statements
     with open(filename, "r") as f:
         for line in f:
-            match = re.match(r"\s*#\s*define\s+(\w+)\s+(\d+)\s*$", line)
+            match = re.match(r"\s*#\s*define\s+(\w+)\s+(\d+)\s*(?:/\*|//|$)", line)
             if match:
                 name, number = match.groups()
                 constants_dict[name] = number

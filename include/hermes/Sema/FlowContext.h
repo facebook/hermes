@@ -12,6 +12,7 @@
 #include "hermes/Sema/SemContext.h"
 
 #include "llvh/ADT/DenseSet.h"
+#include "llvh/ADT/MapVector.h"
 #include "llvh/ADT/SetVector.h"
 
 namespace hermes {
@@ -631,7 +632,8 @@ class ClassType : public TypeWithId {
   /// This allows us to quickly check how many fields to allocate for the class,
   /// as well as quick lookup to see if a field exists.
   /// This also means we can query which class the field exists on easily.
-  llvh::SmallDenseMap<Identifier, FieldLookupEntry> fieldNameMap_{};
+  /// Use a MapVector to make sure it's deterministic to iterate.
+  llvh::SmallMapVector<Identifier, FieldLookupEntry, 4> fieldNameMap_{};
 
   /// Super class, nullptr if this class doesn't extend anything.
   Type *superClass_ = nullptr;
@@ -686,7 +688,7 @@ class ClassType : public TypeWithId {
     return llvh::cast_or_null<ClassType>(
         homeObjectType_ ? homeObjectType_->info : nullptr);
   }
-  const llvh::SmallDenseMap<Identifier, FieldLookupEntry> &getFieldNameMap()
+  const llvh::SmallMapVector<Identifier, FieldLookupEntry, 4> &getFieldNameMap()
       const {
     assert(isInitialized());
     return fieldNameMap_;

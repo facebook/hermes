@@ -1128,6 +1128,25 @@ StoreParentInst *IRBuilder::createStoreParentInst(
   return inst;
 }
 
+FUnaryMathInst *IRBuilder::createFUnaryMathInst(ValueKind kind, Value *arg) {
+  auto *inst = new FUnaryMathInst(kind, arg);
+  insert(inst);
+  return inst;
+}
+FBinaryMathInst *
+IRBuilder::createFBinaryMathInst(ValueKind kind, Value *left, Value *right) {
+  auto *inst = new FBinaryMathInst(kind, left, right);
+  insert(inst);
+  return inst;
+}
+
+FCompareInst *
+IRBuilder::createFCompareInst(ValueKind kind, Value *left, Value *right) {
+  auto *inst = new FCompareInst(kind, left, right);
+  insert(inst);
+  return inst;
+}
+
 UnionNarrowTrustedInst *IRBuilder::createUnionNarrowTrustedInst(
     Value *value,
     Type type) {

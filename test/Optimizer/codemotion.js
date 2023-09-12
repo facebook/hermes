@@ -152,7 +152,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  %2 = AsInt32Inst (:number) %1: any
 // CHECK-NEXT:  %3 = CondBranchInst %0: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = BinaryAddInst (:number) %2: number, %2: number
+// CHECK-NEXT:  %4 = FAddInst (:number) %2: number, %2: number
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %1: any, "z": string
 // CHECK-NEXT:  %6 = LoadPropertyInst (:any) %5: any, "k": string
 // CHECK-NEXT:  %7 = LoadPropertyInst (:any) %6: any, "r": string
@@ -192,7 +192,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  %3 = PhiInst (:number) 0: number, %BB0, %6: number, %BB1
 // CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: number
-// CHECK-NEXT:  %6 = UnaryIncInst (:number) %3: number
+// CHECK-NEXT:  %6 = FAddInst (:number) %3: number, 1: number
 // CHECK-NEXT:  %7 = BinaryLessThanInst (:boolean) %6: number, %0: any
 // CHECK-NEXT:  %8 = CondBranchInst %7: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB2:
@@ -209,9 +209,9 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  %4 = AsNumberInst (:number) %1: any
 // CHECK-NEXT:  %5 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = UnaryMinusInst (:number) %3: number
-// CHECK-NEXT:  %7 = BinaryAddInst (:number) %4: number, 7: number
-// CHECK-NEXT:  %8 = BinaryMultiplyInst (:number) %6: number, %7: number
+// CHECK-NEXT:  %6 = FNegate (:number) %3: number
+// CHECK-NEXT:  %7 = FAddInst (:number) %4: number, 7: number
+// CHECK-NEXT:  %8 = FMultiplyInst (:number) %6: number, %7: number
 // CHECK-NEXT:  %9 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %8: number
 // CHECK-NEXT:  %10 = BranchInst %BB1
 // CHECK-NEXT:function_end
@@ -224,10 +224,10 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  %2 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %4 = BinaryMultiplyInst (:number) 3: number, %1: number
-// CHECK-NEXT:  %5 = BinaryMultiplyInst (:number) %4: number, %1: number
+// CHECK-NEXT:  %4 = FMultiplyInst (:number) 3: number, %1: number
+// CHECK-NEXT:  %5 = FMultiplyInst (:number) %4: number, %1: number
 // CHECK-NEXT:  %6 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %5: number
-// CHECK-NEXT:  %7 = BinarySubtractInst (:number) %1: number, 1: number
+// CHECK-NEXT:  %7 = FSubtractInst (:number) %1: number, 1: number
 // CHECK-NEXT:  %8 = CondBranchInst %7: number, %BB2, %BB1
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
@@ -243,13 +243,13 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  %2 = AsNumberInst (:number) %0: any
 // CHECK-NEXT:  %3 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = BinaryMultiplyInst (:number) %2: number, %2: number
+// CHECK-NEXT:  %4 = FMultiplyInst (:number) %2: number, %2: number
 // CHECK-NEXT:  %5 = CondBranchInst %1: any, %BB2, %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %6 = ReturnInst %1: any
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %8 = BinarySubtractInst (:number) %4: number, 3: number
+// CHECK-NEXT:  %8 = FSubtractInst (:number) %4: number, 3: number
 // CHECK-NEXT:  %9 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %8: number
 // CHECK-NEXT:  %10 = BranchInst %BB1
 // CHECK-NEXT:function_end
@@ -260,8 +260,8 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %y: any
 // CHECK-NEXT:  %2 = AsInt32Inst (:number) %1: any
-// CHECK-NEXT:  %3 = BinaryAddInst (:number) %2: number, 2: number
-// CHECK-NEXT:  %4 = BinaryAddInst (:number) %3: number, 9: number
+// CHECK-NEXT:  %3 = FAddInst (:number) %2: number, 2: number
+// CHECK-NEXT:  %4 = FAddInst (:number) %3: number, 9: number
 // CHECK-NEXT:  %5 = CondBranchInst %0: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = ReturnInst %3: number

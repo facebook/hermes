@@ -76,7 +76,7 @@ function cse_unary(a) {
 // CHECK-NEXT:  %1 = BinaryEqualInst (:boolean) %0: any, %0: any
 // CHECK-NEXT:  %2 = BinaryEqualInst (:boolean) %0: any, %0: any
 // CHECK-NEXT:  %3 = BinaryAddInst (:number) %1: boolean, %2: boolean
-// CHECK-NEXT:  %4 = BinaryMultiplyInst (:number) %3: number, %3: number
+// CHECK-NEXT:  %4 = FMultiplyInst (:number) %3: number, %3: number
 // CHECK-NEXT:  %5 = ReturnInst %4: number
 // CHECK-NEXT:function_end
 
@@ -92,7 +92,7 @@ function cse_unary(a) {
 // CHECK-NEXT:  %5 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %6 = PhiInst (:number) %3: number, %BB1, 0: number, %BB0
-// CHECK-NEXT:  %7 = BinaryMultiplyInst (:number) %3: number, %6: number
+// CHECK-NEXT:  %7 = FMultiplyInst (:number) %3: number, %6: number
 // CHECK-NEXT:  %8 = ReturnInst %7: number
 // CHECK-NEXT:function_end
 
@@ -102,9 +102,9 @@ function cse_unary(a) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %i: any
 // CHECK-NEXT:  %1 = AsInt32Inst (:number) %0: any
 // CHECK-NEXT:  %2 = AsInt32Inst (:number) %0: any
-// CHECK-NEXT:  %3 = BinarySubtractInst (:number) %1: number, %2: number
-// CHECK-NEXT:  %4 = BinaryAddInst (:number) %1: number, %2: number
-// CHECK-NEXT:  %5 = BinaryMultiplyInst (:number) %3: number, %4: number
+// CHECK-NEXT:  %3 = FSubtractInst (:number) %1: number, %2: number
+// CHECK-NEXT:  %4 = FAddInst (:number) %1: number, %2: number
+// CHECK-NEXT:  %5 = FMultiplyInst (:number) %3: number, %4: number
 // CHECK-NEXT:  %6 = ReturnInst %5: number
 // CHECK-NEXT:function_end
 

@@ -101,7 +101,7 @@ function test_async() {
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %builder(): number
 // CHECK-NEXT:  %1 = CallInst (:number) %0: object, %builder(): number, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %2 = CallInst (:number) %0: object, %builder(): number, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:  %3 = BinaryAddInst (:number) %1: number, %2: number
+// CHECK-NEXT:  %3 = FAddInst (:number) %1: number, %2: number
 // CHECK-NEXT:  %4 = ReturnInst %3: number
 // CHECK-NEXT:function_end
 
@@ -145,7 +145,7 @@ function test_async() {
 // CHECK:function foo(x: number, y: number): number [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BinaryAddInst (:number) 1: number, 2: number
+// CHECK-NEXT:  %0 = FAddInst (:number) 1: number, 2: number
 // CHECK-NEXT:  %1 = ReturnInst %0: number
 // CHECK-NEXT:function_end
 

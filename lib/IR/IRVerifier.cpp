@@ -944,6 +944,26 @@ void Verifier::visitFastArrayLengthInst(const FastArrayLengthInst &Inst) {}
 void Verifier::visitLoadParentInst(const LoadParentInst &Inst) {}
 void Verifier::visitStoreParentInst(const StoreParentInst &Inst) {}
 
+void Verifier::visitFUnaryMathInst(const FUnaryMathInst &Inst) {
+  Assert(
+      Inst.getArg()->getType().isNumberType() && Inst.getType().isNumberType(),
+      "FUnaryMathInst wrong type");
+}
+void Verifier::visitFBinaryMathInst(const FBinaryMathInst &Inst) {
+  Assert(
+      Inst.getLeft()->getType().isNumberType() &&
+          Inst.getRight()->getType().isNumberType() &&
+          Inst.getType().isNumberType(),
+      "FBinaryMathInst wrong type");
+}
+void Verifier::visitFCompareInst(const FCompareInst &Inst) {
+  Assert(
+      Inst.getLeft()->getType().isNumberType() &&
+          Inst.getRight()->getType().isNumberType() &&
+          Inst.getType().isBooleanType(),
+      "FCompare wrong type");
+}
+
 void Verifier::visitUnionNarrowTrustedInst(const UnionNarrowTrustedInst &Inst) {
 }
 void Verifier::visitCheckedTypeCastInst(const CheckedTypeCastInst &Inst) {}
