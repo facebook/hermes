@@ -76,7 +76,7 @@ CallResult<HermesValue>
 throwTypeError(void *, Runtime &runtime, NativeArgs args);
 
 enum class TypeErrorKind {
-  NonStrictOnly,
+  RestrictedProperty,
   InvalidDynamicRequire,
   // change this if more errors are added
   NumKinds

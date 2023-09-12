@@ -247,7 +247,7 @@ CallResult<HermesValue> gc(void *, Runtime &runtime, NativeArgs) {
 CallResult<HermesValue>
 throwTypeError(void *ctx, Runtime &runtime, NativeArgs) {
   static const char *TypeErrorMessage[] = {
-      "Restricted in strict mode",
+      "Restricted property cannot be accessed",
       "Dynamic requires are not allowed after static resolution",
   };
 
@@ -375,7 +375,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   auto throwTypeErrorFunction = NativeFunction::create(
       runtime,
       Handle<JSObject>::vmcast(&runtime.functionPrototype),
-      (void *)TypeErrorKind::NonStrictOnly,
+      (void *)TypeErrorKind::RestrictedProperty,
       throwTypeError,
       Predefined::getSymbolID(Predefined::emptyString),
       0,

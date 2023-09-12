@@ -19,21 +19,21 @@ print('function properties');
 print(typeof strict, typeof nonStrict);
 // CHECK-NEXT: function function
 try { print(nonStrict.caller); } catch(e) { print('caught', e.name, e.message); }
-// CHECK-NEXT: caught TypeError Restricted in strict mode
+// CHECK-NEXT: caught TypeError Restricted property cannot be accessed
 try { print(nonStrict.arguments); } catch(e) { print('caught', e.name, e.message); }
-// CHECK-NEXT: caught TypeError Restricted in strict mode
+// CHECK-NEXT: caught TypeError Restricted property cannot be accessed
 try { print(strict.caller); } catch(e) { print('caught', e.name, e.message); }
-// CHECK-NEXT: caught TypeError Restricted in strict mode
+// CHECK-NEXT: caught TypeError Restricted property cannot be accessed
 try { print(strict.arguments); } catch(e) { print('caught', e.name, e.message); }
-// CHECK-NEXT: caught TypeError Restricted in strict mode
+// CHECK-NEXT: caught TypeError Restricted property cannot be accessed
 
 var bound = nonStrict.bind(42);
 try { print(bound.caller); } catch(e) { print('caught', e.name, e.message); }
-// CHECK-NEXT: caught TypeError Restricted in strict mode
+// CHECK-NEXT: caught TypeError Restricted property cannot be accessed
 try { print(bound.arguments); } catch(e) { print('caught', e.name, e.message); }
-// CHECK-NEXT: caught TypeError Restricted in strict mode
+// CHECK-NEXT: caught TypeError Restricted property cannot be accessed
 
 try { print(Function.prototype.caller); } catch(e) { print('caught', e.name, e.message); }
-// CHECK-NEXT: caught TypeError Restricted in strict mode
+// CHECK-NEXT: caught TypeError Restricted property cannot be accessed
 try { print(Function.prototype.arguments); } catch(e) { print('caught', e.name, e.message); }
-// CHECK-NEXT: caught TypeError Restricted in strict mode
+// CHECK-NEXT: caught TypeError Restricted property cannot be accessed
