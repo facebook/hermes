@@ -160,20 +160,6 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
   auto nameHandle = runtime.makeHandle(runtime.getStringPrimFromSymbolID(name));
   DEFINE_PROP(selfHandle, P::name, nameHandle);
 
-  if (strictMode) {
-    // Define .callee and .arguments properties: throw always in strict mode.
-    auto accessor =
-        Handle<PropertyAccessor>::vmcast(&runtime.throwTypeErrorAccessor);
-
-    pf.clear();
-    pf.enumerable = 0;
-    pf.configurable = 0;
-    pf.accessor = 1;
-
-    DEFINE_PROP(selfHandle, P::caller, accessor);
-    DEFINE_PROP(selfHandle, P::arguments, accessor);
-  }
-
   if (prototypeObjectHandle) {
     // Set its 'prototype' property.
     pf.clear();
@@ -613,35 +599,6 @@ ExecutionStatus BoundFunction::initializeLengthAndName_RJS(
               Predefined::getSymbolID(Predefined::name),
               dpf,
               boundNameHandle) == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  // Define .callee and .arguments properties: throw always in bound functions.
-  auto accessor =
-      Handle<PropertyAccessor>::vmcast(&runtime.throwTypeErrorAccessor);
-
-  pf.clear();
-  pf.enumerable = 0;
-  pf.configurable = 0;
-  pf.accessor = 1;
-
-  if (LLVM_UNLIKELY(
-          JSObject::defineNewOwnProperty(
-              selfHandle,
-              runtime,
-              Predefined::getSymbolID(Predefined::caller),
-              pf,
-              accessor) == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  if (LLVM_UNLIKELY(
-          JSObject::defineNewOwnProperty(
-              selfHandle,
-              runtime,
-              Predefined::getSymbolID(Predefined::arguments),
-              pf,
-              accessor) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
