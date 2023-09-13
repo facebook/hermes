@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -O -dump-lra -dump-operand-registers %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %shermes -O -dump-lra %s | %FileCheckOrRegen --match-full-lines %s
 
 // Check that call and new arguments, including the calleee and new.target, are
 // correctly lowered into stack registers.

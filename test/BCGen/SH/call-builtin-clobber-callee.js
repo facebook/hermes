@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -O -dump-lra -dump-operand-registers %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %shermes -O -dump-lra %s | %FileCheckOrRegen --match-full-lines %s
 
 /// Ensure that the callee stack entry is clobbered by the builtin call.
 function test_call_after_builtin() {

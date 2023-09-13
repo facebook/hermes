@@ -342,10 +342,10 @@ cl::opt<bool> VerifyIR(
     cl::desc("Verify the IR after each pass."),
     cl::cat(CompilerCategory));
 
-cl::opt<bool> DumpOperandRegisters(
-    "dump-operand-registers",
-    cl::desc("Dump registers for operands instead of instruction numbers"),
-    cl::init(true),
+cl::opt<bool> DumpRegisterInterval(
+    "dump-register-interval",
+    cl::desc("Dump the liveness interval of allocated registers"),
+    cl::init(false),
     cl::cat(CompilerCategory));
 
 cl::opt<bool> DumpUseList(
@@ -464,7 +464,7 @@ std::shared_ptr<Context> createContext() {
   codeGenOpts.enableTDZ = cli::Test262 && !cli::EnableTDZ.getNumOccurrences()
       ? true
       : cli::EnableTDZ;
-  codeGenOpts.dumpOperandRegisters = cli::DumpOperandRegisters;
+  codeGenOpts.dumpRegisterInterval = cli::DumpRegisterInterval;
   codeGenOpts.dumpUseList = cli::DumpUseList;
   codeGenOpts.dumpSourceLocation =
       cli::DumpSourceLocation != LocationDumpMode::None;
