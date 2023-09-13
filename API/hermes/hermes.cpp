@@ -118,15 +118,6 @@ void raw_ostream_append(llvh::raw_ostream &os, Arg0 &&arg0, Args &&...args) {
   raw_ostream_append(os, args...);
 }
 
-template <typename... Args>
-jsi::JSError makeJSError(jsi::Runtime &rt, Args &&...args) {
-  std::string s;
-  llvh::raw_string_ostream os(s);
-  raw_ostream_append(os, std::forward<Args>(args)...);
-  LOG_EXCEPTION_CAUSE("JSError: %s", os.str().c_str());
-  return jsi::JSError(rt, os.str());
-}
-
 /// HermesVM uses the LLVM fatal error handle to report fatal errors. This
 /// wrapper helps us install the handler at construction time, before any
 /// HermesVM code has been invoked.
@@ -1003,6 +994,14 @@ class HermesRuntimeImpl final : public HermesRuntime,
       const jsi::PropNameID &name,
       unsigned int paramCount);
 
+  /// Throw the exception stored in the Runtime as a jsi::JSError.
+  LLVM_ATTRIBUTE_NORETURN void throwPendingError();
+
+  /// Throw a jsi::JSError with a message created by concatenating the string
+  /// representations of \p args.
+  template <typename... Args>
+  LLVM_ATTRIBUTE_NORETURN void throwJSErrorWithMessage(Args &&...args);
+
  public:
   ManagedValues<vm::PinnedHermesValue> hermesValues_;
   ManagedValues<vm::WeakRoot<vm::JSObject>> weakHermesValues_;
@@ -1686,7 +1685,7 @@ jsi::String HermesRuntimeImpl::bigintToString(
     const jsi::BigInt &bigint,
     int radix) {
   if (radix < 2 || radix > 36) {
-    throw makeJSError(*this, "Invalid radix ", radix, " to BigInt.toString");
+    throwJSErrorWithMessage("Invalid radix ", radix, " to BigInt.toString");
   }
 
   vm::GCScope gcScope(runtime_);
@@ -2009,13 +2008,8 @@ uint8_t *HermesRuntimeImpl::data(const jsi::ArrayBuffer &arr) {
 jsi::Value HermesRuntimeImpl::getValueAtIndex(const jsi::Array &arr, size_t i) {
   vm::GCScope gcScope(runtime_);
   if (LLVM_UNLIKELY(i >= size(arr))) {
-    throw makeJSError(
-        *this,
-        "getValueAtIndex: index ",
-        i,
-        " is out of bounds [0, ",
-        size(arr),
-        ")");
+    throwJSErrorWithMessage(
+        "getValueAtIndex: index ", i, " is out of bounds [0, ", size(arr), ")");
   }
 
   auto res = vm::JSObject::getComputed_RJS(
@@ -2033,13 +2027,8 @@ void HermesRuntimeImpl::setValueAtIndexImpl(
     const jsi::Value &value) {
   vm::GCScope gcScope(runtime_);
   if (LLVM_UNLIKELY(i >= size(arr))) {
-    throw makeJSError(
-        *this,
-        "setValueAtIndex: index ",
-        i,
-        " is out of bounds [0, ",
-        size(arr),
-        ")");
+    throwJSErrorWithMessage(
+        "setValueAtIndex: index ", i, " is out of bounds [0, ", size(arr), ")");
   }
 
   auto res = vm::JSObject::putComputed_RJS(
@@ -2231,24 +2220,17 @@ void HermesRuntimeImpl::checkStatus(vm::ExecutionStatus status) {
     return;
   }
 
-  jsi::Value exception = valueFromHermesValue(runtime_.getThrownValue());
-  runtime_.clearThrownValue();
   // Here, we increment the depth to detect recursion in error handling.
   vm::ScopedNativeDepthTracker depthTracker{runtime_};
-  if (LLVM_LIKELY(!depthTracker.overflowed())) {
-    auto ex = jsi::JSError(*this, std::move(exception));
-    LOG_EXCEPTION_CAUSE("JSI rethrowing JS exception: %s", ex.what());
-    throw ex;
-  }
+  if (LLVM_LIKELY(!depthTracker.overflowed()))
+    throwPendingError();
 
   (void)runtime_.raiseStackOverflow(
       vm::Runtime::StackOverflowKind::NativeStack);
-  exception = valueFromHermesValue(runtime_.getThrownValue());
-  runtime_.clearThrownValue();
   // Here, we give us a little more room so we can call into JS to
   // populate the JSError members.
   vm::ScopedNativeDepthReducer reducer(runtime_);
-  throw jsi::JSError(*this, std::move(exception));
+  throwPendingError();
 }
 
 vm::HermesValue HermesRuntimeImpl::stringHVFromAscii(
@@ -2268,6 +2250,27 @@ vm::HermesValue HermesRuntimeImpl::stringHVFromUtf8(
       runtime_, llvh::makeArrayRef(utf8, length), IgnoreInputErrors);
   checkStatus(strRes.getStatus());
   return *strRes;
+}
+
+void HermesRuntimeImpl::throwPendingError() {
+  // Convert the thrown value to a jsi::Value and construct a JSError from it.
+  jsi::Value exception = valueFromHermesValue(runtime_.getThrownValue());
+  runtime_.clearThrownValue();
+  throw jsi::JSError(*this, std::move(exception));
+}
+
+template <typename... Args>
+void HermesRuntimeImpl::throwJSErrorWithMessage(Args &&...args) {
+  // TODO: Add support for size_t in TwineChar16 and directly construct that
+  //       instead of using a stream.
+  std::string s;
+  llvh::raw_string_ostream os(s);
+  raw_ostream_append(os, std::forward<Args>(args)...);
+  LOG_EXCEPTION_CAUSE("JSError: %s", os.str().c_str());
+  // Raise an error with this message in the Runtime and rethrow it with
+  // throwPendingError.
+  (void)runtime_.raiseError(vm::TwineChar16(s));
+  throwPendingError();
 }
 
 namespace {
