@@ -357,11 +357,11 @@ static opt<bool> OutputSourceMap(
     desc("Emit a source map to the output filename with .map extension"),
     cat(CompilerCategory));
 
-static opt<bool> DumpOperandRegisters(
-    "dump-operand-registers",
-    desc("Dump registers assigned to instruction operands"),
-    init(true),
-    cat(CompilerCategory));
+cl::opt<bool> DumpRegisterInterval(
+    "dump-register-interval",
+    cl::desc("Dump the liveness interval of allocated registers"),
+    cl::init(false),
+    cl::cat(CompilerCategory));
 
 static opt<bool> DumpUseList(
     "dump-instr-uselist",
@@ -1012,7 +1012,7 @@ std::shared_ptr<Context> createContext(
     std::vector<uint32_t> segments) {
   CodeGenerationSettings codeGenOpts;
   codeGenOpts.enableTDZ = cl::EnableTDZ;
-  codeGenOpts.dumpOperandRegisters = cl::DumpOperandRegisters;
+  codeGenOpts.dumpRegisterInterval = cl::DumpRegisterInterval;
   codeGenOpts.dumpUseList = cl::DumpUseList;
   codeGenOpts.dumpSourceLocation =
       cl::DumpSourceLocation != LocationDumpMode::None;
