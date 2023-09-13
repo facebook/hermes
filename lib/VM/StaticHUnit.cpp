@@ -151,7 +151,6 @@ static SHLegacyValue sh_unit_run(SHRuntime *shr, SHUnit *unit) {
       nullptr,
       nullptr,
       0,
-      0,
       HermesValue::fromRaw(closure.raw),
       HermesValue::encodeUndefinedValue());
   frame.getThisArgRef() = runtime.global_;

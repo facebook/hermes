@@ -20,7 +20,7 @@ namespace llvh {
 class raw_ostream;
 }
 
-struct SHUnit;
+struct SHLocals;
 
 namespace hermes {
 namespace inst {
@@ -107,8 +107,7 @@ class StackFramePtrT {
   _HERMESVM_DEFINE_STACKFRAME_REF(PreviousFrame)
   _HERMESVM_DEFINE_STACKFRAME_REF(SavedIP)
   _HERMESVM_DEFINE_STACKFRAME_REF(SavedCodeBlock)
-  _HERMESVM_DEFINE_STACKFRAME_REF(SHUnit)
-  _HERMESVM_DEFINE_STACKFRAME_REF(SrcLocationIdx)
+  _HERMESVM_DEFINE_STACKFRAME_REF(SHLocals)
   _HERMESVM_DEFINE_STACKFRAME_REF(ArgCount)
   _HERMESVM_DEFINE_STACKFRAME_REF(NewTarget)
   _HERMESVM_DEFINE_STACKFRAME_REF(CalleeClosureOrCB)
@@ -140,15 +139,9 @@ class StackFramePtrT {
     return getSavedCodeBlockRef().template getNativePointer<CodeBlock>();
   }
 
-  /// \return The current SHUnit in execution.
-  const SHUnit *getSHUnit() const {
-    return getSHUnitRef().template getNativePointer<const SHUnit>();
-  }
-
-  /// \return the current index into the SHUnit source location table. This
-  /// corresponds to the current line of source JS being executed.
-  uint32_t getSrcLocationIdx() const {
-    return getSrcLocationIdxRef().getNativeUInt32();
+  /// \return The current SHLocals.
+  const SHLocals *getSHLocals() const {
+    return getSHLocalsRef().template getNativePointer<const SHLocals>();
   }
 
   /// \return a handle holding the callee debug environment.
@@ -236,8 +229,7 @@ class StackFramePtrT {
       StackFramePtrT previousFrame,
       const Inst *savedIP,
       const CodeBlock *savedCodeBlock,
-      const SHUnit *shUnit,
-      uint32_t srcLocationIdx,
+      const SHLocals *locals,
       uint32_t argCount,
       HermesValue calleeClosureOrCB,
       HermesValue newTarget) {
@@ -247,10 +239,8 @@ class StackFramePtrT {
         HermesValue::encodeNativePointer(savedIP);
     stackPointer[StackFrameLayout::SavedCodeBlock] =
         HermesValue::encodeNativePointer(savedCodeBlock);
-    stackPointer[StackFrameLayout::SHUnit] =
-        HermesValue::encodeNativePointer(shUnit);
-    stackPointer[StackFrameLayout::SrcLocationIdx] =
-        HermesValue::encodeNativeUInt32(srcLocationIdx);
+    stackPointer[StackFrameLayout::SHLocals] =
+        HermesValue::encodeNativePointer(locals);
     stackPointer[StackFrameLayout::ArgCount] =
         HermesValue::encodeNativeUInt32(argCount);
     stackPointer[StackFrameLayout::NewTarget] = newTarget;
@@ -266,8 +256,7 @@ class StackFramePtrT {
       StackFramePtrT previousFrame,
       const Inst *savedIP,
       const CodeBlock *savedCodeBlock,
-      const SHUnit *shUnit,
-      uint32_t srcLocationIdx,
+      const SHLocals *locals,
       uint32_t argCount,
       Callable *calleeClosure,
       bool construct) {
@@ -276,8 +265,7 @@ class StackFramePtrT {
         previousFrame,
         savedIP,
         savedCodeBlock,
-        shUnit,
-        srcLocationIdx,
+        locals,
         argCount,
         HermesValue::encodeObjectValue(calleeClosure),
         construct ? HermesValue::encodeObjectValue(calleeClosure)

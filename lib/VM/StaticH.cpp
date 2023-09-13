@@ -388,8 +388,7 @@ _sh_ljs_call(SHRuntime *shr, SHLegacyValue *frame, uint32_t argCount) {
   newFrame.getPreviousFrameRef() = HermesValue::encodeNativePointer(frame);
   newFrame.getSavedIPRef() = HermesValue::encodeNativePointer(nullptr);
   newFrame.getSavedCodeBlockRef() = HermesValue::encodeNativePointer(nullptr);
-  newFrame.getSHUnitRef() = HermesValue::encodeNativePointer(nullptr);
-  newFrame.getSrcLocationIdxRef() = HermesValue::encodeNativeUInt32(0);
+  newFrame.getSHLocalsRef() = HermesValue::encodeNativePointer(nullptr);
   newFrame.getArgCountRef() = HermesValue::encodeNativeUInt32(argCount);
   return doCall(runtime, &newFrame.getCalleeClosureOrCBRef());
 }
@@ -404,8 +403,7 @@ extern "C" SHLegacyValue _sh_ljs_call_builtin(
   newFrame.getPreviousFrameRef() = HermesValue::encodeNativePointer(frame);
   newFrame.getSavedIPRef() = HermesValue::encodeNativePointer(nullptr);
   newFrame.getSavedCodeBlockRef() = HermesValue::encodeNativePointer(nullptr);
-  newFrame.getSHUnitRef() = HermesValue::encodeNativePointer(nullptr);
-  newFrame.getSrcLocationIdxRef() = HermesValue::encodeNativeUInt32(0);
+  newFrame.getSHLocalsRef() = HermesValue::encodeNativePointer(nullptr);
   newFrame.getArgCountRef() = HermesValue::encodeNativeUInt32(argCount);
   newFrame.getNewTargetRef() = HermesValue::encodeUndefinedValue();
   newFrame.getCalleeClosureOrCBRef() = HermesValue::encodeObjectValue(

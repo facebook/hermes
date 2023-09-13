@@ -723,7 +723,6 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
         ip,
         nullptr,
         nullptr,
-        0,
         totalArgCount,
         HermesValue::encodeObjectValue(self->getTarget(runtime)),
         originalNewTarget);
@@ -754,7 +753,6 @@ bail:
       ip,
       nullptr,
       nullptr,
-      0,
       0,
       HermesValue::encodeEmptyValue(),
       HermesValue::encodeEmptyValue());

@@ -565,15 +565,16 @@ void JSError::recordNativeStackTrace(
       skip = false;
       continue;
     }
-    // If the SHUnit is null, that means no location was set. This means
+    // If the SHLocals is null, that means no location was set. This means
     // this is probably a NativeFunction, e.g. JSLib. If the function does have
     // source information, but the source location index is 0, then the current
     // instruction has no source info.
-    if (!cf.getSHUnit() || cf.getSrcLocationIdx() == 0) {
+    const SHLocals *locals = cf.getSHLocals();
+    if (!locals || locals->src_location_idx == 0) {
       selfHandle->nativeStacktrace_->push_back({nullptr, {}});
     } else {
-      const SHUnit *unit = cf.getSHUnit();
-      uint32_t curLocIdx = cf.getSrcLocationIdx();
+      const SHUnit *unit = locals->unit;
+      uint32_t curLocIdx = locals->src_location_idx;
       assert(
           curLocIdx < unit->source_locations_size &&
           "out of bounds access on source locations table");

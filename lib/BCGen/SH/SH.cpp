@@ -1749,12 +1749,8 @@ class InstrGen {
     os_ << " = _sh_ljs_native_pointer((void*)0);\n";
 
     os_.indent(2);
-    generateRegister(stackReg(hbc::StackFrameLayout::SHUnit));
+    generateRegister(stackReg(hbc::StackFrameLayout::SHLocals));
     os_ << " = _sh_ljs_native_pointer((void*)0);\n";
-
-    os_.indent(2);
-    generateRegister(stackReg(hbc::StackFrameLayout::SrcLocationIdx));
-    os_ << " = _sh_ljs_native_uint32(0);\n";
 
     os_.indent(2);
     generateRegister(stackReg(hbc::StackFrameLayout::ArgCount));
@@ -2294,10 +2290,23 @@ void generateFunction(
     OS << "  _sh_check_native_stack_overflow(shr);\n";
   }
 
+  // Emit instructions for native stack traces if the debug info level is set to
+  // at least throwing.
+  bool emitNativeTraces =
+      F.getContext().getDebugInfoSetting() >= DebugInfoSetting::THROWING;
+
   OS << "  SHLegacyValue *frame = _sh_enter(shr, &locals.head, "
      << (RA.getMaxArgumentRegisters() + hbc::StackFrameLayout::FirstLocal)
      << ");\n"
      << "  locals.head.count =" << localsSize << ";\n";
+
+  if (emitNativeTraces) {
+    // Initialize the current SHUnit.
+    OS << "  locals.head.unit = &THIS_UNIT;\n";
+    // Initialize the current source location to invalid.
+    OS << "  locals.head.src_location_idx = "
+       << SHSrcLocationTable::kInvalidLocIdx << ";\n";
+  }
 
   // Initialize all registers to undefined.
   for (size_t i = 0; i < localsSize; ++i) {
@@ -2313,18 +2322,10 @@ void generateFunction(
   for (size_t i = 0; i < maxTryDepth; ++i)
     OS << "  SHJmpBuf jmpBuf" << i << ";\n";
 
-  // Emit instructions for native stack traces if the debug info level is set to
-  // at least throwing.
-  bool emitNativeTraces =
-      F.getContext().getDebugInfoSetting() >= DebugInfoSetting::THROWING;
   if (emitNativeTraces) {
-    // Initialize the current SHUnit ptr for this frame.
-    OS << "  frame[" << hbc::StackFrameLayout::SHUnit
-       << "] = _sh_ljs_native_pointer(&THIS_UNIT);\n";
-    // Initialize the current source location to invalid.
-    OS << "  frame[" << hbc::StackFrameLayout::SrcLocationIdx
-       << "] = _sh_ljs_native_uint32(" << SHSrcLocationTable::kInvalidLocIdx
-       << ");\n";
+    // Setup the frame to reference this SHLocals.
+    OS << "  frame[" << hbc::StackFrameLayout::SHLocals << "]"
+       << " = _sh_ljs_native_pointer(&locals.head);\n";
   }
 
   // The most recent index into the source location table that was used by a
@@ -2382,8 +2383,7 @@ void generateFunction(
           if (idx != prevSrcLocationIdx) {
             // We update the source location if the source location index of the
             // current instruction has changed from the previous update.
-            OS << "  frame[" << hbc::StackFrameLayout::SrcLocationIdx
-               << "] = _sh_ljs_native_uint32(" << idx << ");\n";
+            OS << "  locals.head.src_location_idx = " << idx << ";\n";
           }
           prevSrcLocationIdx = idx;
         }

@@ -132,6 +132,10 @@ typedef struct SHUnit {
 typedef struct SHLocals {
   struct SHLocals *prev;
   unsigned count;
+  /// The SHUnit associated with this locals.
+  SHUnit *unit;
+  /// The current index into the SHUnit's source location table.
+  uint32_t src_location_idx;
   SHLegacyValue locals[0];
 } SHLocals;
 

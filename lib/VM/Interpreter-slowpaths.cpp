@@ -294,7 +294,6 @@ ExecutionStatus Interpreter::implCallBuiltin(
       ip,
       curCodeBlock,
       nullptr,
-      0,
       op3 - 1,
       nf,
       false);

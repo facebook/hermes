@@ -1728,7 +1728,6 @@ class ScopedNativeCallFrame {
         nullptr,
         nullptr,
         nullptr,
-        0,
         argCount,
         callee,
         newTarget);
