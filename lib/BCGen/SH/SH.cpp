@@ -335,7 +335,7 @@ class SHSrcLocationTable {
   FileIdxCacheTy fileIdxCache_{};
   /// To avoid performing a hash lookup in most cases, cache the last found
   /// entry in the file index cache.
-  FileIdxCacheTy::value_type *lastFileIdxEntry_;
+  FileIdxCacheTy::value_type *lastFileIdxEntry_ = nullptr;
 
   /// A reference to the global string table. Used for filenames.
   SHStringTable &stringTable_;
