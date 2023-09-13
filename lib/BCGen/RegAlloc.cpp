@@ -846,7 +846,7 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
       os << "$" << allocator.getRegister(I);
     }
 
-    if (!codeGenOpts.dumpOperandRegisters) {
+    if (codeGenOpts.dumpRegisterInterval) {
       os << " ";
       if (allocator.hasInstructionNumber(I)) {
         auto idx = allocator.getInstructionNumber(I);
@@ -855,14 +855,11 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
       } else {
         os << "          \t";
       }
-
-      IRPrinter::printInstructionDestination(I);
     }
   }
 
   void printValueLabel(Instruction *I, Value *V, unsigned opIndex) override {
-    auto codeGenOpts = I->getContext().getCodeGenerationSettings();
-    if (codeGenOpts.dumpOperandRegisters && allocator.isAllocated(V)) {
+    if (allocator.isAllocated(V)) {
       os << "$" << allocator.getRegister(V);
     } else {
       IRPrinter::printValueLabel(I, V, opIndex);

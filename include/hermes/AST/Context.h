@@ -27,8 +27,8 @@ struct CodeGenerationSettings {
   bool test262{false};
   /// Whether we should emit TDZ checks.
   bool enableTDZ{false};
-  /// Dump registers assigned to instruction operands.
-  bool dumpOperandRegisters{false};
+  /// Dump register liveness intervals.
+  bool dumpRegisterInterval{false};
   /// Print source location information in IR dumps.
   bool dumpSourceLocation{false};
   /// Print the use list if the instruction has any users.
