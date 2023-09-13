@@ -3160,8 +3160,8 @@ TEST_F(ConnectionTests, testGlobalLexicalScopeNames) {
 TEST_F(ConnectionTests, testInvalidExecutionContext) {
   int msgId = 1;
   send<m::runtime::EnableRequest>(conn, msgId++);
-  send<m::debugger::EnableRequest>(conn, msgId++);
   auto executionContextNotification = expectExecutionContextCreated(conn);
+  send<m::debugger::EnableRequest>(conn, msgId++);
 
   asyncRuntime.executeScriptAsync(R"(debugger;)");
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
