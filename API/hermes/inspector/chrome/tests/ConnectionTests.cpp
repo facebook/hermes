@@ -2248,64 +2248,41 @@ TEST_F(ConnectionTests, testConsoleLog) {
   send<m::debugger::ResumeRequest>(conn, msgId++);
   expectNotification<m::debugger::ResumedNotification>(conn);
 
-  // Two notifications (hitting debugger and console API call) can appear
-  // in any order. We wait for two notifications here and later check
-  // that both of them were hit.
-  bool receivedConsoleNotification = false;
-  bool receivedPausedNotification = false;
-  for (size_t i = 0; i < 2; ++i) {
-    conn.waitForNotification([this,
-                              &receivedConsoleNotification,
-                              &receivedPausedNotification,
-                              &msgId](const std::string &str) {
-      auto parsedNote = mustParseStrAsJsonObj(str, factory);
-      message::JSONValue *methodRes = parsedNote->get("method");
-      EXPECT_TRUE(methodRes != nullptr);
-      std::unique_ptr<std::string> method =
-          message::valueFromJson<std::string>(methodRes);
-      EXPECT_TRUE(method != nullptr);
-      if (*method == "Runtime.consoleAPICalled") {
-        receivedConsoleNotification = true;
-        auto note =
-            mustMake<m::runtime::ConsoleAPICalledNotification>(parsedNote);
-        EXPECT_EQ(note.type, "warning");
-        EXPECT_EQ(note.args.size(), 3);
+  auto warningNote =
+      expectNotification<m::runtime::ConsoleAPICalledNotification>(conn);
+  EXPECT_EQ(warningNote.type, "warning");
+  EXPECT_EQ(warningNote.args.size(), 3);
 
-        EXPECT_EQ(note.args[0].type, "string");
-        EXPECT_EQ(*note.args[0].value, "\"string value\"");
+  EXPECT_EQ(warningNote.args[0].type, "string");
+  EXPECT_EQ(*warningNote.args[0].value, "\"string value\"");
 
-        EXPECT_EQ(note.args[1].type, "object");
-        expectProps(
-            conn,
-            msgId++,
-            note.args[1].objectId.value(),
-            {{"number1", PropInfo("number").setValue("1")},
-             {"bool1", PropInfo("boolean").setValue("false")},
-             {"__proto__", PropInfo("object")}});
+  EXPECT_EQ(warningNote.args[1].type, "object");
 
-        EXPECT_EQ(note.args[2].type, "object");
-        expectProps(
-            conn,
-            msgId++,
-            note.args[2].objectId.value(),
-            {{"number2", PropInfo("number").setValue("2")},
-             {"bool2", PropInfo("boolean").setValue("true")},
-             {"__proto__", PropInfo("object")}});
-      } else if (*method == "Debugger.paused") {
-        receivedPausedNotification = true;
-        auto note = mustMake<m::debugger::PausedNotification>(parsedNote);
-        EXPECT_EQ(note.reason, "other");
-        EXPECT_EQ(note.callFrames.size(), 1);
-        EXPECT_EQ(note.callFrames[0].functionName, "global");
-        EXPECT_EQ(note.callFrames[0].location.lineNumber, 6);
-      } else {
-        throw UnexpectedNotificationException();
-      }
-    });
-  }
+  EXPECT_EQ(warningNote.args[2].type, "object");
 
-  EXPECT_TRUE(receivedConsoleNotification);
-  EXPECT_TRUE(receivedPausedNotification);
+  auto pausedNote = expectNotification<m::debugger::PausedNotification>(conn);
+  EXPECT_EQ(pausedNote.reason, "other");
+  EXPECT_EQ(pausedNote.callFrames.size(), 1);
+  EXPECT_EQ(pausedNote.callFrames[0].functionName, "global");
+  EXPECT_EQ(pausedNote.callFrames[0].location.lineNumber, 6);
+
+  // Requesting object properties sends requests and expects response messages
+  // with the result, so this must be done after the paused message above has
+  // already been removed from the queue of incoming messages.
+  expectProps(
+      conn,
+      msgId++,
+      warningNote.args[1].objectId.value(),
+      {{"number1", PropInfo("number").setValue("1")},
+       {"bool1", PropInfo("boolean").setValue("false")},
+       {"__proto__", PropInfo("object")}});
+  expectProps(
+      conn,
+      msgId++,
+      warningNote.args[2].objectId.value(),
+      {{"number2", PropInfo("number").setValue("2")},
+       {"bool2", PropInfo("boolean").setValue("true")},
+       {"__proto__", PropInfo("object")}});
 
   // Resume and expect no further notifications
   send<m::debugger::ResumeRequest>(conn, msgId++);
@@ -2338,82 +2315,56 @@ TEST_F(ConnectionTests, testConsoleGroup) {
   send<m::debugger::ResumeRequest>(conn, msgId++);
   expectNotification<m::debugger::ResumedNotification>(conn);
 
-  // Debugger and console notifications can appear out of order. We wait for
-  // all notifications here and later check that all of them were hit. The
-  // correct order of the multiple console notifications is checked.
-  bool receivedGroupStartNotification = false;
-  bool receivedGroupEndNotification = false;
-  bool receivedPausedNotification = false;
   constexpr long long kNewYears2023 = 1672549200000;
   constexpr long long kNewYears3023 = 33229458000000;
-  for (size_t i = 0; i < 3; ++i) {
-    conn.waitForNotification([this,
-                              &receivedGroupStartNotification,
-                              &receivedGroupEndNotification,
-                              &receivedPausedNotification,
-                              &msgId,
-                              kNewYears2023,
-                              kNewYears3023](const std::string &str) {
-      auto parsedNote = mustParseStrAsJsonObj(str, factory);
-      std::string method;
-      EXPECT_TRUE(message::assign(method, parsedNote, "method"));
-      if (method == "Runtime.consoleAPICalled") {
-        if (!receivedGroupStartNotification) {
-          auto note =
-              mustMake<m::runtime::ConsoleAPICalledNotification>(parsedNote);
-          EXPECT_EQ(note.type, "startGroup");
-          receivedGroupStartNotification = true;
 
-          EXPECT_GT(note.timestamp, kNewYears2023);
-          EXPECT_LT(note.timestamp, kNewYears3023);
-          EXPECT_EQ(note.args.size(), 3);
+  auto groupNote =
+      expectNotification<m::runtime::ConsoleAPICalledNotification>(conn);
+  EXPECT_EQ(groupNote.type, "startGroup");
 
-          EXPECT_EQ(note.args[0].type, "string");
-          EXPECT_EQ(note.args[0].value.value(), "\"grouping\"");
+  EXPECT_GT(groupNote.timestamp, kNewYears2023);
+  EXPECT_LT(groupNote.timestamp, kNewYears3023);
+  EXPECT_EQ(groupNote.args.size(), 3);
 
-          EXPECT_EQ(note.args[1].type, "object");
-          expectProps(
-              conn,
-              msgId++,
-              note.args[1].objectId.value(),
-              {{"number1", PropInfo("number").setValue("1")},
-               {"bool1", PropInfo("boolean").setValue("false")},
-               {"__proto__", PropInfo("object")}});
+  EXPECT_EQ(groupNote.args[0].type, "string");
+  EXPECT_EQ(groupNote.args[0].value.value(), "\"grouping\"");
 
-          EXPECT_EQ(note.args[2].type, "object");
-          expectProps(
-              conn,
-              msgId++,
-              note.args[2].objectId.value(),
-              {{"number2", PropInfo("number").setValue("2")},
-               {"bool2", PropInfo("boolean").setValue("true")},
-               {"__proto__", PropInfo("object")}});
-        } else {
-          auto note =
-              mustMake<m::runtime::ConsoleAPICalledNotification>(parsedNote);
-          EXPECT_EQ(note.type, "endGroup");
-          receivedGroupEndNotification = true;
+  EXPECT_EQ(groupNote.args[1].type, "object");
 
-          EXPECT_GT(note.timestamp, kNewYears2023);
-          EXPECT_LT(note.timestamp, kNewYears3023);
-          EXPECT_EQ(note.args.size(), 0);
-        }
-      } else if (method == "Debugger.paused") {
-        receivedPausedNotification = true;
-        auto note = mustMake<m::debugger::PausedNotification>(parsedNote);
-        EXPECT_EQ(note.reason, "other");
-        EXPECT_EQ(note.callFrames.size(), 1);
-        EXPECT_EQ(note.callFrames[0].functionName, "global");
-        EXPECT_EQ(note.callFrames[0].location.lineNumber, 9);
-      } else {
-        throw UnexpectedNotificationException();
-      }
-    });
-  }
+  EXPECT_EQ(groupNote.args[2].type, "object");
 
-  EXPECT_TRUE(receivedGroupStartNotification);
-  EXPECT_TRUE(receivedGroupEndNotification);
-  EXPECT_TRUE(receivedPausedNotification);
+  auto endNote =
+      expectNotification<m::runtime::ConsoleAPICalledNotification>(conn);
+  EXPECT_EQ(endNote.type, "endGroup");
+
+  EXPECT_GT(endNote.timestamp, kNewYears2023);
+  EXPECT_LT(endNote.timestamp, kNewYears3023);
+  EXPECT_EQ(endNote.args.size(), 0);
+
+  auto pausedNote = expectNotification<m::debugger::PausedNotification>(conn);
+  EXPECT_EQ(pausedNote.reason, "other");
+  EXPECT_EQ(pausedNote.callFrames.size(), 1);
+  EXPECT_EQ(pausedNote.callFrames[0].functionName, "global");
+  EXPECT_EQ(pausedNote.callFrames[0].location.lineNumber, 9);
+
+  // Requesting object properties sends requests and expects response messages
+  // with the result, so this must be done after the groupEnd and paused
+  // messages above have already been removed from the queue of incoming
+  // messages.
+  expectProps(
+      conn,
+      msgId++,
+      groupNote.args[1].objectId.value(),
+      {{"number1", PropInfo("number").setValue("1")},
+       {"bool1", PropInfo("boolean").setValue("false")},
+       {"__proto__", PropInfo("object")}});
+  expectProps(
+      conn,
+      msgId++,
+      groupNote.args[2].objectId.value(),
+      {{"number2", PropInfo("number").setValue("2")},
+       {"bool2", PropInfo("boolean").setValue("true")},
+       {"__proto__", PropInfo("object")}});
 
   // Resume and expect no further notifications
   send<m::debugger::ResumeRequest>(conn, msgId++);
