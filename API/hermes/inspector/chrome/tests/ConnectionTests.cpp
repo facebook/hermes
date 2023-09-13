@@ -2404,16 +2404,8 @@ TEST_F(ConnectionTests, testConsoleBuffer) {
   // Loop for 1 iteration more than kExpectedMaxBufferSize because there is a
   // warning message given when buffer is exceeded
   for (size_t i = 0; i < kExpectedMaxBufferSize + 1; i++) {
-    const std::string message = conn.waitForMessage();
-    auto parsedNote = mustParseStrAsJsonObj(message, factory);
-    message::JSONValue *methodRes = parsedNote->get("method");
-    EXPECT_TRUE(methodRes != nullptr);
-    std::unique_ptr<std::string> method =
-        message::valueFromJson<std::string>(methodRes);
-    EXPECT_TRUE(method != nullptr);
-    EXPECT_EQ(*method, "Runtime.consoleAPICalled");
-
-    auto note = mustMake<m::runtime::ConsoleAPICalledNotification>(parsedNote);
+    auto note =
+        expectNotification<m::runtime::ConsoleAPICalledNotification>(conn);
     EXPECT_EQ(note.args[0].type, "string");
 
     try {
