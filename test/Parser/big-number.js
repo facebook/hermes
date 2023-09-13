@@ -32,4 +32,4 @@
 
 // CHKIR-LABEL: %BB0:
 // CHKIR:   %[[RETVAL:[0-9]+]] = AllocStackInst (:any) $?anon_0_ret: any
-// CHKIR:   %{{[0-9]+}} = StoreStackInst Infinity: number, %[[RETVAL]]
+// CHKIR:   StoreStackInst Infinity: number, %[[RETVAL]]

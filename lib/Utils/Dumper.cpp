@@ -236,8 +236,21 @@ void IRPrinter::printFunctionVariables(Function *F) {
 }
 
 bool IRPrinter::printInstructionDestination(Instruction *I) {
-  os << "%" << InstNamer.getNumber(I);
-  return true;
+  unsigned number = InstNamer.getNumber(I);
+  if (I->hasOutput()) {
+    os << "%" << number;
+    return true;
+  } else {
+    // Calculate the width of the printed number.
+    unsigned width = 1;
+    while (number > 9) {
+      number /= 10;
+      ++width;
+    }
+    os << ' ';
+    os.indent(width);
+    return false;
+  }
 }
 
 void IRPrinter::printInstruction(Instruction *I) {
