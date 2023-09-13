@@ -33,46 +33,46 @@ return foo;
 // CHECK-NEXT:frame = [main: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:  %1 = StoreStackInst undefined: undefined, %0: any
-// CHECK-NEXT:  %2 = StoreStackInst "use strict": string, %0: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %0: any
+// CHECK-NEXT:       StoreStackInst "use strict": string, %0: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %main(): any
-// CHECK-NEXT:  %4 = StoreFrameInst %3: object, [main]: any
+// CHECK-NEXT:       StoreFrameInst %3: object, [main]: any
 // CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %6 = StoreStackInst %5: any, %0: any
+// CHECK-NEXT:       StoreStackInst %5: any, %0: any
 // CHECK-NEXT:  %7 = LoadStackInst (:any) %0: any
-// CHECK-NEXT:  %8 = ReturnInst %7: any
+// CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): any
 // CHECK-NEXT:frame = [foo: any, C: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [C]: any
+// CHECK-NEXT:       StoreFrameInst undefined: undefined, [C]: any
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): any
-// CHECK-NEXT:  %2 = StoreFrameInst %1: object, [foo]: any
+// CHECK-NEXT:       StoreFrameInst %1: object, [foo]: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %C(): any
-// CHECK-NEXT:  %4 = StoreFrameInst %3: object, [C]: any
+// CHECK-NEXT:       StoreFrameInst %3: object, [C]: any
 // CHECK-NEXT:  %5 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:  %6 = StorePropertyStrictInst %5: object, %3: object, "prototype": string
+// CHECK-NEXT:       StorePropertyStrictInst %5: object, %3: object, "prototype": string
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [foo]: any
-// CHECK-NEXT:  %8 = ReturnInst %7: any
+// CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = UnreachableInst
+// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(x: number): any [typed]
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:number) %x: number
-// CHECK-NEXT:  %1 = StoreFrameInst %0: number, [x]: any
+// CHECK-NEXT:       StoreFrameInst %0: number, [x]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [C@main]: any
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: any, "prototype": string
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) "x": string, 0: number
-// CHECK-NEXT:  %5 = StoreParentInst %3: any, %4: object
+// CHECK-NEXT:       StoreParentInst %3: any, %4: object
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %7 = CallInst (:any) %2: any, %C(): any, empty: any, %2: any, %4: object, %6: any
-// CHECK-NEXT:  %8 = ReturnInst %4: object
+// CHECK-NEXT:       ReturnInst %4: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = UnreachableInst
+// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function C(x: any): any [typed]
@@ -80,9 +80,9 @@ return foo;
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:  %2 = StoreFrameInst %1: any, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: any, [x]: any
 // CHECK-NEXT:  %3 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %4 = CheckedTypeCastInst (:number) %3: any
-// CHECK-NEXT:  %5 = PrStoreInst %4: number, %0: object, 0: number, "x": string, true: boolean
-// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
+// CHECK-NEXT:       PrStoreInst %4: number, %0: object, 0: number, "x": string, true: boolean
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -22,15 +22,15 @@
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %main(): undefined
-// CHECK-NEXT:  %1 = ReturnInst %0: object
+// CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): undefined
 // CHECK-NEXT:frame = [f: object]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f(): any
-// CHECK-NEXT:  %1 = StoreFrameInst %0: object, [f]: object
-// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
+// CHECK-NEXT:       StoreFrameInst %0: object, [f]: object
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f(): any [allCallsitesKnownInStrictMode]
@@ -38,5 +38,5 @@
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:object) [f@main]: object
 // CHECK-NEXT:  %1 = CallInst (:any) %0: object, %f(): any, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:  %2 = ReturnInst %1: any
+// CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:function_end

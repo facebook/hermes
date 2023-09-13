@@ -25,7 +25,7 @@ print(new C().method());
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %C(): undefined
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %method(): number
 // CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) "method": string, %1: object
-// CHECK-NEXT:  %3 = StorePropertyStrictInst %2: object, %0: object, "prototype": string
+// CHECK-NEXT:       StorePropertyStrictInst %2: object, %0: object, "prototype": string
 // CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %0: object, "prototype": string
 // CHECK-NEXT:  %6 = AllocObjectInst (:object) 0: number, %5: any
@@ -33,17 +33,17 @@ print(new C().method());
 // CHECK-NEXT:  %8 = PrLoadInst (:object) %7: object, 0: number, "method": string
 // CHECK-NEXT:  %9 = CallInst [njsf] (:any) %8: object, empty: any, empty: any, undefined: undefined, %6: object
 // CHECK-NEXT:  %10 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %9: any
-// CHECK-NEXT:  %11 = ReturnInst %10: any
+// CHECK-NEXT:        ReturnInst %10: any
 // CHECK-NEXT:function_end
 
 // CHECK:function C(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function method(): number [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst 1: number
+// CHECK-NEXT:       ReturnInst 1: number
 // CHECK-NEXT:function_end

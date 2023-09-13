@@ -51,22 +51,22 @@ function test_unary(x) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "sink": string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "test_one": string
-// CHECK-NEXT:  %2 = DeclareGlobalVarInst "test_unary": string
+// CHECK-NEXT:       DeclareGlobalVarInst "sink": string
+// CHECK-NEXT:       DeclareGlobalVarInst "test_one": string
+// CHECK-NEXT:       DeclareGlobalVarInst "test_unary": string
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %sink(): undefined
-// CHECK-NEXT:  %4 = StorePropertyLooseInst %3: object, globalObject: object, "sink": string
+// CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "sink": string
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %test_one(): undefined
-// CHECK-NEXT:  %6 = StorePropertyLooseInst %5: object, globalObject: object, "test_one": string
+// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "test_one": string
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %test_unary(): undefined
-// CHECK-NEXT:  %8 = StorePropertyLooseInst %7: object, globalObject: object, "test_unary": string
-// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
+// CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "test_unary": string
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function sink(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_one(x: any, y: any): undefined
@@ -96,7 +96,7 @@ function test_unary(x) {
 // CHECK-NEXT:  %21 = BinaryAddInst (:string|number|bigint) %19: object, %20: object
 // CHECK-NEXT:  %22 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %21: string|number|bigint
 // CHECK-NEXT:  %23 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, NaN: number
-// CHECK-NEXT:  %24 = ReturnInst undefined: undefined
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_unary(x: any): undefined
@@ -112,5 +112,5 @@ function test_unary(x) {
 // CHECK-NEXT:  %7 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %6: number|bigint
 // CHECK-NEXT:  %8 = UnaryTypeofInst (:string) %0: any
 // CHECK-NEXT:  %9 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %8: string
-// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

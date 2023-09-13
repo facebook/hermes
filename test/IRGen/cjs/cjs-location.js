@@ -18,11 +18,11 @@ x = 10;
 // CHECK-NEXT:; <global>:1:1
 // CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:; <global>:1:1
-// CHECK-NEXT:  %1 = StoreStackInst undefined: undefined, %0: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %0: any
 // CHECK-NEXT:; <global>:1:1
 // CHECK-NEXT:  %2 = LoadStackInst (:any) %0: any
 // CHECK-NEXT:; <global>:1:1
-// CHECK-NEXT:  %3 = ReturnInst %2: any
+// CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end
 
 // CHECK:function cjs_module(exports: any, require: any, module: any): any
@@ -32,17 +32,17 @@ x = 10;
 // CHECK-NEXT:; <stdin>:10:1
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %exports: any
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [exports]: any
+// CHECK-NEXT:       StoreFrameInst %0: any, [exports]: any
 // CHECK-NEXT:; <stdin>:10:1
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %require: any
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [require]: any
+// CHECK-NEXT:       StoreFrameInst %2: any, [require]: any
 // CHECK-NEXT:; <stdin>:10:1
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %module: any
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %5 = StoreFrameInst %4: any, [module]: any
+// CHECK-NEXT:       StoreFrameInst %4: any, [module]: any
 // CHECK-NEXT:; <stdin>:10:3
-// CHECK-NEXT:  %6 = StorePropertyLooseInst 10: number, globalObject: object, "x": string
+// CHECK-NEXT:       StorePropertyLooseInst 10: number, globalObject: object, "x": string
 // CHECK-NEXT:; <stdin>:10:7
-// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -26,5 +26,5 @@ print(void print);
 // CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %6 = UnaryVoidInst (:undefined) %5: any
 // CHECK-NEXT:  %7 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %6: undefined
-// CHECK-NEXT:  %8 = ReturnInst %7: any
+// CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:function_end

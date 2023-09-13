@@ -17,7 +17,7 @@ function outer() {
 // CHECK:function outer(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK-NOT: {{.*}}foo{{.*}}

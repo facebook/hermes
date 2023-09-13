@@ -17,26 +17,26 @@ function simple_test0(x, y) {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "simple_test0": string
+// CHECK-NEXT:       DeclareGlobalVarInst "simple_test0": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %simple_test0(): any
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "simple_test0": string
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "simple_test0": string
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst %5: any
+// CHECK-NEXT:       ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_test0(x: any, y: any): any
 // CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [x]: any
+// CHECK-NEXT:       StoreFrameInst %0: any, [x]: any
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [y]: any
+// CHECK-NEXT:       StoreFrameInst %2: any, [y]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [y]: any
 // CHECK-NEXT:  %6 = BinaryInstanceOfInst (:any) %4: any, %5: any
-// CHECK-NEXT:  %7 = ReturnInst %6: any
+// CHECK-NEXT:       ReturnInst %6: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = UnreachableInst
+// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

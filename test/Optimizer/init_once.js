@@ -27,22 +27,22 @@ function main(p) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
+// CHECK-NEXT:       DeclareGlobalVarInst "main": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): object
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "main": string
-// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "main": string
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function main(p: any): object
 // CHECK-NEXT:frame = [p: any, k: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %p: any
-// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [p]: any
+// CHECK-NEXT:       StoreFrameInst %0: any, [p]: any
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %bar(): undefined
-// CHECK-NEXT:  %3 = StoreFrameInst %0: any, [k]: any
+// CHECK-NEXT:       StoreFrameInst %0: any, [k]: any
 // CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %5 = StoreFrameInst %4: any, [p]: any
-// CHECK-NEXT:  %6 = ReturnInst %2: object
+// CHECK-NEXT:       StoreFrameInst %4: any, [p]: any
+// CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): undefined
@@ -56,5 +56,5 @@ function main(p) {
 // CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %1: any
 // CHECK-NEXT:  %6 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %1: any
 // CHECK-NEXT:  %7 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %1: any
-// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

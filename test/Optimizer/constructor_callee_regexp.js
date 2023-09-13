@@ -23,10 +23,10 @@ function ctor_this_test() {
 // CHECK:function global(): string
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "ctor_this_test": string
+// CHECK-NEXT:       DeclareGlobalVarInst "ctor_this_test": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %ctor_this_test(): object
-// CHECK-NEXT:  %2 = StorePropertyStrictInst %1: object, globalObject: object, "ctor_this_test": string
-// CHECK-NEXT:  %3 = ReturnInst "use strict": string
+// CHECK-NEXT:       StorePropertyStrictInst %1: object, globalObject: object, "ctor_this_test": string
+// CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
 // CHECK:function ctor_this_test(): object
@@ -36,14 +36,14 @@ function ctor_this_test() {
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "prototype": string
 // CHECK-NEXT:  %2 = CreateThisInst (:object) %1: any, %0: object
 // CHECK-NEXT:  %3 = CallInst (:object) %0: object, %use_this(): object, empty: any, undefined: undefined, %2: object, 12: number
-// CHECK-NEXT:  %4 = ReturnInst %3: object
+// CHECK-NEXT:       ReturnInst %3: object
 // CHECK-NEXT:function_end
 
 // CHECK:function use_this(k: number): object [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
-// CHECK-NEXT:  %1 = StorePropertyStrictInst 12: number, %0: object, "k": string
+// CHECK-NEXT:       StorePropertyStrictInst 12: number, %0: object, "k": string
 // CHECK-NEXT:  %2 = CreateRegExpInst (:object) "regexp": string, "": string
-// CHECK-NEXT:  %3 = ReturnInst %2: object
+// CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end

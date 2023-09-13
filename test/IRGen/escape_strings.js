@@ -33,25 +33,25 @@ function test_hex_printable() {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "test_newline": string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "test_quote": string
-// CHECK-NEXT:  %2 = DeclareGlobalVarInst "test_slash": string
-// CHECK-NEXT:  %3 = DeclareGlobalVarInst "test_hex": string
-// CHECK-NEXT:  %4 = DeclareGlobalVarInst "test_hex_printable": string
+// CHECK-NEXT:       DeclareGlobalVarInst "test_newline": string
+// CHECK-NEXT:       DeclareGlobalVarInst "test_quote": string
+// CHECK-NEXT:       DeclareGlobalVarInst "test_slash": string
+// CHECK-NEXT:       DeclareGlobalVarInst "test_hex": string
+// CHECK-NEXT:       DeclareGlobalVarInst "test_hex_printable": string
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %test_newline(): any
-// CHECK-NEXT:  %6 = StorePropertyLooseInst %5: object, globalObject: object, "test_newline": string
+// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "test_newline": string
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %test_quote(): any
-// CHECK-NEXT:  %8 = StorePropertyLooseInst %7: object, globalObject: object, "test_quote": string
+// CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "test_quote": string
 // CHECK-NEXT:  %9 = CreateFunctionInst (:object) %test_slash(): any
-// CHECK-NEXT:  %10 = StorePropertyLooseInst %9: object, globalObject: object, "test_slash": string
+// CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "test_slash": string
 // CHECK-NEXT:  %11 = CreateFunctionInst (:object) %test_hex(): any
-// CHECK-NEXT:  %12 = StorePropertyLooseInst %11: object, globalObject: object, "test_hex": string
+// CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "test_hex": string
 // CHECK-NEXT:  %13 = CreateFunctionInst (:object) %test_hex_printable(): any
-// CHECK-NEXT:  %14 = StorePropertyLooseInst %13: object, globalObject: object, "test_hex_printable": string
+// CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "test_hex_printable": string
 // CHECK-NEXT:  %15 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:  %16 = StoreStackInst undefined: undefined, %15: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %15: any
 // CHECK-NEXT:  %17 = LoadStackInst (:any) %15: any
-// CHECK-NEXT:  %18 = ReturnInst %17: any
+// CHECK-NEXT:        ReturnInst %17: any
 // CHECK-NEXT:function_end
 
 // CHECK:function test_newline(): any
@@ -59,7 +59,7 @@ function test_hex_printable() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "A string with a newline\\n": string
-// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_quote(): any
@@ -67,7 +67,7 @@ function test_hex_printable() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "A string with a newline\\\"": string
-// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_slash(): any
@@ -75,7 +75,7 @@ function test_hex_printable() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "A string with a newline\\\\": string
-// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_hex(): any
@@ -83,7 +83,7 @@ function test_hex_printable() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "A string with a hex: \\x03": string
-// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_hex_printable(): any
@@ -91,5 +91,5 @@ function test_hex_printable() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "A string with a hex printable: a": string
-// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

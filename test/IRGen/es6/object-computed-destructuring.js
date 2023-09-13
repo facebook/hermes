@@ -20,41 +20,41 @@ var {} = x;
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "b": string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "rest": string
-// CHECK-NEXT:  %2 = DeclareGlobalVarInst "d": string
+// CHECK-NEXT:       DeclareGlobalVarInst "b": string
+// CHECK-NEXT:       DeclareGlobalVarInst "rest": string
+// CHECK-NEXT:       DeclareGlobalVarInst "d": string
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "x": string
 // CHECK-NEXT:  %6 = LoadPropertyInst (:any) %5: any, "a": string
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6: any, globalObject: object, "b": string
+// CHECK-NEXT:       StorePropertyLooseInst %6: any, globalObject: object, "b": string
 // CHECK-NEXT:  %8 = TryLoadGlobalPropertyInst (:any) globalObject: object, "x": string
 // CHECK-NEXT:  %9 = LoadPropertyInst (:any) %8: any, "a": string
-// CHECK-NEXT:  %10 = StorePropertyLooseInst %9: any, globalObject: object, "b": string
+// CHECK-NEXT:        StorePropertyLooseInst %9: any, globalObject: object, "b": string
 // CHECK-NEXT:  %11 = AllocObjectLiteralInst (:object) "a": string, 0: number
 // CHECK-NEXT:  %12 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %11: object, null: null
 // CHECK-NEXT:  %13 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %14 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %13: object, %8: any, %11: object
-// CHECK-NEXT:  %15 = StorePropertyLooseInst %14: any, globalObject: object, "rest": string
+// CHECK-NEXT:        StorePropertyLooseInst %14: any, globalObject: object, "rest": string
 // CHECK-NEXT:  %16 = TryLoadGlobalPropertyInst (:any) globalObject: object, "x": string
 // CHECK-NEXT:  %17 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
 // CHECK-NEXT:  %18 = CallInst (:any) %17: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %19 = LoadPropertyInst (:any) %16: any, %18: any
-// CHECK-NEXT:  %20 = StorePropertyLooseInst %19: any, globalObject: object, "b": string
+// CHECK-NEXT:        StorePropertyLooseInst %19: any, globalObject: object, "b": string
 // CHECK-NEXT:  %21 = LoadPropertyInst (:any) %16: any, "c": string
-// CHECK-NEXT:  %22 = StorePropertyLooseInst %21: any, globalObject: object, "d": string
+// CHECK-NEXT:        StorePropertyLooseInst %21: any, globalObject: object, "d": string
 // CHECK-NEXT:  %23 = AllocObjectLiteralInst (:object) "c": string, 0: number
 // CHECK-NEXT:  %24 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %23: object, null: null
-// CHECK-NEXT:  %25 = StorePropertyLooseInst 0: number, %23: object, %18: any
+// CHECK-NEXT:        StorePropertyLooseInst 0: number, %23: object, %18: any
 // CHECK-NEXT:  %26 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %27 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %26: object, %16: any, %23: object
-// CHECK-NEXT:  %28 = StorePropertyLooseInst %27: any, globalObject: object, "rest": string
+// CHECK-NEXT:        StorePropertyLooseInst %27: any, globalObject: object, "rest": string
 // CHECK-NEXT:  %29 = TryLoadGlobalPropertyInst (:any) globalObject: object, "x": string
 // CHECK-NEXT:  %30 = BinaryEqualInst (:any) %29: any, null: null
-// CHECK-NEXT:  %31 = CondBranchInst %30: any, %BB1, %BB2
+// CHECK-NEXT:        CondBranchInst %30: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %32 = ThrowTypeErrorInst "Cannot destructure 'undefined' or 'null'.": string
+// CHECK-NEXT:        ThrowTypeErrorInst "Cannot destructure 'undefined' or 'null'.": string
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %33 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %34 = ReturnInst %33: any
+// CHECK-NEXT:        ReturnInst %33: any
 // CHECK-NEXT:function_end

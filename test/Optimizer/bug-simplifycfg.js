@@ -21,29 +21,29 @@ function bug2() {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "bug1": string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "bug2": string
+// CHECK-NEXT:       DeclareGlobalVarInst "bug1": string
+// CHECK-NEXT:       DeclareGlobalVarInst "bug2": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %bug1(): any
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: object, globalObject: object, "bug1": string
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "bug1": string
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %bug2(): any
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: object, globalObject: object, "bug2": string
-// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
+// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "bug2": string
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function bug1(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BranchInst %BB1
+// CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %1 = PhiInst (:undefined|number) undefined: undefined, %BB0, %2: number, %BB1
 // CHECK-NEXT:  %2 = UnaryIncInst (:number) %1: undefined|number
-// CHECK-NEXT:  %3 = BranchInst %BB1
+// CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:function_end
 
 // CHECK:function bug2(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BranchInst %BB1
+// CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = BranchInst %BB1
+// CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:function_end

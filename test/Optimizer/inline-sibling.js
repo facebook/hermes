@@ -23,17 +23,17 @@ function outer(a, b) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "outer": string
+// CHECK-NEXT:       DeclareGlobalVarInst "outer": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %outer(): string|number
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "outer": string
-// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "outer": string
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function outer(a: any, b: any): string|number
 // CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [a]: any
+// CHECK-NEXT:       StoreFrameInst %0: any, [a]: any
 // CHECK-NEXT:  %2 = BinaryAddInst (:string|number) %0: any, 1: number
-// CHECK-NEXT:  %3 = ReturnInst %2: string|number
+// CHECK-NEXT:       ReturnInst %2: string|number
 // CHECK-NEXT:function_end

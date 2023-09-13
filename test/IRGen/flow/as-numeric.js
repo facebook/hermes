@@ -18,31 +18,31 @@ function main() {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
+// CHECK-NEXT:       DeclareGlobalVarInst "main": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): any
-// CHECK-NEXT:  %2 = StorePropertyStrictInst %1: object, globalObject: object, "main": string
+// CHECK-NEXT:       StorePropertyStrictInst %1: object, globalObject: object, "main": string
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst %5: any
+// CHECK-NEXT:       ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): any
 // CHECK-NEXT:frame = [baz: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %baz(): any
-// CHECK-NEXT:  %1 = StoreFrameInst %0: object, [baz]: any
-// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
+// CHECK-NEXT:       StoreFrameInst %0: object, [baz]: any
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function baz(x: number): any [typed]
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:number) %x: number
-// CHECK-NEXT:  %1 = StoreFrameInst %0: number, [x]: any
+// CHECK-NEXT:       StoreFrameInst %0: number, [x]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %3 = AsNumericInst (:number|bigint) %2: any
 // CHECK-NEXT:  %4 = UnaryIncInst (:any) %3: number|bigint
-// CHECK-NEXT:  %5 = StoreFrameInst %4: any, [x]: any
-// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
+// CHECK-NEXT:       StoreFrameInst %4: any, [x]: any
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

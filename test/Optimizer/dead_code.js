@@ -30,13 +30,13 @@ function test_two(x,y,z) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "test_one": string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "test_two": string
+// CHECK-NEXT:       DeclareGlobalVarInst "test_one": string
+// CHECK-NEXT:       DeclareGlobalVarInst "test_two": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %test_one(): string
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: object, globalObject: object, "test_one": string
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "test_one": string
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test_two(): undefined
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: object, globalObject: object, "test_two": string
-// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
+// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "test_two": string
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_one(x: any, y: any, z: any): string
@@ -49,11 +49,11 @@ function test_two(x,y,z) {
 // CHECK-NEXT:  %4 = BinaryAddInst (:string|number) %0: any, 5: number
 // CHECK-NEXT:  %5 = BinaryAddInst (:string|number) false: boolean, %1: any
 // CHECK-NEXT:  %6 = BinaryAddInst (:string) "hi": string, %2: any
-// CHECK-NEXT:  %7 = ReturnInst %6: string
+// CHECK-NEXT:       ReturnInst %6: string
 // CHECK-NEXT:function_end
 
 // CHECK:function test_two(x: any, y: any, z: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

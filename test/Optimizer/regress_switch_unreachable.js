@@ -31,12 +31,12 @@
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BranchInst %BB1
+// CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %1 = PhiInst (:number) 0: number, %BB0, %5: number, %BB1
 // CHECK-NEXT:  %2 = PhiInst (:undefined) undefined: undefined, %BB0, %2: undefined, %BB1
 // CHECK-NEXT:  %3 = PhiInst (:undefined) undefined: undefined, %BB0, %3: undefined, %BB1
 // CHECK-NEXT:  %4 = PhiInst (:undefined) undefined: undefined, %BB0, %4: undefined, %BB1
 // CHECK-NEXT:  %5 = FAddInst (:number) %1: number, 1: number
-// CHECK-NEXT:  %6 = BranchInst %BB1
+// CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:function_end

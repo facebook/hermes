@@ -17,12 +17,12 @@
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:  %1 = StoreStackInst undefined: undefined, %0: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %0: any
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): any
 // CHECK-NEXT:  %3 = CallInst [njsf] (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %4 = StoreStackInst %3: any, %0: any
+// CHECK-NEXT:       StoreStackInst %3: any, %0: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %0: any
-// CHECK-NEXT:  %6 = ReturnInst %5: any
+// CHECK-NEXT:       ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): any
@@ -32,7 +32,7 @@
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "PI": string
 // CHECK-NEXT:  %2 = CheckedTypeCastInst (:number) %1: any
 // CHECK-NEXT:  %3 = BinaryMultiplyInst (:any) %2: number, 3: number
-// CHECK-NEXT:  %4 = ReturnInst %3: any
+// CHECK-NEXT:       ReturnInst %3: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = UnreachableInst
+// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

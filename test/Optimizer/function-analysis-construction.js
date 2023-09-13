@@ -20,10 +20,10 @@ function main() {
 // CHECK:function global(): string
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
+// CHECK-NEXT:       DeclareGlobalVarInst "main": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): object
-// CHECK-NEXT:  %2 = StorePropertyStrictInst %1: object, globalObject: object, "main": string
-// CHECK-NEXT:  %3 = ReturnInst "use strict": string
+// CHECK-NEXT:       StorePropertyStrictInst %1: object, globalObject: object, "main": string
+// CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): object
@@ -33,11 +33,11 @@ function main() {
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "prototype": string
 // CHECK-NEXT:  %2 = CreateThisInst (:object) %1: any, %0: object
 // CHECK-NEXT:  %3 = CallInst (:undefined) %0: object, %f(): undefined, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:  %4 = ReturnInst %2: object
+// CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
 // CHECK:function f(): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

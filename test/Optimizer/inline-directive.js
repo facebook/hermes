@@ -26,11 +26,11 @@
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): number
 // CHECK-NEXT:  %1 = CallInst (:number) %0: object, %""(): number, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:  %2 = ReturnInst 10: number
+// CHECK-NEXT:       ReturnInst 10: number
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): number [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst 10: number
+// CHECK-NEXT:       ReturnInst 10: number
 // CHECK-NEXT:function_end

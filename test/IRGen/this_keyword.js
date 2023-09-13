@@ -22,13 +22,13 @@ function f2(){
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "f1": string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "f2": string
+// CHECK-NEXT:       DeclareGlobalVarInst "f1": string
+// CHECK-NEXT:       DeclareGlobalVarInst "f2": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %f1(): object
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: object, globalObject: object, "f1": string
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "f1": string
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %f2(): any
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: object, globalObject: object, "f2": string
-// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
+// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "f2": string
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f1(): object
@@ -36,12 +36,12 @@ function f2(){
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
-// CHECK-NEXT:  %2 = ReturnInst %1: object
+// CHECK-NEXT:       ReturnInst %1: object
 // CHECK-NEXT:function_end
 
 // CHECK:function f2(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
-// CHECK-NEXT:  %1 = ReturnInst %0: any
+// CHECK-NEXT:       ReturnInst %0: any
 // CHECK-NEXT:function_end

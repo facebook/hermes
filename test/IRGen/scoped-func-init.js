@@ -25,60 +25,60 @@ function foo() {
 // CHKLOOSE:function global(): any
 // CHKLOOSE-NEXT:frame = []
 // CHKLOOSE-NEXT:%BB0:
-// CHKLOOSE-NEXT:  %0 = DeclareGlobalVarInst "init": string
-// CHKLOOSE-NEXT:  %1 = DeclareGlobalVarInst "f": string
-// CHKLOOSE-NEXT:  %2 = DeclareGlobalVarInst "foo": string
+// CHKLOOSE-NEXT:       DeclareGlobalVarInst "init": string
+// CHKLOOSE-NEXT:       DeclareGlobalVarInst "f": string
+// CHKLOOSE-NEXT:       DeclareGlobalVarInst "foo": string
 // CHKLOOSE-NEXT:  %3 = CreateFunctionInst (:object) %foo(): any
-// CHKLOOSE-NEXT:  %4 = StorePropertyLooseInst %3: object, globalObject: object, "foo": string
+// CHKLOOSE-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "foo": string
 // CHKLOOSE-NEXT:  %5 = AllocStackInst (:any) $?anon_0_ret: any
-// CHKLOOSE-NEXT:  %6 = StoreStackInst undefined: undefined, %5: any
+// CHKLOOSE-NEXT:       StoreStackInst undefined: undefined, %5: any
 // CHKLOOSE-NEXT:  %7 = LoadStackInst (:any) %5: any
-// CHKLOOSE-NEXT:  %8 = ReturnInst %7: any
+// CHKLOOSE-NEXT:       ReturnInst %7: any
 // CHKLOOSE-NEXT:function_end
 
 // CHKLOOSE:function foo(): any
 // CHKLOOSE-NEXT:frame = [f: any]
 // CHKLOOSE-NEXT:%BB0:
-// CHKLOOSE-NEXT:  %0 = StoreFrameInst undefined: undefined, [f]: any
+// CHKLOOSE-NEXT:       StoreFrameInst undefined: undefined, [f]: any
 // CHKLOOSE-NEXT:  %1 = LoadFrameInst (:any) [f]: any
-// CHKLOOSE-NEXT:  %2 = StorePropertyLooseInst %1: any, globalObject: object, "init": string
+// CHKLOOSE-NEXT:       StorePropertyLooseInst %1: any, globalObject: object, "init": string
 // CHKLOOSE-NEXT:  %3 = CreateFunctionInst (:object) %f(): any
-// CHKLOOSE-NEXT:  %4 = StoreFrameInst %3: object, [f]: any
-// CHKLOOSE-NEXT:  %5 = ReturnInst undefined: undefined
+// CHKLOOSE-NEXT:       StoreFrameInst %3: object, [f]: any
+// CHKLOOSE-NEXT:       ReturnInst undefined: undefined
 // CHKLOOSE-NEXT:function_end
 
 // CHKLOOSE:function f(): any
 // CHKLOOSE-NEXT:frame = []
 // CHKLOOSE-NEXT:%BB0:
-// CHKLOOSE-NEXT:  %0 = ReturnInst undefined: undefined
+// CHKLOOSE-NEXT:       ReturnInst undefined: undefined
 // CHKLOOSE-NEXT:function_end
 
 // CHKSTRICT:function global(): any
 // CHKSTRICT-NEXT:frame = []
 // CHKSTRICT-NEXT:%BB0:
-// CHKSTRICT-NEXT:  %0 = DeclareGlobalVarInst "init": string
-// CHKSTRICT-NEXT:  %1 = DeclareGlobalVarInst "f": string
-// CHKSTRICT-NEXT:  %2 = DeclareGlobalVarInst "foo": string
+// CHKSTRICT-NEXT:       DeclareGlobalVarInst "init": string
+// CHKSTRICT-NEXT:       DeclareGlobalVarInst "f": string
+// CHKSTRICT-NEXT:       DeclareGlobalVarInst "foo": string
 // CHKSTRICT-NEXT:  %3 = CreateFunctionInst (:object) %foo(): any
-// CHKSTRICT-NEXT:  %4 = StorePropertyStrictInst %3: object, globalObject: object, "foo": string
+// CHKSTRICT-NEXT:       StorePropertyStrictInst %3: object, globalObject: object, "foo": string
 // CHKSTRICT-NEXT:  %5 = AllocStackInst (:any) $?anon_0_ret: any
-// CHKSTRICT-NEXT:  %6 = StoreStackInst undefined: undefined, %5: any
+// CHKSTRICT-NEXT:       StoreStackInst undefined: undefined, %5: any
 // CHKSTRICT-NEXT:  %7 = LoadStackInst (:any) %5: any
-// CHKSTRICT-NEXT:  %8 = ReturnInst %7: any
+// CHKSTRICT-NEXT:       ReturnInst %7: any
 // CHKSTRICT-NEXT:function_end
 
 // CHKSTRICT:function foo(): any
 // CHKSTRICT-NEXT:frame = [f: any]
 // CHKSTRICT-NEXT:%BB0:
 // CHKSTRICT-NEXT:  %0 = LoadPropertyInst (:any) globalObject: object, "f": string
-// CHKSTRICT-NEXT:  %1 = StorePropertyStrictInst %0: any, globalObject: object, "init": string
+// CHKSTRICT-NEXT:       StorePropertyStrictInst %0: any, globalObject: object, "init": string
 // CHKSTRICT-NEXT:  %2 = CreateFunctionInst (:object) %f(): any
-// CHKSTRICT-NEXT:  %3 = StoreFrameInst %2: object, [f]: any
-// CHKSTRICT-NEXT:  %4 = ReturnInst undefined: undefined
+// CHKSTRICT-NEXT:       StoreFrameInst %2: object, [f]: any
+// CHKSTRICT-NEXT:       ReturnInst undefined: undefined
 // CHKSTRICT-NEXT:function_end
 
 // CHKSTRICT:function f(): any
 // CHKSTRICT-NEXT:frame = []
 // CHKSTRICT-NEXT:%BB0:
-// CHKSTRICT-NEXT:  %0 = ReturnInst undefined: undefined
+// CHKSTRICT-NEXT:       ReturnInst undefined: undefined
 // CHKSTRICT-NEXT:function_end

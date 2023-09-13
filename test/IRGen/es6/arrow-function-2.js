@@ -29,16 +29,16 @@ function outer2() {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "outer1": string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "outer2": string
+// CHECK-NEXT:       DeclareGlobalVarInst "outer1": string
+// CHECK-NEXT:       DeclareGlobalVarInst "outer2": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %outer1(): any
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: object, globalObject: object, "outer1": string
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "outer1": string
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %outer2(): any
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: object, globalObject: object, "outer2": string
+// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "outer2": string
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:  %7 = StoreStackInst undefined: undefined, %6: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %6: any
 // CHECK-NEXT:  %8 = LoadStackInst (:any) %6: any
-// CHECK-NEXT:  %9 = ReturnInst %8: any
+// CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:function_end
 
 // CHECK:function outer1(): any
@@ -46,16 +46,16 @@ function outer2() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
-// CHECK-NEXT:  %2 = StoreFrameInst %1: object, [?anon_0_this]: any
+// CHECK-NEXT:       StoreFrameInst %1: object, [?anon_0_this]: any
 // CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
-// CHECK-NEXT:  %4 = StoreFrameInst %3: undefined|object, [?anon_1_new.target]: undefined|object
-// CHECK-NEXT:  %5 = StoreFrameInst undefined: undefined, [innerArrow1]: any
-// CHECK-NEXT:  %6 = StoreFrameInst undefined: undefined, [innerArrow2]: any
+// CHECK-NEXT:       StoreFrameInst %3: undefined|object, [?anon_1_new.target]: undefined|object
+// CHECK-NEXT:       StoreFrameInst undefined: undefined, [innerArrow1]: any
+// CHECK-NEXT:       StoreFrameInst undefined: undefined, [innerArrow2]: any
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %innerArrow1(): any
-// CHECK-NEXT:  %8 = StoreFrameInst %7: object, [innerArrow1]: any
+// CHECK-NEXT:       StoreFrameInst %7: object, [innerArrow1]: any
 // CHECK-NEXT:  %9 = CreateFunctionInst (:object) %innerArrow2(): any
-// CHECK-NEXT:  %10 = StoreFrameInst %9: object, [innerArrow2]: any
-// CHECK-NEXT:  %11 = ReturnInst undefined: undefined
+// CHECK-NEXT:        StoreFrameInst %9: object, [innerArrow2]: any
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function outer2(): any
@@ -63,16 +63,16 @@ function outer2() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
-// CHECK-NEXT:  %2 = StoreFrameInst %1: object, [?anon_0_this]: any
+// CHECK-NEXT:       StoreFrameInst %1: object, [?anon_0_this]: any
 // CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
-// CHECK-NEXT:  %4 = StoreFrameInst %3: undefined|object, [?anon_1_new.target]: undefined|object
-// CHECK-NEXT:  %5 = StoreFrameInst undefined: undefined, [inner3]: any
-// CHECK-NEXT:  %6 = StoreFrameInst undefined: undefined, [innerArrow4]: any
+// CHECK-NEXT:       StoreFrameInst %3: undefined|object, [?anon_1_new.target]: undefined|object
+// CHECK-NEXT:       StoreFrameInst undefined: undefined, [inner3]: any
+// CHECK-NEXT:       StoreFrameInst undefined: undefined, [innerArrow4]: any
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %inner3(): any
-// CHECK-NEXT:  %8 = StoreFrameInst %7: object, [inner3]: any
+// CHECK-NEXT:       StoreFrameInst %7: object, [inner3]: any
 // CHECK-NEXT:  %9 = CreateFunctionInst (:object) %innerArrow4(): any
-// CHECK-NEXT:  %10 = StoreFrameInst %9: object, [innerArrow4]: any
-// CHECK-NEXT:  %11 = ReturnInst undefined: undefined
+// CHECK-NEXT:        StoreFrameInst %9: object, [innerArrow4]: any
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow innerArrow1(): any
@@ -80,9 +80,9 @@ function outer2() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [?anon_0_this@outer1]: any
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "x": string
-// CHECK-NEXT:  %2 = ReturnInst %1: any
+// CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow innerArrow2(): any
@@ -90,9 +90,9 @@ function outer2() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [?anon_0_this@outer1]: any
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "y": string
-// CHECK-NEXT:  %2 = ReturnInst %1: any
+// CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function inner3(): any
@@ -101,20 +101,20 @@ function outer2() {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) %1: object, "a": string
-// CHECK-NEXT:  %3 = ReturnInst %2: any
+// CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = UnreachableInst
+// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:arrow innerArrow4(): any
 // CHECK-NEXT:frame = [nestedInnerArrow5: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [nestedInnerArrow5]: any
+// CHECK-NEXT:       StoreFrameInst undefined: undefined, [nestedInnerArrow5]: any
 // CHECK-NEXT:  %1 = LoadFrameInst (:any) [?anon_0_this@outer2]: any
-// CHECK-NEXT:  %2 = StorePropertyLooseInst 10: number, %1: any, "b": string
+// CHECK-NEXT:       StorePropertyLooseInst 10: number, %1: any, "b": string
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %nestedInnerArrow5(): any
-// CHECK-NEXT:  %4 = StoreFrameInst %3: object, [nestedInnerArrow5]: any
-// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
+// CHECK-NEXT:       StoreFrameInst %3: object, [nestedInnerArrow5]: any
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow nestedInnerArrow5(): any
@@ -122,7 +122,7 @@ function outer2() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [?anon_0_this@outer2]: any
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "b": string
-// CHECK-NEXT:  %2 = ReturnInst %1: any
+// CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

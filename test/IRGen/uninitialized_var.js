@@ -16,11 +16,11 @@ x;
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "x": string
+// CHECK-NEXT:       DeclareGlobalVarInst "x": string
 // CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:  %2 = StoreStackInst undefined: undefined, %1: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "x": string
-// CHECK-NEXT:  %4 = StoreStackInst %3: any, %1: any
+// CHECK-NEXT:       StoreStackInst %3: any, %1: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %6 = ReturnInst %5: any
+// CHECK-NEXT:       ReturnInst %5: any
 // CHECK-NEXT:function_end

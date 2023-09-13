@@ -17,46 +17,46 @@ function condExpr(a,b,c,d) {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "condExpr": string
+// CHECK-NEXT:       DeclareGlobalVarInst "condExpr": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %condExpr(): any
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "condExpr": string
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "condExpr": string
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst %5: any
+// CHECK-NEXT:       ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function condExpr(a: any, b: any, c: any, d: any): any
 // CHECK-NEXT:frame = [a: any, b: any, c: any, d: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [a]: any
+// CHECK-NEXT:       StoreFrameInst %0: any, [a]: any
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %b: any
-// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [b]: any
+// CHECK-NEXT:       StoreFrameInst %2: any, [b]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %c: any
-// CHECK-NEXT:  %5 = StoreFrameInst %4: any, [c]: any
+// CHECK-NEXT:       StoreFrameInst %4: any, [c]: any
 // CHECK-NEXT:  %6 = LoadParamInst (:any) %d: any
-// CHECK-NEXT:  %7 = StoreFrameInst %6: any, [d]: any
+// CHECK-NEXT:       StoreFrameInst %6: any, [d]: any
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [a]: any
-// CHECK-NEXT:  %9 = CondBranchInst %8: any, %BB1, %BB2
+// CHECK-NEXT:       CondBranchInst %8: any, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [d]: any
-// CHECK-NEXT:  %11 = BranchInst %BB3
+// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_logical: any
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [b]: any
-// CHECK-NEXT:  %14 = StoreStackInst %13: any, %12: any
-// CHECK-NEXT:  %15 = CondBranchInst %13: any, %BB4, %BB5
+// CHECK-NEXT:        StoreStackInst %13: any, %12: any
+// CHECK-NEXT:        CondBranchInst %13: any, %BB4, %BB5
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %16 = PhiInst (:any) %21: any, %BB4, %10: any, %BB2
-// CHECK-NEXT:  %17 = ReturnInst %16: any
+// CHECK-NEXT:        ReturnInst %16: any
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %18 = LoadFrameInst (:any) [c]: any
-// CHECK-NEXT:  %19 = StoreStackInst %18: any, %12: any
-// CHECK-NEXT:  %20 = BranchInst %BB4
+// CHECK-NEXT:        StoreStackInst %18: any, %12: any
+// CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %21 = LoadStackInst (:any) %12: any
-// CHECK-NEXT:  %22 = BranchInst %BB3
+// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %23 = UnreachableInst
+// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end

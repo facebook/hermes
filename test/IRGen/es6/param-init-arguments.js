@@ -18,30 +18,30 @@ function foo(a = arguments) {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string
+// CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): any
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "foo": string
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst %5: any
+// CHECK-NEXT:       ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(a: any): any
 // CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
-// CHECK-NEXT:  %1 = StoreFrameInst undefined: undefined, [a]: any
+// CHECK-NEXT:       StoreFrameInst undefined: undefined, [a]: any
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  %3 = BinaryStrictlyNotEqualInst (:any) %2: any, undefined: undefined
-// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
+// CHECK-NEXT:       CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = BranchInst %BB1
+// CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = PhiInst (:any) %2: any, %BB0, %0: object, %BB2
-// CHECK-NEXT:  %7 = StoreFrameInst %6: any, [a]: any
+// CHECK-NEXT:       StoreFrameInst %6: any, [a]: any
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [a]: any
-// CHECK-NEXT:  %9 = ReturnInst %8: any
+// CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %10 = UnreachableInst
+// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end

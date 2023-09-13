@@ -16,32 +16,32 @@ function foo(a, b, c) {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string
+// CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): any
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "foo": string
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst %5: any
+// CHECK-NEXT:       ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(a: any, b: any, c: any): any
 // CHECK-NEXT:frame = [a: any, b: any, c: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [a]: any
+// CHECK-NEXT:       StoreFrameInst %0: any, [a]: any
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %b: any
-// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [b]: any
+// CHECK-NEXT:       StoreFrameInst %2: any, [b]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %c: any
-// CHECK-NEXT:  %5 = StoreFrameInst %4: any, [c]: any
+// CHECK-NEXT:       StoreFrameInst %4: any, [c]: any
 // CHECK-NEXT:  %6 = AllocObjectInst (:object) 2: number, empty: any
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [a]: any
-// CHECK-NEXT:  %8 = StoreNewOwnPropertyInst %7: any, %6: object, "a": string, true: boolean
+// CHECK-NEXT:       StoreNewOwnPropertyInst %7: any, %6: object, "a": string, true: boolean
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) [b]: any
 // CHECK-NEXT:  %10 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %6: object, %9: any
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) [c]: any
-// CHECK-NEXT:  %12 = StoreOwnPropertyInst %11: any, %6: object, "c": string, true: boolean
-// CHECK-NEXT:  %13 = ReturnInst %6: object
+// CHECK-NEXT:        StoreOwnPropertyInst %11: any, %6: object, "c": string, true: boolean
+// CHECK-NEXT:        ReturnInst %6: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %14 = UnreachableInst
+// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end

@@ -26,51 +26,51 @@ function foo() {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string
+// CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): any
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "foo": string
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst %5: any
+// CHECK-NEXT:       ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): any
 // CHECK-NEXT:frame = [x: any, y: any, z: any, x#1: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [x]: any
-// CHECK-NEXT:  %1 = StoreFrameInst undefined: undefined, [y]: any
-// CHECK-NEXT:  %2 = StoreFrameInst undefined: undefined, [z]: any
-// CHECK-NEXT:  %3 = StoreFrameInst undefined: undefined, [x]: any
-// CHECK-NEXT:  %4 = StoreFrameInst undefined: undefined, [x#1]: any
+// CHECK-NEXT:       StoreFrameInst undefined: undefined, [x]: any
+// CHECK-NEXT:       StoreFrameInst undefined: undefined, [y]: any
+// CHECK-NEXT:       StoreFrameInst undefined: undefined, [z]: any
+// CHECK-NEXT:       StoreFrameInst undefined: undefined, [x]: any
+// CHECK-NEXT:       StoreFrameInst undefined: undefined, [x#1]: any
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %x(): any
-// CHECK-NEXT:  %6 = StoreFrameInst %5: object, [x#1]: any
+// CHECK-NEXT:       StoreFrameInst %5: object, [x#1]: any
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %y(): any
-// CHECK-NEXT:  %8 = StoreFrameInst %7: object, [y]: any
+// CHECK-NEXT:       StoreFrameInst %7: object, [y]: any
 // CHECK-NEXT:  %9 = CreateFunctionInst (:object) %z(): any
-// CHECK-NEXT:  %10 = StoreFrameInst %9: object, [z]: any
+// CHECK-NEXT:        StoreFrameInst %9: object, [z]: any
 // CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [y]: any
 // CHECK-NEXT:  %14 = LoadFrameInst (:any) [z]: any
 // CHECK-NEXT:  %15 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: any, %13: any, %14: any
-// CHECK-NEXT:  %16 = ReturnInst undefined: undefined
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function x(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function y(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function z(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

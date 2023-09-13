@@ -21,10 +21,10 @@ function main()  {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
+// CHECK-NEXT:       DeclareGlobalVarInst "main": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): undefined
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "main": string
-// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "main": string
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): undefined
@@ -32,7 +32,7 @@ function main()  {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): string
 // CHECK-NEXT:  %1 = CallInst (:string) %0: object, %foo(): string, empty: any, undefined: undefined, undefined: undefined, 2: number
-// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(p1: any): string [allCallsitesKnownInStrictMode]
@@ -40,5 +40,5 @@ function main()  {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %p1: any
 // CHECK-NEXT:  %1 = BinaryAddInst (:string) "value": string, %0: any
-// CHECK-NEXT:  %2 = ReturnInst %1: string
+// CHECK-NEXT:       ReturnInst %1: string
 // CHECK-NEXT:function_end

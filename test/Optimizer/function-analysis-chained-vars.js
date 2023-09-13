@@ -29,10 +29,10 @@ function main() {
 // CHECK:function global(): string
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
+// CHECK-NEXT:       DeclareGlobalVarInst "main": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): undefined
-// CHECK-NEXT:  %2 = StorePropertyStrictInst %1: object, globalObject: object, "main": string
-// CHECK-NEXT:  %3 = ReturnInst "use strict": string
+// CHECK-NEXT:       StorePropertyStrictInst %1: object, globalObject: object, "main": string
+// CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): undefined
@@ -40,9 +40,9 @@ function main() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): object
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %x(): number
-// CHECK-NEXT:  %2 = StoreFrameInst %1: object, [x]: object
+// CHECK-NEXT:       StoreFrameInst %1: object, [x]: object
 // CHECK-NEXT:  %3 = CallInst (:object) %0: object, %foo(): object, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): object [allCallsitesKnownInStrictMode]
@@ -50,14 +50,14 @@ function main() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %bar(): undefined
 // CHECK-NEXT:  %1 = LoadFrameInst (:object) [x@main]: object
-// CHECK-NEXT:  %2 = StoreFrameInst %1: object, [y]: object
-// CHECK-NEXT:  %3 = ReturnInst %0: object
+// CHECK-NEXT:       StoreFrameInst %1: object, [y]: object
+// CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
 // CHECK:arrow x(): number [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst 1: number
+// CHECK-NEXT:       ReturnInst 1: number
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): undefined
@@ -65,5 +65,5 @@ function main() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:object) [y@foo]: object
 // CHECK-NEXT:  %1 = CallInst (:number) %0: object, %x(): number, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

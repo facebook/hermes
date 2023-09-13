@@ -23,10 +23,10 @@ function main() {
 // CHECK:function global(): string
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
+// CHECK-NEXT:       DeclareGlobalVarInst "main": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): undefined
-// CHECK-NEXT:  %2 = StorePropertyStrictInst %1: object, globalObject: object, "main": string
-// CHECK-NEXT:  %3 = ReturnInst "use strict": string
+// CHECK-NEXT:       StorePropertyStrictInst %1: object, globalObject: object, "main": string
+// CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): undefined
@@ -34,7 +34,7 @@ function main() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f(): undefined
 // CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %f(): undefined, empty: any, undefined: undefined, undefined: undefined, %0: object
-// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f(): undefined
@@ -42,5 +42,5 @@ function main() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "sink": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

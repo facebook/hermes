@@ -22,16 +22,16 @@ f();
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "f": string
+// CHECK-NEXT:       DeclareGlobalVarInst "f": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %f(): undefined
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "f": string
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "f": string
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "f": string
 // CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %5 = ReturnInst %4: any
+// CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end
 
 // CHECK:function f(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

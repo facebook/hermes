@@ -14,23 +14,23 @@ function f1(a, ...b) {}
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "f1": string
+// CHECK-NEXT:       DeclareGlobalVarInst "f1": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %f1(): any
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "f1": string
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "f1": string
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst %5: any
+// CHECK-NEXT:       ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function f1(a: any): any
 // CHECK-NEXT:frame = [a: any, b: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [a]: any
-// CHECK-NEXT:  %1 = StoreFrameInst undefined: undefined, [b]: any
+// CHECK-NEXT:       StoreFrameInst undefined: undefined, [a]: any
+// CHECK-NEXT:       StoreFrameInst undefined: undefined, [b]: any
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [a]: any
+// CHECK-NEXT:       StoreFrameInst %2: any, [a]: any
 // CHECK-NEXT:  %4 = CallBuiltinInst (:any) [HermesBuiltin.copyRestArgs]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number
-// CHECK-NEXT:  %5 = StoreFrameInst %4: any, [b]: any
-// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
+// CHECK-NEXT:       StoreFrameInst %4: any, [b]: any
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

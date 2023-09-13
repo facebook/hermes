@@ -17,18 +17,18 @@ function foo () {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string
+// CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): any
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "foo": string
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst %5: any
+// CHECK-NEXT:       ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DebuggerInst
-// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
+// CHECK-NEXT:       DebuggerInst
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

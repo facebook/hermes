@@ -25,34 +25,34 @@ foo()
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string
+// CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): any
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "foo": string
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) globalObject: object, "foo": string
 // CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %7 = StoreStackInst %6: any, %3: any
+// CHECK-NEXT:       StoreStackInst %6: any, %3: any
 // CHECK-NEXT:  %8 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %9 = ReturnInst %8: any
+// CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst "hi": string
+// CHECK-NEXT:       ReturnInst "hi": string
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst 2.312: number
+// CHECK-NEXT:       ReturnInst 2.312: number
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %2 = ReturnInst 12: number
+// CHECK-NEXT:       ReturnInst 12: number
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %3 = ReturnInst 18: number
+// CHECK-NEXT:       ReturnInst 18: number
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %4 = ReturnInst true: boolean
+// CHECK-NEXT:       ReturnInst true: boolean
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %6 = ReturnInst null: null
+// CHECK-NEXT:       ReturnInst null: null
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %7 = UnreachableInst
+// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

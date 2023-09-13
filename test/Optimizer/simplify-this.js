@@ -20,14 +20,14 @@ function thisUndefined () {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "thisUndefined": string
+// CHECK-NEXT:       DeclareGlobalVarInst "thisUndefined": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %thisUndefined(): undefined
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "thisUndefined": string
-// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "thisUndefined": string
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function thisUndefined(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

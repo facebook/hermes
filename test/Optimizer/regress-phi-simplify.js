@@ -43,18 +43,18 @@
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %main(): object
 // CHECK-NEXT:  %1 = CallInst (:object) %0: object, %main(): object, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:  %2 = ReturnInst %1: object
+// CHECK-NEXT:       ReturnInst %1: object
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): object [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %updateEventTarget(): undefined
-// CHECK-NEXT:  %1 = ReturnInst %0: object
+// CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
 // CHECK:function updateEventTarget(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ThrowInst 123: number
+// CHECK-NEXT:       ThrowInst 123: number
 // CHECK-NEXT:function_end

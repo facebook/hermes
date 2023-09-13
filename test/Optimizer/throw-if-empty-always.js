@@ -19,5 +19,5 @@ let x;
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ThrowIfEmptyInst (:any) empty: empty
 // CHECK-NEXT:  %1 = BinaryAddInst (:string|number) %0: any, 1: number
-// CHECK-NEXT:  %2 = ReturnInst %1: string|number
+// CHECK-NEXT:       ReturnInst %1: string|number
 // CHECK-NEXT:function_end

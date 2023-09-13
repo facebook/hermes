@@ -36,37 +36,37 @@ function outer2(){
 // CHECK:function global(): string
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "outer": string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "outer2": string
+// CHECK-NEXT:       DeclareGlobalVarInst "outer": string
+// CHECK-NEXT:       DeclareGlobalVarInst "outer2": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %outer(): undefined
-// CHECK-NEXT:  %3 = StorePropertyStrictInst %2: object, globalObject: object, "outer": string
+// CHECK-NEXT:       StorePropertyStrictInst %2: object, globalObject: object, "outer": string
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %outer2(): object
-// CHECK-NEXT:  %5 = StorePropertyStrictInst %4: object, globalObject: object, "outer2": string
-// CHECK-NEXT:  %6 = ReturnInst "use strict": string
+// CHECK-NEXT:       StorePropertyStrictInst %4: object, globalObject: object, "outer2": string
+// CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
 // CHECK:function outer(a: any, b: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function outer2(): object
 // CHECK-NEXT:frame = [foo: object]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): undefined|object
-// CHECK-NEXT:  %1 = StoreFrameInst %0: object, [foo]: object
+// CHECK-NEXT:       StoreFrameInst %0: object, [foo]: object
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %bar(): object
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: object, "prototype": string
 // CHECK-NEXT:  %4 = LoadPropertyInst (:any) %0: object, "prototype": string
-// CHECK-NEXT:  %5 = ReturnInst %0: object
+// CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): undefined|object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
-// CHECK-NEXT:  %1 = ReturnInst %0: undefined|object
+// CHECK-NEXT:       ReturnInst %0: undefined|object
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): object [allCallsitesKnownInStrictMode]
@@ -74,5 +74,5 @@ function outer2(){
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:object) [foo@outer2]: object
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "prototype": string
-// CHECK-NEXT:  %2 = ReturnInst %0: object
+// CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end

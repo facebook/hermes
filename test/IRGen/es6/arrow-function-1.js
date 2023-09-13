@@ -18,33 +18,33 @@ var func2 = () => { return 11; }
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
-// CHECK-NEXT:  %2 = StoreFrameInst %1: object, [?anon_0_this]: any
+// CHECK-NEXT:       StoreFrameInst %1: object, [?anon_0_this]: any
 // CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
-// CHECK-NEXT:  %4 = StoreFrameInst %3: undefined|object, [?anon_1_new.target]: undefined|object
-// CHECK-NEXT:  %5 = DeclareGlobalVarInst "func1": string
-// CHECK-NEXT:  %6 = DeclareGlobalVarInst "func2": string
+// CHECK-NEXT:       StoreFrameInst %3: undefined|object, [?anon_1_new.target]: undefined|object
+// CHECK-NEXT:       DeclareGlobalVarInst "func1": string
+// CHECK-NEXT:       DeclareGlobalVarInst "func2": string
 // CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_2_ret: any
-// CHECK-NEXT:  %8 = StoreStackInst undefined: undefined, %7: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %7: any
 // CHECK-NEXT:  %9 = CreateFunctionInst (:object) %func1(): any
-// CHECK-NEXT:  %10 = StorePropertyLooseInst %9: object, globalObject: object, "func1": string
+// CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "func1": string
 // CHECK-NEXT:  %11 = CreateFunctionInst (:object) %func2(): any
-// CHECK-NEXT:  %12 = StorePropertyLooseInst %11: object, globalObject: object, "func2": string
+// CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "func2": string
 // CHECK-NEXT:  %13 = LoadStackInst (:any) %7: any
-// CHECK-NEXT:  %14 = ReturnInst %13: any
+// CHECK-NEXT:        ReturnInst %13: any
 // CHECK-NEXT:function_end
 
 // CHECK:arrow func1(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst 10: number
+// CHECK-NEXT:       ReturnInst 10: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow func2(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst 11: number
+// CHECK-NEXT:       ReturnInst 11: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

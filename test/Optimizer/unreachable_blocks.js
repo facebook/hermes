@@ -33,35 +33,35 @@ bar();
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "bar": string
+// CHECK-NEXT:       DeclareGlobalVarInst "foo": string
+// CHECK-NEXT:       DeclareGlobalVarInst "bar": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %foo(): undefined
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: object, globalObject: object, "foo": string
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %bar(): undefined
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: object, globalObject: object, "bar": string
+// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "bar": string
 // CHECK-NEXT:  %6 = LoadPropertyInst (:any) globalObject: object, "foo": string
 // CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) globalObject: object, "bar": string
 // CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %10 = ReturnInst %9: any
+// CHECK-NEXT:        ReturnInst %9: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryStartInst %BB1, %BB2
+// CHECK-NEXT:       TryStartInst %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %1 = CatchInst (:any)
-// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %3 = BranchInst %BB3
+// CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = TryEndInst
-// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
+// CHECK-NEXT:       TryEndInst
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

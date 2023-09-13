@@ -48,25 +48,25 @@ function foo4(a) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo1": string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "foo2": string
-// CHECK-NEXT:  %2 = DeclareGlobalVarInst "foo3": string
-// CHECK-NEXT:  %3 = DeclareGlobalVarInst "foo4": string
+// CHECK-NEXT:       DeclareGlobalVarInst "foo1": string
+// CHECK-NEXT:       DeclareGlobalVarInst "foo2": string
+// CHECK-NEXT:       DeclareGlobalVarInst "foo3": string
+// CHECK-NEXT:       DeclareGlobalVarInst "foo4": string
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %foo1(): number
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: object, globalObject: object, "foo1": string
+// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "foo1": string
 // CHECK-NEXT:  %6 = CreateFunctionInst (:object) %foo2(): string|number
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6: object, globalObject: object, "foo2": string
+// CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "foo2": string
 // CHECK-NEXT:  %8 = CreateFunctionInst (:object) %foo3(): any
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8: object, globalObject: object, "foo3": string
+// CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "foo3": string
 // CHECK-NEXT:  %10 = CreateFunctionInst (:object) %foo4(): any
-// CHECK-NEXT:  %11 = StorePropertyLooseInst %10: object, globalObject: object, "foo4": string
-// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
+// CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "foo4": string
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo1(a: any): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst 100: number
+// CHECK-NEXT:       ReturnInst 100: number
 // CHECK-NEXT:function_end
 
 // CHECK:function foo2(a: any): string|number
@@ -74,19 +74,19 @@ function foo4(a) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  %1 = BinaryAddInst (:string|number) %0: any, 10: number
-// CHECK-NEXT:  %2 = ReturnInst %1: string|number
+// CHECK-NEXT:       ReturnInst %1: string|number
 // CHECK-NEXT:function_end
 
 // CHECK:function foo3(a: any): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:  %1 = CondBranchInst %0: any, %BB1, %BB2
+// CHECK-NEXT:       CondBranchInst %0: any, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %2 = PhiInst (:any) %0: any, %BB1, 10: number, %BB0
-// CHECK-NEXT:  %3 = ReturnInst %2: any
+// CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = BranchInst %BB2
+// CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function foo4(a: any): any
@@ -94,13 +94,13 @@ function foo4(a) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  %1 = BinaryLessThanInst (:boolean) %0: any, 0: number
-// CHECK-NEXT:  %2 = CondBranchInst %1: boolean, %BB1, %BB2
+// CHECK-NEXT:       CondBranchInst %1: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = PhiInst (:any) 10: number, %BB3, %0: any, %BB2, -1: number, %BB0
-// CHECK-NEXT:  %4 = ReturnInst %3: any
+// CHECK-NEXT:       ReturnInst %3: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = BinaryEqualInst (:boolean) %0: any, 0: number
-// CHECK-NEXT:  %6 = CondBranchInst %5: boolean, %BB3, %BB1
+// CHECK-NEXT:       CondBranchInst %5: boolean, %BB3, %BB1
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %7 = BranchInst %BB1
+// CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:function_end

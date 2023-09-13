@@ -28,23 +28,23 @@ new D();
 // CHECK-NEXT:frame = [C: object]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %C(): undefined
-// CHECK-NEXT:  %1 = StoreFrameInst %0: object, [C]: object
+// CHECK-NEXT:       StoreFrameInst %0: object, [C]: object
 // CHECK-NEXT:  %2 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:  %3 = StorePropertyStrictInst %2: object, %0: object, "prototype": string
+// CHECK-NEXT:       StorePropertyStrictInst %2: object, %0: object, "prototype": string
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %D(): undefined
 // CHECK-NEXT:  %5 = LoadPropertyInst (:object) %0: object, "prototype": string
 // CHECK-NEXT:  %6 = AllocObjectInst (:object) 0: number, %5: object
-// CHECK-NEXT:  %7 = StorePropertyStrictInst %6: object, %4: object, "prototype": string
+// CHECK-NEXT:       StorePropertyStrictInst %6: object, %4: object, "prototype": string
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) %4: object, "prototype": string
 // CHECK-NEXT:  %9 = AllocObjectInst (:object) 0: number, %8: any
 // CHECK-NEXT:  %10 = CallInst (:undefined) %4: object, %D(): undefined, empty: any, undefined: undefined, %9: object
-// CHECK-NEXT:  %11 = ReturnInst %9: object
+// CHECK-NEXT:        ReturnInst %9: object
 // CHECK-NEXT:function_end
 
 // CHECK:function C(): undefined [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function D(): undefined [typed]
@@ -53,5 +53,5 @@ new D();
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = LoadFrameInst (:object) [C@global]: object
 // CHECK-NEXT:  %2 = CallInst [njsf] (:undefined) %1: object, %C(): undefined, empty: any, undefined: undefined, %0: object
-// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

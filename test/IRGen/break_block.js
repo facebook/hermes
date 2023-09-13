@@ -21,20 +21,20 @@ x = 2;
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "x": string
+// CHECK-NEXT:       DeclareGlobalVarInst "x": string
 // CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:  %2 = StoreStackInst undefined: undefined, %1: any
-// CHECK-NEXT:  %3 = StorePropertyLooseInst 0: number, globalObject: object, "x": string
-// CHECK-NEXT:  %4 = StorePropertyLooseInst 0: number, globalObject: object, "x": string
-// CHECK-NEXT:  %5 = StoreStackInst 0: number, %1: any
-// CHECK-NEXT:  %6 = BranchInst %BB1
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
+// CHECK-NEXT:       StorePropertyLooseInst 0: number, globalObject: object, "x": string
+// CHECK-NEXT:       StorePropertyLooseInst 0: number, globalObject: object, "x": string
+// CHECK-NEXT:       StoreStackInst 0: number, %1: any
+// CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = StorePropertyLooseInst 2: number, globalObject: object, "x": string
-// CHECK-NEXT:  %8 = StoreStackInst 2: number, %1: any
+// CHECK-NEXT:       StorePropertyLooseInst 2: number, globalObject: object, "x": string
+// CHECK-NEXT:       StoreStackInst 2: number, %1: any
 // CHECK-NEXT:  %9 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %10 = ReturnInst %9: any
+// CHECK-NEXT:        ReturnInst %9: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %11 = StorePropertyLooseInst 1: number, globalObject: object, "x": string
-// CHECK-NEXT:  %12 = StoreStackInst 1: number, %1: any
-// CHECK-NEXT:  %13 = BranchInst %BB1
+// CHECK-NEXT:        StorePropertyLooseInst 1: number, globalObject: object, "x": string
+// CHECK-NEXT:        StoreStackInst 1: number, %1: any
+// CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:function_end

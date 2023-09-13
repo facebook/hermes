@@ -18,53 +18,53 @@ function three() { return z; return z;}
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "one": string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "two": string
-// CHECK-NEXT:  %2 = DeclareGlobalVarInst "three": string
+// CHECK-NEXT:       DeclareGlobalVarInst "one": string
+// CHECK-NEXT:       DeclareGlobalVarInst "two": string
+// CHECK-NEXT:       DeclareGlobalVarInst "three": string
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %one(): any
-// CHECK-NEXT:  %4 = StorePropertyLooseInst %3: object, globalObject: object, "one": string
+// CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "one": string
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %two(): any
-// CHECK-NEXT:  %6 = StorePropertyLooseInst %5: object, globalObject: object, "two": string
+// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "two": string
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %three(): any
-// CHECK-NEXT:  %8 = StorePropertyLooseInst %7: object, globalObject: object, "three": string
+// CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "three": string
 // CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:  %10 = StoreStackInst undefined: undefined, %9: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %9: any
 // CHECK-NEXT:  %11 = LoadStackInst (:any) %9: any
-// CHECK-NEXT:  %12 = ReturnInst %11: any
+// CHECK-NEXT:        ReturnInst %11: any
 // CHECK-NEXT:function_end
 
 // CHECK:function one(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "s": string
-// CHECK-NEXT:  %1 = ReturnInst %0: any
+// CHECK-NEXT:       ReturnInst %0: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "s": string
-// CHECK-NEXT:  %3 = ReturnInst %2: any
+// CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = UnreachableInst
+// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function two(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "s": string
-// CHECK-NEXT:  %1 = ReturnInst %0: any
+// CHECK-NEXT:       ReturnInst %0: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "t": string
-// CHECK-NEXT:  %3 = ReturnInst %2: any
+// CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = UnreachableInst
+// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function three(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "z": string
-// CHECK-NEXT:  %1 = ReturnInst %0: any
+// CHECK-NEXT:       ReturnInst %0: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "z": string
-// CHECK-NEXT:  %3 = ReturnInst %2: any
+// CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = UnreachableInst
+// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

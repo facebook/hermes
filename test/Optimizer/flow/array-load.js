@@ -17,20 +17,20 @@ function main() {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
+// CHECK-NEXT:       DeclareGlobalVarInst "main": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): number
-// CHECK-NEXT:  %2 = StorePropertyStrictInst %1: object, globalObject: object, "main": string
-// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
+// CHECK-NEXT:       StorePropertyStrictInst %1: object, globalObject: object, "main": string
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocFastArrayInst (:object) 3: number
-// CHECK-NEXT:  %1 = FastArrayPushInst 1: number, %0: object
-// CHECK-NEXT:  %2 = FastArrayPushInst 2: number, %0: object
-// CHECK-NEXT:  %3 = FastArrayPushInst 3: number, %0: object
+// CHECK-NEXT:       FastArrayPushInst 1: number, %0: object
+// CHECK-NEXT:       FastArrayPushInst 2: number, %0: object
+// CHECK-NEXT:       FastArrayPushInst 3: number, %0: object
 // CHECK-NEXT:  %4 = FastArrayLoadInst (:number) %0: object, 0: number
 // CHECK-NEXT:  %5 = FAddInst (:number) %4: number, 1: number
-// CHECK-NEXT:  %6 = ReturnInst %5: number
+// CHECK-NEXT:       ReturnInst %5: number
 // CHECK-NEXT:function_end
