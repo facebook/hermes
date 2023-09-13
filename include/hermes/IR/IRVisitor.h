@@ -10,6 +10,7 @@
 
 #include "hermes/IR/IR.h"
 #include "hermes/IR/Instrs.h"
+#include "hermes/IR/SH/SHModule.h"
 
 #define INCLUDE_ALL_INSTRS
 

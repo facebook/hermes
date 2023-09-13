@@ -5,16 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "hermes/IR/IR.h"
+
+#include "hermes/AST/Context.h"
+#include "hermes/IR/Instrs.h"
+#include "hermes/IR/SH/SHModule.h"
+#include "hermes/Utils/Dumper.h"
+
 #include "llvh/ADT/SetVector.h"
 #include "llvh/ADT/SmallString.h"
 #include "llvh/Support/Casting.h"
 #include "llvh/Support/ErrorHandling.h"
 #include "llvh/Support/raw_ostream.h"
-
-#include "hermes/AST/Context.h"
-#include "hermes/IR/IR.h"
-#include "hermes/IR/Instrs.h"
-#include "hermes/Utils/Dumper.h"
 
 #include <set>
 #include <type_traits>
