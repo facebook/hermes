@@ -349,6 +349,31 @@ void expectEvalException(
   }
 }
 
+// Expect a sequence of messages conveying a heap snapshot:
+// 1 or more notifications containing chunks of the snapshot JSON object
+// followed by an OK response to the snapshot request.
+// conn specifies the connection from which to receive. id specifies the
+// id of the snapshot request.
+void expectHeapSnapshot(SyncConnection &conn, int id) {
+  JSLexer::Allocator jsonAlloc;
+  JSONFactory factory(jsonAlloc);
+
+  // Expect chunk notifications until the snapshot object is complete. Fail if
+  // the object is invalid (e.g. truncated data, excess data, malformed JSON).
+  // There is no indication of how many segments there will be, so just receive
+  // until the object is complete, then expect no more.
+  std::stringstream snapshot;
+  do {
+    auto note =
+        expectNotification<m::heapProfiler::AddHeapSnapshotChunkNotification>(
+            conn);
+    snapshot << note.chunk;
+  } while (!parseStrAsJsonObj(snapshot.str(), factory).has_value());
+
+  // Expect the snapshot response after all chunks have been received.
+  expectResponse<m::OkResponse>(conn, id);
+}
+
 struct PropInfo {
   PropInfo(const std::string &type) : type(type) {}
 
@@ -2956,7 +2981,8 @@ TEST_F(ConnectionTests, heapSnapshotRemoteObject) {
     req.reportProgress = false;
     // We don't need the response because we can directly query for object IDs
     // from the runtime.
-    send(conn, req);
+    conn.send(req.toJsonStr());
+    expectHeapSnapshot(conn, req.id);
   }
 
   const uint64_t globalObjID = runtime->getUniqueID(runtime->global());
