@@ -302,7 +302,7 @@ class CDPHandler::Impl : public message::RequestHandler,
   double currentTimestampMs();
 
   std::unique_ptr<RuntimeAdapter> runtimeAdapter_;
-  std::string title_;
+  const std::string title_;
 
   // preparedScripts_ stores user-entered scripts that have been prepared for
   // execution, and may be invoked by a later command.
