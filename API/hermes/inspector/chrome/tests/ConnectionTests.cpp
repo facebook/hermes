@@ -3151,6 +3151,32 @@ TEST_F(ConnectionTests, testInvalidExecutionContext) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
+TEST_F(ConnectionTests, heapSnapshot) {
+  std::shared_ptr<HermesRuntime> runtime = asyncRuntime.runtime();
+  int msgId = 1;
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
+
+  asyncRuntime.executeScriptAsync(R"(
+      while(!shouldStop());
+  )");
+  expectNotification<m::debugger::ScriptParsedNotification>(conn);
+
+  // Request a heap snapshot.
+  m::heapProfiler::TakeHeapSnapshotRequest req;
+  req.id = msgId;
+  req.reportProgress = false;
+  conn.send(req.toJsonStr());
+
+  // Expect the heap snapshot chunks and confirmation, in order.
+  expectHeapSnapshot(conn, req.id);
+
+  // Expect no more chunks are pending.
+  expectNothing(conn);
+
+  asyncRuntime.stop();
+}
+
 } // namespace chrome
 } // namespace inspector_modern
 } // namespace hermes
