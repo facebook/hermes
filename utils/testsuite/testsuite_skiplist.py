@@ -2105,7 +2105,6 @@ UNSUPPORTED_FEATURES = [
     "class-static-block",
     "class-methods-private",
     "computed-property-names",
-    "const",
     "destructuring-binding",
     "dynamic-import",
     "error-cause",
