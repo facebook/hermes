@@ -914,28 +914,6 @@ unsigned RegisterAllocator::getInstructionNumber(Instruction *I) {
   return newIdx;
 }
 
-llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, Register reg) {
-  if (!reg.isValid()) {
-    OS << "invalid";
-  } else {
-    switch (reg.getClass()) {
-      case RegClass::LocalPtr:
-        OS << "loc" << reg.getIndex();
-        break;
-      case RegClass::LocalNonPtr:
-        OS << "np" << reg.getIndex();
-        break;
-      case RegClass::RegStack:
-        OS << "stack[" << reg.getIndex() << ']';
-        break;
-      case RegClass::_last:
-        llvm_unreachable("invalid register class");
-    }
-  }
-
-  return OS;
-}
-
 llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, const Segment &segment) {
   if (segment.empty()) {
     OS << "[empty]";

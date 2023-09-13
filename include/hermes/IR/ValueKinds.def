@@ -58,6 +58,8 @@ MARK_LAST(Function)
 
 DEF_VALUE(Module, Value)
 
+DEF_VALUE(SHLocal, Value)
+
 #undef DEF_VALUE
 #undef MARK_FIRST
 #undef MARK_LAST

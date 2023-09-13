@@ -26,7 +26,6 @@
 #include "llvh/ADT/Twine.h"
 #include "llvh/ADT/ilist_node.h"
 #include "llvh/ADT/iterator_range.h"
-#include "llvh/IR/SymbolTableListTraits.h"
 #include "llvh/Support/Casting.h"
 #include "llvh/Support/MathExtras.h"
 #include "llvh/Support/raw_ostream.h"
@@ -37,6 +36,7 @@
 
 namespace hermes {
 
+// Forward declarations.
 class Module;
 class VariableScope;
 class Function;
@@ -45,6 +45,14 @@ class JSDynamicParam;
 class Instruction;
 class Context;
 class TerminatorInst;
+
+// Opaque declarations provided in other headers.
+namespace sh {
+class SHModule;
+class SHLocal;
+} // namespace sh
+// ValueKinds.def doesn't support namespaces, so for now import.
+using sh::SHLocal;
 
 /// Representation of a type in the IR. This roughly corresponds for JavaScript
 /// types, but represents lower level concepts like "empty" type for TDZ and
@@ -302,10 +310,10 @@ class Type {
   void print(llvh::raw_ostream &OS) const;
 
   /// The hash of a Type is the hash of its opaque value.
+  /// Hashes only numBitmask_.
   llvh::hash_code hash() const {
-    return llvh::hash_value(bitmask_);
+    return bitmask_;
   }
-
   constexpr bool operator==(Type RHS) const {
     return bitmask_ == RHS.bitmask_;
   }
@@ -2051,6 +2059,10 @@ class Module : public Value {
 
  private:
   std::shared_ptr<Context> Ctx;
+
+  /// IR state related to native code generation.
+  std::shared_ptr<sh::SHModule> shModule_{};
+
   /// Optionally specify the top level function, if it isn't the first one.
   Function *topLevelFunction_{};
 
@@ -2132,6 +2144,19 @@ class Module : public Value {
 
   std::shared_ptr<Context> shareContext() const {
     return Ctx;
+  }
+
+  /// Set the SHModule, containing SH-relevant IR data.
+  void setSHModule(const std::shared_ptr<sh::SHModule> &shModule) {
+    assert(!shModule_ && "SHModule already set!");
+    assert(shModule && "cannot set null SHModule");
+    shModule_ = shModule;
+  }
+
+  /// Obtain the SHModule, containing SH-relevant IR data.
+  sh::SHModule &getSHModule() {
+    assert(shModule_ && "SHModule is not set!");
+    return *shModule_;
   }
 
   /// Derive a unique internal name from a specified identifier.

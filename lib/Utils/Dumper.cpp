@@ -190,6 +190,8 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
     if (ne->declared())
       os << " /*declared*/";
     os << ")";
+  } else if (auto *shLocal = llvh::dyn_cast<sh::SHLocal>(V)) {
+    os << '$' << shLocal->reg();
   } else {
     llvm_unreachable("Invalid value");
   }
