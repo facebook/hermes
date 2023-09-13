@@ -525,10 +525,18 @@ class InstrGen {
     }
   }
 
+  /// Generate the destination register of an instruction.
+  void generateRegister(Instruction &inst) {
+    generateRegister(ra_.getRegister(&inst));
+  }
+
   /// Helper to generate a value that must always have an allocated register,
   /// for instance because we need to assign to it or take its address.
   void generateRegister(Value &val) {
-    generateRegister(ra_.getRegister(&val));
+    if (llvh::isa<sh::SHLocal>(val))
+      generateRegister(llvh::cast<sh::SHLocal>(val).reg());
+    else
+      generateRegister(llvh::cast<Instruction>(val));
   }
 
   /// Helper to generate a pointer to a value that must always have an allocated
@@ -579,8 +587,10 @@ class InstrGen {
       os_ << "\", ";
       os_ << bytes.size();
       os_ << ")";
-    } else if (llvh::isa<Instruction>(&val)) {
-      generateRegister(val);
+    } else if (auto *inst = llvh::dyn_cast<Instruction>(&val)) {
+      generateRegister(*inst);
+    } else if (auto *shLocal = llvh::dyn_cast<sh::SHLocal>(&val)) {
+      generateRegister(shLocal->reg());
     } else if (auto *NE = llvh::dyn_cast<LiteralNativeExtern>(&val)) {
       os_ << "_sh_ljs_native_pointer(" << NE->getData()->name()->str() << ")";
     } else {
@@ -638,8 +648,8 @@ class InstrGen {
   }
   void generateMovInst(MovInst &inst) {
     sh::Register dstReg = ra_.getRegister(&inst);
-    if (ra_.isAllocated(inst.getSingleOperand()) &&
-        dstReg == ra_.getRegister(inst.getSingleOperand())) {
+    if (auto *opLocal = llvh::dyn_cast<sh::SHLocal>(inst.getSingleOperand());
+        opLocal && opLocal->reg() == dstReg) {
       os_ << "  // MovInst\n";
       return;
     }
@@ -1948,8 +1958,9 @@ class InstrGen {
     // Since all values are currently NaN-boxed, narrowing is just a move.
     // TODO(T155912625): Revisit this once union narrow lowering is fixed.
     sh::Register dstReg = ra_.getRegister(&inst);
-    if (ra_.isAllocated(inst.getSingleOperand()) &&
-        dstReg == ra_.getRegister(inst.getSingleOperand())) {
+    if (auto *opLocal = llvh::dyn_cast<sh::SHLocal>(inst.getSingleOperand());
+        opLocal && opLocal->reg() == dstReg) {
+      os_ << "  // UnionNarrowTrustedInst\n";
       return;
     }
 
@@ -2174,6 +2185,64 @@ void lowerModuleIR(Module *M, bool optimize) {
   PM.run(M);
 }
 
+/// Replace all register allocated operands with instances of SHLocal. Thus
+/// the registers of the operands are explicitly encoded in the instructions.
+bool replaceOperandsWithLocals(Function *F, sh::RegisterAllocator &ra) {
+  bool changed = false;
+  sh::SHModule &shMod = F->getParent()->getSHModule();
+
+  IRBuilder::InstructionDestroyer destroyer{};
+
+  for (auto &BB : *F) {
+    // Skip unallocated blocks.
+    if (BB.empty() || !ra.isAllocated(&BB.front()))
+      continue;
+
+    for (auto &I : BB) {
+      // Collect instructions to be removed.
+      switch (I.getKind()) {
+        case ValueKind::PhiInstKind:
+        case ValueKind::AllocStackInstKind:
+          destroyer.add(&I);
+          changed = true;
+          break;
+        default:
+          break;
+      }
+
+      for (unsigned i = 0, e = I.getNumOperands(); i != e; ++i) {
+        Value *op = I.getOperand(i);
+        if (llvh::isa<Instruction>(op)) {
+          sh::Register reg = ra.getRegister(op);
+          sh::SHLocal *local = shMod.getLocal(reg, op->getType());
+          I.setOperand(local, i);
+          changed = true;
+        } else {
+          assert(
+              !ra.isAllocated(op) &&
+              "Non-instruction operand cannot be allocated");
+        }
+      }
+    }
+  }
+
+  return changed;
+}
+
+Pass *createReplaceOperandsWithLocals(sh::SHRegisterAllocator &RA) {
+  class ReplaceOperands : public FunctionPass {
+    sh::SHRegisterAllocator &RA_;
+
+   public:
+    explicit ReplaceOperands(sh::SHRegisterAllocator &RA)
+        : FunctionPass("ReplaceOperandsWithLocals"), RA_(RA) {}
+    bool runOnFunction(Function *F) override {
+      return replaceOperandsWithLocals(F, RA_);
+    }
+  };
+  return new ReplaceOperands(RA);
+}
+
 /// Perform final lowering of a register-allocated function's IR.
 void lowerAllocatedFunctionIR(
     Function *F,
@@ -2186,6 +2255,7 @@ void lowerAllocatedFunctionIR(
     PM.addPass(new MovElimination(RA));
     PM.addPass(sh::createRecreateCheapValues(RA));
   }
+  PM.addPass(createReplaceOperandsWithLocals(RA));
   PM.run(F);
 }
 
@@ -2548,5 +2618,6 @@ void sh::generateSH(
     Module *M,
     llvh::raw_ostream &OS,
     const BytecodeGenerationOptions &options) {
+  M->setSHModule(std::make_shared<sh::SHModule>());
   generateModule(M, OS, options);
 }

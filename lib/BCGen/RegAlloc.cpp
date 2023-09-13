@@ -861,6 +861,7 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
   void printValueLabel(Instruction *I, Value *V, unsigned opIndex) override {
     if (allocator.isAllocated(V)) {
       os << "$" << allocator.getRegister(V);
+      printTypeLabel(V);
     } else {
       IRPrinter::printValueLabel(I, V, opIndex);
     }
