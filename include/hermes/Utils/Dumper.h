@@ -94,7 +94,8 @@ struct IRPrinter : public IRVisitor<IRPrinter, void> {
   virtual void printValueLabel(Instruction *I, Value *V, unsigned opIndex);
   virtual void printTypeLabel(Value *v);
   virtual void printInstruction(Instruction *I);
-  virtual void printInstructionDestination(Instruction *I);
+  /// Return true if the destination is non-empty.
+  virtual bool printInstructionDestination(Instruction *I);
   virtual void printSourceLocation(SMLoc loc);
   virtual void printSourceLocation(SMRange rng);
 

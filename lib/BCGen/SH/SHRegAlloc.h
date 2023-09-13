@@ -20,6 +20,8 @@ namespace hermes::sh {
 
 /// A register class identifies a set of registers with similar properties.
 enum class RegClass : uint8_t {
+  /// A "dummy" register used for no-output instructions.
+  NoOutput,
   /// A native local that may be a pointer.
   LocalPtr,
   /// A native local that is guaranteed to not be a pointer.
@@ -460,7 +462,10 @@ class RegisterAllocator {
   void free(Register reg);
 
   /// \return the register allocated for the value \p V.
-  Register getRegister(Value *I);
+  Register getRegister(Value *I) const;
+
+  /// \return the register allocated for the value \p V which may be None.
+  hermes::OptValue<Register> getOptionalRegister(Value *I) const;
 
   /// Marks the value \p as being allocated to \p R.
   void updateRegister(Value *I, Register R);

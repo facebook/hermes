@@ -837,7 +837,7 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
       bool escape = false)
       : IRPrinter(RA.getContext(), ost, escape), allocator(RA) {}
 
-  void printInstructionDestination(Instruction *I) override {
+  bool printInstructionDestination(Instruction *I) override {
     auto codeGenOpts = I->getContext().getCodeGenerationSettings();
 
     if (!allocator.isAllocated(I)) {
@@ -856,6 +856,7 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
         os << "          \t";
       }
     }
+    return true;
   }
 
   void printValueLabel(Instruction *I, Value *V, unsigned opIndex) override {

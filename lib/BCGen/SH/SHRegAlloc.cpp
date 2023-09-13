@@ -503,6 +503,8 @@ bool isBlockLocal(Instruction *inst) {
 } // namespace
 
 RegClass RegisterAllocator::getRegClass(Instruction *inst) {
+  if (!inst->hasOutput())
+    return RegClass::NoOutput;
   return inst->getType().isNonPtr() ? RegClass::LocalNonPtr
                                     : RegClass::LocalPtr;
 }
@@ -825,16 +827,18 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
       bool escape = false)
       : IRPrinter(RA.getContext(), ost, escape), allocator(RA) {}
 
-  void printInstructionDestination(Instruction *I) override {
+  bool printInstructionDestination(Instruction *I) override {
+    bool empty = false;
     auto codeGenOpts = I->getContext().getCodeGenerationSettings();
 
-    if (!allocator.isAllocated(I)) {
+    auto optReg = allocator.getOptionalRegister(I);
+    if (!optReg || optReg->getClass() == RegClass::NoOutput) {
       os << llvh::formatv(
           "{0}", llvh::fmt_align("", llvh::AlignStyle::Left, 9 + 1));
+      empty = true;
     } else {
       os << llvh::formatv(
-          "${0}",
-          llvh::fmt_align(allocator.getRegister(I), llvh::AlignStyle::Left, 9));
+          "${0}", llvh::fmt_align(*optReg, llvh::AlignStyle::Left, 9));
     }
 
     if (codeGenOpts.dumpRegisterInterval) {
@@ -847,6 +851,7 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
         os << "          \t";
       }
     }
+    return !empty;
   }
 
   void printValueLabel(Instruction *I, Value *V, unsigned opIndex) override {
@@ -864,9 +869,18 @@ void RegisterAllocator::dump() {
   Printer.visitFunction(*F);
 }
 
-Register RegisterAllocator::getRegister(Value *I) {
-  assert(isAllocated(I) && "Instruction is not allocated!");
-  return allocated[I];
+hermes::OptValue<Register> RegisterAllocator::getOptionalRegister(
+    Value *I) const {
+  if (auto it = allocated.find(I); it != allocated.end())
+    return it->second;
+  else
+    return llvh::None;
+}
+
+Register RegisterAllocator::getRegister(Value *I) const {
+  auto it = allocated.find(I);
+  assert(it != allocated.end() && "Instruction is not allocated!");
+  return it->second;
 }
 
 void RegisterAllocator::updateRegister(Value *I, Register R) {
@@ -920,6 +934,9 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, Register reg) {
     OS << "invalid";
   } else {
     switch (reg.getClass()) {
+      case RegClass::NoOutput:
+        OS << "empty" << reg.getIndex();
+        break;
       case RegClass::LocalPtr:
         OS << "loc" << reg.getIndex();
         break;

@@ -22,13 +22,13 @@ function foo (a, b) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $loc0      = DeclareGlobalVarInst "foo": string
+// CHECK-NEXT:               DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  $loc0      = HBCCreateEnvironmentInst (:environment)
 // CHECK-NEXT:  $loc1      = HBCCreateFunctionInst (:object) %foo(): any, $loc0: environment
 // CHECK-NEXT:  $loc0      = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  $loc0      = StorePropertyLooseInst $loc1: object, $loc0: object, "foo": string
+// CHECK-NEXT:               StorePropertyLooseInst $loc1: object, $loc0: object, "foo": string
 // CHECK-NEXT:  $np0       = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  $loc0      = ReturnInst $np0: undefined
+// CHECK-NEXT:               ReturnInst $np0: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(a: any, b: any): any
@@ -38,7 +38,7 @@ function foo (a, b) {
 // CHECK-NEXT:  $loc0      = LoadParamInst (:any) %b: any
 // CHECK-NEXT:  $loc1      = MovInst (:any) $loc1: any
 // CHECK-NEXT:  $loc0      = MovInst (:any) $loc0: any
-// CHECK-NEXT:  $loc2      = BranchInst %BB1
+// CHECK-NEXT:               BranchInst %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  $loc1      = PhiInst (:any) $loc1: any, %BB0, $loc1: any, %BB1
 // CHECK-NEXT:  $loc0      = PhiInst (:any) $loc0: any, %BB0, $loc0: any, %BB1
@@ -46,5 +46,5 @@ function foo (a, b) {
 // CHECK-NEXT:  $loc0      = MovInst (:any) $loc0: any
 // CHECK-NEXT:  $loc1      = MovInst (:any) $loc0: any
 // CHECK-NEXT:  $loc0      = MovInst (:any) $loc2: any
-// CHECK-NEXT:  $loc0      = BranchInst %BB1
+// CHECK-NEXT:               BranchInst %BB1
 // CHECK-NEXT:function_end

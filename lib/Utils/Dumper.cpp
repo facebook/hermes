@@ -235,13 +235,16 @@ void IRPrinter::printFunctionVariables(Function *F) {
   os << "]";
 }
 
-void IRPrinter::printInstructionDestination(Instruction *I) {
+bool IRPrinter::printInstructionDestination(Instruction *I) {
   os << "%" << InstNamer.getNumber(I);
+  return true;
 }
 
 void IRPrinter::printInstruction(Instruction *I) {
-  printInstructionDestination(I);
-  os << " = ";
+  if (printInstructionDestination(I))
+    os << " = ";
+  else
+    os << "   ";
   os << I->getName();
 
   if (!I->getAttributes(I->getModule()).isEmpty()) {
