@@ -16,6 +16,7 @@
 #include "hermes/BCGen/LowerStoreInstrs.h"
 #include "hermes/BCGen/Lowering.h"
 #include "hermes/BCGen/MovElimination.h"
+#include "hermes/BCGen/RemoveMovs.h"
 #include "hermes/BCGen/SerializedLiteralGenerator.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/IR.h"
@@ -638,11 +639,6 @@ class InstrGen {
   }
   void generateMovInst(MovInst &inst) {
     sh::Register dstReg = ra_.getRegister(&inst);
-    if (ra_.isAllocated(inst.getSingleOperand()) &&
-        dstReg == ra_.getRegister(inst.getSingleOperand())) {
-      os_ << "  // MovInst\n";
-      return;
-    }
     os_.indent(2);
     generateRegister(dstReg);
     os_ << " = ";
@@ -2182,6 +2178,7 @@ void lowerAllocatedFunctionIR(
     PM.addPass(new MovElimination(RA));
     PM.addPass(sh::createRecreateCheapValues(RA));
   }
+  PM.addPass(new RemoveMovs(RA));
   PM.run(F);
 }
 
