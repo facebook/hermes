@@ -1060,13 +1060,17 @@ ESTREE_NODE_1_ARGS(
     TSTypeAnnotation, TS,
     NodePtr, typeAnnotation, false)
 
-ESTREE_NODE_0_ARGS(TSAnyKeyword, Base)
-ESTREE_NODE_0_ARGS(TSNumberKeyword, Base)
-ESTREE_NODE_0_ARGS(TSBooleanKeyword, Base)
-ESTREE_NODE_0_ARGS(TSStringKeyword, Base)
-ESTREE_NODE_0_ARGS(TSSymbolKeyword, Base)
-ESTREE_NODE_0_ARGS(TSVoidKeyword, Base)
-ESTREE_NODE_0_ARGS(TSThisType, Base)
+ESTREE_NODE_0_ARGS(TSAnyKeyword, TS)
+ESTREE_NODE_0_ARGS(TSNumberKeyword, TS)
+ESTREE_NODE_0_ARGS(TSBooleanKeyword, TS)
+ESTREE_NODE_0_ARGS(TSStringKeyword, TS)
+ESTREE_NODE_0_ARGS(TSSymbolKeyword, TS)
+ESTREE_NODE_0_ARGS(TSVoidKeyword, TS)
+ESTREE_NODE_0_ARGS(TSUndefinedKeyword, TS)
+ESTREE_NODE_0_ARGS(TSUnknownKeyword, TS)
+ESTREE_NODE_0_ARGS(TSNeverKeyword, TS)
+ESTREE_NODE_0_ARGS(TSBigIntKeyword, TS)
+ESTREE_NODE_0_ARGS(TSThisType, TS)
 ESTREE_NODE_1_ARGS(
     TSLiteralType, TS,
     NodePtr, literal, false)

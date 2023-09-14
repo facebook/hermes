@@ -318,6 +318,9 @@ class JSParserImpl {
 #if HERMES_PARSE_TS
   UniqueString *namespaceIdent_;
   UniqueString *readonlyIdent_;
+  UniqueString *neverIdent_;
+  UniqueString *undefinedIdent_;
+  UniqueString *unknownIdent_;
 #endif
 
 #if HERMES_PARSE_FLOW || HERMES_PARSE_TS
