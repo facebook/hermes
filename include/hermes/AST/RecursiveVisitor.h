@@ -115,7 +115,20 @@ struct RecursiveVisitorDispatch {
   static void visit(Visitor &, NodeBoolean, Node *) {}
   static void visit(Visitor &, NodeNumber &, Node *) {}
 
+  template <typename V>
+  static constexpr auto has_node_list_override(V *v)
+      -> decltype(v->visit(*static_cast<NodeList *>(nullptr), nullptr), true) {
+    return true;
+  }
+  template <typename V>
+  static constexpr bool has_node_list_override(...) {
+    return false;
+  }
+
   static void visit(Visitor &v, NodeList &list, Node *parent) {
+    if constexpr (has_node_list_override<Visitor>(nullptr))
+      return v.visit(list, parent);
+
     for (auto &node : list)
       visit(v, &node, parent);
   }

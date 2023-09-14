@@ -114,6 +114,25 @@ class TS2FlowConverter
     visitESTreeChildren(*this, node);
   }
 
+  /// Iterate over the given list and convert any TS nodes in the list.
+  void visit(ESTree::NodeList &list, ESTree::Node *parent) {
+    for (auto iter = list.begin(), end = list.end(); iter != end; ++iter) {
+      auto &node = *iter;
+
+      if (!llvh::isa<ESTree::TSNode>(node)) {
+        ESTree::visitESTreeNode(*this, &node, parent);
+        continue;
+      }
+
+      // Convert a TSNode to a matching Flow node and replace the TSNode with
+      // the result node.
+      if (auto *result = convertTSNode(&node)) {
+        iter = list.insert(iter, *result);
+        list.remove(node);
+      }
+    }
+  }
+
   void recursionDepthExceeded(ESTree::Node *n) {
     sm_.error(
         n->getEndLoc(),
@@ -123,8 +142,8 @@ class TS2FlowConverter
  private:
   /// Converts the given node to a matching Flow node, when the given
   /// node is a TS node. Otherwise, returns the given node as is. It returns
-  /// nullptr after reporting an error via the context's source manager when the
-  /// conversion failed.
+  /// nullptr after reporting an error via the context's source manager when
+  /// the conversion failed.
   ESTree::Node *convertTSNode(ESTree::Node *node) {
     if (!node || !llvh::isa<ESTree::TSNode>(node)) {
       return node;
@@ -135,10 +154,20 @@ class TS2FlowConverter
   case ESTree::NodeKind::KIND: \
     return convertTSNode(llvh::cast<ESTree::KIND##Node>(node));
       CASE(TSTypeAnnotation)
+      CASE(TSAnyKeyword)
       CASE(TSNumberKeyword)
+      CASE(TSBooleanKeyword)
+      CASE(TSStringKeyword)
+      CASE(TSSymbolKeyword)
       CASE(TSVoidKeyword)
+      CASE(TSUndefinedKeyword)
+      CASE(TSUnknownKeyword)
+      CASE(TSNeverKeyword)
+      CASE(TSBigIntKeyword)
+      CASE(TSLiteralType)
       CASE(TSArrayType)
       CASE(TSTypeReference)
+      CASE(TSTypeAliasDeclaration)
 #undef CASE
       default:
         sm_.error(
@@ -148,17 +177,58 @@ class TS2FlowConverter
     }
   }
 
+#define DEFINE_CONVERT_TSNODE_SIMPLE(TS, FLOW)          \
+  ESTree::Node *convertTSNode(ESTree::TS##Node *node) { \
+    return createNode<ESTree::FLOW##Node>(node);        \
+  }
+  DEFINE_CONVERT_TSNODE_SIMPLE(TSAnyKeyword, AnyTypeAnnotation)
+  DEFINE_CONVERT_TSNODE_SIMPLE(TSNumberKeyword, NumberTypeAnnotation)
+  DEFINE_CONVERT_TSNODE_SIMPLE(TSBooleanKeyword, BooleanTypeAnnotation)
+  DEFINE_CONVERT_TSNODE_SIMPLE(TSStringKeyword, StringTypeAnnotation)
+  DEFINE_CONVERT_TSNODE_SIMPLE(TSSymbolKeyword, SymbolTypeAnnotation)
+  DEFINE_CONVERT_TSNODE_SIMPLE(TSVoidKeyword, VoidTypeAnnotation)
+  DEFINE_CONVERT_TSNODE_SIMPLE(TSUndefinedKeyword, VoidTypeAnnotation)
+  DEFINE_CONVERT_TSNODE_SIMPLE(TSUnknownKeyword, MixedTypeAnnotation)
+  DEFINE_CONVERT_TSNODE_SIMPLE(TSNeverKeyword, EmptyTypeAnnotation)
+  DEFINE_CONVERT_TSNODE_SIMPLE(TSBigIntKeyword, BigIntTypeAnnotation)
+#undef DEFINE_CONVERT_TSNODE_SIMPLE
+
   ESTree::Node *convertTSNode(ESTree::TSTypeAnnotationNode *node) {
     return createNode<ESTree::TypeAnnotationNode>(
         node, convertTSNode(node->_typeAnnotation));
   }
 
-  ESTree::Node *convertTSNode(ESTree::TSNumberKeywordNode *node) {
-    return createNode<ESTree::NumberTypeAnnotationNode>(node);
-  }
-
-  ESTree::Node *convertTSNode(ESTree::TSVoidKeywordNode *node) {
-    return createNode<ESTree::VoidTypeAnnotationNode>(node);
+  ESTree::Node *convertTSNode(ESTree::TSLiteralTypeNode *node) {
+    switch (node->_literal->getKind()) {
+      case ESTree::NodeKind::NullLiteral:
+        return createNode<ESTree::NullLiteralTypeAnnotationNode>(node);
+      case ESTree::NodeKind::NumericLiteral: {
+        auto *lit = llvh::cast<ESTree::NumericLiteralNode>(node->_literal);
+        return createNode<ESTree::NumberLiteralTypeAnnotationNode>(
+            node, lit->_value, getRawString(lit->getSourceRange()));
+      }
+      case ESTree::NodeKind::StringLiteral: {
+        auto *lit = llvh::cast<ESTree::StringLiteralNode>(node->_literal);
+        return createNode<ESTree::StringLiteralTypeAnnotationNode>(
+            node, lit->_value, getRawString(lit->getSourceRange()));
+      }
+      case ESTree::NodeKind::BooleanLiteral: {
+        auto *lit = llvh::cast<ESTree::BooleanLiteralNode>(node->_literal);
+        return createNode<ESTree::BooleanLiteralTypeAnnotationNode>(
+            node, lit->_value, getRawString(lit->getSourceRange()));
+      }
+      case ESTree::NodeKind::BigIntLiteral: {
+        auto *lit = llvh::cast<ESTree::BigIntLiteralNode>(node->_literal);
+        return createNode<ESTree::BigIntLiteralTypeAnnotationNode>(
+            node, lit->_bigint);
+      }
+      default:
+        sm_.error(
+            node->getSourceRange(),
+            "ts2flow: unsupported literal type " +
+                node->_literal->getNodeName());
+        return nullptr;
+    }
   }
 
   ESTree::Node *convertTSNode(ESTree::TSArrayTypeNode *node) {
@@ -174,11 +244,28 @@ class TS2FlowConverter
         node, node->_typeName, node->_typeParameters);
   }
 
+  ESTree::Node *convertTSNode(ESTree::TSTypeAliasDeclarationNode *node) {
+    if (node->_typeParameters) {
+      sm_.error(node->getSourceRange(), "ts2flow: unimplemented type params");
+    }
+    return createNode<ESTree::TypeAliasNode>(
+        node,
+        node->_id,
+        node->_typeParameters,
+        convertTSNode(node->_typeAnnotation));
+  }
+
   template <typename T, typename... Args>
   T *createNode(const ESTree::Node *src, Args &&...args) {
     auto *node = new (context_) T(std::forward<Args>(args)...);
     node->copyLocationFrom(src);
     return node;
+  }
+
+  UniqueString *getRawString(llvh::SMRange range) {
+    return context_.getStringTable().getString(llvh::StringRef{
+        range.Start.getPointer(),
+        (size_t)(range.End.getPointer() - range.Start.getPointer())});
   }
 
   Context &context_;
