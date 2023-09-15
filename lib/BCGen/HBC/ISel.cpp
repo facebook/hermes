@@ -244,13 +244,18 @@ inline FileAndSourceMapId HBCISel::obtainFileAndSourceMapId(
   uint32_t currentFilenameId = BCFGen_->addFilename(filename);
   uint32_t currentSourceMappingUrlId;
 
-  auto sourceMappingUrl = sm.getSourceMappingUrl(bufId);
+  llvh::StringRef sourceMappingUrl{};
+  // Only fetch the source map URL if we are not stripping it and if we are
+  // generating full debug info.
+  if (!bytecodeGenerationOptions_.stripSourceMappingURL &&
+      F_->getContext().getDebugInfoSetting() >= DebugInfoSetting::ALL) {
+    sourceMappingUrl = sm.getSourceMappingUrl(bufId);
+  }
 
   // Lazily compiled functions ask to strip the source mapping URL because
   // it was already encoded in the top level module, and it could be a 1MB+
   // data url that we don't want to duplicate once per function.
-  if (sourceMappingUrl.empty() ||
-      bytecodeGenerationOptions_.stripSourceMappingURL) {
+  if (sourceMappingUrl.empty()) {
     currentSourceMappingUrlId = facebook::hermes::debugger::kInvalidBreakpoint;
   } else {
     // NOTE: this is potentially a very expensive operation, since the source
