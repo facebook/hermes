@@ -256,8 +256,10 @@ CallResult<PseudoHandle<JSObject>> JSProxy::getPrototypeOf(
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
     return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
-  Handle<JSObject> target =
-      runtime.makeHandle(detail::slots(*selfHandle).target);
+  // Make sure to retrieve the target and handler before any JS can execute.
+  auto &slots = detail::slots(*selfHandle);
+  Handle<JSObject> target = runtime.makeHandle(slots.target);
+  Handle<JSObject> handler = runtime.makeHandle(slots.handler);
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::getPrototypeOf);
   if (LLVM_UNLIKELY(trapRes == ExecutionStatus::EXCEPTION)) {
@@ -270,10 +272,7 @@ CallResult<PseudoHandle<JSObject>> JSProxy::getPrototypeOf(
   }
   // 7. Let handlerProto be ? Call(trap, handler, « target »).
   CallResult<PseudoHandle<>> handlerProtoRes = Callable::executeCall1(
-      *trapRes,
-      runtime,
-      runtime.makeHandle(detail::slots(*selfHandle).handler),
-      target.getHermesValue());
+      *trapRes, runtime, handler, target.getHermesValue());
   if (handlerProtoRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -320,8 +319,10 @@ CallResult<bool> JSProxy::setPrototypeOf(
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
     return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
-  Handle<JSObject> target =
-      runtime.makeHandle(detail::slots(*selfHandle).target);
+  // Make sure to retrieve the target and handler before any JS can execute.
+  auto &slots = detail::slots(*selfHandle);
+  Handle<JSObject> target = runtime.makeHandle(slots.target);
+  Handle<JSObject> handler = runtime.makeHandle(slots.handler);
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::setPrototypeOf);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -337,7 +338,7 @@ CallResult<bool> JSProxy::setPrototypeOf(
   CallResult<PseudoHandle<>> booleanTrapRes = Callable::executeCall2(
       *trapRes,
       runtime,
-      runtime.makeHandle(detail::slots(*selfHandle).handler),
+      handler,
       target.getHermesValue(),
       *parent ? parent.getHermesValue() : HermesValue::encodeNullValue());
   if (booleanTrapRes == ExecutionStatus::EXCEPTION) {
@@ -379,8 +380,10 @@ CallResult<bool> JSProxy::isExtensible(
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
     return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
-  Handle<JSObject> target =
-      runtime.makeHandle(detail::slots(*selfHandle).target);
+  // Make sure to retrieve the target and handler before any JS can execute.
+  auto &slots = detail::slots(*selfHandle);
+  Handle<JSObject> target = runtime.makeHandle(slots.target);
+  Handle<JSObject> handler = runtime.makeHandle(slots.handler);
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::isExtensible);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -393,10 +396,7 @@ CallResult<bool> JSProxy::isExtensible(
   }
   // 7. Let booleanTrapResult be ToBoolean(? Call(trap, handler, « target »)).
   CallResult<PseudoHandle<>> res = Callable::executeCall1(
-      *trapRes,
-      runtime,
-      runtime.makeHandle(detail::slots(*selfHandle).handler),
-      target.getHermesValue());
+      *trapRes, runtime, handler, target.getHermesValue());
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -426,8 +426,10 @@ CallResult<bool> JSProxy::preventExtensions(
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
     return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
-  Handle<JSObject> target =
-      runtime.makeHandle(detail::slots(*selfHandle).target);
+  // Make sure to retrieve the target and handler before any JS can execute.
+  auto &slots = detail::slots(*selfHandle);
+  Handle<JSObject> target = runtime.makeHandle(slots.target);
+  Handle<JSObject> handler = runtime.makeHandle(slots.handler);
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::preventExtensions);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -444,10 +446,7 @@ CallResult<bool> JSProxy::preventExtensions(
   }
   // 7. Let booleanTrapResult be ToBoolean(? Call(trap, handler, « target »)).
   CallResult<PseudoHandle<>> res = Callable::executeCall1(
-      *trapRes,
-      runtime,
-      runtime.makeHandle(detail::slots(*selfHandle).handler),
-      target.getHermesValue());
+      *trapRes, runtime, handler, target.getHermesValue());
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -482,8 +481,10 @@ CallResult<bool> JSProxy::getOwnProperty(
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
     return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
-  Handle<JSObject> target =
-      runtime.makeHandle(detail::slots(*selfHandle).target);
+  // Make sure to retrieve the target and handler before any JS can execute.
+  auto &slots = detail::slots(*selfHandle);
+  Handle<JSObject> target = runtime.makeHandle(slots.target);
+  Handle<JSObject> handler = runtime.makeHandle(slots.handler);
   CallResult<Handle<Callable>> trapRes = detail::findTrap(
       selfHandle, runtime, Predefined::getOwnPropertyDescriptor);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -510,7 +511,7 @@ CallResult<bool> JSProxy::getOwnProperty(
   CallResult<PseudoHandle<>> trapResultRes = Callable::executeCall2(
       *trapRes,
       runtime,
-      runtime.makeHandle(detail::slots(*selfHandle).handler),
+      handler,
       target.getHermesValue(),
       nameValHandle.getHermesValue());
   if (trapResultRes == ExecutionStatus::EXCEPTION) {
@@ -551,8 +552,7 @@ CallResult<bool> JSProxy::getOwnProperty(
     //   e. If extensibleTarget is false, throw a TypeError exception.
     if (!*extensibleRes) {
       return runtime.raiseTypeErrorForValue(
-          runtime.makeHandle(detail::slots(*selfHandle).target),
-          " is not extensible (getOwnPropertyDescriptor target)");
+          target, " is not extensible (getOwnPropertyDescriptor target)");
     }
     //   f. Return undefined.
     return false;
@@ -643,8 +643,10 @@ CallResult<bool> JSProxy::defineOwnProperty(
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
     return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
-  Handle<JSObject> target =
-      runtime.makeHandle(detail::slots(*selfHandle).target);
+  // Make sure to retrieve the target and handler before any JS can execute.
+  auto &slots = detail::slots(*selfHandle);
+  Handle<JSObject> target = runtime.makeHandle(slots.target);
+  Handle<JSObject> handler = runtime.makeHandle(slots.handler);
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::defineProperty);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -672,7 +674,7 @@ CallResult<bool> JSProxy::defineOwnProperty(
   CallResult<PseudoHandle<>> trapResultRes = Callable::executeCall3(
       *trapRes,
       runtime,
-      runtime.makeHandle(detail::slots(*selfHandle).handler),
+      handler,
       target.getHermesValue(),
       nameValHandle.getHermesValue(),
       *descObjRes);
@@ -816,8 +818,10 @@ CallResult<bool> JSProxy::hasNamed(
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
     return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
-  Handle<JSObject> target =
-      runtime.makeHandle(detail::slots(*selfHandle).target);
+  // Make sure to retrieve the target and handler before any JS can execute.
+  auto &slots = detail::slots(*selfHandle);
+  Handle<JSObject> target = runtime.makeHandle(slots.target);
+  Handle<JSObject> handler = runtime.makeHandle(slots.handler);
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::has);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -833,7 +837,7 @@ CallResult<bool> JSProxy::hasNamed(
       runtime.makeHandle(HermesValue::encodeStringValue(
           runtime.getStringPrimFromSymbolID(name))),
       *trapRes,
-      runtime.makeHandle(detail::slots(*selfHandle).handler),
+      handler,
       target);
 }
 
@@ -846,8 +850,10 @@ CallResult<bool> JSProxy::hasComputed(
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
     return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
-  Handle<JSObject> target =
-      runtime.makeHandle(detail::slots(*selfHandle).target);
+  // Make sure to retrieve the target and handler before any JS can execute.
+  auto &slots = detail::slots(*selfHandle);
+  Handle<JSObject> target = runtime.makeHandle(slots.target);
+  Handle<JSObject> handler = runtime.makeHandle(slots.handler);
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::has);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -858,12 +864,7 @@ CallResult<bool> JSProxy::hasComputed(
     //   a. Return ? target.[[HasProperty]](P, Receiver).
     return JSObject::hasComputed(target, runtime, nameValHandle);
   }
-  return hasWithTrap(
-      runtime,
-      nameValHandle,
-      *trapRes,
-      runtime.makeHandle(detail::slots(*selfHandle).handler),
-      target);
+  return hasWithTrap(runtime, nameValHandle, *trapRes, handler, target);
 }
 
 namespace {
@@ -981,8 +982,10 @@ CallResult<PseudoHandle<>> JSProxy::getComputed(
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
     return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
-  Handle<JSObject> target =
-      runtime.makeHandle(detail::slots(*selfHandle).target);
+  // Make sure to retrieve the target and handler before any JS can execute.
+  auto &slots = detail::slots(*selfHandle);
+  Handle<JSObject> target = runtime.makeHandle(slots.target);
+  Handle<JSObject> handler = runtime.makeHandle(slots.handler);
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::get);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -995,12 +998,7 @@ CallResult<PseudoHandle<>> JSProxy::getComputed(
         target, runtime, nameValHandle, receiver);
   }
   return getWithTrap(
-      runtime,
-      nameValHandle,
-      *trapRes,
-      runtime.makeHandle(detail::slots(*selfHandle).handler),
-      target,
-      receiver);
+      runtime, nameValHandle, *trapRes, handler, target, receiver);
 }
 
 namespace {
@@ -1089,8 +1087,10 @@ CallResult<bool> JSProxy::setNamed(
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
     return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
-  Handle<JSObject> target =
-      runtime.makeHandle(detail::slots(*selfHandle).target);
+  // Make sure to retrieve the target and handler before any JS can execute.
+  auto &slots = detail::slots(*selfHandle);
+  Handle<JSObject> target = runtime.makeHandle(slots.target);
+  Handle<JSObject> handler = runtime.makeHandle(slots.handler);
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::set);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -1109,7 +1109,7 @@ CallResult<bool> JSProxy::setNamed(
                        : runtime.makeHandle(name),
       valueHandle,
       *trapRes,
-      runtime.makeHandle(detail::slots(*selfHandle).handler),
+      handler,
       target,
       receiver);
 }
@@ -1126,8 +1126,10 @@ CallResult<bool> JSProxy::setComputed(
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
     return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
-  Handle<JSObject> target =
-      runtime.makeHandle(detail::slots(*selfHandle).target);
+  // Make sure to retrieve the target and handler before any JS can execute.
+  auto &slots = detail::slots(*selfHandle);
+  Handle<JSObject> target = runtime.makeHandle(slots.target);
+  Handle<JSObject> handler = runtime.makeHandle(slots.handler);
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::set);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -1140,13 +1142,7 @@ CallResult<bool> JSProxy::setComputed(
         target, runtime, nameValHandle, valueHandle, receiver);
   }
   return setWithTrap(
-      runtime,
-      nameValHandle,
-      valueHandle,
-      *trapRes,
-      runtime.makeHandle(detail::slots(*selfHandle).handler),
-      target,
-      receiver);
+      runtime, nameValHandle, valueHandle, *trapRes, handler, target, receiver);
 }
 
 namespace {
@@ -1214,8 +1210,10 @@ CallResult<bool> JSProxy::deleteNamed(
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
     return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
-  Handle<JSObject> target =
-      runtime.makeHandle(detail::slots(*selfHandle).target);
+  // Make sure to retrieve the target and handler before any JS can execute.
+  auto &slots = detail::slots(*selfHandle);
+  Handle<JSObject> target = runtime.makeHandle(slots.target);
+  Handle<JSObject> handler = runtime.makeHandle(slots.handler);
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::deleteProperty);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -1231,7 +1229,7 @@ CallResult<bool> JSProxy::deleteNamed(
       runtime.makeHandle(HermesValue::encodeStringValue(
           runtime.getStringPrimFromSymbolID(name))),
       *trapRes,
-      runtime.makeHandle(detail::slots(*selfHandle).handler),
+      handler,
       target);
 }
 
@@ -1244,8 +1242,10 @@ CallResult<bool> JSProxy::deleteComputed(
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
     return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
-  Handle<JSObject> target =
-      runtime.makeHandle(detail::slots(*selfHandle).target);
+  // Make sure to retrieve the target and handler before any JS can execute.
+  auto &slots = detail::slots(*selfHandle);
+  Handle<JSObject> target = runtime.makeHandle(slots.target);
+  Handle<JSObject> handler = runtime.makeHandle(slots.handler);
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::deleteProperty);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -1256,12 +1256,7 @@ CallResult<bool> JSProxy::deleteComputed(
     //   a. Return ? target.[[Delete]](P, Receiver).
     return JSObject::deleteComputed(target, runtime, nameValHandle);
   }
-  return deleteWithTrap(
-      runtime,
-      nameValHandle,
-      *trapRes,
-      runtime.makeHandle(detail::slots(*selfHandle).handler),
-      target);
+  return deleteWithTrap(runtime, nameValHandle, *trapRes, handler, target);
 }
 
 namespace {
@@ -1353,8 +1348,10 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
     return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
-  Handle<JSObject> target =
-      runtime.makeHandle(detail::slots(*selfHandle).target);
+  // Make sure to retrieve the target and handler before any JS can execute.
+  auto &slots = detail::slots(*selfHandle);
+  Handle<JSObject> target = runtime.makeHandle(slots.target);
+  Handle<JSObject> handler = runtime.makeHandle(slots.handler);
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, Predefined::ownKeys);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -1380,10 +1377,7 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   }
   // 7. Let trapResultArray be ? Call(trap, handler, « target »).
   CallResult<PseudoHandle<>> trapResultArrayRes = Callable::executeCall1(
-      *trapRes,
-      runtime,
-      runtime.makeHandle(detail::slots(*selfHandle).handler),
-      target.getHermesValue());
+      *trapRes, runtime, handler, target.getHermesValue());
   if (trapResultArrayRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
