@@ -1546,6 +1546,18 @@ function deserializeTSSymbolKeyword() {
 function deserializeTSVoidKeyword() {
   return {type: 'TSVoidKeyword', loc: this.addEmptyLoc()};
 }
+function deserializeTSUndefinedKeyword() {
+  return {type: 'TSUndefinedKeyword', loc: this.addEmptyLoc()};
+}
+function deserializeTSUnknownKeyword() {
+  return {type: 'TSUnknownKeyword', loc: this.addEmptyLoc()};
+}
+function deserializeTSNeverKeyword() {
+  return {type: 'TSNeverKeyword', loc: this.addEmptyLoc()};
+}
+function deserializeTSBigIntKeyword() {
+  return {type: 'TSBigIntKeyword', loc: this.addEmptyLoc()};
+}
 function deserializeTSThisType() {
   return {type: 'TSThisType', loc: this.addEmptyLoc()};
 }
@@ -2088,6 +2100,10 @@ module.exports = [
   deserializeTSStringKeyword,
   deserializeTSSymbolKeyword,
   deserializeTSVoidKeyword,
+  deserializeTSUndefinedKeyword,
+  deserializeTSUnknownKeyword,
+  deserializeTSNeverKeyword,
+  deserializeTSBigIntKeyword,
   deserializeTSThisType,
   deserializeTSLiteralType,
   deserializeTSIndexedAccessType,
