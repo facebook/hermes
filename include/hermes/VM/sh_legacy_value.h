@@ -258,6 +258,9 @@ static inline bool _sh_ljs_is_double(SHLegacyValue v) {
 static inline bool _sh_ljs_is_pointer(SHLegacyValue v) {
   return v.raw >= ((uint64_t)HVTag_FirstPointer << kHV_NumDataBits);
 }
+static inline bool _sh_ljs_is_bigint(SHLegacyValue v) {
+  return _sh_ljs_get_tag(v) == HVTag_BigInt;
+}
 static inline bool _sh_ljs_is_string(SHLegacyValue v) {
   return _sh_ljs_get_tag(v) == HVTag_Str;
 }

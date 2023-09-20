@@ -1951,12 +1951,98 @@ class InstrGen {
     generateValue(*inst.getSingleOperand());
     os_ << ";\n";
   }
+
+  /// \return the name of the SH function for checking whether a value is of
+  /// a specific type.
+  static llvh::StringLiteral nameOfFunctionCheckingForType(Type type) {
+    assert(!type.isNoType() && "type must be non-zero");
+    switch (type.getFirstTypeKind()) {
+      case Type::Empty:
+        return "_sh_ljs_is_empty";
+      case Type::Undefined:
+        return "_sh_ljs_is_undefined";
+      case Type::Null:
+        return "_sh_ljs_is_null";
+      case Type::Boolean:
+        return "_sh_ljs_is_bool";
+      case Type::String:
+        return "_sh_ljs_is_string";
+      case Type::Number:
+        return "_sh_ljs_is_double";
+      case Type::BigInt:
+        return "_sh_ljs_is_bigint";
+      case Type::Environment:
+        hermes_fatal("cannot check for environment type");
+      case Type::Object:
+        return "_sh_ljs_is_object";
+      case Type::LAST_TYPE:
+        break;
+    }
+    hermes_fatal("invalid type for checking");
+  }
   void generateCheckedTypeCastInst(CheckedTypeCastInst &inst) {
+    const Type resultType = inst.getType();
+    const Type inputType = inst.getSingleOperand()->getType();
+
+    assert(
+        ra_.isAllocated(inst.getSingleOperand()) &&
+        "operand of CheckedCastInst must have an allocated register");
+    sh::Register srcReg = ra_.getRegister(inst.getSingleOperand());
+    sh::Register dstReg = ra_.getRegister(&inst);
+
+    // Are the input and output type the same?
+    if (inputType.isSubsetOf(resultType)) {
+      // If so, just move the value, but do nothing if the registers are the
+      // same.
+      if (dstReg != srcReg) {
+        os_.indent(2);
+        generateRegister(dstReg);
+        os_ << " = ";
+        generateValue(*inst.getSingleOperand());
+        os_ << ";\n";
+      }
+      return;
+    }
+
     os_.indent(2);
-    generateValue(inst);
-    os_ << " = _sh_type_cast_or_throw(shr, ";
-    generateRegisterPtr(*inst.getSingleOperand());
-    os_ << ");\n";
+    os_ << "if (";
+
+    // Types which cause an exception if they are the input.
+    Type badTypes = Type::subtractTy(inputType, resultType);
+    // Are there fewer "bad" types than "good" types? That determines which we
+    // check.
+    auto [checkTypes, negativeCheck] =
+        badTypes.countTypes() < resultType.countTypes()
+        ? std::make_pair(badTypes, true)
+        : std::make_pair(resultType, false);
+
+    if (!negativeCheck)
+      os_ << "!(";
+    {
+      bool first = true;
+      for (Type t : checkTypes) {
+        if (!first)
+          os_ << " || ";
+        os_ << nameOfFunctionCheckingForType(t) << '(';
+        generateRegister(srcReg);
+        os_ << ')';
+        first = false;
+      }
+    }
+    if (!negativeCheck)
+      os_ << ')';
+
+    // TODO: generate a type-specific error.
+    os_ << ") _sh_throw_type_error_ascii(shr, \"Checked cast failed\");\n";
+
+    // If so, just move the value, but do nothing if the registers are the same.
+    if (dstReg != srcReg) {
+      os_.indent(2);
+      generateRegister(dstReg);
+      os_ << " = ";
+      generateValue(*inst.getSingleOperand());
+      os_ << ";\n";
+    }
   }
   void generateLIRDeadValueInst(LIRDeadValueInst &inst) {
     os_.indent(2);

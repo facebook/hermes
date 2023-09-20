@@ -50,6 +50,7 @@ class TerminatorInst;
 /// types, but represents lower level concepts like "empty" type for TDZ and
 /// integers.
 class Type {
+ public:
   // Encodes the JavaScript type hierarchy.
   enum TypeKind {
     /// An uninitialized TDZ.
@@ -66,6 +67,7 @@ class Type {
     LAST_TYPE
   };
 
+ private:
   static_assert(LAST_TYPE <= 16, "Type tag must fit in 16 bits");
 
   /// Return the string representation of the type at index \p idx.
@@ -220,10 +222,26 @@ class Type {
     return IS_VAL(Environment);
   }
 
+  /// \return the TypeKind of the first set bit. This is intended to be used
+  /// when there is single type set. If there are no types, it returns
+  /// LAST_TYPE.
+  TypeKind getFirstTypeKind() const {
+    auto res = LLVM_LIKELY(bitmask_)
+        ? (TypeKind)llvh::countTrailingZeros(bitmask_, llvh::ZB_Undefined)
+        : TypeKind::LAST_TYPE;
+    assert(res <= LAST_TYPE && "Invalid bitmask");
+    return res;
+  }
+
+  /// \return how many valid types are represented by this (union) type.
+  unsigned countTypes() const {
+    return llvh::countPopulation(bitmask_);
+  }
+
   /// \return true if the type is one of the known javascript primitive types:
   /// Number, BigInt, Null, Boolean, String, Undefined.
   constexpr bool isKnownPrimitiveType() const {
-    return isPrimitive() && 1 == llvh::countPopulation(bitmask_);
+    return isPrimitive() && 1 == countTypes();
   }
 
   constexpr bool isPrimitive() const {
@@ -312,9 +330,67 @@ class Type {
   constexpr bool operator!=(Type RHS) const {
     return !(*this == RHS);
   }
+
+  class iterator;
+
+  /// Return an iterator over the types in this Type.
+  iterator begin() const;
+  /// Return an "end" iterator over the types in this Type.
+  iterator end() const;
 };
 
 static_assert(sizeof(Type) == 2, "Type must not be too big");
+
+/// An iterator over the types in a Type.
+class Type::iterator {
+  friend class Type;
+  Type type_;
+  unsigned index_;
+
+  iterator(Type type, unsigned index) : type_(type), index_(index) {
+    skip();
+  }
+
+  /// Skip to the first set bit in the bitmask.
+  void skip() {
+    while (index_ < sizeof(type_.bitmask_) * CHAR_BIT &&
+           !(type_.bitmask_ & (1 << index_))) {
+      ++index_;
+    }
+  }
+
+ public:
+  bool operator==(const iterator &RHS) const {
+    return type_ == RHS.type_ && index_ == RHS.index_;
+  }
+  bool operator!=(const iterator &RHS) const {
+    return !(*this == RHS);
+  }
+
+  iterator &operator++() {
+    assert(index_ < sizeof(type_.bitmask_) * CHAR_BIT && "Out of bounds");
+    ++index_;
+    skip();
+    return *this;
+  }
+  iterator operator++(int) {
+    auto copy = *this;
+    ++*this;
+    return copy;
+  }
+
+  Type operator*() const {
+    assert(index_ < sizeof(type_.bitmask_) * CHAR_BIT && "Out of bounds");
+    return Type(1 << index_);
+  }
+};
+
+inline Type::iterator Type::begin() const {
+  return iterator(*this, 0);
+}
+inline Type::iterator Type::end() const {
+  return iterator(*this, sizeof(bitmask_) * CHAR_BIT);
+}
 
 /// Describes the potential side effects of an instruction. The side effects are
 /// described by a series of bits, each of which specifies a particular way in

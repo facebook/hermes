@@ -1789,12 +1789,6 @@ extern "C" void _sh_store_parent(
       objectHandle.get(), runtime, parentHandle.get());
 }
 
-extern "C" SHLegacyValue _sh_type_cast_or_throw(
-    SHRuntime *shr,
-    const SHLegacyValue *value) {
-  return *value;
-}
-
 /// Check that \p index is an unsigned integer smaller than \p length. If it is,
 /// return it, otherwise, throw.
 inline static uint32_t
