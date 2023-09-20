@@ -71,9 +71,8 @@ class JSError final : public JSObject {
       Handle<JSObject> prototype);
 
   /// If the stack trace is not set, attempt to record it by walking the runtime
-  /// stack. If the top call frame indicates a JS callee, but the codeBlock and
-  /// ip are not supplied, return without doing anything. This handles the case
-  /// when an exception is thrown from within the current code block.
+  /// stack. This will correctly dispatch to recording either the interpreter or
+  /// native call stack.
   ///
   /// \param skipTopFrame don't record the topmost frame. This is used when
   ///   we want to skip the Error() constructor itself.
@@ -86,18 +85,6 @@ class JSError final : public JSObject {
       bool skipTopFrame = false,
       CodeBlock *codeBlock = nullptr,
       const Inst *ip = nullptr);
-
-  /// If the stack trace is not set, attempt to record it by walking the runtime
-  /// stack. If the top call frame indicates a JS callee, but the codeBlock and
-  /// ip are not supplied, return without doing anything. This handles the case
-  /// when an exception is thrown from within the current code block.
-  ///
-  /// \param skipTopFrame don't record the topmost frame. This is used when
-  ///   we want to skip the Error() constructor itself.
-  static void recordNativeStackTrace(
-      Handle<JSError> selfHandle,
-      Runtime &runtime,
-      bool skipTopFrame = false);
 
   /// Define the stack setter and getter, for later stack trace creation.
   /// May be used on JSError instances, or on any JSObject that has a
@@ -195,6 +182,35 @@ class JSError final : public JSObject {
   /// or when the VM is not in a state where it can execute JS usefully, for
   /// example if an OOM has occurred.
   bool catchable_{true};
+
+  /// If the stack trace is not set, attempt to record it by walking the runtime
+  /// stack. If the top call frame indicates a JS callee, but the codeBlock and
+  /// ip are not supplied, return without doing anything. This handles the case
+  /// when an exception is thrown from within the current code block.
+  ///
+  /// \param skipTopFrame don't record the topmost frame. This is used when
+  ///   we want to skip the Error() constructor itself.
+  /// \param codeBlock optional current CodeBlock.
+  /// \param ip if \c codeBlock is not \c nullptr, the instruction in the
+  ///   current CodeBlock.
+  static ExecutionStatus recordInterpreterStackTrace(
+      Handle<JSError> selfHandle,
+      Runtime &runtime,
+      bool skipTopFrame = false,
+      CodeBlock *codeBlock = nullptr,
+      const Inst *ip = nullptr);
+
+  /// If the stack trace is not set, attempt to record it by walking the runtime
+  /// stack. If the top call frame indicates a JS callee, but the codeBlock and
+  /// ip are not supplied, return without doing anything. This handles the case
+  /// when an exception is thrown from within the current code block.
+  ///
+  /// \param skipTopFrame don't record the topmost frame. This is used when
+  ///   we want to skip the Error() constructor itself.
+  static void recordNativeStackTrace(
+      Handle<JSError> selfHandle,
+      Runtime &runtime,
+      bool skipTopFrame = false);
 
   /// Construct the stacktrace string, append to \p stack.
   /// If the construction of the stack throws an uncatchable error, this

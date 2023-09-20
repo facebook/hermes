@@ -118,15 +118,7 @@ static CallResult<HermesValue> constructErrorObject(
   }
 
   // Record the stack trace, skipping this entry.
-  if (true) {
-    JSError::recordNativeStackTrace(selfHandle, runtime, true);
-  } else {
-    if (LLVM_UNLIKELY(
-            JSError::recordStackTrace(selfHandle, runtime, true) ==
-            ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-  }
+  JSError::recordStackTrace(selfHandle, runtime, true);
 
   // Initialize stack accessor.
   if (LLVM_UNLIKELY(

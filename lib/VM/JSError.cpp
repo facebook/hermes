@@ -462,6 +462,59 @@ ExecutionStatus JSError::recordStackTrace(
     bool skipTopFrame,
     CodeBlock *codeBlock,
     const Inst *ip) {
+  if (true) {
+    JSError::recordNativeStackTrace(selfHandle, runtime, skipTopFrame);
+    return ExecutionStatus::RETURNED;
+  } else {
+    return JSError::recordInterpreterStackTrace(
+        selfHandle, runtime, skipTopFrame, codeBlock, ip);
+  }
+}
+
+void JSError::recordNativeStackTrace(
+    Handle<JSError> selfHandle,
+    Runtime &runtime,
+    bool skipTopFrame) {
+  selfHandle->nativeStacktrace_ = std::make_unique<NativeStackTrace>();
+  bool skip = skipTopFrame;
+  for (StackFramePtr cf : runtime.getStackFrames()) {
+    if (skip) {
+      skip = false;
+      continue;
+    }
+    // If the SHLocals is null, that means no location was set. This means
+    // this is probably a NativeFunction, e.g. JSLib. If the function does have
+    // source information, but the source location index is 0, then the current
+    // instruction has no source info.
+    const SHLocals *locals = cf.getSHLocals();
+    if (!locals || locals->src_location_idx == 0) {
+      selfHandle->nativeStacktrace_->push_back({nullptr, {}});
+    } else {
+      const SHUnit *unit = locals->unit;
+      uint32_t curLocIdx = locals->src_location_idx;
+      assert(
+          curLocIdx < unit->source_locations_size &&
+          "out of bounds access on source locations table");
+      SHSrcLoc curLoc = unit->source_locations[curLocIdx];
+      selfHandle->nativeStacktrace_->push_back({unit, curLoc});
+    }
+  }
+
+  auto funcNames = getCallStackFunctionNames(
+      runtime, skipTopFrame, selfHandle->nativeStacktrace_->size());
+  assert(
+      (!funcNames ||
+       funcNames->size() == selfHandle->nativeStacktrace_->size()) &&
+      "Function names and stack trace must have same size.");
+  selfHandle->funcNames_.set(runtime, *funcNames, runtime.getHeap());
+}
+
+ExecutionStatus JSError::recordInterpreterStackTrace(
+    Handle<JSError> selfHandle,
+    Runtime &runtime,
+    bool skipTopFrame,
+    CodeBlock *codeBlock,
+    const Inst *ip) {
   if (selfHandle->stacktrace_)
     return ExecutionStatus::RETURNED;
 
@@ -552,44 +605,6 @@ ExecutionStatus JSError::recordStackTrace(
   selfHandle->stacktrace_ = std::move(stack);
   selfHandle->funcNames_.set(runtime, *funcNames, runtime.getHeap());
   return ExecutionStatus::RETURNED;
-}
-
-void JSError::recordNativeStackTrace(
-    Handle<JSError> selfHandle,
-    Runtime &runtime,
-    bool skipTopFrame) {
-  selfHandle->nativeStacktrace_ = std::make_unique<NativeStackTrace>();
-  bool skip = skipTopFrame;
-  for (StackFramePtr cf : runtime.getStackFrames()) {
-    if (skip) {
-      skip = false;
-      continue;
-    }
-    // If the SHLocals is null, that means no location was set. This means
-    // this is probably a NativeFunction, e.g. JSLib. If the function does have
-    // source information, but the source location index is 0, then the current
-    // instruction has no source info.
-    const SHLocals *locals = cf.getSHLocals();
-    if (!locals || locals->src_location_idx == 0) {
-      selfHandle->nativeStacktrace_->push_back({nullptr, {}});
-    } else {
-      const SHUnit *unit = locals->unit;
-      uint32_t curLocIdx = locals->src_location_idx;
-      assert(
-          curLocIdx < unit->source_locations_size &&
-          "out of bounds access on source locations table");
-      SHSrcLoc curLoc = unit->source_locations[curLocIdx];
-      selfHandle->nativeStacktrace_->push_back({unit, curLoc});
-    }
-  }
-
-  auto funcNames = getCallStackFunctionNames(
-      runtime, skipTopFrame, selfHandle->nativeStacktrace_->size());
-  assert(
-      (!funcNames ||
-       funcNames->size() == selfHandle->nativeStacktrace_->size()) &&
-      "Function names and stack trace must have same size.");
-  selfHandle->funcNames_.set(runtime, *funcNames, runtime.getHeap());
 }
 
 /// Given a codeblock and opcode offset, \returns the debug information.
