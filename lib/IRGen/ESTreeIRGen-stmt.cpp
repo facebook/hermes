@@ -7,6 +7,8 @@
 
 #include "ESTreeIRGen.h"
 
+#include "hermes/AST/RecursiveVisitor.h"
+
 namespace hermes {
 namespace irgen {
 
@@ -330,6 +332,49 @@ void ESTreeIRGen::genDoWhileLoop(ESTree::DoWhileStatementNode *loop) {
   Builder.setInsertionBlock(exitBlock);
 }
 
+bool ESTreeIRGen::treeDoesNotCapture(ESTree::Node *tree) {
+  // Stops the recursion when a function node is visited and sets a flag.
+  class MayBeCaptures : public ESTree::RecursionDepthTracker<MayBeCaptures> {
+   public:
+    bool mayBeCaptures = false;
+
+    void visit(ESTree::FunctionDeclarationNode *node) {
+      mayBeCaptures = true;
+    }
+    void visit(ESTree::FunctionExpressionNode *node) {
+      mayBeCaptures = true;
+    }
+    void visit(ESTree::ArrowFunctionExpressionNode *node) {
+      mayBeCaptures = true;
+    }
+    void visit(ESTree::ClassExpressionNode *node) {
+      mayBeCaptures = true;
+    }
+    void visit(ESTree::ClassDeclarationNode *node) {
+      mayBeCaptures = true;
+    }
+    void visit(ESTree::Node *n) {
+      // Stop the recursion early if we have our answer.
+      if (mayBeCaptures)
+        return;
+      ESTree::visitESTreeChildren(*this, n);
+    }
+
+    void recursionDepthExceeded(ESTree::Node *) {
+      // In case of too deep recursion, assume the expression captures.
+      mayBeCaptures = true;
+    }
+  };
+
+  // Nonexistent trees don't capture.
+  if (!tree)
+    return true;
+
+  MayBeCaptures mbc;
+  ESTree::visitESTreeNode(mbc, tree);
+  return !mbc.mayBeCaptures;
+}
+
 void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
   // IS this a "scoped" for loop?
   // TODO: check if any of the declared variables are captured.
@@ -337,15 +382,19 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
     if (auto *VD =
             llvh::dyn_cast<ESTree::VariableDeclarationNode>(loop->_init)) {
       if (VD->_kind != kw_.identVar) {
-        genScopedForLoop(loop);
-        return;
+        bool testExprCaptures = !treeDoesNotCapture(loop->_test);
+        bool updateExprCaptures = !treeDoesNotCapture(loop->_update);
+
+        // Invoke the scoped loop generation only if something is potentially
+        // captured in the loop.
+        if (testExprCaptures || updateExprCaptures ||
+            !treeDoesNotCapture(loop->_body)) {
+          genScopedForLoop(loop, testExprCaptures, updateExprCaptures);
+          return;
+        }
       }
     }
   }
-
-  assert(
-      (!loop->getScope() || loop->getScope()->decls.empty()) &&
-      "for-loop scope must be empty if there is no scoped init");
 
   // Create the basic blocks that make the while structure.
   Function *function = Builder.getInsertionBlock()->getParent();
@@ -356,6 +405,9 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
 
   // Initialize the goto labels.
   curFunction()->initLabel(loop, exitBlock, updateBlock);
+
+  // Declarations created by the init statement.
+  emitScopeDeclarations(loop->getScope());
 
   // Generate IR for the loop initialization.
   // The init field can be a variable declaration or any expression.
@@ -400,7 +452,10 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
   Builder.setInsertionBlock(exitBlock);
 }
 
-void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
+void ESTreeIRGen::genScopedForLoop(
+    ESTree::ForStatementNode *loop,
+    bool testExprCaptures,
+    bool updateExprCaptures) {
   // A scoped for-loop has "interesting" semantics. The declared variables live
   // in a new scope for every iteration (so they can be captured). Additionally:
   // - the test condition executes in the current iteration's scope.
@@ -424,22 +479,76 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
   //        loop->body(newVars)
   //  updateBlock:
   //        oldVars(ignoring constness) = newVars
+  //        first = false
   //      end s
-  //      first = false
   //      goto loopBlock
+
+  // Clearly, this structure is awful for optimization, so we try to improve it.
+  //
+  // OPTIMIZATION1:
+  // If the update expression doesn't capture anything, it can be emitted in the
+  // current iteration scope instead of the next one.
+  //      let/const oldVars = loop->init()
+  // loopBlock:
+  //      Scope s = createScope
+  //        declare newVars in s
+  //        newVars = oldVars
+  //        if !loop->test(newVars)
+  //            goto exitBlock
+  //        loop->body(newVars)
+  //  updateBlock:
+  //        oldVars(ignoring constness) = newVars
+  //      end s
+  //      loop->update(oldVars)
+  //      goto loopBlock
+  //
+  // OPTIMIZATION2:
+  // If both the test and update expression doesn't capture anything:
+  //      let/const oldVars = loop->init()
+  //      if !loop->test(oldVars)
+  //        goto exitBlock
+  // loopBlock:
+  //      Scope s = createScope
+  //        declare newVars in s
+  //        newVars = oldVars
+  //        loop->body(newVars)
+  //  updateBlock:
+  //        oldVars(ignoring constness) = newVars
+  //      end s
+  //      loop->update(oldVars)
+  //      if loop->test(oldVars)
+  //          goto loopBlock
+  //      goto loopBlock
+  // exitBlock:
+
+  bool testOrUpdateCapture = testExprCaptures | updateExprCaptures;
 
   // Create the basic blocks that make the while structure.
   Function *function = Builder.getInsertionBlock()->getParent();
+  BasicBlock *dontExitBlock = nullptr;
+  if (!testOrUpdateCapture && loop->_test) {
+    dontExitBlock = Builder.createBasicBlock(function);
+  }
   BasicBlock *loopBlock = Builder.createBasicBlock(function);
-  BasicBlock *firstIterBlock =
-      loop->_update ? Builder.createBasicBlock(function) : nullptr;
-  BasicBlock *notFirstIterBlock =
-      loop->_update ? Builder.createBasicBlock(function) : nullptr;
+  BasicBlock *firstIterBlock = nullptr;
+  BasicBlock *notFirstIterBlock = nullptr;
+  if (updateExprCaptures) {
+    firstIterBlock = Builder.createBasicBlock(function);
+    notFirstIterBlock = Builder.createBasicBlock(function);
+  }
   BasicBlock *bodyBlock = Builder.createBasicBlock(function);
   BasicBlock *updateBlock = Builder.createBasicBlock(function);
   BasicBlock *exitBlock = Builder.createBasicBlock(function);
-  // Each pair is an "old" var and its corresponding "new" var
-  llvh::SmallVector<std::pair<Variable *, Variable *>, 2> vars{};
+  // A mapping between an "old" variable and its "new" version in the loop body
+  // scope.
+  struct VarMapping {
+    sema::Decl *decl;
+    Variable *oldVar;
+    Variable *newVar;
+    VarMapping(sema::Decl *decl, Variable *oldVar, Variable *newVar)
+        : decl(decl), oldVar(oldVar), newVar(newVar) {}
+  };
+  llvh::SmallVector<VarMapping, 2> vars{};
 
   // Initialize the goto labels.
   curFunction()->initLabel(loop, exitBlock, updateBlock);
@@ -453,10 +562,16 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
       "A scoped for-loop must have an init declaration");
   genStatement(loop->_init);
 
+  if (!testOrUpdateCapture && loop->_test) {
+    // Branch out of the loop if the condition is false.
+    genExpressionBranch(loop->_test, dontExitBlock, exitBlock, nullptr);
+    Builder.setInsertionBlock(dontExitBlock);
+  }
+
   Builder.setLocation(loop->_init->getDebugLoc());
   // Create the "first" flag and set it to true.
   AllocStackInst *firstStack = nullptr;
-  if (loop->_update) {
+  if (updateExprCaptures) {
     firstStack = Builder.createAllocStackInst(
         genAnonymousLabelName("first"), Type::createBoolean());
     Builder.createStoreStackInst(Builder.getLiteralBool(true), firstStack);
@@ -488,7 +603,7 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
         decl->name,
         Type::subtractTy(oldVar->getType(), Type::createEmpty()));
 
-    vars.emplace_back(oldVar, newVar);
+    vars.emplace_back(decl, oldVar, newVar);
 
     // Note that we are using a direct load/store, which doesn't check TDZ. If
     // our thinking is correct, all variables declared in the for(;;) must have
@@ -502,7 +617,7 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
     setDeclData(decl, newVar);
   }
 
-  if (loop->_update) {
+  if (updateExprCaptures) {
     // if first...
     Builder.createCondBranchInst(
         Builder.createLoadStackInst(firstStack),
@@ -513,12 +628,13 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
     Builder.setLocation(loop->_update->getDebugLoc());
     Builder.setInsertionBlock(notFirstIterBlock);
     genExpression(loop->_update);
+
     Builder.createBranchInst(firstIterBlock);
     Builder.setInsertionBlock(firstIterBlock);
   }
 
   // Branch out of the loop if the condition is false.
-  if (loop->_test)
+  if (testOrUpdateCapture && loop->_test)
     genExpressionBranch(loop->_test, bodyBlock, exitBlock, nullptr);
   else
     Builder.createBranchInst(bodyBlock);
@@ -528,19 +644,30 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
   genStatement(loop->_body);
   Builder.createBranchInst(updateBlock);
 
-  // Copy the new vars back into the old ones.
   Builder.setInsertionBlock(updateBlock);
-  for (const auto &pair : vars) {
+  // Copy the new vars back into the old ones.
+  for (const auto &mapping : vars) {
     Builder.createStoreFrameInst(
-        Builder.createLoadFrameInst(pair.second), pair.first);
+        Builder.createLoadFrameInst(mapping.newVar), mapping.oldVar);
+    // Update the declaration to resolve to the old variable.
+    setDeclData(mapping.decl, mapping.oldVar);
   }
 
   // Set "first" to false.
-  if (firstStack)
+  if (updateExprCaptures)
     Builder.createStoreStackInst(Builder.getLiteralBool(false), firstStack);
 
+  if (!updateExprCaptures && loop->_update) {
+    genExpression(loop->_update);
+  }
+
   // Loop.
-  Builder.createBranchInst(loopBlock);
+  if (!testOrUpdateCapture && loop->_test) {
+    FunctionContext::AllowRecompileRAII allowRecompile(*curFunction());
+    genExpressionBranch(loop->_test, loopBlock, exitBlock, nullptr);
+  } else {
+    Builder.createBranchInst(loopBlock);
+  }
 
   // Following statements are inserted to the exit block.
   Builder.setInsertionBlock(exitBlock);

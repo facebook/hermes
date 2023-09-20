@@ -481,9 +481,23 @@ class ESTreeIRGen {
   void genForOfStatement(ESTree::ForOfStatementNode *forOfStmt);
   void genWhileLoop(ESTree::WhileStatementNode *loop);
   void genDoWhileLoop(ESTree::DoWhileStatementNode *loop);
+
+  /// A conservative check of whether the AST tree \p tree captures any
+  /// variables. This simply checks whether the expression creates any closures.
+  bool treeDoesNotCapture(ESTree::Node *tree);
+  /// Compile a for-loop.
   void genForLoop(ESTree::ForStatementNode *loop);
   /// Compile a for-loop with let/const declaration.
-  void genScopedForLoop(ESTree::ForStatementNode *loop);
+  ///
+  /// \param loop the loop
+  /// \param testExprCaptures the test expression possibly captures variables.
+  ///     True also implies tha the test expression is non-null.
+  /// \param updateExprCaptures the update expression possibly captures
+  ///     variables. True also implies tha the test expression is non-null.
+  void genScopedForLoop(
+      ESTree::ForStatementNode *loop,
+      bool testExprCaptures,
+      bool updateExprCaptures);
 
   void genSwitchStatement(ESTree::SwitchStatementNode *switchStmt);
 
