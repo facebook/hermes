@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-//RUN: %hermes -O -target=HBC %s -gc-sanitize-handles=0 | %FileCheck --match-full-lines %s
+//RUN: ulimit -s 1024 && %hermes -O -target=HBC %s -gc-sanitize-handles=0 | %FileCheck --match-full-lines %s
 
 try {
   var proxy = new Proxy(function() {}, {});

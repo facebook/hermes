@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -Xhermes-internal-test-methods -Xes6-proxy -non-strict -O -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: ulimit -s 2048 && %hermes -Xhermes-internal-test-methods -Xes6-proxy -non-strict -O -target=HBC %s | %FileCheck --match-full-lines %s
 
 let isStrictMode = (function() { return this === undefined; })();
 
