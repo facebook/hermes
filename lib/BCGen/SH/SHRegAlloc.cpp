@@ -828,39 +828,62 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
       : IRPrinter(RA.getContext(), ost, escape), allocator(RA) {}
 
   bool printInstructionDestination(Instruction *I) override {
-    bool empty = false;
     auto codeGenOpts = I->getContext().getCodeGenerationSettings();
 
     auto optReg = allocator.getOptionalRegister(I);
-    if (!optReg || optReg->getClass() == RegClass::NoOutput) {
-      os << llvh::formatv(
-          "{0}", llvh::fmt_align("", llvh::AlignStyle::Left, 9 + 1));
-      empty = true;
+
+    if (optReg && optReg->getClass() != RegClass::NoOutput) {
+      os << llvh::formatv("{0,-8} ", llvh::formatv("{{{0}}", *optReg));
     } else {
-      os << llvh::formatv(
-          "${0}", llvh::fmt_align(*optReg, llvh::AlignStyle::Left, 9));
+      os << llvh::formatv("{0,-8} ", "");
     }
 
     if (codeGenOpts.dumpRegisterInterval) {
-      os << " ";
-      if (allocator.hasInstructionNumber(I)) {
-        auto idx = allocator.getInstructionNumber(I);
+      bool hasInstNumber = allocator.hasInstructionNumber(I);
+      auto idx = hasInstNumber ? allocator.getInstructionNumber(I) : 0;
+
+      if (optReg && optReg->getClass() != RegClass::NoOutput && hasInstNumber) {
         Interval &ivl = allocator.getInstructionInterval(I);
-        os << "@" << idx << " " << ivl << "\t";
+        os << llvh::formatv("{0,+3}", llvh::formatv("%{0}", idx));
+        os << ' ' << llvh::formatv("{0,-10}", ivl);
+        return true;
+      } else if (hasInstNumber) {
+        os << llvh::formatv("{0,+3}", llvh::formatv("%{0}", idx));
+        os << ' ' << llvh::formatv("{0,-10}", "");
+        return true;
       } else {
-        os << "          \t";
+        os << llvh::formatv("{0,+3}", "");
+        os << ' ' << llvh::formatv("{0,-10}", "");
+        return false;
       }
     }
-    return !empty;
+
+    if (optReg && optReg->getClass() != RegClass::NoOutput) {
+      os << llvh::formatv(
+          "{0,3}", llvh::formatv("%{0}", InstNamer.getNumber(I)));
+      return true;
+    } else {
+      os << llvh::formatv("{0,3}", "");
+      return false;
+    }
   }
 
   void printValueLabel(Instruction *I, Value *V, unsigned opIndex) override {
-    if (allocator.isAllocated(V)) {
-      os << "$" << allocator.getRegister(V);
-      printTypeLabel(V);
-    } else {
-      IRPrinter::printValueLabel(I, V, opIndex);
+    auto codeGenOpts = I->getContext().getCodeGenerationSettings();
+    if (codeGenOpts.dumpRegisterInterval) {
+      if (auto *opInst = llvh::dyn_cast<Instruction>(V)) {
+        if (allocator.hasInstructionNumber(opInst))
+          os << '%' << allocator.getInstructionNumber(opInst);
+        else
+          os << "%dead";
+        printTypeLabel(opInst);
+        return;
+      }
     }
+    if (allocator.isAllocated(V)) {
+      os << '{' << allocator.getRegister(V) << "} ";
+    }
+    IRPrinter::printValueLabel(I, V, opIndex);
   }
 };
 
