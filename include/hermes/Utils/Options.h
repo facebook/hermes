@@ -55,10 +55,6 @@ struct BytecodeGenerationOptions {
   /// Whether to strip the debug info in the bytecode binary.
   bool stripDebugInfoSection = false;
 
-  /// Whether to print the disassembled bytecode in a more human readable
-  /// format.
-  bool prettyDisassemble = true;
-
   /// Whether to enable basic block profiling or not.
   bool basicBlockProfiling = false;
 

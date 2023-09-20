@@ -808,7 +808,6 @@ bool compileFromCommandLineOptions() {
 
   BytecodeGenerationOptions genOptions{toOutputFormatKind(cli::OutputLevel)};
   genOptions.optimizationEnabled = cli::OptimizationLevel > OptLevel::Og;
-  genOptions.prettyDisassemble = cli::Pretty;
   // genOptions.basicBlockProfiling = cl::BasicBlockProfiling;
   //  The static builtin setting should be set correctly after command line
   //  options parsing and js parsing. Set the bytecode header flag here.
