@@ -78,12 +78,21 @@ class DeclCollector
 
   void visit(ESTree::VariableDeclarationNode *node);
   void visit(ESTree::ClassDeclarationNode *node);
+  void visit(ESTree::ClassExpressionNode *) {
+    // Don't descend into class bodies.
+  }
   void visit(ESTree::ImportDeclarationNode *node);
 #if HERMES_PARSE_FLOW
   void visit(ESTree::TypeAliasNode *node);
+  void visit(ESTree::InterfaceDeclarationNode *node) {
+    // Don't descend into interface bodies.
+  }
 #endif
 #if HERMES_PARSE_TS
   void visit(ESTree::TSTypeAliasDeclarationNode *node);
+  void visit(ESTree::TSInterfaceDeclarationNode *) {
+    // Don't descend into interface bodies.
+  }
 #endif
 
   void visit(ESTree::FunctionDeclarationNode *node);

@@ -88,7 +88,7 @@ void DeclCollector::visit(ESTree::VariableDeclarationNode *node) {
 }
 void DeclCollector::visit(ESTree::ClassDeclarationNode *node) {
   addToCur(node);
-  visitESTreeChildren(*this, node);
+  // Don't descend into class bodies.
 }
 void DeclCollector::visit(ESTree::ImportDeclarationNode *node) {
   addToCur(node);
