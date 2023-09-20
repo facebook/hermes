@@ -846,13 +846,8 @@ class FlowChecker::ExprVisitor {
       }
     }
     if (llvh::isa<AnyType>(type->info)) {
-      // any becomes (number|bigint).
-      llvh::SmallVector<Type *, 2> types{
-          outer_.flowContext_.getNumber(), outer_.flowContext_.getBigInt()};
-      outer_.setNodeType(
-          node,
-          outer_.flowContext_.createType(
-              outer_.flowContext_.maybeCreateUnion(types)));
+      // any remains any.
+      outer_.setNodeType(node, outer_.flowContext_.getAny());
       return;
     }
     outer_.sm_.error(

@@ -62,5 +62,5 @@ w++;
 // CHECK-NEXT:            NumericLiteral : number
 // CHECK-NEXT:            Id 'w' [D:E:%d.4 'w']
 // CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        UpdateExpression : union %t.1
+// CHECK-NEXT:        UpdateExpression : any
 // CHECK-NEXT:            Id 'w' [D:E:%d.4 'w'] : any
