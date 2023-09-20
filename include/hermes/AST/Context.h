@@ -37,6 +37,8 @@ struct CodeGenerationSettings {
   bool dumpIRBetweenPasses{false};
   /// Run the IRVerifier between every pass.
   bool verifyIRBetweenPasses{false};
+  /// Use colors in IR dumps.
+  bool colors{false};
 };
 
 struct OptimizationSettings {

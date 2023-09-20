@@ -30,6 +30,12 @@ using llvh::dyn_cast;
 using llvh::isa;
 
 namespace hermes {
+IRPrinter::IRPrinter(Context &ctx, llvh::raw_ostream &ost, bool escape)
+    : Indent(0),
+      sm_(ctx.getSourceErrorManager()),
+      os(ost),
+      colors_(ctx.getCodeGenerationSettings().colors && os.has_colors()),
+      needEscape(escape) {}
 
 std::string IRPrinter::escapeStr(llvh::StringRef name) {
   std::string s = name.str();
@@ -116,7 +122,9 @@ void IRPrinter::printTypeLabel(Value *v) {
   // Don't print the type of basic blocks.
   if (llvh::isa<BasicBlock>(v))
     return;
+  setColor(Color::Type);
   os << ": " << v->getType();
+  resetColor();
 }
 
 void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
@@ -157,9 +165,13 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
   } else if (isa<EmptySentinel>(V)) {
     os << "empty";
   } else if (isa<Instruction>(V)) {
+    setColor(Color::Name);
     os << "%" << InstNamer.getNumber(V);
+    resetColor();
   } else if (isa<BasicBlock>(V)) {
+    setColor(Color::Name);
     os << "%BB" << BBNamer.getNumber(V);
+    resetColor();
   } else if (auto L = dyn_cast<Label>(V)) {
     auto Name = L->get();
     os << "$" << quoteStr(ctx.toString(Name));
@@ -238,7 +250,9 @@ void IRPrinter::printFunctionVariables(Function *F) {
 bool IRPrinter::printInstructionDestination(Instruction *I) {
   unsigned number = InstNamer.getNumber(I);
   if (I->hasOutput()) {
+    setColor(Color::Name);
     os << "%" << number;
+    resetColor();
     return true;
   } else {
     // Calculate the width of the printed number.
@@ -258,7 +272,9 @@ void IRPrinter::printInstruction(Instruction *I) {
     os << " = ";
   else
     os << "   ";
+  setColor(Color::Inst);
   os << I->getName();
+  resetColor();
 
   if (!I->getAttributes(I->getModule()).isEmpty()) {
     os << " " << I->getAttributes(I->getModule()).getDescriptionStr();
@@ -266,7 +282,11 @@ void IRPrinter::printInstruction(Instruction *I) {
 
   // Don't print the type of instructions without output.
   if (I->hasOutput()) {
-    os << " (:" << I->getType() << ")";
+    os << " (";
+    setColor(Color::Type);
+    os << ':' << I->getType();
+    resetColor();
+    os << ")";
   }
 
   bool first = true;
@@ -366,7 +386,9 @@ void IRPrinter::visitFunction(
 void IRPrinter::visitBasicBlock(const BasicBlock &BB) {
   auto *UBB = const_cast<BasicBlock *>(&BB);
   os.indent(Indent);
+  setColor(Color::Name);
   os << "%BB" << BBNamer.getNumber(UBB) << ":\n";
+  resetColor();
   Indent += 2;
 
   // Use IRVisitor dispatch to visit the instructions.
@@ -389,6 +411,49 @@ void IRPrinter::visitInstruction(const Instruction &I) {
   os << "\n";
 }
 
+/// A simple palette for IR dumping, superficially inspired by Godbolt's LLVM IR
+/// palette.
+static struct {
+  raw_ostream::Colors color;
+  // -1 means select default color, false means not bold, true means bold.
+  int8_t bold;
+} s_palette[] = {
+    // None
+    {.bold = -1},
+    // Inst
+    {.bold = -1},
+    // Type like :number.
+    {raw_ostream::Colors::GREEN, false},
+    // Name like %15 or %BB3
+    /* BLUE looks better, but sometimes fades in dark mode. */
+    /* {raw_ostream::Colors::BLUE, false}, */
+    {raw_ostream::Colors::RED, false},
+    // Register like {loc1}
+    {raw_ostream::Colors::MAGENTA, false},
+};
+static_assert(
+    sizeof(s_palette) / sizeof(s_palette[0]) == (size_t)IRPrinter::Color::_last,
+    "palette size mismatch");
+
+void IRPrinter::setColor(hermes::IRPrinter::Color color) {
+  assert(color < Color::_last && "invalid color");
+  unsigned ind = (unsigned)color;
+  if (s_palette[ind].bold < 0)
+    resetColor();
+  else
+    _changeColor(s_palette[ind].color, s_palette[ind].bold);
+}
+
+void IRPrinter::resetColor() {
+  if (colors_)
+    os.resetColor();
+}
+
+void IRPrinter::_changeColor(raw_ostream::Colors Color, bool Bold, bool BG) {
+  if (colors_)
+    os.changeColor(Color, Bold, BG);
+}
+
 } // namespace hermes
 
 namespace {
@@ -405,6 +470,7 @@ struct DottyPrinter : public IRVisitor<DottyPrinter, void> {
       llvh::raw_ostream &ost,
       llvh::StringRef Title)
       : os(ost), Printer(ctx, ost, /* escape output */ true) {
+    Printer.colors_ = false;
     os << " digraph g {\n graph [ rankdir = \"TD\" ];\n";
     os << "labelloc=\"t\"; ";
     os << " node [ fontsize = \"16\" shape = \"record\" ]; edge [ ];\n";

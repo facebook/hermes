@@ -67,12 +67,29 @@ llvh::raw_ostream &operator<<(
 using llvh::raw_ostream;
 
 struct IRPrinter : public IRVisitor<IRPrinter, void> {
+  /// Indexes in a pallette of colors for IR dumps.
+  enum class Color : uint8_t {
+    // Default color.
+    None,
+    // Color of an instruction.
+    Inst,
+    // Color of type annotation like :number.
+    Type,
+    // Color of a name like %10.
+    Name,
+    // Color of a register name.
+    Register,
+    _last
+  };
+
   /// Indentation level.
   unsigned Indent;
 
   SourceErrorManager &sm_;
   /// Output stream.
   llvh::raw_ostream &os;
+  /// Whether to show colors.
+  bool colors_;
   /// If set to true then we need to escape the quote mark because the output of
   /// this printer may be printed as a quoted label.
   bool needEscape;
@@ -81,11 +98,7 @@ struct IRPrinter : public IRVisitor<IRPrinter, void> {
   InstructionNamer BBNamer;
   VariableNamer varNamer_{};
 
-  explicit IRPrinter(Context &ctx, llvh::raw_ostream &ost, bool escape = false)
-      : Indent(0),
-        sm_(ctx.getSourceErrorManager()),
-        os(ost),
-        needEscape(escape) {}
+  explicit IRPrinter(Context &ctx, llvh::raw_ostream &ost, bool escape = false);
 
   virtual ~IRPrinter() = default;
 
@@ -115,6 +128,17 @@ struct IRPrinter : public IRVisitor<IRPrinter, void> {
   void visitFunction(const Function &F);
   void visitFunction(const Function &F, llvh::ArrayRef<BasicBlock *> order);
   void visitModule(const Module &M);
+
+  /// Set the output color to \p Color. Do nothing if colors are disabled.
+  void setColor(Color color);
+  /// Set the output color to the default color. Do nothing if colors are
+  /// disabled.
+  void resetColor();
+
+  /// Invoke llvh::raw_ostream::changeColor() if colors are enabled, otherwise
+  /// do nothing.
+  void
+  _changeColor(raw_ostream::Colors Color, bool Bold = false, bool BG = false);
 };
 
 } // namespace hermes

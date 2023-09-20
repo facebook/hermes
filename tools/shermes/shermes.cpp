@@ -238,6 +238,12 @@ cl::opt<bool> Pretty(
     cl::desc("Pretty print JSON, JS or disassembled bytecode"),
     cl::cat(CompilerCategory));
 
+cl::opt<bool> Colors(
+    "colors",
+    cl::init(false),
+    cl::desc("Use colors in some dumps"),
+    cl::cat(CompilerCategory));
+
 #if HERMES_PARSE_JSX
 cl::opt<bool> JSX(
     "parse-jsx",
@@ -470,7 +476,7 @@ std::shared_ptr<Context> createContext() {
       cli::DumpSourceLocation != LocationDumpMode::None;
   codeGenOpts.dumpIRBetweenPasses = cli::DumpBetweenPasses;
   codeGenOpts.verifyIRBetweenPasses = cli::VerifyIR;
-  // codeGenOpts.instrumentIR = cl::InstrumentIR;
+  codeGenOpts.colors = cli::Colors;
 
   OptimizationSettings optimizationOpts;
 

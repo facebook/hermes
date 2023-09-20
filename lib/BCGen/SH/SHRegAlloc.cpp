@@ -833,7 +833,9 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
     auto optReg = allocator.getOptionalRegister(I);
 
     if (optReg && optReg->getClass() != RegClass::NoOutput) {
+      setColor(Color::Register);
       os << llvh::formatv("{0,-8} ", llvh::formatv("{{{0}}", *optReg));
+      resetColor();
     } else {
       os << llvh::formatv("{0,-8} ", "");
     }
@@ -843,12 +845,16 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
       auto idx = hasInstNumber ? allocator.getInstructionNumber(I) : 0;
 
       if (optReg && optReg->getClass() != RegClass::NoOutput && hasInstNumber) {
-        Interval &ivl = allocator.getInstructionInterval(I);
+        setColor(Color::Name);
         os << llvh::formatv("{0,+3}", llvh::formatv("%{0}", idx));
-        os << ' ' << llvh::formatv("{0,-10}", ivl);
+        os << ' '
+           << llvh::formatv("{0,-10}", allocator.getInstructionInterval(I));
+        resetColor();
         return true;
       } else if (hasInstNumber) {
+        setColor(Color::Name);
         os << llvh::formatv("{0,+3}", llvh::formatv("%{0}", idx));
+        resetColor();
         os << ' ' << llvh::formatv("{0,-10}", "");
         return true;
       } else {
@@ -859,8 +865,10 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
     }
 
     if (optReg && optReg->getClass() != RegClass::NoOutput) {
+      setColor(Color::Name);
       os << llvh::formatv(
           "{0,3}", llvh::formatv("%{0}", InstNamer.getNumber(I)));
+      resetColor();
       return true;
     } else {
       os << llvh::formatv("{0,3}", "");
@@ -872,16 +880,20 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
     auto codeGenOpts = I->getContext().getCodeGenerationSettings();
     if (codeGenOpts.dumpRegisterInterval) {
       if (auto *opInst = llvh::dyn_cast<Instruction>(V)) {
+        setColor(Color::Name);
         if (allocator.hasInstructionNumber(opInst))
           os << '%' << allocator.getInstructionNumber(opInst);
         else
           os << "%dead";
+        resetColor();
         printTypeLabel(opInst);
         return;
       }
     }
     if (allocator.isAllocated(V)) {
+      setColor(Color::Register);
       os << '{' << allocator.getRegister(V) << "} ";
+      resetColor();
     }
     IRPrinter::printValueLabel(I, V, opIndex);
   }
