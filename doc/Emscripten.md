@@ -31,7 +31,7 @@ WARNING: The old `fastcomp` backend was [removed in emscripten `2.0.0` (August 2
 
 ## Setting up Workspace and Host Hermesc
 
-Hermes now requires a two stage build proecess because the VM now contains
+Hermes now requires a two stage build process because the VM now contains
 Hermes bytecode which needs to be compiled by Hermes.
 
 Please follow the [Cross Compilation](./CrossCompilation.md) to set up a workplace
