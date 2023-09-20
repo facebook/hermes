@@ -864,9 +864,9 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
   }
 };
 
-void RegisterAllocator::dump() {
+void RegisterAllocator::dump(llvh::ArrayRef<BasicBlock *> order) {
   LivenessRegAllocIRPrinter Printer(*this, llvh::outs());
-  Printer.visitFunction(*F);
+  Printer.visitFunction(*F, order);
 }
 
 hermes::OptValue<Register> RegisterAllocator::getOptionalRegister(

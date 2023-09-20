@@ -113,6 +113,7 @@ struct IRPrinter : public IRVisitor<IRPrinter, void> {
   void visitInstruction(const Instruction &I);
   void visitBasicBlock(const BasicBlock &BB);
   void visitFunction(const Function &F);
+  void visitFunction(const Function &F, llvh::ArrayRef<BasicBlock *> order);
   void visitModule(const Module &M);
 };
 

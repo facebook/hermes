@@ -402,7 +402,7 @@ class RegisterAllocator {
 
  public:
   /// Dump the status of the allocator in a textual form.
-  void dump();
+  void dump(llvh::ArrayRef<BasicBlock *> order);
 
   /// \returns the computed live interval for the instruction \p I.
   Interval &getInstructionInterval(Instruction *I);

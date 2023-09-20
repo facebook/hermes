@@ -322,12 +322,22 @@ void IRPrinter::visitModule(const Module &M) {
 
 void IRPrinter::visitFunction(const Function &F) {
   auto *UF = const_cast<Function *>(&F);
+  llvh::SmallVector<BasicBlock *, 8> order{};
+  for (auto &BB : *UF)
+    order.push_back(&BB);
+  visitFunction(F, order);
+}
+
+void IRPrinter::visitFunction(
+    const Function &F,
+    llvh::ArrayRef<BasicBlock *> order) {
+  auto *UF = const_cast<Function *>(&F);
   os.indent(Indent);
   BBNamer.clear();
   InstNamer.clear();
   // Number all instructions sequentially.
-  for (auto &BB : *UF)
-    for (auto &I : BB)
+  for (auto *BB : order)
+    for (auto &I : *BB)
       InstNamer.getNumber(&I);
 
   printFunctionHeader(UF);
@@ -343,8 +353,8 @@ void IRPrinter::visitFunction(const Function &F) {
   }
 
   // Use IRVisitor dispatch to visit the basic blocks.
-  for (auto &BB : F) {
-    visit(BB);
+  for (auto *BB : order) {
+    visit(*BB);
   }
 
   os.indent(Indent);

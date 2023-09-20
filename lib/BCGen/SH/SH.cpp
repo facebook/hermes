@@ -2198,14 +2198,14 @@ void generateFunction(
   RA.allocate(order);
 
   if (options.format == DumpRA) {
-    RA.dump();
+    RA.dump(order);
     return;
   }
 
   lowerAllocatedFunctionIR(&F, RA, options.optimizationEnabled);
 
   if (options.format == DumpLRA) {
-    RA.dump();
+    RA.dump(order);
     return;
   }
 
