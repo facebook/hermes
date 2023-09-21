@@ -20,11 +20,14 @@ if (EMSCRIPTEN)
   target_link_options(hermes-parser-wasm PRIVATE "SHELL: -s NODERAWFS=0 -s WASM=1")
   target_link_options(hermes-parser-wasm PRIVATE "SHELL: -s ALLOW_MEMORY_GROWTH=1")
   target_link_options(hermes-parser-wasm PRIVATE
-    "SHELL: -s EXTRA_EXPORTED_RUNTIME_METHODS=[cwrap,ccall]")
+    "SHELL: -s EXPORTED_RUNTIME_METHODS=[cwrap,ccall]")
+  target_link_options(hermes-parser-wasm PRIVATE
+    "SHELL: -s EXPORTED_FUNCTIONS=[_malloc,_free]")
   target_link_options(hermes-parser-wasm PRIVATE "SHELL: -s MODULARIZE=1")
   target_link_options(hermes-parser-wasm PRIVATE "SHELL: -s EXPORT_NAME=hermes_parser_wasm")
   target_link_options(hermes-parser-wasm PRIVATE
     "SHELL: -s BINARYEN_ASYNC_COMPILATION=0 -s SINGLE_FILE=1 -s WASM_ASYNC_COMPILATION=0")
   target_link_options(hermes-parser-wasm PRIVATE "SHELL: -s NODEJS_CATCH_EXIT=0")
   target_link_options(hermes-parser-wasm PRIVATE "SHELL: -s NODEJS_CATCH_REJECTION=0")
+  target_link_options(hermes-parser-wasm PRIVATE "SHELL: -s STACK_SIZE=5MB")
 endif ()
