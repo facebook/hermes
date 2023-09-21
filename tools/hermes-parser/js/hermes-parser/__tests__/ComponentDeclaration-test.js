@@ -134,7 +134,8 @@ describe('ComponentDeclaration', () => {
 
   describe('rest params', () => {
     const code = `
-      component Foo(...props: Props) {}
+component Foo(...props: Props) {}
+component Foo(...{prop}: Props) {}
     `;
 
     test('ESTree', async () => {
@@ -144,9 +145,13 @@ describe('ComponentDeclaration', () => {
 
     test('Babel', async () => {
       expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
-      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(
-        `"function Foo(props: $ReadOnly<{...}>): React.Node {}"`,
-      );
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+        "function Foo(props: $ReadOnly<{...}>): React.Node {}
+
+        function Foo({
+          prop
+        }: $ReadOnly<{...}>): React.Node {}"
+      `);
     });
   });
 
