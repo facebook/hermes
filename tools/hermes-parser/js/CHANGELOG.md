@@ -1,3 +1,27 @@
+## 0.16.0
+
+### `hermes-estree`
+* Improve types of `DestructuringObjectPropertyWithShorthandStaticName`, `ExportNamedDeclarationWithSpecifiers`, `ObjectTypeAnnotation` and `BigIntLiteral`.
+
+### `hermes-parser`
+* Major refactor of hermes parser babel support infra to allow safer/easier transforms and more closely match babel output.
+* Correct `FunctionExpression` property range.
+* Correct `DeclareEnum` babel output to correctly wrap the `TypeAnnotationType` in a `TypeAnnotation`.
+* Upgrade to latest `emscripten` (3.1.44 from 3.1.3).
+
+### `hermes-eslint`
+
+### `hermes-transform`
+
+### `flow-api-translator`
+* Correctly handle converting identifier references via `typeof identifier`.
+* Support conditional types, type guards, `infer`, mapped object types, `$ReadOnlyMap` and `$ReadOnlySet`.
+
+### `prettier-plugin-hermes-parser`
+* Update internal version of prettier to version `3.0.2`.
+
+### `babel-plugin-syntax-hermes-parser`
+
 ## 0.15.1
 
 ### `hermes-estree`

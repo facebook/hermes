@@ -1,6 +1,6 @@
 {
   "name": "flow-api-translator",
-  "version": "0.15.1",
+  "version": "0.16.0",
   "description": "Toolkit for creating Flow and TypeScript compatible libraries from Flow source code.",
   "main": "dist/index.js",
   "license": "MIT",
@@ -12,10 +12,10 @@
     "@babel/code-frame": "^7.16.0",
     "@typescript-eslint/visitor-keys": "^5.42.0",
     "flow-enums-runtime": "^0.0.6",
-    "hermes-eslint": "0.15.1",
-    "hermes-estree": "0.15.1",
-    "hermes-parser": "0.15.1",
-    "hermes-transform": "0.15.1"
+    "hermes-eslint": "0.16.0",
+    "hermes-estree": "0.16.0",
+    "hermes-parser": "0.16.0",
+    "hermes-transform": "0.16.0"
   },
   "peerDependencies": {
     "prettier": "^3.0.0 || ^2.7.1"
