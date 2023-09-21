@@ -554,6 +554,25 @@ TEST_F(ConnectionTests, testUnregisteringCallback) {
   EXPECT_TRUE(conn.registerCallbacks());
 }
 
+TEST_F(ConnectionTests, testScriptsOnEnable) {
+  int msgId = 1;
+
+  asyncRuntime.executeScriptAsync(R"(
+    true
+  )");
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
+  expectNotification<m::debugger::ScriptParsedNotification>(conn);
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
+  expectNotification<m::debugger::ScriptParsedNotification>(conn);
+
+  send<m::debugger::DisableRequest>(conn, msgId++);
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
+  expectNotification<m::debugger::ScriptParsedNotification>(conn);
+}
+
 TEST_F(ConnectionTests, testRespondsErrorToUnknownRequests) {
   asyncRuntime.executeScriptAsync(R"(
     var a = 1 + 2;
