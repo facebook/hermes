@@ -35,9 +35,9 @@ bool Semaphore::open(const char *semaphorePrefix) {
   llvh::SmallVector<char, 64> semaphoreName;
   llvh::raw_svector_ostream OS(semaphoreName);
 
-  // oscompat::thread_id returns the OS level thread ID, and is thus system
-  // unique.
-  OS << semaphorePrefix << oscompat::thread_id();
+  // oscompat::global_thread_id returns the OS level thread ID, and is thus
+  // system unique.
+  OS << semaphorePrefix << oscompat::global_thread_id();
 
   // Create a named semaphore with read/write. Use O_EXCL as an extra protection
   // layer -- sem_open will fail if semaphoreName is not unique.
