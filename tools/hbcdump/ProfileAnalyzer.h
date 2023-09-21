@@ -148,7 +148,7 @@ class ProfileAnalyzer {
   // Print the file name string corresponding to \p filenameId.
   void dumpFileName(uint32_t filenameId) {
     const auto *debugInfo = hbcParser_.getBCProvider()->getDebugInfo();
-    std::string fileName = debugInfo->getFilenameByID(filenameId);
+    std::string fileName = debugInfo->getUTF8FilenameByID(filenameId);
     os_ << fileName;
   }
   // Print bundle epilogue.

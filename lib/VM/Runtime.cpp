@@ -1998,7 +1998,8 @@ void Runtime::crashWriteCallStack(JSONEmitter &json) {
         auto sourceLocation = debugInfo->getLocationForAddress(
             blockSourceCode.getValue(), bytecodeOffs);
         if (sourceLocation) {
-          auto file = debugInfo->getFilenameByID(sourceLocation->filenameId);
+          auto file =
+              debugInfo->getUTF8FilenameByID(sourceLocation->filenameId);
           llvh::SmallString<256> srcLocStorage;
           json.emitKeyValue(
               "SourceLocation",
@@ -2040,7 +2041,8 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
         auto sourceLocation = debugInfo->getLocationForAddress(
             blockSourceCode.getValue(), bytecodeOffs);
         if (sourceLocation) {
-          auto file = debugInfo->getFilenameByID(sourceLocation->filenameId);
+          auto file =
+              debugInfo->getUTF8FilenameByID(sourceLocation->filenameId);
           res += ": " + file + ":" + std::to_string(sourceLocation->line) +
               ":" + std::to_string(sourceLocation->column);
         }
@@ -2092,7 +2094,7 @@ Runtime::getIPSourceLocation(const CodeBlock *codeBlock, const Inst *ip) {
   if (!sourceLocation) {
     return llvh::None;
   }
-  auto filename = debugInfo->getFilenameByID(sourceLocation->filenameId);
+  auto filename = debugInfo->getUTF8FilenameByID(sourceLocation->filenameId);
   auto line = sourceLocation->line;
   auto col = sourceLocation->column;
   return std::make_tuple(filename, line, col);

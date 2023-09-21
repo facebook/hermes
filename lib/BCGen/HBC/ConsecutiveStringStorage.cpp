@@ -793,16 +793,17 @@ void ConsecutiveStringStorage::appendStorage(ConsecutiveStringStorage &&rhs) {
   storage_.insert(storage_.end(), rhs.storage_.begin(), rhs.storage_.end());
 }
 
-llvh::StringRef ConsecutiveStringStorage::getStringAtIndex(
+llvh::StringRef ConsecutiveStringStorage::getUTF8StringAtIndex(
     uint32_t idx,
     std::string &utf8ConversionStorage) const {
   ensureTableValid();
   ensureStorageValid();
-  assert(idx < strTable_.size() && "getStringAtIndex: invalid index");
-  return getStringFromEntry(strTable_[idx], storage_, utf8ConversionStorage);
+  assert(idx < strTable_.size() && "getUTF8StringAtIndex: invalid index");
+  return getUTF8StringFromEntry(
+      strTable_[idx], storage_, utf8ConversionStorage);
 }
 
-llvh::StringRef getStringFromEntry(
+llvh::StringRef getUTF8StringFromEntry(
     const StringTableEntry &entry,
     llvh::ArrayRef<unsigned char> storage,
     std::string &utf8ConversionStorage) {

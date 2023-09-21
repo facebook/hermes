@@ -35,7 +35,7 @@ StringLiteralIDMapping::StringLiteralIDMapping(
   uint32_t count = storage_.count();
   assert(isIdentifier_.size() == count);
   for (uint32_t i = 0; i < count; i++) {
-    uint32_t j = strings_.insert(storage_.getStringAtIndex(i, utf8Storage));
+    uint32_t j = strings_.insert(storage_.getUTF8StringAtIndex(i, utf8Storage));
     assert(i == j && "Duplicate string in storage.");
     (void)j;
   }

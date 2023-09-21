@@ -825,7 +825,7 @@ ExecutionStatus JSError::constructStackTraceString_RJS(
     RuntimeModule *runtimeModule = sti.codeBlock->getRuntimeModule();
     if (location) {
       stack.append(
-          runtimeModule->getBytecode()->getDebugInfo()->getFilenameByID(
+          runtimeModule->getBytecode()->getDebugInfo()->getUTF8FilenameByID(
               location->filenameId));
     } else {
       auto sourceURL = runtimeModule->getSourceURL();

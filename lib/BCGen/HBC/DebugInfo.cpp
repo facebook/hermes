@@ -241,7 +241,7 @@ OptValue<uint32_t> DebugInfo::getParentFunctionId(uint32_t offset) const {
 void DebugInfo::disassembleFilenames(llvh::raw_ostream &os) const {
   os << "Debug filename table:\n";
   for (uint32_t i = 0, e = filenameTable_.size(); i < e; ++i) {
-    os << "  " << i << ": " << getFilenameByID(i) << '\n';
+    os << "  " << i << ": " << getUTF8FilenameByID(i) << '\n';
   }
   if (filenameTable_.empty()) {
     os << "  (none)\n";
@@ -338,7 +338,7 @@ void DebugInfo::populateSourceMap(
     assert(loc.column >= 1 && "column numbers in debug info must be 1-based");
     segment.representedLocation = SourceMap::Segment::SourceLocation(
         sourceMap->getSourceIndex(
-            getFilenameByID(*getFilenameForAddress(debugOffset))),
+            getUTF8FilenameByID(*getFilenameForAddress(debugOffset))),
         loc.line - 1,
         loc.column - 1);
     return segment;

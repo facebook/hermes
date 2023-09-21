@@ -361,7 +361,7 @@ llvh::Optional<SourceMapTextLocation> BCProviderBase::getLocationForAddress(
         funcDebugOffsets->sourceLocations, offsetInFunction);
     if (locOpt.hasValue()) {
       DebugSourceLocation loc = locOpt.getValue();
-      std::string fileName = debugInfo->getFilenameByID(loc.filenameId);
+      std::string fileName = debugInfo->getUTF8FilenameByID(loc.filenameId);
       return SourceMapTextLocation{std::move(fileName), loc.line, loc.column};
     }
   }

@@ -30,7 +30,7 @@ namespace hbc {
 /// storage \p storage, converting UTF16 strings to UTF8 using
 /// \p utf8ConversionStorage if necessary.
 /// \return a StringRef of the string.
-llvh::StringRef getStringFromEntry(
+llvh::StringRef getUTF8StringFromEntry(
     const StringTableEntry &entry,
     llvh::ArrayRef<unsigned char> storage,
     std::string &utf8ConversionStorage);
@@ -135,7 +135,7 @@ class ConsecutiveStringStorage {
   /// UTF16 strings to UTF8 using \p storage if necessary.
   /// \return a StringRef of the string, which may or may not reference
   /// \p storage.
-  llvh::StringRef getStringAtIndex(
+  llvh::StringRef getUTF8StringAtIndex(
       uint32_t idx,
       std::string &utf8ConversionStorage) const;
 };

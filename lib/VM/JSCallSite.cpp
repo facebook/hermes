@@ -101,7 +101,7 @@ CallResult<HermesValue> JSCallSite::getFileName(
       auto debugInfo = runtimeModule->getBytecode()->getDebugInfo();
 
       std::string utf8Storage;
-      llvh::StringRef fileName = hbc::getStringFromEntry(
+      llvh::StringRef fileName = hbc::getUTF8StringFromEntry(
           debugInfo->getFilenameTable()[location->filenameId],
           debugInfo->getFilenameStorage(),
           utf8Storage);

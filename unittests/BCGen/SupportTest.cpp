@@ -50,7 +50,7 @@ TEST(StringStorageTest, GetStringFromEntryTest) {
   hbc::ConsecutiveStringStorage storage{strings};
   std::string utf8;
   for (uint32_t i = 0; i < strings.size(); i++) {
-    EXPECT_EQ(strings[i], storage.getStringAtIndex(i, utf8));
+    EXPECT_EQ(strings[i], storage.getUTF8StringAtIndex(i, utf8));
   }
 }
 

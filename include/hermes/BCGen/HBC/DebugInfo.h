@@ -181,10 +181,11 @@ class DebugInfo {
   }
 
   /// Retrieve the filename for a given \p id in the filename table.
-  std::string getFilenameByID(uint32_t id) const {
+  std::string getUTF8FilenameByID(uint32_t id) const {
     assert(id < filenameTable_.size() && "Filename ID out of bounds");
     std::string utf8Storage;
-    return getStringFromEntry(filenameTable_[id], filenameStorage_, utf8Storage)
+    return getUTF8StringFromEntry(
+               filenameTable_[id], filenameStorage_, utf8Storage)
         .str();
   }
 

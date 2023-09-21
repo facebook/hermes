@@ -199,8 +199,9 @@ void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
             bcProvider, frame.jsFrame.functionId, frame.jsFrame.offset);
         if (sourceLocOpt.hasValue()) {
           // Bundle has debug info.
-          std::string fileNameStr = bcProvider->getDebugInfo()->getFilenameByID(
-              sourceLocOpt.getValue().filenameId);
+          std::string fileNameStr =
+              bcProvider->getDebugInfo()->getUTF8FilenameByID(
+                  sourceLocOpt.getValue().filenameId);
 
           uint32_t line = sourceLocOpt.getValue().line;
           uint32_t column = sourceLocOpt.getValue().column;
@@ -424,7 +425,7 @@ void ProfilerProfileSerializer::processNode(
       if (sourceLocOpt.hasValue()) {
         // Bundle has debug info.
         scriptId = sourceLocOpt.getValue().filenameId;
-        url = bcProvider->getDebugInfo()->getFilenameByID(scriptId);
+        url = bcProvider->getDebugInfo()->getUTF8FilenameByID(scriptId);
 
         lineNumber = sourceLocOpt.getValue().line;
         columnNumber = sourceLocOpt.getValue().column;

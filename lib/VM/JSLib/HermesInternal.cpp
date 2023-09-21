@@ -578,7 +578,7 @@ static CallResult<HermesValue> getCodeBlockFileName(
     if (location) {
       auto debugInfo = runtimeModule->getBytecode()->getDebugInfo();
       return StringPrimitive::createEfficient(
-          runtime, debugInfo->getFilenameByID(location->filenameId));
+          runtime, debugInfo->getUTF8FilenameByID(location->filenameId));
     } else {
       llvh::StringRef sourceURL = runtimeModule->getSourceURL();
       if (!sourceURL.empty()) {

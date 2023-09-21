@@ -165,8 +165,9 @@ StackTracesTreeNode::SourceLoc StackTracesTree::computeSourceLoc(
   auto scriptID = runtimeModule->getScriptID();
   int32_t lineNo, columnNo;
   if (location) {
-    scriptName = runtimeModule->getBytecode()->getDebugInfo()->getFilenameByID(
-        location->filenameId);
+    scriptName =
+        runtimeModule->getBytecode()->getDebugInfo()->getUTF8FilenameByID(
+            location->filenameId);
     lineNo = location->line;
     columnNo = location->column;
   } else {

@@ -42,7 +42,7 @@ class CodeCoverageProfilerTest : public RuntimeTestFixture {
         debugOffsets->sourceLocations != hbc::DebugOffsets::NO_OFFSET) {
       if (auto pos = debugInfo->getLocationForAddress(
               debugOffsets->sourceLocations, 0 /* opcodeOffset */)) {
-        auto file = debugInfo->getFilenameByID(pos->filenameId);
+        auto file = debugInfo->getUTF8FilenameByID(pos->filenameId);
         auto line = pos->line - 1; // Normalised to zero-based
         auto column = pos->column - 1; // Normalised to zero-based
         return {line, column, file};

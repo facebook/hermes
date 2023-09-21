@@ -50,7 +50,7 @@ static std::string getFileNameAsUTF8(
     RuntimeModule *runtimeModule,
     uint32_t filenameId) {
   const auto *debugInfo = runtimeModule->getBytecode()->getDebugInfo();
-  return debugInfo->getFilenameByID(filenameId);
+  return debugInfo->getUTF8FilenameByID(filenameId);
 }
 
 /// \return a scope chain containing the block and all its lexical parents,
