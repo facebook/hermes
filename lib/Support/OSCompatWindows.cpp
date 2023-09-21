@@ -391,7 +391,7 @@ uint64_t process_id() {
   return GetCurrentProcessId();
 }
 
-uint64_t thread_id() {
+uint64_t global_thread_id() {
   return GetCurrentThreadId();
 }
 
