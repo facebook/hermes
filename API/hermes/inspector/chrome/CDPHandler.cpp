@@ -1605,10 +1605,6 @@ CDPHandler::CDPHandler(
 
 CDPHandler::~CDPHandler() = default;
 
-HermesRuntime &CDPHandler::getRuntime() {
-  return impl_->getRuntime();
-}
-
 std::string CDPHandler::getTitle() const {
   return impl_->getTitle();
 }
