@@ -824,9 +824,15 @@ ExecutionStatus JSError::constructStackTraceString_RJS(
     // report unknown.
     RuntimeModule *runtimeModule = sti.codeBlock->getRuntimeModule();
     if (location) {
-      stack.append(
+      // Convert the UTF8 filename to UTF16. Use stack as the parameter to the
+      // conversion so it appends the filename to the stack trace output.
+      std::string utf8Filename =
           runtimeModule->getBytecode()->getDebugInfo()->getUTF8FilenameByID(
-              location->filenameId));
+              location->filenameId);
+      convertUTF8WithSurrogatesToUTF16(
+          std::back_inserter(stack),
+          &*utf8Filename.begin(),
+          &*utf8Filename.end());
     } else {
       auto sourceURL = runtimeModule->getSourceURL();
       stack.append(sourceURL.empty() ? "unknown" : sourceURL);
