@@ -217,6 +217,15 @@ set(HERMES_USE_STATIC_ICU OFF CACHE BOOL
 set(HERMES_UNICODE_LITE OFF CACHE BOOL
   "Enable to use internal no-op unicode functionality instead of relying on underlying system libraries")
 
+if(WIN32 OR EMSCRIPTEN)
+  set(DEFAULT_HERMES_CHECK_NATIVE_STACK OFF)
+else()
+  set(DEFAULT_HERMES_CHECK_NATIVE_STACK ON)
+endif()
+
+set(HERMES_CHECK_NATIVE_STACK ${DEFAULT_HERMES_CHECK_NATIVE_STACK} CACHE BOOL
+  "Check the native stack for stack overflow")
+
 set(HERMES_ENABLE_DEBUGGER ON CACHE BOOL
   "Build with debugger support")
 
@@ -283,6 +292,16 @@ set(HERMES_BUILD_SHARED_JSI OFF CACHE BOOL "Build JSI as a shared library.")
 
 if (HERMES_IS_ANDROID)
   add_definitions(-DHERMES_PLATFORM_UNICODE=HERMES_PLATFORM_UNICODE_JAVA)
+endif()
+
+if(HERMES_CHECK_NATIVE_STACK)
+  if (WIN32 OR EMSCRIPTEN)
+    message(
+      FATAL_ERROR
+      "Native stack checking not supported on Windows or EMSCRIPTEN"
+    )
+  endif()
+  add_definitions(-DHERMES_CHECK_NATIVE_STACK)
 endif()
 
 if(HERMES_BUILD_APPLE_DSYM)

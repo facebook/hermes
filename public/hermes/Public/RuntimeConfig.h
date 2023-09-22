@@ -37,6 +37,9 @@ class PinnedHermesValue;
   /* Register Stack Size */                                            \
   F(constexpr, unsigned, MaxNumRegisters, 128 * 1024)                  \
                                                                        \
+  /* Native stack remaining before assuming overflow */                \
+  F(constexpr, unsigned, NativeStackGap, 64 * 1024)                    \
+                                                                       \
   /* Whether to allow eval and Function ctor */                        \
   F(constexpr, bool, EnableEval, true)                                 \
                                                                        \
