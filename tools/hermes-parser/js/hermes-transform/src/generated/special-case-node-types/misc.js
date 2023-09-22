@@ -63,8 +63,11 @@ export function ArrowFunctionExpression(props: {
     expression: props.body.type !== 'BlockStatement',
     params: props.params.map(n => asDetachedNode(n)),
     body: asDetachedNode(props.body),
+    // $FlowFixMe[incompatible-call]
     typeParameters: asDetachedNode(props.typeParameters),
+    // $FlowFixMe[incompatible-call]
     returnType: asDetachedNode(props.returnType),
+    // $FlowFixMe[incompatible-call]
     predicate: asDetachedNode(props.predicate),
     async: props.async,
   });
@@ -95,9 +98,13 @@ export function ClassDeclaration(props: {
 }): DetachedNode<ClassDeclarationType> {
   const node = detachedProps<ClassDeclarationType>(props.parent, {
     type: 'ClassDeclaration',
+    // $FlowFixMe[incompatible-call]
     id: asDetachedNode(props.id),
+    // $FlowFixMe[incompatible-call]
     typeParameters: asDetachedNode(props.typeParameters),
+    // $FlowFixMe[incompatible-call]
     superClass: asDetachedNode(props.superClass),
+    // $FlowFixMe[incompatible-call]
     superTypeParameters: asDetachedNode(props.superTypeParameters),
     decorators: (props.decorators ?? []).map(n => asDetachedNode(n)),
     implements: (props.implements ?? []).map(n => asDetachedNode(n)),
@@ -142,6 +149,7 @@ export function Identifier(props: {
     type: 'Identifier',
     name: props.name,
     optional: props.optional ?? false,
+    // $FlowFixMe[incompatible-call]
     typeAnnotation: asDetachedNode(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
@@ -199,6 +207,7 @@ export function DeclareFunction(props: {
         typeAnnotation: asDetachedNode(props.functionType),
       }),
     }),
+    // $FlowFixMe[incompatible-call]
     predicate: asDetachedNode(props.predicate),
   });
   setParentPointersInDirectChildren(node);
