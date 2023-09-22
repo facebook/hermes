@@ -1949,9 +1949,9 @@ bool Runtime::isNativeStackOverflowingSlowPath() {
   auto [highPtr, size] = oscompat::thread_stack_bounds(nativeStackGap_);
   nativeStackHigh_ = (const char *)highPtr;
   nativeStackSize_ = size;
-  volatile int spCheck;
   return LLVM_UNLIKELY(
-      (uintptr_t)nativeStackHigh_ - (uintptr_t)&spCheck > nativeStackSize_);
+      (uintptr_t)nativeStackHigh_ - (uintptr_t)__builtin_frame_address(0) >
+      nativeStackSize_);
 #else
   return false;
 #endif

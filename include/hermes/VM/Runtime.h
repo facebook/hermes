@@ -2108,17 +2108,17 @@ inline llvh::iterator_range<ConstStackFrameIterator> Runtime::getStackFrames()
 
 inline bool Runtime::isNativeStackOverflowing() {
 #ifdef HERMES_CHECK_NATIVE_STACK
-  volatile int spCheck;
-  // Check for overflow by subtracting the spCheck from the high pointer.
-  // If the spCheck is outside the valid stack range, the difference will
+  // Check for overflow by subtracting the sp from the high pointer.
+  // If the sp is outside the valid stack range, the difference will
   // be greater than the known stack size.
-  // This is clearly true when 0 < &spCheck < nativeStackHigh_ - size.
-  // If nativeStackHigh_ < &spCheck, then the subtraction will wrap around.
+  // This is clearly true when 0 < sp < nativeStackHigh_ - size.
+  // If nativeStackHigh_ < sp, then the subtraction will wrap around.
   // We know that nativeStackSize_ <= nativeStackHigh_
   // (because otherwise the stack wouldn't fit in the memory),
   // so the overflowed difference will be greater than nativeStackSize_.
   bool overflowing =
-      (uintptr_t)nativeStackHigh_ - (uintptr_t)&spCheck > nativeStackSize_;
+      (uintptr_t)nativeStackHigh_ - (uintptr_t)__builtin_frame_address(0) >
+      nativeStackSize_;
   if (LLVM_LIKELY(!overflowing)) {
     // Fast path: quickly check the stored stack bounds.
     // NOTE: It is possible to have a false negative here (highly unlikely).

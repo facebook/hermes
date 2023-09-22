@@ -143,10 +143,9 @@ TEST(OSCompatTest, GetProtections) {
 #if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
 
 TEST(OSCompatTest, ThreadStackBounds) {
-  volatile int spCheck;
   auto [high, size] = oscompat::thread_stack_bounds();
   ASSERT_TRUE(size > 0);
-  ASSERT_FALSE((uintptr_t)high - (uintptr_t)&spCheck > size);
+  ASSERT_FALSE((uintptr_t)high - (uintptr_t)__builtin_frame_address(0) > size);
 }
 
 #endif
