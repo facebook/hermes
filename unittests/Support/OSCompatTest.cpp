@@ -6,6 +6,7 @@
  */
 
 #include "hermes/Support/OSCompat.h"
+
 #include "gtest/gtest.h"
 
 namespace {
@@ -138,4 +139,15 @@ TEST(OSCompatTest, GetProtections) {
   }
 }
 #endif
+
+#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
+
+TEST(OSCompatTest, ThreadStackBounds) {
+  auto [high, size] = oscompat::thread_stack_bounds();
+  ASSERT_TRUE(size > 0);
+  ASSERT_FALSE((uintptr_t)high - (uintptr_t)__builtin_frame_address(0) > size);
+}
+
+#endif
+
 } // namespace
