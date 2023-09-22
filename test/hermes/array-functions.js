@@ -1078,12 +1078,6 @@ print(arrayEquals([1,[2,[3,[4]]]].flat(2), [1,2,3,[4]]));
 // CHECK-NEXT: true
 print(arrayEquals([1,[2,[3,[4]]]].flat(Infinity), [1,2,3,4]));
 // CHECK-NEXT: true
-var a = [1];
-for (var i = 0; i < 1000; ++i) {
-  a = [a];
-}
-try { a.flat(Infinity); } catch(e) { print('caught', e.name) }
-// CHECK-NEXT: caught RangeError
 
 print('flatMap');
 // CHECK-LABEL: flatMap

@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O0 %s | %FileCheck --match-full-lines %s
-// RUN: %hermes -O %s  | %FileCheck --match-full-lines %s
-// REQUIRES: !check_native_stack
+// RUN: ulimit -s 4096 && %hermes -O0 %s | %FileCheck --match-full-lines %s
+// RUN: ulimit -s 4096 && %hermes -O %s  | %FileCheck --match-full-lines %s
+// REQUIRES: check_native_stack
 
 "use strict";
 

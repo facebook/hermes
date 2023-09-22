@@ -720,6 +720,7 @@ if(HERMES_ENABLE_TEST_SUITE)
     gc=${HERMESVM_GCKIND}
     ubsan=${HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER}
     coverage=${coverage_directory}
+    check_native_stack=${HERMES_CHECK_NATIVE_STACK}
     )
 
   set(HERMES_LIT_TEST_PARAMS

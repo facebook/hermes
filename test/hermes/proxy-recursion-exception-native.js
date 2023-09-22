@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-//RUN: %hermes -O -target=HBC %s -gc-sanitize-handles=0 | %FileCheck --match-full-lines %s
-//REQUIRES: !check_native_stack
+//RUN: ulimit -s 1024 && %hermes -O -target=HBC %s -gc-sanitize-handles=0 | %FileCheck --match-full-lines %s
+//REQUIRES: check_native_stack
 
 try {
   var proxy = new Proxy(function() {}, {});
