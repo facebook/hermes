@@ -1847,7 +1847,12 @@ Value *ESTreeIRGen::genAssignmentExpr(ESTree::AssignmentExpressionNode *AE) {
 
   assert(opStr != "=" && "Assignment was already handled");
 
-  LReference lref = createLRef(AE->_left, false);
+  // The implicit cast may exist here to signal that the result of the binary
+  // expression should be implicitly casted, so skip it when computing the lref.
+  auto *optImplicitCast =
+      llvh::dyn_cast<ESTree::ImplicitCheckedCastNode>(AE->_left);
+  LReference lref = createLRef(
+      optImplicitCast ? optImplicitCast->_argument : AE->_left, false);
   Identifier nameHint = extractNameHint(lref);
 
   auto logicalAssign =
@@ -1870,6 +1875,13 @@ Value *ESTreeIRGen::genAssignmentExpr(ESTree::AssignmentExpressionNode *AE) {
   auto *RHS = genExpression(AE->_right, nameHint);
   Value *result;
   result = Builder.createBinaryOperatorInst(V, RHS, AssignmentKind);
+
+  // Cast the result of the binary op if it was on the LHS.
+  if (optImplicitCast) {
+    result = Builder.createCheckedTypeCastInst(
+        result,
+        flowTypeToIRType(flowContext_.getNodeTypeOrAny(optImplicitCast)));
+  }
 
   lref.emitStore(result);
 

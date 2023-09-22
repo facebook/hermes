@@ -1243,12 +1243,18 @@ class FlowChecker::ExprVisitor {
           res = outer_.flowContext_.getAny();
       } else {
         // We are modifying a typed target. The type has to be compatible.
-        // FIXME: we have to be able to deal with implicit checked casts in
-        // cases like this. For now just ensure that the types are the same.
-        if (res != lt) {
+        CanFlowResult cf = canAFlowIntoB(res, lt);
+        if (!cf.canFlow) {
           outer_.sm_.error(
               node->getSourceRange(), "ft: incompatible assignment types");
           res = lt;
+        } else if (cf.needCheckedCast) {
+          // Insert an ImplicitCheckedCast around the LHS in the
+          // AssignmentExpressionNode, because there's no other place in the AST
+          // that indicates that we want to cast the result of the binary
+          // expression.
+          // IRGen is aware of this and handles it specially.
+          node->_left = outer_.implicitCheckedCast(node->_left, lt, cf);
         }
       }
     }
