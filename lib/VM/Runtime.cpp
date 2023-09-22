@@ -66,6 +66,16 @@ namespace {
 static constexpr uint32_t kMaxSupportedNumRegisters =
     UINT32_MAX / sizeof(PinnedHermesValue);
 
+#ifdef HERMES_CHECK_NATIVE_STACK
+/// The minimum stack gap allowed from RuntimeConfig.
+static constexpr uint32_t kMinSupportedNativeStackGap =
+#if LLVM_ADDRESS_SANITIZER_BUILD
+    512 * 1024;
+#else
+    64 * 1024;
+#endif
+#endif
+
 // Only track I/O for buffers > 64 kB (which excludes things like
 // Runtime::generateSpecialRuntimeBytecode).
 static constexpr size_t MIN_IO_TRACKING_SIZE = 64 * 1024;
@@ -255,7 +265,9 @@ Runtime::Runtime(
       stackPointer_(),
       crashMgr_(runtimeConfig.getCrashMgr()),
 #ifdef HERMES_CHECK_NATIVE_STACK
-      nativeStackGap_(runtimeConfig.getNativeStackGap()),
+      nativeStackGap_(std::max(
+          runtimeConfig.getNativeStackGap(),
+          kMinSupportedNativeStackGap)),
 #endif
       crashCallbackKey_(
           crashMgr_->registerCallback([this](int fd) { crashCallback(fd); })),
@@ -2248,6 +2260,14 @@ void Runtime::pushCallStackImpl(
 }
 
 #endif // HERMES_MEMORY_INSTRUMENTATION
+
+void ScopedNativeDepthReducer::staticAsserts() {
+#ifdef HERMES_CHECK_NATIVE_STACK
+  static_assert(
+      kReducedNativeStackGap < kMinSupportedNativeStackGap,
+      "kMinSupportedNativeStackGap too low, must be reduced in the reducer");
+#endif
+}
 
 } // namespace vm
 } // namespace hermes

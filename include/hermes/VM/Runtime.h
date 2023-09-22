@@ -1615,6 +1615,13 @@ class ScopedNativeDepthReducer {
   Runtime &runtime_;
 #ifdef HERMES_CHECK_NATIVE_STACK
   unsigned nativeStackGapOld;
+  // This is empirically good enough.
+  static constexpr int kReducedNativeStackGap =
+#if LLVM_ADDRESS_SANITIZER_BUILD
+      256 * 1024;
+#else
+      32 * 1024;
+#endif
 #else
   bool undo = false;
   // This is empirically good enough.
@@ -1625,15 +1632,15 @@ class ScopedNativeDepthReducer {
 #ifdef HERMES_CHECK_NATIVE_STACK
   explicit ScopedNativeDepthReducer(Runtime &runtime)
       : runtime_(runtime), nativeStackGapOld(runtime.nativeStackGap_) {
-    // Temporarily remove the gap to use that headroom for gathering the error.
+    // Temporarily reduce the gap to use that headroom for gathering the error.
     // If overflow is detected, the recomputation of the stack bounds will
     // result in no gap for the duration of the ScopedNativeDepthReducer's
     // lifetime.
-    runtime_.nativeStackGap_ = 0;
+    runtime_.nativeStackGap_ = kReducedNativeStackGap;
   }
   ~ScopedNativeDepthReducer() {
     assert(
-        runtime_.nativeStackGap_ == 0 &&
+        runtime_.nativeStackGap_ == kReducedNativeStackGap &&
         "ScopedNativeDepthReducer gap was overridden");
     runtime_.nativeStackGap_ = nativeStackGapOld;
     // Force the bounds to be recomputed the next time.
@@ -1652,6 +1659,10 @@ class ScopedNativeDepthReducer {
     }
   }
 #endif
+
+ private:
+  /// Unused function for static asserts that use internal information.
+  static void staticAsserts();
 };
 
 /// A ScopedNativeCallFrame is an RAII class that manipulates the Runtime
