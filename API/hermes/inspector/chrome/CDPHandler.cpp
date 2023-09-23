@@ -30,6 +30,7 @@
 #include <hermes/inspector/chrome/RemoteObjectsTable.h>
 #include <hermes/inspector/chrome/ThreadSafetyAnalysis.h>
 #include <jsi/instrumentation.h>
+#include <llvh/ADT/ScopeExit.h>
 
 namespace facebook {
 namespace hermes {
@@ -206,7 +207,13 @@ class CDPHandler::Impl : public message::RequestHandler,
   void processPendingScriptLoads();
   Script getScriptFromTopCallFrame();
   debugger::Command didPause(debugger::Debugger &debugger) override;
-  void waitForAsyncPauseTrigger() TSA_NO_THREAD_SAFETY_ANALYSIS;
+  /// Wait for more work to arrive. The specified lock (on \p mutex_) will be
+  /// temporarily released (by waiting on the condition variable \p signal_),
+  /// allowing other threads to enqueue work. This requires \p mutex_ to be
+  /// locked exactly once before calling, otherwise \p mutex_ won't be fully
+  /// released, and the new work being awaited can never arrive.
+  void waitForAsyncPauseTrigger(std::unique_lock<std::recursive_mutex> &lock)
+      TSA_NO_THREAD_SAFETY_ANALYSIS;
 
   template <typename T>
   void setHermesLocation(
@@ -243,21 +250,18 @@ class CDPHandler::Impl : public message::RequestHandler,
 
   template <typename R>
   void enqueueDesiredAttachment(const R &req, Attachment attachment) {
-    std::lock_guard<std::mutex> lock(mutex_);
     pendingDesiredAttachments_.push({req.id, attachment});
     triggerAsyncPause();
   }
 
   template <typename R>
   void enqueueDesiredStep(const R &req, debugger::StepMode step) {
-    std::lock_guard<std::mutex> lock(mutex_);
     pendingDesiredSteps_.push({req.id, step});
     triggerAsyncPause();
   }
 
   template <typename R>
   void enqueueDesiredExecution(const R &req, Execution execution) {
-    std::lock_guard<std::mutex> lock(mutex_);
     pendingDesiredExecutions_.push({req.id, execution});
   }
 
@@ -318,20 +322,16 @@ class CDPHandler::Impl : public message::RequestHandler,
 
   // Some events are represented as a mode in Hermes but a breakpoint in CDP,
   // e.g. "beforeScriptExecution" and "beforeScriptWithSourceMapExecution".
-  // Keep track of these separately. The caller should lock the
-  // virtualBreakpointMutex_.
-  std::mutex virtualBreakpointMutex_;
+  // Keep track of these separately.
   uint32_t nextVirtualBreakpoint_ = 1;
   const std::string &createVirtualBreakpoint(const std::string &category);
   bool isVirtualBreakpointId(const std::string &id);
   bool hasVirtualBreakpoint(const std::string &category);
   bool removeVirtualBreakpoint(const std::string &id);
   std::unordered_map<std::string, std::unordered_set<std::string>>
-      virtualBreakpoints_ TSA_GUARDED_BY(virtualBreakpointMutex_);
+      virtualBreakpoints_ TSA_GUARDED_BY(mutex_);
 
-  // msgCallback_ and onUnregister_ are protected by callbackMutex_.
-  std::mutex callbackMutex_;
-  CDPMessageCallbackFunction msgCallback_ TSA_GUARDED_BY(callbackMutex_);
+  CDPMessageCallbackFunction msgCallback_ TSA_GUARDED_BY(mutex_);
   OnUnregisterFunction onUnregister_;
 
   // objTable_ is protected by the inspector lock. It should only be accessed
@@ -340,8 +340,10 @@ class CDPHandler::Impl : public message::RequestHandler,
   RemoteObjectsTable objTable_;
 
   bool breakpointsActive_ = true;
+  /// Tracks whether we are already in a didPause callback to detect recursive
+  /// calls to didPause.
+  bool inDidPause_ = false;
 
-  // Unguarded
   Attachment currentAttachment_ = Attachment::None;
   Execution currentExecution_ = Execution::Running;
   std::unordered_map<int, Script> loadedScripts_;
@@ -350,8 +352,15 @@ class CDPHandler::Impl : public message::RequestHandler,
   int numPendingConsoleMessagesDiscarded_ = 0;
   std::deque<ConsoleMessageInfo> pendingConsoleMessages_;
 
-  // Guarded by mutex
-  std::mutex mutex_;
+  /// \p mutex_ protects all members; any entry point to the CDPHandler from
+  /// external code should lock this mutex. The mutex is recursive, as the
+  /// CDP handler may be re-entered in a specific circumstance: the \p didPause
+  /// handler (which requires the lock) may invoke the runtime, which may
+  /// trigger the \p startTrackingHeapObjectStackTraces callback (which also
+  /// requires the lock). The \p recursive_mutex allows the mutex to be locked
+  /// multiple times on the same thread (the runtime thread) without
+  /// deadlocking.
+  std::recursive_mutex mutex_;
   std::queue<std::pair<int, Execution>> pendingDesiredExecutions_
       TSA_GUARDED_BY(mutex_);
   std::queue<std::pair<int, Attachment>> pendingDesiredAttachments_
@@ -359,7 +368,11 @@ class CDPHandler::Impl : public message::RequestHandler,
   std::queue<std::pair<int, debugger::StepMode>> pendingDesiredSteps_
       TSA_GUARDED_BY(mutex_);
   bool awaitingDebuggerOnStart_ TSA_GUARDED_BY(mutex_);
-  std::condition_variable signal_;
+  /// \p signal_ is used to allow the runtime thread to await another command
+  /// from a non-runtime thread, temporarily releasing \p mutex_ while waiting.
+  /// This is a \p condition_variable_any (rather than a \p condition_variable)
+  /// for compatiblity with the \p recursive_mutex \p mutex_.
+  std::condition_variable_any signal_;
   struct PendingEvalReq {
     long long id;
     uint32_t frameIdx;
@@ -404,6 +417,9 @@ CDPHandler::Impl::~Impl() {
 }
 
 std::string CDPHandler::Impl::getTitle() const {
+  // This is a public function, but the mutex is not required
+  // as we're just returning member that is unchanged for the
+  // lifetime of this instance.
   return title_;
 }
 
@@ -411,7 +427,8 @@ bool CDPHandler::Impl::registerCallbacks(
     CDPMessageCallbackFunction msgCallback,
     OnUnregisterFunction onUnregister) {
   assert(msgCallback);
-  std::lock_guard<std::mutex> lock(callbackMutex_);
+  // Lock because this is a public function that manipulates members.
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
 
   if (msgCallback_ || onUnregister_) {
     return false;
@@ -423,7 +440,8 @@ bool CDPHandler::Impl::registerCallbacks(
 }
 
 bool CDPHandler::Impl::unregisterCallbacks() {
-  std::lock_guard<std::mutex> lock(callbackMutex_);
+  // Lock because this is a public function that manipulates members.
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   bool hadCallback = msgCallback_ != nullptr;
   msgCallback_ = nullptr;
   if (onUnregister_) {
@@ -444,6 +462,9 @@ void CDPHandler::Impl::handle(std::string str) {
   if (!req) {
     return;
   }
+
+  // Lock because this is a public function that manipulates members.
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
 
   // If the debugger is currently disabled and the incoming method is for
   // the debugger, then error out to the request immediately here. We make
@@ -536,7 +557,6 @@ void CDPHandler::Impl::handle(const m::debugger::EnableRequest &req) {
 void CDPHandler::Impl::handle(
     const m::debugger::EvaluateOnCallFrameRequest &req) {
   {
-    std::lock_guard<std::mutex> lock(mutex_);
     pendingEvals_.push(
         {req.id,
          (uint32_t)atoi(req.callFrameId.c_str()),
@@ -583,6 +603,9 @@ void CDPHandler::Impl::sendSnapshot(
       // time of writing.
       inspector_modern::chrome::CallbackOStream cos(
           /* sz */ 100 << 10, [this](std::string s) {
+            // No need to lock the mutex_, as this callback won't be invoked
+            // at a later time when the lock may not be held. The callback is
+            // owned by cos, which is destroyed when the containing scope ends.
             m::heapProfiler::AddHeapSnapshotChunkNotification note;
             note.chunk = std::move(s);
             sendNotificationToClient(note);
@@ -614,6 +637,11 @@ void CDPHandler::Impl::handle(
             uint64_t lastSeenObjectId,
             std::chrono::microseconds timestamp,
             std::vector<jsi::Instrumentation::HeapStatsUpdate> stats) {
+          // Lock because this is a callback that manipulates members. The
+          // runtime may call this callback any time JavaScript is running,
+          // which can be triggered from a didPause callback.
+          std::lock_guard<std::recursive_mutex> lock(mutex_);
+
           // Send the last object ID notification first.
           m::heapProfiler::LastSeenObjectIdNotification note;
           note.lastSeenObjectId = lastSeenObjectId;
@@ -1058,7 +1086,6 @@ void CDPHandler::Impl::handle(const m::runtime::CallFunctionOnRequest &req) {
   // std::function needs a copy-able type.
   auto sharedRunner = std::make_shared<CallFunctionOnRunner>(std::move(runner));
   {
-    std::lock_guard<std::mutex> lock(mutex_);
     pendingEvals_.push(
         {req.id,
          0, // top of the stackframe
@@ -1165,7 +1192,6 @@ void CDPHandler::Impl::handle(const m::runtime::EnableRequest &req) {
 
 void CDPHandler::Impl::handle(const m::runtime::EvaluateRequest &req) {
   {
-    std::lock_guard<std::mutex> lock(mutex_);
     pendingEvals_.push(
         {req.id,
          0, // Top of the stackframe
@@ -1186,7 +1212,6 @@ void CDPHandler::Impl::handle(const m::debugger::PauseRequest &req) {
 void CDPHandler::Impl::handle(const m::debugger::RemoveBreakpointRequest &req) {
   enqueueFunc([this, req]() {
     if (isVirtualBreakpointId(req.breakpointId)) {
-      std::lock_guard<std::mutex> lock(virtualBreakpointMutex_);
       if (!removeVirtualBreakpoint(req.breakpointId)) {
         sendErrorToClient(req.id, "Unknown breakpoint ID: " + req.breakpointId);
       }
@@ -1307,7 +1332,6 @@ void CDPHandler::Impl::handle(
 
   // The act of creating and registering the breakpoint ID is enough
   // to "set" it. We merely check for the existence of them later.
-  std::lock_guard<std::mutex> lock(virtualBreakpointMutex_);
   m::debugger::SetInstrumentationBreakpointResponse resp;
   resp.id = req.id;
   resp.breakpointId = createVirtualBreakpoint(req.instrumentation);
@@ -1560,7 +1584,6 @@ void CDPHandler::Impl::handle(
  */
 
 void CDPHandler::Impl::sendToClient(const std::string &str) {
-  std::lock_guard<std::mutex> lock(callbackMutex_);
   if (msgCallback_) {
     msgCallback_(str);
   }
@@ -1632,6 +1655,8 @@ bool CDPHandler::Impl::isAwaitingDebuggerOnStart() {
 
 void CDPHandler::Impl::triggerAsyncPause() {
   signal_.notify_one();
+  // Although it's generally unsafe to invoke the runtime from arbitrary
+  // threads, triggerAsyncPause is safe, as noted in the debugger API.
   getDebugger().triggerAsyncPause(debugger::AsyncPauseKind::Implicit);
   runtimeAdapter_->tickleJs();
 }
@@ -1662,14 +1687,12 @@ void CDPHandler::Impl::sendPausedNotificationToClient() {
 
 void CDPHandler::Impl::enqueueFunc(
     std::function<void(const debugger::ProgramState &state)> func) {
-  std::lock_guard<std::mutex> lock(mutex_);
   pendingFuncs_.push(func);
   triggerAsyncPause();
 }
 
 // Convenience wrapper for funcs that don't need program state
 void CDPHandler::Impl::enqueueFunc(std::function<void()> func) {
-  std::lock_guard<std::mutex> lock(mutex_);
   pendingFuncs_.push([func](const debugger::ProgramState &) { func(); });
   triggerAsyncPause();
 }
@@ -1683,7 +1706,6 @@ void CDPHandler::Impl::sendPauseOnExceptionNotification() {
 }
 
 void CDPHandler::Impl::processPendingFuncs() {
-  std::lock_guard<std::mutex> lock(mutex_); // TODO: narrow
   while (!pendingFuncs_.empty()) {
     if (true) {
       auto func = pendingFuncs_.front();
@@ -1699,7 +1721,6 @@ void CDPHandler::Impl::processPendingFuncs() {
 }
 
 void CDPHandler::Impl::processPendingDesiredAttachments() {
-  std::lock_guard<std::mutex> lock(mutex_); // TODO: narrow
   while (!pendingDesiredAttachments_.empty()) {
     int requestId;
     Attachment desiredAttachment;
@@ -1745,7 +1766,6 @@ bool CDPHandler::Impl::isDebuggerDisabled() {
 
 void CDPHandler::Impl::processPendingDesiredExecutions(
     debugger::PauseReason pauseReason) {
-  std::lock_guard<std::mutex> lock(mutex_); // TODO: narrow
   Execution previousExecution = currentExecution_;
   while (!pendingDesiredExecutions_.empty()) {
     int requestId;
@@ -1776,7 +1796,6 @@ void CDPHandler::Impl::processPendingDesiredExecutions(
   // been set.
   if (pauseReason == debugger::PauseReason::ScriptLoaded) {
     Script info = getScriptFromTopCallFrame();
-    std::lock_guard<std::mutex> lock(virtualBreakpointMutex_);
     // We don't want to pause on files that we should be ignoring.
     if (isAwaitingDebuggerOnStart() ||
         (hasVirtualBreakpoint(kBeforeScriptWithSourceMapExecution) &&
@@ -1864,6 +1883,15 @@ Script CDPHandler::Impl::getScriptFromTopCallFrame() {
 }
 
 debugger::Command CDPHandler::Impl::didPause(debugger::Debugger &debugger) {
+  // Lock because this callback manipulates members.
+  std::unique_lock<std::recursive_mutex> lock(mutex_);
+
+  if (inDidPause_) {
+    throw std::runtime_error("unexpected recursive call to didPause");
+  }
+  inDidPause_ = true;
+  auto clearInDidPause = llvh::make_scope_exit([this] { inDidPause_ = false; });
+
   processPendingDesiredAttachments();
 
   if (getPauseReason() == debugger::PauseReason::ScriptLoaded) {
@@ -1880,7 +1908,6 @@ debugger::Command CDPHandler::Impl::didPause(debugger::Debugger &debugger) {
   processPendingFuncs();
 
   if (getPauseReason() == debugger::PauseReason::EvalComplete) {
-    std::lock_guard<std::mutex> lock(mutex_);
     auto evalReq = pendingEvals_.front();
     pendingEvals_.pop();
     auto remoteObjPtr = std::make_shared<m::runtime::RemoteObject>();
@@ -1916,7 +1943,6 @@ debugger::Command CDPHandler::Impl::didPause(debugger::Debugger &debugger) {
   // this case, we should respect the pending eval over giving the debugger a
   // continue command, otherwise this eval would never be serviced.
   {
-    std::lock_guard<std::mutex> lock(mutex_);
     // There is currently a known issue with returning an eval command when the
     // runtime paused because of a script load. Therefore, we simply don't
     // process any evals if the pause reason is a script load.
@@ -1932,13 +1958,12 @@ debugger::Command CDPHandler::Impl::didPause(debugger::Debugger &debugger) {
   }
 
   while (true) {
-    waitForAsyncPauseTrigger();
+    waitForAsyncPauseTrigger(lock);
     processPendingDesiredAttachments();
     processPendingDesiredExecutions(
         (debugger::PauseReason)-1); // TOOD: no pause reason here?
     processPendingFuncs();
     {
-      std::lock_guard<std::mutex> lock(mutex_);
       if (!pendingDesiredSteps_.empty()) {
         auto pair = pendingDesiredSteps_.front();
         pendingDesiredSteps_.pop();
@@ -1960,8 +1985,8 @@ debugger::Command CDPHandler::Impl::didPause(debugger::Debugger &debugger) {
   }
 }
 
-void CDPHandler::Impl::waitForAsyncPauseTrigger() {
-  std::unique_lock<std::mutex> lock(mutex_);
+void CDPHandler::Impl::waitForAsyncPauseTrigger(
+    std::unique_lock<std::recursive_mutex> &lock) {
   while (pendingEvals_.empty() && pendingDesiredExecutions_.empty() &&
          pendingDesiredSteps_.empty() && pendingFuncs_.empty() &&
          pendingDesiredAttachments_.empty()) {
@@ -2058,6 +2083,9 @@ void CDPHandler::Impl::installConsoleFunction(
             // around, then we can use its instance methods to emit the proper
             // CDP server event.
             if (auto strongThis = weakThis.lock()) {
+              // Lock because this is a callback that manipulates members.
+              std::lock_guard<std::recursive_mutex> lock(strongThis->mutex_);
+
               if (name != "assert") {
                 // All cases other than assert just log a simple message.
                 jsi::Array argsArray(runtime, count);
