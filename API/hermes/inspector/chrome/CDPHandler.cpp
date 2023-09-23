@@ -344,6 +344,11 @@ class CDPHandler::Impl : public message::RequestHandler,
   /// calls to didPause.
   bool inDidPause_ = false;
 
+  /// Track whether heap object stack trace collection is active (i.e.
+  /// \p startTrackingHeapObjectStackTraces has been called without a
+  /// corresponding \p stopTrackingHeapObjectStackTraces).
+  bool trackingHeapObjectStackTraces_ = false;
+
   Attachment currentAttachment_ = Attachment::None;
   Execution currentExecution_ = Execution::Running;
   std::unordered_map<int, Script> loadedScripts_;
@@ -411,6 +416,10 @@ CDPHandler::Impl::~Impl() {
   unregisterCallbacks();
 
   runtime_.getDebugger().setEventObserver(nullptr);
+
+  if (trackingHeapObjectStackTraces_) {
+    runtime_.instrumentation().stopTrackingHeapObjectStackTraces();
+  }
 
   // TODO(T161620474): Properly clean up all the other variables being protected
   // by other mutex
@@ -579,6 +588,7 @@ void CDPHandler::Impl::sendSnapshot(
     // snapshot.
     if (stopStackTraceCapture) {
       runtime_.instrumentation().stopTrackingHeapObjectStackTraces();
+      trackingHeapObjectStackTraces_ = false;
     }
 
     if (reportProgress) {
@@ -672,6 +682,7 @@ void CDPHandler::Impl::handle(
           // there's a huge amount of allocation and freeing.
           sendNotificationToClient(heapStatsNote);
         });
+    trackingHeapObjectStackTraces_ = true;
     sendResponseToClient(m::makeOkResponse(req.id));
   });
 }
