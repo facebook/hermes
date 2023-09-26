@@ -22,6 +22,7 @@ extern "C" {
 
 typedef struct SHUnitExt SHUnitExt;
 typedef uint32_t SHSymbolID;
+typedef struct SHUnit SHUnit;
 
 /// SHObjectLiteralKeyInfo encodes the set of keys to be used to construct an
 /// object literal.
@@ -43,6 +44,16 @@ typedef struct SHSrcLoc {
   /// Column in the source file. 1-based.
   uint32_t column;
 } SHSrcLoc;
+
+/// Encodes some basic information about a native function.
+typedef struct SHNativeFuncInfo {
+  /// The associated unit that holds this function's information.
+  SHUnit *unit;
+  /// The index in the global string table to get the function name.
+  uint32_t name_index;
+  /// The number of arguments this function takes.
+  uint32_t arg_count;
+} SHNativeFuncInfo;
 
 /// SHUnit describes a compilation unit.
 ///
@@ -120,6 +131,8 @@ typedef struct SHUnit {
 
   /// Unit main function.
   SHLegacyValue (*unit_main)(SHRuntime *shr);
+  /// Unit main function information.
+  SHNativeFuncInfo *unit_main_info;
   /// Unit name.
   const char *unit_name;
 
@@ -400,14 +413,15 @@ SHERMES_EXPORT void _sh_ljs_store_np_to_env(
     SHLegacyValue val,
     uint32_t index);
 
-/// Create a closure.
+/// Create a closure. The properties of the function (name, etc.) will be
+/// populated lazily.
 /// \param env Should be JSNull if there is no environment.
+/// \param funcInfo Should not be null
 SHERMES_EXPORT SHLegacyValue _sh_ljs_create_closure(
     SHRuntime *shr,
     const SHLegacyValue *env,
     SHLegacyValue (*func)(SHRuntime *),
-    SHSymbolID name,
-    uint32_t paramCount);
+    const SHNativeFuncInfo *funcInfo);
 
 SHERMES_EXPORT SHLegacyValue _sh_ljs_get_global_object(SHRuntime *shr);
 SHERMES_EXPORT void _sh_ljs_declare_global_var(SHRuntime *shr, SHSymbolID name);

@@ -26,6 +26,7 @@
 #include "hermes/Support/DenseMapInfoSpecializations.h"
 #include "hermes/Support/HashString.h"
 #include "hermes/Support/UTF8.h"
+#include "llvh/ADT/MapVector.h"
 
 #include "llvh/ADT/BitVector.h"
 #include "llvh/ADT/SetVector.h"
@@ -382,31 +383,43 @@ class SHSrcLocationTable {
   }
 };
 
-struct ModuleGen {
-  /// Table containing uniqued strings for the current module.
-  SHStringTable stringTable{};
+class SHNativeJSFunctionTable {
+  /// A map of function pointer -> function id
+  llvh::DenseMap<Function *, unsigned> funcMap_{};
+  /// A reference to the global string table. Used for function names.
+  SHStringTable &stringTable_;
 
-  /// A map from functions to unique numbers for identificatio
-  llvh::DenseMap<Function *, unsigned> funcMap{};
+ public:
+  explicit SHNativeJSFunctionTable(Module *M, SHStringTable &stringTable)
+      : stringTable_(stringTable) {
+    // Ensure that the top level function has an id of 0.
+    auto topLevelFunc = M->getTopLevelFunction();
+    funcMap_[topLevelFunc] = 0;
+    unsigned funcCounter = 1;
+    // Iterate through all the functions in the module, assigning them unique
+    // incrementing IDs.
+    for (auto &F : *M) {
+      if (&F != topLevelFunc) {
+        funcMap_[&F] = funcCounter++;
+      }
+    }
+  }
 
-  /// Literal buffers for objects and arrays.
-  SHLiteralBuffers literalBuffers;
+  /// \return the unique index for the given \p F.
+  uint32_t getIndex(Function *F) const {
+    return funcMap_.find(F)->second;
+  }
 
-  /// Maintain entries for the object literal class cache.
-  ObjectLiteralClassCache objectLiteralClassCache{};
+  /// \return size of the function table.
+  size_t size() const {
+    return funcMap_.size();
+  }
 
-  /// Maintain a table of all unique source file locations used by throwing
-  /// instructions.
-  SHSrcLocationTable srcLocationTable;
-
-  explicit ModuleGen()
-      : literalBuffers{stringTable}, srcLocationTable{stringTable} {}
-
-  /// Generates the correct label for BasicBlock \p B based on \p bbMap and
-  /// outputs it through \p OS. If the JS function name contains characters
-  /// that aren't allowed in C identifiers, they will be replaced by '_'.
-  void generateFunctionLabel(Function *F, llvh::raw_ostream &OS) {
-    OS << '_' << funcMap.find(F)->second << '_';
+  /// Generates the correct label for Function \p F, and outputs it to \p OS. If
+  /// the JS function name contains characters that aren't allowed in C
+  /// identifiers, they will be replaced by '_'.
+  void generateFunctionLabel(Function *F, llvh::raw_ostream &OS) const {
+    OS << '_' << getIndex(F) << '_';
 
     auto name = F->getInternalNameStr();
     for (auto c : name) {
@@ -419,6 +432,48 @@ struct ModuleGen {
       }
     }
   }
+
+  /// Turn the table of function information into the corresponding SH C data
+  /// structures.
+  void generate(llvh::raw_ostream &OS) const {
+    // Sort the keys by function index.
+    std::vector<const Function *> sortedKeys{funcMap_.size()};
+    for (auto &entry : funcMap_)
+      sortedKeys[entry.second] = entry.first;
+
+    OS << "\nstatic SHNativeFuncInfo s_function_info_table[] = {\n";
+    for (const Function *F : sortedKeys) {
+      uint32_t nameIdx = stringTable_.add(F->getOriginalOrInferredName().str());
+      uint32_t argCount = F->getExpectedParamCountIncludingThis() - 1;
+      OS.indent(2);
+      OS << "{ .unit = &THIS_UNIT, .name_index = " << nameIdx
+         << ", .arg_count = " << argCount << " },\n";
+    }
+    OS << "};\n";
+  }
+};
+
+struct ModuleGen {
+  /// Table containing uniqued strings for the current module.
+  SHStringTable stringTable{};
+
+  /// Literal buffers for objects and arrays.
+  SHLiteralBuffers literalBuffers;
+
+  /// Maintain entries for the object literal class cache.
+  ObjectLiteralClassCache objectLiteralClassCache{};
+
+  /// Maintain a table of all unique source file locations used by throwing
+  /// instructions.
+  SHSrcLocationTable srcLocationTable;
+
+  /// Table of JS native functions
+  SHNativeJSFunctionTable nativeFunctionTable;
+
+  explicit ModuleGen(Module *M)
+      : literalBuffers{stringTable},
+        srcLocationTable{stringTable},
+        nativeFunctionTable{M, stringTable} {}
 };
 
 class InstrGen {
@@ -1510,15 +1565,16 @@ class InstrGen {
   void generateHBCCreateFunctionInst(HBCCreateFunctionInst &inst) {
     os_.indent(2);
     generateRegister(inst);
-    os_ << " = _sh_ljs_create_closure(shr, &";
+    os_ << " = _sh_ljs_create_closure"
+        << "(shr, &";
     generateRegister(*inst.getEnvironment());
     os_ << ", ";
-    moduleGen_.generateFunctionLabel(inst.getFunctionCode(), os_);
-    os_ << ", s_symbols["
-        << moduleGen_.stringTable.add(
-               inst.getFunctionCode()->getOriginalOrInferredName().str())
-        << "], "
-        << inst.getFunctionCode()->getExpectedParamCountIncludingThis() - 1
+    moduleGen_.nativeFunctionTable.generateFunctionLabel(
+        inst.getFunctionCode(), os_);
+    os_ << ", ";
+    os_ << "&s_function_info_table["
+        << moduleGen_.nativeFunctionTable.getIndex(inst.getFunctionCode())
+        << "]"
         << ");\n";
   }
   void generateHBCCreateGeneratorInst(HBCCreateGeneratorInst &inst) {
@@ -1764,7 +1820,7 @@ class InstrGen {
       os_ << " = ";
       if (auto *targetFunc = llvh::dyn_cast<Function>(inst.getTarget())) {
         // Fast path, avoid all indirection and just call the function.
-        moduleGen_.generateFunctionLabel(targetFunc, os_);
+        moduleGen_.nativeFunctionTable.generateFunctionLabel(targetFunc, os_);
         os_ << "(shr);\n";
       } else {
         // Avoid doCall and perform a legacy call on the pointer.
@@ -2343,7 +2399,7 @@ void generateFunction(
   uint32_t localsSize = RA.getMaxRegisterUsage(sh::RegClass::LocalPtr);
 
   OS << "static SHLegacyValue ";
-  moduleGen.generateFunctionLabel(&F, OS);
+  moduleGen.nativeFunctionTable.generateFunctionLabel(&F, OS);
   OS << "(SHRuntime *shr) {\n";
 
   // In the global function, ensure that we are linking to the correct
@@ -2533,18 +2589,9 @@ void generateModule(
   // TODO: Share cache indices where the property name is the same and
   // -reuse-prop-cache is passed in.
   uint32_t nextCacheIdx = 0;
-  ModuleGen moduleGen;
+  ModuleGen moduleGen{M};
 
   auto topLevelFunc = M->getTopLevelFunction();
-  moduleGen.funcMap[topLevelFunc] = 0;
-  unsigned funcCounter = 1;
-  for (auto &F : *M) {
-    if (&F != topLevelFunc) {
-      moduleGen.funcMap[&F] = funcCounter;
-      funcCounter++;
-    }
-  }
-
   FunctionScopeAnalysis scopeAnalysis{topLevelFunc};
 
   if (options.format == DumpBytecode || options.format == EmitBundle) {
@@ -2566,6 +2613,7 @@ void generateModule(
 static SHSymbolID s_symbols[];
 static SHPropertyCacheEntry s_prop_cache[];
 static const SHSrcLoc s_source_locations[];
+static SHNativeFuncInfo s_function_info_table[];
 )";
 
     // Declare extern functions.
@@ -2574,7 +2622,7 @@ static const SHSrcLoc s_source_locations[];
     // Forward declare every JS function.
     for (auto &F : *M) {
       OS << "static SHLegacyValue ";
-      moduleGen.generateFunctionLabel(&F, OS);
+      moduleGen.nativeFunctionTable.generateFunctionLabel(&F, OS);
       OS << "(SHRuntime *shr);\n";
     }
   }
@@ -2583,11 +2631,14 @@ static const SHSrcLoc s_source_locations[];
     generateFunction(F, OS, moduleGen, scopeAnalysis, nextCacheIdx, options);
 
   if (options.format == DumpBytecode || options.format == EmitBundle) {
-    moduleGen.stringTable.generate(OS);
     moduleGen.literalBuffers.generate(OS);
     moduleGen.objectLiteralClassCache.generate(OS);
     moduleGen.srcLocationTable.generate(
         OS, M->getContext().getSourceErrorManager());
+    moduleGen.nativeFunctionTable.generate(OS);
+    // String table should be generated last, because the generate calls to
+    // other module components may add new entries to the string table.
+    moduleGen.stringTable.generate(OS);
 
     OS << "static SHPropertyCacheEntry s_prop_cache[" << nextCacheIdx << "];\n"
        << "SHUnit THIS_UNIT = { .num_symbols = " << moduleGen.stringTable.size()
@@ -2608,6 +2659,7 @@ static const SHSrcLoc s_source_locations[];
        << ".source_locations_size = " << moduleGen.srcLocationTable.size()
        << ", "
        << ".unit_main = _0_global, "
+       << ".unit_main_info = &s_function_info_table[0], "
        << ".unit_name = \"sh_compiled\" };\n";
     if (options.emitMain) {
       OS << R"(

@@ -17,6 +17,7 @@
 
 extern "C" {
 struct SHRuntime;
+struct SHNativeFuncInfo;
 }
 
 namespace hermes {
@@ -440,6 +441,8 @@ class NativeJSFunction : public Callable {
  protected:
   /// Pointer to the actual code.
   const NativeJSFunctionPtr functionPtr_;
+  /// Pointer to the information describing this function.
+  const SHNativeFuncInfo *functionInfo_;
 
 #ifdef HERMESVM_PROFILER_NATIVECALL
   /// How many times the function was called.
@@ -461,6 +464,10 @@ class NativeJSFunction : public Callable {
 
   NativeJSFunctionPtr getFunctionPtr() const {
     return functionPtr_;
+  }
+
+  const SHNativeFuncInfo *getFunctionInfo() const {
+    return functionInfo_;
   }
 
 #ifdef HERMESVM_PROFILER_NATIVECALL
@@ -495,18 +502,14 @@ class NativeJSFunction : public Callable {
   /// \param parentHandle object to use as [[Prototype]].
   /// \param context the context to be passed to the function
   /// \param functionPtr the native function
-  /// \param name the name property of the function.
-  /// \param paramCount number of parameters (excluding `this`)
-  /// \param prototypeObjectHandle if non-null, set as prototype property.
+  /// \param funcInfo pointer to the information describing the function.
   /// \param additionalSlotCount internal slots to reserve within the
   /// object (defaults to zero).
   static Handle<NativeJSFunction> create(
       Runtime &runtime,
       Handle<JSObject> parentHandle,
       NativeJSFunctionPtr functionPtr,
-      SymbolID name,
-      unsigned paramCount,
-      Handle<JSObject> prototypeObjectHandle,
+      const SHNativeFuncInfo *funcInfo,
       unsigned additionalSlotCount = 0);
 
   /// Create an instance of SHLegacyFunction.
@@ -514,9 +517,7 @@ class NativeJSFunction : public Callable {
   /// \param parentEnvHandle the parent environment
   /// \param context the context to be passed to the function
   /// \param functionPtr the native function
-  /// \param name the name property of the function.
-  /// \param paramCount number of parameters (excluding `this`)
-  /// \param prototypeObjectHandle if non-null, set as prototype property.
+  /// \param funcInfo pointer to the information describing the function.
   /// \param additionalSlotCount internal slots to reserve within the
   /// object (defaults to zero).
   static Handle<NativeJSFunction> create(
@@ -524,60 +525,8 @@ class NativeJSFunction : public Callable {
       Handle<JSObject> parentHandle,
       Handle<Environment> parentEnvHandle,
       NativeJSFunctionPtr functionPtr,
-      SymbolID name,
-      unsigned paramCount,
-      Handle<JSObject> prototypeObjectHandle,
+      const SHNativeFuncInfo *funcInfo,
       unsigned additionalSlotCount = 0);
-
-  /// Create an instance of SHLegacyFunction.
-  /// The prototype property will be null.
-  /// \param parentHandle object to use as [[Prototype]].
-  /// \param context the context to be passed to the function
-  /// \param functionPtr the native function
-  /// \param name the name property of the function.
-  /// \param paramCount number of parameters (excluding `this`)
-  /// \param additionalSlotCount internal slots to reserve within the
-  /// object (defaults to zero).
-  static Handle<NativeJSFunction> createWithoutPrototype(
-      Runtime &runtime,
-      Handle<JSObject> parentHandle,
-      NativeJSFunctionPtr functionPtr,
-      SymbolID name,
-      unsigned paramCount,
-      unsigned additionalSlotCount = 0) {
-    return create(
-        runtime,
-        parentHandle,
-        functionPtr,
-        name,
-        paramCount,
-        runtime.makeNullHandle<JSObject>(),
-        additionalSlotCount);
-  }
-
-  /// Create an instance of SHLegacyFunction
-  /// The [[Prototype]] will be Function.prototype.
-  /// The prototype property wil be null;
-  /// \param context the context to be passed to the function
-  /// \param functionPtr the native function
-  /// \param name the name property of the function.
-  /// \param paramCount number of parameters (excluding `this`)
-  /// \param additionalSlotCount internal slots to reserve within the
-  /// object (defaults to zero).
-  static Handle<NativeJSFunction> createWithoutPrototype(
-      Runtime &runtime,
-      NativeJSFunctionPtr functionPtr,
-      SymbolID name,
-      unsigned paramCount,
-      unsigned additionalSlotCount = 0) {
-    return createWithoutPrototype(
-        runtime,
-        Handle<JSObject>::vmcast(&runtime.functionPrototype),
-        functionPtr,
-        name,
-        paramCount,
-        additionalSlotCount);
-  }
 
   /// \return the value in an additional slot.
   /// \param index must be less than the \c additionalSlotCount passed to
@@ -607,16 +556,21 @@ class NativeJSFunction : public Callable {
       Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
-      NativeJSFunctionPtr functionPtr)
-      : Callable(runtime, *parent, *clazz), functionPtr_(functionPtr) {}
+      NativeJSFunctionPtr functionPtr,
+      const SHNativeFuncInfo *funcInfo)
+      : Callable(runtime, *parent, *clazz),
+        functionPtr_(functionPtr),
+        functionInfo_(funcInfo) {}
   NativeJSFunction(
       Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       Handle<Environment> environment,
-      NativeJSFunctionPtr functionPtr)
+      NativeJSFunctionPtr functionPtr,
+      const SHNativeFuncInfo *funcInfo)
       : Callable(runtime, *parent, *clazz, environment),
-        functionPtr_(functionPtr) {}
+        functionPtr_(functionPtr),
+        functionInfo_(funcInfo) {}
 
  protected:
 #ifdef HERMES_MEMORY_INSTRUMENTATION

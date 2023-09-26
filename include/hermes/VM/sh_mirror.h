@@ -17,6 +17,8 @@ typedef uint32_t SHCompressedPointerRawType;
 typedef uintptr_t SHCompressedPointerRawType;
 #endif
 
+typedef struct SHNativeFuncInfo SHNativeFuncInfo;
+
 /// Struct mirroring the layout of PropertyCacheEntry. This allows us to expose
 /// the offsets of certain fields without needing to make the actual C++ version
 /// available here.
@@ -63,10 +65,11 @@ typedef struct SHCallable {
 /// A pointer to native function.
 typedef SHLegacyValue (*NativeJSFunctionPtr)(SHRuntime *shr);
 
-/// Struct mirroring the layout of SHLegacyFunction.
+/// Struct mirroring the layout of NativeJSFunction.
 typedef struct SHNativeJSFunction {
   SHCallable base;
   NativeJSFunctionPtr functionPtr;
+  SHNativeFuncInfo *funcInfo;
 } SHNativeJSFunction;
 
 /// Struct mirroring the layout of Environment.

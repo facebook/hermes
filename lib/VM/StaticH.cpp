@@ -485,25 +485,9 @@ static SHLegacyValue createClosure(
     SHRuntime *shr,
     const SHLegacyValue *env,
     SHLegacyValue (*func)(SHRuntime *),
-    SHSymbolID name,
-    uint32_t paramCount) {
+    const SHNativeFuncInfo *funcInfo) {
   Runtime &runtime = getRuntime(shr);
   GCScopeMarkerRAII marker{runtime};
-
-  // TODO: make this lazy!
-  // Create empty object for prototype.
-  auto prototypeParent = /*vmisa<JSGeneratorFunction>(*jsFun)
-                         ? Handle<JSObject>::vmcast(&runtime.generatorPrototype)
-                         :*/
-      Handle<JSObject>::vmcast(&runtime.objectPrototype);
-
-  // According to ES12 26.7.4, AsyncFunction instances do not have a
-  // 'prototype' property, hence we need to set an null handle here.
-  auto prototypeObjectHandle =
-      /*vmisa<JSAsyncFunction>(*jsFun)
-      ? Runtime::makeNullHandle<JSObject>()
-      :*/
-      runtime.makeHandle(JSObject::create(runtime, prototypeParent));
 
   SHLegacyValue res =
       NativeJSFunction::create(
@@ -512,9 +496,7 @@ static SHLegacyValue createClosure(
           _sh_ljs_is_null(*env) ? runtime.makeNullHandle<Environment>()
                                 : Handle<Environment>::vmcast(toPHV(env)),
           func,
-          SymbolID::unsafeCreate(name),
-          paramCount,
-          prototypeObjectHandle,
+          funcInfo,
           0)
           .getHermesValue();
   return res;
@@ -524,9 +506,8 @@ extern "C" SHLegacyValue _sh_ljs_create_closure(
     SHRuntime *shr,
     const SHLegacyValue *env,
     SHLegacyValue (*func)(SHRuntime *),
-    SHSymbolID name,
-    uint32_t paramCount) {
-  return createClosure(shr, env, func, name, paramCount);
+    const SHNativeFuncInfo *funcInfo) {
+  return createClosure(shr, env, func, funcInfo);
 }
 
 extern "C" SHLegacyValue _sh_ljs_get_global_object(SHRuntime *shr) {

@@ -128,11 +128,7 @@ static SHLegacyValue sh_unit_run(SHRuntime *shr, SHUnit *unit) {
   locals.env = _sh_ljs_null();
 
   SHLegacyValue closure = _sh_ljs_create_closure(
-      shr,
-      &locals.env,
-      unit->unit_main,
-      Predefined::getSymbolID(Predefined::Str::global).unsafeGetRaw(),
-      0);
+      shr, &locals.env, unit->unit_main, unit->unit_main_info);
 
   auto frame = StackFramePtr::initFrame(
       runtime.getStackPointer(),

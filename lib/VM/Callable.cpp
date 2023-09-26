@@ -110,6 +110,33 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
         res != ExecutionStatus::EXCEPTION &&
         "failed to define length and name of bound function");
     (void)res;
+  } else if (auto nativeFun = Handle<NativeJSFunction>::dyn_vmcast(fn)) {
+    auto prototypeParent = /*vmisa<JSGeneratorFunction>(*jsFun)
+                         ? Handle<JSObject>::vmcast(&runtime.generatorPrototype)
+                         :*/
+        Handle<JSObject>::vmcast(&runtime.objectPrototype);
+    // According to ES12 26.7.4, AsyncFunction instances do not have a
+    // 'prototype' property, hence we need to set an null handle here.
+    auto prototypeObjectHandle =
+        /*vmisa<JSAsyncFunction>(*jsFun)
+        ? Runtime::makeNullHandle<JSObject>()
+        :*/
+        runtime.makeHandle(JSObject::create(runtime, prototypeParent));
+    const SHNativeFuncInfo *funcInfo = nativeFun->getFunctionInfo();
+    assert(funcInfo && "funcInfo cannot be null for a lazy NativeJSFunction");
+    const SHUnit *unit = funcInfo->unit;
+    SymbolID name = SymbolID::unsafeCreate(unit->symbols[funcInfo->name_index]);
+    uint32_t argCount = funcInfo->arg_count;
+    auto cr = Callable::defineNameLengthAndPrototype(
+        fn,
+        runtime,
+        name,
+        argCount,
+        prototypeObjectHandle,
+        Callable::WritablePrototype::Yes);
+    assert(
+        cr != ExecutionStatus::EXCEPTION && "failed to define length and name");
+    (void)cr;
   } else {
     // no other kind of function can be lazy currently
     assert(false && "invalid lazy function");
@@ -818,9 +845,7 @@ Handle<NativeJSFunction> NativeJSFunction::create(
     Runtime &runtime,
     Handle<JSObject> parentHandle,
     NativeJSFunctionPtr functionPtr,
-    SymbolID name,
-    unsigned paramCount,
-    Handle<JSObject> prototypeObjectHandle,
+    const SHNativeFuncInfo *funcInfo,
     unsigned additionalSlotCount) {
   size_t reservedSlots =
       numOverlapSlots<NativeJSFunction>() + additionalSlotCount;
@@ -828,24 +853,14 @@ Handle<NativeJSFunction> NativeJSFunction::create(
       runtime,
       parentHandle,
       runtime.getHiddenClassForPrototype(*parentHandle, reservedSlots),
-      functionPtr);
+      functionPtr,
+      funcInfo);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
 
   // Allocate a propStorage if the number of additional slots requires it.
   runtime.ignoreAllocationFailure(
       JSObject::allocatePropStorage(selfHandle, runtime, reservedSlots));
-
-  auto st = defineNameLengthAndPrototype(
-      selfHandle,
-      runtime,
-      name,
-      paramCount,
-      prototypeObjectHandle,
-      Callable::WritablePrototype::Yes);
-  (void)st;
-  assert(
-      st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");
-
+  selfHandle->flags_.lazyObject = 1;
   return selfHandle;
 }
 
@@ -854,9 +869,7 @@ Handle<NativeJSFunction> NativeJSFunction::create(
     Handle<JSObject> parentHandle,
     Handle<Environment> parentEnvHandle,
     NativeJSFunctionPtr functionPtr,
-    SymbolID name,
-    unsigned paramCount,
-    Handle<JSObject> prototypeObjectHandle,
+    const SHNativeFuncInfo *funcInfo,
     unsigned additionalSlotCount) {
   auto *cell = runtime.makeAFixed<NativeJSFunction>(
       runtime,
@@ -865,20 +878,10 @@ Handle<NativeJSFunction> NativeJSFunction::create(
           *parentHandle,
           numOverlapSlots<NativeJSFunction>() + additionalSlotCount),
       parentEnvHandle,
-      functionPtr);
+      functionPtr,
+      funcInfo);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
-
-  auto st = defineNameLengthAndPrototype(
-      selfHandle,
-      runtime,
-      name,
-      paramCount,
-      prototypeObjectHandle,
-      Callable::WritablePrototype::Yes);
-  (void)st;
-  assert(
-      st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");
-
+  selfHandle->flags_.lazyObject = 1;
   return selfHandle;
 }
 
