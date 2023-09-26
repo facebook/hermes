@@ -486,8 +486,7 @@ static SHLegacyValue createClosure(
     const SHLegacyValue *env,
     SHLegacyValue (*func)(SHRuntime *),
     SHSymbolID name,
-    uint32_t paramCount,
-    bool strictMode) {
+    uint32_t paramCount) {
   Runtime &runtime = getRuntime(shr);
   GCScopeMarkerRAII marker{runtime};
 
@@ -516,7 +515,6 @@ static SHLegacyValue createClosure(
           SymbolID::unsafeCreate(name),
           paramCount,
           prototypeObjectHandle,
-          strictMode,
           0)
           .getHermesValue();
   return res;
@@ -528,7 +526,7 @@ extern "C" SHLegacyValue _sh_ljs_create_closure_loose(
     SHLegacyValue (*func)(SHRuntime *),
     SHSymbolID name,
     uint32_t paramCount) {
-  return createClosure(shr, env, func, name, paramCount, false);
+  return createClosure(shr, env, func, name, paramCount);
 }
 
 extern "C" SHLegacyValue _sh_ljs_create_closure_strict(
@@ -537,7 +535,7 @@ extern "C" SHLegacyValue _sh_ljs_create_closure_strict(
     SHLegacyValue (*func)(SHRuntime *),
     SHSymbolID name,
     uint32_t paramCount) {
-  return createClosure(shr, env, func, name, paramCount, true);
+  return createClosure(shr, env, func, name, paramCount);
 }
 
 extern "C" SHLegacyValue _sh_ljs_get_global_object(SHRuntime *shr) {

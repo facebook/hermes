@@ -68,8 +68,7 @@ CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
       name,
       paramCount,
       prototypeObjectHandle,
-      Callable::WritablePrototype::Yes,
-      false);
+      Callable::WritablePrototype::Yes);
   (void)st;
   assert(
       st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");

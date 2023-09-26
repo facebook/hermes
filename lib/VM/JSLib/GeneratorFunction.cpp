@@ -32,8 +32,7 @@ Handle<JSObject> createGeneratorFunctionConstructor(Runtime &runtime) {
       Predefined::getSymbolID(Predefined::GeneratorFunction),
       1,
       proto,
-      Callable::WritablePrototype::No,
-      false);
+      Callable::WritablePrototype::No);
   (void)st;
   assert(
       st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");

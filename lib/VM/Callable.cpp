@@ -95,8 +95,7 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
         codeBlock->getNameMayAllocate(),
         codeBlock->getParamCount() - 1,
         prototypeObjectHandle,
-        Callable::WritablePrototype::Yes,
-        codeBlock->isStrictMode());
+        Callable::WritablePrototype::Yes);
     assert(
         cr != ExecutionStatus::EXCEPTION && "failed to define length and name");
     (void)cr;
@@ -123,8 +122,7 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
     SymbolID name,
     unsigned paramCount,
     Handle<JSObject> prototypeObjectHandle,
-    WritablePrototype writablePrototype,
-    bool strictMode) {
+    WritablePrototype writablePrototype) {
   PropertyFlags pf;
   pf.clear();
   pf.enumerable = 0;
@@ -823,7 +821,6 @@ Handle<NativeJSFunction> NativeJSFunction::create(
     SymbolID name,
     unsigned paramCount,
     Handle<JSObject> prototypeObjectHandle,
-    bool strictMode,
     unsigned additionalSlotCount) {
   size_t reservedSlots =
       numOverlapSlots<NativeJSFunction>() + additionalSlotCount;
@@ -844,8 +841,7 @@ Handle<NativeJSFunction> NativeJSFunction::create(
       name,
       paramCount,
       prototypeObjectHandle,
-      Callable::WritablePrototype::Yes,
-      strictMode);
+      Callable::WritablePrototype::Yes);
   (void)st;
   assert(
       st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");
@@ -861,7 +857,6 @@ Handle<NativeJSFunction> NativeJSFunction::create(
     SymbolID name,
     unsigned paramCount,
     Handle<JSObject> prototypeObjectHandle,
-    bool strictMode,
     unsigned additionalSlotCount) {
   auto *cell = runtime.makeAFixed<NativeJSFunction>(
       runtime,
@@ -879,8 +874,7 @@ Handle<NativeJSFunction> NativeJSFunction::create(
       name,
       paramCount,
       prototypeObjectHandle,
-      Callable::WritablePrototype::Yes,
-      strictMode);
+      Callable::WritablePrototype::Yes);
   (void)st;
   assert(
       st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");
@@ -1018,8 +1012,7 @@ Handle<NativeFunction> NativeFunction::create(
       name,
       paramCount,
       prototypeObjectHandle,
-      Callable::WritablePrototype::Yes,
-      false);
+      Callable::WritablePrototype::Yes);
   (void)st;
   assert(
       st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");
@@ -1054,8 +1047,7 @@ Handle<NativeFunction> NativeFunction::create(
       name,
       paramCount,
       prototypeObjectHandle,
-      Callable::WritablePrototype::Yes,
-      false);
+      Callable::WritablePrototype::Yes);
   (void)st;
   assert(
       st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");

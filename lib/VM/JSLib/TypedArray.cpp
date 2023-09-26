@@ -1763,8 +1763,7 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime &runtime) {
       Predefined::getSymbolID(Predefined::TypedArray),
       0,
       proto,
-      Callable::WritablePrototype::No,
-      false);
+      Callable::WritablePrototype::No);
   (void)st;
   assert(
       st != ExecutionStatus::EXCEPTION &&

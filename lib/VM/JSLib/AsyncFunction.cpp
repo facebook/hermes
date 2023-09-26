@@ -44,8 +44,7 @@ Handle<JSObject> createAsyncFunctionConstructor(Runtime &runtime) {
       Predefined::getSymbolID(Predefined::AsyncFunction),
       1,
       proto,
-      Callable::WritablePrototype::No,
-      false);
+      Callable::WritablePrototype::No);
   (void)st;
   assert(
       st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");

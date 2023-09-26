@@ -177,16 +177,13 @@ class Callable : public JSObject {
   /// \param prototypeObjectHandle optional value for .prototype
   /// \param writablePrototype determines whether the prototype property will
   ///   be created as writable or read-only.
-  /// \param strictMode the function is a strict mode function; used to
-  ///   populate the .arguments and .caller field correctly.
   static ExecutionStatus defineNameLengthAndPrototype(
       Handle<Callable> selfHandle,
       Runtime &runtime,
       SymbolID name,
       unsigned paramCount,
       Handle<JSObject> prototypeObjectHandle,
-      WritablePrototype writablePrototype,
-      bool strictMode);
+      WritablePrototype writablePrototype);
 
   /// Execute this function with no arguments. This is just a convenience
   /// helper method; it actually invokes the interpreter recursively.
@@ -501,7 +498,6 @@ class NativeJSFunction : public Callable {
   /// \param name the name property of the function.
   /// \param paramCount number of parameters (excluding `this`)
   /// \param prototypeObjectHandle if non-null, set as prototype property.
-  /// \param strictMode indicates whether the function is in strict mode.
   /// \param additionalSlotCount internal slots to reserve within the
   /// object (defaults to zero).
   static Handle<NativeJSFunction> create(
@@ -511,7 +507,6 @@ class NativeJSFunction : public Callable {
       SymbolID name,
       unsigned paramCount,
       Handle<JSObject> prototypeObjectHandle,
-      bool strictMode,
       unsigned additionalSlotCount = 0);
 
   /// Create an instance of SHLegacyFunction.
@@ -522,7 +517,6 @@ class NativeJSFunction : public Callable {
   /// \param name the name property of the function.
   /// \param paramCount number of parameters (excluding `this`)
   /// \param prototypeObjectHandle if non-null, set as prototype property.
-  /// \param strictMode indicates whether the function is in strict mode.
   /// \param additionalSlotCount internal slots to reserve within the
   /// object (defaults to zero).
   static Handle<NativeJSFunction> create(
@@ -533,7 +527,6 @@ class NativeJSFunction : public Callable {
       SymbolID name,
       unsigned paramCount,
       Handle<JSObject> prototypeObjectHandle,
-      bool strictMode,
       unsigned additionalSlotCount = 0);
 
   /// Create an instance of SHLegacyFunction.

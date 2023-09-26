@@ -43,8 +43,7 @@ Handle<NativeConstructor> defineSystemConstructor(
       name,
       paramCount,
       prototypeObjectHandle,
-      Callable::WritablePrototype::No,
-      false);
+      Callable::WritablePrototype::No);
   (void)st;
   assert(
       st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");
