@@ -80,8 +80,7 @@ static SHLegacyValue make(SHRuntime *shr) {
 
   _sh_ljs_create_environment(shr, frame, &locals.t0, 1);
   _sh_ljs_store_to_env(shr, locals.t0, _sh_ljs_param(frame, 1), 0);
-  locals.t0 =
-      _sh_ljs_create_closure_loose(shr, &locals.t0, sum, s_symbols[0], 2);
+  locals.t0 = _sh_ljs_create_closure(shr, &locals.t0, sum, s_symbols[0], 2);
 
   _sh_leave(shr, &locals.head, frame);
   return locals.t0;
@@ -101,8 +100,7 @@ static SHLegacyValue unit_main(SHRuntime *shr) {
 
   _sh_ljs_declare_global_var(shr, s_symbols[2]);
   _sh_ljs_create_environment(shr, frame, &locals.t0, 0);
-  locals.t1 =
-      _sh_ljs_create_closure_loose(shr, &locals.t0, make, s_symbols[2], 2);
+  locals.t1 = _sh_ljs_create_closure(shr, &locals.t0, make, s_symbols[2], 2);
   locals.t0 = _sh_ljs_get_global_object(shr);
   _sh_ljs_put_by_id_loose_rjs(
       shr, &locals.t0, s_symbols[2], &locals.t1, s_prop_cache + 0);

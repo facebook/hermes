@@ -520,16 +520,7 @@ static SHLegacyValue createClosure(
   return res;
 }
 
-extern "C" SHLegacyValue _sh_ljs_create_closure_loose(
-    SHRuntime *shr,
-    const SHLegacyValue *env,
-    SHLegacyValue (*func)(SHRuntime *),
-    SHSymbolID name,
-    uint32_t paramCount) {
-  return createClosure(shr, env, func, name, paramCount);
-}
-
-extern "C" SHLegacyValue _sh_ljs_create_closure_strict(
+extern "C" SHLegacyValue _sh_ljs_create_closure(
     SHRuntime *shr,
     const SHLegacyValue *env,
     SHLegacyValue (*func)(SHRuntime *),

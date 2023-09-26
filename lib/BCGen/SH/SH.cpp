@@ -1510,9 +1510,7 @@ class InstrGen {
   void generateHBCCreateFunctionInst(HBCCreateFunctionInst &inst) {
     os_.indent(2);
     generateRegister(inst);
-    os_ << " = _sh_ljs_create_closure_"
-        << (inst.getFunctionCode()->isStrictMode() ? "strict" : "loose")
-        << "(shr, &";
+    os_ << " = _sh_ljs_create_closure(shr, &";
     generateRegister(*inst.getEnvironment());
     os_ << ", ";
     moduleGen_.generateFunctionLabel(inst.getFunctionCode(), os_);
@@ -2609,8 +2607,7 @@ static const SHSrcLoc s_source_locations[];
        << ".source_locations = s_source_locations, "
        << ".source_locations_size = " << moduleGen.srcLocationTable.size()
        << ", "
-       << ".unit_main = _0_global, .unit_main_strict = "
-       << boolStr(M->getTopLevelFunction()->isStrictMode()) << ", "
+       << ".unit_main = _0_global, "
        << ".unit_name = \"sh_compiled\" };\n";
     if (options.emitMain) {
       OS << R"(
