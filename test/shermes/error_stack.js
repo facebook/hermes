@@ -6,7 +6,10 @@
  */
 
 // Ensure debug info level is high enough to trigger stack traces with lines
-// RUN: (%shermes -exec %s -g1 2>&1 || true) | %FileCheckOrRegen --match-full-lines %s
+// RUN: %shermes -exec %s -g1 | %FileCheck --match-full-lines %s
+
+print('error');
+// CHECK-LABEL: error
 
 // Test the error constructor.
 function bar(){
@@ -21,6 +24,12 @@ try {
   const found = arr.findLast(element => element == 3 ? foo() : false);
 } catch (e){
   print(e.stack);
+// CHECK-NEXT:Error
+// CHECK-NEXT:    at bar ({{.*}}error_stack.js{{.*}})
+// CHECK-NEXT:    at foo ({{.*}}error_stack.js{{.*}})
+// CHECK-NEXT:    at anonymous ({{.*}}error_stack.js{{.*}})
+// CHECK-NEXT:    at findLast (<anonymous>)
+// CHECK-NEXT:    at global ({{.*}}error_stack.js{{.*}})
 }
 
 // Test an error being thrown.
@@ -31,6 +40,8 @@ try {
   })();
 } catch (e) {
   print(e.stack);
+// CHECK-NEXT:ReferenceError: Property 'Foo' doesn't exist
+// CHECK-NEXT:    at global ({{.*}}error_stack.js{{.*}})
 }
 
 // Test Error.captureStackTrace
@@ -38,20 +49,7 @@ try {
   let err = {};
   Error.captureStackTrace(err);
   print(err.stack);
+// CHECK-NEXT:Error
+// CHECK-NEXT:    at global ({{.*}}error_stack.js{{.*}})
 })();
 
-// Auto-generated content below. Please do not modify manually.
-
-// CHECK:{{.*}}error_stack.js:30:13: warning: the variable "Foo" was not declared in anonymous function
-// CHECK-NEXT:    let a = Foo.bar;
-// CHECK-NEXT:            ^~~
-// CHECK-NEXT:Error
-// CHECK-NEXT:    at bar ({{.*}}error_stack.js:13:22)
-// CHECK-NEXT:    at foo ({{.*}}error_stack.js:17:6)
-// CHECK-NEXT:    at anonymous ({{.*}}error_stack.js:21:59)
-// CHECK-NEXT:    at findLast (<anonymous>)
-// CHECK-NEXT:    at global ({{.*}}error_stack.js:21:29)
-// CHECK-NEXT:ReferenceError: Property 'Foo' doesn't exist
-// CHECK-NEXT:    at global ({{.*}}error_stack.js:30:13)
-// CHECK-NEXT:Error
-// CHECK-NEXT:    at global ({{.*}}error_stack.js:39:26)
