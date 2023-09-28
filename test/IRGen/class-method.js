@@ -19,7 +19,15 @@ print(new C().method());
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global(): any
+// CHECK:function global(): undefined
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): undefined
+// CHECK-NEXT:  %1 = CallInst [njsf] (:undefined) %0: object, %""(): undefined, empty: any, undefined: undefined, 0: number, 0: number
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function ""(exports: number): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %C(): undefined
@@ -33,7 +41,7 @@ print(new C().method());
 // CHECK-NEXT:  %8 = PrLoadInst (:object) %7: object, 0: number, "method": string
 // CHECK-NEXT:  %9 = CallInst [njsf] (:any) %8: object, empty: any, empty: any, undefined: undefined, %6: object
 // CHECK-NEXT:  %10 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %9: any
-// CHECK-NEXT:        ReturnInst %10: any
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function C(): undefined

@@ -14,19 +14,31 @@ while (x + 1) {}
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:untyped function %t.1 = untyped function ()
+
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
-// CHECK-NEXT:        Decl %d.1 'x' Let : number
+// CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
+// CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:            Decl %d.2 'x' Let : number
+// CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
+// CHECK-NEXT:            Scope %s.3
 
 // CHECK:Program Scope %s.1
-// CHECK-NEXT:    VariableDeclaration
-// CHECK-NEXT:        VariableDeclarator
-// CHECK-NEXT:            NumericLiteral : number
-// CHECK-NEXT:            Id 'x' [D:E:%d.1 'x']
-// CHECK-NEXT:    WhileStatement
-// CHECK-NEXT:        BlockStatement Scope %s.2
-// CHECK-NEXT:        BinaryExpression : number
-// CHECK-NEXT:            Id 'x' [D:E:%d.1 'x'] : number
-// CHECK-NEXT:            NumericLiteral : number
+// CHECK-NEXT:    ExpressionStatement
+// CHECK-NEXT:        CallExpression : any
+// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:                BlockStatement
+// CHECK-NEXT:                    VariableDeclaration
+// CHECK-NEXT:                        VariableDeclarator
+// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            Id 'x' [D:E:%d.2 'x']
+// CHECK-NEXT:                    WhileStatement
+// CHECK-NEXT:                        BlockStatement Scope %s.3
+// CHECK-NEXT:                        BinaryExpression : number
+// CHECK-NEXT:                            Id 'x' [D:E:%d.2 'x'] : number
+// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:            ObjectExpression

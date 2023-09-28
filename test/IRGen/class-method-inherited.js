@@ -25,7 +25,15 @@ new D().inherited();
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global(): any
+// CHECK:function global(): undefined
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): undefined
+// CHECK-NEXT:  %1 = CallInst [njsf] (:undefined) %0: object, %""(): undefined, empty: any, undefined: undefined, 0: number, 0: number
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function ""(exports: number): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = [C: object]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %C(): undefined
@@ -45,7 +53,7 @@ new D().inherited();
 // CHECK-NEXT:  %14 = LoadParentInst (:object) %12: object
 // CHECK-NEXT:  %15 = PrLoadInst (:object) %14: object, 0: number, "inherited": string
 // CHECK-NEXT:  %16 = CallInst [njsf] (:any) %15: object, empty: any, empty: any, undefined: undefined, %12: object
-// CHECK-NEXT:        ReturnInst %16: any
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function C(): undefined
@@ -64,7 +72,7 @@ new D().inherited();
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
-// CHECK-NEXT:  %1 = LoadFrameInst (:object) [C@global]: object
+// CHECK-NEXT:  %1 = LoadFrameInst (:object) [C@""]: object
 // CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %C(): undefined, empty: any, undefined: undefined, %0: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

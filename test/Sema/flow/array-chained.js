@@ -15,35 +15,46 @@ let a: A = [];
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:array %t.1 = array array %t.2
+// CHECK:untyped function %t.1 = untyped function ()
 // CHECK-NEXT:array %t.2 = array array %t.3
-// CHECK-NEXT:array %t.3 = array number
+// CHECK-NEXT:array %t.3 = array array %t.4
+// CHECK-NEXT:array %t.4 = array number
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
-// CHECK-NEXT:        Decl %d.1 'a' Let : array %t.1
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.2
+// CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:            Decl %d.2 'a' Let : array %t.2
+// CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
-// CHECK-NEXT:    TypeAlias
-// CHECK-NEXT:        Id 'A'
-// CHECK-NEXT:        ArrayTypeAnnotation
-// CHECK-NEXT:            GenericTypeAnnotation
-// CHECK-NEXT:                Id 'B'
-// CHECK-NEXT:    TypeAlias
-// CHECK-NEXT:        Id 'B'
-// CHECK-NEXT:        ArrayTypeAnnotation
-// CHECK-NEXT:            GenericTypeAnnotation
-// CHECK-NEXT:                Id 'C'
-// CHECK-NEXT:    TypeAlias
-// CHECK-NEXT:        Id 'C'
-// CHECK-NEXT:        ArrayTypeAnnotation
-// CHECK-NEXT:            GenericTypeAnnotation
-// CHECK-NEXT:                Id 'D'
-// CHECK-NEXT:    TypeAlias
-// CHECK-NEXT:        Id 'D'
-// CHECK-NEXT:        NumberTypeAnnotation
-// CHECK-NEXT:    VariableDeclaration
-// CHECK-NEXT:        VariableDeclarator
-// CHECK-NEXT:            ArrayExpression : array %t.1
-// CHECK-NEXT:            Id 'a' [D:E:%d.1 'a']
+// CHECK-NEXT:    ExpressionStatement
+// CHECK-NEXT:        CallExpression : any
+// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:                BlockStatement
+// CHECK-NEXT:                    TypeAlias
+// CHECK-NEXT:                        Id 'A'
+// CHECK-NEXT:                        ArrayTypeAnnotation
+// CHECK-NEXT:                            GenericTypeAnnotation
+// CHECK-NEXT:                                Id 'B'
+// CHECK-NEXT:                    TypeAlias
+// CHECK-NEXT:                        Id 'B'
+// CHECK-NEXT:                        ArrayTypeAnnotation
+// CHECK-NEXT:                            GenericTypeAnnotation
+// CHECK-NEXT:                                Id 'C'
+// CHECK-NEXT:                    TypeAlias
+// CHECK-NEXT:                        Id 'C'
+// CHECK-NEXT:                        ArrayTypeAnnotation
+// CHECK-NEXT:                            GenericTypeAnnotation
+// CHECK-NEXT:                                Id 'D'
+// CHECK-NEXT:                    TypeAlias
+// CHECK-NEXT:                        Id 'D'
+// CHECK-NEXT:                        NumberTypeAnnotation
+// CHECK-NEXT:                    VariableDeclaration
+// CHECK-NEXT:                        VariableDeclarator
+// CHECK-NEXT:                            ArrayExpression : array %t.2
+// CHECK-NEXT:                            Id 'a' [D:E:%d.2 'a']
+// CHECK-NEXT:            ObjectExpression

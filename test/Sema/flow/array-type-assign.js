@@ -22,63 +22,74 @@ let a5: number[] = ([]: (number|number)[]);
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:array %t.1 = array array %t.2
-// CHECK-NEXT:union %t.3 = union string | array %t.1
-// CHECK-NEXT:array %t.2 = array number
-// CHECK-NEXT:array %t.4 = array union %t.3
+// CHECK:untyped function %t.1 = untyped function ()
+// CHECK-NEXT:array %t.2 = array array %t.3
+// CHECK-NEXT:union %t.4 = union string | array %t.2
+// CHECK-NEXT:array %t.3 = array number
+// CHECK-NEXT:array %t.5 = array union %t.4
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
-// CHECK-NEXT:        Decl %d.1 'a1' Let : array %t.2
-// CHECK-NEXT:        Decl %d.2 'a2' Let : array %t.2
-// CHECK-NEXT:        Decl %d.3 'a3' Let : array %t.4
-// CHECK-NEXT:        Decl %d.4 'a4' Let : array %t.4
-// CHECK-NEXT:        Decl %d.5 'a5' Let : array %t.2
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.2
+// CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:            Decl %d.2 'a1' Let : array %t.3
+// CHECK-NEXT:            Decl %d.3 'a2' Let : array %t.3
+// CHECK-NEXT:            Decl %d.4 'a3' Let : array %t.5
+// CHECK-NEXT:            Decl %d.5 'a4' Let : array %t.5
+// CHECK-NEXT:            Decl %d.6 'a5' Let : array %t.3
+// CHECK-NEXT:            Decl %d.7 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
-// CHECK-NEXT:    VariableDeclaration
-// CHECK-NEXT:        VariableDeclarator
-// CHECK-NEXT:            ArrayExpression : array %t.2
-// CHECK-NEXT:            Id 'a1' [D:E:%d.1 'a1']
-// CHECK-NEXT:    VariableDeclaration
-// CHECK-NEXT:        VariableDeclarator
-// CHECK-NEXT:            Id 'a1' [D:E:%d.1 'a1'] : array %t.2
-// CHECK-NEXT:            Id 'a2' [D:E:%d.2 'a2']
-// CHECK-NEXT:    TypeAlias
-// CHECK-NEXT:        Id 'A1'
-// CHECK-NEXT:        ArrayTypeAnnotation
-// CHECK-NEXT:            ArrayTypeAnnotation
-// CHECK-NEXT:                NumberTypeAnnotation
-// CHECK-NEXT:    TypeAlias
-// CHECK-NEXT:        Id 'A2'
-// CHECK-NEXT:        ArrayTypeAnnotation
-// CHECK-NEXT:            ArrayTypeAnnotation
-// CHECK-NEXT:                NumberTypeAnnotation
-// CHECK-NEXT:    TypeAlias
-// CHECK-NEXT:        Id 'U1'
-// CHECK-NEXT:        UnionTypeAnnotation
-// CHECK-NEXT:            GenericTypeAnnotation
-// CHECK-NEXT:                Id 'A1'
-// CHECK-NEXT:            StringTypeAnnotation
-// CHECK-NEXT:    TypeAlias
-// CHECK-NEXT:        Id 'U2'
-// CHECK-NEXT:        UnionTypeAnnotation
-// CHECK-NEXT:            StringTypeAnnotation
-// CHECK-NEXT:            GenericTypeAnnotation
-// CHECK-NEXT:                Id 'A2'
-// CHECK-NEXT:            GenericTypeAnnotation
-// CHECK-NEXT:                Id 'A1'
-// CHECK-NEXT:    VariableDeclaration
-// CHECK-NEXT:        VariableDeclarator
-// CHECK-NEXT:            ArrayExpression : array %t.4
-// CHECK-NEXT:            Id 'a3' [D:E:%d.3 'a3']
-// CHECK-NEXT:    VariableDeclaration
-// CHECK-NEXT:        VariableDeclarator
-// CHECK-NEXT:            ArrayExpression : array %t.4
-// CHECK-NEXT:            Id 'a4' [D:E:%d.4 'a4']
-// CHECK-NEXT:    VariableDeclaration
-// CHECK-NEXT:        VariableDeclarator
-// CHECK-NEXT:            TypeCastExpression : array %t.2
-// CHECK-NEXT:                ArrayExpression : array %t.2
-// CHECK-NEXT:            Id 'a5' [D:E:%d.5 'a5']
+// CHECK-NEXT:    ExpressionStatement
+// CHECK-NEXT:        CallExpression : any
+// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:                BlockStatement
+// CHECK-NEXT:                    VariableDeclaration
+// CHECK-NEXT:                        VariableDeclarator
+// CHECK-NEXT:                            ArrayExpression : array %t.3
+// CHECK-NEXT:                            Id 'a1' [D:E:%d.2 'a1']
+// CHECK-NEXT:                    VariableDeclaration
+// CHECK-NEXT:                        VariableDeclarator
+// CHECK-NEXT:                            Id 'a1' [D:E:%d.2 'a1'] : array %t.3
+// CHECK-NEXT:                            Id 'a2' [D:E:%d.3 'a2']
+// CHECK-NEXT:                    TypeAlias
+// CHECK-NEXT:                        Id 'A1'
+// CHECK-NEXT:                        ArrayTypeAnnotation
+// CHECK-NEXT:                            ArrayTypeAnnotation
+// CHECK-NEXT:                                NumberTypeAnnotation
+// CHECK-NEXT:                    TypeAlias
+// CHECK-NEXT:                        Id 'A2'
+// CHECK-NEXT:                        ArrayTypeAnnotation
+// CHECK-NEXT:                            ArrayTypeAnnotation
+// CHECK-NEXT:                                NumberTypeAnnotation
+// CHECK-NEXT:                    TypeAlias
+// CHECK-NEXT:                        Id 'U1'
+// CHECK-NEXT:                        UnionTypeAnnotation
+// CHECK-NEXT:                            GenericTypeAnnotation
+// CHECK-NEXT:                                Id 'A1'
+// CHECK-NEXT:                            StringTypeAnnotation
+// CHECK-NEXT:                    TypeAlias
+// CHECK-NEXT:                        Id 'U2'
+// CHECK-NEXT:                        UnionTypeAnnotation
+// CHECK-NEXT:                            StringTypeAnnotation
+// CHECK-NEXT:                            GenericTypeAnnotation
+// CHECK-NEXT:                                Id 'A2'
+// CHECK-NEXT:                            GenericTypeAnnotation
+// CHECK-NEXT:                                Id 'A1'
+// CHECK-NEXT:                    VariableDeclaration
+// CHECK-NEXT:                        VariableDeclarator
+// CHECK-NEXT:                            ArrayExpression : array %t.5
+// CHECK-NEXT:                            Id 'a3' [D:E:%d.4 'a3']
+// CHECK-NEXT:                    VariableDeclaration
+// CHECK-NEXT:                        VariableDeclarator
+// CHECK-NEXT:                            ArrayExpression : array %t.5
+// CHECK-NEXT:                            Id 'a4' [D:E:%d.5 'a4']
+// CHECK-NEXT:                    VariableDeclaration
+// CHECK-NEXT:                        VariableDeclarator
+// CHECK-NEXT:                            TypeCastExpression : array %t.3
+// CHECK-NEXT:                                ArrayExpression : array %t.3
+// CHECK-NEXT:                            Id 'a5' [D:E:%d.6 'a5']
+// CHECK-NEXT:            ObjectExpression

@@ -24,7 +24,15 @@ new D();
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global(): object
+// CHECK:function global(): undefined
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): undefined
+// CHECK-NEXT:  %1 = CallInst [njsf] (:undefined) %0: object, %""(): undefined, empty: any, undefined: undefined, 0: number, 0: number
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function ""(exports: number): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = [C: object]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %C(): undefined
@@ -38,7 +46,7 @@ new D();
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) %4: object, "prototype": string
 // CHECK-NEXT:  %9 = AllocObjectInst (:object) 0: number, %8: any
 // CHECK-NEXT:  %10 = CallInst (:undefined) %4: object, %D(): undefined, empty: any, undefined: undefined, %9: object
-// CHECK-NEXT:        ReturnInst %9: object
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function C(): undefined [typed]
@@ -51,7 +59,7 @@ new D();
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
-// CHECK-NEXT:  %1 = LoadFrameInst (:object) [C@global]: object
+// CHECK-NEXT:  %1 = LoadFrameInst (:object) [C@""]: object
 // CHECK-NEXT:  %2 = CallInst [njsf] (:undefined) %1: object, %C(): undefined, empty: any, undefined: undefined, %0: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -15,36 +15,47 @@ let b:B;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:array %t.1 = array array %t.1
+// CHECK:untyped function %t.1 = untyped function ()
+// CHECK-NEXT:array %t.2 = array array %t.2
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
-// CHECK-NEXT:        Decl %d.1 'a' Let : array %t.1
-// CHECK-NEXT:        Decl %d.2 'b' Let : array %t.1
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.2
+// CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:            Decl %d.2 'a' Let : array %t.2
+// CHECK-NEXT:            Decl %d.3 'b' Let : array %t.2
+// CHECK-NEXT:            Decl %d.4 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
-// CHECK-NEXT:    TypeAlias
-// CHECK-NEXT:        Id 'A'
-// CHECK-NEXT:        UnionTypeAnnotation
-// CHECK-NEXT:            ArrayTypeAnnotation
-// CHECK-NEXT:                GenericTypeAnnotation
-// CHECK-NEXT:                    Id 'A'
-// CHECK-NEXT:            ArrayTypeAnnotation
-// CHECK-NEXT:                GenericTypeAnnotation
-// CHECK-NEXT:                    Id 'B'
-// CHECK-NEXT:    TypeAlias
-// CHECK-NEXT:        Id 'B'
-// CHECK-NEXT:        UnionTypeAnnotation
-// CHECK-NEXT:            ArrayTypeAnnotation
-// CHECK-NEXT:                GenericTypeAnnotation
-// CHECK-NEXT:                    Id 'A'
-// CHECK-NEXT:            ArrayTypeAnnotation
-// CHECK-NEXT:                GenericTypeAnnotation
-// CHECK-NEXT:                    Id 'B'
-// CHECK-NEXT:    VariableDeclaration
-// CHECK-NEXT:        VariableDeclarator
-// CHECK-NEXT:            Id 'a' [D:E:%d.1 'a']
-// CHECK-NEXT:    VariableDeclaration
-// CHECK-NEXT:        VariableDeclarator
-// CHECK-NEXT:            Id 'b' [D:E:%d.2 'b']
+// CHECK-NEXT:    ExpressionStatement
+// CHECK-NEXT:        CallExpression : any
+// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:                BlockStatement
+// CHECK-NEXT:                    TypeAlias
+// CHECK-NEXT:                        Id 'A'
+// CHECK-NEXT:                        UnionTypeAnnotation
+// CHECK-NEXT:                            ArrayTypeAnnotation
+// CHECK-NEXT:                                GenericTypeAnnotation
+// CHECK-NEXT:                                    Id 'A'
+// CHECK-NEXT:                            ArrayTypeAnnotation
+// CHECK-NEXT:                                GenericTypeAnnotation
+// CHECK-NEXT:                                    Id 'B'
+// CHECK-NEXT:                    TypeAlias
+// CHECK-NEXT:                        Id 'B'
+// CHECK-NEXT:                        UnionTypeAnnotation
+// CHECK-NEXT:                            ArrayTypeAnnotation
+// CHECK-NEXT:                                GenericTypeAnnotation
+// CHECK-NEXT:                                    Id 'A'
+// CHECK-NEXT:                            ArrayTypeAnnotation
+// CHECK-NEXT:                                GenericTypeAnnotation
+// CHECK-NEXT:                                    Id 'B'
+// CHECK-NEXT:                    VariableDeclaration
+// CHECK-NEXT:                        VariableDeclarator
+// CHECK-NEXT:                            Id 'a' [D:E:%d.2 'a']
+// CHECK-NEXT:                    VariableDeclaration
+// CHECK-NEXT:                        VariableDeclarator
+// CHECK-NEXT:                            Id 'b' [D:E:%d.3 'b']
+// CHECK-NEXT:            ObjectExpression

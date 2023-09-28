@@ -14,27 +14,38 @@ function f(x: any, y: number) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function %t.1 = function (x: any, y: number): any
+// CHECK:untyped function %t.1 = untyped function ()
+// CHECK-NEXT:function %t.2 = function (x: any, y: number): any
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
-// CHECK-NEXT:        Decl %d.1 'f' GlobalProperty : any
-// CHECK-NEXT:        hoistedFunction f
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:            Decl %d.2 'x' Parameter : any
-// CHECK-NEXT:            Decl %d.3 'y' Parameter : number
-// CHECK-NEXT:            Decl %d.4 'arguments' Var Arguments
+// CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:            Decl %d.2 'f' ScopedFunction : function %t.2
+// CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
+// CHECK-NEXT:            hoistedFunction f
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.3
+// CHECK-NEXT:                Decl %d.4 'x' Parameter : any
+// CHECK-NEXT:                Decl %d.5 'y' Parameter : number
+// CHECK-NEXT:                Decl %d.6 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
-// CHECK-NEXT:    FunctionDeclaration : function %t.1
-// CHECK-NEXT:        Id 'f' [D:E:%d.1 'f']
-// CHECK-NEXT:        Id 'x' [D:E:%d.2 'x']
-// CHECK-NEXT:        Id 'y' [D:E:%d.3 'y']
-// CHECK-NEXT:        BlockStatement
-// CHECK-NEXT:            ExpressionStatement
-// CHECK-NEXT:                AssignmentExpression : number
-// CHECK-NEXT:                    Id 'y' [D:E:%d.3 'y'] : number
-// CHECK-NEXT:                    ImplicitCheckedCast : number
-// CHECK-NEXT:                        Id 'x' [D:E:%d.2 'x'] : any
+// CHECK-NEXT:    ExpressionStatement
+// CHECK-NEXT:        CallExpression : any
+// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:                BlockStatement
+// CHECK-NEXT:                    FunctionDeclaration : function %t.2
+// CHECK-NEXT:                        Id 'f' [D:E:%d.2 'f']
+// CHECK-NEXT:                        Id 'x' [D:E:%d.4 'x']
+// CHECK-NEXT:                        Id 'y' [D:E:%d.5 'y']
+// CHECK-NEXT:                        BlockStatement
+// CHECK-NEXT:                            ExpressionStatement
+// CHECK-NEXT:                                AssignmentExpression : number
+// CHECK-NEXT:                                    Id 'y' [D:E:%d.5 'y'] : number
+// CHECK-NEXT:                                    ImplicitCheckedCast : number
+// CHECK-NEXT:                                        Id 'x' [D:E:%d.4 'x'] : any
+// CHECK-NEXT:            ObjectExpression

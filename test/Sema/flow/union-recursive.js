@@ -19,49 +19,60 @@ let c: C;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:union %t.1 = union number | array %t.2
-// CHECK-NEXT:union %t.3 = union string | number | array %t.2
-// CHECK-NEXT:array %t.2 = array union %t.1
+// CHECK:untyped function %t.1 = untyped function ()
+// CHECK-NEXT:union %t.2 = union number | array %t.3
+// CHECK-NEXT:union %t.4 = union string | number | array %t.3
+// CHECK-NEXT:array %t.3 = array union %t.2
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
-// CHECK-NEXT:        Decl %d.1 'a' Let : union %t.1
-// CHECK-NEXT:        Decl %d.2 'b' Let : union %t.1
-// CHECK-NEXT:        Decl %d.3 'c' Let : union %t.3
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.2
+// CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:            Decl %d.2 'a' Let : union %t.2
+// CHECK-NEXT:            Decl %d.3 'b' Let : union %t.2
+// CHECK-NEXT:            Decl %d.4 'c' Let : union %t.4
+// CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
-// CHECK-NEXT:    TypeAlias
-// CHECK-NEXT:        Id 'A'
-// CHECK-NEXT:        UnionTypeAnnotation
-// CHECK-NEXT:            ArrayTypeAnnotation
-// CHECK-NEXT:                GenericTypeAnnotation
-// CHECK-NEXT:                    Id 'B'
-// CHECK-NEXT:            ArrayTypeAnnotation
-// CHECK-NEXT:                GenericTypeAnnotation
-// CHECK-NEXT:                    Id 'B'
-// CHECK-NEXT:            NumberTypeAnnotation
-// CHECK-NEXT:    TypeAlias
-// CHECK-NEXT:        Id 'B'
-// CHECK-NEXT:        UnionTypeAnnotation
-// CHECK-NEXT:            ArrayTypeAnnotation
-// CHECK-NEXT:                GenericTypeAnnotation
-// CHECK-NEXT:                    Id 'A'
-// CHECK-NEXT:            NumberTypeAnnotation
-// CHECK-NEXT:    TypeAlias
-// CHECK-NEXT:        Id 'C'
-// CHECK-NEXT:        UnionTypeAnnotation
-// CHECK-NEXT:            NumberTypeAnnotation
-// CHECK-NEXT:            ArrayTypeAnnotation
-// CHECK-NEXT:                GenericTypeAnnotation
-// CHECK-NEXT:                    Id 'A'
-// CHECK-NEXT:            StringTypeAnnotation
-// CHECK-NEXT:    VariableDeclaration
-// CHECK-NEXT:        VariableDeclarator
-// CHECK-NEXT:            Id 'a' [D:E:%d.1 'a']
-// CHECK-NEXT:    VariableDeclaration
-// CHECK-NEXT:        VariableDeclarator
-// CHECK-NEXT:            Id 'b' [D:E:%d.2 'b']
-// CHECK-NEXT:    VariableDeclaration
-// CHECK-NEXT:        VariableDeclarator
-// CHECK-NEXT:            Id 'c' [D:E:%d.3 'c']
+// CHECK-NEXT:    ExpressionStatement
+// CHECK-NEXT:        CallExpression : any
+// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:                BlockStatement
+// CHECK-NEXT:                    TypeAlias
+// CHECK-NEXT:                        Id 'A'
+// CHECK-NEXT:                        UnionTypeAnnotation
+// CHECK-NEXT:                            ArrayTypeAnnotation
+// CHECK-NEXT:                                GenericTypeAnnotation
+// CHECK-NEXT:                                    Id 'B'
+// CHECK-NEXT:                            ArrayTypeAnnotation
+// CHECK-NEXT:                                GenericTypeAnnotation
+// CHECK-NEXT:                                    Id 'B'
+// CHECK-NEXT:                            NumberTypeAnnotation
+// CHECK-NEXT:                    TypeAlias
+// CHECK-NEXT:                        Id 'B'
+// CHECK-NEXT:                        UnionTypeAnnotation
+// CHECK-NEXT:                            ArrayTypeAnnotation
+// CHECK-NEXT:                                GenericTypeAnnotation
+// CHECK-NEXT:                                    Id 'A'
+// CHECK-NEXT:                            NumberTypeAnnotation
+// CHECK-NEXT:                    TypeAlias
+// CHECK-NEXT:                        Id 'C'
+// CHECK-NEXT:                        UnionTypeAnnotation
+// CHECK-NEXT:                            NumberTypeAnnotation
+// CHECK-NEXT:                            ArrayTypeAnnotation
+// CHECK-NEXT:                                GenericTypeAnnotation
+// CHECK-NEXT:                                    Id 'A'
+// CHECK-NEXT:                            StringTypeAnnotation
+// CHECK-NEXT:                    VariableDeclaration
+// CHECK-NEXT:                        VariableDeclarator
+// CHECK-NEXT:                            Id 'a' [D:E:%d.2 'a']
+// CHECK-NEXT:                    VariableDeclaration
+// CHECK-NEXT:                        VariableDeclarator
+// CHECK-NEXT:                            Id 'b' [D:E:%d.3 'b']
+// CHECK-NEXT:                    VariableDeclaration
+// CHECK-NEXT:                        VariableDeclarator
+// CHECK-NEXT:                            Id 'c' [D:E:%d.4 'c']
+// CHECK-NEXT:            ObjectExpression

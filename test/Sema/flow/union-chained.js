@@ -14,34 +14,45 @@ type D = number | string;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:union %t.1 = union string | number
+// CHECK:untyped function %t.1 = untyped function ()
+// CHECK-NEXT:union %t.2 = union string | number
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.2
+// CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:            Decl %d.2 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
-// CHECK-NEXT:    TypeAlias
-// CHECK-NEXT:        Id 'A'
-// CHECK-NEXT:        UnionTypeAnnotation
-// CHECK-NEXT:            GenericTypeAnnotation
-// CHECK-NEXT:                Id 'B'
-// CHECK-NEXT:            GenericTypeAnnotation
-// CHECK-NEXT:                Id 'C'
-// CHECK-NEXT:    TypeAlias
-// CHECK-NEXT:        Id 'B'
-// CHECK-NEXT:        UnionTypeAnnotation
-// CHECK-NEXT:            GenericTypeAnnotation
-// CHECK-NEXT:                Id 'D'
-// CHECK-NEXT:            StringTypeAnnotation
-// CHECK-NEXT:    TypeAlias
-// CHECK-NEXT:        Id 'C'
-// CHECK-NEXT:        UnionTypeAnnotation
-// CHECK-NEXT:            GenericTypeAnnotation
-// CHECK-NEXT:                Id 'D'
-// CHECK-NEXT:            StringTypeAnnotation
-// CHECK-NEXT:    TypeAlias
-// CHECK-NEXT:        Id 'D'
-// CHECK-NEXT:        UnionTypeAnnotation
-// CHECK-NEXT:            NumberTypeAnnotation
-// CHECK-NEXT:            StringTypeAnnotation
+// CHECK-NEXT:    ExpressionStatement
+// CHECK-NEXT:        CallExpression : any
+// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:                BlockStatement
+// CHECK-NEXT:                    TypeAlias
+// CHECK-NEXT:                        Id 'A'
+// CHECK-NEXT:                        UnionTypeAnnotation
+// CHECK-NEXT:                            GenericTypeAnnotation
+// CHECK-NEXT:                                Id 'B'
+// CHECK-NEXT:                            GenericTypeAnnotation
+// CHECK-NEXT:                                Id 'C'
+// CHECK-NEXT:                    TypeAlias
+// CHECK-NEXT:                        Id 'B'
+// CHECK-NEXT:                        UnionTypeAnnotation
+// CHECK-NEXT:                            GenericTypeAnnotation
+// CHECK-NEXT:                                Id 'D'
+// CHECK-NEXT:                            StringTypeAnnotation
+// CHECK-NEXT:                    TypeAlias
+// CHECK-NEXT:                        Id 'C'
+// CHECK-NEXT:                        UnionTypeAnnotation
+// CHECK-NEXT:                            GenericTypeAnnotation
+// CHECK-NEXT:                                Id 'D'
+// CHECK-NEXT:                            StringTypeAnnotation
+// CHECK-NEXT:                    TypeAlias
+// CHECK-NEXT:                        Id 'D'
+// CHECK-NEXT:                        UnionTypeAnnotation
+// CHECK-NEXT:                            NumberTypeAnnotation
+// CHECK-NEXT:                            StringTypeAnnotation
+// CHECK-NEXT:            ObjectExpression

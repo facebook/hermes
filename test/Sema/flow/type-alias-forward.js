@@ -12,15 +12,27 @@ type B = number;
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:untyped function %t.1 = untyped function ()
+
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.2
+// CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:            Decl %d.2 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
-// CHECK-NEXT:    TypeAlias
-// CHECK-NEXT:        Id 'A'
-// CHECK-NEXT:        GenericTypeAnnotation
-// CHECK-NEXT:            Id 'B'
-// CHECK-NEXT:    TypeAlias
-// CHECK-NEXT:        Id 'B'
-// CHECK-NEXT:        NumberTypeAnnotation
+// CHECK-NEXT:    ExpressionStatement
+// CHECK-NEXT:        CallExpression : any
+// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:                BlockStatement
+// CHECK-NEXT:                    TypeAlias
+// CHECK-NEXT:                        Id 'A'
+// CHECK-NEXT:                        GenericTypeAnnotation
+// CHECK-NEXT:                            Id 'B'
+// CHECK-NEXT:                    TypeAlias
+// CHECK-NEXT:                        Id 'B'
+// CHECK-NEXT:                        NumberTypeAnnotation
+// CHECK-NEXT:            ObjectExpression

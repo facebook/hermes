@@ -24,54 +24,66 @@ let y: bigint = 1n;
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:untyped function %t.1 = untyped function ()
+
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
-// CHECK-NEXT:        Decl %d.1 'x' Let : number
-// CHECK-NEXT:        Decl %d.2 'y' Let : bigint
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.2
+// CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:            Decl %d.2 'x' Let : number
+// CHECK-NEXT:            Decl %d.3 'y' Let : bigint
+// CHECK-NEXT:            Decl %d.4 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        UnaryExpression : number
-// CHECK-NEXT:            NumericLiteral : number
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        UnaryExpression : number
-// CHECK-NEXT:            NumericLiteral : number
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        UnaryExpression : bigint
-// CHECK-NEXT:            BigIntLiteral : bigint
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        UnaryExpression : boolean
-// CHECK-NEXT:            NumericLiteral : number
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        UnaryExpression : number
-// CHECK-NEXT:            NumericLiteral : number
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        UnaryExpression : bigint
-// CHECK-NEXT:            BigIntLiteral : bigint
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        UnaryExpression : string
-// CHECK-NEXT:            NumericLiteral : number
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        UnaryExpression : void
-// CHECK-NEXT:            NumericLiteral : number
-// CHECK-NEXT:    VariableDeclaration
-// CHECK-NEXT:        VariableDeclarator
-// CHECK-NEXT:            NumericLiteral : number
-// CHECK-NEXT:            Id 'x' [D:E:%d.1 'x']
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        UpdateExpression : number
-// CHECK-NEXT:            Id 'x' [D:E:%d.1 'x'] : number
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        UpdateExpression : number
-// CHECK-NEXT:            Id 'x' [D:E:%d.1 'x'] : number
-// CHECK-NEXT:    VariableDeclaration
-// CHECK-NEXT:        VariableDeclarator
-// CHECK-NEXT:            BigIntLiteral : bigint
-// CHECK-NEXT:            Id 'y' [D:E:%d.2 'y']
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        UpdateExpression : bigint
-// CHECK-NEXT:            Id 'y' [D:E:%d.2 'y'] : bigint
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        UpdateExpression : bigint
-// CHECK-NEXT:            Id 'y' [D:E:%d.2 'y'] : bigint
+// CHECK-NEXT:        CallExpression : any
+// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:                BlockStatement
+// CHECK-NEXT:                    ExpressionStatement
+// CHECK-NEXT:                        UnaryExpression : number
+// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                    ExpressionStatement
+// CHECK-NEXT:                        UnaryExpression : number
+// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                    ExpressionStatement
+// CHECK-NEXT:                        UnaryExpression : bigint
+// CHECK-NEXT:                            BigIntLiteral : bigint
+// CHECK-NEXT:                    ExpressionStatement
+// CHECK-NEXT:                        UnaryExpression : boolean
+// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                    ExpressionStatement
+// CHECK-NEXT:                        UnaryExpression : number
+// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                    ExpressionStatement
+// CHECK-NEXT:                        UnaryExpression : bigint
+// CHECK-NEXT:                            BigIntLiteral : bigint
+// CHECK-NEXT:                    ExpressionStatement
+// CHECK-NEXT:                        UnaryExpression : string
+// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                    ExpressionStatement
+// CHECK-NEXT:                        UnaryExpression : void
+// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                    VariableDeclaration
+// CHECK-NEXT:                        VariableDeclarator
+// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            Id 'x' [D:E:%d.2 'x']
+// CHECK-NEXT:                    ExpressionStatement
+// CHECK-NEXT:                        UpdateExpression : number
+// CHECK-NEXT:                            Id 'x' [D:E:%d.2 'x'] : number
+// CHECK-NEXT:                    ExpressionStatement
+// CHECK-NEXT:                        UpdateExpression : number
+// CHECK-NEXT:                            Id 'x' [D:E:%d.2 'x'] : number
+// CHECK-NEXT:                    VariableDeclaration
+// CHECK-NEXT:                        VariableDeclarator
+// CHECK-NEXT:                            BigIntLiteral : bigint
+// CHECK-NEXT:                            Id 'y' [D:E:%d.3 'y']
+// CHECK-NEXT:                    ExpressionStatement
+// CHECK-NEXT:                        UpdateExpression : bigint
+// CHECK-NEXT:                            Id 'y' [D:E:%d.3 'y'] : bigint
+// CHECK-NEXT:                    ExpressionStatement
+// CHECK-NEXT:                        UpdateExpression : bigint
+// CHECK-NEXT:                            Id 'y' [D:E:%d.3 'y'] : bigint
+// CHECK-NEXT:            ObjectExpression

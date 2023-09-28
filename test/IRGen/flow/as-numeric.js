@@ -18,13 +18,24 @@ function main() {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:       DeclareGlobalVarInst "main": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): any
-// CHECK-NEXT:       StorePropertyStrictInst %1: object, globalObject: object, "main": string
-// CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:       StoreStackInst undefined: undefined, %3: any
-// CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:       ReturnInst %5: any
+// CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %0: any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): any
+// CHECK-NEXT:  %3 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %4 = CallInst [njsf] (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: object
+// CHECK-NEXT:       StoreStackInst %4: any, %0: any
+// CHECK-NEXT:  %6 = LoadStackInst (:any) %0: any
+// CHECK-NEXT:       ReturnInst %6: any
+// CHECK-NEXT:function_end
+
+// CHECK:function ""(exports: any): any
+// CHECK-NEXT:frame = [exports: any, main: any]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %exports: any
+// CHECK-NEXT:       StoreFrameInst %0: any, [exports]: any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %main(): any
+// CHECK-NEXT:       StoreFrameInst %2: object, [main]: any
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): any

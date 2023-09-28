@@ -27,15 +27,23 @@ return [dotProduct, Vec2D];
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global(): object
+// CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): object
-// CHECK-NEXT:  %1 = CallInst [njsf] (:object) %0: object, %""(): object, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:       ReturnInst %1: object
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): undefined
+// CHECK-NEXT:  %1 = CallInst [njsf] (:undefined) %0: object, %""(): undefined, empty: any, undefined: undefined, 0: number, 0: number
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function ""(): object [allCallsitesKnownInStrictMode]
+// CHECK:function ""(exports: number): undefined [allCallsitesKnownInStrictMode]
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %" 1#"(): object
+// CHECK-NEXT:  %1 = CallInst [njsf] (:object) %0: object, %" 1#"(): object, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function " 1#"(): object [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %dotProduct(): number

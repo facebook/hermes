@@ -12,25 +12,36 @@ type B = (this: number, number) => string;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function %t.1 = function (: number): string
-// CHECK-NEXT:function %t.2 = function (this: number, : number): string
+// CHECK:untyped function %t.1 = untyped function ()
+// CHECK-NEXT:function %t.2 = function (: number): string
+// CHECK-NEXT:function %t.3 = function (this: number, : number): string
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.2
+// CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:            Decl %d.2 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
-// CHECK-NEXT:    TypeAlias
-// CHECK-NEXT:        Id 'A'
-// CHECK-NEXT:        FunctionTypeAnnotation
-// CHECK-NEXT:            FunctionTypeParam
-// CHECK-NEXT:                NumberTypeAnnotation
-// CHECK-NEXT:            StringTypeAnnotation
-// CHECK-NEXT:    TypeAlias
-// CHECK-NEXT:        Id 'B'
-// CHECK-NEXT:        FunctionTypeAnnotation
-// CHECK-NEXT:            FunctionTypeParam
-// CHECK-NEXT:                NumberTypeAnnotation
-// CHECK-NEXT:            FunctionTypeParam
-// CHECK-NEXT:                NumberTypeAnnotation
-// CHECK-NEXT:            StringTypeAnnotation
+// CHECK-NEXT:    ExpressionStatement
+// CHECK-NEXT:        CallExpression : any
+// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:                BlockStatement
+// CHECK-NEXT:                    TypeAlias
+// CHECK-NEXT:                        Id 'A'
+// CHECK-NEXT:                        FunctionTypeAnnotation
+// CHECK-NEXT:                            FunctionTypeParam
+// CHECK-NEXT:                                NumberTypeAnnotation
+// CHECK-NEXT:                            StringTypeAnnotation
+// CHECK-NEXT:                    TypeAlias
+// CHECK-NEXT:                        Id 'B'
+// CHECK-NEXT:                        FunctionTypeAnnotation
+// CHECK-NEXT:                            FunctionTypeParam
+// CHECK-NEXT:                                NumberTypeAnnotation
+// CHECK-NEXT:                            FunctionTypeParam
+// CHECK-NEXT:                                NumberTypeAnnotation
+// CHECK-NEXT:                            StringTypeAnnotation
+// CHECK-NEXT:            ObjectExpression
