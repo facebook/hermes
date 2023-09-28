@@ -2413,44 +2413,51 @@ TEST_F(ConnectionTests, testConsoleBuffer) {
   asyncRuntime.executeScriptAsync(oss.str());
   asyncRuntime.wait();
 
-  send<m::runtime::EnableRequest>(conn, msgId++);
-  expectExecutionContextCreated(conn);
-
   bool receivedWarning = false;
   std::array<bool, kExpectedMaxBufferSize> received;
-  received.fill(false);
 
-  // Loop for 1 iteration more than kExpectedMaxBufferSize because there is a
-  // warning message given when buffer is exceeded
-  for (size_t i = 0; i < kExpectedMaxBufferSize + 1; i++) {
-    auto note =
-        expectNotification<m::runtime::ConsoleAPICalledNotification>(conn);
-    EXPECT_EQ(note.args[0].type, "string");
+  // Test for repeated connection by sending Runtime.enable multiple times. It's
+  // expected that the message cache is always kept around and provided to the
+  // frontend each time.
+  for (int numConnect = 0; numConnect < 2; numConnect++) {
+    receivedWarning = false;
+    received.fill(false);
 
-    try {
-      // Verify that the latest kExpectedMaxBufferSize number of logs are
-      // emitted
-      int nthLog = std::stoi(
-          note.args[0].value->substr(1, note.args[0].value->length() - 2));
-      EXPECT_GT(nthLog, kExpectedMaxBufferSize - 1);
-      EXPECT_LT(nthLog, kNumLogsToTest);
-      EXPECT_EQ(note.type, "log");
-      EXPECT_EQ(note.args.size(), 1);
-      received[nthLog % kExpectedMaxBufferSize] = true;
-    } catch (const std::exception &e) {
-      EXPECT_EQ(note.type, "warning");
-      EXPECT_EQ(note.args.size(), 1);
-      EXPECT_NE((*note.args[0].value).find("discarded"), std::string::npos);
-      receivedWarning = true;
+    send<m::runtime::EnableRequest>(conn, msgId++);
+    expectExecutionContextCreated(conn);
+
+    // Loop for 1 iteration more than kExpectedMaxBufferSize because there is a
+    // warning message given when buffer is exceeded
+    for (size_t i = 0; i < kExpectedMaxBufferSize + 1; i++) {
+      auto note =
+          expectNotification<m::runtime::ConsoleAPICalledNotification>(conn);
+      EXPECT_EQ(note.args[0].type, "string");
+
+      try {
+        // Verify that the latest kExpectedMaxBufferSize number of logs are
+        // emitted
+        int nthLog = std::stoi(
+            note.args[0].value->substr(1, note.args[0].value->length() - 2));
+        EXPECT_GT(nthLog, kExpectedMaxBufferSize - 1);
+        EXPECT_LT(nthLog, kNumLogsToTest);
+        EXPECT_EQ(note.type, "log");
+        EXPECT_EQ(note.args.size(), 1);
+        received[nthLog % kExpectedMaxBufferSize] = true;
+      } catch (const std::exception &e) {
+        EXPECT_EQ(note.type, "warning");
+        EXPECT_EQ(note.args.size(), 1);
+        EXPECT_NE((*note.args[0].value).find("discarded"), std::string::npos);
+        receivedWarning = true;
+      }
     }
-  }
 
-  expectNothing(conn);
+    expectNothing(conn);
 
-  for (size_t i = 0; i < kExpectedMaxBufferSize; i++) {
-    EXPECT_TRUE(received[i]);
+    for (size_t i = 0; i < kExpectedMaxBufferSize; i++) {
+      EXPECT_TRUE(received[i]);
+    }
+    EXPECT_TRUE(receivedWarning);
   }
-  EXPECT_TRUE(receivedWarning);
 }
 
 TEST_F(ConnectionTests, testThisObject) {
