@@ -278,6 +278,12 @@ cl::opt<bool> Typed(
     cl::init(false),
     cl::cat(CompilerCategory));
 
+cl::opt<bool> Script(
+    "script",
+    cl::desc("Enable script mode"),
+    cl::init(false),
+    cl::cat(CompilerCategory));
+
 CLFlag StdGlobals(
     'f',
     "std-globals",
@@ -567,6 +573,54 @@ std::shared_ptr<Context> createContext() {
   return context;
 }
 
+/// Wrap the given program in a IIFE, e.g.
+/// (function(exports){ ...program body })({});
+/// This function cannot fail.
+ESTree::ProgramNode *wrapInIIFE(
+    std::shared_ptr<Context> &context,
+    ESTree::ProgramNode *program) {
+  // Function body should be the given program body.
+  auto *funcBody =
+      new (*context) ESTree::BlockStatementNode(std::move(program->_body));
+  funcBody->setSourceRange(program->getSourceRange());
+  funcBody->setDebugLoc(program->getDebugLoc());
+
+  // Add an 'exports' parameter to the function.
+  ESTree::NodeList argNames{};
+  auto *exports = new (*context) ESTree::IdentifierNode(
+      context->getIdentifier("exports").getUnderlyingPointer(), nullptr, false);
+  argNames.push_back(*exports);
+  auto *wrappedFn = new (*context) ESTree::FunctionExpressionNode(
+      nullptr,
+      std::move(argNames),
+      funcBody,
+      nullptr,
+      nullptr,
+      nullptr,
+      false,
+      false);
+  wrappedFn->setSourceRange(program->getSourceRange());
+  wrappedFn->setDebugLoc(program->getDebugLoc());
+
+  // Supply an empty object to the call expression.
+  auto *emptyObj = new (*context) ESTree::ObjectExpressionNode({});
+  ESTree::NodeList suppliedArgs{};
+  suppliedArgs.push_back(*emptyObj);
+
+  // Call the function.
+  auto *callExpr = new (*context)
+      ESTree::CallExpressionNode(wrappedFn, nullptr, std::move(suppliedArgs));
+  // Create a top level expression statement of the function call.
+  auto *topLevelExpr =
+      new (*context) ESTree::ExpressionStatementNode(callExpr, nullptr);
+
+  ESTree::NodeList stmtList;
+  stmtList.push_back(*topLevelExpr);
+  program->_body = std::move(stmtList);
+
+  return program;
+}
+
 /// Parse the given files and return a single AST pointer.
 /// \p sourceMap any parsed source map associated with \p fileBuf.
 /// \p sourceMapTranslator input source map coordinate translator.
@@ -653,6 +707,16 @@ ESTree::NodePtr parseJS(
   //     return nullptr;
   //   }
   // }
+
+  // If we are executing in typed mode and not script, then wrap the program.
+  if (cli::Typed && !cli::Script) {
+    parsedAST = wrapInIIFE(context, parsedAST);
+    // In case this API decides it can fail in the future, check for a
+    // nullptr.
+    if (!parsedAST) {
+      return nullptr;
+    }
+  }
 
   if (cli::OutputLevel == OutputLevelKind::AST) {
     hermes::dumpESTreeJSON(

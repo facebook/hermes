@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -typed -parse-ts -dump-ast -pretty %s | %FileCheck %s --match-full-lines
+// RUN: %shermes -typed -parse-ts -dump-ast -pretty -script %s | %FileCheck %s --match-full-lines
 
 // CHECK-LABEL: {
 // CHECK-NEXT:   "type": "Program",
