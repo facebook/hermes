@@ -24,7 +24,7 @@ using namespace hermes;
 
 using llvh::dbgs;
 
-raw_ostream &llvh::operator<<(raw_ostream &OS, const Register &reg) {
+llvh::raw_ostream &llvh::operator<<(raw_ostream &OS, const Register &reg) {
   if (!reg.isValid()) {
     OS << "Null";
   } else {
@@ -34,7 +34,7 @@ raw_ostream &llvh::operator<<(raw_ostream &OS, const Register &reg) {
   return OS;
 }
 
-raw_ostream &llvh::operator<<(raw_ostream &OS, const Segment &segment) {
+llvh::raw_ostream &llvh::operator<<(raw_ostream &OS, const Segment &segment) {
   if (segment.empty()) {
     OS << "[empty]";
     return OS;
@@ -44,7 +44,7 @@ raw_ostream &llvh::operator<<(raw_ostream &OS, const Segment &segment) {
   return OS;
 }
 
-raw_ostream &llvh::operator<<(raw_ostream &OS, const Interval &interval) {
+llvh::raw_ostream &llvh::operator<<(raw_ostream &OS, const Interval &interval) {
   Interval t = interval.compress();
   for (auto &s : t.segments_) {
     OS << s;
@@ -828,7 +828,7 @@ void RegisterAllocator::calculateLiveIntervals(ArrayRef<BasicBlock *> order) {
   } // for each block.
 }
 
-struct LivenessRegAllocIRPrinter : IRPrinter {
+struct LivenessRegAllocIRPrinter : irdumper::IRPrinter {
   RegisterAllocator &allocator;
 
   explicit LivenessRegAllocIRPrinter(
@@ -841,19 +841,19 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
     auto codeGenOpts = I->getContext().getCodeGenerationSettings();
 
     if (!allocator.isAllocated(I)) {
-      os << "$???";
+      os_ << "$???";
     } else {
-      os << "$" << allocator.getRegister(I);
+      os_ << "$" << allocator.getRegister(I);
     }
 
     if (codeGenOpts.dumpRegisterInterval) {
-      os << " ";
+      os_ << " ";
       if (allocator.hasInstructionNumber(I)) {
         auto idx = allocator.getInstructionNumber(I);
         Interval &ivl = allocator.getInstructionInterval(I);
-        os << "@" << idx << " " << ivl << "\t";
+        os_ << "@" << idx << " " << ivl << "\t";
       } else {
-        os << "          \t";
+        os_ << "          \t";
       }
     }
     return true;
@@ -861,7 +861,7 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
 
   void printValueLabel(Instruction *I, Value *V, unsigned opIndex) override {
     if (allocator.isAllocated(V)) {
-      os << "$" << allocator.getRegister(V);
+      os_ << "$" << allocator.getRegister(V);
     } else {
       IRPrinter::printValueLabel(I, V, opIndex);
     }

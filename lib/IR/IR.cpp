@@ -292,7 +292,7 @@ BasicBlock::BasicBlock(Function *parent)
 }
 
 void BasicBlock::dump(llvh::raw_ostream &os) const {
-  IRPrinter D(getParent()->getContext(), os);
+  irdumper::IRPrinter D(getParent()->getContext(), os);
   D.visit(*this);
 }
 
@@ -303,7 +303,7 @@ void BasicBlock::printAsOperand(llvh::raw_ostream &OS, bool) const {
 }
 
 void Instruction::dump(llvh::raw_ostream &os) const {
-  IRPrinter D(getParent()->getContext(), os);
+  irdumper::IRPrinter D(getParent()->getContext(), os);
   D.visit(*this);
 }
 
@@ -674,12 +674,12 @@ uint32_t JSDynamicParam::getIndexInParamList() const {
 }
 
 void Function::dump(llvh::raw_ostream &os) const {
-  IRPrinter D(getParent()->getContext(), os);
+  irdumper::IRPrinter D(getParent()->getContext(), os);
   D.visit(*this);
 }
 
 void Function::viewGraph() {
-  ::viewGraph(this);
+  irdumper::viewGraph(this);
 }
 
 /// Strip the " #number" suffice of a generated internal name, or a name that
@@ -737,12 +737,12 @@ Identifier Module::deriveUniqueInternalName(Identifier originalName) {
 
 void Module::viewGraph() {
   for (auto &F : *this) {
-    ::viewGraph(&F);
+    irdumper::viewGraph(&F);
   }
 }
 
 void Module::dump(llvh::raw_ostream &os) const {
-  IRPrinter D(getContext(), os);
+  irdumper::IRPrinter D(getContext(), os);
   D.visit(*this);
 }
 
@@ -808,7 +808,7 @@ void Type::print(llvh::raw_ostream &OS) const {
   }
 }
 
-raw_ostream &llvh::operator<<(raw_ostream &OS, const hermes::Type &T) {
+llvh::raw_ostream &llvh::operator<<(raw_ostream &OS, const hermes::Type &T) {
   T.print(OS);
   return OS;
 }

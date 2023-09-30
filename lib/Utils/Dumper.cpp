@@ -24,18 +24,17 @@
 #include "hermes/Support/Statistic.h"
 #include "hermes/Utils/Dumper.h"
 
-using namespace hermes;
-
 using llvh::dyn_cast;
 using llvh::isa;
 
-namespace hermes {
+namespace hermes::irdumper {
+
 IRPrinter::IRPrinter(Context &ctx, llvh::raw_ostream &ost, bool escape)
-    : Indent(0),
+    : indent_(0),
       sm_(ctx.getSourceErrorManager()),
-      os(ost),
-      colors_(ctx.getCodeGenerationSettings().colors && os.has_colors()),
-      needEscape(escape) {}
+      os_(ost),
+      colors_(ctx.getCodeGenerationSettings().colors && os_.has_colors()),
+      needEscape_(escape) {}
 
 std::string IRPrinter::escapeStr(llvh::StringRef name) {
   std::string s = name.str();
@@ -82,17 +81,15 @@ std::string IRPrinter::quoteStr(llvh::StringRef name) {
   return name.str();
 }
 
-void InstructionNamer::clear() {
-  Counter = 0;
-  InstrMap.clear();
+void ValueNamer::clear() {
+  counter_ = 0;
+  map_.clear();
 }
-unsigned InstructionNamer::getNumber(Value *T) {
-  auto It = InstrMap.find(T);
-  if (It != InstrMap.end()) {
-    return It->second;
-  }
-  InstrMap[T] = Counter;
-  return Counter++;
+unsigned ValueNamer::getNumber(Value *T) {
+  auto [it, inserted] = map_.try_emplace(T, counter_);
+  if (inserted)
+    ++counter_;
+  return it->second;
 }
 
 VariableNamer::Name VariableNamer::getName(Variable *var) {
@@ -123,85 +120,85 @@ void IRPrinter::printTypeLabel(Value *v) {
   if (llvh::isa<BasicBlock>(v))
     return;
   setColor(Color::Type);
-  os << ": " << v->getType();
+  os_ << ": " << v->getType();
   resetColor();
 }
 
 void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
   auto &ctx = I->getContext();
   if (isa<CallBuiltinInst>(I) && opIndex == CallInst::CalleeIdx) {
-    os << "["
-       << getBuiltinMethodName(cast<CallBuiltinInst>(I)->getBuiltinIndex())
-       << "]";
+    os_ << "["
+        << getBuiltinMethodName(cast<CallBuiltinInst>(I)->getBuiltinIndex())
+        << "]";
   } else if (isa<GetBuiltinClosureInst>(I) && opIndex == 0) {
-    os << "["
-       << getBuiltinMethodName(
-              cast<GetBuiltinClosureInst>(I)->getBuiltinIndex())
-       << "]";
+    os_ << "["
+        << getBuiltinMethodName(
+               cast<GetBuiltinClosureInst>(I)->getBuiltinIndex())
+        << "]";
   } else if (auto LBI = dyn_cast<LiteralBigInt>(V)) {
-    os << LBI->getValue()->str();
+    os_ << LBI->getValue()->str();
   } else if (auto LS = dyn_cast<LiteralString>(V)) {
-    os << escapeStr(ctx.toString(LS->getValue()));
+    os_ << escapeStr(ctx.toString(LS->getValue()));
   } else if (auto LB = dyn_cast<LiteralBool>(V)) {
-    os << (LB->getValue() ? "true" : "false");
+    os_ << (LB->getValue() ? "true" : "false");
   } else if (auto LN = dyn_cast<LiteralNumber>(V)) {
     const auto Num = LN->getValue();
     if (Num == 0 && std::signbit(Num)) {
       // Ensure we output -0 correctly
-      os << "-0";
+      os_ << "-0";
     } else {
       char buf[NUMBER_TO_STRING_BUF_SIZE];
       numberToString(LN->getValue(), buf, sizeof(buf));
-      os << buf;
+      os_ << buf;
     }
   } else if (isa<LiteralEmpty>(V)) {
-    os << "empty";
+    os_ << "empty";
   } else if (isa<LiteralNull>(V)) {
-    os << "null";
+    os_ << "null";
   } else if (isa<LiteralUndefined>(V)) {
-    os << "undefined";
+    os_ << "undefined";
   } else if (isa<GlobalObject>(V)) {
-    os << "globalObject";
+    os_ << "globalObject";
   } else if (isa<EmptySentinel>(V)) {
-    os << "empty";
+    os_ << "empty";
   } else if (isa<Instruction>(V)) {
     setColor(Color::Name);
-    os << "%" << InstNamer.getNumber(V);
+    os_ << "%" << namer_.getInstNumber(llvh::cast<Instruction>(V));
     resetColor();
   } else if (isa<BasicBlock>(V)) {
     setColor(Color::Name);
-    os << "%BB" << BBNamer.getNumber(V);
+    os_ << "%BB" << namer_.getBBNumber(llvh::cast<BasicBlock>(V));
     resetColor();
   } else if (auto L = dyn_cast<Label>(V)) {
     auto Name = L->get();
-    os << "$" << quoteStr(ctx.toString(Name));
+    os_ << "$" << quoteStr(ctx.toString(Name));
   } else if (auto P = dyn_cast<JSDynamicParam>(V)) {
     auto Name = P->getName();
-    os << "%" << ctx.toString(Name);
+    os_ << "%" << ctx.toString(Name);
   } else if (auto F = dyn_cast<Function>(V)) {
-    os << "%" << quoteStr(ctx.toString(F->getInternalName())) << "()";
+    os_ << "%" << quoteStr(ctx.toString(F->getInternalName())) << "()";
   } else if (auto VS = dyn_cast<VariableScope>(V)) {
-    os << "%" << quoteStr(ctx.toString(VS->getFunction()->getInternalName()))
-       << "()";
+    os_ << "%" << quoteStr(ctx.toString(VS->getFunction()->getInternalName()))
+        << "()";
   } else if (auto VR = dyn_cast<Variable>(V)) {
-    os << "[" << varNamer_.getName(VR);
+    os_ << "[" << namer_.getVarName(VR);
     if (I->getParent()->getParent() != VR->getParent()->getFunction()) {
       llvh::StringRef scopeName =
           VR->getParent()->getFunction()->getInternalNameStr();
-      os << "@" << quoteStr(scopeName);
+      os_ << "@" << quoteStr(scopeName);
     }
-    os << "]";
+    os_ << "]";
   } else if (auto *NS = llvh::dyn_cast<LiteralNativeSignature>(V)) {
-    os << '"';
-    NS->getData()->format(os);
-    os << '"';
+    os_ << '"';
+    NS->getData()->format(os_);
+    os_ << '"';
   } else if (auto *NE = llvh::dyn_cast<LiteralNativeExtern>(V)) {
     NativeExtern *ne = NE->getData();
-    os << "extern_c(";
-    ne->signature()->format(os, ne->name()->c_str());
+    os_ << "extern_c(";
+    ne->signature()->format(os_, ne->name()->c_str());
     if (ne->declared())
-      os << " /*declared*/";
-    os << ")";
+      os_ << " /*declared*/";
+    os_ << ")";
   } else {
     llvm_unreachable("Invalid value");
   }
@@ -213,8 +210,8 @@ void IRPrinter::printFunctionHeader(Function *F) {
   auto &Ctx = F->getContext();
   std::string defKindStr = F->getDefinitionKindStr(false);
 
-  os << defKindStr << " " << quoteStr(Ctx.toString(F->getInternalName()))
-     << "(";
+  os_ << defKindStr << " " << quoteStr(Ctx.toString(F->getInternalName()))
+      << "(";
   uint32_t idx = 0u - 1;
   for (auto *P : F->getJSDynamicParams()) {
     ++idx;
@@ -223,35 +220,35 @@ void IRPrinter::printFunctionHeader(Function *F) {
       continue;
     // Comma before the second param
     if (idx > 1) {
-      os << ", ";
+      os_ << ", ";
     }
-    os << P->getName().str();
+    os_ << P->getName().str();
     printTypeLabel(P);
   }
-  os << ")";
+  os_ << ")";
   printTypeLabel(F);
-  os << " " << F->getAttributes(F->getParent()).getDescriptionStr();
+  os_ << " " << F->getAttributes(F->getParent()).getDescriptionStr();
 }
 
 void IRPrinter::printFunctionVariables(Function *F) {
   bool first = true;
-  os << "frame = [";
+  os_ << "frame = [";
   for (auto V : F->getFunctionScope()->getVariables()) {
     if (!first) {
-      os << ", ";
+      os_ << ", ";
     }
-    os << varNamer_.getName(V);
+    os_ << namer_.getVarName(V);
     printTypeLabel(V);
     first = false;
   }
-  os << "]";
+  os_ << "]";
 }
 
 bool IRPrinter::printInstructionDestination(Instruction *I) {
-  unsigned number = InstNamer.getNumber(I);
+  unsigned number = namer_.getInstNumber(I);
   if (I->hasOutput()) {
     setColor(Color::Name);
-    os << "%" << number;
+    os_ << "%" << number;
     resetColor();
     return true;
   } else {
@@ -261,38 +258,38 @@ bool IRPrinter::printInstructionDestination(Instruction *I) {
       number /= 10;
       ++width;
     }
-    os << ' ';
-    os.indent(width);
+    os_ << ' ';
+    os_.indent(width);
     return false;
   }
 }
 
 void IRPrinter::printInstruction(Instruction *I) {
   if (printInstructionDestination(I))
-    os << " = ";
+    os_ << " = ";
   else
-    os << "   ";
+    os_ << "   ";
   setColor(Color::Inst);
-  os << I->getName();
+  os_ << I->getName();
   resetColor();
 
   if (!I->getAttributes(I->getModule()).isEmpty()) {
-    os << " " << I->getAttributes(I->getModule()).getDescriptionStr();
+    os_ << " " << I->getAttributes(I->getModule()).getDescriptionStr();
   }
 
   // Don't print the type of instructions without output.
   if (I->hasOutput()) {
-    os << " (";
+    os_ << " (";
     setColor(Color::Type);
-    os << ':' << I->getType();
+    os_ << ':' << I->getType();
     resetColor();
-    os << ")";
+    os_ << ")";
   }
 
   bool first = true;
 
   for (int i = 0, e = I->getNumOperands(); i < e; i++) {
-    os << (first ? " " : ", ");
+    os_ << (first ? " " : ", ");
     printValueLabel(I, I->getOperand(i), i);
     first = false;
   }
@@ -303,14 +300,14 @@ void IRPrinter::printInstruction(Instruction *I) {
     return;
 
   llvh::DenseSet<Instruction *> Visited;
-  os << " // users:";
+  os_ << " // users:";
   for (auto &U : I->getUsers()) {
     auto *II = cast<Instruction>(U);
     assert(II && "Expecting user to be an Instruction");
     if (Visited.find(II) != Visited.end())
       continue;
     Visited.insert(II);
-    os << " %" << InstNamer.getNumber(II);
+    os_ << " %" << namer_.getInstNumber(II);
   }
 }
 
@@ -319,8 +316,8 @@ void IRPrinter::printSourceLocation(SMLoc loc) {
   if (!sm_.findBufferLineAndLoc(loc, coords))
     return;
 
-  os << sm_.getSourceUrl(coords.bufId) << ":" << coords.line << ":"
-     << coords.col;
+  os_ << sm_.getSourceUrl(coords.bufId) << ":" << coords.line << ":"
+      << coords.col;
 }
 
 void IRPrinter::printSourceLocation(SMRange rng) {
@@ -329,9 +326,9 @@ void IRPrinter::printSourceLocation(SMRange rng) {
       !sm_.findBufferLineAndLoc(rng.End, end))
     return;
 
-  os << "[" << sm_.getSourceUrl(start.bufId) << ":" << start.line << ":"
-     << start.col << " ... " << sm_.getSourceUrl(end.bufId) << ":" << end.line
-     << ":" << end.col << ")";
+  os_ << "[" << sm_.getSourceUrl(start.bufId) << ":" << start.line << ":"
+      << start.col << " ... " << sm_.getSourceUrl(end.bufId) << ":" << end.line
+      << ":" << end.col << ")";
 }
 
 void IRPrinter::visitModule(const Module &M) {
@@ -352,24 +349,23 @@ void IRPrinter::visitFunction(
     const Function &F,
     llvh::ArrayRef<BasicBlock *> order) {
   auto *UF = const_cast<Function *>(&F);
-  os.indent(Indent);
-  BBNamer.clear();
-  InstNamer.clear();
+  os_.indent(indent_);
+  namer_.newFunction(&F);
   // Number all instructions sequentially.
   for (auto *BB : order)
     for (auto &I : *BB)
-      InstNamer.getNumber(&I);
+      namer_.getInstNumber(&I);
 
   printFunctionHeader(UF);
-  os << "\n";
+  os_ << "\n";
   printFunctionVariables(UF);
-  os << "\n";
+  os_ << "\n";
 
   auto codeGenOpts = F.getContext().getCodeGenerationSettings();
   if (codeGenOpts.dumpSourceLocation) {
-    os << "source location: ";
+    os_ << "source location: ";
     printSourceLocation(F.getSourceRange());
-    os << "\n";
+    os_ << "\n";
   }
 
   // Use IRVisitor dispatch to visit the basic blocks.
@@ -377,44 +373,44 @@ void IRPrinter::visitFunction(
     visit(*BB);
   }
 
-  os.indent(Indent);
-  os << "function_end"
-     << "\n";
-  os << "\n";
+  os_.indent(indent_);
+  os_ << "function_end"
+      << "\n";
+  os_ << "\n";
 }
 
 void IRPrinter::visitBasicBlock(const BasicBlock &BB) {
   auto *UBB = const_cast<BasicBlock *>(&BB);
-  os.indent(Indent);
+  os_.indent(indent_);
   setColor(Color::Name);
-  os << "%BB" << BBNamer.getNumber(UBB) << ":\n";
+  os_ << "%BB" << namer_.getBBNumber(UBB) << ":\n";
   resetColor();
-  Indent += 2;
+  indent_ += 2;
 
   // Use IRVisitor dispatch to visit the instructions.
   for (auto &I : BB)
     visit(I);
 
-  Indent -= 2;
+  indent_ -= 2;
 }
 
 void IRPrinter::visitInstruction(const Instruction &I) {
   auto *UII = const_cast<Instruction *>(&I);
   auto codeGenOpts = I.getContext().getCodeGenerationSettings();
   if (codeGenOpts.dumpSourceLocation) {
-    os << "; ";
+    os_ << "; ";
     printSourceLocation(UII->getLocation());
-    os << "\n";
+    os_ << "\n";
   }
-  os.indent(Indent);
+  os_.indent(indent_);
   printInstruction(UII);
-  os << "\n";
+  os_ << "\n";
 }
 
 /// A simple palette for IR dumping, superficially inspired by Godbolt's LLVM IR
 /// palette.
 static struct {
-  raw_ostream::Colors color;
+  llvh::raw_ostream::Colors color;
   // -1 means select default color, false means not bold, true means bold.
   int8_t bold;
 } s_palette[] = {
@@ -423,19 +419,19 @@ static struct {
     // Inst
     {.bold = -1},
     // Type like :number.
-    {raw_ostream::Colors::GREEN, false},
+    {llvh::raw_ostream::Colors::GREEN, false},
     // Name like %15 or %BB3
     /* BLUE looks better, but sometimes fades in dark mode. */
     /* {raw_ostream::Colors::BLUE, false}, */
-    {raw_ostream::Colors::RED, false},
+    {llvh::raw_ostream::Colors::RED, false},
     // Register like {loc1}
-    {raw_ostream::Colors::MAGENTA, false},
+    {llvh::raw_ostream::Colors::MAGENTA, false},
 };
 static_assert(
     sizeof(s_palette) / sizeof(s_palette[0]) == (size_t)IRPrinter::Color::_last,
     "palette size mismatch");
 
-void IRPrinter::setColor(hermes::IRPrinter::Color color) {
+void IRPrinter::setColor(IRPrinter::Color color) {
   assert(color < Color::_last && "invalid color");
   unsigned ind = (unsigned)color;
   if (s_palette[ind].bold < 0)
@@ -446,15 +442,16 @@ void IRPrinter::setColor(hermes::IRPrinter::Color color) {
 
 void IRPrinter::resetColor() {
   if (colors_)
-    os.resetColor();
+    os_.resetColor();
 }
 
-void IRPrinter::_changeColor(raw_ostream::Colors Color, bool Bold, bool BG) {
+void IRPrinter::_changeColor(
+    llvh::raw_ostream::Colors Color,
+    bool Bold,
+    bool BG) {
   if (colors_)
-    os.changeColor(Color, Bold, BG);
+    os_.changeColor(Color, Bold, BG);
 }
-
-} // namespace hermes
 
 namespace {
 
@@ -470,7 +467,7 @@ struct DottyPrinter : public IRVisitor<DottyPrinter, void> {
       llvh::raw_ostream &ost,
       llvh::StringRef Title)
       : os(ost), Printer(ctx, ost, /* escape output */ true) {
-    Printer.colors_ = false;
+    Printer.disableColors();
     os << " digraph g {\n graph [ rankdir = \"TD\" ];\n";
     os << "labelloc=\"t\"; ";
     os << " node [ fontsize = \"16\" shape = \"record\" ]; edge [ ];\n";
@@ -505,7 +502,7 @@ struct DottyPrinter : public IRVisitor<DottyPrinter, void> {
     // InstNamer table before we dump all the instructions.
     for (auto &BB : F) {
       for (auto &II : BB) {
-        (void)Printer.InstNamer.getNumber(const_cast<Instruction *>(&II));
+        (void)Printer.namer_.getInstNumber(const_cast<Instruction *>(&II));
       }
     }
 
@@ -524,7 +521,7 @@ struct DottyPrinter : public IRVisitor<DottyPrinter, void> {
     os << "\"" << toString(BB) << "\"";
     os << "[ label = \"{ ";
 
-    os << " { <self> | <head> \\<\\<%BB" << Printer.BBNamer.getNumber(BB)
+    os << " { <self> | <head> \\<\\<%BB" << Printer.namer_.getBBNumber(BB)
        << "\\>\\> | } ";
 
     int counter = 0;
@@ -551,7 +548,7 @@ struct DottyPrinter : public IRVisitor<DottyPrinter, void> {
 
 } // anonymous namespace
 
-void hermes::viewGraph(Function *F) {
+void viewGraph(Function *F) {
 #ifndef NDEBUG
   auto &Ctx = F->getContext();
   llvh::StringRef Name = Ctx.toString(F->getInternalName());
@@ -576,3 +573,5 @@ void hermes::viewGraph(Function *F) {
   llvh::errs() << " done. \n";
 #endif
 }
+
+} // namespace hermes::irdumper

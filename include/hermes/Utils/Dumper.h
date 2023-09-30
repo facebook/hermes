@@ -31,15 +31,19 @@ class ReturnInst;
 class JSDynamicParam;
 class BranchInst;
 
+namespace irdumper {
+
 /// Display a nice dotty graph that depicts the function.
 void viewGraph(Function *F);
 
-/// A utility class for naming instructions. This should only be used for
-/// pretty-printing instructions.
-struct InstructionNamer {
-  InstructionNamer() = default;
-  std::map<Value *, unsigned> InstrMap;
-  unsigned Counter{0};
+/// A utility class for naming IR values. This should only be used for
+/// pretty-printing instructions and basic blocks.
+class ValueNamer {
+  llvh::DenseMap<Value *, unsigned> map_{};
+  unsigned counter_ = 0;
+
+ public:
+  ValueNamer() = default;
   void clear();
   unsigned getNumber(Value *);
 };
@@ -60,13 +64,52 @@ class VariableNamer {
   Name getName(Variable *var);
 };
 
+/// This class holds all state necessary for naming things in IR dumps.
+class Namer {
+  ValueNamer instNamer;
+  ValueNamer bbNamer;
+  VariableNamer varNamer{};
+
+ public:
+  /// Reset the state before a new function is dumped.
+  void newFunction(const Function *) {
+    instNamer.clear();
+    bbNamer.clear();
+  }
+
+  /// Return the number associated with \p inst.
+  unsigned getInstNumber(Instruction *inst) {
+    return instNamer.getNumber(inst);
+  }
+  /// Return the number associated with \p bb.
+  unsigned getBBNumber(BasicBlock *bb) {
+    return bbNamer.getNumber(bb);
+  }
+  /// Return the unique printable name associated with \p var.
+  VariableNamer::Name getVarName(Variable *var) {
+    return varNamer.getName(var);
+  }
+};
+
 llvh::raw_ostream &operator<<(
     llvh::raw_ostream &os,
     const VariableNamer::Name &n);
 
-using llvh::raw_ostream;
+class IRPrinter : public IRVisitor<IRPrinter, void> {
+ protected:
+  /// Indentation level.
+  unsigned indent_;
 
-struct IRPrinter : public IRVisitor<IRPrinter, void> {
+  SourceErrorManager &sm_;
+  /// Output stream.
+  llvh::raw_ostream &os_;
+  /// Whether to show colors.
+  bool colors_;
+  /// If set to true then we need to escape the quote mark because the output of
+  /// this printer may be printed as a quoted label.
+  bool needEscape_;
+
+ public:
   /// Indexes in a pallette of colors for IR dumps.
   enum class Color : uint8_t {
     // Default color.
@@ -82,23 +125,15 @@ struct IRPrinter : public IRVisitor<IRPrinter, void> {
     _last
   };
 
-  /// Indentation level.
-  unsigned Indent;
-
-  SourceErrorManager &sm_;
-  /// Output stream.
-  llvh::raw_ostream &os;
-  /// Whether to show colors.
-  bool colors_;
-  /// If set to true then we need to escape the quote mark because the output of
-  /// this printer may be printed as a quoted label.
-  bool needEscape;
-
-  InstructionNamer InstNamer;
-  InstructionNamer BBNamer;
-  VariableNamer varNamer_{};
+  /// State for naming values and variables.
+  Namer namer_{};
 
   explicit IRPrinter(Context &ctx, llvh::raw_ostream &ost, bool escape = false);
+
+  /// Force colors to off.
+  void disableColors() {
+    colors_ = false;
+  }
 
   virtual ~IRPrinter() = default;
 
@@ -113,7 +148,7 @@ struct IRPrinter : public IRVisitor<IRPrinter, void> {
   virtual void printSourceLocation(SMRange rng);
 
   std::string getQuoteSign() {
-    return needEscape ? R"(\")" : R"(")";
+    return needEscape_ ? R"(\")" : R"(")";
   }
 
   /// Quote the string if it has spaces.
@@ -137,9 +172,13 @@ struct IRPrinter : public IRVisitor<IRPrinter, void> {
 
   /// Invoke llvh::raw_ostream::changeColor() if colors are enabled, otherwise
   /// do nothing.
-  void
-  _changeColor(raw_ostream::Colors Color, bool Bold = false, bool BG = false);
+  void _changeColor(
+      llvh::raw_ostream::Colors Color,
+      bool Bold = false,
+      bool BG = false);
 };
+
+} // namespace irdumper
 
 } // namespace hermes
 

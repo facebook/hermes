@@ -818,7 +818,7 @@ void RegisterAllocator::calculateLiveIntervals(ArrayRef<BasicBlock *> order) {
   } // for each block.
 }
 
-struct LivenessRegAllocIRPrinter : IRPrinter {
+struct LivenessRegAllocIRPrinter : irdumper::IRPrinter {
   RegisterAllocator &allocator;
 
   explicit LivenessRegAllocIRPrinter(
@@ -834,10 +834,10 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
 
     if (optReg && optReg->getClass() != RegClass::NoOutput) {
       setColor(Color::Register);
-      os << llvh::formatv("{0,-8} ", llvh::formatv("{{{0}}", *optReg));
+      os_ << llvh::formatv("{0,-8} ", llvh::formatv("{{{0}}", *optReg));
       resetColor();
     } else {
-      os << llvh::formatv("{0,-8} ", "");
+      os_ << llvh::formatv("{0,-8} ", "");
     }
 
     if (codeGenOpts.dumpRegisterInterval) {
@@ -846,32 +846,32 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
 
       if (optReg && optReg->getClass() != RegClass::NoOutput && hasInstNumber) {
         setColor(Color::Name);
-        os << llvh::formatv("{0,+3}", llvh::formatv("%{0}", idx));
-        os << ' '
-           << llvh::formatv("{0,-10}", allocator.getInstructionInterval(I));
+        os_ << llvh::formatv("{0,+3}", llvh::formatv("%{0}", idx));
+        os_ << ' '
+            << llvh::formatv("{0,-10}", allocator.getInstructionInterval(I));
         resetColor();
         return true;
       } else if (hasInstNumber) {
         setColor(Color::Name);
-        os << llvh::formatv("{0,+3}", llvh::formatv("%{0}", idx));
+        os_ << llvh::formatv("{0,+3}", llvh::formatv("%{0}", idx));
         resetColor();
-        os << ' ' << llvh::formatv("{0,-10}", "");
+        os_ << ' ' << llvh::formatv("{0,-10}", "");
         return true;
       } else {
-        os << llvh::formatv("{0,+3}", "");
-        os << ' ' << llvh::formatv("{0,-10}", "");
+        os_ << llvh::formatv("{0,+3}", "");
+        os_ << ' ' << llvh::formatv("{0,-10}", "");
         return false;
       }
     }
 
     if (optReg && optReg->getClass() != RegClass::NoOutput) {
       setColor(Color::Name);
-      os << llvh::formatv(
-          "{0,3}", llvh::formatv("%{0}", InstNamer.getNumber(I)));
+      os_ << llvh::formatv(
+          "{0,3}", llvh::formatv("%{0}", namer_.getInstNumber(I)));
       resetColor();
       return true;
     } else {
-      os << llvh::formatv("{0,3}", "");
+      os_ << llvh::formatv("{0,3}", "");
       return false;
     }
   }
@@ -882,9 +882,9 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
       if (auto *opInst = llvh::dyn_cast<Instruction>(V)) {
         setColor(Color::Name);
         if (allocator.hasInstructionNumber(opInst))
-          os << '%' << allocator.getInstructionNumber(opInst);
+          os_ << '%' << allocator.getInstructionNumber(opInst);
         else
-          os << "%dead";
+          os_ << "%dead";
         resetColor();
         printTypeLabel(opInst);
         return;
@@ -892,7 +892,7 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
     }
     if (allocator.isAllocated(V)) {
       setColor(Color::Register);
-      os << '{' << allocator.getRegister(V) << "} ";
+      os_ << '{' << allocator.getRegister(V) << "} ";
       resetColor();
     }
     IRPrinter::printValueLabel(I, V, opIndex);

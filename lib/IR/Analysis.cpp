@@ -63,13 +63,13 @@ PostOrderAnalysis::PostOrderAnalysis(Function *F) : ctx_(F->getContext()) {
 }
 
 void PostOrderAnalysis::dump() {
-  IRPrinter D(ctx_, outs());
+  irdumper::IRPrinter D(ctx_, outs());
   D.visit(*Order[0]->getParent());
 
   outs() << "Blocks: ";
 
   for (auto &BB : Order) {
-    outs() << "BB" << D.BBNamer.getNumber(BB) << " ";
+    outs() << "BB" << D.namer_.getBBNumber(BB) << " ";
   }
 
   outs() << "\n";
