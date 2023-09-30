@@ -39,13 +39,50 @@ void viewGraph(Function *F);
 /// A utility class for naming IR values. This should only be used for
 /// pretty-printing instructions and basic blocks.
 class ValueNamer {
-  llvh::DenseMap<Value *, unsigned> map_{};
+  /// The kind of the value associated with this number, and the actual number.
+  struct ValueT {
+    /// The kind of the value for which this number was allocated. If the kind
+    /// changes, a new number will be allocated. A kind can change when an
+    /// instruction is freed and a new one is allocated at the same address.
+    ValueKind kind;
+
+    /// Generation of the namer when this number was visited. Unvisited values
+    /// are "garbage collected".
+    uint8_t visitedGen;
+
+    /// The unique (within a function) number label associated with this value.
+    unsigned number;
+
+    ValueT(ValueKind kind, uint8_t visitedGen, unsigned int number)
+        : kind(kind), visitedGen(visitedGen), number(number) {}
+  };
+
+  /// Map from an IR Value pointer, to a number associated with it, plus some
+  /// extra data.
+  llvh::DenseMap<Value *, ValueT> map_{};
+
+  /// The current generation. This is stamped in every value when we visit it.
+  /// When the generation changes, all values that were not visited in the last
+  /// generation are removed from the map.
+  uint8_t currentGen_ = 0;
+
+  /// Next number to allocate.
   unsigned counter_ = 0;
 
  public:
   ValueNamer() = default;
+
+  /// Clear the map and reset the counter.
   void clear();
-  unsigned getNumber(Value *);
+
+  /// Advance the generation. This invalidates all numbers that were not visited
+  /// in the previous generation.
+  void nextGeneration();
+
+  /// Return the number associated with \p v. If \p v is not in the map, or is
+  /// in the map bit associated with a different kind, a new number is
+  /// allocated.
+  unsigned getNumber(Value *v);
 };
 
 /// Utility class to print unique variable name within a function.
@@ -70,6 +107,16 @@ class Namer {
   struct PerFunction {
     ValueNamer instNamer;
     ValueNamer bbNamer;
+
+    void nextGeneration() {
+      instNamer.nextGeneration();
+      bbNamer.nextGeneration();
+    }
+
+    void clear() {
+      instNamer.clear();
+      bbNamer.clear();
+    }
   };
   VariableNamer varNamer{};
 
@@ -101,9 +148,9 @@ class Namer {
       if (inserted)
         it->second = std::make_unique<PerFunction>();
       curFunctionState_ = it->second.get();
+      curFunctionState_->nextGeneration();
     } else {
-      curFunctionState_->instNamer.clear();
-      curFunctionState_->bbNamer.clear();
+      curFunctionState_->clear();
     }
   }
 

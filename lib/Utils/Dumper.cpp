@@ -90,14 +90,38 @@ std::string IRPrinter::quoteStr(llvh::StringRef name) {
 }
 
 void ValueNamer::clear() {
+  currentGen_ = 0;
   counter_ = 0;
   map_.clear();
 }
-unsigned ValueNamer::getNumber(Value *T) {
-  auto [it, inserted] = map_.try_emplace(T, counter_);
-  if (inserted)
+
+void ValueNamer::nextGeneration() {
+  for (auto it = map_.begin(), end = map_.end(); it != end;) {
+    auto cur = it++;
+    if (cur->second.visitedGen != currentGen_) {
+      map_.erase(cur);
+    }
+  }
+
+  currentGen_ ^= 1;
+}
+
+unsigned ValueNamer::getNumber(Value *v) {
+  ValueKind kind = v->getKind();
+  auto [it, inserted] =
+      map_.try_emplace(v, ValueT(kind, currentGen_, counter_));
+  if (inserted) {
     ++counter_;
-  return it->second;
+  } else {
+    if (it->second.visitedGen != currentGen_)
+      it->second.visitedGen = currentGen_;
+    if (it->second.kind != kind) {
+      // If the kind of the value has changed, reset the counter.
+      it->second.kind = kind;
+      it->second.number = counter_++;
+    }
+  }
+  return it->second.number;
 }
 
 VariableNamer::Name VariableNamer::getName(Variable *var) {
