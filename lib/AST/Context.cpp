@@ -8,6 +8,7 @@
 #include "hermes/AST/Context.h"
 
 #include "hermes/AST/NativeContext.h"
+#include "hermes/Utils/Dumper.h"
 
 namespace hermes {
 
@@ -42,5 +43,13 @@ Context::Context(
           nativeSettings ? *nativeSettings : NativeSettings())) {}
 
 Context::~Context() = default;
+
+void Context::createPersistentIRNamer() {
+  persistentIRNamer_ = std::make_unique<irdumper::Namer>(true);
+}
+
+void Context::clearPersistentIRNamer() {
+  persistentIRNamer_.reset();
+}
 
 } // namespace hermes

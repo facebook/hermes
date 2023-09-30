@@ -29,12 +29,20 @@ using llvh::isa;
 
 namespace hermes::irdumper {
 
-IRPrinter::IRPrinter(Context &ctx, llvh::raw_ostream &ost, bool escape)
+IRPrinter::IRPrinter(
+    Context &ctx,
+    bool usePersistent,
+    llvh::raw_ostream &ost,
+    bool escape)
     : indent_(0),
       sm_(ctx.getSourceErrorManager()),
       os_(ost),
       colors_(ctx.getCodeGenerationSettings().colors && os_.has_colors()),
-      needEscape_(escape) {}
+      needEscape_(escape),
+      tempNamer_(
+          usePersistent && ctx.getPersistentIRNamer() ? nullptr
+                                                      : new Namer(false)),
+      namer_(tempNamer_ ? *tempNamer_ : *ctx.getPersistentIRNamer()) {}
 
 std::string IRPrinter::escapeStr(llvh::StringRef name) {
   std::string s = name.str();
@@ -466,7 +474,7 @@ struct DottyPrinter : public IRVisitor<DottyPrinter, void> {
       Context &ctx,
       llvh::raw_ostream &ost,
       llvh::StringRef Title)
-      : os(ost), Printer(ctx, ost, /* escape output */ true) {
+      : os(ost), Printer(ctx, false, ost, /* escape output */ true) {
     Printer.disableColors();
     os << " digraph g {\n graph [ rankdir = \"TD\" ];\n";
     os << "labelloc=\"t\"; ";

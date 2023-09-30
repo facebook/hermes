@@ -42,7 +42,7 @@ TEST(BuilderTest, SimpleSmokeTest) {
   EXPECT_TRUE(F);
   EXPECT_TRUE(BB);
 
-  IRPrinter D(*Ctx, OS);
+  irdumper::IRPrinter D(*Ctx, OS);
   D.visit(M);
 
   std::string Res = OS.str();

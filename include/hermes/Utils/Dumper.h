@@ -66,24 +66,54 @@ class VariableNamer {
 
 /// This class holds all state necessary for naming things in IR dumps.
 class Namer {
-  ValueNamer instNamer;
-  ValueNamer bbNamer;
+  /// State needed per IR Function.
+  struct PerFunction {
+    ValueNamer instNamer;
+    ValueNamer bbNamer;
+  };
   VariableNamer varNamer{};
 
+  /// Whether the state should persist across functions.
+  bool const persistent_;
+
+  /// Associates per-function state with an IR Function. Only in "persistent"
+  /// mode.
+  llvh::DenseMap<const Function *, std::unique_ptr<PerFunction>> functionMap_{};
+
+  /// State that is used in non-persistent mode.
+  std::unique_ptr<PerFunction> nonPersistentState_{};
+
+  /// The current state.
+  PerFunction *curFunctionState_ = nullptr;
+
  public:
-  /// Reset the state before a new function is dumped.
-  void newFunction(const Function *) {
-    instNamer.clear();
-    bbNamer.clear();
+  explicit Namer(bool persistent) : persistent_(persistent) {
+    if (!persistent_) {
+      nonPersistentState_ = std::make_unique<PerFunction>();
+      curFunctionState_ = nonPersistentState_.get();
+    }
+  }
+
+  void newFunction(const Function *F) {
+    if (persistent_) {
+      auto [it, inserted] =
+          functionMap_.try_emplace(F, std::unique_ptr<PerFunction>());
+      if (inserted)
+        it->second = std::make_unique<PerFunction>();
+      curFunctionState_ = it->second.get();
+    } else {
+      curFunctionState_->instNamer.clear();
+      curFunctionState_->bbNamer.clear();
+    }
   }
 
   /// Return the number associated with \p inst.
   unsigned getInstNumber(Instruction *inst) {
-    return instNamer.getNumber(inst);
+    return curFunctionState_->instNamer.getNumber(inst);
   }
   /// Return the number associated with \p bb.
   unsigned getBBNumber(BasicBlock *bb) {
-    return bbNamer.getNumber(bb);
+    return curFunctionState_->bbNamer.getNumber(bb);
   }
   /// Return the unique printable name associated with \p var.
   VariableNamer::Name getVarName(Variable *var) {
@@ -109,6 +139,9 @@ class IRPrinter : public IRVisitor<IRPrinter, void> {
   /// this printer may be printed as a quoted label.
   bool needEscape_;
 
+  /// A non-peristent namer used when one isn't provided by Context.
+  std::unique_ptr<Namer> tempNamer_;
+
  public:
   /// Indexes in a pallette of colors for IR dumps.
   enum class Color : uint8_t {
@@ -126,9 +159,20 @@ class IRPrinter : public IRVisitor<IRPrinter, void> {
   };
 
   /// State for naming values and variables.
-  Namer namer_{};
+  Namer &namer_;
 
-  explicit IRPrinter(Context &ctx, llvh::raw_ostream &ost, bool escape = false);
+  /// \param ctx  the Context
+  /// \param usePersistent whether to use the persistent namer from Context
+  /// \param ost  output stream
+  /// \param escape whether to escape the quote mark.
+  explicit IRPrinter(
+      Context &ctx,
+      bool usePersistent,
+      llvh::raw_ostream &ost,
+      bool escape);
+
+  explicit IRPrinter(Context &ctx, llvh::raw_ostream &ost, bool escape = false)
+      : IRPrinter(ctx, true, ost, escape) {}
 
   /// Force colors to off.
   void disableColors() {

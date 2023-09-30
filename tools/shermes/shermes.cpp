@@ -510,6 +510,9 @@ std::shared_ptr<Context> createContext() {
   auto context =
       std::make_shared<Context>(codeGenOpts, optimizationOpts, &nativeSettings);
 
+  if (codeGenOpts.dumpIRBetweenPasses)
+    context->createPersistentIRNamer();
+
   // Typed mode forces strict mode.
   if (cli::Typed && !cli::StrictMode && cli::StrictMode.getNumOccurrences()) {
     llvh::errs() << "error: types are incompatible with loose mode\n";
