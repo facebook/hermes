@@ -38,5 +38,5 @@ Hermes so it can access the host `hermesc` from the first stage to build the VM.
 This process is currently happened in different places for different platforms:
 
 1. For Android, this happened in `hermes/android/build.gradle`
-2. For Apple platforms, this happend in `hermes/utils/build-apple-framework.sh`
+2. For Apple platforms, this happened in `hermes/utils/build-apple-framework.sh`
 3. For Emscripten, you can find an example from the `test-emscripten` job from `hermes/.circleci/config.yml`. Also see more details at [Building with Emscripten](./Emscripten.md)
