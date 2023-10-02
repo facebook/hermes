@@ -137,16 +137,14 @@ void SwitchLowering::erasePhiTarget(BasicBlock *block, BasicBlock *toDelete) {
 /// required to achieve reliable lowering optimizations for object
 /// creations.
 class LowerAllocObjectFuncContext
-    : public DomTreeDFS::Visitor<
-          LowerAllocObjectFuncContext,
-          DomTreeDFS::StackNode<LowerAllocObjectFuncContext>> {
+    : public DomTreeDFS::
+          Visitor<LowerAllocObjectFuncContext, DomTreeDFS::StackNode> {
  public:
   LowerAllocObjectFuncContext(
       const DominanceInfo &DI,
       AllocObjectInst *allocInst)
-      : DomTreeDFS::Visitor<
-            LowerAllocObjectFuncContext,
-            DomTreeDFS::StackNode<LowerAllocObjectFuncContext>>(DI),
+      : DomTreeDFS::Visitor<LowerAllocObjectFuncContext, DomTreeDFS::StackNode>(
+            DI),
         allocInst_(allocInst) {
     // The following loop constructs userBasicBlockMap_, by storing
     // all users of allocInst keyed by Basic Block.
@@ -167,9 +165,8 @@ class LowerAllocObjectFuncContext
 
  private:
   // friend Visitor such that DFS can call processNode.
-  friend DomTreeDFS::Visitor<
-      LowerAllocObjectFuncContext,
-      DomTreeDFS::StackNode<LowerAllocObjectFuncContext>>;
+  friend DomTreeDFS::
+      Visitor<LowerAllocObjectFuncContext, DomTreeDFS::StackNode>;
 
   /// Called by DFS recursively to process each node.
   /// The outcome (sortedBasicBlocks_) we expect is the list of basic blocks
@@ -179,7 +176,7 @@ class LowerAllocObjectFuncContext
   /// other BBs that contains users of allocInst_ that's not in the basic block
   /// list. The return value indicates whether this basic block is added to the
   /// list. Note that the return value isn't actually used.
-  bool processNode(DomTreeDFS::StackNode<LowerAllocObjectFuncContext> *SN);
+  bool processNode(DomTreeDFS::StackNode *SN);
 
   /// collectInstructions walks through sortedBasicBlocks_, extract instructions
   /// that are users of allocInst_, ordered by dominance relationship.
@@ -209,11 +206,7 @@ class LowerAllocObjectFuncContext
   llvh::SmallVector<BasicBlock *, 4> sortedBasicBlocks_{};
 };
 
-bool LowerAllocObjectFuncContext::processNode(
-    DomTreeDFS::StackNode<LowerAllocObjectFuncContext> *SN) {
-  assert(!SN->isDone() && "Visiting same basic block twice");
-  SN->markDone();
-
+bool LowerAllocObjectFuncContext::processNode(DomTreeDFS::StackNode *SN) {
   BasicBlock *BB = SN->node()->getBlock();
   if (!userBasicBlockMap_.count(BB)) {
     // BB does not contain any users of allocInst_.

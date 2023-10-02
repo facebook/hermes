@@ -179,39 +179,36 @@ class FunctionScopeAnalysis {
 /// based on a DFS visit of a dominator tree.
 namespace DomTreeDFS {
 
-/// StackNode - contains all the needed information to create a stack for doing
-/// a depth first traversal of the tree. This includes scopes for values and
-/// loads as well as the generation. There is a child iterator so that the
-/// children do not need to be stored separately.
-template <typename Visitor>
+/// StackNode - contains the needed information to create a stack for doing
+/// a depth first traversal of a dominator tree.
+/// It can be subclassed to attach more information like scoped tables, etc.
 class StackNode {
  public:
   StackNode(const StackNode &) = delete;
   void operator=(const StackNode &) = delete;
 
-  StackNode(Visitor *, const DominanceInfoNode *n)
+  StackNode(const DominanceInfoNode *n)
       : node_(n), childIter_(n->begin()), endIter_(n->end()), done_(false) {}
+  /// A convenience constructor matching the signature of the derived class.
+  StackNode(void *, const DominanceInfoNode *n) : StackNode(n) {}
 
-  // Accessors.
+  /// The dominator tree node associated with this stack node.
   const DominanceInfoNode *node() {
     return node_;
   }
-  // Return nullptr when the end is reached, or the next child otherwise.
-  DominanceInfoNode *nextChild() {
-    return childIter_ == endIter_ ? nullptr : *childIter_++;
-  }
-  bool isDone() {
-    return done_;
-  }
-  void markDone() {
-    done_ = true;
-  }
 
  private:
-  // Members.
+  template <typename Derived, typename StackNode>
+  friend class Visitor;
+
+  /// The dominator tree node associated with this stack node.
   const DominanceInfoNode *node_;
+  /// The next child of the dominance tree node to process.
   DominanceInfoNode::const_iterator childIter_;
+  /// The end iterator of child dominance tree nodes.
   const DominanceInfoNode::const_iterator endIter_;
+  /// This flag indicates that this dominance tree node has been processed
+  /// and we have moved onto iterating its children.
   bool done_;
 };
 
@@ -225,11 +222,11 @@ class Visitor {
     return static_cast<Derived *>(this);
   }
 
-  StackNode *newNode(const DominanceInfoNode *n) {
+  StackNode *newStackEntry(const DominanceInfoNode *n) {
     auto *sn = nodeAllocator_.Allocate();
     return new (sn) StackNode(derived(), n);
   }
-  void freeNode(StackNode *n) {
+  void freeStackEntry(StackNode *n) {
     n->~StackNode();
     nodeAllocator_.Deallocate(n);
   }
@@ -240,38 +237,41 @@ class Visitor {
   Visitor(const DominanceInfo &DT) : DT_(DT) {}
 
   /// Starting DFS from root node.
+  /// \return the changed flag.
   bool DFS() {
     return DFS(DT_.getRootNode());
   }
 
   /// Starting DFS from a specific node.
+  /// \return the changed flag.
   bool DFS(const DominanceInfoNode *DIN) {
-    llvh::SmallVector<StackNode *, 4> nodesToProcess;
+    llvh::SmallVector<StackNode *, 4> stack{};
 
     bool changed = false;
 
     // Process the root node.
-    nodesToProcess.push_back(newNode(DIN));
+    stack.push_back(newStackEntry(DIN));
 
     // Process the stack.
-    while (!nodesToProcess.empty()) {
+    while (!stack.empty()) {
       // Grab the first item off the stack. Set the current generation, remove
       // the node from the stack, and process it.
-      StackNode *toProcess = nodesToProcess.back();
+      StackNode *toProcess = stack.back();
 
       // Check if the node needs to be processed.
-      if (!toProcess->isDone()) {
+      if (!toProcess->done_) {
         // Process the node.
         changed |= derived()->processNode(toProcess);
         // This node has been processed.
-        toProcess->markDone();
-      } else if (auto *child = toProcess->nextChild()) {
+        toProcess->done_ = true;
+      } else if (toProcess->childIter_ != toProcess->endIter_) {
+        auto *dn = *toProcess->childIter_++;
         // Push the next child onto the stack.
-        nodesToProcess.push_back(newNode(child));
+        stack.push_back(newStackEntry(dn));
       } else {
         // It has been processed, and there are no more children to process,
         // so pop it off the stack
-        freeNode(nodesToProcess.pop_back_val());
+        freeStackEntry(stack.pop_back_val());
       }
     }
 

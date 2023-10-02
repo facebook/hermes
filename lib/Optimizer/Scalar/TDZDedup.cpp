@@ -14,11 +14,7 @@
 #include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
-#include "llvh/ADT/DenseMap.h"
 #include "llvh/ADT/DenseSet.h"
-#include "llvh/ADT/Hashing.h"
-#include "llvh/ADT/STLExtras.h"
-#include "llvh/Support/RecyclingAllocator.h"
 
 STATISTIC(NumTDZDedup, "Number of TDZ instructions eliminated");
 
@@ -35,7 +31,7 @@ using ScopeType = hermes::ScopedHashTableScope<Value *, bool>;
 // a depth first traversal of the tree. This includes scopes for values and
 // loads as well as the generation. There is a child iterator so that the
 // children do not need to be store spearately.
-class StackNode : public DomTreeDFS::StackNode<TDZDedupContext> {
+class StackNode : public DomTreeDFS::StackNode {
  public:
   inline StackNode(TDZDedupContext *ctx, const DominanceInfoNode *n);
 
@@ -83,8 +79,7 @@ class TDZDedupContext : public DomTreeDFS::Visitor<TDZDedupContext, StackNode> {
 };
 
 inline StackNode::StackNode(TDZDedupContext *ctx, const DominanceInfoNode *n)
-    : DomTreeDFS::StackNode<TDZDedupContext>(ctx, n),
-      scope_{ctx->availableValues_} {}
+    : DomTreeDFS::StackNode(n), scope_{ctx->availableValues_} {}
 
 bool TDZDedupContext::run() {
   // First, collect all TDZ state variables.

@@ -100,7 +100,7 @@ using ScopedHTType = llvh::ScopedHashTable<
 // a depth first traversal of the tree. This includes scopes for values and
 // loads as well as the generation. There is a child iterator so that the
 // children do not need to be store spearately.
-class StackNode : public DomTreeDFS::StackNode<CSEContext> {
+class StackNode : public DomTreeDFS::StackNode {
  public:
   inline StackNode(CSEContext *ctx, const DominanceInfoNode *n);
 
@@ -135,8 +135,7 @@ class CSEContext : public DomTreeDFS::Visitor<CSEContext, StackNode> {
 };
 
 inline StackNode::StackNode(CSEContext *ctx, const DominanceInfoNode *n)
-    : DomTreeDFS::StackNode<CSEContext>(ctx, n),
-      scope_{ctx->availableValues_} {}
+    : DomTreeDFS::StackNode(n), scope_{ctx->availableValues_} {}
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
