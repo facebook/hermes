@@ -747,6 +747,31 @@ class InstSimplifyImpl {
       return UNT->getSingleOperand();
     return nullptr;
   }
+  /// \returns one of:
+  ///   - nullptr if the instruction cannot be simplified.
+  ///   - a new value to replace the original one
+  OptValue<Value *> simplifyCheckedTypeCast(CheckedTypeCastInst *ctc) {
+    Type resType =
+        Type::intersectTy(ctc->getType(), ctc->getSingleOperand()->getType());
+    // This is a cast that always fails. Do nothing.
+    if (resType.isNoType())
+      return nullptr;
+
+    // A widening checked cast is pointless.
+    if (ctc->getSingleOperand()->getType().isSubsetOf(ctc->getType()))
+      return ctc->getSingleOperand();
+
+    // If the result type is wider than necessary, narrow it.
+    if (ctc->getType() != resType)
+      ctc->setType(resType);
+
+    // Casting a cast is pointless. Use the first cast's operand as operand.
+    if (auto *inputCast =
+            llvh::dyn_cast<CheckedTypeCastInst>(ctc->getSingleOperand())) {
+      ctc->setOperand(inputCast->getSingleOperand(), 0);
+    }
+    return nullptr;
+  }
 
   /// Try to simplify the instruction \p I.
   /// \returns one of:
@@ -790,6 +815,8 @@ class InstSimplifyImpl {
         return simplifyThrowIfEmpty(cast<ThrowIfEmptyInst>(I));
       case ValueKind::UnionNarrowTrustedInstKind:
         return simplifyUnionNarrowTrusted(cast<UnionNarrowTrustedInst>(I));
+      case ValueKind::CheckedTypeCastInstKind:
+        return simplifyCheckedTypeCast(cast<CheckedTypeCastInst>(I));
 
       default:
         // TODO: handle other kinds of instructions.
