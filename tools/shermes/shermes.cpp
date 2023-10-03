@@ -379,6 +379,13 @@ cl::opt<LocationDumpMode> DumpSourceLocation(
         clEnumValN(LocationDumpMode::Range, "range", "Print only byte range")),
     cl::cat(CompilerCategory));
 
+cl::opt<bool> ForceLineDirectives(
+    "Xline-directives",
+    cl::desc("Force line directives to be emitted in C."),
+    cl::init(false),
+    cl::Hidden,
+    cl::cat(CompilerCategory));
+
 cl::opt<bool> IncludeEmptyASTNodes(
     "Xinclude-empty-ast-nodes",
     cl::desc(
@@ -903,6 +910,11 @@ bool compileFromCommandLineOptions() {
 
   genOptions.emitSourceLocations =
       cli::DumpSourceLocation != LocationDumpMode::None;
+
+  // Emit line directives if we have full debug info enabled or it was
+  // explicitly requested.
+  genOptions.emitLineDirectives =
+      cli::DebugInfoLevel >= DebugLevel::g3 || cli::ForceLineDirectives;
 
   ShermesCompileParams params(genOptions);
   // Populate all fields of ShermesCompileParams.

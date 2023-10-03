@@ -76,6 +76,9 @@ struct BytecodeGenerationOptions {
   // Emit source locations in the resulting output.
   bool emitSourceLocations = false;
 
+  // Emit #line directives in the resulting output.
+  bool emitLineDirectives = false;
+
   /* implicit */ BytecodeGenerationOptions(OutputFormatKind format)
       : format(format) {}
 

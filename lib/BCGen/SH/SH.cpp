@@ -7,6 +7,7 @@
 
 #include "hermes/BCGen/SH/SH.h"
 
+#include "LineDirectiveEmitter.h"
 #include "LoweringPasses.h"
 #include "SHRegAlloc.h"
 #include "hermes/AST/NativeContext.h"
@@ -2325,7 +2326,7 @@ void lowerAllocatedFunctionIR(
 /// Converts Function \p F into valid C code and outputs it through \p OS.
 void generateFunction(
     Function &F,
-    llvh::raw_ostream &OS,
+    hermes::sh::LineDirectiveEmitter &OS,
     ModuleGen &moduleGen,
     FunctionScopeAnalysis &scopeAnalysis,
     uint32_t &nextCacheIdx,
@@ -2402,6 +2403,19 @@ void generateFunction(
   moduleGen.nativeFunctionTable.generateFunctionLabel(&F, OS);
   OS << "(SHRuntime *shr) {\n";
 
+  bool emitLineDirectives = options.emitLineDirectives;
+  // Emit source location comments if requested, and we are *not* emitting line
+  // directives. Otherwise, the resulting C is too noisy and unreadable.
+  bool emitSrcLocComments = options.emitSourceLocations && !emitLineDirectives;
+  if (emitLineDirectives) {
+    OS.enableLineDirectives();
+    // Initialize the location of the directive statement to source location of
+    // the current function. This way, if the first BB initially doesn't have
+    // instructions with source information, this value will provide a good
+    // fallback.
+    OS.setDirectiveInfo(F.getSourceRange().Start, srcMgr);
+  }
+
   // In the global function, ensure that we are linking to the correct
   // library.
   if (F.isGlobalScope())
@@ -2470,6 +2484,9 @@ void generateFunction(
   SHSrcLocationTable::IdxTy prevSrcLocationIdx =
       SHSrcLocationTable::kInvalidLocIdx;
   for (auto &B : order) {
+    // Line directives of the BB label will match those of the first
+    // instruction in this basic block.
+    OS.setDirectiveInfo(B->front().getLocation(), srcMgr);
     OS << "\n";
     generateBasicBlockLabel(B, OS, bbMap);
     OS << ":\n"
@@ -2485,7 +2502,8 @@ void generateFunction(
     // duplicate of.
     bool firstInst = true;
     for (auto &I : *B) {
-      if (options.emitSourceLocations) {
+      OS.setDirectiveInfo(I.getLocation(), srcMgr);
+      if (emitSrcLocComments) {
         SMLoc curLoc = I.getLocation();
         // We only print out a line comment if the source location has changed
         // from the previous line comment printed.
@@ -2528,7 +2546,7 @@ void generateFunction(
       instrGen.generate(I);
     }
   }
-
+  OS.disableLineDirectives();
   OS << "}\n";
 }
 
@@ -2568,7 +2586,7 @@ void generateExternC(Module *M, llvh::raw_ostream &OS) {
 /// Returns the cache size necessary to store all the cache indexes used.
 void generateModule(
     Module *M,
-    llvh::raw_ostream &OS,
+    hermes::sh::LineDirectiveEmitter &OS,
     const BytecodeGenerationOptions &options) {
   lowerModuleIR(M, options.optimizationEnabled);
 
@@ -2680,5 +2698,6 @@ void sh::generateSH(
     Module *M,
     llvh::raw_ostream &OS,
     const BytecodeGenerationOptions &options) {
-  generateModule(M, OS, options);
+  LineDirectiveEmitter emitter{OS};
+  generateModule(M, emitter, options);
 }

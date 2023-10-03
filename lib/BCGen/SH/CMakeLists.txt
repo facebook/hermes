@@ -11,6 +11,7 @@ add_hermes_library(hermesSHBackend
   LowerAllocObjectLiteral.cpp
   SH.cpp
   SHRegAlloc.cpp SHRegAlloc.h
+  LineDirectiveEmitter.cpp LineDirectiveEmitter.h
   LINK_OBJLIBS
   hermesBackend
   hermesInst

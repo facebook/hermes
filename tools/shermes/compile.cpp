@@ -245,6 +245,9 @@ bool invokeCC(
     if (params.enableAsserts == ShermesCompileParams::EnableAsserts::off) {
       args.emplace_back("-DNDEBUG");
     }
+    if (params.genOptions.emitLineDirectives) {
+      args.emplace_back("-g");
+    }
     // We depend on reading/writing certain properties in C++ objects in
     // generated C code through C structs that mirror those C++ objects. This
     // means that unrelated types may alias in our code, and we must disable
