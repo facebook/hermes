@@ -226,6 +226,11 @@ class Token {
   void setPunctuator(TokenKind kind) {
     kind_ = kind;
   }
+  /// Set the TokenKind to a given IDENT_OP token.
+  /// Used when converting identifiers to the corresponding ident op token.
+  void setIdentOp(TokenKind kind) {
+    kind_ = kind;
+  }
   void setEof() {
     kind_ = TokenKind::eof;
   }
@@ -721,6 +726,16 @@ class JSLexer {
       }
     }
   };
+
+  /// Convert the current token to an identifier-operator token.
+  /// Identifiers for new TokenKinds can be added here.
+  /// \pre the current token is an identifier which is an IDENT_OP operator.
+  /// \param the IDENT_OP token kind to convert to.
+  void convertCurTokenToIdentOp(TokenKind kind) {
+    assert(token_.getKind() == TokenKind::identifier);
+    assert(token_.getIdentifier()->str() == tokenKindStr(kind));
+    token_.setIdentOp(kind);
+  }
 
  private:
   /// Initialize the storage with the characters between \p begin and \p end.
