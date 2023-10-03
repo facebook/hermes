@@ -160,3 +160,6 @@ print(JSON.stringify(new Intl.DateTimeFormat('en-US', {weekday: 'long',
   timeZone: 'UTC'
 }).formatToParts(new Date(Date.UTC(2020, 0, 2, 3, 45, 00, 30)))));
 // CHECK-NEXT: [{"value":"Thursday","type":"weekday"},{"value":",","type":"literal"},{"value":" ","type":"literal"},{"value":"1","type":"month"},{"value":"/","type":"literal"},{"value":"2","type":"day"},{"value":"/","type":"literal"},{"value":"2020","type":"year"},{"value":",","type":"literal"},{"value":" ","type":"literal"},{"value":"3","type":"hour"},{"value":":","type":"literal"},{"value":"45","type":"minute"},{"value":":","type":"literal"},{"value":"00","type":"second"},{"value":".","type":"literal"},{"value":"030","type":"fractionalSecond"},{"value":" ","type":"literal"},{"value":"AM","type":"dayPeriod"}]
+
+print(new Date(Date.UTC(2020, 0, 2)).toLocaleString("en-US", {weekday: "short", timeZone: "UTC"}))
+// CHECK-NEXT: Thu
