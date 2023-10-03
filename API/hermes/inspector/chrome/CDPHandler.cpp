@@ -236,12 +236,9 @@ class CDPHandler::Impl : public message::RequestHandler,
     }
 
     if (chromeLoc.url.has_value()) {
-      // TODO: still relevant? RN-ism, maybe should move responsibility
-      // elsewhere/out?
-      hermesLoc.fileName = m::stripCachePrevention(chromeLoc.url.value());
+      hermesLoc.fileName = chromeLoc.url.value();
     } else if (chromeLoc.urlRegex.has_value()) {
-      const std::regex regex(
-          m::stripCachePrevention(chromeLoc.urlRegex.value()));
+      const std::regex regex(chromeLoc.urlRegex.value());
       for (const auto &[name, _] : loadedScriptIdByName_) {
         if (std::regex_match(name, regex)) {
           hermesLoc.fileName = name;
