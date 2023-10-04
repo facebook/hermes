@@ -27,6 +27,7 @@ import type {
   ArrayExpression as ArrayExpressionType,
   ArrayPattern as ArrayPatternType,
   ArrayTypeAnnotation as ArrayTypeAnnotationType,
+  AsExpression as AsExpressionType,
   AssignmentExpression as AssignmentExpressionType,
   AssignmentPattern as AssignmentPatternType,
   AwaitExpression as AwaitExpressionType,
@@ -207,6 +208,11 @@ export type ArrayPatternProps = {
 
 export type ArrayTypeAnnotationProps = {
   +elementType: MaybeDetachedNode<ArrayTypeAnnotationType['elementType']>,
+};
+
+export type AsExpressionProps = {
+  +expression: MaybeDetachedNode<AsExpressionType['expression']>,
+  +typeAnnotation: MaybeDetachedNode<AsExpressionType['typeAnnotation']>,
 };
 
 export type AssignmentExpressionProps = {
@@ -1145,6 +1151,19 @@ export function ArrayTypeAnnotation(props: {
   const node = detachedProps<ArrayTypeAnnotationType>(props.parent, {
     type: 'ArrayTypeAnnotation',
     elementType: asDetachedNodeForCodeGen(props.elementType),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function AsExpression(props: {
+  ...$ReadOnly<AsExpressionProps>,
+  +parent?: ESNode,
+}): DetachedNode<AsExpressionType> {
+  const node = detachedProps<AsExpressionType>(props.parent, {
+    type: 'AsExpression',
+    expression: asDetachedNodeForCodeGen(props.expression),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
   return node;

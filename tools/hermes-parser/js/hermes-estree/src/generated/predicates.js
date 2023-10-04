@@ -45,6 +45,10 @@ export function isArrowFunctionExpression(
   return node.type === 'ArrowFunctionExpression';
 }
 
+export function isAsExpression(node: ESNode | Token): boolean %checks {
+  return node.type === 'AsExpression';
+}
+
 export function isAssignmentExpression(node: ESNode | Token): boolean %checks {
   return node.type === 'AssignmentExpression';
 }

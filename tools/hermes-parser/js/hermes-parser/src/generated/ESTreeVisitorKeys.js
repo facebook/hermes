@@ -34,6 +34,7 @@ module.exports = {
     'returnType',
     'predicate',
   ],
+  AsExpression: ['expression', 'typeAnnotation'],
   AssignmentExpression: ['left', 'right'],
   AssignmentPattern: ['left', 'right'],
   AwaitExpression: ['argument'],

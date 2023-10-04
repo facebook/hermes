@@ -451,6 +451,7 @@ export type Expression =
   | ImportExpression
   | ChainExpression
   | TypeCastExpression
+  | AsExpression
   | JSXFragment
   | JSXElement;
 
@@ -1484,6 +1485,11 @@ export interface OptionalIndexedAccessType extends BaseNode {
 
 export interface TypeCastExpression extends BaseNode {
   +type: 'TypeCastExpression';
+  +expression: Expression;
+  +typeAnnotation: TypeAnnotation;
+}
+export interface AsExpression extends BaseNode {
+  +type: 'AsExpression';
   +expression: Expression;
   +typeAnnotation: TypeAnnotation;
 }
