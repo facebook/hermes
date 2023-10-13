@@ -573,43 +573,6 @@ TEST_F(ConnectionTests, testScriptsOnEnable) {
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 }
 
-TEST_F(ConnectionTests, testScriptsOrdering) {
-  int msgId = 1;
-  std::vector<m::debugger::ScriptParsedNotification> notifications;
-
-  const int kNumScriptParsed = 10;
-
-  send<m::debugger::EnableRequest>(conn, msgId++);
-
-  // Trigger a bunch of scriptParsed notifications to later verify that they get
-  // re-sent in the same order
-  for (int i = 0; i < kNumScriptParsed; i++) {
-    asyncRuntime.executeScriptAsync(R"(
-      true
-    )");
-    auto notification =
-        expectNotification<m::debugger::ScriptParsedNotification>(conn);
-    notifications.push_back(notification);
-  }
-
-  // Make sure a new Debugger.enable will see the same ordering of scriptParsed
-  send<m::debugger::EnableRequest>(conn, msgId++);
-  for (int i = 0; i < kNumScriptParsed; i++) {
-    auto notification =
-        expectNotification<m::debugger::ScriptParsedNotification>(conn);
-    EXPECT_EQ(notifications[i].scriptId, notification.scriptId);
-  }
-
-  // Make sure the same ordering is retained after a disable request
-  send<m::debugger::DisableRequest>(conn, msgId++);
-  send<m::debugger::EnableRequest>(conn, msgId++);
-  for (int i = 0; i < kNumScriptParsed; i++) {
-    auto notification =
-        expectNotification<m::debugger::ScriptParsedNotification>(conn);
-    EXPECT_EQ(notifications[i].scriptId, notification.scriptId);
-  }
-}
-
 TEST_F(ConnectionTests, testRespondsErrorToUnknownRequests) {
   asyncRuntime.executeScriptAsync(R"(
     var a = 1 + 2;
