@@ -73,7 +73,8 @@ declare component Foo1() renders SomeComponent;
 // CHECK-NEXT:       "rest": null,
 // CHECK-NEXT:       "typeParameters": null,
 // CHECK-NEXT:       "rendersType": {
-// CHECK-NEXT:         "type": "TypeAnnotation",
+// CHECK-NEXT:         "type": "TypeOperator",
+// CHECK-NEXT:         "operator": "renders",
 // CHECK-NEXT:         "typeAnnotation": {
 // CHECK-NEXT:           "type": "GenericTypeAnnotation",
 // CHECK-NEXT:           "id": {

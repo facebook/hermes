@@ -1165,6 +1165,12 @@ class JSParserImpl {
       SMLoc start,
       bool declare);
 
+  /// This is for parsing the `renders` clause that comes after component
+  /// declarations, declared components, and component types, but not for
+  /// standalone render types. It assumes that you've already checked that there
+  /// is a `renders` clause.
+  Optional<ESTree::Node *> parseComponentRenderTypeFlow(bool componentType);
+
   /// Parse ComponentParameters with the leading '(' and the trailing ')'.
   /// \pre the current token must be '('. \param[out] paramList populated
   /// with the ComponentParameters. \return true on success, false on failure.
