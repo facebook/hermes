@@ -12,6 +12,7 @@
 
 import {
   parseForSnapshotBabel,
+  printForSnapshotESTree,
   parseForSnapshotESTree,
   printForSnapshotBabel,
 } from '../__test_utils__/parse';
@@ -20,6 +21,7 @@ describe('`as` expression', () => {
   const code = 'x as number;';
 
   test('ESTree', async () => {
+    expect(await printForSnapshotESTree(code)).toBe(code.trim());
     expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
   });
 

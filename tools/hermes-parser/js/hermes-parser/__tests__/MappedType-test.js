@@ -15,29 +15,10 @@ import {
   parseForSnapshotBabel,
 } from '../__test_utils__/parse';
 
-describe('ComponentTypeAnnotation', () => {
+describe('MappedType', () => {
   describe('Basic', () => {
     const code = `
-      type T = component();
-    `;
-
-    test('ESTree', async () => {
-      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
-      expect(await printForSnapshotESTree(code)).toBe(code.trim());
-    });
-
-    test('Babel', async () => {
-      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
-      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(
-        `"type T = any;"`,
-      );
-    });
-  });
-
-  describe('Union', () => {
-    const code = `
-type T = component() | null;
-type T = (component() renders Foo) | null;
+      type Mapped = {[key in keyof O]: O[key]};
     `;
 
     test('ESTree', async () => {
@@ -48,20 +29,28 @@ type T = (component() renders Foo) | null;
     test('Babel', async () => {
       expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
       expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
-        "type T = any | null;
-        type T = any | null;"
+        "type Mapped = { any
+        };"
       `);
     });
   });
-  describe('Without parens union', () => {
+
+  describe('Union', () => {
     const code = `
-      type T = component() renders Foo | null;
+      type Mapped = {[key in keyof (O | Z)]: O[key]};
     `;
 
     test('ESTree', async () => {
-      expect(await printForSnapshotESTree(code)).toBe(
-        `type T = (component() renders Foo) | null;`,
-      );
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+        "type Mapped = { any
+        };"
+      `);
     });
   });
 });

@@ -93,7 +93,6 @@ describe('ComponentDeclaration', () => {
       );
     });
   });
-  /* Commenting out these tests for @Pieterv to re-enable after he adds in prettier support
   describe('renders maybe type', () => {
     const code = `
       component Foo() renders? SpecialType {}
@@ -129,7 +128,6 @@ describe('ComponentDeclaration', () => {
       );
     });
   });
-  */
 
   describe('renders type (complex)', () => {
     const code = `

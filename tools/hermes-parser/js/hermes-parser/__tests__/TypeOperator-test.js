@@ -19,7 +19,9 @@ describe('TypeOperator', () => {
   describe('renders', () => {
     describe('Basic', () => {
       const code = `
-        type T = renders Foo;
+type T1 = renders Foo;
+type T2 = renders* Foo;
+type T3 = renders? Foo;
       `;
 
       test('ESTree', async () => {
@@ -29,14 +31,18 @@ describe('TypeOperator', () => {
 
       test('Babel', async () => {
         expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
-        expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(
-          `"type T = any;"`,
-        );
+        expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+          "type T1 = any;
+          type T2 = any;
+          type T3 = any;"
+        `);
       });
     });
     describe('Union', () => {
       const code = `
-        type T = renders (Foo | Bar);
+type T1 = renders (Foo | Bar);
+type T2 = renders* (Foo | Bar);
+type T3 = renders? (Foo | Bar);
       `;
 
       test('ESTree', async () => {
@@ -46,9 +52,11 @@ describe('TypeOperator', () => {
 
       test('Babel', async () => {
         expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
-        expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(
-          `"type T = any;"`,
-        );
+        expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+          "type T1 = any;
+          type T2 = any;
+          type T3 = any;"
+        `);
       });
     });
     describe('Nested Union', () => {
