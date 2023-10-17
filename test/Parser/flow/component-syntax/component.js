@@ -146,6 +146,58 @@ component Foo1() renders SomeComponent | number {}
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+component Foo1() renders? SomeComponent {}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ComponentDeclaration",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "Foo1"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "params": [],
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "BlockStatement",
+// CHECK-NEXT:         "body": []
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "rendersType": {
+// CHECK-NEXT:         "type": "TypeOperator",
+// CHECK-NEXT:         "operator": "renders?",
+// CHECK-NEXT:         "typeAnnotation": {
+// CHECK-NEXT:           "type": "GenericTypeAnnotation",
+// CHECK-NEXT:           "id": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "SomeComponent"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "typeParameters": null
+// CHECK-NEXT:         }
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+component Foo1() renders* SomeComponent {}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ComponentDeclaration",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "Foo1"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "params": [],
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "BlockStatement",
+// CHECK-NEXT:         "body": []
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "rendersType": {
+// CHECK-NEXT:         "type": "TypeOperator",
+// CHECK-NEXT:         "operator": "renders*",
+// CHECK-NEXT:         "typeAnnotation": {
+// CHECK-NEXT:           "type": "GenericTypeAnnotation",
+// CHECK-NEXT:           "id": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "SomeComponent"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "typeParameters": null
+// CHECK-NEXT:         }
+// CHECK-NEXT:       }
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

@@ -237,6 +237,7 @@ class JSParserImpl {
 
 #if HERMES_PARSE_FLOW
   bool allowAnonFunctionType_{false};
+  Optional<UniqueString *> parseRenderTypeOperator();
 #endif
 #if HERMES_PARSE_FLOW || HERMES_PARSE_TS
   bool allowConditionalType_{false};
@@ -313,6 +314,8 @@ class JSParserImpl {
 
   UniqueString *componentIdent_;
   UniqueString *rendersIdent_;
+  UniqueString *rendersMaybeOperator_;
+  UniqueString *rendersStarOperator_;
 #endif
 
 #if HERMES_PARSE_TS
