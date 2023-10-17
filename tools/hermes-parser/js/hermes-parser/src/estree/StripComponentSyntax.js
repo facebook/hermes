@@ -43,22 +43,12 @@ import type {
 import {SimpleTransform} from '../transform/SimpleTransform';
 import {shallowCloneNode} from '../transform/astNodeMutationHelpers';
 import {SimpleTraverser} from '../traverse/SimpleTraverser';
+import {createSyntaxError} from '../utils/createSyntaxError';
 
 const nodeWith = SimpleTransform.nodeWith;
 
 // Rely on the mapper to fix up parent relationships.
 const EMPTY_PARENT: $FlowFixMe = null;
-
-function createSyntaxError(node: ESNode, err: string): SyntaxError {
-  const syntaxError = new SyntaxError(err);
-  // $FlowExpectedError[prop-missing]
-  syntaxError.loc = {
-    line: node.loc.start.line,
-    column: node.loc.start.column,
-  };
-
-  return syntaxError;
-}
 
 function createDefaultPosition(): Position {
   return {

@@ -28,10 +28,9 @@ describe('MappedType', () => {
 
     test('Babel', async () => {
       expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
-      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
-        "type Mapped = { any
-        };"
-      `);
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(
+        `"type Mapped = any;"`,
+      );
     });
   });
 
@@ -47,10 +46,9 @@ describe('MappedType', () => {
 
     test('Babel', async () => {
       expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
-      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
-        "type Mapped = { any
-        };"
-      `);
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(
+        `"type Mapped = any;"`,
+      );
     });
   });
 });

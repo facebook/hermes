@@ -49,6 +49,7 @@ import type {VisitorKeys} from '../generated/ESTreeVisitorKeys';
 import {SimpleTransform} from '../transform/SimpleTransform';
 import {SimpleTraverser} from '../traverse/SimpleTraverser';
 import FlowVisitorKeys from '../generated/ESTreeVisitorKeys';
+import {createSyntaxError} from '../utils/createSyntaxError';
 
 // Rely on the mapper to fix up parent relationships.
 const EMPTY_PARENT: $FlowFixMe = null;
@@ -94,17 +95,6 @@ function nodeWith<T: ESNode>(node: T, overrideProps: Partial<T>): T {
     overrideProps,
     FlowESTreeAndBabelVisitorKeys,
   );
-}
-
-function createSyntaxError(node: ESNode, err: string): SyntaxError {
-  const syntaxError = new SyntaxError(err);
-  // $FlowExpectedError[prop-missing]
-  syntaxError.loc = {
-    line: node.loc.start.line,
-    column: node.loc.start.column,
-  };
-
-  return syntaxError;
 }
 
 /**
