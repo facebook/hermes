@@ -3055,25 +3055,19 @@ exports[`ComponentDeclaration renders type (complex) Babel 1`] = `
       "returnType": {
         "type": "TypeAnnotation",
         "typeAnnotation": {
-          "type": "UnionTypeAnnotation",
-          "types": [
-            {
-              "id": {
-                "name": "SpecialType",
-                "type": "Identifier",
-              },
-              "type": "GenericTypeAnnotation",
-              "typeParameters": null,
+          "id": {
+            "id": {
+              "name": "Node",
+              "type": "Identifier",
             },
-            {
-              "id": {
-                "name": "OtherSpecialType",
-                "type": "Identifier",
-              },
-              "type": "GenericTypeAnnotation",
-              "typeParameters": null,
+            "qualification": {
+              "name": "React",
+              "type": "Identifier",
             },
-          ],
+            "type": "QualifiedTypeIdentifier",
+          },
+          "type": "GenericTypeAnnotation",
+          "typeParameters": null,
         },
       },
       "type": "FunctionDeclaration",
@@ -3099,7 +3093,8 @@ exports[`ComponentDeclaration renders type (complex) ESTree 1`] = `
       },
       "params": [],
       "rendersType": {
-        "type": "TypeAnnotation",
+        "operator": "renders",
+        "type": "TypeOperator",
         "typeAnnotation": {
           "type": "UnionTypeAnnotation",
           "types": [
@@ -3155,8 +3150,15 @@ exports[`ComponentDeclaration renders type Babel 1`] = `
         "type": "TypeAnnotation",
         "typeAnnotation": {
           "id": {
-            "name": "SpecialType",
-            "type": "Identifier",
+            "id": {
+              "name": "Node",
+              "type": "Identifier",
+            },
+            "qualification": {
+              "name": "React",
+              "type": "Identifier",
+            },
+            "type": "QualifiedTypeIdentifier",
           },
           "type": "GenericTypeAnnotation",
           "typeParameters": null,
@@ -3185,7 +3187,8 @@ exports[`ComponentDeclaration renders type ESTree 1`] = `
       },
       "params": [],
       "rendersType": {
-        "type": "TypeAnnotation",
+        "operator": "renders",
+        "type": "TypeOperator",
         "typeAnnotation": {
           "id": {
             "name": "SpecialType",
@@ -3522,8 +3525,15 @@ exports[`ComponentDeclaration type parameters Babel 1`] = `
         "type": "TypeAnnotation",
         "typeAnnotation": {
           "id": {
-            "name": "T2",
-            "type": "Identifier",
+            "id": {
+              "name": "Node",
+              "type": "Identifier",
+            },
+            "qualification": {
+              "name": "React",
+              "type": "Identifier",
+            },
+            "type": "QualifiedTypeIdentifier",
           },
           "type": "GenericTypeAnnotation",
           "typeParameters": null,
@@ -3602,7 +3612,8 @@ exports[`ComponentDeclaration type parameters ESTree 1`] = `
         },
       ],
       "rendersType": {
-        "type": "TypeAnnotation",
+        "operator": "renders",
+        "type": "TypeOperator",
         "typeAnnotation": {
           "id": {
             "name": "T2",

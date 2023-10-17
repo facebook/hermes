@@ -54,6 +54,7 @@ import type {
   TypeAnnotation,
   TypeAnnotationType,
   TypeCastExpression,
+  TypeOperator,
   TypeParameterDeclaration,
   TypeParameterInstantiation,
   VariableDeclaration,
@@ -1108,7 +1109,7 @@ function convertComponentDeclaration(
     }
 
     return [
-      asDetachedNode<TypeAnnotation>(rendersType),
+      asDetachedNode<TypeOperator>(rendersType),
       analyzeTypeDependencies(rendersType, context),
     ];
   })();

@@ -181,7 +181,8 @@ exports[`DeclareComponent Params and renders ESTree 1`] = `
         },
       ],
       "rendersType": {
-        "type": "TypeAnnotation",
+        "operator": "renders",
+        "type": "TypeOperator",
         "typeAnnotation": {
           "id": {
             "name": "Foo",
