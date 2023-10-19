@@ -12,13 +12,10 @@ if(HERMES_ENABLE_DEBUGGER)
   set(INSPECTOR_DEPS hermesInspector_rtti_exception)
 endif()
 
-set(HERMES_ENABLE_EH ON)
-
-# synthTraceParser uses exceptions but not RTTI.
-# TODO(T127739425): Switch it to either use both exceptions and RTTI or neither.
 add_hermes_library(synthTraceParser SynthTraceParser.cpp LINK_LIBS hermesSupport hermesParser synthTrace)
 
 # All remaining targets in this file use both exceptions and RTTI.
+set(HERMES_ENABLE_EH ON)
 set(HERMES_ENABLE_RTTI ON)
 
 # List the files that define exported functions explicitly, and they can link
