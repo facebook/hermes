@@ -267,8 +267,7 @@ bool LowerAllocObject::runOnFunction(Function *F) {
     for (Instruction &I : BB)
       for (size_t i = 0; i < I.getNumOperands(); ++i)
         if (auto *A = llvh::dyn_cast<AllocObjectInst>(I.getOperand(i)))
-          if (llvh::isa<EmptySentinel>(A->getParentObject()))
-            tryAdd(A, &I, allocUsers[A][&BB]);
+          tryAdd(A, &I, allocUsers[A][&BB]);
 
   bool changed = false;
   DominanceInfo DI(F);
@@ -304,7 +303,8 @@ static bool canSerialize(Value *V) {
 }
 
 uint32_t LowerAllocObject::estimateBestNumElemsToSerialize(
-    const StoreList &users) {
+    const StoreList &users,
+    bool hasParent) {
   // We want to track curSaving to avoid serializing too many place holders
   // which ends up causing a big size regression.
   // We set curSaving to be the delta of the size of two instructions to avoid
@@ -312,6 +312,10 @@ uint32_t LowerAllocObject::estimateBestNumElemsToSerialize(
   // significantly increase bytecode size.
   int32_t curSaving = static_cast<int32_t>(sizeof(inst::NewObjectInst)) -
       static_cast<int32_t>(sizeof(inst::NewObjectWithBufferInst));
+  // If there is a parent set on the new object, account for the CallBuiltin to
+  // explicitly set it.
+  if (hasParent)
+    curSaving -= sizeof(inst::CallBuiltinInst);
   int32_t maxSaving = 0;
   uint32_t optimumStopIndex = 0;
   uint32_t nonLiteralPlaceholderCount = 0;
@@ -358,7 +362,8 @@ bool LowerAllocObject::lowerAllocObjectBuffer(
     AllocObjectInst *allocInst,
     const StoreList &users,
     uint32_t maxSize) {
-  auto size = estimateBestNumElemsToSerialize(users);
+  auto size = estimateBestNumElemsToSerialize(
+      users, !llvh::isa<EmptySentinel>(allocInst->getParentObject()));
   if (size == 0) {
     return false;
   }
@@ -412,6 +417,14 @@ bool LowerAllocObject::lowerAllocObjectBuffer(
   builder.setInsertionPoint(allocInst);
   auto *alloc = builder.createHBCAllocObjectFromBufferInst(
       prop_map, allocInst->getSize());
+
+  // HBCAllocObjectFromBuffer does not take a prototype argument. So if the
+  // AllocObjectInst had a prototype set, make an explicit call to set it.
+  if (!llvh::isa<EmptySentinel>(allocInst->getParentObject())) {
+    builder.createCallBuiltinInst(
+        BuiltinMethod::HermesBuiltin_silentSetPrototypeOf,
+        {alloc, allocInst->getParentObject()});
+  }
   allocInst->replaceAllUsesWith(alloc);
   allocInst->eraseFromParent();
 
