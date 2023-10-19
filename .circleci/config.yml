@@ -15,7 +15,7 @@ jobs:
   test-macos:
     macos:
       xcode: 13.4.1
-    resource_class: large
+    resource_class: macos.m1.medium.gen1
     parameters:
       sanitize:
         type: string
