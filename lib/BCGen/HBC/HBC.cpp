@@ -76,7 +76,7 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
   PM.addPass(new DedupReifyArguments());
   PM.addPass(new LowerSwitchIntoJumpTables());
   PM.addPass(new SwitchLowering());
-  PM.addPass(new LoadConstants(options.optimizationEnabled));
+  PM.addPass(new LoadConstants());
   if (options.optimizationEnabled) {
     // Lowers AllocObjects and its sequential literal properties into a single
     // HBCAllocObjectFromBufferInst
