@@ -320,7 +320,7 @@ static bool canSerialize(Value *V) {
 }
 
 uint32_t LowerAllocObject::estimateBestNumElemsToSerialize(
-    llvh::SmallVectorImpl<StoreNewOwnPropertyInst *> &users) {
+    const StoreList &users) {
   // We want to track curSaving to avoid serializing too many place holders
   // which ends up causing a big size regression.
   // We set curSaving to be the delta of the size of two instructions to avoid
@@ -372,7 +372,7 @@ uint32_t LowerAllocObject::estimateBestNumElemsToSerialize(
 
 bool LowerAllocObject::lowerAllocObjectBuffer(
     AllocObjectInst *allocInst,
-    llvh::SmallVectorImpl<StoreNewOwnPropertyInst *> &users,
+    const StoreList &users,
     uint32_t maxSize) {
   auto size = estimateBestNumElemsToSerialize(users);
   if (size == 0) {
