@@ -577,10 +577,25 @@ class FlowChecker::ExprVisitor {
 
     // The type is either the type of the identifier or "any".
     Type *type = outer_.flowContext_.findDeclType(decl);
+
     if (!type && !sema::Decl::isKindGlobal(decl->kind)) {
-      outer_.sm_.error(
-          node->getSourceRange(), "local variable used prior to declaration");
+      // Assume "any".
+      // If we're in the same function as decl was declared,
+      // then IRGen can report TDZ violations early when applicable.
+      // See FlowChecker::AnnotateScopeDecls doc-comment.
+      type = outer_.flowContext_.getAny();
+
+      // Report a warning because this is likely unintended.
+      // The following code errors in Flow but not in untyped JS:
+      //   x = 10;
+      //   var x = x + 1;
+      // So we don't error to maintain compatibility when there's no
+      // annotations.
+      outer_.sm_.warning(
+          node->getSourceRange(),
+          "local variable may be used prior to declaration, assuming 'any'");
     }
+
     outer_.setNodeType(node, type ? type : outer_.flowContext_.getAny());
   }
 
@@ -2504,12 +2519,89 @@ class FlowChecker::DeclareScopeTypes {
   }
 };
 
+/// AnnotateScopeDecls needs to not report errors when visiting a closure
+/// to infer a variable declaration's type:
+/// \code
+///   let func = () => { let a = b; }
+///   let b = 10;
+/// \endcode
+///
+/// So we do the following:
+/// 1. Iterate variable declarations with annotations/literals to record types,
+///   but do not visit their initializers.
+/// 2. Iterate all declarations and visit variable initializers to do inference,
+///   descending into functions along the way.
+///
+/// While visiting an identifier in step 2, if the variable has no type yet,
+/// it means that it has no type annotation AND its type hasn't been inferred.
+/// Assume "any", because:
+/// * If it's 'var': then it's untyped and may be init'ed later, assume "any".
+/// * If it's 'let':
+///   * If we're in the same function, it's declared late, assume "any",
+///     and IRGen will report a TDZ error early when possible.
+///   * If we're in a different function the variable could be initialized in
+///     the other function, assume "any".
 class FlowChecker::AnnotateScopeDecls {
   FlowChecker &outer;
 
  public:
   AnnotateScopeDecls(FlowChecker &outer, const sema::ScopeDecls &decls)
       : outer(outer) {
+    setTypesForAnnotatedVariables(decls);
+    annotateAllScopeDecls(decls);
+  }
+
+ private:
+  /// Step 1 above.
+  /// Iterate all variable declarations with type annotations or literal
+  /// initializers and register them.
+  void setTypesForAnnotatedVariables(const sema::ScopeDecls &decls) {
+    for (ESTree::Node *declNode : decls) {
+      if (auto *declaration =
+              llvh::dyn_cast<ESTree::VariableDeclarationNode>(declNode)) {
+        for (ESTree::Node &n : declaration->_declarations) {
+          auto *declarator = llvh::cast<ESTree::VariableDeclaratorNode>(&n);
+          if (auto *id =
+                  llvh::dyn_cast<ESTree::IdentifierNode>(declarator->_id)) {
+            sema::Decl *decl = outer.getDecl(id);
+            // Global properties don't have sound types, let the
+            // annotateVariableDeclaration call handle it later.
+            if (sema::Decl::isKindGlobal(decl->kind)) {
+              continue;
+            }
+            if (id->_typeAnnotation) {
+              // Found a type annotation on a local variable declaration.
+              Type *type = outer.parseTypeAnnotation(
+                  llvh::cast<ESTree::TypeAnnotationNode>(id->_typeAnnotation)
+                      ->_typeAnnotation);
+              outer.recordDecl(decl, type, id, declarator);
+              continue;
+            }
+            // Check for literal initializers.
+            if (declarator->_init &&
+                (llvh::isa<ESTree::NullLiteralNode>(declarator->_init) ||
+                 llvh::isa<ESTree::NumericLiteralNode>(declarator->_init) ||
+                 llvh::isa<ESTree::BooleanLiteralNode>(declarator->_init) ||
+                 llvh::isa<ESTree::StringLiteralNode>(declarator->_init) ||
+                 llvh::isa<ESTree::RegExpLiteralNode>(declarator->_init) ||
+                 llvh::isa<ESTree::BigIntLiteralNode>(declarator->_init))) {
+              outer.visitExpression(declarator->_init, declarator);
+              outer.recordDecl(
+                  outer.getDecl(id),
+                  outer.getNodeTypeOrAny(declarator->_init),
+                  id,
+                  declarator);
+              continue;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /// Step 2 above.
+  /// Visit all declarations and attempt to infer variable types.
+  void annotateAllScopeDecls(const sema::ScopeDecls &decls) {
     for (ESTree::Node *declNode : decls) {
       if (auto *declaration =
               llvh::dyn_cast<ESTree::VariableDeclarationNode>(declNode)) {
@@ -2541,13 +2633,16 @@ class FlowChecker::AnnotateScopeDecls {
     }
   }
 
- private:
   void annotateVariableDeclaration(
       ESTree::VariableDeclarationNode *declaration) {
     for (ESTree::Node &n : declaration->_declarations) {
       auto *declarator = llvh::cast<ESTree::VariableDeclaratorNode>(&n);
       if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(declarator->_id)) {
         sema::Decl *decl = outer.getDecl(id);
+        if (outer.flowContext_.findDeclType(decl)) {
+          // This decl was already handled in setTypesForAnnotatedVariables.
+          continue;
+        }
         Type *type = outer.parseOptionalTypeAnnotation(id->_typeAnnotation);
 
         // Global properties don't have sound types, since they can be
