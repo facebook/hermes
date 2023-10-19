@@ -50,7 +50,6 @@ add_hermes_library(hermesFrontend
   IR/Instrs.cpp
   Utils/Dumper.cpp
   Optimizer/Wasm/WasmIntrinsics.cpp
-  Optimizer/Wasm/EmitWasmIntrinsics.cpp
   LINK_LIBS hermesSupport hermesFrontEndDefs hermesAST hermesParser
 )
 
