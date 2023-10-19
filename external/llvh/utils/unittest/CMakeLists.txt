@@ -38,7 +38,7 @@ if(CXX_SUPPORTS_COVERED_SWITCH_DEFAULT_FLAG)
   add_definitions("-Wno-covered-switch-default")
 endif()
 
-set(HERMES_ENABLE_RTTI 1)
+set(HERMES_ENABLE_EH_RTTI ON)
 add_definitions( -DGTEST_HAS_RTTI=0 )
 
 if (NOT LLVM_ENABLE_THREADS)

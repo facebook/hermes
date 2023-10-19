@@ -4,7 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 if(HERMES_ENABLE_FUZZILLI)
-    set(HERMES_ENABLE_EH ON)
+    set(HERMES_ENABLE_EH_RTTI ON)
     set(HERMES_ENABLE_FUZZILLI ON)
 
     add_hermes_tool(fuzzilli

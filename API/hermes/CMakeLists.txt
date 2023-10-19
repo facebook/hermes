@@ -15,8 +15,7 @@ endif()
 add_hermes_library(synthTraceParser SynthTraceParser.cpp LINK_LIBS hermesSupport hermesParser synthTrace)
 
 # All remaining targets in this file use both exceptions and RTTI.
-set(HERMES_ENABLE_EH ON)
-set(HERMES_ENABLE_RTTI ON)
+set(HERMES_ENABLE_EH_RTTI ON)
 
 # List the files that define exported functions explicitly, and they can link
 # against the internal functionality they need.

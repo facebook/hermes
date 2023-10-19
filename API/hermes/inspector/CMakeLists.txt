@@ -15,8 +15,7 @@ set(no_rtti_no_exception_SRC
 
 add_hermes_library(hermesInspector_no_rtti_no_exception ${no_rtti_no_exception_SRC} LINK_LIBS jsi hermesapi)
 
-set(HERMES_ENABLE_EH ON)
-set(HERMES_ENABLE_RTTI ON)
+set(HERMES_ENABLE_EH_RTTI ON)
 set(rtti_exception_SRC
         chrome/CallbackOStream.cpp
         chrome/RemoteObjectConverters.cpp

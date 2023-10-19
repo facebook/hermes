@@ -3,7 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-set(HERMES_ENABLE_RTTI ON)
+set(HERMES_ENABLE_EH_RTTI ON)
 add_hermes_library(hermesPublic rtti.cpp)
 target_include_directories(hermesPublic PUBLIC ../../)
 

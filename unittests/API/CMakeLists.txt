@@ -25,8 +25,7 @@ set(HERMES_LINK_COMPONENTS LLVHSupport)
 add_hermes_library(SegmentTestCompile STATIC ${APISegmentTestCompileSources} LINK_LIBS hermesHBCBackend)
 
 # Turn on EH and RTTI for APITests
-set(HERMES_ENABLE_EH ON)
-set(HERMES_ENABLE_RTTI ON)
+set(HERMES_ENABLE_EH_RTTI ON)
 # For some reason (bug?) add_unittest() is clearing LLVM_REQUIRES_RTTI, so
 # we need to set this one.
 set(LLVM_ENABLE_RTTI ON)
