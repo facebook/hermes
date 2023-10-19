@@ -243,7 +243,7 @@ bool LowerAllocObject::runOnFunction(Function *F) {
     if (!stores.empty() && !stores.back())
       return;
     auto *SI = llvh::dyn_cast<StoreNewOwnPropertyInst>(U);
-    if (!SI || SI->getStoredValue() == A) {
+    if (!SI || SI->getStoredValue() == A || !SI->getIsEnumerable()) {
       // A user that's not a StoreNewOwnPropertyInst storing into the object
       // created by allocInst. We have to stop processing here. Note that we
       // check the stored value instead of the target object so that we omit
