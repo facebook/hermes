@@ -171,16 +171,17 @@ function helloWorld() {
 // CHECK-NEXT:frame = [obj: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [obj]: any
-// CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "dummy": string
-// CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) "func": string, %1: any
-// CHECK-NEXT:       StoreFrameInst %2: object, [obj]: any
-// CHECK-NEXT:  %4 = GetTemplateObjectInst (:any) 5: number, true: boolean, "hello world!": string
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) [obj]: any
-// CHECK-NEXT:  %6 = LoadPropertyInst (:any) %5: any, "func": string
-// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, %5: any, %4: any
-// CHECK-NEXT:       ReturnInst %7: any
+// CHECK-NEXT:  %1 = AllocObjectInst (:object) 1: number, empty: any
+// CHECK-NEXT:  %2 = LoadPropertyInst (:any) globalObject: object, "dummy": string
+// CHECK-NEXT:       StoreNewOwnPropertyInst %2: any, %1: object, "func": string, true: boolean
+// CHECK-NEXT:       StoreFrameInst %1: object, [obj]: any
+// CHECK-NEXT:  %5 = GetTemplateObjectInst (:any) 5: number, true: boolean, "hello world!": string
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) [obj]: any
+// CHECK-NEXT:  %7 = LoadPropertyInst (:any) %6: any, "func": string
+// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, %6: any, %5: any
+// CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
+// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function callExpr(): any

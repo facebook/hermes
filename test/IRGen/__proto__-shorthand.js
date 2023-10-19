@@ -66,11 +66,14 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:       StoreFrameInst %0: any, [func]: any
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [__proto__]: any
 // CHECK-NEXT:       StoreFrameInst 42: number, [__proto__]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) [__proto__]: any
-// CHECK-NEXT:  %5 = AllocObjectLiteralInst (:object) "__proto__": string, %4: any, "a": string, 2: number, "b": string, 3: number
-// CHECK-NEXT:       ReturnInst %5: object
+// CHECK-NEXT:  %4 = AllocObjectInst (:object) 3: number, empty: any
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) [__proto__]: any
+// CHECK-NEXT:       StoreNewOwnPropertyInst %5: any, %4: object, "__proto__": string, true: boolean
+// CHECK-NEXT:       StoreNewOwnPropertyInst 2: number, %4: object, "a": string, true: boolean
+// CHECK-NEXT:       StoreNewOwnPropertyInst 3: number, %4: object, "b": string, true: boolean
+// CHECK-NEXT:       ReturnInst %4: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
+// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function protoShorthandDup(func: any): any
