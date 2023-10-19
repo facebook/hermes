@@ -31,8 +31,8 @@ var {} = x;
 // CHECK-NEXT:  %8 = TryLoadGlobalPropertyInst (:any) globalObject: object, "x": string
 // CHECK-NEXT:  %9 = LoadPropertyInst (:any) %8: any, "a": string
 // CHECK-NEXT:        StorePropertyLooseInst %9: any, globalObject: object, "b": string
-// CHECK-NEXT:  %11 = AllocObjectLiteralInst (:object) "a": string, 0: number
-// CHECK-NEXT:  %12 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %11: object, null: null
+// CHECK-NEXT:  %11 = AllocObjectInst (:object) 1: number, null: null
+// CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %11: object, "a": string, true: boolean
 // CHECK-NEXT:  %13 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %14 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %13: object, %8: any, %11: object
 // CHECK-NEXT:        StorePropertyLooseInst %14: any, globalObject: object, "rest": string
@@ -43,8 +43,8 @@ var {} = x;
 // CHECK-NEXT:        StorePropertyLooseInst %19: any, globalObject: object, "b": string
 // CHECK-NEXT:  %21 = LoadPropertyInst (:any) %16: any, "c": string
 // CHECK-NEXT:        StorePropertyLooseInst %21: any, globalObject: object, "d": string
-// CHECK-NEXT:  %23 = AllocObjectLiteralInst (:object) "c": string, 0: number
-// CHECK-NEXT:  %24 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %23: object, null: null
+// CHECK-NEXT:  %23 = AllocObjectInst (:object) 2: number, null: null
+// CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %23: object, "c": string, true: boolean
 // CHECK-NEXT:        StorePropertyLooseInst 0: number, %23: object, %18: any
 // CHECK-NEXT:  %26 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %27 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %26: object, %16: any, %23: object
