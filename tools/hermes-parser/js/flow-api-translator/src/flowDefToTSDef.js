@@ -3330,9 +3330,11 @@ const getTransforms = (
         typeAnnotation: transformTypeAnnotationType(node.argument),
       };
     },
-    TypeOperator(node: FlowESTree.TypeOperator): TSESTree.TypeNode {
+    TypeOperator(node: FlowESTree.RendersType): TSESTree.TypeNode {
       switch (node.operator) {
-        case 'renders': {
+        case 'renders':
+        case 'renders?':
+        case 'renders*': {
           const hasReactImport = isReactImport(node, 'React');
           return {
             type: 'TSTypeReference',
