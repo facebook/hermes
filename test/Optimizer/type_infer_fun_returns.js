@@ -41,9 +41,10 @@ function g14(z) {
 // CHECK-NEXT:  %8 = CallInst (:any) %7: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %9 = BinaryAddInst (:string|number) %8: any, 1: number
 // CHECK-NEXT:  %10 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %9: string|number
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %m(): undefined
-// CHECK-NEXT:  %12 = AllocObjectLiteralInst (:object) "m": string, %11: object
-// CHECK-NEXT:        ReturnInst %12: object
+// CHECK-NEXT:  %11 = AllocObjectInst (:object) 1: number, empty: any
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %m(): undefined
+// CHECK-NEXT:        StoreNewOwnPropertyInst %12: object, %11: object, "m": string, true: boolean
+// CHECK-NEXT:        ReturnInst %11: object
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

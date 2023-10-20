@@ -31,10 +31,10 @@ function test_call_after_builtin() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {loc0}    %0 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  {loc1}    %1 = TryLoadGlobalPropertyInst (:any) {loc0} %0: object, "print": string
-// CHECK-NEXT:  {loc0}    %2 = HBCAllocObjectFromBufferInst (:object) 1: number, "valueOf": string, null: null
+// CHECK-NEXT:  {loc0}    %2 = AllocObjectInst (:object) 1: number, empty: any
 // CHECK-NEXT:  {loc2}    %3 = HBCCreateEnvironmentInst (:environment)
 // CHECK-NEXT:  {loc2}    %4 = HBCCreateFunctionInst (:object) %valueOf(): number, {loc2} %3: environment
-// CHECK-NEXT:                 StorePropertyLooseInst {loc2} %4: object, {loc0} %2: object, "valueOf": string
+// CHECK-NEXT:                 StoreNewOwnPropertyInst {loc2} %4: object, {loc0} %2: object, "valueOf": string, true: boolean
 // CHECK-NEXT:  {stack[0]}  %6 = HBCLoadConstInst (:number) 3: number
 // CHECK-NEXT:  {stack[4]}  %7 = ImplicitMovInst (:undefined) undefined: undefined
 // CHECK-NEXT:  {stack[3]}  %8 = ImplicitMovInst (:empty) empty: empty
