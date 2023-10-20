@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -exec %s  | %FileCheck --match-full-lines %s
+// RUN: ulimit -s 512 && %shermes -exec %s  | %FileCheck --match-full-lines %s
 
 "use strict";
 
