@@ -9,10 +9,7 @@ add_hermes_tool(hcds
   ${ALL_HEADER_FILES}
   )
 
-target_link_libraries(hcds
-  hermesapi
-  hermesInspector_rtti_exception
-)
+target_link_libraries(hcds hermesapi)
 
 install(TARGETS hcds
   RUNTIME DESTINATION bin

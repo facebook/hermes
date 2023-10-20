@@ -7,9 +7,40 @@
 add_hermes_library(compileJS CompileJS.cpp LINK_LIBS hermesPublic)
 
 if(HERMES_ENABLE_DEBUGGER)
-  add_subdirectory(inspector)
-  set(INSPECTOR_API_SOURCES inspector/RuntimeAdapter.cpp inspector/chrome/CDPHandler.cpp)
-  set(INSPECTOR_DEPS hermesInspector_rtti_exception)
+  if(HERMES_ENABLE_TOOLS AND NOT WIN32)
+    add_subdirectory(inspector/chrome/cli)
+  endif()
+
+  # Some inspector sources need to be built without RTTI because they consume
+  # internal data structures compiled without RTTI.
+  set(INSPECTOR_NO_EH_RTTI_SOURCES
+    inspector/chrome/JSONValueInterfaces.cpp
+    inspector/chrome/MessageConverters.cpp
+    inspector/chrome/MessageInterfaces.cpp
+    inspector/chrome/MessageTypes.cpp
+  )
+
+  if (NOT HERMES_ENABLE_EH_RTTI)
+    if (GCC_COMPATIBLE)
+      set_property(SOURCE ${INSPECTOR_NO_EH_RTTI_SOURCES} APPEND_STRING
+        PROPERTY COMPILE_FLAGS "-fno-exceptions -fno-rtti")
+    elseif (MSVC)
+      set_property(SOURCE ${INSPECTOR_NO_EH_RTTI_SOURCES} APPEND_STRING
+        PROPERTY COMPILE_FLAGS "/EHs-c- /GR-")
+    endif ()
+  endif ()
+
+  set(INSPECTOR_API_SOURCES
+    inspector/chrome/CallbackOStream.cpp
+    inspector/chrome/CDPHandler.cpp
+    inspector/chrome/RemoteObjectConverters.cpp
+    inspector/chrome/RemoteObjectsTable.cpp
+    inspector/RuntimeAdapter.cpp
+    ${INSPECTOR_NO_EH_RTTI_SOURCES}
+  )
+
+  # Even in lean builds, the inspector needs the parser to parse JSON.
+  set(INSPECTOR_DEPS hermesParser)
 endif()
 
 add_hermes_library(synthTraceParser SynthTraceParser.cpp LINK_LIBS hermesSupport hermesParser synthTrace)
