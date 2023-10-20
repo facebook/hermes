@@ -92,13 +92,14 @@ function f5(o) {
 // CHECK-NEXT:       StoreFrameInst %6: any, [a]: any
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) %5: any, "b": string
 // CHECK-NEXT:       StoreFrameInst %8: any, [b]: any
-// CHECK-NEXT:  %10 = AllocObjectLiteralInst (:object) "a": string, 0: number, "b": string, 0: number
-// CHECK-NEXT:  %11 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %10: object, null: null
-// CHECK-NEXT:  %12 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:  %13 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: object, %5: any, %10: object
-// CHECK-NEXT:        StoreFrameInst %13: any, [rest]: any
-// CHECK-NEXT:  %15 = LoadFrameInst (:any) [rest]: any
-// CHECK-NEXT:        ReturnInst %15: any
+// CHECK-NEXT:  %10 = AllocObjectInst (:object) 2: number, null: null
+// CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %10: object, "a": string, true: boolean
+// CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %10: object, "b": string, true: boolean
+// CHECK-NEXT:  %13 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %14 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %13: object, %5: any, %10: object
+// CHECK-NEXT:        StoreFrameInst %14: any, [rest]: any
+// CHECK-NEXT:  %16 = LoadFrameInst (:any) [rest]: any
+// CHECK-NEXT:        ReturnInst %16: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
@@ -113,8 +114,8 @@ function f5(o) {
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [t]: any
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %4: any, "a": string
 // CHECK-NEXT:       StoreFrameInst %5: any, [a]: any
-// CHECK-NEXT:  %7 = AllocObjectLiteralInst (:object) "a": string, 0: number
-// CHECK-NEXT:  %8 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %7: object, null: null
+// CHECK-NEXT:  %7 = AllocObjectInst (:object) 1: number, null: null
+// CHECK-NEXT:       StoreNewOwnPropertyInst 0: number, %7: object, "a": string, true: boolean
 // CHECK-NEXT:  %9 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %10 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %9: object, %4: any, %7: object
 // CHECK-NEXT:        StoreFrameInst %10: any, [rest]: any
@@ -133,8 +134,8 @@ function f5(o) {
 // CHECK-NEXT:  %6 = LoadPropertyInst (:any) %5: any, "a": string
 // CHECK-NEXT:       StoreFrameInst %6: any, [a]: any
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [o]: any
-// CHECK-NEXT:  %9 = AllocObjectLiteralInst (:object) "a": string, 0: number
-// CHECK-NEXT:  %10 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %9: object, null: null
+// CHECK-NEXT:  %9 = AllocObjectInst (:object) 1: number, null: null
+// CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %9: object, "a": string, true: boolean
 // CHECK-NEXT:  %11 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %12 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %11: object, %5: any, %9: object
 // CHECK-NEXT:        StorePropertyLooseInst %12: any, %8: any, "rest": string
@@ -153,8 +154,8 @@ function f5(o) {
 // CHECK-NEXT:       StoreFrameInst %5: any, [a]: any
 // CHECK-NEXT:  %7 = LoadPropertyInst (:any) %4: any, "a": string
 // CHECK-NEXT:       StoreFrameInst %7: any, [a]: any
-// CHECK-NEXT:  %9 = AllocObjectLiteralInst (:object) "a": string, 0: number
-// CHECK-NEXT:  %10 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %9: object, null: null
+// CHECK-NEXT:  %9 = AllocObjectInst (:object) 1: number, null: null
+// CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %9: object, "a": string, true: boolean
 // CHECK-NEXT:  %11 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %12 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %11: object, %4: any, %9: object
 // CHECK-NEXT:        StoreFrameInst %12: any, [rest]: any
