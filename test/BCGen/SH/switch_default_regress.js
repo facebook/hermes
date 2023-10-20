@@ -56,18 +56,18 @@ function foo(i) {
 // CHKLIR:function foo(i: any): any
 // CHKLIR-NEXT:frame = []
 // CHKLIR-NEXT:%BB0:
-// CHKLIR-NEXT:  %0 = HBCLoadConstInst (:number) 2: number
-// CHKLIR-NEXT:  %1 = LoadParamInst (:any) %i: any
+// CHKLIR-NEXT:  %0 = LoadParamInst (:any) %i: any
 // CHKLIR-NEXT:       BranchInst %BB1
 // CHKLIR-NEXT:%BB2:
-// CHKLIR-NEXT:  %3 = PhiInst (:any) %0: number, %BB3, %1: any, %BB4
-// CHKLIR-NEXT:       ReturnInst %3: any
+// CHKLIR-NEXT:  %2 = PhiInst (:any) %4: number, %BB3, %0: any, %BB4
+// CHKLIR-NEXT:       ReturnInst %2: any
 // CHKLIR-NEXT:%BB3:
+// CHKLIR-NEXT:  %4 = HBCLoadConstInst (:number) 2: number
 // CHKLIR-NEXT:       BranchInst %BB2
 // CHKLIR-NEXT:%BB4:
 // CHKLIR-NEXT:  %6 = HBCLoadConstInst (:number) 1: number
-// CHKLIR-NEXT:       CmpBrStrictlyEqualInst %6: number, %1: any, %BB2, %BB2
+// CHKLIR-NEXT:       CmpBrStrictlyEqualInst %6: number, %0: any, %BB2, %BB2
 // CHKLIR-NEXT:%BB1:
 // CHKLIR-NEXT:  %8 = HBCLoadConstInst (:number) 0: number
-// CHKLIR-NEXT:       CmpBrStrictlyEqualInst %8: number, %1: any, %BB3, %BB4
+// CHKLIR-NEXT:       CmpBrStrictlyEqualInst %8: number, %0: any, %BB3, %BB4
 // CHKLIR-NEXT:function_end
