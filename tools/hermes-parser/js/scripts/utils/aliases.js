@@ -182,6 +182,7 @@ export default ({
   PrivateName: ['Private'],
   AnyTypeAnnotation: ['Flow', 'FlowType', 'FlowBaseAnnotation'],
   ArrayTypeAnnotation: ['Flow', 'FlowType'],
+  AsExpression: ['Flow', 'ExpressionWrapper', 'Expression'],
   BooleanTypeAnnotation: ['Flow', 'FlowType', 'FlowBaseAnnotation'],
   BooleanLiteralTypeAnnotation: ['Flow', 'FlowType'],
   NullLiteralTypeAnnotation: ['Flow', 'FlowType', 'FlowBaseAnnotation'],

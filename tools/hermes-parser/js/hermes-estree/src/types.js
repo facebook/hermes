@@ -1511,7 +1511,7 @@ export interface TypeCastExpression extends BaseNode {
 export interface AsExpression extends BaseNode {
   +type: 'AsExpression';
   +expression: Expression;
-  +typeAnnotation: TypeAnnotation;
+  +typeAnnotation: TypeAnnotationType;
 }
 
 interface BaseInterfaceNode extends BaseNode {

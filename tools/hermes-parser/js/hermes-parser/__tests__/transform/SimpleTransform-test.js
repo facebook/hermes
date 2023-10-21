@@ -109,10 +109,10 @@ describe('SimpleTransform', () => {
     });
     it('Nested expressions', () => {
       expectTransformToEqual({
-        code: `((a: number): string);`,
+        code: `a as number as string;`,
         result: `a;`,
         transform(node) {
-          if (node.type === 'TypeCastExpression') {
+          if (node.type === 'AsExpression') {
             return node.expression;
           }
           return node;
