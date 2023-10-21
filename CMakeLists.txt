@@ -290,6 +290,16 @@ set(HERMES_BUILD_LEAN_LIBHERMES OFF CACHE BOOL "Exclude the Hermes compiler from
 
 set(HERMES_BUILD_SHARED_JSI OFF CACHE BOOL "Build JSI as a shared library.")
 
+# On Windows, produce static libraries by default so that tests and tools work
+# without needing to move DLLs around.
+# On Emscripten, there is no concept of a shared library.
+if(WIN32 OR EMSCRIPTEN)
+  set(DEFAULT_BUILD_SHARED_LIBS OFF)
+else()
+  set(DEFAULT_BUILD_SHARED_LIBS ON)
+endif()
+set(BUILD_SHARED_LIBS ${DEFAULT_BUILD_SHARED_LIBS} CACHE BOOL "Prefer producing shared libraries.")
+
 if (HERMES_IS_ANDROID)
   add_definitions(-DHERMES_PLATFORM_UNICODE=HERMES_PLATFORM_UNICODE_JAVA)
 endif()
@@ -321,6 +331,7 @@ if (HERMES_STATIC_LINK)
   append("-static" CMAKE_EXE_LINKER_FLAGS)
   set(HERMES_USE_STATIC_ICU ON)
   set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(BUILD_SHARED_LIBS OFF)
 endif()
 
 # Check if the linker supports deleting unused sections and ICF.

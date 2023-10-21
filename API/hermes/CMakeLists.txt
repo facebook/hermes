@@ -86,7 +86,7 @@ add_hermes_library(traceInterpreter TraceInterpreter.cpp
 
 set(HERMES_LINK_COMPONENTS LLVHSupport)
 
-add_library(libhermes SHARED ${api_sources})
+add_library(libhermes ${api_sources})
 
 # This is configured using a cmake flag instead of a separate target, because
 # we need the output to be named "libhermes.so".
