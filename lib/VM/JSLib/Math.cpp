@@ -23,10 +23,12 @@
 #include <float.h>
 #include <math.h>
 #include <random>
+#include <sys/time.h>
 #include "hermes/Support/Math.h"
 #include "hermes/Support/OSCompat.h"
 
 #include "llvh/Support/MathExtras.h"
+#include "llvh/ADT/bit.h"
 #pragma GCC diagnostic push
 
 #ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
@@ -205,18 +207,45 @@ CallResult<HermesValue> mathPow(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeUntrustedNumberValue(expOp(x, y));
 }
 
+// Help defines for random
+static constexpr int RIGHT12 = 12;
+static constexpr int SECONDS_TO_SUBTLE = 1000000;
+static constexpr int RIGHT27 = 27;
+static constexpr int LEFT25 = 25;
+static constexpr uint64_t GET_MULTIPLY = 0x2545F4914F6CDD1D;
+// Exponent bits for double value between [1.0, 2.0)
+static constexpr uint64_t EXPONENTBITS_RANGE_IN_ONE_AND_TWO = 0x3FF0000000000000;
+
+static double ToDouble(uint64_t state) {
+  uint64_t random = (state >> RIGHT12) | EXPONENTBITS_RANGE_IN_ONE_AND_TWO;
+  return llvh::bit_cast<double>(random) - 1;
+}
+
+static uint64_t XorShift64(uint64_t *pVal) {
+  uint64_t x = *pVal;
+  x ^= x >> RIGHT12;
+  x ^= x << LEFT25;
+  x ^= x >> RIGHT27;
+  *pVal = x;
+  return x * GET_MULTIPLY;
+}
+
 // ES5.1 15.8.2.14
 // Returns a Hermes-encoded pseudo-random number uniformly chosen from [0, 1)
 CallResult<HermesValue> mathRandom(void *, Runtime &runtime, NativeArgs) {
   RuntimeCommonStorage *storage = runtime.getCommonStorage();
-  if (!storage->randomEngineSeeded_) {
-    std::minstd_rand::result_type seed;
-    seed = std::random_device()();
-    storage->randomEngine_.seed(seed);
-    storage->randomEngineSeeded_ = true;
-  }
-  std::uniform_real_distribution<> dist(0.0, 1.0);
-  return HermesValue::encodeUntrustedNumberValue(dist(storage->randomEngine_));
+  if (!storage->randomEngineInited) {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    storage->randomState_ = static_cast<uint64_t>((tv.tv_sec * SECONDS_TO_SUBTLE) + tv.tv_usec);
+    // the state must be non zero
+    if (storage->randomState_ == 0) {
+      storage->randomState_ = 1;
+    }
+      storage->randomEngineInited = true;
+    }
+    uint64_t val = XorShift64(&storage->randomState_);
+    return HermesValue::encodeUntrustedNumberValue(ToDouble(val));
 }
 
 CallResult<HermesValue> mathFround(void *, Runtime &runtime, NativeArgs args)

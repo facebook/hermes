@@ -38,8 +38,8 @@ struct RuntimeCommonStorage {
   MockedEnvironment tracedEnv;
 
   /// PRNG used by Math.random()
-  std::minstd_rand randomEngine_;
-  bool randomEngineSeeded_ = false;
+  uint64_t randomState_;
+  bool randomEngineInited = false;
 };
 
 } // namespace vm
