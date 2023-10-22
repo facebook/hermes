@@ -242,10 +242,10 @@ CallResult<HermesValue> mathRandom(void *, Runtime &runtime, NativeArgs) {
     if (storage->randomState_ == 0) {
       storage->randomState_ = 1;
     }
-      storage->randomEngineInited = true;
-    }
-    uint64_t val = XorShift64(&storage->randomState_);
-    return HermesValue::encodeUntrustedNumberValue(ToDouble(val));
+    storage->randomEngineInited = true;
+  }
+  uint64_t val = XorShift64(&storage->randomState_);
+  return HermesValue::encodeUntrustedNumberValue(ToDouble(val));
 }
 
 CallResult<HermesValue> mathFround(void *, Runtime &runtime, NativeArgs args)
