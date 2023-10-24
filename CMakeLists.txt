@@ -286,8 +286,6 @@ set(HERMES_BUILD_APPLE_DSYM OFF CACHE BOOL
 
 set(HERMES_BUILD_NODE_HERMES OFF CACHE BOOL "Whether to build node-hermes")
 
-set(HERMES_BUILD_LEAN_LIBHERMES OFF CACHE BOOL "Exclude the Hermes compiler from libhermes.")
-
 set(HERMES_BUILD_SHARED_JSI OFF CACHE BOOL "Build JSI as a shared library.")
 
 # On Windows, produce static libraries by default so that tests and tools work
