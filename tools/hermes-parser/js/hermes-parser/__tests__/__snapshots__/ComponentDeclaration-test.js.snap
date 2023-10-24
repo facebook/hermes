@@ -3035,6 +3035,573 @@ exports[`ComponentDeclaration ref param ESTree 1`] = `
 }
 `;
 
+exports[`ComponentDeclaration ref param renamed Babel 1`] = `
+{
+  "body": [
+    {
+      "declarations": [
+        {
+          "id": {
+            "name": "Foo",
+            "type": "Identifier",
+          },
+          "init": {
+            "arguments": [
+              {
+                "name": "Foo_withRef",
+                "type": "Identifier",
+              },
+            ],
+            "callee": {
+              "computed": false,
+              "object": {
+                "name": "React",
+                "type": "Identifier",
+              },
+              "property": {
+                "name": "forwardRef",
+                "type": "Identifier",
+              },
+              "type": "MemberExpression",
+            },
+            "type": "CallExpression",
+          },
+          "type": "VariableDeclarator",
+        },
+      ],
+      "kind": "const",
+      "type": "VariableDeclaration",
+    },
+    {
+      "__componentDeclaration": true,
+      "async": false,
+      "body": {
+        "body": [],
+        "directives": [],
+        "type": "BlockStatement",
+      },
+      "generator": false,
+      "id": {
+        "name": "Foo_withRef",
+        "type": "Identifier",
+      },
+      "params": [
+        {
+          "name": "_$$empty_props_placeholder$$",
+          "type": "Identifier",
+          "typeAnnotation": {
+            "type": "TypeAnnotation",
+            "typeAnnotation": {
+              "id": {
+                "name": "$ReadOnly",
+                "type": "Identifier",
+              },
+              "type": "GenericTypeAnnotation",
+              "typeParameters": {
+                "params": [
+                  {
+                    "callProperties": [],
+                    "exact": false,
+                    "indexers": [],
+                    "inexact": true,
+                    "internalSlots": [],
+                    "properties": [],
+                    "type": "ObjectTypeAnnotation",
+                  },
+                ],
+                "type": "TypeParameterInstantiation",
+              },
+            },
+          },
+        },
+        {
+          "name": "internalRef",
+          "type": "Identifier",
+          "typeAnnotation": {
+            "type": "TypeAnnotation",
+            "typeAnnotation": {
+              "id": {
+                "name": "Ref",
+                "type": "Identifier",
+              },
+              "type": "GenericTypeAnnotation",
+              "typeParameters": null,
+            },
+          },
+        },
+      ],
+      "returnType": {
+        "type": "TypeAnnotation",
+        "typeAnnotation": {
+          "id": {
+            "id": {
+              "name": "Node",
+              "type": "Identifier",
+            },
+            "qualification": {
+              "name": "React",
+              "type": "Identifier",
+            },
+            "type": "QualifiedTypeIdentifier",
+          },
+          "type": "GenericTypeAnnotation",
+          "typeParameters": null,
+        },
+      },
+      "type": "FunctionDeclaration",
+    },
+  ],
+  "type": "Program",
+}
+`;
+
+exports[`ComponentDeclaration ref param renamed ESTree 1`] = `
+{
+  "body": [
+    {
+      "body": {
+        "body": [],
+        "type": "BlockStatement",
+      },
+      "id": {
+        "name": "Foo",
+        "optional": false,
+        "type": "Identifier",
+        "typeAnnotation": null,
+      },
+      "params": [
+        {
+          "local": {
+            "name": "internalRef",
+            "optional": false,
+            "type": "Identifier",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "id": {
+                  "name": "Ref",
+                  "optional": false,
+                  "type": "Identifier",
+                  "typeAnnotation": null,
+                },
+                "type": "GenericTypeAnnotation",
+                "typeParameters": null,
+              },
+            },
+          },
+          "name": {
+            "name": "ref",
+            "optional": false,
+            "type": "Identifier",
+            "typeAnnotation": null,
+          },
+          "shorthand": false,
+          "type": "ComponentParameter",
+        },
+      ],
+      "rendersType": null,
+      "type": "ComponentDeclaration",
+      "typeParameters": null,
+    },
+  ],
+  "type": "Program",
+}
+`;
+
+exports[`ComponentDeclaration ref param renamed destructure Babel 1`] = `
+{
+  "body": [
+    {
+      "declarations": [
+        {
+          "id": {
+            "name": "Foo",
+            "type": "Identifier",
+          },
+          "init": {
+            "arguments": [
+              {
+                "name": "Foo_withRef",
+                "type": "Identifier",
+              },
+            ],
+            "callee": {
+              "computed": false,
+              "object": {
+                "name": "React",
+                "type": "Identifier",
+              },
+              "property": {
+                "name": "forwardRef",
+                "type": "Identifier",
+              },
+              "type": "MemberExpression",
+            },
+            "type": "CallExpression",
+          },
+          "type": "VariableDeclarator",
+        },
+      ],
+      "kind": "const",
+      "type": "VariableDeclaration",
+    },
+    {
+      "__componentDeclaration": true,
+      "async": false,
+      "body": {
+        "body": [],
+        "directives": [],
+        "type": "BlockStatement",
+      },
+      "generator": false,
+      "id": {
+        "name": "Foo_withRef",
+        "type": "Identifier",
+      },
+      "params": [
+        {
+          "name": "_$$empty_props_placeholder$$",
+          "type": "Identifier",
+          "typeAnnotation": {
+            "type": "TypeAnnotation",
+            "typeAnnotation": {
+              "id": {
+                "name": "$ReadOnly",
+                "type": "Identifier",
+              },
+              "type": "GenericTypeAnnotation",
+              "typeParameters": {
+                "params": [
+                  {
+                    "callProperties": [],
+                    "exact": false,
+                    "indexers": [],
+                    "inexact": true,
+                    "internalSlots": [],
+                    "properties": [],
+                    "type": "ObjectTypeAnnotation",
+                  },
+                ],
+                "type": "TypeParameterInstantiation",
+              },
+            },
+          },
+        },
+        {
+          "properties": [
+            {
+              "computed": false,
+              "key": {
+                "name": "current",
+                "type": "Identifier",
+              },
+              "method": false,
+              "shorthand": true,
+              "type": "ObjectProperty",
+              "value": {
+                "name": "current",
+                "type": "Identifier",
+              },
+            },
+          ],
+          "type": "ObjectPattern",
+          "typeAnnotation": {
+            "type": "TypeAnnotation",
+            "typeAnnotation": {
+              "id": {
+                "name": "Ref",
+                "type": "Identifier",
+              },
+              "type": "GenericTypeAnnotation",
+              "typeParameters": null,
+            },
+          },
+        },
+      ],
+      "returnType": {
+        "type": "TypeAnnotation",
+        "typeAnnotation": {
+          "id": {
+            "id": {
+              "name": "Node",
+              "type": "Identifier",
+            },
+            "qualification": {
+              "name": "React",
+              "type": "Identifier",
+            },
+            "type": "QualifiedTypeIdentifier",
+          },
+          "type": "GenericTypeAnnotation",
+          "typeParameters": null,
+        },
+      },
+      "type": "FunctionDeclaration",
+    },
+  ],
+  "type": "Program",
+}
+`;
+
+exports[`ComponentDeclaration ref param renamed destructure ESTree 1`] = `
+{
+  "body": [
+    {
+      "body": {
+        "body": [],
+        "type": "BlockStatement",
+      },
+      "id": {
+        "name": "Foo",
+        "optional": false,
+        "type": "Identifier",
+        "typeAnnotation": null,
+      },
+      "params": [
+        {
+          "local": {
+            "properties": [
+              {
+                "computed": false,
+                "key": {
+                  "name": "current",
+                  "optional": false,
+                  "type": "Identifier",
+                  "typeAnnotation": null,
+                },
+                "kind": "init",
+                "method": false,
+                "shorthand": true,
+                "type": "Property",
+                "value": {
+                  "name": "current",
+                  "optional": false,
+                  "type": "Identifier",
+                  "typeAnnotation": null,
+                },
+              },
+            ],
+            "type": "ObjectPattern",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "id": {
+                  "name": "Ref",
+                  "optional": false,
+                  "type": "Identifier",
+                  "typeAnnotation": null,
+                },
+                "type": "GenericTypeAnnotation",
+                "typeParameters": null,
+              },
+            },
+          },
+          "name": {
+            "name": "ref",
+            "optional": false,
+            "type": "Identifier",
+            "typeAnnotation": null,
+          },
+          "shorthand": false,
+          "type": "ComponentParameter",
+        },
+      ],
+      "rendersType": null,
+      "type": "ComponentDeclaration",
+      "typeParameters": null,
+    },
+  ],
+  "type": "Program",
+}
+`;
+
+exports[`ComponentDeclaration ref param with default Babel 1`] = `
+{
+  "body": [
+    {
+      "declarations": [
+        {
+          "id": {
+            "name": "Foo",
+            "type": "Identifier",
+          },
+          "init": {
+            "arguments": [
+              {
+                "name": "Foo_withRef",
+                "type": "Identifier",
+              },
+            ],
+            "callee": {
+              "computed": false,
+              "object": {
+                "name": "React",
+                "type": "Identifier",
+              },
+              "property": {
+                "name": "forwardRef",
+                "type": "Identifier",
+              },
+              "type": "MemberExpression",
+            },
+            "type": "CallExpression",
+          },
+          "type": "VariableDeclarator",
+        },
+      ],
+      "kind": "const",
+      "type": "VariableDeclaration",
+    },
+    {
+      "__componentDeclaration": true,
+      "async": false,
+      "body": {
+        "body": [],
+        "directives": [],
+        "type": "BlockStatement",
+      },
+      "generator": false,
+      "id": {
+        "name": "Foo_withRef",
+        "type": "Identifier",
+      },
+      "params": [
+        {
+          "name": "_$$empty_props_placeholder$$",
+          "type": "Identifier",
+          "typeAnnotation": {
+            "type": "TypeAnnotation",
+            "typeAnnotation": {
+              "id": {
+                "name": "$ReadOnly",
+                "type": "Identifier",
+              },
+              "type": "GenericTypeAnnotation",
+              "typeParameters": {
+                "params": [
+                  {
+                    "callProperties": [],
+                    "exact": false,
+                    "indexers": [],
+                    "inexact": true,
+                    "internalSlots": [],
+                    "properties": [],
+                    "type": "ObjectTypeAnnotation",
+                  },
+                ],
+                "type": "TypeParameterInstantiation",
+              },
+            },
+          },
+        },
+        {
+          "left": {
+            "name": "ref",
+            "type": "Identifier",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "id": {
+                  "name": "Ref",
+                  "type": "Identifier",
+                },
+                "type": "GenericTypeAnnotation",
+                "typeParameters": null,
+              },
+            },
+          },
+          "right": {
+            "properties": [],
+            "type": "ObjectExpression",
+          },
+          "type": "AssignmentPattern",
+        },
+      ],
+      "returnType": {
+        "type": "TypeAnnotation",
+        "typeAnnotation": {
+          "id": {
+            "id": {
+              "name": "Node",
+              "type": "Identifier",
+            },
+            "qualification": {
+              "name": "React",
+              "type": "Identifier",
+            },
+            "type": "QualifiedTypeIdentifier",
+          },
+          "type": "GenericTypeAnnotation",
+          "typeParameters": null,
+        },
+      },
+      "type": "FunctionDeclaration",
+    },
+  ],
+  "type": "Program",
+}
+`;
+
+exports[`ComponentDeclaration ref param with default ESTree 1`] = `
+{
+  "body": [
+    {
+      "body": {
+        "body": [],
+        "type": "BlockStatement",
+      },
+      "id": {
+        "name": "Foo",
+        "optional": false,
+        "type": "Identifier",
+        "typeAnnotation": null,
+      },
+      "params": [
+        {
+          "local": {
+            "left": {
+              "name": "ref",
+              "optional": false,
+              "type": "Identifier",
+              "typeAnnotation": {
+                "type": "TypeAnnotation",
+                "typeAnnotation": {
+                  "id": {
+                    "name": "Ref",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
+                  },
+                  "type": "GenericTypeAnnotation",
+                  "typeParameters": null,
+                },
+              },
+            },
+            "right": {
+              "properties": [],
+              "type": "ObjectExpression",
+            },
+            "type": "AssignmentPattern",
+          },
+          "name": {
+            "name": "ref",
+            "optional": false,
+            "type": "Identifier",
+            "typeAnnotation": null,
+          },
+          "shorthand": true,
+          "type": "ComponentParameter",
+        },
+      ],
+      "rendersType": null,
+      "type": "ComponentDeclaration",
+      "typeParameters": null,
+    },
+  ],
+  "type": "Program",
+}
+`;
+
 exports[`ComponentDeclaration renders maybe type Babel 1`] = `
 {
   "body": [
