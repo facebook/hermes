@@ -167,36 +167,20 @@ public:
             return ESTree::Unmodified;
         }
 
-        auto classMembers = resolveClassMembers(classBody);
-        auto *ctorAsFunction = createClassCtor(classDecl->_id, classBody, classDecl->_superClass, classMembers.constructor);
-
-        auto *oldProcessingClass = _currentProcessingClass;
-        VisitedClass currentProcessingClass(classDecl->_id, classDecl->_superClass);
-        _currentProcessingClass = &currentProcessingClass;
-
-        ESTree::Node *superClassIdentifier = nullptr;
-        if (classDecl->_superClass != nullptr) {
-            superClassIdentifier = copyIdentifier(classDecl->_superClass);
-        } else {
-            superClassIdentifier = new (context_) ESTree::NullLiteralNode();
-        }
-
-        auto *defineClassResult = makeHermesES6InternalCall("defineClass", {copyIdentifier(ctorAsFunction->_id), superClassIdentifier});
-
-        NodeVector statements;
-        statements.append(ctorAsFunction);
-        statements.append(toStatement(defineClassResult));
-
-        appendMethods(classDecl->_id, classMembers, statements);
-
-        // Wrap into an immediately invoked function
-        auto *expressionResult = blockToExpression(statements, ctorAsFunction->_id);
+        auto *expressionResult = createClass(classDecl->_id, classBody, classDecl->_superClass);
 
         auto result = makeSingleVariableDecl(copyIdentifier(classDecl->_id), expressionResult);
 
-        _currentProcessingClass = oldProcessingClass;
-
         return result;
+    }
+
+    ESTree::VisitResult visit(ESTree::ClassExpressionNode *classExpr) {
+        auto *classBody = llvh::dyn_cast<ESTree::ClassBodyNode>(classExpr->_body);
+        if (classBody == nullptr) {
+            return ESTree::Unmodified;
+        }
+
+        return createClass(classExpr->_id, classBody, classExpr->_superClass);
     }
 
     ESTree::VisitResult visit(ESTree::CallExpressionNode *callExpression) {
@@ -249,6 +233,44 @@ private:
 
     void popClass(const VisitedClass **oldProcessingClass) {
         _currentProcessingClass = *oldProcessingClass;
+    }
+
+    ESTree::Node *createClass(ESTree::Node *id, ESTree::ClassBodyNode *classBody, ESTree::Node *superClass) {
+        ESTree::Node *resolvedClassId = nullptr;
+        if (id == nullptr) {
+            resolvedClassId = makeIdentifierNode("__clsExpr__");
+        } else {
+            resolvedClassId = id;
+        }
+
+        auto classMembers = resolveClassMembers(classBody);
+        auto *ctorAsFunction = createClassCtor(resolvedClassId, classBody, superClass, classMembers.constructor);
+
+        auto *oldProcessingClass = _currentProcessingClass;
+        VisitedClass currentProcessingClass(resolvedClassId, superClass);
+        _currentProcessingClass = &currentProcessingClass;
+
+        ESTree::Node *superClassIdentifier = nullptr;
+        if (superClass != nullptr) {
+            superClassIdentifier = copyIdentifier(superClass);
+        } else {
+            superClassIdentifier = new (context_) ESTree::NullLiteralNode();
+        }
+
+        auto *defineClassResult = makeHermesES6InternalCall("defineClass", {copyIdentifier(ctorAsFunction->_id), superClassIdentifier});
+
+        NodeVector statements;
+        statements.append(ctorAsFunction);
+        statements.append(toStatement(defineClassResult));
+
+        appendMethods(resolvedClassId, classMembers, statements);
+
+        // Wrap into an immediately invoked function
+        auto *expr = blockToExpression(statements, ctorAsFunction->_id);
+
+        _currentProcessingClass = oldProcessingClass;
+
+        return expr;
     }
 
     ESTree::StatementNode *toStatement(ESTree::Node *expression) {
