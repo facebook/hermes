@@ -110,6 +110,7 @@ add_library(hermesvm_a STATIC)
 target_link_libraries(hermesvm_a PUBLIC
   LLVHSupport_obj
   dtoa_obj
+  hermesapi_obj
   hermesADT_obj
   hermesAST2JS_obj
   hermesAST_obj
@@ -138,6 +139,7 @@ add_library(hermesvmlean_a STATIC)
 target_link_libraries(hermesvmlean_a PUBLIC
   LLVHSupport_obj
   dtoa_obj
+  hermesapiLean_obj
   hermesADT_obj
   hermesHBCBackendLean_obj
   hermesInst_obj

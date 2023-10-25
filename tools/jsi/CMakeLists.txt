@@ -10,5 +10,5 @@ set(CXX_STANDARD_REQUIRED ON)
 add_hermes_tool(hermes-jsi
   jsi.cpp
   ${ALL_HEADER_FILES}
-  LINK_OBJLIBS hermesapi timerStats
+  LINK_OBJLIBS hermesvm_a timerStats
   )
