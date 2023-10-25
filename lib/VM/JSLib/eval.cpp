@@ -48,6 +48,7 @@ CallResult<HermesValue> evalInEnvironment(
   compileFlags.enableBlockScoping = runtime.enableBlockScopingInEval;
   compileFlags.lazy =
       utf8code.size() >= compileFlags.preemptiveFileCompilationThreshold;
+  compileFlags.enableES6Classes = runtime.hasES6Class();
 #ifdef HERMES_ENABLE_DEBUGGER
   // Required to allow stepping and examining local variables in eval'd code
   compileFlags.debug = true;

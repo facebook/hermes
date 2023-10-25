@@ -6,6 +6,7 @@
  */
 
 #include "hermes/AST/SemValidate.h"
+#include "hermes/AST/ES6Class.h"
 
 #include "hermes/Support/PerfSection.h"
 
@@ -19,6 +20,11 @@ bool validateAST(Context &astContext, SemContext &semCtx, Node *root) {
   if (astContext.getCodeGenerationSettings().enableBlockScoping) {
     canonicalizeForBlockScoping(astContext, root);
   }
+  if (astContext.getConvertES6Classes()) {
+    // Convert ES6 classes to functions
+    transformES6Classes(astContext, root);
+  }
+
   // Validate the entire AST.
   SemanticValidator validator{astContext, semCtx, true};
   return validator.doIt(root);
