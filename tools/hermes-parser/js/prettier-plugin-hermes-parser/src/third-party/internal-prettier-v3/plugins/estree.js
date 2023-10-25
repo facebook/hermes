@@ -2776,6 +2776,24 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           return true;
         }
       }
+      if (key === "expression") {
+        switch (node.name) {
+          case "await":
+          case "interface":
+          case "module":
+          case "using":
+          case "yield":
+          case "let":
+          case "type": {
+            const ancestorNeitherAsNorSatisfies = path.findAncestor(
+              (node2) => !isBinaryCastExpression(node2)
+            );
+            if (ancestorNeitherAsNorSatisfies !== parent && ancestorNeitherAsNorSatisfies.type === "ExpressionStatement") {
+              return true;
+            }
+          }
+        }
+      }
       return false;
     }
     if (node.type === "ObjectExpression" || node.type === "FunctionExpression" || node.type === "ClassExpression" || node.type === "DoExpression") {
