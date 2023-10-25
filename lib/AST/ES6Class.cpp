@@ -129,6 +129,7 @@ private:
 struct VisitedClass {
     UniqueString *className = nullptr;
     UniqueString *parentClassName = nullptr;
+    bool superCallFound = false;
 
     VisitedClass(ESTree::NodePtr className, ESTree::NodePtr superClass) {
         if (className != nullptr) {
@@ -184,20 +185,25 @@ public:
     }
 
     ESTree::VisitResult visit(ESTree::CallExpressionNode *callExpression) {
-        // Convert super.method(...args) calls to ParentClass.prototype.method.call(this, ...args);
-        auto *memberExpressionNode = llvh::dyn_cast<ESTree::MemberExpressionNode>(callExpression->_callee);
-        if (memberExpressionNode == nullptr || memberExpressionNode->_object->getKind() != ESTree::NodeKind::Super) {
-            return ESTree::Unmodified;
-        }
+          auto *topClass = _currentProcessingClass;
+          if (topClass == nullptr || topClass->parentClassName == nullptr) {
+              return ESTree::Unmodified;
+          }
 
-        auto *topClass = _currentProcessingClass;
-        if (topClass == nullptr || topClass->parentClassName == nullptr) {
-            // Should not happen
-            return ESTree::Unmodified;
-        }
+          if (callExpression->_callee->getKind() == ESTree::NodeKind::Super) {
+              // Convert super(...args) calls
+              _currentProcessingClass->superCallFound = true;
+              return createSuperCall(makeIdentifierNode(topClass->parentClassName), NodeVector(callExpression->_arguments));
+          }
 
-        return createSuperMethodCall(topClass->parentClassName, memberExpressionNode->_property, NodeVector(callExpression->_arguments));
-    }
+          // Convert super.method(...args) calls to ParentClass.prototype.method.call(this, ...args);
+          auto *memberExpressionNode = llvh::dyn_cast<ESTree::MemberExpressionNode>(callExpression->_callee);
+          if (memberExpressionNode == nullptr || memberExpressionNode->_object->getKind() != ESTree::NodeKind::Super) {
+              return ESTree::Unmodified;
+          }
+
+          return createSuperMethodCall(topClass->parentClassName, memberExpressionNode->_property, NodeVector(callExpression->_arguments));
+      }
 
     ESTree::VisitResult visit(ESTree::MemberExpressionNode *memberExpression) {
         // Convert super.property into Reflect.get(ParentClass.prototype, 'property', this);
@@ -227,13 +233,8 @@ public:
 private:
     Context& context_;
     UniqueString *const identVar_;
-//    llvh::SmallVector<VisitedClass, 2> _classStack;
-    const VisitedClass *_currentProcessingClass = nullptr;
+    VisitedClass *_currentProcessingClass = nullptr;
     const ResolvedClassMember *_currentClassMember = nullptr;
-
-    void popClass(const VisitedClass **oldProcessingClass) {
-        _currentProcessingClass = *oldProcessingClass;
-    }
 
     ESTree::Node *createClass(ESTree::Node *id, ESTree::ClassBodyNode *classBody, ESTree::Node *superClass) {
         ESTree::Node *resolvedClassId = nullptr;
@@ -243,12 +244,12 @@ private:
             resolvedClassId = id;
         }
 
-        auto classMembers = resolveClassMembers(classBody);
-        auto *ctorAsFunction = createClassCtor(resolvedClassId, classBody, superClass, classMembers.constructor);
-
         auto *oldProcessingClass = _currentProcessingClass;
         VisitedClass currentProcessingClass(resolvedClassId, superClass);
         _currentProcessingClass = &currentProcessingClass;
+
+        auto classMembers = resolveClassMembers(classBody);
+        auto *ctorAsFunction = createClassCtor(resolvedClassId, classBody, superClass, classMembers.constructor);
 
         ESTree::Node *superClassIdentifier = nullptr;
         if (superClass != nullptr) {
@@ -385,10 +386,12 @@ private:
         return new (context_) ESTree::CallExpressionNode(immediateInvokedFunction, nullptr, {});
     }
 
-    ESTree::FunctionDeclarationNode *createClassCtor(ESTree::Node *identifier, ESTree::ClassBodyNode *classBody, ESTree::Node *superClass, ESTree::MethodDefinitionNode *existingCtor) {
+    ESTree::FunctionDeclarationNode *createClassCtor(ESTree::Node *identifier,
+                                                     ESTree::ClassBodyNode *classBody,
+                                                     ESTree::Node *superClass,
+                                                     ESTree::MethodDefinitionNode *existingCtor) {
         ESTree::NodeList paramList;
-        ESTree::Node *superCall = nullptr;
-        NodeVector userStmts;
+        ESTree::NodeList ctorStatements;
 
         if (existingCtor != nullptr) {
             auto *ctorExpression = llvh::dyn_cast<ESTree::FunctionExpressionNode>(existingCtor->_value);
@@ -396,38 +399,42 @@ private:
 
             auto *block = llvh::dyn_cast<ESTree::BlockStatementNode>(ctorExpression->_body);
             NodeVector tmpStatements(block->_body);
-            for (auto *stmt: tmpStatements) {
+            auto addedPropertyInitializers = false;
+
+            if (superClass == nullptr) {
+                // Append property initializers at beginning if no super class
+                addedPropertyInitializers = true;
+                appendPropertyInitializers(classBody, ctorStatements);
+            }
+
+            for (auto &stmt: tmpStatements) {
+                auto oldSuperCallFound = _currentProcessingClass->superCallFound;
                 visitESTreeChildren(*this, stmt);
-
-                if (isSuperCtorCall(stmt)) {
-                    auto *call = llvh::cast<ESTree::CallExpressionNode>(llvh::cast<ESTree::ExpressionStatementNode>(stmt)->_expression);
-
-                    superCall = createSuperCall(superClass, NodeVector(call->_arguments));
-                } else {
-                    userStmts.append(stmt);
+                ctorStatements.push_back(*stmt);
+                if (!addedPropertyInitializers && !oldSuperCallFound && _currentProcessingClass->superCallFound) {
+                    // We just processed the super() call.
+                    // Append initializers of class properties
+                    // Note that this is not fully correct in some cases. There could be a statement like:
+                    // super(), this.prop = 'value'
+                    // in which case we will end up adding the properties after this.prop is set.
+                    addedPropertyInitializers = true;
+                    appendPropertyInitializers(classBody, ctorStatements);
                 }
             }
+        } else {
+            // No existing ctor.
+            if (superClass != nullptr) {
+                // Generate call to super()
+                auto *argumentsSpread = new (context_) ESTree::SpreadElementNode(makeIdentifierNode("arguments"));
+                auto *superCall = createSuperCall(copyIdentifier(superClass), {argumentsSpread});
+                ctorStatements.push_back(*superCall);
+            }
+
+            // Append initializers of class properties
+            appendPropertyInitializers(classBody, ctorStatements);
         }
 
-         if (superCall == nullptr && superClass != nullptr) {
-             superCall = createSuperCall(superClass, {});
-         }
-
-        ESTree::NodeList stmtList;
-        // Call super as the first statement
-        if (superCall != nullptr) {
-            stmtList.push_back(*superCall);
-        }
-
-        // Append initializers of class properties
-        appendPropertyInitializers(classBody, stmtList);
-
-        // Append user statements that were found in the user provided constructor
-        for (auto *statement: userStmts) {
-            stmtList.push_back(*statement);
-        }
-
-        auto *body = new (context_) ESTree::BlockStatementNode(std::move(stmtList));
+        auto *body = new (context_) ESTree::BlockStatementNode(std::move(ctorStatements));
 
         return new (context_) ESTree::FunctionDeclarationNode(
                 identifier,
@@ -583,7 +590,7 @@ private:
         if (stmt == nullptr) {
             return false;
         }
-        
+
         auto *call = llvh::dyn_cast<ESTree::CallExpressionNode>(stmt->_expression);
         if (call == nullptr) {
             return false;
