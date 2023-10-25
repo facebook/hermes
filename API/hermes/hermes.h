@@ -22,6 +22,7 @@
 
 struct HermesTestHelper;
 struct SHUnit;
+struct SHRuntime;
 
 namespace hermes {
 namespace vm {
@@ -215,6 +216,9 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   /// destroyed. The unit must not be already associated with another runtime.
   jsi::Value evaluateSHUnit(SHUnit *shUnit);
 
+  /// Retrieve the underlying SHRuntime.
+  SHRuntime *getSHRuntime() noexcept;
+
  private:
   // Only HermesRuntimeImpl can subclass this.
   HermesRuntime() = default;
@@ -242,6 +246,14 @@ HERMES_EXPORT ::hermes::vm::RuntimeConfig hardenedHermesRuntimeConfig();
 HERMES_EXPORT std::unique_ptr<HermesRuntime> makeHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig =
         ::hermes::vm::RuntimeConfig());
+
+/// Create a HermesRuntime for the given config without throwing any exceptions.
+/// This is safe to be called from code that is compiled without exceptions.
+/// Returns nullptr on failure.
+HERMES_EXPORT std::unique_ptr<HermesRuntime> makeHermesRuntimeNoThrow(
+    const ::hermes::vm::RuntimeConfig &runtimeConfig =
+        ::hermes::vm::RuntimeConfig()) noexcept;
+
 HERMES_EXPORT std::unique_ptr<jsi::ThreadSafeRuntime>
 makeThreadSafeHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig =

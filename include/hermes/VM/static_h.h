@@ -1122,6 +1122,15 @@ class RuntimeConfig;
 
 /// Create a runtime instance using the supplied configuration.
 SHERMES_EXPORT SHRuntime *_sh_init(const hermes::vm::RuntimeConfig &config);
+
+namespace facebook::hermes {
+class HermesRuntime;
+}
+
+/// Get the HermesRuntime that owns the given SHRuntime. This can be used to
+/// access JSI functionality from an SHRuntime.
+SHERMES_EXPORT facebook::hermes::HermesRuntime *_sh_get_hermes_runtime(
+    SHRuntime *shr);
 #endif // __cplusplus
 
 #endif // HERMES_STATIC_H_H

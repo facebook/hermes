@@ -7,6 +7,7 @@
 
 #include "hermes/VM/RuntimeFlags.h"
 #include "hermes/VM/StaticHUtils.h"
+#include "hermes/hermes.h"
 
 #include "llvh/ADT/ScopeExit.h"
 
@@ -14,6 +15,7 @@
 
 using namespace hermes;
 using namespace hermes::vm;
+using namespace facebook::hermes;
 
 namespace {
 struct GlobalState {
@@ -23,7 +25,7 @@ struct GlobalState {
   /// The lifetime of a Runtime is managed by a smart pointer, but the C API
   /// wants to deal with a regular pointer. Keep all created runtimes here, so
   /// they can be destroyed from a pointer.
-  llvh::DenseMap<Runtime *, std::shared_ptr<Runtime>> runtimes{};
+  llvh::DenseMap<SHRuntime *, std::shared_ptr<HermesRuntime>> runtimes{};
 };
 
 GlobalState &getGlobalState() {
@@ -33,18 +35,33 @@ GlobalState &getGlobalState() {
 } // namespace
 
 SHRuntime *_sh_init(const RuntimeConfig &config) {
-  std::shared_ptr<Runtime> runtimePtr = Runtime::create(config);
-  Runtime *pRuntime = runtimePtr.get();
+  std::shared_ptr<HermesRuntime> runtimePtr = makeHermesRuntimeNoThrow(config);
+  if (!runtimePtr) {
+    llvh::errs() << "Failed to create runtime\n";
+    abort();
+  }
+  SHRuntime *pRuntime = runtimePtr->getSHRuntime();
   {
     auto &gs = getGlobalState();
     std::lock_guard<std::mutex> lock(gs.mutex);
     gs.runtimes.try_emplace(pRuntime, std::move(runtimePtr));
   }
-  return getSHRuntime(*pRuntime);
+  return pRuntime;
+}
+
+HermesRuntime *_sh_get_hermes_runtime(SHRuntime *shr) {
+  auto &gs = getGlobalState();
+  std::lock_guard<std::mutex> lock(gs.mutex);
+  auto it = gs.runtimes.find(shr);
+  if (it == gs.runtimes.end()) {
+    llvh::errs() << "SHRuntime not found\n";
+    abort();
+  }
+  return it->second.get();
 }
 
 extern "C" void _sh_done(SHRuntime *shr) {
-  std::shared_ptr<Runtime> runtimePtr{};
+  std::shared_ptr<HermesRuntime> runtimePtr{};
   // Keep the scope of the lock only around finding the runtime and removing
   // it from the map.
   {

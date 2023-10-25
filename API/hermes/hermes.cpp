@@ -1376,6 +1376,10 @@ jsi::Value HermesRuntime::evaluateSHUnit(SHUnit *shUnit) {
   }
 }
 
+SHRuntime *HermesRuntime::getSHRuntime() noexcept {
+  return vm::getSHRuntime(impl(this)->runtime_);
+}
+
 size_t HermesRuntime::rootsListLengthForTests() const {
   return impl(this)->hermesValues_.sizeForTests();
 }
@@ -2375,6 +2379,15 @@ std::unique_ptr<HermesRuntime> makeHermesRuntime(
 #endif
 
   return ret;
+}
+
+std::unique_ptr<HermesRuntime> makeHermesRuntimeNoThrow(
+    const vm::RuntimeConfig &runtimeConfig) noexcept {
+  try {
+    return makeHermesRuntime(runtimeConfig);
+  } catch (...) {
+    return nullptr;
+  }
 }
 
 std::unique_ptr<jsi::ThreadSafeRuntime> makeThreadSafeHermesRuntime(

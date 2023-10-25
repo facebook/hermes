@@ -165,9 +165,10 @@ elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
   set_source_files_properties(DecoratedObject.cpp HostModel.cpp PROPERTIES COMPILE_FLAGS /GR)
 endif()
 
-add_hermes_library(hermesVMRuntime ${source_files} LINK_OBJLIBS hermesPublic)
+# Take dependencies on hermesPublic and hermesapi so their headers are exposed.
+add_hermes_library(hermesVMRuntime ${source_files} LINK_OBJLIBS hermesPublic hermesapi)
 
-add_hermes_library(hermesVMRuntimeLean ${source_files} LINK_OBJLIBS hermesPublic)
+add_hermes_library(hermesVMRuntimeLean ${source_files} LINK_OBJLIBS hermesPublic hermesapiLean)
 target_compile_definitions(hermesVMRuntimeLean_obj PUBLIC HERMESVM_LEAN)
 
 add_subdirectory(Instrumentation)
