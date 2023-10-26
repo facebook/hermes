@@ -386,6 +386,39 @@ private:
         return new (context_) ESTree::CallExpressionNode(immediateInvokedFunction, nullptr, {});
     }
 
+    void doCopyLocation(ESTree::Node *src, ESTree::Node *dest) {
+        dest->setStartLoc(src->getStartLoc());
+        dest->setEndLoc(src->getEndLoc());
+        dest->setDebugLoc(src->getDebugLoc());
+    }
+
+    template<typename T>
+    T *copyLocation(ESTree::Node *src, T *dest) {
+        doCopyLocation(src, dest);
+        return dest;
+    }
+
+    void unpackStatements(ESTree::Node *stmt, NodeVector &out) {
+        auto *expressionStatement = llvh::dyn_cast<ESTree::ExpressionStatementNode>(stmt);
+        if (expressionStatement == nullptr) {
+            out.append(stmt);
+            return;
+        }
+
+        auto *sequenceExpression = llvh::dyn_cast<ESTree::SequenceExpressionNode>(expressionStatement->_expression);
+        if (sequenceExpression == nullptr) {
+            out.append(stmt);
+            return;
+        }
+
+        NodeVector expressions(sequenceExpression->_expressions);
+        for (auto *node: expressions) {
+            auto *emittedExpressionStatement = copyLocation(node, new (context_) ESTree::ExpressionStatementNode(node, expressionStatement->_directive));
+
+            out.append(emittedExpressionStatement);
+        }
+    }
+
     ESTree::FunctionDeclarationNode *createClassCtor(ESTree::Node *identifier,
                                                      ESTree::ClassBodyNode *classBody,
                                                      ESTree::Node *superClass,
@@ -398,7 +431,10 @@ private:
             paramList = std::move(ctorExpression->_params);
 
             auto *block = llvh::dyn_cast<ESTree::BlockStatementNode>(ctorExpression->_body);
-            NodeVector tmpStatements(block->_body);
+            NodeVector tmpStatements;
+            for (auto &stmt: block->_body) {
+                unpackStatements(&stmt, tmpStatements);
+            }
             auto addedPropertyInitializers = false;
 
             if (superClass == nullptr) {

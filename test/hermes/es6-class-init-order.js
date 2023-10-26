@@ -20,7 +20,7 @@ class Child extends Parent {
 
   constructor() {
     print('Child ctor before super');
-    super();
+    super(), print('Child ctor in sequence expression');
     print('Child ctor after super');
   }
 }
@@ -30,4 +30,5 @@ new Child();
 //CHECK: Parent Prop
 //CHECK: Parent ctor
 //CHECK: Child Prop
+//CHECK: Child ctor in sequence expression
 //CHECK: Child ctor after super
