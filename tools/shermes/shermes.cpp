@@ -75,8 +75,9 @@ static cl::OptionCategory CompilerCategory(
     "Compiler Options",
     "These options change how JS is compiled.");
 
-cl::opt<std::string>
-    InputFilename(cl::desc("<file>"), cl::Positional, cl::Required);
+cl::list<std::string> InputFilenames(
+    cl::desc("<file1> <file2>..."),
+    cl::Positional);
 
 cl::list<std::string> ExecArgs(
     "Wx,",
@@ -645,82 +646,99 @@ ESTree::NodePtr parseJS(
     sema::SemContext &semCtx,
     flow::FlowContext *flowContext,
     const DeclarationFileListTy &ambientDecls,
-    std::unique_ptr<llvh::MemoryBuffer> fileBuf,
+    std::vector<std::unique_ptr<llvh::MemoryBuffer>> fileBufs,
     std::unique_ptr<SourceMap> sourceMap = nullptr,
     std::shared_ptr<SourceMapTranslator> sourceMapTranslator = nullptr,
     bool wrapCJSModule = false) {
-  assert(fileBuf && "Need a file to compile");
-  assert(context && "Need a context to compile using");
+  std::vector<ESTree::ProgramNode *> programs{};
 
-  // Save the previous stictness and force strict mode if we are parsing a typed
-  // file.
-  auto onExit = llvh::make_scope_exit(
-      [&context, saveStrictness = context->isStrictMode()]() {
-        context->setStrictMode(saveStrictness);
-      });
-  if (flowContext)
-    context->setStrictMode(true);
+  for (std::unique_ptr<llvh::MemoryBuffer> &fileBuf : fileBufs) {
+    assert(fileBuf && "Need a file to compile");
+    assert(context && "Need a context to compile using");
 
-  // This value will be set to true if the parser detected the 'use static
-  // builtin' directive in the source.
-  bool useStaticBuiltinDetected = false;
+    // Save the previous strictness and force strict mode if we are parsing a
+    // typed file.
+    auto onExit = llvh::make_scope_exit(
+        [&context, saveStrictness = context->isStrictMode()]() {
+          context->setStrictMode(saveStrictness);
+        });
+    if (flowContext)
+      context->setStrictMode(true);
 
-  bool isLargeFile = fileBuf->getBufferSize() >=
-      context->getPreemptiveFileCompilationThreshold();
+    // This value will be set to true if the parser detected the 'use static
+    // builtin' directive in the source.
+    bool useStaticBuiltinDetected = false;
 
-  int fileBufId =
-      context->getSourceErrorManager().addNewSourceBuffer(std::move(fileBuf));
-  if (sourceMap != nullptr && sourceMapTranslator != nullptr) {
-    sourceMapTranslator->addSourceMap(fileBufId, std::move(sourceMap));
-  }
+    bool isLargeFile = fileBuf->getBufferSize() >=
+        context->getPreemptiveFileCompilationThreshold();
 
-  auto mode = parser::FullParse;
+    int fileBufId =
+        context->getSourceErrorManager().addNewSourceBuffer(std::move(fileBuf));
+    if (sourceMap != nullptr && sourceMapTranslator != nullptr) {
+      sourceMapTranslator->addSourceMap(fileBufId, std::move(sourceMap));
+    }
 
-  if (context->isLazyCompilation() && isLargeFile) {
-    if (!parser::JSParser::preParseBuffer(
-            *context, fileBufId, useStaticBuiltinDetected)) {
+    auto mode = parser::FullParse;
+
+    if (context->isLazyCompilation() && isLargeFile) {
+      if (!parser::JSParser::preParseBuffer(
+              *context, fileBufId, useStaticBuiltinDetected)) {
+        return nullptr;
+      }
+      mode = parser::LazyParse;
+    }
+
+    llvh::Optional<ESTree::ProgramNode *> parsedJs;
+
+    {
+      parser::JSParser jsParser(*context, fileBufId, mode);
+      parsedJs = jsParser.parse();
+      // If we are using lazy parse mode, we should have already detected the
+      // 'use static builtin' directive in the pre-parsing stage.
+      if (mode != parser::LazyParse) {
+        useStaticBuiltinDetected = jsParser.getUseStaticBuiltin();
+      }
+    }
+    if (!parsedJs)
       return nullptr;
+    ESTree::ProgramNode *parsedAST = parsedJs.getValue();
+
+    if (cli::StaticBuiltins == cli::StaticBuiltinSetting::AutoDetect) {
+      context->setStaticBuiltinOptimization(useStaticBuiltinDetected);
     }
-    mode = parser::LazyParse;
+
+    // Convert TS AST to Flow AST as an intermediate step until we have a
+    // separate TS type checker.
+    if (flowContext && context->getParseTS()) {
+      parsedAST = hermes::convertTSToFlow(
+          *context, cast<ESTree::ProgramNode>(parsedAST));
+      if (!parsedAST) {
+        return nullptr;
+      }
+    }
+
+    assert(!wrapCJSModule && "unsupported");
+    // if (wrapCJSModule) {
+    //   parsedAST =
+    //       hermes::wrapCJSModule(context,
+    //       cast<ESTree::ProgramNode>(parsedAST));
+    //   if (!parsedAST) {
+    //     return nullptr;
+    //   }
+    // }
+
+    programs.push_back(parsedAST);
   }
 
-  llvh::Optional<ESTree::ProgramNode *> parsedJs;
+  ESTree::ProgramNode *parsedAST = programs[0];
 
-  {
-    parser::JSParser jsParser(*context, fileBufId, mode);
-    parsedJs = jsParser.parse();
-    // If we are using lazy parse mode, we should have already detected the 'use
-    // static builtin' directive in the pre-parsing stage.
-    if (mode != parser::LazyParse) {
-      useStaticBuiltinDetected = jsParser.getUseStaticBuiltin();
+  // If there's multiple files, concat the programs together.
+  if (programs.size() > 1) {
+    ESTree::NodeList &allStmts = parsedAST->_body;
+    for (size_t i = 1, e = programs.size(); i < e; ++i) {
+      allStmts.splice(allStmts.end(), programs[i]->_body);
     }
   }
-  if (!parsedJs)
-    return nullptr;
-  ESTree::ProgramNode *parsedAST = parsedJs.getValue();
-
-  if (cli::StaticBuiltins == cli::StaticBuiltinSetting::AutoDetect) {
-    context->setStaticBuiltinOptimization(useStaticBuiltinDetected);
-  }
-
-  // Convert TS AST to Flow AST as an intermediate step until we have a separate
-  // TS type checker.
-  if (flowContext && context->getParseTS()) {
-    parsedAST =
-        hermes::convertTSToFlow(*context, cast<ESTree::ProgramNode>(parsedAST));
-    if (!parsedAST) {
-      return nullptr;
-    }
-  }
-
-  assert(!wrapCJSModule && "unsupported");
-  // if (wrapCJSModule) {
-  //   parsedAST =
-  //       hermes::wrapCJSModule(context, cast<ESTree::ProgramNode>(parsedAST));
-  //   if (!parsedAST) {
-  //     return nullptr;
-  //   }
-  // }
 
   // If we are executing in typed mode and not script, then wrap the program.
   if (cli::Typed && !cli::Script) {
@@ -793,11 +811,10 @@ bool compileFromCommandLineOptions() {
       return false;
     }
   }
-
-  std::unique_ptr<llvh::MemoryBuffer> fileBuf =
-      memoryBufferFromFile(cli::InputFilename, true);
-  if (!fileBuf)
+  if (cli::InputFilenames.empty()) {
+    llvh::errs() << "Error: must provide an input filename.\n";
     return false;
+  }
 
   std::shared_ptr<Context> context = createContext();
   if (!context)
@@ -819,6 +836,15 @@ bool compileFromCommandLineOptions() {
   Module M(context);
   sema::SemContext semCtx(*context);
   flow::FlowContext flowContext{};
+  std::vector<std::unique_ptr<llvh::MemoryBuffer>> fileBufs{};
+
+  for (llvh::StringRef filename : cli::InputFilenames) {
+    std::unique_ptr<llvh::MemoryBuffer> fileBuf =
+        memoryBufferFromFile(filename, true);
+    if (!fileBuf)
+      return false;
+    fileBufs.push_back(std::move(fileBuf));
+  }
 
   // TODO: support input source map.
   ESTree::NodePtr ast = parseJS(
@@ -826,7 +852,7 @@ bool compileFromCommandLineOptions() {
       semCtx,
       cli::Typed ? &flowContext : nullptr,
       declFileList,
-      std::move(fileBuf));
+      std::move(fileBufs));
   if (!ast) {
     auto N = context->getSourceErrorManager().getErrorCount();
     llvh::errs() << "Emitted " << N << " errors. exiting.\n";
@@ -837,6 +863,7 @@ bool compileFromCommandLineOptions() {
     return true;
   }
   generateIRFromESTree(&M, semCtx, flowContext, ast);
+
   // Bail out if there were any errors. We can't ensure that the module is in
   // a valid state.
   if (auto N = context->getSourceErrorManager().getErrorCount()) {
@@ -942,7 +969,7 @@ bool compileFromCommandLineOptions() {
       M,
       params,
       cli::OutputLevel,
-      cli::InputFilename,
+      cli::InputFilenames[cli::InputFilenames.size() - 1],
       cli::OutputFilename,
       cli::ExecArgs);
 }
