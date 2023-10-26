@@ -128,16 +128,14 @@ private:
 
 struct VisitedClass {
     UniqueString *className = nullptr;
-    UniqueString *parentClassName = nullptr;
+    ESTree::Node *parentClass = nullptr;
     bool superCallFound = false;
 
     VisitedClass(ESTree::NodePtr className, ESTree::NodePtr superClass) {
         if (className != nullptr) {
             this->className = llvh::cast<ESTree::IdentifierNode>(className)->_name;
         }
-        if (superClass != nullptr) {
-            this->parentClassName = llvh::cast<ESTree::IdentifierNode>(superClass)->_name;
-        }
+        this->parentClass = superClass;
     }
 };
 
@@ -186,14 +184,14 @@ public:
 
     ESTree::VisitResult visit(ESTree::CallExpressionNode *callExpression) {
           auto *topClass = _currentProcessingClass;
-          if (topClass == nullptr || topClass->parentClassName == nullptr) {
+          if (topClass == nullptr || topClass->parentClass == nullptr) {
               return ESTree::Unmodified;
           }
 
           if (callExpression->_callee->getKind() == ESTree::NodeKind::Super) {
               // Convert super(...args) calls
               _currentProcessingClass->superCallFound = true;
-              return createSuperCall(callExpression, makeIdentifierNode(callExpression, topClass->parentClassName), NodeVector(callExpression->_arguments));
+              return createSuperCall(callExpression, topClass->parentClass, NodeVector(callExpression->_arguments));
           }
 
           // Convert super.method(...args) calls to ParentClass.prototype.method.call(this, ...args);
@@ -202,7 +200,7 @@ public:
               return ESTree::Unmodified;
           }
 
-          return createSuperMethodCall(callExpression, topClass->parentClassName, memberExpressionNode->_property, NodeVector(callExpression->_arguments));
+          return createSuperMethodCall(callExpression, topClass->parentClass, memberExpressionNode->_property, NodeVector(callExpression->_arguments));
       }
 
     ESTree::VisitResult visit(ESTree::MemberExpressionNode *memberExpression) {
@@ -212,12 +210,12 @@ public:
         }
 
         auto *topClass = _currentProcessingClass;
-        if (topClass == nullptr || topClass->parentClassName == nullptr) {
+        if (topClass == nullptr || topClass->parentClass == nullptr) {
             // Should not happen
             return ESTree::Unmodified;
         }
 
-        return createGetSuperProperty(memberExpression, topClass->parentClassName, memberExpression->_property);
+        return createGetSuperProperty(memberExpression, topClass->parentClass, memberExpression->_property);
     }
 
     void visit(ESTree::Node *node) {
@@ -257,6 +255,29 @@ private:
         return copyLocation(src, node);
     }
 
+    ESTree::Node *cloneNodeInternal(ESTree::Node *node) {
+        if (node == nullptr) {
+            return nullptr;
+        }
+
+        // TODO: Is there a better way to do this?
+        if (auto *identifier = llvh::dyn_cast<ESTree::IdentifierNode>(node)) {
+            return createTransformedNode<ESTree::IdentifierNode>(node, identifier->_name, cloneNode(identifier->_typeAnnotation), identifier->_optional);
+        }
+        if (auto *memberExpression = llvh::dyn_cast<ESTree::MemberExpressionNode>(node)) {
+            return createTransformedNode<ESTree::MemberExpressionNode>(node, cloneNode(memberExpression->_object), cloneNode(memberExpression->_property), memberExpression->_computed);
+        }
+
+        llvm_unreachable("Unsupported Node Kind");
+
+        return node;
+    }
+
+    template<typename T>
+    T *cloneNode(T *node) {
+        return llvh::cast_or_null<T>(cloneNodeInternal(node));
+    }
+
     ESTree::Node *createClass(ESTree::Node *classNode, ESTree::Node *id, ESTree::ClassBodyNode *classBody, ESTree::Node *superClass) {
         ESTree::Node *resolvedClassId = nullptr;
         if (id == nullptr) {
@@ -272,14 +293,14 @@ private:
         auto classMembers = resolveClassMembers(classBody);
         auto *ctorAsFunction = createClassCtor(resolvedClassId, classBody, superClass, classMembers.constructor);
 
-        ESTree::Node *superClassIdentifier = nullptr;
+        ESTree::Node *superClassExpr = nullptr;
         if (superClass != nullptr) {
-            superClassIdentifier = copyIdentifier(superClass);
+            superClassExpr = cloneNode(superClass);
         } else {
-            superClassIdentifier = new (context_) ESTree::NullLiteralNode();
+            superClassExpr = new (context_) ESTree::NullLiteralNode();
         }
 
-        auto *defineClassResult = makeHermesES6InternalCall(classNode, "defineClass", {copyIdentifier(ctorAsFunction->_id), superClassIdentifier});
+        auto *defineClassResult = makeHermesES6InternalCall(classNode, "defineClass", {copyIdentifier(ctorAsFunction->_id), superClassExpr});
 
         NodeVector statements;
         statements.append(ctorAsFunction);
@@ -343,19 +364,19 @@ private:
     }
 
     ESTree::Node *createSuperCall(ESTree::Node *srcNode, ESTree::Node *superClass, NodeVector parameters) {
-        return createCallWithForwardedThis(srcNode, copyIdentifier(superClass), std::move(parameters));
+        return createCallWithForwardedThis(srcNode, cloneNode(superClass), std::move(parameters));
     }
 
-    ESTree::Node *createGetSuperProperty(ESTree::Node *srcNode, UniqueString *superClassName, ESTree::Node *propertyName) {
+    ESTree::Node *createGetSuperProperty(ESTree::Node *srcNode, ESTree::Node *superClass, ESTree::Node *propertyName) {
         auto *reflectGet = createTransformedNode<ESTree::MemberExpressionNode>(srcNode, makeIdentifierNode(srcNode, "Reflect"), makeIdentifierNode(srcNode, "get"), false);
 
         ESTree::NodeList parameters;
         if (_currentClassMember && _currentClassMember->isStatic) {
             // Reflect.get(ParentClass, 'property', this);
-            parameters.push_back(*makeIdentifierNode(srcNode, superClassName));
+            parameters.push_back(*cloneNode(superClass));
         } else {
             // Reflect.get(ParentClass.prototype, 'property', this);
-            auto *getParentClassPrototype = createTransformedNode<ESTree::MemberExpressionNode>(srcNode, makeIdentifierNode(srcNode, superClassName), makeIdentifierNode(srcNode, "prototype"), false);
+            auto *getParentClassPrototype = createTransformedNode<ESTree::MemberExpressionNode>(srcNode, cloneNode(superClass), makeIdentifierNode(srcNode, "prototype"), false);
             parameters.push_back(*getParentClassPrototype);
         }
 
@@ -368,16 +389,16 @@ private:
         return createTransformedNode<ESTree::CallExpressionNode>(srcNode, reflectGet, nullptr, std::move(parameters));
     }
 
-    ESTree::Node *createSuperMethodCall(ESTree::Node *srcNode, UniqueString *superClassName, ESTree::NodePtr property, NodeVector parameters) {
+    ESTree::Node *createSuperMethodCall(ESTree::Node *srcNode, ESTree::Node *superClass, ESTree::NodePtr property, NodeVector parameters) {
         ESTree::Node *getMethodNodeParameter = nullptr;
         if (_currentClassMember && _currentClassMember->isStatic) {
             // Convert super.method(...args) calls to ParentClass.method.call(this, ...args);
-            getMethodNodeParameter = makeIdentifierNode(srcNode, superClassName);
+            getMethodNodeParameter = cloneNode(superClass);
         } else {
             // Convert super.method(...args) calls to ParentClass.prototype.method.call(this, ...args);
             auto prototypeIdentifier = makeIdentifierNode(srcNode, "prototype");
 
-            getMethodNodeParameter = createTransformedNode<ESTree::MemberExpressionNode>(srcNode, makeIdentifierNode(srcNode, superClassName), prototypeIdentifier, false);
+            getMethodNodeParameter = createTransformedNode<ESTree::MemberExpressionNode>(srcNode, cloneNode(superClass), prototypeIdentifier, false);
         }
 
         auto *getMethodNode = createTransformedNode<ESTree::MemberExpressionNode>(srcNode, getMethodNodeParameter, property, false);
@@ -459,9 +480,6 @@ private:
                 if (!addedPropertyInitializers && !oldSuperCallFound && _currentProcessingClass->superCallFound) {
                     // We just processed the super() call.
                     // Append initializers of class properties
-                    // Note that this is not fully correct in some cases. There could be a statement like:
-                    // super(), this.prop = 'value'
-                    // in which case we will end up adding the properties after this.prop is set.
                     addedPropertyInitializers = true;
                     appendPropertyInitializers(classBody, ctorStatements);
                 }
@@ -471,7 +489,7 @@ private:
             if (superClass != nullptr) {
                 // Generate call to super()
                 auto *argumentsSpread = createTransformedNode<ESTree::SpreadElementNode>(superClass, makeIdentifierNode(superClass, "arguments"));
-                auto *superCall = createSuperCall(classBody, copyIdentifier(superClass), {argumentsSpread});
+                auto *superCall = createSuperCall(classBody, cloneNode(superClass), {argumentsSpread});
                 ctorStatements.push_back(*superCall);
             }
 
