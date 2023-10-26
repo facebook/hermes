@@ -7,7 +7,7 @@
  * @format
  */
 
-// RUN: %shermes -exec %s -- -gc-sanitize-handles=0
+// RUN: %shermes -exec %s -Wx,-gc-sanitize-handles=0
 
 'use strict';
 

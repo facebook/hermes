@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -exec %s -- -Xhermes-internal-test-methods=true | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s -Wx,-Xhermes-internal-test-methods=true | %FileCheck --match-full-lines %s
 
 print("HermesInternal job throws");
 // CHECK-LABEL: HermesInternal job throws

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -exec %s -- -gc-sanitize-handles=0
+// RUN: %shermes -exec %s -Wx,-gc-sanitize-handles=0
 
 function manyIdents(obj) {
     for(var i = 0; i < 10000; ++i) {

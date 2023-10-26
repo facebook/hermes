@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -exec %s -- -gc-sanitize-handles=0 | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s -Wx,-gc-sanitize-handles=0 | %FileCheck --match-full-lines %s
 // REQUIRES: !slow_debug
 
 // At one point, growing a Set (or other user of OrderedHashMap) to a

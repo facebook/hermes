@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -exec %s -- -gc-max-heap=8M -gc-init-heap=8M | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s -Wx,-gc-max-heap=8M,-gc-init-heap=8M | %FileCheck --match-full-lines %s
 
 print('ArrayBuffer')
 // CHECK-LABEL: ArrayBuffer

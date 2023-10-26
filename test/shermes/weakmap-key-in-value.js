@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -exec %s -- -gc-init-heap=4M -Xhermes-internal-test-methods | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s -Wx,-gc-init-heap=4M,-Xhermes-internal-test-methods | %FileCheck --match-full-lines %s
 
 "use strict";
 

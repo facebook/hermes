@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: echo "var obj ={0" ":0,"{1..65535} ":0};" | %shermes - -exec -- -gc-sanitize-handles=0
+// RUN: echo "var obj ={0" ":0,"{1..65535} ":0};" | %shermes - -exec -Wx,-gc-sanitize-handles=0
 // REQUIRES: !slow_debug
 
 // The above echo generates JavaScript code like this:

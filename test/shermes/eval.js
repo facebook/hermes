@@ -6,7 +6,7 @@
  */
 
 // RUN: %shermes -w -exec %s | %FileCheck --match-full-lines %s
-// RUN: %shermes -w -exec %s -- -optimized-eval | %FileCheck --match-full-lines %s
+// RUN: %shermes -w -exec %s -Wx,-optimized-eval | %FileCheck --match-full-lines %s
 // UNSUPPORTED: true
 
 "use strict";

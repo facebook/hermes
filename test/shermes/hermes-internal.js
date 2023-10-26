@@ -5,10 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -exec %s -- -enable-hermes-internal=true | %FileCheck --match-full-lines --check-prefix=CHKHIE %s
-// RUN: %shermes -exec %s -- -enable-hermes-internal=false | %FileCheck --match-full-lines --check-prefix=CHKHID %s
-// RUN: %shermes -exec %s -- -Xhermes-internal-test-methods=true | %FileCheck --match-full-lines --check-prefix=CHKIME %s
-// RUN: %shermes -exec %s -- -Xhermes-internal-test-methods=false | %FileCheck --match-full-lines --check-prefix=CHKIMD %s
+// RUN: %shermes -exec %s -Wx,-enable-hermes-internal=true | %FileCheck --match-full-lines --check-prefix=CHKHIE %s
+// RUN: %shermes -exec %s -Wx,-enable-hermes-internal=false | %FileCheck --match-full-lines --check-prefix=CHKHID %s
+// RUN: %shermes -exec %s -Wx,-Xhermes-internal-test-methods=true | %FileCheck --match-full-lines --check-prefix=CHKIME %s
+// RUN: %shermes -exec %s -Wx,-Xhermes-internal-test-methods=false | %FileCheck --match-full-lines --check-prefix=CHKIMD %s
 
 // concat
 // hasPromise

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -exec %s -- -gc-sanitize-handles=0 | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s -Wx,-gc-sanitize-handles=0 | %FileCheck --match-full-lines %s
 
 // This test was one of HandleSan's slowest at 30 seconds, so
 // -gc-sanitize-handles=0 is passed to reduce the risk of a timeout.

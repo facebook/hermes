@@ -78,7 +78,11 @@ static cl::OptionCategory CompilerCategory(
 cl::opt<std::string>
     InputFilename(cl::desc("<file>"), cl::Positional, cl::Required);
 
-cl::list<std::string> ExecArgs(cl::desc("<exec arguments>"), cl::ConsumeAfter);
+cl::list<std::string> ExecArgs(
+    "Wx,",
+    cl::desc("Pass extra exec arguments (comma separated) to the runtime"),
+    cl::Prefix,
+    cl::CommaSeparated);
 
 static cl::opt<std::string> OutputFilename(
     "o",

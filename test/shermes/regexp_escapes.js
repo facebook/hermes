@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -exec %s -- -gc-sanitize-handles=0  | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s -Wx,-gc-sanitize-handles=0  | %FileCheck --match-full-lines %s
 
 print('RegExp Escapes');
 // CHECK-LABEL: RegExp Escapes

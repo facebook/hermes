@@ -6,7 +6,7 @@
  */
 
 // Make sure to run with a large register stack so we exhaust the native stack first.
-// RUN: %shermes -exec %s -- -max-register-stack=1048576 | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s -Wx,-max-register-stack=1048576 | %FileCheck --match-full-lines %s
 
 function f() {
     f.apply();

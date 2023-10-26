@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -exec %s -- -Xhermes-internal-test-methods -gc-sanitize-handles=0 | %FileCheck %s
+// RUN: %shermes -exec %s -Wx,-Xhermes-internal-test-methods,-gc-sanitize-handles=0 | %FileCheck %s
 
 'use strict';
 

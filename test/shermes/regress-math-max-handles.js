@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -exec %s -- -gc-sanitize-handles=0
+// RUN: %shermes -exec %s -Wx,-gc-sanitize-handles=0
 // Make sure that we don't get a handle count overflow
 "use strict";
 

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -exec %s -- -gc-max-heap=1G | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s -Wx,-gc-max-heap=1G | %FileCheck --match-full-lines %s
 
 print("Array.prototype.join with a large array should throw RangeError")
 // CHECK-LABEL: Array.prototype.join with a large array should throw RangeError

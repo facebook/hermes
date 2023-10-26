@@ -6,7 +6,7 @@
  */
 
 // RUN: %shermes -exec %s | %FileCheck --match-full-lines --check-prefix=ON %s
-// RUN: %shermes -exec %s -- -Xes6-promise=0 | %FileCheck --match-full-lines --check-prefix=OFF %s
+// RUN: %shermes -exec %s -Wx,-Xes6-promise=0 | %FileCheck --match-full-lines --check-prefix=OFF %s
 
 print(HermesInternal.hasPromise());
 // ON: true

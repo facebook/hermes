@@ -5,6 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -exec %s -- -gc-sanitize-handles=1
+// RUN: %shermes -exec %s -Wx,-gc-sanitize-handles=1
 // This is an empty file, just used to ensure that the Runtime can be
 // constructed with full handle sanitization turned on and not crash.
