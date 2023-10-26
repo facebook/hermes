@@ -168,9 +168,9 @@ public:
             return ESTree::Unmodified;
         }
 
-        auto *expressionResult = createClass(classDecl->_id, classBody, classDecl->_superClass);
+        auto *expressionResult = createClass(classDecl, classDecl->_id, classBody, classDecl->_superClass);
 
-        auto result = makeSingleVariableDecl(copyIdentifier(classDecl->_id), expressionResult);
+        auto result = makeSingleVariableDecl(expressionResult, copyIdentifier(classDecl->_id), expressionResult);
 
         return result;
     }
@@ -181,7 +181,7 @@ public:
             return ESTree::Unmodified;
         }
 
-        return createClass(classExpr->_id, classBody, classExpr->_superClass);
+        return createClass(classExpr, classExpr->_id, classBody, classExpr->_superClass);
     }
 
     ESTree::VisitResult visit(ESTree::CallExpressionNode *callExpression) {
@@ -193,7 +193,7 @@ public:
           if (callExpression->_callee->getKind() == ESTree::NodeKind::Super) {
               // Convert super(...args) calls
               _currentProcessingClass->superCallFound = true;
-              return createSuperCall(makeIdentifierNode(topClass->parentClassName), NodeVector(callExpression->_arguments));
+              return createSuperCall(callExpression, makeIdentifierNode(callExpression, topClass->parentClassName), NodeVector(callExpression->_arguments));
           }
 
           // Convert super.method(...args) calls to ParentClass.prototype.method.call(this, ...args);
@@ -202,7 +202,7 @@ public:
               return ESTree::Unmodified;
           }
 
-          return createSuperMethodCall(topClass->parentClassName, memberExpressionNode->_property, NodeVector(callExpression->_arguments));
+          return createSuperMethodCall(callExpression, topClass->parentClassName, memberExpressionNode->_property, NodeVector(callExpression->_arguments));
       }
 
     ESTree::VisitResult visit(ESTree::MemberExpressionNode *memberExpression) {
@@ -217,7 +217,7 @@ public:
             return ESTree::Unmodified;
         }
 
-        return createGetSuperProperty(topClass->parentClassName, memberExpression->_property);
+        return createGetSuperProperty(memberExpression, topClass->parentClassName, memberExpression->_property);
     }
 
     void visit(ESTree::Node *node) {
@@ -236,10 +236,31 @@ private:
     VisitedClass *_currentProcessingClass = nullptr;
     const ResolvedClassMember *_currentClassMember = nullptr;
 
-    ESTree::Node *createClass(ESTree::Node *id, ESTree::ClassBodyNode *classBody, ESTree::Node *superClass) {
+    void doCopyLocation(ESTree::Node *src, ESTree::Node *dest) {
+        if (src != nullptr) {
+            dest->setStartLoc(src->getStartLoc());
+            dest->setEndLoc(src->getEndLoc());
+            dest->setDebugLoc(src->getDebugLoc());
+        }
+    }
+
+    template<typename T>
+    T *copyLocation(ESTree::Node *src, T *dest) {
+        doCopyLocation(src, dest);
+        return dest;
+    }
+
+    template<typename T,
+             typename... Args>
+    T *createTransformedNode(ESTree::Node *src, Args&&... args) {
+        auto *node = new (context_) T(std::forward<Args>(args)...);
+        return copyLocation(src, node);
+    }
+
+    ESTree::Node *createClass(ESTree::Node *classNode, ESTree::Node *id, ESTree::ClassBodyNode *classBody, ESTree::Node *superClass) {
         ESTree::Node *resolvedClassId = nullptr;
         if (id == nullptr) {
-            resolvedClassId = makeIdentifierNode("__clsExpr__");
+            resolvedClassId = makeIdentifierNode(nullptr, "__clsExpr__");
         } else {
             resolvedClassId = id;
         }
@@ -258,7 +279,7 @@ private:
             superClassIdentifier = new (context_) ESTree::NullLiteralNode();
         }
 
-        auto *defineClassResult = makeHermesES6InternalCall("defineClass", {copyIdentifier(ctorAsFunction->_id), superClassIdentifier});
+        auto *defineClassResult = makeHermesES6InternalCall(classNode, "defineClass", {copyIdentifier(ctorAsFunction->_id), superClassIdentifier});
 
         NodeVector statements;
         statements.append(ctorAsFunction);
@@ -267,7 +288,7 @@ private:
         appendMethods(resolvedClassId, classMembers, statements);
 
         // Wrap into an immediately invoked function
-        auto *expr = blockToExpression(statements, ctorAsFunction->_id);
+        auto *expr = blockToExpression(classNode, statements, ctorAsFunction->_id);
 
         _currentProcessingClass = oldProcessingClass;
 
@@ -275,127 +296,115 @@ private:
     }
 
     ESTree::StatementNode *toStatement(ESTree::Node *expression) {
-        return new (context_) ESTree::ExpressionStatementNode(expression, nullptr);
+        return createTransformedNode<ESTree::ExpressionStatementNode>(expression, expression, nullptr);
     }
 
     ESTree::IdentifierNode *copyIdentifier(ESTree::Node *identifer) {
         auto *typedIdentifier = llvh::cast<ESTree::IdentifierNode>(identifer);
-        return new (context_) ESTree::IdentifierNode(typedIdentifier->_name, nullptr, false);
+        return createTransformedNode<ESTree::IdentifierNode>(identifer, typedIdentifier->_name, nullptr, false);
     }
 
-    ESTree::Node *makeSingleVariableDecl(ESTree::Node *identifier, ESTree::Node *value) {
-        auto *variableDeclarator = new (context_) ESTree::VariableDeclaratorNode(value, identifier);
+    ESTree::Node *makeSingleVariableDecl(ESTree::Node *srcNode, ESTree::Node *identifier, ESTree::Node *value) {
+        auto *variableDeclarator = createTransformedNode<ESTree::VariableDeclaratorNode>(srcNode, value, identifier);
         ESTree::NodeList variableList;
         variableList.push_back(*variableDeclarator);
-        return new (context_) ESTree::VariableDeclarationNode(identVar_, std::move(variableList));
+        return createTransformedNode<ESTree::VariableDeclarationNode>(srcNode, identVar_, std::move(variableList));
     }
 
-    ESTree::Node *makeHermesES6InternalCall(llvh::StringRef methodName, const NodeVector &parameters) {
-        auto hermesInternalIdentifier = makeIdentifierNode("HermesES6Internal");
-        auto methodIdentifier = makeIdentifierNode(methodName);
+    ESTree::Node *makeHermesES6InternalCall(ESTree::Node *srcNode, llvh::StringRef methodName, const NodeVector &parameters) {
+        auto hermesInternalIdentifier = makeIdentifierNode(srcNode, "HermesES6Internal");
+        auto methodIdentifier = makeIdentifierNode(srcNode, methodName);
 
-        auto *getPropertyNode = new (context_) ESTree::MemberExpressionNode(hermesInternalIdentifier, methodIdentifier, false);
-        return new (context_) ESTree::CallExpressionNode(getPropertyNode, nullptr, parameters.toNodeList());
+        auto *getPropertyNode = createTransformedNode<ESTree::MemberExpressionNode>(srcNode, hermesInternalIdentifier, methodIdentifier, false);
+        return createTransformedNode<ESTree::CallExpressionNode>(srcNode, getPropertyNode, nullptr, parameters.toNodeList());
     }
 
-    ESTree::IdentifierNode *makeIdentifierNode(UniqueString *name) {
-        return new (context_) ESTree::IdentifierNode(name, nullptr, false);
+    ESTree::IdentifierNode *makeIdentifierNode(ESTree::Node *srcNode, UniqueString *name) {
+        return createTransformedNode<ESTree::IdentifierNode>(srcNode, name, nullptr, false);
     }
 
-    ESTree::IdentifierNode *makeIdentifierNode(llvh::StringRef name) {
-        return makeIdentifierNode(context_.getIdentifier(name).getUnderlyingPointer());
+    ESTree::IdentifierNode *makeIdentifierNode(ESTree::Node *srcNode, llvh::StringRef name) {
+        return makeIdentifierNode(srcNode, context_.getIdentifier(name).getUnderlyingPointer());
     }
 
-    ESTree::Node *makeUndefinedNode() {
-        return makeIdentifierNode("undefined");
+    ESTree::Node *makeUndefinedNode(ESTree::Node *srcNode) {
+        return makeIdentifierNode(srcNode, "undefined");
     }
 
-    ESTree::Node *createCallWithForwardedThis(ESTree::Node *object, NodeVector parameters) {
-        auto *this_ = new (context_) ESTree::ThisExpressionNode();
+    ESTree::Node *createCallWithForwardedThis(ESTree::Node *srcNode, ESTree::Node *object, NodeVector parameters) {
+        auto *this_ = createTransformedNode<ESTree::ThisExpressionNode>(srcNode);
 
         parameters.prepend(this_);
 
-        auto methodIdentifier = makeIdentifierNode("call");
+        auto methodIdentifier = makeIdentifierNode(srcNode, "call");
 
-        auto *getPropertyNode = new (context_) ESTree::MemberExpressionNode(object, methodIdentifier, false);
-        return new (context_) ESTree::CallExpressionNode(getPropertyNode, nullptr, parameters.toNodeList());
+        auto *getPropertyNode = createTransformedNode<ESTree::MemberExpressionNode>(srcNode, object, methodIdentifier, false);
+        return createTransformedNode<ESTree::CallExpressionNode>(srcNode, getPropertyNode, nullptr, parameters.toNodeList());
     }
 
-    ESTree::Node *createSuperCall(ESTree::Node *superClass, NodeVector parameters) {
-        return createCallWithForwardedThis(copyIdentifier(superClass), std::move(parameters));
+    ESTree::Node *createSuperCall(ESTree::Node *srcNode, ESTree::Node *superClass, NodeVector parameters) {
+        return createCallWithForwardedThis(srcNode, copyIdentifier(superClass), std::move(parameters));
     }
 
-    ESTree::Node *createGetSuperProperty(UniqueString *superClassName, ESTree::Node *propertyName) {
-        auto *reflectGet = new (context_) ESTree::MemberExpressionNode(makeIdentifierNode("Reflect"), makeIdentifierNode("get"), false);
+    ESTree::Node *createGetSuperProperty(ESTree::Node *srcNode, UniqueString *superClassName, ESTree::Node *propertyName) {
+        auto *reflectGet = createTransformedNode<ESTree::MemberExpressionNode>(srcNode, makeIdentifierNode(srcNode, "Reflect"), makeIdentifierNode(srcNode, "get"), false);
 
         ESTree::NodeList parameters;
         if (_currentClassMember && _currentClassMember->isStatic) {
             // Reflect.get(ParentClass, 'property', this);
-            parameters.push_back(*makeIdentifierNode(superClassName));
+            parameters.push_back(*makeIdentifierNode(srcNode, superClassName));
         } else {
             // Reflect.get(ParentClass.prototype, 'property', this);
-            auto *getParentClassPrototype = new (context_) ESTree::MemberExpressionNode(makeIdentifierNode(superClassName), makeIdentifierNode("prototype"), false);
+            auto *getParentClassPrototype = createTransformedNode<ESTree::MemberExpressionNode>(srcNode, makeIdentifierNode(srcNode, superClassName), makeIdentifierNode(srcNode, "prototype"), false);
             parameters.push_back(*getParentClassPrototype);
         }
 
-        auto *propertyStringLiteral = new (context_) ESTree::StringLiteralNode(llvh::cast<ESTree::IdentifierNode>(propertyName)->_name);
-        auto *this_ = new (context_) ESTree::ThisExpressionNode();
+        auto *propertyStringLiteral = createTransformedNode<ESTree::StringLiteralNode>(propertyName, llvh::cast<ESTree::IdentifierNode>(propertyName)->_name);
+        auto *this_ = createTransformedNode<ESTree::ThisExpressionNode>(srcNode);
 
         parameters.push_back(*propertyStringLiteral);
         parameters.push_back(*this_);
 
-        return new (context_) ESTree::CallExpressionNode(reflectGet, nullptr, std::move(parameters));
+        return createTransformedNode<ESTree::CallExpressionNode>(srcNode, reflectGet, nullptr, std::move(parameters));
     }
 
-    ESTree::Node *createSuperMethodCall(UniqueString *superClassName, ESTree::NodePtr property, NodeVector parameters) {
+    ESTree::Node *createSuperMethodCall(ESTree::Node *srcNode, UniqueString *superClassName, ESTree::NodePtr property, NodeVector parameters) {
         ESTree::Node *getMethodNodeParameter = nullptr;
         if (_currentClassMember && _currentClassMember->isStatic) {
             // Convert super.method(...args) calls to ParentClass.method.call(this, ...args);
-            getMethodNodeParameter = makeIdentifierNode(superClassName);
+            getMethodNodeParameter = makeIdentifierNode(srcNode, superClassName);
         } else {
             // Convert super.method(...args) calls to ParentClass.prototype.method.call(this, ...args);
-            auto prototypeIdentifier = makeIdentifierNode("prototype");
+            auto prototypeIdentifier = makeIdentifierNode(srcNode, "prototype");
 
-            getMethodNodeParameter = new (context_) ESTree::MemberExpressionNode(makeIdentifierNode(superClassName), prototypeIdentifier, false);
+            getMethodNodeParameter = createTransformedNode<ESTree::MemberExpressionNode>(srcNode, makeIdentifierNode(srcNode, superClassName), prototypeIdentifier, false);
         }
 
-        auto *getMethodNode = new (context_) ESTree::MemberExpressionNode(getMethodNodeParameter, property, false);
+        auto *getMethodNode = createTransformedNode<ESTree::MemberExpressionNode>(srcNode, getMethodNodeParameter, property, false);
 
-        return createCallWithForwardedThis(getMethodNode, std::move(parameters));
+        return createCallWithForwardedThis(srcNode, getMethodNode, std::move(parameters));
     }
 
-    ESTree::Node *blockToExpression(const NodeVector &statements, ESTree::Node *returnVariableName) {
+    ESTree::Node *blockToExpression(ESTree::Node *srcNode, const NodeVector &statements, ESTree::Node *returnVariableName) {
         auto stmtList = statements.toNodeList();
 
-        auto *returnStmt = new (context_) ESTree::ReturnStatementNode(copyIdentifier(returnVariableName));
+        auto *returnStmt = createTransformedNode<ESTree::ReturnStatementNode>(srcNode, copyIdentifier(returnVariableName));
 
         stmtList.push_back(*returnStmt);
 
-        auto *body = new (context_) ESTree::BlockStatementNode(std::move(stmtList));
+        auto *body = createTransformedNode<ESTree::BlockStatementNode>(srcNode, std::move(stmtList));
 
-        auto *immediateInvokedFunction = new (context_) ESTree::FunctionExpressionNode(
-                                                                                       nullptr,
-                                                                                       {},
-                                                                                       body,
-                                                                                       nullptr,
-                                                                                       nullptr,
-                                                                                       nullptr,
-                                                                                       false,
-                                                                                       false);
+        auto *immediateInvokedFunction = createTransformedNode<ESTree::FunctionExpressionNode>(srcNode,
+                                                                                               nullptr,
+                                                                                               ESTree::NodeList(),
+                                                                                               body,
+                                                                                               nullptr,
+                                                                                               nullptr,
+                                                                                               nullptr,
+                                                                                               false,
+                                                                                               false);
 
-        return new (context_) ESTree::CallExpressionNode(immediateInvokedFunction, nullptr, {});
-    }
-
-    void doCopyLocation(ESTree::Node *src, ESTree::Node *dest) {
-        dest->setStartLoc(src->getStartLoc());
-        dest->setEndLoc(src->getEndLoc());
-        dest->setDebugLoc(src->getDebugLoc());
-    }
-
-    template<typename T>
-    T *copyLocation(ESTree::Node *src, T *dest) {
-        doCopyLocation(src, dest);
-        return dest;
+        return createTransformedNode<ESTree::CallExpressionNode>(srcNode, immediateInvokedFunction, nullptr, ESTree::NodeList());
     }
 
     void unpackStatements(ESTree::Node *stmt, NodeVector &out) {
@@ -413,7 +422,7 @@ private:
 
         NodeVector expressions(sequenceExpression->_expressions);
         for (auto *node: expressions) {
-            auto *emittedExpressionStatement = copyLocation(node, new (context_) ESTree::ExpressionStatementNode(node, expressionStatement->_directive));
+            auto *emittedExpressionStatement = createTransformedNode<ESTree::ExpressionStatementNode>(node, node, expressionStatement->_directive);
 
             out.append(emittedExpressionStatement);
         }
@@ -461,8 +470,8 @@ private:
             // No existing ctor.
             if (superClass != nullptr) {
                 // Generate call to super()
-                auto *argumentsSpread = new (context_) ESTree::SpreadElementNode(makeIdentifierNode("arguments"));
-                auto *superCall = createSuperCall(copyIdentifier(superClass), {argumentsSpread});
+                auto *argumentsSpread = createTransformedNode<ESTree::SpreadElementNode>(superClass, makeIdentifierNode(superClass, "arguments"));
+                auto *superCall = createSuperCall(classBody, copyIdentifier(superClass), {argumentsSpread});
                 ctorStatements.push_back(*superCall);
             }
 
@@ -470,17 +479,17 @@ private:
             appendPropertyInitializers(classBody, ctorStatements);
         }
 
-        auto *body = new (context_) ESTree::BlockStatementNode(std::move(ctorStatements));
+        auto *body = createTransformedNode<ESTree::BlockStatementNode>(classBody, std::move(ctorStatements));
 
-        return new (context_) ESTree::FunctionDeclarationNode(
-                identifier,
-                std::move(paramList),
-                body,
-                nullptr,
-                nullptr,
-                nullptr,
-                false,
-                false);
+        return createTransformedNode<ESTree::FunctionDeclarationNode>(classBody,
+                                                                      identifier,
+                                                                      std::move(paramList),
+                                                                      body,
+                                                                      nullptr,
+                                                                      nullptr,
+                                                                      nullptr,
+                                                                      false,
+                                                                      false);
     }
 
     void appendPropertyInitializers(ESTree::ClassBodyNode *classBody, ESTree::NodeList &stmtList) {
@@ -488,7 +497,7 @@ private:
             if (auto *classProperty = llvh::dyn_cast<ESTree::ClassPropertyNode>(&entry)) {
                 if (classProperty->_value != nullptr) {
                     visitESTreeNode(*this, classProperty->_value);
-                    auto *initializer = createThisPropertyInitializer(classProperty->_key, classProperty->_value);
+                    auto *initializer = createThisPropertyInitializer(classProperty, classProperty->_key, classProperty->_value);
                     stmtList.push_back(*initializer);
                 }
             }
@@ -540,7 +549,7 @@ private:
                 } else {
                     auto index = resolvedClassMembers.members.size();
                     classMemberIndexByIdentifier[memberKey] = index;
-                    resolvedClassMembers.members.emplace_back(new (context_) ESTree::StringLiteralNode(identifierNode->_name), memberKey.isStatic);
+                    resolvedClassMembers.members.emplace_back(createTransformedNode<ESTree::StringLiteralNode>(identifierNode, identifierNode->_name), memberKey.isStatic);
                     resolvedClassMember = &resolvedClassMembers.members.back();
                 }
 
@@ -577,8 +586,10 @@ private:
             parameters.append(classMember.name);
 
             llvh::StringRef hermesCallName;
+            ESTree::Node *srcNode = nullptr;
 
             if (classMember.method != nullptr) {
+                srcNode = classMember.method;
                 visitMethodESTreeChildren(classMember, classMember.method);
 
                 hermesCallName = classMember.isStatic ? "defineStaticClassMethod" : "defineClassMethod";
@@ -588,31 +599,33 @@ private:
                 hermesCallName = classMember.isStatic ? "defineStaticClassProperty" : "defineClassProperty";
 
                 if (classMember.getter != nullptr) {
+                    srcNode = classMember.getter;
                     visitMethodESTreeChildren(classMember, classMember.getter);
                     parameters.append(classMember.getter->_value);
                 } else {
-                    parameters.append(makeUndefinedNode());
+                    parameters.append(makeUndefinedNode(classMember.setter));
                 }
 
                 if (classMember.setter != nullptr) {
+                    srcNode = classMember.setter;
                     visitMethodESTreeChildren(classMember, classMember.setter);
                     parameters.append(classMember.setter->_value);
                 } else {
-                    parameters.append(makeUndefinedNode());
+                    parameters.append(makeUndefinedNode(classMember.getter));
                 }
             }
 
-            auto *call = makeHermesES6InternalCall(hermesCallName, parameters);
+            auto *call = makeHermesES6InternalCall(srcNode, hermesCallName, parameters);
 
             stmtList.append(toStatement(call));
         }
     }
 
-    ESTree::Node *createThisPropertyInitializer(ESTree::Node *identifier, ESTree::Node *initialValue) {
-        auto *this_ = new (context_) ESTree::ThisExpressionNode();
+    ESTree::Node *createThisPropertyInitializer(ESTree::Node *srcNode, ESTree::Node *identifier, ESTree::Node *initialValue) {
+        auto *this_ = createTransformedNode<ESTree::ThisExpressionNode>(srcNode);
 
-        auto *getPropertyNode = new (context_) ESTree::MemberExpressionNode(this_, identifier, false);
-        auto *assignmentExpression = new (context_) ESTree::AssignmentExpressionNode(getIdentifierForTokenKind(parser::TokenKind::equal), getPropertyNode, initialValue);
+        auto *getPropertyNode = createTransformedNode<ESTree::MemberExpressionNode>(srcNode, this_, identifier, false);
+        auto *assignmentExpression = createTransformedNode<ESTree::AssignmentExpressionNode>(srcNode, getIdentifierForTokenKind(parser::TokenKind::equal), getPropertyNode, initialValue);
 
         return toStatement(assignmentExpression);
     }
