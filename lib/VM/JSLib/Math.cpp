@@ -208,44 +208,44 @@ CallResult<HermesValue> mathPow(void *, Runtime &runtime, NativeArgs args) {
 }
 
 // Help defines for random
-static constexpr int RIGHT12 = 12;
-static constexpr int SECONDS_TO_SUBTLE = 1000000;
-static constexpr int RIGHT27 = 27;
-static constexpr int LEFT25 = 25;
-static constexpr uint64_t GET_MULTIPLY = 0x2545F4914F6CDD1D;
-// Exponent bits for double value between [1.0, 2.0)
-static constexpr uint64_t EXPONENTBITS_RANGE_IN_ONE_AND_TWO = 0x3FF0000000000000;
-
-static double ToDouble(uint64_t state) {
-  uint64_t random = (state >> RIGHT12) | EXPONENTBITS_RANGE_IN_ONE_AND_TWO;
-  return llvh::bit_cast<double>(random) - 1;
+static uint64_t MurmurHash3(uint64_t h) {
+  h ^= h >> 33;
+  h *= uint64_t{0xFF51AFD7ED558CCD};
+  h ^= h >> 33;
+  h *= uint64_t{0xC4CEB9FE1A85EC53};
+  h ^= h >> 33;
+  return h;
 }
 
-static uint64_t XorShift64(uint64_t *pVal) {
-  uint64_t x = *pVal;
-  x ^= x >> RIGHT12;
-  x ^= x << LEFT25;
-  x ^= x >> RIGHT27;
-  *pVal = x;
-  return x * GET_MULTIPLY;
+static inline void XorShift128(uint64_t (&s)[2]) {
+  uint64_t s1 = s[0];
+  uint64_t s0 = s[1];
+  s[0] = s0;
+  s1 ^= s1 << 23;
+  s1 ^= s1 >> 17;
+  s1 ^= s0;
+  s1 ^= s0 >> 26;
+  s[1] = s1;
 }
 
 // ES5.1 15.8.2.14
 // Returns a Hermes-encoded pseudo-random number uniformly chosen from [0, 1)
 CallResult<HermesValue> mathRandom(void *, Runtime &runtime, NativeArgs) {
   RuntimeCommonStorage *storage = runtime.getCommonStorage();
-  if (!storage->randomEngineInited) {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    storage->randomState_ = static_cast<uint64_t>((tv.tv_sec * SECONDS_TO_SUBTLE) + tv.tv_usec);
-    // the state must be non zero
-    if (storage->randomState_ == 0) {
-      storage->randomState_ = 1;
-    }
-    storage->randomEngineInited = true;
+  if (!storage->randomEngineSeeded_) {
+    std::minstd_rand::result_type first_half_seed;
+    std::minstd_rand::result_type second_half_seed;
+    first_half_seed = std::random_device()();
+    second_half_seed = std::random_device()();
+    int64_t seed = (static_cast<int64_t>(first_half_seed) << 32) + second_half_seed;
+    
+    storage->randomEngineState_[0] = MurmurHash3(llvh::bit_cast<uint64_t>(seed));
+    storage->randomEngineState_[1] = MurmurHash3(~storage->randomEngineState_[0]);
+    storage->randomEngineSeeded_ = true;
   }
-  uint64_t val = XorShift64(&storage->randomState_);
-  return HermesValue::encodeUntrustedNumberValue(ToDouble(val));
+  XorShift128(storage->randomEngineState_);
+  double randDouble = storage->randomEngineState_[0];
+  return HermesValue::encodeUntrustedNumberValue(randDouble);
 }
 
 CallResult<HermesValue> mathFround(void *, Runtime &runtime, NativeArgs args)

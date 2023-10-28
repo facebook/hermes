@@ -37,9 +37,9 @@ struct RuntimeCommonStorage {
   /// results of calls to functions).
   MockedEnvironment tracedEnv;
 
-  /// PRNG used by Math.random()
-  uint64_t randomState_;
-  bool randomEngineInited = false;
+  /// state for xoroshiro128+ PRNG used by Math.random()
+  uint64_t randomEngineState_[2];
+  bool randomEngineSeeded_ = false;
 };
 
 } // namespace vm
