@@ -63,7 +63,9 @@ class TS2FlowConverter
     : public ESTree::RecursionDepthTracker<TS2FlowConverter> {
  public:
   TS2FlowConverter(Context &context)
-      : context_(context), sm_(context.getSourceErrorManager()) {}
+      : context_(context),
+        sm_(context.getSourceErrorManager()),
+        thisIdent_(context.getStringTable().getIdentifier("this")) {}
 
   /// Convert any TS annotation nodes to Flow annotation nodes, in place.
   /// Reports errors via the context's source manager if conversion fails.
@@ -168,6 +170,7 @@ class TS2FlowConverter
       CASE(TSArrayType)
       CASE(TSTypeReference)
       CASE(TSTypeAliasDeclaration)
+      CASE(TSFunctionType)
 #undef CASE
       default:
         sm_.error(
@@ -255,6 +258,118 @@ class TS2FlowConverter
         convertTSNode(node->_typeAnnotation));
   }
 
+  ESTree::Node *convertTSNode(ESTree::TSFunctionTypeNode *node) {
+    if (node->_typeParameters) {
+      sm_.error(node->getSourceRange(), "ts2flow: unimplemented type params");
+    }
+    auto *returnType = convertTSNode(node->_returnType);
+
+    // Extract `this` and `...` from params if exist.
+    // In TS AST, `this` and `...` are included in params, while
+    // FunctionTypeAnnotation in Flow AST has them in dedicated fields.
+
+    // `this` is a normal IdentifierNode in TS AST.
+    ESTree::Node *thisNode = nullptr;
+    if (!node->_params.empty()) {
+      auto &firstArg = node->_params.front();
+      if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(&firstArg)) {
+        if (Identifier::getFromPointer(id->_name) == thisIdent_) {
+          thisNode = convertIdentifierToFunctionTypeParam(*id);
+          node->_params.pop_front();
+        }
+      }
+    }
+
+    ESTree::Node *restNode = nullptr;
+    if (!node->_params.empty()) {
+      auto &lastArg = node->_params.back();
+      if (auto *rest = llvh::dyn_cast<ESTree::RestElementNode>(&lastArg)) {
+        restNode = convertRestElementToFunctionTypeParam(*rest);
+        node->_params.pop_back();
+      }
+    }
+
+    ESTree::NodeList params{};
+    for (auto &param : node->_params) {
+      ESTree::Node *convertedParam = nullptr;
+      switch (param.getKind()) {
+        case ESTree::NodeKind::Identifier:
+          convertedParam = convertIdentifierToFunctionTypeParam(
+              llvh::cast<ESTree::IdentifierNode>(param));
+          break;
+        default:
+          break;
+      }
+
+      if (!convertedParam) {
+        sm_.error(
+            param.getSourceRange(),
+            "ts2flow: failed to convert a function type node");
+        return nullptr;
+      }
+
+      params.push_back(*convertedParam);
+    }
+
+    return createNode<ESTree::FunctionTypeAnnotationNode>(
+        node,
+        std::move(params),
+        thisNode,
+        returnType,
+        restNode,
+        node->_typeParameters);
+  }
+
+  /// Convert the given IdentifierNode in TS AST to FunctionTypeParamNode.
+  /// The given IdentifierNode may be modified and reused as the name of
+  /// the returned FunctionTypeParam.
+  /// \param node an IdentifierNode in TS AST.
+  /// \return a FunctionTypeParamNode. nullptr on error.
+  ESTree::FunctionTypeParamNode *convertIdentifierToFunctionTypeParam(
+      ESTree::IdentifierNode &node) {
+    ESTree::Node *typeAnnotation = convertTSNode(node._typeAnnotation);
+    if (auto *typeAnnotationNode =
+            llvh::dyn_cast<ESTree::TypeAnnotationNode>(typeAnnotation)) {
+      typeAnnotation = typeAnnotationNode->_typeAnnotation;
+    }
+    if (!typeAnnotation) {
+      sm_.error(
+          node.getSourceRange(), "ts2flow: failed to convert type annotation");
+      return nullptr;
+    }
+
+    bool optional = node._optional;
+
+    // `this` doesn't have name in FunctionTypeParamNode.
+    // Otherwise, reuse the given node as name.
+    ESTree::Node *name = nullptr;
+    if (Identifier::getFromPointer(node._name) != thisIdent_) {
+      node._typeAnnotation = nullptr;
+      node._optional = false;
+      name = &node;
+    }
+
+    return createNode<ESTree::FunctionTypeParamNode>(
+        &node, name, typeAnnotation, optional);
+  }
+
+  /// Convert the given RestElementNode in TS AST to FunctionTypeParamNode.
+  /// \param node an RestElementNode in TS AST.
+  /// \return a FunctionTypeParamNode. nullptr on error.
+  ESTree::FunctionTypeParamNode *convertRestElementToFunctionTypeParam(
+      ESTree::RestElementNode &node) {
+    auto *argument = node._argument;
+    switch (argument->getKind()) {
+      case ESTree::NodeKind::Identifier:
+        return convertIdentifierToFunctionTypeParam(
+            *llvh::cast<ESTree::IdentifierNode>(argument));
+      default:
+        sm_.error(
+            node.getSourceRange(), "ts2flow: failed to convert rest element");
+        return nullptr;
+    }
+  }
+
   template <typename T, typename... Args>
   T *createNode(const ESTree::Node *src, Args &&...args) {
     auto *node = new (context_) T(std::forward<Args>(args)...);
@@ -272,6 +387,9 @@ class TS2FlowConverter
 
   /// A reference to Context::getSourceErrorManager() for easier access.
   SourceErrorManager &sm_;
+
+  // Memoize some keywords for convenience.
+  Identifier thisIdent_;
 };
 
 } // anonymous namespace
