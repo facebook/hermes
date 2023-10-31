@@ -377,7 +377,7 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentParameterFlow(
 
     auto elem = setLocation(
         identRng,
-        identRng,
+        getPrevTokenEndLoc(),
         new (context_) ESTree::IdentifierNode(id, type, optional));
     ESTree::Node *localElem;
 
