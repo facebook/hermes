@@ -1720,7 +1720,13 @@ class FlowChecker::ExprVisitor {
           node->getSourceRange(), "ft: unsupported native type annotation");
       return false;
     }
-    UniqueString *name = llvh::cast<ESTree::IdentifierNode>(ann->_id)->_name;
+    auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(ann->_id);
+    if (!id) {
+      outer_.sm_.error(
+          node->getSourceRange(), "ft: unsupported native type annotation");
+      return false;
+    }
+    UniqueString *name = id->_name;
     auto it = outer_.nativeTypes_.find(name);
     if (it == outer_.nativeTypes_.end()) {
       outer_.sm_.error(
@@ -2310,7 +2316,13 @@ class FlowChecker::DeclareScopeTypes {
     /// recursively alias to another generic annotation or a union.
     if (auto *gta =
             llvh::dyn_cast<ESTree::GenericTypeAnnotationNode>(annotation)) {
-      auto *id = llvh::cast<ESTree::IdentifierNode>(gta->_id);
+      auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(gta->_id);
+
+      if (!id) {
+        outer.sm_.error(
+            gta->getSourceRange(), "ft: unsupported type annotation");
+        return outer.flowContext_.getAny();
+      }
 
       // Is it declared anywhere?
       // If so, find its innermost declaration.
@@ -2909,7 +2921,13 @@ Type *FlowChecker::parseArrayTypeAnnotation(
 
 Type *FlowChecker::parseGenericTypeAnnotation(
     ESTree::GenericTypeAnnotationNode *node) {
-  auto *id = llvh::cast<ESTree::IdentifierNode>(node->_id);
+  auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(node->_id);
+
+  if (!id) {
+    sm_.error(node->getSourceRange(), "ft: unsupported type annotation");
+    return flowContext_.getAny();
+  }
+
   TypeDecl *td = bindingTable_.find(id->_name);
 
   if (!td) {
