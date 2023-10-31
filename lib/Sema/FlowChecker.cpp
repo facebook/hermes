@@ -938,6 +938,7 @@ class FlowChecker::ExprVisitor {
         .Case("**=", BinopKind::exp);
   }
 
+  /// \return nullptr if the operation is not supported.
   Type *determineBinopType(BinopKind op, TypeKind lk, TypeKind rk) {
     struct BinTypes {
       BinopKind op;
@@ -1250,6 +1251,15 @@ class FlowChecker::ExprVisitor {
           assignKind(node->_operator->str()),
           lt->info->getKind(),
           rt->info->getKind());
+
+      if (!res) {
+        outer_.sm_.error(
+            node->getSourceRange(),
+            llvh::Twine("ft: incompatible binary operation: ") +
+                node->_operator->str() + " cannot be applied to " +
+                lt->info->getKindName() + " and " + rt->info->getKindName());
+        res = outer_.flowContext_.getAny();
+      }
 
       if (llvh::isa<AnyType>(lt->info)) {
         // If the target we are assigning to is untyped, there are no checks
