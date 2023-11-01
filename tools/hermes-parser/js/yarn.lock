@@ -2646,10 +2646,10 @@ eslint-plugin-eslint-comments@^3.2.0:
     escape-string-regexp "^1.0.5"
     ignore "^5.0.5"
 
-eslint-plugin-fb-flow@^0.0.4:
-  version "0.0.4"
-  resolved "https://registry.yarnpkg.com/eslint-plugin-fb-flow/-/eslint-plugin-fb-flow-0.0.4.tgz#47fa51630a5620b3b03919194e783ddfc094fd5d"
-  integrity sha512-VWRoULiRkYqgeX4uCw2uIuu4v5DOhtWC+4fLM+qXX2mUtLf07znqhyTtxwIugnX8MgPczkaKmtDPrkuhvFmAoA==
+eslint-plugin-fb-flow@^0.0.5:
+  version "0.0.5"
+  resolved "https://registry.yarnpkg.com/eslint-plugin-fb-flow/-/eslint-plugin-fb-flow-0.0.5.tgz#42aa285a79d0a9ce0a78279b162ffcb2d41c312b"
+  integrity sha512-GTLSipYC3H8ASGdsgNb/BvyuEypd3+kBHB5tSNQckGpSqGcX18Vu229b6Xaxi6nG+JbQNSGvo9yRnnTJs1dLiw==
 
 eslint-plugin-flowtype@^8.0.3:
   version "8.0.3"
