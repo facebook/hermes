@@ -77,6 +77,7 @@ static llvh::cl::opt<bool> ES6Class(
     "Xes6-class",
     llvh::cl::init(false),
     llvh::cl::desc("Enable support for ES6 Class"),
+    llvh::cl::Hidden,
     llvh::cl::cat(cl::RuntimeCategory));
 
 // This is the vm driver.

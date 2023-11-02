@@ -9,12 +9,12 @@
 #include "hermes/AST/RecursiveVisitor.h"
 #include "hermes/Parser/JSLexer.h"
 
-namespace hermes {
+namespace {
 struct ClassMemberKey {
-    Identifier identifier;
+    hermes::Identifier identifier;
     bool isStatic;
 
-    ClassMemberKey(Identifier identifier, bool isStatic): identifier(identifier), isStatic(isStatic) {}
+    ClassMemberKey(hermes::Identifier identifier, bool isStatic): identifier(identifier), isStatic(isStatic) {}
 
     bool operator==(const ClassMemberKey &other) const {
         return identifier == other.identifier && isStatic == other.isStatic;
@@ -31,48 +31,28 @@ struct ClassMemberKey {
 namespace llvh {
 
 template <>
-struct DenseMapInfo<hermes::ClassMemberKey> {
-  static inline hermes::ClassMemberKey getEmptyKey() {
-      return hermes::ClassMemberKey(hermes::Identifier::getFromPointer(DenseMapInfo<hermes::UniqueString *>::getEmptyKey()), false);
+struct DenseMapInfo<ClassMemberKey> {
+  static inline ClassMemberKey getEmptyKey() {
+      return ClassMemberKey(hermes::Identifier::getFromPointer(DenseMapInfo<hermes::UniqueString *>::getEmptyKey()), false);
   }
-  static inline hermes::ClassMemberKey getTombstoneKey() {
-      return hermes::ClassMemberKey(hermes::Identifier::getFromPointer(
+  static inline ClassMemberKey getTombstoneKey() {
+      return ClassMemberKey(hermes::Identifier::getFromPointer(
         DenseMapInfo<hermes::UniqueString *>::getTombstoneKey()), false);
   }
-  static inline unsigned getHashValue(hermes::ClassMemberKey memberKey) {
+  static inline unsigned getHashValue(ClassMemberKey memberKey) {
       auto identifierHash = DenseMapInfo<hermes::UniqueString *>::getHashValue(memberKey.identifier.getUnderlyingPointer());
       return static_cast<unsigned>(llvh::hash_combine(identifierHash, memberKey.isStatic));
   }
 
-  static inline bool isEqual(hermes::ClassMemberKey a, hermes::ClassMemberKey b) {
+  static inline bool isEqual(ClassMemberKey a, ClassMemberKey b) {
     return a == b;
   }
 };
 
 } // namespace llvh
 
-namespace hermes {
-
-enum class ClassMemberKind {
-    Constructor,
-    Method,
-    PropertyGetter,
-    PropertySetter
-};
-
-static ClassMemberKind getClassMemberKind(ESTree::MethodDefinitionNode *methodDefinition) {
-    const auto &str = methodDefinition->_kind->str();
-    if (str == "constructor") {
-        return ClassMemberKind::Constructor;
-    } else if (str == "method") {
-        return ClassMemberKind::Method;
-    } else if (str == "get") {
-        return ClassMemberKind::PropertyGetter;
-    } else if (str == "set") {
-        return ClassMemberKind::PropertySetter;
-    }
-    abort();
-}
+namespace {
+    using namespace hermes;
 
 class NodeVector {
 public:
@@ -154,6 +134,31 @@ struct ResolvedClassMembers {
 
     llvh::SmallVector<ResolvedClassMember, 8> members;
 };
+
+enum class ClassMemberKind {
+    Constructor,
+    Method,
+    PropertyGetter,
+    PropertySetter
+};
+
+static ClassMemberKind getClassMemberKind(ESTree::MethodDefinitionNode *methodDefinition) {
+    const auto &str = methodDefinition->_kind->str();
+    if (str == "constructor") {
+        return ClassMemberKind::Constructor;
+    } else if (str == "method") {
+        return ClassMemberKind::Method;
+    } else if (str == "get") {
+        return ClassMemberKind::PropertyGetter;
+    } else if (str == "set") {
+        return ClassMemberKind::PropertySetter;
+    }
+    abort();
+}
+
+}
+
+namespace hermes {
 
 class ES6ClassesTransformations {
 public:

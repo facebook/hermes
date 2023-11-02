@@ -101,7 +101,6 @@ extern llvh::cl::opt<bool> EnableEval;
 extern llvh::cl::list<std::string> InputFilenames;
 extern llvh::cl::opt<bool> OptimizedEval;
 extern llvh::cl::opt<bool> VerifyIR;
-extern llvh::cl::opt<bool> VerifyIR;
 extern llvh::cl::opt<bool> ES6Class;
 
 } // namespace cl
