@@ -45,7 +45,6 @@ class INSPECTOR_EXPORT CDPHandler {
   /// methods.
   CDPHandler(
       std::unique_ptr<RuntimeAdapter> adapter,
-      const std::string &title,
       bool waitForDebugger = false);
 
  public:
@@ -53,6 +52,10 @@ class INSPECTOR_EXPORT CDPHandler {
   /// should generally called before you start running any JS in the runtime.
   /// This should also be called on the runtime thread, as methods are invoked
   /// on the given \p adapter.
+  static std::shared_ptr<CDPHandler> create(
+      std::unique_ptr<RuntimeAdapter> adapter,
+      bool waitForDebugger = false);
+  /// Temporarily kept to allow React Native build to still work
   static std::shared_ptr<CDPHandler> create(
       std::unique_ptr<RuntimeAdapter> adapter,
       const std::string &title,
