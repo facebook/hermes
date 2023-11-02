@@ -10,12 +10,22 @@
 
 'use strict';
 
-import type {ESNode, Program} from 'hermes-estree';
+import type {ESNode, Program, Comment} from 'hermes-estree';
 import type {VisitorKeysType} from '../traverse/getVisitorKeys';
 import {SimpleTransform} from '../transform/SimpleTransform';
 
 // https://github.com/prettier/prettier/blob/d962466a828f8ef51435e3e8840178d90b7ec6cd/src/language-js/parse/postprocess/index.js#L161-L182
-function transformChainExpression(node: ESNode): ESNode {
+function transformChainExpression(
+  node: ESNode,
+  comments: ?$ReadOnlyArray<Comment>,
+): ESNode {
+  if (comments != null) {
+    // $FlowExpectedError[prop-missing]
+    const joinedComments = comments.concat(node.comments ?? []);
+    // $FlowExpectedError[prop-missing]
+    // $FlowFixMe[cannot-write]
+    node.comments = joinedComments;
+  }
   switch (node.type) {
     case 'CallExpression':
       // $FlowExpectedError[cannot-spread-interface]
@@ -59,7 +69,8 @@ export default function mutate(
       // so we have to apply their transform to our AST so it can actually format it.
       // Note: Only needed for prettier V2, this is supported in V3
       if (node.type === 'ChainExpression') {
-        return transformChainExpression(node.expression);
+        // $FlowFixMe[prop-missing]
+        return transformChainExpression(node.expression, node?.comments);
       }
 
       // Prettier currently relies on comparing the `node` vs `node.value` start positions to know if an
