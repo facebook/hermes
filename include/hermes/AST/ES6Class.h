@@ -16,9 +16,7 @@
 
 namespace hermes {
 
-void transformES6Classes(
-    Context &context,
-    ESTree::Node *node);
+void transformES6Classes(Context &context, ESTree::Node *node);
 
 } // namespace hermes
 
