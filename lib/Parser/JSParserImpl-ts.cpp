@@ -240,6 +240,28 @@ Optional<ESTree::Node *> JSParserImpl::parseTSFunctionOrParenthesizedType(
   ESTree::Node *type = nullptr;
   ESTree::NodeList params{};
 
+  if (check(TokenKind::rw_this)) {
+    OptValue<TokenKind> optNext = lexer_.lookahead1(None);
+    if (optNext.hasValue() && *optNext == TokenKind::colon) {
+      SMLoc thisStart = advance(JSLexer::GrammarContext::Type).Start;
+      advance(JSLexer::GrammarContext::Type);
+      CHECK_RECURSION;
+      auto typeAnnotation = parseTypeAnnotationTS();
+      if (!typeAnnotation)
+        return None;
+
+      params.push_back(*setLocation(
+          thisStart,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::IdentifierNode(
+              thisIdent_, *typeAnnotation, /* optional */ false)));
+      checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type);
+    } else if (optNext.hasValue() && *optNext == TokenKind::question) {
+      error(tok_->getSourceRange(), "'this' constraint may not be optional");
+      return None;
+    }
+  }
+
   if (allowAnonFunctionType_ &&
       checkAndEat(TokenKind::dotdotdot, JSLexer::GrammarContext::Type)) {
     isFunction = true;

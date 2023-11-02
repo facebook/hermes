@@ -291,6 +291,32 @@ type A = ({x}: number) => number;
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "typeParameters": null
 // CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+type A = (this: string) => void;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TSTypeAliasDeclaration",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "A"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "typeAnnotation": {
+// CHECK-NEXT:         "type": "TSFunctionType",
+// CHECK-NEXT:         "params": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "this",
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "TSStringKeyword"
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "returnType": {
+// CHECK-NEXT:           "type": "TSVoidKeyword"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "typeParameters": null
+// CHECK-NEXT:       }
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

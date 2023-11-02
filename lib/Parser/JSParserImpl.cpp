@@ -592,9 +592,9 @@ bool JSParserImpl::parseFormalParameters(
   // (
   SMLoc lparenLoc = advance().Start;
 
-#if HERMES_PARSE_FLOW
-  // The first parameter can be 'this' in Flow mode.
-  if (context_.getParseFlow() && check(TokenKind::rw_this)) {
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+  // The first parameter can be 'this' in Flow and TypeScript.
+  if (context_.getParseTypes() && check(TokenKind::rw_this)) {
     auto *name = tok_->getResWordIdentifier();
     SMLoc thisParamStart = advance().Start;
 
@@ -607,7 +607,7 @@ bool JSParserImpl::parseFormalParameters(
             thisParamStart))
       return false;
 
-    auto optType = parseTypeAnnotationFlow(annotStart);
+    auto optType = parseTypeAnnotation(annotStart);
     if (!optType)
       return false;
     ESTree::Node *type = *optType;
