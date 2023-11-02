@@ -16,6 +16,12 @@
 
 namespace hermes {
 
+/**
+ * Recursively transforms the ESTree Node tree such that ES6 classes
+ * are converted into ES5 functions, to make the ESTree compatible
+ * with Hermes IR's gen pipeline, which currently does not support
+ * ES6 classes.
+ */
 void transformES6Classes(Context &context, ESTree::Node *node);
 
 } // namespace hermes

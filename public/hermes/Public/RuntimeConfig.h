@@ -58,9 +58,9 @@ class PinnedHermesValue;
   /* Support for ES6 Proxy. */                                         \
   F(constexpr, bool, ES6Proxy, true)                                   \
                                                                        \
-/* Support for ES6 Class. */                                         \
-F(constexpr, bool, ES6Class, false)                                   \
-                                                                     \
+  /* Support for ES6 Class. */                                         \
+  F(constexpr, bool, ES6Class, false)                                  \
+                                                                       \
   /* Support for ECMA-402 Intl APIs. */                                \
   F(constexpr, bool, Intl, true)                                       \
                                                                        \

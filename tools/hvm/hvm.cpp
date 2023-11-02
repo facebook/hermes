@@ -73,6 +73,7 @@ static llvh::cl::alias _EnableBlockScoping(
     llvh::cl::desc("Alias for --block-scoping"),
     llvh::cl::Hidden,
     llvh::cl::aliasopt(EnableBlockScoping));
+
 static llvh::cl::opt<bool> ES6Class(
     "Xes6-class",
     llvh::cl::init(false),
