@@ -415,8 +415,7 @@ void ProfilerProfileSerializer::processNode(
       RuntimeModule *module = frame.jsFrame.module;
       hbc::BCProvider *bcProvider = module->getBytecode();
 
-      llvh::raw_string_ostream os(name);
-      os << getJSFunctionName(bcProvider, frame.jsFrame.functionId);
+      name = getJSFunctionName(bcProvider, frame.jsFrame.functionId);
 
       url = "unknown";
       OptValue<hbc::DebugSourceLocation> sourceLocOpt = getSourceLocation(
@@ -428,8 +427,6 @@ void ProfilerProfileSerializer::processNode(
 
         lineNumber = sourceLocOpt.getValue().line;
         columnNumber = sourceLocOpt.getValue().column;
-        // format: frame_name(file:line:column)
-        os << "(" << url << ":" << lineNumber << ":" << columnNumber << ")";
       }
       break;
     }
