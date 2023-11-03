@@ -235,7 +235,7 @@ class Context {
   /// The separate native context. It is automatically created on construction.
   std::unique_ptr<NativeContext> nativeContext_;
 
-  std::unique_ptr<irdumper::Namer> persistentIRNamer_{};
+  std::unique_ptr<irdumper::Namer> persistentIRNamer_;
 
  public:
   explicit Context(
