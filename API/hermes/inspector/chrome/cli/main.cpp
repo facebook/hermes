@@ -132,7 +132,7 @@ static void runScript(const std::string &scriptSource, const std::string &url) {
       std::make_unique<fbhermes::inspector_modern::SharedRuntimeAdapter>(
           runtime);
   std::shared_ptr<CDPHandler> cdpHandler =
-      CDPHandler::create(std::move(adapter), "hermes-chrome-debug-server");
+      CDPHandler::create(std::move(adapter));
   std::thread debuggerLoop(runDebuggerLoop, std::ref(cdpHandler), scriptSource);
 
   fbhermes::HermesRuntime::DebugFlags flags{};
