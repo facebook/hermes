@@ -2504,7 +2504,6 @@ void HadesGC::youngGenCollection(
       // Since we can't track the actual number of external bytes that were in
       // this segment, just use the swept external byte count.
       externalBytes.before += externalCompactedBytes;
-      externalBytes.after += externalCompactedBytes;
     }
 
     // Move external memory accounting from YG to OG as well.
