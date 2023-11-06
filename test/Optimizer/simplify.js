@@ -316,6 +316,27 @@ function undef_test(x, y) {
   var sink = print;
   sink(undefined >= undefined)
   sink(undefined == undefined)
+  sink(undefined != undefined)
+  sink(undefined == null)
+  sink(null == undefined)
+  sink(undefined != null)
+  sink(null != undefined)
+  sink(undefined == 0)
+  sink(null == 0)
+  sink("" == null)
+  sink("" == undefined)
+  sink(undefined == false)
+  sink(null == false)
+  sink(true == undefined)
+  sink(true == null)
+  sink(undefined != 0)
+  sink(null != 0)
+  sink("" != undefined)
+  sink("" != null)
+  sink(undefined != false)
+  sink(null != false)
+  sink(true != undefined)
+  sink(true != null)
 }
 
 function foo(y) {
@@ -863,7 +884,28 @@ function objectCond() {
 // CHECK-NEXT:  %1 = BinaryGreaterThanOrEqualInst (:boolean) undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %1: boolean
 // CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, true: boolean
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, false: boolean
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, true: boolean
+// CHECK-NEXT:  %6 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, true: boolean
+// CHECK-NEXT:  %7 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, false: boolean
+// CHECK-NEXT:  %8 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, false: boolean
+// CHECK-NEXT:  %9 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, false: boolean
+// CHECK-NEXT:  %10 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, false: boolean
+// CHECK-NEXT:  %11 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, false: boolean
+// CHECK-NEXT:  %12 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, false: boolean
+// CHECK-NEXT:  %13 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, false: boolean
+// CHECK-NEXT:  %14 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, false: boolean
+// CHECK-NEXT:  %15 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, false: boolean
+// CHECK-NEXT:  %16 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, false: boolean
+// CHECK-NEXT:  %17 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, true: boolean
+// CHECK-NEXT:  %18 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, true: boolean
+// CHECK-NEXT:  %19 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, true: boolean
+// CHECK-NEXT:  %20 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, true: boolean
+// CHECK-NEXT:  %21 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, true: boolean
+// CHECK-NEXT:  %22 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, true: boolean
+// CHECK-NEXT:  %23 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, true: boolean
+// CHECK-NEXT:  %24 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, true: boolean
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(y: any): number
