@@ -102,7 +102,7 @@ vm_allocate_aligned(size_t sz, size_t alignment, void * /* hint */) {
 
   // Emscripten does not support partial munmap, so use aligned_alloc to obtain
   // an aligned region and then memset it to zero.
-  auto *p = std::aligned_alloc(alignment, sz);
+  auto *p = aligned_alloc(alignment, sz);
   if (!p)
     return std::error_code(errno, std::generic_category());
   memset(p, 0, sz);
