@@ -69,7 +69,7 @@ void FlowChecker::declareNativeTypes(sema::LexicalScope *rootScope) {
                      llvh::StringRef name, NativeCType ctype, Type *type) {
     UniqueString *ident =
         astContext_.getIdentifier(name).getUnderlyingPointer();
-    bindingTable_.insert(ident, TypeDecl(type, rootScope, nullptr));
+    bindingTable_.try_emplace(ident, TypeDecl(type, rootScope, nullptr));
     nativeTypes_.try_emplace(ident, ctype);
   };
 
@@ -419,7 +419,7 @@ void FlowChecker::visit(ESTree::ClassExpressionNode *node) {
   // If there was a class id T, in the new scope declare class type T and
   // declaration for class constructor T.
   if (id) {
-    bindingTable_.insert(
+    bindingTable_.try_emplace(
         id->_name, TypeDecl(classType, node->getScope(), node));
 
     sema::Decl *decl = getDecl(id);
@@ -2215,7 +2215,7 @@ class FlowChecker::DeclareScopeTypes {
             classNode);
         forwardClassDecls.push_back(newType);
 
-        outer.bindingTable_.insert(
+        outer.bindingTable_.try_emplace(
             id->_name, TypeDecl(newType, scope, declNode));
 
         bool success = outer.recordDecl(
@@ -2235,7 +2235,7 @@ class FlowChecker::DeclareScopeTypes {
           continue;
         Type *newType = outer.flowContext_.createType(declNode);
         localTypeAliases.push_back(newType);
-        outer.bindingTable_.insert(
+        outer.bindingTable_.try_emplace(
             id->_name, TypeDecl(newType, scope, declNode));
       } else {
         outer.sm_.error(

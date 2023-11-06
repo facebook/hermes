@@ -652,7 +652,7 @@ void SemanticResolver::visit(ESTree::ClassExpressionNode *node) {
       Decl *decl = semCtx_.newDeclInScope(
           ident->_name, Decl::Kind::ClassExprName, curScope_);
       semCtx_.setDeclarationDecl(ident, decl);
-      bindingTable_.insert(ident->_name, Binding{decl, ident});
+      bindingTable_.try_emplace(ident->_name, Binding{decl, ident});
     }
     visitESTreeChildren(*this, node);
   } else {
@@ -1003,7 +1003,7 @@ void SemanticResolver::visitFunctionLike(
       prevName->ident = paramId;
     } else {
       // Just add the new parameter.
-      bindingTable_.insert(paramId->_name, Binding{paramDecl, paramId});
+      bindingTable_.try_emplace(paramId->_name, Binding{paramDecl, paramId});
     }
   }
 
@@ -1011,7 +1011,7 @@ void SemanticResolver::visitFunctionLike(
   auto declareArguments = [this]() {
     Decl *argsDecl =
         semCtx_.funcArgumentsDecl(curFunctionInfo(), kw_.identArguments);
-    bindingTable_.insert(kw_.identArguments, Binding{argsDecl, nullptr});
+    bindingTable_.try_emplace(kw_.identArguments, Binding{argsDecl, nullptr});
   };
 
   // Determine whether we need to declare "arguments" temporarily, while
@@ -1093,7 +1093,7 @@ void SemanticResolver::visitFunctionExpression(
     Decl *decl = semCtx_.newDeclInScope(
         ident->_name, Decl::Kind::FunctionExprName, curScope_);
     semCtx_.setDeclarationDecl(ident, decl);
-    bindingTable_.insert(ident->_name, Binding{decl, ident});
+    bindingTable_.try_emplace(ident->_name, Binding{decl, ident});
     visitFunctionLike(node, ident, body, params, method);
   } else {
     // Otherwise, no extra scope needed, just move on.
@@ -1141,7 +1141,7 @@ Decl *SemanticResolver::resolveIdentifier(
       identifier->_name, Decl::Kind::UndeclaredGlobalProperty);
   semCtx_.setExpressionDecl(identifier, decl);
 
-  bindingTable_.insertIntoScope(
+  bindingTable_.tryEmplaceIntoScope(
       globalScope_, identifier->_name, Binding{decl, identifier});
 
   return decl;
@@ -1449,7 +1449,7 @@ void SemanticResolver::validateAndDeclareIdentifier(
       decl = semCtx_.newGlobal(ident->_name, kind);
     else
       decl = semCtx_.newDeclInScope(ident->_name, kind, curScope_);
-    bindingTable_.insert(ident->_name, Binding{decl, ident});
+    bindingTable_.try_emplace(ident->_name, Binding{decl, ident});
   }
 
   semCtx_.setDeclarationDecl(ident, decl);
@@ -1670,7 +1670,8 @@ void SemanticResolver::processAmbientDecls() {
     if (!bindingTable_.count(name)) {
       Decl *decl =
           semCtx_.newGlobal(name, Decl::Kind::UndeclaredGlobalProperty);
-      bindingTable_.insertIntoScope(globalScope_, name, Binding{decl, nullptr});
+      bindingTable_.tryEmplaceIntoScope(
+          globalScope_, name, Binding{decl, nullptr});
     }
   };
 

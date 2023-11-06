@@ -140,7 +140,7 @@ void ScopedFunctionPromoter::processParameters(FunctionLikeNode *funcNode) {
       if (funcNames_.count(name)) {
         // Found a parameter with a name we care about, add it to the binding
         // table.
-        bindingTable_.insert(name, true);
+        bindingTable_.try_emplace(name, true);
       }
     }
   }
@@ -194,7 +194,7 @@ void ScopedFunctionPromoter::processDeclarations(Node *scope) {
     // Remember only idents matching the set.
     for (IdentifierNode *idNode : idents) {
       if (funcNames_.count(idNode->_name)) {
-        bindingTable_.insert(idNode->_name, true);
+        bindingTable_.try_emplace(idNode->_name, true);
       }
     }
   }

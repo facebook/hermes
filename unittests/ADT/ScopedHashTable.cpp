@@ -17,18 +17,18 @@ using Scope = hermes::ScopedHashTableScope<llvh::StringRef, llvh::StringRef>;
 TEST(ScopedHashTable, SmokeTest) {
   Table table;
   Scope scope(table);
-  table.insert("foo", "bar");
+  table.try_emplace("foo", "bar");
   EXPECT_EQ("bar", table.lookup("foo"));
 }
 
 TEST(ScopedHashTable, Nesting) {
   Table table;
   Scope outer(table);
-  table.insert("key", "outer");
+  table.try_emplace("key", "outer");
   EXPECT_EQ("outer", table.lookup("key"));
   {
     Scope inner(table);
-    table.insert("key", "inner");
+    table.try_emplace("key", "inner");
     EXPECT_EQ("inner", table.lookup("key"));
   }
   EXPECT_EQ("outer", table.lookup("key"));
@@ -37,15 +37,15 @@ TEST(ScopedHashTable, Nesting) {
 TEST(ScopedHashTable, Overwrite) {
   Table table;
   Scope outer(table);
-  table.insert("key", "foo");
+  table.try_emplace("key", "foo");
   EXPECT_EQ("foo", table.lookup("key"));
-  table.insert("key", "outer");
+  table.setInCurrentScope("key", "outer");
   EXPECT_EQ("outer", table.lookup("key"));
   {
     Scope inner(table);
-    table.insert("key", "foo");
+    table.try_emplace("key", "foo");
     EXPECT_EQ("foo", table.lookup("key"));
-    table.insert("key", "inner");
+    table.setInCurrentScope("key", "inner");
     EXPECT_EQ("inner", table.lookup("key"));
   }
   EXPECT_EQ("outer", table.lookup("key"));
@@ -54,10 +54,10 @@ TEST(ScopedHashTable, Overwrite) {
 TEST(ScopedHashTable, Flatten) {
   Table table;
   Scope outer(table);
-  table.insert("out", "outer");
+  table.try_emplace("out", "outer");
   {
     Scope inner(table);
-    table.insert("in", "inner");
+    table.try_emplace("in", "inner");
     auto map = table.flatten();
     EXPECT_EQ(2u, map->size());
     EXPECT_EQ("outer", map->lookup("out"));
@@ -68,11 +68,11 @@ TEST(ScopedHashTable, Flatten) {
 TEST(ScopedHashTable, GetKeysByScope) {
   Table table;
   Scope outer(table);
-  table.insert("out", "outer");
-  table.insert("in", "trash");
+  table.try_emplace("out", "outer");
+  table.try_emplace("in", "trash");
   {
     Scope inner(table);
-    table.insert("in", "inner");
+    table.try_emplace("in", "inner");
     auto scopes = table.getKeysByScope();
     EXPECT_EQ(2u, scopes->size());
     EXPECT_EQ(1u, scopes->at(0).size());
@@ -85,7 +85,7 @@ TEST(ScopedHashTable, GetKeysByScope) {
 TEST(ScopedHashTable, SetInCurrentScope) {
   Table table;
   Scope outer(table);
-  table.insert("foo", "true");
+  table.try_emplace("foo", "true");
   {
     Scope inner(table);
     EXPECT_EQ("true", table.lookup("foo"));
@@ -102,10 +102,10 @@ TEST(ScopedHashTable, SetInCurrentScope) {
 TEST(ScopedHashTable, FindInCurrentScope) {
   Table table;
   Scope outer(table);
-  table.insert("foo", "true");
+  table.try_emplace("foo", "true");
   {
     Scope inner(table);
-    table.insert("bar", "true");
+    table.try_emplace("bar", "true");
     EXPECT_EQ(nullptr, table.findInCurrentScope("foo"));
     EXPECT_EQ("true", *table.findInCurrentScope("bar"));
   }
@@ -122,7 +122,7 @@ TEST(ScopedHashTable, EraseFromCurrentScope) {
   // Try to erase missing element with a scope.
   EXPECT_FALSE(table.eraseFromCurrentScope("foo"));
 
-  table.insert("foo", "10");
+  table.try_emplace("foo", "10");
   {
     Scope inner(table);
     // Try to erase element from a parent scope.
@@ -133,14 +133,14 @@ TEST(ScopedHashTable, EraseFromCurrentScope) {
   EXPECT_TRUE(table.eraseFromCurrentScope("foo"));
   EXPECT_FALSE(table.eraseFromCurrentScope("foo"));
 
-  table.insert("foo", "10");
-  table.insert("bar", "20");
+  table.try_emplace("foo", "10");
+  table.try_emplace("bar", "20");
 
   // Erase the last added element.
   EXPECT_TRUE(table.eraseFromCurrentScope("bar"));
   EXPECT_FALSE(table.eraseFromCurrentScope("bar"));
 
-  table.insert("bar", "20");
+  table.try_emplace("bar", "20");
 
   // Erase the first added element.
   EXPECT_TRUE(table.eraseFromCurrentScope("foo"));
@@ -150,9 +150,9 @@ TEST(ScopedHashTable, EraseFromCurrentScope) {
   EXPECT_TRUE(table.eraseFromCurrentScope("bar"));
   EXPECT_FALSE(table.eraseFromCurrentScope("bar"));
 
-  table.insert("1", "10");
-  table.insert("2", "20");
-  table.insert("3", "30");
+  table.try_emplace("1", "10");
+  table.try_emplace("2", "20");
+  table.try_emplace("3", "30");
 
   // Erase the middle element
   EXPECT_TRUE(table.eraseFromCurrentScope("2"));
@@ -163,15 +163,15 @@ TEST(ScopedHashTable, EraseFromCurrentScope) {
   EXPECT_TRUE(table.eraseFromCurrentScope("3"));
   EXPECT_FALSE(table.eraseFromCurrentScope("3"));
 
-  table.insert("1", "10");
-  table.insert("2", "20");
-  table.insert("3", "30");
+  table.try_emplace("1", "10");
+  table.try_emplace("2", "20");
+  table.try_emplace("3", "30");
   {
     Scope inner(table);
 
-    table.insert("1", "10");
-    table.insert("2", "20");
-    table.insert("3", "30");
+    table.try_emplace("1", "10");
+    table.try_emplace("2", "20");
+    table.try_emplace("3", "30");
 
     // Erase the middle element in a nested scope, with a shadowed element.
     EXPECT_TRUE(table.eraseFromCurrentScope("2"));
