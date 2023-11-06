@@ -331,22 +331,22 @@ describe('Object properties', () => {
       {
         "body": [
           {
-            "directive": null,
             "expression": {
               "properties": [
                 {
                   "computed": false,
                   "key": {
                     "name": "prop1",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
-                  "kind": "init",
                   "method": false,
                   "shorthand": false,
                   "type": "ObjectProperty",
                   "value": {
+                    "extra": {
+                      "raw": "1",
+                      "rawValue": 1,
+                    },
                     "type": "NumericLiteral",
                     "value": 1,
                   },
@@ -355,11 +355,8 @@ describe('Object properties', () => {
                   "computed": false,
                   "key": {
                     "name": "prop2",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
-                  "kind": "init",
                   "method": false,
                   "shorthand": false,
                   "type": "ObjectProperty",
@@ -373,10 +370,7 @@ describe('Object properties', () => {
                     "generator": false,
                     "id": null,
                     "params": [],
-                    "predicate": null,
-                    "returnType": null,
                     "type": "FunctionExpression",
-                    "typeParameters": null,
                   },
                 },
                 {
@@ -391,17 +385,12 @@ describe('Object properties', () => {
                   "id": null,
                   "key": {
                     "name": "prop3",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
                   "kind": "method",
                   "method": true,
                   "params": [],
-                  "predicate": null,
-                  "returnType": null,
                   "type": "ObjectMethod",
-                  "typeParameters": null,
                 },
                 {
                   "async": true,
@@ -415,17 +404,12 @@ describe('Object properties', () => {
                   "id": null,
                   "key": {
                     "name": "prop4",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
                   "kind": "method",
                   "method": true,
                   "params": [],
-                  "predicate": null,
-                  "returnType": null,
                   "type": "ObjectMethod",
-                  "typeParameters": null,
                 },
                 {
                   "async": false,
@@ -439,17 +423,12 @@ describe('Object properties', () => {
                   "id": null,
                   "key": {
                     "name": "prop5",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
                   "kind": "get",
                   "method": false,
                   "params": [],
-                  "predicate": null,
-                  "returnType": null,
                   "type": "ObjectMethod",
-                  "typeParameters": null,
                   "variance": null,
                 },
                 {
@@ -464,24 +443,17 @@ describe('Object properties', () => {
                   "id": null,
                   "key": {
                     "name": "prop6",
-                    "optional": false,
                     "type": "Identifier",
-                    "typeAnnotation": null,
                   },
                   "kind": "set",
                   "method": false,
                   "params": [
                     {
                       "name": "x",
-                      "optional": false,
                       "type": "Identifier",
-                      "typeAnnotation": null,
                     },
                   ],
-                  "predicate": null,
-                  "returnType": null,
                   "type": "ObjectMethod",
-                  "typeParameters": null,
                   "variance": null,
                 },
               ],

@@ -18,12 +18,9 @@ describe('Babel-Specific Tests', () => {
       {
         "body": [
           {
-            "directive": null,
             "expression": {
               "name": "test",
-              "optional": false,
               "type": "Identifier",
-              "typeAnnotation": null,
             },
             "type": "ExpressionStatement",
           },
@@ -38,12 +35,9 @@ describe('Babel-Specific Tests', () => {
       {
         "body": [
           {
-            "directive": null,
             "expression": {
               "name": "test",
-              "optional": false,
               "type": "Identifier",
-              "typeAnnotation": null,
             },
             "type": "ExpressionStatement",
           },

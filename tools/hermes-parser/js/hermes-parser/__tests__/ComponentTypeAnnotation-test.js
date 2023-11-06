@@ -69,9 +69,7 @@ describe('ComponentTypeAnnotation', () => {
           {
             "id": {
               "name": "T",
-              "optional": false,
               "type": "Identifier",
-              "typeAnnotation": null,
             },
             "right": {
               "type": "AnyTypeAnnotation",

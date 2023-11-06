@@ -19,81 +19,178 @@ import {
 import {parseForSnapshot} from '../__test_utils__/parse';
 
 describe('JSXElement', () => {
-  const testCase: AlignmentCase = {
-    code: '<Component<string> />',
-    espree: {
-      expectToFail: 'espree-exception',
-      expectedExceptionMessage: 'Unexpected token <',
-    },
-    babel: {
-      expectToFail: 'babel-exception',
-      expectedExceptionMessage: 'Unexpected token',
-    },
-  };
-  test('ESTree', () => {
-    expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-      {
-        "body": [
-          {
-            "directive": null,
-            "expression": {
-              "children": [],
-              "closingElement": null,
-              "openingElement": {
-                "attributes": [],
-                "name": {
-                  "name": "Component",
-                  "type": "JSXIdentifier",
-                },
-                "selfClosing": true,
-                "type": "JSXOpeningElement",
-                "typeArguments": {
-                  "params": [
-                    {
-                      "type": "StringTypeAnnotation",
+  describe('With type', () => {
+    const testCase: AlignmentCase = {
+      code: '<Component<string> />',
+      espree: {
+        expectToFail: 'espree-exception',
+        expectedExceptionMessage: 'Unexpected token <',
+      },
+      babel: {
+        expectToFail: 'babel-exception',
+        expectedExceptionMessage: 'Unexpected token',
+      },
+    };
+    test('ESTree', () => {
+      expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
+              {
+                "body": [
+                  {
+                    "directive": null,
+                    "expression": {
+                      "children": [],
+                      "closingElement": null,
+                      "openingElement": {
+                        "attributes": [],
+                        "name": {
+                          "name": "Component",
+                          "type": "JSXIdentifier",
+                        },
+                        "selfClosing": true,
+                        "type": "JSXOpeningElement",
+                        "typeArguments": {
+                          "params": [
+                            {
+                              "type": "StringTypeAnnotation",
+                            },
+                          ],
+                          "type": "TypeParameterInstantiation",
+                        },
+                      },
+                      "type": "JSXElement",
                     },
-                  ],
-                  "type": "TypeParameterInstantiation",
-                },
-              },
-              "type": "JSXElement",
-            },
-            "type": "ExpressionStatement",
-          },
-        ],
-        "type": "Program",
-      }
-    `);
-    expectEspreeAlignment(testCase);
-  });
+                    "type": "ExpressionStatement",
+                  },
+                ],
+                "type": "Program",
+              }
+          `);
+      expectEspreeAlignment(testCase);
+    });
 
-  test('Babel', () => {
-    expect(parseForSnapshot(testCase.code, {babel: true}))
-      .toMatchInlineSnapshot(`
-      {
-        "body": [
-          {
-            "directive": null,
-            "expression": {
-              "children": [],
-              "closingElement": null,
-              "openingElement": {
-                "attributes": [],
-                "name": {
-                  "name": "Component",
-                  "type": "JSXIdentifier",
+    test('Babel', () => {
+      expect(parseForSnapshot(testCase.code, {babel: true}))
+        .toMatchInlineSnapshot(`
+              {
+                "body": [
+                  {
+                    "expression": {
+                      "children": [],
+                      "closingElement": null,
+                      "openingElement": {
+                        "attributes": [],
+                        "name": {
+                          "name": "Component",
+                          "type": "JSXIdentifier",
+                        },
+                        "selfClosing": true,
+                        "type": "JSXOpeningElement",
+                      },
+                      "type": "JSXElement",
+                    },
+                    "type": "ExpressionStatement",
+                  },
+                ],
+                "type": "Program",
+              }
+          `);
+      expectBabelAlignment(testCase);
+    });
+  });
+  describe('With text', () => {
+    const testCase: AlignmentCase = {
+      code: '<Foo>text</Foo>',
+      espree: {
+        expectToFail: false,
+      },
+      babel: {
+        expectToFail: false,
+      },
+    };
+    test('ESTree', () => {
+      expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
+        {
+          "body": [
+            {
+              "directive": null,
+              "expression": {
+                "children": [
+                  {
+                    "raw": "text",
+                    "type": "JSXText",
+                    "value": "text",
+                  },
+                ],
+                "closingElement": {
+                  "name": {
+                    "name": "Foo",
+                    "type": "JSXIdentifier",
+                  },
+                  "type": "JSXClosingElement",
                 },
-                "selfClosing": true,
-                "type": "JSXOpeningElement",
+                "openingElement": {
+                  "attributes": [],
+                  "name": {
+                    "name": "Foo",
+                    "type": "JSXIdentifier",
+                  },
+                  "selfClosing": false,
+                  "type": "JSXOpeningElement",
+                  "typeArguments": null,
+                },
+                "type": "JSXElement",
               },
-              "type": "JSXElement",
+              "type": "ExpressionStatement",
             },
-            "type": "ExpressionStatement",
-          },
-        ],
-        "type": "Program",
-      }
-    `);
-    expectBabelAlignment(testCase);
+          ],
+          "type": "Program",
+        }
+      `);
+      expectEspreeAlignment(testCase);
+    });
+
+    test('Babel', () => {
+      expect(parseForSnapshot(testCase.code, {babel: true}))
+        .toMatchInlineSnapshot(`
+        {
+          "body": [
+            {
+              "expression": {
+                "children": [
+                  {
+                    "extra": {
+                      "raw": "text",
+                      "rawValue": "text",
+                    },
+                    "type": "JSXText",
+                    "value": "text",
+                  },
+                ],
+                "closingElement": {
+                  "name": {
+                    "name": "Foo",
+                    "type": "JSXIdentifier",
+                  },
+                  "type": "JSXClosingElement",
+                },
+                "openingElement": {
+                  "attributes": [],
+                  "name": {
+                    "name": "Foo",
+                    "type": "JSXIdentifier",
+                  },
+                  "selfClosing": false,
+                  "type": "JSXOpeningElement",
+                },
+                "type": "JSXElement",
+              },
+              "type": "ExpressionStatement",
+            },
+          ],
+          "type": "Program",
+        }
+      `);
+      expectBabelAlignment(testCase);
+    });
   });
 });

@@ -59,10 +59,13 @@ describe('ImportExpression', () => {
       {
         "body": [
           {
-            "directive": null,
             "expression": {
               "arguments": [
                 {
+                  "extra": {
+                    "raw": "'foo'",
+                    "rawValue": "foo",
+                  },
                   "type": "StringLiteral",
                   "value": "foo",
                 },

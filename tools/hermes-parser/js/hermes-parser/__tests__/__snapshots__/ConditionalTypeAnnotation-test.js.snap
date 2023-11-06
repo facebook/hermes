@@ -6,9 +6,7 @@ exports[`ConditionalTypeAnnotation Basic Babel 1`] = `
     {
       "id": {
         "name": "ReturnType",
-        "optional": false,
         "type": "Identifier",
-        "typeAnnotation": null,
       },
       "right": {
         "type": "AnyTypeAnnotation",
@@ -139,7 +137,6 @@ exports[`ConditionalTypeAnnotation InferType Babel 1`] = `
         {
           "id": {
             "name": "x",
-            "optional": false,
             "type": "Identifier",
             "typeAnnotation": {
               "type": "TypeAnnotation",

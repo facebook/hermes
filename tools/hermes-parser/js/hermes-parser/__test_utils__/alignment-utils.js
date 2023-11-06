@@ -10,81 +10,65 @@
 
 import {parse as parseBabelOriginal} from '@babel/parser';
 import {parse as parseEspreeOriginal} from 'espree';
-import {VisitorKeys} from 'hermes-eslint';
-import {parse as parseHermesOriginal} from './parse';
+import {BABEL_VISITOR_KEYS, parse as parseHermesOriginal} from './parse';
+import {SimpleTraverser} from '../src/traverse/SimpleTraverser';
 
-function isNode(thing: mixed): boolean %checks {
-  return (
-    typeof thing === 'object' && thing != null && typeof thing.type === 'string'
+function cleanAstForHermes(ast: mixed): mixed {
+  return JSON.parse(
+    // $FlowExpectedError[incompatible-call]
+    JSON.stringify(ast, (_, value) => {
+      if (typeof value === 'bigint') {
+        return value.toString();
+      }
+      return value;
+    }),
   );
 }
-function getVisitorKeys(
-  thing: $ReadOnly<{[string]: mixed}>,
-): $ReadOnlyArray<string> {
-  // $FlowExpectedError[incompatible-type]
-  const keys = VisitorKeys[thing.type];
-  if (keys == null) {
-    return Object.keys(thing).filter(
-      k =>
-        k !== 'parent' &&
-        k !== 'range' &&
-        k !== 'loc' &&
-        k !== 'leadingComments' &&
-        k !== 'trailingComments' &&
-        !k.startsWith('_'),
-    );
-  }
 
-  return keys;
-}
-function traverse(obj: mixed, cb: (node: {[string]: mixed}) => void): void {
-  if (!isNode(obj)) {
-    return;
-  }
-
-  // $FlowExpectedError[incompatible-variance]
-  cb(obj);
-
-  const keys = getVisitorKeys(obj);
-  for (const key of keys) {
-    const child = obj[key];
-
-    if (Array.isArray(child)) {
-      for (let j = 0; j < child.length; ++j) {
-        traverse(child[j], cb);
-      }
-    } else {
-      traverse(child, cb);
-    }
-  }
-}
-
-function cleanAst(ast: mixed): mixed {
+function cleanAstForEspree(ast: $FlowFixMe): mixed {
   // $FlowExpectedError[incompatible-use]
   delete ast.comments;
   // $FlowExpectedError[incompatible-use]
   delete ast.tokens;
   // $FlowExpectedError[incompatible-use]
   delete ast.errors;
-  traverse(ast, node => {
-    delete node.parent;
-    delete node.start;
-    delete node.end;
+  SimpleTraverser.traverse(ast, {
+    enter(node: $FlowFixMe) {
+      delete node.parent;
+      delete node.start;
+      delete node.end;
+    },
+    leave() {},
+  });
+  return JSON.parse(
+    // $FlowExpectedError[incompatible-call]
+    JSON.stringify(ast, (_, value) => {
+      if (typeof value === 'bigint') {
+        return value.toString();
+      }
+      return value;
+    }),
+  );
+}
 
-    // this is babel-specific
-    delete node.extra;
-    // $FlowExpectedError[incompatible-use]
-    delete node.loc?.identifierName;
-    // babel does some inconsistent stuff with the program loc so just ignore it
-    if (node.type === 'Program' || node.type === 'File') {
-      delete node.loc;
-    }
+function cleanBabelAst(ast: $FlowFixMe): mixed {
+  delete ast.errors;
+
+  SimpleTraverser.traverse(ast, {
+    enter(node: $FlowFixMe) {
+      // Babel adds "extra" properties to capture parenthesized locations,
+      // Hermes does not support these.
+      if (node.extra != null && node.extra.parenthesized === true) {
+        delete node.extra;
+      }
+    },
+    leave() {},
+    visitorKeys: BABEL_VISITOR_KEYS,
   });
 
   return JSON.parse(
     // $FlowExpectedError[incompatible-call]
     JSON.stringify(ast, (_, value) => {
-      // $FlowExpectedError[illegal-typeof]
       if (typeof value === 'bigint') {
         return value.toString();
       }
@@ -94,7 +78,11 @@ function cleanAst(ast: mixed): mixed {
 }
 
 export function parseBabel(source: string): mixed {
-  const ast = parseBabelOriginal(source, {
+  // Trim end of string as Babel includes all whitespace in the
+  // range but Hermes parser does not.
+  const sourceTrimmed = source.trimEnd();
+
+  const ast = parseBabelOriginal(sourceTrimmed, {
     attachComment: false,
     errorRecovery: false,
     plugins: [
@@ -118,7 +106,8 @@ export function parseBabel(source: string): mixed {
     sourceType: 'module',
     tokens: false,
   });
-  return cleanAst(ast);
+
+  return cleanBabelAst(ast);
 }
 
 export function parseEspree(source: string): mixed {
@@ -133,7 +122,7 @@ export function parseEspree(source: string): mixed {
     sourceType: 'module',
     tokens: false,
   });
-  return cleanAst(ast);
+  return cleanAstForEspree(ast);
 }
 
 export function parseHermes(source: string, style: 'babel' | 'estree'): mixed {
@@ -143,7 +132,7 @@ export function parseHermes(source: string, style: 'babel' | 'estree'): mixed {
     sourceType: 'module',
     tokens: false,
   });
-  return cleanAst(ast);
+  return cleanAstForHermes(ast);
 }
 
 export type AlignmentExpectation = $ReadOnly<
@@ -168,16 +157,27 @@ function expectAlignment(
   hermesAst: () => mixed,
   otherAst: () => mixed,
   expectation: AlignmentExpectation,
+  parserType: 'Babel' | 'ESTree',
 ): void {
   switch (expectation.expectToFail) {
     case false:
-      // Received = Hermes, Expected = Babel/ESPree
-      expect(hermesAst()).toMatchObject(otherAst());
+      if (parserType === 'Babel') {
+        // Received = Hermes, Expected = Babel
+        expect(hermesAst()).toEqual(otherAst());
+      } else {
+        // Received = Hermes, Expected = Espree
+        expect(hermesAst()).toMatchObject(otherAst());
+      }
       break;
 
     case 'ast-diff':
-      // Received = Hermes, Expected = Babel/ESPree
-      expect(hermesAst()).not.toMatchObject(otherAst());
+      if (parserType === 'Babel') {
+        // Received = Hermes, Expected = Babel
+        expect(hermesAst()).not.toEqual(otherAst());
+      } else {
+        // Received = Hermes, Expected = Espree
+        expect(hermesAst()).not.toMatchObject(otherAst());
+      }
       break;
 
     case 'hermes-exception':
@@ -195,12 +195,12 @@ export function expectEspreeAlignment(testCase: AlignmentCase): void {
   const hermesAst = () => parseHermes(testCase.code, 'estree');
   const espreeAst = () => parseEspree(testCase.code);
 
-  expectAlignment(hermesAst, espreeAst, testCase.espree);
+  expectAlignment(hermesAst, espreeAst, testCase.espree, 'ESTree');
 }
 
 export function expectBabelAlignment(testCase: AlignmentCase): void {
   const hermesAst = () => parseHermes(testCase.code, 'babel');
   const babelAst = () => parseBabel(testCase.code);
 
-  expectAlignment(hermesAst, babelAst, testCase.babel);
+  expectAlignment(hermesAst, babelAst, testCase.babel, 'Babel');
 }

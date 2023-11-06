@@ -67,7 +67,6 @@ describe('DeclareVariable', () => {
             {
               "id": {
                 "name": "T1",
-                "optional": false,
                 "type": "Identifier",
                 "typeAnnotation": {
                   "type": "TypeAnnotation",
@@ -135,7 +134,6 @@ describe('DeclareVariable', () => {
             {
               "id": {
                 "name": "T1",
-                "optional": false,
                 "type": "Identifier",
                 "typeAnnotation": {
                   "type": "TypeAnnotation",
@@ -203,7 +201,6 @@ describe('DeclareVariable', () => {
             {
               "id": {
                 "name": "T1",
-                "optional": false,
                 "type": "Identifier",
                 "typeAnnotation": {
                   "type": "TypeAnnotation",
