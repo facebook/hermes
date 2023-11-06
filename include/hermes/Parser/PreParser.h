@@ -21,7 +21,7 @@ using llvh::SMLoc;
 /// Allow using \p SMLoc in \p llvh::DenseMaps.
 struct SMLocInfo : llvh::DenseMapInfo<SMLoc> {
   static inline SMLoc getEmptyKey() {
-    return SMLoc::getFromPointer(0);
+    return SMLoc::getFromPointer(nullptr);
   }
   static inline SMLoc getTombstoneKey() {
     return SMLoc::getFromPointer((const char *)1);
