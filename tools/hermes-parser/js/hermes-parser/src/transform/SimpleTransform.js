@@ -39,6 +39,13 @@ export type TransformOptions = $ReadOnly<{
   visitorKeys?: ?VisitorKeysType,
 }>;
 
+function setParentPointer(node: ESNode, parent: ?ESNode): void {
+  if (parent != null) {
+    // $FlowExpectedError[cannot-write]
+    node.parent = parent;
+  }
+}
+
 /**
  * A simple class to recursively tranform AST trees.
  */
@@ -53,10 +60,20 @@ export class SimpleTransform {
     let resultRootNode: ESNode | null = rootNode;
     SimpleTraverser.traverse(rootNode, {
       enter: (node: ESNode, parent: ?ESNode) => {
+        // Ensure the parent pointers are correctly set before entering the node.
+        setParentPointer(node, parent);
+
         const resultNode = options.transform(node);
         if (resultNode !== node) {
-          const traversedResultNode =
-            resultNode != null ? this.transform(resultNode, options) : null;
+          let traversedResultNode = null;
+
+          if (resultNode != null) {
+            // Ensure the new node has the correct parent pointers before recursing again.
+            setParentPointer(resultNode, parent);
+
+            traversedResultNode = this.transform(resultNode, options);
+          }
+
           if (parent == null) {
             if (node !== rootNode) {
               throw new Error(
@@ -73,6 +90,7 @@ export class SimpleTransform {
               traversedResultNode,
               options.visitorKeys,
             );
+            setParentPointer(traversedResultNode, parent);
           }
 
           throw SimpleTraverser.Skip;
