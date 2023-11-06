@@ -774,6 +774,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
 
     const functionComponent = {
       type: 'FunctionDeclaration',
+      __componentDeclaration: true,
       id: nodeUnprocessed.id,
       typeParameters: nodeUnprocessed.typeParameters,
       params,

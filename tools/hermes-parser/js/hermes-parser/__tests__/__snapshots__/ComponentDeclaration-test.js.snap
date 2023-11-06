@@ -4,6 +4,7 @@ exports[`ComponentDeclaration Basic Babel 1`] = `
 {
   "body": [
     {
+      "__componentDeclaration": true,
       "async": false,
       "body": {
         "body": [],
@@ -73,6 +74,7 @@ exports[`ComponentDeclaration Complex params Babel 1`] = `
 {
   "body": [
     {
+      "__componentDeclaration": true,
       "async": false,
       "body": {
         "body": [],
@@ -301,6 +303,7 @@ exports[`ComponentDeclaration default params Babel 1`] = `
 {
   "body": [
     {
+      "__componentDeclaration": true,
       "async": false,
       "body": {
         "body": [],
@@ -460,6 +463,7 @@ exports[`ComponentDeclaration normal and rest params Babel 1`] = `
 {
   "body": [
     {
+      "__componentDeclaration": true,
       "async": false,
       "body": {
         "body": [],
@@ -677,6 +681,7 @@ exports[`ComponentDeclaration rest params Babel 1`] = `
 {
   "body": [
     {
+      "__componentDeclaration": true,
       "async": false,
       "body": {
         "body": [],
@@ -798,6 +803,7 @@ exports[`ComponentDeclaration return type Babel 1`] = `
 {
   "body": [
     {
+      "__componentDeclaration": true,
       "async": false,
       "body": {
         "body": [],
@@ -874,6 +880,7 @@ exports[`ComponentDeclaration type parameters Babel 1`] = `
 {
   "body": [
     {
+      "__componentDeclaration": true,
       "async": false,
       "body": {
         "body": [],
