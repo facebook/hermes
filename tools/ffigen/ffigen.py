@@ -86,6 +86,14 @@ for pointer in root.findall(".//PointerType"):
     type_id = pointer.get("id")
     dynamic_type_mapping[type_id] = "c_ptr"
 
+for enumeration in root.findall(".//Enumeration"):
+    type_id = enumeration.get("id")
+    dynamic_type_mapping[type_id] = "c_int"
+    for enum_value in enumeration.findall(".//EnumValue"):
+        enum_name = enum_value.get("name")
+        enum_value = enum_value.get("init")
+        constants_dict[enum_name] = enum_value
+
 # Generate JS declarations
 for func in root.findall(".//Function"):
     arg_count = 0
