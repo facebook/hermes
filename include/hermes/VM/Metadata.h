@@ -186,7 +186,7 @@ struct Metadata final {
 
   /// The maximum number of offsets we can store for a cell. Bump this if
   /// asserts start failing and more fields are needed.
-  static constexpr size_t kMaxNumFields = 8;
+  static constexpr size_t kMaxNumFields = 10;
 
   struct SlotOffsets {
     /// The offset of each field for a given cell type is stored contiguously in
