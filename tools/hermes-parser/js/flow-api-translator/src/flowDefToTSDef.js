@@ -658,6 +658,8 @@ const getTransforms = (
         return transform.VoidTypeAnnotation(node);
       case 'TypePredicate':
         return unsupportedAnnotation(node, node.type);
+      case 'ConditionalTypeAnnotation':
+        return transform.ConditionalTypeAnnotation(node);
       default:
         throw unexpectedTranslationError(node, `Unhandled type ${node.type}`);
     }
@@ -3061,6 +3063,17 @@ const getTransforms = (
     ): TSESTree.TSVoidKeyword {
       return {
         type: 'TSVoidKeyword',
+      };
+    },
+    ConditionalTypeAnnotation(
+      node: FlowESTree.ConditionalTypeAnnotation,
+    ): TSESTree.TSConditionalType {
+      return {
+        type: 'TSConditionalType',
+        checkType: transformTypeAnnotationType(node.checkType),
+        extendsType: transformTypeAnnotationType(node.extendsType),
+        trueType: transformTypeAnnotationType(node.trueType),
+        falseType: transformTypeAnnotationType(node.falseType),
       };
     },
   };
