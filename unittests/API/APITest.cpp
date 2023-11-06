@@ -176,6 +176,18 @@ TEST_F(HermesRuntimeTestMethodsTest, ExternalArrayBufferTest) {
   }
 }
 
+TEST_F(HermesRuntimeTestMethodsTest, DetachedArrayBuffer) {
+  auto ab = eval(
+                R"(
+  var x  = new ArrayBuffer(10);
+  HermesInternal.detachArrayBuffer(x);
+  x
+)")
+                .getObject(*rt)
+                .getArrayBuffer(*rt);
+  EXPECT_THROW(ab.data(*rt), JSINativeException);
+}
+
 TEST_P(HermesRuntimeTest, BytecodeTest) {
   const uint8_t shortBytes[] = {1, 2, 3};
   EXPECT_FALSE(HermesRuntime::isHermesBytecode(shortBytes, 0));

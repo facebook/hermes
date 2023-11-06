@@ -2028,7 +2028,10 @@ size_t HermesRuntimeImpl::size(const jsi::ArrayBuffer &arr) {
 }
 
 uint8_t *HermesRuntimeImpl::data(const jsi::ArrayBuffer &arr) {
-  return vm::vmcast<vm::JSArrayBuffer>(phv(arr))->getDataBlock(runtime_);
+  auto ab = arrayBufferHandle(arr);
+  if (LLVM_UNLIKELY(!ab->attached()))
+    throw jsi::JSINativeException("ArrayBuffer is detached.");
+  return ab->getDataBlock(runtime_);
 }
 
 jsi::Value HermesRuntimeImpl::getValueAtIndex(const jsi::Array &arr, size_t i) {
