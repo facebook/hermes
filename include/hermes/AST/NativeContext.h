@@ -122,12 +122,18 @@ class NativeSignature : public llvh::FoldingSetNode {
   NativeCType result_;
   /// The type of the parameters. Note that void is not allowed here.
   llvh::SmallVector<NativeCType, 4> params_;
+  /// Whether the function should be passed the runtime as the first argument
+  /// (which must be a pointer).
+  bool passRuntime_;
 
  public:
   explicit NativeSignature(
       NativeCType result,
-      llvh::ArrayRef<NativeCType> params)
-      : result_(result), params_(params.begin(), params.end()) {}
+      llvh::ArrayRef<NativeCType> params,
+      bool passRuntime)
+      : result_(result),
+        params_(params.begin(), params.end()),
+        passRuntime_(passRuntime) {}
 
   NativeCType result() const {
     return result_;
@@ -135,6 +141,12 @@ class NativeSignature : public llvh::FoldingSetNode {
 
   llvh::ArrayRef<NativeCType> params() const {
     return params_;
+  }
+
+  /// \return whether the function should be passed the runtime as the first
+  ///     argument.
+  bool passRuntime() const {
+    return passRuntime_;
   }
 
   /// Compare two signatures and return -1, 0 or +1. Note that the ordering is
@@ -151,7 +163,8 @@ class NativeSignature : public llvh::FoldingSetNode {
   static void Profile(
       llvh::FoldingSetNodeID &ID,
       NativeCType result,
-      llvh::ArrayRef<NativeCType> params);
+      llvh::ArrayRef<NativeCType> params,
+      bool passRuntime);
 
   void Profile(llvh::FoldingSetNodeID &ID) const;
 };
@@ -176,6 +189,8 @@ class NativeExtern : public llvh::FoldingSetNode {
   bool declared_;
   /// Optional include file name.
   UniqueString *include_;
+  /// Whether the function should be passed the runtime as the first argument.
+  bool passRuntime_;
 
  public:
   /// \param declared whether the function is already declared in the emitted C
@@ -187,12 +202,14 @@ class NativeExtern : public llvh::FoldingSetNode {
       NativeSignature *signature,
       llvh::SMLoc loc,
       bool declared,
-      UniqueString *include)
+      UniqueString *include,
+      bool passRuntime)
       : name_(name),
         signature_(signature),
         loc_(loc),
         declared_(declared),
-        include_(include) {}
+        include_(include),
+        passRuntime_(passRuntime) {}
 
   UniqueString *name() const {
     return name_;
@@ -220,6 +237,14 @@ class NativeExtern : public llvh::FoldingSetNode {
 
   void setInclude(UniqueString *include) {
     include_ = include;
+  }
+
+  bool passRuntime() const {
+    return passRuntime_;
+  }
+
+  void setPassRuntime(bool passRuntime) {
+    passRuntime_ = passRuntime;
   }
 
   static void Profile(llvh::FoldingSetNodeID &ID, UniqueString *name) {
@@ -257,7 +282,8 @@ class NativeContext {
   /// Get a uniqued signature with the specified result and parameters.
   NativeSignature *getSignature(
       NativeCType result,
-      llvh::ArrayRef<NativeCType> params);
+      llvh::ArrayRef<NativeCType> params,
+      bool passRuntime);
 
   /// Get a uniqued version of this extern by name. If it already exists,
   /// there is no guarantee that the signature of the returned extern matches
@@ -267,12 +293,15 @@ class NativeContext {
   ///     source.
   /// \param include optional the name of the file to include to declare the
   ///     function.
+  /// \param passRuntime whether the function should be passed the runtime as
+  ///     the first argument.
   NativeExtern *getExtern(
       UniqueString *name,
       NativeSignature *signature,
       llvh::SMLoc loc,
       bool declared,
-      UniqueString *include);
+      UniqueString *include,
+      bool passRuntime);
 
   /// Obtain an extern, which must exist, by name.
   /// \return a non-null result.

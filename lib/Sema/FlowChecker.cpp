@@ -1493,7 +1493,9 @@ class FlowChecker::ExprVisitor {
     // Parse the options.
     bool declaredOption = false;
     UniqueString *includeOption = nullptr;
-    if (!parseExternCOptions(options, &declaredOption, &includeOption))
+    bool passRuntimeOption = false;
+    if (!parseExternCOptions(
+            options, &declaredOption, &includeOption, &passRuntimeOption))
       return;
 
     // Check arg 2.
@@ -1574,13 +1576,29 @@ class FlowChecker::ExprVisitor {
       natParamTypes.push_back(natParamType);
     }
 
+    if (passRuntimeOption) {
+      // Check if the first parameter is a pointer.
+      if (natParamTypes.empty() || natParamTypes[0] != NativeCType::ptr) {
+        outer_.sm_.error(
+            func->getSourceRange(),
+            "ft: extern_c with passRuntime=true requires a function with a "
+            "pointer as the first parameter");
+        return;
+      }
+    }
+
     signature = outer_.astContext_.getNativeContext().getSignature(
-        natReturnType, natParamTypes);
+        natReturnType, natParamTypes, passRuntimeOption);
 
     // Now that we have the signature, declare the extern and check for invalid
     // redeclaration.
     NativeExtern *ne = outer_.astContext_.getNativeContext().getExtern(
-        name, signature, call->getStartLoc(), declaredOption, includeOption);
+        name,
+        signature,
+        call->getStartLoc(),
+        declaredOption,
+        includeOption,
+        passRuntimeOption);
     if (ne->signature() != signature) {
       outer_.sm_.error(
           call->getSourceRange(),
@@ -1602,9 +1620,11 @@ class FlowChecker::ExprVisitor {
   bool parseExternCOptions(
       ESTree::ObjectExpressionNode *options,
       bool *declaredOption,
-      UniqueString **includeOption) {
+      UniqueString **includeOption,
+      bool *passRuntimeOption) {
     *declaredOption = false;
     *includeOption = nullptr;
+    *passRuntimeOption = false;
 
     auto parseObjRes = parseExternCObjectLiteral(options);
     if (!parseObjRes)
@@ -1614,25 +1634,32 @@ class FlowChecker::ExprVisitor {
 
     // NOTE: Whenever we find a supported option, we erase it.
 
-    // declared: boolean.
-    auto it = map.find(
-        outer_.astContext_.getIdentifier("declared").getUnderlyingPointer());
-    if (it != map.end()) {
-      auto *declared =
-          llvh::dyn_cast<ESTree::BooleanLiteralNode>(it->second->_value);
-      if (declared) {
-        *declaredOption = declared->_value;
-      } else {
-        outer_.sm_.error(
-            it->second->getSourceRange(),
-            "ft: extern_c option 'declared' must be a boolean literal");
-        success = false;
+    /// Parse a boolean option.
+    auto parseBooleanOption = [&map, &success, this](
+                                  llvh::StringRef name, bool *result) {
+      auto it = map.find(
+          outer_.astContext_.getIdentifier(name).getUnderlyingPointer());
+      if (it != map.end()) {
+        auto *declared =
+            llvh::dyn_cast<ESTree::BooleanLiteralNode>(it->second->_value);
+        if (declared) {
+          *result = declared->_value;
+        } else {
+          outer_.sm_.error(
+              it->second->getSourceRange(),
+              llvh::Twine("ft: extern_c option '") + name +
+                  "' must be a boolean literal");
+          success = false;
+        }
+        map.erase(it);
       }
-      map.erase(it);
-    }
+    };
+
+    // declared: boolean.
+    parseBooleanOption("declared", declaredOption);
 
     // include: string.
-    it = map.find(
+    auto it = map.find(
         outer_.astContext_.getIdentifier("include").getUnderlyingPointer());
     if (it != map.end()) {
       auto *include =
@@ -1647,6 +1674,9 @@ class FlowChecker::ExprVisitor {
       }
       map.erase(it);
     }
+
+    // passRuntime: boolean.
+    parseBooleanOption("passRuntime", passRuntimeOption);
 
     // Check for unsupported properties.
     for (auto &prop : map) {

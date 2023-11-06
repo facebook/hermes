@@ -84,14 +84,16 @@ llvh::raw_ostream &NativeSignature::format(
 void NativeSignature::Profile(
     llvh::FoldingSetNodeID &ID,
     NativeCType result,
-    llvh::ArrayRef<NativeCType> params) {
+    llvh::ArrayRef<NativeCType> params,
+    bool passRuntime) {
   ID.AddInteger((uint8_t)result);
   for (auto pt : params)
     ID.AddInteger((uint8_t)pt);
+  ID.AddBoolean(passRuntime);
 }
 
 void NativeSignature::Profile(llvh::FoldingSetNodeID &ID) const {
-  Profile(ID, result_, params_);
+  Profile(ID, result_, params_, passRuntime_);
 }
 
 /// A helper to normalize the contents of \c NativeSettings, specifically the
@@ -112,8 +114,9 @@ NativeContext::~NativeContext() = default;
 
 NativeSignature *NativeContext::getSignature(
     NativeCType result,
-    llvh::ArrayRef<NativeCType> params) {
-  return signatures_.getOrEmplaceWithNew(result, params).first;
+    llvh::ArrayRef<NativeCType> params,
+    bool passRuntime) {
+  return signatures_.getOrEmplaceWithNew(result, params, passRuntime).first;
 }
 
 NativeExtern *NativeContext::getExtern(
@@ -121,7 +124,8 @@ NativeExtern *NativeContext::getExtern(
     NativeSignature *signature,
     llvh::SMLoc loc,
     bool declared,
-    UniqueString *include) {
+    UniqueString *include,
+    bool passRuntime) {
   llvh::FoldingSetNodeID ID;
   NativeExtern::Profile(ID, name);
   void *insertPos;
@@ -130,10 +134,13 @@ NativeExtern *NativeContext::getExtern(
       ext->setDeclared(true);
     if (include)
       ext->setInclude(include);
+    if (passRuntime)
+      ext->setPassRuntime(true);
     return ext;
   }
   auto *res = externMap_.InsertNode(
-      std::make_unique<NativeExtern>(name, signature, loc, declared, include),
+      std::make_unique<NativeExtern>(
+          name, signature, loc, declared, include, passRuntime),
       insertPos);
   externVector_.push_back(res);
   return res;

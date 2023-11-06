@@ -2176,7 +2176,11 @@ class InstrGen {
     for (unsigned i = 0, e = inst.getNumArgs(); i != e; ++i) {
       if (i)
         os_ << ", ";
-      convertToNativeArg(sig->params()[i], inst.getArg(i));
+      if (i == 0 && sig->passRuntime()) {
+        os_ << "shr";
+      } else {
+        convertToNativeArg(sig->params()[i], inst.getArg(i));
+      }
     }
     // End of argument list.
     os_ << ')';
