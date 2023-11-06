@@ -210,7 +210,7 @@ describe('flowToFlowDef', () => {
         `function foo() {}
          export default foo;`,
         `declare function foo(): void;
-         declare export default foo;`,
+         declare export default typeof foo;`,
       );
     });
   });
@@ -433,6 +433,14 @@ describe('flowToFlowDef', () => {
          declare export const bar: typeof foo;`,
       );
     });
+    it('with imported value', async () => {
+      await expectTranslate(
+        `import {foo} from 'foo';
+         export const bar = foo;`,
+        `import {foo} from 'foo';
+         declare export const bar: typeof foo;`,
+      );
+    });
   });
   describe('EnumDeclaration', () => {
     it('basic', async () => {
@@ -479,7 +487,7 @@ describe('flowToFlowDef', () => {
     }
     describe('Identifier', () => {
       it('basic', async () => {
-        await expectTranslateExpression(`foo`, `foo`);
+        await expectTranslateExpression(`foo`, `typeof foo`);
       });
     });
     describe('ObjectExpression', () => {
