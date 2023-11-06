@@ -62,11 +62,11 @@ void unset_test_vm_allocate_limit();
 // will be zero-filled on demand.
 llvh::ErrorOr<void *> vm_allocate(size_t sz, void *hint = nullptr);
 
-// Allocates a virtual memory region of the given size and alignment (both
-// must be multiples of page_size()), and returns a pointer to the start.
-// Optionally specify a page-aligned hint for where to place the mapping.
-// Returns nullptr if the allocation is unsuccessful.  The pages
-// will be zero-filled on demand.
+// Allocates a virtual memory region of the given size and alignment, and
+// returns a pointer to the start. Both the size and alignment must be multiples
+// of the page size, and the alignment must also be a power of 2. Optionally
+// specify a page-aligned hint for where to place the mapping. Returns nullptr
+// if the allocation is unsuccessful. The pages will be zero-filled on demand.
 llvh::ErrorOr<void *>
 vm_allocate_aligned(size_t sz, size_t alignment, void *hint = nullptr);
 
