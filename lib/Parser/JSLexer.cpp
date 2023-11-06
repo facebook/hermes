@@ -428,6 +428,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
           scanLineComment(curCharPtr_);
           continue;
         }
+        token_.setStart(curCharPtr_);
         if (!scanPrivateIdentifier()) {
           continue;
         }
@@ -1729,9 +1730,6 @@ bool JSLexer::scanPrivateIdentifier() {
     return false;
   }
 
-  // Reset the start to the '#' because the scanIdentifier functions were
-  // not aware of the true start of the token.
-  token_.setStart(start);
   // Parsed a resword or identifier.
   // Convert the TokenKind to private_identifier after the fact.
   // This avoids adding another Mode to IdentifierMode.
