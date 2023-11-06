@@ -6607,6 +6607,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
         new (context_)
             ESTree::ExportAllDeclarationNode(*optFromClause, valueIdent_));
   } else if (checkAndEat(TokenKind::rw_default)) {
+    CHECK_RECURSION;
     // export default
     if (check(TokenKind::rw_function) ||
         (check(asyncIdent_) && checkAsyncFunction())) {
