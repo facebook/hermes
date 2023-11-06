@@ -156,6 +156,20 @@ void vm_free_aligned(void *p, size_t sz) {
   vm_free(p, sz);
 }
 
+/// Define a no-op implementation of the reserve/commit APIs that just call
+/// through to regular allocations.
+llvh::ErrorOr<void *>
+vm_reserve_aligned(size_t sz, size_t alignment, void *hint) {
+  return vm_allocate_aligned(sz, alignment, hint);
+}
+void vm_release_aligned(void *p, size_t sz) {
+  vm_free_aligned(p, sz);
+}
+llvh::ErrorOr<void *> vm_commit(void *p, size_t sz) {
+  return p;
+}
+void vm_uncommit(void *p, size_t sz) {}
+
 void vm_hugepage(void *p, size_t sz) {
   assert(
       reinterpret_cast<uintptr_t>(p) % page_size() == 0 &&
