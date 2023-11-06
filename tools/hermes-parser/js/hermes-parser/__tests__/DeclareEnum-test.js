@@ -90,7 +90,10 @@ describe('DeclareEnum', () => {
               "optional": false,
               "type": "Identifier",
               "typeAnnotation": {
-                "type": "AnyTypeAnnotation",
+                "type": "TypeAnnotation",
+                "typeAnnotation": {
+                  "type": "AnyTypeAnnotation",
+                },
               },
             },
             "type": "DeclareVariable",
