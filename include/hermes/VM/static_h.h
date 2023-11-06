@@ -1041,7 +1041,7 @@ static inline SHLegacyValue _sh_ljs_native_pointer_or_throw(
   _sh_throw_type_error_ascii(shr, "pointer not representable as number");
 #else
   (void)shr;
-  return _sh_ljs_double((double)(uint32_t)(uintptr_t)p);
+  return _sh_ljs_native_pointer(p);
 #endif
 }
 
