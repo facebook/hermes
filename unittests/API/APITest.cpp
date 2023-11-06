@@ -12,6 +12,7 @@
 #include <hermes/VM/TimeLimitMonitor.h>
 #include <hermes/hermes.h>
 #include <jsi/instrumentation.h>
+#include <jsi/test/testlib.h>
 
 #include <tuple>
 
@@ -34,32 +35,37 @@ struct HermesTestHelper {
 
 namespace {
 
-class HermesRuntimeTestBase : public ::testing::Test {
+class HermesRuntimeTestBase {
  public:
-  HermesRuntimeTestBase(::hermes::vm::RuntimeConfig runtimeConfig)
-      : rt(makeHermesRuntime(runtimeConfig)) {}
+  HermesRuntimeTestBase(std::unique_ptr<Runtime> rt) : rt(std::move(rt)) {}
 
  protected:
   Value eval(const char *code) {
     return rt->global().getPropertyAsFunction(*rt, "eval").call(*rt, code);
   }
 
-  std::shared_ptr<HermesRuntime> rt;
+  std::unique_ptr<Runtime> rt;
 };
 
-class HermesRuntimeTest : public HermesRuntimeTestBase {
+/// TODO: Run these tests against all jsi::Runtimes implemented on top of
+///       Hermes, similar to HermesRuntimeTest below.
+class HermesRuntimeCustomConfigTest : public ::testing::Test,
+                                      public HermesRuntimeTestBase {
  public:
-  HermesRuntimeTest()
-      : HermesRuntimeTestBase(::hermes::vm::RuntimeConfig::Builder()
-                                  .withES6Proxy(true)
-                                  .withES6Promise(true)
-                                  .build()) {}
+  HermesRuntimeCustomConfigTest(::hermes::vm::RuntimeConfig runtimeConfig)
+      : HermesRuntimeTestBase(makeHermesRuntime(runtimeConfig)) {}
+};
+
+class HermesRuntimeTest : public ::testing::TestWithParam<RuntimeFactory>,
+                          public HermesRuntimeTestBase {
+ public:
+  HermesRuntimeTest() : HermesRuntimeTestBase(GetParam()()) {}
 };
 
 // In JSC there's a bug where host functions are always ran with a this in
 // nonstrict mode so this must be a hermes only test. See
 // https://es5.github.io/#x10.4.3 for more info.
-TEST_F(HermesRuntimeTest, StrictHostFunctionBindTest) {
+TEST_P(HermesRuntimeTest, StrictHostFunctionBindTest) {
   Function coolify = Function::createFromHostFunction(
       *rt,
       PropNameID::forAscii(*rt, "coolify"),
@@ -76,7 +82,7 @@ TEST_F(HermesRuntimeTest, StrictHostFunctionBindTest) {
                   .getBool());
 }
 
-TEST_F(HermesRuntimeTest, DescriptionTest) {
+TEST_P(HermesRuntimeTest, DescriptionTest) {
   // Minimally, if the description doesn't include "Hermes", something
   // is wrong.
   EXPECT_NE(rt->description().find("Hermes"), std::string::npos);
@@ -89,7 +95,7 @@ TEST_F(HermesRuntimeTest, DescriptionTest) {
   EXPECT_NE(rt2->description().find("Hermes"), std::string::npos);
 }
 
-TEST_F(HermesRuntimeTest, ArrayBufferTest) {
+TEST_P(HermesRuntimeTest, ArrayBufferTest) {
   eval(
       "var buffer = new ArrayBuffer(16);\
         var int32View = new Int32Array(buffer);\
@@ -107,12 +113,13 @@ TEST_F(HermesRuntimeTest, ArrayBufferTest) {
   EXPECT_EQ(buffer[1], 5678);
 }
 
-class HermesRuntimeTestMethodsTest : public HermesRuntimeTestBase {
+class HermesRuntimeTestMethodsTest : public HermesRuntimeCustomConfigTest {
  public:
   HermesRuntimeTestMethodsTest()
-      : HermesRuntimeTestBase(::hermes::vm::RuntimeConfig::Builder()
-                                  .withEnableHermesInternalTestMethods(true)
-                                  .build()) {}
+      : HermesRuntimeCustomConfigTest(
+            ::hermes::vm::RuntimeConfig::Builder()
+                .withEnableHermesInternalTestMethods(true)
+                .build()) {}
 };
 
 TEST_F(HermesRuntimeTestMethodsTest, ExternalArrayBufferTest) {
@@ -169,7 +176,7 @@ TEST_F(HermesRuntimeTestMethodsTest, ExternalArrayBufferTest) {
   }
 }
 
-TEST_F(HermesRuntimeTest, BytecodeTest) {
+TEST_P(HermesRuntimeTest, BytecodeTest) {
   const uint8_t shortBytes[] = {1, 2, 3};
   EXPECT_FALSE(HermesRuntime::isHermesBytecode(shortBytes, 0));
   EXPECT_FALSE(HermesRuntime::isHermesBytecode(shortBytes, sizeof(shortBytes)));
@@ -188,7 +195,7 @@ TEST_F(HermesRuntimeTest, BytecodeTest) {
   EXPECT_EQ(HermesRuntime::getBytecodeVersion(), hermes::hbc::BYTECODE_VERSION);
 }
 
-TEST_F(HermesRuntimeTest, PreparedJavaScriptBytecodeTest) {
+TEST_P(HermesRuntimeTest, PreparedJavaScriptBytecodeTest) {
   eval("var q = 0;");
   std::string bytecode;
   ASSERT_TRUE(hermes::compileJS("q++", bytecode));
@@ -201,7 +208,7 @@ TEST_F(HermesRuntimeTest, PreparedJavaScriptBytecodeTest) {
   EXPECT_EQ(rt->global().getProperty(*rt, "q").getNumber(), 2);
 }
 
-TEST_F(HermesRuntimeTest, CompileWithSourceMapTest) {
+TEST_P(HermesRuntimeTest, CompileWithSourceMapTest) {
   /* original source:
   const a: number = 12;
   class MyClass {
@@ -260,7 +267,7 @@ c.doSomething(a, 15);
   }
 }
 
-TEST_F(HermesRuntimeTest, JumpTableBytecodeTest) {
+TEST_P(HermesRuntimeTest, JumpTableBytecodeTest) {
   std::string code = R"xyz(
     (function(){
 var i = 0;
@@ -286,7 +293,7 @@ var i = 0;
   ASSERT_EQ(ret.asNumber(), 5.0);
 }
 
-TEST_F(HermesRuntimeTest, PreparedJavaScriptInvalidSourceThrows) {
+TEST_P(HermesRuntimeTest, PreparedJavaScriptInvalidSourceThrows) {
   const char *badSource = "this is definitely not valid javascript";
   EXPECT_THROW(
       rt->prepareJavaScript(std::make_unique<StringBuffer>(badSource), ""),
@@ -294,7 +301,7 @@ TEST_F(HermesRuntimeTest, PreparedJavaScriptInvalidSourceThrows) {
       << "prepareJavaScript should have thrown an exception";
 }
 
-TEST_F(HermesRuntimeTest, PreparedJavaScriptInvalidSourceBufferPrefix) {
+TEST_P(HermesRuntimeTest, PreparedJavaScriptInvalidSourceBufferPrefix) {
   // Construct a 0-terminated buffer that represents an invalid UTF-8 source.
   char badSource[32];
   memset((void *)badSource, '\xFE', sizeof(badSource));
@@ -310,7 +317,7 @@ TEST_F(HermesRuntimeTest, PreparedJavaScriptInvalidSourceBufferPrefix) {
   EXPECT_TRUE(errMsg.find(prefix) != std::string::npos);
 }
 
-TEST_F(HermesRuntimeTest, NoCorruptionOnJSError) {
+TEST_P(HermesRuntimeTest, NoCorruptionOnJSError) {
   // If the test crashes or infinite loops, the likely cause is that
   // Hermes API library is not built with proper compiler flags
   // (-fexception in GCC/CLANG, /EHsc in MSVC)
@@ -349,7 +356,8 @@ TEST(HermesRuntimeDeathTest, ValueTest) {
 }
 #endif
 
-TEST_F(HermesRuntimeTest, DontGrowWhenMoveObjectOutOfValue) {
+TEST(HermesRootsTest, DontGrowWhenMoveObjectOutOfValue) {
+  auto rt = makeHermesRuntime();
   Value val = Object(*rt);
   // Keep the object alive during measurement.
   std::unique_ptr<Object> obj;
@@ -359,7 +367,8 @@ TEST_F(HermesRuntimeTest, DontGrowWhenMoveObjectOutOfValue) {
   EXPECT_EQ(rootsDelta, 0);
 }
 
-TEST_F(HermesRuntimeTest, DontGrowWhenCloneObject) {
+TEST(HermesRootsTest, DontGrowWhenCloneObject) {
+  auto rt = makeHermesRuntime();
   Value val = Object(*rt);
   constexpr int kCloneCount = 1000;
   // Keep the objects alive during measurement.
@@ -512,7 +521,7 @@ JSON.stringify(JSON.parse(out).callstack.map(x => x.SourceLocation));
   EXPECT_EQ(callstack, expected);
 }
 
-TEST_F(HermesRuntimeTest, SpreadHostObjectWithOwnProperties) {
+TEST_P(HermesRuntimeTest, SpreadHostObjectWithOwnProperties) {
   class HostObjectWithPropertyNames : public HostObject {
     std::vector<PropNameID> getPropertyNames(Runtime &rt) override {
       return PropNameID::names(rt, "prop1", "1", "2", "prop2", "3");
@@ -536,7 +545,7 @@ props.toString();
   EXPECT_EQ(res, "1,2,3,prop1,prop2");
 }
 
-TEST_F(HermesRuntimeTest, HostObjectWithOwnProperties) {
+TEST_P(HermesRuntimeTest, HostObjectWithOwnProperties) {
   class HostObjectWithPropertyNames : public HostObject {
     std::vector<PropNameID> getPropertyNames(Runtime &rt) override {
       return PropNameID::names(rt, "prop1", "1", "2", "prop2", "3");
@@ -615,7 +624,7 @@ TEST_F(HermesRuntimeTest, HostObjectWithOwnProperties) {
 }
 
 // TODO mhorowitz: move this to jsi/testlib.cpp once we have impls for all VMs
-TEST_F(HermesRuntimeTest, WeakReferences) {
+TEST_P(HermesRuntimeTest, WeakReferences) {
   Object o = eval("({one: 1})").getObject(*rt);
   WeakObject wo = WeakObject(*rt, o);
   rt->global().setProperty(*rt, "obj", o);
@@ -672,7 +681,7 @@ TEST_F(HermesRuntimeTest, WeakReferences) {
   EXPECT_TRUE(wo.lock(*rt).isUndefined());
 }
 
-TEST_F(HermesRuntimeTest, SourceURLAppearsInBacktraceTest) {
+TEST_P(HermesRuntimeTest, SourceURLAppearsInBacktraceTest) {
   std::string sourceURL = "//SourceURLAppearsInBacktraceTest/Test/URL";
   std::string sourceCode = R"(
 function thrower() { throw new Error('Test Error Message')}
@@ -696,7 +705,7 @@ throws1();
   }
 }
 
-TEST_F(HermesRuntimeTest, HostObjectAsParentTest) {
+TEST_P(HermesRuntimeTest, HostObjectAsParentTest) {
   class HostObjectWithProp : public HostObject {
     Value get(Runtime &runtime, const PropNameID &name) override {
       if (PropNameID::compare(
@@ -714,7 +723,7 @@ TEST_F(HermesRuntimeTest, HostObjectAsParentTest) {
       eval("var subClass = {__proto__: ho}; subClass.prop1 == 10;").getBool());
 }
 
-TEST_F(HermesRuntimeTest, NativeStateTest) {
+TEST_P(HermesRuntimeTest, NativeStateTest) {
   class C : public facebook::jsi::NativeState {
    public:
     int *dtors;
@@ -759,7 +768,7 @@ TEST_F(HermesRuntimeTest, NativeStateTest) {
   eval("gc()");
 }
 
-TEST_F(HermesRuntimeTest, PropNameIDFromSymbol) {
+TEST_P(HermesRuntimeTest, PropNameIDFromSymbol) {
   auto strProp = PropNameID::forAscii(*rt, "a");
   auto secretProp = PropNameID::forSymbol(
       *rt, eval("var secret = Symbol('a'); secret;").getSymbol(*rt));
@@ -774,7 +783,7 @@ TEST_F(HermesRuntimeTest, PropNameIDFromSymbol) {
   EXPECT_EQ(x.getProperty(*rt, globalProp).getString(*rt).utf8(*rt), "global");
 }
 
-TEST_F(HermesRuntimeTest, HasComputedTest) {
+TEST_P(HermesRuntimeTest, HasComputedTest) {
   // The only use of JSObject::hasComputed() is in HermesRuntimeImpl,
   // so we test its Proxy support here, instead of from JS.
 
@@ -800,19 +809,20 @@ TEST_F(HermesRuntimeTest, HasComputedTest) {
   EXPECT_TRUE(eval("'prop' in new Proxy({}, {has: returnTrue})").getBool());
 }
 
-TEST_F(HermesRuntimeTest, GlobalObjectTest) {
+TEST_P(HermesRuntimeTest, GlobalObjectTest) {
   rt->global().setProperty(*rt, "a", 5);
   eval("f = function(b) { return a + b; }");
   eval("gc()");
   EXPECT_EQ(eval("f(10)").getNumber(), 15);
 }
 
-class HermesRuntimeTestWithDisableGenerator : public HermesRuntimeTestBase {
+class HermesRuntimeTestWithDisableGenerator
+    : public HermesRuntimeCustomConfigTest {
  public:
   HermesRuntimeTestWithDisableGenerator()
-      : HermesRuntimeTestBase(::hermes::vm::RuntimeConfig::Builder()
-                                  .withEnableGenerator(false)
-                                  .build()) {}
+      : HermesRuntimeCustomConfigTest(::hermes::vm::RuntimeConfig::Builder()
+                                          .withEnableGenerator(false)
+                                          .build()) {}
 };
 
 TEST_F(HermesRuntimeTestWithDisableGenerator, WithDisableGenerator) {
@@ -836,7 +846,7 @@ TEST_F(HermesRuntimeTestWithDisableGenerator, WithDisableGenerator) {
       << "Expected JSIException";
 }
 
-TEST_F(HermesRuntimeTest, DiagnosticHandlerTestError) {
+TEST_P(HermesRuntimeTest, DiagnosticHandlerTestError) {
   using DiagnosticHandler = hermes::DiagnosticHandler;
 
   struct BufferingDiagnosticHandler : DiagnosticHandler {
@@ -854,7 +864,7 @@ TEST_F(HermesRuntimeTest, DiagnosticHandlerTestError) {
   EXPECT_EQ(4, diagHandler.ds[0].column);
 }
 
-TEST_F(HermesRuntimeTest, DiagnosticHandlerTestWarning) {
+TEST_P(HermesRuntimeTest, DiagnosticHandlerTestWarning) {
   using DiagnosticHandler = hermes::DiagnosticHandler;
 
   struct BufferingDiagnosticHandler : DiagnosticHandler {
@@ -886,7 +896,7 @@ TEST_F(HermesRuntimeTest, DiagnosticHandlerTestWarning) {
   EXPECT_EQ(5, diagHandler.ds[1].ranges[0].second);
 }
 
-TEST_F(HermesRuntimeTest, BigIntJSI) {
+TEST_P(HermesRuntimeTest, BigIntJSI) {
   Function bigintCtor = rt->global().getPropertyAsFunction(*rt, "BigInt");
   auto BigInt = [&](const char *v) { return bigintCtor.call(*rt, eval(v)); };
 
@@ -912,7 +922,7 @@ TEST_F(HermesRuntimeTest, BigIntJSI) {
   EXPECT_FALSE(BigInt::strictEquals(*rt, bNeg1, bffffffffffffffff));
 }
 
-TEST_F(HermesRuntimeTest, BigIntJSIFromScalar) {
+TEST_P(HermesRuntimeTest, BigIntJSIFromScalar) {
   Function bigintCtor = rt->global().getPropertyAsFunction(*rt, "BigInt");
   auto BigInt = [&](const char *v) {
     return bigintCtor.call(*rt, eval(v)).asBigInt(*rt);
@@ -932,7 +942,7 @@ TEST_F(HermesRuntimeTest, BigIntJSIFromScalar) {
       BigInt::strictEquals(*rt, BigInt("-1"), BigInt::fromInt64(*rt, ~0ull)));
 }
 
-TEST_F(HermesRuntimeTest, BigIntJSIToString) {
+TEST_P(HermesRuntimeTest, BigIntJSIToString) {
   auto b = BigInt::fromUint64(*rt, 1);
   // Test all possible radixes.
   for (int radix = 2; radix <= 36; ++radix) {
@@ -959,7 +969,7 @@ TEST_F(HermesRuntimeTest, BigIntJSIToString) {
   }
 }
 
-TEST_F(HermesRuntimeTest, BigIntJSITruncation) {
+TEST_P(HermesRuntimeTest, BigIntJSITruncation) {
   auto lossless = [](uint64_t value) { return std::make_tuple(value, true); };
   auto lossy = [](uint64_t value) { return std::make_tuple(value, false); };
 
@@ -1018,10 +1028,10 @@ TEST_F(HermesRuntimeTest, BigIntJSITruncation) {
 }
 
 #ifdef HERMESVM_EXCEPTION_ON_OOM
-class HermesRuntimeTestSmallHeap : public HermesRuntimeTestBase {
+class HermesRuntimeTestSmallHeap : public HermesRuntimeCustomConfigTest {
  public:
   HermesRuntimeTestSmallHeap()
-      : HermesRuntimeTestBase(
+      : HermesRuntimeCustomConfigTest(
             ::hermes::vm::RuntimeConfig::Builder()
                 .withGCConfig(::hermes::vm::GCConfig::Builder()
                                   .withInitHeapSize(8 << 20)
@@ -1069,7 +1079,7 @@ globalThis.Error = function (){
 }
 #endif
 
-TEST_F(HermesRuntimeTest, NativeExceptionDoesNotUseGlobalError) {
+TEST_P(HermesRuntimeTest, NativeExceptionDoesNotUseGlobalError) {
   Function alwaysThrows = Function::createFromHostFunction(
       *rt,
       PropNameID::forAscii(*rt, "alwaysThrows"),
@@ -1098,5 +1108,10 @@ TEST_F(HermesRuntimeTest, NativeExceptionDoesNotUseGlobalError) {
       "std::logic_error C++ exception in Host Function",
       test.call(*rt).getString(*rt).utf8(*rt));
 }
+
+INSTANTIATE_TEST_CASE_P(
+    Runtimes,
+    HermesRuntimeTest,
+    ::testing::ValuesIn(runtimeGenerators()));
 
 } // namespace
