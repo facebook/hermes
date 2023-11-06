@@ -22,6 +22,7 @@ import {
 import type {VisitorKeysType} from 'hermes-parser';
 
 let cache = 1;
+const cacheBase = Math.random();
 
 export async function print(
   ast: MaybeDetachedNode<Program>,
@@ -103,7 +104,7 @@ export async function print(
 
                   // Prettier caches the plugin, by making this key always unique we ensure the new `parse`
                   // function with the correct AST is always called.
-                  cache: cache++,
+                  cache: `${cacheBase}-${cache++}`,
 
                   // Provide the passed AST to prettier
                   parse() {
