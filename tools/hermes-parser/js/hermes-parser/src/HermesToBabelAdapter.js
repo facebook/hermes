@@ -49,8 +49,12 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
       end: loc.end,
     };
 
-    node.start = loc.rangeStart;
-    node.end = loc.rangeEnd;
+    if (node.start == null) {
+      node.start = loc.rangeStart;
+    }
+    if (node.end == null) {
+      node.end = loc.rangeEnd;
+    }
   }
 
   mapNode(node: HermesNode): HermesNode {
@@ -615,6 +619,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
               name: 'Node',
               ...createRendersTypeLoc(),
             },
+            ...createRendersTypeLoc(),
           },
           typeParameters: null,
           ...createRendersTypeLoc(),
@@ -778,6 +783,8 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
       generator: false,
       predicate: null,
       loc: nodeUnprocessed.loc,
+      start: nodeUnprocessed.start,
+      end: nodeUnprocessed.end,
     };
 
     return this.mapNodeDefault(functionComponent);

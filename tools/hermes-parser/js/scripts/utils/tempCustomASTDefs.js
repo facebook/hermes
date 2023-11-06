@@ -78,6 +78,10 @@ export default ({
     object: NODE,
     property: NODE,
   },
+  // We delete this from the ESTree AST but need it to exist for the parser visitor to correctly translate to the ESTree AST.
+  ExportNamespaceSpecifier: {
+    exported: NODE,
+  },
 }: $ReadOnly<{
   [string]: $ReadOnly<{[string]: AstType}>,
 }>);
