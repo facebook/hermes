@@ -110,7 +110,7 @@ describe('Object properties', () => {
                     "params": [],
                     "predicate": null,
                     "range": [
-                      41,
+                      43,
                       56,
                     ],
                     "returnType": null,
