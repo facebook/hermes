@@ -293,6 +293,7 @@ class PersistentScopedMap {
       assert(curNode->depth_ == scope_->depth_ && "Bad scope link");
       Node *popped = popEntry(curNode->first);
       assert(curNode == popped && "Unexpected innermost value for key");
+      (void)popped;
     }
     scope_->active_ = false;
     scope_ = scope_->parentScope_;
