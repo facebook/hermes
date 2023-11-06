@@ -593,9 +593,17 @@ class JSParserImpl {
     return check(TokenKind::no_substitution_template, TokenKind::template_head);
   }
 
+  /// Whether to include the 'of' identifier when checking the end of an
+  /// AssignmentExpression.
+  enum class OfEndsAssignment { No, Yes };
+
   /// Check whether the current token can be the token after the end of an
   /// AssignmentExpression.
-  bool checkEndAssignmentExpression() const;
+  /// \param ofEndsAssignment needed because 'of' isn't reserved and can be used
+  /// outside a for loop:
+  ///    yield of();
+  bool checkEndAssignmentExpression(
+      OfEndsAssignment ofEndsAssignment = OfEndsAssignment::Yes) const;
 
   /// Check whether we match 'async [no LineTerminator here] function'.
   /// \pre the current token is 'async'.

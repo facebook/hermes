@@ -8,6 +8,6 @@
 // RUN: (! %hermesc -dump-transformed-ast %s 2>&1 ) | %FileCheck --match-full-lines %s
 
 function *foo() { for (yield of x) print(1) }
-// CHECK: {{.*}}:10:24: error: invalid assignment left-hand side
+// CHECK: {{.*}}:10:33: error: unexpected token after yield expression
 // CHECK: function *foo() { for (yield of x) print(1) }
-// CHECK:                        ^~~~~
+// CHECK:                                 ^
