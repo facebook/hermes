@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       rnVersion:
-        description: "The RN version that triggered this tagging"
+        description: "The React Native version that will use this tag"
         required: true
       targetSha:
         description: "The SHA you want to tag. If not specified it will tag the HEAD of main"
