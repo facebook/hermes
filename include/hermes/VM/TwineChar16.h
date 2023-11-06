@@ -163,7 +163,7 @@ class TwineChar16 {
   TwineChar16(const int32_t i)
       : leftKind_(Int32Kind), rightKind_(EmptyKind), rightSize_(0) {
     // snprintf returns the number of characters that i takes to write.
-    leftSize_ = ::snprintf(0, 0, "%" PRId32, i);
+    leftSize_ = ::snprintf(nullptr, 0, "%" PRId32, i);
     leftChild_.int32 = i;
     assert(isValid());
   }
@@ -171,7 +171,7 @@ class TwineChar16 {
   TwineChar16(const uint32_t i)
       : leftKind_(Unsigned32Kind), rightKind_(EmptyKind), rightSize_(0) {
     // snprintf returns the number of characters that i takes to write.
-    leftSize_ = ::snprintf(0, 0, "%" PRIu32, i);
+    leftSize_ = ::snprintf(nullptr, 0, "%" PRIu32, i);
     leftChild_.uint32 = i;
     assert(isValid());
   }
@@ -255,7 +255,7 @@ class TwineChar16 {
   TwineChar16(const llvh::StringRef left, const int32_t right)
       : leftKind_(CharStrKind), rightKind_(Int32Kind), leftSize_(left.size()) {
     // snprintf returns the number of characters that right takes to write.
-    rightSize_ = ::snprintf(0, 0, "%" PRId32, right);
+    rightSize_ = ::snprintf(nullptr, 0, "%" PRId32, right);
     leftChild_.charStr = left.begin();
     rightChild_.int32 = right;
     assert(isValid());
