@@ -11,6 +11,7 @@
 'use strict';
 
 import type {ESNode} from 'hermes-estree';
+import type {VisitorKeysType} from '../traverse/getVisitorKeys';
 
 import {
   arrayIsEqual,
@@ -23,6 +24,7 @@ import {SimpleTraverser} from '../traverse/SimpleTraverser';
 function getParentKey(
   target: ESNode,
   parent: ESNode,
+  visitorKeys?: ?VisitorKeysType,
 ): $ReadOnly<
   | {
       type: 'single',
@@ -39,7 +41,7 @@ function getParentKey(
   if (parent == null) {
     throw new Error(`Expected parent node to be set on "${target.type}"`);
   }
-  for (const key of getVisitorKeys(parent)) {
+  for (const key of getVisitorKeys(parent, visitorKeys)) {
     if (
       isNode(
         // $FlowExpectedError[prop-missing]
@@ -72,8 +74,13 @@ export function replaceNodeOnParent(
   originalNode: ESNode,
   originalNodeParent: ESNode,
   nodeToReplaceWith: ESNode,
+  visitorKeys?: ?VisitorKeysType,
 ): void {
-  const replacementParent = getParentKey(originalNode, originalNodeParent);
+  const replacementParent = getParentKey(
+    originalNode,
+    originalNodeParent,
+    visitorKeys,
+  );
   const parent = replacementParent.node;
   if (replacementParent.type === 'array') {
     // $FlowExpectedError[prop-missing]
@@ -95,8 +102,13 @@ export function replaceNodeOnParent(
 export function removeNodeOnParent(
   originalNode: ESNode,
   originalNodeParent: ESNode,
+  visitorKeys?: ?VisitorKeysType,
 ): void {
-  const replacementParent = getParentKey(originalNode, originalNodeParent);
+  const replacementParent = getParentKey(
+    originalNode,
+    originalNodeParent,
+    visitorKeys,
+  );
   const parent = replacementParent.node;
   if (replacementParent.type === 'array') {
     // $FlowExpectedError[prop-missing]
@@ -114,8 +126,11 @@ export function removeNodeOnParent(
 /**
  * Corrects the parent pointers in direct children of the given node.
  */
-export function setParentPointersInDirectChildren(node: ESNode): void {
-  for (const key: $FlowFixMe of getVisitorKeys(node)) {
+export function setParentPointersInDirectChildren(
+  node: ESNode,
+  visitorKeys?: ?VisitorKeysType,
+): void {
+  for (const key: $FlowFixMe of getVisitorKeys(node, visitorKeys)) {
     if (isNode(node[key])) {
       node[key].parent = node;
     } else if (Array.isArray(node[key])) {
@@ -129,13 +144,17 @@ export function setParentPointersInDirectChildren(node: ESNode): void {
 /**
  * Traverses the entire subtree to ensure the parent pointers are set correctly.
  */
-export function updateAllParentPointers(node: ESNode) {
+export function updateAllParentPointers(
+  node: ESNode,
+  visitorKeys?: ?VisitorKeysType,
+) {
   SimpleTraverser.traverse(node, {
     enter(node, parent) {
       // $FlowExpectedError[cannot-write]
       node.parent = parent;
     },
     leave() {},
+    visitorKeys,
   });
 }
 
@@ -144,12 +163,23 @@ export function updateAllParentPointers(node: ESNode) {
  *
  * This will only create a new object if the overrides actually result in a change.
  */
-export function nodeWith<T: ESNode>(node: T, overrideProps: Partial<T>): T {
+export function nodeWith<T: ESNode>(
+  node: T,
+  overrideProps: Partial<T>,
+  visitorKeys?: ?VisitorKeysType,
+): T {
   // Check if this will actually result in a change, maintaining referential equality is important.
-  const willBeUnchanged = Object.entries(overrideProps).every(([key, value]) =>
-    // $FlowExpectedError[incompatible-call]
-    // $FlowExpectedError[prop-missing]
-    Array.isArray(value) ? arrayIsEqual(node[key], value) : node[key] === value,
+  const willBeUnchanged = Object.entries(overrideProps).every(
+    ([key, value]) => {
+      if (Array.isArray(value)) {
+        // $FlowExpectedError[prop-missing]
+        return Array.isArray(node[key])
+          ? arrayIsEqual(node[key], value)
+          : false;
+      }
+      // $FlowExpectedError[prop-missing]
+      return node[key] === value;
+    },
   );
   if (willBeUnchanged) {
     return node;
@@ -163,7 +193,7 @@ export function nodeWith<T: ESNode>(node: T, overrideProps: Partial<T>): T {
   };
 
   // Ensure parent pointers are correctly set within this nodes children.
-  setParentPointersInDirectChildren(newNode);
+  setParentPointersInDirectChildren(newNode, visitorKeys);
 
   return newNode;
 }
@@ -171,12 +201,15 @@ export function nodeWith<T: ESNode>(node: T, overrideProps: Partial<T>): T {
 /**
  * Shallow clones node, providing a new reference for an existing node.
  */
-export function shallowCloneNode<T: ESNode>(node: T): T {
+export function shallowCloneNode<T: ESNode>(
+  node: T,
+  visitorKeys?: ?VisitorKeysType,
+): T {
   // $FlowExpectedError[cannot-spread-interface]
   const newNode: T = {...node};
 
   // Ensure parent pointers are correctly set within this nodes children.
-  setParentPointersInDirectChildren(newNode);
+  setParentPointersInDirectChildren(newNode, visitorKeys);
 
   return newNode;
 }
@@ -184,7 +217,10 @@ export function shallowCloneNode<T: ESNode>(node: T): T {
 /**
  * Deeply clones node and its entire tree.
  */
-export function deepCloneNode<T: ESNode>(node: T): T {
+export function deepCloneNode<T: ESNode>(
+  node: T,
+  visitorKeys?: ?VisitorKeysType,
+): T {
   const clone: T = JSON.parse(
     JSON.stringify(node, (key, value) => {
       // null out parent pointers
@@ -195,7 +231,7 @@ export function deepCloneNode<T: ESNode>(node: T): T {
     }),
   );
 
-  updateAllParentPointers(clone);
+  updateAllParentPointers(clone, visitorKeys);
 
   return clone;
 }
