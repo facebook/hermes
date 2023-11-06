@@ -700,7 +700,7 @@ export type Literal =
 
 export interface BigIntLiteral extends BaseNode {
   +type: 'Literal';
-  +value: null /* | bigint */;
+  +value: bigint;
   +bigint: string;
   +raw: string;
   +literalType: 'bigint';
@@ -1223,7 +1223,7 @@ export interface NumberLiteralTypeAnnotation extends BaseNode {
 export interface BigIntLiteralTypeAnnotation extends BaseNode {
   +type: 'BigIntLiteralTypeAnnotation';
   +bigint: string;
-  +value: null /* | bigint */;
+  +value: bigint;
   +raw: string;
 }
 export interface BooleanLiteralTypeAnnotation extends BaseNode {
