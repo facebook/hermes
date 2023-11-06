@@ -1147,13 +1147,17 @@ def run(
             print("Invalid chunk ID")
             sys.exit(1)
 
-    if not path.isfile(path.join(binary_path, "hermes")):
-        print("{} not found.".format(path.join(binary_path, "hermes")))
-        sys.exit(1)
-
-    if not path.isfile(path.join(binary_path, hvm)):
-        print("{} not found.".format(path.join(binary_path, hvm)))
-        sys.exit(1)
+    if shermes:
+        if not path.isfile(path.join(binary_path, "shermes")):
+            print("{} not found.".format(path.join(binary_path, "shermes")))
+            sys.exit(1)
+    else:
+        if not path.isfile(path.join(binary_path, "hermes")):
+            print("{} not found.".format(path.join(binary_path, "hermes")))
+            sys.exit(1)
+        if not path.isfile(path.join(binary_path, hvm)):
+            print("{} not found.".format(path.join(binary_path, hvm)))
+            sys.exit(1)
 
     esprima_runner = esprima.EsprimaTestRunner(verbose)
 
