@@ -2550,12 +2550,35 @@ void generateFunction(
   OS << "}\n";
 }
 
+/// Collect all the native externs used in the module.
+std::unique_ptr<llvh::DenseSet<NativeExtern *>> collectUsedExterns(Module *M) {
+  auto externs = llvh::make_unique<llvh::DenseSet<NativeExtern *>>();
+  // Iterate all functions, basic blocks and operands, checking for
+  // LiteralNativeExtern.
+  for (auto &F : *M) {
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        for (unsigned i = 0, count = I.getNumOperands(); i != count; ++i) {
+          if (auto *ne = llvh::dyn_cast<LiteralNativeExtern>(I.getOperand(i))) {
+            externs->insert(ne->getData());
+          }
+        }
+      }
+    }
+  }
+  return externs;
+}
+
 /// Generate the include statements requested by native externs.
-void generateExternCIncludes(Module *M, llvh::raw_ostream &OS) {
+void generateExternCIncludes(
+    Module *M,
+    llvh::raw_ostream &OS,
+    const llvh::DenseSet<NativeExtern *> &usedExterns) {
   llvh::SmallSetVector<UniqueString *, 4> includes;
   for (NativeExtern *ne : M->getContext().getNativeContext().getAllExterns()) {
-    if (auto *inc = ne->include())
-      includes.insert(inc);
+    if (usedExterns.count(ne))
+      if (auto *inc = ne->include())
+        includes.insert(inc);
   }
   for (auto *inc : includes) {
     OS << "#include <";
@@ -2567,10 +2590,13 @@ void generateExternCIncludes(Module *M, llvh::raw_ostream &OS) {
 }
 
 /// Generate the external C declarations for native externs.
-void generateExternC(Module *M, llvh::raw_ostream &OS) {
+void generateExternC(
+    Module *M,
+    llvh::raw_ostream &OS,
+    const llvh::DenseSet<NativeExtern *> &usedExterns) {
   size_t count = 0;
   for (NativeExtern *ne : M->getContext().getNativeContext().getAllExterns()) {
-    if (!ne->declared() && !ne->include()) {
+    if (usedExterns.count(ne) && !ne->declared() && !ne->include()) {
       ++count;
       if (count == 1)
         OS << '\n';
@@ -2624,7 +2650,8 @@ void generateModule(
 
 )";
 
-    generateExternCIncludes(M, OS);
+    auto usedExterns = collectUsedExterns(M);
+    generateExternCIncludes(M, OS, *usedExterns);
 
     OS << R"(SHUnit THIS_UNIT;
 
@@ -2635,7 +2662,9 @@ static SHNativeFuncInfo s_function_info_table[];
 )";
 
     // Declare extern functions.
-    generateExternC(M, OS);
+    generateExternC(M, OS, *usedExterns);
+    // Free the used externs, we no longer need them.
+    usedExterns.reset();
 
     // Forward declare every JS function.
     for (auto &F : *M) {
