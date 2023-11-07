@@ -172,6 +172,7 @@ ExecutionStatus populateInstrumentedStats(Runtime &runtime, AP addProp) {
   ADD_PROP("js_heapSize", info.heapSize);
   ADD_PROP("js_mallocSizeEstimate", info.mallocSizeEstimate);
   ADD_PROP("js_vaSize", info.va);
+  ADD_PROP("js_externalBytes", info.externalBytes);
   ADD_PROP("js_markStackOverflows", info.numMarkStackOverflows);
   PASSTHROUGH_PROP("js_hermesVolCtxSwitches");
   PASSTHROUGH_PROP("js_hermesInvolCtxSwitches");
