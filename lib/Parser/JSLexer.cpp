@@ -903,10 +903,20 @@ const Token *JSLexer::rescanRBraceInTemplateLiteral() {
 }
 
 OptValue<TokenKind> JSLexer::lookahead1(OptValue<TokenKind> expectedToken) {
+  // We support TokenKind::question here because of Flow's render types.
+  // `renders?` is not a token itself (as making it a token would be bad for
+  // identifier parsing performance). When we are parsing something like
+  // (renders?: number) => string and the cursor is under the `?`, we need to
+  // perform a lookahead to see if the next token is a colon, in which case
+  // this is a function parameter, and if not then parse as a render type.
   assert(
-      (token_.getKind() == TokenKind::identifier || token_.isResWord()) &&
+      (token_.getKind() == TokenKind::identifier || token_.isResWord() ||
+       token_.getKind() == TokenKind::question) &&
       "unsupported current token");
-  UniqueString *savedIdent = token_.getResWordOrIdentifier();
+  UniqueString *savedIdent;
+  if (token_.getKind() == TokenKind::identifier || token_.isResWord()) {
+    savedIdent = token_.getResWordOrIdentifier();
+  }
   TokenKind savedKind = token_.getKind();
   SMLoc start = token_.getStartLoc();
   SMLoc end = token_.getEndLoc();
@@ -936,6 +946,8 @@ OptValue<TokenKind> JSLexer::lookahead1(OptValue<TokenKind> expectedToken) {
   token_.setEnd(end.getPointer());
   if (savedKind == TokenKind::identifier) {
     token_.setIdentifier(savedIdent);
+  } else if (savedKind == TokenKind::question) {
+    token_.setPunctuator(TokenKind::question);
   } else {
     token_.setResWord(savedKind, savedIdent);
   }

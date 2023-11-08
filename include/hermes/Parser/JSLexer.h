@@ -211,6 +211,22 @@ class Token {
     return rawString_;
   }
 
+  /// For certain identifier-like syntactic forms, like Flow's
+  /// `renders? number`, we need to check that the `?` comes immediately after
+  /// `renders` with no whitespace. It is expensive to turn something like this
+  /// into a token, where identifiers have highly-optimized lexing performance.
+  /// Instead, we use this function to detect the `?`, and then we consume the
+  /// token using the normal advance or eat methods.
+  ///
+  /// \return true iff the character directly after the current token matches
+  /// the provided character.
+  bool checkFollowingCharacter(char c) const {
+    // The next character could be end of file \0 or could be the start of utf-8
+    // sequence, but it is always present.
+    assert((unsigned)c < 128 && "test character must be ASCII");
+    return *getEndLoc().getPointer() == c;
+  }
+
  private:
   void setStart(const char *start) {
     range_.Start = SMLoc::getFromPointer(start);

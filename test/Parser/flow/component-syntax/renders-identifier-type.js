@@ -76,6 +76,104 @@ type T = {[renders: string]: void};
 // CHECK-NEXT:          "inexact": false,
 // CHECK-NEXT:          "exact": false
 // CHECK-NEXT:        }
+// CHECK-NEXT:      },
+
+type T = (renders?: string) => void;
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "type": "TypeAlias",
+// CHECK-NEXT:        "id": {
+// CHECK-NEXT:          "type": "Identifier",
+// CHECK-NEXT:          "name": "T"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "typeParameters": null,
+// CHECK-NEXT:        "right": {
+// CHECK-NEXT:          "type": "FunctionTypeAnnotation",
+// CHECK-NEXT:          "params": [
+// CHECK-NEXT:            {
+// CHECK-NEXT:              "type": "FunctionTypeParam",
+// CHECK-NEXT:              "name": {
+// CHECK-NEXT:                "type": "Identifier",
+// CHECK-NEXT:                "name": "renders"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "typeAnnotation": {
+// CHECK-NEXT:                "type": "StringTypeAnnotation"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "optional": true 
+// CHECK-NEXT:            }
+// CHECK-NEXT:          ],
+// CHECK-NEXT:          "this": null,
+// CHECK-NEXT:          "returnType": {
+// CHECK-NEXT:            "type": "VoidTypeAnnotation"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "rest": null,
+// CHECK-NEXT:          "typeParameters": null
+// CHECK-NEXT:        }
+// CHECK-NEXT:      },
+
+type T = (renders? string) => void;
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "type": "TypeAlias",
+// CHECK-NEXT:        "id": {
+// CHECK-NEXT:          "type": "Identifier",
+// CHECK-NEXT:          "name": "T"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "typeParameters": null,
+// CHECK-NEXT:        "right": {
+// CHECK-NEXT:          "type": "FunctionTypeAnnotation",
+// CHECK-NEXT:          "params": [
+// CHECK-NEXT:            {
+// CHECK-NEXT:              "type": "FunctionTypeParam",
+// CHECK-NEXT:              "name": null,
+// CHECK-NEXT:              "typeAnnotation": {
+// CHECK-NEXT:                "type": "TypeOperator",
+// CHECK-NEXT:                "operator": "renders?",
+// CHECK-NEXT:                "typeAnnotation": {
+// CHECK-NEXT:                  "type": "StringTypeAnnotation" 
+// CHECK-NEXT:                }
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "optional": false 
+// CHECK-NEXT:            }
+// CHECK-NEXT:          ],
+// CHECK-NEXT:          "this": null,
+// CHECK-NEXT:          "returnType": {
+// CHECK-NEXT:            "type": "VoidTypeAnnotation"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "rest": null,
+// CHECK-NEXT:          "typeParameters": null
+// CHECK-NEXT:        }
+// CHECK-NEXT:      },
+
+type T = renders? string => void;
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "type": "TypeAlias",
+// CHECK-NEXT:        "id": {
+// CHECK-NEXT:          "type": "Identifier",
+// CHECK-NEXT:          "name": "T"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "typeParameters": null,
+// CHECK-NEXT:        "right": {
+// CHECK-NEXT:          "type": "FunctionTypeAnnotation",
+// CHECK-NEXT:          "params": [
+// CHECK-NEXT:            {
+// CHECK-NEXT:              "type": "FunctionTypeParam",
+// CHECK-NEXT:              "name": null,
+// CHECK-NEXT:              "typeAnnotation": {
+// CHECK-NEXT:                "type": "TypeOperator",
+// CHECK-NEXT:                "operator": "renders?",
+// CHECK-NEXT:                "typeAnnotation": {
+// CHECK-NEXT:                  "type": "StringTypeAnnotation" 
+// CHECK-NEXT:                }
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "optional": false 
+// CHECK-NEXT:            }
+// CHECK-NEXT:          ],
+// CHECK-NEXT:          "this": null,
+// CHECK-NEXT:          "returnType": {
+// CHECK-NEXT:            "type": "VoidTypeAnnotation"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "rest": null,
+// CHECK-NEXT:          "typeParameters": null
+// CHECK-NEXT:        }
 // CHECK-NEXT:      }
 
 // CHECK-NEXT:   ]

@@ -164,7 +164,63 @@ type Foo5 = component() renders (SomeComponent | OtherComponent);
 // CHECK-NEXT:           }
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
+// CHECK-NEXT:     },
 
+type Foo6 = component() renders? SomeComponent;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "Foo6"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "ComponentTypeAnnotation",
+// CHECK-NEXT:         "params": [],
+// CHECK-NEXT:         "rest": null,
+// CHECK-NEXT:         "typeParameters": null,
+// CHECK-NEXT:         "rendersType": {
+// CHECK-NEXT:           "type": "TypeOperator",
+// CHECK-NEXT:           "operator": "renders?",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "GenericTypeAnnotation",
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "SomeComponent"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "typeParameters": null
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+type Foo7 = component() renders* SomeComponent;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "Foo7"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "ComponentTypeAnnotation",
+// CHECK-NEXT:         "params": [],
+// CHECK-NEXT:         "rest": null,
+// CHECK-NEXT:         "typeParameters": null,
+// CHECK-NEXT:         "rendersType": {
+// CHECK-NEXT:           "type": "TypeOperator",
+// CHECK-NEXT:           "operator": "renders*",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "GenericTypeAnnotation",
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "SomeComponent"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "typeParameters": null
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       }
 // CHECK-NEXT:     }
+
 // CHECK-NEXT:   ]
 // CHECK-NEXT: }
