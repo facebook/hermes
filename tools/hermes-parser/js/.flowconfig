@@ -28,7 +28,7 @@ experimental.global_find_ref=true
 enums=true
 
 [version]
-^0.219.0
+^0.219.2
 
 [lints]
 untyped-type-import=error
