@@ -474,9 +474,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
         ->value();
   }
 
-  static ::hermes::vm::Handle<::hermes::vm::HermesValue> stringHandle(
+  static ::hermes::vm::Handle<vm::StringPrimitive> stringHandle(
       const jsi::String &str) {
-    return ::hermes::vm::Handle<::hermes::vm::HermesValue>::vmcast(&phv(str));
+    return ::hermes::vm::Handle<vm::StringPrimitive>::vmcast(&phv(str));
   }
 
   static ::hermes::vm::Handle<::hermes::vm::JSObject> handle(
@@ -690,6 +690,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   void checkStatus(vm::ExecutionStatus);
   vm::HermesValue stringHVFromAscii(const char *ascii, size_t length);
   vm::HermesValue stringHVFromUtf8(const uint8_t *utf8, size_t length);
+  std::string utf8FromStringView(vm::StringView view);
 
   struct JsiProxy final : public vm::HostObjectProxy {
     HermesRuntimeImpl &rt_;
@@ -1634,11 +1635,7 @@ std::string HermesRuntimeImpl::utf8(const jsi::PropNameID &sym) {
   vm::GCScope gcScope(runtime_);
   vm::SymbolID id = phv(sym).getSymbol();
   auto view = runtime_.getIdentifierTable().getStringView(runtime_, id);
-  vm::SmallU16String<32> allocator;
-  std::string ret;
-  ::hermes::convertUTF16ToUTF8WithReplacements(
-      ret, view.getUTF16Ref(allocator));
-  return ret;
+  return utf8FromStringView(view);
 }
 
 bool HermesRuntimeImpl::compare(
@@ -1647,20 +1644,13 @@ bool HermesRuntimeImpl::compare(
   return phv(a).getSymbol() == phv(b).getSymbol();
 }
 
-namespace {
-
-std::string toStdString(
-    vm::Runtime &runtime,
-    vm::Handle<vm::StringPrimitive> handle) {
-  auto view = vm::StringPrimitive::createStringView(runtime, handle);
+std::string HermesRuntimeImpl::utf8FromStringView(vm::StringView view) {
   vm::SmallU16String<32> allocator;
   std::string ret;
   ::hermes::convertUTF16ToUTF8WithReplacements(
       ret, view.getUTF16Ref(allocator));
   return ret;
 }
-
-} // namespace
 
 std::string HermesRuntimeImpl::symbolToString(const jsi::Symbol &sym) {
   vm::GCScope gcScope(runtime_);
@@ -1669,7 +1659,8 @@ std::string HermesRuntimeImpl::symbolToString(const jsi::Symbol &sym) {
       ::hermes::vm::Handle<::hermes::vm::SymbolID>::vmcast(&phv(sym)));
   checkStatus(res.getStatus());
 
-  return toStdString(runtime_, res.getValue());
+  return utf8FromStringView(
+      vm::StringPrimitive::createStringView(runtime_, *res));
 }
 
 jsi::BigInt HermesRuntimeImpl::createBigIntFromInt64(int64_t value) {
@@ -1745,10 +1736,8 @@ jsi::String HermesRuntimeImpl::createStringFromUtf8(
 }
 
 std::string HermesRuntimeImpl::utf8(const jsi::String &str) {
-  vm::GCScope gcScope(runtime_);
-  vm::Handle<vm::StringPrimitive> handle(
-      runtime_, stringHandle(str)->getString());
-  return toStdString(runtime_, handle);
+  return utf8FromStringView(
+      vm::StringPrimitive::createStringView(runtime_, stringHandle(str)));
 }
 
 jsi::Value HermesRuntimeImpl::createValueFromJsonUtf8(
