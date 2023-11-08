@@ -3258,6 +3258,9 @@ Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew(
           getPrevTokenEndLoc(),
           new (context_) ESTree::MetaPropertyNode(meta, prop));
     } else {
+      // Guard against parseAssignmentExpression without parsePrimaryExpression.
+      CHECK_RECURSION;
+
       // ImportCall must be a call with an AssignmentExpression as the
       // argument.
       if (!eat(
