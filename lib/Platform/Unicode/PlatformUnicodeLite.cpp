@@ -16,7 +16,7 @@ int localeCompare(
     llvh::ArrayRef<char16_t> left,
     llvh::ArrayRef<char16_t> right) {
   for (size_t i = 0; i < left.size(); i++) {
-    if (i > right.size()) {
+    if (i >= right.size()) {
       return 1;
     }
     if (left[i] > right[i]) {
