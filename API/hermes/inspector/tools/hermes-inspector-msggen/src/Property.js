@@ -154,8 +154,8 @@ class PrimitiveProperty extends Property {
       return '{}';
     }
 
-    // everything else (folly::dynamic and std::string) has sensible default
-    // constructor, no need to explicitly zero-init
+    // std::string has sensible default constructor, no need to explicitly
+    // zero-init
     return '';
   }
 }
