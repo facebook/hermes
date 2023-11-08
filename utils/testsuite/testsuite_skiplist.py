@@ -1115,11 +1115,7 @@ SKIP_LIST = [
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/order-dayPeriod.js",
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-timeStyle.js",
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/order-style.js",
-    "test262/test/intl402/DateTimeFormat/prototype/formatToParts/related-year-zh.js",
-    "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-narrow-en.js",
-    "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-long-en.js",
-    "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-short-en.js",
-    "test262/test/intl402/DateTimeFormat/prototype/formatToParts/fractionalSecondDigits.js",
+    "test262/test/intl402/DateTimeFormat/prototype/formatToParts",
     "test262/test/intl402/DateTimeFormat/prototype/format/timedatestyle-en.js",
     "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-long-en.js",
     "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-narrow-en.js",
@@ -1129,7 +1125,6 @@ SKIP_LIST = [
     # This test assumes that "year" has some default value. That is an implementation-defined behavior.
     # In our case it remains undefined, which causes this test to fail.
     "test262/test/intl402/DateTimeFormat/default-options-object-prototype.js",
-    "test262/test/intl402/DateTimeFormat/prototype/formatToParts/related-year.js",
     "test262/test/intl402/DateTimeFormat/prototype/format/proleptic-gregorian-calendar.js",
     "test262/test/intl402/DateTimeFormat/prototype/formatRange",
     "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts",
