@@ -11,9 +11,9 @@
 import {parseForSnapshot, printForSnapshot} from '../__test_utils__/parse';
 
 const parserOpts = {enableExperimentalComponentSyntax: true};
-// async function printForSnapshotESTree(code: string) {
-//   return printForSnapshot(code, parserOpts);
-// }
+async function printForSnapshotESTree(code: string) {
+  return printForSnapshot(code, parserOpts);
+}
 async function parseForSnapshotESTree(code: string) {
   return parseForSnapshot(code, parserOpts);
 }
@@ -33,8 +33,7 @@ describe('TypeOperator', () => {
 
       test('ESTree', async () => {
         expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
-        // TODO: Prettier support
-        // expect(await printForSnapshotESTree(code)).toBe(code.trim());
+        expect(await printForSnapshotESTree(code)).toBe(code.trim());
       });
 
       test('Babel', async () => {
@@ -51,14 +50,30 @@ describe('TypeOperator', () => {
 
       test('ESTree', async () => {
         expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
-        // TODO: Prettier support
-        // expect(await printForSnapshotESTree(code)).toBe(code.trim());
+        expect(await printForSnapshotESTree(code)).toBe(code.trim());
       });
 
       test('Babel', async () => {
         expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
         expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(
           `"type T = any;"`,
+        );
+      });
+    });
+    describe('Nested Union', () => {
+      const code = `
+        type T = renders (Foo | Bar) | null;
+      `;
+
+      test('ESTree', async () => {
+        expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+        expect(await printForSnapshotESTree(code)).toBe(code.trim());
+      });
+
+      test('Babel', async () => {
+        expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+        expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(
+          `"type T = any | null;"`,
         );
       });
     });

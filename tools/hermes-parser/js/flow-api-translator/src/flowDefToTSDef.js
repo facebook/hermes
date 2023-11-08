@@ -1663,7 +1663,7 @@ const getTransforms = (
           return {
             type: 'TSImportType',
             isTypeOf: true,
-            parameter: moduleName,
+            argument: moduleName,
             qualifier: null,
             typeParameters: null,
           };

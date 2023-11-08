@@ -85,7 +85,7 @@ describe('ComponentDeclaration', () => {
     });
   });
 
-  describe('return type', () => {
+  describe('renders type', () => {
     const code = `
       component Foo() renders SpecialType {}
     `;
@@ -99,6 +99,24 @@ describe('ComponentDeclaration', () => {
       expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
       expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(
         `"function Foo(): SpecialType {}"`,
+      );
+    });
+  });
+
+  describe('renders type (complex)', () => {
+    const code = `
+      component Foo() renders (SpecialType | OtherSpecialType) {}
+    `;
+
+    test('ESTree', async () => {
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(
+        `"function Foo(): SpecialType | OtherSpecialType {}"`,
       );
     });
   });

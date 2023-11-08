@@ -1589,7 +1589,7 @@ export interface TSImportEqualsDeclaration extends BaseNode {
 export interface TSImportType extends BaseNode {
   +type: 'TSImportType';
   +isTypeOf: boolean;
-  +parameter: TypeNode;
+  +argument: TypeNode;
   +qualifier: EntityName | null;
   +typeParameters: TSTypeParameterInstantiation | null;
 }

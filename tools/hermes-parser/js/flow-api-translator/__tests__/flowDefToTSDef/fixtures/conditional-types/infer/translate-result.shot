@@ -12,7 +12,8 @@ exports[`flowDefToTSDef conditional-types/infer 1`] = `
 
 type ExtractValues<
   T extends
-    string | {readonly default: string; readonly [$$Key$$: string]: string},
+    | string
+    | {readonly default: string; readonly [$$Key$$: string]: string},
 > = T[Key] extends {
   readonly default: infer X;
   readonly [$$Key$$: string]: infer Y;
