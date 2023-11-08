@@ -12,6 +12,7 @@
 
 import type {
   ArrowFunctionExpression,
+  AsExpression,
   AssignmentExpression,
   AssignmentPattern,
   BlockStatement,
@@ -358,6 +359,11 @@ class Referencer extends Visitor {
 
   ArrowFunctionExpression(node: ArrowFunctionExpression): void {
     this.visitFunction(node);
+  }
+
+  AsExpression(node: AsExpression): void {
+    this.visit(node.expression);
+    this.visitType(node.typeAnnotation);
   }
 
   AssignmentExpression(node: AssignmentExpression): void {
