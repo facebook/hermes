@@ -17,9 +17,10 @@ import type {BabelFile} from './babel/TransformESTreeToBabel';
 import * as HermesParser from './HermesParser';
 import HermesToESTreeAdapter from './HermesToESTreeAdapter';
 import FlowVisitorKeys from './generated/ESTreeVisitorKeys';
-import * as TransformReactScriptForBabel from './babel/TransformReactScriptForBabel';
-import * as TransformFlowTypesForBabel from './babel/TransformFlowTypesForBabel';
+import * as StripComponentSyntax from './estree/StripComponentSyntax';
+import * as StripFlowTypesForBabel from './estree/StripFlowTypesForBabel';
 import * as TransformESTreeToBabel from './babel/TransformESTreeToBabel';
+import * as StripFlowTypes from './estree/StripFlowTypes';
 
 const DEFAULTS = {
   flow: 'detect',
@@ -86,8 +87,8 @@ export function parse(
   }
 
   const loweredESTreeAST = [
-    TransformReactScriptForBabel.transformProgram,
-    TransformFlowTypesForBabel.transformProgram,
+    StripComponentSyntax.transformProgram,
+    StripFlowTypesForBabel.transformProgram,
   ].reduce((ast, transform) => transform(ast, options), estreeAST);
 
   return TransformESTreeToBabel.transformProgram(loweredESTreeAST, options);
@@ -102,3 +103,10 @@ export {FlowVisitorKeys};
 export * as astArrayMutationHelpers from './transform/astArrayMutationHelpers';
 export * as astNodeMutationHelpers from './transform/astNodeMutationHelpers';
 export {default as mutateESTreeASTForPrettier} from './utils/mutateESTreeASTForPrettier';
+
+const Transforms = {
+  stripComponentSyntax: StripComponentSyntax.transformProgram,
+  stripFlowTypesForBabel: StripFlowTypesForBabel.transformProgram,
+  stripFlowTypes: StripFlowTypes.transformProgram,
+};
+export {Transforms};
