@@ -209,9 +209,7 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow(
 
   ESTree::Node *rendersType = nullptr;
   if (check(rendersIdent_)) {
-    SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-    // only stardard types are allowed, no predicates.
-    auto optRenders = parseTypeAnnotationFlow(annotStart);
+    auto optRenders = parseComponentRenderTypeFlow(false);
     if (!optRenders)
       return None;
     rendersType = *optRenders;
@@ -407,6 +405,36 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentParameterFlow(
   return None;
 }
 
+Optional<ESTree::Node *> JSParserImpl::parseComponentRenderTypeFlow(
+    bool componentType) {
+  assert(tok_->getResWordOrIdentifier() == rendersIdent_);
+  SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
+  Optional<ESTree::Node *> optBody;
+  // This is a weird part of the Flow render syntax design that we should
+  // reconsider. Because unions have higher precedence than renders, we
+  // parse `component() renders null | number` as
+  // `(component() renders null) | number. But with declared components
+  // and component declarations we parse the entirety of the RHS of
+  // `renders` as a single type, so
+  // `component A() renders null | number { ... }` parses the render type
+  // as a union of null | number. This was an intentional decision, and
+  // prettier will make the discrepancy obvious, but it still feels
+  // weird. If we give `renders` higher precedence than unions then this
+  // is no longer a problem, but `keyof` has similar syntax and lower
+  // precedence than a union type.
+  if (componentType) {
+    optBody = parsePrefixTypeAnnotationFlow();
+  } else {
+    optBody = parseTypeAnnotationFlow();
+  }
+  if (!optBody)
+    return None;
+  return setLocation(
+      annotStart,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::TypeOperatorNode(rendersIdent_, *optBody));
+}
+
 Optional<ESTree::Node *> JSParserImpl::parseComponentTypeAnnotationFlow() {
   // component
   assert(check(componentIdent_));
@@ -445,8 +473,7 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentTypeAnnotationFlow() {
 
   ESTree::Node *rendersType = nullptr;
   if (check(rendersIdent_)) {
-    SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-    auto optRenders = parseTypeAnnotationFlow(annotStart);
+    auto optRenders = parseComponentRenderTypeFlow(true);
     if (!optRenders)
       return None;
     rendersType = *optRenders;
