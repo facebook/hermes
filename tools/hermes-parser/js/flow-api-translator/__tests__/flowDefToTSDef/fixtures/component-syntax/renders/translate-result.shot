@@ -15,5 +15,6 @@ type T = Bar;
 export declare function Foo(props: {}): React.ReactNode;
 export declare function Foo(props: {foo: React.ReactNode}): React.ReactNode;
 type T = React.ReactNode;
+type T = (props: {}) => React.ReactNode;
 "
 `;

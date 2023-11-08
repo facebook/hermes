@@ -22,7 +22,5 @@ type ExtraPropsBar = {bar: string};
 export declare function Foo(
   props: Omit<ExtraPropsBar, keyof ({foo: string})> & {foo: string},
 ): React.ReactNode;
-type T = Bar;
-export declare function Foo(props: {}): React.ReactNode;
 "
 `;

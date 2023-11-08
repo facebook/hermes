@@ -7,12 +7,12 @@
  * @flow strict-local
  */
 
-declare export component Foo();
+type T = component();
 
-declare export component Foo(foo: string, 'bar'?: string);
+type T = component(foo: string, 'bar'?: string);
 
 type ExtraPropsFoo = {foo: string};
-declare export component Foo(...rest: ExtraPropsFoo);
+type T = component(...rest: ExtraPropsFoo);
 
 type ExtraPropsBar = {'bar': string};
-declare export component Foo(foo: string, ...rest: ExtraPropsBar);
+type T = component(foo: string, ...rest: ExtraPropsBar);
