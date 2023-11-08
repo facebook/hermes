@@ -42,6 +42,7 @@ import type {
 
 import {SimpleTransform} from '../transform/SimpleTransform';
 import {shallowCloneNode} from '../transform/astNodeMutationHelpers';
+import {SimpleTraverser} from '../traverse/SimpleTraverser';
 
 const nodeWith = SimpleTransform.nodeWith;
 
@@ -493,6 +494,40 @@ function mapComponentDeclaration(node: ComponentDeclaration): {
   return {comp, forwardRefDetails};
 }
 
+/**
+ * Scan a list of statements and return the position of the
+ * first statement that contains a reference to a given component
+ * or null of no references were found.
+ */
+function scanForFirstComponentReference(
+  compName: string,
+  bodyList: Array<Statement | ModuleDeclaration>,
+): ?number {
+  for (let i = 0; i < bodyList.length; i++) {
+    const bodyNode = bodyList[i];
+    let referencePos = null;
+    SimpleTraverser.traverse(bodyNode, {
+      enter(node: ESNode) {
+        switch (node.type) {
+          case 'Identifier': {
+            if (node.name === compName) {
+              // We found a reference, record it and stop.
+              referencePos = i;
+              throw SimpleTraverser.Break;
+            }
+          }
+        }
+      },
+      leave(_node: ESNode) {},
+    });
+    if (referencePos != null) {
+      return referencePos;
+    }
+  }
+
+  return null;
+}
+
 function mapComponentDeclarationIntoList(
   node: ComponentDeclaration,
   newBody: Array<Statement | ModuleDeclaration>,
@@ -500,8 +535,21 @@ function mapComponentDeclarationIntoList(
 ) {
   const {comp, forwardRefDetails} = mapComponentDeclaration(node);
   if (forwardRefDetails != null) {
-    newBody.push(forwardRefDetails.forwardRefStatement);
+    // Scan for references to our component.
+    const referencePos = scanForFirstComponentReference(
+      forwardRefDetails.forwardRefCompId.name,
+      newBody,
+    );
+
+    // If a reference is found insert the forwardRef statement before it (to simulate function hoisting).
+    if (referencePos != null) {
+      newBody.splice(referencePos, 0, forwardRefDetails.forwardRefStatement);
+    } else {
+      newBody.push(forwardRefDetails.forwardRefStatement);
+    }
+
     newBody.push(comp);
+
     if (insertExport != null) {
       newBody.push(insertExport(forwardRefDetails.forwardRefCompId));
     }

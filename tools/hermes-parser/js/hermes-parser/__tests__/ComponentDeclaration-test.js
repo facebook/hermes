@@ -326,4 +326,71 @@ switch (thing) {
       `);
     });
   });
+
+  describe('ref and normal params with hoisting', () => {
+    const code = `
+Bar;
+unrelated;
+someSideEffect(Foo);
+unrelated;
+
+component Foo(foo: string, ref: Ref) {}
+
+Bar;
+component Bar(foo: string, ref: Ref) {}
+    `;
+
+    test('ESTree', async () => {
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+        "const Bar = React.forwardRef(Bar_withRef);
+        Bar;
+        unrelated;
+        const Foo = React.forwardRef(Foo_withRef);
+        someSideEffect(Foo);
+        unrelated;
+
+        function Foo_withRef({
+          foo
+        }: $ReadOnly<{...}>, ref: Ref): React.Node {}
+
+        Bar;
+
+        function Bar_withRef({
+          foo
+        }: $ReadOnly<{...}>, ref: Ref): React.Node {}"
+      `);
+    });
+  });
+
+  describe('ref and normal params with hoisting (recursive)', () => {
+    const code = `
+component Foo(bar: mixed = Foo, ref: any) {
+  return null;
+}
+    `;
+
+    test('ESTree', async () => {
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+        "const Foo = React.forwardRef(Foo_withRef);
+
+        function Foo_withRef({
+          bar = Foo
+        }: $ReadOnly<{...}>, ref: any): React.Node {
+          return null;
+        }"
+      `);
+    });
+  });
 });
