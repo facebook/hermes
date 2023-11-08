@@ -1420,6 +1420,14 @@ function deserializeTypeCastExpression() {
     typeAnnotation: this.deserializeNode(),
   };
 }
+function deserializeAsExpression() {
+  return {
+    type: 'AsExpression',
+    loc: this.addEmptyLoc(),
+    expression: this.deserializeNode(),
+    typeAnnotation: this.deserializeNode(),
+  };
+}
 function deserializeInferredPredicate() {
   return {type: 'InferredPredicate', loc: this.addEmptyLoc()};
 }
@@ -2077,6 +2085,7 @@ module.exports = [
 
   deserializeTypeParameterInstantiation,
   deserializeTypeCastExpression,
+  deserializeAsExpression,
   deserializeInferredPredicate,
   deserializeDeclaredPredicate,
   deserializeEnumDeclaration,

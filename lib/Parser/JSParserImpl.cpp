@@ -4009,9 +4009,9 @@ inline unsigned getPrecedenceExcept(const Token *token, TokenKind except) {
 } // namespace
 
 inline void JSParserImpl::convertIdentOpIfPossible() {
-#if HERMES_PARSE_TS
+#if HERMES_PARSE_TS || HERMES_PARSE_FLOW
   if (LLVM_UNLIKELY(tok_->getKind() == TokenKind::identifier) &&
-      context_.getParseTS()) {
+      context_.getParseTypes()) {
     if (tok_->getIdentifier() == asIdent_)
       lexer_.convertCurTokenToIdentOp(TokenKind::as_operator);
   }
@@ -4075,12 +4075,20 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
           startLoc,
           endLoc,
           new (context_) ESTree::LogicalExpressionNode(left, right, opIdent));
-#if HERMES_PARSE_TS
+#if HERMES_PARSE_TS || HERMES_PARSE_FLOW
     } else if (LLVM_UNLIKELY(opKind == TokenKind::as_operator)) {
-      return setLocation(
-          startLoc,
-          endLoc,
-          new (context_) ESTree::TSAsExpressionNode(left, right));
+      if (context_.getParseTS()) {
+        return setLocation(
+            startLoc,
+            endLoc,
+            new (context_) ESTree::TSAsExpressionNode(left, right));
+      } else {
+        assert(context_.getParseFlow() && "must be parsing types");
+        return setLocation(
+            startLoc,
+            endLoc,
+            new (context_) ESTree::AsExpressionNode(left, right));
+      }
 #endif
     } else {
       return setLocation(
@@ -4163,9 +4171,9 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
     advance();
 
     topExprStartLoc = tok_->getStartLoc();
-#if HERMES_PARSE_TS
+#if HERMES_PARSE_TS || HERMES_PARSE_FLOW
     if (LLVM_UNLIKELY(stack.back().opKind == TokenKind::as_operator)) {
-      auto optRightExpr = parseTypeAnnotationTS();
+      auto optRightExpr = parseTypeAnnotation();
       if (!optRightExpr)
         return None;
       topExpr = optRightExpr.getValue();

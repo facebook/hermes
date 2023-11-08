@@ -43,6 +43,10 @@ export const HERMES_AST_VISITOR_KEYS = {
     returnType: 'Node',
     predicate: 'Node',
   },
+  AsExpression: {
+    expression: 'Node',
+    typeAnnotation: 'Node',
+  },
   AssignmentExpression: {
     left: 'Node',
     right: 'Node',
