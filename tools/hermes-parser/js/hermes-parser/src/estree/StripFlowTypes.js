@@ -32,6 +32,7 @@ export function transformProgram(
   return SimpleTransform.transformProgram(program, {
     transform(node: ESNode) {
       switch (node.type) {
+        case 'AsExpression':
         case 'TypeCastExpression': {
           return node.expression;
         }

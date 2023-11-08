@@ -982,6 +982,19 @@ function transformNode(node: ESNodeOrBabelNode): ESNodeOrBabelNode | null {
       node.range = [node.range[0] + 1, node.range[1] - 1];
       return node;
     }
+    case 'AsExpression': {
+      const {typeAnnotation} = node;
+      // $FlowExpectedError[cannot-write]
+      node.type = 'TypeCastExpression';
+      // $FlowExpectedError[cannot-write]
+      node.typeAnnotation = {
+        type: 'TypeAnnotation',
+        typeAnnotation,
+        loc: typeAnnotation.loc,
+        range: typeAnnotation.range,
+      };
+      return node;
+    }
 
     /**
      * Babel has a different format for Literals
