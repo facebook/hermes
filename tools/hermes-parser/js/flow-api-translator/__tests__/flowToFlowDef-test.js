@@ -532,6 +532,11 @@ describe('flowToFlowDef', () => {
         await expectTranslateExpression(`(1: number)`, `number`);
       });
     });
+    describe('AsExpression', () => {
+      it('basic', async () => {
+        await expectTranslateExpression(`1 as number`, `number`);
+      });
+    });
     describe('FunctionExpression', () => {
       it('basic', async () => {
         await expectTranslateExpression(`function foo() {}`, `() => void`);
