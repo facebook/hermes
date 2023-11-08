@@ -2116,7 +2116,6 @@ UNSUPPORTED_FEATURES = [
     "json-superset",
     "let",
     "new.target",
-    "regexp-match-indices",
     "regexp-unicode-property-escapes",
     "resizable-arraybuffer",
     "string-trimming",
