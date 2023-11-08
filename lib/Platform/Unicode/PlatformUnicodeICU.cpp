@@ -101,12 +101,12 @@ void dateFormat(
   const int INITIAL_SIZE = 128;
   buf.resize(INITIAL_SIZE);
   err = U_ZERO_ERROR;
-  int length =
-      udat_format(df, unixtimeMs, (UChar *)buf.begin(), INITIAL_SIZE, 0, &err);
+  int length = udat_format(
+      df, unixtimeMs, (UChar *)buf.begin(), INITIAL_SIZE, nullptr, &err);
   if (length > INITIAL_SIZE) {
     buf.resize(length + 1);
     err = U_ZERO_ERROR;
-    udat_format(df, unixtimeMs, (UChar *)buf.begin(), length, 0, &err);
+    udat_format(df, unixtimeMs, (UChar *)buf.begin(), length, nullptr, &err);
     buf.resize(length);
   } else {
     buf.resize(length);
