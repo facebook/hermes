@@ -212,6 +212,7 @@ component Foo(...{prop}: Props) {}
       `);
     });
   });
+
   describe('ref param', () => {
     const code = `
       component Foo(ref: Ref) {}
@@ -228,6 +229,68 @@ component Foo(...{prop}: Props) {}
         "const Foo = React.forwardRef(Foo_withRef);
 
         function Foo_withRef(_$$empty_props_placeholder$$: $ReadOnly<{...}>, ref: Ref): React.Node {}"
+      `);
+    });
+  });
+
+  describe('ref param renamed', () => {
+    const code = `
+      component Foo(ref as internalRef: Ref) {}
+    `;
+
+    test('ESTree', async () => {
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+        "const Foo = React.forwardRef(Foo_withRef);
+
+        function Foo_withRef(_$$empty_props_placeholder$$: $ReadOnly<{...}>, internalRef: Ref): React.Node {}"
+      `);
+    });
+  });
+
+  describe('ref param renamed destructure', () => {
+    const code = `
+      component Foo(ref as {current}: Ref) {}
+    `;
+
+    test('ESTree', async () => {
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+        "const Foo = React.forwardRef(Foo_withRef);
+
+        function Foo_withRef(_$$empty_props_placeholder$$: $ReadOnly<{...}>, {
+          current
+        }: Ref): React.Node {}"
+      `);
+    });
+  });
+
+  describe('ref param with default', () => {
+    const code = `
+      component Foo(ref: Ref = {}) {}
+    `;
+
+    test('ESTree', async () => {
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+        "const Foo = React.forwardRef(Foo_withRef);
+
+        function Foo_withRef(_$$empty_props_placeholder$$: $ReadOnly<{...}>, ref: Ref = {}): React.Node {}"
       `);
     });
   });
