@@ -1,3 +1,22 @@
+## 0.17.0
+
+### `hermes-estree`
+
+### `hermes-parser`
+* Parse `AsExpressions` in Flow.
+* Fix `ObjectTypeMappedTypeProperty` babel lowering to output valid code.
+
+### `hermes-eslint`
+
+### `hermes-transform`
+
+### `flow-api-translator`
+
+### `prettier-plugin-hermes-parser`
+* Update internal version of prettier to version `3.0.3`.
+
+### `babel-plugin-syntax-hermes-parser`
+
 ## 0.16.0
 
 ### `hermes-estree`
