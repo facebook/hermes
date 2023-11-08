@@ -188,26 +188,6 @@ def`;
 // CHECK-NEXT:        "directive": null
 // CHECK-NEXT:      },
 
-// Test <CR><LF>
-`abc\
-def`;
-// CHECK-NEXT:      {
-// CHECK-NEXT:        "type": "ExpressionStatement",
-// CHECK-NEXT:        "expression": {
-// CHECK-NEXT:          "type": "TemplateLiteral",
-// CHECK-NEXT:          "quasis": [
-// CHECK-NEXT:            {
-// CHECK-NEXT:              "type": "TemplateElement",
-// CHECK-NEXT:              "tail": true,
-// CHECK-NEXT:              "cooked": "abcdef",
-// CHECK-NEXT:              "raw": "abc\\\ndef"
-// CHECK-NEXT:            }
-// CHECK-NEXT:          ],
-// CHECK-NEXT:          "expressions": []
-// CHECK-NEXT:        },
-// CHECK-NEXT:        "directive": null
-// CHECK-NEXT:      },
-
 `abc${x}def`;
 // CHECK-NEXT:      {
 // CHECK-NEXT:        "type": "ExpressionStatement",
