@@ -17,7 +17,5 @@ declare export component Foo(...rest: ExtraPropsFoo);
 type ExtraPropsBar = {'bar': string};
 declare export component Foo(foo: string, ...rest: ExtraPropsBar);
 
-declare export component Foo(foo: string, ref: Ref<HTMLElement>);
-
 type T = Bar;
 declare export component Foo() renders T;
