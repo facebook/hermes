@@ -5,7 +5,29 @@ exports[`TypeOperator renders Basic Babel 1`] = `
   "body": [
     {
       "id": {
-        "name": "T",
+        "name": "T1",
+        "type": "Identifier",
+      },
+      "right": {
+        "type": "AnyTypeAnnotation",
+      },
+      "type": "TypeAlias",
+      "typeParameters": null,
+    },
+    {
+      "id": {
+        "name": "T2",
+        "type": "Identifier",
+      },
+      "right": {
+        "type": "AnyTypeAnnotation",
+      },
+      "type": "TypeAlias",
+      "typeParameters": null,
+    },
+    {
+      "id": {
+        "name": "T3",
         "type": "Identifier",
       },
       "right": {
@@ -24,13 +46,61 @@ exports[`TypeOperator renders Basic ESTree 1`] = `
   "body": [
     {
       "id": {
-        "name": "T",
+        "name": "T1",
         "optional": false,
         "type": "Identifier",
         "typeAnnotation": null,
       },
       "right": {
         "operator": "renders",
+        "type": "TypeOperator",
+        "typeAnnotation": {
+          "id": {
+            "name": "Foo",
+            "optional": false,
+            "type": "Identifier",
+            "typeAnnotation": null,
+          },
+          "type": "GenericTypeAnnotation",
+          "typeParameters": null,
+        },
+      },
+      "type": "TypeAlias",
+      "typeParameters": null,
+    },
+    {
+      "id": {
+        "name": "T2",
+        "optional": false,
+        "type": "Identifier",
+        "typeAnnotation": null,
+      },
+      "right": {
+        "operator": "renders*",
+        "type": "TypeOperator",
+        "typeAnnotation": {
+          "id": {
+            "name": "Foo",
+            "optional": false,
+            "type": "Identifier",
+            "typeAnnotation": null,
+          },
+          "type": "GenericTypeAnnotation",
+          "typeParameters": null,
+        },
+      },
+      "type": "TypeAlias",
+      "typeParameters": null,
+    },
+    {
+      "id": {
+        "name": "T3",
+        "optional": false,
+        "type": "Identifier",
+        "typeAnnotation": null,
+      },
+      "right": {
+        "operator": "renders?",
         "type": "TypeOperator",
         "typeAnnotation": {
           "id": {
@@ -138,7 +208,29 @@ exports[`TypeOperator renders Union Babel 1`] = `
   "body": [
     {
       "id": {
-        "name": "T",
+        "name": "T1",
+        "type": "Identifier",
+      },
+      "right": {
+        "type": "AnyTypeAnnotation",
+      },
+      "type": "TypeAlias",
+      "typeParameters": null,
+    },
+    {
+      "id": {
+        "name": "T2",
+        "type": "Identifier",
+      },
+      "right": {
+        "type": "AnyTypeAnnotation",
+      },
+      "type": "TypeAlias",
+      "typeParameters": null,
+    },
+    {
+      "id": {
+        "name": "T3",
         "type": "Identifier",
       },
       "right": {
@@ -157,13 +249,91 @@ exports[`TypeOperator renders Union ESTree 1`] = `
   "body": [
     {
       "id": {
-        "name": "T",
+        "name": "T1",
         "optional": false,
         "type": "Identifier",
         "typeAnnotation": null,
       },
       "right": {
         "operator": "renders",
+        "type": "TypeOperator",
+        "typeAnnotation": {
+          "type": "UnionTypeAnnotation",
+          "types": [
+            {
+              "id": {
+                "name": "Foo",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": null,
+              },
+              "type": "GenericTypeAnnotation",
+              "typeParameters": null,
+            },
+            {
+              "id": {
+                "name": "Bar",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": null,
+              },
+              "type": "GenericTypeAnnotation",
+              "typeParameters": null,
+            },
+          ],
+        },
+      },
+      "type": "TypeAlias",
+      "typeParameters": null,
+    },
+    {
+      "id": {
+        "name": "T2",
+        "optional": false,
+        "type": "Identifier",
+        "typeAnnotation": null,
+      },
+      "right": {
+        "operator": "renders*",
+        "type": "TypeOperator",
+        "typeAnnotation": {
+          "type": "UnionTypeAnnotation",
+          "types": [
+            {
+              "id": {
+                "name": "Foo",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": null,
+              },
+              "type": "GenericTypeAnnotation",
+              "typeParameters": null,
+            },
+            {
+              "id": {
+                "name": "Bar",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": null,
+              },
+              "type": "GenericTypeAnnotation",
+              "typeParameters": null,
+            },
+          ],
+        },
+      },
+      "type": "TypeAlias",
+      "typeParameters": null,
+    },
+    {
+      "id": {
+        "name": "T3",
+        "optional": false,
+        "type": "Identifier",
+        "typeAnnotation": null,
+      },
+      "right": {
+        "operator": "renders?",
         "type": "TypeOperator",
         "typeAnnotation": {
           "type": "UnionTypeAnnotation",
