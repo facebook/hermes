@@ -1806,7 +1806,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
       }
       if (tok_->getResWordOrIdentifier() == keyofIdent_) {
         advance(JSLexer::GrammarContext::Type);
-        auto optBody = parsePrimaryTypeAnnotationFlow();
+        auto optBody = parsePrefixTypeAnnotationFlow();
         if (!optBody)
           return None;
         return setLocation(
@@ -1817,7 +1817,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
       if (context_.getParseFlowComponentSyntax() &&
           tok_->getResWordOrIdentifier() == rendersIdent_) {
         advance(JSLexer::GrammarContext::Type);
-        auto optBody = parsePrimaryTypeAnnotationFlow();
+        auto optBody = parsePrefixTypeAnnotationFlow();
         if (!optBody)
           return None;
         return setLocation(

@@ -76,6 +76,55 @@ type A = renders (B | C) | null;
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
+type A = renders ?number;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "A"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "TypeOperator",
+// CHECK-NEXT:         "operator": "renders",
+// CHECK-NEXT:         "typeAnnotation": {
+// CHECK-NEXT:           "type": "NullableTypeAnnotation",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "NumberTypeAnnotation"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+//
+type A = renders React.Node;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "A"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "TypeOperator",
+// CHECK-NEXT:         "operator": "renders",
+// CHECK-NEXT:         "typeAnnotation": {
+// CHECK-NEXT:           "type": "GenericTypeAnnotation",
+// CHECK-NEXT:           "id": {
+// CHECK-NEXT:             "type": "QualifiedTypeIdentifier",
+// CHECK-NEXT:             "qualification": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "React"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "Node"
+// CHECK-NEXT:             }
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "typeParameters": null
+// CHECK-NEXT:         }
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
 component Foo(bar: renders A) {}
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "ComponentDeclaration",
