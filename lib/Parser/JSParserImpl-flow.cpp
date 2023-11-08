@@ -514,7 +514,7 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentTypeRestParameterFlow(
 
   SMLoc start = advance(JSLexer::GrammarContext::Type).Start;
 
-  auto optLeft = parseTypeAnnotationFlow();
+  auto optLeft = parseTypeAnnotationBeforeColonFlow();
   if (!optLeft)
     return None;
 
@@ -1490,6 +1490,34 @@ Optional<ESTree::Node *> JSParserImpl::parseReturnTypeAnnotationFlow(
   return returnType;
 }
 
+Optional<ESTree::Node *> JSParserImpl::parseTypeAnnotationBeforeColonFlow() {
+  // If the identifier name is a known keyword we need to lookahead to see if
+  // its a type or an identifier otherwise it could fail to parse.
+  if (check(TokenKind::identifier) &&
+      (context_.getParseFlowComponentSyntax() &&
+       (tok_->getResWordOrIdentifier() == componentIdent_ ||
+        tok_->getResWordOrIdentifier() == rendersIdent_))) {
+    OptValue<TokenKind> optNext = lexer_.lookahead1(None);
+    if (optNext.hasValue() &&
+        (*optNext == TokenKind::colon || *optNext == TokenKind::question)) {
+      auto id = setLocation(
+          tok_,
+          tok_,
+          new (context_) ESTree::GenericTypeAnnotationNode(
+              setLocation(
+                  tok_,
+                  tok_,
+                  new (context_) ESTree::IdentifierNode(
+                      tok_->getResWordOrIdentifier(), nullptr, false)),
+              nullptr));
+      advance(JSLexer::GrammarContext::Type);
+      return id;
+    }
+  }
+
+  return parseTypeAnnotationFlow();
+}
+
 Optional<ESTree::Node *> JSParserImpl::parseTypeAnnotationFlow(
     Optional<SMLoc> wrappedStart,
     AllowAnonFunctionType allowAnonFunctionType) {
@@ -2084,7 +2112,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTupleElementFlow() {
   // ...Type
   // ^
   if (checkAndEat(TokenKind::dotdotdot, JSLexer::GrammarContext::Type)) {
-    auto optType = parseTypeAnnotationFlow();
+    auto optType = parseTypeAnnotationBeforeColonFlow();
     if (!optType)
       return None;
     if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Type)) {
@@ -2124,7 +2152,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTupleElementFlow() {
   /// Identifier [?] : Type
   /// Type
   /// ^
-  auto optType = parseTypeAnnotationFlow();
+  auto optType = parseTypeAnnotationBeforeColonFlow();
   if (!optType)
     return None;
 
@@ -2606,8 +2634,8 @@ bool JSParserImpl::parsePropertyTypeAnnotationFlow(
       //   ^
       // Because we cannot differentiate without looking ahead for the `in`
       // or `:`, we call `parseTypeAnnotation`, check for the next token
-      // and then convert the TypeAnnotation to the approprate node.
-      auto optLeft = parseTypeAnnotationFlow();
+      // and then convert the TypeAnnotation to the appropriate node.
+      auto optLeft = parseTypeAnnotationBeforeColonFlow();
       if (!optLeft)
         return false;
       ESTree::Node *left = *optLeft;
@@ -3234,7 +3262,7 @@ JSParserImpl::parseFunctionTypeAnnotationParamFlow() {
     }
   }
 
-  auto optLeft = parseTypeAnnotationFlow();
+  auto optLeft = parseTypeAnnotationBeforeColonFlow();
   if (!optLeft)
     return None;
 
