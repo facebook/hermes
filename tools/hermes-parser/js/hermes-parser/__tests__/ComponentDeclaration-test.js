@@ -163,4 +163,167 @@ describe('ComponentDeclaration', () => {
       `);
     });
   });
+  describe('ref param', () => {
+    const code = `
+      component Foo(ref: Ref) {}
+    `;
+
+    test('ESTree', async () => {
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+        "const Foo = React.forwardRef(Foo_withRef);
+
+        function Foo_withRef(_$$empty_props_placeholder$$: $ReadOnly<{...}>, ref: Ref): React.Node {}"
+      `);
+    });
+  });
+
+  describe('ref and normal params', () => {
+    const code = `
+      component Foo(foo: string, ref: Ref) {}
+    `;
+
+    test('ESTree', async () => {
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+        "const Foo = React.forwardRef(Foo_withRef);
+
+        function Foo_withRef({
+          foo
+        }: $ReadOnly<{...}>, ref: Ref): React.Node {}"
+      `);
+    });
+  });
+
+  describe('ref and normal params default exported', () => {
+    const code = `
+      export default component Foo(foo: string, ref: Ref) {}
+    `;
+
+    test('ESTree', async () => {
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+        "const Foo = React.forwardRef(Foo_withRef);
+
+        function Foo_withRef({
+          foo
+        }: $ReadOnly<{...}>, ref: Ref): React.Node {}
+
+        export default Foo;"
+      `);
+    });
+  });
+
+  describe('ref and normal params named exported', () => {
+    const code = `
+      export component Foo(foo: string, ref: Ref) {}
+    `;
+
+    test('ESTree', async () => {
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+        "const Foo = React.forwardRef(Foo_withRef);
+
+        function Foo_withRef({
+          foo
+        }: $ReadOnly<{...}>, ref: Ref): React.Node {}
+
+        export { Foo };"
+      `);
+    });
+  });
+
+  describe('ref and normal params within block', () => {
+    const code = `
+function A() {
+  component Foo(foo: string, ref: Ref) {}
+  return Foo;
+}
+if (true) {
+  component Foo(foo: string, ref: Ref) {}
+  callSomething(Foo);
+}
+    `;
+
+    test('ESTree', async () => {
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+        "function A() {
+          const Foo = React.forwardRef(Foo_withRef);
+
+          function Foo_withRef({
+            foo
+          }: $ReadOnly<{...}>, ref: Ref): React.Node {}
+
+          return Foo;
+        }
+
+        if (true) {
+          const Foo = React.forwardRef(Foo_withRef);
+
+          function Foo_withRef({
+            foo
+          }: $ReadOnly<{...}>, ref: Ref): React.Node {}
+
+          callSomething(Foo);
+        }"
+      `);
+    });
+  });
+
+  describe('ref and normal params within case', () => {
+    const code = `
+switch (thing) {
+  case 1:
+    component Foo(foo: string, ref: Ref) {}
+    callSomething(Foo);
+}
+    `;
+
+    test('ESTree', async () => {
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+        "switch (thing) {
+          case 1:
+            const Foo = React.forwardRef(Foo_withRef);
+
+            function Foo_withRef({
+              foo
+            }: $ReadOnly<{...}>, ref: Ref): React.Node {}
+
+            callSomething(Foo);
+        }"
+      `);
+    });
+  });
 });
