@@ -1911,7 +1911,12 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     expectedParamCountIncludingThis_ = count;
   }
 
+  /// \return the number of params this function takes, including 'this'. Should
+  /// always return a number greater than 0.
   uint32_t getExpectedParamCountIncludingThis() const {
+    assert(
+        expectedParamCountIncludingThis_ > 0 &&
+        "there should always be at least the 'this' parameter");
     return expectedParamCountIncludingThis_;
   }
 

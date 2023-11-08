@@ -123,6 +123,8 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
           CustomDirectives{
               .sourceVisibility = SourceVisibility::Default,
               .alwaysInline = true});
+      func->addJSThisParam();
+      func->setExpectedParamCountIncludingThis(1);
       Builder.setInsertionBlock(Builder.createBasicBlock(func));
       Builder.createReturnInst(Builder.getLiteralUndefined());
       CompiledMapKey key(node, (unsigned)ExtraKey::ImplicitClassConstructor);
