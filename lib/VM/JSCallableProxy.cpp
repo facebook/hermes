@@ -90,8 +90,10 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime &runtime, NativeArgs) {
   // this isn't a member, so it can't see it.  It doesn't seem to be
   // worth tweaking the abstractions to avoid the small overhead in
   // this case.
-  Handle<JSObject> target =
-      runtime.makeHandle(detail::slots(*selfHandle).target);
+  // Make sure to retrieve the target and handler before any JS can execute.
+  auto &slots = detail::slots(*selfHandle);
+  Handle<JSObject> target = runtime.makeHandle(slots.target);
+  Handle<JSObject> handler = runtime.makeHandle(slots.handler);
   Predefined::Str trapName = callerFrame->isConstructorCall()
       ? Predefined::construct
       : Predefined::apply;
@@ -146,7 +148,7 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime &runtime, NativeArgs) {
     CallResult<PseudoHandle<>> newObjRes = Callable::executeCall3(
         *trapRes,
         runtime,
-        runtime.makeHandle(detail::slots(*selfHandle).handler),
+        handler,
         target.getHermesValue(),
         argArray.getHermesValue(),
         callerFrame.getNewTargetRef());
@@ -164,7 +166,7 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime &runtime, NativeArgs) {
     auto res = Callable::executeCall3(
         *trapRes,
         runtime,
-        runtime.makeHandle(detail::slots(*selfHandle).handler),
+        handler,
         target.getHermesValue(),
         callerFrame.getThisArgRef(),
         argArray.getHermesValue());
