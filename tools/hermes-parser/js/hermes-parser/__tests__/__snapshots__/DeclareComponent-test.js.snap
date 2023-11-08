@@ -42,6 +42,98 @@ exports[`DeclareComponent Basic ESTree 1`] = `
 }
 `;
 
+exports[`DeclareComponent Export Babel 1`] = `
+{
+  "body": [
+    {
+      "declaration": {
+        "id": {
+          "name": "Foo",
+          "type": "Identifier",
+          "typeAnnotation": {
+            "type": "TypeAnnotation",
+            "typeAnnotation": {
+              "type": "AnyTypeAnnotation",
+            },
+          },
+        },
+        "type": "DeclareVariable",
+      },
+      "default": false,
+      "source": null,
+      "specifiers": [],
+      "type": "DeclareExportDeclaration",
+    },
+    {
+      "declaration": {
+        "id": {
+          "name": "Bar",
+          "type": "Identifier",
+          "typeAnnotation": {
+            "type": "TypeAnnotation",
+            "typeAnnotation": {
+              "type": "AnyTypeAnnotation",
+            },
+          },
+        },
+        "type": "DeclareVariable",
+      },
+      "default": true,
+      "source": null,
+      "specifiers": [],
+      "type": "DeclareExportDeclaration",
+    },
+  ],
+  "type": "Program",
+}
+`;
+
+exports[`DeclareComponent Export ESTree 1`] = `
+{
+  "body": [
+    {
+      "declaration": {
+        "id": {
+          "name": "Foo",
+          "optional": false,
+          "type": "Identifier",
+          "typeAnnotation": null,
+        },
+        "params": [],
+        "rendersType": null,
+        "rest": null,
+        "type": "DeclareComponent",
+        "typeParameters": null,
+      },
+      "default": false,
+      "source": null,
+      "specifiers": [],
+      "type": "DeclareExportDeclaration",
+    },
+    {
+      "declaration": {
+        "id": {
+          "name": "Bar",
+          "optional": false,
+          "type": "Identifier",
+          "typeAnnotation": null,
+        },
+        "params": [],
+        "rendersType": null,
+        "rest": null,
+        "type": "DeclareComponent",
+        "typeParameters": null,
+      },
+      "default": true,
+      "source": null,
+      "specifiers": [],
+      "type": "DeclareExportDeclaration",
+    },
+  ],
+  "type": "Program",
+}
+`;
+
 exports[`DeclareComponent Params and renders Babel 1`] = `
 {
   "body": [

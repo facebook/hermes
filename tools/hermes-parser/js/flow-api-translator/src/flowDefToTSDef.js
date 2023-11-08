@@ -992,6 +992,13 @@ const getTransforms = (
             ];
           }
 
+          case 'DeclareComponent': {
+            throw translationError(
+              node.declaration,
+              `Unsupported node of type \`${node.declaration.type}\``,
+            );
+          }
+
           // Flow's declare export default Identifier is ambiguous.
           // the Identifier might reference a type, or it might reference a value
           // - If it's a value, then that's all good, TS supports that.
@@ -1128,6 +1135,12 @@ const getTransforms = (
                     exportKind: 'value',
                   },
                 ];
+              case 'DeclareComponent': {
+                throw translationError(
+                  node.declaration,
+                  `Unsupported node of type \`${node.declaration.type}\``,
+                );
+              }
               case 'DeclareFunction':
                 return [
                   {

@@ -1715,7 +1715,11 @@ interface DeclareExportDeclarationBase extends BaseNode {
 export interface DeclareExportDefaultDeclaration
   extends DeclareExportDeclarationBase {
   +type: 'DeclareExportDeclaration';
-  +declaration: DeclareClass | DeclareFunction | TypeAnnotationType;
+  +declaration:
+    | DeclareClass
+    | DeclareFunction
+    | DeclareComponent
+    | TypeAnnotationType;
   +default: true;
   // default cannot have a source
   +source: null;
@@ -1728,6 +1732,7 @@ export interface DeclareExportDeclarationNamedWithDeclaration
   +declaration:
     | DeclareClass
     | DeclareFunction
+    | DeclareComponent
     | DeclareInterface
     | DeclareOpaqueType
     | DeclareVariable

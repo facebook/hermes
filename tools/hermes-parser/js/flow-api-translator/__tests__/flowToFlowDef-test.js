@@ -551,4 +551,50 @@ describe('flowToFlowDef', () => {
       });
     });
   });
+  describe('ComponentDeclaration', () => {
+    it('export', async () => {
+      await expectTranslate(
+        `export component Foo() {}`,
+        `declare export component Foo();`,
+      );
+    });
+    it('export default', async () => {
+      await expectTranslate(
+        `export default component Foo() {}`,
+        `declare export default component Foo();`,
+      );
+    });
+    it('params', async () => {
+      await expectTranslate(
+        `export component Foo(foo: string, 'bar' as BAR?: string) {}`,
+        `declare export component Foo(foo: string, 'bar'?: string);`,
+      );
+    });
+    it('default params', async () => {
+      await expectTranslate(
+        `export component Foo(foo: string = '') {}`,
+        `declare export component Foo(foo?: string);`,
+      );
+    });
+    it('rest param', async () => {
+      await expectTranslate(
+        `export component Foo(...foo: {...}) {}`,
+        `declare export component Foo(...foo: {...});`,
+      );
+    });
+    it('destructured rest param', async () => {
+      await expectTranslate(
+        `export component Foo(...{foo}: {...}) {}`,
+        `declare export component Foo(...rest: {...});`,
+      );
+    });
+    it('renders type', async () => {
+      await expectTranslate(
+        `type T = Bar;
+         export component Foo() renders T {}`,
+        `type T = Bar;
+         declare export component Foo() renders T;`,
+      );
+    });
+  });
 });
