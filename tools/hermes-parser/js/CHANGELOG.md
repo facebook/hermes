@@ -1,3 +1,24 @@
+## 0.17.1
+
+### `hermes-estree`
+* Fix type of `typeAnnotation` property of `AsExpression`
+
+### `hermes-parser`
+
+### `hermes-eslint`
+* Ensure types cast to in `AsExpression`s are considered as referenced
+
+### `hermes-transform`
+* Fix an issue with preserving comments of optional chaining nodes
+
+### `flow-api-translator`
+* Add support for `AsExpression`s in Flow to Flow def
+
+### `prettier-plugin-hermes-parser`
+* Patch prettier#15514, fixing edge case of `AsExpression` printing
+
+### `babel-plugin-syntax-hermes-parser`
+
 ## 0.17.0
 
 ### `hermes-estree`
