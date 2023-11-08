@@ -29,6 +29,10 @@
 #define TEMPLATE(name, str) TOK(name, str)
 #endif
 
+#ifndef IDENT_OP
+#define IDENT_OP(name, str, precedence) TOK(name, str)
+#endif
+
 #ifndef RANGE_MARKER
 #define RANGE_MARKER(name) TOK(name, "<" #name ">")
 #endif
@@ -155,6 +159,8 @@ PUNCTUATOR(questionquestionequal, "\?\?=")
 PUNCTUATOR(caretequal,          "^=")
 PUNCTUATOR(equalgreater,        "=>")
 
+IDENT_OP(as_operator,           "as",   8)
+
 TOK(numeric_literal, "number")
 TOK(string_literal, "string")
 TOK(regexp_literal, "regexp")
@@ -175,4 +181,5 @@ RANGE_MARKER(_last_token)
 #undef PUNCTUATOR_FLOW
 #undef BINOP
 #undef TEMPLATE
+#undef IDENT_OP
 #undef RANGE_MARKER

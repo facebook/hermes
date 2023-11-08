@@ -255,6 +255,11 @@ class HermesParserJSSerializer {
     serializeToken(token, TokenType::Keyword); \
     break;
 
+#define IDENT_OP(NAME, ...)                       \
+  case TokenKind::NAME:                           \
+    serializeToken(token, TokenType::Punctuator); \
+    break;
+
 #include "hermes/Parser/TokenKinds.def"
 
         // Exclude EOF token

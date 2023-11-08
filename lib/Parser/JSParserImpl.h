@@ -900,6 +900,11 @@ class JSParserImpl {
   Optional<ESTree::Node *> parsePostfixExpression();
   Optional<ESTree::Node *> parseUnaryExpression();
 
+  /// Convert identifiers to the operator they represent.
+  /// Called after each parseUnaryExpression to change identifiers that might be
+  /// operators into their corresponding IDENT_OP tokens.
+  inline void convertIdentOpIfPossible();
+
   /// Parse a binary expression using a precedence table, in order to decrease
   /// recursion depth.
   Optional<ESTree::Node *> parseBinaryExpression(Param param);
