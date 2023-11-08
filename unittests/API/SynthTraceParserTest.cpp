@@ -112,7 +112,7 @@ TEST_F(SynthTraceParserTest, SynthVersionMismatch) {
   "trace": []
 }
   )";
-  ASSERT_THROW(parseSynthTrace(bufFromStr(src)), std::invalid_argument);
+  EXPECT_DEATH_IF_SUPPORTED(parseSynthTrace(bufFromStr(src)), "");
 }
 
 TEST_F(SynthTraceParserTest, ParsePropID) {
@@ -178,7 +178,7 @@ TEST_F(SynthTraceParserTest, SynthVersionInvalidKind) {
   "trace": []
 }
   )";
-  ASSERT_THROW(parseSynthTrace(bufFromStr(src)), std::invalid_argument);
+  EXPECT_DEATH_IF_SUPPORTED(parseSynthTrace(bufFromStr(src)), "");
 }
 
 TEST_F(SynthTraceParserTest, SynthMissingVersion) {
@@ -193,7 +193,7 @@ TEST_F(SynthTraceParserTest, SynthMissingVersion) {
   "trace": []
 }
   )";
-  EXPECT_NO_THROW(parseSynthTrace(bufFromStr(src)));
+  parseSynthTrace(bufFromStr(src));
 }
 
 TEST_F(SynthTraceParserTest, CreateBigIntRecord) {
@@ -223,103 +223,7 @@ TEST_F(SynthTraceParserTest, CreateBigIntRecord) {
   ]
 }
   )";
-  EXPECT_NO_THROW(parseSynthTrace(bufFromStr(src)));
-}
-
-TEST_F(SynthTraceParserTest, CreateBigIntRecordFailures) {
-  auto createBigIntRecord = [](const char *record) -> std::string {
-    std::stringstream src;
-
-    src << R"(
-{
-  "globalObjID": 258,
-  "runtimeConfig": {
-  },
-  "env": {
-    "callsToHermesInternalGetInstrumentedStats": [],
-  },
-  "trace": [
-)" << record
-        << R"(
-  ]
-}
-  )";
-
-    return src.str();
-  };
-
-  struct Test {
-    const char *description;
-    const char *createBigIntRecord;
-  } shouldThrowInvalidArgument[] = {
-      {"missing bits field",
-       R"(
-        {
-          "type": "CreateBigIntRecord",
-          "time": 0,
-          "objID": 0,
-          "method": "FromUint64"
-        }
-        )"},
-      {"bits field is not a string",
-       R"(
-        {
-          "type": "CreateBigIntRecord",
-          "time": 0,
-          "objID": 0,
-          "method": "FromUint64",
-          "bits": 123456
-        }
-        )"},
-      {"bits has non-digit charaters",
-       R"(
-        {
-          "type": "CreateBigIntRecord",
-          "time": 0,
-          "objID": 0,
-          "method": "FromUint64",
-          "bits": "123456!"
-        })"},
-      {"bits field is empty",
-       R"(
-        {
-          "type": "CreateBigIntRecord",
-          "time": 0,
-          "objID": 0,
-          "method": "FromUint64",
-          "bits": ""
-        }
-        )"},
-      {"bits is not a number",
-       R"(
-        {
-          "type": "CreateBigIntRecord",
-          "time": 0,
-          "objID": 0,
-          "method": "FromUint64",
-          "bits": "I am not a number"
-        })"},
-  };
-
-  for (const auto &test : shouldThrowInvalidArgument) {
-    // TODO(T127739425): Enforce the type of this exception after we fix RTTI in
-    // SynthTraceParser.
-    EXPECT_ANY_THROW(parseSynthTrace(
-        bufFromStr(createBigIntRecord(test.createBigIntRecord))))
-        << test.description;
-  }
-
-  EXPECT_THROW(
-      parseSynthTrace(bufFromStr(createBigIntRecord(R"(
-        {
-          "type": "CreateBigIntRecord",
-          "time": 0,
-          "objID": 0,
-          "method": "FromUint64",
-          "bits": "9999999999999999999999999999999999999999999"
-        })"))),
-      std::out_of_range)
-      << "bits is out-of-range";
+  parseSynthTrace(bufFromStr(src));
 }
 
 TEST_F(SynthTraceParserTest, BigIntToStringRecord) {
@@ -342,7 +246,7 @@ TEST_F(SynthTraceParserTest, BigIntToStringRecord) {
   ]
 }
   )";
-  EXPECT_NO_THROW(parseSynthTrace(bufFromStr(src)));
+  parseSynthTrace(bufFromStr(src));
 }
 
 } // namespace
