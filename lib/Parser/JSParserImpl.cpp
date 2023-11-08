@@ -6726,6 +6726,9 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
         new (context_) ESTree::ExportNamedDeclarationNode(
             nullptr, std::move(specifiers), source, valueIdent_));
   } else if (check(TokenKind::rw_var)) {
+    // Could find another AssignmentExpression without hitting
+    // PrimaryExpression.
+    CHECK_RECURSION;
     // export VariableStatement
     auto optVar = parseVariableStatement(Param{});
     if (!optVar) {
