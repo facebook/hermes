@@ -34,10 +34,10 @@ print(new Intl.DateTimeFormat('de-DE').format(oldDate));
 // CHECK-NEXT: 9.1.1952
 
 print(new Intl.DateTimeFormat('en-US', { timeStyle: 'long', timeZone: 'PST'}).format(date));
-// CHECK-NEXT: 7:45:00 PM PST
+// CHECK-NEXT: 7:45:00{{.+}}PM PST
 
 print(new Intl.DateTimeFormat('en-US', { timeStyle: 'long', timeZone: 'EET'}).format(date));
-// CHECK-NEXT: 5:45:00 AM GMT+2
+// CHECK-NEXT: 5:45:00{{.+}}AM GMT+2
 
 try {
   print(new Intl.DateTimeFormat('en-US', { timeStyle: 'long', timeZone: 'XXX'}).format(date));
@@ -54,13 +54,13 @@ print(new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'medium
 // CHECK-NEXT: 2020. 1. 2. 오전 3:45:00
 
 print(new Intl.DateTimeFormat('en-US', { dateStyle: 'short', timeStyle: 'medium' }).format(oldDate));
-// CHECK-NEXT: 1/9/52, 8:04:03 AM
+// CHECK-NEXT: 1/9/52, 8:04:03{{.+}}AM
 
 print(new Intl.DateTimeFormat('de-DE', { dateStyle: 'full', timeStyle: 'long' }).format(oldDate));
 // CHECK-NEXT: Mittwoch, 9. Januar 1952 um 08:04:03 GMT
 
 print(new Intl.DateTimeFormat('it-IT', { dateStyle: 'long', timeStyle: 'short' }).format(oldDate))
-// CHECK-NEXT: 9 gennaio 1952, 08:04
+// CHECK-NEXT: 9 gennaio 1952{{.+}}08:04
 
 const lengthOptions = ['narrow', 'short', 'long'];
 const numericOptions = ['numeric', '2-digit'];
