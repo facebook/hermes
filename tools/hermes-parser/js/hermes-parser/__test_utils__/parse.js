@@ -73,7 +73,7 @@ export function parseForSnapshot(
 ): mixed {
   const parseOpts = {
     enableExperimentalComponentSyntax:
-      enableExperimentalComponentSyntax ?? false,
+      enableExperimentalComponentSyntax ?? true,
   };
   if (babel === true) {
     return cleanASTForSnapshot(
@@ -103,7 +103,7 @@ export async function printForSnapshot(
 ): Promise<string> {
   const parseOpts = {
     enableExperimentalComponentSyntax:
-      enableExperimentalComponentSyntax ?? false,
+      enableExperimentalComponentSyntax ?? true,
   };
   if (babel === true) {
     const ast = parse(source, {

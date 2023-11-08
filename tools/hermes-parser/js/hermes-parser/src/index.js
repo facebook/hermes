@@ -47,6 +47,10 @@ function getOptions(options?: ParserOptions = {...DEFAULTS}) {
     );
   }
 
+  if (options.enableExperimentalComponentSyntax == null) {
+    options.enableExperimentalComponentSyntax = true; // Enable by default
+  }
+
   options.tokens = options.tokens === true;
   options.allowReturnOutsideFunction =
     options.allowReturnOutsideFunction === true;

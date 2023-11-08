@@ -16,8 +16,6 @@ import {
 } from '../__test_utils__/alignment-utils';
 import {parseForSnapshot} from '../__test_utils__/parse';
 
-const parserOpts = {enableExperimentalComponentSyntax: true};
-
 describe('ComponentTypeAnnotation', () => {
   const testCase: AlignmentCase = {
     code: `
@@ -34,7 +32,7 @@ describe('ComponentTypeAnnotation', () => {
   };
 
   test('ESTree', () => {
-    expect(parseForSnapshot(testCase.code, parserOpts)).toMatchInlineSnapshot(`
+    expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
       {
         "body": [
           {
@@ -62,7 +60,7 @@ describe('ComponentTypeAnnotation', () => {
   });
 
   test('Babel', () => {
-    expect(parseForSnapshot(testCase.code, {babel: true, ...parserOpts}))
+    expect(parseForSnapshot(testCase.code, {babel: true}))
       .toMatchInlineSnapshot(`
       {
         "body": [

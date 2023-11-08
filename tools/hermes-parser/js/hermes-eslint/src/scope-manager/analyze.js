@@ -57,6 +57,8 @@ type AnalyzeOptions = $ReadOnly<{
 
   /**
    * Support experimental component syntax
+   *
+   * Defaults to `true`.
    */
   enableExperimentalComponentSyntax?: boolean,
 }>;
