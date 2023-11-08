@@ -89,10 +89,47 @@ describe('ComponentDeclaration', () => {
     test('Babel', async () => {
       expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
       expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(
-        `"function Foo(): SpecialType {}"`,
+        `"function Foo(): React.Node {}"`,
       );
     });
   });
+  /* Commenting out these tests for @Pieterv to re-enable after he adds in prettier support
+  describe('renders maybe type', () => {
+    const code = `
+      component Foo() renders? SpecialType {}
+    `;
+
+    test('ESTree', async () => {
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(
+        `"function Foo(): React.Node {}"`,
+      );
+    });
+  });
+
+  describe('renders star type', () => {
+    const code = `
+      component Foo() renders* SpecialType {}
+    `;
+
+    test('ESTree', async () => {
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(
+        `"function Foo(): React.Node {}"`,
+      );
+    });
+  });
+  */
 
   describe('renders type (complex)', () => {
     const code = `
@@ -107,7 +144,7 @@ describe('ComponentDeclaration', () => {
     test('Babel', async () => {
       expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
       expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(
-        `"function Foo(): SpecialType | OtherSpecialType {}"`,
+        `"function Foo(): React.Node {}"`,
       );
     });
   });
@@ -127,7 +164,7 @@ describe('ComponentDeclaration', () => {
       expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
         "function Foo<T1, T2>({
           bar
-        }: $ReadOnly<{...}>): T2 {}"
+        }: $ReadOnly<{...}>): React.Node {}"
       `);
     });
   });

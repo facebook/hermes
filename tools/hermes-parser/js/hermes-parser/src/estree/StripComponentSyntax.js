@@ -424,46 +424,42 @@ function mapComponentDeclaration(node: ComponentDeclaration): {
   comp: FunctionDeclaration,
   forwardRefDetails: ?ForwardRefDetails,
 } {
-  let rendersType = node.rendersType;
-  if (rendersType == null) {
-    // Create empty loc for return type annotation nodes
-    const createRendersTypeLoc = () => ({
-      loc: {
-        start: node.body.loc.end,
-        end: node.body.loc.end,
-      },
-      range: [node.body.range[1], node.body.range[1]],
-      parent: EMPTY_PARENT,
-    });
-
-    rendersType = {
-      type: 'TypeAnnotation',
-      typeAnnotation: {
-        type: 'GenericTypeAnnotation',
-        id: {
-          type: 'QualifiedTypeIdentifier',
-          qualification: {
-            type: 'Identifier',
-            name: 'React',
-            optional: false,
-            typeAnnotation: null,
-            ...createRendersTypeLoc(),
-          },
-          id: {
-            type: 'Identifier',
-            name: 'Node',
-            optional: false,
-            typeAnnotation: null,
-            ...createRendersTypeLoc(),
-          },
+  // Create empty loc for return type annotation nodes
+  const createRendersTypeLoc = () => ({
+    loc: {
+      start: node.body.loc.end,
+      end: node.body.loc.end,
+    },
+    range: [node.body.range[1], node.body.range[1]],
+    parent: EMPTY_PARENT,
+  });
+  const returnType: TypeAnnotation = {
+    type: 'TypeAnnotation',
+    typeAnnotation: {
+      type: 'GenericTypeAnnotation',
+      id: {
+        type: 'QualifiedTypeIdentifier',
+        qualification: {
+          type: 'Identifier',
+          name: 'React',
+          optional: false,
+          typeAnnotation: null,
           ...createRendersTypeLoc(),
         },
-        typeParameters: null,
+        id: {
+          type: 'Identifier',
+          name: 'Node',
+          optional: false,
+          typeAnnotation: null,
+          ...createRendersTypeLoc(),
+        },
         ...createRendersTypeLoc(),
       },
+      typeParameters: null,
       ...createRendersTypeLoc(),
-    };
-  }
+    },
+    ...createRendersTypeLoc(),
+  };
 
   const {props, ref} = mapComponentParameters(node.params);
 
@@ -482,7 +478,7 @@ function mapComponentDeclaration(node: ComponentDeclaration): {
     __componentDeclaration: true,
     typeParameters: node.typeParameters,
     params: props == null ? [] : ref == null ? [props] : [props, ref],
-    returnType: rendersType,
+    returnType,
     body: node.body,
     async: false,
     generator: false,

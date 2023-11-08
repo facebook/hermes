@@ -398,7 +398,7 @@ export interface ComponentDeclaration extends BaseNode {
   +body: BlockStatement;
   +id: Identifier;
   +params: $ReadOnlyArray<ComponentParameterAndRestElement>;
-  +rendersType: null | TypeAnnotation;
+  +rendersType: null | TypeOperator;
   +typeParameters: null | TypeParameterDeclaration;
 }
 
@@ -1358,7 +1358,7 @@ export interface ComponentTypeAnnotation extends BaseNode {
   +params: $ReadOnlyArray<ComponentTypeParameter>;
   +rest: null | ComponentTypeParameter;
   +typeParameters: null | TypeParameterDeclaration;
-  +rendersType: null | TypeAnnotationType;
+  +rendersType: null | TypeOperator;
 }
 export interface ComponentTypeParameter extends BaseNode {
   +type: 'ComponentTypeParameter';
@@ -1661,7 +1661,7 @@ export interface DeclareComponent extends BaseNode {
   +params: Array<ComponentTypeParameter>;
   +rest: null | ComponentTypeParameter;
   +typeParameters: null | TypeParameterDeclaration;
-  +rendersType: null | TypeAnnotation;
+  +rendersType: null | TypeOperator;
 }
 
 export interface DeclareVariable extends BaseNode {
