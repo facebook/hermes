@@ -13,7 +13,25 @@ import {parse as parseEspreeOriginal} from 'espree';
 import {BABEL_VISITOR_KEYS, parse as parseHermesOriginal} from './parse';
 import {SimpleTraverser} from '../src/traverse/SimpleTraverser';
 
-function cleanAstForHermes(ast: mixed): mixed {
+function cleanAstForHermes(ast: $FlowFixMe, style: 'babel' | 'estree'): mixed {
+  if (style === 'babel') {
+    // Babel changes what properties are stripped by each version, to support some
+    // older versions of Babel we don't exactly match the output of the latest babel
+    // version in all cases. This code allows us to strip properties when comparing
+    // AST's to ensure we can continue matching latest Babel in the tests.
+    SimpleTraverser.traverse(ast, {
+      enter(node: $FlowFixMe) {
+        // Most older version of babel expect this property.
+        if (node.type === 'OptionalCallExpression' && node.optional === false) {
+          // $FlowExpectedError[cannot-write]
+          delete node.optional;
+        }
+      },
+      leave() {},
+      visitorKeys: BABEL_VISITOR_KEYS,
+    });
+  }
+
   return JSON.parse(
     // $FlowExpectedError[incompatible-call]
     JSON.stringify(ast, (_, value) => {
@@ -132,7 +150,7 @@ export function parseHermes(source: string, style: 'babel' | 'estree'): mixed {
     sourceType: 'module',
     tokens: false,
   });
-  return cleanAstForHermes(ast);
+  return cleanAstForHermes(ast, style);
 }
 
 export type AlignmentExpectation = $ReadOnly<

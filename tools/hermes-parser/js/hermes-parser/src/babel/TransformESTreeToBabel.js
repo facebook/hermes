@@ -1050,12 +1050,18 @@ function transformNode(node: ESNodeOrBabelNode): ESNodeOrBabelNode | null {
 
       return node;
     }
-    case 'CallExpression':
-    case 'OptionalCallExpression': {
+    case 'CallExpression': {
       if (node.optional === false) {
         // $FlowExpectedError[cannot-write]
         delete node.optional;
       }
+      if (node.typeArguments == null) {
+        // $FlowExpectedError[cannot-write]
+        delete node.typeArguments;
+      }
+      return node;
+    }
+    case 'OptionalCallExpression': {
       if (node.typeArguments == null) {
         // $FlowExpectedError[cannot-write]
         delete node.typeArguments;
