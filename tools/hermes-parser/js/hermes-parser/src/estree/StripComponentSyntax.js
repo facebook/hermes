@@ -168,7 +168,8 @@ function mapComponentParameters(
   if (
     params.length === 1 &&
     params[0].type === 'RestElement' &&
-    params[0].argument.type === 'Identifier'
+    (params[0].argument.type === 'Identifier' ||
+      params[0].argument.type === 'ObjectPattern')
   ) {
     const restElementArgument = params[0].argument;
     return {
