@@ -38,7 +38,7 @@ struct RuntimeCommonStorage {
   MockedEnvironment tracedEnv;
 
   /// PRNG used by Math.random()
-  std::minstd_rand randomEngine_;
+  std::mt19937_64 randomEngine_;
   bool randomEngineSeeded_ = false;
 };
 
