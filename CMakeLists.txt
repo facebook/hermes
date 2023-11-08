@@ -498,7 +498,8 @@ if (HERMES_HARDENED)
   add_definitions(-DHERMES_HARDENED)
 endif()
 
-if ((NOT GENERATOR_IS_MULTI_CONFIG) AND (CMAKE_BUILD_TYPE STREQUAL Debug))
+# Assume dbg for multi-config generators to avoid running slow tests.
+if (GENERATOR_IS_MULTI_CONFIG OR (CMAKE_BUILD_TYPE STREQUAL Debug))
     set(HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST "dbg")
 else()
     set(HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST "opt")
