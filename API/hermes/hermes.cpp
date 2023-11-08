@@ -1645,10 +1645,12 @@ bool HermesRuntimeImpl::compare(
 }
 
 std::string HermesRuntimeImpl::utf8FromStringView(vm::StringView view) {
-  vm::SmallU16String<32> allocator;
+  if (view.isASCII())
+    return std::string{view.castToCharPtr(), view.length()};
+
   std::string ret;
   ::hermes::convertUTF16ToUTF8WithReplacements(
-      ret, view.getUTF16Ref(allocator));
+      ret, llvh::ArrayRef{view.castToChar16Ptr(), view.length()});
   return ret;
 }
 
