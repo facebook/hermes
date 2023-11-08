@@ -42,6 +42,10 @@ const std::vector<std::u16string> &getAvailableLocales() {
       std::replace(u16str.begin(), u16str.end(), u'_', u'-');
       // Some locales may still not be properly canonicalized (e.g. en_US_POSIX
       // should be en-US-posix).
+      // Note that we do not need to handle legacy extensions here (unlike
+      // getDefaultLocale), since the documentation for
+      // availableLocaleIdentifiers states that they will only contain a
+      // language, country, and script code.
       if (auto parsed = ParsedLocaleIdentifier::parse(u16str))
         vec->push_back(parsed->canonicalize());
     }
@@ -53,12 +57,17 @@ const std::u16string &getDefaultLocale() {
   static const std::u16string *defLocale = new std::u16string([] {
     // Environment variable used for testing only
     const char *testLocale = std::getenv("_HERMES_TEST_LOCALE");
-    if (testLocale) {
-      NSString *nsTestLocale = [NSString stringWithUTF8String:testLocale];
-      return nsStringToU16String(nsTestLocale);
-    }
-    NSString *nsDefLocale = [[NSLocale currentLocale] localeIdentifier];
-    auto defLocale = nsStringToU16String(nsDefLocale);
+    NSString *nsLocale = testLocale
+        ? [NSString stringWithUTF8String:testLocale]
+        : [[NSLocale currentLocale] localeIdentifier];
+    auto defLocale = nsStringToU16String(nsLocale);
+
+    // The locale identifier may occasionally contain legacy style locale
+    // extensions. We cannot handle them so remove them before parsing the tag.
+    size_t delimIdx = defLocale.find(u'@');
+    if (delimIdx != std::u16string::npos)
+      defLocale.resize(delimIdx);
+
     // See the comment in getAvailableLocales.
     std::replace(defLocale.begin(), defLocale.end(), u'_', u'-');
     if (auto parsed = ParsedLocaleIdentifier::parse(defLocale))
