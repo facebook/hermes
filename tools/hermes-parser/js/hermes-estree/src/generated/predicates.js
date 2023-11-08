@@ -687,6 +687,10 @@ export function isTypeofTypeAnnotation(node: ESNode | Token): boolean %checks {
   return node.type === 'TypeofTypeAnnotation';
 }
 
+export function isTypeOperator(node: ESNode | Token): boolean %checks {
+  return node.type === 'TypeOperator';
+}
+
 export function isTypeParameter(node: ESNode | Token): boolean %checks {
   return node.type === 'TypeParameter';
 }

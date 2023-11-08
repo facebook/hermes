@@ -1140,6 +1140,7 @@ export type TypeAnnotationType =
   | UnionTypeAnnotation
   | IntersectionTypeAnnotation
   | ConditionalTypeAnnotation
+  | TypeOperator
   | TypePredicate
   | FunctionTypeAnnotation
   | ComponentTypeAnnotation
@@ -1318,6 +1319,13 @@ export interface ConditionalTypeAnnotation extends BaseNode {
   +extendsType: TypeAnnotationType;
   +trueType: TypeAnnotationType;
   +falseType: TypeAnnotationType;
+}
+
+export interface TypeOperator extends BaseNode {
+  +type: 'TypeOperator';
+  // Supported type operators, currently only "renders".
+  +operator: 'renders';
+  +typeAnnotation: TypeAnnotationType;
 }
 
 export interface TypePredicate extends BaseNode {
