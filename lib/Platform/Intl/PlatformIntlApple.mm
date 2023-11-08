@@ -9,6 +9,8 @@
 #include "hermes/Platform/Intl/PlatformIntl.h"
 
 #import <Foundation/Foundation.h>
+#include <shared_mutex>
+#include <thread>
 #include <unordered_set>
 
 static_assert(__has_feature(objc_arc), "arc must be enabled");
@@ -580,23 +582,68 @@ std::u16string toASCIIUppercase(std::u16string_view tz) {
   return result;
 }
 
-static std::unordered_map<std::u16string, std::u16string>
-    &validTimeZoneNames() {
-  // This stores all the timezones the Intl API considers valid. It is
-  // intentionally leaked to avoid destruction order problems.
-  static auto *validNames = [] {
+namespace {
+/// Thread safe management of time zone names map.
+class TimeZoneNames {
+ public:
+  /// Initializing the underlying map with all known time zone names in
+  /// NSTimeZone.
+  TimeZoneNames() {
     auto nsTimeZoneNames = [NSTimeZone.knownTimeZoneNames
         arrayByAddingObjectsFromArray:NSTimeZone.abbreviationDictionary
                                           .allKeys];
-    auto *names = new std::unordered_map<std::u16string, std::u16string>();
     for (NSString *timeZoneName in nsTimeZoneNames) {
       auto canonical = nsStringToU16String(timeZoneName);
       auto upper = toASCIIUppercase(canonical);
-      names->emplace(std::move(upper), std::move(canonical));
+      timeZoneNamesMap_.emplace(std::move(upper), std::move(canonical));
     }
-    return names;
-  }();
-  return *validNames;
+  }
+
+  /// Check if \p tz is a valid time zone name.
+  bool contains(std::u16string_view tz) const {
+    std::shared_lock lock(mutex_);
+    return timeZoneNamesMap_.find(toASCIIUppercase(tz)) !=
+        timeZoneNamesMap_.end();
+  }
+
+  /// Get canonical time zone name for \p tz. Note that \p tz must
+  /// be a valid key in the map.
+  std::u16string getCanonical(std::u16string_view tz) const {
+    std::shared_lock lock(mutex_);
+    auto ianaTimeZoneIt = timeZoneNamesMap_.find(toASCIIUppercase(tz));
+    assert(
+        ianaTimeZoneIt != timeZoneNamesMap_.end() &&
+        "getCanonical() must be called on valid time zone name.");
+    return ianaTimeZoneIt->second;
+  }
+
+  /// Update the time zone name map with \p tz if it does not exist yet.
+  void update(std::u16string_view tz) {
+    auto upper = toASCIIUppercase(tz);
+    // Read lock and check if tz is already in the map.
+    {
+      std::shared_lock lock(mutex_);
+      if (timeZoneNamesMap_.find(upper) != timeZoneNamesMap_.end()) {
+        return;
+      }
+    }
+    // If not, write lock and insert it into the map.
+    {
+      std::unique_lock lock(mutex_);
+      timeZoneNamesMap_.emplace(upper, tz);
+    }
+  }
+
+ private:
+  /// Map from upper case time zone name to canonical time zone name.
+  std::unordered_map<std::u16string, std::u16string> timeZoneNamesMap_;
+  mutable std::shared_mutex mutex_;
+};
+} // namespace
+
+static TimeZoneNames &validTimeZoneNames() {
+  static TimeZoneNames validTimeZoneNames;
+  return validTimeZoneNames;
 }
 
 // https://402.ecma-international.org/8.0/#sec-defaulttimezone
@@ -612,9 +659,7 @@ static std::unordered_map<std::u16string, std::u16string>
 // to accept both the old and new timezones.
 std::u16string getDefaultTimeZone() {
   std::u16string tz = nsStringToU16String(NSTimeZone.defaultTimeZone.name);
-  // emplace won't insert duplicates if the TZ hasn't changed since the last
-  // call to getDefaultTimeZone.
-  validTimeZoneNames().emplace(toASCIIUppercase(tz), tz);
+  validTimeZoneNames().update(tz);
   return tz;
 }
 
@@ -623,11 +668,7 @@ std::u16string canonicalizeTimeZoneName(std::u16string_view tz) {
   // 1. Let ianaTimeZone be the Zone or Link name of the IANA Time Zone Database
   // such that timeZone, converted to upper case as described in 6.1, is equal
   // to ianaTimeZone, converted to upper case as described in 6.1.
-  const auto &timeZones = validTimeZoneNames();
-  auto ianaTimeZoneIt = timeZones.find(toASCIIUppercase(tz));
-  auto ianaTimeZone = (ianaTimeZoneIt != timeZones.end())
-      ? ianaTimeZoneIt->second
-      : std::u16string(tz);
+  auto ianaTimeZone = validTimeZoneNames().getCanonical(tz);
   // NOTE: We don't use actual IANA database, so we leave (2) unimplemented.
   // 2. If ianaTimeZone is a Link name, let ianaTimeZone be the corresponding
   // Zone name as specified in the "backward" file of the IANA Time Zone
@@ -641,8 +682,7 @@ std::u16string canonicalizeTimeZoneName(std::u16string_view tz) {
 
 // https://402.ecma-international.org/8.0/#sec-isvalidtimezonename
 static bool isValidTimeZoneName(std::u16string_view tz) {
-  const auto &timeZones = validTimeZoneNames();
-  return timeZones.find(toASCIIUppercase(tz)) != timeZones.end();
+  return validTimeZoneNames().contains(tz);
 }
 
 // https://www.unicode.org/reports/tr35/tr35-31/tr35-dates.html#Date_Field_Symbol_Table
