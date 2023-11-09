@@ -561,6 +561,37 @@ class InstrGen {
     hermes_fatal(err);
   }
 
+  /// Generate a comment containing the string \p str escaped and truncated
+  /// to 20 characters.
+  llvh::raw_ostream &genStringComment(llvh::StringRef str) {
+    os_ << " /*";
+    if (str.size() > 20)
+      os_.write_escaped(str.take_front(20)) << "...";
+    else
+      os_.write_escaped(str);
+    return os_ << "*/";
+  }
+
+  /// Generate a string constant by referencing the global string table.
+  llvh::raw_ostream &genStringConst(LiteralString *LS) {
+    auto str = LS->getValue().str();
+    os_ << "s_symbols[" << moduleGen_.stringTable.add(str) << ']';
+    return genStringComment(str);
+  }
+  /// Generate a string constant, followed by an optional value (if non-null),
+  /// and a cache index. This must be used when
+  /// passing parameters to API functions that will use the cache index.
+  llvh::raw_ostream &genStringConstIC(
+      LiteralString *LS,
+      Value *optValue = nullptr) {
+    genStringConst(LS);
+    if (optValue) {
+      os_ << ", ";
+      generateRegisterPtr(*optValue);
+    }
+    return os_ << ", s_prop_cache + " << nextCacheIdx_++;
+  }
+
   /// Helper to generate a value in a register,
   void generateRegister(sh::Register reg) {
     switch (reg.getClass()) {
@@ -619,8 +650,8 @@ class InstrGen {
       }
       os_ << ")";
     } else if (auto S = llvh::dyn_cast<LiteralString>(&val)) {
-      os_ << "_sh_ljs_get_string(shr, s_symbols["
-          << moduleGen_.stringTable.add(S->getValue().str()) << "])";
+      os_ << "_sh_ljs_get_string(shr, ";
+      genStringConst(S) << ")";
     } else if (auto *LBI = llvh::dyn_cast<LiteralBigInt>(&val)) {
       auto parsedBigInt = bigint::ParsedBigInt::parsedBigIntFromNumericValue(
           LBI->getValue()->str());
@@ -775,9 +806,8 @@ class InstrGen {
     os_ << ");\n";
   }
   void generateDeclareGlobalVarInst(DeclareGlobalVarInst &inst) {
-    os_ << "  _sh_ljs_declare_global_var(shr, s_symbols["
-        << moduleGen_.stringTable.add(inst.getName()->getValue().str())
-        << "]);\n";
+    os_ << "  _sh_ljs_declare_global_var(shr, ";
+    genStringConst(inst.getName()) << ");\n";
   }
   void generateLoadFrameInst(LoadFrameInst &inst) {
     hermes_fatal("LoadFrameInst should have been lowered.");
@@ -1057,10 +1087,8 @@ class InstrGen {
         os_ << "_sh_ljs_put_by_id_loose_rjs";
       os_ << "(shr,&";
       generateRegister(*inst.getObject());
-      os_ << ",s_symbols[" << moduleGen_.stringTable.add(LS->getValue().str())
-          << "], &";
-      generateRegister(*inst.getStoredValue());
-      os_ << ", s_prop_cache + " << nextCacheIdx_++ << ");\n";
+      os_ << ", ";
+      genStringConstIC(LS, inst.getStoredValue()) << ");\n";
       return;
     }
 
@@ -1097,14 +1125,7 @@ class InstrGen {
     os_ << ", ";
     auto prop = inst.getProperty();
     auto *propStr = cast<LiteralString>(prop);
-    os_ << llvh::format(
-               "s_symbols[%u]",
-               moduleGen_.stringTable.add(propStr->getValue().str()))
-        << ", ";
-    generateRegisterPtr(*inst.getStoredValue());
-    os_ << ", s_prop_cache + " << nextCacheIdx_++;
-
-    os_ << ");\n";
+    genStringConstIC(propStr, inst.getStoredValue()) << ");\n";
   }
   void generateTryStoreGlobalPropertyLooseInst(
       TryStoreGlobalPropertyLooseInst &inst) {
@@ -1180,11 +1201,8 @@ class InstrGen {
     generateRegisterPtr(*inst.getObject());
     os_ << ", ";
     auto *propStr = cast<LiteralString>(prop);
-    os_ << llvh::format(
-               "s_symbols[%u]",
-               moduleGen_.stringTable.add(propStr->getValue().str()))
-        << ", &";
-    generateRegister(*inst.getStoredValue());
+    genStringConst(propStr) << ", ";
+    generateRegisterPtr(*inst.getStoredValue());
     os_ << ");\n";
   }
   void generateStoreGetterSetterInst(StoreGetterSetterInst &inst) {
@@ -1217,10 +1235,7 @@ class InstrGen {
       os_ << "shr, ";
       generateRegisterPtr(*inst.getObject());
       os_ << ", ";
-      os_ << llvh::format(
-          "s_symbols[%u]",
-          moduleGen_.stringTable.add(propStr->getValue().str()));
-      os_ << ");\n";
+      genStringConst(propStr) << ");\n";
       return;
     }
 
@@ -1248,8 +1263,8 @@ class InstrGen {
     if (auto *LS = llvh::dyn_cast<LiteralString>(inst.getProperty())) {
       os_ << "_sh_ljs_get_by_id_rjs(shr,&";
       generateRegister(*inst.getObject());
-      os_ << ",s_symbols[" << moduleGen_.stringTable.add(LS->getValue().str())
-          << "], s_prop_cache + " << nextCacheIdx_++ << ");\n";
+      os_ << ",";
+      genStringConstIC(LS) << ");\n";
       return;
     }
     os_ << "_sh_ljs_get_by_val_rjs(shr,&";
@@ -1265,8 +1280,8 @@ class InstrGen {
     LiteralString *LS = inst.getProperty();
     os_ << "_sh_ljs_try_get_by_id_rjs(shr,&";
     generateRegister(*inst.getObject());
-    os_ << ",s_symbols[" << moduleGen_.stringTable.add(LS->getValue().str())
-        << "], s_prop_cache + " << nextCacheIdx_++ << ");\n";
+    os_ << ", ";
+    genStringConstIC(LS) << ");\n";
   }
   void generateLoadParentInst(LoadParentInst &inst) {
     os_.indent(2);
@@ -1544,14 +1559,16 @@ class InstrGen {
     generateValue(*inst.getEnvironment());
     os_ << ",";
     generateValue(*inst.getStoredValue());
-    os_ << ", " << inst.getResolvedName()->getIndexInVariableList() << ");\n";
+    os_ << ", " << inst.getResolvedName()->getIndexInVariableList();
+    genStringComment(inst.getResolvedName()->getName().str()) << ");\n";
   }
   void generateHBCLoadFromEnvironmentInst(HBCLoadFromEnvironmentInst &inst) {
     os_.indent(2);
     generateValue(inst);
     os_ << " = _sh_ljs_load_from_env(";
     generateValue(*inst.getEnvironment());
-    os_ << ", " << inst.getResolvedName()->getIndexInVariableList() << ");\n";
+    os_ << ", " << inst.getResolvedName()->getIndexInVariableList();
+    genStringComment(inst.getResolvedName()->getName().str()) << ");\n";
   }
   void generateUnreachableInst(UnreachableInst &inst) {
     os_.indent(2);
