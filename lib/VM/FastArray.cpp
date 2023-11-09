@@ -67,7 +67,7 @@ Handle<HiddenClass> FastArray::createClass(
 
   // Add the length property.
   PropertyFlags pf{};
-  pf.enumerable = 1;
+  pf.enumerable = 0;
   pf.writable = 0;
   pf.configurable = 0;
 
