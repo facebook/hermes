@@ -7,6 +7,11 @@
  * @flow
  */
 
+function IM_COL32(r, g, b, a) {
+  "inline";
+  return ((a & 0xFF) << 24) | ((b & 0xFF) << 16) | ((g & 0xFF) << 8) | (r & 0xFF);
+}
+
 class Vector {
   x: number;
   y: number;
@@ -394,7 +399,7 @@ class RayTracer {
     return result;
   }
 
-  render(scene: Scene, screenWidth: number, screenHeight: number) {
+  render(scene: Scene, screenWidth: number, screenHeight: number, buf: c_ptr) {
     var getPoint = (x, y, camera) => {
       var recenterX = (x) => (x - screenWidth / 2.0) / 2.0 / screenWidth;
       var recenterY = (y) => -(y - screenHeight / 2.0) / 2.0 / screenHeight;
@@ -416,7 +421,7 @@ class RayTracer {
           0
         );
         var c = Color_toDrawingColor(color);
-        // print(c);
+        _sh_ptr_write_c_uint(buf, 4 * (y * screenWidth + x), IM_COL32(c.r, c.g, c.b, 255));
       }
     }
   }
@@ -439,11 +444,21 @@ function defaultScene(): Scene {
   };
 }
 
-function exec() {
+function exec(width: number, height: number, buf: c_ptr) {
   var rayTracer = new RayTracer();
-  var width = 100;
-  var height = 100;
-  return rayTracer.render(defaultScene(), width, height);
+  return rayTracer.render(defaultScene(), width, height, buf);
 }
 
-exec();
+if (typeof performance === "undefined") {
+  globalThis.performance = { now: Date.now };
+}
+
+if (typeof USE_GUI === "undefined") {
+  let w = 256;
+  let h = 256;
+  let buf = allocTmp(w * h * 4);
+  let t1 = performance.now();
+  exec(w, h, buf);
+  print("exec time: ", (performance.now() - t1), "ms");
+  flushAllocTmp();
+}
