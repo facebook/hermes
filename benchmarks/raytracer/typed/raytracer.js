@@ -413,7 +413,7 @@ class RayTracer {
   }
 
   render(scene: Scene, screenWidth: number, screenHeight: number, buf: c_ptr) {
-    var getPoint = (x, y, camera) => {
+    var getPoint = (x: number, y: number, camera: Camera) => {
       var recenterX = (x) => (x - screenWidth / 2.0) / 2.0 / screenWidth;
       var recenterY = (y) => -(y - screenHeight / 2.0) / 2.0 / screenHeight;
       return Vector_norm(
