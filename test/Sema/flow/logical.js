@@ -21,10 +21,10 @@
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:untyped function %t.1 = untyped function ()
-// CHECK-NEXT:union %t.2 = union void | null | number
-// CHECK-NEXT:union %t.3 = union null | number
-// CHECK-NEXT:function %t.4 = function (x: union %t.2, y: union %t.3, z: number): any
+// CHECK:%untyped_function.1 = untyped_function()
+// CHECK-NEXT:%union.2 = union(void | null | number)
+// CHECK-NEXT:%union.3 = union(null | number)
+// CHECK-NEXT:%function.4 = function(x: %union.2, y: %union.3, z: number): any
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -35,54 +35,54 @@
 // CHECK-NEXT:            Decl %d.2 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:                Decl %d.3 'foo' ScopedFunction : function %t.4
+// CHECK-NEXT:                Decl %d.3 'foo' ScopedFunction : %function.4
 // CHECK-NEXT:                Decl %d.4 'arguments' Var Arguments
 // CHECK-NEXT:                hoistedFunction foo
 // CHECK-NEXT:            Func strict
 // CHECK-NEXT:                Scope %s.4
-// CHECK-NEXT:                    Decl %d.5 'x' Parameter : union %t.2
-// CHECK-NEXT:                    Decl %d.6 'y' Parameter : union %t.3
+// CHECK-NEXT:                    Decl %d.5 'x' Parameter : %union.2
+// CHECK-NEXT:                    Decl %d.6 'y' Parameter : %union.3
 // CHECK-NEXT:                    Decl %d.7 'z' Parameter : number
 // CHECK-NEXT:                    Decl %d.8 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
 // CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:                BlockStatement
 // CHECK-NEXT:                    ExpressionStatement
-// CHECK-NEXT:                        FunctionExpression : untyped function %t.1
+// CHECK-NEXT:                        FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                            BlockStatement
-// CHECK-NEXT:                                FunctionDeclaration : function %t.4
+// CHECK-NEXT:                                FunctionDeclaration : %function.4
 // CHECK-NEXT:                                    Id 'foo' [D:E:%d.3 'foo']
 // CHECK-NEXT:                                    Id 'x' [D:E:%d.5 'x']
 // CHECK-NEXT:                                    Id 'y' [D:E:%d.6 'y']
 // CHECK-NEXT:                                    Id 'z' [D:E:%d.7 'z']
 // CHECK-NEXT:                                    BlockStatement
 // CHECK-NEXT:                                        ExpressionStatement
-// CHECK-NEXT:                                            LogicalExpression : union %t.2
-// CHECK-NEXT:                                                Id 'x' [D:E:%d.5 'x'] : union %t.2
-// CHECK-NEXT:                                                Id 'y' [D:E:%d.6 'y'] : union %t.3
+// CHECK-NEXT:                                            LogicalExpression : %union.2
+// CHECK-NEXT:                                                Id 'x' [D:E:%d.5 'x'] : %union.2
+// CHECK-NEXT:                                                Id 'y' [D:E:%d.6 'y'] : %union.3
 // CHECK-NEXT:                                        ExpressionStatement
-// CHECK-NEXT:                                            LogicalExpression : union %t.3
-// CHECK-NEXT:                                                Id 'x' [D:E:%d.5 'x'] : union %t.2
-// CHECK-NEXT:                                                Id 'y' [D:E:%d.6 'y'] : union %t.3
+// CHECK-NEXT:                                            LogicalExpression : %union.3
+// CHECK-NEXT:                                                Id 'x' [D:E:%d.5 'x'] : %union.2
+// CHECK-NEXT:                                                Id 'y' [D:E:%d.6 'y'] : %union.3
 // CHECK-NEXT:                                        ExpressionStatement
-// CHECK-NEXT:                                            LogicalExpression : union %t.3
-// CHECK-NEXT:                                                Id 'x' [D:E:%d.5 'x'] : union %t.2
-// CHECK-NEXT:                                                Id 'y' [D:E:%d.6 'y'] : union %t.3
+// CHECK-NEXT:                                            LogicalExpression : %union.3
+// CHECK-NEXT:                                                Id 'x' [D:E:%d.5 'x'] : %union.2
+// CHECK-NEXT:                                                Id 'y' [D:E:%d.6 'y'] : %union.3
 // CHECK-NEXT:                                        ExpressionStatement
-// CHECK-NEXT:                                            LogicalExpression : union %t.2
-// CHECK-NEXT:                                                Id 'x' [D:E:%d.5 'x'] : union %t.2
+// CHECK-NEXT:                                            LogicalExpression : %union.2
+// CHECK-NEXT:                                                Id 'x' [D:E:%d.5 'x'] : %union.2
 // CHECK-NEXT:                                                Id 'z' [D:E:%d.7 'z'] : number
 // CHECK-NEXT:                                        ExpressionStatement
 // CHECK-NEXT:                                            LogicalExpression : number
-// CHECK-NEXT:                                                Id 'x' [D:E:%d.5 'x'] : union %t.2
+// CHECK-NEXT:                                                Id 'x' [D:E:%d.5 'x'] : %union.2
 // CHECK-NEXT:                                                Id 'z' [D:E:%d.7 'z'] : number
 // CHECK-NEXT:                                        ExpressionStatement
 // CHECK-NEXT:                                            LogicalExpression : number
-// CHECK-NEXT:                                                Id 'x' [D:E:%d.5 'x'] : union %t.2
+// CHECK-NEXT:                                                Id 'x' [D:E:%d.5 'x'] : %union.2
 // CHECK-NEXT:                                                Id 'z' [D:E:%d.7 'z'] : number
 // CHECK-NEXT:                                        ExpressionStatement
 // CHECK-NEXT:                                            LogicalExpression : number

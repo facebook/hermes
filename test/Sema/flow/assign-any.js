@@ -14,8 +14,8 @@ function f(x: any, y: number) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:untyped function %t.1 = untyped function ()
-// CHECK-NEXT:function %t.2 = function (x: any, y: number): any
+// CHECK:%untyped_function.1 = untyped_function()
+// CHECK-NEXT:%function.2 = function(x: any, y: number): any
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -23,7 +23,7 @@ function f(x: any, y: number) {
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'f' ScopedFunction : function %t.2
+// CHECK-NEXT:            Decl %d.2 'f' ScopedFunction : %function.2
 // CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
 // CHECK-NEXT:            hoistedFunction f
 // CHECK-NEXT:        Func strict
@@ -35,10 +35,10 @@ function f(x: any, y: number) {
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
 // CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:                BlockStatement
-// CHECK-NEXT:                    FunctionDeclaration : function %t.2
+// CHECK-NEXT:                    FunctionDeclaration : %function.2
 // CHECK-NEXT:                        Id 'f' [D:E:%d.2 'f']
 // CHECK-NEXT:                        Id 'x' [D:E:%d.4 'x']
 // CHECK-NEXT:                        Id 'y' [D:E:%d.5 'y']

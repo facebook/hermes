@@ -19,10 +19,10 @@ let c: C;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:untyped function %t.1 = untyped function ()
-// CHECK-NEXT:union %t.2 = union number | array %t.3
-// CHECK-NEXT:union %t.4 = union string | number | array %t.3
-// CHECK-NEXT:array %t.3 = array union %t.2
+// CHECK:%untyped_function.1 = untyped_function()
+// CHECK-NEXT:%union.2 = union(number | %array.3)
+// CHECK-NEXT:%union.4 = union(string | number | %array.3)
+// CHECK-NEXT:%array.3 = array(%union.2)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -30,15 +30,15 @@ let c: C;
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'a' Let : union %t.2
-// CHECK-NEXT:            Decl %d.3 'b' Let : union %t.2
-// CHECK-NEXT:            Decl %d.4 'c' Let : union %t.4
+// CHECK-NEXT:            Decl %d.2 'a' Let : %union.2
+// CHECK-NEXT:            Decl %d.3 'b' Let : %union.2
+// CHECK-NEXT:            Decl %d.4 'c' Let : %union.4
 // CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
 // CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:                BlockStatement
 // CHECK-NEXT:                    TypeAlias

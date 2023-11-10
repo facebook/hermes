@@ -16,8 +16,8 @@ let zz = foo(function name() {});
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:untyped function %t.1 = untyped function ()
-// CHECK-NEXT:union %t.2 = union string | number
+// CHECK:%untyped_function.1 = untyped_function()
+// CHECK-NEXT:%union.2 = union(string | number)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -28,11 +28,11 @@ let zz = foo(function name() {});
 // CHECK-NEXT:            Decl %d.2 'exports' Parameter : any
 // CHECK-NEXT:            Decl %d.3 'x' Let : number
 // CHECK-NEXT:            Decl %d.4 'y' Let : number
-// CHECK-NEXT:            Decl %d.5 'z' Let : union %t.2
+// CHECK-NEXT:            Decl %d.5 'z' Let : %union.2
 // CHECK-NEXT:            Decl %d.6 'zz' Let : any
 // CHECK-NEXT:            Decl %d.7 'arguments' Var Arguments
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:                Decl %d.8 'name' FunctionExprName : untyped function %t.1
+// CHECK-NEXT:                Decl %d.8 'name' FunctionExprName : %untyped_function.1
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.4
 // CHECK-NEXT:                Decl %d.9 'arguments' Var Arguments
@@ -40,7 +40,7 @@ let zz = foo(function name() {});
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
 // CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.2 'exports']
 // CHECK-NEXT:                BlockStatement
 // CHECK-NEXT:                    ExpressionStatement
@@ -61,7 +61,7 @@ let zz = foo(function name() {});
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            CallExpression
 // CHECK-NEXT:                                Id 'foo' [D:E:%d.1 'foo'] : any
-// CHECK-NEXT:                                FunctionExpression : untyped function %t.1 Scope %s.3
+// CHECK-NEXT:                                FunctionExpression : %untyped_function.1 Scope %s.3
 // CHECK-NEXT:                                    Id 'name' [D:E:%d.8 'name']
 // CHECK-NEXT:                                    BlockStatement
 // CHECK-NEXT:                            Id 'zz' [D:E:%d.6 'zz']

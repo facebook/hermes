@@ -19,7 +19,7 @@ let c = Math.random();
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:untyped function %t.1 = untyped function ()
+// CHECK:%untyped_function.1 = untyped_function()
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -28,7 +28,7 @@ let c = Math.random();
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.2 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.3 'func' Let : untyped function %t.1
+// CHECK-NEXT:            Decl %d.3 'func' Let : %untyped_function.1
 // CHECK-NEXT:            Decl %d.4 'a' Let : number
 // CHECK-NEXT:            Decl %d.5 'b' Let : number
 // CHECK-NEXT:            Decl %d.6 'c' Let : any
@@ -42,12 +42,12 @@ let c = Math.random();
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
 // CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.2 'exports']
 // CHECK-NEXT:                BlockStatement
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            ArrowFunctionExpression : untyped function %t.1
+// CHECK-NEXT:                            ArrowFunctionExpression : %untyped_function.1
 // CHECK-NEXT:                                BlockStatement
 // CHECK-NEXT:                                    VariableDeclaration
 // CHECK-NEXT:                                        VariableDeclarator

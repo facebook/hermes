@@ -18,8 +18,8 @@
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:untyped function %t.1 = untyped function ()
-// CHECK-NEXT:function %t.2 = function (): void
+// CHECK:%untyped_function.1 = untyped_function()
+// CHECK-NEXT:%function.2 = function(): void
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -29,10 +29,10 @@
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:            Decl %d.2 'arguments' Var Arguments
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:                Decl %d.3 'main' FunctionExprName : function %t.2
+// CHECK-NEXT:                Decl %d.3 'main' FunctionExprName : %function.2
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.4
-// CHECK-NEXT:                Decl %d.4 'foo' ScopedFunction : untyped function %t.1
+// CHECK-NEXT:                Decl %d.4 'foo' ScopedFunction : %untyped_function.1
 // CHECK-NEXT:                Decl %d.5 'arguments' Var Arguments
 // CHECK-NEXT:                hoistedFunction foo
 // CHECK-NEXT:            Func strict
@@ -42,19 +42,19 @@
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
 // CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:                BlockStatement
 // CHECK-NEXT:                    ExpressionStatement
 // CHECK-NEXT:                        CallExpression : void
-// CHECK-NEXT:                            FunctionExpression : function %t.2 Scope %s.3
+// CHECK-NEXT:                            FunctionExpression : %function.2 Scope %s.3
 // CHECK-NEXT:                                Id 'main' [D:E:%d.3 'main']
 // CHECK-NEXT:                                BlockStatement
-// CHECK-NEXT:                                    FunctionDeclaration : untyped function %t.1
+// CHECK-NEXT:                                    FunctionDeclaration : %untyped_function.1
 // CHECK-NEXT:                                        Id 'foo' [D:E:%d.4 'foo']
 // CHECK-NEXT:                                        BlockStatement
 // CHECK-NEXT:                                    ExpressionStatement
 // CHECK-NEXT:                                        CallExpression : any
-// CHECK-NEXT:                                            Id 'foo' [D:E:%d.4 'foo'] : untyped function %t.1
+// CHECK-NEXT:                                            Id 'foo' [D:E:%d.4 'foo'] : %untyped_function.1
 // CHECK-NEXT:                                            NumericLiteral : number
 // CHECK-NEXT:            ObjectExpression

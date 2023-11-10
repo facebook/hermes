@@ -22,11 +22,11 @@ let a5: number[] = ([]: (number|number)[]);
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:untyped function %t.1 = untyped function ()
-// CHECK-NEXT:array %t.2 = array array %t.3
-// CHECK-NEXT:union %t.4 = union string | array %t.2
-// CHECK-NEXT:array %t.3 = array number
-// CHECK-NEXT:array %t.5 = array union %t.4
+// CHECK:%untyped_function.1 = untyped_function()
+// CHECK-NEXT:%array.2 = array(%array.3)
+// CHECK-NEXT:%union.4 = union(string | %array.2)
+// CHECK-NEXT:%array.3 = array(number)
+// CHECK-NEXT:%array.5 = array(%union.4)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -34,26 +34,26 @@ let a5: number[] = ([]: (number|number)[]);
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'a1' Let : array %t.3
-// CHECK-NEXT:            Decl %d.3 'a2' Let : array %t.3
-// CHECK-NEXT:            Decl %d.4 'a3' Let : array %t.5
-// CHECK-NEXT:            Decl %d.5 'a4' Let : array %t.5
-// CHECK-NEXT:            Decl %d.6 'a5' Let : array %t.3
+// CHECK-NEXT:            Decl %d.2 'a1' Let : %array.3
+// CHECK-NEXT:            Decl %d.3 'a2' Let : %array.3
+// CHECK-NEXT:            Decl %d.4 'a3' Let : %array.5
+// CHECK-NEXT:            Decl %d.5 'a4' Let : %array.5
+// CHECK-NEXT:            Decl %d.6 'a5' Let : %array.3
 // CHECK-NEXT:            Decl %d.7 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
 // CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:                BlockStatement
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            ArrayExpression : array %t.3
+// CHECK-NEXT:                            ArrayExpression : %array.3
 // CHECK-NEXT:                            Id 'a1' [D:E:%d.2 'a1']
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            Id 'a1' [D:E:%d.2 'a1'] : array %t.3
+// CHECK-NEXT:                            Id 'a1' [D:E:%d.2 'a1'] : %array.3
 // CHECK-NEXT:                            Id 'a2' [D:E:%d.3 'a2']
 // CHECK-NEXT:                    TypeAlias
 // CHECK-NEXT:                        Id 'A1'
@@ -81,15 +81,15 @@ let a5: number[] = ([]: (number|number)[]);
 // CHECK-NEXT:                                Id 'A1'
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            ArrayExpression : array %t.5
+// CHECK-NEXT:                            ArrayExpression : %array.5
 // CHECK-NEXT:                            Id 'a3' [D:E:%d.4 'a3']
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            ArrayExpression : array %t.5
+// CHECK-NEXT:                            ArrayExpression : %array.5
 // CHECK-NEXT:                            Id 'a4' [D:E:%d.5 'a4']
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            TypeCastExpression : array %t.3
-// CHECK-NEXT:                                ArrayExpression : array %t.3
+// CHECK-NEXT:                            TypeCastExpression : %array.3
+// CHECK-NEXT:                                ArrayExpression : %array.3
 // CHECK-NEXT:                            Id 'a5' [D:E:%d.6 'a5']
 // CHECK-NEXT:            ObjectExpression

@@ -10,6 +10,20 @@
 namespace hermes {
 namespace flow {
 
+/// Get the type name formatted as a variable identifier.
+static llvh::StringRef getTypeAsVarName(const TypeInfo *type) {
+  switch (type->getKind()) {
+    case TypeKind::NativeFunction:
+      return "native_function";
+    case TypeKind::UntypedFunction:
+      return "untyped_function";
+    case TypeKind::ClassConstructor:
+      return "class_constructor";
+    default:
+      return type->getKindName();
+  }
+}
+
 size_t FlowTypesDumper::getNumber(const TypeInfo *type) {
   if (type->isSingleton())
     return 0;
@@ -23,21 +37,20 @@ size_t FlowTypesDumper::getNumber(const TypeInfo *type) {
 void FlowTypesDumper::printTypeRef(
     llvh::raw_ostream &os,
     const TypeInfo *type) {
-  os << type->getKindName();
   if (!type->isSingleton())
-    os << " %t." << getNumber(type);
+    os << "%" << getTypeAsVarName(type) << "." << getNumber(type);
+  else
+    os << getTypeAsVarName(type);
 }
 
 void FlowTypesDumper::printTypeDescription(
     llvh::raw_ostream &os,
     const TypeInfo *type) {
-  os << type->getKindName();
+  os << getTypeAsVarName(type);
   if (type->isSingleton()) {
     os << '\n';
     return;
   }
-
-  os << ' ';
 
   switch (type->getKind()) {
     case TypeKind::Void:
@@ -53,6 +66,7 @@ void FlowTypesDumper::printTypeDescription(
       break;
 
     case TypeKind::Union: {
+      os << '(';
       bool first = true;
       for (Type *t : llvh::cast<UnionType>(type)->getTypes()) {
         if (!first)
@@ -60,6 +74,7 @@ void FlowTypesDumper::printTypeDescription(
         first = false;
         printTypeRef(os, t);
       }
+      os << ')';
     } break;
 
     case TypeKind::TypedFunction: {
@@ -80,9 +95,10 @@ void FlowTypesDumper::printTypeDescription(
         if (!first)
           os << ", ";
         first = false;
-        if (param.first.isValid())
+        if (param.first.isValid()) {
           os << param.first;
-        os << ": ";
+          os << ": ";
+        }
         printTypeRef(os, param.second);
       }
       os << "): ";
@@ -105,7 +121,7 @@ void FlowTypesDumper::printTypeDescription(
       }
       os << "): ";
       printTypeRef(os, nfuncType->getReturnType());
-      os << ", (" << *nfuncType->getSignature() << ")";
+      os << " [" << *nfuncType->getSignature() << ']';
     } break;
 
     case TypeKind::UntypedFunction:
@@ -113,6 +129,7 @@ void FlowTypesDumper::printTypeDescription(
       break;
 
     case TypeKind::Class: {
+      os << '(';
       auto *classType = llvh::cast<ClassType>(type);
       if (classType->getClassName().isValid())
         os << classType->getClassName();
@@ -136,15 +153,19 @@ void FlowTypesDumper::printTypeDescription(
         printTypeRef(os, field.type);
         os << '\n';
       }
-      os << '}';
+      os << "})";
     } break;
 
     case TypeKind::ClassConstructor:
+      os << '(';
       printTypeRef(os, llvh::cast<ClassConstructorType>(type)->getClassType());
+      os << ')';
       break;
 
     case TypeKind::Array:
+      os << '(';
       printTypeRef(os, llvh::cast<ArrayType>(type)->getElement());
+      os << ')';
       break;
   }
 

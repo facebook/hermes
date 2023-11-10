@@ -23,8 +23,8 @@ w++;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:untyped function %t.1 = untyped function ()
-// CHECK-NEXT:union %t.2 = union number | bigint
+// CHECK:%untyped_function.1 = untyped_function()
+// CHECK-NEXT:%union.2 = union(number | bigint)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -34,14 +34,14 @@ w++;
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:            Decl %d.2 'x' Let : number
 // CHECK-NEXT:            Decl %d.3 'y' Let : bigint
-// CHECK-NEXT:            Decl %d.4 'z' Let : union %t.2
+// CHECK-NEXT:            Decl %d.4 'z' Let : %union.2
 // CHECK-NEXT:            Decl %d.5 'w' Let : any
 // CHECK-NEXT:            Decl %d.6 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
 // CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:                BlockStatement
 // CHECK-NEXT:                    ExpressionStatement
@@ -65,8 +65,8 @@ w++;
 // CHECK-NEXT:                            NumericLiteral : number
 // CHECK-NEXT:                            Id 'z' [D:E:%d.4 'z']
 // CHECK-NEXT:                    ExpressionStatement
-// CHECK-NEXT:                        UpdateExpression : union %t.2
-// CHECK-NEXT:                            Id 'z' [D:E:%d.4 'z'] : union %t.2
+// CHECK-NEXT:                        UpdateExpression : %union.2
+// CHECK-NEXT:                            Id 'z' [D:E:%d.4 'z'] : %union.2
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            NumericLiteral : number

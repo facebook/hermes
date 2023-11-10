@@ -22,14 +22,14 @@ let u: U;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:untyped function %t.1 = untyped function ()
-// CHECK-NEXT:function %t.2 = function (a: number): function %t.3
-// CHECK-NEXT:function %t.3 = function (a: string): function %t.4
-// CHECK-NEXT:function %t.4 = function (a: boolean): function %t.2
-// CHECK-NEXT:function %t.5 = function (a: number): function %t.6
-// CHECK-NEXT:function %t.6 = function (a: string): function %t.7
-// CHECK-NEXT:function %t.7 = function (a: boolean): function %t.6
-// CHECK-NEXT:union %t.8 = union function %t.2 | function %t.5
+// CHECK:%untyped_function.1 = untyped_function()
+// CHECK-NEXT:%function.2 = function(a: number): %function.3
+// CHECK-NEXT:%function.3 = function(a: string): %function.4
+// CHECK-NEXT:%function.4 = function(a: boolean): %function.2
+// CHECK-NEXT:%function.5 = function(a: number): %function.6
+// CHECK-NEXT:%function.6 = function(a: string): %function.7
+// CHECK-NEXT:%function.7 = function(a: boolean): %function.6
+// CHECK-NEXT:%union.8 = union(%function.2 | %function.5)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -37,13 +37,13 @@ let u: U;
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'u' Let : union %t.8
+// CHECK-NEXT:            Decl %d.2 'u' Let : %union.8
 // CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
 // CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:                BlockStatement
 // CHECK-NEXT:                    TypeAlias

@@ -20,7 +20,7 @@ function foo() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:untyped function %t.1 = untyped function ()
+// CHECK:%untyped_function.1 = untyped_function()
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -28,7 +28,7 @@ function foo() {
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'foo' ScopedFunction : untyped function %t.1
+// CHECK-NEXT:            Decl %d.2 'foo' ScopedFunction : %untyped_function.1
 // CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
 // CHECK-NEXT:            hoistedFunction foo
 // CHECK-NEXT:        Func strict
@@ -40,12 +40,12 @@ function foo() {
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
 // CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:                BlockStatement
 // CHECK-NEXT:                    ExpressionStatement
 // CHECK-NEXT:                        StringLiteral : string
-// CHECK-NEXT:                    FunctionDeclaration : untyped function %t.1
+// CHECK-NEXT:                    FunctionDeclaration : %untyped_function.1
 // CHECK-NEXT:                        Id 'foo' [D:E:%d.2 'foo']
 // CHECK-NEXT:                        BlockStatement
 // CHECK-NEXT:                            TypeAlias

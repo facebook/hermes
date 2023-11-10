@@ -13,7 +13,7 @@ let x = c_null;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:untyped function %t.1 = untyped function ()
+// CHECK:%untyped_function.1 = untyped_function()
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -29,7 +29,7 @@ let x = c_null;
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
 // CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.2 'exports']
 // CHECK-NEXT:                BlockStatement
 // CHECK-NEXT:                    VariableDeclaration

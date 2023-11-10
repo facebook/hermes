@@ -14,8 +14,8 @@ type D = number | string;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:untyped function %t.1 = untyped function ()
-// CHECK-NEXT:union %t.2 = union string | number
+// CHECK:%untyped_function.1 = untyped_function()
+// CHECK-NEXT:%union.2 = union(string | number)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -28,7 +28,7 @@ type D = number | string;
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
 // CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:                BlockStatement
 // CHECK-NEXT:                    TypeAlias

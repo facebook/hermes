@@ -25,8 +25,8 @@ let z;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:untyped function %t.1 = untyped function ()
-// CHECK-NEXT:function %t.2 = function (): void
+// CHECK:%untyped_function.1 = untyped_function()
+// CHECK-NEXT:%function.2 = function(): void
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -37,7 +37,7 @@ let z;
 // CHECK-NEXT:            Decl %d.2 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:                Decl %d.3 'foo' ScopedFunction : function %t.2
+// CHECK-NEXT:                Decl %d.3 'foo' ScopedFunction : %function.2
 // CHECK-NEXT:                Decl %d.4 'x' Let : any
 // CHECK-NEXT:                Decl %d.5 'y' Let : number
 // CHECK-NEXT:                Decl %d.6 'z' Let : any
@@ -50,16 +50,16 @@ let z;
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
 // CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : untyped function %t.1
+// CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:                BlockStatement
 // CHECK-NEXT:                    ExpressionStatement
 // CHECK-NEXT:                        StringLiteral : string
 // CHECK-NEXT:                    ExpressionStatement
 // CHECK-NEXT:                        CallExpression : void
-// CHECK-NEXT:                            FunctionExpression : function %t.2
+// CHECK-NEXT:                            FunctionExpression : %function.2
 // CHECK-NEXT:                                BlockStatement
-// CHECK-NEXT:                                    FunctionDeclaration : function %t.2
+// CHECK-NEXT:                                    FunctionDeclaration : %function.2
 // CHECK-NEXT:                                        Id 'foo' [D:E:%d.3 'foo']
 // CHECK-NEXT:                                        BlockStatement
 // CHECK-NEXT:                                            ExpressionStatement
