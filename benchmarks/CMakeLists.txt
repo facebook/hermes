@@ -9,3 +9,4 @@ project(sh-benchmarks)
 set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory(lib/libgui)
+add_subdirectory(raytracer/typed)
