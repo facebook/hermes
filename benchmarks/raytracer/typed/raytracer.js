@@ -17,6 +17,7 @@ class Vector {
   y: number;
   z: number;
   constructor(x: number, y: number, z: number) {
+    "inline";
     this.x = x;
     this.y = y;
     this.z = z;
@@ -24,26 +25,33 @@ class Vector {
 }
 
 function Vector_times(k: number, v: Vector) {
+  "inline";
   return new Vector(k * v.x, k * v.y, k * v.z);
 }
 function Vector_minus(v1: Vector, v2: Vector) {
+  "inline";
   return new Vector(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z);
 }
 function Vector_plus(v1: Vector, v2: Vector) {
+  "inline";
   return new Vector(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z);
 }
 function Vector_dot(v1: Vector, v2: Vector) {
+  "inline";
   return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
 }
 function Vector_mag(v: Vector) {
+  "inline";
   return Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 }
 function Vector_norm(v: Vector) {
+  "inline";
   var mag = Vector_mag(v);
   var div = mag === 0 ? Infinity : 1.0 / mag;
   return Vector_times(div, v);
 }
 function Vector_cross(v1: Vector, v2: Vector) {
+  "inline";
   return new Vector(
     v1.y * v2.z - v1.z * v2.y,
     v1.z * v2.x - v1.x * v2.z,
@@ -56,6 +64,7 @@ class Color {
   g: number;
   b: number;
   constructor(r: number, g: number, b: number) {
+    "inline";
     this.r = r;
     this.g = g;
     this.b = b;
@@ -63,12 +72,15 @@ class Color {
 }
 
 function Color_scale(k: number, v: Color) {
+  "inline";
   return new Color(k * v.r, k * v.g, k * v.b);
 }
 function Color_plus(v1: Color, v2: Color) {
+  "inline";
   return new Color(v1.r + v2.r, v1.g + v2.g, v1.b + v2.b);
 }
 function Color_times(v1: Color, v2: Color) {
+  "inline";
   return new Color(v1.r * v2.r, v1.g * v2.g, v1.b * v2.b);
 }
 const Color_white = new Color(1.0, 1.0, 1.0);
@@ -122,6 +134,7 @@ class Intersection {
   dist: number;
 
   constructor(thing: Thing, ray: Ray, dist: number) {
+    "inline";
     this.thing = thing;
     this.ray = ray;
     this.dist = dist;
