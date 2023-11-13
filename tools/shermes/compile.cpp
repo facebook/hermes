@@ -283,6 +283,7 @@ bool invokeCC(
         args.emplace_back("-framework");
         args.emplace_back("Foundation");
         args.emplace_back("-lc++");
+        args.emplace_back("-ljsi");
 #else
         llvh::errs() << "Static linking unsupported on this platform\n";
         return false;

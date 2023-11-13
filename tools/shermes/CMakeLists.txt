@@ -6,7 +6,7 @@
 set(SHERMES_CC_INCLUDE_PATH
   "${CMAKE_BINARY_DIR}/lib/config:${CMAKE_SOURCE_DIR}/include" CACHE STRING
   "Include path when invoking CC")
-set(SHERMES_CC_LIB_PATH "${CMAKE_BINARY_DIR}/lib$<${IS_MULTI_CONFIG}:/$<CONFIG>>" CACHE STRING
+set(SHERMES_CC_LIB_PATH "$<TARGET_FILE_DIR:hermesvm>:$<TARGET_FILE_DIR:jsi>" CACHE STRING
   "Library path when invoking CC")
 
 file(GENERATE
