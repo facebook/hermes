@@ -58,6 +58,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addInlining();
   PM.addFunctionAnalysis();
   PM.addInlining();
+  PM.addObjectStackPromotion();
   PM.addTypeInference();
   PM.addSimpleStackPromotion();
   PM.addInstSimplify();
@@ -68,6 +69,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addFrameLoadStoreOpts();
   PM.addFunctionAnalysis();
   PM.addMem2Reg();
+  PM.addObjectStackPromotion();
 
   // Run type inference before CSE so that we can better reason about binopt.
   PM.addTypeInference();
