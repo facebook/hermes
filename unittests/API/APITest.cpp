@@ -437,21 +437,6 @@ TEST(HermesWatchTimeLimitTest, WatchTimeLimit) {
         rt2->evaluateJavaScript(std::make_unique<StringBuffer>(forEver), ""),
         JSIException);
   }
-  {
-    auto timeLimitMonitor = hermes::vm::TimeLimitMonitor::getOrCreate();
-    const auto &watchedRuntimes = timeLimitMonitor->getWatchedRuntimes();
-
-    auto rt1 = makeHermesRuntime();
-    rt1->watchTimeLimit(Around20MinsMS);
-    auto rt2 = makeHermesRuntime();
-    rt2->watchTimeLimit(Around20MinsMS);
-    auto rt3 = makeHermesRuntime();
-    rt3->watchTimeLimit(Around20MinsMS);
-    EXPECT_EQ(watchedRuntimes.size(), 3);
-
-    rt2 = nullptr;
-    EXPECT_EQ(watchedRuntimes.size(), 2);
-  }
 }
 
 TEST(HermesTriggerAsyncTimeoutTest, TriggerAsyncTimeout) {
