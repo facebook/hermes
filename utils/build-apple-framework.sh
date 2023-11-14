@@ -69,6 +69,7 @@ function configure_apple_framework {
     -DHERMES_ENABLE_TEST_SUITE:BOOLEAN=false \
     -DHERMES_ENABLE_BITCODE:BOOLEAN="$enable_bitcode" \
     -DHERMES_BUILD_APPLE_FRAMEWORK:BOOLEAN=true \
+    -DHERMES_BUILD_SHARED_JSI:BOOLEAN=false \
     -DHERMES_BUILD_APPLE_DSYM:BOOLEAN=true \
     -DHERMES_ENABLE_TOOLS:BOOLEAN="$build_cli_tools" \
     -DIMPORT_HERMESC:PATH="$PWD/build_host_hermesc/ImportHermesc.cmake" \
