@@ -32,7 +32,7 @@ set(LLVM_ENABLE_RTTI ON)
 
 add_hermes_unittest(APITests ${APITestsSources})
 
-target_link_libraries(APITests hermesapi compileJS SegmentTestCompile traceInterpreter timerStats)
+target_link_libraries(APITests libhermes compileJS SegmentTestCompile traceInterpreter timerStats)
 
 add_hermes_unittest(APILeanTests APILeanTest.cpp)
-target_link_libraries(APILeanTests hermesapiLean)
+target_link_libraries(APILeanTests libhermes_lean jsi)

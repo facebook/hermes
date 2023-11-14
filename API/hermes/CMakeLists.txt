@@ -4,7 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 # compileJS uses neither exceptions nor RTTI
-add_hermes_library(compileJS CompileJS.cpp LINK_LIBS hermesPublic)
+add_hermes_library(compileJS CompileJS.cpp LINK_LIBS hermesPublic hermesHBCBackend)
 
 if(HERMES_ENABLE_DEBUGGER)
   if(HERMES_ENABLE_TOOLS AND NOT WIN32)
@@ -59,11 +59,6 @@ set(api_sources
 file(GLOB api_headers ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 file(GLOB api_public_headers ${PROJECT_SOURCE_DIR}/public/hermes/Public/*.h)
 
-add_hermes_library(hermesapi
-        ${api_sources}
-        LINK_LIBS jsi hermesVMRuntime ${INSPECTOR_DEPS})
-target_include_directories(hermesapi PUBLIC ..)
-
 if(HERMES_THREAD_SAFETY_ANALYSIS)
   if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     set_property(SOURCE inspector/chrome/CDPHandler.cpp APPEND_STRING PROPERTY
@@ -71,21 +66,16 @@ if(HERMES_THREAD_SAFETY_ANALYSIS)
   endif()
 endif()
 
-add_hermes_library(hermesapiLean
-        ${api_sources}
-        LINK_LIBS jsi hermesVMRuntimeLean)
-target_include_directories(hermesapiLean PUBLIC ..)
-
 add_hermes_library(synthTrace hermes_tracing.cpp SynthTrace.cpp TracingRuntime.cpp
-  LINK_LIBS hermesapi)
+  LINK_LIBS libhermes hermesPlatform)
 
 add_hermes_library(timerStats TimerStats.cpp LINK_LIBS jsi hermesSupport)
 
 add_hermes_library(traceInterpreter TraceInterpreter.cpp
-  LINK_LIBS hermesapi hermesInstrumentation synthTrace synthTraceParser)
+  LINK_LIBS libhermes hermesInstrumentation synthTrace synthTraceParser)
 
 add_library(libhermes ${api_sources})
-target_link_libraries(libhermes PRIVATE jsi hermesVMRuntime ${INSPECTOR_DEPS})
+target_link_libraries(libhermes PUBLIC jsi PRIVATE hermesVMRuntime ${INSPECTOR_DEPS})
 target_link_options(libhermes PRIVATE ${HERMES_EXTRA_LINKER_FLAGS})
 
 # Export the required header directory
@@ -96,7 +86,7 @@ set_target_properties(libhermes PROPERTIES OUTPUT_NAME hermes)
 
 # Create a lean version of libhermes in the same way.
 add_library(libhermes_lean ${api_sources})
-target_link_libraries(libhermes_lean PRIVATE jsi hermesVMRuntimeLean ${INSPECTOR_DEPS})
+target_link_libraries(libhermes_lean PUBLIC jsi PRIVATE hermesVMRuntimeLean ${INSPECTOR_DEPS})
 target_link_options(libhermes_lean PRIVATE ${HERMES_EXTRA_LINKER_FLAGS})
 target_include_directories(libhermes_lean PUBLIC .. ../../public ${HERMES_JSI_DIR})
 set_target_properties(libhermes_lean PROPERTIES OUTPUT_NAME hermes_lean)

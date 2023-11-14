@@ -17,6 +17,6 @@ if(HERMES_ENABLE_LIBFUZZER)
     target_include_directories(fuzzer-jsi-entry PRIVATE ${HERMES_SOURCE_DIR}/API)
     target_link_libraries(fuzzer-jsi-entry
       PRIVATE
-        hermesapi
+        libhermes
     )
 endif()

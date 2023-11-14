@@ -25,7 +25,6 @@ if(HERMES_IS_ANDROID)
       ${jni_source_files}
       LINK_LIBS
       libhermes
-      hermesapi
       compileJS
       fbjni::fbjni
       jsi
@@ -36,7 +35,6 @@ if(HERMES_IS_ANDROID)
       ${epi_source_files}
       LINK_LIBS
       libhermes
-      hermesapi
       compileJS
       fbjni::fbjni
       jsi
