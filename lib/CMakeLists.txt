@@ -42,6 +42,7 @@ add_hermes_library(hermesFrontend
   IR/IRBuilder.cpp
   IR/IRVerifier.cpp
   IR/Instrs.cpp
+  IR/IRUtils.cpp
   Utils/Dumper.cpp
   LINK_OBJLIBS hermesSupport hermesFrontEndDefs hermesAST hermesSema hermesParser
 )

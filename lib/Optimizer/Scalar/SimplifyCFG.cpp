@@ -11,6 +11,7 @@
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/IREval.h"
+#include "hermes/IR/IRUtils.h"
 #include "hermes/Optimizer/PassManager/Pass.h"
 #include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
@@ -20,7 +21,6 @@
 
 using namespace hermes;
 
-STATISTIC(NumUnreachableBlock, "Number of unreachable blocks eliminated");
 STATISTIC(NumSB, "Number of static branches simplified");
 
 /// \returns true if the control-flow edge between \p src to \p dest crosses
@@ -374,62 +374,6 @@ static bool optimizeStaticBranches(Function *F) {
   return changed;
 }
 
-/// Process the deletion of the basic block, and erase it.
-static void deleteBasicBlock(BasicBlock *B) {
-  // Remove all uses of this basic block.
-
-  // Copy the uses of the block aside because removing the users invalidates the
-  // iterator.
-  Value::UseListTy users(B->getUsers().begin(), B->getUsers().end());
-
-  // Remove the block from all Phi instructions referring to it. Note that
-  // reachable blocks could end up with Phi instructions referring to
-  // unreachable blocks.
-  for (auto *I : users) {
-    if (auto *Phi = llvh::dyn_cast<PhiInst>(I)) {
-      Phi->removeEntry(B);
-      continue;
-    }
-  }
-
-  // There may still be uses of the block from other unreachable blocks.
-  B->replaceAllUsesWith(nullptr);
-  // Erase this basic block.
-  B->eraseFromParent();
-}
-
-/// Remove all the unreachable basic blocks.
-static bool removeUnreachedBasicBlocks(Function *F) {
-  bool changed = false;
-
-  // Visit all reachable blocks.
-  llvh::SmallPtrSet<BasicBlock *, 16> visited;
-  llvh::SmallVector<BasicBlock *, 32> workList;
-
-  workList.push_back(&*F->begin());
-  while (!workList.empty()) {
-    auto *BB = workList.pop_back_val();
-    // Already visited?
-    if (!visited.insert(BB).second)
-      continue;
-
-    for (auto *succ : successors(BB))
-      workList.push_back(succ);
-  }
-
-  // Delete all blocks that weren't visited.
-  for (auto it = F->begin(), e = F->end(); it != e;) {
-    auto *BB = &*it++;
-    if (!visited.count(BB)) {
-      ++NumUnreachableBlock;
-      deleteBasicBlock(BB);
-      changed = true;
-    }
-  }
-
-  return changed;
-}
-
 static bool runSimplifyCFG(Module *M) {
   bool changed = false;
 
@@ -439,7 +383,7 @@ static bool runSimplifyCFG(Module *M) {
     // long as we are making progress.
     do {
       iterChanged =
-          optimizeStaticBranches(&F) || removeUnreachedBasicBlocks(&F);
+          optimizeStaticBranches(&F) || deleteUnreachableBasicBlocks(&F);
       changed |= iterChanged;
     } while (iterChanged);
   }
