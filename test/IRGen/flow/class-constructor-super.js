@@ -72,6 +72,7 @@ new D();
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = LoadFrameInst (:any) [C@""]: any
-// CHECK-NEXT:  %2 = CallInst [njsf] (:any) %1: any, empty: any, empty: any, undefined: undefined, %0: object
+// CHECK-NEXT:  %2 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
+// CHECK-NEXT:  %3 = CallInst [njsf] (:any) %1: any, empty: any, empty: any, %2: undefined|object, %0: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

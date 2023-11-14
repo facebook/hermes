@@ -614,9 +614,13 @@ class ESTreeIRGen {
 
   /// Emits the actual call for \p call, and is used as a helper function for
   /// genCallExpr and genOptionalCallExpr.
+  /// \param newTarget the new.target, undefined if not a constructor call.
   /// \return the result value of the call.
-  Value *
-  emitCall(ESTree::CallExpressionLikeNode *call, Value *callee, Value *thisVal);
+  Value *emitCall(
+      ESTree::CallExpressionLikeNode *call,
+      Value *callee,
+      Value *thisVal,
+      Value *newTarget);
 
   struct MemberExpressionResult {
     /// Value of the looked up property.
@@ -667,9 +671,6 @@ class ESTreeIRGen {
   /// Generate IR for a direct call to eval(). This is invoked from
   /// genCallExpr().
   Value *genCallEvalExpr(ESTree::CallExpressionNode *call);
-
-  /// Generate IR for a call to super() in a class constructor.
-  Value *genCallSuperExpr(ESTree::CallExpressionNode *call);
 
   Value *genNewExpr(ESTree::NewExpressionNode *N);
   Value *genAssignmentExpr(ESTree::AssignmentExpressionNode *AE);

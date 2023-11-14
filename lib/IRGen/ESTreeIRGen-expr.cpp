@@ -422,6 +422,7 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
 
   Value *thisVal;
   Value *callee;
+  Value *newTarget = Builder.getLiteralUndefined();
 
   // Handle MemberExpression expression calls that sets the 'this' property.
   if (auto *Mem = llvh::dyn_cast<ESTree::MemberExpressionNode>(call->_callee)) {
@@ -477,12 +478,14 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
         curFunction()->superClassNode_ &&
         "SemanticResolver must check super() is in a class with a superclass");
     callee = genExpression(curFunction()->superClassNode_);
+    newTarget = Builder.createGetNewTargetInst(
+        curFunction()->function->getNewTargetParam());
   } else {
     thisVal = Builder.getLiteralUndefined();
     callee = genExpression(call->_callee);
   }
 
-  return emitCall(call, callee, thisVal);
+  return emitCall(call, callee, thisVal, newTarget);
 }
 
 Value *ESTreeIRGen::genOptionalCallExpr(
@@ -558,7 +561,8 @@ Value *ESTreeIRGen::genOptionalCallExpr(
     Builder.setInsertionBlock(evalRHSBB);
   }
 
-  Value *callResult = emitCall(call, callee, thisVal);
+  Value *callResult =
+      emitCall(call, callee, thisVal, Builder.getLiteralUndefined());
 
   if (isFirstOptional) {
     values.push_back(callResult);
@@ -662,7 +666,8 @@ Value *ESTreeIRGen::genSHBuiltinExternC(ESTree::CallExpressionNode *call) {
 Value *ESTreeIRGen::emitCall(
     ESTree::CallExpressionLikeNode *call,
     Value *callee,
-    Value *thisVal) {
+    Value *thisVal,
+    Value *newTarget) {
   bool hasSpread = false;
   for (auto &arg : getArguments(call)) {
     if (llvh::isa<ESTree::SpreadElementNode>(&arg)) {
@@ -676,8 +681,7 @@ Value *ESTreeIRGen::emitCall(
       args.push_back(genExpression(&arg));
     }
 
-    auto *callInst = Builder.createCallInst(
-        callee, /* newTarget */ Builder.getLiteralUndefined(), thisVal, args);
+    auto *callInst = Builder.createCallInst(callee, newTarget, thisVal, args);
     if (auto *functionType = llvh::dyn_cast<flow::BaseFunctionType>(
             flowContext_.getNodeTypeOrAny(getCallee(call))->info)) {
       // Every BaseFunctionType currently is going to be compiled to a
