@@ -1825,9 +1825,7 @@ class InstrGen {
     os_ << " = _sh_ljs_native_uint32(" << (inst.getNumArguments() - 1)
         << ");\n";
 
-    os_.indent(2);
-    generateRegister(stackReg(hbc::StackFrameLayout::NewTarget));
-    os_ << " = _sh_ljs_undefined();\n";
+    // new.target is set up in LowerCalls.
   }
   void generateCallInst(CallInst &inst) {
     if (inst.getAttributes(inst.getModule()).isNativeJSFunction) {
