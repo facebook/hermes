@@ -2224,8 +2224,8 @@ class FlowChecker::DeclareScopeTypes {
                 outer.flowContext_.createClassConstructor(newType), classNode),
             id,
             classNode);
-        assert(success && "class constructor unexpectedly re-declared"),
-            (void)success;
+        assert(success && "class constructor unexpectedly re-declared");
+        (void)success;
       } else if (
           auto *aliasNode = llvh::dyn_cast<ESTree::TypeAliasNode>(declNode)) {
         // Type alias.
