@@ -706,6 +706,7 @@ class ESTreeIRGen {
   Value *genUnaryExpression(ESTree::UnaryExpressionNode *U);
   Value *genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr);
   Value *genLogicalExpression(ESTree::LogicalExpressionNode *logical);
+  Value *genThisExpression();
 
   /// A helper function to unify the largely same IRGen logic of \c genYieldExpr
   /// and \c genAwaitExpr.

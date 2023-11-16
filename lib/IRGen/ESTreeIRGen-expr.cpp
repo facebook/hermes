@@ -130,14 +130,7 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
 
   // Handle the 'this' keyword.
   if (llvh::isa<ESTree::ThisExpressionNode>(expr)) {
-    if (curFunction()->function->getDefinitionKind() ==
-        Function::DefinitionKind::ES6Arrow) {
-      assert(
-          curFunction()->capturedThis &&
-          "arrow function must have a captured this");
-      return Builder.createLoadFrameInst(curFunction()->capturedThis);
-    }
-    return curFunction()->jsParams[0];
+    return genThisExpression();
   }
 
   if (auto *MP = llvh::dyn_cast<ESTree::MetaPropertyNode>(expr)) {
@@ -2188,6 +2181,17 @@ Value *ESTreeIRGen::genLogicalExpression(
   // Load the content of the temp variable that was set in one of the branches.
   Builder.setInsertionBlock(continueBlock);
   return Builder.createLoadStackInst(tempVar);
+}
+
+Value *ESTreeIRGen::genThisExpression() {
+  if (curFunction()->function->getDefinitionKind() ==
+      Function::DefinitionKind::ES6Arrow) {
+    assert(
+        curFunction()->capturedThis &&
+        "arrow function must have a captured this");
+    return Builder.createLoadFrameInst(curFunction()->capturedThis);
+  }
+  return curFunction()->jsParams[0];
 }
 
 void ESTreeIRGen::genLogicalExpressionBranch(
