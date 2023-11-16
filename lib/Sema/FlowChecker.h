@@ -96,9 +96,6 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// the AST. False if we just want to validate the AST.
   bool const compile_;
 
-  /// Counter for creating anonymous labels during typechecking.
-  uint32_t anonymousLabelCounter_{0};
-
   /// Mapping from native type names to their enum code. Populated by
   /// \c declareNativeTypes()
   llvh::DenseMap<UniqueString *, NativeCType> nativeTypes_;
@@ -262,10 +259,6 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
 
   /// Parse a class type into an already created (but empty) class.
   class ParseClassType;
-
-  /// Resolve a superClass node for a class into a ClassType if possible.
-  /// \return nullptr on failure, reporting errors if any.
-  ClassType *resolveSuperClass(ESTree::Node *superClass);
 
   /// Visit the \p node for either resolution or parsing and call \p cb on each
   /// of the type annotations in it.
