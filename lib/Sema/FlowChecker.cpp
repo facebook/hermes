@@ -1344,7 +1344,21 @@ class FlowChecker::ExprVisitor {
       // Check the type of "this".
       if (auto *methodCallee =
               llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee)) {
-        Type *thisArgType = outer_.getNodeTypeOrAny(methodCallee->_object);
+        Type *thisArgType = nullptr;
+        if (auto *superNode =
+                llvh::dyn_cast<ESTree::SuperNode>(methodCallee->_object)) {
+          // 'super' calls implicitly pass the current class as 'this'.
+          if (!outer_.curClassContext_->classType) {
+            outer_.sm_.error(
+                node->_callee->getSourceRange(),
+                "ft: 'super' call outside class");
+            return;
+          }
+          thisArgType = outer_.curClassContext_->classType;
+        } else {
+          thisArgType = outer_.getNodeTypeOrAny(methodCallee->_object);
+        }
+
         if (!canAFlowIntoB(thisArgType->info, expectedThisType->info).canFlow) {
           outer_.sm_.error(
               methodCallee->getSourceRange(), "ft: 'this' type mismatch");
@@ -1782,23 +1796,32 @@ class FlowChecker::ExprVisitor {
   }
 
   void visit(ESTree::SuperNode *node, ESTree::Node *parent) {
-    if (!llvh::isa<ESTree::CallExpressionNode>(parent) ||
-        !outer_.curClassContext_) {
+    if (!outer_.curClassContext_) {
       outer_.sm_.error(
-          node->getSourceRange(),
-          "ft: super only supported in constructor call");
+          node->getSourceRange(), "ft: super only supported in class");
       return;
     }
 
-    ClassType *superClassType =
-        outer_.curClassContext_->getClassTypeInfo()->getSuperClassInfo();
+    // Check that the super call is valid.
+    ClassType *curClassType = outer_.curClassContext_->getClassTypeInfo();
+    ClassType *superClassType = curClassType->getSuperClassInfo();
     if (!superClassType) {
       outer_.sm_.error(
           node->getSourceRange(), "ft: super requires a base class");
       return;
     }
 
-    outer_.setNodeType(node, superClassType->getConstructorType());
+    if (llvh::isa<ESTree::CallExpressionNode>(parent)) {
+      // super() call calls the constructor of the super class.
+      outer_.setNodeType(node, superClassType->getConstructorType());
+    } else if (llvh::isa<ESTree::MemberExpressionNode>(parent)) {
+      // super.property lookup is on the super class.
+      outer_.setNodeType(node, curClassType->getSuperClass());
+    } else {
+      outer_.sm_.error(node->getSourceRange(), "ft: invalid usage of super");
+      outer_.flowContext_.setNodeType(node, outer_.flowContext_.getAny());
+      return;
+    }
   }
 
   /// Check the types of the supplies arguments, adding checked casts if needed.
