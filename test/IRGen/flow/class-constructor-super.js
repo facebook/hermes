@@ -52,7 +52,7 @@ new D();
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) [C]: any
 // CHECK-NEXT:  %10 = CreateFunctionInst (:object) %D(): any
 // CHECK-NEXT:        StoreFrameInst %10: object, [D]: any
-// CHECK-NEXT:  %12 = LoadPropertyInst (:object) %9: any, "prototype": string
+// CHECK-NEXT:  %12 = LoadFrameInst (:object) [?C.prototype]: object
 // CHECK-NEXT:  %13 = AllocObjectInst (:object) 0: number, %12: object
 // CHECK-NEXT:        StoreFrameInst %13: object, [?D.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %13: object, %10: object, "prototype": string

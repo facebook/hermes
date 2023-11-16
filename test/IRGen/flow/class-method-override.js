@@ -65,7 +65,7 @@ new D().override();
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) [C]: any
 // CHECK-NEXT:  %12 = CreateFunctionInst (:object) %D(): any
 // CHECK-NEXT:        StoreFrameInst %12: object, [D]: any
-// CHECK-NEXT:  %14 = LoadPropertyInst (:object) %11: any, "prototype": string
+// CHECK-NEXT:  %14 = LoadFrameInst (:object) [?C.prototype]: object
 // CHECK-NEXT:  %15 = CreateFunctionInst (:object) %"override 1#"(): any
 // CHECK-NEXT:  %16 = CreateFunctionInst (:object) %"override2 1#"(): any
 // CHECK-NEXT:  %17 = AllocObjectLiteralInst (:object) "override": string, %15: object, "override2": string, %16: object

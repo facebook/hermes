@@ -139,8 +139,9 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
   // Must be done even if there are no methods to enable 'instanceof'.
   Value *vtable = nullptr;
   if (superClass) {
-    vtable =
-        Builder.createLoadPropertyInst(superClass, kw_.identPrototype->str());
+    auto it = classConstructors_.find(classType->getSuperClassInfo());
+    assert(it != classConstructors_.end() && "missing super class constructor");
+    vtable = Builder.createLoadFrameInst(it->second.homeObjectVar);
     // TODO: This will be known to be the actual type when we properly use an
     // instruction for class creation, but for now we need an object here
     // because we want to use PrLoad on it.

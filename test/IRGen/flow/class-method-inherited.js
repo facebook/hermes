@@ -54,7 +54,7 @@ new D().inherited();
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [C]: any
 // CHECK-NEXT:  %11 = CreateFunctionInst (:object) %D(): any
 // CHECK-NEXT:        StoreFrameInst %11: object, [D]: any
-// CHECK-NEXT:  %13 = LoadPropertyInst (:object) %10: any, "prototype": string
+// CHECK-NEXT:  %13 = LoadFrameInst (:object) [?C.prototype]: object
 // CHECK-NEXT:  %14 = PrLoadInst (:object) %13: object, 0: number, "inherited": string
 // CHECK-NEXT:  %15 = AllocObjectLiteralInst (:object) "inherited": string, %14: object
 // CHECK-NEXT:        StoreParentInst %13: object, %15: object
