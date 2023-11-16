@@ -28,7 +28,7 @@ try {} finally { class C {} }
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(exports: any): any
-// CHECK-NEXT:frame = [exports: any, C: any]
+// CHECK-NEXT:frame = [exports: any, C: any, ?C.prototype: object, ?C.prototype#1: object]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %exports: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [exports]: any
@@ -39,8 +39,9 @@ try {} finally { class C {} }
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %C(): any
 // CHECK-NEXT:       StoreFrameInst %5: object, [C]: any
 // CHECK-NEXT:  %7 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:       StoreFrameInst %7: object, [?C.prototype#1]: object
 // CHECK-NEXT:       StorePropertyStrictInst %7: object, %5: object, "prototype": string
-// CHECK-NEXT:       ThrowInst %3: any
+// CHECK-NEXT:        ThrowInst %3: any
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
@@ -48,10 +49,11 @@ try {} finally { class C {} }
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        StoreFrameInst undefined: undefined, [C]: any
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %C(): any
-// CHECK-NEXT:        StoreFrameInst %14: object, [C]: any
-// CHECK-NEXT:  %16 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:        StorePropertyStrictInst %16: object, %14: object, "prototype": string
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %C(): any
+// CHECK-NEXT:        StoreFrameInst %15: object, [C]: any
+// CHECK-NEXT:  %17 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:        StoreFrameInst %17: object, [?C.prototype]: object
+// CHECK-NEXT:        StorePropertyStrictInst %17: object, %15: object, "prototype": string
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:function_end
 

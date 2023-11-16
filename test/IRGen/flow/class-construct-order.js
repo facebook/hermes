@@ -54,7 +54,7 @@ return foo;
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): any
-// CHECK-NEXT:frame = [foo: any, C: any]
+// CHECK-NEXT:frame = [foo: any, C: any, ?C.prototype: object]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [C]: any
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): any
@@ -62,11 +62,12 @@ return foo;
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %C(): any
 // CHECK-NEXT:       StoreFrameInst %3: object, [C]: any
 // CHECK-NEXT:  %5 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:       StoreFrameInst %5: object, [?C.prototype]: object
 // CHECK-NEXT:       StorePropertyStrictInst %5: object, %3: object, "prototype": string
-// CHECK-NEXT:  %7 = LoadFrameInst (:any) [foo]: any
-// CHECK-NEXT:       ReturnInst %7: any
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) [foo]: any
+// CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
+// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(x: number): any [typed]

@@ -38,7 +38,7 @@ new D();
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(exports: any): any
-// CHECK-NEXT:frame = [exports: any, C: any, D: any]
+// CHECK-NEXT:frame = [exports: any, C: any, D: any, ?C.prototype: object, ?D.prototype: object]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %exports: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [exports]: any
@@ -47,17 +47,19 @@ new D();
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %C(): any
 // CHECK-NEXT:       StoreFrameInst %4: object, [C]: any
 // CHECK-NEXT:  %6 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:       StoreFrameInst %6: object, [?C.prototype]: object
 // CHECK-NEXT:       StorePropertyStrictInst %6: object, %4: object, "prototype": string
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) [C]: any
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %D(): any
-// CHECK-NEXT:        StoreFrameInst %9: object, [D]: any
-// CHECK-NEXT:  %11 = LoadPropertyInst (:object) %8: any, "prototype": string
-// CHECK-NEXT:  %12 = AllocObjectInst (:object) 0: number, %11: object
-// CHECK-NEXT:        StorePropertyStrictInst %12: object, %9: object, "prototype": string
-// CHECK-NEXT:  %14 = LoadFrameInst (:any) [D]: any
-// CHECK-NEXT:  %15 = LoadPropertyInst (:any) %14: any, "prototype": string
-// CHECK-NEXT:  %16 = AllocObjectInst (:object) 0: number, %15: any
-// CHECK-NEXT:  %17 = CallInst (:any) %14: any, %D(): any, empty: any, %14: any, %16: object
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) [C]: any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %D(): any
+// CHECK-NEXT:        StoreFrameInst %10: object, [D]: any
+// CHECK-NEXT:  %12 = LoadPropertyInst (:object) %9: any, "prototype": string
+// CHECK-NEXT:  %13 = AllocObjectInst (:object) 0: number, %12: object
+// CHECK-NEXT:        StoreFrameInst %13: object, [?D.prototype]: object
+// CHECK-NEXT:        StorePropertyStrictInst %13: object, %10: object, "prototype": string
+// CHECK-NEXT:  %16 = LoadFrameInst (:any) [D]: any
+// CHECK-NEXT:  %17 = LoadPropertyInst (:any) %16: any, "prototype": string
+// CHECK-NEXT:  %18 = AllocObjectInst (:object) 0: number, %17: any
+// CHECK-NEXT:  %19 = CallInst (:any) %16: any, %D(): any, empty: any, %16: any, %18: object
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

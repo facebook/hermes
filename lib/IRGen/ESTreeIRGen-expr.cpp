@@ -2082,7 +2082,7 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
       // corresponding ClassType.
       auto it = classConstructors_.find(classType);
       if (it != classConstructors_.end()) {
-        Value *target = it->second;
+        Function *target = it->second.constructorFunc;
         Builder.createCallInst(
             callee, target, Builder.getEmptySentinel(), callee, newInst, args);
       } else {

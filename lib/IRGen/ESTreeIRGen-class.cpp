@@ -135,16 +135,6 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
   }
   emitStore(consFunction, getDeclData(decl), true);
 
-  if (auto *createCallable =
-          llvh::dyn_cast<BaseCreateCallableInst>(consFunction)) {
-    auto [it, inserted] = classConstructors_.try_emplace(
-        classType, createCallable->getFunctionCode());
-    (void)it;
-    assert(
-        it->second == createCallable->getFunctionCode() &&
-        "redefinition of constructor function");
-  }
-
   // Create and populate the "prototype" property (vtable).
   // Must be done even if there are no methods to enable 'instanceof'.
   Value *vtable = nullptr;
@@ -158,6 +148,27 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
   }
   auto *homeObject =
       emitClassAllocation(classType->getHomeObjectTypeInfo(), vtable);
+
+  // Store the home object in a variable so that we can reference it later,
+  // e.g. when we emit method calls.
+  Variable *homeObjectVar = Builder.createVariable(
+      curFunction()->function->getFunctionScope(),
+      Builder.createIdentifier(
+          llvh::Twine("?") + classType->getClassName().str() + ".prototype"),
+      flowTypeToIRType(classType->getHomeObjectType()));
+  Builder.createStoreFrameInst(homeObject, homeObjectVar);
+
+  // Check to make sure this is a valid class definition,
+  // because there may have been errors.
+  if (auto *createCallable =
+          llvh::dyn_cast<BaseCreateCallableInst>(consFunction)) {
+    auto [it, inserted] = classConstructors_.try_emplace(
+        classType, createCallable->getFunctionCode(), homeObjectVar);
+    (void)it;
+    assert(
+        it->second.constructorFunc == createCallable->getFunctionCode() &&
+        "redefinition of constructor function");
+  }
 
   // The 'prototype' property is initially set as non-configurable,
   // and we're overwriting it with our own.

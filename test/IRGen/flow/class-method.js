@@ -33,7 +33,7 @@ print(new C().method());
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(exports: any): any
-// CHECK-NEXT:frame = [exports: any, C: any]
+// CHECK-NEXT:frame = [exports: any, C: any, ?C.prototype: object]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %exports: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [exports]: any
@@ -42,15 +42,16 @@ print(new C().method());
 // CHECK-NEXT:       StoreFrameInst %3: object, [C]: any
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %method(): any
 // CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) "method": string, %5: object
+// CHECK-NEXT:       StoreFrameInst %6: object, [?C.prototype]: object
 // CHECK-NEXT:       StorePropertyStrictInst %6: object, %3: object, "prototype": string
-// CHECK-NEXT:  %8 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %9 = LoadFrameInst (:any) [C]: any
-// CHECK-NEXT:  %10 = LoadPropertyInst (:any) %9: any, "prototype": string
-// CHECK-NEXT:  %11 = AllocObjectInst (:object) 0: number, %10: any
-// CHECK-NEXT:  %12 = LoadParentInst (:object) %11: object
-// CHECK-NEXT:  %13 = PrLoadInst (:object) %12: object, 0: number, "method": string
-// CHECK-NEXT:  %14 = CallInst [njsf] (:any) %13: object, empty: any, empty: any, undefined: undefined, %11: object
-// CHECK-NEXT:  %15 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %14: any
+// CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) [C]: any
+// CHECK-NEXT:  %11 = LoadPropertyInst (:any) %10: any, "prototype": string
+// CHECK-NEXT:  %12 = AllocObjectInst (:object) 0: number, %11: any
+// CHECK-NEXT:  %13 = LoadParentInst (:object) %12: object
+// CHECK-NEXT:  %14 = PrLoadInst (:object) %13: object, 0: number, "method": string
+// CHECK-NEXT:  %15 = CallInst [njsf] (:any) %14: object, empty: any, empty: any, undefined: undefined, %12: object
+// CHECK-NEXT:  %16 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %15: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
