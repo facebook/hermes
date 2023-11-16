@@ -666,6 +666,11 @@ class ESTreeIRGen {
       Value *baseValue,
       Value *propValue);
 
+  /// Load a member property from a super.property expression.
+  MemberExpressionResult emitSuperLoad(
+      ESTree::SuperNode *superNode,
+      ESTree::IdentifierNode *property);
+
   /// Generate IR for a member expression in the middle of an optional chain.
   /// \param shortCircuitBB the block to jump to upon short circuiting,
   ///    when the `?.` operator is used. If null, this is the outermost

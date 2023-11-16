@@ -722,6 +722,18 @@ Value *ESTreeIRGen::emitNativeCall(
 ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
     ESTree::MemberExpressionNode *mem,
     MemberExpressionOperation op) {
+  if (auto *superNode = llvh::dyn_cast<ESTree::SuperNode>(mem->_object)) {
+    auto *property = llvh::dyn_cast<ESTree::IdentifierNode>(mem->_property);
+    if (op != MemberExpressionOperation::Load || !property || mem->_computed) {
+      // We can only handle super.foo, where foo is an identifier.
+      Mod->getContext().getSourceErrorManager().error(
+          mem->getSourceRange(), "unsupported use of 'super'");
+      return MemberExpressionResult{
+          Builder.getLiteralUndefined(), Builder.getLiteralUndefined()};
+    }
+    return emitSuperLoad(superNode, property);
+  }
+
   Value *baseValue = genExpression(mem->_object);
   Value *prop = genMemberExpressionProperty(mem);
   switch (op) {
@@ -797,6 +809,52 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
 
   return MemberExpressionResult{
       Builder.createLoadPropertyInst(baseValue, propValue), baseValue};
+}
+
+ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitSuperLoad(
+    ESTree::SuperNode *superNode,
+    ESTree::IdentifierNode *property) {
+  if (auto *classType = llvh::dyn_cast<flow::ClassType>(
+          flowContext_.getNodeTypeOrAny(superNode)->info)) {
+    auto propName = Identifier::getFromPointer(
+        llvh::cast<ESTree::IdentifierNode>(property)->_name);
+    Value *thisValue = genThisExpression();
+    if (auto optFieldLookup = classType->findField(propName)) {
+      // Found the field on the class, so load it directly from 'this'.
+      size_t fieldIndex = optFieldLookup->getField()->layoutSlotIR;
+      return MemberExpressionResult{
+          Builder.createPrLoadInst(
+              thisValue,
+              fieldIndex,
+              Builder.getLiteralString(propName),
+              flowTypeToIRType(optFieldLookup->getField()->type)),
+          thisValue};
+    }
+    // Failed to find a class field, check the home object for methods.
+    auto optMethodLookup =
+        classType->getHomeObjectTypeInfo()->findField(propName);
+    assert(
+        optMethodLookup && "must have typechecked as either method or field");
+    size_t methodIndex = optMethodLookup->getField()->layoutSlotIR;
+    // Lookup method on the parent, return thisValue in the result to
+    // correctly populate 'this' argument.
+    auto it = classConstructors_.find(classType);
+    Value *superHomeObject =
+        Builder.createLoadFrameInst(it->second.homeObjectVar);
+    return MemberExpressionResult{
+        Builder.createPrLoadInst(
+            superHomeObject,
+            methodIndex,
+            Builder.getLiteralString(propName),
+            flowTypeToIRType(optMethodLookup->getField()->type)),
+        thisValue};
+  }
+
+  Mod->getContext().getSourceErrorManager().error(
+      superNode->getSourceRange(),
+      "'super' in legacy JS classes not supported (yet)");
+  return MemberExpressionResult{
+      Builder.getLiteralUndefined(), Builder.getLiteralUndefined()};
 }
 
 void ESTreeIRGen::emitMemberStore(
