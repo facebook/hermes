@@ -12,6 +12,7 @@
 
 #include "llvh/ADT/DenseMap.h"
 #include "llvh/ADT/StringRef.h"
+#include "llvh/ADT/Twine.h"
 
 namespace llvh {
 class raw_ostream;
@@ -114,21 +115,25 @@ class StringTable {
   explicit StringTable(Allocator &allocator) : allocator_(allocator){};
 
   /// Return a unique zero-terminated copy of the supplied string \p name.
-  UniqueString *getString(llvh::StringRef name) {
+  UniqueString *getString(const llvh::Twine &name) {
+    llvh::SmallVector<char, 32> buf;
+    // Get single StringRef if the Twine is already a StringRef,
+    // otherwise create one by allocating in \p buf.
+    llvh::StringRef nameRef = name.toStringRef(buf);
     // Already in the map?
-    auto it = strMap_.find(name);
+    auto it = strMap_.find(nameRef);
     if (it != strMap_.end())
       return it->second;
 
     // Allocate a zero-terminated copy of the string
     auto *str = new (allocator_.Allocate<UniqueString>())
-        UniqueString(zeroTerminate(allocator_, name));
+        UniqueString(zeroTerminate(allocator_, nameRef));
     strMap_.insert({str->str(), str});
     return str;
   }
 
   /// A wrapper arond getString() returning an Identifier.
-  Identifier getIdentifier(llvh::StringRef name) {
+  Identifier getIdentifier(const llvh::Twine &name) {
     return Identifier::getFromPointer(getString(name));
   }
 };

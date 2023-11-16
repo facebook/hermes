@@ -13,6 +13,7 @@
 
 #include "llvh/ADT/SmallVector.h"
 #include "llvh/ADT/StringRef.h"
+#include "llvh/ADT/Twine.h"
 
 #include "hermes/AST/Context.h"
 #include "hermes/FrontEndDefs/Builtins.h"
@@ -142,7 +143,7 @@ class IRBuilder {
 
   /// Add a new variable to scope \p Parent.
   Variable *
-  createVariable(VariableScope *Parent, llvh::StringRef Name, Type type);
+  createVariable(VariableScope *Parent, const llvh::Twine &Name, Type type);
 
   /// Create a new literal number of value \p value.
   LiteralNumber *getLiteralNumber(double value);
@@ -160,7 +161,7 @@ class IRBuilder {
   LiteralBigInt *getLiteralBigInt(UniqueString *value);
 
   /// Create a new literal string of value \p value.
-  LiteralString *getLiteralString(llvh::StringRef value);
+  LiteralString *getLiteralString(const llvh::Twine &value);
 
   /// Create a new literal string of value \p value.
   LiteralString *getLiteralString(Identifier value);
@@ -184,7 +185,7 @@ class IRBuilder {
   EmptySentinel *getEmptySentinel();
 
   /// Convert llvh::StringRef to Identifier.
-  Identifier createIdentifier(llvh::StringRef str);
+  Identifier createIdentifier(const llvh::Twine &str);
 
   //--------------------------------------------------------------------------//
   //                          Statefull APIs.                                 //
@@ -262,7 +263,7 @@ class IRBuilder {
 
   ReturnInst *createReturnInst(Value *Val);
 
-  AllocStackInst *createAllocStackInst(llvh::StringRef varName, Type type);
+  AllocStackInst *createAllocStackInst(const llvh::Twine &varName, Type type);
 
   AllocStackInst *createAllocStackInst(Identifier varName, Type type);
 

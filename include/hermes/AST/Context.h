@@ -308,7 +308,7 @@ class Context {
 
   /// Get or create a new identifier for the string \p str. The method copies
   /// the content of the string.
-  Identifier getIdentifier(llvh::StringRef str) {
+  Identifier getIdentifier(const llvh::Twine &str) {
     return stringTable_.getIdentifier(str);
   }
 

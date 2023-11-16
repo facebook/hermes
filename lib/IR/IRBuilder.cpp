@@ -176,7 +176,7 @@ IRBuilder::createVariable(VariableScope *Parent, Identifier Name, Type type) {
 
 Variable *IRBuilder::createVariable(
     VariableScope *Parent,
-    llvh::StringRef Name,
+    const llvh::Twine &Name,
     Type type) {
   return createVariable(Parent, createIdentifier(Name), type);
 }
@@ -202,7 +202,7 @@ LiteralBigInt *IRBuilder::getLiteralBigInt(UniqueString *value) {
   return M->getLiteralBigInt(value);
 }
 
-LiteralString *IRBuilder::getLiteralString(llvh::StringRef value) {
+LiteralString *IRBuilder::getLiteralString(const llvh::Twine &value) {
   Identifier Iden = createIdentifier(value);
   return getLiteralString(Iden);
 }
@@ -235,7 +235,7 @@ EmptySentinel *IRBuilder::getEmptySentinel() {
   return M->getEmptySentinel();
 }
 
-Identifier IRBuilder::createIdentifier(llvh::StringRef str) {
+Identifier IRBuilder::createIdentifier(const llvh::Twine &str) {
   return M->getContext().getIdentifier(str);
 }
 
@@ -291,7 +291,7 @@ TryEndInst *IRBuilder::createTryEndInst() {
 }
 
 AllocStackInst *IRBuilder::createAllocStackInst(
-    llvh::StringRef varName,
+    const llvh::Twine &varName,
     Type type) {
   Identifier Iden = createIdentifier(varName);
   return createAllocStackInst(Iden, type);
