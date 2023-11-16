@@ -35,12 +35,57 @@ int32_t truncateToInt32SlowPath(double d);
 /// the integer are then returned.
 int32_t truncateToInt32(double d) LLVM_NO_SANITIZE("float-cast-overflow");
 inline int32_t truncateToInt32(double d) {
-  // Check of the value can be converted to integer without loss. We want to
-  // use the widest available integer because this conversion will be much
-  // faster than the bit-twiddling slow path.
-  intmax_t fast = (intmax_t)d;
-  if (LLVM_LIKELY(fast == d))
-    return (int32_t)fast;
+  /// ARM64 has different behavior when the double value can't fit into
+  /// int64_t (results in 2^63-1 instead of -2^63 on x86-64), and 2^63-1 can't
+  /// be represented precisely in double, so it's converted to 2^63. The result
+  /// is that a double value 2^63 still goes through the fast path and
+  /// eventually is casted to int32_t and -1 is returned, which is wrong. The
+  /// solution is to use smaller width integer (so every value can be
+  /// represented in double). In constant path, we check the range of
+  /// [-2^53, 2^53], where 53 is the number of precision bits for double. In
+  /// non-constant fast path, we do a left shift followed by right shift of 1
+  /// bit to avoid imprecise conversion between double and int64_t on 2^63 (
+  /// the top 2 bits "10" becomes "00" after the shifting).
+  /// On 32bit platform, this non-constant path produces less efficient code,
+  /// so instead, we use conversion to int32_t directly.
+  /// In addition, use __builtin_constant_p() to avoid UB caused by constant
+  /// propagation.
+
+  if constexpr (sizeof(void *) == 8) {
+    // Use this builtin to avoid undefined behavior caused by constant
+    // propagation when \p d can't fit into int64_t.
+#if defined(__GNUC__) || defined(__clang__)
+    if (__builtin_constant_p(d)) {
+#endif
+      // Be aggressive on constant path, use the maximum precision bits
+      // of double type for range check.
+      if (d >= (int64_t)(-1ULL << 53) && d <= (1LL << 53)) {
+        return (int32_t)(int64_t)d;
+      }
+#if defined(__GNUC__) || defined(__clang__)
+    } else {
+      int64_t fast = (int64_t)((uint64_t)d << 1) >> 1;
+      if (LLVM_LIKELY(fast == d))
+        return (int32_t)fast;
+    }
+#endif
+  } else {
+#if defined(__GNUC__) || defined(__clang__)
+    if (__builtin_constant_p(d)) {
+#endif
+      // Converted to int32_t directly on 32bit arch for efficiency.
+      // Many uint32_t values may fall to slow path though.
+      if (d >= (int64_t)(-1ULL << 53) && d <= (1LL << 53)) {
+        return (int32_t)(int64_t)d;
+      }
+#if defined(__GNUC__) || defined(__clang__)
+    } else {
+      int32_t fast = (int32_t)d;
+      if (LLVM_LIKELY(fast == d))
+        return fast;
+    }
+#endif
+  }
   return truncateToInt32SlowPath(d);
 }
 

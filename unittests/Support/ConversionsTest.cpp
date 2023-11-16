@@ -15,30 +15,31 @@ using namespace hermes;
 
 namespace {
 
-// Work around new versions of clang treating the truncation fast path as UB
-// and optimising it to not work on compile time constants.
-#ifdef __clang__
-LLVM_ATTRIBUTE_NOINLINE
-#endif
-int32_t toInt32Wrapper(double d) {
-  return hermes::truncateToInt32(d);
-}
-
 TEST(ConversionsTest, toInt32Test) {
-  EXPECT_EQ(0, toInt32Wrapper(0));
-  EXPECT_EQ(0, toInt32Wrapper(-0.1));
-  EXPECT_EQ(0, toInt32Wrapper(0.1));
-  EXPECT_EQ(1, toInt32Wrapper(1));
-  EXPECT_EQ(-1, toInt32Wrapper(-1.5));
+  EXPECT_EQ(0, hermes::truncateToInt32(0));
+  EXPECT_EQ(0, hermes::truncateToInt32(-0.1));
+  EXPECT_EQ(0, hermes::truncateToInt32(0.1));
+  EXPECT_EQ(1, hermes::truncateToInt32(1));
+  EXPECT_EQ(-1, hermes::truncateToInt32(-1.5));
 
-  EXPECT_EQ(1661992960, toInt32Wrapper(1e20));
-  EXPECT_EQ(-1661992960, toInt32Wrapper(-1e20));
-  EXPECT_EQ(-2147483648, toInt32Wrapper(-2147483648));
+  EXPECT_EQ(1661992960, hermes::truncateToInt32(1e20));
+  EXPECT_EQ(-1661992960, hermes::truncateToInt32(-1e20));
+  EXPECT_EQ(-2147483648, hermes::truncateToInt32(-2147483648));
+  EXPECT_EQ(0, hermes::truncateToInt32(9223372036854775808.0));
+  // This should still go through the fast/constant path even if it
+  // does not fit into int32_t, because we use a wider range check.
+  // It won't break the old implementation. Add it to make sure
+  // we don't make mistakes in the new fast/constant path.
+  EXPECT_EQ(-2147483648, hermes::truncateToInt32(2147483648));
 
-  EXPECT_EQ(0, toInt32Wrapper(std::numeric_limits<double>::infinity()));
-  EXPECT_EQ(0, toInt32Wrapper(-std::numeric_limits<double>::infinity()));
-  EXPECT_EQ(0, toInt32Wrapper(-std::numeric_limits<double>::quiet_NaN()));
-  EXPECT_EQ(0, toInt32Wrapper(-std::numeric_limits<double>::denorm_min()));
+  EXPECT_EQ(
+      0, hermes::truncateToInt32(std::numeric_limits<double>::infinity()));
+  EXPECT_EQ(
+      0, hermes::truncateToInt32(-std::numeric_limits<double>::infinity()));
+  EXPECT_EQ(
+      0, hermes::truncateToInt32(-std::numeric_limits<double>::quiet_NaN()));
+  EXPECT_EQ(
+      0, hermes::truncateToInt32(-std::numeric_limits<double>::denorm_min()));
 }
 
 TEST(ConversionsTest, toArrayIndexTest) {
