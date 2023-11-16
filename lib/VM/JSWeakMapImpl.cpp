@@ -213,6 +213,16 @@ void JSWeakMapImplBase::_snapshotAddEdgesImpl(
     snap.addNamedEdge(
         HeapSnapshot::EdgeType::Internal, "map", self->getMapID(gc));
   }
+
+  // Add edges to objects pointed by WeakRef keys.
+  uint32_t edge_index = 0;
+  for (const auto &[key, _] : self->map_) {
+    auto indexName = std::to_string(edge_index++);
+    snap.addNamedEdge(
+        HeapSnapshot::EdgeType::Weak,
+        indexName,
+        gc.getObjectID(key.ref.getNoBarrierUnsafe(gc.getPointerBase())));
+  }
 }
 
 void JSWeakMapImplBase::_snapshotAddNodesImpl(

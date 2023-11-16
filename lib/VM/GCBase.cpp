@@ -255,7 +255,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
   llvh::DenseSet<double, GCBase::IDTracker::DoubleComparator> seenNumbers_;
 };
 
-struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
+struct EdgeAddingAcceptor : public SnapshotAcceptor {
   using SnapshotAcceptor::accept;
 
   EdgeAddingAcceptor(GCBase &gc, HeapSnapshot &snap)
@@ -285,25 +285,6 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
     acceptHV(hv, name);
   }
 
-  void accept(WeakRefBase &wr) override {
-    WeakRefSlot *slot = wr.unsafeGetSlot();
-    if (slot->state() == WeakSlotState::Free) {
-      // If the slot is free, there's no edge to add.
-      return;
-    }
-    if (!slot->hasValue()) {
-      // Filter out empty refs from adding edges.
-      return;
-    }
-    // Assume all weak pointers have no names, and are stored in an array-like
-    // structure.
-    std::string indexName = std::to_string(nextEdge_++);
-    snap_.addNamedEdge(
-        HeapSnapshot::EdgeType::Weak,
-        indexName,
-        gc_.getObjectID(slot->getNoBarrierUnsafe(gc_.getPointerBase())));
-  }
-
   void acceptSym(SymbolID sym, const char *name) override {
     if (sym.isInvalid()) {
       return;
@@ -316,8 +297,6 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
 
  private:
   GCBase &gc_;
-  // For unnamed edges, use indices instead.
-  unsigned nextEdge_{0};
 };
 
 struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,

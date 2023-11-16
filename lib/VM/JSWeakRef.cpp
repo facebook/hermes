@@ -18,7 +18,17 @@ const ObjectVTable JSWeakRef::vt{
         CellKind::JSWeakRefKind,
         cellSize<JSWeakRef>(),
         nullptr,
-        JSWeakRef::_markWeakImpl),
+        JSWeakRef::_markWeakImpl,
+        nullptr,
+        nullptr
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+        ,
+        VTable::HeapSnapshotMetadata {
+          HeapSnapshot::NodeType::Object, nullptr,
+              JSWeakRef::_snapshotAddEdgesImpl, nullptr, nullptr
+        }
+#endif
+        ),
     JSWeakRef::_getOwnIndexedRangeImpl,
     JSWeakRef::_haveOwnIndexedImpl,
     JSWeakRef::_getOwnIndexedPropertyFlagsImpl,
@@ -40,6 +50,19 @@ void JSWeakRef::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
     acceptor.accept(self->ref_);
   }
 }
+
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+void JSWeakRef::_snapshotAddEdgesImpl(
+    GCCell *cell,
+    GC &gc,
+    HeapSnapshot &snap) {
+  auto *const self = vmcast<JSWeakRef>(cell);
+  snap.addNamedEdge(
+      HeapSnapshot::EdgeType::Weak,
+      "weak",
+      gc.getObjectID(self->ref_.getNoBarrierUnsafe(gc.getPointerBase())));
+}
+#endif
 
 PseudoHandle<JSWeakRef> JSWeakRef::create(
     Runtime &runtime,
