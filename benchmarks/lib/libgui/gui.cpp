@@ -10,6 +10,7 @@
 #include "sokol_glue.h"
 #include "sokol_log.h"
 #include "sokol_time.h"
+#include "stb_image.h"
 
 #include "sokol_imgui.h"
 
@@ -80,31 +81,57 @@ static double s_fps = 0;
 
 extern "C" int make_image(int w, int h, const unsigned char *data) {
   s_images.emplace_back(std::make_unique<Image>(w, h, data));
-  return s_images.size() - 1;
+  return s_images.size();
+}
+extern "C" int load_image(const char *path) {
+  unsigned char *data;
+  int w, h, n;
+  unsigned size;
+  if (const unsigned char *blob = find_blob(path, &size))
+    data = stbi_load_from_memory(blob, size, &w, &h, &n, 4);
+  else
+    data = stbi_load(path, &w, &h, &n, 4);
+  if (!data) {
+    slog_func("ERROR", 1, 0, path, __LINE__, __FILE__, nullptr);
+    abort();
+  }
+  int res = make_image(w, h, data);
+  stbi_image_free(data);
+  return res;
 }
 extern "C" int image_width(int index) {
-  if (index < 0 || index >= s_images.size()) {
+  if (index <= 0 || index > s_images.size() || !s_images[index - 1]) {
     slog_func(
         "ERROR", 1, 0, "Invalid image index", __LINE__, __FILE__, nullptr);
-    return 0;
+    abort();
   }
-  return s_images[index]->w_;
+  return s_images[index - 1]->w_;
 }
 extern "C" int image_height(int index) {
-  if (index < 0 || index >= s_images.size()) {
+  if (index <= 0 || index > s_images.size() || !s_images[index - 1]) {
     slog_func(
         "ERROR", 1, 0, "Invalid image index", __LINE__, __FILE__, nullptr);
-    return 0;
+    abort();
   }
-  return s_images[index]->h_;
+  return s_images[index - 1]->h_;
 }
 extern "C" const simgui_image_t *image_simgui_image(int index) {
-  if (index < 0 || index >= s_images.size()) {
+  if (index <= 0 || index > s_images.size() || !s_images[index - 1]) {
     slog_func(
         "ERROR", 1, 0, "Invalid image index", __LINE__, __FILE__, nullptr);
-    return 0;
+    abort();
   }
-  return &s_images[index]->simguiImage_;
+  return &s_images[index - 1]->simguiImage_;
+}
+extern "C" void free_image(int index) {
+  if (index == 0)
+    return;
+  if (index <= 0 || index > s_images.size()) {
+    slog_func(
+        "ERROR", 1, 0, "Invalid image index", __LINE__, __FILE__, nullptr);
+    return;
+  }
+  s_images[index - 1].reset();
 }
 
 static void app_init() {
