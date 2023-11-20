@@ -160,8 +160,7 @@ function mapComponentParameters(
   if (
     params.length === 1 &&
     params[0].type === 'RestElement' &&
-    (params[0].argument.type === 'Identifier' ||
-      params[0].argument.type === 'ObjectPattern')
+    params[0].argument.type === 'Identifier'
   ) {
     const restElementArgument = params[0].argument;
     return {
@@ -189,7 +188,7 @@ function mapComponentParameters(
     return true;
   });
 
-  const propsProperties = paramsWithoutRef.map(mapComponentParameter);
+  const propsProperties = paramsWithoutRef.flatMap(mapComponentParameter);
 
   let props = null;
   if (propsProperties.length === 0) {
@@ -250,14 +249,31 @@ function mapComponentParameters(
 
 function mapComponentParameter(
   param: ComponentParameter | RestElement,
-): DestructuringObjectProperty | RestElement {
+): Array<DestructuringObjectProperty | RestElement> {
   switch (param.type) {
     case 'RestElement': {
-      const a = nodeWith(param, {
-        typeAnnotation: null,
-        argument: nodeWith(param.argument, {typeAnnotation: null}),
-      });
-      return a;
+      switch (param.argument.type) {
+        case 'Identifier': {
+          const a = nodeWith(param, {
+            typeAnnotation: null,
+            argument: nodeWith(param.argument, {typeAnnotation: null}),
+          });
+          return [a];
+        }
+        case 'ObjectPattern': {
+          return param.argument.properties.map(property => {
+            return nodeWith(property, {
+              typeAnnotation: null,
+            });
+          });
+        }
+        default: {
+          throw createSyntaxError(
+            param,
+            `Unhandled ${param.argument.type} encountered in restParameter`,
+          );
+        }
+      }
     }
     case 'ComponentParameter': {
       let value;
@@ -281,33 +297,37 @@ function mapComponentParameter(
         param.shorthand &&
         (value.type === 'Identifier' || value.type === 'AssignmentPattern')
       ) {
-        return {
+        return [
+          {
+            type: 'Property',
+            key: param.name,
+            kind: 'init',
+            value,
+            method: false,
+            shorthand: true,
+            computed: false,
+            loc: param.loc,
+            range: param.range,
+            parent: EMPTY_PARENT,
+          },
+        ];
+      }
+
+      // Complex params
+      return [
+        {
           type: 'Property',
           key: param.name,
           kind: 'init',
           value,
           method: false,
-          shorthand: true,
+          shorthand: false,
           computed: false,
           loc: param.loc,
           range: param.range,
           parent: EMPTY_PARENT,
-        };
-      }
-
-      // Complex params
-      return {
-        type: 'Property',
-        key: param.name,
-        kind: 'init',
-        value,
-        method: false,
-        shorthand: false,
-        computed: false,
-        loc: param.loc,
-        range: param.range,
-        parent: EMPTY_PARENT,
-      };
+        },
+      ];
     }
     default: {
       throw createSyntaxError(
