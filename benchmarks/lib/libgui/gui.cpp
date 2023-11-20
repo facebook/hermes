@@ -76,8 +76,6 @@ static std::vector<std::unique_ptr<Image>> s_images{};
 
 static bool s_started = false;
 static uint64_t s_start_time = 0;
-static uint64_t s_last_fps_time = 0;
-static double s_fps = 0;
 
 extern "C" int make_image(int w, int h, const unsigned char *data) {
   s_images.emplace_back(std::make_unique<Image>(w, h, data));
@@ -185,15 +183,8 @@ static void app_frame() {
   if (!s_started) {
     s_started = true;
     s_start_time = now;
-    s_last_fps_time = now;
-  } else {
-    // Update FPS every second
-    uint64_t diff = stm_diff(now, s_last_fps_time);
-    if (diff > 1000000000) {
-      s_fps = 1.0 / sapp_frame_duration(); // stm_sec(diff);
-      s_last_fps_time = now;
-    }
   }
+  double fps = 1.0 / sapp_frame_duration();
 
   simgui_new_frame({
       .width = sapp_width(),
@@ -217,7 +208,7 @@ static void app_frame() {
 
   simgui_render();
   sdtx_canvas((float)sapp_width(), (float)sapp_height());
-  sdtx_printf("FPS: %d", (int)(s_fps + 0.5));
+  sdtx_printf("FPS: %d", (int)(fps + 0.5));
   sdtx_draw();
   sg_end_pass();
   sg_commit();
