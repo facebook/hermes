@@ -664,6 +664,34 @@ describe('jsx', () => {
       );
     });
 
+    describe('Opening and closing tag', () => {
+      verifyHasScopes(
+        `
+          import React from 'react';
+          var Component;
+          <Component></Component>;
+        `,
+        [
+          {
+            type: ScopeType.Module,
+            variables: [
+              {
+                name: 'React',
+                type: DefinitionType.ImportBinding,
+                referenceCount: 0,
+                eslintUsed: true,
+              },
+              {
+                name: 'Component',
+                type: DefinitionType.Variable,
+                referenceCount: 2,
+              },
+            ],
+          },
+        ],
+      );
+    });
+
     describe('Member expressions are referenced regardless of casing', () => {
       verifyHasScopes(
         `
@@ -699,6 +727,34 @@ describe('jsx', () => {
         ],
       );
     });
+  });
+
+  describe('Opening and closing tag with member expression', () => {
+    verifyHasScopes(
+      `
+          import React from 'react';
+          var Namespace;
+          <Namespace.Component></Namespace.Component>;
+        `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'React',
+              type: DefinitionType.ImportBinding,
+              referenceCount: 0,
+              eslintUsed: true,
+            },
+            {
+              name: 'Namespace',
+              type: DefinitionType.Variable,
+              referenceCount: 2,
+            },
+          ],
+        },
+      ],
+    );
   });
 
   describe('Component generic references', () => {
