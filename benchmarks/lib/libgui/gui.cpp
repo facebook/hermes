@@ -20,6 +20,33 @@
 
 #include <vector>
 
+struct Blob {
+  const char *name;
+  const unsigned char *data;
+  unsigned size;
+};
+static constexpr unsigned kMaxBlobs = 32;
+static Blob s_blobs[kMaxBlobs];
+static unsigned s_numBlobs = 0;
+
+extern "C" void
+register_blob(const char *name, const unsigned char *data, unsigned size) {
+  if (s_numBlobs >= kMaxBlobs) {
+    slog_func("ERROR", 1, 0, "Too many blobs", __LINE__, __FILE__, nullptr);
+    abort();
+  }
+  s_blobs[s_numBlobs++] = {name, data, size};
+}
+static const unsigned char *find_blob(const char *name, unsigned *size) {
+  for (unsigned i = 0; i < s_numBlobs; ++i) {
+    if (strcmp(s_blobs[i].name, name) == 0) {
+      *size = s_blobs[i].size;
+      return s_blobs[i].data;
+    }
+  }
+  return nullptr;
+}
+
 static sg_sampler s_sampler = {};
 
 class Image {

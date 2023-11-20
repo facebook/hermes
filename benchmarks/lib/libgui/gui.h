@@ -23,6 +23,7 @@ void gui_on_event(const sapp_event *ev);
 void gui_on_frame(int width, int height, double secs);
 
 // Functions that can be called by the application.
+void register_blob(const char *name, const unsigned char *data, unsigned size);
 int make_image(int w, int h, const unsigned char *data);
 int image_width(int index);
 int image_height(int index);
