@@ -30,6 +30,7 @@ int image_width(int index);
 int image_height(int index);
 const struct simgui_image_t *image_simgui_image(int index);
 void free_image(int index);
+float *get_bg_color(void);
 
 #ifdef __cplusplus
 }
