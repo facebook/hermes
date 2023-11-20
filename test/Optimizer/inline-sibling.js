@@ -30,10 +30,9 @@ function outer(a, b) {
 // CHECK-NEXT:function_end
 
 // CHECK:function outer(a: any, b: any): string|number
-// CHECK-NEXT:frame = [a: any]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [a]: any
-// CHECK-NEXT:  %2 = BinaryAddInst (:string|number) %0: any, 1: number
-// CHECK-NEXT:       ReturnInst %2: string|number
+// CHECK-NEXT:  %1 = BinaryAddInst (:string|number) %0: any, 1: number
+// CHECK-NEXT:       ReturnInst %1: string|number
 // CHECK-NEXT:function_end
