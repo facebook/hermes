@@ -5,6 +5,7 @@
 
 add_subdirectory(cimgui)
 add_subdirectory(sokol)
+add_subdirectory(stb)
 
 set(HERMES_BUILD "NOT-SET" CACHE STRING "Hermes build directory")
 set(HERMES_SRC "NOT-SET" CACHE STRING "Hermes source directory")
@@ -17,8 +18,8 @@ include_directories(${HERMES_SRC}/API)
 include_directories(${HERMES_SRC}/API/jsi)
 
 add_library(gui gui.cpp gui.h)
-target_link_libraries(gui sokol cimgui)
+target_link_libraries(gui sokol cimgui stb)
 target_include_directories(gui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 add_library(shgui gui.cpp gui.h shgui.cpp)
-target_link_libraries(shgui sokol cimgui)
+target_link_libraries(shgui sokol cimgui stb)
