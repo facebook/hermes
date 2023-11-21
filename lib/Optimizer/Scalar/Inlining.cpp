@@ -167,21 +167,29 @@ static std::vector<Function *> orderFunctions(Module *M) {
 }
 
 /// Check for features in \p F that prevent inlining.
-/// \return true if the pass is capable of inlining \p F.
-static bool canBeInlined(Function *F) {
+/// \return (canInline, numSignificantInstructions)
+///   \c canInline is true if the pass is capable of inlining \p F.
+///   \c numSignificantInstructions the number of instructions that
+///   aren't param/return. Only valid when canInline=true.
+static std::pair<bool, size_t> canBeInlined(Function *F) {
   // If it has variables, don't inline it right now.
   // TODO: Inlining will require moving Variables between functions.
   if (!F->getFunctionScope()->getVariables().empty()) {
     LLVM_DEBUG(
         llvh::dbgs() << "Cannot inline function '" << F->getInternalNameStr()
                      << "': has captured variables\n");
-    return false;
+    return {false, 0};
   }
+
+  size_t numSignificantInstructions = 0;
 
   // Allow inlining between functions of different strictness,
   // because all relevant instructions have Strict/Loose variants.
   for (BasicBlock *oldBB : orderDFS(F)) {
     for (auto &I : *oldBB) {
+      if (!llvh::isa<LoadParamInst>(I) && !llvh::isa<ReturnInst>(I)) {
+        ++numSignificantInstructions;
+      }
       switch (I.getKind()) {
         // TODO: We can allow LIRGetThisNSInst to be inlined but it needs to be
         // copied with other parameters.
@@ -202,7 +210,7 @@ static bool canBeInlined(Function *F) {
                            << F->getInternalNameStr()
                            << "': invalid instruction " << I.getKindStr()
                            << '\n');
-          return false;
+          return {false, 0};
         case ValueKind::CallBuiltinInstKind:
           if (cast<CallBuiltinInst>(&I)->getBuiltinIndex() ==
               BuiltinMethod::HermesBuiltin_copyRestArgs) {
@@ -210,7 +218,7 @@ static bool canBeInlined(Function *F) {
                 llvh::dbgs()
                 << "Cannot inline function '" << F->getInternalNameStr()
                 << "': copies rest args\n");
-            return false;
+            return {false, 0};
           }
           break;
         default:
@@ -219,7 +227,7 @@ static bool canBeInlined(Function *F) {
     }
   }
 
-  return true;
+  return {true, numSignificantInstructions};
 }
 
 /// Inline a function into the current insertion point, which must be at the
@@ -419,12 +427,32 @@ static Value *inlineFunction(
 static bool shouldTryToInline(
     Function *FC,
     llvh::ArrayRef<BaseCallInst *> callsites) {
+  auto [canInline, numSignificantInstructions] = canBeInlined(FC);
+
   // If the function can't be inlined then bail early.
-  if (!canBeInlined(FC)) {
+  if (!canInline) {
     return false;
   }
 
   if (FC->getAlwaysInline()) {
+    return true;
+  }
+
+  // Account for parameter setup in the caller, and add 1 extra for moving
+  // the return value.
+  // TODO: Figure out how best to make this configurable.
+  size_t maxInlineSize = FC->getExpectedParamCountIncludingThis() + 1;
+
+  if (numSignificantInstructions <= maxInlineSize) {
+    // The function is likely small enough that inlining it won't affect the
+    // size substantially.
+    LLVM_DEBUG(
+        llvh::dbgs() << "Heuristic: do inline function '"
+                     << FC->getInternalNameStr()
+                     << llvh::format(
+                            "': has %u instructions (requires <= %u)\n",
+                            numSignificantInstructions,
+                            maxInlineSize));
     return true;
   }
 

@@ -30,19 +30,6 @@ function g12(z) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %z: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %w(): number
-// CHECK-NEXT:  %2 = CallInst (:number) %1: object, %w(): number, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %3 = BinaryGreaterThanInst (:boolean) %0: any, 0: number
-// CHECK-NEXT:       CondBranchInst %3: boolean, %BB1, %BB2
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = CallInst (:number) %1: object, %w(): number, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:       BranchInst %BB2
-// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %1 = BinaryGreaterThanInst (:boolean) %0: any, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function w(): number [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:       ReturnInst 1: number
 // CHECK-NEXT:function_end
