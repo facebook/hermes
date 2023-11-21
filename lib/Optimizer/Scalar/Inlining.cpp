@@ -419,6 +419,44 @@ static Value *inlineFunction(
   return returnValue ? returnValue : cast<Value>(builder.getLiteralUndefined());
 }
 
+/// Heuristics to determine whether to inline \p FC.
+/// \param callsites the list of known call sites of the function.
+/// \return true if we should try to inline the function. This doesn't mean that
+///   it will be able to be inlined at every callsite, but it means that it's
+///   desirable to try.
+static bool shouldTryToInline(
+    Function *FC,
+    llvh::ArrayRef<BaseCallInst *> callsites) {
+  if (FC->getAlwaysInline()) {
+    return true;
+  }
+
+  // Check for allCallsitesKnownExceptErrorStructuredStackTrace here because
+  // we're only ever inlining functions with one callsites right now, which
+  // means that the function will be DCE'd completely and it won't ever be
+  // populated in the structured stack trace at runtime.
+  // This allows us to inline loose mode functions.
+  if (!FC->allCallsitesKnownExceptErrorStructuredStackTrace()) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Heuristic: not inlining function '"
+                     << FC->getInternalNameStr()
+                     << "': has unknown callsites\n");
+    return false;
+  }
+
+  if (callsites.size() != 1) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Heuristic: not inlining function '"
+                     << FC->getInternalNameStr()
+                     << llvh::format(
+                            "': has %u callsites (requires 1)\n",
+                            callsites.size()));
+    return false;
+  }
+
+  return true;
+}
+
 bool Inlining::runOnModule(Module *M) {
   if (!M->getContext().getOptimizationSettings().inlining)
     return false;
@@ -432,38 +470,11 @@ bool Inlining::runOnModule(Module *M) {
         llvh::dbgs() << "Visiting function '" << FC->getInternalNameStr()
                      << "'\n");
 
-    llvh::SmallVector<BaseCallInst *, 2> callsites;
+    auto callsites = getKnownCallsites(FC);
 
-    if (FC->getAlwaysInline()) {
-      callsites = getKnownCallsites(FC);
-    } else {
-      // Heuristic to determine whether to inline.
-      // Applied when the "inline" directive isn't specified.
-
-      // Check for allCallsitesKnownExceptErrorStructuredStackTrace here because
-      // we're only ever inlining functions with one callsites right now, which
-      // means that the function will be DCE'd completely and it won't ever be
-      // populated in the structured stack trace at runtime.
-      // This allows us to inline loose mode functions.
-      if (!FC->allCallsitesKnownExceptErrorStructuredStackTrace()) {
-        LLVM_DEBUG(
-            llvh::dbgs() << "Cannot inline function '"
-                         << FC->getInternalNameStr()
-                         << "': has unknown callsites\n");
-        continue;
-      }
-
-      callsites = getKnownCallsites(FC);
-
-      if (callsites.size() != 1) {
-        LLVM_DEBUG(
-            llvh::dbgs() << "Cannot inline function '"
-                         << FC->getInternalNameStr()
-                         << llvh::format(
-                                "': has %u callsites (requires 1)\n",
-                                callsites.size()));
-        continue;
-      }
+    // Check the heuristic before doing any work.
+    if (!shouldTryToInline(FC, callsites)) {
+      continue;
     }
 
     for (BaseCallInst *CI : callsites) {
