@@ -315,6 +315,13 @@ cl::opt<bool> ReusePropCache(
 
 CLFlag Inline('f', "inline", true, "inlining of functions", CompilerCategory);
 
+cl::opt<unsigned> InlineMaxSize(
+    "Xinline-max-size",
+    cl::init(1),
+    cl::desc("Suppress inlining of functions larger than the given size"),
+    cl::Hidden,
+    cl::cat(CompilerCategory));
+
 CLFlag StripFunctionNames(
     'f',
     "strip-function-names",
@@ -500,6 +507,7 @@ std::shared_ptr<Context> createContext() {
 
   optimizationOpts.inlining =
       cli::OptimizationLevel != OptLevel::O0 && cli::Inline;
+  optimizationOpts.inlineMaxSize = cli::InlineMaxSize;
 
   optimizationOpts.reusePropCache = cli::ReusePropCache;
 

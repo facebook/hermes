@@ -49,6 +49,10 @@ struct OptimizationSettings {
   /// Enable any inlining of functions.
   bool inlining{true};
 
+  /// Maximum number of instructions (in addition to parameter handling)
+  /// that is allowed for inlining of small functions.
+  unsigned inlineMaxSize{1};
+
   /// Reuse property cache entries for same property name.
   bool reusePropCache{true};
 

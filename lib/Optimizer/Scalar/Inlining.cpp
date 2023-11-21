@@ -441,7 +441,8 @@ static bool shouldTryToInline(
   // Account for parameter setup in the caller, and add 1 extra for moving
   // the return value.
   // TODO: Figure out how best to make this configurable.
-  size_t maxInlineSize = FC->getExpectedParamCountIncludingThis() + 1;
+  size_t maxInlineSize = FC->getExpectedParamCountIncludingThis() +
+      FC->getContext().getOptimizationSettings().inlineMaxSize;
 
   if (numSignificantInstructions <= maxInlineSize) {
     // The function is likely small enough that inlining it won't affect the
