@@ -166,17 +166,9 @@ static std::vector<Function *> orderFunctions(Module *M) {
   return order;
 }
 
-/// \return true if the function \p F satisfies the conditions for being
-///   inlined.
-static bool canBeInlined(Function *F, Function *intoFunction) {
-  // If it's a recursive call, it can't be inlined.
-  if (F == intoFunction) {
-    LLVM_DEBUG(
-        llvh::dbgs() << "Cannot inline function '" << F->getInternalNameStr()
-                     << "' into itself\n");
-    return false;
-  }
-
+/// Check for features in \p F that prevent inlining.
+/// \return true if the pass is capable of inlining \p F.
+static bool canBeInlined(Function *F) {
   // If it has variables, don't inline it right now.
   // TODO: Inlining will require moving Variables between functions.
   if (!F->getFunctionScope()->getVariables().empty()) {
@@ -427,6 +419,11 @@ static Value *inlineFunction(
 static bool shouldTryToInline(
     Function *FC,
     llvh::ArrayRef<BaseCallInst *> callsites) {
+  // If the function can't be inlined then bail early.
+  if (!canBeInlined(FC)) {
+    return false;
+  }
+
   if (FC->getAlwaysInline()) {
     return true;
   }
@@ -474,6 +471,11 @@ bool Inlining::runOnModule(Module *M) {
 
     // Check the heuristic before doing any work.
     if (!shouldTryToInline(FC, callsites)) {
+      if (FC->getAlwaysInline()) {
+        FC->getParent()->getContext().getSourceErrorManager().warning(
+            FC->getSourceRange().Start,
+            "function marked 'inline' cannot be inlined");
+      }
       continue;
     }
 
@@ -481,13 +483,11 @@ bool Inlining::runOnModule(Module *M) {
       // We know the callee is an IR function, so it must be possible to inline.
       Function *intoFunction = CI->getParent()->getParent();
 
-      if (!canBeInlined(FC, intoFunction)) {
-        if (FC->getAlwaysInline()) {
-          FC->getParent()->getContext().getSourceErrorManager().warning(
-              CI->getLocation(), "function marked 'inline' cannot be inlined");
-          FC->getParent()->getContext().getSourceErrorManager().note(
-              FC->getSourceRange().Start, "function definition");
-        }
+      // If it's a recursive call, it can't be inlined.
+      if (FC == intoFunction) {
+        LLVM_DEBUG(
+            llvh::dbgs() << "Cannot inline function '"
+                         << FC->getInternalNameStr() << "' into itself\n");
         continue;
       }
 
