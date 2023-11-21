@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -gc-max-heap=32M %s
+// RUN: %hermes -gc-max-heap=64M %s
 // REQUIRES: !slow_debug
 
 (function () {
     var foo = new WeakMap();
 
-    for (var i = 0; i < 1000000; i++) {
+    for (var i = 0; i < 4000000; i++) {
         var x = {};
         foo.set(x, x);
     }
