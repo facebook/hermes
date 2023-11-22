@@ -10,6 +10,7 @@
 #include "llvh/Support/YAMLParser.h"
 
 #include "hermes/AST/ASTBuilder.h"
+#include "hermes/AST/ESTree.h"
 #include "hermes/AST/ESTreeVisitors.h"
 #include "hermes/Parser/JSONParser.h"
 
@@ -69,6 +70,18 @@ TEST(ESTreeTest, EmptyTest) {
   auto Name = cast<ESTree::IdentifierNode>(FuncDecl->_id)->_name;
 
   EXPECT_STREQ("my_name_is_foo", Name->c_str());
+}
+
+TEST(ESTreeTest, LabelDecorationBaseTest) {
+  Context context;
+  auto *node = new (context) ESTree::WhileStatementNode(
+      new (context) ESTree::BlockStatementNode({}),
+      new (context) ESTree::EmptyStatementNode());
+  EXPECT_TRUE(
+      ESTree::getDecoration<ESTree::LabelDecorationBase>(node) != nullptr);
+  EXPECT_TRUE(
+      ESTree::getDecoration<ESTree::LabelDecorationBase>(node->_test) ==
+      nullptr);
 }
 
 #if HERMES_PARSE_JSX

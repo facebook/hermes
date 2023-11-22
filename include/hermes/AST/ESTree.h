@@ -1163,7 +1163,7 @@ class GetDecorationHelper {
   static Decoration *helper(Decoration *d) {
     return d;
   }
-  static constexpr ScopeDecorationBase *helper(void *) {
+  static constexpr Decoration *helper(void *) {
     return nullptr;
   }
 };
