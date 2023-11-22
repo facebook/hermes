@@ -186,6 +186,11 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
         genExpression(TC->_expression, nameHint),
         flowTypeToIRType(flowContext_.getNodeTypeOrAny(TC)));
   }
+  if (auto *TC = llvh::dyn_cast<ESTree::AsExpressionNode>(expr)) {
+    return Builder.createCheckedTypeCastInst(
+        genExpression(TC->_expression, nameHint),
+        flowTypeToIRType(flowContext_.getNodeTypeOrAny(TC)));
+  }
 
   Builder.getModule()->getContext().getSourceErrorManager().error(
       expr->getSourceRange(), Twine("Invalid expression encountered"));

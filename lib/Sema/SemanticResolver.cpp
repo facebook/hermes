@@ -893,6 +893,11 @@ void SemanticResolver::visit(TypeCastExpressionNode *node) {
   visitESTreeNode(*this, node->_expression, node);
 }
 
+void SemanticResolver::visit(AsExpressionNode *node) {
+  // Visit the expression, but not the type annotation.
+  visitESTreeNode(*this, node->_expression, node);
+}
+
 /// Process a component declaration by creating a new FunctionContext.
 void SemanticResolver::visit(ComponentDeclarationNode *componentDecl) {
   visitFunctionLike(

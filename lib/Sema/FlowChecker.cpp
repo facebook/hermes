@@ -687,24 +687,37 @@ class FlowChecker::ExprVisitor {
       visitESTreeNode(*this, node->_property, node);
   }
 
-  void visit(ESTree::TypeCastExpressionNode *node) {
-    auto *resTy = outer_.parseTypeAnnotation(
-        llvh::cast<ESTree::TypeAnnotationNode>(node->_typeAnnotation)
-            ->_typeAnnotation);
+  void visitExplicitCast(
+      ESTree::Node *node,
+      ESTree::Node *expression,
+      ESTree::Node *typeAnnotation) {
+    auto *resTy = outer_.parseTypeAnnotation(typeAnnotation);
     // Populate the type of this node before visiting the expression, since it
     // is already known. This also allows the result type to be used as context
     // while we are visiting the expression being cast. For instance, if we are
     // casting an empty array literal, the resulting type of the cast can be
     // used to set the element type of the array.
     outer_.setNodeType(node, resTy);
-    visitESTreeNode(*this, node->_expression, node);
+    visitESTreeNode(*this, expression, node);
 
-    auto *expTy = outer_.getNodeTypeOrAny(node->_expression);
+    auto *expTy = outer_.getNodeTypeOrAny(expression);
     auto cf = canAFlowIntoB(expTy->info, resTy->info);
     if (!cf.canFlow) {
       outer_.sm_.error(
           node->getSourceRange(), "ft: cast from incompatible type");
     }
+  }
+
+  void visit(ESTree::TypeCastExpressionNode *node) {
+    visitExplicitCast(
+        node,
+        node->_expression,
+        llvh::cast<ESTree::TypeAnnotationNode>(node->_typeAnnotation)
+            ->_typeAnnotation);
+  }
+
+  void visit(ESTree::AsExpressionNode *node) {
+    visitExplicitCast(node, node->_expression, node->_typeAnnotation);
   }
 
   void visit(ESTree::ArrayExpressionNode *node, ESTree::Node *parent) {
@@ -778,8 +791,9 @@ class FlowChecker::ExprVisitor {
 
     // If this array expression is immediately cast to something else, try using
     // the type we are casting to.
-    if (auto *cast = llvh::dyn_cast<ESTree::TypeCastExpressionNode>(parent)) {
-      auto *resTy = outer_.getNodeTypeOrAny(cast);
+    if (llvh::isa<ESTree::TypeCastExpressionNode>(parent) ||
+        llvh::isa<ESTree::AsExpressionNode>(parent)) {
+      auto *resTy = outer_.getNodeTypeOrAny(parent);
       if (auto *arrTy = llvh::dyn_cast<ArrayType>(resTy->info)) {
         tryElementType(arrTy->getElement());
         return;
