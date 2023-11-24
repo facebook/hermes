@@ -16,6 +16,9 @@
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringView.h"
 #include "llvh/Support/ConvertUTF.h"
+
+#include "simdutf/src/simdutf.h"
+
 #pragma GCC diagnostic push
 
 #ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
@@ -163,20 +166,24 @@ CallResult<HermesValue> StringPrimitive::createEfficient(
     bool IgnoreInputErrors) {
   const uint8_t *utf8 = str.data();
   const size_t length = str.size();
-  if (isAllASCII(utf8, utf8 + length)) {
+  if (isAllASCII_v2(utf8, utf8 + length)) {
     const char *ascii = reinterpret_cast<const char *>(utf8);
     return StringPrimitive::createEfficient(
         runtime, llvh::makeArrayRef(ascii, length));
   }
 
-  std::u16string out;
-  ExecutionStatus cRes =
-      convertUtf8ToUtf16(runtime, str, IgnoreInputErrors, out);
-  if (LLVM_UNLIKELY(cRes == ExecutionStatus::EXCEPTION)) {
+  const char *utf8ForSimd = reinterpret_cast<const char *>(utf8);
+  auto utf16capacity = simdutf::utf16_length_from_utf8(utf8ForSimd, length);
+
+  SmallU16String<32> utf16;
+  utf16.resize(utf16capacity);
+
+  auto utf16words = simdutf::convert_utf8_to_utf16(utf8ForSimd, length, utf16.begin());
+  if (LLVM_UNLIKELY(!utf16words)) {
     return ExecutionStatus::EXCEPTION;
   }
-
-  return StringPrimitive::createEfficient(runtime, std::move(out));
+  UTF16Ref out{utf16.begin(), utf16words};
+  return StringPrimitive::create(runtime, out);
 }
 
 CallResult<HermesValue> StringPrimitive::createEfficient(

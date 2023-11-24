@@ -12,6 +12,7 @@
 #include "hermes/VM/MockedEnvironment.h"
 
 #include "llvh/ADT/Optional.h"
+#include "simdjson/src/simdjson.h"
 
 namespace hermes {
 namespace vm {
@@ -40,6 +41,9 @@ struct RuntimeCommonStorage {
   /// PRNG used by Math.random()
   std::mt19937_64 randomEngine_;
   bool randomEngineSeeded_ = false;
+
+  // simdjson parser
+  simdjson::ondemand::parser simdjsonParser;
 };
 
 } // namespace vm

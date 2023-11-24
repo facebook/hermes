@@ -69,6 +69,12 @@ inline bool isAllASCII(const char *start, const char *end) {
   return isAllASCII((const uint8_t *)start, (const uint8_t *)end);
 }
 
+bool isAllASCII_v2(const uint8_t *start, const uint8_t *end);
+
+inline bool isAllASCII_v2(const char *start, const char *end) {
+  return isAllASCII_v2((const uint8_t *)start, (const uint8_t *)end);
+}
+
 /// Decode a sequence of UTF8 encoded bytes when it is known that the first byte
 /// is a start of an UTF8 sequence.
 /// \tparam allowSurrogates when false, values in the surrogate range are
