@@ -34,7 +34,10 @@ struct SynthTraceTest : public ::testing::Test {
 
   static std::unique_ptr<TracingHermesRuntime> makeRuntime() {
     ::hermes::vm::RuntimeConfig config =
-        ::hermes::vm::RuntimeConfig::Builder().withTraceEnabled(true).build();
+        ::hermes::vm::RuntimeConfig::Builder()
+            .withSynthTraceMode(
+                ::hermes::vm::SynthTraceMode::TracingAndReplaying)
+            .build();
     // We pass "forReplay = true" below, to prevent the TracingHermesRuntime
     // from interactions it does automatically on non-replay runs.
     // We don't need those for these tests.
@@ -1031,7 +1034,8 @@ struct SynthTraceRuntimeTest : public ::testing::Test {
 
   SynthTraceRuntimeTest()
       : config(::hermes::vm::RuntimeConfig::Builder()
-                   .withTraceEnabled(true)
+                   .withSynthTraceMode(
+                       ::hermes::vm::SynthTraceMode::TracingAndReplaying)
                    .withMicrotaskQueue(true)
                    .build()),
         traceRt(makeTracingHermesRuntime(

@@ -16,7 +16,9 @@ namespace hermes {
 std::unique_ptr<jsi::Runtime> makeTracingHermesRuntime(
     std::unique_ptr<HermesRuntime> hermesRuntime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig) {
-  if (runtimeConfig.getTraceEnabled()) {
+  auto mode = runtimeConfig.getSynthTraceMode();
+  if (mode == ::hermes::vm::SynthTraceMode::Tracing ||
+      mode == ::hermes::vm::SynthTraceMode::TracingAndReplaying) {
     return tracing::makeTracingHermesRuntime(
         std::move(hermesRuntime),
         runtimeConfig,

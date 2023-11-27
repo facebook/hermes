@@ -791,6 +791,8 @@ class HERMES_EMPTY_BASES Runtime : public PointerBase,
   /// Whether to enable block scoping in eval().
   const bool enableBlockScopingInEval : 1;
 
+  const SynthTraceMode traceMode;
+
 #ifdef HERMESVM_PROFILER_OPCODE
   /// Track the frequency of each opcode in the interpreter.
   uint32_t opcodeExecuteFrequency[256] = {0};
