@@ -8,6 +8,7 @@
 #include "hermes/AST/ES6Class.h"
 #include "hermes/AST/RecursiveVisitor.h"
 #include "hermes/Parser/JSLexer.h"
+#include "llvh/ADT/StringRef.h"
 
 namespace {
 /**
@@ -173,7 +174,7 @@ static ClassMemberKind getClassMemberKind(
   } else if (str == "set") {
     return ClassMemberKind::PropertySetter;
   }
-  abort();
+    hermes_fatal("Invalid ES6 class member");
 }
 
 } // namespace
@@ -742,7 +743,8 @@ class ES6ClassesTransformations {
             resolvedClassMember->setter = methodDefinition;
             break;
           default:
-            std::abort();
+            hermes_fatal("Invalid ES6 class member");
+            break;
         }
       }
     }
