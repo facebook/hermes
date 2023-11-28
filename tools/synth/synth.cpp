@@ -234,14 +234,11 @@ int main(int argc, char **argv) {
 
     // We want to print the GC stats by default.  We won't print them
     // if -gc-print-stats is specified false explicitly, and
-    // -gc-before-stats is also false, or if we're trying to get
-    // a stable instruction count.
+    // -gc-before-stats is also false.
     bool shouldPrintGCStats = true;
     if (cl::GCPrintStats.getNumOccurrences() > 0) {
-      shouldPrintGCStats = (cl::GCPrintStats || cl::GCBeforeStats) &&
-          !cl::StableInstructionCount;
+      shouldPrintGCStats = (cl::GCPrintStats || cl::GCBeforeStats);
     }
-    shouldPrintGCStats = shouldPrintGCStats && !cl::StableInstructionCount;
 
     llvh::Optional<::hermes::vm::gcheapsize_t> minHeapSize =
         execOption(cl::MinHeapSize);

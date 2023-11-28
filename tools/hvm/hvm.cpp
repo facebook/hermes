@@ -125,8 +125,7 @@ int main(int argc, char **argv) {
                                     .withSanitizeRate(cl::GCSanitizeRate)
                                     .withRandomSeed(cl::GCSanitizeRandomSeed)
                                     .build())
-                            .withShouldRecordStats(
-                                GCPrintStats && !cl::StableInstructionCount)
+                            .withShouldRecordStats(GCPrintStats)
                             .withShouldReleaseUnused(vm::kReleaseUnusedNone)
                             .withName("hvm")
                             .build())
