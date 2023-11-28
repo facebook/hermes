@@ -122,7 +122,6 @@ static int executeHBCBytecodeFromCL(
   options.timeLimit = cl::ExecutionTimeLimit;
   options.stopAfterInit = cl::StopAfterInit;
   options.forceGCBeforeStats = cl::GCBeforeStats;
-  options.stabilizeInstructionCount = cl::StableInstructionCount;
   options.sampleProfiling = cl::SampleProfiling;
   options.heapTimeline = cl::HeapTimeline;
 

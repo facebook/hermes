@@ -749,7 +749,6 @@ std::string TraceInterpreter::execFromMemoryBuffer(
     // Set up the mocks for environment-dependent JS behavior
     {
       auto env = std::get<3>(traceAndConfigAndEnv);
-      env.stabilizeInstructionCount = options.stabilizeInstructionCount;
       hermesRuntime->setMockedEnvironment(env);
     }
     bool tracing = false;

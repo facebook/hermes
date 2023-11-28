@@ -56,10 +56,6 @@ struct MockedEnvironment final {
 
   std::deque<StatsTable> callsToHermesInternalGetInstrumentedStats;
 
-  /// True if we should try to execute the same number of CPU instructions
-  /// across repeated invocations of the same JS.
-  bool stabilizeInstructionCount{false};
-
   MockedEnvironment() = default;
   explicit MockedEnvironment(
       const std::deque<StatsTable> &callsToHermesInternalGetInstrumentedStats)

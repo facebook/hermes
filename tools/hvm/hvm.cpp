@@ -142,7 +142,6 @@ int main(int argc, char **argv) {
           .withMaxNumRegisters(1024 * 1024)
           .build();
 
-  options.stabilizeInstructionCount = cl::StableInstructionCount;
   options.stopAfterInit = cl::StopAfterInit;
 
   bool success;

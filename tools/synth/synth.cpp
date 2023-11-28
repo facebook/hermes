@@ -228,7 +228,6 @@ int main(int argc, char **argv) {
       options.profileFileName = std::string{tmpfile.begin(), tmpfile.end()};
     }
     options.forceGCBeforeStats = cl::GCBeforeStats;
-    options.stabilizeInstructionCount = cl::StableInstructionCount;
     options.disableSourceHashCheck = cl::DisableSourceHashCheck;
 
     // These are the config parameters.

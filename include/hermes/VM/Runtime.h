@@ -890,8 +890,6 @@ class HERMES_EMPTY_BASES Runtime : public PointerBase,
     return builtinsFrozen_;
   }
 
-  bool shouldStabilizeInstructionCount();
-
   experiments::VMExperimentFlags getVMExperimentFlags() const {
     return vmExperimentFlags_;
   }

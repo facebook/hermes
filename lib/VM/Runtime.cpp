@@ -698,9 +698,6 @@ void Runtime::printRuntimeGCStats(JSONEmitter &json) const {
 }
 
 void Runtime::printHeapStats(llvh::raw_ostream &os) {
-  // Printing the timings is unstable.
-  if (shouldStabilizeInstructionCount())
-    return;
   getHeap().printAllCollectedStats(os);
 #ifndef NDEBUG
   printArrayCensus(llvh::outs());
@@ -897,11 +894,6 @@ void Runtime::potentiallyMoveHeap() {
           heapAlignSize(sizeof(FillerCell)), GC::minAllocationSize()));
 }
 #endif
-
-bool Runtime::shouldStabilizeInstructionCount() {
-  return getCommonStorage()->env &&
-      getCommonStorage()->env->stabilizeInstructionCount;
-}
 
 void Runtime::setMockedEnvironment(const MockedEnvironment &env) {
   getCommonStorage()->env = env;

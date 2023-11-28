@@ -108,9 +108,6 @@ CallResult<HermesValue>
 hermesInternalGetInstrumentedStats(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   auto resultHandle = runtime.makeHandle(JSObject::create(runtime));
-  // Printing the values would be unstable, so prevent that.
-  if (runtime.shouldStabilizeInstructionCount())
-    return resultHandle.getHermesValue();
 
   /// Adds \p key with \p val to the resultHandle object.
   auto addToResultHandle = [&](llvh::StringRef key, double v) {
