@@ -1308,6 +1308,75 @@ var secondDeref = ref.deref();
   EXPECT_EQ(secondDeref, replayedSecond);
 }
 
+TEST_F(NonDeterminismReplayTest, HermesInternalGetInstrumentedStatsTest) {
+  // Use JSON.stringify to serialize stats object to verify the result easily.
+  auto jsonStringify = [](jsi::Runtime &runtime,
+                          const jsi::Value &val) -> std::string {
+    auto JSON = runtime.global().getPropertyAsObject(runtime, "JSON");
+    auto stringify = JSON.getPropertyAsFunction(runtime, "stringify");
+
+    facebook::jsi::Value stringifyRes = stringify.call(runtime, val);
+    assert(stringifyRes.isString());
+    const auto statsStr = stringifyRes.getString(runtime).utf8(runtime);
+    return statsStr;
+  };
+
+  // Create some objects
+  eval(*traceRt, R"(
+    var s512 = " ".repeat(128);
+    var arr = [];
+  )");
+
+  // Run GC to get meaningful stats
+  traceRt->instrumentation().collectGarbage("forced for stats");
+
+  {
+    // Store current stats to var "stats1"
+    const jsi::Value stats1 = eval(*traceRt, R"(
+      var stats1 = HermesInternal.getInstrumentedStats();
+      stats1;
+    )");
+
+    // Run GC again to get different stats
+    traceRt->instrumentation().collectGarbage("forced for stats");
+
+    // Store second stats to var "stats2"
+    const jsi::Value stats2 = eval(*traceRt, R"(
+      var stats2 = HermesInternal.getInstrumentedStats();
+      stats2;
+    )");
+
+    // Return type of getInstrumentedStats should be an object
+    EXPECT_TRUE(stats1.isObject());
+    EXPECT_TRUE(stats2.isObject());
+  }
+
+  {
+    const std::string stats1Str =
+        jsonStringify(*traceRt, eval(*traceRt, "stats1"));
+    const std::string stats2Str =
+        jsonStringify(*traceRt, eval(*traceRt, "stats2"));
+
+    //
+    // replay
+    //
+    replay();
+
+    // Return type of getInstrumentedStats should be an object
+    EXPECT_TRUE(eval(*replayRt, "stats1").isObject());
+    EXPECT_TRUE(eval(*replayRt, "stats2").isObject());
+
+    const std::string replayStats1Str =
+        jsonStringify(*replayRt, eval(*replayRt, "stats1"));
+    const std::string replayStats2Str =
+        jsonStringify(*replayRt, eval(*replayRt, "stats2"));
+
+    // Compare the results between the original and the replayed run.
+    EXPECT_EQ(stats1Str, replayStats1Str);
+    EXPECT_EQ(stats2Str, replayStats2Str);
+  }
+}
+
 /// @}
 
 } // namespace
