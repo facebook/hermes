@@ -14,7 +14,6 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSLib.h"
-#include "hermes/VM/JSLib/RuntimeCommonStorage.h"
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/Operations.h"
@@ -104,66 +103,46 @@ hermesInternalGetWeakSize(void *, Runtime &runtime, NativeArgs args) {
       "getWeakSize can only be called on a WeakMap/WeakSet");
 }
 
-namespace {
-/// Populates the instrumentes stats object using \p addProp as the handler for
-/// adding properties to the object. \p addProp's should be invocable with
-/// (const char *), or (const char *, double). The first prototype is used when
-/// property passthrough is enable (i.e., the \p addProp will figure out what
-/// the property value is), and the second, when new/actual values should be
-/// recorded. Note that any property below added with PASSTHROUGH_PROP is only
-/// populated in passthrough mode (i.e., when replaying calls to
-/// getInstrumentedStats during synth trace replay).
-template <typename AP>
-ExecutionStatus populateInstrumentedStats(Runtime &runtime, AP addProp) {
-  constexpr bool addPropTakesValue =
-      std::is_invocable_v<AP, const char *, double>;
-  constexpr bool addPropGeneratesValue = std::is_invocable_v<AP, const char *>;
-  static_assert(
-      addPropGeneratesValue || addPropTakesValue, "invalid addProp prototype");
+/// \return an object containing various instrumented statistics.
+CallResult<HermesValue>
+hermesInternalGetInstrumentedStats(void *, Runtime &runtime, NativeArgs args) {
+  GCScope gcScope(runtime);
+  auto resultHandle = runtime.makeHandle(JSObject::create(runtime));
+  // Printing the values would be unstable, so prevent that.
+  if (runtime.shouldStabilizeInstructionCount())
+    return resultHandle.getHermesValue();
 
-  // PASSTHROUGH_PROP is used to populate the instrumented stats objects with
-  // properties that are no longer being returned by hermes, but at one point
-  // where, and thus are kept here for synth trace playback compatibility only.
-#define PASSTHROUGH_PROP(name)                                          \
-  do {                                                                  \
-    if constexpr (addPropGeneratesValue) {                              \
-      if (LLVM_UNLIKELY(addProp(name) == ExecutionStatus::EXCEPTION)) { \
-        return ExecutionStatus::EXCEPTION;                              \
-      }                                                                 \
-    }                                                                   \
-  } while (0)
+  /// Adds \p key with \p val to the resultHandle object.
+  auto addToResultHandle = [&](llvh::StringRef key, double v) {
+    GCScopeMarkerRAII marker{gcScope};
+    HermesValue val = HermesValue::encodeUntrustedNumberValue(v);
+    Handle<> valHandle = runtime.makeHandle(val);
+    auto keySym = symbolForCStr(runtime, key.data());
+    if (LLVM_UNLIKELY(keySym == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
 
-#define ADD_PROP(name, value)                                                  \
-  do {                                                                         \
-    if constexpr (addPropGeneratesValue) {                                     \
-      PASSTHROUGH_PROP(name);                                                  \
-    } else {                                                                   \
-      if (LLVM_UNLIKELY(addProp(name, value) == ExecutionStatus::EXCEPTION)) { \
-        return ExecutionStatus::EXCEPTION;                                     \
-      }                                                                        \
-    }                                                                          \
-  } while (0)
+    return JSObject::defineNewOwnProperty(
+        resultHandle,
+        runtime,
+        **keySym,
+        PropertyFlags::defaultNewNamedPropertyFlags(),
+        valHandle);
+  };
+
+  /// Adds a property to resultHandle. \p key provides its name, and \p val,
+  /// its value.
+#define ADD_PROP(name, value)                                              \
+  if (LLVM_UNLIKELY(                                                       \
+          addToResultHandle(name, value) == ExecutionStatus::EXCEPTION)) { \
+    return ExecutionStatus::EXCEPTION;                                     \
+  }
 
   auto &heap = runtime.getHeap();
   GCBase::HeapInfo info;
   heap.getHeapInfo(info);
 
-  // To ensure synth trace compatibility, properties should not be removed nor
-  // reordered. To "remove" a property use PASSTHROUGH_PROP instead of ADD_PROP.
-  PASSTHROUGH_PROP("js_hostFunctionTime");
-  PASSTHROUGH_PROP("js_hostFunctionCPUTime");
-  PASSTHROUGH_PROP("js_hostFunctionCount");
-  PASSTHROUGH_PROP("js_evaluateJSTime");
-  PASSTHROUGH_PROP("js_evaluateJSCPUTime");
-  PASSTHROUGH_PROP("js_evaluateJSCount");
-  PASSTHROUGH_PROP("js_incomingFunctionTime");
-  PASSTHROUGH_PROP("js_incomingFunctionCPUTime");
-  PASSTHROUGH_PROP("js_incomingFunctionCount");
   ADD_PROP("js_VMExperiments", runtime.getVMExperimentFlags());
-  PASSTHROUGH_PROP("js_hermesTime");
-  PASSTHROUGH_PROP("js_hermesCPUTime");
-  PASSTHROUGH_PROP("js_hermesThreadMinorFaults");
-  PASSTHROUGH_PROP("js_hermesThreadMajorFaults");
   ADD_PROP("js_numGCs", heap.getNumGCs());
   ADD_PROP("js_gcCPUTime", heap.getGCCPUTime());
   ADD_PROP("js_gcTime", heap.getGCTime());
@@ -174,137 +153,7 @@ ExecutionStatus populateInstrumentedStats(Runtime &runtime, AP addProp) {
   ADD_PROP("js_vaSize", info.va);
   ADD_PROP("js_externalBytes", info.externalBytes);
   ADD_PROP("js_markStackOverflows", info.numMarkStackOverflows);
-  PASSTHROUGH_PROP("js_hermesVolCtxSwitches");
-  PASSTHROUGH_PROP("js_hermesInvolCtxSwitches");
-  PASSTHROUGH_PROP("js_pageSize");
-  PASSTHROUGH_PROP("js_threadAffinityMask");
-  PASSTHROUGH_PROP("js_threadCPU");
-  PASSTHROUGH_PROP("js_bytecodePagesResident");
-  PASSTHROUGH_PROP("js_bytecodePagesResidentRuns");
-  PASSTHROUGH_PROP("js_bytecodePagesAccessed");
-  PASSTHROUGH_PROP("js_bytecodeSize");
-  PASSTHROUGH_PROP("js_bytecodePagesTraceHash");
-  PASSTHROUGH_PROP("js_bytecodeIOTime");
-  PASSTHROUGH_PROP("js_bytecodePagesTraceSample");
-
-#undef PASSTHROUGH_PROP
 #undef ADD_PROP
-
-  return ExecutionStatus::RETURNED;
-}
-
-/// Converts \p val to a HermesValue.
-CallResult<HermesValue> statsTableValueToHermesValue(
-    Runtime &runtime,
-    const MockedEnvironment::StatsTableValue &val) {
-  if (val.isNum()) {
-    return HermesValue::encodeUntrustedNumberValue(val.num());
-  }
-
-  auto strRes =
-      StringPrimitive::create(runtime, createASCIIRef(val.str().c_str()));
-  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  return *strRes;
-}
-} // namespace
-
-/// \return an object containing various instrumented statistics.
-CallResult<HermesValue>
-hermesInternalGetInstrumentedStats(void *, Runtime &runtime, NativeArgs args) {
-  GCScope gcScope(runtime);
-  auto resultHandle = runtime.makeHandle(JSObject::create(runtime));
-  // Printing the values would be unstable, so prevent that.
-  if (runtime.shouldStabilizeInstructionCount())
-    return resultHandle.getHermesValue();
-
-  MockedEnvironment::StatsTable *statsTable = nullptr;
-  auto *const storage = runtime.getCommonStorage();
-  if (storage->env) {
-    if (!storage->env->callsToHermesInternalGetInstrumentedStats.empty()) {
-      statsTable =
-          &storage->env->callsToHermesInternalGetInstrumentedStats.front();
-    }
-  }
-
-  std::unique_ptr<MockedEnvironment::StatsTable> newStatsTable;
-  if (storage->shouldTrace) {
-    newStatsTable.reset(new MockedEnvironment::StatsTable());
-  }
-
-  /// Adds \p key with \p val to the resultHandle object. \p newStatsTableVal is
-  /// the value \p key should have in the newStatsTable object (i.e., during
-  /// synth trace recording).
-  auto addToResultHandle =
-      [&](llvh::StringRef key, HermesValue val, auto newStatsTableVal) {
-        Handle<> valHandle = runtime.makeHandle(val);
-        auto keySym = symbolForCStr(runtime, key.data());
-        if (LLVM_UNLIKELY(keySym == ExecutionStatus::EXCEPTION)) {
-          return ExecutionStatus::EXCEPTION;
-        }
-
-        auto status = JSObject::defineNewOwnProperty(
-            resultHandle,
-            runtime,
-            **keySym,
-            PropertyFlags::defaultNewNamedPropertyFlags(),
-            valHandle);
-
-        if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
-          return ExecutionStatus::EXCEPTION;
-        }
-
-        if (newStatsTable) {
-          newStatsTable->try_emplace(key, newStatsTableVal);
-        }
-
-        return ExecutionStatus::RETURNED;
-      };
-
-  ExecutionStatus populateRes;
-  if (!statsTable) {
-    /// Adds a property to resultHandle. \p key provides its name, and \p val,
-    /// its value. Adds {\p key, \p val} to newStatsTable if it is not null.
-    populateRes = populateInstrumentedStats(
-        runtime, [&](llvh::StringRef key, double val) {
-          GCScopeMarkerRAII marker{gcScope};
-
-          return addToResultHandle(
-              key, HermesValue::encodeUntrustedNumberValue(val), val);
-        });
-  } else {
-    /// Adds a property named \p key to resultHandle if it is present in
-    /// statsTable. Also copies it to newStatsTable if it is not null. Does
-    /// nothing if \p key is not in statsTable.
-    populateRes = populateInstrumentedStats(runtime, [&](llvh::StringRef key) {
-      auto it = statsTable->find(key);
-      if (it == statsTable->end()) {
-        return ExecutionStatus::RETURNED;
-      }
-
-      GCScopeMarkerRAII marker{gcScope};
-
-      auto valRes = statsTableValueToHermesValue(runtime, it->getValue());
-      if (LLVM_UNLIKELY(valRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-
-      return addToResultHandle(key, *valRes, it->getValue());
-    });
-  }
-
-  if (LLVM_UNLIKELY(populateRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  if (storage->env && statsTable) {
-    storage->env->callsToHermesInternalGetInstrumentedStats.pop_front();
-  }
-  if (LLVM_UNLIKELY(storage->shouldTrace)) {
-    storage->tracedEnv.callsToHermesInternalGetInstrumentedStats.push_back(
-        *newStatsTable);
-  }
 
   return resultHandle.getHermesValue();
 }

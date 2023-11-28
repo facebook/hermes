@@ -10,8 +10,6 @@
 
 #define FOREACH_TEST(F)              \
   F(callbacksCallJSFunction)         \
-  F(getInstrumentedStats)            \
-  F(getInstrumentedStatsAllowsEmpty) \
   F(globalReturnObject)              \
   F(getPropertyNames)                \
   F(hostCallsJS)                     \
