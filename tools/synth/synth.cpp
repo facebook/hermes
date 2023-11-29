@@ -10,6 +10,7 @@
 #include <hermes/Support/MemoryBuffer.h>
 #include <hermes/TraceInterpreter.h>
 #include <hermes/hermes.h>
+#include <hermes/hermes_tracing.h>
 
 #include "llvh/ADT/Statistic.h"
 #include "llvh/Support/CommandLine.h"
@@ -318,8 +319,22 @@ int main(int argc, char **argv) {
       if (ec) {
         throw std::system_error(ec);
       }
-      TraceInterpreter::execAndTrace(
-          cl::TraceFile, bytecodeFiles, options, std::move(os));
+
+      options.traceEnabled = true;
+      TraceInterpreter::execWithRuntime(
+          cl::TraceFile,
+          bytecodeFiles,
+          options,
+          [stream = std::ref(os)](
+              const ::hermes::vm::RuntimeConfig &config) mutable {
+            auto &st = stream.get();
+            return facebook::hermes::makeTracingHermesRuntime(
+                facebook::hermes::makeHermesRuntime(config),
+                config,
+                std::move(st),
+                /* forReplay */ true);
+          });
+
       llvh::outs() << "\nWrote output trace to: " << cl::Trace << "\n";
     } else {
       llvh::outs() << TraceInterpreter::execAndGetStats(

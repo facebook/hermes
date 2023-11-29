@@ -10,6 +10,10 @@
 
 #include <hermes/hermes.h>
 
+namespace llvh {
+class raw_ostream;
+} // namespace llvh
+
 namespace facebook {
 namespace hermes {
 
@@ -19,6 +23,12 @@ namespace hermes {
 std::unique_ptr<jsi::Runtime> makeTracingHermesRuntime(
     std::unique_ptr<HermesRuntime> hermesRuntime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig);
+
+std::unique_ptr<jsi::Runtime> makeTracingHermesRuntime(
+    std::unique_ptr<HermesRuntime> hermesRuntime,
+    const ::hermes::vm::RuntimeConfig &runtimeConfig,
+    std::unique_ptr<llvh::raw_ostream> traceStream,
+    bool forReplay = false);
 
 } // namespace hermes
 } // namespace facebook

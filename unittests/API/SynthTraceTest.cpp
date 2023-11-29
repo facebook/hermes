@@ -1093,8 +1093,7 @@ struct SynthTraceReplayTest : public SynthTraceRuntimeTest {
         llvh::MemoryBuffer::getMemBuffer(traceResult), // traceBuf
         {}, // codeBufs
         options, // ExecuteOptions
-        nullptr // traceStream
-    );
+        makeHermesRuntime);
     replayRt = std::move(rt);
   }
 };
