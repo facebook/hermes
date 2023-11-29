@@ -73,7 +73,8 @@ declare component Foo1() renders SomeComponent;
 // CHECK-NEXT:       "rest": null,
 // CHECK-NEXT:       "typeParameters": null,
 // CHECK-NEXT:       "rendersType": {
-// CHECK-NEXT:         "type": "TypeAnnotation",
+// CHECK-NEXT:         "type": "TypeOperator",
+// CHECK-NEXT:         "operator": "renders",
 // CHECK-NEXT:         "typeAnnotation": {
 // CHECK-NEXT:           "type": "GenericTypeAnnotation",
 // CHECK-NEXT:           "id": {
@@ -107,6 +108,54 @@ declare component Foo1<T>();
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "rendersType": null
+// CHECK-NEXT:     },
+
+declare component Foo1() renders? SomeComponent;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "DeclareComponent",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "Foo1"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "params": [],
+// CHECK-NEXT:       "rest": null,
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "rendersType": {
+// CHECK-NEXT:         "type": "TypeOperator",
+// CHECK-NEXT:         "operator": "renders?",
+// CHECK-NEXT:         "typeAnnotation": {
+// CHECK-NEXT:           "type": "GenericTypeAnnotation",
+// CHECK-NEXT:           "id": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "SomeComponent"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "typeParameters": null
+// CHECK-NEXT:         }
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+declare component Foo1() renders* SomeComponent;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "DeclareComponent",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "Foo1"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "params": [],
+// CHECK-NEXT:       "rest": null,
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "rendersType": {
+// CHECK-NEXT:         "type": "TypeOperator",
+// CHECK-NEXT:         "operator": "renders*",
+// CHECK-NEXT:         "typeAnnotation": {
+// CHECK-NEXT:           "type": "GenericTypeAnnotation",
+// CHECK-NEXT:           "id": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "SomeComponent"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "typeParameters": null
+// CHECK-NEXT:         }
+// CHECK-NEXT:       }
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

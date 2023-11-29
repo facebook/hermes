@@ -120,6 +120,8 @@ void JSParserImpl::initializeIdentifiers() {
   // Flow Component syntax
   componentIdent_ = lexer_.getIdentifier("component");
   rendersIdent_ = lexer_.getIdentifier("renders");
+  rendersMaybeOperator_ = lexer_.getIdentifier("renders?");
+  rendersStarOperator_ = lexer_.getIdentifier("renders*");
 
 #endif
 
@@ -590,9 +592,9 @@ bool JSParserImpl::parseFormalParameters(
   // (
   SMLoc lparenLoc = advance().Start;
 
-#if HERMES_PARSE_FLOW
-  // The first parameter can be 'this' in Flow mode.
-  if (context_.getParseFlow() && check(TokenKind::rw_this)) {
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+  // The first parameter can be 'this' in Flow and TypeScript.
+  if (context_.getParseTypes() && check(TokenKind::rw_this)) {
     auto *name = tok_->getResWordIdentifier();
     SMLoc thisParamStart = advance().Start;
 
@@ -605,7 +607,7 @@ bool JSParserImpl::parseFormalParameters(
             thisParamStart))
       return false;
 
-    auto optType = parseTypeAnnotationFlow(annotStart);
+    auto optType = parseTypeAnnotation(annotStart);
     if (!optType)
       return false;
     ESTree::Node *type = *optType;
@@ -3978,6 +3980,7 @@ inline unsigned getPrecedence(TokenKind kind) {
   static const unsigned precedence[] = {
 #define TOK(...) 0,
 #define BINOP(name, str, precedence) precedence,
+#define IDENT_OP(name, str, precedence) precedence,
 
 // There are two reserved words that are binary operators.
 #define RESWORD(name)                                       \
@@ -4000,21 +4003,21 @@ inline bool isLeftAssoc(TokenKind kind) {
 /// except, in which case return 0.
 /// \param asIdent if not null, the "as" UniqueString used to parse TS
 ///   AsExpressions.
-inline unsigned getPrecedenceExcept(
-    const Token *token,
-    TokenKind except,
-    UniqueString *asIdent) {
+inline unsigned getPrecedenceExcept(const Token *token, TokenKind except) {
   const TokenKind kind = token->getKind();
-#if HERMES_PARSE_TS
-  // 'as' has the same precedence as 'in' in TS.
-  if (LLVM_UNLIKELY(kind == TokenKind::identifier) &&
-      LLVM_UNLIKELY(token->getIdentifier() == asIdent)) {
-    return getPrecedence(TokenKind::rw_in);
-  }
-#endif
   return LLVM_LIKELY(kind != except) ? getPrecedence(kind) : 0;
 }
 } // namespace
+
+inline void JSParserImpl::convertIdentOpIfPossible() {
+#if HERMES_PARSE_TS || HERMES_PARSE_FLOW
+  if (LLVM_UNLIKELY(tok_->getKind() == TokenKind::identifier) &&
+      context_.getParseTypes()) {
+    if (tok_->getIdentifier() == asIdent_)
+      lexer_.convertCurTokenToIdentOp(TokenKind::as_operator);
+  }
+#endif
+};
 
 Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
   // The stack can never go deeper than the number of precedence levels,
@@ -4073,14 +4076,20 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
           startLoc,
           endLoc,
           new (context_) ESTree::LogicalExpressionNode(left, right, opIdent));
-#if HERMES_PARSE_TS
-    } else if (LLVM_UNLIKELY(opKind == TokenKind::identifier)) {
-      // The only identifier used as a binary operator is 'as' in TS
-      // and it would only have been pushed if TS parsing was enabled.
-      return setLocation(
-          startLoc,
-          endLoc,
-          new (context_) ESTree::TSAsExpressionNode(left, right));
+#if HERMES_PARSE_TS || HERMES_PARSE_FLOW
+    } else if (LLVM_UNLIKELY(opKind == TokenKind::as_operator)) {
+      if (context_.getParseTS()) {
+        return setLocation(
+            startLoc,
+            endLoc,
+            new (context_) ESTree::TSAsExpressionNode(left, right));
+      } else {
+        assert(context_.getParseFlow() && "must be parsing types");
+        return setLocation(
+            startLoc,
+            endLoc,
+            new (context_) ESTree::AsExpressionNode(left, right));
+      }
 #endif
     } else {
       return setLocation(
@@ -4129,12 +4138,10 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
     topExpr = optExpr.getValue();
   }
   SMLoc topExprEndLoc = getPrevTokenEndLoc();
+  convertIdentOpIfPossible();
 
   // While the current token is a binary operator.
-  while (unsigned precedence = getPrecedenceExcept(
-             tok_,
-             exceptKind,
-             HERMES_PARSE_TS && context_.getParseTS() ? asIdent_ : nullptr)) {
+  while (unsigned precedence = getPrecedenceExcept(tok_, exceptKind)) {
     // If the next operator has no greater precedence than the operator on the
     // stack, pop the stack, creating a new binary expression.
     while (!stack.empty() && precedence <= getPrecedence(stack.back().opKind)) {
@@ -4165,10 +4172,9 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
     advance();
 
     topExprStartLoc = tok_->getStartLoc();
-#if HERMES_PARSE_TS
-    if (context_.getParseTS() &&
-        LLVM_UNLIKELY(stack.back().opKind == TokenKind::identifier)) {
-      auto optRightExpr = parseTypeAnnotationTS();
+#if HERMES_PARSE_TS || HERMES_PARSE_FLOW
+    if (LLVM_UNLIKELY(stack.back().opKind == TokenKind::as_operator)) {
+      auto optRightExpr = parseTypeAnnotation();
       if (!optRightExpr)
         return None;
       topExpr = optRightExpr.getValue();
@@ -4186,6 +4192,7 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
     }
 
     topExprEndLoc = getPrevTokenEndLoc();
+    convertIdentOpIfPossible();
   }
 
   // We have consumed all binary operators. Pop the stack, creating expressions.

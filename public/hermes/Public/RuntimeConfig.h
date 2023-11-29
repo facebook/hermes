@@ -12,6 +12,7 @@
 #include "hermes/Public/CtorConfig.h"
 #include "hermes/Public/GCConfig.h"
 
+#include <cstdint>
 #include <memory>
 
 namespace hermes {
@@ -21,6 +22,13 @@ enum CompilationMode {
   SmartCompilation,
   ForceEagerCompilation,
   ForceLazyCompilation
+};
+
+enum class SynthTraceMode : int8_t {
+  None,
+  Replaying,
+  Tracing,
+  TracingAndReplaying,
 };
 
 class PinnedHermesValue;
@@ -70,8 +78,8 @@ class PinnedHermesValue;
   /* Support for using microtasks. */                                  \
   F(constexpr, bool, MicrotaskQueue, false)                            \
                                                                        \
-  /* Enable synth trace. */                                            \
-  F(constexpr, bool, TraceEnabled, false)                              \
+  /* Runtime set up for synth trace. */                                \
+  F(constexpr, SynthTraceMode, SynthTraceMode, SynthTraceMode::None)   \
                                                                        \
   /* Scratch path for synth trace. */                                  \
   F(HERMES_NON_CONSTEXPR, std::string, TraceScratchPath, "")           \

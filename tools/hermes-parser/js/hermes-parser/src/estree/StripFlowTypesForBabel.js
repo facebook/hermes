@@ -32,6 +32,7 @@ import type {
 } from 'hermes-estree';
 
 import {SimpleTransform} from '../transform/SimpleTransform';
+import {createSyntaxError} from '../utils/createSyntaxError';
 
 const nodeWith = SimpleTransform.nodeWith;
 
@@ -140,6 +141,22 @@ export function transformProgram(
           // Convert to simple generic type annotation
           return createSimpleGenericTypeAnnotation('bigint', node);
         }
+        case 'ObjectTypeAnnotation': {
+          const shouldStrip = node.properties.some(
+            prop => prop.type === 'ObjectTypeMappedTypeProperty',
+          );
+          if (shouldStrip) {
+            return createAnyTypeAnnotation(node);
+          }
+
+          return node;
+        }
+        case 'ObjectTypeMappedTypeProperty': {
+          throw createSyntaxError(
+            node,
+            `Invalid AST structure, ObjectTypeMappedTypeProperty found outside of an ObjectTypeAnnotation`,
+          );
+        }
         case 'IndexedAccessType':
         case 'OptionalIndexedAccessType':
         case 'KeyofTypeAnnotation':
@@ -147,7 +164,6 @@ export function transformProgram(
         case 'InferTypeAnnotation':
         case 'TupleTypeLabeledElement':
         case 'TupleTypeSpreadElement':
-        case 'ObjectTypeMappedTypeProperty':
         case 'ComponentTypeAnnotation':
         case 'TypeOperator':
         case 'TypePredicate': {

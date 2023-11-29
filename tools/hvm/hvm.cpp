@@ -132,8 +132,7 @@ int main(int argc, char **argv) {
                                     .withSanitizeRate(cl::GCSanitizeRate)
                                     .withRandomSeed(cl::GCSanitizeRandomSeed)
                                     .build())
-                            .withShouldRecordStats(
-                                GCPrintStats && !cl::StableInstructionCount)
+                            .withShouldRecordStats(GCPrintStats)
                             .withShouldReleaseUnused(vm::kReleaseUnusedNone)
                             .withName("hvm")
                             .build())
@@ -150,7 +149,6 @@ int main(int argc, char **argv) {
           .withMaxNumRegisters(1024 * 1024)
           .build();
 
-  options.stabilizeInstructionCount = cl::StableInstructionCount;
   options.stopAfterInit = cl::StopAfterInit;
 
   bool success;

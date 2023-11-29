@@ -25,7 +25,6 @@ struct HermesTestHelper;
 namespace hermes {
 namespace vm {
 class GCExecTrace;
-struct MockedEnvironment;
 } // namespace vm
 } // namespace hermes
 
@@ -136,18 +135,10 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   /// \return a jsi::Object if a matching object is found, else returns null.
   jsi::Value getObjectForID(uint64_t id);
 
-  /// Get a structure representing the environment-dependent behavior, so
-  /// it can be written into the trace for later replay.
-  const ::hermes::vm::MockedEnvironment &getMockedEnvironment() const;
-
   /// Get a structure representing the execution history (currently just of
   /// GC, but will be generalized as necessary), to aid in debugging
   /// non-deterministic execution.
   const ::hermes::vm::GCExecTrace &getGCExecTrace() const;
-
-  /// Make the runtime read from \p env to replay its environment-dependent
-  /// behavior.
-  void setMockedEnvironment(const ::hermes::vm::MockedEnvironment &env);
 
   /// Get IO tracking (aka HBC page access) info as a JSON string.
   /// See hermes::vm::Runtime::getIOTrackingInfoJSON() for conditions

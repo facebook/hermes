@@ -101,6 +101,66 @@ void TracingRuntime::replaceNondeterministicFuncs() {
       .asFunction(*this)
       .call(*this, {std::move(callUntraced)});
 
+  //
+  // Wrapper for HermesInternal.getInstrumentedStats (or any other
+  // non-deterministic functions that return JSObject)
+  //
+  jsi::Function callUntracedSimpleObjects =
+      jsi::Function::createFromHostFunction(
+          *this,
+          jsi::PropNameID::forAscii(*this, "callUntracedSimpleObjects"),
+          3,
+          [this](
+              Runtime &rt,
+              const jsi::Value &, // thisVal
+              const jsi::Value *args,
+              size_t count) {
+            assert(count == 3);
+            // Use non-tracing runtime to call the original function and
+            // stringify operation.
+            Runtime &noTracingRt = *runtime_;
+            const auto nativeFunc =
+                args[0].getObject(noTracingRt).getFunction(noTracingRt);
+            const auto jsonStringify =
+                args[1].getObject(noTracingRt).getFunction(noTracingRt);
+            const auto jsonParse =
+                args[2].getObject(noTracingRt).getFunction(noTracingRt);
+
+            // Call the original native function without tracing.
+            const jsi::Value funcResult = nativeFunc.call(noTracingRt);
+
+            // Stringify the result and convert it to UTF8 string;
+            const std::string utf8 = jsonStringify.call(noTracingRt, funcResult)
+                                         .asString(noTracingRt)
+                                         .utf8(noTracingRt);
+
+            // Recreate the result object from the string with TracingRuntime
+            // (rt) so that we record this object creation in trace record.
+            jsi::String str = jsi::String::createFromUtf8(rt, utf8);
+            // Finally, parse the stringified result back to JS object.
+            return jsonParse.call(rt, std::move(str));
+          });
+
+  code = R"(
+(function(callUntracedSimpleObjects){
+  // Capture the original JSON.stringify and JSON.parse functions in case they are overridden.
+  var realJSONStringify = JSON.stringify;
+  var realJSONParse = JSON.parse;
+  var hermesInternalGetInstrumentedStatsReal = HermesInternal.getInstrumentedStats;
+  HermesInternal.getInstrumentedStats = function getInstrumentedStats() {
+    return callUntracedSimpleObjects(hermesInternalGetInstrumentedStatsReal,
+      realJSONStringify, realJSONParse);
+  };
+  Object.freeze(HermesInternal);
+});
+)";
+  global()
+      .getPropertyAsFunction(*this, "eval")
+      .call(*this, code)
+      .asObject(*this)
+      .asFunction(*this)
+      .call(*this, {std::move(callUntracedSimpleObjects)});
+
   numPreambleRecords_ = trace_.records().size();
 }
 
@@ -709,8 +769,7 @@ std::string TracingHermesRuntime::flushAndDisableBridgeTrafficTrace() {
   if (flushedAndDisabled_) {
     return committedTraceFilename_;
   }
-  trace().flushAndDisable(
-      hermesRuntime().getMockedEnvironment(), hermesRuntime().getGCExecTrace());
+  trace().flushAndDisable(hermesRuntime().getGCExecTrace());
   flushedAndDisabled_ = true;
   committedTraceFilename_ = commitAction_();
   return committedTraceFilename_;

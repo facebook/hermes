@@ -28,7 +28,6 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSLib.h"
-#include "hermes/VM/JSLib/RuntimeCommonStorage.h"
 #include "hermes/VM/JSLib/RuntimeJSONUtils.h"
 #include "hermes/VM/NativeState.h"
 #include "hermes/VM/Operations.h"
@@ -41,6 +40,7 @@
 #include "hermes/VM/TimeLimitMonitor.h"
 #include "hermes/VM/WeakRoot-inline.h"
 
+#include "llvh/Support/ConvertUTF.h"
 #include "llvh/Support/ErrorHandling.h"
 #include "llvh/Support/FileSystem.h"
 #include "llvh/Support/SHA1.h"
@@ -683,6 +683,12 @@ class HermesRuntimeImpl final : public HermesRuntime,
   vm::HermesValue stringHVFromUtf8(const uint8_t *utf8, size_t length);
   std::string utf8FromStringView(vm::StringView view);
 
+  /// Extract a UTF-8 message from the given exception \p ex as UTF-16. Uses
+  /// \p buf as storage for the resulting UTF-16 message.
+  vm::UTF16Ref utf16FromErrorWhat(
+      const std::exception &ex,
+      llvh::SmallVectorImpl<llvh::UTF16> &buf);
+
   struct JsiProxy final : public vm::HostObjectProxy {
     HermesRuntimeImpl &rt_;
     std::shared_ptr<jsi::HostObject> ho_;
@@ -705,11 +711,12 @@ class HermesRuntimeImpl final : public HermesRuntime,
       catch (const jsi::JSError &error) {
         return rt_.runtime_.setThrownValue(hvFromValue(error.value()));
       } catch (const std::exception &ex) {
+        llvh::SmallVector<llvh::UTF16, 16> buf;
         return rt_.runtime_.raiseError(
             vm::TwineChar16{"Exception in HostObject::get for prop '"} +
             rt_.runtime_.getIdentifierTable().getStringViewForDev(
                 rt_.runtime_, id) +
-            "': " + ex.what());
+            "': " + rt_.utf16FromErrorWhat(ex, buf));
       } catch (...) {
         return rt_.runtime_.raiseError(
             vm::TwineChar16{"Exception in HostObject::get: for prop '"} +
@@ -735,11 +742,12 @@ class HermesRuntimeImpl final : public HermesRuntime,
       catch (const jsi::JSError &error) {
         return rt_.runtime_.setThrownValue(hvFromValue(error.value()));
       } catch (const std::exception &ex) {
+        llvh::SmallVector<llvh::UTF16, 16> buf;
         return rt_.runtime_.raiseError(
             vm::TwineChar16{"Exception in HostObject::set for prop '"} +
             rt_.runtime_.getIdentifierTable().getStringViewForDev(
                 rt_.runtime_, id) +
-            "': " + ex.what());
+            "': " + rt_.utf16FromErrorWhat(ex, buf));
       } catch (...) {
         return rt_.runtime_.raiseError(
             vm::TwineChar16{"Exception in HostObject::set: for prop '"} +
@@ -779,9 +787,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
       catch (const jsi::JSError &error) {
         return rt_.runtime_.setThrownValue(hvFromValue(error.value()));
       } catch (const std::exception &ex) {
+        llvh::SmallVector<llvh::UTF16, 16> buf;
         return rt_.runtime_.raiseError(
             vm::TwineChar16{"Exception in HostObject::getPropertyNames: "} +
-            ex.what());
+            rt_.utf16FromErrorWhat(ex, buf));
       } catch (...) {
         return rt_.runtime_.raiseError(vm::TwineChar16{
             "Exception in HostObject::getPropertyNames: <unknown>"});
@@ -822,8 +831,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
       catch (const jsi::JSError &error) {
         return runtime.setThrownValue(hvFromValue(error.value()));
       } catch (const std::exception &ex) {
+        llvh::SmallVector<llvh::UTF16, 16> buf;
         return runtime.raiseError(
-            vm::TwineChar16{"Exception in HostFunction: "} + ex.what());
+            vm::TwineChar16{"Exception in HostFunction: "} +
+            rt.utf16FromErrorWhat(ex, buf));
       } catch (...) {
         return runtime.raiseError("Exception in HostFunction: <unknown>");
       }
@@ -1244,20 +1255,6 @@ jsi::Value HermesRuntime::getObjectForID(uint64_t id) {
   return jsi::Value::null();
 }
 
-/// Get a structure representing the enviroment-dependent behavior, so
-/// it can be written into the trace for later replay.
-const ::hermes::vm::MockedEnvironment &HermesRuntime::getMockedEnvironment()
-    const {
-  return static_cast<const HermesRuntimeImpl *>(this)
-      ->runtime_.getCommonStorage()
-      ->tracedEnv;
-}
-
-void HermesRuntime::setMockedEnvironment(
-    const ::hermes::vm::MockedEnvironment &env) {
-  static_cast<HermesRuntimeImpl *>(this)->runtime_.setMockedEnvironment(env);
-}
-
 const ::hermes::vm::GCExecTrace &HermesRuntime::getGCExecTrace() const {
   return static_cast<const HermesRuntimeImpl *>(this)
       ->runtime_.getGCExecTrace();
@@ -1632,6 +1629,18 @@ std::string HermesRuntimeImpl::utf8FromStringView(vm::StringView view) {
   ::hermes::convertUTF16ToUTF8WithReplacements(
       ret, llvh::ArrayRef{view.castToChar16Ptr(), view.length()});
   return ret;
+}
+
+vm::UTF16Ref HermesRuntimeImpl::utf16FromErrorWhat(
+    const std::exception &ex,
+    llvh::SmallVectorImpl<llvh::UTF16> &buf) {
+  assert(buf.empty() && "buf must be empty");
+  if (!llvh::convertUTF8ToUTF16String(ex.what(), buf))
+    return {u"<invalid utf-8 exception message>"};
+  static_assert(
+      sizeof(char16_t) == sizeof(llvh::UTF16),
+      "Cannot reinterpret UTF16 as char16_t");
+  return vm::UTF16Ref{(char16_t *)buf.data(), buf.size()};
 }
 
 std::string HermesRuntimeImpl::symbolToString(const jsi::Symbol &sym) {

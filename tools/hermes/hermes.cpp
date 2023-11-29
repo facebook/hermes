@@ -77,8 +77,7 @@ static opt<unsigned> ExecutionTimeLimit(
 static int executeHBCBytecodeFromCL(
     std::unique_ptr<hbc::BCProvider> bytecode,
     const driver::BytecodeBufferInfo &info) {
-  auto recStats =
-      (cl::GCPrintStats || cl::GCBeforeStats) && !cl::StableInstructionCount;
+  auto recStats = (cl::GCPrintStats || cl::GCBeforeStats);
   ExecuteOptions options;
   options.runtimeConfig =
       vm::RuntimeConfig::Builder()
@@ -123,7 +122,6 @@ static int executeHBCBytecodeFromCL(
   options.timeLimit = cl::ExecutionTimeLimit;
   options.stopAfterInit = cl::StopAfterInit;
   options.forceGCBeforeStats = cl::GCBeforeStats;
-  options.stabilizeInstructionCount = cl::StableInstructionCount;
   options.sampleProfiling = cl::SampleProfiling;
   options.heapTimeline = cl::HeapTimeline;
 

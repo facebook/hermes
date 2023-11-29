@@ -269,7 +269,7 @@ constexpr OptionData kDTFOptions[] = {
     {u"hourCycle", platform_intl::Option::Kind::String, 0},
     {u"timeZone", platform_intl::Option::Kind::String, 0},
     {u"formatMatcher", platform_intl::Option::Kind::String, 0},
-    {u"weekday", platform_intl::Option::Kind::String, 0},
+    {u"weekday", platform_intl::Option::Kind::String, kDateRequired},
     {u"era", platform_intl::Option::Kind::String, 0},
     {u"year",
      platform_intl::Option::Kind::String,
@@ -929,6 +929,7 @@ void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
       false,
       true);
 
+#ifndef __APPLE__
   defineMethod(
       runtime,
       prototype,
@@ -936,6 +937,7 @@ void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
       nullptr,
       intlDateTimeFormatPrototypeFormatToParts,
       1);
+#endif
 
   defineMethod(
       runtime,

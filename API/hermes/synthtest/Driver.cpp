@@ -66,7 +66,7 @@ class SynthBenchmarkTestFixture : public ::testing::TestWithParam<ParamType> {
           llvh::MemoryBuffer::getMemBuffer(trace.c_str()),
           std::move(sources),
           options,
-          nullptr);
+          makeHermesRuntime);
     }) << "Failed on test: "
        << testName_;
   }
@@ -103,9 +103,6 @@ TEST(SynthBenchmark, RunMultipleSourceFiles) {
   const char *const traceFmt = R"(
     {
       "globalObjID": 1,
-      "env": {
-        "callsToHermesInternalGetInstrumentedStats": [],
-      },
       "trace": [
         {
           "type": "BeginExecJSRecord",
@@ -155,7 +152,7 @@ TEST(SynthBenchmark, RunMultipleSourceFiles) {
         llvh::MemoryBuffer::getMemBuffer(trace),
         std::move(sources),
         options,
-        nullptr);
+        makeHermesRuntime);
   });
 }
 

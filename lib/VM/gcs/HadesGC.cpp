@@ -1709,7 +1709,6 @@ void HadesGC::incrementalCollect(bool backgroundThread) {
         // Finish any collection bookkeeping.
         ogCollectionStats_->setEndTime();
         ogCollectionStats_->setAfterSize(segmentFootprint());
-        compacteeHandleForSweep_.reset();
         concurrentPhase_ = Phase::None;
         if (!backgroundThread)
           checkTripwireAndSubmitStats();
@@ -1751,7 +1750,6 @@ void HadesGC::prepareCompactee(bool forceCompaction) {
     compactee_.startCP = CompressedPointer::encodeNonNull(
         reinterpret_cast<GCCell *>(compactee_.segment->lowLim()),
         getPointerBase());
-    compacteeHandleForSweep_ = compactee_.segment;
   }
 }
 
@@ -2504,7 +2502,6 @@ void HadesGC::youngGenCollection(
       // Since we can't track the actual number of external bytes that were in
       // this segment, just use the swept external byte count.
       externalBytes.before += externalCompactedBytes;
-      externalBytes.after += externalCompactedBytes;
     }
 
     // Move external memory accounting from YG to OG as well.
@@ -2692,12 +2689,17 @@ void HadesGC::scanDirtyCardsForSegment(
   size_t from = cardTable.addressToIndex(seg.start());
   const size_t to = cardTable.addressToIndex(origSegLevel - 1) + 1;
 
-  // If a compaction is taking place during sweeping, we may scan cards that
-  // contain dead objects which in turn point to dead objects in the compactee.
-  // In order to avoid promoting these dead objects, we should skip unmarked
-  // objects altogether when compaction and sweeping happen at the same time.
-  const bool visitUnmarked =
-      !CompactionEnabled || concurrentPhase_ != Phase::Sweep;
+  // Do not scan unmarked objects in the OG if we are currently sweeping. We do
+  // this for three reasons:
+  // 1. If an object is unmarked during sweeping, that means it is dead, so it
+  //    is wasteful to scan it and promote objects it refers to.
+  // 2. During compaction, these unmarked objects may point to dead objects in
+  //    the compactee. Promoting these objects is dangerous, since they may
+  //    contain references to other dead objects that are or will be freed.
+  // 3. If a compaction was completed during this cycle, unmarked objects may
+  //    contain references into the now freed compactee. These pointers are not
+  //    safe to visit.
+  const bool visitUnmarked = concurrentPhase_ != Phase::Sweep;
 
   while (const auto oiBegin = cardTable.findNextDirtyCard(from, to)) {
     const auto iBegin = *oiBegin;

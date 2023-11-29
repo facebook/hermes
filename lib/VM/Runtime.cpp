@@ -28,8 +28,7 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSLib.h"
-#include "hermes/VM/JSLib/RuntimeCommonStorage.h"
-#include "hermes/VM/MockedEnvironment.h"
+#include "hermes/VM/JSLib/JSLibStorage.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/OrderedHashMap.h"
 #include "hermes/VM/PredefinedStringIDs.h"
@@ -231,6 +230,7 @@ Runtime::Runtime(
       optimizedEval(runtimeConfig.getOptimizedEval()),
       asyncBreakCheckInEval(runtimeConfig.getAsyncBreakCheckInEval()),
       enableBlockScopingInEval(runtimeConfig.getEnableBlockScoping()),
+      traceMode(runtimeConfig.getSynthTraceMode()),
       heapStorage_(
           *this,
           *this,
@@ -248,8 +248,7 @@ Runtime::Runtime(
       bytecodeWarmupPercent_(runtimeConfig.getBytecodeWarmupPercent()),
       trackIO_(runtimeConfig.getTrackIO()),
       vmExperimentFlags_(runtimeConfig.getVMExperimentFlags()),
-      commonStorage_(
-          createRuntimeCommonStorage(runtimeConfig.getTraceEnabled())),
+      jsLibStorage_(createJSLibStorage()),
       stackPointer_(),
       crashMgr_(runtimeConfig.getCrashMgr()),
 #ifdef HERMES_CHECK_NATIVE_STACK
@@ -696,12 +695,9 @@ void Runtime::printRuntimeGCStats(JSONEmitter &json) const {
 }
 
 void Runtime::printHeapStats(llvh::raw_ostream &os) {
-  // Printing the timings is unstable.
-  if (shouldStabilizeInstructionCount())
-    return;
   getHeap().printAllCollectedStats(os);
 #ifndef NDEBUG
-  printArrayCensus(llvh::outs());
+  printArrayCensus(os);
 #endif
   if (trackIO_) {
     getIOTrackingInfoJSON(os);
@@ -895,15 +891,6 @@ void Runtime::potentiallyMoveHeap() {
           heapAlignSize(sizeof(FillerCell)), GC::minAllocationSize()));
 }
 #endif
-
-bool Runtime::shouldStabilizeInstructionCount() {
-  return getCommonStorage()->env &&
-      getCommonStorage()->env->stabilizeInstructionCount;
-}
-
-void Runtime::setMockedEnvironment(const MockedEnvironment &env) {
-  getCommonStorage()->env = env;
-}
 
 LLVM_ATTRIBUTE_NOINLINE
 static CallResult<HermesValue> interpretFunctionWithRandomStack(

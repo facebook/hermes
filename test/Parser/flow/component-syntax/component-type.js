@@ -42,7 +42,8 @@ type Foo2 = component() renders SomeComponent;
 // CHECK-NEXT:         "rest": null,
 // CHECK-NEXT:         "typeParameters": null,
 // CHECK-NEXT:         "rendersType": {
-// CHECK-NEXT:           "type": "TypeAnnotation",
+// CHECK-NEXT:           "type": "TypeOperator",
+// CHECK-NEXT:           "operator": "renders",
 // CHECK-NEXT:           "typeAnnotation": {
 // CHECK-NEXT:             "type": "GenericTypeAnnotation",
 // CHECK-NEXT:             "id": {
@@ -80,6 +81,144 @@ type Foo3 = component<T>();
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "rendersType": null
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+type Foo4 = component() renders SomeComponent | OtherComponent;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "Foo4"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "UnionTypeAnnotation",
+// CHECK-NEXT:         "types": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "ComponentTypeAnnotation",
+// CHECK-NEXT:             "params": [],
+// CHECK-NEXT:             "rest": null,
+// CHECK-NEXT:             "typeParameters": null,
+// CHECK-NEXT:             "rendersType": {
+// CHECK-NEXT:               "type": "TypeOperator",
+// CHECK-NEXT:               "operator": "renders",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "GenericTypeAnnotation",
+// CHECK-NEXT:                 "id": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "SomeComponent"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "typeParameters": null
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           },
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "GenericTypeAnnotation",
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "OtherComponent"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "typeParameters": null
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+type Foo5 = component() renders (SomeComponent | OtherComponent);
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "Foo5"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "ComponentTypeAnnotation",
+// CHECK-NEXT:         "params": [],
+// CHECK-NEXT:         "rest": null,
+// CHECK-NEXT:         "typeParameters": null,
+// CHECK-NEXT:         "rendersType": {
+// CHECK-NEXT:           "type": "TypeOperator",
+// CHECK-NEXT:           "operator": "renders",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "UnionTypeAnnotation",
+// CHECK-NEXT:             "types": [
+// CHECK-NEXT:               {
+// CHECK-NEXT:                 "type": "GenericTypeAnnotation",
+// CHECK-NEXT:                 "id": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "SomeComponent"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "typeParameters": null
+// CHECK-NEXT:               },
+// CHECK-NEXT:               {
+// CHECK-NEXT:                 "type": "GenericTypeAnnotation",
+// CHECK-NEXT:                 "id": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "OtherComponent"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "typeParameters": null
+// CHECK-NEXT:               }
+// CHECK-NEXT:             ]
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+type Foo6 = component() renders? SomeComponent;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "Foo6"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "ComponentTypeAnnotation",
+// CHECK-NEXT:         "params": [],
+// CHECK-NEXT:         "rest": null,
+// CHECK-NEXT:         "typeParameters": null,
+// CHECK-NEXT:         "rendersType": {
+// CHECK-NEXT:           "type": "TypeOperator",
+// CHECK-NEXT:           "operator": "renders?",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "GenericTypeAnnotation",
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "SomeComponent"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "typeParameters": null
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+type Foo7 = component() renders* SomeComponent;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "Foo7"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "ComponentTypeAnnotation",
+// CHECK-NEXT:         "params": [],
+// CHECK-NEXT:         "rest": null,
+// CHECK-NEXT:         "typeParameters": null,
+// CHECK-NEXT:         "rendersType": {
+// CHECK-NEXT:           "type": "TypeOperator",
+// CHECK-NEXT:           "operator": "renders*",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "GenericTypeAnnotation",
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "SomeComponent"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "typeParameters": null
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
 // CHECK-NEXT:       }
 // CHECK-NEXT:     }
 

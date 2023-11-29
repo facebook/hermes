@@ -25,6 +25,8 @@ namespace chrome {
 using CDPMessageCallbackFunction = std::function<void(const std::string &)>;
 using OnUnregisterFunction = std::function<void()>;
 
+class CDPHandlerImpl;
+
 /// CDPHandler processes CDP messages between the client and the debugger.
 /// It performs no networking or connection logic itself.
 /// The CDP Handler is invoked from multiple threads. The locking strategy is
@@ -51,6 +53,10 @@ class INSPECTOR_EXPORT CDPHandler {
   /// should generally called before you start running any JS in the runtime.
   /// This should also be called on the runtime thread, as methods are invoked
   /// on the given \p adapter.
+  static std::shared_ptr<CDPHandler> create(
+      std::unique_ptr<RuntimeAdapter> adapter,
+      bool waitForDebugger = false);
+  /// Temporarily kept to allow React Native build to still work
   static std::shared_ptr<CDPHandler> create(
       std::unique_ptr<RuntimeAdapter> adapter,
       const std::string &title,
@@ -81,8 +87,8 @@ class INSPECTOR_EXPORT CDPHandler {
   void handle(std::string str);
 
  private:
-  class Impl;
-  std::shared_ptr<Impl> impl_;
+  std::shared_ptr<CDPHandlerImpl> impl_;
+  const std::string title_;
 };
 
 } // namespace chrome

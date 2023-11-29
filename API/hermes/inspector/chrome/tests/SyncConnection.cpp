@@ -35,7 +35,6 @@ SyncConnection::SyncConnection(
     bool waitForDebugger)
     : cdpHandler_(CDPHandler::create(
           std::make_unique<ExecutorRuntimeAdapter>(runtime),
-          "testConn",
           waitForDebugger)) {
   registerCallbacks();
 }

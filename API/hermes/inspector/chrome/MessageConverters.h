@@ -21,8 +21,6 @@ namespace inspector_modern {
 namespace chrome {
 namespace message {
 
-std::string stripCachePrevention(const std::string &url);
-
 template <typename T>
 void setChromeLocation(
     T &chromeLoc,

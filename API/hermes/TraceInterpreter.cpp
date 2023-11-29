@@ -548,39 +548,21 @@ TraceInterpreter::TraceInterpreter(
 }
 
 /* static */
-void TraceInterpreter::exec(
-    const std::string &traceFile,
-    const std::vector<std::string> &bytecodeFiles,
-    const ExecuteOptions &options) {
-  // If there is a trace, don't write it out, not used here.
-  execFromFileNames(traceFile, bytecodeFiles, options, nullptr);
-}
-
-/* static */
 std::string TraceInterpreter::execAndGetStats(
     const std::string &traceFile,
     const std::vector<std::string> &bytecodeFiles,
     const ExecuteOptions &options) {
   // If there is a trace, don't write it out, not used here.
-  return execFromFileNames(traceFile, bytecodeFiles, options, nullptr);
+  return execWithRuntime(traceFile, bytecodeFiles, options, makeHermesRuntime);
 }
 
 /* static */
-void TraceInterpreter::execAndTrace(
+std::string TraceInterpreter::execWithRuntime(
     const std::string &traceFile,
     const std::vector<std::string> &bytecodeFiles,
     const ExecuteOptions &options,
-    std::unique_ptr<llvh::raw_ostream> traceStream) {
-  assert(traceStream && "traceStream must be provided (precondition)");
-  execFromFileNames(traceFile, bytecodeFiles, options, std::move(traceStream));
-}
-
-/* static */
-std::string TraceInterpreter::execFromFileNames(
-    const std::string &traceFile,
-    const std::vector<std::string> &bytecodeFiles,
-    const ExecuteOptions &options,
-    std::unique_ptr<llvh::raw_ostream> traceStream) {
+    const std::function<std::unique_ptr<jsi::Runtime>(
+        const ::hermes::vm::RuntimeConfig &runtimeConfig)> &createRuntime) {
   auto errorOrFile = llvh::MemoryBuffer::getFile(traceFile);
   if (!errorOrFile) {
     throw std::system_error(errorOrFile.getError());
@@ -594,11 +576,8 @@ std::string TraceInterpreter::execFromFileNames(
     }
     bytecodeBuffers.emplace_back(std::move(errorOrFile.get()));
   }
-  return execFromMemoryBuffer(
-      std::move(traceBuf),
-      std::move(bytecodeBuffers),
-      options,
-      std::move(traceStream));
+  return std::get<0>(execFromMemoryBuffer(
+      std::move(traceBuf), std::move(bytecodeBuffers), options, createRuntime));
 }
 
 /* static */
@@ -693,7 +672,12 @@ TraceInterpreter::getSourceHashToBundleMap(
 
   // If (and only if) an out trace is requested, turn on tracing in the VM
   // as well.
-  rtConfigBuilder.withTraceEnabled(options.traceEnabled);
+  if (options.traceEnabled) {
+    rtConfigBuilder.withSynthTraceMode(
+        ::hermes::vm::SynthTraceMode::TracingAndReplaying);
+  } else {
+    rtConfigBuilder.withSynthTraceMode(::hermes::vm::SynthTraceMode::Replaying);
+  }
 
   if (options.action == ExecuteOptions::MarkerAction::SAMPLE_TIME) {
     // If time sampling is requested, the RuntimeConfig has to have the sampling
@@ -715,77 +699,44 @@ TraceInterpreter::getSourceHashToBundleMap(
 }
 
 /* static */
-std::string TraceInterpreter::execFromMemoryBuffer(
+std::tuple<std::string, std::unique_ptr<jsi::Runtime>>
+TraceInterpreter::execFromMemoryBuffer(
     std::unique_ptr<llvh::MemoryBuffer> &&traceBuf,
     std::vector<std::unique_ptr<llvh::MemoryBuffer>> &&codeBufs,
     const ExecuteOptions &options,
-    std::unique_ptr<llvh::raw_ostream> traceStream) {
-  auto traceAndConfigAndEnv = parseSynthTrace(std::move(traceBuf));
-  const auto &trace = std::get<0>(traceAndConfigAndEnv);
+    const std::function<std::unique_ptr<jsi::Runtime>(
+        const ::hermes::vm::RuntimeConfig &runtimeConfig)> &createRuntime) {
+  auto [trace, rtConfigBuilder, gcConfigBuilder] =
+      parseSynthTrace(std::move(traceBuf));
+
   bool codeIsMmapped;
   bool isBytecode;
-  std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>>
+  const std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>>
       sourceHashToBundle = getSourceHashToBundleMap(
           std::move(codeBufs), trace, options, &codeIsMmapped, &isBytecode);
-  options.traceEnabled = (traceStream != nullptr);
 
   const auto &rtConfig = merge(
-      std::get<1>(traceAndConfigAndEnv),
-      std::get<2>(traceAndConfigAndEnv),
-      options,
-      codeIsMmapped,
-      isBytecode);
+      rtConfigBuilder, gcConfigBuilder, options, codeIsMmapped, isBytecode);
 
   std::vector<std::string> repGCStats(options.reps);
+  std::unique_ptr<jsi::Runtime> rt;
   for (int rep = -options.warmupReps; rep < options.reps; ++rep) {
     ::hermes::vm::instrumentation::PerfEvents::begin();
-    std::unique_ptr<jsi::Runtime> rt;
-    std::unique_ptr<HermesRuntime> hermesRuntime = makeHermesRuntime(rtConfig);
-    // Set up the mocks for environment-dependent JS behavior
-    {
-      auto env = std::get<3>(traceAndConfigAndEnv);
-      env.stabilizeInstructionCount = options.stabilizeInstructionCount;
-      hermesRuntime->setMockedEnvironment(env);
-    }
-    bool tracing = false;
-    if (traceStream) {
-      tracing = true;
-      rt = makeTracingHermesRuntime(
-          std::move(hermesRuntime),
-          rtConfig,
-          std::move(traceStream),
-          /* forReplay */ true);
-    } else {
-      rt = std::move(hermesRuntime);
-    }
+    rt = createRuntime(rtConfig);
+
     auto stats = exec(*rt, options, trace, sourceHashToBundle);
     // If we're not warming up, save the stats.
     if (rep >= 0) {
       repGCStats[rep] = stats;
     }
-    // If we're tracing, flush the trace.
-    if (tracing) {
-      (void)rt->instrumentation().flushAndDisableBridgeTrafficTrace();
-    }
   }
-  return rtConfig.getGCConfig().getShouldRecordStats()
-      ? mergeGCStats(repGCStats)
-      : "";
-}
 
-/* static */
-std::string TraceInterpreter::execFromMemoryBuffer(
-    std::unique_ptr<llvh::MemoryBuffer> &&traceBuf,
-    std::vector<std::unique_ptr<llvh::MemoryBuffer>> &&codeBufs,
-    jsi::Runtime &runtime,
-    const ExecuteOptions &options) {
-  auto traceAndConfigAndEnv = parseSynthTrace(std::move(traceBuf));
-  const auto &trace = std::get<0>(traceAndConfigAndEnv);
-  return exec(
-      runtime,
-      options,
-      trace,
-      getSourceHashToBundleMap(std::move(codeBufs), trace, options));
+  return std::make_tuple(
+      // Merged GC stats
+      rtConfig.getGCConfig().getShouldRecordStats() ? mergeGCStats(repGCStats)
+                                                    : "",
+      // The last runtime used for replay
+      std::move(rt));
 }
 
 /* static */

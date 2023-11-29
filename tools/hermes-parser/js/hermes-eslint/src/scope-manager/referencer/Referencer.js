@@ -12,6 +12,7 @@
 
 import type {
   ArrowFunctionExpression,
+  AsExpression,
   AssignmentExpression,
   AssignmentPattern,
   BlockStatement,
@@ -352,12 +353,48 @@ class Referencer extends Visitor {
     TypeVisitor.visit(this, node);
   };
 
+  visitJSXTag(node: JSXOpeningElement | JSXClosingElement): void {
+    const rootName = getJsxName(node.name);
+    if (this._fbtSupport !== true || !FBT_NAMES.has(rootName)) {
+      // <fbt /> does not reference the jsxPragma, but instead references the fbt import
+      this._referenceJsxPragma();
+    }
+
+    switch (node.name.type) {
+      case 'JSXIdentifier':
+        if (
+          rootName[0].toUpperCase() === rootName[0] ||
+          (this._fbtSupport === true && FBT_NAMES.has(rootName))
+        ) {
+          // lower cased component names are always treated as "intrinsic" names, and are converted to a string,
+          // not a variable by JSX transforms:
+          // <div /> => React.createElement("div", null)
+          this.visit(node.name);
+        }
+        break;
+
+      case 'JSXMemberExpression':
+      case 'JSXNamespacedName':
+        // special case for <this.Foo /> - we don't want to create an unclosed
+        // and impossible-to-resolve reference to a variable called `this`.
+        if (rootName !== 'this') {
+          this.visit(node.name);
+        }
+        break;
+    }
+  }
+
   /////////////////////
   // Visit selectors //
   /////////////////////
 
   ArrowFunctionExpression(node: ArrowFunctionExpression): void {
     this.visitFunction(node);
+  }
+
+  AsExpression(node: AsExpression): void {
+    this.visit(node.expression);
+    this.visitType(node.typeAnnotation);
   }
 
   AssignmentExpression(node: AssignmentExpression): void {
@@ -591,8 +628,19 @@ class Referencer extends Visitor {
     this.visit(node.value);
   }
 
-  JSXClosingElement(_: JSXClosingElement): void {
-    // should not be counted as a reference
+  JSXClosingElement(node: JSXClosingElement): void {
+    /**
+     * Note that this was not previously considered to be a reference and that
+     * other scope analyzers do not count them either: e.g. TypeScript-eslint
+     * https://fburl.com/4q93a3x3
+     *
+     * We are considering this a reference because it technically includes an
+     * identifier that refers to a defined variable. So, if you want to answer:
+     * "what are all of the references to this variable?", the closing element
+     * should be included.
+     */
+
+    this.visitJSXTag(node);
   }
 
   JSXFragment(node: JSXFragment): void {
@@ -617,35 +665,9 @@ class Referencer extends Visitor {
   }
 
   JSXOpeningElement(node: JSXOpeningElement): void {
-    const rootName = getJsxName(node.name);
-    if (this._fbtSupport !== true || !FBT_NAMES.has(rootName)) {
-      // <fbt /> does not reference the jsxPragma, but instead references the fbt import
-      this._referenceJsxPragma();
-    }
+    this.visitJSXTag(node);
 
-    switch (node.name.type) {
-      case 'JSXIdentifier':
-        if (
-          rootName[0].toUpperCase() === rootName[0] ||
-          (this._fbtSupport === true && FBT_NAMES.has(rootName))
-        ) {
-          // lower cased component names are always treated as "intrinsic" names, and are converted to a string,
-          // not a variable by JSX transforms:
-          // <div /> => React.createElement("div", null)
-          this.visit(node.name);
-        }
-        break;
-
-      case 'JSXMemberExpression':
-      case 'JSXNamespacedName':
-        // special case for <this.Foo /> - we don't want to create an unclosed
-        // and impossible-to-resolve reference to a variable called `this`.
-        if (rootName !== 'this') {
-          this.visit(node.name);
-        }
-        break;
-    }
-
+    // the opening tag may also have type args and attributes
     this.visitType(node.typeArguments);
 
     for (const attr of node.attributes) {

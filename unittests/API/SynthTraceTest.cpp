@@ -34,7 +34,10 @@ struct SynthTraceTest : public ::testing::Test {
 
   static std::unique_ptr<TracingHermesRuntime> makeRuntime() {
     ::hermes::vm::RuntimeConfig config =
-        ::hermes::vm::RuntimeConfig::Builder().withTraceEnabled(true).build();
+        ::hermes::vm::RuntimeConfig::Builder()
+            .withSynthTraceMode(
+                ::hermes::vm::SynthTraceMode::TracingAndReplaying)
+            .build();
     // We pass "forReplay = true" below, to prevent the TracingHermesRuntime
     // from interactions it does automatically on non-replay runs.
     // We don't need those for these tests.
@@ -1031,7 +1034,8 @@ struct SynthTraceRuntimeTest : public ::testing::Test {
 
   SynthTraceRuntimeTest()
       : config(::hermes::vm::RuntimeConfig::Builder()
-                   .withTraceEnabled(true)
+                   .withSynthTraceMode(
+                       ::hermes::vm::SynthTraceMode::TracingAndReplaying)
                    .withMicrotaskQueue(true)
                    .build()),
         traceRt(makeTracingHermesRuntime(
@@ -1082,9 +1086,15 @@ struct SynthTraceReplayTest : public SynthTraceRuntimeTest {
 
   void replay() {
     traceRt.reset();
-    replayRt = makeHermesRuntime(config);
-    tracing::TraceInterpreter::execFromMemoryBuffer(
-        llvh::MemoryBuffer::getMemBuffer(traceResult), {}, *replayRt, {});
+
+    tracing::TraceInterpreter::ExecuteOptions options;
+    options.useTraceConfig = true;
+    auto [_, rt] = tracing::TraceInterpreter::execFromMemoryBuffer(
+        llvh::MemoryBuffer::getMemBuffer(traceResult), // traceBuf
+        {}, // codeBufs
+        options, // ExecuteOptions
+        makeHermesRuntime);
+    replayRt = std::move(rt);
   }
 };
 
@@ -1104,6 +1114,86 @@ TEST_F(SynthTraceReplayTest, CreateObjectReplay) {
             .getProperty(rt, "bar")
             .asNumber(),
         5);
+  }
+}
+
+TEST_F(SynthTraceRuntimeTest, WarmUpAndRepeatReplay) {
+  {
+    auto &rt = *traceRt;
+    auto obj = jsi::Object(rt);
+    obj.setProperty(rt, "bar", 5);
+    rt.global().setProperty(rt, "foo", obj);
+  }
+
+  traceRt.reset();
+
+  // ExecuteOptions has warmupReps and reps to run replay multiple times. It
+  // should not have different results from replaying only once.
+  tracing::TraceInterpreter::ExecuteOptions options;
+  options.warmupReps = 1;
+  options.reps = 3;
+  options.useTraceConfig = true;
+  auto [_, rt] = tracing::TraceInterpreter::execFromMemoryBuffer(
+      llvh::MemoryBuffer::getMemBuffer(traceResult), // traceBuf
+      {}, // codeBufs
+      options, // ExecuteOptions
+      makeHermesRuntime);
+
+  {
+    EXPECT_EQ(
+        rt->global()
+            .getPropertyAsObject(*rt, "foo")
+            .getProperty(*rt, "bar")
+            .asNumber(),
+        5);
+  }
+}
+
+// Replay the trace and generate a new one while doing so. They should produce
+// the same results in the runtime regardless how many times we repeat.
+TEST_F(SynthTraceRuntimeTest, TraceWhileReplaying) {
+  // Generate the initial trace.
+  {
+    auto &rt = *traceRt;
+    auto obj = jsi::Object(rt);
+    obj.setProperty(rt, "bar", 5);
+    rt.global().setProperty(rt, "foo", obj);
+  }
+
+  traceRt.reset();
+
+  std::string previousResult = traceResult;
+
+  for (int i = 0; i < 5; i++) {
+    tracing::TraceInterpreter::ExecuteOptions options;
+    options.useTraceConfig = true;
+    options.traceEnabled = true;
+    std::string newResult;
+
+    auto [_, rt] = tracing::TraceInterpreter::execFromMemoryBuffer(
+        llvh::MemoryBuffer::getMemBuffer(previousResult),
+        {}, // codeBufs
+        options, // ExecuteOptions
+        [&newResult](const ::hermes::vm::RuntimeConfig &config) {
+          return makeTracingHermesRuntime(
+              makeHermesRuntime(config),
+              config,
+              std::make_unique<llvh::raw_string_ostream>(newResult),
+              true // forReplay
+          );
+        }
+
+    );
+
+    EXPECT_EQ(
+        rt->global()
+            .getPropertyAsObject(*rt, "foo")
+            .getProperty(*rt, "bar")
+            .asNumber(),
+        5);
+
+    rt.reset(); // flush the result
+    previousResult = newResult;
   }
 }
 
@@ -1302,6 +1392,75 @@ var secondDeref = ref.deref();
   auto replayedSecond = eval(*replayRt, "secondDeref").isUndefined();
   EXPECT_EQ(replayedFirst, 5);
   EXPECT_EQ(secondDeref, replayedSecond);
+}
+
+TEST_F(NonDeterminismReplayTest, HermesInternalGetInstrumentedStatsTest) {
+  // Use JSON.stringify to serialize stats object to verify the result easily.
+  auto jsonStringify = [](jsi::Runtime &runtime,
+                          const jsi::Value &val) -> std::string {
+    auto JSON = runtime.global().getPropertyAsObject(runtime, "JSON");
+    auto stringify = JSON.getPropertyAsFunction(runtime, "stringify");
+
+    facebook::jsi::Value stringifyRes = stringify.call(runtime, val);
+    assert(stringifyRes.isString());
+    const auto statsStr = stringifyRes.getString(runtime).utf8(runtime);
+    return statsStr;
+  };
+
+  // Create some objects
+  eval(*traceRt, R"(
+    var s512 = " ".repeat(128);
+    var arr = [];
+  )");
+
+  // Run GC to get meaningful stats
+  traceRt->instrumentation().collectGarbage("forced for stats");
+
+  {
+    // Store current stats to var "stats1"
+    const jsi::Value stats1 = eval(*traceRt, R"(
+      var stats1 = HermesInternal.getInstrumentedStats();
+      stats1;
+    )");
+
+    // Run GC again to get different stats
+    traceRt->instrumentation().collectGarbage("forced for stats");
+
+    // Store second stats to var "stats2"
+    const jsi::Value stats2 = eval(*traceRt, R"(
+      var stats2 = HermesInternal.getInstrumentedStats();
+      stats2;
+    )");
+
+    // Return type of getInstrumentedStats should be an object
+    EXPECT_TRUE(stats1.isObject());
+    EXPECT_TRUE(stats2.isObject());
+  }
+
+  {
+    const std::string stats1Str =
+        jsonStringify(*traceRt, eval(*traceRt, "stats1"));
+    const std::string stats2Str =
+        jsonStringify(*traceRt, eval(*traceRt, "stats2"));
+
+    //
+    // replay
+    //
+    replay();
+
+    // Return type of getInstrumentedStats should be an object
+    EXPECT_TRUE(eval(*replayRt, "stats1").isObject());
+    EXPECT_TRUE(eval(*replayRt, "stats2").isObject());
+
+    const std::string replayStats1Str =
+        jsonStringify(*replayRt, eval(*replayRt, "stats1"));
+    const std::string replayStats2Str =
+        jsonStringify(*replayRt, eval(*replayRt, "stats2"));
+
+    // Compare the results between the original and the replayed run.
+    EXPECT_EQ(stats1Str, replayStats1Str);
+    EXPECT_EQ(stats2Str, replayStats2Str);
+  }
 }
 
 /// @}

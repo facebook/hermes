@@ -10,6 +10,7 @@
 #include <hermes/Support/MemoryBuffer.h>
 #include <hermes/TraceInterpreter.h>
 #include <hermes/hermes.h>
+#include <hermes/hermes_tracing.h>
 
 #include "llvh/ADT/Statistic.h"
 #include "llvh/Support/CommandLine.h"
@@ -228,21 +229,17 @@ int main(int argc, char **argv) {
       options.profileFileName = std::string{tmpfile.begin(), tmpfile.end()};
     }
     options.forceGCBeforeStats = cl::GCBeforeStats;
-    options.stabilizeInstructionCount = cl::StableInstructionCount;
     options.disableSourceHashCheck = cl::DisableSourceHashCheck;
 
     // These are the config parameters.
 
     // We want to print the GC stats by default.  We won't print them
     // if -gc-print-stats is specified false explicitly, and
-    // -gc-before-stats is also false, or if we're trying to get
-    // a stable instruction count.
+    // -gc-before-stats is also false.
     bool shouldPrintGCStats = true;
     if (cl::GCPrintStats.getNumOccurrences() > 0) {
-      shouldPrintGCStats = (cl::GCPrintStats || cl::GCBeforeStats) &&
-          !cl::StableInstructionCount;
+      shouldPrintGCStats = (cl::GCPrintStats || cl::GCBeforeStats);
     }
-    shouldPrintGCStats = shouldPrintGCStats && !cl::StableInstructionCount;
 
     llvh::Optional<::hermes::vm::gcheapsize_t> minHeapSize =
         execOption(cl::MinHeapSize);
@@ -322,8 +319,22 @@ int main(int argc, char **argv) {
       if (ec) {
         throw std::system_error(ec);
       }
-      TraceInterpreter::execAndTrace(
-          cl::TraceFile, bytecodeFiles, options, std::move(os));
+
+      options.traceEnabled = true;
+      TraceInterpreter::execWithRuntime(
+          cl::TraceFile,
+          bytecodeFiles,
+          options,
+          [stream = std::ref(os)](
+              const ::hermes::vm::RuntimeConfig &config) mutable {
+            auto &st = stream.get();
+            return facebook::hermes::makeTracingHermesRuntime(
+                facebook::hermes::makeHermesRuntime(config),
+                config,
+                std::move(st),
+                /* forReplay */ true);
+          });
+
       llvh::outs() << "\nWrote output trace to: " << cl::Trace << "\n";
     } else {
       llvh::outs() << TraceInterpreter::execAndGetStats(

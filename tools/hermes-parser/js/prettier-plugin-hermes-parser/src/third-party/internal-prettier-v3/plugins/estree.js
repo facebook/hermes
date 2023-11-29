@@ -1994,6 +1994,10 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       "quasis",
       "types"
     ],
+    "AsExpression": [
+      "expression",
+      "typeAnnotation"
+    ],
     "BigIntLiteralTypeAnnotation": [],
     "BigIntTypeAnnotation": [],
     "ComponentDeclaration": [
@@ -2115,7 +2119,14 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     ],
     "NeverTypeAnnotation": [],
     "UndefinedTypeAnnotation": [],
-    "UnknownTypeAnnotation": []
+    "UnknownTypeAnnotation": [],
+    "AsConstExpression": [
+      "expression"
+    ],
+    "SatisfiesExpression": [
+      "expression",
+      "typeAnnotation"
+    ]
   };
 
   // src/language-js/traverse/get-visitor-keys.js
@@ -2192,7 +2203,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     });
   }
   function hasNakedLeftSide(node) {
-    return node.type === "AssignmentExpression" || node.type === "BinaryExpression" || node.type === "LogicalExpression" || node.type === "NGPipeExpression" || node.type === "ConditionalExpression" || isCallExpression(node) || isMemberExpression(node) || node.type === "SequenceExpression" || node.type === "TaggedTemplateExpression" || node.type === "BindExpression" || node.type === "UpdateExpression" && !node.prefix || isTSTypeExpression(node) || node.type === "TSNonNullExpression" || node.type === "ChainExpression";
+    return node.type === "AssignmentExpression" || node.type === "BinaryExpression" || node.type === "LogicalExpression" || node.type === "NGPipeExpression" || node.type === "ConditionalExpression" || isCallExpression(node) || isMemberExpression(node) || node.type === "SequenceExpression" || node.type === "TaggedTemplateExpression" || node.type === "BindExpression" || node.type === "UpdateExpression" && !node.prefix || isBinaryCastExpression(node) || node.type === "TSNonNullExpression" || node.type === "ChainExpression";
   }
   function getLeftSide(node) {
     if (node.expressions) {
@@ -2506,6 +2517,9 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       case "TSSatisfiesExpression":
       case "TSAsExpression":
       case "TSNonNullExpression":
+      case "AsExpression":
+      case "AsConstExpression":
+      case "SatisfiesExpression":
         return startsWithNoLookaheadToken(node.expression, predicate);
       default:
         return predicate(node);
@@ -2709,11 +2723,19 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return node && (node.type === "ObjectProperty" || node.type === "Property" && !node.method && node.kind === "init");
   }
   var markerForIfWithoutBlockAndSameLineComment = Symbol("ifWithoutBlockAndSameLineComment");
-  var isTSTypeExpression = create_type_check_function_default(["TSAsExpression", "TSSatisfiesExpression"]);
+  var isBinaryCastExpression = create_type_check_function_default([
+    // TS
+    "TSAsExpression",
+    "TSSatisfiesExpression",
+    // Flow
+    "AsExpression",
+    "AsConstExpression",
+    "SatisfiesExpression"
+  ]);
 
   // src/language-js/needs-parens.js
   function needsParens(path, options2) {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i;
     if (path.isRoot) {
       return false;
     }
@@ -2752,6 +2774,24 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           (leftmostNode) => leftmostNode === node
         )) {
           return true;
+        }
+      }
+      if (key === "expression") {
+        switch (node.name) {
+          case "await":
+          case "interface":
+          case "module":
+          case "using":
+          case "yield":
+          case "let":
+          case "type": {
+            const ancestorNeitherAsNorSatisfies = path.findAncestor(
+              (node2) => !isBinaryCastExpression(node2)
+            );
+            if (ancestorNeitherAsNorSatisfies !== parent && ancestorNeitherAsNorSatisfies.type === "ExpressionStatement") {
+              return true;
+            }
+          }
         }
       }
       return false;
@@ -2885,13 +2925,19 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       case "TSTypeAssertion":
       case "TSAsExpression":
       case "TSSatisfiesExpression":
+      case "AsExpression":
+      case "AsConstExpression":
+      case "SatisfiesExpression":
       case "LogicalExpression":
         switch (parent.type) {
           case "TSAsExpression":
           case "TSSatisfiesExpression":
-            return !isTSTypeExpression(node);
+          case "AsExpression":
+          case "AsConstExpression":
+          case "SatisfiesExpression":
+            return !isBinaryCastExpression(node);
           case "ConditionalExpression":
-            return isTSTypeExpression(node);
+            return isBinaryCastExpression(node);
           case "CallExpression":
           case "NewExpression":
           case "OptionalCallExpression":
@@ -2914,7 +2960,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
             return key === "object";
           case "AssignmentExpression":
           case "AssignmentPattern":
-            return key === "left" && (node.type === "TSTypeAssertion" || isTSTypeExpression(node));
+            return key === "left" && (node.type === "TSTypeAssertion" || isBinaryCastExpression(node));
           case "LogicalExpression":
             if (node.type === "LogicalExpression") {
               return parent.operator !== node.operator;
@@ -2973,6 +3019,9 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           case "TSAsExpression":
           case "TSSatisfiesExpression":
           case "TSNonNullExpression":
+          case "AsExpression":
+          case "AsConstExpression":
+          case "SatisfiesExpression":
           case "BindExpression":
             return true;
           case "MemberExpression":
@@ -3038,15 +3087,15 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return parent.type === "NullableTypeAnnotation";
       case "IntersectionTypeAnnotation":
       case "UnionTypeAnnotation":
-        return parent.type === "TypeOperator" || parent.type === "ArrayTypeAnnotation" || parent.type === "NullableTypeAnnotation" || parent.type === "IntersectionTypeAnnotation" || parent.type === "UnionTypeAnnotation" || key === "objectType" && (parent.type === "IndexedAccessType" || parent.type === "OptionalIndexedAccessType") || path.match(
-          void 0,
-          (node2, key2) => node2.type === "TypeAnnotation",
-          (node2, key2) => key2 === "rendersType" && (node2.type === "ComponentDeclaration" || node2.type === "ComponentTypeAnnotation" || node2.type === "DeclareComponent")
-        );
+        return parent.type === "TypeOperator" || parent.type === "KeyofTypeAnnotation" || parent.type === "ArrayTypeAnnotation" || parent.type === "NullableTypeAnnotation" || parent.type === "IntersectionTypeAnnotation" || parent.type === "UnionTypeAnnotation" || key === "objectType" && (parent.type === "IndexedAccessType" || parent.type === "OptionalIndexedAccessType");
       case "InferTypeAnnotation":
       case "NullableTypeAnnotation":
         return parent.type === "ArrayTypeAnnotation" || key === "objectType" && (parent.type === "IndexedAccessType" || parent.type === "OptionalIndexedAccessType");
+      case "ComponentTypeAnnotation":
       case "FunctionTypeAnnotation": {
+        if (node.type === "ComponentTypeAnnotation" && node.rendersType == null) {
+          return false;
+        }
         if (path.match(
           void 0,
           (node2, key2) => key2 === "typeAnnotation" && node2.type === "TypeAnnotation",
@@ -3063,7 +3112,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           return true;
         }
         const ancestor = parent.type === "NullableTypeAnnotation" ? path.grandparent : parent;
-        return ancestor.type === "UnionTypeAnnotation" || ancestor.type === "IntersectionTypeAnnotation" || ancestor.type === "ArrayTypeAnnotation" || key === "objectType" && (ancestor.type === "IndexedAccessType" || ancestor.type === "OptionalIndexedAccessType") || key === "checkType" && parent.type === "ConditionalTypeAnnotation" || key === "extendsType" && parent.type === "ConditionalTypeAnnotation" && node.returnType.type === "InferTypeAnnotation" && node.returnType.typeParameter.bound || // We should check ancestor's parent to know whether the parentheses
+        return ancestor.type === "UnionTypeAnnotation" || ancestor.type === "IntersectionTypeAnnotation" || ancestor.type === "ArrayTypeAnnotation" || key === "objectType" && (ancestor.type === "IndexedAccessType" || ancestor.type === "OptionalIndexedAccessType") || key === "checkType" && parent.type === "ConditionalTypeAnnotation" || key === "extendsType" && parent.type === "ConditionalTypeAnnotation" && ((_f = node.returnType) == null ? void 0 : _f.type) === "InferTypeAnnotation" && ((_g = node.returnType) == null ? void 0 : _g.typeParameter.bound) || // We should check ancestor's parent to know whether the parentheses
         // are really needed, but since ??T doesn't make sense this check
         // will almost never be true.
         ancestor.type === "NullableTypeAnnotation" || // See #5283
@@ -3137,6 +3186,9 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           case "TypeCastExpression":
           case "TSAsExpression":
           case "TSSatisfiesExpression":
+          case "AsExpression":
+          case "AsConstExpression":
+          case "SatisfiesExpression":
           case "TSNonNullExpression":
             return true;
           case "NewExpression":
@@ -3165,7 +3217,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       case "ArrowFunctionExpression":
         switch (parent.type) {
           case "BinaryExpression":
-            return parent.operator !== "|>" || ((_f = node.extra) == null ? void 0 : _f.parenthesized);
+            return parent.operator !== "|>" || ((_h = node.extra) == null ? void 0 : _h.parenthesized);
           case "NewExpression":
           case "CallExpression":
           case "OptionalCallExpression":
@@ -3175,6 +3227,9 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
             return key === "object";
           case "TSAsExpression":
           case "TSSatisfiesExpression":
+          case "AsExpression":
+          case "AsConstExpression":
+          case "SatisfiesExpression":
           case "TSNonNullExpression":
           case "BindExpression":
           case "TaggedTemplateExpression":
@@ -3232,7 +3287,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return key === "callee" && (parent.type === "BindExpression" || parent.type === "NewExpression") || key === "object" && isMemberExpression(parent);
       case "NGPipeExpression":
         if (parent.type === "NGRoot" || parent.type === "NGMicrosyntaxExpression" || parent.type === "ObjectProperty" && // Preserve parens for compatibility with AngularJS expressions
-        !((_g = node.extra) == null ? void 0 : _g.parenthesized) || isArrayOrTupleExpression(parent) || key === "arguments" && isCallExpression(parent) || key === "right" && parent.type === "NGPipeExpression" || key === "property" && parent.type === "MemberExpression" || parent.type === "AssignmentExpression") {
+        !((_i = node.extra) == null ? void 0 : _i.parenthesized) || isArrayOrTupleExpression(parent) || key === "arguments" && isCallExpression(parent) || key === "right" && parent.type === "NGPipeExpression" || key === "property" && parent.type === "MemberExpression" || parent.type === "AssignmentExpression") {
           return false;
         }
         return true;
@@ -5195,7 +5250,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     });
   }
   function couldExpandArg(arg, arrowChainRecursion = false) {
-    return isObjectOrRecordExpression(arg) && (arg.properties.length > 0 || hasComment(arg)) || isArrayOrTupleExpression(arg) && (arg.elements.length > 0 || hasComment(arg)) || arg.type === "TSTypeAssertion" && couldExpandArg(arg.expression) || isTSTypeExpression(arg) && couldExpandArg(arg.expression) || arg.type === "FunctionExpression" || arg.type === "ArrowFunctionExpression" && // we want to avoid breaking inside composite return types but not simple keywords
+    return isObjectOrRecordExpression(arg) && (arg.properties.length > 0 || hasComment(arg)) || isArrayOrTupleExpression(arg) && (arg.elements.length > 0 || hasComment(arg)) || arg.type === "TSTypeAssertion" && couldExpandArg(arg.expression) || isBinaryCastExpression(arg) && couldExpandArg(arg.expression) || arg.type === "FunctionExpression" || arg.type === "ArrowFunctionExpression" && // we want to avoid breaking inside composite return types but not simple keywords
     // https://github.com/prettier/prettier/issues/4070
     // export class Thing implements OtherThing {
     //   do: (type: Type) => Provider<Prop> = memoize(
@@ -5254,7 +5309,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     if (node.type === "ParenthesizedExpression") {
       return isHopefullyShortCallArgument(node.expression);
     }
-    if (isTSTypeExpression(node) || node.type === "TypeCastExpression") {
+    if (isBinaryCastExpression(node) || node.type === "TypeCastExpression") {
       let {
         typeAnnotation
       } = node;
@@ -6787,7 +6842,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         child = node2;
         continue;
       }
-      if (node2.type === "NewExpression" && node2.callee === child || isTSTypeExpression(node2) && node2.expression === child) {
+      if (node2.type === "NewExpression" && node2.callee === child || isBinaryCastExpression(node2) && node2.expression === child) {
         parent = path.getParentNode(ancestorCount + 1);
         child = node2;
       } else {
@@ -7530,7 +7585,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       let expressionDoc = expressionDocs[index];
       if (!isSimple) {
         const expression = node[expressionsKey][index];
-        if (hasComment(expression) || isMemberExpression(expression) || expression.type === "ConditionalExpression" || expression.type === "SequenceExpression" || isTSTypeExpression(expression) || isBinaryish(expression)) {
+        if (hasComment(expression) || isMemberExpression(expression) || expression.type === "ConditionalExpression" || expression.type === "SequenceExpression" || isBinaryCastExpression(expression) || isBinaryish(expression)) {
           expressionDoc = [indent([softline, expressionDoc]), softline];
         }
       }
@@ -9330,6 +9385,35 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return hasNode(node, hasSideEffect);
   }
 
+  // src/language-js/print/cast-expression.js
+  function printBinaryCastExpression(path, options2, print3) {
+    const { parent, node } = path;
+    let parts = [];
+    switch (node.type) {
+      case "AsConstExpression":
+        parts = [print3("expression"), " as const"];
+        break;
+      case "AsExpression":
+      case "TSAsExpression":
+        parts = [print3("expression"), " ", "as", " ", print3("typeAnnotation")];
+        break;
+      case "SatisfiesExpression":
+      case "TSSatisfiesExpression":
+        parts = [
+          print3("expression"),
+          " ",
+          "satisfies",
+          " ",
+          print3("typeAnnotation")
+        ];
+        break;
+    }
+    if (isCallExpression(parent) && parent.callee === node || isMemberExpression(parent) && parent.object === node) {
+      return group([indent([softline, ...parts]), softline]);
+    }
+    return parts;
+  }
+
   // src/language-js/print/interface.js
   function printInterface(path, options2, print3) {
     const { node } = path;
@@ -9434,8 +9518,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     parts.push(print3("typeParameters"));
     const parametersDoc = printComponentParameters(path, print3, options2);
     if (node.rendersType) {
-      const renderTypesDoc = path.call((path2) => print3("typeAnnotation"), "rendersType");
-      parts.push(group([parametersDoc, " renders ", renderTypesDoc]));
+      parts.push(group([parametersDoc, " ", print3("rendersType")]));
     } else {
       parts.push(group([parametersDoc]));
     }
@@ -9728,6 +9811,10 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           "%checks",
           ...node.type === "DeclaredPredicate" ? ["(", print3("value"), ")"] : []
         ];
+      case "AsExpression":
+      case "AsConstExpression":
+      case "SatisfiesExpression":
+        return printBinaryCastExpression(path, options2, print3);
     }
   }
 
@@ -9809,15 +9896,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       case "TSTypeParameter":
         return printTypeParameter(path, options2, print3);
       case "TSAsExpression":
-      case "TSSatisfiesExpression": {
-        const operator = node.type === "TSAsExpression" ? "as" : "satisfies";
-        parts.push(print3("expression"), ` ${operator} `, print3("typeAnnotation"));
-        const { parent } = path;
-        if (isCallExpression(parent) && parent.callee === node || isMemberExpression(parent) && parent.object === node) {
-          return group([indent([softline, ...parts]), softline]);
-        }
-        return parts;
-      }
+      case "TSSatisfiesExpression":
+        return printBinaryCastExpression(path, options2, print3);
       case "TSArrayType":
         return printArrayType(print3);
       case "TSPropertySignature":

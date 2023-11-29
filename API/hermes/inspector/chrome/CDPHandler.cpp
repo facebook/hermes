@@ -21,8 +21,6 @@
 
 #include <hermes/DebuggerAPI.h>
 #include <hermes/hermes.h>
-#include <hermes/inspector/AsyncPauseState.h>
-#include <hermes/inspector/Exceptions.h>
 #include <hermes/inspector/RuntimeAdapter.h>
 #include <hermes/inspector/chrome/CallbackOStream.h>
 #include <hermes/inspector/chrome/MessageConverters.h>
@@ -30,6 +28,7 @@
 #include <hermes/inspector/chrome/RemoteObjectsTable.h>
 #include <hermes/inspector/chrome/ThreadSafetyAnalysis.h>
 #include <jsi/instrumentation.h>
+#include <llvh/ADT/MapVector.h>
 #include <llvh/ADT/ScopeExit.h>
 
 namespace facebook {
@@ -50,7 +49,10 @@ static const char *const kUserEnteredScriptPrefix = "userScript";
 static const char *const kDebuggerEnableMethod = "Debugger.enable";
 static const char *const kDebuggerMethodPrefix = "Debugger";
 
-static const int kMaxPendingConsoleMessages = 1000;
+/// Controls the max number of message to cached in \p consoleMessageCache_. The
+/// value here is chosen to match what Chromium uses in their CDP
+/// implementation.
+static const int kMaxCachedConsoleMessages = 1000;
 
 struct Script {
   uint32_t fileId{};
@@ -91,7 +93,7 @@ enum Execution {
 };
 
 /*
- * CDPHandler::Impl
+ * CDPHandlerImpl
  */
 
 /// Impl inherits from enable_shared_from_this in order to properly support
@@ -99,17 +101,12 @@ enum Execution {
 /// lifetime of an instance of Impl. In order to guard against using class
 /// members of an instance that has been de-allocated, we use weak pointers
 /// constructed from this.
-class CDPHandler::Impl : public message::RequestHandler,
-                         public debugger::EventObserver,
-                         public std::enable_shared_from_this<CDPHandler::Impl> {
+class CDPHandlerImpl : public message::RequestHandler,
+                       public debugger::EventObserver,
+                       public std::enable_shared_from_this<CDPHandlerImpl> {
  public:
-  Impl(
-      std::unique_ptr<RuntimeAdapter> adapter,
-      const std::string &title,
-      bool waitForDebugger);
-  ~Impl() override;
-
-  std::string getTitle() const;
+  CDPHandlerImpl(std::unique_ptr<RuntimeAdapter> adapter, bool waitForDebugger);
+  ~CDPHandlerImpl() override;
 
   bool registerCallbacks(
       CDPMessageCallbackFunction msgCallback,
@@ -205,7 +202,11 @@ class CDPHandler::Impl : public message::RequestHandler,
   // If a client is attached, send notifications for any scripts that the
   // client hasn't been notified about yet.
   void processPendingScriptLoads();
-  Script getScriptFromTopCallFrame();
+  /// Converts the top call frame's SourceLocation into CDPHandler's \p Script
+  /// representation for keeping track of loaded scripts. This function returns
+  /// std::optional because SourceLocation is not guaranteed to be valid if
+  /// debug info wasn't compiled in the first place.
+  std::optional<Script> getScriptFromTopCallFrame();
   debugger::Command didPause(debugger::Debugger &debugger) override;
   /// Wait for more work to arrive. The specified lock (on \p mutex_) will be
   /// temporarily released (by waiting on the condition variable \p signal_),
@@ -233,15 +234,12 @@ class CDPHandler::Impl : public message::RequestHandler,
     }
 
     if (chromeLoc.url.has_value()) {
-      // TODO: still relevant? RN-ism, maybe should move responsibility
-      // elsewhere/out?
-      hermesLoc.fileName = m::stripCachePrevention(chromeLoc.url.value());
+      hermesLoc.fileName = chromeLoc.url.value();
     } else if (chromeLoc.urlRegex.has_value()) {
-      const std::regex regex(
-          m::stripCachePrevention(chromeLoc.urlRegex.value()));
-      for (const auto &[name, _] : loadedScriptIdByName_) {
-        if (std::regex_match(name, regex)) {
-          hermesLoc.fileName = name;
+      const std::regex regex(chromeLoc.urlRegex.value());
+      for (const auto &[_, script] : loadedScripts_) {
+        if (std::regex_match(script.fileName, regex)) {
+          hermesLoc.fileName = script.fileName;
           break;
         }
       }
@@ -293,9 +291,28 @@ class CDPHandler::Impl : public message::RequestHandler,
       int id,
       std::optional<m::runtime::ExecutionContextId> context);
 
-  // Emit a Runtime.consoleAPICalled event to the debug client.
-  void emitConsoleAPICalledEvent(ConsoleMessageInfo info);
-  void storePendingConsoleMessage(ConsoleMessageInfo info);
+  /// Function to process a console message being logged. It will invoke
+  /// \p sendConsoleAPICalledEventToClient to actually send the CDP message, and
+  /// use \p cacheConsoleMessage to deal with caching the message. The function
+  /// takes ConsoleMessageInfo by-value for the following reasons:
+  /// 1. Ease of use with temporary objects. It can't be a const reference
+  ///    because the data is to be stored into a cache later.
+  /// 2. Need to store data into a cache. See \p cacheConsoleMessage.
+  void handleConsoleAPI(ConsoleMessageInfo info);
+  /// Sends a Runtime.consoleAPICalled CDP event to the debug client. Generally
+  /// code should not directly use this function and should use
+  /// \p handleConsoleAPI. The only place where it makes sense to directly call
+  /// this function is when handling Runtime.enable.
+  void sendConsoleAPICalledEventToClient(const ConsoleMessageInfo &info);
+  /// Stores the provided console message in the cache and handles when the
+  /// cache is full. When storing things in a cache, if a copy is stored instead
+  /// of pointer, then the cache is less likely to have accidental modification
+  /// later. Also, the data's lifetime is correlated to the cache instead of
+  /// something else. In this case, the function takes ConsoleMessageInfo
+  /// by-value to ensure a copy of the data is received or the ownership is
+  /// moved to the function. Since ConsoleMessageInfo has no copy constructor, a
+  /// move will be used.
+  void cacheConsoleMessage(ConsoleMessageInfo info);
   // Install a host function for a particular console method. This takes a
   // reference to the original console object, so calls can still be forwarded
   // to that object.
@@ -314,7 +331,6 @@ class CDPHandler::Impl : public message::RequestHandler,
   /// inside the CDP Handler without requiring \p RuntimeAdapter::getRuntime
   /// to support use from arbitrary threads.
   HermesRuntime &runtime_;
-  const std::string title_;
 
   // preparedScripts_ stores user-entered scripts that have been prepared for
   // execution, and may be invoked by a later command.
@@ -351,11 +367,20 @@ class CDPHandler::Impl : public message::RequestHandler,
 
   Attachment currentAttachment_ = Attachment::None;
   Execution currentExecution_ = Execution::Running;
-  std::unordered_map<int, Script> loadedScripts_;
-  std::unordered_map<std::string, int> loadedScriptIdByName_;
+  /// Stores every script that appeared in the order that they appear in. The
+  /// ordering is important because frontend DevTools groups by the source URL
+  /// and then takes the latest scriptParsed version as the latest version.
+  llvh::MapVector<uint32_t, Script> loadedScripts_;
   bool runtimeEnabled_ = false;
-  int numPendingConsoleMessagesDiscarded_ = 0;
-  std::deque<ConsoleMessageInfo> pendingConsoleMessages_;
+
+  /// Counts the number of console messages discarded when
+  /// \p consoleMessageCache_ is full.
+  int numConsoleMessagesDiscardedFromCache_ = 0;
+  /// Cache for storing console messages. Earlier messages are discarded when
+  /// the cache is full. The choice to use a std::deque is for fast operations
+  /// at the beginning and the end, so that adding to the cache and discarding
+  /// from the cache are fast.
+  std::deque<ConsoleMessageInfo> consoleMessageCache_;
 
   /// \p mutex_ protects all members; any entry point to the CDPHandler from
   /// external code should lock this mutex. The mutex is recursive, as the
@@ -395,13 +420,11 @@ class CDPHandler::Impl : public message::RequestHandler,
       pendingFuncs_ TSA_GUARDED_BY(mutex_);
 };
 
-CDPHandler::Impl::Impl(
+CDPHandlerImpl::CDPHandlerImpl(
     std::unique_ptr<RuntimeAdapter> adapter,
-    const std::string &title,
     bool waitForDebugger)
     : runtimeAdapter_(std::move(adapter)),
       runtime_(runtimeAdapter_->getRuntime()),
-      title_(title),
       awaitingDebuggerOnStart_(waitForDebugger) {
   // Install __tickleJs. Do this activity before the call to setEventObserver,
   // so we don't get any didPause callback firings for these.
@@ -412,7 +435,7 @@ CDPHandler::Impl::Impl(
   runtime_.getDebugger().setEventObserver(this);
 }
 
-CDPHandler::Impl::~Impl() {
+CDPHandlerImpl::~CDPHandlerImpl() {
   unregisterCallbacks();
 
   runtime_.getDebugger().setEventObserver(nullptr);
@@ -425,14 +448,7 @@ CDPHandler::Impl::~Impl() {
   // by other mutex
 }
 
-std::string CDPHandler::Impl::getTitle() const {
-  // This is a public function, but the mutex is not required
-  // as we're just returning member that is unchanged for the
-  // lifetime of this instance.
-  return title_;
-}
-
-bool CDPHandler::Impl::registerCallbacks(
+bool CDPHandlerImpl::registerCallbacks(
     CDPMessageCallbackFunction msgCallback,
     OnUnregisterFunction onUnregister) {
   assert(msgCallback);
@@ -448,7 +464,7 @@ bool CDPHandler::Impl::registerCallbacks(
   return true;
 }
 
-bool CDPHandler::Impl::unregisterCallbacks() {
+bool CDPHandlerImpl::unregisterCallbacks() {
   // Lock because this is a public function that manipulates members.
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   bool hadCallback = msgCallback_ != nullptr;
@@ -466,7 +482,7 @@ static bool isDebuggerRequest(const m::Request &req) {
   return req.method.rfind(kDebuggerMethodPrefix, 0) == 0;
 }
 
-void CDPHandler::Impl::handle(std::string str) {
+void CDPHandlerImpl::handle(std::string str) {
   std::unique_ptr<m::Request> req = m::Request::fromJson(str);
   if (!req) {
     return;
@@ -488,13 +504,16 @@ void CDPHandler::Impl::handle(std::string str) {
   }
 }
 
-void CDPHandler::Impl::emitConsoleAPICalledEvent(ConsoleMessageInfo info) {
-  // buffer console messages before devtool connects
-  if (!runtimeEnabled_) {
-    storePendingConsoleMessage(std::move(info));
-    return;
+void CDPHandlerImpl::handleConsoleAPI(ConsoleMessageInfo info) {
+  if (runtimeEnabled_) {
+    sendConsoleAPICalledEventToClient(info);
   }
 
+  cacheConsoleMessage(std::move(info));
+}
+
+void CDPHandlerImpl::sendConsoleAPICalledEventToClient(
+    const ConsoleMessageInfo &info) {
   m::runtime::ConsoleAPICalledNotification apiCalledNote;
   apiCalledNote.type = info.level;
   apiCalledNote.timestamp = info.timestamp;
@@ -514,33 +533,26 @@ void CDPHandler::Impl::emitConsoleAPICalledEvent(ConsoleMessageInfo info) {
   sendNotificationToClient(apiCalledNote);
 }
 
-void CDPHandler::Impl::storePendingConsoleMessage(ConsoleMessageInfo info) {
-  assert(pendingConsoleMessages_.size() <= kMaxPendingConsoleMessages);
+void CDPHandlerImpl::cacheConsoleMessage(ConsoleMessageInfo info) {
+  assert(consoleMessageCache_.size() <= kMaxCachedConsoleMessages);
 
-  // Unfortunately we can't have unlimited buffer space, so there will be
-  // situations when we run out of storage. We could either discard earlier
-  // messages, or discard later messages. What's more useful depends on how the
-  // client's app is written, and whether the useful logs happen earlier or
-  // later.
-  //
-  // Chromium's implementation discards the earlier messages.
-  //
-  // Since this is a new feature for us, opting to match Chromium's behavior for
-  // two reasons:
-  // 1. Provide a consistent behavior between devtool environments
-  // 2. Assuming that Chromium has better insight into which approach is more
-  //    desirable
-  if (pendingConsoleMessages_.size() == kMaxPendingConsoleMessages) {
+  // There will be situations when we run out of storage due to limited cache
+  // space. This message cache is used to collect console messages before the
+  // first devtool connection. The cache is also used if the devtool re-opens
+  // and needs restore the previous context as much as possible. This is why the
+  // cache will discard earlier messages if max storage is reached. Keeping the
+  // most recent messages makes sense when restoring the context.
+  if (consoleMessageCache_.size() == kMaxCachedConsoleMessages) {
     // Increment a counter so we can inform users how many messages were
     // discarded.
-    numPendingConsoleMessagesDiscarded_++;
-    pendingConsoleMessages_.pop_front();
+    numConsoleMessagesDiscardedFromCache_++;
+    consoleMessageCache_.pop_front();
   }
 
-  pendingConsoleMessages_.push_back(std::move(info));
+  consoleMessageCache_.push_back(std::move(info));
 }
 
-double CDPHandler::Impl::currentTimestampMs() {
+double CDPHandlerImpl::currentTimestampMs() {
   return std::chrono::duration<double, std::milli>(
              std::chrono::system_clock::now().time_since_epoch())
       .count();
@@ -550,20 +562,20 @@ double CDPHandler::Impl::currentTimestampMs() {
  * RequestHandler overrides
  */
 
-void CDPHandler::Impl::handle(const m::UnknownRequest &req) {
+void CDPHandlerImpl::handle(const m::UnknownRequest &req) {
   sendErrorCodeToClient(
       req.id, m::ErrorCode::MethodNotFound, req.method + " wasn't found");
 }
 
-void CDPHandler::Impl::handle(const m::debugger::DisableRequest &req) {
+void CDPHandlerImpl::handle(const m::debugger::DisableRequest &req) {
   enqueueDesiredAttachment(req, Attachment::Disabled);
 }
 
-void CDPHandler::Impl::handle(const m::debugger::EnableRequest &req) {
+void CDPHandlerImpl::handle(const m::debugger::EnableRequest &req) {
   enqueueDesiredAttachment(req, Attachment::Enabled);
 }
 
-void CDPHandler::Impl::handle(
+void CDPHandlerImpl::handle(
     const m::debugger::EvaluateOnCallFrameRequest &req) {
   {
     pendingEvals_.push(
@@ -578,7 +590,7 @@ void CDPHandler::Impl::handle(
   triggerAsyncPause();
 }
 
-void CDPHandler::Impl::sendSnapshot(
+void CDPHandlerImpl::sendSnapshot(
     int reqId,
     std::string /*message*/,
     bool reportProgress,
@@ -628,7 +640,7 @@ void CDPHandler::Impl::sendSnapshot(
   });
 }
 
-void CDPHandler::Impl::handle(
+void CDPHandlerImpl::handle(
     const m::heapProfiler::TakeHeapSnapshotRequest &req) {
   sendSnapshot(
       req.id,
@@ -637,7 +649,7 @@ void CDPHandler::Impl::handle(
       /* stopStackTraceCapture */ false);
 }
 
-void CDPHandler::Impl::handle(
+void CDPHandlerImpl::handle(
     const m::heapProfiler::StartTrackingHeapObjectsRequest &req) {
   // TODO: Convert
   enqueueFunc([this, req]() {
@@ -687,7 +699,7 @@ void CDPHandler::Impl::handle(
   });
 }
 
-void CDPHandler::Impl::handle(
+void CDPHandlerImpl::handle(
     const m::heapProfiler::StopTrackingHeapObjectsRequest &req) {
   sendSnapshot(
       req.id,
@@ -696,8 +708,7 @@ void CDPHandler::Impl::handle(
       /* stopStackTraceCapture */ true);
 }
 
-void CDPHandler::Impl::handle(
-    const m::heapProfiler::StartSamplingRequest &req) {
+void CDPHandlerImpl::handle(const m::heapProfiler::StartSamplingRequest &req) {
   // This is the same default sampling interval that Chrome uses.
   // https://chromedevtools.github.io/devtools-protocol/tot/HeapProfiler/#method-startSampling
   constexpr size_t kDefaultSamplingInterval = 1 << 15;
@@ -711,7 +722,7 @@ void CDPHandler::Impl::handle(
   });
 }
 
-void CDPHandler::Impl::handle(const m::heapProfiler::StopSamplingRequest &req) {
+void CDPHandlerImpl::handle(const m::heapProfiler::StopSamplingRequest &req) {
   // TODO: IfEnabled
   enqueueFunc([this, req]() {
     std::ostringstream stream;
@@ -728,15 +739,14 @@ void CDPHandler::Impl::handle(const m::heapProfiler::StopSamplingRequest &req) {
   });
 }
 
-void CDPHandler::Impl::handle(
-    const m::heapProfiler::CollectGarbageRequest &req) {
+void CDPHandlerImpl::handle(const m::heapProfiler::CollectGarbageRequest &req) {
   enqueueFunc([this, req]() {
     runtime_.instrumentation().collectGarbage("inspector");
     sendResponseToClient(m::makeOkResponse(req.id));
   });
 }
 
-void CDPHandler::Impl::handle(
+void CDPHandlerImpl::handle(
     const m::heapProfiler::GetObjectByHeapObjectIdRequest &req) {
   enqueueFunc([this, req]() {
     uint64_t objID = atoi(req.objectId.c_str());
@@ -763,7 +773,7 @@ void CDPHandler::Impl::handle(
   });
 }
 
-void CDPHandler::Impl::handle(
+void CDPHandlerImpl::handle(
     const m::heapProfiler::GetHeapObjectIdRequest &req) {
   enqueueFunc([this, req]() {
     // TODO: de-shared_ptr this
@@ -790,14 +800,14 @@ void CDPHandler::Impl::handle(
   });
 }
 
-void CDPHandler::Impl::handle(const m::profiler::StartRequest &req) {
+void CDPHandlerImpl::handle(const m::profiler::StartRequest &req) {
   enqueueFunc([this, req]() {
     HermesRuntime::enableSamplingProfiler();
     sendResponseToClient(m::makeOkResponse(req.id));
   });
 }
 
-void CDPHandler::Impl::handle(const m::profiler::StopRequest &req) {
+void CDPHandlerImpl::handle(const m::profiler::StopRequest &req) {
   enqueueFunc([this, req]() {
     HermesRuntime *hermesRT = &runtime_;
 
@@ -1055,7 +1065,7 @@ class CallFunctionOnBuilder {
 
 } // namespace
 
-void CDPHandler::Impl::handle(const m::runtime::CallFunctionOnRequest &req) {
+void CDPHandlerImpl::handle(const m::runtime::CallFunctionOnRequest &req) {
   std::string expression;
   CallFunctionOnRunner runner;
 
@@ -1125,7 +1135,7 @@ void CDPHandler::Impl::handle(const m::runtime::CallFunctionOnRequest &req) {
   triggerAsyncPause();
 }
 
-void CDPHandler::Impl::handle(const m::runtime::CompileScriptRequest &req) {
+void CDPHandlerImpl::handle(const m::runtime::CompileScriptRequest &req) {
   // TODO: formerly IfEnabled
   enqueueFunc([this, req]() {
     if (!validateExecutionContext(req.id, req.executionContextId)) {
@@ -1155,14 +1165,14 @@ void CDPHandler::Impl::handle(const m::runtime::CompileScriptRequest &req) {
   });
 }
 
-void CDPHandler::Impl::handle(const m::runtime::DisableRequest &req) {
+void CDPHandlerImpl::handle(const m::runtime::DisableRequest &req) {
   enqueueFunc([this, req]() {
     runtimeEnabled_ = false;
     sendResponseToClient(m::makeOkResponse(req.id));
   });
 }
 
-void CDPHandler::Impl::handle(const m::runtime::EnableRequest &req) {
+void CDPHandlerImpl::handle(const m::runtime::EnableRequest &req) {
   enqueueFunc([this, req]() {
     runtimeEnabled_ = true;
     sendResponseToClient(m::makeOkResponse(req.id));
@@ -1170,36 +1180,33 @@ void CDPHandler::Impl::handle(const m::runtime::EnableRequest &req) {
     // Per CDP spec, when reporting is enabled, immediately send an
     // executionContextCreated event for each existing execution context.
     m::runtime::ExecutionContextCreatedNotification note;
-    note.context.id = CDPHandler::Impl::kHermesExecutionContextId;
+    note.context.id = CDPHandlerImpl::kHermesExecutionContextId;
     note.context.name = "hermes";
     sendNotificationToClient(note);
 
-    if (numPendingConsoleMessagesDiscarded_ != 0) {
+    if (numConsoleMessagesDiscardedFromCache_ != 0) {
       jsi::Runtime &rt = runtime_;
       std::ostringstream oss;
-      oss << "Too many console messages were logged before devtool connected. "
-          << numPendingConsoleMessagesDiscarded_
-          << (numPendingConsoleMessagesDiscarded_ == 1 ? " message was"
-                                                       : " messages were")
+      oss << "Only limited number of console messages can be cached. "
+          << numConsoleMessagesDiscardedFromCache_
+          << (numConsoleMessagesDiscardedFromCache_ == 1 ? " message was"
+                                                         : " messages were")
           << " discarded at the beginning.";
       jsi::Array argsArray(rt, 1);
       argsArray.setValueAtIndex(rt, 0, oss.str());
-      emitConsoleAPICalledEvent(ConsoleMessageInfo{
-          pendingConsoleMessages_.front().timestamp - 0.1,
+      sendConsoleAPICalledEventToClient(ConsoleMessageInfo{
+          consoleMessageCache_.front().timestamp - 0.1,
           "warning",
           std::move(argsArray)});
-
-      numPendingConsoleMessagesDiscarded_ = 0;
     }
 
-    for (auto &msg : pendingConsoleMessages_) {
-      emitConsoleAPICalledEvent(std::move(msg));
+    for (auto &msg : consoleMessageCache_) {
+      sendConsoleAPICalledEventToClient(msg);
     }
-    pendingConsoleMessages_.clear();
   });
 }
 
-void CDPHandler::Impl::handle(const m::runtime::EvaluateRequest &req) {
+void CDPHandlerImpl::handle(const m::runtime::EvaluateRequest &req) {
   {
     pendingEvals_.push(
         {req.id,
@@ -1213,12 +1220,12 @@ void CDPHandler::Impl::handle(const m::runtime::EvaluateRequest &req) {
   triggerAsyncPause();
 }
 
-void CDPHandler::Impl::handle(const m::debugger::PauseRequest &req) {
+void CDPHandlerImpl::handle(const m::debugger::PauseRequest &req) {
   enqueueDesiredExecution(req, Execution::Paused);
   triggerAsyncPause();
 }
 
-void CDPHandler::Impl::handle(const m::debugger::RemoveBreakpointRequest &req) {
+void CDPHandlerImpl::handle(const m::debugger::RemoveBreakpointRequest &req) {
   enqueueFunc([this, req]() {
     if (isVirtualBreakpointId(req.breakpointId)) {
       if (!removeVirtualBreakpoint(req.breakpointId)) {
@@ -1231,12 +1238,12 @@ void CDPHandler::Impl::handle(const m::debugger::RemoveBreakpointRequest &req) {
   });
 }
 
-void CDPHandler::Impl::handle(const m::debugger::ResumeRequest &req) {
+void CDPHandlerImpl::handle(const m::debugger::ResumeRequest &req) {
   enqueueDesiredExecution(req, Execution::Running);
   triggerAsyncPause();
 }
 
-void CDPHandler::Impl::handle(const m::debugger::SetBreakpointRequest &req) {
+void CDPHandlerImpl::handle(const m::debugger::SetBreakpointRequest &req) {
   debugger::SourceLocation loc;
   // TODO: failure to parse
   auto scriptId = std::stoull(req.location.scriptId);
@@ -1271,8 +1278,7 @@ void CDPHandler::Impl::handle(const m::debugger::SetBreakpointRequest &req) {
   });
 }
 
-void CDPHandler::Impl::handle(
-    const m::debugger::SetBreakpointByUrlRequest &req) {
+void CDPHandlerImpl::handle(const m::debugger::SetBreakpointByUrlRequest &req) {
   enqueueFunc([this, req]() {
     debugger::SourceLocation loc;
     // TODO: getLocationByBreakpointRequest(req);
@@ -1297,31 +1303,31 @@ void CDPHandler::Impl::handle(
   });
 }
 
-void CDPHandler::Impl::handle(
+void CDPHandlerImpl::handle(
     const m::debugger::SetBreakpointsActiveRequest &req) {
   breakpointsActive_ = req.active;
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
-bool CDPHandler::Impl::isVirtualBreakpointId(const std::string &id) {
+bool CDPHandlerImpl::isVirtualBreakpointId(const std::string &id) {
   return id.rfind(kVirtualBreakpointPrefix, 0) == 0;
 }
 
-const std::string &CDPHandler::Impl::createVirtualBreakpoint(
+const std::string &CDPHandlerImpl::createVirtualBreakpoint(
     const std::string &category) {
   auto ret = virtualBreakpoints_[category].insert(
       kVirtualBreakpointPrefix + std::to_string(nextVirtualBreakpoint_++));
   return *ret.first;
 }
 
-bool CDPHandler::Impl::hasVirtualBreakpoint(const std::string &category) {
+bool CDPHandlerImpl::hasVirtualBreakpoint(const std::string &category) {
   auto pos = virtualBreakpoints_.find(category);
   if (pos == virtualBreakpoints_.end())
     return false;
   return !pos->second.empty();
 }
 
-bool CDPHandler::Impl::removeVirtualBreakpoint(const std::string &id) {
+bool CDPHandlerImpl::removeVirtualBreakpoint(const std::string &id) {
   // We expect roughly 1 category, so just iterate over all the sets
   for (auto &kv : virtualBreakpoints_) {
     if (kv.second.erase(id) > 0) {
@@ -1331,7 +1337,7 @@ bool CDPHandler::Impl::removeVirtualBreakpoint(const std::string &id) {
   return false;
 }
 
-void CDPHandler::Impl::handle(
+void CDPHandlerImpl::handle(
     const m::debugger::SetInstrumentationBreakpointRequest &req) {
   if (req.instrumentation != kBeforeScriptWithSourceMapExecution) {
     sendErrorToClient(
@@ -1347,7 +1353,7 @@ void CDPHandler::Impl::handle(
   sendResponseToClient(resp);
 }
 
-void CDPHandler::Impl::handle(
+void CDPHandlerImpl::handle(
     const m::debugger::SetPauseOnExceptionsRequest &req) {
   debugger::PauseOnThrowMode mode = debugger::PauseOnThrowMode::None;
 
@@ -1368,20 +1374,19 @@ void CDPHandler::Impl::handle(
   });
 }
 
-void CDPHandler::Impl::handle(const m::debugger::StepIntoRequest &req) {
+void CDPHandlerImpl::handle(const m::debugger::StepIntoRequest &req) {
   enqueueDesiredStep(req, debugger::StepMode::Into);
 }
 
-void CDPHandler::Impl::handle(const m::debugger::StepOutRequest &req) {
+void CDPHandlerImpl::handle(const m::debugger::StepOutRequest &req) {
   enqueueDesiredStep(req, debugger::StepMode::Out);
 }
 
-void CDPHandler::Impl::handle(const m::debugger::StepOverRequest &req) {
+void CDPHandlerImpl::handle(const m::debugger::StepOverRequest &req) {
   enqueueDesiredStep(req, debugger::StepMode::Over);
 }
 
-std::vector<m::runtime::PropertyDescriptor>
-CDPHandler::Impl::makePropsFromScope(
+std::vector<m::runtime::PropertyDescriptor> CDPHandlerImpl::makePropsFromScope(
     std::pair<uint32_t, uint32_t> frameAndScopeIndex,
     const std::string &objectGroup,
     const debugger::ProgramState &state,
@@ -1436,8 +1441,7 @@ CDPHandler::Impl::makePropsFromScope(
   return result;
 }
 
-std::vector<m::runtime::PropertyDescriptor>
-CDPHandler::Impl::makePropsFromValue(
+std::vector<m::runtime::PropertyDescriptor> CDPHandlerImpl::makePropsFromValue(
     const jsi::Value &value,
     const std::string &objectGroup,
     bool onlyOwnProperties,
@@ -1505,7 +1509,7 @@ CDPHandler::Impl::makePropsFromValue(
   return result;
 }
 
-void CDPHandler::Impl::handle(const m::runtime::GetHeapUsageRequest &req) {
+void CDPHandlerImpl::handle(const m::runtime::GetHeapUsageRequest &req) {
   enqueueFunc([this, req]() {
     // getHeapInfo must be called from the runtime thread.
     auto heapInfo = runtime_.instrumentation().getHeapInfo(false);
@@ -1517,7 +1521,7 @@ void CDPHandler::Impl::handle(const m::runtime::GetHeapUsageRequest &req) {
   });
 }
 
-void CDPHandler::Impl::handle(const m::runtime::GetPropertiesRequest &req) {
+void CDPHandlerImpl::handle(const m::runtime::GetPropertiesRequest &req) {
   // TODO: formerly "IfEnabled"
   enqueueFunc(
       [this, req, generatePreview = req.generatePreview.value_or(false)](
@@ -1542,7 +1546,7 @@ void CDPHandler::Impl::handle(const m::runtime::GetPropertiesRequest &req) {
       });
 }
 
-void CDPHandler::Impl::handle(
+void CDPHandlerImpl::handle(
     const m::runtime::GlobalLexicalScopeNamesRequest &req) {
   // TODO: formerly "IfEnabled"
   enqueueFunc([this, req](const debugger::ProgramState &state) {
@@ -1577,7 +1581,7 @@ void CDPHandler::Impl::handle(
   });
 }
 
-void CDPHandler::Impl::handle(
+void CDPHandlerImpl::handle(
     const m::runtime::RunIfWaitingForDebuggerRequest &req) {
   if (isAwaitingDebuggerOnStart()) {
     enqueueDesiredExecution(req, Execution::Running);
@@ -1592,21 +1596,21 @@ void CDPHandler::Impl::handle(
  * Send-to-client methods
  */
 
-void CDPHandler::Impl::sendToClient(const std::string &str) {
+void CDPHandlerImpl::sendToClient(const std::string &str) {
   if (msgCallback_) {
     msgCallback_(str);
   }
 }
 
-void CDPHandler::Impl::sendResponseToClient(const m::Response &resp) {
+void CDPHandlerImpl::sendResponseToClient(const m::Response &resp) {
   sendToClient(resp.toJsonStr());
 }
 
-void CDPHandler::Impl::sendNotificationToClient(const m::Notification &note) {
+void CDPHandlerImpl::sendNotificationToClient(const m::Notification &note) {
   sendToClient(note.toJsonStr());
 }
 
-bool CDPHandler::Impl::validateExecutionContext(
+bool CDPHandlerImpl::validateExecutionContext(
     int id,
     std::optional<m::runtime::ExecutionContextId> context) {
   if (context.has_value() && context.value() != kHermesExecutionContextId) {
@@ -1622,6 +1626,14 @@ bool CDPHandler::Impl::validateExecutionContext(
  */
 std::shared_ptr<CDPHandler> CDPHandler::create(
     std::unique_ptr<RuntimeAdapter> adapter,
+    bool waitForDebugger) {
+  // Can't use make_shared here since the constructor is private.
+  return std::shared_ptr<CDPHandler>(
+      new CDPHandler(std::move(adapter), "", waitForDebugger));
+}
+
+std::shared_ptr<CDPHandler> CDPHandler::create(
+    std::unique_ptr<RuntimeAdapter> adapter,
     const std::string &title,
     bool waitForDebugger) {
   // Can't use make_shared here since the constructor is private.
@@ -1633,15 +1645,17 @@ CDPHandler::CDPHandler(
     std::unique_ptr<RuntimeAdapter> adapter,
     const std::string &title,
     bool waitForDebugger)
-    : impl_(
-          std::make_shared<Impl>(std::move(adapter), title, waitForDebugger)) {
+    : impl_(std::make_shared<CDPHandlerImpl>(
+          std::move(adapter),
+          waitForDebugger)),
+      title_(title) {
   impl_->installLogHandler();
 }
 
 CDPHandler::~CDPHandler() = default;
 
 std::string CDPHandler::getTitle() const {
-  return impl_->getTitle();
+  return title_;
 }
 
 bool CDPHandler::registerCallbacks(
@@ -1658,11 +1672,11 @@ void CDPHandler::handle(std::string str) {
   impl_->handle(std::move(str));
 }
 
-bool CDPHandler::Impl::isAwaitingDebuggerOnStart() {
+bool CDPHandlerImpl::isAwaitingDebuggerOnStart() {
   return awaitingDebuggerOnStart_;
 }
 
-void CDPHandler::Impl::triggerAsyncPause() {
+void CDPHandlerImpl::triggerAsyncPause() {
   signal_.notify_one();
   // Although it's generally unsafe to invoke the runtime from arbitrary
   // threads, triggerAsyncPause is safe, as noted in the debugger API.
@@ -1670,23 +1684,23 @@ void CDPHandler::Impl::triggerAsyncPause() {
   runtimeAdapter_->tickleJs();
 }
 
-void CDPHandler::Impl::sendErrorToClient(int id, const std::string &msg) {
+void CDPHandlerImpl::sendErrorToClient(int id, const std::string &msg) {
   sendResponseToClient(makeErrorResponse(id, m::ErrorCode::ServerError, msg));
 }
-void CDPHandler::Impl::sendErrorCodeToClient(
+void CDPHandlerImpl::sendErrorCodeToClient(
     int id,
     m::ErrorCode errorCode,
     const std::string &msg) {
   sendResponseToClient(m::makeErrorResponse(id, errorCode, msg));
 }
 
-void CDPHandler::Impl::resetScriptsLoaded() {
+void CDPHandlerImpl::resetScriptsLoaded() {
   for (auto &[_, script] : loadedScripts_) {
     script.notifiedClient = false;
   }
 }
 
-void CDPHandler::Impl::sendPausedNotificationToClient() {
+void CDPHandlerImpl::sendPausedNotificationToClient() {
   m::debugger::PausedNotification note;
   note.reason = "other";
   note.callFrames = m::debugger::makeCallFrames(
@@ -1694,19 +1708,19 @@ void CDPHandler::Impl::sendPausedNotificationToClient() {
   sendNotificationToClient(note);
 }
 
-void CDPHandler::Impl::enqueueFunc(
+void CDPHandlerImpl::enqueueFunc(
     std::function<void(const debugger::ProgramState &state)> func) {
   pendingFuncs_.push(func);
   triggerAsyncPause();
 }
 
 // Convenience wrapper for funcs that don't need program state
-void CDPHandler::Impl::enqueueFunc(std::function<void()> func) {
+void CDPHandlerImpl::enqueueFunc(std::function<void()> func) {
   pendingFuncs_.push([func](const debugger::ProgramState &) { func(); });
   triggerAsyncPause();
 }
 
-void CDPHandler::Impl::sendPauseOnExceptionNotification() {
+void CDPHandlerImpl::sendPauseOnExceptionNotification() {
   m::debugger::PausedNotification note;
   note.reason = "exception";
   note.callFrames = m::debugger::makeCallFrames(
@@ -1714,7 +1728,7 @@ void CDPHandler::Impl::sendPauseOnExceptionNotification() {
   sendNotificationToClient(note);
 }
 
-void CDPHandler::Impl::processPendingFuncs() {
+void CDPHandlerImpl::processPendingFuncs() {
   while (!pendingFuncs_.empty()) {
     if (true) {
       auto func = pendingFuncs_.front();
@@ -1729,7 +1743,7 @@ void CDPHandler::Impl::processPendingFuncs() {
   }
 }
 
-void CDPHandler::Impl::processPendingDesiredAttachments() {
+void CDPHandlerImpl::processPendingDesiredAttachments() {
   while (!pendingDesiredAttachments_.empty()) {
     int requestId;
     Attachment desiredAttachment;
@@ -1745,7 +1759,7 @@ void CDPHandler::Impl::processPendingDesiredAttachments() {
   }
 }
 
-void CDPHandler::Impl::enableDebugger() {
+void CDPHandlerImpl::enableDebugger() {
   getDebugger().setIsDebuggerAttached(true);
 
   // The debugger just got enabled; inform the client about all scripts.
@@ -1759,7 +1773,7 @@ void CDPHandler::Impl::enableDebugger() {
   }
 }
 
-void CDPHandler::Impl::disableDebugger() {
+void CDPHandlerImpl::disableDebugger() {
   getDebugger().setIsDebuggerAttached(false);
   resetScriptsLoaded();
   getDebugger().deleteAllBreakpoints();
@@ -1769,11 +1783,11 @@ void CDPHandler::Impl::disableDebugger() {
   currentExecution_ = Execution::Running;
 }
 
-bool CDPHandler::Impl::isDebuggerDisabled() {
+bool CDPHandlerImpl::isDebuggerDisabled() {
   return currentAttachment_ == Attachment::Disabled;
 }
 
-void CDPHandler::Impl::processPendingDesiredExecutions(
+void CDPHandlerImpl::processPendingDesiredExecutions(
     debugger::PauseReason pauseReason) {
   Execution previousExecution = currentExecution_;
   while (!pendingDesiredExecutions_.empty()) {
@@ -1804,11 +1818,11 @@ void CDPHandler::Impl::processPendingDesiredExecutions(
   // We also pause on script loads when the appropriate virtual breakpoint has
   // been set.
   if (pauseReason == debugger::PauseReason::ScriptLoaded) {
-    Script info = getScriptFromTopCallFrame();
+    std::optional<Script> info = getScriptFromTopCallFrame();
     // We don't want to pause on files that we should be ignoring.
     if (isAwaitingDebuggerOnStart() ||
         (hasVirtualBreakpoint(kBeforeScriptWithSourceMapExecution) &&
-         !info.sourceMappingUrl.empty())) {
+         (info && !info->sourceMappingUrl.empty()))) {
       currentExecution_ = Execution::Paused;
       // We should only be sending notifications if a debugger is attached,
       // else there's no one there to receive them. This notification will be
@@ -1848,16 +1862,19 @@ void CDPHandler::Impl::processPendingDesiredExecutions(
   }
 }
 
-void CDPHandler::Impl::processCurrentScriptLoaded() {
-  Script info = getScriptFromTopCallFrame();
-  auto loadedScript = loadedScripts_.find(info.fileId);
-  if (loadedScript == loadedScripts_.end()) {
-    loadedScripts_[info.fileId] = info;
-    loadedScriptIdByName_[info.fileName] = info.fileId;
+void CDPHandlerImpl::processCurrentScriptLoaded() {
+  std::optional<Script> info = getScriptFromTopCallFrame();
+  if (!info) {
+    return;
+  }
+
+  auto search = loadedScripts_.find(info->fileId);
+  if (search == loadedScripts_.end()) {
+    loadedScripts_[info->fileId] = *info;
   }
 }
 
-void CDPHandler::Impl::processPendingScriptLoads() {
+void CDPHandlerImpl::processPendingScriptLoads() {
   if (Attachment::Enabled != currentAttachment_)
     return;
   for (auto &[_, info] : loadedScripts_) {
@@ -1875,12 +1892,18 @@ void CDPHandler::Impl::processPendingScriptLoads() {
   }
 }
 
-Script CDPHandler::Impl::getScriptFromTopCallFrame() {
+std::optional<Script> CDPHandlerImpl::getScriptFromTopCallFrame() {
   Script info{};
   auto stackTrace = getDebugger().getProgramState().getStackTrace();
 
   if (stackTrace.callFrameCount() > 0) {
     debugger::SourceLocation loc = stackTrace.callFrameForIndex(0).location;
+
+    // Invalid fileId indicates debug info isn't included when compilation took
+    // place. E.g. compiling to bytecode without -g.
+    if (loc.fileId == debugger::kInvalidLocation) {
+      return std::nullopt;
+    }
 
     info.fileId = loc.fileId;
     info.fileName = loc.fileName;
@@ -1891,7 +1914,7 @@ Script CDPHandler::Impl::getScriptFromTopCallFrame() {
   return info;
 }
 
-debugger::Command CDPHandler::Impl::didPause(debugger::Debugger &debugger) {
+debugger::Command CDPHandlerImpl::didPause(debugger::Debugger &debugger) {
   // Lock because this callback manipulates members.
   std::unique_lock<std::recursive_mutex> lock(mutex_);
 
@@ -1994,7 +2017,7 @@ debugger::Command CDPHandler::Impl::didPause(debugger::Debugger &debugger) {
   }
 }
 
-void CDPHandler::Impl::waitForAsyncPauseTrigger(
+void CDPHandlerImpl::waitForAsyncPauseTrigger(
     std::unique_lock<std::recursive_mutex> &lock) {
   while (pendingEvals_.empty() && pendingDesiredExecutions_.empty() &&
          pendingDesiredSteps_.empty() && pendingFuncs_.empty() &&
@@ -2026,7 +2049,7 @@ static bool toBoolean(jsi::Runtime &runtime, const jsi::Value &val) {
   return false;
 }
 
-void CDPHandler::Impl::installLogHandler() {
+void CDPHandlerImpl::installLogHandler() {
   jsi::Runtime &rt = runtime_;
   auto console = jsi::Object(rt);
   auto val = rt.global().getProperty(rt, "console");
@@ -2054,7 +2077,7 @@ void CDPHandler::Impl::installLogHandler() {
   rt.global().setProperty(rt, "console", console);
 }
 
-void CDPHandler::Impl::installConsoleFunction(
+void CDPHandlerImpl::installConsoleFunction(
     jsi::Object &console,
     std::shared_ptr<jsi::Object> &originalConsole,
     const std::string &name,
@@ -2064,7 +2087,7 @@ void CDPHandler::Impl::installConsoleFunction(
   auto nameID = jsi::PropNameID::forUtf8(rt, name);
   // We cannot capture `this` in the HostFunction, since it may outlive this
   // Impl instance. Instead, we pass it a weak_ptr.
-  auto weakThis = std::weak_ptr<CDPHandler::Impl>(shared_from_this());
+  auto weakThis = std::weak_ptr<CDPHandlerImpl>(shared_from_this());
   console.setProperty(
       rt,
       nameID,
@@ -2100,7 +2123,7 @@ void CDPHandler::Impl::installConsoleFunction(
                 jsi::Array argsArray(runtime, count);
                 for (size_t index = 0; index < count; ++index)
                   argsArray.setValueAtIndex(runtime, index, args[index]);
-                strongThis->emitConsoleAPICalledEvent(ConsoleMessageInfo{
+                strongThis->handleConsoleAPI(ConsoleMessageInfo{
                     strongThis->currentTimestampMs(),
                     chromeType,
                     std::move(argsArray)});
@@ -2110,7 +2133,7 @@ void CDPHandler::Impl::installConsoleFunction(
               // logging.
               if (count == 0) {
                 // No parameters, throw a blank assertion failed message.
-                strongThis->emitConsoleAPICalledEvent(ConsoleMessageInfo{
+                strongThis->handleConsoleAPI(ConsoleMessageInfo{
                     strongThis->currentTimestampMs(),
                     chromeType,
                     jsi::Array(runtime, 0)});
@@ -2120,7 +2143,7 @@ void CDPHandler::Impl::installConsoleFunction(
                 jsi::Array argsArray(runtime, count - 1);
                 for (size_t index = 1; index < count; ++index)
                   argsArray.setValueAtIndex(runtime, index, args[index]);
-                strongThis->emitConsoleAPICalledEvent(ConsoleMessageInfo{
+                strongThis->handleConsoleAPI(ConsoleMessageInfo{
                     strongThis->currentTimestampMs(),
                     chromeType,
                     std::move(argsArray)});

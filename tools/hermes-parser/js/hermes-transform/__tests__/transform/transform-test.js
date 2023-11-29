@@ -1284,6 +1284,36 @@ foo?.[0]?.bar;
 `);
   });
 
+  it('should preserve attached comments on ChainExpression nodes', async () => {
+    const code = `\
+foo(
+  // $FlowFixMe[prop-missing]
+  bar.baz,
+  // $FlowFixMe[prop-missing]
+  bar?.baz,
+);
+`;
+    const result = await transform(code, context => ({
+      Identifier(node) {
+        context.replaceNode(
+          node,
+          t.Identifier({
+            name: node.name,
+          }),
+        );
+        return;
+      },
+    }));
+    expect(result).toBe(`\
+foo(
+  // $FlowFixMe[prop-missing]
+  bar.baz,
+  // $FlowFixMe[prop-missing]
+  bar?.baz,
+);
+`);
+  });
+
   it('should correctly print method functions', async () => {
     const code = `\
       type A = {};`;

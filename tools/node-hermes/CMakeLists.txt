@@ -4,7 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 if(HERMES_BUILD_NODE_HERMES)
-  set(HERMES_ENABLE_EH ON)
+  set(HERMES_ENABLE_EH_RTTI ON)
   set(CXX_STANDARD 14)
   set(CXX_STANDARD_REQUIRED ON)
 
@@ -18,7 +18,7 @@ if(HERMES_BUILD_NODE_HERMES)
     InternalBindings/util.cpp InternalBindings/tty_wrap.cpp
     InternalBindings/pipe_wrap.cpp InternalBindings/stream_base.cpp
     ${ALL_HEADER_FILES}
-    LINK_LIBS hermesapi hermesNodeBytecode uv_a
+    LINK_LIBS libhermes hermesNodeBytecode uv_a
     )
   target_include_directories(node-hermes PRIVATE third-party/libuv/include/)
 endif()

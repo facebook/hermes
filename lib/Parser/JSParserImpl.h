@@ -237,6 +237,7 @@ class JSParserImpl {
 
 #if HERMES_PARSE_FLOW
   bool allowAnonFunctionType_{false};
+  Optional<UniqueString *> parseRenderTypeOperator();
 #endif
 #if HERMES_PARSE_FLOW || HERMES_PARSE_TS
   bool allowConditionalType_{false};
@@ -313,6 +314,8 @@ class JSParserImpl {
 
   UniqueString *componentIdent_;
   UniqueString *rendersIdent_;
+  UniqueString *rendersMaybeOperator_;
+  UniqueString *rendersStarOperator_;
 #endif
 
 #if HERMES_PARSE_TS
@@ -900,6 +903,11 @@ class JSParserImpl {
   Optional<ESTree::Node *> parsePostfixExpression();
   Optional<ESTree::Node *> parseUnaryExpression();
 
+  /// Convert identifiers to the operator they represent.
+  /// Called after each parseUnaryExpression to change identifiers that might be
+  /// operators into their corresponding IDENT_OP tokens.
+  inline void convertIdentOpIfPossible();
+
   /// Parse a binary expression using a precedence table, in order to decrease
   /// recursion depth.
   Optional<ESTree::Node *> parseBinaryExpression(Param param);
@@ -1159,6 +1167,12 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseComponentDeclarationFlow(
       SMLoc start,
       bool declare);
+
+  /// This is for parsing the `renders` clause that comes after component
+  /// declarations, declared components, and component types, but not for
+  /// standalone render types. It assumes that you've already checked that there
+  /// is a `renders` clause.
+  Optional<ESTree::Node *> parseComponentRenderTypeFlow(bool componentType);
 
   /// Parse ComponentParameters with the leading '(' and the trailing ')'.
   /// \pre the current token must be '('. \param[out] paramList populated

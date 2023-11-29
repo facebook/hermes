@@ -44,6 +44,10 @@ class JSWeakRef final : public JSObject {
 
   static void _markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor);
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
+#endif
+
   JSWeakRef(
       Runtime &runtime,
       Handle<JSObject> parent,

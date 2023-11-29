@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  *
  * @flow
- * @format
+ * @noformat
  */
 
 const xxx = 0;
@@ -16,3 +16,6 @@ const yyy = '';
 (xxx => xxx + 1: (xxx: number) => number);
 (xxx: number), (yyy: string);
 ((xxx: number): number);
+
+// Note: re-enable formatting after Prettier is updated to handle `as` expressions
+xxx as number;

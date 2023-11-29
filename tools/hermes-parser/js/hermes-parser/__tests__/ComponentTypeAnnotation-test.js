@@ -8,77 +8,60 @@
  * @format
  */
 
-import type {AlignmentCase} from '../__test_utils__/alignment-utils';
-
 import {
-  expectBabelAlignment,
-  expectEspreeAlignment,
-} from '../__test_utils__/alignment-utils';
-import {parseForSnapshot} from '../__test_utils__/parse';
+  printForSnapshotESTree,
+  parseForSnapshotESTree,
+  printForSnapshotBabel,
+  parseForSnapshotBabel,
+} from '../__test_utils__/parse';
 
 describe('ComponentTypeAnnotation', () => {
-  const testCase: AlignmentCase = {
-    code: `
+  describe('Basic', () => {
+    const code = `
       type T = component();
-    `,
-    espree: {
-      expectToFail: 'espree-exception',
-      expectedExceptionMessage: 'Unexpected token T',
-    },
-    babel: {
-      expectToFail: 'babel-exception',
-      expectedExceptionMessage: 'Unexpected token',
-    },
-  };
+    `;
 
-  test('ESTree', () => {
-    expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-      {
-        "body": [
-          {
-            "id": {
-              "name": "T",
-              "optional": false,
-              "type": "Identifier",
-              "typeAnnotation": null,
-            },
-            "right": {
-              "params": [],
-              "rendersType": null,
-              "rest": null,
-              "type": "ComponentTypeAnnotation",
-              "typeParameters": null,
-            },
-            "type": "TypeAlias",
-            "typeParameters": null,
-          },
-        ],
-        "type": "Program",
-      }
-    `);
-    expectEspreeAlignment(testCase);
+    test('ESTree', async () => {
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(
+        `"type T = any;"`,
+      );
+    });
   });
 
-  test('Babel', () => {
-    expect(parseForSnapshot(testCase.code, {babel: true}))
-      .toMatchInlineSnapshot(`
-      {
-        "body": [
-          {
-            "id": {
-              "name": "T",
-              "type": "Identifier",
-            },
-            "right": {
-              "type": "AnyTypeAnnotation",
-            },
-            "type": "TypeAlias",
-            "typeParameters": null,
-          },
-        ],
-        "type": "Program",
-      }
-    `);
-    expectBabelAlignment(testCase);
+  describe('Union', () => {
+    const code = `
+type T = component() | null;
+type T = (component() renders Foo) | null;
+    `;
+
+    test('ESTree', async () => {
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+        "type T = any | null;
+        type T = any | null;"
+      `);
+    });
+  });
+  describe('Without parens union', () => {
+    const code = `
+      type T = component() renders Foo | null;
+    `;
+
+    test('ESTree', async () => {
+      expect(await printForSnapshotESTree(code)).toBe(
+        `type T = (component() renders Foo) | null;`,
+      );
+    });
   });
 });

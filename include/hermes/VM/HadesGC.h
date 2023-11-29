@@ -837,15 +837,6 @@ class HadesGC final : public GCBase {
     std::shared_ptr<HeapSegment> segment;
   } compactee_;
 
-  /// If compaction completes before sweeping, there is a possibility that
-  /// dangling pointers into the now freed compactee may remain in the OG heap
-  /// until sweeping finishes. In certain cases, like when scanning dirty cards,
-  /// this could cause a segfault if you attempt to say, compress a pointer. To
-  /// handle this case, if compaction completes while sweeping is still in
-  /// progress, this shared_ptr will keep the compactee segment alive until the
-  /// end of sweeping.
-  std::shared_ptr<HeapSegment> compacteeHandleForSweep_;
-
   /// The number of compactions this GC has performed.
   size_t numCompactions_{0};
 

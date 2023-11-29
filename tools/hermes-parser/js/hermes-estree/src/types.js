@@ -398,7 +398,7 @@ export interface ComponentDeclaration extends BaseNode {
   +body: BlockStatement;
   +id: Identifier;
   +params: $ReadOnlyArray<ComponentParameterAndRestElement>;
-  +rendersType: null | TypeAnnotation;
+  +rendersType: null | RendersType;
   +typeParameters: null | TypeParameterDeclaration;
 }
 
@@ -451,6 +451,7 @@ export type Expression =
   | ImportExpression
   | ChainExpression
   | TypeCastExpression
+  | AsExpression
   | JSXFragment
   | JSXElement;
 
@@ -1321,11 +1322,31 @@ export interface ConditionalTypeAnnotation extends BaseNode {
   +falseType: TypeAnnotationType;
 }
 
-export interface TypeOperator extends BaseNode {
+export type TypeOperator =
+  | RendersTypeOperator
+  | RendersStarTypeOperator
+  | RendersQuestionTypeOperator;
+
+export type RendersType =
+  | RendersTypeOperator
+  | RendersStarTypeOperator
+  | RendersQuestionTypeOperator;
+
+interface TypeOperatorBase extends BaseNode {
   +type: 'TypeOperator';
-  // Supported type operators, currently only "renders".
-  +operator: 'renders';
   +typeAnnotation: TypeAnnotationType;
+}
+export interface RendersTypeOperator extends TypeOperatorBase {
+  +type: 'TypeOperator';
+  +operator: 'renders';
+}
+export interface RendersStarTypeOperator extends TypeOperatorBase {
+  +type: 'TypeOperator';
+  +operator: 'renders*';
+}
+export interface RendersQuestionTypeOperator extends TypeOperatorBase {
+  +type: 'TypeOperator';
+  +operator: 'renders?';
 }
 
 export interface TypePredicate extends BaseNode {
@@ -1357,7 +1378,7 @@ export interface ComponentTypeAnnotation extends BaseNode {
   +params: $ReadOnlyArray<ComponentTypeParameter>;
   +rest: null | ComponentTypeParameter;
   +typeParameters: null | TypeParameterDeclaration;
-  +rendersType: null | TypeAnnotationType;
+  +rendersType: null | RendersType;
 }
 export interface ComponentTypeParameter extends BaseNode {
   +type: 'ComponentTypeParameter';
@@ -1486,6 +1507,11 @@ export interface TypeCastExpression extends BaseNode {
   +type: 'TypeCastExpression';
   +expression: Expression;
   +typeAnnotation: TypeAnnotation;
+}
+export interface AsExpression extends BaseNode {
+  +type: 'AsExpression';
+  +expression: Expression;
+  +typeAnnotation: TypeAnnotationType;
 }
 
 interface BaseInterfaceNode extends BaseNode {
@@ -1655,7 +1681,7 @@ export interface DeclareComponent extends BaseNode {
   +params: Array<ComponentTypeParameter>;
   +rest: null | ComponentTypeParameter;
   +typeParameters: null | TypeParameterDeclaration;
-  +rendersType: null | TypeAnnotation;
+  +rendersType: null | RendersType;
 }
 
 export interface DeclareVariable extends BaseNode {

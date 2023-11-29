@@ -20,6 +20,7 @@ struct Profile {
     let maxExecsBeforeRespawn: Int
     // Timeout is in milliseconds.
     let timeout: Int
+    let startupTimeout: Int? = nil
     let codePrefix: String
     let codeSuffix: String
     let ecmaVersion: ECMAScriptVersion
@@ -38,4 +39,5 @@ struct Profile {
 
 let profiles = [
     "hermes": hermesProfile,
+    "spark": sparkARProfile,
 ]

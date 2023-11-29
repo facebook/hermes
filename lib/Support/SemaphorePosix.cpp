@@ -37,7 +37,7 @@ bool Semaphore::open(const char *semaphorePrefix) {
 
   // oscompat::global_thread_id returns the OS level thread ID, and is thus
   // system unique.
-  OS << semaphorePrefix << oscompat::global_thread_id();
+  OS << semaphorePrefix << oscompat::global_thread_id() << '\0';
 
   // Create a named semaphore with read/write. Use O_EXCL as an extra protection
   // layer -- sem_open will fail if semaphoreName is not unique.

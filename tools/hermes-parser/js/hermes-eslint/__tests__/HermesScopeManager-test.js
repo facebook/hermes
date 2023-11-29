@@ -2159,3 +2159,26 @@ describe('TupleTypeAnnotation', () => {
     );
   });
 });
+
+describe('AsExpression', () => {
+  describe('types cast to are counted as referenced', () => {
+    verifyHasScopes(
+      `
+      type T = number;
+      1 as T;
+    `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'T',
+              type: DefinitionType.Type,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ],
+    );
+  });
+});

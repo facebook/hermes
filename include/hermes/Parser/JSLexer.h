@@ -211,6 +211,22 @@ class Token {
     return rawString_;
   }
 
+  /// For certain identifier-like syntactic forms, like Flow's
+  /// `renders? number`, we need to check that the `?` comes immediately after
+  /// `renders` with no whitespace. It is expensive to turn something like this
+  /// into a token, where identifiers have highly-optimized lexing performance.
+  /// Instead, we use this function to detect the `?`, and then we consume the
+  /// token using the normal advance or eat methods.
+  ///
+  /// \return true iff the character directly after the current token matches
+  /// the provided character.
+  bool checkFollowingCharacter(char c) const {
+    // The next character could be end of file \0 or could be the start of utf-8
+    // sequence, but it is always present.
+    assert((unsigned)c < 128 && "test character must be ASCII");
+    return *getEndLoc().getPointer() == c;
+  }
+
  private:
   void setStart(const char *start) {
     range_.Start = SMLoc::getFromPointer(start);
@@ -224,6 +240,11 @@ class Token {
   }
 
   void setPunctuator(TokenKind kind) {
+    kind_ = kind;
+  }
+  /// Set the TokenKind to a given IDENT_OP token.
+  /// Used when converting identifiers to the corresponding ident op token.
+  void setIdentOp(TokenKind kind) {
     kind_ = kind;
   }
   void setEof() {
@@ -721,6 +742,16 @@ class JSLexer {
       }
     }
   };
+
+  /// Convert the current token to an identifier-operator token.
+  /// Identifiers for new TokenKinds can be added here.
+  /// \pre the current token is an identifier which is an IDENT_OP operator.
+  /// \param the IDENT_OP token kind to convert to.
+  void convertCurTokenToIdentOp(TokenKind kind) {
+    assert(token_.getKind() == TokenKind::identifier);
+    assert(token_.getIdentifier()->str() == tokenKindStr(kind));
+    token_.setIdentOp(kind);
+  }
 
  private:
   /// Initialize the storage with the characters between \p begin and \p end.

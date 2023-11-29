@@ -4,7 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 if(HERMES_ENABLE_LIBFUZZER)
-    set(HERMES_ENABLE_EH ON)
+    set(HERMES_ENABLE_EH_RTTI ON)
 
     add_hermes_tool(fuzzer-jsi-entry
       fuzzer-jsi-entry.cpp
@@ -17,6 +17,6 @@ if(HERMES_ENABLE_LIBFUZZER)
     target_include_directories(fuzzer-jsi-entry PRIVATE ${HERMES_SOURCE_DIR}/API)
     target_link_libraries(fuzzer-jsi-entry
       PRIVATE
-        hermesapi
+        libhermes
     )
 endif()

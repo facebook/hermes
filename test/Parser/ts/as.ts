@@ -71,7 +71,29 @@ x + y as number;
 // CHECK-NEXT:         }
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "directive": null
-// CHECK-NEXT:     }
+// CHECK-NEXT:     },
 
+x as any as number;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "TSAsExpression",
+// CHECK-NEXT:         "expression": {
+// CHECK-NEXT:           "type": "TSAsExpression",
+// CHECK-NEXT:           "expression": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "x"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "TSAnyKeyword"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "typeAnnotation": {
+// CHECK-NEXT:           "type": "TSNumberKeyword"
+// CHECK-NEXT:         }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     }
 // CHECK-NEXT:   ]
+
 // CHECK-NEXT: }

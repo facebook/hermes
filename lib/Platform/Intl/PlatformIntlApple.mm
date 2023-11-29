@@ -9,6 +9,8 @@
 #include "hermes/Platform/Intl/PlatformIntl.h"
 
 #import <Foundation/Foundation.h>
+#include <shared_mutex>
+#include <thread>
 #include <unordered_set>
 
 static_assert(__has_feature(objc_arc), "arc must be enabled");
@@ -42,6 +44,10 @@ const std::vector<std::u16string> &getAvailableLocales() {
       std::replace(u16str.begin(), u16str.end(), u'_', u'-');
       // Some locales may still not be properly canonicalized (e.g. en_US_POSIX
       // should be en-US-posix).
+      // Note that we do not need to handle legacy extensions here (unlike
+      // getDefaultLocale), since the documentation for
+      // availableLocaleIdentifiers states that they will only contain a
+      // language, country, and script code.
       if (auto parsed = ParsedLocaleIdentifier::parse(u16str))
         vec->push_back(parsed->canonicalize());
     }
@@ -53,12 +59,17 @@ const std::u16string &getDefaultLocale() {
   static const std::u16string *defLocale = new std::u16string([] {
     // Environment variable used for testing only
     const char *testLocale = std::getenv("_HERMES_TEST_LOCALE");
-    if (testLocale) {
-      NSString *nsTestLocale = [NSString stringWithUTF8String:testLocale];
-      return nsStringToU16String(nsTestLocale);
-    }
-    NSString *nsDefLocale = [[NSLocale currentLocale] localeIdentifier];
-    auto defLocale = nsStringToU16String(nsDefLocale);
+    NSString *nsLocale = testLocale
+        ? [NSString stringWithUTF8String:testLocale]
+        : [[NSLocale currentLocale] localeIdentifier];
+    auto defLocale = nsStringToU16String(nsLocale);
+
+    // The locale identifier may occasionally contain legacy style locale
+    // extensions. We cannot handle them so remove them before parsing the tag.
+    size_t delimIdx = defLocale.find(u'@');
+    if (delimIdx != std::u16string::npos)
+      defLocale.resize(delimIdx);
+
     // See the comment in getAvailableLocales.
     std::replace(defLocale.begin(), defLocale.end(), u'_', u'-');
     if (auto parsed = ParsedLocaleIdentifier::parse(defLocale))
@@ -571,23 +582,68 @@ std::u16string toASCIIUppercase(std::u16string_view tz) {
   return result;
 }
 
-static std::unordered_map<std::u16string, std::u16string>
-    &validTimeZoneNames() {
-  // This stores all the timezones the Intl API considers valid. It is
-  // intentionally leaked to avoid destruction order problems.
-  static auto *validNames = [] {
+namespace {
+/// Thread safe management of time zone names map.
+class TimeZoneNames {
+ public:
+  /// Initializing the underlying map with all known time zone names in
+  /// NSTimeZone.
+  TimeZoneNames() {
     auto nsTimeZoneNames = [NSTimeZone.knownTimeZoneNames
         arrayByAddingObjectsFromArray:NSTimeZone.abbreviationDictionary
                                           .allKeys];
-    auto *names = new std::unordered_map<std::u16string, std::u16string>();
     for (NSString *timeZoneName in nsTimeZoneNames) {
       auto canonical = nsStringToU16String(timeZoneName);
       auto upper = toASCIIUppercase(canonical);
-      names->emplace(std::move(upper), std::move(canonical));
+      timeZoneNamesMap_.emplace(std::move(upper), std::move(canonical));
     }
-    return names;
-  }();
-  return *validNames;
+  }
+
+  /// Check if \p tz is a valid time zone name.
+  bool contains(std::u16string_view tz) const {
+    std::shared_lock lock(mutex_);
+    return timeZoneNamesMap_.find(toASCIIUppercase(tz)) !=
+        timeZoneNamesMap_.end();
+  }
+
+  /// Get canonical time zone name for \p tz. Note that \p tz must
+  /// be a valid key in the map.
+  std::u16string getCanonical(std::u16string_view tz) const {
+    std::shared_lock lock(mutex_);
+    auto ianaTimeZoneIt = timeZoneNamesMap_.find(toASCIIUppercase(tz));
+    assert(
+        ianaTimeZoneIt != timeZoneNamesMap_.end() &&
+        "getCanonical() must be called on valid time zone name.");
+    return ianaTimeZoneIt->second;
+  }
+
+  /// Update the time zone name map with \p tz if it does not exist yet.
+  void update(std::u16string_view tz) {
+    auto upper = toASCIIUppercase(tz);
+    // Read lock and check if tz is already in the map.
+    {
+      std::shared_lock lock(mutex_);
+      if (timeZoneNamesMap_.find(upper) != timeZoneNamesMap_.end()) {
+        return;
+      }
+    }
+    // If not, write lock and insert it into the map.
+    {
+      std::unique_lock lock(mutex_);
+      timeZoneNamesMap_.emplace(upper, tz);
+    }
+  }
+
+ private:
+  /// Map from upper case time zone name to canonical time zone name.
+  std::unordered_map<std::u16string, std::u16string> timeZoneNamesMap_;
+  mutable std::shared_mutex mutex_;
+};
+} // namespace
+
+static TimeZoneNames &validTimeZoneNames() {
+  static TimeZoneNames validTimeZoneNames;
+  return validTimeZoneNames;
 }
 
 // https://402.ecma-international.org/8.0/#sec-defaulttimezone
@@ -603,9 +659,7 @@ static std::unordered_map<std::u16string, std::u16string>
 // to accept both the old and new timezones.
 std::u16string getDefaultTimeZone() {
   std::u16string tz = nsStringToU16String(NSTimeZone.defaultTimeZone.name);
-  // emplace won't insert duplicates if the TZ hasn't changed since the last
-  // call to getDefaultTimeZone.
-  validTimeZoneNames().emplace(toASCIIUppercase(tz), tz);
+  validTimeZoneNames().update(tz);
   return tz;
 }
 
@@ -614,11 +668,7 @@ std::u16string canonicalizeTimeZoneName(std::u16string_view tz) {
   // 1. Let ianaTimeZone be the Zone or Link name of the IANA Time Zone Database
   // such that timeZone, converted to upper case as described in 6.1, is equal
   // to ianaTimeZone, converted to upper case as described in 6.1.
-  const auto &timeZones = validTimeZoneNames();
-  auto ianaTimeZoneIt = timeZones.find(toASCIIUppercase(tz));
-  auto ianaTimeZone = (ianaTimeZoneIt != timeZones.end())
-      ? ianaTimeZoneIt->second
-      : std::u16string(tz);
+  auto ianaTimeZone = validTimeZoneNames().getCanonical(tz);
   // NOTE: We don't use actual IANA database, so we leave (2) unimplemented.
   // 2. If ianaTimeZone is a Link name, let ianaTimeZone be the corresponding
   // Zone name as specified in the "backward" file of the IANA Time Zone
@@ -632,8 +682,7 @@ std::u16string canonicalizeTimeZoneName(std::u16string_view tz) {
 
 // https://402.ecma-international.org/8.0/#sec-isvalidtimezonename
 static bool isValidTimeZoneName(std::u16string_view tz) {
-  const auto &timeZones = validTimeZoneNames();
-  return timeZones.find(toASCIIUppercase(tz)) != timeZones.end();
+  return validTimeZoneNames().contains(tz);
 }
 
 // https://www.unicode.org/reports/tr35/tr35-31/tr35-dates.html#Date_Field_Symbol_Table
@@ -1180,8 +1229,6 @@ class DateTimeFormatApple : public DateTimeFormat {
   Options resolvedOptions() noexcept;
 
   std::u16string format(double jsTimeValue) noexcept;
-
-  std::vector<Part> formatToParts(double x) noexcept;
 
  private:
   void initializeNSDateFormatter() noexcept;
@@ -1848,76 +1895,8 @@ std::u16string DateTimeFormat::format(double jsTimeValue) noexcept {
   return static_cast<DateTimeFormatApple *>(this)->format(jsTimeValue);
 }
 
-static std::u16string returnTypeOfDate(const char16_t &c16) {
-  if (c16 == u'a')
-    return u"dayPeriod";
-  if (c16 == u'z' || c16 == u'v' || c16 == u'O')
-    return u"timeZoneName";
-  if (c16 == u'G')
-    return u"era";
-  if (c16 == u'y')
-    return u"year";
-  if (c16 == u'M')
-    return u"month";
-  if (c16 == u'E')
-    return u"weekday";
-  if (c16 == u'd')
-    return u"day";
-  if (c16 == u'h' || c16 == u'k' || c16 == u'K' || c16 == u'H')
-    return u"hour";
-  if (c16 == u'm')
-    return u"minute";
-  if (c16 == u's')
-    return u"second";
-  if (c16 == u'S')
-    return u"fractionalSecond";
-  return u"literal";
-}
-
-// Implementer note: This method corresponds roughly to
-// https://402.ecma-international.org/8.0/#sec-formatdatetimetoparts
-std::vector<Part> DateTimeFormatApple::formatToParts(double x) noexcept {
-  // NOTE: We dont have access to localeData.patterns. Instead we use
-  // NSDateFormatter's foramt string, and break it into components.
-  // 1. Let parts be ? PartitionDateTimePattern(dateTimeFormat, x).
-  auto fmt = nsStringToU16String(nsDateFormatter_.dateFormat);
-  std::unique(fmt.begin(), fmt.end());
-  auto formattedDate = format(x);
-  // 2. Let result be ArrayCreate(0).
-  std::vector<Part> result;
-  // 3. Let n be 0.
-  // 4. For each Record { [[Type]], [[Value]] } part in parts, do
-  // a. Let O be OrdinaryObjectCreate(%Object.prototype%).
-  // b. Perform ! CreateDataPropertyOrThrow(O, "type", part.[[Type]]).
-  // c. Perform ! CreateDataPropertyOrThrow(O, "value", part.[[Value]]).
-  // d. Perform ! CreateDataProperty(result, ! ToString(n), O).
-  // e. Increment n by 1.
-  std::u16string currentPart;
-  unsigned n = 0;
-  static auto alphanumerics = NSCharacterSet.alphanumericCharacterSet;
-  for (char16_t c16 : formattedDate) {
-    if ([alphanumerics characterIsMember:c16]) {
-      currentPart += c16;
-      continue;
-    }
-    if (currentPart != u"") {
-      result.push_back(
-          {{u"type", returnTypeOfDate(fmt[n])}, {u"value", currentPart}});
-      currentPart = u"";
-      n++;
-    }
-    result.push_back({{u"type", u"literal"}, {u"value", {c16}}});
-    n++;
-  }
-  // Last format string component.
-  result.push_back(
-      {{u"type", returnTypeOfDate(fmt[n])}, {u"value", currentPart}});
-  // 5. Return result.
-  return result;
-}
-
 std::vector<Part> DateTimeFormat::formatToParts(double x) noexcept {
-  return static_cast<DateTimeFormatApple *>(this)->formatToParts(x);
+  llvm_unreachable("formatToParts is unimplemented on Apple platforms");
 }
 
 class NumberFormatApple : public NumberFormat {

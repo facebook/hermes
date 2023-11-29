@@ -12,7 +12,7 @@
 
 #include "JSLibInternal.h"
 
-#include "hermes/VM/JSLib/RuntimeCommonStorage.h"
+#include "hermes/VM/JSLib/JSLibStorage.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/SingleObject.h"
 #include "hermes/VM/StringPrimitive.h"
@@ -208,10 +208,21 @@ CallResult<HermesValue> mathPow(void *, Runtime &runtime, NativeArgs args) {
 // ES5.1 15.8.2.14
 // Returns a Hermes-encoded pseudo-random number uniformly chosen from [0, 1)
 CallResult<HermesValue> mathRandom(void *, Runtime &runtime, NativeArgs) {
-  RuntimeCommonStorage *storage = runtime.getCommonStorage();
+  JSLibStorage *storage = runtime.getJSLibStorage();
   if (!storage->randomEngineSeeded_) {
-    std::minstd_rand::result_type seed;
-    seed = std::random_device()();
+    std::random_device randDevice;
+
+    auto randValue = randDevice();
+    static_assert(
+        sizeof(randValue) == 4, "expecting 32 bits from std::random_device()");
+
+    // Create a 64-bit seed using two 32-bit random numbers.
+    uint64_t seed =
+        (uint64_t(randValue) << (8 * sizeof(randValue))) | randDevice();
+    static_assert(
+        sizeof(decltype(storage->randomEngine_)::result_type) >= 8,
+        "expecting at least 64-bit result_type for PRNG");
+
     storage->randomEngine_.seed(seed);
     storage->randomEngineSeeded_ = true;
   }

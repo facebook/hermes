@@ -8,7 +8,7 @@ exports[`flowToJS typecasts 1`] = `
  * LICENSE file in the root directory of this source tree.
  *
  *
- * @format
+ * @noformat
  */
 
 const xxx = 0;
@@ -18,6 +18,9 @@ xxx;
 ({xxx: 0, yyy: 'hey'});
 xxx => xxx + 1;
 xxx, yyy;
+xxx;
+
+// Note: re-enable formatting after Prettier is updated to handle \`as\` expressions
 xxx;
 "
 `;

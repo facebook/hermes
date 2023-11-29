@@ -62,10 +62,11 @@ describe('prettier-plugin-hermes-parser', () => {
 
       // ComponentDeclaration
       component Foo(
-        foo: string
-      ) {
-        return <div />;
-      }
+        bar: {
+          // @deprecated
+          baz?: Baz,
+        },
+      ) {}
     `;
     const output = prettier.format(code, getOptions());
     expect(output).toMatchInlineSnapshot(`
@@ -105,9 +106,12 @@ describe('prettier-plugin-hermes-parser', () => {
       }
 
       // ComponentDeclaration
-      component Foo(foo: string) {
-        return <div />;
-      }
+      component Foo(
+        bar: {
+          // @deprecated
+          baz?: Baz,
+        },
+      ) {}
       "
     `);
   });

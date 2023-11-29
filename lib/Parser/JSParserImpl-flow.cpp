@@ -209,9 +209,7 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow(
 
   ESTree::Node *rendersType = nullptr;
   if (check(rendersIdent_)) {
-    SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-    // only stardard types are allowed, no predicates.
-    auto optRenders = parseTypeAnnotationFlow(annotStart);
+    auto optRenders = parseComponentRenderTypeFlow(false);
     if (!optRenders)
       return None;
     rendersType = *optRenders;
@@ -379,7 +377,7 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentParameterFlow(
 
     auto elem = setLocation(
         identRng,
-        identRng,
+        getPrevTokenEndLoc(),
         new (context_) ESTree::IdentifierNode(id, type, optional));
     ESTree::Node *localElem;
 
@@ -405,6 +403,72 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentParameterFlow(
       tok_->getStartLoc(),
       "identifier or string literal expected in component parameter name");
   return None;
+}
+
+Optional<UniqueString *> JSParserImpl::parseRenderTypeOperator() {
+  assert(tok_->getResWordOrIdentifier() == rendersIdent_);
+  auto typeOperator = rendersIdent_;
+  if (tok_->checkFollowingCharacter('?')) {
+    SMLoc start = advance(JSLexer::GrammarContext::Type).Start;
+    if (!eat(
+            TokenKind::question,
+            JSLexer::GrammarContext::Type,
+            "in render type annotation",
+            "start of render type",
+            start)) {
+      return None;
+    }
+    typeOperator = rendersMaybeOperator_;
+  } else if (tok_->checkFollowingCharacter('*')) {
+    SMLoc start = advance(JSLexer::GrammarContext::Type).Start;
+    if (!eat(
+            TokenKind::star,
+            JSLexer::GrammarContext::Type,
+            "in render type annotation",
+            "start of render type",
+            start)) {
+      return None;
+    }
+    typeOperator = rendersStarOperator_;
+  } else {
+    // Normal renders, but we must still eat the renders token. We don't just
+    // eat unconditionally above because the checkFollowingCharacter calls must
+    // have the renders ident as the current token, so we can't advance until
+    // after those calls
+    advance(JSLexer::GrammarContext::Type);
+  }
+
+  return typeOperator;
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseComponentRenderTypeFlow(
+    bool componentType) {
+  SMLoc annotStart = tok_->getStartLoc();
+  auto optTypeOperator = parseRenderTypeOperator();
+  Optional<ESTree::Node *> optBody;
+  // This is a weird part of the Flow render syntax design that we should
+  // reconsider. Because unions have higher precedence than renders, we
+  // parse `component() renders null | number` as
+  // `(component() renders null) | number. But with declared components
+  // and component declarations we parse the entirety of the RHS of
+  // `renders` as a single type, so
+  // `component A() renders null | number { ... }` parses the render type
+  // as a union of null | number. This was an intentional decision, and
+  // prettier will make the discrepancy obvious, but it still feels
+  // weird. If we give `renders` higher precedence than unions then this
+  // is no longer a problem, but `keyof` has similar syntax and lower
+  // precedence than a union type.
+  if (componentType) {
+    optBody = parsePrefixTypeAnnotationFlow();
+  } else {
+    optBody = parseTypeAnnotationFlow();
+  }
+  if (!optBody || !optTypeOperator)
+    return None;
+  return setLocation(
+      annotStart,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::TypeOperatorNode(*optTypeOperator, *optBody));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseComponentTypeAnnotationFlow() {
@@ -445,8 +509,7 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentTypeAnnotationFlow() {
 
   ESTree::Node *rendersType = nullptr;
   if (check(rendersIdent_)) {
-    SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-    auto optRenders = parseTypeAnnotationFlow(annotStart);
+    auto optRenders = parseComponentRenderTypeFlow(true);
     if (!optRenders)
       return None;
     rendersType = *optRenders;
@@ -1494,12 +1557,30 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAnnotationBeforeColonFlow() {
   // If the identifier name is a known keyword we need to lookahead to see if
   // its a type or an identifier otherwise it could fail to parse.
   if (check(TokenKind::identifier) &&
-      (context_.getParseFlowComponentSyntax() &&
-       (tok_->getResWordOrIdentifier() == componentIdent_ ||
-        tok_->getResWordOrIdentifier() == rendersIdent_))) {
-    OptValue<TokenKind> optNext = lexer_.lookahead1(None);
-    if (optNext.hasValue() &&
-        (*optNext == TokenKind::colon || *optNext == TokenKind::question)) {
+      (context_.getParseFlowComponentSyntax())) {
+    if ((tok_->getResWordOrIdentifier() == componentIdent_) ||
+        (tok_->getResWordOrIdentifier() == rendersIdent_ &&
+         !tok_->checkFollowingCharacter('?'))) {
+      OptValue<TokenKind> optNext = lexer_.lookahead1(None);
+      if (optNext.hasValue() &&
+          (*optNext == TokenKind::colon || *optNext == TokenKind::question)) {
+        auto id = setLocation(
+            tok_,
+            tok_,
+            new (context_) ESTree::GenericTypeAnnotationNode(
+                setLocation(
+                    tok_,
+                    tok_,
+                    new (context_) ESTree::IdentifierNode(
+                        tok_->getResWordOrIdentifier(), nullptr, false)),
+                nullptr));
+        advance(JSLexer::GrammarContext::Type);
+        return id;
+      }
+    } else if (
+        tok_->getResWordOrIdentifier() == rendersIdent_ &&
+        tok_->checkFollowingCharacter('?')) {
+      SMLoc startLoc = tok_->getStartLoc();
       auto id = setLocation(
           tok_,
           tok_,
@@ -1511,7 +1592,27 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAnnotationBeforeColonFlow() {
                       tok_->getResWordOrIdentifier(), nullptr, false)),
               nullptr));
       advance(JSLexer::GrammarContext::Type);
-      return id;
+      OptValue<TokenKind> optNext = lexer_.lookahead1(None);
+      if (optNext.hasValue() && (*optNext == TokenKind::colon)) {
+        return id;
+      } else {
+        if (!eat(
+                TokenKind::question,
+                JSLexer::GrammarContext::Type,
+                "in render type annotation",
+                "start of render type",
+                startLoc)) {
+          return None;
+        }
+        auto optBody = parsePrefixTypeAnnotationFlow();
+        if (!optBody)
+          return None;
+        return setLocation(
+            startLoc,
+            getPrevTokenEndLoc(),
+            new (context_)
+                ESTree::TypeOperatorNode(rendersMaybeOperator_, *optBody));
+      }
     }
   }
 
@@ -1844,14 +1945,15 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
       }
       if (context_.getParseFlowComponentSyntax() &&
           tok_->getResWordOrIdentifier() == rendersIdent_) {
-        advance(JSLexer::GrammarContext::Type);
+        auto optTypeOperator = parseRenderTypeOperator();
         auto optBody = parsePrefixTypeAnnotationFlow();
-        if (!optBody)
+        if (!optBody || !optTypeOperator)
           return None;
         return setLocation(
             start,
             getPrevTokenEndLoc(),
-            new (context_) ESTree::TypeOperatorNode(rendersIdent_, *optBody));
+            new (context_)
+                ESTree::TypeOperatorNode(*optTypeOperator, *optBody));
       }
       if (context_.getParseFlowComponentSyntax() &&
           tok_->getResWordOrIdentifier() == componentIdent_) {

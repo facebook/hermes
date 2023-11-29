@@ -11,7 +11,6 @@
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/UTF8.h"
-#include "hermes/VM/MockedEnvironment.h"
 #include "hermes/VM/StringPrimitive.h"
 
 #include "llvh/Support/Endian.h"
@@ -778,9 +777,7 @@ void SynthTrace::flushRecords() {
   records_.clear();
 }
 
-void SynthTrace::flushAndDisable(
-    const ::hermes::vm::MockedEnvironment &env,
-    const ::hermes::vm::GCExecTrace &gcTrace) {
+void SynthTrace::flushAndDisable(const ::hermes::vm::GCExecTrace &gcTrace) {
   if (!json_) {
     return;
   }
@@ -788,28 +785,6 @@ void SynthTrace::flushAndDisable(
   // First, flush any buffered records, and close the still-open "trace" array.
   flushRecords();
   json_->closeArray();
-
-  // Env section.
-  json_->emitKey("env");
-  json_->openDict();
-
-  json_->emitKey("callsToHermesInternalGetInstrumentedStats");
-  json_->openArray();
-  for (const ::hermes::vm::MockedEnvironment::StatsTable &call :
-       env.callsToHermesInternalGetInstrumentedStats) {
-    json_->openDict();
-    for (const auto &key : call.keys()) {
-      auto val = call.lookup(key);
-      if (val.isNum()) {
-        json_->emitKeyValue(key, val.num());
-      } else {
-        json_->emitKeyValue(key, val.str());
-      }
-    }
-    json_->closeDict();
-  }
-  json_->closeArray();
-  json_->closeDict();
 
   // Now emit the history information, if we're in trace debug mode.
   gcTrace.emit(*json_);

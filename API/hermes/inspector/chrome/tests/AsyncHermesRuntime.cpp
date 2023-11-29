@@ -92,6 +92,20 @@ void AsyncHermesRuntime::executeScriptSync(
   wait(timeout);
 }
 
+void AsyncHermesRuntime::evaluateBytecodeAsync(
+    const std::string &bytecode,
+    const std::string &url) {
+  executor_->add([this, bytecode, url] {
+    try {
+      runtime_->evaluateJavaScript(
+          std::unique_ptr<jsi::StringBuffer>(new jsi::StringBuffer(bytecode)),
+          url);
+    } catch (jsi::JSError &error) {
+      thrownExceptions_.push_back(error.getMessage());
+    }
+  });
+}
+
 void AsyncHermesRuntime::start() {
   LOG(INFO) << "AsyncHermesRuntime: set stop flag false";
   stopFlag_.store(false);

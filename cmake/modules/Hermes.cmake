@@ -28,12 +28,6 @@ if (EMSCRIPTEN AND EMSCRIPTEN_FASTCOMP)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s BINARYEN_TRAP_MODE=clamp")
 endif()
 
-# For compatibility, CMake adds /EHsc by default for MSVC. We want to set that
-# flag per target, so remove it.
-if (MSVC)
-  string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-endif (MSVC)
-
 # set stack reserved size to ~10MB
 if (MSVC)
   # CMake previously automatically set this value for MSVC builds, but the
@@ -75,31 +69,11 @@ function(hermes_update_compile_flags name)
 
   set(flags "")
 
-  if (HERMES_ENABLE_EH)
+  if (NOT HERMES_ENABLE_EH_RTTI)
     if (GCC_COMPATIBLE)
-      set(flags "${flags} -fexceptions")
+      set(flags "${flags} -fno-exceptions -fno-rtti")
     elseif (MSVC)
-      set(flags "${flags} /EHsc")
-    endif ()
-  else ()
-    if (GCC_COMPATIBLE)
-      set(flags "${flags} -fno-exceptions")
-    elseif (MSVC)
-      set(flags "${flags} /EHs-c-")
-    endif ()
-  endif ()
-
-  if (HERMES_ENABLE_RTTI)
-    if (GCC_COMPATIBLE)
-      set(flags "${flags} -frtti")
-    elseif (MSVC)
-      set(flags "${flags} /GR")
-    endif ()
-  else ()
-    if (GCC_COMPATIBLE)
-      set(flags "${flags} -fno-rtti")
-    elseif (MSVC)
-      set(flags "${flags} /GR-")
+      set(flags "${flags} /EHs-c- /GR-")
     endif ()
   endif ()
 

@@ -93,7 +93,7 @@ set(source_files
   JSLib/Instrument.cpp
   JSLib/Intl.cpp
   JSLib/JSLibInternal.cpp JSLib/JSLibInternal.h
-  JSLib/RuntimeCommonStorage.cpp
+  JSLib/JSLibStorage.cpp
   JSLib/Map.cpp
   JSLib/Math.cpp
   JSLib/JSON.cpp

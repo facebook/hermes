@@ -9,6 +9,7 @@
 
 #include "hermes/Parser/JSLexer.h"
 #include "hermes/Parser/JSONParser.h"
+#include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/SourceErrorManager.h"
 
 #include <sstream>
@@ -25,7 +26,7 @@ namespace {
   ::hermes::SHA1 sourceHash{};
   // Each byte is 2 characters.
   if (hashStr.size() != 2 * sourceHash.size()) {
-    throw std::runtime_error("sourceHash is not the right length");
+    ::hermes::hermes_fatal("sourceHash is not the right length");
   }
   for (size_t i = 0; i < sourceHash.size(); ++i) {
     auto byte = llvh::StringRef{hashStr.data() + (i * 2), 2};
@@ -46,27 +47,25 @@ JSONObject *parseJSON(
   auto rootObj = parser.parse();
   if (!rootObj) {
     // The source error manager will print to stderr.
-    throw std::invalid_argument("JSON invalid");
+    ::hermes::hermes_fatal("JSON invalid");
   }
   return llvh::cast<JSONObject>(rootObj.getValue());
 }
 
 /// Get a number from a JSON value.
-/// \throws invalid_argument if it's not a number.
 template <typename NumericType>
 NumericType getNumberAs(const JSONValue *val) {
   if (!val) {
-    throw std::invalid_argument("value doesn't exist");
+    ::hermes::hermes_fatal("value doesn't exist");
   }
   if (val->getKind() != JSONKind::Number) {
-    throw std::invalid_argument("value is not a number");
+    ::hermes::hermes_fatal("value is not a number");
   }
   return static_cast<NumericType>(llvh::cast<JSONNumber>(val)->getValue());
 }
 
 /// Get a number from a JSON value.
 /// Use \param dflt if the JSON value doesn't exist.
-/// \throws invalid_argument if it's not a number.
 template <typename NumericType>
 NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
   if (!val) {
@@ -76,26 +75,18 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
   }
 }
 
-/// Parses the json \p value (which must be a string) as a uint64_t. Throws if
-/// std::stoull throws, or if it fails to parse the entire string.
+/// Parses the json \p value (which must be a string) as a uint64_t.
 uint64_t jsonStringToUint64(const ::hermes::parser::JSONValue *val) {
   if (!val) {
-    throw std::invalid_argument("value doesn't exist");
+    ::hermes::hermes_fatal("value doesn't exist");
   }
 
   auto str = llvh::dyn_cast<JSONString>(val);
   if (!str) {
-    throw std::invalid_argument("value is not a string");
+    ::hermes::hermes_fatal("value is not a string");
   }
 
-  llvh::StringRef r = str->str();
-  std::size_t numProcessed;
-  uint64_t ret = std::stoull(std::string{r.data(), r.size()}, &numProcessed);
-  if (numProcessed < r.size()) {
-    throw std::invalid_argument(
-        std::string("failed to convert jsonString '") + r.data() +
-        "' to uint64_t");
-  }
+  uint64_t ret = std::strtoull(str->c_str(), nullptr, 10);
   return ret;
 }
 
@@ -111,7 +102,7 @@ uint64_t jsonStringToUint64(const ::hermes::parser::JSONValue *val) {
     return gcconf;
   }
   if (val->getKind() != JSONKind::Object) {
-    throw std::invalid_argument("gcConfig should be an object");
+    ::hermes::hermes_fatal("gcConfig should be an object");
   }
   auto *gcConfig = llvh::cast<JSONObject>(val);
   if (auto *sz = gcConfig->get("minHeapSize")) {
@@ -189,61 +180,11 @@ Collection<std::string, std::allocator<std::string>> getListOfStrings(
       std::back_inserter(strings),
       [](const JSONValue *value) -> std::string {
         if (value->getKind() != JSONKind::String) {
-          throw std::invalid_argument("Array should contain only strings");
+          ::hermes::hermes_fatal("Array should contain only strings");
         }
         return std::string(llvh::cast<JSONString>(value)->c_str());
       });
   return strings;
-}
-
-template <template <typename, typename> class Collection>
-Collection<
-    ::hermes::vm::MockedEnvironment::StatsTable,
-    std::allocator<::hermes::vm::MockedEnvironment::StatsTable>>
-getListOfStatsTable(JSONArray *array) {
-  Collection<
-      ::hermes::vm::MockedEnvironment::StatsTable,
-      std::allocator<::hermes::vm::MockedEnvironment::StatsTable>>
-      calls;
-  if (!array) {
-    return calls;
-  }
-  std::transform(
-      array->begin(),
-      array->end(),
-      std::back_inserter(calls),
-      [](const JSONValue *value)
-          -> ::hermes::vm::MockedEnvironment::StatsTable {
-        if (value->getKind() != JSONKind::Object) {
-          throw std::invalid_argument("Stats table JSON rep is not object");
-        }
-        const JSONObject *obj = llvh::cast<JSONObject>(value);
-        ::hermes::vm::MockedEnvironment::StatsTable result;
-        for (auto name : *obj->getHiddenClass()) {
-          auto valForName = obj->at(name->str());
-          if (valForName->getKind() == JSONKind::Number) {
-            result.try_emplace(
-                name->str(), llvh::cast<JSONNumber>(valForName)->getValue());
-          } else if (valForName->getKind() == JSONKind::String) {
-            result.try_emplace(
-                name->str(),
-                std::string(llvh::cast<JSONString>(valForName)->c_str()));
-          } else {
-            throw std::invalid_argument(
-                "Stats table kind is not num or string.");
-          }
-        }
-        return result;
-      });
-  return calls;
-}
-
-::hermes::vm::MockedEnvironment getMockedEnvironment(JSONObject *env) {
-  auto callsToHermesInternalGetInstrumentedStats =
-      getListOfStatsTable<std::deque>(llvh::cast_or_null<JSONArray>(
-          env->get("callsToHermesInternalGetInstrumentedStats")));
-  return ::hermes::vm::MockedEnvironment{
-      callsToHermesInternalGetInstrumentedStats};
 }
 
 SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
@@ -259,7 +200,7 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
         std::back_inserter(values),
         [&trace](const JSONValue *value) -> SynthTrace::TraceValue {
           if (value->getKind() != JSONKind::String) {
-            throw std::invalid_argument("Array should contain only strings");
+            ::hermes::hermes_fatal("Array should contain only strings");
           }
           return trace.decode(llvh::cast<JSONString>(value)->c_str());
         });
@@ -567,18 +508,13 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
 std::tuple<
     SynthTrace,
     ::hermes::vm::RuntimeConfig::Builder,
-    ::hermes::vm::GCConfig::Builder,
-    ::hermes::vm::MockedEnvironment>
+    ::hermes::vm::GCConfig::Builder>
 parseSynthTrace(std::unique_ptr<llvh::MemoryBuffer> trace) {
   JSLexer::Allocator alloc;
   JSONObject *root = llvh::cast<JSONObject>(parseJSON(alloc, std::move(trace)));
   if (!llvh::dyn_cast_or_null<JSONNumber>(root->get("globalObjID"))) {
-    throw std::invalid_argument(
+    ::hermes::hermes_fatal(
         "Trace does not have a \"globalObjID\" value that is a number");
-  }
-  if (!llvh::dyn_cast_or_null<JSONObject>(root->get("env"))) {
-    throw std::invalid_argument(
-        "Trace does not have an \"env\" value that is an object");
   }
   if (auto *ver = root->get("version")) {
     // Version exists, validate that it is a number, and the correct version.
@@ -586,13 +522,13 @@ parseSynthTrace(std::unique_ptr<llvh::MemoryBuffer> trace) {
       // version is a number.
       const uint32_t version = verNum->getValue();
       if (version != SynthTrace::synthVersion()) {
-        throw std::invalid_argument(
+        ::hermes::hermes_fatal(
             "Trace version mismatch, expected " +
             std::to_string(SynthTrace::synthVersion()) + ", actual: " +
             std::to_string(static_cast<uint32_t>(verNum->getValue())));
       }
     } else {
-      throw std::invalid_argument(
+      ::hermes::hermes_fatal(
           "version exists, but is not a Number. Found instead value of kind: " +
           std::string(::hermes::parser::JSONKindToString(ver->getKind())));
     }
@@ -608,15 +544,13 @@ parseSynthTrace(std::unique_ptr<llvh::MemoryBuffer> trace) {
   return std::make_tuple(
       getTrace(llvh::cast<JSONArray>(root->at("trace")), globalObjID),
       getRuntimeConfig(rtConfig),
-      getGCConfig(rtConfig),
-      getMockedEnvironment(llvh::cast<JSONObject>(root->at("env"))));
+      getGCConfig(rtConfig));
 }
 
 std::tuple<
     SynthTrace,
     ::hermes::vm::RuntimeConfig::Builder,
-    ::hermes::vm::GCConfig::Builder,
-    ::hermes::vm::MockedEnvironment>
+    ::hermes::vm::GCConfig::Builder>
 parseSynthTrace(const std::string &tracefile) {
   return parseSynthTrace(
       std::move(llvh::MemoryBuffer::getFile(tracefile).get()));
