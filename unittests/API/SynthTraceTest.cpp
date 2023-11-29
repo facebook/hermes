@@ -1086,9 +1086,16 @@ struct SynthTraceReplayTest : public SynthTraceRuntimeTest {
 
   void replay() {
     traceRt.reset();
-    replayRt = makeHermesRuntime(config);
-    tracing::TraceInterpreter::execFromMemoryBuffer(
-        llvh::MemoryBuffer::getMemBuffer(traceResult), {}, *replayRt, {});
+
+    tracing::TraceInterpreter::ExecuteOptions options;
+    options.useTraceConfig = true;
+    auto [_, rt] = tracing::TraceInterpreter::execFromMemoryBuffer(
+        llvh::MemoryBuffer::getMemBuffer(traceResult), // traceBuf
+        {}, // codeBufs
+        options, // ExecuteOptions
+        nullptr // traceStream
+    );
+    replayRt = std::move(rt);
   }
 };
 

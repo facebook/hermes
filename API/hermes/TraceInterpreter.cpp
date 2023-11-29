@@ -594,11 +594,11 @@ std::string TraceInterpreter::execFromFileNames(
     }
     bytecodeBuffers.emplace_back(std::move(errorOrFile.get()));
   }
-  return execFromMemoryBuffer(
+  return std::get<0>(execFromMemoryBuffer(
       std::move(traceBuf),
       std::move(bytecodeBuffers),
       options,
-      std::move(traceStream));
+      std::move(traceStream)));
 }
 
 /* static */
@@ -720,13 +720,15 @@ TraceInterpreter::getSourceHashToBundleMap(
 }
 
 /* static */
-std::string TraceInterpreter::execFromMemoryBuffer(
+std::tuple<std::string, std::unique_ptr<jsi::Runtime>>
+TraceInterpreter::execFromMemoryBuffer(
     std::unique_ptr<llvh::MemoryBuffer> &&traceBuf,
     std::vector<std::unique_ptr<llvh::MemoryBuffer>> &&codeBufs,
     const ExecuteOptions &options,
     std::unique_ptr<llvh::raw_ostream> traceStream) {
-  auto traceAndConfigAndEnv = parseSynthTrace(std::move(traceBuf));
-  const auto &trace = std::get<0>(traceAndConfigAndEnv);
+  auto [trace, rtConfigBuilder, gcConfigBuilder] =
+      parseSynthTrace(std::move(traceBuf));
+
   bool codeIsMmapped;
   bool isBytecode;
   std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>>
@@ -735,16 +737,12 @@ std::string TraceInterpreter::execFromMemoryBuffer(
   options.traceEnabled = (traceStream != nullptr);
 
   const auto &rtConfig = merge(
-      std::get<1>(traceAndConfigAndEnv),
-      std::get<2>(traceAndConfigAndEnv),
-      options,
-      codeIsMmapped,
-      isBytecode);
+      rtConfigBuilder, gcConfigBuilder, options, codeIsMmapped, isBytecode);
 
   std::vector<std::string> repGCStats(options.reps);
+  std::unique_ptr<jsi::Runtime> rt;
   for (int rep = -options.warmupReps; rep < options.reps; ++rep) {
     ::hermes::vm::instrumentation::PerfEvents::begin();
-    std::unique_ptr<jsi::Runtime> rt;
     std::unique_ptr<HermesRuntime> hermesRuntime = makeHermesRuntime(rtConfig);
     bool tracing = false;
     if (traceStream) {
@@ -767,24 +765,13 @@ std::string TraceInterpreter::execFromMemoryBuffer(
       (void)rt->instrumentation().flushAndDisableBridgeTrafficTrace();
     }
   }
-  return rtConfig.getGCConfig().getShouldRecordStats()
-      ? mergeGCStats(repGCStats)
-      : "";
-}
 
-/* static */
-std::string TraceInterpreter::execFromMemoryBuffer(
-    std::unique_ptr<llvh::MemoryBuffer> &&traceBuf,
-    std::vector<std::unique_ptr<llvh::MemoryBuffer>> &&codeBufs,
-    jsi::Runtime &runtime,
-    const ExecuteOptions &options) {
-  auto traceAndConfigAndEnv = parseSynthTrace(std::move(traceBuf));
-  const auto &trace = std::get<0>(traceAndConfigAndEnv);
-  return exec(
-      runtime,
-      options,
-      trace,
-      getSourceHashToBundleMap(std::move(codeBufs), trace, options));
+  return std::make_tuple(
+      // Merged GC stats
+      rtConfig.getGCConfig().getShouldRecordStats() ? mergeGCStats(repGCStats)
+                                                    : "",
+      // The last runtime used for replay
+      std::move(rt));
 }
 
 /* static */
