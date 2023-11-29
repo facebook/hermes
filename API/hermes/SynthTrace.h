@@ -13,7 +13,6 @@
 #include "hermes/Support/SHA1.h"
 #include "hermes/Support/StringSetVector.h"
 #include "hermes/VM/GCExecTrace.h"
-#include "hermes/VM/MockedEnvironment.h"
 
 #include <chrono>
 #include <cstdlib>
@@ -1184,9 +1183,7 @@ class SynthTrace {
   /// Completes writing of the trace to the trace stream.  If writing
   /// to a file, disables further writing to the file, or accumulation
   /// of data.
-  void flushAndDisable(
-      const ::hermes::vm::MockedEnvironment &env,
-      const ::hermes::vm::GCExecTrace &gcTrace);
+  void flushAndDisable(const ::hermes::vm::GCExecTrace &gcTrace);
 };
 
 llvh::raw_ostream &operator<<(

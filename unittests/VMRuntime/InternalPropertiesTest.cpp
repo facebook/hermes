@@ -10,7 +10,6 @@
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/VM/JSDate.h"
 #include "hermes/VM/JSLib/RuntimeCommonStorage.h"
-#include "hermes/VM/MockedEnvironment.h"
 
 using namespace hermes::vm;
 using namespace hermes::hbc;

@@ -769,8 +769,7 @@ std::string TracingHermesRuntime::flushAndDisableBridgeTrafficTrace() {
   if (flushedAndDisabled_) {
     return committedTraceFilename_;
   }
-  trace().flushAndDisable(
-      hermesRuntime().getMockedEnvironment(), hermesRuntime().getGCExecTrace());
+  trace().flushAndDisable(hermesRuntime().getGCExecTrace());
   flushedAndDisabled_ = true;
   committedTraceFilename_ = commitAction_();
   return committedTraceFilename_;
