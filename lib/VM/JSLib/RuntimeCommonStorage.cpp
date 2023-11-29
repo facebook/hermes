@@ -14,12 +14,12 @@
 namespace hermes {
 namespace vm {
 
-std::unique_ptr<RuntimeCommonStorage> createRuntimeCommonStorage() {
-  return std::make_unique<RuntimeCommonStorage>();
+std::unique_ptr<JSLibStorage> createJSLibStorage() {
+  return std::make_unique<JSLibStorage>();
 }
 
-RuntimeCommonStorage::RuntimeCommonStorage() = default;
-RuntimeCommonStorage::~RuntimeCommonStorage() = default;
+JSLibStorage::JSLibStorage() = default;
+JSLibStorage::~JSLibStorage() = default;
 
 } // namespace vm
 } // namespace hermes

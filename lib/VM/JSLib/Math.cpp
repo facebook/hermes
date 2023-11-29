@@ -208,7 +208,7 @@ CallResult<HermesValue> mathPow(void *, Runtime &runtime, NativeArgs args) {
 // ES5.1 15.8.2.14
 // Returns a Hermes-encoded pseudo-random number uniformly chosen from [0, 1)
 CallResult<HermesValue> mathRandom(void *, Runtime &runtime, NativeArgs) {
-  RuntimeCommonStorage *storage = runtime.getCommonStorage();
+  JSLibStorage *storage = runtime.getJSLibStorage();
   if (!storage->randomEngineSeeded_) {
     std::random_device randDevice;
 
