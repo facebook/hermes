@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/VM/JSLib/RuntimeCommonStorage.h"
+#include "hermes/VM/JSLib/JSLibStorage.h"
 
 #include <memory>
 
