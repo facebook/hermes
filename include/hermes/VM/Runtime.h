@@ -1206,7 +1206,7 @@ class HERMES_EMPTY_BASES Runtime : public PointerBase,
   SymbolRegistry symbolRegistry_{};
 
   /// Shared location to place native objects required by JSLib
-  std::shared_ptr<RuntimeCommonStorage> commonStorage_;
+  std::unique_ptr<RuntimeCommonStorage> commonStorage_;
 
   /// Empty code block that returns undefined.
   /// Owned by specialCodeBlockRuntimeModule_.

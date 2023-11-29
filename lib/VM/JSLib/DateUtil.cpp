@@ -11,7 +11,6 @@
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/CallResult.h"
-#include "hermes/VM/JSLib/RuntimeCommonStorage.h"
 #include "hermes/VM/SmallXString.h"
 
 #include "llvh/Support/ErrorHandling.h"
