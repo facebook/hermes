@@ -247,10 +247,7 @@ Runtime::Runtime(
       bytecodeWarmupPercent_(runtimeConfig.getBytecodeWarmupPercent()),
       trackIO_(runtimeConfig.getTrackIO()),
       vmExperimentFlags_(runtimeConfig.getVMExperimentFlags()),
-      commonStorage_(createRuntimeCommonStorage(
-          runtimeConfig.getSynthTraceMode() == SynthTraceMode::Tracing ||
-          runtimeConfig.getSynthTraceMode() ==
-              SynthTraceMode::TracingAndReplaying)),
+      commonStorage_(createRuntimeCommonStorage()),
       stackPointer_(),
       crashMgr_(runtimeConfig.getCrashMgr()),
 #ifdef HERMES_CHECK_NATIVE_STACK
