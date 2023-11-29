@@ -11,11 +11,10 @@
 #include "llvh/ADT/StringRef.h"
 
 namespace {
-/**
- * Identifies a class member, like a method or a static property.
- * A Class can have the same property name in static and non static
- * version, in which case they are considered to be different.
- */
+
+/// Identifies a class member, like a method or a static property.
+/// A Class can have the same property name in static and non static
+/// version, in which case they are considered to be different.
 struct ClassMemberKey {
   hermes::Identifier identifier;
   bool isStatic;
@@ -68,11 +67,9 @@ struct DenseMapInfo<ClassMemberKey> {
 namespace {
 using namespace hermes;
 
-/**
- * Mutable vector that helps dealing with arrays of nodes safely.
- * Once done with the vector, it can create an ESTree::NodeList
- * representation which is used by the ESTree API in several places.
- */
+/// Mutable vector that helps dealing with arrays of nodes safely.
+/// Once done with the vector, it can create an ESTree::NodeList
+/// representation which is used by the ESTree API in several places.
 class NodeVector {
  public:
   using Storage = llvh::SmallVector<ESTree::Node *, 8>;
@@ -174,19 +171,17 @@ static ClassMemberKind getClassMemberKind(
   } else if (str == "set") {
     return ClassMemberKind::PropertySetter;
   }
-    hermes_fatal("Invalid ES6 class member");
+  hermes_fatal("Invalid ES6 class member");
 }
 
 } // namespace
 
 namespace hermes {
 
-/**
- * Visitor that visits Class declarations and Class expressions and convert
- * them into plain ES5 functions. The generated AST leverages the
- * HermesES6Internal object, which should be made available at runtime by
- * enabling the ES6Class option.
- */
+/// Visitor that visits Class declarations and Class expressions and convert
+/// them into plain ES5 functions. The generated AST leverages the
+/// HermesES6Internal object, which should be made available at runtime by
+/// enabling the ES6Class option.
 class ES6ClassesTransformations {
  public:
   ES6ClassesTransformations(Context &context)
@@ -218,11 +213,9 @@ class ES6ClassesTransformations {
         classExpr, classExpr->_id, classBody, classExpr->_superClass);
   }
 
-  /**
-   * Visits call expressions nodes to convert super ctor invocations like
-   * `super(params...)`, or super method invocations like
-   * `super.method(params...)`
-   */
+  /// Visits call expressions nodes to convert super ctor invocations like
+  /// `super(params...)`, or super method invocations like
+  /// `super.method(params...)`
   ESTree::VisitResult visit(ESTree::CallExpressionNode *callExpression) {
     auto *topClass = _currentProcessingClass;
     if (topClass == nullptr || topClass->parentClass == nullptr) {
@@ -254,10 +247,8 @@ class ES6ClassesTransformations {
         NodeVector(callExpression->_arguments));
   }
 
-  /**
-   * Visits member expression nodes to convert super access, like
-   * `super.property`.
-   */
+  /// Visits member expression nodes to convert super access, like
+  /// `super.property`.
   ESTree::VisitResult visit(ESTree::MemberExpressionNode *memberExpression) {
     // Convert super.property into Reflect.get(ParentClass.prototype,
     // 'property', this);
