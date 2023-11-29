@@ -659,13 +659,8 @@ CallResult<bool> JSProxy::defineOwnProperty(
         target, runtime, nameValHandle, dpFlags, valueOrAccessor, opFlags);
   }
   // 8. Let descObj be FromPropertyDescriptor(Desc).
-  ComputedPropertyDescriptor desc;
-  desc.flags.accessor = dpFlags.setGetter || dpFlags.setSetter;
-  desc.flags.writable = dpFlags.setWritable && dpFlags.writable;
-  desc.flags.enumerable = dpFlags.setEnumerable && dpFlags.enumerable;
-  desc.flags.configurable = dpFlags.setConfigurable && dpFlags.configurable;
   CallResult<HermesValue> descObjRes =
-      objectFromPropertyDescriptor(runtime, desc, valueOrAccessor);
+      objectFromPropertyDescriptor(runtime, dpFlags, valueOrAccessor);
   if (descObjRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }

@@ -455,9 +455,16 @@ ExecutionStatus toPropertyDescriptor(
     MutableHandle<> &valueOrAccessor);
 
 /// ES9 6.2.5.4 FromPropertyDescriptor
+/// \p dpFlags is used to create the property descriptor object.
+/// If dpFlags.isAccessor() is true, it will be an Acessor Property Descriptor
+/// and so it will have getter and setter fields (they might be undefined).
+/// If dpFlags.isAccessor() is false, it will be a Data Property Descriptor, and
+/// so it will have value field, and also will have writable field if
+/// setWritable is true. enumurable and configurable fields will be set if
+/// setEnumurable and setConfigurable are set to true respectively.
 CallResult<HermesValue> objectFromPropertyDescriptor(
     Runtime &runtime,
-    ComputedPropertyDescriptor desc,
+    DefinePropertyFlags dpFlags,
     Handle<> valueOrAccessor);
 
 /// ES2022 21.2.1.1.1 NumberToBigInt(number)
