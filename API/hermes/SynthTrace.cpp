@@ -789,28 +789,6 @@ void SynthTrace::flushAndDisable(
   flushRecords();
   json_->closeArray();
 
-  // Env section.
-  json_->emitKey("env");
-  json_->openDict();
-
-  json_->emitKey("callsToHermesInternalGetInstrumentedStats");
-  json_->openArray();
-  for (const ::hermes::vm::MockedEnvironment::StatsTable &call :
-       env.callsToHermesInternalGetInstrumentedStats) {
-    json_->openDict();
-    for (const auto &key : call.keys()) {
-      auto val = call.lookup(key);
-      if (val.isNum()) {
-        json_->emitKeyValue(key, val.num());
-      } else {
-        json_->emitKeyValue(key, val.str());
-      }
-    }
-    json_->closeDict();
-  }
-  json_->closeArray();
-  json_->closeDict();
-
   // Now emit the history information, if we're in trace debug mode.
   gcTrace.emit(*json_);
 

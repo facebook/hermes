@@ -21,9 +21,6 @@ const char *parseGCConfigTrace() {
       "maxHeapSize": 16777216
     }
   },
-  "env": {
-    "callsToHermesInternalGetInstrumentedStats": [],
-  },
   "trace": [
     {
       "type": "BeginExecJSRecord",

@@ -15,9 +15,6 @@ const char *callbacksCallJSFunctionTrace() {
   return R"###(
 {
   "globalObjID": 1,
-  "env": {
-    "callsToHermesInternalGetInstrumentedStats": [],
-  },
   "trace": [
     {
       "type": "BeginExecJSRecord",

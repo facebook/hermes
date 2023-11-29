@@ -54,13 +54,7 @@ struct MockedEnvironment final {
   };
   using StatsTable = llvh::StringMap<StatsTableValue>;
 
-  std::deque<StatsTable> callsToHermesInternalGetInstrumentedStats;
-
   MockedEnvironment() = default;
-  explicit MockedEnvironment(
-      const std::deque<StatsTable> &callsToHermesInternalGetInstrumentedStats)
-      : callsToHermesInternalGetInstrumentedStats(
-            callsToHermesInternalGetInstrumentedStats) {}
 };
 
 } // namespace vm

@@ -103,9 +103,6 @@ TEST(SynthBenchmark, RunMultipleSourceFiles) {
   const char *const traceFmt = R"(
     {
       "globalObjID": 1,
-      "env": {
-        "callsToHermesInternalGetInstrumentedStats": [],
-      },
       "trace": [
         {
           "type": "BeginExecJSRecord",
