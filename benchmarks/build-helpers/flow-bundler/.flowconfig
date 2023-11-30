@@ -1,0 +1,48 @@
+[libs]
+../flow-typed
+
+[include]
+
+[ignore]
+; make sure flow doesn't look node_modules by default - this greatly improves startup time
+.*/node_modules/
+; allowlist of modules that flow is allowed to look at
+; these modules have their own flow types included as part of the package
+!.*/node_modules/hermes-eslint/
+!.*/node_modules/hermes-estree/
+!.*/node_modules/hermes-parser/
+!.*/node_modules/hermes-transform/
+
+[options]
+emoji=true
+
+suppress_type=$FlowIssue
+suppress_type=$FlowFixMe
+suppress_type=$FlowFixMeProps
+suppress_type=$FlowFixMeState
+suppress_type=$FlowFixMeEmpty
+suppress_type=$FlowExpectedError
+
+enums=true
+casting_syntax=both
+
+[lints]
+untyped-type-import=error
+deprecated-type-bool=off
+unused-promise=error
+
+; ES6 module lints
+invalid-import-star-use=error
+non-const-var-export=error
+this-in-exported-function=error
+mixed-import-and-require=error
+export-renamed-default=error
+default-import-access=error
+
+[strict]
+nonstrict-import
+sketchy-null
+unclear-type
+unsafe-getters-setters
+untyped-import
+untyped-type-import

@@ -1,0 +1,23 @@
+{
+  "name": "flow-bundler",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "private": true,
+  "devDependencies": {
+    "@babel/core": "^7.23.3",
+    "@babel/preset-env": "^7.23.3",
+    "@babel/preset-flow": "^7.23.3",
+    "@babel/register": "^7.22.15",
+    "babel-plugin-syntax-hermes-parser": "^0.17.1",
+    "flow-bin": "^0.222.0",
+    "hermes-eslint": "0.17.1",
+    "hermes-estree": "0.17.1",
+    "hermes-parser": "0.17.1",
+    "hermes-transform": "0.17.1",
+    "prettier": "2.8.8",
+    "prettier-plugin-hermes-parser": "^0.17.1",
+    "string-width": "4.2.3",
+    "yargs": "^17.7.2"
+  }
+}
