@@ -301,6 +301,7 @@ opt<bool> ES6Class(
     "Xes6-class",
     init(false),
     desc("Enable support for ES6 Class"),
+    Hidden,
     cat(CompilerCategory));
 
 opt<bool>
