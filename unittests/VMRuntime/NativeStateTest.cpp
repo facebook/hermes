@@ -16,8 +16,8 @@ namespace {
 
 using NativeStateTest = RuntimeTestFixture;
 
-void inc(void *context) {
-  ++*(int *)context;
+void inc(GC &, NativeState *ns) {
+  ++*static_cast<int *>(ns->context());
 }
 
 TEST_F(NativeStateTest, NativeStateFinalizerRunsOnce) {

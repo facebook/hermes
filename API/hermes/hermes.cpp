@@ -1779,8 +1779,8 @@ bool HermesRuntimeImpl::hasNativeState(const jsi::Object &obj) {
       desc);
 }
 
-static void deleteShared(void *context) {
-  delete reinterpret_cast<std::shared_ptr<jsi::NativeState> *>(context);
+static void deleteShared(vm::GC &, vm::NativeState *ns) {
+  delete reinterpret_cast<std::shared_ptr<jsi::NativeState> *>(ns->context());
 }
 
 void HermesRuntimeImpl::setNativeState(
@@ -1991,8 +1991,8 @@ jsi::ArrayBuffer HermesRuntimeImpl::createArrayBuffer(
   auto size = buffer->size();
   auto *data = buffer->data();
   auto *ctx = new std::shared_ptr<jsi::MutableBuffer>(std::move(buffer));
-  auto finalize = [](void *ctx) {
-    delete static_cast<std::shared_ptr<jsi::MutableBuffer> *>(ctx);
+  auto finalize = [](vm::GC &, vm::NativeState *ns) {
+    delete static_cast<std::shared_ptr<jsi::MutableBuffer> *>(ns->context());
   };
   auto res = vm::JSArrayBuffer::setExternalDataBlock(
       runtime_, buf, data, size, ctx, finalize);

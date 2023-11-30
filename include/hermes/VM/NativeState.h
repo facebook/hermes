@@ -15,8 +15,8 @@ namespace hermes {
 namespace vm {
 
 class Runtime;
-
-using FinalizeNativeStatePtr = void (*)(void *context);
+class NativeState;
+using FinalizeNativeStatePtr = void (*)(GC &gc, NativeState *ns);
 
 /// Wrapper for a pointer to some arbitrary native data (not on the JS heap)
 /// + a function that's invoked on that data when the NativeState is finalized.
@@ -42,10 +42,6 @@ class NativeState final : public GCCell {
   /// Create a new NativeState on the JS heap.
   static NativeState *
   create(Runtime &runtime, void *context, FinalizeNativeStatePtr finalizePtr);
-
-  ~NativeState() {
-    finalizePtr_(context_);
-  }
 
   void *context() {
     return context_;

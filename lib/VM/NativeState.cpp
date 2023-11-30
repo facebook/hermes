@@ -33,7 +33,7 @@ NativeState *NativeState::create(
 
 void NativeState::_finalizeImpl(GCCell *cell, GC &gc) {
   auto *self = vmcast<NativeState>(cell);
-  self->~NativeState();
+  self->finalizePtr_(gc, self);
 }
 
 } // namespace vm
