@@ -13,34 +13,59 @@
 
 #include <time.h>
 
+#include <memory>
+
 namespace hermes {
 namespace platform_unicode {
+
+namespace {
+struct UCollatorDeleter {
+  void operator()(UCollator *coll) {
+    ucol_close(coll);
+  }
+};
+
+/// Returns a pointer to the singleton UCollator. It is thread-safe because
+/// threads can only access const APIs using this handle(which are thread-safe
+/// as per the documentation). Please refer to
+/// https://unicode-org.github.io/icu/userguide/icu/design.html#thread-safe-const-apis,
+/// for more details. This
+/// function invokes ucol_open only once and keeps it as a singleton for better
+/// performance instead of ucol_open/ucol_close in each invocation.
+const UCollator *getUCollatorInstance() {
+  using UCollatorPtr = std::unique_ptr<UCollator, UCollatorDeleter>;
+  static UCollatorPtr coll = [] {
+    UErrorCode err{U_ZERO_ERROR};
+    UCollator *coll = ucol_open(uloc_getDefault(), &err);
+
+    if (U_FAILURE(err)) {
+      // Failover to root locale if we're unable to open in default locale.
+      err = U_ZERO_ERROR;
+      coll = ucol_open("", &err);
+    }
+    assert(U_SUCCESS(err) && "failed to open collator");
+
+    // Normalization mode allows for strings that can be represented
+    // in two different ways to compare as equal.
+    ucol_setAttribute(coll, UCOL_NORMALIZATION_MODE, UCOL_ON, &err);
+    assert(U_SUCCESS(err) && "failed to set collator attribute");
+    return UCollatorPtr(coll, UCollatorDeleter());
+  }();
+
+  return coll.get();
+}
+} // namespace
 
 int localeCompare(
     llvh::ArrayRef<char16_t> left,
     llvh::ArrayRef<char16_t> right) {
-  UErrorCode err{U_ZERO_ERROR};
-  UCollator *coll = ucol_open(uloc_getDefault(), &err);
-  if (U_FAILURE(err)) {
-    // Failover to root locale if we're unable to open in default locale.
-    err = U_ZERO_ERROR;
-    coll = ucol_open("", &err);
-  }
-  assert(U_SUCCESS(err) && "failed to open collator");
-
-  // Normalization mode allows for strings that can be represented
-  // in two different ways to compare as equal.
-  ucol_setAttribute(coll, UCOL_NORMALIZATION_MODE, UCOL_ON, &err);
-  assert(U_SUCCESS(err) && "failed to set collator attribute");
-
+  const UCollator *coll = getUCollatorInstance();
   auto result = ucol_strcoll(
       coll,
       (const UChar *)left.data(),
       left.size(),
       (const UChar *)right.data(),
       right.size());
-
-  ucol_close(coll);
 
   switch (result) {
     case UCOL_LESS:
