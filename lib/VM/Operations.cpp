@@ -2133,8 +2133,6 @@ CallResult<HermesValue> objectFromPropertyDescriptor(
 
   if (!dpFlags.isAccessor()) {
     // Data Descriptor
-    assert(dpFlags.setValue && "Data Descriptor must have value set");
-
     auto result = JSObject::defineOwnProperty(
         obj,
         runtime,
@@ -2166,8 +2164,6 @@ CallResult<HermesValue> objectFromPropertyDescriptor(
     }
   } else {
     // Accessor
-    assert(!dpFlags.setValue && "Accessor Descriptor cannot have value set");
-
     auto *accessor = vmcast<PropertyAccessor>(valueOrAccessor.get());
 
     auto getter = runtime.makeHandle(
