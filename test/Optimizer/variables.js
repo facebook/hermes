@@ -33,7 +33,8 @@ function foo(p1, p2, p3) {
 // OPT-CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
 // OPT-CHECK-NEXT:  %1 = BinaryOperatorInst '+', %p1, %p2
 // OPT-CHECK-NEXT:  %2 = BinaryOperatorInst '+', %p2, %p3
-// OPT-CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// OPT-CHECK-NEXT:  %3 = BinaryOperatorInst '+', %2 : string|number|bigint, %1 : string|number|bigint
+// OPT-CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // OPT-CHECK-NEXT:function_end
 
 // CHECK:function global#0()#1
