@@ -34,6 +34,7 @@ function foo(p1, p2, p3) {
 // OPT-CHECK-NEXT:  %2 = LoadParamInst (:any) %p3: any
 // OPT-CHECK-NEXT:  %3 = BinaryAddInst (:string|number|bigint) %0: any, %1: any
 // OPT-CHECK-NEXT:  %4 = BinaryAddInst (:string|number|bigint) %1: any, %2: any
+// OPT-CHECK-NEXT:  %5 = BinaryAddInst (:string|number|bigint) %4: string|number|bigint, %3: string|number|bigint
 // OPT-CHECK-NEXT:       ReturnInst undefined: undefined
 // OPT-CHECK-NEXT:function_end
 

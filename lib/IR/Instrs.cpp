@@ -49,10 +49,6 @@ void TerminatorInst::setSuccessor(unsigned idx, BasicBlock *B) {
   llvm_unreachable("not a terminator?!");
 }
 
-bool hermes::isSideEffectFree(Type T) {
-  return T.isPrimitive();
-}
-
 const char *UnaryOperatorInst::opStringRepr[] =
     {"void", "typeof", "-", "~", "!", "++", "--"};
 
@@ -74,7 +70,7 @@ ValueKind UnaryOperatorInst::parseOperator(llvh::StringRef op) {
 }
 
 SideEffect UnaryOperatorInst::getSideEffectImpl() const {
-  if (isSideEffectFree(getSingleOperand()->getType())) {
+  if (getSingleOperand()->getType().isPrimitive()) {
     return SideEffect{}.setIdempotent();
   }
 
@@ -113,21 +109,66 @@ SideEffect BinaryOperatorInst::getBinarySideEffect(
     Type leftTy,
     Type rightTy,
     ValueKind op) {
-  // The 'in' and 'instanceof' operators may execute arbitrary code, or throw
-  // when given primitive types:
-  if (op == ValueKind::BinaryInInstKind ||
-      op == ValueKind::BinaryInstanceOfInstKind)
-    return SideEffect::createExecute();
+  switch (op) {
+    // The 'in' and 'instanceof' operators may execute arbitrary code, or throw
+    // when given primitive types:
+    case ValueKind::BinaryInInstKind:
+    case ValueKind::BinaryInstanceOfInstKind:
+      return SideEffect::createExecute();
 
-  // Strict equality does not throw or have other side effects (per ES5 11.9.6).
-  if (op == ValueKind::BinaryStrictlyNotEqualInstKind ||
-      op == ValueKind::BinaryStrictlyEqualInstKind)
-    return SideEffect{}.setIdempotent();
+    // Strict equality does not throw or have other side effects (per
+    // ES5 11.9.6).
+    case ValueKind::BinaryStrictlyNotEqualInstKind:
+    case ValueKind::BinaryStrictlyEqualInstKind:
+      return SideEffect{}.setIdempotent();
 
-  // This instruction does not read/write memory if the LHS and RHS types are
-  // known to be safe (number, string, null, etc).
-  if (isSideEffectFree(leftTy) && isSideEffectFree(rightTy))
-    return SideEffect{}.setIdempotent();
+    case ValueKind::BinaryEqualInstKind:
+    case ValueKind::BinaryNotEqualInstKind:
+    case ValueKind::BinaryLessThanInstKind:
+    case ValueKind::BinaryLessThanOrEqualInstKind:
+    case ValueKind::BinaryGreaterThanInstKind:
+    case ValueKind::BinaryGreaterThanOrEqualInstKind:
+      // This instruction does not read/write memory if the LHS and RHS types
+      // are known to be primitive.
+      if (leftTy.isPrimitive() && rightTy.isPrimitive())
+        return SideEffect{}.setIdempotent();
+      break;
+
+    case ValueKind::BinaryAddInstKind:
+      // We can only reason about primitive types.
+      if (!leftTy.isPrimitive() || !rightTy.isPrimitive())
+        break;
+      // If one of the operands is a string, it is side effect free.
+      if (leftTy.isStringType() || rightTy.isStringType())
+        return SideEffect{}.setIdempotent();
+      [[fallthrough]];
+
+    case ValueKind::BinaryLeftShiftInstKind:
+    case ValueKind::BinaryRightShiftInstKind:
+    case ValueKind::BinaryUnsignedRightShiftInstKind:
+    case ValueKind::BinarySubtractInstKind:
+    case ValueKind::BinaryMultiplyInstKind:
+    case ValueKind::BinaryDivideInstKind:
+    case ValueKind::BinaryModuloInstKind:
+    case ValueKind::BinaryOrInstKind:
+    case ValueKind::BinaryXorInstKind:
+    case ValueKind::BinaryAndInstKind:
+    case ValueKind::BinaryExponentiationInstKind:
+      // We can only reason about primitive types.
+      if (!leftTy.isPrimitive() || !rightTy.isPrimitive())
+        break;
+      // If both operands are BigInt, it is side effect free.
+      if (leftTy.isBigIntType() && rightTy.isBigIntType())
+        return SideEffect{}.setIdempotent();
+      // However BigInt arithmetic operands don't mix with any other type.
+      if (leftTy.canBeBigInt() || rightTy.canBeBigInt())
+        return SideEffect{}.setThrow();
+      // We have primitive operands that are not BigInt.
+      return SideEffect{}.setIdempotent();
+
+    default:
+      hermes_fatal("Invalid binary operator");
+  }
 
   // This binary operation may execute arbitrary code.
   return SideEffect::createExecute();

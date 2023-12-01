@@ -24,10 +24,6 @@ using llvh::cast;
 
 namespace hermes {
 
-/// \returns true if the type \p T is side effect free in the context of
-/// binary operations.
-bool isSideEffectFree(Type T);
-
 /// Base class for instructions that have exactly one operand. It guarantees
 /// that only one operand is pushed and it provides getSingleOperand().
 class SingleOperandInst : public Instruction {

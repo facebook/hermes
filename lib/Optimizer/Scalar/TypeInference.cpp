@@ -267,7 +267,7 @@ static Type inferBinaryInst(BinaryOperatorInst *BOI) {
       // If both sides of the binary operand are known and both sides are known
       // to be non-string (and can't be converted to strings) then the result
       // must be of a numeric type.
-      if (isSideEffectFree(LeftTy) && isSideEffectFree(RightTy) &&
+      if (LeftTy.isPrimitive() && RightTy.isPrimitive() &&
           !LeftTy.canBeString() && !RightTy.canBeString()) {
         return numeric;
       }
