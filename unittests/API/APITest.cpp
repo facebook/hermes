@@ -14,6 +14,7 @@
 #include <jsi/instrumentation.h>
 #include <jsi/test/testlib.h>
 
+#include <atomic>
 #include <tuple>
 
 using namespace facebook::jsi;
@@ -763,6 +764,50 @@ TEST_P(HermesRuntimeTest, NativeStateTest) {
   // Make sure any NativeState cells are finalized before leaving, since they
   // point to local variables. Otherwise ASAN will complain.
   eval("gc()");
+}
+
+TEST_P(HermesRuntimeTest, ExternalMemoryTest) {
+  // Keep track of the number of NativeState instances to make sure they are
+  // being freed by the GC when there is memory pressure associated with the
+  // object. This needs to be atomic because the destructor of NativeState may
+  // be invoked on any thread.
+  static std::atomic<size_t> numAllocs = 0;
+
+  class Counter : public HostObject, public NativeState {
+   public:
+    Counter() {
+      // Check that we haven't accumulated too many CountNativeStates. MallocGC
+      // does not deal with external memory correctly so it is excluded.
+
+#ifndef HERMESVM_GC_MALLOC
+      EXPECT_LT(numAllocs++, 50);
+#endif
+    }
+    ~Counter() {
+      numAllocs--;
+    }
+  };
+
+  for (size_t i = 0; i < 200; i++) {
+    auto o = Object::createFromHostObject(*rt, std::make_shared<Counter>());
+    o.setExternalMemoryPressure(*rt, 1024 * 1024);
+  }
+
+  // Test that we can adjust memory pressure even on a frozen object.
+  auto freeze = eval("Object.freeze").getObject(*rt).getFunction(*rt);
+  for (size_t i = 0; i < 200; i++) {
+    Object o{*rt};
+    o.setNativeState(*rt, std::make_shared<Counter>());
+    freeze.call(*rt, o);
+    o.setExternalMemoryPressure(*rt, 1024 * 1024);
+  }
+
+  // Try setting a series of values on the same object.
+  Object o{*rt};
+  o.setExternalMemoryPressure(*rt, 5);
+  o.setExternalMemoryPressure(*rt, 5);
+  o.setExternalMemoryPressure(*rt, 0);
+  o.setExternalMemoryPressure(*rt, 1024 * 1024);
 }
 
 TEST_P(HermesRuntimeTest, PropNameIDFromSymbol) {

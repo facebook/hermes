@@ -1836,7 +1836,74 @@ std::shared_ptr<jsi::NativeState> HermesRuntimeImpl::getNativeState(
       *reinterpret_cast<std::shared_ptr<jsi::NativeState> *>(ns->context()));
 }
 
-void HermesRuntimeImpl::setExternalMemoryPressure(const jsi::Object &, size_t) {
+void HermesRuntimeImpl::setExternalMemoryPressure(
+    const jsi::Object &obj,
+    size_t amt) {
+  vm::GCScope gcScope(runtime_);
+  auto h = handle(obj);
+  if (h->isProxyObject())
+    throw jsi::JSINativeException("Cannot set external memory on Proxy");
+
+  // Check if the internal property is already set. If so, we can update the
+  // associated external memory in place.
+  vm::NamedPropertyDescriptor desc;
+  bool exists = vm::JSObject::getOwnNamedDescriptor(
+      h,
+      runtime_,
+      vm::Predefined::getSymbolID(
+          vm::Predefined::InternalPropertyExternalMemoryPressure),
+      desc);
+
+  vm::NativeState *ns;
+  if (exists) {
+    ns = vm::vmcast<vm::NativeState>(
+        vm::JSObject::getNamedSlotValueUnsafe(*h, runtime_, desc)
+            .getObject(runtime_));
+  } else {
+    auto debitMem = [](vm::GC &gc, vm::NativeState *ns) {
+      auto amt = reinterpret_cast<uintptr_t>(ns->context());
+      gc.debitExternalMemory(ns, amt);
+    };
+
+    // This is the first time adding external memory to this object. Create a
+    // new NativeState. We use the context pointer to store the external memory
+    // amount.
+    auto nsHnd = runtime_.makeHandle(vm::NativeState::create(
+        runtime_, reinterpret_cast<void *>(0), debitMem));
+
+    // Use defineNewOwnProperty to create the new property since we know it
+    // doesn't exist. Note that this also bypasses the extensibility check on
+    // the object.
+    auto res = vm::JSObject::defineNewOwnProperty(
+        h,
+        runtime_,
+        vm::Predefined::getSymbolID(
+            vm::Predefined::InternalPropertyExternalMemoryPressure),
+        vm::PropertyFlags::defaultNewNamedPropertyFlags(),
+        nsHnd);
+    checkStatus(res);
+    ns = *nsHnd;
+  }
+
+  auto curAmt = reinterpret_cast<uintptr_t>(ns->context());
+  assert(llvh::isUInt<32>(curAmt) && "Amount is too large.");
+
+  // The GC does not support adding more than a 32 bit amount.
+  if (!llvh::isUInt<32>(amt))
+    throw jsi::JSINativeException("Amount is too large.");
+
+  // Try to credit or debit the delta depending on whether the new amount is
+  // larger.
+  if (amt > curAmt) {
+    auto delta = amt - curAmt;
+    if (!runtime_.getHeap().canAllocExternalMemory(delta))
+      throw jsi::JSINativeException("External memory is too high.");
+    runtime_.getHeap().creditExternalMemory(ns, delta);
+  } else {
+    runtime_.getHeap().debitExternalMemory(ns, curAmt - amt);
+  }
+
+  ns->setContext(reinterpret_cast<void *>(amt));
 }
 
 jsi::Value HermesRuntimeImpl::getProperty(

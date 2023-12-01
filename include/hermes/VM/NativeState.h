@@ -46,6 +46,9 @@ class NativeState final : public GCCell {
   void *context() {
     return context_;
   }
+  void setContext(void *context) {
+    context_ = context;
+  }
 
  private:
   static void _finalizeImpl(GCCell *cell, GC &gc);
