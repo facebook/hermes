@@ -29,6 +29,21 @@ describe('babel-plugin-syntax-hermes-parser', () => {
     expect(parseSpy).toBeCalledTimes(1);
   });
 
+  test('test skip TS', () => {
+    const parseSpy = jest.spyOn(HermesParser, 'parse');
+    const code = MODULE_PREAMBLE + 'const a: string = 1;';
+    const output = transformSync(code, {
+      plugins: [hermesParserPlugin],
+      filename: 'foo.ts',
+    });
+    expect(output.code).toMatchInlineSnapshot(`
+      ""use strict";
+
+      const a = 1;"
+    `);
+    expect(parseSpy).toBeCalledTimes(0);
+  });
+
   test('test component syntax parsing', () => {
     const parseSpy = jest.spyOn(HermesParser, 'parse');
     const code = MODULE_PREAMBLE + 'component Foo() {}';

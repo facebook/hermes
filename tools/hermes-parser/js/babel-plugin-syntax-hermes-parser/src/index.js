@@ -21,16 +21,27 @@ export default function BabelPluginSyntaxHermesParser(
   api.assertVersion(7);
 
   let curParserOpts: ParserOptions = {};
+  let curFilename: ?string = null;
 
   return {
     name: 'syntax-hermes-parser',
 
-    manipulateOptions(opts: $ReadOnly<{parserOpts: ParserOptions}>) {
+    manipulateOptions(
+      opts: $ReadOnly<{parserOpts: ParserOptions, filename?: ?string}>,
+    ) {
       curParserOpts = opts.parserOpts;
+      curFilename = opts.filename;
     },
 
     // API suggested via https://babeljs.io/docs/babel-parser#will-the-babel-parser-support-a-plugin-system
     parserOverride(code: string) {
+      const filename = curFilename;
+      if (
+        filename != null &&
+        (filename.endsWith('.ts') || filename.endsWith('.tsx'))
+      ) {
+        return;
+      }
       const opts: ParserOptions = {};
       for (const [key, value] of Object.entries(curParserOpts)) {
         if (HermesParser.ParserOptionsKeys.has(key)) {
