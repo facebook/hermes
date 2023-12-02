@@ -36,6 +36,7 @@ export type ReexportSource = {
 };
 export type ModuleGraphNode = {
   file: string,
+  projectRoot: string,
   parseResult: ParseResult,
   moduleName: string,
   importBindingToSource: Map<LocalBinding, ImportBindingSource>,
@@ -203,12 +204,14 @@ function processModuleStatement(
 
 export async function createModuleGraphNode(
   file: string,
+  projectRoot: string,
   moduleName: string,
 ): Promise<ModuleGraphNode> {
   const parseResult = await parseFile(file);
 
   const moduleGraphNode: ModuleGraphNode = {
     file,
+    projectRoot,
     moduleName,
     parseResult,
     importBindingToSource: new Map(),

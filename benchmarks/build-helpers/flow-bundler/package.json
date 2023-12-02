@@ -6,9 +6,11 @@
   "private": true,
   "devDependencies": {
     "@babel/core": "^7.23.3",
+    "@babel/generator": "^7.23.5",
     "@babel/preset-env": "^7.23.3",
     "@babel/preset-flow": "^7.23.3",
     "@babel/register": "^7.22.15",
+    "@babel/types": "^7.23.5",
     "babel-plugin-syntax-hermes-parser": "^0.17.1",
     "flow-bin": "^0.222.0",
     "hermes-eslint": "0.17.1",

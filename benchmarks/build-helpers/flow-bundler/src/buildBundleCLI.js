@@ -10,8 +10,11 @@
 
 import * as path from 'path';
 import {createModuleGraph} from './ModuleGraph';
-import {writeFile, parseFile} from './utils';
+import {writeFile, parseFile, hermesASTToBabel} from './utils';
 import yargs from 'yargs';
+
+// $FlowExpectedError[cannot-resolve-module] Untyped third-party module
+import generate from '@babel/generator';
 
 async function main() {
   const rawArgs = process.argv.slice(2);
@@ -46,9 +49,8 @@ async function main() {
   const outPath = cliYargs.out;
   const entrypoints: Array<string> = cliYargs._;
 
-  const bundleSource = await createModuleGraph(rootPath, entrypoints);
-  const bundleHeader = `\
-/**
+  const bundle = await createModuleGraph(rootPath, entrypoints);
+  const bundleHeader = `*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
@@ -58,22 +60,45 @@ async function main() {
  *
  * Entrypoints:
  *   ${entrypoints.map(f => path.relative(rootPath, f)).join('\n *   ')}
- */
+ `;
 
-'use strict';
+  const fileMapping: {[string]: string} = {};
+  const bundleAST = {
+    type: 'File',
+    program: {
+      type: 'Program',
+      // $FlowExpectedError[unclear-type]
+      body: [] as Array<any>,
+    },
+  };
 
-// SH console Polyfill
-const console =
-  typeof globalThis.console === 'undefined'
-    ? {
-        log: globalThis.print,
-        error: globalThis.print,
-      }
-    : globalThis.console;
+  // Merge files into single bundle AST.
+  for (const file of bundle) {
+    const babelAST = hermesASTToBabel(file.ast, file.file);
 
-`;
+    bundleAST.program.body.push(...babelAST.program.body);
+    fileMapping[file.file] = file.code;
+  }
 
-  await writeFile(outPath, bundleHeader + bundleSource);
+  // Add bundle docblock comment
+  if (bundleAST.program.body.length > 0) {
+    const firstStmt = bundleAST.program.body[0];
+    firstStmt.leadingComments = [
+      {type: 'CommentBlock', value: bundleHeader},
+      ...firstStmt.leadingComments,
+    ];
+  }
+
+  const bundleSource = generate(bundleAST, {sourceMaps: true}, fileMapping);
+
+  await writeFile(
+    outPath,
+    bundleSource.code +
+      '\n//# sourceMappingURL=' +
+      path.basename(outPath) +
+      '.map\n',
+  );
+  await writeFile(outPath + '.map', JSON.stringify(bundleSource.map));
 }
 
 main().catch((err: mixed) => {

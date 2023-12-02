@@ -192,7 +192,7 @@ async function resolveImportNames(
 export async function createModuleGraph(
   projectRoot: string,
   entrypoints: Array<string>,
-): Promise<string> {
+): Promise<Array<{file: string, ast: Program, code: string}>> {
   const moduleNameCounter = new Map<string, number>();
   const moduleStack: Array<string> = [];
   const moduleInfoMap = new Map<string, ModuleInfo>();
@@ -228,6 +228,7 @@ export async function createModuleGraph(
     // Extract module import/export information from AST.
     const moduleGraphNode = await createModuleGraphNode(
       fileName,
+      projectRoot,
       getModuleName(fileName),
     );
 
@@ -247,18 +248,13 @@ export async function createModuleGraph(
     // Resolve imports (and any needed dependent modules)
     await resolveImportNames(moduleGraphNode, moduleInfo, buildModuleGraph);
 
-    const builtModuleSource = await transformModule(
-      moduleGraphNode,
-      moduleInfo,
-    );
+    const builtModule = await transformModule(moduleGraphNode, moduleInfo);
 
-    bundleSources.push(
-      '// ' +
-        path.relative(projectRoot, fileName) +
-        '\n' +
-        builtModuleSource.trim() +
-        '\n',
-    );
+    bundleSources.push({
+      file: fileName,
+      ast: builtModule.ast,
+      code: builtModule.code,
+    });
 
     // Pop module from stack
     moduleStack.pop();
@@ -270,5 +266,5 @@ export async function createModuleGraph(
     await buildModuleGraph(entrypoint);
   }
 
-  return bundleSources.join('\n');
+  return bundleSources;
 }

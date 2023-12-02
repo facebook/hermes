@@ -10,5 +10,5 @@ features removed.
 # Run
 
 ```
-./benchmarks/build-helpers/flow-bundler/bin/flow-bundler --root benchmarks/MiniReact/no-objects/src/ --out benchmarks/MiniReact/no-objects/MiniReact.js benchmarks/MiniReact/no-objects/src/index.js && (cd ~/builds/shdebug/; ninja hermesvm shermes && ./bin/shermes -typed -exec -g ~/fbsource/xplat/static_h/benchmarks/MiniReact/no-objects/MiniReact.js)
+./benchmarks/build-helpers/flow-bundler/bin/flow-bundler --root benchmarks/MiniReact/no-objects/src/ --out benchmarks/MiniReact/no-objects/MiniReact.js benchmarks/MiniReact/no-objects/src/index.js && (cd ~/builds/shdebug/; ninja hermesvm shermes && ./bin/shermes -typed -exec -g -source-map ~/fbsource/xplat/static_h/benchmarks/MiniReact/no-objects/MiniReact.js.map ~/fbsource/xplat/static_h/benchmarks/MiniReact/no-objects/MiniReact.js)
 ```

@@ -29,7 +29,7 @@ import * as path from 'path';
 export async function transformModule(
   moduleGraphNode: ModuleGraphNode,
   moduleInfo: ModuleInfo,
-): Promise<string> {
+): Promise<{ast: Program, code: string}> {
   const {ast, astWasMutated, mutatedCode} = transformAST(
     moduleGraphNode.parseResult,
     context => {
@@ -220,7 +220,16 @@ export async function transformModule(
           const moduleScope = globalScope.childScopes[0];
 
           // $FlowExpectedError[cannot-write] Yes yes, i'm bad.
-          node.docblock = null;
+          node.docblock = {
+            directives: {},
+            comment: {
+              type: 'Block',
+              value: ` file: ${path.relative(
+                moduleGraphNode.projectRoot,
+                moduleGraphNode.file,
+              )} `,
+            },
+          };
 
           for (const stmt of node.body) {
             switch (stmt.type) {
@@ -272,9 +281,6 @@ export async function transformModule(
       };
     },
   );
-  if (!astWasMutated) {
-    return moduleGraphNode.parseResult.code;
-  }
 
-  return print(ast, mutatedCode, {});
+  return {ast, code: mutatedCode};
 }
