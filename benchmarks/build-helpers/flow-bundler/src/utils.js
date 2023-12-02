@@ -139,3 +139,16 @@ export function hermesASTToBabel(ast: Program, file: string): BabelFile {
 
   return babelAST;
 }
+
+export async function writeBundle(
+  file: string,
+  code: string,
+  // $FlowExpectedError[unclear-type]
+  map: any,
+): Promise<void> {
+  await writeFile(
+    file,
+    code + '\n//# sourceMappingURL=' + path.basename(file) + '.map\n',
+  );
+  await writeFile(file + '.map', JSON.stringify(map));
+}

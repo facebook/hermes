@@ -17,6 +17,7 @@
     "hermes-estree": "0.17.1",
     "hermes-parser": "0.17.1",
     "hermes-transform": "0.17.1",
+    "metro-react-native-babel-preset": "^0.77.0",
     "prettier": "2.8.8",
     "prettier-plugin-hermes-parser": "^0.17.1",
     "string-width": "4.2.3",

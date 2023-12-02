@@ -10,11 +10,13 @@
 
 import * as path from 'path';
 import {createModuleGraph} from './ModuleGraph';
-import {writeFile, parseFile, hermesASTToBabel} from './utils';
+import {parseFile, hermesASTToBabel, writeBundle} from './utils';
 import yargs from 'yargs';
 
 // $FlowExpectedError[cannot-resolve-module] Untyped third-party module
 import generate from '@babel/generator';
+// $FlowExpectedError[cannot-resolve-module] Untyped third-party module
+import {transformFromAstSync} from '@babel/core';
 
 async function main() {
   const rawArgs = process.argv.slice(2);
@@ -28,6 +30,12 @@ async function main() {
       required: true,
       requiresArg: true,
       type: 'string',
+    })
+    .option('es5', {
+      describe:
+        'Create ES5 syntax compatible bundle along side standard bundle',
+      default: false,
+      type: 'boolean',
     })
     .option('root', {
       alias: 'r',
@@ -47,6 +55,7 @@ async function main() {
 
   const rootPath = cliYargs.root;
   const outPath = cliYargs.out;
+  const createES5Bundle = cliYargs.es5;
   const entrypoints: Array<string> = cliYargs._;
 
   const bundle = await createModuleGraph(rootPath, entrypoints);
@@ -56,7 +65,8 @@ async function main() {
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @flow
+ * ${'@'}flow
+ * ${'@'}generated
  *
  * Entrypoints:
  *   ${entrypoints.map(f => path.relative(rootPath, f)).join('\n *   ')}
@@ -69,6 +79,7 @@ async function main() {
       type: 'Program',
       // $FlowExpectedError[unclear-type]
       body: [] as Array<any>,
+      directives: [],
     },
   };
 
@@ -89,16 +100,33 @@ async function main() {
     ];
   }
 
-  const bundleSource = generate(bundleAST, {sourceMaps: true}, fileMapping);
+  // Generate bundle for Static Hermes
+  const shBundleSource = generate(bundleAST, {sourceMaps: true}, fileMapping);
+  await writeBundle(outPath, shBundleSource.code, shBundleSource.map);
 
-  await writeFile(
-    outPath,
-    bundleSource.code +
-      '\n//# sourceMappingURL=' +
-      path.basename(outPath) +
-      '.map\n',
-  );
-  await writeFile(outPath + '.map', JSON.stringify(bundleSource.map));
+  if (createES5Bundle) {
+    // Generate bundle for ES5 runtimes (aka normal Hermes)
+    const es5Bundle = transformFromAstSync(bundleAST, fileMapping, {
+      ast: true,
+      code: false,
+      presets: [
+        [
+          require.resolve('metro-react-native-babel-preset'),
+          {enableBabelRuntime: false},
+        ],
+      ],
+    });
+    const es5bundleSource = generate(
+      es5Bundle.ast,
+      {sourceMaps: true},
+      fileMapping,
+    );
+    await writeBundle(
+      outPath.replace('.js', '-es5.js'),
+      es5bundleSource.code,
+      es5bundleSource.map,
+    );
+  }
 }
 
 main().catch((err: mixed) => {
