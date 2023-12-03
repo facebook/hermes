@@ -178,8 +178,9 @@ ExecutionStatus Interpreter::caseIteratorBegin(
   if (LLVM_UNLIKELY(iterRecord == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  O1REG(IteratorBegin) = iterRecord->iterator.getHermesValue();
   O2REG(IteratorBegin) = iterRecord->nextMethod.getHermesValue();
+  // Write the result last in case it is the same register as O2REG.
+  O1REG(IteratorBegin) = iterRecord->iterator.getHermesValue();
   return ExecutionStatus::RETURNED;
 }
 
@@ -209,8 +210,9 @@ ExecutionStatus Interpreter::caseIteratorNext(
       NoAllocScope noAlloc{runtime};
       SmallHermesValue value = arr->at(runtime, i);
       if (LLVM_LIKELY(!value.isEmpty())) {
-        O1REG(IteratorNext) = value.unboxToHV(runtime);
         O2REG(IteratorNext) = HermesValue::encodeUntrustedNumberValue(i + 1);
+        // Write the result last in case it is the same register as O2REG.
+        O1REG(IteratorNext) = value.unboxToHV(runtime);
         return ExecutionStatus::RETURNED;
       }
     }
@@ -222,8 +224,9 @@ ExecutionStatus Interpreter::caseIteratorNext(
     if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    O1REG(IteratorNext) = valueRes->get();
     O2REG(IteratorNext) = HermesValue::encodeUntrustedNumberValue(i + 1);
+    // Write the result last in case it is the same register as O2REG.
+    O1REG(IteratorNext) = valueRes->get();
     return ExecutionStatus::RETURNED;
   }
   if (LLVM_UNLIKELY(O2REG(IteratorNext).isUndefined())) {
@@ -299,9 +302,11 @@ ExecutionStatus Interpreter::caseGetPNameList(
     return ExecutionStatus::EXCEPTION;
   }
   auto arr = *cr;
-  O1REG(GetPNameList) = arr.getHermesValue();
   O3REG(GetPNameList) = HermesValue::encodeUntrustedNumberValue(beginIndex);
   O4REG(GetPNameList) = HermesValue::encodeUntrustedNumberValue(endIndex);
+  // Write the result last in case it is the same register as one of the in/out
+  // operands.
+  O1REG(GetPNameList) = arr.getHermesValue();
   return ExecutionStatus::RETURNED;
 }
 
