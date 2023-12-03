@@ -14,6 +14,8 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
 import java.text.AttributedCharacterIterator;
+import java.util.Map;
+import java.util.Set;
 
 public interface IPlatformDateTimeFormatter {
   enum FormatMatcher {
@@ -34,28 +36,28 @@ public interface IPlatformDateTimeFormatter {
   }
 
   enum HourCycle {
-    H11,
-    H12,
-    H23,
-    H24,
-    UNDEFINED;
+    H11("h11", 'K'),
+    H12("h12", 'h'),
+    H23("h23", 'H'),
+    H24("h24", 'k'),
+    UNDEFINED("", '\0');
 
+    final private String value;
+    final private char skeleton;
+
+    HourCycle(String value, char skeleton) {
+      this.value = value;
+      this.skeleton = skeleton;
+    }
+
+    public char getSkeletonSymbol() {
+     return this.skeleton;
+    }
+
+    @NonNull
     @Override
     public String toString() {
-      switch (this) {
-        case H11:
-          return "h11";
-        case H12:
-          return "h12";
-        case H23:
-          return "h23";
-        case H24:
-          return "h24";
-        case UNDEFINED:
-          return "";
-        default:
-          throw new IllegalArgumentException();
-      }
+      return this.value;
     }
   }
 
@@ -81,7 +83,7 @@ public interface IPlatformDateTimeFormatter {
       }
     }
 
-    public String getSkeleonSymbol() {
+    public String getSkeletonSymbol() {
       switch (this) {
         case LONG:
           return "EEEE";
@@ -119,7 +121,7 @@ public interface IPlatformDateTimeFormatter {
       }
     }
 
-    public String getSkeleonSymbol() {
+    public String getSkeletonSymbol() {
       switch (this) {
         case LONG:
           return "GGGG";
@@ -154,7 +156,7 @@ public interface IPlatformDateTimeFormatter {
       }
     }
 
-    public String getSkeleonSymbol() {
+    public String getSkeletonSymbol() {
       switch (this) {
         case NUMERIC:
           return "yyyy";
@@ -196,7 +198,7 @@ public interface IPlatformDateTimeFormatter {
       }
     }
 
-    public String getSkeleonSymbol() {
+    public String getSkeletonSymbol() {
       switch (this) {
         case NUMERIC:
           return "M";
@@ -235,7 +237,7 @@ public interface IPlatformDateTimeFormatter {
       }
     }
 
-    public String getSkeleonSymbol() {
+    public String getSkeletonSymbol() {
       switch (this) {
         case NUMERIC:
           return "d";
@@ -268,12 +270,16 @@ public interface IPlatformDateTimeFormatter {
       }
     }
 
-    public String getSkeleonSymbol12() {
+    public String getSkeletonSymbol(HourCycle hourCycle) {
+      char hc = hourCycle.getSkeletonSymbol();
+
+      if (hc == '\0') return "";
+
       switch (this) {
         case NUMERIC:
-          return "h";
+          return String.format("%s", hc);
         case DIGIT2:
-          return "hh";
+          return String.format("%s%s", hc, hc);
         case UNDEFINED:
           return "";
         default:
@@ -281,18 +287,7 @@ public interface IPlatformDateTimeFormatter {
       }
     }
 
-    public String getSkeleonSymbol24() {
-      switch (this) {
-        case NUMERIC:
-          return "k";
-        case DIGIT2:
-          return "kk";
-        case UNDEFINED:
-          return "";
-        default:
-          throw new IllegalArgumentException();
-      }
-    }
+
   }
 
   enum Minute {
@@ -314,7 +309,7 @@ public interface IPlatformDateTimeFormatter {
       }
     }
 
-    public String getSkeleonSymbol() {
+    public String getSkeletonSymbol() {
       switch (this) {
         case NUMERIC:
           return "m";
@@ -347,7 +342,7 @@ public interface IPlatformDateTimeFormatter {
       }
     }
 
-    public String getSkeleonSymbol() {
+    public String getSkeletonSymbol() {
       switch (this) {
         case NUMERIC:
           return "s";
@@ -392,7 +387,7 @@ public interface IPlatformDateTimeFormatter {
       }
     }
 
-    public String getSkeleonSymbol() {
+    public String getSkeletonSymbol() {
       switch (this) {
         case LONG:
           return "zzzz";
@@ -546,14 +541,24 @@ public interface IPlatformDateTimeFormatter {
 
   String format(double n) throws JSRangeErrorException;
 
-  String fieldToString(AttributedCharacterIterator.Attribute attribute, String fieldValue);
+  String formatRange(double from, double to) throws JSRangeErrorException;
+
+  String fieldAttrsToSourceString(Set<Map.Entry<AttributedCharacterIterator.Attribute, Object>> attrs);
+
+  String fieldAttrsToTypeString(Set<Map.Entry<AttributedCharacterIterator.Attribute, Object>> attrs, String fieldValue);
 
   AttributedCharacterIterator formatToParts(double n) throws JSRangeErrorException;
+
+  AttributedCharacterIterator formatRangeToParts(double from, double to) throws JSRangeErrorException;
 
   String getDefaultCalendarName(ILocaleObject<?> mResolvedLocaleObject)
       throws JSRangeErrorException;
 
-  HourCycle getDefaultHourCycle(ILocaleObject<?> localeObject) throws JSRangeErrorException;
+  HourCycle getHourCycle12(ILocaleObject<?> localeObject) throws JSRangeErrorException;
+
+  HourCycle getHourCycle24(ILocaleObject<?> localeObject) throws JSRangeErrorException;
+
+  HourCycle getHourCycle(ILocaleObject<?> localeObject) throws JSRangeErrorException;
 
   String getDefaultTimeZone(ILocaleObject<?> localeObject) throws JSRangeErrorException;
 

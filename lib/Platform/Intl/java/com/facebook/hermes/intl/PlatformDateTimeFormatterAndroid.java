@@ -12,14 +12,23 @@ import android.os.Build;
 import androidx.annotation.Nullable;
 
 import java.text.AttributedCharacterIterator;
+import java.text.AttributedString;
+import java.text.CharacterIterator;
 import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
 
 public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormatter {
+  public static String SEPARATOR = " - ";
   private DateFormat mDateFormat = null;
 
   @Override
@@ -28,7 +37,63 @@ public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormat
   }
 
   @Override
-  public String fieldToString(AttributedCharacterIterator.Attribute field, String fieldValue) {
+  public String formatRange(double from, double to) {
+    return mDateFormat.format(new Date((long) from)) + SEPARATOR + mDateFormat.format(new Date((long) to));
+  }
+
+  public String fieldAttrsToSourceString(Set<Map.Entry<AttributedCharacterIterator.Attribute, Object>> attrs) {
+    Iterator<Map.Entry<AttributedCharacterIterator.Attribute, Object>> iterator = attrs.iterator();
+
+    if (!iterator.hasNext()) {
+      return "shared";
+    }
+
+    Map.Entry<AttributedCharacterIterator.Attribute, Object> entry;
+    Object value = null;
+    do {
+      entry = iterator.next();
+
+      if (entry.getKey() == SpanField.DATE_INTERVAL_SPAN) {
+        value = iterator.next().getValue();
+      }
+    } while (iterator.hasNext());
+
+    if (!(value instanceof Integer)) {
+      return "shared";
+    }
+
+    if ((Integer) value == 0) {
+      return "startRange";
+    }
+
+    if ((Integer) value == 1) {
+      return "endRange";
+    }
+
+    return "shared";
+  }
+
+  @Override
+  public String fieldAttrsToTypeString(Set<Map.Entry<AttributedCharacterIterator.Attribute, Object>> attrs, String fieldValue) {
+    Iterator<Map.Entry<AttributedCharacterIterator.Attribute, Object>> iterator = attrs.iterator();
+
+    if (!iterator.hasNext()) {
+      return "literal";
+    }
+
+    Map.Entry<AttributedCharacterIterator.Attribute, Object> entry;
+    do {
+      entry = iterator.next();
+
+      if (entry.getKey() instanceof DateFormat.Field || entry.getKey().toString().startsWith("java.text.DateFormat$Field")) {
+        return this.fieldToString(entry.getKey(), fieldValue);
+      }
+    } while (iterator.hasNext());
+
+    return "literal";
+  }
+
+  private String fieldToString(AttributedCharacterIterator.Attribute field, String fieldValue) {
     if (field == DateFormat.Field.DAY_OF_WEEK) {
       return "weekday";
     }
@@ -80,8 +145,9 @@ public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormat
       return "fractionalSecond";
     }
     // TODO:: There must be a better way to do this.
-    if (field.toString().equals("android.icu.text.DateFormat$Field(related year)"))
+    if (field.toString().equals("java.text.DateFormat$Field(related year)"))
       return "relatedYear";
+
     // Report unsupported/unexpected date fields as literals.
     return "literal";
   }
@@ -90,6 +156,63 @@ public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormat
   public AttributedCharacterIterator formatToParts(double n) {
     return mDateFormat.formatToCharacterIterator(n);
   }
+
+  enum DateTimeFormatterSource {
+    START_RANGE,
+    SHARED,
+    END_RANGE
+  }
+
+
+  @Override
+  public AttributedCharacterIterator formatRangeToParts(double from, double to) {
+    AttributedCharacterIterator fromIterator = mDateFormat.formatToCharacterIterator(from);
+    AttributedCharacterIterator toIterator = mDateFormat.formatToCharacterIterator(to);
+
+    StringBuilder sb = new StringBuilder();
+
+    char ch = fromIterator.current();
+    while (ch != CharacterIterator.DONE)
+    {
+      sb.append(ch);
+      ch = fromIterator.next();
+    }
+
+    int separatorLength = SEPARATOR.length();
+    sb.append(SEPARATOR);
+
+    ch = toIterator.current();
+    while (ch != CharacterIterator.DONE)
+    {
+      sb.append(ch);
+
+      ch = toIterator.next();
+    }
+
+    AttributedString combined = new AttributedString(sb.toString());
+
+    fromIterator = mDateFormat.formatToCharacterIterator(from);
+    toIterator = mDateFormat.formatToCharacterIterator(to);
+
+    HashMap<AttributedCharacterIterator.Attribute, Object> map = new HashMap<AttributedCharacterIterator.Attribute, Object>();
+    map.put(SpanField.DATE_INTERVAL_SPAN, 0);
+    combined.addAttributes(map, 0, fromIterator.getEndIndex());
+
+    int fromIndex = fromIterator.getEndIndex();
+
+    map = new HashMap<>();
+    map.put(SpanField.DATE_INTERVAL_SPAN, 2);
+    combined.addAttributes(map, fromIndex, fromIndex + separatorLength);
+
+    map = new HashMap<>();
+    map.put(SpanField.DATE_INTERVAL_SPAN, 1);
+
+    int toIndex = toIterator.getEndIndex();
+    combined.addAttributes(map, fromIndex + separatorLength, fromIndex + separatorLength + toIndex);
+
+    return combined.getIterator();
+  }
+
 
   @Override
   public String getDefaultCalendarName(ILocaleObject<?> mResolvedLocaleObject)
@@ -124,28 +247,109 @@ public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormat
   }
 
   @Override
-  public HourCycle getDefaultHourCycle(ILocaleObject<?> localeObject) throws JSRangeErrorException {
+  public HourCycle getHourCycle(ILocaleObject<?> localeObject) throws JSRangeErrorException {
+    List<String> exts = localeObject.getUnicodeExtensions("hc");
+    if (exts.size() > 0) {
+      if (exts.contains("h11")) {
+        return HourCycle.H11;
+      } else if (exts.contains("h12")) {
+        return HourCycle.H12;
+      } else if (exts.contains("h23")) {
+        return HourCycle.H23;
+      } else if (exts.contains("h24")) {
+        return HourCycle.H24;
+      }
+    }
+
     HourCycle hourCycle;
+
     try {
       String dateFormatPattern =
-          ((java.text.SimpleDateFormat)
-                  DateFormat.getTimeInstance(DateFormat.FULL, (Locale) localeObject.getLocale()))
-              .toPattern();
-      String dateFormatPatternWithoutLiterals =
-          PatternUtils.getPatternWithoutLiterals(dateFormatPattern);
-      if (dateFormatPatternWithoutLiterals.contains(String.valueOf('h'))) hourCycle = HourCycle.H12;
+              ((SimpleDateFormat)
+                      DateFormat.getTimeInstance(DateFormat.FULL, (Locale) localeObject.getLocale()))
+                      .toPattern();
+      String dateFormatPatternWithoutLiterals = PatternUtils.getPatternWithoutLiterals(dateFormatPattern);
+
+      if (dateFormatPatternWithoutLiterals.contains(String.valueOf('h')))
+        hourCycle = HourCycle.H12;
       else if (dateFormatPatternWithoutLiterals.contains(String.valueOf('K')))
         hourCycle = HourCycle.H11;
       else if (dateFormatPatternWithoutLiterals.contains(String.valueOf('H')))
         hourCycle = HourCycle.H23;
-      else // TODO :: Make it more tight.
-      hourCycle = HourCycle.H24;
+      else if (dateFormatPatternWithoutLiterals.contains(String.valueOf('k')))
+        hourCycle = HourCycle.H24;
+      else
+        hourCycle = HourCycle.H23;
     } catch (ClassCastException ex) {
-      hourCycle = HourCycle.H24;
+      hourCycle = HourCycle.H23;
     }
 
     return hourCycle;
   }
+
+  @Override
+  public HourCycle getHourCycle12(ILocaleObject<?> localeObject) throws JSRangeErrorException {
+    List<String> exts = localeObject.getUnicodeExtensions("hc");
+    if (exts.size() > 0) {
+      if (exts.contains("h11") || exts.contains("h23")) {
+        return HourCycle.H11;
+      } else if (exts.contains("h12") || exts.contains("h24")) {
+        return HourCycle.H12;
+      }
+    }
+
+    try {
+      SimpleDateFormat sdf =
+              ((SimpleDateFormat)
+                      DateFormat.getTimeInstance(DateFormat.FULL, (Locale) localeObject.getLocale()));
+
+      String pattern = PatternUtils.getPatternWithoutLiterals(sdf.toPattern());
+
+      if (pattern.contains("K") || pattern.contains("H")) {
+        return HourCycle.H11;
+      } else if (pattern.contains("k") || pattern.contains("h")) {
+        return HourCycle.H12;
+      }
+    } catch (IllegalArgumentException ex) {
+    } catch (ClassCastException ex) {
+    }
+
+    return HourCycle.H11;
+  }
+
+  @Override
+  public HourCycle getHourCycle24(ILocaleObject<?> localeObject) throws JSRangeErrorException {
+    List<String> exts = localeObject.getUnicodeExtensions("hc");
+
+    if (exts.size() > 0) {
+      if (exts.contains("h23") || exts.contains("h11")) {
+        return HourCycle.H23;
+      } else if (exts.contains("h24") || exts.contains("h12")) {
+        return HourCycle.H24;
+      }
+    }
+
+
+    try {
+      SimpleDateFormat sdf =
+              ((SimpleDateFormat)
+                      DateFormat.getTimeInstance(DateFormat.FULL, (Locale) localeObject.getLocale()));
+
+      String pattern = PatternUtils.getPatternWithoutLiterals(sdf.toPattern());
+
+      if (pattern.contains("K") || pattern.contains("H")) {
+        return HourCycle.H23;
+      } else if (pattern.contains("k") || pattern.contains("h")) {
+        return HourCycle.H24;
+      }
+    } catch (IllegalArgumentException ex) {
+    } catch (ClassCastException ex) {
+    }
+
+    return HourCycle.H23;
+  }
+
+
 
   @Override
   public String getDefaultTimeZone(ILocaleObject<?> localeObject) throws JSRangeErrorException {
@@ -209,9 +413,20 @@ public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormat
           DateFormat.getTimeInstance(DateFormat.FULL, (Locale) resolvedLocaleObject.getLocale());
 
     if (!JSObjects.isUndefined(timeZone) && !JSObjects.isNull(timeZone)) {
-      TimeZone timeZoneObject = TimeZone.getTimeZone(JSObjects.getJavaString(timeZone));
+      TimeZone timeZoneObject = this.parseTimeZoneIdentifierFallback(JSObjects.getJavaString(timeZone));
       mDateFormat.setTimeZone(timeZoneObject);
     }
+  }
+
+  private TimeZone parseTimeZoneIdentifierFallback(String timeZone) {
+
+    // TimeZone.getTimeZone doesn't support raw offset strings
+    if (timeZone.startsWith("-") || timeZone.startsWith("+")) {
+      return TimeZone.getTimeZone("GMT" + timeZone);
+    } else {
+      return TimeZone.getTimeZone(timeZone);
+    }
+
   }
 
   @Override

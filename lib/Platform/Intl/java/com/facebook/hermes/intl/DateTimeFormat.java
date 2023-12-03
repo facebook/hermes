@@ -12,12 +12,13 @@ import android.os.Build;
 import androidx.annotation.Nullable;
 
 import com.facebook.proguard.annotations.DoNotStrip;
+
 import java.text.AttributedCharacterIterator;
 import java.text.CharacterIterator;
+import java.text.StringCharacterIterator;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,6 +78,10 @@ public class DateTimeFormat {
   IPlatformDateTimeFormatter mPlatformDateTimeFormatter;
 
   private ILocaleObject<?> mResolvedLocaleObject = null;
+
+  // We need to preserve the matched locale without options
+  // to handle hourCycle formatting
+  private ILocaleObject<?> mResolvedDataLocaleObject = null;
 
   // This is a hacky way to avoid the extensions that we add from being shown in "resolvedOptions"
   // ..
@@ -171,6 +176,12 @@ public class DateTimeFormat {
         return id;
       }
     }
+
+    String offset = getTimeZoneOffset(timeZone);
+    if (offset != null) {
+      return offset;
+    }
+
     throw new JSRangeErrorException("Invalid timezone name!");
   }
 
@@ -178,19 +189,145 @@ public class DateTimeFormat {
     return mPlatformDateTimeFormatter.getDefaultTimeZone(mResolvedLocaleObject);
   }
 
+  // 21.4.1.33.1 IsTimeZoneOffsetString ( offsetString )
+  // The abstract operation IsTimeZoneOffsetString takes argument offsetString (a String) and returns a Boolean.
+  // The return value indicates whether offsetString conforms to the grammar given by UTCOffset.
+  // It performs the following steps when called:
+  private String getTimeZoneOffset(String offsetString) {
+    // 1. Let parseResult be ParseText(StringToCodePoints(offsetString), UTCOffset).
+    // 2. If parseResult is a List of errors, return false.
+    // 3. Return true.
+
+    int length = offsetString.length();
+
+    boolean isInvalidInJava = false;
+
+    // Java supports "Z" and "+3" while JavaScript does not.
+    // The shortest JavaScript zone offset is "+03" and the longest is "+22:00"
+    // See https://docs.oracle.com/javase/8/docs/api/java/time/ZoneOffset.html#of-java.lang.String-
+    if (offsetString.equals("Z") || length < 3 || length > 6) {
+      return null;
+    }
+
+    // Normalize -00:00
+    if (offsetString.equals("-00") || offsetString.equals("-0000") || offsetString.equals("-00:00") ||
+        offsetString.equals("\u221200") || offsetString.equals("\u22120000") || offsetString.equals("\u221200:00")
+        || offsetString.equals("+00") || offsetString.equals("+0000") || offsetString.equals("+00:00")) {
+      return "+00:00";
+    }
+
+    StringBuilder builder = new StringBuilder();
+    StringCharacterIterator i = new StringCharacterIterator(offsetString);
+
+    char next = i.first();
+    if (next == StringCharacterIterator.DONE) {
+      return null;
+    }
+
+    if (next == '+') {
+      builder.append('+');
+    } else if (next == '-' || next == '\u2212') {
+      builder.append('-');
+    } else {
+      return null;
+    }
+
+    next = i.next();
+
+    // + is invalid
+    if (next == StringCharacterIterator.DONE) {
+      return null;
+    }
+
+    boolean isTwenty = next == '2';
+    if (next == '0' || next == '1' || isTwenty) {
+      builder.append(next);
+    } else {
+      return null;
+    }
+
+    next = i.next();
+
+    // +2 is invalid
+    if (next == StringCharacterIterator.DONE) {
+      return null;
+    }
+
+
+    if (!isTwenty && next >= '0' && next <= '9') {
+      if (next >= '8') {
+        isInvalidInJava = true;
+      }
+      builder.append(next);
+    } else if (isTwenty && next >= '0' && next <= '3') {
+      isInvalidInJava = true;
+      builder.append(next);
+    } else {
+      // +0A is invalid and +24 is invalid
+      return null;
+    }
+
+    next = i.next();
+    if (next == StringCharacterIterator.DONE) {
+      return builder + ":00";
+    }
+
+    if (next == ':') {
+      next = i.next();
+    }
+
+    builder.append(':');
+
+
+    // +12: is invalid
+    if (next == StringCharacterIterator.DONE) {
+      return null;
+    }
+
+    if (next >= '0' && next <= '5') {
+      builder.append(next);
+    } else {
+      // +12:9 is invalid
+      return null;
+    }
+
+    next = i.next();
+
+    // +12:6 is invalid
+    if (next == StringCharacterIterator.DONE) {
+      return null;
+    }
+
+    if (next >= '0' && next <= '9') {
+      builder.append(next);
+    } else {
+      // +12:5A is invalid
+      return null;
+    }
+
+    next = i.next();
+
+    // +12532 or +12:532 is invalid
+    if (next != StringCharacterIterator.DONE) {
+      return null;
+    }
+
+    return builder.toString();
+  }
+
+
   // https://tc39.es/ecma402/#sec-initializedatetimeformat
   private void initializeDateTimeFormat(List<String> locales, Map<String, Object> inOptions)
       throws JSRangeErrorException {
-
     List<String> relevantExtensionKeys = Arrays.asList("ca", "nu", "hc");
 
-    // 2
+    // 2.
     Object options = ToDateTimeOptions(inOptions, "any", "date");
 
-    // 3
+    // 3 - 4.
     Object opt = JSObjects.newObject();
 
-    // 4,5,
+    // 5 - 6.
     Object matcher =
         OptionHelpers.GetOption(
             options,
@@ -200,7 +337,7 @@ public class DateTimeFormat {
             Constants.LOCALEMATCHER_BESTFIT);
     JSObjects.Put(opt, "localeMatcher", matcher);
 
-    // 6 - 8
+    // 7 - 9.
     Object calendar =
         OptionHelpers.GetOption(
             options,
@@ -214,7 +351,7 @@ public class DateTimeFormat {
     }
     JSObjects.Put(opt, "ca", calendar);
 
-    // 9 - 11
+    // 10 - 12.
     Object numberingSystem =
         OptionHelpers.GetOption(
             options,
@@ -228,7 +365,7 @@ public class DateTimeFormat {
     }
     JSObjects.Put(opt, "nu", numberingSystem);
 
-    // 12 - 15
+    // 13 - 16.
     Object hour12 =
         OptionHelpers.GetOption(
             options,
@@ -246,14 +383,17 @@ public class DateTimeFormat {
 
     if (!JSObjects.isUndefined(hour12)) hourCycle = JSObjects.Null();
 
-    JSObjects.Put(opt, "hc", hourCycle);
+    mHour12 = hour12;
 
-    // 16 - 23
+    JSObjects.Put(opt, "hc", hourCycle);
+    // 18 - 20.
     HashMap<String, Object> r = LocaleResolver.resolveLocale(locales, opt, relevantExtensionKeys);
 
     mResolvedLocaleObject = (ILocaleObject<?>) JSObjects.getJavaMap(r).get("locale");
+    mResolvedDataLocaleObject = (ILocaleObject<?>) JSObjects.getJavaMap(r).get("dataLocale");
     mResolvedLocaleObjectForResolvedOptions = mResolvedLocaleObject.cloneObject();
 
+    // 21.
     Object calendarResolved = JSObjects.Get(r, "ca");
     if (!JSObjects.isNull(calendarResolved)) {
       useDefaultCalendar = false;
@@ -263,6 +403,7 @@ public class DateTimeFormat {
       mCalendar = mPlatformDateTimeFormatter.getDefaultCalendarName(mResolvedLocaleObject);
     }
 
+    // 22.
     Object numeringSystemResolved = JSObjects.Get(r, "nu");
     if (!JSObjects.isNull(numeringSystemResolved)) {
       useDefaultNumberSystem = false;
@@ -273,9 +414,26 @@ public class DateTimeFormat {
           mPlatformDateTimeFormatter.getDefaultNumberingSystem(mResolvedLocaleObject);
     }
 
-    Object hourCycleResolved = JSObjects.Get(r, "hc");
+    IPlatformDateTimeFormatter.HourCycle hc;
 
-    // 24 - 27
+    if (JSObjects.isBoolean(hour12)) {
+      if (JSObjects.getJavaBoolean(hour12)) {
+        hc = mPlatformDateTimeFormatter.getHourCycle12(mResolvedDataLocaleObject);
+      } else {
+        hc = mPlatformDateTimeFormatter.getHourCycle24(mResolvedDataLocaleObject);
+      }
+    } else {
+      Object hourCycleResolved = JSObjects.Get(r, "hc");
+      if (JSObjects.isNull(hourCycleResolved)) {
+        hc = mPlatformDateTimeFormatter.getHourCycle(mResolvedDataLocaleObject);
+      } else {
+        hc = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.HourCycle.class, hourCycleResolved);
+      }
+    }
+
+    mHourCycle = hc;
+
+    // 29 - 35.
     Object timeZone = JSObjects.Get(options, "timeZone");
     if (JSObjects.isUndefined(timeZone)) {
       timeZone = DefaultTimeZone();
@@ -284,7 +442,7 @@ public class DateTimeFormat {
     }
     mTimeZone = timeZone;
 
-    // 28 - 34
+    // 36 - 38.
     Object formatMatcher =
         OptionHelpers.GetOption(
             options,
@@ -296,7 +454,7 @@ public class DateTimeFormat {
         OptionHelpers.searchEnum(
             IPlatformDateTimeFormatter.FormatMatcher.class, JSObjects.getJavaString(formatMatcher));
 
-    // 29, 35
+    // 39.
     Object weekDay =
         OptionHelpers.GetOption(
             options,
@@ -407,6 +565,7 @@ public class DateTimeFormat {
             JSObjects.Undefined());
     mDateStyle = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.DateStyle.class, dateStyle);
 
+    // 43.
     Object timeStyle =
         OptionHelpers.GetOption(
             options,
@@ -416,38 +575,10 @@ public class DateTimeFormat {
             JSObjects.Undefined());
     mTimeStyle = OptionHelpers.searchEnum(IPlatformDateTimeFormatter.TimeStyle.class, timeStyle);
 
-    // 36
-    if (JSObjects.isUndefined(hour) && JSObjects.isUndefined(timeStyle)) {
+    // 48.
+    if (mTimeStyle == IPlatformDateTimeFormatter.TimeStyle.UNDEFINED && mHour == IPlatformDateTimeFormatter.Hour.UNDEFINED) {
       mHourCycle = IPlatformDateTimeFormatter.HourCycle.UNDEFINED;
-    } else {
-      IPlatformDateTimeFormatter.HourCycle hcDefault =
-          mPlatformDateTimeFormatter.getDefaultHourCycle(mResolvedLocaleObject);
-      IPlatformDateTimeFormatter.HourCycle hc;
-
-      if (JSObjects.isNull(hourCycleResolved)) {
-        hc = hcDefault;
-      } else {
-        hc =
-            OptionHelpers.searchEnum(IPlatformDateTimeFormatter.HourCycle.class, hourCycleResolved);
-      }
-
-      if (!JSObjects.isUndefined(hour12)) {
-        if (JSObjects.getJavaBoolean(hour12)) { // true
-          if (hcDefault == IPlatformDateTimeFormatter.HourCycle.H11
-              || hcDefault == IPlatformDateTimeFormatter.HourCycle.H23)
-            hc = IPlatformDateTimeFormatter.HourCycle.H11;
-          else hc = IPlatformDateTimeFormatter.HourCycle.H12;
-        } else {
-          if (hcDefault == IPlatformDateTimeFormatter.HourCycle.H11
-              || hcDefault == IPlatformDateTimeFormatter.HourCycle.H23)
-            hc = IPlatformDateTimeFormatter.HourCycle.H23;
-          else hc = IPlatformDateTimeFormatter.HourCycle.H24;
-        }
-      }
-      mHourCycle = hc;
     }
-
-    mHour12 = hour12;
   }
 
   @DoNotStrip
@@ -584,6 +715,69 @@ public class DateTimeFormat {
     return finalResolvedOptions;
   }
 
+  private List<Map<String, String>> mapAttributedCharacterIteratorToParts(AttributedCharacterIterator iterator) {
+    ArrayList<Map<String, String>> ret = new ArrayList<>();
+    StringBuilder sb = new StringBuilder();
+    for (char ch = iterator.first(); ch != CharacterIterator.DONE; ch = iterator.next()) {
+      sb.append(ch);
+      if (iterator.getIndex() + 1 == iterator.getRunLimit()) {
+        Map<AttributedCharacterIterator.Attribute, Object> attributes =
+            iterator.getAttributes();
+
+        String value = sb.toString();
+        sb.setLength(0);
+
+        String type;
+        if (attributes.size() > 0) {
+          type = mPlatformDateTimeFormatter.fieldAttrsToTypeString(attributes.entrySet(), value);
+        } else {
+          type = "literal";
+        }
+
+        HashMap<String, String> part = new HashMap<>();
+        part.put("type", type);
+        part.put("value", value);
+        ret.add(part);
+      }
+    }
+
+    return ret;
+  }
+
+  private List<Map<String, String>> mapAttributedCharacterIteratorToSourceParts(AttributedCharacterIterator iterator) {
+    ArrayList<Map<String, String>> ret = new ArrayList<>();
+    StringBuilder sb = new StringBuilder();
+
+    for (char ch = iterator.first(); ch != CharacterIterator.DONE; ch = iterator.next()) {
+      sb.append(ch);
+      if (iterator.getIndex() + 1 == iterator.getRunLimit()) {
+        HashMap<String, String> part = new HashMap<>();
+
+        String value = sb.toString();
+        sb.setLength(0);
+
+        part.put("value", value);
+
+        Map<AttributedCharacterIterator.Attribute, Object> attributes = iterator.getAttributes();
+        String type, source;
+
+        if (attributes.size() == 0) {
+          type = "literal";
+          source = "shared";
+        } else {
+          type = mPlatformDateTimeFormatter.fieldAttrsToTypeString(attributes.entrySet(), value);
+          source = mPlatformDateTimeFormatter.fieldAttrsToSourceString(attributes.entrySet());
+        }
+
+        part.put("type", type);
+        part.put("source", source);
+        ret.add(part);
+      }
+    }
+
+    return ret;
+  }
+
   // Implementer note: This method corresponds roughly to
   // https://tc39.es/ecma402/#sec-formatdatetime
   //
@@ -601,30 +795,24 @@ public class DateTimeFormat {
   // https://tc39.es/ecma402/#sec-formatdatetimetoparts
   @DoNotStrip
   public List<Map<String, String>> formatToParts(double jsTimeValue) throws JSRangeErrorException {
-    ArrayList<Map<String, String>> ret = new ArrayList<>();
     AttributedCharacterIterator iterator = mPlatformDateTimeFormatter.formatToParts(jsTimeValue);
-    StringBuilder sb = new StringBuilder();
-    for (char ch = iterator.first(); ch != CharacterIterator.DONE; ch = iterator.next()) {
-      sb.append(ch);
-      if (iterator.getIndex() + 1 == iterator.getRunLimit()) {
-        Iterator<AttributedCharacterIterator.Attribute> keyIterator =
-            iterator.getAttributes().keySet().iterator();
-        String key;
-        if (keyIterator.hasNext()) {
-          key = mPlatformDateTimeFormatter.fieldToString(keyIterator.next(), sb.toString());
-        } else {
-          key = "literal";
-        }
-        String value = sb.toString();
-        sb.setLength(0);
 
-        HashMap<String, String> part = new HashMap<>();
-        part.put("type", key);
-        part.put("value", value);
-        ret.add(part);
-      }
-    }
+    return this.mapAttributedCharacterIteratorToParts(iterator);
+  }
 
-    return ret;
+  // Implementer note: This method corresponds roughly to
+  // https://tc39.es/ecma402/#sec-formatdatetimerange
+  @DoNotStrip
+  public String formatRange(double jsTimeValueFrom, double jsTimeValueTo) throws JSRangeErrorException {
+    return mPlatformDateTimeFormatter.formatRange(jsTimeValueFrom, jsTimeValueTo);
+  }
+
+  // Implementer note: This method corresponds roughly to
+  // https://tc39.es/ecma402/#sec-formatdatetimerangetoparts
+  @DoNotStrip
+  public List<Map<String, String>> formatRangeToParts(double jsTimeValueFrom, double jsTimeValueTo) throws JSRangeErrorException {
+    AttributedCharacterIterator iterator = mPlatformDateTimeFormatter.formatRangeToParts(jsTimeValueFrom, jsTimeValueTo);
+
+    return this.mapAttributedCharacterIteratorToSourceParts(iterator);
   }
 }

@@ -1,2 +1,3 @@
 .gradle
 .externalNativeBuild
+local.properties

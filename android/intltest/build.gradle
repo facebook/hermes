@@ -58,7 +58,7 @@ task prepareTests() {
 
 // TODO: Figure out how to deduplicate this file and intl/build.gradle
 android {
-  compileSdkVersion 28
+  compileSdkVersion 31
 
   defaultConfig {
     minSdkVersion 16

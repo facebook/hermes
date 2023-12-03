@@ -18,6 +18,7 @@ public class LocaleMatcher {
 
   public static class LocaleMatchResult {
     public ILocaleObject<?> matchedLocale;
+    public ILocaleObject<?> dataLocale = null;
     public HashMap<String, String> extensions = new HashMap<>();
   }
 
@@ -56,12 +57,14 @@ public class LocaleMatcher {
       String availableLocale = BestAvailableLocale(availableLocales, noExtensionLocale);
       if (!availableLocale.isEmpty()) {
         result.matchedLocale = LocaleObject.createFromLocaleId(availableLocale);
+        result.dataLocale = requestedLocaleObject;
         result.extensions = requestedLocaleObject.getUnicodeExtensions();
         return result;
       }
     }
 
     result.matchedLocale = LocaleObject.createDefault();
+    result.dataLocale = LocaleObject.createDefault();
     return result;
   }
 
@@ -139,12 +142,14 @@ public class LocaleMatcher {
       ULocale availableLocale = bestFitBestAvailableLocale(requestedLocaleObject);
       if (availableLocale != null) {
         result.matchedLocale = LocaleObjectICU.createFromULocale(availableLocale);
+        result.dataLocale = requestedLocaleObject;
         result.extensions = requestedLocaleObject.getUnicodeExtensions();
         return result;
       }
     }
 
     result.matchedLocale = LocaleObjectICU.createDefault();
+    result.dataLocale = LocaleObjectICU.createDefault();
     return result;
   }
 

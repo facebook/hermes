@@ -150,8 +150,9 @@ class DateTimeFormat : public vm::DecoratedObject::Decoration {
   std::u16string formatRange(double jsTimeValueFrom,
                              double jsTimeValueTo) noexcept;
   std::vector<Part> formatToParts(double jsTimeValue) noexcept;
-  std::vector<Part> formatRangeToParts(double jsTimeValueFrom,
-                                       double jsTimeValueTo) noexcept;
+  std::vector<Part> formatRangeToParts(
+      double jsTimeValueFrom,
+      double jsTimeValueTo) noexcept;
 };
 
 class NumberFormat : public vm::DecoratedObject::Decoration {

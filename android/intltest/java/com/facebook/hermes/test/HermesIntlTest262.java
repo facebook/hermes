@@ -81,8 +81,7 @@ public final class HermesIntlTest262 {
 
   protected static Set<String> unsupportedFeatures = new HashSet<String>(Arrays.asList(
       "Temporal",
-      "Intl.NumberFormat-v3",
-      "Intl.DateTimeFormat-formatRange"
+      "Intl.NumberFormat-v3"
   ));
 
   protected List<String> getFeaturesList() {
@@ -269,10 +268,6 @@ public final class HermesIntlTest262 {
             "test262/test/intl402/DateTimeFormat/constructor-options-order-fractionalSecondDigits.js",
             "test262/test/intl402/DateTimeFormat/constructor-options-order-dayPeriod.js",
             "test262/test/intl402/DateTimeFormat/constructor-options-timeZoneName-valid.js",
-            "test262/test/intl402/DateTimeFormat/prototype/format/offset-timezone-gmt-same.js",
-            "test262/test/intl402/DateTimeFormat/prototype/formatToParts/offset-timezone-correct.js",
-            "test262/test/intl402/DateTimeFormat/prototype/formatToParts/temporal-objects-resolved-time-zone.js",
-            "test262/test/intl402/DateTimeFormat/prototype/format/temporal-objects-resolved-time-zone.js",
             "test262/test/intl402/DateTimeFormat/subclassing.js",
             "test262/test/intl402/DateTimeFormat/proto-from-ctor-realm.js",
             // TODO: Investigate why this fails.
@@ -280,10 +275,6 @@ public final class HermesIntlTest262 {
             "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/order.js",
             "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/order-style.js",
             "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/order-fractionalSecondDigits.js",
-            "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-dateStyle.js",
-            "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-timeStyle.js",
-            "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/offset-timezone-basic.js",
-            "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/offset-timezone-change.js",
             "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/order-dayPeriod.js",
             // Requires Intl.supportedValuesOf
             "test262/test/intl402/DateTimeFormat/timezone-case-insensitive.js"));
@@ -389,7 +380,62 @@ public final class HermesIntlTest262 {
             "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-zh-TW.js",
             "test262/test/intl402/NumberFormat/prototype/formatToParts/percent-en-US.js",
             "test262/test/intl402/NumberFormat/prototype/formatToParts/engineering-scientific-zh-TW.js",
-            "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-zh-TW.js"));
+            "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-zh-TW.js",
+            "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-negative-ja-JP.js",
+            "test262/test/intl402/NumberFormat/prototype/format/format-rounding-increment-50.js",
+            "test262/test/intl402/NumberFormat/prototype/format/format-rounding-increment-25.js",
+            "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-negative-currency-en-US.js",
+            "test262/test/intl402/NumberFormat/test-option-roundingPriority-mixed-options.js",
+            "test262/test/intl402/NumberFormat/prototype/resolvedOptions/return-keys-order-default.js",
+            "test262/test/intl402/NumberFormat/prototype/format/signDisplay-negative-de-DE.js",
+            "test262/test/intl402/NumberFormat/prototype/formatRangeToParts/name.js",
+            "test262/test/intl402/NumberFormat/prototype/format/signDisplay-negative-en-US.js",
+            "test262/test/intl402/NumberFormat/test-option-roundingPriority.js",
+            "test262/test/intl402/NumberFormat/prototype/format/signDisplay-negative-currency-de-DE.js",
+            "test262/test/intl402/NumberFormat/prototype/formatRangeToParts/invoked-as-func.js",
+            "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-negative-currency-ko-KR.js",
+            "test262/test/intl402/NumberFormat/prototype/formatRange/invoked-as-func.js",
+            "test262/test/intl402/NumberFormat/prototype/format/format-rounding-increment-2000.js",
+            "test262/test/intl402/NumberFormat/prototype/format/format-rounding-increment-5.js",
+            "test262/test/intl402/NumberFormat/constructor-options-throwing-getters-trailing-zero-display.js",
+            "test262/test/intl402/NumberFormat/prototype/formatRange/builtin.js",
+            "test262/test/intl402/NumberFormat/prototype/formatRangeToParts/prop-desc.js",
+            "test262/test/intl402/NumberFormat/prototype/formatRange/pt-PT.js",
+            "test262/test/intl402/NumberFormat/prototype/format/format-rounding-increment-2.js",
+            "test262/test/intl402/NumberFormat/prototype/formatRange/nan-arguments-throws.js",
+            "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-negative-zh-TW.js",
+            "test262/test/intl402/NumberFormat/prototype/format/format-rounding-increment-250.js",
+            "test262/test/intl402/NumberFormat/prototype/formatRangeToParts/length.js",
+            "test262/test/intl402/NumberFormat/prototype/format/useGrouping-extended-de-DE.js",
+            "test262/test/intl402/NumberFormat/prototype/format/format-rounding-increment-5000.js",
+            "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-negative-currency-de-DE.js",
+            "test262/test/intl402/NumberFormat/throws-for-maximumFractionDigits-over-limit.js",
+            "test262/test/intl402/NumberFormat/prototype/formatRange/length.js",
+            "test262/test/intl402/NumberFormat/prototype/format/numbering-systems.js",
+            "test262/test/intl402/NumberFormat/constructor-roundingIncrement.js",
+            "test262/test/intl402/NumberFormat/constructor-options-throwing-getters-rounding-increment.js",
+            "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-negative-ko-KR.js",
+            "test262/test/intl402/NumberFormat/prototype/format/signDisplay-negative-currency-ko-KR.js",
+            "test262/test/intl402/NumberFormat/prototype/format/format-rounding-increment-2500.js",
+            "test262/test/intl402/NumberFormat/constructor-signDisplay-negative.js",
+            "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-negative-currency-ja-JP.js",
+            "test262/test/intl402/NumberFormat/constructor-options-throwing-getters-rounding-priority.js",
+            "test262/test/intl402/NumberFormat/prototype/format/format-rounding-increment-500.js",
+            "test262/test/intl402/NumberFormat/prototype/format/signDisplay-negative-currency-zh-TW.js",
+            "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-negative-de-DE.js",
+            "test262/test/intl402/NumberFormat/prototype/format/value-decimal-string.js",
+            "test262/test/intl402/NumberFormat/prototype/formatRangeToParts/nan-arguments-throws.js",
+            "test262/test/intl402/NumberFormat/throws-for-minimumFractionDigits-over-limit.js",
+            "test262/test/intl402/NumberFormat/prototype/formatRangeToParts/en-US.js",
+            "test262/test/intl402/NumberFormat/prototype/formatRange/x-greater-than-y-not-throws.js",
+            "test262/test/intl402/NumberFormat/prototype/format/format-rounding-increment-200.js",
+            "test262/test/intl402/NumberFormat/prototype/format/signDisplay-negative-ja-JP.js",
+            "test262/test/intl402/NumberFormat/prototype/formatRangeToParts/x-greater-than-y-not-throws.js",
+            "test262/test/intl402/NumberFormat/prototype/formatRange/name.js",
+            "test262/test/intl402/NumberFormat/prototype/formatRange/en-US.js",
+            "test262/test/intl402/NumberFormat/prototype/format/format-rounding-priority-more-precision.js",
+            "test262/test/intl402/NumberFormat/prototype/formatRangeToParts/builtin.js"
+        ));
 
     // Misc
     skipList.addAll(

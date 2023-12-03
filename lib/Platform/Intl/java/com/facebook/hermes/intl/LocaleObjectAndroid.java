@@ -11,6 +11,7 @@ import android.os.Build;
 import android.text.TextUtils;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
@@ -244,7 +245,7 @@ public class LocaleObjectAndroid implements ILocaleObject<Locale> {
   }
 
   @Override
-  public void setUnicodeExtensions(String key, ArrayList<String> value)
+  public void setUnicodeExtensions(String key, List<String> value)
       throws JSRangeErrorException {
     ensureNotDirty();
     ensureParsedLocaleIdentifier();

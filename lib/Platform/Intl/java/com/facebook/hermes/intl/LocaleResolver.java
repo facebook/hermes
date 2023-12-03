@@ -39,6 +39,8 @@ public class LocaleResolver {
           LocaleMatcher.bestFitMatch(requestedLocales.toArray(new String[requestedLocales.size()]));
     }
 
+    result.put("dataLocale", localeMatchResult.dataLocale);
+
     Set<String> supportedExtensionAdditionKeys = new HashSet<>();
 
     for (String key : relevantExtensionKeys) {
