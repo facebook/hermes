@@ -1127,6 +1127,10 @@ SKIP_LIST = [
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/order-style.js",
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/offset-timezone-basic.js",
     "test262/test/intl402/DateTimeFormat/prototype/formatToParts",
+    "test262/test/intl402/DateTimeFormat/prototype/formatRange/en-US.js",
+    "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts",
+    "test262/test/intl402/DateTimeFormat/prototype/format/proleptic-gregorian-calendar.js",
+    # Moved to test/hermes/intl/date-time-format-time-style.js with modifications
     "test262/test/intl402/DateTimeFormat/prototype/format/timedatestyle-en.js",
     "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-long-en.js",
     "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-narrow-en.js",
@@ -1138,11 +1142,8 @@ SKIP_LIST = [
     # This test assumes that "year" has some default value. That is an implementation-defined behavior.
     # In our case it remains undefined, which causes this test to fail.
     "test262/test/intl402/DateTimeFormat/default-options-object-prototype.js",
-    "test262/test/intl402/DateTimeFormat/prototype/format/proleptic-gregorian-calendar.js",
     "test262/test/intl402/DateTimeFormat/prototype/formatRange",
     "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts",
-    # We're missing some options
-    "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/basic.js",
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/offset-timezone-change.js",
     "test262/test/intl402/Date/prototype/throws-same-exceptions-as-DateTimeFormat.js",
     "test262/test/intl402/NumberFormat/prototype/formaToParts",
@@ -1170,7 +1171,6 @@ SKIP_LIST = [
     "test262/test/intl402/NumberFormat/prototype/format/engineering-scientific-en-US.js",
     "test262/test/intl402/NumberFormat/prototype/format/signDisplay-rounding.js",
     "test262/test/intl402/NumberFormat/prototype/format/notation-compact-zh-TW.js",
-    "test262/test/intl402/NumberFormat/prototype/format/numbering-systems.js",
     "test262/test/intl402/NumberFormat/prototype/format/signDisplay-currency-ko-KR.js",
     "test262/test/intl402/NumberFormat/prototype/format/signDisplay-ko-KR.js",
     "test262/test/intl402/NumberFormat/prototype/format/engineering-scientific-ko-KR.js",
@@ -1190,8 +1190,6 @@ SKIP_LIST = [
     # We generally haven't implemented taint-proof prototypes for Intl
     "test262/test/intl402/constructors-taint-Object-prototype-2.js",
     "test262/test/intl402/constructors-taint-Object-prototype.js",
-    # We don't currently support correctly canonicalizing many language tags
-    "test262/test/intl402/language-tags-canonicalized.js",
     "test262/test/intl402/language-tags-invalid.js",
     # Unicode 13.0
     "test262/test/language/identifiers/part-unicode-13.0.0-escaped.js",
@@ -2094,6 +2092,9 @@ UNSUPPORTED_FEATURES = [
     "Intl.DurationFormat",
     "Intl.NumberFormat-v3",
     "Intl.NumberFormat-unified",
+    "Intl.DateTimeFormat-fractionalSecondDigits",
+    "Intl.DateTimeFormat-dayPeriod",
+    "Intl-enumeration",
 ]
 
 PERMANENT_UNSUPPORTED_FEATURES = [

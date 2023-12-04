@@ -1888,6 +1888,10 @@ class DateTimeFormatApple : public DateTimeFormat {
 
   std::u16string format(double jsTimeValue) noexcept;
 
+  std::u16string formatRange(
+      double jsTimeValueFrom,
+      double jsTimeValueTo) noexcept;
+
  private:
   void initializeNSDateFormatter() noexcept;
 
@@ -1952,6 +1956,7 @@ class DateTimeFormatApple : public DateTimeFormat {
   // NOTE: Pattern and RangePatterns are not implemented. BoundFormat is
   // implemented in Intl.cpp.
   NSDateFormatter *nsDateFormatter_;
+  NSDateIntervalFormatter *nsDateIntervalFormatter_;
 };
 } // namespace
 
@@ -2467,42 +2472,57 @@ void DateTimeFormatApple::initializeNSDateFormatter() noexcept {
   nsDateFormatter_ = [[NSDateFormatter alloc] init];
   nsDateFormatter_.locale =
       [[NSLocale alloc] initWithLocaleIdentifier:u16StringToNSString(locale_)];
+
+  nsDateIntervalFormatter_ = [[NSDateIntervalFormatter alloc] init];
+  nsDateIntervalFormatter_.locale = nsDateFormatter_.locale;
   if (calendar_) {
     nsDateFormatter_.calendar = [[NSCalendar alloc]
         initWithCalendarIdentifier:u16StringToNSString(
                                        getNSCalendarIdentifier(*calendar_))];
+    nsDateIntervalFormatter_.calendar = nsDateFormatter_.calendar;
   }
 
   if (timeStyle_.has_value()) {
     if (*timeStyle_ == kFull) {
       nsDateFormatter_.timeStyle = NSDateFormatterFullStyle;
+      nsDateIntervalFormatter_.timeStyle = NSDateIntervalFormatterFullStyle;
     } else if (*timeStyle_ == kLong) {
       nsDateFormatter_.timeStyle = NSDateFormatterLongStyle;
+      nsDateIntervalFormatter_.timeStyle = NSDateIntervalFormatterLongStyle;
     } else if (*timeStyle_ == kMedium) {
       nsDateFormatter_.timeStyle = NSDateFormatterMediumStyle;
+      nsDateIntervalFormatter_.timeStyle = NSDateIntervalFormatterMediumStyle;
     } else {
       assert(*timeStyle_ == kShort && "No other valid timeStyle.");
       nsDateFormatter_.timeStyle = NSDateFormatterShortStyle;
+      nsDateIntervalFormatter_.timeStyle = NSDateIntervalFormatterShortStyle;
     }
   }
   if (dateStyle_.has_value()) {
     if (*dateStyle_ == kFull) {
       nsDateFormatter_.dateStyle = NSDateFormatterFullStyle;
+      nsDateIntervalFormatter_.dateStyle = NSDateIntervalFormatterFullStyle;
     } else if (*dateStyle_ == kLong) {
       nsDateFormatter_.dateStyle = NSDateFormatterLongStyle;
+      nsDateIntervalFormatter_.dateStyle = NSDateIntervalFormatterLongStyle;
     } else if (*dateStyle_ == kMedium) {
       nsDateFormatter_.dateStyle = NSDateFormatterMediumStyle;
+      nsDateIntervalFormatter_.dateStyle = NSDateIntervalFormatterMediumStyle;
     } else {
       assert(*dateStyle_ == kShort && "No other valid dateStyle.");
       nsDateFormatter_.dateStyle = NSDateFormatterShortStyle;
+      nsDateIntervalFormatter_.dateStyle = NSDateIntervalFormatterShortStyle;
     }
   }
 
   if (timeZone_.size() > 0 && (timeZone_[0] == u'+' || timeZone_[0] == u'-')) {
     nsDateFormatter_.timeZone =
         [NSTimeZone timeZoneForSecondsFromGMT:60 * timeZoneOffsetMinutes_];
+    nsDateIntervalFormatter_.timeZone =
+        [NSTimeZone timeZoneForSecondsFromGMT:60 * timeZoneOffsetMinutes_];
   } else {
     nsDateFormatter_.timeZone = createTimeZone(timeZone_);
+    nsDateIntervalFormatter_.timeZone = createTimeZone(timeZone_);
   }
 
   if (timeStyle_.has_value() || dateStyle_.has_value())
@@ -2660,8 +2680,13 @@ void DateTimeFormatApple::initializeNSDateFormatter() noexcept {
   // empty
   if (customFormattedDate.length > 0) {
     [nsDateFormatter_ setLocalizedDateFormatFromTemplate:customFormattedDate];
+    nsDateIntervalFormatter_.dateTemplate =
+        [NSDateFormatter dateFormatFromTemplate:customFormattedDate
+                                        options:0
+                                         locale:nsDateFormatter_.locale];
   } else {
     nsDateFormatter_.dateStyle = NSDateFormatterShortStyle;
+    nsDateIntervalFormatter_.dateStyle = NSDateIntervalFormatterShortStyle;
   }
 }
 
@@ -2671,12 +2696,36 @@ std::u16string DateTimeFormatApple::format(double jsTimeValue) noexcept {
   return nsStringToU16String([nsDateFormatter_ stringFromDate:date]);
 }
 
+std::u16string DateTimeFormatApple::formatRange(
+    double jsTimeValueFrom,
+    double jsTimeValueTo) noexcept {
+  auto timeInSecondsFrom = jsTimeValueFrom / 1000;
+  NSDate *dateFrom = [NSDate dateWithTimeIntervalSince1970:timeInSecondsFrom];
+  auto timeInSecondsTo = jsTimeValueTo / 1000;
+  NSDate *dateTo = [NSDate dateWithTimeIntervalSince1970:timeInSecondsTo];
+  return nsStringToU16String([nsDateIntervalFormatter_ stringFromDate:dateFrom
+                                                               toDate:dateTo]);
+}
+
 std::u16string DateTimeFormat::format(double jsTimeValue) noexcept {
   return static_cast<DateTimeFormatApple *>(this)->format(jsTimeValue);
 }
 
 std::vector<Part> DateTimeFormat::formatToParts(double x) noexcept {
   llvm_unreachable("formatToParts is unimplemented on Apple platforms");
+}
+
+std::u16string DateTimeFormat::formatRange(
+    double jsTimeValueFrom,
+    double jsTimeValueTo) noexcept {
+  return static_cast<DateTimeFormatApple *>(this)->formatRange(
+      jsTimeValueFrom, jsTimeValueTo);
+}
+
+std::vector<Part> DateTimeFormat::formatRangeToParts(
+    double jsTimeValueFrom,
+    double jsTimeValueTo) noexcept {
+  llvm_unreachable("formatRangeToParts is unimplemented on Apple platforms");
 }
 
 class NumberFormatApple : public NumberFormat {
