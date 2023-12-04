@@ -21,6 +21,7 @@ from os import path
 
 try:
     import testsuite.esprima_test_runner as esprima
+    from testsuite.testsuite_allowlist import CONST_ALLOWLIST
     from testsuite.testsuite_skiplist import (
         HANDLESAN_SKIP_LIST,
         INTL_TESTS,
@@ -33,6 +34,7 @@ try:
 except ImportError:
     import esprima_test_runner as esprima
 
+    from testsuite_allowlist import CONST_ALLOWLIST
     # Hacky way to handle non-buck builds that call the file immediately.
     from testsuite_skiplist import (
         HANDLESAN_SKIP_LIST,
@@ -380,6 +382,17 @@ def fileInSkiplist(filename, skiplist):
     return False
 
 
+def fileInConstAllowlist(filename, allowlist):
+    for blName in allowlist:
+        if isinstance(blName, str):
+            if blName in filename:
+                return True
+        else:
+            # Assume it's a regex if it's not a string.
+            if blName.search(filename):
+                return True
+    return False
+
 # should_run: bool, If the test should run
 # skip_reason: str, Reason for skipping, if the test shouldn't be run.
 #               Empty if the test should be run (str)
@@ -457,7 +470,8 @@ def testShouldRun(filename, content):
             return TestContentParameters(
                 False, "Skipping test with with()", True, flags, strictModes
             )
-        if constMatcher.search(content):
+        allowed = fileInConstAllowlist(filename, CONST_ALLOWLIST)
+        if constMatcher.search(content) and not allowed:
             return TestContentParameters(
                 False, "Skipping test with 'const'", False, flags, strictModes
             )
@@ -574,9 +588,6 @@ def runTest(
 
         source, includes = generateSource(content, strictEnabled, suite, flags)
         source = source.encode("utf-8")
-        if "testIntl.js" in includes:
-            # No support for multiple Intl constructors in that file.
-            return (TestFlag.TEST_SKIPPED, "", 0)
 
         with open(js_source, "wb") as f:
             f.write(source)
