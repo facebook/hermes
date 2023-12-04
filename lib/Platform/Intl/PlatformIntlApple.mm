@@ -1874,7 +1874,15 @@ void DateTimeFormatApple::initializeNSDateFormatter() noexcept {
         [customFormattedDate appendString:@"SSS"];
     }
   }
-  // Not supported - dayPeriod (at night/in the morning)
+  if (dayPeriod_.has_value()) {
+    if (*dayPeriod_ == u"narrow") {
+      [customFormattedDate appendString:@"BBBBB"];
+    } else if (*dayPeriod_ == u"short") {
+      [customFormattedDate appendString:@"B"];
+    } else if (*dayPeriod_ == u"long") {
+      [customFormattedDate appendString:@"BBBB"];
+    }
+  }
   // Set the custom date from all the concatonated NSStrings (locale will
   // automatically separate the order) Only set a template format if it isn't
   // empty
