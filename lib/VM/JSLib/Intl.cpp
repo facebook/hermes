@@ -45,7 +45,7 @@ CallResult<std::u16string> stringFromJS(
   return std::u16string(view.begin(), view.end());
 }
 
-CallResult<HermesValue> localesToJS(
+CallResult<HermesValue> stringArrayToJS(
     Runtime &runtime,
     CallResult<std::vector<std::u16string>> result) {
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
@@ -61,10 +61,10 @@ CallResult<HermesValue> localesToJS(
   MutableHandle<> name{runtime};
   uint64_t index = 0;
   GCScopeMarkerRAII marker{runtime};
-  for (auto &locale : *result) {
+  for (auto &str : *result) {
     marker.flush();
     CallResult<HermesValue> nameRes =
-        StringPrimitive::createEfficient(runtime, std::move(locale));
+        StringPrimitive::createEfficient(runtime, std::move(str));
     if (LLVM_UNLIKELY(nameRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -126,17 +126,27 @@ CallResult<Handle<JSObject>> partToJS(
   MutableHandle<> key{runtime};
   MutableHandle<> value{runtime};
   GCScopeMarkerRAII marker{runtime};
-  for (auto &kv : result) {
+
+  for (auto &k : std::array{
+           u"type",
+           u"value",
+           u"source",
+       }) {
     marker.flush();
 
+    auto kv = result.find(k);
+    if (kv == result.end()) {
+      continue;
+    }
+
     CallResult<HermesValue> keyRes = StringPrimitive::createEfficient(
-        runtime, createUTF16Ref(kv.first.c_str()));
+        runtime, createUTF16Ref(kv->first.c_str()));
     if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     key = *keyRes;
     CallResult<HermesValue> valueRes =
-        StringPrimitive::createEfficient(runtime, std::move(kv.second));
+        StringPrimitive::createEfficient(runtime, std::move(kv->second));
     if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -154,8 +164,7 @@ CallResult<Handle<JSObject>> partToJS(
 
 CallResult<HermesValue> partsToJS(
     Runtime &runtime,
-    CallResult<std::vector<hermes::platform_intl::Part>>
-        result) {
+    CallResult<std::vector<hermes::platform_intl::Part>> result) {
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -521,7 +530,7 @@ CallResult<HermesValue> intlServiceSupportedLocalesOf(
     return ExecutionStatus::EXCEPTION;
   }
 
-  return localesToJS(
+  return stringArrayToJS(
       runtime, T::supportedLocalesOf(runtime, *localesRes, *optionsRes));
 }
 
@@ -1668,7 +1677,7 @@ intlGetCanonicalLocales(void *, vm::Runtime &runtime, vm::NativeArgs args) {
     return vm::ExecutionStatus::EXCEPTION;
   }
 
-  return vm::localesToJS(
+  return vm::stringArrayToJS(
       runtime, platform_intl::getCanonicalLocales(runtime, *localesRes));
 }
 

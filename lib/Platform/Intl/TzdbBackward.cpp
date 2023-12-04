@@ -10,7 +10,8 @@
 #include <vector>
 
 // Copied from https://data.iana.org/time-zones/tzdb-2023c/backward
-static std::u16string tzdb_backward = uR"(
+static std::u16string tzdb_backward =
+    uR"(
 # tzdb links for backward compatibility
 
 # This file is in the public domain, so clarified as of
@@ -332,24 +333,23 @@ Link    Pacific/Guadalcanal    Pacific/Ponape    #= Pacific/Pohnpei
 Link    Pacific/Port_Moresby    Pacific/Truk    #= Pacific/Chuuk
 )";
 
-std::vector<std::u16string> splitLines(std::u16string const& str)
-{
-    std::vector<std::u16string> lines;
-    typename std::u16string::size_type currentIndex = 0;
+std::vector<std::u16string> splitLines(std::u16string const &str) {
+  std::vector<std::u16string> lines;
+  typename std::u16string::size_type currentIndex = 0;
 
-    auto length = str.length();
-    while (currentIndex < length + 1) {
-        auto index = str.find_first_of(u'\n', currentIndex);
-        if (index == std::u16string::npos)
-            index = length;
+  auto length = str.length();
+  while (currentIndex < length + 1) {
+    auto index = str.find_first_of(u'\n', currentIndex);
+    if (index == std::u16string::npos)
+      index = length;
 
-        if (index != currentIndex)
-            lines.emplace_back(str.data() + currentIndex, index - currentIndex);
+    if (index != currentIndex)
+      lines.emplace_back(str.data() + currentIndex, index - currentIndex);
 
-        currentIndex = index + 1;
-    }
+    currentIndex = index + 1;
+  }
 
-    return lines;
+  return lines;
 }
 
 namespace hermes {
@@ -358,48 +358,49 @@ namespace Tzdb {
 namespace Backward {
 
 std::unordered_map<std::u16string, std::u16string> parse() {
-    std::unordered_map<std::u16string, std::u16string> results;
+  std::unordered_map<std::u16string, std::u16string> results;
 
-    for (std::u16string line : splitLines(tzdb_backward)) {
-        if (line.size() == 0) continue;
+  for (std::u16string line : splitLines(tzdb_backward)) {
+    if (line.size() == 0)
+      continue;
 
-        if (line.find_first_of('#') < line.find_first_not_of(u"# ")) {
-            continue;
-        }
-
-
-        auto endOfColumn = line.find_first_of(u' ');
-
-        auto type = line.substr(0, endOfColumn);
-
-        if (type != u"Link") {
-            continue;
-        }
-
-        auto startOfColumn = line.find_first_not_of(u' ', endOfColumn);
-        endOfColumn = line.find_first_of(u' ', startOfColumn);
-
-        auto target = line.substr(startOfColumn, endOfColumn - startOfColumn);
-
-        startOfColumn = line.find_first_not_of(u' ', endOfColumn);
-        endOfColumn = line.find_first_of(u' ', startOfColumn);
-
-        if (endOfColumn == std::u16string::npos) {
-           endOfColumn = line.size();
-         }
-
-         auto linkName = line.substr(startOfColumn, endOfColumn - startOfColumn);
-
-        //  std::wstring_convert<std::codecvt_utf8_utf16<char16_t>,char16_t> convert_;
-        //  std::cout << convert_.to_bytes(linkName) << " to " << convert_.to_bytes(target) << "\n";
-
-        results.emplace(linkName, target);
+    if (line.find_first_of('#') < line.find_first_not_of(u"# ")) {
+      continue;
     }
 
-    return results;
+    auto endOfColumn = line.find_first_of(u' ');
+
+    auto type = line.substr(0, endOfColumn);
+
+    if (type != u"Link") {
+      continue;
+    }
+
+    auto startOfColumn = line.find_first_not_of(u' ', endOfColumn);
+    endOfColumn = line.find_first_of(u' ', startOfColumn);
+
+    auto target = line.substr(startOfColumn, endOfColumn - startOfColumn);
+
+    startOfColumn = line.find_first_not_of(u' ', endOfColumn);
+    endOfColumn = line.find_first_of(u' ', startOfColumn);
+
+    if (endOfColumn == std::u16string::npos) {
+      endOfColumn = line.size();
+    }
+
+    auto linkName = line.substr(startOfColumn, endOfColumn - startOfColumn);
+
+    //  std::wstring_convert<std::codecvt_utf8_utf16<char16_t>,char16_t>
+    //  convert_; std::cout << convert_.to_bytes(linkName) << " to " <<
+    //  convert_.to_bytes(target) << "\n";
+
+    results.emplace(linkName, target);
+  }
+
+  return results;
 }
 
-} // Backward
-} // Tzdb
-}
-}
+} // namespace Backward
+} // namespace Tzdb
+} // namespace platform_intl
+} // namespace hermes

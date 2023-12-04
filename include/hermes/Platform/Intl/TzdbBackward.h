@@ -16,8 +16,8 @@ namespace platform_intl {
 namespace Tzdb {
 namespace Backward {
 std::unordered_map<std::u16string, std::u16string> parse();
-} // Backward
-} // Tzdb
+} // namespace Backward
+} // namespace Tzdb
 } // namespace platform_intl
 } // namespace hermes
 

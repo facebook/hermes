@@ -314,7 +314,6 @@ LocaleMatch lookupMatcher(
   return result;
 }
 
-
 std::vector<std::optional<std::u16string_view>> getKeyLocaleDataCalendars(
     NSLocale *foundLocaleData) {
   auto keyLocaleData =
@@ -1888,7 +1887,13 @@ class DateTimeFormatApple : public DateTimeFormat {
 
   std::u16string format(double jsTimeValue) noexcept;
 
+  std::vector<Part> formatToParts(double x) noexcept;
+
   std::u16string formatRange(
+      double jsTimeValueFrom,
+      double jsTimeValueTo) noexcept;
+
+  std::vector<Part> formatRangeToParts(
       double jsTimeValueFrom,
       double jsTimeValueTo) noexcept;
 
@@ -2712,7 +2717,184 @@ std::u16string DateTimeFormat::format(double jsTimeValue) noexcept {
 }
 
 std::vector<Part> DateTimeFormat::formatToParts(double x) noexcept {
-  llvm_unreachable("formatToParts is unimplemented on Apple platforms");
+  return static_cast<DateTimeFormatApple *>(this)->formatToParts(x);
+}
+
+// Map date format patterns to Intl option types
+// See
+// https://developer.apple.com/documentation/foundation/nsdateformatter/1408112-dateformatfromtemplate#parameters
+static std::u16string typeFromDateFormatPattern(const char16_t &c16) {
+  if (c16 == u'a' || c16 == u'b' || c16 == u'B')
+    return u"dayPeriod";
+  if (c16 == u'z' || c16 == u'v' || c16 == u'O')
+    return u"timeZoneName";
+  if (c16 == u'G')
+    return u"era";
+  if (c16 == u'y')
+    return u"year";
+  if (c16 == u'M')
+    return u"month";
+  if (c16 == u'E')
+    return u"weekday";
+  if (c16 == u'd')
+    return u"day";
+  if (c16 == u'h' || c16 == u'k' || c16 == u'K' || c16 == u'H')
+    return u"hour";
+  if (c16 == u'm')
+    return u"minute";
+  if (c16 == u's')
+    return u"second";
+  if (c16 == u'S')
+    return u"fractionalSecond";
+  if (c16 == u'U')
+    return u"yearName";
+  if (c16 == u'r')
+    return u"relatedYear";
+
+  // If the character is not known, return literal.
+  return u"literal";
+}
+
+// Implementer note: This method corresponds roughly to
+// https://402.ecma-international.org/8.0/#sec-formatdatetimetoparts
+std::vector<Part> DateTimeFormatApple::formatToParts(double x) noexcept {
+  // NOTE: We don't have access to localeData.patterns. Instead we use
+  // NSDateFormatter's format string, and break it into components.
+
+  // 1. Let parts be ? PartitionDateTimePattern(dateTimeFormat, x).
+  std::vector<std::u16string> parts;
+  auto dateTimeFormat = nsStringToU16String(nsDateFormatter_.dateFormat);
+  auto timeInSeconds = x / 1000;
+  NSDate *date = [NSDate dateWithTimeIntervalSince1970:timeInSeconds];
+  // 2. Let result be ArrayCreate(0).
+  std::vector<Part> result;
+  // 3. Let n be 0.
+  size_t n = 0;
+
+  auto formattedString = format(x);
+
+  char16_t formatCharacter = dateTimeFormat[n];
+
+  std::u16string type = typeFromDateFormatPattern(formatCharacter);
+  std::u16string currentType = type;
+
+  std::u16string partFormatString = u"";
+  partFormatString.reserve(6);
+
+  for (size_t n = 0; n < dateTimeFormat.size(); n++) {
+    formatCharacter = dateTimeFormat[n];
+    type = typeFromDateFormatPattern(formatCharacter);
+
+    if (type != currentType) {
+      parts.push_back(partFormatString);
+
+      partFormatString.clear();
+      currentType = type;
+    }
+
+    partFormatString += formatCharacter;
+  }
+
+  if (partFormatString.size() > 0) {
+    parts.push_back(std::move(partFormatString));
+  }
+
+  NSDateFormatter *nsDatePartFormatter = [[NSDateFormatter alloc] init];
+  nsDatePartFormatter.locale = nsDateFormatter_.locale;
+  nsDatePartFormatter.timeZone = nsDateFormatter_.timeZone;
+  nsDatePartFormatter.calendar = nsDateFormatter_.calendar;
+
+  // 4. For each Record { [[Type]], [[Value]] } part in parts, do
+  for (auto part : parts) {
+    if (part == u"")
+      continue;
+
+    auto type = typeFromDateFormatPattern(part[0]);
+
+    if (type == u"literal") {
+      result.push_back({{u"type", u"literal"}, {u"value", part}});
+    } else {
+      nsDatePartFormatter.dateFormat = u16StringToNSString(part);
+      std::u16string formattedPart =
+          nsStringToU16String([nsDatePartFormatter stringFromDate:date]);
+      result.push_back({{u"type", type}, {u"value", formattedPart}});
+    }
+  }
+
+  // 5. Return result.
+  return result;
+}
+
+std::vector<Part> DateTimeFormatApple::formatRangeToParts(
+    double x,
+    double y) noexcept {
+  // NOTE: NSDateIntervalFormatter does not expose details on what
+  // parts of the formatted string belong to which date, so as a stub
+  // we'll implement formatRangeToParts using a basic format of
+  // [start] - [end], calling formatToParts on [start] and [end]
+  // individually. While this meets the spec, it does not match
+  // the formatting of formatRange.
+
+  // A quick check if the outputs should be equal, in
+  // that case we should just return the parts as "shared".
+  auto isTheSameDateTimeOutput = format(x) == format(y);
+
+  if (isTheSameDateTimeOutput) {
+    std::vector<Part> parts = formatToParts(x);
+    std::vector<Part> result;
+
+    for (Part part : parts) {
+      Part O(part);
+      O.insert({u"source", u"shared"});
+      result.push_back(O);
+    }
+
+    return result;
+  }
+
+  // 1. Let parts be ? PartitionDateTimeRangePattern(dateTimeFormat, x, y).
+  std::vector<Part> xParts = formatToParts(x);
+  std::vector<Part> yParts = formatToParts(y);
+
+  // 2. Let result be ! ArrayCreate(0).
+  std::vector<Part> result;
+
+  // Reserve the expected space required, this is the parts
+  // of [start], the parts of [end], and 3 literals (" ", "-", " ")
+  result.reserve(xParts.size() + yParts.size() + 3);
+
+  // Combine the parts
+  for (auto [first, second] :
+       std::vector<std::pair<std::u16string, std::vector<Part>>>{
+           {u"startRange", xParts},
+           {
+               u"shared",
+               {
+                   {{u"type", u"literal"},
+                    // thin space, en-dash, thin space to match formatRange
+                    {u"value", u"\u2009\u2013\u2009"},
+                    {u"source", u"shared"}},
+               },
+           },
+           {u"endRange", yParts}}) {
+    // 3. Let n be 0.
+    for (Part part : second) {
+      // 4. For each Record { [[Type]], [[Value]], [[Source]] } part in parts,
+      // do
+
+      //   a. Let O be OrdinaryObjectCreate(%Object.prototype%).
+      //   d. Perform ! CreateDataPropertyOrThrow(O, "source", part.[[Source]]).
+      Part O{{u"source", first}};
+      //   b. Perform ! CreateDataPropertyOrThrow(O, "type", part.[[Type]]).
+      //   c. Perform ! CreateDataPropertyOrThrow(O, "value", part.[[Value]]).
+      O.merge(part);
+      //   e. Perform ! CreateDataProperty(result, ! ToString(n), O).
+      result.push_back(O);
+      //   f. Increment n by 1.
+    }
+  }
+
+  return result;
 }
 
 std::u16string DateTimeFormat::formatRange(
@@ -2725,7 +2907,8 @@ std::u16string DateTimeFormat::formatRange(
 std::vector<Part> DateTimeFormat::formatRangeToParts(
     double jsTimeValueFrom,
     double jsTimeValueTo) noexcept {
-  llvm_unreachable("formatRangeToParts is unimplemented on Apple platforms");
+  return static_cast<DateTimeFormatApple *>(this)->formatRangeToParts(
+      jsTimeValueFrom, jsTimeValueTo);
 }
 
 class NumberFormatApple : public NumberFormat {

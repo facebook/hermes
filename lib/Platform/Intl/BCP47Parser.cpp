@@ -471,7 +471,8 @@ std::u16string ParsedLocaleIdentifier::canonicalizeExtensionString() const {
 // https://unicode.org/reports/tr35/#Canonical_Unicode_Locale_Identifiers
 // https://tc39.es/ecma402/#sec-canonicalizeunicodelocaleid
 std::u16string ParsedLocaleIdentifier::canonicalize() const {
-  std::u16string canoLocaleId = canonicalizeLocaleId().append(canonicalizeExtensionString());
+  std::u16string canoLocaleId =
+      canonicalizeLocaleId().append(canonicalizeExtensionString());
 
   return canoLocaleId;
 }
