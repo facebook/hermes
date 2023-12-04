@@ -346,27 +346,34 @@ class ES6ClassesTransformations {
       resolvedClassId = id;
     }
 
+    NodeVector statements;
+
+    ESTree::Node *superClassExpr = nullptr;
+    ESTree::Node *currentProcessingSuperClass = nullptr;
+    if (superClass != nullptr) {
+      superClassExpr = makeIdentifierNode(nullptr, "__super__");
+      currentProcessingSuperClass = superClassExpr;
+      statements.append(makeSingleVariableDecl(
+          superClass, cloneNode(superClassExpr), cloneNode(superClass)));
+      superClassExpr = cloneNode(superClass);
+    } else {
+      superClassExpr = new (context_) ESTree::NullLiteralNode();
+    }
+
     auto *oldProcessingClass = _currentProcessingClass;
-    VisitedClass currentProcessingClass(resolvedClassId, superClass);
+    VisitedClass currentProcessingClass(
+        resolvedClassId, currentProcessingSuperClass);
     _currentProcessingClass = &currentProcessingClass;
 
     auto classMembers = resolveClassMembers(classBody);
     auto *ctorAsFunction = createClassCtor(
         resolvedClassId, classBody, superClass, classMembers.constructor);
 
-    ESTree::Node *superClassExpr = nullptr;
-    if (superClass != nullptr) {
-      superClassExpr = cloneNode(superClass);
-    } else {
-      superClassExpr = new (context_) ESTree::NullLiteralNode();
-    }
-
     auto *defineClassResult = makeHermesES6InternalCall(
         classNode,
         "defineClass",
         {copyIdentifier(ctorAsFunction->_id), superClassExpr});
 
-    NodeVector statements;
     statements.append(ctorAsFunction);
     statements.append(toStatement(defineClassResult));
 
