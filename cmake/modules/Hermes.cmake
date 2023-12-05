@@ -399,6 +399,10 @@ if (GCC_COMPATIBLE)
   # released or XCode is fixed.
   # add_flag_if_supported("-fno-strict-float-cast-overflow" NO_STRICT_FLOAT_CAST_OVERFLOW_FLAG)
 
+  # GCC uses fp-contract=fast by default, use "on" instead so that we can
+  # control it in source where needed.
+  add_flag_if_supported("-ffp-contract=on" FP_CONTRACT_FLAG)
+
   # Disable range loop analysis warnings.
   check_cxx_compiler_flag("-Wrange-loop-analysis" RANGE_ANALYSIS_FLAG)
   append_if(RANGE_ANALYSIS_FLAG "-Wno-range-loop-analysis" CMAKE_CXX_FLAGS)

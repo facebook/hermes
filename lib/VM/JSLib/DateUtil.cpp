@@ -489,7 +489,14 @@ double makeDate(double day, double t) {
     return std::numeric_limits<double>::quiet_NaN();
   }
 
-  return day * MS_PER_DAY + t;
+  // Some compilers may contract the multiplication and addition into a single
+  // FMA when they are part of the same expression. This would result in
+  // non-standard results, so to avoid it, split them into separate expressions.
+  // Note that this applies only when compiling with -ffp-contract=on. If
+  // -ffp-contract=fast is used, the compiler will still be permitted to emit an
+  // FMA operation for the separate expressions.
+  double dayMs = day * MS_PER_DAY;
+  return dayMs + t;
 }
 
 //===----------------------------------------------------------------------===//
