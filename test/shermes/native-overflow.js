@@ -6,7 +6,7 @@
  */
 
 // Restrict the native stack to ensure it overflows before the register stack.
-// RUN: (ulimit -s 512 && ! %shermes -fcheck-native-stack -exec %s 2>&1) | %FileCheck --match-full-lines %s
+// RUN: (ulimit -s 1024 && ! %shermes -fcheck-native-stack -exec %s 2>&1) | %FileCheck --match-full-lines %s
 // REQUIRES: check_native_stack
 
 function foo() {
