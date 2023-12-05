@@ -161,6 +161,7 @@ BCProviderFromSrc::createBCProviderFromSrcImpl(
 
   context->setStrictMode(compileFlags.strict);
   context->setEnableEval(true);
+  context->setConvertES6Classes(compileFlags.enableES6Classes);
   context->setPreemptiveFunctionCompilationThreshold(
       compileFlags.preemptiveFunctionCompilationThreshold);
   context->setPreemptiveFileCompilationThreshold(
@@ -212,6 +213,7 @@ BCProviderFromSrc::createBCProviderFromSrcImpl(
   if (!parsed || !hermes::sem::validateAST(*context, semCtx, *parsed)) {
     return {nullptr, getErrorString()};
   }
+
   // If we are using lazy parse mode, we should have already detected the 'use
   // static builtin' directive in the pre-parsing stage.
   if (parserMode != parser::LazyParse) {

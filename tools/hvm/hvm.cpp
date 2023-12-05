@@ -74,6 +74,13 @@ static llvh::cl::alias _EnableBlockScoping(
     llvh::cl::Hidden,
     llvh::cl::aliasopt(EnableBlockScoping));
 
+static llvh::cl::opt<bool> ES6Class(
+    "Xes6-class",
+    llvh::cl::init(false),
+    llvh::cl::desc("Enable support for ES6 Class"),
+    llvh::cl::Hidden,
+    llvh::cl::cat(cl::RuntimeCategory));
+
 // This is the vm driver.
 int main(int argc, char **argv) {
   // Normalize the arg vector.
@@ -132,6 +139,7 @@ int main(int argc, char **argv) {
           .withEnableBlockScoping(EnableBlockScoping)
           .withES6Promise(cl::ES6Promise)
           .withES6Proxy(cl::ES6Proxy)
+          .withES6Class(ES6Class)
           .withIntl(cl::Intl)
           .withMicrotaskQueue(cl::MicrotaskQueue)
           .withTrackIO(cl::TrackBytecodeIO)

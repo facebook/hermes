@@ -297,6 +297,13 @@ static llvh::cl::alias _EnableBlockScoping(
     Hidden,
     llvh::cl::aliasopt(EnableBlockScoping));
 
+opt<bool> ES6Class(
+    "Xes6-class",
+    init(false),
+    desc("Enable support for ES6 Class"),
+    Hidden,
+    cat(CompilerCategory));
+
 opt<bool>
     EnableEval("enable-eval", init(true), desc("Enable support for eval()"));
 
@@ -1146,6 +1153,7 @@ std::shared_ptr<Context> createContext(
   // Default is non-strict mode.
   context->setStrictMode(!cl::NonStrictMode && cl::StrictMode);
   context->setEnableEval(cl::EnableEval);
+  context->setConvertES6Classes(cl::ES6Class);
   context->getSourceErrorManager().setOutputOptions(guessErrorOutputOptions());
 
   setWarningsAreErrorsFromFlags(context->getSourceErrorManager());
