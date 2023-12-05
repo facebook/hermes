@@ -37,6 +37,12 @@ async function main() {
       default: false,
       type: 'boolean',
     })
+    .option('strip-types', {
+      describe:
+        'Strip flow types without lowering',
+      default: false,
+      type: 'boolean',
+    })
     .option('root', {
       alias: 'r',
       describe:
@@ -56,6 +62,7 @@ async function main() {
   const rootPath = cliYargs.root;
   const outPath = cliYargs.out;
   const createES5Bundle = cliYargs.es5;
+  const stripTypes = cliYargs.stripTypes;
   const entrypoints: Array<string> = cliYargs._;
 
   const bundle = await createModuleGraph(rootPath, entrypoints);
@@ -125,6 +132,25 @@ async function main() {
       outPath.replace('.js', '-es5.js'),
       es5bundleSource.code,
       es5bundleSource.map,
+    );
+  }
+
+  if (stripTypes) {
+    // Generate bundle without types.
+    const strippedBundle = transformFromAstSync(bundleAST, fileMapping, {
+      ast: true,
+      code: false,
+      plugins: [require.resolve('@babel/plugin-transform-flow-strip-types')],
+    });
+    const strippedSource = generate(
+      strippedBundle.ast,
+      {sourceMaps: true},
+      fileMapping,
+    );
+    await writeBundle(
+      outPath.replace('.js', '-stripped.js'),
+      strippedSource.code,
+      strippedSource.map,
     );
   }
 }
