@@ -150,13 +150,13 @@ function check_after_check() {
 // CHKOPT-NEXT:function_end
 
 // CHKOPT:function check_after_check(): any
-// CHKOPT-NEXT:frame = [inner2: undefined|object, x: any|empty]
+// CHKOPT-NEXT:frame = [inner2: undefined|object, x: empty|number]
 // CHKOPT-NEXT:%BB0:
 // CHKOPT-NEXT:       StoreFrameInst undefined: undefined, [inner2]: undefined|object
-// CHKOPT-NEXT:       StoreFrameInst empty: empty, [x]: any|empty
-// CHKOPT-NEXT:  %2 = CreateFunctionInst (:object) %inner2(): any
+// CHKOPT-NEXT:       StoreFrameInst empty: empty, [x]: empty|number
+// CHKOPT-NEXT:  %2 = CreateFunctionInst (:object) %inner2(): number
 // CHKOPT-NEXT:       StoreFrameInst %2: object, [inner2]: undefined|object
-// CHKOPT-NEXT:       StoreFrameInst 0: number, [x]: any|empty
+// CHKOPT-NEXT:       StoreFrameInst 0: number, [x]: empty|number
 // CHKOPT-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "inner": string
 // CHKOPT-NEXT:       ReturnInst %5: any
 // CHKOPT-NEXT:function_end
@@ -179,27 +179,27 @@ function check_after_check() {
 // CHKOPT-NEXT:       ReturnInst 0: number
 // CHKOPT-NEXT:function_end
 
-// CHKOPT:function inner2(p: any): any
+// CHKOPT:function inner2(p: any): number
 // CHKOPT-NEXT:frame = [p: any]
 // CHKOPT-NEXT:%BB0:
 // CHKOPT-NEXT:  %0 = LoadParamInst (:any) %p: any
 // CHKOPT-NEXT:       StoreFrameInst %0: any, [p]: any
-// CHKOPT-NEXT:  %2 = LoadFrameInst (:any|empty) [x@check_after_check]: any|empty
-// CHKOPT-NEXT:  %3 = ThrowIfEmptyInst (:any) %2: any|empty
-// CHKOPT-NEXT:  %4 = UnaryIncInst (:number|bigint) %3: any
-// CHKOPT-NEXT:       StoreFrameInst %4: number|bigint, [x@check_after_check]: any|empty
+// CHKOPT-NEXT:  %2 = LoadFrameInst (:empty|number) [x@check_after_check]: empty|number
+// CHKOPT-NEXT:  %3 = ThrowIfEmptyInst (:number) %2: empty|number
+// CHKOPT-NEXT:  %4 = UnaryIncInst (:number) %3: number
+// CHKOPT-NEXT:       StoreFrameInst %4: number, [x@check_after_check]: empty|number
 // CHKOPT-NEXT:  %6 = LoadFrameInst (:any) [p]: any
 // CHKOPT-NEXT:       CondBranchInst %6: any, %BB1, %BB2
 // CHKOPT-NEXT:%BB1:
-// CHKOPT-NEXT:  %8 = LoadFrameInst (:any|empty) [x@check_after_check]: any|empty
-// CHKOPT-NEXT:  %9 = UnionNarrowTrustedInst (:any) %8: any|empty
-// CHKOPT-NEXT:  %10 = UnaryIncInst (:number|bigint) %9: any
-// CHKOPT-NEXT:        StoreFrameInst %10: number|bigint, [x@check_after_check]: any|empty
+// CHKOPT-NEXT:  %8 = LoadFrameInst (:empty|number) [x@check_after_check]: empty|number
+// CHKOPT-NEXT:  %9 = UnionNarrowTrustedInst (:number) %8: empty|number
+// CHKOPT-NEXT:  %10 = UnaryIncInst (:number) %9: number
+// CHKOPT-NEXT:        StoreFrameInst %10: number, [x@check_after_check]: empty|number
 // CHKOPT-NEXT:        BranchInst %BB3
 // CHKOPT-NEXT:%BB2:
 // CHKOPT-NEXT:        BranchInst %BB3
 // CHKOPT-NEXT:%BB3:
-// CHKOPT-NEXT:  %14 = LoadFrameInst (:any|empty) [x@check_after_check]: any|empty
-// CHKOPT-NEXT:  %15 = UnionNarrowTrustedInst (:any) %14: any|empty
-// CHKOPT-NEXT:        ReturnInst %15: any
+// CHKOPT-NEXT:  %14 = LoadFrameInst (:empty|number) [x@check_after_check]: empty|number
+// CHKOPT-NEXT:  %15 = UnionNarrowTrustedInst (:number) %14: empty|number
+// CHKOPT-NEXT:        ReturnInst %15: number
 // CHKOPT-NEXT:function_end

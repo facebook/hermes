@@ -18,6 +18,8 @@
 
 #include "llvh/ADT/DenseMap.h"
 #include "llvh/ADT/DenseSet.h"
+#include "llvh/ADT/EquivalenceClasses.h"
+#include "llvh/ADT/MapVector.h"
 #include "llvh/ADT/SmallPtrSet.h"
 #include "llvh/Support/Debug.h"
 
@@ -416,7 +418,8 @@ class TypeInferenceImpl {
     return newTy != originalTy || changed;
   }
 
-  bool runOnFunction(Function *F);
+  /// Run type inference on a the provided set of functions to a fixed point.
+  bool runOnFunctions(llvh::ArrayRef<Function *> functions);
 
   Type inferSingleOperandInst(SingleOperandInst *inst) {
     hermes_fatal("This is not a concrete instruction");
@@ -1019,23 +1022,17 @@ class TypeInferenceImpl {
   }
 };
 
-bool TypeInferenceImpl::runOnFunction(Function *F) {
+bool TypeInferenceImpl::runOnFunctions(llvh::ArrayRef<Function *> functions) {
   LLVM_DEBUG(
-      dbgs() << "\nStart Type Inference on " << F->getInternalName().c_str()
-             << "\n");
+      dbgs() << "\nStart Type Inference on " << functions.size()
+             << " functions.\n");
 
-  // Begin by clearing the existing types and storing pre-pass types.
-  // This prevents us from relying on the previous inference pass's type info,
-  // which can be too loose (if things have been simplified, etc.).
-  clearTypesInFunction(F);
-
-  // Infer the type of formal parameters, based on knowing the (full) set
-  // of call sites from which this function may be invoked.
-  // This information changes based on call sites that are  in other functions,
-  // so we might as well do this outside the loop because the type information
-  // for those call sites will not change in the loop (except for recursive
-  // functions.)
-  inferParams(F);
+  for (Function *F : functions) {
+    // Begin by clearing the existing types and storing pre-pass types.
+    // This prevents us from relying on the previous inference pass's type info,
+    // which can be too loose (if things have been simplified, etc.).
+    clearTypesInFunction(F);
+  }
 
   // Inferring the types of instructions can help us figure out the types of
   // variables. Typed variables can help us deduce the types of loads and other
@@ -1044,12 +1041,20 @@ bool TypeInferenceImpl::runOnFunction(Function *F) {
   do {
     localChanged = false;
 
+    // Infer the type of formal parameters, based on knowing the (full) set
+    // of call sites from which this function may be invoked.
+    for (Function *F : functions) {
+      inferParams(F);
+    }
+
     // Infer types of instructions.
     bool inferredInst = false;
-    for (auto &bbit : *F) {
-      for (auto &it : bbit) {
-        Instruction *I = &it;
-        inferredInst |= inferInstruction(I);
+    for (Function *F : functions) {
+      for (auto &bbit : *F) {
+        for (auto &it : bbit) {
+          Instruction *I = &it;
+          inferredInst |= inferInstruction(I);
+        }
       }
     }
     if (inferredInst)
@@ -1058,16 +1063,20 @@ bool TypeInferenceImpl::runOnFunction(Function *F) {
 
     // Infer the return type of the function based on the type of return
     // instructions in the function.
-    bool inferredRetType = inferFunctionReturnType(F);
+    bool inferredRetType = false;
+    for (Function *F : functions) {
+      inferredRetType |= inferFunctionReturnType(F);
+    }
     if (inferredRetType)
-      LLVM_DEBUG(
-          dbgs() << "Inferred function return type: " << F->getType() << "\n");
+      LLVM_DEBUG(dbgs() << "Inferred function return type\n");
     localChanged |= inferredRetType;
 
     // Infer type of F's variables.
     bool inferredVarType = false;
-    for (auto *V : F->getFunctionScope()->getVariables()) {
-      inferredVarType |= inferMemoryType(V);
+    for (Function *F : functions) {
+      for (auto *V : F->getFunctionScope()->getVariables()) {
+        inferredVarType |= inferMemoryType(V);
+      }
     }
     if (inferredVarType)
       LLVM_DEBUG(dbgs() << "Inferred variable type\n");
@@ -1076,11 +1085,13 @@ bool TypeInferenceImpl::runOnFunction(Function *F) {
 
 #ifndef NDEBUG
   // Validate that all instructions that need to have types do.
-  for (auto &BB : *F) {
-    for (auto &I : BB) {
-      assert(
-          (I.getType().isNoType() ^ I.hasOutput()) &&
-          "Instructions are NoType iff they have no outputs");
+  for (Function *F : functions) {
+    for (auto &BB : *F) {
+      for (auto &I : BB) {
+        assert(
+            (I.getType().isNoType() ^ I.hasOutput()) &&
+            "Instructions are NoType iff they have no outputs");
+      }
     }
   }
 #endif
@@ -1089,13 +1100,67 @@ bool TypeInferenceImpl::runOnFunction(Function *F) {
   return true;
 }
 
+/// Partition the functions in \p M into groups such that each group contains
+/// all functions that have usages (either direct or via their variables) within
+/// the same group, and no usages outside the group.
+static std::vector<std::vector<Function *>> partitionFunctions(Module *M) {
+  // EquivalenceClasses basically implements union-find (disjoint-set).
+  // This is convenient for finding all the functions that share variables
+  // or use each other.
+  llvh::EquivalenceClasses<const Function *> funcGroups{};
+  for (Function &F : *M) {
+    // Add the function to the equivalence class, in case it doesn't have any
+    // users or captured vars, we will create a new group.
+    funcGroups.insert(&F);
+
+    // NOTE: unionSets automatically inserts both arguments if they don't exist
+    // before unioning.
+
+    // Include any users of the function, to account for known callsites
+    // as well as closure creation.
+    for (const Instruction *user : F.getUsers()) {
+      funcGroups.unionSets(&F, user->getFunction());
+    }
+
+    // Include any functions that capture the function's variables,
+    // to allow those variables to be inferred.
+    for (const Variable *V : F.getFunctionScope()->getVariables()) {
+      for (const Instruction *user : V->getUsers()) {
+        funcGroups.unionSets(&F, user->getFunction());
+      }
+    }
+  }
+
+  // Convert the EquivalenceClasses into a vector of vectors for faster
+  // iteration.
+  // Can't iterate the EquivalenceClasses directly because it uses pointers as
+  // keys and we want a deterministic ordering.
+
+  // Map from leader to index so we can use findLeader.
+  llvh::DenseMap<const Function *, unsigned> funcGroupIndices;
+  // List of the groups, where group i has a leader and
+  // funcGroupIndices[leader] == i.
+  std::vector<std::vector<Function *>> funcGroupsVec;
+  for (Function &F : *M) {
+    const Function *leader = *funcGroups.findLeader(&F);
+    auto [it, inserted] =
+        funcGroupIndices.try_emplace(leader, funcGroupsVec.size());
+    if (inserted) {
+      funcGroupsVec.emplace_back(1, &F);
+    } else {
+      funcGroupsVec[it->second].push_back(&F);
+    }
+  }
+  return funcGroupsVec;
+}
+
 bool TypeInferenceImpl::runOnModule(Module *M) {
   bool changed = false;
-
   LLVM_DEBUG(dbgs() << "\nStart Type Inference on Module\n");
 
-  for (auto &F : *M) {
-    changed |= runOnFunction(&F);
+  auto partitionedFuncs = partitionFunctions(M);
+  for (const auto &funcGroup : partitionedFuncs) {
+    changed |= runOnFunctions(funcGroup);
   }
   return changed;
 }
