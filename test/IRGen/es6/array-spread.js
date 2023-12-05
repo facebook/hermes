@@ -55,8 +55,6 @@ function foo(x) {
 // CHECK-NEXT:  %23 = BinaryAddInst (:any) %22: number, 1: number
 // CHECK-NEXT:        StoreStackInst %23: any, %2: number
 // CHECK-NEXT:        ReturnInst %11: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // OPT:function global(): undefined

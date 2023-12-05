@@ -69,8 +69,6 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:       StoreNewOwnPropertyInst 2: number, %4: object, "a": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst 3: number, %4: object, "b": string, true: boolean
 // CHECK-NEXT:       ReturnInst %4: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function protoIsConst1(): any
@@ -79,8 +77,6 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:  %0 = AllocObjectInst (:object) 1: number, null: null
 // CHECK-NEXT:       StoreNewOwnPropertyInst 2: number, %0: object, "a": string, true: boolean
 // CHECK-NEXT:       ReturnInst %0: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function protoIsConst2(): any
@@ -89,8 +85,6 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:  %0 = AllocObjectInst (:object) 1: number, 10: number
 // CHECK-NEXT:       StoreNewOwnPropertyInst 3: number, %0: object, "b": string, true: boolean
 // CHECK-NEXT:       ReturnInst %0: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function protoIsConst3(): any
@@ -99,8 +93,6 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:  %0 = AllocObjectInst (:object) 1: number, null: null
 // CHECK-NEXT:       StoreNewOwnPropertyInst 4: number, %0: object, "c": string, true: boolean
 // CHECK-NEXT:       ReturnInst %0: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function protoIsDynamic(func: any, getParent: any): any
@@ -119,6 +111,4 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %11 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object, %10: any
 // CHECK-NEXT:        ReturnInst %4: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end

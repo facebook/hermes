@@ -96,6 +96,4 @@ class B extends A {
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = PrLoadInst (:number) %0: object, 0: number, "x": string
 // CHECK-NEXT:       ReturnInst %1: number
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

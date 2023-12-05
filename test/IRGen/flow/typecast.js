@@ -44,6 +44,4 @@
 // CHECK-NEXT:  %2 = CheckedTypeCastInst (:number) %1: any
 // CHECK-NEXT:  %3 = BinaryMultiplyInst (:any) %2: number, 3: number
 // CHECK-NEXT:       ReturnInst %3: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

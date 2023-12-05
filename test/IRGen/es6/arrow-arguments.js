@@ -91,8 +91,6 @@ function bar() {
 // CHECK-NEXT:        StorePropertyStrictInst %10: any, globalObject: object, "dummy": string
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [arrow1]: any
 // CHECK-NEXT:        ReturnInst %12: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): any
@@ -105,8 +103,6 @@ function bar() {
 // CHECK-NEXT:       StorePropertyStrictInst %3: any, globalObject: object, "dummy": string
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [inner]: any
 // CHECK-NEXT:       ReturnInst %5: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:arrow arrow1(): any
@@ -120,8 +116,6 @@ function bar() {
 // CHECK-NEXT:       StoreFrameInst %4: object, [arrow2]: any
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [arrow2]: any
 // CHECK-NEXT:       ReturnInst %6: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function inner(): any
@@ -141,8 +135,6 @@ function bar() {
 // CHECK-NEXT:        StoreFrameInst %10: object, [arrow3]: any
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [arrow3]: any
 // CHECK-NEXT:        ReturnInst %12: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:arrow arrow2(): any

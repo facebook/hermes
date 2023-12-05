@@ -129,10 +129,6 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %17 = LoadFrameInst (:any) [prop]: any
 // CHECK-NEXT:  %18 = CallInst (:any) %16: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %17: any
 // CHECK-NEXT:        BranchInst %BB1
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        BranchInst %BB2
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function for_in_loop_with_named_break(obj: any): any
@@ -163,8 +159,6 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %18 = LoadFrameInst (:any) [prop]: any
 // CHECK-NEXT:  %19 = CallInst (:any) %17: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %18: any
 // CHECK-NEXT:        BranchInst %BB1
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function check_var_decl_for_in_loop(obj: any): any

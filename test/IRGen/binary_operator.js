@@ -211,103 +211,6 @@
 // CHECK-NEXT:  %109 = LoadFrameInst (:any) [y]: any
 // CHECK-NEXT:  %110 = BinaryEqualInst (:any) %108: any, %109: any
 // CHECK-NEXT:         ReturnInst %110: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %112 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %113 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %114 = BinaryNotEqualInst (:any) %112: any, %113: any
-// CHECK-NEXT:         ReturnInst %114: any
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %116 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %117 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %118 = BinaryStrictlyEqualInst (:any) %116: any, %117: any
-// CHECK-NEXT:         ReturnInst %118: any
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %120 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %121 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %122 = BinaryLessThanInst (:any) %120: any, %121: any
-// CHECK-NEXT:         ReturnInst %122: any
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %124 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %125 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %126 = BinaryLessThanOrEqualInst (:any) %124: any, %125: any
-// CHECK-NEXT:         ReturnInst %126: any
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %128 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %129 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %130 = BinaryGreaterThanInst (:any) %128: any, %129: any
-// CHECK-NEXT:         ReturnInst %130: any
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %132 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %133 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %134 = BinaryGreaterThanOrEqualInst (:any) %132: any, %133: any
-// CHECK-NEXT:         ReturnInst %134: any
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %136 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %137 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %138 = BinaryLeftShiftInst (:any) %136: any, %137: any
-// CHECK-NEXT:         ReturnInst %138: any
-// CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %140 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %141 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %142 = BinaryLeftShiftInst (:any) %140: any, %141: any
-// CHECK-NEXT:         ReturnInst %142: any
-// CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %144 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %145 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %146 = BinaryUnsignedRightShiftInst (:any) %144: any, %145: any
-// CHECK-NEXT:         ReturnInst %146: any
-// CHECK-NEXT:%BB10:
-// CHECK-NEXT:  %148 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %149 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %150 = BinaryAddInst (:any) %148: any, %149: any
-// CHECK-NEXT:         ReturnInst %150: any
-// CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %152 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %153 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %154 = BinarySubtractInst (:any) %152: any, %153: any
-// CHECK-NEXT:         ReturnInst %154: any
-// CHECK-NEXT:%BB12:
-// CHECK-NEXT:  %156 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %157 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %158 = BinaryMultiplyInst (:any) %156: any, %157: any
-// CHECK-NEXT:         ReturnInst %158: any
-// CHECK-NEXT:%BB13:
-// CHECK-NEXT:  %160 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %161 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %162 = BinaryDivideInst (:any) %160: any, %161: any
-// CHECK-NEXT:         ReturnInst %162: any
-// CHECK-NEXT:%BB14:
-// CHECK-NEXT:  %164 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %165 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %166 = BinaryModuloInst (:any) %164: any, %165: any
-// CHECK-NEXT:         ReturnInst %166: any
-// CHECK-NEXT:%BB15:
-// CHECK-NEXT:  %168 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %169 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %170 = BinaryOrInst (:any) %168: any, %169: any
-// CHECK-NEXT:         ReturnInst %170: any
-// CHECK-NEXT:%BB16:
-// CHECK-NEXT:  %172 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %173 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %174 = BinaryXorInst (:any) %172: any, %173: any
-// CHECK-NEXT:         ReturnInst %174: any
-// CHECK-NEXT:%BB17:
-// CHECK-NEXT:  %176 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %177 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %178 = BinaryAndInst (:any) %176: any, %177: any
-// CHECK-NEXT:         ReturnInst %178: any
-// CHECK-NEXT:%BB18:
-// CHECK-NEXT:  %180 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %181 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %182 = BinaryInInst (:any) %180: any, %181: any
-// CHECK-NEXT:         ReturnInst %182: any
-// CHECK-NEXT:%BB19:
-// CHECK-NEXT:  %184 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %185 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %186 = BinaryInstanceOfInst (:any) %184: any, %185: any
-// CHECK-NEXT:         ReturnInst %186: any
-// CHECK-NEXT:%BB20:
-// CHECK-NEXT:         UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function assignment_test(x: any, y: any): any
@@ -352,6 +255,4 @@
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [y]: any
 // CHECK-NEXT:  %6 = BinaryUnsignedRightShiftInst (:any) %4: any, %5: any
 // CHECK-NEXT:       ReturnInst %6: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

@@ -181,12 +181,10 @@ void Verifier::visitFunction(const Function &F) {
       D.getRoot() == &*F.begin(),
       "Root node in dominance tree should be the entry basic block");
   for (const auto &I : F) {
-    if (isVerifyingOptimalIR()) {
-      // Check for unreachable blocks.
-      Assert(
-          D.isReachableFromEntry(&I),
-          "Basic Block unreachable from entry in the Dominance Tree");
-    }
+    // Check for unreachable blocks.
+    Assert(
+        D.isReachableFromEntry(&I),
+        "Basic Block unreachable from entry in the Dominance Tree");
 
     // Domination checks within a block are linear, so for huge blocks we get
     // quadratic runtime. To avoid this, we store a set of instructions we've

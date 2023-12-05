@@ -180,8 +180,6 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "something": string
 // CHECK-NEXT:       ReturnInst %6: any
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function "fexpr 1#"(): any

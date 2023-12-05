@@ -66,16 +66,12 @@ function delete_expr() {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %p: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [p]: any
 // CHECK-NEXT:       ReturnInst false: boolean
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function delete_literal(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst true: boolean
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function delete_variable(): any
@@ -83,8 +79,6 @@ function delete_expr() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeletePropertyLooseInst (:any) globalObject: object, "x": string
 // CHECK-NEXT:       ReturnInst %0: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function delete_expr(): any
@@ -93,6 +87,4 @@ function delete_expr() {
 // CHECK-NEXT:  %0 = LoadPropertyInst (:any) globalObject: object, "sink": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst true: boolean
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

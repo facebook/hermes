@@ -79,15 +79,6 @@ function test5() {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [y]: any
 // CHECK-NEXT:       ReturnInst %8: any
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:        ReturnInst %10: any
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function test1(x: any, y: any): any
@@ -106,8 +97,6 @@ function test5() {
 // CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:function_end
 
 // CHECK:function test2(x: any, y: any): any
@@ -126,8 +115,6 @@ function test5() {
 // CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:function_end
 
 // CHECK:function test3(x: any, y: any): any
@@ -139,21 +126,6 @@ function test5() {
 // CHECK-NEXT:       StoreFrameInst %2: any, [y]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:       ReturnInst %4: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:       CondBranchInst %6: any, %BB2, %BB3
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:       ReturnInst %8: any
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:        ReturnInst %10: any
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        UnreachableInst
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:        BranchInst %BB4
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:function_end
 
 // CHECK:function test4(x: any, y: any): any
@@ -165,27 +137,10 @@ function test5() {
 // CHECK-NEXT:       StoreFrameInst %2: any, [y]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:       ReturnInst %4: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:       CondBranchInst %6: any, %BB2, %BB3
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:       ReturnInst %8: any
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:        ReturnInst %10: any
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        UnreachableInst
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:        BranchInst %BB4
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:function_end
 
 // CHECK:function test5(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

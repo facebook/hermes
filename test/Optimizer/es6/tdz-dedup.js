@@ -59,8 +59,6 @@ function check_after_check() {
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [x]: any|empty
 // CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "inner": string
 // CHECK-NEXT:       ReturnInst %7: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function check_after_check(): any
@@ -73,8 +71,6 @@ function check_after_check() {
 // CHECK-NEXT:       StoreFrameInst 0: number, [x]: any|empty
 // CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "inner": string
 // CHECK-NEXT:       ReturnInst %5: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function inner1(): any
@@ -93,10 +89,6 @@ function check_after_check() {
 // CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:       ReturnInst 0: number
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function inner2(p: any): any
@@ -126,8 +118,6 @@ function check_after_check() {
 // CHECK-NEXT:  %18 = LoadFrameInst (:any|empty) [x@check_after_check]: any|empty
 // CHECK-NEXT:  %19 = ThrowIfEmptyInst (:any) %18: any|empty
 // CHECK-NEXT:        ReturnInst %19: any
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHKOPT:function global(): undefined
@@ -157,8 +147,6 @@ function check_after_check() {
 // CHKOPT-NEXT:       StoreFrameInst undefined: undefined, [x]: empty|undefined|number
 // CHKOPT-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "inner": string
 // CHKOPT-NEXT:       ReturnInst %7: any
-// CHKOPT-NEXT:%BB1:
-// CHKOPT-NEXT:       UnreachableInst
 // CHKOPT-NEXT:function_end
 
 // CHKOPT:function check_after_check(): any
@@ -171,8 +159,6 @@ function check_after_check() {
 // CHKOPT-NEXT:       StoreFrameInst 0: number, [x]: any|empty
 // CHKOPT-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "inner": string
 // CHKOPT-NEXT:       ReturnInst %5: any
-// CHKOPT-NEXT:%BB1:
-// CHKOPT-NEXT:       UnreachableInst
 // CHKOPT-NEXT:function_end
 
 // CHKOPT:function inner1(): undefined|number
@@ -191,10 +177,6 @@ function check_after_check() {
 // CHKOPT-NEXT:       BranchInst %BB3
 // CHKOPT-NEXT:%BB3:
 // CHKOPT-NEXT:       ReturnInst 0: number
-// CHKOPT-NEXT:%BB4:
-// CHKOPT-NEXT:        BranchInst %BB3
-// CHKOPT-NEXT:%BB5:
-// CHKOPT-NEXT:        UnreachableInst
 // CHKOPT-NEXT:function_end
 
 // CHKOPT:function inner2(p: any): any
@@ -220,6 +202,4 @@ function check_after_check() {
 // CHKOPT-NEXT:  %14 = LoadFrameInst (:any|empty) [x@check_after_check]: any|empty
 // CHKOPT-NEXT:  %15 = UnionNarrowTrustedInst (:any) %14: any|empty
 // CHKOPT-NEXT:        ReturnInst %15: any
-// CHKOPT-NEXT:%BB4:
-// CHKOPT-NEXT:        UnreachableInst
 // CHKOPT-NEXT:function_end

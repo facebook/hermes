@@ -51,16 +51,8 @@ function foo2(x) {
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst 1: number
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:       BranchInst %BB5
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:       ReturnInst 2: number
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:       ReturnInst 3: number
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:function_end
 
 // CHECK:function foo2(x: any): any
@@ -74,14 +66,6 @@ function foo2(x) {
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst 1: number
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:       ReturnInst 2: number
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:       BranchInst %BB6
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:       ReturnInst 3: number
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:function_end

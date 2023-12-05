@@ -66,8 +66,6 @@ function test2(x,y) {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
 // CHECK-NEXT:       StoreFrameInst %2: any, [y]: any
 // CHECK-NEXT:       ReturnInst 3: number
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function test2(x: any, y: any): any
@@ -86,6 +84,4 @@ function test2(x,y) {
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [y]: any
 // CHECK-NEXT:  %11 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %9: any, %10: any
 // CHECK-NEXT:        ReturnInst %11: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end

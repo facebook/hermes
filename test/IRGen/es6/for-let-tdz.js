@@ -363,8 +363,6 @@ function foo_var() {
 // CHECK-NEXT:  %0 = LoadFrameInst (:any|empty) [i@foo_full]: any|empty
 // CHECK-NEXT:  %1 = ThrowIfEmptyInst (:any) %0: any|empty
 // CHECK-NEXT:       ReturnInst %1: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow " 1#"(): any
@@ -373,8 +371,6 @@ function foo_var() {
 // CHECK-NEXT:  %0 = LoadFrameInst (:any|empty) [i@foo_full]: any|empty
 // CHECK-NEXT:  %1 = ThrowIfEmptyInst (:any) %0: any|empty
 // CHECK-NEXT:       ReturnInst %1: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow " 2#"(): any
@@ -383,8 +379,6 @@ function foo_var() {
 // CHECK-NEXT:  %0 = LoadFrameInst (:any|empty) [i@foo_full]: any|empty
 // CHECK-NEXT:  %1 = ThrowIfEmptyInst (:any) %0: any|empty
 // CHECK-NEXT:       ReturnInst %1: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow " 3#"(): any
@@ -393,8 +387,6 @@ function foo_var() {
 // CHECK-NEXT:  %0 = LoadFrameInst (:any|empty) [i@foo_testnc]: any|empty
 // CHECK-NEXT:  %1 = ThrowIfEmptyInst (:any) %0: any|empty
 // CHECK-NEXT:       ReturnInst %1: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow " 4#"(): any
@@ -403,8 +395,6 @@ function foo_var() {
 // CHECK-NEXT:  %0 = LoadFrameInst (:any|empty) [i@foo_testnc]: any|empty
 // CHECK-NEXT:  %1 = ThrowIfEmptyInst (:any) %0: any|empty
 // CHECK-NEXT:       ReturnInst %1: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow " 5#"(): any
@@ -413,8 +403,6 @@ function foo_var() {
 // CHECK-NEXT:  %0 = LoadFrameInst (:any|empty) [i@foo_updatenc]: any|empty
 // CHECK-NEXT:  %1 = ThrowIfEmptyInst (:any) %0: any|empty
 // CHECK-NEXT:       ReturnInst %1: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow " 6#"(): any
@@ -423,8 +411,6 @@ function foo_var() {
 // CHECK-NEXT:  %0 = LoadFrameInst (:any|empty) [i@foo_updatenc]: any|empty
 // CHECK-NEXT:  %1 = ThrowIfEmptyInst (:any) %0: any|empty
 // CHECK-NEXT:       ReturnInst %1: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow " 7#"(): any
@@ -433,6 +419,4 @@ function foo_var() {
 // CHECK-NEXT:  %0 = LoadFrameInst (:any|empty) [i@foo_testnc_updatenc]: any|empty
 // CHECK-NEXT:  %1 = ThrowIfEmptyInst (:any) %0: any|empty
 // CHECK-NEXT:       ReturnInst %1: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

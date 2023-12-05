@@ -46,8 +46,6 @@ function foo(x = () => this) {
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %14 = CallInst (:any) %13: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        ReturnInst %14: any
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:arrow x(): any
@@ -55,6 +53,4 @@ function foo(x = () => this) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [?anon_0_this@foo]: any
 // CHECK-NEXT:       ReturnInst %0: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

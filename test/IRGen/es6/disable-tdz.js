@@ -45,17 +45,6 @@ function check1() {
 // CHECK-NEXT:  %6 = ThrowIfEmptyInst (:any) empty: empty
 // CHECK-NEXT:  %7 = BinaryAddInst (:any) %5: any, %6: any
 // CHECK-NEXT:       ReturnInst %7: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       StoreFrameInst 10: number, [x]: any|empty
-// CHECK-NEXT:        StoreFrameInst 1: number, [y]: any|empty
-// CHECK-NEXT:  %11 = LoadFrameInst (:any|empty) [x]: any|empty
-// CHECK-NEXT:  %12 = UnionNarrowTrustedInst (:any) %11: any|empty
-// CHECK-NEXT:  %13 = LoadFrameInst (:any|empty) [y]: any|empty
-// CHECK-NEXT:  %14 = UnionNarrowTrustedInst (:any) %13: any|empty
-// CHECK-NEXT:  %15 = BinaryAddInst (:any) %12: any, %14: any
-// CHECK-NEXT:        ReturnInst %15: any
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function inner(): any
@@ -70,8 +59,6 @@ function check1() {
 // CHECK-NEXT:  %6 = LoadFrameInst (:any|empty) [y@check1]: any|empty
 // CHECK-NEXT:  %7 = ThrowIfEmptyInst (:any) %6: any|empty
 // CHECK-NEXT:       ReturnInst %7: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHKDIS:function global(): any
@@ -98,15 +85,6 @@ function check1() {
 // CHKDIS-NEXT:  %6 = LoadFrameInst (:any) [y]: any
 // CHKDIS-NEXT:  %7 = BinaryAddInst (:any) %5: any, %6: any
 // CHKDIS-NEXT:       ReturnInst %7: any
-// CHKDIS-NEXT:%BB1:
-// CHKDIS-NEXT:       StoreFrameInst 10: number, [x]: any
-// CHKDIS-NEXT:        StoreFrameInst 1: number, [y]: any
-// CHKDIS-NEXT:  %11 = LoadFrameInst (:any) [x]: any
-// CHKDIS-NEXT:  %12 = LoadFrameInst (:any) [y]: any
-// CHKDIS-NEXT:  %13 = BinaryAddInst (:any) %11: any, %12: any
-// CHKDIS-NEXT:        ReturnInst %13: any
-// CHKDIS-NEXT:%BB2:
-// CHKDIS-NEXT:        UnreachableInst
 // CHKDIS-NEXT:function_end
 
 // CHKDIS:function inner(): any
@@ -117,6 +95,4 @@ function check1() {
 // CHKDIS-NEXT:       StoreFrameInst %1: any, [x@check1]: any
 // CHKDIS-NEXT:  %3 = LoadFrameInst (:any) [y@check1]: any
 // CHKDIS-NEXT:       ReturnInst %3: any
-// CHKDIS-NEXT:%BB1:
-// CHKDIS-NEXT:       UnreachableInst
 // CHKDIS-NEXT:function_end

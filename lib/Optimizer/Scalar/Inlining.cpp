@@ -10,6 +10,7 @@
 
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IRBuilder.h"
+#include "hermes/IR/IRUtils.h"
 #include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
@@ -489,6 +490,9 @@ bool Inlining::runOnModule(Module *M) {
 
   bool changed = false;
 
+  // Record all functions that have had a call inlined into them so that we can
+  // any newly created dead blocks in a single pass.
+  llvh::SmallDenseSet<Function *, 8> intoFunctions;
   std::vector<Function *> functionOrder = orderFunctions(M);
 
   for (Function *FC : functionOrder) {
@@ -530,6 +534,7 @@ bool Inlining::runOnModule(Module *M) {
                      llvh::dbgs(), intoFunction->getSourceRange().Start);
                  llvh::dbgs() << "\n";);
 
+      intoFunctions.insert(intoFunction);
       IRBuilder builder(M);
 
       // Split the block in two and move all instructions following the call
@@ -555,6 +560,10 @@ bool Inlining::runOnModule(Module *M) {
       changed = true;
     }
   }
+
+  // Remove all unreachable blocks.
+  for (Function *F : intoFunctions)
+    changed |= deleteUnreachableBasicBlocks(F);
 
   return changed;
 }

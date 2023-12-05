@@ -56,24 +56,6 @@ delete_test()
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %3 = AsNumberInst (:number) %2: any
 // CHECK-NEXT:       ReturnInst %3: number
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %6 = UnaryMinusInst (:any) %5: any
-// CHECK-NEXT:       ReturnInst %6: any
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %9 = UnaryTildeInst (:any) %8: any
-// CHECK-NEXT:        ReturnInst %9: any
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %11 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %12 = UnaryBangInst (:any) %11: any
-// CHECK-NEXT:        ReturnInst %12: any
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %14 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %15 = UnaryTypeofInst (:any) %14: any
-// CHECK-NEXT:        ReturnInst %15: any
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function delete_test(o: any): any

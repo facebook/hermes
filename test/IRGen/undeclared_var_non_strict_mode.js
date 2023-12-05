@@ -38,11 +38,6 @@ function three() { return z; return z;}
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "s": string
 // CHECK-NEXT:       ReturnInst %0: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "s": string
-// CHECK-NEXT:       ReturnInst %2: any
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function two(): any
@@ -50,11 +45,6 @@ function three() { return z; return z;}
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "s": string
 // CHECK-NEXT:       ReturnInst %0: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "t": string
-// CHECK-NEXT:       ReturnInst %2: any
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function three(): any
@@ -62,9 +52,4 @@ function three() { return z; return z;}
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "z": string
 // CHECK-NEXT:       ReturnInst %0: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "z": string
-// CHECK-NEXT:       ReturnInst %2: any
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

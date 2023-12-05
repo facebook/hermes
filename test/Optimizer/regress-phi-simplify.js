@@ -49,11 +49,11 @@
 // CHECK:function main(): object [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %updateEventTarget(): undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %updateEventTarget(): any
 // CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
-// CHECK:function updateEventTarget(x: any, y: any): undefined
+// CHECK:function updateEventTarget(x: any, y: any): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ThrowInst 123: number

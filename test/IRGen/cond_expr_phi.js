@@ -57,6 +57,4 @@ function condExpr(a,b,c,d) {
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %21 = LoadStackInst (:any) %12: any
 // CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end

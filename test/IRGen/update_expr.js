@@ -70,8 +70,6 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:  %5 = UnaryIncInst (:any) %4: number|bigint
 // CHECK-NEXT:       StorePropertyLooseInst %5: any, %2: any, "f": string
 // CHECK-NEXT:       ReturnInst %4: number|bigint
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function update_field_test1(o: any): any
@@ -85,8 +83,6 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:  %5 = UnaryDecInst (:any) %4: number|bigint
 // CHECK-NEXT:       StorePropertyLooseInst %5: any, %2: any, "f": string
 // CHECK-NEXT:       ReturnInst %4: number|bigint
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function update_field_test2(o: any): any
@@ -99,8 +95,6 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:  %4 = UnaryIncInst (:any) %3: any
 // CHECK-NEXT:       StorePropertyLooseInst %4: any, %2: any, "f": string
 // CHECK-NEXT:       ReturnInst %4: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function update_field_test3(o: any): any
@@ -113,8 +107,6 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:  %4 = UnaryDecInst (:any) %3: any
 // CHECK-NEXT:       StorePropertyLooseInst %4: any, %2: any, "f": string
 // CHECK-NEXT:       ReturnInst %4: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function update_variable_test0(x: any): any
@@ -127,8 +119,6 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:  %4 = UnaryIncInst (:any) %3: number|bigint
 // CHECK-NEXT:       StoreFrameInst %4: any, [x]: any
 // CHECK-NEXT:       ReturnInst %3: number|bigint
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function update_variable_test1(x: any): any
@@ -141,8 +131,6 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:  %4 = UnaryDecInst (:any) %3: number|bigint
 // CHECK-NEXT:       StoreFrameInst %4: any, [x]: any
 // CHECK-NEXT:       ReturnInst %3: number|bigint
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function update_variable_test2(x: any): any
@@ -154,8 +142,6 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:  %3 = UnaryIncInst (:any) %2: any
 // CHECK-NEXT:       StoreFrameInst %3: any, [x]: any
 // CHECK-NEXT:       ReturnInst %3: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function update_variable_test3(x: any): any
@@ -167,6 +153,4 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:  %3 = UnaryDecInst (:any) %2: any
 // CHECK-NEXT:       StoreFrameInst %3: any, [x]: any
 // CHECK-NEXT:       ReturnInst %3: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

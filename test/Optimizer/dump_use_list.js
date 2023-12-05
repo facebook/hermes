@@ -42,6 +42,4 @@ function foo(a, b) {
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [c]: any // users: %11
 // CHECK-NEXT:  %11 = BinaryMultiplyInst (:any) %9: any, %10: any // users: %12
 // CHECK-NEXT:        ReturnInst %11: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end

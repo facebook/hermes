@@ -59,8 +59,6 @@ function shadow(arguments) {
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) %0: object, 0: number
 // CHECK-NEXT:  %3 = BinaryAddInst (:any) %1: any, %2: any
 // CHECK-NEXT:       ReturnInst %3: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function expensive(): any
@@ -74,8 +72,6 @@ function shadow(arguments) {
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %0: object, 0: number
 // CHECK-NEXT:  %6 = BinaryAddInst (:any) %4: any, %5: any
 // CHECK-NEXT:       ReturnInst %6: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function cond(): any
@@ -91,8 +87,6 @@ function shadow(arguments) {
 // CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:function_end
 
 // CHECK:function shadow(arguments: any): any
@@ -103,6 +97,4 @@ function shadow(arguments) {
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [arguments]: any
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: any, "length": string
 // CHECK-NEXT:       ReturnInst %3: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

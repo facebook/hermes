@@ -106,8 +106,6 @@ function helloWorld() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function emptyString(): any
@@ -117,8 +115,6 @@ function helloWorld() {
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "dummy": string
 // CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any
 // CHECK-NEXT:       ReturnInst %2: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function oneString(): any
@@ -128,8 +124,6 @@ function helloWorld() {
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "dummy": string
 // CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any
 // CHECK-NEXT:       ReturnInst %2: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function oneSub(): any
@@ -139,8 +133,6 @@ function helloWorld() {
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "dummy": string
 // CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any, 666: number
 // CHECK-NEXT:       ReturnInst %2: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function dup(): any
@@ -151,8 +143,6 @@ function helloWorld() {
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) globalObject: object, "dummy": string
 // CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any, %1: any
 // CHECK-NEXT:       ReturnInst %3: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function notDup(): any
@@ -163,8 +153,6 @@ function helloWorld() {
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) globalObject: object, "dummy": string
 // CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any, %1: any
 // CHECK-NEXT:       ReturnInst %3: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function memberExpr(): any
@@ -180,8 +168,6 @@ function helloWorld() {
 // CHECK-NEXT:  %7 = LoadPropertyInst (:any) %6: any, "func": string
 // CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, %6: any, %5: any
 // CHECK-NEXT:       ReturnInst %8: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function callExpr(): any
@@ -195,8 +181,6 @@ function helloWorld() {
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: any
 // CHECK-NEXT:       ReturnInst %6: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function dup2(): any
@@ -207,8 +191,6 @@ function helloWorld() {
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) globalObject: object, "dummy": string
 // CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any, %1: any
 // CHECK-NEXT:       ReturnInst %3: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function dup3(): any
@@ -218,8 +200,6 @@ function helloWorld() {
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "dummy": string
 // CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any, 7: number
 // CHECK-NEXT:       ReturnInst %2: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function helloWorld(): any
@@ -229,8 +209,6 @@ function helloWorld() {
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "dummy": string
 // CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: any, 0: number
 // CHECK-NEXT:       ReturnInst %2: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function func(): any
@@ -238,14 +216,10 @@ function helloWorld() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): any
 // CHECK-NEXT:       ReturnInst %0: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

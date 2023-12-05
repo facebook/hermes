@@ -131,17 +131,6 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %7 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %8 = BinaryLessThanInst (:any) %7: any, 10: number
-// CHECK-NEXT:       CondBranchInst %8: any, %BB1, %BB2
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %11 = BinaryAddInst (:any) %10: any, 1: number
-// CHECK-NEXT:        StoreFrameInst %11: any, [i]: any
-// CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_for_loop_break_label(): any
@@ -158,17 +147,6 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       BranchInst %BB3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %9 = BinaryLessThanInst (:any) %8: any, 10: number
-// CHECK-NEXT:        CondBranchInst %9: any, %BB1, %BB2
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %11 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %12 = BinaryAddInst (:any) %11: any, 1: number
-// CHECK-NEXT:        StoreFrameInst %12: any, [i]: any
-// CHECK-NEXT:        BranchInst %BB4
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_for_loop_continue(): any
@@ -192,8 +170,6 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:  %11 = BinaryAddInst (:any) %10: any, 1: number
 // CHECK-NEXT:        StoreFrameInst %11: any, [i]: any
 // CHECK-NEXT:        BranchInst %BB4
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_for_loop_continue_label(): any
@@ -219,8 +195,6 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:  %12 = BinaryAddInst (:any) %11: any, 1: number
 // CHECK-NEXT:        StoreFrameInst %12: any, [i]: any
 // CHECK-NEXT:        BranchInst %BB5
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:function_end
 
 // CHECK:function for_loop_match(a: any, b: any, c: any, d: any, e: any, f: any): any
@@ -249,18 +223,6 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        ReturnInst undefined: undefined
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %21 = LoadFrameInst (:any) [b]: any
-// CHECK-NEXT:  %22 = CallInst (:any) %21: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:        CondBranchInst %22: any, %BB1, %BB2
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %24 = LoadFrameInst (:any) [c]: any
-// CHECK-NEXT:  %25 = CallInst (:any) %24: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %27 = LoadFrameInst (:any) [e]: any
-// CHECK-NEXT:  %28 = CallInst (:any) %27: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:function_end
 
 // CHECK:function naked_for_loop(): any
@@ -270,11 +232,9 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:%BB4:
 // CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:       BranchInst %BB4
+// CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:function_end
 
 // CHECK:function test_init_update_exprs(param1: any): any

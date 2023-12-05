@@ -79,8 +79,6 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:       StoreOwnPropertyInst null: null, %4: object, "__proto__": string, true: boolean
 // CHECK-NEXT:       StoreOwnPropertyInst 42: number, %4: object, "a": string, true: boolean
 // CHECK-NEXT:       ReturnInst %4: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function protoDupMethod1(func: any): any
@@ -95,8 +93,6 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:       StoreNewOwnPropertyInst %5: object, %4: object, "__proto__": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst 42: number, %4: object, "a": string, true: boolean
 // CHECK-NEXT:       ReturnInst %4: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function protoDupMethod2(func: any): any
@@ -112,8 +108,6 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %7 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %2: object, %6: any
 // CHECK-NEXT:       StoreNewOwnPropertyInst 42: number, %2: object, "a": string, true: boolean
 // CHECK-NEXT:       ReturnInst %2: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function protoDupAccessor1(func: any): any
@@ -127,8 +121,6 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %"get __proto__"(): any
 // CHECK-NEXT:       StoreGetterSetterInst %5: object, undefined: undefined, %4: object, "__proto__": string, true: boolean
 // CHECK-NEXT:       ReturnInst %4: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function protoDupAccessor2(func: any): any
@@ -142,8 +134,6 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %"set __proto__"(): any
 // CHECK-NEXT:       StoreGetterSetterInst undefined: undefined, %5: object, %4: object, "__proto__": string, true: boolean
 // CHECK-NEXT:       ReturnInst %4: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function protoDupAccessor3(func: any): any
@@ -159,8 +149,6 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %8 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %2: object, %7: any
 // CHECK-NEXT:       ReturnInst %2: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function __proto__(x: any, y: any): any
@@ -174,8 +162,6 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [y]: any
 // CHECK-NEXT:  %6 = BinaryAddInst (:any) %4: any, %5: any
 // CHECK-NEXT:       ReturnInst %6: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function "__proto__ 1#"(x: any, y: any): any
@@ -189,16 +175,12 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [y]: any
 // CHECK-NEXT:  %6 = BinaryAddInst (:any) %4: any, %5: any
 // CHECK-NEXT:       ReturnInst %6: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function "get __proto__"(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst 33: number
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function "set __proto__"(_: any): any
@@ -207,16 +189,12 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %_: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [_]: any
 // CHECK-NEXT:       ReturnInst 44: number
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function "get __proto__ 1#"(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst 33: number
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function "set __proto__ 1#"(_: any): any
@@ -225,6 +203,4 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %_: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [_]: any
 // CHECK-NEXT:       ReturnInst 44: number
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

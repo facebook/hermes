@@ -51,6 +51,4 @@ function onlyDefault () {
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       BranchInst %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:function_end

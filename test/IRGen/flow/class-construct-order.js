@@ -66,8 +66,6 @@ return foo;
 // CHECK-NEXT:       StorePropertyStrictInst %5: object, %3: object, "prototype": string
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [foo]: any
 // CHECK-NEXT:       ReturnInst %8: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(x: number): any [typed]
@@ -82,8 +80,6 @@ return foo;
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %7 = CallInst (:any) %2: any, %C(): any, empty: any, %2: any, %4: object, %6: any
 // CHECK-NEXT:       ReturnInst %4: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function C(x: any): any [typed]

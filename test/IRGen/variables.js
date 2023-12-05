@@ -109,8 +109,6 @@ function level0(x) {
 // CHECK-NEXT:       StoreFrameInst %0: any, [same_param_name]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [same_param_name]: any
 // CHECK-NEXT:       ReturnInst %2: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function level2(z: any): any

@@ -75,6 +75,4 @@ function foo(p1, p2, p3) {
 // CHECK-NEXT:  %19 = BinaryAddInst (:any) %17: any, %18: any
 // CHECK-NEXT:        StoreFrameInst %19: any, [k]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end

@@ -84,11 +84,6 @@ function for_while_do_mixed_test(cond) {
 // CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:       CondBranchInst %5: any, %BB1, %BB2
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:function_end
 
 // CHECK:function do_while_continue_test(cond: any): any
@@ -104,8 +99,6 @@ function for_while_do_mixed_test(cond) {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [cond]: any
 // CHECK-NEXT:       CondBranchInst %5: any, %BB1, %BB3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function for_while_do_mixed_test(cond: any): any
@@ -137,18 +130,11 @@ function for_while_do_mixed_test(cond) {
 // CHECK-NEXT:        BranchInst %BB7
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:        BranchInst %BB6
-// CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %20 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:        CondBranchInst %20: any, %BB3, %BB4
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:        BranchInst %BB9
-// CHECK-NEXT:%BB10:
-// CHECK-NEXT:        BranchInst %BB4
-// CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %24 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:        CondBranchInst %24: any, %BB7, %BB10
-// CHECK-NEXT:%BB11:
-// CHECK-NEXT:        BranchInst %BB9
-// CHECK-NEXT:%BB12:
 // CHECK-NEXT:        BranchInst %BB8
+// CHECK-NEXT:%BB9:
+// CHECK-NEXT:        BranchInst %BB4
+// CHECK-NEXT:%BB8:
+// CHECK-NEXT:  %22 = LoadFrameInst (:any) [cond]: any
+// CHECK-NEXT:        CondBranchInst %22: any, %BB7, %BB9
 // CHECK-NEXT:function_end

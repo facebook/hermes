@@ -44,6 +44,4 @@ undefined;
 // CHECK-NEXT:       StoreFrameInst 5: number, [undefined]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [undefined]: any
 // CHECK-NEXT:       ReturnInst %2: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

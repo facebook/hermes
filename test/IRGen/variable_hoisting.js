@@ -51,6 +51,4 @@ function main() {
 // CHECK-NEXT:       StoreFrameInst %0: any, [x]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [capture_me@main]: any
 // CHECK-NEXT:       ReturnInst %2: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

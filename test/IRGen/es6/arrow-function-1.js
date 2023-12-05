@@ -37,14 +37,10 @@ var func2 = () => { return 11; }
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst 10: number
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow func2(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst 11: number
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

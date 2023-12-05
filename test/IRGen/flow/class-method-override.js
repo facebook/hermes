@@ -92,8 +92,6 @@ new D().override();
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst 1: number
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function override2(x: number): any [typed]
@@ -102,8 +100,6 @@ new D().override();
 // CHECK-NEXT:  %0 = LoadParamInst (:number) %x: number
 // CHECK-NEXT:       StoreFrameInst %0: number, [x]: any
 // CHECK-NEXT:       ReturnInst 1: number
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function D(): any [typed]
@@ -120,8 +116,6 @@ new D().override();
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst 2: number
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function "override2 1#"(x: string|number): any [typed]
@@ -130,6 +124,4 @@ new D().override();
 // CHECK-NEXT:  %0 = LoadParamInst (:string|number) %x: string|number
 // CHECK-NEXT:       StoreFrameInst %0: string|number, [x]: any
 // CHECK-NEXT:       ReturnInst 2: number
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

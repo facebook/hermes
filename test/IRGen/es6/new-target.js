@@ -63,8 +63,6 @@ function func4() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
 // CHECK-NEXT:       ReturnInst %0: undefined|object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function func2(a: any): any
@@ -85,8 +83,6 @@ function func4() {
 // CHECK-NEXT:  %9 = BinaryStrictlyNotEqualInst (:any) %8: undefined|object, undefined: undefined
 // CHECK-NEXT:  %10 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %9: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:function_end
 
 // CHECK:function func3(): any
@@ -113,8 +109,6 @@ function func4() {
 // CHECK-NEXT:  %18 = LoadFrameInst (:any) [innerArrow1]: any
 // CHECK-NEXT:        StoreOwnPropertyInst %18: any, %16: object, 1: number, true: boolean
 // CHECK-NEXT:        ReturnInst %16: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function func4(): any
@@ -123,8 +117,6 @@ function func4() {
 // CHECK-NEXT:  %0 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: undefined|object, "prototype": string
 // CHECK-NEXT:       ReturnInst %1: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function innerFunction(): any
@@ -132,8 +124,6 @@ function func4() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
 // CHECK-NEXT:       ReturnInst %0: undefined|object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:arrow innerArrow1(): any
@@ -149,8 +139,6 @@ function func4() {
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [innerArrow2]: any
 // CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst %8: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow innerArrow2(): any
@@ -158,6 +146,4 @@ function func4() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:undefined|object) [?anon_1_new.target@func3]: undefined|object
 // CHECK-NEXT:       ReturnInst %0: undefined|object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

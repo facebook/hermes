@@ -132,8 +132,6 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:       StoreNewOwnPropertyInst 5: number, %2: object, "5": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst 6: number, %2: object, "6": string, true: boolean
 // CHECK-NEXT:       ReturnInst %2: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function nestedAllocObjectLiteral(func: any): any
@@ -150,8 +148,6 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:       StoreNewOwnPropertyInst "hello": string, %2: object, "c": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst null: null, %2: object, "d": string, true: boolean
 // CHECK-NEXT:        ReturnInst %2: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function duplicatedObjectLiteral(func: any): any
@@ -166,8 +162,6 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:       StoreNewOwnPropertyInst 3: number, %2: object, "c": string, true: boolean
 // CHECK-NEXT:       StoreOwnPropertyInst 4: number, %2: object, "d": string, true: boolean
 // CHECK-NEXT:       ReturnInst %2: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function emptyObjectLiteral(func: any): any
@@ -177,8 +171,6 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:       StoreFrameInst %0: any, [func]: any
 // CHECK-NEXT:  %2 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:       ReturnInst %2: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function protoObjectLiteral1(func: any): any
@@ -193,8 +185,6 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %6 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %7 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %2: object, %6: object
 // CHECK-NEXT:       ReturnInst %2: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function protoObjectLiteral2(func: any): any
@@ -208,8 +198,6 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:       StoreNewOwnPropertyInst 2: number, %3: object, "b": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst 3: number, %3: object, "c": string, true: boolean
 // CHECK-NEXT:       ReturnInst %3: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function computedObjectLiteral(func: any): any
@@ -223,8 +211,6 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:       StoreNewOwnPropertyInst 3: number, %2: object, "c": string, true: boolean
 // CHECK-NEXT:       StoreOwnPropertyInst 4: number, %2: object, "test": string, true: boolean
 // CHECK-NEXT:       ReturnInst %2: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function spreadObjectLiteral(func: any): any
@@ -242,8 +228,6 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %9 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %7: object, %8: any
 // CHECK-NEXT:        StoreOwnPropertyInst 42: number, %7: object, "c": string, true: boolean
 // CHECK-NEXT:        ReturnInst %7: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function accessorObjectLiteral1(func: any): any
@@ -258,8 +242,6 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:       StoreNewOwnPropertyInst null: null, %2: object, "d": string, true: boolean
 // CHECK-NEXT:       StoreOwnPropertyInst 10086: number, %2: object, "c": string, true: boolean
 // CHECK-NEXT:       ReturnInst %2: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function accessorObjectLiteral2(func: any): any
@@ -274,14 +256,10 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:       StoreGetterSetterInst %5: object, undefined: undefined, %2: object, "c": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst null: null, %2: object, "d": string, true: boolean
 // CHECK-NEXT:       ReturnInst %2: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function "get c"(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst 42: number
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

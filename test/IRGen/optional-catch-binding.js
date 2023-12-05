@@ -42,20 +42,11 @@ function foo(f, g) {
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [g]: any
 // CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst %7: any
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) [f]: any
-// CHECK-NEXT:  %11 = CallInst (:any) %10: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:        BranchInst %BB4
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:        ReturnInst %11: any
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:        BranchInst %BB6
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:        TryEndInst
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) [f]: any
+// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:        TryEndInst
+// CHECK-NEXT:        ReturnInst %10: any
 // CHECK-NEXT:function_end

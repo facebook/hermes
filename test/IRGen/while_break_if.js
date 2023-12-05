@@ -70,8 +70,6 @@ fail2:
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst 1: number
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function continue_test(cond: any): any
@@ -88,8 +86,6 @@ fail2:
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [cond]: any
 // CHECK-NEXT:       CondBranchInst %6: any, %BB1, %BB2
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:function_end
 
 // CHECK:function break_test(cond: any): any
@@ -103,11 +99,6 @@ fail2:
 // CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:       CondBranchInst %6: any, %BB1, %BB2
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:function_end
 
 // CHECK:function break_label(cond: any): any
@@ -123,11 +114,6 @@ fail2:
 // CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       BranchInst %BB3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %7 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:       CondBranchInst %7: any, %BB1, %BB2
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:       BranchInst %BB4
 // CHECK-NEXT:function_end
 
 // CHECK:function continue_label(cond: any): any
@@ -146,8 +132,6 @@ fail2:
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [cond]: any
 // CHECK-NEXT:       CondBranchInst %7: any, %BB1, %BB2
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:       BranchInst %BB4
 // CHECK-NEXT:function_end
 
 // CHECK:function nested_label(cond: any): any
@@ -176,6 +160,4 @@ fail2:
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [cond]: any
 // CHECK-NEXT:        CondBranchInst %13: any, %BB4, %BB5
-// CHECK-NEXT:%BB9:
-// CHECK-NEXT:        BranchInst %BB8
 // CHECK-NEXT:function_end

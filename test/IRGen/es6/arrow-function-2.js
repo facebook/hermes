@@ -81,8 +81,6 @@ function outer2() {
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [?anon_0_this@outer1]: any
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "x": string
 // CHECK-NEXT:       ReturnInst %1: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow innerArrow2(): any
@@ -91,8 +89,6 @@ function outer2() {
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [?anon_0_this@outer1]: any
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "y": string
 // CHECK-NEXT:       ReturnInst %1: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function inner3(): any
@@ -102,8 +98,6 @@ function outer2() {
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) %1: object, "a": string
 // CHECK-NEXT:       ReturnInst %2: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:arrow innerArrow4(): any
@@ -123,6 +117,4 @@ function outer2() {
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [?anon_0_this@outer2]: any
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "b": string
 // CHECK-NEXT:       ReturnInst %1: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

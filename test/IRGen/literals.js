@@ -41,18 +41,4 @@ foo()
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst "hi": string
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       ReturnInst 2.312: number
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:       ReturnInst 12: number
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:       ReturnInst 18: number
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:       ReturnInst true: boolean
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:       ReturnInst null: null
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

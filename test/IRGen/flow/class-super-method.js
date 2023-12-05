@@ -89,8 +89,6 @@ class B extends A {
 // CHECK-NEXT:  %1 = PrLoadInst (:number) %0: object, 0: number, "x": string
 // CHECK-NEXT:  %2 = BinaryMultiplyInst (:any) %1: number, 10: number
 // CHECK-NEXT:       ReturnInst %2: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function B(x: number): any [typed]
@@ -115,6 +113,4 @@ class B extends A {
 // CHECK-NEXT:  %3 = CallInst [njsf] (:any) %2: object, empty: any, empty: any, undefined: undefined, %0: object
 // CHECK-NEXT:  %4 = BinaryAddInst (:any) %3: any, 23: number
 // CHECK-NEXT:       ReturnInst %4: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

@@ -55,8 +55,6 @@ function f2(a, b) {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %12 = LoadStackInst (:any) %4: any
 // CHECK-NEXT:        ReturnInst %12: any
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function f2(a: any, b: any): any
@@ -73,15 +71,9 @@ function f2(a, b) {
 // CHECK-NEXT:       ReturnInst 1: number
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:       ReturnInst 2: number
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) [b]: any
-// CHECK-NEXT:        CondBranchInst %10: any, %BB3, %BB4
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) [b]: any
+// CHECK-NEXT:        CondBranchInst %9: any, %BB3, %BB4
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        CondBranchInst %4: any, %BB3, %BB4
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:        BranchInst %BB5
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:function_end

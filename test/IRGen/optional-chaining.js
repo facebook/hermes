@@ -97,8 +97,6 @@ function f9(a) {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) %2: any, "b": string
 // CHECK-NEXT:       BranchInst %BB3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function f2(f: any): any
@@ -117,8 +115,6 @@ function f9(a) {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       BranchInst %BB3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function f3(a: any): any
@@ -138,8 +134,6 @@ function f9(a) {
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) %2: any, "b": string
 // CHECK-NEXT:  %9 = LoadPropertyInst (:any) %8: any, "c": string
 // CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function f4(a: any): any
@@ -160,8 +154,6 @@ function f9(a) {
 // CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, %2: any
 // CHECK-NEXT:  %10 = LoadPropertyInst (:any) %9: any, "c": string
 // CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function f5(a: any): any
@@ -181,8 +173,6 @@ function f9(a) {
 // CHECK-NEXT:  %8 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %9 = LoadPropertyInst (:any) %8: any, "b": string
 // CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function f6(a: any): any
@@ -203,8 +193,6 @@ function f9(a) {
 // CHECK-NEXT:  %9 = LoadPropertyInst (:any) %2: any, "b": string
 // CHECK-NEXT:  %10 = LoadPropertyInst (:any) %9: any, "c": string
 // CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function f7(a: any): any
@@ -228,8 +216,6 @@ function f9(a) {
 // CHECK-NEXT:  %11 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, %2: any
 // CHECK-NEXT:  %12 = LoadPropertyInst (:any) %11: any, "c": string
 // CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function f8(a: any): any
@@ -256,8 +242,6 @@ function f9(a) {
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %14 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, %8: any
 // CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function f9(a: any): any
@@ -276,6 +260,4 @@ function f9(a) {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = DeletePropertyLooseInst (:any) %2: any, "b": string
 // CHECK-NEXT:       BranchInst %BB3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end

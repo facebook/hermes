@@ -144,8 +144,6 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:       ReturnInst 1: number
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       ReturnInst %2: any
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_?anon_0_simpleAwait(): any
@@ -172,8 +170,6 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:        ReturnInst %13: any
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:        ReturnInst %9: any
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_?anon_0_nonSimpleArrayDestructuring(?anon_2_param: any): any
@@ -241,8 +237,6 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:        ReturnInst %46: any
 // CHECK-NEXT:%BB12:
 // CHECK-NEXT:        ReturnInst %42: any
-// CHECK-NEXT:%BB14:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_?anon_0_simpleAsyncFE(): any
@@ -269,6 +263,4 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:        ReturnInst %13: any
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:        ReturnInst %9: any
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end

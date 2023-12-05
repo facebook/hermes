@@ -51,15 +51,4 @@ function sink(x, y) {
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %4: any, "bar": string
 // CHECK-NEXT:       ReturnInst %5: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %8 = LoadPropertyInst (:any) %7: any, "bar": string
-// CHECK-NEXT:       ReturnInst %8: any
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %11 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %12 = LoadPropertyInst (:any) %10: any, %11: any
-// CHECK-NEXT:        ReturnInst %12: any
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end

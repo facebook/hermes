@@ -146,8 +146,6 @@ function forof_continue(seq) {
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB1
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function forof_break(seq: any): any
@@ -201,13 +199,9 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %36 = LoadStackInst (:any) %6: any
 // CHECK-NEXT:  %37 = IteratorCloseInst (:any) %36: any, false: boolean
 // CHECK-NEXT:        BranchInst %BB2
-// CHECK-NEXT:%BB11:
-// CHECK-NEXT:        BranchInst %BB9
 // CHECK-NEXT:%BB10:
 // CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB1
-// CHECK-NEXT:%BB12:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function forof_continue(seq: any): any
@@ -259,11 +253,7 @@ function forof_continue(seq) {
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB1
-// CHECK-NEXT:%BB11:
-// CHECK-NEXT:        BranchInst %BB9
 // CHECK-NEXT:%BB10:
 // CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB1
-// CHECK-NEXT:%BB12:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end

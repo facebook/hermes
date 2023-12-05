@@ -225,17 +225,6 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %29 = UnaryIncInst (:any) %28: number|bigint
 // CHECK-NEXT:        StoreFrameInst %29: any, [i]: any
 // CHECK-NEXT:        BranchInst %BB7
-// CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %32 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %33 = AsNumericInst (:number|bigint) %32: any
-// CHECK-NEXT:  %34 = UnaryDecInst (:any) %33: number|bigint
-// CHECK-NEXT:        StoreFrameInst %34: any, [i]: any
-// CHECK-NEXT:        BranchInst %BB9
-// CHECK-NEXT:%BB9:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:%BB10:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_try_catch_finally_test(): any
@@ -326,66 +315,36 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %5 = BinaryAddInst (:any) %4: any, 3: number
 // CHECK-NEXT:       StoreFrameInst %5: any, [i]: any
 // CHECK-NEXT:       ReturnInst "c": string
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %9 = BinaryAddInst (:any) %8: any, 4: number
-// CHECK-NEXT:        StoreFrameInst %9: any, [i]: any
-// CHECK-NEXT:        ReturnInst "d": string
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:        TryStartInst %BB4, %BB5
+// CHECK-NEXT:       TryStartInst %BB3, %BB4
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %9 = CatchInst (:any)
+// CHECK-NEXT:        StoreFrameInst %9: any, [e]: any
+// CHECK-NEXT:  %11 = LoadFrameInst (:any) [i]: any
+// CHECK-NEXT:  %12 = BinaryAddInst (:any) %11: any, 2: number
+// CHECK-NEXT:        StoreFrameInst %12: any, [i]: any
+// CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %13 = CatchInst (:any)
-// CHECK-NEXT:        StoreFrameInst %13: any, [e]: any
 // CHECK-NEXT:  %15 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %16 = BinaryAddInst (:any) %15: any, 2: number
-// CHECK-NEXT:        StoreFrameInst %16: any, [i]: any
+// CHECK-NEXT:  %16 = AsNumericInst (:number|bigint) %15: any
+// CHECK-NEXT:  %17 = UnaryIncInst (:any) %16: number|bigint
+// CHECK-NEXT:        StoreFrameInst %17: any, [i]: any
 // CHECK-NEXT:        BranchInst %BB6
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:        BranchInst %BB8
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %20 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %21 = AsNumericInst (:number|bigint) %20: any
-// CHECK-NEXT:  %22 = UnaryIncInst (:any) %21: number|bigint
-// CHECK-NEXT:        StoreFrameInst %22: any, [i]: any
-// CHECK-NEXT:        BranchInst %BB9
-// CHECK-NEXT:%BB9:
+// CHECK-NEXT:%BB6:
 // CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:        BranchInst %BB10
-// CHECK-NEXT:%BB10:
+// CHECK-NEXT:        BranchInst %BB7
+// CHECK-NEXT:%BB7:
+// CHECK-NEXT:        TryEndInst
+// CHECK-NEXT:  %23 = LoadFrameInst (:any) [i]: any
+// CHECK-NEXT:  %24 = BinaryAddInst (:any) %23: any, 3: number
+// CHECK-NEXT:        StoreFrameInst %24: any, [i]: any
+// CHECK-NEXT:        ReturnInst "c": string
+// CHECK-NEXT:%BB5:
 // CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:  %28 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %29 = BinaryAddInst (:any) %28: any, 3: number
 // CHECK-NEXT:        StoreFrameInst %29: any, [i]: any
 // CHECK-NEXT:        ReturnInst "c": string
-// CHECK-NEXT:%BB11:
-// CHECK-NEXT:        ReturnInst "a": string
-// CHECK-NEXT:%BB12:
-// CHECK-NEXT:        BranchInst %BB13
-// CHECK-NEXT:%BB13:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:        BranchInst %BB7
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %37 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %38 = BinaryAddInst (:any) %37: any, 3: number
-// CHECK-NEXT:        StoreFrameInst %38: any, [i]: any
-// CHECK-NEXT:        ReturnInst "c": string
-// CHECK-NEXT:%BB14:
-// CHECK-NEXT:        ReturnInst "b": string
-// CHECK-NEXT:%BB15:
-// CHECK-NEXT:        BranchInst %BB7
-// CHECK-NEXT:%BB8:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %44 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %45 = BinaryAddInst (:any) %44: any, 3: number
-// CHECK-NEXT:        StoreFrameInst %45: any, [i]: any
-// CHECK-NEXT:        ReturnInst "c": string
-// CHECK-NEXT:%BB16:
-// CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:%BB17:
-// CHECK-NEXT:        ThrowInst %3: any
-// CHECK-NEXT:%BB18:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function nested_try_test(): any
@@ -497,34 +456,29 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %79 = BinaryAddInst (:any) %78: any, 3: number
 // CHECK-NEXT:        StoreFrameInst %79: any, [i]: any
 // CHECK-NEXT:        ReturnInst "a": string
-// CHECK-NEXT:%BB30:
-// CHECK-NEXT:        BranchInst %BB31
-// CHECK-NEXT:%BB31:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:        BranchInst %BB22
 // CHECK-NEXT:%BB23:
 // CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %86 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %87 = BinaryAddInst (:any) %86: any, 10: number
-// CHECK-NEXT:        StoreFrameInst %87: any, [i]: any
+// CHECK-NEXT:  %83 = LoadFrameInst (:any) [i]: any
+// CHECK-NEXT:  %84 = BinaryAddInst (:any) %83: any, 10: number
+// CHECK-NEXT:        StoreFrameInst %84: any, [i]: any
 // CHECK-NEXT:        BranchInst %BB18
 // CHECK-NEXT:%BB19:
 // CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB14
 // CHECK-NEXT:%BB15:
 // CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %93 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %94 = BinaryAddInst (:any) %93: any, 7: number
-// CHECK-NEXT:        StoreFrameInst %94: any, [i]: any
+// CHECK-NEXT:  %90 = LoadFrameInst (:any) [i]: any
+// CHECK-NEXT:  %91 = BinaryAddInst (:any) %90: any, 7: number
+// CHECK-NEXT:        StoreFrameInst %91: any, [i]: any
 // CHECK-NEXT:        BranchInst %BB10
 // CHECK-NEXT:%BB11:
 // CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB6
 // CHECK-NEXT:%BB7:
 // CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %100 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %101 = BinaryAddInst (:any) %100: any, 3: number
-// CHECK-NEXT:         StoreFrameInst %101: any, [i]: any
+// CHECK-NEXT:  %97 = LoadFrameInst (:any) [i]: any
+// CHECK-NEXT:  %98 = BinaryAddInst (:any) %97: any, 3: number
+// CHECK-NEXT:        StoreFrameInst %98: any, [i]: any
 // CHECK-NEXT:         BranchInst %BB3
 // CHECK-NEXT:function_end
 
@@ -703,67 +657,48 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %20 = BinaryAddInst (:any) %19: any, 3: number
 // CHECK-NEXT:        StoreFrameInst %20: any, [i]: any
 // CHECK-NEXT:        ThrowInst %18: any
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:        BranchInst %BB6
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:        TryStartInst %BB8, %BB9
+// CHECK-NEXT:        TryStartInst %BB7, %BB8
+// CHECK-NEXT:%BB7:
+// CHECK-NEXT:  %24 = CatchInst (:any)
+// CHECK-NEXT:        StoreFrameInst %24: any, [e]: any
+// CHECK-NEXT:  %26 = LoadFrameInst (:any) [i]: any
+// CHECK-NEXT:  %27 = BinaryAddInst (:any) %26: any, 2: number
+// CHECK-NEXT:        StoreFrameInst %27: any, [i]: any
+// CHECK-NEXT:  %29 = LoadFrameInst (:any) [i]: any
+// CHECK-NEXT:  %30 = BinaryEqualInst (:any) %29: any, 3: number
+// CHECK-NEXT:        CondBranchInst %30: any, %BB9, %BB10
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %25 = CatchInst (:any)
-// CHECK-NEXT:        StoreFrameInst %25: any, [e]: any
-// CHECK-NEXT:  %27 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %28 = BinaryAddInst (:any) %27: any, 2: number
-// CHECK-NEXT:        StoreFrameInst %28: any, [i]: any
-// CHECK-NEXT:  %30 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %31 = BinaryEqualInst (:any) %30: any, 3: number
-// CHECK-NEXT:        CondBranchInst %31: any, %BB10, %BB11
-// CHECK-NEXT:%BB12:
-// CHECK-NEXT:        BranchInst %BB13
-// CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %34 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %35 = AsNumericInst (:number|bigint) %34: any
-// CHECK-NEXT:  %36 = UnaryIncInst (:any) %35: number|bigint
-// CHECK-NEXT:        StoreFrameInst %36: any, [i]: any
-// CHECK-NEXT:        BranchInst %BB14
-// CHECK-NEXT:%BB14:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:        BranchInst %BB15
-// CHECK-NEXT:%BB15:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %42 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %43 = BinaryAddInst (:any) %42: any, 3: number
-// CHECK-NEXT:        StoreFrameInst %43: any, [i]: any
-// CHECK-NEXT:        BranchInst %BB2
-// CHECK-NEXT:%BB16:
-// CHECK-NEXT:        BranchInst %BB17
-// CHECK-NEXT:%BB17:
+// CHECK-NEXT:  %32 = LoadFrameInst (:any) [i]: any
+// CHECK-NEXT:  %33 = AsNumericInst (:number|bigint) %32: any
+// CHECK-NEXT:  %34 = UnaryIncInst (:any) %33: number|bigint
+// CHECK-NEXT:        StoreFrameInst %34: any, [i]: any
+// CHECK-NEXT:        BranchInst %BB11
+// CHECK-NEXT:%BB11:
 // CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB12
+// CHECK-NEXT:%BB12:
+// CHECK-NEXT:        TryEndInst
+// CHECK-NEXT:  %40 = LoadFrameInst (:any) [i]: any
+// CHECK-NEXT:  %41 = BinaryAddInst (:any) %40: any, 3: number
+// CHECK-NEXT:        StoreFrameInst %41: any, [i]: any
+// CHECK-NEXT:        BranchInst %BB2
+// CHECK-NEXT:%BB9:
+// CHECK-NEXT:        BranchInst %BB13
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:        BranchInst %BB18
-// CHECK-NEXT:%BB11:
-// CHECK-NEXT:        BranchInst %BB19
-// CHECK-NEXT:%BB19:
-// CHECK-NEXT:        BranchInst %BB20
-// CHECK-NEXT:%BB18:
+// CHECK-NEXT:        BranchInst %BB14
+// CHECK-NEXT:%BB14:
+// CHECK-NEXT:        BranchInst %BB15
+// CHECK-NEXT:%BB13:
+// CHECK-NEXT:        TryEndInst
+// CHECK-NEXT:  %48 = LoadFrameInst (:any) [i]: any
+// CHECK-NEXT:  %49 = BinaryAddInst (:any) %48: any, 3: number
+// CHECK-NEXT:        StoreFrameInst %49: any, [i]: any
+// CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:%BB15:
 // CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:  %53 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %54 = BinaryAddInst (:any) %53: any, 3: number
 // CHECK-NEXT:        StoreFrameInst %54: any, [i]: any
-// CHECK-NEXT:        ReturnInst undefined: undefined
-// CHECK-NEXT:%BB21:
-// CHECK-NEXT:        BranchInst %BB19
-// CHECK-NEXT:%BB20:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %59 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %60 = BinaryAddInst (:any) %59: any, 3: number
-// CHECK-NEXT:        StoreFrameInst %60: any, [i]: any
 // CHECK-NEXT:        BranchInst %BB6
-// CHECK-NEXT:%BB22:
-// CHECK-NEXT:        BranchInst %BB12
-// CHECK-NEXT:%BB13:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %65 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %66 = BinaryAddInst (:any) %65: any, 3: number
-// CHECK-NEXT:        StoreFrameInst %66: any, [i]: any
-// CHECK-NEXT:        BranchInst %BB7
 // CHECK-NEXT:function_end

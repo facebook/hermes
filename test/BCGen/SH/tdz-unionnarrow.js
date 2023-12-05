@@ -49,9 +49,6 @@ function f2() {
 // CHKIR-NEXT:  %2 = UnionNarrowTrustedInst (:any) empty: empty
 // CHKIR-NEXT:  %3 = BinaryAddInst (:any) %2: any, 1: number
 // CHKIR-NEXT:       ReturnInst %3: any
-// CHKIR-NEXT:%BB1:
-// CHKIR-NEXT:       StoreFrameInst undefined: undefined, [x]: any|empty
-// CHKIR-NEXT:       UnreachableInst
 // CHKIR-NEXT:function_end
 
 // CHKIR:function f2(): any
@@ -74,8 +71,6 @@ function f2() {
 // CHKIR-NEXT:  %3 = LoadFrameInst (:any|empty) [x@f2]: any|empty
 // CHKIR-NEXT:  %4 = UnionNarrowTrustedInst (:any) %3: any|empty
 // CHKIR-NEXT:       ReturnInst %4: any
-// CHKIR-NEXT:%BB1:
-// CHKIR-NEXT:       UnreachableInst
 // CHKIR-NEXT:function_end
 
 // CHKLIR:function global(): undefined
@@ -97,20 +92,16 @@ function f2() {
 // CHKLIR-NEXT:function_end
 
 // CHKLIR:function f1(): string|number
-// CHKLIR-NEXT:frame = [x: empty|undefined]
+// CHKLIR-NEXT:frame = [x: empty]
 // CHKLIR-NEXT:%BB0:
 // CHKLIR-NEXT:  %0 = HBCCreateEnvironmentInst (:environment)
 // CHKLIR-NEXT:  %1 = HBCLoadConstInst (:empty) empty: empty
-// CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: environment, %1: empty, [x]: empty|undefined
+// CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: environment, %1: empty, [x]: empty
 // CHKLIR-NEXT:  %3 = ThrowIfEmptyInst (:any) %1: empty
 // CHKLIR-NEXT:  %4 = UnionNarrowTrustedInst (:any) %1: empty
 // CHKLIR-NEXT:  %5 = HBCLoadConstInst (:number) 1: number
 // CHKLIR-NEXT:  %6 = BinaryAddInst (:string|number) %4: any, %5: number
 // CHKLIR-NEXT:       ReturnInst %6: string|number
-// CHKLIR-NEXT:%BB1:
-// CHKLIR-NEXT:  %8 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: environment, %8: undefined, [x]: empty|undefined
-// CHKLIR-NEXT:        UnreachableInst
 // CHKLIR-NEXT:function_end
 
 // CHKLIR:function f2(): undefined
@@ -138,6 +129,4 @@ function f2() {
 // CHKLIR-NEXT:  %5 = HBCLoadFromEnvironmentInst (:empty|undefined|number) %0: environment, [x@f2]: empty|undefined|number
 // CHKLIR-NEXT:  %6 = UnionNarrowTrustedInst (:undefined|number) %5: empty|undefined|number
 // CHKLIR-NEXT:       ReturnInst %6: undefined|number
-// CHKLIR-NEXT:%BB1:
-// CHKLIR-NEXT:       UnreachableInst
 // CHKLIR-NEXT:function_end

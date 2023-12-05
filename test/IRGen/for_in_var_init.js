@@ -56,6 +56,4 @@ function foo(obj) {
 // CHECK-NEXT:  %18 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %19 = CallInst (:any) %17: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %18: any
 // CHECK-NEXT:        BranchInst %BB2
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end

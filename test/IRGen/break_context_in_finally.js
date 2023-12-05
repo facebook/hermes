@@ -50,47 +50,20 @@ function foo() {
 // CHECK-NEXT:       TryStartInst %BB3, %BB4
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:       BranchInst %BB2
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:       BranchInst %BB1
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:       BranchInst %BB6
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %6 = CatchInst (:any)
-// CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "finally1": string
-// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %4 = CatchInst (:any)
+// CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "finally1": string
+// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       BranchInst %BB5
-// CHECK-NEXT:%BB8:
-// CHECK-NEXT:        BranchInst %BB7
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:        BranchInst %BB9
-// CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %12 = TryLoadGlobalPropertyInst (:any) globalObject: object, "bar2": string
-// CHECK-NEXT:  %13 = CallInst (:any) %12: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:        BranchInst %BB10
-// CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %15 = TryLoadGlobalPropertyInst (:any) globalObject: object, "bar3": string
-// CHECK-NEXT:  %16 = CallInst (:any) %15: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:        BranchInst %BB12
-// CHECK-NEXT:%BB13:
-// CHECK-NEXT:        BranchInst %BB9
-// CHECK-NEXT:%BB14:
-// CHECK-NEXT:        BranchInst %BB13
-// CHECK-NEXT:%BB10:
+// CHECK-NEXT:       BranchInst %BB6
+// CHECK-NEXT:%BB6:
+// CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "bar2": string
+// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:        BranchInst %BB7
+// CHECK-NEXT:%BB7:
 // CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %21 = TryLoadGlobalPropertyInst (:any) globalObject: object, "finally1": string
-// CHECK-NEXT:  %22 = CallInst (:any) %21: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %13 = TryLoadGlobalPropertyInst (:any) globalObject: object, "finally1": string
+// CHECK-NEXT:  %14 = CallInst (:any) %13: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        BranchInst %BB5
-// CHECK-NEXT:%BB15:
-// CHECK-NEXT:        BranchInst %BB5
-// CHECK-NEXT:%BB16:
-// CHECK-NEXT:        BranchInst %BB14
-// CHECK-NEXT:%BB12:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %27 = TryLoadGlobalPropertyInst (:any) globalObject: object, "finally1": string
-// CHECK-NEXT:  %28 = CallInst (:any) %27: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:        BranchInst %BB5
-// CHECK-NEXT:%BB17:
-// CHECK-NEXT:        BranchInst %BB8
-// CHECK-NEXT:%BB18:
-// CHECK-NEXT:        ThrowInst %6: any
 // CHECK-NEXT:function_end

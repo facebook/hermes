@@ -45,10 +45,4 @@ function fibonacci(n) {
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [n]: any
 // CHECK-NEXT:  %8 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %7: any
 // CHECK-NEXT:       ReturnInst %8: any
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:        UnreachableInst
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:function_end

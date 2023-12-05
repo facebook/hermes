@@ -120,8 +120,6 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %22 = BinaryAddInst (:any) %18: any, %21: any
 // CHECK-NEXT:        StoreFrameInst %22: any, [ret]: any
 // CHECK-NEXT:        BranchInst %BB2
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function different_prop(obj: any): any
@@ -158,8 +156,6 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %25 = BinaryAddInst (:any) %21: any, %24: any
 // CHECK-NEXT:        StoreFrameInst %25: any, [ret]: any
 // CHECK-NEXT:        BranchInst %BB2
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function different_obj(obj: any): any
@@ -196,8 +192,6 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %25 = BinaryAddInst (:any) %21: any, %24: any
 // CHECK-NEXT:        StoreFrameInst %25: any, [ret]: any
 // CHECK-NEXT:        BranchInst %BB2
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function modify_prop(obj: any): any
@@ -232,8 +226,6 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %23 = BinaryAddInst (:any) %19: any, %22: any
 // CHECK-NEXT:        StoreFrameInst %23: any, [ret]: any
 // CHECK-NEXT:        BranchInst %BB2
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function modify_value(obj: any): any
@@ -273,8 +265,6 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %28 = BinaryAddInst (:any) %24: any, %27: any
 // CHECK-NEXT:        StoreFrameInst %28: any, [ret]: any
 // CHECK-NEXT:        BranchInst %BB2
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function expression_prop(obj: any): any
@@ -307,6 +297,4 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %21 = BinaryAddInst (:any) %18: any, %20: any
 // CHECK-NEXT:        StoreFrameInst %21: any, [ret]: any
 // CHECK-NEXT:        BranchInst %BB2
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end

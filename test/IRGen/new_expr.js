@@ -56,8 +56,6 @@ function test_simple_call() {
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [year]: any
 // CHECK-NEXT:       StorePropertyLooseInst %8: any, %1: object, "year": string
 // CHECK-NEXT:        ReturnInst "wat": string
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function test_simple_new(): any

@@ -33,8 +33,4 @@ x = 2;
 // CHECK-NEXT:       StoreStackInst 2: number, %1: any
 // CHECK-NEXT:  %9 = LoadStackInst (:any) %1: any
 // CHECK-NEXT:        ReturnInst %9: any
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:        StorePropertyLooseInst 1: number, globalObject: object, "x": string
-// CHECK-NEXT:        StoreStackInst 1: number, %1: any
-// CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:function_end

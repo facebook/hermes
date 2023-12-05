@@ -47,8 +47,6 @@ return function f(x: any, n: number) {
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f(): any
 // CHECK-NEXT:       StoreFrameInst %0: object, [f]: any
 // CHECK-NEXT:       ReturnInst %0: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function f(x: any, n: number): any [typed]

@@ -7,6 +7,7 @@
 
 #include "ESTreeIRGen.h"
 
+#include "hermes/IR/IRUtils.h"
 #include "llvh/ADT/SmallString.h"
 
 namespace hermes {
@@ -740,6 +741,9 @@ void ESTreeIRGen::emitFunctionEpilogue(Value *returnValue) {
   }
 
   curFunction()->function->clearStatementCount();
+
+  // Delete any unreachable blocks produced while emitting this function.
+  deleteUnreachableBasicBlocks(curFunction()->function);
 }
 
 void ESTreeIRGen::genDummyFunction(Function *dummy) {

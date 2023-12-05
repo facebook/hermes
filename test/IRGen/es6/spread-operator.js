@@ -42,6 +42,4 @@ function foo(a, b, c) {
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) [c]: any
 // CHECK-NEXT:        StoreOwnPropertyInst %11: any, %6: object, "c": string, true: boolean
 // CHECK-NEXT:        ReturnInst %6: object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
