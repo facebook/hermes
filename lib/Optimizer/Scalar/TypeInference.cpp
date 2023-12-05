@@ -117,19 +117,6 @@ static Type inferMemoryLocationType(Value *addr) {
   return T;
 }
 
-/// Attempt to infer the type of a variable stored in memory.
-/// \return true if the type changed.
-static bool inferMemoryType(Value *V) {
-  Type T = inferMemoryLocationType(V);
-
-  // We were able to identify the type of the value. Record this info.
-  if (T != V->getType()) {
-    V->setType(T);
-    return true;
-  }
-  return false;
-}
-
 /// Collects all of the values that are used by a tree of PHIs, recursively.
 /// Inputs are stored into \p inputs. Visited PHIs are stored into \p visited.
 static void collectPHIInputs(
@@ -960,6 +947,21 @@ class TypeInferenceImpl {
     return F->getType() != originalTy;
   }
 
+  /// Attempt to infer the type of a variable stored in memory.
+  /// \return true if the type changed.
+  bool inferMemoryType(Value *V) {
+    Type originalTy = V->getType();
+    Type T = inferMemoryLocationType(V);
+
+    // We were able to identify the type of the value. Record this info.
+    if (T != V->getType()) {
+      V->setType(T);
+      checkAndSetPrePassType(V);
+      return V->getType() != originalTy;
+    }
+    return false;
+  }
+
   /// Clear every type for instructions, return types, parameters and variables
   /// in the function provided.
   /// Store the pre-pass types in prePassTypes_.
@@ -1071,17 +1073,6 @@ bool TypeInferenceImpl::runOnFunction(Function *F) {
       LLVM_DEBUG(dbgs() << "Inferred variable type\n");
     localChanged |= inferredVarType;
   } while (localChanged);
-
-  // Ensure that no types were widened.
-  // No need to check instructions here, as they are handled every iteration.
-  // An infinite loop due to widening/narrowing won't occur, because if the
-  // checkAndSetPrePassType call results in no change from the original type,
-  // changed=false.
-  if (!F->isGlobalScope()) {
-    for (auto *V : F->getFunctionScope()->getVariables()) {
-      checkAndSetPrePassType(V);
-    }
-  }
 
 #ifndef NDEBUG
   // Validate that all instructions that need to have types do.
