@@ -3,7 +3,7 @@
 BIN_FOLDER=$(dirname -- "$( readlink -f -- "$0"; )")
 FLOW_BUNDLER_ROOT="$BIN_FOLDER/.."
 
-yarn node \
+node \
   --max-old-space-size=4096 \
   -r $FLOW_BUNDLER_ROOT/babel-register.js \
   $FLOW_BUNDLER_ROOT/src/buildBundleCLI.js \
