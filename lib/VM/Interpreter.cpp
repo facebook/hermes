@@ -1687,9 +1687,10 @@ tailCall:
       CASE(ResumeGenerator) {
         auto *innerFn = vmcast<GeneratorInnerFunction>(
             runtime.getCurrentFrame().getCalleeClosureUnsafe());
-        O1REG(ResumeGenerator) = innerFn->getResult().unboxToHV(runtime);
         O2REG(ResumeGenerator) = HermesValue::encodeBoolValue(
             innerFn->getAction() == GeneratorInnerFunction::Action::Return);
+        // Write the result last in case it is the same register as O2REG.
+        O1REG(ResumeGenerator) = innerFn->getResult().unboxToHV(runtime);
         innerFn->clearResult(runtime);
         if (innerFn->getAction() == GeneratorInnerFunction::Action::Throw) {
           runtime.setThrownValue(O1REG(ResumeGenerator));
@@ -2583,8 +2584,10 @@ tailCall:
                   "toString on number cannot fail");
               tmpHandle = status->getHermesValue();
             }
+            O4REG(GetNextPName) =
+                HermesValue::encodeTrustedNumberValue(idx + 1);
+            // Write the result last in case it is the same register as O4REG.
             O1REG(GetNextPName) = tmpHandle.get();
-            O4REG(GetNextPName) = HermesValue::encodeTrustedNumberValue(idx + 1);
           } else {
             O1REG(GetNextPName) = HermesValue::encodeUndefinedValue();
           }
