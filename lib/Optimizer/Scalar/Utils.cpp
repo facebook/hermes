@@ -14,6 +14,8 @@
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/Instrs.h"
 
+#include "llvh/ADT/SetVector.h"
+
 using namespace hermes;
 
 Value *hermes::isStoreOnceVariable(Variable *V) {
@@ -206,29 +208,40 @@ bool hermes::deleteUnusedFunctionsAndVariables(Module *M) {
     // A list of unused functions to remove from the module without being
     // destroyed. We have to collect these separately since we can't remove the
     // functions as we iterate over the module.
-    llvh::SmallVector<Function *, 16> toRemove;
-    localChanged = false;
+    llvh::SmallSetVector<Function *, 16> toRemove;
     for (auto &F : *M) {
-      // Delete any functions that have any uses other than in their own bodies.
-      // The top level function does not have an explicit user,
-      // so check for it directly.
+      // Delete any functions that do not have any uses other than in their own
+      // bodies. The top level function does not have an explicit user, so check
+      // for it directly.
       if (&F != M->getTopLevelFunction() &&
           llvh::all_of(F.getUsers(), [&F](Instruction *user) {
             // Use must be from another function to be meaningful.
             return user->getFunction() == &F;
           })) {
-        toRemove.push_back(&F);
-        toDestroy.push_back(&F);
-        changed = true;
-        localChanged = true;
+        toRemove.insert(&F);
       }
     }
 
     // We erase the basic blocks and instructions from each function in
     // toRemove, and also remove the function from the module. However, the
     // memory of the function remains alive.
-    for (auto *F : toRemove)
+    for (size_t i = 0; i < toRemove.size(); ++i) {
+      auto *F = toRemove[i];
+
+      // All users of F, and all users of variables from F must also be dead.
+      // Add them to the worklist. This is also necessary for correctness since
+      // it avoids leaving dangling references.
+      for (auto *U : F->getUsers())
+        toRemove.insert(U->getFunction());
+      for (auto *V : F->getFunctionScope()->getVariables())
+        for (auto *U : V->getUsers())
+          toRemove.insert(U->getFunction());
+
       F->eraseFromParentNoDestroy();
+      toDestroy.push_back(F);
+    }
+    localChanged = !toRemove.empty();
+    changed |= localChanged;
   } while (localChanged);
 
   // Now that all instructions have been destroyed from each dead function, it's

@@ -418,7 +418,6 @@ void Function::eraseFromParentNoDestroy() {
     begin()->replaceAllUsesWith(nullptr);
     begin()->eraseFromParent();
   }
-  assert(!hasUsers() && "Use list is not empty");
   getParent()->getFunctionList().remove(getIterator());
 }
 

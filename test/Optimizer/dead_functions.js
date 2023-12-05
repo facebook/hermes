@@ -33,4 +33,11 @@ function main() {
   var x1 = function () { return function () { return "nested" + k } }
   var x2 = function () { return 1 + 2 }
 
+  function f1() {
+    function f2() {
+      return function f3() {
+        f2();
+      };
+    }
+  }
 }
