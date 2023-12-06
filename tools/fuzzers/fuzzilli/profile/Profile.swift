@@ -40,4 +40,5 @@ struct Profile {
 let profiles = [
     "hermes": hermesProfile,
     "spark": sparkARProfile,
+    "w2c": w2cProfile,
 ]
