@@ -657,8 +657,8 @@ extern "C" ESTree::ProgramNode *hermes_parser_get_ast(
 extern "C" bool
 hermes_parser_find_location(ParserContext *parserCtx, SMLoc loc, Coord *res) {
   SourceErrorManager::SourceCoords coords;
-  if (!parserCtx->context_.getSourceErrorManager().findBufferLineAndLoc(
-          loc, coords)) {
+  if (!parserCtx->context_.getSourceErrorManager()
+           .findUntranslatedBufferLineAndLoc(loc, coords)) {
     res->line = res->offset = 0;
     return false;
   }

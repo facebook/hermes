@@ -76,8 +76,11 @@ class SourceErrorManager {
   /// identifies a location in the source. This is the "decoded" form of SMLoc.
   class SourceCoords {
    public:
+    /// 1-based buffer id.
     unsigned bufId = 0;
+    /// 1-based line number.
     unsigned line = 0;
+    /// 1-based column.
     unsigned col = 0;
 
     SourceCoords() = default;
@@ -98,6 +101,13 @@ class SourceErrorManager {
       if (line != o.line)
         return line < o.line;
       return col < o.col;
+    }
+
+    bool operator==(const SourceCoords &o) const {
+      return bufId == o.bufId && line == o.line && col == o.col;
+    }
+    bool operator!=(const SourceCoords &o) const {
+      return !(*this == o);
     }
   };
 
@@ -411,14 +421,13 @@ class SourceErrorManager {
   /// Find the bufferId, line and column of the specified location \p loc.
   /// \return true on success, false if could not be found, in which case
   ///     result.isValid() would also return false.
-  bool findBufferLineAndLoc(SMLoc loc, SourceCoords &result);
+  bool findUntranslatedBufferLineAndLoc(SMLoc loc, SourceCoords &result);
 
   /// Find the bufferId, line and column of the specified location \p loc.
-  /// Optionally perform source coordinate translation depending on
-  /// \p translate.
+  /// and perform source coordinate translation.
   /// \return true on success, false if could not be found, in which case
   ///     result.isValid() would also return false.
-  bool findBufferLineAndLoc(SMLoc loc, SourceCoords &result, bool translate);
+  bool findBufferLineAndLoc(SMLoc loc, SourceCoords &result);
 
   /// Given a \p loc, return the buffer that the location is in.
   /// Returns nullptr if the buffer is not found.
@@ -426,12 +435,6 @@ class SourceErrorManager {
 
   /// Find the SMLoc corresponding to the supplied source coordinates.
   SMLoc findSMLocFromCoords(SourceCoords coords);
-
-  /// Given an SMDiagnostic, return {sourceLine, caretLine}, respecting the
-  /// error output options
-  static std::pair<std::string, std::string> buildSourceAndCaretLine(
-      const llvh::SMDiagnostic &diag,
-      SourceErrorOutputOptions opts);
 
   /// Get the user-specified source URL for this buffer, or a default identifier
   /// for it (typically the filename it was read from).

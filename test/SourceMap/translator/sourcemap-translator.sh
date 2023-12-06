@@ -3,7 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-# RUN: bash %s %S %T %hermes
+# RUN: bash %s %S %T %shermes
 # REQUIRES: !fbcode_coverage
 # shellcheck shell=bash disable=SC2086
 
@@ -17,7 +17,7 @@
 
 SRCDIR=$1
 TMPDIR=$2
-HERMES=$3
+SHERMES=$3
 
 # Perform a symbolication test.
 # Argument 1: a name for the test
@@ -36,10 +36,10 @@ run_1_test() {
   SYM_TRACE="$TMPDIR/${NAME}_symbolicated_trace.txt"
 
   # Run the original JS, record the backtrace.
-  "$HERMES" $ARGS "$ORIGINAL_JS_FILE" &> "$ORIG_TRACE"
+  "$SHERMES" $ARGS "$ORIGINAL_JS_FILE" &> "$ORIG_TRACE"
 
   # Run the generated JS with input source file, record the backtrace symbolicated with merged debuginfo.
-  "$HERMES" $ARGS "$GENERATED_JS_FILE" -source-map "$JS_FILE_SOURCE_MAP" &> "$SYM_TRACE"
+  "$SHERMES" $ARGS "$GENERATED_JS_FILE" -source-map "$JS_FILE_SOURCE_MAP" &> "$SYM_TRACE"
 
   # Check if original and symbolicated traces using input source map match using stacktrace_diff.py.
   # stacktrace_diff.py matches stack frames ignoring file full path and column number. This is necessary because:
@@ -51,6 +51,4 @@ run_1_test() {
   python3 "$SRCDIR/stacktrace_diff.py" "$ORIG_TRACE" "$SYM_TRACE"
 }
 
-# -gc-sanitize-handles=0 because ASAN build is far too slow without it.
-run_1_test "default"   "-gc-sanitize-handles=0 -target=HBC" "$SRCDIR/throw.js" "$SRCDIR/throw.min.js" "$SRCDIR/throw.min.js.map"
-run_1_test "optimized"   "-O -gc-sanitize-handles=0 -target=HBC" "$SRCDIR/throw.js" "$SRCDIR/throw.min.js" "$SRCDIR/throw.min.js.map"
+run_1_test "default"   "-exec -g" "$SRCDIR/throw.js" "$SRCDIR/throw.min.js" "$SRCDIR/throw.min.js.map"

@@ -20,6 +20,7 @@
 #include "hermes/Sema/SemContext.h"
 #include "hermes/Sema/SemResolve.h"
 #include "hermes/SourceMap/SourceMap.h"
+#include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/SourceMap/SourceMapTranslator.h"
 #include "hermes/Support/OSCompat.h"
 
@@ -129,6 +130,11 @@ cl::opt<DebugLevel> DebugInfoLevel(
             "Emit location info for all instructions"),
         clEnumValN(DebugLevel::g3, "g3", "Emit full info for debugging"),
         clEnumValN(DebugLevel::g3, "g", "Equivalent to -g3")),
+    cl::cat(CompilerCategory));
+
+cl::opt<std::string> InputSourceMap(
+    "source-map",
+    cl::desc("Specify a matching source map for the input file"),
     cl::cat(CompilerCategory));
 
 static cl::list<std::string> CustomOptimize(
@@ -431,18 +437,24 @@ namespace {
 
 /// Read a file at path \p path into a memory buffer. If \p stdinOk is set,
 /// allow "-" to mean stdin.
+/// \param pathDesc an optional description of what we are trying to read, to be
+///    used in error messages instead of the word "file".
 /// \param silent if true, don't print an error message on failure.
+///
 /// \return the memory buffer, or nullptr on error, in
-/// which case an error message will have been printed to llvh::errs().
+///     which case an error message will have been printed to llvh::errs().
 std::unique_ptr<llvh::MemoryBuffer> memoryBufferFromFile(
     llvh::StringRef path,
+    llvh::StringRef pathDesc,
     bool stdinOk = false,
     bool silent = false) {
   auto fileBuf = stdinOk ? llvh::MemoryBuffer::getFileOrSTDIN(path)
                          : llvh::MemoryBuffer::getFile(path);
   if (!fileBuf) {
     if (!silent) {
-      llvh::errs() << "Error! Failed to open file: " << path << '\n';
+      llvh::errs() << "Error! Failed to open "
+                   << (pathDesc.empty() ? "file" : pathDesc) << ": " << path
+                   << '\n';
     }
     return nullptr;
   }
@@ -645,8 +657,8 @@ ESTree::ProgramNode *wrapInIIFE(
 }
 
 /// Parse the given files and return a single AST pointer.
-/// \p sourceMap any parsed source map associated with \p fileBuf.
-/// \p sourceMapTranslator input source map coordinate translator.
+/// \param singleInputSourceMap if non-empty, the source map to use for the
+///     single input buffer.
 /// \return A pointer to the new validated AST, nullptr if parsing failed.
 /// If using CJS modules, return a FunctionExpressionNode, else a ProgramNode.
 ESTree::NodePtr parseJS(
@@ -655,10 +667,19 @@ ESTree::NodePtr parseJS(
     flow::FlowContext *flowContext,
     const DeclarationFileListTy &ambientDecls,
     std::vector<std::unique_ptr<llvh::MemoryBuffer>> fileBufs,
-    std::unique_ptr<SourceMap> sourceMap = nullptr,
-    std::shared_ptr<SourceMapTranslator> sourceMapTranslator = nullptr,
-    bool wrapCJSModule = false) {
+    llvh::StringRef singleInputSourceMap) {
   std::vector<ESTree::ProgramNode *> programs{};
+  std::shared_ptr<SourceMapTranslator> sourceMapTranslator = nullptr;
+
+  if (!singleInputSourceMap.empty() && fileBufs.size() > 1) {
+    llvh::errs() << "Error: --source-map can only be used with a single "
+                    "input file.\n";
+    return nullptr;
+  }
+
+  assert(
+      (singleInputSourceMap.empty() || fileBufs.size() == 1) &&
+      "singleInputSourceMap can only be specified for a single input file");
 
   for (std::unique_ptr<llvh::MemoryBuffer> &fileBuf : fileBufs) {
     assert(fileBuf && "Need a file to compile");
@@ -682,9 +703,6 @@ ESTree::NodePtr parseJS(
 
     int fileBufId =
         context->getSourceErrorManager().addNewSourceBuffer(std::move(fileBuf));
-    if (sourceMap != nullptr && sourceMapTranslator != nullptr) {
-      sourceMapTranslator->addSourceMap(fileBufId, std::move(sourceMap));
-    }
 
     auto mode = parser::FullParse;
 
@@ -709,6 +727,35 @@ ESTree::NodePtr parseJS(
     }
     if (!parsedJs)
       return nullptr;
+
+    // If we have a source map, load it, parse it, and associate it with the
+    // file buffer. Note however that the source map translation is not enabled
+    // until sourceMapTranslator is set in SourceErrorManager, which we are not
+    // doing yet.
+    if (!singleInputSourceMap.empty()) {
+      // Defensive programming: clear singleInputSourceMap after we use it.
+      llvh::StringRef sourceMapPath = singleInputSourceMap;
+      singleInputSourceMap = {};
+
+      auto mapBuffer = memoryBufferFromFile(sourceMapPath, "input source map");
+      if (!mapBuffer) {
+        // Reading the source map file failed.
+        return nullptr;
+      }
+      auto sourceMap =
+          SourceMapParser::parse(*mapBuffer, context->getSourceErrorManager());
+      if (!sourceMap) {
+        // Parsing the source map failed.
+        return nullptr;
+      }
+
+      if (!sourceMapTranslator) {
+        sourceMapTranslator = std::make_shared<SourceMapTranslator>(
+            context->getSourceErrorManager());
+      }
+      sourceMapTranslator->addSourceMap(fileBufId, std::move(sourceMap));
+    }
+
     ESTree::ProgramNode *parsedAST = parsedJs.getValue();
 
     if (cli::StaticBuiltins == cli::StaticBuiltinSetting::AutoDetect) {
@@ -725,18 +772,13 @@ ESTree::NodePtr parseJS(
       }
     }
 
-    assert(!wrapCJSModule && "unsupported");
-    // if (wrapCJSModule) {
-    //   parsedAST =
-    //       hermes::wrapCJSModule(context,
-    //       cast<ESTree::ProgramNode>(parsedAST));
-    //   if (!parsedAST) {
-    //     return nullptr;
-    //   }
-    // }
-
     programs.push_back(parsedAST);
   }
+
+  // If we have any source maps, we would have initialized sourceMapTranslator.
+  // Set it if so.
+  if (sourceMapTranslator)
+    context->getSourceErrorManager().setTranslator(sourceMapTranslator);
 
   ESTree::ProgramNode *parsedAST = programs[0];
 
@@ -848,7 +890,7 @@ bool compileFromCommandLineOptions() {
 
   for (llvh::StringRef filename : cli::InputFilenames) {
     std::unique_ptr<llvh::MemoryBuffer> fileBuf =
-        memoryBufferFromFile(filename, true);
+        memoryBufferFromFile(filename, "input file", true);
     if (!fileBuf)
       return false;
     fileBufs.push_back(std::move(fileBuf));
@@ -860,7 +902,8 @@ bool compileFromCommandLineOptions() {
       semCtx,
       cli::Typed ? &flowContext : nullptr,
       declFileList,
-      std::move(fileBufs));
+      std::move(fileBufs),
+      cli::InputSourceMap);
   if (!ast) {
     auto N = context->getSourceErrorManager().getErrorCount();
     llvh::errs() << "Emitted " << N << " errors. exiting.\n";
