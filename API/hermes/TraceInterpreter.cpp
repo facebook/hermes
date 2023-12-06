@@ -537,9 +537,7 @@ TraceInterpreter::TraceInterpreter(
       globalDefsAndUses_(globalDefsAndUses),
       hostFunctionCalls_(hostFunctionCalls),
       hostObjectCalls_(hostObjectCalls),
-      hostFunctions_(),
       hostFunctionsCallCount_(),
-      hostObjects_(),
       hostObjectsCallCount_(),
       hostObjectsPropertyNamesCallCount_(),
       gom_() {
@@ -1203,34 +1201,25 @@ Value TraceInterpreter::execFunction(
             const auto &chor =
                 static_cast<const SynthTrace::CreateHostObjectRecord &>(*rec);
             const ObjectID objID = chor.objID_;
-            auto iterAndDidCreate =
-                hostObjects_.emplace(objID, createHostObject(objID));
-            assert(
-                iterAndDidCreate.second &&
-                "This should always be creating a new host object");
             addJSIValueToDefs(
                 call,
                 objID,
                 globalRecordNum,
-                Value(rt_, iterAndDidCreate.first->second),
+                Value(rt_, createHostObject(objID)),
                 locals);
             break;
           }
           case RecordType::CreateHostFunction: {
             const auto &chfr =
                 static_cast<const SynthTrace::CreateHostFunctionRecord &>(*rec);
-            auto iterAndDidCreate = hostFunctions_.emplace(
-                chfr.objID_,
-                createHostFunction(
-                    chfr, getPropNameIDForUse(chfr.propNameID_)));
-            assert(
-                iterAndDidCreate.second &&
-                "This should always be creating a new host function");
             addJSIValueToDefs(
                 call,
                 chfr.objID_,
                 globalRecordNum,
-                Value(rt_, iterAndDidCreate.first->second),
+                Value(
+                    rt_,
+                    createHostFunction(
+                        chfr, getPropNameIDForUse(chfr.propNameID_))),
                 locals);
             break;
           }

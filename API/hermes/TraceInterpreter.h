@@ -174,14 +174,7 @@ class TraceInterpreter final {
   const std::unordered_map<SynthTrace::ObjectID, DefAndUse> &globalDefsAndUses_;
   const HostFunctionToCalls &hostFunctionCalls_;
   const HostObjectToCalls &hostObjectCalls_;
-  std::unordered_map<SynthTrace::ObjectID, jsi::Function> hostFunctions_;
   std::unordered_map<SynthTrace::ObjectID, uint64_t> hostFunctionsCallCount_;
-  // NOTE: Theoretically a host object property can have both a getter and a
-  // setter. Since this doesn't occur in practice currently, this
-  // implementation will ignore it. If it does happen, the value of the
-  // interior map should turn into a pair of functions, and a pair of function
-  // counts.
-  std::unordered_map<SynthTrace::ObjectID, jsi::Object> hostObjects_;
   std::unordered_map<
       SynthTrace::ObjectID,
       std::unordered_map<std::string, uint64_t>>
