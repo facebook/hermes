@@ -100,6 +100,7 @@ public class DateTimeFormat {
   private IPlatformDateTimeFormatter.TimeZoneName mTimeZoneName;
   private IPlatformDateTimeFormatter.DateStyle mDateStyle;
   private IPlatformDateTimeFormatter.TimeStyle mTimeStyle;
+  private IPlatformDateTimeFormatter.DayPeriod mDayPeriod;
 
   private Object mTimeZone = null;
 
@@ -116,7 +117,7 @@ public class DateTimeFormat {
     boolean needDefaults = true;
 
     if (required.equals("date") || required.equals("any")) {
-      for (String property : new String[] {"weekday", "year", "month", "day"}) {
+      for (String property : new String[] {"dayPeriod", "weekday", "year", "month", "day"}) {
         if (!JSObjects.isUndefined(JSObjects.Get(options, property))) needDefaults = false;
       }
     }
@@ -375,6 +376,17 @@ public class DateTimeFormat {
     mTimeZoneName =
         OptionHelpers.searchEnum(IPlatformDateTimeFormatter.TimeZoneName.class, timeZoneName);
 
+    Object dayPeriod =
+        OptionHelpers.GetOption(
+            options,
+            "dayPeriod",
+            OptionHelpers.OptionType.STRING,
+            new String[] {"long", "short", "narrow"},
+            JSObjects.Undefined());
+    mDayPeriod =
+        OptionHelpers.searchEnum(IPlatformDateTimeFormatter.DayPeriod.class, dayPeriod);
+
+    // 41.
     Object dateStyle =
         OptionHelpers.GetOption(
             options,
@@ -455,7 +467,8 @@ public class DateTimeFormat {
         mTimeZone,
         mDateStyle,
         mTimeStyle,
-        mHour12);
+        mHour12,
+        mDayPeriod);
   }
 
   // options are localeMatcher:string
@@ -538,6 +551,10 @@ public class DateTimeFormat {
 
     if (mTimeZoneName != IPlatformDateTimeFormatter.TimeZoneName.UNDEFINED) {
       finalResolvedOptions.put("timeZoneName", mTimeZoneName.toString());
+    }
+
+    if (mDayPeriod != IPlatformDateTimeFormatter.DayPeriod.UNDEFINED) {
+      finalResolvedOptions.put("dayPeriod", mDayPeriod.toString());
     }
 
     if (mDateStyle != IPlatformDateTimeFormatter.DateStyle.UNDEFINED) {

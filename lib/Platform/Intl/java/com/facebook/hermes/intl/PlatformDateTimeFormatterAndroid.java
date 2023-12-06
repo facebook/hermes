@@ -169,7 +169,8 @@ public class PlatformDateTimeFormatterAndroid implements IPlatformDateTimeFormat
       Object timeZone,
       DateStyle dateStyle,
       TimeStyle timeStyle,
-      Object hour12)
+      Object hour12,
+      DayPeriod dayPeriod)
       throws JSRangeErrorException {
     if (!calendar.isEmpty()) {
       ArrayList<String> calendarList = new ArrayList<>();

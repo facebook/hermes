@@ -78,9 +78,16 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
     if (field == DateFormat.Field.TIME_ZONE) {
       return "timeZoneName";
     }
+
+    // Flexible day period is only supported on API 28+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && field == DateFormat.Field.FLEXIBLE_DAY_PERIOD) {
+        return "dayPeriod";
+    }
+
     if (field == DateFormat.Field.AM_PM) {
       return "dayPeriod";
     }
+
     // TODO:: There must be a better way to do this.
     if (field.toString().equals("android.icu.text.DateFormat$Field(related year)"))
       return "relatedYear";
@@ -258,7 +265,8 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
       HourCycle hourCycle,
       DateStyle dateStyle,
       TimeStyle timeStyle,
-      Object hour12)
+      Object hour12,
+      DayPeriod dayPeriod)
       throws JSRangeErrorException {
 
     StringBuilder skeletonBuffer = new StringBuilder();
@@ -307,6 +315,14 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
       skeletonBuffer.append(minute.getSkeleonSymbol());
       skeletonBuffer.append(second.getSkeleonSymbol());
       skeletonBuffer.append(timeZoneName.getSkeleonSymbol());
+
+      // Day period is only technically supported on API 28+,
+      // so we fallback to the AM/PM field
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        skeletonBuffer.append(dayPeriod.getSkeletonSymbol());
+      } else {
+        skeletonBuffer.append(dayPeriod.getSkeletonSymbolFallback());
+      }
     }
 
     return skeletonBuffer.toString();
@@ -331,7 +347,8 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
       Object timeZone,
       DateStyle dateStyle,
       TimeStyle timeStyle,
-      Object hour12)
+      Object hour12,
+      DayPeriod dayPeriod)
       throws JSRangeErrorException {
     String skeleton =
         getSkeleton(
@@ -348,7 +365,8 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
             hourCycle,
             dateStyle,
             timeStyle,
-            hour12);
+            hour12,
+            dayPeriod);
 
     Calendar calendarInstance = null;
     if (!calendar.isEmpty()) {
