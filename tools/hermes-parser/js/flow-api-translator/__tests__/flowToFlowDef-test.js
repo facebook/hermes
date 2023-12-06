@@ -362,6 +362,22 @@ describe('flowToFlowDef', () => {
            foo: string;
          }`,
       );
+      await expectTranslate(
+        `export class A {
+           'foo': string = '';
+         }`,
+        `declare export class A {
+           foo: string;
+         }`,
+      );
+      await expectTranslate(
+        `export class A {
+           1: string = '';
+         }`,
+        `declare export class A {
+           1: string;
+         }`,
+      );
     });
     it('method', async () => {
       await expectTranslate(
@@ -372,6 +388,26 @@ describe('flowToFlowDef', () => {
         `declare export class A {
            foo(): void;
            static bar(): void;
+         }`,
+      );
+      await expectTranslate(
+        `export class A {
+           'foo'() {}
+           static 'bar'() {}
+         }`,
+        `declare export class A {
+           foo(): void;
+           static bar(): void;
+         }`,
+      );
+      await expectTranslate(
+        `export class A {
+           1() {}
+           static 2() {}
+         }`,
+        `declare export class A {
+           1(): void;
+           static 2(): void;
          }`,
       );
     });
@@ -496,14 +532,31 @@ describe('flowToFlowDef', () => {
       });
       it('methods', async () => {
         await expectTranslateExpression(`{foo() {}}`, `{foo(): void}`);
+        await expectTranslateExpression(`{1() {}}`, `{1(): void}`);
+        await expectTranslateExpression(`{'foo'() {}}`, `{foo(): void}`);
         await expectTranslateExpression(`{get foo() {}}`, `{get foo(): void}`);
+        await expectTranslateExpression(`{get 1() {}}`, `{get 1(): void}`);
+        await expectTranslateExpression(
+          `{get 'foo'() {}}`,
+          `{get foo(): void}`,
+        );
         await expectTranslateExpression(
           `{set foo(bar: string) {}}`,
+          `{set foo(bar: string): void}`,
+        );
+        await expectTranslateExpression(
+          `{set 1(bar: string) {}}`,
+          `{set 1(bar: string): void}`,
+        );
+        await expectTranslateExpression(
+          `{set 'foo'(bar: string) {}}`,
           `{set foo(bar: string): void}`,
         );
       });
       it('properties', async () => {
         await expectTranslateExpression(`{FOO: 1}`, `{FOO: 1}`);
+        await expectTranslateExpression(`{'foo-bar': 1}`, `{'foo-bar': 1}`);
+        await expectTranslateExpression(`{1: 1}`, `{1: 1}`);
       });
       it('spread', async () => {
         await expectTranslateExpression(`{...a}`, `{...a}`);
