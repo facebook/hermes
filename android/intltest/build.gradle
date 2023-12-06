@@ -20,11 +20,13 @@ buildDir.mkdirs()
 
 def testDestination = "java/com/facebook/hermes/test/assets"
 
+def testBaseDir = file(rootProject.ext.fbsource).exists() ?
+        "${rootProject.ext.fbsource}/xplat/third-party/javascript-test-suites" :
+        "${rootProject.ext.hermes_ws}"
+def test262Dir = "${testBaseDir}/test262/"
+
 task prepareTests() {
   doLast {
-    def test262Dir = file(rootProject.ext.fbsource).exists() ?
-                 "${rootProject.ext.fbsource}/xplat/third-party/javascript-test-suites/test262/" :
-                 "${rootProject.ext.hermes_ws}/test262"
     assert file(test262Dir).exists() : "Test262 directory not found"
     copy{
       from(test262Dir) {
@@ -94,6 +96,13 @@ android {
   // Allow using prefab so that we can import libfbjni.so.
   buildFeatures {
     prefab true
+  }
+
+  buildTypes {
+    debug {
+      buildConfigField "String", "TEST_BASE_DIR", "\"$testBaseDir\""
+      buildConfigField "String", "TEST_TEST262_DIR", "\"$test262Dir\""
+    }
   }
 
   dependencies {
