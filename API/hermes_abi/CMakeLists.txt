@@ -24,3 +24,10 @@ elseif (MSVC)
   target_compile_options(hermesabi PRIVATE /GR- /EHs-c-)
   target_compile_options(hermesabi_lean PRIVATE /GR- /EHs-c-)
 endif()
+
+# Define the library for the C++ wrapper that wraps our C-API to provide a JSI
+# interface. Note that this does not take a dependency on hermesabi, an
+# integrator will instantiate the wrapper with an instance of the C-API.
+add_library(hermesABIRuntimeWrapper STATIC HermesABIRuntimeWrapper.cpp)
+target_include_directories(hermesABIRuntimeWrapper PUBLIC ..)
+target_link_libraries(hermesABIRuntimeWrapper PUBLIC jsi hermesPublic)
