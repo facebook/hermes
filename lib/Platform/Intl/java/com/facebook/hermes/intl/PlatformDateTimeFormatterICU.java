@@ -16,6 +16,8 @@ import android.icu.util.Calendar;
 import android.icu.util.TimeZone;
 import android.icu.util.ULocale;
 import android.os.Build;
+
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import java.text.AttributedCharacterIterator;
 import java.util.ArrayList;
@@ -86,6 +88,10 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
 
     if (field == DateFormat.Field.AM_PM) {
       return "dayPeriod";
+    }
+
+    if (field == DateFormat.Field.MILLISECOND) {
+      return "fractionalSecond";
     }
 
     // TODO:: There must be a better way to do this.
@@ -266,7 +272,8 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
       DateStyle dateStyle,
       TimeStyle timeStyle,
       Object hour12,
-      DayPeriod dayPeriod)
+      DayPeriod dayPeriod,
+      @Nullable Integer fractionalSecondDigits)
       throws JSRangeErrorException {
 
     StringBuilder skeletonBuffer = new StringBuilder();
@@ -325,6 +332,20 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
       }
     }
 
+    if (fractionalSecondDigits != null) {
+      switch (fractionalSecondDigits) {
+        case 1:
+          skeletonBuffer.append("S");
+          break;
+        case 2:
+          skeletonBuffer.append("SS");
+          break;
+        case 3:
+          skeletonBuffer.append("SSS");
+          break;
+      }
+    }
+
     return skeletonBuffer.toString();
   }
 
@@ -348,7 +369,8 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
       DateStyle dateStyle,
       TimeStyle timeStyle,
       Object hour12,
-      DayPeriod dayPeriod)
+      DayPeriod dayPeriod,
+      Integer fractionalSecondDigits)
       throws JSRangeErrorException {
     String skeleton =
         getSkeleton(
@@ -366,7 +388,8 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
             dateStyle,
             timeStyle,
             hour12,
-            dayPeriod);
+            dayPeriod,
+            fractionalSecondDigits);
 
     Calendar calendarInstance = null;
     if (!calendar.isEmpty()) {

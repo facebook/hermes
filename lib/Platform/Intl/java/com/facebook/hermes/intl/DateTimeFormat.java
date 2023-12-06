@@ -8,6 +8,9 @@
 package com.facebook.hermes.intl;
 
 import android.os.Build;
+
+import androidx.annotation.Nullable;
+
 import com.facebook.proguard.annotations.DoNotStrip;
 import java.text.AttributedCharacterIterator;
 import java.text.CharacterIterator;
@@ -101,6 +104,8 @@ public class DateTimeFormat {
   private IPlatformDateTimeFormatter.DateStyle mDateStyle;
   private IPlatformDateTimeFormatter.TimeStyle mTimeStyle;
   private IPlatformDateTimeFormatter.DayPeriod mDayPeriod;
+  @Nullable
+  private Integer mFractionalSecondDigits;
 
   private Object mTimeZone = null;
 
@@ -386,6 +391,12 @@ public class DateTimeFormat {
     mDayPeriod =
         OptionHelpers.searchEnum(IPlatformDateTimeFormatter.DayPeriod.class, dayPeriod);
 
+    mFractionalSecondDigits = OptionHelpers.GetNumberOption(
+        options,
+        "fractionalSecondDigits",
+        1, 3,
+        null);
+
     // 41.
     Object dateStyle =
         OptionHelpers.GetOption(
@@ -468,7 +479,8 @@ public class DateTimeFormat {
         mDateStyle,
         mTimeStyle,
         mHour12,
-        mDayPeriod);
+        mDayPeriod,
+        mFractionalSecondDigits);
   }
 
   // options are localeMatcher:string
@@ -555,6 +567,10 @@ public class DateTimeFormat {
 
     if (mDayPeriod != IPlatformDateTimeFormatter.DayPeriod.UNDEFINED) {
       finalResolvedOptions.put("dayPeriod", mDayPeriod.toString());
+    }
+
+    if (mFractionalSecondDigits != null) {
+      finalResolvedOptions.put("fractionalSecondDigits", mFractionalSecondDigits);
     }
 
     if (mDateStyle != IPlatformDateTimeFormatter.DateStyle.UNDEFINED) {

@@ -10,6 +10,7 @@ package com.facebook.hermes.intl;
 import android.os.Build;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
 import java.text.AttributedCharacterIterator;
@@ -539,7 +540,8 @@ public interface IPlatformDateTimeFormatter {
       DateStyle dateStyle,
       TimeStyle timeStyle,
       Object hour12,
-      DayPeriod dayPeriod)
+      DayPeriod dayPeriod,
+      @Nullable Integer fractionalSecondDigits)
       throws JSRangeErrorException;
 
   String format(double n) throws JSRangeErrorException;
