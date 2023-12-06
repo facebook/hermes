@@ -87,25 +87,25 @@ module.exports = {
           items: [
             {
               label: 'Privacy',
-              href: 'https://opensource.facebook.com/legal/privacy/',
+              href: 'https://opensource.fb.com/legal/privacy/',
             },
             {
               label: 'Terms',
-              href: 'https://opensource.facebook.com/legal/terms/',
+              href: 'https://opensource.fb.com/legal/terms/',
             },
             {
               label: 'Cookies',
-              href: 'https://opensource.facebook.com/legal/cookie-policy/',
+              href: 'https://opensource.fb.com/legal/cookie-policy/',
             },
           ],
         },
       ],
       logo: {
-        alt: 'Facebook Open Source Logo',
-        src: 'img/oss_logo.png',
-        href: 'https://opensource.facebook.com',
+        alt: 'Meta Open Source Logo',
+        src: 'img/oss_logo.svg',
+        href: 'https://opensource.fb.com',
       },
-      copyright: `Copyright © ${new Date().getFullYear()} Facebook, Inc. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Meta Platforms, Inc. Built with Docusaurus.`,
     },
     prism: {
       defaultLanguage: 'shell',
