@@ -13,33 +13,17 @@ import type {Props, React$MixedElement} from './React';
 import * as React from './React';
 
 function Title(props: Props): React$MixedElement {
-  return React.createElement(
-    'h1',
-    {
-      children: props.children,
-    },
-    null,
-  );
+  return <h1>{props.children}</h1>;
 }
 
 function MyComponent(_props: Props): React$MixedElement {
-  const [count, setCount] = React.useState<number>(0);
+  const [str, setStr] = React.useState<string>('');
 
-  return React.createElement(
-    'div',
-    {
-      children: [
-        React.createElement(
-          Title,
-          {
-            children: 'Hello',
-          },
-          null,
-        ),
-        ' world!',
-      ],
-    },
-    null,
+  return (
+    <div>
+      <Title>Hello</Title> world!
+      {str}
+    </div>
   );
 }
 
@@ -47,7 +31,7 @@ function run(): void {
   var N = 1;
   for (var i = 0; i < N; ++i) {
     var root = React.createRoot();
-    var rendered = root.render(React.createElement(MyComponent, {}, null));
+    var rendered = root.render(<MyComponent />);
   }
   print(rendered);
 }

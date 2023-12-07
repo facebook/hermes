@@ -581,7 +581,7 @@ class React$INTERNAL$Fiber {
     this.state = null;
   }
 }
-function React$createElement(type: React$INTERNAL$React$ElementType, props: React$Props, key: React$INTERNAL$React$Key | null): React$React$MixedElement {
+function React$jsx(type: React$INTERNAL$React$ElementType, props: React$Props, key: React$INTERNAL$React$Key | null): React$React$MixedElement {
   'inline';
 
   return {
@@ -591,25 +591,29 @@ function React$createElement(type: React$INTERNAL$React$ElementType, props: Reac
     ref: null
   };
 }
+function React$Fragment(props: React$Props): React$React$Node {
+  // TODO: Get this to work.
+  return props.children;
+}
 /* file: index.js */
 function index$INTERNAL$Title(props: React$Props): React$React$MixedElement {
-  return React$createElement('h1', {
+  return React$jsx('h1', {
     children: props.children
   }, null);
 }
 function index$INTERNAL$MyComponent(_props: React$Props): React$React$MixedElement {
-  const [count, setCount] = React$useState<number>(0);
-  return React$createElement('div', {
-    children: [React$createElement(index$INTERNAL$Title, {
+  const [str, setStr] = React$useState<string>('');
+  return React$jsx('div', {
+    children: [React$jsx(index$INTERNAL$Title, {
       children: 'Hello'
-    }, null), ' world!']
+    }, null), ' world!', str]
   }, null);
 }
 function index$INTERNAL$run(): void {
   var N = 1;
   for (var i = 0; i < N; ++i) {
     var root = React$createRoot();
-    var rendered = root.render(React$createElement(index$INTERNAL$MyComponent, {}, null));
+    var rendered = root.render(React$jsx(index$INTERNAL$MyComponent, {}, null));
   }
   print(rendered);
 }

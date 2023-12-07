@@ -725,7 +725,7 @@ class Fiber {
   }
 }
 
-export function createElement(
+export function jsx(
   type: React$ElementType,
   props: Props,
   key: React$Key | null,
@@ -737,4 +737,9 @@ export function createElement(
     key: key,
     ref: null,
   };
+}
+
+export function Fragment(props: Props): React$Node {
+  // TODO: Get this to work.
+  return props.children;
 }

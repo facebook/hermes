@@ -11,6 +11,8 @@
 import * as path from 'path';
 import {createModuleGraph} from './ModuleGraph';
 import {parseFile, hermesASTToBabel, writeBundle} from './utils';
+import transformJSX from './transforms/transformJSX';
+import {analyze} from 'hermes-eslint/dist/scope-manager/analyze';
 import yargs from 'yargs';
 
 // $FlowExpectedError[cannot-resolve-module] Untyped third-party module
@@ -92,7 +94,13 @@ async function main() {
 
   // Merge files into single bundle AST.
   for (const file of bundle) {
-    const babelAST = hermesASTToBabel(file.ast, file.file);
+    const {ast} = await transformJSX({
+      ast: file.ast,
+      scopeManager: analyze(file.ast),
+      code: file.code,
+    });
+
+    const babelAST = hermesASTToBabel(ast, file.file);
 
     bundleAST.program.body.push(...babelAST.program.body);
     fileMapping[file.file] = file.code;

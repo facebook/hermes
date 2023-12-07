@@ -10,13 +10,13 @@
 
 import type {ScopeManager} from 'hermes-eslint';
 import type {Program, ESNode, BaseToken, Comment} from 'hermes-estree';
-import type {BabelFile} from 'hermes-parser/dist/babel/TransformESTreeToBabel';
+import type {BabelFile} from './fork/TransformESTreeToBabel';
 
 import {parse} from 'hermes-transform';
 import {promises as fs} from 'fs';
 import * as path from 'path';
 import {SimpleTraverser} from 'hermes-parser/dist/traverse/SimpleTraverser';
-import * as TransformESTreeToBabel from 'hermes-parser/dist/babel/TransformESTreeToBabel';
+import * as TransformESTreeToBabel from './fork/TransformESTreeToBabel';
 
 // $FlowExpectedError[cannot-resolve-module] Untyped third-party module
 import {VISITOR_KEYS as babelVisitorKeys} from '@babel/types';
