@@ -537,7 +537,7 @@ bool DedupReifyArguments::runOnFunction(Function *F) {
     return false;
 
   DominanceInfo domInfo{F};
-  PostOrderAnalysis PO(F);
+  auto PO = postOrderAnalysis(F);
   IRBuilder::InstructionDestroyer destroyer;
 
   llvh::SmallVector<BasicBlock *, 16> reversePO(PO.rbegin(), PO.rend());

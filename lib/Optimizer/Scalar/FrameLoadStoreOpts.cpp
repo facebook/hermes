@@ -87,7 +87,7 @@ class FunctionLoadStoreOptimizer {
   llvh::DenseMap<Variable *, AllocStackInst *> variableAllocas_;
 
   /// Post order analysis for this function.
-  PostOrderAnalysis PO_;
+  std::vector<BasicBlock *> PO_;
 
   /// Map from a basic block to the set of variables that have valid values in
   /// their corresponding stack locations at the end of the block.
@@ -340,7 +340,9 @@ class FunctionLoadStoreOptimizer {
 
  public:
   FunctionLoadStoreOptimizer(Function *F, const CapturedVariables &globalCV)
-      : F_(F), globalCV_(globalCV), PO_(F) {}
+      : F_(F), globalCV_(globalCV) {
+    PO_ = postOrderAnalysis(F);
+  }
 
   bool run() {
     // Create an alloca for each variable we want to optimize.

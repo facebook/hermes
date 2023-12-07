@@ -22,60 +22,7 @@ namespace hermes {
 /// basic blocks that are not linked to the entry blocks (catch blocks),
 /// and LLVM's graph traits expect all blocks to be reachable from the entry
 /// blocks. The analysis does not enumerate unreachable blocks.
-class PostOrderAnalysis {
-  using BlockList = std::vector<BasicBlock *>;
-
-  /// The AST context, which here is only used by Dump().
-  Context &ctx_;
-
-  /// Holds the ordered list of basic blocks.
-  BlockList Order;
-
-  /// This function does the recursive scan of the function. \p BB is the basic
-  /// block that starts the scan. \p order is the ordered list of blocks, and
-  /// the output.
-  static void visitPostOrder(BasicBlock *BB, BlockList &order);
-
- public:
-  explicit PostOrderAnalysis(Function *F);
-
-  void dump();
-
-  using iterator = decltype(Order)::iterator;
-  using const_iterator = decltype(Order)::const_iterator;
-  using reverse_iterator = decltype(Order)::reverse_iterator;
-  using const_reverse_iterator = decltype(Order)::const_reverse_iterator;
-
-  using range = llvh::iterator_range<iterator>;
-  using const_range = llvh::iterator_range<const_iterator>;
-  using reverse_range = llvh::iterator_range<reverse_iterator>;
-  using const_reverse_range = llvh::iterator_range<const_reverse_iterator>;
-
-  inline iterator begin() {
-    return Order.begin();
-  }
-  inline iterator end() {
-    return Order.end();
-  }
-  inline reverse_iterator rbegin() {
-    return Order.rbegin();
-  }
-  inline reverse_iterator rend() {
-    return Order.rend();
-  }
-  inline const_iterator begin() const {
-    return Order.begin();
-  }
-  inline const_iterator end() const {
-    return Order.end();
-  }
-  inline const_reverse_iterator rbegin() const {
-    return Order.rbegin();
-  }
-  inline const_reverse_iterator rend() const {
-    return Order.rend();
-  }
-};
+std::vector<BasicBlock *> postOrderAnalysis(Function *F);
 
 /// This analysis finds out which blocks are part of loops, and identifies
 /// header and preheader blocks. All blocks in cycles of the CFG are considered

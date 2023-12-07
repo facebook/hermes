@@ -58,7 +58,7 @@ class InstSimplifyImpl {
     IRBuilder::InstructionDestroyer destroyer;
 
     // For all reachable blocks in the function, in RPO order.
-    PostOrderAnalysis PO(F_);
+    auto PO = postOrderAnalysis(F_);
     for (BasicBlock *BB : llvh::reverse(PO)) {
       // For all instructions:
       for (auto instIter = BB->begin(), e = BB->end(); instIter != e;) {

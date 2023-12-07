@@ -204,7 +204,7 @@ static bool sinkInstructionsInBlock(
 
 bool CodeMotion::runOnFunction(Function *F) {
   bool changed = false;
-  PostOrderAnalysis PO(F);
+  auto PO = postOrderAnalysis(F);
 
   for (auto &BB : PO) {
     auto *term = BB->getTerminator();

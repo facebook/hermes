@@ -40,7 +40,7 @@ class MovElimination : public FunctionPass {
 
     // For each basic block, do a forward scan and remember when each variable
     // was last assigned. Use this information to remove MOVs.
-    PostOrderAnalysis PO(F);
+    auto PO = postOrderAnalysis(F);
     llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
     for (auto *BB : order) {
       unsigned index = 0;

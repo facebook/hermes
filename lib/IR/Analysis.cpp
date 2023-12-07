@@ -25,7 +25,9 @@ using llvh::dbgs;
 using llvh::Optional;
 using llvh::outs;
 
-void PostOrderAnalysis::visitPostOrder(BasicBlock *BB, BlockList &order) {
+/// Visit basic blocks in post order starting from \p BB, appending them into \p
+/// order.
+static void visitPostOrder(BasicBlock *BB, std::vector<BasicBlock *> &order) {
   struct State {
     BasicBlock *BB;
     succ_iterator cur, end;
@@ -37,6 +39,7 @@ void PostOrderAnalysis::visitPostOrder(BasicBlock *BB, BlockList &order) {
   llvh::SmallVector<State, 32> stack{};
 
   stack.emplace_back(BB);
+  visited.insert(BB);
   do {
     while (stack.back().cur != stack.back().end) {
       BB = *stack.back().cur++;
@@ -49,30 +52,17 @@ void PostOrderAnalysis::visitPostOrder(BasicBlock *BB, BlockList &order) {
   } while (!stack.empty());
 }
 
-PostOrderAnalysis::PostOrderAnalysis(Function *F) : ctx_(F->getContext()) {
-  assert(Order.empty() && "vector must be empty");
-
+std::vector<BasicBlock *> hermes::postOrderAnalysis(Function *F) {
+  std::vector<BasicBlock *> order;
   BasicBlock *entry = &*F->begin();
 
   // Finally, do an PO scan from the entry block.
-  visitPostOrder(entry, Order);
+  visitPostOrder(entry, order);
 
   assert(
-      !Order.empty() && Order[Order.size() - 1] == entry &&
+      !order.empty() && order[order.size() - 1] == entry &&
       "Entry block must be the last element in the vector");
-}
-
-void PostOrderAnalysis::dump() {
-  irdumper::IRPrinter D(ctx_, outs());
-  D.visit(*Order[0]->getParent());
-
-  outs() << "Blocks: ";
-
-  for (auto &BB : Order) {
-    outs() << "BB" << D.namer_.getBBNumber(BB) << " ";
-  }
-
-  outs() << "\n";
+  return order;
 }
 
 // Perform depth-first search to identify loops. The loop header of a block B is

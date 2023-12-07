@@ -1699,7 +1699,7 @@ void HBCISel::generate(Instruction *ii, BasicBlock *next) {
 }
 
 void HBCISel::generate(SourceMapGenerator *outSourceMap) {
-  PostOrderAnalysis PO(F_);
+  auto PO = postOrderAnalysis(F_);
 
   /// The order of the blocks is reverse-post-order, which is a simply
   /// topological sort.

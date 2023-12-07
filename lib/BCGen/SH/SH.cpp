@@ -2346,7 +2346,7 @@ void generateFunction(
     FunctionScopeAnalysis &scopeAnalysis,
     uint32_t &nextCacheIdx,
     BytecodeGenerationOptions options) {
-  PostOrderAnalysis PO(&F);
+  auto PO = hermes::postOrderAnalysis(&F);
 
   llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
 

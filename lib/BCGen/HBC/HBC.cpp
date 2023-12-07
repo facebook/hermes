@@ -372,7 +372,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
         RA.setFastPassThreshold(kFastRegisterAllocationThreshold);
         RA.setMemoryLimit(kRegisterAllocationMemoryLimit);
       }
-      PostOrderAnalysis PO(&F);
+      auto PO = postOrderAnalysis(&F);
       /// The order of the blocks is reverse-post-order, which is a simply
       /// topological sort.
       llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());

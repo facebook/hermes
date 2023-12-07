@@ -374,7 +374,7 @@ TEST(SpillRegisterTest, SpillsParameters) {
   builder.createReturnInst(undef);
 
   HVMRegisterAllocator RA(F);
-  PostOrderAnalysis PO(F);
+  auto PO = postOrderAnalysis(F);
   llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
   RA.allocate(order);
 
@@ -412,7 +412,7 @@ TEST(SpillRegisterTest, NoStoreUnspilling) {
 
   // Allocate that store to a high register
   HVMRegisterAllocator RA(F);
-  PostOrderAnalysis PO(F);
+  auto PO = postOrderAnalysis(F);
   llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
   RA.allocate(order);
   RA.allocateParameterCount(256);

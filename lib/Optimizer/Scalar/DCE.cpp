@@ -27,7 +27,7 @@ STATISTIC(NumDCE, "Number of instructions DCE'd");
 
 static bool performFunctionDCE(Function *F) {
   bool changed = false;
-  PostOrderAnalysis PO(F);
+  auto PO = hermes::postOrderAnalysis(F);
 
   // Scan the function in post order (from end to start). We want to visit the
   // uses of the instruction before we visit the instruction itself in order to

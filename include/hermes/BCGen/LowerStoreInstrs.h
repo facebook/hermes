@@ -30,7 +30,7 @@ class LowerStoreInstrs : public FunctionPass {
     IRBuilder::InstructionDestroyer destroyer;
     bool changed = false;
 
-    PostOrderAnalysis PO(F);
+    auto PO = postOrderAnalysis(F);
     llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
     for (auto *bbit : order) {
       for (auto &it : bbit->getInstList()) {
