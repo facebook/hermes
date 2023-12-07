@@ -23,6 +23,8 @@ function Title(props: Props): React$MixedElement {
 }
 
 function MyComponent(_props: Props): React$MixedElement {
+  const [count, setCount] = React.useState<number>(0);
+
   return React.createElement(
     'div',
     {

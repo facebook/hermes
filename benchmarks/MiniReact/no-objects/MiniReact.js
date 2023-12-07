@@ -109,26 +109,26 @@ function React$useState<T>(
  * Initial value of the state
  */
 initial: T): [T, (value: T | ((prev: T) => T)) => void] {
-  const root = React$INTERNAL$workInProgressRoot;
-  const fiber = React$INTERNAL$workInProgressFiber;
   invariant$default(fiber !== null && root !== null, 'useState() called outside of render');
+  const root: React$INTERNAL$Root = CHECKED_CAST$default<React$INTERNAL$Root>(React$INTERNAL$workInProgressRoot);
+  const fiber: React$INTERNAL$Fiber = CHECKED_CAST$default<React$INTERNAL$Fiber>(React$INTERNAL$workInProgressFiber);
   let state: React$INTERNAL$State<T>;
-  const _workInProgressState = React$INTERNAL$workInProgressState;
+  const _workInProgressState: React$INTERNAL$State<mixed> | null = React$INTERNAL$workInProgressState;
   if (_workInProgressState === null) {
     // Get or initialize the first state on the fiber
     let nextState = fiber.state;
     if (nextState === null) {
-      nextState = new React$INTERNAL$State(initial);
+      nextState = new React$INTERNAL$State<mixed>(initial);
       fiber.state = nextState;
     }
     // NOTE: in case of a re-render we assume that the hook types match but
     // can't statically prove this
     state = CHECKED_CAST$default<React$INTERNAL$State<T>>(nextState);
   } else {
-    let nextState = _workInProgressState.next;
+    let nextState = CHECKED_CAST$default<React$INTERNAL$State<mixed>>(_workInProgressState).next;
     if (nextState === null) {
-      nextState = new React$INTERNAL$State(initial);
-      _workInProgressState.next = nextState;
+      nextState = new React$INTERNAL$State<mixed>(initial);
+      CHECKED_CAST$default<React$INTERNAL$State<mixed>>(_workInProgressState).next = nextState;
     }
     // NOTE: in case of a re-render we assume that the hook types match but
     // can't statically prove this
@@ -139,8 +139,8 @@ initial: T): [T, (value: T | ((prev: T) => T)) => void] {
   return [
   // Untyped check that the existing state value has the correct type,
   // This is safe if components follow the rules of hooks
-  CHECKED_CAST$default<T>(state.value), updater => {
-    const update = new React$INTERNAL$Update<mixed>(fiber, CHECKED_CAST$default<React$INTERNAL$State<mixed>>(state), CHECKED_CAST$default<Updater<mixed>>(updater));
+  CHECKED_CAST$default<T>(state.value), (updater: T | ((prev: T) => T)): void => {
+    const update = new React$INTERNAL$Update<mixed>(fiber, CHECKED_CAST$default<React$INTERNAL$State<mixed>>(state), CHECKED_CAST$default<T | ((prev: T) => T)>(updater));
     if (React$INTERNAL$workInProgressFiber !== null) {
       // called during render
       React$INTERNAL$renderPhaseUpdateQueue.push(update);
@@ -598,6 +598,7 @@ function index$INTERNAL$Title(props: React$Props): React$React$MixedElement {
   }, null);
 }
 function index$INTERNAL$MyComponent(_props: React$Props): React$React$MixedElement {
+  const [count, setCount] = React$useState<number>(0);
   return React$createElement('div', {
     children: [React$createElement(index$INTERNAL$Title, {
       children: 'Hello'

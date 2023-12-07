@@ -1,3 +1,9 @@
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i]; return arr2; }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
@@ -115,9 +121,9 @@ function React$useState(
  * Initial value of the state
  */
 initial) {
-  var root = React$INTERNAL$workInProgressRoot;
-  var fiber = React$INTERNAL$workInProgressFiber;
   invariant$default(fiber !== null && root !== null, 'useState() called outside of render');
+  var root = CHECKED_CAST$default(React$INTERNAL$workInProgressRoot);
+  var fiber = CHECKED_CAST$default(React$INTERNAL$workInProgressFiber);
   var state;
   var _workInProgressState = React$INTERNAL$workInProgressState;
   if (_workInProgressState === null) {
@@ -131,10 +137,10 @@ initial) {
     // can't statically prove this
     state = CHECKED_CAST$default(nextState);
   } else {
-    var _nextState = _workInProgressState.next;
+    var _nextState = CHECKED_CAST$default(_workInProgressState).next;
     if (_nextState === null) {
       _nextState = new React$INTERNAL$State(initial);
-      _workInProgressState.next = _nextState;
+      CHECKED_CAST$default(_workInProgressState).next = _nextState;
     }
     // NOTE: in case of a re-render we assume that the hook types match but
     // can't statically prove this
@@ -637,6 +643,10 @@ function index$INTERNAL$Title(props) {
   }, null);
 }
 function index$INTERNAL$MyComponent(_props) {
+  var _React$useState = React$useState(0),
+    _React$useState2 = _slicedToArray(_React$useState, 2),
+    count = _React$useState2[0],
+    setCount = _React$useState2[1];
   return React$createElement('div', {
     children: [React$createElement(index$INTERNAL$Title, {
       children: 'Hello'

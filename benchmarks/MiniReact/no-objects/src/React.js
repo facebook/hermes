@@ -116,30 +116,30 @@ export function useState<T>(
    */
   initial: T,
 ): [T, (value: T | ((prev: T) => T)) => void] {
-  const root = workInProgressRoot;
-  const fiber = workInProgressFiber;
   invariant(
     fiber !== null && root !== null,
     'useState() called outside of render',
   );
+  const root: Root = CHECKED_CAST<Root>(workInProgressRoot);
+  const fiber: Fiber = CHECKED_CAST<Fiber>(workInProgressFiber);
 
   let state: State<T>;
-  const _workInProgressState = workInProgressState;
+  const _workInProgressState: State<mixed> | null = workInProgressState;
   if (_workInProgressState === null) {
     // Get or initialize the first state on the fiber
     let nextState = fiber.state;
     if (nextState === null) {
-      nextState = new State(initial);
+      nextState = new State<mixed>(initial);
       fiber.state = nextState;
     }
     // NOTE: in case of a re-render we assume that the hook types match but
     // can't statically prove this
     state = CHECKED_CAST<State<T>>(nextState);
   } else {
-    let nextState = _workInProgressState.next;
+    let nextState = CHECKED_CAST<State<mixed>>(_workInProgressState).next;
     if (nextState === null) {
-      nextState = new State(initial);
-      _workInProgressState.next = nextState;
+      nextState = new State<mixed>(initial);
+      CHECKED_CAST<State<mixed>>(_workInProgressState).next = nextState;
     }
     // NOTE: in case of a re-render we assume that the hook types match but
     // can't statically prove this
@@ -151,11 +151,11 @@ export function useState<T>(
     // Untyped check that the existing state value has the correct type,
     // This is safe if components follow the rules of hooks
     CHECKED_CAST<T>(state.value),
-    updater => {
+    (updater: T | ((prev: T) => T)): void => {
       const update = new Update<mixed>(
         fiber,
         CHECKED_CAST<State<mixed>>(state),
-        CHECKED_CAST<Updater<mixed>>(updater),
+        CHECKED_CAST<T | ((prev: T) => T)>(updater),
       );
       if (workInProgressFiber !== null) {
         // called during render
