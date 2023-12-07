@@ -1463,6 +1463,87 @@ TEST_F(NonDeterminismReplayTest, HermesInternalGetInstrumentedStatsTest) {
   }
 }
 
+// Verify that jsi::Runtime::setExternalMemoryPressure() is properly traced and
+// replayed
+TEST(SynthTraceReplayTestNoFixture, ExternalMemoryTest) {
+  std::string traceResult;
+  std::vector<size_t>
+      amounts; // Record the "amount" passed to setExternalMemoryPressure()
+
+  // Tracing
+  {
+    const ::hermes::vm::RuntimeConfig config(
+        ::hermes::vm::RuntimeConfig::Builder()
+            .withSynthTraceMode(::hermes::vm::SynthTraceMode::Tracing)
+            .build());
+    std::unique_ptr<TracingHermesRuntime> traceRt = makeTracingHermesRuntime(
+        makeHermesRuntime(config),
+        config,
+        std::make_unique<llvh::raw_string_ostream>(traceResult),
+        /* forReplay */ false);
+
+    for (size_t i = 0; i < 200; i++) {
+      auto o = jsi::Object::createFromHostObject(
+          *traceRt, std::make_shared<jsi::HostObject>());
+
+      size_t amount = (i + 1) * 1024;
+      o.setExternalMemoryPressure(*traceRt, amount);
+      amounts.push_back(amount);
+    }
+
+    traceRt.reset();
+  }
+
+  // Just to hook setExternalMemoryPressure() and record the invokations of it
+  // so that we can verify the function calls were traced and replayed
+  // correctly.
+  class ReplayRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
+   public:
+    using RD = RuntimeDecorator<jsi::Runtime>;
+    ReplayRuntime(
+        std::unique_ptr<jsi::Runtime> runtime,
+        const ::hermes::vm::RuntimeConfig &conf)
+        : jsi::RuntimeDecorator<jsi::Runtime>(*runtime),
+          runtime_(std::move(runtime)) {}
+
+    void setExternalMemoryPressure(const jsi::Object &obj, size_t amount)
+        override {
+      RD::setExternalMemoryPressure(obj, amount);
+      amounts.push_back(amount);
+    }
+
+    std::vector<size_t> amounts;
+
+   private:
+    std::unique_ptr<jsi::Runtime> runtime_;
+  };
+
+  // Replaying
+
+  tracing::TraceInterpreter::ExecuteOptions options;
+  options.useTraceConfig = true;
+  auto [_, rt] = tracing::TraceInterpreter::execFromMemoryBuffer(
+      llvh::MemoryBuffer::getMemBuffer(traceResult),
+      {}, // codeBufs
+      options,
+      [](const ::hermes::vm::RuntimeConfig &config)
+          -> std::unique_ptr<jsi::Runtime> {
+        return std::make_unique<ReplayRuntime>(
+            makeHermesRuntime(config), config);
+      });
+
+  auto replayRt = dynamic_cast<ReplayRuntime *>(rt.get());
+
+  // Verify that the call counts of setExternalMemoryPressure() are the same
+  EXPECT_EQ(amounts.size(), replayRt->amounts.size());
+
+  // Verify that the arguments passed to setExternalMemoryPressure() are the
+  // same
+  for (size_t i = 0; i < amounts.size(); i++) {
+    EXPECT_EQ(amounts[i], replayRt->amounts[i]);
+  }
+}
+
 /// @}
 
 } // namespace

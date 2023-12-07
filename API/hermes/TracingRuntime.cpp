@@ -669,6 +669,14 @@ jsi::Value TracingRuntime::callAsConstructor(
   return retval;
 }
 
+void TracingRuntime::setExternalMemoryPressure(
+    const jsi::Object &obj,
+    size_t amount) {
+  trace_.emplace_back<SynthTrace::SetExternalMemoryPressureRecord>(
+      getTimeSinceStart(), getUniqueID(obj), amount);
+  RD::setExternalMemoryPressure(obj, amount);
+}
+
 void TracingRuntime::addMarker(const std::string &marker) {
   trace_.emplace_back<SynthTrace::MarkerRecord>(getTimeSinceStart(), marker);
 }

@@ -208,6 +208,7 @@ class SynthTrace {
     GetNativePropertyNamesReturn,
     CreateBigInt,
     BigIntToString,
+    SetExternalMemoryPressure,
   };
 
   /// A Record is one element of a trace.
@@ -1177,6 +1178,29 @@ class SynthTrace {
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
 
+    bool operator==(const Record &that) const override;
+  };
+
+  struct SetExternalMemoryPressureRecord final : public Record {
+    static constexpr RecordType type{RecordType::SetExternalMemoryPressure};
+    const ObjectID objID_;
+    const size_t amount_;
+
+    explicit SetExternalMemoryPressureRecord(
+        TimeSinceStart time,
+        const ObjectID objID,
+        const size_t amount)
+        : Record(time), objID_(objID), amount_(amount) {}
+
+    RecordType getType() const override {
+      return type;
+    }
+
+    std::vector<ObjectID> uses() const override {
+      return {objID_};
+    }
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
     bool operator==(const Record &that) const override;
   };
 

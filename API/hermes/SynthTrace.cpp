@@ -521,6 +521,16 @@ bool SynthTrace::GetNativePropertyNamesReturnRecord::operator==(
   return propNames_ == thatCasted.propNames_;
 }
 
+bool SynthTrace::SetExternalMemoryPressureRecord::operator==(
+    const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto &thatCasted =
+      dynamic_cast<const SetExternalMemoryPressureRecord &>(that);
+  return objID_ == thatCasted.objID_ && amount_ == thatCasted.amount_;
+}
+
 void SynthTrace::Record::toJSONInternal(JSONEmitter &json) const {
   std::string storage;
   llvh::raw_string_ostream os{storage};
@@ -730,6 +740,13 @@ void SynthTrace::GetNativePropertyNamesReturnRecord::toJSONInternal(
   json.closeArray();
 }
 
+void SynthTrace::SetExternalMemoryPressureRecord::toJSONInternal(
+    JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKeyValue("objID", objID_);
+  json.emitKeyValue("amount", amount_);
+}
+
 const char *SynthTrace::nameFromReleaseUnused(::hermes::vm::ReleaseUnused ru) {
   switch (ru) {
     case ::hermes::vm::ReleaseUnused::kReleaseUnusedNone:
@@ -835,6 +852,7 @@ llvh::raw_ostream &operator<<(
     CASE(GetNativePropertyNamesReturn);
     CASE(CreateBigInt);
     CASE(BigIntToString);
+    CASE(SetExternalMemoryPressure);
   }
 #undef CASE
   // This only exists to appease gcc.
@@ -880,6 +898,7 @@ std::istream &operator>>(std::istream &is, SynthTrace::RecordType &type) {
   CASE(GetNativePropertyNamesReturn)
   CASE(CreateBigInt)
   CASE(BigIntToString)
+  CASE(SetExternalMemoryPressure)
 #undef CASE
 
   llvm_unreachable(

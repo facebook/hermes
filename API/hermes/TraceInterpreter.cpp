@@ -73,9 +73,11 @@ getCalls(
     ObjectID objID;
     HostObjectPropNames(ObjectID hostObjID) : StackValue(), objID(hostObjID) {}
   };
+  // A mapping from host functions to calls. The first element of the return
+  // tuple.
   TraceInterpreter::HostFunctionToCalls funcIDToRecords;
   // A mapping from a host object id to a map from property name to
-  // list of records
+  // list of records. The second element of the return tuple.
   TraceInterpreter::HostObjectToCalls hostObjIDToNameToRecords;
   // As CallRecords are encountered, the id of the object or function being
   // called is placed at the end of this stack, so that when the matching return
@@ -1516,6 +1518,13 @@ Value TraceInterpreter::execFunction(
             // Accessing the list of property names on a host object doesn't
             // return a JS value.
             return Value::undefined();
+            break;
+          }
+          case RecordType::SetExternalMemoryPressure: {
+            const auto &record = static_cast<
+                const SynthTrace::SetExternalMemoryPressureRecord &>(*rec);
+            const auto &obj = getObjForUse(record.objID_);
+            obj.setExternalMemoryPressure(rt_, record.amount_);
             break;
           }
         }
