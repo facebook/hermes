@@ -92,12 +92,16 @@ TEST(IRVerifierTest, BranchInstTest) {
 
   auto BB1 = Builder.createBasicBlock(F);
   auto BB2 = Builder.createBasicBlock(F);
+  auto BB3 = Builder.createBasicBlock(F);
 
   Builder.setInsertionBlock(BB1);
   Builder.createBranchInst(BB2);
 
   Builder.setInsertionBlock(BB2);
-  Builder.createBranchInst(BB1);
+  Builder.createBranchInst(BB3);
+
+  Builder.setInsertionBlock(BB3);
+  Builder.createBranchInst(BB2);
 
   // Everything should pass
   EXPECT_TRUE(verifyModule(M));

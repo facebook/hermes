@@ -180,6 +180,9 @@ void Verifier::visitFunction(const Function &F) {
   Assert(
       D.getRoot() == &*F.begin(),
       "Root node in dominance tree should be the entry basic block");
+  Assert(
+      pred_count(&*F.begin()) == 0,
+      "The entry block should have no predecessors");
   for (const auto &I : F) {
     // Check for unreachable blocks.
     Assert(
