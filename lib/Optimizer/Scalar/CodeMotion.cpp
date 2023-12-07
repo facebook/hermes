@@ -56,6 +56,15 @@ static Instruction *findIdenticalInWindow(
   return nullptr;
 }
 
+/// Check whether \p inst can be hoisted out of its basic block.
+/// \returns true if \p inst is safe to hoist.
+static inline bool canHoistFromCondBranch(Instruction *inst) {
+  // Terminators and instructions that need to be first should not be hoisted.
+  return !(
+      llvh::isa<TerminatorInst>(inst) ||
+      inst->getSideEffect().getFirstInBlock());
+}
+
 /// Try to hoist instructions from both sides of the branch.
 /// \returns true if some instructions were hoisted.
 static bool hoistCBI(CondBranchInst *CBI) {
@@ -76,8 +85,7 @@ static bool hoistCBI(CondBranchInst *CBI) {
     Instruction *I0 = &*BB0->begin();
     Instruction *I1 = &*BB1->begin();
 
-    // Don't hoist terminators.
-    if (llvh::isa<TerminatorInst>(I0) || llvh::isa<TerminatorInst>(I1))
+    if (!(canHoistFromCondBranch(I0) && canHoistFromCondBranch(I1)))
       return changed;
 
     Instruction *LHS;
