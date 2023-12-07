@@ -11,27 +11,13 @@
 import type {Props, React$MixedElement} from './React';
 
 import * as React from './React';
-
-function Title(props: Props): React$MixedElement {
-  return <h1>{props.children}</h1>;
-}
-
-function MyComponent(_props: Props): React$MixedElement {
-  const [str, setStr] = React.useState<string>('');
-
-  return (
-    <div>
-      <Title>Hello</Title> world!
-      {str}
-    </div>
-  );
-}
+import App from './App';
 
 function run(): void {
   var N = 1;
   for (var i = 0; i < N; ++i) {
     var root = React.createRoot();
-    var rendered = root.render(<MyComponent />);
+    var rendered = root.render(<App />);
   }
   print(rendered);
 }

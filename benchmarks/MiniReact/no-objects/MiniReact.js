@@ -270,8 +270,11 @@ class React$INTERNAL$Root {
         {
           const tag = CHECKED_CAST$default<React$INTERNAL$FiberTypeHost>(fiber.type).tag;
           out.push('<' + tag);
-          for (const prop of Object.entries(fiber.props)) {
-            out.push(` ${prop.prop}=${JSON.stringify(prop.value) ?? 'undefined'}`);
+          for (const [propName, propValue] of Object.entries(fiber.props)) {
+            if (typeof propValue === 'function') {
+              continue;
+            }
+            out.push(` ${propName}=${JSON.stringify(propValue) ?? 'undefined'}`);
           }
           out.push('>');
           this.printChildren(fiber, out);
@@ -595,25 +598,168 @@ function React$Fragment(props: React$Props): React$React$Node {
   // TODO: Get this to work.
   return props.children;
 }
-/* file: index.js */
-function index$INTERNAL$Title(props: React$Props): React$React$MixedElement {
-  return React$jsx('h1', {
-    children: props.children
+/* file: App.js */
+function App$INTERNAL$Button(props: React$Props): React$React$MixedElement {
+  return React$jsx('button', {
+    onClick: props.onClick,
+    children: 'Click me'
   }, null);
 }
-function index$INTERNAL$MyComponent(_props: React$Props): React$React$MixedElement {
-  const [str, setStr] = React$useState<string>('');
+function App$INTERNAL$Input(props: React$Props): React$React$MixedElement {
+  return React$jsx('input', {
+    type: "text",
+    onChange: props.onChange
+  }, null);
+}
+function App$INTERNAL$TextArea(props: React$Props): React$React$MixedElement {
+  return React$jsx('textarea', {
+    onChange: props.onChange
+  }, null);
+}
+function App$INTERNAL$Select(props: React$Props): React$React$MixedElement {
+  const children = [];
+  for (let i = 0; i < props.options.length; i++) {
+    const option = props.options[i];
+    children.push(React$jsx('option', {
+      value: option.value,
+      children: option.label
+    }, option.value));
+  }
+  return React$jsx('select', {
+    onChange: props.onChange,
+    children: children
+  }, null);
+}
+function App$INTERNAL$Checkbox(props: React$Props): React$React$MixedElement {
+  return React$jsx('input', {
+    type: "checkbox",
+    checked: props.checked,
+    onChange: props.onChange
+  }, null);
+}
+function App$INTERNAL$Radio(props: React$Props): React$React$MixedElement {
+  return React$jsx('input', {
+    type: "radio",
+    checked: props.checked,
+    onChange: props.onChange
+  }, null);
+}
+function App$INTERNAL$Slider(props: React$Props): React$React$MixedElement {
+  return React$jsx('input', {
+    type: "range",
+    min: props.min,
+    max: props.max,
+    step: props.step,
+    value: props.value,
+    onChange: props.onChange
+  }, null);
+}
+function App$INTERNAL$ProgressBar(props: React$Props): React$React$MixedElement {
   return React$jsx('div', {
-    children: [React$jsx(index$INTERNAL$Title, {
-      children: 'Hello'
-    }, null), ' world!', str]
+    style: {
+      width: `${props.progress}%`
+    }
   }, null);
 }
+function App$INTERNAL$Spinner(props: React$Props): React$React$MixedElement {
+  return React$jsx('div', {
+    className: "spinner",
+    children: 'Loading...'
+  }, null);
+}
+function App$INTERNAL$Modal(props: React$Props): React$React$MixedElement {
+  return React$jsx('div', {
+    className: `modal ${props.isOpen ? 'open' : ''}`,
+    children: [React$jsx('div', {
+      className: "overlay",
+      onClick: props.onClose
+    }, null), React$jsx('div', {
+      className: "content",
+      children: props.children
+    }, null)]
+  }, null);
+}
+function App$INTERNAL$Tooltip(props: React$Props): React$React$MixedElement {
+  return React$jsx('div', {
+    className: `tooltip ${props.isOpen ? 'open' : ''}`,
+    children: [React$jsx('div', {
+      className: "arrow"
+    }, null), React$jsx('div', {
+      className: "content",
+      children: props.children
+    }, null)]
+  }, null);
+}
+function App$default(props: React$Props): React$React$MixedElement {
+  const [text, setText] = React$useState<string>('');
+  const [number, setNumber] = React$useState<number>(0);
+  const [isChecked, setIsChecked] = React$useState<boolean>(false);
+  const [isSelected, setIsSelected] = React$useState<boolean>(false);
+  const [isOpen, setIsOpen] = React$useState<boolean>(false);
+  const [isTooltipOpen, setIsTooltipOpen] = React$useState<boolean>(false);
+  return React$jsx('div', {
+    children: [React$jsx('h1', {
+      children: 'React Benchmark'
+    }, null), React$jsx(App$INTERNAL$Button, {
+      onClick: (): void => setIsOpen(!isOpen),
+      children: 'Toggle Modal'
+    }, null), React$jsx(App$INTERNAL$Modal, {
+      isOpen: isOpen,
+      onClose: (): void => setIsOpen(false),
+      children: [React$jsx('h2', {
+        children: 'Modal Content'
+      }, null), React$jsx('p', {
+        children: 'This is some modal content.'
+      }, null)]
+    }, null), React$jsx(App$INTERNAL$Tooltip, {
+      isOpen: isTooltipOpen,
+      onClose: (): void => setIsTooltipOpen(false),
+      children: [React$jsx('h3', {
+        children: 'Tooltip Content'
+      }, null), React$jsx('p', {
+        children: 'This is some tooltip content.'
+      }, null)]
+    }, null), React$jsx(App$INTERNAL$Input, {
+      value: text,
+      onChange: e => setText(e.target.value)
+    }, null), React$jsx(App$INTERNAL$TextArea, {
+      value: text,
+      onChange: e => setText(e.target.value)
+    }, null), React$jsx(App$INTERNAL$Select, {
+      options: [{
+        label: 'Option 1',
+        value: 1
+      }, {
+        label: 'Option 2',
+        value: 2
+      }, {
+        label: 'Option 3',
+        value: 3
+      }],
+      onChange: e => setNumber(parseInt(e.target.value))
+    }, null), React$jsx(App$INTERNAL$Checkbox, {
+      checked: isChecked,
+      onChange: e => setIsChecked(e.target.checked)
+    }, null), React$jsx(App$INTERNAL$Radio, {
+      checked: isSelected,
+      onChange: e => setIsSelected(e.target.checked)
+    }, null), React$jsx(App$INTERNAL$Slider, {
+      min: 0,
+      max: 100,
+      step: 1,
+      value: number,
+      onChange: e => setNumber(parseInt(e.target.value))
+    }, null), React$jsx(App$INTERNAL$ProgressBar, {
+      progress: number
+    }, null), React$jsx(App$INTERNAL$Spinner, {}, null)]
+  }, null);
+}
+/* file: index.js */
 function index$INTERNAL$run(): void {
   var N = 1;
   for (var i = 0; i < N; ++i) {
     var root = React$createRoot();
-    var rendered = root.render(React$jsx(index$INTERNAL$MyComponent, {}, null));
+    var rendered = root.render(React$jsx(App$default, {}, null));
   }
   print(rendered);
 }

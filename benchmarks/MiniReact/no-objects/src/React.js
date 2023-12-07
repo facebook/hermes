@@ -327,10 +327,12 @@ class Root {
       case 'host': {
         const tag = CHECKED_CAST<FiberTypeHost>(fiber.type).tag;
         out.push('<' + tag);
-        for (const prop of Object.entries(fiber.props)) {
-          out.push(
-            ` ${prop.prop}=${JSON.stringify(prop.value) ?? 'undefined'}`,
-          );
+        for (const [propName, propValue] of Object.entries(fiber.props)) {
+          if (typeof propValue === 'function') {
+            continue;
+          }
+
+          out.push(` ${propName}=${JSON.stringify(propValue) ?? 'undefined'}`);
         }
         out.push('>');
         this.printChildren(fiber, out);

@@ -32,6 +32,7 @@ import type {MaybeDetachedNode} from 'hermes-transform/dist/detachedNode';
 
 import {transformAST} from 'hermes-transform/dist/transform/transformAST';
 import {t} from 'hermes-transform';
+import {SimpleTransform} from 'hermes-parser/dist/transform/SimpleTransform';
 
 const REACT_JSX_NAME = 'React$jsx';
 const REACT_FRAGMENT_NAME = 'React$Fragment';
@@ -84,10 +85,10 @@ export default async function transformJSX(
               return t.BooleanLiteral({value: true});
             }
 
-            return jsxAttributeValue.expression;
+            return transformExpression(jsxAttributeValue.expression);
           }
-          case 'StringLiteral': {
-            return t.StringLiteral({value: jsxAttributeValue.value});
+          case 'Literal': {
+            return jsxAttributeValue;
           }
           case 'JSXEmptyExpression': {
             return t.BooleanLiteral({value: true});
@@ -263,7 +264,7 @@ export default async function transformJSX(
             if (child.expression.type === 'JSXEmptyExpression') {
               return t.NullLiteral();
             }
-            return child.expression;
+            return transformExpression(child.expression);
           }
           default: {
             throw new Error(
@@ -274,6 +275,26 @@ export default async function transformJSX(
             );
           }
         }
+      }
+
+      function transformExpression(expr: Expression): Expression {
+        const resultExpr = SimpleTransform.transform(expr, {
+          transform(node: ESNode) {
+            switch (node.type) {
+              case 'JSXElement':
+              case 'JSXFragment': {
+                // $FlowExpectedError[incompatible-call]
+                return convertJSXChild(node);
+              }
+              default: {
+                return node;
+              }
+            }
+          },
+        });
+
+        // $FlowExpectedError[incompatible-return]
+        return resultExpr;
       }
 
       return {
