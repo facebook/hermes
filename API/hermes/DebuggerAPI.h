@@ -206,6 +206,9 @@ class HERMES_EXPORT Debugger {
   /// \return the source map URL for the \p fileId.
   String getSourceMappingUrl(uint32_t fileId) const;
 
+  /// \return list of loaded scripts
+  std::vector<SourceLocation> getLoadedScripts() const;
+
   /// -- Breakpoint Management --
 
   /// Sets a breakpoint on a given SourceLocation.

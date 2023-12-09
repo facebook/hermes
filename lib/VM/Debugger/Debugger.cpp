@@ -1414,6 +1414,43 @@ auto Debugger::getSourceMappingUrl(ScriptID scriptId) const -> String {
   return "";
 }
 
+auto Debugger::getLoadedScripts() const -> std::vector<SourceLocation> {
+  std::vector<SourceLocation> loadedScripts;
+  for (auto &runtimeModule : runtime_.getRuntimeModules()) {
+    if (!runtimeModule.isInitialized()) {
+      // Uninitialized module.
+      continue;
+    }
+
+    auto *debugInfo = runtimeModule.getBytecode()->getDebugInfo();
+    if (!debugInfo) {
+      // No debug info in this module, keep going.
+      continue;
+    }
+
+    // Same as the temp breakpoint we set in Debugger::willExecuteModule() for
+    // pausing on script load.
+    auto globalFunctionIndex =
+        runtimeModule.getBytecode()->getGlobalFunctionIndex();
+    auto globalCodeBlock =
+        runtimeModule.getCodeBlockMayAllocate(globalFunctionIndex);
+    OptValue<hbc::DebugSourceLocation> debugSrcLoc =
+        globalCodeBlock->getSourceLocation();
+    if (!debugSrcLoc) {
+      continue;
+    }
+
+    SourceLocation loc;
+    loc.fileId = resolveScriptId(&runtimeModule, debugSrcLoc->filenameId);
+    loc.line = debugSrcLoc->line;
+    loc.column = debugSrcLoc->column;
+    loc.fileName = debugInfo->getFilenameByID(debugSrcLoc->filenameId);
+
+    loadedScripts.push_back(loc);
+  }
+  return loadedScripts;
+}
+
 auto Debugger::resolveScriptId(
     RuntimeModule *runtimeModule,
     uint32_t filenameId) const -> ScriptID {

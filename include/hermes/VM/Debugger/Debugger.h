@@ -389,6 +389,9 @@ class Debugger {
   /// \return the source map URL for \p scriptId, empty string if non exists.
   String getSourceMappingUrl(ScriptID scriptId) const;
 
+  /// \return list of loaded scripts
+  std::vector<SourceLocation> getLoadedScripts() const;
+
   /// Find the handler for an exception thrown at \p state.
   /// \return llvh::None if no handler is found, else return the state of the
   /// handler and the offset of its frame.
