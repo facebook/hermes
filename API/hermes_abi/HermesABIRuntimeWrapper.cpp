@@ -381,6 +381,26 @@ class HermesABIRuntimeWrapper : public Runtime {
     }
   };
 
+  class NativeStateWrapper : public HermesABINativeState {
+    std::shared_ptr<NativeState> nativeState_;
+
+    static void release(HermesABINativeState *self) {
+      delete static_cast<NativeStateWrapper *>(self);
+    }
+
+   public:
+    static constexpr HermesABINativeStateVTable vt{
+        release,
+    };
+
+    NativeStateWrapper(std::shared_ptr<NativeState> nativeState)
+        : HermesABINativeState{&vt}, nativeState_{std::move(nativeState)} {}
+
+    std::shared_ptr<NativeState> getNativeState() const {
+      return nativeState_;
+    }
+  };
+
   PointerValue *clone(const PointerValue *pv) {
     // TODO: Evaluate whether to keep this null check. It is currently here for
     //       compatibility with hermes' API, but it is odd that it is the only
@@ -749,15 +769,19 @@ class HermesABIRuntimeWrapper : public Runtime {
         ->getHostFunction();
   }
 
-  bool hasNativeState(const Object &) override {
-    THROW_UNIMPLEMENTED();
+  bool hasNativeState(const Object &obj) override {
+    if (auto *ns = vtable_->get_native_state(abiRt_, toABIObject(obj)))
+      return ns->vtable == &NativeStateWrapper::vt;
+    return false;
   }
-  std::shared_ptr<NativeState> getNativeState(const Object &) override {
-    THROW_UNIMPLEMENTED();
+  std::shared_ptr<NativeState> getNativeState(const Object &obj) override {
+    auto *ns = vtable_->get_native_state(abiRt_, toABIObject(obj));
+    return static_cast<NativeStateWrapper *>(ns)->getNativeState();
   }
-  void setNativeState(const Object &, std::shared_ptr<NativeState> state)
+  void setNativeState(const Object &obj, std::shared_ptr<NativeState> state)
       override {
-    THROW_UNIMPLEMENTED();
+    unwrap(vtable_->set_native_state(
+        abiRt_, toABIObject(obj), new NativeStateWrapper(std::move(state))));
   }
 
   Value getProperty(const Object &obj, const PropNameID &name) override {

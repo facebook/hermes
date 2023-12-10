@@ -21,6 +21,7 @@ struct HermesABIMutableBuffer;
 struct HermesABIHostFunction;
 struct HermesABIPropNameIDList;
 struct HermesABIHostObject;
+struct HermesABINativeState;
 
 /// Define the structure for references to pointer types in JS (e.g. string,
 /// object, BigInt).
@@ -253,6 +254,13 @@ struct HermesABIHostObject {
   const struct HermesABIHostObjectVTable *vtable;
 };
 
+struct HermesABINativeStateVTable {
+  void (*release)(struct HermesABINativeState *self);
+};
+struct HermesABINativeState {
+  const struct HermesABINativeStateVTable *vtable;
+};
+
 struct HermesABIRuntimeVTable {
   /// Release the given runtime.
   void (*release)(struct HermesABIRuntime *);
@@ -461,6 +469,14 @@ struct HermesABIRuntimeVTable {
   struct HermesABIHostObject *(*get_host_object)(
       struct HermesABIRuntime *rt,
       struct HermesABIObject obj);
+
+  struct HermesABINativeState *(*get_native_state)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject obj);
+  struct HermesABIVoidOrError (*set_native_state)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject obj,
+      struct HermesABINativeState *ns);
 };
 
 /// An instance of a Hermes Runtime.
