@@ -656,7 +656,7 @@ class HermesABIRuntimeWrapper : public Runtime {
   }
 
   bool drainMicrotasks(int maxMicrotasksHint = -1) override {
-    THROW_UNIMPLEMENTED();
+    return unwrap(vtable_->drain_microtasks(abiRt_, maxMicrotasksHint));
   }
 
   Object global() override {

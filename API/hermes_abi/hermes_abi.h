@@ -529,6 +529,9 @@ struct HermesABIRuntimeVTable {
       struct HermesABIRuntime *rt,
       struct HermesABIObject a,
       struct HermesABIObject b);
+
+  struct HermesABIBoolOrError (
+      *drain_microtasks)(struct HermesABIRuntime *rt, int max_hint);
 };
 
 /// An instance of a Hermes Runtime.
