@@ -660,6 +660,86 @@ HermesABIArrayOrError get_object_property_names(
   return hart->createArrayOrError(ret.getHermesValue());
 }
 
+HermesABIVoidOrError set_object_external_memory_pressure(
+    HermesABIRuntime *abiRt,
+    HermesABIObject obj,
+    size_t amt) {
+  auto *hart = impl(abiRt);
+  auto &rt = *hart->rt;
+  vm::GCScope gcScope(rt);
+  auto h = toHandle(obj);
+  if (h->isProxyObject()) {
+    hart->nativeExceptionMessage = "Cannot set external memory on Proxy";
+    return abi::createVoidOrError(HermesABIErrorCodeNativeException);
+  }
+
+  // Check if the internal property is already set. If so, we can update the
+  // associated external memory in place.
+  vm::NamedPropertyDescriptor desc;
+  bool exists = vm::JSObject::getOwnNamedDescriptor(
+      h,
+      rt,
+      vm::Predefined::getSymbolID(
+          vm::Predefined::InternalPropertyExternalMemoryPressure),
+      desc);
+
+  vm::NativeState *ns;
+  if (exists) {
+    ns = vm::vmcast<vm::NativeState>(
+        vm::JSObject::getNamedSlotValueUnsafe(*h, rt, desc).getObject(rt));
+  } else {
+    auto debitMem = [](vm::GC &gc, vm::NativeState *ns) {
+      auto amt = reinterpret_cast<uintptr_t>(ns->context());
+      gc.debitExternalMemory(ns, amt);
+    };
+
+    // This is the first time adding external memory to this object. Create a
+    // new NativeState. We use the context pointer to store the external memory
+    // amount.
+    auto nsHnd = rt.makeHandle(
+        vm::NativeState::create(rt, reinterpret_cast<void *>(0), debitMem));
+
+    // Use defineNewOwnProperty to create the new property since we know it
+    // doesn't exist. Note that this also bypasses the extensibility check on
+    // the object.
+    auto res = vm::JSObject::defineNewOwnProperty(
+        h,
+        rt,
+        vm::Predefined::getSymbolID(
+            vm::Predefined::InternalPropertyExternalMemoryPressure),
+        vm::PropertyFlags::defaultNewNamedPropertyFlags(),
+        nsHnd);
+    if (LLVM_UNLIKELY(res == vm::ExecutionStatus::EXCEPTION))
+      return abi::createVoidOrError(HermesABIErrorCodeJSError);
+    ns = *nsHnd;
+  }
+
+  auto curAmt = reinterpret_cast<uintptr_t>(ns->context());
+  assert(llvh::isUInt<32>(curAmt) && "Amount is too large.");
+
+  // The GC does not support adding more than a 32 bit amount.
+  if (!llvh::isUInt<32>(amt)) {
+    hart->nativeExceptionMessage = "Amount is too large";
+    return abi::createVoidOrError(HermesABIErrorCodeNativeException);
+  }
+
+  // Try to credit or debit the delta depending on whether the new amount is
+  // larger.
+  if (amt > curAmt) {
+    auto delta = amt - curAmt;
+    if (!rt.getHeap().canAllocExternalMemory(delta)) {
+      hart->nativeExceptionMessage = "External memory is too high";
+      return abi::createVoidOrError(HermesABIErrorCodeNativeException);
+    }
+    rt.getHeap().creditExternalMemory(ns, delta);
+  } else {
+    rt.getHeap().debitExternalMemory(ns, curAmt - amt);
+  }
+
+  ns->setContext(reinterpret_cast<void *>(amt));
+  return abi::createVoidOrError();
+}
+
 constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     release_hermes_runtime,
     get_and_clear_js_error_value,
@@ -683,6 +763,7 @@ constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     set_object_property_from_string,
     set_object_property_from_propnameid,
     get_object_property_names,
+    set_object_external_memory_pressure,
 };
 
 } // namespace

@@ -298,6 +298,19 @@ struct HermesABIRuntimeVTable {
   struct HermesABIArrayOrError (*get_object_property_names)(
       struct HermesABIRuntime *rt,
       struct HermesABIObject obj);
+
+  /// Inform the runtime that there is additional memory associated with a given
+  /// JavaScript object that is not visible to the GC. This can be used if an
+  /// object is known to retain some native memory, and may be used to guide
+  /// decisions about when to run garbage collection.
+  /// This method may be invoked multiple times on an object, and subsequent
+  /// calls will overwrite any previously set value. Once the object is garbage
+  /// collected, the associated external memory will be considered freed and may
+  /// no longer factor into GC decisions.
+  struct HermesABIVoidOrError (*set_object_external_memory_pressure)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject obj,
+      size_t amount);
 };
 
 /// An instance of a Hermes Runtime.
