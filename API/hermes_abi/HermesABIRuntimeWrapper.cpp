@@ -505,23 +505,26 @@ class HermesABIRuntimeWrapper : public Runtime {
 
   PropNameID createPropNameIDFromAscii(const char *str, size_t length)
       override {
-    THROW_UNIMPLEMENTED();
+    return createPropNameIDFromString(createStringFromAscii(str, length));
   }
   PropNameID createPropNameIDFromUtf8(const uint8_t *utf8, size_t length)
       override {
-    THROW_UNIMPLEMENTED();
+    return createPropNameIDFromString(createStringFromUtf8(utf8, length));
   }
   PropNameID createPropNameIDFromString(const String &str) override {
-    THROW_UNIMPLEMENTED();
+    return intoJSIPropNameID(
+        vtable_->create_propnameid_from_string(abiRt_, toABIString(str)));
   }
   PropNameID createPropNameIDFromSymbol(const Symbol &sym) override {
-    THROW_UNIMPLEMENTED();
+    return intoJSIPropNameID(
+        vtable_->create_propnameid_from_symbol(abiRt_, toABISymbol(sym)));
   }
   std::string utf8(const PropNameID &) override {
     THROW_UNIMPLEMENTED();
   }
-  bool compare(const PropNameID &, const PropNameID &) override {
-    THROW_UNIMPLEMENTED();
+  bool compare(const PropNameID &a, const PropNameID &b) override {
+    return vtable_->prop_name_id_equals(
+        abiRt_, toABIPropNameID(a), toABIPropNameID(b));
   }
 
   std::string symbolToString(const Symbol &) override {

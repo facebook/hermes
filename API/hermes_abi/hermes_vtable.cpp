@@ -859,6 +859,32 @@ HermesABISizeTOrError get_arraybuffer_size(
   return abi::createSizeTOrError(ab->size());
 }
 
+HermesABIPropNameIDOrError create_propnameid_from_string(
+    HermesABIRuntime *abiRt,
+    HermesABIString str) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  auto cr =
+      vm::stringToSymbolID(runtime, vm::createPseudoHandle(*toHandle(str)));
+  if (cr == vm::ExecutionStatus::EXCEPTION)
+    return abi::createPropNameIDOrError(HermesABIErrorCodeJSError);
+  return hart->createPropNameIDOrError(cr->getHermesValue());
+}
+
+HermesABIPropNameIDOrError create_propnameid_from_symbol(
+    HermesABIRuntime *abiRt,
+    HermesABISymbol sym) {
+  return impl(abiRt)->createPropNameIDOrError(toHandle(sym).getHermesValue());
+}
+
+bool prop_name_id_equals(
+    HermesABIRuntime *,
+    HermesABIPropNameID a,
+    HermesABIPropNameID b) {
+  return *toHandle(a) == *toHandle(b);
+}
+
 constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     release_hermes_runtime,
     get_and_clear_js_error_value,
@@ -890,6 +916,9 @@ constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     create_arraybuffer_from_external_data,
     get_arraybuffer_data,
     get_arraybuffer_size,
+    create_propnameid_from_string,
+    create_propnameid_from_symbol,
+    prop_name_id_equals,
 };
 
 } // namespace
