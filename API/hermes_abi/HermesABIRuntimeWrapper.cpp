@@ -280,6 +280,107 @@ class HermesABIRuntimeWrapper : public Runtime {
     }
   };
 
+  class HostObjectWrapper : public HermesABIHostObject {
+    HermesABIRuntimeWrapper &rtw_;
+    std::shared_ptr<HostObject> ho_;
+
+    static HermesABIValueOrError get(
+        HermesABIHostObject *ho,
+        HermesABIRuntime *ctx,
+        HermesABIPropNameID name) {
+      auto *self = static_cast<HostObjectWrapper *>(ho);
+      auto &rtw = self->rtw_;
+      return rtw.abiRethrow(abi::createValueOrError, "HostObject::get", [&] {
+        auto jsiName = rtw.cloneToJSIPropNameID(name);
+        return abi::createValueOrError(
+            rtw.cloneToABIValue(self->ho_->get(rtw, jsiName)));
+      });
+    }
+
+    static HermesABIVoidOrError set(
+        HermesABIHostObject *ho,
+        HermesABIRuntime *ctx,
+        HermesABIPropNameID name,
+        const HermesABIValue *value) {
+      auto *self = static_cast<HostObjectWrapper *>(ho);
+      auto &rtw = self->rtw_;
+      return rtw.abiRethrow(abi::createVoidOrError, "HostObject::set", [&] {
+        auto jsiName = rtw.cloneToJSIPropNameID(name);
+        auto jsiValue = rtw.cloneToJSIValue(*value);
+        self->ho_->set(rtw, jsiName, jsiValue);
+        return abi::createVoidOrError();
+      });
+    }
+
+    class PropNameIDListWrapper : public HermesABIPropNameIDList {
+      std::vector<PropNameID> jsiPropsVec_;
+      std::vector<HermesABIPropNameID> abiPropsVec_;
+
+      static void release(HermesABIPropNameIDList *self) {
+        delete static_cast<PropNameIDListWrapper *>(self);
+      }
+      static constexpr HermesABIPropNameIDListVTable vt{
+          release,
+      };
+
+     public:
+      PropNameIDListWrapper(
+          std::vector<PropNameID> jsiPropsVec,
+          std::vector<HermesABIPropNameID> abiPropsVec) {
+        vtable = &vt;
+        jsiPropsVec_ = std::move(jsiPropsVec);
+        abiPropsVec_ = std::move(abiPropsVec);
+        props = abiPropsVec_.data();
+        size = abiPropsVec_.size();
+      }
+    };
+
+    static HermesABIPropNameIDListPtrOrError getPropertyNames(
+        HermesABIHostObject *ho,
+        HermesABIRuntime *ctx) {
+      auto *self = static_cast<HostObjectWrapper *>(ho);
+      auto &rtw = self->rtw_;
+
+      return rtw.abiRethrow(
+          abi::createPropNameIDListPtrOrError,
+          "HostObject::getPropertyNames",
+          [&] {
+            auto res = self->ho_->getPropertyNames(rtw);
+            // Create a vector of ABIPropNameIDs while keeping the ownership
+            // with the jsi::PropNameID. We happen to know that the list will be
+            // destroyed soon, so the memory cost is minimal, and this is faster
+            // since it saves us needing to clone and release each
+            // ABIPropNameID.
+            std::vector<HermesABIPropNameID> v;
+            for (auto &p : res)
+              v.push_back(rtw.toABIPropNameID(p));
+            return abi::createPropNameIDListPtrOrError(
+                new PropNameIDListWrapper(std::move(res), std::move(v)));
+          });
+    }
+
+    static void release(HermesABIHostObject *ho) {
+      delete static_cast<HostObjectWrapper *>(ho);
+    }
+
+   public:
+    static constexpr HermesABIHostObjectVTable vt{
+        release,
+        get,
+        set,
+        getPropertyNames,
+    };
+
+    HostObjectWrapper(
+        HermesABIRuntimeWrapper &rt,
+        std::shared_ptr<HostObject> ho)
+        : HermesABIHostObject{&vt}, rtw_{rt}, ho_{std::move(ho)} {}
+
+    std::shared_ptr<HostObject> getHostObject() const {
+      return ho_;
+    }
+  };
+
   PointerValue *clone(const PointerValue *pv) {
     // TODO: Evaluate whether to keep this null check. It is currently here for
     //       compatibility with hermes' API, but it is odd that it is the only
@@ -634,10 +735,13 @@ class HermesABIRuntimeWrapper : public Runtime {
     return intoJSIObject(vtable_->create_object(abiRt_));
   }
   Object createObject(std::shared_ptr<HostObject> ho) override {
-    THROW_UNIMPLEMENTED();
+    return intoJSIObject(vtable_->create_object_from_host_object(
+        abiRt_, new HostObjectWrapper(*this, std::move(ho))));
   }
-  std::shared_ptr<HostObject> getHostObject(const Object &) override {
-    THROW_UNIMPLEMENTED();
+  std::shared_ptr<HostObject> getHostObject(const Object &o) override {
+    return static_cast<HostObjectWrapper *>(
+               vtable_->get_host_object(abiRt_, toABIObject(o)))
+        ->getHostObject();
   }
   HostFunctionType &getHostFunction(const Function &f) override {
     return static_cast<HostFunctionWrapper *>(

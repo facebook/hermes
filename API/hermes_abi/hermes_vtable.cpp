@@ -1060,6 +1060,102 @@ HermesABIHostFunction *get_host_function(
   return nullptr;
 }
 
+namespace {
+class HostObjectWrapper : public vm::HostObjectProxy {
+  HermesABIRuntimeImpl *hart_;
+  HermesABIHostObject *ho_;
+
+ public:
+  HostObjectWrapper(HermesABIRuntimeImpl *hart, HermesABIHostObject *ho)
+      : hart_(hart), ho_(ho) {}
+
+  // This is called when the object is finalized.
+  ~HostObjectWrapper() override {
+    ho_->vtable->release(ho_);
+  }
+
+  HermesABIHostObject *getHostObject() {
+    return ho_;
+  }
+
+  // This is called to fetch a property value by name.
+  vm::CallResult<vm::HermesValue> get(vm::SymbolID sym) override {
+    HermesABIPropNameID name =
+        hart_->createPropNameID(vm::HermesValue::encodeSymbolValue(sym));
+    auto retOrErr = ho_->vtable->get(ho_, hart_, name);
+    abi::releasePointer(name.pointer);
+
+    if (abi::isError(retOrErr))
+      return hart_->raiseError(abi::getError(retOrErr));
+
+    auto ret = abi::getValue(retOrErr);
+    auto retHV = toHermesValue(ret);
+    abi::releaseValue(ret);
+    return retHV;
+  }
+
+  // This is called to set a property value by name.  It will return
+  // \c ExecutionStatus, and set the runtime's thrown value as appropriate.
+  vm::CallResult<bool> set(vm::SymbolID sym, vm::HermesValue value) override {
+    HermesABIPropNameID name =
+        hart_->createPropNameID(vm::HermesValue::encodeSymbolValue(sym));
+    auto abiVal = hart_->createValue(value);
+    auto ret = ho_->vtable->set(ho_, hart_, name, &abiVal);
+    abi::releasePointer(name.pointer);
+    abi::releaseValue(abiVal);
+    if (abi::isError(ret))
+      return hart_->raiseError(abi::getError(ret));
+    return true;
+  }
+
+  // This is called to query names of properties.  In case of failure it will
+  // return \c ExecutionStatus::EXCEPTION, and set the runtime's thrown Value
+  // as appropriate.
+  vm::CallResult<vm::Handle<vm::JSArray>> getHostPropertyNames() override {
+    auto ret = ho_->vtable->get_property_names(ho_, hart_);
+    if (abi::isError(ret))
+      return hart_->raiseError(abi::getError(ret));
+    auto *abiNames = abi::getPropNameIDListPtr(ret);
+    const HermesABIPropNameID *names = abiNames->props;
+    size_t size = abiNames->size;
+    auto &runtime = *hart_->rt;
+    auto arrayRes = vm::JSArray::create(runtime, size, size);
+    if (arrayRes == vm::ExecutionStatus::EXCEPTION) {
+      abiNames->vtable->release(abiNames);
+      return vm::ExecutionStatus::EXCEPTION;
+    }
+    vm::Handle<vm::JSArray> arrayHandle = *arrayRes;
+    vm::JSArray::setStorageEndIndex(arrayHandle, runtime, size);
+    for (size_t i = 0; i < size; ++i) {
+      auto shv = vm::SmallHermesValue::encodeSymbolValue(*toHandle(names[i]));
+      vm::JSArray::unsafeSetExistingElementAt(*arrayHandle, runtime, i, shv);
+    }
+    abiNames->vtable->release(abiNames);
+    return arrayHandle;
+  }
+};
+} // namespace
+
+HermesABIObjectOrError create_object_from_host_object(
+    HermesABIRuntime *abiRt,
+    HermesABIHostObject *ho) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  auto objRes = vm::HostObject::createWithoutPrototype(
+      runtime, std::make_unique<HostObjectWrapper>(hart, ho));
+  assert(
+      objRes != vm::ExecutionStatus::EXCEPTION &&
+      "Failed to create HostObject");
+  return hart->createObjectOrError(*objRes);
+}
+
+HermesABIHostObject *get_host_object(HermesABIRuntime *, HermesABIObject obj) {
+  if (auto h = vm::Handle<vm::HostObject>::dyn_vmcast(toHandle(obj)))
+    return static_cast<HostObjectWrapper *>(h->getProxy())->getHostObject();
+  return nullptr;
+}
+
 constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     release_hermes_runtime,
     get_and_clear_js_error_value,
@@ -1098,6 +1194,8 @@ constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     call_as_constructor,
     create_function_from_host_function,
     get_host_function,
+    create_object_from_host_object,
+    get_host_object,
 };
 
 } // namespace

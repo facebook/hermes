@@ -20,6 +20,7 @@ struct HermesABIBuffer;
 struct HermesABIMutableBuffer;
 struct HermesABIHostFunction;
 struct HermesABIPropNameIDList;
+struct HermesABIHostObject;
 
 /// Define the structure for references to pointer types in JS (e.g. string,
 /// object, BigInt).
@@ -218,6 +219,38 @@ struct HermesABIHostFunctionVTable {
 };
 struct HermesABIHostFunction {
   const struct HermesABIHostFunctionVTable *vtable;
+};
+
+/// Define the structure for lists of PropNameIDs, so that they can be returned
+/// by get_property_names on a HostObject.
+struct HermesABIPropNameIDListVTable {
+  void (*release)(struct HermesABIPropNameIDList *);
+};
+struct HermesABIPropNameIDList {
+  const struct HermesABIPropNameIDListVTable *vtable;
+  const struct HermesABIPropNameID *props;
+  size_t size;
+};
+
+/// Define the structure for host objects. This is designed to recreate the
+/// functionality of jsi::HostObject.
+struct HermesABIHostObjectVTable {
+  void (*release)(struct HermesABIHostObject *);
+  struct HermesABIValueOrError (*get)(
+      struct HermesABIHostObject *self,
+      struct HermesABIRuntime *rt,
+      struct HermesABIPropNameID name);
+  struct HermesABIVoidOrError (*set)(
+      struct HermesABIHostObject *self,
+      struct HermesABIRuntime *rt,
+      struct HermesABIPropNameID name,
+      const struct HermesABIValue *value);
+  struct HermesABIPropNameIDListPtrOrError (*get_property_names)(
+      struct HermesABIHostObject *self,
+      struct HermesABIRuntime *rt);
+};
+struct HermesABIHostObject {
+  const struct HermesABIHostObjectVTable *vtable;
 };
 
 struct HermesABIRuntimeVTable {
@@ -421,6 +454,13 @@ struct HermesABIRuntimeVTable {
   struct HermesABIHostFunction *(*get_host_function)(
       struct HermesABIRuntime *rt,
       struct HermesABIFunction fn);
+
+  struct HermesABIObjectOrError (*create_object_from_host_object)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIHostObject *ho);
+  struct HermesABIHostObject *(*get_host_object)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject obj);
 };
 
 /// An instance of a Hermes Runtime.
