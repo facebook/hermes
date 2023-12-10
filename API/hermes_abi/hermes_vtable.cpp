@@ -514,6 +514,152 @@ HermesABIObjectOrError create_object(HermesABIRuntime *abiRt) {
       vm::JSObject::create(runtime).getHermesValue());
 }
 
+HermesABIBoolOrError has_object_property_from_string(
+    HermesABIRuntime *abiRt,
+    HermesABIObject obj,
+    HermesABIString str) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  auto res = vm::JSObject::hasComputed(toHandle(obj), runtime, toHandle(str));
+  if (res == vm::ExecutionStatus::EXCEPTION)
+    return abi::createBoolOrError(HermesABIErrorCodeJSError);
+  return abi::createBoolOrError(*res);
+}
+
+HermesABIBoolOrError has_object_property_from_propnameid(
+    HermesABIRuntime *abiRt,
+    HermesABIObject obj,
+    HermesABIPropNameID name) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  auto res =
+      vm::JSObject::hasNamedOrIndexed(toHandle(obj), runtime, *toHandle(name));
+  if (res == vm::ExecutionStatus::EXCEPTION)
+    return abi::createBoolOrError(HermesABIErrorCodeJSError);
+  return abi::createBoolOrError(*res);
+}
+
+HermesABIValueOrError get_object_property_from_string(
+    HermesABIRuntime *abiRt,
+    HermesABIObject object,
+    HermesABIString str) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  auto res =
+      vm::JSObject::getComputed_RJS(toHandle(object), runtime, toHandle(str));
+  if (res == vm::ExecutionStatus::EXCEPTION)
+    return abi::createValueOrError(HermesABIErrorCodeJSError);
+  return hart->createValueOrError(res->get());
+}
+
+HermesABIValueOrError get_object_property_from_propnameid(
+    HermesABIRuntime *abiRt,
+    HermesABIObject object,
+    HermesABIPropNameID sym) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  auto res = vm::JSObject::getNamedOrIndexed(
+      toHandle(object), runtime, *toHandle(sym));
+  if (res == vm::ExecutionStatus::EXCEPTION)
+    return abi::createValueOrError(HermesABIErrorCodeJSError);
+  return hart->createValueOrError(res->get());
+}
+
+HermesABIVoidOrError set_object_property_from_string(
+    HermesABIRuntime *abiRt,
+    HermesABIObject obj,
+    HermesABIString str,
+    const HermesABIValue *val) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+
+  auto res = vm::JSObject::putComputed_RJS(
+                 toHandle(obj),
+                 runtime,
+                 toHandle(str),
+                 hart->makeHandle(*val),
+                 vm::PropOpFlags().plusThrowOnError())
+                 .getStatus();
+  if (res == vm::ExecutionStatus::EXCEPTION)
+    return abi::createVoidOrError(HermesABIErrorCodeJSError);
+  return abi::createVoidOrError();
+}
+
+HermesABIVoidOrError set_object_property_from_propnameid(
+    HermesABIRuntime *abiRt,
+    HermesABIObject obj,
+    HermesABIPropNameID name,
+    const HermesABIValue *val) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+
+  auto res = vm::JSObject::putNamedOrIndexed(
+                 toHandle(obj),
+                 runtime,
+                 *toHandle(name),
+                 hart->makeHandle(*val),
+                 vm::PropOpFlags().plusThrowOnError())
+                 .getStatus();
+  if (res == vm::ExecutionStatus::EXCEPTION)
+    return abi::createVoidOrError(HermesABIErrorCodeJSError);
+  return abi::createVoidOrError();
+}
+
+HermesABIArrayOrError get_object_property_names(
+    HermesABIRuntime *abiRt,
+    HermesABIObject obj) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  uint32_t beginIndex;
+  uint32_t endIndex;
+  auto objHandle = toHandle(obj);
+
+  auto propsRes =
+      vm::getForInPropertyNames(runtime, objHandle, beginIndex, endIndex);
+  if (propsRes == vm::ExecutionStatus::EXCEPTION)
+    return abi::createArrayOrError(HermesABIErrorCodeJSError);
+
+  vm::Handle<vm::SegmentedArray> props = *propsRes;
+  size_t length = endIndex - beginIndex;
+
+  auto retRes = vm::JSArray::create(runtime, length, length);
+  if (retRes == vm::ExecutionStatus::EXCEPTION)
+    return abi::createArrayOrError(HermesABIErrorCodeJSError);
+  vm::Handle<vm::JSArray> ret = *retRes;
+  vm::JSArray::setStorageEndIndex(ret, runtime, length);
+  vm::MutableHandle<> nameHnd{runtime};
+
+  // Convert each property name to a string and store it in the result array.
+  for (size_t i = 0; i < length; ++i) {
+    vm::HermesValue name = props->at(runtime, beginIndex + i);
+    vm::StringPrimitive *asString;
+    if (name.isString()) {
+      asString = name.getString();
+    } else {
+      assert(name.isNumber());
+      nameHnd = name;
+      auto asStrRes = vm::toString_RJS(runtime, nameHnd);
+      if (asStrRes == vm::ExecutionStatus::EXCEPTION)
+        return abi::createArrayOrError(HermesABIErrorCodeJSError);
+      asString = asStrRes->get();
+    }
+    vm::JSArray::unsafeSetExistingElementAt(
+        *ret,
+        runtime,
+        i,
+        vm::SmallHermesValue::encodeStringValue(asString, runtime));
+  }
+
+  return hart->createArrayOrError(ret.getHermesValue());
+}
+
 constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     release_hermes_runtime,
     get_and_clear_js_error_value,
@@ -530,6 +676,13 @@ constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     get_global_object,
     create_string_from_utf8,
     create_object,
+    has_object_property_from_string,
+    has_object_property_from_propnameid,
+    get_object_property_from_string,
+    get_object_property_from_propnameid,
+    set_object_property_from_string,
+    set_object_property_from_propnameid,
+    get_object_property_names,
 };
 
 } // namespace
