@@ -176,6 +176,9 @@ class HermesABIRuntimeImpl : public HermesABIRuntime {
   ManagedChunkedList<ManagedValue<vm::PinnedHermesValue>> hermesValues;
   ManagedChunkedList<ManagedValue<vm::WeakRoot<vm::JSObject>>> weakHermesValues;
 
+  /// This holds the message for cases where we throw a native exception.
+  std::string nativeExceptionMessage{};
+
   explicit HermesABIRuntimeImpl(const hermes::vm::RuntimeConfig &runtimeConfig)
       : HermesABIRuntime{&vtable},
         rt(hermes::vm::Runtime::create(runtimeConfig)),
@@ -288,12 +291,57 @@ class HermesABIRuntimeImpl : public HermesABIRuntime {
         hermes_fatal("Value has an unexpected tag.");
     }
   }
+
+  /// Convert the error associated with the given error code \p err into a VM
+  /// exception.
+  vm::ExecutionStatus raiseError(HermesABIErrorCode err) {
+    if (err == HermesABIErrorCodeJSError)
+      return vm::ExecutionStatus::EXCEPTION;
+
+    if (err == HermesABIErrorCodeNativeException) {
+      auto msg = std::exchange(nativeExceptionMessage, {});
+
+      // Treat the error message as UTF-8 and convert it to UTF-16 before
+      // passing it into the VM.
+      llvh::SmallVector<llvh::UTF16, 8> u16msg;
+      if (!llvh::convertUTF8ToUTF16String(msg, u16msg))
+        return rt->raiseError("<invalid utf-8 exception message>");
+
+      static_assert(
+          sizeof(llvh::UTF16) == sizeof(char16_t),
+          "Cannot safely cast UTF16 to char16_t.");
+      return rt->raiseError(
+          vm::UTF16Ref{(char16_t *)u16msg.data(), u16msg.size()});
+    }
+
+    return rt->raiseError("<unknown native exception>");
+  }
 };
 
 /// Convenience function to cast the given HermesABIRuntime to a
 /// HermesABIRuntimeImpl.
 HermesABIRuntimeImpl *impl(HermesABIRuntime *abiRt) {
   return static_cast<HermesABIRuntimeImpl *>(abiRt);
+}
+
+/// Helper function to write the given StringRef \p ref to the buffer \p buf.
+/// Terminates if the size of the buffer cannot be grown sufficiently to hold
+/// the resulting string.
+/// TODO: Revisit the termination behavior. It may be preferable to report an
+/// error or truncate the string depending on the usage.
+void writeToBuf(HermesABIGrowableBuffer *buf, llvh::StringRef ref) {
+  // Grow the buffer if necessary.
+  if (buf->size < ref.size())
+    buf->vtable->grow_to(buf, ref.size());
+
+  // In the unlikely case that we failed to allocate enough space for the
+  // message, fatal.
+  if (buf->size < ref.size())
+    hermes_fatal("Failed to allocate buffer to return string");
+
+  // Copy the message into the buffer and adjust the buffer's available space.
+  memcpy(buf->data, ref.data(), ref.size());
+  buf->used = ref.size();
 }
 
 HermesABIRuntime *make_hermes_runtime(const HermesABIRuntimeConfig *config) {
@@ -304,8 +352,45 @@ void release_hermes_runtime(HermesABIRuntime *abiRt) {
   delete impl(abiRt);
 }
 
+HermesABIValue get_and_clear_js_error_value(HermesABIRuntime *abiRt) {
+  auto *hart = impl(abiRt);
+  auto thrownValue = hart->rt->getThrownValue();
+
+  // In debug builds, assert if there is no currently thrown value. In release
+  // builds, return undefined so the behaviour is reasonable.
+  assert(!thrownValue.isEmpty() && "Retrieving a non-existent error.");
+
+  auto ret = thrownValue.isEmpty() ? abi::createUndefinedValue()
+                                   : hart->createValue(thrownValue);
+  hart->rt->clearThrownValue();
+  return ret;
+}
+
+void get_and_clear_native_exception_message(
+    HermesABIRuntime *abiRt,
+    HermesABIGrowableBuffer *buf) {
+  auto *hart = impl(abiRt);
+  writeToBuf(buf, hart->nativeExceptionMessage);
+  hart->nativeExceptionMessage.clear();
+  hart->nativeExceptionMessage.shrink_to_fit();
+}
+
+void set_js_error_value(HermesABIRuntime *abiRt, const HermesABIValue *val) {
+  impl(abiRt)->rt->setThrownValue(toHermesValue(*val));
+}
+void set_native_exception_message(
+    HermesABIRuntime *abiRt,
+    const uint8_t *message,
+    size_t length) {
+  impl(abiRt)->nativeExceptionMessage.assign((const char *)message, length);
+}
+
 constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     release_hermes_runtime,
+    get_and_clear_js_error_value,
+    get_and_clear_native_exception_message,
+    set_js_error_value,
+    set_native_exception_message,
 };
 
 } // namespace

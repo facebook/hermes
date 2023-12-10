@@ -36,6 +36,55 @@ namespace {
 
 #define THROW_UNIMPLEMENTED() throwUnimplementedImpl(__func__)
 
+/// An implementation of HermesABIGrowableBuffer that uses a string as its
+/// internal storage. This can be used to conveniently construct a std::string
+/// from ABI functions that return strings.
+class StringByteBuffer : public HermesABIGrowableBuffer {
+  std::string buf_;
+
+  static void grow_to(HermesABIGrowableBuffer *buf, size_t sz) {
+    auto *self = static_cast<StringByteBuffer *>(buf);
+    // The API specifies that providing a smaller size is a no-op.
+    if (sz < self->size)
+      return;
+    self->buf_.resize(sz);
+    self->data = (uint8_t *)self->buf_.data();
+    self->size = sz;
+  }
+
+  static constexpr HermesABIGrowableBufferVTable vt{
+      grow_to,
+  };
+
+ public:
+  explicit StringByteBuffer() : HermesABIGrowableBuffer{&vt, nullptr, 0, 0} {
+    // Make the small string storage available for use without needing to call
+    // grow_by.
+    buf_.resize(buf_.capacity());
+    data = (uint8_t *)buf_.data();
+    size = buf_.size();
+  }
+
+  std::string get() && {
+    // Trim off any unused bytes at the end.
+    buf_.resize(used);
+    return std::move(buf_);
+  }
+};
+
+/// Helper class to save and restore a value on exiting a scope.
+template <typename T>
+class SaveAndRestore {
+  T &target_;
+  T oldVal_;
+
+ public:
+  SaveAndRestore(T &target) : target_(target), oldVal_(target) {}
+  ~SaveAndRestore() {
+    target_ = oldVal_;
+  }
+};
+
 /// An implementation of jsi::Runtime on top of the Hermes C-API.
 class HermesABIRuntimeWrapper : public Runtime {
   class ManagedPointerHolder;
@@ -54,6 +103,11 @@ class HermesABIRuntimeWrapper : public Runtime {
   /// lifetime of the underlying ABI pointers so that they are released when the
   /// corresponding JSI pointer is released.
   hermes::ManagedChunkedList<ManagedPointerHolder> managedPointers_;
+
+  /// Whether we are currently processing a JSError. This is used to detect
+  /// recursive invocations of the JSError constructor and prevent them from
+  /// causing a stack overflow.
+  bool activeJSError_ = false;
 
   /// A ManagedChunkedList element that indicates whether it's occupied based on
   /// a refcount.
@@ -125,25 +179,82 @@ class HermesABIRuntimeWrapper : public Runtime {
     }
   };
 
-  /// Define two helper functions for each pointer type.
+  /// Convert the error code returned by the Hermes C-API into a C++ exception.
+  [[noreturn]] void throwError(HermesABIErrorCode err) {
+    if (err == HermesABIErrorCodeJSError) {
+      // We have to get and clear the error regardless of whether it is used.
+      auto errVal = intoJSIValue(vtable_->get_and_clear_js_error_value(abiRt_));
+
+      // If we are already in the process of creating a JSError, it means that
+      // something in JSError's constructor is throwing. We cannot handle this
+      // gracefully, so bail.
+      if (activeJSError_)
+        throw JSINativeException("Error thrown while handling error.");
+
+      // Record the fact that we are in the process of creating a JSError.
+      SaveAndRestore<bool> s(activeJSError_);
+      activeJSError_ = true;
+      throw JSError(*this, std::move(errVal));
+    } else if (err == HermesABIErrorCodeNativeException) {
+      StringByteBuffer buf;
+      vtable_->get_and_clear_native_exception_message(abiRt_, &buf);
+      throw JSINativeException(std::move(buf).get());
+    }
+
+    throw JSINativeException("ABI threw an unknown error.");
+  }
+
+  /// Define some helper functions for each pointer type.
   /// 1. intoJSI*Pointer*: Take ownership of the given ABI pointer and produce a
-  /// JSI Pointer that will now manage its lifetime.
+  /// JSI Pointer that will now manage its lifetime. If the operand may contain
+  /// an error, check for and convert the exception.
   /// 2. toABI*Pointer*: Create an ABI pointer that aliases the given JSI
   /// pointer. The ABI pointer will be invalidated once the JSI pointer is
   /// released.
+  /// 3. unwrap: Unwrap the given ABI pointer, checking for errors.
 
 #define DECLARE_POINTER_CONVERSIONS(name)                             \
   name intoJSI##name(const HermesABI##name &p) {                      \
     return make<name>(&managedPointers_.add(p.pointer));              \
   }                                                                   \
+  name intoJSI##name(const HermesABI##name##OrError &p) {             \
+    return intoJSI##name(unwrap(p));                                  \
+  }                                                                   \
   HermesABI##name toABI##name(const name &p) const {                  \
     return abi::create##name(                                         \
         static_cast<const ManagedPointerHolder *>(getPointerValue(p)) \
             ->getManagedPointer());                                   \
+  }                                                                   \
+  HermesABI##name unwrap(const HermesABI##name##OrError &p) {         \
+    if (abi::isError(p))                                              \
+      throwError(abi::getError(p));                                   \
+    return abi::get##name(p);                                         \
   }
 
   HERMES_ABI_POINTER_TYPES(DECLARE_POINTER_CONVERSIONS)
 #undef DECLARE_POINTER_CONVERSIONS
+
+  /// Define unwrap functions for each primitive type. These check their operand
+  /// for errors and return the contained primitive if they do not.
+  void unwrap(const HermesABIVoidOrError &v) {
+    if (abi::isError(v))
+      throwError(abi::getError(v));
+  }
+  bool unwrap(const HermesABIBoolOrError &p) {
+    if (abi::isError(p))
+      throwError(abi::getError(p));
+    return abi::getBool(p);
+  }
+  uint8_t *unwrap(const HermesABIUint8PtrOrError &p) {
+    if (abi::isError(p))
+      throwError(abi::getError(p));
+    return abi::getUint8Ptr(p);
+  }
+  size_t unwrap(const HermesABISizeTOrError &p) {
+    if (abi::isError(p))
+      throwError(abi::getError(p));
+    return abi::getSizeT(p);
+  }
 
   /// Take ownership of the given value \p v and wrap it in a jsi::Value that
   /// will now manage its lifetime.
@@ -171,6 +282,14 @@ class HermesABIRuntimeWrapper : public Runtime {
         abi::releaseValue(v);
         throw JSINativeException("ABI returned an unknown value kind.");
     }
+  }
+
+  /// Helper function to take ownership of an ABI value as a JSI value and
+  /// report any exceptions.
+  Value intoJSIValue(const HermesABIValueOrError &val) {
+    if (abi::isError(val))
+      throwError(abi::getError(val));
+    return intoJSIValue(abi::getValue(val));
   }
 
   /// Convert the given jsi::Value \p v to an ABI value. The ABI value will be
