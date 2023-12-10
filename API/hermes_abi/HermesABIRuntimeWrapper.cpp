@@ -7,9 +7,23 @@
 
 #include "hermes_abi/HermesABIRuntimeWrapper.h"
 
+#include "hermes_abi/HermesABIHelpers.h"
 #include "hermes_abi/hermes_abi.h"
 
+#include "hermes/ADT/ManagedChunkedList.h"
+
+#include <atomic>
+
+#if __has_builtin(__builtin_unreachable)
+#define BUILTIN_UNREACHABLE __builtin_unreachable()
+#elif defined(_MSC_VER)
+#define BUILTIN_UNREACHABLE __assume(false)
+#else
+#define BUILTIN_UNREACHABLE assert(false);
+#endif
+
 using namespace facebook::jsi;
+using namespace facebook::hermes;
 
 namespace {
 
@@ -24,6 +38,8 @@ namespace {
 
 /// An implementation of jsi::Runtime on top of the Hermes C-API.
 class HermesABIRuntimeWrapper : public Runtime {
+  class ManagedPointerHolder;
+
   /// The primary vtable for the C-API implementation that this runtime wraps.
   const HermesABIVTable *abiVtable_;
 
@@ -34,13 +50,165 @@ class HermesABIRuntimeWrapper : public Runtime {
   /// The runtime object for the Hermes C-API implementation.
   HermesABIRuntime *abiRt_;
 
+  /// The list of pointers currently retained through JSI. This manages the
+  /// lifetime of the underlying ABI pointers so that they are released when the
+  /// corresponding JSI pointer is released.
+  hermes::ManagedChunkedList<ManagedPointerHolder> managedPointers_;
+
+  /// A ManagedChunkedList element that indicates whether it's occupied based on
+  /// a refcount.
+  /// TODO: Replace jsi::PointerValue with something like
+  ///       HermesABIManagedPointer, so we can directly invalidate values.
+  class ManagedPointerHolder : public PointerValue {
+    std::atomic<uint32_t> refCount_;
+    union {
+      HermesABIManagedPointer *managedPointer_;
+      ManagedPointerHolder *nextFree_;
+    };
+
+   public:
+    ManagedPointerHolder() : refCount_(0) {}
+
+    /// Determine whether the element is occupied by inspecting the refcount.
+    bool isFree() const {
+      return refCount_.load(std::memory_order_relaxed) == 0;
+    }
+
+    /// Store a value and start the refcount at 1. After invocation, this
+    /// instance is occupied with a value, and the "nextFree" methods should
+    /// not be used until the value is released.
+    void emplace(HermesABIManagedPointer *managedPointer) {
+      assert(isFree() && "Emplacing already occupied value");
+      refCount_.store(1, std::memory_order_relaxed);
+      managedPointer_ = managedPointer;
+    }
+
+    /// Get the next free element. Must not be called when this instance is
+    /// occupied with a value.
+    ManagedPointerHolder *getNextFree() {
+      assert(isFree() && "Free pointer unusable while occupied");
+      return nextFree_;
+    }
+
+    /// Set the next free element. Must not be called when this instance is
+    /// occupied with a value.
+    void setNextFree(ManagedPointerHolder *nextFree) {
+      assert(isFree() && "Free pointer unusable while occupied");
+      nextFree_ = nextFree;
+    }
+
+    HermesABIManagedPointer *getManagedPointer() const {
+      assert(!isFree() && "Value not present");
+      return managedPointer_;
+    }
+
+    void invalidate() override {
+      dec();
+    }
+
+    void inc() {
+      // See comments in hermes_abi.cpp for why we use relaxed operations here.
+      auto oldCount = refCount_.fetch_add(1, std::memory_order_relaxed);
+      assert(oldCount && "Cannot resurrect a pointer");
+      assert(oldCount + 1 != 0 && "Ref count overflow");
+      (void)oldCount;
+    }
+
+    void dec() {
+      // See comments in hermes_abi.cpp for why we use relaxed operations here.
+      auto oldCount = refCount_.fetch_sub(1, std::memory_order_relaxed);
+      assert(oldCount > 0 && "Ref count underflow");
+      // This was the last decrement of this holder, so we can invalidate the
+      // underlying pointer.
+      if (oldCount == 1)
+        abi::releasePointer(managedPointer_);
+    }
+  };
+
+  /// Define two helper functions for each pointer type.
+  /// 1. intoJSI*Pointer*: Take ownership of the given ABI pointer and produce a
+  /// JSI Pointer that will now manage its lifetime.
+  /// 2. toABI*Pointer*: Create an ABI pointer that aliases the given JSI
+  /// pointer. The ABI pointer will be invalidated once the JSI pointer is
+  /// released.
+
+#define DECLARE_POINTER_CONVERSIONS(name)                             \
+  name intoJSI##name(const HermesABI##name &p) {                      \
+    return make<name>(&managedPointers_.add(p.pointer));              \
+  }                                                                   \
+  HermesABI##name toABI##name(const name &p) const {                  \
+    return abi::create##name(                                         \
+        static_cast<const ManagedPointerHolder *>(getPointerValue(p)) \
+            ->getManagedPointer());                                   \
+  }
+
+  HERMES_ABI_POINTER_TYPES(DECLARE_POINTER_CONVERSIONS)
+#undef DECLARE_POINTER_CONVERSIONS
+
+  /// Take ownership of the given value \p v and wrap it in a jsi::Value that
+  /// will now manage its lifetime.
+  Value intoJSIValue(const HermesABIValue &v) {
+    switch (abi::getValueKind(v)) {
+      case HermesABIValueKindUndefined:
+        return Value::undefined();
+      case HermesABIValueKindNull:
+        return Value::null();
+      case HermesABIValueKindBoolean:
+        return Value(abi::getBoolValue(v));
+      case HermesABIValueKindNumber:
+        return Value(abi::getNumberValue(v));
+      case HermesABIValueKindString:
+        return make<String>(&managedPointers_.add(abi::getPointerValue(v)));
+      case HermesABIValueKindObject:
+        return make<Object>(&managedPointers_.add(abi::getPointerValue(v)));
+      case HermesABIValueKindSymbol:
+        return make<Symbol>(&managedPointers_.add(abi::getPointerValue(v)));
+      case HermesABIValueKindBigInt:
+        return make<BigInt>(&managedPointers_.add(abi::getPointerValue(v)));
+      default:
+        // We aren't able to construct an equivalent jsi::Value, just release
+        // the value that was passed in.
+        abi::releaseValue(v);
+        throw JSINativeException("ABI returned an unknown value kind.");
+    }
+  }
+
+  /// Convert the given jsi::Value \p v to an ABI value. The ABI value will be
+  /// invalidated once the jsi::Value is released.
+  static HermesABIValue toABIValue(const Value &v) {
+    if (v.isUndefined())
+      return abi::createUndefinedValue();
+    if (v.isNull())
+      return abi::createNullValue();
+    if (v.isBool())
+      return abi::createBoolValue(v.getBool());
+    if (v.isNumber())
+      return abi::createNumberValue(v.getNumber());
+
+    HermesABIManagedPointer *mp =
+        static_cast<const ManagedPointerHolder *>(getPointerValue(v))
+            ->getManagedPointer();
+    if (v.isString())
+      return abi::createStringValue(mp);
+    if (v.isObject())
+      return abi::createObjectValue(mp);
+    if (v.isSymbol())
+      return abi::createSymbolValue(mp);
+    if (v.isBigInt())
+      return abi::createBigIntValue(mp);
+
+    BUILTIN_UNREACHABLE;
+  }
+
  public:
-  HermesABIRuntimeWrapper(const HermesABIVTable *vtable) : abiVtable_(vtable) {
+  HermesABIRuntimeWrapper(const HermesABIVTable *vtable)
+      : abiVtable_(vtable), managedPointers_(0.5, 0.5) {
     abiRt_ = abiVtable_->make_hermes_runtime(nullptr);
     vtable_ = abiRt_->vt;
   }
   ~HermesABIRuntimeWrapper() override {
     vtable_->release(abiRt_);
+    assert(managedPointers_.sizeForTests() == 0 && "Dangling references.");
   }
 
   Value evaluateJavaScript(
