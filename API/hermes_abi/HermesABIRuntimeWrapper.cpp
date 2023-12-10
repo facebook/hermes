@@ -708,16 +708,20 @@ class HermesABIRuntimeWrapper : public Runtime {
     return intoJSIPropNameID(
         vtable_->create_propnameid_from_symbol(abiRt_, toABISymbol(sym)));
   }
-  std::string utf8(const PropNameID &) override {
-    THROW_UNIMPLEMENTED();
+  std::string utf8(const PropNameID &name) override {
+    StringByteBuffer buffer;
+    vtable_->get_utf8_from_propnameid(abiRt_, toABIPropNameID(name), &buffer);
+    return std::move(buffer).get();
   }
   bool compare(const PropNameID &a, const PropNameID &b) override {
     return vtable_->prop_name_id_equals(
         abiRt_, toABIPropNameID(a), toABIPropNameID(b));
   }
 
-  std::string symbolToString(const Symbol &) override {
-    THROW_UNIMPLEMENTED();
+  std::string symbolToString(const Symbol &sym) override {
+    StringByteBuffer buffer;
+    vtable_->get_utf8_from_symbol(abiRt_, toABISymbol(sym), &buffer);
+    return std::move(buffer).get();
   }
 
   BigInt createBigIntFromInt64(int64_t) override {
@@ -747,8 +751,10 @@ class HermesABIRuntimeWrapper : public Runtime {
     return intoJSIString(
         vtable_->create_string_from_utf8(abiRt_, utf8, length));
   }
-  std::string utf8(const String &) override {
-    THROW_UNIMPLEMENTED();
+  std::string utf8(const String &str) override {
+    StringByteBuffer buffer;
+    vtable_->get_utf8_from_string(abiRt_, toABIString(str), &buffer);
+    return std::move(buffer).get();
   }
 
   Object createObject() override {

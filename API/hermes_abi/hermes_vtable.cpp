@@ -1257,6 +1257,77 @@ HermesABIValue lock_weak_object(
   return abi::createUndefinedValue();
 }
 
+void get_utf8_from_string(
+    HermesABIRuntime *abiRt,
+    HermesABIString str,
+    HermesABIGrowableBuffer *buf) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  auto view = vm::StringPrimitive::createStringView(runtime, toHandle(str));
+  if (LLVM_LIKELY(view.isASCII())) {
+    writeToBuf(buf, {view.castToCharPtr(), view.length()});
+    return;
+  }
+
+  std::string convertBuf;
+  convertUTF16ToUTF8WithReplacements(
+      convertBuf, {view.castToChar16Ptr(), view.length()});
+  writeToBuf(buf, convertBuf);
+}
+
+void get_utf8_from_propnameid(
+    HermesABIRuntime *abiRt,
+    HermesABIPropNameID name,
+    HermesABIGrowableBuffer *buf) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  auto view =
+      runtime.getIdentifierTable().getStringView(runtime, *toHandle(name));
+  // TODO: Consider aligning this with the behaviour for symbols below, such
+  // that PropNameIDs backed by Symbols also get wrapped in "Symbol()".
+  if (LLVM_LIKELY(view.isASCII())) {
+    writeToBuf(buf, {view.castToCharPtr(), view.length()});
+    return;
+  }
+
+  std::string convertBuf;
+  convertUTF16ToUTF8WithReplacements(
+      convertBuf, {view.castToChar16Ptr(), view.length()});
+  writeToBuf(buf, convertBuf);
+}
+
+void get_utf8_from_symbol(
+    HermesABIRuntime *abiRt,
+    HermesABISymbol name,
+    HermesABIGrowableBuffer *buf) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  auto view =
+      runtime.getIdentifierTable().getStringView(runtime, *toHandle(name));
+
+  // Wrap the resulting string in "Symbol()" to match the behaviour of
+  // symbolDescriptiveString. We don't directly use symbolDescriptiveString here
+  // to avoid extra allocations and error conditions.
+  // For simplicity, we first construct the result string in this buffer before
+  // copying it over. This is inefficient since we force a copy, but should be
+  // fairly uncommon and the strings should be small.
+  std::string res = "Symbol(";
+
+  if (LLVM_LIKELY(view.isASCII())) {
+    res.append(view.castToCharPtr(), view.length());
+  } else {
+    std::string ret;
+    convertUTF16ToUTF8WithReplacements(
+        ret, {view.castToChar16Ptr(), view.length()});
+    res.append(ret);
+  }
+  res.append(1, ')');
+  writeToBuf(buf, res);
+}
+
 constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     release_hermes_runtime,
     get_and_clear_js_error_value,
@@ -1304,6 +1375,9 @@ constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     object_is_function,
     create_weak_object,
     lock_weak_object,
+    get_utf8_from_string,
+    get_utf8_from_propnameid,
+    get_utf8_from_symbol,
 };
 
 } // namespace
