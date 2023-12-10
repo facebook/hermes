@@ -18,6 +18,7 @@ struct HermesABIManagedPointer;
 struct HermesABIGrowableBuffer;
 struct HermesABIBuffer;
 struct HermesABIMutableBuffer;
+struct HermesABIHostFunction;
 struct HermesABIPropNameIDList;
 
 /// Define the structure for references to pointer types in JS (e.g. string,
@@ -202,6 +203,21 @@ struct HermesABIMutableBuffer {
   const struct HermesABIMutableBufferVTable *vtable;
   uint8_t *data;
   size_t size;
+};
+
+/// Define the structure for host functions. This is designed to recreate the
+/// functionality of jsi::HostFunction.
+struct HermesABIHostFunctionVTable {
+  void (*release)(struct HermesABIHostFunction *);
+  struct HermesABIValueOrError (*call)(
+      struct HermesABIHostFunction *self,
+      struct HermesABIRuntime *rt,
+      const struct HermesABIValue *this_arg,
+      const struct HermesABIValue *args,
+      size_t arg_count);
+};
+struct HermesABIHostFunction {
+  const struct HermesABIHostFunctionVTable *vtable;
 };
 
 struct HermesABIRuntimeVTable {
@@ -396,6 +412,15 @@ struct HermesABIRuntimeVTable {
       struct HermesABIFunction fn,
       const struct HermesABIValue *args,
       size_t arg_count);
+
+  struct HermesABIFunctionOrError (*create_function_from_host_function)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIPropNameID name,
+      unsigned int length,
+      struct HermesABIHostFunction *hf);
+  struct HermesABIHostFunction *(*get_host_function)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIFunction fn);
 };
 
 /// An instance of a Hermes Runtime.

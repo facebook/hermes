@@ -212,6 +212,74 @@ class HermesABIRuntimeWrapper : public Runtime {
     }
   };
 
+  /// Invoke the given \p fn and return the result. If an exception occurs,
+  /// catch it and convert it to an ABI exception with type \p T by invoking \p
+  /// wrapErr.
+  template <typename T, size_t N, typename Fn>
+  auto
+  abiRethrow(T (*wrapErr)(HermesABIErrorCode), const char (&where)[N], Fn fn) {
+    try {
+      return fn();
+    } catch (const JSError &e) {
+      auto abiVal = toABIValue(e.value());
+      vtable_->set_js_error_value(abiRt_, &abiVal);
+      return wrapErr(HermesABIErrorCodeJSError);
+    } catch (const std::exception &e) {
+      std::string what{"Exception in "};
+      what.append(where, N - 1).append(": ").append(e.what());
+      vtable_->set_native_exception_message(
+          abiRt_, (const uint8_t *)what.c_str(), what.size());
+      return wrapErr(HermesABIErrorCodeNativeException);
+    } catch (...) {
+      std::string err{"An unknown exception occurred in "};
+      err.append(where, N - 1);
+      vtable_->set_native_exception_message(
+          abiRt_, (const uint8_t *)err.c_str(), err.size());
+      return wrapErr(HermesABIErrorCodeNativeException);
+    }
+  }
+
+  class HostFunctionWrapper : public HermesABIHostFunction {
+    HermesABIRuntimeWrapper &rtw_;
+    HostFunctionType hf_;
+
+    static HermesABIValueOrError call(
+        HermesABIHostFunction *hf,
+        HermesABIRuntime *ctx,
+        const HermesABIValue *thisArg,
+        const HermesABIValue *args,
+        size_t count) {
+      auto *self = static_cast<HostFunctionWrapper *>(hf);
+      auto &rtw = self->rtw_;
+      return rtw.abiRethrow(abi::createValueOrError, "HostFunction", [&] {
+        std::vector<Value> jsiArgs;
+        jsiArgs.reserve(count);
+        for (size_t i = 0; i < count; ++i)
+          jsiArgs.emplace_back(rtw.cloneToJSIValue(args[i]));
+
+        auto jsiThisArg = rtw.cloneToJSIValue(*thisArg);
+        return abi::createValueOrError(rtw.cloneToABIValue(
+            self->hf_(rtw, jsiThisArg, jsiArgs.data(), count)));
+      });
+    }
+    static void release(HermesABIHostFunction *hf) {
+      delete static_cast<HostFunctionWrapper *>(hf);
+    }
+
+   public:
+    static constexpr HermesABIHostFunctionVTable vt{
+        release,
+        call,
+    };
+
+    HostFunctionWrapper(HermesABIRuntimeWrapper &rt, HostFunctionType hf)
+        : HermesABIHostFunction{&vt}, rtw_{rt}, hf_{std::move(hf)} {}
+
+    HostFunctionType &getHostFunction() {
+      return hf_;
+    }
+  };
+
   PointerValue *clone(const PointerValue *pv) {
     // TODO: Evaluate whether to keep this null check. It is currently here for
     //       compatibility with hermes' API, but it is odd that it is the only
@@ -571,8 +639,10 @@ class HermesABIRuntimeWrapper : public Runtime {
   std::shared_ptr<HostObject> getHostObject(const Object &) override {
     THROW_UNIMPLEMENTED();
   }
-  HostFunctionType &getHostFunction(const Function &) override {
-    THROW_UNIMPLEMENTED();
+  HostFunctionType &getHostFunction(const Function &f) override {
+    return static_cast<HostFunctionWrapper *>(
+               vtable_->get_host_function(abiRt_, toABIFunction(f)))
+        ->getHostFunction();
   }
 
   bool hasNativeState(const Object &) override {
@@ -678,7 +748,11 @@ class HermesABIRuntimeWrapper : public Runtime {
       const PropNameID &name,
       unsigned int paramCount,
       HostFunctionType func) override {
-    THROW_UNIMPLEMENTED();
+    return intoJSIFunction(vtable_->create_function_from_host_function(
+        abiRt_,
+        toABIPropNameID(name),
+        paramCount,
+        new HostFunctionWrapper(*this, func)));
   }
   Value call(
       const Function &fn,
