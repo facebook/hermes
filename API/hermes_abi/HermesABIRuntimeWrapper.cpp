@@ -179,6 +179,18 @@ class HermesABIRuntimeWrapper : public Runtime {
     }
   };
 
+  PointerValue *clone(const PointerValue *pv) {
+    // TODO: Evaluate whether to keep this null check. It is currently here for
+    //       compatibility with hermes' API, but it is odd that it is the only
+    //       API that allows null.
+    if (!pv)
+      return nullptr;
+
+    auto *nonConst = const_cast<PointerValue *>(pv);
+    static_cast<ManagedPointerHolder *>(nonConst)->inc();
+    return nonConst;
+  }
+
   /// Convert the error code returned by the Hermes C-API into a C++ exception.
   [[noreturn]] void throwError(HermesABIErrorCode err) {
     if (err == HermesABIErrorCodeJSError) {
@@ -233,6 +245,10 @@ class HermesABIRuntimeWrapper : public Runtime {
 
   HERMES_ABI_POINTER_TYPES(DECLARE_POINTER_CONVERSIONS)
 #undef DECLARE_POINTER_CONVERSIONS
+
+  PropNameID cloneToJSIPropNameID(HermesABIPropNameID name) {
+    return intoJSIPropNameID(vtable_->clone_propnameid(abiRt_, name));
+  }
 
   /// Define unwrap functions for each primitive type. These check their operand
   /// for errors and return the contained primitive if they do not.
@@ -292,6 +308,36 @@ class HermesABIRuntimeWrapper : public Runtime {
     return intoJSIValue(abi::getValue(val));
   }
 
+  /// Create a jsi::Value from the given HermesABIValue without taking ownership
+  /// of it. This will clone any underlying pointers if needed.
+  Value cloneToJSIValue(const HermesABIValue &v) {
+    switch (abi::getValueKind(v)) {
+      case HermesABIValueKindUndefined:
+        return Value::undefined();
+      case HermesABIValueKindNull:
+        return Value::null();
+      case HermesABIValueKindBoolean:
+        return Value(abi::getBoolValue(v));
+      case HermesABIValueKindNumber:
+        return Value(abi::getNumberValue(v));
+      case HermesABIValueKindString:
+        return intoJSIString(
+            vtable_->clone_string(abiRt_, abi::getStringValue(v)));
+      case HermesABIValueKindObject:
+        return intoJSIObject(
+            vtable_->clone_object(abiRt_, abi::getObjectValue(v)));
+      case HermesABIValueKindSymbol:
+        return intoJSISymbol(
+            vtable_->clone_symbol(abiRt_, abi::getSymbolValue(v)));
+      case HermesABIValueKindBigInt:
+        return intoJSIBigInt(
+            vtable_->clone_bigint(abiRt_, abi::getBigIntValue(v)));
+      default:
+        // Don't release the value here, since we didn't take ownership.
+        throw JSINativeException("ABI returned an unknown value kind.");
+    }
+  }
+
   /// Convert the given jsi::Value \p v to an ABI value. The ABI value will be
   /// invalidated once the jsi::Value is released.
   static HermesABIValue toABIValue(const Value &v) {
@@ -315,6 +361,37 @@ class HermesABIRuntimeWrapper : public Runtime {
       return abi::createSymbolValue(mp);
     if (v.isBigInt())
       return abi::createBigIntValue(mp);
+
+    BUILTIN_UNREACHABLE;
+  }
+
+  /// Convert the given jsi::Value \p v to an ABI value. The resulting ABI value
+  /// will need to be explicitly released.
+  HermesABIValue cloneToABIValue(const Value &v) {
+    if (v.isUndefined())
+      return abi::createUndefinedValue();
+    if (v.isNull())
+      return abi::createNullValue();
+    if (v.isBool())
+      return abi::createBoolValue(v.getBool());
+    if (v.isNumber())
+      return abi::createNumberValue(v.getNumber());
+
+    HermesABIManagedPointer *mp =
+        static_cast<const ManagedPointerHolder *>(getPointerValue(v))
+            ->getManagedPointer();
+    if (v.isString())
+      return abi::createStringValue(
+          vtable_->clone_string(abiRt_, abi::createString(mp)));
+    if (v.isObject())
+      return abi::createObjectValue(
+          vtable_->clone_object(abiRt_, abi::createObject(mp)));
+    if (v.isSymbol())
+      return abi::createSymbolValue(
+          vtable_->clone_symbol(abiRt_, abi::createSymbol(mp)));
+    if (v.isBigInt())
+      return abi::createBigIntValue(
+          vtable_->clone_bigint(abiRt_, abi::createBigInt(mp)));
 
     BUILTIN_UNREACHABLE;
   }
@@ -369,19 +446,19 @@ class HermesABIRuntimeWrapper : public Runtime {
 
  protected:
   PointerValue *cloneSymbol(const Runtime::PointerValue *pv) override {
-    THROW_UNIMPLEMENTED();
+    return clone(pv);
   }
   PointerValue *cloneBigInt(const Runtime::PointerValue *pv) override {
-    THROW_UNIMPLEMENTED();
+    return clone(pv);
   }
   PointerValue *cloneString(const Runtime::PointerValue *pv) override {
-    THROW_UNIMPLEMENTED();
+    return clone(pv);
   }
   PointerValue *cloneObject(const Runtime::PointerValue *pv) override {
-    THROW_UNIMPLEMENTED();
+    return clone(pv);
   }
   PointerValue *clonePropNameID(const Runtime::PointerValue *pv) override {
-    THROW_UNIMPLEMENTED();
+    return clone(pv);
   }
 
   PropNameID createPropNameIDFromAscii(const char *str, size_t length)

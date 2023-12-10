@@ -385,12 +385,40 @@ void set_native_exception_message(
   impl(abiRt)->nativeExceptionMessage.assign((const char *)message, length);
 }
 
+HermesABIPropNameID clone_propnameid(
+    HermesABIRuntime *,
+    HermesABIPropNameID name) {
+  static_cast<ManagedValue<vm::PinnedHermesValue> *>(name.pointer)->inc();
+  return name;
+}
+HermesABIString clone_string(HermesABIRuntime *, HermesABIString str) {
+  static_cast<ManagedValue<vm::PinnedHermesValue> *>(str.pointer)->inc();
+  return str;
+}
+HermesABISymbol clone_symbol(HermesABIRuntime *, HermesABISymbol sym) {
+  static_cast<ManagedValue<vm::PinnedHermesValue> *>(sym.pointer)->inc();
+  return sym;
+}
+HermesABIObject clone_object(HermesABIRuntime *, HermesABIObject obj) {
+  static_cast<ManagedValue<vm::PinnedHermesValue> *>(obj.pointer)->inc();
+  return obj;
+}
+HermesABIBigInt clone_bigint(HermesABIRuntime *, HermesABIBigInt bi) {
+  static_cast<ManagedValue<vm::PinnedHermesValue> *>(bi.pointer)->inc();
+  return bi;
+}
+
 constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     release_hermes_runtime,
     get_and_clear_js_error_value,
     get_and_clear_native_exception_message,
     set_js_error_value,
     set_native_exception_message,
+    clone_propnameid,
+    clone_string,
+    clone_symbol,
+    clone_object,
+    clone_bigint,
 };
 
 } // namespace
