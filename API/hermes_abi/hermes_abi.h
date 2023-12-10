@@ -487,6 +487,13 @@ struct HermesABIRuntimeVTable {
   bool (*object_is_function)(
       struct HermesABIRuntime *rt,
       struct HermesABIObject obj);
+
+  struct HermesABIWeakObjectOrError (*create_weak_object)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject obj);
+  struct HermesABIValue (*lock_weak_object)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIWeakObject wo);
 };
 
 /// An instance of a Hermes Runtime.

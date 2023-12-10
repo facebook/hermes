@@ -843,11 +843,12 @@ class HermesABIRuntimeWrapper : public Runtime {
         vtable_->get_object_property_names(abiRt_, toABIObject(obj)));
   }
 
-  WeakObject createWeakObject(const Object &) override {
-    THROW_UNIMPLEMENTED();
+  WeakObject createWeakObject(const Object &obj) override {
+    return intoJSIWeakObject(
+        vtable_->create_weak_object(abiRt_, toABIObject(obj)));
   }
-  Value lockWeakObject(const WeakObject &) override {
-    THROW_UNIMPLEMENTED();
+  Value lockWeakObject(const WeakObject &wo) override {
+    return intoJSIValue(vtable_->lock_weak_object(abiRt_, toABIWeakObject(wo)));
   }
 
   Array createArray(size_t length) override {

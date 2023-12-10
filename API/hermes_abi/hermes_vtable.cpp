@@ -1239,6 +1239,24 @@ bool object_is_function(HermesABIRuntime *, HermesABIObject object) {
   return vm::vmisa<vm::Callable>(*toHandle(object));
 }
 
+HermesABIWeakObjectOrError create_weak_object(
+    HermesABIRuntime *abiRt,
+    HermesABIObject obj) {
+  return impl(abiRt)->createWeakObjectOrError(toHandle(obj).getHermesValue());
+}
+HermesABIValue lock_weak_object(
+    HermesABIRuntime *abiRt,
+    HermesABIWeakObject obj) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  const auto &wr =
+      static_cast<ManagedValue<vm::WeakRoot<vm::JSObject>> *>(obj.pointer)
+          ->value();
+  if (const auto ptr = wr.get(runtime, runtime.getHeap()))
+    return hart->createValue(vm::HermesValue::encodeObjectValue(ptr));
+  return abi::createUndefinedValue();
+}
+
 constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     release_hermes_runtime,
     get_and_clear_js_error_value,
@@ -1284,6 +1302,8 @@ constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     object_is_array,
     object_is_arraybuffer,
     object_is_function,
+    create_weak_object,
+    lock_weak_object,
 };
 
 } // namespace
