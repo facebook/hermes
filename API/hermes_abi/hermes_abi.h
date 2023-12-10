@@ -17,6 +17,7 @@ struct HermesABIRuntime;
 struct HermesABIManagedPointer;
 struct HermesABIGrowableBuffer;
 struct HermesABIBuffer;
+struct HermesABIMutableBuffer;
 struct HermesABIPropNameIDList;
 
 /// Define the structure for references to pointer types in JS (e.g. string,
@@ -190,6 +191,19 @@ struct HermesABIBuffer {
   size_t size;
 };
 
+/// Define the structure for buffers mutable buffers used to share data with
+/// JavaScript. The data and size fields must not be modified after allocation.
+/// The contents of the buffer may be modified by the user or the runtime and
+/// the user must ensure that access is properly synchronized.
+struct HermesABIMutableBufferVTable {
+  void (*release)(struct HermesABIMutableBuffer *self);
+};
+struct HermesABIMutableBuffer {
+  const struct HermesABIMutableBufferVTable *vtable;
+  uint8_t *data;
+  size_t size;
+};
+
 struct HermesABIRuntimeVTable {
   /// Release the given runtime.
   void (*release)(struct HermesABIRuntime *);
@@ -333,6 +347,24 @@ struct HermesABIRuntimeVTable {
       struct HermesABIArray arr,
       size_t index,
       const struct HermesABIValue *value);
+
+  /// Create an ArrayBuffer that is backed by the given buffer. This allows
+  /// native and JS code to efficiently share data, since both can read and
+  /// write it.
+  struct HermesABIArrayBufferOrError (*create_arraybuffer_from_external_data)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIMutableBuffer *buf);
+
+  /// Get a pointer to the underlying data for the given ArrayBuffer.
+  struct HermesABIUint8PtrOrError (*get_arraybuffer_data)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIArrayBuffer ab);
+
+  /// Get the size of the ArrayBuffer storage. This is not affected by
+  /// overriding the byteLength property.
+  struct HermesABISizeTOrError (*get_arraybuffer_size)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIArrayBuffer ab);
 };
 
 /// An instance of a Hermes Runtime.
