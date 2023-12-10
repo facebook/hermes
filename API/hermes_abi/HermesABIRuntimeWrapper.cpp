@@ -923,20 +923,25 @@ class HermesABIRuntimeWrapper : public Runtime {
   }
 
   bool strictEquals(const Symbol &a, const Symbol &b) const override {
-    THROW_UNIMPLEMENTED();
+    return vtable_->strict_equals_symbol(
+        abiRt_, toABISymbol(a), toABISymbol(b));
   }
   bool strictEquals(const BigInt &a, const BigInt &b) const override {
-    THROW_UNIMPLEMENTED();
+    return vtable_->strict_equals_bigint(
+        abiRt_, toABIBigInt(a), toABIBigInt(b));
   }
   bool strictEquals(const String &a, const String &b) const override {
-    THROW_UNIMPLEMENTED();
+    return vtable_->strict_equals_string(
+        abiRt_, toABIString(a), toABIString(b));
   }
   bool strictEquals(const Object &a, const Object &b) const override {
-    THROW_UNIMPLEMENTED();
+    return vtable_->strict_equals_object(
+        abiRt_, toABIObject(a), toABIObject(b));
   }
 
   bool instanceOf(const Object &o, const Function &f) override {
-    THROW_UNIMPLEMENTED();
+    return unwrap(
+        vtable_->instance_of(abiRt_, toABIObject(o), toABIFunction(f)));
   }
 
   void setExternalMemoryPressure(const Object &obj, size_t amount) override {

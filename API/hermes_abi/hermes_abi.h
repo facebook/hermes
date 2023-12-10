@@ -507,6 +507,28 @@ struct HermesABIRuntimeVTable {
       struct HermesABIRuntime *rt,
       struct HermesABISymbol sym,
       struct HermesABIGrowableBuffer *buf);
+
+  struct HermesABIBoolOrError (*instance_of)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject obj,
+      struct HermesABIFunction ctor);
+
+  bool (*strict_equals_symbol)(
+      struct HermesABIRuntime *rt,
+      struct HermesABISymbol a,
+      struct HermesABISymbol b);
+  bool (*strict_equals_bigint)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIBigInt a,
+      struct HermesABIBigInt b);
+  bool (*strict_equals_string)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIString a,
+      struct HermesABIString b);
+  bool (*strict_equals_object)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject a,
+      struct HermesABIObject b);
 };
 
 /// An instance of a Hermes Runtime.

@@ -1328,6 +1328,42 @@ void get_utf8_from_symbol(
   writeToBuf(buf, res);
 }
 
+HermesABIBoolOrError
+instance_of(HermesABIRuntime *abiRt, HermesABIObject o, HermesABIFunction f) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  auto result = vm::instanceOfOperator_RJS(runtime, toHandle(o), toHandle(f));
+  if (result == vm::ExecutionStatus::EXCEPTION)
+    return abi::createBoolOrError(HermesABIErrorCodeJSError);
+  return abi::createBoolOrError(*result);
+}
+
+bool strict_equals_symbol(
+    HermesABIRuntime *abiRt,
+    HermesABISymbol a,
+    HermesABISymbol b) {
+  return toHandle(a) == toHandle(b);
+}
+bool strict_equals_bigint(
+    HermesABIRuntime *abiRt,
+    HermesABIBigInt a,
+    HermesABIBigInt b) {
+  return toHandle(a)->compare(*toHandle(b)) == 0;
+}
+bool strict_equals_string(
+    HermesABIRuntime *abiRt,
+    HermesABIString a,
+    HermesABIString b) {
+  return toHandle(a)->equals(*toHandle(b));
+}
+bool strict_equals_object(
+    HermesABIRuntime *abiRt,
+    HermesABIObject a,
+    HermesABIObject b) {
+  return toHandle(a) == toHandle(b);
+}
+
 constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     release_hermes_runtime,
     get_and_clear_js_error_value,
@@ -1378,6 +1414,11 @@ constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     get_utf8_from_string,
     get_utf8_from_propnameid,
     get_utf8_from_symbol,
+    instance_of,
+    strict_equals_symbol,
+    strict_equals_bigint,
+    strict_equals_string,
+    strict_equals_object,
 };
 
 } // namespace
