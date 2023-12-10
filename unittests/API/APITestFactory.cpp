@@ -6,6 +6,8 @@
  */
 
 #include <hermes/hermes.h>
+#include <hermes_abi/HermesABIRuntimeWrapper.h>
+#include <hermes_abi/hermes_vtable.h>
 #include <jsi/test/testlib.h>
 #include <jsi/threadsafe.h>
 
@@ -18,7 +20,7 @@ std::vector<RuntimeFactory> runtimeGenerators() {
   return {
       [] { return makeHermesRuntime(); },
       [] { return makeThreadSafeHermesRuntime(); },
-  };
+      [] { return makeHermesABIRuntimeWrapper(get_hermes_abi_vtable()); }};
 }
 
 } // namespace jsi
