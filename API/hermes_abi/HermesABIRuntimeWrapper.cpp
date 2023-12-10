@@ -724,23 +724,27 @@ class HermesABIRuntimeWrapper : public Runtime {
     return std::move(buffer).get();
   }
 
-  BigInt createBigIntFromInt64(int64_t) override {
-    THROW_UNIMPLEMENTED();
+  BigInt createBigIntFromInt64(int64_t value) override {
+    return intoJSIBigInt(vtable_->create_bigint_from_int64(abiRt_, value));
   }
-  BigInt createBigIntFromUint64(uint64_t) override {
-    THROW_UNIMPLEMENTED();
+  BigInt createBigIntFromUint64(uint64_t value) override {
+    return intoJSIBigInt(vtable_->create_bigint_from_uint64(abiRt_, value));
   }
-  bool bigintIsInt64(const BigInt &) override {
-    THROW_UNIMPLEMENTED();
+  bool bigintIsInt64(const BigInt &bigint) override {
+    return vtable_->bigint_is_int64(abiRt_, toABIBigInt(bigint));
   }
-  bool bigintIsUint64(const BigInt &) override {
-    THROW_UNIMPLEMENTED();
+  bool bigintIsUint64(const BigInt &bigint) override {
+    return vtable_->bigint_is_uint64(abiRt_, toABIBigInt(bigint));
   }
-  uint64_t truncate(const BigInt &) override {
-    THROW_UNIMPLEMENTED();
+  uint64_t truncate(const BigInt &bigint) override {
+    return vtable_->bigint_truncate_to_uint64(abiRt_, toABIBigInt(bigint));
   }
-  String bigintToString(const BigInt &, int) override {
-    THROW_UNIMPLEMENTED();
+  String bigintToString(const BigInt &bigint, int radix) override {
+    // Note that the ABI takes the radix as unsigned, but it is safe to pass in
+    // the signed value without a check because values <2 or >36 will be
+    // rejected anyway.
+    return intoJSIString(vtable_->bigint_to_string(
+        abiRt_, toABIBigInt(bigint), (unsigned)radix));
   }
 
   String createStringFromAscii(const char *str, size_t length) override {

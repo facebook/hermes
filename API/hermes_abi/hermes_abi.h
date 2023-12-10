@@ -532,6 +532,24 @@ struct HermesABIRuntimeVTable {
 
   struct HermesABIBoolOrError (
       *drain_microtasks)(struct HermesABIRuntime *rt, int max_hint);
+
+  struct HermesABIBigIntOrError (
+      *create_bigint_from_int64)(struct HermesABIRuntime *rt, int64_t value);
+  struct HermesABIBigIntOrError (
+      *create_bigint_from_uint64)(struct HermesABIRuntime *rt, uint64_t value);
+  bool (*bigint_is_int64)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIBigInt bigint);
+  bool (*bigint_is_uint64)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIBigInt bigint);
+  uint64_t (*bigint_truncate_to_uint64)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIBigInt bigint);
+  struct HermesABIStringOrError (*bigint_to_string)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIBigInt bigint,
+      unsigned radix);
 };
 
 /// An instance of a Hermes Runtime.
