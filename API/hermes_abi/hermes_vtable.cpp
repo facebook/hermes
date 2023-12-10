@@ -487,6 +487,33 @@ HermesABIValueOrError evaluate_hermes_bytecode(
       hart, std::move(bcErr.first), {sourceURL, sourceURLLength});
 }
 
+HermesABIObject get_global_object(HermesABIRuntime *abiRt) {
+  auto *hart = impl(abiRt);
+  return hart->createObject(hart->rt->getGlobal().getHermesValue());
+}
+
+HermesABIStringOrError create_string_from_utf8(
+    HermesABIRuntime *abiRt,
+    const uint8_t *utf8,
+    size_t length) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  auto strRes = vm::StringPrimitive::createEfficient(
+      runtime, llvh::makeArrayRef(utf8, length), /* IgnoreInputErrors */ true);
+  if (strRes == vm::ExecutionStatus::EXCEPTION)
+    return abi::createStringOrError(HermesABIErrorCodeJSError);
+  return hart->createStringOrError(*strRes);
+}
+
+HermesABIObjectOrError create_object(HermesABIRuntime *abiRt) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  return hart->createObjectOrError(
+      vm::JSObject::create(runtime).getHermesValue());
+}
+
 constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     release_hermes_runtime,
     get_and_clear_js_error_value,
@@ -500,6 +527,9 @@ constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     clone_bigint,
     evaluate_javascript_source,
     evaluate_hermes_bytecode,
+    get_global_object,
+    create_string_from_utf8,
+    create_object,
 };
 
 } // namespace

@@ -455,7 +455,7 @@ class HermesABIRuntimeWrapper : public Runtime {
   }
 
   Object global() override {
-    THROW_UNIMPLEMENTED();
+    return intoJSIObject(vtable_->get_global_object(abiRt_));
   }
 
   std::string description() override {
@@ -532,17 +532,19 @@ class HermesABIRuntimeWrapper : public Runtime {
   }
 
   String createStringFromAscii(const char *str, size_t length) override {
-    THROW_UNIMPLEMENTED();
+    // For now, there is no ASCII specific function, so just use the UTF-8 one.
+    return createStringFromUtf8(reinterpret_cast<const uint8_t *>(str), length);
   }
   String createStringFromUtf8(const uint8_t *utf8, size_t length) override {
-    THROW_UNIMPLEMENTED();
+    return intoJSIString(
+        vtable_->create_string_from_utf8(abiRt_, utf8, length));
   }
   std::string utf8(const String &) override {
     THROW_UNIMPLEMENTED();
   }
 
   Object createObject() override {
-    THROW_UNIMPLEMENTED();
+    return intoJSIObject(vtable_->create_object(abiRt_));
   }
   Object createObject(std::shared_ptr<HostObject> ho) override {
     THROW_UNIMPLEMENTED();
