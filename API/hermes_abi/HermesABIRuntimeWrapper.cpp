@@ -9,6 +9,7 @@
 
 #include "hermes_abi/HermesABIHelpers.h"
 #include "hermes_abi/hermes_abi.h"
+#include "jsi/jsilib.h"
 
 #include "hermes/ADT/ManagedChunkedList.h"
 
@@ -70,6 +71,22 @@ class StringByteBuffer : public HermesABIGrowableBuffer {
     buf_.resize(used);
     return std::move(buf_);
   }
+};
+
+/// An implementation of HermesABIBuffer that wraps a jsi::Buffer.
+class BufferWrapper : public HermesABIBuffer {
+  std::shared_ptr<const Buffer> buf_;
+
+  static void release(HermesABIBuffer *buf) {
+    delete static_cast<const BufferWrapper *>(buf);
+  }
+  static constexpr HermesABIBufferVTable vt{
+      release,
+  };
+
+ public:
+  explicit BufferWrapper(std::shared_ptr<const Buffer> buf)
+      : HermesABIBuffer{&vt, buf->data(), buf->size()}, buf_(std::move(buf)) {}
 };
 
 /// Helper class to save and restore a value on exiting a scope.
@@ -410,18 +427,27 @@ class HermesABIRuntimeWrapper : public Runtime {
   Value evaluateJavaScript(
       const std::shared_ptr<const Buffer> &buffer,
       const std::string &sourceURL) override {
-    THROW_UNIMPLEMENTED();
+    auto *bw = new BufferWrapper(buffer);
+    if (abiVtable_->is_hermes_bytecode(buffer->data(), buffer->size()))
+      return intoJSIValue(vtable_->evaluate_hermes_bytecode(
+          abiRt_, bw, sourceURL.c_str(), sourceURL.size()));
+
+    return intoJSIValue(vtable_->evaluate_javascript_source(
+        abiRt_, bw, sourceURL.c_str(), sourceURL.size()));
   }
 
   std::shared_ptr<const PreparedJavaScript> prepareJavaScript(
       const std::shared_ptr<const Buffer> &buffer,
       std::string sourceURL) override {
-    THROW_UNIMPLEMENTED();
+    return std::make_shared<const SourceJavaScriptPreparation>(
+        buffer, std::move(sourceURL));
   }
 
   Value evaluatePreparedJavaScript(
       const std::shared_ptr<const PreparedJavaScript> &js) override {
-    THROW_UNIMPLEMENTED();
+    assert(dynamic_cast<const SourceJavaScriptPreparation *>(js.get()));
+    auto sjp = std::static_pointer_cast<const SourceJavaScriptPreparation>(js);
+    return evaluateJavaScript(sjp, sjp->sourceURL());
   }
 
   bool drainMicrotasks(int maxMicrotasksHint = -1) override {
