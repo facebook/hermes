@@ -311,6 +311,28 @@ struct HermesABIRuntimeVTable {
       struct HermesABIRuntime *rt,
       struct HermesABIObject obj,
       size_t amount);
+
+  /// Create a new JS array with the given length and return a reference to it.
+  struct HermesABIArrayOrError (
+      *create_array)(struct HermesABIRuntime *rt, size_t length);
+
+  /// Get the length of the given array by reading its .length property.
+  size_t (*get_array_length)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIArray arr);
+
+  /// Get the value at the specified index in the given array.
+  struct HermesABIValueOrError (*get_array_value_at_index)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIArray arr,
+      size_t index);
+
+  /// Set the value at a specified index in the given array to the given value.
+  struct HermesABIVoidOrError (*set_array_value_at_index)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIArray arr,
+      size_t index,
+      const struct HermesABIValue *value);
 };
 
 /// An instance of a Hermes Runtime.

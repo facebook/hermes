@@ -740,6 +740,73 @@ HermesABIVoidOrError set_object_external_memory_pressure(
   return abi::createVoidOrError();
 }
 
+HermesABIArrayOrError create_array(HermesABIRuntime *abiRt, size_t length) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  auto result = vm::JSArray::create(runtime, length, length);
+  if (result == vm::ExecutionStatus::EXCEPTION)
+    return abi::createArrayOrError(HermesABIErrorCodeJSError);
+  return hart->createArrayOrError(result->getHermesValue());
+}
+
+size_t get_array_length(HermesABIRuntime *abiRt, HermesABIArray arr) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  return vm::JSArray::getLength(*toHandle(arr), runtime);
+}
+
+HermesABIValueOrError get_array_value_at_index(
+    HermesABIRuntime *abiRt,
+    HermesABIArray arr,
+    size_t i) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+
+  // Check that the index is within the bounds of the array.
+  auto len = vm::JSArray::getLength(*toHandle(arr), runtime);
+  if (LLVM_UNLIKELY(i >= len)) {
+    (void)runtime.raiseError("Array index out of bounds.");
+    return abi::createValueOrError(HermesABIErrorCodeJSError);
+  }
+
+  auto res = vm::JSObject::getComputed_RJS(
+      toHandle(arr),
+      runtime,
+      runtime.makeHandle(vm::HermesValue::encodeUntrustedNumberValue(i)));
+  if (res == vm::ExecutionStatus::EXCEPTION)
+    return abi::createValueOrError(HermesABIErrorCodeJSError);
+
+  return hart->createValueOrError(res->get());
+}
+
+HermesABIVoidOrError set_array_value_at_index(
+    HermesABIRuntime *abiRt,
+    HermesABIArray arr,
+    size_t i,
+    const HermesABIValue *val) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+
+  // Check that the index is within the bounds of the array.
+  auto len = vm::JSArray::getLength(*toHandle(arr), runtime);
+  if (LLVM_UNLIKELY(i >= len)) {
+    (void)runtime.raiseError("Array index out of bounds.");
+    return abi::createVoidOrError(HermesABIErrorCodeJSError);
+  }
+
+  auto res = vm::JSObject::putComputed_RJS(
+      toHandle(arr),
+      runtime,
+      runtime.makeHandle(vm::HermesValue::encodeTrustedNumberValue(i)),
+      hart->makeHandle(*val));
+  if (res == vm::ExecutionStatus::EXCEPTION)
+    return abi::createVoidOrError(HermesABIErrorCodeJSError);
+  return abi::createVoidOrError();
+}
+
 constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     release_hermes_runtime,
     get_and_clear_js_error_value,
@@ -764,6 +831,10 @@ constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     set_object_property_from_propnameid,
     get_object_property_names,
     set_object_external_memory_pressure,
+    create_array,
+    get_array_length,
+    get_array_value_at_index,
+    set_array_value_at_index,
 };
 
 } // namespace

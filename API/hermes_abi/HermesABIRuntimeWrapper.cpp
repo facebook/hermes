@@ -628,14 +628,14 @@ class HermesABIRuntimeWrapper : public Runtime {
   }
 
   Array createArray(size_t length) override {
-    THROW_UNIMPLEMENTED();
+    return intoJSIArray(vtable_->create_array(abiRt_, length));
   }
   ArrayBuffer createArrayBuffer(
       std::shared_ptr<MutableBuffer> buffer) override {
     THROW_UNIMPLEMENTED();
   }
-  size_t size(const Array &) override {
-    THROW_UNIMPLEMENTED();
+  size_t size(const Array &arr) override {
+    return vtable_->get_array_length(abiRt_, toABIArray(arr));
   }
   size_t size(const ArrayBuffer &) override {
     THROW_UNIMPLEMENTED();
@@ -643,12 +643,15 @@ class HermesABIRuntimeWrapper : public Runtime {
   uint8_t *data(const ArrayBuffer &) override {
     THROW_UNIMPLEMENTED();
   }
-  Value getValueAtIndex(const Array &, size_t i) override {
-    THROW_UNIMPLEMENTED();
+  Value getValueAtIndex(const Array &arr, size_t i) override {
+    return intoJSIValue(
+        vtable_->get_array_value_at_index(abiRt_, toABIArray(arr), i));
   }
-  void setValueAtIndexImpl(const Array &, size_t i, const Value &value)
+  void setValueAtIndexImpl(const Array &arr, size_t i, const Value &value)
       override {
-    THROW_UNIMPLEMENTED();
+    auto abiVal = toABIValue(value);
+    unwrap(
+        vtable_->set_array_value_at_index(abiRt_, toABIArray(arr), i, &abiVal));
   }
 
   Function createFunctionFromHostFunction(
