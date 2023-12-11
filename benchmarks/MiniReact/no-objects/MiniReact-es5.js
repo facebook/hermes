@@ -1,9 +1,3 @@
-function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
-function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
-function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i]; return arr2; }
-function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
-function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
@@ -11,6 +5,12 @@ function _possibleConstructorReturn(self, call) { if (call && (typeof call === "
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i]; return arr2; }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, _toPropertyKey(descriptor.key), descriptor); } }
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 function _toPropertyKey(arg) { var key = _toPrimitive(arg, "string"); return typeof key === "symbol" ? key : String(key); }
@@ -42,15 +42,30 @@ function CHECKED_CAST$default(value) {
 
   return value;
 }
-/* file: React.js */
-function React$INTERNAL$queueMicrotask(callback) {
-  HermesInternal.enqueueJob(callback);
+/* file: microtask.js */
+var microtask$INTERNAL$microtaskQueue = [];
+function microtask$drainMicrotaskQueue() {
+  for (var i = 0; i < microtask$INTERNAL$microtaskQueue.length; i++) {
+    microtask$INTERNAL$microtaskQueue[i]();
+  }
+  microtask$INTERNAL$microtaskQueue = [];
 }
+function microtask$queueMicrotask(callback) {
+  microtask$INTERNAL$microtaskQueue.push(callback);
+}
+/* file: React.js */
 function React$INTERNAL$fastArrayJoin(arr, sep) {
   var result = '';
   for (var i = 0, e = arr.length; i < e; ++i) {
     if (i !== 0) result += sep;
     result += arr[i];
+  }
+  return result;
+}
+function React$INTERNAL$padString(str, len) {
+  var result = '';
+  for (var i = 0; i < len; i++) {
+    result += str;
   }
   return result;
 }
@@ -121,9 +136,9 @@ function React$useState(
  * Initial value of the state
  */
 initial) {
-  invariant$default(fiber !== null && root !== null, 'useState() called outside of render');
   var root = CHECKED_CAST$default(React$INTERNAL$workInProgressRoot);
   var fiber = CHECKED_CAST$default(React$INTERNAL$workInProgressFiber);
+  invariant$default(fiber !== null && root !== null, 'useState() called outside of render');
   var state;
   var _workInProgressState = React$INTERNAL$workInProgressState;
   if (_workInProgressState === null) {
@@ -160,6 +175,14 @@ initial) {
       root.notify(update);
     }
   }];
+}
+var React$INTERNAL$callbacks = new Map();
+function React$callOnClickOrChange(id, event) {
+  var callback = React$INTERNAL$callbacks.get(id);
+  if (callback == null) {
+    throw new Error('No callback registered with id: ' + id);
+  }
+  callback(event);
 }
 /**
  * The type of value that may be passed to the setState function (second part of useState return value).
@@ -221,7 +244,7 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
       var _this = this;
       this.updateQueue.push(update);
       if (this.updateQueue.length === 1) {
-        React$INTERNAL$queueMicrotask(function () {
+        microtask$queueMicrotask(function () {
           var element = _this.element;
           invariant$default(element !== null, 'Expected an element to be set after rendering');
           _this.doWork(CHECKED_CAST$default(element));
@@ -240,9 +263,9 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
       invariant$default(this.root !== null, 'Expected root to be rendered');
       var root = CHECKED_CAST$default(this.root);
       var output = [];
-      this.printFiber(root, output);
+      this.printFiber(root, output, 0);
       // return output.join('');
-      return React$INTERNAL$fastArrayJoin(output, '');
+      return React$INTERNAL$fastArrayJoin(output, '\n');
     }
   }, {
     key: "doWork",
@@ -287,40 +310,50 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
     }
   }, {
     key: "printFiber",
-    value: function printFiber(fiber, out) {
+    value: function printFiber(fiber, out, level) {
       switch (fiber.type.kind) {
         case 'host':
           {
             var tag = CHECKED_CAST$default(fiber.type).tag;
-            out.push('<' + tag);
-            for (var prop of Object.entries(fiber.props)) {
+            var padStr = React$INTERNAL$padString(' ', level);
+            var str = padStr + '<' + tag;
+            for (var _ref of Object.entries(fiber.props)) {
               var _JSON$stringify;
-              out.push(` ${prop.prop}=${(_JSON$stringify = JSON.stringify(prop.value)) != null ? _JSON$stringify : 'undefined'}`);
+              var _ref2 = _slicedToArray(_ref, 2);
+              var propName = _ref2[0];
+              var propValue = _ref2[1];
+              if (typeof propValue === 'function') {
+                continue;
+              }
+              str += ` ${propName}=${(_JSON$stringify = JSON.stringify(propValue)) != null ? _JSON$stringify : 'undefined'}`;
             }
-            out.push('>');
-            this.printChildren(fiber, out);
-            out.push('</' + tag + '>');
+            str += '>';
+            out.push(str);
+            this.printChildren(fiber, out, level + 1);
+            out.push(padStr + '</' + tag + '>');
             break;
           }
         case 'text':
           {
             var text = CHECKED_CAST$default(fiber.type).text;
-            out.push(text);
+            if (text !== '') {
+              out.push(React$INTERNAL$padString(' ', level) + text);
+            }
             break;
           }
         case 'component':
           {
-            this.printChildren(fiber, out);
+            this.printChildren(fiber, out, level);
             break;
           }
       }
     }
   }, {
     key: "printChildren",
-    value: function printChildren(fiber, out) {
+    value: function printChildren(fiber, out, level) {
       var current = fiber.child;
       while (current !== null) {
-        this.printFiber(CHECKED_CAST$default(current), out);
+        this.printFiber(CHECKED_CAST$default(current), out, level);
         current = CHECKED_CAST$default(current).sibling;
       }
     }
@@ -355,6 +388,20 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
               break;
             }
           case 'host':
+            {
+              var id = fiber.props.id;
+              if (id != null) {
+                var onClick = fiber.props.onClick;
+                if (onClick != null) {
+                  React$INTERNAL$callbacks.set(id, onClick);
+                }
+                var onChange = fiber.props.onChange;
+                if (onChange != null) {
+                  React$INTERNAL$callbacks.set(id, onChange);
+                }
+              }
+              break;
+            }
           case 'text':
             {
               // Nothing to reconcile, these nodes are visited by the main doWork() loop
@@ -390,9 +437,9 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
           invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
           // const {children, ...props} = element.props;
           var children = element.props.children;
-          var _props2 = Object.assign({}, element.props);
-          delete _props2.children;
-          fiber = new React$INTERNAL$Fiber(_type, _props2, element.key);
+          var _props = Object.assign({}, element.props);
+          delete _props.children;
+          fiber = new React$INTERNAL$Fiber(_type, _props, element.key);
           if (Array.isArray(children)) {
             var _prev = null;
             for (var childElement of CHECKED_CAST$default(children)) {
@@ -441,9 +488,9 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
           invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
           // const {children, ...props} = element.props;
           var children = element.props.children;
-          var _props3 = Object.assign({}, element.props);
-          delete _props3.children;
-          _prevChild.props = _props3;
+          var _props2 = Object.assign({}, element.props);
+          delete _props2.children;
+          _prevChild.props = _props2;
           this.reconcileChildren(_prevChild, children);
         } else if (_prevChild.type.kind === 'component') {
           invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
@@ -506,8 +553,8 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
       var prev = null; // previous fiber at this key/index
       var prevByIndex = parent.child; // keep track of prev fiber at this index
       for (var childElement of children) {
-        var _ref;
-        var prevFiber = (_ref = childElement.key != null ? keyedChildren.get(childElement.key) : null) != null ? _ref : prevByIndex;
+        var _ref3;
+        var prevFiber = (_ref3 = childElement.key != null ? keyedChildren.get(childElement.key) : null) != null ? _ref3 : prevByIndex;
         var child = void 0;
         if (prevFiber != null) {
           child = this.reconcileFiber(parent, prevFiber, childElement);
@@ -626,7 +673,7 @@ var React$INTERNAL$Fiber = /*#__PURE__*/_createClass(function React$INTERNAL$Fib
   this.sibling = null;
   this.state = null;
 });
-function React$createElement(type, props, key) {
+function React$jsx(type, props, key) {
   'inline';
 
   return {
@@ -636,30 +683,245 @@ function React$createElement(type, props, key) {
     ref: null
   };
 }
-/* file: index.js */
-function index$INTERNAL$Title(props) {
-  return React$createElement('h1', {
-    children: props.children
+function React$Fragment(props) {
+  // TODO: Get this to work.
+  return props.children;
+}
+/* file: App.js */
+function App$INTERNAL$Button(props) {
+  return React$jsx('button', {
+    id: props.id,
+    onClick: props.onClick,
+    children: 'Click me'
   }, null);
 }
-function index$INTERNAL$MyComponent(_props) {
-  var _React$useState = React$useState(0),
-    _React$useState2 = _slicedToArray(_React$useState, 2),
-    count = _React$useState2[0],
-    setCount = _React$useState2[1];
-  return React$createElement('div', {
-    children: [React$createElement(index$INTERNAL$Title, {
-      children: 'Hello'
-    }, null), ' world!']
+function App$INTERNAL$Input(props) {
+  return React$jsx('input', {
+    id: props.id,
+    type: "text",
+    onChange: props.onChange,
+    value: props.value
   }, null);
 }
-function index$INTERNAL$run() {
-  var N = 1;
-  for (var i = 0; i < N; ++i) {
-    var root = React$createRoot();
-    var rendered = root.render(React$createElement(index$INTERNAL$MyComponent, {}, null));
+function App$INTERNAL$TextArea(props) {
+  return React$jsx('textarea', {
+    onChange: props.onChange,
+    children: props.value
+  }, null);
+}
+function App$INTERNAL$Select(props) {
+  var children = [];
+  for (var i = 0; i < props.options.length; i++) {
+    var option = props.options[i];
+    children.push(React$jsx('option', {
+      value: option.value,
+      children: option.label
+    }, option.value));
   }
-  print(rendered);
+  return React$jsx('select', {
+    onChange: props.onChange,
+    children: children
+  }, null);
 }
-index$INTERNAL$run();
+function App$INTERNAL$Checkbox(props) {
+  return React$jsx('input', {
+    type: "checkbox",
+    checked: props.checked,
+    onChange: props.onChange
+  }, null);
+}
+function App$INTERNAL$Radio(props) {
+  return React$jsx('input', {
+    type: "radio",
+    checked: props.checked,
+    onChange: props.onChange
+  }, null);
+}
+function App$INTERNAL$Slider(props) {
+  return React$jsx('input', {
+    type: "range",
+    min: props.min,
+    max: props.max,
+    step: props.step,
+    value: props.value,
+    onChange: props.onChange
+  }, null);
+}
+function App$INTERNAL$ProgressBar(props) {
+  return React$jsx('div', {
+    style: {
+      width: `${props.progress}%`
+    }
+  }, null);
+}
+function App$INTERNAL$Spinner(props) {
+  return React$jsx('div', {
+    className: "spinner",
+    children: 'Loading...'
+  }, null);
+}
+function App$INTERNAL$Modal(props) {
+  if (!props.isOpen) {
+    return React$jsx('div', {
+      className: "modal closed"
+    }, null);
+  }
+  return React$jsx('div', {
+    className: "modal open",
+    children: [React$jsx('div', {
+      className: "overlay",
+      onClick: props.onClose,
+      children: 'X'
+    }, null), React$jsx('div', {
+      className: "content",
+      children: props.children
+    }, null)]
+  }, null);
+}
+function App$INTERNAL$Tooltip(props) {
+  if (!props.isOpen) {
+    return React$jsx('div', {
+      className: "tooltip closed"
+    }, null);
+  }
+  return React$jsx('div', {
+    className: "tooltip open",
+    children: [React$jsx('div', {
+      className: "arrow"
+    }, null), React$jsx('div', {
+      className: "content",
+      children: props.children
+    }, null)]
+  }, null);
+}
+function App$default(props) {
+  var _React$useState = React$useState(''),
+    _React$useState2 = _slicedToArray(_React$useState, 2),
+    text = _React$useState2[0],
+    setText = _React$useState2[1];
+  var _React$useState3 = React$useState(0),
+    _React$useState4 = _slicedToArray(_React$useState3, 2),
+    number = _React$useState4[0],
+    setNumber = _React$useState4[1];
+  var _React$useState5 = React$useState(false),
+    _React$useState6 = _slicedToArray(_React$useState5, 2),
+    isChecked = _React$useState6[0],
+    setIsChecked = _React$useState6[1];
+  var _React$useState7 = React$useState(false),
+    _React$useState8 = _slicedToArray(_React$useState7, 2),
+    isSelected = _React$useState8[0],
+    setIsSelected = _React$useState8[1];
+  var _React$useState9 = React$useState(false),
+    _React$useState10 = _slicedToArray(_React$useState9, 2),
+    isOpen = _React$useState10[0],
+    setIsOpen = _React$useState10[1];
+  var _React$useState11 = React$useState(true),
+    _React$useState12 = _slicedToArray(_React$useState11, 2),
+    isTooltipOpen = _React$useState12[0],
+    setIsTooltipOpen = _React$useState12[1];
+  return React$jsx('div', {
+    children: [React$jsx('h1', {
+      children: 'React Benchmark'
+    }, null), React$jsx(App$INTERNAL$Button, {
+      id: "toggle-modal",
+      onClick: function onClick() {
+        return setIsOpen(!isOpen);
+      },
+      children: 'Toggle Modal'
+    }, null), React$jsx(App$INTERNAL$Modal, {
+      isOpen: isOpen,
+      onClose: function onClose() {
+        return setIsOpen(false);
+      },
+      children: [React$jsx('h2', {
+        children: 'Modal Content'
+      }, null), React$jsx('p', {
+        children: 'This is some modal content.'
+      }, null), React$jsx(App$INTERNAL$Tooltip, {
+        isOpen: isTooltipOpen,
+        onClose: function onClose() {
+          return setIsTooltipOpen(false);
+        },
+        children: [React$jsx('h3', {
+          children: 'Tooltip Content'
+        }, null), React$jsx('p', {
+          children: 'This is some tooltip content.'
+        }, null)]
+      }, null)]
+    }, null), React$jsx('div', {
+      children: [React$jsx('h2', {
+        children: 'Form Elements'
+      }, null), React$jsx(App$INTERNAL$Input, {
+        id: "update-text",
+        value: text,
+        onChange: function onChange(e) {
+          return setText(e.target.value);
+        }
+      }, null), React$jsx(App$INTERNAL$TextArea, {
+        value: text,
+        onChange: function onChange(e) {
+          return setText(e.target.value);
+        }
+      }, null), React$jsx(App$INTERNAL$Select, {
+        options: [{
+          label: 'Option 1',
+          value: 1
+        }, {
+          label: 'Option 2',
+          value: 2
+        }, {
+          label: 'Option 3',
+          value: 3
+        }],
+        onChange: function onChange(e) {
+          return setNumber(parseInt(e.target.value));
+        }
+      }, null), React$jsx(App$INTERNAL$Checkbox, {
+        checked: isChecked,
+        onChange: function onChange(e) {
+          return setIsChecked(e.target.checked);
+        }
+      }, null), React$jsx(App$INTERNAL$Radio, {
+        checked: isSelected,
+        onChange: function onChange(e) {
+          return setIsSelected(e.target.checked);
+        }
+      }, null), React$jsx(App$INTERNAL$Slider, {
+        min: 0,
+        max: 100,
+        step: 1,
+        value: number,
+        onChange: function onChange(e) {
+          return setNumber(parseInt(e.target.value));
+        }
+      }, null), React$jsx(App$INTERNAL$ProgressBar, {
+        progress: number
+      }, null), React$jsx(App$INTERNAL$Spinner, {}, null)]
+    }, null)]
+  }, null);
+}
+/* file: index.js */
+function index$INTERNAL$printIf1(i, str) {
+  if (i === 1) {
+    print('===============================');
+    print(str);
+    print('===============================');
+  }
+}
+function index$INTERNAL$run(N) {
+  for (var i = 1; i <= N; ++i) {
+    var root = React$createRoot();
+    var rootElement = React$jsx(App$default, {}, null);
+    index$INTERNAL$printIf1(i, root.render(rootElement));
+    React$callOnClickOrChange('toggle-modal', null);
+    React$callOnClickOrChange('update-text', {
+      target: {
+        value: '!!!!! some text !!!!!'
+      }
+    });
+    microtask$drainMicrotaskQueue();
+    index$INTERNAL$printIf1(i, root.render(rootElement));
+  }
+}
+index$INTERNAL$run(1);
 //# sourceMappingURL=MiniReact-es5.js.map

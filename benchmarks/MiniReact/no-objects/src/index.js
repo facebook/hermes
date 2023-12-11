@@ -12,14 +12,29 @@ import type {Props, React$MixedElement} from './React';
 
 import * as React from './React';
 import App from './App';
+import {drainMicrotaskQueue} from './microtask';
 
-function run(): void {
-  var N = 1;
-  for (var i = 0; i < N; ++i) {
-    var root = React.createRoot();
-    var rendered = root.render(<App />);
+function printIf1(i: number, str: string): void {
+  if (i === 1) {
+    print('===============================');
+    print(str);
+    print('===============================');
   }
-  print(rendered);
 }
 
-run();
+function run(N: number): void {
+  for (let i: number = 1; i <= N; ++i) {
+    const root = React.createRoot();
+    const rootElement = <App />;
+    printIf1(i, root.render(rootElement));
+
+    React.callOnClickOrChange('toggle-modal', null);
+    React.callOnClickOrChange('update-text', {
+      target: {value: '!!!!! some text !!!!!'},
+    });
+    drainMicrotaskQueue();
+    printIf1(i, root.render(rootElement));
+  }
+}
+
+run(1);

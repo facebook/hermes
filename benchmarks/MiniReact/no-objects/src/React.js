@@ -10,16 +10,21 @@
 
 import invariant from './invariant';
 import CHECKED_CAST from './CHECKED_CAST';
-
-function queueMicrotask(callback: () => void) {
-  HermesInternal.enqueueJob(callback);
-}
+import {queueMicrotask} from './microtask';
 
 function fastArrayJoin(arr: string[], sep: string): string {
   let result: string = '';
   for (let i: number = 0, e = arr.length; i < e; ++i) {
     if (i !== 0) result += sep;
     result += arr[i];
+  }
+  return result;
+}
+
+function padString(str: string, len: number): string {
+  let result: string = '';
+  for (let i: number = 0; i < len; i++) {
+    result += str;
   }
   return result;
 }
@@ -116,12 +121,12 @@ export function useState<T>(
    */
   initial: T,
 ): [T, (value: T | ((prev: T) => T)) => void] {
+  const root: Root = CHECKED_CAST<Root>(workInProgressRoot);
+  const fiber: Fiber = CHECKED_CAST<Fiber>(workInProgressFiber);
   invariant(
     fiber !== null && root !== null,
     'useState() called outside of render',
   );
-  const root: Root = CHECKED_CAST<Root>(workInProgressRoot);
-  const fiber: Fiber = CHECKED_CAST<Fiber>(workInProgressFiber);
 
   let state: State<T>;
   const _workInProgressState: State<mixed> | null = workInProgressState;
@@ -165,6 +170,15 @@ export function useState<T>(
       }
     },
   ];
+}
+
+const callbacks = new Map();
+export function callOnClickOrChange(id: string, event: any): void {
+  const callback = callbacks.get(id);
+  if (callback == null) {
+    throw new Error('No callback registered with id: ' + id);
+  }
+  callback(event);
 }
 
 /**
@@ -273,9 +287,9 @@ class Root {
     invariant(this.root !== null, 'Expected root to be rendered');
     const root: Fiber = CHECKED_CAST<Fiber>(this.root);
     const output: string[] = [];
-    this.printFiber(root, output);
+    this.printFiber(root, output, 0);
     // return output.join('');
-    return fastArrayJoin(output, '');
+    return fastArrayJoin(output, '\n');
   }
 
   doWork(element: React$MixedElement): void {
@@ -322,39 +336,43 @@ class Root {
   /**
    * Prints a representation of the output DOM as HTML, emitting HTML snippets to @param out.
    */
-  printFiber(fiber: Fiber, out: string[]): void {
+  printFiber(fiber: Fiber, out: string[], level: number): void {
     switch (fiber.type.kind) {
       case 'host': {
         const tag = CHECKED_CAST<FiberTypeHost>(fiber.type).tag;
-        out.push('<' + tag);
+        const padStr = padString(' ', level);
+        let str = padStr + '<' + tag;
         for (const [propName, propValue] of Object.entries(fiber.props)) {
           if (typeof propValue === 'function') {
             continue;
           }
 
-          out.push(` ${propName}=${JSON.stringify(propValue) ?? 'undefined'}`);
+          str += ` ${propName}=${JSON.stringify(propValue) ?? 'undefined'}`;
         }
-        out.push('>');
-        this.printChildren(fiber, out);
-        out.push('</' + tag + '>');
+        str += '>';
+        out.push(str);
+        this.printChildren(fiber, out, level + 1);
+        out.push(padStr + '</' + tag + '>');
         break;
       }
       case 'text': {
         const text = CHECKED_CAST<FiberTypeText>(fiber.type).text;
-        out.push(text);
+        if (text !== '') {
+          out.push(padString(' ', level) + text);
+        }
         break;
       }
       case 'component': {
-        this.printChildren(fiber, out);
+        this.printChildren(fiber, out, level);
         break;
       }
     }
   }
 
-  printChildren(fiber: Fiber, out: string[]): void {
+  printChildren(fiber: Fiber, out: string[], level: number): void {
     let current: Fiber | null = fiber.child;
     while (current !== null) {
-      this.printFiber(CHECKED_CAST<Fiber>(current), out);
+      this.printFiber(CHECKED_CAST<Fiber>(current), out, level);
       current = CHECKED_CAST<Fiber>(current).sibling;
     }
   }
@@ -401,7 +419,20 @@ class Root {
           fiber.child = this.reconcileFiber(fiber, fiber.child, element);
           break;
         }
-        case 'host':
+        case 'host': {
+          const id = fiber.props.id;
+          if (id != null) {
+            const onClick = fiber.props.onClick;
+            if (onClick != null) {
+              callbacks.set(id, onClick);
+            }
+            const onChange = fiber.props.onChange;
+            if (onChange != null) {
+              callbacks.set(id, onChange);
+            }
+          }
+          break;
+        }
         case 'text': {
           // Nothing to reconcile, these nodes are visited by the main doWork() loop
           break;
