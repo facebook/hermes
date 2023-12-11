@@ -175,10 +175,6 @@ class TraceInterpreter final {
   const HostFunctionToCalls &hostFunctionCalls_;
   const HostObjectToCalls &hostObjectCalls_;
   std::unordered_map<SynthTrace::ObjectID, uint64_t> hostFunctionsCallCount_;
-  std::unordered_map<
-      SynthTrace::ObjectID,
-      std::unordered_map<std::string, uint64_t>>
-      hostObjectsCallCount_;
   std::unordered_map<SynthTrace::ObjectID, uint64_t>
       hostObjectsPropertyNamesCallCount_;
 
