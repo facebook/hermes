@@ -1255,6 +1255,153 @@ TEST_F(SynthTraceReplayTest, BigIntCreate) {
   }
 }
 
+TEST_F(SynthTraceReplayTest, HostObjectManipulation) {
+  // HostObject for testing.
+  // It allows to set either number or string property.
+  class TestHostObject : public jsi::HostObject {
+    using NumOrString = std::variant<double, std::string>;
+    std::unordered_map<std::string, NumOrString> values_;
+
+   public:
+    jsi::Value get(jsi::Runtime &rt, const jsi::PropNameID &name) override {
+      auto it = values_.find(name.utf8(rt));
+      if (it != values_.end()) {
+        const auto &val = it->second;
+        if (const auto *d = std::get_if<double>(&val)) {
+          return jsi::Value(*d);
+        } else if (const auto *s = std::get_if<std::string>(&val)) {
+          return jsi::String::createFromUtf8(rt, *s);
+        } else {
+          return jsi::Value::undefined();
+        }
+      }
+      return jsi::Value::undefined();
+    }
+
+    void set(
+        jsi::Runtime &rt,
+        const jsi::PropNameID &name,
+        const jsi::Value &value) override {
+      if (value.isNumber()) {
+        values_[name.utf8(rt)] = value.asNumber();
+      } else if (value.isString()) {
+        values_[name.utf8(rt)] = value.asString(rt).utf8(rt);
+      } else {
+        throw std::runtime_error("Unsupported type");
+      }
+    }
+
+    std::vector<jsi::PropNameID> getPropertyNames(jsi::Runtime &rt) override {
+      std::vector<jsi::PropNameID> ret;
+      for (const auto &kv : values_) {
+        ret.emplace_back(jsi::PropNameID::forUtf8(rt, kv.first));
+      }
+      return ret;
+    }
+  };
+
+  //
+  // Tracing
+  //
+  {
+    auto &rt = *traceRt;
+    auto o = jsi::Object::createFromHostObject(
+        rt, std::make_shared<TestHostObject>());
+
+    // Put "o" in global scope.
+    rt.global().setProperty(rt, "o", o);
+
+    // Add a new property with number
+    o.setProperty(rt, "foo", 5);
+    // Store the value of o.foo to foo1 so that we can use for verification
+    eval(rt, "var foo1 = o.foo;");
+
+    // Add another property with number
+    o.setProperty(rt, "bar", 3);
+    // Store the value of o.bar to bar so that we can use for verification
+    eval(rt, "var bar = o.bar;");
+
+    // Override o.foo with string
+    o.setProperty(rt, "foo", "name");
+    // Store the value of o.foo to foo2 so that we can use for verification
+    eval(rt, "var foo2 = o.foo;");
+
+    // Below verification is rather checking that TestHostObject is working as
+    // expected.
+    auto foo1 = eval(rt, "foo1;");
+    auto foo2 = eval(rt, "foo2;");
+    auto bar = eval(rt, "bar;");
+    EXPECT_TRUE(foo1.isNumber());
+    EXPECT_EQ(foo1.asNumber(), 5);
+    EXPECT_TRUE(foo2.isString());
+    EXPECT_EQ(foo2.asString(rt).utf8(rt), "name");
+    EXPECT_TRUE(bar.isNumber());
+    EXPECT_EQ(bar.asNumber(), 3);
+
+    // Store the result of Object.getOwnPropertyNames(o) to "props" so that we
+    // can use for verification
+    eval(rt, "var props = Object.getOwnPropertyNames(o);");
+
+    // Below verification is rather checking that TestHostObject is working as
+    // expected.
+    auto props = eval(rt, "props;");
+    EXPECT_TRUE(props.isObject());
+    EXPECT_TRUE(props.asObject(rt).isArray(rt));
+    auto propsArray = props.asObject(rt).asArray(rt);
+    for (size_t i = 0; i < propsArray.size(rt); ++i) {
+      auto prop = propsArray.getValueAtIndex(rt, i);
+      EXPECT_TRUE(prop.isString());
+      EXPECT_TRUE(
+          prop.getString(rt).utf8(rt) == "foo" ||
+          prop.getString(rt).utf8(rt) == "bar");
+    }
+  }
+
+  replay();
+
+  //
+  // Verification
+  //
+  {
+    auto &rt = *replayRt;
+
+    // We replayed the code above, that means we should have "foo1", "foo2",
+    // "bar", "props" in global scope. Use them to verify that the replay
+    // reproduced the same result for the host object manipulation.
+    auto foo1 = eval(rt, "foo1;");
+    auto foo2 = eval(rt, "foo2;");
+    auto bar = eval(rt, "bar;");
+    EXPECT_TRUE(foo1.isNumber());
+    EXPECT_EQ(foo1.asNumber(), 5);
+    EXPECT_TRUE(foo2.isString());
+    EXPECT_EQ(foo2.asString(rt).utf8(rt), "name");
+    EXPECT_TRUE(bar.isNumber());
+    EXPECT_EQ(bar.asNumber(), 3);
+
+    auto props = eval(rt, "props;");
+    EXPECT_TRUE(props.isObject());
+    EXPECT_TRUE(props.asObject(rt).isArray(rt));
+    auto propsArray = props.asObject(rt).asArray(rt);
+    for (size_t i = 0; i < propsArray.size(rt); ++i) {
+      auto prop = propsArray.getValueAtIndex(rt, i);
+      EXPECT_TRUE(prop.isString());
+      EXPECT_TRUE(
+          prop.getString(rt).utf8(rt) == "foo" ||
+          prop.getString(rt).utf8(rt) == "bar");
+    }
+
+    // Note: Keeping below as commented out to note that we can't test like
+    // below because it will fail. TraceInterpreter's FakeHostObject (see
+    // TraceInterpreter::createHostObject()) does not work beyond just replaying
+    // what was recorded.
+
+    // auto o = rt.global().getPropertyAsObject(rt, "o");
+    // EXPECT_TRUE(o.getProperty(rt, "foo").isString());
+    // EXPECT_EQ(o.getProperty(rt, "foo").asString(rt).utf8(rt), "hello");
+    // EXPECT_EQ(o.getProperty(rt, "bar").asNumber(), 5);
+  }
+}
+
 using JobQueueReplayTest = SynthTraceReplayTest;
 
 TEST_F(JobQueueReplayTest, DrainSingleMicrotask) {
