@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %shermes --typed --dump-sema %s 2>&1) | %FileCheckOrRegen %s --match-full-lines
+// RUN: (! %shermes -Werror --typed --dump-sema %s 2>&1) | %FileCheckOrRegen %s --match-full-lines
 
 (function main() {
 

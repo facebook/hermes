@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -typed -exec -O0 %s | %FileCheck --match-full-lines %s
-// RUN: %shermes -typed -exec -O %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -Werror -typed -exec -O0 %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -Werror -typed -exec -O %s | %FileCheck --match-full-lines %s
 
 'use strict';
 

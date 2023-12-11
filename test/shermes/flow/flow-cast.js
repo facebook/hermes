@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -typed -exec %s
+// RUN: %shermes -Werror -typed -exec %s
 
 (function() {
 var str: string = "hello";

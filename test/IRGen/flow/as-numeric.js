@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -typed -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %shermes -Werror -typed -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
 
 function main() {
   function baz(x: number): void {

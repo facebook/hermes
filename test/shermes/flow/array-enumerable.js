@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -typed -exec %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -Werror -typed -exec %s | %FileCheck --match-full-lines %s
 
 var x: string[] = ['a', 'b'];
 

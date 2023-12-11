@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -typed -dump-ir %s | %FileCheckOrRegen %s --match-full-lines
+// RUN: %shermes -Werror -typed -dump-ir %s | %FileCheckOrRegen %s --match-full-lines
 
 (function(){
 class Vec2D {

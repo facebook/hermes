@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %shermes -typed -dump-sema %s 2>&1 ) | %FileCheck --match-full-lines %s
+// RUN: (! %shermes -Werror -typed -dump-sema %s 2>&1 ) | %FileCheck --match-full-lines %s
 
 type A = B | B;
 type B = C | C;

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -typed -dump-ir -O0 %s | %FileCheckOrRegen %s --match-full-lines
+// RUN: %shermes -Werror -typed -dump-ir -O0 %s | %FileCheckOrRegen %s --match-full-lines
 
 (function(){
   return (Math.PI as number) * 3.0;

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -typed -dump-sema -fno-std-globals %s | %FileCheckOrRegen %s --match-full-lines
+// RUN: %shermes -Werror -typed -dump-sema -fno-std-globals %s | %FileCheckOrRegen %s --match-full-lines
 
 try {} catch (e) { let x: number = 1; }
 
