@@ -139,7 +139,7 @@ cl::opt<std::string> InputSourceMap(
 
 static cl::list<std::string> CustomOptimize(
     "custom-opt",
-    cl::desc("Custom optimzations"),
+    cl::desc("Custom optimizations"),
     cl::Hidden,
     cl::cat(CompilerCategory));
 
@@ -306,6 +306,36 @@ cl::opt<unsigned> ErrorLimit(
     "ferror-limit",
     cl::desc("Maximum number of errors (0 means unlimited)"),
     cl::init(20),
+    cl::cat(CompilerCategory));
+
+#define WARNING_CATEGORY(name, specifier, description) \
+  CLFlag name##Warning('W', specifier, true, description, CompilerCategory);
+#include "hermes/Support/Warnings.def"
+
+static cl::ValuesClass warningValues{
+#define WARNING_CATEGORY_HIDDEN(name, specifier, description) \
+  clEnumValN(Warning::name, specifier, description),
+#include "hermes/Support/Warnings.def"
+
+};
+
+cl::list<Warning> Werror(
+    llvh::cl::ValueOptional,
+    "Werror",
+    cl::value_desc("category"),
+    cl::desc(
+        "Treat all warnings as errors, or treat warnings of a particular category as errors"),
+    warningValues,
+    cl::cat(CompilerCategory));
+
+cl::list<Warning> Wnoerror(
+    llvh::cl::ValueOptional,
+    "Wno-error",
+    cl::value_desc("category"),
+    cl::Hidden,
+    cl::desc(
+        "Treat no warnings as errors, or treat warnings of a particular category as warnings"),
+    warningValues,
     cl::cat(CompilerCategory));
 
 cl::opt<bool> DisableAllWarnings(
@@ -497,6 +527,49 @@ SourceErrorOutputOptions guessErrorOutputOptions() {
   return result;
 }
 
+/// Apply the -Werror, -Wno-error, -Werror=<category> and -Wno-error=<category>
+/// flags to \c sm from left to right.
+void setWarningsAreErrorsFromFlags(SourceErrorManager &sm) {
+  std::vector<Warning>::iterator yesIt = cli::Werror.begin();
+  std::vector<Warning>::iterator noIt = cli::Wnoerror.begin();
+  // Argument positions are indices into argv and start at 1 (or 2 if there's a
+  // subcommand). See llvh::cl::CommandLineParser::ParseCommandLineOptions().
+  // In this loop, position 0 represents the lack of a value.
+  unsigned noPos = 0, yesPos = 0;
+  while (true) {
+    if (noIt != cli::Wnoerror.end()) {
+      noPos = cli::Wnoerror.getPosition(noIt - cli::Wnoerror.begin());
+    } else {
+      noPos = 0;
+    }
+    if (yesIt != cli::Werror.end()) {
+      yesPos = cli::Werror.getPosition(yesIt - cli::Werror.begin());
+    } else {
+      yesPos = 0;
+    }
+
+    Warning warning;
+    bool enable;
+    if (yesPos != 0 && (noPos == 0 || yesPos < noPos)) {
+      warning = *yesIt;
+      enable = true;
+      ++yesIt;
+    } else if (noPos != 0 && (yesPos == 0 || noPos < yesPos)) {
+      warning = *noIt;
+      enable = false;
+      ++noIt;
+    } else {
+      break;
+    }
+
+    if (warning == Warning::NoWarning) {
+      sm.setWarningsAreErrors(enable);
+    } else {
+      sm.setWarningIsError(warning, enable);
+    }
+  }
+}
+
 /// Create a Context, respecting the command line flags.
 /// \return the Context.
 std::shared_ptr<Context> createContext() {
@@ -554,12 +627,12 @@ std::shared_ptr<Context> createContext() {
   context->setEnableEval(cli::EnableEval);
   context->getSourceErrorManager().setOutputOptions(guessErrorOutputOptions());
 
-  // setWarningsAreErrorsFromFlags(context->getSourceErrorManager());
+  setWarningsAreErrorsFromFlags(context->getSourceErrorManager());
 
-  //#define WARNING_CATEGORY(name, specifier, description) \
-//  context->getSourceErrorManager().setWarningStatus(   \
-//      Warning::name, cl::name##Warning);
-  // #include "hermes/Support/Warnings.def"
+#define WARNING_CATEGORY(name, specifier, description) \
+  context->getSourceErrorManager().setWarningStatus(   \
+      Warning::name, cli::name##Warning);
+#include "hermes/Support/Warnings.def"
 
   if (cli::DisableAllWarnings)
     context->getSourceErrorManager().disableAllWarnings();
