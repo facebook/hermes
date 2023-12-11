@@ -21,6 +21,7 @@
 #include <hermes/hermes.h>
 
 #include <memory>
+#include <variant>
 
 using namespace facebook::hermes::tracing;
 using namespace facebook::hermes;
