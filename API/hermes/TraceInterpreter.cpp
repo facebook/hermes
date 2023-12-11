@@ -540,7 +540,6 @@ TraceInterpreter::TraceInterpreter(
       hostFunctionCalls_(hostFunctionCalls),
       hostObjectCalls_(hostObjectCalls),
       hostFunctionsCallCount_(),
-      hostObjectsPropertyNamesCallCount_(),
       gom_() {
   // Add the global object to the global object map
   gom_.emplace(trace.globalObjID(), rt.global());
@@ -802,15 +801,12 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
     TraceInterpreter &interpreter;
     const HostObjectInfo &hostObjectInfo;
     std::unordered_map<std::string, uint64_t> callCounts;
-    uint64_t &propertyNamesCallCounts;
+    uint64_t propertyNamesCallCounts = 0;
 
     FakeHostObject(
         TraceInterpreter &interpreter,
-        const HostObjectInfo &hostObjectInfo,
-        uint64_t &propertyNamesCallCounts)
-        : interpreter(interpreter),
-          hostObjectInfo(hostObjectInfo),
-          propertyNamesCallCounts(propertyNamesCallCounts) {}
+        const HostObjectInfo &hostObjectInfo)
+        : interpreter(interpreter), hostObjectInfo(hostObjectInfo) {}
 
     Value get(Runtime &rt, const PropNameID &name) override {
       try {
@@ -873,11 +869,7 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
   };
 
   return Object::createFromHostObject(
-      rt_,
-      std::make_shared<FakeHostObject>(
-          *this,
-          hostObjectCalls_.at(objID),
-          hostObjectsPropertyNamesCallCount_[objID]));
+      rt_, std::make_shared<FakeHostObject>(*this, hostObjectCalls_.at(objID)));
 }
 
 std::string TraceInterpreter::execEntryFunction(

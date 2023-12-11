@@ -175,8 +175,6 @@ class TraceInterpreter final {
   const HostFunctionToCalls &hostFunctionCalls_;
   const HostObjectToCalls &hostObjectCalls_;
   std::unordered_map<SynthTrace::ObjectID, uint64_t> hostFunctionsCallCount_;
-  std::unordered_map<SynthTrace::ObjectID, uint64_t>
-      hostObjectsPropertyNamesCallCount_;
 
   // Invariant: the value is either jsi::Object or jsi::String.
   std::unordered_map<SynthTrace::ObjectID, jsi::Value> gom_;
