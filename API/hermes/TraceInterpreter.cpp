@@ -539,7 +539,6 @@ TraceInterpreter::TraceInterpreter(
       globalDefsAndUses_(globalDefsAndUses),
       hostFunctionCalls_(hostFunctionCalls),
       hostObjectCalls_(hostObjectCalls),
-      hostFunctionsCallCount_(),
       gom_() {
   // Add the global object to the global object map
   gom_.emplace(trace.globalObjID(), rt.global());
@@ -777,19 +776,18 @@ Function TraceInterpreter::createHostFunction(
 #ifdef HERMESVM_API_TRACE_DEBUG
   assert(propNameID.utf8(rt_) == rec.functionName_);
 #endif
+  uint64_t callCount = 0;
   return Function::createFromHostFunction(
       rt_,
       propNameID,
       rec.paramCount_,
-      [this, funcID, &calls](
-          Runtime &, const Value &thisVal, const Value *args, size_t count)
-          -> Value {
+      [this, callCount, &calls](
+          Runtime &,
+          const Value &thisVal,
+          const Value *args,
+          size_t count) mutable -> Value {
         try {
-          return execFunction(
-              calls.at(hostFunctionsCallCount_[funcID]++),
-              thisVal,
-              args,
-              count);
+          return execFunction(calls.at(callCount++), thisVal, args, count);
         } catch (const std::exception &e) {
           crashOnException(e, llvh::None);
         }
