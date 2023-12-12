@@ -97,7 +97,7 @@ public class JSObjects {
   }
 
   public static Map<String, Object> getJavaMap(Object object) {
-    return (HashMap<String, Object>) object;
+    return (Map<String, Object>) object;
   }
 
   public static Object newObject() {
@@ -105,7 +105,7 @@ public class JSObjects {
   }
 
   public static Object Get(Object options, String property) {
-    HashMap<String, Object> javaObject = (HashMap<String, Object>) options;
+    Map<String, Object> javaObject = (Map<String, Object>) options;
     if (javaObject.containsKey(property)) {
       Object value = javaObject.get(property);
       if (value == null) return JSObjects.Null();
@@ -116,7 +116,7 @@ public class JSObjects {
   }
 
   public static void Put(Object options, String property, Object value) {
-    HashMap<String, Object> javaObject = (HashMap<String, Object>) options;
+    Map<String, Object> javaObject = (Map<String, Object>) options;
     javaObject.put(property, value);
   }
 }

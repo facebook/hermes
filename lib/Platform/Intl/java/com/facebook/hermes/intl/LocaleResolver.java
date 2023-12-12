@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 public class LocaleResolver {
@@ -27,16 +28,16 @@ public class LocaleResolver {
 
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N || optionLocaleMatcher.equals("lookup")) {
       localeMatchResult =
-          LocaleMatcher.lookupMatch(requestedLocales.toArray(new String[requestedLocales.size()]));
+          LocaleMatcher.lookupMatch(requestedLocales.toArray(new String[0]));
     } else {
       // Default is best-fit
       // Note that we don't pass the list of available locale ids for best fit match ... to avoid
       // re-creation of ULocale for each of the IDs again. Instead, we directly call
       // ULocale.getAvailableLocales() at the lowest platform aware method.
-      // TODO :: Avoid fetching the available locales array in the preceeding code when best-fit
+      // TODO :: Avoid fetching the available locales array in the preceding code when best-fit
       // locale matching is desired.
       localeMatchResult =
-          LocaleMatcher.bestFitMatch(requestedLocales.toArray(new String[requestedLocales.size()]));
+          LocaleMatcher.bestFitMatch(requestedLocales.toArray(new String[0]));
     }
 
     result.put("dataLocale", localeMatchResult.dataLocale);
@@ -51,7 +52,7 @@ public class LocaleResolver {
         if (localeMatchResult.extensions.containsKey(key)) { // 9.h.i
           String requestedValue = localeMatchResult.extensions.get(key);
 
-          if (!requestedValue.isEmpty()) {
+          if (!Objects.requireNonNull(requestedValue).isEmpty()) {
             value = requestedValue;
           } else {
             value = JSObjects.newString("true");
