@@ -117,7 +117,7 @@ CallResult<HermesValue> optionsToJS(
 
 CallResult<Handle<JSObject>> partToJS(
     Runtime &runtime,
-    std::unordered_map<std::u16string, std::u16string> result) {
+    hermes::platform_intl::Part result) {
   CallResult<PseudoHandle<JSObject>> objRes = JSObject::create(runtime);
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -154,7 +154,7 @@ CallResult<Handle<JSObject>> partToJS(
 
 CallResult<HermesValue> partsToJS(
     Runtime &runtime,
-    CallResult<std::vector<std::unordered_map<std::u16string, std::u16string>>>
+    CallResult<std::vector<hermes::platform_intl::Part>>
         result) {
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;

@@ -1085,16 +1085,25 @@ SKIP_LIST = [
     "test262/test/built-ins/String/prototype/toLocaleLowerCase/special_casing_conditional.js",
     "test262/test/built-ins/String/prototype/toLowerCase/special_casing_conditional.js",
     # Intl
+    # We need to support canonicalizing "deleted codes" per
+    # ISO 3166: https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2
+    "test262/test/intl402/language-tags-canonicalized.js",
+    # Ignore all tests checking if constructors can be tainted, this isn't implemented yet
+    "test262/test/intl402/constructors-taint-Object-prototype",
+    # BigInt toLocaleString currently prints the number without formatting
     "test262/test/intl402/BigInt/prototype/toLocaleString/de-DE.js",
     "test262/test/intl402/BigInt/prototype/toLocaleString/default-options-object-prototype.js",
+    # "test262/test/intl402/BigInt/prototype/toLocaleString/default-options-object-prototype.js",
     "test262/test/intl402/BigInt/prototype/toLocaleString/en-US.js",
     "test262/test/intl402/BigInt/prototype/toLocaleString/length.js",
     "test262/test/intl402/BigInt/prototype/toLocaleString/returns-same-results-as-NumberFormat.js",
     "test262/test/intl402/BigInt/prototype/toLocaleString/throws-same-exceptions-as-NumberFormat.js",
     "test262/test/intl402/Collator/subclassing.js",
+    "test262/test/intl402/Collator/unicode-ext-seq-in-private-tag.js",
     "test262/test/intl402/Collator/unicode-ext-value-collation.js",
-    "test262/test/intl402/Collator/ignore-invalid-unicode-ext-values.js",
+    "test262/test/intl402/Collator/usage-de.js",
     "test262/test/intl402/Collator/proto-from-ctor-realm.js",
+    "test262/test/intl402/Collator/prototype/resolvedOptions/basic.js",
     "test262/test/intl402/Collator/prototype/resolvedOptions/order.js",
     "test262/test/intl402/String/prototype/toLocaleLowerCase/special_casing_Lithuanian.js",
     "test262/test/intl402/String/prototype/toLocaleLowerCase/special_casing_Azeri.js",
@@ -1104,18 +1113,17 @@ SKIP_LIST = [
     "test262/test/intl402/DateTimeFormat/constructor-options-order-fractionalSecondDigits.js",
     "test262/test/intl402/DateTimeFormat/constructor-options-order-dayPeriod.js",
     "test262/test/intl402/DateTimeFormat/constructor-options-order.js",
-    "test262/test/intl402/DateTimeFormat/constructor-options-dayPeriod-invalid.js",
-    "test262/test/intl402/DateTimeFormat/constructor-options-fractionalSecondDigits-valid.js",
-    "test262/test/intl402/DateTimeFormat/constructor-options-throwing-getters-dayPeriod.js",
     "test262/test/intl402/DateTimeFormat/constructor-options-order-timedate-style.js",
-    "test262/test/intl402/DateTimeFormat/constructor-options-dayPeriod-valid.js",
-    "test262/test/intl402/DateTimeFormat/constructor-options-style-conflict.js",
+    # Requires Intl.supportedValuesOf
+    "test262/test/intl402/DateTimeFormat/timezone-case-insensitive.js",
+    "test262/test/intl402/DateTimeFormat/taint-Object-prototype-date-time-components.js",
+    # Requires resolvedOptions() to support returning numberingSystem
+    "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/basic.js",
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/order.js",
     # We still canonicalize timezones where ECMA-402 2024 no longer does so
     "test262/test/intl402/DateTimeFormat/timezone-not-canonicalized.js",
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/order-fractionalSecondDigits.js",
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/order-dayPeriod.js",
-    "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-timeStyle.js",
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/order-style.js",
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/offset-timezone-basic.js",
     "test262/test/intl402/DateTimeFormat/prototype/formatToParts",
@@ -1174,7 +1182,9 @@ SKIP_LIST = [
     "test262/test/intl402/NumberFormat/prototype/format/engineering-scientific-zh-TW.js",
     "test262/test/intl402/NumberFormat/prototype/format/signDisplay-zh-TW.js",
     "test262/test/intl402/NumberFormat/prototype/format/notation-compact-de-DE.js",
+    "test262/test/intl402/NumberFormat/prototype/format/numbering-systems.js",
     "test262/test/intl402/NumberFormat/prototype/format/signDisplay-currency-zh-TW.js",
+    "test262/test/intl402/NumberFormat/prototype/format/units.js",
     "test262/test/intl402/NumberFormat/prototype/formatToParts",
     "test262/test/intl402/supportedLocalesOf-test-option-localeMatcher.js",
     # We generally haven't implemented taint-proof prototypes for Intl

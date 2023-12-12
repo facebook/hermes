@@ -7,8 +7,11 @@
 
 #include "hermes/Platform/Intl/BCP47Parser.h"
 #include "hermes/Platform/Intl/PlatformIntl.h"
+#include "hermes/Platform/Intl/TzdbBackward.h"
 
 #import <Foundation/Foundation.h>
+#include <algorithm>
+#include <array>
 #include <shared_mutex>
 #include <thread>
 #include <unordered_set>
@@ -17,10 +20,15 @@ static_assert(__has_feature(objc_arc), "arc must be enabled");
 
 namespace hermes {
 namespace platform_intl {
+
+// StringRecord contains a mapping of strings to strings or null (optional)
+typedef std::unordered_map<std::u16string, std::optional<std::u16string>>
+    StringRecord;
+
 namespace {
-NSString *u16StringToNSString(const std::u16string &src) {
+NSString *u16StringToNSString(const std::u16string_view &src) {
   auto size = src.size();
-  const auto *cString = (const unichar *)src.c_str();
+  const auto *cString = (const unichar *)src.data();
   return [NSString stringWithCharacters:cString length:size];
 }
 std::u16string nsStringToU16String(NSString *src) {
@@ -77,6 +85,158 @@ const std::u16string &getDefaultLocale() {
     return std::u16string(u"und");
   }());
   return *defLocale;
+}
+
+// From
+// https://github.com/eggert/tz/blob/a8761eebe979a56dfc234698e0e4f001c95329e7/etcetera
+std::map<std::u16string, std::u16string> etc_timezones{
+    // Zone    Etc/GMT-14    14    -    +14
+    {u"Etc/GMT-14", u"GMT+14"},
+    // Zone    Etc/GMT-13    13    -    +13
+    {u"Etc/GMT-13", u"GMT+13"},
+    // Zone    Etc/GMT-12    12    -    +12
+    {u"Etc/GMT-12", u"GMT+12"},
+    // Zone    Etc/GMT-11    11    -    +11
+    {u"Etc/GMT-11", u"GMT+11"},
+    // Zone    Etc/GMT-10    10    -    +10
+    {u"Etc/GMT-10", u"UTC+10"},
+    // Zone    Etc/GMT-9    9    -    +09
+    {u"Etc/GMT-9", u"GMT+9"},
+    // Zone    Etc/GMT-8    8    -    +08
+    {u"Etc/GMT-8", u"GMT+8"},
+    // Zone    Etc/GMT-7    7    -    +07
+    {u"Etc/GMT-7", u"GMT+7"},
+    // Zone    Etc/GMT-6    6    -    +06
+    {u"Etc/GMT-6", u"GMT+6"},
+    // Zone    Etc/GMT-5    5    -    +05
+    {u"Etc/GMT-5", u"GMT+5"},
+    // Zone    Etc/GMT-4    4    -    +04
+    {u"Etc/GMT-4", u"GMT+4"},
+    // Zone    Etc/GMT-3    3    -    +03
+    {u"Etc/GMT-3", u"GMT+3"},
+    // Zone    Etc/GMT-2    2    -    +02
+    {u"Etc/GMT-2", u"GMT+2"},
+    // Zone    Etc/GMT-1    1    -    +01
+    {u"Etc/GMT-1", u"GMT+1"},
+    // Zone    Etc/GMT+1    -1    -    -01
+    {u"Etc/GMT+1", u"GMT-1"},
+    // Zone    Etc/GMT+2    -2    -    -02
+    {u"Etc/GMT+2", u"GMT-2"},
+    // Zone    Etc/GMT+3    -3    -    -03
+    {u"Etc/GMT+3", u"GMT-3"},
+    // Zone    Etc/GMT+4    -4    -    -04
+    {u"Etc/GMT+4", u"GMT-4"},
+    // Zone    Etc/GMT+5    -5    -    -05
+    {u"Etc/GMT+5", u"GMT-5"},
+    // Zone    Etc/GMT+6    -6    -    -06
+    {u"Etc/GMT+6", u"GMT-6"},
+    // Zone    Etc/GMT+7    -7    -    -07
+    {u"Etc/GMT+7", u"GMT-7"},
+    // Zone    Etc/GMT+8    -8    -    -08
+    {u"Etc/GMT+8", u"GMT-8"},
+    // Zone    Etc/GMT+9    -9    -    -09
+    {u"Etc/GMT+9", u"GMT-9"},
+    // Zone    Etc/GMT+10    -10    -    -10
+    {u"Etc/GMT+10", u"GMT-10"},
+    // Zone    Etc/GMT+11    -11    -    -11
+    {u"Etc/GMT+11", u"GMT-11"},
+    // Zone    Etc/GMT+12    -12    -    -12
+    {u"Etc/GMT+12", u"GMT-12"},
+};
+
+std::map<std::u16string, std::u16string> missing_iana_timezones{
+    // Due to historical reasons, these timezones are treated differently.
+    {u"Etc/UTC", u"UTC"},
+    {u"Etc/GMT", u"UTC"},
+    {u"GMT", u"UTC"},
+    // These are missing from Apple's NSTimeZone implementation but expected
+    // in test262 and standard IANA implementations
+    {u"MET", u"Europe/Berlin"},
+    {u"US/Pacific-New", u"America/Los_Angeles"},
+    {u"EST5EDT", u"America/New_York"},
+    {u"CST6CDT", u"America/Chicago"},
+    {u"MST7MDT", u"America/Denver"},
+    {u"PST8PDT", u"America/Los_Angeles"},
+};
+
+// These are link names which are verified to work with NSTimeZone
+// but aren't listed by knownTimeZoneNames
+std::vector<std::u16string> iana_links{u"Asia/Kolkata", u"Europe/Kyiv"};
+
+static std::unordered_map<std::u16string_view, std::u16string>
+    supportedCalendars{
+        {u"buddhist", nsStringToU16String(NSCalendarIdentifierBuddhist)},
+        {u"chinese", nsStringToU16String(NSCalendarIdentifierChinese)},
+        {u"coptic", nsStringToU16String(NSCalendarIdentifierCoptic)},
+        {u"ethiopic",
+         nsStringToU16String(NSCalendarIdentifierEthiopicAmeteMihret)},
+        {u"ethioaa",
+         nsStringToU16String(NSCalendarIdentifierEthiopicAmeteAlem)},
+        {u"gregory", nsStringToU16String(NSCalendarIdentifierGregorian)},
+        {u"hebrew", nsStringToU16String(NSCalendarIdentifierHebrew)},
+        {u"indian", nsStringToU16String(NSCalendarIdentifierIndian)},
+        {u"islamic", nsStringToU16String(NSCalendarIdentifierIslamic)},
+        {u"islamic-civil",
+         nsStringToU16String(NSCalendarIdentifierIslamicCivil)},
+        {u"islamic-tbla",
+         nsStringToU16String(NSCalendarIdentifierIslamicTabular)},
+        {u"islamic-umalqura",
+         nsStringToU16String(NSCalendarIdentifierIslamicUmmAlQura)},
+        {u"iso8601", nsStringToU16String(NSCalendarIdentifierISO8601)},
+        {u"japanese", nsStringToU16String(NSCalendarIdentifierJapanese)},
+        {u"persian", nsStringToU16String(NSCalendarIdentifierPersian)},
+        {u"roc", nsStringToU16String(NSCalendarIdentifierRepublicOfChina)},
+    };
+
+static std::vector<std::u16string_view> keysOf(
+    const std::unordered_map<std::u16string_view, std::u16string> map_) {
+  std::vector<std::u16string_view> keys;
+  for (const auto &[key, value] : map_) {
+    keys.push_back(std::u16string_view(key));
+  }
+  return keys;
+}
+
+std::unordered_map<std::u16string, std::u16string_view> reverseMap(
+    std::unordered_map<std::u16string_view, std::u16string> map) {
+  static std::unordered_map<std::u16string, std::u16string_view> reversed;
+
+  for (const auto &[key, value] : map) {
+    reversed.emplace(std::u16string(value), key);
+  }
+
+  return reversed;
+}
+
+static std::vector<std::u16string_view> getSupportedCalendarIdentifiers() {
+  static std::vector<std::u16string_view> supportedCalendarIdentifiers =
+      keysOf(supportedCalendars);
+
+  return supportedCalendarIdentifiers;
+}
+
+static std::u16string_view getNSCalendarIdentifier(std::u16string_view ca) {
+  auto entry = supportedCalendars.find(ca);
+
+  // Fallback to "gregorian" if no matching calendar is found...
+  if (entry == supportedCalendars.end()) {
+    return u"gregory";
+  }
+
+  return std::u16string_view(entry->second);
+}
+
+static std::optional<std::u16string_view> fromNSCalendarIdentifier(
+    NSString *identifier) {
+  static std::unordered_map<std::u16string, std::u16string_view>
+      supportedCalendarsReverse = reverseMap(supportedCalendars);
+  auto entry = supportedCalendarsReverse.find(nsStringToU16String(identifier));
+
+  if (entry == supportedCalendarsReverse.end()) {
+    return {};
+  }
+
+  return entry->second;
 }
 
 /// https://402.ecma-international.org/8.0/#sec-bestavailablelocale
@@ -154,22 +314,76 @@ LocaleMatch lookupMatcher(
   return result;
 }
 
+
+std::vector<std::optional<std::u16string_view>> getKeyLocaleDataCalendars(
+    NSLocale *foundLocaleData) {
+  auto keyLocaleData =
+      fromNSCalendarIdentifier(foundLocaleData.calendarIdentifier);
+
+  std::vector<std::optional<std::u16string_view>> calendarIdentifiers;
+
+  if (keyLocaleData) {
+    calendarIdentifiers.push_back(*keyLocaleData);
+  }
+
+  for (auto ca : getSupportedCalendarIdentifiers()) {
+    // Avoid adding the same calendar twice...
+    if (ca == keyLocaleData) {
+      continue;
+    }
+
+    calendarIdentifiers.push_back(ca);
+  }
+
+  return calendarIdentifiers;
+}
+
+std::vector<std::optional<std::u16string_view>> getKeyLocaleData(
+    NSLocale *foundLocaleData,
+    std::u16string_view key) {
+  static std::vector<std::optional<std::u16string_view>> hourCycleOptions(
+      {std::nullopt, u"h11", u"h12", u"h23", u"h24"});
+  static std::vector<std::optional<std::u16string_view>> numericOptions(
+      {u"true", u"false"});
+  static std::vector<std::optional<std::u16string_view>> caseFirstOptions(
+      {u"false", u"upper", u"lower"});
+  // nu is "" currently, this should be updated to include the list of
+  // valid numbering systems in the future.
+  static std::vector<std::optional<std::u16string_view>> numberingSystemOptions;
+  static std::vector<std::optional<std::u16string_view>> emptyOptions;
+
+  if (key == u"ca") {
+    return getKeyLocaleDataCalendars(foundLocaleData);
+  } else if (key == u"hc") {
+    return hourCycleOptions;
+  } else if (key == u"kn") {
+    return numericOptions;
+  } else if (key == u"kf") {
+    return caseFirstOptions;
+  } else if (key == u"nu") {
+    return numberingSystemOptions;
+  }
+
+  return emptyOptions;
+}
+
 struct ResolvedLocale {
   std::u16string locale;
   std::u16string dataLocale;
-  std::unordered_map<std::u16string, std::u16string> extensions;
+  StringRecord extensions;
 };
+
 /// https://402.ecma-international.org/8.0/#sec-resolvelocale
 ResolvedLocale resolveLocale(
     const std::vector<std::u16string> &availableLocales,
     const std::vector<std::u16string> &requestedLocales,
-    const std::unordered_map<std::u16string, std::u16string> &options,
+    const StringRecord &options,
     llvh::ArrayRef<std::u16string_view> relevantExtensionKeys) {
   // 1. Let matcher be options.[[localeMatcher]].
   // 2. If matcher is "lookup", then
-  // a. Let r be LookupMatcher(availableLocales, requestedLocales).
+  //   a. Let r be ! LookupMatcher(availableLocales, requestedLocales).
   // 3. Else,
-  // a. Let r be BestFitMatcher(availableLocales, requestedLocales).
+  //   a. Let r be ! BestFitMatcher(availableLocales, requestedLocales).
   auto r = lookupMatcher(availableLocales, requestedLocales);
   // 4. Let foundLocale be r.[[locale]].
   auto foundLocale = r.locale;
@@ -178,91 +392,110 @@ ResolvedLocale resolveLocale(
   // 6. Set result.[[dataLocale]] to foundLocale.
   result.dataLocale = foundLocale;
   // 7. If r has an [[extension]] field, then
-  // a. Let components be ! UnicodeExtensionComponents(r.[[extension]]).
-  // b. Let keywords be components.[[Keywords]].
+  //   a. Let components be ! UnicodeExtensionComponents(r.[[extension]]).
+  //   b. Let keywords be components.[[Keywords]].
   // 8. Let supportedExtension be "-u".
   std::u16string supportedExtension = u"-u";
   // 9. For each element key of relevantExtensionKeys, do
   for (const auto &keyView : relevantExtensionKeys) {
-    // TODO(T116352920): Make relevantExtensionKeys an ArrayRef<std::u16string>
-    // and remove this temporary once we have constexpr std::u16string.
+    // TODO(T116352920): Make relevantExtensionKeys an
+    // ArrayRef<std::u16string> and remove this temporary once we have
+    // constexpr std::u16string.
     std::u16string key{keyView};
     // a. Let foundLocaleData be localeData.[[<foundLocale>]].
-    // NOTE: We don't actually have access to the underlying locale data, so we
-    // accept everything and defer to NSLocale.
+    auto *foundLocaleData = [[NSLocale alloc]
+        initWithLocaleIdentifier:u16StringToNSString(foundLocale)];
     // b. Assert: Type(foundLocaleData) is Record.
     // c. Let keyLocaleData be foundLocaleData.[[<key>]].
+    auto keyLocaleData = getKeyLocaleData(foundLocaleData, key);
     // d. Assert: Type(keyLocaleData) is List.
     // e. Let value be keyLocaleData[0].
+    std::optional<std::u16string_view> value =
+        keyLocaleData.empty() ? std::nullopt : keyLocaleData[0];
     // f. Assert: Type(value) is either String or Null.
     // g. Let supportedExtensionAddition be "".
+    std::u16string supportedExtensionAddition = u"";
     // h. If r has an [[extension]] field, then
-    auto extIt = r.extensions.find(key);
-    std::optional<std::u16string> value;
-    std::u16string supportedExtensionAddition;
-    // i. If keywords contains an element whose [[Key]] is the same as key, then
-    if (extIt != r.extensions.end()) {
-      // 1. Let entry be the element of keywords whose [[Key]] is the same as
-      // key.
-      // 2. Let requestedValue be entry.[[Value]].
-      // 3. If requestedValue is not the empty String, then
-      // a. If keyLocaleData contains requestedValue, then
-      // i. Let value be requestedValue.
-      // ii. Let supportedExtensionAddition be the string-concatenation of "-",
-      // key, "-", and value.
-      // 4. Else if keyLocaleData contains "true", then
-      // a. Let value be "true".
-      // b. Let supportedExtensionAddition be the string-concatenation of "-"
-      // and key.
-      supportedExtensionAddition.append(u"-").append(key);
-      if (extIt->second.empty())
-        value = u"true";
-      else {
-        value = extIt->second;
-        supportedExtensionAddition.append(u"-").append(*value);
+    if (!r.extensions.empty()) {
+      // i. If keywords contains an element whose [[Key]] is the same as key,
+      // then
+      auto entry = r.extensions.find(key);
+      if (entry != r.extensions.end()) {
+        // 1. Let entry be the element of keywords whose [[Key]] is the same
+        // as key.
+        // 2. Let requestedValue be entry.[[Value]].
+        auto requestedValue = entry->second;
+        // 3. If requestedValue is not the empty String, then
+        if (!requestedValue.empty()) {
+          // a. If keyLocaleData contains requestedValue, then
+          if (std::find(
+                  keyLocaleData.begin(), keyLocaleData.end(), requestedValue) !=
+              keyLocaleData.end()) {
+            // i. Let value be requestedValue.
+            value = requestedValue;
+            // ii. Let supportedExtensionAddition be the string-concatenation
+            // of
+            // "-", key, "-", and value.
+            supportedExtensionAddition =
+                std::u16string(u"-").append(key).append(u"-").append(*value);
+          }
+          // 4. Else if keyLocaleData contains "true", then
+        } else if (
+            std::find(keyLocaleData.begin(), keyLocaleData.end(), u"true") !=
+            keyLocaleData.end()) {
+          // a. Let value be "true".
+          value = u"true";
+          // b. Let supportedExtensionAddition be the string-concatenation of
+          // "-" and key.
+          supportedExtensionAddition = std::u16string(u"-").append(key);
+        }
       }
     }
     // i. If options has a field [[<key>]], then
     auto optIt = options.find(key);
     if (optIt != options.end()) {
       // i. Let optionsValue be options.[[<key>]].
-      std::u16string optionsValue = optIt->second;
+      std::optional<std::u16string> optionsValue = optIt->second;
       // ii. Assert: Type(optionsValue) is either String, Undefined, or Null.
       // iii. If Type(optionsValue) is String, then
-      // 1. Let optionsValue be the string optionsValue after performing the
-      // algorithm steps to transform Unicode extension values to canonical
-      // syntax per Unicode Technical Standard #35 LDML § 3.2.1 Canonical
-      // Unicode Locale Identifiers, treating key as ukey and optionsValue as
-      // uvalue productions.
-      // 2. Let optionsValue be the string optionsValue after performing the
-      // algorithm steps to replace Unicode extension values with their
-      // canonical form per Technical Standard #35 LDML § 3.2.1 Canonical
-      // Unicode Locale Identifiers, treating key as ukey and optionsValue as
-      // uvalue productions
-      // 3. If optionsValue is the empty String, then
-      if (optionsValue.empty()) {
-        // a. Let optionsValue be "true".
-        optionsValue = u"true";
+      if (optionsValue) {
+        // 1. Let optionsValue be the string optionsValue after performing the
+        // algorithm steps to transform Unicode extension values to canonical
+        // syntax per Unicode Technical Standard #35 LDML § 3.2.1 Canonical
+        // Unicode Locale Identifiers, treating key as ukey and optionsValue
+        // as uvalue productions.
+        // 2. Let optionsValue be the string optionsValue after performing the
+        // algorithm steps to replace Unicode extension values with their
+        // canonical form per Unicode Technical Standard #35 LDML § 3.2.1
+        // Canonical Unicode Locale Identifiers, treating key as ukey and
+        // optionsValue as uvalue productions.
+        // 3. If optionsValue is the empty String, then
+        if (optionsValue->empty()) {
+          // a. Let optionsValue be "true".
+          optionsValue = u"true";
+        }
       }
-      // iv. If keyLocaleData contains optionsValue, then
-      // 1. If SameValue(optionsValue, value) is false, then
-      if (optionsValue != value) {
-        // a. Let value be optionsValue.
+      // iv. If SameValue(optionsValue, value) is false and keyLocaleData
+      // contains optionsValue, then
+      if (optionsValue != value &&
+          std::find(keyLocaleData.begin(), keyLocaleData.end(), optionsValue) !=
+              keyLocaleData.end()) {
+        // 1. Let value be optionsValue.
         value = optionsValue;
-        // b. Let supportedExtensionAddition be "".
+        // 2. Let supportedExtensionAddition be "".
         supportedExtensionAddition = u"";
       }
     }
     // j. Set result.[[<key>]] to value.
-    if (value)
-      result.extensions.emplace(key, std::move(*value));
-    // k. Append supportedExtensionAddition to supportedExtension.
-    supportedExtension.append(supportedExtensionAddition);
+    result.extensions.emplace(key, value);
+    // k. Set supportedExtension to the string-concatenation of
+    // supportedExtension and supportedExtensionAddition.
+    supportedExtension = supportedExtension + supportedExtensionAddition;
   }
-  // 10. If the number of elements in supportedExtension is greater than 2, then
-  if (supportedExtension.size() > 2) {
-    // a. Let foundLocale be InsertUnicodeExtensionAndCanonicalize(foundLocale,
-    // supportedExtension).
+  // 10. If supportedExtension is not "-u", then
+  if (supportedExtension != u"-u") {
+    // a. Set foundLocale to
+    // InsertUnicodeExtensionAndCanonicalize(foundLocale, supportedExtension).
     foundLocale.append(supportedExtension);
   }
   // 11. Set result.[[locale]] to foundLocale.
@@ -296,23 +529,47 @@ std::vector<std::u16string> lookupSupportedLocales(
   return subset;
 }
 
-/// https://402.ecma-international.org/8.0/#sec-supportedlocales
-std::vector<std::u16string> supportedLocales(
-    const std::vector<std::u16string> &availableLocales,
-    const std::vector<std::u16string> &requestedLocales) {
-  // 1. Set options to ? CoerceOptionsToObject(options).
-  // 2. Let matcher be ? GetOption(options, "localeMatcher", "string", «
-  //    "lookup", "best fit" », "best fit").
-  // 3. If matcher is "best fit", then
-  //   a. Let supportedLocales be BestFitSupportedLocales(availableLocales,
-  //      requestedLocales).
-  // 4. Else,
-  //   a. Let supportedLocales be LookupSupportedLocales(availableLocales,
-  //      requestedLocales).
-  // 5. Return CreateArrayFromList(supportedLocales).
+// See https://www.rfc-editor.org/rfc/rfc5646.html#section-2.1
+std::optional<std::u16string> canonicalizeLocaleId(
+    const std::u16string &localeId) {
+  // This is the list of "regular" locale IDs that are grandfathered
+  static std::unordered_map<std::u16string, std::u16string> regular{
+      {u"art-lojban", u"jbo"},
+      {u"cel-gaulish", u"xtg"},
 
-  // We do not implement a BestFitMatcher, so we can just use LookupMatcher.
-  return lookupSupportedLocales(availableLocales, requestedLocales);
+      {u"zh-guoyu", u"zh"},
+      {u"zh-hakka", u"hak"},
+
+      {u"zh-xiang", u"hsn"},
+      {u"en-GB-oed", u"en-GB-oxendict"},
+  };
+
+  static std::unordered_map<std::u16string, std::u16string> regularNonUts35{
+      {u"no-bok", u"nb"},
+      {u"no-nyn", u"nn"},
+      {u"zh-min", u"cdo"},
+      {u"zh-min-nan", u"nan"},
+  };
+
+  // All IDs starting with i-
+  auto isI = localeId[0] == u'i' && localeId[1] == u'-';
+  // And all IDs starting with sgn- are grandfathered...
+  auto isSgn = localeId[0] == u's' && localeId[1] == u'g' &&
+      localeId[2] == u'n' && localeId[3] == u'-';
+
+  if (isI || isSgn) {
+    return {};
+  }
+
+  if (regularNonUts35.find(localeId) != regularNonUts35.end()) {
+    return {};
+  }
+
+  auto it = regular.find(localeId);
+  if (it != regular.end()) {
+    return it->second;
+  }
+  return localeId;
 }
 
 /// https://402.ecma-international.org/8.0/#sec-canonicalizelocalelist
@@ -324,29 +581,39 @@ vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
   // Not needed, this validation occurs closer to VM in 'normalizeLocales'.
   // 2. Let seen be a new empty List.
   std::vector<std::u16string> seen;
-  // 3. If Type(locales) is String or Type(locales) is Object and locales has an
+  // 3. If Type(locales) is String or Type(locales) is Object and locales has
+  // an
   // [[InitializedLocale]] internal slot, then
   // 4. Else
   // We don't yet support Locale object -
-  // https://402.ecma-international.org/8.0/#locale-objects As of now, 'locales'
-  // can only be a string list/array. Validation occurs in normalizeLocaleList,
-  // so this function just takes a vector of strings.
+  // https://402.ecma-international.org/8.0/#locale-objects As of now,
+  // 'locales' can only be a string list/array. Validation occurs in
+  // normalizeLocaleList, so this function just takes a vector of strings.
   // 5. Let len be ? ToLength(? Get(O, "length")).
   // 6. Let k be 0.
   // 7. Repeat, while k < len
   for (const auto &locale : locales) {
     // 7.c.vi. Let canonicalizedTag be CanonicalizeUnicodeLocaleId(tag).
     auto parsedOpt = ParsedLocaleIdentifier::parse(locale);
+
     if (!parsedOpt)
       return runtime.raiseRangeError(
           vm::TwineChar16("Invalid language tag: ") +
           vm::TwineChar16(locale.c_str()));
-    auto canonicalizedTag = parsedOpt->canonicalize();
+    auto canonicalizedTag =
+        canonicalizeLocaleId(parsedOpt->canonicalizeLocaleId());
+    if (!canonicalizedTag) {
+      return runtime.raiseRangeError(
+          vm::TwineChar16("Invalid language tag: ") +
+          vm::TwineChar16(locale.c_str()));
+    }
+    auto canonicalized =
+        *canonicalizedTag + parsedOpt->canonicalizeExtensionString();
 
     // 7.c.vii. If canonicalizedTag is not an element of seen, append
     // canonicalizedTag as the last element of seen.
     if (std::find(seen.begin(), seen.end(), canonicalizedTag) == seen.end()) {
-      seen.push_back(std::move(canonicalizedTag));
+      seen.push_back(std::move(canonicalized));
     }
   }
   return seen;
@@ -369,15 +636,16 @@ vm::CallResult<std::u16string> localeListToLocaleString(
   std::u16string requestedLocale = requestedLocales->empty()
       ? getDefaultLocale()
       : std::move(requestedLocales->front());
-  // 6. Let noExtensionsLocale be the String value that is requestedLocale with
-  // any Unicode locale extension sequences (6.2.1) removed.
-  // We can skip this step, see the comment in lookupMatcher.
+  // 6. Let noExtensionsLocale be the String value that is requestedLocale
+  // with any Unicode locale extension sequences (6.2.1) removed. We can skip
+  // this step, see the comment in lookupMatcher.
   // 7. Let availableLocales be a List with language tags that includes the
   // languages for which the Unicode Character Database contains language
   // sensitive case mappings. Implementations may add additional language tags
   // if they support case mapping for additional locales.
-  // 8. Let locale be BestAvailableLocale(availableLocales, noExtensionsLocale).
-  // Convert to C++ array for bestAvailableLocale function
+  // 8. Let locale be BestAvailableLocale(availableLocales,
+  // noExtensionsLocale). Convert to C++ array for bestAvailableLocale
+  // function
   const std::vector<std::u16string> &availableLocales = getAvailableLocales();
   std::optional<std::u16string> locale =
       bestAvailableLocale(availableLocales, requestedLocale);
@@ -406,8 +674,8 @@ vm::CallResult<std::optional<std::u16string>> getOptionString(
   // a. Set value to ! ToBoolean(value).
   // 6. If type is "string", then
   // a. Set value to ? ToString(value).
-  // 7. If values is not undefined and values does not contain an element equal
-  // to value, throw a RangeError exception.
+  // 7. If values is not undefined and values does not contain an element
+  // equal to value, throw a RangeError exception.
   if (!values.empty() && llvh::find(values, value) == values.end())
     return runtime.raiseRangeError(
         vm::TwineChar16(property.c_str()) +
@@ -482,6 +750,33 @@ vm::CallResult<std::optional<uint8_t>> getNumberOption(
   return std::optional<uint8_t>(defaultNumber.getValue());
 }
 
+/// https://402.ecma-international.org/8.0/#sec-supportedlocales
+vm::CallResult<std::vector<std::u16string>> supportedLocales(
+    vm::Runtime &runtime,
+    const std::vector<std::u16string> &availableLocales,
+    const std::vector<std::u16string> &requestedLocales,
+    const Options &options) {
+  // 1. Set options to ? CoerceOptionsToObject(options).
+  // 2. Let matcher be ? GetOption(options, "localeMatcher", "string", «
+  //    "lookup", "best fit" », "best fit").
+  static constexpr std::u16string_view localeMatcherOpts[] = {
+      u"lookup", u"best fit"};
+  auto localeMatcherRes = getOptionString(
+      runtime, options, u"localeMatcher", localeMatcherOpts, u"best fit");
+  if (LLVM_UNLIKELY(localeMatcherRes == vm::ExecutionStatus::EXCEPTION))
+    return vm::ExecutionStatus::EXCEPTION;
+  // 3. If matcher is "best fit", then
+  //   a. Let supportedLocales be BestFitSupportedLocales(availableLocales,
+  //      requestedLocales).
+  // 4. Else,
+  //   a. Let supportedLocales be LookupSupportedLocales(availableLocales,
+  //      requestedLocales).
+  // 5. Return CreateArrayFromList(supportedLocales).
+
+  // We do not implement a BestFitMatcher, so we can just use LookupMatcher.
+  return lookupSupportedLocales(availableLocales, requestedLocales);
+}
+
 // Implementation of
 // https://402.ecma-international.org/8.0/#sec-todatetimeoptions
 vm::CallResult<Options> toDateTimeOptions(
@@ -489,15 +784,15 @@ vm::CallResult<Options> toDateTimeOptions(
     Options options,
     std::u16string_view required,
     std::u16string_view defaults) {
-  // 1. If options is undefined, let options be null; otherwise let options be ?
-  // ToObject(options).
+  // 1. If options is undefined, let options be null; otherwise let options be
+  // ? ToObject(options).
   // 2. Let options be OrdinaryObjectCreate(options).
   // 3. Let needDefaults be true.
   bool needDefaults = true;
   // 4. If required is "date" or "any", then
   if (required == u"date" || required == u"any") {
-    // a. For each property name prop of « "weekday", "year", "month", "day" »,
-    // do
+    // a. For each property name prop of « "weekday", "year", "month", "day"
+    // », do
     // TODO(T116352920): Make this a std::u16string props[] once we have
     // constexpr std::u16string.
     static constexpr std::u16string_view props[] = {
@@ -589,31 +884,99 @@ class TimeZoneNames {
   /// Initializing the underlying map with all known time zone names in
   /// NSTimeZone.
   TimeZoneNames() {
-    auto nsTimeZoneNames = [NSTimeZone.knownTimeZoneNames
-        arrayByAddingObjectsFromArray:NSTimeZone.abbreviationDictionary
-                                          .allKeys];
-    for (NSString *timeZoneName in nsTimeZoneNames) {
+    auto nsKnownTimeZoneNames = NSTimeZone.knownTimeZoneNames;
+    for (NSString *timeZoneName in nsKnownTimeZoneNames) {
+      auto canonical = nsStringToU16String(timeZoneName);
+      if (canonical != u"Etc/UTC" && canonical != u"Etc/GMT" &&
+          canonical != u"UTC") {
+        timeZoneNamesVector_.emplace_back(canonical);
+      }
+
+      auto upper = toASCIIUppercase(canonical);
+      timeZoneCanonicalNamesMap_.emplace(
+          std::move(upper), std::move(canonical));
+    }
+    auto nsTimeZoneAbbreviations = NSTimeZone.abbreviationDictionary.allKeys;
+    for (NSString *timeZoneName in nsTimeZoneAbbreviations) {
       auto canonical = nsStringToU16String(timeZoneName);
       auto upper = toASCIIUppercase(canonical);
-      timeZoneNamesMap_.emplace(std::move(upper), std::move(canonical));
+      timeZoneCanonicalNamesMap_.emplace(
+          std::move(upper), std::move(canonical));
     }
+
+    // Etc/ timezones are canonically valid.
+    for (auto const &entry : etc_timezones) {
+      auto upper = toASCIIUppercase(entry.first);
+      timeZoneNameOverridesMap_.emplace(upper, entry.second);
+      timeZoneCanonicalNamesMap_.emplace(upper, entry.first);
+    }
+
+    for (auto const &entry : missing_iana_timezones) {
+      auto upper = toASCIIUppercase(entry.first);
+
+      if (entry.first != u"Etc/UTC" && entry.first != u"Etc/GMT" &&
+          entry.first != u"UTC") {
+        timeZoneNamesVector_.emplace_back(entry.first);
+      }
+      timeZoneNameOverridesMap_.emplace(upper, entry.second);
+      timeZoneCanonicalNamesMap_.emplace(upper, entry.first);
+    }
+
+    for (auto entry : Tzdb::Backward::parse()) {
+      auto upper = toASCIIUppercase(entry.first);
+      timeZoneCanonicalNamesMap_.emplace(upper, entry.first);
+      timeZoneNameLinkMap_.emplace(upper, entry.second);
+    }
+
+    for (auto const &link : iana_links) {
+      auto upper = toASCIIUppercase(link);
+
+      timeZoneCanonicalNamesMap_.emplace(std::move(upper), link);
+    }
+
+    std::sort(timeZoneNamesVector_.begin(), timeZoneNamesVector_.end());
   }
 
   /// Check if \p tz is a valid time zone name.
   bool contains(std::u16string_view tz) const {
     std::shared_lock lock(mutex_);
-    return timeZoneNamesMap_.find(toASCIIUppercase(tz)) !=
-        timeZoneNamesMap_.end();
+    auto upper = toASCIIUppercase(tz);
+    return timeZoneCanonicalNamesMap_.find(upper) !=
+        timeZoneCanonicalNamesMap_.end();
   }
 
   /// Get canonical time zone name for \p tz. Note that \p tz must
   /// be a valid key in the map.
   std::u16string getCanonical(std::u16string_view tz) const {
     std::shared_lock lock(mutex_);
-    auto ianaTimeZoneIt = timeZoneNamesMap_.find(toASCIIUppercase(tz));
+    auto upper = toASCIIUppercase(tz);
+    auto ianaTimeZoneIt = timeZoneCanonicalNamesMap_.find(upper);
+
     assert(
-        ianaTimeZoneIt != timeZoneNamesMap_.end() &&
+        ianaTimeZoneIt != timeZoneCanonicalNamesMap_.end() &&
         "getCanonical() must be called on valid time zone name.");
+    return ianaTimeZoneIt->second;
+  }
+
+  std::u16string getNSName(std::u16string_view tz) const {
+    std::shared_lock lock(mutex_);
+    auto upper = toASCIIUppercase(tz);
+
+    auto ianaTimeZoneOverrideIt = timeZoneNameOverridesMap_.find(upper);
+    if (ianaTimeZoneOverrideIt != timeZoneNameOverridesMap_.end()) {
+      return ianaTimeZoneOverrideIt->second;
+    }
+
+    auto ianaTimeZoneLinkIt = timeZoneNameLinkMap_.find(upper);
+    if (ianaTimeZoneLinkIt != timeZoneNameLinkMap_.end()) {
+      return ianaTimeZoneLinkIt->second;
+    }
+
+    auto ianaTimeZoneIt = timeZoneCanonicalNamesMap_.find(upper);
+
+    assert(
+        ianaTimeZoneIt != timeZoneCanonicalNamesMap_.end() &&
+        "getNSTimeZone() must be called on valid time zone name.");
     return ianaTimeZoneIt->second;
   }
 
@@ -623,20 +986,38 @@ class TimeZoneNames {
     // Read lock and check if tz is already in the map.
     {
       std::shared_lock lock(mutex_);
-      if (timeZoneNamesMap_.find(upper) != timeZoneNamesMap_.end()) {
+      if (timeZoneCanonicalNamesMap_.find(upper) !=
+          timeZoneCanonicalNamesMap_.end()) {
         return;
       }
     }
     // If not, write lock and insert it into the map.
     {
       std::unique_lock lock(mutex_);
-      timeZoneNamesMap_.emplace(upper, tz);
+      timeZoneCanonicalNamesMap_.emplace(upper, tz);
+      timeZoneNamesVector_.emplace_back(tz);
     }
+  }
+
+  std::vector<std::u16string_view> availableCanonicalTimeZones() {
+    std::vector<std::u16string_view> keys;
+    for (const auto &name : timeZoneNamesVector_) {
+      if (name == u"")
+        continue;
+
+      auto found = std::find(keys.begin(), keys.end(), name) != keys.end();
+      if (!found)
+        keys.emplace_back(name);
+    }
+    return keys;
   }
 
  private:
   /// Map from upper case time zone name to canonical time zone name.
-  std::unordered_map<std::u16string, std::u16string> timeZoneNamesMap_;
+  std::unordered_map<std::u16string, std::u16string> timeZoneCanonicalNamesMap_;
+  std::unordered_map<std::u16string, std::u16string> timeZoneNameOverridesMap_;
+  std::unordered_map<std::u16string, std::u16string> timeZoneNameLinkMap_;
+  std::vector<std::u16string> timeZoneNamesVector_;
   mutable std::shared_mutex mutex_;
 };
 } // namespace
@@ -650,39 +1031,287 @@ static TimeZoneNames &validTimeZoneNames() {
 // There is a weird quirk on iOS regarding default time zones and
 // NSTimeZone.knownTimeZoneNames. Unforunately, knownTimeZoneNames is not
 // accurate. There is a chance the default timezone reported via
-// NSTimeZone.defaultTimeZone is not present in knownTimeZoneNames. However, the
-// NSTimeZone constructor can actually still understand this default TZ.
-// Therefore, anytime the defaultTimeZone is requested we record it by manually
-// inserting it into the timezones we consider valid. Note we have to do this
-// every time the method is called, because there is a chance the default
-// timezone can change while the program is running. In that case, we would want
-// to accept both the old and new timezones.
+// NSTimeZone.defaultTimeZone is not present in knownTimeZoneNames. However,
+// the NSTimeZone constructor can actually still understand this default TZ.
+// Therefore, anytime the defaultTimeZone is requested we record it by
+// manually inserting it into the timezones we consider valid. Note we have to
+// do this every time the method is called, because there is a chance the
+// default timezone can change while the program is running. In that case, we
+// would want to accept both the old and new timezones.
 std::u16string getDefaultTimeZone() {
   std::u16string tz = nsStringToU16String(NSTimeZone.defaultTimeZone.name);
   validTimeZoneNames().update(tz);
   return tz;
 }
 
-// https://402.ecma-international.org/8.0/#sec-canonicalizetimezonename
-std::u16string canonicalizeTimeZoneName(std::u16string_view tz) {
-  // 1. Let ianaTimeZone be the Zone or Link name of the IANA Time Zone Database
-  // such that timeZone, converted to upper case as described in 6.1, is equal
-  // to ianaTimeZone, converted to upper case as described in 6.1.
+// https://402.ecma-international.org/8.0/#sec-getAvailableNamedTimeZoneIdentifier
+std::u16string getAvailableNamedTimeZoneIdentifier(std::u16string_view tz) {
   auto ianaTimeZone = validTimeZoneNames().getCanonical(tz);
-  // NOTE: We don't use actual IANA database, so we leave (2) unimplemented.
-  // 2. If ianaTimeZone is a Link name, let ianaTimeZone be the corresponding
-  // Zone name as specified in the "backward" file of the IANA Time Zone
-  // Database.
-  // 3. If ianaTimeZone is "Etc/UTC" or "Etc/GMT", return "UTC".
-  if (ianaTimeZone == u"Etc/UTC" || ianaTimeZone == u"Etc/GMT")
-    ianaTimeZone = u"UTC";
-  // 4. Return ianaTimeZone.
+
   return ianaTimeZone;
+}
+
+NSTimeZone *createTimeZone(std::u16string_view tz) {
+  auto nsTimeZoneName = validTimeZoneNames().getNSName(tz);
+
+  return [NSTimeZone timeZoneWithName:u16StringToNSString(nsTimeZoneName)];
 }
 
 // https://402.ecma-international.org/8.0/#sec-isvalidtimezonename
 static bool isValidTimeZoneName(std::u16string_view tz) {
   return validTimeZoneNames().contains(tz);
+}
+
+struct TimeZoneOffsetParseResult {
+  long long nanoseconds;
+  std::u16string parsedComponents;
+  bool hasSecondsComponent;
+};
+
+// 21.4.1.33.1 IsTimeZoneOffsetString ( offsetString )
+// The abstract operation IsTimeZoneOffsetString takes argument offsetString
+// (a String) and returns a Boolean. The return value indicates whether
+// offsetString conforms to the grammar given by UTCOffset. It performs the
+// following steps when called:
+static std::optional<TimeZoneOffsetParseResult> getTimeZoneOffsetString(
+    std::u16string_view offsetString) {
+  // 1. Let parseResult be ParseText(StringToCodePoints(offsetString),
+  // UTCOffset).
+  // 2. If parseResult is a List of errors, return false.
+  // 3. Return true.
+
+  int length = offsetString.length();
+
+  // Java supports "Z" and "+3" while JavaScript does not.
+  // The shortest JavaScript zone offset is "+03" and the longest is "+22:00"
+  // See
+  // https://docs.oracle.com/javase/8/docs/api/java/time/ZoneOffset.html#of-java.lang.String-
+  if (offsetString == u"Z" || length < 3 || length > 6) {
+    return {};
+  }
+
+  // Normalize -00:00
+  if (offsetString == u"-00" || offsetString == u"-0000" ||
+      offsetString == u"-00:00" || offsetString == u"\u221200" ||
+      offsetString == u"\u22120000" || offsetString == u"\u221200:00" ||
+      offsetString == u"+00" || offsetString == u"+0000" ||
+      offsetString == u"+00:00") {
+    return TimeZoneOffsetParseResult{0, u"+00:00", false};
+  }
+
+  std::u16string parsedSign = u"";
+  std::u16string parsedHour = u"";
+  std::u16string parsedMinute = u"";
+  std::u16string parsedSecond = u"";
+  std::u16string parsedNanosecond = u"";
+
+  int i = 0;
+  int sign;
+  int hours;
+  int minutes;
+  int seconds;
+  long long nanoseconds;
+
+  char16_t next = offsetString[i];
+
+  if (next == u'+') {
+    parsedSign += '+';
+    sign = 1;
+  } else if (next == u'-' || next == u'\u2212') {
+    parsedSign += '-';
+    sign = -1;
+  } else {
+    return {};
+  }
+
+  next = offsetString[++i];
+
+  // + is invalid
+  if (i == length) {
+    return {};
+  }
+
+  bool isTwenty = next == u'2';
+  if (next == u'0' || next == u'1' || isTwenty) {
+    parsedHour += next;
+  } else {
+    return {};
+  }
+
+  next = offsetString[++i];
+
+  // +2 is invalid
+  if (i == length) {
+    return {};
+  }
+
+  if (!isTwenty && next >= u'0' && next <= u'9') {
+    parsedHour += next;
+  } else if (isTwenty && next >= u'0' && next <= u'3') {
+    parsedHour += next;
+  } else {
+    // +0A is invalid and +24 is invalid
+    return {};
+  }
+
+  hours = u16StringToNSString(parsedHour).integerValue;
+
+  next = offsetString[++i];
+  if (i == length) {
+    long long nanoseconds = sign * hours * 60 * 60 * 1e9;
+    return TimeZoneOffsetParseResult{
+        nanoseconds, parsedSign + parsedHour + u":00", false};
+  }
+
+  if (next == u':') {
+    next = offsetString[++i];
+  }
+
+  // +12: is invalid
+  if (i == length) {
+    return {};
+  }
+
+  if (next >= u'0' && next <= u'5') {
+    parsedMinute += next;
+  } else {
+    // +12:9 is invalid
+    return {};
+  }
+
+  next = offsetString[++i];
+
+  // +12:6 is invalid
+  if (i == length) {
+    return {};
+  }
+
+  if (next >= u'0' && next <= u'9') {
+    parsedMinute += next;
+  } else {
+    // +12:5A is invalid
+    return {};
+  }
+
+  minutes = u16StringToNSString(parsedMinute).integerValue;
+
+  next = offsetString[++i];
+
+  // +12:32
+  if (i == length) {
+    long long nanoseconds = sign * (((hours * 60 + minutes) * 60) * 1e9);
+    return TimeZoneOffsetParseResult{
+        nanoseconds, parsedSign + parsedHour + u":" + parsedMinute, false};
+  }
+
+  // +12532 or +12:532 is invalid
+  if (next != u':') {
+    return {};
+  }
+
+  if (next >= u'0' && next <= u'5') {
+    parsedSecond += next;
+  } else {
+    // +12:54:9 is invalid
+    return {};
+  }
+
+  next = offsetString[++i];
+
+  // +12:54:6 is invalid
+  if (i == length) {
+    return {};
+  }
+
+  if (next >= u'0' && next <= u'9') {
+    parsedSecond += next;
+  } else {
+    // +12:52:4A is invalid
+    return {};
+  }
+
+  seconds = u16StringToNSString(parsedSecond).integerValue;
+  next = offsetString[++i];
+
+  // +12:32:10
+  if (i == length) {
+    long long nanoseconds =
+        sign * (((hours * 60 + minutes) * 60 + seconds) * 1e9);
+    std::u16string parsedComponents =
+        parsedSign + parsedHour + u":" + parsedMinute + u":" + parsedSecond;
+    return TimeZoneOffsetParseResult{nanoseconds, parsedComponents, true};
+  }
+
+  if (next != u'.' && next != u',') {
+    // +12:32:10_ is invalid
+    return {};
+  }
+
+  next = offsetString[++i];
+
+  while (i < length) {
+    if (next >= u'0' && next <= u'9') {
+      parsedNanosecond += next;
+
+      next = offsetString[++i];
+      continue;
+    }
+
+    // +12:32:10.ABC is invalid
+    return {};
+  }
+
+  std::u16string fraction = parsedNanosecond + u"000000000";
+  std::u16string nanosecondsString = fraction.substr(1, 10);
+  nanoseconds = u16StringToNSString(parsedSecond).longLongValue;
+
+  // Return sign × (((hours × 60 + minutes) × 60 + seconds) × 10**9 +
+  // nanoseconds).
+  nanoseconds =
+      sign * (((hours * 60 + minutes) * 60 + seconds) * 1e9 + nanoseconds);
+  std::u16string parsedComponents = parsedSign + parsedHour + u":" +
+      parsedMinute + u":" + parsedSecond + u"." + nanosecondsString;
+
+  return TimeZoneOffsetParseResult{nanoseconds, parsedComponents, true};
+}
+
+// 22.1.3.17.3 ToZeroPaddedDecimalString ( n, minLength )
+// The abstract operation ToZeroPaddedDecimalString takes arguments n (a
+// non-negative integer) and minLength (a non-negative integer) and returns a
+// String. It performs the following steps when called:
+std::u16string toZeroPaddedDecimalString(int n, int minLength) {
+  // 1. Let S be the String representation of n, formatted as a decimal
+  // number.
+  NSString *S = [@(n) stringValue];
+  // 2. Return StringPad(S, minLength, "0", start).
+  std::u16string s = nsStringToU16String(S);
+  return s.insert(0, minLength - s.size(), u'0');
+}
+
+// The abstract operation FormatOffsetTimeZoneIdentifier takes argument
+// offsetMinutes (an integer) and returns a String. It formats a UTC offset,
+// in minutes, into a UTC offset string formatted like ±HH:MM. It performs the
+// following steps when called:
+std::u16string formatOffsetTimeZoneIdentifier(int offsetMinutes) {
+  // 1. If offsetMinutes ≥ 0, let sign be the code unit 0x002B (PLUS SIGN);
+  // otherwise, let sign be the code unit 0x002D (HYPHEN-MINUS).
+  std::u16string sign;
+  if (offsetMinutes >= 0) {
+    sign = u"+";
+  } else {
+    sign = u"-";
+  }
+  // 2. Let absoluteMinutes be abs(offsetMinutes).
+  auto absoluteMinutes = std::abs(offsetMinutes);
+  // 3. Let hours be floor(absoluteMinutes / 60).
+  auto hours = std::floor(absoluteMinutes / 60);
+  // 4. Let minutes be absoluteMinutes modulo 60.
+  auto minutes = absoluteMinutes % 60;
+  // 5. Return the string-concatenation of sign,
+  // ToZeroPaddedDecimalString(hours, 2), the code unit 0x003A (COLON), and
+  // ToZeroPaddedDecimalString(minutes, 2).
+  return u"" + sign + toZeroPaddedDecimalString(hours, 2) + u":" +
+      toZeroPaddedDecimalString(minutes, 2);
 }
 
 // https://www.unicode.org/reports/tr35/tr35-31/tr35-dates.html#Date_Field_Symbol_Table
@@ -696,11 +1325,45 @@ std::u16string getDefaultHourCycle(NSLocale *locale) {
       return u"h12";
     } else if (c16 == u'K') {
       return u"h11";
+    } else if (c16 == u'k') {
+      return u"h24";
+    }
+  }
+
+  return u"h23";
+}
+
+std::u16string getDefaultHourCycle24(NSLocale *locale) {
+  auto *formatter = [[NSDateFormatter alloc] init];
+  formatter.locale = locale;
+  [formatter setLocalizedDateFormatFromTemplate:@"Hm"];
+  auto dateFormatPattern = nsStringToU16String(formatter.dateFormat);
+
+  for (char16_t c16 : dateFormatPattern) {
+    if (c16 == u'k') {
+      return u"h24";
     } else if (c16 == u'H') {
       return u"h23";
     }
   }
-  return u"h24";
+  return u"h23";
+}
+
+std::u16string getDefaultHourCycle12(NSLocale *locale) {
+  auto *formatter = [[NSDateFormatter alloc] init];
+  formatter.locale = locale;
+  [formatter setLocalizedDateFormatFromTemplate:@"hm"];
+  auto dateFormatPattern = nsStringToU16String(formatter.dateFormat);
+
+  for (char16_t c16 : dateFormatPattern) {
+    if (c16 == u'h') {
+      return u"h12";
+    } else if (c16 == u'K') {
+      return u"h11";
+    }
+  }
+
+  return u"h11";
 }
 
 /// Helper to lookup a \p key in a map represented as a sorted array of pairs.
@@ -758,16 +1421,16 @@ bool isWellFormedUnitIdentifier(std::u16string_view unitIdentifier) {
   //  true, then a. Return true.
   if (isSanctionedSimpleUnitIdentifier(unitIdentifier))
     return true;
-  //  2. If the substring "-per-" does not occur exactly once in unitIdentifier,
-  //  then a. Return false.
+  //  2. If the substring "-per-" does not occur exactly once in
+  //  unitIdentifier, then a. Return false.
   std::u16string_view fractionDelimiter = u"-per-";
   auto foundPos = unitIdentifier.find(fractionDelimiter);
   if (foundPos == std::u16string_view::npos)
     return false;
-  //  3. Let numerator be the substring of unitIdentifier from the beginning to
-  //  just before "-per-".
-  //  4. If the result of IsSanctionedSimpleUnitIdentifier(numerator) is false,
-  //  then a. Return false.
+  //  3. Let numerator be the substring of unitIdentifier from the beginning
+  //  to just before "-per-".
+  //  4. If the result of IsSanctionedSimpleUnitIdentifier(numerator) is
+  //  false, then a. Return false.
   auto numerator = unitIdentifier.substr(0, foundPos);
   if (!isSanctionedSimpleUnitIdentifier(numerator))
     return false;
@@ -877,13 +1540,13 @@ uint8_t getCurrencyDigits(std::u16string_view code) {
       {u"UYW", 4}, {u"VND", 0}, {u"VUV", 0}, {u"XAF", 0}, {u"XOF", 0},
       {u"XPF", 0}};
   //  1. If the ISO 4217 currency and funds code list contains currency as an
-  //  alphabetic code, return the minor unit value corresponding to the currency
-  //  from the list; otherwise, return 2.
+  //  alphabetic code, return the minor unit value corresponding to the
+  //  currency from the list; otherwise, return 2.
   if (auto digitsOpt = pairMapLookup(currencies, code))
     return *digitsOpt;
   return 2;
 }
-}
+} // namespace
 
 /// https://402.ecma-international.org/8.0/#sec-intl.getcanonicallocales
 vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
@@ -986,7 +1649,8 @@ vm::CallResult<std::vector<std::u16string>> Collator::supportedLocalesOf(
   if (LLVM_UNLIKELY(requestedLocalesRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   // 3. Return ? SupportedLocales(availableLocales, requestedLocales, options)
-  return supportedLocales(availableLocales, *requestedLocalesRes);
+  return supportedLocales(
+      runtime, availableLocales, *requestedLocalesRes, options);
 }
 
 /// https://402.ecma-international.org/8.0/#sec-initializecollator
@@ -1013,7 +1677,7 @@ vm::ExecutionStatus CollatorApple::initialize(
   // 6. Else,
   // a. Let localeData be %Collator%.[[SearchLocaleData]].
   // 7. Let opt be a new Record.
-  std::unordered_map<std::u16string, std::u16string> opt;
+  StringRecord opt;
   // 8. Let matcher be ? GetOption(options, "localeMatcher", "string", «
   //    "lookup", "best fit" », "best fit").
   // 9. Set opt.[[localeMatcher]] to matcher.
@@ -1070,29 +1734,23 @@ vm::ExecutionStatus CollatorApple::initialize(
   // 20. Set collator.[[Locale]] to r.[[locale]].
   locale_ = std::move(r.locale);
   // 21. Let collation be r.[[co]].
-  auto coIt = r.extensions.find(u"co");
+  auto collation = r.extensions.at(u"co");
   // 22. If collation is null, let collation be "default".
   // 23. Set collator.[[Collation]] to collation.
-  if (coIt == r.extensions.end())
-    collation_ = u"default";
-  else
-    collation_ = std::move(coIt->second);
+  if (collation) {
+    collation_ = *collation;
+  }
   // 24. If relevantExtensionKeys contains "kn", then
   // a. Set collator.[[Numeric]] to ! SameValue(r.[[kn]], "true").
-  auto knIt = r.extensions.find(u"kn");
-  if (knIt == r.extensions.end())
-    numeric_ = false;
-  else
-    numeric_ = (knIt->second == u"true");
+  auto numeric = r.extensions.at(u"kn") == u"true";
+  numeric_ = numeric;
 
   // 25. If relevantExtensionKeys contains "kf", then
   // a. Set collator.[[CaseFirst]] to r.[[kf]].
-  auto kfIt = r.extensions.find(u"kf");
-  if (kfIt == r.extensions.end())
-    caseFirst_ = u"false";
-  else
-    caseFirst_ = kfIt->second;
-
+  auto caseFirst = r.extensions.at(u"kf");
+  if (caseFirst) {
+    caseFirst_ = *caseFirst;
+  }
   // 26. Let sensitivity be ? GetOption(options, "sensitivity", "string", «
   // "base", "accent", "case", "variant" », undefined).
   static constexpr std::u16string_view sensitivityOpts[] = {
@@ -1242,6 +1900,7 @@ class DateTimeFormatApple : public DateTimeFormat {
   // [[Locale]] is a String value with the language tag of the locale whose
   // localization is used for formatting.
   std::u16string locale_;
+  std::u16string dataLocale_;
   // [[Calendar]] is a String value with the "type" given in Unicode Technical
   // Standard 35 for the calendar used for formatting.
   std::optional<std::u16string> calendar_;
@@ -1254,6 +1913,7 @@ class DateTimeFormatApple : public DateTimeFormat {
   // [[TimeZone]] is a String value with the IANA time zone name of the time
   // zone used for formatting.
   std::u16string timeZone_;
+  int timeZoneOffsetMinutes_;
   // [[Weekday]], [[Era]], [[Year]], [[Month]], [[Day]], [[DayPeriod]],
   // [[Hour]], [[Minute]], [[Second]], [[TimeZoneName]] are each either
   // undefined, indicating that the component is not used for formatting, or one
@@ -1309,7 +1969,8 @@ vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
   auto requestedLocales = getCanonicalLocales(runtime, locales);
   const std::vector<std::u16string> &availableLocales = getAvailableLocales();
   // 3. Return ? (availableLocales, requestedLocales, options).
-  return supportedLocales(availableLocales, requestedLocales.getValue());
+  return supportedLocales(
+      runtime, availableLocales, requestedLocales.getValue(), options);
 }
 
 // Implementation of
@@ -1319,6 +1980,7 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
     const std::vector<std::u16string> &locales,
     const Options &inputOptions) noexcept {
   // 1. Let requestedLocales be ? CanonicalizeLocaleList(locales).
+
   auto requestedLocalesRes = canonicalizeLocaleList(runtime, locales);
   if (LLVM_UNLIKELY(requestedLocalesRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
@@ -1328,7 +1990,7 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
     return vm::ExecutionStatus::EXCEPTION;
   auto options = *optionsRes;
   // 3. Let opt be a new Record.
-  std::unordered_map<std::u16string, std::u16string> opt;
+  StringRecord opt;
   // 4. Let matcher be ? GetOption(options, "localeMatcher", "string",
   // «"lookup", "best fit" », "best fit").
   auto matcherRes = getOptionString(
@@ -1360,9 +2022,18 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
   }
   // 9. Let numberingSystem be ? GetOption(options, "numberingSystem",
   // "string", undefined, undefined).
+  auto numberingSystemRes =
+      getOptionString(runtime, options, u"numberingSystem", {}, {});
   // 10. If numberingSystem is not undefined, then
-  // a. If numberingSystem does not match the Unicode Locale Identifier
-  // type nonterminal, throw a RangeError exception.
+  if (numberingSystemRes->has_value()) {
+    auto numberingSystemOpt = *numberingSystemRes;
+    // a. If numberingSystem does not match the Unicode Locale Identifier
+    // type nonterminal, throw a RangeError exception.
+    if (!isUnicodeExtensionType(*numberingSystemOpt))
+      return runtime.raiseRangeError(
+          vm::TwineChar16("Invalid numbering system: ") +
+          vm::TwineChar16(numberingSystemOpt->c_str()));
+  }
   // 11. Set opt.[[nu]] to numberingSystem.
   opt.emplace(u"nu", u"");
   // 12. Let hour12 be ? GetOption(options, "hour12", "boolean",
@@ -1376,21 +2047,19 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
       getOptionString(runtime, options, u"hourCycle", hourCycles, {});
   if (LLVM_UNLIKELY(hourCycleRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
-  auto hourCycleOpt = *hourCycleRes;
+  std::optional<std::u16string> hourCycleOpt = *hourCycleRes;
   // 14. If hour12 is not undefined, then
   if (hour12.has_value())
     // a. Let hourCycle be null.
-    // NOTE: We would normally just don't add this to the "opt" map, but
-    // resolveLocale actually checks for presence of keys, even if values are
-    // null or undefined.
-    hourCycleOpt = u"";
-  if (hourCycleOpt.has_value())
-    // 15. Set opt.[[hc]] to hourCycle.
-    opt.emplace(u"hc", *hourCycleOpt);
+    hourCycleOpt = std::nullopt;
+
+  // 15. Set opt.[[hc]] to hourCycle.
+  // _If_ hourCycle has a value, add it to opt
+  // or add std::nullopt if hour12 has a value
+  if (hourCycleOpt.has_value() || hour12.has_value())
+    opt.emplace(u"hc", hourCycleOpt);
   // 16. Let localeData be %DateTimeFormat%.[[LocaleData]].
-  // NOTE: We don't actually have access to the underlying locale data, so we
-  // will use NSLocale.currentLocale instance as a substitute
-  auto localeData = NSLocale.currentLocale;
+  // NOTE: We use NSLocale as "localeData", see 23.
   // 17. Let r be ResolveLocale(%DateTimeFormat%.[[AvailableLocales]],
   // requestedLocales, opt, %DateTimeFormat%.[[RelevantExtensionKeys]],
   // localeData).
@@ -1400,75 +2069,119 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
       getAvailableLocales(), *requestedLocalesRes, opt, relevantExtensionKeys);
   // 18. Set dateTimeFormat.[[Locale]] to r.[[locale]].
   locale_ = std::move(r.locale);
+  dataLocale_ = r.dataLocale;
   // 19. Let calendar be r.[[ca]].
-  auto caIt = r.extensions.find(u"ca");
+  auto ca = r.extensions.at(u"ca");
   // 20. Set dateTimeFormat.[[Calendar]] to calendar.
-  if (caIt != r.extensions.end())
-    calendar_ = std::move(caIt->second);
+  calendar_ = ca;
   // 21. Set dateTimeFormat.[[HourCycle]] to r.[[hc]].
-  auto hcIt = r.extensions.find(u"hc");
-  if (hcIt != r.extensions.end())
-    hourCycle_ = std::move(hcIt->second);
+  auto hc = r.extensions.at(u"hc");
+  hourCycle_ = hc;
   // 22. Set dateTimeFormat.[[NumberingSystem]] to r.[[nu]].
   // 23. Let dataLocale be r.[[dataLocale]].
   auto dataLocale = r.dataLocale;
-  // 24. Let timeZone be ? Get(options, "timeZone").
+  // 23. Let dataLocaleData be localeData.[[<dataLocale>]].
+  auto dataLocaleData =
+      [NSLocale localeWithLocaleIdentifier:u16StringToNSString(dataLocale_)];
+  // 24. Let hcDefault be dataLocaleData.[[hourCycle]].
+  auto hcDefault = getDefaultHourCycle(dataLocaleData);
+  // If hour12 is true, then
+  if (hour12.has_value() && *hour12 == true) {
+    // a. If hcDefault is "h11" or "h23", let hc be "h11". Otherwise, let hc be
+    // "h12".
+    hc = getDefaultHourCycle12(dataLocaleData);
+    // 26. Else if hour12 is false, then
+  } else if (hour12.has_value() && *hour12 == false) {
+    // a. If hcDefault is "h11" or "h23", let hc be "h23". Otherwise, let hc be
+    // "h24".
+    hc = getDefaultHourCycle24(dataLocaleData);
+  } else {
+    // 27. Else,
+    //  a. Assert: hour12 is undefined.
+    //  b. Let hc be r.[[hc]].
+    hc = r.extensions.at(u"hc");
+    // c. If hc is null, set hc to hcDefault.
+    if (!hc) {
+      hc = hcDefault;
+    }
+  }
+  // 28. Set dateTimeFormat.[[HourCycle]] to hc.
+  hourCycle_ = hc;
+  // 29. Let timeZone be ? Get(options, "timeZone").
   auto timeZoneIt = options.find(u"timeZone");
   std::u16string timeZone;
-  //  25. If timeZone is undefined, then
+  // 30. If timeZone is undefined, then
   if (timeZoneIt == options.end()) {
     // a. Let timeZone be DefaultTimeZone().
     timeZone = getDefaultTimeZone();
-    // 26. Else,
+    // 31. Else,
   } else {
     // a. Let timeZone be ? ToString(timeZone).
     timeZone = timeZoneIt->second.getString();
-    // b. If the result of IsValidTimeZoneName(timeZone) is false, then
-    if (!isValidTimeZoneName(timeZone)) {
-      // i. Throw a RangeError exception.
-      return runtime.raiseRangeError("Incorrect timeZone information provided");
-    }
-    // c. Let timeZone be CanonicalizeTimeZoneName(timeZone).
-    timeZone = canonicalizeTimeZoneName(timeZone);
-  }
-  // 27. Set dateTimeFormat.[[TimeZone]] to timeZone.
-  timeZone_ = timeZone;
-  // 28. Let opt be a new Record.
-  // 29. For each row of Table 4, except the header row, in table order, do
-  // a. Let prop be the name given in the Property column of the row.
-  // b. If prop is "fractionalSecondDigits", then
-  // i. Let value be ? GetNumberOption(options, "fractionalSecondDigits", 1,
-  // 3, undefined).
-  // d. Set opt.[[<prop>]] to value.
-  // c. Else,
-  // i. Let value be ? GetOption(options, prop, "string", « the strings
-  // given in the Values column of the row », undefined).
-  // d. Set opt.[[<prop>]] to value.
-  // 30. Let dataLocaleData be localeData.[[<dataLocale>]].
-  // 31. Let matcher be ? GetOption(options, "formatMatcher", "string", «
-  // "basic", "best fit" », "best fit").
-  // 32. Let dateStyle be ? GetOption(options, "dateStyle", "string", « "full",
-  // "long", "medium", "short" », undefined).
-  static constexpr std::u16string_view dateStyles[] = {
-      u"full", u"long", u"medium", u"short"};
-  auto dateStyleRes =
-      getOptionString(runtime, options, u"dateStyle", dateStyles, {});
-  if (LLVM_UNLIKELY(dateStyleRes == vm::ExecutionStatus::EXCEPTION))
-    return vm::ExecutionStatus::EXCEPTION;
-  // 33. Set dateTimeFormat.[[DateStyle]] to dateStyle.
-  dateStyle_ = *dateStyleRes;
-  // 34. Let timeStyle be ? GetOption(options, "timeStyle", "string", « "full",
-  // "long", "medium", "short" », undefined).
-  static constexpr std::u16string_view timeStyles[] = {
-      u"full", u"long", u"medium", u"short"};
-  auto timeStyleRes =
-      getOptionString(runtime, options, u"timeStyle", timeStyles, {});
-  if (LLVM_UNLIKELY(timeStyleRes == vm::ExecutionStatus::EXCEPTION))
-    return vm::ExecutionStatus::EXCEPTION;
-  // 35. Set dateTimeFormat.[[TimeStyle]] to timeStyle.
-  timeStyle_ = *timeStyleRes;
+    auto timeZoneOffsetStringParseResult = getTimeZoneOffsetString(timeZone);
+    auto isTimeZoneOffsetString = timeZoneOffsetStringParseResult.has_value();
+    if (isTimeZoneOffsetString) {
+      // a. Let parseResult be ParseText(StringToCodePoints(timeZone),
+      // UTCOffset).
+      auto parseResult = timeZoneOffsetStringParseResult.value();
+      // c. If parseResult contains more than one MinuteSecond Parse Node, throw
+      // a RangeError exception.
+      if (parseResult.hasSecondsComponent) {
+        return runtime.raiseRangeError(
+            "TimeZone offset has unexpected seconds components");
+      }
 
-  // Initialize properties using values from the input options.
+      // d. Let offsetNanoseconds be ParseTimeZoneOffsetString(timeZone).
+      long long offsetNanoseconds = parseResult.nanoseconds;
+      // e. Let offsetMinutes be offsetNanoseconds / (6 × 10**10).
+      long long offsetMinutes = offsetNanoseconds / (6 * 1e10);
+      // f. Assert: offsetMinutes is an integer.
+      assert(
+          offsetMinutes >= NSIntegerMin && offsetMinutes <= NSIntegerMax &&
+          "Offset minutes is within an integer.");
+      // g. Set timeZone to FormatOffsetTimeZoneIdentifier(offsetMinutes).
+      timeZoneOffsetMinutes_ = static_cast<int>(offsetMinutes);
+      timeZone =
+          formatOffsetTimeZoneIdentifier(static_cast<int>(offsetMinutes));
+    } else if (isValidTimeZoneName(timeZone)) {
+      timeZone = getAvailableNamedTimeZoneIdentifier(timeZone);
+    } else {
+      // Throw a RangeError exception.
+      return runtime.raiseRangeError(
+          vm::TwineChar16("Incorrect timeZone information provided: ") +
+          vm::TwineChar16(timeZone.c_str()));
+    }
+  }
+
+  // 32. Set dateTimeFormat.[[TimeZone]] to timeZone.
+  timeZone_ = timeZone;
+  // 33. Let formatOptions be a new Record.
+  // NOTE: We use properties of this class like _<key> as
+  // formatOptions.[[<key>]]
+  // 34. Set formatOptions.[[hourCycle]] to hc.
+  // 35.  Let hasExplicitFormatComponents be false.
+  auto hasExplicitFormatComponents = false;
+
+  // 36. For each row of Table 7, except the header row, in table order, do
+  //   a. Let prop be the name given in the Property column of the row.
+  //   b. If prop is "fractionalSecondDigits", then
+  //     i. Let value be ? GetNumberOption(options, "fractionalSecondDigits", 1,
+  //     3, undefined).
+  auto fractionalSecondDigitsRes =
+      getNumberOption(runtime, options, u"fractionalSecondDigits", 1, 3, {});
+  if (LLVM_UNLIKELY(
+          fractionalSecondDigitsRes == vm::ExecutionStatus::EXCEPTION))
+    return vm::ExecutionStatus::EXCEPTION;
+  // d. Set formatOptions.[[<prop>]] to value.
+  fractionalSecondDigits_ = *fractionalSecondDigitsRes;
+  // e. If value is not undefined, then
+  if (fractionalSecondDigits_)
+    // i. Set hasExplicitFormatComponents to true.
+    hasExplicitFormatComponents = true;
+  // c. Else,
+  //   i. Let values be a List whose elements are the strings given in the
+  //   Values column of the row. ii. Let value be ? GetOption(options, prop,
+  //   string, values, undefined).
   static constexpr std::u16string_view weekdayValues[] = {
       u"narrow", u"short", u"long"};
   auto weekdayRes =
@@ -1476,33 +2189,68 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
   if (LLVM_UNLIKELY(weekdayRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   weekday_ = *weekdayRes;
+  // e. If value is not undefined, then
+  if (weekday_)
+    // i. Set hasExplicitFormatComponents to true.
+    hasExplicitFormatComponents = true;
 
+  // i. Let values be a List whose elements are the strings given in the Values
+  // column of the row. ii. Let value be ? GetOption(options, prop, string,
+  // values, undefined).
   static constexpr std::u16string_view eraValues[] = {
       u"narrow", u"short", u"long"};
   auto eraRes = getOptionString(runtime, options, u"era", eraValues, {});
   if (LLVM_UNLIKELY(eraRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   era_ = *eraRes;
+  // e. If value is not undefined, then
+  if (era_)
+    // i. Set hasExplicitFormatComponents to true.
+    hasExplicitFormatComponents = true;
 
+  // i. Let values be a List whose elements are the strings given in the Values
+  // column of the row. ii. Let value be ? GetOption(options, prop, string,
+  // values, undefined).
   static constexpr std::u16string_view yearValues[] = {u"2-digit", u"numeric"};
   auto yearRes = getOptionString(runtime, options, u"year", yearValues, {});
   if (LLVM_UNLIKELY(yearRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   year_ = *yearRes;
+  // e. If value is not undefined, then
+  if (year_)
+    // i. Set hasExplicitFormatComponents to true.
+    hasExplicitFormatComponents = true;
 
+  // i. Let values be a List whose elements are the strings given in the Values
+  // column of the row. ii. Let value be ? GetOption(options, prop, string,
+  // values, undefined).
   static constexpr std::u16string_view monthValues[] = {
       u"2-digit", u"numeric", u"narrow", u"short", u"long"};
   auto monthRes = getOptionString(runtime, options, u"month", monthValues, {});
   if (LLVM_UNLIKELY(monthRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   month_ = *monthRes;
+  // e. If value is not undefined, then
+  if (month_)
+    // i. Set hasExplicitFormatComponents to true.
+    hasExplicitFormatComponents = true;
 
+  // i. Let values be a List whose elements are the strings given in the Values
+  // column of the row. ii. Let value be ? GetOption(options, prop, string,
+  // values, undefined).
   static constexpr std::u16string_view dayValues[] = {u"2-digit", u"numeric"};
   auto dayRes = getOptionString(runtime, options, u"day", dayValues, {});
   if (LLVM_UNLIKELY(dayRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   day_ = *dayRes;
+  // e. If value is not undefined, then
+  if (day_)
+    // i. Set hasExplicitFormatComponents to true.
+    hasExplicitFormatComponents = true;
 
+  // i. Let values be a List whose elements are the strings given in the Values
+  // column of the row. ii. Let value be ? GetOption(options, prop, string,
+  // values, undefined).
   static constexpr std::u16string_view dayPeriodValues[] = {
       u"narrow", u"short", u"long"};
   auto dayPeriodRes =
@@ -1510,13 +2258,27 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
   if (LLVM_UNLIKELY(dayPeriodRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   dayPeriod_ = *dayPeriodRes;
+  // e. If value is not undefined, then
+  if (dayPeriod_)
+    // i. Set hasExplicitFormatComponents to true.
+    hasExplicitFormatComponents = true;
 
+  // i. Let values be a List whose elements are the strings given in the Values
+  // column of the row. ii. Let value be ? GetOption(options, prop, string,
+  // values, undefined).
   static constexpr std::u16string_view hourValues[] = {u"2-digit", u"numeric"};
   auto hourRes = getOptionString(runtime, options, u"hour", hourValues, {});
   if (LLVM_UNLIKELY(hourRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   hour_ = *hourRes;
+  // e. If value is not undefined, then
+  if (hour_)
+    // i. Set hasExplicitFormatComponents to true.
+    hasExplicitFormatComponents = true;
 
+  // i. Let values be a List whose elements are the strings given in the Values
+  // column of the row. ii. Let value be ? GetOption(options, prop, string,
+  // values, undefined).
   static constexpr std::u16string_view minuteValues[] = {
       u"2-digit", u"numeric"};
   auto minuteRes =
@@ -1524,7 +2286,14 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
   if (LLVM_UNLIKELY(minuteRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   minute_ = *minuteRes;
+  // e. If value is not undefined, then
+  if (minute_)
+    // i. Set hasExplicitFormatComponents to true.
+    hasExplicitFormatComponents = true;
 
+  // i. Let values be a List whose elements are the strings given in the Values
+  // column of the row. ii. Let value be ? GetOption(options, prop, string,
+  // values, undefined).
   static constexpr std::u16string_view secondValues[] = {
       u"2-digit", u"numeric"};
   auto secondRes =
@@ -1532,16 +2301,15 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
   if (LLVM_UNLIKELY(secondRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   second_ = *secondRes;
+  // e. If value is not undefined, then
+  if (second_)
+    // i. Set hasExplicitFormatComponents to true.
+    hasExplicitFormatComponents = true;
 
-  auto fractionalSecondDigitsRes =
-      getNumberOption(runtime, options, u"fractionalSecondDigits", 1, 3, {});
-  if (LLVM_UNLIKELY(
-          fractionalSecondDigitsRes == vm::ExecutionStatus::EXCEPTION))
-    return vm::ExecutionStatus::EXCEPTION;
-  fractionalSecondDigits_ = *fractionalSecondDigitsRes;
-
-  // NOTE: "shortOffset", "longOffset", "shortGeneric", "longGeneric"
-  // are specified here:
+  // i. Let values be a List whose elements are the strings given in the Values
+  // column of the row. ii. Let value be ? GetOption(options, prop, string,
+  // values, undefined). NOTE: "shortOffset", "longOffset", "shortGeneric",
+  // "longGeneric" are specified here:
   // https://tc39.es/proposal-intl-extend-timezonename
   // they are not in ecma402 spec, but there is a test for them:
   // "test262/test/intl402/DateTimeFormat/constructor-options-timeZoneName-valid.js"
@@ -1557,85 +2325,77 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
   if (LLVM_UNLIKELY(timeZoneNameRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   timeZoneName_ = *timeZoneNameRes;
-  // NOTE: We don't have access to localeData, instead we'll defer to NSLocale
-  // wherever it is needed.
-  // 36. If dateStyle is not undefined or timeStyle is not undefined, then
-  // a. For each row in Table 4, except the header row, do
-  // i. Let prop be the name given in the Property column of the row.
-  // ii. Let p be opt.[[<prop>]].
-  // iii. If p is not undefined, then
-  // 1. Throw a TypeError exception.
-  // b. Let styles be dataLocaleData.[[styles]].[[<calendar>]].
-  // c. Let bestFormat be DateTimeStyleFormat(dateStyle, timeStyle, styles).
-  // 37. Else,
-  // a. Let formats be dataLocaleData.[[formats]].[[<calendar>]].
-  // b. If matcher is "basic", then
-  // i. Let bestFormat be BasicFormatMatcher(opt, formats).
-  // c. Else,
-  // i. Let bestFormat be BestFitFormatMatcher(opt, formats).
-  // 38. For each row in Table 4, except the header row, in table order, do
-  // for (auto const &row : table4) {
-  // a. Let prop be the name given in the Property column of the row.
-  // auto prop = row.first;
-  // b. If bestFormat has a field [[<prop>]], then
-  // i. Let p be bestFormat.[[<prop>]].
-  // ii. Set dateTimeFormat's internal slot whose name is the Internal
-  // Slot column of the row to p.
-  // 39. If dateTimeFormat.[[Hour]] is undefined, then
-  if (!hour_.has_value()) {
+  // e. If value is not undefined, then
+  if (timeZoneName_)
+    // i. Set hasExplicitFormatComponents to true.
+    hasExplicitFormatComponents = true;
+
+  // 37. Let matcher be ? GetOption(options, "formatMatcher", string, « "basic",
+  // "best fit" », "best fit").
+  auto formatMatcherRes = getOptionString(
+      runtime, options, u"formatMatcher", {u"basic", u"best fit"}, u"best fit");
+  if (LLVM_UNLIKELY(formatMatcherRes == vm::ExecutionStatus::EXCEPTION))
+    return vm::ExecutionStatus::EXCEPTION;
+
+  // 38. Let dateStyle be ? GetOption(options, "dateStyle", string, « "full",
+  // "long", "medium", "short" », undefined).
+  static constexpr std::u16string_view dateStyles[] = {
+      u"full", u"long", u"medium", u"short"};
+  auto dateStyleRes =
+      getOptionString(runtime, options, u"dateStyle", dateStyles, {});
+  if (LLVM_UNLIKELY(dateStyleRes == vm::ExecutionStatus::EXCEPTION))
+    return vm::ExecutionStatus::EXCEPTION;
+
+  // 39. Set dateTimeFormat.[[DateStyle]] to dateStyle.
+  dateStyle_ = *dateStyleRes;
+  // 40. Let timeStyle be ? GetOption(options, "timeStyle", string, « "full",
+  // "long", "medium", "short" », undefined).
+  static constexpr std::u16string_view timeStyles[] = {
+      u"full", u"long", u"medium", u"short"};
+  auto timeStyleRes =
+      getOptionString(runtime, options, u"timeStyle", timeStyles, {});
+  if (LLVM_UNLIKELY(timeStyleRes == vm::ExecutionStatus::EXCEPTION))
+    return vm::ExecutionStatus::EXCEPTION;
+  // 41. Set dateTimeFormat.[[TimeStyle]] to timeStyle.
+  timeStyle_ = *timeStyleRes;
+
+  // 42. If dateStyle is not undefined or timeStyle is not undefined, then
+  if (dateStyle_.has_value() || timeStyle_.has_value()) {
+    // a. If hasExplicitFormatComponents is true, then
+    if (hasExplicitFormatComponents) {
+      // i. Throw a TypeError exception.
+      return runtime.raiseTypeError(
+          "Cannot use explicit format options with dateStyle or timeStyle");
+    }
+    // b. Let styles be dataLocaleData.[[styles]].[[<resolvedCalendar>]].
+    // c. Let bestFormat be DateTimeStyleFormat(dateStyle, timeStyle, styles).
+  }
+  // 43. Else,
+  //   a. Let formats be dataLocaleData.[[formats]].[[<resolvedCalendar>]].
+  //   b. If matcher is "basic", then
+  //     i. Let bestFormat be BasicFormatMatcher(formatOptions, formats).
+  //   c. Else,
+  //     i. Let bestFormat be BestFitFormatMatcher(formatOptions, formats).
+  // 44. For each row in Table 7, except the header row, in table order, do
+  //   a. Let prop be the name given in the Property column of the row.
+  //   b. If bestFormat has a field [[<prop>]], then
+  //     i. Let p be bestFormat.[[<prop>]].
+  //     ii. Set dateTimeFormat's internal slot whose name is the Internal Slot
+  //     column of the row to p.
+  // 45. If dateTimeFormat.[[Hour]] is undefined, then
+  if (!hour_.has_value() && !timeStyle_.has_value()) {
     // a. Set dateTimeFormat.[[HourCycle]] to undefined.
     hourCycle_ = std::nullopt;
-    // b. Let pattern be bestFormat.[[pattern]].
-    // c. Let rangePatterns be bestFormat.[[rangePatterns]].
-    // 40. Else,
-  } else {
-    // a. Let hcDefault be dataLocaleData.[[hourCycle]].
-    auto hcDefault = getDefaultHourCycle(localeData);
-    // b. Let hc be dateTimeFormat.[[HourCycle]].
-    auto hc = hourCycle_;
-    // c. If hc is null, then
-    if (!hc.has_value())
-      // i. Set hc to hcDefault.
-      hc = hcDefault;
-    // d. If hour12 is not undefined, then
-    if (hour12.has_value()) {
-      // i. If hour12 is true, then
-      if (*hour12 == true) {
-        // 1. If hcDefault is "h11" or "h23", then
-        if (hcDefault == u"h11" || hcDefault == u"h23") {
-          // a. Set hc to "h11".
-          hc = u"h11";
-          // 2. Else,
-        } else {
-          // a. Set hc to "h12".
-          hc = u"h12";
-        }
-        // ii. Else,
-      } else {
-        // 1. Assert: hour12 is false.
-        // 2. If hcDefault is "h11" or "h23", then
-        if (hcDefault == u"h11" || hcDefault == u"h23") {
-          // a. Set hc to "h23".
-          hc = u"h23";
-          // 3. Else,
-        } else {
-          // a. Set hc to "h24".
-          hc = u"h24";
-        }
-      }
-    }
-    // e. Set dateTimeFormat.[[HourCycle]] to hc.
-    hourCycle_ = hc;
-    // f. If dateTimeformat.[[HourCycle]] is "h11" or "h12", then
-    // i. Let pattern be bestFormat.[[pattern12]].
-    // ii. Let rangePatterns be bestFormat.[[rangePatterns12]].
-    // g. Else,
-    // i. Let pattern be bestFormat.[[pattern]].
-    // ii. Let rangePatterns be bestFormat.[[rangePatterns]].
   }
-  // 41. Set dateTimeFormat.[[Pattern]] to pattern.
-  // 42. Set dateTimeFormat.[[RangePatterns]] to rangePatterns.
-  // 43. Return dateTimeFormat.
+  // 46. If dateTimeFormat.[[HourCycle]] is "h11" or "h12", then
+  //   a. Let pattern be bestFormat.[[pattern12]].
+  //   b. Let rangePatterns be bestFormat.[[rangePatterns12]].
+  // 47. Else,
+  //   a. Let pattern be bestFormat.[[pattern]].
+  //   b. Let rangePatterns be bestFormat.[[rangePatterns]].
+  // 48. Set dateTimeFormat.[[Pattern]] to pattern.
+  // 49. Set dateTimeFormat.[[RangePatterns]] to rangePatterns.
+  // 50. Return dateTimeFormat.
   initializeNSDateFormatter();
   return vm::ExecutionStatus::RETURNED;
 }
@@ -1705,6 +2465,14 @@ void DateTimeFormatApple::initializeNSDateFormatter() noexcept {
                                        kLongGeneric = u"longGeneric";
 
   nsDateFormatter_ = [[NSDateFormatter alloc] init];
+  nsDateFormatter_.locale =
+      [[NSLocale alloc] initWithLocaleIdentifier:u16StringToNSString(locale_)];
+  if (calendar_) {
+    nsDateFormatter_.calendar = [[NSCalendar alloc]
+        initWithCalendarIdentifier:u16StringToNSString(
+                                       getNSCalendarIdentifier(*calendar_))];
+  }
+
   if (timeStyle_.has_value()) {
     if (*timeStyle_ == kFull) {
       nsDateFormatter_.timeStyle = NSDateFormatterFullStyle;
@@ -1729,13 +2497,14 @@ void DateTimeFormatApple::initializeNSDateFormatter() noexcept {
       nsDateFormatter_.dateStyle = NSDateFormatterShortStyle;
     }
   }
-  nsDateFormatter_.timeZone =
-      [[NSTimeZone alloc] initWithName:u16StringToNSString(timeZone_)];
-  nsDateFormatter_.locale =
-      [[NSLocale alloc] initWithLocaleIdentifier:u16StringToNSString(locale_)];
-  if (calendar_)
-    nsDateFormatter_.calendar = [[NSCalendar alloc]
-        initWithCalendarIdentifier:u16StringToNSString(*calendar_)];
+
+  if (timeZone_.size() > 0 && (timeZone_[0] == u'+' || timeZone_[0] == u'-')) {
+    nsDateFormatter_.timeZone =
+        [NSTimeZone timeZoneForSecondsFromGMT:60 * timeZoneOffsetMinutes_];
+  } else {
+    nsDateFormatter_.timeZone = createTimeZone(timeZone_);
+  }
+
   if (timeStyle_.has_value() || dateStyle_.has_value())
     return;
   // The following options cannot be used in conjunction with timeStyle or
@@ -2029,6 +2798,8 @@ class NumberFormatApple : public NumberFormat {
   NSMeasurementFormatter *nsMeasurementFormatter_;
   NSUnit *nsUnit_;
 
+  std::optional<std::u16string> numberingSystem_;
+
   vm::ExecutionStatus setNumberFormatUnitOptions(
       vm::Runtime &runtime,
       const Options &options) noexcept;
@@ -2054,7 +2825,8 @@ vm::CallResult<std::vector<std::u16string>> NumberFormat::supportedLocalesOf(
   // 2. Let requestedLocales be ? CanonicalizeLocaleList(locales).
   auto requestedLocales = getCanonicalLocales(runtime, locales);
   // 3. Return ? (availableLocales, requestedLocales, options).
-  return supportedLocales(availableLocales, requestedLocales.getValue());
+  return supportedLocales(
+      runtime, availableLocales, requestedLocales.getValue(), options);
 }
 
 // https://402.ecma-international.org/8.0/#sec-setnumberformatunitoptions
@@ -2269,7 +3041,7 @@ vm::ExecutionStatus NumberFormatApple::initialize(
     return vm::ExecutionStatus::EXCEPTION;
   // 2. Set options to ? CoerceOptionsToObject(options).
   // 3. Let opt be a new Record.
-  std::unordered_map<std::u16string, std::u16string> opt;
+  StringRecord opt;
   // Create a copy of the unordered map &options
   // 4. Let matcher be ? GetOption(options, "localeMatcher", "string", «
   // "lookup", "best fit" », "best fit").
@@ -2314,6 +3086,8 @@ vm::ExecutionStatus NumberFormatApple::initialize(
   // 12. Set numberFormat.[[DataLocale]] to r.[[dataLocale]].
   dataLocale_ = r.dataLocale;
   // 13. Set numberFormat.[[NumberingSystem]] to r.[[nu]].
+  numberingSystem_ = r.extensions.at(u"nu");
+
   // 14. Perform ? SetNumberFormatUnitOptions(numberFormat, options).
   auto setUnitOptionsRes = setNumberFormatUnitOptions(runtime, options);
   if (LLVM_UNLIKELY(setUnitOptionsRes == vm::ExecutionStatus::EXCEPTION))
@@ -2525,8 +3299,7 @@ std::u16string NumberFormat::format(double number) noexcept {
   return static_cast<NumberFormatApple *>(this)->format(number);
 }
 
-std::vector<std::unordered_map<std::u16string, std::u16string>>
-NumberFormat::formatToParts(double number) noexcept {
+std::vector<Part> NumberFormat::formatToParts(double number) noexcept {
   llvm_unreachable("formatToParts is unimplemented on Apple platforms");
 }
 

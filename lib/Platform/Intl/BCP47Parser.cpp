@@ -354,7 +354,7 @@ ParsedLocaleIdentifier::parse(const std::u16string &localeId) {
 
 // https://unicode.org/reports/tr35/#Canonical_Unicode_Locale_Identifiers
 // https://tc39.es/ecma402/#sec-canonicalizeunicodelocaleid
-std::u16string ParsedLocaleIdentifier::canonicalize() const {
+std::u16string ParsedLocaleIdentifier::canonicalizeLocaleId() const {
   std::u16string canoLocaleId;
 
   // Append unicode_language_id
@@ -380,6 +380,14 @@ std::u16string ParsedLocaleIdentifier::canonicalize() const {
     for (const auto &subtag : languageIdentifier.variantSubtagList)
       canoLocaleId.append(u"-").append(subtag);
   }
+
+  return canoLocaleId;
+}
+
+// https://unicode.org/reports/tr35/#Canonical_Unicode_Locale_Identifiers
+// https://tc39.es/ecma402/#sec-canonicalizeunicodelocaleid
+std::u16string ParsedLocaleIdentifier::canonicalizeExtensionString() const {
+  std::u16string canoLocaleId = u"";
 
   // Any extensions are in alphabetical order by their singleton (eg,
   // en-t-xxx-u-yyy, not en-u-yyy-t-xxx).
@@ -456,6 +464,14 @@ std::u16string ParsedLocaleIdentifier::canonicalize() const {
     canoLocaleId.append(u"-x-");
     canoLocaleId.append(puExtensions);
   }
+
+  return canoLocaleId;
+}
+
+// https://unicode.org/reports/tr35/#Canonical_Unicode_Locale_Identifiers
+// https://tc39.es/ecma402/#sec-canonicalizeunicodelocaleid
+std::u16string ParsedLocaleIdentifier::canonicalize() const {
+  std::u16string canoLocaleId = canonicalizeLocaleId().append(canonicalizeExtensionString());
 
   return canoLocaleId;
 }
