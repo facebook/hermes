@@ -14,11 +14,11 @@ const keys = {
 
 class Test {
   [keys.private]() {
-    console.log('Hello from public method!');
+    print('Hello from private method!');
   }
 
   [keys.public]() {
-    console.log('Hello from private method!');
+    print('Hello from public method!');
   }
 }
 

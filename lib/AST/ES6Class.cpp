@@ -10,59 +10,59 @@
 #include "hermes/Parser/JSLexer.h"
 #include "llvh/ADT/StringRef.h"
 
-namespace {
+// namespace {
 
-/// Identifies a class member, like a method or a static property.
-/// A Class can have the same property name in static and non static
-/// version, in which case they are considered to be different.
-struct ClassMemberKey {
-  hermes::Identifier identifier;
-  bool isStatic;
+// /// Identifies a class member, like a method or a static property.
+// /// A Class can have the same property name in static and non static
+// /// version, in which case they are considered to be different.
+// struct ClassMemberKey {
+//   hermes::Identifier identifier;
+//   bool isStatic;
 
-  ClassMemberKey(hermes::Identifier identifier, bool isStatic)
-      : identifier(identifier), isStatic(isStatic) {}
+//   ClassMemberKey(hermes::Identifier identifier, bool isStatic)
+//       : identifier(identifier), isStatic(isStatic) {}
 
-  bool operator==(const ClassMemberKey &other) const {
-    return identifier == other.identifier && isStatic == other.isStatic;
-  }
+//   bool operator==(const ClassMemberKey &other) const {
+//     return identifier == other.identifier && isStatic == other.isStatic;
+//   }
 
-  bool operator!=(const ClassMemberKey &other) const {
-    return !(*this == other);
-  }
-};
+//   bool operator!=(const ClassMemberKey &other) const {
+//     return !(*this == other);
+//   }
+// };
 
-} // namespace
+// } // namespace
 
-// Enable using ClassMemberKey in DenseMap.
-namespace llvh {
+// // Enable using ClassMemberKey in DenseMap.
+// namespace llvh {
 
-template <>
-struct DenseMapInfo<ClassMemberKey> {
-  static inline ClassMemberKey getEmptyKey() {
-    return ClassMemberKey(
-        hermes::Identifier::getFromPointer(
-            DenseMapInfo<hermes::UniqueString *>::getEmptyKey()),
-        false);
-  }
-  static inline ClassMemberKey getTombstoneKey() {
-    return ClassMemberKey(
-        hermes::Identifier::getFromPointer(
-            DenseMapInfo<hermes::UniqueString *>::getTombstoneKey()),
-        false);
-  }
-  static inline unsigned getHashValue(ClassMemberKey memberKey) {
-    auto identifierHash = DenseMapInfo<hermes::UniqueString *>::getHashValue(
-        memberKey.identifier.getUnderlyingPointer());
-    return static_cast<unsigned>(
-        llvh::hash_combine(identifierHash, memberKey.isStatic));
-  }
+// template <>
+// struct DenseMapInfo<ClassMemberKey> {
+//   static inline ClassMemberKey getEmptyKey() {
+//     return ClassMemberKey(
+//         hermes::Identifier::getFromPointer(
+//             DenseMapInfo<hermes::UniqueString *>::getEmptyKey()),
+//         false);
+//   }
+//   static inline ClassMemberKey getTombstoneKey() {
+//     return ClassMemberKey(
+//         hermes::Identifier::getFromPointer(
+//             DenseMapInfo<hermes::UniqueString *>::getTombstoneKey()),
+//         false);
+//   }
+//   static inline unsigned getHashValue(ClassMemberKey memberKey) {
+//     auto identifierHash = DenseMapInfo<hermes::UniqueString *>::getHashValue(
+//         memberKey.identifier.getUnderlyingPointer());
+//     return static_cast<unsigned>(
+//         llvh::hash_combine(identifierHash, memberKey.isStatic));
+//   }
 
-  static inline bool isEqual(ClassMemberKey a, ClassMemberKey b) {
-    return a == b;
-  }
-};
+//   static inline bool isEqual(ClassMemberKey a, ClassMemberKey b) {
+//     return a == b;
+//   }
+// };
 
-} // namespace llvh
+// } // namespace llvh
 
 namespace {
 using namespace hermes;
@@ -135,15 +135,21 @@ struct VisitedClass {
   }
 };
 
-struct ResolvedClassMember {
-  ESTree::StringLiteralNode *name;
-  bool isStatic;
-  ESTree::MethodDefinitionNode *method = nullptr;
-  ESTree::MethodDefinitionNode *getter = nullptr;
-  ESTree::MethodDefinitionNode *setter = nullptr;
+enum class ClassMemberKind {
+  Constructor,
+  Method,
+  PropertyGetter,
+  PropertySetter
+};
 
-  ResolvedClassMember(ESTree::StringLiteralNode *name, bool isStatic)
-      : name(name), isStatic(isStatic) {}
+struct ResolvedClassMember {
+  ESTree::Node *key;
+  bool isStatic;
+  ClassMemberKind kind;
+  ESTree::MethodDefinitionNode *definitionNode;
+
+  ResolvedClassMember(ESTree::Node *key, bool isStatic, ClassMemberKind kind, ESTree::MethodDefinitionNode *definitionNode)
+      : key(key), isStatic(isStatic), kind(kind), definitionNode(definitionNode) {}
 };
 
 struct ResolvedClassMembers {
@@ -152,12 +158,7 @@ struct ResolvedClassMembers {
   llvh::SmallVector<ResolvedClassMember, 8> members;
 };
 
-enum class ClassMemberKind {
-  Constructor,
-  Method,
-  PropertyGetter,
-  PropertySetter
-};
+
 
 static ClassMemberKind getClassMemberKind(
     ESTree::MethodDefinitionNode *methodDefinition) {
@@ -675,7 +676,6 @@ class ES6ClassesTransformations {
 
   ResolvedClassMembers resolveClassMembers(ESTree::ClassBodyNode *classBody) {
     ResolvedClassMembers resolvedClassMembers;
-    llvh::DenseMap<ClassMemberKey, size_t> classMemberIndexByIdentifier;
 
     for (auto &entry : classBody->_body) {
       if (auto *methodDefinition =
@@ -687,63 +687,21 @@ class ES6ClassesTransformations {
           continue;
         }
 
-        auto *identifierNode =
-            llvh::cast<ESTree::IdentifierNode>(methodDefinition->_key);
-        auto memberKey = ClassMemberKey(
-            Identifier::getFromPointer(identifierNode->_name),
-            methodDefinition->_static);
-
-        // Group all the MethodDefinition by the member name
-        // e.g.:
-        /**
-         Group all the MethodDefinition by the member name.
-         e.g.: class Animal {
-         get hello() {
-           return this._hello;
-         }
-
-         set hello(value) {
-             this._hello = value;
-         }
-
-         constructor(name) {
-           this.name = name
-         }
-
-         sayHello() {}
-         }`
-
-         Would be turned into an array containing the `hello` getter/setter, the
-         `constructor`, and the `sayHello` method
-         */
-        ResolvedClassMember *resolvedClassMember = nullptr;
-        auto it = classMemberIndexByIdentifier.find(memberKey);
-        if (it != classMemberIndexByIdentifier.end()) {
-          resolvedClassMember = &resolvedClassMembers.members[it->second];
+        ESTree::Node *key = nullptr;
+        if (llvh::isa<ESTree::IdentifierNode>(methodDefinition->_key)) {
+            // Turn identifier into a string literal so that we can pass it
+            // as a parameter to the defineClassProperty / defineClassMethod methods.
+            auto *identifierNode = llvh::cast<ESTree::IdentifierNode>(methodDefinition->_key);
+            key = createTransformedNode<ESTree::StringLiteralNode>(identifierNode, identifierNode->_name);
         } else {
-          auto index = resolvedClassMembers.members.size();
-          classMemberIndexByIdentifier[memberKey] = index;
-          resolvedClassMembers.members.emplace_back(
-              createTransformedNode<ESTree::StringLiteralNode>(
-                  identifierNode, identifierNode->_name),
-              memberKey.isStatic);
-          resolvedClassMember = &resolvedClassMembers.members.back();
+            key = cloneNode(methodDefinition->_key);
         }
 
-        switch (memberKind) {
-          case ClassMemberKind::Method:
-            resolvedClassMember->method = methodDefinition;
-            break;
-          case ClassMemberKind::PropertyGetter:
-            resolvedClassMember->getter = methodDefinition;
-            break;
-          case ClassMemberKind::PropertySetter:
-            resolvedClassMember->setter = methodDefinition;
-            break;
-          default:
-            hermes_fatal("Invalid ES6 class member");
-            break;
-        }
+        resolvedClassMembers.members.emplace_back(
+            key,
+            methodDefinition->_static,
+            memberKind,
+            methodDefinition);
       }
     }
 
@@ -766,38 +724,30 @@ class ES6ClassesTransformations {
     for (const auto &classMember : classMembers.members) {
       NodeVector parameters;
       parameters.append(copyIdentifier(className));
-      parameters.append(classMember.name);
+      parameters.append(classMember.key);
 
       llvh::StringRef hermesCallName;
-      ESTree::Node *srcNode = nullptr;
 
-      if (classMember.method != nullptr) {
-        srcNode = classMember.method;
-        visitMethodESTreeChildren(classMember, classMember.method);
+      auto *srcNode = classMember.definitionNode;
+      visitMethodESTreeChildren(classMember, srcNode);
+      parameters.append(srcNode->_value);
 
+      switch (classMember.kind) {
+        case ClassMemberKind::Method:
         hermesCallName = classMember.isStatic ? "defineStaticClassMethod"
                                               : "defineClassMethod";
-
-        parameters.append(classMember.method->_value);
-      } else {
-        hermesCallName = classMember.isStatic ? "defineStaticClassProperty"
-                                              : "defineClassProperty";
-
-        if (classMember.getter != nullptr) {
-          srcNode = classMember.getter;
-          visitMethodESTreeChildren(classMember, classMember.getter);
-          parameters.append(classMember.getter->_value);
-        } else {
-          parameters.append(makeUndefinedNode(classMember.setter));
-        }
-
-        if (classMember.setter != nullptr) {
-          srcNode = classMember.setter;
-          visitMethodESTreeChildren(classMember, classMember.setter);
-          parameters.append(classMember.setter->_value);
-        } else {
-          parameters.append(makeUndefinedNode(classMember.getter));
-        }
+          break;
+        case ClassMemberKind::PropertyGetter:
+          hermesCallName = classMember.isStatic ? "defineStaticClassPropertyGetter"
+                                                : "defineClassPropertyGetter";
+          break;
+        case ClassMemberKind::PropertySetter:
+          hermesCallName = classMember.isStatic ? "defineStaticClassPropertySetter"
+                                                : "defineClassPropertySetter";
+          break;
+        default:
+          hermes_fatal("Invalid ES6 class member");
+          break;
       }
 
       auto *call =
