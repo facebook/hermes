@@ -413,10 +413,41 @@ double localTime(double t) {
   return t + localTZA() + daylightSavingTA(t);
 }
 
+/// https://tc39.es/ecma262/#sec-localtime
 /// Conversion from local time to UTC.
+///
+/// There is time ambiguity when converting local time to UTC time. For example,
+/// when offsets change in backward direction (transition from DST), the same
+/// local time is repeated, and mapped to two different UTC times. When
+/// offsets change in forward direction (transition to DST), local times are
+/// skipped. ECMA262 requires that for both cases, time \t should be interpreted
+/// using the time zone offset *before* the transition.
+/// Consider time zone `America/New_York`, 1:30 AM on 5 November 2017 is
+/// repeated twice, it should be converted to UTC epoch 1509859800000
+/// (1:30 AM UTC-04) instead of 1509863400000 (1:30 AM UTC-05). And 2:30 AM on
+/// 12 March 2017 is skipped, it should be interpreted as 2:30 AM UTC-05
+/// instead of 3:30 AM UTC-04. However, in this case, both have the same UTC
+/// epoch.
 double utcTime(double t) {
   double ltza = localTZA();
-  return t - ltza - daylightSavingTA(t - ltza);
+  // To compute the DST offset, we need to use UTC time (as required by
+  // daylightSavingTA()). However, getting the exact UTC time is not possible
+  // since that would be circular. Therefore, we approximate the UTC time by
+  // subtracting the standard time adjustment and then subtracting an additional
+  // hour to comply with the spec's requirements as noted in the doc-comment.
+  //
+  // For example, imagine a transition to DST that goes from UTC+0 to UTC+1,
+  // moving 00:00 to 01:00. Any time in the skipped hour gets mapped to a
+  // UTC time before the transition when we subtract an hour (e.g., 00:30 ->
+  // 23:30), which will correctly result in DST not being in effect.
+  //
+  // Similarly, during a transition from DST back to standard time, the hour
+  // from 00:00 to 01:00 is repeated. A local time in the repeated hour
+  // similarly gets mapped to a UTC time before the transition.
+  //
+  // Note that this will not work if the timezone offset has historical/future
+  // changes (which generates a different ltza than the one obtained here).
+  return t - ltza - daylightSavingTA(t - ltza - MS_PER_HOUR);
 }
 
 //===----------------------------------------------------------------------===//
