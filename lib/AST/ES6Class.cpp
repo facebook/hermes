@@ -192,7 +192,7 @@ class ES6ClassesTransformations {
   ESTree::VisitResult visit(ESTree::ClassDeclarationNode *classDecl) {
     auto *classBody = llvh::dyn_cast<ESTree::ClassBodyNode>(classDecl->_body);
     if (classBody == nullptr) {
-      return ESTree::Unmodified;
+      return doVisitChildren(classDecl);
     }
 
     auto *expressionResult = createClass(
@@ -207,7 +207,7 @@ class ES6ClassesTransformations {
   ESTree::VisitResult visit(ESTree::ClassExpressionNode *classExpr) {
     auto *classBody = llvh::dyn_cast<ESTree::ClassBodyNode>(classExpr->_body);
     if (classBody == nullptr) {
-      return ESTree::Unmodified;
+      return doVisitChildren(classExpr);
     }
 
     return createClass(
@@ -220,7 +220,7 @@ class ES6ClassesTransformations {
   ESTree::VisitResult visit(ESTree::CallExpressionNode *callExpression) {
     auto *topClass = _currentProcessingClass;
     if (topClass == nullptr || topClass->parentClass == nullptr) {
-      return ESTree::Unmodified;
+      return doVisitChildren(callExpression);
     }
 
     if (callExpression->_callee->getKind() == ESTree::NodeKind::Super) {
@@ -238,7 +238,7 @@ class ES6ClassesTransformations {
         llvh::dyn_cast<ESTree::MemberExpressionNode>(callExpression->_callee);
     if (memberExpressionNode == nullptr ||
         memberExpressionNode->_object->getKind() != ESTree::NodeKind::Super) {
-      return ESTree::Unmodified;
+      return doVisitChildren(callExpression);
     }
 
     return createSuperMethodCall(
@@ -254,13 +254,13 @@ class ES6ClassesTransformations {
     // Convert super.property into Reflect.get(ParentClass.prototype,
     // 'property', this);
     if (memberExpression->_object->getKind() != ESTree::NodeKind::Super) {
-      return ESTree::Unmodified;
+      return doVisitChildren(memberExpression);
     }
 
     auto *topClass = _currentProcessingClass;
     if (topClass == nullptr || topClass->parentClass == nullptr) {
       // Should not happen
-      return ESTree::Unmodified;
+      return doVisitChildren(memberExpression);
     }
 
     return createGetSuperProperty(
@@ -282,6 +282,11 @@ class ES6ClassesTransformations {
   UniqueString *const identVar_;
   VisitedClass *_currentProcessingClass = nullptr;
   const ResolvedClassMember *_currentClassMember = nullptr;
+
+  ESTree::VisitResult doVisitChildren(ESTree::Node *node) {
+      visitESTreeChildren(*this, node);
+      return ESTree::Unmodified;
+  }
 
   void doCopyLocation(ESTree::Node *src, ESTree::Node *dest) {
     if (src != nullptr) {
