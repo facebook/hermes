@@ -43,6 +43,7 @@ type PatternVisitorTypeAnnotationCallback = (
   pattern: BindingName,
 ) => void;
 
+// $FlowFixMe[deprecated-type]
 function isPattern(node: ESNode): boolean %checks {
   return (
     node.type === 'Identifier' ||

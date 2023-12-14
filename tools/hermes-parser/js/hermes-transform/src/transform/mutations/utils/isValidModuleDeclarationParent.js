@@ -11,6 +11,7 @@
 import type {ESNode, ModuleDeclaration, Statement} from 'hermes-estree';
 import type {DetachedNode} from '../../../detachedNode';
 
+// $FlowFixMe[deprecated-type]
 function isModuleDeclaration(node: ESNode): boolean %checks {
   return (
     node.type === 'ImportDeclaration' ||
