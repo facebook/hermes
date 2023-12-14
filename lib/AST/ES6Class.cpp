@@ -10,60 +10,6 @@
 #include "hermes/Parser/JSLexer.h"
 #include "llvh/ADT/StringRef.h"
 
-// namespace {
-
-// /// Identifies a class member, like a method or a static property.
-// /// A Class can have the same property name in static and non static
-// /// version, in which case they are considered to be different.
-// struct ClassMemberKey {
-//   hermes::Identifier identifier;
-//   bool isStatic;
-
-//   ClassMemberKey(hermes::Identifier identifier, bool isStatic)
-//       : identifier(identifier), isStatic(isStatic) {}
-
-//   bool operator==(const ClassMemberKey &other) const {
-//     return identifier == other.identifier && isStatic == other.isStatic;
-//   }
-
-//   bool operator!=(const ClassMemberKey &other) const {
-//     return !(*this == other);
-//   }
-// };
-
-// } // namespace
-
-// // Enable using ClassMemberKey in DenseMap.
-// namespace llvh {
-
-// template <>
-// struct DenseMapInfo<ClassMemberKey> {
-//   static inline ClassMemberKey getEmptyKey() {
-//     return ClassMemberKey(
-//         hermes::Identifier::getFromPointer(
-//             DenseMapInfo<hermes::UniqueString *>::getEmptyKey()),
-//         false);
-//   }
-//   static inline ClassMemberKey getTombstoneKey() {
-//     return ClassMemberKey(
-//         hermes::Identifier::getFromPointer(
-//             DenseMapInfo<hermes::UniqueString *>::getTombstoneKey()),
-//         false);
-//   }
-//   static inline unsigned getHashValue(ClassMemberKey memberKey) {
-//     auto identifierHash = DenseMapInfo<hermes::UniqueString *>::getHashValue(
-//         memberKey.identifier.getUnderlyingPointer());
-//     return static_cast<unsigned>(
-//         llvh::hash_combine(identifierHash, memberKey.isStatic));
-//   }
-
-//   static inline bool isEqual(ClassMemberKey a, ClassMemberKey b) {
-//     return a == b;
-//   }
-// };
-
-// } // namespace llvh
-
 namespace {
 using namespace hermes;
 
@@ -148,8 +94,15 @@ struct ResolvedClassMember {
   ClassMemberKind kind;
   ESTree::MethodDefinitionNode *definitionNode;
 
-  ResolvedClassMember(ESTree::Node *key, bool isStatic, ClassMemberKind kind, ESTree::MethodDefinitionNode *definitionNode)
-      : key(key), isStatic(isStatic), kind(kind), definitionNode(definitionNode) {}
+  ResolvedClassMember(
+      ESTree::Node *key,
+      bool isStatic,
+      ClassMemberKind kind,
+      ESTree::MethodDefinitionNode *definitionNode)
+      : key(key),
+        isStatic(isStatic),
+        kind(kind),
+        definitionNode(definitionNode) {}
 };
 
 struct ResolvedClassMembers {
@@ -157,8 +110,6 @@ struct ResolvedClassMembers {
 
   llvh::SmallVector<ResolvedClassMember, 8> members;
 };
-
-
 
 static ClassMemberKind getClassMemberKind(
     ESTree::MethodDefinitionNode *methodDefinition) {
@@ -284,8 +235,8 @@ class ES6ClassesTransformations {
   const ResolvedClassMember *_currentClassMember = nullptr;
 
   ESTree::VisitResult doVisitChildren(ESTree::Node *node) {
-      visitESTreeChildren(*this, node);
-      return ESTree::Unmodified;
+    visitESTreeChildren(*this, node);
+    return ESTree::Unmodified;
   }
 
   void doCopyLocation(ESTree::Node *src, ESTree::Node *dest) {
@@ -694,19 +645,19 @@ class ES6ClassesTransformations {
 
         ESTree::Node *key = nullptr;
         if (llvh::isa<ESTree::IdentifierNode>(methodDefinition->_key)) {
-            // Turn identifier into a string literal so that we can pass it
-            // as a parameter to the defineClassProperty / defineClassMethod methods.
-            auto *identifierNode = llvh::cast<ESTree::IdentifierNode>(methodDefinition->_key);
-            key = createTransformedNode<ESTree::StringLiteralNode>(identifierNode, identifierNode->_name);
+          // Turn identifier into a string literal so that we can pass it
+          // as a parameter to the defineClassProperty / defineClassMethod
+          // methods.
+          auto *identifierNode =
+              llvh::cast<ESTree::IdentifierNode>(methodDefinition->_key);
+          key = createTransformedNode<ESTree::StringLiteralNode>(
+              identifierNode, identifierNode->_name);
         } else {
-            key = cloneNode(methodDefinition->_key);
+          key = cloneNode(methodDefinition->_key);
         }
 
         resolvedClassMembers.members.emplace_back(
-            key,
-            methodDefinition->_static,
-            memberKind,
-            methodDefinition);
+            key, methodDefinition->_static, memberKind, methodDefinition);
       }
     }
 
@@ -739,16 +690,18 @@ class ES6ClassesTransformations {
 
       switch (classMember.kind) {
         case ClassMemberKind::Method:
-        hermesCallName = classMember.isStatic ? "defineStaticClassMethod"
-                                              : "defineClassMethod";
+          hermesCallName = classMember.isStatic ? "defineStaticClassMethod"
+                                                : "defineClassMethod";
           break;
         case ClassMemberKind::PropertyGetter:
-          hermesCallName = classMember.isStatic ? "defineStaticClassPropertyGetter"
-                                                : "defineClassPropertyGetter";
+          hermesCallName = classMember.isStatic
+              ? "defineStaticClassPropertyGetter"
+              : "defineClassPropertyGetter";
           break;
         case ClassMemberKind::PropertySetter:
-          hermesCallName = classMember.isStatic ? "defineStaticClassPropertySetter"
-                                                : "defineClassPropertySetter";
+          hermesCallName = classMember.isStatic
+              ? "defineStaticClassPropertySetter"
+              : "defineClassPropertySetter";
           break;
         default:
           hermes_fatal("Invalid ES6 class member");
