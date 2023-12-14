@@ -225,18 +225,17 @@ double localTZA() {
 
 #else
 
-  ::tzset();
-
   // Get the current time in seconds (might have DST adjustment included).
-  time_t currentWithDST = std::time(nullptr);
-  if (currentWithDST == static_cast<time_t>(-1)) {
-    return 0;
-  }
+  std::time_t currentWithDST = std::time(nullptr);
 
   // Deconstruct the time into localTime.
-  std::tm *local = std::localtime(&currentWithDST);
+  // Note that localtime_r uses cached timezone information on Linux (glibc) and
+  // Windows, so the returned local time may not be computed using an updated
+  // timezone.
+  std::tm tm;
+  std::tm *local = ::localtime_r(&currentWithDST, &tm);
   if (!local) {
-    llvm_unreachable("localtime failed in localTZA()");
+    return std::numeric_limits<double>::quiet_NaN();
   }
 
   long gmtoff = local->tm_gmtoff;
@@ -379,8 +378,6 @@ double daylightSavingTA(double t) {
     return std::numeric_limits<double>::quiet_NaN();
   }
 
-  ::tzset();
-
   // Convert t to seconds and get the actual time needed.
   const double seconds = t / MS_PER_SECOND;
   // If the number of seconds is higher or lower than a unix timestamp can
@@ -397,12 +394,23 @@ double daylightSavingTA(double t) {
   // savings time calculations.
   local = detail::equivalentTime(static_cast<int64_t>(seconds));
 
-  std::tm *brokenTime = std::localtime(&local);
+  std::tm tm;
+#ifdef _WINDOWS
+  // The return value of localtime_s on Windows is an error code instead of
+  // a pointer to std::tm. For simplicity, we don't inspect the concrete error
+  // code and just return NaN.
+  auto err = ::localtime_s(&tm, &local);
+  if (!err) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+#else
+  std::tm *brokenTime = ::localtime_r(&local, &tm);
   if (!brokenTime) {
     // Local time is invalid.
     return std::numeric_limits<double>::quiet_NaN();
   }
-  return brokenTime->tm_isdst ? MS_PER_HOUR : 0;
+#endif
+  return tm.tm_isdst ? MS_PER_HOUR : 0;
 }
 
 //===----------------------------------------------------------------------===//
