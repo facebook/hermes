@@ -167,6 +167,18 @@ void FlowTypesDumper::printTypeDescription(
       printTypeRef(os, llvh::cast<ArrayType>(type)->getElement());
       os << ')';
       break;
+
+    case TypeKind::Tuple:
+      os << '(';
+      bool first = true;
+      for (Type *t : llvh::cast<TupleType>(type)->getTypes()) {
+        if (!first)
+          os << ", ";
+        first = false;
+        printTypeRef(os, t);
+      }
+      os << ')';
+      break;
   }
 
   os << '\n';

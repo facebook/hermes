@@ -122,6 +122,8 @@ llvh::StringRef TypeInfo::getKindName() const {
       return "class constructor";
     case TypeKind::Array:
       return "array";
+    case TypeKind::Tuple:
+      return "tuple";
   }
   llvm_unreachable("invalid TypeKind");
 }
@@ -425,6 +427,31 @@ bool ArrayType::_equalsImpl(const ArrayType *other, CompareState &state) const {
 
 unsigned ArrayType::_hashImpl() const {
   return (unsigned)llvh::hash_combine((unsigned)TypeKind::Array);
+}
+
+int TupleType::_compareImpl(const TupleType *other, CompareState &state) const {
+  return lexicographicalComparison(
+      types_.begin(),
+      types_.end(),
+      other->types_.begin(),
+      other->types_.end(),
+      [&state](const Type *ta, const Type *tb) {
+        return ta->info->compare(tb->info, state);
+      });
+}
+
+bool TupleType::_equalsImpl(const TupleType *other, CompareState &state) const {
+  if (types_.size() != other->types_.size())
+    return false;
+  for (size_t i = 0, e = types_.size(); i < e; ++i) {
+    if (!types_[i]->info->equals(other->types_[i]->info, state))
+      return false;
+  }
+  return true;
+}
+
+unsigned TupleType::_hashImpl() const {
+  return (unsigned)llvh::hash_combine((unsigned)TypeKind::Tuple, types_.size());
 }
 
 /// Compare two instances of the same TypeKind.

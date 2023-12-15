@@ -2140,6 +2140,18 @@ class FlowChecker::FindLoopingTypes {
     return isTypeLooping(type->getElement());
   }
 
+  bool isLooping(TupleType *type) {
+    bool result = false;
+    for (Type *t : type->getTypes()) {
+      if (isTypeLooping(t)) {
+        // Don't return here, have to run on all types so that if there's
+        // multiple looping union arms they get registered.
+        result = true;
+      }
+    }
+    return result;
+  }
+
   bool isLooping(TypedFunctionType *type) {
     bool result = false;
     result |= isTypeLooping(type->getReturnType());
@@ -2919,6 +2931,9 @@ Type *FlowChecker::parseTypeAnnotation(ESTree::Node *node) {
     case ESTree::NodeKind::ArrayTypeAnnotation:
       return parseArrayTypeAnnotation(
           llvh::cast<ESTree::ArrayTypeAnnotationNode>(node));
+    case ESTree::NodeKind::TupleTypeAnnotation:
+      return parseTupleTypeAnnotation(
+          llvh::cast<ESTree::TupleTypeAnnotationNode>(node));
     case ESTree::NodeKind::GenericTypeAnnotation:
       return parseGenericTypeAnnotation(
           llvh::cast<ESTree::GenericTypeAnnotationNode>(node));
@@ -2954,6 +2969,23 @@ Type *FlowChecker::parseArrayTypeAnnotation(
     ESTree::ArrayTypeAnnotationNode *node) {
   return flowContext_.createType(
       flowContext_.createArray(parseTypeAnnotation(node->_elementType)), node);
+}
+
+Type *FlowChecker::parseTupleTypeAnnotation(
+    ESTree::TupleTypeAnnotationNode *node) {
+  llvh::SmallVector<Type *, 4> types{};
+  for (auto &n : node->_types) {
+    if (llvh::isa<ESTree::TupleTypeSpreadElementNode>(&n)) {
+      sm_.error(n.getSourceRange(), "ft: tuple spread unsupported");
+      continue;
+    }
+    if (llvh::isa<ESTree::TupleTypeLabeledElementNode>(&n)) {
+      sm_.error(n.getSourceRange(), "ft: tuple labels unsupported");
+      continue;
+    }
+    types.push_back(parseTypeAnnotation(&n));
+  }
+  return flowContext_.createType(flowContext_.createTuple(types), node);
 }
 
 Type *FlowChecker::parseGenericTypeAnnotation(

@@ -37,6 +37,7 @@ namespace flow {
 #define _HERMES_SEMA_FLOW_COMPLEX_TYPES      \
   _HERMES_SEMA_FLOW_DEFKIND(Union)           \
   _HERMES_SEMA_FLOW_DEFKIND(Array)           \
+  _HERMES_SEMA_FLOW_DEFKIND(Tuple)           \
   _HERMES_SEMA_FLOW_DEFKIND(UntypedFunction) \
   _HERMES_SEMA_FLOW_DEFKIND(TypedFunction)   \
   _HERMES_SEMA_FLOW_DEFKIND(NativeFunction)  \
@@ -389,6 +390,31 @@ class ArrayType : public SingleType<TypeKind::Array, TypeInfo> {
  private:
   bool isInitialized() const {
     return element_ != nullptr;
+  }
+};
+
+class TupleType : public TypeInfo {
+  llvh::SmallVector<Type *, 4> types_{};
+
+ public:
+  /// Initialize a new instance.
+  explicit TupleType(llvh::ArrayRef<Type *> types) : TypeInfo(TypeKind::Tuple) {
+    types_.append(types.begin(), types.end());
+  }
+
+  llvh::ArrayRef<Type *> getTypes() const {
+    return types_;
+  }
+
+  /// Compare two instances of the same TypeKind.
+  int _compareImpl(const TupleType *other, CompareState &state) const;
+  /// Compare two instances of the same TypeKind.
+  bool _equalsImpl(const TupleType *other, CompareState &state) const;
+  /// Calculate the type-specific hash.
+  unsigned _hashImpl() const;
+
+  static bool classof(const TypeInfo *t) {
+    return t->getKind() == TypeKind::Tuple;
   }
 };
 
@@ -818,6 +844,9 @@ class FlowContext {
   ArrayType *createArray(Type *element) {
     assert(element);
     return &allocArray_.emplace_back(element);
+  }
+  TupleType *createTuple(llvh::ArrayRef<Type *> types) {
+    return &allocTuple_.emplace_back(types);
   }
   TypedFunctionType *createFunction(
       Type *returnType,

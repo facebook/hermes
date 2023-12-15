@@ -254,6 +254,7 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   Type *parseUnionTypeAnnotation(ESTree::UnionTypeAnnotationNode *node);
   Type *parseNullableTypeAnnotation(ESTree::NullableTypeAnnotationNode *node);
   Type *parseArrayTypeAnnotation(ESTree::ArrayTypeAnnotationNode *node);
+  Type *parseTupleTypeAnnotation(ESTree::TupleTypeAnnotationNode *node);
   Type *parseGenericTypeAnnotation(ESTree::GenericTypeAnnotationNode *node);
   Type *parseFunctionTypeAnnotation(ESTree::FunctionTypeAnnotationNode *node);
 
