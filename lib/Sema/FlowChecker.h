@@ -286,6 +286,7 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   }
   static CanFlowResult canAFlowIntoB(TypeInfo *a, TypeInfo *b);
   static CanFlowResult canAFlowIntoB(ClassType *a, ClassType *b);
+  static CanFlowResult canAFlowIntoB(TupleType *a, TupleType *b);
 
   /// How to handle 'this' parameters when checking if function types can flow.
   enum class ThisFlowDirection {

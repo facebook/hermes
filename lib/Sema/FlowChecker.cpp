@@ -3071,6 +3071,15 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     return {};
   }
 
+  // Tuples are invariant, so if `a` is an tuple, `b` must be an tuple with the
+  // same types.
+  if (auto *tupleA = llvh::dyn_cast<TupleType>(a)) {
+    auto *tupleB = llvh::dyn_cast<TupleType>(b);
+    if (!tupleB)
+      return {};
+    return canAFlowIntoB(tupleA, tupleB);
+  }
+
   if (ClassType *classA = llvh::dyn_cast<ClassType>(a)) {
     ClassType *classB = llvh::dyn_cast<ClassType>(b);
     if (!classB)
@@ -3100,6 +3109,25 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     cur = cur->getSuperClassInfo();
   }
   return {};
+}
+
+FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
+    TupleType *a,
+    TupleType *b) {
+  auto aTypes = a->getTypes();
+  auto bTypes = b->getTypes();
+  if (aTypes.size() != bTypes.size()) {
+    return {};
+  }
+
+  for (size_t i = 0, e = aTypes.size(); i < e; ++i) {
+    // TODO: This will be more complex when we allow variance in tuple types.
+    if (!aTypes[i]->info->equals(bTypes[i]->info)) {
+      return {};
+    }
+  }
+
+  return {.canFlow = true};
 }
 
 FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
