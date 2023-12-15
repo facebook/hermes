@@ -1105,6 +1105,14 @@ class ESTreeIRGen {
       ESTree::ArrayPatternNode *targetPat,
       Value *source);
 
+  /// Generate code for destructuring assignment to ArrayPattern from a typed
+  /// tuple.
+  void emitDestructuringTypedTuple(
+      bool declInit,
+      ESTree::ArrayPatternNode *targetPat,
+      flow::TupleType *type,
+      Value *source);
+
   /// A record used by to describe a shared exception handler. Every individual
   /// stores the caught exception in the specified location and branches to the
   /// specified block.

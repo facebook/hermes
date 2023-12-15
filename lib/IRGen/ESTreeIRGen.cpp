@@ -443,6 +443,12 @@ void ESTreeIRGen::emitDestructuringArray(
     bool declInit,
     ESTree::ArrayPatternNode *targetPat,
     Value *source) {
+  if (auto *tuple = llvh::dyn_cast<flow::TupleType>(
+          flowContext_.getNodeTypeOrAny(targetPat)->info)) {
+    emitDestructuringTypedTuple(declInit, targetPat, tuple, source);
+    return;
+  }
+
   const IteratorRecord iteratorRecord = emitGetIterator(source);
 
   /// iteratorDone = undefined.
@@ -650,6 +656,32 @@ void ESTreeIRGen::emitDestructuringArray(
         !handler.exc->hasUsers() &&
         "should not have any users if no try/catch was emitted");
     handler.exc->eraseFromParent();
+  }
+}
+
+void ESTreeIRGen::emitDestructuringTypedTuple(
+    bool declInit,
+    ESTree::ArrayPatternNode *targetPat,
+    flow::TupleType *type,
+    Value *source) {
+  size_t i = 0;
+  for (ESTree::Node &elem : targetPat->_elements) {
+    // It's possible that getting the LRef will have side effects,
+    // so we must emit it before the PrLoad.
+    // We don't need a try/catch here because there's no iterator to close
+    // in typed mode.
+    // The PrLoad itself won't have side effects.
+    LReference elemLRef = createLRef(&elem, declInit);
+    assert(
+        i < type->getTypes().size() &&
+        "index out of bounds on typechecked tuple");
+    Value *val = Builder.createPrLoadInst(
+        source,
+        i,
+        Builder.getLiteralString(llvh::Twine(i)),
+        flowTypeToIRType(type->getTypes()[i]));
+    elemLRef.emitStore(val);
+    ++i;
   }
 }
 
