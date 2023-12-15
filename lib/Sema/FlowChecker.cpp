@@ -1406,6 +1406,28 @@ class FlowChecker::ExprVisitor {
     outer_.setNodeType(node, res);
   }
 
+  void visit(ESTree::ArrayPatternNode *node) {
+    // For now, this just marks the array pattern (used on the LHS of assignment
+    // expressions) as a tuple, so that it can be used with destructuring.
+    // This isn't called from variable declaration nodes here, because
+    // AnnotateScopeDecls handles variable declarations directly.
+    // The tuple type is then read by, e.g., visit(AssignmentExpressionNode *),
+    // which will use the tuple type to typecheck the assignment itself.
+    // TODO: Determine how to destructure from arrays.
+
+    // Annotate the children of the array pattern.
+    visitESTreeChildren(*this, node);
+
+    llvh::SmallVector<Type *, 4> types;
+    for (ESTree::Node &elem : node->_elements) {
+      types.push_back(outer_.getNodeTypeOrAny(&elem));
+    }
+    outer_.setNodeType(
+        node,
+        outer_.flowContext_.createType(
+            outer_.flowContext_.createTuple(types), node));
+  }
+
   void visit(ESTree::ConditionalExpressionNode *node) {
     visitESTreeChildren(*this, node);
 
@@ -2111,6 +2133,18 @@ void FlowChecker::visit(ESTree::VariableDeclarationNode *node) {
       } else {
         declarator->_init = implicitCheckedCast(declarator->_init, lt, cf);
       }
+    } else {
+      Type *lt = getNodeTypeOrAny(declarator->_id);
+      Type *rt = getNodeTypeOrAny(declarator->_init);
+
+      CanFlowResult cf = canAFlowIntoB(rt, lt);
+      if (!cf.canFlow) {
+        sm_.error(
+            declarator->getSourceRange(),
+            "ft: incompatible initialization type");
+      } else {
+        declarator->_init = implicitCheckedCast(declarator->_init, lt, cf);
+      }
     }
   }
 }
@@ -2770,6 +2804,18 @@ class FlowChecker::AnnotateScopeDecls {
                   declarator);
               continue;
             }
+          } else if (
+              auto *arr =
+                  llvh::dyn_cast<ESTree::ArrayPatternNode>(declarator->_id)) {
+            if (arr->_typeAnnotation) {
+              // Found a type annotation on a local variable declaration that
+              // destructures into an array pattern.
+              Type *type = outer.parseTypeAnnotation(
+                  llvh::cast<ESTree::TypeAnnotationNode>(arr->_typeAnnotation)
+                      ->_typeAnnotation);
+              annotateDestructuringTarget(declarator, arr, type);
+              continue;
+            }
           }
         }
       }
@@ -2812,6 +2858,20 @@ class FlowChecker::AnnotateScopeDecls {
 
   void annotateVariableDeclaration(
       ESTree::VariableDeclarationNode *declaration) {
+    /// Attempt to infer the RHS of the declarator by calling the typecheck
+    /// visitor on it to see if it's able to associate a type with the init
+    /// node.
+    /// \return the inferred type, or nullptr if no inference was possible.
+    auto tryInferInitExpression =
+        [this](ESTree::VariableDeclaratorNode *declarator) -> Type * {
+      outer.visitExpression(declarator->_init, declarator);
+      outer.visitedInits_.insert(declarator->_init);
+      if (Type *inferred = outer.flowContext_.findNodeType(declarator->_init)) {
+        return inferred;
+      }
+      return nullptr;
+    };
+
     for (ESTree::Node &n : declaration->_declarations) {
       auto *declarator = llvh::cast<ESTree::VariableDeclaratorNode>(&n);
       if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(declarator->_id)) {
@@ -2832,24 +2892,113 @@ class FlowChecker::AnnotateScopeDecls {
                 "ft: global property type annotations are unsound and are ignored");
           }
         } else if (!id->_typeAnnotation && declarator->_init) {
-          // Attempt to infer the RHS of the declarator by calling the typecheck
-          // visitor on it to see if it's able to associate a type with the init
-          // node.
-          outer.visitExpression(declarator->_init, declarator);
-          outer.visitedInits_.insert(declarator->_init);
-          if (Type *inferred =
-                  outer.flowContext_.findNodeType(declarator->_init)) {
+          if (Type *inferred = tryInferInitExpression(declarator))
             type = inferred;
-          }
         }
 
         outer.recordDecl(decl, type, id, declarator);
+      } else if (
+          auto *arr =
+              llvh::dyn_cast<ESTree::ArrayPatternNode>(declarator->_id)) {
+        if (outer.flowContext_.findNodeType(arr)) {
+          // This array pattern was already handled in
+          // setTypesForAnnotatedVariables.
+          continue;
+        }
+        Type *type = outer.flowContext_.getAny();
+        assert(
+            declarator->_init &&
+            "array patterns without initializers are parser errors");
+        if (Type *inferred = tryInferInitExpression(declarator))
+          type = inferred;
+        if (llvh::isa<AnyType>(type->info)) {
+          // Legacy assignment to unannotated array pattern.
+          // let [x, y] = anyTypedVar;
+          // Don't annotate anything because the iterator protocol will be used.
+          continue;
+        }
+        annotateDestructuringTarget(declarator, arr, type);
       } else {
         outer.sm_.warning(
             declarator->_id->getSourceRange(),
-            "ft: typing of pattern declarators not implemented, :any assumed");
+            "ft: typing of object declarators not implemented, :any assumed");
       }
     }
+  }
+
+  /// Annotate the elements of the destructuring pattern given that the pattern
+  /// itself has type \p type.
+  /// Associates the target node and nested patterns with their respective
+  /// types, and records the types of decls that were declared by the pattern.
+  void annotateDestructuringTarget(
+      ESTree::VariableDeclaratorNode *declarator,
+      ESTree::PatternNode *pattern,
+      Type *patternType) {
+    // Use a worklist to avoid recursion.
+    llvh::SmallVector<std::pair<ESTree::Node *, Type *>, 4> worklist{};
+    worklist.emplace_back(pattern, patternType);
+
+    while (!worklist.empty()) {
+      auto [node, t] = worklist.pop_back_val();
+      if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(node)) {
+        // If this is an identifier, then we just record its type.
+        if (id->_typeAnnotation) {
+          outer.setNodeType(id, outer.flowContext_.getAny());
+          outer.sm_.error(
+              node->getSourceRange(),
+              "ft: type annotations not supported inside destructuring, "
+              "annotate the whole pattern instead");
+          continue;
+        }
+        sema::Decl *decl = outer.getDecl(id);
+        outer.setNodeType(id, t);
+        outer.recordDecl(decl, t, id, declarator);
+      } else if (auto *arr = llvh::dyn_cast<ESTree::ArrayPatternNode>(node)) {
+        // If we have an array pattern, then we need to visit each element and
+        // annotate them accordingly.
+        if (auto *tuple = llvh::dyn_cast<TupleType>(t->info)) {
+          // Setting the type to the tuple allows IRGen to conveniently
+          // query the kind of destructuring to run by checking the annotated
+          // type on the array pattern.
+          // It also allows us to avoid rerunning annotation in subsequent
+          // phases of AnnotateScopeDecls.
+          outer.setNodeType(arr, t);
+          size_t i = 0;
+          // Whether we had to stop early due to not enough tuple elements.
+          bool tooFewTupleElements = false;
+          for (ESTree::Node &element : arr->_elements) {
+            if (i >= tuple->getTypes().size()) {
+              tooFewTupleElements = true;
+              break;
+            }
+            worklist.emplace_back(&element, tuple->getTypes()[i]);
+            ++i;
+          }
+          if (tooFewTupleElements || i != tuple->getTypes().size()) {
+            outer.sm_.error(
+                pattern->getSourceRange(),
+                llvh::Twine("ft: cannot destructure tuple, expected ") +
+                    llvh::Twine(tuple->getTypes().size()) +
+                    " elements, found " + llvh::Twine(arr->_elements.size()));
+            return;
+          }
+        } else {
+          outer.setNodeType(arr, outer.flowContext_.getAny());
+          outer.sm_.error(
+              arr->getSourceRange(),
+              "ft: incompatible type for array pattern, expected tuple");
+          continue;
+        }
+      } else if (auto *obj = llvh::dyn_cast<ESTree::ObjectPatternNode>(node)) {
+        outer.setNodeType(arr, outer.flowContext_.getAny());
+        outer.sm_.warning(
+            node->getSourceRange(),
+            "ft: typing of object declarators not implemented, :any assumed");
+        continue;
+      }
+    }
+
+    return;
   }
 
   void annotateFunctionDeclaration(ESTree::FunctionDeclarationNode *funcDecl) {
