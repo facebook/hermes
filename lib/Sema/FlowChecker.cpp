@@ -51,13 +51,8 @@ bool FlowChecker::run(ESTree::ProgramNode *rootNode) {
   FunctionContext globalFunc(*this, rootNode, nullptr, flowContext_.getAny());
   ScopeRAII scope(*this);
   declareNativeTypes(rootNode->getScope());
-  resolveScopeTypesAndAnnotate(rootNode, rootNode->getScope());
-  if (sm_.getErrorCount()) {
-    // Avoid running the visitor to check types if the resolution failed,
-    // because the visitor relies on data populated during
-    // resolveScopeTypesAndAnnotate.
+  if (!resolveScopeTypesAndAnnotate(rootNode, rootNode->getScope()))
     return false;
-  }
   visitESTreeNode(*this, rootNode);
   return sm_.getErrorCount() == 0;
 }
@@ -2048,19 +2043,22 @@ void FlowChecker::visit(ESTree::DoWhileStatementNode *node) {
   visitExpression(node->_test, node);
 }
 void FlowChecker::visit(ESTree::ForOfStatementNode *node) {
-  resolveScopeTypesAndAnnotate(node, node->getScope());
+  if (!resolveScopeTypesAndAnnotate(node, node->getScope()))
+    return;
   visitESTreeNode(*this, node->_left, node);
   visitExpression(node->_right, node);
   visitESTreeNode(*this, node->_body, node);
 }
 void FlowChecker::visit(ESTree::ForInStatementNode *node) {
-  resolveScopeTypesAndAnnotate(node, node->getScope());
+  if (!resolveScopeTypesAndAnnotate(node, node->getScope()))
+    return;
   visitESTreeNode(*this, node->_left, node);
   visitExpression(node->_right, node);
   visitESTreeNode(*this, node->_body, node);
 }
 void FlowChecker::visit(ESTree::ForStatementNode *node) {
-  resolveScopeTypesAndAnnotate(node, node->getScope());
+  if (!resolveScopeTypesAndAnnotate(node, node->getScope()))
+    return;
   if (node->_init) {
     if (llvh::isa<ESTree::VariableDeclarationNode>(node->_init))
       visitESTreeNode(*this, node->_init, node);
@@ -2104,7 +2102,8 @@ void FlowChecker::visit(ESTree::ReturnStatementNode *node) {
 
 void FlowChecker::visit(ESTree::BlockStatementNode *node) {
   ScopeRAII scope(*this);
-  resolveScopeTypesAndAnnotate(node, node->getScope());
+  if (!resolveScopeTypesAndAnnotate(node, node->getScope()))
+    return;
   visitESTreeChildren(*this, node);
 }
 
@@ -2151,7 +2150,8 @@ void FlowChecker::visit(ESTree::VariableDeclarationNode *node) {
 
 void FlowChecker::visit(ESTree::CatchClauseNode *node) {
   ScopeRAII scope(*this);
-  resolveScopeTypesAndAnnotate(node, node->getScope());
+  if (!resolveScopeTypesAndAnnotate(node, node->getScope()))
+    return;
   visitESTreeNode(*this, node->_param, node);
   // Process body's declarations, skip visiting it, visit its children.
   visitESTreeChildren(*this, node->_body);
@@ -2173,7 +2173,9 @@ void FlowChecker::visitFunctionLike(
     }
   }
 
-  resolveScopeTypesAndAnnotate(node, node->getSemInfo()->getFunctionScope());
+  if (!resolveScopeTypesAndAnnotate(
+          node, node->getSemInfo()->getFunctionScope()))
+    return;
   visitESTreeNode(*this, body, node);
   checkImplicitReturnType(node);
 }
@@ -3052,18 +3054,23 @@ class FlowChecker::AnnotateScopeDecls {
   }
 };
 
-void FlowChecker::resolveScopeTypesAndAnnotate(
+bool FlowChecker::resolveScopeTypesAndAnnotate(
     ESTree::Node *scopeNode,
     sema::LexicalScope *scope) {
   const sema::ScopeDecls *decls =
       curFunctionContext_->declCollector->getScopeDeclsForNode(scopeNode);
   if (!decls || decls->empty())
-    return;
+    return true;
 
   assert(scope && "declarations found but no lexical scope");
+  unsigned errorsBefore = sm_.getErrorCount();
 
   DeclareScopeTypes(*this, *decls, scope);
   AnnotateScopeDecls(*this, *decls);
+
+  // If there were any errors during annotation, fail.
+  // Don't count errors that happened during typechecking other nodes.
+  return sm_.getErrorCount() == errorsBefore;
 }
 
 /// Record the declaration's type and declaring AST node, while checking for

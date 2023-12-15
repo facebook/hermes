@@ -197,7 +197,9 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
 
   /// Declare all named types in the specified scope and annotate the
   /// declarations with them.
-  void resolveScopeTypesAndAnnotate(
+  /// \return true on success. Do not typecheck the scope if this returns false.
+  /// LLVM_NODISCARD to ensure that we always enforce the check.
+  LLVM_NODISCARD bool resolveScopeTypesAndAnnotate(
       ESTree::Node *scopeNode,
       sema::LexicalScope *scope);
 
