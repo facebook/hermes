@@ -643,21 +643,11 @@ class ES6ClassesTransformations {
           continue;
         }
 
-        ESTree::Node *key = nullptr;
-        if (llvh::isa<ESTree::IdentifierNode>(methodDefinition->_key)) {
-          // Turn identifier into a string literal so that we can pass it
-          // as a parameter to the defineClassProperty / defineClassMethod
-          // methods.
-          auto *identifierNode =
-              llvh::cast<ESTree::IdentifierNode>(methodDefinition->_key);
-          key = createTransformedNode<ESTree::StringLiteralNode>(
-              identifierNode, identifierNode->_name);
-        } else {
-          key = cloneNode(methodDefinition->_key);
-        }
-
         resolvedClassMembers.members.emplace_back(
-            key, methodDefinition->_static, memberKind, methodDefinition);
+            methodDefinition->_key,
+            methodDefinition->_static,
+            memberKind,
+            methodDefinition);
       }
     }
 
@@ -678,15 +668,32 @@ class ES6ClassesTransformations {
       const ResolvedClassMembers &classMembers,
       NodeVector &stmtList) {
     for (const auto &classMember : classMembers.members) {
-      NodeVector parameters;
-      parameters.append(copyIdentifier(className));
-      parameters.append(classMember.key);
-
-      llvh::StringRef hermesCallName;
-
       auto *srcNode = classMember.definitionNode;
       visitMethodESTreeChildren(classMember, srcNode);
-      parameters.append(srcNode->_value);
+
+      NodeVector parameters;
+      parameters.append(copyIdentifier(className));
+
+      if (llvh::isa<ESTree::IdentifierNode>(classMember.key)) {
+        // Turn identifier into a string literal so that we can pass it
+        // as a parameter to the defineClassProperty / defineClassMethod
+        // methods.
+        auto *identifierNode =
+            llvh::cast<ESTree::IdentifierNode>(classMember.key);
+        parameters.append(createTransformedNode<ESTree::StringLiteralNode>(
+            identifierNode, identifierNode->_name));
+
+        auto *functionExpr =
+            llvh::cast<ESTree::FunctionExpressionNode>(srcNode->_value);
+        // Preserve method name
+        functionExpr->_id = cloneNode(identifierNode);
+        parameters.append(functionExpr);
+      } else {
+        parameters.append(cloneNode(classMember.key));
+        parameters.append(srcNode->_value);
+      }
+
+      llvh::StringRef hermesCallName;
 
       switch (classMember.kind) {
         case ClassMemberKind::Method:
