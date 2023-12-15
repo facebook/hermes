@@ -41,6 +41,7 @@ OutputFormatKind toOutputFormatKind(OutputLevelKind level) {
     case OutputLevelKind::AST:
       return OutputFormatKind::DumpAST;
     case OutputLevelKind::Sema:
+    case OutputLevelKind::TranspiledAST:
     case OutputLevelKind::TransformedAST:
       return OutputFormatKind::DumpTransformedAST;
     case OutputLevelKind::CFG:
@@ -210,6 +211,10 @@ cl::opt<OutputLevelKind> OutputLevel(
     cl::Optional,
     cl::values(
         clEnumValN(OutputLevelKind::AST, "dump-ast", "AST as text in JSON"),
+        clEnumValN(
+            OutputLevelKind::TranspiledAST,
+            "dump-transpiled-ast",
+            "Transformed AST as text after optional early transpilation"),
         clEnumValN(
             OutputLevelKind::TransformedAST,
             "dump-transformed-ast",
@@ -758,6 +763,20 @@ ESTree::NodePtr parseJS(
     }
   }
 
+  if (cli::OutputLevel == OutputLevelKind::AST) {
+    hermes::dumpESTreeJSON(
+        llvh::outs(),
+        parsedAST,
+        cli::Pretty /* pretty */,
+        cli::IncludeEmptyASTNodes ? ESTreeDumpMode::DumpAll
+                                  : ESTreeDumpMode::HideEmpty,
+        context->getSourceErrorManager(),
+        cli::DumpSourceLocation,
+        cli::IncludeRawASTProp ? ESTreeRawProp::Include
+                               : ESTreeRawProp::Exclude);
+    return parsedAST;
+  }
+
   // Convert TS AST to Flow AST as an intermediate step until we have a
   // separate TS type checker.
   if (flowContext && context->getParseTS()) {
@@ -777,7 +796,7 @@ ESTree::NodePtr parseJS(
     }
   }
 
-  if (cli::OutputLevel == OutputLevelKind::AST) {
+  if (cli::OutputLevel == OutputLevelKind::TranspiledAST) {
     hermes::dumpESTreeJSON(
         llvh::outs(),
         parsedAST,

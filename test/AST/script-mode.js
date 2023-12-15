@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -dump-ast -typed -script %s | %FileCheck --match-full-lines -check-prefix SM %s
-// RUN: %shermes -dump-ast -typed %s | %FileCheck --match-full-lines -check-prefix MM %s
+// RUN: %shermes -dump-transpiled-ast -typed -script %s | %FileCheck --match-full-lines -check-prefix SM %s
+// RUN: %shermes -dump-transpiled-ast -typed %s | %FileCheck --match-full-lines -check-prefix MM %s
 
 print("hi");
 

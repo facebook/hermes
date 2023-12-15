@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -typed -parse-ts -dump-ast -pretty -script %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -typed -parse-ts -dump-transpiled-ast -pretty -script %s | %FileCheck --match-full-lines %s
 
 "use strict";
 (function main() {
