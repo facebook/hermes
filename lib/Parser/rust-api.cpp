@@ -629,6 +629,7 @@ hermes_parser_parse(ParserFlags flags, const char *source, size_t len) {
       // Just in case.
       parserCtx->addError("Internal error");
     } else {
+      parser.registerMagicURLs();
       parserCtx->ast_ = *ast;
     }
   }

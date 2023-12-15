@@ -103,6 +103,10 @@ class JSParserImpl {
     return context_;
   }
 
+  JSLexer &getLexer() {
+    return lexer_;
+  }
+
   bool isStrictMode() const {
     return lexer_.isStrictMode();
   }
@@ -119,22 +123,6 @@ class JSParserImpl {
   /// of \c SmallString to be stored in \c PreParseFunctionInfo safely.
   llvh::SmallVector<llvh::SmallString<24>, 1> copySeenDirectives() const;
 
-  llvh::ArrayRef<StoredComment> getStoredComments() const {
-    return lexer_.getStoredComments();
-  }
-
-  llvh::ArrayRef<StoredToken> getStoredTokens() const {
-    return lexer_.getStoredTokens();
-  }
-
-  void setStoreComments(bool storeComments) {
-    lexer_.setStoreComments(storeComments);
-  }
-
-  void setStoreTokens(bool storeTokens) {
-    lexer_.setStoreTokens(storeTokens);
-  }
-
   Optional<ESTree::ProgramNode *> parse();
 
   void seek(SMLoc startPos) {
@@ -143,14 +131,13 @@ class JSParserImpl {
   }
 
   /// Parse the given buffer id, indexing all functions and storing them in the
-  /// \p Context. Returns true on success, at which point the file can be
-  /// processed on demand in \p LazyParse mode. \p useStaticBuiltinDetected will
-  /// be set to true if 'use static builtin' directive is detected in the
-  /// source.
-  static bool preParseBuffer(
+  /// \p Context. On failure returns nullptr.
+  /// On success, returns a pointer to the \c JSParserImpl object that can be
+  /// queried for various attributes of the just pre-parsed file, e.g. static
+  /// builtins or magic URLs.
+  static std::shared_ptr<JSParserImpl> preParseBuffer(
       Context &context,
-      uint32_t bufferId,
-      bool &useStaticBuiltinDetected);
+      uint32_t bufferId);
 
   /// Parse the AST of a specified function type at a given starting point.
   /// This is used for lazy compilation to parse and compile the function on

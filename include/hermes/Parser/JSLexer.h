@@ -441,6 +441,11 @@ class JSLexer {
     return resWordIdent_[ord(kind) - ord(TokenKind::_first_resword)];
   }
 
+  /// Source URL from magic comment.
+  llvh::StringRef sourceURL_{};
+  /// Source mapping URL from magic comment.
+  llvh::StringRef sourceMappingURL_{};
+
   /// Storage for comments we store when storedComments_ == true.
   /// Elements of commentStorage_ are pointers into the file buffer
   /// and have the same lifetime as pointers such as bufferStart_ and
@@ -648,6 +653,18 @@ class JSLexer {
   /// \return a pointer to the end of the buffer.
   const char *getBufferEnd() const {
     return bufferEnd_;
+  }
+
+  /// \return the source URL from the magic comment, or an empty string if there
+  /// was no magic comment.
+  llvh::StringRef getSourceURL() const {
+    return sourceURL_;
+  }
+
+  /// \return the source mapping URL from the magic comment, or an empty string
+  /// if there was no magic comment.
+  llvh::StringRef getSourceMappingURL() const {
+    return sourceMappingURL_;
   }
 
   /// \return any stored comments to this point, moving them out of storage

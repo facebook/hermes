@@ -502,6 +502,7 @@ bool loadGlobalDefinition(
   auto parsedJs = jsParser.parse();
   if (!parsedJs)
     return false;
+  jsParser.registerMagicURLs();
 
   declFileList.push_back(parsedJs.getValue());
   return true;
@@ -741,6 +742,7 @@ ESTree::NodePtr parseJS(
     const DeclarationFileListTy &ambientDecls,
     std::vector<std::unique_ptr<llvh::MemoryBuffer>> fileBufs,
     llvh::StringRef singleInputSourceMap) {
+  using parser::JSParser;
   std::vector<ESTree::ProgramNode *> programs{};
   std::shared_ptr<SourceMapTranslator> sourceMapTranslator = nullptr;
 
@@ -779,23 +781,33 @@ ESTree::NodePtr parseJS(
 
     auto mode = parser::FullParse;
 
+    // Keep track of which magic comments to register with SourceErrorManager.
+    JSParser::MCFlag::Type mcFlags = JSParser::MCFlag::All;
+
+    // Disable registering the //# sourceMappingURL= magic comment in
+    // SourceErrorManager, if we are consuming a source map.
+    if (!singleInputSourceMap.empty())
+      mcFlags &= ~JSParser::MCFlag::SourceMappingURL;
+
     if (context->isLazyCompilation() && isLargeFile) {
-      if (!parser::JSParser::preParseBuffer(
-              *context, fileBufId, useStaticBuiltinDetected)) {
+      auto preParser = JSParser::preParseBuffer(*context, fileBufId);
+      if (!preParser)
         return nullptr;
-      }
+      useStaticBuiltinDetected = preParser->getUseStaticBuiltin();
+      preParser->registerMagicURLs(mcFlags);
       mode = parser::LazyParse;
     }
 
     llvh::Optional<ESTree::ProgramNode *> parsedJs;
 
     {
-      parser::JSParser jsParser(*context, fileBufId, mode);
+      JSParser jsParser(*context, fileBufId, mode);
       parsedJs = jsParser.parse();
       // If we are using lazy parse mode, we should have already detected the
-      // 'use static builtin' directive in the pre-parsing stage.
-      if (mode != parser::LazyParse) {
+      // 'use static builtin' directive and magic URLs in the pre-parsing stage.
+      if (parsedJs && mode != parser::LazyParse) {
         useStaticBuiltinDetected = jsParser.getUseStaticBuiltin();
+        jsParser.registerMagicURLs(mcFlags);
       }
     }
     if (!parsedJs)

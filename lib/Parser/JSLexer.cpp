@@ -1301,10 +1301,17 @@ void JSLexer::scanLineComment(const char *start) {
   if (!comment.consume_front(llvh::StringLiteral("//# ")))
     return;
 
-  if (comment.consume_front(llvh::StringLiteral("sourceURL=")))
+  if (comment.consume_front(llvh::StringLiteral("sourceURL="))) {
+    sourceURL_ = comment;
+#ifndef STATIC_HERMES
     sm_.setSourceUrl(bufId_, comment);
-  else if (comment.consume_front(llvh::StringLiteral("sourceMappingURL=")))
+#endif
+  } else if (comment.consume_front(llvh::StringLiteral("sourceMappingURL="))) {
+    sourceMappingURL_ = comment;
+#ifndef STATIC_HERMES
     sm_.setSourceMappingUrl(bufId_, comment);
+#endif
+  }
 }
 
 const char *JSLexer::skipBlockComment(const char *start) {

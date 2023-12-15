@@ -469,6 +469,7 @@ static ValuesClass warningValues{
 #define WARNING_CATEGORY_HIDDEN(name, specifier, description) \
   clEnumValN(Warning::name, specifier, description),
 #include "hermes/Support/Warnings.def"
+
 };
 
 static list<hermes::Warning> Werror(
@@ -717,6 +718,7 @@ bool loadGlobalDefinition(
   auto parsedJs = jsParser.parse();
   if (!parsedJs)
     return false;
+  jsParser.registerMagicURLs();
 
   declFileList.push_back(parsedJs.getValue());
   return true;
@@ -772,10 +774,11 @@ ESTree::NodePtr parseJS(
   auto mode = parser::FullParse;
 
   if (context->isLazyCompilation() && isLargeFile) {
-    if (!parser::JSParser::preParseBuffer(
-            *context, fileBufId, useStaticBuiltinDetected)) {
+    auto preParser = parser::JSParser::preParseBuffer(*context, fileBufId);
+    if (!preParser)
       return nullptr;
-    }
+    useStaticBuiltinDetected = preParser->getUseStaticBuiltin();
+    preParser->registerMagicURLs();
     mode = parser::LazyParse;
   }
 
@@ -784,10 +787,11 @@ ESTree::NodePtr parseJS(
   {
     parser::JSParser jsParser(*context, fileBufId, mode);
     parsedJs = jsParser.parse();
-    // If we are using lazy parse mode, we should have already detected the 'use
-    // static builtin' directive in the pre-parsing stage.
-    if (mode != parser::LazyParse) {
+    // If we are using lazy parse mode, we should have already detected the
+    // 'use static builtin' directive and magic URLs in the pre-parsing stage.
+    if (parsedJs && mode != parser::LazyParse) {
       useStaticBuiltinDetected = jsParser.getUseStaticBuiltin();
+      jsParser.registerMagicURLs();
     }
   }
   if (!parsedJs)

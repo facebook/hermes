@@ -385,7 +385,10 @@ class SourceErrorManager {
   /// Set the source mapping URL for the buffer \p bufId.
   /// If one was already set, overwrite it.
   void setSourceMappingUrl(unsigned bufId, llvh::StringRef url) {
-    sourceMappingUrls_[bufId] = url;
+    if (!url.empty())
+      sourceMappingUrls_[bufId] = url;
+    else
+      sourceMappingUrls_.erase(bufId);
   }
 
   /// Get the source mapping URL for file \p bufId.
@@ -401,7 +404,20 @@ class SourceErrorManager {
   /// Set the user-specified source URL for the buffer \p bufId.
   /// If one was already set, overwrite it.
   void setSourceUrl(unsigned bufId, llvh::StringRef url) {
-    sourceUrls_[bufId] = url;
+    if (!url.empty())
+      sourceUrls_[bufId] = url;
+    else
+      sourceUrls_.erase(bufId);
+  }
+
+  /// Get the user-specified source URL for this buffer, or a default identifier
+  /// for it (typically the filename it was read from).
+  llvh::StringRef getSourceUrl(unsigned bufId) const {
+    const auto it = sourceUrls_.find(bufId);
+    if (it != sourceUrls_.end()) {
+      return it->second;
+    }
+    return getBufferFileName(bufId);
   }
 
   /// Find the bufferId of the specified location \p loc.
@@ -435,16 +451,6 @@ class SourceErrorManager {
 
   /// Find the SMLoc corresponding to the supplied source coordinates.
   SMLoc findSMLocFromCoords(SourceCoords coords);
-
-  /// Get the user-specified source URL for this buffer, or a default identifier
-  /// for it (typically the filename it was read from).
-  llvh::StringRef getSourceUrl(unsigned bufId) const {
-    const auto it = sourceUrls_.find(bufId);
-    if (it != sourceUrls_.end()) {
-      return it->second;
-    }
-    return getBufferFileName(bufId);
-  }
 
   /// Print the passed source coordinates in human readable form for debugging.
   void dumpCoords(llvh::raw_ostream &OS, const SourceCoords &coords);

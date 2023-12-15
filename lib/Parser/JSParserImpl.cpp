@@ -6908,18 +6908,31 @@ Optional<ESTree::NodePtr> castNode(Optional<T> node) {
     return None;
   return Optional<ESTree::NodePtr>(node.getValue());
 }
+
+class PreParser {
+  AllocationScope scope_;
+
+ public:
+  JSParserImpl parser;
+
+  explicit PreParser(Context &context, uint32_t bufferId)
+      : scope_(context.getAllocator()), parser(context, bufferId, PreParse) {}
+};
+
 } // namespace
 
-bool JSParserImpl::preParseBuffer(
+std::shared_ptr<JSParserImpl> JSParserImpl::preParseBuffer(
     Context &context,
-    uint32_t bufferId,
-    bool &useStaticBuiltinDetected) {
+    uint32_t bufferId) {
   PerfSection preparsing("Pre-Parsing JavaScript");
-  AllocationScope scope(context.getAllocator());
-  JSParserImpl parser(context, bufferId, PreParse);
-  auto result = parser.parse();
-  useStaticBuiltinDetected = parser.getUseStaticBuiltin();
-  return result.hasValue();
+  auto preParser = std::make_shared<PreParser>(context, bufferId);
+  auto result = preParser->parser.parse();
+  if (!result.hasValue())
+    return nullptr;
+
+  // Return a pointer only to JSParserImpl, while aliasing and maintaining
+  // ownership of the entire PreParser object.
+  return std::shared_ptr<JSParserImpl>(preParser, &preParser->parser);
 }
 
 Optional<ESTree::NodePtr> JSParserImpl::parseLazyFunction(
