@@ -1473,7 +1473,7 @@ HermesRuntimeImpl::prepareJavaScriptWithSourceMap(
       ::hermes::SimpleDiagHandler diag;
       ::hermes::SourceErrorManager sm;
       diag.installInto(sm);
-      sourceMap = ::hermes::SourceMapParser::parse(mbref, sm);
+      sourceMap = ::hermes::SourceMapParser::parse(mbref, {}, sm);
       if (!sourceMap) {
         auto errorStr = diag.getErrorString();
         LOG_EXCEPTION_CAUSE("Error parsing source map: %s", errorStr.c_str());

@@ -23,6 +23,7 @@ class SourceMapParser {
   /// On failure if malformed, prints an error message and returns nullptr.
   static std::unique_ptr<SourceMap> parse(
       llvh::MemoryBufferRef sourceMap,
+      llvh::StringRef baseDir,
       SourceErrorManager &sm);
 
   /// Parse input \p sourceMapContent and return parsed SourceMap.
@@ -30,8 +31,10 @@ class SourceMapParser {
   /// On failure if malformed, prints an error message and returns nullptr.
   static std::unique_ptr<SourceMap> parse(
       llvh::StringRef sourceMapContent,
+      llvh::StringRef baseDir,
       SourceErrorManager &sm) {
-    return parse(llvh::MemoryBufferRef(sourceMapContent, "<source map>"), sm);
+    return parse(
+        llvh::MemoryBufferRef(sourceMapContent, "<source map>"), baseDir, sm);
   }
 
  private:

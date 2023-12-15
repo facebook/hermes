@@ -827,8 +827,8 @@ ESTree::NodePtr parseJS(
         // Reading the source map file failed.
         return nullptr;
       }
-      auto sourceMap =
-          SourceMapParser::parse(*mapBuffer, context->getSourceErrorManager());
+      auto sourceMap = SourceMapParser::parse(
+          *mapBuffer, {}, context->getSourceErrorManager());
       if (!sourceMap) {
         // Parsing the source map failed.
         return nullptr;

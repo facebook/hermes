@@ -7,7 +7,38 @@
 
 #include "hermes/SourceMap/SourceMap.h"
 
+#include "llvh/Support/Path.h"
+
 namespace hermes {
+
+SourceMap::SourceMap(
+    llvh::StringRef sourceRoot,
+    llvh::StringRef originalSourceRoot,
+    std::vector<std::string> &&sources,
+    std::vector<SegmentList> &&lines,
+    MetadataList &&sourcesMetadata)
+    : sourceRoot_(sourceRoot),
+      originalSourceRoot_(originalSourceRoot),
+      sources_(std::move(sources)),
+      lines_(std::move(lines)),
+      sourcesMetadata_(std::move(sourcesMetadata)) {
+  // Prepend sourceRoot_ to sources_ if it is not empty.
+  // Make sure to leave absolute paths alone.
+  if (!sourceRoot_.empty()) {
+    rootedSources_.reserve(sources_.size());
+    llvh::SmallString<32> buf{};
+    for (const auto &p : sources_) {
+      if (llvh::sys::path::is_absolute(p)) {
+        rootedSources_.push_back(p);
+      } else {
+        buf = sourceRoot_;
+        llvh::sys::path::append(buf, p);
+        llvh::sys::path::remove_dots(buf, true);
+        rootedSources_.push_back(buf.str());
+      }
+    }
+  }
+}
 
 /// Query source map text location for \p line and \p column.
 /// In both the input and output of this function, line and column numbers

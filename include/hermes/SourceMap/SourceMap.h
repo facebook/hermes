@@ -21,8 +21,10 @@ namespace hermes {
 /// Represent a source location in original JS source file.
 /// It is different from DebugSourceLocation that it may hold string
 /// names not existing in string table.
+/// The life time of this struct is tied to the life time of the SourceMap
+/// object.
 struct SourceMapTextLocation {
-  std::string fileName;
+  llvh::StringRef fileName;
   // 1-based
   uint32_t line;
   // 1-based
@@ -103,15 +105,19 @@ class SourceMap {
   using MetadataEntry = parser::JSONSharedValue;
   using MetadataList = std::vector<llvh::Optional<MetadataEntry>>;
 
+  /// \param sourceRoot path to be prepended to every file source path. This is
+  ///   not necessarily the same as the sourceRoot field in the source map,
+  ///   because we may need to prepend additional paths.
+  /// \param originalSourceRoot the original sourceRoot field in the source map.
+  /// \param sources the source path names
+  /// \param lines
+  /// \param sourcesMetadata
   SourceMap(
-      const std::string &sourceRoot,
+      llvh::StringRef sourceRoot,
+      llvh::StringRef originalSourceRoot,
       std::vector<std::string> &&sources,
       std::vector<SegmentList> &&lines,
-      MetadataList &&sourcesMetadata)
-      : sourceRoot_(sourceRoot),
-        sources_(std::move(sources)),
-        lines_(std::move(lines)),
-        sourcesMetadata_(std::move(sourcesMetadata)) {}
+      MetadataList &&sourcesMetadata);
 
   /// Query source map text location for \p line and \p column.
   /// In both the input and output of this function, line and column numbers
@@ -134,10 +140,15 @@ class SourceMap {
       uint32_t line,
       uint32_t column) const;
 
+  /// \return the sourceRoot field of the source map.
+  llvh::StringRef getSourceRoot() const {
+    return sourceRoot_;
+  }
+
   /// \return a list of original sources used by “mappings” entry.
   /// For testing.
-  std::vector<std::string> getAllFullPathSources() const {
-    std::vector<std::string> sourceFullPath(sources_.size());
+  std::vector<llvh::StringRef> getAllFullPathSources() const {
+    std::vector<llvh::StringRef> sourceFullPath(sources_.size());
     for (uint32_t i = 0, e = sources_.size(); i < e; ++i) {
       sourceFullPath[i] = getSourceFullPath(i);
     }
@@ -150,11 +161,17 @@ class SourceMap {
     return (uint32_t)sources_.size();
   }
 
-  /// \return source file path with root combined for source \p index.
-  std::string getSourceFullPath(uint32_t index) const {
+  /// \return source file path for \p index without the source root.
+  llvh::StringRef getSourcePathWithoutRoot(uint32_t index) const {
     assert(index < sources_.size() && "index out-of-range for sources_");
-    // TODO: more sophisticated path concat handling.
-    return sourceRoot_ + sources_[index];
+    return sources_[index];
+  }
+
+  /// \return source file path with root combined for source \p index.
+  llvh::StringRef getSourceFullPath(uint32_t index) const {
+    // ... speed up, cache and return StringRef ...
+    assert(index < sources_.size() && "index out-of-range for sources_");
+    return sourceRoot_.empty() ? sources_[index] : rootedSources_[index];
   }
 
   /// \return metadata for source \p index, if we have any.
@@ -169,11 +186,19 @@ class SourceMap {
   /// An optional source root, useful for relocating source files on a server or
   /// removing repeated values in the “sources” entry.  This value is prepended
   /// to the individual entries in the “source” field.
+  /// This value could differ from what was specified in the original source
+  /// map - in some cases we need to prepend additional paths. The "original"
+  /// value of this attribute is stored in originalSourceRoot_.
   std::string sourceRoot_;
+
+  /// The original source root that hasn't been modified.
+  std::string originalSourceRoot_;
 
   /// The list of sources parsed from the "sources" section without sourceRoot_
   /// appended.
   std::vector<std::string> sources_;
+
+  std::vector<std::string> rootedSources_{};
 
   /// The list of segments in VLQ scheme.
   std::vector<SegmentList> lines_;

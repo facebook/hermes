@@ -13,12 +13,15 @@
 #include <algorithm>
 #include <memory>
 
+#include "llvh/Support/Path.h"
+
 using namespace hermes::parser;
 
 namespace hermes {
 
 std::unique_ptr<SourceMap> SourceMapParser::parse(
     llvh::MemoryBufferRef sourceMap,
+    llvh::StringRef baseDir,
     SourceErrorManager &sm) {
   std::shared_ptr<parser::JSLexer::Allocator> alloc =
       std::make_shared<parser::JSLexer::Allocator>();
@@ -57,7 +60,7 @@ std::unique_ptr<SourceMap> SourceMapParser::parse(
   }
 
   // sourceRoot is optional.
-  std::string sourceRoot;
+  llvh::StringRef sourceRoot;
   auto *sourceRootJson =
       llvh::dyn_cast_or_null<JSONString>(json->get("sourceRoot"));
   if (sourceRootJson != nullptr) {
@@ -103,8 +106,24 @@ std::unique_ptr<SourceMap> SourceMapParser::parse(
     sm.error(genericLoc, "Failed to parse source map mappings");
     return nullptr;
   }
+
+  llvh::StringRef originalSourceRoot = sourceRoot;
+  llvh::SmallString<32> pathBuf{};
+  // Optionally prepend baseDir to sources.
+  if (!baseDir.empty() && !llvh::sys::path::is_absolute(sourceRoot)) {
+    if (sourceRoot.empty()) {
+      sourceRoot = baseDir;
+    } else {
+      pathBuf = baseDir;
+      llvh::sys::path::append(pathBuf, sourceRoot);
+      llvh::sys::path::remove_dots(pathBuf, true);
+      sourceRoot = pathBuf;
+    }
+  }
+
   return std::make_unique<SourceMap>(
       sourceRoot,
+      originalSourceRoot,
       std::move(sources),
       std::move(lines),
       std::move(sourcesMetadata));

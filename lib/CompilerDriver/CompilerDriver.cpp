@@ -1560,7 +1560,7 @@ bool generateIRForSourcesAsCJSModules(
         if (moduleInSegment.sourceMap) {
           SourceErrorManager sm;
           auto inputMap =
-              SourceMapParser::parse(*moduleInSegment.sourceMap, sm);
+              SourceMapParser::parse(*moduleInSegment.sourceMap, {}, sm);
           if (!inputMap) {
             // parse() returns nullptr on failure and reports its own errors.
             return false;
@@ -1859,7 +1859,7 @@ CompileResult processSourceFiles(
     std::unique_ptr<SourceMap> sourceMap{nullptr};
     if (mainFileBuf.sourceMap) {
       SourceErrorManager sm;
-      sourceMap = SourceMapParser::parse(*mainFileBuf.sourceMap, sm);
+      sourceMap = SourceMapParser::parse(*mainFileBuf.sourceMap, {}, sm);
       if (!sourceMap) {
         // parse() returns nullptr on failure and reports its own errors.
         return InputFileError;
