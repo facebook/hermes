@@ -491,6 +491,9 @@ class ESTreeIRGen {
   void genReturnStatement(ESTree::ReturnStatementNode *RetStmt);
   void genForInStatement(ESTree::ForInStatementNode *ForInStmt);
   void genForOfStatement(ESTree::ForOfStatementNode *forOfStmt);
+  void genForOfFastArrayStatement(
+      ESTree::ForOfStatementNode *forOfStmt,
+      flow::ArrayType *type);
   void genWhileLoop(ESTree::WhileStatementNode *loop);
   void genDoWhileLoop(ESTree::DoWhileStatementNode *loop);
 

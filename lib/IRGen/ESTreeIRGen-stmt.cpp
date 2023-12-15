@@ -786,6 +786,11 @@ void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
 }
 
 void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
+  if (auto *type = llvh::dyn_cast<flow::ArrayType>(
+          flowContext_.getNodeTypeOrAny(forOfStmt->_right)->info)) {
+    return genForOfFastArrayStatement(forOfStmt, type);
+  }
+
   emitScopeDeclarations(forOfStmt->getScope());
 
   auto *function = Builder.getInsertionBlock()->getParent();
@@ -849,6 +854,72 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
         emitIteratorClose(iteratorRecord, true);
         Builder.createThrowInst(catchReg);
       });
+
+  Builder.setInsertionBlock(exitBlock);
+}
+
+void ESTreeIRGen::genForOfFastArrayStatement(
+    ESTree::ForOfStatementNode *forOfStmt,
+    flow::ArrayType *type) {
+  emitScopeDeclarations(forOfStmt->getScope());
+
+  auto *function = Builder.getInsertionBlock()->getParent();
+  // Set the element variable and run the body.
+  auto *bodyBlock = Builder.createBasicBlock(function);
+  // Exit the loop.
+  auto *exitBlock = Builder.createBasicBlock(function);
+  // Check index < length at the end of the loop.
+  auto *postTestBlock = Builder.createBasicBlock(function);
+  // ++index.
+  auto *incrementBlock = Builder.createBasicBlock(function);
+
+  // Initialize the goto labels.
+  // Break goes to the exit, continue goes to the incrementBlock.
+  curFunction()->initLabel(forOfStmt, exitBlock, incrementBlock);
+
+  // RHS expression.
+  auto *exprValue = genExpression(forOfStmt->_right);
+  // Index for iteration.
+  auto *idx = Builder.createAllocStackInst(
+      genAnonymousLabelName("forOfIndex"), Type::createNumber());
+  Builder.createStoreStackInst(Builder.getLiteralNumber(0), idx);
+  Builder.createCompareBranchInst(
+      Builder.createLoadStackInst(idx),
+      Builder.createFastArrayLengthInst(exprValue),
+      ValueKind::CmpBrLessThanInstKind,
+      bodyBlock,
+      exitBlock);
+
+  Builder.setInsertionBlock(bodyBlock);
+  // Load the element from the array.
+  auto *nextValue = Builder.createFastArrayLoadInst(
+      exprValue,
+      Builder.createLoadStackInst(idx),
+      flowTypeToIRType(type->getElement()));
+  createLRef(forOfStmt->_left, false).emitStore(nextValue);
+  // Run the body of the loop.
+  genStatement(forOfStmt->_body);
+  Builder.createBranchInst(incrementBlock);
+
+  // Increment the index (this is the 'continue' target).
+  Builder.setInsertionBlock(incrementBlock);
+  Builder.createStoreStackInst(
+      Builder.createFBinaryMathInst(
+          ValueKind::FAddInstKind,
+          Builder.createLoadStackInst(idx),
+          Builder.getLiteralNumber(1)),
+      idx);
+  Builder.createBranchInst(postTestBlock);
+
+  // Use a separate block here for symmetry with other loops.
+  Builder.setInsertionBlock(postTestBlock);
+  // Branch out of the loop if the index has reached the end of the array.
+  Builder.createCompareBranchInst(
+      Builder.createLoadStackInst(idx),
+      Builder.createFastArrayLengthInst(exprValue),
+      ValueKind::CmpBrLessThanInstKind,
+      bodyBlock,
+      exitBlock);
 
   Builder.setInsertionBlock(exitBlock);
 }
