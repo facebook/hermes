@@ -51,10 +51,9 @@ double localOffsetFromGMT() {
   }
 
   // Deconstruct the time into localTime.
-  std::tm tm;
-  std::tm *local = ::localtime_r(&currentWithDST, &tm);
+  std::tm *local = std::localtime(&currentWithDST);
   if (!local) {
-    return std::numeric_limits<double>::quiet_NaN();
+    llvm_unreachable("localtime failed in localOffsetFromGMT()");
   }
 
   return local->tm_gmtoff * MS_PER_SECOND;
