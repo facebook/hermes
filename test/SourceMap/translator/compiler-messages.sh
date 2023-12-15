@@ -26,3 +26,17 @@ $SHERMES -typed -dump-ir --source-map=prog1.js.map prog1.js 2>&1 || true
 # CHECK-NEXT: print(mod1$foo() + 1);
 # CHECK-NEXT:       ^~~~~~~~~~~~~~
 # CHECK-NEXT: Emitted 2 errors. exiting.
+
+$SHERMES -Werror prog2/out/file-sm.js 2>&1 || true
+# CHECK-NEXT: prog2/input.ts:14:5: [original] error: Direct call to eval(), but lexical scope is not supported.
+# CHECK-NEXT: prog2/out/file-sm.js:9:5: [transpiled] error: Direct call to eval(), but lexical scope is not supported.
+# CHECK-NEXT:     eval("0");
+# CHECK-NEXT:     ^~~~
+# CHECK-NEXT: Emitted 1 errors. exiting.
+
+$SHERMES -Werror prog2/out/data-sm.js 2>&1 || true
+# CHECK-NEXT: prog2/input.ts:14:5: [original] error: Direct call to eval(), but lexical scope is not supported.
+# CHECK-NEXT: prog2/out/data-sm.js:9:5: [transpiled] error: Direct call to eval(), but lexical scope is not supported.
+# CHECK-NEXT:     eval("0");
+# CHECK-NEXT:     ^~~~
+# CHECK-NEXT: Emitted 1 errors. exiting.

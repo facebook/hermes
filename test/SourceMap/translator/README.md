@@ -25,3 +25,8 @@ To update this test, run:
 ```
 ../../../benchmarks/build-helpers/flow-bundler/bin/flow-bundler --root=prog1 prog1/index.js --out=prog1.js
 ```
+
+## prog2/ directory.
+
+Tests automatic source map detection. To regenerate, from within that directory run `npm install` as
+needed and run `./gen.sh`

@@ -6,6 +6,7 @@
  */
 
 #include "CLFlag.h"
+#include "ParseJSFile.h"
 #include "compile.h"
 
 #include "hermes/AST/ESTreeJSONDumper.h"
@@ -15,12 +16,9 @@
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Optimizer/PassManager/PassManager.h"
 #include "hermes/Optimizer/PassManager/Pipeline.h"
-#include "hermes/Parser/JSParser.h"
 #include "hermes/Runtime/Libhermes.h"
 #include "hermes/Sema/SemContext.h"
 #include "hermes/Sema/SemResolve.h"
-#include "hermes/SourceMap/SourceMap.h"
-#include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/SourceMap/SourceMapTranslator.h"
 #include "hermes/Support/OSCompat.h"
 
@@ -28,10 +26,8 @@
 #include "llvh/Support/CommandLine.h"
 #include "llvh/Support/InitLLVM.h"
 #include "llvh/Support/MemoryBuffer.h"
-#include "llvh/Support/PrettyStackTrace.h"
 #include "llvh/Support/Process.h"
 #include "llvh/Support/Program.h"
-#include "llvh/Support/Signals.h"
 
 using namespace hermes;
 namespace cl = llvh::cl;
@@ -137,6 +133,23 @@ cl::opt<std::string> InputSourceMap(
     cl::desc("Specify a matching source map for the input file"),
     cl::cat(CompilerCategory));
 
+/// How to handle magic source map comments.
+cl::opt<SourceMappingCommentMode> SourceMappingComments(
+    "sm-comment",
+    cl::desc("Choose how to handle //# sourceMappingURL= comments:"),
+    cl::init(SourceMappingCommentMode::File),
+    cl::values(
+        clEnumValN(SourceMappingCommentMode::Off, "off", "Ignore them"),
+        clEnumValN(
+            SourceMappingCommentMode::Data,
+            "data",
+            "Only use if data URL"),
+        clEnumValN(
+            SourceMappingCommentMode::File,
+            "file",
+            "Only use if data or file URL")),
+    cl::cat(CompilerCategory));
+
 static cl::list<std::string> CustomOptimize(
     "custom-opt",
     cl::desc("Custom optimizations"),
@@ -171,12 +184,6 @@ cl::opt<bool> KeepTemp(
     cl::init(false),
     cl::desc("Keep temporary files made along the way (for debugging)"),
     cl::cat(CompilerCategory));
-
-enum class StaticBuiltinSetting {
-  ForceOn,
-  ForceOff,
-  AutoDetect,
-};
 
 cl::opt<StaticBuiltinSetting> StaticBuiltins(
     cl::desc(
@@ -465,49 +472,6 @@ cl::opt<std::string> XNativeTarget(
 
 namespace {
 
-/// Read a file at path \p path into a memory buffer. If \p stdinOk is set,
-/// allow "-" to mean stdin.
-/// \param pathDesc an optional description of what we are trying to read, to be
-///    used in error messages instead of the word "file".
-/// \param silent if true, don't print an error message on failure.
-///
-/// \return the memory buffer, or nullptr on error, in
-///     which case an error message will have been printed to llvh::errs().
-std::unique_ptr<llvh::MemoryBuffer> memoryBufferFromFile(
-    llvh::StringRef path,
-    llvh::StringRef pathDesc,
-    bool stdinOk = false,
-    bool silent = false) {
-  auto fileBuf = stdinOk ? llvh::MemoryBuffer::getFileOrSTDIN(path)
-                         : llvh::MemoryBuffer::getFile(path);
-  if (!fileBuf) {
-    if (!silent) {
-      llvh::errs() << "Error! Failed to open "
-                   << (pathDesc.empty() ? "file" : pathDesc) << ": " << path
-                   << '\n';
-    }
-    return nullptr;
-  }
-  return std::move(*fileBuf);
-}
-
-/// Loads global definitions from MemoryBuffer and adds the definitions to \p
-/// declFileList.
-/// \return true on success, false on error.
-bool loadGlobalDefinition(
-    Context &context,
-    std::unique_ptr<llvh::MemoryBuffer> content,
-    DeclarationFileListTy &declFileList) {
-  parser::JSParser jsParser(context, std::move(content));
-  auto parsedJs = jsParser.parse();
-  if (!parsedJs)
-    return false;
-  jsParser.registerMagicURLs();
-
-  declFileList.push_back(parsedJs.getValue());
-  return true;
-}
-
 /// Attempt to guess the best error output options by inspecting stderr
 SourceErrorOutputOptions guessErrorOutputOptions() {
   SourceErrorOutputOptions result;
@@ -598,13 +562,13 @@ std::shared_ptr<Context> createContext() {
   optimizationOpts.reusePropCache = cli::ReusePropCache;
 
   // Auto enable static builtins in typed mode.
-  if (cli::Typed && cli::StaticBuiltins != cli::StaticBuiltinSetting::ForceOff)
-    cli::StaticBuiltins = cli::StaticBuiltinSetting::ForceOn;
+  if (cli::Typed && cli::StaticBuiltins != StaticBuiltinSetting::ForceOff)
+    cli::StaticBuiltins = StaticBuiltinSetting::ForceOn;
 
   // When the setting is auto-detect, we will set the correct value after
   // parsing.
   optimizationOpts.staticBuiltins =
-      cli::StaticBuiltins == cli::StaticBuiltinSetting::ForceOn;
+      cli::StaticBuiltins == StaticBuiltinSetting::ForceOn;
   // optimizationOpts.staticRequire = cl::StaticRequire;
   //
 
@@ -742,9 +706,10 @@ ESTree::NodePtr parseJS(
     const DeclarationFileListTy &ambientDecls,
     std::vector<std::unique_ptr<llvh::MemoryBuffer>> fileBufs,
     llvh::StringRef singleInputSourceMap) {
-  using parser::JSParser;
   std::vector<ESTree::ProgramNode *> programs{};
   std::shared_ptr<SourceMapTranslator> sourceMapTranslator = nullptr;
+
+  assert(context && "Need a context to compile using");
 
   if (!singleInputSourceMap.empty() && fileBufs.size() > 1) {
     llvh::errs() << "Error: --source-map can only be used with a single "
@@ -752,111 +717,29 @@ ESTree::NodePtr parseJS(
     return nullptr;
   }
 
+  // Save the previous strictness and force strict mode if we are parsing a
+  // typed file.
+  auto onExit = llvh::make_scope_exit(
+      [&context, saveStrictness = context->isStrictMode()]() {
+        context->setStrictMode(saveStrictness);
+      });
+  if (flowContext)
+    context->setStrictMode(true);
+
   assert(
       (singleInputSourceMap.empty() || fileBufs.size() == 1) &&
       "singleInputSourceMap can only be specified for a single input file");
 
   for (std::unique_ptr<llvh::MemoryBuffer> &fileBuf : fileBufs) {
     assert(fileBuf && "Need a file to compile");
-    assert(context && "Need a context to compile using");
 
-    // Save the previous strictness and force strict mode if we are parsing a
-    // typed file.
-    auto onExit = llvh::make_scope_exit(
-        [&context, saveStrictness = context->isStrictMode()]() {
-          context->setStrictMode(saveStrictness);
-        });
-    if (flowContext)
-      context->setStrictMode(true);
-
-    // This value will be set to true if the parser detected the 'use static
-    // builtin' directive in the source.
-    bool useStaticBuiltinDetected = false;
-
-    bool isLargeFile = fileBuf->getBufferSize() >=
-        context->getPreemptiveFileCompilationThreshold();
-
-    int fileBufId =
-        context->getSourceErrorManager().addNewSourceBuffer(std::move(fileBuf));
-
-    auto mode = parser::FullParse;
-
-    // Keep track of which magic comments to register with SourceErrorManager.
-    JSParser::MCFlag::Type mcFlags = JSParser::MCFlag::All;
-
-    // Disable registering the //# sourceMappingURL= magic comment in
-    // SourceErrorManager, if we are consuming a source map.
-    if (!singleInputSourceMap.empty())
-      mcFlags &= ~JSParser::MCFlag::SourceMappingURL;
-
-    if (context->isLazyCompilation() && isLargeFile) {
-      auto preParser = JSParser::preParseBuffer(*context, fileBufId);
-      if (!preParser)
-        return nullptr;
-      useStaticBuiltinDetected = preParser->getUseStaticBuiltin();
-      preParser->registerMagicURLs(mcFlags);
-      mode = parser::LazyParse;
-    }
-
-    llvh::Optional<ESTree::ProgramNode *> parsedJs;
-
-    {
-      JSParser jsParser(*context, fileBufId, mode);
-      parsedJs = jsParser.parse();
-      // If we are using lazy parse mode, we should have already detected the
-      // 'use static builtin' directive and magic URLs in the pre-parsing stage.
-      if (parsedJs && mode != parser::LazyParse) {
-        useStaticBuiltinDetected = jsParser.getUseStaticBuiltin();
-        jsParser.registerMagicURLs(mcFlags);
-      }
-    }
-    if (!parsedJs)
-      return nullptr;
-
-    // If we have a source map, load it, parse it, and associate it with the
-    // file buffer. Note however that the source map translation is not enabled
-    // until sourceMapTranslator is set in SourceErrorManager, which we are not
-    // doing yet.
-    if (!singleInputSourceMap.empty()) {
-      // Defensive programming: clear singleInputSourceMap after we use it.
-      llvh::StringRef sourceMapPath = singleInputSourceMap;
-      singleInputSourceMap = {};
-
-      auto mapBuffer = memoryBufferFromFile(sourceMapPath, "input source map");
-      if (!mapBuffer) {
-        // Reading the source map file failed.
-        return nullptr;
-      }
-      auto sourceMap = SourceMapParser::parse(
-          *mapBuffer, {}, context->getSourceErrorManager());
-      if (!sourceMap) {
-        // Parsing the source map failed.
-        return nullptr;
-      }
-
-      if (!sourceMapTranslator) {
-        sourceMapTranslator = std::make_shared<SourceMapTranslator>(
-            context->getSourceErrorManager());
-      }
-      sourceMapTranslator->addSourceMap(fileBufId, std::move(sourceMap));
-    }
-
-    ESTree::ProgramNode *parsedAST = parsedJs.getValue();
-
-    if (cli::StaticBuiltins == cli::StaticBuiltinSetting::AutoDetect) {
-      context->setStaticBuiltinOptimization(useStaticBuiltinDetected);
-    }
-
-    // Convert TS AST to Flow AST as an intermediate step until we have a
-    // separate TS type checker.
-    if (flowContext && context->getParseTS()) {
-      parsedAST = hermes::convertTSToFlow(
-          *context, cast<ESTree::ProgramNode>(parsedAST));
-      if (!parsedAST) {
-        return nullptr;
-      }
-    }
-
+    ESTree::ProgramNode *parsedAST = parseJSFile(
+        context.get(),
+        cli::SourceMappingComments,
+        cli::StaticBuiltins,
+        context->getSourceErrorManager().addNewSourceBuffer(std::move(fileBuf)),
+        std::exchange(singleInputSourceMap, {}),
+        sourceMapTranslator);
     programs.push_back(parsedAST);
   }
 
@@ -872,6 +755,15 @@ ESTree::NodePtr parseJS(
     ESTree::NodeList &allStmts = parsedAST->_body;
     for (size_t i = 1, e = programs.size(); i < e; ++i) {
       allStmts.splice(allStmts.end(), programs[i]->_body);
+    }
+  }
+
+  // Convert TS AST to Flow AST as an intermediate step until we have a
+  // separate TS type checker.
+  if (flowContext && context->getParseTS()) {
+    parsedAST = convertTSToFlow(*context, parsedAST);
+    if (!parsedAST) {
+      return nullptr;
     }
   }
 
@@ -903,7 +795,7 @@ ESTree::NodePtr parseJS(
   //   return parsedAST;
   // }
 
-  if (!hermes::sema::resolveAST(
+  if (!sema::resolveAST(
           *context, semCtx, flowContext, parsedAST, ambientDecls)) {
     return nullptr;
   }

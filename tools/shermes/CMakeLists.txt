@@ -20,6 +20,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>)
 
 add_hermes_tool(shermes
   shermes.cpp
+  ParseJSFile.cpp ParseJSFile.h
   compile.cpp compile.h
   LINK_LIBS hermescompiler dl)
 
