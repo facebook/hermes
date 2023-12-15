@@ -396,10 +396,24 @@ Value *ESTreeIRGen::genFastArrayFromElements(ESTree::NodeList &list) {
   return array;
 }
 
+Value *ESTreeIRGen::genTupleFromElements(ESTree::NodeList &list) {
+  AllocObjectLiteralInst::ObjectPropertyMap propMap{};
+  size_t i = 0;
+  for (ESTree::Node &node : list) {
+    propMap.emplace_back(
+        Builder.getLiteralString(llvh::Twine(i)), genExpression(&node));
+    ++i;
+  }
+  return Builder.createAllocObjectLiteralInst(propMap);
+}
+
 Value *ESTreeIRGen::genArrayExpr(ESTree::ArrayExpressionNode *Expr) {
   // If the array literal originates in typed code, produce a fast array.
   if (llvh::isa<flow::ArrayType>(flowContext_.getNodeTypeOrAny(Expr)->info))
     return genFastArrayFromElements(Expr->_elements);
+  // If the array literal is a tuple, produce a tuple object.
+  if (llvh::isa<flow::TupleType>(flowContext_.getNodeTypeOrAny(Expr)->info))
+    return genTupleFromElements(Expr->_elements);
   return genArrayFromElements(Expr->_elements);
 }
 
@@ -812,6 +826,26 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
     }
   }
 
+  // Check if we are loading a tuple element, and generate the typed IR.
+  if (auto *tupleType = llvh::dyn_cast<flow::TupleType>(
+          flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
+    if (auto *idx = llvh::dyn_cast<ESTree::NumericLiteralNode>(mem->_property);
+        idx && mem->_computed) {
+      double d = idx->_value;
+      // Safe cast because this has been typechecked.
+      uint32_t ulen = hermes::unsafeTruncateDouble<uint32_t>(d);
+      return MemberExpressionResult{
+          Builder.createPrLoadInst(
+              baseValue,
+              ulen,
+              Builder.getLiteralString(llvh::Twine(ulen)),
+              flowTypeToIRType(tupleType->getTypes()[ulen])),
+          baseValue};
+    }
+    Mod->getContext().getSourceErrorManager().error(
+        mem->getSourceRange(), "invalid tuple access");
+  }
+
   return MemberExpressionResult{
       Builder.createLoadPropertyInst(baseValue, propValue), baseValue};
 }
@@ -895,6 +929,26 @@ void ESTreeIRGen::emitMemberStore(
       Builder.createFastArrayStoreInst(storedValue, baseValue, propValue);
       return;
     }
+  }
+
+  // Check if we are loading a tuple element, and generate the typed IR.
+  if (auto *tupleType = llvh::dyn_cast<flow::TupleType>(
+          flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
+    if (auto *idx = llvh::dyn_cast<ESTree::NumericLiteralNode>(mem->_property);
+        idx && mem->_computed) {
+      double d = idx->_value;
+      // Safe cast because this has been typechecked.
+      uint32_t ulen = hermes::unsafeTruncateDouble<uint32_t>(d);
+      Builder.createPrStoreInst(
+          storedValue,
+          baseValue,
+          ulen,
+          Builder.getLiteralString(llvh::Twine(ulen)),
+          flowTypeToIRType(tupleType->getTypes()[ulen]).isNonPtr());
+      return;
+    }
+    Mod->getContext().getSourceErrorManager().error(
+        mem->getSourceRange(), "invalid tuple access");
   }
 
   Builder.createStorePropertyInst(storedValue, baseValue, propValue);

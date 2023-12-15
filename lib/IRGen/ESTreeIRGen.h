@@ -590,6 +590,11 @@ class ESTreeIRGen {
   /// SpreadElements as needed.
   Value *genFastArrayFromElements(ESTree::NodeList &list);
 
+  /// Convert the given list of elements in \p list into an object with
+  /// properties at the element indices given by the tuple type, so PrLoad can
+  /// be used to retrieve elements.
+  Value *genTupleFromElements(ESTree::NodeList &list);
+
   /// Convert the \p input into an array, spreading SpreadElements
   /// using for-or iteration semantics.
   /// Allows sharing spread code between genArrayExpr and genCallExpr.
