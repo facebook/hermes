@@ -58,7 +58,7 @@ void DeclCollector::runImpl() {
   closeScope(root_);
 }
 
-void DeclCollector::dump(llvh::raw_ostream &os, unsigned indent) {
+void DeclCollector::dump(llvh::raw_ostream &os, unsigned indent) const {
 #ifndef NDEBUG
   for (const auto &p : scopes_) {
     os << llvh::left_justify("", indent) << p.first->getNodeName() << "["

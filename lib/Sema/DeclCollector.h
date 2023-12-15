@@ -45,7 +45,7 @@ class DeclCollector
       unsigned recursionDepth,
       const std::function<void(ESTree::Node *)> &recursionDepthExceeded);
 
-  void dump(llvh::raw_ostream &os, unsigned indent = 0);
+  void dump(llvh::raw_ostream &os, unsigned indent = 0) const;
 
   /// \param node the AST node which could have created a scope.
   ///   The only nodes which can are decorated by `ScopeDecorationBase`.
