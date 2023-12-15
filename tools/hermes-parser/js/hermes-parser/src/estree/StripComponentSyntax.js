@@ -40,6 +40,8 @@ import type {
   Statement,
   AssignmentPattern,
   BindingName,
+  ObjectTypePropertySignature,
+  ObjectTypeSpreadProperty,
 } from 'hermes-estree';
 
 import {SimpleTransform} from '../transform/SimpleTransform';
@@ -100,6 +102,8 @@ function getComponentParameterName(
 }
 
 function createPropsTypeAnnotation(
+  propTypes: Array<ObjectTypePropertySignature>,
+  spread: ?ObjectTypeSpreadProperty,
   loc: ?SourceLocation,
   range: ?Range,
 ): TypeAnnotation {
@@ -112,6 +116,35 @@ function createPropsTypeAnnotation(
     range: range ?? [0, 0],
     parent: EMPTY_PARENT,
   });
+
+  // Optimize `{...Props}` -> `Props`
+  if (spread != null && propTypes.length === 0) {
+    return {
+      type: 'TypeAnnotation',
+      typeAnnotation: spread.argument,
+      ...createParamsTypeLoc(),
+    };
+  }
+
+  const typeProperties: Array<
+    ObjectTypePropertySignature | ObjectTypeSpreadProperty,
+  > = [...propTypes];
+
+  if (spread != null) {
+    // Spread needs to be the first type, as inline properties take precedence.
+    typeProperties.unshift(spread);
+  }
+
+  const propTypeObj = {
+    type: 'ObjectTypeAnnotation',
+    callProperties: [],
+    properties: typeProperties,
+    indexers: [],
+    internalSlots: [],
+    exact: false,
+    inexact: false,
+    ...createParamsTypeLoc(),
+  };
 
   return {
     type: 'TypeAnnotation',
@@ -126,18 +159,7 @@ function createPropsTypeAnnotation(
       },
       typeParameters: {
         type: 'TypeParameterInstantiation',
-        params: [
-          {
-            type: 'ObjectTypeAnnotation',
-            callProperties: [],
-            properties: [],
-            indexers: [],
-            internalSlots: [],
-            exact: false,
-            inexact: true,
-            ...createParamsTypeLoc(),
-          },
-        ],
+        params: [propTypeObj],
         ...createParamsTypeLoc(),
       },
       ...createParamsTypeLoc(),
@@ -164,12 +186,7 @@ function mapComponentParameters(
   ) {
     const restElementArgument = params[0].argument;
     return {
-      props: nodeWith(restElementArgument, {
-        typeAnnotation: createPropsTypeAnnotation(
-          restElementArgument.typeAnnotation?.loc,
-          restElementArgument.typeAnnotation?.range,
-        ),
-      }),
+      props: restElementArgument,
       ref: null,
     };
   }
@@ -188,13 +205,36 @@ function mapComponentParameters(
     return true;
   });
 
+  const [propTypes, spread] = paramsWithoutRef.reduce<
+    [Array<ObjectTypePropertySignature>, ?ObjectTypeSpreadProperty],
+  >(
+    ([propTypes, spread], param) => {
+      switch (param.type) {
+        case 'RestElement': {
+          if (spread != null) {
+            throw createSyntaxError(
+              param,
+              `Invalid state, multiple rest elements found as Component Parameters`,
+            );
+          }
+          return [propTypes, mapComponentParameterRestElementType(param)];
+        }
+        case 'ComponentParameter': {
+          propTypes.push(mapComponentParameterType(param));
+          return [propTypes, spread];
+        }
+      }
+    },
+    [[], null],
+  );
+
   const propsProperties = paramsWithoutRef.flatMap(mapComponentParameter);
 
   let props = null;
   if (propsProperties.length === 0) {
     if (refParam == null) {
       throw new Error(
-        'TransformReactScriptForBabel: Invalid state, ref should always be set at this point if props are empty',
+        'StripComponentSyntax: Invalid state, ref should always be set at this point if props are empty',
       );
     }
     const emptyParamsLoc = {
@@ -208,6 +248,8 @@ function mapComponentParameters(
       name: '_$$empty_props_placeholder$$',
       optional: false,
       typeAnnotation: createPropsTypeAnnotation(
+        [],
+        null,
         emptyParamsLoc,
         emptyParamsRange,
       ),
@@ -221,6 +263,8 @@ function mapComponentParameters(
       type: 'ObjectPattern',
       properties: propsProperties,
       typeAnnotation: createPropsTypeAnnotation(
+        propTypes,
+        spread,
         {
           start: lastPropsProperty.loc.end,
           end: lastPropsProperty.loc.end,
@@ -244,6 +288,67 @@ function mapComponentParameters(
   return {
     props,
     ref,
+  };
+}
+
+function mapComponentParameterType(
+  param: ComponentParameter,
+): ObjectTypePropertySignature {
+  const typeAnnotation =
+    param.local.type === 'AssignmentPattern'
+      ? param.local.left.typeAnnotation
+      : param.local.typeAnnotation;
+  const optional =
+    param.local.type === 'AssignmentPattern'
+      ? true
+      : param.local.type === 'Identifier'
+      ? param.local.optional
+      : false;
+
+  return {
+    type: 'ObjectTypeProperty',
+    key: shallowCloneNode(param.name),
+    value: typeAnnotation?.typeAnnotation ?? {
+      type: 'AnyTypeAnnotation',
+      loc: param.local.loc,
+      range: param.local.range,
+      parent: EMPTY_PARENT,
+    },
+    kind: 'init',
+    optional,
+    method: false,
+    static: false,
+    proto: false,
+    variance: null,
+    loc: param.local.loc,
+    range: param.local.range,
+    parent: EMPTY_PARENT,
+  };
+}
+
+function mapComponentParameterRestElementType(
+  param: RestElement,
+): ObjectTypeSpreadProperty {
+  if (
+    param.argument.type !== 'Identifier' &&
+    param.argument.type !== 'ObjectPattern'
+  ) {
+    throw createSyntaxError(
+      param,
+      `Invalid ${param.argument.type} encountered in restParameter`,
+    );
+  }
+  return {
+    type: 'ObjectTypeSpreadProperty',
+    argument: param.argument.typeAnnotation?.typeAnnotation ?? {
+      type: 'AnyTypeAnnotation',
+      loc: param.loc,
+      range: param.range,
+      parent: EMPTY_PARENT,
+    },
+    loc: param.loc,
+    range: param.range,
+    parent: EMPTY_PARENT,
   };
 }
 
