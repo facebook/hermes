@@ -9,7 +9,7 @@
 
 (function() {
 ([1, "", false]: (number | bool)[])
-// CHECK-LABEL: {{.*}}:11:6: error: ft: incompatible element type
+// CHECK-LABEL: {{.*}}:11:6: error: ft: incompatible array element type at index: 1
 // CHECK-NEXT:  ([1, "", false]: (number | bool)[])
 // CHECK-NEXT:       ^~
 
@@ -21,13 +21,13 @@ class Derived extends Base {
 }
 
 var derivedArr: Derived[] = [new Derived(), new Base()];
-// CHECK-NEXT: {{.*}}:23:45: error: ft: incompatible element type
+// CHECK-NEXT: {{.*}}:23:45: error: ft: incompatible array element type at index: 1
 // CHECK-NEXT: var derivedArr: Derived[] = [new Derived(), new Base()];
 // CHECK-NEXT:                                             ^~~~~~~~~~
 
 var numArr: number[] = [1, 2, 3];
 var strArr: string[] = ["a", "b", "c", ...numArr];
-// CHECK-NEXT: {{.*}}:29:40: error: ft: incompatible element type
+// CHECK-NEXT: {{.*}}:29:40: error: ft: incompatible array element type at index: 3
 // CHECK-NEXT: var strArr: string[] = ["a", "b", "c", ...numArr];
 // CHECK-NEXT:                                        ^~~~~~~~~
 })();

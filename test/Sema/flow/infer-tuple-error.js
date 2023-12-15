@@ -14,10 +14,10 @@
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:{{.*}}infer-tuple-error.js:12:2: error: ft: cannot destructure tuple, expected 1 elements, found 3
+// CHECK:{{.*}}infer-tuple-error.js:12:2: error: ft: incompatible tuple type, expected 1 elements, found 3
 // CHECK-NEXT:([1, 2, 3]: [number]);
 // CHECK-NEXT: ^~~~~~~~~
-// CHECK-NEXT:{{.*}}infer-tuple-error.js:13:2: error: ft: cannot destructure tuple, expected 2 elements, found 1
+// CHECK-NEXT:{{.*}}infer-tuple-error.js:13:2: error: ft: incompatible tuple type, expected 2 elements, found 1
 // CHECK-NEXT:([1]: [number, number]);
 // CHECK-NEXT: ^~~
 // CHECK-NEXT:Emitted 2 errors. exiting.

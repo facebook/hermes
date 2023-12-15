@@ -7,6 +7,8 @@
 
 #include "FlowChecker.h"
 
+#include "hermes/Support/Conversions.h"
+
 #include "llvh/ADT/MapVector.h"
 #include "llvh/ADT/ScopeExit.h"
 #include "llvh/ADT/SetVector.h"
@@ -670,9 +672,47 @@ class FlowChecker::ExprVisitor {
               node->_property->getSourceRange(), "ft: unknown array property");
         }
       }
+    } else if (auto *tupleType = llvh::dyn_cast<TupleType>(objType->info)) {
+      if (node->_computed) {
+        if (auto *idx =
+                llvh::dyn_cast<ESTree::NumericLiteralNode>(node->_property)) {
+          double d = idx->_value;
+          if (0 <= d && d < tupleType->getTypes().size()) {
+            // d is in bounds of the valid integer indices so the cast is safe.
+            if ((uint32_t)d == d) {
+              // ulen can only compare equal to d when d is a valid uint32
+              // integer.
+              resType = tupleType->getTypes()[(uint32_t)d];
+            } else {
+              outer_.sm_.error(
+                  node->_property->getSourceRange(),
+                  "ft: tuple index must be a non-negative integer");
+            }
+          } else {
+            outer_.sm_.error(
+                node->_property->getSourceRange(),
+                "ft: tuple index out of bounds");
+          }
+        } else {
+          outer_.sm_.error(
+              node->_property->getSourceRange(),
+              "ft: tuple property access requires an number literal index");
+        }
+      }
     } else if (!llvh::isa<AnyType>(objType->info)) {
-      outer_.sm_.error(
-          node->getSourceRange(), "ft: properties not defined for type");
+      if (node->_computed) {
+        outer_.sm_.error(
+            node->_property->getSourceRange(),
+            llvh::Twine(
+                "ft: indexed access only allowed on array and tuple, found ") +
+                objType->info->getKindName());
+      } else {
+        outer_.sm_.error(
+            node->_property->getSourceRange(),
+            llvh::Twine(
+                "ft: named property access only allowed on objects, found ") +
+                objType->info->getKindName());
+      }
     }
 
     outer_.setNodeType(node, resType);
