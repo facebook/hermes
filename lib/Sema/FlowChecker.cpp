@@ -743,15 +743,18 @@ class FlowChecker::ExprVisitor {
     /// Try using the given element type \p elTy for this array. If any elements
     /// are incompatible with the given type, report an error, otherwise, set
     /// the type of the array.
-    auto tryElementType = [node, this, getElementType](Type *elTy) {
+    auto tryArrayElementType = [node, this, getElementType](Type *elTy) {
       auto &elements = node->_elements;
+      size_t i = 0;
       for (auto it = elements.begin(); it != elements.end(); ++it) {
         ESTree::Node *arg = &*it;
         Type *argTy = getElementType(arg);
         auto cf = canAFlowIntoB(argTy->info, elTy->info);
         if (!cf.canFlow) {
           outer_.sm_.error(
-              arg->getSourceRange(), "ft: incompatible element type");
+              arg->getSourceRange(),
+              llvh::Twine("ft: incompatible array element type at index: ") +
+                  llvh::Twine(i));
           return;
         }
         // Add a checked cast if needed. Skip spread elements, since we need to
@@ -762,9 +765,48 @@ class FlowChecker::ExprVisitor {
           elements.erase(it);
           it = newIt;
         }
+
+        ++i;
       }
       auto *arrTy = outer_.flowContext_.createArray(elTy);
       outer_.setNodeType(node, outer_.flowContext_.createType(arrTy));
+    };
+
+    /// Make the tuple type of the array expression based on its elements.
+    auto tryTupleType = [node, this, getElementType](
+                            Type *target, TupleType *targetTuple) -> void {
+      auto &elements = node->_elements;
+      size_t i = 0;
+      // Whether we had to stop early due to not enough tuple elements.
+      bool fail = false;
+      for (ESTree::Node &arg : elements) {
+        if (i >= targetTuple->getTypes().size()) {
+          fail = true;
+          break;
+        }
+
+        Type *targetTy = targetTuple->getTypes()[i];
+        Type *argTy = getElementType(&arg);
+        auto cf = canAFlowIntoB(argTy->info, targetTy->info);
+        if (!cf.canFlow) {
+          outer_.sm_.error(
+              arg.getSourceRange(),
+              llvh::Twine("ft: incompatible tuple element type at index: ") +
+                  llvh::Twine(i));
+          return;
+        }
+        ++i;
+      }
+      if (fail || i != targetTuple->getTypes().size()) {
+        outer_.sm_.error(
+            node->getSourceRange(),
+            llvh::Twine("ft: incompatible tuple type, expected ") +
+                llvh::Twine(targetTuple->getTypes().size()) +
+                " elements, found " + llvh::Twine(elements.size()));
+        outer_.setNodeType(node, outer_.flowContext_.getAny());
+        return;
+      }
+      outer_.setNodeType(node, target);
     };
 
     // First, try to determine the desired element type from surrounding
@@ -782,7 +824,11 @@ class FlowChecker::ExprVisitor {
         // right now, so it's possible `findDeclType` returns nullptr.
         if (Type *declType = outer_.flowContext_.findDeclType(decl)) {
           if (auto *arrTy = llvh::dyn_cast<ArrayType>(declType->info)) {
-            tryElementType(arrTy->getElement());
+            tryArrayElementType(arrTy->getElement());
+            return;
+          }
+          if (auto *tupleTy = llvh::dyn_cast<TupleType>(declType->info)) {
+            tryTupleType(declType, tupleTy);
             return;
           }
         }
@@ -795,8 +841,28 @@ class FlowChecker::ExprVisitor {
         llvh::isa<ESTree::AsExpressionNode>(parent)) {
       auto *resTy = outer_.getNodeTypeOrAny(parent);
       if (auto *arrTy = llvh::dyn_cast<ArrayType>(resTy->info)) {
-        tryElementType(arrTy->getElement());
+        tryArrayElementType(arrTy->getElement());
         return;
+      }
+      if (auto *tupleTy = llvh::dyn_cast<TupleType>(resTy->info)) {
+        tryTupleType(resTy, tupleTy);
+        return;
+      }
+    }
+
+    // If this is a returned literal, try the type of the function.
+    if (llvh::isa<ESTree::ReturnStatementNode>(parent)) {
+      if (auto *ftype = llvh::dyn_cast<TypedFunctionType>(
+              outer_.curFunctionContext_->functionType->info)) {
+        if (auto *arrTy = llvh::dyn_cast<ArrayType>(ftype)) {
+          tryArrayElementType(arrTy->getElement());
+          return;
+        }
+        if (auto *tupleTy =
+                llvh::dyn_cast<TupleType>(ftype->getReturnType()->info)) {
+          tryTupleType(ftype->getReturnType(), tupleTy);
+          return;
+        }
       }
     }
 
