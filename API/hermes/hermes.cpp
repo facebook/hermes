@@ -103,7 +103,20 @@ void hermesFatalErrorHandler(
   if (sApiFatalHandler) {
     sApiFatalHandler(reason);
   } else {
+#ifdef HERMES_IS_MOBILE_BUILD
     *((volatile int *)nullptr) = 42;
+#else
+    // Copied from ErrorHandling.cpp.
+    // Blast the result out to stderr.  We don't try hard to make sure this
+    // succeeds (e.g. handling EINTR) and we can't use errs() here because
+    // raw ostreams can call report_fatal_error.
+    llvh::SmallVector<char, 64> buffer;
+    llvh::raw_svector_ostream OS(buffer);
+    OS << "LLVM ERROR: " << reason << "\n";
+    llvh::StringRef messageStr = OS.str();
+    ssize_t written = ::write(2, messageStr.data(), messageStr.size());
+    (void)written; // If something went wrong, we deliberately just give up.
+#endif
   }
 }
 
