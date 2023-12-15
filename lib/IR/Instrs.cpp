@@ -26,6 +26,7 @@ unsigned TerminatorInst::getNumSuccessors() const {
     return I->getNumSuccessorsImpl();
 #define BEGIN_TERMINATOR(NAME, PARENT) TERMINATOR(NAME, PARENT)
 #include "hermes/IR/Instrs.def"
+
   llvm_unreachable("not a terminator?!");
 }
 
@@ -36,6 +37,7 @@ BasicBlock *TerminatorInst::getSuccessor(unsigned idx) const {
     return I->getSuccessorImpl(idx);
 #define BEGIN_TERMINATOR(NAME, PARENT) TERMINATOR(NAME, PARENT)
 #include "hermes/IR/Instrs.def"
+
   llvm_unreachable("not a terminator?!");
 }
 
@@ -46,6 +48,7 @@ void TerminatorInst::setSuccessor(unsigned idx, BasicBlock *B) {
     return I->setSuccessorImpl(idx, B);
 #define BEGIN_TERMINATOR(NAME, PARENT) TERMINATOR(NAME, PARENT)
 #include "hermes/IR/Instrs.def"
+
   llvm_unreachable("not a terminator?!");
 }
 
@@ -134,6 +137,21 @@ SideEffect BinaryOperatorInst::getBinarySideEffect(
         return SideEffect{}.setIdempotent();
       break;
 
+    case ValueKind::BinaryUnsignedRightShiftInstKind:
+    case ValueKind::BinaryDivideInstKind:
+    case ValueKind::BinaryModuloInstKind:
+      // We can only reason about primitive types.
+      if (!leftTy.isPrimitive() || !rightTy.isPrimitive())
+        break;
+      // if either of the operands can be a BigInt, this instruction may throw
+      // for one of the following reasons:
+      // - BigInt doesn't have unsigned right shift.
+      // - BigInt division by zero.
+      if (leftTy.canBeBigInt() || rightTy.canBeBigInt())
+        return SideEffect{}.setThrow();
+      // We have primitive operands that are not BigInt.
+      return SideEffect{}.setIdempotent();
+
     case ValueKind::BinaryAddInstKind:
       // We can only reason about primitive types.
       if (!leftTy.isPrimitive() || !rightTy.isPrimitive())
@@ -145,11 +163,8 @@ SideEffect BinaryOperatorInst::getBinarySideEffect(
 
     case ValueKind::BinaryLeftShiftInstKind:
     case ValueKind::BinaryRightShiftInstKind:
-    case ValueKind::BinaryUnsignedRightShiftInstKind:
     case ValueKind::BinarySubtractInstKind:
     case ValueKind::BinaryMultiplyInstKind:
-    case ValueKind::BinaryDivideInstKind:
-    case ValueKind::BinaryModuloInstKind:
     case ValueKind::BinaryOrInstKind:
     case ValueKind::BinaryXorInstKind:
     case ValueKind::BinaryAndInstKind:
