@@ -222,6 +222,8 @@ class SemanticResolver
 #if HERMES_PARSE_FLOW
   void visit(ESTree::CoverTypedIdentifierNode *node);
   void visit(ESTree::TypeAliasNode *node);
+  void visit(ESTree::TypeParameterDeclarationNode *node);
+  void visit(ESTree::TypeParameterInstantiationNode *node);
   void visit(ESTree::TypeCastExpressionNode *node);
   void visit(ESTree::AsExpressionNode *node);
   void visit(ESTree::ComponentDeclarationNode *componentDecl);

@@ -888,6 +888,14 @@ void SemanticResolver::visit(TypeAliasNode *node) {
   // Do nothing.
 }
 
+void SemanticResolver::visit(TypeParameterDeclarationNode *node) {
+  // Do nothing.
+}
+
+void SemanticResolver::visit(TypeParameterInstantiationNode *node) {
+  // Do nothing.
+}
+
 void SemanticResolver::visit(TypeCastExpressionNode *node) {
   // Visit the expression, but not the type annotation.
   visitESTreeNode(*this, node->_expression, node);
