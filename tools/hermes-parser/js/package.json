@@ -30,6 +30,7 @@
   },
   "scripts": {
     "build": "./scripts/build.sh",
+    "build-prettier": "./scripts/build-prettier.sh",
     "lint": "eslint .",
     "flow": "flow",
     "format": "prettier --config ./.prettierrc.json --write \"**/*.js\"",
