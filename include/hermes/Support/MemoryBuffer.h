@@ -16,13 +16,10 @@ namespace hermes {
 // Used in hvm.cpp and hermes.cpp
 class MemoryBuffer : public Buffer {
  public:
-  MemoryBuffer(const llvh::MemoryBuffer *buffer) : buffer_(buffer) {
-    data_ = reinterpret_cast<const uint8_t *>(buffer_->getBufferStart());
-    size_ = buffer_->getBufferSize();
-  }
-
- private:
-  const llvh::MemoryBuffer *buffer_;
+  MemoryBuffer(const llvh::MemoryBuffer *buffer)
+      : Buffer(
+            (const uint8_t *)buffer->getBufferStart(),
+            buffer->getBufferSize()) {}
 };
 
 // Like MemoryBuffer, but owns the underlying llvh::MemoryBuffer
