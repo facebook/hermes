@@ -2634,6 +2634,16 @@ class FlowChecker::DeclareScopeTypes {
   /// Resolve the remaining forward declared types and canonicalize forward
   /// unions as much as possible.
   void completeForwardDeclarations() {
+    // Complete all forward-declared unions.
+    // First find all the recursive union arms.
+    for (Type *type : forwardUnions) {
+      FindLoopingTypes(loopingUnionArms, type);
+    }
+    // Now simplify and canonicalize as many union arms as possible.
+    for (Type *type : forwardUnions) {
+      completeForwardUnion(type, {});
+    }
+
     // Complete all forward-declared types.
     for (Type *type : forwardClassDecls) {
       // This is necessary because we need to defer parsing the class to allow
@@ -2645,16 +2655,6 @@ class FlowChecker::DeclareScopeTypes {
       auto *classNode = llvh::cast<ESTree::ClassDeclarationNode>(type->node);
       outer.visitExpression(classNode->_superClass, classNode);
       ParseClassType(outer, classNode->_superClass, classNode->_body, type);
-    }
-
-    // Complete all forward-declared unions.
-    // First find all the recursive union arms.
-    for (Type *type : forwardUnions) {
-      FindLoopingTypes(loopingUnionArms, type);
-    }
-    // Now simplify and canonicalize as many union arms as possible.
-    for (Type *type : forwardUnions) {
-      completeForwardUnion(type, {});
     }
   }
 
