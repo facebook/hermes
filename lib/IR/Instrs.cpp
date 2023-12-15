@@ -25,6 +25,7 @@ unsigned TerminatorInst::getNumSuccessors() const {
   if (auto I = llvh::dyn_cast<CLASS>(this)) \
     return I->getNumSuccessors();
 #include "hermes/IR/Instrs.def"
+
   llvm_unreachable("not a terminator?!");
 }
 
@@ -34,6 +35,7 @@ BasicBlock *TerminatorInst::getSuccessor(unsigned idx) const {
   if (auto I = llvh::dyn_cast<CLASS>(this)) \
     return I->getSuccessor(idx);
 #include "hermes/IR/Instrs.def"
+
   llvm_unreachable("not a terminator?!");
 }
 
@@ -43,6 +45,7 @@ void TerminatorInst::setSuccessor(unsigned idx, BasicBlock *B) {
   if (auto I = llvh::dyn_cast<CLASS>(this)) \
     return I->setSuccessor(idx, B);
 #include "hermes/IR/Instrs.def"
+
   llvm_unreachable("not a terminator?!");
 }
 
@@ -175,6 +178,21 @@ BinaryOperatorInst::getBinarySideEffect(Type leftTy, Type rightTy, OpKind op) {
         return SideEffectKind::None;
       break;
 
+    case OpKind::UnsignedRightShiftKind:
+    case OpKind::DivideKind:
+    case OpKind::ModuloKind:
+      // We can only reason about primitive types.
+      if (!leftTy.isPrimitive() || !rightTy.isPrimitive())
+        break;
+      // if either of the operands can be a BigInt, this instruction may throw
+      // for one of the following reasons:
+      // - BigInt doesn't have unsigned right shift.
+      // - BigInt division by zero.
+      if (leftTy.canBeBigInt() || rightTy.canBeBigInt())
+        return SideEffectKind::Unknown;
+      // We have primitive operands that are not BigInt.
+      return SideEffectKind::None;
+
     case OpKind::AddKind:
       // We can only reason about primitive types.
       if (!leftTy.isPrimitive() || !rightTy.isPrimitive())
@@ -186,11 +204,8 @@ BinaryOperatorInst::getBinarySideEffect(Type leftTy, Type rightTy, OpKind op) {
 
     case OpKind::LeftShiftKind:
     case OpKind::RightShiftKind:
-    case OpKind::UnsignedRightShiftKind:
     case OpKind::SubtractKind:
     case OpKind::MultiplyKind:
-    case OpKind::DivideKind:
-    case OpKind::ModuloKind:
     case OpKind::OrKind:
     case OpKind::XorKind:
     case OpKind::AndKind:
