@@ -12,29 +12,33 @@
 let tup: [number, boolean] = [1, true];
 let anyVar: any = tup;
 
+{
 let [v1] = tup;
 let [v2, v3, v4] = tup;
 let [v5, v6]: any = tup;
 let [v7, v8]: any = anyVar;
+}
+{
 let a: number;
 let b: string;
 [a, b] = tup;
+}
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:{{.*}}tuple-destr-error.js:15:5: error: ft: cannot destructure tuple, expected 2 elements, found 1
+// CHECK:{{.*}}tuple-destr-error.js:16:5: error: ft: cannot destructure tuple, expected 2 elements, found 1
 // CHECK-NEXT:let [v1] = tup;
 // CHECK-NEXT:    ^~~~
-// CHECK-NEXT:{{.*}}tuple-destr-error.js:16:5: error: ft: cannot destructure tuple, expected 2 elements, found 3
+// CHECK-NEXT:{{.*}}tuple-destr-error.js:17:5: error: ft: cannot destructure tuple, expected 2 elements, found 3
 // CHECK-NEXT:let [v2, v3, v4] = tup;
 // CHECK-NEXT:    ^~~~~~~~~~~~
-// CHECK-NEXT:{{.*}}tuple-destr-error.js:17:5: error: ft: incompatible type for array pattern, expected tuple
+// CHECK-NEXT:{{.*}}tuple-destr-error.js:18:5: error: ft: incompatible type for array pattern, expected tuple
 // CHECK-NEXT:let [v5, v6]: any = tup;
 // CHECK-NEXT:    ^~~~~~~~~~~~~
-// CHECK-NEXT:{{.*}}tuple-destr-error.js:18:5: error: ft: incompatible type for array pattern, expected tuple
+// CHECK-NEXT:{{.*}}tuple-destr-error.js:19:5: error: ft: incompatible type for array pattern, expected tuple
 // CHECK-NEXT:let [v7, v8]: any = anyVar;
 // CHECK-NEXT:    ^~~~~~~~~~~~~
-// CHECK-NEXT:{{.*}}tuple-destr-error.js:21:1: error: ft: incompatible assignment types
+// CHECK-NEXT:{{.*}}tuple-destr-error.js:24:1: error: ft: incompatible assignment types
 // CHECK-NEXT:[a, b] = tup;
 // CHECK-NEXT:^~~~~~~~~~~~
 // CHECK-NEXT:Emitted 5 errors. exiting.

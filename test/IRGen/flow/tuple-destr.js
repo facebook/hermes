@@ -13,7 +13,7 @@ let inner: [number, string] = [2, 'asdf'];
 let outer: [number, bool, [number, string]] = [1, true, inner];
 let [x, y, [a, b]] = outer;
 let i: number;
-let j: bool;
+let j: string;
 [i, j] = inner;
 
 // Auto-generated content below. Please do not modify manually.
@@ -64,7 +64,7 @@ let j: bool;
 // CHECK-NEXT:  %27 = LoadFrameInst (:any) [inner]: any
 // CHECK-NEXT:  %28 = PrLoadInst (:number) %27: any, 0: number, "0": string
 // CHECK-NEXT:        StoreFrameInst %28: number, [i]: any
-// CHECK-NEXT:  %30 = PrLoadInst (:boolean) %27: any, 1: number, "1": string
-// CHECK-NEXT:        StoreFrameInst %30: boolean, [j]: any
+// CHECK-NEXT:  %30 = PrLoadInst (:string) %27: any, 1: number, "1": string
+// CHECK-NEXT:        StoreFrameInst %30: string, [j]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
