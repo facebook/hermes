@@ -39,10 +39,8 @@ print(p1.x, p2.x);
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %Point(): undefined
 // CHECK-NEXT:  %1 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:       StorePropertyStrictInst %1: object, %0: object, "prototype": string
-// CHECK-NEXT:  %3 = LoadPropertyInst (:any) %0: object, "prototype": string
-// CHECK-NEXT:  %4 = LoadPropertyInst (:any) %0: object, "prototype": string
-// CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number, 3: number
+// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number, 3: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

@@ -73,12 +73,13 @@ new D().override();
 // CHECK-NEXT:        StoreFrameInst %17: object, [?D.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %17: object, %12: object, "prototype": string
 // CHECK-NEXT:  %21 = LoadFrameInst (:any) [D]: any
-// CHECK-NEXT:  %22 = LoadPropertyInst (:any) %21: any, "prototype": string
-// CHECK-NEXT:  %23 = AllocObjectInst (:object) 0: number, %22: any
-// CHECK-NEXT:  %24 = CallInst (:any) %21: any, %D(): any, empty: any, %21: any, %23: object
-// CHECK-NEXT:  %25 = LoadParentInst (:object) %23: object
-// CHECK-NEXT:  %26 = PrLoadInst (:object) %25: object, 0: number, "override": string
-// CHECK-NEXT:  %27 = CallInst [njsf] (:any) %26: object, empty: any, empty: any, undefined: undefined, %23: object
+// CHECK-NEXT:  %22 = LoadFrameInst (:object) [?D.prototype]: object
+// CHECK-NEXT:  %23 = UnionNarrowTrustedInst (:object) %22: object
+// CHECK-NEXT:  %24 = AllocObjectInst (:object) 0: number, %23: object
+// CHECK-NEXT:  %25 = CallInst (:any) %21: any, %D(): any, empty: any, %21: any, %24: object
+// CHECK-NEXT:  %26 = LoadParentInst (:object) %24: object
+// CHECK-NEXT:  %27 = PrLoadInst (:object) %26: object, 0: number, "override": string
+// CHECK-NEXT:  %28 = CallInst [njsf] (:any) %27: object, empty: any, empty: any, undefined: undefined, %24: object
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

@@ -46,12 +46,13 @@ print(new C().method());
 // CHECK-NEXT:       StorePropertyStrictInst %6: object, %3: object, "prototype": string
 // CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [C]: any
-// CHECK-NEXT:  %11 = LoadPropertyInst (:any) %10: any, "prototype": string
-// CHECK-NEXT:  %12 = AllocObjectInst (:object) 0: number, %11: any
-// CHECK-NEXT:  %13 = LoadParentInst (:object) %12: object
-// CHECK-NEXT:  %14 = PrLoadInst (:object) %13: object, 0: number, "method": string
-// CHECK-NEXT:  %15 = CallInst [njsf] (:any) %14: object, empty: any, empty: any, undefined: undefined, %12: object
-// CHECK-NEXT:  %16 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %15: any
+// CHECK-NEXT:  %11 = LoadFrameInst (:object) [?C.prototype]: object
+// CHECK-NEXT:  %12 = UnionNarrowTrustedInst (:object) %11: object
+// CHECK-NEXT:  %13 = AllocObjectInst (:object) 0: number, %12: object
+// CHECK-NEXT:  %14 = LoadParentInst (:object) %13: object
+// CHECK-NEXT:  %15 = PrLoadInst (:object) %14: object, 0: number, "method": string
+// CHECK-NEXT:  %16 = CallInst [njsf] (:any) %15: object, empty: any, empty: any, undefined: undefined, %13: object
+// CHECK-NEXT:  %17 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %16: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

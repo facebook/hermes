@@ -74,12 +74,13 @@ return foo;
 // CHECK-NEXT:  %0 = LoadParamInst (:number) %x: number
 // CHECK-NEXT:       StoreFrameInst %0: number, [x]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [C@main]: any
-// CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: any, "prototype": string
-// CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) "x": string, 0: number
-// CHECK-NEXT:       StoreParentInst %3: any, %4: object
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %7 = CallInst (:any) %2: any, %C(): any, empty: any, %2: any, %4: object, %6: any
-// CHECK-NEXT:       ReturnInst %4: object
+// CHECK-NEXT:  %3 = LoadFrameInst (:object) [?C.prototype@main]: object
+// CHECK-NEXT:  %4 = UnionNarrowTrustedInst (:object) %3: object
+// CHECK-NEXT:  %5 = AllocObjectLiteralInst (:object) "x": string, 0: number
+// CHECK-NEXT:       StoreParentInst %4: object, %5: object
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %8 = CallInst (:any) %2: any, %C(): any, empty: any, %2: any, %5: object, %7: any
+// CHECK-NEXT:       ReturnInst %5: object
 // CHECK-NEXT:function_end
 
 // CHECK:function C(x: any): any [typed]

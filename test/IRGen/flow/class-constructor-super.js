@@ -57,9 +57,10 @@ new D();
 // CHECK-NEXT:        StoreFrameInst %13: object, [?D.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %13: object, %10: object, "prototype": string
 // CHECK-NEXT:  %16 = LoadFrameInst (:any) [D]: any
-// CHECK-NEXT:  %17 = LoadPropertyInst (:any) %16: any, "prototype": string
-// CHECK-NEXT:  %18 = AllocObjectInst (:object) 0: number, %17: any
-// CHECK-NEXT:  %19 = CallInst (:any) %16: any, %D(): any, empty: any, %16: any, %18: object
+// CHECK-NEXT:  %17 = LoadFrameInst (:object) [?D.prototype]: object
+// CHECK-NEXT:  %18 = UnionNarrowTrustedInst (:object) %17: object
+// CHECK-NEXT:  %19 = AllocObjectInst (:object) 0: number, %18: object
+// CHECK-NEXT:  %20 = CallInst (:any) %16: any, %D(): any, empty: any, %16: any, %19: object
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

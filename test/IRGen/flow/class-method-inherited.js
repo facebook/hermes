@@ -61,12 +61,13 @@ new D().inherited();
 // CHECK-NEXT:        StoreFrameInst %15: object, [?D.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %15: object, %11: object, "prototype": string
 // CHECK-NEXT:  %19 = LoadFrameInst (:any) [D]: any
-// CHECK-NEXT:  %20 = LoadPropertyInst (:any) %19: any, "prototype": string
-// CHECK-NEXT:  %21 = AllocObjectInst (:object) 0: number, %20: any
-// CHECK-NEXT:  %22 = CallInst (:any) %19: any, %D(): any, empty: any, %19: any, %21: object
-// CHECK-NEXT:  %23 = LoadParentInst (:object) %21: object
-// CHECK-NEXT:  %24 = PrLoadInst (:object) %23: object, 0: number, "inherited": string
-// CHECK-NEXT:  %25 = CallInst [njsf] (:any) %24: object, empty: any, empty: any, undefined: undefined, %21: object
+// CHECK-NEXT:  %20 = LoadFrameInst (:object) [?D.prototype]: object
+// CHECK-NEXT:  %21 = UnionNarrowTrustedInst (:object) %20: object
+// CHECK-NEXT:  %22 = AllocObjectInst (:object) 0: number, %21: object
+// CHECK-NEXT:  %23 = CallInst (:any) %19: any, %D(): any, empty: any, %19: any, %22: object
+// CHECK-NEXT:  %24 = LoadParentInst (:object) %22: object
+// CHECK-NEXT:  %25 = PrLoadInst (:object) %24: object, 0: number, "inherited": string
+// CHECK-NEXT:  %26 = CallInst [njsf] (:any) %25: object, empty: any, empty: any, undefined: undefined, %22: object
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

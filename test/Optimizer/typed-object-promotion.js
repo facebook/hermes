@@ -39,9 +39,8 @@ print(foo.x, foo.y);
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %Foo(): undefined
 // CHECK-NEXT:  %1 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:       StorePropertyStrictInst %1: object, %0: object, "prototype": string
-// CHECK-NEXT:  %3 = LoadPropertyInst (:any) %0: object, "prototype": string
-// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number, 2: number
+// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number, 2: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

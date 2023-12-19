@@ -2171,9 +2171,29 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
     flow::ClassType *classType = consType->getClassTypeInfo();
     assert(!hasSpread && "statically typed spread is not supported");
 
-    Value *newInst = emitClassAllocation(
-        classType,
-        Builder.createLoadPropertyInst(callee, kw_.identPrototype->str()));
+    // If we know the ClassType but it hasn't been populated in
+    // classConstructors_ yet, then it must occur later in the same function.
+    // If it was created in a surrounding function and captured, the function
+    // queueing mechanism would result in compiling this CallInst after
+    // it anyway.
+    // This is an error, since we can statically determine that the constructor
+    // will not have been populated.
+    // TODO: This error should be raised earlier, when the callee is loaded.
+    auto it = classConstructors_.find(classType);
+    if (it == classConstructors_.end()) {
+      Builder.getModule()->getContext().getSourceErrorManager().error(
+          N->_callee->getSourceRange(),
+          Twine("Cannot construct class before its definition."));
+      return Builder.getLiteralUndefined();
+    }
+
+    // Since the callee has already been loaded at this point, we know that the
+    // constructor has already beenn created and initialized. This means that we
+    // do not need to perform any TDZ check on the home object variable.
+    auto *proto = Builder.createUnionNarrowTrustedInst(
+        Builder.createLoadFrameInst(it->second.homeObjectVar),
+        Type::createObject());
+    Value *newInst = emitClassAllocation(classType, proto);
 
     // If there is an explicit constructor, invoke it. Note that there is
     // always a dummy one, which we even loaded (for TDZ), but there is no need
@@ -2183,21 +2203,9 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
       for (auto &arg : N->_arguments)
         args.push_back(genExpression(&arg));
 
-      // If we know the ClassType but it hasn't been populated in
-      // classConstructors_ yet, then it must occur later in the same function.
-      // If it was created in a surrounding function and captured, the function
-      // queueing mechanism would result in compiling this CallInst after
-      // it anyway.
-      // So populate the target when we've already made the Function for the
-      // corresponding ClassType.
-      auto it = classConstructors_.find(classType);
-      if (it != classConstructors_.end()) {
-        Function *target = it->second.constructorFunc;
-        Builder.createCallInst(
-            callee, target, Builder.getEmptySentinel(), callee, newInst, args);
-      } else {
-        Builder.createCallInst(callee, callee, newInst, args);
-      }
+      Function *target = it->second.constructorFunc;
+      Builder.createCallInst(
+          callee, target, Builder.getEmptySentinel(), callee, newInst, args);
     }
     return newInst;
   }
