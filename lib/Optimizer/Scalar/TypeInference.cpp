@@ -5,6 +5,31 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+//===----------------------------------------------------------------------===//
+/// \file
+///
+/// This optimization performs type inference for instructions that do not have
+/// isTyped() == true.
+/// It infers types for variables and function return types as well,
+/// and propagates them through the IR.
+///
+/// Steps:
+/// 1. Partition the functions into groups that use each others variables or
+/// call each other. This allows us to process all the instructions that could
+/// possibly influence each others' types together. If we were to visit
+/// functions one at a time, we might visit the use of a variable prior to its
+/// assignment in another function, and be unable to infer its type correctly.
+/// 2. Clear the type information from all instructions in the group. This
+/// allows us to expand the types to the smallest valid type for each value
+/// instead of starting with types that are too loose prior to the pass and not
+/// be able to narrow them properly.
+/// 3. Infer the type of every instruction, function, and variable in the group.
+/// Iterate until no more changes are made.
+///
+/// The pass never widens types of any value, because it intersects the result
+/// types with the types prior to the pass before setting them.
+//===----------------------------------------------------------------------===//
+
 #define DEBUG_TYPE "typeinference"
 
 #include "hermes/Optimizer/Scalar/TypeInference.h"
