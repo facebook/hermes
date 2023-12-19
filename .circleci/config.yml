@@ -275,7 +275,9 @@ jobs:
       - run:
           name: Build macOS CLI
           environment:
-            RELEASE_FLAGS: -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DCMAKE_OSX_ARCHITECTURES=x86_64;arm64
+            RELEASE_FLAGS: >-
+              -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DCMAKE_OSX_ARCHITECTURES=x86_64;arm64 \
+              -DBUILD_SHARED_LIBS=OFF -DHERMES_BUILD_SHARED_JSI=OFF
           command: |
             cmake -S hermes -B build -G Ninja ${RELEASE_FLAGS} -DHERMES_ENABLE_DEBUGGER=False
             cmake --build ./build --target hermes hvm hbcdump hermesc check-hermes
