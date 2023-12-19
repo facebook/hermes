@@ -1395,7 +1395,7 @@ class InstrGen {
   }
   void generateAllocStackInst(AllocStackInst &inst) {
     // This is a no-op.
-    os_ << "  // AllockStackInst\n";
+    os_ << "  // AllocStackInst\n";
   }
   void generateAllocObjectInst(AllocObjectInst &inst) {
     os_.indent(2);
