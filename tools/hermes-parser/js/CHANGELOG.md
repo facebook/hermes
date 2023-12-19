@@ -1,3 +1,9 @@
+## 0.18.2
+
+### `hermes-parser`
+
+* Retain more type annotations when lowering to babel AST.
+
 ## 0.18.1
 
 ### `flow-api-translator`
