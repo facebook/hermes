@@ -44,3 +44,6 @@ print(Object.keys(parentInstance).length);
 
 print(Object.keys(childInstance).length);
 // CHECK: 0
+
+print(Parent.prototype.nonOverridenMethod.name);
+// CHECK: nonOverridenMethod

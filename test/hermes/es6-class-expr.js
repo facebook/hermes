@@ -17,3 +17,19 @@ const parentInstance = new Parent(42);
 
 print(parentInstance.id);
 //CHECK: 42
+
+const childInstance = [0, new (class extends Parent {
+  constructor() {
+    super(1);
+  }
+
+  getDebugInfo() {
+    return `MyID: ${this.id}`;
+  }
+})][1];
+
+print(childInstance.id);
+//CHECK: 1
+
+print(childInstance.getDebugInfo());
+//CHECK: MyID: 1
