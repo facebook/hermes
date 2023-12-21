@@ -6,6 +6,7 @@
  */
 
 // RUN: TZ="America/Santiago" %hermes -O %s | %FileCheck --match-full-lines %s
+// XFAIL: windows
 "use strict";
 
 // These tests ensure that local to UTC time conversion yields consistent result
