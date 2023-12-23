@@ -7,6 +7,8 @@
 
 // RUN: %hermes -hermes-parser -dump-ir %s     -O | %FileCheckOrRegen %s
 
+sink = print
+
 function add_sub_num(x, y) {
   var sink = print;
 
@@ -16,6 +18,9 @@ function add_sub_num(x, y) {
 
   // Multiplication:
   sink(19 * 7)
+  sink(-1 * null)
+  sink(-1 * undefined)
+  sink(true * false)
 
   // Add/Sub constants:
   sink(1 + 2)
@@ -23,6 +28,10 @@ function add_sub_num(x, y) {
   sink(2.5 - 1.5)
   sink(2.5 - 10)
   sink(2.5 + 1.5)
+  sink(1 + true)
+  sink(false + 1)
+  sink(true + false)
+  sink(true - false)
 
   //Division operations with consts
   sink(48 / 24)
@@ -31,12 +40,18 @@ function add_sub_num(x, y) {
   sink(0 / 0)
   sink(-0 / 4)
   sink(10 / -0)
+  sink(true / false)
+  sink(false / true)
+  sink(true / null)
+  sink(true / undefined)
 
   // Operations with NaN - should all eval to NaN
   sink(2.5 - (undefined + 1))
   sink((undefined + 1) + 1.5)
   sink(19 * (undefined + 1))
   sink((undefined + 1) / -0)
+  sink(undefined + null)
+  sink(null + undefined)
 }
 
 function modulo_num(x, y) {
@@ -54,6 +69,10 @@ function modulo_num(x, y) {
   sink(-5.5 % -1.5)
   sink(5.5 % 2.5)
   sink(5.5 % -2.5)
+  sink(5.5 % null)
+  sink(5.5 % undefined)
+  sink(null % 2.5)
+  sink(undefined % -2.5)
 
   // Operations with NaN - should all eval to NaN
   sink(10 % (undefined + 1))
@@ -89,11 +108,22 @@ function add_str(x, y) {
   sink("hello " + "world")
   sink("hello " + (undefined+1))
   sink((undefined+1) + "world")
+  sink("hello" + 1)
+  sink(1 + "hello")
+  sink(true + "world")
+  sink("world" + false)
+  sink("world" + -0)
 }
 
 function add_empty_str(x) {
   sink("" + x);
   sink(x + "");
+  sink("" + null);
+  sink(undefined + "");
+  sink("" + false);
+  sink(true + "");
+  sink("" + 1);
+  sink(-2 + "");
 }
 
 function add_empty_str_simplify(x) {
@@ -378,6 +408,11 @@ function unary_ops(x, y) {
   sink(typeof(true))
   sink(typeof(/a+b/))
   sink(typeof(function (){}))
+  sink(+true)
+  sink(+false)
+  sink(+null)
+  sink(+undefined)
+  sink(+9)
   sink(-9)
   sink(-true)
   sink(-false)
@@ -447,7 +482,7 @@ function objectCond() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1 : undefined
+// CHECK:function global#0()#1
 // CHECK-NEXT:globals = [add_sub_num, modulo_num, logic_ops_test, add_str, add_empty_str, add_empty_str_simplify, add_null, mul_null, left_shift_num, left_shift_null, left_shift_undefined, right_shift_num, right_shift_null, right_shift_undefined, right_shift_bool, unsigned_right_shift_bool, unsigned_right_shift_compound_assgmt, unsigned_right_shift_num, add_undef, comp_num, equality, arith, undef_test, foo, strip_bang, turn_unary_plus_into_as_number, turn_unary_plus_on_literal_into_result, turn_bitor_into_as_int32, unary_ops, test_phi, if_inline, simplify_switch, objectCond]
 // CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
@@ -518,7 +553,9 @@ function objectCond() {
 // CHECK-NEXT:  %64 = StorePropertyInst %63 : closure, globalObject : object, "simplify_switch" : string
 // CHECK-NEXT:  %65 = CreateFunctionInst %objectCond#0#1()#35 : number, %0
 // CHECK-NEXT:  %66 = StorePropertyInst %65 : closure, globalObject : object, "objectCond" : string
-// CHECK-NEXT:  %67 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %67 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
+// CHECK-NEXT:  %68 = StorePropertyInst %67, globalObject : object, "sink" : string
+// CHECK-NEXT:  %69 = ReturnInst %67
 // CHECK-NEXT:function_end
 
 // CHECK:function add_sub_num#0#1(x, y)#2 : undefined
@@ -529,22 +566,35 @@ function objectCond() {
 // CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, undefined : undefined, 1 : number
 // CHECK-NEXT:  %3 = CallInst %1, undefined : undefined, undefined : undefined, 1 : number
 // CHECK-NEXT:  %4 = CallInst %1, undefined : undefined, undefined : undefined, 133 : number
-// CHECK-NEXT:  %5 = CallInst %1, undefined : undefined, undefined : undefined, 3 : number
-// CHECK-NEXT:  %6 = CallInst %1, undefined : undefined, undefined : undefined, 1.5 : number
-// CHECK-NEXT:  %7 = CallInst %1, undefined : undefined, undefined : undefined, 1 : number
-// CHECK-NEXT:  %8 = CallInst %1, undefined : undefined, undefined : undefined, -7.5 : number
-// CHECK-NEXT:  %9 = CallInst %1, undefined : undefined, undefined : undefined, 4 : number
-// CHECK-NEXT:  %10 = CallInst %1, undefined : undefined, undefined : undefined, 2 : number
-// CHECK-NEXT:  %11 = CallInst %1, undefined : undefined, undefined : undefined, 2 : number
-// CHECK-NEXT:  %12 = CallInst %1, undefined : undefined, undefined : undefined, Infinity : number
-// CHECK-NEXT:  %13 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
-// CHECK-NEXT:  %14 = CallInst %1, undefined : undefined, undefined : undefined, -0 : number
-// CHECK-NEXT:  %15 = CallInst %1, undefined : undefined, undefined : undefined, -Infinity : number
-// CHECK-NEXT:  %16 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
-// CHECK-NEXT:  %17 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
-// CHECK-NEXT:  %18 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
-// CHECK-NEXT:  %19 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
-// CHECK-NEXT:  %20 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %5 = CallInst %1, undefined : undefined, undefined : undefined, -0 : number
+// CHECK-NEXT:  %6 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
+// CHECK-NEXT:  %7 = CallInst %1, undefined : undefined, undefined : undefined, 0 : number
+// CHECK-NEXT:  %8 = CallInst %1, undefined : undefined, undefined : undefined, 3 : number
+// CHECK-NEXT:  %9 = CallInst %1, undefined : undefined, undefined : undefined, 1.5 : number
+// CHECK-NEXT:  %10 = CallInst %1, undefined : undefined, undefined : undefined, 1 : number
+// CHECK-NEXT:  %11 = CallInst %1, undefined : undefined, undefined : undefined, -7.5 : number
+// CHECK-NEXT:  %12 = CallInst %1, undefined : undefined, undefined : undefined, 4 : number
+// CHECK-NEXT:  %13 = CallInst %1, undefined : undefined, undefined : undefined, 2 : number
+// CHECK-NEXT:  %14 = CallInst %1, undefined : undefined, undefined : undefined, 1 : number
+// CHECK-NEXT:  %15 = CallInst %1, undefined : undefined, undefined : undefined, 1 : number
+// CHECK-NEXT:  %16 = CallInst %1, undefined : undefined, undefined : undefined, 1 : number
+// CHECK-NEXT:  %17 = CallInst %1, undefined : undefined, undefined : undefined, 2 : number
+// CHECK-NEXT:  %18 = CallInst %1, undefined : undefined, undefined : undefined, 2 : number
+// CHECK-NEXT:  %19 = CallInst %1, undefined : undefined, undefined : undefined, Infinity : number
+// CHECK-NEXT:  %20 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
+// CHECK-NEXT:  %21 = CallInst %1, undefined : undefined, undefined : undefined, -0 : number
+// CHECK-NEXT:  %22 = CallInst %1, undefined : undefined, undefined : undefined, -Infinity : number
+// CHECK-NEXT:  %23 = CallInst %1, undefined : undefined, undefined : undefined, Infinity : number
+// CHECK-NEXT:  %24 = CallInst %1, undefined : undefined, undefined : undefined, 0 : number
+// CHECK-NEXT:  %25 = CallInst %1, undefined : undefined, undefined : undefined, Infinity : number
+// CHECK-NEXT:  %26 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
+// CHECK-NEXT:  %27 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
+// CHECK-NEXT:  %28 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
+// CHECK-NEXT:  %29 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
+// CHECK-NEXT:  %30 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
+// CHECK-NEXT:  %31 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
+// CHECK-NEXT:  %32 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
+// CHECK-NEXT:  %33 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function modulo_num#0#1(x, y)#3 : undefined
@@ -565,7 +615,11 @@ function objectCond() {
 // CHECK-NEXT:  %12 = CallInst %1, undefined : undefined, undefined : undefined, 0.5 : number
 // CHECK-NEXT:  %13 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
 // CHECK-NEXT:  %14 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
-// CHECK-NEXT:  %15 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %15 = CallInst %1, undefined : undefined, undefined : undefined, 0 : number
+// CHECK-NEXT:  %16 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
+// CHECK-NEXT:  %17 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
+// CHECK-NEXT:  %18 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
+// CHECK-NEXT:  %19 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function logic_ops_test#0#1(x, y)#4 : undefined
@@ -600,7 +654,12 @@ function objectCond() {
 // CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, undefined : undefined, "hello world" : string
 // CHECK-NEXT:  %3 = CallInst %1, undefined : undefined, undefined : undefined, "hello NaN" : string
 // CHECK-NEXT:  %4 = CallInst %1, undefined : undefined, undefined : undefined, "NaNworld" : string
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %5 = CallInst %1, undefined : undefined, undefined : undefined, "hello1" : string
+// CHECK-NEXT:  %6 = CallInst %1, undefined : undefined, undefined : undefined, "1hello" : string
+// CHECK-NEXT:  %7 = CallInst %1, undefined : undefined, undefined : undefined, "trueworld" : string
+// CHECK-NEXT:  %8 = CallInst %1, undefined : undefined, undefined : undefined, "worldfalse" : string
+// CHECK-NEXT:  %9 = CallInst %1, undefined : undefined, undefined : undefined, "world0" : string
+// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function add_empty_str#0#1(x)#6 : undefined
@@ -613,7 +672,19 @@ function objectCond() {
 // CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst globalObject : object, "sink" : string
 // CHECK-NEXT:  %5 = AddEmptyStringInst %x
 // CHECK-NEXT:  %6 = CallInst %4, undefined : undefined, undefined : undefined, %5 : string
-// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst globalObject : object, "sink" : string
+// CHECK-NEXT:  %8 = CallInst %7, undefined : undefined, undefined : undefined, "null" : string
+// CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst globalObject : object, "sink" : string
+// CHECK-NEXT:  %10 = CallInst %9, undefined : undefined, undefined : undefined, "undefined" : string
+// CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst globalObject : object, "sink" : string
+// CHECK-NEXT:  %12 = CallInst %11, undefined : undefined, undefined : undefined, "false" : string
+// CHECK-NEXT:  %13 = TryLoadGlobalPropertyInst globalObject : object, "sink" : string
+// CHECK-NEXT:  %14 = CallInst %13, undefined : undefined, undefined : undefined, "true" : string
+// CHECK-NEXT:  %15 = TryLoadGlobalPropertyInst globalObject : object, "sink" : string
+// CHECK-NEXT:  %16 = CallInst %15, undefined : undefined, undefined : undefined, "1" : string
+// CHECK-NEXT:  %17 = TryLoadGlobalPropertyInst globalObject : object, "sink" : string
+// CHECK-NEXT:  %18 = CallInst %17, undefined : undefined, undefined : undefined, "-2" : string
+// CHECK-NEXT:  %19 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function add_empty_str_simplify#0#1(x)#7 : string
@@ -950,13 +1021,18 @@ function objectCond() {
 // CHECK-NEXT:  %5 = CallInst %1, undefined : undefined, undefined : undefined, "boolean" : string
 // CHECK-NEXT:  %6 = CallInst %1, undefined : undefined, undefined : undefined, "object" : string
 // CHECK-NEXT:  %7 = CallInst %1, undefined : undefined, undefined : undefined, "function" : string
-// CHECK-NEXT:  %8 = CallInst %1, undefined : undefined, undefined : undefined, -9 : number
-// CHECK-NEXT:  %9 = CallInst %1, undefined : undefined, undefined : undefined, -1 : number
-// CHECK-NEXT:  %10 = CallInst %1, undefined : undefined, undefined : undefined, -0 : number
-// CHECK-NEXT:  %11 = CallInst %1, undefined : undefined, undefined : undefined, -0 : number
-// CHECK-NEXT:  %12 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
-// CHECK-NEXT:  %13 = CallInst %1, undefined : undefined, undefined : undefined, true : boolean
-// CHECK-NEXT:  %14 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %8 = CallInst %1, undefined : undefined, undefined : undefined, 1 : number
+// CHECK-NEXT:  %9 = CallInst %1, undefined : undefined, undefined : undefined, 0 : number
+// CHECK-NEXT:  %10 = CallInst %1, undefined : undefined, undefined : undefined, 0 : number
+// CHECK-NEXT:  %11 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
+// CHECK-NEXT:  %12 = CallInst %1, undefined : undefined, undefined : undefined, 9 : number
+// CHECK-NEXT:  %13 = CallInst %1, undefined : undefined, undefined : undefined, -9 : number
+// CHECK-NEXT:  %14 = CallInst %1, undefined : undefined, undefined : undefined, -1 : number
+// CHECK-NEXT:  %15 = CallInst %1, undefined : undefined, undefined : undefined, -0 : number
+// CHECK-NEXT:  %16 = CallInst %1, undefined : undefined, undefined : undefined, -0 : number
+// CHECK-NEXT:  %17 = CallInst %1, undefined : undefined, undefined : undefined, NaN : number
+// CHECK-NEXT:  %18 = CallInst %1, undefined : undefined, undefined : undefined, true : boolean
+// CHECK-NEXT:  %19 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_phi#0#1(a)#32 : number
