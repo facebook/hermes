@@ -6,7 +6,7 @@
  */
 
 // RUN: %hermesc -Xenable-tdz -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
-// RUN: %hermesc -Xenable-tdz -custom-opt=simplestackpromotion -dump-ir %s > /dev/null
+// RUN: %hermesc -Xenable-tdz -Xcustom-opt=simplestackpromotion -dump-ir %s > /dev/null
 
 // Verify code generation for a scoped for-loop.
 // Verify IRGen logic for simplifying a scoped for-loop.

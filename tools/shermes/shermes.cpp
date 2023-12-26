@@ -152,8 +152,9 @@ cl::opt<SourceMappingCommentMode> SourceMappingComments(
     cl::cat(CompilerCategory));
 
 static cl::list<std::string> CustomOptimize(
-    "custom-opt",
+    "Xcustom-opt",
     cl::desc("Custom optimizations"),
+    cl::CommaSeparated,
     cl::Hidden,
     cl::cat(CompilerCategory));
 

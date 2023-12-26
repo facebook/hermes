@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -hermes-parser -dump-ir %s  -custom-opt="simplestackpromotion" -custom-opt="mem2reg" -custom-opt="dce" | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -dump-ir %s -Xcustom-opt=simplestackpromotion,mem2reg,dce | %FileCheckOrRegen %s --match-full-lines
 
 function test_two(x,y,z) {
   function test00() {}

@@ -187,8 +187,9 @@ cl::opt<StaticBuiltinSetting> StaticBuiltins(
     cl::cat(CompilerCategory));
 
 static list<std::string> CustomOptimize(
-    "custom-opt",
+    "Xcustom-opt",
     desc("Custom optimzations"),
+    llvh::cl::CommaSeparated,
     Hidden,
     cat(CompilerCategory));
 

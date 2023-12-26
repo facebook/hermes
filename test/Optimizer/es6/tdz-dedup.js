@@ -6,7 +6,7 @@
  */
 
 // RUN: %hermesc -Xenable-tdz -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
-// RUN: %hermesc -Xenable-tdz -custom-opt=typeinference -custom-opt=tdzdedup -dump-ir %s | %FileCheckOrRegen --match-full-lines --check-prefix=CHKOPT %s
+// RUN: %hermesc -Xenable-tdz -Xcustom-opt=typeinference,tdzdedup -dump-ir %s | %FileCheckOrRegen --match-full-lines --check-prefix=CHKOPT %s
 
 function check_after_store(p) {
     function inner1() {
