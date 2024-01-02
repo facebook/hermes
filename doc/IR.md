@@ -944,6 +944,16 @@ Arguments | %left and %right are the input values
 Semantics | Perform the specified compare on two floating point numbers (same type), return bool. Note that if any operand is NaN, comparison always returns false.
 Effects | None
 
+### StringConcat
+
+StringConcat | _
+--- |-----------------------------------------------|
+Description | Concatenate `N` strings and return the resultant string.
+Example | StringConcat (:string), %op1 (:string), ..., %opN (:string)
+Arguments | %op1 to %opN are the input values which must be strings.
+Semantics | Perform the specified concatenation on strings.
+Effects | None
+
 ### UnionNarrowTrusted
 
 UnionNarrowTrusted | _

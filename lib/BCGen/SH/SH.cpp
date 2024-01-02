@@ -1387,6 +1387,9 @@ class InstrGen {
     generateValue(*inst.getRight());
     os_ << "));\n";
   }
+  void generateStringConcatInst(StringConcatInst &inst) {
+    hermes_fatal("unimplemented");
+  }
   void generateStoreStackInst(StoreStackInst &inst) {
     hermes_fatal("StoreStackInst should have been lowered.");
   }

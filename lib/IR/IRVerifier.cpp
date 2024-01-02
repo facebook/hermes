@@ -955,6 +955,14 @@ void Verifier::visitFCompareInst(const FCompareInst &Inst) {
           Inst.getType().isBooleanType(),
       "FCompare wrong type");
 }
+void Verifier::visitStringConcatInst(const StringConcatInst &Inst) {
+  Assert(Inst.getType().isStringType(), "StringConcat wrong type");
+  for (unsigned i = 0, e = Inst.getNumOperands(); i < e; ++i) {
+    Assert(
+        Inst.getOperand(i)->getType().isStringType(),
+        "StringConcat wrong type");
+  }
+}
 
 void Verifier::visitUnionNarrowTrustedInst(const UnionNarrowTrustedInst &Inst) {
 }

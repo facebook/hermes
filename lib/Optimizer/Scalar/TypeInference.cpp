@@ -851,6 +851,9 @@ class TypeInferenceImpl {
   Type inferFCompareInst(FCompareInst *inst) {
     hermes_fatal("typed instruction");
   }
+  Type inferStringConcatInst(StringConcatInst *inst) {
+    hermes_fatal("typed instruction");
+  }
   Type inferUnionNarrowTrustedInst(UnionNarrowTrustedInst *inst) {
     auto res = Type::intersectTy(
         inst->getSavedResultType(), inst->getSingleOperand()->getType());

@@ -4652,6 +4652,41 @@ class FCompareInst : public Instruction {
   }
 };
 
+class StringConcatInst : public Instruction {
+  StringConcatInst(const StringConcatInst &) = delete;
+  void operator=(const StringConcatInst &) = delete;
+
+ public:
+  explicit StringConcatInst(llvh::ArrayRef<Value *> operands)
+      : Instruction(ValueKind::StringConcatInstKind) {
+    setType(Type::createString());
+    assert(!operands.empty() && "no strings to concatenate");
+    for (Value *op : operands) {
+      assert(op->getType().isStringType() && "invalid input StringConcatInst");
+      pushOperand(op);
+    }
+  }
+  explicit StringConcatInst(
+      const StringConcatInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return true;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::StringConcatInstKind;
+  }
+};
+
 class UnionNarrowTrustedInst : public SingleOperandInst {
   UnionNarrowTrustedInst(const UnionNarrowTrustedInst &) = delete;
   void operator=(const UnionNarrowTrustedInst &) = delete;

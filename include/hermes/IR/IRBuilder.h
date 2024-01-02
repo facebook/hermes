@@ -624,6 +624,8 @@ class IRBuilder {
   createFBinaryMathInst(ValueKind kind, Value *left, Value *right);
   FCompareInst *createFCompareInst(ValueKind kind, Value *left, Value *right);
 
+  StringConcatInst *createStringConcatInst(llvh::ArrayRef<Value *> operands);
+
   UnionNarrowTrustedInst *createUnionNarrowTrustedInst(Value *value, Type type);
   CheckedTypeCastInst *createCheckedTypeCastInst(Value *value, Type type);
 

@@ -1136,6 +1136,13 @@ IRBuilder::createFCompareInst(ValueKind kind, Value *left, Value *right) {
   return inst;
 }
 
+StringConcatInst *IRBuilder::createStringConcatInst(
+    llvh::ArrayRef<Value *> operands) {
+  auto *inst = new StringConcatInst(operands);
+  insert(inst);
+  return inst;
+}
+
 UnionNarrowTrustedInst *IRBuilder::createUnionNarrowTrustedInst(
     Value *value,
     Type type) {
