@@ -292,6 +292,20 @@ class InstSimplifyImpl {
       }
     }
 
+    bool bothString =
+        lhs->getType().isStringType() && rhs->getType().isStringType();
+
+    // Check for operations on two strings.
+    if (bothString) {
+      switch (kind) {
+        case ValueKind::BinaryAddInstKind:
+          // Addition of two strings is just concatenation.
+          return builder_.createStringConcatInst({lhs, rhs});
+        default:
+          break;
+      }
+    }
+
     return nullptr;
   }
 
@@ -766,6 +780,74 @@ class InstSimplifyImpl {
     return nullptr;
   }
 
+  /// Try to simplify StringConcat.
+  /// Either evaluate the concatenation at compile time, or flatten a
+  /// concat of multiple concats into a single StringConcat.
+  /// \returns one of:
+  ///   - nullptr if the instruction cannot be simplified.
+  ///   - the instruction itself, if it was changed inplace.
+  ///   - a new instruction to replace the original one
+  ///   - llvh::None if the instruction should be deleted.
+  OptValue<Value *> simplifyStringConcat(StringConcatInst *inst) {
+    // We can simplify the concatenation if:
+    // * There are consecutive LiteralString operands.
+    // * There are StringConat operands unused outside of this instruction.
+
+    // Eagerly try to simplify, and keep track of whether we changed anything in
+    // the 'changed' flag.
+    bool changed = false;
+
+    llvh::SmallVector<Value *, 8> newOperands{};
+    unsigned i = 0;
+    unsigned e = inst->getNumOperands();
+    while (i < e) {
+      // Check for at least 2 consecutive LiteralStrings that can be joined.
+      if (llvh::isa<LiteralString>(inst->getOperand(i)) && i < e - 1 &&
+          llvh::isa<LiteralString>(inst->getOperand(i + 1))) {
+        llvh::SmallString<256> result;
+        // Inner loop appends all consecutive strings into a single literal.
+        while (i < e && llvh::isa<LiteralString>(inst->getOperand(i))) {
+          result.append(
+              llvh::cast<LiteralString>(inst->getOperand(i))->getValue().str());
+          ++i;
+        }
+        newOperands.push_back(builder_.getLiteralString(result.str()));
+        // Go to next operand directly.
+        changed = true;
+        continue;
+      }
+
+      // Check for StringConcat that can be flattened because it has one user.
+      if (auto *concatOperand =
+              llvh::dyn_cast<StringConcatInst>(inst->getOperand(i));
+          concatOperand && concatOperand->hasOneUser()) {
+        for (unsigned j = 0, f = concatOperand->getNumOperands(); j < f; ++j) {
+          newOperands.push_back(concatOperand->getOperand(j));
+        }
+        ++i;
+        changed = true;
+        continue;
+      }
+
+      // Nothing to do for this operand.
+      newOperands.push_back(inst->getOperand(i));
+      ++i;
+    }
+
+    assert(i == e && "Did not consume all operands.");
+    assert(!newOperands.empty() && "Expected at least one operand.");
+
+    if (!changed)
+      return nullptr;
+
+    // Only one operand left, no need for a no-op StringConcat.
+    // e.g. this is a LiteralString that we've now evaluated at compile time.
+    if (newOperands.size() == 1)
+      return newOperands.front();
+
+    return builder_.createStringConcatInst(newOperands);
+  }
+
   /// Try to simplify UnionNarrowTrustedInst
   /// \returns one of:
   ///   - nullptr if the instruction cannot be simplified.
@@ -819,6 +901,8 @@ class InstSimplifyImpl {
       return simplifyFBinaryMath(llvh::cast<FBinaryMathInst>(I));
     if (llvh::isa<FCompareInst>(I))
       return simplifyFCompare(llvh::cast<FCompareInst>(I));
+    if (llvh::isa<StringConcatInst>(I))
+      return simplifyStringConcat(llvh::cast<StringConcatInst>(I));
     switch (I->getKind()) {
       case ValueKind::AsNumberInstKind:
         return simplifyAsNumber(cast<AsNumberInst>(I));
