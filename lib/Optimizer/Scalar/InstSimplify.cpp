@@ -8,6 +8,15 @@
 //===----------------------------------------------------------------------===//
 /// \file
 /// Perform simple peephole optimizations.
+///
+/// The function \c simplifyInstruction is used to handle the actual
+/// optimization of any given instruction.
+/// Neither \c simplifyInstruction nor any function it calls should directly
+/// erase the instruction they wish to replace - instead, they should be
+/// returning the optional Value to InstSimplify::run, which will handle any
+/// user replacement and destruction.
+/// This allows the core loop to pass the newly simplified instruction to
+/// simplifyInstruction again, if it can be further simplified.
 //===----------------------------------------------------------------------===//
 
 #define DEBUG_TYPE "instsimplify"
@@ -466,12 +475,7 @@ class InstSimplifyImpl {
 
     // The PHI has a single incoming value. Replace all uses of the PHI with
     // the incoming value.
-    if (incoming) {
-      P->replaceAllUsesWith(incoming);
-      P->eraseFromParent();
-    }
-
-    return nullptr;
+    return incoming;
   }
 
   Value *simplifyCondBranchInst(CondBranchInst *CBI) {
