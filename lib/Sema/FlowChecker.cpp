@@ -2908,11 +2908,13 @@ class FlowChecker::AnnotateScopeDecls {
           continue;
         }
         Type *type = outer.flowContext_.getAny();
-        assert(
-            declarator->_init &&
-            "array patterns without initializers are parser errors");
-        if (Type *inferred = tryInferInitExpression(declarator))
-          type = inferred;
+        if (declarator->_init) {
+          // It's possible to not have an _init if this declarator is part of a
+          // for loop:
+          // for ([x, y] of iterable) {}
+          if (Type *inferred = tryInferInitExpression(declarator))
+            type = inferred;
+        }
         if (llvh::isa<AnyType>(type->info)) {
           // Legacy assignment to unannotated array pattern.
           // let [x, y] = anyTypedVar;
