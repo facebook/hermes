@@ -72,7 +72,6 @@ class InstSimplifyImpl {
       // For all instructions:
       for (auto instIter = BB->begin(), e = BB->end(); instIter != e;) {
         Instruction *II = &*instIter;
-        ++instIter;
 
         /// When optimizing instructions, the new instruction is inserted after
         /// the instruction to be optimized. This allows the main loop over the
@@ -81,6 +80,10 @@ class InstSimplifyImpl {
         builder_.setInsertionPointAfter(II);
 
         auto optNewVal = simplifyInstruction(II);
+
+        // Increment iterator after simplifyInstruction to make sure we step to
+        // a newly created instruction.
+        ++instIter;
         if (optNewVal.hasValue()) {
           auto newVal = optNewVal.getValue();
           if (!newVal)
