@@ -15,6 +15,7 @@
 #include "hermes/VM/SerializedLiteralParser.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StaticHUtils.h"
+#include "hermes/VM/StringBuilder.h"
 
 #include "JSLib/JSLibInternal.h"
 
@@ -1822,6 +1823,111 @@ extern "C" void _sh_fastarray_append(
 
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
+}
+
+extern "C" SHLegacyValue
+_sh_string_concat(SHRuntime *shr, uint32_t argCount, ...) {
+  Runtime &runtime = getRuntime(shr);
+
+  // StringPrimitive::concat has special handling for two arguments,
+  // so use that fast path when possible.
+  if (argCount == 2) {
+    va_list args;
+    va_start(args, argCount);
+    auto lhsHandle = Handle<StringPrimitive>::vmcast(
+        toPHV(va_arg(args, const SHLegacyValue *)));
+    auto rhsHandle = Handle<StringPrimitive>::vmcast(
+        toPHV(va_arg(args, const SHLegacyValue *)));
+    va_end(args);
+    CallResult<HermesValue> result{ExecutionStatus::EXCEPTION};
+    {
+      GCScopeMarkerRAII marker{runtime};
+      result = StringPrimitive::concat(runtime, lhsHandle, rhsHandle);
+    }
+    if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
+      _sh_throw_current(shr);
+    }
+    return *result;
+  }
+
+  // Otherwise, we concatenate all the strings ourselves.
+
+  // Whether the first string is Buffered, and we should use
+  // StringPrimitive::concat instead of StringBuilder.
+  bool firstIsBuffered = false;
+  // Information used for StringBuilder, if it's used instead of
+  // StringPrimitive::concat.
+  SafeUInt32 resultSize{0};
+  bool isASCII = true;
+
+  va_list args;
+
+  // Compute the size, check for non-ASCII strings.
+  va_start(args, argCount);
+  for (size_t i = 0; i < argCount; ++i) {
+    auto argHandle = Handle<StringPrimitive>::vmcast(
+        toPHV(va_arg(args, const SHLegacyValue *)));
+    if (i == 0 && isBufferedStringPrimitive(*argHandle)) {
+      firstIsBuffered = true;
+      // Don't need the other information any more.
+      break;
+    }
+    resultSize.add(argHandle->getStringLength());
+    if (!argHandle->isASCII()) {
+      isASCII = false;
+    }
+  }
+  va_end(args);
+
+  // Perform the concatenation using a StringBuilder.
+  va_start(args, argCount);
+  CallResult<HermesValue> result = [&]() -> CallResult<HermesValue> {
+    GCScopeMarkerRAII marker{runtime};
+    if (firstIsBuffered) {
+      // The first argument is a BufferedStringPrimitive, so we can use it and
+      // concatenate the rest using StringPrimitive::concat.
+      // Begin with the first argument in a MutableHandle.
+      MutableHandle<StringPrimitive> outputStrHandle{
+          runtime,
+          vmcast<StringPrimitive>(*toPHV(va_arg(args, const SHLegacyValue *)))};
+      // Start with 1 to account for the first arg already being in the handle.
+      for (size_t i = 1; i < argCount; ++i) {
+        auto argHandle = Handle<StringPrimitive>::vmcast(
+            toPHV(va_arg(args, const SHLegacyValue *)));
+        // Use concat repeatedly to use a BufferedStringPrimitive for faster
+        // concatenation.
+        auto res = StringPrimitive::concat(runtime, outputStrHandle, argHandle);
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        outputStrHandle = vmcast<StringPrimitive>(*res);
+      }
+      return outputStrHandle.getHermesValue();
+    } else {
+      // Otherwise, avoid allocating intermediate strings by using a
+      // StringBuilder.
+      auto builderRes =
+          StringBuilder::createStringBuilder(runtime, resultSize, isASCII);
+      if (LLVM_UNLIKELY(builderRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      auto builder = std::move(*builderRes);
+
+      for (size_t i = 0; i < argCount; ++i) {
+        auto argHandle = Handle<StringPrimitive>::vmcast(
+            toPHV(va_arg(args, const SHLegacyValue *)));
+        assert(!isASCII || argHandle->isASCII() && "ASCII flag incorrect");
+        builder.appendStringPrim(argHandle);
+      }
+      return builder.getStringPrimitive().getHermesValue();
+    }
+  }();
+  va_end(args);
+
+  if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
+    _sh_throw_current(shr);
+  }
+  return *result;
 }
 
 extern "C" int _sh_errno(void) {

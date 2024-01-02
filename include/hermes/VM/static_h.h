@@ -627,6 +627,12 @@ _sh_ljs_minus_rjs(SHRuntime *shr, const SHLegacyValue *n);
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_add_empty_string_rjs(SHRuntime *shr, const SHLegacyValue *a);
 
+/// Concatenate \p argCount strings together into a new StringPrimitive.
+/// \param argCount the number of varargs that follow.
+/// \param ... the (const SHLegacyValue *) string arguments to concatenate.
+SHERMES_EXPORT SHLegacyValue
+_sh_string_concat(SHRuntime *shr, uint32_t argCount, ...);
+
 SHERMES_EXPORT SHLegacyValue _sh_ljs_typeof(SHRuntime *shr, SHLegacyValue *v);
 
 SHERMES_EXPORT SHLegacyValue _sh_ljs_new_object(SHRuntime *shr);

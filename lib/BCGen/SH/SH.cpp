@@ -1388,7 +1388,16 @@ class InstrGen {
     os_ << "));\n";
   }
   void generateStringConcatInst(StringConcatInst &inst) {
-    hermes_fatal("unimplemented");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    os_ << "_sh_string_concat(shr, " << inst.getNumOperands() << ", ";
+    for (int i = 0, e = inst.getNumOperands(); i < e; ++i) {
+      if (i != 0)
+        os_ << ", ";
+      generateRegisterPtr(*inst.getOperand(i));
+    }
+    os_ << ");\n";
   }
   void generateStoreStackInst(StoreStackInst &inst) {
     hermes_fatal("StoreStackInst should have been lowered.");
