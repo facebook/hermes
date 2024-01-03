@@ -298,6 +298,13 @@ class MallocGC final : public GCBase {
   /// unmarked object, mark it and push it on the mark stack.
   void drainMarkStack(MarkingAcceptor &acceptor);
 
+  /// Iterate the list of `weakMapEntrySlots_`, for each non-free slot, if
+  /// both the key and the owner are marked, mark the mapped value with
+  /// \p acceptor. This may further cause other values to be marked, so we need
+  /// to keep iterating until no update. After the iteration, set each
+  /// unreachable mapped value to Empty.
+  void markWeakMapEntrySlots(MarkingAcceptor &acceptor);
+
   /// In the first phase of marking, before this is called, we treat
   /// JSWeakMaps specially: when we mark a reachable JSWeakMap, we do
   /// not mark from it, but rather save a pointer to it in a vector.
