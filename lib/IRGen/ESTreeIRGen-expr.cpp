@@ -2365,10 +2365,22 @@ Value *ESTreeIRGen::genTemplateLiteralExpr(ESTree::TemplateLiteralNode *Expr) {
   if (strItr == Expr->_quasis.end()) {
     return firstCookedStr;
   }
+  // argList includes firstCookedStr as the first element.
   CallInst::ArgumentList argList;
+  argList.push_back(firstCookedStr);
+  // Whether all the expressions are strings.
+  // Determines if we can use StringConcatInst.
+  bool allStrings = true;
   auto exprItr = Expr->_expressions.begin();
   while (strItr != Expr->_quasis.end()) {
     auto *sub = genExpression(&*exprItr);
+    if (!sub->getType().isStringType()) {
+      // Uses the IR type instead of the FlowContext type because
+      // StringConcat needs to know that its operands are String types in the
+      // IR, and not all values have their types correctly brought over from the
+      // annotated AST.
+      allStrings = false;
+    }
     argList.push_back(sub);
     tempEltNode = cast<ESTree::TemplateElementNode>(&*strItr);
     auto cookedStr = tempEltNode->_cooked->str();
@@ -2382,8 +2394,15 @@ Value *ESTreeIRGen::genTemplateLiteralExpr(ESTree::TemplateLiteralNode *Expr) {
       exprItr == Expr->_expressions.end() &&
       "All the substitutions must have been collected.");
 
-  // Generate a function call to HermesInternal.concat() with these arguments.
-  return genHermesInternalCall("concat", firstCookedStr, argList);
+  if (allStrings) {
+    // Fast path: all the substitutions are strings, so we can use
+    // StringConcatInst.
+    return Builder.createStringConcatInst(argList);
+  } else {
+    // Generate a function call to HermesInternal.concat() with these arguments.
+    return genHermesInternalCall(
+        "concat", argList[0], llvh::ArrayRef<Value *>(argList).drop_front(1));
+  }
 }
 
 Value *ESTreeIRGen::genTaggedTemplateExpr(
