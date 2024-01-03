@@ -114,6 +114,96 @@ class WeakRef : public WeakRefBase {
   }
 };
 
+/// This weak reference type is specifically for WeakMap/WeakSet. Each uniquely
+/// owns a WeakMapEntrySlot, which holds both the key, the mapped value and
+/// weak root to the owning map/set.
+class WeakMapEntryRef {
+ public:
+  explicit WeakMapEntryRef(
+      Runtime &runtime,
+      JSObject *key,
+      HermesValue value,
+      JSWeakMapImplBase *ownerMapPtr)
+      : slot_(
+            runtime.getHeap().allocWeakMapEntrySlot(key, value, ownerMapPtr)) {}
+
+  /// \return a pointer to the key object.
+  GCCell *getKeyNoBarrierUnsafe(PointerBase &base) const {
+    return slot_->key.getNoBarrierUnsafe(base);
+  }
+
+  /// \return The mapped value by the the key object.
+  HermesValue getMappedValue(GC &gc) const {
+    // During marking phase in Hades, mutator thread may read a mapped value A
+    // and store it to a marked object B, then deletes the entry. In
+    // completeMarking(), A may become unreachable and gets swept, leaving a
+    // dangling reference in B. To address it, we add a read barrier on every
+    // access to mapped value. Adding writer barrier should also work but this
+    // is cleaner.
+    gc.weakRefReadBarrier(slot_->mappedValue);
+    return slot_->mappedValue;
+  }
+
+  /// Set mapped value in slot_ to \p value;
+  void setMappedValue(HermesValue value) {
+    slot_->mappedValue = value;
+  }
+
+  /// Methods used by the implementation of JSWeakMap.
+
+  static WeakMapEntryRef createEmptyEntryRef() {
+    return WeakMapEntryRef{reinterpret_cast<WeakMapEntrySlot *>(kEmptyKey)};
+  }
+
+  static WeakMapEntryRef createTombstoneEntryRef() {
+    return WeakMapEntryRef{reinterpret_cast<WeakMapEntrySlot *>(kTombstoneKey)};
+  }
+
+  /// \return true if the WeakRoot to the key object is still alive.
+  bool isKeyValid() const {
+    return !!slot_->key;
+  }
+
+  /// \return true if the underlying slots are equal, or point to the same key
+  /// object.
+  bool isKeyEqual(const WeakMapEntryRef &other) const {
+    // Comparing when the slots are equal should always succeed. This also
+    // handles comparison with tombstone and empty.
+    if (slot_ == other.slot_)
+      return true;
+    // If the slots don't match and either one is tombstone or empty,
+    // the comparison has failed (so we won't dereference them below).
+    if (reinterpret_cast<uintptr_t>(slot_) <= kTombstoneKey ||
+        reinterpret_cast<uintptr_t>(other.slot_) <= kTombstoneKey)
+      return false;
+
+    // If either key has been garbage collected, it is impossible for them to
+    // compare equal. Otherwise, check for reference equality between the keys.
+    return slot_->key && other.slot_->key &&
+        slot_->key.getNoBarrierUnsafe() ==
+        other.slot_->key.getNoBarrierUnsafe();
+  }
+
+  /// \return true if the underlying slot points to the same key object as
+  /// \p keyObject. This is only used by LookupKey in the implementation of
+  // JSWeakMap, so \p keyObject should never be null.
+  bool isKeyEqual(CompressedPointer keyObject) const {
+    if (reinterpret_cast<uintptr_t>(slot_) <= kTombstoneKey)
+      return false;
+    return slot_->key.getNoBarrierUnsafe() == keyObject;
+  }
+
+ private:
+  explicit WeakMapEntryRef(WeakMapEntrySlot *slot) : slot_(slot) {}
+
+  WeakMapEntrySlot *slot_;
+
+  /// Used to construct Empty/Tombstone WeakMapEntryRefs that are used in
+  /// the implementation of JSWeakMap.
+  static constexpr uint32_t kEmptyKey = 0;
+  static constexpr uint32_t kTombstoneKey = 1;
+};
+
 } // namespace vm
 } // namespace hermes
 
