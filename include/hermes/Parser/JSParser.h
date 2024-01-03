@@ -37,6 +37,9 @@ enum ParserPass {
 
 /// An EcmaScript 5.1 parser.
 class JSParser {
+  explicit JSParser(std::shared_ptr<detail::JSParserImpl> &&impl)
+      : impl_(std::move(impl)) {}
+
  public:
   explicit JSParser(
       Context &context,
@@ -60,6 +63,28 @@ class JSParser {
 
   void setStrictMode(bool mode);
 
+  /// \return the source URL from the magic comment, or an empty string if there
+  /// was no magic comment.
+  llvh::StringRef getSourceURL() const;
+
+  /// \return the source mapping URL from the magic comment, or an empty string
+  /// if there was no magic comment.
+  llvh::StringRef getSourceMappingURL() const;
+
+  /// Define bitmask flags for magic comments.
+  struct MCFlag {
+    using Type = uint8_t;
+    enum : Type {
+      SourceURL = 1 << 0,
+      SourceMappingURL = 1 << 1,
+      All = SourceURL | SourceMappingURL,
+    };
+  };
+  /// Apply the values of sourceURL and sourceMappingURL magic comments to the
+  /// SourceErrorManager in the associated Context.
+  /// \param flags a bitmask of \c MCFlag values.
+  void registerMagicURLs(MCFlag::Type flags = MCFlag::All) const;
+
   llvh::ArrayRef<StoredComment> getStoredComments() const;
 
   llvh::ArrayRef<StoredToken> getStoredTokens() const;
@@ -77,14 +102,13 @@ class JSParser {
   void seek(SMLoc startPos);
 
   /// Parse the given buffer id, indexing all functions and storing them in the
-  /// \p Context. Returns true on success, at which point the file can be
-  /// processed on demand in \p LazyParse mode. \p useStaticBuiltinDetected will
-  /// be set to true if 'use static builtin' directive is detected in the
-  /// source.
-  static bool preParseBuffer(
+  /// \p Context. On failure returns nullptr.
+  /// On success, returns a pointer to the \c JSParser object that can be
+  /// queried for various attributes of the just pre-parsed file, e.g. static
+  /// builtins or magic URLs.
+  static std::unique_ptr<JSParser> preParseBuffer(
       Context &context,
-      uint32_t bufferId,
-      bool &useStaticBuiltinDetected);
+      uint32_t bufferId);
 
   /// Parse the AST of a specified function type at a given starting point.
   /// This is used for lazy compilation to parse and compile the function on
@@ -97,7 +121,8 @@ class JSParser {
 
  private:
   /// Self-explanatory.
-  std::unique_ptr<detail::JSParserImpl> const impl_;
+  /// Needs to be std::shared_ptr because of \c JSParserImpl::preParseBuffer().
+  std::shared_ptr<detail::JSParserImpl> const impl_;
 };
 
 } // namespace parser

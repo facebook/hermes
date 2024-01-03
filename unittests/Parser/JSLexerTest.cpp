@@ -965,7 +965,7 @@ TEST(JSLexerTest, SourceMappingUrl) {
     ASSERT_EQ(TokenKind::numeric_literal, lex.advance()->getKind());
     ASSERT_EQ(TokenKind::semi, lex.advance()->getKind());
     lex.advance();
-    ASSERT_EQ("localhost:8000/this_is_the_url.map", sm.getSourceMappingUrl(1));
+    ASSERT_EQ("localhost:8000/this_is_the_url.map", lex.getSourceMappingURL());
   }
 
   // Ensure it works in the middle of a file.
@@ -982,7 +982,7 @@ TEST(JSLexerTest, SourceMappingUrl) {
     ASSERT_EQ(TokenKind::numeric_literal, lex.advance()->getKind());
     ASSERT_EQ(TokenKind::semi, lex.advance()->getKind());
     lex.advance();
-    ASSERT_EQ("second-map.map", sm.getSourceMappingUrl(2));
+    ASSERT_EQ("second-map.map", lex.getSourceMappingURL());
   }
 
   // Ensure it doesn't read invalid source map comments.
@@ -1022,7 +1022,7 @@ TEST(JSLexerTest, SourceMappingUrl) {
     ASSERT_EQ(TokenKind::semi, lex.advance()->getKind());
     lex.advance();
     lex.advance();
-    ASSERT_EQ("url2", sm.getSourceMappingUrl(4));
+    ASSERT_EQ("url2", lex.getSourceMappingURL());
   }
 }
 

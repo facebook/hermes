@@ -183,6 +183,7 @@ BCProviderFromSrc::createBCProviderFromSrcImpl(
     parser::JSParser libParser(*context, std::move(libBuffer));
     auto libParsed = libParser.parse();
     assert(libParsed && "Libhermes failed to parse");
+    libParser.registerMagicURLs();
     declFileList.push_back(libParsed.getValue());
   }
 
@@ -200,25 +201,29 @@ BCProviderFromSrc::createBCProviderFromSrcImpl(
   auto parserMode = parser::FullParse;
   bool useStaticBuiltinDetected = false;
   if (context->isLazyCompilation() && isLargeFile) {
-    if (!parser::JSParser::preParseBuffer(
-            *context, fileBufId, useStaticBuiltinDetected)) {
+    auto preParser = parser::JSParser::preParseBuffer(*context, fileBufId);
+    if (!preParser)
       return {nullptr, getErrorString()};
-    }
+    useStaticBuiltinDetected = preParser->getUseStaticBuiltin();
+    preParser->registerMagicURLs();
     parserMode = parser::LazyParse;
   }
 
   sem::SemContext semCtx{};
   parser::JSParser parser(*context, fileBufId, parserMode);
   auto parsed = parser.parse();
+
+  // If we are using lazy parse mode, we should have already detected the 'use
+  // static builtin' directive and magic URLs in the pre-parsing stage.
+  if (parsed && parserMode != parser::LazyParse) {
+    useStaticBuiltinDetected = parser.getUseStaticBuiltin();
+    parser.registerMagicURLs();
+  }
+
   if (!parsed || !hermes::sem::validateAST(*context, semCtx, *parsed)) {
     return {nullptr, getErrorString()};
   }
 
-  // If we are using lazy parse mode, we should have already detected the 'use
-  // static builtin' directive in the pre-parsing stage.
-  if (parserMode != parser::LazyParse) {
-    useStaticBuiltinDetected = parser.getUseStaticBuiltin();
-  }
   // The compiler flag is not set, automatically detect 'use static builtin'
   // from the source.
   if (!compileFlags.staticBuiltins) {

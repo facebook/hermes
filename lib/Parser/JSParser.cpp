@@ -11,12 +11,12 @@
 
 namespace hermes {
 namespace parser {
-
 JSParser::JSParser(Context &context, std::unique_ptr<llvh::MemoryBuffer> input)
-    : impl_(new detail::JSParserImpl(context, std::move(input))) {}
+    : impl_(std::make_shared<detail::JSParserImpl>(context, std::move(input))) {
+}
 
 JSParser::JSParser(Context &context, uint32_t bufferId, ParserPass pass)
-    : impl_(new detail::JSParserImpl(context, bufferId, pass)) {}
+    : impl_(std::make_shared<detail::JSParserImpl>(context, bufferId, pass)) {}
 
 JSParser::~JSParser() = default;
 
@@ -32,20 +32,43 @@ void JSParser::setStrictMode(bool mode) {
   return impl_->setStrictMode(mode);
 }
 
+/// \return the source URL from the magic comment, or an empty string if there
+/// was no magic comment.
+llvh::StringRef JSParser::getSourceURL() const {
+  return impl_->getLexer().getSourceURL();
+}
+
+/// \return the source mapping URL from the magic comment, or an empty string
+/// if there was no magic comment.
+llvh::StringRef JSParser::getSourceMappingURL() const {
+  return impl_->getLexer().getSourceMappingURL();
+}
+
+void JSParser::registerMagicURLs(MCFlag::Type flags) const {
+#ifdef STATIC_HERMES
+  uint32_t bufId = impl_->getLexer().getBufferId();
+  SourceErrorManager &sm = impl_->getContext().getSourceErrorManager();
+  if (flags & MCFlag::SourceURL)
+    sm.setSourceUrl(bufId, getSourceURL());
+  if (flags & MCFlag::SourceMappingURL)
+    sm.setSourceMappingUrl(bufId, getSourceMappingURL());
+#endif
+}
+
 llvh::ArrayRef<StoredComment> JSParser::getStoredComments() const {
-  return impl_->getStoredComments();
+  return impl_->getLexer().getStoredComments();
 }
 
 llvh::ArrayRef<StoredToken> JSParser::getStoredTokens() const {
-  return impl_->getStoredTokens();
+  return impl_->getLexer().getStoredTokens();
 }
 
 void JSParser::setStoreComments(bool storeComments) {
-  impl_->setStoreComments(storeComments);
+  impl_->getLexer().setStoreComments(storeComments);
 }
 
 void JSParser::setStoreTokens(bool storeTokens) {
-  impl_->setStoreTokens(storeTokens);
+  impl_->getLexer().setStoreTokens(storeTokens);
 }
 
 bool JSParser::getUseStaticBuiltin() const {
@@ -60,12 +83,15 @@ void JSParser::seek(SMLoc startPos) {
   return impl_->seek(startPos);
 }
 
-bool JSParser::preParseBuffer(
+std::unique_ptr<JSParser> JSParser::preParseBuffer(
     Context &context,
-    uint32_t bufferId,
-    bool &useStaticBuiltinDetected) {
-  return detail::JSParserImpl::preParseBuffer(
-      context, bufferId, useStaticBuiltinDetected);
+    uint32_t bufferId) {
+  if (auto preParser =
+          detail::JSParserImpl::preParseBuffer(context, bufferId)) {
+    return std::unique_ptr<JSParser>(new JSParser(std::move(preParser)));
+  } else {
+    return nullptr;
+  }
 }
 
 llvh::Optional<ESTree::NodePtr> JSParser::parseLazyFunction(
@@ -75,6 +101,5 @@ llvh::Optional<ESTree::NodePtr> JSParser::parseLazyFunction(
     SMLoc start) {
   return impl_->parseLazyFunction(kind, paramYield, paramAwait, start);
 }
-
 } // namespace parser
 } // namespace hermes
