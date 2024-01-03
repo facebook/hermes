@@ -176,6 +176,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
     compileFlags_.enableBlockScoping = runtimeConfig.getEnableBlockScoping();
     compileFlags_.enableGenerator = runtimeConfig.getEnableGenerator();
+    compileFlags_.enableES6Classes = runtimeConfig.getES6Class();
     compileFlags_.emitAsyncBreakCheck = defaultEmitAsyncBreakCheck_ =
         runtimeConfig.getAsyncBreakCheckInEval();
     runtime_.addCustomRootsFunction(
