@@ -130,6 +130,71 @@ class WeakRefSlot {
 
 using WeakSlotState = WeakRefSlot::State;
 
+class JSObject;
+class JSWeakMapImplBase;
+
+/// Slot used by each entry in a WeakMap or WeakSet. The mapped value is stored
+/// here so that GC can directly mark it if both its key and owner are alive,
+/// eliminating the complexity of managing a separate values array. And the
+/// WeakRoot to the owner is needed to correctly collect cycles, e.g.,
+/// ```
+/// var m = WeakMap();
+/// var o = {};
+/// m.set(o, m);
+/// m = undefined;
+/// ```
+/// Note that all these fields must only be directly accessed by the GC, or
+/// through the corresponding WeakMapEntryRef.
+class WeakMapEntrySlot {
+  /// The state of the slot.
+  std::atomic_bool freed_{true};
+
+ public:
+  /// The owner (WeakMap/WeakSet) of this entry.
+  WeakRoot<GCCell> owner;
+  /// The WeakRoot to the key (or next free slot).
+  union {
+    WeakRoot<GCCell> key;
+    WeakMapEntrySlot *nextFree;
+  };
+  /// The value mapped by the WeakRef key.
+  /// NOTE: It's set to Empty only if either the key or the owner is null.
+  PinnedHermesValue mappedValue;
+
+  void free() {
+    freed_.store(true, std::memory_order_relaxed);
+  }
+
+  /// Methods required by ManagedChunkedList
+
+  WeakMapEntrySlot() {}
+
+  bool isFree() const {
+    return freed_.load(std::memory_order_relaxed);
+  }
+
+  WeakMapEntrySlot *getNextFree() const {
+    assert(isFree() && "Can only get nextFree on a free slot");
+    return nextFree;
+  }
+
+  void setNextFree(WeakMapEntrySlot *nextFree) {
+    assert(isFree() && "can only set nextFree on a free slot");
+    this->nextFree = nextFree;
+  }
+
+  /// Emplace new value to this slot.
+  void emplace(
+      CompressedPointer keyPtr,
+      HermesValue value,
+      CompressedPointer ownerPtr) {
+    freed_.store(false, std::memory_order_relaxed);
+    key = keyPtr;
+    mappedValue = value;
+    owner = ownerPtr;
+  }
+};
+
 } // namespace vm
 } // namespace hermes
 
