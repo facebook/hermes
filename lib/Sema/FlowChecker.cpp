@@ -940,6 +940,10 @@ class FlowChecker::ExprVisitor {
     outer_.setNodeType(node, outer_.flowContext_.getString());
   }
   void visit(ESTree::TemplateLiteralNode *node) {
+    for (ESTree::Node &quasi : node->_quasis)
+      outer_.setNodeType(&quasi, outer_.flowContext_.getString());
+    for (ESTree::Node &expression : node->_expressions)
+      visitESTreeNode(*this, &expression, node);
     outer_.setNodeType(node, outer_.flowContext_.getString());
   }
   void visit(ESTree::NumericLiteralNode *node) {

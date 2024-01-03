@@ -59,7 +59,7 @@ let v7 = /1/;
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            TemplateLiteral : string
-// CHECK-NEXT:                                TemplateElement
+// CHECK-NEXT:                                TemplateElement : string
 // CHECK-NEXT:                            Id 'v4' [D:E:%d.5 'v4']
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
