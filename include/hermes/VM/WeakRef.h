@@ -193,6 +193,16 @@ class WeakMapEntryRef {
     return slot_->key.getNoBarrierUnsafe() == keyObject;
   }
 
+  /// Free the WeakMapEntrySlot held by this reference.
+  void releaseSlot() {
+    slot_->free();
+  }
+
+  /// Whether the underlying slot is freed.
+  bool isSlotFree() const {
+    return slot_->isFree();
+  }
+
  private:
   explicit WeakMapEntryRef(WeakMapEntrySlot *slot) : slot_(slot) {}
 

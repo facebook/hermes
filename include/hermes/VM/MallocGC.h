@@ -305,18 +305,6 @@ class MallocGC final : public GCBase {
   /// unreachable mapped value to Empty.
   void markWeakMapEntrySlots(MarkingAcceptor &acceptor);
 
-  /// In the first phase of marking, before this is called, we treat
-  /// JSWeakMaps specially: when we mark a reachable JSWeakMap, we do
-  /// not mark from it, but rather save a pointer to it in a vector.
-  /// Then we call this method, which finds the keys that are
-  /// reachable, and marks transitively from the corresponding value.
-  /// This is done carefully, to reach a correct global transitive
-  /// closure, in cases where keys are reachable only via values of
-  /// other keys.  When this marking is done, entries with unreachable
-  /// keys are cleared.  Normal WeakRef processing at the end of GC
-  /// will delete the cleared entries from the map.
-  void completeWeakMapMarking(MarkingAcceptor &acceptor);
-
   /// Update all of the weak references and invalidate the ones that point to
   /// dead objects.
   void updateWeakReferences();
