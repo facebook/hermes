@@ -181,9 +181,12 @@ enum XorPtrKeyID {
 ///         const GCCell *value);
 ///
 ///   A weak ref is about to be read. Executes a read barrier so the GC can
-///   take action such as extending the lifetime of the reference. The
-///   HermesValue version does nothing if the value isn't a pointer.
+///   take action such as extending the lifetime of the reference.
 ///     void weakRefReadBarrier(GCCell *value);
+///   A mapped value in WeakMap/WeakSet is about to be read. Executes a read
+///   barrier so the GC can take action such as extending the lifetime of the
+///   mapped value.
+///     void weakRefReadBarrier(HermesValue value);
 ///
 ///   We copied HermesValues into the given region.  Note that \p numHVs is
 ///   the number of HermesValues in the the range, not the char length.
@@ -1045,6 +1048,7 @@ class GCBase {
   void snapshotWriteBarrierRange(
       const GCSmallHermesValue *start,
       uint32_t numHVs);
+  void weakRefReadBarrier(HermesValue value);
   void weakRefReadBarrier(GCCell *value);
 #endif
 
