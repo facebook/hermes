@@ -744,18 +744,27 @@ ESTree::NodePtr parseJS(
       (singleInputSourceMap.empty() || fileBufs.size() == 1) &&
       "singleInputSourceMap can only be specified for a single input file");
 
+  // Whether a parse error ocurred in one of the inputs.
+  bool parseError = false;
   for (std::unique_ptr<llvh::MemoryBuffer> &fileBuf : fileBufs) {
     assert(fileBuf && "Need a file to compile");
 
-    ESTree::ProgramNode *parsedAST = parseJSFile(
-        context.get(),
-        cli::SourceMappingComments,
-        cli::StaticBuiltins,
-        context->getSourceErrorManager().addNewSourceBuffer(std::move(fileBuf)),
-        std::exchange(singleInputSourceMap, {}),
-        sourceMapTranslator);
-    programs.push_back(parsedAST);
+    if (ESTree::ProgramNode *parsedAST = parseJSFile(
+            context.get(),
+            cli::SourceMappingComments,
+            cli::StaticBuiltins,
+            context->getSourceErrorManager().addNewSourceBuffer(
+                std::move(fileBuf)),
+            std::exchange(singleInputSourceMap, {}),
+            sourceMapTranslator)) {
+      programs.push_back(parsedAST);
+    } else {
+      parseError = true;
+    }
   }
+
+  if (parseError)
+    return nullptr;
 
   // If we have any source maps, we would have initialized sourceMapTranslator.
   // Set it if so.
