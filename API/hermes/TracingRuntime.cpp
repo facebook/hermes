@@ -899,6 +899,7 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
       std::move(hermesRuntime),
       runtimeConfig,
       std::move(traceStream),
+      // commitAction
       [traceCompletionCallback, traceScratchPath, traceResultPath]() {
         if (traceScratchPath != traceResultPath) {
           std::error_code ec =
@@ -913,18 +914,22 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
             return std::string();
           }
         }
-        bool success = traceCompletionCallback();
-        if (!success) {
-          ::hermes::hermesLog(
-              "Hermes",
-              "Failed to invoke completion callback for tracing file %s",
-              traceResultPath.c_str());
-          return std::string();
+
+        if (traceCompletionCallback) {
+          bool success = traceCompletionCallback();
+          if (!success) {
+            ::hermes::hermesLog(
+                "Hermes",
+                "Failed to invoke completion callback for tracing file %s",
+                traceResultPath.c_str());
+            return std::string();
+          }
         }
         ::hermes::hermesLog(
             "Hermes", "Completed tracing file at %s", traceResultPath.c_str());
         return traceResultPath;
       },
+      // rollbackAction
       [traceScratchPath]() {
         // Delete the in-progress trace
         llvh::sys::fs::remove(traceScratchPath);
@@ -941,8 +946,8 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
       std::move(hermesRuntime),
       runtimeConfig,
       std::move(traceStream),
-      []() { return std::string(); },
-      []() {},
+      /* commitAction */ []() { return std::string(); },
+      /* rollbackAction*/ []() {},
       forReplay);
 }
 
