@@ -208,6 +208,21 @@ public:
     return Last;
   }
 
+  /// \return an iterator to the node before the first node (the sentinel). This
+  /// is an advanced method, only useful in combination with
+  /// \c _erase_between().
+  iterator _before_begin() { return iterator(Sentinel); }
+
+  /// Erase the elements between (but not including) \p Start and \p End,
+  /// without touching the erased elements. In essence, this simply connects
+  /// \c Start directly to \c End.
+  /// Note that the start iterator is not a fully normal iterator, it could be
+  /// the sentinel.
+  /// This is an advanced method.
+  void _erase_between(iterator Start, iterator End) {
+    list_base_type::removeBetween(*Start.getNodePtr(), *End.getNodePtr());
+  }
+
   /// Remove a node by iterator and dispose of it.
   template <class Disposer>
   iterator eraseAndDispose(iterator I, Disposer dispose) {

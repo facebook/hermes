@@ -27,7 +27,7 @@ class TS2FlowValidator {
     if (sm.getErrorCount())
       return false;
 
-    visitESTreeNode(*this, program);
+    visitESTreeNodeNoReplace(*this, program);
 
     return sm.getErrorCount() == 0;
   }
@@ -75,7 +75,7 @@ class TS2FlowConverter
     if (sm_.getErrorCount())
       return nullptr;
 
-    visitESTreeNode(*this, program);
+    visitESTreeNodeNoReplace(*this, program);
 
     if (sm_.getErrorCount())
       return nullptr;
@@ -122,7 +122,7 @@ class TS2FlowConverter
       auto &node = *iter;
 
       if (!llvh::isa<ESTree::TSNode>(node)) {
-        ESTree::visitESTreeNode(*this, &node, parent);
+        ESTree::visitESTreeNodeNoReplace(*this, &node, parent);
         continue;
       }
 

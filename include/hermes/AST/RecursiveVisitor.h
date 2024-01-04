@@ -17,21 +17,49 @@ namespace ESTree {
 
 namespace detail {
 
-template <typename V, typename N>
-constexpr auto has_parent_param(V *v, N *n) -> decltype(v->visit(n, n), true) {
-  return true;
-}
-template <typename V, typename N>
-constexpr bool has_parent_param(...) {
-  return false;
-}
+#include <type_traits>
+#include <utility>
 
-template <typename V, typename N>
-void visitCaller(V &v, N *node, Node *parent) {
-  if constexpr (has_parent_param<V, N>(nullptr, nullptr))
-    v.visit(node, parent);
+/// A helper template structure used to determine if a method 'visit' exists in
+/// a given class 'T' and can be called with a set of arguments 'Args...'.
+/// It has three template parameters:
+/// - T: The type of the class to check.
+/// - A dummy parameter (unnamed), used for SFINAE.
+/// - Args...: The types of the arguments that we want to check if they can be
+///   passed to the 'visit'.
+/// The base case inherits from std::false_type, assuming 'visit' doesn't exist.
+template <typename T, typename, typename... Args>
+struct has_callable_visit_helper : std::false_type {};
+
+/// This is a partial specialization of has_callable_visit_helper. It gets
+/// instantiated if the expression inside std::void_t is valid.
+/// std::void_t<decltype(std::declval<T>().method(std::declval<Args>()...))>
+/// checks if 'visit' can be called with arguments of types Args...
+/// If it can, decltype extracts the return type of the method call, and
+/// std::void_t transforms it into 'void', making this specialization valid.
+template <typename T, typename... Args>
+struct has_callable_visit_helper<
+    T,
+    std::void_t<decltype(std::declval<T>().visit(std::declval<Args>()...))>,
+    Args...> : std::true_type {};
+
+/// A convenience alias template that sets the second template parameter of
+/// has_callable_visit_helper to 'void'. This simplifies usage by automatically
+/// filling in the non-deduced context (the dummy parameter).
+template <typename T, typename... Args>
+using has_callable_visit = has_callable_visit_helper<T, void, Args...>;
+
+/// Call the visit() method, detecting the correct signature to use.
+template <typename N, typename V>
+void visitCaller(V &v, Node **node, Node *parent) {
+  if constexpr (has_callable_visit<V, N *, Node **, Node *>::value)
+    v.visit(static_cast<N *>(*node), node, parent);
+  else if constexpr (has_callable_visit<V, N *, Node **>::value)
+    v.visit(static_cast<N *>(*node), node);
+  else if constexpr (has_callable_visit<V, N *, Node *>::value)
+    v.visit(static_cast<N *>(*node), parent);
   else
-    v.visit(node);
+    v.visit(static_cast<N *>(*node));
 }
 
 } // namespace detail
@@ -48,7 +76,7 @@ using llvh::cast;
 /// - visitChildren(Visitor,Node):
 ///     recursively visits all children of the node.
 ///
-/// This class is not intended to be used directly. Instead two global wrapper
+/// This class is not intended to be used directly. Instead, two global wrapper
 /// functions: visitESTreeNode() and visitESTreeChildren() have been defined.
 ///
 /// The visitor class must at least implement the method `visit(Node *)` and
@@ -72,13 +100,51 @@ using llvh::cast;
 /// of both methods should do nothing and just return false once the "failure"
 /// flag is set.
 ///
+/// \section AST Mutation
+///
+/// The dispatcher supports optional AST mutation. To enable mutation, the
+/// visitor needs to implement one of two additional signatures:
+/// \code
+///     visit(NodeType *n, Node **ppNode)
+///     visit(NodeType *n, Node **ppNode, Node *parent)
+/// \endcode
+/// In either case, writing to \c *ppNode allows the visitor to replace the
+/// current node. In most cases \c *ppNode is literally the node pointer in the
+/// AST.
+///
+/// This technique allows easy mutation of AST nodes referenced directly by a
+/// parent node (i.e. expression nodes). However modifying nodes in a
+/// \c NodeList, which is needed for almost all mutation, presents additional
+/// challenges.
+///
+/// \subsection NodeList Mutation
+///
+/// \c NodeList works differently because there is no pointer to the node that
+/// can be modified. The node has been inserted in an intrusive doubly-linked
+/// list. This also means that the node could be moved into another list by the
+/// visitor, before we know it. Handling this requires a bit of care after the
+/// visitor has been invoked, and is not free.
+///
+/// The dispatcher does not support mutating \c NodeList by default. Enabling
+/// mutation and the additional cost requires an explicit opt in. The visitor
+/// class must declare the following public constant:
+/// \code
+///     static constexpr bool kEnableNodeListMutation = true;
+/// \endcode
+///
+/// NOTE: AST mutation affects only the AST. If there are side tables, etc.,
+/// maintained by other compiler modules, which need to be kept synchronized
+/// with the AST, they have to be taken care of explicitly by the user of this
+/// API.
+///
 /// \param Visitor the visitor class.
 template <class Visitor>
 struct RecursiveVisitorDispatch {
   /// Invoke Visitor::visit(cast<Type>(node)) with node being cast to its
   /// concrete type, so the visitor can use static overloading to efficiently
   /// dispatch on different types at compile time.
-  static void visit(Visitor &v, Node *node, Node *parent) {
+  static void visit(Visitor &v, Node *&nodeRef, Node *parent) {
+    auto *node = nodeRef;
     if (!node)
       return;
     if (LLVM_UNLIKELY(!v.incRecursionDepth(node)))
@@ -88,9 +154,9 @@ struct RecursiveVisitorDispatch {
       default:
         llvm_unreachable("invalid node kind");
 
-#define VISIT(NAME)                                         \
-  case NodeKind::NAME:                                      \
-    detail::visitCaller(v, cast<NAME##Node>(node), parent); \
+#define VISIT(NAME)                                       \
+  case NodeKind::NAME:                                    \
+    detail::visitCaller<NAME##Node>(v, &nodeRef, parent); \
     break;
 
 #define ESTREE_NODE_0_ARGS(NAME, ...) VISIT(NAME)
@@ -125,12 +191,47 @@ struct RecursiveVisitorDispatch {
     return false;
   }
 
+  template <typename V>
+  static constexpr auto has_node_list_mutation(V *)
+      -> decltype(V::kEnableNodeListMutation, true) {
+    return V::kEnableNodeListMutation;
+  }
+  template <typename V>
+  static constexpr bool has_node_list_mutation(...) {
+    return false;
+  }
+
   static void visit(Visitor &v, NodeList &list, Node *parent) {
     if constexpr (has_node_list_override<Visitor>(nullptr))
       return v.visit(list, parent);
 
-    for (auto &node : list)
-      visit(v, &node, parent);
+    if constexpr (has_node_list_mutation<Visitor>(nullptr)) {
+      // Iterator to the previous element, initialized with the sentinel.
+      NodeList::iterator prevIt = list._before_begin();
+      for (auto it = list.begin(), end = list.end(); it != end;) {
+        auto curr = it;
+        Node *pNode = &*it++;
+        visit(v, pNode, parent);
+
+        // If the node was replaced, we need to erase it from the list without
+        // touching the node itself, and optionally insert a replacement node.
+        if (pNode != &*curr) {
+          list._erase_between(prevIt, it);
+          if (pNode)
+            prevIt = list.insert(it, *pNode);
+        } else {
+          prevIt = curr;
+        }
+      }
+    } else {
+      for (Node &node : list) {
+        Node *pNode = &node;
+        visit(v, pNode, parent);
+        assert(
+            pNode == &node &&
+            "NodeList mutation is disabled. Declare kEnableNodeListMutation=true to enable it.");
+      }
+    }
   }
 
   /// Recursively visit the children of the node.
@@ -164,229 +265,239 @@ struct RecursiveVisitorDispatch {
   }
 
 /// Declare helper functions to recursively visit the children of a node.
-#define ESTREE_NODE_0_ARGS(NAME, BASE) \
-  static void visitChildren(Visitor &v, NAME##Node *) {}
+#define ESTREE_NODE_0_ARGS(NAME, BASE)                   \
+  HERMES_ALWAYS_INLINE static inline void visitChildren( \
+      Visitor &v, NAME##Node *) {}
 
 #define ESTREE_NODE_1_ARGS(NAME, BASE, ARG0TY, ARG0NM, ARG0OPT) \
-  static void visitChildren(Visitor &v, NAME##Node *node) {     \
+  HERMES_ALWAYS_INLINE static inline void visitChildren(        \
+      Visitor &v, NAME##Node *node) {                           \
     visit(v, node->_##ARG0NM, node);                            \
   }
 
 #define ESTREE_NODE_2_ARGS(                                       \
     NAME, BASE, ARG0TY, ARG0NM, ARG0OPT, ARG1TY, ARG1NM, ARG1OPT) \
-  static void visitChildren(Visitor &v, NAME##Node *node) {       \
+  HERMES_ALWAYS_INLINE static inline void visitChildren(          \
+      Visitor &v, NAME##Node *node) {                             \
     visit(v, node->_##ARG0NM, node);                              \
     visit(v, node->_##ARG1NM, node);                              \
   }
 
-#define ESTREE_NODE_3_ARGS(                                 \
-    NAME,                                                   \
-    BASE,                                                   \
-    ARG0TY,                                                 \
-    ARG0NM,                                                 \
-    ARG0OPT,                                                \
-    ARG1TY,                                                 \
-    ARG1NM,                                                 \
-    ARG1OPT,                                                \
-    ARG2TY,                                                 \
-    ARG2NM,                                                 \
-    ARG2OPT)                                                \
-  static void visitChildren(Visitor &v, NAME##Node *node) { \
-    visit(v, node->_##ARG0NM, node);                        \
-    visit(v, node->_##ARG1NM, node);                        \
-    visit(v, node->_##ARG2NM, node);                        \
+#define ESTREE_NODE_3_ARGS(                              \
+    NAME,                                                \
+    BASE,                                                \
+    ARG0TY,                                              \
+    ARG0NM,                                              \
+    ARG0OPT,                                             \
+    ARG1TY,                                              \
+    ARG1NM,                                              \
+    ARG1OPT,                                             \
+    ARG2TY,                                              \
+    ARG2NM,                                              \
+    ARG2OPT)                                             \
+  HERMES_ALWAYS_INLINE static inline void visitChildren( \
+      Visitor &v, NAME##Node *node) {                    \
+    visit(v, node->_##ARG0NM, node);                     \
+    visit(v, node->_##ARG1NM, node);                     \
+    visit(v, node->_##ARG2NM, node);                     \
   }
 
-#define ESTREE_NODE_4_ARGS(                                 \
-    NAME,                                                   \
-    BASE,                                                   \
-    ARG0TY,                                                 \
-    ARG0NM,                                                 \
-    ARG0OPT,                                                \
-    ARG1TY,                                                 \
-    ARG1NM,                                                 \
-    ARG1OPT,                                                \
-    ARG2TY,                                                 \
-    ARG2NM,                                                 \
-    ARG2OPT,                                                \
-    ARG3TY,                                                 \
-    ARG3NM,                                                 \
-    ARG3OPT)                                                \
-  static void visitChildren(Visitor &v, NAME##Node *node) { \
-    visit(v, node->_##ARG0NM, node);                        \
-    visit(v, node->_##ARG1NM, node);                        \
-    visit(v, node->_##ARG2NM, node);                        \
-    visit(v, node->_##ARG3NM, node);                        \
+#define ESTREE_NODE_4_ARGS(                              \
+    NAME,                                                \
+    BASE,                                                \
+    ARG0TY,                                              \
+    ARG0NM,                                              \
+    ARG0OPT,                                             \
+    ARG1TY,                                              \
+    ARG1NM,                                              \
+    ARG1OPT,                                             \
+    ARG2TY,                                              \
+    ARG2NM,                                              \
+    ARG2OPT,                                             \
+    ARG3TY,                                              \
+    ARG3NM,                                              \
+    ARG3OPT)                                             \
+  HERMES_ALWAYS_INLINE static inline void visitChildren( \
+      Visitor &v, NAME##Node *node) {                    \
+    visit(v, node->_##ARG0NM, node);                     \
+    visit(v, node->_##ARG1NM, node);                     \
+    visit(v, node->_##ARG2NM, node);                     \
+    visit(v, node->_##ARG3NM, node);                     \
   }
 
-#define ESTREE_NODE_5_ARGS(                                 \
-    NAME,                                                   \
-    BASE,                                                   \
-    ARG0TY,                                                 \
-    ARG0NM,                                                 \
-    ARG0OPT,                                                \
-    ARG1TY,                                                 \
-    ARG1NM,                                                 \
-    ARG1OPT,                                                \
-    ARG2TY,                                                 \
-    ARG2NM,                                                 \
-    ARG2OPT,                                                \
-    ARG3TY,                                                 \
-    ARG3NM,                                                 \
-    ARG3OPT,                                                \
-    ARG4TY,                                                 \
-    ARG4NM,                                                 \
-    ARG4OPT)                                                \
-  static void visitChildren(Visitor &v, NAME##Node *node) { \
-    visit(v, node->_##ARG0NM, node);                        \
-    visit(v, node->_##ARG1NM, node);                        \
-    visit(v, node->_##ARG2NM, node);                        \
-    visit(v, node->_##ARG3NM, node);                        \
-    visit(v, node->_##ARG4NM, node);                        \
+#define ESTREE_NODE_5_ARGS(                              \
+    NAME,                                                \
+    BASE,                                                \
+    ARG0TY,                                              \
+    ARG0NM,                                              \
+    ARG0OPT,                                             \
+    ARG1TY,                                              \
+    ARG1NM,                                              \
+    ARG1OPT,                                             \
+    ARG2TY,                                              \
+    ARG2NM,                                              \
+    ARG2OPT,                                             \
+    ARG3TY,                                              \
+    ARG3NM,                                              \
+    ARG3OPT,                                             \
+    ARG4TY,                                              \
+    ARG4NM,                                              \
+    ARG4OPT)                                             \
+  HERMES_ALWAYS_INLINE static inline void visitChildren( \
+      Visitor &v, NAME##Node *node) {                    \
+    visit(v, node->_##ARG0NM, node);                     \
+    visit(v, node->_##ARG1NM, node);                     \
+    visit(v, node->_##ARG2NM, node);                     \
+    visit(v, node->_##ARG3NM, node);                     \
+    visit(v, node->_##ARG4NM, node);                     \
   }
 
-#define ESTREE_NODE_6_ARGS(                                 \
-    NAME,                                                   \
-    BASE,                                                   \
-    ARG0TY,                                                 \
-    ARG0NM,                                                 \
-    ARG0OPT,                                                \
-    ARG1TY,                                                 \
-    ARG1NM,                                                 \
-    ARG1OPT,                                                \
-    ARG2TY,                                                 \
-    ARG2NM,                                                 \
-    ARG2OPT,                                                \
-    ARG3TY,                                                 \
-    ARG3NM,                                                 \
-    ARG3OPT,                                                \
-    ARG4TY,                                                 \
-    ARG4NM,                                                 \
-    ARG4OPT,                                                \
-    ARG5TY,                                                 \
-    ARG5NM,                                                 \
-    ARG5OPT)                                                \
-  static void visitChildren(Visitor &v, NAME##Node *node) { \
-    visit(v, node->_##ARG0NM, node);                        \
-    visit(v, node->_##ARG1NM, node);                        \
-    visit(v, node->_##ARG2NM, node);                        \
-    visit(v, node->_##ARG3NM, node);                        \
-    visit(v, node->_##ARG4NM, node);                        \
-    visit(v, node->_##ARG5NM, node);                        \
+#define ESTREE_NODE_6_ARGS(                              \
+    NAME,                                                \
+    BASE,                                                \
+    ARG0TY,                                              \
+    ARG0NM,                                              \
+    ARG0OPT,                                             \
+    ARG1TY,                                              \
+    ARG1NM,                                              \
+    ARG1OPT,                                             \
+    ARG2TY,                                              \
+    ARG2NM,                                              \
+    ARG2OPT,                                             \
+    ARG3TY,                                              \
+    ARG3NM,                                              \
+    ARG3OPT,                                             \
+    ARG4TY,                                              \
+    ARG4NM,                                              \
+    ARG4OPT,                                             \
+    ARG5TY,                                              \
+    ARG5NM,                                              \
+    ARG5OPT)                                             \
+  HERMES_ALWAYS_INLINE static inline void visitChildren( \
+      Visitor &v, NAME##Node *node) {                    \
+    visit(v, node->_##ARG0NM, node);                     \
+    visit(v, node->_##ARG1NM, node);                     \
+    visit(v, node->_##ARG2NM, node);                     \
+    visit(v, node->_##ARG3NM, node);                     \
+    visit(v, node->_##ARG4NM, node);                     \
+    visit(v, node->_##ARG5NM, node);                     \
   }
 
-#define ESTREE_NODE_7_ARGS(                                 \
-    NAME,                                                   \
-    BASE,                                                   \
-    ARG0TY,                                                 \
-    ARG0NM,                                                 \
-    ARG0OPT,                                                \
-    ARG1TY,                                                 \
-    ARG1NM,                                                 \
-    ARG1OPT,                                                \
-    ARG2TY,                                                 \
-    ARG2NM,                                                 \
-    ARG2OPT,                                                \
-    ARG3TY,                                                 \
-    ARG3NM,                                                 \
-    ARG3OPT,                                                \
-    ARG4TY,                                                 \
-    ARG4NM,                                                 \
-    ARG4OPT,                                                \
-    ARG5TY,                                                 \
-    ARG5NM,                                                 \
-    ARG5OPT,                                                \
-    ARG6TY,                                                 \
-    ARG6NM,                                                 \
-    ARG6OPT)                                                \
-  static void visitChildren(Visitor &v, NAME##Node *node) { \
-    visit(v, node->_##ARG0NM, node);                        \
-    visit(v, node->_##ARG1NM, node);                        \
-    visit(v, node->_##ARG2NM, node);                        \
-    visit(v, node->_##ARG3NM, node);                        \
-    visit(v, node->_##ARG4NM, node);                        \
-    visit(v, node->_##ARG5NM, node);                        \
-    visit(v, node->_##ARG6NM, node);                        \
+#define ESTREE_NODE_7_ARGS(                              \
+    NAME,                                                \
+    BASE,                                                \
+    ARG0TY,                                              \
+    ARG0NM,                                              \
+    ARG0OPT,                                             \
+    ARG1TY,                                              \
+    ARG1NM,                                              \
+    ARG1OPT,                                             \
+    ARG2TY,                                              \
+    ARG2NM,                                              \
+    ARG2OPT,                                             \
+    ARG3TY,                                              \
+    ARG3NM,                                              \
+    ARG3OPT,                                             \
+    ARG4TY,                                              \
+    ARG4NM,                                              \
+    ARG4OPT,                                             \
+    ARG5TY,                                              \
+    ARG5NM,                                              \
+    ARG5OPT,                                             \
+    ARG6TY,                                              \
+    ARG6NM,                                              \
+    ARG6OPT)                                             \
+  HERMES_ALWAYS_INLINE static inline void visitChildren( \
+      Visitor &v, NAME##Node *node) {                    \
+    visit(v, node->_##ARG0NM, node);                     \
+    visit(v, node->_##ARG1NM, node);                     \
+    visit(v, node->_##ARG2NM, node);                     \
+    visit(v, node->_##ARG3NM, node);                     \
+    visit(v, node->_##ARG4NM, node);                     \
+    visit(v, node->_##ARG5NM, node);                     \
+    visit(v, node->_##ARG6NM, node);                     \
   }
 
-#define ESTREE_NODE_8_ARGS(                                 \
-    NAME,                                                   \
-    BASE,                                                   \
-    ARG0TY,                                                 \
-    ARG0NM,                                                 \
-    ARG0OPT,                                                \
-    ARG1TY,                                                 \
-    ARG1NM,                                                 \
-    ARG1OPT,                                                \
-    ARG2TY,                                                 \
-    ARG2NM,                                                 \
-    ARG2OPT,                                                \
-    ARG3TY,                                                 \
-    ARG3NM,                                                 \
-    ARG3OPT,                                                \
-    ARG4TY,                                                 \
-    ARG4NM,                                                 \
-    ARG4OPT,                                                \
-    ARG5TY,                                                 \
-    ARG5NM,                                                 \
-    ARG5OPT,                                                \
-    ARG6TY,                                                 \
-    ARG6NM,                                                 \
-    ARG6OPT,                                                \
-    ARG7TY,                                                 \
-    ARG7NM,                                                 \
-    ARG7OPT)                                                \
-  static void visitChildren(Visitor &v, NAME##Node *node) { \
-    visit(v, node->_##ARG0NM, node);                        \
-    visit(v, node->_##ARG1NM, node);                        \
-    visit(v, node->_##ARG2NM, node);                        \
-    visit(v, node->_##ARG3NM, node);                        \
-    visit(v, node->_##ARG4NM, node);                        \
-    visit(v, node->_##ARG5NM, node);                        \
-    visit(v, node->_##ARG6NM, node);                        \
-    visit(v, node->_##ARG7NM, node);                        \
+#define ESTREE_NODE_8_ARGS(                              \
+    NAME,                                                \
+    BASE,                                                \
+    ARG0TY,                                              \
+    ARG0NM,                                              \
+    ARG0OPT,                                             \
+    ARG1TY,                                              \
+    ARG1NM,                                              \
+    ARG1OPT,                                             \
+    ARG2TY,                                              \
+    ARG2NM,                                              \
+    ARG2OPT,                                             \
+    ARG3TY,                                              \
+    ARG3NM,                                              \
+    ARG3OPT,                                             \
+    ARG4TY,                                              \
+    ARG4NM,                                              \
+    ARG4OPT,                                             \
+    ARG5TY,                                              \
+    ARG5NM,                                              \
+    ARG5OPT,                                             \
+    ARG6TY,                                              \
+    ARG6NM,                                              \
+    ARG6OPT,                                             \
+    ARG7TY,                                              \
+    ARG7NM,                                              \
+    ARG7OPT)                                             \
+  HERMES_ALWAYS_INLINE static inline void visitChildren( \
+      Visitor &v, NAME##Node *node) {                    \
+    visit(v, node->_##ARG0NM, node);                     \
+    visit(v, node->_##ARG1NM, node);                     \
+    visit(v, node->_##ARG2NM, node);                     \
+    visit(v, node->_##ARG3NM, node);                     \
+    visit(v, node->_##ARG4NM, node);                     \
+    visit(v, node->_##ARG5NM, node);                     \
+    visit(v, node->_##ARG6NM, node);                     \
+    visit(v, node->_##ARG7NM, node);                     \
   }
 
-#define ESTREE_NODE_9_ARGS(                                 \
-    NAME,                                                   \
-    BASE,                                                   \
-    ARG0TY,                                                 \
-    ARG0NM,                                                 \
-    ARG0OPT,                                                \
-    ARG1TY,                                                 \
-    ARG1NM,                                                 \
-    ARG1OPT,                                                \
-    ARG2TY,                                                 \
-    ARG2NM,                                                 \
-    ARG2OPT,                                                \
-    ARG3TY,                                                 \
-    ARG3NM,                                                 \
-    ARG3OPT,                                                \
-    ARG4TY,                                                 \
-    ARG4NM,                                                 \
-    ARG4OPT,                                                \
-    ARG5TY,                                                 \
-    ARG5NM,                                                 \
-    ARG5OPT,                                                \
-    ARG6TY,                                                 \
-    ARG6NM,                                                 \
-    ARG6OPT,                                                \
-    ARG7TY,                                                 \
-    ARG7NM,                                                 \
-    ARG7OPT,                                                \
-    ARG8TY,                                                 \
-    ARG8NM,                                                 \
-    ARG8OPT)                                                \
-  static void visitChildren(Visitor &v, NAME##Node *node) { \
-    visit(v, node->_##ARG0NM, node);                        \
-    visit(v, node->_##ARG1NM, node);                        \
-    visit(v, node->_##ARG2NM, node);                        \
-    visit(v, node->_##ARG3NM, node);                        \
-    visit(v, node->_##ARG4NM, node);                        \
-    visit(v, node->_##ARG5NM, node);                        \
-    visit(v, node->_##ARG6NM, node);                        \
-    visit(v, node->_##ARG7NM, node);                        \
-    visit(v, node->_##ARG8NM, node);                        \
+#define ESTREE_NODE_9_ARGS(                              \
+    NAME,                                                \
+    BASE,                                                \
+    ARG0TY,                                              \
+    ARG0NM,                                              \
+    ARG0OPT,                                             \
+    ARG1TY,                                              \
+    ARG1NM,                                              \
+    ARG1OPT,                                             \
+    ARG2TY,                                              \
+    ARG2NM,                                              \
+    ARG2OPT,                                             \
+    ARG3TY,                                              \
+    ARG3NM,                                              \
+    ARG3OPT,                                             \
+    ARG4TY,                                              \
+    ARG4NM,                                              \
+    ARG4OPT,                                             \
+    ARG5TY,                                              \
+    ARG5NM,                                              \
+    ARG5OPT,                                             \
+    ARG6TY,                                              \
+    ARG6NM,                                              \
+    ARG6OPT,                                             \
+    ARG7TY,                                              \
+    ARG7NM,                                              \
+    ARG7OPT,                                             \
+    ARG8TY,                                              \
+    ARG8NM,                                              \
+    ARG8OPT)                                             \
+  HERMES_ALWAYS_INLINE static inline void visitChildren( \
+      Visitor &v, NAME##Node *node) {                    \
+    visit(v, node->_##ARG0NM, node);                     \
+    visit(v, node->_##ARG1NM, node);                     \
+    visit(v, node->_##ARG2NM, node);                     \
+    visit(v, node->_##ARG3NM, node);                     \
+    visit(v, node->_##ARG4NM, node);                     \
+    visit(v, node->_##ARG5NM, node);                     \
+    visit(v, node->_##ARG6NM, node);                     \
+    visit(v, node->_##ARG7NM, node);                     \
+    visit(v, node->_##ARG8NM, node);                     \
   }
 
 #include "hermes/AST/ESTree.def"
@@ -395,9 +506,42 @@ struct RecursiveVisitorDispatch {
 /// Invoke Visitor::visit(cast<Type>(node)) with node being cast to its
 /// concrete type, so the visitor can use static overloading to efficiently
 /// dispatch on different types at compile time.
+/// The node pointer could be modified by the visitor.
 template <class Visitor>
-void visitESTreeNode(Visitor &v, Node *node, Node *parent = nullptr) {
+void visitESTreeNode(Visitor &v, Node *&node, Node *parent) {
   RecursiveVisitorDispatch<Visitor>::visit(v, node, parent);
+}
+
+template <class Visitor>
+void visitESTreeNodeList(Visitor &v, NodeList &list, Node *parent) {
+  RecursiveVisitorDispatch<Visitor>::visit(v, list, parent);
+}
+
+/// Invoke Visitor::visit(cast<Type>(node)) with node being cast to its
+/// concrete type, so the visitor can use static overloading to efficiently
+/// dispatch on different types at compile time.
+/// \p node must not be replaced by the visitor, because there is no way to pass
+/// that information back to the caller of this function. This restriction does
+/// not apply to child nodes - if it is a mutating visitor, it could still
+/// change the AST, it is just not allowed to replace the specific node passed
+/// as a parameter here.
+template <class Visitor>
+void visitESTreeNodeNoReplace(Visitor &v, Node *node, Node *parent) {
+  Node *saveNode = node;
+  (void)saveNode;
+  RecursiveVisitorDispatch<Visitor>::visit(v, node, parent);
+  assert(
+      saveNode == node &&
+      "node must not be replaced in-place with a no-replace visitor");
+}
+
+/// Invoke Visitor::visit(cast<Type>(node)) with node being cast to its
+/// concrete type, so the visitor can use static overloading to efficiently
+/// dispatch on different types at compile time.
+/// The node pointer must not be modified by the visitor.
+template <class Visitor>
+void visitESTreeNodeNoReplace(Visitor &v, Node *node) {
+  visitESTreeNodeNoReplace(v, node, nullptr);
 }
 
 /// Recursively visit the children of the node.

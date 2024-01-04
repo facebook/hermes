@@ -53,7 +53,7 @@ bool FlowChecker::run(ESTree::ProgramNode *rootNode) {
   declareNativeTypes(rootNode->getScope());
   if (!resolveScopeTypesAndAnnotate(rootNode, rootNode->getScope()))
     return false;
-  visitESTreeNode(*this, rootNode);
+  visitESTreeNodeNoReplace(*this, rootNode);
   return sm_.getErrorCount() == 0;
 }
 

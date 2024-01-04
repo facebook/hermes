@@ -15,6 +15,13 @@
 // This file provides portable definitions of compiler specific macros
 // It is modelled after LLVM's Compiler.h
 
+/// Like LLVM_ATTRIBUTE_NORETURN, but only in release builds.
+#ifndef NDEBUG
+#define HERMES_ALWAYS_INLINE
+#else
+#define HERMES_ALWAYS_INLINE LLVM_ATTRIBUTE_ALWAYS_INLINE
+#endif
+
 // Force MSVC to enable empty base class optimization; this is necessary
 // for PointerBase alignment requirements in some cases when using
 // HERMESVM_CONTIGUOUS_HEAP

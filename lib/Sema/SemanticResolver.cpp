@@ -37,7 +37,7 @@ SemanticResolver::SemanticResolver(
 bool SemanticResolver::run(ESTree::ProgramNode *rootNode) {
   if (sm_.getErrorCount())
     return false;
-  visitESTreeNode(*this, rootNode);
+  visitESTreeNodeNoReplace(*this, rootNode);
   return sm_.getErrorCount() == 0;
 }
 
@@ -61,7 +61,7 @@ bool SemanticResolver::runCommonJSModule(
     llvh::SaveAndRestore<BindingTableScopeTy *> setGlobalScope(
         globalScope_, &programBindingScope);
 
-    visitESTreeNode(*this, rootNode);
+    visitESTreeNodeNoReplace(*this, rootNode);
   }
 
   return sm_.getErrorCount() == 0;
@@ -281,8 +281,7 @@ void SemanticResolver::visit(ESTree::SwitchStatementNode *node) {
     processDeclarations(*declsOpt);
   }
 
-  for (ESTree::Node &c : node->_cases)
-    visitESTreeNode(*this, &c, node);
+  visitESTreeNodeList(*this, node->_cases, node);
 }
 
 void SemanticResolver::visit(ESTree::ForInStatementNode *node) {
@@ -1044,8 +1043,7 @@ void SemanticResolver::visitFunctionLike(
   {
     llvh::SaveAndRestore<bool> oldIsFormalParams{
         functionContext()->isFormalParams, true};
-    for (auto &param : getParams(node))
-      visitESTreeNode(*this, &param, node);
+    visitESTreeNodeList(*this, getParams(node), node);
   }
 
   // If we declared the arguments object temporarily, unbind it, so it doesn't
@@ -1785,7 +1783,7 @@ UniqueString *FunctionContext::getFunctionName() const {
 /* static */ void
 Unresolver::run(SemContext &semCtx, uint32_t depth, ESTree::Node *root) {
   Unresolver unresolver{semCtx, depth};
-  visitESTreeNode(unresolver, root);
+  visitESTreeNodeNoReplace(unresolver, root);
 }
 
 void Unresolver::visit(ESTree::IdentifierNode *node) {

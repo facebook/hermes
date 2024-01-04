@@ -47,7 +47,7 @@ TEST(VisitorTest, NodeParentTest) {
   };
 
   Visitor v{};
-  visitESTreeNode(v, statement);
+  visitESTreeNodeNoReplace(v, statement);
   ASSERT_TRUE(v.foundNull);
 }
 
@@ -98,7 +98,7 @@ TEST(VisitorTest, VisitNodeListTest) {
   };
 
   Visitor v0{};
-  visitESTreeNode(v0, program);
+  visitESTreeNodeNoReplace(v0, program);
   ASSERT_EQ(v0.countNull, 5);
 
   // Count the number of NullLiteralNode inside NodeList and outside NodeList
@@ -128,15 +128,155 @@ TEST(VisitorTest, VisitNodeListTest) {
           continue; // skip calling visit(ESTree::NullLiteralNode *node).
         }
 
-        ESTree::visitESTreeNode(*this, &node);
+        ESTree::visitESTreeNodeNoReplace(*this, &node);
       }
     }
   };
 
   VisitorWithVisitNodeList vv{};
-  visitESTreeNode(vv, program);
+  visitESTreeNodeNoReplace(vv, program);
   ASSERT_EQ(vv.countNullInNodeList, 3);
   ASSERT_EQ(vv.countNullOutsideNodeList, 2);
+}
+
+TEST(VisitorTest, MutateNodeTest) {
+  Context context;
+
+  auto *expr = new (context) ESTree::BinaryExpressionNode(
+      new (context) ESTree::NullLiteralNode(),
+      new (context) ESTree::NumericLiteralNode(1),
+      context.getStringTable().getString("+"));
+
+  class Visitor {
+    Context &context_;
+
+   public:
+    explicit Visitor(Context &context) : context_(context) {}
+
+    bool incRecursionDepth(ESTree::Node *) {
+      return true;
+    }
+    void decRecursionDepth() {}
+
+    void visit(ESTree::Node *node) {
+      visitESTreeChildren(*this, node);
+    }
+
+    void visit(ESTree::NullLiteralNode *, ESTree::Node **ppNode) {
+      *ppNode = new (context_) ESTree::BooleanLiteralNode(false);
+    }
+    void visit(
+        ESTree::NumericLiteralNode *,
+        ESTree::Node **ppNode,
+        ESTree::Node *parent) {
+      ASSERT_TRUE(llvh::isa<ESTree::BinaryExpressionNode>(parent));
+      *ppNode = new (context_) ESTree::BooleanLiteralNode(true);
+    }
+  };
+
+  Visitor v(context);
+  ESTree::visitESTreeNodeNoReplace(v, expr);
+  ASSERT_TRUE(llvh::isa<ESTree::BooleanLiteralNode>(expr->_left));
+  ASSERT_EQ(false, llvh::cast<ESTree::BooleanLiteralNode>(expr->_left)->_value);
+  ASSERT_TRUE(llvh::isa<ESTree::BooleanLiteralNode>(expr->_right));
+  ASSERT_EQ(true, llvh::cast<ESTree::BooleanLiteralNode>(expr->_right)->_value);
+}
+
+TEST(VisitorTest, MutateNodeList) {
+  Context context;
+
+  // Create a program from the following code.
+  //   return;
+  //   1;
+  //   break;
+  //   2;
+  //   label: continue;
+  //   3;
+
+  ESTree::NodeList body;
+
+  body.push_back(*new (context) ESTree::ReturnStatementNode(nullptr));
+  body.push_back(*new (context) ESTree::ExpressionStatementNode(
+      new (context) ESTree::NumericLiteralNode(1), nullptr));
+  body.push_back(*new (context) ESTree::BreakStatementNode(nullptr));
+  body.push_back(*new (context) ESTree::ExpressionStatementNode(
+      new (context) ESTree::NumericLiteralNode(2), nullptr));
+  body.push_back(*new (context) ESTree::LabeledStatementNode(
+      new (context) ESTree::IdentifierNode(
+          context.getIdentifier("label").getUnderlyingPointer(),
+          nullptr,
+          false),
+      new (context) ESTree::ContinueStatementNode(nullptr)));
+  body.push_back(*new (context) ESTree::ExpressionStatementNode(
+      new (context) ESTree::NumericLiteralNode(3), nullptr));
+
+  auto *program = new (context) ESTree::ProgramNode(std::move(body));
+
+  class Visitor {
+   public:
+    // NOTE: have to use an enum because statics are not allowed here.
+    enum { kEnableNodeListMutation = 1 };
+
+    bool incRecursionDepth(ESTree::Node *) {
+      return true;
+    }
+    void decRecursionDepth() {}
+
+    void visit(ESTree::Node *node) {
+      visitESTreeChildren(*this, node);
+    }
+
+    void visit(ESTree::ReturnStatementNode *, ESTree::Node **ppNode) {
+      // Delete the "return";
+      *ppNode = nullptr;
+    }
+    void visit(ESTree::BreakStatementNode *, ESTree::Node **ppNode) {
+      // Delete the "break";
+      *ppNode = nullptr;
+    }
+    void visit(ESTree::LabeledStatementNode *node, ESTree::Node **ppNode) {
+      // Replace the label with its body;
+      *ppNode = node->_body;
+      node->_body = nullptr;
+    }
+  };
+
+  Visitor v;
+  ESTree::visitESTreeNodeNoReplace(v, program);
+
+  // Transformed program:
+  //   1;
+  //   2;
+  //   label: continue;
+  //   3;
+  ASSERT_EQ(4, program->_body.size());
+  auto it = program->_body.begin();
+  // 1.
+  ASSERT_TRUE(llvh::isa<ESTree::ExpressionStatementNode>(*it));
+  ASSERT_EQ(
+      1,
+      llvh::cast<ESTree::NumericLiteralNode>(
+          llvh::cast<ESTree::ExpressionStatementNode>(it)->_expression)
+          ->_value);
+  // 2.
+  ++it;
+  ASSERT_TRUE(llvh::isa<ESTree::ExpressionStatementNode>(*it));
+  ASSERT_EQ(
+      2,
+      llvh::cast<ESTree::NumericLiteralNode>(
+          llvh::cast<ESTree::ExpressionStatementNode>(it)->_expression)
+          ->_value);
+  // continue;
+  ++it;
+  ASSERT_TRUE(llvh::isa<ESTree::ContinueStatementNode>(*it));
+  // 3;
+  ++it;
+  ASSERT_TRUE(llvh::isa<ESTree::ExpressionStatementNode>(*it));
+  ASSERT_EQ(
+      3,
+      llvh::cast<ESTree::NumericLiteralNode>(
+          llvh::cast<ESTree::ExpressionStatementNode>(it)->_expression)
+          ->_value);
 }
 
 } // end anonymous namespace

@@ -371,7 +371,7 @@ bool ESTreeIRGen::treeDoesNotCapture(ESTree::Node *tree) {
     return true;
 
   MayBeCaptures mbc;
-  ESTree::visitESTreeNode(mbc, tree);
+  ESTree::visitESTreeNodeNoReplace(mbc, tree);
   return !mbc.mayBeCaptures;
 }
 

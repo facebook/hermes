@@ -92,7 +92,7 @@ class GenJS {
   GenJS(llvh::raw_ostream &OS, bool const pretty) : OS_(OS), pretty_(pretty) {}
 
   void doIt(Node *root) {
-    visitESTreeNode(*this, root);
+    visitESTreeNodeNoReplace(*this, root);
     OS_ << '\n';
   }
 
@@ -142,7 +142,7 @@ class GenJS {
       OS_ << elem->_raw->str();
       if (ecur != eend) {
         OS_ << esc2;
-        visitESTreeNode(*this, &*ecur++, node);
+        visitESTreeNodeNoReplace(*this, &*ecur++, node);
         OS_ << '}';
       }
     }
@@ -187,7 +187,7 @@ class GenJS {
     for (auto &prop : props) {
       if (i++)
         comma();
-      visitESTreeNode(*this, &prop, parent);
+      visitESTreeNodeNoReplace(*this, &prop, parent);
     }
     OS_ << '}';
   }
@@ -221,7 +221,7 @@ class GenJS {
     if (needSep)
       OS_ << ' ';
     needSep = false;
-    visitESTreeNode(*this, node->_key);
+    visitESTreeNode(*this, node->_key, node);
     if (node->_computed)
       OS_ << ']';
     if (node->_shorthand)
@@ -273,7 +273,7 @@ class GenJS {
   void visit(RestElementNode *node) {
     OS_ << "...";
     space();
-    visitESTreeNode(*this, node->_argument);
+    visitESTreeNode(*this, node->_argument, node);
   }
 
   void visit(EmptyNode *node) {}
@@ -381,7 +381,7 @@ class GenJS {
     for (auto &decl : node->_declarations) {
       if (i++ != 0)
         comma();
-      visitESTreeNode(*this, &decl, node);
+      visitESTreeNodeNoReplace(*this, &decl, node);
     }
   }
 
@@ -551,7 +551,7 @@ class GenJS {
     OS_ << '{';
     newline();
     for (auto &c : node->_cases) {
-      visitESTreeNode(*this, &c, node);
+      visitESTreeNodeNoReplace(*this, &c, node);
       newline();
     }
     OS_ << '}';
@@ -656,7 +656,7 @@ class GenJS {
 
     for (auto &p : node->_body) {
       newline();
-      visitESTreeNode(*this, &p, node);
+      visitESTreeNodeNoReplace(*this, &p, node);
     }
 
     decIndent();
@@ -774,14 +774,14 @@ class GenJS {
     if ((node->_expression || !pretty_) && node->_params.size() == 1) {
       if (needSep)
         OS_ << ' ';
-      visitESTreeNode(*this, &node->_params.front(), node);
+      visitESTreeNodeNoReplace(*this, &node->_params.front(), node);
     } else {
       OS_ << '(';
       int i = 0;
       for (auto &param : node->_params) {
         if (i++)
           comma();
-        visitESTreeNode(*this, &param, node);
+        visitESTreeNodeNoReplace(*this, &param, node);
       }
       OS_ << ')';
     }
@@ -823,7 +823,7 @@ class GenJS {
     for (auto &param : params) {
       if (i++ != 0)
         comma();
-      visitESTreeNode(*this, &param, node);
+      visitESTreeNodeNoReplace(*this, &param, node);
     }
     OS_ << ')';
     visitESTreeNode(*this, body, node);
