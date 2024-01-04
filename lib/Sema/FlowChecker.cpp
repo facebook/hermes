@@ -2049,14 +2049,20 @@ void FlowChecker::visit(ESTree::DoWhileStatementNode *node) {
 void FlowChecker::visit(ESTree::ForOfStatementNode *node) {
   if (!resolveScopeTypesAndAnnotate(node, node->getScope()))
     return;
-  visitESTreeNode(*this, node->_left, node);
+  if (llvh::isa<ESTree::VariableDeclarationNode>(node->_left))
+    visitESTreeNode(*this, node->_left, node);
+  else
+    visitExpression(node->_left, node);
   visitExpression(node->_right, node);
   visitESTreeNode(*this, node->_body, node);
 }
 void FlowChecker::visit(ESTree::ForInStatementNode *node) {
   if (!resolveScopeTypesAndAnnotate(node, node->getScope()))
     return;
-  visitESTreeNode(*this, node->_left, node);
+  if (llvh::isa<ESTree::VariableDeclarationNode>(node->_left))
+    visitESTreeNode(*this, node->_left, node);
+  else
+    visitExpression(node->_left, node);
   visitExpression(node->_right, node);
   visitESTreeNode(*this, node->_body, node);
 }
