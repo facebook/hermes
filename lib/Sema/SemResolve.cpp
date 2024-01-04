@@ -16,24 +16,6 @@
 namespace hermes {
 namespace sema {
 
-class AnnotateDecl final {
-  const flow::FlowContext &flowContext_;
-  flow::FlowTypesDumper &flowDumper_;
-
- public:
-  AnnotateDecl(
-      const flow::FlowContext &flowContext,
-      flow::FlowTypesDumper &flowDumper)
-      : flowContext_(flowContext), flowDumper_(flowDumper) {}
-
-  void annotateDecl(llvh::raw_ostream &os, const Decl *decl) {
-    if (flow::Type *type = flowContext_.findDeclType(decl)) {
-      os << " : ";
-      flowDumper_.printTypeRef(os, type);
-    }
-  };
-};
-
 class ASTPrinter {
   llvh::raw_ostream &os_;
   SemContext &semCtx_;
@@ -205,10 +187,12 @@ void semDump(
       os << '\n';
     }
 
-    AnnotateDecl annotateDecl(*flowContext, flowDumper);
     SemContextDumper semDumper(
-        [&annotateDecl](llvh::raw_ostream &os, const Decl *decl) {
-          annotateDecl.annotateDecl(os, decl);
+        [flowContext, &flowDumper](llvh::raw_ostream &os, const Decl *decl) {
+          if (flow::Type *type = flowContext->findDeclType(decl)) {
+            os << " : ";
+            flowDumper.printTypeRef(os, type);
+          }
         });
 
     semDumper.printSemContext(os, semCtx);
