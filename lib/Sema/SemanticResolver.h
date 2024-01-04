@@ -92,6 +92,10 @@ class SemanticResolver
   bool compile_;
 
  public:
+  /// This constant enables the more expensive path in RecursiveVisitorDispatch,
+  /// enabling us to mutate NodeList.
+  static constexpr bool kEnableNodeListMutation = true;
+
   /// \param semCtx the result of resolution will be stored here.
   /// \param saveDecls if not null, the map will contain all DeclCollector
   ///     instances for reuse by later passes.
@@ -156,10 +160,10 @@ class SemanticResolver
 
   void visit(ESTree::IdentifierNode *identifier, ESTree::Node *parent);
 
-  void visit(ESTree::BinaryExpressionNode *node);
+  void visit(ESTree::BinaryExpressionNode *node, ESTree::Node **ppNode);
   void visit(ESTree::AssignmentExpressionNode *assignment);
   void visit(ESTree::UpdateExpressionNode *node);
-  void visit(ESTree::UnaryExpressionNode *node);
+  void visit(ESTree::UnaryExpressionNode *node, ESTree::Node **ppNode);
 
   void visit(ESTree::BlockStatementNode *node, ESTree::Node *parent);
 

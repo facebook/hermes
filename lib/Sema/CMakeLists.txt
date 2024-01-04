@@ -4,6 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 add_hermes_library(hermesSema
+    ASTEval.cpp ASTEval.h
     Keywords.cpp
     SemContext.cpp
     SemResolve.cpp

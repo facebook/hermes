@@ -7,6 +7,7 @@
 
 #include "SemanticResolver.h"
 
+#include "ASTEval.h"
 #include "ScopedFunctionPromoter.h"
 #include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Sema/SemContext.h"
@@ -183,7 +184,9 @@ void SemanticResolver::visit(
   resolveIdentifier(identifier, false);
 }
 
-void SemanticResolver::visit(ESTree::BinaryExpressionNode *node) {
+void SemanticResolver::visit(
+    ESTree::BinaryExpressionNode *node,
+    ESTree::Node **ppNode) {
   // Handle nested +/- non-recursively.
   if (node->_operator == kw_.identPlus || node->_operator == kw_.identMinus) {
     auto list = linearizeLeft(node, {"+", "-"});
@@ -193,13 +196,25 @@ void SemanticResolver::visit(ESTree::BinaryExpressionNode *node) {
     }
 
     visitESTreeNode(*this, list[0]->_left, list[0]);
-    for (auto *e : list) {
+    for (auto *e : list)
       visitESTreeNode(*this, e->_right, e);
+
+    // If compiling, fold all expressions bottom up (left to right).
+    if (compile_) {
+      for (size_t i = 0, e = list.size(); i < e; ++i) {
+        ESTree::Node **foldResult = i + 1 < e ? &list[i + 1]->_left : ppNode;
+        // Attempt to fold the expression. If it fails, stop folding, since
+        // all subsequent expressions depend on the result of this one.
+        if (!astFoldBinaryExpression(kw_, list[i], foldResult))
+          break;
+      }
     }
     return;
   }
 
   visitESTreeChildren(*this, node);
+  if (compile_)
+    astFoldBinaryExpression(kw_, node, ppNode);
 }
 
 void SemanticResolver::visit(ESTree::AssignmentExpressionNode *assignment) {
@@ -233,7 +248,9 @@ void SemanticResolver::visit(ESTree::UpdateExpressionNode *node) {
   }
 }
 
-void SemanticResolver::visit(ESTree::UnaryExpressionNode *node) {
+void SemanticResolver::visit(
+    ESTree::UnaryExpressionNode *node,
+    ESTree::Node **ppNode) {
   // Check for unqualified delete in strict mode.
   if (node->_operator == kw_.identDelete) {
     if (curFunctionInfo()->strict &&
@@ -244,6 +261,8 @@ void SemanticResolver::visit(ESTree::UnaryExpressionNode *node) {
     }
   }
   visitESTreeChildren(*this, node);
+  if (compile_)
+    astFoldUnaryExpression(kw_, node, ppNode);
 }
 
 void SemanticResolver::visit(

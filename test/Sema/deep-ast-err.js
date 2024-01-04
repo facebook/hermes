@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: echo "1" "+"{1..10000} | %shermes -dump-sema - >/dev/null
-// RUN: (! echo "1" "+"{1..10000} | %shermes -typed -parse-flow -dump-sema - 2>&1 ) | %FileCheck -match-full-lines %s
-// RUN: (! echo "1" "+"{1..10000} | %shermes -typed -parse-ts -dump-sema - 2>&1 ) | %FileCheck -match-full-lines %s --check-prefix=CHECK-TS
+// RUN: echo "x" "+"{1..10000} | %shermes -dump-sema - >/dev/null
+// RUN: (! echo "x" "+"{1..10000} | %shermes -typed -parse-flow -dump-sema - 2>&1 ) | %FileCheck -match-full-lines %s
+// RUN: (! echo "x" "+"{1..10000} | %shermes -typed -parse-ts -dump-sema - 2>&1 ) | %FileCheck -match-full-lines %s --check-prefix=CHECK-TS
 
 // CHECK: {{.*}}: error: ft: too many nested expressions/statements/declarations
 // CHECK-TS: {{.*}}: error: ts2flow: too many nested expressions/statements/declarations

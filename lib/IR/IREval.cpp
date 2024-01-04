@@ -457,13 +457,12 @@ Literal *hermes::evalBinaryOperator(
       int64_t result = 0;
       if (kind == ValueKind::BinaryLeftShiftInstKind) {
         // Truncate to unsigned so that the shift doesn't happen on negative
-        // values. Cast it to a 32-bit signed int to get the sign back, then
-        // promote to 64 bits.
+        // values. Cast it to a 32-bit signed int to get the sign back.
         result = static_cast<int32_t>(lnum->truncateToUInt32() << shiftCount);
       } else if (kind == ValueKind::BinaryRightShiftInstKind) {
-        result = static_cast<int64_t>(lnum->truncateToInt32() >> shiftCount);
+        result = static_cast<int32_t>(lnum->truncateToInt32() >> shiftCount);
       } else {
-        result = static_cast<int64_t>(lnum->truncateToUInt32() >> shiftCount);
+        result = static_cast<uint32_t>(lnum->truncateToUInt32() >> shiftCount);
       }
       return builder.getLiteralNumber(result);
     }
