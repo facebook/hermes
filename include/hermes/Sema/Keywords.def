@@ -51,5 +51,6 @@ HERMES_KEYWORD(Call, "call")
 HERMES_KEYWORD(ExternC, "extern_c")
 HERMES_KEYWORD(Init, "init")
 HERMES_KEYWORD(CNull, "c_null")
+HERMES_KEYWORD(PrivFastArrayPush, "?fastArrayPush")
 
 #undef HERMES_KEYWORD

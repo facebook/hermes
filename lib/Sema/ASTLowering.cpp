@@ -43,10 +43,39 @@ class LowerAST : public ESTree::RecursionDepthTracker<LowerAST> {
   }
 
   void visit(ESTree::Node *node) {
-    (void)semContext_;
-    (void)flowContext_;
-    (void)kw_;
     ESTree::visitESTreeChildren(*this, node);
+  }
+
+  void visit(ESTree::CallExpressionNode *call) {
+    ESTree::visitESTreeChildren(*this, call);
+
+    if (auto *member =
+            llvh::dyn_cast<ESTree::MemberExpressionNode>(call->_callee)) {
+      // Check for SHBuiltin.
+      if (llvh::isa<ESTree::SHBuiltinNode>(member->_object))
+        return;
+
+      // (obj: FastArray).push(...)
+      if (auto *arrayType = llvh::dyn_cast<flow::ArrayType>(
+              flowContext_.getNodeTypeOrAny(member->_object)->info)) {
+        auto *ident = llvh::dyn_cast<ESTree::IdentifierNode>(member->_property);
+
+        if (!member->_computed && ident && ident->_name == kw_.identPush) {
+          // From  (obj).push(...)
+          // To    ($SHBuiltin).fastArrayPush(obj, ...);
+
+          auto *shb = new (astContext_) ESTree::SHBuiltinNode();
+          shb->setSourceRange(ident->getSourceRange());
+          auto *farPush = new (astContext_) ESTree::IdentifierNode(
+              kw_.identPrivFastArrayPush, nullptr, false);
+          farPush->setSourceRange(ident->getSourceRange());
+          call->_arguments.push_front(*member->_object);
+          member->_object = shb;
+          member->_property = farPush;
+          return;
+        }
+      }
+    }
   }
 };
 

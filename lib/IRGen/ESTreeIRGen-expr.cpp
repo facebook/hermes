@@ -444,21 +444,6 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
           call, llvh::cast<ESTree::IdentifierNode>(Mem->_property));
     }
 
-    // Check for builtin array.
-    if (auto *arrayType = llvh::dyn_cast<flow::ArrayType>(
-            flowContext_.getNodeTypeOrAny(Mem->_object)->info)) {
-      auto *ident = llvh::dyn_cast<ESTree::IdentifierNode>(Mem->_property);
-
-      // Check if we are calling push, if so, generate a series of pushes and
-      // appends.
-      if (!Mem->_computed && ident && ident->_name == kw_.identPush) {
-        auto *array = genExpression(Mem->_object);
-        for (ESTree::Node &arg : call->_arguments)
-          genFastArrayPush(array, arg);
-        return Builder.getLiteralUndefined();
-      }
-    }
-
     MemberExpressionResult memResult =
         genMemberExpression(Mem, MemberExpressionOperation::Load);
 
@@ -601,6 +586,15 @@ Value *ESTreeIRGen::genSHBuiltin(
   }
   if (builtin->_name == kw_.identExternC) {
     return genSHBuiltinExternC(call);
+  }
+  // %SHBuiltin.?fastArrayPush(arr: Array, ...);
+  if (builtin->_name == kw_.identPrivFastArrayPush) {
+    assert(call->_arguments.size() >= 1 && "?fastArrayPush without an array");
+    auto it = call->_arguments.begin();
+    Value *array = genExpression(&*it++);
+    for (auto end = call->_arguments.end(); it != end; ++it)
+      genFastArrayPush(array, *it);
+    return Builder.createFastArrayLengthInst(array);
   }
 
   Mod->getContext().getSourceErrorManager().error(

@@ -9,8 +9,6 @@
 
 'use strict';
 
-(function () {
-
 var x: number[] = [1, 2, 3];
 
 print(x[0]);
@@ -25,8 +23,12 @@ for(var i = 0, e = x.length; i < e ; i++)
 // CHECK-NEXT: 42
 // CHECK-NEXT: 3
 
-try { x[3] } catch (e) { print(e.message); }
+print(x.push());
+// CHECK-NEXT: 3
+print(x.push(10, 20));
+// CHECK-NEXT: 5
+
+try { x[10] } catch (e) { print(e.message); }
 try { x[1.2] } catch (e) { print(e.message); }
 // CHECK-NEXT: array load index out of range
 // CHECK-NEXT: array load index out of range
-})();
