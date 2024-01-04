@@ -19,6 +19,8 @@
 
 #include "JSLib/JSLibInternal.h"
 
+#include <cstdarg>
+
 using namespace hermes;
 using namespace hermes::vm;
 
