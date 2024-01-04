@@ -214,6 +214,9 @@ class Context {
   /// Whether to parse TypeScript syntax.
   bool parseTS_{false};
 
+  /// Whether to convert ES6 classes to ES5 functions
+  bool convertES6Classes_{false};
+
   /// If non-null, the resolution table which resolves static require().
   const std::unique_ptr<ResolutionTable> resolutionTable_;
 
@@ -385,6 +388,14 @@ class Context {
   }
   bool getParseTS() const {
     return parseTS_;
+  }
+
+  void setConvertES6Classes(bool convertES6Classes) {
+    convertES6Classes_ = convertES6Classes;
+  }
+
+  bool getConvertES6Classes() const {
+    return convertES6Classes_;
   }
 
   /// \return true if either TS or Flow is being parsed.

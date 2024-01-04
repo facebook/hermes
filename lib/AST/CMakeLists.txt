@@ -5,6 +5,7 @@
 
 add_hermes_library(hermesAST
     ASTBuilder.cpp
+    ES6Class.cpp
     ESTree.cpp
     ESTreeJSONDumper.cpp
     CommonJS.cpp

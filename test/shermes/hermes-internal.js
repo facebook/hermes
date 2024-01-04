@@ -12,11 +12,12 @@
 
 // concat
 // hasPromise
+// hasES6Class
 // setPromiseRejectionTrackingHook
 // enablePromiseRejectionTracker
 // enqueueJob
 // useEngineQueue
-var SAFE_FIELDS_COUNT = 6;
+var SAFE_FIELDS_COUNT = 7;
 
 // Check that we can disable unsafe fields of HermesInternal.
 print(Object.getOwnPropertyNames(HermesInternal).length)

@@ -253,6 +253,7 @@ Runtime::Runtime(
           runtimeConfig.getVMExperimentFlags()),
       hasES6Promise_(runtimeConfig.getES6Promise()),
       hasES6Proxy_(runtimeConfig.getES6Proxy()),
+      hasES6Class_(runtimeConfig.getES6Class()),
       hasIntl_(runtimeConfig.getIntl()),
       hasArrayBuffer_(runtimeConfig.getArrayBuffer()),
       hasMicrotaskQueue_(runtimeConfig.getMicrotaskQueue()),

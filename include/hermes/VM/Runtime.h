@@ -879,6 +879,10 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
     return hasES6Proxy_;
   }
 
+  bool hasES6Class() const {
+    return hasES6Class_;
+  }
+
   bool hasIntl() const {
     return hasIntl_;
   }
@@ -1149,6 +1153,9 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
   /// Set to true if we should enable ES6 Proxy.
   const bool hasES6Proxy_;
+
+  /// Set to true if we should enable ES6 Class
+  const bool hasES6Class_;
 
   /// Set to true if we should enable ECMA-402 Intl APIs.
   const bool hasIntl_;

@@ -130,6 +130,7 @@ int main(int argc, char **argv) {
           .withMaxNumRegisters(flags.MaxNumRegisters)
           .withES6Promise(flags.ES6Promise)
           .withES6Proxy(flags.ES6Proxy)
+          .withES6Class(flags.EvalES6Class)
           .withIntl(flags.Intl)
           .withMicrotaskQueue(flags.MicrotaskQueue)
           .withTrackIO(flags.TrackBytecodeIO)

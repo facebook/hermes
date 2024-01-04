@@ -163,6 +163,7 @@ NATIVE_FUNCTION(hermesInternalGetRuntimeProperties)
 NATIVE_FUNCTION(hermesInternalGetWeakSize)
 NATIVE_FUNCTION(hermesInternalIsProxy)
 NATIVE_FUNCTION(hermesInternalHasPromise)
+NATIVE_FUNCTION(hermesInternalHasES6Class)
 NATIVE_FUNCTION(hermesInternalTTIReached)
 NATIVE_FUNCTION(hermesInternalTTRCReached)
 

@@ -116,6 +116,13 @@ struct VMOnlyRuntimeFlags {
       llvh::cl::init(vm::RuntimeConfig::getDefaultES6Proxy()),
       llvh::cl::cat(RuntimeCategory)};
 
+  llvh::cl::opt<bool> EvalES6Class{
+      "Xeval-es6-class",
+      llvh::cl::Hidden,
+      llvh::cl::desc("Enable support for ES6 Class"),
+      llvh::cl::init(vm::RuntimeConfig::getDefaultES6Class()),
+      llvh::cl::cat(RuntimeCategory)};
+
   llvh::cl::opt<bool> Intl{
       "Xintl",
       llvh::cl::desc("Enable support for ECMA-402 Intl APIs"),
