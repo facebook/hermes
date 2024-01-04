@@ -946,21 +946,6 @@ GCBASE_BARRIER_1(weakRefReadBarrier, GCCell *);
 #undef GCBASE_BARRIER_2
 #endif
 
-/*static*/
-std::vector<detail::WeakRefKey *> GCBase::buildKeyList(
-    GC &gc,
-    JSWeakMap *weakMap) {
-  std::vector<detail::WeakRefKey *> res;
-  for (auto iter = weakMap->keys_begin(), end = weakMap->keys_end();
-       iter != end;
-       iter++) {
-    if (iter->getObjectInGC(gc)) {
-      res.push_back(&(*iter));
-    }
-  }
-  return res;
-}
-
 WeakRefSlot *GCBase::allocWeakSlot(CompressedPointer ptr) {
   // The weak ref mutex doesn't need to be held since we are only accessing free
   // slots, which the background thread cannot access.
