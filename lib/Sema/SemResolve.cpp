@@ -7,6 +7,7 @@
 
 #include "hermes/Sema/SemResolve.h"
 
+#include "ASTLowering.h"
 #include "FlowChecker.h"
 #include "FlowTypesDumper.h"
 #include "SemanticResolver.h"
@@ -136,7 +137,10 @@ bool resolveAST(
   if (flowContext) {
     flow::FlowChecker checker(
         astContext, semCtx, *flowContext, declCollectorMap, true);
-    if (!checker.run(llvh::cast<ESTree::ProgramNode>(root)))
+    ESTree::ProgramNode *programNode = llvh::cast<ESTree::ProgramNode>(root);
+    if (!checker.run(programNode))
+      return false;
+    if (!lowerAST(astContext, semCtx, *flowContext, programNode))
       return false;
   }
 

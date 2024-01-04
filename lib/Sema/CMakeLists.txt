@@ -5,6 +5,7 @@
 
 add_hermes_library(hermesSema
     ASTEval.cpp ASTEval.h
+    ASTLowering.cpp ASTLowering.h
     Keywords.cpp
     SemContext.cpp
     SemResolve.cpp
