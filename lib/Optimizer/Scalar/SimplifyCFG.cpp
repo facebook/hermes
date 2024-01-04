@@ -212,6 +212,17 @@ static bool attemptBranchRemovalFromPhiNodes(BasicBlock *BB) {
   return true;
 }
 
+/// Perform a strict quality check on two literals. Literals are uniqued by
+/// type, so we can just compare pointers, except for numbers, where we need to
+/// perform a numeric comparison to ensure that NaNs and -0 are handled.
+static bool literalStrictEquality(Literal *L1, Literal *L2) {
+  if (llvh::isa<LiteralNumber>(L1) && llvh::isa<LiteralNumber>(L2)) {
+    return llvh::cast<LiteralNumber>(L1)->getValue() ==
+        llvh::cast<LiteralNumber>(L2)->getValue();
+  }
+  return L1 == L2;
+}
+
 /// Remove switch targets that are known to be unreachable via the switch
 /// due to \p SI having a literal operand.
 static bool simplifySwitchInst(SwitchInst *SI) {
@@ -233,7 +244,7 @@ static bool simplifySwitchInst(SwitchInst *SI) {
     auto switchCase = SI->getCasePair(i);
 
     // Look for a case which matches input.
-    if (switchCase.first == litInput) {
+    if (literalStrictEquality(switchCase.first, litInput)) {
       destination = switchCase.second;
       break;
     }
