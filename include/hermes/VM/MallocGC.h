@@ -243,6 +243,7 @@ class MallocGC final : public GCBase {
   void snapshotWriteBarrier(const GCSymbolID *) {}
   void snapshotWriteBarrierRange(const GCHermesValue *, uint32_t) {}
   void snapshotWriteBarrierRange(const GCSmallHermesValue *, uint32_t) {}
+  void weakRefReadBarrier(HermesValue) {}
   void weakRefReadBarrier(GCCell *) {}
 
   void getHeapInfo(HeapInfo &info) override;

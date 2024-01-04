@@ -270,6 +270,10 @@ class HadesGC final : public GCBase {
       const GCSmallHermesValue *start,
       uint32_t numHVs);
 
+  /// Add read barrier for \p value. This is only used when reading entry
+  /// value from WeakMap/WeakSet.
+  void weakRefReadBarrier(HermesValue value);
+
   void weakRefReadBarrier(GCCell *value);
 
   /// \}

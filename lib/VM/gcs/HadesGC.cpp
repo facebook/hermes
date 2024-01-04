@@ -2104,6 +2104,14 @@ void HadesGC::relocationWriteBarrier(const void *loc, const void *value) {
   }
 }
 
+void HadesGC::weakRefReadBarrier(HermesValue value) {
+  assert(
+      !calledByBackgroundThread() &&
+      "Read barrier invoked by background thread.");
+  if (ogMarkingBarriers_)
+    snapshotWriteBarrierInternal(value);
+}
+
 void HadesGC::weakRefReadBarrier(GCCell *value) {
   assert(
       !calledByBackgroundThread() &&
