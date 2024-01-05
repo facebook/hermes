@@ -17,13 +17,32 @@ class raw_ostream;
 namespace facebook {
 namespace hermes {
 
-/// Like the method above, except takes a file descriptor instead of
-/// a stream.  If the \p traceFileDescriptor argument is -1, do not write
-/// the trace to a file.
+/// Creates and returns a tracing runtime if \p runtimeConfig.SynthTraceMode is
+/// either SynthTraceMode::Tracing or SynthTraceMode::TracingAndReplaying.
+/// Otherwise, returns the passed \n hermesRuntime as is.
+/// The trace will be written to \p traceScratchPath incrementally.
+/// On completion, the file will be renamed to \p traceResultPath, and
+/// \p traceCompletionCallback (for post-processing) will be invoked.
+/// Completion can be triggered implicitly by crash (if crash manager is
+/// provided) or explicitly by invocation of flush.
+/// If the runtime is destructed without triggering trace completion,
+/// the file at \p traceScratchPath will be deleted.
+/// The return value of \p traceCompletionCallback indicates whether the
+/// invocation completed successfully. If \p traceCompletionCallback is null, it
+/// also assumes as if the callback is successful.
 std::unique_ptr<jsi::Runtime> makeTracingHermesRuntime(
     std::unique_ptr<HermesRuntime> hermesRuntime,
-    const ::hermes::vm::RuntimeConfig &runtimeConfig);
+    const ::hermes::vm::RuntimeConfig &runtimeConfig,
+    const std::string &traceScratchPath,
+    const std::string &traceResultPath,
+    std::function<bool()> traceCompletionCallback);
 
+/// Creates and returns a tracing runtime that wrapps the passed
+/// \p hermesRuntime. This API is mainly for Synth Trace replay (and tracing),
+/// and for testing.
+/// \p traceStream  the stream to write trace to.
+/// \p forReplay indicates whether the runtime is being used in trace replay and
+/// tracing.
 std::unique_ptr<jsi::Runtime> makeTracingHermesRuntime(
     std::unique_ptr<HermesRuntime> hermesRuntime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
