@@ -19,6 +19,8 @@
 
 #include "JSLib/JSLibInternal.h"
 
+#include <cstdarg>
+
 using namespace hermes;
 using namespace hermes::vm;
 
@@ -1776,8 +1778,9 @@ extern "C" void _sh_throw_array_oob(SHRuntime *shr) {
   _sh_throw_current(shr);
 }
 
+#ifdef HERMESVM_BOXED_DOUBLES
 extern "C" SHLegacyValue
-_sh_fastarray_load_impl(SHRuntime *shr, SHLegacyValue *array, double index) {
+_sh_fastarray_load(SHRuntime *shr, SHLegacyValue *array, double index) {
   Runtime &runtime = getRuntime(shr);
   auto arrayHandle = Handle<FastArray>::vmcast(toPHV(array));
 
@@ -1785,6 +1788,19 @@ _sh_fastarray_load_impl(SHRuntime *shr, SHLegacyValue *array, double index) {
       fastarrayBoundsCheck(shr, arrayHandle->getLength(runtime), index);
   return arrayHandle->at(runtime, intIndex)->unboxToHV(runtime);
 }
+#else
+extern "C" SHLegacyValue
+_sh_fastarray_load(SHRuntime *shr, SHLegacyValue *array, double index) {
+  SHFastArray *arr = (SHFastArray *)_sh_ljs_get_pointer(*array);
+  SHArrayStorageSmall *storage =
+      (SHArrayStorageSmall *)_sh_cp_decode_non_null(shr, arr->indexedStorage);
+  uint32_t idx = index;
+  // Check that the index is an unsigned integer that is within range.
+  if (idx >= storage->size || idx != index)
+    _sh_throw_array_oob(shr);
+  return storage->storage[idx];
+}
+#endif
 
 extern "C" void _sh_fastarray_store(
     SHRuntime *shr,

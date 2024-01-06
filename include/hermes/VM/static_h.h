@@ -918,31 +918,7 @@ SHERMES_EXPORT void _sh_throw_array_oob(SHRuntime *shr)
 /// Out-of-line implementation for loading the element at \p index from the
 /// FastArray \p array.
 SHERMES_EXPORT SHLegacyValue
-_sh_fastarray_load_impl(SHRuntime *shr, SHLegacyValue *array, double index);
-
-#ifdef HERMESVM_BOXED_DOUBLES
-/// A wrapper for \c _sh_fastarray_load_impl, since we cannot load the value
-/// inline when boxed doubles are enabled.
-inline static SHLegacyValue
-_sh_fastarray_load(SHRuntime *shr, SHLegacyValue *array, double index) {
-  return _sh_fastarray_load_impl(shr, array, index);
-}
-#else
-/// Inline implementation for loading the element at \p index from the FastArray
-/// \p array. Because of the cost of the bounds check, this function should not
-/// actually be inlined, it is defined in the header to make it faster to call.
-inline static __attribute__((noinline)) SHLegacyValue
-_sh_fastarray_load(SHRuntime *shr, SHLegacyValue *array, double index) {
-  SHFastArray *arr = (SHFastArray *)_sh_ljs_get_pointer(*array);
-  SHArrayStorageSmall *storage =
-      (SHArrayStorageSmall *)_sh_cp_decode_non_null(shr, arr->indexedStorage);
-  uint32_t idx = index;
-  // Check that the index is an unsigned integer that is within range.
-  if (idx >= storage->size || idx != index)
-    _sh_throw_array_oob(shr);
-  return storage->storage[idx];
-}
-#endif
+_sh_fastarray_load(SHRuntime *shr, SHLegacyValue *array, double index);
 
 /// Store \p storedValue to the FastArray \p array at \p index.
 SHERMES_EXPORT void _sh_fastarray_store(

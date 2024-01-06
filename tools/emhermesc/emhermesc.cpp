@@ -131,7 +131,8 @@ extern "C" CompileResult *hermesCompileToBytecode(
 
     SourceErrorManager sm;
     SimpleDiagHandlerRAII diagHandler(sm);
-    sourceMap = SourceMapParser::parse({sourceMapData, sourceMapSize - 1}, sm);
+    sourceMap =
+        SourceMapParser::parse({sourceMapData, sourceMapSize - 1}, {}, sm);
     if (!sourceMap) {
       compileRes->error_ =
           "Failed to parse source map:" + diagHandler.getErrorString();

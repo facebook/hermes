@@ -36,10 +36,10 @@ run_1_test() {
   SYM_TRACE="$TMPDIR/${NAME}_symbolicated_trace.txt"
 
   # Run the original JS, record the backtrace.
-  "$SHERMES" $ARGS "$ORIGINAL_JS_FILE" &> "$ORIG_TRACE"
+  "$SHERMES" $ARGS "$ORIGINAL_JS_FILE" > "$ORIG_TRACE"
 
   # Run the generated JS with input source file, record the backtrace symbolicated with merged debuginfo.
-  "$SHERMES" $ARGS "$GENERATED_JS_FILE" -source-map "$JS_FILE_SOURCE_MAP" &> "$SYM_TRACE"
+  "$SHERMES" $ARGS "$GENERATED_JS_FILE" -source-map "$JS_FILE_SOURCE_MAP" > "$SYM_TRACE"
 
   # Check if original and symbolicated traces using input source map match using stacktrace_diff.py.
   # stacktrace_diff.py matches stack frames ignoring file full path and column number. This is necessary because:

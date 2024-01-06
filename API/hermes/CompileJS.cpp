@@ -61,7 +61,7 @@ bool compileJS(
   if (sourceMapBuf.has_value()) {
     hermes::SourceErrorManager sm;
     sourceMap = hermes::SourceMapParser::parse(
-        llvh::StringRef{sourceMapBuf->data(), sourceMapBuf->size()}, sm);
+        llvh::StringRef{sourceMapBuf->data(), sourceMapBuf->size()}, {}, sm);
     if (!sourceMap) {
       return false;
     }
