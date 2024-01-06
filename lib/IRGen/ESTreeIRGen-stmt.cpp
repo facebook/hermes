@@ -883,8 +883,9 @@ void ESTreeIRGen::genForOfFastArrayStatement(
   auto *idx = Builder.createAllocStackInst(
       genAnonymousLabelName("forOfIndex"), Type::createNumber());
   Builder.createStoreStackInst(Builder.getLiteralNumber(0), idx);
+  LoadStackInst *loadStack1 = Builder.createLoadStackInst(idx);
   Builder.createCompareBranchInst(
-      Builder.createLoadStackInst(idx),
+      loadStack1,
       Builder.createFastArrayLengthInst(exprValue),
       ValueKind::CmpBrLessThanInstKind,
       bodyBlock,
@@ -914,8 +915,9 @@ void ESTreeIRGen::genForOfFastArrayStatement(
   // Use a separate block here for symmetry with other loops.
   Builder.setInsertionBlock(postTestBlock);
   // Branch out of the loop if the index has reached the end of the array.
+  LoadStackInst *loadStack2 = Builder.createLoadStackInst(idx);
   Builder.createCompareBranchInst(
-      Builder.createLoadStackInst(idx),
+      loadStack2,
       Builder.createFastArrayLengthInst(exprValue),
       ValueKind::CmpBrLessThanInstKind,
       bodyBlock,

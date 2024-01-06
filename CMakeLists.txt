@@ -721,6 +721,8 @@ if(HERMES_ENABLE_TEST_SUITE)
     hbc-diff
     dependency-extractor
     shermes-dep
+    compileJS
+    emhermesc
     )
 
   if(HERMES_BUILD_NODE_HERMES)
