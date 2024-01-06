@@ -10,7 +10,9 @@ add_hermes_tool(synth
 )
 
 target_link_libraries(synth
-  hermesConsoleHost
+  hermesConsoleHost_obj
   hermesvm_a
-  traceInterpreter
+  traceInterpreter_obj
+  synthTrace_obj
+  synthTraceParser_obj
 )

@@ -31,10 +31,10 @@ add_hermes_library(timerStats TimerStats.cpp LINK_LIBS jsi LINK_OBJLIBS hermesSu
 add_hermes_library(traceInterpreter TraceInterpreter.cpp
   LINK_OBJLIBS hermesapi hermesInstrumentation synthTrace synthTraceParser)
 
-add_hermes_library(synthTraceParser SynthTraceParser.cpp LINK_OBJLIBS hermesSupport hermesParser synthTrace)
-
 set(HERMES_ENABLE_RTTI OFF)
 set(HERMES_ENABLE_EH OFF)
+
+add_hermes_library(synthTraceParser SynthTraceParser.cpp LINK_OBJLIBS hermesSupport hermesParser synthTrace)
 
 # compileJS uses neither exceptions nor RTTI
 add_hermes_library(compileJS CompileJS.cpp LINK_OBJLIBS hermesPublic)
