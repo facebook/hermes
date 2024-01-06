@@ -565,10 +565,24 @@ class InstrGen {
   /// to 20 characters.
   llvh::raw_ostream &genStringComment(llvh::StringRef str) {
     os_ << " /*";
-    if (str.size() > 20)
-      os_.write_escaped(str.take_front(20)) << "...";
-    else
-      os_.write_escaped(str);
+
+    // Escape */ specially, since we are in a comment.
+    auto escape = [this](llvh::StringRef str) {
+      size_t from = 0;
+      size_t pos;
+      while ((pos = str.find("*/", from)) != llvh::StringRef::npos) {
+        // Write the part of the string including the "*" followed by "\/".
+        os_.write_escaped(str.slice(from, pos + 1)) << "\\057";
+        from = pos + 2;
+      }
+      os_.write_escaped(str.substr(from));
+    };
+    if (str.size() > 20) {
+      escape(str.take_front(20));
+      os_ << "...";
+    } else {
+      escape(str);
+    }
     return os_ << "*/";
   }
 
