@@ -6,7 +6,7 @@
 add_hermes_tool(emhermesc
   emhermesc.cpp
   ${ALL_HEADER_FILES}
-  LINK_OBJLIBS hermesHBCBackend LLVHSupport
+  LINK_OBJLIBS hermesHBCBackend
   )
 
 if (EMSCRIPTEN)

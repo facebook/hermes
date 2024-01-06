@@ -10,6 +10,4 @@ add_hermes_tool(hbc-deltaprep
 
 target_link_libraries(hbc-deltaprep
   hermesHBCBackend
-  hermesSupport
-  LLVHSupport
 )

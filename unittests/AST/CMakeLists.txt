@@ -16,7 +16,5 @@ add_hermes_unittest(HermesASTTests
 
 target_link_libraries(HermesASTTests
  hermesParser
- hermesAST
  hermesSema
- hermesSupport
  )

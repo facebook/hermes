@@ -9,10 +9,7 @@ add_hermes_tool(dependency-extractor
   )
 
 target_link_libraries(dependency-extractor
-  hermesAST
   hermesDependencyExtractor
-  hermesParser
-  LLVHSupport
 )
 
 add_hermes_tool(emdependency-extractor
@@ -21,9 +18,7 @@ add_hermes_tool(emdependency-extractor
   )
 
 target_link_libraries(emdependency-extractor
-  hermesAST
   hermesDependencyExtractor
-  hermesParser
 )
 
 if (EMSCRIPTEN)

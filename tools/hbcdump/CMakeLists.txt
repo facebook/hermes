@@ -12,8 +12,6 @@ add_hermes_tool(hbcdump
 
 target_link_libraries(hbcdump
   hermesHBCBackend
-  hermesSupport
-  LLVHSupport
 )
 
 install(TARGETS hbcdump

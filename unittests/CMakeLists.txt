@@ -10,7 +10,7 @@ function(add_hermes_unittest test_dirname)
   add_unittest(HermesUnitTests ${test_dirname} ${ARGN})
   # gtest uses LLVHSupport, so LLVHSupport needs to be listed after gtest on
   # the link line.
-  target_link_libraries(${test_dirname} LLVHSupport)
+#  target_link_libraries(${test_dirname} LLVHSupport)
   target_compile_definitions(${test_dirname} PUBLIC UNIT_TEST)
 endfunction()
 

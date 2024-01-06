@@ -23,6 +23,4 @@ target_link_libraries(HermesIRTests
  hermesFrontend
  hermesOptimizer
  hermesParser
- hermesSupport
- dtoa
  )

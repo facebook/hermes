@@ -9,5 +9,5 @@ add_hermes_tool(hbc-attribute
   )
 
 target_link_libraries(hbc-attribute
-  hermesHBCBackend LLVHSupport
+  hermesHBCBackend
 )

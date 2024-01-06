@@ -10,7 +10,5 @@ add_hermes_tool(hbc-diff
 
 target_link_libraries(hbc-diff
   hermesHBCBackend
-  hermesSupport
   hermesInst
-  LLVHSupport
 )
