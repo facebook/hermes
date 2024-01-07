@@ -519,6 +519,19 @@ struct HermesABIRuntimeVTable {
   bool (*object_is_function)(
       struct HermesABIRuntime *rt,
       struct HermesABIObject obj);
+
+  /// Create a weak reference to the given object \p obj. The returned
+  /// WeakObject may be invalidated at any time after the last strong reference
+  /// to the object is removed.
+  struct HermesABIWeakObjectOrError (*create_weak_object)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject obj);
+
+  /// Lock the given weak object \p wo, returning a strong reference to the
+  /// object if it is still valid, or undefined otherwise.
+  struct HermesABIValue (*lock_weak_object)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIWeakObject wo);
 };
 
 /// An instance of a Hermes Runtime.
