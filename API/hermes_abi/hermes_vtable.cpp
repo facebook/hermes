@@ -839,6 +839,97 @@ bool prop_name_id_equals(
   return *toHandle(a) == *toHandle(b);
 }
 
+HermesABIValueOrError call(
+    HermesABIRuntime *abiRt,
+    HermesABIFunction func,
+    const HermesABIValue *jsThis,
+    const HermesABIValue *args,
+    size_t count) {
+  auto *hart = impl(abiRt);
+
+  // We have to cast down the count to uint32 before calling VM APIs.
+  if (count > std::numeric_limits<uint32_t>::max()) {
+    hart->nativeExceptionMessage = "Too many arguments to call";
+    return abi::createValueOrError(HermesABIErrorCodeNativeException);
+  }
+
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  vm::Handle<vm::Callable> funcHandle = toHandle(func);
+
+  // Set up the call frame and create space for the arguments.
+  vm::ScopedNativeCallFrame newFrame{
+      runtime,
+      static_cast<uint32_t>(count),
+      funcHandle.getHermesValue(),
+      vm::HermesValue::encodeUndefinedValue(),
+      toHermesValue(*jsThis)};
+  if (LLVM_UNLIKELY(newFrame.overflowed())) {
+    (void)runtime.raiseStackOverflow(
+        ::hermes::vm::Runtime::StackOverflowKind::NativeStack);
+    return abi::createValueOrError(HermesABIErrorCodeJSError);
+  }
+
+  // Convert each argument from a HermesABIValue to a HermesValue and store it
+  // in the frame.
+  for (uint32_t i = 0; i != count; ++i)
+    newFrame->getArgRef(i) = toHermesValue(args[i]);
+
+  auto callRes = vm::Callable::call(funcHandle, runtime);
+  if (callRes == vm::ExecutionStatus::EXCEPTION)
+    return abi::createValueOrError(HermesABIErrorCodeJSError);
+
+  return hart->createValueOrError(callRes->get());
+}
+
+HermesABIValueOrError call_as_constructor(
+    HermesABIRuntime *abiRt,
+    HermesABIFunction fn,
+    const HermesABIValue *args,
+    size_t count) {
+  auto *hart = impl(abiRt);
+  if (count > std::numeric_limits<uint32_t>::max()) {
+    hart->nativeExceptionMessage = "Too many arguments to call";
+    return abi::createValueOrError(HermesABIErrorCodeNativeException);
+  }
+
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  vm::Handle<vm::Callable> funcHandle = toHandle(fn);
+
+  // Create the new object for the constructor call and save it in case the
+  // function does not return an object.
+  auto thisRes = vm::Callable::createThisForConstruct_RJS(funcHandle, runtime);
+  auto objHandle = runtime.makeHandle<vm::JSObject>(std::move(*thisRes));
+
+  // Set up the call frame and create space for the arguments.
+  vm::ScopedNativeCallFrame newFrame{
+      runtime,
+      static_cast<uint32_t>(count),
+      funcHandle.getHermesValue(),
+      funcHandle.getHermesValue(),
+      objHandle.getHermesValue()};
+  if (LLVM_UNLIKELY(newFrame.overflowed())) {
+    (void)runtime.raiseStackOverflow(
+        ::hermes::vm::Runtime::StackOverflowKind::NativeStack);
+    return abi::createValueOrError(HermesABIErrorCodeJSError);
+  }
+
+  // Convert each argument from a HermesABIValue to a HermesValue and store it
+  // in the frame.
+  for (uint32_t i = 0; i != count; ++i)
+    newFrame->getArgRef(i) = toHermesValue(args[i]);
+
+  auto callRes = vm::Callable::call(funcHandle, runtime);
+  if (callRes == vm::ExecutionStatus::EXCEPTION)
+    return abi::createValueOrError(HermesABIErrorCodeJSError);
+
+  // If the result is not an object, return the this parameter.
+  auto res = callRes->get();
+  return hart->createValueOrError(
+      res.isObject() ? res : objHandle.getHermesValue());
+}
+
 constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     release_hermes_runtime,
     get_and_clear_js_error_value,
@@ -871,6 +962,8 @@ constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     create_propnameid_from_string,
     create_propnameid_from_symbol,
     prop_name_id_equals,
+    call,
+    call_as_constructor,
 };
 
 } // namespace

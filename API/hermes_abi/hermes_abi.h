@@ -366,6 +366,23 @@ struct HermesABIRuntimeVTable {
       struct HermesABIRuntime *rt,
       struct HermesABIPropNameID a,
       struct HermesABIPropNameID b);
+
+  /// Call the function \p fn with \p arg_count \p args, and with the the this
+  /// parameter set to \p js_this.
+  struct HermesABIValueOrError (*call)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIFunction fn,
+      const struct HermesABIValue *js_this,
+      const struct HermesABIValue *args,
+      size_t arg_count);
+
+  /// Call the function \p fn as a constructor with \p arg_count \p args.
+  /// Equivalent to invoking the function with `new`.
+  struct HermesABIValueOrError (*call_as_constructor)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIFunction fn,
+      const struct HermesABIValue *args,
+      size_t arg_count);
 };
 
 /// An instance of a Hermes Runtime.
