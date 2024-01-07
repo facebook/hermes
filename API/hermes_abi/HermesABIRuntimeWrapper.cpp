@@ -695,7 +695,10 @@ class HermesABIRuntimeWrapper : public Runtime {
     THROW_UNIMPLEMENTED();
   }
 
-  void setExternalMemoryPressure(const Object &obj, size_t amount) override {}
+  void setExternalMemoryPressure(const Object &obj, size_t amount) override {
+    unwrap(vtable_->set_object_external_memory_pressure(
+        abiRt_, toABIObject(obj), amount));
+  }
 };
 
 } // namespace
