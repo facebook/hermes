@@ -41,7 +41,7 @@
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Math": string
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "PI": string
-// CHECK-NEXT:  %2 = CheckedTypeCastInst (:number) %1: any
+// CHECK-NEXT:  %2 = CheckedTypeCastInst (:number) %1: any, type(number)
 // CHECK-NEXT:  %3 = BinaryMultiplyInst (:any) %2: number, 3: number
 // CHECK-NEXT:       ReturnInst %3: any
 // CHECK-NEXT:function_end

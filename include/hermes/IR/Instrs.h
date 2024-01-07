@@ -4737,19 +4737,31 @@ class UnionNarrowTrustedInst : public SingleOperandInst {
   }
 };
 
-class CheckedTypeCastInst : public SingleOperandInst {
+class CheckedTypeCastInst : public Instruction {
   CheckedTypeCastInst(const CheckedTypeCastInst &) = delete;
   void operator=(const CheckedTypeCastInst &) = delete;
 
  public:
-  explicit CheckedTypeCastInst(Value *src, Type type)
-      : SingleOperandInst(ValueKind::CheckedTypeCastInstKind, src) {
-    setType(type);
+  enum { CheckedValueIdx, SpecifiedTypeIdx };
+
+  explicit CheckedTypeCastInst(Value *src, LiteralIRType *type)
+      : Instruction(ValueKind::CheckedTypeCastInstKind) {
+    setType(type->getData());
+    pushOperand(src);
+    pushOperand(type);
   }
   explicit CheckedTypeCastInst(
       const CheckedTypeCastInst *src,
       llvh::ArrayRef<Value *> operands)
-      : SingleOperandInst(src, operands) {}
+      : Instruction(src, operands) {}
+
+  Value *getCheckedValue() const {
+    return getOperand(CheckedValueIdx);
+  }
+
+  LiteralIRType *getSpecifiedType() const {
+    return llvh::cast<LiteralIRType>(getOperand(SpecifiedTypeIdx));
+  }
 
   static bool hasOutput() {
     return true;

@@ -90,7 +90,7 @@ return foo;
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:       StoreFrameInst %1: any, [x]: any
 // CHECK-NEXT:  %3 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %4 = CheckedTypeCastInst (:number) %3: any
+// CHECK-NEXT:  %4 = CheckedTypeCastInst (:number) %3: any, type(number)
 // CHECK-NEXT:       PrStoreInst %4: number, %0: object, 0: number, "x": string, true: boolean
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

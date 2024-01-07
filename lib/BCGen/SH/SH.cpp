@@ -2078,12 +2078,12 @@ class InstrGen {
   }
   void generateCheckedTypeCastInst(CheckedTypeCastInst &inst) {
     const Type resultType = inst.getType();
-    const Type inputType = inst.getSingleOperand()->getType();
+    const Type inputType = inst.getCheckedValue()->getType();
 
     assert(
-        ra_.isAllocated(inst.getSingleOperand()) &&
+        ra_.isAllocated(inst.getCheckedValue()) &&
         "operand of CheckedCastInst must have an allocated register");
-    sh::Register srcReg = ra_.getRegister(inst.getSingleOperand());
+    sh::Register srcReg = ra_.getRegister(inst.getCheckedValue());
     sh::Register dstReg = ra_.getRegister(&inst);
 
     // Are the input and output type the same?
@@ -2094,7 +2094,7 @@ class InstrGen {
         os_.indent(2);
         generateRegister(dstReg);
         os_ << " = ";
-        generateValue(*inst.getSingleOperand());
+        generateValue(*inst.getCheckedValue());
         os_ << ";\n";
       }
       return;
@@ -2136,7 +2136,7 @@ class InstrGen {
       os_.indent(2);
       generateRegister(dstReg);
       os_ << " = ";
-      generateValue(*inst.getSingleOperand());
+      generateValue(*inst.getCheckedValue());
       os_ << ";\n";
     }
   }

@@ -59,12 +59,12 @@ return function f(x: any, n: number) {
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [n]: any
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %6 = BinaryAddInst (:any) %4: any, %5: any
-// CHECK-NEXT:  %7 = CheckedTypeCastInst (:number) %6: any
+// CHECK-NEXT:  %7 = CheckedTypeCastInst (:number) %6: any, type(number)
 // CHECK-NEXT:       StoreFrameInst %7: number, [n]: any
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) [n]: any
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %11 = BinarySubtractInst (:any) %9: any, %10: any
-// CHECK-NEXT:  %12 = CheckedTypeCastInst (:number) %11: any
+// CHECK-NEXT:  %12 = CheckedTypeCastInst (:number) %11: any, type(number)
 // CHECK-NEXT:        StoreFrameInst %12: number, [n]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

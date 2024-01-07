@@ -46,9 +46,9 @@ exports.next = next
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:undefined|null|object) %ptr: undefined|null|object
-// CHECK-NEXT:  %1 = CheckedTypeCastInst (:object) %0: undefined|null|object
+// CHECK-NEXT:  %1 = CheckedTypeCastInst (:object) %0: undefined|null|object, type(object)
 // CHECK-NEXT:  %2 = PrLoadInst (:undefined|null|object) %1: object, 0: number, "next": string
-// CHECK-NEXT:  %3 = CheckedTypeCastInst (:object) %2: undefined|null|object
+// CHECK-NEXT:  %3 = CheckedTypeCastInst (:object) %2: undefined|null|object, type(object)
 // CHECK-NEXT:       ReturnInst %3: object
 // CHECK-NEXT:function_end
 

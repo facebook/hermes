@@ -862,14 +862,14 @@ class InstSimplifyImpl {
   ///   - a new value to replace the original one
   OptValue<Value *> simplifyCheckedTypeCast(CheckedTypeCastInst *ctc) {
     Type resType =
-        Type::intersectTy(ctc->getType(), ctc->getSingleOperand()->getType());
+        Type::intersectTy(ctc->getType(), ctc->getCheckedValue()->getType());
     // This is a cast that always fails. Do nothing.
     if (resType.isNoType())
       return nullptr;
 
     // A widening checked cast is pointless.
-    if (ctc->getSingleOperand()->getType().isSubsetOf(ctc->getType()))
-      return ctc->getSingleOperand();
+    if (ctc->getCheckedValue()->getType().isSubsetOf(ctc->getType()))
+      return ctc->getCheckedValue();
 
     // If the result type is wider than necessary, narrow it.
     if (ctc->getType() != resType)
@@ -877,8 +877,8 @@ class InstSimplifyImpl {
 
     // Casting a cast is pointless. Use the first cast's operand as operand.
     if (auto *inputCast =
-            llvh::dyn_cast<CheckedTypeCastInst>(ctc->getSingleOperand())) {
-      ctc->setOperand(inputCast->getSingleOperand(), 0);
+            llvh::dyn_cast<CheckedTypeCastInst>(ctc->getCheckedValue())) {
+      ctc->setOperand(inputCast->getCheckedValue(), 0);
     }
     return nullptr;
   }

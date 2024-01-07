@@ -969,8 +969,8 @@ Effects | None
 CheckedTypeCast | _
 --- |-----------------------------------------------|
 Description | Attempt to cast to the result type, throw if unable.
-Example | CheckedTypeCast (:U), %operand (:T)
-Arguments | %operand is the value to cast
+Example | CheckedTypeCast (:U), %operand (:T), %type
+Arguments | %operand is the value to cast, %type is the type to cast to
 Semantics | Cast from type `T` to `U`, throw when the cast is not valid.
 Effects | May throw.
 
