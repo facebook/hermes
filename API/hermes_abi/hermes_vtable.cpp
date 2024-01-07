@@ -1365,6 +1365,63 @@ HermesABIBoolOrError drain_microtasks(HermesABIRuntime *abiRt, int) {
   return abi::createBoolOrError(true);
 }
 
+HermesABIBigIntOrError create_bigint_from_int64(
+    HermesABIRuntime *abiRt,
+    int64_t value) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  auto res = vm::BigIntPrimitive::fromSigned(runtime, value);
+  if (res == vm::ExecutionStatus::EXCEPTION)
+    return abi::createBigIntOrError(HermesABIErrorCodeJSError);
+  return hart->createBigIntOrError(*res);
+}
+HermesABIBigIntOrError create_bigint_from_uint64(
+    HermesABIRuntime *abiRt,
+    uint64_t value) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  auto res = vm::BigIntPrimitive::fromUnsigned(runtime, value);
+  if (res == vm::ExecutionStatus::EXCEPTION)
+    return abi::createBigIntOrError(HermesABIErrorCodeJSError);
+  return hart->createBigIntOrError(*res);
+}
+bool bigint_is_int64(HermesABIRuntime *, HermesABIBigInt bigint) {
+  return toHandle(bigint)->isTruncationToSingleDigitLossless(
+      /* signedTruncation */ true);
+}
+bool bigint_is_uint64(HermesABIRuntime *, HermesABIBigInt bigint) {
+  return toHandle(bigint)->isTruncationToSingleDigitLossless(
+      /* signedTruncation */ false);
+}
+uint64_t bigint_truncate_to_uint64(HermesABIRuntime *, HermesABIBigInt bigint) {
+  auto digit = toHandle(bigint)->truncateToSingleDigit();
+  static_assert(
+      sizeof(digit) == sizeof(uint64_t),
+      "BigInt digit is no longer sizeof(uint64_t) bytes.");
+  return digit;
+}
+HermesABIStringOrError bigint_to_string(
+    HermesABIRuntime *abiRt,
+    HermesABIBigInt bigint,
+    unsigned radix) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  if (radix < 2 || radix > 36) {
+    hart->nativeExceptionMessage = "Radix must be between 2 and 36";
+    return abi::createStringOrError(HermesABIErrorCodeNativeException);
+  }
+
+  vm::GCScope gcScope(runtime);
+  auto toStringRes = vm::BigIntPrimitive::toString(
+      runtime, vm::createPseudoHandle(*toHandle(bigint)), radix);
+
+  if (toStringRes == vm::ExecutionStatus::EXCEPTION)
+    return abi::createStringOrError(HermesABIErrorCodeJSError);
+  return hart->createStringOrError(*toStringRes);
+}
+
 constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     release_hermes_runtime,
     get_and_clear_js_error_value,
@@ -1419,6 +1476,12 @@ constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     strict_equals_string,
     strict_equals_object,
     drain_microtasks,
+    create_bigint_from_int64,
+    create_bigint_from_uint64,
+    bigint_is_int64,
+    bigint_is_uint64,
+    bigint_truncate_to_uint64,
+    bigint_to_string,
 };
 
 } // namespace
