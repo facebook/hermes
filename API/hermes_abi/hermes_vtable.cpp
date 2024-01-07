@@ -745,6 +745,22 @@ HermesABIVoidOrError set_object_external_memory_pressure(
   return abi::createVoidOrError();
 }
 
+HermesABIArrayOrError create_array(HermesABIRuntime *abiRt, size_t length) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  auto result = vm::JSArray::create(runtime, length, length);
+  if (result == vm::ExecutionStatus::EXCEPTION)
+    return abi::createArrayOrError(HermesABIErrorCodeJSError);
+  return hart->createArrayOrError(result->getHermesValue());
+}
+
+size_t get_array_length(HermesABIRuntime *abiRt, HermesABIArray arr) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  return vm::JSArray::getLength(*toHandle(arr), runtime);
+}
+
 constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     release_hermes_runtime,
     get_and_clear_js_error_value,
@@ -769,6 +785,8 @@ constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     set_object_property_from_propnameid,
     get_object_property_names,
     set_object_external_memory_pressure,
+    create_array,
+    get_array_length,
 };
 
 } // namespace
