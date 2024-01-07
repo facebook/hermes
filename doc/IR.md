@@ -971,7 +971,8 @@ CheckedTypeCast | _
 Description | Attempt to cast to the result type, throw if unable.
 Example | CheckedTypeCast (:U), %operand (:T), %type
 Arguments | %operand is the value to cast, %type is the type to cast to
-Semantics | Cast from type `T` to `U`, throw when the cast is not valid.
+Semantics | Cast from type `T` to `U`, throw when the cast is not valid. The result type may be narrower than the
+specified cast type, if the compiler can prove that the input value is more specific.
 Effects | May throw.
 
 ### NativeCall

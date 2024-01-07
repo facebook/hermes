@@ -867,7 +867,23 @@ class TypeInferenceImpl {
     return res;
   }
   Type inferCheckedTypeCastInst(CheckedTypeCastInst *inst) {
-    hermes_fatal("typed instruction");
+    Type inputType = inst->getCheckedValue()->getType();
+    assert(
+        !inputType.isNoType() && "input to CheckedTypeCast cannot be NoType");
+
+    Type resultType =
+        Type::intersectTy(inst->getSpecifiedType()->getData(), inputType);
+
+    if (LLVM_UNLIKELY(resultType.isNoType())) {
+      // Some checked casts can be proven at compile time to always throw. In
+      // that case, the result type of CheckedTypeCastInst would theoretically
+      // need to be something that represents an "unreachable" type. Handling
+      // this "unreachable" type everywhere would require a lot of complexity.
+      // Instead, when we get to that point, we simply return the known type.
+      return inst->getSpecifiedType()->getData();
+    }
+
+    return resultType;
   }
   Type inferLIRDeadValueInst(LIRDeadValueInst *inst) {
     return inst->getSavedResultType();

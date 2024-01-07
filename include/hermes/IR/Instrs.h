@@ -4767,7 +4767,7 @@ class CheckedTypeCastInst : public Instruction {
     return true;
   }
   static bool isTyped() {
-    return true;
+    return false;
   }
 
   SideEffect getSideEffectImpl() const {
