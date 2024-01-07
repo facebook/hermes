@@ -761,6 +761,58 @@ size_t get_array_length(HermesABIRuntime *abiRt, HermesABIArray arr) {
   return vm::JSArray::getLength(*toHandle(arr), runtime);
 }
 
+HermesABIArrayBufferOrError create_arraybuffer_from_external_data(
+    HermesABIRuntime *abiRt,
+    HermesABIMutableBuffer *buf) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+
+  vm::GCScope gcScope(runtime);
+  auto arrayBuffer = runtime.makeHandle(vm::JSArrayBuffer::create(
+      runtime,
+      vm::Handle<vm::JSObject>::vmcast(&runtime.arrayBufferPrototype)));
+
+  // Set up the ArrayBuffer such that the data refers to the provided buffer,
+  // and the finalizer will invoke the release method.
+  auto size = buf->size;
+  auto *data = buf->data;
+  auto finalize = [](vm::GC &, vm::NativeState *ns) {
+    auto *self = static_cast<HermesABIMutableBuffer *>(ns->context());
+    self->vtable->release(self);
+  };
+  auto res = vm::JSArrayBuffer::setExternalDataBlock(
+      runtime, arrayBuffer, data, size, buf, finalize);
+  if (res == vm::ExecutionStatus::EXCEPTION)
+    return abi::createArrayBufferOrError(HermesABIErrorCodeJSError);
+  return hart->createArrayBufferOrError(arrayBuffer.getHermesValue());
+}
+
+HermesABIUint8PtrOrError get_arraybuffer_data(
+    HermesABIRuntime *abiRt,
+    HermesABIArrayBuffer buf) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  auto ab = toHandle(buf);
+  if (!ab->attached()) {
+    hart->nativeExceptionMessage =
+        "Cannot get data block of detached ArrayBuffer.";
+    return abi::createUint8PtrOrError(HermesABIErrorCodeNativeException);
+  }
+  return abi::createUint8PtrOrError(ab->getDataBlock(runtime));
+}
+
+HermesABISizeTOrError get_arraybuffer_size(
+    HermesABIRuntime *abiRt,
+    HermesABIArrayBuffer buf) {
+  auto *hart = impl(abiRt);
+  auto ab = toHandle(buf);
+  if (!ab->attached()) {
+    hart->nativeExceptionMessage = "Cannot get size of detached ArrayBuffer.";
+    return abi::createSizeTOrError(HermesABIErrorCodeNativeException);
+  }
+  return abi::createSizeTOrError(ab->size());
+}
+
 constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     release_hermes_runtime,
     get_and_clear_js_error_value,
@@ -787,6 +839,9 @@ constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     set_object_external_memory_pressure,
     create_array,
     get_array_length,
+    create_arraybuffer_from_external_data,
+    get_arraybuffer_data,
+    get_arraybuffer_size,
 };
 
 } // namespace

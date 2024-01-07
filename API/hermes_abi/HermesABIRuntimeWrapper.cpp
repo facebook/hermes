@@ -89,6 +89,22 @@ class BufferWrapper : public HermesABIBuffer {
       : HermesABIBuffer{&vt, buf->data(), buf->size()}, buf_(std::move(buf)) {}
 };
 
+class MutableBufferWrapper : public HermesABIMutableBuffer {
+  std::shared_ptr<MutableBuffer> buf_;
+
+  static void release(HermesABIMutableBuffer *buf) {
+    delete static_cast<const MutableBufferWrapper *>(buf);
+  }
+  static constexpr HermesABIMutableBufferVTable vt{
+      release,
+  };
+
+ public:
+  explicit MutableBufferWrapper(std::shared_ptr<MutableBuffer> buf)
+      : HermesABIMutableBuffer{&vt, buf->data(), buf->size()},
+        buf_(std::move(buf)) {}
+};
+
 /// Helper class to save and restore a value on exiting a scope.
 template <typename T>
 class SaveAndRestore {
@@ -641,16 +657,17 @@ class HermesABIRuntimeWrapper : public Runtime {
   }
   ArrayBuffer createArrayBuffer(
       std::shared_ptr<MutableBuffer> buffer) override {
-    THROW_UNIMPLEMENTED();
+    return intoJSIArrayBuffer(vtable_->create_arraybuffer_from_external_data(
+        abiRt_, new MutableBufferWrapper(std::move(buffer))));
   }
   size_t size(const Array &arr) override {
     return vtable_->get_array_length(abiRt_, toABIArray(arr));
   }
-  size_t size(const ArrayBuffer &) override {
-    THROW_UNIMPLEMENTED();
+  size_t size(const ArrayBuffer &ab) override {
+    return unwrap(vtable_->get_arraybuffer_size(abiRt_, toABIArrayBuffer(ab)));
   }
-  uint8_t *data(const ArrayBuffer &) override {
-    THROW_UNIMPLEMENTED();
+  uint8_t *data(const ArrayBuffer &ab) override {
+    return unwrap(vtable_->get_arraybuffer_data(abiRt_, toABIArrayBuffer(ab)));
   }
   Value getValueAtIndex(const Array &arr, size_t i) override {
     if (i >= arr.length(*this))
