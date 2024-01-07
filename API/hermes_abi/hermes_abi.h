@@ -352,6 +352,20 @@ struct HermesABIRuntimeVTable {
   struct HermesABISizeTOrError (*get_arraybuffer_size)(
       struct HermesABIRuntime *rt,
       struct HermesABIArrayBuffer ab);
+
+  /// Create a new PropNameID from the given string or symbol.
+  struct HermesABIPropNameIDOrError (*create_propnameid_from_string)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIString str);
+  struct HermesABIPropNameIDOrError (*create_propnameid_from_symbol)(
+      struct HermesABIRuntime *rt,
+      struct HermesABISymbol sym);
+
+  /// Return true if the two PropNameIDs are equal, false otherwise.
+  bool (*prop_name_id_equals)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIPropNameID a,
+      struct HermesABIPropNameID b);
 };
 
 /// An instance of a Hermes Runtime.
