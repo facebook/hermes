@@ -573,6 +573,25 @@ struct HermesABIRuntimeVTable {
       struct HermesABIRuntime *rt,
       struct HermesABIObject a,
       struct HermesABIObject b);
+
+  /// Drain the JavaScript VM internal Microtask (a.k.a. Job in ECMA262) queue.
+  /// Return true if the queue is drained or false if there is more work to do.
+  ///
+  /// The implementation may make a best effort to execute no more than
+  /// \p max_hint microtasks. Use -1 to indicate no limit.
+  ///
+  /// If executing a microtask results in an exception, the implementation may
+  /// stop draining early and raise an error. Note that error propagation is
+  /// only a concern if a host needs to implement `queueMicrotask`, a recent API
+  /// that allows enqueueing arbitrary functions (hence may throw) as
+  /// microtasks. Exceptions from ECMA-262 Promise Jobs are handled internally
+  /// to VMs and are never propagated to hosts.
+  ///
+  /// If draining is ended early due to an exception or because the limit is
+  /// reached, the integrator may call this repeatedly until it returns true to
+  /// ensure all pending microtasks are executed.
+  struct HermesABIBoolOrError (
+      *drain_microtasks)(struct HermesABIRuntime *rt, int max_hint);
 };
 
 /// An instance of a Hermes Runtime.
