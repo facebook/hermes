@@ -772,6 +772,10 @@ GlobalObjectProperty *Module::addGlobalProperty(
   return res;
 }
 
+LiteralIRType *Module::getLiteralIRType(Type value) {
+  return literalIRTypes_.getOrEmplaceWithNew(value).first;
+}
+
 LiteralNativeSignature *Module::getLiteralNativeSignature(
     NativeSignature *data) {
   return nativeSignatures_.getOrEmplaceWithNew(data).first;

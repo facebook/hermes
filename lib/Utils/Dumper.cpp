@@ -148,8 +148,8 @@ llvh::raw_ostream &operator<<(
 }
 
 void IRPrinter::printTypeLabel(Value *v) {
-  // Don't print the type of basic blocks.
-  if (llvh::isa<BasicBlock>(v))
+  // Don't print the type of basic blocks or LiteralIRType.
+  if (llvh::isa<BasicBlock>(v) || llvh::isa<LiteralIRType>(v))
     return;
   setColor(Color::Type);
   os_ << ": " << v->getType();
@@ -220,6 +220,8 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
       os_ << "@" << quoteStr(scopeName);
     }
     os_ << "]";
+  } else if (auto *lt = llvh::dyn_cast<LiteralIRType>(V)) {
+    os_ << "type(" << lt->getData() << ")";
   } else if (auto *NS = llvh::dyn_cast<LiteralNativeSignature>(V)) {
     os_ << '"';
     NS->getData()->format(os_);

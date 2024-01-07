@@ -178,6 +178,10 @@ class IRBuilder {
   /// Create a new literal null.
   LiteralNull *getLiteralNull();
 
+  LiteralIRType *getLiteralIRType(Type type) {
+    return M->getLiteralIRType(type);
+  }
+
   /// Return the GlobalObject value.
   GlobalObject *getGlobalObject();
 

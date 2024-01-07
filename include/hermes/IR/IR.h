@@ -337,6 +337,11 @@ class Type {
   iterator begin() const;
   /// Return an "end" iterator over the types in this Type.
   iterator end() const;
+
+  /// Allow Type to be used as a llvh::FoldingSet.
+  void Profile(llvh::FoldingSetNodeID &ID) const {
+    ID.AddInteger(bitmask_);
+  }
 };
 
 static_assert(sizeof(Type) == 2, "Type must not be too big");
@@ -391,6 +396,18 @@ inline Type::iterator Type::begin() const {
 inline Type::iterator Type::end() const {
   return iterator(*this, sizeof(bitmask_) * CHAR_BIT);
 }
+} // namespace hermes
+
+namespace llvh {
+template <>
+struct FoldingSetTrait<hermes::Type> {
+  static inline void Profile(hermes::Type t, FoldingSetNodeID &ID) {
+    t.Profile(ID);
+  }
+};
+} // namespace llvh
+
+namespace hermes {
 
 /// Describes the potential side effects of an instruction. The side effects are
 /// described by a series of bits, each of which specifies a particular way in
@@ -1195,6 +1212,8 @@ class LiteralWrapper : public Literal, public llvh::FoldingSetNode {
   }
 };
 
+using LiteralIRType =
+    LiteralWrapper<Type, ValueKind::LiteralIRTypeKind, Type::createNull>;
 using LiteralNativeSignature =
     LiteralWrapper<NativeSignature *, ValueKind::LiteralNativeSignatureKind>;
 using LiteralNativeExtern = LiteralWrapper<
@@ -2151,6 +2170,7 @@ class Module : public Value {
   OwningFoldingSet<LiteralBigInt, ValueDeleter> literalBigInts_{};
   OwningFoldingSet<LiteralString, ValueDeleter> literalStrings_{};
   OwningFoldingSet<GlobalObjectProperty, ValueDeleter> globalProperties_{};
+  OwningFoldingSet<LiteralIRType, ValueDeleter> literalIRTypes_{};
   OwningFoldingSet<LiteralNativeSignature, ValueDeleter> nativeSignatures_{};
   OwningFoldingSet<LiteralNativeExtern, ValueDeleter> nativeExterns_{};
 
@@ -2268,6 +2288,9 @@ class Module : public Value {
 
   /// Create a new literal bool of value \p value.
   LiteralBool *getLiteralBool(bool value);
+
+  /// Create a new literal representing an IR type.
+  LiteralIRType *getLiteralIRType(Type value);
 
   /// Create a new LiteralNativeSignature.
   LiteralNativeSignature *getLiteralNativeSignature(NativeSignature *data);
