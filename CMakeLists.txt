@@ -217,7 +217,7 @@ set(HERMES_USE_STATIC_ICU OFF CACHE BOOL
 set(HERMES_UNICODE_LITE OFF CACHE BOOL
   "Enable to use internal no-op unicode functionality instead of relying on underlying system libraries")
 
-if(WIN32 OR EMSCRIPTEN)
+if(WIN32)
   set(DEFAULT_HERMES_CHECK_NATIVE_STACK OFF)
 else()
   set(DEFAULT_HERMES_CHECK_NATIVE_STACK ON)
@@ -304,10 +304,10 @@ if (HERMES_IS_ANDROID)
 endif()
 
 if(HERMES_CHECK_NATIVE_STACK)
-  if (WIN32 OR EMSCRIPTEN)
+  if (WIN32)
     message(
       FATAL_ERROR
-      "Native stack checking not supported on Windows or EMSCRIPTEN"
+      "Native stack checking not supported on Windows"
     )
   endif()
   add_definitions(-DHERMES_CHECK_NATIVE_STACK)
