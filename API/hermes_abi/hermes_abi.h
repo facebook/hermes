@@ -18,6 +18,7 @@ struct HermesABIManagedPointer;
 struct HermesABIGrowableBuffer;
 struct HermesABIBuffer;
 struct HermesABIMutableBuffer;
+struct HermesABIHostFunction;
 struct HermesABIPropNameIDList;
 
 /// Define the structure for references to pointer types in JS (e.g. string,
@@ -204,6 +205,23 @@ struct HermesABIMutableBuffer {
   size_t size;
 };
 
+/// Define the structure for host functions. This is designed to recreate the
+/// functionality of jsi::HostFunction.
+struct HermesABIHostFunctionVTable {
+  void (*release)(struct HermesABIHostFunction *);
+
+  /// Call this HostFunction with the given arguments and return the result.
+  struct HermesABIValueOrError (*call)(
+      struct HermesABIHostFunction *self,
+      struct HermesABIRuntime *rt,
+      const struct HermesABIValue *this_arg,
+      const struct HermesABIValue *args,
+      size_t arg_count);
+};
+struct HermesABIHostFunction {
+  const struct HermesABIHostFunctionVTable *vtable;
+};
+
 struct HermesABIRuntimeVTable {
   /// Release the given runtime.
   void (*release)(struct HermesABIRuntime *);
@@ -383,6 +401,22 @@ struct HermesABIRuntimeVTable {
       struct HermesABIFunction fn,
       const struct HermesABIValue *args,
       size_t arg_count);
+
+  /// Create a function from a HostFunction with the given name and length. This
+  /// turns the HostFunction into a JavaScript value and allows it to be invoked
+  /// from JS. This takes ownership of \p hf, and it will be released when the
+  /// returned function is garbage collected. \p hf must not be null.
+  struct HermesABIFunctionOrError (*create_function_from_host_function)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIPropNameID name,
+      unsigned int length,
+      struct HermesABIHostFunction *hf);
+
+  /// Return the HostFunction assocated with the given function \p fn if there
+  /// is one. Otherwise return nullptr.
+  struct HermesABIHostFunction *(*get_host_function)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIFunction fn);
 };
 
 /// An instance of a Hermes Runtime.
