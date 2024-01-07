@@ -567,27 +567,46 @@ class HermesABIRuntimeWrapper : public Runtime {
     THROW_UNIMPLEMENTED();
   }
 
-  Value getProperty(const Object &, const PropNameID &name) override {
-    THROW_UNIMPLEMENTED();
+  Value getProperty(const Object &obj, const PropNameID &name) override {
+    return intoJSIValue(vtable_->get_object_property_from_propnameid(
+        abiRt_, toABIObject(obj), toABIPropNameID(name)));
   }
-  Value getProperty(const Object &, const String &name) override {
-    THROW_UNIMPLEMENTED();
+  Value getProperty(const Object &obj, const String &name) override {
+    // Create an ABI value that is just a reference to \p name, without taking
+    // ownership of it.
+    auto abiKey = abi::createStringValue(toABIString(name));
+    return intoJSIValue(vtable_->get_object_property_from_value(
+        abiRt_, toABIObject(obj), &abiKey));
   }
-  bool hasProperty(const Object &, const PropNameID &name) override {
-    THROW_UNIMPLEMENTED();
+  bool hasProperty(const Object &obj, const PropNameID &name) override {
+    return unwrap(vtable_->has_object_property_from_propnameid(
+        abiRt_, toABIObject(obj), toABIPropNameID(name)));
   }
-  bool hasProperty(const Object &, const String &name) override {
-    THROW_UNIMPLEMENTED();
+  bool hasProperty(const Object &obj, const String &name) override {
+    // Create an ABI value that is just a reference to \p name, without taking
+    // ownership of it.
+    auto abiKey = abi::createStringValue(toABIString(name));
+    return unwrap(vtable_->has_object_property_from_value(
+        abiRt_, toABIObject(obj), &abiKey));
   }
   void setPropertyValue(
-      const Object &,
+      const Object &obj,
       const PropNameID &name,
       const Value &value) override {
-    THROW_UNIMPLEMENTED();
+    auto abiVal = toABIValue(value);
+    unwrap(vtable_->set_object_property_from_propnameid(
+        abiRt_, toABIObject(obj), toABIPropNameID(name), &abiVal));
   }
-  void setPropertyValue(const Object &, const String &name, const Value &value)
-      override {
-    THROW_UNIMPLEMENTED();
+  void setPropertyValue(
+      const Object &obj,
+      const String &name,
+      const Value &value) override {
+    // Create an ABI value that is just a reference to \p name, without taking
+    // ownership of it.
+    auto abiKey = abi::createStringValue(toABIString(name));
+    auto abiVal = toABIValue(value);
+    unwrap(vtable_->set_object_property_from_value(
+        abiRt_, toABIObject(obj), &abiKey, &abiVal));
   }
 
   bool isArray(const Object &) const override {
@@ -605,8 +624,9 @@ class HermesABIRuntimeWrapper : public Runtime {
   bool isHostFunction(const Function &) const override {
     THROW_UNIMPLEMENTED();
   }
-  Array getPropertyNames(const Object &) override {
-    THROW_UNIMPLEMENTED();
+  Array getPropertyNames(const Object &obj) override {
+    return intoJSIArray(
+        vtable_->get_object_property_names(abiRt_, toABIObject(obj)));
   }
 
   WeakObject createWeakObject(const Object &) override {
