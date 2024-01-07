@@ -1129,6 +1129,84 @@ HermesABIHostObject *get_host_object(HermesABIRuntime *, HermesABIObject obj) {
   return nullptr;
 }
 
+HermesABINativeState *get_native_state(
+    HermesABIRuntime *abiRt,
+    HermesABIObject obj) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  auto h = toHandle(obj);
+
+  // Proxy and HostObject cannot have native state.
+  if (h->isProxyObject() || h->isHostObject())
+    return nullptr;
+
+  // Check if the internal property exists, and if so retrieve its descriptor.
+  vm::NamedPropertyDescriptor desc;
+  bool exists = vm::JSObject::getOwnNamedDescriptor(
+      h,
+      runtime,
+      vm::Predefined::getSymbolID(vm::Predefined::InternalPropertyNativeState),
+      desc);
+
+  if (!exists)
+    return nullptr;
+
+  // There is a NativeState instance, return it.
+  vm::NoAllocScope scope(runtime);
+  vm::NativeState *ns = vm::vmcast<vm::NativeState>(
+      vm::JSObject::getNamedSlotValueUnsafe(*h, runtime, desc)
+          .getObject(runtime));
+  assert(ns->context() && "State cannot be null.");
+  return static_cast<HermesABINativeState *>(ns->context());
+}
+
+HermesABIVoidOrError set_native_state(
+    HermesABIRuntime *abiRt,
+    HermesABIObject obj,
+    HermesABINativeState *abiState) {
+  assert(abiState && "Cannot set null native state.");
+
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+
+  auto finalize = [](vm::GC &, vm::NativeState *ns) {
+    auto *self = static_cast<HermesABINativeState *>(ns->context());
+    self->vtable->release(self);
+  };
+  // Note that creating the vm::NativeState here takes ownership of abiState, so
+  // if the below steps fail, abiState will simply be freed when the
+  // vm::NativeState is garbage collected.
+  auto ns =
+      runtime.makeHandle(vm::NativeState::create(runtime, abiState, finalize));
+
+  auto h = toHandle(obj);
+  if (h->isProxyObject()) {
+    hart->nativeExceptionMessage = "Native state is unsupported on Proxy";
+    return abi::createVoidOrError(HermesABIErrorCodeNativeException);
+  } else if (h->isHostObject()) {
+    hart->nativeExceptionMessage = "Native state is unsupported on HostObject";
+    return abi::createVoidOrError(HermesABIErrorCodeNativeException);
+  }
+
+  // Store the vm::NativeState as an internal property on the object.
+  auto res = vm::JSObject::defineOwnProperty(
+      h,
+      runtime,
+      vm::Predefined::getSymbolID(vm::Predefined::InternalPropertyNativeState),
+      vm::DefinePropertyFlags::getDefaultNewPropertyFlags(),
+      ns);
+  if (res == vm::ExecutionStatus::EXCEPTION) {
+    return abi::createVoidOrError(HermesABIErrorCodeJSError);
+  }
+  if (!*res) {
+    hart->nativeExceptionMessage = "Failed to set native state.";
+    return abi::createVoidOrError(HermesABIErrorCodeNativeException);
+  }
+  return abi::createVoidOrError();
+}
+
 constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     release_hermes_runtime,
     get_and_clear_js_error_value,
@@ -1167,6 +1245,8 @@ constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     get_host_function,
     create_object_from_host_object,
     get_host_object,
+    get_native_state,
+    set_native_state,
 };
 
 } // namespace
