@@ -504,6 +504,21 @@ struct HermesABIRuntimeVTable {
       struct HermesABIRuntime *rt,
       struct HermesABIObject obj,
       struct HermesABINativeState *ns);
+
+  /// Return true if an object is an Array, false otherwise.
+  bool (*object_is_array)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject obj);
+
+  /// Return true if an object is an ArrayBuffer, false otherwise.
+  bool (*object_is_arraybuffer)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject obj);
+
+  /// Return true if an object is a Function, false otherwise.
+  bool (*object_is_function)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject obj);
 };
 
 /// An instance of a Hermes Runtime.
