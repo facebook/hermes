@@ -181,6 +181,31 @@ struct HermesABIGrowableBuffer {
 struct HermesABIRuntimeVTable {
   /// Release the given runtime.
   void (*release)(struct HermesABIRuntime *);
+
+  /// Methods for retrieving and clearing exceptions. An exception should be
+  /// retrieved if and only if some method returned an error value.
+  /// Get and clear the stored JS exception value. This should be called exactly
+  /// once after an exception is thrown.
+  struct HermesABIValue (*get_and_clear_js_error_value)(
+      struct HermesABIRuntime *rt);
+  /// Get and clear the stored native exception message. The message is UTF-8
+  /// encoded.
+  void (*get_and_clear_native_exception_message)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIGrowableBuffer *msg_buf);
+
+  /// Set the current error before returning control to the ABI. These are
+  /// intended to be used to throw exceptions from HostFunctions and
+  /// HostObjects.
+  /// Report a JavaScript exception with the given value.
+  void (*set_js_error_value)(
+      struct HermesABIRuntime *rt,
+      const struct HermesABIValue *error_value);
+  /// Report a native exception with the given UTF-8 message.
+  void (*set_native_exception_message)(
+      struct HermesABIRuntime *rt,
+      const uint8_t *utf8,
+      size_t length);
 };
 
 /// An instance of a Hermes Runtime.
