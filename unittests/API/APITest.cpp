@@ -306,7 +306,8 @@ var i = 0;
   ASSERT_EQ(ret.asNumber(), 5.0);
 }
 
-TEST_P(HermesRuntimeTest, PreparedJavaScriptInvalidSourceThrows) {
+TEST(HermesRuntimePreparedJavaScriptTest, InvalidSourceThrows) {
+  auto rt = makeHermesRuntime();
   const char *badSource = "this is definitely not valid javascript";
   EXPECT_THROW(
       rt->prepareJavaScript(std::make_unique<StringBuffer>(badSource), ""),
@@ -314,7 +315,8 @@ TEST_P(HermesRuntimeTest, PreparedJavaScriptInvalidSourceThrows) {
       << "prepareJavaScript should have thrown an exception";
 }
 
-TEST_P(HermesRuntimeTest, PreparedJavaScriptInvalidSourceBufferPrefix) {
+TEST(HermesRuntimePreparedJavaScriptTest, InvalidSourceBufferPrefix) {
+  auto rt = makeHermesRuntime();
   // Construct a 0-terminated buffer that represents an invalid UTF-8 source.
   char badSource[32];
   memset((void *)badSource, '\xFE', sizeof(badSource));
