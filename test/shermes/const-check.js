@@ -15,5 +15,5 @@
    // CHECK: ReferenceError: accessing an uninitialized variable
    const x = 1;
    fn();
-   // CHECK-NEXT: TypeError: assignment to constant variable.
+   // CHECK-NEXT: TypeError: assignment to constant variable 'x'
 })();

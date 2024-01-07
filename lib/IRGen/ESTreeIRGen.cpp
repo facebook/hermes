@@ -935,7 +935,7 @@ Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
                     : SourceErrorManager::DK_Error,
                 Builder.getLocation(),
                 "TDZ violation: reading from uninitialized variable '" +
-                    var->getName().str() + "");
+                    var->getName().str() + "'");
           }
 
           auto *thr = Builder.createThrowIfEmptyInst(Builder.getLiteralEmpty());
@@ -1002,7 +1002,7 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
                       : SourceErrorManager::DK_Error,
                   Builder.getLocation(),
                   "TDZ violation: writing to uninitialized variable '" +
-                      var->getName().str() + "");
+                      var->getName().str() + "'");
             }
 
             auto thr =
@@ -1017,8 +1017,8 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
       }
       if (var->getIsConst()) {
         // If this is a const variable being reassigned, throw a TypeError.
-        Builder.createThrowTypeErrorInst(
-            Builder.getLiteralString("assignment to constant variable."));
+        Builder.createThrowTypeErrorInst(Builder.getLiteralString(
+            "assignment to constant variable '" + var->getName().str() + "'"));
         // Create a new block, since ThrowTypeError is a terminator.
         Builder.setInsertionBlock(
             Builder.createBasicBlock(Builder.getFunction()));
