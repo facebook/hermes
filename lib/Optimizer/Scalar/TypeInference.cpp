@@ -130,7 +130,7 @@ static Type inferMemoryLocationType(Value *addr) {
 
       default:
         // Other instructions that may write to alloc stack thwart our analysis.
-        return Type::createAnyOrEmpty();
+        return Type::createAnyType();
     }
 
     if (!storedVal)
