@@ -655,8 +655,10 @@ GetNewTargetInst *IRBuilder::createGetNewTargetInst(Value *newTargetParam) {
   return inst;
 }
 
-ThrowIfEmptyInst *IRBuilder::createThrowIfEmptyInst(Value *checkedValue) {
-  auto *inst = new ThrowIfEmptyInst(checkedValue);
+ThrowIfInst *IRBuilder::createThrowIfInst(
+    Value *checkedValue,
+    Type invalidTypes) {
+  auto *inst = new ThrowIfInst(checkedValue, getLiteralIRType(invalidTypes));
   insert(inst);
   return inst;
 }

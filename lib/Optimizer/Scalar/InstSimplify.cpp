@@ -684,17 +684,29 @@ class InstSimplifyImpl {
     return nullptr;
   }
 
-  /// Try to simplify ThrowIfEmptyInst
+  /// Try to simplify ThrowIfInst
   /// \returns one of:
   ///   - nullptr if the instruction cannot be simplified.
   ///   - the instruction itself, if it was changed inplace.
   ///   - a new instruction to replace the original one
   ///   - llvh::None if the instruction should be deleted.
-  OptValue<Value *> simplifyThrowIfEmpty(ThrowIfEmptyInst *TIE) {
+  OptValue<Value *> simplifyThrowIf(ThrowIfInst *TIE) {
     // If the operand does not contain the "poison" type, it can be safely
     // eliminated.
-    if (!TIE->getCheckedValue()->getType().canBeEmpty())
+    const Type invalidTypes = TIE->getInvalidTypes()->getData();
+
+    // The subset of invalid types that the operand could actually be.
+    Type invalidSubset =
+        Type::intersectTy(TIE->getCheckedValue()->getType(), invalidTypes);
+    // If all invalid types are possible, there is nothing we can optimize.
+    if (invalidSubset == invalidTypes)
+      return nullptr;
+    // If the operand does not contain any invalid type, it can be safely
+    // eliminated.
+    if (invalidSubset.isNoType())
       return TIE->getCheckedValue();
+    // Make the throwIf invalid types narrower.
+    TIE->setInvalidTypes(builder_.getLiteralIRType(invalidSubset));
     return nullptr;
   }
 
@@ -923,8 +935,8 @@ class InstSimplifyImpl {
             cast<GetConstructedObjectInst>(I));
       case ValueKind::CoerceThisNSInstKind:
         return simplifyCoerceThisNS(cast<CoerceThisNSInst>(I));
-      case ValueKind::ThrowIfEmptyInstKind:
-        return simplifyThrowIfEmpty(cast<ThrowIfEmptyInst>(I));
+      case ValueKind::ThrowIfInstKind:
+        return simplifyThrowIf(cast<ThrowIfInst>(I));
       case ValueKind::UnionNarrowTrustedInstKind:
         return simplifyUnionNarrowTrusted(cast<UnionNarrowTrustedInst>(I));
       case ValueKind::CheckedTypeCastInstKind:

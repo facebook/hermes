@@ -1550,7 +1550,10 @@ class InstrGen {
     generateRegister(inst);
     os_ << " = frame[" << hbc::StackFrameLayout::NewTarget << "];\n";
   }
-  void generateThrowIfEmptyInst(ThrowIfEmptyInst &inst) {
+  void generateThrowIfInst(ThrowIfInst &inst) {
+    assert(
+        inst.getInvalidTypes()->getData().isEmptyType() &&
+        "Only Empty supported");
     os_.indent(2);
     os_ << "if (_sh_ljs_is_empty(";
     generateRegister(inst);

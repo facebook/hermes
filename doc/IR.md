@@ -648,13 +648,13 @@ Arguments | %param is a dummy JSDynamicParam used to quickly find usages of `new
 Semantics | It must only be called from a ES6 class constructor or ES5 function. If the callee was invoked from `new`, it returns the function object of the direct constructor, otherwise `undefined`.
 Effects | Does not read or write memory
 
-### ThrowIfEmptyInst
+### ThrowIfInst
 
-ThrowIfEmptyInst | _
+ThrowIfInst | _
 --- | --- |
-Description | Check whether the value is "empty", and if it is, throw ReferenceError, otherwise return it.
-Example |  %_ = ThrowIfEmptyInst %value
-Arguments | The value to check.
+Description | Check whether the value belongs to one of the "rejected" types, and if it is, throw ReferenceError, otherwise return it.
+Example |  %_ = ThrowIfInst %value, %rejectedTypesUnion
+Arguments | %value is the value to check. %rejectedTypesUnion is a union of types that should be rejected.
 Semantics | It is used to implement ES6 TDZ functionality. Variables declared with `let` are *poisoned* with *empty* until they are initialized.
 Effects | Potentially throws an exception. Has no other side effects.
 

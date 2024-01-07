@@ -17,7 +17,7 @@ let x;
 // CHECK:function global(): string|number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ThrowIfEmptyInst (:any) empty: empty
+// CHECK-NEXT:  %0 = ThrowIfInst (:any) empty: empty, type(empty)
 // CHECK-NEXT:  %1 = BinaryAddInst (:string|number) %0: any, 1: number
 // CHECK-NEXT:       ReturnInst %1: string|number
 // CHECK-NEXT:function_end

@@ -85,7 +85,7 @@ bool TDZDedupContext::run() {
   // First, collect all TDZ state variables.
   for (auto &BB : *F_) {
     for (auto &I : BB) {
-      auto *TIU = llvh::dyn_cast<ThrowIfEmptyInst>(&I);
+      auto *TIU = llvh::dyn_cast<ThrowIfInst>(&I);
       if (!TIU)
         continue;
 
@@ -120,8 +120,8 @@ bool TDZDedupContext::processNode(StackNode *SN) {
   for (auto &inst : *BB) {
     // The storage containing the value that can potentially be empty.
     Value *tdzStorage = nullptr;
-    ThrowIfEmptyInst *TIE = nullptr;
-    if ((TIE = llvh::dyn_cast<ThrowIfEmptyInst>(&inst)) != nullptr) {
+    ThrowIfInst *TIE = nullptr;
+    if ((TIE = llvh::dyn_cast<ThrowIfInst>(&inst)) != nullptr) {
       auto *checkedValue = TIE->getCheckedValue();
 
       if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(checkedValue)) {
@@ -163,7 +163,7 @@ bool TDZDedupContext::processNode(StackNode *SN) {
       continue;
     }
 
-    // Handle only ThrowIfEmpty from here on.
+    // Handle only ThrowIf from here on.
     if (!TIE)
       continue;
 
@@ -173,7 +173,7 @@ bool TDZDedupContext::processNode(StackNode *SN) {
     changed = true;
     ++NumTDZDedup;
 
-    // If ThrowIfEmpty has no users, we will attempt to destroy the load too, to
+    // If ThrowIf has no users, we will attempt to destroy the load too, to
     // save work in other passes.
     if (!TIE->hasUsers()) {
       if (TIE->getCheckedValue()->hasOneUser() &&

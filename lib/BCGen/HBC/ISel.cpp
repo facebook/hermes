@@ -1003,10 +1003,10 @@ void HBCISel::generateReturnInst(ReturnInst *Inst, BasicBlock *next) {
 void HBCISel::generateThrowInst(ThrowInst *Inst, BasicBlock *next) {
   BCFGen_->emitThrow(encodeValue(Inst->getThrownValue()));
 }
-void HBCISel::generateThrowIfEmptyInst(
-    hermes::ThrowIfEmptyInst *Inst,
+void HBCISel::generateThrowIfInst(
+    hermes::ThrowIfInst *Inst,
     hermes::BasicBlock *next) {
-  BCFGen_->emitThrowIfEmpty(
+  BCFGen_->emitThrowIf(
       encodeValue(Inst), encodeValue(Inst->getCheckedValue()));
 }
 void HBCISel::generateSwitchInst(SwitchInst *Inst, BasicBlock *next) {

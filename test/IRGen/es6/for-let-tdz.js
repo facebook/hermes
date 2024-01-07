@@ -361,7 +361,7 @@ function foo_var() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any|empty) [i@foo_full]: any|empty
-// CHECK-NEXT:  %1 = ThrowIfEmptyInst (:any) %0: any|empty
+// CHECK-NEXT:  %1 = ThrowIfInst (:any) %0: any|empty, type(empty)
 // CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:function_end
 
@@ -369,7 +369,7 @@ function foo_var() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any|empty) [i@foo_full]: any|empty
-// CHECK-NEXT:  %1 = ThrowIfEmptyInst (:any) %0: any|empty
+// CHECK-NEXT:  %1 = ThrowIfInst (:any) %0: any|empty, type(empty)
 // CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:function_end
 
@@ -377,7 +377,7 @@ function foo_var() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any|empty) [i@foo_full]: any|empty
-// CHECK-NEXT:  %1 = ThrowIfEmptyInst (:any) %0: any|empty
+// CHECK-NEXT:  %1 = ThrowIfInst (:any) %0: any|empty, type(empty)
 // CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:function_end
 
@@ -385,7 +385,7 @@ function foo_var() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any|empty) [i@foo_testnc]: any|empty
-// CHECK-NEXT:  %1 = ThrowIfEmptyInst (:any) %0: any|empty
+// CHECK-NEXT:  %1 = ThrowIfInst (:any) %0: any|empty, type(empty)
 // CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:function_end
 
@@ -393,7 +393,7 @@ function foo_var() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any|empty) [i@foo_testnc]: any|empty
-// CHECK-NEXT:  %1 = ThrowIfEmptyInst (:any) %0: any|empty
+// CHECK-NEXT:  %1 = ThrowIfInst (:any) %0: any|empty, type(empty)
 // CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:function_end
 
@@ -401,7 +401,7 @@ function foo_var() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any|empty) [i@foo_updatenc]: any|empty
-// CHECK-NEXT:  %1 = ThrowIfEmptyInst (:any) %0: any|empty
+// CHECK-NEXT:  %1 = ThrowIfInst (:any) %0: any|empty, type(empty)
 // CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:function_end
 
@@ -409,7 +409,7 @@ function foo_var() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any|empty) [i@foo_updatenc]: any|empty
-// CHECK-NEXT:  %1 = ThrowIfEmptyInst (:any) %0: any|empty
+// CHECK-NEXT:  %1 = ThrowIfInst (:any) %0: any|empty, type(empty)
 // CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:function_end
 
@@ -417,6 +417,6 @@ function foo_var() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any|empty) [i@foo_testnc_updatenc]: any|empty
-// CHECK-NEXT:  %1 = ThrowIfEmptyInst (:any) %0: any|empty
+// CHECK-NEXT:  %1 = ThrowIfInst (:any) %0: any|empty, type(empty)
 // CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:function_end

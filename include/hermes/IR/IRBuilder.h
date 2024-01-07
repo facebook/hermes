@@ -444,7 +444,7 @@ class IRBuilder {
 
   GetNewTargetInst *createGetNewTargetInst(Value *newTargetParam);
 
-  ThrowIfEmptyInst *createThrowIfEmptyInst(Value *checkedValue);
+  ThrowIfInst *createThrowIfInst(Value *checkedValue, Type invalidTypes);
 
   HBCGetGlobalObjectInst *createHBCGetGlobalObjectInst();
 

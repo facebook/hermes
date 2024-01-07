@@ -2821,39 +2821,42 @@ class GetNewTargetInst : public Instruction {
 };
 
 /// Throw if the operand is "empty", otherwise return it.
-class ThrowIfEmptyInst : public Instruction {
-  ThrowIfEmptyInst(const ThrowIfEmptyInst &) = delete;
-  void operator=(const ThrowIfEmptyInst &) = delete;
+class ThrowIfInst : public Instruction {
+  ThrowIfInst(const ThrowIfInst &) = delete;
+  void operator=(const ThrowIfInst &) = delete;
 
   /// Record the result type when the instruction was created. The recorded type
   /// must be correct with respect to the instructions that consume it, which
   /// is an invariant enforced by IRGen.
   /// If through optimization we get to a point where the input type is Empty,
   /// meaning that the TDZ is always going to throw, the result type of
-  /// ThrowIfEmptyInst would theoretically need to be something that represents
+  /// ThrowIfInst would theoretically need to be something that represents
   /// an "unreachable" type. Such a type would violate the type requirements of
-  /// all instructions consuming the result of ThrowIfEmpty, even though they
+  /// all instructions consuming the result of ThrowIf, even though they
   /// will never execute. Handling this "unreachable" type everywhere would
   /// require a lot of complexity.
   /// Instead, when we get to that point, we simply return the recorded type.
   Type savedResultType_;
 
  public:
-  enum { CheckedValueIdx };
+  enum { CheckedValueIdx, InvalidTypesIdx };
 
-  explicit ThrowIfEmptyInst(Value *checkedValue)
-      : Instruction(ValueKind::ThrowIfEmptyInstKind),
+  explicit ThrowIfInst(Value *checkedValue, LiteralIRType *invalidTypes)
+      : Instruction(ValueKind::ThrowIfInstKind),
         savedResultType_(Type::createAnyType()) {
+    assert(
+        !invalidTypes->getData().isNoType() &&
+        invalidTypes->getData().isSubsetOf(Type::createEmpty()) &&
+        "invalidTypes set can only contain Empty");
     pushOperand(checkedValue);
+    pushOperand(invalidTypes);
 
     // Calculate the correct result type, to preserve invariants for
     // instructions that use this result.
-    setType(Type::subtractTy(checkedValue->getType(), Type::createEmpty()));
+    setType(Type::subtractTy(checkedValue->getType(), invalidTypes->getData()));
     updateSavedResultType();
   }
-  explicit ThrowIfEmptyInst(
-      const ThrowIfEmptyInst *src,
-      llvh::ArrayRef<Value *> operands)
+  explicit ThrowIfInst(const ThrowIfInst *src, llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands), savedResultType_(src->savedResultType_) {}
 
   /// For use only by TypeInference. Returns the result type that was recorded
@@ -2868,8 +2871,23 @@ class ThrowIfEmptyInst : public Instruction {
     savedResultType_ = getType();
   }
 
-  Value *getCheckedValue() {
+  Value *getCheckedValue() const {
     return getOperand(CheckedValueIdx);
+  }
+  void setCheckedValue(Value *value) {
+    setOperand(value, CheckedValueIdx);
+  }
+
+  LiteralIRType *getInvalidTypes() const {
+    return cast<LiteralIRType>(getOperand(InvalidTypesIdx));
+  }
+  void setInvalidTypes(LiteralIRType *invalidTypes) {
+    assert(
+        !invalidTypes->getData().isNoType() &&
+        invalidTypes->getData().isSubsetOf(
+            Type::unionTy(Type::createEmpty(), Type::createUninit())) &&
+        "invalidTypes set can only contain Empty or Uninit");
+    setOperand(invalidTypes, InvalidTypesIdx);
   }
 
   static bool hasOutput() {
@@ -2889,7 +2907,7 @@ class ThrowIfEmptyInst : public Instruction {
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::ThrowIfEmptyInstKind;
+    return kind == ValueKind::ThrowIfInstKind;
   }
 };
 
@@ -4695,7 +4713,7 @@ class UnionNarrowTrustedInst : public SingleOperandInst {
   /// This is used to intersect with the type of the operand during type
   /// inference, and also to avoid corner cases where the type of the operand is
   /// narrowed so that the intersection is empty.
-  /// Also see the comment in ThrowIfEmptyInst.
+  /// Also see the comment in ThrowIfInst.
   Type savedResultType_;
 
  public:

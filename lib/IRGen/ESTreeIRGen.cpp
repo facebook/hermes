@@ -938,7 +938,8 @@ Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
                     var->getName().str() + "'");
           }
 
-          auto *thr = Builder.createThrowIfEmptyInst(Builder.getLiteralEmpty());
+          auto *thr = Builder.createThrowIfInst(
+              Builder.getLiteralEmpty(), Type::createEmpty());
           // Pretend that the instruction, which always throws, returns a
           // value with the correct type.
           thr->setType(Type::subtractTy(var->getType(), Type::createEmpty()));
@@ -950,7 +951,8 @@ Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
               Type::subtractTy(var->getType(), Type::createEmpty()));
         }
       } else {
-        res = Builder.createThrowIfEmptyInst(Builder.createLoadFrameInst(var));
+        res = Builder.createThrowIfInst(
+            Builder.createLoadFrameInst(var), Type::createEmpty());
       }
     } else {
       res = Builder.createLoadFrameInst(var);
@@ -1005,14 +1007,15 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
                       var->getName().str() + "'");
             }
 
-            auto thr =
-                Builder.createThrowIfEmptyInst(Builder.getLiteralEmpty());
+            auto thr = Builder.createThrowIfInst(
+                Builder.getLiteralEmpty(), Type::createEmpty());
             thr->setType(Type::createUndefined());
             thr->updateSavedResultType();
           }
         } else {
           // Must verify whether the variable is initialized.
-          Builder.createThrowIfEmptyInst(Builder.createLoadFrameInst(var));
+          Builder.createThrowIfInst(
+              Builder.createLoadFrameInst(var), Type::createEmpty());
         }
       }
       if (var->getIsConst()) {

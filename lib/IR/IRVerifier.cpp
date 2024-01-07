@@ -922,7 +922,18 @@ void Verifier::visitGetNewTargetInst(GetNewTargetInst const &Inst) {
       "GetNewTargetInst must use correct getNewTargetParam");
 }
 
-void Verifier::visitThrowIfEmptyInst(const ThrowIfEmptyInst &Inst) {}
+void Verifier::visitThrowIfInst(const ThrowIfInst &Inst) {
+  const Type invTypes = Inst.getInvalidTypes()->getData();
+  Assert(
+      !invTypes.isNoType() && invTypes.isSubsetOf(Type::createEmpty()),
+      "ThrowIfInst invalid types set can only contain Empty");
+  // Note: we are not performing a subtraction and equality check here, because
+  // if the invalid types and the input types are proven disjoint after
+  // TypeInference, we deliberately don't return NoType.
+  Assert(
+      Type::intersectTy(Inst.getType(), invTypes).isNoType(),
+      "ThrowIfInst must throw away all invalid types");
+}
 
 void Verifier::visitPrLoadInst(const PrLoadInst &Inst) {}
 void Verifier::visitPrStoreInst(const PrStoreInst &Inst) {}

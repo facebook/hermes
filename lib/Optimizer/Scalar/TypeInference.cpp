@@ -640,7 +640,7 @@ class TypeInferenceImpl {
   Type inferGetNewTargetInst(GetNewTargetInst *inst) {
     return inst->getOperand(GetNewTargetInst::GetNewTargetParamIdx)->getType();
   }
-  Type inferThrowIfEmptyInst(ThrowIfEmptyInst *inst) {
+  Type inferThrowIfInst(ThrowIfInst *inst) {
     Type type = inst->getCheckedValue()->getType();
     assert(!type.isNoType() && "input to throwIfEmpty cannot be NoType");
 
@@ -859,7 +859,7 @@ class TypeInferenceImpl {
         inst->getSavedResultType(), inst->getSingleOperand()->getType());
 
     // It may be possible that the input value would be proven to always be
-    // empty and this code is unreachable. Similarly to ThrowIfEmpty, in that
+    // empty and this code is unreachable. Similarly to ThrowIf, in that
     // case we simply return something to avoid breaking invariants.
     if (LLVM_UNLIKELY(res.isNoType())) {
       return inst->getSavedResultType();

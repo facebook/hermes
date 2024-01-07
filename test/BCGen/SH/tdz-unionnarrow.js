@@ -45,7 +45,7 @@ function f2() {
 // CHKIR-NEXT:frame = [x: any|empty]
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:       StoreFrameInst empty: empty, [x]: any|empty
-// CHKIR-NEXT:  %1 = ThrowIfEmptyInst (:any) empty: empty
+// CHKIR-NEXT:  %1 = ThrowIfInst (:any) empty: empty, type(empty)
 // CHKIR-NEXT:  %2 = UnionNarrowTrustedInst (:any) empty: empty
 // CHKIR-NEXT:  %3 = BinaryAddInst (:any) %2: any, 1: number
 // CHKIR-NEXT:       ReturnInst %3: any
@@ -66,7 +66,7 @@ function f2() {
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = LoadFrameInst (:any|empty) [x@f2]: any|empty
-// CHKIR-NEXT:  %1 = ThrowIfEmptyInst (:any) %0: any|empty
+// CHKIR-NEXT:  %1 = ThrowIfInst (:any) %0: any|empty, type(empty)
 // CHKIR-NEXT:       StoreFrameInst 10: number, [x@f2]: any|empty
 // CHKIR-NEXT:  %3 = LoadFrameInst (:any|empty) [x@f2]: any|empty
 // CHKIR-NEXT:  %4 = UnionNarrowTrustedInst (:any) %3: any|empty
@@ -97,7 +97,7 @@ function f2() {
 // CHKLIR-NEXT:  %0 = HBCCreateEnvironmentInst (:environment)
 // CHKLIR-NEXT:  %1 = HBCLoadConstInst (:empty) empty: empty
 // CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: environment, %1: empty, [x]: empty
-// CHKLIR-NEXT:  %3 = ThrowIfEmptyInst (:any) %1: empty
+// CHKLIR-NEXT:  %3 = ThrowIfInst (:any) %1: empty, type(empty)
 // CHKLIR-NEXT:  %4 = UnionNarrowTrustedInst (:any) %1: empty
 // CHKLIR-NEXT:  %5 = HBCLoadConstInst (:number) 1: number
 // CHKLIR-NEXT:  %6 = BinaryAddInst (:string|number) %4: any, %5: number
@@ -123,7 +123,7 @@ function f2() {
 // CHKLIR-NEXT:%BB0:
 // CHKLIR-NEXT:  %0 = HBCResolveEnvironment (:environment) %f2(): any
 // CHKLIR-NEXT:  %1 = HBCLoadFromEnvironmentInst (:empty|undefined|number) %0: environment, [x@f2]: empty|undefined|number
-// CHKLIR-NEXT:  %2 = ThrowIfEmptyInst (:undefined|number) %1: empty|undefined|number
+// CHKLIR-NEXT:  %2 = ThrowIfInst (:undefined|number) %1: empty|undefined|number, type(empty)
 // CHKLIR-NEXT:  %3 = HBCLoadConstInst (:number) 10: number
 // CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: environment, %3: number, [x@f2]: empty|undefined|number
 // CHKLIR-NEXT:  %5 = HBCLoadFromEnvironmentInst (:empty|undefined|number) %0: environment, [x@f2]: empty|undefined|number

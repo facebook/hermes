@@ -239,6 +239,9 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
       opIndex == CheckedTypeCastInst::SpecifiedTypeIdx) {
     return true;
   }
+  if (llvh::isa<ThrowIfInst>(Inst) && opIndex == ThrowIfInst::InvalidTypesIdx) {
+    return true;
+  }
 
   return false;
 }

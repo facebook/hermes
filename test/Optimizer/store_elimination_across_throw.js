@@ -62,7 +62,7 @@
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StoreFrameInst 0: number, [x@""]: undefined|number
 // CHECK-NEXT:  %1 = LoadFrameInst (:empty|undefined) [tdz@""]: empty|undefined
-// CHECK-NEXT:  %2 = ThrowIfEmptyInst (:undefined) %1: empty|undefined
+// CHECK-NEXT:  %2 = ThrowIfInst (:undefined) %1: empty|undefined, type(empty)
 // CHECK-NEXT:       StoreFrameInst 1: number, [x@""]: undefined|number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

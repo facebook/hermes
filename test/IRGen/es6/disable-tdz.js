@@ -41,8 +41,8 @@ function check1() {
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %inner(): any
 // CHECK-NEXT:       StoreFrameInst %2: object, [inner]: any
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "glob": string
-// CHECK-NEXT:  %5 = ThrowIfEmptyInst (:any) empty: empty
-// CHECK-NEXT:  %6 = ThrowIfEmptyInst (:any) empty: empty
+// CHECK-NEXT:  %5 = ThrowIfInst (:any) empty: empty, type(empty)
+// CHECK-NEXT:  %6 = ThrowIfInst (:any) empty: empty, type(empty)
 // CHECK-NEXT:  %7 = BinaryAddInst (:any) %5: any, %6: any
 // CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:function_end
@@ -51,13 +51,13 @@ function check1() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any|empty) [x@check1]: any|empty
-// CHECK-NEXT:  %1 = ThrowIfEmptyInst (:any) %0: any|empty
+// CHECK-NEXT:  %1 = ThrowIfInst (:any) %0: any|empty, type(empty)
 // CHECK-NEXT:  %2 = UnaryIncInst (:any) %1: any
 // CHECK-NEXT:  %3 = LoadFrameInst (:any|empty) [x@check1]: any|empty
-// CHECK-NEXT:  %4 = ThrowIfEmptyInst (:any) %3: any|empty
+// CHECK-NEXT:  %4 = ThrowIfInst (:any) %3: any|empty, type(empty)
 // CHECK-NEXT:       StoreFrameInst %2: any, [x@check1]: any|empty
 // CHECK-NEXT:  %6 = LoadFrameInst (:any|empty) [y@check1]: any|empty
-// CHECK-NEXT:  %7 = ThrowIfEmptyInst (:any) %6: any|empty
+// CHECK-NEXT:  %7 = ThrowIfInst (:any) %6: any|empty, type(empty)
 // CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:function_end
 

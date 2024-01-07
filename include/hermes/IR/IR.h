@@ -1390,7 +1390,7 @@ class Instruction
 
   /// Returns true if any of the operands can have an "empty" type. The default
   /// implementation returns false. This method has to be overridden by a few
-  /// instructions that can handle an empty type (ThrowIfEmpty, Mov, etc).
+  /// instructions that can handle an empty type (ThrowIf, Mov, etc).
   bool acceptsEmptyTypeImpl() const {
     return false;
   }
