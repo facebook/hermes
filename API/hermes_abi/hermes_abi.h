@@ -16,6 +16,7 @@ struct HermesABIRuntimeConfig;
 struct HermesABIRuntime;
 struct HermesABIManagedPointer;
 struct HermesABIGrowableBuffer;
+struct HermesABIBuffer;
 struct HermesABIPropNameIDList;
 
 /// Define the structure for references to pointer types in JS (e.g. string,
@@ -178,6 +179,17 @@ struct HermesABIGrowableBuffer {
   size_t used;
 };
 
+/// Define the structure for buffers containing JS source or bytecode. This is
+/// designed to mirror the functionality of jsi::Buffer.
+struct HermesABIBufferVTable {
+  void (*release)(struct HermesABIBuffer *self);
+};
+struct HermesABIBuffer {
+  const struct HermesABIBufferVTable *vtable;
+  const uint8_t *data;
+  size_t size;
+};
+
 struct HermesABIRuntimeVTable {
   /// Release the given runtime.
   void (*release)(struct HermesABIRuntime *);
@@ -219,6 +231,24 @@ struct HermesABIRuntimeVTable {
   struct HermesABIBigInt (*clone_bigint)(
       struct HermesABIRuntime *rt,
       struct HermesABIBigInt bigint);
+
+  /// Evaluate the given JavaScript source with an associated source URL in the
+  /// given runtime, and return the result. The buffer must have a past-the-end
+  /// null terminator.
+  struct HermesABIValueOrError (*evaluate_javascript_source)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIBuffer *buf,
+      const char *source_url,
+      size_t source_url_len);
+
+  /// Evaluate the given Hermes bytecode with an associated source URL in the
+  /// given runtime, and return the result. No validation is performed on the
+  /// bytecode, so the caller must ensure it is valid.
+  struct HermesABIValueOrError (*evaluate_hermes_bytecode)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIBuffer *buf,
+      const char *source_url,
+      size_t source_url_len);
 };
 
 /// An instance of a Hermes Runtime.
@@ -231,6 +261,9 @@ struct HermesABIVTable {
   /// runtime must be explicitly released when it is no longer needed.
   struct HermesABIRuntime *(*make_hermes_runtime)(
       const struct HermesABIRuntimeConfig *config);
+
+  /// Check if the given buffer contains Hermes bytecode.
+  bool (*is_hermes_bytecode)(const uint8_t *buf, size_t len);
 };
 
 #endif
