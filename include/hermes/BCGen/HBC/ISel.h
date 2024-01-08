@@ -209,7 +209,6 @@ class HBCISel {
     protoIdent_ = F->getContext().getIdentifier("__proto__");
   }
 
-#if 0
 /// This is the header declaration for all of the methods that emit opcodes
 /// for specific high-level IR instructions.
 #define INCLUDE_HBC_INSTRS
@@ -231,7 +230,6 @@ class HBCISel {
 
   /// Generate the bytecode stream for the function.
   void generate(SourceMapGenerator *outSourceMap);
-#endif
 };
 
 } // namespace hbc

@@ -16,6 +16,7 @@
 #include "hermes/BCGen/HBC/Passes/OptEnvironmentInit.h"
 #include "hermes/BCGen/HBC/TraverseLiteralStrings.h"
 #include "hermes/BCGen/LowerBuiltinCalls.h"
+#include "hermes/BCGen/LowerStoreInstrs.h"
 #include "hermes/BCGen/Lowering.h"
 #include "hermes/BCGen/MovElimination.h"
 #include "hermes/IR/Analysis.h"
@@ -34,7 +35,6 @@
 using namespace hermes;
 using namespace hbc;
 
-#if 0
 namespace {
 
 // If we have less than this number of instructions in a Function, and we're
@@ -145,7 +145,6 @@ UniquingStringLiteralAccumulator stringAccumulatorFromBCProvider(
 }
 
 } // namespace
-#endif
 
 std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
     Module *M,
@@ -164,7 +163,6 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
       std::move(baseBCProvider));
 }
 
-#if 0
 /// Encode a Unicode codepoint into a UTF8 sequence and append it to \p
 /// storage. Code points above 0xFFFF are encoded into UTF16, and the
 /// resulting surrogate pair values are encoded individually into UTF8.
@@ -187,7 +185,6 @@ static inline void appendUnicodeToStorage(
   }
   storage.append(buf, d);
 }
-#endif
 
 std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
     Module *M,
@@ -197,9 +194,6 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
     hermes::OptValue<uint32_t> segment,
     SourceMapGenerator *sourceMapGen,
     std::unique_ptr<BCProviderBase> baseBCProvider) {
-  hermes_fatal("Generating HBC bytecode disabled in Static Hermes");
-
-#if 0
   PerfSection perf("Bytecode Generation");
   lowerIR(M, options);
 
@@ -403,8 +397,8 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
 
       funcGen =
           BytecodeFunctionGenerator::create(BMGen, RA.getMaxRegisterUsage());
-      HBCISel hbciSel(&F, funcGen.get(), RA, scopeAnalysis, options, debugCache);
-      hbciSel.populateDebugCache(debugCache);
+      HBCISel hbciSel(
+          &F, funcGen.get(), RA, scopeAnalysis, options, debugCache);
       hbciSel.generate(sourceMapGen);
     }
 
@@ -417,7 +411,6 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
   }
 
   return BMGen.generate();
-#endif
 }
 
 std::unique_ptr<BytecodeModule> hbc::generateBytecode(

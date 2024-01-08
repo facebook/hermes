@@ -38,7 +38,6 @@ STATISTIC(
     NumCacheSlots,
     "Number of cache slots allocated for all put/get property instructions");
 
-#if 0
 /// Given a list of basic blocks \p blocks linearized into the order they will
 /// be generated, \return the set of those basic blocks containing backwards
 /// successors. Note a jump from a block to itself is necessarily backwards.
@@ -56,7 +55,6 @@ static DenseSet<const BasicBlock *> basicBlocksWithBackwardSuccessors(
   }
   return result;
 }
-#endif
 
 void HVMRegisterAllocator::handleInstruction(Instruction *I) {
   if (auto *CI = llvh::dyn_cast<BaseCallInst>(I)) {
@@ -331,7 +329,6 @@ void HBCISel::populatePropertyCachingInfo() {
   BCFGen_->setHighestWriteCacheIndex(lastPropertyWriteCacheIndex_);
 }
 
-#if 0
 void HBCISel::generateDirectEvalInst(DirectEvalInst *Inst, BasicBlock *next) {
   auto dst = encodeValue(Inst);
   auto evalText = encodeValue(Inst->getEvalText());
@@ -886,11 +883,6 @@ void HBCISel::generateGetTemplateObjectInst(
     BasicBlock *next) {
   hermes_fatal("GetTemplateObjectInst unsupported in HBC");
 }
-void HBCISel::generateCreateArgumentsInst(
-    CreateArgumentsInst *Inst,
-    BasicBlock *next) {
-  llvm_unreachable("CreateArgumentsInst should have been lowered.");
-}
 void HBCISel::generateCreateFunctionInst(
     CreateFunctionInst *Inst,
     BasicBlock *next) {
@@ -1006,8 +998,7 @@ void HBCISel::generateThrowInst(ThrowInst *Inst, BasicBlock *next) {
 void HBCISel::generateThrowIfInst(
     hermes::ThrowIfInst *Inst,
     hermes::BasicBlock *next) {
-  BCFGen_->emitThrowIf(
-      encodeValue(Inst), encodeValue(Inst->getCheckedValue()));
+  hermes_fatal("ThrowIfInst not supported.");
 }
 void HBCISel::generateSwitchInst(SwitchInst *Inst, BasicBlock *next) {
   llvm_unreachable("SwitchInst should have been lowered");
@@ -1623,6 +1614,70 @@ void HBCISel::generatePrStoreInst(PrStoreInst *inst, BasicBlock *) {
       inst->getLocation(), inst->getKindStr() + " not implemented");
 }
 
+void HBCISel::generateFCompareInst(FCompareInst *Inst, BasicBlock *) {
+  hermes_fatal("FCompareInst not supported.");
+}
+void HBCISel::generateFBinaryMathInst(FBinaryMathInst *Inst, BasicBlock *) {
+  hermes_fatal("FBinaryMathInst not supported.");
+}
+void HBCISel::generateFUnaryMathInst(FUnaryMathInst *Inst, BasicBlock *) {
+  hermes_fatal("FUnaryMathInst not supported.");
+}
+void HBCISel::generateLoadParentInst(LoadParentInst *, BasicBlock *) {
+  hermes_fatal("LoadParentInst not supported.");
+}
+void HBCISel::generateNativeCallInst(NativeCallInst *, BasicBlock *) {
+  hermes_fatal("NativeCallInst not supported.");
+}
+void HBCISel::generateStoreParentInst(StoreParentInst *, BasicBlock *) {
+  hermes_fatal("StoreParentInst not supported.");
+}
+void HBCISel::generateLIRDeadValueInst(LIRDeadValueInst *, BasicBlock *) {
+  hermes_fatal("LIRDeadValueInst not supported.");
+}
+void HBCISel::generateFastArrayLoadInst(FastArrayLoadInst *, BasicBlock *) {
+  hermes_fatal("FastArrayLoadInst not supported.");
+}
+void HBCISel::generateFastArrayPushInst(FastArrayPushInst *, BasicBlock *) {
+  hermes_fatal("FastArrayPushInst not supported.");
+}
+void HBCISel::generateAllocFastArrayInst(AllocFastArrayInst *, BasicBlock *) {
+  hermes_fatal("AllocFastArrayInst not supported.");
+}
+void HBCISel::generateFastArrayStoreInst(FastArrayStoreInst *, BasicBlock *) {
+  hermes_fatal("FastArrayStoreInst not supported.");
+}
+void HBCISel::generateThrowTypeErrorInst(ThrowTypeErrorInst *, BasicBlock *) {
+  hermes_fatal("ThrowTypeErrorInst not supported.");
+}
+void HBCISel::generateCheckedTypeCastInst(CheckedTypeCastInst *, BasicBlock *) {
+  hermes_fatal("CheckedTypeCastInst not supported.");
+}
+void HBCISel::generateFastArrayAppendInst(FastArrayAppendInst *, BasicBlock *) {
+  hermes_fatal("FastArrayAppendInst not supported.");
+}
+void HBCISel::generateFastArrayLengthInst(FastArrayLengthInst *, BasicBlock *) {
+  hermes_fatal("FastArrayLengthInst not supported.");
+}
+void HBCISel::generateUnionNarrowTrustedInst(
+    UnionNarrowTrustedInst *,
+    BasicBlock *) {
+  hermes_fatal("UnionNarrowTrustedInstshould not supported.");
+}
+void HBCISel::generateCreateArgumentsLooseInst(
+    CreateArgumentsLooseInst *,
+    BasicBlock *) {
+  hermes_fatal("CreateArgumentsLooseInst not supported.");
+}
+void HBCISel::generateCreateArgumentsStrictInst(
+    CreateArgumentsStrictInst *,
+    BasicBlock *) {
+  hermes_fatal("CreateArgumentsStrictInst not supported.");
+}
+void HBCISel::generateStringConcatInst(StringConcatInst *inst, BasicBlock *) {
+  hermes_fatal("StringConcatInst not supported.");
+}
+
 void HBCISel::generate(BasicBlock *BB, BasicBlock *next) {
   // Register the address of the current basic block.
   auto begin_loc = BCFGen_->getCurrentLocation();
@@ -1668,8 +1723,10 @@ void HBCISel::generate(Instruction *ii, BasicBlock *next) {
 
   // Generate the debug info.
   switch (F_->getContext().getDebugInfoSetting()) {
+    case DebugInfoSetting::NONE:
+      break;
     case DebugInfoSetting::THROWING:
-      if (!ii->mayExecute()) {
+      if (!ii->getSideEffect().getThrow()) {
         break;
       }
     // Falls through - if ii can execute.
@@ -1730,7 +1787,6 @@ void HBCISel::generate(SourceMapGenerator *outSourceMap) {
   populatePropertyCachingInfo();
   BCFGen_->bytecodeGenerationComplete();
 }
-#endif
 
 uint8_t HBCISel::acquirePropertyReadCacheIndex(unsigned id) {
   const bool reuse = F_->getContext().getOptimizationSettings().reusePropCache;
