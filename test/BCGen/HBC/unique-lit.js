@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -O0 -dump-postra %s | %FileCheckOrRegen --match-full-lines %s
-// RUN: %hermesc -O -dump-postra %s | %FileCheckOrRegen --match-full-lines  --check-prefix=CHKOPT %s
+// RUN: %hermesc -O0 -dump-lra %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermesc -O -dump-lra %s | %FileCheckOrRegen --match-full-lines  --check-prefix=CHKOPT %s
 
 // Check that literals are uniqued when optimizations is disabled, but aren't
 // when it is enabled.

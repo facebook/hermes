@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -O -fstatic-builtins -target=HBC -dump-postra %s | %FileCheckOrRegen --match-full-lines --check-prefix=CHKRA %s
+// RUN: %hermesc -O -fstatic-builtins -target=HBC -dump-lra %s | %FileCheckOrRegen --match-full-lines --check-prefix=CHKRA %s
 // RUN: %hermesc -O -fstatic-builtins -target=HBC -dump-bytecode %s | %FileCheckOrRegen --match-full-lines --check-prefix=CHKBC %s
 // RUN: %hermes -O -fstatic-builtins -target=HBC %s | %FileCheck --match-full-lines %s
 

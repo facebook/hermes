@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-postra -O %s | %FileCheck %s --match-full-lines
+// RUN: %hermes -dump-lra -O %s | %FileCheck %s --match-full-lines
 
 // Positive zero is 'cheap'.
 function poszero(f) {

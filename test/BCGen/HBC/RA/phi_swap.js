@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -dump-ra -dump-operand-registers %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermes -O -dump-ra %s | %FileCheckOrRegen --match-full-lines %s
 // Ensure that the register allocator correctly handles cycles between Phi-nodes.
 
 function foo (a, b) {
