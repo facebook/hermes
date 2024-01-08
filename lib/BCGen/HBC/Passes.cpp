@@ -193,6 +193,12 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
        opIndex == CallBuiltinInst::ThisIdx))
     return true;
 
+  // CallInst's NewTarget should only be a literal if it's undefined.
+  if (auto *CI = llvh::dyn_cast<CallInst>(Inst);
+      CI && opIndex == CallInst::NewTargetIdx) {
+    return llvh::isa<LiteralUndefined>(CI->getNewTarget());
+  }
+
   /// GetBuiltinClosureInst's builtin index is always literal.
   if (llvh::isa<GetBuiltinClosureInst>(Inst) &&
       opIndex == GetBuiltinClosureInst::BuiltinIndexIdx)
@@ -576,7 +582,7 @@ bool DedupReifyArguments::runOnFunction(Function *F) {
   return changed;
 }
 
-bool LowerCalls::runOnFunction(Function *F) {
+bool InitCallFrame::runOnFunction(Function *F) {
   IRBuilder builder(F);
   bool changed = false;
 
@@ -769,7 +775,7 @@ bool SpillRegisters::requiresShortOperand(Instruction *I, int op) {
     // emitted in the bytecode.
     case ValueKind::CallInstKind:
     case ValueKind::CallBuiltinInstKind:
-      return op == CallInst::CalleeIdx;
+      return op == CallInst::CalleeIdx || op == CallInst::NewTargetIdx;
     case ValueKind::HBCCallWithArgCountInstKind:
       return op == CallInst::CalleeIdx || op == CallInst::NewTargetIdx ||
           op == HBCCallWithArgCountInst::NumArgLiteralIdx;

@@ -1494,18 +1494,6 @@ tailCall:
         callNewTarget = O3REG(CallWithNewTargetLong).getRaw();
         goto doCall;
       }
-      CASE(ConstructLong) {
-        callArgCount = (uint32_t)ip->iConstructLong.op3;
-        nextIP = NEXTINST(ConstructLong);
-        callNewTarget = O2REG(ConstructLong).getRaw();
-        goto doCall;
-      }
-      CASE(CallLong) {
-        callArgCount = (uint32_t)ip->iCallLong.op3;
-        nextIP = NEXTINST(CallLong);
-        callNewTarget = HermesValue::encodeUndefinedValue().getRaw();
-        goto doCall;
-      }
 
       // Note in Call1 through Call4, the first argument is 'this' which has
       // argument index -1.

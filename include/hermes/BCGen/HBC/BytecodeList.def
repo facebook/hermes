@@ -459,14 +459,6 @@ DEFINE_RET_TARGET(Call3)
 DEFINE_OPCODE_6(Call4, Reg8, Reg8, Reg8, Reg8, Reg8, Reg8)
 DEFINE_RET_TARGET(Call4)
 
-/// Identical to Call, but allowing more arguments.
-DEFINE_OPCODE_3(CallLong, Reg8, Reg8, UInt32)
-DEFINE_RET_TARGET(CallLong)
-
-/// Identical to Construct, but allowing more arguments.
-DEFINE_OPCODE_3(ConstructLong, Reg8, Reg8, UInt32)
-DEFINE_RET_TARGET(ConstructLong)
-
 /// Identical to CallWithNewTarget, but allowing more arguments.
 /// arg4 is a register containing a number, instead of a literal number.
 /// This is done to decrease the size of this opcode.
@@ -482,8 +474,6 @@ ASSERT_MONOTONE_INCREASING(
     Call2,
     Call3,
     Call4,
-    CallLong,
-    ConstructLong,
     CallWithNewTargetLong)
 
 /// Call a builtin function.
@@ -844,9 +834,6 @@ ASSERT_EQUAL_LAYOUT3(GetArgumentsPropByValLoose, GetArgumentsPropByValStrict)
 
 // CallWithNewTarget and CallWithNewTargetLong must agree on the first 2 parameters.
 ASSERT_EQUAL_LAYOUT2(CallWithNewTarget, CallWithNewTargetLong)
-// Call and CallLong must agree on the first 2 parameters.
-ASSERT_EQUAL_LAYOUT2(Call, CallLong)
-ASSERT_EQUAL_LAYOUT2(Construct, ConstructLong)
 
 #undef DEFINE_JUMP_1
 #undef DEFINE_JUMP_2

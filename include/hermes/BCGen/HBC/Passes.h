@@ -72,11 +72,11 @@ class DedupReifyArguments : public FunctionPass {
 
 /// Lower calls into a series of parameter moves followed by a call with
 /// those moved values. Should only run once, right before MovElimination.
-class LowerCalls : public FunctionPass {
+class InitCallFrame : public FunctionPass {
  public:
-  explicit LowerCalls(HVMRegisterAllocator &RA)
+  explicit InitCallFrame(HVMRegisterAllocator &RA)
       : FunctionPass("LowerCalls"), RA_(RA) {}
-  ~LowerCalls() override = default;
+  ~InitCallFrame() override = default;
   bool runOnFunction(Function *F) override;
 
  protected:

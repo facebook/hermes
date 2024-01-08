@@ -1229,12 +1229,22 @@ void HBCISel::generateTryStartInst(TryStartInst *Inst, BasicBlock *next) {
 void HBCISel::generateCallInst(CallInst *Inst, BasicBlock *next) {
   auto output = encodeValue(Inst);
   auto function = encodeValue(Inst->getCallee());
+  bool newTargetIsUndefined = llvh::isa<LiteralUndefined>(Inst->getNewTarget());
+  assert(
+      Inst->getNumArguments() <= UINT8_MAX &&
+      "CallInst doesn't support large number of args");
   verifyCall(Inst);
 
-  if (Inst->getNumArguments() <= UINT8_MAX) {
+  if (newTargetIsUndefined) {
     BCFGen_->emitCall(output, function, Inst->getNumArguments());
   } else {
-    BCFGen_->emitCallLong(output, function, Inst->getNumArguments());
+    auto newTarget = encodeValue(Inst->getNewTarget());
+    if (function == newTarget) {
+      BCFGen_->emitConstruct(output, function, Inst->getNumArguments());
+    } else {
+      BCFGen_->emitCallWithNewTarget(
+          output, function, newTarget, Inst->getNumArguments());
+    }
   }
 }
 

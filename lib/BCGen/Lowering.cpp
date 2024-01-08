@@ -628,6 +628,61 @@ bool LowerNumericProperties::runOnFunction(Function *F) {
   return changed;
 }
 
+static llvh::SmallVector<Value *, 4> getArgumentsWithoutThis(CallInst *CI) {
+  llvh::SmallVector<Value *, 4> args;
+  for (size_t i = 1; i < CI->getNumArguments(); i++) {
+    args.push_back(CI->getArgument(i));
+  }
+  return args;
+}
+
+bool LowerCalls::runOnFunction(Function *F) {
+  IRBuilder::InstructionDestroyer destroyer;
+  IRBuilder builder(F);
+  bool changed = false;
+  for (BasicBlock &BB : *F) {
+    for (Instruction &I : BB) {
+      if (auto *CI = llvh::dyn_cast<CallInst>(&I)) {
+        unsigned argCount = CI->getNumArguments();
+        if (argCount > UINT8_MAX) {
+          builder.setLocation(CI->getLocation());
+          builder.setInsertionPoint(CI);
+          auto *replacement = builder.createHBCCallWithArgCount(
+              CI->getCallee(),
+              CI->getTarget(),
+              CI->getEnvironment(),
+              CI->getNewTarget(),
+              builder.getLiteralNumber(argCount),
+              CI->getThis(),
+              getArgumentsWithoutThis(CI));
+          CI->replaceAllUsesWith(replacement);
+          destroyer.add(CI);
+          changed = true;
+          continue;
+        }
+        // HBCCallNInst can only be used when new.target is undefined.
+        if (HBCCallNInst::kMinArgs <= argCount &&
+            argCount <= HBCCallNInst::kMaxArgs &&
+            llvh::isa<LiteralUndefined>(CI->getNewTarget())) {
+          builder.setLocation(CI->getLocation());
+          builder.setInsertionPoint(CI);
+          HBCCallNInst *newCall = builder.createHBCCallNInst(
+              CI->getCallee(),
+              CI->getTarget(),
+              CI->getEnvironment(),
+              CI->getNewTarget(),
+              CI->getThis(),
+              getArgumentsWithoutThis(CI));
+          CI->replaceAllUsesWith(newCall);
+          destroyer.add(CI);
+          changed = true;
+        }
+      }
+    }
+  }
+  return changed;
+}
+
 bool LimitAllocArray::runOnFunction(Function *F) {
   bool changed = false;
   for (BasicBlock &BB : *F) {

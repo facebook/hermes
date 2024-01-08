@@ -11,7 +11,6 @@
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/ISel.h"
 #include "hermes/BCGen/HBC/Passes.h"
-#include "hermes/BCGen/HBC/Passes/FuncCallNOpts.h"
 #include "hermes/BCGen/HBC/Passes/InsertProfilePoint.h"
 #include "hermes/BCGen/HBC/Passes/OptEnvironmentInit.h"
 #include "hermes/BCGen/HBC/TraverseLiteralStrings.h"
@@ -67,6 +66,7 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
   PM.addPass(new LowerStringConcat());
   // LowerBuiltinCalls needs to run before the rest of the lowering.
   PM.addPass(new LowerBuiltinCalls());
+  PM.addPass(new LowerCalls());
   // It is important to run LowerNumericProperties before LoadConstants
   // as LowerNumericProperties could generate new constants.
   PM.addPass(new LowerNumericProperties());
@@ -86,7 +86,6 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
     // Reduce comparison and conditional jump to single comparison jump
     PM.addPass(new LowerCondBranch());
     // Turn Calls into CallNs.
-    PM.addPass(new FuncCallNOpts());
     // Move loads to child blocks if possible.
     PM.addCodeMotion();
     // Eliminate common HBCLoadConstInsts.
@@ -380,7 +379,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
 
       PassManager PM;
       PM.addPass(new LowerStoreInstrs(RA));
-      PM.addPass(new LowerCalls(RA));
+      PM.addPass(new InitCallFrame(RA));
       if (options.optimizationEnabled) {
         PM.addPass(new MovElimination(RA));
         PM.addPass(new RecreateCheapValues(RA));

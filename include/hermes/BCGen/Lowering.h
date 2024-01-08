@@ -107,6 +107,18 @@ class LowerNumericProperties : public FunctionPass {
       unsigned operandIdx);
 };
 
+/// Transform CallInsts to HBCCallWithArgCountInst or HBCCallNInst.
+/// CallWithArgCountInst is used for function calls with a large number of
+/// arguments. HBCCallNInst is used for eligible function calls with a small
+/// number of arguments.
+class LowerCalls : public FunctionPass {
+ public:
+  explicit LowerCalls() : FunctionPass("LowerCalls") {}
+  ~LowerCalls() override = default;
+
+  bool runOnFunction(Function *F) override;
+};
+
 // Limits the size of a function's array buffer by creating a
 // StoreOwnPropertyInst for each element in an AllocArray once it reaches
 // maxSize_ elements, since bytecode instructions can only represent up to

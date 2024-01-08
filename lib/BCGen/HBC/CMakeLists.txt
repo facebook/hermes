@@ -21,7 +21,6 @@ add_hermes_library(hermesHBCBackend
   TraverseLiteralStrings.cpp
   UniquingFilenameTable.cpp
   UniquingStringLiteralTable.cpp
-  Passes/FuncCallNOpts.cpp
   Passes/InsertProfilePoint.cpp
   Passes/OptEnvironmentInit.cpp
   LINK_OBJLIBS
