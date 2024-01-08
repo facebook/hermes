@@ -673,6 +673,7 @@ bool LowerCalls::runOnFunction(Function *F) {
               CI->getNewTarget(),
               CI->getThis(),
               getArgumentsWithoutThis(CI));
+          newCall->setType(CI->getType());
           CI->replaceAllUsesWith(newCall);
           destroyer.add(CI);
           changed = true;
