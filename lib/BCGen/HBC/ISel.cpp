@@ -1725,9 +1725,11 @@ void HBCISel::generateFastArrayLengthInst(FastArrayLengthInst *, BasicBlock *) {
   hermes_fatal("FastArrayLengthInst not supported.");
 }
 void HBCISel::generateUnionNarrowTrustedInst(
-    UnionNarrowTrustedInst *,
+    UnionNarrowTrustedInst *Inst,
     BasicBlock *) {
-  hermes_fatal("UnionNarrowTrustedInstshould not supported.");
+  auto dst = encodeValue(Inst);
+  auto src = encodeValue(Inst->getSingleOperand());
+  emitMovIfNeeded(dst, src);
 }
 void HBCISel::generateCreateArgumentsLooseInst(
     CreateArgumentsLooseInst *,
