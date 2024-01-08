@@ -805,4 +805,23 @@ bool LowerExponentiationOperator::lowerExponentiationOperator(
   return true;
 }
 
+bool LowerThrowTypeError::runOnFunction(Function *F) {
+  IRBuilder builder(F);
+  IRBuilder::InstructionDestroyer destroyer{};
+  bool changed = false;
+  for (BasicBlock &BB : *F) {
+    for (auto &I : BB) {
+      if (auto *TTE = llvh::dyn_cast<ThrowTypeErrorInst>(&I)) {
+        builder.setInsertionPoint(TTE);
+        auto *replace = builder.createCallBuiltinInst(
+            BuiltinMethod::HermesBuiltin_throwTypeError, {TTE->getMessage()});
+        builder.createLIRDeadTerminatorInst();
+        TTE->replaceAllUsesWith(replace);
+        destroyer.add(TTE);
+      }
+    }
+  }
+  return changed;
+}
+
 #undef DEBUG_TYPE

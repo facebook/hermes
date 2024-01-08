@@ -182,6 +182,7 @@ TERMINATOR(GetPNamesInst, TerminatorInst)
 TERMINATOR(GetNextPNameInst, TerminatorInst)
 TERMINATOR(TryStartInst, TerminatorInst)
 TERMINATOR(UnreachableInst, TerminatorInst)
+TERMINATOR(LIRDeadTerminatorInst, TerminatorInst)
 
 BEGIN_TERMINATOR(CompareBranchInst, TerminatorInst)
 // NOTE: the ordering here matches BinaryOperatorInst!

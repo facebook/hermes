@@ -157,6 +157,13 @@ class LowerExponentiationOperator : public FunctionPass {
       BinaryOperatorInst *inst);
 };
 
+class LowerThrowTypeError : public FunctionPass {
+ public:
+  explicit LowerThrowTypeError() : FunctionPass("LowerThrowTypeError") {}
+  ~LowerThrowTypeError() override = default;
+  bool runOnFunction(Function *F) override;
+};
+
 } // namespace hermes
 
 #endif

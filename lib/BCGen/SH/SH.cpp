@@ -1603,6 +1603,10 @@ class InstrGen {
     os_.indent(2);
     os_ << "abort();\n";
   }
+  void generateLIRDeadTerminatorInst(LIRDeadTerminatorInst &inst) {
+    os_.indent(2);
+    os_ << "abort();\n";
+  }
   void generateCreateFunctionInst(CreateFunctionInst &inst) {
     hermes_fatal("CreateFunctionInst should have been lowered.");
   }

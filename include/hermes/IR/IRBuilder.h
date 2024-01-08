@@ -596,6 +596,8 @@ class IRBuilder {
 
   UnreachableInst *createUnreachableInst();
 
+  LIRDeadTerminatorInst *createLIRDeadTerminatorInst();
+
   PrLoadInst *createPrLoadInst(
       Value *object,
       size_t propIndex,

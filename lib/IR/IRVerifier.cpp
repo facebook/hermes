@@ -894,6 +894,7 @@ void Verifier::visitHBCCreateFunctionInst(const HBCCreateFunctionInst &Inst) {
 }
 void Verifier::visitHBCSpillMovInst(const HBCSpillMovInst &Inst) {}
 void Verifier::visitUnreachableInst(const UnreachableInst &Inst) {}
+void Verifier::visitLIRDeadTerminatorInst(const LIRDeadTerminatorInst &Inst) {}
 
 void Verifier::visitIteratorBeginInst(const IteratorBeginInst &Inst) {
   Assert(

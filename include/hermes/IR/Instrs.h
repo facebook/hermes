@@ -4167,6 +4167,45 @@ class UnreachableInst : public TerminatorInst {
   }
 };
 
+class LIRDeadTerminatorInst : public TerminatorInst {
+  LIRDeadTerminatorInst(const LIRDeadTerminatorInst &) = delete;
+  void operator=(const LIRDeadTerminatorInst &) = delete;
+
+ public:
+  explicit LIRDeadTerminatorInst()
+      : TerminatorInst(ValueKind::LIRDeadTerminatorInstKind) {}
+  explicit LIRDeadTerminatorInst(
+      const LIRDeadTerminatorInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : TerminatorInst(src, operands) {}
+
+  static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect::createExecute();
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::LIRDeadTerminatorInstKind;
+  }
+
+  unsigned getNumSuccessorsImpl() const {
+    return 0;
+  }
+  BasicBlock *getSuccessorImpl(unsigned idx) const {
+    llvm_unreachable("LIRDeadTerminatorInst has no successor!");
+  }
+  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
+    llvm_unreachable("LIRDeadTerminatorInst has no successor!");
+  }
+};
+
 class PrLoadInst : public Instruction {
  public:
   enum { ObjectIdx, PropIndexIdx, PropNameIdx };

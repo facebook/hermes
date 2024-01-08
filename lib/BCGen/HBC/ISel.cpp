@@ -1548,6 +1548,11 @@ void HBCISel::generateUnreachableInst(
     hermes::BasicBlock *next) {
   emitUnreachableIfDebug();
 }
+void HBCISel::generateLIRDeadTerminatorInst(
+    hermes::LIRDeadTerminatorInst *Inst,
+    hermes::BasicBlock *next) {
+  emitUnreachableIfDebug();
+}
 
 void HBCISel::generateIteratorBeginInst(
     hermes::IteratorBeginInst *Inst,
@@ -1648,7 +1653,7 @@ void HBCISel::generateFastArrayStoreInst(FastArrayStoreInst *, BasicBlock *) {
   hermes_fatal("FastArrayStoreInst not supported.");
 }
 void HBCISel::generateThrowTypeErrorInst(ThrowTypeErrorInst *, BasicBlock *) {
-  hermes_fatal("ThrowTypeErrorInst not supported.");
+  hermes_fatal("ThrowTypeErrorInst should have been lowered.");
 }
 void HBCISel::generateCheckedTypeCastInst(CheckedTypeCastInst *, BasicBlock *) {
   hermes_fatal("CheckedTypeCastInst not supported.");
