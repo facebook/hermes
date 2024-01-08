@@ -16,28 +16,30 @@ function foo() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHKRA:function global() : undefined
-// CHKRA-NEXT:frame = [], globals = [x, foo]
-// CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCCreateEnvironmentInst
-// CHKRA-NEXT:  $Reg1 @1 [2...4) 	%1 = HBCCreateFunctionInst %foo(), %0
-// CHKRA-NEXT:  $Reg0 @2 [3...4) 	%2 = HBCGetGlobalObjectInst
-// CHKRA-NEXT:  $Reg0 @3 [empty]	%3 = StorePropertyLooseInst %1 : closure, %2 : object, "foo" : string
-// CHKRA-NEXT:  $Reg0 @4 [5...6) 	%4 = HBCLoadConstInst undefined : undefined
-// CHKRA-NEXT:  $Reg0 @5 [empty]	%5 = ReturnInst %4 : undefined
-// CHKRA-NEXT:function_end
-
-// CHKRA:function foo()
+// CHKRA:function global(): undefined
 // CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCGetGlobalObjectInst
-// CHKRA-NEXT:  $Reg0 @1 [2...3) 	%1 = LoadPropertyInst %0 : object, "x" : string
-// CHKRA-NEXT:  $Reg0 @2 [empty]	%2 = ReturnInst %1
+// CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "x": string
+// CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "foo": string
+// CHKRA-NEXT:  $Reg0 = HBCCreateEnvironmentInst (:any)
+// CHKRA-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %foo(): any, $Reg0
+// CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg0, "foo": string
+// CHKRA-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKRA-NEXT:  $Reg0 = ReturnInst $Reg0
+// CHKRA-NEXT:function_end
+
+// CHKRA:function foo(): any
+// CHKRA-NEXT:frame = []
+// CHKRA-NEXT:%BB0:
+// CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  $Reg0 = LoadPropertyInst (:any) $Reg0, "x": string
+// CHKRA-NEXT:  $Reg0 = ReturnInst $Reg0
 // CHKRA-NEXT:function_end
 
 // CHKBC:Bytecode File Information:
-// CHKBC-NEXT:  Bytecode version number: 90
-// CHKBC-NEXT:  Source hash: 0000000000000000000000000000000000000000
+// CHKBC-NEXT:  Bytecode version number: {{.*}}
+// CHKBC-NEXT:  Source hash: {{.*}}
 // CHKBC-NEXT:  Function count: 2
 // CHKBC-NEXT:  String count: 3
 // CHKBC-NEXT:  BigInt count: 0
@@ -68,7 +70,7 @@ function foo() {
 // CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Function<foo>(1 params, 1 registers, 0 symbols):
-// CHKBC-NEXT:Offset in debug table: source 0x0007, lexical 0x0000
+// CHKBC-NEXT:Offset in debug table: source 0x000d, lexical 0x0000
 // CHKBC-NEXT:    GetGlobalObject   r0
 // CHKBC-NEXT:    GetByIdShort      r0, r0, 1, "x"
 // CHKBC-NEXT:    Ret               r0
@@ -81,10 +83,12 @@ function foo() {
 
 // CHKBC:Debug source table:
 // CHKBC-NEXT:  0x0000  function idx 0, starts at line 11 col 1
+// CHKBC-NEXT:    bc 0: line 11 col 1
+// CHKBC-NEXT:    bc 5: line 11 col 1
 // CHKBC-NEXT:    bc 19: line 11 col 1
-// CHKBC-NEXT:  0x0007  function idx 1, starts at line 13 col 1
+// CHKBC-NEXT:  0x000d  function idx 1, starts at line 13 col 1
 // CHKBC-NEXT:    bc 2: line 14 col 10
-// CHKBC-NEXT:  0x000e  end of debug source table
+// CHKBC-NEXT:  0x0014  end of debug source table
 
 // CHKBC:Debug lexical table:
 // CHKBC-NEXT:  0x0000  lexical parent: none, variable count: 0

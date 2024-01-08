@@ -28,72 +28,75 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHKRA:function global()
-// CHKRA-NEXT:frame = [], globals = [foo, shadows, checkNonStaticBuiltin]
-// CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  %0 = HBCCreateEnvironmentInst
-// CHKRA-NEXT:  %1 = HBCCreateFunctionInst %foo(), %0
-// CHKRA-NEXT:  %2 = HBCGetGlobalObjectInst
-// CHKRA-NEXT:  %3 = StorePropertyLooseInst %1 : closure, %2 : object, "foo" : string
-// CHKRA-NEXT:  %4 = HBCCreateFunctionInst %shadows() : undefined, %0
-// CHKRA-NEXT:  %5 = StorePropertyLooseInst %4 : closure, %2 : object, "shadows" : string
-// CHKRA-NEXT:  %6 = HBCCreateFunctionInst %checkNonStaticBuiltin() : undefined, %0
-// CHKRA-NEXT:  %7 = StorePropertyLooseInst %6 : closure, %2 : object, "checkNonStaticBuiltin" : string
-// CHKRA-NEXT:  %8 = TryLoadGlobalPropertyInst %2 : object, "print" : string
-// CHKRA-NEXT:  %9 = LoadPropertyInst %2 : object, "foo" : string
-// CHKRA-NEXT:  %10 = HBCLoadConstInst undefined : undefined
-// CHKRA-NEXT:  %11 = HBCAllocObjectFromBufferInst 4 : number, "a" : string, 10 : number, "b" : string, 20 : number, "lastKey" : string, 30 : number, 5 : number, 6 : number
-// CHKRA-NEXT:  %12 = ImplicitMovInst %10 : undefined
-// CHKRA-NEXT:  %13 = ImplicitMovInst %11 : object
-// CHKRA-NEXT:  %14 = HBCCallNInst %9, empty, empty, %10 : undefined, %11 : object
-// CHKRA-NEXT:  %15 = ImplicitMovInst %10 : undefined
-// CHKRA-NEXT:  %16 = ImplicitMovInst %14
-// CHKRA-NEXT:  %17 = HBCCallNInst %8, empty, empty, %10 : undefined, %14
-// CHKRA-NEXT:  %18 = ReturnInst %17
-// CHKRA-NEXT:function_end
-
-// CHKRA:function foo(x)
+// CHKRA:function global(): any
 // CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  %0 = LoadParamInst %x
-// CHKRA-NEXT:  %1 = ImplicitMovInst undefined : undefined
-// CHKRA-NEXT:  %2 = CallBuiltinInst [Object.keys] : number, empty, empty, undefined : undefined, %0
-// CHKRA-NEXT:  %3 = ReturnInst %2
+// CHKRA-NEXT:  $Reg1 = HBCCreateEnvironmentInst (:any)
+// CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "foo": string
+// CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "shadows": string
+// CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "checkNonStaticBuiltin": string
+// CHKRA-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %foo(): any, $Reg1
+// CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg0, "foo": string
+// CHKRA-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %shadows(): undefined, $Reg1
+// CHKRA-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg0, "shadows": string
+// CHKRA-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %checkNonStaticBuiltin(): undefined, $Reg1
+// CHKRA-NEXT:  $Reg1 = StorePropertyLooseInst $Reg1, $Reg0, "checkNonStaticBuiltin": string
+// CHKRA-NEXT:  $Reg2 = TryLoadGlobalPropertyInst (:any) $Reg0, "print": string
+// CHKRA-NEXT:  $Reg3 = LoadPropertyInst (:any) $Reg0, "foo": string
+// CHKRA-NEXT:  $Reg1 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKRA-NEXT:  $Reg0 = HBCAllocObjectFromBufferInst (:object) 4: number, "a": string, 10: number, "b": string, 20: number, "lastKey": string, 30: number, 5: number, 6: number
+// CHKRA-NEXT:  $Reg5 = ImplicitMovInst (:undefined) $Reg1
+// CHKRA-NEXT:  $Reg4 = ImplicitMovInst (:object) $Reg0
+// CHKRA-NEXT:  $Reg0 = HBCCallNInst (:any) $Reg3, empty: any, empty: any, $Reg1, $Reg1, $Reg0
+// CHKRA-NEXT:  $Reg5 = ImplicitMovInst (:undefined) $Reg1
+// CHKRA-NEXT:  $Reg4 = ImplicitMovInst (:any) $Reg0
+// CHKRA-NEXT:  $Reg0 = HBCCallNInst (:any) $Reg2, empty: any, empty: any, $Reg1, $Reg1, $Reg0
+// CHKRA-NEXT:  $Reg0 = ReturnInst $Reg0
 // CHKRA-NEXT:function_end
 
-// CHKRA:function shadows() : undefined
+// CHKRA:function foo(x: any): any
 // CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  %0 = HBCGetGlobalObjectInst
-// CHKRA-NEXT:  %1 = TryLoadGlobalPropertyInst %0 : object, "print" : string
-// CHKRA-NEXT:  %2 = AllocObjectInst 1 : number, empty
-// CHKRA-NEXT:  %3 = StoreNewOwnPropertyInst %1, %2 : object, "keys" : string, true : boolean
-// CHKRA-NEXT:  %4 = LoadPropertyInst %2 : object, "keys" : string
-// CHKRA-NEXT:  %5 = HBCLoadConstInst "evil" : string
-// CHKRA-NEXT:  %6 = ImplicitMovInst %2 : object
-// CHKRA-NEXT:  %7 = ImplicitMovInst %5 : string
-// CHKRA-NEXT:  %8 = HBCCallNInst %4, empty, empty, %2 : object, %5 : string
-// CHKRA-NEXT:  %9 = HBCLoadConstInst undefined : undefined
-// CHKRA-NEXT:  %10 = ReturnInst %9 : undefined
+// CHKRA-NEXT:  $Reg1 = LoadParamInst (:any) %x: any
+// CHKRA-NEXT:  $Reg2 = ImplicitMovInst (:undefined) undefined: undefined
+// CHKRA-NEXT:  $Reg0 = CallBuiltinInst (:any) [Object.keys]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, $Reg1
+// CHKRA-NEXT:  $Reg0 = ReturnInst $Reg0
 // CHKRA-NEXT:function_end
 
-// CHKRA:function checkNonStaticBuiltin() : undefined
+// CHKRA:function shadows(): undefined
 // CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  %0 = HBCGetGlobalObjectInst
-// CHKRA-NEXT:  %1 = TryLoadGlobalPropertyInst %0 : object, "HermesInternal" : string
-// CHKRA-NEXT:  %2 = LoadPropertyInst %1, "concat" : string
-// CHKRA-NEXT:  %3 = HBCLoadConstInst "hello" : string
-// CHKRA-NEXT:  %4 = ImplicitMovInst %1
-// CHKRA-NEXT:  %5 = ImplicitMovInst %3 : string
-// CHKRA-NEXT:  %6 = HBCCallNInst %2, empty, empty, %1, %3 : string
-// CHKRA-NEXT:  %7 = HBCLoadConstInst undefined : undefined
-// CHKRA-NEXT:  %8 = ReturnInst %7 : undefined
+// CHKRA-NEXT:  $Reg3 = AllocObjectInst (:object) 1: number, empty: any
+// CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  $Reg0 = TryLoadGlobalPropertyInst (:any) $Reg0, "print": string
+// CHKRA-NEXT:  $Reg0 = StoreNewOwnPropertyInst $Reg0, $Reg3, "keys": string, true: boolean
+// CHKRA-NEXT:  $Reg2 = LoadPropertyInst (:any) $Reg3, "keys": string
+// CHKRA-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKRA-NEXT:  $Reg1 = HBCLoadConstInst (:string) "evil": string
+// CHKRA-NEXT:  $Reg5 = ImplicitMovInst (:object) $Reg3
+// CHKRA-NEXT:  $Reg4 = ImplicitMovInst (:string) $Reg1
+// CHKRA-NEXT:  $Reg1 = HBCCallNInst (:any) $Reg2, empty: any, empty: any, $Reg0, $Reg3, $Reg1
+// CHKRA-NEXT:  $Reg0 = ReturnInst $Reg0
+// CHKRA-NEXT:function_end
+
+// CHKRA:function checkNonStaticBuiltin(): undefined
+// CHKRA-NEXT:frame = []
+// CHKRA-NEXT:%BB0:
+// CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  $Reg3 = TryLoadGlobalPropertyInst (:any) $Reg0, "HermesInternal": string
+// CHKRA-NEXT:  $Reg2 = LoadPropertyInst (:any) $Reg3, "concat": string
+// CHKRA-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKRA-NEXT:  $Reg1 = HBCLoadConstInst (:string) "hello": string
+// CHKRA-NEXT:  $Reg5 = ImplicitMovInst (:any) $Reg3
+// CHKRA-NEXT:  $Reg4 = ImplicitMovInst (:string) $Reg1
+// CHKRA-NEXT:  $Reg1 = HBCCallNInst (:any) $Reg2, empty: any, empty: any, $Reg0, $Reg3, $Reg1
+// CHKRA-NEXT:  $Reg0 = ReturnInst $Reg0
 // CHKRA-NEXT:function_end
 
 // CHKBC:Bytecode File Information:
-// CHKBC-NEXT:  Bytecode version number: 90
-// CHKBC-NEXT:  Source hash: 0000000000000000000000000000000000000000
+// CHKBC-NEXT:  Bytecode version number: {{.*}}
+// CHKBC-NEXT:  Source hash: {{.*}}
 // CHKBC-NEXT:  Function count: 4
 // CHKBC-NEXT:  String count: 13
 // CHKBC-NEXT:  BigInt count: 0
@@ -132,12 +135,12 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:[int 20]
 // CHKBC-NEXT:[int 30]
 // CHKBC-NEXT:[int 6]
-// CHKBC-NEXT:Function<global>(1 params, 12 registers, 0 symbols):
+// CHKBC-NEXT:Function<global>(1 params, 13 registers, 0 symbols):
 // CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHKBC-NEXT:    CreateEnvironment r1
 // CHKBC-NEXT:    DeclareGlobalVar  "foo"
 // CHKBC-NEXT:    DeclareGlobalVar  "shadows"
 // CHKBC-NEXT:    DeclareGlobalVar  "checkNonStaticBui"...
-// CHKBC-NEXT:    CreateEnvironment r1
 // CHKBC-NEXT:    CreateClosure     r2, r1, Function<foo>
 // CHKBC-NEXT:    GetGlobalObject   r0
 // CHKBC-NEXT:    PutByIdLoose      r0, r2, 1, "foo"
@@ -153,32 +156,32 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:    Call2             r0, r2, r1, r0
 // CHKBC-NEXT:    Ret               r0
 
-// CHKBC:Function<foo>(2 params, 9 registers, 0 symbols):
-// CHKBC-NEXT:Offset in debug table: source 0x0019, lexical 0x0000
+// CHKBC:Function<foo>(2 params, 10 registers, 0 symbols):
+// CHKBC-NEXT:Offset in debug table: source 0x0022, lexical 0x0000
 // CHKBC-NEXT:    LoadParam         r1, 1
 // CHKBC-NEXT:    CallBuiltin       r0, "Object.keys", 2
 // CHKBC-NEXT:    Ret               r0
 
-// CHKBC:Function<shadows>(1 params, 11 registers, 0 symbols):
-// CHKBC-NEXT:Offset in debug table: source 0x0020, lexical 0x0000
+// CHKBC:Function<shadows>(1 params, 13 registers, 0 symbols):
+// CHKBC-NEXT:Offset in debug table: source 0x0029, lexical 0x0000
+// CHKBC-NEXT:    NewObject         r3
 // CHKBC-NEXT:    GetGlobalObject   r0
 // CHKBC-NEXT:    TryGetById        r0, r0, 1, "print"
-// CHKBC-NEXT:    NewObject         r2
-// CHKBC-NEXT:    PutNewOwnByIdShort r2, r0, "keys"
-// CHKBC-NEXT:    GetByIdShort      r1, r2, 2, "keys"
-// CHKBC-NEXT:    LoadConstString   r0, "evil"
-// CHKBC-NEXT:    Call2             r0, r1, r2, r0
+// CHKBC-NEXT:    PutNewOwnByIdShort r3, r0, "keys"
+// CHKBC-NEXT:    GetByIdShort      r2, r3, 2, "keys"
 // CHKBC-NEXT:    LoadConstUndefined r0
+// CHKBC-NEXT:    LoadConstString   r1, "evil"
+// CHKBC-NEXT:    Call2             r1, r2, r3, r1
 // CHKBC-NEXT:    Ret               r0
 
-// CHKBC:Function<checkNonStaticBuiltin>(1 params, 11 registers, 0 symbols):
-// CHKBC-NEXT:Offset in debug table: source 0x0030, lexical 0x0000
+// CHKBC:Function<checkNonStaticBuiltin>(1 params, 13 registers, 0 symbols):
+// CHKBC-NEXT:Offset in debug table: source 0x0039, lexical 0x0000
 // CHKBC-NEXT:    GetGlobalObject   r0
-// CHKBC-NEXT:    TryGetById        r2, r0, 1, "HermesInternal"
-// CHKBC-NEXT:    GetByIdShort      r1, r2, 2, "concat"
-// CHKBC-NEXT:    LoadConstString   r0, "hello"
-// CHKBC-NEXT:    Call2             r0, r1, r2, r0
+// CHKBC-NEXT:    TryGetById        r3, r0, 1, "HermesInternal"
+// CHKBC-NEXT:    GetByIdShort      r2, r3, 2, "concat"
 // CHKBC-NEXT:    LoadConstUndefined r0
+// CHKBC-NEXT:    LoadConstString   r1, "hello"
+// CHKBC-NEXT:    Call2             r1, r2, r3, r1
 // CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Debug filename table:
@@ -189,6 +192,9 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 
 // CHKBC:Debug source table:
 // CHKBC-NEXT:  0x0000  function idx 0, starts at line 12 col 1
+// CHKBC-NEXT:    bc 2: line 12 col 1
+// CHKBC-NEXT:    bc 7: line 12 col 1
+// CHKBC-NEXT:    bc 12: line 12 col 1
 // CHKBC-NEXT:    bc 24: line 12 col 1
 // CHKBC-NEXT:    bc 35: line 12 col 1
 // CHKBC-NEXT:    bc 46: line 12 col 1
@@ -196,18 +202,18 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:    bc 58: line 26 col 7
 // CHKBC-NEXT:    bc 75: line 26 col 10
 // CHKBC-NEXT:    bc 80: line 26 col 6
-// CHKBC-NEXT:  0x0019  function idx 1, starts at line 12 col 1
+// CHKBC-NEXT:  0x0022  function idx 1, starts at line 12 col 1
 // CHKBC-NEXT:    bc 3: line 13 col 23
-// CHKBC-NEXT:  0x0020  function idx 2, starts at line 17 col 1
-// CHKBC-NEXT:    bc 2: line 18 col 25
+// CHKBC-NEXT:  0x0029  function idx 2, starts at line 17 col 1
+// CHKBC-NEXT:    bc 4: line 18 col 25
 // CHKBC-NEXT:    bc 10: line 18 col 18
 // CHKBC-NEXT:    bc 14: line 19 col 16
-// CHKBC-NEXT:    bc 23: line 19 col 16
-// CHKBC-NEXT:  0x0030  function idx 3, starts at line 22 col 1
+// CHKBC-NEXT:    bc 25: line 19 col 16
+// CHKBC-NEXT:  0x0039  function idx 3, starts at line 22 col 1
 // CHKBC-NEXT:    bc 2: line 23 col 3
 // CHKBC-NEXT:    bc 8: line 23 col 24
-// CHKBC-NEXT:    bc 17: line 23 col 24
-// CHKBC-NEXT:  0x003d  end of debug source table
+// CHKBC-NEXT:    bc 19: line 23 col 24
+// CHKBC-NEXT:  0x0046  end of debug source table
 
 // CHKBC:Debug lexical table:
 // CHKBC-NEXT:  0x0000  lexical parent: none, variable count: 0

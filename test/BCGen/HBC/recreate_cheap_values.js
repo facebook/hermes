@@ -16,3 +16,46 @@ function poszero(f) {
 function negzero(f) {
   return f(-0.0, -0.0);
 }
+
+// Auto-generated content below. Please do not modify manually.
+
+// CHECK:function global(): undefined
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  $Reg0 = HBCCreateEnvironmentInst (:any)
+// CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "poszero": string
+// CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "negzero": string
+// CHECK-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %poszero(): any, $Reg0
+// CHECK-NEXT:  $Reg1 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg1, "poszero": string
+// CHECK-NEXT:  $Reg0 = HBCCreateFunctionInst (:object) %negzero(): any, $Reg0
+// CHECK-NEXT:  $Reg0 = StorePropertyLooseInst $Reg0, $Reg1, "negzero": string
+// CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
+// CHECK-NEXT:function_end
+
+// CHECK:function poszero(f: any): any
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  $Reg2 = LoadParamInst (:any) %f: any
+// CHECK-NEXT:  $Reg1 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:number) 0: number
+// CHECK-NEXT:  $Reg5 = ImplicitMovInst (:undefined) $Reg1
+// CHECK-NEXT:  $Reg4 = ImplicitMovInst (:number) $Reg0
+// CHECK-NEXT:  $Reg3 = ImplicitMovInst (:number) $Reg0
+// CHECK-NEXT:  $Reg0 = HBCCallNInst (:any) $Reg2, empty: any, empty: any, $Reg1, $Reg1, $Reg0, $Reg0
+// CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
+// CHECK-NEXT:function_end
+
+// CHECK:function negzero(f: any): any
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  $Reg2 = LoadParamInst (:any) %f: any
+// CHECK-NEXT:  $Reg1 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:number) -0: number
+// CHECK-NEXT:  $Reg5 = ImplicitMovInst (:undefined) $Reg1
+// CHECK-NEXT:  $Reg4 = ImplicitMovInst (:number) $Reg0
+// CHECK-NEXT:  $Reg3 = ImplicitMovInst (:number) $Reg0
+// CHECK-NEXT:  $Reg0 = HBCCallNInst (:any) $Reg2, empty: any, empty: any, $Reg1, $Reg1, $Reg0, $Reg0
+// CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
+// CHECK-NEXT:function_end

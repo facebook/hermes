@@ -15,48 +15,52 @@ function foo(x) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [sink, foo]
+// CHECK:function global(): any
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0           	%0 = HBCCreateEnvironmentInst
-// CHECK-NEXT:  $Reg1           	%1 = HBCGetGlobalObjectInst
-// CHECK-NEXT:  $Reg2           	%2 = HBCLoadConstInst undefined : undefined
-// CHECK-NEXT:  $Reg3           	%3 = HBCCreateFunctionInst %sink(), %0
-// CHECK-NEXT:  $Reg4           	%4 = StorePropertyLooseInst %3 : closure, %1 : object, "sink" : string
-// CHECK-NEXT:  $Reg4           	%5 = HBCCreateFunctionInst %foo(), %0
-// CHECK-NEXT:  $Reg5           	%6 = StorePropertyLooseInst %5 : closure, %1 : object, "foo" : string
-// CHECK-NEXT:  $Reg5           	%7 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  $Reg6           	%8 = StoreStackInst %2 : undefined, %7
-// CHECK-NEXT:  $Reg6           	%9 = LoadStackInst %7
-// CHECK-NEXT:  $Reg7           	%10 = ReturnInst %9
+// CHECK-NEXT:  $Reg0 = HBCCreateEnvironmentInst (:any)
+// CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "sink": string
+// CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "foo": string
+// CHECK-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %sink(): any, $Reg0
+// CHECK-NEXT:  $Reg2 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  $Reg3 = StorePropertyLooseInst $Reg1, $Reg2, "sink": string
+// CHECK-NEXT:  $Reg3 = HBCCreateFunctionInst (:object) %foo(): any, $Reg0
+// CHECK-NEXT:  $Reg4 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  $Reg5 = StorePropertyLooseInst $Reg3, $Reg4, "foo": string
+// CHECK-NEXT:  $Reg5 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  $Reg6 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  $Reg7 = StoreStackInst $Reg6, $Reg5
+// CHECK-NEXT:  $Reg7 = LoadStackInst (:any) $Reg5
+// CHECK-NEXT:  $Reg8 = ReturnInst $Reg7
 // CHECK-NEXT:function_end
 
-// CHECK:function sink(x, y, z)
-// CHECK-NEXT:frame = [x, y, z]
+// CHECK:function sink(x: any, y: any, z: any): any
+// CHECK-NEXT:frame = [x: any, y: any, z: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0           	%0 = HBCCreateEnvironmentInst
-// CHECK-NEXT:  $Reg1           	%1 = HBCLoadConstInst undefined : undefined
-// CHECK-NEXT:  $Reg2           	%2 = LoadParamInst %x
-// CHECK-NEXT:  $Reg3           	%3 = HBCStoreToEnvironmentInst %0, %2, [x]
-// CHECK-NEXT:  $Reg3           	%4 = LoadParamInst %y
-// CHECK-NEXT:  $Reg4           	%5 = HBCStoreToEnvironmentInst %0, %4, [y]
-// CHECK-NEXT:  $Reg4           	%6 = LoadParamInst %z
-// CHECK-NEXT:  $Reg5           	%7 = HBCStoreToEnvironmentInst %0, %6, [z]
-// CHECK-NEXT:  $Reg5           	%8 = ReturnInst %1 : undefined
+// CHECK-NEXT:  $Reg0 = HBCCreateEnvironmentInst (:any)
+// CHECK-NEXT:  $Reg1 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  $Reg2 = HBCStoreToEnvironmentInst $Reg0, $Reg1, [x]: any
+// CHECK-NEXT:  $Reg2 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  $Reg3 = HBCStoreToEnvironmentInst $Reg0, $Reg2, [y]: any
+// CHECK-NEXT:  $Reg3 = LoadParamInst (:any) %z: any
+// CHECK-NEXT:  $Reg4 = HBCStoreToEnvironmentInst $Reg0, $Reg3, [z]: any
+// CHECK-NEXT:  $Reg4 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  $Reg5 = ReturnInst $Reg4
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(x)
-// CHECK-NEXT:frame = [x]
+// CHECK:function foo(x: any): any
+// CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0           	%0 = HBCCreateEnvironmentInst
-// CHECK-NEXT:  $Reg1           	%1 = HBCLoadConstInst 1 : number
-// CHECK-NEXT:  $Reg2           	%2 = HBCLoadConstInst 2 : number
-// CHECK-NEXT:  $Reg3           	%3 = HBCLoadConstInst 3 : number
-// CHECK-NEXT:  $Reg4           	%4 = HBCLoadConstInst undefined : undefined
-// CHECK-NEXT:  $Reg5           	%5 = LoadParamInst %x
-// CHECK-NEXT:  $Reg6           	%6 = HBCStoreToEnvironmentInst %0, %5, [x]
-// CHECK-NEXT:  $Reg6           	%7 = HBCLoadFromEnvironmentInst %0, [x]
-// CHECK-NEXT:  $Reg7           	%8 = LoadPropertyInst %7, "sink" : string
-// CHECK-NEXT:  $Reg8           	%9 = CallInst %8, empty, empty, %7, %1 : number, %2 : number, %3 : number
-// CHECK-NEXT:  $Reg8           	%10 = ReturnInst %4 : undefined
+// CHECK-NEXT:  $Reg0 = HBCCreateEnvironmentInst (:any)
+// CHECK-NEXT:  $Reg1 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  $Reg2 = HBCStoreToEnvironmentInst $Reg0, $Reg1, [x]: any
+// CHECK-NEXT:  $Reg2 = HBCLoadFromEnvironmentInst (:any) $Reg0, [x]: any
+// CHECK-NEXT:  $Reg3 = LoadPropertyInst (:any) $Reg2, "sink": string
+// CHECK-NEXT:  $Reg4 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  $Reg5 = HBCLoadConstInst (:number) 1: number
+// CHECK-NEXT:  $Reg6 = HBCLoadConstInst (:number) 2: number
+// CHECK-NEXT:  $Reg7 = HBCLoadConstInst (:number) 3: number
+// CHECK-NEXT:  $Reg8 = HBCCallNInst (:any) $Reg3, empty: any, empty: any, $Reg4, $Reg2, $Reg5, $Reg6, $Reg7
+// CHECK-NEXT:  $Reg8 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  $Reg9 = ReturnInst $Reg8
 // CHECK-NEXT:function_end

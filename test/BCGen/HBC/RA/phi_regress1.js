@@ -39,49 +39,51 @@ print(glob);
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHKRA:function global()
-// CHKRA-NEXT:frame = [], globals = [glob, bad]
-// CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCCreateEnvironmentInst
-// CHKRA-NEXT:  $Reg1 @1 [2...4) 	%1 = HBCCreateFunctionInst %bad() : null, %0
-// CHKRA-NEXT:  $Reg0 @2 [3...15) 	%2 = HBCGetGlobalObjectInst
-// CHKRA-NEXT:  $Reg1 @3 [empty]	%3 = StorePropertyLooseInst %1 : closure, %2 : object, "bad" : string
-// CHKRA-NEXT:  $Reg4 @4 [5...10) 	%4 = HBCLoadConstInst null : null
-// CHKRA-NEXT:  $Reg1 @5 [empty]	%5 = StorePropertyLooseInst %4 : null, %2 : object, "glob" : string
-// CHKRA-NEXT:  $Reg3 @6 [7...10) 	%6 = LoadPropertyInst %2 : object, "bad" : string
-// CHKRA-NEXT:  $Reg2 @7 [8...16) 	%7 = HBCLoadConstInst undefined : undefined
-// CHKRA-NEXT:  $Reg1 @8 [9...10) 	%8 = HBCLoadConstInst "foo" : string
-// CHKRA-NEXT:  $Reg1 @9 [empty]	%9 = HBCCallNInst %6, empty, empty, %7 : undefined, %8 : string, %4 : null
-// CHKRA-NEXT:  $Reg3 @10 [11...13) 	%10 = TryLoadGlobalPropertyInst %2 : object, "print" : string
-// CHKRA-NEXT:  $Reg1 @11 [12...13) 	%11 = HBCLoadConstInst "phi" : string
-// CHKRA-NEXT:  $Reg1 @12 [empty]	%12 = HBCCallNInst %10, empty, empty, %7 : undefined, %11 : string
-// CHKRA-NEXT:  $Reg1 @13 [14...16) 	%13 = TryLoadGlobalPropertyInst %2 : object, "print" : string
-// CHKRA-NEXT:  $Reg0 @14 [15...16) 	%14 = LoadPropertyInst %2 : object, "glob" : string
-// CHKRA-NEXT:  $Reg0 @15 [16...17) 	%15 = HBCCallNInst %13, empty, empty, %7 : undefined, %14
-// CHKRA-NEXT:  $Reg0 @16 [empty]	%16 = ReturnInst %15
-// CHKRA-NEXT:function_end
-
-// CHKRA:function bad(param1, param2) : null
+// CHKRA:function global(): any
 // CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  $Reg3 @0 [1...12) 	%0 = HBCLoadConstInst 0 : number
-// CHKRA-NEXT:  $Reg2 @1 [2...4) 	%1 = LoadParamInst %param1
-// CHKRA-NEXT:  $Reg0 @2 [3...12) 	%2 = LoadParamInst %param2
-// CHKRA-NEXT:  $Reg2 @3 [4...6) 	%3 = MovInst %1
-// CHKRA-NEXT:  $Reg1 @4 [empty]	%4 = BranchInst %BB1
+// CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "glob": string
+// CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "bad": string
+// CHKRA-NEXT:  $Reg0 = HBCCreateEnvironmentInst (:any)
+// CHKRA-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %bad(): null, $Reg0
+// CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  $Reg1 = StorePropertyLooseInst $Reg1, $Reg0, "bad": string
+// CHKRA-NEXT:  $Reg4 = HBCLoadConstInst (:null) null: null
+// CHKRA-NEXT:  $Reg1 = StorePropertyLooseInst $Reg4, $Reg0, "glob": string
+// CHKRA-NEXT:  $Reg3 = LoadPropertyInst (:any) $Reg0, "bad": string
+// CHKRA-NEXT:  $Reg2 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKRA-NEXT:  $Reg1 = HBCLoadConstInst (:string) "foo": string
+// CHKRA-NEXT:  $Reg1 = HBCCallNInst (:any) $Reg3, empty: any, empty: any, $Reg2, $Reg2, $Reg1, $Reg4
+// CHKRA-NEXT:  $Reg3 = TryLoadGlobalPropertyInst (:any) $Reg0, "print": string
+// CHKRA-NEXT:  $Reg1 = HBCLoadConstInst (:string) "phi": string
+// CHKRA-NEXT:  $Reg1 = HBCCallNInst (:any) $Reg3, empty: any, empty: any, $Reg2, $Reg2, $Reg1
+// CHKRA-NEXT:  $Reg1 = TryLoadGlobalPropertyInst (:any) $Reg0, "print": string
+// CHKRA-NEXT:  $Reg0 = LoadPropertyInst (:any) $Reg0, "glob": string
+// CHKRA-NEXT:  $Reg0 = HBCCallNInst (:any) $Reg1, empty: any, empty: any, $Reg2, $Reg2, $Reg0
+// CHKRA-NEXT:  $Reg0 = ReturnInst $Reg0
+// CHKRA-NEXT:function_end
+
+// CHKRA:function bad(param1: any, param2: any): null
+// CHKRA-NEXT:frame = []
+// CHKRA-NEXT:%BB0:
+// CHKRA-NEXT:  $Reg3 = LoadParamInst (:any) %param1: any
+// CHKRA-NEXT:  $Reg2 = LoadParamInst (:any) %param2: any
+// CHKRA-NEXT:  $Reg0 = HBCLoadConstInst (:number) 0: number
+// CHKRA-NEXT:  $Reg3 = MovInst (:any) $Reg3
+// CHKRA-NEXT:  $Reg1 = BranchInst %BB1
 // CHKRA-NEXT:%BB1:
-// CHKRA-NEXT:  $Reg2 @5 [2...7) [11...12) 	%5 = PhiInst %3, %BB0, %10, %BB2
-// CHKRA-NEXT:  $Reg1 @6 [7...14) 	%6 = MovInst %5
-// CHKRA-NEXT:  $Reg4 @7 [empty]	%7 = CondBranchInst %2, %BB3, %BB2
+// CHKRA-NEXT:  $Reg3 = PhiInst (:any) $Reg3, %BB0, $Reg3, %BB2
+// CHKRA-NEXT:  $Reg1 = MovInst (:any) $Reg3
+// CHKRA-NEXT:  $Reg4 = CondBranchInst $Reg2, %BB3, %BB2
 // CHKRA-NEXT:%BB3:
-// CHKRA-NEXT:  $Reg4 @8 [empty]	%8 = StorePropertyLooseInst %0 : number, %2, "foo" : string
-// CHKRA-NEXT:  $Reg4 @9 [empty]	%9 = BranchInst %BB2
+// CHKRA-NEXT:  $Reg4 = StorePropertyLooseInst $Reg0, $Reg2, "foo": string
+// CHKRA-NEXT:  $Reg4 = BranchInst %BB2
 // CHKRA-NEXT:%BB2:
-// CHKRA-NEXT:  $Reg2 @10 [11...12) 	%10 = MovInst %2
-// CHKRA-NEXT:  $Reg0 @11 [empty]	%11 = CondBranchInst %10, %BB1, %BB4
+// CHKRA-NEXT:  $Reg3 = MovInst (:any) $Reg2
+// CHKRA-NEXT:  $Reg0 = CondBranchInst $Reg3, %BB1, %BB4
 // CHKRA-NEXT:%BB4:
-// CHKRA-NEXT:  $Reg0 @12 [13...14) 	%12 = HBCGetGlobalObjectInst
-// CHKRA-NEXT:  $Reg0 @13 [empty]	%13 = StorePropertyLooseInst %6, %12 : object, "glob" : string
-// CHKRA-NEXT:  $Reg0 @14 [15...16) 	%14 = HBCLoadConstInst null : null
-// CHKRA-NEXT:  $Reg0 @15 [empty]	%15 = ReturnInst %14 : null
+// CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg0, "glob": string
+// CHKRA-NEXT:  $Reg0 = HBCLoadConstInst (:null) null: null
+// CHKRA-NEXT:  $Reg0 = ReturnInst $Reg0
 // CHKRA-NEXT:function_end

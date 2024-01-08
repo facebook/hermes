@@ -19,31 +19,32 @@ function foo (a, b) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
-// CHECK-NEXT:frame = [], globals = [foo]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCCreateEnvironmentInst
-// CHECK-NEXT:  $Reg1 @1 [2...4) 	%1 = HBCCreateFunctionInst %foo(), %0 @ $Reg0
-// CHECK-NEXT:  $Reg0 @2 [3...4) 	%2 = HBCGetGlobalObjectInst
-// CHECK-NEXT:  $Reg0 @3 [empty]	%3 = StorePropertyLooseInst %1 : closure @ $Reg1, %2 : object @ $Reg0, "foo" : string
-// CHECK-NEXT:  $Reg0 @4 [5...6) 	%4 = HBCLoadConstInst undefined : undefined
-// CHECK-NEXT:  $Reg0 @5 [empty]	%5 = ReturnInst %4 : undefined @ $Reg0
-// CHECK-NEXT:function_end
-
-// CHECK:function foo(a, b)
+// CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg1 @0 [1...3) 	%0 = LoadParamInst %a
-// CHECK-NEXT:  $Reg0 @1 [2...4) 	%1 = LoadParamInst %b
-// CHECK-NEXT:  $Reg1 @2 [3...6) 	%2 = MovInst %0 @ $Reg1
-// CHECK-NEXT:  $Reg0 @3 [4...7) 	%3 = MovInst %1 @ $Reg0
-// CHECK-NEXT:  $Reg2 @4 [empty]	%4 = BranchInst %BB1
+// CHECK-NEXT:  $Reg0 = DeclareGlobalVarInst "foo": string
+// CHECK-NEXT:  $Reg0 = HBCCreateEnvironmentInst (:any)
+// CHECK-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %foo(): any, $Reg0
+// CHECK-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg0, "foo": string
+// CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
+// CHECK-NEXT:function_end
+
+// CHECK:function foo(a: any, b: any): any
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  $Reg1 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:  $Reg0 = LoadParamInst (:any) %b: any
+// CHECK-NEXT:  $Reg1 = MovInst (:any) $Reg1
+// CHECK-NEXT:  $Reg0 = MovInst (:any) $Reg0
+// CHECK-NEXT:  $Reg2 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  $Reg1 @5 [1...8) [10...12) 	%5 = PhiInst %2 @ $Reg1, %BB0, %9 @ $Reg1, %BB1
-// CHECK-NEXT:  $Reg0 @6 [2...9) [11...12) 	%6 = PhiInst %3 @ $Reg0, %BB0, %10 @ $Reg0, %BB1
-// CHECK-NEXT:  $Reg2 @7 [8...11) 	%7 = MovInst %5 @ $Reg1
-// CHECK-NEXT:  $Reg0 @8 [2...10) [11...12) 	%8 = MovInst %6 @ $Reg0
-// CHECK-NEXT:  $Reg1 @9 [10...11) 	%9 = MovInst %8 @ $Reg0
-// CHECK-NEXT:  $Reg0 @10 [empty]	%10 = MovInst %7 @ $Reg2
-// CHECK-NEXT:  $Reg0 @11 [empty]	%11 = BranchInst %BB1
+// CHECK-NEXT:  $Reg1 = PhiInst (:any) $Reg1, %BB0, $Reg1, %BB1
+// CHECK-NEXT:  $Reg0 = PhiInst (:any) $Reg0, %BB0, $Reg0, %BB1
+// CHECK-NEXT:  $Reg2 = MovInst (:any) $Reg1
+// CHECK-NEXT:  $Reg0 = MovInst (:any) $Reg0
+// CHECK-NEXT:  $Reg1 = MovInst (:any) $Reg0
+// CHECK-NEXT:  $Reg0 = MovInst (:any) $Reg2
+// CHECK-NEXT:  $Reg0 = BranchInst %BB1
 // CHECK-NEXT:function_end
