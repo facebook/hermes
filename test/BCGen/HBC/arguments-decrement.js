@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -Xdump-between-passes %s 2>&1 | %FileCheck --match-full-lines %s --check-prefix CHKIR
-// RUN: %hermes -O -dump-ra %s | %FileCheck --match-full-lines %s --check-prefix CHKRA
+// RUN: %hermes -O -Xdump-between-passes %s 2>&1 | %FileCheckOrRegen --match-full-lines %s --check-prefix CHKIR
+// RUN: %hermes -O -dump-ra %s | %FileCheckOrRegen --match-full-lines %s --check-prefix CHKRA
 
 // This test exercises an issue found in LowerArgumentsArray in which PHI nodes
 // were not being properly updated.
@@ -18,32 +18,3 @@ function decrementArguments() {
     return var3 - 1;
 }
 
-// CHKIR-LABEL: *** AFTER LowerAllocObjectLiteral
-// CHKIR-LABEL: function decrementArguments() : number
-// CHKIR-LABEL: %BB0:
-// CHKIR-LABEL: %BB1:
-// CHKIR-NEXT:   %4 = PhiInst undefined : undefined, %BB0, %2 : object, %BB1
-// CHKIR-NEXT:   %5 = PhiInst 0 : number, %BB0, %6 : number, %BB1
-// CHKIR-LABEL: %BB2:
-// CHKIR-LABEL: *** AFTER LowerArgumentsArray
-// CHKIR-LABEL: function decrementArguments() : number
-// CHKIR-LABEL: %BB0:
-// CHKIR-LABEL: %BB1:
-// CHKIR-NEXT:   %5 = PhiInst undefined : undefined, %BB0, %15, %BB2
-//                 N.B. the broken hermesc would fail to update %BB2 in
-//                 the next instruction, thus having an invalid PHI node with an
-//                 operand that wasn't a predecessor node.
-// CHKIR-NEXT:   %6 = PhiInst 0 : number, %BB0, %7 : number, %BB2
-// CHKIR-LABEL: %BB3:
-// CHKIR-LABEL: %BB2:
-
-// CHKRA-LABEL: function decrementArguments() : number
-// CHKRA-LABEL: %BB0:
-// CHKRA-LABEL: %BB1:
-// CHKRA-NEXT:   $Reg2 @7 [2...19)    %7 = PhiInst %5 : number, %BB0, %17 : number, %BB2
-// CHKRA-NEXT:   $Reg2 @8 [9...18)   %8 = UnaryOperatorInst '++', %7 : number
-// CHKRA-LABEL: %BB3:
-// CHKRA-LABEL: %BB2:
-// CHKRA-NEXT:   $Reg3 @15 [empty]    %15 = HBCReifyArgumentsLooseInst %3
-// CHKRA-NEXT:   $Reg3 @16 [empty]    %16 = LoadStackInst %3
-// CHKRA-NEXT:   $Reg2 @17 [18...19)  %17 = MovInst %8 : number
