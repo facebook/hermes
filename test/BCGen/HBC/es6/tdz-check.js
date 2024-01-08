@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -Xenable-tdz -O0 -target=HBC -dump-bytecode %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -Xenable-tdz -test262 -O0 -target=HBC -dump-bytecode %s | %FileCheck --match-full-lines %s
 
 function foo() {
     return x;
