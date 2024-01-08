@@ -832,6 +832,10 @@ bool SpillRegisters::runOnFunction(Function *F) {
         auto opRegister = RA_.getRegister(op);
 
         if (requiresShortOperand(&inst, i) && !isShort(opRegister)) {
+          // The check for if an instruction modifies an operand depends on the
+          // kind of the instruction the operand is. So, we need to compute this
+          // value before we replace the operand.
+          bool modifiesOp = modifiesOperandRegister(&inst, i);
           auto temp = getReserved(tempReg++);
 
           builder.setInsertionPoint(&inst);
@@ -839,7 +843,7 @@ bool SpillRegisters::runOnFunction(Function *F) {
           RA_.updateRegister(load, temp);
           inst.setOperand(load, i);
 
-          if (modifiesOperandRegister(&inst, i)) {
+          if (modifiesOp) {
             toSpill.push_back(
                 std::pair<Instruction *, Register>(load, opRegister));
           }
