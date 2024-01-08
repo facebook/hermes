@@ -164,6 +164,13 @@ class LowerThrowTypeError : public FunctionPass {
   bool runOnFunction(Function *F) override;
 };
 
+class LowerStringConcat : public FunctionPass {
+ public:
+  explicit LowerStringConcat() : FunctionPass("LowerStringConcat") {}
+  ~LowerStringConcat() override = default;
+  bool runOnFunction(Function *F) override;
+};
+
 } // namespace hermes
 
 #endif

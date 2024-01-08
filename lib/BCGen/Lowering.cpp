@@ -824,4 +824,32 @@ bool LowerThrowTypeError::runOnFunction(Function *F) {
   return changed;
 }
 
+bool LowerStringConcat::runOnFunction(Function *F) {
+  IRBuilder builder(F);
+  IRBuilder::InstructionDestroyer destroyer{};
+  bool changed = false;
+  for (BasicBlock &BB : *F) {
+    for (auto &I : BB) {
+      if (auto *SCI = llvh::dyn_cast<StringConcatInst>(&I)) {
+        builder.setInsertionPoint(SCI);
+        auto *firstString = SCI->getOperand(0);
+        CallInst::ArgumentList restOfStrings;
+        for (size_t i = 1, e = SCI->getNumOperands(); i < e; ++i) {
+          restOfStrings.push_back(SCI->getOperand(i));
+        }
+        auto *replace = builder.createCallInst(
+            builder.createLoadPropertyInst(
+                builder.createTryLoadGlobalPropertyInst("HermesInternal"),
+                "concat"),
+            builder.getLiteralUndefined(),
+            firstString,
+            restOfStrings);
+        SCI->replaceAllUsesWith(replace);
+        destroyer.add(SCI);
+      }
+    }
+  }
+  return changed;
+}
+
 #undef DEBUG_TYPE
