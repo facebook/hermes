@@ -42,7 +42,6 @@
 using llvh::dbgs;
 using namespace hermes::inst;
 
-#if 0
 HERMES_SLOW_STATISTIC(
     NumGetById,
     "NumGetById: Number of property 'read by id' accesses");
@@ -92,7 +91,6 @@ HERMES_SLOW_STATISTIC(
 HERMES_SLOW_STATISTIC(
     NumPutByIdTransient,
     "NumPutByIdTransient: Number of property 'write by id' to non-objects");
-#endif
 
 HERMES_SLOW_STATISTIC(
     NumNativeFunctionCalls,
@@ -734,7 +732,6 @@ static bool isCallType(OpCode opcode) {
 
 #endif
 
-#if 0
 /// \return the address of the next instruction after \p ip, which must be a
 /// call-type instruction.
 LLVM_ATTRIBUTE_ALWAYS_INLINE
@@ -785,7 +782,6 @@ static inline const Inst *nextInstCall(const Inst *ip) {
   const uint8_t offset = static_cast<uint8_t>(ip->opCode) - firstCall;
   return IPADD(((callSizes >> (offset * W)) & mask) + minSize);
 }
-#endif
 
 CallResult<HermesValue> Runtime::interpretFunctionImpl(
     CodeBlock *newCodeBlock) {
@@ -853,10 +849,6 @@ template <bool SingleStep, bool EnableCrashTrace>
 CallResult<HermesValue> Interpreter::interpretFunction(
     Runtime &runtime,
     InterpreterState &state) {
-  hermes_fatal("Interpreting HBC bytecode disabled in Static Hermes");
-
-#if 0
-
   // The interpreter is re-entrant and also saves/restores its IP via the
   // runtime whenever a call out is made (see the CAPTURE_IP_* macros). As such,
   // failure to preserve the IP across calls to interpreterFunction() disrupt
@@ -1185,24 +1177,24 @@ tailCall:
     DISPATCH;                                                            \
   }
 
-#define INCDECOP(name)                                                        \
-  CASE(name) {                                                                \
-    if (LLVM_LIKELY(O2REG(name).isNumber())) {                                \
-      O1REG(name) = HermesValue::encodeTrustedNumberValue(                    \
-          do##name(O2REG(name).getNumber()));                                 \
-      ip = NEXTINST(name);                                                    \
-      DISPATCH;                                                               \
-    }                                                                         \
-    CAPTURE_IP(                                                               \
-        res =                                                                 \
-            doIncDecOperSlowPath<do##name>(runtime, Handle<>(&O2REG(name)))); \
-    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {                   \
-      goto exception;                                                         \
-    }                                                                         \
-    O1REG(name) = *res;                                                       \
-    gcScope.flushToSmallCount(KEEP_HANDLES);                                  \
-    ip = NEXTINST(name);                                                      \
-    DISPATCH;                                                                 \
+#define INCDECOP(name)                                      \
+  CASE(name) {                                              \
+    if (LLVM_LIKELY(O2REG(name).isNumber())) {              \
+      O1REG(name) = HermesValue::encodeTrustedNumberValue(  \
+          do##name(O2REG(name).getNumber()));               \
+      ip = NEXTINST(name);                                  \
+      DISPATCH;                                             \
+    }                                                       \
+    CAPTURE_IP(                                             \
+        res = doIncDecOperSlowPath_RJS<do##name>(           \
+            runtime, Handle<>(&O2REG(name))));              \
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) { \
+      goto exception;                                       \
+    }                                                       \
+    O1REG(name) = *res;                                     \
+    gcScope.flushToSmallCount(KEEP_HANDLES);                \
+    ip = NEXTINST(name);                                    \
+    DISPATCH;                                               \
   }
 
 /// Implement a shift instruction with a fast path where both
@@ -1580,6 +1572,7 @@ tailCall:
           FRAME,
           ip,
           curCodeBlock,
+          /* SHLocals */ nullptr,
           callArgCount - 1,
           O2REG(Call),
           HermesValue::fromRaw(callNewTarget));
@@ -3306,7 +3299,8 @@ tailCall:
           LoadConstUInt8,
           HermesValue::encodeTrustedNumberValue(ip->iLoadConstUInt8.op2));
       LOAD_CONST(
-          LoadConstInt, HermesValue::encodeTrustedNumberValue(ip->iLoadConstInt.op2));
+          LoadConstInt,
+          HermesValue::encodeTrustedNumberValue(ip->iLoadConstInt.op2));
       LOAD_CONST(
           LoadConstDouble,
           HermesValue::encodeTrustedNumberValue(ip->iLoadConstDouble.op2));
@@ -3576,8 +3570,6 @@ tailCall:
 
     ip = IPADD(handlerOffset - CUROFFSET);
   }
-
-#endif // 0
 }
 
 } // namespace vm
