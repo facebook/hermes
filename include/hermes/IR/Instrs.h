@@ -4072,8 +4072,8 @@ class ResumeGeneratorInst : public Instruction {
     return SideEffect::createUnknown().setWriteStack();
   }
 
-  AllocStackInst *getIsReturn() {
-    return llvh::cast<AllocStackInst>(getOperand(IsReturnIdx));
+  Value *getIsReturn() {
+    return getOperand(IsReturnIdx);
   }
 
   static bool classof(const Value *V) {
