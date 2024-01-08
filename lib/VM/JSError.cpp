@@ -84,7 +84,7 @@ errorStackGetter(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto errorHandle = *errorHandleRes;
-  if (!errorHandle->nativeStacktrace_ && !errorHandle->stacktrace_) {
+  if (!errorHandle->stacktrace_) {
     // Stacktrace has not been set, we simply return empty string.
     // This is different from other VMs where stacktrace is created when
     // the error object is created. We only set it when the error
@@ -136,18 +136,10 @@ errorStackGetter(void *, Runtime &runtime, NativeArgs args) {
     }
     stackTraceFormatted = std::move(*prepareRes);
   } else {
-    if (errorHandle->nativeStacktrace_) {
-      if (JSError::constructNativeStackTraceString_RJS(
-              runtime, errorHandle, targetHandle, stack) ==
-          ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-    } else {
-      if (JSError::constructStackTraceString_RJS(
-              runtime, errorHandle, targetHandle, stack) ==
-          ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
+    if (JSError::constructStackTraceString_RJS(
+            runtime, errorHandle, targetHandle, stack) ==
+        ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
     }
 
     auto strRes = StringPrimitive::create(runtime, stack);
@@ -462,66 +454,13 @@ ExecutionStatus JSError::recordStackTrace(
     bool skipTopFrame,
     CodeBlock *codeBlock,
     const Inst *ip) {
-  if (true) {
-    JSError::recordNativeStackTrace(selfHandle, runtime, skipTopFrame);
-    return ExecutionStatus::RETURNED;
-  } else {
-    return JSError::recordInterpreterStackTrace(
-        selfHandle, runtime, skipTopFrame, codeBlock, ip);
-  }
-}
-
-void JSError::recordNativeStackTrace(
-    Handle<JSError> selfHandle,
-    Runtime &runtime,
-    bool skipTopFrame) {
-  selfHandle->nativeStacktrace_ = std::make_unique<NativeStackTrace>();
-  bool skip = skipTopFrame;
-  for (StackFramePtr cf : runtime.getStackFrames()) {
-    if (skip) {
-      skip = false;
-      continue;
-    }
-    // If the SHLocals is null, that means no location was set. This means
-    // this is probably a NativeFunction, e.g. JSLib. If the function does have
-    // source information, but the source location index is 0, then the current
-    // instruction has no source info.
-    const SHLocals *locals = cf.getSHLocals();
-    if (!locals || locals->src_location_idx == 0) {
-      selfHandle->nativeStacktrace_->push_back({nullptr, {}});
-    } else {
-      const SHUnit *unit = locals->unit;
-      uint32_t curLocIdx = locals->src_location_idx;
-      assert(
-          curLocIdx < unit->source_locations_size &&
-          "out of bounds access on source locations table");
-      SHSrcLoc curLoc = unit->source_locations[curLocIdx];
-      selfHandle->nativeStacktrace_->push_back({unit, curLoc});
-    }
-  }
-
-  auto funcNames = getCallStackFunctionNames(
-      runtime, skipTopFrame, selfHandle->nativeStacktrace_->size());
-  assert(
-      (!funcNames ||
-       funcNames->size() == selfHandle->nativeStacktrace_->size()) &&
-      "Function names and stack trace must have same size.");
-  selfHandle->funcNames_.set(runtime, *funcNames, runtime.getHeap());
-}
-
-ExecutionStatus JSError::recordInterpreterStackTrace(
-    Handle<JSError> selfHandle,
-    Runtime &runtime,
-    bool skipTopFrame,
-    CodeBlock *codeBlock,
-    const Inst *ip) {
   if (selfHandle->stacktrace_)
     return ExecutionStatus::RETURNED;
 
   auto frames = runtime.getStackFrames();
-
   // Check if the top frame is a JSFunction and we don't have the current
-  // CodeBlock, do nothing.
+  // CodeBlock, do nothing. The interpreter will call us again with the proper
+  // CodeBlock and IP.
   if (!skipTopFrame && !codeBlock && frames.begin() != frames.end() &&
       frames.begin()->getCalleeCodeBlock(runtime)) {
     return ExecutionStatus::RETURNED;
@@ -551,42 +490,73 @@ ExecutionStatus JSError::recordInterpreterStackTrace(
     return ArrayStorageSmall::push_back(domains, runtime, domain);
   };
 
+  auto tryAddNativeFrame = [&stack](const SHLocals *locals) {
+    if (locals && locals->src_location_idx != 0) {
+      const SHUnit *unit = locals->unit;
+      uint32_t curLocIdx = locals->src_location_idx;
+      assert(
+          curLocIdx < unit->source_locations_size &&
+          "out of bounds access on source locations table");
+      SHSrcLoc curLoc = unit->source_locations[curLocIdx];
+      stack->emplace_back(NativeStackTraceInfo(unit, curLoc));
+      return true;
+    }
+    return false;
+  };
+
   if (!skipTopFrame) {
     if (codeBlock) {
-      stack->emplace_back(codeBlock, codeBlock->getOffsetOf(ip));
+      stack->emplace_back(
+          BytecodeStackTraceInfo(codeBlock, codeBlock->getOffsetOf(ip)));
       if (LLVM_UNLIKELY(addDomain(codeBlock) == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
     } else {
-      stack->emplace_back(nullptr, 0);
+      if (!(frames.begin() != frames.end() &&
+            tryAddNativeFrame(runtime.getCurrentFrame().getSHLocals()))) {
+        stack->emplace_back(BytecodeStackTraceInfo(nullptr, 0));
+      }
     }
   }
 
   const StackFramePtr framesEnd = *runtime.getStackFrames().end();
 
-  // Fill in the call stack.
-  // Each stack frame tracks information about the caller.
+  // Fill in the call stack. Each element in the stack trace could be coming
+  // from either bytecode, native JS, or an unknown location. Use
+  // BytecodeStackTraceInfo(nullptr, 0) to denote the 'unknown' case.
   for (StackFramePtr cf : runtime.getStackFrames()) {
     CodeBlock *savedCodeBlock = cf.getSavedCodeBlock();
     const Inst *const savedIP = cf.getSavedIP();
-    // Go up one frame and get the callee code block but use the current
-    // frame's saved IP. This also allows us to account for bound functions,
-    // which have savedCodeBlock == nullptr in order to allow proper returns in
-    // the interpreter.
+    // Each bytecode stack frame tracks information about the caller. But, each
+    // native stack frame's SHLocals tracks information about the callee. This
+    // means when checking for a native frame, we should always look at the
+    // frame above to get the information.
+    const SHLocals *locals = nullptr;
     StackFramePtr prev = cf->getPreviousFrame();
     if (prev != framesEnd) {
+      // Go up one frame and get the callee code block but use the current
+      // frame's saved IP. This also allows us to account for bound functions,
+      // which have savedCodeBlock == nullptr in order to allow proper returns
+      // in the interpreter.
       if (CodeBlock *parentCB = prev->getCalleeCodeBlock(runtime)) {
         savedCodeBlock = parentCB;
       }
+      locals = prev->getSHLocals();
     }
     if (savedCodeBlock && savedIP) {
-      stack->emplace_back(savedCodeBlock, savedCodeBlock->getOffsetOf(savedIP));
+      stack->emplace_back(BytecodeStackTraceInfo(
+          savedCodeBlock, savedCodeBlock->getOffsetOf(savedIP)));
       if (LLVM_UNLIKELY(
               addDomain(savedCodeBlock) == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
     } else {
-      stack->emplace_back(nullptr, 0);
+      // We don't have info from a bytecode frame, so try to get the information
+      // as a native frame. If that also fails, it means we could be seeing a
+      // frame from JSLib. In that case, we don't have any source information.
+      if (!tryAddNativeFrame(locals)) {
+        stack->emplace_back(BytecodeStackTraceInfo(nullptr, 0));
+      }
     }
   }
   selfHandle->domains_.set(runtime, domains.get(), runtime.getHeap());
@@ -643,9 +613,11 @@ Handle<StringPrimitive> JSError::getFunctionNameAtIndex(
   if ((!name || name->getStringLength() == 0) && selfHandle->stacktrace_) {
     // We did not have an explicit function name, or it was not a nonempty
     // string. If we have a code block, try its debug info.
-    if (const CodeBlock *codeBlock =
-            selfHandle->stacktrace_->at(index).codeBlock) {
-      name = idt.getStringPrim(runtime, codeBlock->getNameMayAllocate());
+    const auto frame = selfHandle->stacktrace_->at(index);
+    if (auto *bcFrame = std::get_if<BytecodeStackTraceInfo>(&frame)) {
+      if (const CodeBlock *codeBlock = bcFrame->codeBlock) {
+        name = idt.getStringPrim(runtime, codeBlock->getNameMayAllocate());
+      }
     }
   }
 
@@ -764,7 +736,7 @@ ExecutionStatus JSError::constructStackTraceString_RJS(
     }
 
     const size_t absIndex = index + selfHandle->firstExposedFrameIndex_;
-    const StackTraceInfo &sti = selfHandle->stacktrace_->at(absIndex);
+    const auto &frame = selfHandle->stacktrace_->at(absIndex);
     gcScope.flushToMarker(marker);
     // For each stacktrace entry, we add a line with the following format:
     // at <functionName> (<fileName>:<lineNo>:<columnNo>)
@@ -774,70 +746,116 @@ ExecutionStatus JSError::constructStackTraceString_RJS(
     if (!appendFunctionNameAtIndex(runtime, selfHandle, absIndex, stack))
       stack.append(u"anonymous");
 
-    // If we have a null codeBlock, it's a native function, which do not have
-    // lines and columns.
-    if (!sti.codeBlock) {
-      stack.append(u" (native)");
-      continue;
-    }
-
-    // We are not a native function.
-    int32_t lineNo;
-    int32_t columnNo;
-    OptValue<SymbolID> fileName;
-    bool isAddress = false;
-    OptValue<hbc::DebugSourceLocation> location =
-        getDebugInfo(sti.codeBlock, sti.bytecodeOffset);
-    if (location) {
-      // Use the line and column from the debug info.
-      lineNo = location->line;
-      columnNo = location->column;
+    if (auto *bcFrame = std::get_if<BytecodeStackTraceInfo>(&frame)) {
+      appendBytecodeFrame(virtualOffsetCache, bcFrame, stack);
+    } else if (auto *nativeFrame = std::get_if<NativeStackTraceInfo>(&frame)) {
+      appendNativeFrame(runtime, nativeFrame, stack);
     } else {
-      // Use a "line" and "column" synthesized from the bytecode.
-      // In our synthesized stack trace, a line corresponds to a bytecode
-      // module. This matches the interpretation in DebugInfo.cpp. Currently we
-      // can only have one bytecode module without debug information, namely the
-      // one loaded from disk, which is always at index 1.
-      // TODO: find a way to track the bytecode modules explicitly.
-      // TODO: we do not yet have a way of getting the file name separate from
-      // the debug info. For now we end up leaving it as "unknown".
-      auto pair = virtualOffsetCache.insert({sti.codeBlock, 0});
-      uint32_t &virtualOffset = pair.first->second;
-      if (pair.second) {
-        // Code block was not in the cache, update the cache.
-        virtualOffset = sti.codeBlock->getVirtualOffset();
-      }
-      // Add 1 to the SegmentID to account for 1-based indexing of
-      // symbolication tools.
-      lineNo =
-          sti.codeBlock->getRuntimeModule()->getBytecode()->getSegmentID() + 1;
-      columnNo = sti.bytecodeOffset + virtualOffset;
-      isAddress = true;
+      assert(false && "unsupported frame type");
     }
+  }
+  return ExecutionStatus::RETURNED;
+}
 
-    stack.append(u" (");
-    if (isAddress)
-      stack.append(u"address at ");
+void JSError::appendBytecodeFrame(
+    llvh::DenseMap<const CodeBlock *, uint32_t> &virtualOffsetCache,
+    const BytecodeStackTraceInfo *frame,
+    SmallU16String<32> &stack) {
+  // If we have a null codeBlock, it's a native function, which does not have
+  // lines and columns.
+  if (!frame->codeBlock) {
+    stack.append(u" (native)");
+    return;
+  }
 
-    // Append the filename. If we have a source location, use the filename from
-    // that location; otherwise use the RuntimeModule's sourceURL; otherwise
-    // report unknown.
-    RuntimeModule *runtimeModule = sti.codeBlock->getRuntimeModule();
-    if (location) {
-      // Convert the UTF8 filename to UTF16. Use stack as the parameter to the
-      // conversion so it appends the filename to the stack trace output.
-      std::string utf8Filename =
-          runtimeModule->getBytecode()->getDebugInfo()->getUTF8FilenameByID(
-              location->filenameId);
-      convertUTF8WithSurrogatesToUTF16(
-          std::back_inserter(stack),
-          &*utf8Filename.begin(),
-          &*utf8Filename.end());
-    } else {
-      auto sourceURL = runtimeModule->getSourceURL();
-      stack.append(sourceURL.empty() ? "unknown" : sourceURL);
+  char buf[NUMBER_TO_STRING_BUF_SIZE];
+  // We are not a native function.
+  int32_t lineNo;
+  int32_t columnNo;
+  OptValue<SymbolID> fileName;
+  bool isAddress = false;
+  OptValue<hbc::DebugSourceLocation> location =
+      getDebugInfo(frame->codeBlock, frame->bytecodeOffset);
+  if (location) {
+    // Use the line and column from the debug info.
+    lineNo = location->line;
+    columnNo = location->column;
+  } else {
+    // Use a "line" and "column" synthesized from the bytecode.
+    // In our synthesized stack trace, a line corresponds to a bytecode
+    // module. This matches the interpretation in DebugInfo.cpp. Currently
+    // we can only have one bytecode module without debug information,
+    // namely the one loaded from disk, which is always at index 1.
+    // TODO: find a way to track the bytecode modules explicitly.
+    // TODO: we do not yet have a way of getting the file name separate from
+    // the debug info. For now we end up leaving it as "unknown".
+    auto [it, inserted] = virtualOffsetCache.insert({frame->codeBlock, 0});
+    uint32_t &virtualOffset = it->second;
+    if (inserted) {
+      // Code block was not in the cache, update the cache.
+      virtualOffset = frame->codeBlock->getVirtualOffset();
     }
+    // Add 1 to the SegmentID to account for 1-based indexing of
+    // symbolication tools.
+    lineNo =
+        frame->codeBlock->getRuntimeModule()->getBytecode()->getSegmentID() + 1;
+    columnNo = frame->bytecodeOffset + virtualOffset;
+    isAddress = true;
+  }
+
+  stack.append(u" (");
+  if (isAddress)
+    stack.append(u"address at ");
+
+  // Append the filename. If we have a source location, use the filename
+  // from that location; otherwise use the RuntimeModule's sourceURL;
+  // otherwise report unknown.
+  RuntimeModule *runtimeModule = frame->codeBlock->getRuntimeModule();
+  if (location) {
+    // Convert the UTF8 filename to UTF16. Use stack as the parameter to the
+    // conversion so it appends the filename to the stack trace output.
+    std::string utf8Filename =
+        runtimeModule->getBytecode()->getDebugInfo()->getUTF8FilenameByID(
+            location->filenameId);
+    convertUTF8WithSurrogatesToUTF16(
+        std::back_inserter(stack),
+        &*utf8Filename.begin(),
+        &*utf8Filename.end());
+  } else {
+    auto sourceURL = runtimeModule->getSourceURL();
+    stack.append(sourceURL.empty() ? "unknown" : sourceURL);
+  }
+  stack.push_back(u':');
+
+  numberToString(lineNo, buf, NUMBER_TO_STRING_BUF_SIZE);
+  stack.append(buf);
+
+  stack.push_back(u':');
+
+  numberToString(columnNo, buf, NUMBER_TO_STRING_BUF_SIZE);
+  stack.append(buf);
+
+  stack.push_back(u')');
+}
+
+void JSError::appendNativeFrame(
+    Runtime &runtime,
+    const NativeStackTraceInfo *frame,
+    SmallU16String<32> &stack) {
+  const auto &[unit, loc] = *frame;
+  stack.append(u" (");
+  // If unit is nonnull then we have a valid location and can use the fields
+  // in loc. Otherwise, it is an unknown location.
+  if (unit) {
+    char buf[NUMBER_TO_STRING_BUF_SIZE];
+    SymbolID fnameSym = SymbolID::unsafeCreate(unit->symbols[loc.filename_idx]);
+    const StringPrimitive *prim = runtime.getStringPrimFromSymbolID(fnameSym);
+    prim->appendUTF16String(stack);
+
     stack.push_back(u':');
+
+    int32_t lineNo = loc.line;
+    int32_t columnNo = loc.column;
 
     numberToString(lineNo, buf, NUMBER_TO_STRING_BUF_SIZE);
     stack.append(buf);
@@ -846,138 +864,11 @@ ExecutionStatus JSError::constructStackTraceString_RJS(
 
     numberToString(columnNo, buf, NUMBER_TO_STRING_BUF_SIZE);
     stack.append(buf);
-
-    stack.push_back(u')');
-  }
-  return ExecutionStatus::RETURNED;
-}
-
-ExecutionStatus JSError::constructNativeStackTraceString_RJS(
-    Runtime &runtime,
-    Handle<JSError> selfHandle,
-    Handle<JSObject> targetHandle,
-    SmallU16String<32> &stack) {
-  assert(selfHandle->nativeStacktrace_ && "native stacktrace not constructed");
-  // This method potentially runs javascript, so we need to protect it agains
-  // stack overflow.
-  ScopedNativeDepthTracker depthTracker(runtime);
-  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-    return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
-  }
-
-  GCScope gcScope(runtime);
-  // First of all, the stacktrace string starts with
-  // %Error.prototype.toString%(target).
-  CallResult<Handle<StringPrimitive>> res =
-      JSError::toString(targetHandle, runtime);
-  // Keep track whether targetHandle.toString() threw. If it did, the error
-  // message will contain a string letting the user know that something went
-  // awry.
-  const bool targetHandleToStringThrew = res == ExecutionStatus::EXCEPTION;
-
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    // target.toString() threw an exception; if it is a catchable error try to
-    // toString() it so the user has some indication of what went wrong.
-    if (!isUncatchableError(runtime.getThrownValue())) {
-      HermesValue thrownValue = runtime.getThrownValue();
-      if (thrownValue.isObject()) {
-        // Clear the pending exception, and try to convert thrownValue to string
-        // with %Error.prototype.toString%(thrownValue).
-        runtime.clearThrownValue();
-        res = JSError::toString(
-            runtime.makeHandle<JSObject>(thrownValue), runtime);
-      }
-    }
-  }
-
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    // An exception happened while trying to get the description for the error.
-    if (isUncatchableError(runtime.getThrownValue())) {
-      // If JSError::toString throws an uncatchable exception, bubble it up.
-      return ExecutionStatus::EXCEPTION;
-    }
-    // Clear the pending exception so the caller doesn't observe this side
-    // effect.
-    runtime.clearThrownValue();
-    // Append a generic <error> string and move on.
-    stack.append(u"<error>");
   } else {
-    if (targetHandleToStringThrew) {
-      stack.append(u"<while converting error to string: ");
-    }
-    res->get()->appendUTF16String(stack);
-    if (targetHandleToStringThrew) {
-      stack.append(u">");
-    }
+    stack.append(u"native");
   }
 
-  // Append each function location in the call stack to stack trace.
-  auto marker = gcScope.createMarker();
-  for (size_t index = 0, max = selfHandle->nativeStacktrace_->size();
-       index < max;
-       index++) {
-    char buf[NUMBER_TO_STRING_BUF_SIZE];
-
-    // If the trace contains more than 100 entries, limit the string to the
-    // first 50 and the last 50 entries and include a line about the truncation.
-    static constexpr unsigned PRINT_HEAD = 50;
-    static constexpr unsigned PRINT_TAIL = 50;
-    if (LLVM_UNLIKELY(max > PRINT_HEAD + PRINT_TAIL)) {
-      if (index == PRINT_HEAD) {
-        stack.append("\n    ... skipping ");
-        numberToString(max - PRINT_HEAD - PRINT_TAIL, buf, sizeof(buf));
-        stack.append(buf);
-        stack.append(" frames");
-        continue;
-      }
-
-      // Skip the middle frames.
-      if (index > PRINT_HEAD && index < max - PRINT_TAIL) {
-        index = max - PRINT_TAIL;
-      }
-    }
-
-    const auto &pair = selfHandle->nativeStacktrace_->at(index);
-    const SHSrcLoc &loc = pair.second;
-    const SHUnit *unit = pair.first;
-    gcScope.flushToMarker(marker);
-    // For each stacktrace entry, we add a line with the following format:
-    // at <functionName> (<fileName>:<lineNo>:<columnNo>)
-
-    stack.append(u"\n    at ");
-
-    if (!appendFunctionNameAtIndex(runtime, selfHandle, index, stack))
-      stack.append(u"anonymous");
-
-    int32_t lineNo = loc.line;
-    int32_t columnNo = loc.column;
-
-    stack.append(u" (");
-
-    // If unit is nonnull then we have a valid location and can use the fields
-    // in loc. Otherwise, it is an unknown location.
-    if (unit) {
-      SymbolID fnameSym =
-          SymbolID::unsafeCreate(unit->symbols[loc.filename_idx]);
-      const StringPrimitive *prim = runtime.getStringPrimFromSymbolID(fnameSym);
-      prim->appendUTF16String(stack);
-
-      stack.push_back(u':');
-
-      numberToString(lineNo, buf, NUMBER_TO_STRING_BUF_SIZE);
-      stack.append(buf);
-
-      stack.push_back(u':');
-
-      numberToString(columnNo, buf, NUMBER_TO_STRING_BUF_SIZE);
-      stack.append(buf);
-    } else {
-      stack.append(u"<anonymous>");
-    }
-
-    stack.push_back(u')');
-  }
-  return ExecutionStatus::RETURNED;
+  stack.push_back(u')');
 }
 
 CallResult<HermesValue> JSError::constructCallSitesArray(
@@ -1068,10 +959,12 @@ void JSError::popFramesUntilInclusive(
   }
   for (size_t index = 0, max = selfHandle->stacktrace_->size(); index < max;
        index++) {
-    const StackTraceInfo &sti = selfHandle->stacktrace_->at(index);
-    if (sti.codeBlock == codeBlock) {
-      selfHandle->firstExposedFrameIndex_ = index + 1;
-      break;
+    const auto &frame = selfHandle->stacktrace_->at(index);
+    if (auto *bcFrame = std::get_if<BytecodeStackTraceInfo>(&frame)) {
+      if (bcFrame->codeBlock == codeBlock) {
+        selfHandle->firstExposedFrameIndex_ = index + 1;
+        break;
+      }
     }
   }
 }

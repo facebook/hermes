@@ -28,7 +28,7 @@ try {
 // CHECK-NEXT:    at bar ({{.*}}error_stack.js{{.*}})
 // CHECK-NEXT:    at foo ({{.*}}error_stack.js{{.*}})
 // CHECK-NEXT:    at anonymous ({{.*}}error_stack.js{{.*}})
-// CHECK-NEXT:    at findLast (<anonymous>)
+// CHECK-NEXT:    at findLast (native)
 // CHECK-NEXT:    at global ({{.*}}error_stack.js{{.*}})
 }
 

@@ -106,4 +106,4 @@ Object.defineProperty(e, "message", {
 });
 print(e.stack);
 //CHECK-NEXT: Error
-//CHECK-NEXT:     at global (<anonymous>)
+//CHECK-NEXT:     at global (native)
