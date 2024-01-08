@@ -394,10 +394,10 @@ DEFINE_OPCODE_4(GetPNameList, Reg8, Reg8, Reg8, Reg8)
 DEFINE_OPCODE_5(GetNextPName, Reg8, Reg8, Reg8, Reg8, Reg8)
 
 ///!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-/// NOTE: the ordering of Call, CallN, Construct, CallLong, ConstructLong is
-/// important. The "long" versions are defined after the "short" versions.
-/// It is important for efficiency that all Calls have contiguous opcodes, with
-/// wider instructions appearing after narrower ones.
+/// NOTE: the ordering of the Call instructions is important. The "long" 
+/// versions are defined after the "short" versions. It is important for
+/// efficiency that all Calls have contiguous opcodes, with wider
+/// instructions appearing after narrower ones.
 
 /// Call a function.
 /// Arg1 is the destination of the return value.
@@ -422,6 +422,15 @@ DEFINE_RET_TARGET(Construct)
 /// Arg3 is the first argument.
 DEFINE_OPCODE_3(Call1, Reg8, Reg8, Reg8)
 DEFINE_RET_TARGET(Call1)
+
+/// Call a function with an explicitly specified `new.target`.
+/// Arg1 is the destination of the return value.
+/// Arg2 is the closure to invoke.
+/// Arg3 is the value of new.target
+/// Arg4 is the number of arguments, assumed to be found in reverse order
+///      from the end of the current frame.
+DEFINE_OPCODE_4(CallWithNewTarget, Reg8, Reg8, Reg8, UInt8)
+DEFINE_RET_TARGET(CallWithNewTarget)
 
 /// Call a function with two args.
 /// Arg1 is the destination of the return value.
@@ -458,16 +467,24 @@ DEFINE_RET_TARGET(CallLong)
 DEFINE_OPCODE_3(ConstructLong, Reg8, Reg8, UInt32)
 DEFINE_RET_TARGET(ConstructLong)
 
+/// Identical to CallWithNewTarget, but allowing more arguments.
+/// arg4 is a register containing a number, instead of a literal number.
+/// This is done to decrease the size of this opcode.
+DEFINE_OPCODE_4(CallWithNewTargetLong, Reg8, Reg8, Reg8, Reg8)
+DEFINE_RET_TARGET(CallWithNewTargetLong)
+
 // Enforce the order.
 ASSERT_MONOTONE_INCREASING(
     Call,
     Construct,
     Call1,
+    CallWithNewTarget,
     Call2,
     Call3,
     Call4,
     CallLong,
-    ConstructLong)
+    ConstructLong,
+    CallWithNewTargetLong)
 
 /// Call a builtin function.
 /// Note this is NOT marked as a Ret target, because the callee is native
@@ -825,6 +842,8 @@ ASSERT_EQUAL_LAYOUT3(Mul, MulN)
 ASSERT_EQUAL_LAYOUT1(ReifyArgumentsLoose, ReifyArgumentsStrict)
 ASSERT_EQUAL_LAYOUT3(GetArgumentsPropByValLoose, GetArgumentsPropByValStrict)
 
+// CallWithNewTarget and CallWithNewTargetLong must agree on the first 2 parameters.
+ASSERT_EQUAL_LAYOUT2(CallWithNewTarget, CallWithNewTargetLong)
 // Call and CallLong must agree on the first 2 parameters.
 ASSERT_EQUAL_LAYOUT2(Call, CallLong)
 ASSERT_EQUAL_LAYOUT2(Construct, ConstructLong)

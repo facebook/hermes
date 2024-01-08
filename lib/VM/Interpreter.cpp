@@ -1482,6 +1482,18 @@ tailCall:
       DISPATCH;
     }
 
+      CASE(CallWithNewTarget) {
+        callArgCount = (uint32_t)ip->iCallWithNewTarget.op4;
+        nextIP = NEXTINST(CallWithNewTarget);
+        callNewTarget = O3REG(CallWithNewTarget).getRaw();
+        goto doCall;
+      }
+      CASE(CallWithNewTargetLong) {
+        callArgCount = O4REG(CallWithNewTarget).getNumber();
+        nextIP = NEXTINST(CallWithNewTargetLong);
+        callNewTarget = O3REG(CallWithNewTargetLong).getRaw();
+        goto doCall;
+      }
       CASE(ConstructLong) {
         callArgCount = (uint32_t)ip->iConstructLong.op3;
         nextIP = NEXTINST(ConstructLong);
