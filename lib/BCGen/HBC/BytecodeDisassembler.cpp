@@ -825,8 +825,8 @@ void PrettyDisassembleVisitor::visitOperand(
 void PrettyDisassembleVisitor::printSourceLineForOffset(uint32_t opcodeOffset) {
   if ((options_ & DisassemblyOptions::IncludeSource) ==
       DisassemblyOptions::IncludeSource) {
-    llvh::Optional<SourceMapTextLocation> sourceLocOpt =
-        bcProvider_->getLocationForAddress(funcId_, opcodeOffset);
+    llvh::Optional<SourceTextLocation> sourceLocOpt =
+        bcProvider_->getSourceTextLocation(funcId_, opcodeOffset);
     if (sourceLocOpt.hasValue()) {
       const std::string &fileNameStr = sourceLocOpt.getValue().fileName;
       os_ << formatString(

@@ -42,6 +42,17 @@ struct SourceMapTextLocationFIndex {
   uint32_t column;
 };
 
+/// Represent a source location in original JS source file.
+/// It is different from SourceMapTextLocation in that the filename is not
+/// associated with the life time of any SourceMap object.
+struct SourceTextLocation {
+  std::string fileName;
+  // 1-based
+  uint32_t line;
+  // 1-based
+  uint32_t column;
+};
+
 /// In-memory representation of JavaScript version 3 source map.
 /// See https://sourcemaps.info/spec.html for the spec.
 class SourceMap {

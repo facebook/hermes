@@ -349,7 +349,7 @@ uint32_t BCProviderBase::getVirtualOffsetForFunction(
   return virtualOffset;
 }
 
-llvh::Optional<SourceMapTextLocation> BCProviderBase::getLocationForAddress(
+llvh::Optional<SourceTextLocation> BCProviderBase::getSourceTextLocation(
     uint32_t funcId,
     uint32_t offsetInFunction) const {
   auto *funcDebugOffsets = getDebugOffsets(funcId);
@@ -362,7 +362,7 @@ llvh::Optional<SourceMapTextLocation> BCProviderBase::getLocationForAddress(
     if (locOpt.hasValue()) {
       DebugSourceLocation loc = locOpt.getValue();
       std::string fileName = debugInfo->getUTF8FilenameByID(loc.filenameId);
-      return SourceMapTextLocation{std::move(fileName), loc.line, loc.column};
+      return SourceTextLocation{std::move(fileName), loc.line, loc.column};
     }
   }
   return llvh::None;

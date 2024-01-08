@@ -352,7 +352,7 @@ void ProfileAnalyzer::dumpFunctionStats() {
     }
 
     const auto funcId = entry.first;
-    llvh::Optional<SourceMapTextLocation> funcStartSourceLocOpt =
+    llvh::Optional<SourceTextLocation> funcStartSourceLocOpt =
         hbcParser_.getSourceLocation(funcId, 0);
 
     uint64_t funcInstFrequency = entry.second.instFrequency;
@@ -629,7 +629,7 @@ void ProfileAnalyzer::dumpBasicBlockStats() {
                formatString("%s(%d)", funcName.c_str(), funcId), 24);
 
     // Print source location for the block if available.
-    llvh::Optional<SourceMapTextLocation> sourceLocOpt =
+    llvh::Optional<SourceTextLocation> sourceLocOpt =
         hbcParser_.getSourceLocation(funcId, entry.offset);
     if (sourceLocOpt.hasValue()) {
       const std::string &fileNameStr = sourceLocOpt.getValue().fileName;
@@ -863,8 +863,8 @@ void ProfileAnalyzer::dumpFunctionInfo(uint32_t funcId, JSONEmitter &json) {
     }
   }
 
-  llvh::Optional<SourceMapTextLocation> sourceLocOpt =
-      bcProvider->getLocationForAddress(funcId, /* offsetInFunction */ 0);
+  llvh::Optional<SourceTextLocation> sourceLocOpt =
+      bcProvider->getSourceTextLocation(funcId, /* offsetInFunction */ 0);
   if (sourceLocOpt.hasValue()) {
     json.emitKey("FinalSourceLocation");
     json.openDict();
