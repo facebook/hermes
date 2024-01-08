@@ -6,6 +6,7 @@
 add_hermes_library(hermesSHBackend
   LoweringPasses.h
   LowerCalls.cpp
+  LoadConstants.cpp
   RecreateCheapValues.cpp
   LowerNanBoxedUnionNarrowT.cpp
   LowerAllocObjectLiteral.cpp

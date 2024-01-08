@@ -2335,7 +2335,7 @@ void lowerModuleIR(Module *M, bool optimize) {
   PM.addPass(new hbc::DedupReifyArguments());
   // TODO Consider supporting LowerSwitchIntoJumpTables for optimization
   PM.addPass(new SwitchLowering());
-  PM.addPass(new hbc::LoadConstants());
+  PM.addPass(sh::createLoadConstants());
   PM.addPass(new hbc::LowerLoadStoreFrameInst());
   if (optimize) {
     PM.addTypeInference();

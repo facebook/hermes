@@ -21,6 +21,9 @@ Pass *createLowerNanBoxedUnionNarrowTrusted();
 
 Pass *createLowerAllocObjectLiteral();
 
+/// Lower literal values to the appropriate LoadConst instruction.
+Pass *createLoadConstants();
+
 /// Lower calls into a series of parameter moves followed by a call with
 /// those moved values. Should only run once, right before MovElimination.
 Pass *createLowerCalls(SHRegisterAllocator &RA);
