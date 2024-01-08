@@ -953,8 +953,8 @@ class TypeInferenceImpl {
             << " failed to get info from callsites: defaulting to 'any'\n");
         P->setType(Type::createAnyType());
       } else {
-        // Update the type if we have new information.
-        P->setType(paramTy);
+        // Types should only be widened.
+        P->setType(Type::unionTy(originalTy, paramTy));
       }
 
       checkAndSetPrePassType(P);
