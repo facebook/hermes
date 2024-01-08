@@ -31,6 +31,6 @@ try {
 } catch (e) {
     print(e.stack);
 }
-//CHECK: SyntaxError: 1:41:invalid statement encountered.
+//CHECK: SyntaxError: 1:41:with statement is not supported
 //CHECK-NEXT:     at Function (native)
 //CHECK-NEXT:     at global ({{.*}}eval-errors.js:{{.*}}:25)
