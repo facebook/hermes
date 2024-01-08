@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc %s | %FileCheck %s --match-full-lines
+// RUN: %hermes %s | %FileCheck %s --match-full-lines
 // REQUIRES: interpreter
 
 var global = Function("return this")();
