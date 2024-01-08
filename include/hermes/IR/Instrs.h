@@ -2884,9 +2884,8 @@ class ThrowIfInst : public Instruction {
   void setInvalidTypes(LiteralIRType *invalidTypes) {
     assert(
         !invalidTypes->getData().isNoType() &&
-        invalidTypes->getData().isSubsetOf(
-            Type::unionTy(Type::createEmpty(), Type::createUninit())) &&
-        "invalidTypes set can only contain Empty or Uninit");
+        invalidTypes->getData().isSubsetOf(Type::createEmpty()) &&
+        "invalidTypes set can only contain Empty");
     setOperand(invalidTypes, InvalidTypesIdx);
   }
 
