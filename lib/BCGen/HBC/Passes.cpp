@@ -78,8 +78,10 @@ void updateToEntryInsertionPoint(IRBuilder &builder, Function *F) {
   auto &BB = F->front();
   auto it = BB.begin();
   auto end = BB.end();
-  // Skip all HBCCreateEnvironmentInst.
-  while (it != end && llvh::isa<HBCCreateEnvironmentInst>(*it))
+  // Skip all HBCCreateEnvironmentInst and FirstInBlock insts.
+  while (it != end &&
+         (llvh::isa<HBCCreateEnvironmentInst>(*it) ||
+          it->getSideEffect().getFirstInBlock()))
     ++it;
 
   builder.setInsertionPoint(&*it);
