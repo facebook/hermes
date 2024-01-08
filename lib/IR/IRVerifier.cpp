@@ -795,8 +795,8 @@ void Verifier::visitSwitchImmInst(const hermes::SwitchImmInst &Inst) {
   visitSwitchLikeInst(Inst);
   for (unsigned idx = 0, e = Inst.getNumCasePair(); idx < e; ++idx) {
     Assert(
-        Inst.getCasePair(idx).first->isInt32Representible(),
-        "case value must be a int32");
+        Inst.getCasePair(idx).first->isUInt32Representible(),
+        "case value must be a uint32");
   }
 }
 
