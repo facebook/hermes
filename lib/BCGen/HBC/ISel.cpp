@@ -998,7 +998,11 @@ void HBCISel::generateThrowInst(ThrowInst *Inst, BasicBlock *next) {
 void HBCISel::generateThrowIfInst(
     hermes::ThrowIfInst *Inst,
     hermes::BasicBlock *next) {
-  hermes_fatal("ThrowIfInst not supported.");
+  assert(
+      Inst->getInvalidTypes()->getData().isEmptyType() &&
+      "Only Empty supported");
+  BCFGen_->emitThrowIfEmpty(
+      encodeValue(Inst), encodeValue(Inst->getCheckedValue()));
 }
 void HBCISel::generateSwitchInst(SwitchInst *Inst, BasicBlock *next) {
   llvm_unreachable("SwitchInst should have been lowered");
