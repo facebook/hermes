@@ -1624,13 +1624,69 @@ void HBCISel::generatePrStoreInst(PrStoreInst *inst, BasicBlock *) {
 }
 
 void HBCISel::generateFCompareInst(FCompareInst *Inst, BasicBlock *) {
-  hermes_fatal("FCompareInst not supported.");
+  auto left = encodeValue(Inst->getLeft());
+  auto right = encodeValue(Inst->getRight());
+  auto res = encodeValue(Inst);
+  switch (Inst->getKind()) {
+    case ValueKind::FEqualInstKind:
+      BCFGen_->emitStrictEq(res, left, right);
+      break;
+    case ValueKind::FNotEqualInstKind:
+      BCFGen_->emitStrictNeq(res, left, right);
+      break;
+    case ValueKind::FLessThanInstKind:
+      BCFGen_->emitLess(res, left, right);
+      break;
+    case ValueKind::FLessThanOrEqualInstKind:
+      BCFGen_->emitLessEq(res, left, right);
+      break;
+    case ValueKind::FGreaterThanInstKind:
+      BCFGen_->emitGreater(res, left, right);
+      break;
+    case ValueKind::FGreaterThanOrEqualInstKind:
+      BCFGen_->emitGreaterEq(res, left, right);
+      break;
+    default:
+      hermes_fatal("invalid kind for FCompareInst");
+      break;
+  }
 }
 void HBCISel::generateFBinaryMathInst(FBinaryMathInst *Inst, BasicBlock *) {
-  hermes_fatal("FBinaryMathInst not supported.");
+  auto left = encodeValue(Inst->getLeft());
+  auto right = encodeValue(Inst->getRight());
+  auto res = encodeValue(Inst);
+  switch (Inst->getKind()) {
+    case ValueKind::FAddInstKind:
+      BCFGen_->emitAddN(res, left, right);
+      break;
+    case ValueKind::FSubtractInstKind:
+      BCFGen_->emitSubN(res, left, right);
+      break;
+    case ValueKind::FMultiplyInstKind:
+      BCFGen_->emitMulN(res, left, right);
+      break;
+    case ValueKind::FDivideInstKind:
+      BCFGen_->emitDivN(res, left, right);
+      break;
+    case ValueKind::FModuloInstKind:
+      BCFGen_->emitMod(res, left, right);
+      break;
+    default:
+      hermes_fatal("invalid kind for FBinaryMathInst");
+      break;
+  }
 }
 void HBCISel::generateFUnaryMathInst(FUnaryMathInst *Inst, BasicBlock *) {
-  hermes_fatal("FUnaryMathInst not supported.");
+  auto opReg = encodeValue(Inst->getArg());
+  auto resReg = encodeValue(Inst);
+  switch (Inst->getKind()) {
+    case ValueKind::FNegateKind:
+      BCFGen_->emitNegate(resReg, opReg);
+      break;
+    default:
+      hermes_fatal("invalid kind for FUnaryMathInst");
+      break;
+  }
 }
 void HBCISel::generateLoadParentInst(LoadParentInst *, BasicBlock *) {
   hermes_fatal("LoadParentInst not supported.");
