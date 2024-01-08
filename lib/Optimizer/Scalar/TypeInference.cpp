@@ -344,7 +344,6 @@ class TypeInferenceImpl {
       return false;
     }
 
-    LLVM_DEBUG(dbgs() << "Inferring " << inst->getName() << "\n");
     Type originalTy = inst->getType();
 
     // Handle Phi instructions separately by invoking inferPhi directly.
@@ -932,6 +931,10 @@ class TypeInferenceImpl {
           arg = call->getArgument(i);
         }
 
+        LLVM_DEBUG(
+            dbgs() << F->getInternalName().c_str()
+                   << "::" << P->getName().c_str()
+                   << " found arg of type: " << arg->getType() << '\n');
         if (first) {
           paramTy = arg->getType();
           first = false;
@@ -944,6 +947,10 @@ class TypeInferenceImpl {
 
       if (first || paramTy.isNoType()) {
         // No information retrieved from call sites, bail.
+        LLVM_DEBUG(
+            dbgs()
+            << F->getInternalName().c_str() << "::" << P->getName().c_str()
+            << " failed to get info from callsites: defaulting to 'any'\n");
         P->setType(Type::createAnyType());
       } else {
         // Update the type if we have new information.
@@ -956,7 +963,7 @@ class TypeInferenceImpl {
         LLVM_DEBUG(
             dbgs() << F->getInternalName().c_str()
                    << "::" << P->getName().c_str() << " changed to ");
-        LLVM_DEBUG(paramTy.print(dbgs()));
+        LLVM_DEBUG(P->getType().print(dbgs()));
         LLVM_DEBUG(dbgs() << "\n");
       }
     }
@@ -1083,6 +1090,8 @@ bool TypeInferenceImpl::runOnFunctions(llvh::ArrayRef<Function *> functions) {
   // values. This means that we need to iterate until we reach convergence.
   bool localChanged = false;
   do {
+    LLVM_DEBUG(dbgs() << "\nStart TypeInference pass:\n");
+
     localChanged = false;
 
     // Infer the type of formal parameters, based on knowing the (full) set
@@ -1102,7 +1111,7 @@ bool TypeInferenceImpl::runOnFunctions(llvh::ArrayRef<Function *> functions) {
       }
     }
     if (inferredInst)
-      LLVM_DEBUG(dbgs() << "Inferred an instruction\n");
+      LLVM_DEBUG(dbgs() << ">> Inferred an instruction\n");
     localChanged |= inferredInst;
 
     // Infer the return type of the function based on the type of return
@@ -1112,7 +1121,7 @@ bool TypeInferenceImpl::runOnFunctions(llvh::ArrayRef<Function *> functions) {
       inferredRetType |= inferFunctionReturnType(F);
     }
     if (inferredRetType)
-      LLVM_DEBUG(dbgs() << "Inferred function return type\n");
+      LLVM_DEBUG(dbgs() << ">> Inferred function return type\n");
     localChanged |= inferredRetType;
 
     // Infer type of F's variables.
@@ -1123,7 +1132,7 @@ bool TypeInferenceImpl::runOnFunctions(llvh::ArrayRef<Function *> functions) {
       }
     }
     if (inferredVarType)
-      LLVM_DEBUG(dbgs() << "Inferred variable type\n");
+      LLVM_DEBUG(dbgs() << ">> Inferred variable type\n");
     localChanged |= inferredVarType;
   } while (localChanged);
 
