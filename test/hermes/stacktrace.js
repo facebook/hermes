@@ -46,9 +46,10 @@ try {
 } catch (e) {
   print(e.stack);
 }
+// TODO: Change name of 'eval' frame when T173197877 is completed.
 //CHECK-LABEL: Error: EvalTest
 //CHECK-NEXT:    at throwit ({{.*}}stacktrace.js:43:37)
-//CHECK-NEXT:    at eval (JavaScript:1:8)
+//CHECK-NEXT:    at global (JavaScript:1:8)
 //CHECK-NEXT:    at global ({{.*}}stacktrace.js:45:7)
 
 function runAndPrint(f) {
@@ -178,7 +179,7 @@ baz.displayName = "MyComponent";
 
 try { baz(); } catch (e) { print(e.stack); }
 //CHECK-LABEL: Error: oops
-//CHECK-NEXT:     at MyComponent ({{.*}}stacktrace.js:175:18)
+//CHECK-NEXT:     at MyComponent ({{.*}}stacktrace.js:176:18)
 
 // Empty strings should be ignored.
 function qux() {
@@ -188,7 +189,7 @@ qux.displayName = "";
 
 try { qux(); } catch (e) { print(e.stack); }
 //CHECK-LABEL: Error: oops
-//CHECK-NEXT:     at qux ({{.*}}stacktrace.js:185:18)
+//CHECK-NEXT:     at qux ({{.*}}stacktrace.js:186:18)
 
 // Non-strings should be ignored.
 function bop() {
@@ -198,7 +199,7 @@ bop.displayName = 123;
 
 try { bop(); } catch (e) { print(e.stack); }
 //CHECK-LABEL: Error: oops
-//CHECK-NEXT:     at bop ({{.*}}stacktrace.js:195:18)
+//CHECK-NEXT:     at bop ({{.*}}stacktrace.js:196:18)
 
 try {
   Array.prototype.map = function() {
@@ -210,7 +211,7 @@ try {
   print(e.stack);
 }
 //CHECK-LABEL: Error: oops
-//CHECK-NEXT:     at map2 ({{.*}}stacktrace.js:205:20)
+//CHECK-NEXT:     at map2 ({{.*}}stacktrace.js:206:20)
 
 let object = {
   someMethod: function() {
@@ -222,4 +223,4 @@ object.someMethod.displayName = 'anotherMethod';
 
 try { object.someMethod(); } catch (e) { print(e.stack); }
 //CHECK-LABEL: Error: oops
-//CHECK-NEXT:     at anotherMethod ({{.*}}stacktrace.js:217:20)
+//CHECK-NEXT:     at anotherMethod ({{.*}}stacktrace.js:218:20)
