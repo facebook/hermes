@@ -764,9 +764,15 @@ bool SpillRegisters::requiresShortOperand(Instruction *I, int op) {
     case ValueKind::LoadStackInstKind:
     case ValueKind::StoreStackInstKind:
       return false;
+    // For all the call instructions, ensure that the *arguments* are not moved
+    // around, because they are going to be placed in the stack and not directly
+    // emitted in the bytecode.
     case ValueKind::CallInstKind:
     case ValueKind::CallBuiltinInstKind:
       return op == CallInst::CalleeIdx;
+    case ValueKind::HBCCallWithArgCountInstKind:
+      return op == CallInst::CalleeIdx || op == CallInst::NewTargetIdx ||
+          op == HBCCallWithArgCountInst::NumArgLiteralIdx;
     default:
       return true;
   }

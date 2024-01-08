@@ -1238,6 +1238,16 @@ void HBCISel::generateCallInst(CallInst *Inst, BasicBlock *next) {
   }
 }
 
+void HBCISel::generateHBCCallWithArgCountInst(
+    HBCCallWithArgCountInst *Inst,
+    BasicBlock *next) {
+  auto output = encodeValue(Inst);
+  auto function = encodeValue(Inst->getCallee());
+  auto newTarget = encodeValue(Inst->getNewTarget());
+  auto argCount = encodeValue(Inst->getNumArgumentsLiteral());
+  BCFGen_->emitCallWithNewTargetLong(output, function, newTarget, argCount);
+}
+
 void HBCISel::generateHBCCallNInst(HBCCallNInst *Inst, BasicBlock *next) {
   auto output = encodeValue(Inst);
   auto function = encodeValue(Inst->getCallee());

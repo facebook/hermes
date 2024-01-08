@@ -203,6 +203,7 @@ MARK_LAST(TerminatorInst)
 MARK_FIRST(BaseCallInst, Instruction)
 DEF_VALUE(CallInst, BaseCallInst)
 DEF_VALUE(CallBuiltinInst, BaseCallInst)
+DEF_VALUE(HBCCallWithArgCountInst, BaseCallInst)
 #ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCCallNInst, BaseCallInst)
 #endif

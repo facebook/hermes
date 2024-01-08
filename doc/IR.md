@@ -824,6 +824,16 @@ Arguments | %callee is the function to execute. %this is a reference to the 'thi
 Semantics | The instruction copies its arguments (starting from this) into the parameter-passing registers at the end of the frame, and passes the control to the callee, which must be of closure type. The arguments are mapped to the parameters. Unmapped parameters are initialized to 'undefined'.
 Effects | May read and write memory.
 
+### HBCCallWithArgCountInst
+
+HBCCallWithArgCountInst | _
+--- | --- |
+Description | This instruction contains the same operands as CallInst, in addition to explicitly passing in the argument count as an operand.
+Example | %0 = HBCCallWithArgCountInst %callee, %target, %env, %newtarget, $argcount, %this, %arg0, %arg1, %arg2, ...
+Arguments | %argcount is the number of arguments to the function, including 'this'.
+Semantics | The instruction passes the control to the callee, that must be of closure type. The arguments are mapped to the parameters. Unmapped parameters are initialized to 'undefined'.
+Effects | May read and write memory.
+
 ### prload
 
 | prload      | _                                                                                                                                                                     |

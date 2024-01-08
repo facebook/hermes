@@ -496,6 +496,16 @@ void Verifier::visitCreateFunctionInst(const CreateFunctionInst &Inst) {
 void Verifier::visitCallInst(const CallInst &Inst) {
   // Nothing to verify at this point.
 }
+void Verifier::visitHBCCallWithArgCountInst(
+    const HBCCallWithArgCountInst &Inst) {
+  // NumArgumentsLiteral is not always a number literal. For example, it will be
+  // lowered into HBCLoadConstant.
+  if (auto *LN = llvh::dyn_cast<LiteralNumber>(Inst.getNumArgumentsLiteral())) {
+    Assert(
+        LN->getValue() == Inst.getNumArguments(),
+        "HBCCallWithArgCountInst mismatched arg count");
+  }
+}
 
 void Verifier::visitHBCCallNInst(const HBCCallNInst &Inst) {
   Assert(

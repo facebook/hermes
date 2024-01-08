@@ -310,6 +310,15 @@ class IRBuilder {
         args);
   }
 
+  HBCCallWithArgCountInst *createHBCCallWithArgCount(
+      Value *callee,
+      Value *target,
+      Value *env,
+      Value *newTarget,
+      LiteralNumber *argCount,
+      Value *thisValue,
+      ArrayRef<Value *> args);
+
   HBCCallNInst *createHBCCallNInst(
       Value *callee,
       Value *target,

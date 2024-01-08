@@ -374,6 +374,20 @@ CallInst *IRBuilder::createCallInst(
   return CI;
 }
 
+HBCCallWithArgCountInst *IRBuilder::createHBCCallWithArgCount(
+    Value *callee,
+    Value *target,
+    Value *env,
+    Value *newTarget,
+    LiteralNumber *argCount,
+    Value *thisValue,
+    ArrayRef<Value *> args) {
+  auto CI = new HBCCallWithArgCountInst(
+      callee, target, env, newTarget, argCount, thisValue, args);
+  insert(CI);
+  return CI;
+}
+
 HBCCallNInst *IRBuilder::createHBCCallNInst(
     Value *callee,
     Value *target,

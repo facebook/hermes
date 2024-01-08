@@ -1907,6 +1907,9 @@ class InstrGen {
     os_ << " = _sh_ljs_call_builtin(shr, frame, " << inst.getNumArguments() - 1
         << ", " << (uint32_t)inst.getBuiltinIndex() << ");\n";
   }
+  void generateHBCCallWithArgCountInst(HBCCallWithArgCountInst &inst) {
+    unimplemented(inst);
+  }
   void generateHBCCallNInst(HBCCallNInst &inst) {
     unimplemented(inst);
   }

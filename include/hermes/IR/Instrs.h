@@ -738,6 +738,9 @@ class BaseCallInst : public Instruction {
   void operator=(const BaseCallInst &) = delete;
 
  protected:
+  /// Operand index of the first arg, starting at 'this'. The arguments are
+  /// assumed to be found in [thisIdx_, numOperands).
+  size_t thisIdx_;
   explicit BaseCallInst(
       ValueKind kind,
       Value *callee,
@@ -751,22 +754,46 @@ class BaseCallInst : public Instruction {
     pushOperand(target);
     pushOperand(env);
     pushOperand(newTarget);
+    thisIdx_ = getNumOperands();
     pushOperand(thisValue);
     for (const auto &arg : args) {
       pushOperand(arg);
     }
   }
+  /// This constructor is used when there are more operands subclasses need to
+  /// add before the list of function arguments. It's required that subclass
+  /// constructors perform the following in order:
+  /// - Push the additional operands they need in the space from NewTargetIdx to
+  ///   \p thisIdx.
+  /// - Push the function arguments including 'this', which will be starting
+  ///   from \p thisIdx.
+  explicit BaseCallInst(
+      ValueKind kind,
+      Value *callee,
+      Value *target,
+      Value *env,
+      Value *newTarget,
+      size_t thisIdx)
+      : Instruction(kind) {
+    pushOperand(callee);
+    pushOperand(target);
+    pushOperand(env);
+    pushOperand(newTarget);
+    thisIdx_ = thisIdx;
+  }
   explicit BaseCallInst(
       const BaseCallInst *src,
       llvh::ArrayRef<Value *> operands)
-      : Instruction(src, operands) {}
+      : Instruction(src, operands) {
+    thisIdx_ = src->thisIdx_;
+  }
 
   // Forces the code to use the appropriate getters instead of relying on
   // hard-coded offsets when accessing the arguments.
   using Instruction::getOperand;
 
  public:
-  enum { CalleeIdx, TargetIdx, EnvIdx, NewTargetIdx, ThisIdx };
+  enum { CalleeIdx, TargetIdx, EnvIdx, NewTargetIdx, _LastIdx };
 
   using ArgumentList = llvh::SmallVector<Value *, 2>;
 
@@ -802,19 +829,23 @@ class BaseCallInst : public Instruction {
   }
   /// Get argument 0, the value for 'this'.
   Value *getThis() const {
-    return getOperand(ThisIdx);
+    return getOperand(thisIdx_);
   }
   /// Get argument by index. 'this' is argument 0.
   Value *getArgument(unsigned idx) {
-    return getOperand(ThisIdx + idx);
+    return getOperand(thisIdx_ + idx);
   }
   /// Set the value \p v at index \p idx. 'this' is argument 0.
   void setArgument(Value *V, unsigned idx) {
-    setOperand(V, ThisIdx + idx);
+    setOperand(V, thisIdx_ + idx);
   }
 
   unsigned getNumArguments() const {
-    return getNumOperands() - ThisIdx;
+    return getNumOperands() - thisIdx_;
+  }
+
+  unsigned getThisIdx() const {
+    return thisIdx_;
   }
 
   static bool hasOutput() {
@@ -838,6 +869,7 @@ class CallInst : public BaseCallInst {
   void operator=(const CallInst &) = delete;
 
  public:
+  enum { ThisIdx = BaseCallInst::_LastIdx };
   explicit CallInst(
       Value *callee,
       Value *target,
@@ -861,6 +893,49 @@ class CallInst : public BaseCallInst {
   }
 };
 
+class HBCCallWithArgCountInst : public BaseCallInst {
+  HBCCallWithArgCountInst(const HBCCallWithArgCountInst &) = delete;
+  void operator=(const HBCCallWithArgCountInst &) = delete;
+
+ public:
+  enum { NumArgLiteralIdx = BaseCallInst::_LastIdx, ThisIdx };
+  explicit HBCCallWithArgCountInst(
+      Value *callee,
+      Value *target,
+      Value *env,
+      Value *newTarget,
+      LiteralNumber *argCount,
+      Value *thisValue,
+      ArrayRef<Value *> args)
+      : BaseCallInst(
+            ValueKind::HBCCallWithArgCountInstKind,
+            callee,
+            target,
+            env,
+            newTarget,
+            ThisIdx) {
+    pushOperand(argCount);
+    pushOperand(thisValue);
+    for (const auto &arg : args) {
+      pushOperand(arg);
+    }
+  }
+  explicit HBCCallWithArgCountInst(
+      const HBCCallWithArgCountInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseCallInst(src, operands) {}
+
+  /// \return the number of arguments, including 'this'.
+  /// This should always match the value in \c getNumArguments.
+  Value *getNumArgumentsLiteral() const {
+    return getOperand(NumArgLiteralIdx);
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::HBCCallWithArgCountInstKind;
+  }
+};
+
 /// Call a VM builtin with the specified number and undefined as the "this"
 /// parameter.
 class CallBuiltinInst : public BaseCallInst {
@@ -868,6 +943,7 @@ class CallBuiltinInst : public BaseCallInst {
   void operator=(const CallBuiltinInst &) = delete;
 
  public:
+  enum { ThisIdx = BaseCallInst::_LastIdx };
   explicit CallBuiltinInst(
       LiteralNumber *callee,
       EmptySentinel *target,
