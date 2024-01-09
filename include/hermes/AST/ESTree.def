@@ -762,9 +762,11 @@ ESTREE_NODE_2_ARGS(
     QualifiedTypeIdentifier, Flow,
     NodePtr, qualification, false,
     NodePtr, id, false)
-ESTREE_NODE_1_ARGS(
+ESTREE_NODE_2_ARGS(
     TypeofTypeAnnotation, Flow,
-    NodePtr, argument, false)
+    NodePtr, argument, false,
+    NodePtr, typeArguments, true)
+ESTREE_IGNORE_IF_EMPTY(TypeofTypeAnnotation, typeArguments)
 ESTREE_NODE_1_ARGS(
     KeyofTypeAnnotation, Flow,
     NodePtr, argument, false)

@@ -2168,10 +2168,18 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeofTypeAnnotationFlow() {
     ident->incParens();
   }
 
+  ESTree::Node *typeArguments = nullptr;
+  if (check(TokenKind::less)) {
+    auto optTypeArgs = parseTypeArgsFlow();
+    if (!optTypeArgs)
+      return None;
+    typeArguments = *optTypeArgs;
+  }
+
   return setLocation(
       startLoc,
       getPrevTokenEndLoc(),
-      new (context_) ESTree::TypeofTypeAnnotationNode(ident));
+      new (context_) ESTree::TypeofTypeAnnotationNode(ident, typeArguments));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTupleTypeAnnotationFlow() {
