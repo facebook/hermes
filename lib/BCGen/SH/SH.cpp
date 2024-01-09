@@ -477,6 +477,31 @@ struct ModuleGen {
         nativeFunctionTable{M, stringTable} {}
 };
 
+/// \return true if the SHLegacyValue representations of values \p a and \p b
+/// can be compared directly (bitwise).
+static bool canCompareStrictEqualityRaw(Value *a, Value *b) {
+  Type aType = a->getType();
+  Type bType = b->getType();
+
+  // If both can be numbers, then we can't compare because `-0` and `0` have
+  // different bitwise representations.
+  if (aType.canBeNumber() && bType.canBeNumber())
+    return false;
+
+  // If both can be bigint, then we can't compare because BigInts are compared
+  // by values which are stored on the heap.
+  if (aType.canBeBigInt() && bType.canBeBigInt())
+    return false;
+
+  // If both can be strings, then we can't compare because strings are compared
+  // by their contents which are stored on the heap.
+  if (aType.canBeString() && bType.canBeString())
+    return false;
+
+  // Otherwise, we can compare.
+  return true;
+}
+
 class InstrGen {
  public:
   /// \p os is the output stream
@@ -903,6 +928,8 @@ class InstrGen {
 
     // Infix operator for doubles.
     const char *infixDoubleOp = nullptr;
+    // Infix operator for raw bitwise comparison.
+    const char *infixRawOp = nullptr;
     // Function call for operator for doubles.
     const char *funcDoubleOp = nullptr;
     // Function call for operator for int32.
@@ -985,6 +1012,9 @@ class InstrGen {
       case ValueKind::BinaryStrictlyNotEqualInstKind: // !==
         if (bothDouble) {
           infixDoubleOp = "!=";
+        } else if (canCompareStrictEqualityRaw(
+                       inst.getLeftHandSide(), inst.getRightHandSide())) {
+          infixRawOp = "!=";
         } else {
           funcUntypedOp = "!_sh_ljs_strict_equal";
           passByValue = true;
@@ -994,6 +1024,9 @@ class InstrGen {
       case ValueKind::BinaryStrictlyEqualInstKind: // ===
         if (bothDouble) {
           infixDoubleOp = "==";
+        } else if (canCompareStrictEqualityRaw(
+                       inst.getLeftHandSide(), inst.getRightHandSide())) {
+          infixRawOp = "==";
         } else {
           funcUntypedOp = "_sh_ljs_strict_equal";
           passByValue = true;
@@ -1077,6 +1110,12 @@ class InstrGen {
       os_ << "), _sh_ljs_get_double(";
       generateRegister(*inst.getRightHandSide());
       os_ << "))";
+    } else if (infixRawOp) {
+      os_ << "";
+      generateRegister(*inst.getLeftHandSide());
+      os_ << ".raw " << infixRawOp << " ";
+      generateRegister(*inst.getRightHandSide());
+      os_ << ".raw";
     } else {
       assert(funcUntypedOp);
       os_ << funcUntypedOp << "(shr, &";
@@ -1734,6 +1773,8 @@ class InstrGen {
 
     // Infix operator for doubles.
     const char *infixDoubleOp = nullptr;
+    // Infix operator for raw bitwise comparison.
+    const char *infixRawOp = nullptr;
 
     bool bothDouble = inst.getLeftHandSide()->getType().isNumberType() &&
         inst.getRightHandSide()->getType().isNumberType();
@@ -1776,6 +1817,9 @@ class InstrGen {
       case ValueKind::CmpBrStrictlyEqualInstKind: // ===
         if (bothDouble) {
           infixDoubleOp = "==";
+        } else if (canCompareStrictEqualityRaw(
+                       inst.getLeftHandSide(), inst.getRightHandSide())) {
+          infixRawOp = "==";
         } else {
           funcUntypedOp = "_sh_ljs_strict_equal";
           passByValue = true;
@@ -1784,6 +1828,9 @@ class InstrGen {
       case ValueKind::CmpBrStrictlyNotEqualInstKind: // !==
         if (bothDouble) {
           infixDoubleOp = "!=";
+        } else if (canCompareStrictEqualityRaw(
+                       inst.getLeftHandSide(), inst.getRightHandSide())) {
+          infixRawOp = "!=";
         } else {
           funcUntypedOp = "!_sh_ljs_strict_equal";
           passByValue = true;
@@ -1806,6 +1853,12 @@ class InstrGen {
       os_ << ") " << infixDoubleOp << " _sh_ljs_get_double(";
       generateRegister(*inst.getRightHandSide());
       os_ << ")";
+    } else if (infixRawOp) {
+      os_ << "";
+      generateRegister(*inst.getLeftHandSide());
+      os_ << ".raw " << infixRawOp << " ";
+      generateRegister(*inst.getRightHandSide());
+      os_ << ".raw";
     } else {
       assert(funcUntypedOp);
       os_ << funcUntypedOp << "(shr, &";
