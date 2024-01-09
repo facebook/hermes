@@ -174,7 +174,9 @@ void analyzeFunctionCallsites(Function *F) {
     F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
   }
 
-  for (Instruction *user : F->getUsers()) {
+  // Users can be added as the loop iterates.
+  for (size_t i = 0; i < F->getNumUsers(); ++i) {
+    Instruction *user = F->getUsers()[i];
     if (auto *create = llvh::dyn_cast<BaseCreateCallableInst>(user)) {
       assert(
           create->getFunctionCode() == F &&
