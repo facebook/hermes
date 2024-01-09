@@ -1262,6 +1262,7 @@ export interface QualifiedTypeofIdentifier extends BaseNode {
 export interface TypeofTypeAnnotation extends BaseNode {
   +type: 'TypeofTypeAnnotation';
   +argument: QualifiedTypeofIdentifier | Identifier;
+  +typeArguments?: TypeParameterInstantiation;
 }
 export interface KeyofTypeAnnotation extends BaseNode {
   +type: 'KeyofTypeAnnotation';

@@ -1024,6 +1024,9 @@ export type TypeCastExpressionProps = {
 
 export type TypeofTypeAnnotationProps = {
   +argument: MaybeDetachedNode<TypeofTypeAnnotationType['argument']>,
+  +typeArguments?: ?MaybeDetachedNode<
+    TypeofTypeAnnotationType['typeArguments'],
+  >,
 };
 
 export type TypeOperatorProps = {
@@ -2971,6 +2974,7 @@ export function TypeofTypeAnnotation(props: {
   const node = detachedProps<TypeofTypeAnnotationType>(props.parent, {
     type: 'TypeofTypeAnnotation',
     argument: asDetachedNodeForCodeGen(props.argument),
+    typeArguments: asDetachedNodeForCodeGen(props.typeArguments),
   });
   setParentPointersInDirectChildren(node);
   return node;

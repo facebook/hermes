@@ -748,6 +748,8 @@ function mapPropertyDefinition(
 function mapTypeofTypeAnnotation(
   node: TypeofTypeAnnotation,
 ): TypeofTypeAnnotation {
+  // $FlowExpectedError[cannot-write]
+  delete node.typeArguments;
   if (node.argument.type !== 'GenericTypeAnnotation') {
     return nodeWith(node, {
       // $FlowExpectedError[incompatible-call] Special override for Babel

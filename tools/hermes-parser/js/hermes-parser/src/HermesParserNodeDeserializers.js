@@ -1016,8 +1016,10 @@ function deserializeTypeofTypeAnnotation() {
     type: 'TypeofTypeAnnotation',
     loc: this.addEmptyLoc(),
     argument: this.deserializeNode(),
+    typeArguments: this.deserializeNode(),
   };
 }
+
 function deserializeKeyofTypeAnnotation() {
   return {
     type: 'KeyofTypeAnnotation',
@@ -2040,6 +2042,7 @@ module.exports = [
   deserializeNullableTypeAnnotation,
   deserializeQualifiedTypeIdentifier,
   deserializeTypeofTypeAnnotation,
+
   deserializeKeyofTypeAnnotation,
   deserializeTypeOperator,
   deserializeQualifiedTypeofIdentifier,
