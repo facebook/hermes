@@ -11,7 +11,9 @@ labels:
 ## Bug Description
 
 <!--
-  Please provide a clear and concise description of what the bug is.
+  Please provide a clear and concise description of what the bug is with the
+  latest version of React Native and Hermes. Unfortunately we are unable to
+  provide fixes for old versions of Hermes.
 
   If it's an exception, please include the screenshots, e.g. the React Native
   RedBox screen includes a symbolicated JavaScript stack trace with a stack trace
@@ -26,10 +28,11 @@ labels:
 -->
 
 - [ ] I have run `gradle clean` and confirmed this bug does not occur with JSC
+- [ ] The issue is reproducible with the latest version of React Native.
 
-Hermes version:
-React Native version (if any):
-OS version (if any):
+Hermes git revision (if applicable):
+React Native version:
+OS:
 Platform (most likely one of arm64-v8a, armeabi-v7a, x86, x86_64):
 
 ## Steps To Reproduce
