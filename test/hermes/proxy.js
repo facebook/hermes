@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -Xhermes-internal-test-methods -Xes6-proxy -non-strict -O -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: ulimit -s 1024 && %hermes -Xhermes-internal-test-methods -Xes6-proxy -non-strict -O -target=HBC %s | %FileCheck --match-full-lines %s
 
 let isStrictMode = (function() { return this === undefined; })();
 
@@ -2113,14 +2113,14 @@ assert.equal(p.a, 1);
 
 // Do a really deep target recursion to test for stack overflow
 var p = {a:1};
-for (var i = 0; i < 100000; ++i) {
+for (var i = 0; i < 10000; ++i) {
   p = new Proxy({}, p);
 }
 checkThrows(RangeError)(_ => p.a);
 
 // Do a really deep handler recursion to test for stack overflow
 var p = {a:1};
-for (var i = 0; i < 100000; ++i) {
+for (var i = 0; i < 10000; ++i) {
   p = new Proxy(p, {});
 }
 checkThrows(RangeError)(_ => p.a);
