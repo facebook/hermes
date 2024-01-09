@@ -1714,6 +1714,11 @@ void HBCISel::generateLoadParentInst(LoadParentInst *, BasicBlock *) {
 void HBCISel::generateNativeCallInst(NativeCallInst *, BasicBlock *) {
   hermes_fatal("NativeCallInst not supported.");
 }
+void HBCISel::generateGetNativeRuntimeInst(
+    hermes::GetNativeRuntimeInst *Inst,
+    hermes::BasicBlock *next) {
+  hermes_fatal("GetNativeRuntimeInst not supported.");
+}
 void HBCISel::generateStoreParentInst(StoreParentInst *, BasicBlock *) {
   hermes_fatal("StoreParentInst not supported.");
 }

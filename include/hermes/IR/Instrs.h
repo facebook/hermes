@@ -5003,6 +5003,34 @@ class NativeCallInst : public Instruction {
   }
 };
 
+class GetNativeRuntimeInst : public Instruction {
+  GetNativeRuntimeInst(const GetNativeRuntimeInst &) = delete;
+  void operator=(const GetNativeRuntimeInst &) = delete;
+
+ public:
+  explicit GetNativeRuntimeInst()
+      : Instruction(ValueKind::GetNativeRuntimeInstKind) {
+    setType(Type::createNumber());
+  }
+  explicit GetNativeRuntimeInst(
+      const GetNativeRuntimeInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return true;
+  }
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setIdempotent();
+  }
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::GetNativeRuntimeInstKind;
+  }
+};
+
 } // end namespace hermes
 
 #endif

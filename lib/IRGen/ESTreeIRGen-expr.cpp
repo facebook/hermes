@@ -584,6 +584,9 @@ Value *ESTreeIRGen::genSHBuiltin(
   if (builtin->_name == kw_.identCNull) {
     return Builder.getLiteralPositiveZero();
   }
+  if (builtin->_name == kw_.identCNativeRuntime) {
+    return Builder.createGetNativeRuntimeInst();
+  }
   if (builtin->_name == kw_.identExternC) {
     return genSHBuiltinExternC(call);
   }

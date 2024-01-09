@@ -995,6 +995,16 @@ Arguments | %nativeFunctionPtr is the pointer to the native function. %nativeSig
 Semantics | The JS arguments are converted to native types. The result is converted to the JS type.
 Effects | Unknown.
 
+### GetNativeRuntime
+
+GetNativeRuntime | _
+--- |-----------------------------------------------|
+Description | Get a native pointer to the native runtime to be passed to a native function.
+Example | GetNativeRuntime (:number)
+Arguments | None
+Semantics | Get the native runtime pointer.
+Effects | None
+
 ### LIRDeadValue
 
 LIRDeadValue | _

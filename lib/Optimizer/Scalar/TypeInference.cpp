@@ -850,6 +850,9 @@ class TypeInferenceImpl {
   Type inferNativeCallInst(NativeCallInst *inst) {
     hermes_fatal("typed instruction");
   }
+  Type inferGetNativeRuntimeInst(GetNativeRuntimeInst *inst) {
+    hermes_fatal("typed instruction");
+  }
   Type inferFUnaryMathInst(FUnaryMathInst *inst) {
     hermes_fatal("typed instruction");
   }

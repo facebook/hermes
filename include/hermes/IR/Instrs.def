@@ -272,6 +272,7 @@ DEF_VALUE(CheckedTypeCastInst, Instruction)
 DEF_VALUE(LIRDeadValueInst, Instruction)
 
 DEF_VALUE(NativeCallInst, Instruction)
+DEF_VALUE(GetNativeRuntimeInst, Instruction)
 
 #undef INCLUDE_HBC_BACKEND
 

@@ -655,6 +655,7 @@ class IRBuilder {
       Value *callee,
       NativeSignature *sig,
       ArrayRef<Value *> args);
+  GetNativeRuntimeInst *createGetNativeRuntimeInst();
 
   /// This is an RAII object that saves and restores the source location of the
   /// IRBuilder.

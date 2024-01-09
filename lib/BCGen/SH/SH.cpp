@@ -2255,6 +2255,11 @@ class InstrGen {
     generateRegisterPtr(*inst.getArray());
     os_ << ");\n";
   }
+  void generateGetNativeRuntimeInst(GetNativeRuntimeInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_native_pointer(shr);\n";
+  }
   void generateNativeCallInst(NativeCallInst &inst) {
     NativeSignature *sig = inst.getSignature()->getData();
     unsigned parens = 0;

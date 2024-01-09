@@ -1206,6 +1206,12 @@ NativeCallInst *IRBuilder::createNativeCallInst(
   return inst;
 }
 
+GetNativeRuntimeInst *IRBuilder::createGetNativeRuntimeInst() {
+  auto *inst = new GetNativeRuntimeInst();
+  insert(inst);
+  return inst;
+}
+
 inline void IRBuilder::justInsert(Instruction *Inst) {
   assert(!Inst->getParent() && "Instr that's already inserted elsewhere");
   Inst->setParent(Block);

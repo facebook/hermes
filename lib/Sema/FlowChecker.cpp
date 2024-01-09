@@ -1551,6 +1551,10 @@ class FlowChecker::ExprVisitor {
       checkSHBuiltinCNull(call);
       return;
     }
+    if (builtin->_name == outer_.kw_.identCNativeRuntime) {
+      checkSHBuiltinCNativeRuntime(call);
+      return;
+    }
     if (builtin->_name == outer_.kw_.identExternC) {
       checkSHBuiltinExternC(call);
       return;
@@ -1620,6 +1624,17 @@ class FlowChecker::ExprVisitor {
     // Check the number and types of arguments.
     if (call->_arguments.size() != 0) {
       outer_.sm_.error(call->getSourceRange(), "ft: c_null takes no arguments");
+      return;
+    }
+    outer_.setNodeType(call, outer_.flowContext_.getCPtr());
+  }
+
+  /// SHBuiltin.c_native_runtime().
+  void checkSHBuiltinCNativeRuntime(ESTree::CallExpressionNode *call) {
+    // Check the number and types of arguments.
+    if (call->_arguments.size() != 0) {
+      outer_.sm_.error(
+          call->getSourceRange(), "ft: c_native_runtime takes no arguments");
       return;
     }
     outer_.setNodeType(call, outer_.flowContext_.getCPtr());

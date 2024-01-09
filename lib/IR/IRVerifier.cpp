@@ -998,6 +998,9 @@ void Verifier::visitNativeCallInst(const hermes::NativeCallInst &Inst) {
   //      "NativeCallInst callee must be a number");
 }
 
+void Verifier::visitGetNativeRuntimeInst(
+    const hermes::GetNativeRuntimeInst &Inst) {}
+
 } // namespace
 
 #endif
