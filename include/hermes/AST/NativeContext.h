@@ -49,6 +49,7 @@ enum class MachineType : uint8_t {
 /// The set of native types that can be used in native signatures.
 enum class NativeCType : uint8_t {
 #define NATIVE_VOID(name, cstr) c_##name,
+#define NATIVE_HV(name, cstr) c_##name,
 #define NATIVE_TYPE(name, cstr) name,
 #define NATIVE_CTYPE(name, cstr) c_##name,
 #include "NativeTypes.def"

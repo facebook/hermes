@@ -2308,6 +2308,9 @@ class InstrGen {
   /// \param parens the number of closing parentheses to print after. This
   ///     value is in-out.
   void convertFromNativeResult(NativeCType ctype, unsigned &parens) {
+    if (ctype == NativeCType::c_void || ctype == NativeCType::c_hermes_value)
+      return;
+
     MachineType mt = nativeContext_.md.mapCType(ctype);
     const MachineDesc::MTD &mtd = nativeContext_.md.getMTD(mt);
 

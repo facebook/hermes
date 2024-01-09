@@ -14,6 +14,7 @@ namespace hermes {
 
 static const char *nativeCTypeNames[] = {
 #define NATIVE_VOID(name, cstr) cstr,
+#define NATIVE_HV(name, cstr) cstr,
 #define NATIVE_TYPE(name, cstr) cstr,
 #include "hermes/AST/NativeTypes.def"
 };
@@ -241,6 +242,10 @@ static constexpr MachineDesc s_LP64 = {
             MachineType::f32,
             // double
             MachineType::f64,
+            // SHLegacyValue
+            MachineType::u64,
+            // void (just use anything)
+            MachineType::i8,
         }
     //
 };
@@ -335,6 +340,10 @@ static constexpr MachineDesc s_ILP32 = {
             MachineType::f32,
             // double
             MachineType::f64,
+            // SHLegacyValue
+            MachineType::u64,
+            // void (just use anything)
+            MachineType::i8,
         }
     //
 };

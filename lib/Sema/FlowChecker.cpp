@@ -1662,7 +1662,9 @@ class FlowChecker::ExprVisitor {
     // Parse the options.
     bool declaredOption = false;
     UniqueString *includeOption = nullptr;
-    if (!parseExternCOptions(options, &declaredOption, &includeOption))
+    bool allowHVOption = false;
+    if (!parseExternCOptions(
+            options, &declaredOption, &includeOption, &allowHVOption))
       return;
 
     // Check arg 2.
@@ -1724,6 +1726,7 @@ class FlowChecker::ExprVisitor {
       natReturnType = NativeCType::c_void;
     else if (!parseNativeAnnotation(
                  llvh::cast<ESTree::TypeAnnotationNode>(func->_returnType),
+                 allowHVOption,
                  &natReturnType))
       return;
 
@@ -1738,6 +1741,7 @@ class FlowChecker::ExprVisitor {
       NativeCType natParamType;
       if (!parseNativeAnnotation(
               llvh::cast<ESTree::TypeAnnotationNode>(param->_typeAnnotation),
+              false,
               &natParamType))
         return;
       natParamTypes.push_back(natParamType);
@@ -1771,7 +1775,8 @@ class FlowChecker::ExprVisitor {
   bool parseExternCOptions(
       ESTree::ObjectExpressionNode *options,
       bool *declaredOption,
-      UniqueString **includeOption) {
+      UniqueString **includeOption,
+      bool *allowHVOption) {
     *declaredOption = false;
     *includeOption = nullptr;
 
@@ -1783,39 +1788,49 @@ class FlowChecker::ExprVisitor {
 
     // NOTE: Whenever we find a supported option, we erase it.
 
-    // declared: boolean.
-    auto it = map.find(
-        outer_.astContext_.getIdentifier("declared").getUnderlyingPointer());
-    if (it != map.end()) {
-      auto *declared =
-          llvh::dyn_cast<ESTree::BooleanLiteralNode>(it->second->_value);
-      if (declared) {
-        *declaredOption = declared->_value;
-      } else {
-        outer_.sm_.error(
-            it->second->getSourceRange(),
-            "ft: extern_c option 'declared' must be a boolean literal");
-        success = false;
+    // Parse an option of a specified literal type. On error print an error
+    // message and clear the success flag.
+    // \param lit The literal type to parse. The passed value is ignored, only
+    //    the type matters.
+    // \param typeName The name of the type to print in the error message.
+    // \param optionName The name of the option to parse.
+    // \param res Output parameter for the parsed value.
+    auto parseOption = [&map, &success, this](
+                           auto *lit,
+                           llvh::StringLiteral typeName,
+                           llvh::StringLiteral optionName,
+                           auto *res) {
+      using LitType = std::remove_pointer_t<decltype(lit)>;
+      auto it = map.find(
+          outer_.astContext_.getIdentifier(optionName).getUnderlyingPointer());
+      if (it != map.end()) {
+        lit = llvh::dyn_cast<LitType>(it->second->_value);
+        if (lit) {
+          *res = lit->_value;
+        } else {
+          outer_.sm_.error(
+              it->second->getSourceRange(),
+              "ft: extern_c option '" + optionName + "' must be a " + typeName +
+                  " literal");
+          success = false;
+        }
+        map.erase(it);
       }
-      map.erase(it);
-    }
+    };
 
-    // include: string.
-    it = map.find(
-        outer_.astContext_.getIdentifier("include").getUnderlyingPointer());
-    if (it != map.end()) {
-      auto *include =
-          llvh::dyn_cast<ESTree::StringLiteralNode>(it->second->_value);
-      if (include) {
-        *includeOption = include->_value;
-      } else {
-        outer_.sm_.error(
-            it->second->getSourceRange(),
-            "ft: extern_c option 'include' must be a string literal");
-        success = false;
-      }
-      map.erase(it);
-    }
+    auto parseString = [&parseOption](
+                           llvh::StringLiteral optionName, UniqueString **res) {
+      parseOption(
+          (ESTree::StringLiteralNode *)nullptr, "string", optionName, res);
+    };
+    auto parseBool = [&parseOption](llvh::StringLiteral optionName, bool *res) {
+      parseOption(
+          (ESTree::BooleanLiteralNode *)nullptr, "boolean", optionName, res);
+    };
+
+    parseBool("declared", declaredOption);
+    parseBool("hv", allowHVOption);
+    parseString("include", includeOption);
 
     // Check for unsupported properties.
     for (auto &prop : map) {
@@ -1878,19 +1893,27 @@ class FlowChecker::ExprVisitor {
   /// value in \p res. On error print an error message and return false.
   ///
   /// \param node The node to parse.
+  /// \param allowRegular If true, allow type annotations that are not native
+  ///     types.
   /// \param res Output parameter for the parsed type.
   bool parseNativeAnnotation(
       ESTree::TypeAnnotationNode *node,
+      bool allowRegular,
       NativeCType *res) {
+    *res = NativeCType::c_hermes_value;
     auto *ann = llvh::dyn_cast<ESTree::GenericTypeAnnotationNode>(
         node->_typeAnnotation);
     if (!ann || ann->_typeParameters) {
+      if (allowRegular)
+        return true;
       outer_.sm_.error(
           node->getSourceRange(), "ft: unsupported native type annotation");
       return false;
     }
     auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(ann->_id);
     if (!id) {
+      if (allowRegular)
+        return true;
       outer_.sm_.error(
           node->getSourceRange(), "ft: unsupported native type annotation");
       return false;
@@ -1898,6 +1921,8 @@ class FlowChecker::ExprVisitor {
     UniqueString *name = id->_name;
     auto it = outer_.nativeTypes_.find(name);
     if (it == outer_.nativeTypes_.end()) {
+      if (allowRegular)
+        return true;
       outer_.sm_.error(
           ann->_id->getSourceRange(),
           "ft: '" + name->str() + "' is not a native type");

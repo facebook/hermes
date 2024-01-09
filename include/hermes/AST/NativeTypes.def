@@ -8,6 +8,9 @@
 #ifndef NATIVE_VOID
 #define NATIVE_VOID(name, cstr)
 #endif
+#ifndef NATIVE_HV
+#define NATIVE_HV(name, cstr)
+#endif
 #ifndef NATIVE_TYPE
 #define NATIVE_TYPE(name, cstr)
 #endif
@@ -50,9 +53,11 @@ NATIVE_CTYPE(ssize_t, "ssize_t")
 NATIVE_CTYPE(float, "float")
 NATIVE_CTYPE(double, "double")
 
+NATIVE_HV(hermes_value, "SHLegacyValue")
 NATIVE_VOID(void, "void")
 
 #undef NATIVE_VOID
+#undef NATIVE_HV
 #undef NATIVE_TYPE
 #undef NATIVE_PTR
 #undef NATIVE_CTYPE
