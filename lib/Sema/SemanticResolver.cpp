@@ -935,6 +935,26 @@ void SemanticResolver::visit(ComponentDeclarationNode *componentDecl) {
 
 #endif
 
+#if HERMES_PARSE_TS
+
+void visit(ESTree::TSTypeAliasDeclarationNode *node) {
+  // Do nothing.
+}
+
+void visit(ESTree::TSTypeParameterDeclarationNode *node) {
+  // Do nothing.
+}
+
+void visit(ESTree::TSTypeParameterInstantiationNode *node) {
+  // Do nothing.
+}
+
+void visit(ESTree::TSAsExpressionNode *node) {
+  // Do nothing.
+}
+
+#endif
+
 void SemanticResolver::visitFunctionLike(
     ESTree::FunctionLikeNode *node,
     ESTree::IdentifierNode *id,

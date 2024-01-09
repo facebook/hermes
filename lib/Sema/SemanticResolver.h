@@ -232,6 +232,12 @@ class SemanticResolver
   void visit(ESTree::AsExpressionNode *node);
   void visit(ESTree::ComponentDeclarationNode *componentDecl);
 #endif
+#if HERMES_PARSE_TS
+  void visit(ESTree::TSTypeAliasDeclarationNode *node);
+  void visit(ESTree::TSTypeParameterDeclarationNode *node);
+  void visit(ESTree::TSTypeParameterInstantiationNode *node);
+  void visit(ESTree::TSAsExpressionNode *node);
+#endif
 
   friend class FunctionContext;
   friend class ESTree::RecursionDepthTracker<SemanticResolver>;
