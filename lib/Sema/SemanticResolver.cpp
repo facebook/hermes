@@ -937,19 +937,19 @@ void SemanticResolver::visit(ComponentDeclarationNode *componentDecl) {
 
 #if HERMES_PARSE_TS
 
-void visit(ESTree::TSTypeAliasDeclarationNode *node) {
+void SemanticResolver::visit(ESTree::TSTypeAliasDeclarationNode *node) {
   // Do nothing.
 }
 
-void visit(ESTree::TSTypeParameterDeclarationNode *node) {
+void SemanticResolver::visit(ESTree::TSTypeParameterDeclarationNode *node) {
   // Do nothing.
 }
 
-void visit(ESTree::TSTypeParameterInstantiationNode *node) {
+void SemanticResolver::visit(ESTree::TSTypeParameterInstantiationNode *node) {
   // Do nothing.
 }
 
-void visit(ESTree::TSAsExpressionNode *node) {
+void SemanticResolver::visit(ESTree::TSAsExpressionNode *node) {
   // Do nothing.
 }
 
