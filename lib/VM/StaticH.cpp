@@ -1949,3 +1949,13 @@ _sh_string_concat(SHRuntime *shr, uint32_t argCount, ...) {
 extern "C" int _sh_errno(void) {
   return errno;
 }
+
+extern "C" SHLegacyValue _sh_asciiz_to_string(SHRuntime *shr, const char *str) {
+  Runtime &runtime = getRuntime(shr);
+
+  auto res = StringPrimitive::createEfficient(
+      runtime, UTF8Ref((const uint8_t *)str, strlen(str)), false);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *res;
+}

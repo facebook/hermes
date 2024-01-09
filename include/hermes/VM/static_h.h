@@ -1030,6 +1030,10 @@ static inline SHLegacyValue _sh_ljs_native_pointer_or_throw(
 /// \return the C errno value.
 SHERMES_EXPORT int _sh_errno(void);
 
+/// Convert a C string to a JS string.
+SHERMES_EXPORT SHLegacyValue
+_sh_asciiz_to_string(SHRuntime *shr, const char *str);
+
 static inline void _sh_ptr_write_char(char *ptr, int offset, char c) {
   ptr[offset] = c;
 }
