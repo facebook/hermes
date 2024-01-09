@@ -47,7 +47,8 @@ const unsigned kFastRegisterAllocationThreshold = 250;
 // time memory usage.
 const uint64_t kRegisterAllocationMemoryLimit = 10L * 1024 * 1024;
 
-void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
+/// Lower module IR to LIR, so it is suitable for register allocation.
+void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
   if (M->isLowered())
     return;
 
@@ -110,6 +111,28 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
     M->dump(llvh::errs());
     return;
   }
+}
+
+/// Perform final lowering of a register-allocated function's IR.
+void lowerAllocatedFunctionIR(
+    Function *F,
+    HVMRegisterAllocator &RA,
+    const BytecodeGenerationOptions &options) {
+  PassManager PM;
+  PM.addPass(new LowerStoreInstrs(RA));
+  PM.addPass(new InitCallFrame(RA));
+  if (options.optimizationEnabled) {
+    PM.addPass(new MovElimination(RA));
+    PM.addPass(new RecreateCheapValues(RA));
+    PM.addPass(new LoadConstantValueNumbering(RA));
+  }
+  PM.addPass(new SpillRegisters(RA));
+  if (options.basicBlockProfiling) {
+    // Insert after all other passes so that it sees final basic block
+    // list.
+    PM.addPass(new InsertProfilePoint());
+  }
+  PM.run(F);
 }
 
 /// Used in delta optimizing mode.
@@ -196,7 +219,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
     SourceMapGenerator *sourceMapGen,
     std::unique_ptr<BCProviderBase> baseBCProvider) {
   PerfSection perf("Bytecode Generation");
-  lowerIR(M, options);
+  lowerModuleIR(M, options);
 
   if (options.format == DumpLIR)
     M->dump();
@@ -377,21 +400,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
         RA.dump();
       }
 
-      PassManager PM;
-      PM.addPass(new LowerStoreInstrs(RA));
-      PM.addPass(new InitCallFrame(RA));
-      if (options.optimizationEnabled) {
-        PM.addPass(new MovElimination(RA));
-        PM.addPass(new RecreateCheapValues(RA));
-        PM.addPass(new LoadConstantValueNumbering(RA));
-      }
-      PM.addPass(new SpillRegisters(RA));
-      if (options.basicBlockProfiling) {
-        // Insert after all other passes so that it sees final basic block
-        // list.
-        PM.addPass(new InsertProfilePoint());
-      }
-      PM.run(&F);
+      lowerAllocatedFunctionIR(&F, RA, options);
 
       if (options.format == DumpLRA)
         RA.dump();
