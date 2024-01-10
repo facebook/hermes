@@ -49,7 +49,6 @@
 //! ```
 //! We will get the following state in memory:
 //! ```[text]
-//!
 //! Scope 1: --> "a":1 ------------------> "c": 3
 //!               ^                         ^
 //!               |                         |
