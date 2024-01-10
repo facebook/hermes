@@ -10,7 +10,9 @@ package com.facebook.hermes.test;
 import static org.assertj.core.api.Java6Assertions.assertThat;
 
 import android.content.res.AssetManager;
-import android.test.InstrumentationTestCase;
+
+import androidx.test.platform.app.InstrumentationRegistry;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,10 +20,10 @@ import java.io.InputStreamReader;
 import java.util.stream.Collectors;
 import org.junit.Test;
 
-public class HermesIntlAndroidTest extends InstrumentationTestCase {
+public class HermesIntlAndroidTest {
   @Test
   public void testIntlFromAsset() throws IOException {
-    AssetManager assets = getInstrumentation().getContext().getAssets();
+    AssetManager assets = InstrumentationRegistry.getInstrumentation().getContext().getAssets();
     InputStream is = assets.open("intl.js");
     String script =
         new BufferedReader(new InputStreamReader(is)).lines().collect(Collectors.joining("\n"));

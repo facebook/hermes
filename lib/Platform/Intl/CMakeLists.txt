@@ -12,9 +12,12 @@ if(HERMES_ENABLE_INTL)
     )
     target_compile_options(hermesPlatformIntl PRIVATE -frtti -fexceptions)
   elseif(APPLE)
+    add_hermes_library(hermesTzdbBackward STATIC TzdbBackward.cpp)
+
     add_hermes_library(hermesPlatformIntl STATIC PlatformIntlApple.mm
         LINK_LIBS
         ${FOUNDATION}
+        hermesTzdbBackward
         hermesBCP47Parser
         hermesPublic
     )

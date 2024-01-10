@@ -111,6 +111,15 @@ std::u16string DateTimeFormat::format(double jsTimeValue) noexcept {
   return std::u16string(s.begin(), s.end());
 }
 
+std::u16string DateTimeFormat::formatRange(
+    double jsTimeValueFrom,
+    double jsTimeValueTo) noexcept {
+  auto sfrom = format(jsTimeValueFrom);
+  auto sto = format(jsTimeValueTo);
+
+  return sfrom + u" - " + sto;
+}
+
 std::vector<std::unordered_map<std::u16string, std::u16string>>
 DateTimeFormat::formatToParts(double jsTimeValue) noexcept {
   std::unordered_map<std::u16string, std::u16string> part;
@@ -119,6 +128,32 @@ DateTimeFormat::formatToParts(double jsTimeValue) noexcept {
   std::string s = std::to_string(jsTimeValue);
   part[u"value"] = {s.begin(), s.end()};
   return std::vector<std::unordered_map<std::u16string, std::u16string>>{part};
+}
+
+std::vector<std::unordered_map<std::u16string, std::u16string>>
+DateTimeFormat::formatRangeToParts(
+    double jsTimeValueFrom,
+    double jsTimeValueTo) noexcept {
+  std::string sfrom = std::to_string(jsTimeValueFrom);
+  std::unordered_map<std::u16string, std::u16string> frompart;
+  frompart[u"type"] = u"integer";
+  frompart[u"value"] = {sfrom.begin(), sfrom.end()};
+  frompart[u"source"] = u"startRange";
+
+  std::string separator = " - ";
+  std::unordered_map<std::u16string, std::u16string> separatorpart;
+  separatorpart[u"type"] = u"literal";
+  separatorpart[u"value"] = {separatorpart.begin(), separatorpart.end()};
+  separatorpart[u"source"] = u"shared";
+
+  std::unordered_map<std::u16string, std::u16string> topart;
+  std::string sto = std::to_string(jsTimeValueFrom);
+  topart[u"type"] = u"integer";
+  topart[u"value"] = {sto.begin(), sto.end()};
+  topart[u"source"] = u"endRange";
+
+  return std::vector<std::unordered_map<std::u16string, std::u16string>>{
+      frompart, separatorpart, topart};
 }
 
 namespace {

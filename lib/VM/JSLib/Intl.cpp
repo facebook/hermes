@@ -45,7 +45,7 @@ CallResult<std::u16string> stringFromJS(
   return std::u16string(view.begin(), view.end());
 }
 
-CallResult<HermesValue> localesToJS(
+CallResult<HermesValue> stringArrayToJS(
     Runtime &runtime,
     CallResult<std::vector<std::u16string>> result) {
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
@@ -61,10 +61,10 @@ CallResult<HermesValue> localesToJS(
   MutableHandle<> name{runtime};
   uint64_t index = 0;
   GCScopeMarkerRAII marker{runtime};
-  for (auto &locale : *result) {
+  for (auto &str : *result) {
     marker.flush();
     CallResult<HermesValue> nameRes =
-        StringPrimitive::createEfficient(runtime, std::move(locale));
+        StringPrimitive::createEfficient(runtime, std::move(str));
     if (LLVM_UNLIKELY(nameRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -117,7 +117,7 @@ CallResult<HermesValue> optionsToJS(
 
 CallResult<Handle<JSObject>> partToJS(
     Runtime &runtime,
-    std::unordered_map<std::u16string, std::u16string> result) {
+    hermes::platform_intl::Part result) {
   CallResult<PseudoHandle<JSObject>> objRes = JSObject::create(runtime);
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -126,17 +126,27 @@ CallResult<Handle<JSObject>> partToJS(
   MutableHandle<> key{runtime};
   MutableHandle<> value{runtime};
   GCScopeMarkerRAII marker{runtime};
-  for (auto &kv : result) {
+
+  for (auto &k : std::array{
+           u"type",
+           u"value",
+           u"source",
+       }) {
     marker.flush();
 
+    auto kv = result.find(k);
+    if (kv == result.end()) {
+      continue;
+    }
+
     CallResult<HermesValue> keyRes = StringPrimitive::createEfficient(
-        runtime, createUTF16Ref(kv.first.c_str()));
+        runtime, createUTF16Ref(kv->first.c_str()));
     if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     key = *keyRes;
     CallResult<HermesValue> valueRes =
-        StringPrimitive::createEfficient(runtime, std::move(kv.second));
+        StringPrimitive::createEfficient(runtime, std::move(kv->second));
     if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -154,8 +164,7 @@ CallResult<Handle<JSObject>> partToJS(
 
 CallResult<HermesValue> partsToJS(
     Runtime &runtime,
-    CallResult<std::vector<std::unordered_map<std::u16string, std::u16string>>>
-        result) {
+    CallResult<std::vector<hermes::platform_intl::Part>> result) {
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -521,7 +530,7 @@ CallResult<HermesValue> intlServiceSupportedLocalesOf(
     return ExecutionStatus::EXCEPTION;
   }
 
-  return localesToJS(
+  return stringArrayToJS(
       runtime, T::supportedLocalesOf(runtime, *localesRes, *optionsRes));
 }
 
@@ -929,7 +938,6 @@ void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
       false,
       true);
 
-#ifndef __APPLE__
   defineMethod(
       runtime,
       prototype,
@@ -937,7 +945,22 @@ void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
       nullptr,
       intlDateTimeFormatPrototypeFormatToParts,
       1);
-#endif
+
+  defineMethod(
+      runtime,
+      prototype,
+      Predefined::getSymbolID(Predefined::formatRange),
+      nullptr,
+      intlDateTimeFormatPrototypeFormatRange,
+      2);
+
+  defineMethod(
+      runtime,
+      prototype,
+      Predefined::getSymbolID(Predefined::formatRangeToParts),
+      nullptr,
+      intlDateTimeFormatPrototypeFormatRangeToParts,
+      2);
 
   defineMethod(
       runtime,
@@ -1010,6 +1033,37 @@ CallResult<double> dateNowValue(Runtime &runtime, NativeArgs args) {
   return x;
 }
 
+CallResult<double> dateValueOrTypeError(Runtime &runtime, NativeArgs args, unsigned argn) {
+  // ECMA 402 13.1.5:
+  // 1 and 2 are implicit in the callers.
+  // 3. If startDate is undefined or endDate is undefined, throw a TypeError exception.
+  if (args.getArg(0).isUndefined()) {
+     return runtime.raiseTypeError("startDate is undefined");
+  }
+
+  if (args.getArg(1).isUndefined()) {
+     return runtime.raiseTypeError("endDate is undefined");
+  }
+
+  // 4. Let x be ? ToNumber(startDate)
+  // 5. Let y be ? ToNumber(endDate).
+  CallResult<HermesValue> xyRes = toNumber_RJS(runtime, args.getArgHandle(argn));
+  if (LLVM_UNLIKELY(xyRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // ECMA 402 11.5.10, shared by the callers to this function:
+  // 1. Let x be TimeClip(x).
+  // 3. Let y be TimeClip(y).
+  double xy = timeClip(xyRes->getNumber());
+  // 2. If x is NaN, throw a RangeError exception.
+  if (std::isnan(xy)) {
+    return runtime.raiseRangeError("Invalid time value");
+  }
+
+  return xy;
+}
+
 } // namespace
 
 CallResult<HermesValue>
@@ -1032,6 +1086,41 @@ intlDateTimeFormatFormat(void *, Runtime &runtime, NativeArgs args) {
   }
   return StringPrimitive::createEfficient(
       runtime, dateTimeFormat->format(*dateRes));
+}
+
+CallResult<HermesValue>
+intlDateTimeFormatFormatRange(void *, Runtime &runtime, NativeArgs args) {
+  // 11.3.5 Intl.DateTimeFormat.prototype.formatRange ( startDate, endDate )
+
+  // 1. Let dtf be this value.
+  auto *nf = vmcast<NativeFunction>(
+      runtime.getCurrentFrame()->getCalleeClosureUnsafe());
+  // 2. Perform ? RequireInternalSlot(dtf, [[InitializedDateTimeFormat]]).
+  PseudoHandle<DecoratedObject> dateTimeFormatHandle =
+      getDateTimeFormat(createPseudoHandle(nf), runtime);
+
+  // Since dateTimeFormatHandle came out of an internal slot, it's an
+  // assertable failure if it has the wrong type.
+  platform_intl::DateTimeFormat *dateTimeFormat =
+      static_cast<platform_intl::DateTimeFormat *>(
+          dateTimeFormatHandle->getDecoration());
+  assert(dateTimeFormat && "Intl.DateTimeFormat platform part is nullptr");
+
+  // 3. If startDate is undefined or endDate is undefined, throw a TypeError exception.
+  // 4. Let x be ? ToNumber(startDate).
+  CallResult<double> x = dateValueOrTypeError(runtime, args, 0);
+  if (LLVM_UNLIKELY(x == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 3. ...
+  // 5. Let y be ? ToNumber(endDate).
+  CallResult<double> y = dateValueOrTypeError(runtime, args, 1);
+  if (LLVM_UNLIKELY(y == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return StringPrimitive::createEfficient(
+      runtime, dateTimeFormat->formatRange(*x,*y));
 }
 
 CallResult<HermesValue> intlDateTimeFormatPrototypeFormatGetter(
@@ -1091,6 +1180,79 @@ CallResult<HermesValue> intlDateTimeFormatPrototypeFormatToParts(
     return ExecutionStatus::EXCEPTION;
   }
   return partsToJS(runtime, (*dateTimeFormatRes)->formatToParts(*dateRes));
+}
+
+CallResult<HermesValue> intlDateTimeFormatPrototypeFormatRange(
+    void *,
+    Runtime &runtime,
+    NativeArgs args) {
+  // 11.3.5 Intl.DateTimeFormat.prototype.formatRange ( startDate, endDate )
+  Handle<DecoratedObject> dateTimeFormatHandle =
+      args.dyncastThis<DecoratedObject>();
+  // 1. Let dtf be this value.
+  // 2. Perform ? RequireInternalSlot(dtf, [[InitializedDateTimeFormat]]).
+  CallResult<platform_intl::DateTimeFormat *> dateTimeFormatRes =
+      verifyDecoration<platform_intl::DateTimeFormat>(
+          runtime,
+          dateTimeFormatHandle,
+          "Intl.DateTimeFormat.prototype.formatRange");
+  if (LLVM_UNLIKELY(dateTimeFormatRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 3. If startDate is undefined or endDate is undefined, throw a TypeError exception.
+  // 4. Let x be ? ToNumber(startDate).
+  CallResult<double> x = dateValueOrTypeError(runtime, args, 0);
+  if (LLVM_UNLIKELY(x == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 3. ...
+  // 5. Let y be ? ToNumber(endDate).
+  CallResult<double> y = dateValueOrTypeError(runtime, args, 1);
+  if (LLVM_UNLIKELY(y == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 6. Return ? FormatDateTimeRangeToParts(dtf, x, y).
+  return StringPrimitive::createEfficient(
+      runtime, (*dateTimeFormatRes)->formatRange(*x,*y));
+}
+
+CallResult<HermesValue> intlDateTimeFormatPrototypeFormatRangeToParts(
+    void *,
+    Runtime &runtime,
+    NativeArgs args) {
+  // 11.3.6 Intl.DateTimeFormat.prototype.formatRangeToParts ( startDate, endDate )
+  Handle<DecoratedObject> dateTimeFormatHandle =
+      args.dyncastThis<DecoratedObject>();
+  // 1. Let dtf be this value.
+  // 2. Perform ? RequireInternalSlot(dtf, [[InitializedDateTimeFormat]]).
+  CallResult<platform_intl::DateTimeFormat *> dateTimeFormatRes =
+      verifyDecoration<platform_intl::DateTimeFormat>(
+          runtime,
+          dateTimeFormatHandle,
+          "Intl.DateTimeFormat.prototype.formatRangeToParts");
+  if (LLVM_UNLIKELY(dateTimeFormatRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 3. If startDate is undefined or endDate is undefined, throw a TypeError exception.
+  // 4. Let x be ? ToNumber(startDate).
+  CallResult<double> x = dateValueOrTypeError(runtime, args, 0);
+  if (LLVM_UNLIKELY(x == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 3. ...
+  // 5. Let y be ? ToNumber(endDate).
+  CallResult<double> y = dateValueOrTypeError(runtime, args, 1);
+  if (LLVM_UNLIKELY(y == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 6. Return ? FormatDateTimeRangeToParts(dtf, x, y).
+  return partsToJS(runtime, (*dateTimeFormatRes)->formatRangeToParts(*x,*y));
 }
 
 CallResult<HermesValue> intlDateTimeFormatPrototypeResolvedOptions(
@@ -1668,7 +1830,7 @@ intlGetCanonicalLocales(void *, vm::Runtime &runtime, vm::NativeArgs args) {
     return vm::ExecutionStatus::EXCEPTION;
   }
 
-  return vm::localesToJS(
+  return vm::stringArrayToJS(
       runtime, platform_intl::getCanonicalLocales(runtime, *localesRes));
 }
 

@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 
 public class LocaleObjectICU implements ILocaleObject<ULocale> {
 
@@ -94,7 +95,7 @@ public class LocaleObjectICU implements ILocaleObject<ULocale> {
 
   @RequiresApi(api = Build.VERSION_CODES.N)
   @Override
-  public void setUnicodeExtensions(String key, ArrayList<String> value)
+  public void setUnicodeExtensions(String key, List<String> value)
       throws JSRangeErrorException {
     ensureNotDirty();
     if (m_icuLocaleBuilder == null)

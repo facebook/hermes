@@ -20,11 +20,13 @@ buildDir.mkdirs()
 
 def testDestination = "java/com/facebook/hermes/test/assets"
 
+def testBaseDir = file(rootProject.ext.fbsource).exists() ?
+        "${rootProject.ext.fbsource}/xplat/third-party/javascript-test-suites" :
+        "${rootProject.ext.hermes_ws}"
+def test262Dir = "${testBaseDir}/test262/"
+
 task prepareTests() {
   doLast {
-    def test262Dir = file(rootProject.ext.fbsource).exists() ?
-                 "${rootProject.ext.fbsource}/xplat/third-party/javascript-test-suites/test262/" :
-                 "${rootProject.ext.hermes_ws}/test262"
     assert file(test262Dir).exists() : "Test262 directory not found"
     copy{
       from(test262Dir) {
@@ -56,7 +58,7 @@ task prepareTests() {
 
 // TODO: Figure out how to deduplicate this file and intl/build.gradle
 android {
-  compileSdkVersion 24
+  compileSdkVersion 31
 
   defaultConfig {
     minSdkVersion 16
@@ -96,17 +98,28 @@ android {
     prefab true
   }
 
+  buildTypes {
+    debug {
+      buildConfigField "String", "TEST_BASE_DIR", "\"$testBaseDir\""
+      buildConfigField "String", "TEST_TEST262_DIR", "\"$test262Dir\""
+    }
+  }
+
   dependencies {
-    androidTestImplementation 'junit:junit:4.12'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-    androidTestImplementation 'org.assertj:assertj-core:2.9.1'
+    androidTestImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    androidTestImplementation 'org.assertj:assertj-core:3.18.1'
     androidTestImplementation 'com.facebook.soloader:soloader:0.10.4'
     androidTestImplementation 'com.facebook.yoga:proguard-annotations:1.19.0'
 
     implementation 'com.facebook.fbjni:fbjni:0.2.2'
     implementation "androidx.annotation:annotation:1.3.0"
     implementation "androidx.annotation:annotation-experimental:1.0.0"
+
+    androidTestImplementation "androidx.test:runner:1.5.2"
+    androidTestImplementation "androidx.test:rules:1.2.0"
+
   }
 
   // TODO: Revisit this if there is a better solution for deduplicating native

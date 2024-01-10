@@ -39,7 +39,7 @@ buildscript {
     System.getenv("HOME") + "/fbsource"
 
     minSdkVersion = 16
-    compileSdkVersion = 28
+    compileSdkVersion = 31
     abis = project.hasProperty('abis') ?
          project.getProperty("abis").split(",") :
          ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]

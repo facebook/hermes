@@ -9,12 +9,13 @@ package com.facebook.hermes.test;
 
 import static org.assertj.core.api.Java6Assertions.assertThat;
 
-import android.test.InstrumentationTestCase;
 import java.util.Locale;
 import java.util.TimeZone;
+
+import org.junit.Assert;
 import org.junit.Test;
 
-public class HermesInstrumentationTest extends InstrumentationTestCase {
+public class HermesInstrumentationTest {
 
   @Test
   public void testEvaluatingJavaScript() {
@@ -143,6 +144,6 @@ public class HermesInstrumentationTest extends InstrumentationTestCase {
     byte[] epilogue =
         HermesEpilogue.getHermesBytecodeMetadata(
             HermesEpilogueTestData.getBytecodeWithEpilogue(EXPECTED_EPILOGUE));
-    assertEquals(EXPECTED_EPILOGUE, new String(epilogue));
+    Assert.assertEquals(EXPECTED_EPILOGUE, new String(epilogue));
   }
 }

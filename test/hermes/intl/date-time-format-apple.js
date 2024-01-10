@@ -12,8 +12,8 @@
 print("get date time format test");
 // CHECK-LABEL: get date time format test
 
-const date = new Date(Date.UTC(2020, 0, 2, 3, 45, 00, 30));
-const oldDate = new Date(Date.UTC(1952, 0, 9, 8, 04, 03, 05));
+const date = new Date(Date.UTC(2020, 0, 2, 3, 45, 0, 30));
+const oldDate = new Date(Date.UTC(1952, 0, 9, 8, 4, 3, 5));
 
 print(new Intl.DateTimeFormat('en-US').format(date));
 // CHECK-NEXT: 1/2/2020

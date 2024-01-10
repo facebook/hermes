@@ -279,16 +279,16 @@ public class NumberFormat {
 
   // https://tc39.es/ecma402/#sec-setnfdigitoptions
   private void setNumberFormatDigitOptions(
-      Map<String, Object> options, Object mnfdDefault, Object mxfdDefault)
+      Map<String, Object> options, int mnfdDefault, int mxfdDefault)
       throws JSRangeErrorException {
 
-    Object mnid =
+    int mnid =
         OptionHelpers.GetNumberOption(
             options,
             "minimumIntegerDigits",
-            JSObjects.newNumber(1),
-            JSObjects.newNumber(21),
-            JSObjects.newNumber(1));
+            1,
+            21,
+            1);
 
     Object mnfd = JSObjects.Get(options, "minimumFractionDigits");
     Object mxfd = JSObjects.Get(options, "maximumFractionDigits");
@@ -296,39 +296,33 @@ public class NumberFormat {
     Object mnsd = JSObjects.Get(options, "minimumSignificantDigits");
     Object mxsd = JSObjects.Get(options, "maximumSignificantDigits");
 
-    mResolvedMinimumIntegerDigits = (int) Math.floor(JSObjects.getJavaDouble(mnid));
+    mResolvedMinimumIntegerDigits = mnid;
 
     if (!JSObjects.isUndefined(mnsd) || !JSObjects.isUndefined(mxsd)) {
-
       mRoundingType = IPlatformNumberFormatter.RoundingType.SIGNIFICANT_DIGITS;
 
-      mnsd =
+      int mnsd_ =
           OptionHelpers.DefaultNumberOption(
-              mnsd, JSObjects.newNumber(1), JSObjects.newNumber(21), JSObjects.newNumber(1));
-      mxsd =
+              mnsd, 1, 21, 1);
+      int mxsd_ =
           OptionHelpers.DefaultNumberOption(
-              mxsd, mnsd, JSObjects.newNumber(21), JSObjects.newNumber(21));
+              mxsd, mnsd_, 21, 21);
 
-      mResolvedMinimumSignificantDigits = (int) Math.floor(JSObjects.getJavaDouble(mnsd));
-      mResolvedMaximumSignificantDigits = (int) Math.floor(JSObjects.getJavaDouble(mxsd));
-
+      mResolvedMinimumSignificantDigits = mnsd_;
+      mResolvedMaximumSignificantDigits = mxsd_;
     } else if (!JSObjects.isUndefined(mnfd) || !JSObjects.isUndefined(mxfd)) {
-
       mRoundingType = IPlatformNumberFormatter.RoundingType.FRACTION_DIGITS;
 
-      mnfd =
+      int mnfd_ =
           OptionHelpers.DefaultNumberOption(
-              mnfd, JSObjects.newNumber(0), JSObjects.newNumber(20), mnfdDefault);
-      Object mxfdActualDefault =
-          JSObjects.newNumber(
-              Math.max(JSObjects.getJavaDouble(mnfd), JSObjects.getJavaDouble(mxfdDefault)));
+              mnfd, 0, 20, mnfdDefault);
 
-      mxfd =
-          OptionHelpers.DefaultNumberOption(mxfd, mnfd, JSObjects.newNumber(20), mxfdActualDefault);
+      int mxfdActualDefault = Math.max(mnfd_, mxfdDefault);
+      int mxfd_ =
+          OptionHelpers.DefaultNumberOption(mxfd, mnfd_, 20, mxfdActualDefault);
 
-      mResolvedMinimumFractionDigits = (int) Math.floor(JSObjects.getJavaDouble(mnfd));
-      mResolvedMaximumFractionDigits = (int) Math.floor(JSObjects.getJavaDouble(mxfd));
-
+      mResolvedMinimumFractionDigits = mnfd_;
+      mResolvedMaximumFractionDigits = mxfd_;
     } else if (mResolvedNotation == IPlatformNumberFormatter.Notation.COMPACT) {
       mRoundingType = IPlatformNumberFormatter.RoundingType.COMPACT_ROUNDING;
     } else if (mResolvedNotation == IPlatformNumberFormatter.Notation.ENGINEERING) {
@@ -349,8 +343,8 @@ public class NumberFormat {
       mResolvedMaximumFractionDigits = 5;
     } else {
       mRoundingType = IPlatformNumberFormatter.RoundingType.FRACTION_DIGITS;
-      mResolvedMinimumFractionDigits = (int) Math.floor(JSObjects.getJavaDouble(mnfdDefault));
-      mResolvedMaximumFractionDigits = (int) Math.floor(JSObjects.getJavaDouble(mxfdDefault));
+      mResolvedMinimumFractionDigits = mnfdDefault;
+      mResolvedMaximumFractionDigits = mxfdDefault;
     }
   }
 
@@ -408,8 +402,8 @@ public class NumberFormat {
     setNumberFormatUnitOptions(options);
 
     // 17, 18
-    Object mnfdDefault;
-    Object mxfdDefault;
+    int mnfdDefault;
+    int mxfdDefault;
     if (mResolvedStyle == CURRENCY) {
 
       int cDigits;
@@ -420,13 +414,13 @@ public class NumberFormat {
         cDigits = PlatformNumberFormatterAndroid.getCurrencyDigits(mResolvedCurrency);
       }
 
-      mnfdDefault = JSObjects.newNumber(cDigits);
-      mxfdDefault = JSObjects.newNumber(cDigits);
+      mnfdDefault = cDigits;
+      mxfdDefault = cDigits;
     } else {
-      mnfdDefault = JSObjects.newNumber(0);
+      mnfdDefault = 0;
 
-      if (mResolvedStyle == PERCENT) mxfdDefault = JSObjects.newNumber(0);
-      else mxfdDefault = JSObjects.newNumber(3);
+      if (mResolvedStyle == PERCENT) mxfdDefault = 0;
+      else mxfdDefault = 3;
     }
 
     // 19, 20

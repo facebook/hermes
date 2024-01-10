@@ -27,6 +27,9 @@ One popular implementation strategy followed by other engines, is to bundle an i
 - `Intl.DateTimeFormat`*
   - `Intl.DateTimeFormat.supportedLocalesOf`
   - `Intl.DateTimeFormat.prototype.format`
+  - `Intl.DateTimeFormat.prototype.formatToParts`
+  - `Intl.DateTimeFormat.prototype.formatRange`
+  - `Intl.DateTimeFormat.prototype.formatRangeToParts`
   - `Intl.DateTimeFormat.prototype.resolvedOptions`
 
 - `Intl.getCanonicalLocales`
@@ -50,7 +53,6 @@ One popular implementation strategy followed by other engines, is to bundle an i
 ## Supported on Android only
 - `Intl.NumberFormat`
   - `Intl.NumberFormat.prototype.formatToParts`
-  - `Intl.DateTimeFormat.prototype.formatToParts`
 
 ## * Limitations on property support
 

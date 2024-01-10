@@ -27,6 +27,12 @@ struct ParsedLocaleIdentifier {
   // Returns a string containing the canonicalized representation of this
   // identifier.
   std::u16string canonicalize() const;
+  // Returns a string containing the canonicalized representation of this
+  // locale identifier (without extensions)
+  std::u16string canonicalizeLocaleId() const;
+  // Returns a string containing the canonicalized representation of this
+  // extension string
+  std::u16string canonicalizeExtensionString() const;
 
   struct ParsedLanguageIdentifier {
     std::u16string languageSubtag;
