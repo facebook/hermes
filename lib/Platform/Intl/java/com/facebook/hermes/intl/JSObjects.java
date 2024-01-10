@@ -80,10 +80,6 @@ public class JSObjects {
     return object instanceof Double;
   }
 
-  public static Object newNumber(double d) {
-    return new Double(d);
-  }
-
   public static double getJavaDouble(Object object) {
     return (Double) object;
   }

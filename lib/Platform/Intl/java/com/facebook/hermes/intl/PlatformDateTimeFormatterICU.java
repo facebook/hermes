@@ -16,6 +16,8 @@ import android.icu.util.Calendar;
 import android.icu.util.TimeZone;
 import android.icu.util.ULocale;
 import android.os.Build;
+
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import java.text.AttributedCharacterIterator;
 import java.util.ArrayList;
@@ -78,9 +80,20 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
     if (field == DateFormat.Field.TIME_ZONE) {
       return "timeZoneName";
     }
+
+    // Flexible day period is only supported on API 28+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && field == DateFormat.Field.FLEXIBLE_DAY_PERIOD) {
+        return "dayPeriod";
+    }
+
     if (field == DateFormat.Field.AM_PM) {
       return "dayPeriod";
     }
+
+    if (field == DateFormat.Field.MILLISECOND) {
+      return "fractionalSecond";
+    }
+
     // TODO:: There must be a better way to do this.
     if (field.toString().equals("android.icu.text.DateFormat$Field(related year)"))
       return "relatedYear";
@@ -258,7 +271,9 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
       HourCycle hourCycle,
       DateStyle dateStyle,
       TimeStyle timeStyle,
-      Object hour12)
+      Object hour12,
+      DayPeriod dayPeriod,
+      @Nullable Integer fractionalSecondDigits)
       throws JSRangeErrorException {
 
     StringBuilder skeletonBuffer = new StringBuilder();
@@ -307,6 +322,28 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
       skeletonBuffer.append(minute.getSkeleonSymbol());
       skeletonBuffer.append(second.getSkeleonSymbol());
       skeletonBuffer.append(timeZoneName.getSkeleonSymbol());
+
+      // Day period is only technically supported on API 28+,
+      // so we fallback to the AM/PM field
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        skeletonBuffer.append(dayPeriod.getSkeletonSymbol());
+      } else {
+        skeletonBuffer.append(dayPeriod.getSkeletonSymbolFallback());
+      }
+    }
+
+    if (fractionalSecondDigits != null) {
+      switch (fractionalSecondDigits) {
+        case 1:
+          skeletonBuffer.append("S");
+          break;
+        case 2:
+          skeletonBuffer.append("SS");
+          break;
+        case 3:
+          skeletonBuffer.append("SSS");
+          break;
+      }
     }
 
     return skeletonBuffer.toString();
@@ -331,7 +368,9 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
       Object timeZone,
       DateStyle dateStyle,
       TimeStyle timeStyle,
-      Object hour12)
+      Object hour12,
+      DayPeriod dayPeriod,
+      Integer fractionalSecondDigits)
       throws JSRangeErrorException {
     String skeleton =
         getSkeleton(
@@ -348,7 +387,9 @@ public class PlatformDateTimeFormatterICU implements IPlatformDateTimeFormatter 
             hourCycle,
             dateStyle,
             timeStyle,
-            hour12);
+            hour12,
+            dayPeriod,
+            fractionalSecondDigits);
 
     Calendar calendarInstance = null;
     if (!calendar.isEmpty()) {

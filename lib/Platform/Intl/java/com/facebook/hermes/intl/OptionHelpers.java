@@ -7,32 +7,48 @@
 
 package com.facebook.hermes.intl;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import java.util.Arrays;
+import java.util.Objects;
 
 public class OptionHelpers {
 
   public enum OptionType {
     BOOLEAN,
-    STRING
+    STRING,
   }
 
-  public static Object DefaultNumberOption(
-      Object value, Object minimum, Object maximum, Object fallback) throws JSRangeErrorException {
+  @Nullable
+  public static Integer DefaultNumberOption(
+      Object value, int minimum, int maximum, Integer fallback) throws JSRangeErrorException {
     if (JSObjects.isUndefined(value)) return fallback;
 
     if (!JSObjects.isNumber(value)) throw new JSRangeErrorException("Invalid number value !");
 
     double d = JSObjects.getJavaDouble(value);
-    if (Double.isNaN(d)
-        || d > JSObjects.getJavaDouble(maximum)
-        || d < JSObjects.getJavaDouble(minimum))
+    if (Double.isNaN(d) || d > maximum || d < minimum)
       throw new JSRangeErrorException("Invalid number value !");
 
-    return value;
+    return (int) Math.floor(d);
   }
 
-  public static Object GetNumberOption(
-      Object options, String property, Object minimum, Object maximum, Object fallback)
+  public static int DefaultNumberOption(
+      Object value, int minimum, int maximum, int fallback) throws JSRangeErrorException {
+    return Objects.requireNonNull(DefaultNumberOption(value, minimum, maximum, (Integer) fallback));
+  }
+
+  @Nullable
+  public static Integer GetNumberOption(
+      Object options, String property, int minimum, int maximum, Integer fallback)
+      throws JSRangeErrorException {
+    Object value = JSObjects.Get(options, property);
+    return DefaultNumberOption(value, minimum, maximum, fallback);
+  }
+
+  public static int GetNumberOption(
+      Object options, String property, int minimum, int maximum, int fallback)
       throws JSRangeErrorException {
     Object value = JSObjects.Get(options, property);
     return DefaultNumberOption(value, minimum, maximum, fallback);

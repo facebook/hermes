@@ -1868,13 +1868,24 @@ void DateTimeFormatApple::initializeNSDateFormatter() noexcept {
     switch (*fractionalSecondDigits_) {
       case 1:
         [customFormattedDate appendString:@"S"];
+        break;
       case 2:
         [customFormattedDate appendString:@"SS"];
+        break;
       case 3:
         [customFormattedDate appendString:@"SSS"];
+        break;
     }
   }
-  // Not supported - dayPeriod (at night/in the morning)
+  if (dayPeriod_.has_value()) {
+    if (*dayPeriod_ == u"narrow") {
+      [customFormattedDate appendString:@"BBBBB"];
+    } else if (*dayPeriod_ == u"short") {
+      [customFormattedDate appendString:@"B"];
+    } else if (*dayPeriod_ == u"long") {
+      [customFormattedDate appendString:@"BBBB"];
+    }
+  }
   // Set the custom date from all the concatonated NSStrings (locale will
   // automatically separate the order) Only set a template format if it isn't
   // empty
