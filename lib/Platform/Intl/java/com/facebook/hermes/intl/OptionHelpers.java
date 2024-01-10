@@ -17,16 +17,18 @@ public class OptionHelpers {
   }
 
   public static Object DefaultNumberOption(
-      Object value, Object minimum, Object maximum, Object fallback) throws JSRangeErrorException {
+      String property, Object value, Object minimum, Object maximum, Object fallback)
+      throws JSRangeErrorException {
     if (JSObjects.isUndefined(value)) return fallback;
 
-    if (!JSObjects.isNumber(value)) throw new JSRangeErrorException("Invalid number value !");
+    if (!JSObjects.isNumber(value))
+      throw new JSRangeErrorException(property + " value is invalid.");
 
     double d = JSObjects.getJavaDouble(value);
     if (Double.isNaN(d)
         || d > JSObjects.getJavaDouble(maximum)
         || d < JSObjects.getJavaDouble(minimum))
-      throw new JSRangeErrorException("Invalid number value !");
+      throw new JSRangeErrorException(property + " value is invalid.");
 
     return value;
   }
@@ -35,7 +37,7 @@ public class OptionHelpers {
       Object options, String property, Object minimum, Object maximum, Object fallback)
       throws JSRangeErrorException {
     Object value = JSObjects.Get(options, property);
-    return DefaultNumberOption(value, minimum, maximum, fallback);
+    return DefaultNumberOption(property, value, minimum, maximum, fallback);
   }
 
   // https://tc39.es/ecma402/#sec-getoption
