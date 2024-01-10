@@ -91,18 +91,19 @@ CallResult<HermesValue> StringPrimitive::createEfficientImpl(
     if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto output = runtime.makeHandle<StringPrimitive>(*result);
     // Copy directly into the StringPrimitive storage.
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4244)
 #endif
-
-    std::copy(str.begin(), str.end(), output->castToASCIIPointerForWrite());
+    std::copy(
+        str.begin(),
+        str.end(),
+        vmcast<StringPrimitive>(*result)->castToASCIIPointerForWrite());
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-    return output.getHermesValue();
+    return *result;
   }
 
   return StringPrimitive::create(runtime, str);

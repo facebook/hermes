@@ -1952,6 +1952,7 @@ extern "C" int _sh_errno(void) {
 
 extern "C" SHLegacyValue _sh_asciiz_to_string(SHRuntime *shr, const char *str) {
   Runtime &runtime = getRuntime(shr);
+  NoHandleScope noHandle{runtime};
 
   auto res = StringPrimitive::createEfficient(
       runtime, UTF8Ref((const uint8_t *)str, strlen(str)), false);
