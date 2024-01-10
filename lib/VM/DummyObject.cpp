@@ -107,6 +107,9 @@ void DummyObject::_snapshotAddEdgesImpl(
   auto *const self = vmcast<DummyObject>(cell);
   if (!self->weak)
     return;
+  // Filter out empty refs from adding edges.
+  if (!self->weak->isValid())
+    return;
   // DummyObject has only one WeakRef field.
   snap.addNamedEdge(
       HeapSnapshot::EdgeType::Weak,

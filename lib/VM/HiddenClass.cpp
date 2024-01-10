@@ -50,6 +50,7 @@ void TransitionMap::snapshotAddEdges(GC &gc, HeapSnapshot &snap) {
   uint32_t edge_index = 0;
   forEachEntry([&snap, &gc, &edge_index](
                    const Transition &, const WeakRef<HiddenClass> &value) {
+    // Filter out empty refs from adding edges.
     if (value.isValid()) {
       snap.addNamedEdge(
           HeapSnapshot::EdgeType::Weak,
