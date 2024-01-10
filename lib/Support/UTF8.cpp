@@ -169,4 +169,12 @@ bool isAllASCII(const uint8_t *start, const uint8_t *end) {
   return true;
 }
 
+bool isAllASCII(const char16_t *start, const char16_t *end) {
+  for (; start != end; ++start) {
+    if (*start > 0x7F)
+      return false;
+  }
+  return true;
+}
+
 } // namespace hermes

@@ -52,21 +52,21 @@ bool isASCII(Char c) {
 }
 
 /// \return true if this is a pure ASCII char sequence.
-template <typename Iter>
-inline bool isAllASCII(Iter begin, Iter end) {
-  while (begin < end) {
-    if (!isASCII(*begin))
-      return false;
-    ++begin;
-  }
-  return true;
-}
-
 /// Overload for char* and uint8_t*.
 bool isAllASCII(const uint8_t *start, const uint8_t *end);
 
 inline bool isAllASCII(const char *start, const char *end) {
   return isAllASCII((const uint8_t *)start, (const uint8_t *)end);
+}
+
+/// \return true if this is a pure ASCII char sequence.
+/// Overload for char16_t.
+bool isAllASCII(const char16_t *start, const char16_t *end);
+
+/// \return true if this is a pure ASCII char sequence.
+template <typename T>
+inline bool isAllASCII(const T &str) {
+  return isAllASCII(str.data(), str.data() + str.size());
 }
 
 /// Decode a sequence of UTF8 encoded bytes when it is known that the first byte

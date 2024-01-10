@@ -612,7 +612,7 @@ static void printDiagnosticHelper(
   // If we find them, don't try to show the caret line
   // TODO: bravely teach buildSourceAndCaretLine to use wcwidth(), lifting this
   // restriction
-  bool showCaret = isAllASCII(sourceLine.begin(), sourceLine.end());
+  bool showCaret = isAllASCII(sourceLine);
 
   S << sourceLine << '\n';
   if (showCaret) {

@@ -107,7 +107,7 @@ class SHStringTable {
 
     for (const auto &str : strings_) {
       StringEntry entry;
-      if (isAllASCII(str.begin(), str.end())) {
+      if (isAllASCII(str)) {
         asciiStr += "  ";
         // The given string is entirely ASCII. Emit the sequence of ASCII
         // characters to asciiStr.

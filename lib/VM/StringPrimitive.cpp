@@ -198,8 +198,7 @@ CallResult<HermesValue> StringPrimitive::createEfficient(
 CallResult<HermesValue> StringPrimitive::createDynamic(
     Runtime &runtime,
     UTF16Ref str) {
-  return createDynamicWithKnownEncoding(
-      runtime, str, isAllASCII(str.begin(), str.end()));
+  return createDynamicWithKnownEncoding(runtime, str, isAllASCII(str));
 }
 
 CallResult<HermesValue> StringPrimitive::createDynamicWithKnownEncoding(
