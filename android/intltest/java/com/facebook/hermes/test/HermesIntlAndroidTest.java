@@ -31,6 +31,17 @@ public class HermesIntlAndroidTest extends InstrumentationTestCase {
   }
 
   @Test
+  public void testNumberFormatFractionDigitsFromAsset() throws IOException {
+    AssetManager assets = getInstrumentation().getContext().getAssets();
+    InputStream is = assets.open("number-format-fraction-digits.js");
+    String script =
+        new BufferedReader(new InputStreamReader(is)).lines().collect(Collectors.joining("\n"));
+    try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
+      rt.evaluateJavaScript(script);
+    }
+  }
+
+  @Test
   public void testDateTimeFormat() {
     try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
       rt.evaluateJavaScript(

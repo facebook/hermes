@@ -277,11 +277,17 @@ public class NumberFormat {
     }
   }
 
-  // https://tc39.es/ecma402/#sec-setnfdigitoptions
+  // https://402.ecma-international.org/8.0/index.html#sec-setnfdigitoptions
   private void setNumberFormatDigitOptions(
       Map<String, Object> options, Object mnfdDefault, Object mxfdDefault)
       throws JSRangeErrorException {
 
+    // 1. Assert: Type(intlObj) is Object.
+    // 2. Assert: Type(options) is Object.
+    // 3. Assert: Type(mnfdDefault) is Number.
+    // 4. Assert: Type(mxfdDefault) is Number.
+
+    // 5. Let mnid be ? GetNumberOption(options, "minimumIntegerDigits,", 1, 21, 1).
     Object mnid =
         OptionHelpers.GetNumberOption(
             options,
@@ -290,46 +296,98 @@ public class NumberFormat {
             JSObjects.newNumber(21),
             JSObjects.newNumber(1));
 
+    // 6. Let mnfd be ? Get(options, "minimumFractionDigits").
     Object mnfd = JSObjects.Get(options, "minimumFractionDigits");
+    // 7. Let mxfd be ? Get(options, "maximumFractionDigits").
     Object mxfd = JSObjects.Get(options, "maximumFractionDigits");
 
+    // 8. Let mnsd be ? Get(options, "minimumSignificantDigits").
     Object mnsd = JSObjects.Get(options, "minimumSignificantDigits");
+    // 9. Let mxsd be ? Get(options, "maximumSignificantDigits").
     Object mxsd = JSObjects.Get(options, "maximumSignificantDigits");
 
+    // 10. Set intlObj.[[MinimumIntegerDigits]] to mnid.
     mResolvedMinimumIntegerDigits = (int) Math.floor(JSObjects.getJavaDouble(mnid));
 
+    // 11. If mnsd is not undefined or mxsd is not undefined, then
     if (!JSObjects.isUndefined(mnsd) || !JSObjects.isUndefined(mxsd)) {
 
+      // a. Set intlObj.[[RoundingType]] to significantDigits.
       mRoundingType = IPlatformNumberFormatter.RoundingType.SIGNIFICANT_DIGITS;
 
+      // b. Let mnsd be ? DefaultNumberOption(mnsd, 1, 21, 1).
       mnsd =
           OptionHelpers.DefaultNumberOption(
-              mnsd, JSObjects.newNumber(1), JSObjects.newNumber(21), JSObjects.newNumber(1));
+              "minimumSignificantDigits",
+              mnsd,
+              JSObjects.newNumber(1),
+              JSObjects.newNumber(21),
+              JSObjects.newNumber(1));
+      // c. Let mxsd be ? DefaultNumberOption(mxsd, mnsd, 21, 21).
       mxsd =
           OptionHelpers.DefaultNumberOption(
-              mxsd, mnsd, JSObjects.newNumber(21), JSObjects.newNumber(21));
+              "maximumSignificantDigits",
+              mxsd,
+              mnsd,
+              JSObjects.newNumber(21),
+              JSObjects.newNumber(21));
 
+      // d. Set intlObj.[[MinimumSignificantDigits]] to mnsd.
       mResolvedMinimumSignificantDigits = (int) Math.floor(JSObjects.getJavaDouble(mnsd));
+      // e. Set intlObj.[[MaximumSignificantDigits]] to mxsd.
       mResolvedMaximumSignificantDigits = (int) Math.floor(JSObjects.getJavaDouble(mxsd));
 
+      // 12. Else if mnfd is not undefined or mxfd is not undefined, then
     } else if (!JSObjects.isUndefined(mnfd) || !JSObjects.isUndefined(mxfd)) {
 
+      // a. Set intlObj.[[RoundingType]] to fractionDigits.
       mRoundingType = IPlatformNumberFormatter.RoundingType.FRACTION_DIGITS;
 
+      // b. Let mnfd be ? DefaultNumberOption(mnfd, 0, 20, undefined).
       mnfd =
           OptionHelpers.DefaultNumberOption(
-              mnfd, JSObjects.newNumber(0), JSObjects.newNumber(20), mnfdDefault);
-      Object mxfdActualDefault =
-          JSObjects.newNumber(
-              Math.max(JSObjects.getJavaDouble(mnfd), JSObjects.getJavaDouble(mxfdDefault)));
-
+              "minimumFractionDigits",
+              mnfd,
+              JSObjects.newNumber(0),
+              JSObjects.newNumber(20),
+              JSObjects.Undefined());
+      // c. Let mxfd be ? DefaultNumberOption(mxfd, 0, 20, undefined).
       mxfd =
-          OptionHelpers.DefaultNumberOption(mxfd, mnfd, JSObjects.newNumber(20), mxfdActualDefault);
+          OptionHelpers.DefaultNumberOption(
+              "maximumFractionDigits",
+              mxfd,
+              JSObjects.newNumber(0),
+              JSObjects.newNumber(20),
+              JSObjects.Undefined());
 
+      // d. If mnfd is undefined, set mnfd to min(mnfdDefault, mxfd).
+      if (JSObjects.isUndefined(mnfd)) {
+        mnfd =
+            JSObjects.newNumber(
+                Math.min(JSObjects.getJavaDouble(mnfdDefault), JSObjects.getJavaDouble(mxfd)));
+        // e. Else if mxfd is undefined, set mxfd to max(mxfdDefault, mnfd).
+      } else if (JSObjects.isUndefined(mxfd)) {
+        mxfd =
+            JSObjects.newNumber(
+                Math.max(JSObjects.getJavaDouble(mxfdDefault), JSObjects.getJavaDouble(mnfd)));
+      } else {
+        double mnfdValue = JSObjects.getJavaDouble(mnfd);
+        double mxfdValue = JSObjects.getJavaDouble(mxfd);
+        // f. Else if mnfd is greater than mxfd, throw a RangeError exception.
+        if (mnfdValue > mxfdValue) {
+          throw new JSRangeErrorException(
+              "minimumFractionDigits is greater than maximumFractionDigits");
+        }
+      }
+
+      // g. Set intlObj.[[MinimumFractionDigits]] to mnfd.
       mResolvedMinimumFractionDigits = (int) Math.floor(JSObjects.getJavaDouble(mnfd));
+      // h. Set intlObj.[[MaximumFractionDigits]] to mxfd.
       mResolvedMaximumFractionDigits = (int) Math.floor(JSObjects.getJavaDouble(mxfd));
 
+      // 13. Else if notation is "compact", then
     } else if (mResolvedNotation == IPlatformNumberFormatter.Notation.COMPACT) {
+      // a. Set intlObj.[[RoundingType]] to compactRounding.
       mRoundingType = IPlatformNumberFormatter.RoundingType.COMPACT_ROUNDING;
     } else if (mResolvedNotation == IPlatformNumberFormatter.Notation.ENGINEERING) {
       // The default setting for engineering notation.
@@ -347,9 +405,14 @@ public class NumberFormat {
       // fraction digits of "3" (as in spec), we should set the maximum fraction digits to "5"
       mRoundingType = IPlatformNumberFormatter.RoundingType.FRACTION_DIGITS;
       mResolvedMaximumFractionDigits = 5;
+
+      // 14. Else,
     } else {
+      // a. Set intlObj.[[RoundingType]] to fractionDigits.
       mRoundingType = IPlatformNumberFormatter.RoundingType.FRACTION_DIGITS;
+      // b. Set intlObj.[[MinimumFractionDigits]] to mnfdDefault.
       mResolvedMinimumFractionDigits = (int) Math.floor(JSObjects.getJavaDouble(mnfdDefault));
+      // c. Set intlObj.[[MaximumFractionDigits]] to mxfdDefault.
       mResolvedMaximumFractionDigits = (int) Math.floor(JSObjects.getJavaDouble(mxfdDefault));
     }
   }
