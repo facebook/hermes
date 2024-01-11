@@ -47,6 +47,7 @@ var microtask$INTERNAL$microtaskQueue = [];
 function microtask$drainMicrotaskQueue() {
   for (var i = 0; i < microtask$INTERNAL$microtaskQueue.length; i++) {
     microtask$INTERNAL$microtaskQueue[i]();
+    microtask$INTERNAL$microtaskQueue[i] = undefined;
   }
   microtask$INTERNAL$microtaskQueue = [];
 }

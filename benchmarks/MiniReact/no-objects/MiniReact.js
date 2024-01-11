@@ -29,6 +29,7 @@ let microtask$INTERNAL$microtaskQueue = [];
 function microtask$drainMicrotaskQueue(): void {
   for (let i = 0; i < microtask$INTERNAL$microtaskQueue.length; i++) {
     microtask$INTERNAL$microtaskQueue[i]();
+    microtask$INTERNAL$microtaskQueue[i] = undefined;
   }
   microtask$INTERNAL$microtaskQueue = [];
 }
