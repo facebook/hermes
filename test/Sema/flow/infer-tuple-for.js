@@ -36,8 +36,8 @@ function foo(c: [number, string][]) {
 // CHECK-NEXT:                Decl %d.4 'c' Parameter : %array.3
 // CHECK-NEXT:                Decl %d.5 'arguments' Var Arguments
 // CHECK-NEXT:                Scope %s.4
-// CHECK-NEXT:                    Decl %d.6 'a' Const
-// CHECK-NEXT:                    Decl %d.7 'b' Const
+// CHECK-NEXT:                    Decl %d.6 'a' Const : any
+// CHECK-NEXT:                    Decl %d.7 'b' Const : any
 // CHECK-NEXT:                    Scope %s.5
 
 // CHECK:Program Scope %s.1
@@ -55,9 +55,9 @@ function foo(c: [number, string][]) {
 // CHECK-NEXT:                            ForOfStatement Scope %s.4
 // CHECK-NEXT:                                VariableDeclaration
 // CHECK-NEXT:                                    VariableDeclarator
-// CHECK-NEXT:                                        ArrayPattern
-// CHECK-NEXT:                                            Id 'a' [D:E:%d.6 'a']
-// CHECK-NEXT:                                            Id 'b' [D:E:%d.7 'b']
+// CHECK-NEXT:                                        ArrayPattern : any
+// CHECK-NEXT:                                            Id 'a' [D:E:%d.6 'a'] : any
+// CHECK-NEXT:                                            Id 'b' [D:E:%d.7 'b'] : any
 // CHECK-NEXT:                                Id 'c' [D:E:%d.4 'c'] : %array.3
 // CHECK-NEXT:                                BlockStatement Scope %s.5
 // CHECK-NEXT:            ObjectExpression

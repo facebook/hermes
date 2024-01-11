@@ -17,6 +17,7 @@ let i: number;
 let j: string;
 [i, j] = inner;
 let anyVar: any = inner;
+let [anyVar1, anyVar2]: any = inner;
 let [anyNumber, anyString]: [number, string] = anyVar; // implicit checked cast
 
 // Auto-generated content below. Please do not modify manually.
@@ -43,9 +44,11 @@ let [anyNumber, anyString]: [number, string] = anyVar; // implicit checked cast
 // CHECK-NEXT:            Decl %d.11 'i' Let : number
 // CHECK-NEXT:            Decl %d.12 'j' Let : string
 // CHECK-NEXT:            Decl %d.13 'anyVar' Let : any
-// CHECK-NEXT:            Decl %d.14 'anyNumber' Let : number
-// CHECK-NEXT:            Decl %d.15 'anyString' Let : string
-// CHECK-NEXT:            Decl %d.16 'arguments' Var Arguments
+// CHECK-NEXT:            Decl %d.14 'anyVar1' Let : any
+// CHECK-NEXT:            Decl %d.15 'anyVar2' Let : any
+// CHECK-NEXT:            Decl %d.16 'anyNumber' Let : number
+// CHECK-NEXT:            Decl %d.17 'anyString' Let : string
+// CHECK-NEXT:            Decl %d.18 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
@@ -102,9 +105,15 @@ let [anyNumber, anyString]: [number, string] = anyVar; // implicit checked cast
 // CHECK-NEXT:                            Id 'anyVar' [D:E:%d.13 'anyVar']
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
+// CHECK-NEXT:                            Id 'inner' [D:E:%d.2 'inner'] : %tuple.2
+// CHECK-NEXT:                            ArrayPattern : any
+// CHECK-NEXT:                                Id 'anyVar1' [D:E:%d.14 'anyVar1'] : any
+// CHECK-NEXT:                                Id 'anyVar2' [D:E:%d.15 'anyVar2'] : any
+// CHECK-NEXT:                    VariableDeclaration
+// CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            ImplicitCheckedCast : %tuple.2
 // CHECK-NEXT:                                Id 'anyVar' [D:E:%d.13 'anyVar'] : any
 // CHECK-NEXT:                            ArrayPattern : %tuple.2
-// CHECK-NEXT:                                Id 'anyNumber' [D:E:%d.14 'anyNumber'] : number
-// CHECK-NEXT:                                Id 'anyString' [D:E:%d.15 'anyString'] : string
+// CHECK-NEXT:                                Id 'anyNumber' [D:E:%d.16 'anyNumber'] : number
+// CHECK-NEXT:                                Id 'anyString' [D:E:%d.17 'anyString'] : string
 // CHECK-NEXT:            ObjectExpression

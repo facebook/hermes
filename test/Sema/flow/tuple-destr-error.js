@@ -15,8 +15,6 @@ let anyVar: any = tup;
 {
 let [v1] = tup;
 let [v2, v3, v4] = tup;
-let [v5, v6]: any = tup;
-let [v7, v8]: any = anyVar;
 }
 {
 let a: number;
@@ -32,13 +30,7 @@ let b: string;
 // CHECK-NEXT:{{.*}}tuple-destr-error.js:17:5: error: ft: cannot destructure tuple, expected 2 elements, found 3
 // CHECK-NEXT:let [v2, v3, v4] = tup;
 // CHECK-NEXT:    ^~~~~~~~~~~~
-// CHECK-NEXT:{{.*}}tuple-destr-error.js:18:5: error: ft: incompatible type for array pattern, expected tuple
-// CHECK-NEXT:let [v5, v6]: any = tup;
-// CHECK-NEXT:    ^~~~~~~~~~~~~
-// CHECK-NEXT:{{.*}}tuple-destr-error.js:19:5: error: ft: incompatible type for array pattern, expected tuple
-// CHECK-NEXT:let [v7, v8]: any = anyVar;
-// CHECK-NEXT:    ^~~~~~~~~~~~~
-// CHECK-NEXT:{{.*}}tuple-destr-error.js:24:1: error: ft: incompatible assignment types
+// CHECK-NEXT:{{.*}}tuple-destr-error.js:22:1: error: ft: incompatible assignment types
 // CHECK-NEXT:[a, b] = tup;
 // CHECK-NEXT:^~~~~~~~~~~~
-// CHECK-NEXT:Emitted 5 errors. exiting.
+// CHECK-NEXT:Emitted 3 errors. exiting.

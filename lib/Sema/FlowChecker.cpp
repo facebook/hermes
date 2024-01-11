@@ -2964,12 +2964,6 @@ class FlowChecker::AnnotateScopeDecls {
           if (Type *inferred = tryInferInitExpression(declarator))
             type = inferred;
         }
-        if (llvh::isa<AnyType>(type->info)) {
-          // Legacy assignment to unannotated array pattern.
-          // let [x, y] = anyTypedVar;
-          // Don't annotate anything because the iterator protocol will be used.
-          continue;
-        }
         annotateDestructuringTarget(declarator, arr, type);
       } else {
         outer.sm_.warning(
@@ -3035,6 +3029,18 @@ class FlowChecker::AnnotateScopeDecls {
                     " elements, found " + llvh::Twine(arr->_elements.size()));
             return;
           }
+        } else if (llvh::isa<AnyType>(t->info)) {
+          outer.setNodeType(arr, outer.flowContext_.getAny());
+          // Propagate the 'any' type to all children.
+          // Records that we've seen the declaration for every variable
+          // declared in this pattern, so the IdentifierNode visitor knows not
+          // to emit a warning during typechecking for use before declaration.
+          // The iterator protocol will be used to populate the elements when
+          // the code is generated.
+          for (ESTree::Node &element : arr->_elements) {
+            worklist.emplace_back(&element, t);
+          }
+          continue;
         } else {
           outer.setNodeType(arr, outer.flowContext_.getAny());
           outer.sm_.error(
