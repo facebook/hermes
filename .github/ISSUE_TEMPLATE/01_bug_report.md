@@ -25,6 +25,10 @@ labels:
   <https://github.com/facebook/hermes/blob/HEAD/doc/ReactNativeIntegration.md#reporting-native-crashes>
   for instructions on reporting a native crash, including symbolicating the native
   stack trace.  Note this will only work with some versions of Hermes.
+
+  If you believe you have discovered a security vulnerability in Hermes, please
+  refrain from filing a public issue and instead submit it through the Meta Bug
+  Bounty program <https://www.facebook.com/whitehat>.
 -->
 
 - [ ] I have run `gradle clean` and confirmed this bug does not occur with JSC
