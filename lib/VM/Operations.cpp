@@ -993,6 +993,49 @@ IMPLEMENT_COMPARISON_OP(greaterOp_RJS, >);
 IMPLEMENT_COMPARISON_OP(lessEqualOp_RJS, <=);
 IMPLEMENT_COMPARISON_OP(greaterEqualOp_RJS, >=);
 
+namespace {
+
+enum class EqualityResult { Unknown = -1, NotEqual, Equal };
+
+/// Perform a fast equality check to see if a given double and a given
+/// BigInt are equal. If both numbers are small enough for a fast
+/// comparison, this will return `Equal` or `NotEqual`. Otherwise, if
+/// the numbers are not small enough to be quickly compared, this will
+/// return `Unknown`, which denotes that a non-fast-path check is needed.
+EqualityResult areEqualSmallNumbers(const double x, BigIntPrimitive *y) {
+  // Doubles have a 53-bit mantissa, so only values from 0 to 2^53 - 1 are
+  // contiguously representable.
+  constexpr int64_t MaxSafeIntegerValueOfDouble =
+      (int64_t{1} << std::numeric_limits<double>::digits) - 1;
+
+  // Do a quick pass for single digit values. This prevents us from
+  // having to instantiate a BigInt object for small numbers. We can
+  // only do this if we can cast our single BigInt digit to a double
+  // without loss of precision.
+  if (y->isTruncationToSingleDigitLossless(true)) {
+    const auto yDigit =
+        static_cast<bigint::SignedBigIntDigitType>(y->truncateToSingleDigit());
+
+    if (std::abs(yDigit) < MaxSafeIntegerValueOfDouble) {
+      // `false` and `true` are safely castable directly to EqualityResults
+      return static_cast<EqualityResult>(static_cast<double>(yDigit) == x);
+    }
+  }
+
+  // y (the BigInt) is greater than MaxSafeIntegerValueOfDouble. Thus, if
+  // x (the double) is less than MaxSafeIntegerValueOfDouble they are
+  // certainly NotEqual.
+  if (std::abs(x) < static_cast<double>(MaxSafeIntegerValueOfDouble)) {
+    static_assert(
+        std::numeric_limits<bigint::SignedBigIntDigitType>::max() >
+        MaxSafeIntegerValueOfDouble);
+    return EqualityResult::NotEqual;
+  }
+
+  return EqualityResult::Unknown;
+}
+} // namespace
+
 /// ES11 7.2.15 Abstract Equality Comparison
 CallResult<bool>
 abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
@@ -1172,6 +1215,12 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
       CASE_S_M(NUMBER_TAG, BigInt) {
         if (!isIntegralNumber(x->getNumber())) {
           return false;
+        }
+
+        EqualityResult areEqual =
+            areEqualSmallNumbers(x->getNumber(), y->getBigInt());
+        if (areEqual != EqualityResult::Unknown) {
+          return areEqual == EqualityResult::Equal ? true : false;
         }
 
         auto xAsBigInt = BigIntPrimitive::fromDouble(runtime, x->getNumber());
