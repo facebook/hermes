@@ -33,6 +33,8 @@ Pass *createLowerCalls(SHRegisterAllocator &RA);
 /// Must run after RA since that's when Movs are introduced.
 Pass *createRecreateCheapValues(SHRegisterAllocator &RA);
 
+/// Perform simple peephole lowering.
+Pass *createPeepholeLowering();
 } // namespace hermes::sh
 
 #endif

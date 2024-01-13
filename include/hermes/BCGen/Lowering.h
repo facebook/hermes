@@ -19,8 +19,6 @@
 
 namespace hermes {
 
-Pass *createLIRPeephole();
-
 /// Lowers switches to a sequence of IFs.
 class SwitchLowering : public FunctionPass {
  public:
@@ -149,40 +147,6 @@ class LowerCondBranch : public FunctionPass {
   /// branch.
   static bool isOperatorSupported(ValueKind kind);
 };
-
-/// Iterates over all instructions and performs lowering on exponentiation
-/// operators to turn them into HermesInternal calls.
-/// NOTE: It may be possible in the future to extend this pass to allow for
-/// other lowering operations on single instructions.
-class LowerExponentiationOperator : public FunctionPass {
- public:
-  explicit LowerExponentiationOperator()
-      : FunctionPass("LowerExponentiationOperator") {}
-  ~LowerExponentiationOperator() override = default;
-  bool runOnFunction(Function *F) override;
-
- private:
-  /// Changes the binary exponentiation operator \p inst into a call to
-  /// HermesInternal.exponentiationOperator.
-  static bool lowerExponentiationOperator(
-      IRBuilder &builder,
-      BinaryOperatorInst *inst);
-};
-
-class LowerThrowTypeError : public FunctionPass {
- public:
-  explicit LowerThrowTypeError() : FunctionPass("LowerThrowTypeError") {}
-  ~LowerThrowTypeError() override = default;
-  bool runOnFunction(Function *F) override;
-};
-
-class LowerStringConcat : public FunctionPass {
- public:
-  explicit LowerStringConcat() : FunctionPass("LowerStringConcat") {}
-  ~LowerStringConcat() override = default;
-  bool runOnFunction(Function *F) override;
-};
-
 } // namespace hermes
 
 #endif

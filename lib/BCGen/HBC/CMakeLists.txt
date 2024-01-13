@@ -23,6 +23,7 @@ add_hermes_library(hermesHBCBackend
   UniquingStringLiteralTable.cpp
   Passes/InsertProfilePoint.cpp
   Passes/OptEnvironmentInit.cpp
+  Passes/PeepholeLowering.cpp
   LINK_OBJLIBS
   hermesBackend
   hermesInst

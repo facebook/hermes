@@ -10,6 +10,7 @@ add_hermes_library(hermesSHBackend
   RecreateCheapValues.cpp
   LowerNanBoxedUnionNarrowT.cpp
   LowerAllocObjectLiteral.cpp
+  PeepholeLowering.cpp
   SH.cpp
   SHRegAlloc.cpp SHRegAlloc.h
   LineDirectiveEmitter.cpp LineDirectiveEmitter.h

@@ -13,6 +13,7 @@
 #include "hermes/BCGen/HBC/Passes.h"
 #include "hermes/BCGen/HBC/Passes/InsertProfilePoint.h"
 #include "hermes/BCGen/HBC/Passes/OptEnvironmentInit.h"
+#include "hermes/BCGen/HBC/Passes/PeepholeLowering.h"
 #include "hermes/BCGen/HBC/TraverseLiteralStrings.h"
 #include "hermes/BCGen/LowerBuiltinCalls.h"
 #include "hermes/BCGen/LowerStoreInstrs.h"
@@ -53,19 +54,16 @@ void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
     return;
 
   PassManager PM;
-  PM.addPass(createLIRPeephole());
+  // Lowering ExponentiationOperator and ThrowTypeError (in PeepholeLowering)
+  // needs to run before LowerBuiltinCalls because it introduces calls to
+  // HermesInternal.
+  PM.addPass(new PeepholeLowering());
   PM.addPass(new LowerLoadStoreFrameInst());
   if (options.optimizationEnabled) {
     // OptEnvironmentInit needs to run before LowerConstants.
     PM.addPass(new OptEnvironmentInit());
   }
-  // LowerExponentiationOperator needs to run before LowerBuiltinCalls because
-  // it introduces calls to HermesInternal.
-  PM.addPass(new LowerExponentiationOperator());
-  PM.addPass(new LowerGetTemplateObject());
-  PM.addPass(new LowerThrowTypeError());
-  PM.addPass(new LowerStringConcat());
-  // LowerBuiltinCalls needs to run before the rest of the lowering.
+  // LowerBuilinCalls needs to run before the rest of the lowering.
   PM.addPass(new LowerBuiltinCalls());
   PM.addPass(new LowerCalls());
   // It is important to run LowerNumericProperties before LoadConstants

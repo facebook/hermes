@@ -1369,7 +1369,7 @@ function decrementArguments() {
 // CHKIR-NEXT:       ReturnInst %6: number
 // CHKIR-NEXT:function_end
 
-// CHKIR:*** AFTER LIRPeephole
+// CHKIR:*** AFTER PeepholeLowering
 
 // CHKIR:function global(): undefined
 // CHKIR-NEXT:frame = []
@@ -1424,118 +1424,6 @@ function decrementArguments() {
 // CHKIR-NEXT:function_end
 
 // CHKIR:*** AFTER OptEnvironmentInit
-
-// CHKIR:function global(): undefined
-// CHKIR-NEXT:frame = []
-// CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
-// CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): number, %0: any
-// CHKIR-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "decrementArguments": string
-// CHKIR-NEXT:       ReturnInst undefined: undefined
-// CHKIR-NEXT:function_end
-
-// CHKIR:function decrementArguments(): number
-// CHKIR-NEXT:frame = []
-// CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
-// CHKIR-NEXT:  %1 = CreateArgumentsLooseInst (:object)
-// CHKIR-NEXT:       BranchInst %BB1
-// CHKIR-NEXT:%BB1:
-// CHKIR-NEXT:  %3 = PhiInst (:number) 0: number, %BB0, %4: number, %BB1
-// CHKIR-NEXT:  %4 = FAddInst (:number) %3: number, 1: number
-// CHKIR-NEXT:  %5 = FLessThanInst (:boolean) %4: number, 2: number
-// CHKIR-NEXT:       CondBranchInst %5: boolean, %BB1, %BB2
-// CHKIR-NEXT:%BB2:
-// CHKIR-NEXT:  %7 = BinarySubtractInst (:number) %1: object, 1: number
-// CHKIR-NEXT:       ReturnInst %7: number
-// CHKIR-NEXT:function_end
-
-// CHKIR:*** AFTER LowerExponentiationOperator
-
-// CHKIR:function global(): undefined
-// CHKIR-NEXT:frame = []
-// CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
-// CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): number, %0: any
-// CHKIR-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "decrementArguments": string
-// CHKIR-NEXT:       ReturnInst undefined: undefined
-// CHKIR-NEXT:function_end
-
-// CHKIR:function decrementArguments(): number
-// CHKIR-NEXT:frame = []
-// CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
-// CHKIR-NEXT:  %1 = CreateArgumentsLooseInst (:object)
-// CHKIR-NEXT:       BranchInst %BB1
-// CHKIR-NEXT:%BB1:
-// CHKIR-NEXT:  %3 = PhiInst (:number) 0: number, %BB0, %4: number, %BB1
-// CHKIR-NEXT:  %4 = FAddInst (:number) %3: number, 1: number
-// CHKIR-NEXT:  %5 = FLessThanInst (:boolean) %4: number, 2: number
-// CHKIR-NEXT:       CondBranchInst %5: boolean, %BB1, %BB2
-// CHKIR-NEXT:%BB2:
-// CHKIR-NEXT:  %7 = BinarySubtractInst (:number) %1: object, 1: number
-// CHKIR-NEXT:       ReturnInst %7: number
-// CHKIR-NEXT:function_end
-
-// CHKIR:*** AFTER LowerGetTemplateObject
-
-// CHKIR:function global(): undefined
-// CHKIR-NEXT:frame = []
-// CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
-// CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): number, %0: any
-// CHKIR-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "decrementArguments": string
-// CHKIR-NEXT:       ReturnInst undefined: undefined
-// CHKIR-NEXT:function_end
-
-// CHKIR:function decrementArguments(): number
-// CHKIR-NEXT:frame = []
-// CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
-// CHKIR-NEXT:  %1 = CreateArgumentsLooseInst (:object)
-// CHKIR-NEXT:       BranchInst %BB1
-// CHKIR-NEXT:%BB1:
-// CHKIR-NEXT:  %3 = PhiInst (:number) 0: number, %BB0, %4: number, %BB1
-// CHKIR-NEXT:  %4 = FAddInst (:number) %3: number, 1: number
-// CHKIR-NEXT:  %5 = FLessThanInst (:boolean) %4: number, 2: number
-// CHKIR-NEXT:       CondBranchInst %5: boolean, %BB1, %BB2
-// CHKIR-NEXT:%BB2:
-// CHKIR-NEXT:  %7 = BinarySubtractInst (:number) %1: object, 1: number
-// CHKIR-NEXT:       ReturnInst %7: number
-// CHKIR-NEXT:function_end
-
-// CHKIR:*** AFTER LowerThrowTypeError
-
-// CHKIR:function global(): undefined
-// CHKIR-NEXT:frame = []
-// CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
-// CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): number, %0: any
-// CHKIR-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "decrementArguments": string
-// CHKIR-NEXT:       ReturnInst undefined: undefined
-// CHKIR-NEXT:function_end
-
-// CHKIR:function decrementArguments(): number
-// CHKIR-NEXT:frame = []
-// CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
-// CHKIR-NEXT:  %1 = CreateArgumentsLooseInst (:object)
-// CHKIR-NEXT:       BranchInst %BB1
-// CHKIR-NEXT:%BB1:
-// CHKIR-NEXT:  %3 = PhiInst (:number) 0: number, %BB0, %4: number, %BB1
-// CHKIR-NEXT:  %4 = FAddInst (:number) %3: number, 1: number
-// CHKIR-NEXT:  %5 = FLessThanInst (:boolean) %4: number, 2: number
-// CHKIR-NEXT:       CondBranchInst %5: boolean, %BB1, %BB2
-// CHKIR-NEXT:%BB2:
-// CHKIR-NEXT:  %7 = BinarySubtractInst (:number) %1: object, 1: number
-// CHKIR-NEXT:       ReturnInst %7: number
-// CHKIR-NEXT:function_end
-
-// CHKIR:*** AFTER LowerStringConcat
 
 // CHKIR:function global(): undefined
 // CHKIR-NEXT:frame = []

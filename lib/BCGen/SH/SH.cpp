@@ -2386,10 +2386,10 @@ class InstrGen {
 /// Lower module IR to LIR, so it is suitable for register allocation.
 void lowerModuleIR(Module *M, bool optimize) {
   PassManager PM;
-  PM.addPass(createLIRPeephole());
-  // LowerExponentiationOperator needs to run before LowerBuiltinCalls because
-  // it introduces calls to HermesInternal.
-  PM.addPass(new LowerExponentiationOperator());
+  // Lowering ExponentiationOperator and ThrowTypeError (in PeepholeLowering)
+  // needs to run before LowerBuiltinCalls because it introduces calls to
+  // HermesInternal.
+  PM.addPass(sh::createPeepholeLowering());
   // LowerBuiltinCalls needs to run before the rest of the lowering.
   PM.addPass(new LowerBuiltinCalls());
   PM.addPass(new LowerNumericProperties());
