@@ -10,7 +10,6 @@
 
 #include "gtest/gtest.h"
 
-#include <deque>
 #include <vector>
 
 using namespace hermes;
@@ -115,10 +114,10 @@ TEST(StringTest, UTF16ToUTF8StringWithReplacements) {
 }
 
 TEST(StringTest, IsAllASCIITest) {
-  std::deque<uint8_t> ascii = {32, 23, 18};
-  std::deque<uint8_t> notAscii = {234, 1, 0};
-  EXPECT_TRUE(isAllASCII(std::begin(ascii), std::end(ascii)));
-  EXPECT_FALSE(isAllASCII(std::begin(notAscii), std::end(notAscii)));
+  std::vector<uint8_t> ascii = {32, 23, 18};
+  std::vector<uint8_t> notAscii = {234, 1, 0};
+  EXPECT_TRUE(isAllASCII(ascii));
+  EXPECT_FALSE(isAllASCII(notAscii));
   // Check overloads.
   uint8_t asciiArr[] = {1, 3, 14, 54, 19, 124, 13, 43, 127, 19, 0};
   uint8_t partialAsciiArr[] = {1, 3, 14, 54, 219, 124, 13, 43, 127, 19};
