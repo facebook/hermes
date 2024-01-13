@@ -15,6 +15,7 @@
 #include <math.h>
 #include <setjmp.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -1031,8 +1032,10 @@ static inline SHLegacyValue _sh_ljs_native_pointer_or_throw(
 SHERMES_EXPORT int _sh_errno(void);
 
 /// Convert a C string to a JS string.
+/// \param str the C string to convert.
+/// \param len the length of the string, or -1 if the length is unknown.
 SHERMES_EXPORT SHLegacyValue
-_sh_asciiz_to_string(SHRuntime *shr, const char *str);
+_sh_asciiz_to_string(SHRuntime *shr, const char *str, ptrdiff_t len);
 
 static inline void _sh_ptr_write_char(char *ptr, int offset, char c) {
   ptr[offset] = c;

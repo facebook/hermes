@@ -18,7 +18,7 @@ const _ptr_write_char = $SHBuiltin.extern_c({declared: true},
     function _sh_ptr_write_char(ptr: c_ptr, offset: c_int, v: c_char): void {
     });
 const _sh_asciiz_to_string = $SHBuiltin.extern_c({declared: true, hv: true},
-    function _sh_asciiz_to_string(runtime: c_ptr, str: c_ptr): string {
+    function _sh_asciiz_to_string(runtime: c_ptr, str: c_ptr, len: c_ptrdiff_t): string {
         throw 0;
     }
 );
@@ -28,7 +28,7 @@ _ptr_write_char(buf, 0, 65);
 _ptr_write_char(buf, 1, 98);
 _ptr_write_char(buf, 2, 51);
 _ptr_write_char(buf, 3, 0);
-let str = _sh_asciiz_to_string($SHBuiltin.c_native_runtime(), buf);
+let str = _sh_asciiz_to_string($SHBuiltin.c_native_runtime(), buf, -1);
 _free(buf);
 print(str);
 // CHECK: Ab3
