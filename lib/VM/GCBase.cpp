@@ -314,10 +314,6 @@ struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
     // pointers.
   }
 
-  void accept(WeakRefBase &wr) override {
-    // Same goes for weak refs.
-  }
-
   void acceptWeak(GCCell *&ptr) override {
     // Same goes for weak pointers.
   }
@@ -356,8 +352,6 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
   void acceptWeak(GCCell *&ptr) override {
     pointerAccept(ptr, nullptr, true);
   }
-
-  void accept(WeakRefBase &wr) override {}
 
   void acceptSym(SymbolID sym, const char *name) override {
     if (sym.isInvalid()) {
@@ -929,9 +923,6 @@ GCBASE_BARRIER_1(weakRefReadBarrier, GCCell *);
 #endif
 
 WeakRefSlot *GCBase::allocWeakSlot(CompressedPointer ptr) {
-  // We have to hold the lock as ManagedChunkedList may inspect the state of
-  // reachable slots while collecting.
-  WeakRefLock lk{weakRefMutex_};
   return &weakSlots_.add(ptr);
 }
 

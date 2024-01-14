@@ -170,11 +170,6 @@ class JSWeakMapImplBase : public JSObject {
     self->~JSWeakMapImplBase();
   }
 
-  /// Mark weak references and set hasFreeableSlots_ if invalidated slots
-  /// were found.
-  /// \pre The weak ref mutex must be held.
-  static void _markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor);
-
   static size_t _mallocSizeImpl(GCCell *cell) {
     auto *self = vmcast<JSWeakMapImplBase>(cell);
     return self->getMallocSize();

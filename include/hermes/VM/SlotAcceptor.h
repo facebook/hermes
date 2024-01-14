@@ -18,7 +18,6 @@ namespace vm {
 
 class GCPointerBase;
 class HeapSnapshot;
-class WeakRefBase;
 class WeakRootBase;
 class GCCell;
 
@@ -37,13 +36,6 @@ struct SlotAcceptor {
   virtual void accept(GCHermesValue &hv) = 0;
   virtual void accept(GCSmallHermesValue &hv) = 0;
   virtual void accept(const GCSymbolID &sym) = 0;
-};
-
-/// Weak references are typically slower to find, and need to be done separately
-/// from normal references.
-struct WeakRefAcceptor {
-  virtual ~WeakRefAcceptor() = default;
-  virtual void accept(WeakRefBase &wr) = 0;
 };
 
 struct RootSectionAcceptor {

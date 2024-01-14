@@ -15,12 +15,7 @@
 namespace hermes {
 namespace vm {
 const ObjectVTable JSCallSite::vt{
-    VTable(
-        CellKind::JSCallSiteKind,
-        cellSize<JSCallSite>(),
-        nullptr,
-        nullptr,
-        nullptr),
+    VTable(CellKind::JSCallSiteKind, cellSize<JSCallSite>(), nullptr, nullptr),
     JSCallSite::_getOwnIndexedRangeImpl,
     JSCallSite::_haveOwnIndexedImpl,
     JSCallSite::_getOwnIndexedPropertyFlagsImpl,

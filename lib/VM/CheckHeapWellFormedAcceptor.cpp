@@ -66,8 +66,6 @@ void CheckHeapWellFormedAcceptor::acceptSym(SymbolID sym) {
       static_cast<const GCCell *>(gc.getCallbacks().getStringForSymbol(sym)));
 }
 
-void CheckHeapWellFormedAcceptor::accept(WeakRefBase &wr) {}
-
 #endif
 
 } // namespace vm

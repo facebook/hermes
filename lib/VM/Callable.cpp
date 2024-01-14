@@ -471,7 +471,6 @@ const CallableVTable BoundFunction::vt{
             cellSize<BoundFunction>(),
             nullptr,
             nullptr,
-            nullptr,
             nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
             ,
@@ -825,7 +824,6 @@ const CallableVTable NativeFunction::vt{
             cellSize<NativeFunction>(),
             nullptr,
             nullptr,
-            nullptr,
             nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
             ,
@@ -1000,7 +998,6 @@ const CallableVTable NativeConstructor::vt{
             cellSize<NativeConstructor>(),
             nullptr,
             nullptr,
-            nullptr,
             nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
             ,
@@ -1053,7 +1050,6 @@ const CallableVTable JSFunction::vt{
         VTable(
             CellKind::JSFunctionKind,
             cellSize<JSFunction>(),
-            nullptr,
             nullptr,
             nullptr,
             nullptr
@@ -1175,7 +1171,6 @@ const CallableVTable JSAsyncFunction::vt{
             cellSize<JSAsyncFunction>(),
             nullptr,
             nullptr,
-            nullptr,
             nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
             ,
@@ -1232,7 +1227,6 @@ const CallableVTable JSGeneratorFunction::vt{
             cellSize<JSGeneratorFunction>(),
             nullptr,
             nullptr,
-            nullptr,
             nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
             ,
@@ -1287,7 +1281,6 @@ const CallableVTable GeneratorInnerFunction::vt{
         VTable(
             CellKind::GeneratorInnerFunctionKind,
             cellSize<GeneratorInnerFunction>(),
-            nullptr,
             nullptr,
             nullptr,
             nullptr

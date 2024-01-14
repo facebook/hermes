@@ -42,9 +42,6 @@ struct DummyObject final : public GCCell {
       XorPtrKeyID::DummyObjectFinalizerCallback>
       finalizerCallback;
 
-  using MarkWeakCallback = std::function<VTable::MarkWeakCallback>;
-  std::unique_ptr<MarkWeakCallback> markWeakCallback;
-
   DummyObject(GC &gc);
 
   void acquireExtMem(GC &gc, uint32_t sz);
@@ -57,7 +54,6 @@ struct DummyObject final : public GCCell {
   static bool classof(const GCCell *cell);
   static void _finalizeImpl(GCCell *cell, GC &);
   static size_t _mallocSizeImpl(GCCell *cell);
-  static void _markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor);
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
   static void _snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);

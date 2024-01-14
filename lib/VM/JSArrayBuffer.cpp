@@ -21,7 +21,6 @@ const ObjectVTable JSArrayBuffer::vt{
         CellKind::JSArrayBufferKind,
         cellSize<JSArrayBuffer>(),
         _finalizeImpl,
-        nullptr,
         _mallocSizeImpl,
         nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION

@@ -205,8 +205,6 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   gc.getDebugHeapInfo(debugInfo);
   EXPECT_EQ(2u, debugInfo.numAllocatedObjects);
 
-  WeakRefMutex &mtx = gc.weakRefMutex();
-  mtx.lock();
   WeakRef<ArrayStorage> wr1{rt, gc, a1};
   WeakRef<ArrayStorage> wr2{rt, gc, a2};
 
@@ -220,12 +218,10 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   // the pointer to avoid mistakes.
   a1 = nullptr;
 
-  mtx.unlock();
   // Test that freeing an object correctly "empties" the weak ref slot but
   // preserves the other slot.
   rt.collect();
   gc.getDebugHeapInfo(debugInfo);
-  mtx.lock();
   EXPECT_EQ(1u, debugInfo.numAllocatedObjects);
   ASSERT_FALSE(wr1.isValid());
   // Though the slot is empty, it's still reachable, so must not be freed yet.

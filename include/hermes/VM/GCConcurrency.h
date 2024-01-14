@@ -174,9 +174,6 @@ using Mutex = std::conditional<
     ,
     impl::FakeMutex>::type;
 
-using WeakRefMutex = Mutex;
-using WeakRefLock = std::lock_guard<WeakRefMutex>;
-
 } // namespace vm
 } // namespace hermes
 
