@@ -39,13 +39,10 @@ class WeakRefBase {
     return slot->hasValue();
   }
 
-  /// \return a pointer to the slot used by this WeakRef.
-  /// Used primarily when populating a DenseMap with WeakRef keys.
-  WeakRefSlot *unsafeGetSlot() {
-    return slot_;
-  }
-  const WeakRefSlot *unsafeGetSlot() const {
-    return slot_;
+  /// Free the underlying slot. This happens only when the WeakRef is destroyed
+  /// on the mutator or in the finalizer on background thread.
+  void releaseSlot() {
+    slot_->free();
   }
 };
 
@@ -67,8 +64,9 @@ class WeakRef : public WeakRefBase {
   explicit WeakRef(PointerBase &base, GC &gc, Handle<T> handle)
       : WeakRef(base, gc, *handle) {}
 
-  /// Used only by hash tables to allow for special WeakRef creation.
-  /// In particular, this makes tombstone and empty values in the hash table.
+  /// Construct a WeakRef with slot pointer directly. This is only used in
+  /// TransitionMap and JSWeakRef where we need to initialize a WeakRef with
+  /// nullptr before creating an actual one.
   explicit WeakRef(WeakRefSlot *slot) : WeakRefBase(slot) {}
 
   /// Convert between compatible types.
@@ -108,9 +106,14 @@ class WeakRef : public WeakRefBase {
     return static_cast<T *>(slot_->getNoBarrierUnsafe(base));
   }
 
-  /// Clear the slot to which the WeakRef refers.
-  void clear() {
-    unsafeGetSlot()->clearPointer();
+  /// \return true if the underlying slot is null.
+  bool isEmpty() const {
+    return !slot_;
+  }
+
+  /// Whether the underlying slot is freed.
+  bool isSlotFree() const {
+    return slot_->isFree();
   }
 };
 

@@ -80,6 +80,8 @@ void DummyObject::_finalizeImpl(GCCell *cell, GC &gc) {
   auto callback = self->finalizerCallback.get(gc);
   if (callback)
     (*callback)();
+  if (self->weak)
+    self->weak->releaseSlot();
   self->releaseExtMem(gc);
 
   // Callback is assumed to point to allocated memory

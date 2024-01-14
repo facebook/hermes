@@ -171,8 +171,6 @@ TEST_F(GCBasicsTest, WeakRefSlotTest) {
 
   WeakRefSlot s;
   s.emplace(ptr);
-  s.unmark();
-  EXPECT_EQ(WeakSlotState::Unmarked, s.state());
   EXPECT_TRUE(s.hasValue());
   EXPECT_EQ(ptr, s.getNoBarrierUnsafe());
   EXPECT_EQ(obj, s.getNoBarrierUnsafe(rt));
@@ -180,29 +178,17 @@ TEST_F(GCBasicsTest, WeakRefSlotTest) {
   // Update pointer of unmarked slot.
   auto obj2 = (void *)0x76543210;
   s.setPointer(CompressedPointer::encode(static_cast<GCCell *>(obj2), rt));
-  EXPECT_EQ(WeakSlotState::Unmarked, s.state());
+  EXPECT_FALSE(s.isFree());
   EXPECT_TRUE(s.hasValue());
   EXPECT_EQ(obj2, s.getNoBarrierUnsafe(rt));
-
-  // Marked slot.
-  s.mark();
-  EXPECT_EQ(WeakSlotState::Marked, s.state());
-  EXPECT_TRUE(s.hasValue());
-  EXPECT_EQ(obj2, s.getNoBarrierUnsafe(rt));
-  s.setPointer(ptr);
-  EXPECT_EQ(WeakSlotState::Marked, s.state());
-  EXPECT_TRUE(s.hasValue());
-  EXPECT_EQ(obj, s.getNoBarrierUnsafe(rt));
 
   s.clearPointer();
-  EXPECT_EQ(WeakSlotState::Marked, s.state());
+  EXPECT_FALSE(s.isFree());
   EXPECT_FALSE(s.hasValue());
 
-  // Unmark and free.
-  s.unmark();
-  EXPECT_EQ(WeakSlotState::Unmarked, s.state());
+  // Free slot.
   s.free();
-  EXPECT_EQ(WeakSlotState::Free, s.state());
+  EXPECT_TRUE(s.isFree());
 }
 
 TEST_F(GCBasicsTest, WeakRefTest) {
@@ -213,12 +199,11 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   gc.getDebugHeapInfo(debugInfo);
   EXPECT_EQ(0u, debugInfo.numAllocatedObjects);
 
-  auto dummyObj = rt.makeHandle(DummyObject::create(gc, rt));
   auto a2 = rt.makeHandle(ArrayStorage::createForTest(gc, 10));
   auto *a1 = ArrayStorage::createForTest(gc, 10);
 
   gc.getDebugHeapInfo(debugInfo);
-  EXPECT_EQ(3u, debugInfo.numAllocatedObjects);
+  EXPECT_EQ(2u, debugInfo.numAllocatedObjects);
 
   WeakRefMutex &mtx = gc.weakRefMutex();
   mtx.lock();
@@ -231,14 +216,6 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   ASSERT_EQ(a1, wr1.getNoBarrierUnsafe(rt));
   ASSERT_EQ(*a2, wr2.getNoBarrierUnsafe(rt));
 
-  /// Use the MarkWeakCallback of DummyObject as a hack to update these
-  /// WeakRefs.
-  dummyObj->markWeakCallback = std::make_unique<DummyObject::MarkWeakCallback>(
-      [&wr1, &wr2](GCCell *, WeakRefAcceptor &acceptor) mutable {
-        acceptor.accept(wr1);
-        acceptor.accept(wr2);
-      });
-
   // a1 is supposed to be freed during the following collection, so clear
   // the pointer to avoid mistakes.
   a1 = nullptr;
@@ -249,23 +226,17 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   rt.collect();
   gc.getDebugHeapInfo(debugInfo);
   mtx.lock();
-  EXPECT_EQ(2u, debugInfo.numAllocatedObjects);
+  EXPECT_EQ(1u, debugInfo.numAllocatedObjects);
   ASSERT_FALSE(wr1.isValid());
   // Though the slot is empty, it's still reachable, so must not be freed yet.
-  ASSERT_NE(WeakSlotState::Free, wr1.unsafeGetSlot()->state());
+  ASSERT_FALSE(wr1.isSlotFree());
   ASSERT_TRUE(wr2.isValid());
   ASSERT_EQ(*a2, wr2.getNoBarrierUnsafe(rt));
 
   // Make the slot unreachable and test that it is freed.
-  mtx.unlock();
-  dummyObj->markWeakCallback = std::make_unique<DummyObject::MarkWeakCallback>(
-      [&wr2](GCCell *, WeakRefAcceptor &acceptor) mutable {
-        acceptor.accept(wr2);
-      });
-  rt.collect();
-  mtx.lock();
+  wr1.releaseSlot();
 
-  ASSERT_EQ(WeakSlotState::Free, wr1.unsafeGetSlot()->state());
+  ASSERT_TRUE(wr1.isSlotFree());
 
   // Create a new weak ref, possibly reusing the just freed slot.
   auto *a3 = ArrayStorage::createForTest(gc, 10);
@@ -273,8 +244,9 @@ TEST_F(GCBasicsTest, WeakRefTest) {
 
   ASSERT_TRUE(wr3.isValid());
   ASSERT_EQ(a3, wr3.getNoBarrierUnsafe(rt));
-#undef LOCK
-#undef UNLOCK
+
+  wr2.releaseSlot();
+  wr3.releaseSlot();
 }
 #endif // !NDEBUG && !HERMESVM_GC_HADES && !HERMESVM_GC_RUNTIME
 

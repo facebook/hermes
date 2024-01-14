@@ -33,13 +33,6 @@ TEST_F(WeakValueMapTest, SmokeTest) {
   auto wvpPtr = std::make_shared<WeakValueMap<int, JSNumber>>();
   auto &wvp = *wvpPtr;
 
-  auto dummyObj =
-      runtime.makeHandle(DummyObject::create(runtime.getHeap(), runtime));
-  dummyObj->markWeakCallback = std::make_unique<DummyObject::MarkWeakCallback>(
-      [wvpPtr](GCCell *, WeakRefAcceptor &acceptor) {
-        wvpPtr->markWeakRefs(acceptor);
-      });
-
   auto makeNumber = [&](int n) -> JSNumber * {
     return JSNumber::create(
                runtime, (double)n, Runtime::makeNullHandle<JSObject>())

@@ -48,6 +48,8 @@ class JSWeakRef final : public JSObject {
   static void _snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
 #endif
 
+  static void _finalizeImpl(GCCell *cell, GC &gc);
+
   JSWeakRef(
       Runtime &runtime,
       Handle<JSObject> parent,

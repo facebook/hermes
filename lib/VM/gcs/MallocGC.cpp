@@ -157,9 +157,7 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
     markedSymbols_.set(sym.unsafeGetIndex());
   }
 
-  void accept(WeakRefBase &wr) override {
-    wr.unsafeGetSlot()->mark();
-  }
+  void accept(WeakRefBase &wr) override {}
 };
 
 gcheapsize_t MallocGC::Size::storageFootprint() const {
@@ -293,9 +291,6 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
     // Update weak roots references.
     markWeakRoots(acceptor, /*markLongLived*/ true);
 
-    // Update and remove weak references.
-    updateWeakReferences();
-    resetWeakReferences();
     // Free the unused symbols.
     gcCallbacks_.freeSymbols(acceptor.markedSymbols_);
     // By the end of the marking loop, all pointers left in pointers_ are dead.
@@ -503,22 +498,6 @@ void MallocGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
   for (auto *ptr : pointers_) {
     callback(ptr->data());
   }
-}
-
-void MallocGC::resetWeakReferences() {
-  weakSlots_.forEach([](WeakRefSlot &slot) {
-    // Set all allocated slots to unmarked.
-    if (slot.state() == WeakSlotState::Marked)
-      slot.unmark();
-  });
-}
-
-void MallocGC::updateWeakReferences() {
-  weakSlots_.forEach([](WeakRefSlot &slot) {
-    if (slot.state() == WeakSlotState::Unmarked) {
-      slot.free();
-    }
-  });
 }
 
 #ifndef NDEBUG

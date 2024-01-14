@@ -149,6 +149,8 @@ class TransitionMap {
   ~TransitionMap() {
     if (isLarge())
       delete large();
+    else if (!isClean())
+      smallValue().releaseSlot();
   }
 
   /// Return true if there is an entry with the given key and a valid value.
