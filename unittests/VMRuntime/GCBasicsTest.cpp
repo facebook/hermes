@@ -169,7 +169,8 @@ TEST_F(GCBasicsTest, WeakRefSlotTest) {
   CompressedPointer ptr =
       CompressedPointer::encode(static_cast<GCCell *>(obj), rt);
 
-  WeakRefSlot s(ptr);
+  WeakRefSlot s;
+  s.emplace(ptr);
   s.unmark();
   EXPECT_EQ(WeakSlotState::Unmarked, s.state());
   EXPECT_TRUE(s.hasValue());
@@ -200,10 +201,8 @@ TEST_F(GCBasicsTest, WeakRefSlotTest) {
   // Unmark and free.
   s.unmark();
   EXPECT_EQ(WeakSlotState::Unmarked, s.state());
-  auto nextFree = (WeakRefSlot *)0xffee10;
-  s.free(nextFree);
+  s.free();
   EXPECT_EQ(WeakSlotState::Free, s.state());
-  EXPECT_EQ(nextFree, s.nextFree());
 }
 
 TEST_F(GCBasicsTest, WeakRefTest) {
@@ -318,9 +317,10 @@ TEST_F(GCBasicsTest, ExtraBytes) {
     obj->extraBytes = 1;
     gc.getHeapInfoWithMallocSize(info);
     EXPECT_EQ(info.externalBytes, 256);
-    // Since there is one dummy in the heap, the malloc size is the size of its
-    // corresponding WeakRefSlot and one extra byte.
-    EXPECT_EQ(info.mallocSizeEstimate, sizeof(WeakRefSlot) + 1);
+    // Since there is one dummy in the heap, the malloc size is at least the
+    // size of its corresponding WeakRefSlot and one extra byte (since
+    // ManagedChunkedList may allocate more bytes than actually used).
+    EXPECT_GE(info.mallocSizeEstimate, sizeof(WeakRefSlot) + 1);
   }
 
   {
@@ -330,7 +330,7 @@ TEST_F(GCBasicsTest, ExtraBytes) {
     obj->extraBytes = 1;
     gc.getHeapInfoWithMallocSize(info);
     EXPECT_EQ(info.externalBytes, 256 + 1024);
-    EXPECT_EQ(info.mallocSizeEstimate, sizeof(WeakRefSlot) * 2 + 2);
+    EXPECT_GE(info.mallocSizeEstimate, sizeof(WeakRefSlot) * 2 + 2);
   }
 
   rt.collect();
@@ -339,7 +339,7 @@ TEST_F(GCBasicsTest, ExtraBytes) {
     GCBase::HeapInfo info;
     gc.getHeapInfoWithMallocSize(info);
     EXPECT_EQ(info.externalBytes, 0);
-    EXPECT_EQ(info.mallocSizeEstimate, sizeof(WeakRefSlot) * 2);
+    EXPECT_GE(info.mallocSizeEstimate, sizeof(WeakRefSlot) * 2);
   }
 }
 
