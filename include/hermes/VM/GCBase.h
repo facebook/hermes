@@ -777,6 +777,7 @@ class GCBase {
     assert(
         weakMapEntrySlots_.sizeForTests() == 0 &&
         "weakMapEntrySlots_ must all be freed");
+    assert(weakSlots_.sizeForTests() == 0 && "weakSlots_ must all be freed");
   }
 
   /// Create a fixed size object of type T.

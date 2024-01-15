@@ -804,16 +804,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
     writeBarrierMarkedSymbols_[idx] = true;
   }
 
-  void accept(WeakRefBase &wr) override {
-    assert(
-        gc.weakRefMutex() &&
-        "Must hold weak ref mutex when marking a WeakRef.");
-    WeakRefSlot *slot = wr.unsafeGetSlot();
-    assert(
-        slot->state() != WeakSlotState::Free &&
-        "marking a freed weak ref slot");
-    slot->mark();
-  }
+  void accept(WeakRefBase &) override {}
 
   /// Set the drain rate that'll be used for any future calls to drain APIs.
   void setDrainRate(size_t rate) {
@@ -1901,11 +1892,6 @@ void HadesGC::completeMarking() {
 
   // Now free symbols and weak refs.
   gcCallbacks_.freeSymbols(oldGenMarker_->markedSymbols());
-  // NOTE: If sweeping is done concurrently with YG collection, weak references
-  // could be handled during the sweep pass instead of the mark pass. The read
-  // barrier will need to be updated to handle the case where a WeakRef points
-  // to an now-empty cell.
-  updateWeakReferencesForOldGen();
 
   // Nothing needs oldGenMarker_ from this point onward.
   oldGenMarker_.reset();
@@ -2848,22 +2834,6 @@ void HadesGC::finalizeYoungGenObjects() {
     }
   }
   youngGenFinalizables_.clear();
-}
-
-void HadesGC::updateWeakReferencesForOldGen() {
-  weakSlots_.forEach([](WeakRefSlot &slot) {
-    switch (slot.state()) {
-      case WeakSlotState::Marked:
-        // Set all allocated slots to unmarked.
-        slot.unmark();
-        break;
-      case WeakSlotState::Unmarked:
-        slot.free();
-        break;
-      default:
-        llvm_unreachable("Freed slots are already skipped in forEach()");
-    }
-  });
 }
 
 uint64_t HadesGC::allocatedBytes() const {

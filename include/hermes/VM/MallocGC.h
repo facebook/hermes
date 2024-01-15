@@ -286,9 +286,6 @@ class MallocGC final : public GCBase {
   /// Reset the statistics used for reporting GC information.
   void resetStats();
 
-  /// Sets all weak references to unmarked in preparation for a collection.
-  void resetWeakReferences();
-
   struct MarkingAcceptor;
   class SkipWeakRefsMarkingAcceptor;
   struct FullMSCUpdateWeakRootsAcceptor;
