@@ -33,6 +33,8 @@ namespace hermes {
 template <typename Element, size_t kElementsPerChunk = 16>
 class ManagedChunkedList {
  public:
+  using value_type = Element;
+
   // Create a new ManagedChunkedList. The occupancy ratio determines the
   // collection threshold based on the number of values that survive
   // collection. The sizing weight determines how quickly to react to changing
