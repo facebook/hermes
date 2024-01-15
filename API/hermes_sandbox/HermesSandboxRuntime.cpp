@@ -576,7 +576,135 @@ F *getFunctionPtr(w2c_hermes *mod, u32 idx) {
   return (F *)funcref.func;
 }
 
+/// Helper class to manage a pointer to a value or array of type \p T in the
+/// sandbox heap. This maintains both the size and value of the referenced
+/// memory, and performs bounds checks to ensure that it falls entirely within
+/// the sandbox heap. It recomputes the actual pointer to the data on each
+/// access, making it safe to hold across sandbox operations (since they may
+/// otherwise move the sandbox heap if it grows).
+/// While it does provide some safety, it should be used with care. Operations
+/// that return pointers into the sandbox heap such as the * and -> operators
+/// should not be mixed with operations that may move the sandbox heap, such as
+/// calling a sandbox function. For example the following would be unsafe:
+///   myPtr->field = w2c_hermes_malloc(mod, 10);
+/// since the call to w2c_hermes_malloc may move the sandbox heap, invalidating
+/// the reference into sandbox memory on the LHS. It can instead be safely
+/// rewritten as:
+///   auto tmp = w2c_hermes_malloc(mod, 10);
+///   myPtr->field = tmp;
+template <typename T>
+class Ptr {
+ protected:
+  w2c_hermes *mod_;
+  u32 ptr_;
+#ifndef NDEBUG
+  u32 n_;
+#endif
+
+  /// Set the pointer to refer to the address \p ptr, with \p elements of T.
+  void set(u32 ptr, u32 n) {
+    ptr_ = ptr;
+#ifndef NDEBUG
+    n_ = n;
+#endif
+
+    // Check that the memory range accessed through this Ptr is entirely within
+    // the module's memory.
+    if (((u64)ptr + sizeof(T) * n) > mod_->w2c_memory.size)
+      abort();
+  }
+
+  /// Constructor to create a Ptr and defer initializing it. This is used by
+  /// subclasses that need to perform some work before initializing the pointer.
+  Ptr(w2c_hermes *mod) : Ptr(mod, 0, 0){};
+
+ public:
+  Ptr(w2c_hermes *mod, u32 ptr, u32 n = 1) : mod_(mod) {
+    set(ptr, n);
+  }
+
+  /// Define operators to conveniently access the referenced value. We can
+  /// compute the address without a bounds check here because the constructor
+  /// has checked that the pointer is valid.
+  /// Note that these references are never safe to hold across operations that
+  /// may result in moving the sandbox heap.
+  T *operator->() const {
+    return &**this;
+  }
+  T &operator*() const {
+    return *reinterpret_cast<T *>(&mod_->w2c_memory.data[ptr_]);
+  }
+  T &operator[](size_t idx) const {
+    assert(idx < n_);
+    return (&**this)[idx];
+  }
+
+  /// Allow implicit conversion to u32 for convenience, particularly when
+  /// passing a Ptr to a sandbox function that accepts u32.
+  operator u32() const {
+    return ptr_;
+  }
+};
+
+/// Invalidate the ManagedPointer referenced by \p ptr.
+void releasePointer(w2c_hermes *mod, u32 ptr) {
+  auto vtable = sb::Ptr<SandboxManagedPointer>(mod, ptr)->vtable;
+  auto invId = sb::Ptr<SandboxManagedPointerVTable>(mod, vtable)->invalidate;
+  auto inv = getFunctionPtr<void(w2c_hermes *, u32)>(mod, invId);
+  inv(mod, ptr);
+}
+
 } // namespace sb
+
+/// Helper class to manage allocations made in the stack in sandbox memory.
+/// Constructing this allocates memory for a T on the stack, and the destructor
+/// will restore the stack. Note that these must be destroyed in the reverse
+/// order of construction.
+template <typename T>
+class StackAlloc : public sb::Ptr<T> {
+  /// Save the old level since alignment may mean the stack needs to be restored
+  /// by further than sizeof(T).
+  u32 oldLevel_;
+
+ public:
+  StackAlloc(w2c_hermes *mod) : sb::Ptr<T>(mod) {
+    oldLevel_ = w2c_hermes_stackSave(mod);
+
+    // Sanity check that the stack allocation is a reasonable size.
+    static_assert(sizeof(T) < 512);
+    sb::Ptr<T>::set(w2c_hermes_stackAlloc(mod, sizeof(T)), 1);
+  }
+  ~StackAlloc() {
+    w2c_hermes_stackRestore(this->mod_, oldLevel_);
+  }
+
+  StackAlloc(const StackAlloc &) = delete;
+  StackAlloc &operator=(const StackAlloc &) = delete;
+
+  StackAlloc(StackAlloc &&other) = delete;
+  StackAlloc &operator=(StackAlloc &&other) = delete;
+};
+
+/// Helper class to allocate and manage data allocated in a LIFO allocation
+/// region. Unlike StackAlloc, this can be used for allocations with dynamic
+/// size, since the allocations will be made on the heap.
+template <typename T>
+class LIFOAlloc : public sb::Ptr<T> {
+ public:
+  LIFOAlloc(w2c_hermes *mod, u32 n)
+      : sb::Ptr<T>(mod, w2c_hermes_malloc(mod, sizeof(T) * n), n) {
+    // TODO: Implement a more efficient allocator.
+  }
+  ~LIFOAlloc() {
+    w2c_hermes_free(this->mod_, this->ptr_);
+  }
+
+  LIFOAlloc(const LIFOAlloc &) = delete;
+  LIFOAlloc &operator=(const LIFOAlloc &) = delete;
+
+  LIFOAlloc(LIFOAlloc &&other) = delete;
+  LIFOAlloc &operator=(LIFOAlloc &&other) = delete;
+};
 
 /// Define a helper macro to throw an exception for unimplemented methods. The
 /// actual throw is kept in a separate function because throwing generates a lot
