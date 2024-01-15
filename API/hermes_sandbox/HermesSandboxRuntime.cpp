@@ -736,6 +736,9 @@ class LIFOAlloc : public sb::Ptr<T> {
 
 class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
                                  public W2CHermesRAII {
+  /// Pre-allocated vtables for each of the sandbox types used by this wrapper.
+  StackAlloc<SandboxGrowableBufferVTable> growableBufferVTable_;
+
   /// A copy of the vtable for srt_ with all of the function pointers retrieved
   /// once at creation. This allows for efficient access, and makes the
   /// functions more convenient to call.
@@ -743,6 +746,42 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
 
   /// A pointer to the ABI runtime object allocated inside sandbox memory.
   u32 srt_;
+#ifndef NDEBUG
+  /// Counter to track heap allocations that cannot be managed by a LIFOAlloc.
+  /// This helps ensure that these allocations are correctly cleaned up.
+  size_t numAllocs_ = 0;
+#endif
+
+  /// Allocate an array of \p n elements of type T in the sandbox heap.
+  template <typename T>
+  sb::Ptr<T> sbAlloc(size_t n = 1) {
+    auto ptr = w2c_hermes_malloc(this, sizeof(T) * n);
+    return sb::Ptr<T>(this, ptr, n);
+  }
+
+  /// Manage the allocation counter.
+  void incAllocDbg() {
+#ifndef NDEBUG
+    numAllocs_++;
+#endif
+  }
+  void decAllocDbg() {
+#ifndef NDEBUG
+    numAllocs_--;
+#endif
+  }
+
+  /// Add the given function pointer \p func to the function table, populating
+  /// its associated fields. The function table must already have space for this
+  /// additional entry.
+  template <typename F>
+  void registerFunction(F *func, u32 funcIdx) {
+    wasm_rt_funcref_table_t &table = w2c_0x5F_indirect_function_table;
+    assert(funcIdx < table.size && "Function index out of range");
+    table.data[funcIdx].func_type = sb::getFunctionType<F>();
+    table.data[funcIdx].func = (wasm_rt_function_ptr_t)func;
+    table.data[funcIdx].module_instance = static_cast<w2c_hermes *>(this);
+  }
 
   /// Cast from the given module pointer to the JSI runtime pointer.
   static HermesSandboxRuntimeImpl &getRuntime(w2c_hermes *mod) {
@@ -754,8 +793,63 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
     return const_cast<HermesSandboxRuntimeImpl *>(this);
   }
 
+  /// Implement GrowableBuffer for exposing to the sandbox.
+  class GrowableBufferImpl : public SandboxGrowableBuffer {
+   public:
+    /// Create a new GrowableBufferImpl instance.
+    static sb::Ptr<GrowableBufferImpl> create(
+        HermesSandboxRuntimeImpl &runtime) {
+      runtime.incAllocDbg();
+
+      auto self = runtime.sbAlloc<GrowableBufferImpl>();
+      self->vtable = runtime.growableBufferVTable_;
+      self->data = 0;
+      self->size = 0;
+      self->used = 0;
+      return self;
+    }
+
+    static void release(w2c_hermes *mod, sb::Ptr<GrowableBufferImpl> self) {
+      static_cast<HermesSandboxRuntimeImpl *>(mod)->decAllocDbg();
+
+      w2c_hermes_free(mod, self->data);
+      w2c_hermes_free(mod, self);
+    }
+
+    static void try_grow_to(w2c_hermes *mod, u32 buf, u32 sz) {
+      sb::Ptr<GrowableBufferImpl> self{mod, buf};
+      if (sz < self->size)
+        return;
+      u32 newData = w2c_hermes_realloc(mod, self->data, sz);
+      self->data = newData;
+      self->size = sz;
+    }
+
+    /// Copy the contents of this GrowableBuffer into an std::string and return
+    /// it.
+    std::string getString(w2c_hermes *mod) {
+      return {&*sb::Ptr<char>(mod, data), used};
+    }
+  };
+
  public:
-  HermesSandboxRuntimeImpl() {
+  HermesSandboxRuntimeImpl() : growableBufferVTable_(this) {
+    // Grow the function table for the vtable functions we need to register.
+    wasm_rt_funcref_table_t &table = w2c_0x5F_indirect_function_table;
+    static constexpr size_t kNumVTableFunctions = 1;
+    auto oldEndIdx = wasm_rt_grow_funcref_table(
+        &table, kNumVTableFunctions, wasm_rt_funcref_null_value);
+    auto funcIdx = oldEndIdx;
+
+    // For each vtable function that needs to be exposed to the sandbox,
+    // register it and populate its index in the vtable.
+    registerFunction(&GrowableBufferImpl::try_grow_to, funcIdx);
+    growableBufferVTable_->try_grow_to = funcIdx++;
+
+    assert(
+        funcIdx == oldEndIdx + kNumVTableFunctions &&
+        "Wrong number of functions registered");
+
     auto sbVt =
         sb::Ptr<SandboxVTable>(this, w2c_hermes_get_hermes_abi_vtable(this));
 
@@ -774,7 +868,10 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
 #undef RETRIEVE_VTABLE_FUNCTIONS
   }
   ~HermesSandboxRuntimeImpl() override {
+    // Destroy the context first, so any finalizers that may reference vtables
+    // or ManagedPointers will run.
     vt_.release(this, srt_);
+    assert(numAllocs_ == 0 && "Dangling heap allocations.");
   }
 
   Value evaluateJavaScript(
