@@ -109,18 +109,6 @@ constexpr uint32_t GCBase::minAllocationSize() {
 }
 
 template <typename Acceptor>
-void GCBase::markWeakRefsIfNecessary(
-    GCCell *cell,
-    CellKind kind,
-    Acceptor &acceptor) {
-  markWeakRefsIfNecessary(
-      cell,
-      kind,
-      acceptor,
-      std::is_convertible<Acceptor &, WeakRefAcceptor &>{});
-}
-
-template <typename Acceptor>
 inline void GCBase::markCell(GCCell *cell, Acceptor &acceptor) {
   markCell(cell, cell->getKind(), acceptor);
 }
@@ -136,7 +124,6 @@ inline void
 GCBase::markCell(SlotVisitor<Acceptor> &visitor, GCCell *cell, CellKind kind) {
   visitor.visit(
       cell, Metadata::metadataTable[static_cast<size_t>(kind)].offsets);
-  markWeakRefsIfNecessary(cell, kind, visitor.acceptor_);
 }
 
 template <typename Acceptor>
@@ -151,7 +138,6 @@ inline void GCBase::markCellWithinRange(
       Metadata::metadataTable[static_cast<size_t>(kind)].offsets,
       begin,
       end);
-  markWeakRefsIfNecessary(cell, kind, visitor.acceptor_);
 }
 
 template <typename Acceptor>
@@ -163,7 +149,6 @@ inline void GCBase::markCellWithNames(
       cell,
       Metadata::metadataTable[static_cast<size_t>(kind)].offsets,
       Metadata::metadataTable[static_cast<size_t>(kind)].names);
-  markWeakRefsIfNecessary(cell, kind, visitor.acceptor_);
 }
 
 } // namespace vm

@@ -80,7 +80,6 @@ class WeakValueMap {
     auto it = internalFind(key);
     if (it == map_.end())
       return false;
-    WeakRefLock lk{gc.weakRefMutex()};
     it->second.releaseSlot();
     map_.erase(it);
     recalcPruneLimit();
@@ -90,12 +89,6 @@ class WeakValueMap {
   /// Insert a key/value into the map if the key is not already there.
   /// \return true if the pair was inserted, false if the key was already there.
   bool insertNew(Runtime &runtime, const KeyT &key, Handle<ValueT> value) {
-    WeakRefLock lk{runtime.getHeap().weakRefMutex()};
-    return insertNewLocked(runtime, key, value);
-  }
-
-  bool
-  insertNewLocked(Runtime &runtime, const KeyT &key, Handle<ValueT> value) {
     auto [it, inserted] = map_.try_emplace(key, runtime, value);
     if (!inserted) {
       // The key already exists and the value is valid, this isn't a new entry.
@@ -108,14 +101,6 @@ class WeakValueMap {
     }
     pruneInvalid(runtime.getHeap());
     return true;
-  }
-
-  /// This method should be invoked during garbage collection. It calls
-  /// the acceptor with every valid WeakRef in the map.
-  void markWeakRefs(WeakRefAcceptor &acceptor) {
-    for (auto it = map_.begin(), e = map_.end(); it != e; ++it) {
-      acceptor.accept(it->second);
-    }
   }
 
   size_t getMemorySize() const {
@@ -151,9 +136,6 @@ class WeakValueMap {
   /// If the size of the map has exceeded the prune limit, scan the map and
   /// delete the invalid WeakRef-s. Then recalculate the prune limit.
   void pruneInvalid(GC &gc) {
-    assert(
-        gc.weakRefMutex() &&
-        "Weak ref mutex must be held before calling this function");
     if (map_.size() <= pruneLimit_)
       return;
 

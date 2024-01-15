@@ -42,8 +42,6 @@ class JSWeakRef final : public JSObject {
 
   friend void JSWeakRefBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
-  static void _markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor);
-
 #ifdef HERMES_MEMORY_INSTRUMENTATION
   static void _snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
 #endif

@@ -35,7 +35,6 @@ const ObjectVTable JSError::vt{
         CellKind::JSErrorKind,
         cellSize<JSError>(),
         JSError::_finalizeImpl,
-        nullptr,
         JSError::_mallocSizeImpl),
     JSError::_getOwnIndexedRangeImpl,
     JSError::_haveOwnIndexedImpl,

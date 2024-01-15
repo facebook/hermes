@@ -694,8 +694,7 @@ class MarkWorklist {
   llvh::SmallVector<GCCell *, 0> worklist_;
 };
 
-class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
-                                    public WeakRefAcceptor {
+class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
  public:
   MarkAcceptor(HadesGC &gc)
       : gc{gc},
@@ -803,8 +802,6 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
     }
     writeBarrierMarkedSymbols_[idx] = true;
   }
-
-  void accept(WeakRefBase &) override {}
 
   /// Set the drain rate that'll be used for any future calls to drain APIs.
   void setDrainRate(size_t rate) {
@@ -1364,7 +1361,6 @@ void HadesGC::createSnapshot(llvh::raw_ostream &os) {
   waitForCollectionToFinish("snapshot");
   {
     GCCycle cycle{*this, "GC Heap Snapshot"};
-    WeakRefLock lk{weakRefMutex()};
     GCBase::createSnapshot(*this, os);
   }
 }
@@ -2230,11 +2226,6 @@ void *HadesGC::allocLongLived(uint32_t sz) {
   assert(
       isSizeHeapAligned(sz) &&
       "Call to allocLongLived must use a size aligned to HeapAlign");
-  if (kConcurrentGC) {
-    HERMES_SLOW_ASSERT(
-        !weakRefMutex() &&
-        "WeakRef mutex should not be held when allocLongLived is called");
-  }
   assert(gcMutex_ && "GC mutex must be held when calling allocLongLived");
   totalAllocatedBytes_ += sz;
   // Alloc directly into the old gen.
@@ -3102,7 +3093,6 @@ void HadesGC::removeSegmentExtentFromCrashManager(
 #ifdef HERMES_SLOW_DEBUG
 
 void HadesGC::checkWellFormed() {
-  WeakRefLock lk{weakRefMutex()};
   CheckHeapWellFormedAcceptor acceptor(*this);
   {
     DroppingAcceptor<CheckHeapWellFormedAcceptor> nameAcceptor{acceptor};

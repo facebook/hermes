@@ -1107,11 +1107,6 @@ void *HadesGC::allocWork(uint32_t sz) {
       isSizeHeapAligned(sz) &&
       "Should be aligned before entering this function");
   assert(sz >= minAllocationSize() && "Allocating too small of an object");
-  if (kConcurrentGC) {
-    HERMES_SLOW_ASSERT(
-        !weakRefMutex() &&
-        "WeakRef mutex should not be held when alloc is called");
-  }
   if (shouldSanitizeHandles()) {
     // The best way to sanitize uses of raw pointers outside handles is to force
     // the entire heap to move, and ASAN poison the old heap. That is too

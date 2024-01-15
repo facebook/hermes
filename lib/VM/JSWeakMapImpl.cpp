@@ -122,9 +122,6 @@ void JSWeakMapImplBase::clearFreeableEntries() {
   targetSize_.update(set_.size() / kOccupancyTarget + 1);
 }
 
-void JSWeakMapImplBase::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
-}
-
 HeapSnapshot::NodeID JSWeakMapImplBase::getMapID(GC &gc) {
   assert(set_.size() && "Shouldn't call getMapID on an empty map");
   GCBase::IDTracker &tracker = gc.getIDTracker();
@@ -204,7 +201,6 @@ const ObjectVTable JSWeakMapImpl<C>::vt{
         C,
         cellSize<JSWeakMapImpl>(),
         JSWeakMapImpl::_finalizeImpl,
-        JSWeakMapImpl::_markWeakImpl,
         JSWeakMapImpl::_mallocSizeImpl,
         nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION

@@ -802,7 +802,6 @@ const VTable DynamicStringPrimitive<T, Uniqued>::vt = VTable(
     0,
     nullptr,
     nullptr,
-    nullptr,
     nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
     ,
@@ -828,7 +827,6 @@ const VTable ExternalStringPrimitive<T>::vt = VTable(
     ExternalStringPrimitive<T>::getCellKind(),
     0,
     ExternalStringPrimitive<T>::_finalizeImpl,
-    nullptr, // markWeak.
     ExternalStringPrimitive<T>::_mallocSizeImpl,
     nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
@@ -850,7 +848,6 @@ const VTable BufferedStringPrimitive<T>::vt = VTable(
     BufferedStringPrimitive<T>::getCellKind(),
     0,
     nullptr, // finalize.
-    nullptr, // markWeak.
     nullptr, // mallocSize
     nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION

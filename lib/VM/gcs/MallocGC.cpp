@@ -156,8 +156,6 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
         "Tried to mark a symbol not in range");
     markedSymbols_.set(sym.unsafeGetIndex());
   }
-
-  void accept(WeakRefBase &wr) override {}
 };
 
 gcheapsize_t MallocGC::Size::storageFootprint() const {

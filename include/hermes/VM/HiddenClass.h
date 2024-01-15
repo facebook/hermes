@@ -183,8 +183,6 @@ class TransitionMap {
     if (smallKey_ == key && smallValue().isValid()) {
       return false;
     }
-    // Need to hold the lock when mutating smallKey and smallValue.
-    WeakRefLock lk{runtime.getHeap().weakRefMutex()};
     if (isClean()) {
       smallKey_ = key;
       smallValue() = WeakRef<HiddenClass>(runtime, value);
@@ -192,16 +190,7 @@ class TransitionMap {
     }
     if (!isLarge())
       uncleanMakeLarge(runtime);
-    return large()->insertNewLocked(runtime, key, value);
-  }
-
-  /// Accepts every valid WeakRef in the map.
-  void markWeakRefs(WeakRefAcceptor &acceptor) {
-    if (isLarge()) {
-      large()->markWeakRefs(acceptor);
-    } else if (!isClean()) {
-      acceptor.accept(smallValue());
-    }
+    return large()->insertNew(runtime, key, value);
   }
 
   /// \return estimated dynamically allocated memory owned by this map.
@@ -553,9 +542,6 @@ class HiddenClass final : public GCCell {
 
   /// Free all non-GC managed resources associated with the object.
   static void _finalizeImpl(GCCell *cell, GC &gc);
-
-  /// Mark all the weak references for an object.
-  static void _markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor);
 
   /// \return the amount of non-GC memory being used by the given \p cell, which
   /// is assumed to be a HiddenClass.

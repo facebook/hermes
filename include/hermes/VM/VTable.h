@@ -117,10 +117,6 @@ struct VTable {
   /// isn't.
   using FinalizeCallback = void(GCCell *, GC &gc);
   FinalizeCallback *const finalize_;
-  /// Call GC functions on weak-reference-holding objects. In a concurrent GC,
-  /// guaranteed to be called while the weak ref mutex is held.
-  using MarkWeakCallback = void(GCCell *, WeakRefAcceptor &);
-  MarkWeakCallback *const markWeak_;
   /// Report if there is any size contribution from an object beyond the GC.
   /// Used to report any externally allocated memory for metric gathering.
   using MallocSizeCallback = size_t(GCCell *);
@@ -147,7 +143,6 @@ struct VTable {
       CellKind kind,
       uint32_t size,
       FinalizeCallback *finalize = nullptr,
-      MarkWeakCallback *markWeak = nullptr,
       MallocSizeCallback *mallocSize = nullptr,
       TrimSizeCallback *trimSize = nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
@@ -161,7 +156,6 @@ struct VTable {
       : kind(kind),
         size(heapAlignSize(size)),
         finalize_(finalize),
-        markWeak_(markWeak),
         mallocSize_(mallocSize),
         trimSize_(trimSize)
 #ifdef HERMES_MEMORY_INSTRUMENTATION
@@ -188,11 +182,6 @@ struct VTable {
         finalize_ &&
         "Cannot unconditionally finalize if it doesn't have a finalize pointer");
     finalize_(cell, gc);
-  }
-
-  MarkWeakCallback *getMarkWeakCallback() const {
-    assert(isValid());
-    return markWeak_;
   }
 
   size_t getMallocSize(GCCell *cell) const {

@@ -124,7 +124,7 @@ class RootAndSlotAcceptorWithNamesDefault
   PointerBase &pointerBase_;
 };
 
-class WeakAcceptorDefault : public WeakRefAcceptor, public WeakRootAcceptor {
+class WeakAcceptorDefault : public WeakRootAcceptor {
  public:
   explicit WeakAcceptorDefault(PointerBase &base)
       : pointerBaseForWeakRoot_(base) {}

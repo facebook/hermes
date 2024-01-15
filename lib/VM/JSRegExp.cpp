@@ -33,7 +33,6 @@ const ObjectVTable JSRegExp::vt{
         CellKind::JSRegExpKind,
         cellSize<JSRegExp>(),
         JSRegExp::_finalizeImpl,
-        nullptr,
         JSRegExp::_mallocSizeImpl,
         nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
