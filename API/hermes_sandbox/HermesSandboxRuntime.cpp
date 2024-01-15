@@ -656,6 +656,25 @@ void releasePointer(w2c_hermes *mod, u32 ptr) {
 
 } // namespace sb
 
+/// Define a simple wrapper class that manages the lifetime of the w2c_hermes
+/// instance. This lets us maintain the order of the destructor relative to
+/// other fields in HermesSandboxRuntimeImpl, which may need to be destroyed
+/// first.
+class W2CHermesRAII : public w2c_hermes {
+ public:
+  W2CHermesRAII() {
+    wasm2c_hermes_instantiate(
+        this,
+        (w2c_env *)this,
+        (w2c_hermes__import *)this,
+        (w2c_wasi__snapshot__preview1 *)this);
+    w2c_hermes_0x5Finitialize(this);
+  }
+  ~W2CHermesRAII() {
+    wasm2c_hermes_free(this);
+  }
+};
+
 /// Helper class to manage allocations made in the stack in sandbox memory.
 /// Constructing this allocates memory for a T on the stack, and the destructor
 /// will restore the stack. Note that these must be destroyed in the reverse
@@ -715,7 +734,18 @@ class LIFOAlloc : public sb::Ptr<T> {
 
 #define THROW_UNIMPLEMENTED() throwUnimplementedImpl(__func__)
 
-class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime {
+class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
+                                 public W2CHermesRAII {
+  /// Cast from the given module pointer to the JSI runtime pointer.
+  static HermesSandboxRuntimeImpl &getRuntime(w2c_hermes *mod) {
+    return *static_cast<HermesSandboxRuntimeImpl *>(mod);
+  }
+
+  /// Helper to provide access to a non-const module pointer from const methods.
+  w2c_hermes *getMutMod() const {
+    return const_cast<HermesSandboxRuntimeImpl *>(this);
+  }
+
  public:
   HermesSandboxRuntimeImpl() {}
   ~HermesSandboxRuntimeImpl() override {}
