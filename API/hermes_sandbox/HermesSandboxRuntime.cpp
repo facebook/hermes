@@ -736,6 +736,14 @@ class LIFOAlloc : public sb::Ptr<T> {
 
 class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
                                  public W2CHermesRAII {
+  /// A copy of the vtable for srt_ with all of the function pointers retrieved
+  /// once at creation. This allows for efficient access, and makes the
+  /// functions more convenient to call.
+  SandboxRuntimeVTableMirror vt_;
+
+  /// A pointer to the ABI runtime object allocated inside sandbox memory.
+  u32 srt_;
+
   /// Cast from the given module pointer to the JSI runtime pointer.
   static HermesSandboxRuntimeImpl &getRuntime(w2c_hermes *mod) {
     return *static_cast<HermesSandboxRuntimeImpl *>(mod);
@@ -747,8 +755,27 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
   }
 
  public:
-  HermesSandboxRuntimeImpl() {}
-  ~HermesSandboxRuntimeImpl() override {}
+  HermesSandboxRuntimeImpl() {
+    auto sbVt =
+        sb::Ptr<SandboxVTable>(this, w2c_hermes_get_hermes_abi_vtable(this));
+
+    // Initialize the ABI runtime in the sandbox.
+    auto *makeFn = sb::getFunctionPtr<u32(w2c_hermes *, u32)>(
+        this, sbVt->make_hermes_runtime);
+    srt_ = makeFn(this, 0);
+
+    // Copy the vtable into vt_ for efficient access.
+    sb::Ptr<SandboxRuntimeVTable> srtVt(
+        this, sb::Ptr<SandboxRuntime>(this, srt_)->vtable);
+
+#define RETRIEVE_VTABLE_FUNCTIONS(name, ret, args) \
+  vt_.name = sb::getFunctionPtr<ret args>(this, srtVt->name);
+    SANDBOX_CONTEXT_VTABLE_FUNCTIONS(RETRIEVE_VTABLE_FUNCTIONS)
+#undef RETRIEVE_VTABLE_FUNCTIONS
+  }
+  ~HermesSandboxRuntimeImpl() override {
+    vt_.release(this, srt_);
+  }
 
   Value evaluateJavaScript(
       const std::shared_ptr<const Buffer> &buffer,
