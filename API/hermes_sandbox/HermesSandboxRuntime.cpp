@@ -13,6 +13,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <deque>
 #include <random>
 
 #if __has_builtin(__builtin_unreachable)
@@ -752,6 +753,61 @@ class LIFOAlloc : public sb::Ptr<T> {
   LIFOAlloc &operator=(LIFOAlloc &&other) = delete;
 };
 
+/// Manage ownership of user-provided native JSI state, such as HostFunction,
+/// HostObject, and NativeState. These cannot be stored directly in the sandbox
+/// heap since they may be corrupted, so this provides a simple indexed data
+/// structure to store them. Indices are reused after allocations are freed.
+/// TODO(T174477603): Allow the table to shrink if it has too many free entries.
+template <typename T>
+class NativeTable {
+  /// Store the elements for the table. Use a deque rather than a vector so we
+  /// can hold stable references to elements (needed by getHostFunction for
+  /// instance).
+  std::deque<T> table_;
+
+  /// Store the indices of free elements in the table. This list is consulted
+  /// first before adding more elements to the table.
+  std::vector<u32> freeList_;
+
+ public:
+  ~NativeTable() {
+    assert(table_.size() == freeList_.size() && "Dangling native reference.");
+  }
+
+  /// Get the element at the given index.
+  T &at(size_t idx) {
+    if (idx >= table_.size())
+      abort();
+    return table_[idx];
+  }
+
+  /// Get the total size of this table.
+  size_t size() const {
+    return table_.size();
+  }
+
+  /// Emplace a new element in the table, reusing a free index if possible.
+  template <typename... Args>
+  u32 emplace(Args &&...args) {
+    if (freeList_.empty()) {
+      table_.emplace_back(std::forward<Args>(args)...);
+      return table_.size() - 1;
+    }
+    u32 idx = freeList_.back();
+    freeList_.pop_back();
+    table_[idx] = T(std::forward<Args>(args)...);
+    return idx;
+  }
+
+  /// Release the entry at the given index, adding it to the free list.
+  void release(u32 idx) {
+    if (idx >= table_.size())
+      abort();
+    table_[idx] = {};
+    freeList_.push_back(idx);
+  }
+};
+
 /// Define a helper macro to throw an exception for unimplemented methods. The
 /// actual throw is kept in a separate function because throwing generates a lot
 /// of code.
@@ -768,11 +824,20 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
   /// Pre-allocated vtables for each of the sandbox types used by this wrapper.
   StackAlloc<SandboxBufferVTable> bufferVTable_;
   StackAlloc<SandboxGrowableBufferVTable> growableBufferVTable_;
+  StackAlloc<SandboxHostFunctionVTable> hostFunctionVTable_;
+  StackAlloc<SandboxPropNameIDListVTable> propNameIDListVTable_;
+  StackAlloc<SandboxHostObjectVTable> hostObjectVTable_;
+  StackAlloc<SandboxNativeStateVTable> nativeStateVTable_;
 
   /// The list of pointers currently retained through JSI. This manages the
   /// lifetime of the underlying pointers through the ABI so that they are
   /// released when the corresponding JSI pointer is released.
   hermes::ManagedChunkedList<ManagedPointerHolder> managedPointers_;
+
+  /// Tables for user-provided native JSI types.
+  NativeTable<HostFunctionType> hostFunctions_;
+  NativeTable<std::shared_ptr<HostObject>> hostObjects_;
+  NativeTable<std::shared_ptr<NativeState>> nativeStates_;
 
   /// A copy of the vtable for srt_ with all of the function pointers retrieved
   /// once at creation. This allows for efficient access, and makes the
@@ -988,6 +1053,278 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
     /// it.
     std::string getString(w2c_hermes *mod) {
       return {&*sb::Ptr<char>(mod, data), used};
+    }
+  };
+
+  /// Invoke the given \p fn and return the result. If an exception occurs,
+  /// catch it and convert it to an error struct with type \p T by invoking \p
+  /// wrapErr.
+  template <typename T, size_t N, typename Fn>
+  auto
+  sbRethrow(T (*wrapErr)(SandboxErrorCode), const char (&where)[N], Fn fn) {
+    try {
+      return fn();
+    } catch (const JSError &e) {
+      // Caught a JSError, retrieve its value and set the reported error.
+      StackAlloc<SandboxValue> errVal(this);
+      *errVal = toSandboxValue(e.value());
+      vt_.set_js_error_value(this, srt_, errVal);
+      return wrapErr(SandboxErrorCodeJSError);
+    } catch (const std::exception &e) {
+      // For all other native exceptions, register a native exception message
+      // with the location where this error occurred
+      std::string what{"Exception in "};
+      what.append(where, N - 1).append(": ").append(e.what());
+      LIFOAlloc<char> whatBuf(this, what.size());
+      memcpy(&*whatBuf, what.c_str(), what.size());
+      vt_.set_native_exception_message(this, srt_, whatBuf, what.size());
+      return wrapErr(SandboxErrorCodeNativeException);
+    } catch (...) {
+      // Unknown exception, register a generic message.
+      std::string what{"An unknown exception occurred in "};
+      what.append(where, N - 1);
+      LIFOAlloc<char> whatBuf(this, what.size());
+      memcpy(&*whatBuf, what.c_str(), what.size());
+      vt_.set_native_exception_message(this, srt_, whatBuf, what.size());
+      return wrapErr(SandboxErrorCodeNativeException);
+    }
+  }
+
+  /// Implement the HostFunction interface, for calling back from the sandbox
+  /// into a native user provided JSI function.
+  class HostFunctionWrapper : public SandboxHostFunction {
+    /// The index of the jsi::HostFunction to be invoked.
+    u32 hfIdx_;
+
+   public:
+    /// Create a new HostFunctionWrapper that will invoke the given \p
+    /// hostFunction.
+    static sb::Ptr<HostFunctionWrapper> create(
+        HermesSandboxRuntimeImpl &runtime,
+        HostFunctionType hostFunction) {
+      runtime.incAllocDbg();
+
+      auto self = runtime.sbAlloc<HostFunctionWrapper>();
+      self->vtable = runtime.hostFunctionVTable_;
+      self->hfIdx_ = runtime.hostFunctions_.emplace(std::move(hostFunction));
+      return self;
+    }
+
+    static void release(w2c_hermes *mod, u32 hfw) {
+      static_cast<HermesSandboxRuntimeImpl *>(mod)->decAllocDbg();
+
+      // Free the HostFunction from the table.
+      sb::Ptr<HostFunctionWrapper> self(mod, hfw);
+      getRuntime(mod).hostFunctions_.release(self->hfIdx_);
+      // Free the wrapper object in the sandbox heap.
+      w2c_hermes_free(mod, hfw);
+    }
+
+    static void call(
+        w2c_hermes *mod,
+        u32 res,
+        u32 func,
+        u32 srt,
+        u32 thisArg,
+        u32 args,
+        u32 count) {
+      sb::Ptr<HostFunctionWrapper> self(mod, func);
+      auto &rt = getRuntime(mod);
+
+      auto ret = rt.sbRethrow(sb::createValueOrError, "HostFunction", [&] {
+        // Convert the arguments from SandboxValue to jsi::Value.
+        sb::Ptr<SandboxValue> argsPtr(mod, args, count);
+        std::vector<Value> jsiArgs;
+        jsiArgs.reserve(count);
+        for (size_t i = 0; i < count; ++i)
+          jsiArgs.emplace_back(rt.cloneToJSIValue(argsPtr[i]));
+
+        auto jsiThisArg =
+            rt.cloneToJSIValue(*sb::Ptr<SandboxValue>(&rt, thisArg));
+        auto &hf = rt.hostFunctions_.at(self->hfIdx_);
+
+        // Call the user provided function and convert the result back to a
+        // SandboxValue. Note that the resulting value must be cloned because
+        // the returned jsi::Value will go out of scope after this function
+        // returns.
+        return sb::createValueOrError(
+            rt.cloneToSandboxValue(hf(rt, jsiThisArg, jsiArgs.data(), count)));
+      });
+
+      // Write the result to the return value location.
+      *sb::Ptr<SandboxValueOrError>(&rt, res) = ret;
+    }
+
+    HostFunctionType &getHostFunction(HermesSandboxRuntimeImpl &rt) {
+      return rt.hostFunctions_.at(hfIdx_);
+    }
+  };
+
+  /// Implement PropNameIDList for exposing to the sandbox.
+  class PropNameIDListWrapper : public SandboxPropNameIDList {
+   public:
+    /// Create a new PropNameIDListWrapper with the given size. The caller must
+    /// then write to the allocated props array before it is released.
+    static sb::Ptr<PropNameIDListWrapper> create(
+        HermesSandboxRuntimeImpl &runtime,
+        size_t sz) {
+      runtime.incAllocDbg();
+
+      static_assert(
+          alignof(PropNameIDListWrapper) == alignof(SandboxPropNameID),
+          "Alignment must match to create a single allocation.");
+
+      /// Allocate the wrapper and the array of props in a single allocation.
+      auto alloc = w2c_hermes_malloc(
+          &runtime,
+          sizeof(PropNameIDListWrapper) + sizeof(SandboxPropNameID) * sz);
+
+      sb::Ptr<PropNameIDListWrapper> self(&runtime, alloc);
+      self->vtable = runtime.propNameIDListVTable_;
+      self->size = sz;
+      self->props = alloc + sizeof(PropNameIDListWrapper);
+      return self;
+    }
+
+    static void release(w2c_hermes *mod, u32 self) {
+      static_cast<HermesSandboxRuntimeImpl *>(mod)->decAllocDbg();
+
+      sb::Ptr<PropNameIDListWrapper> selfPtr(mod, self);
+      auto sz = selfPtr->size;
+
+      // Obtain a pointer to the props array and free each entry.
+      sb::Ptr<SandboxPropNameID> propsPtr(
+          mod, self + sizeof(PropNameIDListWrapper), sz);
+      for (size_t i = 0; i < sz; ++i)
+        sb::releasePointer(mod, propsPtr[i].pointer);
+
+      // Free the PropNameIDListWrapper itself.
+      w2c_hermes_free(mod, self);
+    }
+  };
+
+  /// Implement HostObject for exposing to the sandbox. This allows the sandbox
+  /// to interact with jsi::HostObjects.
+  class HostObjectWrapper : public SandboxHostObject {
+    /// The index of the user-provided jsi::HostObject.
+    u32 hoIdx_;
+
+   public:
+    /// Create a new HostObjectWrapper that when accessed by JS executing in the
+    /// sandbox will pass accesses through to the given \p hostObject.
+    static sb::Ptr<HostObjectWrapper> create(
+        HermesSandboxRuntimeImpl &runtime,
+        std::shared_ptr<HostObject> hostObject) {
+      runtime.incAllocDbg();
+
+      auto self = runtime.sbAlloc<HostObjectWrapper>();
+      self->vtable = runtime.hostObjectVTable_;
+      self->hoIdx_ = runtime.hostObjects_.emplace(std::move(hostObject));
+      return self;
+    }
+
+    static void get(w2c_hermes *mod, u32 res, u32 obj, u32 srt, u32 prop) {
+      sb::Ptr<HostObjectWrapper> self(mod, obj);
+      auto &rt = getRuntime(mod);
+
+      auto ret = rt.sbRethrow(sb::createValueOrError, "HostObject", [&] {
+        // Convert the prop to a jsi::PropNameID and invoke the getter on the
+        // jsi::HostObject.
+        auto jsiProp = rt.cloneToJSIPropNameID(SandboxPropNameID{prop});
+        auto res = rt.hostObjects_.at(self->hoIdx_)->get(rt, jsiProp);
+        return sb::createValueOrError(rt.cloneToSandboxValue(res));
+      });
+      *sb::Ptr<SandboxValueOrError>(mod, res) = ret;
+    }
+
+    static u32 set(w2c_hermes *mod, u32 obj, u32 srt, u32 prop, u32 val) {
+      sb::Ptr<HostObjectWrapper> self(mod, obj);
+      auto &rt = getRuntime(mod);
+
+      auto ret = rt.sbRethrow(sb::createVoidOrError, "HostObject", [&] {
+        // Convert the prop and value to JSI types and invoke the setter on the
+        // jsi::HostObject.
+        auto jsiProp = rt.cloneToJSIPropNameID(SandboxPropNameID{prop});
+        auto jsiVal = rt.cloneToJSIValue(*sb::Ptr<SandboxValue>(mod, val));
+        rt.hostObjects_.at(self->hoIdx_)->set(rt, jsiProp, jsiVal);
+        return sb::createVoidOrError();
+      });
+      return ret.void_or_error;
+    }
+
+    static u32 get_own_keys(w2c_hermes *mod, u32 obj, u32 srt) {
+      sb::Ptr<HostObjectWrapper> self(mod, obj);
+      auto &rt = getRuntime(mod);
+
+      auto ret = rt.sbRethrow(
+          sb::createPropNameIDListPtrOrError,
+          "HostObject::getPropertyNames",
+          [&]() -> SandboxPropNameIDListPtrOrError {
+            // Invoke the getOwnPropertyNames method on the jsi::HostObject.
+            auto props = rt.hostObjects_.at(self->hoIdx_)->getPropertyNames(rt);
+            size_t sz = props.size();
+            auto res = PropNameIDListWrapper::create(rt, sz);
+            sb::Ptr<SandboxPropNameID> sbProps(mod, res->props, sz);
+
+            // Convert each of the returned props to SandboxPropNameIDs and
+            // populate the array in the PropNameIDListWrapper.
+            for (size_t i = 0; i < sz; ++i)
+              sbProps[i] = rt.cloneToSandboxPropNameID(props[i]);
+            return sb::createPropNameIDListPtrOrError(res);
+          });
+      return ret.ptr_or_error;
+    }
+
+    static void release(w2c_hermes *mod, u32 how) {
+      static_cast<HermesSandboxRuntimeImpl *>(mod)->decAllocDbg();
+
+      // Release the table entry for this HostObject.
+      sb::Ptr<HostObjectWrapper> self(mod, how);
+      getRuntime(mod).hostObjects_.release(self->hoIdx_);
+      // Free the wrapper object in the sandbox heap.
+      w2c_hermes_free(mod, how);
+    }
+
+    std::shared_ptr<HostObject> getHostObject(
+        HermesSandboxRuntimeImpl &rt) const {
+      return rt.hostObjects_.at(hoIdx_);
+    }
+  };
+
+  /// Implement NativeState for exposing to the sandbox. Since NativeState is
+  /// only accessible from native code, this is only used to ensure the
+  /// NativeState is freed when the corresponding object is garbage collected.
+  class NativeStateWrapper : public SandboxNativeState {
+    /// The index of the jsi::NativeState that is stored.
+    u32 nsIdx_;
+
+   public:
+    /// Create a new NativeStateWrapper that manages the lifetime of the given
+    /// jsi::NativeState and allows it to be retrieved by native code.
+    static sb::Ptr<NativeStateWrapper> create(
+        HermesSandboxRuntimeImpl &runtime,
+        std::shared_ptr<NativeState> nativeState) {
+      runtime.incAllocDbg();
+
+      auto self = runtime.sbAlloc<NativeStateWrapper>();
+      self->vtable = runtime.nativeStateVTable_;
+      self->nsIdx_ = runtime.nativeStates_.emplace(std::move(nativeState));
+      return self;
+    }
+
+    static void release(w2c_hermes *mod, u32 nsw) {
+      static_cast<HermesSandboxRuntimeImpl *>(mod)->decAllocDbg();
+
+      // Free the HostFunction which is allocated on the regular heap.
+      sb::Ptr<NativeStateWrapper> self(mod, nsw);
+      getRuntime(mod).nativeStates_.release(self->nsIdx_);
+      // Free the wrapper object in the sandbox heap.
+      w2c_hermes_free(mod, nsw);
+    }
+
+    std::shared_ptr<NativeState> getNativeState(
+        HermesSandboxRuntimeImpl &rt) const {
+      return rt.nativeStates_.at(nsIdx_);
     }
   };
 
@@ -1216,10 +1553,14 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
   HermesSandboxRuntimeImpl()
       : bufferVTable_(this),
         growableBufferVTable_(this),
+        hostFunctionVTable_(this),
+        propNameIDListVTable_(this),
+        hostObjectVTable_(this),
+        nativeStateVTable_(this),
         managedPointers_(0.5, 0.5) {
     // Grow the function table for the vtable functions we need to register.
     wasm_rt_funcref_table_t &table = w2c_0x5F_indirect_function_table;
-    static constexpr size_t kNumVTableFunctions = 2;
+    static constexpr size_t kNumVTableFunctions = 10;
     auto oldEndIdx = wasm_rt_grow_funcref_table(
         &table, kNumVTableFunctions, wasm_rt_funcref_null_value);
     auto funcIdx = oldEndIdx;
@@ -1231,6 +1572,26 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
 
     registerFunction(&GrowableBufferImpl::try_grow_to, funcIdx);
     growableBufferVTable_->try_grow_to = funcIdx++;
+
+    registerFunction(&HostFunctionWrapper::release, funcIdx);
+    hostFunctionVTable_->release = funcIdx++;
+    registerFunction(&HostFunctionWrapper::call, funcIdx);
+    hostFunctionVTable_->call = funcIdx++;
+
+    registerFunction(&PropNameIDListWrapper::release, funcIdx);
+    propNameIDListVTable_->release = funcIdx++;
+
+    registerFunction(&HostObjectWrapper::release, funcIdx);
+    hostObjectVTable_->release = funcIdx++;
+    registerFunction(&HostObjectWrapper::get, funcIdx);
+    hostObjectVTable_->get = funcIdx++;
+    registerFunction(&HostObjectWrapper::set, funcIdx);
+    hostObjectVTable_->set = funcIdx++;
+    registerFunction(&HostObjectWrapper::get_own_keys, funcIdx);
+    hostObjectVTable_->get_own_keys = funcIdx++;
+
+    registerFunction(&NativeStateWrapper::release, funcIdx);
+    nativeStateVTable_->release = funcIdx++;
 
     assert(
         funcIdx == oldEndIdx + kNumVTableFunctions &&
@@ -1444,24 +1805,33 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
     return intoJSIObject(SandboxObjectOrError{vt_.create_object(this, srt_)});
   }
   Object createObject(std::shared_ptr<HostObject> ho) override {
-    THROW_UNIMPLEMENTED();
+    auto how = HostObjectWrapper::create(*this, std::move(ho));
+    return intoJSIObject(SandboxObjectOrError{
+        vt_.create_object_from_host_object(this, srt_, how)});
   }
-  std::shared_ptr<HostObject> getHostObject(const Object &) override {
-    THROW_UNIMPLEMENTED();
+  std::shared_ptr<HostObject> getHostObject(const Object &obj) override {
+    u32 how = vt_.get_host_object(this, srt_, toSandboxObject(obj).pointer);
+    return sb::Ptr<HostObjectWrapper>(this, how)->getHostObject(*this);
   }
-  HostFunctionType &getHostFunction(const Function &) override {
-    THROW_UNIMPLEMENTED();
+  HostFunctionType &getHostFunction(const Function &fn) override {
+    u32 hfw = vt_.get_host_function(this, srt_, toSandboxFunction(fn).pointer);
+    return sb::Ptr<HostFunctionWrapper>(this, hfw)->getHostFunction(*this);
   }
 
-  bool hasNativeState(const Object &) override {
-    THROW_UNIMPLEMENTED();
+  bool hasNativeState(const Object &obj) override {
+    return vt_.get_native_state(this, srt_, toSandboxObject(obj).pointer);
   }
-  std::shared_ptr<NativeState> getNativeState(const Object &) override {
-    THROW_UNIMPLEMENTED();
+  std::shared_ptr<NativeState> getNativeState(const Object &obj) override {
+    assert(hasNativeState(obj));
+    u32 nsw = vt_.get_native_state(this, srt_, toSandboxObject(obj).pointer);
+    return sb::Ptr<NativeStateWrapper>(this, nsw)->getNativeState(*this);
   }
-  void setNativeState(const Object &, std::shared_ptr<NativeState> state)
+  void setNativeState(const Object &obj, std::shared_ptr<NativeState> state)
       override {
-    THROW_UNIMPLEMENTED();
+    auto nsw = NativeStateWrapper::create(*this, std::move(state));
+    SandboxVoidOrError resVoidOrError{
+        vt_.set_native_state(this, srt_, toSandboxObject(obj).pointer, nsw)};
+    unwrap(resVoidOrError);
   }
 
   Value getProperty(const Object &obj, const PropNameID &name) override {
@@ -1592,7 +1962,10 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
       const PropNameID &name,
       unsigned int paramCount,
       HostFunctionType func) override {
-    THROW_UNIMPLEMENTED();
+    auto hfw = HostFunctionWrapper::create(*this, std::move(func));
+    return intoJSIFunction(
+        SandboxFunctionOrError{vt_.create_function_from_host_function(
+            this, srt_, toSandboxPropNameID(name).pointer, paramCount, hfw)});
   }
   Value call(
       const Function &fn,
