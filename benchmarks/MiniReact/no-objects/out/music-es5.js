@@ -1,3 +1,6 @@
+var _excluded = ["className", "variant", "size", "asChild"];
+function _objectWithoutProperties(source, excluded) { if (source == null) return {}; var target = _objectWithoutPropertiesLoose(source, excluded); var key, i; if (Object.getOwnPropertySymbols) { var sourceSymbolKeys = Object.getOwnPropertySymbols(source); for (i = 0; i < sourceSymbolKeys.length; i++) { key = sourceSymbolKeys[i]; if (excluded.indexOf(key) >= 0) continue; if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue; target[key] = source[key]; } } return target; }
+function _objectWithoutPropertiesLoose(source, excluded) { if (source == null) return {}; var target = {}; var sourceKeys = Object.keys(source); var key, i; for (i = 0; i < sourceKeys.length; i++) { key = sourceKeys[i]; if (excluded.indexOf(key) >= 0) continue; target[key] = source[key]; } return target; }
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
@@ -26,7 +29,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
  * @generated
  *
  * Entrypoints:
- *   app/simple/index.js
+ *   app/music/index.js
  */
 /* file: packages/react/invariant.js */
 function react_invariant$default(condition, format) {
@@ -694,220 +697,74 @@ function react_index$forwardRef(comp) {
     return comp(props, null);
   };
 }
-/* file: app/simple/App.js */
-function App$INTERNAL$Button(props) {
-  return react_index$jsx('button', {
-    id: props.id,
-    onClick: props.onClick,
-    children: 'Click me'
-  }, null);
+/* file: packages/class-variance-authority/index.js */
+function class_variance_authority_index$cva(base, variants) {
+  var baseString = typeof base === 'string' ? sh_CHECKED_CAST$default(base) : sh_fastarray$fastArrayJoin(sh_CHECKED_CAST$default(base), ' ');
+  return function (opts) {
+    return baseString;
+  };
 }
-function App$INTERNAL$Input(props) {
-  return react_index$jsx('input', {
-    id: props.id,
-    type: "text",
-    onChange: props.onChange,
-    value: props.value
-  }, null);
-}
-function App$INTERNAL$TextArea(props) {
-  return react_index$jsx('textarea', {
-    onChange: props.onChange,
-    children: props.value
-  }, null);
-}
-function App$INTERNAL$Select(props) {
-  var children = [];
-  for (var i = 0; i < props.options.length; i++) {
-    var option = props.options[i];
-    children.push(react_index$jsx('option', {
-      value: option.value,
-      children: option.label
-    }, option.value));
+/* file: lib/utils.js */
+function utils$cn() {
+  for (var _len = arguments.length, rest = new Array(_len), _key = 0; _key < _len; _key++) {
+    rest[_key] = arguments[_key];
   }
-  return react_index$jsx('select', {
-    onChange: props.onChange,
-    children: children
-  }, null);
+  return rest.join(' ');
 }
-function App$INTERNAL$Checkbox(props) {
-  return react_index$jsx('input', {
-    type: "checkbox",
-    checked: props.checked,
-    onChange: props.onChange
-  }, null);
-}
-function App$INTERNAL$Radio(props) {
-  return react_index$jsx('input', {
-    type: "radio",
-    checked: props.checked,
-    onChange: props.onChange
-  }, null);
-}
-function App$INTERNAL$Slider(props) {
-  return react_index$jsx('input', {
-    type: "range",
-    min: props.min,
-    max: props.max,
-    step: props.step,
-    value: props.value,
-    onChange: props.onChange
-  }, null);
-}
-function App$INTERNAL$ProgressBar(props) {
-  return react_index$jsx('div', {
-    style: {
-      width: `${props.progress}%`
+/* file: registry/new-york/ui/button.js */
+var button$buttonVariants = class_variance_authority_index$cva('inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50', {
+  variants: {
+    variant: {
+      default: 'bg-primary text-primary-foreground shadow hover:bg-primary/90',
+      destructive: 'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
+      outline: 'border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground',
+      secondary: 'bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80',
+      ghost: 'hover:bg-accent hover:text-accent-foreground',
+      link: 'text-primary underline-offset-4 hover:underline'
+    },
+    size: {
+      default: 'h-9 px-4 py-2',
+      sm: 'h-8 rounded-md px-3 text-xs',
+      lg: 'h-10 rounded-md px-8',
+      icon: 'h-9 w-9'
     }
-  }, null);
-}
-function App$INTERNAL$Spinner(props) {
-  return react_index$jsx('div', {
-    className: "spinner",
-    children: 'Loading...'
-  }, null);
-}
-function App$INTERNAL$Modal(props) {
-  if (!props.isOpen) {
-    return react_index$jsx('div', {
-      className: "modal closed"
-    }, null);
+  },
+  defaultVariants: {
+    variant: 'default',
+    size: 'default'
   }
-  return react_index$jsx('div', {
-    className: "modal open",
-    children: [react_index$jsx('div', {
-      className: "overlay",
-      onClick: props.onClose,
-      children: 'X'
-    }, null), react_index$jsx('div', {
-      className: "content",
-      children: props.children
-    }, null)]
-  }, null);
-}
-function App$INTERNAL$Tooltip(props) {
-  if (!props.isOpen) {
-    return react_index$jsx('div', {
-      className: "tooltip closed"
-    }, null);
-  }
-  return react_index$jsx('div', {
-    className: "tooltip open",
-    children: [react_index$jsx('div', {
-      className: "arrow"
-    }, null), react_index$jsx('div', {
-      className: "content",
-      children: props.children
-    }, null)]
-  }, null);
-}
-function App$default(props) {
-  var _react_index$useState = react_index$useState(''),
+});
+var button$Button = react_index$forwardRef(function (_ref4, ref) {
+  var className = _ref4.className,
+    variant = _ref4.variant,
+    size = _ref4.size,
+    _ref4$asChild = _ref4.asChild,
+    asChild = _ref4$asChild === void 0 ? false : _ref4$asChild,
+    props = _objectWithoutProperties(_ref4, _excluded);
+  return react_index$jsx('button', Object.assign({
+    className: utils$cn(button$buttonVariants({
+      variant: variant,
+      size: size,
+      className: className
+    })),
+    ref: ref
+  }, props), null);
+});
+/* file: app/music/page.js */
+function page$default(props) {
+  var _react_index$useState = react_index$useState(true),
     _react_index$useState2 = _slicedToArray(_react_index$useState, 2),
-    text = _react_index$useState2[0],
-    setText = _react_index$useState2[1];
-  var _react_index$useState3 = react_index$useState(0),
-    _react_index$useState4 = _slicedToArray(_react_index$useState3, 2),
-    number = _react_index$useState4[0],
-    setNumber = _react_index$useState4[1];
-  var _react_index$useState5 = react_index$useState(false),
-    _react_index$useState6 = _slicedToArray(_react_index$useState5, 2),
-    isChecked = _react_index$useState6[0],
-    setIsChecked = _react_index$useState6[1];
-  var _react_index$useState7 = react_index$useState(false),
-    _react_index$useState8 = _slicedToArray(_react_index$useState7, 2),
-    isSelected = _react_index$useState8[0],
-    setIsSelected = _react_index$useState8[1];
-  var _react_index$useState9 = react_index$useState(false),
-    _react_index$useState10 = _slicedToArray(_react_index$useState9, 2),
-    isOpen = _react_index$useState10[0],
-    setIsOpen = _react_index$useState10[1];
-  var _react_index$useState11 = react_index$useState(true),
-    _react_index$useState12 = _slicedToArray(_react_index$useState11, 2),
-    isTooltipOpen = _react_index$useState12[0],
-    setIsTooltipOpen = _react_index$useState12[1];
-  return react_index$jsx('div', {
-    children: [react_index$jsx('h1', {
-      children: 'React Benchmark'
-    }, null), react_index$jsx(App$INTERNAL$Button, {
-      id: "toggle-modal",
-      onClick: function onClick() {
-        return setIsOpen(!isOpen);
-      },
-      children: 'Toggle Modal'
-    }, null), react_index$jsx(App$INTERNAL$Modal, {
-      isOpen: isOpen,
-      onClose: function onClose() {
-        return setIsOpen(false);
-      },
-      children: [react_index$jsx('h2', {
-        children: 'Modal Content'
-      }, null), react_index$jsx('p', {
-        children: 'This is some modal content.'
-      }, null), react_index$jsx(App$INTERNAL$Tooltip, {
-        isOpen: isTooltipOpen,
-        onClose: function onClose() {
-          return setIsTooltipOpen(false);
-        },
-        children: [react_index$jsx('h3', {
-          children: 'Tooltip Content'
-        }, null), react_index$jsx('p', {
-          children: 'This is some tooltip content.'
-        }, null)]
-      }, null)]
-    }, null), react_index$jsx('div', {
-      children: [react_index$jsx('h2', {
-        children: 'Form Elements'
-      }, null), react_index$jsx(App$INTERNAL$Input, {
-        id: "update-text",
-        value: text,
-        onChange: function onChange(e) {
-          return setText(e.target.value);
-        }
-      }, null), react_index$jsx(App$INTERNAL$TextArea, {
-        value: text,
-        onChange: function onChange(e) {
-          return setText(e.target.value);
-        }
-      }, null), react_index$jsx(App$INTERNAL$Select, {
-        options: [{
-          label: 'Option 1',
-          value: 1
-        }, {
-          label: 'Option 2',
-          value: 2
-        }, {
-          label: 'Option 3',
-          value: 3
-        }],
-        onChange: function onChange(e) {
-          return setNumber(parseInt(e.target.value));
-        }
-      }, null), react_index$jsx(App$INTERNAL$Checkbox, {
-        checked: isChecked,
-        onChange: function onChange(e) {
-          return setIsChecked(e.target.checked);
-        }
-      }, null), react_index$jsx(App$INTERNAL$Radio, {
-        checked: isSelected,
-        onChange: function onChange(e) {
-          return setIsSelected(e.target.checked);
-        }
-      }, null), react_index$jsx(App$INTERNAL$Slider, {
-        min: 0,
-        max: 100,
-        step: 1,
-        value: number,
-        onChange: function onChange(e) {
-          return setNumber(parseInt(e.target.value));
-        }
-      }, null), react_index$jsx(App$INTERNAL$ProgressBar, {
-        progress: number
-      }, null), react_index$jsx(App$INTERNAL$Spinner, {}, null)]
-    }, null)]
+    toggle = _react_index$useState2[0],
+    setToggle = _react_index$useState2[1];
+  return react_index$jsx(button$Button, {
+    id: "click-me",
+    onClick: function onClick() {
+      return setToggle(!toggle);
+    },
+    children: ['Click me: ', String(toggle)]
   }, null);
 }
-/* file: app/simple/index.js */
+/* file: app/music/index.js */
 function index$INTERNAL$printIf1(i, str) {
   if (i === 1) {
     print('===============================');
@@ -918,17 +775,12 @@ function index$INTERNAL$printIf1(i, str) {
 function index$INTERNAL$run(N) {
   for (var i = 1; i <= N; ++i) {
     var root = react_index$createRoot();
-    var rootElement = react_index$jsx(App$default, {}, null);
+    var rootElement = react_index$jsx(page$default, {}, null);
     index$INTERNAL$printIf1(i, root.render(rootElement));
-    react_index$callOnClickOrChange('toggle-modal', null);
-    react_index$callOnClickOrChange('update-text', {
-      target: {
-        value: '!!!!! some text !!!!!'
-      }
-    });
+    react_index$callOnClickOrChange('click-me', null);
     sh_microtask$drainMicrotaskQueue();
     index$INTERNAL$printIf1(i, root.render(rootElement));
   }
 }
 index$INTERNAL$run(1);
-//# sourceMappingURL=simple-es5.js.map
+//# sourceMappingURL=music-es5.js.map

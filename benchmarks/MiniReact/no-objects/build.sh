@@ -7,6 +7,7 @@ BENCHMARKS_ROOT="$REACTMINI_ROOT/../.."
 
 ENTRYPOINTS=(
   simple
+  music
 )
 
 for ENTRYPOINT in "${ENTRYPOINTS[@]}"; do

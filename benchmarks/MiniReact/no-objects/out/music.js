@@ -8,7 +8,7 @@
  * @generated
  *
  * Entrypoints:
- *   app/simple/index.js
+ *   app/music/index.js
  */
 /* file: packages/react/invariant.js */
 function react_invariant$default(condition: boolean, format: string): void {
@@ -644,184 +644,65 @@ function react_index$Fragment(props: react_index$Props): react_index$React$Node 
 function react_index$forwardRef(comp: (props: react_index$Props, ref: mixed) => react_index$React$MixedElement): react_index$INTERNAL$Component {
   return (props: react_index$Props): react_index$React$MixedElement => comp(props, null);
 }
-/* file: app/simple/App.js */
-function App$INTERNAL$Button(props: react_index$Props): react_index$React$MixedElement {
-  return react_index$jsx('button', {
-    id: props.id,
-    onClick: props.onClick,
-    children: 'Click me'
-  }, null);
+/* file: packages/class-variance-authority/index.js */
+function class_variance_authority_index$cva(base: string[] | string, variants: mixed): (opts: mixed) => string {
+  const baseString: string = typeof base === 'string' ? sh_CHECKED_CAST$default<string>(base) : sh_fastarray$fastArrayJoin(sh_CHECKED_CAST$default<string[]>(base), ' ');
+  return (opts: mixed): string => baseString;
 }
-function App$INTERNAL$Input(props: react_index$Props): react_index$React$MixedElement {
-  return react_index$jsx('input', {
-    id: props.id,
-    type: "text",
-    onChange: props.onChange,
-    value: props.value
-  }, null);
+/* file: lib/utils.js */
+function utils$cn(...rest: any): string {
+  return rest.join(' ');
 }
-function App$INTERNAL$TextArea(props: react_index$Props): react_index$React$MixedElement {
-  return react_index$jsx('textarea', {
-    onChange: props.onChange,
-    children: props.value
-  }, null);
-}
-function App$INTERNAL$Select(props: react_index$Props): react_index$React$MixedElement {
-  const children = [];
-  for (let i = 0; i < props.options.length; i++) {
-    const option = props.options[i];
-    children.push(react_index$jsx('option', {
-      value: option.value,
-      children: option.label
-    }, option.value));
-  }
-  return react_index$jsx('select', {
-    onChange: props.onChange,
-    children: children
-  }, null);
-}
-function App$INTERNAL$Checkbox(props: react_index$Props): react_index$React$MixedElement {
-  return react_index$jsx('input', {
-    type: "checkbox",
-    checked: props.checked,
-    onChange: props.onChange
-  }, null);
-}
-function App$INTERNAL$Radio(props: react_index$Props): react_index$React$MixedElement {
-  return react_index$jsx('input', {
-    type: "radio",
-    checked: props.checked,
-    onChange: props.onChange
-  }, null);
-}
-function App$INTERNAL$Slider(props: react_index$Props): react_index$React$MixedElement {
-  return react_index$jsx('input', {
-    type: "range",
-    min: props.min,
-    max: props.max,
-    step: props.step,
-    value: props.value,
-    onChange: props.onChange
-  }, null);
-}
-function App$INTERNAL$ProgressBar(props: react_index$Props): react_index$React$MixedElement {
-  return react_index$jsx('div', {
-    style: {
-      width: `${props.progress}%`
+/* file: registry/new-york/ui/button.js */
+const button$buttonVariants = class_variance_authority_index$cva('inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50', {
+  variants: {
+    variant: {
+      default: 'bg-primary text-primary-foreground shadow hover:bg-primary/90',
+      destructive: 'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
+      outline: 'border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground',
+      secondary: 'bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80',
+      ghost: 'hover:bg-accent hover:text-accent-foreground',
+      link: 'text-primary underline-offset-4 hover:underline'
+    },
+    size: {
+      default: 'h-9 px-4 py-2',
+      sm: 'h-8 rounded-md px-3 text-xs',
+      lg: 'h-10 rounded-md px-8',
+      icon: 'h-9 w-9'
     }
-  }, null);
-}
-function App$INTERNAL$Spinner(props: react_index$Props): react_index$React$MixedElement {
-  return react_index$jsx('div', {
-    className: "spinner",
-    children: 'Loading...'
-  }, null);
-}
-function App$INTERNAL$Modal(props: react_index$Props): react_index$React$MixedElement {
-  if (!props.isOpen) {
-    return react_index$jsx('div', {
-      className: "modal closed"
-    }, null);
+  },
+  defaultVariants: {
+    variant: 'default',
+    size: 'default'
   }
-  return react_index$jsx('div', {
-    className: "modal open",
-    children: [react_index$jsx('div', {
-      className: "overlay",
-      onClick: props.onClose,
-      children: 'X'
-    }, null), react_index$jsx('div', {
-      className: "content",
-      children: props.children
-    }, null)]
+});
+const button$Button = react_index$forwardRef(({
+  className,
+  variant,
+  size,
+  asChild = false,
+  ...props
+}, ref): react_index$React$MixedElement => {
+  return react_index$jsx('button', {
+    className: utils$cn(button$buttonVariants({
+      variant,
+      size,
+      className
+    })),
+    ref: ref,
+    ...props
+  }, null);
+});
+/* file: app/music/page.js */
+function page$default(props: react_index$Props): react_index$React$MixedElement {
+  const [toggle, setToggle] = react_index$useState<boolean>(true);
+  return react_index$jsx(button$Button, {
+    id: "click-me",
+    onClick: () => setToggle(!toggle),
+    children: ['Click me: ', String(toggle)]
   }, null);
 }
-function App$INTERNAL$Tooltip(props: react_index$Props): react_index$React$MixedElement {
-  if (!props.isOpen) {
-    return react_index$jsx('div', {
-      className: "tooltip closed"
-    }, null);
-  }
-  return react_index$jsx('div', {
-    className: "tooltip open",
-    children: [react_index$jsx('div', {
-      className: "arrow"
-    }, null), react_index$jsx('div', {
-      className: "content",
-      children: props.children
-    }, null)]
-  }, null);
-}
-function App$default(props: react_index$Props): react_index$React$MixedElement {
-  const [text, setText] = react_index$useState<string>('');
-  const [number, setNumber] = react_index$useState<number>(0);
-  const [isChecked, setIsChecked] = react_index$useState<boolean>(false);
-  const [isSelected, setIsSelected] = react_index$useState<boolean>(false);
-  const [isOpen, setIsOpen] = react_index$useState<boolean>(false);
-  const [isTooltipOpen, setIsTooltipOpen] = react_index$useState<boolean>(true);
-  return react_index$jsx('div', {
-    children: [react_index$jsx('h1', {
-      children: 'React Benchmark'
-    }, null), react_index$jsx(App$INTERNAL$Button, {
-      id: "toggle-modal",
-      onClick: (): void => setIsOpen(!isOpen),
-      children: 'Toggle Modal'
-    }, null), react_index$jsx(App$INTERNAL$Modal, {
-      isOpen: isOpen,
-      onClose: (): void => setIsOpen(false),
-      children: [react_index$jsx('h2', {
-        children: 'Modal Content'
-      }, null), react_index$jsx('p', {
-        children: 'This is some modal content.'
-      }, null), react_index$jsx(App$INTERNAL$Tooltip, {
-        isOpen: isTooltipOpen,
-        onClose: (): void => setIsTooltipOpen(false),
-        children: [react_index$jsx('h3', {
-          children: 'Tooltip Content'
-        }, null), react_index$jsx('p', {
-          children: 'This is some tooltip content.'
-        }, null)]
-      }, null)]
-    }, null), react_index$jsx('div', {
-      children: [react_index$jsx('h2', {
-        children: 'Form Elements'
-      }, null), react_index$jsx(App$INTERNAL$Input, {
-        id: "update-text",
-        value: text,
-        onChange: e => setText(e.target.value)
-      }, null), react_index$jsx(App$INTERNAL$TextArea, {
-        value: text,
-        onChange: e => setText(e.target.value)
-      }, null), react_index$jsx(App$INTERNAL$Select, {
-        options: [{
-          label: 'Option 1',
-          value: 1
-        }, {
-          label: 'Option 2',
-          value: 2
-        }, {
-          label: 'Option 3',
-          value: 3
-        }],
-        onChange: e => setNumber(parseInt(e.target.value))
-      }, null), react_index$jsx(App$INTERNAL$Checkbox, {
-        checked: isChecked,
-        onChange: e => setIsChecked(e.target.checked)
-      }, null), react_index$jsx(App$INTERNAL$Radio, {
-        checked: isSelected,
-        onChange: e => setIsSelected(e.target.checked)
-      }, null), react_index$jsx(App$INTERNAL$Slider, {
-        min: 0,
-        max: 100,
-        step: 1,
-        value: number,
-        onChange: e => setNumber(parseInt(e.target.value))
-      }, null), react_index$jsx(App$INTERNAL$ProgressBar, {
-        progress: number
-      }, null), react_index$jsx(App$INTERNAL$Spinner, {}, null)]
-    }, null)]
-  }, null);
-}
-/* file: app/simple/index.js */
+/* file: app/music/index.js */
 function index$INTERNAL$printIf1(i: number, str: string): void {
   if (i === 1) {
     print('===============================');
@@ -832,17 +713,12 @@ function index$INTERNAL$printIf1(i: number, str: string): void {
 function index$INTERNAL$run(N: number): void {
   for (let i: number = 1; i <= N; ++i) {
     const root = react_index$createRoot();
-    const rootElement = react_index$jsx(App$default, {}, null);
+    const rootElement = react_index$jsx(page$default, {}, null);
     index$INTERNAL$printIf1(i, root.render(rootElement));
-    react_index$callOnClickOrChange('toggle-modal', null);
-    react_index$callOnClickOrChange('update-text', {
-      target: {
-        value: '!!!!! some text !!!!!'
-      }
-    });
+    react_index$callOnClickOrChange('click-me', null);
     sh_microtask$drainMicrotaskQueue();
     index$INTERNAL$printIf1(i, root.render(rootElement));
   }
 }
 index$INTERNAL$run(1);
-//# sourceMappingURL=simple.js.map
+//# sourceMappingURL=music.js.map

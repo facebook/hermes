@@ -11,15 +11,7 @@
 import invariant from './invariant';
 import CHECKED_CAST from 'sh/CHECKED_CAST';
 import {queueMicrotask} from 'sh/microtask';
-
-function fastArrayJoin(arr: string[], sep: string): string {
-  let result: string = '';
-  for (let i: number = 0, e = arr.length; i < e; ++i) {
-    if (i !== 0) result += sep;
-    result += arr[i];
-  }
-  return result;
-}
+import {fastArrayJoin} from 'sh/fastarray';
 
 function padString(str: string, len: number): string {
   let result: string = '';
@@ -775,4 +767,10 @@ export function jsx(
 export function Fragment(props: Props): React$Node {
   // TODO: Get this to work.
   return props.children;
+}
+
+export function forwardRef(
+  comp: (props: Props, ref: mixed) => React$MixedElement,
+): Component {
+  return (props: Props): React$MixedElement => comp(props, null);
 }
