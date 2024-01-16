@@ -123,20 +123,53 @@ class Verifier : public InstructionVisitor<Verifier, void> {
   /// Assert that the attributes of \p val are allowed to be set, based on the
   /// kind of \p val.
   void verifyAttributes(const Value *val, Module *M);
+
+  /// A helper function for the Assert macros that prints the location of the
+  /// the problematic instruction, if available.
+  /// \param inst the optional instruction to print the location of.
+  void _assertPrintLocation(const Instruction *inst);
 };
 
+void Verifier::_assertPrintLocation(const Instruction *inst) {
+  const Function *f = nullptr;
+  if (inst)
+    f = inst->getParent()->getParent();
+  else if (functionState)
+    f = &functionState->function;
+
+  if (f) {
+    OS << " in function " << f->getInternalNameStr();
+    if (inst) {
+      SourceErrorManager::SourceCoords coords{};
+      if (Ctx->getSourceErrorManager().findBufferLineAndLoc(
+              inst->getLocation(), coords)) {
+        OS << ", ";
+        Ctx->getSourceErrorManager().dumpCoords(OS, coords);
+      }
+    }
+  }
+  OS << '\n';
+}
+
 // TODO: Need to make this accept format strings
-#define Assert(C, ...)                                              \
-  do {                                                              \
-    if (!(C)) {                                                     \
-      valid = false;                                                \
-      if (functionState)                                            \
-        OS << (__VA_ARGS__) << " in function "                      \
-           << functionState->function.getInternalNameStr() << '\n'; \
-      else                                                          \
-        OS << (__VA_ARGS__) << '\n';                                \
-      return;                                                       \
-    }                                                               \
+#define Assert(C, ...)               \
+  do {                               \
+    if (!(C)) {                      \
+      valid = false;                 \
+      OS << __VA_ARGS__;             \
+      _assertPrintLocation(nullptr); \
+      return;                        \
+    }                                \
+  } while (0)
+
+#define AssertI(inst, C, ...)                         \
+  do {                                                \
+    if (!(C)) {                                       \
+      valid = false;                                  \
+      OS << inst.getKindStr() << ": " << __VA_ARGS__; \
+      _assertPrintLocation(&inst);                    \
+      return;                                         \
+    }                                                 \
   } while (0)
 
 void Verifier::verifyAttributes(const Value *val, Module *M) {
@@ -317,9 +350,10 @@ void Verifier::beforeVisitInstruction(const Instruction &Inst) {
     }
 
     if (Operand->getType().canBeEmpty()) {
-      Assert(acceptsEmptyType, "Instruction does not accept empty type");
+      AssertI(Inst, acceptsEmptyType, "Instruction does not accept empty type");
     } else if (Operand->getType().canBeUninit()) {
-      Assert(acceptsEmptyType, "Instruction does not accept uninit type");
+      AssertI(
+          Inst, acceptsEmptyType, "Instruction does not accept uninit type");
     }
   }
 
