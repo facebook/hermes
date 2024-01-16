@@ -177,6 +177,7 @@ class IRPrinter : public IRVisitor<IRPrinter, void> {
   /// Indentation level.
   unsigned indent_;
 
+  Context &ctx_;
   SourceErrorManager &sm_;
   /// Output stream.
   llvh::raw_ostream &os_;

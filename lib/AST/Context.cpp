@@ -14,7 +14,7 @@ namespace hermes {
 
 Context::Context(
     SourceErrorManager &sm,
-    CodeGenerationSettings codeGenOpts,
+    CodeGenerationSettings &&codeGenOpts,
     OptimizationSettings optimizationOpts,
     const NativeSettings *nativeSettings,
     std::unique_ptr<ResolutionTable> resolutionTable,
@@ -28,7 +28,7 @@ Context::Context(
           nativeSettings ? *nativeSettings : NativeSettings())) {}
 
 Context::Context(
-    CodeGenerationSettings codeGenOpts,
+    CodeGenerationSettings &&codeGenOpts,
     OptimizationSettings optimizationOpts,
     const NativeSettings *nativeSettings,
     std::unique_ptr<ResolutionTable> resolutionTable,

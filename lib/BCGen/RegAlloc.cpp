@@ -838,7 +838,7 @@ struct LivenessRegAllocIRPrinter : irdumper::IRPrinter {
       : IRPrinter(RA.getContext(), ost, escape), allocator(RA) {}
 
   bool printInstructionDestination(Instruction *I) override {
-    auto codeGenOpts = I->getContext().getCodeGenerationSettings();
+    const auto &codeGenOpts = I->getContext().getCodeGenerationSettings();
 
     if (!allocator.isAllocated(I)) {
       os_ << "$???";

@@ -828,7 +828,7 @@ struct LivenessRegAllocIRPrinter : irdumper::IRPrinter {
       : IRPrinter(RA.getContext(), ost, escape), allocator(RA) {}
 
   bool printInstructionDestination(Instruction *I) override {
-    auto codeGenOpts = I->getContext().getCodeGenerationSettings();
+    const auto &codeGenOpts = I->getContext().getCodeGenerationSettings();
 
     auto optReg = allocator.getOptionalRegister(I);
 
@@ -877,7 +877,7 @@ struct LivenessRegAllocIRPrinter : irdumper::IRPrinter {
   }
 
   void printValueLabel(Instruction *I, Value *V, unsigned opIndex) override {
-    auto codeGenOpts = I->getContext().getCodeGenerationSettings();
+    const auto &codeGenOpts = I->getContext().getCodeGenerationSettings();
     if (codeGenOpts.dumpRegisterInterval) {
       if (auto *opInst = llvh::dyn_cast<Instruction>(V)) {
         setColor(Color::Name);

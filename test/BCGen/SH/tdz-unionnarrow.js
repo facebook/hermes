@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -Xcustom-opt=tdzdedup -dump-ir --test262 %s | %FileCheckOrRegen --check-prefix=CHKIR --match-full-lines %s
-// RUN: %shermes -Xcustom-opt=tdzdedup -dump-lir --test262 %s | %FileCheckOrRegen --check-prefix=CHKLIR --match-full-lines %s
+// RUN: %shermes -Xdump-functions=f1,f2,inner -Xcustom-opt=tdzdedup -dump-ir --test262 %s | %FileCheckOrRegen --check-prefix=CHKIR --match-full-lines %s
+// RUN: %shermes -Xdump-functions=f1,f2,inner -Xcustom-opt=tdzdedup -dump-lir --test262 %s | %FileCheckOrRegen --check-prefix=CHKLIR --match-full-lines %s
 
 // Verify that LIRDeadValueInst is emitted after TDZDedup has eliminated a ThrowIfEmpty
 function f1() {
@@ -25,21 +25,6 @@ function f2() {
 }
 
 // Auto-generated content below. Please do not modify manually.
-
-// CHKIR:function global(): any
-// CHKIR-NEXT:frame = []
-// CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:       DeclareGlobalVarInst "f1": string
-// CHKIR-NEXT:       DeclareGlobalVarInst "f2": string
-// CHKIR-NEXT:  %2 = CreateFunctionInst (:object) %f1(): any
-// CHKIR-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "f1": string
-// CHKIR-NEXT:  %4 = CreateFunctionInst (:object) %f2(): any
-// CHKIR-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "f2": string
-// CHKIR-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
-// CHKIR-NEXT:       StoreStackInst undefined: undefined, %6: any
-// CHKIR-NEXT:  %8 = LoadStackInst (:any) %6: any
-// CHKIR-NEXT:       ReturnInst %8: any
-// CHKIR-NEXT:function_end
 
 // CHKIR:function f1(): any
 // CHKIR-NEXT:frame = [x: any|empty]
@@ -72,24 +57,6 @@ function f2() {
 // CHKIR-NEXT:  %4 = UnionNarrowTrustedInst (:any) %3: any|empty
 // CHKIR-NEXT:       ReturnInst %4: any
 // CHKIR-NEXT:function_end
-
-// CHKLIR:function global(): undefined
-// CHKLIR-NEXT:frame = []
-// CHKLIR-NEXT:%BB0:
-// CHKLIR-NEXT:  %0 = HBCCreateEnvironmentInst (:environment)
-// CHKLIR-NEXT:       DeclareGlobalVarInst "f1": string
-// CHKLIR-NEXT:       DeclareGlobalVarInst "f2": string
-// CHKLIR-NEXT:  %3 = HBCCreateFunctionInst (:object) %f1(): string|number, %0: environment
-// CHKLIR-NEXT:  %4 = HBCGetGlobalObjectInst (:object)
-// CHKLIR-NEXT:       StorePropertyLooseInst %3: object, %4: object, "f1": string
-// CHKLIR-NEXT:  %6 = HBCCreateFunctionInst (:object) %f2(): undefined, %0: environment
-// CHKLIR-NEXT:       StorePropertyLooseInst %6: object, %4: object, "f2": string
-// CHKLIR-NEXT:  %8 = AllocStackInst (:undefined) $?anon_0_ret: any
-// CHKLIR-NEXT:  %9 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHKLIR-NEXT:        StoreStackInst %9: undefined, %8: undefined
-// CHKLIR-NEXT:  %11 = LoadStackInst (:undefined) %8: undefined
-// CHKLIR-NEXT:        ReturnInst %11: undefined
-// CHKLIR-NEXT:function_end
 
 // CHKLIR:function f1(): string|number
 // CHKLIR-NEXT:frame = [x: empty]

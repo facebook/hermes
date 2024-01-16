@@ -137,7 +137,7 @@ BCProviderFromSrc::createBCProviderFromSrcImpl(
       ? compileFlags.staticBuiltins.getValue()
       : false;
 
-  auto context = std::make_shared<Context>(codeGenOpts, optSettings);
+  auto context = std::make_shared<Context>(std::move(codeGenOpts), optSettings);
   std::unique_ptr<SimpleDiagHandlerRAII> outputManager;
   if (diagHandler) {
     context->getSourceErrorManager().setDiagHandler(diagHandler, diagContext);
