@@ -205,8 +205,8 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        StoreFrameInst 0: number, [i]: any
 // CHECK-NEXT:  %15 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %16 = BinaryLessThanInst (:any) %15: any, 10: number
-// CHECK-NEXT:        CondBranchInst %16: any, %BB4, %BB5
+// CHECK-NEXT:  %16 = BinaryLessThanInst (:boolean) %15: any, 10: number
+// CHECK-NEXT:        CondBranchInst %16: boolean, %BB4, %BB5
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %18 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %19 = BinaryAddInst (:any) %18: any, 2: number
@@ -217,8 +217,8 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:        ThrowInst %22: any
 // CHECK-NEXT:%BB7:
 // CHECK-NEXT:  %24 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %25 = BinaryLessThanInst (:any) %24: any, 10: number
-// CHECK-NEXT:        CondBranchInst %25: any, %BB4, %BB5
+// CHECK-NEXT:  %25 = BinaryLessThanInst (:boolean) %24: any, 10: number
+// CHECK-NEXT:        CondBranchInst %25: boolean, %BB4, %BB5
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %27 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %28 = AsNumericInst (:number|bigint) %27: any
@@ -632,8 +632,8 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [i]: any
 // CHECK-NEXT:       StoreFrameInst 0: number, [i]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %3 = BinaryLessThanInst (:any) %2: any, 10: number
-// CHECK-NEXT:       CondBranchInst %3: any, %BB1, %BB2
+// CHECK-NEXT:  %3 = BinaryLessThanInst (:boolean) %2: any, 10: number
+// CHECK-NEXT:       CondBranchInst %3: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       TryStartInst %BB3, %BB4
 // CHECK-NEXT:%BB2:
@@ -643,8 +643,8 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %11 = BinaryLessThanInst (:any) %10: any, 10: number
-// CHECK-NEXT:        CondBranchInst %11: any, %BB1, %BB2
+// CHECK-NEXT:  %11 = BinaryLessThanInst (:boolean) %10: any, 10: number
+// CHECK-NEXT:        CondBranchInst %11: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %14 = AsNumericInst (:number|bigint) %13: any
@@ -666,8 +666,8 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %27 = BinaryAddInst (:any) %26: any, 2: number
 // CHECK-NEXT:        StoreFrameInst %27: any, [i]: any
 // CHECK-NEXT:  %29 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %30 = BinaryEqualInst (:any) %29: any, 3: number
-// CHECK-NEXT:        CondBranchInst %30: any, %BB9, %BB10
+// CHECK-NEXT:  %30 = BinaryEqualInst (:boolean) %29: any, 3: number
+// CHECK-NEXT:        CondBranchInst %30: boolean, %BB9, %BB10
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:  %32 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %33 = AsNumericInst (:number|bigint) %32: any

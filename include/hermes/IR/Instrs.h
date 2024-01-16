@@ -2169,9 +2169,10 @@ class UnaryOperatorInst : public SingleOperandInst {
     return opStringRepr[HERMES_IR_KIND_TO_OFFSET(UnaryOperatorInst, getKind())];
   }
 
-  explicit UnaryOperatorInst(ValueKind kind, Value *value)
+  explicit UnaryOperatorInst(ValueKind kind, Value *value, Type type)
       : SingleOperandInst(kind, value) {
     assert(HERMES_IR_KIND_IN_CLASS(kind, UnaryOperatorInst));
+    setType(type);
   }
   explicit UnaryOperatorInst(
       const UnaryOperatorInst *src,

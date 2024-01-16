@@ -209,8 +209,8 @@
 // CHECK-NEXT:         StorePropertyLooseInst %106: any, %103: any, "t": string
 // CHECK-NEXT:  %108 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %109 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %110 = BinaryEqualInst (:any) %108: any, %109: any
-// CHECK-NEXT:         ReturnInst %110: any
+// CHECK-NEXT:  %110 = BinaryEqualInst (:boolean) %108: any, %109: any
+// CHECK-NEXT:         ReturnInst %110: boolean
 // CHECK-NEXT:function_end
 
 // CHECK:function assignment_test(x: any, y: any): any

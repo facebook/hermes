@@ -56,9 +56,9 @@ function foo(a,b) {
 // CHECK-NEXT:; <stdin>:11:13
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [b]: any
 // CHECK-NEXT:; <stdin>:11:9
-// CHECK-NEXT:  %6 = BinaryGreaterThanInst (:any) %4: any, %5: any
+// CHECK-NEXT:  %6 = BinaryGreaterThanInst (:boolean) %4: any, %5: any
 // CHECK-NEXT:; <stdin>:11:5
-// CHECK-NEXT:       CondBranchInst %6: any, %BB1, %BB2
+// CHECK-NEXT:       CondBranchInst %6: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:; <stdin>:12:9
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [a]: any

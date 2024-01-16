@@ -75,8 +75,8 @@ function test_three(x, one, two) {
 // CHECK-NEXT:       StoreFrameInst false: boolean, [stop]: any
 // CHECK-NEXT:       StoreFrameInst 16: number, [age]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [age]: any
-// CHECK-NEXT:  %5 = BinaryGreaterThanInst (:any) %4: any, 18: number
-// CHECK-NEXT:       CondBranchInst %5: any, %BB1, %BB2
+// CHECK-NEXT:  %5 = BinaryGreaterThanInst (:boolean) %4: any, 18: number
+// CHECK-NEXT:       CondBranchInst %5: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       StoreFrameInst true: boolean, [stop]: any
 // CHECK-NEXT:       BranchInst %BB3

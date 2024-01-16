@@ -118,8 +118,8 @@ function foo_var() {
 // CHECK-NEXT:  %19 = LoadFrameInst (:any) [i#1]: any
 // CHECK-NEXT:  %20 = UnaryIncInst (:any) %19: any
 // CHECK-NEXT:        StoreFrameInst %20: any, [i#1]: any
-// CHECK-NEXT:  %22 = BinaryLessThanInst (:any) %20: any, 10: number
-// CHECK-NEXT:        CondBranchInst %22: any, %BB4, %BB5
+// CHECK-NEXT:  %22 = BinaryLessThanInst (:boolean) %20: any, 10: number
+// CHECK-NEXT:        CondBranchInst %22: boolean, %BB4, %BB5
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %24 = LoadPropertyInst (:any) globalObject: object, "arr": string
 // CHECK-NEXT:  %25 = LoadPropertyInst (:any) %24: any, "push": string
@@ -170,8 +170,8 @@ function foo_var() {
 // CHECK-NEXT:  %15 = LoadFrameInst (:any) [i#1]: any
 // CHECK-NEXT:  %16 = UnaryIncInst (:any) %15: any
 // CHECK-NEXT:        StoreFrameInst %16: any, [i#1]: any
-// CHECK-NEXT:  %18 = BinaryLessThanInst (:any) %16: any, 10: number
-// CHECK-NEXT:        CondBranchInst %18: any, %BB4, %BB5
+// CHECK-NEXT:  %18 = BinaryLessThanInst (:boolean) %16: any, 10: number
+// CHECK-NEXT:        CondBranchInst %18: boolean, %BB4, %BB5
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %20 = LoadPropertyInst (:any) globalObject: object, "arr": string
 // CHECK-NEXT:  %21 = LoadPropertyInst (:any) %20: any, "push": string
@@ -221,8 +221,8 @@ function foo_var() {
 // CHECK-NEXT:  %15 = LoadFrameInst (:any) [i#1]: any
 // CHECK-NEXT:  %16 = UnaryIncInst (:any) %15: any
 // CHECK-NEXT:        StoreFrameInst %16: any, [i#1]: any
-// CHECK-NEXT:  %18 = BinaryLessThanInst (:any) %16: any, 10: number
-// CHECK-NEXT:        CondBranchInst %18: any, %BB2, %BB3
+// CHECK-NEXT:  %18 = BinaryLessThanInst (:boolean) %16: any, 10: number
+// CHECK-NEXT:        CondBranchInst %18: boolean, %BB2, %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %20 = LoadPropertyInst (:any) globalObject: object, "arr": string
 // CHECK-NEXT:  %21 = LoadPropertyInst (:any) %20: any, "push": string
@@ -258,8 +258,8 @@ function foo_var() {
 // CHECK-NEXT:  %8 = UnionNarrowTrustedInst (:any) %7: any|empty
 // CHECK-NEXT:  %9 = UnaryIncInst (:any) %8: any
 // CHECK-NEXT:        StoreFrameInst %9: any, [i]: any|empty
-// CHECK-NEXT:  %11 = BinaryLessThanInst (:any) %9: any, 10: number
-// CHECK-NEXT:        CondBranchInst %11: any, %BB1, %BB2
+// CHECK-NEXT:  %11 = BinaryLessThanInst (:boolean) %9: any, 10: number
+// CHECK-NEXT:        CondBranchInst %11: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB3:
@@ -287,8 +287,8 @@ function foo_var() {
 // CHECK-NEXT:  %33 = UnionNarrowTrustedInst (:any) %32: any|empty
 // CHECK-NEXT:  %34 = UnaryIncInst (:any) %33: any
 // CHECK-NEXT:        StoreFrameInst %34: any, [i]: any|empty
-// CHECK-NEXT:  %36 = BinaryLessThanInst (:any) %34: any, 10: number
-// CHECK-NEXT:        CondBranchInst %36: any, %BB3, %BB2
+// CHECK-NEXT:  %36 = BinaryLessThanInst (:boolean) %34: any, 10: number
+// CHECK-NEXT:        CondBranchInst %36: boolean, %BB3, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -302,8 +302,8 @@ function foo_var() {
 // CHECK-NEXT:  %3 = UnionNarrowTrustedInst (:any) %2: any|empty
 // CHECK-NEXT:  %4 = UnaryIncInst (:any) %3: any
 // CHECK-NEXT:       StoreFrameInst %4: any, [i]: any|empty
-// CHECK-NEXT:  %6 = BinaryLessThanInst (:any) %4: any, 10: number
-// CHECK-NEXT:       CondBranchInst %6: any, %BB1, %BB2
+// CHECK-NEXT:  %6 = BinaryLessThanInst (:boolean) %4: any, 10: number
+// CHECK-NEXT:       CondBranchInst %6: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %8 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %9 = LoadFrameInst (:any|empty) [i]: any|empty
@@ -317,8 +317,8 @@ function foo_var() {
 // CHECK-NEXT:  %15 = UnionNarrowTrustedInst (:any) %14: any|empty
 // CHECK-NEXT:  %16 = UnaryIncInst (:any) %15: any
 // CHECK-NEXT:        StoreFrameInst %16: any, [i]: any|empty
-// CHECK-NEXT:  %18 = BinaryLessThanInst (:any) %16: any, 10: number
-// CHECK-NEXT:        CondBranchInst %18: any, %BB1, %BB2
+// CHECK-NEXT:  %18 = BinaryLessThanInst (:boolean) %16: any, 10: number
+// CHECK-NEXT:        CondBranchInst %18: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %20 = LoadFrameInst (:any|empty) [i]: any|empty
 // CHECK-NEXT:  %21 = UnionNarrowTrustedInst (:any) %20: any|empty
@@ -335,8 +335,8 @@ function foo_var() {
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %3 = UnaryIncInst (:any) %2: any
 // CHECK-NEXT:       StoreFrameInst %3: any, [i]: any
-// CHECK-NEXT:  %5 = BinaryLessThanInst (:any) %3: any, 10: number
-// CHECK-NEXT:       CondBranchInst %5: any, %BB1, %BB2
+// CHECK-NEXT:  %5 = BinaryLessThanInst (:boolean) %3: any, 10: number
+// CHECK-NEXT:       CondBranchInst %5: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [i]: any
@@ -348,8 +348,8 @@ function foo_var() {
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %13 = UnaryIncInst (:any) %12: any
 // CHECK-NEXT:        StoreFrameInst %13: any, [i]: any
-// CHECK-NEXT:  %15 = BinaryLessThanInst (:any) %13: any, 10: number
-// CHECK-NEXT:        CondBranchInst %15: any, %BB1, %BB2
+// CHECK-NEXT:  %15 = BinaryLessThanInst (:boolean) %13: any, 10: number
+// CHECK-NEXT:        CondBranchInst %15: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %17 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %18 = BinaryAddInst (:any) %17: any, 2: number

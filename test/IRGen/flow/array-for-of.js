@@ -57,8 +57,8 @@ return function main(x: number[]) {
 // CHECK-NEXT:  %10 = FastArrayLoadInst (:number) %3: any, %9: number
 // CHECK-NEXT:        StoreFrameInst %10: number, [i]: any
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %13 = BinaryStrictlyEqualInst (:any) %12: any, 0: number
-// CHECK-NEXT:        CondBranchInst %13: any, %BB3, %BB4
+// CHECK-NEXT:  %13 = BinaryStrictlyEqualInst (:boolean) %12: any, 0: number
+// CHECK-NEXT:        CondBranchInst %13: boolean, %BB3, %BB4
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB5:
@@ -76,8 +76,8 @@ return function main(x: number[]) {
 // CHECK-NEXT:        BranchInst %BB7
 // CHECK-NEXT:%BB7:
 // CHECK-NEXT:  %25 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %26 = BinaryStrictlyEqualInst (:any) %25: any, 1: number
-// CHECK-NEXT:        CondBranchInst %26: any, %BB8, %BB9
+// CHECK-NEXT:  %26 = BinaryStrictlyEqualInst (:boolean) %25: any, 1: number
+// CHECK-NEXT:        CondBranchInst %26: boolean, %BB8, %BB9
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:        BranchInst %BB6
 // CHECK-NEXT:%BB9:
