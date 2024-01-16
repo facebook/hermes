@@ -791,12 +791,12 @@ void Type::print(llvh::raw_ostream &OS) const {
     OS << "notype";
     return;
   }
-  if (isAnyOrEmptyType()) {
-    OS << "any|empty";
-    return;
-  }
-  if (isAnyType()) {
+  if (canBeAny()) {
     OS << "any";
+    if (canBeEmpty())
+      OS << "|empty";
+    if (canBeUninit())
+      OS << "|uninit";
     return;
   }
   for (unsigned i = 0; i < (unsigned)Type::TypeKind::LAST_TYPE; i++) {

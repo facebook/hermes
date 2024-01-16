@@ -26,6 +26,7 @@ MARK_LAST(Instruction)
 
 MARK_FIRST(Literal, Value)
 DEF_VALUE(LiteralEmpty, Literal)
+DEF_VALUE(LiteralUninit, Literal)
 DEF_VALUE(LiteralUndefined, Literal)
 DEF_VALUE(LiteralNull, Literal)
 DEF_VALUE(LiteralNumber, Literal)

@@ -53,8 +53,11 @@ class Type {
  public:
   // Encodes the JavaScript type hierarchy.
   enum TypeKind {
-    /// An uninitialized TDZ.
+    /// An TDZ variable before its declaration.
     Empty,
+    /// A typed variable after its declaration, but before initialization.
+    /// At runtime this maps to undefined.
+    Uninit,
     Undefined,
     Null,
     Boolean,
@@ -75,6 +78,7 @@ class Type {
     // The strings below match the values in TypeKind.
     static const char *const names[] = {
         "empty",
+        "uninit",
         "undefined",
         "null",
         "boolean",
@@ -95,11 +99,11 @@ class Type {
 #define NUM_IS_VAL(XX) (numBitmask_ == (1 << NumTypeKind::XX))
 
   // All possible types including "empty".
-  static constexpr uint16_t TYPE_ANY_OR_EMPTY_MASK =
+  static constexpr uint16_t TYPE_ANY_EMPTY_UNINIT_MASK =
       (1u << TypeKind::LAST_TYPE) - 1;
   // All possible types except "empty".
-  static constexpr uint16_t TYPE_NON_EMPTY_MASK =
-      TYPE_ANY_OR_EMPTY_MASK & ~BIT_TO_VAL(Empty);
+  static constexpr uint16_t TYPE_ANY_MASK =
+      TYPE_ANY_EMPTY_UNINIT_MASK & ~BIT_TO_VAL(Empty) & ~BIT_TO_VAL(Uninit);
 
   static constexpr uint16_t PRIMITIVE_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(String) | BIT_TO_VAL(BigInt) | BIT_TO_VAL(Null) |
@@ -133,15 +137,18 @@ class Type {
   static constexpr Type createNoType() {
     return Type(0);
   }
-  static constexpr Type createAnyOrEmpty() {
-    return Type(TYPE_ANY_OR_EMPTY_MASK);
+  static constexpr Type createAnyEmptyUninit() {
+    return Type(TYPE_ANY_EMPTY_UNINIT_MASK);
   }
   static constexpr Type createAnyType() {
-    return Type(TYPE_NON_EMPTY_MASK);
+    return Type(TYPE_ANY_MASK);
   }
   /// Create an uninitialized TDZ type.
   static constexpr Type createEmpty() {
     return Type(BIT_TO_VAL(Empty));
+  }
+  static constexpr Type createUninit() {
+    return Type(BIT_TO_VAL(Uninit));
   }
   static constexpr Type createUndefined() {
     return Type(BIT_TO_VAL(Undefined));
@@ -187,15 +194,18 @@ class Type {
     return bitmask_ == 0;
   }
 
-  constexpr bool isAnyOrEmptyType() const {
-    return bitmask_ == TYPE_ANY_OR_EMPTY_MASK;
+  constexpr bool isAnyEmptyUninitType() const {
+    return bitmask_ == TYPE_ANY_EMPTY_UNINIT_MASK;
   }
   constexpr bool isAnyType() const {
-    return bitmask_ == TYPE_NON_EMPTY_MASK;
+    return bitmask_ == TYPE_ANY_MASK;
   }
 
   constexpr bool isEmptyType() const {
     return IS_VAL(Empty);
+  }
+  constexpr bool isUninitType() const {
+    return IS_VAL(Uninit);
   }
   constexpr bool isUndefinedType() const {
     return IS_VAL(Undefined);
@@ -301,6 +311,11 @@ class Type {
     return canBeType(Type::createEmpty());
   }
 
+  /// \returns true if this type can represent an "uninit" value.
+  constexpr bool canBeUninit() const {
+    return canBeType(Type::createUninit());
+  }
+
   /// \returns true if this type can represent an undefined value.
   constexpr bool canBeUndefined() const {
     return canBeType(Type::createUndefined());
@@ -309,6 +324,11 @@ class Type {
   /// \returns true if this type can represent a null value.
   constexpr bool canBeNull() const {
     return canBeType(Type::createNull());
+  }
+
+  /// \returns true if this type can represent an "any" type value.
+  constexpr bool canBeAny() const {
+    return canBeType(Type::createAnyType());
   }
 
   /// Return true if this type is a proper subset of \p t. A "proper subset"
@@ -933,6 +953,20 @@ class LiteralEmpty : public Literal {
   }
 };
 
+class LiteralUninit : public Literal {
+  LiteralUninit(const LiteralUninit &) = delete;
+  void operator=(const LiteralUninit &) = delete;
+
+ public:
+  explicit LiteralUninit() : Literal(ValueKind::LiteralUninitKind) {
+    setType(Type::createUninit());
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::LiteralUninitKind;
+  }
+};
+
 class LiteralNull : public Literal {
   LiteralNull(const LiteralNull &) = delete;
   void operator=(const LiteralNull &) = delete;
@@ -1385,12 +1419,12 @@ class Instruction
   /// e.g. have its type inferred by TypeInference.
   bool isTyped() const;
 
-  /// Returns true if any of the operands can have an "empty" type.
+  /// Returns true if any of the operands can have an "empty" or "uninit" type.
   bool acceptsEmptyType() const;
 
-  /// Returns true if any of the operands can have an "empty" type. The default
-  /// implementation returns false. This method has to be overridden by a few
-  /// instructions that can handle an empty type (ThrowIf, Mov, etc).
+  /// Returns true if any of the operands can have an "empty" or "uninit" type.
+  /// The default implementation returns false. This method has to be overridden
+  /// by a few instructions that can handle an empty type (ThrowIf, Mov, etc).
   bool acceptsEmptyTypeImpl() const {
     return false;
   }
@@ -2158,6 +2192,7 @@ class Module : public Value {
 
   GlobalObject globalObject_{};
   LiteralEmpty literalEmpty{};
+  LiteralUninit literalUninit_{};
   LiteralUndefined literalUndefined{};
   LiteralNull literalNull{};
   LiteralBool literalFalse{false};
@@ -2301,6 +2336,11 @@ class Module : public Value {
   /// Create a new literal 'empty'.
   LiteralEmpty *getLiteralEmpty() {
     return &literalEmpty;
+  }
+
+  /// Return the Uninit literal singleton.
+  LiteralUninit *getLiteralUninit() {
+    return &literalUninit_;
   }
 
   /// Create a new literal 'undefined'.

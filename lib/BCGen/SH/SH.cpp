@@ -670,7 +670,7 @@ class InstrGen {
 
   /// Helper to generate an SHValue from a Value.
   void generateValue(Value &val) {
-    if (llvh::isa<LiteralUndefined>(&val)) {
+    if (llvh::isa<LiteralUndefined>(&val) || llvh::isa<LiteralUninit>(&val)) {
       os_ << "_sh_ljs_undefined()";
     } else if (llvh::isa<LiteralNull>(&val)) {
       os_ << "_sh_ljs_null()";
@@ -1589,17 +1589,6 @@ class InstrGen {
     generateRegister(inst);
     os_ << " = frame[" << hbc::StackFrameLayout::NewTarget << "];\n";
   }
-  void generateThrowIfInst(ThrowIfInst &inst) {
-    assert(
-        inst.getInvalidTypes()->getData().isEmptyType() &&
-        "Only Empty supported");
-    os_.indent(2);
-    os_ << "if (_sh_ljs_is_empty(";
-    generateRegister(inst);
-    os_ << " = ";
-    generateValue(*inst.getCheckedValue());
-    os_ << ")) _sh_throw_empty(shr);\n";
-  }
   void generateIteratorBeginInst(IteratorBeginInst &inst) {
     os_.indent(2);
     generateRegister(inst);
@@ -2118,6 +2107,7 @@ class InstrGen {
     switch (type.getFirstTypeKind()) {
       case Type::Empty:
         return "_sh_ljs_is_empty";
+      case Type::Uninit:
       case Type::Undefined:
         return "_sh_ljs_is_undefined";
       case Type::Null:
@@ -2138,6 +2128,51 @@ class InstrGen {
         break;
     }
     hermes_fatal("invalid type for checking");
+  }
+
+  /// \param badTypes the types which cause an exception if they are the input.
+  void _typeCastHelper(
+      Type resultType,
+      Type badTypes,
+      sh::Register dstReg,
+      sh::Register srcReg,
+      const char *errorExpr) {
+    os_.indent(2);
+    os_ << "if (";
+
+    // Are there fewer "bad" types than "good" types? That determines which we
+    // check.
+    auto [checkTypes, negativeCheck] =
+        badTypes.countTypes() < resultType.countTypes()
+        ? std::make_pair(badTypes, true)
+        : std::make_pair(resultType, false);
+
+    if (!negativeCheck)
+      os_ << "!(";
+    {
+      bool first = true;
+      for (Type t : checkTypes) {
+        if (!first)
+          os_ << " || ";
+        os_ << nameOfFunctionCheckingForType(t) << '(';
+        generateRegister(srcReg);
+        os_ << ')';
+        first = false;
+      }
+    }
+    if (!negativeCheck)
+      os_ << ')';
+
+    os_ << ") " << errorExpr << ";\n";
+
+    // Set the result, but do nothing if the registers are the same.
+    if (dstReg != srcReg) {
+      os_.indent(2);
+      generateRegister(dstReg);
+      os_ << " = ";
+      generateRegister(srcReg);
+      os_ << ";\n";
+    }
   }
   void generateCheckedTypeCastInst(CheckedTypeCastInst &inst) {
     const Type resultType = inst.getType();
@@ -2163,45 +2198,32 @@ class InstrGen {
       return;
     }
 
-    os_.indent(2);
-    os_ << "if (";
-
-    // Types which cause an exception if they are the input.
-    Type badTypes = Type::subtractTy(inputType, resultType);
-    // Are there fewer "bad" types than "good" types? That determines which we
-    // check.
-    auto [checkTypes, negativeCheck] =
-        badTypes.countTypes() < resultType.countTypes()
-        ? std::make_pair(badTypes, true)
-        : std::make_pair(resultType, false);
-
-    if (!negativeCheck)
-      os_ << "!(";
-    {
-      bool first = true;
-      for (Type t : checkTypes) {
-        if (!first)
-          os_ << " || ";
-        os_ << nameOfFunctionCheckingForType(t) << '(';
-        generateRegister(srcReg);
-        os_ << ')';
-        first = false;
-      }
-    }
-    if (!negativeCheck)
-      os_ << ')';
-
     // TODO: generate a type-specific error.
-    os_ << ") _sh_throw_type_error_ascii(shr, \"Checked cast failed\");\n";
+    _typeCastHelper(
+        resultType,
+        Type::subtractTy(inputType, resultType),
+        dstReg,
+        srcReg,
+        "_sh_throw_type_error_ascii(shr, \"Checked cast failed\")");
+  }
+  void generateThrowIfInst(ThrowIfInst &inst) {
+    assert(
+        ra_.isAllocated(inst.getCheckedValue()) &&
+        "operand of ThrowIf must have an allocated register");
 
-    // If so, just move the value, but do nothing if the registers are the same.
-    if (dstReg != srcReg) {
-      os_.indent(2);
-      generateRegister(dstReg);
-      os_ << " = ";
-      generateValue(*inst.getCheckedValue());
-      os_ << ";\n";
-    }
+    Type badTypes = inst.getInvalidTypes()->getData();
+    assert(
+        !badTypes.isNoType() &&
+        badTypes.isSubsetOf(
+            Type::unionTy(Type::createEmpty(), Type::createUninit())) &&
+        "invalidTypes set can only contain Empty or Uninit");
+
+    _typeCastHelper(
+        inst.getType(),
+        badTypes,
+        ra_.getRegister(&inst),
+        ra_.getRegister(inst.getCheckedValue()),
+        "_sh_throw_empty(shr)");
   }
   void generateLIRDeadValueInst(LIRDeadValueInst &inst) {
     os_.indent(2);

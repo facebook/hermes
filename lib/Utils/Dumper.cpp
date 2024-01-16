@@ -185,6 +185,8 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
     }
   } else if (isa<LiteralEmpty>(V)) {
     os_ << "empty";
+  } else if (isa<LiteralUninit>(V)) {
+    os_ << "uninit";
   } else if (isa<LiteralNull>(V)) {
     os_ << "null";
   } else if (isa<LiteralUndefined>(V)) {

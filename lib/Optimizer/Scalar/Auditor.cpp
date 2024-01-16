@@ -117,7 +117,7 @@ static void auditInferredTypes(Function *F) {
         TypeNumber++;
       } else if (t.isObjectType()) {
         TypeObject++;
-      } else if (t.isAnyOrEmptyType() || t.isAnyType()) {
+      } else if (t.canBeAny()) {
         TypeAny++;
       } else {
         // Other cases not counted above, e.g. union types.
