@@ -98,7 +98,7 @@ static Type inferTilde(UnaryOperatorInst *UOI) {
 /// Try to infer the type of the value that's stored into \p addr. \p addr is
 /// either a stack location or a variable.
 static Type inferMemoryLocationType(Value *addr) {
-  Type T = Type::createNoType();
+  Type T = addr->getType();
 
   for (auto *U : addr->getUsers()) {
     Value *storedVal = nullptr;
@@ -356,15 +356,15 @@ class TypeInferenceImpl {
     }
 
     // If one of the operands hasn't had its type inferred yet,
-    // skip it and come back later, returning true to signify that we're not
-    // done yet.
+    // skip it and come back later - we'll be back if anything else gets its
+    // type set (which might allow us to infer the type of this instruction).
     for (unsigned int i = 0, e = inst->getNumOperands(); i < e; ++i) {
       Value *operand = inst->getOperand(i);
       if (operand->getType().isNoType()) {
         LLVM_DEBUG(
             dbgs() << llvh::format("Missing type for operand %u of ", i)
                    << inst->getName() << "(" << operand->getKindStr() << ")\n");
-        return true;
+        return false;
       }
     }
 
@@ -424,22 +424,13 @@ class TypeInferenceImpl {
 
     Type newTy = Type::createNoType();
 
-    bool changed = false;
-
-    // For all possible incoming values into this phi:
+    // Union all possible incoming values into this phi:
     for (auto *input : values) {
-      Type T = input->getType();
-
-      // If any phi input has no type inferred, set the changed flag.
-      if (T.isNoType())
-        changed = true;
-
-      // If we already have the first type stored, make a union.
-      newTy = Type::unionTy(T, newTy);
+      newTy = Type::unionTy(input->getType(), newTy);
     }
 
     inst->setType(newTy);
-    return newTy != originalTy || changed;
+    return newTy != originalTy;
   }
 
   /// Run type inference on a the provided set of functions to a fixed point.
@@ -902,36 +893,42 @@ class TypeInferenceImpl {
 
   /// If all call sites of this Function are known, propagate
   /// information from actuals to formals.
-  void inferParams(Function *F) {
+  bool inferParams(Function *F) {
+    bool changed = false;
     if (!F->allCallsitesKnown()) {
       LLVM_DEBUG(
           dbgs() << F->getInternalName().str() << " has unknown call sites.\n");
       // If there are unknown call sites, we can't infer anything about the
       // parameters.
       for (auto *param : F->getJSDynamicParams()) {
+        Type originalTy = param->getType();
         param->setType(Type::createAnyType());
         checkAndSetPrePassType(param);
+        changed |= originalTy != param->getType();
       }
-      return;
+      return changed;
     }
     auto callsites = getKnownCallsites(F);
     LLVM_DEBUG(
         dbgs() << F->getInternalName().str() << " has " << callsites.size()
                << " call sites.\n");
-    propagateArgs(callsites, F);
+    return propagateArgs(callsites, F);
   }
 
   /// Propagate type information from call sites of F to formals of F.
   /// This assumes that all call sites of F are known.
-  void propagateArgs(llvh::ArrayRef<BaseCallInst *> callSites, Function *F) {
+  /// Cannot narrow the type of any parameter from its type prior to this
+  /// function being called.
+  bool propagateArgs(llvh::ArrayRef<BaseCallInst *> callSites, Function *F) {
+    bool changed = false;
     // Hermes does not support using 'arguments' to modify the arguments to a
     // function in loose mode. Therefore, we can safely propagate the parameter
     // types to their usage regardless of the function's strictness.
     IRBuilder builder(F);
     for (uint32_t i = 0, e = F->getJSDynamicParams().size(); i < e; ++i) {
       auto *P = F->getJSDynamicParam(i);
-      Type paramTy = Type::createAnyType();
-      bool first = true;
+      Type originalTy = P->getType();
+      Type paramTy = originalTy;
 
       // For each call sites.
       for (auto *call : callSites) {
@@ -947,28 +944,10 @@ class TypeInferenceImpl {
             dbgs() << F->getInternalName().c_str()
                    << "::" << P->getName().c_str()
                    << " found arg of type: " << arg->getType() << '\n');
-        if (first) {
-          paramTy = arg->getType();
-          first = false;
-        } else {
-          paramTy = Type::unionTy(paramTy, arg->getType());
-        }
+        paramTy = Type::unionTy(paramTy, arg->getType());
       }
 
-      Type originalTy = P->getType();
-
-      if (first || paramTy.isNoType()) {
-        // No information retrieved from call sites, bail.
-        LLVM_DEBUG(
-            dbgs()
-            << F->getInternalName().c_str() << "::" << P->getName().c_str()
-            << " failed to get info from callsites: defaulting to 'any'\n");
-        P->setType(Type::createAnyType());
-      } else {
-        // Types should only be widened.
-        P->setType(Type::unionTy(originalTy, paramTy));
-      }
-
+      P->setType(paramTy);
       checkAndSetPrePassType(P);
 
       if (P->getType() != originalTy) {
@@ -977,16 +956,20 @@ class TypeInferenceImpl {
                    << "::" << P->getName().c_str() << " changed to ");
         LLVM_DEBUG(P->getType().print(dbgs()));
         LLVM_DEBUG(dbgs() << "\n");
+        changed = true;
       }
     }
+
+    return changed;
   }
 
   /// Infer the return type of \p F and register it.
+  /// Cannot narrow the type of \p F from the type prior to this function being
+  /// called.
   /// \return true if the return type was changed.
   bool inferFunctionReturnType(Function *F) {
     Type originalTy = F->getType();
-    Type returnTy = Type::createAnyType();
-    bool first = true;
+    Type returnTy = originalTy;
 
     if (llvh::isa<GeneratorInnerFunction>(F)) {
       // GeneratorInnerFunctions may be called with `.return()` at the start,
@@ -999,13 +982,7 @@ class TypeInferenceImpl {
     for (auto &bbit : *F) {
       if (auto *returnInst =
               llvh::dyn_cast_or_null<ReturnInst>(bbit.getTerminator())) {
-        Type T = returnInst->getValue()->getType();
-        if (first && !T.isNoType()) {
-          returnTy = T;
-          first = false;
-        } else {
-          returnTy = Type::unionTy(returnTy, T);
-        }
+        returnTy = Type::unionTy(returnTy, returnInst->getValue()->getType());
       }
     }
     F->setType(returnTy);
@@ -1062,6 +1039,39 @@ class TypeInferenceImpl {
     f->setType(Type::createNoType());
   }
 
+  /// Reset every return type and parameters in the function provided to the
+  /// pre-pass type, to handle the cases where the type is notype due to
+  /// unreachable or non-returning code.
+  ///
+  /// \return whether anything changed.
+  bool resetReturnAndParamNoTypesToPrePass(Function *F) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Resetting types in " << F->getInternalName() << '\n');
+    bool changed = false;
+
+    /// If the type of \p val is no type, then set it back to the pre-pass type.
+    auto resetTypeIfNoType = [this, &changed](Value *val) -> void {
+      if (val->getType().isNoType()) {
+        auto it = prePassTypes_.find(val);
+        assert(it != prePassTypes_.end() && "Missing pre-pass type.");
+        val->setType(it->second);
+        LLVM_DEBUG(
+            llvh::dbgs() << "Reset type for " << val->getKindStr() << " to "
+                         << it->second << '\n');
+        changed = true;
+      }
+    };
+
+    // Parameters
+    for (auto *P : F->getJSDynamicParams()) {
+      resetTypeIfNoType(P);
+    }
+    // Return type
+    resetTypeIfNoType(F);
+
+    return changed;
+  }
+
   /// Ensure that the type of \p val is not wider than its type prior to the
   /// pass by checking against the pre-pass type and intersecting the type with
   /// it when the pre-pass type is different than \p val's type.
@@ -1101,6 +1111,9 @@ bool TypeInferenceImpl::runOnFunctions(llvh::ArrayRef<Function *> functions) {
   // variables. Typed variables can help us deduce the types of loads and other
   // values. This means that we need to iterate until we reach convergence.
   bool localChanged = false;
+  // Whether we've already run the reset step once (don't do it twice, because
+  // it wouldn't do anything).
+  bool haveRunReset = false;
   do {
     LLVM_DEBUG(dbgs() << "\nStart TypeInference pass:\n");
 
@@ -1108,9 +1121,13 @@ bool TypeInferenceImpl::runOnFunctions(llvh::ArrayRef<Function *> functions) {
 
     // Infer the type of formal parameters, based on knowing the (full) set
     // of call sites from which this function may be invoked.
+    bool inferredParam = false;
     for (Function *F : functions) {
-      inferParams(F);
+      inferredParam |= inferParams(F);
     }
+    if (inferredParam)
+      LLVM_DEBUG(dbgs() << ">> Inferred a parameter\n");
+    localChanged |= inferredParam;
 
     // Infer types of instructions.
     bool inferredInst = false;
@@ -1146,6 +1163,21 @@ bool TypeInferenceImpl::runOnFunctions(llvh::ArrayRef<Function *> functions) {
     if (inferredVarType)
       LLVM_DEBUG(dbgs() << ">> Inferred variable type\n");
     localChanged |= inferredVarType;
+
+    // The standard loop above failed to find any changes.
+    // Run the reset step to populate remaining NoTypes.
+    // Then we continue running the loop to ensure that we converge to the
+    // correct types (e.g. PhiInst type should be the union of the operands).
+    // We only have to do this once for this set of functions, so also check
+    // haveRunReset.
+    if (!localChanged && !haveRunReset) {
+      for (Function *F : functions) {
+        localChanged |= resetReturnAndParamNoTypesToPrePass(F);
+      }
+      haveRunReset = true;
+      if (localChanged)
+        LLVM_DEBUG(dbgs() << ">> Reset NoTypes\n");
+    }
   } while (localChanged);
 
 #ifndef NDEBUG

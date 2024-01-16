@@ -47,10 +47,10 @@ function ctor_load_store_test() {
 // CHECK:function ctor_this_test(): object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %use_this(): any
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %use_this(): object
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "prototype": string
 // CHECK-NEXT:  %2 = CreateThisInst (:object) %1: any, %0: object
-// CHECK-NEXT:  %3 = CallInst (:any) %0: object, %use_this(): any, empty: any, undefined: undefined, %2: object, 12: number
+// CHECK-NEXT:  %3 = CallInst (:object) %0: object, %use_this(): object, empty: any, undefined: undefined, %2: object, 12: number
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
@@ -64,19 +64,19 @@ function ctor_load_store_test() {
 // CHECK-NEXT:       ReturnInst %3: object
 // CHECK-NEXT:function_end
 
-// CHECK:function use_this(k: number): any [allCallsitesKnownInStrictMode]
+// CHECK:function use_this(k: number): object [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
-// CHECK-NEXT:       StorePropertyStrictInst 12: number, %0: any, "k": string
-// CHECK-NEXT:       ReturnInst %0: any
+// CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
+// CHECK-NEXT:       StorePropertyStrictInst 12: number, %0: object, "k": string
+// CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
 // CHECK:function "use_this 1#"(k: number): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
-// CHECK-NEXT:       StorePropertyStrictInst 12: number, %0: any, "k": string
+// CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
+// CHECK-NEXT:       StorePropertyStrictInst 12: number, %0: object, "k": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
