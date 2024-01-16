@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_SUPPORT_STRINGSETVECTOR_H
-#define HERMES_SUPPORT_STRINGSETVECTOR_H
+#ifndef HERMES_ADT_STRINGSETVECTOR_H
+#define HERMES_ADT_STRINGSETVECTOR_H
 
 #include "llvh/ADT/DenseMap.h"
 #include "llvh/ADT/StringRef.h"
@@ -136,4 +136,4 @@ inline StringSetVector::const_iterator StringSetVector::end() const {
 
 } // namespace hermes
 
-#endif // HERMES_SUPPORT_STRINGSETVECTOR_H
+#endif

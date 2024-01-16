@@ -8,10 +8,10 @@
 #ifndef HERMES_SYNTHTRACE_H
 #define HERMES_SYNTHTRACE_H
 
+#include "hermes/ADT/StringSetVector.h"
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/SHA1.h"
-#include "hermes/Support/StringSetVector.h"
 #include "hermes/VM/GCExecTrace.h"
 #include "hermes/VM/MockedEnvironment.h"
 

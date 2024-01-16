@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-#include "hermes/Support/StringSetVector.h"
+#include "hermes/ADT/StringSetVector.h"
 
 namespace {
 
