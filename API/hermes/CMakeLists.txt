@@ -53,6 +53,7 @@ set(HERMES_ENABLE_EH_RTTI ON)
 set(api_sources
   hermes.cpp
   DebuggerAPI.cpp
+  AsyncDebuggerAPI.cpp
   ${INSPECTOR_API_SOURCES}
   )
 
@@ -61,7 +62,7 @@ file(GLOB api_public_headers ${PROJECT_SOURCE_DIR}/public/hermes/Public/*.h)
 
 if(HERMES_THREAD_SAFETY_ANALYSIS)
   if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    set_property(SOURCE inspector/chrome/CDPHandler.cpp APPEND_STRING PROPERTY
+    set_property(SOURCE AsyncDebuggerAPI.cpp APPEND_STRING PROPERTY
       COMPILE_FLAGS "-Wthread-safety -Werror=thread-safety-analysis -D_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS")
   endif()
 endif()
