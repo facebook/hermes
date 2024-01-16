@@ -2122,6 +2122,8 @@ class InstrGen {
         return "_sh_ljs_is_bigint";
       case Type::Environment:
         hermes_fatal("cannot check for environment type");
+      case Type::FunctionCode:
+        hermes_fatal("cannot check for functionCode type");
       case Type::Object:
         return "_sh_ljs_is_object";
       case Type::LAST_TYPE:

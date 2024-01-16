@@ -262,7 +262,9 @@ void IRPrinter::printFunctionHeader(Function *F) {
     printTypeLabel(P);
   }
   os_ << ")";
-  printTypeLabel(F);
+  setColor(Color::Type);
+  os_ << ": " << F->getReturnType();
+  resetColor();
   os_ << " " << F->getAttributes(F->getParent()).getDescriptionStr();
 }
 

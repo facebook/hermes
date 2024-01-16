@@ -324,7 +324,8 @@ static Type inferBinaryInst(BinaryOperatorInst *BOI) {
 /// dispatch mechanism.
 class TypeInferenceImpl {
   /// Map from various values to their types prior to the pass.
-  /// Store types for Instruction, Parameter, Variable, Function.
+  /// Store types for Instruction, Parameter, Variable.
+  /// Store return type for Function.
   llvh::DenseMap<Value *, Type> prePassTypes_{};
 
  public:
@@ -723,7 +724,7 @@ class TypeInferenceImpl {
   Type inferCallInst(CallInst *inst) {
     // If the target of this call is known, propagate its return type.
     if (auto *F = llvh::dyn_cast<Function>(inst->getTarget()))
-      return F->getType();
+      return F->getReturnType();
     return Type::createAnyType();
   }
   Type inferHBCCallWithArgCountInst(HBCCallWithArgCountInst *inst) {
@@ -968,15 +969,15 @@ class TypeInferenceImpl {
   /// called.
   /// \return true if the return type was changed.
   bool inferFunctionReturnType(Function *F) {
-    Type originalTy = F->getType();
+    Type originalTy = F->getReturnType();
     Type returnTy = originalTy;
 
     if (llvh::isa<GeneratorInnerFunction>(F)) {
       // GeneratorInnerFunctions may be called with `.return()` at the start,
       // with any value of any type.
-      F->setType(Type::createAnyType());
+      F->setReturnType(Type::createAnyType());
       checkAndSetPrePassType(F);
-      return F->getType() != originalTy;
+      return F->getReturnType() != originalTy;
     }
 
     for (auto &bbit : *F) {
@@ -985,9 +986,9 @@ class TypeInferenceImpl {
         returnTy = Type::unionTy(returnTy, returnInst->getValue()->getType());
       }
     }
-    F->setType(returnTy);
+    F->setReturnType(returnTy);
     checkAndSetPrePassType(F);
-    return F->getType() != originalTy;
+    return F->getReturnType() != originalTy;
   }
 
   /// Attempt to infer the type of a variable stored in memory.
@@ -1035,8 +1036,8 @@ class TypeInferenceImpl {
       V->setType(Type::createNoType());
     }
     // Return type
-    prePassTypes_.try_emplace(f, f->getType());
-    f->setType(Type::createNoType());
+    prePassTypes_.try_emplace(f, f->getReturnType());
+    f->setReturnType(Type::createNoType());
   }
 
   /// Reset every return type and parameters in the function provided to the
@@ -1051,6 +1052,9 @@ class TypeInferenceImpl {
 
     /// If the type of \p val is no type, then set it back to the pre-pass type.
     auto resetTypeIfNoType = [this, &changed](Value *val) -> void {
+      assert(
+          !llvh::isa<Function>(val) &&
+          "Functions should handle their return type");
       if (val->getType().isNoType()) {
         auto it = prePassTypes_.find(val);
         assert(it != prePassTypes_.end() && "Missing pre-pass type.");
@@ -1067,7 +1071,12 @@ class TypeInferenceImpl {
       resetTypeIfNoType(P);
     }
     // Return type
-    resetTypeIfNoType(F);
+    if (F->getReturnType().isNoType()) {
+      auto it = prePassTypes_.find(F);
+      assert(it != prePassTypes_.end() && "Missing pre-pass type.");
+      F->setReturnType(it->second);
+      changed |= !F->getReturnType().isNoType();
+    }
 
     return changed;
   }
@@ -1075,20 +1084,30 @@ class TypeInferenceImpl {
   /// Ensure that the type of \p val is not wider than its type prior to the
   /// pass by checking against the pre-pass type and intersecting the type with
   /// it when the pre-pass type is different than \p val's type.
+  /// If \p val is a Function, then update its return type instead of its return
+  /// type.
   /// \return true when the type of \p val was changed.
   bool checkAndSetPrePassType(Value *val) {
+    Type originalTy = val->getType();
+    if (auto *func = llvh::dyn_cast<Function>(val)) {
+      originalTy = func->getReturnType();
+    }
     auto it = prePassTypes_.find(val);
     if (it == prePassTypes_.end()) {
       return false;
     }
-    if (it->second != val->getType()) {
-      Type intersection = Type::intersectTy(it->second, val->getType());
+    if (it->second != originalTy) {
+      Type intersection = Type::intersectTy(it->second, originalTy);
       // Narrow the type to include what we knew before the pass.
       LLVM_DEBUG(
           llvh::errs() << "Intersecting type of " << val->getKindStr()
                        << " from " << val->getType() << " with " << it->second
                        << " to " << intersection << '\n');
-      val->setType(intersection);
+      if (auto *func = llvh::dyn_cast<Function>(val)) {
+        func->setReturnType(intersection);
+      } else {
+        val->setType(intersection);
+      }
       return true;
     }
     return false;

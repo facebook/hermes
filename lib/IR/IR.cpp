@@ -200,6 +200,7 @@ Function::Function(
       SourceRange(sourceRange),
       customDirectives_(customDirectives),
       internalName_(parent->deriveUniqueInternalName(originalName)) {
+  setType(Type::createFunctionCode());
   // Determine the type of new.target.
   newTargetParam_.setType(functionNewTargetType(definitionKind_));
 

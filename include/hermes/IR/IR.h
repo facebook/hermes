@@ -65,6 +65,8 @@ class Type {
     Number,
     BigInt,
     Environment,
+    /// Function code (IR Function value), not a closure.
+    FunctionCode,
     Object,
 
     LAST_TYPE
@@ -86,9 +88,8 @@ class Type {
         "number",
         "bigint",
         "environment",
-        "object",
-        "closure",
-        "regexp"};
+        "functionCode",
+        "object"};
     return names[idx];
   }
 
@@ -189,6 +190,9 @@ class Type {
   static constexpr Type createEnvironment() {
     return Type(BIT_TO_VAL(Environment));
   }
+  static constexpr Type createFunctionCode() {
+    return Type(BIT_TO_VAL(FunctionCode));
+  }
 
   constexpr bool isNoType() const {
     return bitmask_ == 0;
@@ -230,6 +234,9 @@ class Type {
   }
   constexpr bool isEnvironmentType() const {
     return IS_VAL(Environment);
+  }
+  constexpr bool isFunctionCodeType() const {
+    return IS_VAL(FunctionCode);
   }
 
   /// \return the TypeKind of the first set bit. This is intended to be used
@@ -767,6 +774,13 @@ class Value {
   /// (e.g. MovInst, HBCLoadConstInst).
   /// All other Instruction types will be set during inference in TypeInference.
   void setType(Type type) {
+#ifndef NDEBUG
+    if (llvh::isa<Function>(this)) {
+      assert(
+          type.isFunctionCodeType() &&
+          "Functions cannot have non-functionCode types");
+    }
+#endif
     valueType = type;
   }
 
@@ -1778,6 +1792,8 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// Information on custom directives found in this function.
   CustomDirectives customDirectives_{};
 
+  Type returnType_ = Type::createAnyType();
+
   /// A name derived from \c originalOrInferredName_, but unique in the Module.
   /// Used only for printing and diagnostic.
   Identifier internalName_;
@@ -1877,6 +1893,13 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// \return true if JS "this" parameter was added.
   bool jsThisAdded() const {
     return jsThisAdded_;
+  }
+
+  Type getReturnType() const {
+    return returnType_;
+  }
+  void setReturnType(Type returnType) {
+    returnType_ = returnType;
   }
 
   /// \return the new.target parameter.
@@ -2111,7 +2134,8 @@ class GeneratorInnerFunction final : public Function {
                 .alwaysInline = false},
             sourceRange,
             insertBefore) {
-    setType(Type::createAnyType());
+    setType(Type::createFunctionCode());
+    setReturnType(Type::createAnyType());
   }
 
   static bool classof(const Value *V) {
