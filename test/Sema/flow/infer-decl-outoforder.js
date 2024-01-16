@@ -63,7 +63,7 @@ let z;
 // CHECK-NEXT:                                        Id 'foo' [D:E:%d.3 'foo']
 // CHECK-NEXT:                                        BlockStatement
 // CHECK-NEXT:                                            ExpressionStatement
-// CHECK-NEXT:                                                AssignmentExpression : any
+// CHECK-NEXT:                                                AssignmentExpression : number
 // CHECK-NEXT:                                                    Id 'z' [D:E:%d.6 'z'] : any
 // CHECK-NEXT:                                                    NumericLiteral : number
 // CHECK-NEXT:                                    VariableDeclaration
