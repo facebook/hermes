@@ -8,7 +8,7 @@
  * @generated
  *
  * Entrypoints:
- *   index.js
+ *   app/simple/index.js
  */
 /* file: packages/react/invariant.js */
 function react_invariant$default(condition: boolean, format: string): void {
@@ -24,12 +24,12 @@ function sh_CHECKED_CAST$default<T>(value: mixed): T {
 
   return (value: any);
 }
-/* file: microtask.js */
-let microtask$INTERNAL$microtaskQueue = [];
-function microtask$drainMicrotaskQueue(): void {
-  for (let i = 0; i < microtask$INTERNAL$microtaskQueue.length; i++) {
-    microtask$INTERNAL$microtaskQueue[i]();
-    microtask$INTERNAL$microtaskQueue[i] = undefined;
+/* file: packages/sh/microtask.js */
+let sh_microtask$INTERNAL$microtaskQueue = [];
+function sh_microtask$drainMicrotaskQueue(): void {
+  for (let i = 0; i < sh_microtask$INTERNAL$microtaskQueue.length; i++) {
+    sh_microtask$INTERNAL$microtaskQueue[i]();
+    sh_microtask$INTERNAL$microtaskQueue[i] = undefined;
   }
   sh_microtask$INTERNAL$microtaskQueue = [];
 }
@@ -640,7 +640,7 @@ function react_index$Fragment(props: react_index$Props): react_index$React$Node 
   // TODO: Get this to work.
   return props.children;
 }
-/* file: App.js */
+/* file: app/simple/App.js */
 function App$INTERNAL$Button(props: react_index$Props): react_index$React$MixedElement {
   return react_index$jsx('button', {
     id: props.id,
@@ -817,7 +817,7 @@ function App$default(props: react_index$Props): react_index$React$MixedElement {
     }, null)]
   }, null);
 }
-/* file: index.js */
+/* file: app/simple/index.js */
 function index$INTERNAL$printIf1(i: number, str: string): void {
   if (i === 1) {
     print('===============================');
@@ -841,4 +841,4 @@ function index$INTERNAL$run(N: number): void {
   }
 }
 index$INTERNAL$run(1);
-//# sourceMappingURL=MiniReact.js.map
+//# sourceMappingURL=simple.js.map

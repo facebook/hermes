@@ -64,7 +64,9 @@ async function main() {
   const outPath = path.resolve(cliYargs.out);
   const createES5Bundle = cliYargs.es5;
   const stripTypes = cliYargs.stripTypes;
-  const entrypoints: Array<string> = cliYargs._;
+  const entrypoints: Array<string> = cliYargs._.map(f =>
+    path.resolve(rootPath, f),
+  );
 
   const bundle = await createModuleGraph(rootPath, entrypoints);
   const bundleHeader = `*

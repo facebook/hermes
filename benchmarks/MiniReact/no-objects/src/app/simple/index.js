@@ -8,8 +8,6 @@
  * @format
  */
 
-import type {Props, React$MixedElement} from 'react';
-
 import * as React from 'react';
 import App from './App';
 import {drainMicrotaskQueue} from 'sh/microtask';

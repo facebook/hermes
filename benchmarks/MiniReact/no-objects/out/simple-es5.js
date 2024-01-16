@@ -26,7 +26,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
  * @generated
  *
  * Entrypoints:
- *   index.js
+ *   app/simple/index.js
  */
 /* file: packages/react/invariant.js */
 function react_invariant$default(condition, format) {
@@ -42,12 +42,12 @@ function sh_CHECKED_CAST$default(value) {
 
   return value;
 }
-/* file: microtask.js */
-var microtask$INTERNAL$microtaskQueue = [];
-function microtask$drainMicrotaskQueue() {
-  for (var i = 0; i < microtask$INTERNAL$microtaskQueue.length; i++) {
-    microtask$INTERNAL$microtaskQueue[i]();
-    microtask$INTERNAL$microtaskQueue[i] = undefined;
+/* file: packages/sh/microtask.js */
+var sh_microtask$INTERNAL$microtaskQueue = [];
+function sh_microtask$drainMicrotaskQueue() {
+  for (var i = 0; i < sh_microtask$INTERNAL$microtaskQueue.length; i++) {
+    sh_microtask$INTERNAL$microtaskQueue[i]();
+    sh_microtask$INTERNAL$microtaskQueue[i] = undefined;
   }
   sh_microtask$INTERNAL$microtaskQueue = [];
 }
@@ -688,7 +688,7 @@ function react_index$Fragment(props) {
   // TODO: Get this to work.
   return props.children;
 }
-/* file: App.js */
+/* file: app/simple/App.js */
 function App$INTERNAL$Button(props) {
   return react_index$jsx('button', {
     id: props.id,
@@ -901,7 +901,7 @@ function App$default(props) {
     }, null)]
   }, null);
 }
-/* file: index.js */
+/* file: app/simple/index.js */
 function index$INTERNAL$printIf1(i, str) {
   if (i === 1) {
     print('===============================');
@@ -925,4 +925,4 @@ function index$INTERNAL$run(N) {
   }
 }
 index$INTERNAL$run(1);
-//# sourceMappingURL=MiniReact-es5.js.map
+//# sourceMappingURL=simple-es5.js.map
