@@ -22,7 +22,7 @@ x[1] = false;
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %0: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): functionCode
 // CHECK-NEXT:  %3 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %4 = CallInst [njsf] (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: object
 // CHECK-NEXT:       StoreStackInst %4: any, %0: any

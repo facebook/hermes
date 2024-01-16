@@ -34,9 +34,9 @@ function recursive_phi(x) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "sink": string
 // CHECK-NEXT:       DeclareGlobalVarInst "recursive_phi": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %sink(): undefined
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %sink(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "sink": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %recursive_phi(): string|number
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %recursive_phi(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "recursive_phi": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

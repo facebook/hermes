@@ -24,9 +24,9 @@ function f2(){
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "f1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f2": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %f1(): object
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %f1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "f1": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %f2(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %f2(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "f2": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

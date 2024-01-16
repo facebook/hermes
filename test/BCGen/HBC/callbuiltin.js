@@ -35,12 +35,12 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "foo": string
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "shadows": string
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "checkNonStaticBuiltin": string
-// CHKRA-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %foo(): any, $Reg1
+// CHKRA-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %foo(): functionCode, $Reg1
 // CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
 // CHKRA-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg0, "foo": string
-// CHKRA-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %shadows(): undefined, $Reg1
+// CHKRA-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %shadows(): functionCode, $Reg1
 // CHKRA-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg0, "shadows": string
-// CHKRA-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %checkNonStaticBuiltin(): undefined, $Reg1
+// CHKRA-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %checkNonStaticBuiltin(): functionCode, $Reg1
 // CHKRA-NEXT:  $Reg1 = StorePropertyLooseInst $Reg1, $Reg0, "checkNonStaticBuiltin": string
 // CHKRA-NEXT:  $Reg2 = TryLoadGlobalPropertyInst (:any) $Reg0, "print": string
 // CHKRA-NEXT:  $Reg3 = LoadPropertyInst (:any) $Reg0, "foo": string

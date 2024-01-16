@@ -37,21 +37,21 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:       DeclareGlobalVarInst "update_variable_test1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "update_variable_test2": string
 // CHECK-NEXT:       DeclareGlobalVarInst "update_variable_test3": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %update_field_test0(): any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %update_field_test0(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "update_field_test0": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %update_field_test1(): any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %update_field_test1(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "update_field_test1": string
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %update_field_test2(): any
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %update_field_test2(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "update_field_test2": string
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %update_field_test3(): any
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %update_field_test3(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %14: object, globalObject: object, "update_field_test3": string
-// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %update_variable_test0(): any
+// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %update_variable_test0(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %16: object, globalObject: object, "update_variable_test0": string
-// CHECK-NEXT:  %18 = CreateFunctionInst (:object) %update_variable_test1(): any
+// CHECK-NEXT:  %18 = CreateFunctionInst (:object) %update_variable_test1(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %18: object, globalObject: object, "update_variable_test1": string
-// CHECK-NEXT:  %20 = CreateFunctionInst (:object) %update_variable_test2(): any
+// CHECK-NEXT:  %20 = CreateFunctionInst (:object) %update_variable_test2(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %20: object, globalObject: object, "update_variable_test2": string
-// CHECK-NEXT:  %22 = CreateFunctionInst (:object) %update_variable_test3(): any
+// CHECK-NEXT:  %22 = CreateFunctionInst (:object) %update_variable_test3(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %22: object, globalObject: object, "update_variable_test3": string
 // CHECK-NEXT:  %24 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %24: any

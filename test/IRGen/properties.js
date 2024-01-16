@@ -25,7 +25,7 @@ function sink(x, y) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "y": string
 // CHECK-NEXT:       DeclareGlobalVarInst "sink": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %sink(): any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %sink(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "sink": string
 // CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %4: any

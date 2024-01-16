@@ -24,7 +24,7 @@ function main() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "main": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): undefined
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %1: object, globalObject: object, "main": string
 // CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
@@ -32,11 +32,11 @@ function main() {
 // CHECK:function main(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f(): undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f(): functionCode
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "flag": string
 // CHECK-NEXT:       CondBranchInst %1: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %g(): undefined
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %g(): functionCode
 // CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = PhiInst (:object) %3: object, %BB1, %0: object, %BB0

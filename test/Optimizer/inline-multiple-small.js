@@ -29,7 +29,7 @@ function outer(a, b) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "outer": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %outer(): string|number
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %outer(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %1: object, globalObject: object, "outer": string
 // CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
@@ -37,10 +37,10 @@ function outer(a, b) {
 // CHECK:function outer(a: any, b: any): string|number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f3(): string|number
-// CHECK-NEXT:  %1 = CallInst (:string|number) %0: object, %f3(): string|number, empty: any, undefined: undefined, 0: number, 10: number
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f3(): functionCode
+// CHECK-NEXT:  %1 = CallInst (:string|number) %0: object, %f3(): functionCode, empty: any, undefined: undefined, 0: number, 10: number
 // CHECK-NEXT:  %2 = BinaryAddInst (:string|number) 1734: number, %1: string|number
-// CHECK-NEXT:  %3 = CallInst (:string|number) %0: object, %f3(): string|number, empty: any, undefined: undefined, 0: number, 100: number
+// CHECK-NEXT:  %3 = CallInst (:string|number) %0: object, %f3(): functionCode, empty: any, undefined: undefined, 0: number, 100: number
 // CHECK-NEXT:  %4 = BinaryAddInst (:string|number) %2: string|number, %3: string|number
 // CHECK-NEXT:       ReturnInst %4: string|number
 // CHECK-NEXT:function_end

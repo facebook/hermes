@@ -18,7 +18,7 @@ function condExpr(a,b,c,d) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "condExpr": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %condExpr(): any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %condExpr(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "condExpr": string
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %3: any

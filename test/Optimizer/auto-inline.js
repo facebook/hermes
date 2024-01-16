@@ -52,13 +52,13 @@ function foo4(a) {
 // CHECK-NEXT:       DeclareGlobalVarInst "foo2": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo3": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo4": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %foo1(): number
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %foo1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "foo1": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %foo2(): string|number
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %foo2(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "foo2": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %foo3(): any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %foo3(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "foo3": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %foo4(): any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %foo4(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "foo4": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

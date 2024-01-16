@@ -21,7 +21,7 @@ function foo(p1, p2, p3) {
 // OPT-CHECK-NEXT:frame = []
 // OPT-CHECK-NEXT:%BB0:
 // OPT-CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// OPT-CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): undefined
+// OPT-CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): functionCode
 // OPT-CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
 // OPT-CHECK-NEXT:       ReturnInst undefined: undefined
 // OPT-CHECK-NEXT:function_end
@@ -42,7 +42,7 @@ function foo(p1, p2, p3) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %3: any

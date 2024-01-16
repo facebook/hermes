@@ -27,16 +27,16 @@
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): undefined
-// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %""(): undefined, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): functionCode
+// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %""(): functionCode, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): number|bigint
-// CHECK-NEXT:  %1 = CallInst (:number|bigint) %0: object, %foo(): number|bigint, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): functionCode
+// CHECK-NEXT:  %1 = CallInst (:number|bigint) %0: object, %foo(): functionCode, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %3 = UnaryTypeofInst (:string) %1: number|bigint
 // CHECK-NEXT:  %4 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: string, %1: number|bigint
@@ -46,8 +46,8 @@
 // CHECK:function foo(): number|bigint [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %o(): undefined
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %" 1#"(): bigint
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %o(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %" 1#"(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %1: object, %0: object, "valueOf": string
 // CHECK-NEXT:  %3 = UnaryMinusInst (:number|bigint) %0: object
 // CHECK-NEXT:       ReturnInst %3: number|bigint

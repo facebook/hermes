@@ -28,7 +28,7 @@ function foo() {
 // CHKLOOSE-NEXT:       DeclareGlobalVarInst "init": string
 // CHKLOOSE-NEXT:       DeclareGlobalVarInst "f": string
 // CHKLOOSE-NEXT:       DeclareGlobalVarInst "foo": string
-// CHKLOOSE-NEXT:  %3 = CreateFunctionInst (:object) %foo(): any
+// CHKLOOSE-NEXT:  %3 = CreateFunctionInst (:object) %foo(): functionCode
 // CHKLOOSE-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "foo": string
 // CHKLOOSE-NEXT:  %5 = AllocStackInst (:any) $?anon_0_ret: any
 // CHKLOOSE-NEXT:       StoreStackInst undefined: undefined, %5: any
@@ -42,7 +42,7 @@ function foo() {
 // CHKLOOSE-NEXT:       StoreFrameInst undefined: undefined, [f]: any
 // CHKLOOSE-NEXT:  %1 = LoadFrameInst (:any) [f]: any
 // CHKLOOSE-NEXT:       StorePropertyLooseInst %1: any, globalObject: object, "init": string
-// CHKLOOSE-NEXT:  %3 = CreateFunctionInst (:object) %f(): any
+// CHKLOOSE-NEXT:  %3 = CreateFunctionInst (:object) %f(): functionCode
 // CHKLOOSE-NEXT:       StoreFrameInst %3: object, [f]: any
 // CHKLOOSE-NEXT:       ReturnInst undefined: undefined
 // CHKLOOSE-NEXT:function_end
@@ -59,7 +59,7 @@ function foo() {
 // CHKSTRICT-NEXT:       DeclareGlobalVarInst "init": string
 // CHKSTRICT-NEXT:       DeclareGlobalVarInst "f": string
 // CHKSTRICT-NEXT:       DeclareGlobalVarInst "foo": string
-// CHKSTRICT-NEXT:  %3 = CreateFunctionInst (:object) %foo(): any
+// CHKSTRICT-NEXT:  %3 = CreateFunctionInst (:object) %foo(): functionCode
 // CHKSTRICT-NEXT:       StorePropertyStrictInst %3: object, globalObject: object, "foo": string
 // CHKSTRICT-NEXT:  %5 = AllocStackInst (:any) $?anon_0_ret: any
 // CHKSTRICT-NEXT:       StoreStackInst undefined: undefined, %5: any
@@ -72,7 +72,7 @@ function foo() {
 // CHKSTRICT-NEXT:%BB0:
 // CHKSTRICT-NEXT:  %0 = LoadPropertyInst (:any) globalObject: object, "f": string
 // CHKSTRICT-NEXT:       StorePropertyStrictInst %0: any, globalObject: object, "init": string
-// CHKSTRICT-NEXT:  %2 = CreateFunctionInst (:object) %f(): any
+// CHKSTRICT-NEXT:  %2 = CreateFunctionInst (:object) %f(): functionCode
 // CHKSTRICT-NEXT:       StoreFrameInst %2: object, [f]: any
 // CHKSTRICT-NEXT:       ReturnInst undefined: undefined
 // CHKSTRICT-NEXT:function_end

@@ -33,8 +33,8 @@ return x;
 // CHECK:function global(): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): number
-// CHECK-NEXT:  %1 = CallInst (:number) %0: object, %""(): number, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): functionCode
+// CHECK-NEXT:  %1 = CallInst (:number) %0: object, %""(): functionCode, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst %1: number
 // CHECK-NEXT:function_end
 

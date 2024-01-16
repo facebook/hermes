@@ -40,15 +40,15 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:       DeclareGlobalVarInst "simpleAwait": string
 // CHECK-NEXT:       DeclareGlobalVarInst "nonSimpleArrayDestructuring": string
 // CHECK-NEXT:       DeclareGlobalVarInst "simpleAsyncFE": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %simpleReturn(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %simpleReturn(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "simpleReturn": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %simpleAwait(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %simpleAwait(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "simpleAwait": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %nonSimpleArrayDestructuring(): any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %nonSimpleArrayDestructuring(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "nonSimpleArrayDestructuring": string
 // CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %10: any
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %simpleAsyncFE(): any
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %simpleAsyncFE(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "simpleAsyncFE": string
 // CHECK-NEXT:  %14 = LoadStackInst (:any) %10: any
 // CHECK-NEXT:        ReturnInst %14: any
@@ -60,7 +60,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %2 = CoerceThisNSInst (:object) %1: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %?anon_0_simpleReturn(): any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %?anon_0_simpleReturn(): functionCode
 // CHECK-NEXT:  %4 = GetBuiltinClosureInst (:object) [HermesBuiltin.spawnAsync]: number
 // CHECK-NEXT:  %5 = CallInst (:any) %4: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: object, %2: object, %0: object
 // CHECK-NEXT:       ReturnInst %5: any
@@ -72,7 +72,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %2 = CoerceThisNSInst (:object) %1: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %?anon_0_simpleAwait(): any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %?anon_0_simpleAwait(): functionCode
 // CHECK-NEXT:  %4 = GetBuiltinClosureInst (:object) [HermesBuiltin.spawnAsync]: number
 // CHECK-NEXT:  %5 = CallInst (:any) %4: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: object, %2: object, %0: object
 // CHECK-NEXT:       ReturnInst %5: any
@@ -84,7 +84,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %2 = CoerceThisNSInst (:object) %1: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %?anon_0_nonSimpleArrayDestructuring(): any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %?anon_0_nonSimpleArrayDestructuring(): functionCode
 // CHECK-NEXT:  %4 = GetBuiltinClosureInst (:object) [HermesBuiltin.spawnAsync]: number
 // CHECK-NEXT:  %5 = CallInst (:any) %4: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: object, %2: object, %0: object
 // CHECK-NEXT:       ReturnInst %5: any
@@ -96,7 +96,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %2 = CoerceThisNSInst (:object) %1: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %?anon_0_simpleAsyncFE(): any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %?anon_0_simpleAsyncFE(): functionCode
 // CHECK-NEXT:  %4 = GetBuiltinClosureInst (:object) [HermesBuiltin.spawnAsync]: number
 // CHECK-NEXT:  %5 = CallInst (:any) %4: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: object, %2: object, %0: object
 // CHECK-NEXT:       ReturnInst %5: any
@@ -105,21 +105,21 @@ var simpleAsyncFE = async function () {
 // CHECK:function ?anon_0_simpleReturn(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_?anon_0_simpleReturn(): any
+// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_?anon_0_simpleReturn(): functionCode
 // CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_simpleAwait(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_?anon_0_simpleAwait(): any
+// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_?anon_0_simpleAwait(): functionCode
 // CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_nonSimpleArrayDestructuring(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_?anon_0_nonSimpleArrayDestructuring(): any
+// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_?anon_0_nonSimpleArrayDestructuring(): functionCode
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "next": string
 // CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, %0: object
 // CHECK-NEXT:       ReturnInst %0: object
@@ -128,7 +128,7 @@ var simpleAsyncFE = async function () {
 // CHECK:function ?anon_0_simpleAsyncFE(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_?anon_0_simpleAsyncFE(): any
+// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_?anon_0_simpleAsyncFE(): functionCode
 // CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 

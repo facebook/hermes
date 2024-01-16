@@ -30,24 +30,24 @@ return [dotProduct, Vec2D];
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): undefined
-// CHECK-NEXT:  %1 = CallInst [njsf] (:undefined) %0: object, %""(): undefined, empty: any, undefined: undefined, 0: number, 0: number
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): functionCode
+// CHECK-NEXT:  %1 = CallInst [njsf] (:undefined) %0: object, %""(): functionCode, empty: any, undefined: undefined, 0: number, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(exports: number): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %" 1#"(): object
-// CHECK-NEXT:  %1 = CallInst [njsf] (:object) %0: object, %" 1#"(): object, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %" 1#"(): functionCode
+// CHECK-NEXT:  %1 = CallInst [njsf] (:object) %0: object, %" 1#"(): functionCode, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function " 1#"(): object [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %dotProduct(): number
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %Vec2D(): undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %dotProduct(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %Vec2D(): functionCode
 // CHECK-NEXT:  %2 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:       StorePropertyStrictInst %2: object, %1: object, "prototype": string
 // CHECK-NEXT:  %4 = AllocFastArrayInst (:object) 2: number

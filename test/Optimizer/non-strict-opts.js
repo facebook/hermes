@@ -22,7 +22,7 @@ function main()  {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "main": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): undefined
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "main": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -30,8 +30,8 @@ function main()  {
 // CHECK:function main(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): string
-// CHECK-NEXT:  %1 = CallInst (:string) %0: object, %foo(): string, empty: any, undefined: undefined, undefined: undefined, 2: number
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): functionCode
+// CHECK-NEXT:  %1 = CallInst (:string) %0: object, %foo(): functionCode, empty: any, undefined: undefined, undefined: undefined, 2: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

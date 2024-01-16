@@ -87,17 +87,17 @@ function fallthrough(b) {
 // CHECK-NEXT:       DeclareGlobalVarInst "simple_test0": string
 // CHECK-NEXT:       DeclareGlobalVarInst "simple_test1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "fallthrough": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %days_of_the_week(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %days_of_the_week(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "days_of_the_week": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %simple_xor(): any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %simple_xor(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "simple_xor": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %simple_xor2(): any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %simple_xor2(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "simple_xor2": string
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %simple_test0(): any
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %simple_test0(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "simple_test0": string
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %simple_test1(): any
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %simple_test1(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %14: object, globalObject: object, "simple_test1": string
-// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %fallthrough(): any
+// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %fallthrough(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %16: object, globalObject: object, "fallthrough": string
 // CHECK-NEXT:  %18 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %18: any

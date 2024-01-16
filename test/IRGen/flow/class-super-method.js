@@ -38,7 +38,7 @@ class B extends A {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %0: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): functionCode
 // CHECK-NEXT:  %3 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %4 = CallInst [njsf] (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: object
 // CHECK-NEXT:       StoreStackInst %4: any, %0: any
@@ -53,17 +53,17 @@ class B extends A {
 // CHECK-NEXT:       StoreFrameInst %0: any, [exports]: any
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [A]: any
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [B]: any
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %A(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %A(): functionCode
 // CHECK-NEXT:       StoreFrameInst %4: object, [A]: any
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %f(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %f(): functionCode
 // CHECK-NEXT:  %7 = AllocObjectLiteralInst (:object) "f": string, %6: object
 // CHECK-NEXT:       StoreFrameInst %7: object, [?A.prototype]: object
 // CHECK-NEXT:       StorePropertyStrictInst %7: object, %4: object, "prototype": string
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [A]: any
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %B(): any
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %B(): functionCode
 // CHECK-NEXT:        StoreFrameInst %11: object, [B]: any
 // CHECK-NEXT:  %13 = LoadFrameInst (:object) [?A.prototype]: object
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %"f 1#"(): any
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %"f 1#"(): functionCode
 // CHECK-NEXT:  %15 = AllocObjectLiteralInst (:object) "f": string, %14: object
 // CHECK-NEXT:        StoreParentInst %13: object, %15: object
 // CHECK-NEXT:        StoreFrameInst %15: object, [?B.prototype]: object

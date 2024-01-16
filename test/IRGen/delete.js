@@ -38,15 +38,15 @@ function delete_expr() {
 // CHECK-NEXT:       DeclareGlobalVarInst "delete_literal": string
 // CHECK-NEXT:       DeclareGlobalVarInst "delete_variable": string
 // CHECK-NEXT:       DeclareGlobalVarInst "delete_expr": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %sink(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %sink(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "sink": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %delete_parameter(): any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %delete_parameter(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "delete_parameter": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %delete_literal(): any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %delete_literal(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "delete_literal": string
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %delete_variable(): any
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %delete_variable(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "delete_variable": string
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %delete_expr(): any
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %delete_expr(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %14: object, globalObject: object, "delete_expr": string
 // CHECK-NEXT:  %16 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %16: any

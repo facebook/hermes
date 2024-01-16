@@ -60,13 +60,13 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:       DeclareGlobalVarInst "test_captured_fexpr_in_while": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_captured_fexpr_in_finally": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_captured_let_in_finally": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test_fexpr_in_while_cond(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test_fexpr_in_while_cond(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "test_fexpr_in_while_cond": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %test_captured_fexpr_in_while(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %test_captured_fexpr_in_while(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "test_captured_fexpr_in_while": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %test_captured_fexpr_in_finally(): any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %test_captured_fexpr_in_finally(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "test_captured_fexpr_in_finally": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %test_captured_let_in_finally(): any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %test_captured_let_in_finally(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "test_captured_let_in_finally": string
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %12: any
@@ -77,7 +77,7 @@ function test_captured_let_in_finally() {
 // CHECK:function test_fexpr_in_while_cond(): any
 // CHECK-NEXT:frame = [f: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f(): any
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f(): functionCode
 // CHECK-NEXT:       StoreFrameInst %0: object, [f]: any
 // CHECK-NEXT:       CondBranchInst %0: object, %BB1, %BB2
 // CHECK-NEXT:%BB1:
@@ -85,7 +85,7 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %f(): any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %f(): functionCode
 // CHECK-NEXT:       StoreFrameInst %5: object, [f]: any
 // CHECK-NEXT:       CondBranchInst %5: object, %BB1, %BB2
 // CHECK-NEXT:function_end
@@ -93,7 +93,7 @@ function test_captured_let_in_finally() {
 // CHECK:function test_captured_fexpr_in_while(): any
 // CHECK-NEXT:frame = [fexpr: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %fexpr(): any
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %fexpr(): functionCode
 // CHECK-NEXT:       StoreFrameInst %0: object, [fexpr]: any
 // CHECK-NEXT:  %2 = CallInst (:any) %0: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       CondBranchInst %2: any, %BB1, %BB2
@@ -102,7 +102,7 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %fexpr(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %fexpr(): functionCode
 // CHECK-NEXT:       StoreFrameInst %6: object, [fexpr]: any
 // CHECK-NEXT:  %8 = CallInst (:any) %6: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       CondBranchInst %8: any, %BB1, %BB2
@@ -114,7 +114,7 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:       TryStartInst %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %1 = CatchInst (:any)
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %"fexpr 1#"(): any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %"fexpr 1#"(): functionCode
 // CHECK-NEXT:       StoreFrameInst %2: object, [fexpr]: any
 // CHECK-NEXT:  %4 = CallInst (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ThrowInst %1: any
@@ -126,7 +126,7 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:       BranchInst %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %"fexpr 1#"(): any
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %"fexpr 1#"(): functionCode
 // CHECK-NEXT:        StoreFrameInst %11: object, [fexpr]: any
 // CHECK-NEXT:  %13 = CallInst (:any) %11: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        BranchInst %BB3
@@ -141,7 +141,7 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [x]: any
 // CHECK-NEXT:       StorePropertyLooseInst 0: number, globalObject: object, "glob": string
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [x]: any
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %"fexpr 2#"(): any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %"fexpr 2#"(): functionCode
 // CHECK-NEXT:       StoreFrameInst %5: object, [fexpr]: any
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "glob": string
 // CHECK-NEXT:       ThrowInst %1: any
@@ -154,7 +154,7 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:        StoreFrameInst undefined: undefined, [x]: any
 // CHECK-NEXT:        StorePropertyLooseInst 0: number, globalObject: object, "glob": string
 // CHECK-NEXT:        StoreFrameInst undefined: undefined, [x]: any
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %"fexpr 2#"(): any
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %"fexpr 2#"(): functionCode
 // CHECK-NEXT:        StoreFrameInst %15: object, [fexpr]: any
 // CHECK-NEXT:        StorePropertyLooseInst %15: object, globalObject: object, "glob": string
 // CHECK-NEXT:        BranchInst %BB3

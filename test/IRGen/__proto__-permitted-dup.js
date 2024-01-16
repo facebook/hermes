@@ -50,17 +50,17 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:       DeclareGlobalVarInst "protoDupAccessor1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "protoDupAccessor2": string
 // CHECK-NEXT:       DeclareGlobalVarInst "protoDupAccessor3": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %protoDupComputed(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %protoDupComputed(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "protoDupComputed": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %protoDupMethod1(): any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %protoDupMethod1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "protoDupMethod1": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %protoDupMethod2(): any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %protoDupMethod2(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "protoDupMethod2": string
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %protoDupAccessor1(): any
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %protoDupAccessor1(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "protoDupAccessor1": string
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %protoDupAccessor2(): any
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %protoDupAccessor2(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %14: object, globalObject: object, "protoDupAccessor2": string
-// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %protoDupAccessor3(): any
+// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %protoDupAccessor3(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %16: object, globalObject: object, "protoDupAccessor3": string
 // CHECK-NEXT:  %18 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %18: any
@@ -89,7 +89,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [func]: any
 // CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %4 = AllocObjectInst (:object) 2: number, %3: any
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %__proto__(): any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %__proto__(): functionCode
 // CHECK-NEXT:       StoreNewOwnPropertyInst %5: object, %4: object, "__proto__": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst 42: number, %4: object, "a": string, true: boolean
 // CHECK-NEXT:       ReturnInst %4: object
@@ -101,7 +101,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [func]: any
 // CHECK-NEXT:  %2 = AllocObjectInst (:object) 2: number, empty: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %"__proto__ 1#"(): any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %"__proto__ 1#"(): functionCode
 // CHECK-NEXT:       StoreNewOwnPropertyInst %3: object, %2: object, "__proto__": string, true: boolean
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [func]: any
 // CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined
@@ -118,7 +118,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [func]: any
 // CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %4 = AllocObjectInst (:object) 1: number, %3: any
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %"get __proto__"(): any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %"get __proto__"(): functionCode
 // CHECK-NEXT:       StoreGetterSetterInst %5: object, undefined: undefined, %4: object, "__proto__": string, true: boolean
 // CHECK-NEXT:       ReturnInst %4: object
 // CHECK-NEXT:function_end
@@ -131,7 +131,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [func]: any
 // CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %4 = AllocObjectInst (:object) 1: number, %3: any
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %"set __proto__"(): any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %"set __proto__"(): functionCode
 // CHECK-NEXT:       StoreGetterSetterInst undefined: undefined, %5: object, %4: object, "__proto__": string, true: boolean
 // CHECK-NEXT:       ReturnInst %4: object
 // CHECK-NEXT:function_end
@@ -142,8 +142,8 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [func]: any
 // CHECK-NEXT:  %2 = AllocObjectInst (:object) 1: number, empty: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %"get __proto__ 1#"(): any
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %"set __proto__ 1#"(): any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %"get __proto__ 1#"(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %"set __proto__ 1#"(): functionCode
 // CHECK-NEXT:       StoreGetterSetterInst %3: object, %4: object, %2: object, "__proto__": string, true: boolean
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [func]: any
 // CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined

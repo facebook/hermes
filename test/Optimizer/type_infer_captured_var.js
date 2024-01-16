@@ -27,14 +27,14 @@
 // CHECK:function global(): object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): object
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): functionCode
 // CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): object
 // CHECK-NEXT:frame = [res: number]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): functionCode
 // CHECK-NEXT:       StoreFrameInst 0: number, [res]: number
 // CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end

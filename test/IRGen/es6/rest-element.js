@@ -33,13 +33,13 @@ function f4(t) {
 // CHECK-NEXT:       DeclareGlobalVarInst "f2": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f3": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f4": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %f1(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %f1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "f1": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %f2(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %f2(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "f2": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %f3(): any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %f3(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "f3": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %f4(): any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %f4(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "f4": string
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %12: any

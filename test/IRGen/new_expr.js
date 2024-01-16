@@ -30,11 +30,11 @@ function test_simple_call() {
 // CHECK-NEXT:       DeclareGlobalVarInst "Car": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_simple_new": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_simple_call": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %Car(): any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %Car(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "Car": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %test_simple_new(): any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %test_simple_new(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "test_simple_new": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %test_simple_call(): any
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %test_simple_call(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "test_simple_call": string
 // CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %9: any

@@ -37,9 +37,9 @@ function test2(p1, p2) {
 // OPT-CHECK-NEXT:%BB0:
 // OPT-CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // OPT-CHECK-NEXT:       DeclareGlobalVarInst "test2": string
-// OPT-CHECK-NEXT:  %2 = CreateFunctionInst (:object) %foo(): any
+// OPT-CHECK-NEXT:  %2 = CreateFunctionInst (:object) %foo(): functionCode
 // OPT-CHECK-NEXT:       StorePropertyStrictInst %2: object, globalObject: object, "foo": string
-// OPT-CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test2(): undefined
+// OPT-CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test2(): functionCode
 // OPT-CHECK-NEXT:       StorePropertyStrictInst %4: object, globalObject: object, "test2": string
 // OPT-CHECK-NEXT:  %6 = LoadPropertyInst (:any) globalObject: object, "foo": string
 // OPT-CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined
@@ -75,9 +75,9 @@ function test2(p1, p2) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test2": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %foo(): any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %foo(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %2: object, globalObject: object, "foo": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test2(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test2(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %4: object, globalObject: object, "test2": string
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %6: any

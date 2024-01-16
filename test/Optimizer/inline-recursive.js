@@ -21,14 +21,14 @@
 // CHECK:function global(): object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %main(): undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %main(): functionCode
 // CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): undefined
 // CHECK-NEXT:frame = [f: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f(): any
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f(): functionCode
 // CHECK-NEXT:       StoreFrameInst %0: object, [f]: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -37,6 +37,6 @@
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:object) [f@main]: object
-// CHECK-NEXT:  %1 = CallInst (:any) %0: object, %f(): any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %1 = CallInst (:any) %0: object, %f(): functionCode, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:function_end

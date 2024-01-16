@@ -29,9 +29,9 @@ function simple_test1() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "simple_test0": string
 // CHECK-NEXT:       DeclareGlobalVarInst "simple_test1": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %simple_test0(): any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %simple_test0(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "simple_test0": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %simple_test1(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %simple_test1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "simple_test1": string
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %6: any

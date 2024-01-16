@@ -24,7 +24,7 @@ print(new C().method());
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %0: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): functionCode
 // CHECK-NEXT:  %3 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %4 = CallInst [njsf] (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: object
 // CHECK-NEXT:       StoreStackInst %4: any, %0: any
@@ -38,9 +38,9 @@ print(new C().method());
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %exports: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [exports]: any
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [C]: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %C(): any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %C(): functionCode
 // CHECK-NEXT:       StoreFrameInst %3: object, [C]: any
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %method(): any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %method(): functionCode
 // CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) "method": string, %5: object
 // CHECK-NEXT:       StoreFrameInst %6: object, [?C.prototype]: object
 // CHECK-NEXT:       StorePropertyStrictInst %6: object, %3: object, "prototype": string

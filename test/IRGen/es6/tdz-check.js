@@ -46,13 +46,13 @@ function check4() {
 // CHECK-NEXT:       DeclareGlobalVarInst "check2": string
 // CHECK-NEXT:       DeclareGlobalVarInst "check3": string
 // CHECK-NEXT:       DeclareGlobalVarInst "check4": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %check1(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %check1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "check1": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %check2(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %check2(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "check2": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %check3(): any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %check3(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "check3": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %check4(): any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %check4(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "check4": string
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %12: any
@@ -93,7 +93,7 @@ function check4() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StoreFrameInst empty: empty, [x]: any|empty
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [check3_inner]: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %check3_inner(): any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %check3_inner(): functionCode
 // CHECK-NEXT:       StoreFrameInst %2: object, [check3_inner]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [check3_inner]: any
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined

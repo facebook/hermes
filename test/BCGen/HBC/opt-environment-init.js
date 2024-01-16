@@ -32,7 +32,7 @@ function foo(o) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): object
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -46,7 +46,7 @@ function foo(o) {
 // CHECK-NEXT:       StoreFrameInst 0: number, [cnt]: number
 // CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [flag2]: undefined|number
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %""(): number
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %""(): functionCode
 // CHECK-NEXT:       ReturnInst %6: object
 // CHECK-NEXT:function_end
 
@@ -85,7 +85,7 @@ function foo(o) {
 // CHKLIR-NEXT:%BB0:
 // CHKLIR-NEXT:       DeclareGlobalVarInst "foo": string
 // CHKLIR-NEXT:  %1 = HBCCreateEnvironmentInst (:any)
-// CHKLIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %foo(): object, %1: any
+// CHKLIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %foo(): functionCode, %1: any
 // CHKLIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHKLIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "foo": string
 // CHKLIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -102,7 +102,7 @@ function foo(o) {
 // CHKLIR-NEXT:  %4 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHKLIR-NEXT:  %5 = HBCCallNInst (:any) %3: any, empty: any, empty: any, %4: undefined, %4: undefined
 // CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: any, %4: undefined, [flag2]: undefined|number
-// CHKLIR-NEXT:  %7 = HBCCreateFunctionInst (:object) %""(): number, %0: any
+// CHKLIR-NEXT:  %7 = HBCCreateFunctionInst (:object) %""(): functionCode, %0: any
 // CHKLIR-NEXT:       ReturnInst %7: object
 // CHKLIR-NEXT:function_end
 

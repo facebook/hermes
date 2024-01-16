@@ -26,7 +26,7 @@ function outer() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "outer": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %outer(): object
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %outer(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "outer": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -34,9 +34,9 @@ function outer() {
 // CHECK:function outer(): object
 // CHECK-NEXT:frame = [Point: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %Point(): undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %Point(): functionCode
 // CHECK-NEXT:       StoreFrameInst %0: object, [Point]: object
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %makePoint(): object
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %makePoint(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 

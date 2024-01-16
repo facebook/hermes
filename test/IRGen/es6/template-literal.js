@@ -37,15 +37,15 @@ function f5(x) {
 // CHKIR-NEXT:       DeclareGlobalVarInst "f3": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "f4": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "f5": string
-// CHKIR-NEXT:  %5 = CreateFunctionInst (:object) %f1(): any
+// CHKIR-NEXT:  %5 = CreateFunctionInst (:object) %f1(): functionCode
 // CHKIR-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "f1": string
-// CHKIR-NEXT:  %7 = CreateFunctionInst (:object) %f2(): string
+// CHKIR-NEXT:  %7 = CreateFunctionInst (:object) %f2(): functionCode
 // CHKIR-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "f2": string
-// CHKIR-NEXT:  %9 = CreateFunctionInst (:object) %f3(): string
+// CHKIR-NEXT:  %9 = CreateFunctionInst (:object) %f3(): functionCode
 // CHKIR-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "f3": string
-// CHKIR-NEXT:  %11 = CreateFunctionInst (:object) %f4(): any
+// CHKIR-NEXT:  %11 = CreateFunctionInst (:object) %f4(): functionCode
 // CHKIR-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "f4": string
-// CHKIR-NEXT:  %13 = CreateFunctionInst (:object) %f5(): any
+// CHKIR-NEXT:  %13 = CreateFunctionInst (:object) %f5(): functionCode
 // CHKIR-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "f5": string
 // CHKIR-NEXT:        ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end

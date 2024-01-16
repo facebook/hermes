@@ -18,7 +18,7 @@ function foo(a) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 = HBCCreateEnvironmentInst (:any)
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %foo(): any, $Reg0
+// CHECK-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %foo(): functionCode, $Reg0
 // CHECK-NEXT:  $Reg2 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  $Reg3 = StorePropertyLooseInst $Reg1, $Reg2, "foo": string
 // CHECK-NEXT:  $Reg3 = AllocStackInst (:any) $?anon_0_ret: any

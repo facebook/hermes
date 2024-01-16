@@ -21,7 +21,7 @@ function *foo() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): object
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -29,7 +29,7 @@ function *foo() {
 // CHECK:function foo(): object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_foo(): any
+// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_foo(): functionCode
 // CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 

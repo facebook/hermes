@@ -24,7 +24,7 @@ function fib(n) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 = DeclareGlobalVarInst "fib": string
 // CHECK-NEXT:  $Reg0 = HBCCreateEnvironmentInst (:any)
-// CHECK-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %fib(): number, $Reg0
+// CHECK-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %fib(): functionCode, $Reg0
 // CHECK-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg0, "fib": string
 // CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined

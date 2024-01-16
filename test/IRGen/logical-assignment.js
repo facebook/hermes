@@ -32,13 +32,13 @@ function testComplex(x, y, z) {
 // CHECK-NEXT:       DeclareGlobalVarInst "testOr": string
 // CHECK-NEXT:       DeclareGlobalVarInst "testNullish": string
 // CHECK-NEXT:       DeclareGlobalVarInst "testComplex": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %testAnd(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %testAnd(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "testAnd": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %testOr(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %testOr(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "testOr": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %testNullish(): any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %testNullish(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "testNullish": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %testComplex(): any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %testComplex(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "testComplex": string
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %12: any

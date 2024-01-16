@@ -29,11 +29,11 @@ function test_member_access(obj, param) {
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:       DeclareGlobalVarInst "bar": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_member_access": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %foo(): any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "foo": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %bar(): any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %bar(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "bar": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %test_member_access(): any
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %test_member_access(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "test_member_access": string
 // CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %9: any

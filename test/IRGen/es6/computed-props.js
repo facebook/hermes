@@ -27,11 +27,11 @@
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %0: any
 // CHECK-NEXT:  %2 = AllocObjectInst (:object) 4: number, empty: any
 // CHECK-NEXT:       StoreOwnPropertyInst 3: number, %2: object, "x": string, true: boolean
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %""(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %""(): functionCode
 // CHECK-NEXT:       StoreGetterSetterInst %4: object, undefined: undefined, %2: object, "y": string, true: boolean
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %" 1#"(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %" 1#"(): functionCode
 // CHECK-NEXT:       StoreGetterSetterInst undefined: undefined, %6: object, %2: object, "y": string, true: boolean
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %" 2#"(): any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %" 2#"(): functionCode
 // CHECK-NEXT:       StoreOwnPropertyInst %8: object, %2: object, "z": string, true: boolean
 // CHECK-NEXT:        StoreStackInst %2: object, %0: any
 // CHECK-NEXT:  %11 = LoadStackInst (:any) %0: any

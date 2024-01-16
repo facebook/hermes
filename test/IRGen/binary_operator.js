@@ -82,13 +82,13 @@
 // CHECK-NEXT:       DeclareGlobalVarInst "assignment_test": string
 // CHECK-NEXT:       DeclareGlobalVarInst "member_test": string
 // CHECK-NEXT:       DeclareGlobalVarInst "binary_ops": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %foo(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "foo": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %assignment_test(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %assignment_test(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "assignment_test": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %member_test(): any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %member_test(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "member_test": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %binary_ops(): any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %binary_ops(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "binary_ops": string
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %12: any

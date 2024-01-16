@@ -22,7 +22,7 @@ function foo() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %2 = HBCCreateFunctionInst (:object) %foo(): any, %0: any
+// CHECK-NEXT:  %2 = HBCCreateFunctionInst (:object) %foo(): functionCode, %0: any
 // CHECK-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, %3: object, "foo": string
 // CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_0_ret: any

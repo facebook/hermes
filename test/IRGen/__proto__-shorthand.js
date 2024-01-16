@@ -45,13 +45,13 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:       DeclareGlobalVarInst "protoShorthandDup": string
 // CHECK-NEXT:       DeclareGlobalVarInst "protoShorthandMix1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "protoShorthandMix2": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %protoShorthand(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %protoShorthand(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "protoShorthand": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %protoShorthandDup(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %protoShorthandDup(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "protoShorthandDup": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %protoShorthandMix1(): any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %protoShorthandMix1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "protoShorthandMix1": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %protoShorthandMix2(): any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %protoShorthandMix2(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "protoShorthandMix2": string
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %12: any

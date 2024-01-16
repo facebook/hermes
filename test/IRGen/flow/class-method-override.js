@@ -40,7 +40,7 @@ new D().override();
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %0: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): functionCode
 // CHECK-NEXT:  %3 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %4 = CallInst [njsf] (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: object
 // CHECK-NEXT:       StoreStackInst %4: any, %0: any
@@ -55,19 +55,19 @@ new D().override();
 // CHECK-NEXT:       StoreFrameInst %0: any, [exports]: any
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [C]: any
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [D]: any
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %C(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %C(): functionCode
 // CHECK-NEXT:       StoreFrameInst %4: object, [C]: any
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %override(): any
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %override2(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %override(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %override2(): functionCode
 // CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) "override": string, %6: object, "override2": string, %7: object
 // CHECK-NEXT:       StoreFrameInst %8: object, [?C.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %8: object, %4: object, "prototype": string
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) [C]: any
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %D(): any
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %D(): functionCode
 // CHECK-NEXT:        StoreFrameInst %12: object, [D]: any
 // CHECK-NEXT:  %14 = LoadFrameInst (:object) [?C.prototype]: object
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %"override 1#"(): any
-// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %"override2 1#"(): any
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %"override 1#"(): functionCode
+// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %"override2 1#"(): functionCode
 // CHECK-NEXT:  %17 = AllocObjectLiteralInst (:object) "override": string, %15: object, "override2": string, %16: object
 // CHECK-NEXT:        StoreParentInst %14: object, %17: object
 // CHECK-NEXT:        StoreFrameInst %17: object, [?D.prototype]: object
@@ -76,7 +76,7 @@ new D().override();
 // CHECK-NEXT:  %22 = LoadFrameInst (:object) [?D.prototype]: object
 // CHECK-NEXT:  %23 = UnionNarrowTrustedInst (:object) %22: object
 // CHECK-NEXT:  %24 = AllocObjectInst (:object) 0: number, %23: object
-// CHECK-NEXT:  %25 = CallInst (:any) %21: any, %D(): any, empty: any, %21: any, %24: object
+// CHECK-NEXT:  %25 = CallInst (:any) %21: any, %D(): functionCode, empty: any, %21: any, %24: object
 // CHECK-NEXT:  %26 = LoadParentInst (:object) %24: object
 // CHECK-NEXT:  %27 = PrLoadInst (:object) %26: object, 0: number, "override": string
 // CHECK-NEXT:  %28 = CallInst [njsf] (:any) %27: object, empty: any, empty: any, undefined: undefined, %24: object

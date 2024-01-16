@@ -45,13 +45,13 @@ function test_merge_blocks(x, y) {
 // CHECK-NEXT:       DeclareGlobalVarInst "test_catch_region": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_cond_branch": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_merge_blocks": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test_one(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test_one(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "test_one": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %test_catch_region(): undefined
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %test_catch_region(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "test_catch_region": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %test_cond_branch(): any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %test_cond_branch(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "test_cond_branch": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %test_merge_blocks(): undefined
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %test_merge_blocks(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "test_merge_blocks": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

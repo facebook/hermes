@@ -38,15 +38,15 @@ function test_hex_printable() {
 // CHECK-NEXT:       DeclareGlobalVarInst "test_slash": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_hex": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_hex_printable": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %test_newline(): any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %test_newline(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "test_newline": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %test_quote(): any
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %test_quote(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "test_quote": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %test_slash(): any
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %test_slash(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "test_slash": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %test_hex(): any
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %test_hex(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "test_hex": string
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %test_hex_printable(): any
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %test_hex_printable(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "test_hex_printable": string
 // CHECK-NEXT:  %15 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %15: any

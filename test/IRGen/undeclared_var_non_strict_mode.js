@@ -21,11 +21,11 @@ function three() { return z; return z;}
 // CHECK-NEXT:       DeclareGlobalVarInst "one": string
 // CHECK-NEXT:       DeclareGlobalVarInst "two": string
 // CHECK-NEXT:       DeclareGlobalVarInst "three": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %one(): any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %one(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "one": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %two(): any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %two(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "two": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %three(): any
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %three(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "three": string
 // CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %9: any

@@ -25,7 +25,7 @@ function check1() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "check1": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %check1(): any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %check1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "check1": string
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %3: any
@@ -38,7 +38,7 @@ function check1() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StoreFrameInst empty: empty, [x]: any|empty
 // CHECK-NEXT:       StoreFrameInst empty: empty, [y]: any|empty
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %inner(): any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %inner(): functionCode
 // CHECK-NEXT:       StoreFrameInst %2: object, [inner]: any
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "glob": string
 // CHECK-NEXT:  %5 = ThrowIfInst (:any) empty: empty, type(empty)
@@ -65,7 +65,7 @@ function check1() {
 // CHKDIS-NEXT:frame = []
 // CHKDIS-NEXT:%BB0:
 // CHKDIS-NEXT:       DeclareGlobalVarInst "check1": string
-// CHKDIS-NEXT:  %1 = CreateFunctionInst (:object) %check1(): any
+// CHKDIS-NEXT:  %1 = CreateFunctionInst (:object) %check1(): functionCode
 // CHKDIS-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "check1": string
 // CHKDIS-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHKDIS-NEXT:       StoreStackInst undefined: undefined, %3: any
@@ -78,7 +78,7 @@ function check1() {
 // CHKDIS-NEXT:%BB0:
 // CHKDIS-NEXT:       StoreFrameInst undefined: undefined, [x]: any
 // CHKDIS-NEXT:       StoreFrameInst undefined: undefined, [y]: any
-// CHKDIS-NEXT:  %2 = CreateFunctionInst (:object) %inner(): any
+// CHKDIS-NEXT:  %2 = CreateFunctionInst (:object) %inner(): functionCode
 // CHKDIS-NEXT:       StoreFrameInst %2: object, [inner]: any
 // CHKDIS-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "glob": string
 // CHKDIS-NEXT:  %5 = LoadFrameInst (:any) [x]: any

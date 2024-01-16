@@ -33,21 +33,21 @@ function f8_ok() { 1 * "a"; }
 // CHECK-NEXT:       DeclareGlobalVarInst "f6_ok": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f7_ok": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f8_ok": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %f1_throws(): undefined
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %f1_throws(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "f1_throws": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %f2_throws(): undefined
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %f2_throws(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "f2_throws": string
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %f3_ok(): undefined
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %f3_ok(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "f3_ok": string
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %f4_ok(): undefined
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %f4_ok(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %14: object, globalObject: object, "f4_ok": string
-// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %f5_ok(): undefined
+// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %f5_ok(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %16: object, globalObject: object, "f5_ok": string
-// CHECK-NEXT:  %18 = CreateFunctionInst (:object) %f6_ok(): undefined
+// CHECK-NEXT:  %18 = CreateFunctionInst (:object) %f6_ok(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %18: object, globalObject: object, "f6_ok": string
-// CHECK-NEXT:  %20 = CreateFunctionInst (:object) %f7_ok(): undefined
+// CHECK-NEXT:  %20 = CreateFunctionInst (:object) %f7_ok(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %20: object, globalObject: object, "f7_ok": string
-// CHECK-NEXT:  %22 = CreateFunctionInst (:object) %f8_ok(): undefined
+// CHECK-NEXT:  %22 = CreateFunctionInst (:object) %f8_ok(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %22: object, globalObject: object, "f8_ok": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

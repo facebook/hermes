@@ -49,17 +49,17 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:       DeclareGlobalVarInst "for_in_loop_with_named_break": string
 // CHECK-NEXT:       DeclareGlobalVarInst "check_var_decl_for_in_loop": string
 // CHECK-NEXT:       DeclareGlobalVarInst "loop_member_expr_lhs": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %sink(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %sink(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "sink": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %simple_for_in_loop(): any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %simple_for_in_loop(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "simple_for_in_loop": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %for_in_loop_with_break_continue(): any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %for_in_loop_with_break_continue(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "for_in_loop_with_break_continue": string
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %for_in_loop_with_named_break(): any
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %for_in_loop_with_named_break(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "for_in_loop_with_named_break": string
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %check_var_decl_for_in_loop(): any
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %check_var_decl_for_in_loop(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %14: object, globalObject: object, "check_var_decl_for_in_loop": string
-// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %loop_member_expr_lhs(): any
+// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %loop_member_expr_lhs(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %16: object, globalObject: object, "loop_member_expr_lhs": string
 // CHECK-NEXT:  %18 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %18: any

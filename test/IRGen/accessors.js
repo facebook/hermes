@@ -28,10 +28,10 @@ var x = {
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = AllocObjectInst (:object) 3: number, empty: any
 // CHECK-NEXT:       StoreNewOwnPropertyInst null: null, %3: object, "1": string, true: boolean
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %"get a"(): any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %"get a"(): functionCode
 // CHECK-NEXT:       StoreGetterSetterInst %5: object, undefined: undefined, %3: object, "a": string, true: boolean
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %"get 1"(): any
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %"set 1"(): any
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %"get 1"(): functionCode
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %"set 1"(): functionCode
 // CHECK-NEXT:       StoreGetterSetterInst %7: object, %8: object, %3: object, "1": string, true: boolean
 // CHECK-NEXT:        StoreNewOwnPropertyInst null: null, %3: object, "b": string, true: boolean
 // CHECK-NEXT:        StoreOwnPropertyInst 12: number, %3: object, "b": string, true: boolean

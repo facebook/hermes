@@ -47,13 +47,13 @@ function forof_continue(seq) {
 // CHECK-NEXT:       DeclareGlobalVarInst "forof_update": string
 // CHECK-NEXT:       DeclareGlobalVarInst "forof_break": string
 // CHECK-NEXT:       DeclareGlobalVarInst "forof_continue": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %forof_normal(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %forof_normal(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "forof_normal": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %forof_update(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %forof_update(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "forof_update": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %forof_break(): any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %forof_break(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "forof_break": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %forof_continue(): any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %forof_continue(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "forof_continue": string
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %12: any

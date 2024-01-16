@@ -29,7 +29,7 @@ function foo(x) {
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "a": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "b": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %foo(): any, $Reg0
+// CHECK-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %foo(): functionCode, $Reg0
 // CHECK-NEXT:  $Reg2 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  $Reg3 = StorePropertyLooseInst $Reg1, $Reg2, "foo": string
 // CHECK-NEXT:  $Reg3 = AllocStackInst (:any) $?anon_0_ret: any
@@ -69,7 +69,7 @@ function foo(x) {
 // CHKOPT-NEXT:  $Reg0 = DeclareGlobalVarInst "b": string
 // CHKOPT-NEXT:  $Reg0 = DeclareGlobalVarInst "foo": string
 // CHKOPT-NEXT:  $Reg0 = HBCCreateEnvironmentInst (:any)
-// CHKOPT-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %foo(): undefined, $Reg0
+// CHKOPT-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %foo(): functionCode, $Reg0
 // CHKOPT-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
 // CHKOPT-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg0, "foo": string
 // CHKOPT-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined

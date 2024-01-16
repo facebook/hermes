@@ -25,7 +25,7 @@
 // CHECK:function global(): object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %main(): undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %main(): functionCode
 // CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 

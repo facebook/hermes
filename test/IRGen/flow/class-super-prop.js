@@ -34,7 +34,7 @@ class B extends A {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %0: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): functionCode
 // CHECK-NEXT:  %3 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %4 = CallInst [njsf] (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: object
 // CHECK-NEXT:       StoreStackInst %4: any, %0: any
@@ -49,16 +49,16 @@ class B extends A {
 // CHECK-NEXT:       StoreFrameInst %0: any, [exports]: any
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [A]: any
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [B]: any
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %A(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %A(): functionCode
 // CHECK-NEXT:       StoreFrameInst %4: object, [A]: any
 // CHECK-NEXT:  %6 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:       StoreFrameInst %6: object, [?A.prototype]: object
 // CHECK-NEXT:       StorePropertyStrictInst %6: object, %4: object, "prototype": string
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) [A]: any
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %B(): any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %B(): functionCode
 // CHECK-NEXT:        StoreFrameInst %10: object, [B]: any
 // CHECK-NEXT:  %12 = LoadFrameInst (:object) [?A.prototype]: object
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %f(): any
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %f(): functionCode
 // CHECK-NEXT:  %14 = AllocObjectLiteralInst (:object) "f": string, %13: object
 // CHECK-NEXT:        StoreParentInst %12: object, %14: object
 // CHECK-NEXT:        StoreFrameInst %14: object, [?B.prototype]: object

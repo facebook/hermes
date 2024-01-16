@@ -51,21 +51,21 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:       DeclareGlobalVarInst "yieldStar": string
 // CHECK-NEXT:       DeclareGlobalVarInst "destr": string
 // CHECK-NEXT:       DeclareGlobalVarInst "initializer": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %simple(): any
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %simple(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "simple": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %useResult(): any
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %useResult(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "useResult": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %loop(): any
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %loop(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "loop": string
 // CHECK-NEXT:  %13 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %13: any
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %simple2(): any
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %simple2(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %15: object, globalObject: object, "simple2": string
-// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %yieldStar(): any
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %yieldStar(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %17: object, globalObject: object, "yieldStar": string
-// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %destr(): any
+// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %destr(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %19: object, globalObject: object, "destr": string
-// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %initializer(): any
+// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %initializer(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %21: object, globalObject: object, "initializer": string
 // CHECK-NEXT:  %23 = LoadStackInst (:any) %13: any
 // CHECK-NEXT:        ReturnInst %23: any
@@ -74,42 +74,42 @@ var initializer = function*(x = foo()) {
 // CHECK:function simple(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_simple(): any
+// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_simple(): functionCode
 // CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
 // CHECK:function useResult(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_useResult(): any
+// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_useResult(): functionCode
 // CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
 // CHECK:function loop(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_loop(): any
+// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_loop(): functionCode
 // CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
 // CHECK:function simple2(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_simple2(): any
+// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_simple2(): functionCode
 // CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
 // CHECK:function yieldStar(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_yieldStar(): any
+// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_yieldStar(): functionCode
 // CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
 // CHECK:function destr(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_destr(): any
+// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_destr(): functionCode
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "next": string
 // CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, %0: object
 // CHECK-NEXT:       ReturnInst %0: object
@@ -118,7 +118,7 @@ var initializer = function*(x = foo()) {
 // CHECK:function initializer(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_initializer(): any
+// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_initializer(): functionCode
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "next": string
 // CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, %0: object
 // CHECK-NEXT:       ReturnInst %0: object

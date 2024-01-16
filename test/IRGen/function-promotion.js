@@ -27,7 +27,7 @@ function foo() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %3: any
@@ -43,11 +43,11 @@ function foo() {
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [z]: any
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [x]: any
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [x#1]: any
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %x(): any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %x(): functionCode
 // CHECK-NEXT:       StoreFrameInst %5: object, [x#1]: any
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %y(): any
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %y(): functionCode
 // CHECK-NEXT:       StoreFrameInst %7: object, [y]: any
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %z(): any
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %z(): functionCode
 // CHECK-NEXT:        StoreFrameInst %9: object, [z]: any
 // CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [x]: any

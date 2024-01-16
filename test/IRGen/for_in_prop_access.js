@@ -71,17 +71,17 @@ function expression_prop(obj) {
 // CHECK-NEXT:       DeclareGlobalVarInst "modify_prop": string
 // CHECK-NEXT:       DeclareGlobalVarInst "modify_value": string
 // CHECK-NEXT:       DeclareGlobalVarInst "expression_prop": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %simple_loop(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %simple_loop(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "simple_loop": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %different_prop(): any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %different_prop(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "different_prop": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %different_obj(): any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %different_obj(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "different_obj": string
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %modify_prop(): any
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %modify_prop(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "modify_prop": string
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %modify_value(): any
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %modify_value(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %14: object, globalObject: object, "modify_value": string
-// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %expression_prop(): any
+// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %expression_prop(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %16: object, globalObject: object, "expression_prop": string
 // CHECK-NEXT:  %18 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %18: any

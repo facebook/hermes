@@ -35,9 +35,9 @@ bar();
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:       DeclareGlobalVarInst "bar": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %foo(): undefined
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %bar(): undefined
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %bar(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "bar": string
 // CHECK-NEXT:  %6 = LoadPropertyInst (:any) globalObject: object, "foo": string
 // CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined

@@ -19,7 +19,7 @@ try {} finally { class C {} }
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %0: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): functionCode
 // CHECK-NEXT:  %3 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %4 = CallInst [njsf] (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: object
 // CHECK-NEXT:       StoreStackInst %4: any, %0: any
@@ -36,7 +36,7 @@ try {} finally { class C {} }
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = CatchInst (:any)
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [C]: any
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %C(): any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %C(): functionCode
 // CHECK-NEXT:       StoreFrameInst %5: object, [C]: any
 // CHECK-NEXT:  %7 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:       StoreFrameInst %7: object, [?C.prototype#1]: object
@@ -49,7 +49,7 @@ try {} finally { class C {} }
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        StoreFrameInst undefined: undefined, [C]: any
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %C(): any
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %C(): functionCode
 // CHECK-NEXT:        StoreFrameInst %15: object, [C]: any
 // CHECK-NEXT:  %17 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:        StoreFrameInst %17: object, [?C.prototype]: object

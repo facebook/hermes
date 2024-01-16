@@ -35,17 +35,17 @@
 // CHECK:function global(): object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): object
-// CHECK-NEXT:  %1 = CallInst (:object) %0: object, %""(): object, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): functionCode
+// CHECK-NEXT:  %1 = CallInst (:object) %0: object, %""(): functionCode, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst %1: object
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): object [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = [arr: object, bar: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %bar(): undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %bar(): functionCode
 // CHECK-NEXT:       StoreFrameInst %0: object, [bar]: object
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %foo(): undefined
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %foo(): functionCode
 // CHECK-NEXT:  %3 = AllocArrayInst (:object) 0: number
 // CHECK-NEXT:       StoreFrameInst %3: object, [arr]: object
 // CHECK-NEXT:       ReturnInst %2: object
@@ -78,7 +78,7 @@
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %17 = LoadFrameInst (:object) [arr@""]: object
 // CHECK-NEXT:  %18 = LoadPropertyInst (:any) %17: object, "push": string
-// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %" 1#"(): number
+// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %" 1#"(): functionCode
 // CHECK-NEXT:  %20 = CallInst (:any) %18: any, empty: any, empty: any, undefined: undefined, %17: object, %19: object
 // CHECK-NEXT:  %21 = LoadStackInst (:number) %0: number
 // CHECK-NEXT:  %22 = FAddInst (:number) %21: number, 1: number
@@ -101,7 +101,7 @@
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:object) [bar@""]: object
-// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %bar(): undefined, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %bar(): functionCode, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

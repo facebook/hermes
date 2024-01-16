@@ -62,13 +62,13 @@ function test_could_be_int(func) {
 // CHKIR-NEXT:       DeclareGlobalVarInst "test_int_uint": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "test_uint_uint": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "test_could_be_int": string
-// CHKIR-NEXT:  %4 = CreateFunctionInst (:object) %test_int_int(): undefined|number
+// CHKIR-NEXT:  %4 = CreateFunctionInst (:object) %test_int_int(): functionCode
 // CHKIR-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "test_int_int": string
-// CHKIR-NEXT:  %6 = CreateFunctionInst (:object) %test_int_uint(): undefined|number
+// CHKIR-NEXT:  %6 = CreateFunctionInst (:object) %test_int_uint(): functionCode
 // CHKIR-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "test_int_uint": string
-// CHKIR-NEXT:  %8 = CreateFunctionInst (:object) %test_uint_uint(): undefined|number
+// CHKIR-NEXT:  %8 = CreateFunctionInst (:object) %test_uint_uint(): functionCode
 // CHKIR-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "test_uint_uint": string
-// CHKIR-NEXT:  %10 = CreateFunctionInst (:object) %test_could_be_int(): undefined|number
+// CHKIR-NEXT:  %10 = CreateFunctionInst (:object) %test_could_be_int(): functionCode
 // CHKIR-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "test_could_be_int": string
 // CHKIR-NEXT:        ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end

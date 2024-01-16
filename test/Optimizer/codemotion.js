@@ -105,23 +105,23 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:       DeclareGlobalVarInst "hoist_with_dependencies_in_loop": string
 // CHECK-NEXT:       DeclareGlobalVarInst "code_sinking": string
 // CHECK-NEXT:       DeclareGlobalVarInst "code_sinking_in_loop": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %hoist_branch(): any
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %hoist_branch(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "hoist_branch": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %hoist_branch_window(): any
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %hoist_branch_window(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "hoist_branch_window": string
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %no_hoist_inc_dec(): number|bigint
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %no_hoist_inc_dec(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "no_hoist_inc_dec": string
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %hoist_loop(): undefined
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %hoist_loop(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %15: object, globalObject: object, "hoist_loop": string
-// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %hoist_loop_expression(): any
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %hoist_loop_expression(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %17: object, globalObject: object, "hoist_loop_expression": string
-// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %hoist_from_multiblock_loop(): any
+// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %hoist_from_multiblock_loop(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %19: object, globalObject: object, "hoist_from_multiblock_loop": string
-// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %hoist_with_dependencies_in_loop(): any
+// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %hoist_with_dependencies_in_loop(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %21: object, globalObject: object, "hoist_with_dependencies_in_loop": string
-// CHECK-NEXT:  %23 = CreateFunctionInst (:object) %code_sinking(): number
+// CHECK-NEXT:  %23 = CreateFunctionInst (:object) %code_sinking(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %23: object, globalObject: object, "code_sinking": string
-// CHECK-NEXT:  %25 = CreateFunctionInst (:object) %code_sinking_in_loop(): undefined
+// CHECK-NEXT:  %25 = CreateFunctionInst (:object) %code_sinking_in_loop(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %25: object, globalObject: object, "code_sinking_in_loop": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

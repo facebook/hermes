@@ -56,15 +56,15 @@ function cse_unary(a) {
 // CHECK-NEXT:       DeclareGlobalVarInst "check_operator_kind": string
 // CHECK-NEXT:       DeclareGlobalVarInst "cse_this_instr": string
 // CHECK-NEXT:       DeclareGlobalVarInst "cse_unary": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %foo(): number
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "foo": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %foo_with_cf(): number
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %foo_with_cf(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "foo_with_cf": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %check_operator_kind(): number
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %check_operator_kind(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "check_operator_kind": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %cse_this_instr(): undefined
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %cse_this_instr(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "cse_this_instr": string
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %cse_unary(): number|bigint
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %cse_unary(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "cse_unary": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

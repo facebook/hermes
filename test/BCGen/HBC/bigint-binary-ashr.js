@@ -20,7 +20,7 @@ function numberPlusBigInt() {
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:       DeclareGlobalVarInst "numberPlusBigInt": string
-// CHKIR-NEXT:  %1 = CreateFunctionInst (:object) %numberPlusBigInt(): number
+// CHKIR-NEXT:  %1 = CreateFunctionInst (:object) %numberPlusBigInt(): functionCode
 // CHKIR-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "numberPlusBigInt": string
 // CHKIR-NEXT:       ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end

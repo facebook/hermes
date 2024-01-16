@@ -18,7 +18,7 @@ function test_two(x,y,z) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "test_two": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %test_two(): any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %test_two(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "test_two": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

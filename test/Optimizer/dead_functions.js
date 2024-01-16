@@ -11,7 +11,7 @@
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:       DeclareGlobalVarInst "main": string
-//CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): undefined
+//CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): function
 //CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "main": string
 //CHECK-NEXT:       ReturnInst undefined: undefined
 //CHECK-NEXT:function_end

@@ -42,15 +42,15 @@ function f5(o) {
 // CHECK-NEXT:       DeclareGlobalVarInst "f3": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f4": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f5": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %f1(): any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %f1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "f1": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %f2(): any
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %f2(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "f2": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %f3(): any
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %f3(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "f3": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %f4(): any
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %f4(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "f4": string
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %f5(): any
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %f5(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "f5": string
 // CHECK-NEXT:  %15 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %15: any

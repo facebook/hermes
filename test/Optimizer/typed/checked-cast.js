@@ -24,9 +24,9 @@ exports.next = next
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): functionCode
 // CHECK-NEXT:  %1 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:  %2 = CallInst [njsf] (:undefined) %0: object, %""(): undefined, empty: any, undefined: undefined, 0: number, %1: object
+// CHECK-NEXT:  %2 = CallInst [njsf] (:undefined) %0: object, %""(): functionCode, empty: any, undefined: undefined, 0: number, %1: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -34,8 +34,8 @@ exports.next = next
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %exports: object
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %next(): object
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %Cls(): undefined
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %next(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %Cls(): functionCode
 // CHECK-NEXT:  %3 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:       StorePropertyStrictInst %3: object, %2: object, "prototype": string
 // CHECK-NEXT:       StorePropertyStrictInst %1: object, %0: object, "next": string

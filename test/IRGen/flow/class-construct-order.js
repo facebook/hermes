@@ -34,7 +34,7 @@ return foo;
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %0: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): functionCode
 // CHECK-NEXT:  %3 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %4 = CallInst [njsf] (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: object
 // CHECK-NEXT:       StoreStackInst %4: any, %0: any
@@ -47,7 +47,7 @@ return foo;
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %exports: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [exports]: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %main(): any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %main(): functionCode
 // CHECK-NEXT:       StoreFrameInst %2: object, [main]: any
 // CHECK-NEXT:  %4 = CallInst [njsf] (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst undefined: undefined
@@ -57,9 +57,9 @@ return foo;
 // CHECK-NEXT:frame = [foo: any, C: any, ?C.prototype: object]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [C]: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: object, [foo]: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %C(): any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %C(): functionCode
 // CHECK-NEXT:       StoreFrameInst %3: object, [C]: any
 // CHECK-NEXT:  %5 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:       StoreFrameInst %5: object, [?C.prototype]: object
@@ -79,7 +79,7 @@ return foo;
 // CHECK-NEXT:  %5 = AllocObjectLiteralInst (:object) "x": string, 0: number
 // CHECK-NEXT:       StoreParentInst %4: object, %5: object
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %8 = CallInst (:any) %2: any, %C(): any, empty: any, %2: any, %5: object, %7: any
+// CHECK-NEXT:  %8 = CallInst (:any) %2: any, %C(): functionCode, empty: any, %2: any, %5: object, %7: any
 // CHECK-NEXT:       ReturnInst %5: object
 // CHECK-NEXT:function_end
 

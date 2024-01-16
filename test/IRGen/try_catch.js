@@ -163,19 +163,19 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:       DeclareGlobalVarInst "nested_try_test": string
 // CHECK-NEXT:       DeclareGlobalVarInst "nested_catch_test": string
 // CHECK-NEXT:       DeclareGlobalVarInst "finally_with_break_continue_test": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %simple_try_catch_test(): any
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %simple_try_catch_test(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "simple_try_catch_test": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %simple_try_catch_finally_test(): any
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %simple_try_catch_finally_test(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "simple_try_catch_finally_test": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %simple_try_finally_test(): any
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %simple_try_finally_test(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "simple_try_finally_test": string
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %try_catch_finally_with_return_test(): any
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %try_catch_finally_with_return_test(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "try_catch_finally_with_return_test": string
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %nested_try_test(): any
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %nested_try_test(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %15: object, globalObject: object, "nested_try_test": string
-// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %nested_catch_test(): any
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %nested_catch_test(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %17: object, globalObject: object, "nested_catch_test": string
-// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %finally_with_break_continue_test(): any
+// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %finally_with_break_continue_test(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %19: object, globalObject: object, "finally_with_break_continue_test": string
 // CHECK-NEXT:  %21 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %21: any

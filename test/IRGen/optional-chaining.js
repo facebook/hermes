@@ -57,23 +57,23 @@ function f9(a) {
 // CHECK-NEXT:       DeclareGlobalVarInst "f7": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f8": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f9": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %f1(): any
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %f1(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "f1": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %f2(): any
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %f2(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "f2": string
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %f3(): any
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %f3(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "f3": string
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %f4(): any
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %f4(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %15: object, globalObject: object, "f4": string
-// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %f5(): any
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %f5(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %17: object, globalObject: object, "f5": string
-// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %f6(): any
+// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %f6(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %19: object, globalObject: object, "f6": string
-// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %f7(): any
+// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %f7(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %21: object, globalObject: object, "f7": string
-// CHECK-NEXT:  %23 = CreateFunctionInst (:object) %f8(): any
+// CHECK-NEXT:  %23 = CreateFunctionInst (:object) %f8(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %23: object, globalObject: object, "f8": string
-// CHECK-NEXT:  %25 = CreateFunctionInst (:object) %f9(): any
+// CHECK-NEXT:  %25 = CreateFunctionInst (:object) %f9(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %25: object, globalObject: object, "f9": string
 // CHECK-NEXT:  %27 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %27: any

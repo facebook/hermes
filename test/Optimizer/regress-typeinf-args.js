@@ -62,13 +62,13 @@ function test4(f) {
 // CHECK-NEXT:       DeclareGlobalVarInst "test2": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test3": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test4": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test1(): undefined
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test1(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %4: object, globalObject: object, "test1": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %test2(): undefined
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %test2(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %6: object, globalObject: object, "test2": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %test3(): object
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %test3(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %8: object, globalObject: object, "test3": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %test4(): any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %test4(): functionCode
 // CHECK-NEXT:        StorePropertyStrictInst %10: object, globalObject: object, "test4": string
 // CHECK-NEXT:        ReturnInst "use strict": string
 // CHECK-NEXT:function_end
@@ -76,7 +76,7 @@ function test4(f) {
 // CHECK:function test1(): undefined
 // CHECK-NEXT:frame = [f: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f(): any
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f(): functionCode
 // CHECK-NEXT:       StoreFrameInst %0: object, [f]: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -90,7 +90,7 @@ function test4(f) {
 // CHECK:function test3(): object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %"f3 1#"(): undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %"f3 1#"(): functionCode
 // CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
@@ -98,7 +98,7 @@ function test4(f) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %""(): any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %""(): functionCode
 // CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %1: object
 // CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end
@@ -108,7 +108,7 @@ function test4(f) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = LoadFrameInst (:object) [f@test1]: object
-// CHECK-NEXT:  %2 = CallInst (:any) %1: object, %f(): any, empty: any, undefined: undefined, 0: number, %0: any
+// CHECK-NEXT:  %2 = CallInst (:any) %1: object, %f(): functionCode, empty: any, undefined: undefined, 0: number, %0: any
 // CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end
 

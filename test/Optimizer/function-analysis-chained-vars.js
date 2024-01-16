@@ -30,7 +30,7 @@ function main() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "main": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): undefined
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %1: object, globalObject: object, "main": string
 // CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
@@ -38,17 +38,17 @@ function main() {
 // CHECK:function main(): undefined
 // CHECK-NEXT:frame = [x: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): object
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %x(): number
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %x(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: object, [x]: object
-// CHECK-NEXT:  %3 = CallInst (:object) %0: object, %foo(): object, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %3 = CallInst (:object) %0: object, %foo(): functionCode, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): object [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = [y: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %bar(): undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %bar(): functionCode
 // CHECK-NEXT:  %1 = LoadFrameInst (:object) [x@main]: object
 // CHECK-NEXT:       StoreFrameInst %1: object, [y]: object
 // CHECK-NEXT:       ReturnInst %0: object
@@ -64,6 +64,6 @@ function main() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:object) [y@foo]: object
-// CHECK-NEXT:  %1 = CallInst (:number) %0: object, %x(): number, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %1 = CallInst (:number) %0: object, %x(): functionCode, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -34,11 +34,11 @@ function level0(x) {
 // CHECK-NEXT:       DeclareGlobalVarInst "same_func_name": string
 // CHECK-NEXT:       DeclareGlobalVarInst "sink": string
 // CHECK-NEXT:       DeclareGlobalVarInst "level0": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %same_func_name(): any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %same_func_name(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "same_func_name": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %sink(): any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %sink(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "sink": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %level0(): any
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %level0(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "level0": string
 // CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %9: any
@@ -52,7 +52,7 @@ function level0(x) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %same_param_name: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [same_param_name]: any
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [same_func_name]: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %"same_func_name 1#"(): any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %"same_func_name 1#"(): functionCode
 // CHECK-NEXT:       StoreFrameInst %3: object, [same_func_name]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -75,7 +75,7 @@ function level0(x) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [x]: any
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [level1]: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %level1(): any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %level1(): functionCode
 // CHECK-NEXT:       StoreFrameInst %3: object, [level1]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -86,7 +86,7 @@ function level0(x) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %same_param_name: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [same_param_name]: any
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [same_func_name]: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %"same_func_name 2#"(): any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %"same_func_name 2#"(): functionCode
 // CHECK-NEXT:       StoreFrameInst %3: object, [same_func_name]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -97,7 +97,7 @@ function level0(x) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %y: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [y]: any
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [level2]: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %level2(): any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %level2(): functionCode
 // CHECK-NEXT:       StoreFrameInst %3: object, [level2]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

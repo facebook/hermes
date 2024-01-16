@@ -54,11 +54,11 @@ function test_unary(x) {
 // CHECK-NEXT:       DeclareGlobalVarInst "sink": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_one": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_unary": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %sink(): undefined
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %sink(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "sink": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %test_one(): undefined
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %test_one(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "test_one": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %test_unary(): undefined
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %test_unary(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "test_unary": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

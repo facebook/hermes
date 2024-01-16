@@ -61,23 +61,23 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:       DeclareGlobalVarInst "for_loop_match": string
 // CHECK-NEXT:       DeclareGlobalVarInst "naked_for_loop": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_init_update_exprs": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %sink(): any
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %sink(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "sink": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %simple_for_loop(): any
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %simple_for_loop(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "simple_for_loop": string
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %simple_for_loop_break(): any
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %simple_for_loop_break(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "simple_for_loop_break": string
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %simple_for_loop_break_label(): any
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %simple_for_loop_break_label(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %15: object, globalObject: object, "simple_for_loop_break_label": string
-// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %simple_for_loop_continue(): any
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %simple_for_loop_continue(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %17: object, globalObject: object, "simple_for_loop_continue": string
-// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %simple_for_loop_continue_label(): any
+// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %simple_for_loop_continue_label(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %19: object, globalObject: object, "simple_for_loop_continue_label": string
-// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %for_loop_match(): any
+// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %for_loop_match(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %21: object, globalObject: object, "for_loop_match": string
-// CHECK-NEXT:  %23 = CreateFunctionInst (:object) %naked_for_loop(): any
+// CHECK-NEXT:  %23 = CreateFunctionInst (:object) %naked_for_loop(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %23: object, globalObject: object, "naked_for_loop": string
-// CHECK-NEXT:  %25 = CreateFunctionInst (:object) %test_init_update_exprs(): any
+// CHECK-NEXT:  %25 = CreateFunctionInst (:object) %test_init_update_exprs(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %25: object, globalObject: object, "test_init_update_exprs": string
 // CHECK-NEXT:  %27 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %27: any

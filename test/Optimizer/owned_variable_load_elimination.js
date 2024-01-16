@@ -23,7 +23,7 @@ function foo(sink){
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): object
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -58,7 +58,7 @@ function foo(sink){
 // CHECK-NEXT:  %19 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %16: number
 // CHECK-NEXT:        BranchInst %BB6
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %""(): number
+// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %""(): functionCode
 // CHECK-NEXT:        ReturnInst %21: object
 // CHECK-NEXT:function_end
 

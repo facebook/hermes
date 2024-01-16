@@ -22,7 +22,7 @@ function foo() {
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "x": string
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "foo": string
 // CHKRA-NEXT:  $Reg0 = HBCCreateEnvironmentInst (:any)
-// CHKRA-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %foo(): any, $Reg0
+// CHKRA-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %foo(): functionCode, $Reg0
 // CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
 // CHKRA-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg0, "foo": string
 // CHKRA-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined

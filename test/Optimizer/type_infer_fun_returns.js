@@ -21,7 +21,7 @@ function g14(z) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "g14": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %g14(): undefined|object
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %g14(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "g14": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -30,7 +30,7 @@ function g14(z) {
 // CHECK-NEXT:frame = [w: object]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %z: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %w(): number
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %w(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: object, [w]: object
 // CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "k": string
 // CHECK-NEXT:  %4 = BinaryMultiplyInst (:number) %3: any, 1: number
@@ -43,7 +43,7 @@ function g14(z) {
 // CHECK-NEXT:  %10 = BinaryAddInst (:string|number) %9: any, 1: number
 // CHECK-NEXT:  %11 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %10: string|number
 // CHECK-NEXT:  %12 = AllocObjectInst (:object) 1: number, empty: any
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %m(): undefined
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %m(): functionCode
 // CHECK-NEXT:        StoreNewOwnPropertyInst %13: object, %12: object, "m": string, true: boolean
 // CHECK-NEXT:        ReturnInst %12: object
 // CHECK-NEXT:%BB2:
@@ -61,7 +61,7 @@ function g14(z) {
 // CHECK:function m(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %"w 1#"(): boolean
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %"w 1#"(): functionCode
 // CHECK-NEXT:       StoreFrameInst %0: object, [w@g14]: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

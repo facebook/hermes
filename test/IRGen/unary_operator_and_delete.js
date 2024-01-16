@@ -32,9 +32,9 @@ delete_test()
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "unary_operator_test": string
 // CHECK-NEXT:       DeclareGlobalVarInst "delete_test": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %unary_operator_test(): any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %unary_operator_test(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "unary_operator_test": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %delete_test(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %delete_test(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "delete_test": string
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %6: any

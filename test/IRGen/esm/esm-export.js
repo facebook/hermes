@@ -48,7 +48,7 @@ export * from 'foo.js';
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [z]: any
 // CHECK-NEXT:        StoreFrameInst undefined: undefined, [longVariableName]: any
 // CHECK-NEXT:        StoreFrameInst undefined: undefined, [a]: any
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %myFun(): any
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %myFun(): functionCode
 // CHECK-NEXT:        StoreFrameInst %12: object, [myFun]: any
 // CHECK-NEXT:  %14 = LoadFrameInst (:any) [myFun]: any
 // CHECK-NEXT:        StorePropertyLooseInst %14: any, %0: any, "myFun": string

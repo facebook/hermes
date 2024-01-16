@@ -40,13 +40,13 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:       DeclareGlobalVarInst "test1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test2": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_hoisting_of_func_expr": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test0(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test0(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "test0": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %test1(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %test1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "test1": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %test2(): any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %test2(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "test2": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %test_hoisting_of_func_expr(): any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %test_hoisting_of_func_expr(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "test_hoisting_of_func_expr": string
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %12: any
@@ -57,7 +57,7 @@ function test_hoisting_of_func_expr() {
 // CHECK:function test0(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): any
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): functionCode
 // CHECK-NEXT:  %1 = CallInst (:any) %0: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -67,7 +67,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [x]: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %" 1#"(): any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %" 1#"(): functionCode
 // CHECK-NEXT:  %3 = CallInst (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -77,7 +77,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [x]: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %" 2#"(): any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %" 2#"(): functionCode
 // CHECK-NEXT:  %3 = CallInst (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -85,7 +85,7 @@ function test_hoisting_of_func_expr() {
 // CHECK:function test_hoisting_of_func_expr(): any
 // CHECK-NEXT:frame = [some_local_name: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %some_local_name(): any
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %some_local_name(): functionCode
 // CHECK-NEXT:       StoreFrameInst %0: object, [some_local_name]: any
 // CHECK-NEXT:  %2 = CallInst (:any) %0: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst undefined: undefined
@@ -107,7 +107,7 @@ function test_hoisting_of_func_expr() {
 // CHECK:function " 2#"(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %" 3#"(): any
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %" 3#"(): functionCode
 // CHECK-NEXT:  %1 = CallInst (:any) %0: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

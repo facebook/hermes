@@ -54,11 +54,11 @@ function outer() {
 // CHECK-NEXT:       DeclareGlobalVarInst "bar": string
 // CHECK-NEXT:       DeclareGlobalVarInst "main": string
 // CHECK-NEXT:       DeclareGlobalVarInst "outer": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %bar(): undefined
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %bar(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "bar": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %main(): object
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %main(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "main": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %outer(): object
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %outer(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "outer": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -81,7 +81,7 @@ function outer() {
 // CHECK-NEXT:  %6 = LoadPropertyInst (:any) globalObject: object, "bar": string
 // CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       StoreFrameInst %7: any, [k3]: any
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %""(): string|number|bigint
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %""(): functionCode
 // CHECK-NEXT:        ReturnInst %9: object
 // CHECK-NEXT:function_end
 
@@ -89,10 +89,10 @@ function outer() {
 // CHECK-NEXT:frame = [envVar: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [envVar]: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %setValue(): undefined
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %getValue(): any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %test1(): undefined
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test2(): undefined
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %setValue(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %getValue(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %test1(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test2(): functionCode
 // CHECK-NEXT:  %5 = AllocArrayInst (:object) 5: number
 // CHECK-NEXT:       StoreOwnPropertyInst %2: object, %5: object, 0: number, true: boolean
 // CHECK-NEXT:       StoreOwnPropertyInst %1: object, %5: object, 1: number, true: boolean

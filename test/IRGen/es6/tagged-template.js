@@ -74,27 +74,27 @@ function helloWorld() {
 // CHECK-NEXT:       DeclareGlobalVarInst "dup2": string
 // CHECK-NEXT:       DeclareGlobalVarInst "dup3": string
 // CHECK-NEXT:        DeclareGlobalVarInst "helloWorld": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %dummy(): any
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %dummy(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "dummy": string
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %emptyString(): any
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %emptyString(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "emptyString": string
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %oneString(): any
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %oneString(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %15: object, globalObject: object, "oneString": string
-// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %oneSub(): any
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %oneSub(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %17: object, globalObject: object, "oneSub": string
-// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %dup(): any
+// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %dup(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %19: object, globalObject: object, "dup": string
-// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %notDup(): any
+// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %notDup(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %21: object, globalObject: object, "notDup": string
-// CHECK-NEXT:  %23 = CreateFunctionInst (:object) %memberExpr(): any
+// CHECK-NEXT:  %23 = CreateFunctionInst (:object) %memberExpr(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %23: object, globalObject: object, "memberExpr": string
-// CHECK-NEXT:  %25 = CreateFunctionInst (:object) %callExpr(): any
+// CHECK-NEXT:  %25 = CreateFunctionInst (:object) %callExpr(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %25: object, globalObject: object, "callExpr": string
-// CHECK-NEXT:  %27 = CreateFunctionInst (:object) %dup2(): any
+// CHECK-NEXT:  %27 = CreateFunctionInst (:object) %dup2(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %27: object, globalObject: object, "dup2": string
-// CHECK-NEXT:  %29 = CreateFunctionInst (:object) %dup3(): any
+// CHECK-NEXT:  %29 = CreateFunctionInst (:object) %dup3(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %29: object, globalObject: object, "dup3": string
-// CHECK-NEXT:  %31 = CreateFunctionInst (:object) %helloWorld(): any
+// CHECK-NEXT:  %31 = CreateFunctionInst (:object) %helloWorld(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %31: object, globalObject: object, "helloWorld": string
 // CHECK-NEXT:  %33 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %33: any
@@ -180,7 +180,7 @@ function helloWorld() {
 // CHECK-NEXT:frame = [func: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [func]: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %func(): any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %func(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: object, [func]: any
 // CHECK-NEXT:  %3 = GetTemplateObjectInst (:any) 5: number, true: boolean, "hello world!": string
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [func]: any
@@ -223,7 +223,7 @@ function helloWorld() {
 // CHECK:function func(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): any
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): functionCode
 // CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 

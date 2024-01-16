@@ -25,9 +25,9 @@ function onlyDefault () {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "empty": string
 // CHECK-NEXT:       DeclareGlobalVarInst "onlyDefault": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %empty(): any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %empty(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "empty": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %onlyDefault(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %onlyDefault(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "onlyDefault": string
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %6: any

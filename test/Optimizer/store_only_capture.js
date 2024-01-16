@@ -23,7 +23,7 @@ function store_dedup(foo){
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "store_dedup": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %store_dedup(): any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %store_dedup(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "store_dedup": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -34,7 +34,7 @@ function store_dedup(foo){
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %foo: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [foo]: any
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [x]: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %bar(): undefined
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %bar(): functionCode
 // CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: object
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:       ReturnInst %5: any

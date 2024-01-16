@@ -28,15 +28,15 @@ print(foo.x, foo.y);
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): undefined
-// CHECK-NEXT:  %1 = CallInst [njsf] (:undefined) %0: object, %""(): undefined, empty: any, undefined: undefined, 0: number, 0: number
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): functionCode
+// CHECK-NEXT:  %1 = CallInst [njsf] (:undefined) %0: object, %""(): functionCode, empty: any, undefined: undefined, 0: number, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(exports: number): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %Foo(): undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %Foo(): functionCode
 // CHECK-NEXT:  %1 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:       StorePropertyStrictInst %1: object, %0: object, "prototype": string
 // CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string

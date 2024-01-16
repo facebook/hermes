@@ -42,15 +42,15 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:       DeclareGlobalVarInst "protoIsConst2": string
 // CHECK-NEXT:       DeclareGlobalVarInst "protoIsConst3": string
 // CHECK-NEXT:       DeclareGlobalVarInst "protoIsDynamic": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %protoIsFirst(): any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %protoIsFirst(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "protoIsFirst": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %protoIsConst1(): any
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %protoIsConst1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "protoIsConst1": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %protoIsConst2(): any
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %protoIsConst2(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "protoIsConst2": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %protoIsConst3(): any
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %protoIsConst3(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "protoIsConst3": string
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %protoIsDynamic(): any
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %protoIsDynamic(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "protoIsDynamic": string
 // CHECK-NEXT:  %15 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %15: any

@@ -30,9 +30,9 @@ function load_dedup(foo){
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "load_only_capture": string
 // CHECK-NEXT:       DeclareGlobalVarInst "load_dedup": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %load_only_capture(): number
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %load_only_capture(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "load_only_capture": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %load_dedup(): object
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %load_dedup(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "load_dedup": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -47,7 +47,7 @@ function load_dedup(foo){
 // CHECK-NEXT:       CondBranchInst %3: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = PhiInst (:number) 0: number, %BB0, %8: number, %BB1
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %""(): number
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %""(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, %0: any, "k": string
 // CHECK-NEXT:  %8 = FAddInst (:number) %5: number, 1: number
 // CHECK-NEXT:       StoreFrameInst %8: number, [i]: number
@@ -64,7 +64,7 @@ function load_dedup(foo){
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %foo: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [foo]: any
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [x]: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %bar(): any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %bar(): functionCode
 // CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       StoreFrameInst %4: any, [x]: any
 // CHECK-NEXT:       ReturnInst %3: object

@@ -37,13 +37,13 @@ function shadow(arguments) {
 // CHECK-NEXT:       DeclareGlobalVarInst "expensive": string
 // CHECK-NEXT:       DeclareGlobalVarInst "cond": string
 // CHECK-NEXT:       DeclareGlobalVarInst "shadow": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %cheap(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %cheap(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "cheap": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %expensive(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %expensive(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "expensive": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %cond(): any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %cond(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "cond": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %shadow(): any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %shadow(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "shadow": string
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %12: any

@@ -38,13 +38,13 @@ function daa(a) {
 // CHECK-NEXT:       DeclareGlobalVarInst "bar": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:       DeclareGlobalVarInst "daa": string
-// CHECK-NEXT:  %5 = HBCCreateFunctionInst (:object) %bar(): any, %0: any
+// CHECK-NEXT:  %5 = HBCCreateFunctionInst (:object) %bar(): functionCode, %0: any
 // CHECK-NEXT:  %6 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:       StorePropertyStrictInst %5: object, %6: object, "bar": string
-// CHECK-NEXT:  %8 = HBCCreateFunctionInst (:object) %foo(): any, %0: any
+// CHECK-NEXT:  %8 = HBCCreateFunctionInst (:object) %foo(): functionCode, %0: any
 // CHECK-NEXT:  %9 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:        StorePropertyStrictInst %8: object, %9: object, "foo": string
-// CHECK-NEXT:  %11 = HBCCreateFunctionInst (:object) %daa(): any, %0: any
+// CHECK-NEXT:  %11 = HBCCreateFunctionInst (:object) %daa(): functionCode, %0: any
 // CHECK-NEXT:  %12 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:        StorePropertyStrictInst %11: object, %12: object, "daa": string
 // CHECK-NEXT:  %14 = AllocStackInst (:any) $?anon_0_ret: any
@@ -97,7 +97,7 @@ function daa(a) {
 // CHECK-NEXT:       HBCStoreToEnvironmentInst %0: any, %1: any, [a]: any
 // CHECK-NEXT:  %3 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:       HBCStoreToEnvironmentInst %0: any, %3: undefined, [b]: any
-// CHECK-NEXT:  %5 = HBCCreateFunctionInst (:object) %daa_capture(): any, %0: any
+// CHECK-NEXT:  %5 = HBCCreateFunctionInst (:object) %daa_capture(): functionCode, %0: any
 // CHECK-NEXT:       HBCStoreToEnvironmentInst %0: any, %5: object, [daa_capture]: any
 // CHECK-NEXT:  %7 = HBCLoadFromEnvironmentInst (:any) %0: any, [a]: any
 // CHECK-NEXT:  %8 = HBCLoadConstInst (:number) 1: number
@@ -124,12 +124,12 @@ function daa(a) {
 // CHKOPT-NEXT:       DeclareGlobalVarInst "bar": string
 // CHKOPT-NEXT:       DeclareGlobalVarInst "foo": string
 // CHKOPT-NEXT:       DeclareGlobalVarInst "daa": string
-// CHKOPT-NEXT:  %5 = HBCCreateFunctionInst (:object) %bar(): any, %0: any
+// CHKOPT-NEXT:  %5 = HBCCreateFunctionInst (:object) %bar(): functionCode, %0: any
 // CHKOPT-NEXT:  %6 = HBCGetGlobalObjectInst (:object)
 // CHKOPT-NEXT:       StorePropertyStrictInst %5: object, %6: object, "bar": string
-// CHKOPT-NEXT:  %8 = HBCCreateFunctionInst (:object) %foo(): any, %0: any
+// CHKOPT-NEXT:  %8 = HBCCreateFunctionInst (:object) %foo(): functionCode, %0: any
 // CHKOPT-NEXT:       StorePropertyStrictInst %8: object, %6: object, "foo": string
-// CHKOPT-NEXT:  %10 = HBCCreateFunctionInst (:object) %daa(): object, %0: any
+// CHKOPT-NEXT:  %10 = HBCCreateFunctionInst (:object) %daa(): functionCode, %0: any
 // CHKOPT-NEXT:        StorePropertyStrictInst %10: object, %6: object, "daa": string
 // CHKOPT-NEXT:  %12 = HBCLoadConstInst (:number) 5: number
 // CHKOPT-NEXT:        StorePropertyStrictInst %12: number, %6: object, "a": string
@@ -163,7 +163,7 @@ function daa(a) {
 // CHKOPT-NEXT:  %2 = HBCLoadConstInst (:number) 1: number
 // CHKOPT-NEXT:  %3 = BinaryAddInst (:string|number) %1: any, %2: number
 // CHKOPT-NEXT:       HBCStoreToEnvironmentInst %0: any, %3: string|number, [b]: undefined|string|number
-// CHKOPT-NEXT:  %5 = HBCCreateFunctionInst (:object) %daa_capture(): undefined|string|number, %0: any
+// CHKOPT-NEXT:  %5 = HBCCreateFunctionInst (:object) %daa_capture(): functionCode, %0: any
 // CHKOPT-NEXT:       ReturnInst %5: object
 // CHKOPT-NEXT:function_end
 

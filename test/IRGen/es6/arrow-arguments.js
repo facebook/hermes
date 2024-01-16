@@ -52,11 +52,11 @@ function bar() {
 // CHECK-NEXT:       DeclareGlobalVarInst "normal": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:       DeclareGlobalVarInst "bar": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %normal(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %normal(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %4: object, globalObject: object, "normal": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %foo(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %foo(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %6: object, globalObject: object, "foo": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %bar(): any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %bar(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %8: object, globalObject: object, "bar": string
 // CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %10: any
@@ -84,7 +84,7 @@ function bar() {
 // CHECK-NEXT:       StoreFrameInst %3: undefined|object, [?anon_1_new.target]: undefined|object
 // CHECK-NEXT:       StoreFrameInst %0: object, [?anon_2_arguments]: object
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [arrow1]: any
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %arrow1(): any
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %arrow1(): functionCode
 // CHECK-NEXT:       StoreFrameInst %7: object, [arrow1]: any
 // CHECK-NEXT:  %9 = LoadFrameInst (:object) [?anon_2_arguments]: object
 // CHECK-NEXT:  %10 = LoadPropertyInst (:any) %9: object, 0: number
@@ -97,7 +97,7 @@ function bar() {
 // CHECK-NEXT:frame = [inner: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsStrictInst (:object)
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %inner(): any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %inner(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: object, [inner]: any
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %0: object, 0: number
 // CHECK-NEXT:       StorePropertyStrictInst %3: any, globalObject: object, "dummy": string
@@ -112,7 +112,7 @@ function bar() {
 // CHECK-NEXT:  %1 = LoadFrameInst (:object) [?anon_2_arguments@foo]: object
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) %1: object, 1: number
 // CHECK-NEXT:       StorePropertyStrictInst %2: any, globalObject: object, "dummy": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %arrow2(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %arrow2(): functionCode
 // CHECK-NEXT:       StoreFrameInst %4: object, [arrow2]: any
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [arrow2]: any
 // CHECK-NEXT:       ReturnInst %6: any
@@ -131,7 +131,7 @@ function bar() {
 // CHECK-NEXT:  %7 = LoadFrameInst (:object) [?anon_2_arguments]: object
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) %7: object, 0: number
 // CHECK-NEXT:       StorePropertyStrictInst %8: any, globalObject: object, "dummy": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %arrow3(): any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %arrow3(): functionCode
 // CHECK-NEXT:        StoreFrameInst %10: object, [arrow3]: any
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [arrow3]: any
 // CHECK-NEXT:        ReturnInst %12: any

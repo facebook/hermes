@@ -40,7 +40,7 @@ print(e);
 // RA-NEXT:%BB1:
 // RA-NEXT:  $Reg2 = CatchInst (:any)
 // RA-NEXT:  $Reg2 = HBCStoreToEnvironmentInst $Reg1, $Reg2, [e]: any
-// RA-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %local(): any, $Reg1
+// RA-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %local(): functionCode, $Reg1
 // RA-NEXT:  $Reg1 = StorePropertyLooseInst $Reg1, $Reg0, "local": string
 // RA-NEXT:  $Reg3 = TryLoadGlobalPropertyInst (:any) $Reg0, "print": string
 // RA-NEXT:  $Reg1 = TryLoadGlobalPropertyInst (:any) $Reg0, "local": string

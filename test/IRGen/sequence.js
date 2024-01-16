@@ -28,13 +28,13 @@ function test2(x,y) {
 // CHECK-NEXT:       DeclareGlobalVarInst "sink1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test2": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %sink0(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %sink0(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "sink0": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %sink1(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %sink1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "sink1": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %test1(): any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %test1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "test1": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %test2(): any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %test2(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "test2": string
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %12: any

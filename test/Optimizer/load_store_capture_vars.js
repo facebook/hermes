@@ -85,21 +85,21 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:       DeclareGlobalVarInst "abort": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:       DeclareGlobalVarInst "postponed_store_in_use_block": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %store_x_not_captured(): number
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %store_x_not_captured(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "store_x_not_captured": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %store_x_is_captured(): number
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %store_x_is_captured(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "store_x_is_captured": string
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %load_x_not_captured(): number
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %load_x_not_captured(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "load_x_not_captured": string
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %load_x_is_captured(): number
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %load_x_is_captured(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %14: object, globalObject: object, "load_x_is_captured": string
-// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %load_x_captured_as_load(): number
+// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %load_x_captured_as_load(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %16: object, globalObject: object, "load_x_captured_as_load": string
-// CHECK-NEXT:  %18 = CreateFunctionInst (:object) %abort(): any
+// CHECK-NEXT:  %18 = CreateFunctionInst (:object) %abort(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %18: object, globalObject: object, "abort": string
-// CHECK-NEXT:  %20 = CreateFunctionInst (:object) %foo(): any
+// CHECK-NEXT:  %20 = CreateFunctionInst (:object) %foo(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %20: object, globalObject: object, "foo": string
-// CHECK-NEXT:  %22 = CreateFunctionInst (:object) %postponed_store_in_use_block(): undefined
+// CHECK-NEXT:  %22 = CreateFunctionInst (:object) %postponed_store_in_use_block(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %22: object, globalObject: object, "postponed_store_in_use_block": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -107,24 +107,24 @@ function postponed_store_in_use_block(x) {
 // CHECK:function store_x_not_captured(): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %"foo 1#"(): undefined
-// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %"foo 1#"(): undefined, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %"foo 1#"(): functionCode
+// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %"foo 1#"(): functionCode, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst 9: number
 // CHECK-NEXT:function_end
 
 // CHECK:function store_x_is_captured(): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %"foo 2#"(): undefined
-// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %"foo 2#"(): undefined, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %"foo 2#"(): functionCode
+// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %"foo 2#"(): functionCode, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst 9: number
 // CHECK-NEXT:function_end
 
 // CHECK:function load_x_not_captured(): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %"foo 3#"(): undefined
-// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %"foo 3#"(): undefined, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %"foo 3#"(): functionCode
+// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %"foo 3#"(): functionCode, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst 4: number
 // CHECK-NEXT:function_end
 
@@ -132,8 +132,8 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:frame = [x: number]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StoreFrameInst 4: number, [x]: number
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %"foo 4#"(): undefined
-// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %"foo 4#"(): undefined, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %"foo 4#"(): functionCode
+// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %"foo 4#"(): functionCode, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %3 = LoadFrameInst (:number) [x]: number
 // CHECK-NEXT:       ReturnInst %3: number
 // CHECK-NEXT:function_end
@@ -141,8 +141,8 @@ function postponed_store_in_use_block(x) {
 // CHECK:function load_x_captured_as_load(): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %"foo 5#"(): undefined
-// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %"foo 5#"(): undefined, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %"foo 5#"(): functionCode
+// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %"foo 5#"(): functionCode, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst 4: number
 // CHECK-NEXT:function_end
 
@@ -187,7 +187,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [x]: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): functionCode
 // CHECK-NEXT:  %3 = BinaryAddInst (:string|number) 0: number, %2: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

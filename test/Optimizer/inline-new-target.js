@@ -38,9 +38,9 @@ function outer2(){
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "outer": string
 // CHECK-NEXT:       DeclareGlobalVarInst "outer2": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %outer(): undefined
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %outer(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %2: object, globalObject: object, "outer": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %outer2(): object
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %outer2(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %4: object, globalObject: object, "outer2": string
 // CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
@@ -54,9 +54,9 @@ function outer2(){
 // CHECK:function outer2(): object
 // CHECK-NEXT:frame = [foo: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): undefined|object
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): functionCode
 // CHECK-NEXT:       StoreFrameInst %0: object, [foo]: object
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %bar(): object
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %bar(): functionCode
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: object, "prototype": string
 // CHECK-NEXT:  %4 = LoadPropertyInst (:any) %0: object, "prototype": string
 // CHECK-NEXT:       ReturnInst %0: object

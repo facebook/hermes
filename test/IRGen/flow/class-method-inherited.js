@@ -30,7 +30,7 @@ new D().inherited();
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %0: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): functionCode
 // CHECK-NEXT:  %3 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %4 = CallInst [njsf] (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: object
 // CHECK-NEXT:       StoreStackInst %4: any, %0: any
@@ -45,14 +45,14 @@ new D().inherited();
 // CHECK-NEXT:       StoreFrameInst %0: any, [exports]: any
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [C]: any
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [D]: any
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %C(): any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %C(): functionCode
 // CHECK-NEXT:       StoreFrameInst %4: object, [C]: any
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %inherited(): any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %inherited(): functionCode
 // CHECK-NEXT:  %7 = AllocObjectLiteralInst (:object) "inherited": string, %6: object
 // CHECK-NEXT:       StoreFrameInst %7: object, [?C.prototype]: object
 // CHECK-NEXT:       StorePropertyStrictInst %7: object, %4: object, "prototype": string
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [C]: any
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %D(): any
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %D(): functionCode
 // CHECK-NEXT:        StoreFrameInst %11: object, [D]: any
 // CHECK-NEXT:  %13 = LoadFrameInst (:object) [?C.prototype]: object
 // CHECK-NEXT:  %14 = PrLoadInst (:object) %13: object, 0: number, "inherited": string
@@ -64,7 +64,7 @@ new D().inherited();
 // CHECK-NEXT:  %20 = LoadFrameInst (:object) [?D.prototype]: object
 // CHECK-NEXT:  %21 = UnionNarrowTrustedInst (:object) %20: object
 // CHECK-NEXT:  %22 = AllocObjectInst (:object) 0: number, %21: object
-// CHECK-NEXT:  %23 = CallInst (:any) %19: any, %D(): any, empty: any, %19: any, %22: object
+// CHECK-NEXT:  %23 = CallInst (:any) %19: any, %D(): functionCode, empty: any, %19: any, %22: object
 // CHECK-NEXT:  %24 = LoadParentInst (:object) %22: object
 // CHECK-NEXT:  %25 = PrLoadInst (:object) %24: object, 0: number, "inherited": string
 // CHECK-NEXT:  %26 = CallInst [njsf] (:any) %25: object, empty: any, empty: any, undefined: undefined, %22: object

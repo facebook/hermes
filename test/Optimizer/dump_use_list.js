@@ -18,7 +18,7 @@ function foo(a, b) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): any // users: %2
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): functionCode // users: %2
 // CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any // users: %4 %5
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %3: any
