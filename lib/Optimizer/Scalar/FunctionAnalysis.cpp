@@ -120,8 +120,33 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
       // UnionNarrowTrustedInst is a cast, the result is the same as its input.
       // That means we can add it to the worklist to follow it.
       if (llvh::isa<UnionNarrowTrustedInst>(closureUser)) {
+        assert(
+            llvh::cast<UnionNarrowTrustedInst>(closureUser)
+                ->getSingleOperand()
+                ->getType()
+                .canBeObject() &&
+            "closure type is not object");
+        assert(
+            llvh::cast<UnionNarrowTrustedInst>(closureUser)
+                ->getType()
+                .canBeObject() &&
+            "The result UnionNarrowTrusted of closure is not object");
         worklist.push_back(closureUser);
         continue;
+      }
+
+      // CheckedTypeCast's result is the same as its input, as long as the
+      // output allows the closure type.
+      // That means that if the conditions are met, we can add it to the
+      // worklist to follow it.
+      if (auto *CC = llvh::dyn_cast<CheckedTypeCastInst>(closureUser)) {
+        assert(
+            CC->getCheckedValue()->getType().canBeObject() &&
+            "closure type is not object");
+        if (CC->getType().canBeObject()) {
+          worklist.push_back(closureUser);
+          continue;
+        }
       }
 
       // Closure is stored to a variable, look at corresponding loads
