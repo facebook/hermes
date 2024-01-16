@@ -172,6 +172,11 @@ class IRBuilder {
   /// Create a new literal 'empty'.
   LiteralEmpty *getLiteralEmpty();
 
+  /// Return the "Uninit" literal singletone.
+  LiteralUninit *getLiteralUninit() {
+    return M->getLiteralUninit();
+  }
+
   /// Create a new literal 'undefined'.
   LiteralUndefined *getLiteralUndefined();
 

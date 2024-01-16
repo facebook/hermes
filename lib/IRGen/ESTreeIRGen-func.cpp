@@ -530,7 +530,8 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
           var = Builder.createVariable(
               func->getFunctionScope(),
               decl->name,
-              tdz ? Type::createAnyOrEmpty() : Type::createAnyType());
+              tdz ? Type::unionTy(Type::createAnyType(), Type::createEmpty())
+                  : Type::createAnyType());
           var->setObeysTDZ(tdz);
           var->setIsConst(decl->kind == sema::Decl::Kind::Const);
           setDeclData(decl, var);
@@ -639,7 +640,8 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
     Variable *var = Builder.createVariable(
         newFunc->getFunctionScope(),
         decl->name,
-        tdz ? Type::createAnyOrEmpty() : Type::createAnyType());
+        tdz ? Type::unionTy(Type::createAnyType(), Type::createEmpty())
+            : Type::createAnyType());
     setDeclData(decl, var);
 
     // If not simple parameter list, enable TDZ and init every param.

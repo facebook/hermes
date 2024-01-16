@@ -318,6 +318,8 @@ void Verifier::beforeVisitInstruction(const Instruction &Inst) {
 
     if (Operand->getType().canBeEmpty()) {
       Assert(acceptsEmptyType, "Instruction does not accept empty type");
+    } else if (Operand->getType().canBeUninit()) {
+      Assert(acceptsEmptyType, "Instruction does not accept uninit type");
     }
   }
 
@@ -936,14 +938,25 @@ void Verifier::visitGetNewTargetInst(GetNewTargetInst const &Inst) {
 void Verifier::visitThrowIfInst(const ThrowIfInst &Inst) {
   const Type invTypes = Inst.getInvalidTypes()->getData();
   Assert(
-      !invTypes.isNoType() && invTypes.isSubsetOf(Type::createEmpty()),
-      "ThrowIfInst invalid types set can only contain Empty");
+      !invTypes.isNoType() &&
+          invTypes.isSubsetOf(
+              Type::unionTy(Type::createEmpty(), Type::createUninit())),
+      "ThrowIfInst invalid types set can only contain Empty or Uninit");
+
   // Note: we are not performing a subtraction and equality check here, because
   // if the invalid types and the input types are proven disjoint after
   // TypeInference, we deliberately don't return NoType.
   Assert(
       Type::intersectTy(Inst.getType(), invTypes).isNoType(),
       "ThrowIfInst must throw away all invalid types");
+
+  // A variable may only perform the following state transitions:
+  // empty -> uninit -> initialized
+  // empty -> initialized
+  // uninit -> initialized
+  // So, it can never be empty after it has been checked for uninit.
+  Assert(
+      !Inst.getType().canBeEmpty(), "ThrowIfInst can never return type Empty");
 }
 
 void Verifier::visitPrLoadInst(const PrLoadInst &Inst) {}

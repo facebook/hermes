@@ -202,30 +202,30 @@ TEST(BuilderTest, TestValueTypes) {
 }
 
 TEST(BuilderTest, Types) {
-  Type T = Type::createAnyOrEmpty();
+  Type T = Type::createAnyEmptyUninit();
   EXPECT_FALSE(T.isNoType());
-  EXPECT_TRUE(T.isAnyOrEmptyType());
+  EXPECT_TRUE(T.isAnyEmptyUninitType());
 
   Type W = Type::unionTy(Type::createNumber(), Type::createBoolean());
-  EXPECT_FALSE(W.isAnyOrEmptyType());
+  EXPECT_FALSE(W.isAnyEmptyUninitType());
   EXPECT_TRUE(W.isPrimitive());
   EXPECT_FALSE(W.isStringType());
   EXPECT_FALSE(W.isObjectType());
 
   EXPECT_EQ(
-      Type::createAnyOrEmpty(),
-      Type::unionTy(Type::createAnyOrEmpty(), Type::createBoolean()));
+      Type::createAnyEmptyUninit(),
+      Type::unionTy(Type::createAnyEmptyUninit(), Type::createBoolean()));
 
   EXPECT_EQ(
-      Type::createAnyOrEmpty(),
-      Type::unionTy(Type::createAnyOrEmpty(), Type::createBoolean()));
+      Type::createAnyEmptyUninit(),
+      Type::unionTy(Type::createAnyEmptyUninit(), Type::createBoolean()));
 
   Type U = Type::unionTy(Type::createUndefined(), Type::createObject());
   EXPECT_FALSE(U.isObjectType());
   EXPECT_FALSE(U.isBooleanType());
 
   Type R = Type::unionTy(Type::createNumber(), Type::createObject());
-  EXPECT_FALSE(R.isAnyOrEmptyType());
+  EXPECT_FALSE(R.isAnyEmptyUninitType());
   EXPECT_FALSE(R.isPrimitive());
   EXPECT_FALSE(R.isNumberType());
   EXPECT_FALSE(R.isObjectType());
