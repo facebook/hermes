@@ -8,6 +8,17 @@
 #include "HermesSandboxRuntime.h"
 
 #include "external/hermes_sandbox_impl_compiled.h"
+#include "hermes/ADT/ManagedChunkedList.h"
+
+#include <atomic>
+
+#if __has_builtin(__builtin_unreachable)
+#define BUILTIN_UNREACHABLE __builtin_unreachable()
+#elif defined(_MSC_VER)
+#define BUILTIN_UNREACHABLE __assume(false)
+#else
+#define BUILTIN_UNREACHABLE assert(false);
+#endif
 
 using namespace facebook::jsi;
 
@@ -656,6 +667,19 @@ void releasePointer(w2c_hermes *mod, u32 ptr) {
 
 } // namespace sb
 
+/// Helper class to save and restore a value on exiting a scope.
+template <typename T>
+class SaveAndRestore {
+  T &target_;
+  T oldVal_;
+
+ public:
+  SaveAndRestore(T &target) : target_(target), oldVal_(target) {}
+  ~SaveAndRestore() {
+    target_ = oldVal_;
+  }
+};
+
 /// Define a simple wrapper class that manages the lifetime of the w2c_hermes
 /// instance. This lets us maintain the order of the destructor relative to
 /// other fields in HermesSandboxRuntimeImpl, which may need to be destroyed
@@ -736,8 +760,15 @@ class LIFOAlloc : public sb::Ptr<T> {
 
 class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
                                  public W2CHermesRAII {
+  class ManagedPointerHolder;
+
   /// Pre-allocated vtables for each of the sandbox types used by this wrapper.
   StackAlloc<SandboxGrowableBufferVTable> growableBufferVTable_;
+
+  /// The list of pointers currently retained through JSI. This manages the
+  /// lifetime of the underlying pointers through the ABI so that they are
+  /// released when the corresponding JSI pointer is released.
+  hermes::ManagedChunkedList<ManagedPointerHolder> managedPointers_;
 
   /// A copy of the vtable for srt_ with all of the function pointers retrieved
   /// once at creation. This allows for efficient access, and makes the
@@ -746,6 +777,12 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
 
   /// A pointer to the ABI runtime object allocated inside sandbox memory.
   u32 srt_;
+
+  /// Whether we are currently processing a JSError. This is used to detect
+  /// recursive invocations of the JSError constructor and prevent them from
+  /// causing a stack overflow.
+  bool activeJSError_ = false;
+
 #ifndef NDEBUG
   /// Counter to track heap allocations that cannot be managed by a LIFOAlloc.
   /// This helps ensure that these allocations are correctly cleaned up.
@@ -793,6 +830,91 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
     return const_cast<HermesSandboxRuntimeImpl *>(this);
   }
 
+  /// A ManagedChunkedList element that indicates whether it's occupied based on
+  /// a refcount.
+  class ManagedPointerHolder : public PointerValue {
+    /// The reference count indicating the number of existing JSI references
+    /// that point to this ManagedPointerHolder.
+    std::atomic<uint32_t> refCount_;
+
+    /// The managed pointer value in the sandbox. A non-zero value indicates
+    /// that the underlying SandboxManagedPointer is still live (even if the
+    /// reference count is zero).
+    u32 managedPointer_;
+
+    /// Store the runtime pointer and nextFree in a union to save space since
+    /// they are never needed at the same time.
+    union {
+      /// The runtime that owns this ManagedPointerHolder. We need to retain
+      /// this to invalidate the reference inside the sandbox.
+      HermesSandboxRuntimeImpl *runtime_;
+
+      /// The next free entry. This value is managed by the list itself.
+      ManagedPointerHolder *nextFree_;
+    };
+
+   public:
+    ManagedPointerHolder() : refCount_(0), managedPointer_(0) {}
+
+    /// Determine whether the element is occupied by inspecting the refcount.
+    bool isFree() const {
+      return refCount_.load(std::memory_order_relaxed) == 0;
+    }
+
+    /// Store a value and start the refcount at 1. After invocation, this
+    /// instance is occupied with a value, and the "nextFree" methods should
+    /// not be used until the value is released.
+    void emplace(HermesSandboxRuntimeImpl &runtime, u32 managedPointer) {
+      assert(isFree() && "Emplacing already occupied value");
+      refCount_.store(1, std::memory_order_relaxed);
+      managedPointer_ = managedPointer;
+      runtime_ = &runtime;
+    }
+
+    /// Get the next free element. Must not be called when this instance is
+    /// occupied with a value.
+    ManagedPointerHolder *getNextFree() {
+      assert(isFree() && "Free pointer unusable while occupied");
+      return nextFree_;
+    }
+
+    /// Set the next free element. Must not be called when this instance is
+    /// occupied with a value.
+    void setNextFree(ManagedPointerHolder *nextFree) {
+      assert(isFree() && "Free pointer unusable while occupied");
+      nextFree_ = nextFree;
+    }
+
+    u32 getManagedPointer() const {
+      assert(!isFree() && "Value not present");
+      return managedPointer_;
+    }
+
+    void invalidate() override {
+      dec();
+    }
+
+    void inc() {
+      // See comments in hermes_abi.cpp for why we use relaxed operations here.
+      auto oldCount = refCount_.fetch_add(1, std::memory_order_relaxed);
+      assert(oldCount && "Cannot resurrect a pointer");
+      assert(oldCount + 1 != 0 && "Ref count overflow");
+      (void)oldCount;
+    }
+
+    void dec() {
+      // See comments in hermes_abi.cpp for why we use relaxed operations here.
+      auto oldCount = refCount_.fetch_sub(1, std::memory_order_relaxed);
+      assert(oldCount > 0 && "Ref count underflow");
+      // TODO(T174477630): releasePointer can only be invoked from the JS thread
+      // since it involves calling back into the sandbox. This means that
+      // destroying a JSI Pointer created by the sandbox can only currently be
+      // done from the JS thread.
+      if (oldCount == 1)
+        sb::releasePointer(runtime_, managedPointer_);
+    }
+  };
+
   /// Implement GrowableBuffer for exposing to the sandbox.
   class GrowableBufferImpl : public SandboxGrowableBuffer {
    public:
@@ -832,8 +954,218 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
     }
   };
 
+  /// Convert the error code returned by the sandbox into a C++ exception.
+  [[noreturn]] void throwError(SandboxErrorCode err) {
+    if (err == SandboxErrorCodeJSError) {
+      StackAlloc<SandboxValue> resValue(this);
+      vt_.get_and_clear_js_error_value(this, resValue, srt_);
+      // We have to get and clear the error regardless of whether it is used.
+      auto errVal = intoJSIValue(*resValue);
+
+      // If we are already in the process of creating a JSError, it means that
+      // something in JSError's constructor is throwing. We cannot handle this
+      // gracefully, so bail.
+      if (activeJSError_)
+        throw JSINativeException("Error thrown while handling error.");
+
+      // Record the fact that we are in the process of creating a JSError.
+      SaveAndRestore s(activeJSError_);
+      activeJSError_ = true;
+      throw JSError(*this, std::move(errVal));
+    } else if (err == SandboxErrorCodeNativeException) {
+      auto buf = GrowableBufferImpl::create(
+          *const_cast<HermesSandboxRuntimeImpl *>(this));
+      vt_.get_and_clear_native_exception_message(this, srt_, buf);
+      auto msg = buf->getString(this);
+      GrowableBufferImpl::release(this, buf);
+      throw JSINativeException(std::move(msg));
+    }
+
+    // Sandbox threw an unrecognized error code, it may be compromised.
+    abort();
+  }
+
+  /// Define a series of helper functions to convert to/from the sandbox
+  /// representation to JSI. Note that as a rule, we deliberately accept the
+  /// parameter by value to force a copy onto the stack. Taking a copy makes it
+  /// safe to pass in values that are in the sandbox's memory, since that memory
+  /// may move.
+
+#define DECLARE_POINTER_CONVERSIONS(name)                             \
+  name intoJSI##name(Sandbox##name p) {                               \
+    return make<name>(&managedPointers_.add(*this, p.pointer));       \
+  }                                                                   \
+  name intoJSI##name(Sandbox##name##OrError p) {                      \
+    return intoJSI##name(unwrap(p));                                  \
+  }                                                                   \
+  Sandbox##name toSandbox##name(const name &p) const {                \
+    return sb::create##name(                                          \
+        static_cast<const ManagedPointerHolder *>(getPointerValue(p)) \
+            ->getManagedPointer());                                   \
+  }                                                                   \
+  Sandbox##name unwrap(Sandbox##name##OrError p) {                    \
+    if (sb::isError(p))                                               \
+      throwError(sb::getError(p));                                    \
+    return sb::get##name(p);                                          \
+  }
+  SANDBOX_POINTER_TYPES(DECLARE_POINTER_CONVERSIONS)
+#undef DECLARE_POINTER_CONVERSIONS
+
+  PropNameID cloneToJSIPropNameID(SandboxPropNameID name) {
+    return intoJSIPropNameID(
+        sb::createPropNameID(vt_.clone_propnameid(this, srt_, name.pointer)));
+  }
+  SandboxPropNameID cloneToSandboxPropNameID(const PropNameID &name) const {
+    auto mp = static_cast<const ManagedPointerHolder *>(getPointerValue(name))
+                  ->getManagedPointer();
+    return sb::createPropNameID(vt_.clone_propnameid(getMutMod(), srt_, mp));
+  }
+
+  void unwrap(SandboxVoidOrError v) {
+    if (sb::isError(v))
+      throwError(sb::getError(v));
+  }
+  bool unwrap(SandboxBoolOrError p) {
+    if (sb::isError(p))
+      throwError(sb::getError(p));
+    return sb::getBool(p);
+  }
+  u32 unwrap(SandboxUint8PtrOrError p) {
+    if (sb::isError(p))
+      throwError(sb::getError(p));
+    return sb::getUint8Ptr(p);
+  }
+  size_t unwrap(SandboxSizeTOrError p) {
+    if (sb::isError(p))
+      throwError(sb::getError(p));
+    return sb::getSizeT(p);
+  }
+
+  /// Take ownership of the given value \p v and wrap it in a jsi::Value that
+  /// will now manage its lifetime.
+  Value intoJSIValue(SandboxValue sv) {
+    switch (sv.kind) {
+      case SandboxValueKindUndefined:
+        return Value::undefined();
+      case SandboxValueKindNull:
+        return Value::null();
+      case SandboxValueKindBoolean:
+        return Value(sv.data.boolean);
+      case SandboxValueKindNumber:
+        return Value(sv.data.number);
+      case SandboxValueKindString:
+        return make<String>(
+            &managedPointers_.add(*this, sb::getPointerValue(sv)));
+      case SandboxValueKindObject:
+        return make<Object>(
+            &managedPointers_.add(*this, sb::getPointerValue(sv)));
+      case SandboxValueKindSymbol:
+        return make<Symbol>(
+            &managedPointers_.add(*this, sb::getPointerValue(sv)));
+      case SandboxValueKindBigInt:
+        return make<BigInt>(
+            &managedPointers_.add(*this, sb::getPointerValue(sv)));
+      default:
+        // Sandbox returned a value with an unknown kind, it may be compromised.
+        abort();
+    }
+  }
+
+  /// If \p sv is an error, re-throw it as a C++ exception, otherwise take
+  /// ownership of the value and wrap it in a jsi::Value.
+  Value intoJSIValue(SandboxValueOrError sv) {
+    if (sb::isError(sv))
+      throwError(sb::getError(sv));
+    return intoJSIValue(sb::getValue(sv));
+  }
+
+  /// Create a jsi::Value from the given SandboxValue without taking ownership
+  /// of it. This will clone any underlying pointers if needed.
+  Value cloneToJSIValue(SandboxValue v) {
+    switch (sb::getValueKind(v)) {
+      case SandboxValueKindUndefined:
+        return Value::undefined();
+      case SandboxValueKindNull:
+        return Value::null();
+      case SandboxValueKindBoolean:
+        return Value(sb::getBoolValue(v));
+      case SandboxValueKindNumber:
+        return Value(sb::getNumberValue(v));
+      case SandboxValueKindString:
+        return intoJSIString(SandboxString{
+            vt_.clone_string(this, srt_, sb::getStringValue(v).pointer)});
+      case SandboxValueKindObject:
+        return intoJSIObject(SandboxObject{
+            vt_.clone_object(this, srt_, sb::getObjectValue(v).pointer)});
+      case SandboxValueKindSymbol:
+        return intoJSISymbol(SandboxSymbol{
+            vt_.clone_symbol(this, srt_, sb::getSymbolValue(v).pointer)});
+      case SandboxValueKindBigInt:
+        return intoJSIBigInt(SandboxBigInt{
+            vt_.clone_bigint(this, srt_, sb::getBigIntValue(v).pointer)});
+      default:
+        // Sandbox returned a value with an unknown kind, it may be compromised.
+        abort();
+    }
+  }
+
+  /// Convert the given jsi::Value \p v to a SandboxValue. The SandboxValue will
+  /// be invalidated once the jsi::Value is released. This is useful when a
+  /// SandboxValue is only needed for a temporary duration that falls within the
+  /// lifetime of \p v.
+  static SandboxValue toSandboxValue(const Value &v) {
+    if (v.isUndefined())
+      return sb::createUndefinedValue();
+    if (v.isNull())
+      return sb::createNullValue();
+    if (v.isBool())
+      return sb::createBoolValue(v.getBool());
+    if (v.isNumber())
+      return sb::createNumberValue(v.getNumber());
+
+    u32 mp = static_cast<const ManagedPointerHolder *>(getPointerValue(v))
+                 ->getManagedPointer();
+    if (v.isString())
+      return sb::createStringValue(mp);
+    if (v.isObject())
+      return sb::createObjectValue(mp);
+    if (v.isSymbol())
+      return sb::createSymbolValue(mp);
+    if (v.isBigInt())
+      return sb::createBigIntValue(mp);
+
+    BUILTIN_UNREACHABLE;
+  }
+
+  /// Convert the given jsi::Value \p v to a SandboxValue. The resulting
+  /// SandboxValue will need to be explicitly released.
+  SandboxValue cloneToSandboxValue(const Value &v) {
+    if (v.isUndefined())
+      return sb::createUndefinedValue();
+    if (v.isNull())
+      return sb::createNullValue();
+    if (v.isBool())
+      return sb::createBoolValue(v.getBool());
+    if (v.isNumber())
+      return sb::createNumberValue(v.getNumber());
+
+    u32 mp = static_cast<const ManagedPointerHolder *>(getPointerValue(v))
+                 ->getManagedPointer();
+    if (v.isString())
+      return sb::createStringValue(vt_.clone_string(this, srt_, mp));
+    if (v.isObject())
+      return sb::createObjectValue(vt_.clone_object(this, srt_, mp));
+    if (v.isSymbol())
+      return sb::createSymbolValue(vt_.clone_symbol(this, srt_, mp));
+    if (v.isBigInt())
+      return sb::createBigIntValue(vt_.clone_bigint(this, srt_, mp));
+
+    BUILTIN_UNREACHABLE;
+  }
+
  public:
-  HermesSandboxRuntimeImpl() : growableBufferVTable_(this) {
+  HermesSandboxRuntimeImpl()
+      : growableBufferVTable_(this), managedPointers_(0.5, 0.5) {
     // Grow the function table for the vtable functions we need to register.
     wasm_rt_funcref_table_t &table = w2c_0x5F_indirect_function_table;
     static constexpr size_t kNumVTableFunctions = 1;
@@ -871,6 +1203,7 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
     // Destroy the context first, so any finalizers that may reference vtables
     // or ManagedPointers will run.
     vt_.release(this, srt_);
+    assert(managedPointers_.sizeForTests() == 0 && "Dangling references");
     assert(numAllocs_ == 0 && "Dangling heap allocations.");
   }
 
