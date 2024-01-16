@@ -40,8 +40,7 @@ async function main() {
       type: 'boolean',
     })
     .option('strip-types', {
-      describe:
-        'Strip flow types without lowering',
+      describe: 'Strip flow types without lowering',
       default: false,
       type: 'boolean',
     })
@@ -61,8 +60,8 @@ async function main() {
     .wrap(yargs.terminalWidth())
     .parse();
 
-  const rootPath = cliYargs.root;
-  const outPath = cliYargs.out;
+  const rootPath = path.resolve(cliYargs.root);
+  const outPath = path.resolve(cliYargs.out);
   const createES5Bundle = cliYargs.es5;
   const stripTypes = cliYargs.stripTypes;
   const entrypoints: Array<string> = cliYargs._;
@@ -92,6 +91,8 @@ async function main() {
     },
   };
 
+  const outPathDir = path.dirname(outPath);
+
   // Merge files into single bundle AST.
   for (const file of bundle) {
     const {ast} = await transformJSX({
@@ -103,7 +104,7 @@ async function main() {
     const babelAST = hermesASTToBabel(ast, file.file);
 
     bundleAST.program.body.push(...babelAST.program.body);
-    fileMapping[file.file] = file.code;
+    fileMapping[path.relative(outPathDir, file.file)] = file.code;
   }
 
   // Add bundle docblock comment
