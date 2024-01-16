@@ -10,16 +10,16 @@
  * Entrypoints:
  *   index.js
  */
-/* file: invariant.js */
-function invariant$default(condition: boolean, format: string): void {
+/* file: packages/react/invariant.js */
+function react_invariant$default(condition: boolean, format: string): void {
   'inline';
 
   if (!condition) {
     throw new Error(format);
   }
 }
-/* file: CHECKED_CAST.js */
-function CHECKED_CAST$default<T>(value: mixed): T {
+/* file: packages/sh/CHECKED_CAST.js */
+function sh_CHECKED_CAST$default<T>(value: mixed): T {
   'inline';
 
   return (value: any);
@@ -31,13 +31,13 @@ function microtask$drainMicrotaskQueue(): void {
     microtask$INTERNAL$microtaskQueue[i]();
     microtask$INTERNAL$microtaskQueue[i] = undefined;
   }
-  microtask$INTERNAL$microtaskQueue = [];
+  sh_microtask$INTERNAL$microtaskQueue = [];
 }
-function microtask$queueMicrotask(callback: () => void): void {
-  microtask$INTERNAL$microtaskQueue.push(callback);
+function sh_microtask$queueMicrotask(callback: () => void): void {
+  sh_microtask$INTERNAL$microtaskQueue.push(callback);
 }
-/* file: React.js */
-function React$INTERNAL$fastArrayJoin(arr: string[], sep: string): string {
+/* file: packages/react/index.js */
+function react_index$INTERNAL$fastArrayJoin(arr: string[], sep: string): string {
   let result: string = '';
   for (let i: number = 0, e = arr.length; i < e; ++i) {
     if (i !== 0) result += sep;
@@ -45,14 +45,14 @@ function React$INTERNAL$fastArrayJoin(arr: string[], sep: string): string {
   }
   return result;
 }
-function React$INTERNAL$padString(str: string, len: number): string {
+function react_index$INTERNAL$padString(str: string, len: number): string {
   let result: string = '';
   for (let i: number = 0; i < len; i++) {
     result += str;
   }
   return result;
 }
-type React$React$Node = string | React$INTERNAL$React$Element<React$INTERNAL$React$ElementType>;
+type react_index$React$Node = string | react_index$INTERNAL$React$Element<react_index$INTERNAL$React$ElementType>;
 /**
  * The type of an element in React. A React element may be a:
  *
@@ -61,7 +61,7 @@ type React$React$Node = string | React$INTERNAL$React$Element<React$INTERNAL$Rea
  * - React component. See `ComponentType` for more information about its
  *   different variants.
  */
-type React$INTERNAL$React$ElementType = string | React$INTERNAL$Component /* TODO: React$AbstractComponent<empty, mixed> */;
+type react_index$INTERNAL$React$ElementType = string | react_index$INTERNAL$Component /* TODO: React$AbstractComponent<empty, mixed> */;
 /**
  * Type of a React element. React elements are commonly created using JSX
  * literals, which desugar to React.createElement calls (see below).
@@ -72,102 +72,102 @@ type React$INTERNAL$React$ElementType = string | React$INTERNAL$Component /* TOD
 //   key: React$Key | null,
 //   ref: any,
 // |};
-class React$INTERNAL$React$Element<ElementType> {
+class react_index$INTERNAL$React$Element<ElementType> {
   type: ElementType;
-  props: React$Props;
-  key: React$INTERNAL$React$Key | null;
+  props: react_index$Props;
+  key: react_index$INTERNAL$React$Key | null;
   ref: any;
-  constructor(type: ElementType, props: React$Props, key: React$INTERNAL$React$Key | null, ref: any) {
+  constructor(type: ElementType, props: react_index$Props, key: react_index$INTERNAL$React$Key | null, ref: any) {
     this.type = type;
     this.props = props;
     this.key = key;
     this.ref = ref;
   }
 }
-type React$React$MixedElement = React$INTERNAL$React$Element<React$INTERNAL$React$ElementType>;
+type react_index$React$MixedElement = react_index$INTERNAL$React$Element<react_index$INTERNAL$React$ElementType>;
 /**
  * The type of the key that React uses to determine where items in a new list
  * have moved.
  */
-type React$INTERNAL$React$Key = string | number;
+type react_index$INTERNAL$React$Key = string | number;
 /* eslint-disable lint/strictly-null, lint/react-state-props-mutation, lint/flow-react-element */
 
 /**
  * The current root
  */
-let React$INTERNAL$workInProgressRoot: React$INTERNAL$Root | null = null;
+let react_index$INTERNAL$workInProgressRoot: react_index$INTERNAL$Root | null = null;
 /**
  * The currently rendering fiber. Only set when a component is being rendered.
  */
-let React$INTERNAL$workInProgressFiber: React$INTERNAL$Fiber | null = null;
+let react_index$INTERNAL$workInProgressFiber: react_index$INTERNAL$Fiber | null = null;
 /**
  * The previous state hook, or null if no state hook has been evaluated yet.
  */
-let React$INTERNAL$workInProgressState: React$INTERNAL$State<mixed> | null = null;
+let react_index$INTERNAL$workInProgressState: react_index$INTERNAL$State<mixed> | null = null;
 /**
  * Queue of updates triggered *during* render.
  */
-const React$INTERNAL$renderPhaseUpdateQueue: React$INTERNAL$Update<mixed>[] = [];
+const react_index$INTERNAL$renderPhaseUpdateQueue: react_index$INTERNAL$Update<mixed>[] = [];
 /**
  * Public API to create a new "root", this is where React attaches rendering to a host element.
  * In our case we don't actually have a real host, and currently only "render" to strings.
  */
-function React$createRoot(): React$INTERNAL$Root {
-  return new React$INTERNAL$Root();
+function react_index$createRoot(): react_index$INTERNAL$Root {
+  return new react_index$INTERNAL$Root();
 }
 /**
  * Hook to create (on initial render) or access (on update) a state, using the index of the useState
  * call within the component as the identity. Thus conditionally calling this API can cause state to
  * be lost.
  */
-function React$useState<T>(
+function react_index$useState<T>(
 /**
  * Initial value of the state
  */
 initial: T): [T, (value: T | ((prev: T) => T)) => void] {
-  const root: React$INTERNAL$Root = CHECKED_CAST$default<React$INTERNAL$Root>(React$INTERNAL$workInProgressRoot);
-  const fiber: React$INTERNAL$Fiber = CHECKED_CAST$default<React$INTERNAL$Fiber>(React$INTERNAL$workInProgressFiber);
-  invariant$default(fiber !== null && root !== null, 'useState() called outside of render');
-  let state: React$INTERNAL$State<T>;
-  const _workInProgressState: React$INTERNAL$State<mixed> | null = React$INTERNAL$workInProgressState;
+  const root: react_index$INTERNAL$Root = sh_CHECKED_CAST$default<react_index$INTERNAL$Root>(react_index$INTERNAL$workInProgressRoot);
+  const fiber: react_index$INTERNAL$Fiber = sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(react_index$INTERNAL$workInProgressFiber);
+  react_invariant$default(fiber !== null && root !== null, 'useState() called outside of render');
+  let state: react_index$INTERNAL$State<T>;
+  const _workInProgressState: react_index$INTERNAL$State<mixed> | null = react_index$INTERNAL$workInProgressState;
   if (_workInProgressState === null) {
     // Get or initialize the first state on the fiber
     let nextState = fiber.state;
     if (nextState === null) {
-      nextState = new React$INTERNAL$State<mixed>(initial);
+      nextState = new react_index$INTERNAL$State<mixed>(initial);
       fiber.state = nextState;
     }
     // NOTE: in case of a re-render we assume that the hook types match but
     // can't statically prove this
-    state = CHECKED_CAST$default<React$INTERNAL$State<T>>(nextState);
+    state = sh_CHECKED_CAST$default<react_index$INTERNAL$State<T>>(nextState);
   } else {
-    let nextState = CHECKED_CAST$default<React$INTERNAL$State<mixed>>(_workInProgressState).next;
+    let nextState = sh_CHECKED_CAST$default<react_index$INTERNAL$State<mixed>>(_workInProgressState).next;
     if (nextState === null) {
-      nextState = new React$INTERNAL$State<mixed>(initial);
-      CHECKED_CAST$default<React$INTERNAL$State<mixed>>(_workInProgressState).next = nextState;
+      nextState = new react_index$INTERNAL$State<mixed>(initial);
+      sh_CHECKED_CAST$default<react_index$INTERNAL$State<mixed>>(_workInProgressState).next = nextState;
     }
     // NOTE: in case of a re-render we assume that the hook types match but
     // can't statically prove this
-    state = CHECKED_CAST$default<React$INTERNAL$State<T>>(nextState);
+    state = sh_CHECKED_CAST$default<react_index$INTERNAL$State<T>>(nextState);
   }
   // NOTE: this should just work because of subtying, State<T> should be subtype of State<mixed>
-  React$INTERNAL$workInProgressState = CHECKED_CAST$default<React$INTERNAL$State<mixed>>(state);
+  react_index$INTERNAL$workInProgressState = sh_CHECKED_CAST$default<react_index$INTERNAL$State<mixed>>(state);
   return [
   // Untyped check that the existing state value has the correct type,
   // This is safe if components follow the rules of hooks
-  CHECKED_CAST$default<T>(state.value), (updater: T | ((prev: T) => T)): void => {
-    const update = new React$INTERNAL$Update<mixed>(fiber, CHECKED_CAST$default<React$INTERNAL$State<mixed>>(state), CHECKED_CAST$default<T | ((prev: T) => T)>(updater));
-    if (React$INTERNAL$workInProgressFiber !== null) {
+  sh_CHECKED_CAST$default<T>(state.value), (updater: T | ((prev: T) => T)): void => {
+    const update = new react_index$INTERNAL$Update<mixed>(fiber, sh_CHECKED_CAST$default<react_index$INTERNAL$State<mixed>>(state), sh_CHECKED_CAST$default<T | ((prev: T) => T)>(updater));
+    if (react_index$INTERNAL$workInProgressFiber !== null) {
       // called during render
-      React$INTERNAL$renderPhaseUpdateQueue.push(update);
+      react_index$INTERNAL$renderPhaseUpdateQueue.push(update);
     } else {
       root.notify(update);
     }
   }];
 }
-const React$INTERNAL$callbacks = new Map();
-function React$callOnClickOrChange(id: string, event: any): void {
-  const callback = React$INTERNAL$callbacks.get(id);
+const react_index$INTERNAL$callbacks = new Map();
+function react_index$callOnClickOrChange(id: string, event: any): void {
+  const callback = react_index$INTERNAL$callbacks.get(id);
   if (callback == null) {
     throw new Error('No callback registered with id: ' + id);
   }
@@ -188,11 +188,11 @@ function React$callOnClickOrChange(id: string, event: any): void {
 /**
  * A queued state update.
  */
-class React$INTERNAL$Update<T> {
-  fiber: React$INTERNAL$Fiber;
-  state: React$INTERNAL$State<T>;
+class react_index$INTERNAL$Update<T> {
+  fiber: react_index$INTERNAL$Fiber;
+  state: react_index$INTERNAL$State<T>;
   updater: T | ((prev: T) => T);
-  constructor(fiber: React$INTERNAL$Fiber, state: React$INTERNAL$State<T>, updater: T | ((prev: T) => T)) {
+  constructor(fiber: react_index$INTERNAL$Fiber, state: react_index$INTERNAL$State<T>, updater: T | ((prev: T) => T)) {
     this.fiber = fiber;
     this.state = state;
     this.updater = updater;
@@ -204,64 +204,64 @@ class React$INTERNAL$Update<T> {
     if (typeof updater === 'function') {
       // NOTE: The type of Updater<T> is meant to expresss `T (not function) | T (function of T => T)`
       // thus the fact that updater is a function here menas its a function of T => T.
-      const fn = CHECKED_CAST$default<(prev: T) => T>(updater);
+      const fn = sh_CHECKED_CAST$default<(prev: T) => T>(updater);
       value = fn(state.value);
     } else {
       // NOTE: The type of Updater<T> is meant to expresss `T (not function) | T (function of T => T)`
       // thus the fact that updater is *not* a function here means it is a T
-      value = CHECKED_CAST$default<T>(updater);
+      value = sh_CHECKED_CAST$default<T>(updater);
     }
     const changed = !Object.is(state.value, value);
     state.value = value;
     return changed;
   }
 }
-class React$INTERNAL$Root {
-  root: React$INTERNAL$Fiber | null;
-  element: React$React$MixedElement | null;
-  updateQueue: React$INTERNAL$Update<mixed>[];
+class react_index$INTERNAL$Root {
+  root: react_index$INTERNAL$Fiber | null;
+  element: react_index$React$MixedElement | null;
+  updateQueue: react_index$INTERNAL$Update<mixed>[];
   constructor() {
     this.root = null;
     this.element = null;
-    this.updateQueue = ([]: React$INTERNAL$Update<mixed>[]);
+    this.updateQueue = ([]: react_index$INTERNAL$Update<mixed>[]);
   }
-  notify(update: React$INTERNAL$Update<mixed>): void {
+  notify(update: react_index$INTERNAL$Update<mixed>): void {
     this.updateQueue.push(update);
     if (this.updateQueue.length === 1) {
-      microtask$queueMicrotask((): void => {
+      sh_microtask$queueMicrotask((): void => {
         const element = this.element;
-        invariant$default(element !== null, 'Expected an element to be set after rendering');
-        this.doWork(CHECKED_CAST$default<React$React$MixedElement>(element));
+        react_invariant$default(element !== null, 'Expected an element to be set after rendering');
+        this.doWork(sh_CHECKED_CAST$default<react_index$React$MixedElement>(element));
       });
     }
   }
-  render(element: React$React$MixedElement): string {
-    invariant$default(React$INTERNAL$workInProgressFiber === null && React$INTERNAL$workInProgressState === null, 'Cannot render, an existing render is in progress');
+  render(element: react_index$React$MixedElement): string {
+    react_invariant$default(react_index$INTERNAL$workInProgressFiber === null && react_index$INTERNAL$workInProgressState === null, 'Cannot render, an existing render is in progress');
     const hasChanges = element !== this.element;
     this.element = element;
     if (hasChanges) {
       this.doWork(element);
     }
-    invariant$default(this.root !== null, 'Expected root to be rendered');
-    const root: React$INTERNAL$Fiber = CHECKED_CAST$default<React$INTERNAL$Fiber>(this.root);
+    react_invariant$default(this.root !== null, 'Expected root to be rendered');
+    const root: react_index$INTERNAL$Fiber = sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(this.root);
     const output: string[] = [];
     this.printFiber(root, output, 0);
     // return output.join('');
-    return React$INTERNAL$fastArrayJoin(output, '\n');
+    return react_index$INTERNAL$fastArrayJoin(output, '\n');
   }
-  doWork(element: React$React$MixedElement): void {
+  doWork(element: react_index$React$MixedElement): void {
     let mustRender = this.root === null;
     for (const update of this.updateQueue) {
       mustRender = update.run() || mustRender;
     }
-    this.updateQueue = ([]: React$INTERNAL$Update<mixed>[]);
+    this.updateQueue = ([]: react_index$INTERNAL$Update<mixed>[]);
     if (!mustRender) {
       return;
     }
     // Visit the tree in pre-order, rendering each node
     // and then processing its children
     // eslint-disable-next-line consistent-this
-    React$INTERNAL$workInProgressRoot = this;
+    react_index$INTERNAL$workInProgressRoot = this;
     let fiber = this.root;
     if (fiber === null) {
       fiber = this.mountFiber(element, null);
@@ -269,7 +269,7 @@ class React$INTERNAL$Root {
     }
     while (fiber !== null) {
       // Render the fiber, which creates child/sibling nodes
-      let fiber2: React$INTERNAL$Fiber = CHECKED_CAST$default<React$INTERNAL$Fiber>(fiber);
+      let fiber2: react_index$INTERNAL$Fiber = sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(fiber);
       this.renderFiber(fiber2);
       // advance to the next fiber
       if (fiber2.child !== null) {
@@ -278,22 +278,22 @@ class React$INTERNAL$Root {
         fiber = fiber2.sibling;
       } else {
         fiber = fiber2.parent;
-        while (fiber !== null && CHECKED_CAST$default<React$INTERNAL$Fiber>(fiber).sibling === null) {
-          fiber = CHECKED_CAST$default<React$INTERNAL$Fiber>(fiber).parent;
+        while (fiber !== null && sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(fiber).sibling === null) {
+          fiber = sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(fiber).parent;
         }
         if (fiber !== null) {
-          fiber = CHECKED_CAST$default<React$INTERNAL$Fiber>(fiber).sibling;
+          fiber = sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(fiber).sibling;
         }
       }
     }
-    React$INTERNAL$workInProgressRoot = null;
+    react_index$INTERNAL$workInProgressRoot = null;
   }
-  printFiber(fiber: React$INTERNAL$Fiber, out: string[], level: number): void {
+  printFiber(fiber: react_index$INTERNAL$Fiber, out: string[], level: number): void {
     switch (fiber.type.kind) {
       case 'host':
         {
-          const tag = CHECKED_CAST$default<React$INTERNAL$FiberTypeHost>(fiber.type).tag;
-          const padStr = React$INTERNAL$padString(' ', level);
+          const tag = sh_CHECKED_CAST$default<react_index$INTERNAL$FiberTypeHost>(fiber.type).tag;
+          const padStr = react_index$INTERNAL$padString(' ', level);
           let str = padStr + '<' + tag;
           for (const [propName, propValue] of Object.entries(fiber.props)) {
             if (typeof propValue === 'function') {
@@ -309,9 +309,9 @@ class React$INTERNAL$Root {
         }
       case 'text':
         {
-          const text = CHECKED_CAST$default<React$INTERNAL$FiberTypeText>(fiber.type).text;
+          const text = sh_CHECKED_CAST$default<react_index$INTERNAL$FiberTypeText>(fiber.type).text;
           if (text !== '') {
-            out.push(React$INTERNAL$padString(' ', level) + text);
+            out.push(react_index$INTERNAL$padString(' ', level) + text);
           }
           break;
         }
@@ -322,33 +322,33 @@ class React$INTERNAL$Root {
         }
     }
   }
-  printChildren(fiber: React$INTERNAL$Fiber, out: string[], level: number): void {
-    let current: React$INTERNAL$Fiber | null = fiber.child;
+  printChildren(fiber: react_index$INTERNAL$Fiber, out: string[], level: number): void {
+    let current: react_index$INTERNAL$Fiber | null = fiber.child;
     while (current !== null) {
-      this.printFiber(CHECKED_CAST$default<React$INTERNAL$Fiber>(current), out, level);
-      current = CHECKED_CAST$default<React$INTERNAL$Fiber>(current).sibling;
+      this.printFiber(sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(current), out, level);
+      current = sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(current).sibling;
     }
   }
-  renderFiber(fiber: React$INTERNAL$Fiber): void {
+  renderFiber(fiber: react_index$INTERNAL$Fiber): void {
     try {
-      React$INTERNAL$workInProgressFiber = fiber;
-      React$INTERNAL$workInProgressState = null;
+      react_index$INTERNAL$workInProgressFiber = fiber;
+      react_index$INTERNAL$workInProgressState = null;
       switch (fiber.type.kind) {
         case 'component':
           {
-            invariant$default(React$INTERNAL$renderPhaseUpdateQueue.length === 0, 'Expected no queued render updates');
-            const render: (props: React$Props) => React$React$MixedElement = CHECKED_CAST$default<React$INTERNAL$FiberTypeComponent>(fiber.type).component;
+            react_invariant$default(react_index$INTERNAL$renderPhaseUpdateQueue.length === 0, 'Expected no queued render updates');
+            const render: (props: react_index$Props) => react_index$React$MixedElement = sh_CHECKED_CAST$default<react_index$INTERNAL$FiberTypeComponent>(fiber.type).component;
             let element = render(fiber.props);
             let iterationCount: number = 0;
-            while (React$INTERNAL$renderPhaseUpdateQueue.length !== 0) {
+            while (react_index$INTERNAL$renderPhaseUpdateQueue.length !== 0) {
               iterationCount++;
-              invariant$default(iterationCount < 1000, 'Possible infinite loop with setState during render');
+              react_invariant$default(iterationCount < 1000, 'Possible infinite loop with setState during render');
               let hasChanges = false;
-              for (const update of React$INTERNAL$renderPhaseUpdateQueue) {
-                invariant$default(update.fiber === fiber, 'setState() during render is currently only supported when updating the component ' + 'being rendered. Setting state from another component is not supported.');
+              for (const update of react_index$INTERNAL$renderPhaseUpdateQueue) {
+                react_invariant$default(update.fiber === fiber, 'setState() during render is currently only supported when updating the component ' + 'being rendered. Setting state from another component is not supported.');
                 hasChanges = update.run() || hasChanges;
               }
-              React$INTERNAL$renderPhaseUpdateQueue.length = 0;
+              react_index$INTERNAL$renderPhaseUpdateQueue.length = 0;
               if (!hasChanges) {
                 break;
               }
@@ -363,11 +363,11 @@ class React$INTERNAL$Root {
             if (id != null) {
               const onClick = fiber.props.onClick;
               if (onClick != null) {
-                React$INTERNAL$callbacks.set(id, onClick);
+                react_index$INTERNAL$callbacks.set(id, onClick);
               }
               const onChange = fiber.props.onChange;
               if (onChange != null) {
-                React$INTERNAL$callbacks.set(id, onChange);
+                react_index$INTERNAL$callbacks.set(id, onChange);
               }
             }
             break;
@@ -379,43 +379,43 @@ class React$INTERNAL$Root {
           }
       }
     } finally {
-      React$INTERNAL$workInProgressFiber = null;
-      React$INTERNAL$workInProgressState = null;
+      react_index$INTERNAL$workInProgressFiber = null;
+      react_index$INTERNAL$workInProgressState = null;
     }
   }
-  mountFiber(elementOrString: React$React$Node, parent: React$INTERNAL$Fiber | null): React$INTERNAL$Fiber {
-    let fiber: React$INTERNAL$Fiber;
+  mountFiber(elementOrString: react_index$React$Node, parent: react_index$INTERNAL$Fiber | null): react_index$INTERNAL$Fiber {
+    let fiber: react_index$INTERNAL$Fiber;
     if (typeof elementOrString === 'object') {
-      const element = CHECKED_CAST$default<React$React$MixedElement>(elementOrString);
+      const element = sh_CHECKED_CAST$default<react_index$React$MixedElement>(elementOrString);
       if (typeof element.type === 'function') {
-        const component: React$INTERNAL$Component = CHECKED_CAST$default<React$INTERNAL$Component>(element.type);
+        const component: react_index$INTERNAL$Component = sh_CHECKED_CAST$default<react_index$INTERNAL$Component>(element.type);
         // const type: FiberType = {
         //   kind: 'component',
         //   component,
         // };
-        const type: React$INTERNAL$FiberType = new React$INTERNAL$FiberTypeComponent(component);
-        fiber = new React$INTERNAL$Fiber(type, (element.props: any), element.key);
+        const type: react_index$INTERNAL$FiberType = new react_index$INTERNAL$FiberTypeComponent(component);
+        fiber = new react_index$INTERNAL$Fiber(type, (element.props: any), element.key);
       } else {
-        invariant$default(typeof element.type === 'string', 'Expected a host component name such as "div" or "span", got ' + CHECKED_CAST$default<string>(element.type));
+        react_invariant$default(typeof element.type === 'string', 'Expected a host component name such as "div" or "span", got ' + sh_CHECKED_CAST$default<string>(element.type));
         // const type: FiberType = {
         //   kind: 'host',
         //   tag: element.type,
         // };
-        const type: React$INTERNAL$FiberType = new React$INTERNAL$FiberTypeHost(CHECKED_CAST$default<string>(element.type));
-        invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
+        const type: react_index$INTERNAL$FiberType = new react_index$INTERNAL$FiberTypeHost(sh_CHECKED_CAST$default<string>(element.type));
+        react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
         // const {children, ...props} = element.props;
         const children = element.props.children;
         const props = {
           ...element.props
         };
         delete props.children;
-        fiber = new React$INTERNAL$Fiber(type, props, element.key);
+        fiber = new react_index$INTERNAL$Fiber(type, props, element.key);
         if (Array.isArray(children)) {
-          let prev: React$INTERNAL$Fiber | null = null;
-          for (const childElement of CHECKED_CAST$default<any[]>(children)) {
-            const child = this.mountFiber(CHECKED_CAST$default<React$React$Node>(childElement), fiber);
+          let prev: react_index$INTERNAL$Fiber | null = null;
+          for (const childElement of sh_CHECKED_CAST$default<any[]>(children)) {
+            const child = this.mountFiber(sh_CHECKED_CAST$default<react_index$React$Node>(childElement), fiber);
             if (prev !== null) {
-              CHECKED_CAST$default<React$INTERNAL$Fiber>(prev).sibling = child;
+              sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(prev).sibling = child;
             } else {
               // set parent to point to first child
               fiber.child = child;
@@ -423,7 +423,7 @@ class React$INTERNAL$Root {
             prev = child;
           }
         } else if (typeof children === 'string') {
-          const child = new React$INTERNAL$Fiber({
+          const child = new react_index$INTERNAL$Fiber({
             kind: 'text',
             text: children
           }, {}, null);
@@ -435,25 +435,25 @@ class React$INTERNAL$Root {
         }
       }
     } else {
-      invariant$default(typeof elementOrString === 'string', 'Expected a string');
+      react_invariant$default(typeof elementOrString === 'string', 'Expected a string');
       // const type: FiberType = {
       //   kind: 'text',
       //   text: element,
       // };
-      const type = new React$INTERNAL$FiberTypeText(CHECKED_CAST$default<string>(elementOrString));
-      fiber = new React$INTERNAL$Fiber(type, {}, null);
+      const type = new react_index$INTERNAL$FiberTypeText(sh_CHECKED_CAST$default<string>(elementOrString));
+      fiber = new react_index$INTERNAL$Fiber(type, {}, null);
     }
     fiber.parent = parent;
     return fiber;
   }
-  reconcileFiber(parent: React$INTERNAL$Fiber, prevChild: React$INTERNAL$Fiber | null, element: React$React$MixedElement): React$INTERNAL$Fiber {
-    if (prevChild !== null && CHECKED_CAST$default<React$INTERNAL$Fiber>(prevChild).type === element.type) {
-      let prevChild: React$INTERNAL$Fiber = CHECKED_CAST$default<React$INTERNAL$Fiber>(prevChild);
+  reconcileFiber(parent: react_index$INTERNAL$Fiber, prevChild: react_index$INTERNAL$Fiber | null, element: react_index$React$MixedElement): react_index$INTERNAL$Fiber {
+    if (prevChild !== null && sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(prevChild).type === element.type) {
+      let prevChild: react_index$INTERNAL$Fiber = sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(prevChild);
       // Only host nodes have to be reconciled: otherwise this is a function component
       // and its children will be reconciled when they are later emitted in a host
       // position (ie as a direct result of render)
       if (prevChild.type.kind === 'host') {
-        invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
+        react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
         // const {children, ...props} = element.props;
         const children = element.props.children;
         const props = {
@@ -463,7 +463,7 @@ class React$INTERNAL$Root {
         prevChild.props = props;
         this.reconcileChildren(prevChild, (children: any));
       } else if (prevChild.type.kind === 'component') {
-        invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
+        react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
         prevChild.props = element.props;
       }
       return prevChild;
@@ -472,68 +472,68 @@ class React$INTERNAL$Root {
       return child;
     }
   }
-  reconcileChildren(parent: React$INTERNAL$Fiber, children: React$React$MixedElement[] | React$React$MixedElement | string | null | void): void {
-    const prevChild: React$INTERNAL$Fiber | null = parent.child;
+  reconcileChildren(parent: react_index$INTERNAL$Fiber, children: react_index$React$MixedElement[] | react_index$React$MixedElement | string | null | void): void {
+    const prevChild: react_index$INTERNAL$Fiber | null = parent.child;
     if (Array.isArray(children)) {
-      let childrenArray = CHECKED_CAST$default<React$React$MixedElement[]>(children);
+      let childrenArray = sh_CHECKED_CAST$default<react_index$React$MixedElement[]>(children);
       // Fast-path for empty and single-element arrays
       if (childrenArray.length === 0) {
         parent.child = null;
       } else if (childrenArray.length === 1) {
         parent.child = this.reconcileFiber(parent, prevChild, childrenArray[0]);
-        CHECKED_CAST$default<React$INTERNAL$Fiber>(parent.child).sibling = null;
+        sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(parent.child).sibling = null;
       } else {
         this.reconcileMultipleChildren(parent, childrenArray);
       }
     } else if (typeof children === 'string') {
-      if (prevChild === null || CHECKED_CAST$default<React$INTERNAL$Fiber>(prevChild).type.kind !== 'text') {
-        const child = new React$INTERNAL$Fiber({
+      if (prevChild === null || sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(prevChild).type.kind !== 'text') {
+        const child = new react_index$INTERNAL$Fiber({
           kind: 'text',
           text: children
         }, {}, null);
         parent.child = child;
       } else {
-        CHECKED_CAST$default<React$INTERNAL$FiberTypeText>(CHECKED_CAST$default<React$INTERNAL$Fiber>(prevChild).type).text = CHECKED_CAST$default<string>(children);
+        sh_CHECKED_CAST$default<react_index$INTERNAL$FiberTypeText>(sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(prevChild).type).text = sh_CHECKED_CAST$default<string>(children);
       }
     } else if (children != null) {
-      parent.child = this.reconcileFiber(parent, prevChild, CHECKED_CAST$default<React$React$MixedElement>(children));
-      CHECKED_CAST$default<React$INTERNAL$Fiber>(parent.child).sibling = null;
+      parent.child = this.reconcileFiber(parent, prevChild, sh_CHECKED_CAST$default<react_index$React$MixedElement>(children));
+      sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(parent.child).sibling = null;
     } else {
       parent.child = null;
       if (prevChild !== null) {
-        CHECKED_CAST$default<React$INTERNAL$Fiber>(prevChild).parent = null;
+        sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(prevChild).parent = null;
       }
     }
   }
-  reconcileMultipleChildren(parent: React$INTERNAL$Fiber, children: React$React$MixedElement[]): void {
-    invariant$default(children.length > 1, 'Expected children to have multiple elements');
+  reconcileMultipleChildren(parent: react_index$INTERNAL$Fiber, children: react_index$React$MixedElement[]): void {
+    react_invariant$default(children.length > 1, 'Expected children to have multiple elements');
     // map existing children by key to make subsequent lookup O(log n)
     const keyedChildren: any = new Map();
-    let current: React$INTERNAL$Fiber | null = parent.child;
+    let current: react_index$INTERNAL$Fiber | null = parent.child;
     while (current !== null) {
-      if (CHECKED_CAST$default<React$INTERNAL$Fiber>(current).key !== null) {
-        keyedChildren.set(CHECKED_CAST$default<React$INTERNAL$Fiber>(current).key, current);
+      if (sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(current).key !== null) {
+        keyedChildren.set(sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(current).key, current);
       }
-      current = CHECKED_CAST$default<React$INTERNAL$Fiber>(current).sibling;
+      current = sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(current).sibling;
     }
-    let prev: React$INTERNAL$Fiber | null = null; // previous fiber at this key/index
-    let prevByIndex: React$INTERNAL$Fiber | null = parent.child; // keep track of prev fiber at this index
+    let prev: react_index$INTERNAL$Fiber | null = null; // previous fiber at this key/index
+    let prevByIndex: react_index$INTERNAL$Fiber | null = parent.child; // keep track of prev fiber at this index
     for (const childElement of children) {
       const prevFiber = (childElement.key != null ? keyedChildren.get(childElement.key) : null) ?? prevByIndex;
-      let child: React$INTERNAL$Fiber;
+      let child: react_index$INTERNAL$Fiber;
       if (prevFiber != null) {
         child = this.reconcileFiber(parent, prevFiber, childElement);
       } else {
         child = this.mountFiber(childElement, parent);
       }
       if (prev !== null) {
-        CHECKED_CAST$default<React$INTERNAL$Fiber>(prev).sibling = child;
+        sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(prev).sibling = child;
       } else {
         // set parent to point to first child
         parent.child = child;
       }
       prev = child;
-      prevByIndex = prevByIndex !== null ? CHECKED_CAST$default<React$INTERNAL$Fiber>(prevByIndex).sibling : null;
+      prevByIndex = prevByIndex !== null ? sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(prevByIndex).sibling : null;
     }
   }
 }
@@ -543,7 +543,7 @@ class React$INTERNAL$Root {
  * - Host stores the name of the host component, ie "div"
  * - Text stores the text itself.
  */
-type React$INTERNAL$Component = (props: React$Props) => React$React$MixedElement;
+type react_index$INTERNAL$Component = (props: react_index$Props) => react_index$React$MixedElement;
 // type FiberType =
 //   | {
 //       kind: 'component',
@@ -558,27 +558,27 @@ type React$INTERNAL$Component = (props: React$Props) => React$React$MixedElement
 //       text: string,
 //     };
 
-class React$INTERNAL$FiberType {
+class react_index$INTERNAL$FiberType {
   kind: string;
   constructor(kind: string) {
     this.kind = kind;
   }
 }
-class React$INTERNAL$FiberTypeComponent extends React$INTERNAL$FiberType {
-  component: React$INTERNAL$Component;
-  constructor(component: React$INTERNAL$Component) {
+class react_index$INTERNAL$FiberTypeComponent extends react_index$INTERNAL$FiberType {
+  component: react_index$INTERNAL$Component;
+  constructor(component: react_index$INTERNAL$Component) {
     super('component');
     this.component = component;
   }
 }
-class React$INTERNAL$FiberTypeHost extends React$INTERNAL$FiberType {
+class react_index$INTERNAL$FiberTypeHost extends react_index$INTERNAL$FiberType {
   tag: string;
   constructor(tag: string) {
     super('host');
     this.tag = tag;
   }
 }
-class React$INTERNAL$FiberTypeText extends React$INTERNAL$FiberType {
+class react_index$INTERNAL$FiberTypeText extends react_index$INTERNAL$FiberType {
   text: string;
   constructor(text: string) {
     super('text');
@@ -590,14 +590,14 @@ class React$INTERNAL$FiberTypeText extends React$INTERNAL$FiberType {
  * the framework only looks at the identity of prop values and does not otherwise make any
  * assumptions about which props may exist and what their types are.
  */
-type React$Props = any;
+type react_index$Props = any;
 /**
  * Data storage for the useState() hook
  */
-class React$INTERNAL$State<T> {
+class react_index$INTERNAL$State<T> {
   value: T;
-  next: React$INTERNAL$State<T> | null;
-  prev: React$INTERNAL$State<T> | null;
+  next: react_index$INTERNAL$State<T> | null;
+  prev: react_index$INTERNAL$State<T> | null;
   constructor(value: T) {
     this.value = value;
     this.next = null;
@@ -608,15 +608,15 @@ class React$INTERNAL$State<T> {
  * Represents a node in the UI tree, and may correspond to a user-defined function component,
  * a host node, or a text node.
  */
-class React$INTERNAL$Fiber {
-  type: React$INTERNAL$FiberType;
-  props: React$Props;
-  parent: React$INTERNAL$Fiber | null;
-  child: React$INTERNAL$Fiber | null;
-  sibling: React$INTERNAL$Fiber | null;
-  state: React$INTERNAL$State<mixed> | null;
-  key: React$INTERNAL$React$Key | null;
-  constructor(type: React$INTERNAL$FiberType, props: React$Props, key: React$INTERNAL$React$Key | null) {
+class react_index$INTERNAL$Fiber {
+  type: react_index$INTERNAL$FiberType;
+  props: react_index$Props;
+  parent: react_index$INTERNAL$Fiber | null;
+  child: react_index$INTERNAL$Fiber | null;
+  sibling: react_index$INTERNAL$Fiber | null;
+  state: react_index$INTERNAL$State<mixed> | null;
+  key: react_index$INTERNAL$React$Key | null;
+  constructor(type: react_index$INTERNAL$FiberType, props: react_index$Props, key: react_index$INTERNAL$React$Key | null) {
     this.type = type;
     this.props = props;
     this.key = key;
@@ -626,7 +626,7 @@ class React$INTERNAL$Fiber {
     this.state = null;
   }
 }
-function React$jsx(type: React$INTERNAL$React$ElementType, props: React$Props, key: React$INTERNAL$React$Key | null): React$React$MixedElement {
+function react_index$jsx(type: react_index$INTERNAL$React$ElementType, props: react_index$Props, key: react_index$INTERNAL$React$Key | null): react_index$React$MixedElement {
   'inline';
 
   return {
@@ -636,62 +636,62 @@ function React$jsx(type: React$INTERNAL$React$ElementType, props: React$Props, k
     ref: null
   };
 }
-function React$Fragment(props: React$Props): React$React$Node {
+function react_index$Fragment(props: react_index$Props): react_index$React$Node {
   // TODO: Get this to work.
   return props.children;
 }
 /* file: App.js */
-function App$INTERNAL$Button(props: React$Props): React$React$MixedElement {
-  return React$jsx('button', {
+function App$INTERNAL$Button(props: react_index$Props): react_index$React$MixedElement {
+  return react_index$jsx('button', {
     id: props.id,
     onClick: props.onClick,
     children: 'Click me'
   }, null);
 }
-function App$INTERNAL$Input(props: React$Props): React$React$MixedElement {
-  return React$jsx('input', {
+function App$INTERNAL$Input(props: react_index$Props): react_index$React$MixedElement {
+  return react_index$jsx('input', {
     id: props.id,
     type: "text",
     onChange: props.onChange,
     value: props.value
   }, null);
 }
-function App$INTERNAL$TextArea(props: React$Props): React$React$MixedElement {
-  return React$jsx('textarea', {
+function App$INTERNAL$TextArea(props: react_index$Props): react_index$React$MixedElement {
+  return react_index$jsx('textarea', {
     onChange: props.onChange,
     children: props.value
   }, null);
 }
-function App$INTERNAL$Select(props: React$Props): React$React$MixedElement {
+function App$INTERNAL$Select(props: react_index$Props): react_index$React$MixedElement {
   const children = [];
   for (let i = 0; i < props.options.length; i++) {
     const option = props.options[i];
-    children.push(React$jsx('option', {
+    children.push(react_index$jsx('option', {
       value: option.value,
       children: option.label
     }, option.value));
   }
-  return React$jsx('select', {
+  return react_index$jsx('select', {
     onChange: props.onChange,
     children: children
   }, null);
 }
-function App$INTERNAL$Checkbox(props: React$Props): React$React$MixedElement {
-  return React$jsx('input', {
+function App$INTERNAL$Checkbox(props: react_index$Props): react_index$React$MixedElement {
+  return react_index$jsx('input', {
     type: "checkbox",
     checked: props.checked,
     onChange: props.onChange
   }, null);
 }
-function App$INTERNAL$Radio(props: React$Props): React$React$MixedElement {
-  return React$jsx('input', {
+function App$INTERNAL$Radio(props: react_index$Props): react_index$React$MixedElement {
+  return react_index$jsx('input', {
     type: "radio",
     checked: props.checked,
     onChange: props.onChange
   }, null);
 }
-function App$INTERNAL$Slider(props: React$Props): React$React$MixedElement {
-  return React$jsx('input', {
+function App$INTERNAL$Slider(props: react_index$Props): react_index$React$MixedElement {
+  return react_index$jsx('input', {
     type: "range",
     min: props.min,
     max: props.max,
@@ -700,94 +700,94 @@ function App$INTERNAL$Slider(props: React$Props): React$React$MixedElement {
     onChange: props.onChange
   }, null);
 }
-function App$INTERNAL$ProgressBar(props: React$Props): React$React$MixedElement {
-  return React$jsx('div', {
+function App$INTERNAL$ProgressBar(props: react_index$Props): react_index$React$MixedElement {
+  return react_index$jsx('div', {
     style: {
       width: `${props.progress}%`
     }
   }, null);
 }
-function App$INTERNAL$Spinner(props: React$Props): React$React$MixedElement {
-  return React$jsx('div', {
+function App$INTERNAL$Spinner(props: react_index$Props): react_index$React$MixedElement {
+  return react_index$jsx('div', {
     className: "spinner",
     children: 'Loading...'
   }, null);
 }
-function App$INTERNAL$Modal(props: React$Props): React$React$MixedElement {
+function App$INTERNAL$Modal(props: react_index$Props): react_index$React$MixedElement {
   if (!props.isOpen) {
-    return React$jsx('div', {
+    return react_index$jsx('div', {
       className: "modal closed"
     }, null);
   }
-  return React$jsx('div', {
+  return react_index$jsx('div', {
     className: "modal open",
-    children: [React$jsx('div', {
+    children: [react_index$jsx('div', {
       className: "overlay",
       onClick: props.onClose,
       children: 'X'
-    }, null), React$jsx('div', {
+    }, null), react_index$jsx('div', {
       className: "content",
       children: props.children
     }, null)]
   }, null);
 }
-function App$INTERNAL$Tooltip(props: React$Props): React$React$MixedElement {
+function App$INTERNAL$Tooltip(props: react_index$Props): react_index$React$MixedElement {
   if (!props.isOpen) {
-    return React$jsx('div', {
+    return react_index$jsx('div', {
       className: "tooltip closed"
     }, null);
   }
-  return React$jsx('div', {
+  return react_index$jsx('div', {
     className: "tooltip open",
-    children: [React$jsx('div', {
+    children: [react_index$jsx('div', {
       className: "arrow"
-    }, null), React$jsx('div', {
+    }, null), react_index$jsx('div', {
       className: "content",
       children: props.children
     }, null)]
   }, null);
 }
-function App$default(props: React$Props): React$React$MixedElement {
-  const [text, setText] = React$useState<string>('');
-  const [number, setNumber] = React$useState<number>(0);
-  const [isChecked, setIsChecked] = React$useState<boolean>(false);
-  const [isSelected, setIsSelected] = React$useState<boolean>(false);
-  const [isOpen, setIsOpen] = React$useState<boolean>(false);
-  const [isTooltipOpen, setIsTooltipOpen] = React$useState<boolean>(true);
-  return React$jsx('div', {
-    children: [React$jsx('h1', {
+function App$default(props: react_index$Props): react_index$React$MixedElement {
+  const [text, setText] = react_index$useState<string>('');
+  const [number, setNumber] = react_index$useState<number>(0);
+  const [isChecked, setIsChecked] = react_index$useState<boolean>(false);
+  const [isSelected, setIsSelected] = react_index$useState<boolean>(false);
+  const [isOpen, setIsOpen] = react_index$useState<boolean>(false);
+  const [isTooltipOpen, setIsTooltipOpen] = react_index$useState<boolean>(true);
+  return react_index$jsx('div', {
+    children: [react_index$jsx('h1', {
       children: 'React Benchmark'
-    }, null), React$jsx(App$INTERNAL$Button, {
+    }, null), react_index$jsx(App$INTERNAL$Button, {
       id: "toggle-modal",
       onClick: (): void => setIsOpen(!isOpen),
       children: 'Toggle Modal'
-    }, null), React$jsx(App$INTERNAL$Modal, {
+    }, null), react_index$jsx(App$INTERNAL$Modal, {
       isOpen: isOpen,
       onClose: (): void => setIsOpen(false),
-      children: [React$jsx('h2', {
+      children: [react_index$jsx('h2', {
         children: 'Modal Content'
-      }, null), React$jsx('p', {
+      }, null), react_index$jsx('p', {
         children: 'This is some modal content.'
-      }, null), React$jsx(App$INTERNAL$Tooltip, {
+      }, null), react_index$jsx(App$INTERNAL$Tooltip, {
         isOpen: isTooltipOpen,
         onClose: (): void => setIsTooltipOpen(false),
-        children: [React$jsx('h3', {
+        children: [react_index$jsx('h3', {
           children: 'Tooltip Content'
-        }, null), React$jsx('p', {
+        }, null), react_index$jsx('p', {
           children: 'This is some tooltip content.'
         }, null)]
       }, null)]
-    }, null), React$jsx('div', {
-      children: [React$jsx('h2', {
+    }, null), react_index$jsx('div', {
+      children: [react_index$jsx('h2', {
         children: 'Form Elements'
-      }, null), React$jsx(App$INTERNAL$Input, {
+      }, null), react_index$jsx(App$INTERNAL$Input, {
         id: "update-text",
         value: text,
         onChange: e => setText(e.target.value)
-      }, null), React$jsx(App$INTERNAL$TextArea, {
+      }, null), react_index$jsx(App$INTERNAL$TextArea, {
         value: text,
         onChange: e => setText(e.target.value)
-      }, null), React$jsx(App$INTERNAL$Select, {
+      }, null), react_index$jsx(App$INTERNAL$Select, {
         options: [{
           label: 'Option 1',
           value: 1
@@ -799,21 +799,21 @@ function App$default(props: React$Props): React$React$MixedElement {
           value: 3
         }],
         onChange: e => setNumber(parseInt(e.target.value))
-      }, null), React$jsx(App$INTERNAL$Checkbox, {
+      }, null), react_index$jsx(App$INTERNAL$Checkbox, {
         checked: isChecked,
         onChange: e => setIsChecked(e.target.checked)
-      }, null), React$jsx(App$INTERNAL$Radio, {
+      }, null), react_index$jsx(App$INTERNAL$Radio, {
         checked: isSelected,
         onChange: e => setIsSelected(e.target.checked)
-      }, null), React$jsx(App$INTERNAL$Slider, {
+      }, null), react_index$jsx(App$INTERNAL$Slider, {
         min: 0,
         max: 100,
         step: 1,
         value: number,
         onChange: e => setNumber(parseInt(e.target.value))
-      }, null), React$jsx(App$INTERNAL$ProgressBar, {
+      }, null), react_index$jsx(App$INTERNAL$ProgressBar, {
         progress: number
-      }, null), React$jsx(App$INTERNAL$Spinner, {}, null)]
+      }, null), react_index$jsx(App$INTERNAL$Spinner, {}, null)]
     }, null)]
   }, null);
 }
@@ -827,16 +827,16 @@ function index$INTERNAL$printIf1(i: number, str: string): void {
 }
 function index$INTERNAL$run(N: number): void {
   for (let i: number = 1; i <= N; ++i) {
-    const root = React$createRoot();
-    const rootElement = React$jsx(App$default, {}, null);
+    const root = react_index$createRoot();
+    const rootElement = react_index$jsx(App$default, {}, null);
     index$INTERNAL$printIf1(i, root.render(rootElement));
-    React$callOnClickOrChange('toggle-modal', null);
-    React$callOnClickOrChange('update-text', {
+    react_index$callOnClickOrChange('toggle-modal', null);
+    react_index$callOnClickOrChange('update-text', {
       target: {
         value: '!!!!! some text !!!!!'
       }
     });
-    microtask$drainMicrotaskQueue();
+    sh_microtask$drainMicrotaskQueue();
     index$INTERNAL$printIf1(i, root.render(rootElement));
   }
 }

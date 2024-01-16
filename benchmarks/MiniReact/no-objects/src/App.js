@@ -8,9 +8,9 @@
  * @format
  */
 
-import type {Props, React$MixedElement} from './React';
+import type {Props, React$MixedElement} from 'react';
 
-import {useState} from './React';
+import {useState} from 'react';
 
 function Button(props: Props): React$MixedElement {
   return (

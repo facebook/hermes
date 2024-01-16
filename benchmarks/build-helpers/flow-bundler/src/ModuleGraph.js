@@ -30,22 +30,71 @@ import {transformModule} from './TransformModule';
 import {parseFile} from './utils';
 import * as path from 'path';
 
+const PACKAGES_DIR_NAME = 'packages';
+
+function getPathSourceWithJSExtension(source: string): string {
+  return path.extname(source) !== '' ? source : source + '.js';
+}
+
+function getPackageNameFromFile(projectRoot: string, file: string): ?string {
+  const packagesDir = path.join(projectRoot, PACKAGES_DIR_NAME);
+  if (!file.startsWith(packagesDir)) {
+    return null;
+  }
+
+  return file.substring(packagesDir.length + 1).split('/')[0];
+}
+
 function resolveModuleLocation(
   moduleGraphNode: ModuleGraphNode,
   source: ImportSource,
 ): string {
+  // Absolute path, leave as is
   if (path.isAbsolute(source)) {
     return source;
   }
 
+  // Relative path, resolve to absolute path.
   if (source.startsWith('.')) {
-    const sourceWithExtension =
-      path.extname(source) !== '' ? source : source + '.js';
-    return path.join(path.dirname(moduleGraphNode.file), sourceWithExtension);
+    return path.join(
+      path.dirname(moduleGraphNode.file),
+      getPathSourceWithJSExtension(source),
+    );
   }
 
-  throw new Error(
-    `Cannot resolve module location for "${source}" in "${moduleGraphNode.file}"`,
+  // Root relative path, resolve to project root
+  if (source.startsWith('@')) {
+    const sourceWithoutAt = source.substring(2);
+    const packageName = getPackageNameFromFile(
+      moduleGraphNode.projectRoot,
+      moduleGraphNode.file,
+    );
+
+    // If we are inside a package, then we need to resolve relative to that package.
+    if (packageName != null) {
+      return path.join(
+        moduleGraphNode.projectRoot,
+        PACKAGES_DIR_NAME,
+        packageName,
+        getPathSourceWithJSExtension(sourceWithoutAt),
+      );
+    }
+
+    return path.join(
+      moduleGraphNode.projectRoot,
+      getPathSourceWithJSExtension(sourceWithoutAt),
+    );
+  }
+
+  // Package path, resolve to node_modules directory
+  const pathParts = source.split('/');
+  if (pathParts.length === 1) {
+    pathParts.push('index.js');
+  }
+  return path.join(
+    moduleGraphNode.projectRoot,
+    PACKAGES_DIR_NAME,
+    getPathSourceWithJSExtension(pathParts.join('/')),
   );
 }
 
@@ -200,6 +249,14 @@ export async function createModuleGraph(
 
   function getModuleName(fileName: string): string {
     let moduleName = path.basename(fileName, '.js');
+
+    // Prefix module with package name if within package.
+    const packageName = getPackageNameFromFile(projectRoot, fileName);
+    if (packageName != null) {
+      moduleName = packageName + '_' + moduleName;
+    }
+
+    // Dedupe file name conflicts by adding index suffix to module name.
     const moduleIndex = moduleNameCounter.get(moduleName) ?? 0;
     moduleNameCounter.set(moduleName, moduleIndex + 1);
     const sanitizedModuleName = moduleName.replace(/[^a-zA-Z0-9_$]/g, '_');

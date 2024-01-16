@@ -28,16 +28,16 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
  * Entrypoints:
  *   index.js
  */
-/* file: invariant.js */
-function invariant$default(condition, format) {
+/* file: packages/react/invariant.js */
+function react_invariant$default(condition, format) {
   'inline';
 
   if (!condition) {
     throw new Error(format);
   }
 }
-/* file: CHECKED_CAST.js */
-function CHECKED_CAST$default(value) {
+/* file: packages/sh/CHECKED_CAST.js */
+function sh_CHECKED_CAST$default(value) {
   'inline';
 
   return value;
@@ -49,13 +49,13 @@ function microtask$drainMicrotaskQueue() {
     microtask$INTERNAL$microtaskQueue[i]();
     microtask$INTERNAL$microtaskQueue[i] = undefined;
   }
-  microtask$INTERNAL$microtaskQueue = [];
+  sh_microtask$INTERNAL$microtaskQueue = [];
 }
-function microtask$queueMicrotask(callback) {
-  microtask$INTERNAL$microtaskQueue.push(callback);
+function sh_microtask$queueMicrotask(callback) {
+  sh_microtask$INTERNAL$microtaskQueue.push(callback);
 }
-/* file: React.js */
-function React$INTERNAL$fastArrayJoin(arr, sep) {
+/* file: packages/react/index.js */
+function react_index$INTERNAL$fastArrayJoin(arr, sep) {
   var result = '';
   for (var i = 0, e = arr.length; i < e; ++i) {
     if (i !== 0) result += sep;
@@ -63,7 +63,7 @@ function React$INTERNAL$fastArrayJoin(arr, sep) {
   }
   return result;
 }
-function React$INTERNAL$padString(str, len) {
+function react_index$INTERNAL$padString(str, len) {
   var result = '';
   for (var i = 0; i < len; i++) {
     result += str;
@@ -89,10 +89,10 @@ function React$INTERNAL$padString(str, len) {
 //   key: React$Key | null,
 //   ref: any,
 // |};
-var React$INTERNAL$React$Element = /*#__PURE__*/_createClass(function React$INTERNAL$React$Element(type, props, key, ref) {
+var react_index$INTERNAL$React$Element = /*#__PURE__*/_createClass(function react_index$INTERNAL$React$Element(type, props, key, ref) {
   "use strict";
 
-  _classCallCheck(this, React$INTERNAL$React$Element);
+  _classCallCheck(this, react_index$INTERNAL$React$Element);
   this.type = type;
   this.props = props;
   this.key = key;
@@ -107,79 +107,79 @@ var React$INTERNAL$React$Element = /*#__PURE__*/_createClass(function React$INTE
 /**
  * The current root
  */
-var React$INTERNAL$workInProgressRoot = null;
+var react_index$INTERNAL$workInProgressRoot = null;
 /**
  * The currently rendering fiber. Only set when a component is being rendered.
  */
-var React$INTERNAL$workInProgressFiber = null;
+var react_index$INTERNAL$workInProgressFiber = null;
 /**
  * The previous state hook, or null if no state hook has been evaluated yet.
  */
-var React$INTERNAL$workInProgressState = null;
+var react_index$INTERNAL$workInProgressState = null;
 /**
  * Queue of updates triggered *during* render.
  */
-var React$INTERNAL$renderPhaseUpdateQueue = [];
+var react_index$INTERNAL$renderPhaseUpdateQueue = [];
 /**
  * Public API to create a new "root", this is where React attaches rendering to a host element.
  * In our case we don't actually have a real host, and currently only "render" to strings.
  */
-function React$createRoot() {
-  return new React$INTERNAL$Root();
+function react_index$createRoot() {
+  return new react_index$INTERNAL$Root();
 }
 /**
  * Hook to create (on initial render) or access (on update) a state, using the index of the useState
  * call within the component as the identity. Thus conditionally calling this API can cause state to
  * be lost.
  */
-function React$useState(
+function react_index$useState(
 /**
  * Initial value of the state
  */
 initial) {
-  var root = CHECKED_CAST$default(React$INTERNAL$workInProgressRoot);
-  var fiber = CHECKED_CAST$default(React$INTERNAL$workInProgressFiber);
-  invariant$default(fiber !== null && root !== null, 'useState() called outside of render');
+  var root = sh_CHECKED_CAST$default(react_index$INTERNAL$workInProgressRoot);
+  var fiber = sh_CHECKED_CAST$default(react_index$INTERNAL$workInProgressFiber);
+  react_invariant$default(fiber !== null && root !== null, 'useState() called outside of render');
   var state;
-  var _workInProgressState = React$INTERNAL$workInProgressState;
+  var _workInProgressState = react_index$INTERNAL$workInProgressState;
   if (_workInProgressState === null) {
     // Get or initialize the first state on the fiber
     var nextState = fiber.state;
     if (nextState === null) {
-      nextState = new React$INTERNAL$State(initial);
+      nextState = new react_index$INTERNAL$State(initial);
       fiber.state = nextState;
     }
     // NOTE: in case of a re-render we assume that the hook types match but
     // can't statically prove this
-    state = CHECKED_CAST$default(nextState);
+    state = sh_CHECKED_CAST$default(nextState);
   } else {
-    var _nextState = CHECKED_CAST$default(_workInProgressState).next;
+    var _nextState = sh_CHECKED_CAST$default(_workInProgressState).next;
     if (_nextState === null) {
-      _nextState = new React$INTERNAL$State(initial);
-      CHECKED_CAST$default(_workInProgressState).next = _nextState;
+      _nextState = new react_index$INTERNAL$State(initial);
+      sh_CHECKED_CAST$default(_workInProgressState).next = _nextState;
     }
     // NOTE: in case of a re-render we assume that the hook types match but
     // can't statically prove this
-    state = CHECKED_CAST$default(_nextState);
+    state = sh_CHECKED_CAST$default(_nextState);
   }
   // NOTE: this should just work because of subtying, State<T> should be subtype of State<mixed>
-  React$INTERNAL$workInProgressState = CHECKED_CAST$default(state);
+  react_index$INTERNAL$workInProgressState = sh_CHECKED_CAST$default(state);
   return [
   // Untyped check that the existing state value has the correct type,
   // This is safe if components follow the rules of hooks
-  CHECKED_CAST$default(state.value), function (updater) {
-    var update = new React$INTERNAL$Update(fiber, CHECKED_CAST$default(state), CHECKED_CAST$default(updater));
-    if (React$INTERNAL$workInProgressFiber !== null) {
+  sh_CHECKED_CAST$default(state.value), function (updater) {
+    var update = new react_index$INTERNAL$Update(fiber, sh_CHECKED_CAST$default(state), sh_CHECKED_CAST$default(updater));
+    if (react_index$INTERNAL$workInProgressFiber !== null) {
       // called during render
-      React$INTERNAL$renderPhaseUpdateQueue.push(update);
+      react_index$INTERNAL$renderPhaseUpdateQueue.push(update);
     } else {
       root.notify(update);
     }
   }];
 }
-var React$INTERNAL$callbacks = new Map();
-function React$callOnClickOrChange(id, event) {
-  var callback = React$INTERNAL$callbacks.get(id);
+var react_index$INTERNAL$callbacks = new Map();
+function react_index$callOnClickOrChange(id, event) {
+  var callback = react_index$INTERNAL$callbacks.get(id);
   if (callback == null) {
     throw new Error('No callback registered with id: ' + id);
   }
@@ -198,16 +198,16 @@ function React$callOnClickOrChange(id, event) {
 /**
  * A queued state update.
  */
-var React$INTERNAL$Update = /*#__PURE__*/function () {
+var react_index$INTERNAL$Update = /*#__PURE__*/function () {
   "use strict";
 
-  function React$INTERNAL$Update(fiber, state, updater) {
-    _classCallCheck(this, React$INTERNAL$Update);
+  function react_index$INTERNAL$Update(fiber, state, updater) {
+    _classCallCheck(this, react_index$INTERNAL$Update);
     this.fiber = fiber;
     this.state = state;
     this.updater = updater;
   }
-  _createClass(React$INTERNAL$Update, [{
+  _createClass(react_index$INTERNAL$Update, [{
     key: "run",
     value: function run() {
       var state = this.state;
@@ -216,57 +216,57 @@ var React$INTERNAL$Update = /*#__PURE__*/function () {
       if (typeof updater === 'function') {
         // NOTE: The type of Updater<T> is meant to expresss `T (not function) | T (function of T => T)`
         // thus the fact that updater is a function here menas its a function of T => T.
-        var fn = CHECKED_CAST$default(updater);
+        var fn = sh_CHECKED_CAST$default(updater);
         value = fn(state.value);
       } else {
         // NOTE: The type of Updater<T> is meant to expresss `T (not function) | T (function of T => T)`
         // thus the fact that updater is *not* a function here means it is a T
-        value = CHECKED_CAST$default(updater);
+        value = sh_CHECKED_CAST$default(updater);
       }
       var changed = !Object.is(state.value, value);
       state.value = value;
       return changed;
     }
   }]);
-  return React$INTERNAL$Update;
+  return react_index$INTERNAL$Update;
 }();
-var React$INTERNAL$Root = /*#__PURE__*/function () {
+var react_index$INTERNAL$Root = /*#__PURE__*/function () {
   "use strict";
 
-  function React$INTERNAL$Root() {
-    _classCallCheck(this, React$INTERNAL$Root);
+  function react_index$INTERNAL$Root() {
+    _classCallCheck(this, react_index$INTERNAL$Root);
     this.root = null;
     this.element = null;
     this.updateQueue = [];
   }
-  _createClass(React$INTERNAL$Root, [{
+  _createClass(react_index$INTERNAL$Root, [{
     key: "notify",
     value: function notify(update) {
       var _this = this;
       this.updateQueue.push(update);
       if (this.updateQueue.length === 1) {
-        microtask$queueMicrotask(function () {
+        sh_microtask$queueMicrotask(function () {
           var element = _this.element;
-          invariant$default(element !== null, 'Expected an element to be set after rendering');
-          _this.doWork(CHECKED_CAST$default(element));
+          react_invariant$default(element !== null, 'Expected an element to be set after rendering');
+          _this.doWork(sh_CHECKED_CAST$default(element));
         });
       }
     }
   }, {
     key: "render",
     value: function render(element) {
-      invariant$default(React$INTERNAL$workInProgressFiber === null && React$INTERNAL$workInProgressState === null, 'Cannot render, an existing render is in progress');
+      react_invariant$default(react_index$INTERNAL$workInProgressFiber === null && react_index$INTERNAL$workInProgressState === null, 'Cannot render, an existing render is in progress');
       var hasChanges = element !== this.element;
       this.element = element;
       if (hasChanges) {
         this.doWork(element);
       }
-      invariant$default(this.root !== null, 'Expected root to be rendered');
-      var root = CHECKED_CAST$default(this.root);
+      react_invariant$default(this.root !== null, 'Expected root to be rendered');
+      var root = sh_CHECKED_CAST$default(this.root);
       var output = [];
       this.printFiber(root, output, 0);
       // return output.join('');
-      return React$INTERNAL$fastArrayJoin(output, '\n');
+      return react_index$INTERNAL$fastArrayJoin(output, '\n');
     }
   }, {
     key: "doWork",
@@ -282,7 +282,7 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
       // Visit the tree in pre-order, rendering each node
       // and then processing its children
       // eslint-disable-next-line consistent-this
-      React$INTERNAL$workInProgressRoot = this;
+      react_index$INTERNAL$workInProgressRoot = this;
       var fiber = this.root;
       if (fiber === null) {
         fiber = this.mountFiber(element, null);
@@ -290,7 +290,7 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
       }
       while (fiber !== null) {
         // Render the fiber, which creates child/sibling nodes
-        var fiber2 = CHECKED_CAST$default(fiber);
+        var fiber2 = sh_CHECKED_CAST$default(fiber);
         this.renderFiber(fiber2);
         // advance to the next fiber
         if (fiber2.child !== null) {
@@ -299,15 +299,15 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
           fiber = fiber2.sibling;
         } else {
           fiber = fiber2.parent;
-          while (fiber !== null && CHECKED_CAST$default(fiber).sibling === null) {
-            fiber = CHECKED_CAST$default(fiber).parent;
+          while (fiber !== null && sh_CHECKED_CAST$default(fiber).sibling === null) {
+            fiber = sh_CHECKED_CAST$default(fiber).parent;
           }
           if (fiber !== null) {
-            fiber = CHECKED_CAST$default(fiber).sibling;
+            fiber = sh_CHECKED_CAST$default(fiber).sibling;
           }
         }
       }
-      React$INTERNAL$workInProgressRoot = null;
+      react_index$INTERNAL$workInProgressRoot = null;
     }
   }, {
     key: "printFiber",
@@ -315,8 +315,8 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
       switch (fiber.type.kind) {
         case 'host':
           {
-            var tag = CHECKED_CAST$default(fiber.type).tag;
-            var padStr = React$INTERNAL$padString(' ', level);
+            var tag = sh_CHECKED_CAST$default(fiber.type).tag;
+            var padStr = react_index$INTERNAL$padString(' ', level);
             var str = padStr + '<' + tag;
             for (var _ref of Object.entries(fiber.props)) {
               var _JSON$stringify;
@@ -336,9 +336,9 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
           }
         case 'text':
           {
-            var text = CHECKED_CAST$default(fiber.type).text;
+            var text = sh_CHECKED_CAST$default(fiber.type).text;
             if (text !== '') {
-              out.push(React$INTERNAL$padString(' ', level) + text);
+              out.push(react_index$INTERNAL$padString(' ', level) + text);
             }
             break;
           }
@@ -354,32 +354,32 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
     value: function printChildren(fiber, out, level) {
       var current = fiber.child;
       while (current !== null) {
-        this.printFiber(CHECKED_CAST$default(current), out, level);
-        current = CHECKED_CAST$default(current).sibling;
+        this.printFiber(sh_CHECKED_CAST$default(current), out, level);
+        current = sh_CHECKED_CAST$default(current).sibling;
       }
     }
   }, {
     key: "renderFiber",
     value: function renderFiber(fiber) {
       try {
-        React$INTERNAL$workInProgressFiber = fiber;
-        React$INTERNAL$workInProgressState = null;
+        react_index$INTERNAL$workInProgressFiber = fiber;
+        react_index$INTERNAL$workInProgressState = null;
         switch (fiber.type.kind) {
           case 'component':
             {
-              invariant$default(React$INTERNAL$renderPhaseUpdateQueue.length === 0, 'Expected no queued render updates');
-              var render = CHECKED_CAST$default(fiber.type).component;
+              react_invariant$default(react_index$INTERNAL$renderPhaseUpdateQueue.length === 0, 'Expected no queued render updates');
+              var render = sh_CHECKED_CAST$default(fiber.type).component;
               var element = render(fiber.props);
               var iterationCount = 0;
-              while (React$INTERNAL$renderPhaseUpdateQueue.length !== 0) {
+              while (react_index$INTERNAL$renderPhaseUpdateQueue.length !== 0) {
                 iterationCount++;
-                invariant$default(iterationCount < 1000, 'Possible infinite loop with setState during render');
+                react_invariant$default(iterationCount < 1000, 'Possible infinite loop with setState during render');
                 var hasChanges = false;
-                for (var update of React$INTERNAL$renderPhaseUpdateQueue) {
-                  invariant$default(update.fiber === fiber, 'setState() during render is currently only supported when updating the component ' + 'being rendered. Setting state from another component is not supported.');
+                for (var update of react_index$INTERNAL$renderPhaseUpdateQueue) {
+                  react_invariant$default(update.fiber === fiber, 'setState() during render is currently only supported when updating the component ' + 'being rendered. Setting state from another component is not supported.');
                   hasChanges = update.run() || hasChanges;
                 }
-                React$INTERNAL$renderPhaseUpdateQueue.length = 0;
+                react_index$INTERNAL$renderPhaseUpdateQueue.length = 0;
                 if (!hasChanges) {
                   break;
                 }
@@ -394,11 +394,11 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
               if (id != null) {
                 var onClick = fiber.props.onClick;
                 if (onClick != null) {
-                  React$INTERNAL$callbacks.set(id, onClick);
+                  react_index$INTERNAL$callbacks.set(id, onClick);
                 }
                 var onChange = fiber.props.onChange;
                 if (onChange != null) {
-                  React$INTERNAL$callbacks.set(id, onChange);
+                  react_index$INTERNAL$callbacks.set(id, onChange);
                 }
               }
               break;
@@ -410,8 +410,8 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
             }
         }
       } finally {
-        React$INTERNAL$workInProgressFiber = null;
-        React$INTERNAL$workInProgressState = null;
+        react_index$INTERNAL$workInProgressFiber = null;
+        react_index$INTERNAL$workInProgressState = null;
       }
     }
   }, {
@@ -419,34 +419,34 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
     value: function mountFiber(elementOrString, parent) {
       var fiber;
       if (typeof elementOrString === 'object') {
-        var element = CHECKED_CAST$default(elementOrString);
+        var element = sh_CHECKED_CAST$default(elementOrString);
         if (typeof element.type === 'function') {
-          var component = CHECKED_CAST$default(element.type);
+          var component = sh_CHECKED_CAST$default(element.type);
           // const type: FiberType = {
           //   kind: 'component',
           //   component,
           // };
-          var type = new React$INTERNAL$FiberTypeComponent(component);
-          fiber = new React$INTERNAL$Fiber(type, element.props, element.key);
+          var type = new react_index$INTERNAL$FiberTypeComponent(component);
+          fiber = new react_index$INTERNAL$Fiber(type, element.props, element.key);
         } else {
-          invariant$default(typeof element.type === 'string', 'Expected a host component name such as "div" or "span", got ' + CHECKED_CAST$default(element.type));
+          react_invariant$default(typeof element.type === 'string', 'Expected a host component name such as "div" or "span", got ' + sh_CHECKED_CAST$default(element.type));
           // const type: FiberType = {
           //   kind: 'host',
           //   tag: element.type,
           // };
-          var _type = new React$INTERNAL$FiberTypeHost(CHECKED_CAST$default(element.type));
-          invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
+          var _type = new react_index$INTERNAL$FiberTypeHost(sh_CHECKED_CAST$default(element.type));
+          react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
           // const {children, ...props} = element.props;
           var children = element.props.children;
           var _props = Object.assign({}, element.props);
           delete _props.children;
-          fiber = new React$INTERNAL$Fiber(_type, _props, element.key);
+          fiber = new react_index$INTERNAL$Fiber(_type, _props, element.key);
           if (Array.isArray(children)) {
             var _prev = null;
-            for (var childElement of CHECKED_CAST$default(children)) {
-              var child = this.mountFiber(CHECKED_CAST$default(childElement), fiber);
+            for (var childElement of sh_CHECKED_CAST$default(children)) {
+              var child = this.mountFiber(sh_CHECKED_CAST$default(childElement), fiber);
               if (_prev !== null) {
-                CHECKED_CAST$default(_prev).sibling = child;
+                sh_CHECKED_CAST$default(_prev).sibling = child;
               } else {
                 // set parent to point to first child
                 fiber.child = child;
@@ -454,7 +454,7 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
               _prev = child;
             }
           } else if (typeof children === 'string') {
-            var _child = new React$INTERNAL$Fiber({
+            var _child = new react_index$INTERNAL$Fiber({
               kind: 'text',
               text: children
             }, {}, null);
@@ -466,13 +466,13 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
           }
         }
       } else {
-        invariant$default(typeof elementOrString === 'string', 'Expected a string');
+        react_invariant$default(typeof elementOrString === 'string', 'Expected a string');
         // const type: FiberType = {
         //   kind: 'text',
         //   text: element,
         // };
-        var _type2 = new React$INTERNAL$FiberTypeText(CHECKED_CAST$default(elementOrString));
-        fiber = new React$INTERNAL$Fiber(_type2, {}, null);
+        var _type2 = new react_index$INTERNAL$FiberTypeText(sh_CHECKED_CAST$default(elementOrString));
+        fiber = new react_index$INTERNAL$Fiber(_type2, {}, null);
       }
       fiber.parent = parent;
       return fiber;
@@ -480,13 +480,13 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
   }, {
     key: "reconcileFiber",
     value: function reconcileFiber(parent, prevChild, element) {
-      if (prevChild !== null && CHECKED_CAST$default(prevChild).type === element.type) {
-        var _prevChild = CHECKED_CAST$default(_prevChild);
+      if (prevChild !== null && sh_CHECKED_CAST$default(prevChild).type === element.type) {
+        var _prevChild = sh_CHECKED_CAST$default(_prevChild);
         // Only host nodes have to be reconciled: otherwise this is a function component
         // and its children will be reconciled when they are later emitted in a host
         // position (ie as a direct result of render)
         if (_prevChild.type.kind === 'host') {
-          invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
+          react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
           // const {children, ...props} = element.props;
           var children = element.props.children;
           var _props2 = Object.assign({}, element.props);
@@ -494,7 +494,7 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
           _prevChild.props = _props2;
           this.reconcileChildren(_prevChild, children);
         } else if (_prevChild.type.kind === 'component') {
-          invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
+          react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
           _prevChild.props = element.props;
         }
         return _prevChild;
@@ -508,48 +508,48 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
     value: function reconcileChildren(parent, children) {
       var prevChild = parent.child;
       if (Array.isArray(children)) {
-        var childrenArray = CHECKED_CAST$default(children);
+        var childrenArray = sh_CHECKED_CAST$default(children);
         // Fast-path for empty and single-element arrays
         if (childrenArray.length === 0) {
           parent.child = null;
         } else if (childrenArray.length === 1) {
           parent.child = this.reconcileFiber(parent, prevChild, childrenArray[0]);
-          CHECKED_CAST$default(parent.child).sibling = null;
+          sh_CHECKED_CAST$default(parent.child).sibling = null;
         } else {
           this.reconcileMultipleChildren(parent, childrenArray);
         }
       } else if (typeof children === 'string') {
-        if (prevChild === null || CHECKED_CAST$default(prevChild).type.kind !== 'text') {
-          var child = new React$INTERNAL$Fiber({
+        if (prevChild === null || sh_CHECKED_CAST$default(prevChild).type.kind !== 'text') {
+          var child = new react_index$INTERNAL$Fiber({
             kind: 'text',
             text: children
           }, {}, null);
           parent.child = child;
         } else {
-          CHECKED_CAST$default(CHECKED_CAST$default(prevChild).type).text = CHECKED_CAST$default(children);
+          sh_CHECKED_CAST$default(sh_CHECKED_CAST$default(prevChild).type).text = sh_CHECKED_CAST$default(children);
         }
       } else if (children != null) {
-        parent.child = this.reconcileFiber(parent, prevChild, CHECKED_CAST$default(children));
-        CHECKED_CAST$default(parent.child).sibling = null;
+        parent.child = this.reconcileFiber(parent, prevChild, sh_CHECKED_CAST$default(children));
+        sh_CHECKED_CAST$default(parent.child).sibling = null;
       } else {
         parent.child = null;
         if (prevChild !== null) {
-          CHECKED_CAST$default(prevChild).parent = null;
+          sh_CHECKED_CAST$default(prevChild).parent = null;
         }
       }
     }
   }, {
     key: "reconcileMultipleChildren",
     value: function reconcileMultipleChildren(parent, children) {
-      invariant$default(children.length > 1, 'Expected children to have multiple elements');
+      react_invariant$default(children.length > 1, 'Expected children to have multiple elements');
       // map existing children by key to make subsequent lookup O(log n)
       var keyedChildren = new Map();
       var current = parent.child;
       while (current !== null) {
-        if (CHECKED_CAST$default(current).key !== null) {
-          keyedChildren.set(CHECKED_CAST$default(current).key, current);
+        if (sh_CHECKED_CAST$default(current).key !== null) {
+          keyedChildren.set(sh_CHECKED_CAST$default(current).key, current);
         }
-        current = CHECKED_CAST$default(current).sibling;
+        current = sh_CHECKED_CAST$default(current).sibling;
       }
       var prev = null; // previous fiber at this key/index
       var prevByIndex = parent.child; // keep track of prev fiber at this index
@@ -563,17 +563,17 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
           child = this.mountFiber(childElement, parent);
         }
         if (prev !== null) {
-          CHECKED_CAST$default(prev).sibling = child;
+          sh_CHECKED_CAST$default(prev).sibling = child;
         } else {
           // set parent to point to first child
           parent.child = child;
         }
         prev = child;
-        prevByIndex = prevByIndex !== null ? CHECKED_CAST$default(prevByIndex).sibling : null;
+        prevByIndex = prevByIndex !== null ? sh_CHECKED_CAST$default(prevByIndex).sibling : null;
       }
     }
   }]);
-  return React$INTERNAL$Root;
+  return react_index$INTERNAL$Root;
 }();
 /**
  * Describes the `type` field of Fiber, which can hold different data depending on the fiber's kind:
@@ -594,54 +594,54 @@ var React$INTERNAL$Root = /*#__PURE__*/function () {
 //       kind: 'text',
 //       text: string,
 //     };
-var React$INTERNAL$FiberType = /*#__PURE__*/_createClass(function React$INTERNAL$FiberType(kind) {
+var react_index$INTERNAL$FiberType = /*#__PURE__*/_createClass(function react_index$INTERNAL$FiberType(kind) {
   "use strict";
 
-  _classCallCheck(this, React$INTERNAL$FiberType);
+  _classCallCheck(this, react_index$INTERNAL$FiberType);
   this.kind = kind;
 });
-var React$INTERNAL$FiberTypeComponent = /*#__PURE__*/function (_React$INTERNAL$Fiber) {
+var react_index$INTERNAL$FiberTypeComponent = /*#__PURE__*/function (_react_index$INTERNAL) {
   "use strict";
 
-  _inherits(React$INTERNAL$FiberTypeComponent, _React$INTERNAL$Fiber);
-  var _super = _createSuper(React$INTERNAL$FiberTypeComponent);
-  function React$INTERNAL$FiberTypeComponent(component) {
+  _inherits(react_index$INTERNAL$FiberTypeComponent, _react_index$INTERNAL);
+  var _super = _createSuper(react_index$INTERNAL$FiberTypeComponent);
+  function react_index$INTERNAL$FiberTypeComponent(component) {
     var _this2;
-    _classCallCheck(this, React$INTERNAL$FiberTypeComponent);
+    _classCallCheck(this, react_index$INTERNAL$FiberTypeComponent);
     _this2 = _super.call(this, 'component');
     _this2.component = component;
     return _this2;
   }
-  return _createClass(React$INTERNAL$FiberTypeComponent);
-}(React$INTERNAL$FiberType);
-var React$INTERNAL$FiberTypeHost = /*#__PURE__*/function (_React$INTERNAL$Fiber2) {
+  return _createClass(react_index$INTERNAL$FiberTypeComponent);
+}(react_index$INTERNAL$FiberType);
+var react_index$INTERNAL$FiberTypeHost = /*#__PURE__*/function (_react_index$INTERNAL2) {
   "use strict";
 
-  _inherits(React$INTERNAL$FiberTypeHost, _React$INTERNAL$Fiber2);
-  var _super2 = _createSuper(React$INTERNAL$FiberTypeHost);
-  function React$INTERNAL$FiberTypeHost(tag) {
+  _inherits(react_index$INTERNAL$FiberTypeHost, _react_index$INTERNAL2);
+  var _super2 = _createSuper(react_index$INTERNAL$FiberTypeHost);
+  function react_index$INTERNAL$FiberTypeHost(tag) {
     var _this3;
-    _classCallCheck(this, React$INTERNAL$FiberTypeHost);
+    _classCallCheck(this, react_index$INTERNAL$FiberTypeHost);
     _this3 = _super2.call(this, 'host');
     _this3.tag = tag;
     return _this3;
   }
-  return _createClass(React$INTERNAL$FiberTypeHost);
-}(React$INTERNAL$FiberType);
-var React$INTERNAL$FiberTypeText = /*#__PURE__*/function (_React$INTERNAL$Fiber3) {
+  return _createClass(react_index$INTERNAL$FiberTypeHost);
+}(react_index$INTERNAL$FiberType);
+var react_index$INTERNAL$FiberTypeText = /*#__PURE__*/function (_react_index$INTERNAL3) {
   "use strict";
 
-  _inherits(React$INTERNAL$FiberTypeText, _React$INTERNAL$Fiber3);
-  var _super3 = _createSuper(React$INTERNAL$FiberTypeText);
-  function React$INTERNAL$FiberTypeText(text) {
+  _inherits(react_index$INTERNAL$FiberTypeText, _react_index$INTERNAL3);
+  var _super3 = _createSuper(react_index$INTERNAL$FiberTypeText);
+  function react_index$INTERNAL$FiberTypeText(text) {
     var _this4;
-    _classCallCheck(this, React$INTERNAL$FiberTypeText);
+    _classCallCheck(this, react_index$INTERNAL$FiberTypeText);
     _this4 = _super3.call(this, 'text');
     _this4.text = text;
     return _this4;
   }
-  return _createClass(React$INTERNAL$FiberTypeText);
-}(React$INTERNAL$FiberType);
+  return _createClass(react_index$INTERNAL$FiberTypeText);
+}(react_index$INTERNAL$FiberType);
 /**
  * The type of component props as seen by the framework, because processing is heterogenous
  * the framework only looks at the identity of prop values and does not otherwise make any
@@ -650,10 +650,10 @@ var React$INTERNAL$FiberTypeText = /*#__PURE__*/function (_React$INTERNAL$Fiber3
 /**
  * Data storage for the useState() hook
  */
-var React$INTERNAL$State = /*#__PURE__*/_createClass(function React$INTERNAL$State(value) {
+var react_index$INTERNAL$State = /*#__PURE__*/_createClass(function react_index$INTERNAL$State(value) {
   "use strict";
 
-  _classCallCheck(this, React$INTERNAL$State);
+  _classCallCheck(this, react_index$INTERNAL$State);
   this.value = value;
   this.next = null;
   this.prev = null;
@@ -662,10 +662,10 @@ var React$INTERNAL$State = /*#__PURE__*/_createClass(function React$INTERNAL$Sta
  * Represents a node in the UI tree, and may correspond to a user-defined function component,
  * a host node, or a text node.
  */
-var React$INTERNAL$Fiber = /*#__PURE__*/_createClass(function React$INTERNAL$Fiber(type, props, key) {
+var react_index$INTERNAL$Fiber = /*#__PURE__*/_createClass(function react_index$INTERNAL$Fiber(type, props, key) {
   "use strict";
 
-  _classCallCheck(this, React$INTERNAL$Fiber);
+  _classCallCheck(this, react_index$INTERNAL$Fiber);
   this.type = type;
   this.props = props;
   this.key = key;
@@ -674,7 +674,7 @@ var React$INTERNAL$Fiber = /*#__PURE__*/_createClass(function React$INTERNAL$Fib
   this.sibling = null;
   this.state = null;
 });
-function React$jsx(type, props, key) {
+function react_index$jsx(type, props, key) {
   'inline';
 
   return {
@@ -684,20 +684,20 @@ function React$jsx(type, props, key) {
     ref: null
   };
 }
-function React$Fragment(props) {
+function react_index$Fragment(props) {
   // TODO: Get this to work.
   return props.children;
 }
 /* file: App.js */
 function App$INTERNAL$Button(props) {
-  return React$jsx('button', {
+  return react_index$jsx('button', {
     id: props.id,
     onClick: props.onClick,
     children: 'Click me'
   }, null);
 }
 function App$INTERNAL$Input(props) {
-  return React$jsx('input', {
+  return react_index$jsx('input', {
     id: props.id,
     type: "text",
     onChange: props.onChange,
@@ -705,7 +705,7 @@ function App$INTERNAL$Input(props) {
   }, null);
 }
 function App$INTERNAL$TextArea(props) {
-  return React$jsx('textarea', {
+  return react_index$jsx('textarea', {
     onChange: props.onChange,
     children: props.value
   }, null);
@@ -714,32 +714,32 @@ function App$INTERNAL$Select(props) {
   var children = [];
   for (var i = 0; i < props.options.length; i++) {
     var option = props.options[i];
-    children.push(React$jsx('option', {
+    children.push(react_index$jsx('option', {
       value: option.value,
       children: option.label
     }, option.value));
   }
-  return React$jsx('select', {
+  return react_index$jsx('select', {
     onChange: props.onChange,
     children: children
   }, null);
 }
 function App$INTERNAL$Checkbox(props) {
-  return React$jsx('input', {
+  return react_index$jsx('input', {
     type: "checkbox",
     checked: props.checked,
     onChange: props.onChange
   }, null);
 }
 function App$INTERNAL$Radio(props) {
-  return React$jsx('input', {
+  return react_index$jsx('input', {
     type: "radio",
     checked: props.checked,
     onChange: props.onChange
   }, null);
 }
 function App$INTERNAL$Slider(props) {
-  return React$jsx('input', {
+  return react_index$jsx('input', {
     type: "range",
     min: props.min,
     max: props.max,
@@ -749,31 +749,31 @@ function App$INTERNAL$Slider(props) {
   }, null);
 }
 function App$INTERNAL$ProgressBar(props) {
-  return React$jsx('div', {
+  return react_index$jsx('div', {
     style: {
       width: `${props.progress}%`
     }
   }, null);
 }
 function App$INTERNAL$Spinner(props) {
-  return React$jsx('div', {
+  return react_index$jsx('div', {
     className: "spinner",
     children: 'Loading...'
   }, null);
 }
 function App$INTERNAL$Modal(props) {
   if (!props.isOpen) {
-    return React$jsx('div', {
+    return react_index$jsx('div', {
       className: "modal closed"
     }, null);
   }
-  return React$jsx('div', {
+  return react_index$jsx('div', {
     className: "modal open",
-    children: [React$jsx('div', {
+    children: [react_index$jsx('div', {
       className: "overlay",
       onClick: props.onClose,
       children: 'X'
-    }, null), React$jsx('div', {
+    }, null), react_index$jsx('div', {
       className: "content",
       children: props.children
     }, null)]
@@ -781,89 +781,89 @@ function App$INTERNAL$Modal(props) {
 }
 function App$INTERNAL$Tooltip(props) {
   if (!props.isOpen) {
-    return React$jsx('div', {
+    return react_index$jsx('div', {
       className: "tooltip closed"
     }, null);
   }
-  return React$jsx('div', {
+  return react_index$jsx('div', {
     className: "tooltip open",
-    children: [React$jsx('div', {
+    children: [react_index$jsx('div', {
       className: "arrow"
-    }, null), React$jsx('div', {
+    }, null), react_index$jsx('div', {
       className: "content",
       children: props.children
     }, null)]
   }, null);
 }
 function App$default(props) {
-  var _React$useState = React$useState(''),
-    _React$useState2 = _slicedToArray(_React$useState, 2),
-    text = _React$useState2[0],
-    setText = _React$useState2[1];
-  var _React$useState3 = React$useState(0),
-    _React$useState4 = _slicedToArray(_React$useState3, 2),
-    number = _React$useState4[0],
-    setNumber = _React$useState4[1];
-  var _React$useState5 = React$useState(false),
-    _React$useState6 = _slicedToArray(_React$useState5, 2),
-    isChecked = _React$useState6[0],
-    setIsChecked = _React$useState6[1];
-  var _React$useState7 = React$useState(false),
-    _React$useState8 = _slicedToArray(_React$useState7, 2),
-    isSelected = _React$useState8[0],
-    setIsSelected = _React$useState8[1];
-  var _React$useState9 = React$useState(false),
-    _React$useState10 = _slicedToArray(_React$useState9, 2),
-    isOpen = _React$useState10[0],
-    setIsOpen = _React$useState10[1];
-  var _React$useState11 = React$useState(true),
-    _React$useState12 = _slicedToArray(_React$useState11, 2),
-    isTooltipOpen = _React$useState12[0],
-    setIsTooltipOpen = _React$useState12[1];
-  return React$jsx('div', {
-    children: [React$jsx('h1', {
+  var _react_index$useState = react_index$useState(''),
+    _react_index$useState2 = _slicedToArray(_react_index$useState, 2),
+    text = _react_index$useState2[0],
+    setText = _react_index$useState2[1];
+  var _react_index$useState3 = react_index$useState(0),
+    _react_index$useState4 = _slicedToArray(_react_index$useState3, 2),
+    number = _react_index$useState4[0],
+    setNumber = _react_index$useState4[1];
+  var _react_index$useState5 = react_index$useState(false),
+    _react_index$useState6 = _slicedToArray(_react_index$useState5, 2),
+    isChecked = _react_index$useState6[0],
+    setIsChecked = _react_index$useState6[1];
+  var _react_index$useState7 = react_index$useState(false),
+    _react_index$useState8 = _slicedToArray(_react_index$useState7, 2),
+    isSelected = _react_index$useState8[0],
+    setIsSelected = _react_index$useState8[1];
+  var _react_index$useState9 = react_index$useState(false),
+    _react_index$useState10 = _slicedToArray(_react_index$useState9, 2),
+    isOpen = _react_index$useState10[0],
+    setIsOpen = _react_index$useState10[1];
+  var _react_index$useState11 = react_index$useState(true),
+    _react_index$useState12 = _slicedToArray(_react_index$useState11, 2),
+    isTooltipOpen = _react_index$useState12[0],
+    setIsTooltipOpen = _react_index$useState12[1];
+  return react_index$jsx('div', {
+    children: [react_index$jsx('h1', {
       children: 'React Benchmark'
-    }, null), React$jsx(App$INTERNAL$Button, {
+    }, null), react_index$jsx(App$INTERNAL$Button, {
       id: "toggle-modal",
       onClick: function onClick() {
         return setIsOpen(!isOpen);
       },
       children: 'Toggle Modal'
-    }, null), React$jsx(App$INTERNAL$Modal, {
+    }, null), react_index$jsx(App$INTERNAL$Modal, {
       isOpen: isOpen,
       onClose: function onClose() {
         return setIsOpen(false);
       },
-      children: [React$jsx('h2', {
+      children: [react_index$jsx('h2', {
         children: 'Modal Content'
-      }, null), React$jsx('p', {
+      }, null), react_index$jsx('p', {
         children: 'This is some modal content.'
-      }, null), React$jsx(App$INTERNAL$Tooltip, {
+      }, null), react_index$jsx(App$INTERNAL$Tooltip, {
         isOpen: isTooltipOpen,
         onClose: function onClose() {
           return setIsTooltipOpen(false);
         },
-        children: [React$jsx('h3', {
+        children: [react_index$jsx('h3', {
           children: 'Tooltip Content'
-        }, null), React$jsx('p', {
+        }, null), react_index$jsx('p', {
           children: 'This is some tooltip content.'
         }, null)]
       }, null)]
-    }, null), React$jsx('div', {
-      children: [React$jsx('h2', {
+    }, null), react_index$jsx('div', {
+      children: [react_index$jsx('h2', {
         children: 'Form Elements'
-      }, null), React$jsx(App$INTERNAL$Input, {
+      }, null), react_index$jsx(App$INTERNAL$Input, {
         id: "update-text",
         value: text,
         onChange: function onChange(e) {
           return setText(e.target.value);
         }
-      }, null), React$jsx(App$INTERNAL$TextArea, {
+      }, null), react_index$jsx(App$INTERNAL$TextArea, {
         value: text,
         onChange: function onChange(e) {
           return setText(e.target.value);
         }
-      }, null), React$jsx(App$INTERNAL$Select, {
+      }, null), react_index$jsx(App$INTERNAL$Select, {
         options: [{
           label: 'Option 1',
           value: 1
@@ -877,17 +877,17 @@ function App$default(props) {
         onChange: function onChange(e) {
           return setNumber(parseInt(e.target.value));
         }
-      }, null), React$jsx(App$INTERNAL$Checkbox, {
+      }, null), react_index$jsx(App$INTERNAL$Checkbox, {
         checked: isChecked,
         onChange: function onChange(e) {
           return setIsChecked(e.target.checked);
         }
-      }, null), React$jsx(App$INTERNAL$Radio, {
+      }, null), react_index$jsx(App$INTERNAL$Radio, {
         checked: isSelected,
         onChange: function onChange(e) {
           return setIsSelected(e.target.checked);
         }
-      }, null), React$jsx(App$INTERNAL$Slider, {
+      }, null), react_index$jsx(App$INTERNAL$Slider, {
         min: 0,
         max: 100,
         step: 1,
@@ -895,9 +895,9 @@ function App$default(props) {
         onChange: function onChange(e) {
           return setNumber(parseInt(e.target.value));
         }
-      }, null), React$jsx(App$INTERNAL$ProgressBar, {
+      }, null), react_index$jsx(App$INTERNAL$ProgressBar, {
         progress: number
-      }, null), React$jsx(App$INTERNAL$Spinner, {}, null)]
+      }, null), react_index$jsx(App$INTERNAL$Spinner, {}, null)]
     }, null)]
   }, null);
 }
@@ -911,16 +911,16 @@ function index$INTERNAL$printIf1(i, str) {
 }
 function index$INTERNAL$run(N) {
   for (var i = 1; i <= N; ++i) {
-    var root = React$createRoot();
-    var rootElement = React$jsx(App$default, {}, null);
+    var root = react_index$createRoot();
+    var rootElement = react_index$jsx(App$default, {}, null);
     index$INTERNAL$printIf1(i, root.render(rootElement));
-    React$callOnClickOrChange('toggle-modal', null);
-    React$callOnClickOrChange('update-text', {
+    react_index$callOnClickOrChange('toggle-modal', null);
+    react_index$callOnClickOrChange('update-text', {
       target: {
         value: '!!!!! some text !!!!!'
       }
     });
-    microtask$drainMicrotaskQueue();
+    sh_microtask$drainMicrotaskQueue();
     index$INTERNAL$printIf1(i, root.render(rootElement));
   }
 }

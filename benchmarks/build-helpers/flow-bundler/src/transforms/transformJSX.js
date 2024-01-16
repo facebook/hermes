@@ -34,8 +34,8 @@ import {transformAST} from 'hermes-transform/dist/transform/transformAST';
 import {t} from 'hermes-transform';
 import {SimpleTransform} from 'hermes-parser/dist/transform/SimpleTransform';
 
-const REACT_JSX_NAME = 'React$jsx';
-const REACT_FRAGMENT_NAME = 'React$Fragment';
+const REACT_JSX_NAME = 'react_index$jsx';
+const REACT_FRAGMENT_NAME = 'react_index$Fragment';
 
 export default async function transformJSX(
   parseResult: ParseResult,

@@ -9,8 +9,8 @@
  */
 
 import invariant from './invariant';
-import CHECKED_CAST from './CHECKED_CAST';
-import {queueMicrotask} from './microtask';
+import CHECKED_CAST from 'sh/CHECKED_CAST';
+import {queueMicrotask} from 'sh/microtask';
 
 function fastArrayJoin(arr: string[], sep: string): string {
   let result: string = '';

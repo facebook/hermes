@@ -8,11 +8,11 @@
  * @format
  */
 
-import type {Props, React$MixedElement} from './React';
+import type {Props, React$MixedElement} from 'react';
 
-import * as React from './React';
+import * as React from 'react';
 import App from './App';
-import {drainMicrotaskQueue} from './microtask';
+import {drainMicrotaskQueue} from 'sh/microtask';
 
 function printIf1(i: number, str: string): void {
   if (i === 1) {
