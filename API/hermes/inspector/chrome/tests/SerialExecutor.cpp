@@ -7,8 +7,6 @@
 
 #include "SerialExecutor.h"
 
-#include <glog/logging.h>
-
 namespace facebook {
 namespace hermes {
 namespace inspector_modern {
@@ -42,10 +40,6 @@ void SerialExecutor::run() {
     }
 
     if (shouldStop_) {
-      if (tasks_.size()) {
-        LOG(WARNING) << "Executor shutdown with " << tasks_.size()
-                     << " tasks running";
-      }
       return;
     }
 

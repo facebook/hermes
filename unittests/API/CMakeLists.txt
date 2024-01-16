@@ -7,6 +7,8 @@ set(APITestsSources
   APITest.cpp
   APITestFactory.cpp
   ${HERMES_JSI_DIR}/jsi/test/testlib.cpp
+  AsyncDebuggerAPITest.cpp
+  ../../API/hermes/inspector/chrome/tests/SerialExecutor.cpp
   DebuggerTest.cpp
   SegmentTest.cpp
   HeapSnapshotAPITest.cpp
