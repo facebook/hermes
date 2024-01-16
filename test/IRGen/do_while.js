@@ -123,8 +123,8 @@ function for_while_do_mixed_test(cond) {
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %14 = AsNumericInst (:number|bigint) %13: any
-// CHECK-NEXT:  %15 = UnaryIncInst (:any) %14: number|bigint
-// CHECK-NEXT:        StoreFrameInst %15: any, [i]: any
+// CHECK-NEXT:  %15 = UnaryIncInst (:number|bigint) %14: number|bigint
+// CHECK-NEXT:        StoreFrameInst %15: number|bigint, [i]: any
 // CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:        BranchInst %BB7

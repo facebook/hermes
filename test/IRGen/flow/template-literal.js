@@ -45,6 +45,7 @@ return function main() {
 // CHECK-NEXT:       StoreFrameInst "X": string, [x]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %3 = CheckedTypeCastInst (:string) %2: any, type(string)
-// CHECK-NEXT:  %4 = StringConcatInst (:string) "hello": string, %3: string, "world": string
-// CHECK-NEXT:       ReturnInst %4: string
+// CHECK-NEXT:  %4 = CheckedTypeCastInst (:string) %3: string, type(string)
+// CHECK-NEXT:  %5 = StringConcatInst (:string) "hello": string, %4: string, "world": string
+// CHECK-NEXT:       ReturnInst %5: string
 // CHECK-NEXT:function_end

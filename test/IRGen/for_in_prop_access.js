@@ -256,8 +256,8 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %19 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %20 = LoadPropertyInst (:any) %18: any, %19: any
 // CHECK-NEXT:  %21 = AsNumericInst (:number|bigint) %20: any
-// CHECK-NEXT:  %22 = UnaryIncInst (:any) %21: number|bigint
-// CHECK-NEXT:        StorePropertyLooseInst %22: any, %18: any, %19: any
+// CHECK-NEXT:  %22 = UnaryIncInst (:number|bigint) %21: number|bigint
+// CHECK-NEXT:        StorePropertyLooseInst %22: number|bigint, %18: any, %19: any
 // CHECK-NEXT:  %24 = LoadFrameInst (:any) [ret]: any
 // CHECK-NEXT:  %25 = LoadFrameInst (:any) [obj]: any
 // CHECK-NEXT:  %26 = LoadFrameInst (:any) [x]: any

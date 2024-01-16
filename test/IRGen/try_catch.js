@@ -193,8 +193,8 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:       StoreFrameInst %2: any, [e]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [e]: any
 // CHECK-NEXT:  %5 = AsNumericInst (:number|bigint) %4: any
-// CHECK-NEXT:  %6 = UnaryIncInst (:any) %5: number|bigint
-// CHECK-NEXT:       StoreFrameInst %6: any, [e]: any
+// CHECK-NEXT:  %6 = UnaryIncInst (:number|bigint) %5: number|bigint
+// CHECK-NEXT:       StoreFrameInst %6: number|bigint, [e]: any
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %9 = BinarySubtractInst (:any) %8: any, 3: number
 // CHECK-NEXT:        StoreFrameInst %9: any, [i]: any
@@ -222,8 +222,8 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %27 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %28 = AsNumericInst (:number|bigint) %27: any
-// CHECK-NEXT:  %29 = UnaryIncInst (:any) %28: number|bigint
-// CHECK-NEXT:        StoreFrameInst %29: any, [i]: any
+// CHECK-NEXT:  %29 = UnaryIncInst (:number|bigint) %28: number|bigint
+// CHECK-NEXT:        StoreFrameInst %29: number|bigint, [i]: any
 // CHECK-NEXT:        BranchInst %BB7
 // CHECK-NEXT:function_end
 
@@ -258,8 +258,8 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %20 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %21 = AsNumericInst (:number|bigint) %20: any
-// CHECK-NEXT:  %22 = UnaryIncInst (:any) %21: number|bigint
-// CHECK-NEXT:        StoreFrameInst %22: any, [i]: any
+// CHECK-NEXT:  %22 = UnaryIncInst (:number|bigint) %21: number|bigint
+// CHECK-NEXT:        StoreFrameInst %22: number|bigint, [i]: any
 // CHECK-NEXT:        BranchInst %BB8
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:        TryEndInst
@@ -292,8 +292,8 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %13 = AsNumericInst (:number|bigint) %12: any
-// CHECK-NEXT:  %14 = UnaryIncInst (:any) %13: number|bigint
-// CHECK-NEXT:        StoreFrameInst %14: any, [i]: any
+// CHECK-NEXT:  %14 = UnaryIncInst (:number|bigint) %13: number|bigint
+// CHECK-NEXT:        StoreFrameInst %14: number|bigint, [i]: any
 // CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:        TryEndInst
@@ -327,8 +327,8 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %15 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %16 = AsNumericInst (:number|bigint) %15: any
-// CHECK-NEXT:  %17 = UnaryIncInst (:any) %16: number|bigint
-// CHECK-NEXT:        StoreFrameInst %17: any, [i]: any
+// CHECK-NEXT:  %17 = UnaryIncInst (:number|bigint) %16: number|bigint
+// CHECK-NEXT:        StoreFrameInst %17: number|bigint, [i]: any
 // CHECK-NEXT:        BranchInst %BB6
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:        TryEndInst
@@ -378,8 +378,8 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %20 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %21 = AsNumericInst (:number|bigint) %20: any
-// CHECK-NEXT:  %22 = UnaryIncInst (:any) %21: number|bigint
-// CHECK-NEXT:        StoreFrameInst %22: any, [i]: any
+// CHECK-NEXT:  %22 = UnaryIncInst (:number|bigint) %21: number|bigint
+// CHECK-NEXT:        StoreFrameInst %22: number|bigint, [i]: any
 // CHECK-NEXT:        TryStartInst %BB8, %BB9
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:  %25 = CatchInst (:any)
@@ -513,8 +513,8 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %20 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %21 = AsNumericInst (:number|bigint) %20: any
-// CHECK-NEXT:  %22 = UnaryIncInst (:any) %21: number|bigint
-// CHECK-NEXT:        StoreFrameInst %22: any, [i]: any
+// CHECK-NEXT:  %22 = UnaryIncInst (:number|bigint) %21: number|bigint
+// CHECK-NEXT:        StoreFrameInst %22: number|bigint, [i]: any
 // CHECK-NEXT:        BranchInst %BB10
 // CHECK-NEXT:%BB10:
 // CHECK-NEXT:        TryEndInst
@@ -648,8 +648,8 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %14 = AsNumericInst (:number|bigint) %13: any
-// CHECK-NEXT:  %15 = UnaryIncInst (:any) %14: number|bigint
-// CHECK-NEXT:        StoreFrameInst %15: any, [i]: any
+// CHECK-NEXT:  %15 = UnaryIncInst (:number|bigint) %14: number|bigint
+// CHECK-NEXT:        StoreFrameInst %15: number|bigint, [i]: any
 // CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %18 = CatchInst (:any)
@@ -671,8 +671,8 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:  %32 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %33 = AsNumericInst (:number|bigint) %32: any
-// CHECK-NEXT:  %34 = UnaryIncInst (:any) %33: number|bigint
-// CHECK-NEXT:        StoreFrameInst %34: any, [i]: any
+// CHECK-NEXT:  %34 = UnaryIncInst (:number|bigint) %33: number|bigint
+// CHECK-NEXT:        StoreFrameInst %34: number|bigint, [i]: any
 // CHECK-NEXT:        BranchInst %BB11
 // CHECK-NEXT:%BB11:
 // CHECK-NEXT:        TryEndInst

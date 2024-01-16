@@ -566,12 +566,22 @@ class ESTreeIRGen {
   /// @name expressions
   /// @{
 
-  /// Generate IR for the expression \p Expr.
+  /// Optionally emit a checked cast if the IR value type does not match the
+  /// Flow type of the specified expression.
+  /// This is called automatically by genExpression() but may need to be used
+  /// manually in some rare cases.
+  Value *enforceExprType(Value *value, ESTree::Node *expr);
+
+  /// Generate IR for the expression \p Expr. Emit a checked cast if the Flow
+  /// type of the expression doesn't match the compiled IR type.
   /// \p nameHint is used to provide names for anonymous functions.
   /// We currently provide names for functions that are assigned to a variable,
   /// or functions that are assigned to an object key. These are a subset of
   /// ES6, but not all of it.
   Value *genExpression(ESTree::Node *expr, Identifier nameHint = Identifier{});
+
+  /// A helper called only from \c genExpression. It performs the actual work.
+  Value *_genExpressionImpl(ESTree::Node *expr, Identifier nameHint);
 
   /// Generate an expression and perform a conditional branch depending on
   /// whether it evaluates to true or false (or optionally, nullish).

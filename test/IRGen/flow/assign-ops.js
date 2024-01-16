@@ -57,14 +57,16 @@ return function f(x: any, n: number) {
 // CHECK-NEXT:  %2 = LoadParamInst (:number) %n: number
 // CHECK-NEXT:       StoreFrameInst %2: number, [n]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [n]: any
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %6 = BinaryAddInst (:any) %4: any, %5: any
-// CHECK-NEXT:  %7 = CheckedTypeCastInst (:number) %6: any, type(number)
-// CHECK-NEXT:       StoreFrameInst %7: number, [n]: any
-// CHECK-NEXT:  %9 = LoadFrameInst (:any) [n]: any
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %11 = BinarySubtractInst (:any) %9: any, %10: any
-// CHECK-NEXT:  %12 = CheckedTypeCastInst (:number) %11: any, type(number)
-// CHECK-NEXT:        StoreFrameInst %12: number, [n]: any
+// CHECK-NEXT:  %5 = CheckedTypeCastInst (:number) %4: any, type(number)
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %7 = BinaryAddInst (:any) %5: number, %6: any
+// CHECK-NEXT:  %8 = CheckedTypeCastInst (:number) %7: any, type(number)
+// CHECK-NEXT:       StoreFrameInst %8: number, [n]: any
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) [n]: any
+// CHECK-NEXT:  %11 = CheckedTypeCastInst (:number) %10: any, type(number)
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %13 = BinarySubtractInst (:any) %11: number, %12: any
+// CHECK-NEXT:  %14 = CheckedTypeCastInst (:number) %13: any, type(number)
+// CHECK-NEXT:        StoreFrameInst %14: number, [n]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

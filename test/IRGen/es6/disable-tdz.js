@@ -52,10 +52,10 @@ function check1() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any|empty) [x@check1]: any|empty
 // CHECK-NEXT:  %1 = ThrowIfInst (:any) %0: any|empty, type(empty)
-// CHECK-NEXT:  %2 = UnaryIncInst (:any) %1: any
+// CHECK-NEXT:  %2 = UnaryIncInst (:number|bigint) %1: any
 // CHECK-NEXT:  %3 = LoadFrameInst (:any|empty) [x@check1]: any|empty
 // CHECK-NEXT:  %4 = ThrowIfInst (:any) %3: any|empty, type(empty)
-// CHECK-NEXT:       StoreFrameInst %2: any, [x@check1]: any|empty
+// CHECK-NEXT:       StoreFrameInst %2: number|bigint, [x@check1]: any|empty
 // CHECK-NEXT:  %6 = LoadFrameInst (:any|empty) [y@check1]: any|empty
 // CHECK-NEXT:  %7 = ThrowIfInst (:any) %6: any|empty, type(empty)
 // CHECK-NEXT:       ReturnInst %7: any
@@ -91,8 +91,8 @@ function check1() {
 // CHKDIS-NEXT:frame = []
 // CHKDIS-NEXT:%BB0:
 // CHKDIS-NEXT:  %0 = LoadFrameInst (:any) [x@check1]: any
-// CHKDIS-NEXT:  %1 = UnaryIncInst (:any) %0: any
-// CHKDIS-NEXT:       StoreFrameInst %1: any, [x@check1]: any
+// CHKDIS-NEXT:  %1 = UnaryIncInst (:number|bigint) %0: any
+// CHKDIS-NEXT:       StoreFrameInst %1: number|bigint, [x@check1]: any
 // CHKDIS-NEXT:  %3 = LoadFrameInst (:any) [y@check1]: any
 // CHKDIS-NEXT:       ReturnInst %3: any
 // CHKDIS-NEXT:function_end

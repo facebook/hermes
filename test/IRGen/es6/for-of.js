@@ -139,8 +139,8 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %26 = LoadFrameInst (:any) [ar]: any
 // CHECK-NEXT:  %27 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %28 = AsNumericInst (:number|bigint) %27: any
-// CHECK-NEXT:  %29 = UnaryIncInst (:any) %28: number|bigint
-// CHECK-NEXT:        StoreFrameInst %29: any, [i]: any
+// CHECK-NEXT:  %29 = UnaryIncInst (:number|bigint) %28: number|bigint
+// CHECK-NEXT:        StoreFrameInst %29: number|bigint, [i]: any
 // CHECK-NEXT:        StorePropertyLooseInst %15: any, %26: any, %28: number|bigint
 // CHECK-NEXT:        BranchInst %BB6
 // CHECK-NEXT:%BB6:
