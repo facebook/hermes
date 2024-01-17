@@ -133,7 +133,7 @@ typedef struct SHUnit {
   /// Unit main function.
   SHLegacyValue (*unit_main)(SHRuntime *shr);
   /// Unit main function information.
-  SHNativeFuncInfo *unit_main_info;
+  const SHNativeFuncInfo *unit_main_info;
   /// Unit name.
   const char *unit_name;
 
