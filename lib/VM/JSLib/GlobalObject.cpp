@@ -740,6 +740,9 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // Define the 'unescape' function.
   defineGlobalFunc(Predefined::getSymbolID(Predefined::unescape), unescape, 1);
 
+  // Define the 'btoa' function.
+  defineGlobalFunc(Predefined::getSymbolID(Predefined::btoa), btoa, 1);
+
   // Define the 'decodeURI' function.
   defineGlobalFunc(
       Predefined::getSymbolID(Predefined::decodeURI), decodeURI, 1);
