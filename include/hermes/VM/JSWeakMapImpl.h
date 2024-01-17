@@ -22,15 +22,109 @@ namespace detail {
 
 /// Used as the key to the DenseSet in JSWeakMapImpl.
 /// Packages the hash with the WeakRef itself.
-/// Uses WeakRefs using invalid locations as slots for empty and tombstone keys.
-struct WeakRefKey {
-  /// Actual weak ref stored as the key.
-  WeakMapEntryRef ref;
+/// Uses invalid locations as slots for empty and tombstone keys.
+class WeakRefKey {
+  /// Used to construct Empty/Tombstone WeakRefKey.
+  static constexpr uint32_t kEmptyKey = 0;
+  static constexpr uint32_t kTombstoneKey = 1;
+
+  /// Slot to the key object (packaged with its mapped value and owning map).
+  WeakMapEntrySlot *slot_;
 
   /// GC-stable hash value of the JSObject pointed to by ref, while it's alive.
-  uint32_t hash;
+  uint32_t hash_;
 
-  WeakRefKey(WeakMapEntryRef ref, uint32_t hash) : ref(ref), hash(hash) {}
+  explicit WeakRefKey(WeakMapEntrySlot *slot, uint32_t hash)
+      : slot_(slot), hash_(hash) {}
+
+ public:
+  WeakRefKey(
+      Runtime &runtime,
+      Handle<JSObject> key,
+      HermesValue value,
+      JSWeakMapImplBase *ownerMapPtr)
+      : slot_(
+            runtime.getHeap().allocWeakMapEntrySlot(*key, value, ownerMapPtr)),
+        hash_(runtime.gcStableHashHermesValue(key)) {}
+
+  /// \return a pointer to the key object with read barrier. This should not be
+  /// called when the weak ref key object is collected.
+  JSObject *getKeyNonNull(PointerBase &base, GC &gc) const {
+    assert(isKeyValid() && "tried to access collected weak ref object");
+    return static_cast<JSObject *>(slot_->key.getNonNull(base, gc));
+  }
+
+  /// \return The mapped value by the the key object.
+  HermesValue getMappedValue(GC &gc) const {
+    // During marking phase in Hades, mutator thread may read a mapped value A
+    // and store it to a marked object B, then deletes the entry. In
+    // completeMarking(), A may become unreachable and gets swept, leaving a
+    // dangling reference in B. To address it, we add a read barrier on every
+    // access to mapped value. Adding writer barrier should also work but this
+    // is cleaner.
+    gc.weakRefReadBarrier(slot_->mappedValue);
+    return slot_->mappedValue;
+  }
+
+  /// Set mapped value in slot_ to \p value.
+  void setMappedValue(HermesValue value) {
+    slot_->mappedValue = value;
+  }
+
+  /// Create an empty key to be used in DenseMap.
+  static WeakRefKey createEmptyKey() {
+    return WeakRefKey{
+        reinterpret_cast<WeakMapEntrySlot *>(kEmptyKey), kEmptyKey};
+  }
+
+  /// Create a tombstone key to be used in DenseMap.
+  static WeakRefKey createTombstoneKey() {
+    return WeakRefKey{
+        reinterpret_cast<WeakMapEntrySlot *>(kTombstoneKey), kTombstoneKey};
+  }
+
+  /// \return true if the WeakRoot to the key object is still alive.
+  bool isKeyValid() const {
+    return !!slot_->key;
+  }
+
+  /// \return true if the underlying slots are equal, or point to the same key
+  /// object.
+  bool isKeyEqual(const WeakRefKey &other) const {
+    // Comparing when the slots are equal should always succeed. This also
+    // handles comparison with tombstone and empty.
+    if (slot_ == other.slot_)
+      return true;
+    // If the slots don't match and either one is tombstone or empty,
+    // the comparison has failed (so we won't dereference them below).
+    if (reinterpret_cast<uintptr_t>(slot_) <= kTombstoneKey ||
+        reinterpret_cast<uintptr_t>(other.slot_) <= kTombstoneKey)
+      return false;
+
+    // If either key has been garbage collected, it is impossible for them to
+    // compare equal. Otherwise, check for reference equality between the keys.
+    return slot_->key && other.slot_->key &&
+        slot_->key.getNoBarrierUnsafe() ==
+        other.slot_->key.getNoBarrierUnsafe();
+  }
+
+  /// \return true if the underlying slot points to the same key object as
+  /// \p keyObject. This is only used by WeakRefLookupKey, so \p keyObject
+  /// should never be null.
+  bool isKeyEqual(CompressedPointer keyObject) const {
+    if (reinterpret_cast<uintptr_t>(slot_) <= kTombstoneKey)
+      return false;
+    return slot_->key.getNoBarrierUnsafe() == keyObject;
+  }
+
+  /// Free the WeakMapEntrySlot held by this reference.
+  void releaseSlot() {
+    slot_->free();
+  }
+
+  uint32_t getHash() const {
+    return hash_;
+  }
 };
 
 /// Used as a lookup key to the DenseSet in JSWeakMapImpl, so that we don't
@@ -48,22 +142,19 @@ struct WeakRefLookupKey {
         hash(runtime.gcStableHashHermesValue(keyObj)) {}
 };
 
-/// Enable using WeakRef<JSObject> in DenseMap.
+/// Enable using WeakRefKey in DenseMap.
 struct WeakRefInfo {
   /// \return Empty key which is simply null.
   static inline WeakRefKey getEmptyKey() {
-    // Hashes of Empty/Tombstone key do not matter, since the key to be inserted
-    // or searched can never be one of these two values. So we just pass a
-    // constant 0 here.
-    return WeakRefKey{WeakMapEntryRef::createEmptyEntryRef(), 0};
+    return WeakRefKey::createEmptyKey();
   }
   /// \return Empty key which is simply a pointer to 0x1 - don't dereference.
   static inline WeakRefKey getTombstoneKey() {
-    return WeakRefKey{WeakMapEntryRef::createTombstoneEntryRef(), 0};
+    return WeakRefKey::createTombstoneKey();
   }
   /// \return the hash in \p key.
   static inline unsigned getHashValue(const WeakRefKey &key) {
-    return key.hash;
+    return key.getHash();
   }
   /// \return the hash in lookup key.
   static inline unsigned getHashValue(const WeakRefLookupKey &key) {
@@ -72,7 +163,7 @@ struct WeakRefInfo {
   /// \return true both arguments are empty, both are tombstone,
   /// or both point to the same JSObject.
   static inline bool isEqual(const WeakRefKey &a, const WeakRefKey &b) {
-    return a.ref.isKeyEqual(b.ref);
+    return a.isKeyEqual(b);
   }
   /// \return true if \p b is neither empty nor tombstone, and points to the
   /// same JSObject as refCellPtr of \p a (which should never be null pointer).
@@ -83,7 +174,7 @@ struct WeakRefInfo {
   /// object will ever compare equal to an object that has been freed.
   static inline bool isEqual(const WeakRefLookupKey &a, const WeakRefKey &b) {
     assert(a.refCellPtr && "LookupKey should not use a null object pointer");
-    return b.ref.isKeyEqual(a.refCellPtr);
+    return b.isKeyEqual(a.refCellPtr);
   }
 };
 
@@ -165,7 +256,7 @@ class JSWeakMapImplBase : public JSObject {
     for (auto &element : self->set_) {
       // No need to explicitly erase the owning entry of this slot since the
       // whole map/set is to be deleted.
-      element.ref.releaseSlot();
+      element.releaseSlot();
     }
     self->~JSWeakMapImplBase();
   }
