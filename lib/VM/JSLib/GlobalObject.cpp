@@ -740,6 +740,9 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // Define the 'unescape' function.
   defineGlobalFunc(Predefined::getSymbolID(Predefined::unescape), unescape, 1);
 
+  // Define the 'atob' function.
+  defineGlobalFunc(Predefined::getSymbolID(Predefined::atob), atob, 1);
+
   // Define the 'btoa' function.
   defineGlobalFunc(Predefined::getSymbolID(Predefined::btoa), btoa, 1);
 
