@@ -292,22 +292,40 @@ getMethod(Runtime &runtime, Handle<> O, Handle<> key);
 
 /// ES9.0 Record type for iterator records.
 /// Used for caching the "next" method to avoid repeated property lookups.
+template <typename T>
 struct IteratorRecord {
   /// Actual iterator object.
   const Handle<JSObject> iterator;
 
   /// Cache for the "next" method to call to step the iterator.
-  const Handle<Callable> nextMethod;
+  const Handle<T> nextMethod;
 
-  IteratorRecord(Handle<JSObject> iterator, Handle<Callable> nextMethod)
+  IteratorRecord(Handle<JSObject> iterator, Handle<T> nextMethod)
       : iterator(iterator), nextMethod(nextMethod) {}
 };
+
+// The nextMethod of this IteratorRecord could be of any type.
+using UncheckedIteratorRecord = IteratorRecord<HermesValue>;
+// This is an IteratorRecord that has its next method explicity checked and
+// defined as a Callable type.
+using CheckedIteratorRecord = IteratorRecord<Callable>;
 
 /// ES6.0 7.4.1
 /// \param obj object to iterate over.
 /// \param method an optional method to call instead of retrieving @@iterator.
 /// \return the iterator object
-CallResult<IteratorRecord> getIterator(
+/// If the "next" method is not a Callable, throw a TypeError.
+CallResult<CheckedIteratorRecord> getCheckedIterator(
+    Runtime &runtime,
+    Handle<> obj,
+    llvh::Optional<Handle<Callable>> method = llvh::None);
+
+/// ES6.0 7.4.1
+/// \param obj object to iterate over.
+/// \param method an optional method to call instead of retrieving @@iterator.
+/// \return the iterator object
+/// This does not check if the "next" method is a Callable.
+CallResult<UncheckedIteratorRecord> getIterator(
     Runtime &runtime,
     Handle<> obj,
     llvh::Optional<Handle<Callable>> method = llvh::None);
@@ -315,7 +333,7 @@ CallResult<IteratorRecord> getIterator(
 /// ES6.0 7.4.2
 CallResult<PseudoHandle<JSObject>> iteratorNext(
     Runtime &runtime,
-    const IteratorRecord &iteratorRecord,
+    const CheckedIteratorRecord &iteratorRecord,
     llvh::Optional<Handle<>> value = llvh::None);
 
 /// ES6.0 7.4.5
@@ -328,7 +346,7 @@ CallResult<PseudoHandle<HermesValue>> iteratorValue(
 /// \return a null pointer instead of the boolean false.
 CallResult<Handle<JSObject>> iteratorStep(
     Runtime &runtime,
-    const IteratorRecord &iteratorRecord);
+    const CheckedIteratorRecord &iteratorRecord);
 
 /// ES sec-iteratorclose
 /// \param completion the thrown value to complete this operation with, empty if

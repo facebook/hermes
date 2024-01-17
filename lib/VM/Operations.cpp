@@ -1447,7 +1447,24 @@ getMethod(Runtime &runtime, Handle<> O, Handle<> key) {
   return funcRes;
 }
 
-CallResult<IteratorRecord> getIterator(
+CallResult<CheckedIteratorRecord> getCheckedIterator(
+    Runtime &runtime,
+    Handle<> obj,
+    llvh::Optional<Handle<Callable>> methodOpt) {
+  auto uncheckedIterRecordRes = getIterator(runtime, obj, methodOpt);
+  if (uncheckedIterRecordRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto uncheckedIterRecord = uncheckedIterRecordRes.getValue();
+  if (LLVM_UNLIKELY(!vmisa<Callable>(uncheckedIterRecord.nextMethod.get()))) {
+    return runtime.raiseTypeError("'next' method on iterator must be callable");
+  }
+  return CheckedIteratorRecord{
+      std::move(uncheckedIterRecord.iterator),
+      Handle<Callable>::vmcast(std::move(uncheckedIterRecord.nextMethod))};
+}
+
+CallResult<UncheckedIteratorRecord> getIterator(
     Runtime &runtime,
     Handle<> obj,
     llvh::Optional<Handle<Callable>> methodOpt) {
@@ -1483,23 +1500,18 @@ CallResult<IteratorRecord> getIterator(
     return ExecutionStatus::EXCEPTION;
   }
 
-  // We perform this check prior to returning, because every function in the JS
-  // library which gets an iterator immediately calls the 'next' function.
-  if (!vmisa<Callable>(nextMethodRes->get())) {
-    return runtime.raiseTypeError("'next' method on iterator must be callable");
-  }
-
-  auto nextMethod =
-      Handle<Callable>::vmcast(runtime.makeHandle(std::move(*nextMethodRes)));
-
-  return IteratorRecord{iterator, nextMethod};
+  return UncheckedIteratorRecord{
+      iterator,
+      Handle<HermesValue>::vmcast(
+          runtime.makeHandle(std::move(*nextMethodRes)))};
 }
 
 CallResult<PseudoHandle<JSObject>> iteratorNext(
     Runtime &runtime,
-    const IteratorRecord &iteratorRecord,
+    const CheckedIteratorRecord &iteratorRecord,
     llvh::Optional<Handle<>> value) {
   GCScopeMarkerRAII marker{runtime};
+
   auto resultRes = value
       ? Callable::executeCall1(
             iteratorRecord.nextMethod,
@@ -1526,7 +1538,7 @@ CallResult<PseudoHandle<HermesValue>> iteratorValue(
 
 CallResult<Handle<JSObject>> iteratorStep(
     Runtime &runtime,
-    const IteratorRecord &iteratorRecord) {
+    const CheckedIteratorRecord &iteratorRecord) {
   auto resultRes = iteratorNext(runtime, iteratorRecord);
   if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -1613,11 +1625,12 @@ CallResult<Handle<JSArray>> iterableToArray(
     Runtime &runtime,
     Handle<HermesValue> items) {
   // IterableToList: 2a. Let iteratorRecord be ? GetIterator(items, sync).
-  CallResult<IteratorRecord> iteratorRecordRes = getIterator(runtime, items);
+  CallResult<CheckedIteratorRecord> iteratorRecordRes =
+      getCheckedIterator(runtime, items);
   if (LLVM_UNLIKELY(iteratorRecordRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  IteratorRecord iteratorRecord = *iteratorRecordRes;
+  CheckedIteratorRecord iteratorRecord = *iteratorRecordRes;
 
   // CreateArrayFromList: 1. Let array be ! ArrayCreate(0).
   auto arrRes = JSArray::create(runtime, 0, 0);
@@ -2961,7 +2974,8 @@ extern "C" SHLegacyValue _sh_ljs_iterator_begin_rjs(
     }
 
     // Fall back to the general case.
-    CallResult<IteratorRecord> iterRecord = getIterator(runtime, srcHandle);
+    CallResult<CheckedIteratorRecord> iterRecord =
+        getCheckedIterator(runtime, srcHandle);
     if (LLVM_UNLIKELY(iterRecord == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
     *src = iterRecord->nextMethod.getHermesValue();
@@ -3033,7 +3047,7 @@ extern "C" SHLegacyValue _sh_ljs_iterator_next_rjs(
 
     GCScopeMarkerRAII marker{runtime};
 
-    IteratorRecord iterRecord{
+    CheckedIteratorRecord iterRecord{
         Handle<JSObject>::vmcast(iteratorOrIdxHandle),
         Handle<Callable>::vmcast(srcOrNextHandle)};
 

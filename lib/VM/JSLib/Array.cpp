@@ -3645,7 +3645,7 @@ CallResult<HermesValue> arrayFrom(void *, Runtime &runtime, NativeArgs args) {
     // Assert we can cast usingIterator to a Callable otherwise getMethod would
     // have thrown.
     // e. ReturnIfAbrupt(iterator).
-    auto iterRes = getIterator(
+    auto iterRes = getCheckedIterator(
         runtime, args.getArgHandle(0), Handle<Callable>::vmcast(usingIterator));
     if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;

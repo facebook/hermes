@@ -160,7 +160,7 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("Property 'add' for Set is not callable");
   }
 
-  auto iterRes = getIterator(runtime, args.getArgHandle(0));
+  auto iterRes = getCheckedIterator(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

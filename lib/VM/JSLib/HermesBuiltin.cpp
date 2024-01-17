@@ -557,11 +557,11 @@ hermesBuiltinArraySpread(void *, Runtime &runtime, NativeArgs args) {
   }
 
   // 3. Let iteratorRecord be ? GetIterator(spreadObj).
-  auto iteratorRecordRes = getIterator(runtime, args.getArgHandle(1));
+  auto iteratorRecordRes = getCheckedIterator(runtime, args.getArgHandle(1));
   if (LLVM_UNLIKELY(iteratorRecordRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  IteratorRecord iteratorRecord = *iteratorRecordRes;
+  CheckedIteratorRecord iteratorRecord = *iteratorRecordRes;
 
   MutableHandle<> nextIndex{runtime, args.getArg(2)};
 

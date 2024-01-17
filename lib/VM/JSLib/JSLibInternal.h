@@ -466,7 +466,8 @@ CallResult<HermesValue> addEntriesFromIterable(
       !iterable->isUndefined() && !iterable->isNull() &&
       "iterable cannot be undefined or null");
   // 3. Let iteratorRecord be ? GetIterator(iterable).
-  CallResult<IteratorRecord> iterRes = getIterator(runtime, iterable);
+  CallResult<CheckedIteratorRecord> iterRes =
+      getCheckedIterator(runtime, iterable);
   if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

@@ -143,7 +143,7 @@ ExecutionStatus Interpreter::caseIteratorBegin(
     }
   }
   GCScopeMarkerRAII marker{runtime};
-  CallResult<IteratorRecord> iterRecord =
+  CallResult<UncheckedIteratorRecord> iterRecord =
       getIterator(runtime, Handle<>(&O2REG(IteratorBegin)));
   if (LLVM_UNLIKELY(iterRecord == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -211,9 +211,13 @@ ExecutionStatus Interpreter::caseIteratorNext(
     return ExecutionStatus::RETURNED;
   }
 
+  if (LLVM_UNLIKELY(!vmisa<Callable>(O3REG(IteratorNext)))) {
+    return runtime.raiseTypeError("'next' method on iterator must be callable");
+  }
+
   GCScopeMarkerRAII marker{runtime};
 
-  IteratorRecord iterRecord{
+  CheckedIteratorRecord iterRecord{
       Handle<JSObject>::vmcast(&O2REG(IteratorNext)),
       Handle<Callable>::vmcast(&O3REG(IteratorNext))};
 
