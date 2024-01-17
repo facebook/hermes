@@ -41,6 +41,10 @@ constexpr double MS_PER_MINUTE = MS_PER_SECOND * SECONDS_PER_MINUTE;
 constexpr double MS_PER_HOUR = MS_PER_MINUTE * MINUTES_PER_HOUR;
 constexpr double MS_PER_DAY = MS_PER_HOUR * HOURS_PER_DAY;
 
+// Time value ranges from ES2024 21.4.1.1.
+constexpr int64_t TIME_RANGE_SECS = SECONDS_PER_DAY * 100000000LL;
+constexpr int64_t TIME_RANGE_MS = TIME_RANGE_SECS * MS_PER_SECOND;
+
 //===----------------------------------------------------------------------===//
 // Current time
 
