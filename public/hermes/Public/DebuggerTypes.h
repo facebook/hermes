@@ -120,7 +120,10 @@ enum class PauseReason {
   Breakpoint, /// A breakpoint was hit.
   StepFinish, /// A Step operation completed.
   Exception, /// An Exception was thrown.
-  AsyncTrigger, /// The Pause is the result of triggerAsyncPause().
+  AsyncTriggerImplicit, /// The Pause is the result of
+                        /// triggerAsyncPause(Implicit).
+  AsyncTriggerExplicit, /// The Pause is the result of
+                        /// triggerAsyncPause(Explicit).
   EvalComplete, /// An eval() function finished.
 };
 

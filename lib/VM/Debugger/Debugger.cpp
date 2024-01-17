@@ -227,7 +227,7 @@ ExecutionStatus Debugger::runDebugger(
       isDebugging_ = false;
       return ExecutionStatus::RETURNED;
     }
-    pauseReason = PauseReason::AsyncTrigger;
+    pauseReason = PauseReason::AsyncTriggerImplicit;
   } else if (runReason == RunReason::AsyncBreakExplicit) {
     // The user requested an async break, so we can clear stepping state
     // with the knowledge that the inspector isn't sending an immediate
@@ -236,7 +236,7 @@ ExecutionStatus Debugger::runDebugger(
       clearTempBreakpoints();
       curStepMode_ = llvh::None;
     }
-    pauseReason = PauseReason::AsyncTrigger;
+    pauseReason = PauseReason::AsyncTriggerExplicit;
   } else {
     assert(runReason == RunReason::Opcode && "Unknown run reason");
     // First, check if we have to finish a step that's in progress.
