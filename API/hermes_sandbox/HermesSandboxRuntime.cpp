@@ -1052,7 +1052,7 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
     /// Copy the contents of this GrowableBuffer into an std::string and return
     /// it.
     std::string getString(w2c_hermes *mod) {
-      return {&*sb::Ptr<char>(mod, data), used};
+      return {&*sb::Ptr<char>(mod, data, used), used};
     }
   };
 
