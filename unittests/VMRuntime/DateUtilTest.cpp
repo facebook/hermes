@@ -145,6 +145,11 @@ double localTime(double t) {
 double utcTime(double t) {
   return hermes::vm::utcTime(t, getLocalTimeOffsetCache());
 }
+
+/// A wrapper that implements the deleted daylightSavingTA() function.
+double daylightSavingTA(double timeMs) {
+  return getLocalTimeOffsetCache().daylightSavingOffsetInMs(timeMs);
+}
 } // namespace
 
 TEST(DateUtilTest, LocalTZATest) {
