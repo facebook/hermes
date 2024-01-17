@@ -625,7 +625,7 @@ class Ptr {
 
     // Check that the memory range accessed through this Ptr is entirely within
     // the module's memory.
-    if (((u64)ptr + sizeof(T) * n) > mod_->w2c_memory.size)
+    if (((u64)ptr + sizeof(T) * (u64)n) > mod_->w2c_memory.size)
       abort();
   }
 
