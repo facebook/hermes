@@ -1101,21 +1101,41 @@ tailCall:
 
 #endif // HERMESVM_INDIRECT_THREADING
 
-#define RUN_DEBUGGER_ASYNC_BREAK(flags)                                      \
-  do {                                                                       \
-    CAPTURE_IP_ASSIGN(                                                       \
-        auto dRes,                                                           \
-        runDebuggerUpdatingState(                                            \
-            (uint8_t)(flags) &                                               \
-                    (uint8_t)Runtime::AsyncBreakReasonBits::DebuggerExplicit \
-                ? Debugger::RunReason::AsyncBreakExplicit                    \
-                : Debugger::RunReason::AsyncBreakImplicit,                   \
-            runtime,                                                         \
-            curCodeBlock,                                                    \
-            ip,                                                              \
-            frameRegs));                                                     \
-    if (dRes == ExecutionStatus::EXCEPTION)                                  \
-      goto exception;                                                        \
+// This macro is used when we detect that either the Implicit or Explicit
+// AsyncBreak flags have been set. It checks to see which one was requested and
+// propagate the corresponding RunReason. If both Implicit and Explicit have
+// been requested, then we'll propagate the RunReasons for both. Once for
+// Implicit and once for Explicit.
+#define RUN_DEBUGGER_ASYNC_BREAK(flags)                         \
+  bool requestedImplicit = (uint8_t)(flags) &                   \
+      (uint8_t)Runtime::AsyncBreakReasonBits::DebuggerImplicit; \
+  bool requestedExplicit = (uint8_t)(flags) &                   \
+      (uint8_t)Runtime::AsyncBreakReasonBits::DebuggerExplicit; \
+  do {                                                          \
+    if (requestedImplicit) {                                    \
+      CAPTURE_IP_ASSIGN(                                        \
+          auto dRes,                                            \
+          runDebuggerUpdatingState(                             \
+              Debugger::RunReason::AsyncBreakImplicit,          \
+              runtime,                                          \
+              curCodeBlock,                                     \
+              ip,                                               \
+              frameRegs));                                      \
+      if (dRes == ExecutionStatus::EXCEPTION)                   \
+        goto exception;                                         \
+    }                                                           \
+    if (requestedExplicit) {                                    \
+      CAPTURE_IP_ASSIGN(                                        \
+          auto dRes,                                            \
+          runDebuggerUpdatingState(                             \
+              Debugger::RunReason::AsyncBreakExplicit,          \
+              runtime,                                          \
+              curCodeBlock,                                     \
+              ip,                                               \
+              frameRegs));                                      \
+      if (dRes == ExecutionStatus::EXCEPTION)                   \
+        goto exception;                                         \
+    }                                                           \
   } while (0)
 
   for (;;) {
