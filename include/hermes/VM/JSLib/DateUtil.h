@@ -24,6 +24,8 @@
 namespace hermes {
 namespace vm {
 
+class LocalTimeOffsetCache;
+
 //===----------------------------------------------------------------------===//
 // Conversion constants
 
@@ -122,11 +124,11 @@ int32_t equivalentTime(int64_t epochSecs);
 // ES5.1 15.9.1.9
 
 /// Conversion from UTC to local time.
-double localTime(double t);
+double localTime(double t, LocalTimeOffsetCache &);
 
 /// Conversion from local time to UTC.
 /// Spec refers to this as the UTC() function.
-double utcTime(double t);
+double utcTime(double t, LocalTimeOffsetCache &);
 
 //===----------------------------------------------------------------------===//
 // ES5.1 15.9.1.10
@@ -273,7 +275,7 @@ void timeTZString(double t, double tza, llvh::SmallVectorImpl<char> &buf);
 ///   - Date.parse(x.toISOString())
 /// We can extend this to support other formats as well, when the given str
 /// does not conform to the 15.9.1.15 format.
-double parseDate(StringView str);
+double parseDate(StringView str, LocalTimeOffsetCache &);
 
 } // namespace vm
 } // namespace hermes
