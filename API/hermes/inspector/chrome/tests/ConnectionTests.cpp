@@ -2679,82 +2679,28 @@ TEST_F(ConnectionTests, testSetBreakpointsMultipleScripts) {
 TEST_F(ConnectionTests, testSetBreakpointByUrlRegex) {
   int msgId = 1;
 
-  std::string url1 = "https://www.example.com/123456";
-  asyncRuntime.executeScriptAsync(
-      R"(
-    function foo1() {
-      var somevar1 = 111; // (line 2) hit breakpoint
-    }
-  )",
-      url1);
-  send<m::debugger::EnableRequest>(conn, msgId++);
-  auto scriptParsed1 =
-      expectNotification<m::debugger::ScriptParsedNotification>(conn);
-
-  std::string url2 = "https://www.example.com/abcdefg";
-  asyncRuntime.executeScriptAsync(
-      R"(
-    function foo2() {
-      var aaa = 'bbb';
-      var somevar2 = 222; // (line 3) hit breakpoint
-    }
-  )",
-      url2);
-  auto scriptParsed2 =
-      expectNotification<m::debugger::ScriptParsedNotification>(conn);
-
-  // In the third script we will set breakpoint (on debugger statement)
-  // and call both functions (script url doesn't matter).
   asyncRuntime.executeScriptAsync(R"(
-    debugger; // [1] (line 1) set breakpoints in both files
-    foo1();
-    foo2();
+    var a = 1 + 2;
+    debugger;      // [1] (line 2) hit debugger statement,
+    var b = a / 2;
   )");
-  auto scriptParsed3 =
-      expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
-  // [1] hit debugger statement
-  expectPaused(conn, "other", {{"global", 1, 1}});
+  send<m::debugger::EnableRequest>(conn, msgId++);
+  expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
-  // Set breakpoint on line 2 of URL matching "www\.example\.com\/[\d]+"
-  // (should match url1).
-  m::debugger::SetBreakpointByUrlRequest req1;
-  req1.id = msgId++;
-  req1.lineNumber = 2;
-  req1.urlRegex = R"(https://www\.example\.com\/[\d]+)";
-  conn.send(req1.toJsonStr());
+  // [1] (line 2) hit debugger statement
+  expectPaused(conn, "other", {{"global", 2, 1}});
 
-  expectBreakpointResponse(conn, req1.id, 2, 2);
+  // Unsuccessfully attempt a regex breakpoint
+  m::debugger::SetBreakpointByUrlRequest req;
+  req.urlRegex = ".*";
+  req.id = msgId++;
+  req.lineNumber = 3;
+  req.columnNumber = 0;
+  conn.send(req.toJsonStr());
+  expectResponse<m::ErrorResponse>(conn, req.id);
 
-  // Set breakpoint on line 3 of URL matching "www\.example\.com\/[a-zA-z]+"
-  // (should match url2).
-  m::debugger::SetBreakpointByUrlRequest req2;
-  req2.id = msgId++;
-  req2.lineNumber = 3;
-  req2.urlRegex = R"(https://www\.example\.com\/[a-zA-z]+)";
-  conn.send(req2.toJsonStr());
-
-  expectBreakpointResponse(conn, req2.id, 3, 3);
-
-  // Resume and check that we hit correct breakpoints.
-  send<m::debugger::ResumeRequest>(conn, msgId++);
-  expectNotification<m::debugger::ResumedNotification>(conn);
-
-  // First we should stop on line 2 of the first script.
-  expectPaused(
-      conn,
-      "other",
-      {FrameInfo("foo1", 2, 2).setScriptId(scriptParsed1.scriptId),
-       FrameInfo("global", 2, 1).setScriptId(scriptParsed3.scriptId)});
-  send<m::debugger::ResumeRequest>(conn, msgId++);
-  expectNotification<m::debugger::ResumedNotification>(conn);
-
-  // Next we should stop on line 3 of the second script.
-  expectPaused(
-      conn,
-      "other",
-      {FrameInfo("foo2", 3, 2).setScriptId(scriptParsed2.scriptId),
-       FrameInfo("global", 3, 1).setScriptId(scriptParsed3.scriptId)});
+  // Resume
   send<m::debugger::ResumeRequest>(conn, msgId++);
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
