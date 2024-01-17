@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#ifdef HERMES_ENABLE_DEBUGGER
+
 #include "AsyncDebuggerAPI.h"
 
 #include <llvh/ADT/ScopeExit.h>
@@ -243,3 +245,5 @@ std::unique_ptr<AsyncDebuggerAPI> AsyncDebuggerAPI::create(
 } // namespace debugger
 } // namespace hermes
 } // namespace facebook
+
+#endif // HERMES_ENABLE_DEBUGGER
