@@ -53,6 +53,17 @@ class StringBuilder {
     return StringBuilder(runtime, crtRes->getString());
   }
 
+  /// Number of characters accumulated in the StringBuilder so far.
+  uint32_t currentLength() const {
+    return index_;
+  }
+
+  /// The length this StringBuilder was constructed with. The max length doesn't
+  /// ever change.
+  uint32_t maxLength() const {
+    return strPrim_->getStringLength();
+  }
+
   /// Append an UTF16Ref \p str. Note that str should not point to a GC-managed
   /// memory, as this function in theory can allocate.
   void appendUTF16Ref(UTF16Ref str) {
