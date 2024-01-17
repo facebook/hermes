@@ -30,6 +30,7 @@ workflows:
             - windows
             - macos
       - emscripten
+      - sandbox
       - test-linux
       - test-windows
       - test-e2e
@@ -547,6 +548,64 @@ jobs:
           root: output
           paths:
             - .
+
+  sandbox:
+    docker:
+      - image: emscripten/emsdk:3.1.39
+    environment:
+      - DEBIAN_FRONTEND: noninteractive
+    working_directory: /root
+    steps:
+      - run:
+          name: Install dependencies
+          command: |
+            apt update
+            apt install -y libicu-dev tzdata
+            wget https://github.com/WebAssembly/wabt/releases/download/1.0.33/wabt-1.0.33-ubuntu.tar.gz
+            tar -xvf ./wabt-1.0.33-ubuntu.tar.gz
+      - checkout:
+          path: hermes
+      - run:
+          name: Build Hermes with Emscripten
+          command: |
+            # Generate the host compiler.
+            cmake -S hermes -B build_host
+            cmake --build ./build_host --target hermesc -j 4
+
+            # Generate and build the debug artefact.
+            cmake -S hermes -B build_wasm_dbg \
+              -DCMAKE_TOOLCHAIN_FILE=$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake \
+              -DIMPORT_HERMESC=build_host/ImportHermesc.cmake \
+              -DCMAKE_BUILD_TYPE=Debug -DHERMES_UNICODE_LITE=ON \
+              -DCMAKE_CXX_FLAGS=-O2  -DCMAKE_C_FLAGS=-O2 \
+              -DCMAKE_EXE_LINKER_FLAGS="-sALLOW_MEMORY_GROWTH=1 -sSTACK_SIZE=256KB" \
+              -DHERMES_ENABLE_DEBUGGER=OFF -DHERMES_SLOW_DEBUG=OFF
+
+            cmake --build build_wasm_dbg --target hermesSandboxImpl -j 4
+            ./wabt-1.0.33/bin/wasm2c build_wasm_dbg/API/hermes_sandbox/hermesSandboxImpl.wasm -n hermes \
+              -o hermes/API/hermes_sandbox/external/hermes_sandbox_impl_dbg_compiled.c
+
+            # Generate and build the release artefact.
+            cmake -S hermes -B build_wasm_opt \
+              -DCMAKE_TOOLCHAIN_FILE=$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake \
+              -DIMPORT_HERMESC=build_host/ImportHermesc.cmake \
+              -DCMAKE_BUILD_TYPE=Release -DHERMES_UNICODE_LITE=ON \
+              -DCMAKE_EXE_LINKER_FLAGS="-sALLOW_MEMORY_GROWTH=1 -sSTACK_SIZE=256KB -g2" \
+              -DHERMES_ENABLE_DEBUGGER=OFF
+
+            cmake --build build_wasm_opt --target hermesSandboxImpl -j 4
+            ./wabt-1.0.33/bin/wasm2c build_wasm_opt/API/hermes_sandbox/hermesSandboxImpl.wasm -n hermes \
+              -o hermes/API/hermes_sandbox/external/hermes_sandbox_impl_opt_compiled.c
+      - run:
+          name: Build and test with the newly generated sandbox
+          command: |
+            cmake -S hermes -B build_dbg -DCMAKE_BUILD_TYPE=Debug
+            cmake --build build_dbg -j 4
+            cmake --build build_dbg --target check-hermes -j 4
+
+            cmake -S hermes -B build_opt -DCMAKE_BUILD_TYPE=Release
+            cmake --build build_opt -j 4
+            cmake --build build_opt --target check-hermes -j 4
 
   test-e2e:
     executor:
