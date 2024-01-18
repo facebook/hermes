@@ -287,6 +287,7 @@ CallResult<uint32_t> JSWeakMapImplBase::getFreeValueStorageIndex(
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
+    self->valueStorage_.setNonNull(runtime, *storageHandle, runtime.getHeap());
   }
 
   // Update internal state here to ensure we don't corrupt it on exception.
@@ -299,8 +300,6 @@ CallResult<uint32_t> JSWeakMapImplBase::getFreeValueStorageIndex(
   }
 
   assert(i < storageHandle->size(runtime) && "invalid index");
-  self->valueStorage_.setNonNull(runtime, *storageHandle, runtime.getHeap());
-
   return i;
 }
 
