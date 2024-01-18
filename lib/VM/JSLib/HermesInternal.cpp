@@ -924,12 +924,26 @@ Handle<JSObject> createHermesInternalObject(
   // generally considered harmless to be exposed by default.
   defineInternMethod(P::getEpilogues, hermesInternalGetEpilogues);
   defineInternMethod(
-      P::getInstrumentedStats, hermesInternalGetInstrumentedStats);
-  defineInternMethod(
       P::getRuntimeProperties, hermesInternalGetRuntimeProperties);
   defineInternMethod(P::ttiReached, hermesInternalTTIReached);
   defineInternMethod(P::ttrcReached, hermesInternalTTRCReached);
   defineInternMethod(P::getFunctionLocation, hermesInternalGetFunctionLocation);
+
+  if (LLVM_UNLIKELY(runtime.traceMode != SynthTraceMode::None)) {
+    // Use getNewNonEnumerableFlags() so that getInstrumentedStats can be
+    // overridden for synth trace case. See TracingRuntime.cpp.
+    (void)defineMethod(
+        runtime,
+        intern,
+        Predefined::getSymbolID(P::getInstrumentedStats),
+        nullptr /* context */,
+        hermesInternalGetInstrumentedStats,
+        0,
+        DefinePropertyFlags::getNewNonEnumerableFlags());
+  } else {
+    defineInternMethod(
+        P::getInstrumentedStats, hermesInternalGetInstrumentedStats);
+  }
 
   // HermesInternal function that are only meant to be used for testing purpose.
   // They can change language semantics and are security risks.
