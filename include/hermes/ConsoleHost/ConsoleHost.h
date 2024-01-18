@@ -138,10 +138,6 @@ struct ExecuteOptions {
   /// Perform a full GC just before printing any statistics.
   bool forceGCBeforeStats{false};
 
-  /// Try to execute the same number of CPU instructions
-  /// across repeated invocations of the same JS.
-  bool stabilizeInstructionCount{false};
-
   /// Run the sampling profiler.
   bool sampleProfiling{false};
 

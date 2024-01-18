@@ -109,7 +109,6 @@ static int executeHBCBytecodeFromCL(
   options.timeLimit = flags.ExecutionTimeLimit;
   options.stopAfterInit = flags.StopAfterInit;
   options.forceGCBeforeStats = flags.GCBeforeStats;
-  options.stabilizeInstructionCount = flags.StableInstructionCount;
   options.sampleProfiling = flags.SampleProfiling;
   options.heapTimeline = flags.HeapTimeline;
 

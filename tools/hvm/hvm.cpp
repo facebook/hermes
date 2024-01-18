@@ -140,7 +140,6 @@ int main(int argc, char **argv) {
           .withMaxNumRegisters(1024 * 1024)
           .build();
 
-  options.stabilizeInstructionCount = flags.StableInstructionCount;
   options.stopAfterInit = flags.StopAfterInit;
 
   bool success;

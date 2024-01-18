@@ -266,13 +266,6 @@ bool executeHBCBytecodeImpl(
 
   std::unique_ptr<vm::StatSamplingThread> statSampler;
   auto runtime = vm::Runtime::create(options.runtimeConfig);
-  if (options.stabilizeInstructionCount) {
-    // Try to limit features that can introduce unpredictable CPU instruction
-    // behavior. Date is a potential cause, but is not handled currently.
-    vm::MockedEnvironment env;
-    env.stabilizeInstructionCount = true;
-    runtime->setMockedEnvironment(env);
-  }
 
   if (options.timeLimit > 0) {
     runtime->timeLimitMonitor = vm::TimeLimitMonitor::getOrCreate();

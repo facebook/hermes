@@ -119,10 +119,6 @@ class TraceInterpreter final {
     /// guaranteeing there's no garbage in heap size numbers.
     bool forceGCBeforeStats{false};
 
-    /// If true, make attempts to make the instruction count more stable. Useful
-    /// for using a tool like PIN to count instructions and compare runs.
-    bool stabilizeInstructionCount{false};
-
     /// If true, remove the requirement that the input bytecode was compiled
     /// from the same source used to record the trace. There must only be one
     /// input bytecode file in this case. If its observable behavior deviates
