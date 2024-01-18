@@ -1403,6 +1403,86 @@ TEST_F(SynthTraceReplayTest, HostObjectManipulation) {
   }
 }
 
+// This test mainly verifies that SynthTrace records HostFunction calls and
+// returns properly, and the replay to return the same values for each calls.
+TEST_F(SynthTraceReplayTest, HostFunctionTraceAndReplayCallCount) {
+  //
+  // Tracing
+  //
+  {
+    auto &rt = *traceRt;
+    auto propName = jsi::PropNameID::forAscii(rt, "foo");
+    const unsigned int paramCount = 0;
+    int callCount = 0;
+
+    // A HostFunction that returns different type of Value based on the call
+    // count.
+    auto func = jsi::Function::createFromHostFunction(
+        rt,
+        propName,
+        paramCount,
+        [callCount](
+            jsi::Runtime &rt,
+            const jsi::Value &thisVal,
+            const jsi::Value *args,
+            size_t count) mutable -> jsi::Value {
+          ++callCount;
+          if (callCount == 1) {
+            return jsi::Value::undefined();
+          } else if (callCount == 2) {
+            return jsi::Value::null();
+          } else if (callCount == 3) {
+            return jsi::Value(3);
+          } else if (callCount == 4) {
+            return jsi::Value(true);
+          } else if (callCount == 5) {
+            return jsi::String::createFromUtf8(rt, "foobarbaz");
+          }
+          return jsi::Value::undefined();
+        });
+
+    rt.global().setProperty(rt, "foo", func);
+
+    // Call foo() and store results to variables so that we can use them for
+    // verification after replay.
+    eval(rt, "var ret1 = foo()"); // undefined
+    eval(rt, "var ret2 = foo()"); // null
+    eval(rt, "var ret3 = foo()"); // 3
+    eval(rt, "var ret4 = foo()"); // true
+    eval(rt, "var ret5 = foo()"); // "foobarbaz"
+    eval(rt, "var ret6 = foo()"); // undefined
+  }
+
+  replay();
+
+  //
+  // Verification
+  //
+  {
+    auto &rt = *replayRt;
+    auto ret1 = eval(rt, "ret1;");
+    EXPECT_TRUE(ret1.isUndefined());
+
+    auto ret2 = eval(rt, "ret2;");
+    EXPECT_TRUE(ret2.isNull());
+
+    auto ret3 = eval(rt, "ret3;");
+    EXPECT_TRUE(ret3.isNumber());
+    EXPECT_EQ(ret3.getNumber(), 3);
+
+    auto ret4 = eval(rt, "ret4;");
+    EXPECT_TRUE(ret4.isBool());
+    EXPECT_EQ(ret4.getBool(), true);
+
+    auto ret5 = eval(rt, "ret5;");
+    EXPECT_TRUE(ret5.isString());
+    EXPECT_EQ(ret5.getString(rt).utf8(rt), "foobarbaz");
+
+    auto ret6 = eval(rt, "ret6;");
+    EXPECT_TRUE(ret6.isUndefined());
+  }
+}
+
 using JobQueueReplayTest = SynthTraceReplayTest;
 
 TEST_F(JobQueueReplayTest, DrainSingleMicrotask) {
