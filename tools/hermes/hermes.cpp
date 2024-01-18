@@ -63,8 +63,7 @@ Flags flags;
 static int executeHBCBytecodeFromCL(
     std::unique_ptr<hbc::BCProvider> bytecode,
     const driver::BytecodeBufferInfo &info) {
-  auto recStats = (flags.GCPrintStats || flags.GCBeforeStats) &&
-      !flags.StableInstructionCount;
+  auto recStats = (flags.GCPrintStats || flags.GCBeforeStats);
   ExecuteOptions options;
   options.runtimeConfig =
       vm::RuntimeConfig::Builder()
