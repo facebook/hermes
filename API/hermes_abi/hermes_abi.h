@@ -547,6 +547,32 @@ struct HermesABIRuntimeVTable {
       struct HermesABIRuntime *rt,
       struct HermesABISymbol sym,
       struct HermesABIGrowableBuffer *buf);
+
+  /// Perform the JS instanceof operation, checking if \p obj is an instance of
+  /// \p ctor. Returns true if so, false otherwise.
+  struct HermesABIBoolOrError (*instance_of)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject obj,
+      struct HermesABIFunction ctor);
+
+  /// Check for strict equality between two references, returning true if they
+  /// are equal, false otherwise.
+  bool (*strict_equals_symbol)(
+      struct HermesABIRuntime *rt,
+      struct HermesABISymbol a,
+      struct HermesABISymbol b);
+  bool (*strict_equals_bigint)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIBigInt a,
+      struct HermesABIBigInt b);
+  bool (*strict_equals_string)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIString a,
+      struct HermesABIString b);
+  bool (*strict_equals_object)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject a,
+      struct HermesABIObject b);
 };
 
 /// An instance of a Hermes Runtime.
