@@ -6,6 +6,7 @@
 <PROJECT_ROOT>/.*/node_modules
 <PROJECT_ROOT>/flow-api-translator/__tests__/flowDefToTSDef/fixtures
 <PROJECT_ROOT>/flow-api-translator/__tests__/flowToJS/fixtures
+<PROJECT_ROOT>/prettier-hermes-v2-backport
 
 [options]
 name=hermes-parser
