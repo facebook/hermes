@@ -1052,11 +1052,12 @@ TEST_F(JSLibTest, HugeSortTest) {
 class JSLibMockedEnvironmentTest : public RuntimeTestFixtureBase {
  public:
   JSLibMockedEnvironmentTest()
-      : RuntimeTestFixtureBase(RuntimeConfig::Builder()
-                                   .withGCConfig(kTestGCConfig)
-                                   .withTraceEnabled(true)
-                                   .withEnableSampledStats(true)
-                                   .build()) {}
+      : RuntimeTestFixtureBase(
+            RuntimeConfig::Builder()
+                .withGCConfig(kTestGCConfig)
+                .withSynthTraceMode(::hermes::vm::SynthTraceMode::Tracing)
+                .withEnableSampledStats(true)
+                .build()) {}
 };
 
 TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {

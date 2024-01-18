@@ -243,6 +243,7 @@ Runtime::Runtime(
       verifyEvalIR(runtimeConfig.getVerifyEvalIR()),
       optimizedEval(runtimeConfig.getOptimizedEval()),
       asyncBreakCheckInEval(runtimeConfig.getAsyncBreakCheckInEval()),
+      traceMode(runtimeConfig.getSynthTraceMode()),
       gcCallbacksWrapper_(*this),
       heapStorage_(
           gcCallbacksWrapper_,
@@ -261,8 +262,10 @@ Runtime::Runtime(
       bytecodeWarmupPercent_(runtimeConfig.getBytecodeWarmupPercent()),
       trackIO_(runtimeConfig.getTrackIO()),
       vmExperimentFlags_(runtimeConfig.getVMExperimentFlags()),
-      commonStorage_(
-          createRuntimeCommonStorage(runtimeConfig.getTraceEnabled())),
+      commonStorage_(createRuntimeCommonStorage(
+          runtimeConfig.getSynthTraceMode() == SynthTraceMode::Tracing ||
+          runtimeConfig.getSynthTraceMode() ==
+              SynthTraceMode::TracingAndReplaying)),
       stackPointer_(),
       crashMgr_(runtimeConfig.getCrashMgr()),
 #ifdef HERMES_CHECK_NATIVE_STACK

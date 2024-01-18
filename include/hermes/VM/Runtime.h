@@ -798,6 +798,8 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// Whether to emit async break check instructions in eval().
   const bool asyncBreakCheckInEval : 1;
 
+  const SynthTraceMode traceMode;
+
 #ifdef HERMESVM_PROFILER_OPCODE
   /// Track the frequency of each opcode in the interpreter.
   uint32_t opcodeExecuteFrequency[256] = {0};

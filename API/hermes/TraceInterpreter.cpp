@@ -693,7 +693,12 @@ TraceInterpreter::getSourceHashToBundleMap(
 
   // If (and only if) an out trace is requested, turn on tracing in the VM
   // as well.
-  rtConfigBuilder.withTraceEnabled(options.traceEnabled);
+  if (options.traceEnabled) {
+    rtConfigBuilder.withSynthTraceMode(
+        ::hermes::vm::SynthTraceMode::TracingAndReplaying);
+  } else {
+    rtConfigBuilder.withSynthTraceMode(::hermes::vm::SynthTraceMode::Replaying);
+  }
 
   if (options.action == ExecuteOptions::MarkerAction::SAMPLE_TIME) {
     // If time sampling is requested, the RuntimeConfig has to have the sampling
