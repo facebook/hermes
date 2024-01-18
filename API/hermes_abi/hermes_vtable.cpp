@@ -1207,6 +1207,16 @@ HermesABIVoidOrError set_native_state(
   return abi::createVoidOrError();
 }
 
+bool object_is_array(HermesABIRuntime *, HermesABIObject object) {
+  return vm::vmisa<vm::JSArray>(*toHandle(object));
+}
+bool object_is_arraybuffer(HermesABIRuntime *, HermesABIObject object) {
+  return vm::vmisa<vm::JSArrayBuffer>(*toHandle(object));
+}
+bool object_is_function(HermesABIRuntime *, HermesABIObject object) {
+  return vm::vmisa<vm::Callable>(*toHandle(object));
+}
+
 constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     release_hermes_runtime,
     get_and_clear_js_error_value,
@@ -1247,6 +1257,9 @@ constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     get_host_object,
     get_native_state,
     set_native_state,
+    object_is_array,
+    object_is_arraybuffer,
+    object_is_function,
 };
 
 } // namespace

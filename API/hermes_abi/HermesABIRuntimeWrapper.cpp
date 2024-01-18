@@ -884,20 +884,30 @@ class HermesABIRuntimeWrapper : public Runtime {
         abiRt_, toABIObject(obj), &abiKey, &abiVal));
   }
 
-  bool isArray(const Object &) const override {
-    THROW_UNIMPLEMENTED();
+  bool isArray(const Object &obj) const override {
+    return vtable_->object_is_array(abiRt_, toABIObject(obj));
   }
-  bool isArrayBuffer(const Object &) const override {
-    THROW_UNIMPLEMENTED();
+  bool isArrayBuffer(const Object &obj) const override {
+    return vtable_->object_is_arraybuffer(abiRt_, toABIObject(obj));
   }
-  bool isFunction(const Object &) const override {
-    THROW_UNIMPLEMENTED();
+  bool isFunction(const Object &obj) const override {
+    return vtable_->object_is_function(abiRt_, toABIObject(obj));
   }
-  bool isHostObject(const Object &) const override {
-    THROW_UNIMPLEMENTED();
+  bool isHostObject(const Object &obj) const override {
+    // Check if it is a HostObject and was created by this C++ wrapper. Checking
+    // the vtable allows us to safely share the HermesABIRuntime with other
+    // users in the future.
+    if (auto *ho = vtable_->get_host_object(abiRt_, toABIObject(obj)))
+      return ho->vtable == &HostObjectWrapper::vt;
+    return false;
   }
-  bool isHostFunction(const Function &) const override {
-    THROW_UNIMPLEMENTED();
+  bool isHostFunction(const Function &fn) const override {
+    // Check if it is a HostFunction and was created by this C++ wrapper.
+    // Checking the vtable allows us to safely share the HermesABIRuntime with
+    // other users in the future.
+    if (auto *hf = vtable_->get_host_function(abiRt_, toABIFunction(fn)))
+      return hf->vtable == &HostFunctionWrapper::vt;
+    return false;
   }
   Array getPropertyNames(const Object &obj) override {
     return intoJSIArray(
