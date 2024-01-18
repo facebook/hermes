@@ -76,7 +76,12 @@ import {
 import {createTranslationContext} from './utils/TranslationUtils';
 import {asDetachedNode} from 'hermes-transform';
 import {translationError, flowFixMeOrError} from './utils/ErrorUtils';
-import {isExpression} from 'hermes-estree';
+import {
+  isExpression,
+  isStringLiteral,
+  isNumericLiteral,
+  isIdentifier,
+} from 'hermes-estree';
 
 const EMPTY_TRANSLATION_RESULT = [null, []];
 
@@ -475,8 +480,9 @@ function convertObjectExpression(
       }
       case 'Property': {
         if (
-          prop.key.type !== 'Identifier' &&
-          prop.key.type !== 'StringLiteral'
+          !isIdentifier(prop.key) &&
+          !isStringLiteral(prop.key) &&
+          !isNumericLiteral(prop.key)
         ) {
           throw translationError(
             prop.key,
@@ -1011,8 +1017,9 @@ function convertClassMember(
         return EMPTY_TRANSLATION_RESULT;
       }
       if (
-        member.key.type !== 'Identifier' &&
-        member.key.type !== 'StringLiteral'
+        !isIdentifier(member.key) &&
+        !isStringLiteral(member.key) &&
+        !isNumericLiteral(member.key)
       ) {
         throw translationError(
           member.key,
@@ -1047,8 +1054,9 @@ function convertClassMember(
         return EMPTY_TRANSLATION_RESULT;
       }
       if (
-        member.key.type !== 'Identifier' &&
-        member.key.type !== 'StringLiteral'
+        !isIdentifier(member.key) &&
+        !isStringLiteral(member.key) &&
+        !isNumericLiteral(member.key)
       ) {
         throw translationError(
           member.key,
