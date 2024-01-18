@@ -13,6 +13,7 @@
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/VM/Callable.h"
+#include "hermes/VM/HostModel.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/Runtime.h"
@@ -930,6 +931,98 @@ HermesABIValueOrError call_as_constructor(
       res.isObject() ? res : objHandle.getHermesValue());
 }
 
+/// A wrapper that holds the HermesABIRuntime and HostFunction, to allow the
+/// HostFunction to be conveniently exposed to the VM and destroyed when it is
+/// no longer needed.
+class HostFunctionWrapper {
+  /// The HermesABIRuntime that created this HostFunction.
+  HermesABIRuntimeImpl *hart_;
+
+  /// The HostFunction that this wrapper manages.
+  HermesABIHostFunction *func_;
+
+ public:
+  HostFunctionWrapper(HermesABIRuntimeImpl *hart, HermesABIHostFunction *func)
+      : hart_(hart), func_(func) {}
+
+  ~HostFunctionWrapper() {
+    func_->vtable->release(func_);
+  }
+
+  HermesABIHostFunction *getFunc() {
+    return func_;
+  }
+
+  static vm::CallResult<vm::HermesValue>
+  call(void *hfCtx, vm::Runtime &runtime, vm::NativeArgs hvArgs) {
+    auto *self = static_cast<HostFunctionWrapper *>(hfCtx);
+    auto *hart = self->hart_;
+    assert(&runtime == hart->rt.get());
+
+    // Convert the HermesValue arguments to HermesABIValues.
+    llvh::SmallVector<HermesABIValue, 8> apiArgs;
+    for (vm::HermesValue hv : hvArgs)
+      apiArgs.push_back(hart->createValue(hv));
+
+    HermesABIValue thisArg = hart->createValue(hvArgs.getThisArg());
+
+    auto retOrError = (self->func_->vtable->call)(
+        self->func_, hart, &thisArg, apiArgs.data(), apiArgs.size());
+
+    // Release all of the values allocated for the arguments.
+    for (const auto &arg : apiArgs)
+      abi::releaseValue(arg);
+    abi::releaseValue(thisArg);
+
+    // Error values do not need to be "released" so we can return early.
+    if (abi::isError(retOrError))
+      return hart->raiseError(abi::getError(retOrError));
+
+    // Convert the returned HermesABIValue to a HermesValue and release it.
+    auto ret = abi::getValue(retOrError);
+    auto retHV = toHermesValue(ret);
+    abi::releaseValue(ret);
+    return retHV;
+  }
+  static void release(void *data) {
+    delete static_cast<HostFunctionWrapper *>(data);
+  }
+};
+
+HermesABIFunctionOrError create_function_from_host_function(
+    HermesABIRuntime *abiRt,
+    HermesABIPropNameID name,
+    unsigned int paramCount,
+    HermesABIHostFunction *func) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  auto *hfw = new HostFunctionWrapper(hart, func);
+
+  // Create a FinalizableNativeFunction that uses the HostFunctionWrapper as its
+  // context for calling and finalization.
+  auto funcRes = vm::FinalizableNativeFunction::createWithoutPrototype(
+      runtime,
+      hfw,
+      HostFunctionWrapper::call,
+      HostFunctionWrapper::release,
+      *toHandle(name),
+      paramCount);
+  assert(
+      funcRes != vm::ExecutionStatus::EXCEPTION &&
+      "Failed to create HostFunction");
+  return hart->createFunctionOrError(*funcRes);
+}
+
+HermesABIHostFunction *get_host_function(
+    HermesABIRuntime *,
+    HermesABIFunction fn) {
+  if (auto h =
+          vm::Handle<vm::FinalizableNativeFunction>::dyn_vmcast(toHandle(fn)))
+    return static_cast<HostFunctionWrapper *>(h->getContext())->getFunc();
+  return nullptr;
+}
+
 constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     release_hermes_runtime,
     get_and_clear_js_error_value,
@@ -964,6 +1057,8 @@ constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     prop_name_id_equals,
     call,
     call_as_constructor,
+    create_function_from_host_function,
+    get_host_function,
 };
 
 } // namespace
