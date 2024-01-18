@@ -739,7 +739,7 @@ void Runtime::printRuntimeGCStats(JSONEmitter &json) const {
 void Runtime::printHeapStats(llvh::raw_ostream &os) {
   getHeap().printAllCollectedStats(os);
 #ifndef NDEBUG
-  printArrayCensus(llvh::outs());
+  printArrayCensus(os);
 #endif
   if (trackIO_) {
     getIOTrackingInfoJSON(os);
