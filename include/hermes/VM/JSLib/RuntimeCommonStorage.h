@@ -18,14 +18,12 @@ namespace vm {
 /// This struct provides a shared location for per-Runtime storage needs of
 /// JSLib. Runtime owns and provides access to an instance of this class.
 struct RuntimeCommonStorage {
-  RuntimeCommonStorage(bool shouldTrace);
+  RuntimeCommonStorage();
   ~RuntimeCommonStorage();
 
   /// RuntimeCommonStorage is tied to a single Runtime, and should not be copied
   RuntimeCommonStorage(const RuntimeCommonStorage &) = delete;
   void operator=(const RuntimeCommonStorage &) = delete;
-
-  bool shouldTrace = false;
 
   /// PRNG used by Math.random()
   std::mt19937_64 randomEngine_;

@@ -14,14 +14,12 @@
 namespace hermes {
 namespace vm {
 
-std::shared_ptr<RuntimeCommonStorage> createRuntimeCommonStorage(
-    bool shouldTrace) {
-  return std::make_shared<RuntimeCommonStorage>(shouldTrace);
+std::shared_ptr<RuntimeCommonStorage> createRuntimeCommonStorage() {
+  return std::make_shared<RuntimeCommonStorage>();
 }
 
-RuntimeCommonStorage::RuntimeCommonStorage(bool shouldTrace)
-    : shouldTrace(shouldTrace) {}
-RuntimeCommonStorage::~RuntimeCommonStorage() {}
+RuntimeCommonStorage::RuntimeCommonStorage() = default;
+RuntimeCommonStorage::~RuntimeCommonStorage() = default;
 
 } // namespace vm
 } // namespace hermes
