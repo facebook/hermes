@@ -65,13 +65,7 @@ getCalls(
   };
   struct HostObject final : public StackValue {
     ObjectID objID;
-    std::string propName;
-    HostObject(ObjectID hostObjID, const std::string &propName)
-        : StackValue(), objID(hostObjID), propName(propName) {}
-  };
-  struct HostObjectPropNames final : public StackValue {
-    ObjectID objID;
-    HostObjectPropNames(ObjectID hostObjID) : StackValue(), objID(hostObjID) {}
+    explicit HostObject(ObjectID hostObjID) : StackValue(), objID(hostObjID) {}
   };
   // A mapping from host functions to calls. The first element of the return
   // tuple.
@@ -98,14 +92,7 @@ getCalls(
       return funcIDToRecords[hostFunc->hostFunctionID];
     } else if (
         const auto *hostObj = dynamic_cast<const HostObject *>(&stackObj)) {
-      // Host object is a combination of the object id and property
-      // name.
-      return hostObjIDToNameToRecords[hostObj->objID]
-          .propNameToCalls[hostObj->propName];
-    } else if (
-        const auto *hostObj =
-            dynamic_cast<const HostObjectPropNames *>(&stackObj)) {
-      return hostObjIDToNameToRecords[hostObj->objID].callsToGetPropertyNames;
+      return hostObjIDToNameToRecords[hostObj->objID].calls;
     } else {
       llvm_unreachable("Shouldn't be any other subclasses of StackValue");
     }
@@ -152,33 +139,30 @@ getCalls(
       // JS will access a property on a host object, which delegates to an
       // accessor. Add a new call on the stack, and add a call with an empty
       // piece to the object and property it is calling.
-      stack.emplace_back(new HostObject(
-          nativeAccessRec.hostObjectID_, nativeAccessRec.propName_));
+      stack.emplace_back(new HostObject(nativeAccessRec.hostObjectID_));
       hostObjIDToNameToRecords[nativeAccessRec.hostObjectID_]
-          .propNameToCalls[nativeAccessRec.propName_]
-          .emplace_back(
+          .calls.emplace_back(
               TraceInterpreter::Call(TraceInterpreter::Call::Piece(recordNum)));
     } else if (rec->getType() == RecordType::GetNativePropertyNames) {
       const auto &nativePropNamesRec =
           static_cast<const SynthTrace::GetNativePropertyNamesRecord &>(*rec);
       // JS asked for all properties on a host object. Add a new call on the
       // stack, and add a call with an empty piece to the object it is calling.
-      stack.emplace_back(
-          new HostObjectPropNames(nativePropNamesRec.hostObjectID_));
+      stack.emplace_back(new HostObject(nativePropNamesRec.hostObjectID_));
       hostObjIDToNameToRecords[nativePropNamesRec.hostObjectID_]
-          .callsToGetPropertyNames.emplace_back(
+          .calls.emplace_back(
               TraceInterpreter::Call(TraceInterpreter::Call::Piece(recordNum)));
     } else if (rec->getType() == RecordType::GetNativePropertyNamesReturn) {
       // Set the vector of strings that were returned from the original call.
       const auto &nativePropNamesRec =
           static_cast<const SynthTrace::GetNativePropertyNamesReturnRecord &>(
               *rec);
-      // The stack object must be a HostObjectPropNames in order for this to be
-      // a return from there.
-      hostObjIDToNameToRecords
-          [dynamic_cast<const HostObjectPropNames &>(*stack.back()).objID]
-              .resultsOfGetPropertyNames.emplace_back(
-                  nativePropNamesRec.propNames_);
+      // The stack object must be a HostObject in order for this to be a return
+      // from there.
+      hostObjIDToNameToRecords[dynamic_cast<const HostObject &>(*stack.back())
+                                   .objID]
+          .resultsOfGetPropertyNames.emplace_back(
+              nativePropNamesRec.propNames_);
     }
     auto &calls = getCallsFromStack(*stack.back());
     assert(!calls.empty() && "There should always be at least one call");
@@ -261,12 +245,7 @@ std::unordered_map<ObjectID, TraceInterpreter::DefAndUse> createGlobalMap(
     }
   }
   for (const auto &p : objCallStacks) {
-    for (const auto &x : p.second.propNameToCalls) {
-      for (const auto &call : x.second) {
-        calls.push_back(&call);
-      }
-    }
-    for (const auto &call : p.second.callsToGetPropertyNames) {
+    for (const auto &call : p.second.calls) {
       calls.push_back(&call);
     }
   }
@@ -344,12 +323,7 @@ void createCallMetadataForHostFunctions(
 void createCallMetadataForHostObjects(
     TraceInterpreter::HostObjectToCalls *objCallStacks) {
   for (auto &p : *objCallStacks) {
-    for (auto &x : p.second.propNameToCalls) {
-      for (TraceInterpreter::Call &call : x.second) {
-        createCallMetadata(&call);
-      }
-    }
-    for (auto &call : p.second.callsToGetPropertyNames) {
+    for (auto &call : p.second.calls) {
       createCallMetadata(&call);
     }
   }
@@ -798,8 +772,8 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
   struct FakeHostObject : public HostObject {
     TraceInterpreter &interpreter;
     const HostObjectInfo &hostObjectInfo;
-    std::unordered_map<std::string, uint64_t> callCounts;
-    uint64_t propertyNamesCallCounts = 0;
+    uint64_t callCount = 0;
+    uint64_t getPropertyNamesReturnCount = 0;
 
     FakeHostObject(
         TraceInterpreter &interpreter,
@@ -811,8 +785,7 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
         const std::string propName = name.utf8(rt);
         // There are no arguments to pass to a get call.
         return interpreter.execFunction(
-            hostObjectInfo.propNameToCalls.at(propName).at(
-                callCounts[propName]++),
+            hostObjectInfo.calls.at(callCount++),
             // This is undefined since there's no way to access the host object
             // as a JS value normally from this position.
             Value::undefined(),
@@ -830,8 +803,7 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
         const Value args[] = {Value(rt, value)};
         // There is exactly one argument to pass to a set call.
         interpreter.execFunction(
-            hostObjectInfo.propNameToCalls.at(propName).at(
-                callCounts[propName]++),
+            hostObjectInfo.calls.at(callCount++),
             // This is undefined since there's no way to access the host object
             // as a JS value normally from this position.
             Value::undefined(),
@@ -845,16 +817,16 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
 
     std::vector<PropNameID> getPropertyNames(Runtime &rt) override {
       try {
-        const auto callCount = propertyNamesCallCounts++;
         interpreter.execFunction(
-            hostObjectInfo.callsToGetPropertyNames.at(callCount),
+            hostObjectInfo.calls.at(callCount++),
             // This is undefined since there's no way to access the host object
             // as a JS value normally from this position.
             Value::undefined(),
             nullptr,
             0);
         const std::vector<std::string> &names =
-            hostObjectInfo.resultsOfGetPropertyNames.at(callCount);
+            hostObjectInfo.resultsOfGetPropertyNames.at(
+                getPropertyNamesReturnCount++);
         std::vector<PropNameID> props;
         for (const std::string &name : names) {
           props.emplace_back(PropNameID::forUtf8(rt, name));

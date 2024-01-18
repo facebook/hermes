@@ -75,16 +75,14 @@ class TraceInterpreter final {
   using HostFunctionToCalls =
       std::unordered_map<SynthTrace::ObjectID, std::vector<Call>>;
 
-  /// A PropNameToCalls is a mapping from property names to a list of
-  /// calls on that property. The calls are ordered by invocation (the 0th
-  /// element is the 1st call).
-  using PropNameToCalls = std::unordered_map<std::string, std::vector<Call>>;
-
   struct HostObjectInfo final {
     explicit HostObjectInfo() = default;
 
-    PropNameToCalls propNameToCalls;
-    std::vector<Call> callsToGetPropertyNames;
+    /// Stores any of get(), set(), getPropertyNames() call to a HostObject,
+    /// ordered by invocation.
+    std::vector<Call> calls;
+    /// Stores the return value of getPropertyNames() call to a HostObject
+    /// ordered by invocation.
     std::vector<std::vector<std::string>> resultsOfGetPropertyNames;
   };
 
