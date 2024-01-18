@@ -304,6 +304,7 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
     // The marking loop above will have accumulated WeakMaps;
     // find things reachable from values of reachable keys.
     completeWeakMapMarking(acceptor);
+    markWeakMapEntrySlots(acceptor);
 
     // Update weak roots references.
     markWeakRoots(acceptor, /*markLongLived*/ true);
@@ -416,6 +417,43 @@ void MallocGC::drainMarkStack(MarkingAcceptor &acceptor) {
     markCell(cell, acceptor);
     allocatedBytes_ += cell->getAllocatedSize();
   }
+}
+
+void MallocGC::markWeakMapEntrySlots(MarkingAcceptor &acceptor) {
+  bool newlyMarkedValue;
+  do {
+    newlyMarkedValue = false;
+    weakMapEntrySlots_.forEach([this, &acceptor](WeakMapEntrySlot &slot) {
+      if (!slot.key || !slot.owner)
+        return;
+      GCCell *ownerMapCell = slot.owner.getNoBarrierUnsafe(getPointerBase());
+      // If the owner structure isn't reachable, no need to mark the values.
+      if (!CellHeader::from(ownerMapCell)->isMarked())
+        return;
+      GCCell *cell = slot.key.getNoBarrierUnsafe(getPointerBase());
+      // The WeakRef object must be marked for the mapped value to
+      // be marked (unless there are other strong refs to the value).
+      if (!CellHeader::from(cell)->isMarked())
+        return;
+      acceptor.accept(slot.mappedValue);
+    });
+    newlyMarkedValue = !acceptor.worklist_.empty();
+    drainMarkStack(acceptor);
+  } while (newlyMarkedValue);
+
+  // If either a key or its owning map is dead, set the mapped value to Empty.
+  weakMapEntrySlots_.forEach([this](WeakMapEntrySlot &slot) {
+    if (!slot.key || !slot.owner) {
+      slot.mappedValue = HermesValue::encodeEmptyValue();
+      return;
+    }
+    GCCell *cell = slot.key.getNoBarrierUnsafe(getPointerBase());
+    GCCell *ownerMapCell = slot.owner.getNoBarrierUnsafe(getPointerBase());
+    if (!CellHeader::from(ownerMapCell)->isMarked() ||
+        !CellHeader::from(cell)->isMarked()) {
+      slot.mappedValue = HermesValue::encodeEmptyValue();
+    }
+  });
 }
 
 void MallocGC::completeWeakMapMarking(MarkingAcceptor &acceptor) {

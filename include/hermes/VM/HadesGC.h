@@ -946,6 +946,13 @@ class HadesGC final : public GCBase {
   /// whether this call was made from the background thread.
   void incrementalCollect(bool backgroundThread);
 
+  /// Iterate the list of `weakMapEntrySlots_`, for each non-free slot, if
+  /// both the key and the owner are marked, mark the mapped value.
+  /// Note that this may further cause other values to be marked, so we need to
+  /// keep iterating until no update. After the iteration, set each unreachable
+  /// mapped value to Empty.
+  void markWeakMapEntrySlots();
+
   /// Finish the marking process. This requires a STW pause in order to do a
   /// final marking worklist drain, and to update weak roots. It must be invoked
   /// from the mutator.

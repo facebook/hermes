@@ -886,6 +886,10 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
     return !localWorklist_.empty();
   }
 
+  bool isLocalWorklistEmpty() const {
+    return localWorklist_.empty();
+  }
+
   MarkWorklist &globalWorklist() {
     return globalWorklist_;
   }
@@ -1830,6 +1834,43 @@ void HadesGC::updateOldGenThreshold() {
   ogThreshold_.update(clampedRate / (clampedRate + 1));
 }
 
+void HadesGC::markWeakMapEntrySlots() {
+  bool newlyMarkedValue;
+  do {
+    newlyMarkedValue = false;
+    weakMapEntrySlots_.forEach([this](WeakMapEntrySlot &slot) {
+      if (!slot.key || !slot.owner)
+        return;
+      GCCell *ownerMapCell = slot.owner.getNoBarrierUnsafe(getPointerBase());
+      // If the owner structure isn't reachable, no need to mark the values.
+      if (!HeapSegment::getCellMarkBit(ownerMapCell))
+        return;
+      GCCell *cell = slot.key.getNoBarrierUnsafe(getPointerBase());
+      // The WeakRef object must be marked for the mapped value to
+      // be marked (unless there are other strong refs to the value).
+      if (!HeapSegment::getCellMarkBit(cell))
+        return;
+      oldGenMarker_->accept(slot.mappedValue);
+    });
+    newlyMarkedValue = !oldGenMarker_->isLocalWorklistEmpty();
+    oldGenMarker_->drainAllWork();
+  } while (newlyMarkedValue);
+
+  // If either a key or its owning map is dead, set the mapped value to Empty.
+  weakMapEntrySlots_.forEach([this](WeakMapEntrySlot &slot) {
+    if (!slot.key || !slot.owner) {
+      slot.mappedValue = HermesValue::encodeEmptyValue();
+      return;
+    }
+    GCCell *cell = slot.key.getNoBarrierUnsafe(getPointerBase());
+    GCCell *ownerMapCell = slot.owner.getNoBarrierUnsafe(getPointerBase());
+    if (!HeapSegment::getCellMarkBit(cell) ||
+        !HeapSegment::getCellMarkBit(ownerMapCell)) {
+      slot.mappedValue = HermesValue::encodeEmptyValue();
+    }
+  });
+}
+
 void HadesGC::completeMarking() {
   assert(inGC() && "inGC_ must be set during the STW pause");
   // Update the collection threshold before marking anything more, so that only
@@ -1850,6 +1891,7 @@ void HadesGC::completeMarking() {
       oldGenMarker_->globalWorklist().empty() &&
       "Marking worklist wasn't drained");
   completeWeakMapMarking(*oldGenMarker_);
+  markWeakMapEntrySlots();
   // Update the compactee tracking pointers so that the next YG collection will
   // do a compaction.
   compactee_.evacStart = compactee_.start;
@@ -2406,6 +2448,15 @@ void HadesGC::youngGenEvacuateImpl(Acceptor &acceptor, bool doCompaction) {
   {
     DroppingAcceptor<Acceptor> nameAcceptor{acceptor};
     markRoots(nameAcceptor, /*markLongLived*/ doCompaction);
+
+    // Mark the values in WeakMap entries as roots for the purposes of young gen
+    // collection. This is slightly suboptimal since some of the keys or maps
+    // may be dead, but we still end up evacuating their corresponding value.
+    // This is done for simplicity, since it lets us avoid needing to iterate to
+    // a fixed point as is done during a full collection.
+    weakMapEntrySlots_.forEach([&nameAcceptor](WeakMapEntrySlot &slot) {
+      nameAcceptor.accept(slot.mappedValue);
+    });
   }
   // Find old-to-young pointers, as they are considered roots for YG
   // collection.

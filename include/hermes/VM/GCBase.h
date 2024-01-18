@@ -1426,6 +1426,9 @@ class GCBase {
     for (auto &slot : weakSlots_) {
       slot.markWeakRoots(acceptor);
     }
+
+    weakMapEntrySlots_.forEach(
+        [&acceptor](WeakMapEntrySlot &slot) { slot.markWeakRoots(acceptor); });
     acceptor.endRootSection();
   }
 

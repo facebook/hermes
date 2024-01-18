@@ -160,6 +160,11 @@ class WeakMapEntrySlot {
   /// NOTE: It's set to Empty only if either the key or the owner is null.
   PinnedHermesValue mappedValue;
 
+  void markWeakRoots(WeakRootAcceptor &acceptor) {
+    acceptor.acceptWeak(key);
+    acceptor.acceptWeak(owner);
+  }
+
   void free() {
     freed_.store(true, std::memory_order_relaxed);
   }
