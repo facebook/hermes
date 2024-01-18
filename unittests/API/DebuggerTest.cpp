@@ -119,4 +119,35 @@ TEST_F(DebuggerAPITest, SingleFrameStackTraceTest) {
       "tester", observer.stackTraces[2].callFrameForIndex(2).functionName);
 }
 
+TEST_F(DebuggerAPITest, GetLoadedScriptsTest) {
+  auto scripts = rt->getDebugger().getLoadedScripts();
+  EXPECT_EQ(scripts.size(), 0);
+
+  eval("var x = 1;");
+  scripts = rt->getDebugger().getLoadedScripts();
+  EXPECT_EQ(scripts.size(), 1);
+  EXPECT_EQ(scripts[0].line, 1);
+  EXPECT_EQ(scripts[0].column, 1);
+  EXPECT_EQ(scripts[0].fileName, "JavaScript");
+
+  bool foundJavaScript = false;
+  bool foundTestJs = false;
+  rt->debugJavaScript("var x = 2;", "Test.js", {});
+  scripts = rt->getDebugger().getLoadedScripts();
+  EXPECT_EQ(scripts.size(), 2);
+  for (auto script : scripts) {
+    if (script.fileName == "JavaScript") {
+      EXPECT_EQ(script.line, 1);
+      EXPECT_EQ(script.column, 1);
+      foundJavaScript = true;
+    } else if (script.fileName == "Test.js") {
+      EXPECT_EQ(script.line, 1);
+      EXPECT_EQ(script.column, 1);
+      foundTestJs = true;
+    }
+  }
+  EXPECT_TRUE(foundJavaScript);
+  EXPECT_TRUE(foundTestJs);
+}
+
 #endif

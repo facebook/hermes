@@ -45,7 +45,7 @@ add_custom_command(
 # Compile the one source file to Hermes bytecode.
 add_custom_command(
   OUTPUT internal_unit.c
-  COMMAND ${shermes_EXE} -O -w -emit-c -exported-unit=internal_unit -o=${CMAKE_CURRENT_BINARY_DIR}/internal_unit.c ${CMAKE_CURRENT_BINARY_DIR}/InternalBytecode.js
+  COMMAND ${shermes_EXE} -O -g0 -w -emit-c -exported-unit=internal_unit -o=${CMAKE_CURRENT_BINARY_DIR}/internal_unit.c ${CMAKE_CURRENT_BINARY_DIR}/InternalBytecode.js
   DEPENDS ${shermes_EXE} InternalBytecode.js
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   VERBATIM

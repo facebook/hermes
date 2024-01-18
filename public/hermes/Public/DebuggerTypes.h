@@ -44,10 +44,10 @@ using ScriptID = uint32_t;
 /// file.
 constexpr uint32_t kInvalidLocation = ~0u;
 struct SourceLocation {
-  /// Line in the source.
+  /// Line in the source. 1 based.
   uint32_t line = kInvalidLocation;
 
-  /// Column in the source.
+  /// Column in the source. 1 based.
   uint32_t column = kInvalidLocation;
 
   /// Identifier of the source file.
