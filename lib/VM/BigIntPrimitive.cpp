@@ -13,6 +13,7 @@
 #include "llvh/Support/MathExtras.h"
 
 #include <cstdlib>
+#include <limits>
 
 namespace hermes {
 namespace vm {
@@ -41,6 +42,17 @@ BigIntPrimitive::BigIntPrimitive(uint32_t numDigits) : numDigits(numDigits) {
 CallResult<HermesValue> BigIntPrimitive::fromDouble(
     Runtime &runtime,
     double value) {
+  // If our double is perfectly representing a 32-bit int, we can
+  // just convert directly rather than creating then shrinking an
+  // array.
+  if (value < std::numeric_limits<int32_t>::max() &&
+      value > std::numeric_limits<int32_t>::min()) {
+    int32_t valueAsInt = static_cast<int32_t>(value);
+    if (static_cast<double>(valueAsInt) == value) {
+      return fromSigned(runtime, valueAsInt);
+    }
+  }
+
   const uint32_t numDigits = bigint::fromDoubleResultSize(value);
 
   auto u =
