@@ -249,6 +249,18 @@ struct HermesABIRuntimeVTable {
       struct HermesABIBuffer *buf,
       const char *source_url,
       size_t source_url_len);
+
+  /// Obtain a reference to the global object.
+  struct HermesABIObject (*get_global_object)(struct HermesABIRuntime *rt);
+
+  /// Create a JavaScript string from the given UTF-8 encoded string.
+  struct HermesABIStringOrError (*create_string_from_utf8)(
+      struct HermesABIRuntime *rt,
+      const uint8_t *utf8,
+      size_t len);
+
+  /// Create a new empty JavaScript object and return a reference to it.
+  struct HermesABIObjectOrError (*create_object)(struct HermesABIRuntime *rt);
 };
 
 /// An instance of a Hermes Runtime.
