@@ -234,19 +234,13 @@ class TraceInterpreter final {
 
   /// \param traceStream If non-null, write a trace of the execution into this
   /// stream.
-  static std::string execFromMemoryBuffer(
+  /// \return Tuple of GC stats and the runtime instance used for replaying.
+  static std::tuple<std::string, std::unique_ptr<jsi::Runtime>>
+  execFromMemoryBuffer(
       std::unique_ptr<llvh::MemoryBuffer> &&traceBuf,
       std::vector<std::unique_ptr<llvh::MemoryBuffer>> &&codeBufs,
       const ExecuteOptions &options,
       std::unique_ptr<llvh::raw_ostream> traceStream);
-
-  /// For test purposes, use the given runtime, execute once.
-  /// Otherwise like execFromMemoryBuffer above.
-  static std::string execFromMemoryBuffer(
-      std::unique_ptr<llvh::MemoryBuffer> &&traceBuf,
-      std::vector<std::unique_ptr<llvh::MemoryBuffer>> &&codeBufs,
-      jsi::Runtime &runtime,
-      const ExecuteOptions &options);
 
  private:
   TraceInterpreter(
