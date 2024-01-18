@@ -1,3 +1,14 @@
+## 0.18.1
+
+### `flow-api-translator`
+
+* Update codegen to output type guards instead of `%checks`
+* handle Literal properties in flow-to-flowdef conversion
+
+### `babel-plugin-syntax-hermes-parser`
+
+* Do not apply the plugin for TS files
+
 ## 0.18.0
 
 ### `hermes-eslint`
