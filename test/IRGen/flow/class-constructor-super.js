@@ -50,17 +50,19 @@ new D();
 // CHECK-NEXT:       StoreFrameInst %6: object, [?C.prototype]: object
 // CHECK-NEXT:       StorePropertyStrictInst %6: object, %4: object, "prototype": string
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) [C]: any
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %D(): functionCode
-// CHECK-NEXT:        StoreFrameInst %10: object, [D]: any
-// CHECK-NEXT:  %12 = LoadFrameInst (:object) [?C.prototype]: object
-// CHECK-NEXT:  %13 = AllocObjectInst (:object) 0: number, %12: object
-// CHECK-NEXT:        StoreFrameInst %13: object, [?D.prototype]: object
-// CHECK-NEXT:        StorePropertyStrictInst %13: object, %10: object, "prototype": string
-// CHECK-NEXT:  %16 = LoadFrameInst (:any) [D]: any
-// CHECK-NEXT:  %17 = LoadFrameInst (:object) [?D.prototype]: object
-// CHECK-NEXT:  %18 = UnionNarrowTrustedInst (:object) %17: object
-// CHECK-NEXT:  %19 = AllocObjectInst (:object) 0: number, %18: object
-// CHECK-NEXT:  %20 = CallInst (:any) %16: any, %D(): functionCode, empty: any, %16: any, %19: object
+// CHECK-NEXT:  %10 = CheckedTypeCastInst (:object) %9: any, type(object)
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %D(): functionCode
+// CHECK-NEXT:        StoreFrameInst %11: object, [D]: any
+// CHECK-NEXT:  %13 = LoadFrameInst (:object) [?C.prototype]: object
+// CHECK-NEXT:  %14 = AllocObjectInst (:object) 0: number, %13: object
+// CHECK-NEXT:        StoreFrameInst %14: object, [?D.prototype]: object
+// CHECK-NEXT:        StorePropertyStrictInst %14: object, %11: object, "prototype": string
+// CHECK-NEXT:  %17 = LoadFrameInst (:any) [D]: any
+// CHECK-NEXT:  %18 = CheckedTypeCastInst (:object) %17: any, type(object)
+// CHECK-NEXT:  %19 = LoadFrameInst (:object) [?D.prototype]: object
+// CHECK-NEXT:  %20 = UnionNarrowTrustedInst (:object) %19: object
+// CHECK-NEXT:  %21 = AllocObjectInst (:object) 0: number, %20: object
+// CHECK-NEXT:  %22 = CallInst (:any) %18: object, %D(): functionCode, empty: any, %18: object, %21: object
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -75,7 +77,9 @@ new D();
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = LoadFrameInst (:any) [C@""]: any
-// CHECK-NEXT:  %2 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
-// CHECK-NEXT:  %3 = CallInst [njsf] (:any) %1: any, empty: any, empty: any, %2: undefined|object, %0: object
+// CHECK-NEXT:  %2 = CheckedTypeCastInst (:object) %1: any, type(object)
+// CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
+// CHECK-NEXT:  %4 = CallInst [njsf] (:any) %2: object, empty: any, empty: any, %3: undefined|object, %0: object
+// CHECK-NEXT:  %5 = CheckedTypeCastInst (:undefined) %4: any, type(undefined)
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

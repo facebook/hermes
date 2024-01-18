@@ -55,14 +55,15 @@ class B extends A {
 // CHECK-NEXT:       StoreFrameInst %6: object, [?A.prototype]: object
 // CHECK-NEXT:       StorePropertyStrictInst %6: object, %4: object, "prototype": string
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) [A]: any
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %B(): functionCode
-// CHECK-NEXT:        StoreFrameInst %10: object, [B]: any
-// CHECK-NEXT:  %12 = LoadFrameInst (:object) [?A.prototype]: object
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %f(): functionCode
-// CHECK-NEXT:  %14 = AllocObjectLiteralInst (:object) "f": string, %13: object
-// CHECK-NEXT:        StoreParentInst %12: object, %14: object
-// CHECK-NEXT:        StoreFrameInst %14: object, [?B.prototype]: object
-// CHECK-NEXT:        StorePropertyStrictInst %14: object, %10: object, "prototype": string
+// CHECK-NEXT:  %10 = CheckedTypeCastInst (:object) %9: any, type(object)
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %B(): functionCode
+// CHECK-NEXT:        StoreFrameInst %11: object, [B]: any
+// CHECK-NEXT:  %13 = LoadFrameInst (:object) [?A.prototype]: object
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %f(): functionCode
+// CHECK-NEXT:  %15 = AllocObjectLiteralInst (:object) "f": string, %14: object
+// CHECK-NEXT:        StoreParentInst %13: object, %15: object
+// CHECK-NEXT:        StoreFrameInst %15: object, [?B.prototype]: object
+// CHECK-NEXT:        StorePropertyStrictInst %15: object, %11: object, "prototype": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -73,7 +74,8 @@ class B extends A {
 // CHECK-NEXT:  %1 = LoadParamInst (:number) %x: number
 // CHECK-NEXT:       StoreFrameInst %1: number, [x]: any
 // CHECK-NEXT:  %3 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:       PrStoreInst %3: any, %0: object, 0: number, "x": string, true: boolean
+// CHECK-NEXT:  %4 = CheckedTypeCastInst (:number) %3: any, type(number)
+// CHECK-NEXT:       PrStoreInst %4: number, %0: object, 0: number, "x": string, true: boolean
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -84,10 +86,13 @@ class B extends A {
 // CHECK-NEXT:  %1 = LoadParamInst (:number) %x: number
 // CHECK-NEXT:       StoreFrameInst %1: number, [x]: any
 // CHECK-NEXT:  %3 = LoadFrameInst (:any) [A@""]: any
-// CHECK-NEXT:  %4 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %6 = CallInst [njsf] (:any) %3: any, empty: any, empty: any, %4: undefined|object, %0: object, %5: any
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:  %4 = CheckedTypeCastInst (:object) %3: any, type(object)
+// CHECK-NEXT:  %5 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %7 = CheckedTypeCastInst (:number) %6: any, type(number)
+// CHECK-NEXT:  %8 = CallInst [njsf] (:any) %4: object, empty: any, empty: any, %5: undefined|object, %0: object, %7: number
+// CHECK-NEXT:  %9 = CheckedTypeCastInst (:undefined) %8: any, type(undefined)
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f(): any [typed]

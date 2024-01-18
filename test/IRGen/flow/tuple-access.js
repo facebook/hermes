@@ -41,14 +41,18 @@ x[1] = false;
 // CHECK-NEXT:  %5 = AllocObjectLiteralInst (:object) "0": string, 1: number, "1": string, true: boolean
 // CHECK-NEXT:       StoreFrameInst %5: object, [x]: any
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %8 = PrLoadInst (:number) %7: any, 0: number, "0": string
-// CHECK-NEXT:       StoreFrameInst %8: number, [y]: any
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %11 = PrLoadInst (:boolean) %10: any, 1: number, "1": string
-// CHECK-NEXT:        StoreFrameInst %11: boolean, [z]: any
-// CHECK-NEXT:  %13 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:        PrStoreInst 2: number, %13: any, 0: number, "0": string, true: boolean
+// CHECK-NEXT:  %8 = CheckedTypeCastInst (:object) %7: any, type(object)
+// CHECK-NEXT:  %9 = PrLoadInst (:number) %8: object, 0: number, "0": string
+// CHECK-NEXT:        StoreFrameInst %9: number, [y]: any
+// CHECK-NEXT:  %11 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %12 = CheckedTypeCastInst (:object) %11: any, type(object)
+// CHECK-NEXT:  %13 = PrLoadInst (:boolean) %12: object, 1: number, "1": string
+// CHECK-NEXT:        StoreFrameInst %13: boolean, [z]: any
 // CHECK-NEXT:  %15 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:        PrStoreInst false: boolean, %15: any, 1: number, "1": string, true: boolean
+// CHECK-NEXT:  %16 = CheckedTypeCastInst (:object) %15: any, type(object)
+// CHECK-NEXT:        PrStoreInst 2: number, %16: object, 0: number, "0": string, true: boolean
+// CHECK-NEXT:  %18 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %19 = CheckedTypeCastInst (:object) %18: any, type(object)
+// CHECK-NEXT:        PrStoreInst false: boolean, %19: object, 1: number, "1": string, true: boolean
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

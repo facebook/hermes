@@ -192,8 +192,8 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %13 = AsNumericInst (:number|bigint) %12: any
-// CHECK-NEXT:  %14 = UnaryIncInst (:any) %13: number|bigint
-// CHECK-NEXT:        StoreFrameInst %14: any, [i]: any
+// CHECK-NEXT:  %14 = UnaryIncInst (:number|bigint) %13: number|bigint
+// CHECK-NEXT:        StoreFrameInst %14: number|bigint, [i]: any
 // CHECK-NEXT:  %16 = LoadPropertyInst (:any) %11: any, %13: number|bigint
 // CHECK-NEXT:  %17 = AllocStackInst (:boolean) $?anon_1_isReturn: any
 // CHECK-NEXT:        SaveAndYieldInst %16: any, %BB5

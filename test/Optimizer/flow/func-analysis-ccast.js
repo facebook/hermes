@@ -26,5 +26,6 @@ function bar() {
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [foo@""]: any
 // CHECK-NEXT:  %1 = CheckedTypeCastInst (:object) %0: any, type(object)
 // CHECK-NEXT:  %2 = CallInst [njsf] (:any) %1: object, %foo(): functionCode, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:       ReturnInst %2: any
+// CHECK-NEXT:  %3 = CheckedTypeCastInst (:undefined) %2: any, type(undefined)
+// CHECK-NEXT:       ReturnInst %3: undefined
 // CHECK-NEXT:function_end

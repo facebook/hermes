@@ -60,14 +60,15 @@ class B extends A {
 // CHECK-NEXT:       StoreFrameInst %7: object, [?A.prototype]: object
 // CHECK-NEXT:       StorePropertyStrictInst %7: object, %4: object, "prototype": string
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [A]: any
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %B(): functionCode
-// CHECK-NEXT:        StoreFrameInst %11: object, [B]: any
-// CHECK-NEXT:  %13 = LoadFrameInst (:object) [?A.prototype]: object
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %"f 1#"(): functionCode
-// CHECK-NEXT:  %15 = AllocObjectLiteralInst (:object) "f": string, %14: object
-// CHECK-NEXT:        StoreParentInst %13: object, %15: object
-// CHECK-NEXT:        StoreFrameInst %15: object, [?B.prototype]: object
-// CHECK-NEXT:        StorePropertyStrictInst %15: object, %11: object, "prototype": string
+// CHECK-NEXT:  %11 = CheckedTypeCastInst (:object) %10: any, type(object)
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %B(): functionCode
+// CHECK-NEXT:        StoreFrameInst %12: object, [B]: any
+// CHECK-NEXT:  %14 = LoadFrameInst (:object) [?A.prototype]: object
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %"f 1#"(): functionCode
+// CHECK-NEXT:  %16 = AllocObjectLiteralInst (:object) "f": string, %15: object
+// CHECK-NEXT:        StoreParentInst %14: object, %16: object
+// CHECK-NEXT:        StoreFrameInst %16: object, [?B.prototype]: object
+// CHECK-NEXT:        StorePropertyStrictInst %16: object, %12: object, "prototype": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -78,7 +79,8 @@ class B extends A {
 // CHECK-NEXT:  %1 = LoadParamInst (:number) %x: number
 // CHECK-NEXT:       StoreFrameInst %1: number, [x]: any
 // CHECK-NEXT:  %3 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:       PrStoreInst %3: any, %0: object, 0: number, "x": string, true: boolean
+// CHECK-NEXT:  %4 = CheckedTypeCastInst (:number) %3: any, type(number)
+// CHECK-NEXT:       PrStoreInst %4: number, %0: object, 0: number, "x": string, true: boolean
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -88,7 +90,8 @@ class B extends A {
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = PrLoadInst (:number) %0: object, 0: number, "x": string
 // CHECK-NEXT:  %2 = BinaryMultiplyInst (:any) %1: number, 10: number
-// CHECK-NEXT:       ReturnInst %2: any
+// CHECK-NEXT:  %3 = CheckedTypeCastInst (:number) %2: any, type(number)
+// CHECK-NEXT:       ReturnInst %3: number
 // CHECK-NEXT:function_end
 
 // CHECK:function B(x: number): any [typed]
@@ -98,10 +101,13 @@ class B extends A {
 // CHECK-NEXT:  %1 = LoadParamInst (:number) %x: number
 // CHECK-NEXT:       StoreFrameInst %1: number, [x]: any
 // CHECK-NEXT:  %3 = LoadFrameInst (:any) [A@""]: any
-// CHECK-NEXT:  %4 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %6 = CallInst [njsf] (:any) %3: any, empty: any, empty: any, %4: undefined|object, %0: object, %5: any
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:  %4 = CheckedTypeCastInst (:object) %3: any, type(object)
+// CHECK-NEXT:  %5 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %7 = CheckedTypeCastInst (:number) %6: any, type(number)
+// CHECK-NEXT:  %8 = CallInst [njsf] (:any) %4: object, empty: any, empty: any, %5: undefined|object, %0: object, %7: number
+// CHECK-NEXT:  %9 = CheckedTypeCastInst (:undefined) %8: any, type(undefined)
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function "f 1#"(): any [typed]
@@ -111,6 +117,8 @@ class B extends A {
 // CHECK-NEXT:  %1 = LoadFrameInst (:object) [?A.prototype@""]: object
 // CHECK-NEXT:  %2 = PrLoadInst (:object) %1: object, 0: number, "f": string
 // CHECK-NEXT:  %3 = CallInst [njsf] (:any) %2: object, empty: any, empty: any, undefined: undefined, %0: object
-// CHECK-NEXT:  %4 = BinaryAddInst (:any) %3: any, 23: number
-// CHECK-NEXT:       ReturnInst %4: any
+// CHECK-NEXT:  %4 = CheckedTypeCastInst (:number) %3: any, type(number)
+// CHECK-NEXT:  %5 = BinaryAddInst (:any) %4: number, 23: number
+// CHECK-NEXT:  %6 = CheckedTypeCastInst (:number) %5: any, type(number)
+// CHECK-NEXT:       ReturnInst %6: number
 // CHECK-NEXT:function_end

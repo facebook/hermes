@@ -254,8 +254,8 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %9 = AsNumericInst (:number|bigint) %8: any
-// CHECK-NEXT:  %10 = UnaryIncInst (:any) %9: number|bigint
-// CHECK-NEXT:        StoreFrameInst %10: any, [i]: any
+// CHECK-NEXT:  %10 = UnaryIncInst (:number|bigint) %9: number|bigint
+// CHECK-NEXT:        StoreFrameInst %10: number|bigint, [i]: any
 // CHECK-NEXT:        BranchInst %BB6
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:        BranchInst %BB7
@@ -266,8 +266,8 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:        CondBranchInst false: boolean, %BB4, %BB5
 // CHECK-NEXT:%BB7:
 // CHECK-NEXT:  %17 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %18 = UnaryDecInst (:any) %17: any
-// CHECK-NEXT:        StoreFrameInst %18: any, [i]: any
+// CHECK-NEXT:  %18 = UnaryDecInst (:number|bigint) %17: any
+// CHECK-NEXT:        StoreFrameInst %18: number|bigint, [i]: any
 // CHECK-NEXT:        BranchInst %BB10
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:        BranchInst %BB11

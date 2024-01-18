@@ -15,7 +15,38 @@
 namespace hermes {
 namespace irgen {
 
+Value *ESTreeIRGen::enforceExprType(hermes::Value *value, ESTree::Node *expr) {
+  flow::Type *exprFlowType = flowContext_.findNodeType(expr);
+  if (!exprFlowType)
+    return value;
+
+  Type exprIRType = flowTypeToIRType(exprFlowType);
+  Type valueType = value->getType();
+  // NOTE: equal sets are subsets of each other, but we want to do the fast
+  // check first. In theory, it should catsh 100% of the cases when IRGen is
+  // fully typed.
+  if (exprIRType == valueType || valueType.isSubsetOf(exprIRType))
+    return value;
+
+  if (!exprIRType.isSubsetOf(valueType)) {
+    Mod->getContext().getSourceErrorManager().error(
+        expr->getSourceRange(),
+        "Internal error: Flow expr type is not a subset of value type");
+    return value;
+  }
+
+  Instruction *cast = Builder.createCheckedTypeCastInst(value, exprIRType);
+  cast->setLocation(expr->getDebugLoc());
+  return cast;
+}
+
 Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
+  return enforceExprType(_genExpressionImpl(expr, nameHint), expr);
+}
+
+Value *ESTreeIRGen::_genExpressionImpl(
+    ESTree::Node *expr,
+    Identifier nameHint) {
   LLVM_DEBUG(
       llvh::dbgs() << "IRGen expression of type " << expr->getNodeName()
                    << "\n");
@@ -1889,13 +1920,23 @@ Value *ESTreeIRGen::genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr) {
 
   LReference lref = createLRef(updateExpr->_argument, false);
 
-  // Load the original value. Postfix updates need to convert it toNumeric
-  // before Inc/Dec to ensure the updateExpr has the proper result value.
-  Value *original =
-      isPrefix ? lref.emitLoad() : Builder.createAsNumericInst(lref.emitLoad());
+  // Load the original value.
+  Value *original = enforceExprType(lref.emitLoad(), updateExpr->_argument);
+
+  // Postfix updates need to convert the original value to numeric before
+  // Inc/Dec to ensure the updateExpr has the proper result value.
+  if (!isPrefix && !original->getType().isSubsetOf(Type::createNumeric()))
+    original = Builder.createAsNumericInst(original);
 
   // Create the inc or dec.
   Value *result = Builder.createUnaryOperatorInst(original, opKind);
+  // Number and BigInt types are preserved, otherwise the result is numeric.
+  result->setType(
+      original->getType().isNumberType() || original->getType().isBigIntType()
+          ? original->getType()
+          : Type::createNumeric());
+
+  result = enforceExprType(result, updateExpr);
 
   // Store the result.
   lref.emitStore(result);
@@ -1951,8 +1992,9 @@ Value *ESTreeIRGen::genAssignmentExpr(ESTree::AssignmentExpressionNode *AE) {
   // expression should be implicitly casted, so skip it when computing the lref.
   auto *optImplicitCast =
       llvh::dyn_cast<ESTree::ImplicitCheckedCastNode>(AE->_left);
-  LReference lref = createLRef(
-      optImplicitCast ? optImplicitCast->_argument : AE->_left, false);
+  ESTree::Node *left = optImplicitCast ? optImplicitCast->_argument : AE->_left;
+
+  LReference lref = createLRef(left, false);
   Identifier nameHint = extractNameHint(lref);
 
   auto logicalAssign =
@@ -1971,8 +2013,10 @@ Value *ESTreeIRGen::genAssignmentExpr(ESTree::AssignmentExpressionNode *AE) {
   // LHS before materializing the RHS. Unlike in C, this
   // code is well defined: "x+= x++".
   // https://es5.github.io/#x11.13.1
-  auto V = lref.emitLoad();
-  auto *RHS = genExpression(AE->_right, nameHint);
+  Value *V = lref.emitLoad();
+  V = enforceExprType(V, left);
+
+  Value *RHS = genExpression(AE->_right, nameHint);
   Value *result;
   result = Builder.createBinaryOperatorInst(V, RHS, AssignmentKind);
 
@@ -1983,6 +2027,7 @@ Value *ESTreeIRGen::genAssignmentExpr(ESTree::AssignmentExpressionNode *AE) {
         flowTypeToIRType(flowContext_.getNodeTypeOrAny(optImplicitCast)));
   }
 
+  result = enforceExprType(result, AE);
   lref.emitStore(result);
 
   // Return the value that we stored as the result of the expression.
