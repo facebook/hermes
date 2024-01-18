@@ -773,7 +773,7 @@ function convertExportDefaultDeclaration(
   context: TranslationContext,
 ): TranslatedResult<ProgramStatement> {
   const expr = stmt.declaration;
-  if (isExpression(expr) && (expr: Expression).type === 'Identifier') {
+  if (isExpression(expr) && (expr: $FlowFixMe).type === 'Identifier') {
     const name = ((expr: $FlowFixMe): Identifier).name;
     const [declDecl, deps] = [
       t.TypeofTypeAnnotation({argument: t.Identifier({name})}),

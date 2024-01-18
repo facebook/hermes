@@ -50,7 +50,7 @@ export const GetHermesESTreeJSON: () => ESTreeJSON = () =>
   require(HermesESTreeJSONFile);
 
 type FlowStyle = false | 'loose' | 'strict' | 'strict-local';
-function HEADER(flow: FlowStyle): string {
+function HEADER(flow: FlowStyle, skipFormat: boolean): string {
   let flowDirective = ``;
   if (flow === false) {
     flowDirective += `${'@'}noflow`;
@@ -60,6 +60,7 @@ function HEADER(flow: FlowStyle): string {
       flowDirective += ` ${flow}`;
     }
   }
+  const formatDirective = skipFormat ? '' : '\n * @format';
 
   return `\
 /**
@@ -68,8 +69,7 @@ function HEADER(flow: FlowStyle): string {
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * ${flowDirective}
- * @format
+ * ${flowDirective}${formatDirective}
  * ${'@'}generated
  */
 
@@ -103,6 +103,7 @@ type ArtifactOptions = $ReadOnly<{
   // will write to ../<package>/<file>
   package: Package,
   file: string,
+  skipFormat?: boolean,
 }>;
 
 export async function formatAndWriteDistArtifact(
@@ -127,15 +128,19 @@ async function formatAndWriteArtifact({
   flow = 'loose',
   package: pkg,
   file,
+  skipFormat = false,
 }: ArtifactOptions): Promise<void> {
   // make sure the code has a header
-  const code = code_.slice(0, 3) === '/**' ? code_ : HEADER(flow) + code_;
+  const code =
+    code_.slice(0, 3) === '/**' ? code_ : HEADER(flow, skipFormat) + code_;
 
   // Format the file
-  const formattedContents = await prettier.format(code, {
-    ...prettierConfig,
-    parser: 'flow',
-  });
+  const formattedContents = skipFormat
+    ? code
+    : await prettier.format(code, {
+        ...prettierConfig,
+        parser: 'flow',
+      });
 
   // make sure the folder exists first
   const folder = path.resolve(__dirname, '..', '..', pkg, path.dirname(file));

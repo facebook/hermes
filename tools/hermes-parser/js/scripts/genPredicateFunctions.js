@@ -15,9 +15,33 @@ import {
   NODES_WITHOUT_TRANSFORM_NODE_TYPES,
 } from './utils/scriptUtils';
 
+const nodeTypesToImport: Array<string> = [];
 const predicateFunctions: Array<string> = [];
 
-const NODES_WITH_SPECIAL_HANDLING = new Set<string>([]);
+const NODES_WITH_SPECIAL_HANDLING = new Set<string>([
+  'Identifier',
+  'JSXIdentifier',
+  'JSXText',
+]);
+
+nodeTypesToImport.push('Identifier', 'JSXIdentifier', 'JSXText');
+predicateFunctions.push(
+  `
+export function isIdentifier(node /*: ESNode | Token */) /*: node is (Identifier | MostTokens) */ {
+  return node.type === 'Identifier';
+}
+  `,
+  `
+export function isJSXIdentifier(node /*: ESNode | Token */) /*: node is (JSXIdentifier | MostTokens) */ {
+  return node.type === 'JSXIdentifier';
+}
+  `,
+  `
+export function isJSXText(node /*: ESNode | Token */) /*: node is (JSXText | MostTokens) */ {
+  return node.type === 'JSXText';
+}
+  `,
+);
 
 const nodes = GetHermesESTreeJSON()
   .map(n => n.name)
@@ -31,9 +55,10 @@ for (const node of nodes) {
     continue;
   }
 
+  nodeTypesToImport.push(node);
   predicateFunctions.push(
     `
-export function is${node}(node: ESNode | Token): boolean %checks {
+export function is${node}(node /*: ESNode | Token */) /*: node is ${node} */ {
   return node.type === '${node}';
 }
     `,
@@ -42,9 +67,10 @@ export function is${node}(node: ESNode | Token): boolean %checks {
 
 const COMMENTS = ['Line', 'Block'];
 for (const comment of COMMENTS) {
+  nodeTypesToImport.push(`${comment}Comment`);
   predicateFunctions.push(
     `
-export function is${comment}Comment(node: ESNode | Token): boolean %checks {
+export function is${comment}Comment(node /*: ESNode | Token */) /*: node is (MostTokens | ${comment}Comment) */ {
   return node.type === '${comment}';
 }
     `,
@@ -185,12 +211,13 @@ const TOKENS: $ReadOnlyArray<[string, string, string]> = [
   ['ClosingAngleBracket', '>', 'Punctuator'],
 ];
 
+nodeTypesToImport.push('MostTokens');
 for (const [name, token, type] of TOKENS) {
   if (type === 'Identifier') {
     // certain keywords may be reported as Identifier depending on the context
     predicateFunctions.push(
       `
-export function is${name}Keyword(node: ESNode | Token): boolean %checks {
+export function is${name}Keyword(node /*: ESNode | Token */) /*: node is (Identifier | MostTokens) */ {
   return (
     (node.type === 'Identifier' && node.name === '${token}') ||
     (node.type === 'Keyword' && node.value === '${token}')
@@ -201,7 +228,7 @@ export function is${name}Keyword(node: ESNode | Token): boolean %checks {
   } else {
     predicateFunctions.push(
       `
-export function is${name}Token(node: ESNode | Token): boolean %checks {
+export function is${name}Token(node /*: ESNode | Token */) /*: node is MostTokens */ {
   return node.type === '${type}' && node.value === '${token}';
 }
       `,
@@ -210,7 +237,13 @@ export function is${name}Token(node: ESNode | Token): boolean %checks {
 }
 
 const fileContents = `\
-import type {ESNode, Token} from 'hermes-estree';
+/*::
+import type {
+  ESNode,
+  Token,
+${nodeTypesToImport.map(n => `  ${n}`).join(',\n')},
+} from 'hermes-estree';
+*/
 
 ${predicateFunctions.join('\n')}
 `;
@@ -220,4 +253,5 @@ formatAndWriteSrcArtifact({
   package: 'hermes-estree',
   file: 'generated/predicates.js',
   flow: 'strict-local',
+  skipFormat: true,
 });
