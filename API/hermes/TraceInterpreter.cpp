@@ -52,51 +52,29 @@ getCalls(
   // of the same function invocation into a Piece, which it then puts into the
   // call.
 
-  // NOTE: StackValue should be a std::variant when it's available. In the
-  // meantime, use inheritance to keep it typesafe, in particular to destruct
-  // the std::string correctly.
-  struct StackValue {
-    virtual ~StackValue() {}
-  };
-  struct HostFunction final : public StackValue {
-    ObjectID hostFunctionID;
-    HostFunction(ObjectID hostFunctionID)
-        : StackValue(), hostFunctionID(hostFunctionID) {}
-  };
-  struct HostObject final : public StackValue {
-    ObjectID objID;
-    explicit HostObject(ObjectID hostObjID) : StackValue(), objID(hostObjID) {}
-  };
   // A mapping from host functions to calls. The first element of the return
   // tuple.
   TraceInterpreter::HostFunctionToCalls funcIDToRecords;
   // A mapping from a host object id to a map from property name to
   // list of records. The second element of the return tuple.
   TraceInterpreter::HostObjectToCalls hostObjIDToNameToRecords;
-  // As CallRecords are encountered, the id of the object or function being
-  // called is placed at the end of this stack, so that when the matching return
-  // is executed, records can be attributed to the previous call.
-  std::vector<std::unique_ptr<StackValue>> stack;
+
+  // As CallRecords are encountered, the reference to the list of calls for
+  // HostFunction or HostObject is placed at the end of this stack, so that when
+  // the matching return is executed, records can be attributed to the previous
+  // call.
+  struct StackValue {
+    std::vector<TraceInterpreter::Call> &calls;
+    ObjectID objID = {}; // Only needed for GetNativePropertyNamesRecord
+  };
+  std::vector<StackValue> stack;
+
   // Make the setup function. It is the bottom of the stack, and also a host
   // function.
-  stack.emplace_back(new HostFunction(setupFuncID));
   funcIDToRecords[setupFuncID].emplace_back(
       TraceInterpreter::Call(TraceInterpreter::Call::Piece()));
+  stack.emplace_back(StackValue{funcIDToRecords[setupFuncID]});
 
-  // Get a list of calls of the currently executing function from the stack.
-  const auto getCallsFromStack =
-      [&funcIDToRecords, &hostObjIDToNameToRecords](
-          const StackValue &stackObj) -> std::vector<TraceInterpreter::Call> & {
-    if (const auto *hostFunc = dynamic_cast<const HostFunction *>(&stackObj)) {
-      // A function is just the function id.
-      return funcIDToRecords[hostFunc->hostFunctionID];
-    } else if (
-        const auto *hostObj = dynamic_cast<const HostObject *>(&stackObj)) {
-      return hostObjIDToNameToRecords[hostObj->objID].calls;
-    } else {
-      llvm_unreachable("Shouldn't be any other subclasses of StackValue");
-    }
-  };
   for (uint64_t recordNum = 0; recordNum < records.size(); ++recordNum) {
     const auto &rec = records[recordNum];
     if (rec->getType() == RecordType::CreateHostFunction) {
@@ -128,8 +106,9 @@ getCalls(
       assert(
           callRec.functionID_ != setupFuncID &&
           "Should never encounter a call into the setup function");
-      stack.emplace_back(new HostFunction(callRec.functionID_));
-      funcIDToRecords[callRec.functionID_].emplace_back(
+      auto &calls = funcIDToRecords[callRec.functionID_];
+      stack.emplace_back(StackValue{calls});
+      calls.emplace_back(
           TraceInterpreter::Call(TraceInterpreter::Call::Piece(recordNum)));
     } else if (
         rec->getType() == RecordType::GetPropertyNative ||
@@ -139,32 +118,33 @@ getCalls(
       // JS will access a property on a host object, which delegates to an
       // accessor. Add a new call on the stack, and add a call with an empty
       // piece to the object and property it is calling.
-      stack.emplace_back(new HostObject(nativeAccessRec.hostObjectID_));
-      hostObjIDToNameToRecords[nativeAccessRec.hostObjectID_]
-          .calls.emplace_back(
-              TraceInterpreter::Call(TraceInterpreter::Call::Piece(recordNum)));
+      auto &calls =
+          hostObjIDToNameToRecords[nativeAccessRec.hostObjectID_].calls;
+      stack.emplace_back(StackValue{calls});
+      calls.emplace_back(
+          TraceInterpreter::Call(TraceInterpreter::Call::Piece(recordNum)));
     } else if (rec->getType() == RecordType::GetNativePropertyNames) {
       const auto &nativePropNamesRec =
           static_cast<const SynthTrace::GetNativePropertyNamesRecord &>(*rec);
       // JS asked for all properties on a host object. Add a new call on the
       // stack, and add a call with an empty piece to the object it is calling.
-      stack.emplace_back(new HostObject(nativePropNamesRec.hostObjectID_));
-      hostObjIDToNameToRecords[nativePropNamesRec.hostObjectID_]
-          .calls.emplace_back(
-              TraceInterpreter::Call(TraceInterpreter::Call::Piece(recordNum)));
+      auto &calls =
+          hostObjIDToNameToRecords[nativePropNamesRec.hostObjectID_].calls;
+      stack.emplace_back(StackValue{calls, nativePropNamesRec.hostObjectID_});
+      calls.emplace_back(
+          TraceInterpreter::Call(TraceInterpreter::Call::Piece(recordNum)));
     } else if (rec->getType() == RecordType::GetNativePropertyNamesReturn) {
       // Set the vector of strings that were returned from the original call.
       const auto &nativePropNamesRec =
           static_cast<const SynthTrace::GetNativePropertyNamesReturnRecord &>(
               *rec);
-      // The stack object must be a HostObject in order for this to be a return
-      // from there.
-      hostObjIDToNameToRecords[dynamic_cast<const HostObject &>(*stack.back())
-                                   .objID]
+      hostObjIDToNameToRecords[stack.back().objID]
           .resultsOfGetPropertyNames.emplace_back(
               nativePropNamesRec.propNames_);
     }
-    auto &calls = getCallsFromStack(*stack.back());
+
+    assert(!stack.empty());
+    auto &calls = stack.back().calls;
     assert(!calls.empty() && "There should always be at least one call");
     auto &call = calls.back();
     if (rec->getType() == RecordType::ReturnToNative) {
@@ -172,6 +152,7 @@ getCalls(
       // re-enter native.
       call.pieces.emplace_back(TraceInterpreter::Call::Piece(recordNum));
     }
+
     auto &piece = call.pieces.back();
     piece.records.emplace_back(&*rec);
     if (rec->getType() == RecordType::GetPropertyNativeReturn ||
