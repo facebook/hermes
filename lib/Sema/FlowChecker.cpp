@@ -1360,33 +1360,38 @@ class FlowChecker::ExprVisitor {
       if (!cf.canFlow) {
         outer_.sm_.error(
             node->getSourceRange(), "ft: incompatible assignment types");
+        res = lt;
       } else {
         node->_right = outer_.implicitCheckedCast(node->_right, lt, cf);
+
+        // If we don't need a checked cast, rt is possibly narrower than lt, but
+        // never wider, so we want to use it as result.
+        // This helps with cases like:
+        //  let a: number|string, n: number; n = a = 5;
+        res = cf.needCheckedCast ? lt : rt;
       }
-      res = lt;
     } else {
-      res = determineBinopType(
+      Type *opResType = determineBinopType(
           assignKind(node->_operator->str()),
           lt->info->getKind(),
           rt->info->getKind());
 
-      if (!res) {
+      if (!opResType) {
         outer_.sm_.error(
             node->getSourceRange(),
             llvh::Twine("ft: incompatible binary operation: ") +
                 node->_operator->str() + " cannot be applied to " +
                 lt->info->getKindName() + " and " + rt->info->getKindName());
-        res = outer_.flowContext_.getAny();
+        opResType = outer_.flowContext_.getAny();
       }
 
       if (llvh::isa<AnyType>(lt->info)) {
         // If the target we are assigning to is untyped, there are no checks
         // needed.
-        if (!res)
-          res = outer_.flowContext_.getAny();
+        res = opResType;
       } else {
         // We are modifying a typed target. The type has to be compatible.
-        CanFlowResult cf = canAFlowIntoB(res, lt);
+        CanFlowResult cf = canAFlowIntoB(opResType, lt);
         if (!cf.canFlow) {
           outer_.sm_.error(
               node->getSourceRange(), "ft: incompatible assignment types");
@@ -1398,6 +1403,11 @@ class FlowChecker::ExprVisitor {
           // expression.
           // IRGen is aware of this and handles it specially.
           node->_left = outer_.implicitCheckedCast(node->_left, lt, cf);
+          res = lt;
+        } else {
+          // If we don't need a checked cast, rt is possibly narrower than lt,
+          // but never wider, so we want to use it as result.
+          res = rt;
         }
       }
     }
