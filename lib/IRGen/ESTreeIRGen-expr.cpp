@@ -1509,12 +1509,12 @@ Value *ESTreeIRGen::genYieldOrAwaitExpr(Value *value) {
 /// getNext: Get the next value from the iterator.
 /// - Call next() on the iteratorRecord and stores to `result`
 /// - If done, go to exit
-/// - Otherwise, go to body
+/// - Otherwise, go to yieldNextRes
 ///
-/// resume: Runs the ResumeGenerator instruction.
+/// resumeGenTryStartBB: Runs the ResumeGenerator instruction, wrapped in a try.
 /// - Code for `finally` is also emitted here.
 ///
-/// body: Yield the result of the next() call
+/// yieldNextRes: Yield the result of the next() call
 /// - Calls HermesInternal.generatorSetDelegated so that the result is not
 ///   wrapped by the VM in an IterResult object.
 ///
@@ -1534,11 +1534,11 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
   assert(Y->_delegate && "must use genYieldExpr for yield");
   auto *function = Builder.getInsertionBlock()->getParent();
   auto *getNextBlock = Builder.createBasicBlock(function);
-  auto *bodyBlock = Builder.createBasicBlock(function);
+  auto *yieldNextRes = Builder.createBasicBlock(function);
   auto *exitBlock = Builder.createBasicBlock(function);
 
   // Calls ResumeGenerator and returns or throws if requested.
-  auto *resumeBB = Builder.createBasicBlock(function);
+  auto *resumeGenTryStartBB = Builder.createBasicBlock(function);
 
   // Ends the opened TryStartInst.
   auto *tryEndBB = Builder.createBasicBlock(function);
@@ -1582,19 +1582,25 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
 
   Builder.createStoreStackInst(nextResult, result);
   auto *done = emitIteratorCompleteSlow(nextResult);
-  Builder.createCondBranchInst(done, exitBlock, bodyBlock);
+  Builder.createCondBranchInst(done, exitBlock, yieldNextRes);
 
-  Builder.setInsertionBlock(bodyBlock);
+  // The primary call path for yielding the next result.
+  // It's important to put the SaveAndYield for the .next() value in a separate
+  // BB then ResumeGenerator. This is because other BBs need to jump to
+  // ResumeGenerator after completing a different SaveAndYield.
+  Builder.setInsertionBlock(yieldNextRes);
+  genBuiltinCall(BuiltinMethod::HermesBuiltin_generatorSetDelegated, {});
+  Builder.createSaveAndYieldInst(nextResult, resumeGenTryStartBB);
 
+  Builder.setInsertionBlock(resumeGenTryStartBB);
   emitTryCatchScaffolding(
       getNextBlock,
       // emitBody.
       [this,
        Y,
        resumeIsReturn,
-       resumeBB,
-       nextResult,
        received,
+       resumeGenTryStartBB,
        &iteratorRecord,
        tryEndBB]() {
         // Generate IR for the body of Try
@@ -1602,7 +1608,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
             curFunction(),
             Y,
             {},
-            [this, resumeBB, received, &iteratorRecord](
+            [this, &iteratorRecord, received, resumeGenTryStartBB](
                 ESTree::Node *, ControlFlowChange cfc, BasicBlock *) {
               if (cfc == ControlFlowChange::Break) {
                 // This finalizer block is executed upon early return during
@@ -1657,23 +1663,19 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
                 Builder.setInsertionBlock(isNotDoneBB);
                 genBuiltinCall(
                     BuiltinMethod::HermesBuiltin_generatorSetDelegated, {});
-                Builder.createSaveAndYieldInst(innerReturnResult, resumeBB);
+                Builder.createSaveAndYieldInst(
+                    innerReturnResult, resumeGenTryStartBB);
 
                 // If return is undefined, return Completion(received).
                 Builder.setInsertionBlock(noReturnBB);
               }
             }};
 
-        // The primary call path for yielding the next result.
-        genBuiltinCall(BuiltinMethod::HermesBuiltin_generatorSetDelegated, {});
-        Builder.createSaveAndYieldInst(nextResult, resumeBB);
-
-        // Note that resumeBB was created above to allow all SaveAndYield insts
-        // to have the same resume point (including SaveAndYield in the catch
-        // handler), but we must populate it inside the scaffolding so that the
-        // SurroundingTry is correct for the genFinallyBeforeControlChange
-        // call emitted by genResumeGenerator.
-        Builder.setInsertionBlock(resumeBB);
+        // Note that resumeGenTryStartBB was created above to allow all
+        // SaveAndYield insts to have the same resume point (including
+        // SaveAndYield in the catch handler), but we must populate it inside
+        // the scaffolding so that the SurroundingTry is correct for the
+        // genFinallyBeforeControlChange call emitted by genResumeGenerator.
         genResumeGenerator(GenFinally::Yes, resumeIsReturn, tryEndBB, received);
 
         // SaveAndYieldInst is a Terminator, but emitTryCatchScaffolding
@@ -1684,7 +1686,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
       // emitNormalCleanup.
       []() {},
       // emitHandler.
-      [this, resumeBB, exitBlock, result, &iteratorRecord](
+      [this, exitBlock, result, &iteratorRecord, &resumeGenTryStartBB](
           BasicBlock *getNextBlock) {
         auto *catchReg = Builder.createCatchInst();
 
@@ -1733,7 +1735,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
         // ii. 8. Else, set received to GeneratorYield(innerResult).
         Builder.setInsertionBlock(isNotDoneBB);
         genBuiltinCall(BuiltinMethod::HermesBuiltin_generatorSetDelegated, {});
-        Builder.createSaveAndYieldInst(innerResult, resumeBB);
+        Builder.createSaveAndYieldInst(innerResult, resumeGenTryStartBB);
 
         // NOTE: If iterator does not have a throw method, this throw is
         // going to terminate the yield* loop. But first we need to give
