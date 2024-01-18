@@ -845,7 +845,8 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
             // as a JS value normally from this position.
             Value::undefined(),
             args,
-            1);
+            1,
+            &name);
       } catch (const std::exception &e) {
         interpreter.crashOnException(e, llvh::None);
       }
@@ -1446,7 +1447,7 @@ Value TraceInterpreter::execFunction(
           case RecordType::GetPropertyNative: {
             assert(count == 0 && "Should have no arguments");
             const auto &gpnr =
-                static_cast<const SynthTrace::GetPropertyNativeRecord &>(*rec);
+                dynamic_cast<const SynthTrace::GetPropertyNativeRecord &>(*rec);
             // The propName is a definition.
             assert(nativePropNameToConsumeAsDef);
             // This must be the first record in the call.
@@ -1466,11 +1467,11 @@ Value TraceInterpreter::execFunction(
                 dynamic_cast<const SynthTrace::GetPropertyNativeReturnRecord &>(
                     *rec);
             return traceValueToJSIValue(
-                rt_, trace_, getObjForUse, gpnrr.retVal_);
+                rt_, trace_, getJSIValueForUse, gpnrr.retVal_);
           }
           case RecordType::SetPropertyNative: {
             const auto &spnr =
-                static_cast<const SynthTrace::SetPropertyNativeRecord &>(*rec);
+                dynamic_cast<const SynthTrace::SetPropertyNativeRecord &>(*rec);
             assert(
                 count == 1 &&
                 "There should be exactly one argument to SetPropertyNative");
@@ -1491,18 +1492,6 @@ Value TraceInterpreter::execFunction(
             break;
           }
           case RecordType::SetPropertyNativeReturn: {
-            const auto &spnr =
-                static_cast<const SynthTrace::SetPropertyNativeRecord &>(*rec);
-            // The propName is a definition.
-            assert(nativePropNameToConsumeAsDef);
-            // This must be the first record in the call.
-            assert(rec == firstRec);
-            addPropNameIDToDefs(
-                call,
-                spnr.propNameID_,
-                globalRecordNum,
-                *nativePropNameToConsumeAsDef,
-                pniLocals);
             // Since a SetPropertyNative does not have a return value, return
             // undefined.
             return Value::undefined();
