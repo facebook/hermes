@@ -12,7 +12,6 @@
 
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/SynthTrace.h"
-#include "hermes/VM/MockedEnvironment.h"
 
 #include "llvh/Support/MemoryBuffer.h"
 
@@ -24,16 +23,14 @@ namespace tracing {
 std::tuple<
     SynthTrace,
     ::hermes::vm::RuntimeConfig::Builder,
-    ::hermes::vm::GCConfig::Builder,
-    ::hermes::vm::MockedEnvironment>
+    ::hermes::vm::GCConfig::Builder>
 parseSynthTrace(std::unique_ptr<llvh::MemoryBuffer> trace);
 
 /// Parse a trace from a JSON string stored in the given file name.
 std::tuple<
     SynthTrace,
     ::hermes::vm::RuntimeConfig::Builder,
-    ::hermes::vm::GCConfig::Builder,
-    ::hermes::vm::MockedEnvironment>
+    ::hermes::vm::GCConfig::Builder>
 parseSynthTrace(const std::string &tracefile);
 
 } // namespace tracing

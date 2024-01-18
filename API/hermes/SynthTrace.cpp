@@ -11,7 +11,6 @@
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/UTF8.h"
-#include "hermes/VM/MockedEnvironment.h"
 #include "hermes/VM/StringPrimitive.h"
 
 #include "llvh/Support/Endian.h"
@@ -770,9 +769,7 @@ void SynthTrace::flushRecords() {
   records_.clear();
 }
 
-void SynthTrace::flushAndDisable(
-    const ::hermes::vm::MockedEnvironment &env,
-    const ::hermes::vm::GCExecTrace &gcTrace) {
+void SynthTrace::flushAndDisable(const ::hermes::vm::GCExecTrace &gcTrace) {
   if (!json_) {
     return;
   }

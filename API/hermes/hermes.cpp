@@ -1258,20 +1258,6 @@ jsi::Value HermesRuntime::getObjectForID(uint64_t id) {
   return jsi::Value::null();
 }
 
-/// Get a structure representing the enviroment-dependent behavior, so
-/// it can be written into the trace for later replay.
-const ::hermes::vm::MockedEnvironment &HermesRuntime::getMockedEnvironment()
-    const {
-  return static_cast<const HermesRuntimeImpl *>(this)
-      ->runtime_.getCommonStorage()
-      ->tracedEnv;
-}
-
-void HermesRuntime::setMockedEnvironment(
-    const ::hermes::vm::MockedEnvironment &env) {
-  static_cast<HermesRuntimeImpl *>(this)->runtime_.setMockedEnvironment(env);
-}
-
 const ::hermes::vm::GCExecTrace &HermesRuntime::getGCExecTrace() const {
   return static_cast<const HermesRuntimeImpl *>(this)
       ->runtime_.getGCExecTrace();

@@ -9,7 +9,6 @@
 #define HERMES_VM_JSLIB_RUNTIMECOMMONSTORAGE_H
 
 #include <random>
-#include "hermes/VM/MockedEnvironment.h"
 
 #include "llvh/ADT/Optional.h"
 
@@ -27,15 +26,6 @@ struct RuntimeCommonStorage {
   void operator=(const RuntimeCommonStorage &) = delete;
 
   bool shouldTrace = false;
-
-  /// An environment to replay instead of executing environment-dependent
-  /// behavior. This should be used for any circumstance where a result can
-  /// change from one run of JS to another.
-  llvh::Optional<MockedEnvironment> env;
-
-  /// An environment to record environment-dependent behavior (as a sequence of
-  /// results of calls to functions).
-  MockedEnvironment tracedEnv;
 
   /// PRNG used by Math.random()
   std::mt19937_64 randomEngine_;

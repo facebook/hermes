@@ -28,7 +28,6 @@
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/RuntimeCommonStorage.h"
-#include "hermes/VM/MockedEnvironment.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/OrderedHashMap.h"
 #include "hermes/VM/PredefinedStringIDs.h"
@@ -939,10 +938,6 @@ void Runtime::potentiallyMoveHeap() {
           heapAlignSize(sizeof(FillerCell)), GC::minAllocationSize()));
 }
 #endif
-
-void Runtime::setMockedEnvironment(const MockedEnvironment &env) {
-  getCommonStorage()->env = env;
-}
 
 LLVM_ATTRIBUTE_NOINLINE
 static CallResult<HermesValue> interpretFunctionWithRandomStack(

@@ -86,7 +86,6 @@ class ScopedNativeDepthReducer;
 class ScopedNativeDepthTracker;
 class ScopedNativeCallFrame;
 class CodeCoverageProfiler;
-struct MockedEnvironment;
 struct StackTracesTree;
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
@@ -238,10 +237,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   void addCustomSnapshotFunction(
       std::function<void(HeapSnapshot &)> nodes,
       std::function<void(HeapSnapshot &)> edges);
-
-  /// Make the runtime read from \p env to replay its environment-dependent
-  /// behavior.
-  void setMockedEnvironment(const MockedEnvironment &env);
 
   /// Runs the given UTF-8 \p code in a new RuntimeModule as top-level code.
   /// Note that if compileFlags.lazy is set, the code string will be copied.

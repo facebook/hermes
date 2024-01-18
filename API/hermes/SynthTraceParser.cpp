@@ -187,47 +187,6 @@ Collection<std::string, std::allocator<std::string>> getListOfStrings(
   return strings;
 }
 
-template <template <typename, typename> class Collection>
-Collection<
-    ::hermes::vm::MockedEnvironment::StatsTable,
-    std::allocator<::hermes::vm::MockedEnvironment::StatsTable>>
-getListOfStatsTable(JSONArray *array) {
-  Collection<
-      ::hermes::vm::MockedEnvironment::StatsTable,
-      std::allocator<::hermes::vm::MockedEnvironment::StatsTable>>
-      calls;
-  if (!array) {
-    return calls;
-  }
-  std::transform(
-      array->begin(),
-      array->end(),
-      std::back_inserter(calls),
-      [](const JSONValue *value)
-          -> ::hermes::vm::MockedEnvironment::StatsTable {
-        if (value->getKind() != JSONKind::Object) {
-          ::hermes::hermes_fatal("Stats table JSON rep is not object");
-        }
-        const JSONObject *obj = llvh::cast<JSONObject>(value);
-        ::hermes::vm::MockedEnvironment::StatsTable result;
-        for (auto name : *obj->getHiddenClass()) {
-          auto valForName = obj->at(name->str());
-          if (valForName->getKind() == JSONKind::Number) {
-            result.try_emplace(
-                name->str(), llvh::cast<JSONNumber>(valForName)->getValue());
-          } else if (valForName->getKind() == JSONKind::String) {
-            result.try_emplace(
-                name->str(),
-                std::string(llvh::cast<JSONString>(valForName)->c_str()));
-          } else {
-            ::hermes::hermes_fatal("Stats table kind is not num or string.");
-          }
-        }
-        return result;
-      });
-  return calls;
-}
-
 SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
   using RecordType = SynthTrace::RecordType;
   SynthTrace trace(globalObjID, ::hermes::vm::RuntimeConfig());
@@ -549,8 +508,7 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
 std::tuple<
     SynthTrace,
     ::hermes::vm::RuntimeConfig::Builder,
-    ::hermes::vm::GCConfig::Builder,
-    ::hermes::vm::MockedEnvironment>
+    ::hermes::vm::GCConfig::Builder>
 parseSynthTrace(std::unique_ptr<llvh::MemoryBuffer> trace) {
   JSLexer::Allocator alloc;
   JSONObject *root = llvh::cast<JSONObject>(parseJSON(alloc, std::move(trace)));
@@ -586,15 +544,13 @@ parseSynthTrace(std::unique_ptr<llvh::MemoryBuffer> trace) {
   return std::make_tuple(
       getTrace(llvh::cast<JSONArray>(root->at("trace")), globalObjID),
       getRuntimeConfig(rtConfig),
-      getGCConfig(rtConfig),
-      ::hermes::vm::MockedEnvironment{});
+      getGCConfig(rtConfig));
 }
 
 std::tuple<
     SynthTrace,
     ::hermes::vm::RuntimeConfig::Builder,
-    ::hermes::vm::GCConfig::Builder,
-    ::hermes::vm::MockedEnvironment>
+    ::hermes::vm::GCConfig::Builder>
 parseSynthTrace(const std::string &tracefile) {
   return parseSynthTrace(
       std::move(llvh::MemoryBuffer::getFile(tracefile).get()));

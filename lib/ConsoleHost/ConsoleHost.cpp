@@ -13,7 +13,6 @@
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Domain.h"
 #include "hermes/VM/JSObject.h"
-#include "hermes/VM/MockedEnvironment.h"
 #include "hermes/VM/NativeArgs.h"
 #include "hermes/VM/Profiler/SamplingProfiler.h"
 #include "hermes/VM/Runtime.h"
