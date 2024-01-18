@@ -633,6 +633,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       const jsi::Object &) override;
   void setNativeState(const jsi::Object &, std::shared_ptr<jsi::NativeState>)
       override;
+  void setExternalMemoryPressure(const jsi::Object &, size_t) override;
   jsi::Value getProperty(const jsi::Object &, const jsi::PropNameID &name)
       override;
   jsi::Value getProperty(const jsi::Object &, const jsi::String &name) override;
@@ -1866,6 +1867,9 @@ std::shared_ptr<jsi::NativeState> HermesRuntimeImpl::getNativeState(
           .getObject(runtime_));
   return std::shared_ptr(
       *reinterpret_cast<std::shared_ptr<jsi::NativeState> *>(ns->context()));
+}
+
+void HermesRuntimeImpl::setExternalMemoryPressure(const jsi::Object &, size_t) {
 }
 
 jsi::Value HermesRuntimeImpl::getProperty(
