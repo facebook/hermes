@@ -1211,7 +1211,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   SymbolRegistry symbolRegistry_{};
 
   /// Shared location to place native objects required by JSLib
-  std::shared_ptr<RuntimeCommonStorage> commonStorage_;
+  std::unique_ptr<RuntimeCommonStorage> commonStorage_;
 
   /// Empty code block that returns undefined.
   /// Owned by specialCodeBlockRuntimeModule_.

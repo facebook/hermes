@@ -14,8 +14,8 @@
 namespace hermes {
 namespace vm {
 
-std::shared_ptr<RuntimeCommonStorage> createRuntimeCommonStorage() {
-  return std::make_shared<RuntimeCommonStorage>();
+std::unique_ptr<RuntimeCommonStorage> createRuntimeCommonStorage() {
+  return std::make_unique<RuntimeCommonStorage>();
 }
 
 RuntimeCommonStorage::RuntimeCommonStorage() = default;

@@ -14,7 +14,6 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/JSLib/DateUtil.h"
-#include "hermes/VM/JSLib/RuntimeCommonStorage.h"
 #include "hermes/VM/Operations.h"
 
 namespace hermes {
