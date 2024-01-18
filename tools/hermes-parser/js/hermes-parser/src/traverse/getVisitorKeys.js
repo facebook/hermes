@@ -15,6 +15,7 @@ import type {VisitorKeys as VisitorKeysType} from '../generated/ESTreeVisitorKey
 
 import FlowVisitorKeys from '../generated/ESTreeVisitorKeys';
 
+// $FlowFixMe[deprecated-type]
 export function isNode(thing: mixed): boolean %checks {
   return (
     typeof thing === 'object' && thing != null && typeof thing.type === 'string'

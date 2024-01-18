@@ -19,6 +19,7 @@ type VisitorOptions = $ReadOnly<{
   childVisitorKeys?: VisitorKeysType | null,
 }>;
 
+// $FlowFixMe[deprecated-type]
 function isNode(node: mixed): boolean %checks {
   return (
     typeof node === 'object' && node != null && typeof node.type === 'string'

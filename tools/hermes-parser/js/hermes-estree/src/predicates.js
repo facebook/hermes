@@ -82,30 +82,36 @@ import {
 
 export * from './generated/predicates';
 
+// $FlowFixMe[deprecated-type]
 export function isClass(node: ESNode): boolean %checks {
   return isClassDeclaration(node) || isClassExpression(node);
 }
 
 export function isPropertyDefinitionWithNonComputedName(
   node: ESNode,
+  // $FlowFixMe[deprecated-type]
 ): boolean %checks {
   return isPropertyDefinition(node) && node.computed === false;
 }
 
+// $FlowFixMe[deprecated-type]
 export function isClassMember(node: ESNode): boolean %checks {
   return isPropertyDefinition(node) || isMethodDefinition(node);
 }
 
 export function isClassMemberWithNonComputedName(
   node: ESNode,
+  // $FlowFixMe[deprecated-type]
 ): boolean %checks {
   return isClassMember(node) && node.computed === false;
 }
 
+// $FlowFixMe[deprecated-type]
 export function isComment(node: ESNode | Token): boolean %checks {
   return isBlockComment(node) || isLineComment(node);
 }
 
+// $FlowFixMe[deprecated-type]
 export function isFunction(node: ESNode): boolean %checks {
   return (
     isArrowFunctionExpression(node) ||
@@ -116,56 +122,68 @@ export function isFunction(node: ESNode): boolean %checks {
 
 export function isMethodDefinitionWithNonComputedName(
   node: ESNode,
+  // $FlowFixMe[deprecated-type]
 ): boolean %checks {
   return isMethodDefinition(node) && node.computed === false;
 }
 
 export function isMemberExpressionWithNonComputedProperty(
   node: ESNode,
+  // $FlowFixMe[deprecated-type]
 ): boolean %checks {
   return isMemberExpression(node) && node.computed === false;
 }
 
 export function isOptionalMemberExpressionWithNonComputedProperty(
   node: ESNode,
+  // $FlowFixMe[deprecated-type]
 ): boolean %checks {
   return isMemberExpression(node) && node.computed === false;
 }
 
+// $FlowFixMe[deprecated-type]
 export function isObjectPropertyWithShorthand(node: ESNode): boolean %checks {
   return isProperty(node) && node.shorthand === true;
 }
 
 export function isObjectPropertyWithNonComputedName(
   node: ESNode,
+  // $FlowFixMe[deprecated-type]
 ): boolean %checks {
   return isProperty(node) && node.computed === false;
 }
 
+// $FlowFixMe[deprecated-type]
 export function isBigIntLiteral(node: ESNode): boolean %checks {
   return isLiteral(node) && node.literalType === 'bigint';
 }
 
+// $FlowFixMe[deprecated-type]
 export function isBooleanLiteral(node: ESNode): boolean %checks {
   return isLiteral(node) && node.literalType === 'boolean';
 }
 
+// $FlowFixMe[deprecated-type]
 export function isNullLiteral(node: ESNode): boolean %checks {
   return isLiteral(node) && node.literalType === 'null';
 }
 
+// $FlowFixMe[deprecated-type]
 export function isNumericLiteral(node: ESNode): boolean %checks {
   return isLiteral(node) && node.literalType === 'numeric';
 }
 
+// $FlowFixMe[deprecated-type]
 export function isRegExpLiteral(node: ESNode): boolean %checks {
   return isLiteral(node) && node.literalType === 'regexp';
 }
 
+// $FlowFixMe[deprecated-type]
 export function isStringLiteral(node: ESNode): boolean %checks {
   return isLiteral(node) && node.literalType === 'string';
 }
 
+// $FlowFixMe[deprecated-type]
 export function isExpression(node: ESNode): boolean %checks {
   return (
     isThisExpression(node) ||
@@ -199,6 +217,7 @@ export function isExpression(node: ESNode): boolean %checks {
   );
 }
 
+// $FlowFixMe[deprecated-type]
 export function isStatement(node: ESNode): boolean %checks {
   return (
     isBlockStatement(node) ||
