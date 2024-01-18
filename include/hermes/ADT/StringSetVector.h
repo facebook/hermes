@@ -39,10 +39,17 @@ struct StringSetVector final {
   /// \return the index of the string in the vector.
   inline size_type insert(llvh::StringRef str);
 
+  /// Insert a sequence into the container.
+  template <class InputIt>
+  void insert(InputIt first, InputIt last);
+
   /// Return an iterator \c it such that *it == str if such an iterator exists
   /// or end() otherwise.
   inline iterator find(llvh::StringRef str);
   inline const_iterator find(llvh::StringRef str) const;
+
+  /// \return 0 or 1 depending on whether \p str is in the set.
+  inline unsigned count(llvh::StringRef str) const;
 
   /// Return a reference to the \p i'th string inserted into this set vector.
   /// Assumes \pre i < size().
@@ -92,6 +99,13 @@ inline StringSetVector::size_type StringSetVector::insert(llvh::StringRef str) {
   return storageSize;
 }
 
+template <class InputIt>
+void StringSetVector::insert(InputIt first, InputIt last) {
+  for (; first != last; ++first) {
+    insert(*first);
+  }
+}
+
 inline StringSetVector::iterator StringSetVector::find(llvh::StringRef str) {
   auto it = stringsToIndex_.find(str);
   if (it == stringsToIndex_.end()) {
@@ -104,6 +118,10 @@ inline StringSetVector::iterator StringSetVector::find(llvh::StringRef str) {
 inline StringSetVector::const_iterator StringSetVector::find(
     llvh::StringRef str) const {
   return const_cast<StringSetVector *>(this)->find(str);
+}
+
+inline unsigned StringSetVector::count(llvh::StringRef str) const {
+  return find(str) != end();
 }
 
 inline const std::string &StringSetVector::operator[](size_t i) const {
