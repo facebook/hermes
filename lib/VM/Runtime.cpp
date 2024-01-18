@@ -27,7 +27,7 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSLib.h"
-#include "hermes/VM/JSLib/RuntimeCommonStorage.h"
+#include "hermes/VM/JSLib/JSLibStorage.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/OrderedHashMap.h"
 #include "hermes/VM/PredefinedStringIDs.h"

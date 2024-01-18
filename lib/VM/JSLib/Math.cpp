@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 #include "JSLibInternal.h"
 
-#include "hermes/VM/JSLib/RuntimeCommonStorage.h"
+#include "hermes/VM/JSLib/JSLibStorage.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/SingleObject.h"
 #include "hermes/VM/StringPrimitive.h"
