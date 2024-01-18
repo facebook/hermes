@@ -101,7 +101,8 @@ BCProviderFromSrc::createBCProviderFromSrc(
     const ScopeChain &scopeChain,
     SourceErrorManager::DiagHandlerTy diagHandler,
     void *diagContext,
-    const std::function<void(Module &)> &runOptimizationPasses) {
+    const std::function<void(Module &)> &runOptimizationPasses,
+    llvh::Optional<BytecodeGenerationOptions> bytecodeGenerationOptions) {
   return createBCProviderFromSrcImpl(
       std::move(buffer),
       sourceURL,
@@ -110,7 +111,8 @@ BCProviderFromSrc::createBCProviderFromSrc(
       scopeChain,
       diagHandler,
       diagContext,
-      runOptimizationPasses);
+      runOptimizationPasses,
+      bytecodeGenerationOptions);
 }
 
 std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
@@ -122,7 +124,8 @@ BCProviderFromSrc::createBCProviderFromSrcImpl(
     const ScopeChain &scopeChain,
     SourceErrorManager::DiagHandlerTy diagHandler,
     void *diagContext,
-    const std::function<void(Module &)> &runOptimizationPasses) {
+    const std::function<void(Module &)> &runOptimizationPasses,
+    llvh::Optional<BytecodeGenerationOptions> bytecodeGenerationOptions) {
   assert(
       buffer->data()[buffer->size()] == 0 &&
       "The input buffer must be null terminated");
@@ -240,10 +243,15 @@ BCProviderFromSrc::createBCProviderFromSrcImpl(
     runOptimizationPasses(M);
 
   BytecodeGenerationOptions opts{compileFlags.format};
-  opts.optimizationEnabled = !!runOptimizationPasses;
-  opts.staticBuiltinsEnabled =
-      context->getOptimizationSettings().staticBuiltins;
-  opts.verifyIR = compileFlags.verifyIR;
+  if (bytecodeGenerationOptions) {
+    opts = *bytecodeGenerationOptions;
+  } else {
+    opts.optimizationEnabled = !!runOptimizationPasses;
+    opts.staticBuiltinsEnabled =
+        context->getOptimizationSettings().staticBuiltins;
+    opts.verifyIR = compileFlags.verifyIR;
+  }
+
   auto BM = hbc::generateBytecodeModule(&M, M.getTopLevelFunction(), opts);
   if (context->getSourceErrorManager().getErrorCount() > 0) {
     return {nullptr, getErrorString()};
