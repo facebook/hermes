@@ -20,80 +20,71 @@ namespace vm {
 
 namespace detail {
 
-/// Used as the key to the DenseMap in JSWeakMapImpl.
+/// Used as the key to the DenseSet in JSWeakMapImpl.
 /// Packages the hash with the WeakRef itself.
 /// Uses WeakRefs using invalid locations as slots for empty and tombstone keys.
 struct WeakRefKey {
   /// Actual weak ref stored as the key.
-  WeakRef<JSObject> ref;
+  WeakMapEntryRef ref;
 
   /// GC-stable hash value of the JSObject pointed to by ref, while it's alive.
   uint32_t hash;
 
-  WeakRefKey(WeakRef<JSObject> ref, uint32_t hash) : ref(ref), hash(hash) {}
+  WeakRefKey(WeakMapEntryRef ref, uint32_t hash) : ref(ref), hash(hash) {}
+};
 
-  /// Returns the object reference of ref; returns null if ref is not valid.
-  /// Should only be called during GC; the \param gc argument is used only to
-  /// verify this.
-  JSObject *getObjectInGC(GC &gc) const;
+/// Used as a lookup key to the DenseSet in JSWeakMapImpl, so that we don't
+/// need to allocate a new WeakMapEntrySlot for query operations. With this,
+/// the only case that we will allocate a new slot is when inserting new values.
+struct WeakRefLookupKey {
+  /// Pointer of the key object.
+  CompressedPointer refCellPtr;
+
+  /// GC-stable hash value of the JSObject pointed to by ref, while it's alive.
+  uint32_t hash;
+
+  WeakRefLookupKey(Runtime &runtime, Handle<JSObject> keyObj)
+      : refCellPtr(CompressedPointer::encode(*keyObj, runtime)),
+        hash(runtime.gcStableHashHermesValue(keyObj)) {}
 };
 
 /// Enable using WeakRef<JSObject> in DenseMap.
 struct WeakRefInfo {
- public:
   /// \return Empty key which is simply null.
   static inline WeakRefKey getEmptyKey() {
-    return WeakRefKey{
-        WeakRef<JSObject>(
-            reinterpret_cast<WeakRefSlot *>(static_cast<uintptr_t>(kEmptyKey))),
-        kEmptyKey};
+    // Hashes of Empty/Tombstone key do not matter, since the key to be inserted
+    // or searched can never be one of these two values. So we just pass a
+    // constant 0 here.
+    return WeakRefKey{WeakMapEntryRef::createEmptyEntryRef(), 0};
   }
   /// \return Empty key which is simply a pointer to 0x1 - don't dereference.
   static inline WeakRefKey getTombstoneKey() {
-    return WeakRefKey{
-        WeakRef<JSObject>(reinterpret_cast<WeakRefSlot *>(
-            static_cast<uintptr_t>(kTombstoneKey))),
-        kTombstoneKey};
+    return WeakRefKey{WeakMapEntryRef::createTombstoneEntryRef(), 0};
   }
   /// \return the hash in \p key.
   static inline unsigned getHashValue(const WeakRefKey &key) {
     return key.hash;
   }
+  /// \return the hash in lookup key.
+  static inline unsigned getHashValue(const WeakRefLookupKey &key) {
+    return key.hash;
+  }
   /// \return true both arguments are empty, both are tombstone,
   /// or both point to the same JSObject.
-  /// \pre The weak ref mutex needs to be held before this function is called.
   static inline bool isEqual(const WeakRefKey &a, const WeakRefKey &b) {
-    const auto *aSlot = a.ref.unsafeGetSlot();
-    const auto *bSlot = b.ref.unsafeGetSlot();
-    // Check if the keys are empty or tombstones, to avoid deferencing them.
-    if (aSlot == bSlot) {
-      return true;
-    }
-    if (reinterpret_cast<uintptr_t>(aSlot) <= kTombstoneKey ||
-        reinterpret_cast<uintptr_t>(bSlot) <= kTombstoneKey) {
-      // aSlot != bSlot and one or both are empty or tombstone.
-      return false;
-    }
-    // Check if the refs are valid.
-    // The underlying object may have been collected already,
-    // but markWeakRefs may not have run at this point.
-    // The value will be cleared on the next GC cycle, but for now,
-    // isSlotValid needs to be checked to avoid an error on access.
-    return WeakRef<JSObject>::isSlotValid(aSlot) &&
-        WeakRef<JSObject>::isSlotValid(bSlot) &&
-        aSlot->getNoBarrierUnsafe() == bSlot->getNoBarrierUnsafe();
+    return a.ref.isKeyEqual(b.ref);
   }
-
- private:
-  /// The empty key (used as a pointer and a hash).
-  static constexpr uint32_t kEmptyKey = 0;
-
-  /// The tombstone key (used as a pointer and a hash).
-  static constexpr uint32_t kTombstoneKey = 1;
-
-  static_assert(
-      kEmptyKey < kTombstoneKey,
-      "empty key must be less than tombstone key");
+  /// \return true if \p b is neither empty nor tombstone, and points to the
+  /// same JSObject as refCellPtr of \p a (which should never be null pointer).
+  /// In case that the key object in \p b is already garbage collected, but the
+  /// WeakMapEntrySlot owned by \p b is not freed yet, this function is still
+  /// correct. The hash stored in \p b does not change after the key object is
+  /// collected, and the equality check in isKeyEqual() always fails since no
+  /// object will ever compare equal to an object that has been freed.
+  static inline bool isEqual(const WeakRefLookupKey &a, const WeakRefKey &b) {
+    assert(a.refCellPtr && "LookupKey should not use a null object pointer");
+    return b.ref.isKeyEqual(a.refCellPtr);
+  }
 };
 
 } // namespace detail
@@ -103,16 +94,15 @@ struct WeakRefInfo {
 class JSWeakMapImplBase : public JSObject {
   using Super = JSObject;
   using WeakRefKey = detail::WeakRefKey;
-  using DenseMapT = llvh::DenseMap<WeakRefKey, uint32_t, detail::WeakRefInfo>;
+  using DenseSetT = llvh::DenseSet<WeakRefKey, detail::WeakRefInfo>;
 
  protected:
   JSWeakMapImplBase(
       Runtime &runtime,
       Handle<JSObject> parent,
-      Handle<HiddenClass> clazz,
-      Handle<BigStorage> valueStorage)
+      Handle<HiddenClass> clazz)
       : JSObject(runtime, *parent, *clazz),
-        valueStorage_(runtime, *valueStorage, runtime.getHeap()) {}
+        targetSize_(/* sizingWeight */ 0.5, /* initSize */ 8) {}
 
  public:
   static const ObjectVTable vt;
@@ -155,65 +145,28 @@ class JSWeakMapImplBase : public JSObject {
       Runtime &runtime,
       Handle<JSObject> key);
 
-  /// \return the size of the internal map, after freeing any freeable slots.
-  /// Used for testing purposes.
+  /// \return the size of the internal set, after freeing any freeable slots
+  /// and erasing their owning keys. Used for testing purposes.
   static uint32_t debugFreeSlotsAndGetSize(
       Runtime &runtime,
       JSWeakMapImplBase *self);
 
+  /// Iterate every slot owned by entries in `set_`, free invalid ones, and
+  /// erase the owning entry in `set_` immediately. In the end, recompute
+  /// `targetSize_` using the new size of `set_`.
+  void clearFreeableEntries();
+
   /// An iterator over the keys of the map.
-  struct KeyIterator {
-    DenseMapT::iterator mapIter;
-
-    KeyIterator &operator++(int /*dummy*/) {
-      mapIter++;
-      return *this;
-    }
-
-    WeakRefKey &operator*() {
-      return mapIter->first;
-    }
-
-    WeakRefKey *operator->() {
-      return &mapIter->first;
-    }
-
-    bool operator!=(const KeyIterator &other) {
-      return mapIter != other.mapIter;
-    }
-  };
-
-  // Return begin and end iterators for the keys of the map.
-  KeyIterator keys_begin();
-  KeyIterator keys_end();
-
-  /// Returns a pointer to the HermesValue corresponding to the given \p key.
-  /// Returns nullptr if \p key is not in the map.  May only be
-  /// called during GC.  Note that this returns a pointer into the interior
-  /// of an object; must not be used in contexts where the object might move.
-  /// \param gc Used to verify that the call is during GC, and provides
-  /// a PointerBase.
-  GCHermesValue *getValueDirect(GC &gc, const WeakRefKey &key);
-
-  /// Return a reference to the slot that contains the pointer to the storage
-  /// for the values of the weak map.  Note that this returns a pointer into the
-  /// interior of an object; must not be used in contexts where the object might
-  /// move.
-  /// \param GC Used to verify that the call is during GC.
-  GCPointerBase &getValueStorageRef(GC &gc);
-
-  /// If the given \p key is in the map, clears the entry
-  /// corresponding to \p key -- clears the slot of the WeakRef in
-  /// key, and sets the value to the empty HermesValue.  May only be
-  /// called during GC.
-  /// \param gc Used to verify that the call is during GC, and provides
-  /// a PointerBase.
-  /// \return whether the key was in the map.
-  bool clearEntryDirect(GC &gc, const WeakRefKey &key);
+  using KeyIterator = DenseSetT::iterator;
 
  protected:
   static void _finalizeImpl(GCCell *cell, GC &gc) {
     auto *self = vmcast<JSWeakMapImplBase>(cell);
+    for (auto &element : self->set_) {
+      // No need to explicitly erase the owning entry of this slot since the
+      // whole map/set is to be deleted.
+      element.ref.releaseSlot();
+    }
     self->~JSWeakMapImplBase();
   }
 
@@ -232,23 +185,6 @@ class JSWeakMapImplBase : public JSObject {
   static void _snapshotAddNodesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
 #endif
 
-  /// Iterate the slots in map_ and call deleteInternal on any invalid
-  /// references, adding all available slots to the free list.
-  void findAndDeleteFreeSlots(Runtime &runtime);
-
-  /// Erase the map entry and corresponding valueStorage entry
-  /// pointed to by the iterator \p it.
-  /// Add the newly opened valueStorage slot to the free list.
-  void deleteInternal(Runtime &runtime, DenseMapT::iterator it);
-
- private:
-  /// Get the index to insert a new value into valueStorage_.
-  /// Resize valueStorage_ if no such spots exist.
-  /// \return the index into which to insert, or EXCEPTION if resize failed.
-  static CallResult<uint32_t> getFreeValueStorageIndex(
-      Handle<JSWeakMapImplBase> self,
-      Runtime &runtime);
-
  public:
   // Public for tests.
 
@@ -258,56 +194,44 @@ class JSWeakMapImplBase : public JSObject {
 
   /// \return the number of bytes allocated by this object on the heap.
   size_t getMallocSize() const {
-    return map_.getMemorySize();
+    return set_.getMemorySize();
   }
 
  private:
   /// The underlying weak value map.
-  DenseMapT map_;
+  DenseSetT set_;
 
-  /// Value storage, used to keep the HermesValues out of the DenseMap.
-  /// If a value is kFreeListInvalid it's free to use.
-  /// If a value can be found by following indices starting at freeListHead_,
-  /// it's also free to use.
-  /// The last member of this linked list of free spots is kFreeListInvalid.
-  GCPointer<BigStorage> valueStorage_;
+  /// When the size of `set_` reaches targetSize_, clearFreeableEntries() will
+  /// be called to remove freeable entries and recompute targetSize_.
+  ExponentialMovingAverage targetSize_;
 
-  /// Number indicating the end of the free list.
-  static constexpr uint32_t kFreeListInvalid{UINT32_MAX};
-
-  /// Index of the first free spot in the valueStorage_ free list.
-  /// If kFreeListInvalid, then the free list is completely empty,
-  /// and the nextIndex_ should be used.
-  uint32_t freeListHead_{kFreeListInvalid};
-
-  /// Next index to use when the free list runs out of elements.
-  uint32_t nextIndex_{0};
-
-  /// This is set to true when markWeakRefs sees an invalid slot which can be
-  /// freed later.
-  /// When set to true, the WeakMap should look for free slots the next time
-  /// the user tries to add an element.
-  bool hasFreeableSlots_{false};
+  /// Target occupancy ration of the map storage.
+  static constexpr double kOccupancyTarget = 0.5;
 };
 
 /// Underlying representation of the WeakMap and WeakSet objects.
 ///
-/// The keys are stored in a `DenseMap<WeakRefKey, uint32_t>`,
-/// which allows storing the hashes with the keys,
-/// so that the DenseMap can compute the hashes
-/// without being given a Runtime.
-/// We can't store the hashes separately because the DenseMap
-/// needs to be able to compute hashes based on only the KeyT,
-/// because the map rehashes when growing itself,
-/// and it doesn't store the LookupKeyT if using find_as or insert_as.
-///
-/// The values in the map_ are indices into valueStorage_,
-/// which is where we store the actual values.
-/// valueStorage_ is a GC-managed PropStorage,
-/// and the indices in map_ are gotten either via the free list
-/// or, if that's empty, via the nextIndex_ field.
-/// If we run out of slots, we double the size of valueStorage_.
-/// Currently, we never shrink it.
+/// The key/value pairs are stored in a `DenseSet<WeakRefKey>`. Each
+/// `WeakRefKey` includes the underlying `WeakMapEntryRef` and hash of the key
+/// object, which allows the DenseSet to compute the hash without relying on
+/// the Runtime, and keep the set internally consistent even when the referenced
+/// object is freed. Each `WeakMapEntryRef` uniquely owns a `WeakMapEntrySlot`,
+/// which stores three things: the WeakRoot to key object, the mapped value,
+/// and WeakRoot to the owning map.
+/// The size of `set_` keeps growing when new key/value pairs are inserted,
+/// until reaching `targetSize_`, at which point all freeable entries are
+/// removed from `set_`, the WeakMapEntrySlots owned by them are freed, and
+/// `targetSize_` is recomputed.
+/// Note that when an entry is removed from `set_`, its underlying slot must be
+/// freed together, otherwise, that slot could be used by another key and
+/// causing insertion failure.
+/// Currently, we only free slots at three places:
+/// 1. In deleteValue(), if the key exists.
+/// 2. In clearFreeableEntries(), which is called only in setValue() and
+/// debugFreeSlotsAndGetSize(). All invalid slots are freed and owning entries
+/// are erased from `set_`.
+/// 3. In finalizer. All slots owned by entries in `set_` are freed and the
+/// entire map/set is destructed.
 template <CellKind C>
 class JSWeakMapImpl final : public JSWeakMapImplBase {
   using Super = JSWeakMapImplBase;
@@ -332,9 +256,8 @@ class JSWeakMapImpl final : public JSWeakMapImplBase {
   JSWeakMapImpl(
       Runtime &runtime,
       Handle<JSObject> parent,
-      Handle<HiddenClass> clazz,
-      Handle<BigStorage> valueStorage)
-      : JSWeakMapImplBase(runtime, parent, clazz, valueStorage) {}
+      Handle<HiddenClass> clazz)
+      : JSWeakMapImplBase(runtime, parent, clazz) {}
 };
 
 using JSWeakMap = JSWeakMapImpl<CellKind::JSWeakMapKind>;

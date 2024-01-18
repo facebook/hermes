@@ -1013,11 +1013,6 @@ class HadesGC final : public GCBase {
   /// dead objects, and free the ones that were not marked at all.
   void updateWeakReferencesForOldGen();
 
-  /// The WeakMap type in JS has special semantics for handling keys kept alive
-  /// by only their values. In between marking and sweeping, this function is
-  /// called to handle that special case.
-  void completeWeakMapMarking(MarkAcceptor &acceptor);
-
   /// Return the total number of bytes that are in use by the JS heap.
   uint64_t allocatedBytes() const;
 

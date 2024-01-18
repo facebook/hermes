@@ -7,7 +7,6 @@
 
 #include "hermes/VM/HadesGC.h"
 
-#include "GCBase-WeakMap.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/VM/AllocResult.h"
@@ -15,7 +14,9 @@
 #include "hermes/VM/FillerCell.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCPointer.h"
+#include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/RootAndSlotAcceptorDefault.h"
+#include "hermes/VM/SmallHermesValue-inline.h"
 
 #include <array>
 #include <functional>
@@ -894,10 +895,6 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
     return globalWorklist_;
   }
 
-  std::vector<JSWeakMap *> &reachableWeakMaps() {
-    return reachableWeakMaps_;
-  }
-
   /// Merge the symbols marked by the MarkAcceptor and by the write barrier,
   /// then return a reference to it.
   /// WARN: This should only be called when the mutator is paused, as
@@ -925,9 +922,6 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
   /// because the mutator can't be modifying mark bits at the same time as the
   /// marker thread.
   MarkWorklist globalWorklist_;
-
-  /// The WeakMap objects that have been discovered to be reachable.
-  std::vector<JSWeakMap *> reachableWeakMaps_;
 
   /// markedSymbols_ represents which symbols have been proven live so far in
   /// a collection. True means that it is live, false means that it could
@@ -962,11 +956,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
     // cell's kind after initialization. The GC thread might to a free cell, but
     // only during sweeping, not concurrently with this operation. Therefore
     // there's no need for any synchronization here.
-    if (vmisa<JSWeakMap>(cell)) {
-      reachableWeakMaps_.push_back(vmcast<JSWeakMap>(cell));
-    } else {
-      localWorklist_.push(cell);
-    }
+    localWorklist_.push(cell);
   }
 
   template <typename T>
@@ -1890,7 +1880,6 @@ void HadesGC::completeMarking() {
   assert(
       oldGenMarker_->globalWorklist().empty() &&
       "Marking worklist wasn't drained");
-  completeWeakMapMarking(*oldGenMarker_);
   markWeakMapEntrySlots();
   // Update the compactee tracking pointers so that the next YG collection will
   // do a compaction.
@@ -2897,37 +2886,6 @@ void HadesGC::updateWeakReferencesForOldGen() {
         break;
     }
   }
-}
-
-void HadesGC::completeWeakMapMarking(MarkAcceptor &acceptor) {
-  gcheapsize_t weakMapAllocBytes = GCBase::completeWeakMapMarking(
-      *this,
-      acceptor,
-      acceptor.reachableWeakMaps(),
-      /*objIsMarked*/
-      HeapSegment::getCellMarkBit,
-      /*markFromVal*/
-      [&acceptor](GCCell *valCell, GCHermesValue &valRef) {
-        if (HeapSegment::getCellMarkBit(valCell)) {
-          return false;
-        }
-        acceptor.accept(valRef);
-        // The weak ref lock is held throughout this entire section, so no need
-        // to re-lock it.
-        acceptor.drainAllWork();
-        return true;
-      },
-      /*drainMarkStack*/
-      [](MarkAcceptor &acceptor) {
-        // The weak ref lock is held throughout this entire section, so no need
-        // to re-lock it.
-        acceptor.drainAllWork();
-      },
-      /*checkMarkStackOverflow (HadesGC does not have mark stack overflow)*/
-      []() { return false; });
-
-  acceptor.reachableWeakMaps().clear();
-  (void)weakMapAllocBytes;
 }
 
 uint64_t HadesGC::allocatedBytes() const {

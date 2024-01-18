@@ -55,13 +55,6 @@ namespace hermes {
 namespace vm {
 
 /// Forward declarations;
-namespace detail {
-struct WeakRefKey;
-}
-template <CellKind C>
-class JSWeakMapImpl;
-using JSWeakMap = JSWeakMapImpl<CellKind::JSWeakMapKind>;
-
 class GCCell;
 class JSObject;
 class JSWeakMapImplBase;
@@ -863,7 +856,11 @@ class GCBase {
       std::shared_ptr<CrashManager> crashMgr,
       HeapKind kind);
 
-  virtual ~GCBase() {}
+  virtual ~GCBase() {
+    assert(
+        weakMapEntrySlots_.sizeForTests() == 0 &&
+        "weakMapEntrySlots_ must all be freed");
+  }
 
   /// Create a fixed size object of type T.
   /// \return a pointer to the newly created object in the GC heap.
@@ -1174,118 +1171,11 @@ class GCBase {
       SlotVisitorWithNames<Acceptor> &visitor,
       GCCell *cell);
 
-  /// Utilities for WeakMap marking.
-
-  /// \return a list of pointers to all the WeakRefKeys in \p weakMap.
-  /// The \p gc argument is passed to methods that verify they're only
-  /// called during GC.
-  static std::vector<detail::WeakRefKey *> buildKeyList(
-      GC &gc,
-      JSWeakMap *weakMap);
-
-  /// For all non-null keys in \p weakMap that are unreachable, clear
-  /// the key (clear the pointer in the WeakRefSlot) and value (set it
-  /// to undefined).
-  template <typename KeyReachableFunc>
-  static void clearEntriesWithUnreachableKeys(
-      GC &gc,
-      JSWeakMap *weakMap,
-      KeyReachableFunc keyReachable);
-
-  /// For all reachable keys in \p weakMap, mark from the
-  /// corresponding value using the given \p acceptor, reaching a
-  /// transitive closure.  The acceptor is required to have a property
-  /// we don't normally require: it must be idempotent.  I.e., it must
-  /// function properly when applied multiple times to the same
-  /// pointer slot during a collection.  "Mark-in-place" acceptors
-  /// will generally have this property.  Uses \p objIsMarked to
-  /// determine whether an object is marked, and, for entries whose
-  /// keys are marked, invokes \p markFromVal on the corresponding value.
-  /// These have the following specs:
-  ///
-  ///  * objIsMarked: (GCCell*) ==> bool
-  ///    Returns whether a GCCell is marked.
-  ///
-  ///  * markFromVal: GCCell *cell, GCHermesValue &cellRef) ==> bool
-  ///    If the argument is unmarked, mark it, schedule for scanning.
-  ///    Returns whether the object was newly marked.
-  ///
-  /// If the \p unreachableKeys map has an entry for \p weakMap, assumes the
-  /// list of WeakRefKeys contains all possibly-unreachable keys; any
-  /// other keys are assumed to have already been found reachable.
-  /// Ensures that \p unreachableKeys has an accurate value for \p
-  /// weakMap before return.  \return whether any previously-unmarked
-  /// values were marked.
-  template <
-      typename Acceptor,
-      typename ObjIsMarkedFunc,
-      typename MarkFromValFunc>
-  static bool markFromReachableWeakMapKeys(
-      GC &gc,
-      JSWeakMap *weakMap,
-      Acceptor &acceptor,
-      llvh::DenseMap<JSWeakMap *, std::vector<detail::WeakRefKey *>>
-          *unreachableKeys,
-      ObjIsMarkedFunc objIsMarked,
-      MarkFromValFunc markFromVal);
-
   /// \return A reference to the mutex that controls accessing any WeakRef.
   ///   This mutex must be held if a WeakRef is created or modified.
   WeakRefMutex &weakRefMutex() {
     return weakRefMutex_;
   }
-
-  /// Assumes that all known reachable WeakMaps have been collected in
-  /// \p reachableWeakMaps.  For all these WeakMaps, find all
-  /// reachable keys and mark from the corresponding value using the given \p
-  /// acceptor, reaching a transitive closure.
-  /// Do this until no newly reachable objects are found in a
-  /// traversal of the WeakMaps.  We assume that WeakMaps found newly
-  /// reachable are added to \p reachableWeakMaps, and do not assume
-  /// we've reached transitive closure until all maps are scanned.
-  /// Uses \p objIsMarked to determine whether an object is marked,
-  /// and, for entries whose keys are marked, invokes \p
-  /// checkValIsMarked on the corresponding value.  Used \p
-  /// drainMarkStack to ensure that the transitive closure of what's
-  /// currently on the mark stack is marked.  Requires \p acceptor
-  /// to be idempotent: it must be legal to apply the acceptor
-  /// multiple times to the same slot.  The function arguments have
-  /// the following specs:
-  ///
-  ///  * objIsMarked: (GCCell *) ==> bool
-  ///    Returns whether a GCCell is marked.
-  ///
-  ///  * markFromVal: (GCCell *cell, HermesValue &cellRef) ==> bool
-  ///    Requires that \p cell is non-null, and the value of \p
-  ///    cellRef.  If the argument is unmarked, ensure that its
-  ///    transitive closure is marked.  Returns whether the object was
-  ///    newly marked.
-  ///
-  ///  * drainMarkStack: (Acceptor &acceptor) ==> void
-  ///    Ensures that the mark stack used by the collector is empty;
-  ///    the transitive closure of the original contents is marked.
-  ///
-  ///  * checkMarkStackOverflow: () ==> bool
-  ///    Returns whether mark stack overflow has occurred.
-  ///
-  /// Some collectors compute the allocated bytes during GC.  If this
-  /// is done in \p drainMarkStack, that will cover all objects except
-  /// WeakWaps, which are never pushed on the mark stack.  Thus:
-  /// \return the total size of reachable WeakMaps.
-  template <
-      typename Acceptor,
-      typename ObjIsMarkedFunc,
-      typename MarkFromValFunc,
-      typename DrainMarkStackFunc,
-      typename CheckMarkStackOverflowFunc>
-  static gcheapsize_t completeWeakMapMarking(
-      GC &gc,
-      Acceptor &acceptor,
-      std::vector<JSWeakMap *> &reachableWeakMaps,
-      ObjIsMarkedFunc objIsMarked,
-      MarkFromValFunc markFromVal,
-      DrainMarkStackFunc drainMarkStack,
-      CheckMarkStackOverflowFunc checkMarkStackOverflow);
 
   /// @}
 

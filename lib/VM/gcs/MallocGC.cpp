@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "GCBase-WeakMap.h"
 #include "hermes/Support/CheckedMalloc.h"
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/SlowAssert.h"
@@ -13,6 +12,7 @@
 #include "hermes/VM/CompressedPointer.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase-inline.h"
+#include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/HiddenClass.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/RootAndSlotAcceptorDefault.h"
@@ -33,9 +33,6 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
                                          public WeakAcceptorDefault {
   MallocGC &gc;
   std::vector<CellHeader *> worklist_;
-
-  /// The WeakMap objects that have been discovered to be reachable.
-  std::vector<JSWeakMap *> reachableWeakMaps_;
 
   /// markedSymbols_ represents which symbols have been proven live so far in
   /// a collection. True means that it is live, false means that it could
@@ -87,12 +84,7 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
       // Make sure to put an element on the worklist that is at the updated
       // location. Don't update the stale address that is about to be free'd.
       header->markWithForwardingPointer(newLocation);
-      auto *newCell = newLocation->data();
-      if (vmisa<JSWeakMap>(newCell)) {
-        reachableWeakMaps_.push_back(vmcast<JSWeakMap>(newCell));
-      } else {
-        worklist_.push_back(newLocation);
-      }
+      worklist_.push_back(newLocation);
       gc.newPointers_.insert(newLocation);
       if (gc.isTrackingIDs()) {
         gc.moveObject(
@@ -111,11 +103,7 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
       if (newSize != origSize) {
         static_cast<VariableSizeRuntimeCell *>(cell)->setSizeFromGC(newSize);
       }
-      if (vmisa<JSWeakMap>(cell)) {
-        reachableWeakMaps_.push_back(vmcast<JSWeakMap>(cell));
-      } else {
-        worklist_.push_back(header);
-      }
+      worklist_.push_back(header);
       // Move the pointer from the old pointers to the new pointers.
       gc.pointers_.erase(header);
       gc.newPointers_.insert(header);
@@ -301,11 +289,7 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
 #endif
     drainMarkStack(acceptor);
 
-    // The marking loop above will have accumulated WeakMaps;
-    // find things reachable from values of reachable keys.
-    completeWeakMapMarking(acceptor);
     markWeakMapEntrySlots(acceptor);
-
     // Update weak roots references.
     markWeakRoots(acceptor, /*markLongLived*/ true);
 
@@ -454,40 +438,6 @@ void MallocGC::markWeakMapEntrySlots(MarkingAcceptor &acceptor) {
       slot.mappedValue = HermesValue::encodeEmptyValue();
     }
   });
-}
-
-void MallocGC::completeWeakMapMarking(MarkingAcceptor &acceptor) {
-  gcheapsize_t weakMapAllocBytes = GCBase::completeWeakMapMarking(
-      *this,
-      acceptor,
-      acceptor.reachableWeakMaps_,
-      /*objIsMarked*/
-      [](GCCell *cell) { return CellHeader::from(cell)->isMarked(); },
-      /*markFromVal*/
-      [this, &acceptor](GCCell *valCell, GCHermesValue &valRef) {
-        CellHeader *valHeader = CellHeader::from(valCell);
-        if (valHeader->isMarked()) {
-#ifdef HERMESVM_SANITIZE_HANDLES
-          valRef.setInGC(
-              valRef.updatePointer(valHeader->getForwardingPointer()->data()),
-              *this);
-#endif
-          return false;
-        }
-        acceptor.accept(valRef);
-        drainMarkStack(acceptor);
-        return true;
-      },
-      /*drainMarkStack*/
-      [this](MarkingAcceptor &acceptor) { drainMarkStack(acceptor); },
-      /*checkMarkStackOverflow (MallocGC does not have mark stack overflow)*/
-      []() { return false; });
-
-  acceptor.reachableWeakMaps_.clear();
-  // drainMarkStack will have added the size of every object popped
-  // from the mark stack.  WeakMaps are never pushed on that stack,
-  // but the call above returns their total size.  So add that.
-  allocatedBytes_ += weakMapAllocBytes;
 }
 
 void MallocGC::finalizeAll() {
