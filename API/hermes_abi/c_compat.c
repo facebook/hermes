@@ -8,3 +8,4 @@
 /// This is a dummy C file that includes the ABI header purely to enforce that
 /// the header is C compatible.
 #include "hermes_abi/hermes_abi.h"
+#include "hermes_abi/hermes_vtable.h"
