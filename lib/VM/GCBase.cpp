@@ -53,6 +53,7 @@ GCBase::GCBase(
       // Start off not in GC.
       inGC_(false),
       name_(gcConfig.getName()),
+      weakMapEntrySlots_(gcConfig.getOccupancyTarget(), 0.5 /* sizingWeight */),
 #ifdef HERMES_MEMORY_INSTRUMENTATION
       allocationLocationTracker_(this),
       samplingAllocationTracker_(this),
@@ -966,6 +967,16 @@ WeakRefSlot *GCBase::allocWeakSlot(CompressedPointer ptr) {
   }
   weakSlots_.push_back({ptr});
   return &weakSlots_.back();
+}
+
+WeakMapEntrySlot *GCBase::allocWeakMapEntrySlot(
+    JSObject *key,
+    HermesValue value,
+    JSWeakMapImplBase *owner) {
+  return &weakMapEntrySlots_.add(
+      CompressedPointer::encode(key, getPointerBase()),
+      value,
+      CompressedPointer::encode(owner, getPointerBase()));
 }
 
 HeapSnapshot::NodeID GCBase::getObjectID(const GCCell *cell) {

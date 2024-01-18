@@ -3148,6 +3148,14 @@ void HadesGC::checkWellFormed() {
     assert(cell->isValid() && "Invalid cell encountered in heap");
     markCell(cell, acceptor);
   });
+
+  weakMapEntrySlots_.forEach([](WeakMapEntrySlot &slot) {
+    if (slot.mappedValue.isEmpty()) {
+      assert(
+          !slot.key ||
+          !slot.owner && "Reachable entry should have not have Empty value.");
+    }
+  });
 }
 
 void HadesGC::verifyCardTable() {

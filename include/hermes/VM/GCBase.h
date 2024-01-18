@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_GCBASE_H
 #define HERMES_VM_GCBASE_H
 
+#include "hermes/ADT/ManagedChunkedList.h"
 #include "hermes/Inst/Inst.h"
 #include "hermes/Platform/Logging.h"
 #include "hermes/Public/CrashManager.h"
@@ -62,6 +63,8 @@ class JSWeakMapImpl;
 using JSWeakMap = JSWeakMapImpl<CellKind::JSWeakMapKind>;
 
 class GCCell;
+class JSObject;
+class JSWeakMapImplBase;
 
 #ifdef HERMESVM_GC_RUNTIME
 #define RUNTIME_GC_KINDS GC_KIND(HadesGC)
@@ -1017,6 +1020,15 @@ class GCBase {
 
   WeakRefSlot *allocWeakSlot(CompressedPointer ptr);
 
+  /// Allocate a slot to use in WeakMap/WeakSet when inserting a new entry.
+  /// \param key Pointer to the key object.
+  /// \param value The mapped value by the key \p key.
+  /// \param owner Pointer to the owning WeakMap/WeakSet.
+  WeakMapEntrySlot *allocWeakMapEntrySlot(
+      JSObject *key,
+      HermesValue value,
+      JSWeakMapImplBase *owner);
+
 #ifndef NDEBUG
   /// \name Debug APIs
   /// \{
@@ -1576,6 +1588,11 @@ class GCBase {
   /// The state enum of a WeakRefSlot that is not free may be modified
   /// concurrently, those values are protected by the weakRefMutex_.
   std::deque<WeakRefSlot> weakSlots_;
+
+  /// A list of all slots used by WeakMap/WeakSet. They are freed by the mutator
+  /// when operating on a WeakMap/WeakSet, or in the finalizer during sweeping.
+  /// In collection phase, GC visits each non-free slot to update their values.
+  ManagedChunkedList<WeakMapEntrySlot> weakMapEntrySlots_;
 
   /// Pointer to the first free weak reference slot. Free weak refs are chained
   /// together in a linked list.
