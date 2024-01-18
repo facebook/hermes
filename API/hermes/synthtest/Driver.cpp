@@ -66,7 +66,7 @@ class SynthBenchmarkTestFixture : public ::testing::TestWithParam<ParamType> {
           llvh::MemoryBuffer::getMemBuffer(trace.c_str()),
           std::move(sources),
           options,
-          nullptr);
+          makeHermesRuntime);
     }) << "Failed on test: "
        << testName_;
   }
@@ -152,7 +152,7 @@ TEST(SynthBenchmark, RunMultipleSourceFiles) {
         llvh::MemoryBuffer::getMemBuffer(trace),
         std::move(sources),
         options,
-        nullptr);
+        makeHermesRuntime);
   });
 }
 
