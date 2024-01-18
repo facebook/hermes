@@ -51,14 +51,18 @@ describe('ComponentDeclaration', () => {
           bar,
           baz: boo,
           'data-bav': bav
-        }: $ReadOnly<{...}>): React.Node {}"
+        }: $ReadOnly<{
+          bar: Bar,
+          baz?: Baz,
+          'data-bav': Bav,
+        }>): React.Node {}"
       `);
     });
   });
 
   describe('default params', () => {
     const code = `
-      component Foo(bar?: Bar = '') {}
+      component Foo(bar: Bar = '') {}
     `;
 
     test('ESTree', async () => {
@@ -71,7 +75,33 @@ describe('ComponentDeclaration', () => {
       expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
         "function Foo({
           bar = ''
-        }: $ReadOnly<{...}>): React.Node {}"
+        }: $ReadOnly<{
+          bar?: Bar
+        }>): React.Node {}"
+      `);
+    });
+  });
+
+  describe('destructure params', () => {
+    const code = `
+      component Foo(bar as {baz}: Bar) {}
+    `;
+
+    test('ESTree', async () => {
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+        "function Foo({
+          bar: {
+            baz
+          }
+        }: $ReadOnly<{
+          bar: Bar
+        }>): React.Node {}"
       `);
     });
   });
@@ -162,7 +192,9 @@ describe('ComponentDeclaration', () => {
       expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
         "function Foo<T1, T2>({
           bar
-        }: $ReadOnly<{...}>): React.Node {}"
+        }: $ReadOnly<{
+          bar: T1
+        }>): React.Node {}"
       `);
     });
   });
@@ -181,11 +213,11 @@ component Foo(...{prop}: Props) {}
     test('Babel', async () => {
       expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
       expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
-        "function Foo(props: $ReadOnly<{...}>): React.Node {}
+        "function Foo(props: Props): React.Node {}
 
         function Foo({
           prop
-        }: $ReadOnly<{...}>): React.Node {}"
+        }: Props): React.Node {}"
       `);
     });
   });
@@ -206,7 +238,9 @@ component Foo(...{prop}: Props) {}
         "function Foo({
           param1,
           param2
-        }: $ReadOnly<{...}>): React.Node {}"
+        }: $ReadOnly<{ ...Props,
+          param1: string,
+        }>): React.Node {}"
       `);
     });
   });
@@ -228,7 +262,9 @@ component Foo(...{prop}: Props) {}
           param1,
           param2,
           ...otherParams
-        }: $ReadOnly<{...}>): React.Node {}"
+        }: $ReadOnly<{ ...Props,
+          param1: string,
+        }>): React.Node {}"
       `);
     });
   });
@@ -248,7 +284,7 @@ component Foo(...{prop}: Props) {}
       expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
         "const Foo = React.forwardRef(Foo_withRef);
 
-        function Foo_withRef(_$$empty_props_placeholder$$: $ReadOnly<{...}>, ref: Ref): React.Node {}"
+        function Foo_withRef(_$$empty_props_placeholder$$: $ReadOnly<{}>, ref: Ref): React.Node {}"
       `);
     });
   });
@@ -268,7 +304,7 @@ component Foo(...{prop}: Props) {}
       expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
         "const Foo = React.forwardRef(Foo_withRef);
 
-        function Foo_withRef(_$$empty_props_placeholder$$: $ReadOnly<{...}>, internalRef: Ref): React.Node {}"
+        function Foo_withRef(_$$empty_props_placeholder$$: $ReadOnly<{}>, internalRef: Ref): React.Node {}"
       `);
     });
   });
@@ -288,7 +324,7 @@ component Foo(...{prop}: Props) {}
       expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
         "const Foo = React.forwardRef(Foo_withRef);
 
-        function Foo_withRef(_$$empty_props_placeholder$$: $ReadOnly<{...}>, {
+        function Foo_withRef(_$$empty_props_placeholder$$: $ReadOnly<{}>, {
           current
         }: Ref): React.Node {}"
       `);
@@ -310,7 +346,7 @@ component Foo(...{prop}: Props) {}
       expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
         "const Foo = React.forwardRef(Foo_withRef);
 
-        function Foo_withRef(_$$empty_props_placeholder$$: $ReadOnly<{...}>, ref: Ref = {}): React.Node {}"
+        function Foo_withRef(_$$empty_props_placeholder$$: $ReadOnly<{}>, ref: Ref = {}): React.Node {}"
       `);
     });
   });
@@ -332,7 +368,9 @@ component Foo(...{prop}: Props) {}
 
         function Foo_withRef({
           foo
-        }: $ReadOnly<{...}>, ref: Ref): React.Node {}"
+        }: $ReadOnly<{
+          foo: string
+        }>, ref: Ref): React.Node {}"
       `);
     });
   });
@@ -354,7 +392,9 @@ component Foo(...{prop}: Props) {}
 
         function Foo_withRef({
           foo
-        }: $ReadOnly<{...}>, ref: Ref): React.Node {}
+        }: $ReadOnly<{
+          foo: string
+        }>, ref: Ref): React.Node {}
 
         export default Foo;"
       `);
@@ -378,7 +418,9 @@ component Foo(...{prop}: Props) {}
 
         function Foo_withRef({
           foo
-        }: $ReadOnly<{...}>, ref: Ref): React.Node {}
+        }: $ReadOnly<{
+          foo: string
+        }>, ref: Ref): React.Node {}
 
         export { Foo };"
       `);
@@ -410,7 +452,9 @@ if (true) {
 
           function Foo_withRef({
             foo
-          }: $ReadOnly<{...}>, ref: Ref): React.Node {}
+          }: $ReadOnly<{
+            foo: string
+          }>, ref: Ref): React.Node {}
 
           return Foo;
         }
@@ -420,7 +464,9 @@ if (true) {
 
           function Foo_withRef({
             foo
-          }: $ReadOnly<{...}>, ref: Ref): React.Node {}
+          }: $ReadOnly<{
+            foo: string
+          }>, ref: Ref): React.Node {}
 
           callSomething(Foo);
         }"
@@ -451,7 +497,9 @@ switch (thing) {
 
             function Foo_withRef({
               foo
-            }: $ReadOnly<{...}>, ref: Ref): React.Node {}
+            }: $ReadOnly<{
+              foo: string
+            }>, ref: Ref): React.Node {}
 
             callSomething(Foo);
         }"
@@ -489,13 +537,17 @@ component Bar(foo: string, ref: Ref) {}
 
         function Foo_withRef({
           foo
-        }: $ReadOnly<{...}>, ref: Ref): React.Node {}
+        }: $ReadOnly<{
+          foo: string
+        }>, ref: Ref): React.Node {}
 
         Bar;
 
         function Bar_withRef({
           foo
-        }: $ReadOnly<{...}>, ref: Ref): React.Node {}"
+        }: $ReadOnly<{
+          foo: string
+        }>, ref: Ref): React.Node {}"
       `);
     });
   });
@@ -519,7 +571,9 @@ component Foo(bar: mixed = Foo, ref: any) {
 
         function Foo_withRef({
           bar = Foo
-        }: $ReadOnly<{...}>, ref: any): React.Node {
+        }: $ReadOnly<{
+          bar?: mixed
+        }>, ref: any): React.Node {
           return null;
         }"
       `);

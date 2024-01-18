@@ -147,9 +147,77 @@ exports[`ComponentDeclaration Complex params Babel 1`] = `
                     "callProperties": [],
                     "exact": false,
                     "indexers": [],
-                    "inexact": true,
+                    "inexact": false,
                     "internalSlots": [],
-                    "properties": [],
+                    "properties": [
+                      {
+                        "key": {
+                          "name": "bar",
+                          "type": "Identifier",
+                        },
+                        "kind": "init",
+                        "method": false,
+                        "optional": false,
+                        "proto": false,
+                        "static": false,
+                        "type": "ObjectTypeProperty",
+                        "value": {
+                          "id": {
+                            "name": "Bar",
+                            "type": "Identifier",
+                          },
+                          "type": "GenericTypeAnnotation",
+                          "typeParameters": null,
+                        },
+                        "variance": null,
+                      },
+                      {
+                        "key": {
+                          "name": "baz",
+                          "type": "Identifier",
+                        },
+                        "kind": "init",
+                        "method": false,
+                        "optional": true,
+                        "proto": false,
+                        "static": false,
+                        "type": "ObjectTypeProperty",
+                        "value": {
+                          "id": {
+                            "name": "Baz",
+                            "type": "Identifier",
+                          },
+                          "type": "GenericTypeAnnotation",
+                          "typeParameters": null,
+                        },
+                        "variance": null,
+                      },
+                      {
+                        "key": {
+                          "extra": {
+                            "raw": "'data-bav'",
+                            "rawValue": "data-bav",
+                          },
+                          "type": "StringLiteral",
+                          "value": "data-bav",
+                        },
+                        "kind": "init",
+                        "method": false,
+                        "optional": false,
+                        "proto": false,
+                        "static": false,
+                        "type": "ObjectTypeProperty",
+                        "value": {
+                          "id": {
+                            "name": "Bav",
+                            "type": "Identifier",
+                          },
+                          "type": "GenericTypeAnnotation",
+                          "typeParameters": null,
+                        },
+                        "variance": null,
+                      },
+                    ],
                     "type": "ObjectTypeAnnotation",
                   },
                 ],
@@ -353,9 +421,31 @@ exports[`ComponentDeclaration default params Babel 1`] = `
                     "callProperties": [],
                     "exact": false,
                     "indexers": [],
-                    "inexact": true,
+                    "inexact": false,
                     "internalSlots": [],
-                    "properties": [],
+                    "properties": [
+                      {
+                        "key": {
+                          "name": "bar",
+                          "type": "Identifier",
+                        },
+                        "kind": "init",
+                        "method": false,
+                        "optional": true,
+                        "proto": false,
+                        "static": false,
+                        "type": "ObjectTypeProperty",
+                        "value": {
+                          "id": {
+                            "name": "Bar",
+                            "type": "Identifier",
+                          },
+                          "type": "GenericTypeAnnotation",
+                          "typeParameters": null,
+                        },
+                        "variance": null,
+                      },
+                    ],
                     "type": "ObjectTypeAnnotation",
                   },
                 ],
@@ -409,7 +499,7 @@ exports[`ComponentDeclaration default params ESTree 1`] = `
           "local": {
             "left": {
               "name": "bar",
-              "optional": true,
+              "optional": false,
               "type": "Identifier",
               "typeAnnotation": {
                 "type": "TypeAnnotation",
@@ -440,6 +530,202 @@ exports[`ComponentDeclaration default params ESTree 1`] = `
             "typeAnnotation": null,
           },
           "shorthand": true,
+          "type": "ComponentParameter",
+        },
+      ],
+      "rendersType": null,
+      "type": "ComponentDeclaration",
+      "typeParameters": null,
+    },
+  ],
+  "type": "Program",
+}
+`;
+
+exports[`ComponentDeclaration destructure params Babel 1`] = `
+{
+  "body": [
+    {
+      "__componentDeclaration": true,
+      "async": false,
+      "body": {
+        "body": [],
+        "directives": [],
+        "type": "BlockStatement",
+      },
+      "generator": false,
+      "id": {
+        "name": "Foo",
+        "type": "Identifier",
+      },
+      "params": [
+        {
+          "properties": [
+            {
+              "computed": false,
+              "key": {
+                "name": "bar",
+                "type": "Identifier",
+              },
+              "method": false,
+              "shorthand": false,
+              "type": "ObjectProperty",
+              "value": {
+                "optional": false,
+                "properties": [
+                  {
+                    "computed": false,
+                    "key": {
+                      "name": "baz",
+                      "type": "Identifier",
+                    },
+                    "method": false,
+                    "shorthand": true,
+                    "type": "ObjectProperty",
+                    "value": {
+                      "name": "baz",
+                      "type": "Identifier",
+                    },
+                  },
+                ],
+                "type": "ObjectPattern",
+              },
+            },
+          ],
+          "type": "ObjectPattern",
+          "typeAnnotation": {
+            "type": "TypeAnnotation",
+            "typeAnnotation": {
+              "id": {
+                "name": "$ReadOnly",
+                "type": "Identifier",
+              },
+              "type": "GenericTypeAnnotation",
+              "typeParameters": {
+                "params": [
+                  {
+                    "callProperties": [],
+                    "exact": false,
+                    "indexers": [],
+                    "inexact": false,
+                    "internalSlots": [],
+                    "properties": [
+                      {
+                        "key": {
+                          "name": "bar",
+                          "type": "Identifier",
+                        },
+                        "kind": "init",
+                        "method": false,
+                        "optional": false,
+                        "proto": false,
+                        "static": false,
+                        "type": "ObjectTypeProperty",
+                        "value": {
+                          "id": {
+                            "name": "Bar",
+                            "type": "Identifier",
+                          },
+                          "type": "GenericTypeAnnotation",
+                          "typeParameters": null,
+                        },
+                        "variance": null,
+                      },
+                    ],
+                    "type": "ObjectTypeAnnotation",
+                  },
+                ],
+                "type": "TypeParameterInstantiation",
+              },
+            },
+          },
+        },
+      ],
+      "returnType": {
+        "type": "TypeAnnotation",
+        "typeAnnotation": {
+          "id": {
+            "id": {
+              "name": "Node",
+              "type": "Identifier",
+            },
+            "qualification": {
+              "name": "React",
+              "type": "Identifier",
+            },
+            "type": "QualifiedTypeIdentifier",
+          },
+          "type": "GenericTypeAnnotation",
+          "typeParameters": null,
+        },
+      },
+      "type": "FunctionDeclaration",
+    },
+  ],
+  "type": "Program",
+}
+`;
+
+exports[`ComponentDeclaration destructure params ESTree 1`] = `
+{
+  "body": [
+    {
+      "body": {
+        "body": [],
+        "type": "BlockStatement",
+      },
+      "id": {
+        "name": "Foo",
+        "optional": false,
+        "type": "Identifier",
+        "typeAnnotation": null,
+      },
+      "params": [
+        {
+          "local": {
+            "properties": [
+              {
+                "computed": false,
+                "key": {
+                  "name": "baz",
+                  "optional": false,
+                  "type": "Identifier",
+                  "typeAnnotation": null,
+                },
+                "kind": "init",
+                "method": false,
+                "shorthand": true,
+                "type": "Property",
+                "value": {
+                  "name": "baz",
+                  "optional": false,
+                  "type": "Identifier",
+                  "typeAnnotation": null,
+                },
+              },
+            ],
+            "type": "ObjectPattern",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "id": {
+                  "name": "Bar",
+                  "optional": false,
+                  "type": "Identifier",
+                  "typeAnnotation": null,
+                },
+                "type": "GenericTypeAnnotation",
+                "typeParameters": null,
+              },
+            },
+          },
+          "name": {
+            "name": "bar",
+            "optional": false,
+            "type": "Identifier",
+            "typeAnnotation": null,
+          },
+          "shorthand": false,
           "type": "ComponentParameter",
         },
       ],
@@ -515,9 +801,37 @@ exports[`ComponentDeclaration normal and rest params Babel 1`] = `
                     "callProperties": [],
                     "exact": false,
                     "indexers": [],
-                    "inexact": true,
+                    "inexact": false,
                     "internalSlots": [],
-                    "properties": [],
+                    "properties": [
+                      {
+                        "argument": {
+                          "id": {
+                            "name": "Props",
+                            "type": "Identifier",
+                          },
+                          "type": "GenericTypeAnnotation",
+                          "typeParameters": null,
+                        },
+                        "type": "ObjectTypeSpreadProperty",
+                      },
+                      {
+                        "key": {
+                          "name": "param1",
+                          "type": "Identifier",
+                        },
+                        "kind": "init",
+                        "method": false,
+                        "optional": false,
+                        "proto": false,
+                        "static": false,
+                        "type": "ObjectTypeProperty",
+                        "value": {
+                          "type": "StringTypeAnnotation",
+                        },
+                        "variance": null,
+                      },
+                    ],
                     "type": "ObjectTypeAnnotation",
                   },
                 ],
@@ -709,9 +1023,37 @@ exports[`ComponentDeclaration normal and rest params with nested rest Babel 1`] 
                     "callProperties": [],
                     "exact": false,
                     "indexers": [],
-                    "inexact": true,
+                    "inexact": false,
                     "internalSlots": [],
-                    "properties": [],
+                    "properties": [
+                      {
+                        "argument": {
+                          "id": {
+                            "name": "Props",
+                            "type": "Identifier",
+                          },
+                          "type": "GenericTypeAnnotation",
+                          "typeParameters": null,
+                        },
+                        "type": "ObjectTypeSpreadProperty",
+                      },
+                      {
+                        "key": {
+                          "name": "param1",
+                          "type": "Identifier",
+                        },
+                        "kind": "init",
+                        "method": false,
+                        "optional": false,
+                        "proto": false,
+                        "static": false,
+                        "type": "ObjectTypeProperty",
+                        "value": {
+                          "type": "StringTypeAnnotation",
+                        },
+                        "variance": null,
+                      },
+                    ],
                     "type": "ObjectTypeAnnotation",
                   },
                 ],
@@ -924,9 +1266,26 @@ exports[`ComponentDeclaration ref and normal params Babel 1`] = `
                     "callProperties": [],
                     "exact": false,
                     "indexers": [],
-                    "inexact": true,
+                    "inexact": false,
                     "internalSlots": [],
-                    "properties": [],
+                    "properties": [
+                      {
+                        "key": {
+                          "name": "foo",
+                          "type": "Identifier",
+                        },
+                        "kind": "init",
+                        "method": false,
+                        "optional": false,
+                        "proto": false,
+                        "static": false,
+                        "type": "ObjectTypeProperty",
+                        "value": {
+                          "type": "StringTypeAnnotation",
+                        },
+                        "variance": null,
+                      },
+                    ],
                     "type": "ObjectTypeAnnotation",
                   },
                 ],
@@ -1133,9 +1492,26 @@ exports[`ComponentDeclaration ref and normal params default exported Babel 1`] =
                     "callProperties": [],
                     "exact": false,
                     "indexers": [],
-                    "inexact": true,
+                    "inexact": false,
                     "internalSlots": [],
-                    "properties": [],
+                    "properties": [
+                      {
+                        "key": {
+                          "name": "foo",
+                          "type": "Identifier",
+                        },
+                        "kind": "init",
+                        "method": false,
+                        "optional": false,
+                        "proto": false,
+                        "static": false,
+                        "type": "ObjectTypeProperty",
+                        "value": {
+                          "type": "StringTypeAnnotation",
+                        },
+                        "variance": null,
+                      },
+                    ],
                     "type": "ObjectTypeAnnotation",
                   },
                 ],
@@ -1352,9 +1728,26 @@ exports[`ComponentDeclaration ref and normal params named exported Babel 1`] = `
                     "callProperties": [],
                     "exact": false,
                     "indexers": [],
-                    "inexact": true,
+                    "inexact": false,
                     "internalSlots": [],
-                    "properties": [],
+                    "properties": [
+                      {
+                        "key": {
+                          "name": "foo",
+                          "type": "Identifier",
+                        },
+                        "kind": "init",
+                        "method": false,
+                        "optional": false,
+                        "proto": false,
+                        "static": false,
+                        "type": "ObjectTypeProperty",
+                        "value": {
+                          "type": "StringTypeAnnotation",
+                        },
+                        "variance": null,
+                      },
+                    ],
                     "type": "ObjectTypeAnnotation",
                   },
                 ],
@@ -1599,9 +1992,26 @@ exports[`ComponentDeclaration ref and normal params with hoisting (recursive) Ba
                     "callProperties": [],
                     "exact": false,
                     "indexers": [],
-                    "inexact": true,
+                    "inexact": false,
                     "internalSlots": [],
-                    "properties": [],
+                    "properties": [
+                      {
+                        "key": {
+                          "name": "bar",
+                          "type": "Identifier",
+                        },
+                        "kind": "init",
+                        "method": false,
+                        "optional": true,
+                        "proto": false,
+                        "static": false,
+                        "type": "ObjectTypeProperty",
+                        "value": {
+                          "type": "MixedTypeAnnotation",
+                        },
+                        "variance": null,
+                      },
+                    ],
                     "type": "ObjectTypeAnnotation",
                   },
                 ],
@@ -1886,9 +2296,26 @@ exports[`ComponentDeclaration ref and normal params with hoisting Babel 1`] = `
                     "callProperties": [],
                     "exact": false,
                     "indexers": [],
-                    "inexact": true,
+                    "inexact": false,
                     "internalSlots": [],
-                    "properties": [],
+                    "properties": [
+                      {
+                        "key": {
+                          "name": "foo",
+                          "type": "Identifier",
+                        },
+                        "kind": "init",
+                        "method": false,
+                        "optional": false,
+                        "proto": false,
+                        "static": false,
+                        "type": "ObjectTypeProperty",
+                        "value": {
+                          "type": "StringTypeAnnotation",
+                        },
+                        "variance": null,
+                      },
+                    ],
                     "type": "ObjectTypeAnnotation",
                   },
                 ],
@@ -1986,9 +2413,26 @@ exports[`ComponentDeclaration ref and normal params with hoisting Babel 1`] = `
                     "callProperties": [],
                     "exact": false,
                     "indexers": [],
-                    "inexact": true,
+                    "inexact": false,
                     "internalSlots": [],
-                    "properties": [],
+                    "properties": [
+                      {
+                        "key": {
+                          "name": "foo",
+                          "type": "Identifier",
+                        },
+                        "kind": "init",
+                        "method": false,
+                        "optional": false,
+                        "proto": false,
+                        "static": false,
+                        "type": "ObjectTypeProperty",
+                        "value": {
+                          "type": "StringTypeAnnotation",
+                        },
+                        "variance": null,
+                      },
+                    ],
                     "type": "ObjectTypeAnnotation",
                   },
                 ],
@@ -2328,9 +2772,26 @@ exports[`ComponentDeclaration ref and normal params within block Babel 1`] = `
                           "callProperties": [],
                           "exact": false,
                           "indexers": [],
-                          "inexact": true,
+                          "inexact": false,
                           "internalSlots": [],
-                          "properties": [],
+                          "properties": [
+                            {
+                              "key": {
+                                "name": "foo",
+                                "type": "Identifier",
+                              },
+                              "kind": "init",
+                              "method": false,
+                              "optional": false,
+                              "proto": false,
+                              "static": false,
+                              "type": "ObjectTypeProperty",
+                              "value": {
+                                "type": "StringTypeAnnotation",
+                              },
+                              "variance": null,
+                            },
+                          ],
                           "type": "ObjectTypeAnnotation",
                         },
                       ],
@@ -2478,9 +2939,26 @@ exports[`ComponentDeclaration ref and normal params within block Babel 1`] = `
                           "callProperties": [],
                           "exact": false,
                           "indexers": [],
-                          "inexact": true,
+                          "inexact": false,
                           "internalSlots": [],
-                          "properties": [],
+                          "properties": [
+                            {
+                              "key": {
+                                "name": "foo",
+                                "type": "Identifier",
+                              },
+                              "kind": "init",
+                              "method": false,
+                              "optional": false,
+                              "proto": false,
+                              "static": false,
+                              "type": "ObjectTypeProperty",
+                              "value": {
+                                "type": "StringTypeAnnotation",
+                              },
+                              "variance": null,
+                            },
+                          ],
                           "type": "ObjectTypeAnnotation",
                         },
                       ],
@@ -2851,9 +3329,26 @@ exports[`ComponentDeclaration ref and normal params within case Babel 1`] = `
                             "callProperties": [],
                             "exact": false,
                             "indexers": [],
-                            "inexact": true,
+                            "inexact": false,
                             "internalSlots": [],
-                            "properties": [],
+                            "properties": [
+                              {
+                                "key": {
+                                  "name": "foo",
+                                  "type": "Identifier",
+                                },
+                                "kind": "init",
+                                "method": false,
+                                "optional": false,
+                                "proto": false,
+                                "static": false,
+                                "type": "ObjectTypeProperty",
+                                "value": {
+                                  "type": "StringTypeAnnotation",
+                                },
+                                "variance": null,
+                              },
+                            ],
                             "type": "ObjectTypeAnnotation",
                           },
                         ],
@@ -3124,7 +3619,7 @@ exports[`ComponentDeclaration ref param Babel 1`] = `
                     "callProperties": [],
                     "exact": false,
                     "indexers": [],
-                    "inexact": true,
+                    "inexact": false,
                     "internalSlots": [],
                     "properties": [],
                     "type": "ObjectTypeAnnotation",
@@ -3297,7 +3792,7 @@ exports[`ComponentDeclaration ref param renamed Babel 1`] = `
                     "callProperties": [],
                     "exact": false,
                     "indexers": [],
-                    "inexact": true,
+                    "inexact": false,
                     "internalSlots": [],
                     "properties": [],
                     "type": "ObjectTypeAnnotation",
@@ -3470,7 +3965,7 @@ exports[`ComponentDeclaration ref param renamed destructure Babel 1`] = `
                     "callProperties": [],
                     "exact": false,
                     "indexers": [],
-                    "inexact": true,
+                    "inexact": false,
                     "internalSlots": [],
                     "properties": [],
                     "type": "ObjectTypeAnnotation",
@@ -3677,7 +4172,7 @@ exports[`ComponentDeclaration ref param with default Babel 1`] = `
                     "callProperties": [],
                     "exact": false,
                     "indexers": [],
-                    "inexact": true,
+                    "inexact": false,
                     "internalSlots": [],
                     "properties": [],
                     "type": "ObjectTypeAnnotation",
@@ -4151,24 +4646,11 @@ exports[`ComponentDeclaration rest params Babel 1`] = `
             "type": "TypeAnnotation",
             "typeAnnotation": {
               "id": {
-                "name": "$ReadOnly",
+                "name": "Props",
                 "type": "Identifier",
               },
               "type": "GenericTypeAnnotation",
-              "typeParameters": {
-                "params": [
-                  {
-                    "callProperties": [],
-                    "exact": false,
-                    "indexers": [],
-                    "inexact": true,
-                    "internalSlots": [],
-                    "properties": [],
-                    "type": "ObjectTypeAnnotation",
-                  },
-                ],
-                "type": "TypeParameterInstantiation",
-              },
+              "typeParameters": null,
             },
           },
         },
@@ -4229,24 +4711,11 @@ exports[`ComponentDeclaration rest params Babel 1`] = `
             "type": "TypeAnnotation",
             "typeAnnotation": {
               "id": {
-                "name": "$ReadOnly",
+                "name": "Props",
                 "type": "Identifier",
               },
               "type": "GenericTypeAnnotation",
-              "typeParameters": {
-                "params": [
-                  {
-                    "callProperties": [],
-                    "exact": false,
-                    "indexers": [],
-                    "inexact": true,
-                    "internalSlots": [],
-                    "properties": [],
-                    "type": "ObjectTypeAnnotation",
-                  },
-                ],
-                "type": "TypeParameterInstantiation",
-              },
+              "typeParameters": null,
             },
           },
         },
@@ -4428,9 +4897,31 @@ exports[`ComponentDeclaration type parameters Babel 1`] = `
                     "callProperties": [],
                     "exact": false,
                     "indexers": [],
-                    "inexact": true,
+                    "inexact": false,
                     "internalSlots": [],
-                    "properties": [],
+                    "properties": [
+                      {
+                        "key": {
+                          "name": "bar",
+                          "type": "Identifier",
+                        },
+                        "kind": "init",
+                        "method": false,
+                        "optional": false,
+                        "proto": false,
+                        "static": false,
+                        "type": "ObjectTypeProperty",
+                        "value": {
+                          "id": {
+                            "name": "T1",
+                            "type": "Identifier",
+                          },
+                          "type": "GenericTypeAnnotation",
+                          "typeParameters": null,
+                        },
+                        "variance": null,
+                      },
+                    ],
                     "type": "ObjectTypeAnnotation",
                   },
                 ],
