@@ -30,7 +30,7 @@ enums=true
 casting_syntax=both
 
 [version]
-^0.225.0
+^0.225.1
 
 [lints]
 untyped-type-import=error
