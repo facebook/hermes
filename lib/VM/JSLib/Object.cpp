@@ -367,7 +367,18 @@ CallResult<HermesValue> getOwnPropertyDescriptor(
     valueOrAccessor = std::move(*propRes);
   }
 
-  return objectFromPropertyDescriptor(runtime, desc, valueOrAccessor);
+  DefinePropertyFlags dpFlags;
+  dpFlags.configurable = desc.flags.configurable;
+  dpFlags.enumerable = desc.flags.enumerable;
+  dpFlags.writable = desc.flags.writable;
+  dpFlags.setEnumerable = true;
+  dpFlags.setWritable = true;
+  dpFlags.setConfigurable = true;
+  dpFlags.setGetter = desc.flags.accessor;
+  dpFlags.setSetter = desc.flags.accessor;
+  dpFlags.setValue = !desc.flags.accessor;
+
+  return objectFromPropertyDescriptor(runtime, dpFlags, valueOrAccessor);
 }
 
 CallResult<HermesValue>
