@@ -1347,6 +1347,24 @@ bool strict_equals_object(
   return toHandle(a) == toHandle(b);
 }
 
+HermesABIBoolOrError drain_microtasks(HermesABIRuntime *abiRt, int) {
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  if (runtime.hasMicrotaskQueue()) {
+    auto drainRes = runtime.drainJobs();
+    if (drainRes == vm::ExecutionStatus::EXCEPTION)
+      return abi::createBoolOrError(HermesABIErrorCodeJSError);
+  }
+
+  // Clear strong references to objects retained by WeakRef accesses.
+  runtime.clearKeptObjects();
+
+  // drainJobs currently drains the entire queue, unless there is an exception,
+  // so always return true.
+  // TODO(T89426441): Support max_hint.
+  return abi::createBoolOrError(true);
+}
+
 constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     release_hermes_runtime,
     get_and_clear_js_error_value,
@@ -1400,6 +1418,7 @@ constexpr HermesABIRuntimeVTable HermesABIRuntimeImpl::vtable = {
     strict_equals_bigint,
     strict_equals_string,
     strict_equals_object,
+    drain_microtasks,
 };
 
 } // namespace
