@@ -935,6 +935,7 @@ GCBASE_BARRIER_2(
     snapshotWriteBarrierRange,
     const GCSmallHermesValue *,
     uint32_t);
+GCBASE_BARRIER_1(weakRefReadBarrier, HermesValue);
 GCBASE_BARRIER_1(weakRefReadBarrier, GCCell *);
 
 #undef GCBASE_BARRIER_1
