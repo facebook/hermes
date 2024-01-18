@@ -261,6 +261,43 @@ struct HermesABIRuntimeVTable {
 
   /// Create a new empty JavaScript object and return a reference to it.
   struct HermesABIObjectOrError (*create_object)(struct HermesABIRuntime *rt);
+
+  /// Check if an object has the given property.
+  struct HermesABIBoolOrError (*has_object_property_from_value)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject obj,
+      const struct HermesABIValue *key);
+  struct HermesABIBoolOrError (*has_object_property_from_propnameid)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject obj,
+      struct HermesABIPropNameID name);
+
+  /// Get a property with the given key from an object.
+  struct HermesABIValueOrError (*get_object_property_from_value)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject obj,
+      const struct HermesABIValue *key);
+  struct HermesABIValueOrError (*get_object_property_from_propnameid)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject obj,
+      struct HermesABIPropNameID name);
+
+  /// Set a property with the given key on an object to the given value.
+  struct HermesABIVoidOrError (*set_object_property_from_value)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject obj,
+      const struct HermesABIValue *key,
+      const struct HermesABIValue *value);
+  struct HermesABIVoidOrError (*set_object_property_from_propnameid)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject obj,
+      struct HermesABIPropNameID name,
+      const struct HermesABIValue *value);
+
+  /// Get the names of all enumerable string properties on the given object.
+  struct HermesABIArrayOrError (*get_object_property_names)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject obj);
 };
 
 /// An instance of a Hermes Runtime.
