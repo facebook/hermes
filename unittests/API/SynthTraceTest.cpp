@@ -1117,6 +1117,86 @@ TEST_F(SynthTraceReplayTest, CreateObjectReplay) {
   }
 }
 
+TEST_F(SynthTraceRuntimeTest, WarmUpAndRepeatReplay) {
+  {
+    auto &rt = *traceRt;
+    auto obj = jsi::Object(rt);
+    obj.setProperty(rt, "bar", 5);
+    rt.global().setProperty(rt, "foo", obj);
+  }
+
+  traceRt.reset();
+
+  // ExecuteOptions has warmupReps and reps to run replay multiple times. It
+  // should not have different results from replaying only once.
+  tracing::TraceInterpreter::ExecuteOptions options;
+  options.warmupReps = 1;
+  options.reps = 3;
+  options.useTraceConfig = true;
+  auto [_, rt] = tracing::TraceInterpreter::execFromMemoryBuffer(
+      llvh::MemoryBuffer::getMemBuffer(traceResult), // traceBuf
+      {}, // codeBufs
+      options, // ExecuteOptions
+      makeHermesRuntime);
+
+  {
+    EXPECT_EQ(
+        rt->global()
+            .getPropertyAsObject(*rt, "foo")
+            .getProperty(*rt, "bar")
+            .asNumber(),
+        5);
+  }
+}
+
+// Replay the trace and generate a new one while doing so. They should produce
+// the same results in the runtime regardless how many times we repeat.
+TEST_F(SynthTraceRuntimeTest, TraceWhileReplaying) {
+  // Generate the initial trace.
+  {
+    auto &rt = *traceRt;
+    auto obj = jsi::Object(rt);
+    obj.setProperty(rt, "bar", 5);
+    rt.global().setProperty(rt, "foo", obj);
+  }
+
+  traceRt.reset();
+
+  std::string previousResult = traceResult;
+
+  for (int i = 0; i < 5; i++) {
+    tracing::TraceInterpreter::ExecuteOptions options;
+    options.useTraceConfig = true;
+    options.traceEnabled = true;
+    std::string newResult;
+
+    auto [_, rt] = tracing::TraceInterpreter::execFromMemoryBuffer(
+        llvh::MemoryBuffer::getMemBuffer(previousResult),
+        {}, // codeBufs
+        options, // ExecuteOptions
+        [&newResult](const ::hermes::vm::RuntimeConfig &config) {
+          return makeTracingHermesRuntime(
+              makeHermesRuntime(config),
+              config,
+              std::make_unique<llvh::raw_string_ostream>(newResult),
+              true // forReplay
+          );
+        }
+
+    );
+
+    EXPECT_EQ(
+        rt->global()
+            .getPropertyAsObject(*rt, "foo")
+            .getProperty(*rt, "bar")
+            .asNumber(),
+        5);
+
+    rt.reset(); // flush the result
+    previousResult = newResult;
+  }
+}
+
 TEST_F(SynthTraceReplayTest, SetPropertyReplay) {
   {
     auto &rt = *traceRt;
