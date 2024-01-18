@@ -228,14 +228,6 @@ getListOfStatsTable(JSONArray *array) {
   return calls;
 }
 
-::hermes::vm::MockedEnvironment getMockedEnvironment(JSONObject *env) {
-  auto callsToHermesInternalGetInstrumentedStats =
-      getListOfStatsTable<std::deque>(llvh::cast_or_null<JSONArray>(
-          env->get("callsToHermesInternalGetInstrumentedStats")));
-  return ::hermes::vm::MockedEnvironment{
-      callsToHermesInternalGetInstrumentedStats};
-}
-
 SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
   using RecordType = SynthTrace::RecordType;
   SynthTrace trace(globalObjID, ::hermes::vm::RuntimeConfig());
@@ -566,10 +558,6 @@ parseSynthTrace(std::unique_ptr<llvh::MemoryBuffer> trace) {
     ::hermes::hermes_fatal(
         "Trace does not have a \"globalObjID\" value that is a number");
   }
-  if (!llvh::dyn_cast_or_null<JSONObject>(root->get("env"))) {
-    ::hermes::hermes_fatal(
-        "Trace does not have an \"env\" value that is an object");
-  }
   if (auto *ver = root->get("version")) {
     // Version exists, validate that it is a number, and the correct version.
     if (auto *verNum = llvh::dyn_cast<JSONNumber>(ver)) {
@@ -599,7 +587,7 @@ parseSynthTrace(std::unique_ptr<llvh::MemoryBuffer> trace) {
       getTrace(llvh::cast<JSONArray>(root->at("trace")), globalObjID),
       getRuntimeConfig(rtConfig),
       getGCConfig(rtConfig),
-      getMockedEnvironment(llvh::cast<JSONObject>(root->at("env"))));
+      ::hermes::vm::MockedEnvironment{});
 }
 
 std::tuple<

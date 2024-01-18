@@ -44,9 +44,6 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
     "enableSampledStats": true,
     "vmExperimentFlags": 123
   },
-  "env": {
-    "callsToHermesInternalGetInstrumentedStats": [],
-  },
   "trace": []
 }
 )";
@@ -80,9 +77,6 @@ TEST_F(SynthTraceParserTest, RuntimeConfigDefaults) {
   "version": 4,
   "globalObjID": 258,
   "runtimeConfig": {},
-  "env": {
-    "callsToHermesInternalGetInstrumentedStats": [],
-  },
   "trace": []
 }
   )";
@@ -106,9 +100,6 @@ TEST_F(SynthTraceParserTest, SynthVersionMismatch) {
       "maxHeapSize": 536870912
     }
   },
-  "env": {
-    "callsToHermesInternalGetInstrumentedStats": [],
-  },
   "trace": []
 }
   )";
@@ -125,9 +116,6 @@ TEST_F(SynthTraceParserTest, ParsePropID) {
       "initHeapSize": 33554432,
       "maxHeapSize": 536870912
     }
-  },
-  "env": {
-    "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": [
     {
@@ -172,9 +160,6 @@ TEST_F(SynthTraceParserTest, SynthVersionInvalidKind) {
       "maxHeapSize": 536870912
     }
   },
-  "env": {
-    "callsToHermesInternalGetInstrumentedStats": [],
-  },
   "trace": []
 }
   )";
@@ -187,9 +172,6 @@ TEST_F(SynthTraceParserTest, SynthMissingVersion) {
   "globalObjID": 258,
   "runtimeConfig": {
   },
-  "env": {
-    "callsToHermesInternalGetInstrumentedStats": [],
-  },
   "trace": []
 }
   )";
@@ -201,9 +183,6 @@ TEST_F(SynthTraceParserTest, CreateBigIntRecord) {
 {
   "globalObjID": 258,
   "runtimeConfig": {
-  },
-  "env": {
-    "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": [
     {
@@ -231,9 +210,6 @@ TEST_F(SynthTraceParserTest, BigIntToStringRecord) {
 {
   "globalObjID": 258,
   "runtimeConfig": {
-  },
-  "env": {
-    "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": [
     {
