@@ -37,7 +37,11 @@ let sparkARProfile = Profile(
 
     codeSuffix: """
                   // END FUZZILLI INPUT
-                }; main();
+                }; try {
+                  main();
+                } catch(e) {
+                  report_exception("an arbitrary string used to gate accesses to the report_exception API and avoid accidental calls during fuzzing", e);
+                };
                 """,
 
     ecmaVersion: ECMAScriptVersion.es6,
