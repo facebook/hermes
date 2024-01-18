@@ -40,7 +40,7 @@ ExecutionStatus JSWeakMapImplBase::setValue(
 
   if (it != self->set_.end()) {
     // Key already exists, update existing value.
-    it->ref.setMappedValue(*value);
+    it->setMappedValue(*value);
     return ExecutionStatus::RETURNED;
   }
 
@@ -49,9 +49,7 @@ ExecutionStatus JSWeakMapImplBase::setValue(
   if (self->set_.size() >= self->targetSize_) {
     self->clearFreeableEntries();
   }
-  WeakRefKey mapKey(
-      WeakMapEntryRef{runtime, *key, *value, *self},
-      runtime.gcStableHashHermesValue(key));
+  WeakRefKey mapKey{runtime, key, *value, *self};
   auto result = self->set_.insert(mapKey);
   (void)result;
   assert(result.second && "unable to add a new value to map");
@@ -71,7 +69,7 @@ bool JSWeakMapImplBase::deleteValue(
   if (it == self->set_.end()) {
     return false;
   }
-  it->ref.releaseSlot();
+  it->releaseSlot();
   self->set_.erase(it);
   return true;
 }
@@ -97,7 +95,7 @@ HermesValue JSWeakMapImplBase::getValue(
   if (it == self->set_.end()) {
     return HermesValue::encodeUndefinedValue();
   }
-  return it->ref.getMappedValue(runtime.getHeap());
+  return it->getMappedValue(runtime.getHeap());
 }
 
 uint32_t JSWeakMapImplBase::debugFreeSlotsAndGetSize(
@@ -111,10 +109,13 @@ void JSWeakMapImplBase::clearFreeableEntries() {
   // We only release slots in the STW phase or finalizer, and this function is
   // mostly called when setting new values (mutator thread), so it's safe.
   for (auto it = set_.begin(); it != set_.end(); ++it) {
-    if (!it->ref.isKeyValid())
-      it->ref.releaseSlot();
-    // Every key must be erased immediately after the underlying slot is freed.
-    if (it->ref.isSlotFree()) {
+    if (!it->isKeyValid()) {
+      it->releaseSlot();
+      // Every key must be erased immediately after the underlying slot is
+      // freed.
+      // Note that DenseSet::erase() doesn't invalidate any iterators, so it's
+      // safe to call in a loop, and it has void return. If using std::set, we
+      // have to assign the return to it: it = set_.erase(it).
       set_.erase(it);
     }
   }
@@ -149,16 +150,16 @@ void JSWeakMapImplBase::_snapshotAddEdgesImpl(
   uint32_t edge_index = 0;
   for (const auto &key : self->set_) {
     // Skip if the ref is not valid.
-    if (!key.ref.isKeyValid()) {
+    if (!key.isKeyValid()) {
       continue;
     }
     auto indexName = std::to_string(edge_index++);
     snap.addNamedEdge(
         HeapSnapshot::EdgeType::Weak,
         indexName,
-        gc.getObjectID(key.ref.getKeyNonNull(gc.getPointerBase(), gc)));
+        gc.getObjectID(key.getKeyNonNull(gc.getPointerBase(), gc)));
 
-    auto mappedValue = key.ref.getMappedValue(gc);
+    auto mappedValue = key.getMappedValue(gc);
     // TODO(T175014649): nodes for numbers may not exist since they are not seen
     // by PrimitiveNodeAcceptor. We can't simply add them in
     // _snapshotAddNodesImpl() either, because PrimitiveNodeAcceptor may see the
