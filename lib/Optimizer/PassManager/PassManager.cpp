@@ -107,12 +107,15 @@ void PassManager::run(Module *M) {
       M->dump(llvh::dbgs());
     }
 
-    if (verifyBetweenPasses)
-      if (!verifyModule(*M, &llvh::errs()))
+    if (verifyBetweenPasses) {
+      if (!verifyModule(*M, &llvh::errs())) {
         M->getContext().getSourceErrorManager().error(
             {},
             {},
             llvh::Twine("IRVerifier failed after pass ") + P->getName());
+        return;
+      }
+    }
   }
 }
 } // namespace hermes
