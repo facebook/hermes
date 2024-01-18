@@ -305,6 +305,134 @@ class HermesABIRuntimeWrapper : public Runtime {
     }
   };
 
+  /// Implement HermesABIHostObject for this JSI wrapper. This wraps a
+  /// jsi::HostObject to allow the ABI to interact with it.
+  class HostObjectWrapper : public HermesABIHostObject {
+    /// The runtime wrapper that created this host object. It has to be stored
+    /// so that it can be passed when invoking the HostObject's methods.
+    HermesABIRuntimeWrapper &rtw_;
+
+    /// The HostObject being managed by this HostObjectWrapper.
+    std::shared_ptr<HostObject> ho_;
+
+    /// Invoke the jsi::HostObject's get method and return the result,
+    /// converting to/from the ABI representation.
+    static HermesABIValueOrError
+    get(HermesABIHostObject *ho, HermesABIRuntime *, HermesABIPropNameID name) {
+      auto *self = static_cast<HostObjectWrapper *>(ho);
+      auto &rtw = self->rtw_;
+      return rtw.abiRethrow(abi::createValueOrError, "HostObject::get", [&] {
+        auto jsiName = rtw.cloneToJSIPropNameID(name);
+        return abi::createValueOrError(
+            rtw.cloneToABIValue(self->ho_->get(rtw, jsiName)));
+      });
+    }
+
+    /// Invoke the jsi::HostObject's set method, converting any resulting C++
+    /// exception to an ABI error.
+    static HermesABIVoidOrError set(
+        HermesABIHostObject *ho,
+        HermesABIRuntime *,
+        HermesABIPropNameID name,
+        const HermesABIValue *value) {
+      auto *self = static_cast<HostObjectWrapper *>(ho);
+      auto &rtw = self->rtw_;
+      return rtw.abiRethrow(abi::createVoidOrError, "HostObject::set", [&] {
+        auto jsiName = rtw.cloneToJSIPropNameID(name);
+        // Note that cloneToJSIValue can throw, so it is important to have it in
+        // the abiRethrow block.
+        auto jsiValue = rtw.cloneToJSIValue(*value);
+        self->ho_->set(rtw, jsiName, jsiValue);
+        return abi::createVoidOrError();
+      });
+    }
+
+    /// Implement HermesABIPropNameIDList for this JSI wrapper. This wraps the
+    /// std::vector<PropNameID> returned by getting the properties from a
+    /// jsi::HostObject, and exposes them to the ABI.
+    class PropNameIDListWrapper : public HermesABIPropNameIDList {
+      /// The jsi::PropNameIDs owned by this wrapper. These are never accessed,
+      /// they are only kept to manage the lifetime of the PropNameIDs. This
+      /// incurs some additional memory cost since we will keep both vectors
+      /// alive, however, we happen to know that the PropNameIDListWrapper will
+      /// be destroyed soon after being created, so the cost is minimal, and
+      /// this is faster since it saves us needing to clone and release each
+      /// ABIPropNameID.
+      std::vector<PropNameID> jsiPropsVec_;
+
+      /// The PropNameIDs in jsiPropsVec_ converted into HermesABIPropNameIDs.
+      /// These are just aliases, so they are alive as long as the above vector
+      /// is retained.
+      /// TODO: Eliminate this field once the pointer representations are
+      ///       unified.
+      std::vector<HermesABIPropNameID> abiPropsVec_;
+
+      static void release(HermesABIPropNameIDList *self) {
+        delete static_cast<PropNameIDListWrapper *>(self);
+      }
+      static constexpr HermesABIPropNameIDListVTable vt{
+          release,
+      };
+
+     public:
+      /// Construct a PropNameIDListWrapper from a vector of jsi::PropNameIDs,
+      /// and a vector of HermesABIPropNameIDs that alias them.
+      PropNameIDListWrapper(
+          std::vector<PropNameID> jsiPropsVec,
+          std::vector<HermesABIPropNameID> abiPropsVec) {
+        vtable = &vt;
+        jsiPropsVec_ = std::move(jsiPropsVec);
+        abiPropsVec_ = std::move(abiPropsVec);
+        props = abiPropsVec_.data();
+        size = abiPropsVec_.size();
+      }
+    };
+
+    /// Invoke the jsi::HostObject's getOwnPropertyNames method and return the
+    /// result in ABI representation.
+    static HermesABIPropNameIDListPtrOrError get_own_keys(
+        HermesABIHostObject *ho,
+        HermesABIRuntime *) {
+      auto *self = static_cast<HostObjectWrapper *>(ho);
+      auto &rtw = self->rtw_;
+
+      return rtw.abiRethrow(
+          abi::createPropNameIDListPtrOrError,
+          "HostObject::getPropertyNames",
+          [&] {
+            auto res = self->ho_->getPropertyNames(rtw);
+            // Create a vector of ABIPropNameIDs while keeping the ownership
+            // with the jsi::PropNameID.
+            std::vector<HermesABIPropNameID> v;
+            for (auto &p : res)
+              v.push_back(rtw.toABIPropNameID(p));
+            return abi::createPropNameIDListPtrOrError(
+                new PropNameIDListWrapper(std::move(res), std::move(v)));
+          });
+    }
+
+    static void release(HermesABIHostObject *ho) {
+      delete static_cast<HostObjectWrapper *>(ho);
+    }
+
+   public:
+    static constexpr HermesABIHostObjectVTable vt{
+        release,
+        get,
+        set,
+        get_own_keys,
+    };
+
+    HostObjectWrapper(
+        HermesABIRuntimeWrapper &rt,
+        std::shared_ptr<HostObject> ho)
+        : HermesABIHostObject{&vt}, rtw_{rt}, ho_{std::move(ho)} {}
+
+    std::shared_ptr<HostObject> getHostObject() const {
+      return ho_;
+    }
+  };
+
   PointerValue *clone(const PointerValue *pv) {
     // TODO: Evaluate whether to keep this null check. It is currently here for
     //       compatibility with hermes' API, but it is odd that it is the only
@@ -659,10 +787,13 @@ class HermesABIRuntimeWrapper : public Runtime {
     return intoJSIObject(vtable_->create_object(abiRt_));
   }
   Object createObject(std::shared_ptr<HostObject> ho) override {
-    THROW_UNIMPLEMENTED();
+    return intoJSIObject(vtable_->create_object_from_host_object(
+        abiRt_, new HostObjectWrapper(*this, std::move(ho))));
   }
-  std::shared_ptr<HostObject> getHostObject(const Object &) override {
-    THROW_UNIMPLEMENTED();
+  std::shared_ptr<HostObject> getHostObject(const Object &o) override {
+    return static_cast<HostObjectWrapper *>(
+               vtable_->get_host_object(abiRt_, toABIObject(o)))
+        ->getHostObject();
   }
   HostFunctionType &getHostFunction(const Function &f) override {
     return static_cast<HostFunctionWrapper *>(

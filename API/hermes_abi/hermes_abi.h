@@ -20,6 +20,7 @@ struct HermesABIBuffer;
 struct HermesABIMutableBuffer;
 struct HermesABIHostFunction;
 struct HermesABIPropNameIDList;
+struct HermesABIHostObject;
 
 /// Define the structure for references to pointer types in JS (e.g. string,
 /// object, BigInt).
@@ -222,6 +223,51 @@ struct HermesABIHostFunction {
   const struct HermesABIHostFunctionVTable *vtable;
 };
 
+/// Define the structure for lists of PropNameIDs, so that they can be returned
+/// by get_own_keys on a HostObject.
+struct HermesABIPropNameIDListVTable {
+  void (*release)(struct HermesABIPropNameIDList *);
+};
+struct HermesABIPropNameIDList {
+  const struct HermesABIPropNameIDListVTable *vtable;
+  const struct HermesABIPropNameID *props;
+  size_t size;
+};
+
+/// Define the structure for host objects. This is designed to recreate the
+/// functionality of jsi::HostObject.
+struct HermesABIHostObjectVTable {
+  void (*release)(struct HermesABIHostObject *);
+
+  /// Get the value associated with the given property \p name. This is similar
+  /// to invoking a getter or proxy trap and may re-enter the runtime and
+  /// perform arbitrary operations.
+  struct HermesABIValueOrError (*get)(
+      struct HermesABIHostObject *self,
+      struct HermesABIRuntime *rt,
+      struct HermesABIPropNameID name);
+
+  /// Set the value associated with the given property \p name. This is similar
+  /// to invoking a setter or proxy trap and may re-enter the runtime and
+  /// perform arbitrary operations.
+  struct HermesABIVoidOrError (*set)(
+      struct HermesABIHostObject *self,
+      struct HermesABIRuntime *rt,
+      struct HermesABIPropNameID name,
+      const struct HermesABIValue *value);
+
+  /// Get a list of property keys for this HostObject. The returned PropNameIDs
+  /// may be created from anything that can be used as a property key, including
+  /// both symbols and strings. This is similar to the Proxy ownKeys trap, and
+  /// can re-enter the runtime and perform arbitrary operations.
+  struct HermesABIPropNameIDListPtrOrError (*get_own_keys)(
+      struct HermesABIHostObject *self,
+      struct HermesABIRuntime *rt);
+};
+struct HermesABIHostObject {
+  const struct HermesABIHostObjectVTable *vtable;
+};
+
 struct HermesABIRuntimeVTable {
   /// Release the given runtime.
   void (*release)(struct HermesABIRuntime *);
@@ -417,6 +463,20 @@ struct HermesABIRuntimeVTable {
   struct HermesABIHostFunction *(*get_host_function)(
       struct HermesABIRuntime *rt,
       struct HermesABIFunction fn);
+
+  /// Create a new object that is backed by the given host object \p ho. This
+  /// takes ownership of \p ho, and it will be released when the returned object
+  /// is garbage collected. Accesses to the object will invoke the corresponding
+  /// methods on the HostObject. \p ho must not be null.
+  struct HermesABIObjectOrError (*create_object_from_host_object)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIHostObject *ho);
+
+  /// Return the HostObject assocated with the given object \p obj if there is
+  /// one. Otherwise return nullptr.
+  struct HermesABIHostObject *(*get_host_object)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject obj);
 };
 
 /// An instance of a Hermes Runtime.
