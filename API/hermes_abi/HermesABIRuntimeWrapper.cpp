@@ -698,15 +698,30 @@ class HermesABIRuntimeWrapper : public Runtime {
     THROW_UNIMPLEMENTED();
   }
   Value call(
-      const Function &,
+      const Function &fn,
       const Value &jsThis,
       const Value *args,
       size_t count) override {
-    THROW_UNIMPLEMENTED();
+    // Convert the arguments from jsi::Value to HermesABIValue to make the call.
+    // TODO: Remove this conversion once they have the same representation.
+    std::vector<HermesABIValue> abiArgs;
+    abiArgs.reserve(count);
+    for (size_t i = 0; i < count; ++i)
+      abiArgs.push_back(toABIValue(args[i]));
+    HermesABIValue abiThis = toABIValue(jsThis);
+    return intoJSIValue(vtable_->call(
+        abiRt_, toABIFunction(fn), &abiThis, abiArgs.data(), abiArgs.size()));
   }
-  Value callAsConstructor(const Function &, const Value *args, size_t count)
+  Value callAsConstructor(const Function &fn, const Value *args, size_t count)
       override {
-    THROW_UNIMPLEMENTED();
+    // Convert the arguments from jsi::Value to HermesABIValue to make the call.
+    // TODO: Remove this conversion once they have the same representation.
+    std::vector<HermesABIValue> abiArgs;
+    abiArgs.reserve(count);
+    for (size_t i = 0; i < count; ++i)
+      abiArgs.push_back(toABIValue(args[i]));
+    return intoJSIValue(vtable_->call_as_constructor(
+        abiRt_, toABIFunction(fn), abiArgs.data(), abiArgs.size()));
   }
 
   bool strictEquals(const Symbol &a, const Symbol &b) const override {
