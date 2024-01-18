@@ -80,7 +80,7 @@ class Environment;
 class Interpreter;
 class JSObject;
 class PropertyAccessor;
-struct RuntimeCommonStorage;
+struct JSLibStorage;
 struct RuntimeOffsets;
 class ScopedNativeDepthReducer;
 class ScopedNativeDepthTracker;
@@ -591,9 +591,9 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   void printArrayCensus(llvh::raw_ostream &os);
 #endif
 
-  /// Returns the common storage object.
-  RuntimeCommonStorage *getCommonStorage() {
-    return commonStorage_.get();
+  /// Returns the storage object for JSLib.
+  JSLibStorage *getJSLibStorage() {
+    return jsLibStorage_.get();
   }
 
   const GCExecTrace &getGCExecTrace() {
@@ -1211,7 +1211,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   SymbolRegistry symbolRegistry_{};
 
   /// Shared location to place native objects required by JSLib
-  std::unique_ptr<RuntimeCommonStorage> commonStorage_;
+  std::unique_ptr<JSLibStorage> jsLibStorage_;
 
   /// Empty code block that returns undefined.
   /// Owned by specialCodeBlockRuntimeModule_.

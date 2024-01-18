@@ -12,7 +12,6 @@
 #include "JSLibInternal.h"
 
 #include "hermes/Platform/Unicode/PlatformUnicode.h"
-#include "hermes/VM/JSLib/RuntimeCommonStorage.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/SmallXString.h"
