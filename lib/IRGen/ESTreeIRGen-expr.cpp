@@ -1540,6 +1540,9 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
   // Calls ResumeGenerator and returns or throws if requested.
   auto *resumeBB = Builder.createBasicBlock(function);
 
+  // Ends the opened TryStartInst.
+  auto *tryEndBB = Builder.createBasicBlock(function);
+
   auto *exprValue = genExpression(Y->_argument);
   IteratorRecordSlow iteratorRecord = emitGetIteratorSlow(exprValue);
 
@@ -1589,11 +1592,11 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
       [this,
        Y,
        resumeIsReturn,
-       getNextBlock,
        resumeBB,
        nextResult,
        received,
-       &iteratorRecord]() {
+       &iteratorRecord,
+       tryEndBB]() {
         // Generate IR for the body of Try
         SurroundingTry thisTry{
             curFunction(),
@@ -1671,14 +1674,12 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
         // SurroundingTry is correct for the genFinallyBeforeControlChange
         // call emitted by genResumeGenerator.
         Builder.setInsertionBlock(resumeBB);
-        genResumeGenerator(
-            GenFinally::Yes, resumeIsReturn, getNextBlock, received);
+        genResumeGenerator(GenFinally::Yes, resumeIsReturn, tryEndBB, received);
 
         // SaveAndYieldInst is a Terminator, but emitTryCatchScaffolding
         // needs a block from which to Branch to the TryEnd instruction.
         // Make a dummy block which can do that.
-        Builder.setInsertionBlock(
-            Builder.createBasicBlock(Builder.getFunction()));
+        Builder.setInsertionBlock(tryEndBB);
       },
       // emitNormalCleanup.
       []() {},
