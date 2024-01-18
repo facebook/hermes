@@ -43,6 +43,17 @@ void TransitionMap::snapshotAddNodes(GC &gc, HeapSnapshot &snap) {
 }
 
 void TransitionMap::snapshotAddEdges(GC &gc, HeapSnapshot &snap) {
+  uint32_t edge_index = 0;
+  forEachEntry([&snap, &gc, &edge_index](
+                   const Transition &, const WeakRef<HiddenClass> &value) {
+    if (value.isValid()) {
+      snap.addNamedEdge(
+          HeapSnapshot::EdgeType::Weak,
+          std::to_string(edge_index++),
+          gc.getObjectID(value.getNoBarrierUnsafe(gc.getPointerBase())));
+    }
+  });
+
   if (!isLarge()) {
     return;
   }

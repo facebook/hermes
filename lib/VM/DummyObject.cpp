@@ -22,7 +22,17 @@ const VTable DummyObject::vt{
     _finalizeImpl,
     _markWeakImpl,
     _mallocSizeImpl,
-    nullptr};
+    nullptr
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+    ,
+    VTable::HeapSnapshotMetadata{
+        HeapSnapshot::NodeType::Object,
+        nullptr,
+        _snapshotAddEdgesImpl,
+        nullptr,
+        nullptr}
+#endif
+};
 
 DummyObject::DummyObject(GC &gc) : other(), x(1), y(2) {
   hvBool.setNonPtr(HermesValue::encodeBoolValue(true), gc);
@@ -88,6 +98,22 @@ void DummyObject::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
   if (self->weak)
     acceptor.accept(*self->weak);
 }
+
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+void DummyObject::_snapshotAddEdgesImpl(
+    GCCell *cell,
+    GC &gc,
+    HeapSnapshot &snap) {
+  auto *const self = vmcast<DummyObject>(cell);
+  if (!self->weak)
+    return;
+  // DummyObject has only one WeakRef field.
+  snap.addNamedEdge(
+      HeapSnapshot::EdgeType::Weak,
+      "weak",
+      gc.getObjectID(self->weak->getNoBarrierUnsafe(gc.getPointerBase())));
+}
+#endif
 
 } // namespace testhelpers
 

@@ -58,6 +58,10 @@ struct DummyObject final : public GCCell {
   static void _finalizeImpl(GCCell *cell, GC &);
   static size_t _mallocSizeImpl(GCCell *cell);
   static void _markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor);
+
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
+#endif
 };
 
 } // namespace testhelpers
