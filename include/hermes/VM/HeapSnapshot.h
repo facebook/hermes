@@ -8,10 +8,10 @@
 #ifndef HERMES_VM_HEAPSNAPSHOT_H
 #define HERMES_VM_HEAPSNAPSHOT_H
 
+#include "hermes/ADT/StringSetVector.h"
 #include "hermes/Public/DebuggerTypes.h"
 #include "hermes/Public/GCConfig.h"
 #include "hermes/Support/JSONEmitter.h"
-#include "hermes/Support/StringSetVector.h"
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/StackTracesTree-NoRuntime.h"

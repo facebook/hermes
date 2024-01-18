@@ -8,8 +8,8 @@
 #ifndef HERMES_SUPPORT_SOURCEERRORMANAGER_H
 #define HERMES_SUPPORT_SOURCEERRORMANAGER_H
 
+#include "hermes/ADT/StringSetVector.h"
 #include "hermes/Support/OptValue.h"
-#include "hermes/Support/StringSetVector.h"
 #include "hermes/Support/Warning.h"
 
 #include "llvh/ADT/DenseMap.h"

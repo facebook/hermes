@@ -8,8 +8,8 @@
 #ifndef HERMES_BCGEN_HBC_UNIQUINGFILENAMETABLE_H
 #define HERMES_BCGEN_HBC_UNIQUINGFILENAMETABLE_H
 
+#include "hermes/ADT/StringSetVector.h"
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
-#include "hermes/Support/StringSetVector.h"
 
 #include "llvh/ADT/StringRef.h"
 

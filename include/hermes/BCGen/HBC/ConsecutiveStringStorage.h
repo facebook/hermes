@@ -8,8 +8,8 @@
 #ifndef HERMES_SUPPORT_STRINGSTORAGE_H
 #define HERMES_SUPPORT_STRINGSTORAGE_H
 
+#include "hermes/ADT/StringSetVector.h"
 #include "hermes/Support/OptValue.h"
-#include "hermes/Support/StringSetVector.h"
 #include "hermes/Support/StringTableEntry.h"
 
 #include "llvh/ADT/ArrayRef.h"
