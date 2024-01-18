@@ -1,3 +1,8 @@
+## 0.18.0
+
+### `hermes-eslint`
+* Include JSX closing elements in scope/bindings references
+
 ## 0.17.1
 
 ### `hermes-estree`
