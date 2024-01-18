@@ -170,15 +170,17 @@ uint32_t fromDoubleResultSize(double src) {
 }
 
 OperationStatus fromDouble(MutableBigIntRef dst, double src) {
+  uint32_t numDigitsToRepresentDouble = dst.numDigits;
+
   assert(
-      dst.numDigits >= fromDoubleResultSize(src) &&
+      numDigitsToRepresentDouble >= fromDoubleResultSize(src) &&
       "not enough digits provided for double conversion");
-  // A double can represent a 1024-bit number; the extra bit is needed to
-  // represent the BigInt's sign.
-  const uint32_t MaxBitsToRepresentDouble =
-      llvh::alignTo(1024 + 1, BigIntDigitSizeInBits);
+
+  const uint32_t BitsToRepresentDouble = llvh::alignTo(
+      numDigitsToRepresentDouble * BigIntDigitSizeInBits + 1,
+      BigIntDigitSizeInBits);
   llvh::APInt tmp =
-      llvh::APIntOps::RoundDoubleToAPInt(src, MaxBitsToRepresentDouble);
+      llvh::APIntOps::RoundDoubleToAPInt(src, BitsToRepresentDouble);
 
   auto *ptr = reinterpret_cast<const uint8_t *>(tmp.getRawData());
   auto size = tmp.getNumWords() * BigIntDigitSizeInBytes;
