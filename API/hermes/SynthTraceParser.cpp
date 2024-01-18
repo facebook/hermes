@@ -498,6 +498,12 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
             getListOfStrings<std::vector>(
                 llvh::cast<JSONArray>(obj->get("properties"))));
         break;
+      case RecordType::SetExternalMemoryPressure: {
+        size_t amount = getNumberAs<size_t>(obj->get("amount"));
+        trace.emplace_back<SynthTrace::SetExternalMemoryPressureRecord>(
+            timeFromStart, objID->getValue(), amount);
+        break;
+      }
     }
   }
   return trace;

@@ -121,6 +121,9 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
       const jsi::Value *args,
       size_t count) override;
 
+  void setExternalMemoryPressure(const jsi::Object &obj, size_t amount)
+      override;
+
   /// @}
 
   void addMarker(const std::string &marker);
