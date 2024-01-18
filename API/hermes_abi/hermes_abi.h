@@ -21,6 +21,7 @@ struct HermesABIMutableBuffer;
 struct HermesABIHostFunction;
 struct HermesABIPropNameIDList;
 struct HermesABIHostObject;
+struct HermesABINativeState;
 
 /// Define the structure for references to pointer types in JS (e.g. string,
 /// object, BigInt).
@@ -268,6 +269,17 @@ struct HermesABIHostObject {
   const struct HermesABIHostObjectVTable *vtable;
 };
 
+/// Define the structure for native state. This allows the user to expose
+/// arbitrary native data to the runtime that will be released when it is no
+/// longer needed. It is designed to recreate the functionality of
+/// jsi::NativeState.
+struct HermesABINativeStateVTable {
+  void (*release)(struct HermesABINativeState *self);
+};
+struct HermesABINativeState {
+  const struct HermesABINativeStateVTable *vtable;
+};
+
 struct HermesABIRuntimeVTable {
   /// Release the given runtime.
   void (*release)(struct HermesABIRuntime *);
@@ -477,6 +489,21 @@ struct HermesABIRuntimeVTable {
   struct HermesABIHostObject *(*get_host_object)(
       struct HermesABIRuntime *rt,
       struct HermesABIObject obj);
+
+  /// Return the NativeState assocated with the given object \p obj if there is
+  /// one. Otherwise return nullptr.
+  struct HermesABINativeState *(*get_native_state)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject obj);
+
+  /// Set the NativeState assocated with the given object \p obj to \p ns. This
+  /// takes ownership of \p ns, and its release method will be invoked when the
+  /// NativeState is overwritten or \p obj is garbage collected. \p ns must not
+  /// be null.
+  struct HermesABIVoidOrError (*set_native_state)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIObject obj,
+      struct HermesABINativeState *ns);
 };
 
 /// An instance of a Hermes Runtime.
