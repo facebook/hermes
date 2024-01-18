@@ -592,6 +592,36 @@ struct HermesABIRuntimeVTable {
   /// ensure all pending microtasks are executed.
   struct HermesABIBoolOrError (
       *drain_microtasks)(struct HermesABIRuntime *rt, int max_hint);
+
+  /// Create a BigInt from the given 64-bit integer \p value.
+  struct HermesABIBigIntOrError (
+      *create_bigint_from_int64)(struct HermesABIRuntime *rt, int64_t value);
+  struct HermesABIBigIntOrError (
+      *create_bigint_from_uint64)(struct HermesABIRuntime *rt, uint64_t value);
+
+  /// Return true if the given BigInt can fit in a 64-bit integer, false
+  /// otherwise.
+  bool (*bigint_is_int64)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIBigInt bigint);
+  bool (*bigint_is_uint64)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIBigInt bigint);
+
+  /// Truncate the given BigInt to its least significant 64 bits, and return the
+  /// result as a uint64_t. It will be truncated as though it is a signed two's
+  /// complement number of arbitrary length.
+  uint64_t (*bigint_truncate_to_uint64)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIBigInt bigint);
+
+  /// Convert the given BigInt to a string in the given radix. Like the
+  /// JavaScript function BigInt.prototype.toString, the radix must be in the
+  /// range [2, 36].
+  struct HermesABIStringOrError (*bigint_to_string)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIBigInt bigint,
+      unsigned radix);
 };
 
 /// An instance of a Hermes Runtime.
