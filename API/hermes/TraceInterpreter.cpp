@@ -540,7 +540,6 @@ TraceInterpreter::TraceInterpreter(
       hostFunctionCalls_(hostFunctionCalls),
       hostObjectCalls_(hostObjectCalls),
       hostFunctionsCallCount_(),
-      hostObjectsCallCount_(),
       hostObjectsPropertyNamesCallCount_(),
       gom_() {
   // Add the global object to the global object map
@@ -802,17 +801,15 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
   struct FakeHostObject : public HostObject {
     TraceInterpreter &interpreter;
     const HostObjectInfo &hostObjectInfo;
-    std::unordered_map<std::string, uint64_t> &callCounts;
+    std::unordered_map<std::string, uint64_t> callCounts;
     uint64_t &propertyNamesCallCounts;
 
     FakeHostObject(
         TraceInterpreter &interpreter,
         const HostObjectInfo &hostObjectInfo,
-        std::unordered_map<std::string, uint64_t> &callCounts,
         uint64_t &propertyNamesCallCounts)
         : interpreter(interpreter),
           hostObjectInfo(hostObjectInfo),
-          callCounts(callCounts),
           propertyNamesCallCounts(propertyNamesCallCounts) {}
 
     Value get(Runtime &rt, const PropNameID &name) override {
@@ -880,7 +877,6 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
       std::make_shared<FakeHostObject>(
           *this,
           hostObjectCalls_.at(objID),
-          hostObjectsCallCount_[objID],
           hostObjectsPropertyNamesCallCount_[objID]));
 }
 
