@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_ABI_HERMES_ABI_RUNTIME_H
-#define HERMES_ABI_HERMES_ABI_RUNTIME_H
+#ifndef HERMES_ABI_HERMES_ABI_RUNTIME_WRAPPER_H
+#define HERMES_ABI_HERMES_ABI_RUNTIME_WRAPPER_H
 
 #include <hermes/Public/HermesExport.h>
 #include <jsi/jsi.h>
@@ -22,4 +22,4 @@ makeHermesABIRuntimeWrapper(const HermesABIVTable *vtable);
 } // namespace hermes
 } // namespace facebook
 
-#endif // HERMES_ABI_HERMES_ABI_RUNTIME_H
+#endif // HERMES_ABI_HERMES_ABI_RUNTIME_WRAPPER_H

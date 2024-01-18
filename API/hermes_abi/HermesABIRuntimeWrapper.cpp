@@ -20,7 +20,7 @@ namespace {
   throw JSINativeException(std::string("Unimplemented function ") + name);
 }
 
-#define throwUnimplemented() throwUnimplementedImpl(__func__)
+#define THROW_UNIMPLEMENTED() throwUnimplementedImpl(__func__)
 
 /// An implementation of jsi::Runtime on top of the Hermes C-API.
 class HermesABIRuntimeWrapper : public Runtime {
@@ -46,26 +46,26 @@ class HermesABIRuntimeWrapper : public Runtime {
   Value evaluateJavaScript(
       const std::shared_ptr<const Buffer> &buffer,
       const std::string &sourceURL) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
 
   std::shared_ptr<const PreparedJavaScript> prepareJavaScript(
       const std::shared_ptr<const Buffer> &buffer,
       std::string sourceURL) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
 
   Value evaluatePreparedJavaScript(
       const std::shared_ptr<const PreparedJavaScript> &js) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
 
   bool drainMicrotasks(int maxMicrotasksHint = -1) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
 
   Object global() override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
 
   std::string description() override {
@@ -73,214 +73,214 @@ class HermesABIRuntimeWrapper : public Runtime {
   }
 
   bool isInspectable() override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
 
   Instrumentation &instrumentation() override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
 
  protected:
   PointerValue *cloneSymbol(const Runtime::PointerValue *pv) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   PointerValue *cloneBigInt(const Runtime::PointerValue *pv) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   PointerValue *cloneString(const Runtime::PointerValue *pv) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   PointerValue *cloneObject(const Runtime::PointerValue *pv) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   PointerValue *clonePropNameID(const Runtime::PointerValue *pv) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
 
   PropNameID createPropNameIDFromAscii(const char *str, size_t length)
       override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   PropNameID createPropNameIDFromUtf8(const uint8_t *utf8, size_t length)
       override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   PropNameID createPropNameIDFromString(const String &str) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   PropNameID createPropNameIDFromSymbol(const Symbol &sym) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   std::string utf8(const PropNameID &) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   bool compare(const PropNameID &, const PropNameID &) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
 
   std::string symbolToString(const Symbol &) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
 
   BigInt createBigIntFromInt64(int64_t) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   BigInt createBigIntFromUint64(uint64_t) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   bool bigintIsInt64(const BigInt &) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   bool bigintIsUint64(const BigInt &) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   uint64_t truncate(const BigInt &) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   String bigintToString(const BigInt &, int) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
 
   String createStringFromAscii(const char *str, size_t length) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   String createStringFromUtf8(const uint8_t *utf8, size_t length) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   std::string utf8(const String &) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
 
   Object createObject() override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   Object createObject(std::shared_ptr<HostObject> ho) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   std::shared_ptr<HostObject> getHostObject(const Object &) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   HostFunctionType &getHostFunction(const Function &) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
 
   bool hasNativeState(const Object &) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   std::shared_ptr<NativeState> getNativeState(const Object &) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   void setNativeState(const Object &, std::shared_ptr<NativeState> state)
       override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
 
   Value getProperty(const Object &, const PropNameID &name) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   Value getProperty(const Object &, const String &name) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   bool hasProperty(const Object &, const PropNameID &name) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   bool hasProperty(const Object &, const String &name) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   void setPropertyValue(
       const Object &,
       const PropNameID &name,
       const Value &value) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   void setPropertyValue(const Object &, const String &name, const Value &value)
       override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
 
   bool isArray(const Object &) const override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   bool isArrayBuffer(const Object &) const override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   bool isFunction(const Object &) const override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   bool isHostObject(const Object &) const override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   bool isHostFunction(const Function &) const override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   Array getPropertyNames(const Object &) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
 
   WeakObject createWeakObject(const Object &) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   Value lockWeakObject(const WeakObject &) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
 
   Array createArray(size_t length) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   ArrayBuffer createArrayBuffer(
       std::shared_ptr<MutableBuffer> buffer) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   size_t size(const Array &) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   size_t size(const ArrayBuffer &) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   uint8_t *data(const ArrayBuffer &) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   Value getValueAtIndex(const Array &, size_t i) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   void setValueAtIndexImpl(const Array &, size_t i, const Value &value)
       override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
 
   Function createFunctionFromHostFunction(
       const PropNameID &name,
       unsigned int paramCount,
       HostFunctionType func) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   Value call(
       const Function &,
       const Value &jsThis,
       const Value *args,
       size_t count) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   Value callAsConstructor(const Function &, const Value *args, size_t count)
       override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
 
   bool strictEquals(const Symbol &a, const Symbol &b) const override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   bool strictEquals(const BigInt &a, const BigInt &b) const override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   bool strictEquals(const String &a, const String &b) const override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
   bool strictEquals(const Object &a, const Object &b) const override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
 
   bool instanceOf(const Object &o, const Function &f) override {
-    throwUnimplemented();
+    THROW_UNIMPLEMENTED();
   }
 
   void setExternalMemoryPressure(const Object &obj, size_t amount) override {}
