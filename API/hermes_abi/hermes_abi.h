@@ -532,6 +532,21 @@ struct HermesABIRuntimeVTable {
   struct HermesABIValue (*lock_weak_object)(
       struct HermesABIRuntime *rt,
       struct HermesABIWeakObject wo);
+
+  /// Convert the given reference into UTF-8 and write it into a growable
+  /// buffer.
+  void (*get_utf8_from_string)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIString str,
+      struct HermesABIGrowableBuffer *buf);
+  void (*get_utf8_from_propnameid)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIPropNameID name,
+      struct HermesABIGrowableBuffer *buf);
+  void (*get_utf8_from_symbol)(
+      struct HermesABIRuntime *rt,
+      struct HermesABISymbol sym,
+      struct HermesABIGrowableBuffer *buf);
 };
 
 /// An instance of a Hermes Runtime.
