@@ -206,6 +206,19 @@ struct HermesABIRuntimeVTable {
       struct HermesABIRuntime *rt,
       const uint8_t *utf8,
       size_t length);
+
+  struct HermesABIPropNameID (*clone_propnameid)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIPropNameID name);
+  struct HermesABIString (
+      *clone_string)(struct HermesABIRuntime *rt, struct HermesABIString str);
+  struct HermesABISymbol (
+      *clone_symbol)(struct HermesABIRuntime *rt, struct HermesABISymbol sym);
+  struct HermesABIObject (
+      *clone_object)(struct HermesABIRuntime *rt, struct HermesABIObject obj);
+  struct HermesABIBigInt (*clone_bigint)(
+      struct HermesABIRuntime *rt,
+      struct HermesABIBigInt bigint);
 };
 
 /// An instance of a Hermes Runtime.
