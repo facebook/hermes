@@ -1767,9 +1767,23 @@ Value *ESTreeIRGen::genBinaryExpression(ESTree::BinaryExpressionNode *bin) {
   Value *LHS = genExpression(bin->_left);
   Value *RHS = genExpression(bin->_right);
 
-  auto Kind = BinaryOperatorInst::parseOperator(bin->_operator->str());
+  ValueKind kind = BinaryOperatorInst::parseOperator(bin->_operator->str());
+  Instruction *res = Builder.createBinaryOperatorInst(LHS, RHS, kind);
 
-  return Builder.createBinaryOperatorInst(LHS, RHS, Kind);
+  // If the binary operator is a comparison, set the result type to boolean.
+  static_assert(
+      (int)ValueKind::BinaryGreaterThanOrEqualInstKind -
+              (int)ValueKind::BinaryEqualInstKind + 1 ==
+          8,
+      "Comparison instructions must be consecutive");
+  if ((kind >= ValueKind::BinaryEqualInstKind &&
+       kind <= ValueKind::BinaryGreaterThanOrEqualInstKind) ||
+      kind == ValueKind::BinaryInInstKind ||
+      kind == ValueKind::BinaryInstanceOfInstKind) {
+    res->setType(Type::createBoolean());
+  }
+
+  return res;
 }
 
 Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
@@ -1829,21 +1843,35 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
     if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(U->_argument)) {
       Value *argument = genIdentifierExpression(id, true);
       return Builder.createUnaryOperatorInst(
-          argument, ValueKind::UnaryTypeofInstKind);
+          argument, ValueKind::UnaryTypeofInstKind, Type::createString());
     }
   }
 
   // Generate the unary operand:
   Value *argument = genExpression(U->_argument);
 
-  Value *result;
   if (oper == kw_.identPlus) {
-    result = Builder.createAsNumberInst(argument);
+    return Builder.createAsNumberInst(argument);
   } else {
-    result = Builder.createUnaryOperatorInst(
-        argument, UnaryOperatorInst::parseOperator(oper->str()));
+    ValueKind kind = UnaryOperatorInst::parseOperator(oper->str());
+
+    // Set the type of unary operators that have a fixed result type.
+    Type type = Type::createAnyType();
+    switch (kind) {
+      case ValueKind::UnaryVoidInstKind:
+        type = Type::createUndefined();
+        break;
+      case ValueKind::UnaryTypeofInstKind:
+        type = Type::createString();
+        break;
+      case ValueKind::UnaryBangInstKind:
+        type = Type::createBoolean();
+        break;
+      default:
+        break;
+    }
+    return Builder.createUnaryOperatorInst(argument, kind, type);
   }
-  return result;
 }
 
 Value *ESTreeIRGen::genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr) {

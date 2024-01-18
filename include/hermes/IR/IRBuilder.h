@@ -464,7 +464,10 @@ class IRBuilder {
 
   CreateRegExpInst *createRegExpInst(Identifier pattern, Identifier flags);
 
-  UnaryOperatorInst *createUnaryOperatorInst(Value *value, ValueKind kind);
+  UnaryOperatorInst *createUnaryOperatorInst(
+      Value *value,
+      ValueKind kind,
+      Type type = Type::createAnyType());
 
   DirectEvalInst *createDirectEvalInst(Value *evalText, bool strictCaller);
 

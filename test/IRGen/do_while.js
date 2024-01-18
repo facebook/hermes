@@ -109,8 +109,8 @@ function for_while_do_mixed_test(cond) {
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [i]: any
 // CHECK-NEXT:       StoreFrameInst 0: number, [i]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %5 = BinaryLessThanInst (:any) %4: any, 10: number
-// CHECK-NEXT:       CondBranchInst %5: any, %BB1, %BB2
+// CHECK-NEXT:  %5 = BinaryLessThanInst (:boolean) %4: any, 10: number
+// CHECK-NEXT:       CondBranchInst %5: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [cond]: any
 // CHECK-NEXT:       CondBranchInst %7: any, %BB3, %BB4
@@ -118,8 +118,8 @@ function for_while_do_mixed_test(cond) {
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %11 = BinaryLessThanInst (:any) %10: any, 10: number
-// CHECK-NEXT:        CondBranchInst %11: any, %BB1, %BB2
+// CHECK-NEXT:  %11 = BinaryLessThanInst (:boolean) %10: any, 10: number
+// CHECK-NEXT:        CondBranchInst %11: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %14 = AsNumericInst (:number|bigint) %13: any

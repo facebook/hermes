@@ -182,8 +182,8 @@ function forof_continue(seq) {
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:        StoreFrameInst %13: any, [i]: any
 // CHECK-NEXT:  %25 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %26 = BinaryLessThanInst (:any) %25: any, 0: number
-// CHECK-NEXT:        CondBranchInst %26: any, %BB6, %BB7
+// CHECK-NEXT:  %26 = BinaryLessThanInst (:boolean) %25: any, 0: number
+// CHECK-NEXT:        CondBranchInst %26: boolean, %BB6, %BB7
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:        BranchInst %BB8
 // CHECK-NEXT:%BB7:
@@ -238,8 +238,8 @@ function forof_continue(seq) {
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:        StoreFrameInst %13: any, [i]: any
 // CHECK-NEXT:  %25 = LoadFrameInst (:any) [i]: any
-// CHECK-NEXT:  %26 = BinaryLessThanInst (:any) %25: any, 0: number
-// CHECK-NEXT:        CondBranchInst %26: any, %BB6, %BB7
+// CHECK-NEXT:  %26 = BinaryLessThanInst (:boolean) %25: any, 0: number
+// CHECK-NEXT:        CondBranchInst %26: boolean, %BB6, %BB7
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:        BranchInst %BB8
 // CHECK-NEXT:%BB7:
