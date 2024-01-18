@@ -35,6 +35,7 @@ IRPrinter::IRPrinter(
     llvh::raw_ostream &ost,
     bool escape)
     : indent_(0),
+      ctx_(ctx),
       sm_(ctx.getSourceErrorManager()),
       os_(ost),
       colors_(ctx.getCodeGenerationSettings().colors && os_.has_colors()),
@@ -332,7 +333,7 @@ void IRPrinter::printInstruction(Instruction *I) {
     first = false;
   }
 
-  auto codeGenOpts = I->getContext().getCodeGenerationSettings();
+  const auto &codeGenOpts = I->getContext().getCodeGenerationSettings();
   // Print the use list if there is any user for the instruction.
   if (!codeGenOpts.dumpUseList || I->getUsers().empty())
     return;
@@ -386,6 +387,16 @@ void IRPrinter::visitFunction(const Function &F) {
 void IRPrinter::visitFunction(
     const Function &F,
     llvh::ArrayRef<BasicBlock *> order) {
+  if (!ctx_.getCodeGenerationSettings().dumpFunctions.empty()) {
+    if (!ctx_.getCodeGenerationSettings().dumpFunctions.count(
+            F.getInternalNameStr()))
+      return;
+  }
+  if (ctx_.getCodeGenerationSettings().noDumpFunctions.count(
+          F.getInternalNameStr())) {
+    return;
+  }
+
   auto *UF = const_cast<Function *>(&F);
   os_.indent(indent_);
   namer_.newFunction(&F);
@@ -399,7 +410,7 @@ void IRPrinter::visitFunction(
   printFunctionVariables(UF);
   os_ << "\n";
 
-  auto codeGenOpts = F.getContext().getCodeGenerationSettings();
+  const auto &codeGenOpts = F.getContext().getCodeGenerationSettings();
   if (codeGenOpts.dumpSourceLocation) {
     os_ << "source location: ";
     printSourceLocation(F.getSourceRange());
@@ -434,7 +445,7 @@ void IRPrinter::visitBasicBlock(const BasicBlock &BB) {
 
 void IRPrinter::visitInstruction(const Instruction &I) {
   auto *UII = const_cast<Instruction *>(&I);
-  auto codeGenOpts = I.getContext().getCodeGenerationSettings();
+  const auto &codeGenOpts = I.getContext().getCodeGenerationSettings();
   if (codeGenOpts.dumpSourceLocation) {
     os_ << "; ";
     printSourceLocation(UII->getLocation());

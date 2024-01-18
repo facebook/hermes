@@ -33,7 +33,8 @@ std::vector<uint8_t> hermes::bytecodeForSource(
   CodeGenerationSettings codeGenOpts;
   OptimizationSettings optSettings;
   optSettings.staticBuiltins = flags.staticBuiltins;
-  auto context = std::make_shared<Context>(sm, codeGenOpts, optSettings);
+  auto context =
+      std::make_shared<Context>(sm, std::move(codeGenOpts), optSettings);
   if (sourceMapGen) {
     context->setDebugInfoSetting(DebugInfoSetting::SOURCE_MAP);
     sourceMapGen->addSource("JavaScript");

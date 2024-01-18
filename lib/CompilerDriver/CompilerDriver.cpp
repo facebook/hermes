@@ -222,6 +222,19 @@ static opt<OutputFormatKind> DumpTarget(
         clEnumValN(EmitBundle, "emit-binary", "Emit compiled binary")),
     cat(CompilerCategory));
 
+static list<std::string> DumpFunctions(
+    "Xdump-functions",
+    desc("Only dump the IR for the given functions"),
+    Hidden,
+    llvh::cl::CommaSeparated,
+    cat(CompilerCategory));
+static list<std::string> NoDumpFunctions(
+    "Xno-dump-functions",
+    desc("Exclude the given functions from IR dumps"),
+    Hidden,
+    llvh::cl::CommaSeparated,
+    cat(CompilerCategory));
+
 static opt<bool> Pretty(
     "pretty",
     init(true),
@@ -1038,6 +1051,10 @@ std::shared_ptr<Context> createContext(
       cl::DumpSourceLocation != LocationDumpMode::None;
   codeGenOpts.dumpIRBetweenPasses = cl::DumpBetweenPasses;
   codeGenOpts.verifyIRBetweenPasses = cl::VerifyIR;
+  codeGenOpts.dumpFunctions.insert(
+      cl::DumpFunctions.begin(), cl::DumpFunctions.end());
+  codeGenOpts.noDumpFunctions.insert(
+      cl::NoDumpFunctions.begin(), cl::NoDumpFunctions.end());
 
   OptimizationSettings optimizationOpts;
 
@@ -1053,7 +1070,7 @@ std::shared_ptr<Context> createContext(
   optimizationOpts.staticRequire = cl::StaticRequire;
 
   auto context = std::make_shared<Context>(
-      codeGenOpts,
+      std::move(codeGenOpts),
       optimizationOpts,
       nullptr,
       std::move(resolutionTable),

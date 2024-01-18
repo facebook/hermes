@@ -8,6 +8,7 @@
 #ifndef HERMES_AST_CONTEXT_H
 #define HERMES_AST_CONTEXT_H
 
+#include "hermes/ADT/StringSetVector.h"
 #include "hermes/Parser/PreParser.h"
 #include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/Allocator.h"
@@ -43,6 +44,10 @@ struct CodeGenerationSettings {
   bool verifyIRBetweenPasses{false};
   /// Use colors in IR dumps.
   bool colors{false};
+  /// If not empty, restricts IR dumps only the given functions.
+  StringSetVector dumpFunctions;
+  /// Functions to exclude from IR dumps.
+  StringSetVector noDumpFunctions;
 };
 
 struct OptimizationSettings {
@@ -247,14 +252,14 @@ class Context {
  public:
   explicit Context(
       SourceErrorManager &sm,
-      CodeGenerationSettings codeGenOpts = CodeGenerationSettings(),
+      CodeGenerationSettings &&codeGenOpts = CodeGenerationSettings(),
       OptimizationSettings optimizationOpts = OptimizationSettings(),
       const NativeSettings *nativeSettings = nullptr,
       std::unique_ptr<ResolutionTable> resolutionTable = nullptr,
       std::vector<uint32_t> segments = {});
 
   explicit Context(
-      CodeGenerationSettings codeGenOpts = CodeGenerationSettings(),
+      CodeGenerationSettings &&codeGenOpts = CodeGenerationSettings(),
       OptimizationSettings optimizationOpts = OptimizationSettings(),
       const NativeSettings *nativeSettings = nullptr,
       std::unique_ptr<ResolutionTable> resolutionTable = nullptr,

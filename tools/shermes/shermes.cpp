@@ -243,6 +243,19 @@ cl::opt<OutputLevelKind> OutputLevel(
             "Execute the compiled binary")),
     cl::cat(CompilerCategory));
 
+static cl::list<std::string> DumpFunctions(
+    "Xdump-functions",
+    cl::desc("Only dump the IR for the given functions"),
+    cl::Hidden,
+    cl::CommaSeparated,
+    cl::cat(CompilerCategory));
+static cl::list<std::string> NoDumpFunctions(
+    "Xno-dump-functions",
+    cl::desc("Exclude the given functions from IR dumps"),
+    cl::Hidden,
+    cl::CommaSeparated,
+    cl::cat(CompilerCategory));
+
 static cl::opt<std::string> ExportedUnit(
     "exported-unit",
     cl::desc("Produce an SHUnit with the given name to be used by other code. "
@@ -565,6 +578,10 @@ std::shared_ptr<Context> createContext() {
   codeGenOpts.dumpIRBetweenPasses = cli::DumpBetweenPasses;
   codeGenOpts.verifyIRBetweenPasses = cli::VerifyIR;
   codeGenOpts.colors = cli::Colors;
+  codeGenOpts.dumpFunctions.insert(
+      cli::DumpFunctions.begin(), cli::DumpFunctions.end());
+  codeGenOpts.noDumpFunctions.insert(
+      cli::NoDumpFunctions.begin(), cli::NoDumpFunctions.end());
 
   OptimizationSettings optimizationOpts;
 
@@ -590,8 +607,8 @@ std::shared_ptr<Context> createContext() {
   // TODO: error checking, etc.
   nativeSettings.targetTriple = llvh::Triple(cli::XNativeTarget);
 
-  auto context =
-      std::make_shared<Context>(codeGenOpts, optimizationOpts, &nativeSettings);
+  auto context = std::make_shared<Context>(
+      std::move(codeGenOpts), optimizationOpts, &nativeSettings);
 
   if (codeGenOpts.dumpIRBetweenPasses)
     context->createPersistentIRNamer();
