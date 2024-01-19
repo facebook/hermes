@@ -437,7 +437,10 @@ class GCScope : public GCScopeDebugBase {
   /// Allocate storage for a new PinnedHermesValue. The garbage collector knows
   /// about it and will be able to mark it.
   PinnedHermesValue *newPinnedHermesValue(HermesValue value) {
-#ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+#if defined(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION) && !defined(NDEBUG)
+    // Ignore assert below when fuzzing a debug build.
+    (void)handlesLimit_; // ignore unused variable warning
+#else
     assert(
         getHandleCountDbg() < handlesLimit_ &&
         "Too many handles allocated in GCScope");
