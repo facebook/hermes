@@ -27,6 +27,10 @@ Optional<ESTree::Node *> JSParserImpl::parseFlowDeclaration() {
     return parseComponentDeclarationFlow(start, /* declare */ false);
   }
 
+  if (context_.getParseFlowComponentSyntax() && checkHookDeclarationFlow()) {
+    return parseHookDeclarationFlow(start);
+  }
+
   if (check(TokenKind::rw_enum)) {
     auto optEnum = parseEnumDeclarationFlow(start, /* declare */ false);
     if (!optEnum)
@@ -680,6 +684,94 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentTypeParameterFlow(
       getPrevTokenEndLoc(),
       new (context_)
           ESTree::ComponentTypeParameterNode(nameElem, *optType, optional));
+}
+
+bool JSParserImpl::checkHookDeclarationFlow() {
+  if (!check(hookIdent_))
+    return false;
+
+  // Don't pass an `expectedToken` so we don't advance on a match. This allows
+  // `parseHookDeclarationFlow` to reparse the token and store useful
+  // information. Additionally to be used within `checkDeclaration` this
+  // function must be idempotent.
+  OptValue<TokenKind> optNext = lexer_.lookahead1(None);
+  return optNext.hasValue() && *optNext == TokenKind::identifier;
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseHookDeclarationFlow(SMLoc start) {
+  // hook
+  assert(check(hookIdent_));
+  advance();
+
+  // identifier
+  auto optId = parseBindingIdentifier(Param{});
+
+  // Hooks always require a name identifier
+  if (!optId) {
+    errorExpected(
+        TokenKind::identifier, "after 'hook'", "location of 'hook'", start);
+    return None;
+  }
+
+  ESTree::Node *typeParams = nullptr;
+
+  if (check(TokenKind::less)) {
+    auto optTypeParams = parseTypeParamsFlow();
+    if (!optTypeParams)
+      return None;
+    typeParams = *optTypeParams;
+  }
+
+  if (!need(
+          TokenKind::l_paren,
+          "at start of hook parameter list",
+          "hook declaration starts here",
+          start)) {
+    return None;
+  }
+
+  ESTree::NodeList paramList;
+
+  if (!parseFormalParameters(Param{}, paramList))
+    return None;
+
+  ESTree::Node *returnType = nullptr;
+
+  if (check(TokenKind::colon)) {
+    SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
+    // %checks predicates are unsupported in hooks.
+    if (!check(checksIdent_)) {
+      auto optRet = parseReturnTypeAnnotationFlow(annotStart);
+      if (!optRet)
+        return None;
+      returnType = *optRet;
+    } else {
+      error(tok_->getStartLoc(), "checks predicates unsupported with hooks");
+      return None;
+    }
+  }
+
+  if (!need(
+          TokenKind::l_brace,
+          "in hook declaration",
+          "start of hook declaration",
+          start)) {
+    return None;
+  }
+
+  SaveStrictModeAndSeenDirectives saveStrictModeAndSeenDirectives{this};
+
+  auto parsedBody = parseFunctionBody(
+      Param{}, false, false, false, JSLexer::AllowRegExp, true);
+  if (!parsedBody)
+    return None;
+  auto *body = parsedBody.getValue();
+
+  return setLocation(
+      start,
+      body,
+      new (context_) ESTree::HookDeclarationNode(
+          *optId, std::move(paramList), body, typeParams, returnType));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeAliasFlow(

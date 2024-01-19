@@ -87,6 +87,16 @@ ESTREE_NODE_5_ARGS(
 ESTREE_IGNORE_IF_EMPTY(ComponentDeclaration, typeParameters)
 ESTREE_IGNORE_IF_EMPTY(ComponentDeclaration, rendersType)
 
+ESTREE_NODE_5_ARGS(
+    HookDeclaration, FunctionLike,
+    NodePtr, id, false,
+    NodeList, params, false,
+    NodePtr, body, false,
+    NodePtr, typeParameters, true,
+    NodePtr, returnType, true)
+ESTREE_IGNORE_IF_EMPTY(HookDeclaration, typeParameters)
+ESTREE_IGNORE_IF_EMPTY(HookDeclaration, returnType)
+
 #endif
 
 ESTREE_LAST(FunctionLike)

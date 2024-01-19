@@ -122,7 +122,7 @@ void JSParserImpl::initializeIdentifiers() {
   rendersIdent_ = lexer_.getIdentifier("renders");
   rendersMaybeOperator_ = lexer_.getIdentifier("renders?");
   rendersStarOperator_ = lexer_.getIdentifier("renders*");
-
+  hookIdent_ = lexer_.getIdentifier("hook");
 #endif
 
 #if HERMES_PARSE_TS
@@ -6668,6 +6668,17 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
           startLoc,
           *optComponent,
           new (context_) ESTree::ExportDefaultDeclarationNode(*optComponent));
+    } else if (
+        context_.getParseFlow() && context_.getParseFlowComponentSyntax() &&
+        checkHookDeclarationFlow()) {
+      auto optHook = parseHookDeclarationFlow(tok_->getStartLoc());
+      if (!optHook) {
+        return None;
+      }
+      return setLocation(
+          startLoc,
+          *optHook,
+          new (context_) ESTree::ExportDefaultDeclarationNode(*optHook));
     } else if (context_.getParseFlow() && check(TokenKind::rw_enum)) {
       auto optEnum =
           parseEnumDeclarationFlow(tok_->getStartLoc(), /* declare */ false);
