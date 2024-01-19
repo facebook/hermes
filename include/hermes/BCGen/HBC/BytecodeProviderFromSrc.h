@@ -178,7 +178,8 @@ class BCProviderFromSrc final : public BCProviderBase {
       SourceErrorManager::DiagHandlerTy diagHandler = nullptr,
       void *diagContext = nullptr,
       const std::function<void(Module &)> &runOptimizationPasses = {},
-      BytecodeGenerationOptions defaultBytecodeGenerationOptions = BytecodeGenerationOptions::defaults());
+      BytecodeGenerationOptions defaultBytecodeGenerationOptions =
+          BytecodeGenerationOptions::defaults());
 
   RuntimeFunctionHeader getFunctionHeader(uint32_t functionID) const override {
     return RuntimeFunctionHeader(&module_->getFunction(functionID).getHeader());
