@@ -1225,7 +1225,7 @@ class FlowChecker::ExprVisitor {
 
     static const UnTypes s_types[] = {
         // clang-format off
-        {UnopKind::del, TypeKind::Void, llvh::None},
+        {UnopKind::del, TypeKind::Boolean, llvh::None},
         {UnopKind::voidOp, TypeKind::Void, llvh::None},
         {UnopKind::typeof, TypeKind::String, llvh::None},
         {UnopKind::plus, TypeKind::Number, TypeKind::Number},

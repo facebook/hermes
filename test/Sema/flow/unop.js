@@ -22,6 +22,8 @@ let x: number = 1;
 let y: bigint = 1n;
 ++y;
 --y;
+let o: any = {a: 1};
+delete o.a;
 
 // Auto-generated content below. Please do not modify manually.
 
@@ -36,7 +38,8 @@ let y: bigint = 1n;
 // CHECK-NEXT:            Decl %d.2 't' Let : number
 // CHECK-NEXT:            Decl %d.3 'x' Let : number
 // CHECK-NEXT:            Decl %d.4 'y' Let : bigint
-// CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
+// CHECK-NEXT:            Decl %d.5 'o' Let : any
+// CHECK-NEXT:            Decl %d.6 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
@@ -92,4 +95,16 @@ let y: bigint = 1n;
 // CHECK-NEXT:                    ExpressionStatement
 // CHECK-NEXT:                        UpdateExpression : bigint
 // CHECK-NEXT:                            Id 'y' [D:E:%d.4 'y'] : bigint
+// CHECK-NEXT:                    VariableDeclaration
+// CHECK-NEXT:                        VariableDeclarator
+// CHECK-NEXT:                            ObjectExpression
+// CHECK-NEXT:                                Property
+// CHECK-NEXT:                                    Id 'a'
+// CHECK-NEXT:                                    NumericLiteral : number
+// CHECK-NEXT:                            Id 'o' [D:E:%d.5 'o']
+// CHECK-NEXT:                    ExpressionStatement
+// CHECK-NEXT:                        UnaryExpression : boolean
+// CHECK-NEXT:                            MemberExpression : any
+// CHECK-NEXT:                                Id 'o' [D:E:%d.5 'o'] : any
+// CHECK-NEXT:                                Id 'a'
 // CHECK-NEXT:            ObjectExpression
