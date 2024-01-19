@@ -102,7 +102,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
     SourceErrorManager::DiagHandlerTy diagHandler,
     void *diagContext,
     const std::function<void(Module &)> &runOptimizationPasses,
-    llvh::Optional<BytecodeGenerationOptions> bytecodeGenerationOptions) {
+    BytecodeGenerationOptions defaultBytecodeGenerationOptions) {
   return createBCProviderFromSrcImpl(
       std::move(buffer),
       sourceURL,
@@ -112,7 +112,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
       diagHandler,
       diagContext,
       runOptimizationPasses,
-      bytecodeGenerationOptions);
+      defaultBytecodeGenerationOptions);
 }
 
 std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
@@ -125,7 +125,7 @@ BCProviderFromSrc::createBCProviderFromSrcImpl(
     SourceErrorManager::DiagHandlerTy diagHandler,
     void *diagContext,
     const std::function<void(Module &)> &runOptimizationPasses,
-    llvh::Optional<BytecodeGenerationOptions> bytecodeGenerationOptions) {
+    BytecodeGenerationOptions defaultBytecodeGenerationOptions) {
   assert(
       buffer->data()[buffer->size()] == 0 &&
       "The input buffer must be null terminated");
@@ -242,15 +242,12 @@ BCProviderFromSrc::createBCProviderFromSrcImpl(
   if (runOptimizationPasses)
     runOptimizationPasses(M);
 
-  BytecodeGenerationOptions opts{compileFlags.format};
-  if (bytecodeGenerationOptions) {
-    opts = *bytecodeGenerationOptions;
-  } else {
-    opts.optimizationEnabled = !!runOptimizationPasses;
-    opts.staticBuiltinsEnabled =
-        context->getOptimizationSettings().staticBuiltins;
-    opts.verifyIR = compileFlags.verifyIR;
-  }
+  auto opts = defaultBytecodeGenerationOptions;
+  opts.format = compileFlags.format;
+  opts.optimizationEnabled = !!runOptimizationPasses;
+  opts.staticBuiltinsEnabled =
+      context->getOptimizationSettings().staticBuiltins;
+  opts.verifyIR = compileFlags.verifyIR;
 
   auto BM = hbc::generateBytecodeModule(&M, M.getTopLevelFunction(), opts);
   if (context->getSourceErrorManager().getErrorCount() > 0) {
