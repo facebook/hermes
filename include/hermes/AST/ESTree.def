@@ -749,6 +749,12 @@ ESTREE_NODE_5_ARGS(
     NodePtr, returnType, false,
     NodePtr, rest, true,
     NodePtr, typeParameters, true)
+ESTREE_NODE_4_ARGS(
+    HookTypeAnnotation, Flow,
+    NodeList, params, false,
+    NodePtr, returnType, false,
+    NodePtr, rest, true,
+    NodePtr, typeParameters, true)
 ESTREE_NODE_3_ARGS(
     FunctionTypeParam, Flow,
     NodePtr, name, true,
@@ -891,6 +897,9 @@ ESTREE_NODE_2_ARGS(
     DeclareFunction, Flow,
     NodePtr, id, false,
     NodePtr, predicate, true)
+ESTREE_NODE_1_ARGS(
+    DeclareHook, Flow,
+    NodePtr, id, false)
 ESTREE_NODE_5_ARGS(
     DeclareComponent, Flow,
     NodePtr, id, false,

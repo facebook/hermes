@@ -1203,6 +1203,10 @@ class JSParserImpl {
   bool parseInterfaceExtends(SMLoc start, ESTree::NodeList &extends);
 
   Optional<ESTree::Node *> parseDeclareFunctionFlow(SMLoc start);
+  Optional<ESTree::Node *> parseDeclareHookFlow(SMLoc start);
+  Optional<ESTree::Node *> parseDeclareFunctionOrHookFlow(
+      SMLoc start,
+      bool hook);
   Optional<ESTree::Node *> parseDeclareClassFlow(SMLoc start);
   Optional<ESTree::Node *> parseDeclareExportFlow(
       SMLoc start,
@@ -1222,12 +1226,15 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseTupleTypeAnnotationFlow();
   Optional<ESTree::Node *> parseTupleElementFlow();
   Optional<ESTree::Node *> parseFunctionTypeAnnotationFlow();
+  Optional<ESTree::Node *> parseHookTypeAnnotationFlow();
+  Optional<ESTree::Node *> parseFunctionOrHookTypeAnnotationFlow(bool hook);
   Optional<ESTree::Node *> parseFunctionTypeAnnotationWithParamsFlow(
       SMLoc start,
       ESTree::NodeList &&params,
       ESTree::Node *thisConstraint,
       ESTree::Node *rest,
-      ESTree::Node *typeParams);
+      ESTree::Node *typeParams,
+      bool hook);
   Optional<ESTree::Node *> parseFunctionOrGroupTypeAnnotationFlow();
 
   /// Whether to allow 'proto' properties in an object type annotation.
@@ -1297,7 +1304,9 @@ class JSParserImpl {
   Optional<ESTree::FunctionTypeParamNode *>
   parseFunctionTypeAnnotationParamsFlow(
       ESTree::NodeList &params,
-      ESTree::NodePtr &thisConstraint);
+      ESTree::NodePtr &thisConstraint,
+      bool hook);
+  Optional<ESTree::FunctionTypeParamNode *> parseHookTypeAnnotationParamFlow();
   Optional<ESTree::FunctionTypeParamNode *>
   parseFunctionTypeAnnotationParamFlow();
 
