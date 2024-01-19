@@ -16,7 +16,7 @@ namespace hermes {
 
 /// An entry in the string table inside the ConsecutiveStringStorage.
 class StringTableEntry {
-  static constexpr uint32_t UTF16_MASK = 1 << 31;
+  static constexpr uint32_t UTF16_MASK = static_cast<uint32_t>(1) << 31;
 
   /// The offset of this string in the string storage.
   uint32_t offset_;
