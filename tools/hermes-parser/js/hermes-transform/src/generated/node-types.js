@@ -88,6 +88,8 @@ import type {
   FunctionTypeAnnotation as FunctionTypeAnnotationType,
   FunctionTypeParam as FunctionTypeParamType,
   GenericTypeAnnotation as GenericTypeAnnotationType,
+  HookDeclaration as HookDeclarationType,
+  HookTypeAnnotation as HookTypeAnnotationType,
   IfStatement as IfStatementType,
   ImportAttribute as ImportAttributeType,
   ImportDeclaration as ImportDeclarationType,
@@ -590,6 +592,27 @@ export type GenericTypeAnnotationProps = {
   +id: MaybeDetachedNode<GenericTypeAnnotationType['id']>,
   +typeParameters?: ?MaybeDetachedNode<
     GenericTypeAnnotationType['typeParameters'],
+  >,
+};
+
+export type HookDeclarationProps = {
+  +id: MaybeDetachedNode<HookDeclarationType['id']>,
+  +params: $ReadOnlyArray<
+    MaybeDetachedNode<HookDeclarationType['params'][number]>,
+  >,
+  +body: MaybeDetachedNode<HookDeclarationType['body']>,
+  +typeParameters?: ?MaybeDetachedNode<HookDeclarationType['typeParameters']>,
+  +returnType?: ?MaybeDetachedNode<HookDeclarationType['returnType']>,
+};
+
+export type HookTypeAnnotationProps = {
+  +params: $ReadOnlyArray<
+    MaybeDetachedNode<HookTypeAnnotationType['params'][number]>,
+  >,
+  +returnType: MaybeDetachedNode<HookTypeAnnotationType['returnType']>,
+  +rest?: ?MaybeDetachedNode<HookTypeAnnotationType['rest']>,
+  +typeParameters?: ?MaybeDetachedNode<
+    HookTypeAnnotationType['typeParameters'],
   >,
 };
 
@@ -1972,6 +1995,37 @@ export function GenericTypeAnnotation(props: {
   const node = detachedProps<GenericTypeAnnotationType>(props.parent, {
     type: 'GenericTypeAnnotation',
     id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function HookDeclaration(props: {
+  ...$ReadOnly<HookDeclarationProps>,
+  +parent?: ESNode,
+}): DetachedNode<HookDeclarationType> {
+  const node = detachedProps<HookDeclarationType>(props.parent, {
+    type: 'HookDeclaration',
+    id: asDetachedNodeForCodeGen(props.id),
+    params: props.params.map(n => asDetachedNodeForCodeGen(n)),
+    body: asDetachedNodeForCodeGen(props.body),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    returnType: asDetachedNodeForCodeGen(props.returnType),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function HookTypeAnnotation(props: {
+  ...$ReadOnly<HookTypeAnnotationProps>,
+  +parent?: ESNode,
+}): DetachedNode<HookTypeAnnotationType> {
+  const node = detachedProps<HookTypeAnnotationType>(props.parent, {
+    type: 'HookTypeAnnotation',
+    params: props.params.map(n => asDetachedNodeForCodeGen(n)),
+    returnType: asDetachedNodeForCodeGen(props.returnType),
+    rest: asDetachedNodeForCodeGen(props.rest),
     typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
   });
   setParentPointersInDirectChildren(node);

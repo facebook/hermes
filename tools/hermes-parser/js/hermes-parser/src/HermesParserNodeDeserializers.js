@@ -94,6 +94,18 @@ function deserializeComponentDeclaration() {
   };
 }
 
+function deserializeHookDeclaration() {
+  return {
+    type: 'HookDeclaration',
+    loc: this.addEmptyLoc(),
+    id: this.deserializeNode(),
+    params: this.deserializeNodeList(),
+    body: this.deserializeNode(),
+    typeParameters: this.deserializeNode(),
+    returnType: this.deserializeNode(),
+  };
+}
+
 function deserializeFunctionLikeLast() {
   throw new Error('FunctionLike' + ' should not appear in program buffer');
 }
@@ -968,6 +980,16 @@ function deserializeFunctionTypeAnnotation() {
     typeParameters: this.deserializeNode(),
   };
 }
+function deserializeHookTypeAnnotation() {
+  return {
+    type: 'HookTypeAnnotation',
+    loc: this.addEmptyLoc(),
+    params: this.deserializeNodeList(),
+    returnType: this.deserializeNode(),
+    rest: this.deserializeNode(),
+    typeParameters: this.deserializeNode(),
+  };
+}
 function deserializeFunctionTypeParam() {
   return {
     type: 'FunctionTypeParam',
@@ -1224,6 +1246,13 @@ function deserializeDeclareFunction() {
     loc: this.addEmptyLoc(),
     id: this.deserializeNode(),
     predicate: this.deserializeNode(),
+  };
+}
+function deserializeDeclareHook() {
+  return {
+    type: 'DeclareHook',
+    loc: this.addEmptyLoc(),
+    id: this.deserializeNode(),
   };
 }
 function deserializeDeclareComponent() {
@@ -1902,6 +1931,8 @@ module.exports = [
 
   deserializeComponentDeclaration,
 
+  deserializeHookDeclaration,
+
   deserializeFunctionLikeLast,
   deserializeStatementFirst,
   deserializeLoopStatementFirst,
@@ -2036,6 +2067,7 @@ module.exports = [
   deserializeBigIntTypeAnnotation,
   deserializeVoidTypeAnnotation,
   deserializeFunctionTypeAnnotation,
+  deserializeHookTypeAnnotation,
   deserializeFunctionTypeParam,
   deserializeComponentTypeAnnotation,
   deserializeComponentTypeParameter,
@@ -2067,6 +2099,7 @@ module.exports = [
   deserializeDeclareInterface,
   deserializeDeclareClass,
   deserializeDeclareFunction,
+  deserializeDeclareHook,
   deserializeDeclareComponent,
   deserializeDeclareVariable,
   deserializeDeclareEnum,

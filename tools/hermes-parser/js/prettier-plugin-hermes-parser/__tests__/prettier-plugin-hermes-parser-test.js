@@ -67,6 +67,14 @@ describe('prettier-plugin-hermes-parser', () => {
           baz?: Baz,
         },
       ) {}
+
+      // HookDeclaration
+      hook useFoo(
+        bar: {
+          // @deprecated
+          baz?: Baz,
+        },
+      ) {}
     `;
     const output = prettier.format(code, getOptions());
     expect(output).toMatchInlineSnapshot(`
@@ -112,6 +120,12 @@ describe('prettier-plugin-hermes-parser', () => {
           baz?: Baz,
         },
       ) {}
+
+      // HookDeclaration
+      hook useFoo(bar: {
+        // @deprecated
+        baz?: Baz,
+      }) {}
       "
     `);
   });

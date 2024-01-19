@@ -65,6 +65,7 @@ import type {
   DeclareExportAllDeclaration,
   DeclareExportDeclaration,
   DeclareFunction,
+  DeclareHook,
   DeclareInterface,
   DeclareModule,
   DeclareModuleExports,
@@ -97,6 +98,8 @@ import type {
   FunctionTypeAnnotation,
   FunctionTypeParam,
   GenericTypeAnnotation,
+  HookDeclaration,
+  HookTypeAnnotation,
   IfStatement,
   ImportAttribute,
   ImportDeclaration,
@@ -404,6 +407,11 @@ export function isDeclareFunction(node /*: ESNode | Token */) /*: node is Declar
 }
     
 
+export function isDeclareHook(node /*: ESNode | Token */) /*: node is DeclareHook */ {
+  return node.type === 'DeclareHook';
+}
+    
+
 export function isDeclareInterface(node /*: ESNode | Token */) /*: node is DeclareInterface */ {
   return node.type === 'DeclareInterface';
 }
@@ -561,6 +569,16 @@ export function isFunctionTypeParam(node /*: ESNode | Token */) /*: node is Func
 
 export function isGenericTypeAnnotation(node /*: ESNode | Token */) /*: node is GenericTypeAnnotation */ {
   return node.type === 'GenericTypeAnnotation';
+}
+    
+
+export function isHookDeclaration(node /*: ESNode | Token */) /*: node is HookDeclaration */ {
+  return node.type === 'HookDeclaration';
+}
+    
+
+export function isHookTypeAnnotation(node /*: ESNode | Token */) /*: node is HookTypeAnnotation */ {
+  return node.type === 'HookTypeAnnotation';
 }
     
 
