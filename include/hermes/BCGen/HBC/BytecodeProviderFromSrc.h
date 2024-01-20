@@ -95,6 +95,9 @@ class BCProviderFromSrc final : public BCProviderBase {
   ///     and this is non-null, invoke this callback with the IR module to
   ///     perform optimizations. This allows us to defer the decision of
   ///     whether to link all optimizations to the caller.
+  /// \param defaultBytecodeGenerationOptions the starting bytecode generation
+  ///     options that will be used during the bytecode generation phase.
+  ///     Some options will be overriden depending on other arguments passed in.
   ///
   /// \return a BCProvider and an empty error, or a null BCProvider and an error
   ///     message (if diagHandler was provided, the error message is "error").
@@ -107,7 +110,8 @@ class BCProviderFromSrc final : public BCProviderBase {
       const ScopeChain &scopeChain,
       SourceErrorManager::DiagHandlerTy diagHandler,
       void *diagContext,
-      const std::function<void(Module &)> &runOptimizationPasses);
+      const std::function<void(Module &)> &runOptimizationPasses,
+      const BytecodeGenerationOptions &defaultBytecodeGenerationOptions);
 
  public:
   static std::unique_ptr<BCProviderFromSrc> createBCProviderFromSrc(
@@ -173,7 +177,9 @@ class BCProviderFromSrc final : public BCProviderBase {
       const ScopeChain &scopeChain,
       SourceErrorManager::DiagHandlerTy diagHandler = nullptr,
       void *diagContext = nullptr,
-      const std::function<void(Module &)> &runOptimizationPasses = {});
+      const std::function<void(Module &)> &runOptimizationPasses = {},
+      const BytecodeGenerationOptions &defaultBytecodeGenerationOptions =
+          BytecodeGenerationOptions::defaults());
 
   RuntimeFunctionHeader getFunctionHeader(uint32_t functionID) const override {
     return RuntimeFunctionHeader(&module_->getFunction(functionID).getHeader());
