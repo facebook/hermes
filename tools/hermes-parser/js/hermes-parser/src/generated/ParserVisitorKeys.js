@@ -592,6 +592,7 @@ export const HERMES_AST_VISITOR_KEYS = {
   },
   TypeofTypeAnnotation: {
     argument: 'Node',
+    typeArguments: 'Node',
   },
   TypeOperator: {
     typeAnnotation: 'Node',
