@@ -8,6 +8,7 @@
 #include <hermes/hermes.h>
 #include <hermes_abi/HermesABIRuntimeWrapper.h>
 #include <hermes_abi/hermes_vtable.h>
+#include <hermes_sandbox/HermesSandboxRuntime.h>
 #include <jsi/test/testlib.h>
 #include <jsi/threadsafe.h>
 
