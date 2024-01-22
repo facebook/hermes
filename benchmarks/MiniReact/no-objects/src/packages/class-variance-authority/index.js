@@ -9,7 +9,7 @@
  */
 
 import CHECKED_CAST from 'sh/CHECKED_CAST';
-import {fastArrayJoin} from 'sh/fastarray';
+import {join} from 'sh/fastarray';
 
 export function cva(
   base: string[] | string,
@@ -18,6 +18,6 @@ export function cva(
   const baseString: string =
     typeof base === 'string'
       ? CHECKED_CAST<string>(base)
-      : fastArrayJoin(CHECKED_CAST<string[]>(base), ' ');
+      : join(CHECKED_CAST<string[]>(base), ' ');
   return (opts: mixed): string => baseString;
 }

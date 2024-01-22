@@ -37,13 +37,35 @@ function sh_microtask$queueMicrotask(callback: () => void): void {
   sh_microtask$INTERNAL$microtaskQueue.push(callback);
 }
 /* file: packages/sh/fastarray.js */
-function sh_fastarray$fastArrayJoin(arr: string[], sep: string): string {
+function sh_fastarray$join(arr: string[], sep: string): string {
   let result: string = '';
   for (let i: number = 0, e = arr.length; i < e; ++i) {
     if (i !== 0) result += sep;
     result += arr[i];
   }
   return result;
+}
+function sh_fastarray$reduce<TInput, TAcc>(arr: TInput[], fn: (acc: TAcc, item: TInput, index: number) => TAcc, initialValue: TAcc): TAcc {
+  let acc = initialValue;
+  for (let i = 0, e = arr.length; i < e; ++i) {
+    acc = fn(acc, arr[i], i);
+  }
+  return acc;
+}
+function sh_fastarray$map<TInput, TOutput>(arr: TInput[], fn: (item: TInput, index: number) => TOutput): TOutput[] {
+  const output: TOutput[] = [];
+  for (let i = 0, e = arr.length; i < e; ++i) {
+    output.push(fn(arr[i], i));
+  }
+  return output;
+}
+function sh_fastarray$includes<T>(arr: T[], searchElement: T): boolean {
+  for (let i = 0, e = arr.length; i < e; ++i) {
+    if (arr[i] === searchElement) {
+      return true;
+    }
+  }
+  return false;
 }
 /* file: packages/react/index.js */
 function react_index$INTERNAL$padString(str: string, len: number): string {
@@ -249,7 +271,7 @@ class react_index$INTERNAL$Root {
     const root: react_index$INTERNAL$Fiber = sh_CHECKED_CAST$default<react_index$INTERNAL$Fiber>(this.root);
     const output: string[] = [];
     this.printFiber(root, output, 0);
-    return sh_fastarray$fastArrayJoin(output, '\n');
+    return sh_fastarray$join(output, '\n');
   }
   doWork(element: react_index$React$MixedElement): void {
     let mustRender = this.root === null;
@@ -690,7 +712,7 @@ function react_index$forwardRef(comp: (props: react_index$Props, ref: mixed) => 
 }
 /* file: packages/class-variance-authority/index.js */
 function class_variance_authority_index$cva(base: string[] | string, variants: mixed): (opts: mixed) => string {
-  const baseString: string = typeof base === 'string' ? sh_CHECKED_CAST$default<string>(base) : sh_fastarray$fastArrayJoin(sh_CHECKED_CAST$default<string[]>(base), ' ');
+  const baseString: string = typeof base === 'string' ? sh_CHECKED_CAST$default<string>(base) : sh_fastarray$join(sh_CHECKED_CAST$default<string[]>(base), ' ');
   return (opts: mixed): string => baseString;
 }
 /* file: lib/utils.js */

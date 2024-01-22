@@ -58,13 +58,35 @@ function sh_microtask$queueMicrotask(callback) {
   sh_microtask$INTERNAL$microtaskQueue.push(callback);
 }
 /* file: packages/sh/fastarray.js */
-function sh_fastarray$fastArrayJoin(arr, sep) {
+function sh_fastarray$join(arr, sep) {
   var result = '';
   for (var i = 0, e = arr.length; i < e; ++i) {
     if (i !== 0) result += sep;
     result += arr[i];
   }
   return result;
+}
+function sh_fastarray$reduce(arr, fn, initialValue) {
+  var acc = initialValue;
+  for (var i = 0, e = arr.length; i < e; ++i) {
+    acc = fn(acc, arr[i], i);
+  }
+  return acc;
+}
+function sh_fastarray$map(arr, fn) {
+  var output = [];
+  for (var i = 0, e = arr.length; i < e; ++i) {
+    output.push(fn(arr[i], i));
+  }
+  return output;
+}
+function sh_fastarray$includes(arr, searchElement) {
+  for (var i = 0, e = arr.length; i < e; ++i) {
+    if (arr[i] === searchElement) {
+      return true;
+    }
+  }
+  return false;
 }
 /* file: packages/react/index.js */
 function react_index$INTERNAL$padString(str, len) {
@@ -270,7 +292,7 @@ var react_index$INTERNAL$Root = /*#__PURE__*/function () {
       var root = sh_CHECKED_CAST$default(this.root);
       var output = [];
       this.printFiber(root, output, 0);
-      return sh_fastarray$fastArrayJoin(output, '\n');
+      return sh_fastarray$join(output, '\n');
     }
   }, {
     key: "doWork",
@@ -750,7 +772,7 @@ function react_index$forwardRef(comp) {
 }
 /* file: packages/class-variance-authority/index.js */
 function class_variance_authority_index$cva(base, variants) {
-  var baseString = typeof base === 'string' ? sh_CHECKED_CAST$default(base) : sh_fastarray$fastArrayJoin(sh_CHECKED_CAST$default(base), ' ');
+  var baseString = typeof base === 'string' ? sh_CHECKED_CAST$default(base) : sh_fastarray$join(sh_CHECKED_CAST$default(base), ' ');
   return function (opts) {
     return baseString;
   };

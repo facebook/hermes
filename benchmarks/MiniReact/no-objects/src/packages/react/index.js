@@ -11,7 +11,7 @@
 import invariant from './invariant';
 import CHECKED_CAST from 'sh/CHECKED_CAST';
 import {queueMicrotask} from 'sh/microtask';
-import {fastArrayJoin} from 'sh/fastarray';
+import {join} from 'sh/fastarray';
 
 function padString(str: string, len: number): string {
   let result: string = '';
@@ -283,7 +283,7 @@ class Root {
     const root: Fiber = CHECKED_CAST<Fiber>(this.root);
     const output: string[] = [];
     this.printFiber(root, output, 0);
-    return fastArrayJoin(output, '\n');
+    return join(output, '\n');
   }
 
   doWork(element: React$MixedElement): void {
