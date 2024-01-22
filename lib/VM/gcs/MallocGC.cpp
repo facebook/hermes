@@ -506,19 +506,19 @@ void MallocGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
 }
 
 void MallocGC::resetWeakReferences() {
-  for (auto &slot : weakSlots_) {
+  weakSlots_.forEach([](WeakRefSlot &slot) {
     // Set all allocated slots to unmarked.
     if (slot.state() == WeakSlotState::Marked)
       slot.unmark();
-  }
+  });
 }
 
 void MallocGC::updateWeakReferences() {
-  for (auto &slot : weakSlots_) {
+  weakSlots_.forEach([](WeakRefSlot &slot) {
     if (slot.state() == WeakSlotState::Unmarked) {
-      freeWeakSlot(&slot);
+      slot.free();
     }
-  }
+  });
 }
 
 #ifndef NDEBUG

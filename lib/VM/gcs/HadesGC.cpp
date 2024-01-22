@@ -2872,20 +2872,19 @@ void HadesGC::finalizeYoungGenObjects() {
 }
 
 void HadesGC::updateWeakReferencesForOldGen() {
-  for (auto &slot : weakSlots_) {
+  weakSlots_.forEach([](WeakRefSlot &slot) {
     switch (slot.state()) {
-      case WeakSlotState::Free:
-        // Skip free weak slots.
-        break;
       case WeakSlotState::Marked:
         // Set all allocated slots to unmarked.
         slot.unmark();
         break;
       case WeakSlotState::Unmarked:
-        freeWeakSlot(&slot);
+        slot.free();
         break;
+      default:
+        llvm_unreachable("Freed slots are already skipped in forEach()");
     }
-  }
+  });
 }
 
 uint64_t HadesGC::allocatedBytes() const {

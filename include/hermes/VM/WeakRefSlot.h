@@ -31,10 +31,6 @@ class WeakRefSlot {
 
   // Mutator methods.
 
-  WeakRefSlot(CompressedPointer ptr) {
-    reset(ptr);
-  }
-
   /// Return true if this slot stores a non-null pointer to something.
   bool hasValue() const {
     // This assert should be predicated on kConcurrentGC being false, because it
@@ -61,9 +57,8 @@ class WeakRefSlot {
   }
 
   void markWeakRoots(WeakRootAcceptor &acceptor) {
-    if (state_ != State::Free) {
-      acceptor.acceptWeak(value_.root);
-    }
+    assert(state() != Free && "Cannot mark the weak root of a freed slot.");
+    acceptor.acceptWeak(value_.root);
   }
 
   // GC methods to update slot when referent moves/dies.
@@ -95,11 +90,9 @@ class WeakRefSlot {
     state_ = Unmarked;
   }
 
-  void free(WeakRefSlot *nextFree) {
+  void free() {
     assert(state() == Unmarked && "cannot free a reachable slot");
     state_ = Free;
-    value_.nextFree = nextFree;
-    assert(state() == Free);
   }
 
   WeakRefSlot *nextFree() const {
@@ -109,8 +102,25 @@ class WeakRefSlot {
     return value_.nextFree;
   }
 
-  /// Re-initialize a freed slot.
-  void reset(CompressedPointer ptr) {
+  /// Methods required by ManagedChunkedList.
+
+  WeakRefSlot() : state_(Free) {}
+
+  bool isFree() {
+    return state() == Free;
+  }
+
+  WeakRefSlot *getNextFree() {
+    return nextFree();
+  }
+
+  void setNextFree(WeakRefSlot *nextFree) {
+    assert(state() == Free && "can only set nextFree on a free slot");
+    value_.nextFree = nextFree;
+  }
+
+  /// Emplace new value to this slot.
+  void emplace(CompressedPointer ptr) {
     state_ = Marked;
     value_.root = ptr;
   }

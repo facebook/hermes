@@ -1313,19 +1313,12 @@ class GCBase {
   void markWeakRoots(WeakRootAcceptor &acceptor, bool markLongLived) {
     gcCallbacks_.markWeakRoots(acceptor, markLongLived);
     acceptor.beginRootSection(RootAcceptor::Section::WeakRefSlots);
-    for (auto &slot : weakSlots_) {
-      slot.markWeakRoots(acceptor);
-    }
+    weakSlots_.forEach(
+        [&acceptor](WeakRefSlot &slot) { slot.markWeakRoots(acceptor); });
 
     weakMapEntrySlots_.forEach(
         [&acceptor](WeakMapEntrySlot &slot) { slot.markWeakRoots(acceptor); });
     acceptor.endRootSection();
-  }
-
-  /// Frees the weak slot, so it can be re-used by future WeakRef allocations.
-  void freeWeakSlot(WeakRefSlot *slot) {
-    slot->free(firstFreeWeak_);
-    firstFreeWeak_ = slot;
   }
 
   /// Print the cumulative statistics.
@@ -1484,16 +1477,12 @@ class GCBase {
   /// towards whether an object is live or dead.
   /// The state enum of a WeakRefSlot that is not free may be modified
   /// concurrently, those values are protected by the weakRefMutex_.
-  std::deque<WeakRefSlot> weakSlots_;
+  ManagedChunkedList<WeakRefSlot> weakSlots_;
 
   /// A list of all slots used by WeakMap/WeakSet. They are freed by the mutator
   /// when operating on a WeakMap/WeakSet, or in the finalizer during sweeping.
   /// In collection phase, GC visits each non-free slot to update their values.
   ManagedChunkedList<WeakMapEntrySlot> weakMapEntrySlots_;
-
-  /// Pointer to the first free weak reference slot. Free weak refs are chained
-  /// together in a linked list.
-  WeakRefSlot *firstFreeWeak_{nullptr};
 
   /// Any thread that modifies a WeakRefSlot or a data structure containing
   /// WeakRefs that the GC will mark must hold this mutex. The GC will hold this
