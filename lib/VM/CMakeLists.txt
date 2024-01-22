@@ -84,6 +84,8 @@ set(source_files
   JSLib/ArrayBuffer.cpp
   JSLib/ArrayIterator.cpp
   JSLib/AsyncFunction.cpp
+  JSLib/Base64.cpp
+  JSLib/Base64Util.cpp
   JSLib/BigInt.cpp
   JSLib/CallSite.cpp
   JSLib/DataView.cpp
