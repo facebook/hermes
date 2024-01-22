@@ -8,3 +8,4 @@ set(HERMES_ENABLE_RTTI ON)
 
 add_subdirectory(hermes)
 add_subdirectory(hermes_abi)
+add_subdirectory(hermes_sandbox)
