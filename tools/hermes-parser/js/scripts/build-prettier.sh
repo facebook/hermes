@@ -8,19 +8,26 @@ set -xe -o pipefail
 
 HG_ROOT=$(hg root)
 XPLAT="$HG_ROOT/xplat"
-YARN="$XPLAT/third-party/yarn/yarn"
+XPLAT_YARN="$XPLAT/third-party/yarn/yarn"
 
 REPO_URI="https://github.com/pieterv/prettier.git"
 HERMES_PARSER_JS="$XPLAT/hermes/tools/hermes-parser/js"
+HERMES_PARSER_DIST="$HERMES_PARSER_JS/hermes-parser/dist"
+PRETTIER_DIR="$HERMES_PARSER_JS/prettier-hermes-v2-backport"
 PLUGIN_DIR="$HERMES_PARSER_JS/prettier-plugin-hermes-parser"
-YARN_OFFLINE_MIRROR=$($YARN config get yarn-offline-mirror)
+PRETTIER_YARN="$PRETTIER_DIR/.yarn/releases/yarn-3.6.3.cjs"
 
-if [ ! -d "prettier-hermes-v2-backport" ]; then
-    echo "Cloning prettier fork locally"
-    git clone -b hermes-v2-backport "$REPO_URI" prettier-hermes-v2-backport
+if [ ! -d "$HERMES_PARSER_DIST" ]; then
+    echo "$HERMES_PARSER_DIST does not exist, running initial build"
+    $XPLAT_YARN build
 fi
 
-pushd prettier-hermes-v2-backport
+if [ ! -d "$PRETTIER_DIR" ]; then
+    echo "Cloning prettier fork locally"
+    git clone -b hermes-v2-backport "$REPO_URI" "$PRETTIER_DIR"
+fi
+
+pushd "$PRETTIER_DIR"
 
 # Set upstream remote to canonical url
 if git remote get-url upstream > /dev/null 2>&1; then
@@ -44,19 +51,14 @@ fi
 
 # Install Deps
 echo "Running yarn install"
-$YARN install
-
-# Remove offline-mirror changes
-# There is likely a better way to do this
-echo "Purging any changes to the yarn-offline-mirror"
-hg purge "$YARN_OFFLINE_MIRROR"
+$PRETTIER_YARN install
 
 echo "Copying hermes-parser dist folder into node_modules"
-cp -r "$HERMES_PARSER_JS/hermes-parser/dist" "./node_modules/hermes-parser/"
+cp -r "$HERMES_PARSER_DIST" "./node_modules/hermes-parser/"
 
 # Build prettier
 echo "Building assets"
-$YARN build --no-minify
+$PRETTIER_YARN build --no-minify
 
 # Copy assets to prettier plugin dir
 echo "Copy assets"
