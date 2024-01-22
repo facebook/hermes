@@ -13,6 +13,505 @@ using namespace facebook::jsi;
 
 namespace {
 
+struct SandboxManagedPointer;
+struct SandboxBuffer;
+struct SandboxGrowableBuffer;
+struct SandboxHostFunction;
+struct SandboxPropNameIDList;
+struct SandboxHostObject;
+struct SandboxNativeState;
+
+/// Mirror the types defined in hermes_abi.h but in the form they would have in
+/// the sandbox. For instance, pointers and size_t are replaced with uint32.
+
+struct SandboxManagedPointerVTable {
+  /// Pointer to the function that should be invoked when this reference is
+  /// released.
+  /* void (*)(HermesABIManagedPointer *) */ u32 invalidate;
+};
+struct SandboxManagedPointer {
+  /* const HermesABIManagedPointerVTable * */ u32 vtable;
+};
+
+enum SandboxErrorCode {
+  SandboxErrorCodeNativeException,
+  SandboxErrorCodeJSError,
+};
+
+static_assert(
+    alignof(SandboxManagedPointer) % 4 == 0,
+    "SandboxManagedPointer must be at least aligned to pointer size.");
+
+/// Define simple wrappers for the different pointer types.
+#define SANDBOX_POINTER_TYPES(V) \
+  V(Object)                      \
+  V(Array)                       \
+  V(String)                      \
+  V(BigInt)                      \
+  V(Symbol)                      \
+  V(Function)                    \
+  V(ArrayBuffer)                 \
+  V(PropNameID)                  \
+  V(WeakObject)
+
+#define DECLARE_SANDBOX_POINTER_TYPE(name)      \
+  struct Sandbox##name {                        \
+    /* HermesABIManagedPointer* */ u32 pointer; \
+  };                                            \
+  struct Sandbox##name##OrError {               \
+    u32 ptr_or_error;                           \
+  };
+
+SANDBOX_POINTER_TYPES(DECLARE_SANDBOX_POINTER_TYPE)
+#undef DECLARE_SANDBOX_POINTER_TYPE
+
+struct SandboxVoidOrError {
+  u32 void_or_error;
+};
+
+struct SandboxBoolOrError {
+  u32 bool_or_error;
+};
+
+struct SandboxUint8PtrOrError {
+  bool is_error;
+  union {
+    u32 val;
+    uint16_t error;
+  } data;
+};
+
+struct SandboxSizeTOrError {
+  bool is_error;
+  union {
+    u32 val;
+    uint16_t error;
+  } data;
+};
+
+struct SandboxPropNameIDListPtrOrError {
+  u32 ptr_or_error;
+};
+
+/// Always set the top bit for pointers so they can be easily checked.
+#define SANDBOX_POINTER_MASK (1 << 31)
+
+enum SandboxValueKind {
+  SandboxValueKindUndefined = 0,
+  SandboxValueKindNull = 1,
+  SandboxValueKindBoolean = 2,
+  SandboxValueKindError = 3,
+  SandboxValueKindNumber = 4,
+  SandboxValueKindSymbol = 5 | SANDBOX_POINTER_MASK,
+  SandboxValueKindBigInt = 6 | SANDBOX_POINTER_MASK,
+  SandboxValueKindString = 7 | SANDBOX_POINTER_MASK,
+  SandboxValueKindObject = 9 | SANDBOX_POINTER_MASK,
+};
+
+struct SandboxValue {
+  SandboxValueKind kind;
+  union {
+    bool boolean;
+    alignas(8) double number;
+    /* HermesABIManagedPointer* */ u32 pointer;
+    SandboxErrorCode error;
+  } data;
+};
+struct SandboxValueOrError {
+  SandboxValue value;
+};
+
+struct SandboxBufferVTable {
+  /* void (*)(HermesABIBuffer *) */ u32 release;
+};
+struct SandboxBuffer {
+  /* const HermesABIBufferVTable* */ u32 vtable;
+  /* const uint8_t * */ u32 data;
+  /* size_t */ u32 size;
+};
+
+struct SandboxGrowableBufferVTable {
+  /* void (*)(struct HermesABIGrowableBuffer *, size_t) */ u32 try_grow_to;
+};
+struct SandboxGrowableBuffer {
+  /* const struct HermesABIGrowableBufferVTable * */ u32 vtable;
+  /* uint8_t * */ u32 data;
+  /* size_t */ u32 size;
+  /* size_t */ u32 used;
+};
+
+struct SandboxHostFunctionVTable {
+  /* void (*)(struct HermesABIHostFunction *) */ u32 release;
+  /* struct HermesABIValueOrError (*)(
+         struct HermesABIHostFunction *,
+         struct HermesABIRuntime *rt,
+         const struct HermesABIValue *,
+         const struct HermesABIValue *,
+         size_t) */
+  u32 call;
+};
+struct SandboxHostFunction {
+  /* const struct HermesABIHostFunctionVTable * */ u32 vtable;
+};
+
+struct SandboxPropNameIDListVTable {
+  /* void (*)(struct HermesABIPropNameIDList *) */ u32 release;
+};
+struct SandboxPropNameIDList {
+  /* const struct HermesABIPropNameIDListVTable * */ u32 vtable;
+  /* const struct HermesABIPropNameID * */ u32 props;
+  /* size_t */ u32 size;
+};
+
+struct SandboxHostObjectVTable {
+  /* void (*)(struct HermesABIHostObject *) */ u32 release;
+  /* struct HermesABIValueOrError (*)(
+         struct HermesABIHostObject *,
+         struct HermesABIRuntime *rt,
+         struct HermesABIPropNameID) */
+  u32 get;
+  /* struct HermesABIVoidOrError (*)(
+         struct HermesABIHostObject *,
+         struct HermesABIRuntime *rt,
+         struct HermesABIPropNameID,
+         const struct HermesABIValue *) */
+  u32 set;
+  /* struct HermesABIPropNameIDListPtrOrError (*)(
+         struct HermesABIHostObject *,
+         struct HermesABIRuntime *) */
+  u32 get_own_keys;
+};
+struct SandboxHostObject {
+  /* const struct HermesABIHostObjectVTable * */ u32 vtable;
+};
+
+struct SandboxNativeStateVTable {
+  /* void (*)(struct HermesABINativeState *) */ u32 release;
+};
+struct SandboxNativeState {
+  /* const struct HermesABINativeStateVTable *vtable */ u32 vtable;
+};
+
+/// List all of the vtable functions with their signatures.
+#define SANDBOX_CONTEXT_VTABLE_FUNCTIONS(F)                                   \
+  F(release, void, (w2c_hermes *, u32 srt))                                   \
+  F(get_and_clear_js_error_value, void, (w2c_hermes *, u32 resVal, u32 srt))  \
+  F(get_and_clear_native_exception_message,                                   \
+    void,                                                                     \
+    (w2c_hermes *, u32 srt, u32 buf))                                         \
+  F(set_js_error_value, void, (w2c_hermes *, u32 srt, u32 val))               \
+  F(set_native_exception_message,                                             \
+    void,                                                                     \
+    (w2c_hermes *, u32 srt, u32 buf, u32 len))                                \
+  F(clone_propnameid, u32, (w2c_hermes *, u32 srt, u32 propnameid))           \
+  F(clone_string, u32, (w2c_hermes *, u32 srt, u32 str))                      \
+  F(clone_symbol, u32, (w2c_hermes *, u32 srt, u32 sym))                      \
+  F(clone_object, u32, (w2c_hermes *, u32 srt, u32 obj))                      \
+  F(clone_bigint, u32, (w2c_hermes *, u32 srt, u32 bi))                       \
+  F(evaluate_javascript_source,                                               \
+    void,                                                                     \
+    (w2c_hermes *,                                                            \
+     u32 resValOrError,                                                       \
+     u32 srt,                                                                 \
+     u32 buf,                                                                 \
+     u32 sourceUrl,                                                           \
+     u32 sourceUrlLength))                                                    \
+  F(evaluate_hermes_bytecode,                                                 \
+    void,                                                                     \
+    (w2c_hermes *,                                                            \
+     u32 resValueOrError,                                                     \
+     u32 srt,                                                                 \
+     u32 buf,                                                                 \
+     u32 sourceUrl,                                                           \
+     u32 sourceUrlLength))                                                    \
+  F(get_global_object, u32, (w2c_hermes *, u32 srt))                          \
+  F(create_string_from_utf8, u32, (w2c_hermes *, u32 srt, u32 buf, u32 len))  \
+  F(create_object, u32, (w2c_hermes *, u32 srt))                              \
+  F(has_object_property_from_value, u32, (w2c_hermes *, u32, u32, u32))       \
+  F(has_object_property_from_propnameid, u32, (w2c_hermes *, u32, u32, u32))  \
+  F(get_object_property_from_value, void, (w2c_hermes *, u32, u32, u32, u32)) \
+  F(get_object_property_from_propnameid,                                      \
+    void,                                                                     \
+    (w2c_hermes *, u32, u32, u32, u32))                                       \
+  F(set_object_property_from_value, u32, (w2c_hermes *, u32, u32, u32, u32))  \
+  F(set_object_property_from_propnameid,                                      \
+    u32,                                                                      \
+    (w2c_hermes *, u32, u32, u32, u32))                                       \
+  F(get_object_property_names, u32, (w2c_hermes *, u32, u32))                 \
+  F(set_object_external_memory_pressure, u32, (w2c_hermes *, u32, u32, u32))  \
+  F(create_array, u32, (w2c_hermes *, u32, u32))                              \
+  F(get_array_length, u32, (w2c_hermes *, u32, u32))                          \
+  F(create_arraybuffer_from_external_data, u32, (w2c_hermes *, u32, u32))     \
+  F(get_arraybuffer_data, void, (w2c_hermes *, u32, u32, u32))                \
+  F(get_arraybuffer_size, void, (w2c_hermes *, u32, u32, u32))                \
+  F(create_propnameid_from_string, u32, (w2c_hermes *, u32, u32))             \
+  F(create_propnameid_from_symbol, u32, (w2c_hermes *, u32, u32))             \
+  F(prop_name_id_equals, u32, (w2c_hermes *, u32, u32, u32))                  \
+  F(call, void, (w2c_hermes *, u32, u32, u32, u32, u32, u32))                 \
+  F(call_as_constructor, void, (w2c_hermes *, u32, u32, u32, u32, u32))       \
+  F(create_function_from_host_function,                                       \
+    u32,                                                                      \
+    (w2c_hermes *, u32, u32, u32, u32))                                       \
+  F(get_host_function, u32, (w2c_hermes *, u32, u32))                         \
+  F(create_object_from_host_object, u32, (w2c_hermes *, u32, u32))            \
+  F(get_host_object, u32, (w2c_hermes *, u32, u32))                           \
+  F(get_native_state, u32, (w2c_hermes *, u32, u32))                          \
+  F(set_native_state, u32, (w2c_hermes *, u32, u32, u32))                     \
+  F(object_is_array, u32, (w2c_hermes *, u32, u32))                           \
+  F(object_is_arraybuffer, u32, (w2c_hermes *, u32, u32))                     \
+  F(object_is_function, u32, (w2c_hermes *, u32, u32))                        \
+  F(create_weak_object, u32, (w2c_hermes *, u32, u32))                        \
+  F(lock_weak_object, void, (w2c_hermes *, u32, u32, u32))                    \
+  F(get_utf8_from_string, void, (w2c_hermes *, u32, u32, u32))                \
+  F(get_utf8_from_propnameid, void, (w2c_hermes *, u32, u32, u32))            \
+  F(get_utf8_from_symbol, void, (w2c_hermes *, u32, u32, u32))                \
+  F(instance_of, u32, (w2c_hermes *, u32, u32, u32))                          \
+  F(strict_equals_symbol, u32, (w2c_hermes *, u32, u32, u32))                 \
+  F(strict_equals_bigint, u32, (w2c_hermes *, u32, u32, u32))                 \
+  F(strict_equals_string, u32, (w2c_hermes *, u32, u32, u32))                 \
+  F(strict_equals_object, u32, (w2c_hermes *, u32, u32, u32))                 \
+  F(drain_microtasks, u32, (w2c_hermes *, u32, u32))                          \
+  F(create_bigint_from_int64, u32, (w2c_hermes *, u32, u64))                  \
+  F(create_bigint_from_uint64, u32, (w2c_hermes *, u32, u64))                 \
+  F(bigint_is_int64, u32, (w2c_hermes *, u32, u32))                           \
+  F(bigint_is_uint64, u32, (w2c_hermes *, u32, u32))                          \
+  F(bigint_truncate_to_uint64, u64, (w2c_hermes *, u32, u32))                 \
+  F(bigint_to_string, u32, (w2c_hermes *, u32, u32, u32))
+
+/// Declare the vtable structure as it appears in the sandbox, with u32 as the
+/// function pointer type.
+struct SandboxRuntimeVTable {
+#define DECLARE_SANDBOX_VTABLE_FUNCTION(name, ret, args) u32 name;
+  SANDBOX_CONTEXT_VTABLE_FUNCTIONS(DECLARE_SANDBOX_VTABLE_FUNCTION)
+#undef DECLARE_SANDBOX_VTABLE_FUNCTION
+};
+
+/// Declare the vtable structure with actual C function pointers. The vtable
+/// pointers from the SandboxRuntimeVTable are converted and copied into this
+/// structure, to make the functions easier and more efficient to call.
+struct SandboxRuntimeVTableMirror {
+#define DECLARE_SANDBOX_VTABLE_FUNCTION(name, ret, args) ret(*name) args;
+  SANDBOX_CONTEXT_VTABLE_FUNCTIONS(DECLARE_SANDBOX_VTABLE_FUNCTION)
+#undef DECLARE_SANDBOX_VTABLE_FUNCTION
+};
+
+struct SandboxRuntime {
+  u32 vtable;
+};
+
+struct SandboxVTable {
+  /* struct HermesABIRuntime *(*make_hermes_runtime)
+     (const struct HermesABIRuntimeConfig *config); */
+  u32 make_hermes_runtime;
+  /* bool (*is_hermes_bytecode)(const uint8_t *buf, size_t len) */
+  u32 is_hermes_bytecode;
+};
+
+namespace sb {
+
+/// Mirror the helper functions from HermesABIHelpers.h.
+#define DECLARE_SANDBOX_POINTER_HELPERS(name)           \
+  Sandbox##name create##name(u32 ptr) {                 \
+    return {ptr};                                       \
+  }                                                     \
+  bool isError(Sandbox##name##OrError p) {              \
+    return p.ptr_or_error & 1;                          \
+  }                                                     \
+  SandboxErrorCode getError(Sandbox##name##OrError p) { \
+    assert(isError(p));                                 \
+    return (SandboxErrorCode)(p.ptr_or_error >> 2);     \
+  }                                                     \
+  Sandbox##name get##name(Sandbox##name##OrError p) {   \
+    assert(!isError(p));                                \
+    return create##name(p.ptr_or_error);                \
+  }
+SANDBOX_POINTER_TYPES(DECLARE_SANDBOX_POINTER_HELPERS)
+#undef DECLARE_SANDBOX_POINTER_HELPERS
+
+SandboxVoidOrError createVoidOrError(void) {
+  return {0};
+}
+SandboxVoidOrError createVoidOrError(SandboxErrorCode err) {
+  return {(u32)((err << 2) | 1)};
+}
+bool isError(SandboxVoidOrError v) {
+  return v.void_or_error & 1;
+}
+SandboxErrorCode getError(SandboxVoidOrError v) {
+  assert(isError(v));
+  return (SandboxErrorCode)(v.void_or_error >> 2);
+}
+
+bool isError(const SandboxBoolOrError &p) {
+  return p.bool_or_error & 1;
+}
+SandboxErrorCode getError(const SandboxBoolOrError &p) {
+  return (SandboxErrorCode)(p.bool_or_error >> 2);
+}
+bool getBool(const SandboxBoolOrError &p) {
+  return p.bool_or_error >> 2;
+}
+
+bool isError(const SandboxUint8PtrOrError &p) {
+  return p.is_error;
+}
+SandboxErrorCode getError(const SandboxUint8PtrOrError &p) {
+  return (SandboxErrorCode)p.data.error;
+}
+u32 getUint8Ptr(SandboxUint8PtrOrError p) {
+  return p.data.val;
+}
+
+bool isError(const SandboxSizeTOrError &p) {
+  return p.is_error;
+}
+SandboxErrorCode getError(const SandboxSizeTOrError &p) {
+  return (SandboxErrorCode)p.data.error;
+}
+size_t getSizeT(const SandboxSizeTOrError &p) {
+  return p.data.val;
+}
+
+SandboxPropNameIDListPtrOrError createPropNameIDListPtrOrError(u32 ptr) {
+  return {ptr};
+}
+SandboxPropNameIDListPtrOrError createPropNameIDListPtrOrError(
+    SandboxErrorCode err) {
+  return {static_cast<u32>((err << 2) | 1)};
+}
+
+SandboxValue createUndefinedValue() {
+  SandboxValue val;
+  val.kind = SandboxValueKindUndefined;
+  return val;
+}
+SandboxValue createNullValue() {
+  SandboxValue val;
+  val.kind = SandboxValueKindNull;
+  return val;
+}
+SandboxValue createBoolValue(bool b) {
+  SandboxValue val;
+  val.kind = SandboxValueKindBoolean;
+  val.data.boolean = b;
+  return val;
+}
+SandboxValue createNumberValue(double d) {
+  SandboxValue val;
+  val.kind = SandboxValueKindNumber;
+  val.data.number = d;
+  return val;
+}
+
+/// Helpers to create a SandboxValue from a pointer to a ManagedPointer.
+SandboxValue createObjectValue(u32 ptr) {
+  SandboxValue val;
+  val.kind = SandboxValueKindObject;
+  val.data.pointer = ptr;
+  return val;
+}
+SandboxValue createStringValue(u32 ptr) {
+  SandboxValue val;
+  val.kind = SandboxValueKindString;
+  val.data.pointer = ptr;
+  return val;
+}
+SandboxValue createBigIntValue(u32 ptr) {
+  SandboxValue val;
+  val.kind = SandboxValueKindBigInt;
+  val.data.pointer = ptr;
+  return val;
+}
+SandboxValue createSymbolValue(u32 ptr) {
+  SandboxValue val;
+  val.kind = SandboxValueKindSymbol;
+  val.data.pointer = ptr;
+  return val;
+}
+
+SandboxValueKind getValueKind(const SandboxValue &val) {
+  return val.kind;
+}
+
+bool isBoolValue(const SandboxValue &val) {
+  return getValueKind(val) == SandboxValueKindBoolean;
+}
+bool isNumberValue(const SandboxValue &val) {
+  return getValueKind(val) == SandboxValueKindNumber;
+}
+bool isObjectValue(const SandboxValue &val) {
+  return getValueKind(val) == SandboxValueKindObject;
+}
+bool isStringValue(const SandboxValue &val) {
+  return getValueKind(val) == SandboxValueKindString;
+}
+bool isBigIntValue(const SandboxValue &val) {
+  return getValueKind(val) == SandboxValueKindBigInt;
+}
+bool isSymbolValue(const SandboxValue &val) {
+  return getValueKind(val) == SandboxValueKindSymbol;
+}
+
+bool getBoolValue(const SandboxValue &val) {
+  (void)isBoolValue;
+  assert(isBoolValue(val));
+  return val.data.boolean;
+}
+double getNumberValue(const SandboxValue &val) {
+  (void)isNumberValue;
+  assert(isNumberValue(val));
+  return val.data.number;
+}
+SandboxObject getObjectValue(const SandboxValue &val) {
+  (void)isObjectValue;
+  assert(isObjectValue(val));
+  return createObject(val.data.pointer);
+}
+SandboxString getStringValue(const SandboxValue &val) {
+  (void)isStringValue;
+  assert(isStringValue(val));
+  return createString(val.data.pointer);
+}
+SandboxBigInt getBigIntValue(const SandboxValue &val) {
+  (void)isBigIntValue;
+  assert(isBigIntValue(val));
+  return createBigInt(val.data.pointer);
+}
+SandboxSymbol getSymbolValue(const SandboxValue &val) {
+  (void)isSymbolValue;
+  assert(isSymbolValue(val));
+  return createSymbol(val.data.pointer);
+}
+u32 getPointerValue(const SandboxValue &val) {
+  assert(getValueKind(val) | SANDBOX_POINTER_MASK);
+  return val.data.pointer;
+}
+
+SandboxValueOrError createValueOrError(SandboxValue val) {
+  SandboxValueOrError res;
+  res.value = val;
+  return res;
+}
+SandboxValueOrError createValueOrError(SandboxErrorCode err) {
+  SandboxValueOrError res;
+  res.value.kind = SandboxValueKindError;
+  res.value.data.error = err;
+  return res;
+}
+bool isError(const SandboxValueOrError &val) {
+  return getValueKind(val.value) == SandboxValueKindError;
+}
+SandboxValue getValue(const SandboxValueOrError &val) {
+  assert(!isError(val));
+  return val.value;
+}
+SandboxErrorCode getError(const SandboxValueOrError &val) {
+  assert(isError(val));
+  return val.value.data.error;
+}
+
+} // namespace sb
+
 /// Define a helper macro to throw an exception for unimplemented methods. The
 /// actual throw is kept in a separate function because throwing generates a lot
 /// of code.
