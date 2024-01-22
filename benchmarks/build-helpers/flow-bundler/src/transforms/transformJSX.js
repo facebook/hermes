@@ -26,6 +26,8 @@ import type {
   JSXOpeningElement,
   ObjectExpression,
   StringLiteral,
+  JSXMemberExpression,
+  MemberExpression,
 } from 'hermes-estree';
 import type {ParseResult} from '../utils';
 import type {MaybeDetachedNode} from 'hermes-transform/dist/detachedNode';
@@ -45,7 +47,7 @@ export default async function transformJSX(
     context => {
       function convertOpeningElementToJSXName(
         openingElement: JSXOpeningElement,
-      ): MaybeDetachedNode<Identifier | StringLiteral> {
+      ): MaybeDetachedNode<Identifier | StringLiteral | MemberExpression> {
         switch (openingElement.name.type) {
           case 'JSXIdentifier': {
             const name = openingElement.name.name;
@@ -60,6 +62,41 @@ export default async function transformJSX(
               });
             }
             return t.Identifier({name});
+          }
+          case 'JSXMemberExpression': {
+            function convertJSXMemberExpression(
+              memberExpression: JSXMemberExpression,
+            ): MaybeDetachedNode<MemberExpression> {
+              switch (memberExpression.object.type) {
+                case 'JSXIdentifier': {
+                  return t.MemberExpression({
+                    object: t.Identifier({name: memberExpression.object.name}),
+                    property: t.Identifier({
+                      name: memberExpression.property.name,
+                    }),
+                    computed: false,
+                  });
+                }
+                case 'JSXMemberExpression': {
+                  return t.MemberExpression({
+                    object: convertJSXMemberExpression(memberExpression.object),
+                    property: t.Identifier({
+                      name: memberExpression.property.name,
+                    }),
+                    computed: false,
+                  });
+                }
+                case 'JSXNamespacedName': {
+                  throw new Error(
+                    context.buildCodeFrame(
+                      memberExpression.object,
+                      `JSXNamespacedName JSX element not supported.`,
+                    ),
+                  );
+                }
+              }
+            }
+            return convertJSXMemberExpression(openingElement.name);
           }
           default: {
             throw new Error(
@@ -118,8 +155,11 @@ export default async function transformJSX(
                   return null;
                 }
 
+                const stringKey = attribute.name.name.includes('-');
                 return t.ObjectProperty({
-                  key: t.Identifier({name: attribute.name.name}),
+                  key: stringKey
+                    ? t.StringLiteral({value: attribute.name.name})
+                    : t.Identifier({name: attribute.name.name}),
                   value: convertJSXAttributeValueToExpression(attribute.value),
                   computed: false,
                   method: false,

@@ -165,7 +165,38 @@ export async function transformModule(
                   throw new Error(
                     context.buildCodeFrame(
                       container.property,
-                      `Non identifier reference of namespace object, type "${container.type}"`,
+                      `Non identifier reference of namespace object, type "${container.property.type}"`,
+                    ),
+                  );
+                }
+              }
+              break;
+            }
+            case 'JSXMemberExpression': {
+              switch (container.property.type) {
+                case 'JSXIdentifier': {
+                  const propertyName = container.property.name;
+                  const importNamespaceName = bindings.get(propertyName);
+                  if (importNamespaceName == null) {
+                    throw new Error(
+                      context.buildCodeFrame(
+                        container.property,
+                        `Namespace referenced non existent property "${propertyName}"`,
+                      ),
+                    );
+                  }
+                  context.replaceNode(
+                    container,
+                    t.JSXIdentifier({name: importNamespaceName}),
+                    {keepComments: true},
+                  );
+                  break;
+                }
+                default: {
+                  throw new Error(
+                    context.buildCodeFrame(
+                      container.property,
+                      `Non identifier reference of namespace object, type "${container.property.type}"`,
                     ),
                   );
                 }
