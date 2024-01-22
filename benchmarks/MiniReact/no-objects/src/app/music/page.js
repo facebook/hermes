@@ -16,8 +16,11 @@ import {useState} from 'react';
 export default function MusicPage(props: Props): React$MixedElement {
   const [toggle, setToggle] = useState<boolean>(true);
   return (
-    <Button id="click-me" onClick={() => setToggle(!toggle)}>
-      Click me: {String(toggle)}
-    </Button>
+    <>
+      <Button id="click-me" onClick={() => setToggle(!toggle)}>
+        Click me: {String(toggle)}
+      </Button>
+      <span>Other</span>
+    </>
   );
 }

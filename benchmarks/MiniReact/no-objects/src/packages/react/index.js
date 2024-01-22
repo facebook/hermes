@@ -21,8 +21,6 @@ function padString(str: string, len: number): string {
   return result;
 }
 
-export type React$Node = string | React$Element<React$ElementType>;
-
 /**
  * The type of an element in React. A React element may be a:
  *
@@ -33,7 +31,8 @@ export type React$Node = string | React$Element<React$ElementType>;
  */
 type React$ElementType =
   | string
-  | Component /* TODO: React$AbstractComponent<empty, mixed> */;
+  | Component /* TODO: React$AbstractComponent<empty, mixed> */
+  | number /* TODO: symbol */;
 
 /**
  * Type of a React element. React elements are commonly created using JSX
@@ -65,12 +64,16 @@ class React$Element<ElementType> {
 }
 
 export type React$MixedElement = React$Element<React$ElementType>;
+type React$NodeWithoutArray = React$MixedElement | string | null | void;
+export type React$Node = React$NodeWithoutArray[] | React$NodeWithoutArray;
 
 /**
  * The type of the key that React uses to determine where items in a new list
  * have moved.
  */
 type React$Key = string | number;
+
+const REACT_FRAGMENT_TYPE: number = 1 /* Symbol.for('react.fragment') */;
 
 /* eslint-disable lint/strictly-null, lint/react-state-props-mutation, lint/flow-react-element */
 
@@ -280,7 +283,6 @@ class Root {
     const root: Fiber = CHECKED_CAST<Fiber>(this.root);
     const output: string[] = [];
     this.printFiber(root, output, 0);
-    // return output.join('');
     return fastArrayJoin(output, '\n');
   }
 
@@ -335,16 +337,21 @@ class Root {
         const padStr = padString(' ', level);
         let str = padStr + '<' + tag;
         for (const [propName, propValue] of Object.entries(fiber.props)) {
-          if (typeof propValue === 'function') {
+          if (propValue == null || typeof propValue === 'function') {
             continue;
           }
 
           str += ` ${propName}=${JSON.stringify(propValue) ?? 'undefined'}`;
         }
-        str += '>';
-        out.push(str);
-        this.printChildren(fiber, out, level + 1);
-        out.push(padStr + '</' + tag + '>');
+        if (fiber.child == null) {
+          str += ' />';
+          out.push(str);
+        } else {
+          str += '>';
+          out.push(str);
+          this.printChildren(fiber, out, level + 1);
+          out.push(padStr + '</' + tag + '>');
+        }
         break;
       }
       case 'text': {
@@ -354,6 +361,7 @@ class Root {
         }
         break;
       }
+      case 'fragment':
       case 'component': {
         this.printChildren(fiber, out, level);
         break;
@@ -425,9 +433,13 @@ class Root {
           }
           break;
         }
+        case 'fragment':
         case 'text': {
           // Nothing to reconcile, these nodes are visited by the main doWork() loop
           break;
+        }
+        default: {
+          throw new Error('Unexpected fiber kind: ' + fiber.type.kind);
         }
       }
     } finally {
@@ -442,26 +454,19 @@ class Root {
    */
   mountFiber(elementOrString: React$Node, parent: Fiber | null): Fiber {
     let fiber: Fiber;
+    // TODO: Support Array of Node's being returned from a component.
     if (typeof elementOrString === 'object') {
       const element = CHECKED_CAST<React$MixedElement>(elementOrString);
       if (typeof element.type === 'function') {
         const component: Component = CHECKED_CAST<Component>(element.type);
-        // const type: FiberType = {
-        //   kind: 'component',
-        //   component,
-        // };
         const type: FiberType = new FiberTypeComponent(component);
         fiber = new Fiber(type, (element.props: any), element.key);
-      } else {
+      } else if (typeof element.type === 'string') {
         invariant(
           typeof element.type === 'string',
           'Expected a host component name such as "div" or "span", got ' +
-            CHECKED_CAST<string>(element.type),
+            typeof element.type,
         );
-        // const type: FiberType = {
-        //   kind: 'host',
-        //   tag: element.type,
-        // };
         const type: FiberType = new FiberTypeHost(
           CHECKED_CAST<string>(element.type),
         );
@@ -476,41 +481,53 @@ class Root {
         delete props.children;
 
         fiber = new Fiber(type, props, element.key);
-        if (Array.isArray(children)) {
-          let prev: Fiber | null = null;
-          for (const childElement of CHECKED_CAST<any[]>(children)) {
-            const child = this.mountFiber(
-              CHECKED_CAST<React$Node>(childElement),
-              fiber,
-            );
-            if (prev !== null) {
-              CHECKED_CAST<Fiber>(prev).sibling = child;
-            } else {
-              // set parent to point to first child
-              fiber.child = child;
-            }
-            prev = child;
+        this.mountChildren(children, fiber);
+      } else {
+        switch (element.type) {
+          case REACT_FRAGMENT_TYPE: {
+            const type: FiberType = new FiberTypeFragment();
+            fiber = new Fiber(type, (element.props: any), element.key);
+            this.mountChildren(element.props.children, fiber);
+            break;
           }
-        } else if (typeof children === 'string') {
-          const child = new Fiber({kind: 'text', text: children}, {}, null);
-          child.parent = fiber;
-          fiber.child = child;
-        } else if (children != null) {
-          const child = this.mountFiber((children: any), fiber);
-          fiber.child = child;
+          default: {
+            throw new Error(`Unknown element type ${element.type}`);
+          }
         }
       }
-    } else {
-      invariant(typeof elementOrString === 'string', 'Expected a string');
-      // const type: FiberType = {
-      //   kind: 'text',
-      //   text: element,
-      // };
+    } else if (typeof elementOrString === 'string') {
       const type = new FiberTypeText(CHECKED_CAST<string>(elementOrString));
       fiber = new Fiber(type, {}, null);
+    } else {
+      throw new Error(`Unexpected element type of ${typeof elementOrString}`);
     }
     fiber.parent = parent;
     return fiber;
+  }
+
+  mountChildren(children: React$Node, parentFiber: Fiber): void {
+    if (Array.isArray(children)) {
+      let prev: Fiber | null = null;
+      for (const childElement of CHECKED_CAST<any[]>(children)) {
+        if (childElement == null) {
+          continue;
+        }
+        const child = this.mountFiber(
+          CHECKED_CAST<React$Node>(childElement),
+          parentFiber,
+        );
+        if (prev !== null) {
+          CHECKED_CAST<Fiber>(prev).sibling = child;
+        } else {
+          // set parent to point to first child
+          parentFiber.child = child;
+        }
+        prev = child;
+      }
+    } else if (children != null) {
+      const child = this.mountFiber((children: any), parentFiber);
+      parentFiber.child = child;
+    }
   }
 
   /**
@@ -528,28 +545,46 @@ class Root {
       CHECKED_CAST<Fiber>(prevChild).type === element.type
     ) {
       let prevChild: Fiber = CHECKED_CAST<Fiber>(prevChild);
-      // Only host nodes have to be reconciled: otherwise this is a function component
-      // and its children will be reconciled when they are later emitted in a host
-      // position (ie as a direct result of render)
-      if (prevChild.type.kind === 'host') {
-        invariant(
-          element.props !== null && typeof element.props === 'object',
-          'Expected component props',
-        );
+      // Only host and fragment nodes have to be reconciled: otherwise this is a
+      // function component and its children will be reconciled when they are later
+      // emitted in a host position (ie as a direct result of render)
+      switch (prevChild.type.kind) {
+        case 'host': {
+          invariant(
+            element.props !== null && typeof element.props === 'object',
+            'Expected component props',
+          );
 
-        // const {children, ...props} = element.props;
-        const children = element.props.children;
-        const props = {...element.props};
-        delete props.children;
+          // const {children, ...props} = element.props;
+          const children = element.props.children;
+          const props = {...element.props};
+          delete props.children;
 
-        prevChild.props = props;
-        this.reconcileChildren(prevChild, (children: any));
-      } else if (prevChild.type.kind === 'component') {
-        invariant(
-          element.props !== null && typeof element.props === 'object',
-          'Expected component props',
-        );
-        prevChild.props = element.props;
+          prevChild.props = props;
+          this.reconcileChildren(prevChild, (children: any));
+          break;
+        }
+        case 'fragment': {
+          invariant(
+            element.props !== null && typeof element.props === 'object',
+            'Expected component props',
+          );
+
+          const children = element.props.children;
+          this.reconcileChildren(prevChild, (children: any));
+          break;
+        }
+        case 'component': {
+          invariant(
+            element.props !== null && typeof element.props === 'object',
+            'Expected component props',
+          );
+          prevChild.props = element.props;
+          break;
+        }
+        default: {
+          throw new Error(`Unknown node kind ${prevChild.type.kind}`);
+        }
       }
       return prevChild;
     } else {
@@ -561,10 +596,7 @@ class Root {
   /**
    * Reconciles the @param parent fiber's children nodes.
    */
-  reconcileChildren(
-    parent: Fiber,
-    children: React$MixedElement[] | React$MixedElement | string | null | void,
-  ): void {
+  reconcileChildren(parent: Fiber, children: React$Node): void {
     const prevChild: Fiber | null = parent.child;
     if (Array.isArray(children)) {
       let childrenArray = CHECKED_CAST<React$MixedElement[]>(children);
@@ -694,6 +726,11 @@ class FiberTypeHost extends FiberType {
     this.tag = tag;
   }
 }
+class FiberTypeFragment extends FiberType {
+  constructor() {
+    super('fragment');
+  }
+}
 class FiberTypeText extends FiberType {
   text: string;
   constructor(text: string) {
@@ -764,9 +801,14 @@ export function jsx(
   };
 }
 
-export function Fragment(props: Props): React$Node {
-  // TODO: Get this to work.
-  return props.children;
+export function Fragment(props: Props): React$MixedElement {
+  'inline';
+  return {
+    type: REACT_FRAGMENT_TYPE,
+    props: props,
+    key: null,
+    ref: null,
+  };
 }
 
 export function forwardRef(

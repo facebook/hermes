@@ -87,6 +87,7 @@ class react_index$INTERNAL$React$Element {
  * have moved.
  */
 
+const react_index$INTERNAL$REACT_FRAGMENT_TYPE = 1 /* Symbol.for('react.fragment') */;
 /* eslint-disable lint/strictly-null, lint/react-state-props-mutation, lint/flow-react-element */
 
 /**
@@ -237,7 +238,6 @@ class react_index$INTERNAL$Root {
     const root = sh_CHECKED_CAST$default(this.root);
     const output = [];
     this.printFiber(root, output, 0);
-    // return output.join('');
     return sh_fastarray$fastArrayJoin(output, '\n');
   }
   doWork(element) {
@@ -287,15 +287,20 @@ class react_index$INTERNAL$Root {
           const padStr = react_index$INTERNAL$padString(' ', level);
           let str = padStr + '<' + tag;
           for (const [propName, propValue] of Object.entries(fiber.props)) {
-            if (typeof propValue === 'function') {
+            if (propValue == null || typeof propValue === 'function') {
               continue;
             }
             str += ` ${propName}=${JSON.stringify(propValue) ?? 'undefined'}`;
           }
-          str += '>';
-          out.push(str);
-          this.printChildren(fiber, out, level + 1);
-          out.push(padStr + '</' + tag + '>');
+          if (fiber.child == null) {
+            str += ' />';
+            out.push(str);
+          } else {
+            str += '>';
+            out.push(str);
+            this.printChildren(fiber, out, level + 1);
+            out.push(padStr + '</' + tag + '>');
+          }
           break;
         }
       case 'text':
@@ -306,6 +311,7 @@ class react_index$INTERNAL$Root {
           }
           break;
         }
+      case 'fragment':
       case 'component':
         {
           this.printChildren(fiber, out, level);
@@ -363,10 +369,15 @@ class react_index$INTERNAL$Root {
             }
             break;
           }
+        case 'fragment':
         case 'text':
           {
             // Nothing to reconcile, these nodes are visited by the main doWork() loop
             break;
+          }
+        default:
+          {
+            throw new Error('Unexpected fiber kind: ' + fiber.type.kind);
           }
       }
     } finally {
@@ -376,22 +387,15 @@ class react_index$INTERNAL$Root {
   }
   mountFiber(elementOrString, parent) {
     let fiber;
+    // TODO: Support Array of Node's being returned from a component.
     if (typeof elementOrString === 'object') {
       const element = sh_CHECKED_CAST$default(elementOrString);
       if (typeof element.type === 'function') {
         const component = sh_CHECKED_CAST$default(element.type);
-        // const type: FiberType = {
-        //   kind: 'component',
-        //   component,
-        // };
         const type = new react_index$INTERNAL$FiberTypeComponent(component);
         fiber = new react_index$INTERNAL$Fiber(type, element.props, element.key);
-      } else {
-        react_invariant$default(typeof element.type === 'string', 'Expected a host component name such as "div" or "span", got ' + sh_CHECKED_CAST$default(element.type));
-        // const type: FiberType = {
-        //   kind: 'host',
-        //   tag: element.type,
-        // };
+      } else if (typeof element.type === 'string') {
+        react_invariant$default(typeof element.type === 'string', 'Expected a host component name such as "div" or "span", got ' + typeof element.type);
         const type = new react_index$INTERNAL$FiberTypeHost(sh_CHECKED_CAST$default(element.type));
         react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
         // const {children, ...props} = element.props;
@@ -401,61 +405,89 @@ class react_index$INTERNAL$Root {
         };
         delete props.children;
         fiber = new react_index$INTERNAL$Fiber(type, props, element.key);
-        if (Array.isArray(children)) {
-          let prev = null;
-          for (const childElement of sh_CHECKED_CAST$default(children)) {
-            const child = this.mountFiber(sh_CHECKED_CAST$default(childElement), fiber);
-            if (prev !== null) {
-              sh_CHECKED_CAST$default(prev).sibling = child;
-            } else {
-              // set parent to point to first child
-              fiber.child = child;
+        this.mountChildren(children, fiber);
+      } else {
+        switch (element.type) {
+          case react_index$INTERNAL$REACT_FRAGMENT_TYPE:
+            {
+              const type = new react_index$INTERNAL$FiberTypeFragment();
+              fiber = new react_index$INTERNAL$Fiber(type, element.props, element.key);
+              this.mountChildren(element.props.children, fiber);
+              break;
             }
-            prev = child;
-          }
-        } else if (typeof children === 'string') {
-          const child = new react_index$INTERNAL$Fiber({
-            kind: 'text',
-            text: children
-          }, {}, null);
-          child.parent = fiber;
-          fiber.child = child;
-        } else if (children != null) {
-          const child = this.mountFiber(children, fiber);
-          fiber.child = child;
+          default:
+            {
+              throw new Error(`Unknown element type ${element.type}`);
+            }
         }
       }
-    } else {
-      react_invariant$default(typeof elementOrString === 'string', 'Expected a string');
-      // const type: FiberType = {
-      //   kind: 'text',
-      //   text: element,
-      // };
+    } else if (typeof elementOrString === 'string') {
       const type = new react_index$INTERNAL$FiberTypeText(sh_CHECKED_CAST$default(elementOrString));
       fiber = new react_index$INTERNAL$Fiber(type, {}, null);
+    } else {
+      throw new Error(`Unexpected element type of ${typeof elementOrString}`);
     }
     fiber.parent = parent;
     return fiber;
   }
+  mountChildren(children, parentFiber) {
+    if (Array.isArray(children)) {
+      let prev = null;
+      for (const childElement of sh_CHECKED_CAST$default(children)) {
+        if (childElement == null) {
+          continue;
+        }
+        const child = this.mountFiber(sh_CHECKED_CAST$default(childElement), parentFiber);
+        if (prev !== null) {
+          sh_CHECKED_CAST$default(prev).sibling = child;
+        } else {
+          // set parent to point to first child
+          parentFiber.child = child;
+        }
+        prev = child;
+      }
+    } else if (children != null) {
+      const child = this.mountFiber(children, parentFiber);
+      parentFiber.child = child;
+    }
+  }
   reconcileFiber(parent, prevChild, element) {
     if (prevChild !== null && sh_CHECKED_CAST$default(prevChild).type === element.type) {
       let prevChild = sh_CHECKED_CAST$default(prevChild);
-      // Only host nodes have to be reconciled: otherwise this is a function component
-      // and its children will be reconciled when they are later emitted in a host
-      // position (ie as a direct result of render)
-      if (prevChild.type.kind === 'host') {
-        react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
-        // const {children, ...props} = element.props;
-        const children = element.props.children;
-        const props = {
-          ...element.props
-        };
-        delete props.children;
-        prevChild.props = props;
-        this.reconcileChildren(prevChild, children);
-      } else if (prevChild.type.kind === 'component') {
-        react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
-        prevChild.props = element.props;
+      // Only host and fragment nodes have to be reconciled: otherwise this is a
+      // function component and its children will be reconciled when they are later
+      // emitted in a host position (ie as a direct result of render)
+      switch (prevChild.type.kind) {
+        case 'host':
+          {
+            react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
+            // const {children, ...props} = element.props;
+            const children = element.props.children;
+            const props = {
+              ...element.props
+            };
+            delete props.children;
+            prevChild.props = props;
+            this.reconcileChildren(prevChild, children);
+            break;
+          }
+        case 'fragment':
+          {
+            react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
+            const children = element.props.children;
+            this.reconcileChildren(prevChild, children);
+            break;
+          }
+        case 'component':
+          {
+            react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
+            prevChild.props = element.props;
+            break;
+          }
+        default:
+          {
+            throw new Error(`Unknown node kind ${prevChild.type.kind}`);
+          }
       }
       return prevChild;
     } else {
@@ -567,6 +599,11 @@ class react_index$INTERNAL$FiberTypeHost extends react_index$INTERNAL$FiberType 
     this.tag = tag;
   }
 }
+class react_index$INTERNAL$FiberTypeFragment extends react_index$INTERNAL$FiberType {
+  constructor() {
+    super('fragment');
+  }
+}
 class react_index$INTERNAL$FiberTypeText extends react_index$INTERNAL$FiberType {
   constructor(text) {
     super('text');
@@ -616,8 +653,14 @@ function react_index$jsx(type, props, key) {
   };
 }
 function react_index$Fragment(props) {
-  // TODO: Get this to work.
-  return props.children;
+  'inline';
+
+  return {
+    type: react_index$INTERNAL$REACT_FRAGMENT_TYPE,
+    props: props,
+    key: null,
+    ref: null
+  };
 }
 function react_index$forwardRef(comp) {
   return props => comp(props, null);
@@ -674,10 +717,14 @@ const button$Button = react_index$forwardRef(({
 /* file: app/music/page.js */
 function page$default(props) {
   const [toggle, setToggle] = react_index$useState(true);
-  return react_index$jsx(button$Button, {
-    id: "click-me",
-    onClick: () => setToggle(!toggle),
-    children: ['Click me: ', String(toggle)]
+  return react_index$jsx(react_index$Fragment, {
+    children: [react_index$jsx(button$Button, {
+      id: "click-me",
+      onClick: () => setToggle(!toggle),
+      children: ['Click me: ', String(toggle)]
+    }, null), react_index$jsx('span', {
+      children: 'Other'
+    }, null)]
   }, null);
 }
 /* file: app/music/index.js */
