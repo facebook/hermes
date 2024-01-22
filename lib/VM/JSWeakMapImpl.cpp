@@ -147,6 +147,10 @@ void JSWeakMapImplBase::_snapshotAddEdgesImpl(
   // Add edges to objects pointed by WeakRef keys.
   uint32_t edge_index = 0;
   for (const auto &key : self->set_) {
+    // Skip if the ref is not valid.
+    if (!key.ref.isKeyValid()) {
+      continue;
+    }
     auto indexName = std::to_string(edge_index++);
     snap.addNamedEdge(
         HeapSnapshot::EdgeType::Weak,

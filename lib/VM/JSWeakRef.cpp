@@ -57,6 +57,9 @@ void JSWeakRef::_snapshotAddEdgesImpl(
     GC &gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<JSWeakRef>(cell);
+  // Filter out empty refs from adding edges.
+  if (!self->ref_.isValid())
+    return;
   snap.addNamedEdge(
       HeapSnapshot::EdgeType::Weak,
       "weak",
