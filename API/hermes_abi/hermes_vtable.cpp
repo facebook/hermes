@@ -193,6 +193,9 @@ class HermesABIRuntimeImpl : public HermesABIRuntime {
   /// This holds the message for cases where we throw a native exception.
   std::string nativeExceptionMessage{};
 
+  /// Compiler flags to use when evaluating source.
+  hbc::CompileFlags compileFlags{};
+
   explicit HermesABIRuntimeImpl(const hermes::vm::RuntimeConfig &runtimeConfig)
       : HermesABIRuntime{&vtable},
         rt(hermes::vm::Runtime::create(runtimeConfig)),
@@ -200,6 +203,7 @@ class HermesABIRuntimeImpl : public HermesABIRuntime {
         weakHermesValues(
             runtimeConfig.getGCConfig().getOccupancyTarget(),
             0.5) {
+    compileFlags.emitAsyncBreakCheck = runtimeConfig.getAsyncBreakCheckInEval();
     // Add custom roots functions to the runtime to expose references retained
     // through the API as roots.
     rt->addCustomRootsFunction([this](vm::GC *, vm::RootAcceptor &acceptor) {
@@ -460,7 +464,7 @@ HermesABIValueOrError evaluate_javascript_source(
       std::make_unique<BufferWrapper>(source),
       sourceURLRef,
       /* sourceMap */ {},
-      /* compileFlags */ {});
+      /* compileFlags */ hart->compileFlags);
   if (!bcErr.first) {
     hart->nativeExceptionMessage = std::move(bcErr.second);
     return abi::createValueOrError(HermesABIErrorCodeNativeException);
