@@ -32,7 +32,6 @@ set(RTSources
   GCGuardPageNCTest.cpp
   GCInitTest.cpp
   GCLazySegmentNCTest.cpp
-  GCMarkWeakTest.cpp
   GCObjectIterationTest.cpp
   GCOOMTest.cpp
   GCReturnUnusedMemoryTest.cpp

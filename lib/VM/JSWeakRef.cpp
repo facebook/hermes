@@ -18,7 +18,6 @@ const ObjectVTable JSWeakRef::vt{
         CellKind::JSWeakRefKind,
         cellSize<JSWeakRef>(),
         JSWeakRef::_finalizeImpl,
-        JSWeakRef::_markWeakImpl,
         nullptr,
         nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
@@ -42,13 +41,6 @@ void JSWeakRefBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSWeakRef>());
   JSObjectBuildMeta(cell, mb);
   mb.setVTable(&JSWeakRef::vt);
-}
-
-void JSWeakRef::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
-  auto *self = vmcast<JSWeakRef>(cell);
-  if (!self->ref_.isEmpty()) {
-    acceptor.accept(self->ref_);
-  }
 }
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
@@ -85,7 +77,6 @@ PseudoHandle<JSWeakRef> JSWeakRef::create(
 }
 
 void JSWeakRef::setTarget(Runtime &runtime, Handle<JSObject> target) {
-  WeakRefLock lk{runtime.getHeap().weakRefMutex()};
   assert(ref_.isEmpty() && "Should not call setTarget multiple times");
   ref_ = WeakRef<JSObject>(runtime, target);
 }

@@ -23,7 +23,6 @@ const ObjectVTable DecoratedObject::vt{
         CellKind::DecoratedObjectKind,
         cellSize<DecoratedObject>(),
         DecoratedObject::_finalizeImpl,
-        nullptr, /* markWeak */
         DecoratedObject::_mallocSizeImpl),
     DecoratedObject::_getOwnIndexedRangeImpl,
     DecoratedObject::_haveOwnIndexedImpl,

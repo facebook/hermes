@@ -21,7 +21,6 @@ const VTable ArrayStorageBase<HVType>::vt(
     0,
     nullptr,
     nullptr,
-    nullptr,
     _trimSizeCallback
 #ifdef HERMES_MEMORY_INSTRUMENTATION
     ,

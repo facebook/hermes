@@ -62,8 +62,7 @@ void VTable::HeapSnapshotMetadata::addLocations(
 
 llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const VTable &vt) {
   return os << "VTable: {\n\tsize: " << vt.size
-            << ", finalize: " << reinterpret_cast<void *>(vt.finalize_)
-            << ", markWeak: " << reinterpret_cast<void *>(vt.markWeak_) << "}";
+            << ", finalize: " << reinterpret_cast<void *>(vt.finalize_) << "}";
 }
 
 } // namespace vm

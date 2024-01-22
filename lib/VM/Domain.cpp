@@ -19,7 +19,6 @@ const VTable Domain::vt{
     CellKind::DomainKind,
     cellSize<Domain>(),
     _finalizeImpl,
-    nullptr,
     _mallocSizeImpl,
     nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION

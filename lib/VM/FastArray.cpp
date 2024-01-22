@@ -30,7 +30,6 @@ const ObjectVTable FastArray::vt{
         cellSize<FastArray>(),
         nullptr,
         nullptr,
-        nullptr,
         nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
         ,

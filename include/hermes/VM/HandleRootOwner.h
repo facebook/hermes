@@ -122,9 +122,6 @@ class HandleRootOwner {
 
   void markGCScopes(RootAcceptor &acceptor);
 
-  /// Mark the WeakRefs in the weakRefs_ list.
-  void markWeakRefs(WeakRefAcceptor &acceptor);
-
   /// Return the top-most \c GCScope.
   GCScope *getTopGCScope();
 

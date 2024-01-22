@@ -19,7 +19,6 @@ const VTable SegmentedArrayBase<HVType>::Segment::vt(
     cellSize<SegmentedArrayBase::Segment>(),
     nullptr,
     nullptr,
-    nullptr,
     nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
     ,
@@ -74,7 +73,6 @@ template <typename HVType>
 const VTable SegmentedArrayBase<HVType>::vt(
     getCellKind(),
     /*variableSize*/ 0,
-    nullptr,
     nullptr,
     nullptr,
     _trimSizeCallback

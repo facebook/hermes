@@ -28,7 +28,6 @@ const ObjectVTable JSObject::vt{
         cellSize<JSObject>(),
         nullptr,
         nullptr,
-        nullptr,
         nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
         ,

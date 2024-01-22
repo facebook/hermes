@@ -365,7 +365,6 @@ const ObjectVTable Arguments::vt{
         cellSize<Arguments>(),
         nullptr,
         nullptr,
-        nullptr,
         nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
         ,
@@ -481,7 +480,6 @@ const ObjectVTable JSArray::vt{
     VTable(
         CellKind::JSArrayKind,
         cellSize<JSArray>(),
-        nullptr,
         nullptr,
         nullptr,
         nullptr
