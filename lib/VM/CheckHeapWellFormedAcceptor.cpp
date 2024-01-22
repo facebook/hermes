@@ -66,16 +66,7 @@ void CheckHeapWellFormedAcceptor::acceptSym(SymbolID sym) {
       static_cast<const GCCell *>(gc.getCallbacks().getStringForSymbol(sym)));
 }
 
-void CheckHeapWellFormedAcceptor::accept(WeakRefBase &wr) {
-  // Cannot check if the weak ref is valid, since it is allowed to mark an
-  // empty weak ref.
-  const WeakRefSlot *slot = wr.unsafeGetSlot();
-  // If the weak value is a pointer, check that it's within the valid region.
-  if (slot->state() != WeakSlotState::Free && slot->hasValue()) {
-    GCCell *cell = slot->getNoBarrierUnsafe(gc.getPointerBase());
-    accept(cell);
-  }
-}
+void CheckHeapWellFormedAcceptor::accept(WeakRefBase &wr) {}
 
 #endif
 

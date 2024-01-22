@@ -84,6 +84,7 @@ void TransitionMap::uncleanMakeLarge(Runtime &runtime) {
   // Move any valid entry into the allocated map.
   if (auto value = smallValue().get(runtime))
     large->insertNewLocked(runtime, smallKey_, runtime.makeHandle(value));
+  smallValue().releaseSlot();
   u.large_ = large;
   smallKey_.symbolID = SymbolID::deleted();
   assert(isLarge());

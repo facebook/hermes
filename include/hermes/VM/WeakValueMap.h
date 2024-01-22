@@ -37,6 +37,10 @@ class WeakValueMap {
   using size_type = typename DenseMapT::size_type;
 
   WeakValueMap() : map_() {}
+  ~WeakValueMap() {
+    for (auto &[k, v] : map_)
+      v.releaseSlot();
+  }
 
   WeakValueMap(const WeakValueMap &) = delete;
   WeakValueMap &operator=(const WeakValueMap &) = delete;
@@ -77,6 +81,7 @@ class WeakValueMap {
     if (it == map_.end())
       return false;
     WeakRefLock lk{gc.weakRefMutex()};
+    it->second.releaseSlot();
     map_.erase(it);
     recalcPruneLimit();
     return true;
@@ -91,13 +96,15 @@ class WeakValueMap {
 
   bool
   insertNewLocked(Runtime &runtime, const KeyT &key, Handle<ValueT> value) {
-    auto itAndInserted = map_.try_emplace(key, WeakRef<ValueT>(runtime, value));
-    if (!itAndInserted.second) {
+    auto [it, inserted] = map_.try_emplace(key, runtime, value);
+    if (!inserted) {
       // The key already exists and the value is valid, this isn't a new entry.
-      if (itAndInserted.first->second.isValid()) {
+      if (it->second.isValid()) {
         return false;
       }
-      itAndInserted.first->second = WeakRef<ValueT>(runtime, value);
+      // Release the old slot before assigning it a new one.
+      it->second.releaseSlot();
+      it->second = WeakRef<ValueT>(runtime, value);
     }
     pruneInvalid(runtime.getHeap());
     return true;
@@ -152,6 +159,7 @@ class WeakValueMap {
 
     for (auto it = map_.begin(), e = map_.end(); it != e; ++it) {
       if (!it->second.isValid()) {
+        it->second.releaseSlot();
         // NOTE: DenseMap's erase() operation doesn't invalidate any
         // iterators, (and has a void return type), so this is safe to do. If
         // we were using a std::map<>, we would have to do

@@ -1009,10 +1009,6 @@ class HadesGC final : public GCBase {
   /// Finalize all objects in YG that have finalizers.
   void finalizeYoungGenObjects();
 
-  /// Update all of the weak references, invalidate the ones that point to
-  /// dead objects, and free the ones that were not marked at all.
-  void updateWeakReferencesForOldGen();
-
   /// Return the total number of bytes that are in use by the JS heap.
   uint64_t allocatedBytes() const;
 

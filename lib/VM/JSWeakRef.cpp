@@ -17,7 +17,7 @@ const ObjectVTable JSWeakRef::vt{
     VTable(
         CellKind::JSWeakRefKind,
         cellSize<JSWeakRef>(),
-        nullptr,
+        JSWeakRef::_finalizeImpl,
         JSWeakRef::_markWeakImpl,
         nullptr,
         nullptr
@@ -46,7 +46,7 @@ void JSWeakRefBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 void JSWeakRef::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
   auto *self = vmcast<JSWeakRef>(cell);
-  if (self->ref_.unsafeGetSlot()) {
+  if (!self->ref_.isEmpty()) {
     acceptor.accept(self->ref_);
   }
 }
@@ -67,10 +67,16 @@ void JSWeakRef::_snapshotAddEdgesImpl(
 }
 #endif
 
+void JSWeakRef::_finalizeImpl(GCCell *cell, GC &) {
+  auto *self = vmcast<JSWeakRef>(cell);
+  if (!self->ref_.isEmpty())
+    self->ref_.releaseSlot();
+}
+
 PseudoHandle<JSWeakRef> JSWeakRef::create(
     Runtime &runtime,
     Handle<JSObject> parentHandle) {
-  auto *cell = runtime.makeAFixed<JSWeakRef>(
+  auto *cell = runtime.makeAFixed<JSWeakRef, HasFinalizer::Yes>(
       runtime,
       parentHandle,
       runtime.getHiddenClassForPrototype(
@@ -80,7 +86,7 @@ PseudoHandle<JSWeakRef> JSWeakRef::create(
 
 void JSWeakRef::setTarget(Runtime &runtime, Handle<JSObject> target) {
   WeakRefLock lk{runtime.getHeap().weakRefMutex()};
-  assert(!ref_.unsafeGetSlot() && "Should not call setTarget multiple times");
+  assert(ref_.isEmpty() && "Should not call setTarget multiple times");
   ref_ = WeakRef<JSObject>(runtime, target);
 }
 

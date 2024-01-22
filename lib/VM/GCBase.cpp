@@ -353,19 +353,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
     pointerAccept(ptr, nullptr, true);
   }
 
-  void accept(WeakRefBase &wr) override {
-    WeakRefSlot *slot = wr.unsafeGetSlot();
-    if (slot->state() == WeakSlotState::Free) {
-      // If the slot is free, there's no edge to add.
-      return;
-    }
-    if (!slot->hasValue()) {
-      // Filter out empty refs from adding edges.
-      return;
-    }
-    pointerAccept(
-        slot->getNoBarrierUnsafe(gc_.getPointerBase()), nullptr, true);
-  }
+  void accept(WeakRefBase &wr) override {}
 
   void acceptSym(SymbolID sym, const char *name) override {
     if (sym.isInvalid()) {
