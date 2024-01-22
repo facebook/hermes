@@ -991,6 +991,18 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
     }
   };
 
+  PointerValue *clone(const PointerValue *pv) {
+    // TODO: Evaluate whether to keep this null check. It is currently here for
+    //       compatibility with hermes' API, but it is odd that it is the only
+    //       API that allows null.
+    if (!pv)
+      return nullptr;
+
+    auto *nonConst = const_cast<PointerValue *>(pv);
+    static_cast<ManagedPointerHolder *>(nonConst)->inc();
+    return nonConst;
+  }
+
   /// Convert the error code returned by the sandbox into a C++ exception.
   [[noreturn]] void throwError(SandboxErrorCode err) {
     if (err == SandboxErrorCodeJSError) {
@@ -1307,15 +1319,17 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
   }
 
   bool drainMicrotasks(int maxMicrotasksHint = -1) override {
-    THROW_UNIMPLEMENTED();
+    SandboxBoolOrError resBoolOrError{
+        vt_.drain_microtasks(this, srt_, maxMicrotasksHint)};
+    return unwrap(resBoolOrError);
   }
 
   Object global() override {
-    THROW_UNIMPLEMENTED();
+    return intoJSIObject(SandboxObject{vt_.get_global_object(this, srt_)});
   }
 
   std::string description() override {
-    THROW_UNIMPLEMENTED();
+    return "HermesSandboxRuntime";
   }
 
   bool isInspectable() override {
@@ -1328,77 +1342,106 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
 
  protected:
   PointerValue *cloneSymbol(const Runtime::PointerValue *pv) override {
-    THROW_UNIMPLEMENTED();
+    return clone(pv);
   }
   PointerValue *cloneBigInt(const Runtime::PointerValue *pv) override {
-    THROW_UNIMPLEMENTED();
+    return clone(pv);
   }
   PointerValue *cloneString(const Runtime::PointerValue *pv) override {
-    THROW_UNIMPLEMENTED();
+    return clone(pv);
   }
   PointerValue *cloneObject(const Runtime::PointerValue *pv) override {
-    THROW_UNIMPLEMENTED();
+    return clone(pv);
   }
   PointerValue *clonePropNameID(const Runtime::PointerValue *pv) override {
-    THROW_UNIMPLEMENTED();
+    return clone(pv);
   }
 
   PropNameID createPropNameIDFromAscii(const char *str, size_t length)
       override {
-    THROW_UNIMPLEMENTED();
+    return createPropNameIDFromString(createStringFromAscii(str, length));
   }
   PropNameID createPropNameIDFromUtf8(const uint8_t *utf8, size_t length)
       override {
-    THROW_UNIMPLEMENTED();
+    return createPropNameIDFromString(createStringFromUtf8(utf8, length));
   }
   PropNameID createPropNameIDFromString(const String &str) override {
-    THROW_UNIMPLEMENTED();
+    return intoJSIPropNameID(
+        SandboxPropNameIDOrError{vt_.create_propnameid_from_string(
+            this, srt_, toSandboxString(str).pointer)});
   }
   PropNameID createPropNameIDFromSymbol(const Symbol &sym) override {
-    THROW_UNIMPLEMENTED();
+    return intoJSIPropNameID(
+        SandboxPropNameIDOrError{vt_.create_propnameid_from_symbol(
+            this, srt_, toSandboxSymbol(sym).pointer)});
   }
-  std::string utf8(const PropNameID &) override {
-    THROW_UNIMPLEMENTED();
+  std::string utf8(const PropNameID &name) override {
+    auto outBuf = GrowableBufferImpl::create(*this);
+    vt_.get_utf8_from_propnameid(
+        this, srt_, toSandboxPropNameID(name).pointer, outBuf);
+    auto ret = outBuf->getString(this);
+    GrowableBufferImpl::release(this, outBuf);
+    return ret;
   }
-  bool compare(const PropNameID &, const PropNameID &) override {
-    THROW_UNIMPLEMENTED();
+  bool compare(const PropNameID &lhs, const PropNameID &rhs) override {
+    return vt_.prop_name_id_equals(
+        this,
+        srt_,
+        toSandboxPropNameID(lhs).pointer,
+        toSandboxPropNameID(rhs).pointer);
   }
 
-  std::string symbolToString(const Symbol &) override {
-    THROW_UNIMPLEMENTED();
+  std::string symbolToString(const Symbol &sym) override {
+    auto outBuf = GrowableBufferImpl::create(*this);
+    vt_.get_utf8_from_symbol(this, srt_, toSandboxSymbol(sym).pointer, outBuf);
+    auto ret = outBuf->getString(this);
+    GrowableBufferImpl::release(this, std::move(outBuf));
+    return ret;
   }
 
-  BigInt createBigIntFromInt64(int64_t) override {
-    THROW_UNIMPLEMENTED();
+  BigInt createBigIntFromInt64(int64_t i) override {
+    return intoJSIBigInt(
+        SandboxBigIntOrError{vt_.create_bigint_from_int64(this, srt_, i)});
   }
-  BigInt createBigIntFromUint64(uint64_t) override {
-    THROW_UNIMPLEMENTED();
+  BigInt createBigIntFromUint64(uint64_t u) override {
+    return intoJSIBigInt(
+        SandboxBigIntOrError{vt_.create_bigint_from_uint64(this, srt_, u)});
   }
-  bool bigintIsInt64(const BigInt &) override {
-    THROW_UNIMPLEMENTED();
+  bool bigintIsInt64(const BigInt &bi) override {
+    return vt_.bigint_is_int64(this, srt_, toSandboxBigInt(bi).pointer);
   }
-  bool bigintIsUint64(const BigInt &) override {
-    THROW_UNIMPLEMENTED();
+  bool bigintIsUint64(const BigInt &bi) override {
+    return vt_.bigint_is_uint64(this, srt_, toSandboxBigInt(bi).pointer);
   }
-  uint64_t truncate(const BigInt &) override {
-    THROW_UNIMPLEMENTED();
+  uint64_t truncate(const BigInt &bi) override {
+    return vt_.bigint_truncate_to_uint64(
+        this, srt_, toSandboxBigInt(bi).pointer);
   }
-  String bigintToString(const BigInt &, int) override {
-    THROW_UNIMPLEMENTED();
+  String bigintToString(const BigInt &bi, int radix) override {
+    return intoJSIString(SandboxStringOrError{vt_.bigint_to_string(
+        this, srt_, toSandboxBigInt(bi).pointer, (u32)radix)});
   }
 
   String createStringFromAscii(const char *str, size_t length) override {
-    THROW_UNIMPLEMENTED();
+    return createStringFromUtf8((const uint8_t *)str, length);
   }
   String createStringFromUtf8(const uint8_t *utf8, size_t length) override {
-    THROW_UNIMPLEMENTED();
+    LIFOAlloc<char> s(this, length);
+    memcpy(&*s, utf8, length);
+    SandboxStringOrError res{
+        vt_.create_string_from_utf8(this, srt_, s, length)};
+    return intoJSIString(res);
   }
-  std::string utf8(const String &) override {
-    THROW_UNIMPLEMENTED();
+  std::string utf8(const String &str) override {
+    auto outBuf = GrowableBufferImpl::create(*this);
+    vt_.get_utf8_from_string(this, srt_, toSandboxString(str).pointer, outBuf);
+    auto ret = outBuf->getString(this);
+    GrowableBufferImpl::release(this, std::move(outBuf));
+    return ret;
   }
 
   Object createObject() override {
-    THROW_UNIMPLEMENTED();
+    return intoJSIObject(SandboxObjectOrError{vt_.create_object(this, srt_)});
   }
   Object createObject(std::shared_ptr<HostObject> ho) override {
     THROW_UNIMPLEMENTED();
@@ -1421,77 +1464,128 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
     THROW_UNIMPLEMENTED();
   }
 
-  Value getProperty(const Object &, const PropNameID &name) override {
-    THROW_UNIMPLEMENTED();
+  Value getProperty(const Object &obj, const PropNameID &name) override {
+    StackAlloc<SandboxValueOrError> resValueOrError(this);
+    vt_.get_object_property_from_propnameid(
+        this,
+        resValueOrError,
+        srt_,
+        toSandboxObject(obj).pointer,
+        toSandboxPropNameID(name).pointer);
+    return intoJSIValue(*resValueOrError);
   }
-  Value getProperty(const Object &, const String &name) override {
-    THROW_UNIMPLEMENTED();
+  Value getProperty(const Object &obj, const String &name) override {
+    return getProperty(obj, createPropNameIDFromString(name));
   }
-  bool hasProperty(const Object &, const PropNameID &name) override {
-    THROW_UNIMPLEMENTED();
+  bool hasProperty(const Object &obj, const PropNameID &name) override {
+    SandboxBoolOrError resBoolOrError{vt_.has_object_property_from_propnameid(
+        this,
+        srt_,
+        toSandboxObject(obj).pointer,
+        toSandboxPropNameID(name).pointer)};
+    return unwrap(resBoolOrError);
   }
-  bool hasProperty(const Object &, const String &name) override {
-    THROW_UNIMPLEMENTED();
+  bool hasProperty(const Object &obj, const String &name) override {
+    return hasProperty(obj, createPropNameIDFromString(name));
   }
   void setPropertyValue(
-      const Object &,
+      const Object &obj,
       const PropNameID &name,
       const Value &value) override {
-    THROW_UNIMPLEMENTED();
+    StackAlloc<SandboxValue> propVal(this);
+    *propVal = toSandboxValue(value);
+
+    SandboxVoidOrError resVoidOrError{vt_.set_object_property_from_propnameid(
+        this,
+        srt_,
+        toSandboxObject(obj).pointer,
+        toSandboxPropNameID(name).pointer,
+        /* value */ propVal)};
+    unwrap(resVoidOrError);
   }
-  void setPropertyValue(const Object &, const String &name, const Value &value)
-      override {
-    THROW_UNIMPLEMENTED();
+  void setPropertyValue(
+      const Object &obj,
+      const String &name,
+      const Value &value) override {
+    setPropertyValue(obj, createPropNameIDFromString(name), value);
   }
 
-  bool isArray(const Object &) const override {
-    THROW_UNIMPLEMENTED();
+  bool isArray(const Object &obj) const override {
+    return vt_.object_is_array(getMutMod(), srt_, toSandboxObject(obj).pointer);
   }
-  bool isArrayBuffer(const Object &) const override {
-    THROW_UNIMPLEMENTED();
+  bool isArrayBuffer(const Object &obj) const override {
+    return vt_.object_is_arraybuffer(
+        getMutMod(), srt_, toSandboxObject(obj).pointer);
   }
-  bool isFunction(const Object &) const override {
-    THROW_UNIMPLEMENTED();
+  bool isFunction(const Object &obj) const override {
+    return vt_.object_is_function(
+        getMutMod(), srt_, toSandboxObject(obj).pointer);
   }
-  bool isHostObject(const Object &) const override {
-    THROW_UNIMPLEMENTED();
+  bool isHostObject(const Object &obj) const override {
+    return vt_.get_host_object(getMutMod(), srt_, toSandboxObject(obj).pointer);
   }
-  bool isHostFunction(const Function &) const override {
-    THROW_UNIMPLEMENTED();
+  bool isHostFunction(const Function &fn) const override {
+    return vt_.get_host_function(
+        getMutMod(), srt_, toSandboxFunction(fn).pointer);
   }
-  Array getPropertyNames(const Object &) override {
-    THROW_UNIMPLEMENTED();
+  Array getPropertyNames(const Object &obj) override {
+    return intoJSIArray(SandboxArrayOrError{vt_.get_object_property_names(
+        this, srt_, toSandboxObject(obj).pointer)});
   }
 
-  WeakObject createWeakObject(const Object &) override {
-    THROW_UNIMPLEMENTED();
+  WeakObject createWeakObject(const Object &obj) override {
+    return intoJSIWeakObject(SandboxWeakObjectOrError{
+        vt_.create_weak_object(this, srt_, toSandboxObject(obj).pointer)});
   }
-  Value lockWeakObject(const WeakObject &) override {
-    THROW_UNIMPLEMENTED();
+  Value lockWeakObject(const WeakObject &wo) override {
+    StackAlloc<SandboxValue> resValue(this);
+    vt_.lock_weak_object(this, resValue, srt_, toSandboxWeakObject(wo).pointer);
+    return intoJSIValue(*resValue);
   }
 
   Array createArray(size_t length) override {
-    THROW_UNIMPLEMENTED();
+    return intoJSIArray(
+        SandboxArrayOrError{vt_.create_array(this, srt_, length)});
   }
   ArrayBuffer createArrayBuffer(
       std::shared_ptr<MutableBuffer> buffer) override {
     THROW_UNIMPLEMENTED();
   }
-  size_t size(const Array &) override {
-    THROW_UNIMPLEMENTED();
+  size_t size(const Array &arr) override {
+    return vt_.get_array_length(this, srt_, toSandboxArray(arr).pointer);
   }
-  size_t size(const ArrayBuffer &) override {
-    THROW_UNIMPLEMENTED();
+  size_t size(const ArrayBuffer &ab) override {
+    StackAlloc<SandboxSizeTOrError> resSizeTOrError(this);
+    vt_.get_arraybuffer_size(
+        this, resSizeTOrError, srt_, toSandboxArrayBuffer(ab).pointer);
+    return unwrap(*resSizeTOrError);
   }
   uint8_t *data(const ArrayBuffer &) override {
     THROW_UNIMPLEMENTED();
   }
-  Value getValueAtIndex(const Array &, size_t i) override {
-    THROW_UNIMPLEMENTED();
+  Value getValueAtIndex(const Array &arr, size_t i) override {
+    if (i >= arr.length(*this))
+      throw JSINativeException("Array index out of bounds.");
+
+    StackAlloc<SandboxValueOrError> resValueOrError(this);
+    StackAlloc<SandboxValue> sbKey(this);
+    *sbKey = sb::createNumberValue(i);
+    vt_.get_object_property_from_value(
+        this, resValueOrError, srt_, toSandboxObject(arr).pointer, sbKey);
+    return intoJSIValue(*resValueOrError);
   }
-  void setValueAtIndexImpl(const Array &, size_t i, const Value &value)
+  void setValueAtIndexImpl(const Array &arr, size_t i, const Value &value)
       override {
-    THROW_UNIMPLEMENTED();
+    if (i >= arr.length(*this))
+      throw JSINativeException("Array index out of bounds.");
+
+    StackAlloc<SandboxValue> sbVal(this);
+    StackAlloc<SandboxValue> sbKey(this);
+    *sbKey = sb::createNumberValue(i);
+    *sbVal = toSandboxValue(value);
+    SandboxVoidOrError resVoidOrError{vt_.set_object_property_from_value(
+        this, srt_, toSandboxObject(arr).pointer, sbKey, sbVal)};
+    unwrap(resVoidOrError);
   }
 
   Function createFunctionFromHostFunction(
@@ -1501,35 +1595,91 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
     THROW_UNIMPLEMENTED();
   }
   Value call(
-      const Function &,
+      const Function &fn,
       const Value &jsThis,
       const Value *args,
       size_t count) override {
-    THROW_UNIMPLEMENTED();
+    // Convert the arguments from JSI values to SandboxValues and write them
+    // into the sandbox heap. We don't need to clone the values since they only
+    // remain live during this function.
+    LIFOAlloc<SandboxValue> sbArgs(this, count);
+    for (size_t i = 0; i < count; ++i)
+      sbArgs[i] = toSandboxValue(args[i]);
+
+    StackAlloc<SandboxValue> jsThisValue(this);
+    StackAlloc<SandboxValueOrError> resValueOrError(this);
+    *jsThisValue = toSandboxValue(jsThis);
+
+    vt_.call(
+        this,
+        resValueOrError,
+        srt_,
+        toSandboxFunction(fn).pointer,
+        /* this */ jsThisValue,
+        sbArgs,
+        count);
+    return intoJSIValue(*resValueOrError);
   }
-  Value callAsConstructor(const Function &, const Value *args, size_t count)
+  Value callAsConstructor(const Function &fn, const Value *args, size_t count)
       override {
-    THROW_UNIMPLEMENTED();
+    // Convert the arguments from JSI values to SandboxValues and write them
+    // into the sandbox heap. We don't need to clone the values since they only
+    // remain live during this function.
+    LIFOAlloc<SandboxValue> sbArgs(this, count);
+    for (size_t i = 0; i < count; ++i)
+      sbArgs[i] = toSandboxValue(args[i]);
+
+    StackAlloc<SandboxValueOrError> resValueOrError(this);
+    vt_.call_as_constructor(
+        this,
+        resValueOrError,
+        srt_,
+        toSandboxFunction(fn).pointer,
+        sbArgs,
+        count);
+    return intoJSIValue(*resValueOrError);
   }
 
   bool strictEquals(const Symbol &a, const Symbol &b) const override {
-    THROW_UNIMPLEMENTED();
+    return vt_.strict_equals_symbol(
+        getMutMod(),
+        srt_,
+        toSandboxSymbol(a).pointer,
+        toSandboxSymbol(b).pointer);
   }
   bool strictEquals(const BigInt &a, const BigInt &b) const override {
-    THROW_UNIMPLEMENTED();
+    return vt_.strict_equals_bigint(
+        getMutMod(),
+        srt_,
+        toSandboxBigInt(a).pointer,
+        toSandboxBigInt(b).pointer);
   }
   bool strictEquals(const String &a, const String &b) const override {
-    THROW_UNIMPLEMENTED();
+    return vt_.strict_equals_string(
+        getMutMod(),
+        srt_,
+        toSandboxString(a).pointer,
+        toSandboxString(b).pointer);
   }
   bool strictEquals(const Object &a, const Object &b) const override {
-    THROW_UNIMPLEMENTED();
+    return vt_.strict_equals_object(
+        getMutMod(),
+        srt_,
+        toSandboxObject(a).pointer,
+        toSandboxObject(b).pointer);
   }
 
   bool instanceOf(const Object &o, const Function &f) override {
-    THROW_UNIMPLEMENTED();
+    SandboxBoolOrError resBoolOrError{vt_.instance_of(
+        this, srt_, toSandboxObject(o).pointer, toSandboxFunction(f).pointer)};
+    return unwrap(resBoolOrError);
   }
 
-  void setExternalMemoryPressure(const Object &obj, size_t amount) override {}
+  void setExternalMemoryPressure(const Object &obj, size_t amount) override {
+    SandboxVoidOrError resVoidOrError{vt_.set_object_external_memory_pressure(
+        this, srt_, toSandboxObject(obj).pointer, amount)};
+    unwrap(resVoidOrError);
+  }
 };
 
 } // namespace
