@@ -36,6 +36,7 @@ if(HERMES_ENABLE_DEBUGGER)
     inspector/chrome/RemoteObjectConverters.cpp
     inspector/chrome/RemoteObjectsTable.cpp
     inspector/RuntimeAdapter.cpp
+    cdp/CDPAgent.cpp
     ${INSPECTOR_NO_EH_RTTI_SOURCES}
   )
 
