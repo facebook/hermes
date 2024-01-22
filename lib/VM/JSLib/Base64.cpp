@@ -50,5 +50,39 @@ CallResult<HermesValue> btoa(void *, Runtime &runtime, NativeArgs args) {
   return builder->getStringPrimitive().getHermesValue();
 }
 
+/// Take a Base64-encoded ASCII string and decode it. Error is thrown if the
+/// input string isn't a valid base64 encoded string.
+CallResult<HermesValue> atob(void *, Runtime &runtime, NativeArgs args) {
+  GCScope gcScope{runtime};
+  auto res = toString_RJS(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  auto string = runtime.makeHandle(std::move(*res));
+
+  OptValue<uint32_t> expectedLength = string->isASCII()
+      ? base64DecodeOutputLength(string->getStringRef<char>())
+      : base64DecodeOutputLength(string->getStringRef<char16_t>());
+  if (!expectedLength) {
+    return runtime.raiseError("Not a valid base64 encoded string length");
+  }
+  CallResult<StringBuilder> builder =
+      StringBuilder::createStringBuilder(runtime, SafeUInt32(*expectedLength));
+  if (LLVM_UNLIKELY(builder == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  bool success = string->isASCII()
+      ? base64Decode(string->getStringRef<char>(), *builder)
+      : base64Decode(string->getStringRef<char16_t>(), *builder);
+  if (!success) {
+    return runtime.raiseError(
+        "Found invalid character when decoding base64 string");
+  }
+
+  return builder->getStringPrimitive().getHermesValue();
+}
+
 } // namespace vm
 } // namespace hermes

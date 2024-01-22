@@ -58,6 +58,7 @@ NATIVE_FUNCTION(arrayPrototypeSome)
 NATIVE_FUNCTION(arrayPrototypeUnshift)
 NATIVE_FUNCTION(arrayPrototypeSplice)
 NATIVE_FUNCTION(asyncFunctionConstructor)
+NATIVE_FUNCTION(atob)
 
 NATIVE_FUNCTION(bigintTruncate)
 NATIVE_FUNCTION(bigintConstructor)
