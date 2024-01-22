@@ -54,6 +54,7 @@ set(api_sources
   hermes.cpp
   DebuggerAPI.cpp
   AsyncDebuggerAPI.cpp
+  RuntimeTaskRunner.cpp
   ${INSPECTOR_API_SOURCES}
   )
 
