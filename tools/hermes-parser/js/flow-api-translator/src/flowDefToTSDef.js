@@ -1949,7 +1949,7 @@ const getTransforms = (
             },
             typeParameters: {
               type: 'TSTypeParameterInstantiation',
-              params: assertHasExactlyNTypeParameters(1),
+              params: assertHasExactlyNTypeParameters(2),
             },
           };
         }
