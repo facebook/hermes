@@ -8,6 +8,9 @@ set(APITestsSources
   APITestFactory.cpp
   ${HERMES_JSI_DIR}/jsi/test/testlib.cpp
   AsyncDebuggerAPITest.cpp
+  CDPAgentTest.cpp
+  ../../API/hermes/inspector/chrome/JSONValueInterfaces.cpp
+  ../../API/hermes/inspector/chrome/MessageTypes.cpp
   ../../API/hermes/inspector/chrome/tests/SerialExecutor.cpp
   DebuggerTest.cpp
   SegmentTest.cpp
