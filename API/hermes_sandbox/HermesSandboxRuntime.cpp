@@ -9,6 +9,7 @@
 
 #include "external/hermes_sandbox_impl_compiled.h"
 #include "hermes/ADT/ManagedChunkedList.h"
+#include "jsi/jsilib.h"
 
 #include <atomic>
 #include <chrono>
@@ -765,6 +766,7 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
   class ManagedPointerHolder;
 
   /// Pre-allocated vtables for each of the sandbox types used by this wrapper.
+  StackAlloc<SandboxBufferVTable> bufferVTable_;
   StackAlloc<SandboxGrowableBufferVTable> growableBufferVTable_;
 
   /// The list of pointers currently retained through JSI. This manages the
@@ -914,6 +916,39 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
       // done from the JS thread.
       if (oldCount == 1)
         sb::releasePointer(runtime_, managedPointer_);
+    }
+  };
+
+  /// Implement a simple Buffer for exposing to the sandbox.
+  class BufferWrapper : public SandboxBuffer {
+   public:
+    /// Create a new BufferWrapper by copying the contents of \p buf into
+    /// sandbox memory.
+    static sb::Ptr<BufferWrapper> create(
+        HermesSandboxRuntimeImpl &runtime,
+        const std::shared_ptr<const Buffer> &buf) {
+      runtime.incAllocDbg();
+
+      auto sz = buf->size();
+      // Hermes requires the buffer to be null-terminated. Allocate an extra
+      // byte and make sure it is set to null.
+      auto data = runtime.sbAlloc<char>(sz + 1);
+      memcpy(&*data, buf->data(), sz);
+      data[sz] = 0;
+
+      auto self = runtime.sbAlloc<BufferWrapper>();
+      self->vtable = runtime.bufferVTable_;
+      self->data = data;
+      self->size = sz;
+      return self;
+    }
+
+    static void release(w2c_hermes *mod, u32 buf) {
+      static_cast<HermesSandboxRuntimeImpl *>(mod)->decAllocDbg();
+
+      // Free the data first, then the buffer itself.
+      w2c_hermes_free(mod, sb::Ptr<BufferWrapper>(mod, buf)->data);
+      w2c_hermes_free(mod, buf);
     }
   };
 
@@ -1167,16 +1202,21 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
 
  public:
   HermesSandboxRuntimeImpl()
-      : growableBufferVTable_(this), managedPointers_(0.5, 0.5) {
+      : bufferVTable_(this),
+        growableBufferVTable_(this),
+        managedPointers_(0.5, 0.5) {
     // Grow the function table for the vtable functions we need to register.
     wasm_rt_funcref_table_t &table = w2c_0x5F_indirect_function_table;
-    static constexpr size_t kNumVTableFunctions = 1;
+    static constexpr size_t kNumVTableFunctions = 2;
     auto oldEndIdx = wasm_rt_grow_funcref_table(
         &table, kNumVTableFunctions, wasm_rt_funcref_null_value);
     auto funcIdx = oldEndIdx;
 
     // For each vtable function that needs to be exposed to the sandbox,
     // register it and populate its index in the vtable.
+    registerFunction(&BufferWrapper::release, funcIdx);
+    bufferVTable_->release = funcIdx++;
+
     registerFunction(&GrowableBufferImpl::try_grow_to, funcIdx);
     growableBufferVTable_->try_grow_to = funcIdx++;
 
@@ -1212,24 +1252,58 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
   Value evaluateJavaScript(
       const std::shared_ptr<const Buffer> &buffer,
       const std::string &sourceURL) override {
-    THROW_UNIMPLEMENTED();
+    // Allocate and fill a buffer in the sandbox with the contents of the
+    // provided jsi::Buffer.
+    auto sbuf = BufferWrapper::create(*this, buffer);
+
+    // Allocate and fill a character array in the sandbox for the source URL.
+    LIFOAlloc<char> surl(this, sourceURL.size());
+    memcpy(&*surl, sourceURL.c_str(), sourceURL.size());
+
+    StackAlloc<SandboxValueOrError> resValueOrError(this);
+
+    // Call the appropriate function based on whether the buffer contains
+    // bytecode. Note that the buffer is released since it will now be managed
+    // by the runtime.
+    if (isHermesBytecode(buffer->data(), buffer->size()))
+      vt_.evaluate_hermes_bytecode(
+          this, resValueOrError, srt_, sbuf, surl, sourceURL.size());
+    else
+      vt_.evaluate_javascript_source(
+          this, resValueOrError, srt_, sbuf, surl, sourceURL.size());
+
+    return intoJSIValue(*resValueOrError);
   }
 
   Value evaluateHermesBytecode(
       const std::shared_ptr<const Buffer> &buffer,
       const std::string &sourceURL) override {
-    THROW_UNIMPLEMENTED();
+    // Allocate and fill a buffer in the sandbox with the contents of the
+    // provided jsi::Buffer.
+    auto sbuf = BufferWrapper::create(*this, buffer);
+
+    // Allocate and fill a character array in the sandbox for the source URL.
+    LIFOAlloc<char> surl(this, sourceURL.size());
+    memcpy(&*surl, sourceURL.c_str(), sourceURL.size());
+
+    StackAlloc<SandboxValueOrError> resValueOrError(this);
+    vt_.evaluate_hermes_bytecode(
+        this, resValueOrError, srt_, sbuf, surl, sourceURL.size());
+    return intoJSIValue(*resValueOrError);
   }
 
   std::shared_ptr<const PreparedJavaScript> prepareJavaScript(
       const std::shared_ptr<const Buffer> &buffer,
       std::string sourceURL) override {
-    THROW_UNIMPLEMENTED();
+    return std::make_shared<const SourceJavaScriptPreparation>(
+        buffer, std::move(sourceURL));
   }
 
   Value evaluatePreparedJavaScript(
       const std::shared_ptr<const PreparedJavaScript> &js) override {
-    THROW_UNIMPLEMENTED();
+    assert(dynamic_cast<const SourceJavaScriptPreparation *>(js.get()));
+    auto sjp = std::static_pointer_cast<const SourceJavaScriptPreparation>(js);
+    return evaluateJavaScript(sjp, sjp->sourceURL());
   }
 
   bool drainMicrotasks(int maxMicrotasksHint = -1) override {
