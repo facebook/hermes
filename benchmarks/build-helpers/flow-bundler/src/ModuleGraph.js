@@ -63,7 +63,7 @@ function resolveModuleLocation(
   }
 
   // Root relative path, resolve to project root
-  if (source.startsWith('@')) {
+  if (source.startsWith('@/')) {
     const sourceWithoutAt = source.substring(2);
     const packageName = getPackageNameFromFile(
       moduleGraphNode.projectRoot,
@@ -86,9 +86,13 @@ function resolveModuleLocation(
     );
   }
 
-  // Package path, resolve to node_modules directory
+  // Package path, resolve to packages directory
   const pathParts = source.split('/');
-  if (pathParts.length === 1) {
+  if (
+    pathParts.length === 1 ||
+    // Scoped package path
+    (pathParts[0].startsWith('@') && pathParts.length === 2)
+  ) {
     pathParts.push('index.js');
   }
   return path.join(
