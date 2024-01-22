@@ -11,6 +11,8 @@
 #include "hermes/ADT/ManagedChunkedList.h"
 
 #include <atomic>
+#include <chrono>
+#include <random>
 
 #if __has_builtin(__builtin_unreachable)
 #define BUILTIN_UNREACHABLE __builtin_unreachable()
@@ -1541,19 +1543,42 @@ u32 w2c_wasi__snapshot__preview1_fd_write(
 
 /* import: 'wasi_snapshot_preview1' 'clock_time_get' */
 u32 w2c_wasi__snapshot__preview1_clock_time_get(
-    struct w2c_wasi__snapshot__preview1 *,
-    u32,
-    u64,
-    u32) {
-  return WASI_ENOSYS;
+    struct w2c_wasi__snapshot__preview1 *modPtr,
+    u32 clock_id,
+    u64 max_lag,
+    u32 out) {
+  auto *mod = reinterpret_cast<w2c_hermes *>(modPtr);
+  sb::Ptr<u64> outPtr(mod, out);
+
+  // Only allow access to the time at a millisecond granularity.
+  std::chrono::milliseconds timeMs;
+  if (clock_id == WASI_CLOCKID_REALTIME) {
+    timeMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch());
+  } else if (clock_id == WASI_CLOCKID_MONOTONIC) {
+    timeMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch());
+  } else {
+    return WASI_EINVAL;
+  }
+  static constexpr u64 nsPerMs = 1000 * 1000;
+  *outPtr = timeMs.count() * nsPerMs;
+  return 0;
 }
 
 /* import: 'env' 'emscripten_notify_memory_growth' */
 void w2c_env_emscripten_notify_memory_growth(struct w2c_env *, u32) {}
 
 /* import: 'hermes_import' 'getentropy' */
-u32 w2c_hermes__import_getentropy(struct w2c_hermes__import *, u32, u32) {
-  return WASI_ENOSYS;
+u32 w2c_hermes__import_getentropy(
+    struct w2c_hermes__import *modPtr,
+    u32 buffer,
+    u32 length) {
+  auto *mod = reinterpret_cast<w2c_hermes *>(modPtr);
+  sb::Ptr<char> bufPtr(mod, buffer, length);
+  auto r = std::random_device()();
+  memcpy(&*bufPtr, &r, std::min<size_t>(sizeof(r), length));
+  return 0;
 }
 
 /* import: 'wasi_snapshot_preview1' 'proc_exit' */
