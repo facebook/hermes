@@ -15,14 +15,14 @@
 #include <hermes/cdp/CDPAgent.h>
 #include <hermes/hermes.h>
 #include <hermes/inspector/chrome/tests/SerialExecutor.h>
-#include <hermes/inspector/chrome/tests/TestHelpers.h>
+
+#include "CDPJSONHelpers.h"
 
 using namespace facebook::hermes;
 using namespace facebook::hermes::cdp;
 using namespace facebook::hermes::debugger;
 using namespace facebook::hermes::inspector_modern::chrome;
 using namespace hermes;
-using namespace hermes::parser;
 
 class CDPAgentTest : public ::testing::Test {
  protected:
@@ -45,14 +45,6 @@ void CDPAgentTest::TearDown() {
   runtimeThread_.reset();
   asyncDebuggerAPI_.reset();
   runtime_.reset();
-}
-
-void ensureErrorResponse(int id, const std::string &json) {
-  JSLexer::Allocator allocator;
-  JSONFactory factory(allocator);
-  auto response =
-      mustMake<message::ErrorResponse>(mustParseStrAsJsonObj(json, factory));
-  EXPECT_EQ(response.id, id);
 }
 
 template <typename T>
