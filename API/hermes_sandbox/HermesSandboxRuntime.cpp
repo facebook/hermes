@@ -510,6 +510,72 @@ SandboxErrorCode getError(const SandboxValueOrError &val) {
   return val.value.data.error;
 }
 
+/// Mapping from a type to the wasm type enum used to define function
+/// signatures. This is used by FunctionTypeImpl below to create the function
+/// type for a given function signature.
+template <typename T>
+struct WasmType;
+template <>
+struct WasmType<u32> : std::integral_constant<wasm_rt_type_t, WASM_RT_I32> {};
+template <>
+struct WasmType<u64> : std::integral_constant<wasm_rt_type_t, WASM_RT_I64> {};
+template <>
+struct WasmType<f32> : std::integral_constant<wasm_rt_type_t, WASM_RT_F32> {};
+template <>
+struct WasmType<f64> : std::integral_constant<wasm_rt_type_t, WASM_RT_F64> {};
+
+/// Unpack the given function signature using template specialization, and
+/// combine the types of the parameters and return value into a
+/// wasm_rt_func_type_t.
+/// https://devblogs.microsoft.com/oldnewthing/20200713-00/?p=103978
+template <typename F>
+struct FunctionTypeImpl;
+
+template <typename Ret, typename... Args>
+struct FunctionTypeImpl<Ret(w2c_hermes *, Args...)> {
+  static wasm_rt_func_type_t get() {
+    // Turn the given signature into a wasm_rt_func_type_t by converting each
+    // type into the corresponding wasm enum type, and calling
+    // wasm2c_hermes_get_func_type.
+    // For instance, a signature of void(w2c_hermes*, u32, u32) would result in
+    // the call wasm2c_hermes_get_func_type(2, 0, WASM_RT_I32, WASM_RT_I32).
+    // When there is a return value, the return type is added to the end of the
+    // list, and the second argument is 1. For example u32(w2c_hermes*, u32)
+    // would result in
+    // wasm2c_hermes_get_func_type(1, 1, WASM_RT_I32,WASM_RT_I32).
+
+    if constexpr (std::is_same_v<Ret, void>) {
+      return wasm2c_hermes_get_func_type(
+          sizeof...(Args), 0, WasmType<Args>::value...);
+    } else {
+      return wasm2c_hermes_get_func_type(
+          sizeof...(Args), 1, WasmType<Args>::value..., WasmType<Ret>::value);
+    }
+  }
+};
+
+/// Convert the function type represented by the template parameter \p F to a
+/// wasm_rt_func_type_t that can be used for populating and validating the types
+/// of functions.
+template <typename F>
+wasm_rt_func_type_t getFunctionType() {
+  return FunctionTypeImpl<F>::get();
+}
+
+/// Get the function pointer corresponding to the given index \p idx and cast it
+/// to the signature \p F. This retrieves the function from the indirect
+/// function table, and checks that the function has the expected type.
+template <typename F>
+F *getFunctionPtr(w2c_hermes *mod, u32 idx) {
+  auto &table = mod->w2c_0x5F_indirect_function_table;
+  if (idx >= table.size)
+    abort();
+  auto &funcref = table.data[idx];
+  if (getFunctionType<F>() != funcref.func_type)
+    abort();
+  return (F *)funcref.func;
+}
+
 } // namespace sb
 
 /// Define a helper macro to throw an exception for unimplemented methods. The
