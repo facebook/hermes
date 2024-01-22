@@ -1,4 +1,13 @@
-var _excluded = ["className", "variant", "size", "asChild"];
+var _excluded = ["color"],
+  _excluded2 = ["className", "variant", "size", "asChild"],
+  _excluded3 = ["asChild"],
+  _excluded4 = ["decorative", "orientation"],
+  _excluded5 = ["className", "orientation", "decorative"],
+  _excluded6 = ["className"],
+  _excluded7 = ["className"],
+  _excluded8 = ["className"],
+  _excluded9 = ["album", "aspectRatio", "width", "height", "className"];
+function _defineProperty(obj, key, value) { key = _toPropertyKey(key); if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 function _objectWithoutProperties(source, excluded) { if (source == null) return {}; var target = _objectWithoutPropertiesLoose(source, excluded); var key, i; if (Object.getOwnPropertySymbols) { var sourceSymbolKeys = Object.getOwnPropertySymbols(source); for (i = 0; i < sourceSymbolKeys.length; i++) { key = sourceSymbolKeys[i]; if (excluded.indexOf(key) >= 0) continue; if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue; target[key] = source[key]; } } return target; }
 function _objectWithoutPropertiesLoose(source, excluded) { if (source == null) return {}; var target = {}; var sourceKeys = Object.keys(source); var key, i; for (i = 0; i < sourceKeys.length; i++) { key = sourceKeys[i]; if (excluded.indexOf(key) >= 0) continue; target[key] = source[key]; } return target; }
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
@@ -770,6 +779,81 @@ function react_index$forwardRef(comp) {
     return comp(props, null);
   };
 }
+/* file: app/music/data/albums.js */
+// TODO: Need Object support
+// export type Album = {
+//   name: string
+//   artist: string
+//   cover: string
+// };
+
+var albums$listenNowAlbums = [{
+  name: 'React Rendezvous',
+  artist: 'Ethan Byte',
+  cover: 'https://images.unsplash.com/photo-1611348586804-61bf6c080437?w=300&dpr=2&q=80'
+}, {
+  name: 'Async Awakenings',
+  artist: 'Nina Netcode',
+  cover: 'https://images.unsplash.com/photo-1468817814611-b7edf94b5d60?w=300&dpr=2&q=80'
+}, {
+  name: 'The Art of Reusability',
+  artist: 'Lena Logic',
+  cover: 'https://images.unsplash.com/photo-1528143358888-6d3c7f67bd5d?w=300&dpr=2&q=80'
+}, {
+  name: 'Stateful Symphony',
+  artist: 'Beth Binary',
+  cover: 'https://images.unsplash.com/photo-1490300472339-79e4adc6be4a?w=300&dpr=2&q=80'
+}];
+var albums$madeForYouAlbums = [{
+  name: 'Thinking Components',
+  artist: 'Lena Logic',
+  cover: 'https://images.unsplash.com/photo-1615247001958-f4bc92fa6a4a?w=300&dpr=2&q=80'
+}, {
+  name: 'Functional Fury',
+  artist: 'Beth Binary',
+  cover: 'https://images.unsplash.com/photo-1513745405825-efaf9a49315f?w=300&dpr=2&q=80'
+}, {
+  name: 'React Rendezvous',
+  artist: 'Ethan Byte',
+  cover: 'https://images.unsplash.com/photo-1614113489855-66422ad300a4?w=300&dpr=2&q=80'
+}, {
+  name: 'Stateful Symphony',
+  artist: 'Beth Binary',
+  cover: 'https://images.unsplash.com/photo-1446185250204-f94591f7d702?w=300&dpr=2&q=80'
+}, {
+  name: 'Async Awakenings',
+  artist: 'Nina Netcode',
+  cover: 'https://images.unsplash.com/photo-1468817814611-b7edf94b5d60?w=300&dpr=2&q=80'
+}, {
+  name: 'The Art of Reusability',
+  artist: 'Lena Logic',
+  cover: 'https://images.unsplash.com/photo-1490300472339-79e4adc6be4a?w=300&dpr=2&q=80'
+}];
+/* file: packages/next/image.js */
+function next_image$default(props) {
+  return react_index$jsx('img', Object.assign({}, props), null);
+}
+/* file: packages/@radix-ui/react-icons/index.js */
+var _radix_ui_index$PlusCircledIcon = react_index$forwardRef( /*<SVGSVGElement, IconProps>*/function (_ref4, forwardedRef) {
+  var _ref4$color = _ref4.color,
+    color = _ref4$color === void 0 ? 'currentColor' : _ref4$color,
+    props = _objectWithoutProperties(_ref4, _excluded);
+  return react_index$jsx('svg', Object.assign({
+    width: "15",
+    height: "15",
+    viewBox: "0 0 15 15",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg"
+  }, props, {
+    ref: forwardedRef,
+    children: react_index$jsx('path', {
+      d: "M7.49991 0.876892C3.84222 0.876892 0.877075 3.84204 0.877075 7.49972C0.877075 11.1574 3.84222 14.1226 7.49991 14.1226C11.1576 14.1226 14.1227 11.1574 14.1227 7.49972C14.1227 3.84204 11.1576 0.876892 7.49991 0.876892ZM1.82707 7.49972C1.82707 4.36671 4.36689 1.82689 7.49991 1.82689C10.6329 1.82689 13.1727 4.36671 13.1727 7.49972C13.1727 10.6327 10.6329 13.1726 7.49991 13.1726C4.36689 13.1726 1.82707 10.6327 1.82707 7.49972ZM7.50003 4C7.77617 4 8.00003 4.22386 8.00003 4.5V7H10.5C10.7762 7 11 7.22386 11 7.5C11 7.77614 10.7762 8 10.5 8H8.00003V10.5C8.00003 10.7761 7.77617 11 7.50003 11C7.22389 11 7.00003 10.7761 7.00003 10.5V8H4.50003C4.22389 8 4.00003 7.77614 4.00003 7.5C4.00003 7.22386 4.22389 7 4.50003 7H7.00003V4.5C7.00003 4.22386 7.22389 4 7.50003 4Z",
+      fill: color,
+      fillRule: "evenodd",
+      clipRule: "evenodd"
+    }, null)
+  }), null);
+});
 /* file: packages/class-variance-authority/index.js */
 function class_variance_authority_index$cva(base, variants) {
   var baseString = typeof base === 'string' ? sh_CHECKED_CAST$default(base) : sh_fastarray$join(sh_CHECKED_CAST$default(base), ' ');
@@ -778,6 +862,7 @@ function class_variance_authority_index$cva(base, variants) {
   };
 }
 /* file: lib/utils.js */
+// TODO switch from legacy function when SH supports rest args.
 function utils$cn() {
   for (var _len = arguments.length, rest = new Array(_len), _key = 0; _key < _len; _key++) {
     rest[_key] = arguments[_key];
@@ -807,13 +892,13 @@ var button$buttonVariants = class_variance_authority_index$cva('inline-flex item
     size: 'default'
   }
 });
-var button$Button = react_index$forwardRef(function (_ref4, ref) {
-  var className = _ref4.className,
-    variant = _ref4.variant,
-    size = _ref4.size,
-    _ref4$asChild = _ref4.asChild,
-    asChild = _ref4$asChild === void 0 ? false : _ref4$asChild,
-    props = _objectWithoutProperties(_ref4, _excluded);
+var button$Button = react_index$forwardRef(function (_ref5, ref) {
+  var className = _ref5.className,
+    variant = _ref5.variant,
+    size = _ref5.size,
+    _ref5$asChild = _ref5.asChild,
+    asChild = _ref5$asChild === void 0 ? false : _ref5$asChild,
+    props = _objectWithoutProperties(_ref5, _excluded2);
   return react_index$jsx('button', Object.assign({
     className: utils$cn(button$buttonVariants({
       variant: variant,
@@ -823,21 +908,414 @@ var button$Button = react_index$forwardRef(function (_ref4, ref) {
     ref: ref
   }, props), null);
 });
+/* file: packages/@radix-ui/react-primitive/index.js */
+// import * as ReactDOM from 'react-dom';
+// import {Slot} from '@radix-ui/react-slot';
+var _radix_ui_index$2$INTERNAL$NODES = ['a', 'button', 'div', 'form', 'h2', 'h3', 'img', 'input', 'label', 'li', 'nav', 'ol', 'p', 'span', 'svg', 'ul'];
+
+// Temporary while we await merge of this fix:
+// https://github.com/DefinitelyTyped/DefinitelyTyped/pull/55396
+// prettier-ignore
+// type PropsWithoutRef<P> = P extends any ? ('ref' extends keyof P ? Pick<P, Exclude<keyof P, 'ref'>> : P) : P;
+// type ComponentPropsWithoutRef<T extends React.ElementType> = PropsWithoutRef<
+//   React.ComponentProps<T>,
+// >;
+
+// type Primitives = {
+//   [E in (typeof NODES)[number]]: PrimitiveForwardRefComponent<E>,
+// };
+
+// type PrimitivePropsWithRef<E extends React.ElementType> =
+//   React.ComponentPropsWithRef<E> & {
+//     asChild?: boolean,
+//   };
+
+// interface PrimitiveForwardRefComponent<E extends React.ElementType>
+//   extends React.ForwardRefExoticComponent<PrimitivePropsWithRef<E>> {}
+
+/* -------------------------------------------------------------------------------------------------
+ * Primitive
+ * -----------------------------------------------------------------------------------------------*/
+
+var _radix_ui_index$2$Primitive = sh_fastarray$reduce(_radix_ui_index$2$INTERNAL$NODES, function (primitive, node, _i) {
+  var Node = react_index$forwardRef(function (props /* PrimitivePropsWithRef<typeof node> */, forwardedRef) {
+    var asChild = props.asChild,
+      primitiveProps = _objectWithoutProperties(props, _excluded3);
+    var Comp = asChild ? Slot : node;
+    // TODO?
+    // React.useEffect(() => {
+    //   (window as any)[Symbol.for('radix-ui')] = true;
+    // }, []);
+
+    return react_index$jsx(Comp, Object.assign({}, primitiveProps, {
+      ref: forwardedRef
+    }), null);
+  });
+  // TODO: SH doesn't support setting properties on functions
+  // Node.displayName = `Primitive.${node}`;
+
+  return Object.assign({}, primitive, _defineProperty({}, node, Node));
+}, {});
+/* -------------------------------------------------------------------------------------------------
+ * Utils
+ * -----------------------------------------------------------------------------------------------*/
+
+/**
+ * Flush custom event dispatch
+ * https://github.com/radix-ui/primitives/pull/1378
+ *
+ * React batches *all* event handlers since version 18, this introduces certain considerations when using custom event types.
+ *
+ * Internally, React prioritises events in the following order:
+ *  - discrete
+ *  - continuous
+ *  - default
+ *
+ * https://github.com/facebook/react/blob/a8a4742f1c54493df00da648a3f9d26e3db9c8b5/packages/react-dom/src/events/ReactDOMEventListener.js#L294-L350
+ *
+ * `discrete` is an  important distinction as updates within these events are applied immediately.
+ * React however, is not able to infer the priority of custom event types due to how they are detected internally.
+ * Because of this, it's possible for updates from custom events to be unexpectedly batched when
+ * dispatched by another `discrete` event.
+ *
+ * In order to ensure that updates from custom events are applied predictably, we need to manually flush the batch.
+ * This utility should be used when dispatching a custom event from within another `discrete` event, this utility
+ * is not nessesary when dispatching known event types, or if dispatching a custom type inside a non-discrete event.
+ * For example:
+ *
+ * dispatching a known click 👎
+ * target.dispatchEvent(new Event(‘click’))
+ *
+ * dispatching a custom type within a non-discrete event 👎
+ * onScroll={(event) => event.target.dispatchEvent(new CustomEvent(‘customType’))}
+ *
+ * dispatching a custom type within a `discrete` event 👍
+ * onPointerDown={(event) => dispatchDiscreteCustomEvent(event.target, new CustomEvent(‘customType’))}
+ *
+ * Note: though React classifies `focus`, `focusin` and `focusout` events as `discrete`, it's  not recommended to use
+ * this utility with them. This is because it's possible for those handlers to be called implicitly during render
+ * e.g. when focus is within a component as it is unmounted, or when managing focus on mount.
+ */
+
+// function dispatchDiscreteCustomEvent<E extends CustomEvent>(
+//   target: E['target'],
+//   event: E,
+// ) {
+//   if (target) ReactDOM.flushSync(() => target.dispatchEvent(event));
+// }
+
+/* -----------------------------------------------------------------------------------------------*/
+
+var _radix_ui_index$2$Root = _radix_ui_index$2$Primitive;
+/* file: packages/@radix-ui/react-separator/index.js */
+/* -------------------------------------------------------------------------------------------------
+ *  Separator
+ * -----------------------------------------------------------------------------------------------*/
+var _radix_ui_index$1$INTERNAL$DEFAULT_ORIENTATION = 'horizontal';
+var _radix_ui_index$1$INTERNAL$ORIENTATIONS = ['horizontal', 'vertical'];
+// type Orientation = (typeof ORIENTATIONS)[number];
+// type SeparatorElement = React.ElementRef<typeof Primitive.div>;
+// type PrimitiveDivProps = Radix.ComponentPropsWithoutRef<typeof Primitive.div>;
+// interface SeparatorProps extends PrimitiveDivProps {
+//   /**
+//    * Either `vertical` or `horizontal`. Defaults to `horizontal`.
+//    */
+//   orientation?: Orientation;
+//   /**
+//    * Whether or not the component is purely decorative. When true, accessibility-related attributes
+//    * are updated so that that the rendered element is removed from the accessibility tree.
+//    */
+//   decorative?: boolean;
+// }
+
+var _radix_ui_index$1$Separator = react_index$forwardRef( /*<SeparatorElement, SeparatorProps>*/function (props, forwardedRef) {
+  var decorative = props.decorative,
+    _props$orientation = props.orientation,
+    orientationProp = _props$orientation === void 0 ? _radix_ui_index$1$INTERNAL$DEFAULT_ORIENTATION : _props$orientation,
+    domProps = _objectWithoutProperties(props, _excluded4);
+  var orientation = _radix_ui_index$1$INTERNAL$isValidOrientation(orientationProp) ? orientationProp : _radix_ui_index$1$INTERNAL$DEFAULT_ORIENTATION;
+  // `aria-orientation` defaults to `horizontal` so we only need it if `orientation` is vertical
+  var ariaOrientation = orientation === 'vertical' ? orientation : undefined;
+  var semanticProps = decorative ? {
+    role: 'none'
+  } : {
+    'aria-orientation': ariaOrientation,
+    role: 'separator'
+  };
+  return react_index$jsx(_radix_ui_index$2$Primitive.div, Object.assign({
+    'data-orientation': orientation
+  }, semanticProps, domProps, {
+    ref: forwardedRef
+  }), null);
+});
+function _radix_ui_index$1$INTERNAL$isValidOrientation(orientation) {
+  return sh_fastarray$includes(_radix_ui_index$1$INTERNAL$ORIENTATIONS, orientation);
+}
+var _radix_ui_index$1$Root = _radix_ui_index$1$Separator;
+/* file: registry/new-york/ui/separator.js */
+var separator$Separator = react_index$forwardRef(
+/*<
+React.ElementRef<typeof SeparatorPrimitive.Root>,
+React.ComponentPropsWithoutRef<typeof SeparatorPrimitive.Root>,
+>*/
+function (_ref6, ref) {
+  var className = _ref6.className,
+    _ref6$orientation = _ref6.orientation,
+    orientation = _ref6$orientation === void 0 ? 'horizontal' : _ref6$orientation,
+    _ref6$decorative = _ref6.decorative,
+    decorative = _ref6$decorative === void 0 ? true : _ref6$decorative,
+    props = _objectWithoutProperties(_ref6, _excluded5);
+  return react_index$jsx(_radix_ui_index$1$Root, Object.assign({
+    ref: ref,
+    decorative: decorative,
+    orientation: orientation,
+    className: utils$cn('shrink-0 bg-border', orientation === 'horizontal' ? 'h-[1px] w-full' : 'h-full w-[1px]', className)
+  }, props), null);
+});
+/* file: packages/@radix-ui/react-tabs/index.js */
+// TODO: https://github.com/radix-ui/primitives/blob/main/packages/react/tabs/src/Tabs.tsx
+function _radix_ui_index$3$List(props) {
+  return react_index$jsx('div', Object.assign({}, props), null);
+}
+function _radix_ui_index$3$Trigger(props) {
+  return react_index$jsx('div', Object.assign({}, props), null);
+}
+function _radix_ui_index$3$Content(props) {
+  return react_index$jsx('div', Object.assign({}, props), null);
+}
+function _radix_ui_index$3$Tabs(props) {
+  return react_index$jsx('div', Object.assign({}, props), null);
+}
+var _radix_ui_index$3$Root = _radix_ui_index$3$Tabs;
+/* file: registry/new-york/ui/tabs.js */
+var tabs$Tabs = _radix_ui_index$3$Root;
+var tabs$TabsList = react_index$forwardRef(
+/*<
+React.ElementRef<typeof TabsPrimitive.List>,
+React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>,
+>*/
+function (_ref7, ref) {
+  var className = _ref7.className,
+    props = _objectWithoutProperties(_ref7, _excluded6);
+  return react_index$jsx(_radix_ui_index$3$List, Object.assign({
+    ref: ref,
+    className: utils$cn('inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground', className)
+  }, props), null);
+});
+// TODO: SH does not support setting properties on functions
+// TabsList.displayName = TabsPrimitive.List.displayName;
+
+var tabs$TabsTrigger = react_index$forwardRef(
+/*<
+React.ElementRef<typeof TabsPrimitive.Trigger>,
+React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>,
+>*/
+function (_ref8, ref) {
+  var className = _ref8.className,
+    props = _objectWithoutProperties(_ref8, _excluded7);
+  return react_index$jsx(_radix_ui_index$3$Trigger, Object.assign({
+    ref: ref,
+    className: utils$cn('inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow', className)
+  }, props), null);
+});
+// TODO: SH does not support setting properties on functions
+// TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
+
+var tabs$TabsContent = react_index$forwardRef(
+/*<
+React.ElementRef<typeof TabsPrimitive.Content>,
+React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>,
+>*/
+function (_ref9, ref) {
+  var className = _ref9.className,
+    props = _objectWithoutProperties(_ref9, _excluded8);
+  return react_index$jsx(_radix_ui_index$3$Content, Object.assign({
+    ref: ref,
+    className: utils$cn('mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2', className)
+  }, props), null);
+});
+/* file: app/music/data/playlists.js */
+var playlists$playlists = ['Recently Added', 'Recently Played', 'Top Songs', 'Top Albums', 'Top Artists', 'Logic Discography', 'Bedtime Beats', 'Feeling Happy', 'I miss Y2K Pop', 'Runtober', 'Mellow Days', 'Eminem Essentials'];
+/* file: app/music/components/album-artwork.js */
+// TODO: Support objects
+// type AlbumArtworkProps = {
+//   ...React.HTMLAttributes<HTMLDivElement>,
+//   album: Album
+//   aspectRatio?: "portrait" | "square"
+//   width?: number
+//   height?: number
+// };
+
+function album_artwork$AlbumArtwork(_ref10) {
+  var album = _ref10.album,
+    _ref10$aspectRatio = _ref10.aspectRatio,
+    aspectRatio = _ref10$aspectRatio === void 0 ? 'portrait' : _ref10$aspectRatio,
+    width = _ref10.width,
+    height = _ref10.height,
+    className = _ref10.className,
+    props = _objectWithoutProperties(_ref10, _excluded9);
+  return react_index$jsx('div', Object.assign({
+    className: utils$cn('space-y-3', className)
+  }, props, {
+    children: [null, react_index$jsx('div', {
+      className: "overflow-hidden rounded-md",
+      children: react_index$jsx(next_image$default, {
+        src: album.cover,
+        alt: album.name,
+        width: width,
+        height: height,
+        className: utils$cn('h-auto w-auto object-cover transition-all hover:scale-105', aspectRatio === 'portrait' ? 'aspect-[3/4]' : 'aspect-square')
+      }, null)
+    }, null), null, null, react_index$jsx('div', {
+      className: "space-y-1 text-sm",
+      children: [react_index$jsx('h3', {
+        className: "font-medium leading-none",
+        children: album.name
+      }, null), react_index$jsx('p', {
+        className: "text-xs text-muted-foreground",
+        children: album.artist
+      }, null)]
+    }, null)]
+  }), null);
+}
 /* file: app/music/page.js */
 function page$default(props) {
-  var _react_index$useState = react_index$useState(true),
-    _react_index$useState2 = _slicedToArray(_react_index$useState, 2),
-    toggle = _react_index$useState2[0],
-    setToggle = _react_index$useState2[1];
   return react_index$jsx(react_index$Fragment, {
-    children: [react_index$jsx(button$Button, {
-      id: "click-me",
-      onClick: function onClick() {
-        return setToggle(!toggle);
-      },
-      children: ['Click me: ', String(toggle)]
-    }, null), react_index$jsx('span', {
-      children: 'Other'
+    children: [react_index$jsx('div', {
+      className: "md:hidden",
+      children: [react_index$jsx(next_image$default, {
+        src: "/examples/music-light.png",
+        width: 1280,
+        height: 1114,
+        alt: "Music",
+        className: "block dark:hidden"
+      }, null), react_index$jsx(next_image$default, {
+        src: "/examples/music-dark.png",
+        width: 1280,
+        height: 1114,
+        alt: "Music",
+        className: "hidden dark:block"
+      }, null)]
+    }, null), react_index$jsx('div', {
+      className: "hidden md:block",
+      children: [null, react_index$jsx('div', {
+        className: "border-t",
+        children: react_index$jsx('div', {
+          className: "bg-background",
+          children: react_index$jsx('div', {
+            className: "grid lg:grid-cols-5",
+            children: [null, react_index$jsx('div', {
+              className: "col-span-3 lg:col-span-4 lg:border-l",
+              children: react_index$jsx('div', {
+                className: "h-full px-4 py-6 lg:px-8",
+                children: react_index$jsx(tabs$Tabs, {
+                  defaultValue: "music",
+                  className: "h-full space-y-6",
+                  children: [react_index$jsx('div', {
+                    className: "space-between flex items-center",
+                    children: [react_index$jsx(tabs$TabsList, {
+                      children: [react_index$jsx(tabs$TabsTrigger, {
+                        value: "music",
+                        className: "relative",
+                        children: 'Music'
+                      }, null), react_index$jsx(tabs$TabsTrigger, {
+                        value: "podcasts",
+                        children: 'Podcasts'
+                      }, null), react_index$jsx(tabs$TabsTrigger, {
+                        value: "live",
+                        disabled: true,
+                        children: 'Live'
+                      }, null)]
+                    }, null), react_index$jsx('div', {
+                      className: "ml-auto mr-4",
+                      children: react_index$jsx(button$Button, {
+                        children: [react_index$jsx(_radix_ui_index$PlusCircledIcon, {
+                          className: "mr-2 h-4 w-4"
+                        }, null), 'Add music']
+                      }, null)
+                    }, null)]
+                  }, null), react_index$jsx(tabs$TabsContent, {
+                    value: "music",
+                    className: "border-none p-0 outline-none",
+                    children: [react_index$jsx('div', {
+                      className: "flex items-center justify-between",
+                      children: react_index$jsx('div', {
+                        className: "space-y-1",
+                        children: [react_index$jsx('h2', {
+                          className: "text-2xl font-semibold tracking-tight",
+                          children: 'Listen Now'
+                        }, null), react_index$jsx('p', {
+                          className: "text-sm text-muted-foreground",
+                          children: 'Top picks for you. Updated daily.'
+                        }, null)]
+                      }, null)
+                    }, null), react_index$jsx(separator$Separator, {
+                      className: "my-4"
+                    }, null), react_index$jsx('div', {
+                      className: "relative",
+                      children: [null, react_index$jsx('div', {
+                        className: "flex space-x-4 pb-4",
+                        children: sh_fastarray$map(albums$listenNowAlbums, function (album, _i) {
+                          return react_index$jsx(album_artwork$AlbumArtwork, {
+                            album: album,
+                            className: "w-[250px]",
+                            aspectRatio: "portrait",
+                            width: 250,
+                            height: 330
+                          }, album.name);
+                        })
+                      }, null), null]
+                    }, null), react_index$jsx('div', {
+                      className: "mt-6 space-y-1",
+                      children: [react_index$jsx('h2', {
+                        className: "text-2xl font-semibold tracking-tight",
+                        children: 'Made for You'
+                      }, null), react_index$jsx('p', {
+                        className: "text-sm text-muted-foreground",
+                        children: 'Your personal playlists. Updated daily.'
+                      }, null)]
+                    }, null), react_index$jsx(separator$Separator, {
+                      className: "my-4"
+                    }, null), react_index$jsx('div', {
+                      className: "relative",
+                      children: [null, react_index$jsx('div', {
+                        className: "flex space-x-4 pb-4",
+                        children: sh_fastarray$map(albums$madeForYouAlbums, function (album, _i) {
+                          return react_index$jsx(album_artwork$AlbumArtwork, {
+                            album: album,
+                            className: "w-[150px]",
+                            aspectRatio: "square",
+                            width: 150,
+                            height: 150
+                          }, album.name);
+                        })
+                      }, null), null]
+                    }, null)]
+                  }, null), react_index$jsx(tabs$TabsContent, {
+                    value: "podcasts",
+                    className: "h-full flex-col border-none p-0 data-[state=active]:flex",
+                    children: [react_index$jsx('div', {
+                      className: "flex items-center justify-between",
+                      children: react_index$jsx('div', {
+                        className: "space-y-1",
+                        children: [react_index$jsx('h2', {
+                          className: "text-2xl font-semibold tracking-tight",
+                          children: 'New Episodes'
+                        }, null), react_index$jsx('p', {
+                          className: "text-sm text-muted-foreground",
+                          children: 'Your favorite podcasts. Updated daily.'
+                        }, null)]
+                      }, null)
+                    }, null), react_index$jsx(separator$Separator, {
+                      className: "my-4"
+                    }, null), null]
+                  }, null)]
+                }, null)
+              }, null)
+            }, null)]
+          }, null)
+        }, null)
+      }, null)]
     }, null)]
   }, null);
 }
@@ -854,9 +1332,10 @@ function index$INTERNAL$run(N) {
     var root = react_index$createRoot();
     var rootElement = react_index$jsx(page$default, {}, null);
     index$INTERNAL$printIf1(i, root.render(rootElement));
-    react_index$callOnClickOrChange('click-me', null);
-    sh_microtask$drainMicrotaskQueue();
-    index$INTERNAL$printIf1(i, root.render(rootElement));
+
+    // React.callOnClickOrChange('click-me', null);
+    // drainMicrotaskQueue();
+    // printIf1(i, root.render(rootElement));
   }
 }
 index$INTERNAL$run(1);

@@ -8,7 +8,8 @@
  * @format
  */
 
-// TODO switch from legacy function when SH supports rest args.
-export function cn(...rest) {
-  return rest.join(' ');
+import type {Props, React$MixedElement} from 'react';
+
+export default function Image(props: Props): React$MixedElement {
+  return <img {...props} />;
 }

@@ -26,9 +26,9 @@ function run(N: number): void {
     const rootElement = <MusicPage />;
     printIf1(i, root.render(rootElement));
 
-    React.callOnClickOrChange('click-me', null);
-    drainMicrotaskQueue();
-    printIf1(i, root.render(rootElement));
+    // React.callOnClickOrChange('click-me', null);
+    // drainMicrotaskQueue();
+    // printIf1(i, root.render(rootElement));
   }
 }
 
