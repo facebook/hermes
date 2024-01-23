@@ -16,6 +16,7 @@ import {parse} from 'hermes-transform';
 import {promises as fs} from 'fs';
 import * as path from 'path';
 import {SimpleTraverser} from 'hermes-parser/dist/traverse/SimpleTraverser';
+import * as StripComponentSyntax from 'hermes-parser/dist/estree/StripComponentSyntax';
 import * as TransformESTreeToBabel from './fork/TransformESTreeToBabel';
 
 // $FlowExpectedError[cannot-resolve-module] Untyped third-party module
@@ -75,7 +76,9 @@ function hermesCommentToBabel(comment: Comment): BabelComment {
 }
 
 export function hermesASTToBabel(ast: Program, file: string): BabelFile {
-  SimpleTraverser.traverse(ast, {
+  const strippedAST = StripComponentSyntax.transformProgram(ast, {});
+
+  SimpleTraverser.traverse(strippedAST, {
     enter(node: ESNode) {
       if (node.type === 'Program') {
         // Add docblock comment to first statement
@@ -122,7 +125,7 @@ export function hermesASTToBabel(ast: Program, file: string): BabelFile {
     leave() {},
   });
 
-  const babelAST = TransformESTreeToBabel.transformProgram(ast, {});
+  const babelAST = TransformESTreeToBabel.transformProgram(strippedAST, {});
 
   // Set the filename into each loc for the source map.
   // $FlowExpectedError[incompatible-call]
