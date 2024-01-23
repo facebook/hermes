@@ -14,6 +14,7 @@ for ENTRYPOINT in "${ENTRYPOINTS[@]}"; do
   $BENCHMARKS_ROOT/build-helpers/flow-bundler/bin/flow-bundler \
     --root $REACTMINI_SRC_ROOT \
     --out $REACTMINI_OUT_ROOT/$ENTRYPOINT.js \
+    --simple-jsx-transform \
     --es5 \
     --strip-types\
     ./app/$ENTRYPOINT/index.js

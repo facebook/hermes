@@ -33,6 +33,11 @@ async function main() {
       requiresArg: true,
       type: 'string',
     })
+    .option('simple-jsx-transform', {
+      describe: 'Basic JSX transform for use with MiniReact',
+      default: false,
+      type: 'boolean',
+    })
     .option('es5', {
       describe:
         'Create ES5 syntax compatible bundle along side standard bundle',
@@ -64,6 +69,7 @@ async function main() {
   const outPath = path.resolve(cliYargs.out);
   const createES5Bundle = cliYargs.es5;
   const stripTypes = cliYargs.stripTypes;
+  const simpleJSXTransform = cliYargs.simpleJSXTransform;
   const entrypoints: Array<string> = cliYargs._.map(f =>
     path.resolve(rootPath, f),
   );
@@ -97,11 +103,16 @@ async function main() {
 
   // Merge files into single bundle AST.
   for (const file of bundle) {
-    const {ast} = await transformJSX({
-      ast: file.ast,
-      scopeManager: analyze(file.ast),
-      code: file.code,
-    });
+    let ast = file.ast;
+
+    if (simpleJSXTransform) {
+      const jsxTransformedOutput = await transformJSX({
+        ast: file.ast,
+        scopeManager: analyze(file.ast),
+        code: file.code,
+      });
+      ast = jsxTransformedOutput.ast;
+    }
 
     const babelAST = hermesASTToBabel(ast, file.file);
 
@@ -114,7 +125,7 @@ async function main() {
     const firstStmt = bundleAST.program.body[0];
     firstStmt.leadingComments = [
       {type: 'CommentBlock', value: bundleHeader},
-      ...firstStmt.leadingComments,
+      ...(firstStmt.leadingComments ?? []),
     ];
   }
 
