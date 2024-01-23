@@ -177,7 +177,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
     compileFlags_.enableBlockScoping = runtimeConfig.getEnableBlockScoping();
     compileFlags_.enableGenerator = runtimeConfig.getEnableGenerator();
     compileFlags_.enableES6Classes = runtimeConfig.getES6Class();
-    compileFlags_.emitAsyncBreakCheck = defaultEmitAsyncBreakCheck_ =
+    compileFlags_.emitAsyncBreakCheck =
         runtimeConfig.getAsyncBreakCheckInEval();
     runtime_.addCustomRootsFunction(
         [this](vm::GC *, vm::RootAcceptor &acceptor) {
@@ -1026,8 +1026,6 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
   /// Compilation flags used by prepareJavaScript().
   ::hermes::hbc::CompileFlags compileFlags_{};
-  /// The default setting of "emit async break check" in this runtime.
-  bool defaultEmitAsyncBreakCheck_{false};
 };
 
 namespace {
@@ -1339,7 +1337,6 @@ void HermesRuntime::watchTimeLimit(uint32_t timeoutInMs) {
   vm::Runtime &runtime = concrete.runtime_;
   auto &runtimeTimeLimitMonitor = runtime.timeLimitMonitor;
   if (!runtimeTimeLimitMonitor) {
-    concrete.compileFlags_.emitAsyncBreakCheck = true;
     runtimeTimeLimitMonitor = ::hermes::vm::TimeLimitMonitor::getOrCreate();
   }
   runtimeTimeLimitMonitor->watchRuntime(
@@ -2421,11 +2418,6 @@ vm::RuntimeConfig hardenedHermesRuntimeConfig() {
 
   // Enabled hardening options.
   config.withRandomizeMemoryLayout(true);
-
-  // This flag is misnamed - it doesn't only apply to eval() calls but to
-  // all compilation performed by the HermesRuntime, so it should be enabled
-  // even when eval() is disabled, to ensure that watchTimeLimit works.
-  config.withAsyncBreakCheckInEval(true);
   return config.build();
 }
 

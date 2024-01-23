@@ -461,23 +461,26 @@ TEST(HermesWatchTimeLimitTest, WatchTimeLimit) {
   }
 }
 
-TEST(HermesTriggerAsyncTimeoutTest, TriggerAsyncTimeout) {
-  // Some code that loops forever to exercise the async interrupt.
-  const char *forEver = "for (;;){}";
-  uint32_t ShortTimeoutMS = 123;
-  {
-    auto rt = makeHermesRuntime(hermes::vm::RuntimeConfig::Builder()
-                                    .withAsyncBreakCheckInEval(true)
-                                    .build());
-    std::thread t([&]() {
-      std::this_thread::sleep_for(std::chrono::milliseconds(ShortTimeoutMS));
-      rt->asyncTriggerTimeout();
-    });
-    ASSERT_THROW(
-        rt->evaluateJavaScript(std::make_unique<StringBuffer>(forEver), ""),
-        JSIException);
-    t.join();
-  }
+TEST_P(HermesRuntimeTest, TriggerAsyncTimeout) {
+  auto runTest = [](auto *rt) {
+    // Some code that loops forever to exercise the async interrupt.
+    const char *forEver = "for (;;){}";
+    uint32_t ShortTimeoutMS = 123;
+    {
+      std::thread t([&]() {
+        std::this_thread::sleep_for(std::chrono::milliseconds(ShortTimeoutMS));
+        rt->asyncTriggerTimeout();
+      });
+      ASSERT_THROW(
+          rt->evaluateJavaScript(std::make_unique<StringBuffer>(forEver), ""),
+          JSIException);
+      t.join();
+    }
+  };
+
+  // Only these runtimes support asyncTriggerTimeout.
+  if (auto *hrt = dynamic_cast<HermesRuntime *>(rt.get()))
+    runTest(hrt);
 }
 
 TEST(HermesRuntimeCrashManagerTest, CrashGetStackTrace) {
