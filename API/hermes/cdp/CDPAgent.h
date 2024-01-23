@@ -63,7 +63,9 @@ class HERMES_EXPORT CDPAgent {
   void handleCommand(std::string json);
 
  private:
-  std::shared_ptr<CDPAgentImpl> impl_;
+  /// This should be a unique_ptr to provide predictable destruction time lined
+  /// up with when CDPAgent is destroyed. Do not use shared_ptr.
+  std::unique_ptr<CDPAgentImpl> impl_;
 };
 
 } // namespace cdp
