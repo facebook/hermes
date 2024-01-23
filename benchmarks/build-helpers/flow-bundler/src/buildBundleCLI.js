@@ -122,10 +122,12 @@ async function main() {
       ast = jsxTransformedOutput.ast;
     }
 
-    const babelAST = hermesASTToBabel(ast, file.file);
+    const relativeFilePath = path.relative(outPathDir, file.file);
+
+    const babelAST = hermesASTToBabel(ast, relativeFilePath);
 
     bundleAST.program.body.push(...babelAST.program.body);
-    fileMapping[path.relative(outPathDir, file.file)] = file.code;
+    fileMapping[relativeFilePath] = file.code;
   }
 
   // Add bundle docblock comment
