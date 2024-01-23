@@ -692,8 +692,9 @@ class ES6ClassesTransformations {
 
         auto *functionExpr =
             llvh::cast<ESTree::FunctionExpressionNode>(srcNode->_value);
-        // Preserve method name
-        functionExpr->_id = cloneNode(identifierNode);
+        // Remove method name to prevent symbol resolution conflicts.
+        // The function name will be re-added at runtime
+        functionExpr->_id = nullptr;
         parameters.append(functionExpr);
       } else {
         parameters.append(cloneNode(classMember.key));
