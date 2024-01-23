@@ -26,6 +26,10 @@ class HERMES_EXPORT HermesSandboxRuntime : public jsi::Runtime {
   virtual jsi::Value evaluateHermesBytecode(
       const std::shared_ptr<const jsi::Buffer> &buffer,
       const std::string &sourceURL) = 0;
+
+  /// Asynchronously terminates the current execution. This can be called on
+  /// any thread.
+  virtual void asyncTriggerTimeout() = 0;
 };
 
 /// Create a sandboxed Hermes runtime.

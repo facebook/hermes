@@ -481,6 +481,8 @@ TEST_P(HermesRuntimeTest, TriggerAsyncTimeout) {
   // Only these runtimes support asyncTriggerTimeout.
   if (auto *hrt = dynamic_cast<HermesRuntime *>(rt.get()))
     runTest(hrt);
+  else if (auto *hsrt = dynamic_cast<HermesSandboxRuntime *>(rt.get()))
+    runTest(hsrt);
 }
 
 TEST(HermesRuntimeCrashManagerTest, CrashGetStackTrace) {

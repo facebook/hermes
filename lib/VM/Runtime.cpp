@@ -60,6 +60,19 @@
 #ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
 #pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 #endif
+
+#ifdef __EMSCRIPTEN__
+/// Provide implementations with weak linkage that can serve as the default in a
+/// wasm build, while allowing them to be overridden depending on the target.
+/// Since Emscripten will effectively LTO, these should be inlined.
+__attribute__((__weak__)) extern "C" bool test_wasm_host_timeout() {
+  return false;
+}
+__attribute__((__weak__)) extern "C" bool test_and_clear_wasm_host_timeout() {
+  return false;
+}
+#endif
+
 namespace hermes {
 namespace vm {
 
