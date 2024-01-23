@@ -58,6 +58,13 @@ async function main() {
       type: 'string',
       default: process.cwd(),
     })
+    .option('babel-transforms', {
+      alias: 't',
+      describe:
+        'Babel transforms to apply to the file before writing. Expects a path to a babel config file.',
+      type: 'string',
+      default: '',
+    })
     .positional('entrypoint', {
       type: 'string',
       describe: 'Bundle entrypoint files',
@@ -70,6 +77,7 @@ async function main() {
   const createES5Bundle = cliYargs.es5;
   const stripTypes = cliYargs.stripTypes;
   const simpleJSXTransform = cliYargs.simpleJsxTransform;
+  const babelTransforms: string = cliYargs.babelTransforms;
   const entrypoints: Array<string> = cliYargs._.map(f =>
     path.resolve(rootPath, f),
   );
@@ -129,13 +137,28 @@ async function main() {
     ];
   }
 
+  let transformedBundleAST = bundleAST;
+  if (babelTransforms !== '') {
+    const transformedBundle = transformFromAstSync(bundleAST, fileMapping, {
+      ast: true,
+      code: false,
+      // $FlowExpectedError[unsupported-syntax]
+      plugins: require(babelTransforms),
+    });
+    transformedBundleAST = transformedBundle.ast;
+  }
+
   // Generate bundle for Static Hermes
-  const shBundleSource = generate(bundleAST, {sourceMaps: true}, fileMapping);
+  const shBundleSource = generate(
+    transformedBundleAST,
+    {sourceMaps: true},
+    fileMapping,
+  );
   await writeBundle(outPath, shBundleSource.code, shBundleSource.map);
 
   if (createES5Bundle) {
     // Generate bundle for ES5 runtimes (aka normal Hermes)
-    const es5Bundle = transformFromAstSync(bundleAST, fileMapping, {
+    const es5Bundle = transformFromAstSync(transformedBundleAST, fileMapping, {
       ast: true,
       code: false,
       presets: [
@@ -159,11 +182,15 @@ async function main() {
 
   if (stripTypes) {
     // Generate bundle without types.
-    const strippedBundle = transformFromAstSync(bundleAST, fileMapping, {
-      ast: true,
-      code: false,
-      plugins: [require.resolve('@babel/plugin-transform-flow-strip-types')],
-    });
+    const strippedBundle = transformFromAstSync(
+      transformedBundleAST,
+      fileMapping,
+      {
+        ast: true,
+        code: false,
+        plugins: [require.resolve('@babel/plugin-transform-flow-strip-types')],
+      },
+    );
     const strippedSource = generate(
       strippedBundle.ast,
       {sourceMaps: true},
