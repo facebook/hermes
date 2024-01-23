@@ -134,7 +134,8 @@ namespace hermes {
 /// them into plain ES5 functions. The generated AST leverages the
 /// HermesES6Internal object, which should be made available at runtime by
 /// enabling the ES6Class option.
-class ES6ClassesTransformations {
+class ES6ClassesTransformations
+    : public ESTree::RecursionDepthTracker<ES6ClassesTransformations> {
  public:
   /// Required by ESTree::RecursiveVisitorDispatch.
   static constexpr bool kEnableNodeListMutation = true;
@@ -230,11 +231,10 @@ class ES6ClassesTransformations {
     visitESTreeChildren(*this, node);
   }
 
-  bool incRecursionDepth(ESTree::Node *) {
-    return true;
+  void recursionDepthExceeded(ESTree::Node *n) {
+    context_.getSourceErrorManager().error(
+        n->getEndLoc(), "Too many nested expressions/statements/declarations");
   }
-
-  void decRecursionDepth() {}
 
  private:
   Context &context_;
