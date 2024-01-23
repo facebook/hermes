@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -Xes6-class %s | %FileCheck --match-full-lines %s
+// REQUIRES: es6_class
 
 class Parent {}
 

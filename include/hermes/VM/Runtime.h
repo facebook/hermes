@@ -877,7 +877,11 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   }
 
   bool hasES6Class() const {
+#ifndef HERMES_FACEBOOK_BUILD
     return hasES6Class_;
+#else
+    return false;
+#endif
   }
 
   bool hasIntl() const {
