@@ -69,7 +69,7 @@ async function main() {
   const outPath = path.resolve(cliYargs.out);
   const createES5Bundle = cliYargs.es5;
   const stripTypes = cliYargs.stripTypes;
-  const simpleJSXTransform = cliYargs.simpleJSXTransform;
+  const simpleJSXTransform = cliYargs.simpleJsxTransform;
   const entrypoints: Array<string> = cliYargs._.map(f =>
     path.resolve(rootPath, f),
   );
