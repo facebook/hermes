@@ -426,7 +426,11 @@ class Context {
   }
 
   bool getConvertES6Classes() const {
+#ifndef HERMES_FACEBOOK_BUILD
     return convertES6Classes_;
+#else
+    return false;
+#endif
   }
 
   /// \return true if either TS or Flow is being parsed.
