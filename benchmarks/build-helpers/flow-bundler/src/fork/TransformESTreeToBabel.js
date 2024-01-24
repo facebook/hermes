@@ -873,6 +873,7 @@ function mapLiteral(node: Literal): BabelLiteral {
   };
   switch (getLiteralType(node)) {
     case 'string': {
+      // $FlowFixMe[incompatible-return]
       return {
         type: 'StringLiteral',
         value: node.value,
@@ -884,6 +885,7 @@ function mapLiteral(node: Literal): BabelLiteral {
       };
     }
     case 'numeric': {
+      // $FlowFixMe[incompatible-return]
       return {
         type: 'NumericLiteral',
         value: node.value,
@@ -897,8 +899,10 @@ function mapLiteral(node: Literal): BabelLiteral {
     case 'bigint': {
       return {
         type: 'BigIntLiteral',
+        // $FlowFixMe[prop-missing]
         value: node.bigint,
         extra: {
+          // $FlowFixMe[prop-missing]
           rawValue: node.bigint,
           raw: node.raw,
         },
@@ -906,6 +910,7 @@ function mapLiteral(node: Literal): BabelLiteral {
       };
     }
     case 'boolean': {
+      // $FlowFixMe[incompatible-return]
       return {
         type: 'BooleanLiteral',
         value: node.value,
@@ -924,7 +929,9 @@ function mapLiteral(node: Literal): BabelLiteral {
         extra: {
           raw: node.raw,
         },
+        // $FlowFixMe[prop-missing]
         pattern: node.regex.pattern,
+        // $FlowFixMe[prop-missing]
         flags: node.regex.flags,
         ...base,
       };

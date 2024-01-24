@@ -185,6 +185,7 @@ export async function transformModule(
                       ),
                     );
                   }
+                  // $FlowFixMe[incompatible-call]
                   context.replaceNode(
                     container,
                     t.JSXIdentifier({name: importNamespaceName}),
