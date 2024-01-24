@@ -26,7 +26,7 @@ cmake -S <path to hermes> -B build_wasm_dbg \
 Then generate the C artefact by running the following:
 ```
 cmake --build build_wasm_dbg --target hermesSandboxImpl \
-  && wasm2c build_wasm_dbg/API/hermes_sandbox/hermesSandboxImpl.wasm -n hermes \
+  && wasm2c build_wasm_dbg/API/hermes_sandbox/hermesSandboxImpl.wasm -n hermes --num-outputs 8 \
      -o <path to hermes>/API/hermes_sandbox/external/hermes_sandbox_impl_dbg_compiled.c
 ```
 
@@ -40,7 +40,7 @@ cmake -S <path to hermes> -B build_wasm_opt \
   -DHERMES_ENABLE_DEBUGGER=OFF -G Ninja
 
 cmake --build build_wasm_opt --target hermesSandboxImpl \
-  && wasm2c build_wasm_opt/API/hermes_sandbox/hermesSandboxImpl.wasm -n hermes \
+  && wasm2c build_wasm_opt/API/hermes_sandbox/hermesSandboxImpl.wasm -n hermes --num-outputs 8 \
      -o <path to hermes>/API/hermes_sandbox/external/hermes_sandbox_impl_opt_compiled.c
 ```
 

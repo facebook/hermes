@@ -12,7 +12,9 @@ if (EMSCRIPTEN)
   target_link_options(hermesSandboxImpl PRIVATE ${WASM_LINKER_ARGS})
 endif()
 
-add_library(hermesSandboxRuntime HermesSandboxRuntime.cpp external/wasm-rt-impl.c external/hermes_sandbox_impl_compiled.c)
+file(GLOB IMPL_SRCS external/hermes_sandbox_impl_compiled_*.c)
+list(APPEND IMPL_SRCS external/wasm-rt-impl.c)
+add_library(hermesSandboxRuntime HermesSandboxRuntime.cpp  ${IMPL_SRCS})
 target_include_directories(hermesSandboxRuntime PUBLIC .)
 target_link_libraries(hermesSandboxRuntime PUBLIC jsi hermesPublic)
 
@@ -23,9 +25,7 @@ target_link_libraries(hermesSandboxRuntime PUBLIC jsi hermesPublic)
 target_compile_definitions(hermesSandboxRuntime PUBLIC WASM_RT_SKIP_SIGNAL_RECOVERY=1 WASM_RT_USE_STACK_DEPTH_COUNT=0)
 
 # Disable warnings in external/generated code.
-file(GLOB EXTERNAL_FILES external/*.c)
 if("${CMAKE_C_COMPILER_ID}" MATCHES "Clang" OR
     "${CMAKE_C_COMPILER_ID}" MATCHES "GNU")
-  set_property(SOURCE ${EXTERNAL_FILES} APPEND_STRING
-    PROPERTY COMPILE_FLAGS "-w")
+  set_property(SOURCE ${IMPL_SRCS} APPEND_STRING PROPERTY COMPILE_FLAGS "-w")
 endif()
