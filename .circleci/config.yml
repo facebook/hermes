@@ -583,7 +583,7 @@ jobs:
 
             cmake --build build_wasm_dbg --target hermesSandboxImpl -j 4
             ./wabt-1.0.33/bin/wasm2c build_wasm_dbg/API/hermes_sandbox/hermesSandboxImpl.wasm -n hermes \
-              -o hermes/API/hermes_sandbox/external/hermes_sandbox_impl_dbg_compiled.c
+              -o hermes/API/hermes_sandbox/external/hermes_sandbox_impl_dbg_compiled.c --num-outputs 8
 
             # Generate and build the release artefact.
             cmake -S hermes -B build_wasm_opt \
@@ -595,7 +595,7 @@ jobs:
 
             cmake --build build_wasm_opt --target hermesSandboxImpl -j 4
             ./wabt-1.0.33/bin/wasm2c build_wasm_opt/API/hermes_sandbox/hermesSandboxImpl.wasm -n hermes \
-              -o hermes/API/hermes_sandbox/external/hermes_sandbox_impl_opt_compiled.c
+              -o hermes/API/hermes_sandbox/external/hermes_sandbox_impl_opt_compiled.c --num-outputs 8
       - run:
           name: Build and test with the newly generated sandbox
           command: |
