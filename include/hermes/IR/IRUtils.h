@@ -10,6 +10,7 @@
 
 namespace hermes {
 
+class BasicBlock;
 class Function;
 
 /// Delete all unreachable basic blocks from \p F.

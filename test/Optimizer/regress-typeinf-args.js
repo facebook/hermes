@@ -106,10 +106,7 @@ function test4(f) {
 // CHECK:function f(x: any): any [allCallsitesKnownInStrictMode,unreachable]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:  %1 = LoadFrameInst (:object) [f@test1]: object
-// CHECK-NEXT:  %2 = CallInst (:any) %1: object, %f(): functionCode, empty: any, undefined: undefined, 0: number, %0: any
-// CHECK-NEXT:       ReturnInst %2: any
+// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function "f3 1#"(): undefined

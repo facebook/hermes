@@ -60,6 +60,23 @@ static void removeEntryFromPhi(BasicBlock *BB, BasicBlock *edge) {
   }
 }
 
+/// Makes an entry block for \p F which only contains UnreachableInst.
+/// Deletes the rest of the body of the function.
+static void replaceBodyWithUnreachable(Function *F) {
+  IRBuilder builder(F);
+  for (auto it = F->begin(), e = F->end(); it != e;) {
+    auto *BB = &*it++;
+    // No need to handle Phis because the whole body will be deleted.
+    // There may still be uses of the block from other unreachable blocks.
+    BB->replaceAllUsesWith(nullptr);
+    // Erase this basic block.
+    BB->eraseFromParent();
+  }
+  auto *unreachableBB = builder.createBasicBlock(F);
+  builder.setInsertionBlock(unreachableBB);
+  builder.createUnreachableInst();
+}
+
 /// Delete the conditional branch and create a new direct branch to the
 /// destination block \p dest.
 static void replaceCondBranchWithDirectBranch(
@@ -389,6 +406,12 @@ static bool runSimplifyCFG(Module *M) {
   bool changed = false;
 
   for (auto &F : *M) {
+    if (F.getAttributes(M).unreachable) {
+      replaceBodyWithUnreachable(&F);
+      changed = true;
+      continue;
+    }
+
     bool iterChanged = false;
     // Keep iterating over deleting unreachable code and removing trampolines as
     // long as we are making progress.

@@ -72,7 +72,5 @@ function outer2(){
 // CHECK:function bar(): object [allCallsitesKnownInStrictMode,unreachable]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst (:object) [foo@outer2]: object
-// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "prototype": string
-// CHECK-NEXT:       ReturnInst %0: object
+// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
