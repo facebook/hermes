@@ -34,6 +34,10 @@ ATTRIBUTE(
 ATTRIBUTE(Function, pure, "pure")
 /// Whether this is a typed SH function that has been checked.
 ATTRIBUTE(Function, typed, "typed")
+/// This function will never return a value (either throws or loops).
+ATTRIBUTE(Function, noReturn, "noReturn")
+/// This function is known to be unreachable (i.e. dead).
+ATTRIBUTE(Function, unreachable, "unreachable")
 
 /// Whether a call is known to be calling a NativeJSFunction.
 /// This is used here because we currently know that _every_ user provided
