@@ -834,7 +834,7 @@ function next_image$default(props) {
   return react_index$jsx('img', Object.assign({}, props), null);
 }
 /* file: packages/@radix-ui/react-icons/index.js */
-var _radix_ui_index$PlusCircledIcon = react_index$forwardRef( /*<SVGSVGElement, IconProps>*/function (_ref4, forwardedRef) {
+var radix_ui_react_icons_index$PlusCircledIcon = react_index$forwardRef( /*<SVGSVGElement, IconProps>*/function (_ref4, forwardedRef) {
   var _ref4$color = _ref4.color,
     color = _ref4$color === void 0 ? 'currentColor' : _ref4$color,
     props = _objectWithoutProperties(_ref4, _excluded);
@@ -911,7 +911,7 @@ var button$Button = react_index$forwardRef(function (_ref5, ref) {
 /* file: packages/@radix-ui/react-primitive/index.js */
 // import * as ReactDOM from 'react-dom';
 // import {Slot} from '@radix-ui/react-slot';
-var _radix_ui_index$2$INTERNAL$NODES = ['a', 'button', 'div', 'form', 'h2', 'h3', 'img', 'input', 'label', 'li', 'nav', 'ol', 'p', 'span', 'svg', 'ul'];
+var radix_ui_react_primitive_index$INTERNAL$NODES = ['a', 'button', 'div', 'form', 'h2', 'h3', 'img', 'input', 'label', 'li', 'nav', 'ol', 'p', 'span', 'svg', 'ul'];
 
 // Temporary while we await merge of this fix:
 // https://github.com/DefinitelyTyped/DefinitelyTyped/pull/55396
@@ -937,7 +937,7 @@ var _radix_ui_index$2$INTERNAL$NODES = ['a', 'button', 'div', 'form', 'h2', 'h3'
  * Primitive
  * -----------------------------------------------------------------------------------------------*/
 
-var _radix_ui_index$2$Primitive = sh_fastarray$reduce(_radix_ui_index$2$INTERNAL$NODES, function (primitive, node, _i) {
+var radix_ui_react_primitive_index$Primitive = sh_fastarray$reduce(radix_ui_react_primitive_index$INTERNAL$NODES, function (primitive, node, _i) {
   var Node = react_index$forwardRef(function (props /* PrimitivePropsWithRef<typeof node> */, forwardedRef) {
     var asChild = props.asChild,
       primitiveProps = _objectWithoutProperties(props, _excluded3);
@@ -1006,13 +1006,13 @@ var _radix_ui_index$2$Primitive = sh_fastarray$reduce(_radix_ui_index$2$INTERNAL
 
 /* -----------------------------------------------------------------------------------------------*/
 
-var _radix_ui_index$2$Root = _radix_ui_index$2$Primitive;
+var radix_ui_react_primitive_index$Root = radix_ui_react_primitive_index$Primitive;
 /* file: packages/@radix-ui/react-separator/index.js */
 /* -------------------------------------------------------------------------------------------------
  *  Separator
  * -----------------------------------------------------------------------------------------------*/
-var _radix_ui_index$1$INTERNAL$DEFAULT_ORIENTATION = 'horizontal';
-var _radix_ui_index$1$INTERNAL$ORIENTATIONS = ['horizontal', 'vertical'];
+var radix_ui_react_separator_index$INTERNAL$DEFAULT_ORIENTATION = 'horizontal';
+var radix_ui_react_separator_index$INTERNAL$ORIENTATIONS = ['horizontal', 'vertical'];
 // type Orientation = (typeof ORIENTATIONS)[number];
 // type SeparatorElement = React.ElementRef<typeof Primitive.div>;
 // type PrimitiveDivProps = Radix.ComponentPropsWithoutRef<typeof Primitive.div>;
@@ -1028,12 +1028,12 @@ var _radix_ui_index$1$INTERNAL$ORIENTATIONS = ['horizontal', 'vertical'];
 //   decorative?: boolean;
 // }
 
-var _radix_ui_index$1$Separator = react_index$forwardRef( /*<SeparatorElement, SeparatorProps>*/function (props, forwardedRef) {
+var radix_ui_react_separator_index$Separator = react_index$forwardRef( /*<SeparatorElement, SeparatorProps>*/function (props, forwardedRef) {
   var decorative = props.decorative,
     _props$orientation = props.orientation,
-    orientationProp = _props$orientation === void 0 ? _radix_ui_index$1$INTERNAL$DEFAULT_ORIENTATION : _props$orientation,
+    orientationProp = _props$orientation === void 0 ? radix_ui_react_separator_index$INTERNAL$DEFAULT_ORIENTATION : _props$orientation,
     domProps = _objectWithoutProperties(props, _excluded4);
-  var orientation = _radix_ui_index$1$INTERNAL$isValidOrientation(orientationProp) ? orientationProp : _radix_ui_index$1$INTERNAL$DEFAULT_ORIENTATION;
+  var orientation = radix_ui_react_separator_index$INTERNAL$isValidOrientation(orientationProp) ? orientationProp : radix_ui_react_separator_index$INTERNAL$DEFAULT_ORIENTATION;
   // `aria-orientation` defaults to `horizontal` so we only need it if `orientation` is vertical
   var ariaOrientation = orientation === 'vertical' ? orientation : undefined;
   var semanticProps = decorative ? {
@@ -1042,16 +1042,16 @@ var _radix_ui_index$1$Separator = react_index$forwardRef( /*<SeparatorElement, S
     'aria-orientation': ariaOrientation,
     role: 'separator'
   };
-  return react_index$jsx(_radix_ui_index$2$Primitive.div, Object.assign({
+  return react_index$jsx(radix_ui_react_primitive_index$Primitive.div, Object.assign({
     'data-orientation': orientation
   }, semanticProps, domProps, {
     ref: forwardedRef
   }), null);
 });
-function _radix_ui_index$1$INTERNAL$isValidOrientation(orientation) {
-  return sh_fastarray$includes(_radix_ui_index$1$INTERNAL$ORIENTATIONS, orientation);
+function radix_ui_react_separator_index$INTERNAL$isValidOrientation(orientation) {
+  return sh_fastarray$includes(radix_ui_react_separator_index$INTERNAL$ORIENTATIONS, orientation);
 }
-var _radix_ui_index$1$Root = _radix_ui_index$1$Separator;
+var radix_ui_react_separator_index$Root = radix_ui_react_separator_index$Separator;
 /* file: registry/new-york/ui/separator.js */
 var separator$Separator = react_index$forwardRef(
 /*<
@@ -1065,7 +1065,7 @@ function (_ref6, ref) {
     _ref6$decorative = _ref6.decorative,
     decorative = _ref6$decorative === void 0 ? true : _ref6$decorative,
     props = _objectWithoutProperties(_ref6, _excluded5);
-  return react_index$jsx(_radix_ui_index$1$Root, Object.assign({
+  return react_index$jsx(radix_ui_react_separator_index$Root, Object.assign({
     ref: ref,
     decorative: decorative,
     orientation: orientation,
@@ -1074,21 +1074,21 @@ function (_ref6, ref) {
 });
 /* file: packages/@radix-ui/react-tabs/index.js */
 // TODO: https://github.com/radix-ui/primitives/blob/main/packages/react/tabs/src/Tabs.tsx
-function _radix_ui_index$3$List(props) {
+function radix_ui_react_tabs_index$List(props) {
   return react_index$jsx('div', Object.assign({}, props), null);
 }
-function _radix_ui_index$3$Trigger(props) {
+function radix_ui_react_tabs_index$Trigger(props) {
   return react_index$jsx('div', Object.assign({}, props), null);
 }
-function _radix_ui_index$3$Content(props) {
+function radix_ui_react_tabs_index$Content(props) {
   return react_index$jsx('div', Object.assign({}, props), null);
 }
-function _radix_ui_index$3$Tabs(props) {
+function radix_ui_react_tabs_index$Tabs(props) {
   return react_index$jsx('div', Object.assign({}, props), null);
 }
-var _radix_ui_index$3$Root = _radix_ui_index$3$Tabs;
+var radix_ui_react_tabs_index$Root = radix_ui_react_tabs_index$Tabs;
 /* file: registry/new-york/ui/tabs.js */
-var tabs$Tabs = _radix_ui_index$3$Root;
+var tabs$Tabs = radix_ui_react_tabs_index$Root;
 var tabs$TabsList = react_index$forwardRef(
 /*<
 React.ElementRef<typeof TabsPrimitive.List>,
@@ -1097,7 +1097,7 @@ React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>,
 function (_ref7, ref) {
   var className = _ref7.className,
     props = _objectWithoutProperties(_ref7, _excluded6);
-  return react_index$jsx(_radix_ui_index$3$List, Object.assign({
+  return react_index$jsx(radix_ui_react_tabs_index$List, Object.assign({
     ref: ref,
     className: utils$cn('inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground', className)
   }, props), null);
@@ -1113,7 +1113,7 @@ React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>,
 function (_ref8, ref) {
   var className = _ref8.className,
     props = _objectWithoutProperties(_ref8, _excluded7);
-  return react_index$jsx(_radix_ui_index$3$Trigger, Object.assign({
+  return react_index$jsx(radix_ui_react_tabs_index$Trigger, Object.assign({
     ref: ref,
     className: utils$cn('inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow', className)
   }, props), null);
@@ -1129,7 +1129,7 @@ React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>,
 function (_ref9, ref) {
   var className = _ref9.className,
     props = _objectWithoutProperties(_ref9, _excluded8);
-  return react_index$jsx(_radix_ui_index$3$Content, Object.assign({
+  return react_index$jsx(radix_ui_react_tabs_index$Content, Object.assign({
     ref: ref,
     className: utils$cn('mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2', className)
   }, props), null);
@@ -1229,7 +1229,7 @@ function page$default(props) {
                     }, null), react_index$jsx('div', {
                       className: "ml-auto mr-4",
                       children: react_index$jsx(button$Button, {
-                        children: [react_index$jsx(_radix_ui_index$PlusCircledIcon, {
+                        children: [react_index$jsx(radix_ui_react_icons_index$PlusCircledIcon, {
                           className: "mr-2 h-4 w-4"
                         }, null), 'Add music']
                       }, null)

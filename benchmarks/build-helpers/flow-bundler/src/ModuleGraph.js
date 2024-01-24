@@ -42,7 +42,12 @@ function getPackageNameFromFile(projectRoot: string, file: string): ?string {
     return null;
   }
 
-  return file.substring(packagesDir.length + 1).split('/')[0];
+  const packageParts = file.substring(packagesDir.length + 1).split('/');
+  if (packageParts[0].startsWith('@')) {
+    return packageParts[0].substring(1) + '_' + packageParts[1];
+  }
+
+  return packageParts[0];
 }
 
 function resolveModuleLocation(

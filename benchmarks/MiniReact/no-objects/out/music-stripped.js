@@ -744,7 +744,7 @@ function next_image$default(props) {
   }, null);
 }
 /* file: packages/@radix-ui/react-icons/index.js */
-const _radix_ui_index$PlusCircledIcon = react_index$forwardRef( /*<SVGSVGElement, IconProps>*/({
+const radix_ui_react_icons_index$PlusCircledIcon = react_index$forwardRef( /*<SVGSVGElement, IconProps>*/({
   color = 'currentColor',
   ...props
 }, forwardedRef) => {
@@ -817,7 +817,7 @@ const button$Button = react_index$forwardRef(({
 /* file: packages/@radix-ui/react-primitive/index.js */
 // import * as ReactDOM from 'react-dom';
 // import {Slot} from '@radix-ui/react-slot';
-const _radix_ui_index$2$INTERNAL$NODES = ['a', 'button', 'div', 'form', 'h2', 'h3', 'img', 'input', 'label', 'li', 'nav', 'ol', 'p', 'span', 'svg', 'ul'];
+const radix_ui_react_primitive_index$INTERNAL$NODES = ['a', 'button', 'div', 'form', 'h2', 'h3', 'img', 'input', 'label', 'li', 'nav', 'ol', 'p', 'span', 'svg', 'ul'];
 
 // Temporary while we await merge of this fix:
 // https://github.com/DefinitelyTyped/DefinitelyTyped/pull/55396
@@ -843,7 +843,7 @@ const _radix_ui_index$2$INTERNAL$NODES = ['a', 'button', 'div', 'form', 'h2', 'h
  * Primitive
  * -----------------------------------------------------------------------------------------------*/
 
-const _radix_ui_index$2$Primitive = sh_fastarray$reduce(_radix_ui_index$2$INTERNAL$NODES, (primitive, node, _i) => {
+const radix_ui_react_primitive_index$Primitive = sh_fastarray$reduce(radix_ui_react_primitive_index$INTERNAL$NODES, (primitive, node, _i) => {
   const Node = react_index$forwardRef((props /* PrimitivePropsWithRef<typeof node> */, forwardedRef) => {
     const {
       asChild,
@@ -918,13 +918,13 @@ const _radix_ui_index$2$Primitive = sh_fastarray$reduce(_radix_ui_index$2$INTERN
 
 /* -----------------------------------------------------------------------------------------------*/
 
-const _radix_ui_index$2$Root = _radix_ui_index$2$Primitive;
+const radix_ui_react_primitive_index$Root = radix_ui_react_primitive_index$Primitive;
 /* file: packages/@radix-ui/react-separator/index.js */
 /* -------------------------------------------------------------------------------------------------
  *  Separator
  * -----------------------------------------------------------------------------------------------*/
-const _radix_ui_index$1$INTERNAL$DEFAULT_ORIENTATION = 'horizontal';
-const _radix_ui_index$1$INTERNAL$ORIENTATIONS = ['horizontal', 'vertical'];
+const radix_ui_react_separator_index$INTERNAL$DEFAULT_ORIENTATION = 'horizontal';
+const radix_ui_react_separator_index$INTERNAL$ORIENTATIONS = ['horizontal', 'vertical'];
 // type Orientation = (typeof ORIENTATIONS)[number];
 // type SeparatorElement = React.ElementRef<typeof Primitive.div>;
 // type PrimitiveDivProps = Radix.ComponentPropsWithoutRef<typeof Primitive.div>;
@@ -940,13 +940,13 @@ const _radix_ui_index$1$INTERNAL$ORIENTATIONS = ['horizontal', 'vertical'];
 //   decorative?: boolean;
 // }
 
-const _radix_ui_index$1$Separator = react_index$forwardRef( /*<SeparatorElement, SeparatorProps>*/(props, forwardedRef) => {
+const radix_ui_react_separator_index$Separator = react_index$forwardRef( /*<SeparatorElement, SeparatorProps>*/(props, forwardedRef) => {
   const {
     decorative,
-    orientation: orientationProp = _radix_ui_index$1$INTERNAL$DEFAULT_ORIENTATION,
+    orientation: orientationProp = radix_ui_react_separator_index$INTERNAL$DEFAULT_ORIENTATION,
     ...domProps
   } = props;
-  const orientation = _radix_ui_index$1$INTERNAL$isValidOrientation(orientationProp) ? orientationProp : _radix_ui_index$1$INTERNAL$DEFAULT_ORIENTATION;
+  const orientation = radix_ui_react_separator_index$INTERNAL$isValidOrientation(orientationProp) ? orientationProp : radix_ui_react_separator_index$INTERNAL$DEFAULT_ORIENTATION;
   // `aria-orientation` defaults to `horizontal` so we only need it if `orientation` is vertical
   const ariaOrientation = orientation === 'vertical' ? orientation : undefined;
   const semanticProps = decorative ? {
@@ -955,17 +955,17 @@ const _radix_ui_index$1$Separator = react_index$forwardRef( /*<SeparatorElement,
     'aria-orientation': ariaOrientation,
     role: 'separator'
   };
-  return react_index$jsx(_radix_ui_index$2$Primitive.div, {
+  return react_index$jsx(radix_ui_react_primitive_index$Primitive.div, {
     'data-orientation': orientation,
     ...semanticProps,
     ...domProps,
     ref: forwardedRef
   }, null);
 });
-function _radix_ui_index$1$INTERNAL$isValidOrientation(orientation) {
-  return sh_fastarray$includes(_radix_ui_index$1$INTERNAL$ORIENTATIONS, orientation);
+function radix_ui_react_separator_index$INTERNAL$isValidOrientation(orientation) {
+  return sh_fastarray$includes(radix_ui_react_separator_index$INTERNAL$ORIENTATIONS, orientation);
 }
-const _radix_ui_index$1$Root = _radix_ui_index$1$Separator;
+const radix_ui_react_separator_index$Root = radix_ui_react_separator_index$Separator;
 /* file: registry/new-york/ui/separator.js */
 const separator$Separator = react_index$forwardRef(
 /*<
@@ -977,7 +977,7 @@ React.ComponentPropsWithoutRef<typeof SeparatorPrimitive.Root>,
   orientation = 'horizontal',
   decorative = true,
   ...props
-}, ref) => react_index$jsx(_radix_ui_index$1$Root, {
+}, ref) => react_index$jsx(radix_ui_react_separator_index$Root, {
   ref: ref,
   decorative: decorative,
   orientation: orientation,
@@ -986,29 +986,29 @@ React.ComponentPropsWithoutRef<typeof SeparatorPrimitive.Root>,
 }, null));
 /* file: packages/@radix-ui/react-tabs/index.js */
 // TODO: https://github.com/radix-ui/primitives/blob/main/packages/react/tabs/src/Tabs.tsx
-function _radix_ui_index$3$List(props) {
+function radix_ui_react_tabs_index$List(props) {
   return react_index$jsx('div', {
     ...props
   }, null);
 }
-function _radix_ui_index$3$Trigger(props) {
+function radix_ui_react_tabs_index$Trigger(props) {
   return react_index$jsx('div', {
     ...props
   }, null);
 }
-function _radix_ui_index$3$Content(props) {
+function radix_ui_react_tabs_index$Content(props) {
   return react_index$jsx('div', {
     ...props
   }, null);
 }
-function _radix_ui_index$3$Tabs(props) {
+function radix_ui_react_tabs_index$Tabs(props) {
   return react_index$jsx('div', {
     ...props
   }, null);
 }
-const _radix_ui_index$3$Root = _radix_ui_index$3$Tabs;
+const radix_ui_react_tabs_index$Root = radix_ui_react_tabs_index$Tabs;
 /* file: registry/new-york/ui/tabs.js */
-const tabs$Tabs = _radix_ui_index$3$Root;
+const tabs$Tabs = radix_ui_react_tabs_index$Root;
 const tabs$TabsList = react_index$forwardRef(
 /*<
 React.ElementRef<typeof TabsPrimitive.List>,
@@ -1017,7 +1017,7 @@ React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>,
 ({
   className,
   ...props
-}, ref) => react_index$jsx(_radix_ui_index$3$List, {
+}, ref) => react_index$jsx(radix_ui_react_tabs_index$List, {
   ref: ref,
   className: utils$cn('inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground', className),
   ...props
@@ -1033,7 +1033,7 @@ React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>,
 ({
   className,
   ...props
-}, ref) => react_index$jsx(_radix_ui_index$3$Trigger, {
+}, ref) => react_index$jsx(radix_ui_react_tabs_index$Trigger, {
   ref: ref,
   className: utils$cn('inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow', className),
   ...props
@@ -1049,7 +1049,7 @@ React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>,
 ({
   className,
   ...props
-}, ref) => react_index$jsx(_radix_ui_index$3$Content, {
+}, ref) => react_index$jsx(radix_ui_react_tabs_index$Content, {
   ref: ref,
   className: utils$cn('mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2', className),
   ...props
@@ -1149,7 +1149,7 @@ function page$default(props) {
                     }, null), react_index$jsx('div', {
                       className: "ml-auto mr-4",
                       children: react_index$jsx(button$Button, {
-                        children: [react_index$jsx(_radix_ui_index$PlusCircledIcon, {
+                        children: [react_index$jsx(radix_ui_react_icons_index$PlusCircledIcon, {
                           className: "mr-2 h-4 w-4"
                         }, null), 'Add music']
                       }, null)
