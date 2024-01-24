@@ -67,4 +67,22 @@ bool deleteUnreachableBasicBlocks(Function *F) {
   return changed;
 }
 
+void updateIncomingPhiValues(
+    BasicBlock *blockToFix,
+    BasicBlock *previousBlock,
+    BasicBlock *newBlock) {
+  for (auto &inst : *blockToFix) {
+    auto *phi = llvh::dyn_cast<PhiInst>(&inst);
+    if (!phi)
+      return;
+
+    for (int i = 0, e = phi->getNumEntries(); i < e; i++) {
+      auto entry = phi->getEntry(i);
+      if (entry.second == previousBlock) {
+        phi->updateEntry(i, entry.first, newBlock);
+      }
+    }
+  }
+}
+
 } // namespace hermes

@@ -402,6 +402,42 @@ static bool optimizeStaticBranches(Function *F) {
   return changed;
 }
 
+/// Insert an UnreachableInst after calls to noReturn functions.
+/// Update Phis so that they reference the newly inserted block.
+static bool terminateNoReturnCalls(Function *F) {
+  Module *M = F->getParent();
+  bool changed = false;
+  IRBuilder builder(F);
+
+  // Adding to the BasicBlock list by splitting as we iterate.
+  for (auto bbit = F->begin(); bbit != F->end(); ++bbit) {
+    BasicBlock *BB = &*bbit;
+    for (auto it = BB->begin(), e = BB->end(); it != e; ++it) {
+      Instruction *inst = &*it;
+      CallInst *CI = llvh::dyn_cast<CallInst>(inst);
+      if (!CI)
+        continue;
+      Function *target = llvh::dyn_cast<Function>(CI->getTarget());
+      if (!target)
+        continue;
+      if (!target->getAttributes(M).noReturn)
+        continue;
+
+      // Skip call instruction.
+      ++it;
+
+      // Split block after call instruction.
+      builder.setInsertionPointAfter(CI);
+      auto *unreachable = builder.createUnreachableInst();
+      splitBasicBlock(BB, it, unreachable);
+      changed = true;
+      break;
+    }
+  }
+
+  return changed;
+}
+
 static bool runSimplifyCFG(Module *M) {
   bool changed = false;
 
@@ -412,9 +448,14 @@ static bool runSimplifyCFG(Module *M) {
       continue;
     }
 
-    bool iterChanged = false;
+    if (terminateNoReturnCalls(&F)) {
+      changed = true;
+      deleteUnreachableBasicBlocks(&F);
+    }
+
     // Keep iterating over deleting unreachable code and removing trampolines as
     // long as we are making progress.
+    bool iterChanged = false;
     do {
       iterChanged =
           optimizeStaticBranches(&F) || deleteUnreachableBasicBlocks(&F);

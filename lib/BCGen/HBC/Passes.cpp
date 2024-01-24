@@ -13,6 +13,7 @@
 #include "hermes/BCGen/HBC/ISel.h"
 #include "hermes/BCGen/Lowering.h"
 #include "hermes/BCGen/MovElimination.h"
+#include "hermes/IR/IRUtils.h"
 
 #include "llvh/ADT/SetVector.h"
 
@@ -22,25 +23,6 @@ namespace hermes {
 namespace hbc {
 
 namespace {
-/// In blockToFix, change all incoming Phi values from previousBlock to instead
-/// come from newBlock.
-void updateIncomingPhiValues(
-    BasicBlock *blockToFix,
-    BasicBlock *previousBlock,
-    BasicBlock *newBlock) {
-  for (auto &inst : *blockToFix) {
-    auto *phi = llvh::dyn_cast<PhiInst>(&inst);
-    if (!phi)
-      return;
-
-    for (int i = 0, e = phi->getNumEntries(); i < e; i++) {
-      auto entry = phi->getEntry(i);
-      if (entry.second == previousBlock) {
-        phi->updateEntry(i, entry.first, newBlock);
-      }
-    }
-  }
-}
 // Get the next instruction(s) after this Instruction. Creates branches as
 // necessary.
 llvh::SmallVector<Instruction *, 4> getInsertionPointsAfter(

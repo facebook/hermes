@@ -38,5 +38,5 @@
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:object) [f@main]: object
 // CHECK-NEXT:  %1 = CallInst (:any) %0: object, %f(): functionCode, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:       ReturnInst %1: any
+// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

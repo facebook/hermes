@@ -55,6 +55,17 @@ bool deleteIncomingBlockFromPhis(
 /// due to an inserted block (and can therefore fail when called twice).
 void splitCriticalEdge(IRBuilder *builder, BasicBlock *from, BasicBlock *to);
 
+/// Split a basic block into two at the specified instruction.
+/// The instructions before \p it are retained in \p BB, while those after \p it
+/// are moved into a newly-created successor basic block.
+/// Phi instructions in successors of \p BB will be updated to refer to the new
+/// BasicBlock, and \p newTerm will be used to terminate the original block.
+/// \return the newly created basic block.
+BasicBlock *splitBasicBlock(
+    BasicBlock *BB,
+    BasicBlock::InstListType::iterator it,
+    TerminatorInst *newTerm);
+
 /// Delete all variables that have no remaining uses.
 /// \return true if anything was deleted, false otherwise.
 bool deleteUnusedVariables(Module *M);

@@ -27,7 +27,7 @@
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) %main(): functionCode
 // CHECK-NEXT:  %1 = CallInst (:any) %0: object, %main(): functionCode, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:       ReturnInst %1: any
+// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): any [allCallsitesKnownInStrictMode,noReturn]

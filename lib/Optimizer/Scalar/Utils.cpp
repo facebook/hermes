@@ -12,6 +12,7 @@
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IRBuilder.h"
+#include "hermes/IR/IRUtils.h"
 #include "hermes/IR/Instrs.h"
 
 #include "llvh/ADT/SetVector.h"
@@ -171,6 +172,28 @@ void hermes::splitCriticalEdge(
     llvm_unreachable("There were no current transitions between blocks");
   }
   builder->setInsertionPoint(branch);
+}
+
+BasicBlock *hermes::splitBasicBlock(
+    BasicBlock *BB,
+    BasicBlock::InstListType::iterator it,
+    TerminatorInst *newTerm) {
+  Function *F = BB->getParent();
+  Instruction *I = &*it;
+
+  IRBuilder builder(F);
+  auto *newBB = builder.createBasicBlock(F);
+
+  for (auto *succ : successors(BB))
+    updateIncomingPhiValues(succ, BB, newBB);
+
+  newTerm->moveBefore(I);
+
+  // Move the instructions after the split point into the new BB.
+  newBB->getInstList().splice(
+      newBB->end(), BB->getInstList(), it, BB->getInstList().end());
+
+  return newBB;
 }
 
 bool hermes::deleteUnusedVariables(Module *M) {

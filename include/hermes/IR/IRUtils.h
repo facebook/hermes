@@ -17,6 +17,13 @@ class Function;
 /// \return true if anything was deleted, false otherwise.
 bool deleteUnreachableBasicBlocks(Function *F);
 
+/// In blockToFix, change all incoming Phi values from previousBlock to instead
+/// come from newBlock.
+void updateIncomingPhiValues(
+    BasicBlock *blockToFix,
+    BasicBlock *previousBlock,
+    BasicBlock *newBlock);
+
 } // namespace hermes
 
 #endif
