@@ -664,9 +664,6 @@ class TypeInferenceImpl {
   Type inferUnreachableInst(UnreachableInst *inst) {
     return Type::createNoType();
   }
-  Type inferLIRDeadTerminatorInst(LIRDeadTerminatorInst *inst) {
-    return Type::createNoType();
-  }
 
   Type inferCreateFunctionInst(CreateFunctionInst *inst) {
     return *inst->getInherentType();

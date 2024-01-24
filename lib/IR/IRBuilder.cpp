@@ -1051,11 +1051,6 @@ UnreachableInst *IRBuilder::createUnreachableInst() {
   insert(I);
   return I;
 }
-LIRDeadTerminatorInst *IRBuilder::createLIRDeadTerminatorInst() {
-  auto *I = new LIRDeadTerminatorInst();
-  insert(I);
-  return I;
-}
 
 PrLoadInst *IRBuilder::createPrLoadInst(
     Value *object,

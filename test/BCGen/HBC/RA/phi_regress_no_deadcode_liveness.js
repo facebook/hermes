@@ -238,7 +238,7 @@ function b(d=([[[[{z:[{}]}]]]]=arguments)) {}
 // CHKRA-NEXT:%BB53:
 // CHKRA-NEXT:  $Reg15 = HBCLoadConstInst (:string) "Cannot destructure 'undefined' or 'null'.": string
 // CHKRA-NEXT:  $Reg15 = CallBuiltinInst (:any) [HermesBuiltin.throwTypeError]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, $Reg15
-// CHKRA-NEXT:  $Reg15 = LIRDeadTerminatorInst
+// CHKRA-NEXT:  $Reg15 = UnreachableInst
 // CHKRA-NEXT:%BB54:
 // CHKRA-NEXT:  $Reg15 = BranchInst %BB55
 // CHKRA-NEXT:%BB55:

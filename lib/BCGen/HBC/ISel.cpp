@@ -1572,11 +1572,6 @@ void HBCISel::generateUnreachableInst(
     hermes::BasicBlock *next) {
   emitUnreachableIfDebug();
 }
-void HBCISel::generateLIRDeadTerminatorInst(
-    hermes::LIRDeadTerminatorInst *Inst,
-    hermes::BasicBlock *next) {
-  emitUnreachableIfDebug();
-}
 
 void HBCISel::generateIteratorBeginInst(
     hermes::IteratorBeginInst *Inst,

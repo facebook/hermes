@@ -65,7 +65,7 @@ class DoLower {
     builder_.setInsertionPoint(TTE);
     auto *replace = builder_.createCallBuiltinInst(
         BuiltinMethod::HermesBuiltin_throwTypeError, {TTE->getMessage()});
-    builder_.createLIRDeadTerminatorInst();
+    builder_.createUnreachableInst();
     return replace;
   }
 
