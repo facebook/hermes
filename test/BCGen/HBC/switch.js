@@ -185,7 +185,7 @@ function switch_neg(x) {
 // CHECK-NEXT:  $Reg0 = CmpBrStrictlyEqualInst $Reg0, $Reg1, %BB2, %BB10
 // CHECK-NEXT:function_end
 
-// CHECK:function regress1(w: any): any
+// CHECK:function regress1(w: any): any [noReturn]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg6 = LoadParamInst (:any) %w: any

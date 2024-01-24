@@ -37,7 +37,7 @@ function backwards_branch() {
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function backwards_branch(): undefined
+// CHECK:function backwards_branch(): undefined [noReturn]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       BranchInst %BB1

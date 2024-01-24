@@ -1050,31 +1050,35 @@ class TypeInferenceImpl {
         llvh::dbgs() << "Resetting types in " << F->getInternalName() << '\n');
     bool changed = false;
 
-    /// If the type of \p val is no type, then set it back to the pre-pass type.
-    auto resetTypeIfNoType = [this, &changed](Value *val) -> void {
-      assert(
-          !llvh::isa<Function>(val) &&
-          "Functions should handle their return type");
-      if (val->getType().isNoType()) {
-        auto it = prePassTypes_.find(val);
-        assert(it != prePassTypes_.end() && "Missing pre-pass type.");
-        val->setType(it->second);
-        LLVM_DEBUG(
-            llvh::dbgs() << "Reset type for " << val->getKindStr() << " to "
-                         << it->second << '\n');
-        changed = true;
-      }
-    };
-
     // Parameters
     for (auto *P : F->getJSDynamicParams()) {
-      resetTypeIfNoType(P);
+      if (P->getType().isNoType()) {
+        assert(
+            F->allCallsitesKnown() &&
+            "params should be 'any' for unknown callsites");
+        // We know all callsites, so we can infer the type of the parameter.
+        // If it's notype, then there must be no reachable callsites.
+        F->getAttributesRef(F->getParent()).unreachable = true;
+        auto it = prePassTypes_.find(P);
+        assert(it != prePassTypes_.end() && "Missing pre-pass type.");
+        P->setType(it->second);
+        LLVM_DEBUG(
+            llvh::dbgs() << "Reset parameter type for " << P->getKindStr()
+                         << " to " << it->second << '\n');
+        changed = true;
+      }
     }
     // Return type
     if (F->getReturnType().isNoType()) {
       auto it = prePassTypes_.find(F);
       assert(it != prePassTypes_.end() && "Missing pre-pass type.");
       F->setReturnType(it->second);
+      if (!F->getAttributes(F->getParent()).unreachable) {
+        // Don't mark the Function as noReturn if it's unreachable,
+        // because the return type can be notype even if there is a return in
+        // the Function.
+        F->getAttributesRef(F->getParent()).noReturn = true;
+      }
       changed |= !F->getReturnType().isNoType();
     }
 

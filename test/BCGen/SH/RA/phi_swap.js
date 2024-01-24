@@ -31,7 +31,7 @@ function foo (a, b) {
 // CHECK-NEXT:                 ReturnInst {np0} %5: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(a: any, b: any): any
+// CHECK:function foo(a: any, b: any): any [noReturn]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {loc1}    %0 = LoadParamInst (:any) %a: any

@@ -31,7 +31,7 @@ function foo (a, b) {
 // CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(a: any, b: any): any
+// CHECK:function foo(a: any, b: any): any [noReturn]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg1 = LoadParamInst (:any) %a: any

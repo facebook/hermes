@@ -53,7 +53,7 @@
 // CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
-// CHECK:function updateEventTarget(x: any, y: any): any
+// CHECK:function updateEventTarget(x: any, y: any): any [noReturn]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ThrowInst 123: number

@@ -40,7 +40,7 @@ function outer() {
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
-// CHECK:function Point(x: any, y: any, z: any): undefined [allCallsitesKnownInStrictMode]
+// CHECK:function Point(x: any, y: any, z: any): undefined [allCallsitesKnownInStrictMode,unreachable]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any

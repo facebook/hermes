@@ -69,7 +69,7 @@ function outer2(){
 // CHECK-NEXT:       ReturnInst %0: undefined|object
 // CHECK-NEXT:function_end
 
-// CHECK:function bar(): object [allCallsitesKnownInStrictMode]
+// CHECK:function bar(): object [allCallsitesKnownInStrictMode,unreachable]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:object) [foo@outer2]: object

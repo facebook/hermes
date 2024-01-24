@@ -47,7 +47,7 @@ function main() {
 // CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
-// CHECK:function retval(): undefined
+// CHECK:function retval(): undefined [noReturn]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ThrowInst 1: number

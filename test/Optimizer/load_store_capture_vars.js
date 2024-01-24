@@ -146,7 +146,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:       ReturnInst 4: number
 // CHECK-NEXT:function_end
 
-// CHECK:function abort(): any
+// CHECK:function abort(): any [noReturn]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ThrowInst 42: number

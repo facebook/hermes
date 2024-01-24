@@ -33,7 +33,7 @@
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f(): any [allCallsitesKnownInStrictMode]
+// CHECK:function f(): any [allCallsitesKnownInStrictMode,noReturn]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:object) [f@main]: object

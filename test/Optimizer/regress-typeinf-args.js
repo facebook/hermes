@@ -103,7 +103,7 @@ function test4(f) {
 // CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end
 
-// CHECK:function f(x: any): any [allCallsitesKnownInStrictMode]
+// CHECK:function f(x: any): any [allCallsitesKnownInStrictMode,unreachable]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
@@ -118,7 +118,7 @@ function test4(f) {
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function ""(p: any): any
+// CHECK:function ""(p: any): any [noReturn]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %p: any

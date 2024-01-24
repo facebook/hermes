@@ -199,7 +199,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function hoist_loop_expression(a: any, b: any, call: any): any
+// CHECK:function hoist_loop_expression(a: any, b: any, call: any): any [noReturn]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
@@ -216,7 +216,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:function_end
 
-// CHECK:function hoist_from_multiblock_loop(x: any): any
+// CHECK:function hoist_from_multiblock_loop(x: any): any [noReturn]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
