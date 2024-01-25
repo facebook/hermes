@@ -35,6 +35,6 @@ add_subdirectory(dtoa)
 add_subdirectory(PlatformIntl)
 add_subdirectory(PlatformUnicode)
 # API tests rely on the interpreter.
-# add_subdirectory(API)
+add_subdirectory(API)
 add_subdirectory(ADT)
 add_subdirectory(Optimizer)
