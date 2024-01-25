@@ -166,6 +166,14 @@ class BytecodeInstructionGenerator {
   /// a raw double value instead of having to convert it
   /// to int64_t.
   offset_t emitLoadConstDoubleDirect(param_t dst, double value) {
+    // NaN may have a different bit pattern on different platforms.
+    // We need to make sure that the bit pattern is consistent.
+    if (LLVM_UNLIKELY(std::isnan(value))) {
+      static_assert(
+          sizeof(double) == sizeof(uint64_t), "double better be 64 bits");
+      static constexpr uint64_t qnan = 0xfff8000000000000;
+      return emitLoadConstDouble(dst, qnan);
+    }
     return emitLoadConstDouble(dst, llvh::DoubleToBits(value));
   }
 };
