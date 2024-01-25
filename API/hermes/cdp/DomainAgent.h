@@ -8,9 +8,11 @@
 #ifndef HERMES_CDP_DOMAINAGENT_H
 #define HERMES_CDP_DOMAINAGENT_H
 
+#include <mutex>
 #include <string>
 
 #include <hermes/inspector/chrome/MessageTypes.h>
+#include <hermes/inspector/chrome/ThreadSafetyAnalysis.h>
 
 namespace facebook {
 namespace hermes {
@@ -18,11 +20,48 @@ namespace cdp {
 
 namespace m = ::facebook::hermes::inspector_modern::chrome::message;
 
-using OutboundMessageFunc = std::function<void(const std::string &)>;
+/// A wrapper around std::function<void(...)> to make it safe to use from
+/// multiple threads. The wrapper implements an invalidate function so that one
+/// thread can clean up the underlying std::function in a thread-safe way.
+template <typename... Args>
+class SynchronizedCallback {
+ public:
+  SynchronizedCallback(std::function<void(Args...)> func)
+      : funcContainer_(std::make_shared<FunctionContainer>(func)) {}
+
+  /// Thread-safe version that calls the underlying std::function. If the
+  /// underlying std::function is empty, this function is a no-op.
+  void operator()(Args... args) const {
+    std::lock_guard<std::mutex> lock(funcContainer_->mutex);
+    if (funcContainer_->func) {
+      funcContainer_->func(args...);
+    }
+  }
+
+  /// Reset the underlying std::function so that future invocations of
+  /// operator() would just be a no-op.
+  void invalidate() {
+    std::lock_guard<std::mutex> lock(funcContainer_->mutex);
+    funcContainer_->func = std::function<void(Args...)>();
+  }
+
+ private:
+  struct FunctionContainer {
+    FunctionContainer(std::function<void(Args...)> func) : func(func) {}
+
+    std::mutex mutex{};
+
+    /// The actual std::function to be invoked by operator()
+    std::function<void(Args...)> func TSA_GUARDED_BY(mutex);
+  };
+  std::shared_ptr<FunctionContainer> funcContainer_;
+};
+
+using SynchronizedOutboundCallback = SynchronizedCallback<const std::string &>;
 
 class DomainAgent {
  protected:
-  DomainAgent(OutboundMessageFunc messageCallback)
+  DomainAgent(SynchronizedOutboundCallback messageCallback)
       : messageCallback_(messageCallback) {}
 
   /// Sends the provided string back to the debug client
@@ -41,7 +80,7 @@ class DomainAgent {
   }
 
   /// Callback function to send CDP response back to the debug client
-  OutboundMessageFunc messageCallback_;
+  SynchronizedOutboundCallback messageCallback_;
 };
 
 } // namespace cdp

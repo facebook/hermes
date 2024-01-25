@@ -18,8 +18,8 @@ using namespace facebook::hermes::debugger;
 DebuggerDomainAgent::DebuggerDomainAgent(
     HermesRuntime &runtime,
     AsyncDebuggerAPI &asyncDebugger,
-    OutboundMessageFunc messageCallback)
-    : DomainAgent(messageCallback),
+    SynchronizedOutboundCallback messageCallback)
+    : DomainAgent(std::move(messageCallback)),
       runtime_(runtime),
       asyncDebugger_(asyncDebugger),
       debuggerEventCallbackId_(kInvalidDebuggerEventCallbackID),

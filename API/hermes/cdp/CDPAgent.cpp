@@ -29,7 +29,7 @@ class CDPAgentImpl {
       HermesRuntime &runtime,
       AsyncDebuggerAPI &asyncDebuggerAPI,
       EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
-      OutboundMessageFunc messageCallback);
+      SynchronizedOutboundCallback messageCallback);
   ~CDPAgentImpl();
 
   /// Schedule initialization of handlers for each message domain.
@@ -48,7 +48,7 @@ class CDPAgentImpl {
     DomainAgents(
         HermesRuntime &runtime,
         AsyncDebuggerAPI &asyncDebuggerAPI,
-        OutboundMessageFunc messageCallback);
+        SynchronizedOutboundCallback messageCallback);
 
     /// Create the domain handlers and subscribing to any external events.
     void initialize();
@@ -62,13 +62,21 @@ class CDPAgentImpl {
 
     HermesRuntime &runtime_;
     debugger::AsyncDebuggerAPI &asyncDebuggerAPI_;
-    OutboundMessageFunc messageCallback_;
+
+    /// Callback function for sending CDP response back. Same as the one in
+    /// CDPAgentImpl.
+    SynchronizedOutboundCallback messageCallback_;
 
     std::unique_ptr<DebuggerDomainAgent> debuggerAgent_;
   };
 
-  EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback_;
-  OutboundMessageFunc messageCallback_;
+  /// Callback function for sending CDP response back. This is using the
+  /// SynchronizedOutboundCallback wrapper because we want to be able to
+  /// guarantee the callback will never be used after CDPAgentImpl is
+  /// destroyed. But since the callback is passed to other domain agents and
+  /// being used on the runtime thread, we need a thread-safe way to deal with
+  /// it.
+  SynchronizedOutboundCallback messageCallback_;
 
   RuntimeTaskRunner runtimeTaskRunner_;
   std::shared_ptr<DomainAgents> domainAgents_;
@@ -78,12 +86,13 @@ CDPAgentImpl::CDPAgentImpl(
     HermesRuntime &runtime,
     debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
     EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
-    OutboundMessageFunc messageCallback)
-    : runtimeTaskRunner_(asyncDebuggerAPI, enqueueRuntimeTaskCallback),
+    SynchronizedOutboundCallback messageCallback)
+    : messageCallback_(std::move(messageCallback)),
+      runtimeTaskRunner_(asyncDebuggerAPI, enqueueRuntimeTaskCallback),
       domainAgents_(std::make_shared<DomainAgents>(
           runtime,
           asyncDebuggerAPI,
-          messageCallback)) {}
+          messageCallback_)) {}
 
 CDPAgentImpl::~CDPAgentImpl() {
   // Call DomainAgents::dispose on the runtime thread, only keeping a copy of
@@ -100,6 +109,10 @@ CDPAgentImpl::~CDPAgentImpl() {
       [domainAgents = domainAgents_](HermesRuntime &runtime) {
         domainAgents->dispose();
       });
+
+  // Call invalidate() to prevent the OutboundMessageFunc from being used again
+  // after this destructor.
+  messageCallback_.invalidate();
 }
 
 void CDPAgentImpl::initializeDomainAgents() {
@@ -129,10 +142,10 @@ void CDPAgentImpl::handleCommand(std::string json) {
 CDPAgentImpl::DomainAgents::DomainAgents(
     HermesRuntime &runtime,
     AsyncDebuggerAPI &asyncDebuggerAPI,
-    OutboundMessageFunc messageCallback)
+    SynchronizedOutboundCallback messageCallback)
     : runtime_(runtime),
       asyncDebuggerAPI_(asyncDebuggerAPI),
-      messageCallback_(messageCallback) {}
+      messageCallback_(std::move(messageCallback)) {}
 
 void CDPAgentImpl::DomainAgents::initialize() {
   debuggerAgent_ = std::make_unique<DebuggerDomainAgent>(
@@ -189,7 +202,7 @@ CDPAgent::CDPAgent(
           runtime,
           asyncDebuggerAPI,
           enqueueRuntimeTaskCallback,
-          messageCallback)) {
+          SynchronizedOutboundCallback(messageCallback))) {
   impl_->initializeDomainAgents();
 }
 

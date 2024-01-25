@@ -30,14 +30,18 @@ if(HERMES_ENABLE_DEBUGGER)
     endif ()
   endif ()
 
+  set(CDP_API_SOURCES
+    cdp/CDPAgent.cpp
+    cdp/DebuggerDomainAgent.cpp
+  )
+
   set(INSPECTOR_API_SOURCES
     inspector/chrome/CallbackOStream.cpp
     inspector/chrome/CDPHandler.cpp
     inspector/chrome/RemoteObjectConverters.cpp
     inspector/chrome/RemoteObjectsTable.cpp
     inspector/RuntimeAdapter.cpp
-    cdp/CDPAgent.cpp
-    cdp/DebuggerDomainAgent.cpp
+    ${CDP_API_SOURCES}
     ${INSPECTOR_NO_EH_RTTI_SOURCES}
   )
 
@@ -64,8 +68,12 @@ file(GLOB api_headers ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 file(GLOB api_public_headers ${PROJECT_SOURCE_DIR}/public/hermes/Public/*.h)
 
 if(HERMES_THREAD_SAFETY_ANALYSIS)
+  set(TSA_SOURCES
+    AsyncDebuggerAPI.cpp
+    ${CDP_API_SOURCES}
+  )
   if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    set_property(SOURCE AsyncDebuggerAPI.cpp APPEND_STRING PROPERTY
+    set_property(SOURCE ${TSA_SOURCES} APPEND_STRING PROPERTY
       COMPILE_FLAGS "-Wthread-safety -Werror=thread-safety-analysis -D_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS")
   endif()
 endif()
