@@ -604,9 +604,9 @@ arrayPrototypeAt(void *, Runtime &runtime, NativeArgs args) {
   // 7. Return ? Get(O, ! ToString(𝔽(k))).
   if (LLVM_LIKELY(jsArr)) {
     const SmallHermesValue elm = jsArr->at(runtime, k);
-    if (elm.isEmpty()) {
-      return HermesValue::encodeUndefinedValue();
-    } else {
+    // If the element is not empty, we can return it directly here. Otherwise,
+    // we must proceed to the slow path.
+    if (!elm.isEmpty()) {
       return elm.unboxToHV(runtime);
     }
   }
