@@ -333,7 +333,7 @@ jobs:
           name: Run Hermes regression tests
           command: |
             cmake -S hermes -B build -G 'Visual Studio 16 2019'
-            cmake --build build --target check-hermes
+            cmake --build build --target check-hermes -- -m /p:UseMultiToolTask=true -m /p:EnforceProcessCountAcrossBuilds=true
 
   windows:
     executor:
@@ -396,9 +396,9 @@ jobs:
             if (-not $?) { throw "Failed to configure Hermes" }
             cmake -S hermes -B build_hdb -G 'Visual Studio 16 2019' -Ax64 $Env:RELEASE_FLAGS
             if (-not $?) { throw "Failed to configure Hermes" }
-            cmake --build ./build --config Release
+            cmake --build ./build --config Release -- -m /p:UseMultiToolTask=true -m /p:EnforceProcessCountAcrossBuilds=true
             if (-not $?) { throw "Failed to build Hermes" }
-            cmake --build ./build_hdb --config Release --target hdb
+            cmake --build ./build_hdb --config Release --target hdb -- -m /p:UseMultiToolTask=true -m /p:EnforceProcessCountAcrossBuilds=true
             if (-not $?) { throw "Failed to build Hermes" }
 
       - run:
