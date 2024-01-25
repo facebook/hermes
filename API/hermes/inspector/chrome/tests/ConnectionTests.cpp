@@ -1459,6 +1459,30 @@ TEST_F(ConnectionTests, testRuntimeCompileScript) {
   asyncRuntime.stop();
 }
 
+TEST_F(ConnectionTests, testRuntimeCompileScriptParseError) {
+  int msgId = 1;
+
+  asyncRuntime.executeScriptAsync("while(!shouldStop());");
+
+  send<m::runtime::EnableRequest>(conn, msgId++);
+  expectExecutionContextCreated(conn);
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
+  expectNotification<m::debugger::ScriptParsedNotification>(conn);
+
+  m::runtime::CompileScriptRequest req;
+  req.id = msgId;
+  req.persistScript = true;
+  req.sourceURL = "none";
+  req.expression = "/oops";
+  conn.send(req.toJsonStr());
+
+  auto resp = expectResponse<m::runtime::CompileScriptResponse>(conn, 3);
+  EXPECT_TRUE(resp.exceptionDetails.has_value());
+
+  asyncRuntime.stop();
+}
+
 TEST_F(ConnectionTests, testEvalOnCallFrameException) {
   int msgId = 1;
 
