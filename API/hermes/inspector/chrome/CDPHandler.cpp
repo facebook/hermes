@@ -1635,21 +1635,25 @@ std::shared_ptr<CDPHandler> CDPHandler::create(
 std::shared_ptr<CDPHandler> CDPHandler::create(
     std::unique_ptr<RuntimeAdapter> adapter,
     const std::string &title,
-    bool waitForDebugger) {
+    bool waitForDebugger,
+    bool processConsoleAPI) {
   // Can't use make_shared here since the constructor is private.
-  return std::shared_ptr<CDPHandler>(
-      new CDPHandler(std::move(adapter), title, waitForDebugger));
+  return std::shared_ptr<CDPHandler>(new CDPHandler(
+      std::move(adapter), title, waitForDebugger, processConsoleAPI));
 }
 
 CDPHandler::CDPHandler(
     std::unique_ptr<RuntimeAdapter> adapter,
     const std::string &title,
-    bool waitForDebugger)
+    bool waitForDebugger,
+    bool processConsoleAPI)
     : impl_(std::make_shared<CDPHandlerImpl>(
           std::move(adapter),
           waitForDebugger)),
       title_(title) {
-  impl_->installLogHandler();
+  if (processConsoleAPI) {
+    impl_->installLogHandler();
+  }
 }
 
 CDPHandler::~CDPHandler() = default;

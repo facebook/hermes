@@ -46,7 +46,8 @@ class INSPECTOR_EXPORT CDPHandler {
   CDPHandler(
       std::unique_ptr<RuntimeAdapter> adapter,
       const std::string &title,
-      bool waitForDebugger = false);
+      bool waitForDebugger = false,
+      bool processConsoleAPI = true);
 
  public:
   /// Creating a CDPHandler enables the debugger on the provided runtime. This
@@ -60,7 +61,8 @@ class INSPECTOR_EXPORT CDPHandler {
   static std::shared_ptr<CDPHandler> create(
       std::unique_ptr<RuntimeAdapter> adapter,
       const std::string &title,
-      bool waitForDebugger = false);
+      bool waitForDebugger = false,
+      bool processConsoleAPI = true);
   ~CDPHandler();
 
   /// getTitle returns the name of the friendly name of the runtime that's shown
