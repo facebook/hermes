@@ -1,0 +1,56 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+authors     = ["The React Team https://react.dev/community/team"]
+description = "Hermes bindings for Rust"
+edition     = "2021"
+homepage    = "https://github.com/facebook/hermes"
+keywords    = ["JavaScript", "TypeScript", "Compiler"]
+license     = "MIT"
+repository  = "https://github.com/facebook/hermes"
+
+[workspace.dependencies]
+# workspace crates
+hermes_diagnostics = { path = "crates/hermes_diagnostics" }
+hermes_estree = { path = "crates/hermes_estree" }
+hermes_estree_codegen = { path = "crates/hermes_estree_codegen" }
+hermes_parser = { path = "crates/hermes_parser" }
+hermes_semantic_analysis = { path = "crates/hermes_semantic_analysis" }
+hermes_utils = { path = "crates/hermes_utils" }
+
+# dependencies
+indexmap = { version = "2.0.0", features = ["serde"] }
+insta = { version = "1.30.0", features = ["glob"] }
+miette = { version = "5.9.0" }
+prettyplease = "0.2.10"
+quote = "1.0.29"
+serde = { version = "1.0.167", features = ["serde_derive"] }
+serde_json = "1.0.100"
+stacker = "0.1.15"
+static_assertions = "1.1.0"
+syn = "2.0.23"
+thiserror = "1.0.41"
+hermes = { git = "https://github.com/facebook/hermes.git" }
+juno_support = { git = "https://github.com/facebook/hermes.git" }
+
+[profile.release]
+# configuration adapted from oxc
+# https://github.com/Boshen/oxc/blob/ea85ee9f2d64dd284c5b7410f491d81fb879abae/Cargo.toml#L89-L97
+opt-level     = 3
+lto           = "fat"
+codegen-units = 1
+strip         = "symbols"
+debug         = false
+panic         = "abort"   # Let it crash and force ourselves to write safe Rust.
+
+# Make insta run faster by compiling with release mode optimizations
+# https://docs.rs/insta/latest/insta/#optional-faster-runs
+[profile.dev.package.insta]
+opt-level = 3
+
+# Make insta diffing libary faster by compiling with release mode optimizations
+# https://docs.rs/insta/latest/insta/#optional-faster-runs
+[profile.dev.package.similar]
+opt-level = 3
