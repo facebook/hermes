@@ -6,7 +6,6 @@
  */
 
 // RUN: %hermes -O %s
-// RUN: %shermes -exec %s
 
 // Check that WeakMap doesn't crash due to a bug which caused it to write to
 // internal valueStorage while it was being resized.
