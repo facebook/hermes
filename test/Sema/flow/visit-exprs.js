@@ -15,6 +15,9 @@ var i: number;
 // Ensure that the "i" is annotated.
 for(i in arr);
 for(i of arr);
+switch (i) {
+    case i: break;
+}
 
 // Auto-generated content below. Please do not modify manually.
 
@@ -32,6 +35,7 @@ for(i of arr);
 // CHECK-NEXT:            Decl %d.4 'arguments' Var Arguments
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:            Scope %s.5
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
@@ -54,4 +58,9 @@ for(i of arr);
 // CHECK-NEXT:                        Id 'i' [D:E:%d.3 'i'] : number
 // CHECK-NEXT:                        Id 'arr' [D:E:%d.2 'arr'] : %array.2
 // CHECK-NEXT:                        EmptyStatement
+// CHECK-NEXT:                    SwitchStatement Scope %s.5
+// CHECK-NEXT:                        Id 'i' [D:E:%d.3 'i'] : number
+// CHECK-NEXT:                        SwitchCase
+// CHECK-NEXT:                            Id 'i' [D:E:%d.3 'i'] : number
+// CHECK-NEXT:                            BreakStatement
 // CHECK-NEXT:            ObjectExpression

@@ -2087,6 +2087,14 @@ void FlowChecker::visit(ESTree::IfStatementNode *node) {
   visitESTreeNode(*this, node->_consequent, node);
   visitESTreeNode(*this, node->_alternate, node);
 }
+void FlowChecker::visit(ESTree::SwitchStatementNode *node) {
+  visitExpression(node->_discriminant, node);
+  visitESTreeNodeList(*this, node->_cases, node);
+}
+void FlowChecker::visit(ESTree::SwitchCaseNode *node) {
+  visitExpression(node->_test, node);
+  visitESTreeNodeList(*this, node->_consequent, node);
+}
 void FlowChecker::visit(ESTree::WhileStatementNode *node) {
   visitExpression(node->_test, node);
   visitESTreeNode(*this, node->_body, node);
