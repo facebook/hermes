@@ -28,7 +28,7 @@ add_hermes_tool(shermes
 # During cross-compilation, the compiler needs to be built for the host system,
 # then used to build the VM for the target system.
 # Namespace added to avoid clashing the imported binary with the target binary.
-export(TARGETS shermes FILE ${CMAKE_BINARY_DIR}/ImportShermes.cmake NAMESPACE imported-)
+export(TARGETS shermes APPEND FILE ${CMAKE_BINARY_DIR}/ImportHostCompilers.cmake NAMESPACE imported-)
 
 # A target building both the shermes compiler and the libraries potentially
 # needed for linking of a compiled binary.

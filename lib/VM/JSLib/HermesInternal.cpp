@@ -148,7 +148,7 @@ hermesInternalGetInstrumentedStats(void *, Runtime &runtime, NativeArgs args) {
   ADD_PROP("js_markStackOverflows", info.numMarkStackOverflows);
 #undef ADD_PROP
 
-  return ExecutionStatus::RETURNED;
+  return resultHandle.getHermesValue();
 }
 
 /// \return a static string summarising the presence and resolution type of
