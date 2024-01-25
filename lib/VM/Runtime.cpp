@@ -40,7 +40,7 @@
 #ifdef HERMESVM_INTERNAL_JAVASCRIPT_NATIVE
 #include "hermes/InternalJavaScript/internal_unit.h"
 #else
-#include "hermes/InternalBytecode/InternalBytecode.h"
+#include "hermes/InternalJavaScript/InternalBytecode.h"
 #endif
 
 #ifndef HERMESVM_LEAN
