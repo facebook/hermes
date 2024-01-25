@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -target=HBC -O %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec -O %s | %FileCheck --match-full-lines %s
 
 //CHECK-LABEL:start
 print("start");

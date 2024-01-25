@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -Xhermes-internal-test-methods=true %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s -Wx,-Xhermes-internal-test-methods=true | %FileCheck --match-full-lines %s
 
 print("HermesInternal job queue operations");
 // CHECK-LABEL: HermesInternal job queue operations

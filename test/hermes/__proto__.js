@@ -8,6 +8,7 @@
 // RUN: %hermes -O %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -dump-bytecode %s | %FileCheck --check-prefix=CHKBC %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 var proto1 = Object()
 var proto2 = Object()

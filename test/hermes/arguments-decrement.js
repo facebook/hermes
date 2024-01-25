@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -O %s
+// RUN: %shermes -exec %s
 
 // This test exercises an issue found in LowerArgumentsArray in which PHI nodes
 // were not being properly updated.

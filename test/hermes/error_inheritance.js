@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -O -target=HBC %s
+// RUN: %shermes -exec %s
 
 function Err() {}
 Err.prototype = Error()

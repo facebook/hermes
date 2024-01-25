@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes --target=HBC -O %s | %FileCheck %s --match-full-lines
+// RUN: %shermes -exec %s | %FileCheck %s --match-full-lines
 
 // Using a Phi in a successor of a Phi predecessor block:
 // B0:

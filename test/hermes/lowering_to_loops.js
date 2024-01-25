@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -target=HBC -O %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec -O %s | %FileCheck --match-full-lines %s
 // Makes sure we don't sink object initialization into loops
 // If `o` is sunk into its only use, `arr` is populated with different values
 

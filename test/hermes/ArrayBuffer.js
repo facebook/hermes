@@ -7,6 +7,7 @@
 
 // RUN: %hermes -target=HBC -O %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -target=HBC -O -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 /// @name Normal cases
 /// @{

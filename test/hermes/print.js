@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -hermes-parser -dump-ra %s
+// RUN: %shermes -exec %s
 
 
 // Make sure that we are not crashing on this one:

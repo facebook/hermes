@@ -7,6 +7,8 @@
 
 // RUN: %hermes -Xenable-tdz --test262 -O0 %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -Xenable-tdz --test262 -O %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec --test262 -O0 %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec --test262 -O %s | %FileCheck --match-full-lines %s
 
 function test(f) {
     try {

@@ -7,6 +7,7 @@
 
 // RUN: %hermes -O -w -target=HBC %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -w -target=HBC -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 var obj = {a: 0, b: 1};
 for (var p in obj) {

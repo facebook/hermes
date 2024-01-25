@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes %s | %FileCheck %s --match-full-lines
+// RUN: %shermes -exec %s | %FileCheck %s --match-full-lines
 // XFAIL: *
 
 var obj = {

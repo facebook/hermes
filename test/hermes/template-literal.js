@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -O %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 print(`hello${1 + 1}world`);
 // CHECK: hello2world

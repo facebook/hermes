@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -O -gc-max-heap=8M -gc-init-heap=8M %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s -Wx,-gc-max-heap=8M,-gc-init-heap=8M | %FileCheck --match-full-lines %s
 
 print('ArrayBuffer')
 // CHECK-LABEL: ArrayBuffer

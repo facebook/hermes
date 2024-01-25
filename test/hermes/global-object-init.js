@@ -6,5 +6,6 @@
  */
 
 // RUN: %hermes -target=HBC -O -gc-sanitize-handles=1 %s
+// RUN: %shermes -exec %s -Wx,-gc-sanitize-handles=1
 // This is an empty file, just used to ensure that the Runtime can be
 // constructed with full handle sanitization turned on and not crash.

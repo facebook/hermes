@@ -7,6 +7,7 @@
 
 // RUN: %hermes -non-strict -O %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -non-strict -O %s -emit-binary -out %t && %hermes -b %t | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec -O %s | %FileCheck --match-full-lines %s
 
 function if_small(x, a, b) {
   switch(x) {

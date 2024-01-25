@@ -6,6 +6,7 @@
  */
 
 // RUN: LC_ALL=en_US.UTF-8 %hermes -non-strict -O -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 print('BigInt Binary <|<=|=>|>');
 // CHECK-LABEL: BigInt Binary <|<=|=>|>

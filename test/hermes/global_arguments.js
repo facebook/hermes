@@ -7,6 +7,7 @@
 
 // RUN: %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -target=HBC -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 // arguments doesn't exist in global scope. 
 // v8 fails this test since it has a global property "arguments".

@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 // This is a regression test that ensures SymbolIDs cached in
 // StringPrimitives are properly marked.

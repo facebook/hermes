@@ -7,6 +7,7 @@
 
 // RUN: %hermes -O -target=HBC -gc-sanitize-handles=0 %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -target=HBC -gc-sanitize-handles=0 -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s -Wx,-gc-sanitize-handles=0 | %FileCheck --match-full-lines %s
 "use strict";
 
 var MBString = "0123456789abcdef";

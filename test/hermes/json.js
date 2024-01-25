@@ -7,6 +7,7 @@
 
 // RUN: %hermes -non-strict -O -target=HBC -gc-sanitize-handles=0 %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -non-strict -O -target=HBC -emit-binary -out %t.hbc %s && %hermes -gc-sanitize-handles=0 %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s -Wx,-gc-sanitize-handles=0 | %FileCheck --match-full-lines %s
 
 // This test was one of HandleSan's slowest at 30 seconds, so
 // -gc-sanitize-handles=0 is passed to reduce the risk of a timeout.

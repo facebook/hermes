@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -Xhermes-internal-test-methods -Xes6-proxy -O -gc-sanitize-handles=0 %s | %FileCheck %s
+// RUN: %shermes -exec %s -Wx,-Xhermes-internal-test-methods,-gc-sanitize-handles=0 | %FileCheck %s
 
 'use strict';
 

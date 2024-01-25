@@ -8,6 +8,7 @@
  */
 
 // RUN: %hermes -O -gc-sanitize-handles=0 %s
+// RUN: %shermes -exec %s -Wx,-gc-sanitize-handles=0
 
 'use strict';
 

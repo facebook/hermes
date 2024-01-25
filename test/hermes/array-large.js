@@ -7,6 +7,7 @@
 
 // RUN: %hermes -target=HBC -gc-max-heap=1G -O %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -target=HBC -O -emit-binary -out %t.hbc %s && %hermes -gc-max-heap=1G %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s -Wx,-gc-max-heap=1G | %FileCheck --match-full-lines %s
 
 print("Array.prototype.join with a large array should throw RangeError")
 // CHECK-LABEL: Array.prototype.join with a large array should throw RangeError

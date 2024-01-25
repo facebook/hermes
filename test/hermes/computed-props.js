@@ -7,6 +7,7 @@
 
 // RUN: %hermes %s | %FileCheck %s --match-full-lines
 // RUN: %hermes -O %s | %FileCheck %s --match-full-lines
+// RUN: %shermes -exec %s | %FileCheck %s --match-full-lines
 
 print('computed properties');
 // CHECK-LABEL: computed properties

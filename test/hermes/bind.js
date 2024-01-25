@@ -6,6 +6,7 @@
  */
 
 // RUN: LC_ALL=C.UTF-8 %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: LC_ALL=C.UTF-8 %shermes -exec %s | %FileCheck --match-full-lines %s
 
 "use strict";
 
