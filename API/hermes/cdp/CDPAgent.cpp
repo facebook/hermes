@@ -6,6 +6,7 @@
  */
 
 #include "CDPAgent.h"
+#include "DebuggerDomainAgent.h"
 
 #include <hermes/inspector/chrome/MessageConverters.h>
 #include <hermes/inspector/chrome/MessageTypes.h>
@@ -63,7 +64,7 @@ class CDPAgentImpl {
     debugger::AsyncDebuggerAPI &asyncDebuggerAPI_;
     OutboundMessageFunc messageCallback_;
 
-    // TODO: Add storage for domain-specific handlers
+    std::unique_ptr<DebuggerDomainAgent> debuggerAgent_;
   };
 
   EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback_;
@@ -134,11 +135,12 @@ CDPAgentImpl::DomainAgents::DomainAgents(
       messageCallback_(messageCallback) {}
 
 void CDPAgentImpl::DomainAgents::initialize() {
-  // TODO: create domain-specific handlers
+  debuggerAgent_ = std::make_unique<DebuggerDomainAgent>(
+      runtime_, asyncDebuggerAPI_, messageCallback_);
 }
 
 void CDPAgentImpl::DomainAgents::dispose() {
-  // TODO: dispose domain-specific handlers
+  debuggerAgent_.reset();
 }
 
 void CDPAgentImpl::DomainAgents::handleCommand(
@@ -154,13 +156,19 @@ void CDPAgentImpl::DomainAgents::handleCommand(
   }
   std::string domain = command->method.substr(0, domainLength);
 
-  // TODO: dispatch to the appropriate domain handler
-
-  messageCallback_(message::makeErrorResponse(
-                       command->id,
-                       message::ErrorCode::MethodNotFound,
-                       "Unsupported domain '" + command->method + "'")
-                       .toJsonStr());
+  // TODO: Do better dispatch
+  if (command->method == "Debugger.enable") {
+    debuggerAgent_->enable(static_cast<m::debugger::EnableRequest &>(*command));
+  } else if (command->method == "Debugger.disable") {
+    debuggerAgent_->disable(
+        static_cast<m::debugger::DisableRequest &>(*command));
+  } else {
+    messageCallback_(message::makeErrorResponse(
+                         command->id,
+                         message::ErrorCode::MethodNotFound,
+                         "Unsupported domain '" + command->method + "'")
+                         .toJsonStr());
+  }
 }
 
 std::unique_ptr<CDPAgent> CDPAgent::create(
