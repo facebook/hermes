@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/InternalBytecode/InternalBytecode.h"
+#include "hermes/InternalJavaScript/InternalBytecode.h"
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 
 namespace hermes {
