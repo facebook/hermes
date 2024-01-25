@@ -12,7 +12,6 @@
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 #include "hermes/FrontEndDefs/Builtins.h"
-#include "hermes/InternalJavaScript/internal_unit.h"
 #include "hermes/Platform/Logging.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
@@ -37,6 +36,12 @@
 #include "hermes/VM/StackTracesTree.h"
 #include "hermes/VM/StaticHUtils.h"
 #include "hermes/VM/StringView.h"
+
+#ifdef HERMESVM_INTERNAL_JAVASCRIPT_NATIVE
+#include "hermes/InternalJavaScript/internal_unit.h"
+#else
+#include "hermes/InternalBytecode/InternalBytecode.h"
+#endif
 
 #ifndef HERMESVM_LEAN
 #include "hermes/Support/MemoryBuffer.h"
@@ -1130,11 +1135,40 @@ ExecutionStatus Runtime::loadSegment(
 }
 
 Handle<JSObject> Runtime::runInternalJavaScript() {
+#ifdef HERMESVM_INTERNAL_JAVASCRIPT_NATIVE
   SHLegacyValue resOrExc;
   if (_sh_unit_init_guarded(
           getSHRuntime(*this), &sh_export_internal_unit, &resOrExc))
     return makeHandle<JSObject>(HermesValue::fromRaw(resOrExc.raw));
   hermes_fatal("Error evaluating internal unit.");
+#else
+  auto module = getInternalBytecode();
+  std::pair<std::unique_ptr<hbc::BCProvider>, std::string> bcResult =
+      hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+          std::make_unique<Buffer>(module.data(), module.size()));
+  if (LLVM_UNLIKELY(!bcResult.first)) {
+    hermes_fatal((llvh::Twine("Error running internal bytecode: ") +
+                  bcResult.second.c_str())
+                     .str());
+  }
+  // The bytes backing our buffer are immortal, so we can be persistent.
+  RuntimeModuleFlags flags;
+  flags.persistent = true;
+  flags.hidesEpilogue = true;
+  auto res = runBytecode(
+      std::move(bcResult.first),
+      flags,
+      /*sourceURL*/ "InternalBytecode.js",
+      makeNullHandle<Environment>());
+  // It is a fatal error for the internal bytecode to throw an exception.
+  assert(
+      res != ExecutionStatus::EXCEPTION && "Internal bytecode threw exception");
+  assert(
+      res->isObject() &&
+      "Completion value of internal bytecode must be an object");
+
+  return makeHandle<JSObject>(*res);
+#endif
 }
 
 void Runtime::printException(llvh::raw_ostream &os, Handle<> valueHandle) {
