@@ -286,8 +286,11 @@ set(HERMES_BUILD_LEAN_LIBHERMES OFF CACHE BOOL "Exclude the Hermes compiler from
 
 set(HERMES_BUILD_SHARED_JSI OFF CACHE BOOL "Build JSI as a shared library.")
 
-set(IMPORT_SHERMES "" CACHE FILEPATH
-  "Import the shermes compiler from another build using the given CMake file.")
+set(IMPORT_HOST_COMPILERS "" CACHE FILEPATH
+  "Import the shermes and hermesc compiler from another build using the given CMake file.")
+
+set(HERMESVM_INTERNAL_JAVASCRIPT_NATIVE OFF CACHE BOOL
+  "Use natively compiled InternalJavaScript. Set OFF to use bytecode version")
 
 # This definition is used by source that must be kept identical between Hermes and
 # Static Hermes, but needs to behave differently in each case.
