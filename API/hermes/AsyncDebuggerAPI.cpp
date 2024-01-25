@@ -172,12 +172,13 @@ debugger::Command AsyncDebuggerAPI::didPause(debugger::Debugger &debugger) {
 
 void AsyncDebuggerAPI::processInterruptWhilePaused() {
   std::unique_lock<std::mutex> lock(mutex_);
-  // We check whether `debuggerEventCallbacks_` has callbacks in all the
-  // while-loops below. This is because that callback could be cleared by users
-  // of AsyncDebuggerAPI at any time. We don't impose requirement on callers of
+  // We check whether `eventCallbacks_` has callbacks in all the while-loops
+  // below. This is because that callback could be cleared by users of
+  // AsyncDebuggerAPI at any time. We don't impose requirement on callers of
   // AsyncDebuggerAPI when they must be constructed and destructed.
   while (isWaitingForCommand_ && !eventCallbacks_.empty()) {
-    while (interruptCallbacks_.empty() && !eventCallbacks_.empty()) {
+    while (isWaitingForCommand_ && !eventCallbacks_.empty() &&
+           interruptCallbacks_.empty()) {
       signal_.wait(lock);
     }
     if (!eventCallbacks_.empty()) {
