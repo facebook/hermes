@@ -177,9 +177,15 @@ function processModuleStatement(
           });
           break;
         }
+        case 'Identifier': {
+          moduleGraphNode.exportBindingToSource.set(decl.name, {
+            exported: 'default',
+          });
+          break;
+        }
         default: {
           throw new Error(
-            `Non declaration export default expressions not supported. Got expression of type "${decl.type}"`,
+            `Non declaration export default expressions not supported. Got expression of type "${decl.type}" in "${moduleGraphNode.file}"`,
           );
         }
       }

@@ -100,29 +100,40 @@ export async function transformModule(
 
         for (const ref of variable.references) {
           const id = ref.identifier;
-          refs.add(id);
-          /**
-           * Current version of hermes-eslint does not find `JSXClosingElement` `JSXIdentifiers`,
-           * so we need to manually add them. 0.17.0 should include this logic.
-           *
-           * e.g.
-           * <Text>
-           *  ^^^^ From here
-           *   foo
-           * </Text>
-           *   ^^^^ Also add this
-           */
-          if (
-            id.type === 'JSXIdentifier' &&
-            id.parent.type === 'JSXOpeningElement' &&
-            id.parent.name === id
-          ) {
-            const closingElem = id.parent.parent.closingElement;
-            if (
-              closingElem != null &&
-              closingElem.name.type === 'JSXIdentifier'
-            ) {
-              refs.add(closingElem.name);
+          switch (id.type) {
+            case 'Identifier': {
+              // Skip exports as we know they will be stripped anyway.
+              if (id.parent.type !== 'ExportDefaultDeclaration') {
+                refs.add(id);
+              }
+              break;
+            }
+            case 'JSXIdentifier': {
+              refs.add(id);
+              /**
+               * Current version of hermes-eslint does not find `JSXClosingElement` `JSXIdentifiers`,
+               * so we need to manually add them. 0.17.0 should include this logic.
+               *
+               * e.g.
+               * <Text>
+               *  ^^^^ From here
+               *   foo
+               * </Text>
+               *   ^^^^ Also add this
+               */
+              if (
+                id.parent.type === 'JSXOpeningElement' &&
+                id.parent.name === id
+              ) {
+                const closingElem = id.parent.parent.closingElement;
+                if (
+                  closingElem != null &&
+                  closingElem.name.type === 'JSXIdentifier'
+                ) {
+                  refs.add(closingElem.name);
+                }
+              }
+              break;
             }
           }
         }
@@ -208,7 +219,7 @@ export async function transformModule(
               throw new Error(
                 context.buildCodeFrame(
                   container,
-                  `Non member expression reference of type "${container.type}"`,
+                  `Non member expression reference of type "${container.type}" in "${moduleGraphNode.file}"`,
                 ),
               );
             }
@@ -289,6 +300,10 @@ export async function transformModule(
                     context.replaceNode(stmt, stmt.declaration, {
                       keepComments: true,
                     });
+                    break;
+                  }
+                  case 'Identifier': {
+                    context.removeStatement(stmt);
                     break;
                   }
                   default: {
