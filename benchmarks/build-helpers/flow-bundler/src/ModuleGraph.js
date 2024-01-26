@@ -33,7 +33,7 @@ import * as path from 'path';
 const PACKAGES_DIR_NAME = 'packages';
 
 function getPathSourceWithJSExtension(source: string): string {
-  return path.extname(source) !== '' ? source : source + '.js';
+  return path.extname(source) === '.js' ? source : source + '.js';
 }
 
 function getPackageNameFromFile(projectRoot: string, file: string): ?string {
@@ -265,14 +265,19 @@ export async function createModuleGraph(
       moduleName = packageName + '_' + moduleName;
     }
 
+    // This prefix being uppercase is required for
+    // the JSX transform as it considers lower case JSXIdentifiers as host elements
+    // and transforms them differently.
+    const moduleNamePrefix = 'M$';
+
     // Dedupe file name conflicts by adding index suffix to module name.
     const moduleIndex = moduleNameCounter.get(moduleName) ?? 0;
     moduleNameCounter.set(moduleName, moduleIndex + 1);
     const sanitizedModuleName = moduleName.replace(/[^a-zA-Z0-9_$]/g, '_');
     if (moduleIndex === 0) {
-      return sanitizedModuleName;
+      return moduleNamePrefix + sanitizedModuleName;
     }
-    return sanitizedModuleName + '$' + moduleIndex;
+    return moduleNamePrefix + sanitizedModuleName + '$' + moduleIndex;
   }
 
   async function buildModuleGraph(fileName: string): Promise<ModuleInfo> {
