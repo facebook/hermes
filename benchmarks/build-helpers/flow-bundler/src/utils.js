@@ -17,6 +17,7 @@ import {promises as fs} from 'fs';
 import * as path from 'path';
 import {SimpleTraverser} from 'hermes-parser/dist/traverse/SimpleTraverser';
 import * as StripComponentSyntax from 'hermes-parser/dist/estree/StripComponentSyntax';
+import * as StripFlowTypesForBabel from 'hermes-parser/dist/estree/StripFlowTypesForBabel';
 import * as TransformESTreeToBabel from './fork/TransformESTreeToBabel';
 
 // $FlowExpectedError[cannot-resolve-module] Untyped third-party module
@@ -76,7 +77,10 @@ function hermesCommentToBabel(comment: Comment): BabelComment {
 }
 
 export function hermesASTToBabel(ast: Program, file: string): BabelFile {
-  const strippedAST = StripComponentSyntax.transformProgram(ast, {});
+  const strippedAST = [
+    StripComponentSyntax.transformProgram,
+    StripFlowTypesForBabel.transformProgram,
+  ].reduce((ast, transform) => transform(ast, {}), ast);
 
   SimpleTraverser.traverse(strippedAST, {
     enter(node: ESNode) {
