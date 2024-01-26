@@ -1115,6 +1115,21 @@ print(Array.prototype.at.call({length: 3, 0: 'a', 1: 'b', 2: 'c'}, -1));
 print(Array.prototype.at.call({length: 30}, 5));
 // CHECK-NEXT: undefined
 
+print('toReversed');
+// CHECK-LABEL: toReversed
+print(Array.prototype.toReversed.length);
+// CHECK-NEXT: 0
+var a = [1,2,3,4];
+print(a.toReversed().toString())
+// CHECK-NEXT: 4,3,2,1
+print(a.toString())
+// CHECK-NEXT: 1,2,3,4
+print(arrayEquals([ 1, 2, 3 ].toReversed(), [ 3, 2, 1 ]));
+// CHECK-NEXT: true
+print(Array.prototype.toReversed.call({length : 3, 0 : 'a', 1 : 'b', 2 : 'c'})
+          .toString())
+// CHECK-NEXT: c,b,a
+
 print('with');
 // CHECK-LABEL: with
 print(Array.prototype.with.length);

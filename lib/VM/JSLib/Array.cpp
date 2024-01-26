@@ -131,6 +131,13 @@ Handle<JSObject> createArrayConstructor(Runtime &runtime) {
   defineMethod(
       runtime,
       arrayPrototype,
+      Predefined::getSymbolID(Predefined::toReversed),
+      nullptr,
+      arrayPrototypeToReversed,
+      0);
+  defineMethod(
+      runtime,
+      arrayPrototype,
       Predefined::getSymbolID(Predefined::with),
       nullptr,
       arrayPrototypeWith,
@@ -3527,6 +3534,91 @@ arrayPrototypeIncludes(void *, Runtime &runtime, NativeArgs args) {
 
   // 8. Return false.
   return HermesValue::encodeBoolValue(false);
+}
+
+/// ES14.0 23.1.3.33
+CallResult<HermesValue>
+arrayPrototypeToReversed(void *, Runtime &runtime, NativeArgs args) {
+  GCScope gcScope{runtime};
+
+  // 1. Let O be ? ToObject(this value).
+  auto oRes = toObject(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(oRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto O = runtime.makeHandle<JSObject>(*oRes);
+
+  // 2. Let len be ? LengthOfArrayLike(O).
+  Handle<JSArray> jsArr = Handle<JSArray>::dyn_vmcast(O);
+  auto lenRes = lengthOfArrayLike(runtime, O, jsArr);
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto len = lenRes.getValue();
+
+  // 3. Let A be ArrayCreate(len).
+  auto ARes = JSArray::create(runtime, len, len);
+  if (LLVM_UNLIKELY(ARes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto A = ARes.getValue();
+
+  // 4. Let k be 0.
+  double k = 0;
+
+  MutableHandle<> kHandle{runtime};
+  MutableHandle<> fromHandle{runtime};
+  MutableHandle<> fromValueHandle{runtime};
+
+  auto marker = gcScope.createMarker();
+  // 5. Repeat, while k < len,
+  while (k < len) {
+    gcScope.flushToMarker(marker);
+
+    double from = len - k - 1;
+    // 5a. Let from be ! ToString(𝔽(len - k - 1)).
+    fromHandle = HermesValue::encodeUntrustedNumberValue(from);
+
+    // 5b. Let Pk be ! ToString(𝔽(k)).
+    kHandle = HermesValue::encodeTrustedNumberValue(k);
+
+    // 5c. Let fromValue be ? Get(O, from).
+    if (LLVM_LIKELY(jsArr)) {
+      const SmallHermesValue elm = jsArr->at(runtime, from);
+      // If the element is not empty, we can return it directly here.
+      // Otherwise, we must proceed to the slow path.
+      if (!elm.isEmpty()) {
+        fromValueHandle = elm.unboxToHV(runtime);
+      }
+    }
+    // Slow path
+    else {
+      CallResult<PseudoHandle<>> propRes =
+          JSObject::getComputed_RJS(O, runtime, fromHandle);
+      if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      fromValueHandle = propRes->getHermesValue();
+    }
+
+    // 5d. Perform ! CreateDataPropertyOrThrow(A, Pk, fromValue).
+    if (LLVM_UNLIKELY(
+            JSObject::defineOwnComputedPrimitive(
+                A,
+                runtime,
+                kHandle,
+                DefinePropertyFlags::getDefaultNewPropertyFlags(),
+                fromValueHandle,
+                PropOpFlags().plusThrowOnError()) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    // 5e. Set k to k + 1.
+    ++k;
+  }
+
+  return A.getHermesValue();
 }
 
 /// ES14.0 23.1.3.39
