@@ -862,6 +862,156 @@ TEST_F(ConnectionTests, testSetBreakpoint) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
+TEST_F(ConnectionTests, testSetMultiLocationBreakpoint) {
+  int msgId = 1;
+
+  asyncRuntime.executeScriptAsync(
+      R"(
+        function one() {
+          var a = 1;
+          var b = 2;
+          var c = a + b;
+        }
+  )",
+      "someFile");
+
+  asyncRuntime.executeScriptAsync(
+      R"(
+        function two() {
+          var d = 3;
+          var e = 4;
+          var f = d + e;
+        }
+  )",
+      "someFile");
+
+  asyncRuntime.executeScriptAsync(
+      R"(
+    debugger; // First break, line 1
+    one();
+    two();
+    debugger; // Last break, line 4
+  )",
+      "doesntMatch");
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
+  expectNotification<m::debugger::ScriptParsedNotification>(conn);
+  expectNotification<m::debugger::ScriptParsedNotification>(conn);
+  expectNotification<m::debugger::ScriptParsedNotification>(conn);
+
+  // First break, the first "debugger;"
+  expectPaused(conn, "other", {{"global", 1, 1}});
+
+  // Set a breakpoint that applies to two Hermes locations
+  m::debugger::SetBreakpointByUrlRequest req;
+  req.url = "someFile";
+  req.id = msgId++;
+  req.lineNumber = 2;
+  req.columnNumber = 0;
+  conn.send(req.toJsonStr());
+
+  auto resp =
+      expectResponse<m::debugger::SetBreakpointByUrlResponse>(conn, req.id);
+
+  EXPECT_FALSE(resp.breakpointId.empty());
+  EXPECT_NE(
+      resp.breakpointId,
+      std::to_string(facebook::hermes::debugger::kInvalidBreakpoint));
+  EXPECT_EQ(resp.locations.size(), 2);
+  for (auto &location : resp.locations) {
+    EXPECT_EQ(location.lineNumber, 2);
+  }
+
+  // Continue so we can hit the breakpoints...
+  send<m::debugger::ResumeRequest>(conn, msgId++);
+  expectNotification<m::debugger::ResumedNotification>(conn);
+
+  // Second break, breakpoint in function "one"
+  expectPaused(conn, "other", {{"one", 2, 2}, {"global", 2, 1}});
+  send<m::debugger::ResumeRequest>(conn, msgId++);
+  expectNotification<m::debugger::ResumedNotification>(conn);
+
+  // Third break, breakpoint in function "two"
+  expectPaused(conn, "other", {{"two", 2, 2}, {"global", 3, 1}});
+  send<m::debugger::ResumeRequest>(conn, msgId++);
+  expectNotification<m::debugger::ResumedNotification>(conn);
+
+  // Last break, the second "debugger;""
+  expectPaused(conn, "other", {{"global", 4, 1}});
+  send<m::debugger::ResumeRequest>(conn, msgId++);
+  expectNotification<m::debugger::ResumedNotification>(conn);
+}
+
+TEST_F(ConnectionTests, testDeleteMultiLocationBreakpoint) {
+  int msgId = 1;
+
+  asyncRuntime.executeScriptAsync(
+      R"(
+        function one() {
+          var a = 1;
+          var b = 2;
+          var c = a + b;
+        }
+  )",
+      "someFile");
+
+  asyncRuntime.executeScriptAsync(
+      R"(
+        function two() {
+          var d = 3;
+          var e = 4;
+          var f = d + e;
+        }
+  )",
+      "someFile");
+
+  asyncRuntime.executeScriptAsync(
+      R"(
+    debugger; // First break, line 1
+    one();
+    two();
+    debugger; // Last break, line 4
+  )",
+      "doesntMatch");
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
+  expectNotification<m::debugger::ScriptParsedNotification>(conn);
+  expectNotification<m::debugger::ScriptParsedNotification>(conn);
+  expectNotification<m::debugger::ScriptParsedNotification>(conn);
+
+  // First break, the first "debugger;"
+  expectPaused(conn, "other", {{"global", 1, 1}});
+
+  // Set a breakpoint that applies to two Hermes locations
+  m::debugger::SetBreakpointByUrlRequest req;
+  req.url = "someFile";
+  req.id = msgId++;
+  req.lineNumber = 2;
+  req.columnNumber = 0;
+  conn.send(req.toJsonStr());
+
+  auto resp =
+      expectResponse<m::debugger::SetBreakpointByUrlResponse>(conn, req.id);
+  EXPECT_EQ(resp.locations.size(), 2);
+
+  m::debugger::RemoveBreakpointRequest req2;
+  req2.id = msgId++;
+  req2.breakpointId = resp.breakpointId;
+  conn.send(req2.toJsonStr());
+  expectResponse<m::OkResponse>(conn, req2.id);
+
+  // Continue so we can hit the breakpoints...
+  send<m::debugger::ResumeRequest>(conn, msgId++);
+  expectNotification<m::debugger::ResumedNotification>(conn);
+
+  // Breakpoints that were set and deleted are not hit
+
+  // Last break, the second "debugger;""
+  expectPaused(conn, "other", {{"global", 4, 1}});
+  send<m::debugger::ResumeRequest>(conn, msgId++);
+  expectNotification<m::debugger::ResumedNotification>(conn);
+}
+
 TEST_F(ConnectionTests, testSetBreakpointById) {
   int msgId = 1;
 
