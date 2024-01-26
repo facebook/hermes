@@ -14,6 +14,7 @@ set(APITestsSources
   ${HERMES_JSI_DIR}/jsi/test/testlib.cpp
   AsyncDebuggerAPITest.cpp
   CDPAgentTest.cpp
+  SynchronizedCallbackTest.cpp
   ../../API/hermes/inspector/chrome/tests/SerialExecutor.cpp
   DebuggerTest.cpp
   SegmentTest.cpp
