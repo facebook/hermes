@@ -200,6 +200,7 @@ STR(includes, "includes")
 STR(subarray, "subarray")
 STR(flat, "flat")
 STR(flatMap, "flatMap")
+STR(with, "with")
 
 STR(ArrayBuffer, "ArrayBuffer")
 STR(byteLength, "byteLength")
