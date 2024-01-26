@@ -27,6 +27,8 @@ using OnUnregisterFunction = std::function<void()>;
 
 class CDPHandlerImpl;
 
+struct State;
+
 /// CDPHandler processes CDP messages between the client and the debugger.
 /// It performs no networking or connection logic itself.
 /// The CDP Handler is invoked from multiple threads. The locking strategy is
@@ -47,7 +49,8 @@ class INSPECTOR_EXPORT CDPHandler {
       std::unique_ptr<RuntimeAdapter> adapter,
       const std::string &title,
       bool waitForDebugger = false,
-      bool processConsoleAPI = true);
+      bool processConsoleAPI = true,
+      std::shared_ptr<State> state = nullptr);
 
  public:
   /// Creating a CDPHandler enables the debugger on the provided runtime. This
@@ -56,13 +59,15 @@ class INSPECTOR_EXPORT CDPHandler {
   /// on the given \p adapter.
   static std::shared_ptr<CDPHandler> create(
       std::unique_ptr<RuntimeAdapter> adapter,
-      bool waitForDebugger = false);
+      bool waitForDebugger = false,
+      std::shared_ptr<State> state = nullptr);
   /// Temporarily kept to allow React Native build to still work
   static std::shared_ptr<CDPHandler> create(
       std::unique_ptr<RuntimeAdapter> adapter,
       const std::string &title,
       bool waitForDebugger = false,
-      bool processConsoleAPI = true);
+      bool processConsoleAPI = true,
+      std::shared_ptr<State> state = nullptr);
   ~CDPHandler();
 
   /// getTitle returns the name of the friendly name of the runtime that's shown
@@ -88,9 +93,38 @@ class INSPECTOR_EXPORT CDPHandler {
   /// Process a JSON-encoded Chrome DevTools Protocol request.
   void handle(std::string str);
 
+  /// Extract state to be persisted across reloads.
+  std::unique_ptr<State> getState();
+
  private:
   std::shared_ptr<CDPHandlerImpl> impl_;
   const std::string title_;
+};
+
+/// Public-facing wrapper for internal CDP state that can be preserved across
+/// reloads.
+struct State {
+  /// Incomplete type that stores the actual state.
+  struct Private;
+
+  /// Custom deleter allowing the incomplete type to be used in a unique_ptr.
+  struct PrivateDeleter {
+    void operator()(Private *privateState) const;
+  };
+
+  /// Create a new wrapper with the provided \p privateState.
+  explicit State(std::unique_ptr<Private, PrivateDeleter> &&privateState)
+      : privateState_(std::move(privateState)) {}
+  ~State();
+
+  /// Get the wrapped state.
+  Private &get() {
+    return *privateState_.get();
+  }
+
+ private:
+  /// Pointer to the actual stored state, hidden from users of this wrapper.
+  std::unique_ptr<Private, PrivateDeleter> privateState_;
 };
 
 } // namespace chrome

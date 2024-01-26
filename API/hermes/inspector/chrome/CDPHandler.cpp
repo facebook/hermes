@@ -67,6 +67,14 @@ using CDPBreakpointID = uint32_t;
 
 /// Description of where breakpoints should be created.
 struct CDPBreakpointDescription {
+  /// Determines whether this breakpoint can be persisted across sessions
+  bool persistable() const {
+    // Only persist breakpoints that can apply to future scripts (i.e.
+    // breakpoints set on a set of files specified by script URL, not
+    // breakpoints set on an exact, session-specific script ID).
+    return url.has_value();
+  }
+
   std::optional<std::string> url;
   long long line;
   std::optional<long long> column;
@@ -91,6 +99,32 @@ struct HermesBreakpointLocation {
   debugger::SourceLocation location;
 };
 } // namespace
+
+/// Internal state that can be exported from a CDP Handler and imported into
+/// another.
+struct State::Private {
+  /// Create a new state object, storing any values that should be persisted
+  /// across sessions.
+  explicit Private(
+      const std::unordered_map<CDPBreakpointID, CDPBreakpoint> &breakpoints) {
+    /// Persist breakpoints
+    breakpointDescriptions.reserve(breakpoints.size());
+    for (auto &[id, breakpoint] : breakpoints) {
+      if (breakpoint.description.persistable()) {
+        breakpointDescriptions[id] = breakpoint.description;
+      }
+    }
+  }
+
+  std::unordered_map<CDPBreakpointID, CDPBreakpointDescription>
+      breakpointDescriptions;
+};
+
+State::~State() = default;
+
+void State::PrivateDeleter::operator()(State::Private *privateState) const {
+  delete privateState;
+}
 
 struct Script {
   uint32_t fileId{};
@@ -143,7 +177,10 @@ class CDPHandlerImpl : public message::RequestHandler,
                        public debugger::EventObserver,
                        public std::enable_shared_from_this<CDPHandlerImpl> {
  public:
-  CDPHandlerImpl(std::unique_ptr<RuntimeAdapter> adapter, bool waitForDebugger);
+  CDPHandlerImpl(
+      std::unique_ptr<RuntimeAdapter> adapter,
+      bool waitForDebugger,
+      std::shared_ptr<State> state);
   ~CDPHandlerImpl() override;
 
   bool registerCallbacks(
@@ -151,6 +188,7 @@ class CDPHandlerImpl : public message::RequestHandler,
       OnUnregisterFunction onUnregister);
   bool unregisterCallbacks();
   void handle(std::string str);
+  std::unique_ptr<State> getState();
   /// Install console log handler. This is to detect console.XXX methods, and
   /// then emit the corresponding Runtime.consoleAPICalled event. Callers of
   /// this function must ensure that the instance has already had a shared_ptr
@@ -524,7 +562,8 @@ class CDPHandlerImpl : public message::RequestHandler,
 
 CDPHandlerImpl::CDPHandlerImpl(
     std::unique_ptr<RuntimeAdapter> adapter,
-    bool waitForDebugger)
+    bool waitForDebugger,
+    std::shared_ptr<State> state)
     : runtimeAdapter_(std::move(adapter)),
       runtime_(runtimeAdapter_->getRuntime()),
       awaitingDebuggerOnStart_(waitForDebugger) {
@@ -535,6 +574,20 @@ CDPHandlerImpl::CDPHandlerImpl(
       std::make_shared<jsi::StringBuffer>(src), "__tickleJsHackUrl");
   runtime_.getDebugger().setShouldPauseOnScriptLoad(true);
   runtime_.getDebugger().setEventObserver(this);
+
+  if (state) {
+    // Load persisted breakpoints. They will be applied to the appropriate
+    // scripts as the script-loaded notifications arrive.
+    for (auto &[id, description] : state->get().breakpointDescriptions) {
+      cdpBreakpoints_.emplace(id, CDPBreakpoint(description));
+
+      // Ensure we don't re-use persisted breakpoint IDs; advance the ID counter
+      // past any imported breakpoints.
+      if (id >= nextBreakpointID_) {
+        nextBreakpointID_ = id + 1;
+      }
+    }
+  }
 }
 
 CDPHandlerImpl::~CDPHandlerImpl() {
@@ -604,6 +657,12 @@ void CDPHandlerImpl::handle(std::string str) {
   } else {
     req->accept(*this);
   }
+}
+
+std::unique_ptr<State> CDPHandlerImpl::getState() {
+  return std::make_unique<State>(
+      std::unique_ptr<State::Private, State::PrivateDeleter>(
+          new State::Private(cdpBreakpoints_), State::PrivateDeleter()));
 }
 
 void CDPHandlerImpl::handleConsoleAPI(ConsoleMessageInfo info) {
@@ -1765,30 +1824,38 @@ bool CDPHandlerImpl::validateExecutionContext(
  */
 std::shared_ptr<CDPHandler> CDPHandler::create(
     std::unique_ptr<RuntimeAdapter> adapter,
-    bool waitForDebugger) {
+    bool waitForDebugger,
+    std::shared_ptr<State> state) {
   // Can't use make_shared here since the constructor is private.
-  return std::shared_ptr<CDPHandler>(
-      new CDPHandler(std::move(adapter), "", waitForDebugger));
+  return std::shared_ptr<CDPHandler>(new CDPHandler(
+      std::move(adapter), "", waitForDebugger, true, std::move(state)));
 }
 
 std::shared_ptr<CDPHandler> CDPHandler::create(
     std::unique_ptr<RuntimeAdapter> adapter,
     const std::string &title,
     bool waitForDebugger,
-    bool processConsoleAPI) {
+    bool processConsoleAPI,
+    std::shared_ptr<State> state) {
   // Can't use make_shared here since the constructor is private.
   return std::shared_ptr<CDPHandler>(new CDPHandler(
-      std::move(adapter), title, waitForDebugger, processConsoleAPI));
+      std::move(adapter),
+      title,
+      waitForDebugger,
+      processConsoleAPI,
+      std::move(state)));
 }
 
 CDPHandler::CDPHandler(
     std::unique_ptr<RuntimeAdapter> adapter,
     const std::string &title,
     bool waitForDebugger,
-    bool processConsoleAPI)
+    bool processConsoleAPI,
+    std::shared_ptr<State> state)
     : impl_(std::make_shared<CDPHandlerImpl>(
           std::move(adapter),
-          waitForDebugger)),
+          waitForDebugger,
+          std::move(state))),
       title_(title) {
   if (processConsoleAPI) {
     impl_->installLogHandler();
@@ -1813,6 +1880,10 @@ bool CDPHandler::unregisterCallbacks() {
 
 void CDPHandler::handle(std::string str) {
   impl_->handle(std::move(str));
+}
+
+std::unique_ptr<State> CDPHandler::getState() {
+  return impl_->getState();
 }
 
 bool CDPHandlerImpl::isAwaitingDebuggerOnStart() {
