@@ -9,6 +9,8 @@
 
 #include "AsyncDebuggerAPI.h"
 
+#include <hermes/Support/ErrorHandling.h>
+
 #include <llvh/ADT/ScopeExit.h>
 
 namespace facebook {
@@ -152,7 +154,8 @@ debugger::Command AsyncDebuggerAPI::didPause(debugger::Debugger &debugger) {
       event = DebuggerEventType::ExplicitPause;
       break;
     case debugger::PauseReason::AsyncTriggerImplicit:
-      assert(false && "Should have executed interrupts and returned already");
+      ::hermes::hermes_fatal(
+          "Should have executed interrupts and returned already");
       break;
   }
   runEventCallbacks(event);
