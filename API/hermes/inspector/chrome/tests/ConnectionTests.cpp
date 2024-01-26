@@ -555,6 +555,7 @@ TEST_F(ConnectionTests, testUnregisteringCallback) {
   EXPECT_TRUE(conn.registerCallbacks());
 }
 
+// Also implemented as CDPAgentTest::TestScriptsOnEnable
 TEST_F(ConnectionTests, testScriptsOnEnable) {
   int msgId = 1;
 
@@ -574,6 +575,7 @@ TEST_F(ConnectionTests, testScriptsOnEnable) {
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 }
 
+// Also implemented as CDPAgentTest::TestScriptsOrdering
 TEST_F(ConnectionTests, testScriptsOrdering) {
   int msgId = 1;
   std::vector<m::debugger::ScriptParsedNotification> notifications;
@@ -611,6 +613,7 @@ TEST_F(ConnectionTests, testScriptsOrdering) {
   }
 }
 
+// Also implemented as CDPAgentTest::TestBytecodeScript
 TEST_F(ConnectionTests, testBytecodeScript) {
   int msgId = 1;
   send<m::debugger::EnableRequest>(conn, msgId++);
