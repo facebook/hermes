@@ -1012,6 +1012,65 @@ TEST_F(ConnectionTests, testDeleteMultiLocationBreakpoint) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
+TEST_F(ConnectionTests, testApplyBreakpointsToLoadedScripts) {
+  int msgId = 1;
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
+
+  // Set a breakpoint that applies to zero Hermes locations
+  m::debugger::SetBreakpointByUrlRequest req;
+  req.url = "someFile";
+  req.id = msgId++;
+  req.lineNumber = 2;
+  req.columnNumber = 0;
+  conn.send(req.toJsonStr());
+
+  auto resp =
+      expectResponse<m::debugger::SetBreakpointByUrlResponse>(conn, req.id);
+
+  // Ensure the breakpoint was successfully created
+  EXPECT_FALSE(resp.breakpointId.empty());
+  EXPECT_NE(
+      resp.breakpointId,
+      std::to_string(facebook::hermes::debugger::kInvalidBreakpoint));
+  EXPECT_EQ(resp.locations.size(), 0);
+
+  // Load a script that matches the breakpoint description
+  asyncRuntime.executeScriptAsync(
+      R"(
+        var a = 1;
+        var b = 2;
+        var c = a + b;
+  )",
+      "someFile");
+  auto parsed = expectNotification<m::debugger::ScriptParsedNotification>(conn);
+
+  // Ensure the breakpoint was applied
+  auto resolution =
+      expectNotification<m::debugger::BreakpointResolvedNotification>(conn);
+  EXPECT_EQ(resolution.location.scriptId, parsed.scriptId);
+  EXPECT_EQ(resolution.location.lineNumber, 2);
+
+  // Ensure the breakpoint is hit
+  expectPaused(conn, "other", {{"global", 2, 1}});
+  send<m::debugger::ResumeRequest>(conn, msgId++);
+  expectNotification<m::debugger::ResumedNotification>(conn);
+
+  // Load a script that doesn't match the breakpoint description
+  asyncRuntime.executeScriptAsync(
+      R"(
+        var a = 1;
+        var b = 2;
+        var c = a + b;
+  )",
+      "anotherFile");
+  expectNotification<m::debugger::ScriptParsedNotification>(conn);
+
+  // Ensure the breakpoint wasn't applied (i.e. no breakpoint resolved
+  // notification and no breakpoints hit).
+  expectNothing(conn);
+}
+
 TEST_F(ConnectionTests, testSetBreakpointById) {
   int msgId = 1;
 
