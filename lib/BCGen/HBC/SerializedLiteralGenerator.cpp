@@ -41,6 +41,32 @@ void serializeValueToBuffer(
       value,
       llvh::support::endianness::little);
 }
+
+template <>
+void serializeValueToBuffer(double value, std::vector<unsigned char> &buff) {
+  // Since endian::write takes a pointer, we can write directly to
+  // the buffer. First we resize it to make sure the data fits, then
+  // we pass a pointer to the original end of the vector.
+  // Since the buffer is a char buffer, we pass in an alignment of 1
+  // to endian::write.
+  buff.resize(buff.size() + sizeof(double));
+  // NaN may have a different bit pattern on different platforms.
+  // We need to make sure that the bit pattern is consistent.
+  if (LLVM_UNLIKELY(std::isnan(value))) {
+    static_assert(
+        sizeof(double) == sizeof(uint64_t), "double better be 64 bits");
+    static constexpr uint64_t qnan = 0xfff8000000000000;
+    llvh::support::endian::write<uint64_t, 1>(
+        buff.data() + buff.size() - sizeof(uint64_t),
+        qnan,
+        llvh::support::endianness::little);
+  } else {
+    llvh::support::endian::write<double, 1>(
+        buff.data() + buff.size() - sizeof(double),
+        value,
+        llvh::support::endianness::little);
+  }
+}
 } // namespace
 
 void SerializedLiteralGenerator::serializeBuffer(
