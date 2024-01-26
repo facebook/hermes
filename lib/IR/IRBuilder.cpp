@@ -194,6 +194,10 @@ LiteralNumber *IRBuilder::getLiteralNegativeZero() {
   return M->getLiteralNumber(-0.0);
 }
 
+LiteralNumber *IRBuilder::getLiteralInfinity() {
+  return M->getLiteralNumber(std::numeric_limits<double>::infinity());
+}
+
 LiteralNumber *IRBuilder::getLiteralNaN() {
   return M->getLiteralNumber(std::numeric_limits<double>::quiet_NaN());
 }

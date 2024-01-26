@@ -157,6 +157,9 @@ class IRBuilder {
   /// Create a new literal NaN.
   LiteralNumber *getLiteralNaN();
 
+  /// Create a new literal number value of Infinity.
+  LiteralNumber *getLiteralInfinity();
+
   /// Create a new literal BitInt of value \p value.
   LiteralBigInt *getLiteralBigInt(UniqueString *value);
 

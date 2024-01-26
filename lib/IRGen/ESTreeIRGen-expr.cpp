@@ -2174,11 +2174,18 @@ Value *ESTreeIRGen::genIdentifierExpression(
     return curFunction()->createArgumentsInst;
   }
 
-  // For uses of undefined as the global property, we make an optimization
-  // to always return undefined constant.
-  if (llvh::isa<GlobalObjectProperty>(Var) &&
-      StrName.getUnderlyingPointer() == kw_.identUndefined) {
-    return Builder.getLiteralUndefined();
+  // For uses of undefined/Infinity/NaN as the global property, we make an
+  // optimization to always return the constant directly.
+  if (llvh::isa<GlobalObjectProperty>(Var)) {
+    if (StrName.getUnderlyingPointer() == kw_.identUndefined) {
+      return Builder.getLiteralUndefined();
+    }
+    if (StrName.getUnderlyingPointer() == kw_.identInfinity) {
+      return Builder.getLiteralInfinity();
+    }
+    if (StrName.getUnderlyingPointer() == kw_.identNaN) {
+      return Builder.getLiteralNaN();
+    }
   }
 
   LLVM_DEBUG(
