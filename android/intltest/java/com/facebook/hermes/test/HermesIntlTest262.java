@@ -272,6 +272,7 @@ public class HermesIntlTest262 extends InstrumentationTestCase {
             "test262/test/intl402/NumberFormat/prototype/format/format-rounding-mode-half-trunc.js",
             "test262/test/intl402/NumberFormat/prototype/format/format-rounding-mode-half-ceil.js",
             "test262/test/intl402/NumberFormat/prototype/format/format-rounding-mode-expand.js",
+            "test262/test/intl402/NumberFormat/prototype/format/format-rounding-mode-half-expand.js",
             "test262/test/intl402/NumberFormat/prototype/format/engineering-scientific-zh-TW.js",
             "test262/test/intl402/NumberFormat/prototype/format/unit-zh-TW.js",
             "test262/test/intl402/NumberFormat/prototype/format/notation-compact-zh-TW.js",
