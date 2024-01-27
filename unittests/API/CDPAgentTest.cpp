@@ -57,16 +57,25 @@ class CDPAgentTest : public ::testing::Test {
   /// waits for the next message of either kind (response or notification)
   /// from the debugger. returns the message. throws on timeout.
   std::string waitForMessage(
+      std::string context = "reply",
       std::chrono::milliseconds timeout = std::chrono::milliseconds(2500));
 
   void expectNothing();
 
   void sendAndCheckResponse(const std::string &method, int id);
 
+  jsi::Value shouldStop(
+      jsi::Runtime &runtime,
+      const jsi::Value &thisVal,
+      const jsi::Value *args,
+      size_t count);
+
   std::unique_ptr<HermesRuntime> runtime_;
   std::unique_ptr<AsyncDebuggerAPI> asyncDebuggerAPI_;
   std::unique_ptr<SerialExecutor> runtimeThread_;
   std::unique_ptr<CDPAgent> cdpAgent_;
+
+  std::atomic<bool> stopFlag_{};
 
   std::mutex mutex_;
   std::condition_variable hasMessage_;
@@ -78,6 +87,15 @@ void CDPAgentTest::SetUp() {
 
   auto builder = ::hermes::vm::RuntimeConfig::Builder();
   runtime_ = facebook::hermes::makeHermesRuntime(builder.build());
+  runtime_->global().setProperty(
+      *runtime_,
+      "shouldStop",
+      jsi::Function::createFromHostFunction(
+          *runtime_,
+          jsi::PropNameID::forAscii(*runtime_, "shouldStop"),
+          0,
+          std::bind(&CDPAgentTest::shouldStop, this, _1, _2, _3, _4)));
+
   asyncDebuggerAPI_ = AsyncDebuggerAPI::create(*runtime_);
 
   cdpAgent_ = CDPAgent::create(
@@ -105,14 +123,16 @@ void CDPAgentTest::TearDown() {
   runtimeThread_.reset();
 }
 
-std::string CDPAgentTest::waitForMessage(std::chrono::milliseconds timeout) {
+std::string CDPAgentTest::waitForMessage(
+    std::string context,
+    std::chrono::milliseconds timeout) {
   std::unique_lock<std::mutex> lock(mutex_);
 
   bool success = hasMessage_.wait_for(
       lock, timeout, [this]() -> bool { return !messages_.empty(); });
 
   if (!success) {
-    throw std::runtime_error("timed out waiting for reply");
+    throw std::runtime_error("timed out waiting for " + context);
   }
 
   std::string message = std::move(messages_.front());
@@ -121,22 +141,32 @@ std::string CDPAgentTest::waitForMessage(std::chrono::milliseconds timeout) {
 }
 
 void CDPAgentTest::expectNothing() {
+  std::string message;
   try {
-    waitForMessage();
+    message = waitForMessage();
   } catch (...) {
     // if no values are received it times out with an exception
     // so we can say that we've succeeded at seeing nothing
     return;
   }
 
-  throw std::runtime_error("received a notification but didn't expect one");
+  throw std::runtime_error(
+      "received a notification but didn't expect one: " + message);
+}
+
+jsi::Value CDPAgentTest::shouldStop(
+    jsi::Runtime &runtime,
+    const jsi::Value &thisVal,
+    const jsi::Value *args,
+    size_t count) {
+  return stopFlag_.load() ? jsi::Value(true) : jsi::Value(false);
 }
 
 void CDPAgentTest::sendAndCheckResponse(const std::string &method, int id) {
   std::string json =
       "{\"id\": " + std::to_string(id) + ", \"method\": \"" + method + "\"}";
   cdpAgent_->handleCommand(json);
-  ensureOkResponse(waitForMessage(), id);
+  ensureOkResponse(waitForMessage(method), id);
 }
 
 template <typename T>
@@ -275,6 +305,44 @@ TEST_F(CDPAgentTest, TestScriptsOnEnable) {
   ensureNotification(waitForMessage(), "Debugger.scriptParsed");
 }
 
+TEST_F(CDPAgentTest, TestEnableWhenAlreadyPaused) {
+  int msgId = 1;
+
+  scheduleScript("true");
+
+  // Before Debugger.enable, register another debug client and trigger a pause
+  DebuggerEventCallbackID eventCallbackID;
+  waitFor<bool>([this, &eventCallbackID](auto promise) {
+    eventCallbackID = asyncDebuggerAPI_->addDebuggerEventCallback_TS(
+        [promise](
+            HermesRuntime &runtime,
+            AsyncDebuggerAPI &asyncDebugger,
+            DebuggerEventType event) { promise->set_value(true); });
+    runtime_->getDebugger().triggerAsyncPause(AsyncPauseKind::Explicit);
+  });
+
+  // At this point, the runtime thread is paused due to Explicit AsyncBreak
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+  ensureNotification(
+      waitForMessage("Debugger.scriptParsed"), "Debugger.scriptParsed");
+
+  // Verify that after Debugger.enable is processed, we'll automatically get a
+  // Debugger.paused notification
+  ensurePaused(
+      waitForMessage("paused"),
+      "other",
+      {FrameInfo("global", 0, 1).setLineNumberMax(9)});
+
+  asyncDebuggerAPI_->removeDebuggerEventCallback_TS(eventCallbackID);
+
+  asyncDebuggerAPI_->triggerInterrupt_TS([this](HermesRuntime &runtime) {
+    asyncDebuggerAPI_->setNextCommand(Command::continueExecution());
+  });
+
+  ensureNotification(waitForMessage("Debugger.resumed"), "Debugger.resumed");
+}
+
 TEST_F(CDPAgentTest, TestScriptsOrdering) {
   int msgId = 1;
   std::vector<std::string> notifications;
@@ -324,6 +392,43 @@ TEST_F(CDPAgentTest, TestBytecodeScript) {
   // Verify that invalid SourceLocations simply don't trigger scriptParsed
   // notifications
   expectNothing();
+}
+
+TEST_F(CDPAgentTest, TestAsyncPauseWhileRunning) {
+  int msgId = 1;
+
+  scheduleScript(R"(
+    var accum = 10;
+
+    while (!shouldStop()) {
+      var a = 1;
+      var b = 2;
+      var c = a + b;
+
+      accum += c;
+    }                        // (line 9)
+
+    var d = -accum;
+  )");
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+  // send some number of async pauses, make sure that we always stop before
+  // the end of the loop on line 9
+  for (int i = 0; i < 10; i++) {
+    sendAndCheckResponse("Debugger.pause", msgId++);
+    ensurePaused(
+        waitForMessage(),
+        "other",
+        {FrameInfo("global", 0, 1).setLineNumberMax(9)});
+
+    sendAndCheckResponse("Debugger.resume", msgId++);
+    ensureNotification(waitForMessage(), "Debugger.resumed");
+  }
+
+  // break out of loop
+  stopFlag_.store(true);
 }
 
 #endif // HERMES_ENABLE_DEBUGGER
