@@ -138,6 +138,13 @@ Handle<JSObject> createArrayConstructor(Runtime &runtime) {
   defineMethod(
       runtime,
       arrayPrototype,
+      Predefined::getSymbolID(Predefined::toSpliced),
+      nullptr,
+      arrayPrototypeToSpliced,
+      2);
+  defineMethod(
+      runtime,
+      arrayPrototype,
       Predefined::getSymbolID(Predefined::with),
       nullptr,
       arrayPrototypeWith,
@@ -3617,6 +3624,209 @@ arrayPrototypeToReversed(void *, Runtime &runtime, NativeArgs args) {
     // 5e. Set k to k + 1.
     ++k;
   }
+
+  return A.getHermesValue();
+}
+
+/// Copies \p count elements from \p from (or \p fromArr if is simple array)
+static inline CallResult<double> arrayCopyHelper(
+    Runtime &runtime,
+    GCScope &gcScope,
+    Handle<JSObject> from,
+    Handle<JSArray> fromArr,
+    uint32_t fromStartIndex,
+    Handle<JSArray> to,
+    uint32_t toStartIndex,
+    uint32_t count) {
+  MutableHandle<> fromIndexHandle{runtime};
+  MutableHandle<> toIndexHandle{runtime};
+  MutableHandle<> fromValueHandle{runtime};
+
+  auto marker = gcScope.createMarker();
+  double i = 0;
+
+  while (i < count) {
+    gcScope.flushToMarker(marker);
+    auto fromIndex = fromStartIndex + i;
+
+    if (LLVM_LIKELY(fromArr)) {
+      const SmallHermesValue elem = fromArr->at(runtime, fromIndex);
+      if (!elem.isEmpty()) {
+        fromValueHandle = elem.unboxToHV(runtime);
+      }
+    }
+    // Slow path
+    else {
+      fromIndexHandle = HermesValue::encodeTrustedNumberValue(fromIndex);
+
+      CallResult<PseudoHandle<>> propRes =
+          JSObject::getComputed_RJS(from, runtime, fromIndexHandle);
+      if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      fromValueHandle = propRes->getHermesValue();
+    }
+
+    toIndexHandle = HermesValue::encodeTrustedNumberValue(toStartIndex + i);
+
+    if (LLVM_UNLIKELY(
+            JSObject::defineOwnComputedPrimitive(
+                to,
+                runtime,
+                toIndexHandle,
+                DefinePropertyFlags::getDefaultNewPropertyFlags(),
+                fromValueHandle,
+                PropOpFlags().plusThrowOnError()) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    ++i;
+  }
+
+  return i;
+}
+
+/// ES14.0 23.1.3.35
+CallResult<HermesValue>
+arrayPrototypeToSpliced(void *, Runtime &runtime, NativeArgs args) {
+  GCScope gcScope{runtime};
+
+  // 1. Let O be ? ToObject(this value).
+  auto oRes = toObject(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(oRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto O = runtime.makeHandle<JSObject>(*oRes);
+
+  // 2. Let len be ? LengthOfArrayLike(O).
+  Handle<JSArray> jsArr = Handle<JSArray>::dyn_vmcast(O);
+  auto lenRes = lengthOfArrayLike(runtime, O, jsArr);
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double len = lenRes.getValue();
+
+  // 3. Let relativeIndex be ? ToIntegerOrInfinity(index).
+  auto relativeStartRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(relativeStartRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // Use double here, because ToInteger may return Infinity.
+  double relativeStart = relativeStartRes->getNumber();
+
+  // 4. If relativeStart is -∞, let actualStart be 0.
+  // 5. Else if relativeStart < 0, let actualStart be max(len + relativeStart,
+  // 0).
+  // 6. Else, let actualStart be min(relativeStart, len).
+  double actualStart = relativeStart < 0 ? std::max(len + relativeStart, 0.0)
+                                         : std::min(relativeStart, len);
+
+  uint32_t argCount = args.getArgCount();
+  uint64_t actualSkipCount;
+  uint64_t insertCount;
+
+  switch (argCount) {
+    // 8. If start is not present, then
+    case 0:
+      insertCount = 0;
+      // 8a. Let actualSkipCount be 0.
+      actualSkipCount = 0;
+      break;
+    // 9. Else if skipCount is not present, then
+    case 1:
+      insertCount = 0;
+      // 9a. Let actualSkipCount be len - actualStart.
+      actualSkipCount = len - actualStart;
+      break;
+    // 10. Else
+    default: {
+      // 10a. Let sc be ? ToIntegerOrInfinity(skipCount).
+      auto skipCountRes = toIntegerOrInfinity(runtime, args.getArgHandle(1));
+      if (LLVM_UNLIKELY(skipCountRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+
+      insertCount = argCount - 2;
+
+      // 10b. Let actualSkipCount be the result of clamping dc between 0 and len
+      // - actualStart.
+      actualSkipCount =
+          std::min(std::max(skipCountRes->getNumber(), 0.0), len - actualStart);
+    }
+  }
+
+  // 11. Let newLen be len + insertCount - actualSkipCount.
+  auto lenAfterInsert = len + insertCount - actualSkipCount;
+
+  // 12. If newLen > 253 - 1, throw a TypeError exception.
+  if (LLVM_UNLIKELY(
+          // lenAfterInsert < len ||
+          lenAfterInsert - actualSkipCount > (1LLU << 53) - 1)) {
+    return runtime.raiseTypeError(
+        "Array.prototype.toSpliced result out of space");
+  }
+
+  // 13. Let A be ArrayCreate(len).
+  auto ARes = JSArray::create(runtime, lenAfterInsert, lenAfterInsert);
+  if (LLVM_UNLIKELY(ARes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto A = ARes.getValue();
+
+  // 14. Let i be 0
+  double i = 0;
+  MutableHandle<> insertIndexHandle{runtime};
+
+  // 15. Let r be actualStart + actualSkipCount.
+  uint64_t r = actualStart + actualSkipCount;
+
+  uint64_t paramIndex = 2;
+
+  Handle<JSArray> fromArr = Handle<JSArray>::dyn_vmcast(O);
+
+  // 16a - 16d
+  // Copy elements from original array O from beginning until actualStart into
+  // new array A
+  auto copyRes =
+      arrayCopyHelper(runtime, gcScope, O, fromArr, 0, A, 0, actualStart);
+  if (LLVM_UNLIKELY(copyRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  i += copyRes.getValue();
+
+  // 17. For each element E of items, do
+  while (paramIndex < argCount) {
+    // 17a. Let Pi be ! ToString(𝔽(i)).
+    insertIndexHandle = HermesValue::encodeTrustedNumberValue(i);
+
+    // 17b. Perform ! CreateDataPropertyOrThrow(A, Pi, E).
+    if (LLVM_UNLIKELY(
+            JSObject::defineOwnComputedPrimitive(
+                A,
+                runtime,
+                insertIndexHandle,
+                DefinePropertyFlags::getDefaultNewPropertyFlags(),
+                args.getArgHandle(paramIndex),
+                PropOpFlags().plusThrowOnError()) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    // 17c. Set i to i + 1.
+    ++i;
+    ++paramIndex;
+  }
+
+  // 18a - 18f
+  // Copy remaining elements from original array O including skipCount into new
+  // array A
+  copyRes = arrayCopyHelper(
+      runtime, gcScope, O, fromArr, r, A, i, lenAfterInsert - i);
+  if (LLVM_UNLIKELY(copyRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  i += copyRes.getValue();
 
   return A.getHermesValue();
 }
