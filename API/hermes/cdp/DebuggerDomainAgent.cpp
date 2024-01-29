@@ -54,6 +54,8 @@ void DebuggerDomainAgent::handleDebuggerEvent(
       }
       break;
     case DebuggerEventType::DebuggerStatement:
+      paused_ = true;
+      sendPausedNotificationToClient();
       break;
     case DebuggerEventType::Breakpoint:
       break;
