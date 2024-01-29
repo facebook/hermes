@@ -15,6 +15,7 @@ import type {ESNode, Token} from './types';
 import {
   isArrayExpression,
   isArrowFunctionExpression,
+  isAsExpression,
   isAssignmentExpression,
   isAwaitExpression,
   isBinaryExpression,
@@ -212,6 +213,7 @@ export function isExpression(node: ESNode): boolean %checks {
     isImportExpression(node) ||
     isChainExpression(node) ||
     isTypeCastExpression(node) ||
+    isAsExpression(node) ||
     isJSXFragment(node) ||
     isJSXElement(node)
   );
