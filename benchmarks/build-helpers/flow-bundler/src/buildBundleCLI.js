@@ -144,6 +144,7 @@ async function main() {
     const transformedBundle = transformFromAstSync(bundleAST, fileMapping, {
       ast: true,
       code: false,
+      filename: outPath,
       // $FlowExpectedError[unsupported-syntax]
       plugins: require(babelTransforms),
     });
