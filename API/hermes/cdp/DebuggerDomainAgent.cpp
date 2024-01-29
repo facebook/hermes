@@ -60,6 +60,8 @@ void DebuggerDomainAgent::handleDebuggerEvent(
     case DebuggerEventType::Breakpoint:
       break;
     case DebuggerEventType::StepFinish:
+      paused_ = true;
+      sendPausedNotificationToClient();
       break;
     case DebuggerEventType::ExplicitPause:
       paused_ = true;
@@ -137,6 +139,36 @@ void DebuggerDomainAgent::resume(const m::debugger::ResumeRequest &req) {
   }
 
   asyncDebugger_.setNextCommand(debugger::Command::continueExecution());
+  sendResponseToClient(m::makeOkResponse(req.id));
+}
+
+void DebuggerDomainAgent::stepInto(const m::debugger::StepIntoRequest &req) {
+  if (!checkDebuggerPaused(req)) {
+    return;
+  }
+
+  asyncDebugger_.setNextCommand(
+      debugger::Command::step(debugger::StepMode::Into));
+  sendResponseToClient(m::makeOkResponse(req.id));
+}
+
+void DebuggerDomainAgent::stepOut(const m::debugger::StepOutRequest &req) {
+  if (!checkDebuggerPaused(req)) {
+    return;
+  }
+
+  asyncDebugger_.setNextCommand(
+      debugger::Command::step(debugger::StepMode::Out));
+  sendResponseToClient(m::makeOkResponse(req.id));
+}
+
+void DebuggerDomainAgent::stepOver(const m::debugger::StepOverRequest &req) {
+  if (!checkDebuggerPaused(req)) {
+    return;
+  }
+
+  asyncDebugger_.setNextCommand(
+      debugger::Command::step(debugger::StepMode::Over));
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 

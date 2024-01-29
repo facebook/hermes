@@ -450,4 +450,112 @@ TEST_F(CDPAgentTest, TestDebuggerStatement) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
 
+TEST_F(CDPAgentTest, TestStepOver) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    function divideBy2(val) {
+      return val / 2;
+    }
+
+    var a = 1 + 2;
+    debugger;             // [1] (line 6) hit debugger statement, step over
+    var b = divideBy2(a); // [2] (line 7) step over
+    var c = a + b;        // [3] (line 8) resume
+    var d = b - c;
+    var e = c * d;
+    var f = 10;
+  )");
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+  // [1] (line 6): hit debugger statement, step over
+  ensurePaused(waitForMessage(), "other", {{"global", 6, 1}});
+  sendAndCheckResponse("Debugger.stepOver", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // [2] (line 7): step over
+  ensurePaused(waitForMessage(), "other", {{"global", 7, 1}});
+  sendAndCheckResponse("Debugger.stepOver", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // [3] (line 8): resume
+  ensurePaused(waitForMessage(), "other", {{"global", 8, 1}});
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
+TEST_F(CDPAgentTest, TestStepIn) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    function addOne(val) {
+      return val + 1;   // [3]: resume
+    }
+
+    var a = 1 + 2;
+    debugger;           // [1] (line 6) hit debugger statement, step over
+    var b = addOne(a);  // [2] (line 7) step in
+    var c = a + b;
+    var d = b - c;
+    var e = c * d;
+    var f = 10;
+  )");
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+  // [1] (line 6): hit debugger statement, step over
+  ensurePaused(waitForMessage(), "other", {{"global", 6, 1}});
+  sendAndCheckResponse("Debugger.stepOver", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // [2] (line 7): step in
+  ensurePaused(waitForMessage(), "other", {{"global", 7, 1}});
+  sendAndCheckResponse("Debugger.stepInto", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // [3] (line 2): resume
+  ensurePaused(waitForMessage(), "other", {{"addOne", 2, 2}, {"global", 7, 1}});
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
+TEST_F(CDPAgentTest, TestStepOut) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    function addSquares(a, b) {
+      var a2 = a * a;
+      debugger;        // [1] (line 3) hit debugger statement, step over
+      var b2 = b * b;  // [2] (line 4) step out
+      return a2 + b2;
+    }
+
+    var c = addSquares(1, 2); // [3] (line 8) resume
+    var d = c * c;
+  )");
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+  // [1] (line 3) hit debugger statement, step over
+  ensurePaused(
+      waitForMessage(), "other", {{"addSquares", 3, 2}, {"global", 8, 1}});
+  sendAndCheckResponse("Debugger.stepOver", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // [2] (line 4) step out
+  ensurePaused(
+      waitForMessage(), "other", {{"addSquares", 4, 2}, {"global", 8, 1}});
+  sendAndCheckResponse("Debugger.stepOut", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // [3] (line 8): resume
+  ensurePaused(waitForMessage(), "other", {{"global", 8, 1}});
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
 #endif // HERMES_ENABLE_DEBUGGER
