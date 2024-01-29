@@ -42,6 +42,11 @@ class DebuggerDomainAgent : public DomainAgent {
   /// Handles Debugger.disable request
   void disable(const m::debugger::DisableRequest &req);
 
+  /// Handles Debugger.pause request
+  void pause(const m::debugger::PauseRequest &req);
+  /// Handles Debugger.resume request
+  void resume(const m::debugger::ResumeRequest &req);
+
  private:
   /// Fixed execution context ID because Hermes doesn't currently support realms
   /// or Web Workers.
@@ -63,6 +68,9 @@ class DebuggerDomainAgent : public DomainAgent {
   /// debug client
   void processNewLoadedScript();
 
+  bool checkDebuggerEnabled(const m::Request &req);
+  bool checkDebuggerPaused(const m::Request &req);
+
   HermesRuntime &runtime_;
   debugger::AsyncDebuggerAPI &asyncDebugger_;
 
@@ -74,6 +82,11 @@ class DebuggerDomainAgent : public DomainAgent {
   /// Whether Debugger.enable was received and wasn't disabled by receiving
   /// Debugger.disable
   bool enabled_;
+
+  /// Whether to consider the debugger as currently paused. There are some
+  /// debugger events such as ScriptLoaded where we don't consider the debugger
+  /// to be paused.
+  bool paused_;
 };
 
 } // namespace cdp

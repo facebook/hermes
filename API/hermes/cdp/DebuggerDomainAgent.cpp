@@ -23,7 +23,8 @@ DebuggerDomainAgent::DebuggerDomainAgent(
       runtime_(runtime),
       asyncDebugger_(asyncDebugger),
       debuggerEventCallbackId_(kInvalidDebuggerEventCallbackID),
-      enabled_(false) {}
+      enabled_(false),
+      paused_(false) {}
 
 DebuggerDomainAgent::~DebuggerDomainAgent() {
   // Also remove DebuggerEventCallback here in case we don't receive a
@@ -47,6 +48,10 @@ void DebuggerDomainAgent::handleDebuggerEvent(
     case DebuggerEventType::EvalComplete:
       break;
     case DebuggerEventType::Resumed:
+      if (paused_) {
+        sendNotificationToClient(m::debugger::ResumedNotification{});
+        paused_ = false;
+      }
       break;
     case DebuggerEventType::DebuggerStatement:
       break;
@@ -55,6 +60,8 @@ void DebuggerDomainAgent::handleDebuggerEvent(
     case DebuggerEventType::StepFinish:
       break;
     case DebuggerEventType::ExplicitPause:
+      paused_ = true;
+      sendPausedNotificationToClient();
       break;
   }
 }
@@ -87,14 +94,13 @@ void DebuggerDomainAgent::enable(const m::debugger::EnableRequest &req) {
   // Check to see if debugger is currently paused. There could be multiple debug
   // clients and the program could have already been paused.
   if (asyncDebugger_.isWaitingForCommand()) {
+    paused_ = true;
     sendPausedNotificationToClient();
   }
 }
 
 void DebuggerDomainAgent::disable(const m::debugger::DisableRequest &req) {
-  if (!enabled_) {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id, m::ErrorCode::InvalidRequest, "Debugger domain not enabled"));
+  if (!checkDebuggerEnabled(req)) {
     return;
   }
 
@@ -111,6 +117,24 @@ void DebuggerDomainAgent::disable(const m::debugger::DisableRequest &req) {
 
   enabled_ = false;
 
+  sendResponseToClient(m::makeOkResponse(req.id));
+}
+
+void DebuggerDomainAgent::pause(const m::debugger::PauseRequest &req) {
+  if (!checkDebuggerEnabled(req)) {
+    return;
+  }
+
+  runtime_.getDebugger().triggerAsyncPause(AsyncPauseKind::Explicit);
+  sendResponseToClient(m::makeOkResponse(req.id));
+}
+
+void DebuggerDomainAgent::resume(const m::debugger::ResumeRequest &req) {
+  if (!checkDebuggerPaused(req)) {
+    return;
+  }
+
+  asyncDebugger_.setNextCommand(debugger::Command::continueExecution());
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
@@ -154,6 +178,27 @@ void DebuggerDomainAgent::processNewLoadedScript() {
 
     sendScriptParsedNotificationToClient(loc);
   }
+}
+
+bool DebuggerDomainAgent::checkDebuggerEnabled(const m::Request &req) {
+  if (!enabled_) {
+    sendResponseToClient(m::makeErrorResponse(
+        req.id, m::ErrorCode::InvalidRequest, "Debugger domain not enabled"));
+    return false;
+  }
+  return true;
+}
+
+bool DebuggerDomainAgent::checkDebuggerPaused(const m::Request &req) {
+  assert(
+      paused_ &&
+      "isWaitingForCommand() should imply paused_ is true for all cases where checkDebuggerPaused is called");
+  if (!asyncDebugger_.isWaitingForCommand()) {
+    sendResponseToClient(m::makeErrorResponse(
+        req.id, m::ErrorCode::InvalidRequest, "Debugger is not paused"));
+    return false;
+  }
+  return true;
 }
 
 } // namespace cdp
