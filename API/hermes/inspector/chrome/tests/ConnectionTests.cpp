@@ -2043,6 +2043,7 @@ TEST_F(ConnectionTests, testDisableWhileRunning) {
   asyncRuntime.start();
 }
 
+// Also implemented as CDPAgentTest::TestSetPauseOnExceptionsAll
 TEST_F(ConnectionTests, testSetPauseOnExceptionsAll) {
   int msgId = 1;
 
