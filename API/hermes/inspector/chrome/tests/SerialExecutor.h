@@ -14,7 +14,11 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
+#include <pthread.h>
+#else
 #include <thread>
+#endif
 
 namespace facebook {
 namespace hermes {
@@ -27,7 +31,11 @@ namespace chrome {
 class SerialExecutor {
  private:
   // The thread on which all work is done.
+#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
+  pthread_t tid_;
+#else
   std::thread workerThread_;
+#endif
 
   // A list of functions to execute on the worker thread.
   std::deque<std::function<void()>> tasks_;
@@ -46,10 +54,15 @@ class SerialExecutor {
   /// they are posted. This stops running when shouldStop_ is set to true.
   void run();
 
+#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
+  /// Main function of the new thread.
+  static void *threadMain(void *p);
+#endif
+
  public:
   /// Construct a thread which will run for the duration of this object's
   /// lifetime.
-  SerialExecutor();
+  SerialExecutor(size_t stackSize = 0);
 
   /// Make sure that the spawned thread has terminated. Will block if there is a
   /// long-running task currently being executed.
