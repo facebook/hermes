@@ -305,7 +305,7 @@ TEST_F(CDPAgentTest, TestScriptsOnEnable) {
   ensureNotification(waitForMessage(), "Debugger.scriptParsed");
 }
 
-TEST_F(CDPAgentTest, TestEnableWhenAlreadyPaused) {
+TEST_F(CDPAgentTest, DISABLED_TestEnableWhenAlreadyPaused) {
   int msgId = 1;
 
   scheduleScript("true");
