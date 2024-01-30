@@ -284,6 +284,9 @@ set(HERMES_BUILD_APPLE_FRAMEWORK ON CACHE BOOL
 set(HERMES_BUILD_APPLE_DSYM OFF CACHE BOOL
   "Whether to build a DWARF debugging symbols bundle")
 
+set(IMPORT_HERMESC "" CACHE FILEPATH
+  "Import the hermesc compiler from another build using the given CMake file.")
+
 set(HERMES_BUILD_NODE_HERMES OFF CACHE BOOL "Whether to build node-hermes")
 
 # On Windows, produce static libraries by default so that tests and tools work

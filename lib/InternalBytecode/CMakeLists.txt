@@ -5,20 +5,7 @@
 
 add_definitions(-DHERMES_CMAKE_BUILD)
 
-message(STATUS "CMAKE_HOST_SYSTEM_NAME = ${CMAKE_HOST_SYSTEM_NAME}")
-message(STATUS "CMAKE_SYSTEM_NAME = ${CMAKE_SYSTEM_NAME}")
-message(STATUS "HERMES_APPLE_TARGET_PLATFORM = ${HERMES_APPLE_TARGET_PLATFORM}")
-
-# Apple cross-compilation is different from other cross-compilation, so instead
-# we use HERMES_APPLE_TARGET_PLATFORM to tell if a host hermesc is required.
-if(HERMES_APPLE_TARGET_PLATFORM)
-  set(CMAKE_CROSSCOMPILING TRUE)
-endif()
-
-message(STATUS "CMAKE_CROSSCOMPILING = ${CMAKE_CROSSCOMPILING}")
-
-if(CMAKE_CROSSCOMPILING)
-  set(IMPORT_HERMESC "IMPORTFILE-NOTFOUND" CACHE FILEPATH "hermesc export file")
+if(IMPORT_HERMESC)
   file(TO_CMAKE_PATH "${IMPORT_HERMESC}" IMPORT_HERMESC_CMAKE)
   include(${IMPORT_HERMESC_CMAKE})
   set(hermesc_EXE native-hermesc)
