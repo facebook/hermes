@@ -13,6 +13,7 @@
 
 #include <hermes/AsyncDebuggerAPI.h>
 #include <hermes/CompileJS.h>
+#include <hermes/Support/JSONEmitter.h>
 #include <hermes/cdp/CDPAgent.h>
 #include <hermes/hermes.h>
 #include <hermes/inspector/chrome/tests/SerialExecutor.h>
@@ -27,6 +28,20 @@ using namespace facebook;
 using namespace std::placeholders;
 
 constexpr auto kDefaultUrl = "url";
+
+template <typename T>
+T waitFor(std::function<void(std::shared_ptr<std::promise<T>>)> callback) {
+  auto promise = std::make_shared<std::promise<T>>();
+  auto future = promise->get_future();
+
+  callback(promise);
+
+  auto status = future.wait_for(std::chrono::milliseconds(2500));
+  if (status != std::future_status::ready) {
+    throw std::runtime_error("triggerInterrupt didn't get executed");
+  }
+  return future.get();
+}
 
 class CDPAgentTest : public ::testing::Test {
  public:
@@ -50,9 +65,15 @@ class CDPAgentTest : public ::testing::Test {
       facebook::hermes::HermesRuntime::DebugFlags flags =
           facebook::hermes::HermesRuntime::DebugFlags{}) {
     runtimeThread_->add([this, script, url, flags]() {
-      runtime_->debugJavaScript(script, url, flags);
+      try {
+        runtime_->debugJavaScript(script, url, flags);
+      } catch (jsi::JSError &error) {
+        thrownExceptions_.push_back(error.getMessage());
+      }
     });
   }
+
+  void waitForScheduledScripts();
 
   /// waits for the next message of either kind (response or notification)
   /// from the debugger. returns the message. throws on timeout.
@@ -80,6 +101,8 @@ class CDPAgentTest : public ::testing::Test {
   std::mutex mutex_;
   std::condition_variable hasMessage_;
   std::queue<std::string> messages_;
+
+  std::vector<std::string> thrownExceptions_;
 };
 
 void CDPAgentTest::SetUp() {
@@ -123,6 +146,12 @@ void CDPAgentTest::TearDown() {
   runtimeThread_.reset();
 }
 
+void CDPAgentTest::waitForScheduledScripts() {
+  waitFor<bool>([this](auto promise) {
+    runtimeThread_->add([promise]() { promise->set_value(true); });
+  });
+}
+
 std::string CDPAgentTest::waitForMessage(
     std::string context,
     std::chrono::milliseconds timeout) {
@@ -163,24 +192,16 @@ jsi::Value CDPAgentTest::shouldStop(
 }
 
 void CDPAgentTest::sendAndCheckResponse(const std::string &method, int id) {
-  std::string json =
-      "{\"id\": " + std::to_string(id) + ", \"method\": \"" + method + "\"}";
-  cdpAgent_->handleCommand(json);
+  std::string command;
+  llvh::raw_string_ostream commandStream{command};
+  ::hermes::JSONEmitter json{commandStream};
+  json.openDict();
+  json.emitKeyValue("method", method);
+  json.emitKeyValue("id", id);
+  json.closeDict();
+  commandStream.flush();
+  cdpAgent_->handleCommand(command);
   ensureOkResponse(waitForMessage(method), id);
-}
-
-template <typename T>
-T waitFor(std::function<void(std::shared_ptr<std::promise<T>>)> callback) {
-  auto promise = std::make_shared<std::promise<T>>();
-  auto future = promise->get_future();
-
-  callback(promise);
-
-  auto status = future.wait_for(std::chrono::milliseconds(2500));
-  if (status != std::future_status::ready) {
-    throw std::runtime_error("triggerInterrupt didn't get executed");
-  }
-  return future.get();
 }
 
 TEST_F(CDPAgentTest, IssuesStartupTask) {
@@ -556,6 +577,62 @@ TEST_F(CDPAgentTest, TestStepOut) {
   ensurePaused(waitForMessage(), "other", {{"global", 8, 1}});
   sendAndCheckResponse("Debugger.resume", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
+TEST_F(CDPAgentTest, TestSetPauseOnExceptionsAll) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    debugger; // [1] (line 1) initial pause, set throw on exceptions to 'All'
+
+    try {
+      var a = 123;
+      throw new Error('Caught error'); // [2] line 5, pause on exception
+    } catch (err) {
+      // Do nothing.
+    }
+
+    throw new Error('Uncaught exception'); // [3] line 10, pause on exception
+  )");
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+  // [1] (line 1) initial pause, set throw on exceptions to 'All'
+  ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
+  std::string command;
+  llvh::raw_string_ostream commandStream{command};
+  ::hermes::JSONEmitter json{commandStream};
+  json.openDict();
+  json.emitKeyValue("method", "Debugger.setPauseOnExceptions");
+  json.emitKeyValue("id", msgId);
+  json.emitKey("params");
+  json.openDict();
+  json.emitKeyValue("state", "all");
+  json.closeDict();
+  json.closeDict();
+  commandStream.flush();
+  cdpAgent_->handleCommand(command);
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  // Resume
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // [2] line 5, pause on exception
+  ensurePaused(waitForMessage(), "exception", {{"global", 5, 1}});
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // [3] line 10, pause on exception
+  ensurePaused(waitForMessage(), "exception", {{"global", 10, 1}});
+
+  // Send resume event and check that Hermes has thrown an exception.
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  waitForScheduledScripts();
+  EXPECT_EQ(thrownExceptions_.size(), 1);
+  EXPECT_EQ(thrownExceptions_.back(), "Uncaught exception");
 }
 
 #endif // HERMES_ENABLE_DEBUGGER
