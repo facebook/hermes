@@ -457,7 +457,8 @@ class LocaleIdTokenizer {
     for (mCurrentSubtagEnd = mCurrentSubtagStart;
         mCurrentSubtagEnd < mLocaleIdBuffer.length()
             && !isSubtagSeparator(mLocaleIdBuffer.charAt(mCurrentSubtagEnd));
-        mCurrentSubtagEnd++) ;
+        mCurrentSubtagEnd++)
+      ;
 
     if (mCurrentSubtagEnd > mCurrentSubtagStart) {
       mCurrentSubtagEnd--;
