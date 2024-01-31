@@ -1,21 +1,8 @@
 #!/bin/sh
 
 REACTMINI_ROOT=$(dirname -- "$( readlink -f -- "$0"; )")
-REACTMINI_SRC_ROOT="$REACTMINI_ROOT/src"
-REACTMINI_OUT_ROOT="$REACTMINI_ROOT/out"
 BENCHMARKS_ROOT="$REACTMINI_ROOT/../.."
 
-ENTRYPOINTS=(
-  simple
-  music
-)
 
-for ENTRYPOINT in "${ENTRYPOINTS[@]}"; do
-  $BENCHMARKS_ROOT/build-helpers/flow-bundler/bin/flow-bundler \
-    --root $REACTMINI_SRC_ROOT \
-    --out $REACTMINI_OUT_ROOT/$ENTRYPOINT.js \
-    --simple-jsx-transform \
-    --es5 \
-    --strip-types\
-    ./app/$ENTRYPOINT/index.js
-done
+$BENCHMARKS_ROOT/build-helpers/flow-bundler/bin/flow-bundler \
+  -c $REACTMINI_ROOT/build.config.js

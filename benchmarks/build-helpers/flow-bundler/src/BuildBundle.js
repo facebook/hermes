@@ -130,6 +130,7 @@ export async function buildBundles(
       const transformedBundle = transformFromAstSync(bundleAST, fileMapping, {
         ast: true,
         code: false,
+        filename: outPath,
         plugins: babelPlugins,
         presets: babelPresets,
       });

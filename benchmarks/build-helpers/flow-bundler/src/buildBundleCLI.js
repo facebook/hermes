@@ -19,11 +19,15 @@ async function main() {
   const cliYargs = yargs(rawArgs)
     .usage('Usage: $0 [entrypoint]')
     .scriptName('flow-bundler')
+    .option('config', {
+      alias: 'c',
+      describe: 'Path to multi bundler config',
+      type: 'string',
+    })
     .option('out', {
       alias: 'o',
       describe: 'Path to output the bundle',
       nargs: 1,
-      required: true,
       requiresArg: true,
       type: 'string',
     })
@@ -66,6 +70,23 @@ async function main() {
     .wrap(yargs.terminalWidth())
     .parse();
 
+  // Build multi bundles
+  if (cliYargs.config) {
+    const configPath = path.resolve(process.cwd(), cliYargs.config);
+    // $FlowExpectedError[unsupported-syntax]
+    const bundleOptionsArr: Array<BundleOptions> = require(configPath);
+
+    if (!Array.isArray(bundleOptionsArr) || bundleOptionsArr.length === 0) {
+      throw new Error(
+        `Invalid config, expected an "array" with at least one item`,
+      );
+    }
+
+    await Promise.all(bundleOptionsArr.map(processBundle));
+    return;
+  }
+
+  // Else build single bundle
   const outPath = cliYargs.out;
   const outFilename: string = path.basename(outPath);
 
@@ -118,6 +139,37 @@ async function main() {
     outDir: path.dirname(outPath),
     out: bundleOut,
   };
+
+  await buildBundles(bundleOptions);
+}
+
+async function processBundle(bundleOptions: BundleOptions): Promise<void> {
+  if (typeof bundleOptions.root !== 'string') {
+    throw new Error(
+      `Invalid "root" option, expected a "string" got "${typeof bundleOptions.root}"`,
+    );
+  }
+  if (typeof bundleOptions.outDir !== 'string') {
+    throw new Error(
+      `Invalid "outDir" option, expected a "string" got "${typeof bundleOptions.outDir}"`,
+    );
+  }
+  if (
+    !Array.isArray(bundleOptions.entrypoints) ||
+    bundleOptions.entrypoints.length === 0
+  ) {
+    throw new Error(
+      `Invalid "entrypoints" option, expected an "array" with at least one item`,
+    );
+  }
+  if (
+    typeof bundleOptions.out !== 'object' ||
+    Object.keys(bundleOptions.out).length === 0
+  ) {
+    throw new Error(
+      `Invalid "out" option, expected an "object" with at least one item`,
+    );
+  }
 
   await buildBundles(bundleOptions);
 }

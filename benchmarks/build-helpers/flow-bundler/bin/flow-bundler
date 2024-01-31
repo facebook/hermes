@@ -2,6 +2,13 @@
 
 BIN_FOLDER=$(dirname -- "$( readlink -f -- "$0"; )")
 FLOW_BUNDLER_ROOT="$BIN_FOLDER/.."
+if [ ! -d "$FLOW_BUNDLER_ROOT/node_modules/" ]; then
+  printf "\e[34mNOTE:\e[0m node_modules missing, running yarn install...\n\n"
+  yarn install --cwd "$FLOW_BUNDLER_ROOT/"
+elif [ "$FLOW_BUNDLER_ROOT/yarn.lock" -nt "$FLOW_BUNDLER_ROOT/node_modules" ]; then
+  printf "\e[34mNOTE:\e[0m yarn.lock updated, running yarn install...\n\n"
+  yarn install --cwd "$FLOW_BUNDLER_ROOT/"
+fi
 
 node \
   --max-old-space-size=4096 \
