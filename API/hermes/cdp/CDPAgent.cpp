@@ -7,6 +7,7 @@
 
 #include "CDPAgent.h"
 #include "DebuggerDomainAgent.h"
+#include "RuntimeDomainAgent.h"
 
 #include <hermes/inspector/chrome/MessageConverters.h>
 #include <hermes/inspector/chrome/MessageTypes.h>
@@ -68,6 +69,7 @@ class CDPAgentImpl {
     SynchronizedOutboundCallback messageCallback_;
 
     std::unique_ptr<DebuggerDomainAgent> debuggerAgent_;
+    std::unique_ptr<RuntimeDomainAgent> runtimeAgent_;
   };
 
   /// Callback function for sending CDP response back. This is using the
@@ -151,10 +153,12 @@ CDPAgentImpl::DomainAgents::DomainAgents(
 void CDPAgentImpl::DomainAgents::initialize() {
   debuggerAgent_ = std::make_unique<DebuggerDomainAgent>(
       runtime_, asyncDebuggerAPI_, messageCallback_);
+  runtimeAgent_ = std::make_unique<RuntimeDomainAgent>(messageCallback_);
 }
 
 void CDPAgentImpl::DomainAgents::dispose() {
   debuggerAgent_.reset();
+  runtimeAgent_.reset();
 }
 
 void CDPAgentImpl::DomainAgents::handleCommand(
@@ -192,6 +196,10 @@ void CDPAgentImpl::DomainAgents::handleCommand(
   } else if (command->method == "Debugger.setPauseOnExceptions") {
     debuggerAgent_->setPauseOnExceptions(
         static_cast<m::debugger::SetPauseOnExceptionsRequest &>(*command));
+  } else if (command->method == "Runtime.enable") {
+    runtimeAgent_->enable(static_cast<m::runtime::EnableRequest &>(*command));
+  } else if (command->method == "Runtime.disable") {
+    runtimeAgent_->disable(static_cast<m::runtime::DisableRequest &>(*command));
   } else {
     messageCallback_(message::makeErrorResponse(
                          command->id,

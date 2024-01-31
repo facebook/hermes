@@ -1,0 +1,45 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+#ifndef HERMES_CDP_RUNTIMEDOMAINAGENT_H
+#define HERMES_CDP_RUNTIMEDOMAINAGENT_H
+
+#include "DomainAgent.h"
+
+namespace facebook {
+namespace hermes {
+namespace cdp {
+
+namespace m = ::facebook::hermes::inspector_modern::chrome::message;
+
+/// Handler for the "Runtime" domain of CDP. Accepts CDP requests belonging to
+/// the "Runtime" domain from the debug client. Produces CDP responses and
+/// events belonging to the "Runtime" domain. All methods expect to be invoked
+/// with exclusive access to the runtime.
+class RuntimeDomainAgent : public DomainAgent {
+ public:
+  RuntimeDomainAgent(SynchronizedOutboundCallback messageCallback);
+  ~RuntimeDomainAgent();
+
+  /// Handles Runtime.enable request
+  void enable(const m::runtime::EnableRequest &req);
+  /// Handles Runtime.disable request
+  void disable(const m::runtime::DisableRequest &req);
+
+ private:
+  bool checkRuntimeEnabled(const m::Request &req);
+
+  /// Whether Runtime.enable was received and wasn't disabled by receiving
+  /// Runtime.disable
+  bool enabled_;
+};
+
+} // namespace cdp
+} // namespace hermes
+} // namespace facebook
+
+#endif // HERMES_CDP_RUNTIMEDOMAINAGENT_H
