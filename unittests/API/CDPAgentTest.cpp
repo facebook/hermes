@@ -30,7 +30,9 @@ using namespace std::placeholders;
 constexpr auto kDefaultUrl = "url";
 
 template <typename T>
-T waitFor(std::function<void(std::shared_ptr<std::promise<T>>)> callback) {
+T waitFor(
+    std::function<void(std::shared_ptr<std::promise<T>>)> callback,
+    const std::string &reason = "unknown") {
   auto promise = std::make_shared<std::promise<T>>();
   auto future = promise->get_future();
 
@@ -38,7 +40,7 @@ T waitFor(std::function<void(std::shared_ptr<std::promise<T>>)> callback) {
 
   auto status = future.wait_for(std::chrono::milliseconds(2500));
   if (status != std::future_status::ready) {
-    throw std::runtime_error("triggerInterrupt didn't get executed");
+    throw std::runtime_error("triggerInterrupt didn't get executed: " + reason);
   }
   return future.get();
 }
@@ -326,21 +328,28 @@ TEST_F(CDPAgentTest, TestScriptsOnEnable) {
   ensureNotification(waitForMessage(), "Debugger.scriptParsed");
 }
 
-TEST_F(CDPAgentTest, DISABLED_TestEnableWhenAlreadyPaused) {
+TEST_F(CDPAgentTest, TestEnableWhenAlreadyPaused) {
   int msgId = 1;
 
-  scheduleScript("true");
+  // This needs to be a while-loop because Explicit AsyncBreak will only happen
+  // while there is JS to run
+  scheduleScript(R"(
+    while (!shouldStop()) {
+    }
+  )");
 
   // Before Debugger.enable, register another debug client and trigger a pause
   DebuggerEventCallbackID eventCallbackID;
-  waitFor<bool>([this, &eventCallbackID](auto promise) {
-    eventCallbackID = asyncDebuggerAPI_->addDebuggerEventCallback_TS(
-        [promise](
-            HermesRuntime &runtime,
-            AsyncDebuggerAPI &asyncDebugger,
-            DebuggerEventType event) { promise->set_value(true); });
-    runtime_->getDebugger().triggerAsyncPause(AsyncPauseKind::Explicit);
-  });
+  waitFor<bool>(
+      [this, &eventCallbackID](auto promise) {
+        eventCallbackID = asyncDebuggerAPI_->addDebuggerEventCallback_TS(
+            [promise](
+                HermesRuntime &runtime,
+                AsyncDebuggerAPI &asyncDebugger,
+                DebuggerEventType event) { promise->set_value(true); });
+        runtime_->getDebugger().triggerAsyncPause(AsyncPauseKind::Explicit);
+      },
+      "wait on explicit pause");
 
   // At this point, the runtime thread is paused due to Explicit AsyncBreak
 
@@ -355,13 +364,21 @@ TEST_F(CDPAgentTest, DISABLED_TestEnableWhenAlreadyPaused) {
       "other",
       {FrameInfo("global", 0, 1).setLineNumberMax(9)});
 
+  // At this point we know the runtime thread is paused, so it should be safe to
+  // call setNextCommand() directly.
+  asyncDebuggerAPI_->setNextCommand(Command::continueExecution());
+
+  // After removing this callback, AsyncDebuggerAPI will still have another
+  // callback registered by CDPAgent. Therefore, JS will not continue by itself.
+  // But because of the setNextCommand() in the previous line, removing the
+  // callback should wake up the runtime thread and check that a next command
+  // has been set.
   asyncDebuggerAPI_->removeDebuggerEventCallback_TS(eventCallbackID);
 
-  asyncDebuggerAPI_->triggerInterrupt_TS([this](HermesRuntime &runtime) {
-    asyncDebuggerAPI_->setNextCommand(Command::continueExecution());
-  });
-
   ensureNotification(waitForMessage("Debugger.resumed"), "Debugger.resumed");
+
+  // break out of loop
+  stopFlag_.store(true);
 }
 
 TEST_F(CDPAgentTest, TestScriptsOrdering) {
