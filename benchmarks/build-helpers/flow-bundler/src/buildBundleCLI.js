@@ -14,6 +14,11 @@ import * as path from 'path';
 import yargs from 'yargs';
 import {buildBundles} from './BuildBundle';
 
+type BundleOpts = {
+  builds: Array<BundleOptions>,
+  onBuildComplete: () => void,
+};
+
 async function main() {
   const rawArgs = process.argv.slice(2);
   const cliYargs = yargs(rawArgs)
@@ -74,15 +79,26 @@ async function main() {
   if (cliYargs.config) {
     const configPath = path.resolve(process.cwd(), cliYargs.config);
     // $FlowExpectedError[unsupported-syntax]
-    const bundleOptionsArr: Array<BundleOptions> = require(configPath);
+    const bundleOpts: BundleOpts = require(configPath);
 
-    if (!Array.isArray(bundleOptionsArr) || bundleOptionsArr.length === 0) {
+    if (typeof bundleOpts !== 'object') {
       throw new Error(
-        `Invalid config, expected an "array" with at least one item`,
+        `Invalid config, expected an "object" with at least one item`,
       );
     }
 
-    await Promise.all(bundleOptionsArr.map(processBundle));
+    if (!Array.isArray(bundleOpts.builds) || bundleOpts.builds.length === 0) {
+      throw new Error(
+        `Invalid config, expected "builds" to be an "array" with at least one item`,
+      );
+    }
+
+    await Promise.all(bundleOpts.builds.map(processBundle));
+
+    if (typeof bundleOpts.onBuildComplete === 'function') {
+      bundleOpts.onBuildComplete();
+    }
+
     return;
   }
 

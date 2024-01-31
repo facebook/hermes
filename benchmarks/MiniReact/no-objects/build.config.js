@@ -46,4 +46,6 @@ function createConfig(benchmarkName) {
   };
 }
 
-module.exports = [createConfig('simple'), createConfig('music')];
+module.exports = {
+  builds: [createConfig('simple'), createConfig('music')],
+};
