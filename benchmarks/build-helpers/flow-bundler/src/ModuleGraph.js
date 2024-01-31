@@ -247,14 +247,27 @@ async function resolveImportNames(
   }
 }
 
+export type ModuleOverride = {
+  target: string,
+  override: string,
+};
+
 export async function createModuleGraph(
   projectRoot: string,
   entrypoints: Array<string>,
+  moduleOverrides: Array<ModuleOverride>,
 ): Promise<Array<{file: string, ast: Program, code: string}>> {
   const moduleNameCounter = new Map<string, number>();
   const moduleStack: Array<string> = [];
   const moduleInfoMap = new Map<string, ModuleInfo>();
   const bundleSources = [];
+
+  const overrideModuleMap = new Map<string, string>();
+  const overrideModules = new Set<string>();
+  for (const {target, override} of moduleOverrides) {
+    overrideModuleMap.set(target, override);
+    overrideModules.add(override);
+  }
 
   function getModuleName(fileName: string): string {
     let moduleName = path.basename(fileName, '.js');
@@ -296,9 +309,23 @@ export async function createModuleGraph(
     }
     moduleStack.push(fileName);
 
+    if (overrideModules.has(fileName)) {
+      throw new Error(
+        `Module overrides can be directly imported, override module "${fileName}".`,
+      );
+    }
+
+    // Update the source location if there is an override.
+    let sourceLocation = fileName;
+    const overrideModule = overrideModuleMap.get(fileName);
+    if (overrideModule != null) {
+      sourceLocation = overrideModule;
+    }
+
     // Extract module import/export information from AST.
     const moduleGraphNode = await createModuleGraphNode(
       fileName,
+      sourceLocation,
       projectRoot,
       getModuleName(fileName),
     );
@@ -322,7 +349,7 @@ export async function createModuleGraph(
     const builtModule = await transformModule(moduleGraphNode, moduleInfo);
 
     bundleSources.push({
-      file: fileName,
+      file: sourceLocation,
       ast: builtModule.ast,
       code: builtModule.code,
     });

@@ -210,10 +210,11 @@ function processModuleStatement(
 
 export async function createModuleGraphNode(
   file: string,
+  sourceLocation: string,
   projectRoot: string,
   moduleName: string,
 ): Promise<ModuleGraphNode> {
-  const parseResult = await parseFile(file);
+  const parseResult = await parseFile(sourceLocation);
 
   const moduleGraphNode: ModuleGraphNode = {
     file,

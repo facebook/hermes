@@ -8,6 +8,8 @@
  * @format
  */
 
+import type {ModuleOverride} from './ModuleGraph';
+
 import * as path from 'path';
 import {createModuleGraph} from './ModuleGraph';
 import {parseFile, hermesASTToBabel, writeBundle} from './utils';
@@ -32,6 +34,7 @@ export type BundleOptions = {
   outDir: string,
   simpleJsxTransform?: ?boolean,
   out: {[string]: ?BundleOutOptions},
+  moduleOverrides?: ?Array<ModuleOverride>,
 };
 
 export async function buildBundles(
@@ -39,16 +42,28 @@ export async function buildBundles(
 ): Promise<void> {
   const rootPath = path.resolve(bundleOptions.root);
   const outPathDir = path.resolve(rootPath, bundleOptions.outDir);
-  const simpleJSXTransform = bundleOptions?.simpleJsxTransform === true;
+  const simpleJSXTransform = bundleOptions.simpleJsxTransform === true;
   const entrypoints: Array<string> = bundleOptions.entrypoints.map(f =>
     path.resolve(rootPath, f),
   );
+  const moduleOverrides: Array<ModuleOverride> = Array.isArray(
+    bundleOptions.moduleOverrides,
+  )
+    ? bundleOptions.moduleOverrides.map(({target, override}) => ({
+        target: path.resolve(rootPath, target),
+        override: path.resolve(rootPath, override),
+      }))
+    : [];
 
   if (Object.keys(bundleOptions.out).length === 0) {
     throw new Error('No "output" specified');
   }
 
-  const bundle = await createModuleGraph(rootPath, entrypoints);
+  const bundle = await createModuleGraph(
+    rootPath,
+    entrypoints,
+    moduleOverrides,
+  );
   const bundleHeader = `*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
