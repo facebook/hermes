@@ -193,6 +193,10 @@ BasicBlock *hermes::splitBasicBlock(
   newBB->getInstList().splice(
       newBB->end(), BB->getInstList(), it, BB->getInstList().end());
 
+  // setParent is not called by splice, so add it ourselves.
+  for (auto &movedInst : *newBB)
+    movedInst.setParent(newBB);
+
   return newBB;
 }
 
