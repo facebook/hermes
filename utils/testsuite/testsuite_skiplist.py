@@ -1839,8 +1839,6 @@ SKIP_LIST = [
     "flow/JSX/invalid_unpaired_rcurly.js",
     # TODO: component syntax, hook syntax and render type failures
     "types/render_types/renders_maybe.js",
-    # TODO: Bad ASI handling for typeof with type arguments
-    "types/typeof/with-targs-bad-newline.js",
     # TODO: support declare namespace syntax
     "flow/types/declare_namespace/enum.js",
     "flow/types/declare_namespace/empty.js",
