@@ -126,5 +126,32 @@ void ensurePaused(
   expectCallFrames(notification.callFrames, infos);
 }
 
+struct JSONScope::Private {
+  Private() : allocator(), factory(allocator) {}
+
+  JSLexer::Allocator allocator;
+  JSONFactory factory;
+};
+
+JSONScope::JSONScope() : private_(std::make_unique<Private>()) {}
+
+JSONScope::~JSONScope() {}
+
+JSONObject *JSONScope::parseObject(const std::string &json) {
+  return mustParseStrAsJsonObj(json, private_->factory);
+}
+
+std::string JSONScope::getString(
+    JSONObject *obj,
+    std::vector<std::string> paths) {
+  return *getValue<std::string>(obj, paths);
+}
+
+long long JSONScope::getNumber(
+    JSONObject *obj,
+    std::vector<std::string> paths) {
+  return *getValue<long long>(obj, paths);
+}
+
 } // namespace hermes
 } // namespace facebook

@@ -1558,6 +1558,7 @@ TEST_F(ConnectionTests, testEvalOnCallFrame) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
+// Also implemented as CDPAgentTest::TestRuntimeEnable
 TEST_F(ConnectionTests, testRuntimeEnable) {
   int msgId = 1;
 
