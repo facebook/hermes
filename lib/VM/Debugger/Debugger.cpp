@@ -941,7 +941,7 @@ static unsigned getFrameSize(
 
   do {
     frameSize += scopeDescs[i].names.size();
-  } while (scopeDescs[i--].flags.isInnerScope);
+  } while (scopeDescs[i++].flags.isInnerScope);
 
   return frameSize;
 }
