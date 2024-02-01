@@ -1,3 +1,8 @@
+## 0.19.0
+
+### `flow-api-translator`
+* `$ReadOnlyMap` and `$ReadOnlySet` have been updated to expect two type arguments instead of one, aligning with the flow API.
+
 ## 0.18.2
 
 ### `hermes-parser`
