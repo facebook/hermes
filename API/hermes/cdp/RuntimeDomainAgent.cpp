@@ -6,6 +6,7 @@
  */
 
 #include <hermes/inspector/chrome/MessageConverters.h>
+#include <jsi/instrumentation.h>
 
 #include "RuntimeDomainAgent.h"
 
@@ -14,8 +15,11 @@ namespace hermes {
 namespace cdp {
 
 RuntimeDomainAgent::RuntimeDomainAgent(
+    HermesRuntime &runtime,
     SynchronizedOutboundCallback messageCallback)
-    : DomainAgent(std::move(messageCallback)), enabled_(false) {}
+    : DomainAgent(std::move(messageCallback)),
+      runtime_(runtime),
+      enabled_(false) {}
 
 RuntimeDomainAgent::~RuntimeDomainAgent() {}
 
@@ -46,6 +50,20 @@ void RuntimeDomainAgent::disable(const m::runtime::DisableRequest &req) {
   }
   enabled_ = false;
   sendResponseToClient(m::makeOkResponse(req.id));
+}
+
+void RuntimeDomainAgent::getHeapUsage(
+    const m::runtime::GetHeapUsageRequest &req) {
+  if (!checkRuntimeEnabled(req)) {
+    return;
+  }
+
+  auto heapInfo = runtime_.instrumentation().getHeapInfo(false);
+  m::runtime::GetHeapUsageResponse resp;
+  resp.id = req.id;
+  resp.usedSize = heapInfo["hermes_allocatedBytes"];
+  resp.totalSize = heapInfo["hermes_heapSize"];
+  sendResponseToClient(resp);
 }
 
 bool RuntimeDomainAgent::checkRuntimeEnabled(const m::Request &req) {

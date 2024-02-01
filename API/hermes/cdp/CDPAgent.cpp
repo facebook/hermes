@@ -153,7 +153,8 @@ CDPAgentImpl::DomainAgents::DomainAgents(
 void CDPAgentImpl::DomainAgents::initialize() {
   debuggerAgent_ = std::make_unique<DebuggerDomainAgent>(
       runtime_, asyncDebuggerAPI_, messageCallback_);
-  runtimeAgent_ = std::make_unique<RuntimeDomainAgent>(messageCallback_);
+  runtimeAgent_ =
+      std::make_unique<RuntimeDomainAgent>(runtime_, messageCallback_);
 }
 
 void CDPAgentImpl::DomainAgents::dispose() {
@@ -200,6 +201,9 @@ void CDPAgentImpl::DomainAgents::handleCommand(
     runtimeAgent_->enable(static_cast<m::runtime::EnableRequest &>(*command));
   } else if (command->method == "Runtime.disable") {
     runtimeAgent_->disable(static_cast<m::runtime::DisableRequest &>(*command));
+  } else if (command->method == "Runtime.getHeapUsage") {
+    runtimeAgent_->getHeapUsage(
+        static_cast<m::runtime::GetHeapUsageRequest &>(*command));
   } else {
     messageCallback_(message::makeErrorResponse(
                          command->id,
