@@ -47,8 +47,7 @@ declare enum A { B }
 // CHECK-NEXT:            }
 // CHECK-NEXT:          }
 // CHECK-NEXT:        ]
-// CHECK-NEXT:      },
-// CHECK-NEXT:      "kind": "CommonJS"
+// CHECK-NEXT:      }
 // CHECK-NEXT:    }
 // CHECK-NEXT:  ]
 // CHECK-NEXT:}

@@ -1744,7 +1744,6 @@ export interface DeclareModule extends BaseNode {
   +type: 'DeclareModule';
   +id: StringLiteral | Identifier;
   +body: BlockStatement;
-  +kind: 'CommonJS' | 'ES';
 }
 
 export interface DeclareInterface extends BaseInterfaceDeclaration {

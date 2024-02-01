@@ -924,11 +924,10 @@ ESTREE_NODE_4_ARGS(
 ESTREE_NODE_1_ARGS(
     DeclareExportAllDeclaration, Flow,
     NodePtr, source, false)
-ESTREE_NODE_3_ARGS(
+ESTREE_NODE_2_ARGS(
     DeclareModule, Flow,
     NodePtr, id, false,
-    NodePtr, body, false,
-    NodeLabel, kind, false)
+    NodePtr, body, false)
 ESTREE_NODE_1_ARGS(
     DeclareModuleExports, Flow,
     NodePtr, typeAnnotation, false)

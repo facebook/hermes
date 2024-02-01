@@ -1148,13 +1148,8 @@ class JSParserImpl {
       Optional<SMLoc> wrappedStart = None,
       AllowAnonFunctionType allowAnonFunctionType = AllowAnonFunctionType::Yes);
 
-  /// Allow 'declare export type', which is only allowed in 'declare module'.
-  enum class AllowDeclareExportType { No, Yes };
-
   Optional<ESTree::Node *> parseFlowDeclaration();
-  Optional<ESTree::Node *> parseDeclareFLow(
-      SMLoc start,
-      AllowDeclareExportType allowDeclareExportType);
+  Optional<ESTree::Node *> parseDeclareFLow(SMLoc start);
   bool checkComponentDeclarationFlow();
   Optional<ESTree::Node *> parseComponentDeclarationFlow(
       SMLoc start,
@@ -1208,9 +1203,7 @@ class JSParserImpl {
       SMLoc start,
       bool hook);
   Optional<ESTree::Node *> parseDeclareClassFlow(SMLoc start);
-  Optional<ESTree::Node *> parseDeclareExportFlow(
-      SMLoc start,
-      AllowDeclareExportType allowDeclareExportType);
+  Optional<ESTree::Node *> parseDeclareExportFlow(SMLoc start);
   Optional<ESTree::Node *> parseDeclareModuleFlow(SMLoc start);
 
   Optional<ESTree::Node *> parseExportTypeDeclarationFlow(SMLoc start);

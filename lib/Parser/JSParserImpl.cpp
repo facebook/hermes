@@ -838,7 +838,7 @@ bool JSParserImpl::parseStatementListItem(
   } else if (context_.getParseFlow() && checkDeclareType()) {
     // declare var, declare function, declare interface, etc.
     SMLoc start = advance(JSLexer::GrammarContext::Type).Start;
-    auto decl = parseDeclareFLow(start, AllowDeclareExportType::No);
+    auto decl = parseDeclareFLow(start);
     if (!decl)
       return false;
     stmtList.push_back(*decl.getValue());

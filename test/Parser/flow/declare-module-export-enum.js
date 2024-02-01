@@ -53,8 +53,7 @@ declare export enum A { B }
 // CHECK-NEXT:            "default": false
 // CHECK-NEXT:          }
 // CHECK-NEXT:        ]
-// CHECK-NEXT:      },
-// CHECK-NEXT:      "kind": "ES"
+// CHECK-NEXT:      }
 // CHECK-NEXT:    }
 // CHECK-NEXT:  ]
 // CHECK-NEXT:}
