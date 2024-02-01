@@ -4169,11 +4169,11 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
     //                 We are here
     // Push topExpr and the '*', so we can parse rightExpr.
     stack.emplace_back(topExpr, tok_->getKind(), topExprStartLoc);
-    advance();
 
-    topExprStartLoc = tok_->getStartLoc();
 #if HERMES_PARSE_TS || HERMES_PARSE_FLOW
     if (LLVM_UNLIKELY(stack.back().opKind == TokenKind::as_operator)) {
+      advance(JSLexer::GrammarContext::Type);
+      topExprStartLoc = tok_->getStartLoc();
       auto optRightExpr = parseTypeAnnotation();
       if (!optRightExpr)
         return None;
@@ -4181,6 +4181,8 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
     } else
 #endif
     {
+      advance();
+      topExprStartLoc = tok_->getStartLoc();
       if (LLVM_UNLIKELY(check(TokenKind::private_identifier))) {
         topExpr = consumePrivateIdentifier();
       } else {
