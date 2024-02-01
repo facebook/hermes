@@ -63,6 +63,8 @@ class CDPAgentTest : public ::testing::Test {
   }
 
  protected:
+  static constexpr int32_t kTestExecutionContextId = 1;
+
   void SetUp() override;
   void TearDown() override;
 
@@ -162,6 +164,7 @@ void CDPAgentTest::SetUp() {
   asyncDebuggerAPI_ = AsyncDebuggerAPI::create(*runtime_);
 
   cdpAgent_ = CDPAgent::create(
+      kTestExecutionContextId,
       *runtime_,
       *asyncDebuggerAPI_,
       std::bind(&CDPAgentTest::handleRuntimeTask, this, _1),
@@ -298,7 +301,11 @@ TEST_F(CDPAgentTest, IssuesStartupTask) {
 
   // Trigger the startup task
   auto cdpAgent = CDPAgent::create(
-      *runtime_, *asyncDebuggerAPI_, handleTask, handleMessage);
+      kTestExecutionContextId,
+      *runtime_,
+      *asyncDebuggerAPI_,
+      handleTask,
+      handleMessage);
 
   ASSERT_TRUE(gotTask);
 }
@@ -312,7 +319,11 @@ TEST_F(CDPAgentTest, IssuesShutdownTask) {
   OutboundMessageFunc handleMessage = [](const std::string &message) {};
 
   auto cdpAgent = CDPAgent::create(
-      *runtime_, *asyncDebuggerAPI_, handleTask, handleMessage);
+      kTestExecutionContextId,
+      *runtime_,
+      *asyncDebuggerAPI_,
+      handleTask,
+      handleMessage);
 
   // Ignore the startup task
   gotTask = false;
@@ -332,7 +343,11 @@ TEST_F(CDPAgentTest, IssuesCommandHandlingTask) {
   OutboundMessageFunc handleMessage = [](const std::string &message) {};
 
   auto cdpAgent = CDPAgent::create(
-      *runtime_, *asyncDebuggerAPI_, handleTask, handleMessage);
+      kTestExecutionContextId,
+      *runtime_,
+      *asyncDebuggerAPI_,
+      handleTask,
+      handleMessage);
 
   // Ignore the startup task
   gotTask = false;
@@ -358,7 +373,11 @@ TEST_F(CDPAgentTest, RejectsMalformedMethods) {
       runtimeThread_->add([this, task]() { task(*runtime_); });
     };
     cdpAgent = CDPAgent::create(
-        *runtime_, *asyncDebuggerAPI_, handleTask, handleMessage);
+        kTestExecutionContextId,
+        *runtime_,
+        *asyncDebuggerAPI_,
+        handleTask,
+        handleMessage);
 
     // Send a command with no domain delimiter in the method. Just format the
     // JSON manually, as there is no Request object for this fake method.
@@ -383,7 +402,11 @@ TEST_F(CDPAgentTest, RejectsUnknownDomains) {
       runtimeThread_->add([this, task]() { task(*runtime_); });
     };
     cdpAgent = CDPAgent::create(
-        *runtime_, *asyncDebuggerAPI_, handleTask, handleMessage);
+        kTestExecutionContextId,
+        *runtime_,
+        *asyncDebuggerAPI_,
+        handleTask,
+        handleMessage);
 
     // Send a command with a properly-formatted domain, but unrecognized by the
     // CDP Agent. Just format the JSON manually, as there is no Request object

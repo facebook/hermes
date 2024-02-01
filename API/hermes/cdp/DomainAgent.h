@@ -65,8 +65,11 @@ using SynchronizedOutboundCallback = SynchronizedCallback<const std::string &>;
 
 class DomainAgent {
  protected:
-  DomainAgent(SynchronizedOutboundCallback messageCallback)
-      : messageCallback_(messageCallback) {}
+  DomainAgent(
+      int32_t executionContextID,
+      SynchronizedOutboundCallback messageCallback)
+      : executionContextID_(executionContextID),
+        messageCallback_(messageCallback) {}
 
   /// Sends the provided string back to the debug client
   void sendToClient(const std::string &str) {
@@ -82,6 +85,9 @@ class DomainAgent {
   void sendNotificationToClient(const m::Notification &note) {
     sendToClient(note.toJsonStr());
   }
+
+  /// Execution context ID associated with the HermesRuntime
+  int32_t executionContextID_;
 
   /// Callback function to send CDP response back to the debug client
   SynchronizedOutboundCallback messageCallback_;

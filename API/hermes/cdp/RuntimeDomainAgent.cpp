@@ -15,9 +15,10 @@ namespace hermes {
 namespace cdp {
 
 RuntimeDomainAgent::RuntimeDomainAgent(
+    int32_t executionContextID,
     HermesRuntime &runtime,
     SynchronizedOutboundCallback messageCallback)
-    : DomainAgent(std::move(messageCallback)),
+    : DomainAgent(executionContextID, std::move(messageCallback)),
       runtime_(runtime),
       enabled_(false) {}
 

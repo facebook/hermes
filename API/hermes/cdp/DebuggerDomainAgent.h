@@ -32,6 +32,7 @@ namespace old_cdp = ::facebook::hermes::inspector_modern::chrome;
 class DebuggerDomainAgent : public DomainAgent {
  public:
   DebuggerDomainAgent(
+      int32_t executionContextID,
       HermesRuntime &runtime,
       debugger::AsyncDebuggerAPI &asyncDebugger,
       SynchronizedOutboundCallback messageCallback);

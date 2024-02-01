@@ -16,10 +16,11 @@ namespace cdp {
 using namespace facebook::hermes::debugger;
 
 DebuggerDomainAgent::DebuggerDomainAgent(
+    int32_t executionContextID,
     HermesRuntime &runtime,
     AsyncDebuggerAPI &asyncDebugger,
     SynchronizedOutboundCallback messageCallback)
-    : DomainAgent(std::move(messageCallback)),
+    : DomainAgent(executionContextID, std::move(messageCallback)),
       runtime_(runtime),
       asyncDebugger_(asyncDebugger),
       debuggerEventCallbackId_(kInvalidDebuggerEventCallbackID),
@@ -217,7 +218,7 @@ void DebuggerDomainAgent::sendScriptParsedNotificationToClient(
   m::debugger::ScriptParsedNotification note;
   note.scriptId = std::to_string(srcLoc.fileId);
   note.url = srcLoc.fileName;
-  note.executionContextId = kHermesExecutionContextId;
+  note.executionContextId = executionContextID_;
   std::string sourceMappingUrl =
       runtime_.getDebugger().getSourceMappingUrl(srcLoc.fileId);
   if (!sourceMappingUrl.empty()) {

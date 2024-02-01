@@ -23,6 +23,7 @@ namespace m = ::facebook::hermes::inspector_modern::chrome::message;
 class RuntimeDomainAgent : public DomainAgent {
  public:
   RuntimeDomainAgent(
+      int32_t executionContextID,
       HermesRuntime &runtime_,
       SynchronizedOutboundCallback messageCallback);
   ~RuntimeDomainAgent();

@@ -39,6 +39,7 @@ class HERMES_EXPORT CDPAgent {
   /// Hide the constructor so users can only construct via static create
   /// methods.
   CDPAgent(
+      int32_t executionContextID,
       HermesRuntime &runtime,
       debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
       debugger::EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
@@ -48,6 +49,7 @@ class HERMES_EXPORT CDPAgent {
   /// Create a new CDP Agent. This can be done on an arbitrary thread; the
   /// runtime will not be accessed during execution of this function.
   static std::unique_ptr<CDPAgent> create(
+      int32_t executionContextID,
       HermesRuntime &runtime,
       debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
       debugger::EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
