@@ -194,7 +194,9 @@ void AsyncDebuggerAPI::processInterruptWhilePaused() {
     }
     if (!eventCallbacks_.empty()) {
       lock.unlock();
-      runInterrupts();
+      // Specifically don't run all interrupts if one of the interrupts sets the
+      // next command. Once the next command has been set, we'll exit didPause.
+      runInterrupts(false);
       lock.lock();
     }
   }
@@ -211,13 +213,18 @@ std::optional<InterruptCallback> AsyncDebuggerAPI::takeNextInterruptCallback() {
   return func;
 }
 
-void AsyncDebuggerAPI::runInterrupts() {
+void AsyncDebuggerAPI::runInterrupts(bool ignoreNextCommand) {
   std::optional<InterruptCallback> entry = takeNextInterruptCallback();
   while (entry.has_value()) {
     InterruptCallback func = entry.value();
     if (func) {
       func(runtime_);
     }
+
+    if (!ignoreNextCommand && !isWaitingForCommand_) {
+      break;
+    }
+
     entry = takeNextInterruptCallback();
   }
 }

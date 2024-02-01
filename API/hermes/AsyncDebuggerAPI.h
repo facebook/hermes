@@ -119,8 +119,10 @@ class HERMES_EXPORT AsyncDebuggerAPI : private debugger::EventObserver {
   /// Dequeues the next InterruptCallback if any.
   std::optional<InterruptCallback> takeNextInterruptCallback();
 
-  /// Runs every InterruptCallback that has been queued up so far.
-  void runInterrupts();
+  /// If \p ignoreNextCommand is true, then runs every InterruptCallback that
+  /// has been queued up so far. If \p ignoreNextCommand is false, then attempt
+  /// to run all interrupts, but will stop if any interrupt sets a next command.
+  void runInterrupts(bool ignoreNextCommand = true);
 
   /// Returns the next DebuggerEventCallback to execute if any.
   std::optional<DebuggerEventCallback> takeNextEventCallback();
