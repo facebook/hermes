@@ -128,6 +128,10 @@ class Verifier : public InstructionVisitor<Verifier, void> {
   /// the problematic instruction, if available.
   /// \param inst the optional instruction to print the location of.
   void _assertPrintLocation(const Instruction *inst);
+
+  /// Verify that TryStart/EndInsts are balanced. Also, verify all Try bodies
+  /// are reachable only through the enclosing TryStartInst.
+  void verifyTryStructure(const Function &F);
 };
 
 void Verifier::_assertPrintLocation(const Instruction *inst) {
@@ -260,6 +264,60 @@ void Verifier::visitFunction(const Function &F) {
         }
       }
       seen.insert(&*II);
+    }
+  }
+  verifyTryStructure(F);
+}
+
+void Verifier::verifyTryStructure(const Function &F) {
+  // Stack of basic blocks to visit, and the TryStartInst on entry of that
+  // block.
+  llvh::SmallVector<std::pair<const BasicBlock *, const TryStartInst *>, 4>
+      stack;
+  // Holds a mapping from basic block -> innermost enclosing TryStartInst,
+  // accounting for Catch/TryEnd.
+  llvh::DenseMap<const BasicBlock *, const TryStartInst *> blockToEnclosingTry;
+
+  stack.push_back({&*F.begin(), nullptr});
+  blockToEnclosingTry[&*F.begin()] = nullptr;
+  while (!stack.empty()) {
+    auto [BB, enclosingTry] = stack.pop_back_val();
+    if (llvh::isa<ReturnInst>(BB->getTerminator())) {
+      Assert(
+          enclosingTry == nullptr,
+          "ReturnInst but not all TryStartInsts have been closed.");
+    } else if (auto *TSI = llvh::dyn_cast<TryStartInst>(BB->getTerminator())) {
+      enclosingTry = TSI;
+    }
+
+    for (auto *succ : successors(BB)) {
+      // If succ starts with a TryEndInst or CatchInst, pop off to the
+      // nearest try.
+      auto *succEnclosingTry = enclosingTry;
+      if (llvh::isa<TryEndInst>(&succ->front()) ||
+          llvh::isa<CatchInst>(&succ->front())) {
+        Assert(
+            enclosingTry != nullptr,
+            "TryEndInst/CatchInst outside of any TryStartInst context.");
+        assert(
+            blockToEnclosingTry.find(enclosingTry->getParent()) !=
+                blockToEnclosingTry.end() &&
+            "enclosingTry should already be in map.");
+        succEnclosingTry = blockToEnclosingTry[enclosingTry->getParent()];
+      }
+
+      // If BB already exists in blockToEnclosingTry and has a different
+      // enclosing TryStartInst, error out.
+      auto [enclosingInfo, success] =
+          blockToEnclosingTry.insert({succ, succEnclosingTry});
+      if (!success) {
+        Assert(
+            enclosingInfo->second == succEnclosingTry,
+            "BB is reachable from multiple different try contexts.");
+      } else {
+        // Only expore this BB if we haven't visited it before.
+        stack.push_back({succ, succEnclosingTry});
+      }
     }
   }
 }

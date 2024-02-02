@@ -132,6 +132,41 @@ TEST(IRVerifierTest, DominanceTest) {
   EXPECT_TRUE(verifyModule(M, &errs()));
 }
 
+TEST(IRVerifierTest, TryStructureTest) {
+  auto Ctx = std::make_shared<Context>();
+  Module M{Ctx};
+  IRBuilder Builder(&M);
+  auto F = Builder.createFunction(
+      "testBranch", Function::DefinitionKind::ES5Function, true);
+
+  auto entry = Builder.createBasicBlock(F);
+  // This BB will be reachable from both outside of a try and inside of a try.
+  auto illegalBB = Builder.createBasicBlock(F);
+  auto tryStartBB = Builder.createBasicBlock(F);
+  auto tryBodyBB = Builder.createBasicBlock(F);
+  auto catchBB = Builder.createBasicBlock(F);
+
+  Builder.setInsertionBlock(entry);
+  // Here we reach illegalBB from outside a try.
+  Builder.createCondBranchInst(
+      Builder.getLiteralBool(true), tryStartBB, illegalBB);
+
+  Builder.setInsertionBlock(tryStartBB);
+  Builder.createTryStartInst(tryBodyBB, catchBB);
+
+  // Here we reach illegalBB from inside a try.
+  Builder.setInsertionBlock(tryBodyBB);
+  Builder.createBranchInst(illegalBB);
+
+  Builder.setInsertionBlock(catchBB);
+  Builder.createReturnInst(Builder.getLiteralUndefined());
+
+  Builder.setInsertionBlock(illegalBB);
+  Builder.createReturnInst(Builder.getLiteralUndefined());
+
+  EXPECT_FALSE(verifyModule(M, &llvh::nulls()));
+}
+
 #endif // HERMES_SLOW_DEBUG
 
 } // end anonymous namespace
