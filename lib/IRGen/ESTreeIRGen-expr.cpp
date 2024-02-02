@@ -465,6 +465,7 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
 
   Value *thisVal;
   Value *callee;
+  Value *target = Builder.getEmptySentinel();
   Value *newTarget = Builder.getLiteralUndefined();
 
   // Handle MemberExpression expression calls that sets the 'this' property.
@@ -481,6 +482,7 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
     // Call the callee with obj as the 'this' pointer.
     thisVal = memResult.base;
     callee = memResult.result;
+    target = memResult.resultFn ? memResult.resultFn : target;
   } else if (
       auto *Mem =
           llvh::dyn_cast<ESTree::OptionalMemberExpressionNode>(call->_callee)) {
@@ -513,7 +515,7 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
     callee = genExpression(call->_callee);
   }
 
-  return emitCall(call, callee, thisVal, newTarget);
+  return emitCall(call, callee, target, thisVal, newTarget);
 }
 
 Value *ESTreeIRGen::genOptionalCallExpr(
@@ -589,8 +591,12 @@ Value *ESTreeIRGen::genOptionalCallExpr(
     Builder.setInsertionBlock(evalRHSBB);
   }
 
-  Value *callResult =
-      emitCall(call, callee, thisVal, Builder.getLiteralUndefined());
+  Value *callResult = emitCall(
+      call,
+      callee,
+      /* target */ Builder.getEmptySentinel(),
+      thisVal,
+      Builder.getLiteralUndefined());
 
   if (isFirstOptional) {
     values.push_back(callResult);
@@ -706,6 +712,7 @@ Value *ESTreeIRGen::genSHBuiltinExternC(ESTree::CallExpressionNode *call) {
 Value *ESTreeIRGen::emitCall(
     ESTree::CallExpressionLikeNode *call,
     Value *callee,
+    Value *target,
     Value *thisVal,
     Value *newTarget) {
   bool hasSpread = false;
@@ -721,7 +728,13 @@ Value *ESTreeIRGen::emitCall(
       args.push_back(genExpression(&arg));
     }
 
-    auto *callInst = Builder.createCallInst(callee, newTarget, thisVal, args);
+    auto *callInst = Builder.createCallInst(
+        callee,
+        target,
+        /* env */ Builder.getEmptySentinel(),
+        newTarget,
+        thisVal,
+        args);
     if (auto *functionType = llvh::dyn_cast<flow::BaseFunctionType>(
             flowContext_.getNodeTypeOrAny(getCallee(call))->info)) {
       // Every BaseFunctionType currently is going to be compiled to a
@@ -776,7 +789,9 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
       Mod->getContext().getSourceErrorManager().error(
           mem->getSourceRange(), "unsupported use of 'super'");
       return MemberExpressionResult{
-          Builder.getLiteralUndefined(), Builder.getLiteralUndefined()};
+          Builder.getLiteralUndefined(),
+          nullptr,
+          Builder.getLiteralUndefined()};
     }
     return emitSuperLoad(superNode, property);
   }
@@ -788,7 +803,9 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
       return emitMemberLoad(mem, baseValue, prop);
     case MemberExpressionOperation::Delete:
       return MemberExpressionResult{
-          Builder.createDeletePropertyInst(baseValue, prop), baseValue};
+          Builder.createDeletePropertyInst(baseValue, prop),
+          nullptr,
+          baseValue};
   }
   llvm_unreachable("No other kind of member expression");
 }
@@ -811,6 +828,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
                 fieldIndex,
                 Builder.getLiteralString(propName),
                 flowTypeToIRType(optFieldLookup->getField()->type)),
+            nullptr,
             baseValue};
       }
       // Failed to find a class field, check the home object for methods.
@@ -827,6 +845,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
               methodIndex,
               Builder.getLiteralString(propName),
               flowTypeToIRType(optMethodLookup->getField()->type)),
+          finalMethods_.lookup(optMethodLookup->getField()),
           baseValue};
     }
   }
@@ -842,6 +861,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
       return MemberExpressionResult{
           Builder.createFastArrayLoadInst(
               baseValue, propValue, flowTypeToIRType(arrayType->getElement())),
+          nullptr,
           baseValue};
     }
 
@@ -850,7 +870,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
     auto *ident = llvh::dyn_cast<ESTree::IdentifierNode>(mem->_property);
     if (!mem->_computed && ident && ident->_name == kw_.identLength) {
       return MemberExpressionResult{
-          Builder.createFastArrayLengthInst(baseValue), baseValue};
+          Builder.createFastArrayLengthInst(baseValue), nullptr, baseValue};
     }
   }
 
@@ -868,6 +888,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
               ulen,
               Builder.getLiteralString(llvh::Twine(ulen)),
               flowTypeToIRType(tupleType->getTypes()[ulen])),
+          nullptr,
           baseValue};
     }
     Mod->getContext().getSourceErrorManager().error(
@@ -875,7 +896,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
   }
 
   return MemberExpressionResult{
-      Builder.createLoadPropertyInst(baseValue, propValue), baseValue};
+      Builder.createLoadPropertyInst(baseValue, propValue), nullptr, baseValue};
 }
 
 ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitSuperLoad(
@@ -895,6 +916,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitSuperLoad(
               fieldIndex,
               Builder.getLiteralString(propName),
               flowTypeToIRType(optFieldLookup->getField()->type)),
+          nullptr,
           thisValue};
     }
     // Failed to find a class field, check the home object for methods.
@@ -914,6 +936,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitSuperLoad(
             methodIndex,
             Builder.getLiteralString(propName),
             flowTypeToIRType(optMethodLookup->getField()->type)),
+        nullptr,
         thisValue};
   }
 
@@ -921,7 +944,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitSuperLoad(
       superNode->getSourceRange(),
       "'super' in legacy JS classes not supported (yet)");
   return MemberExpressionResult{
-      Builder.getLiteralUndefined(), Builder.getLiteralUndefined()};
+      Builder.getLiteralUndefined(), nullptr, Builder.getLiteralUndefined()};
 }
 
 void ESTreeIRGen::emitMemberStore(
@@ -1060,11 +1083,11 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genOptionalMemberExpression(
     Builder.createBranchInst(continueBB);
 
     Builder.setInsertionBlock(continueBB);
-    return {Builder.createPhiInst(values, blocks), baseValue};
+    return {Builder.createPhiInst(values, blocks), nullptr, baseValue};
   }
 
   // If this isn't the first optional, no Phi needed, just return the result.
-  return {result, baseValue};
+  return {result, nullptr, baseValue};
 }
 
 Value *ESTreeIRGen::genCallEvalExpr(ESTree::CallExpressionNode *call) {

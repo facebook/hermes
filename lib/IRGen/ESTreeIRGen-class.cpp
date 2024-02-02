@@ -205,6 +205,16 @@ Value *ESTreeIRGen::emitClassAllocation(
             field.name);
         propMap[field.layoutSlotIR] = {
             Builder.getLiteralString(field.name), function};
+        if (auto *CFI = llvh::dyn_cast<CreateFunctionInst>(function)) {
+          // If this field represents a final method, record the IR function so
+          // we can use it to populate the target of calls.
+          if (!field.overridden) {
+            auto [_, success] =
+                finalMethods_.try_emplace(&field, CFI->getFunctionCode());
+            (void)success;
+            assert(success && "Method already emitted");
+          }
+        }
       } else {
         assert(parent && "inherited field without parent ClassType");
         // Method is inherited. Read it from the parent.

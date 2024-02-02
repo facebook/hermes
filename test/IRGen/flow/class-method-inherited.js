@@ -69,7 +69,7 @@ new D().inherited();
 // CHECK-NEXT:  %25 = CallInst (:any) %21: object, %D(): functionCode, empty: any, %21: object, %24: object
 // CHECK-NEXT:  %26 = LoadParentInst (:object) %24: object
 // CHECK-NEXT:  %27 = PrLoadInst (:object) %26: object, 0: number, "inherited": string
-// CHECK-NEXT:  %28 = CallInst [njsf] (:any) %27: object, empty: any, empty: any, undefined: undefined, %24: object
+// CHECK-NEXT:  %28 = CallInst [njsf] (:any) %27: object, %inherited(): functionCode, empty: any, undefined: undefined, %24: object
 // CHECK-NEXT:  %29 = CheckedTypeCastInst (:number) %28: any, type(number)
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

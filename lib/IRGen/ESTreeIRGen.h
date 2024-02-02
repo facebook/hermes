@@ -422,6 +422,10 @@ class ESTreeIRGen {
   /// Map from a class type to IR information about the class.
   llvh::DenseMap<flow::ClassType *, ClassInfo> classConstructors_{};
 
+  /// Map from a field on the home object to the IR function that it is
+  /// guaranteed to be, if any.
+  llvh::DenseMap<const flow::ClassType::Field *, Function *> finalMethods_{};
+
   /// A queue of "entities" that have been forward declared and mapped in
   /// \c compiledEntities_, but need to be actually compiled. This makes the
   /// compiler non-recursive.
@@ -649,12 +653,15 @@ class ESTreeIRGen {
   Value *emitCall(
       ESTree::CallExpressionLikeNode *call,
       Value *callee,
+      Value *target,
       Value *thisVal,
       Value *newTarget);
 
   struct MemberExpressionResult {
     /// Value of the looked up property.
     Value *result;
+    /// The IR Function if the result is known to be a specific function.
+    Function *resultFn;
     /// Object the property is being looked up on.
     Value *base;
   };
