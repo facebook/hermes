@@ -1839,12 +1839,6 @@ SKIP_LIST = [
     "flow/JSX/invalid_unpaired_rcurly.js",
     # TODO: component syntax, hook syntax and render type failures
     "types/render_types/renders_maybe.js",
-    # TODO: support declare namespace syntax
-    "flow/types/declare_namespace/enum.js",
-    "flow/types/declare_namespace/empty.js",
-    "flow/types/declare_namespace/import_type_in_namespace.js",
-    "flow/types/declare_namespace/multiple.js",
-    "flow/types/declare_namespace/unsupported-children.js",
     # Import attributes
     "flow/dynamic_import/migrated_0005.js",
     ### Failing Flow tests end ###

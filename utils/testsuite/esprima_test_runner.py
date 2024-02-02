@@ -127,6 +127,8 @@ class EsprimaTestRunner:
                 del ast["directive"]
         if ast["type"] == "Identifier" and ast["name"] == "this":
             del ast["optional"]
+        if ast["type"] == "DeclareNamespace":
+            del ast["id"]["optional"]
         if ast["type"] == "PrivateName":
             ast = ast["id"]
             ast["type"] = "PrivateIdentifier"
