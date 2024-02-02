@@ -363,6 +363,8 @@ class FlowChecker::ParseClassType {
         if (superIt) {
           // Field is inherited.
           superMethod = superIt->getField();
+          // Mark the super field as overridden.
+          superIt->getFieldMut()->overridden = true;
           // Actually check the type of the method later,
           // because we have to wait for the class to be initialized.
         }

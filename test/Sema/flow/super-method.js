@@ -41,12 +41,12 @@ class B extends A {
 // CHECK-NEXT:%function.3 = function(this: %class.2): void
 // CHECK-NEXT:%function.10 = function(this: %class.2): number
 // CHECK-NEXT:%class.4 = class( {
-// CHECK-NEXT:  f: %function.10
+// CHECK-NEXT:  f [overridden]: %function.10
 // CHECK-NEXT:})
 // CHECK-NEXT:%function.7 = function(this: %class.6): void
 // CHECK-NEXT:%function.11 = function(this: %class.6): number
 // CHECK-NEXT:%class.8 = class( extends %class.4 {
-// CHECK-NEXT:  f: %function.11
+// CHECK-NEXT:  f [final]: %function.11
 // CHECK-NEXT:})
 
 // CHECK:SemContext

@@ -602,14 +602,20 @@ class ClassType : public TypeWithId {
  public:
   /// Represents either a class field or a method.
   struct Field {
-    Identifier name;
-    Type *type;
+    const Identifier name;
+    Type *const type;
     /// The slot for PrLoad and PrStore, used during IRGen.
     /// This ideally should be computed during conversion to IR Type,
     /// but we don't have that yet.
-    size_t layoutSlotIR;
+    const size_t layoutSlotIR;
     /// If the field is a method, AST for the method.
-    ESTree::MethodDefinitionNode *method;
+    ESTree::MethodDefinitionNode *const method;
+
+    /// Whether this field is a method that has been overridden by a subclass.
+    /// This is the only field that can be modified after initialization, as
+    /// subclasses are processed.
+    bool overridden{false};
+
     Field(
         Identifier name,
         Type *type,
@@ -635,8 +641,11 @@ class ClassType : public TypeWithId {
     explicit FieldLookupEntry(ClassType *classType, size_t fieldsIndex)
         : classType(classType), fieldsIndex(fieldsIndex) {}
 
-    /// Helper function to retrieve the field given the lookup entry.
+    /// Helper functions to retrieve the field given the lookup entry.
     const Field *getField() const {
+      return &classType->fields_[fieldsIndex];
+    }
+    Field *getFieldMut() const {
       return &classType->fields_[fieldsIndex];
     }
   };

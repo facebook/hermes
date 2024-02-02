@@ -149,7 +149,10 @@ void FlowTypesDumper::printTypeDescription(
         os << '\n';
       }
       for (const ClassType::Field &field : classType->getFields()) {
-        os << "  " << field.name << ": ";
+        os << "  " << field.name;
+        if (field.isMethod())
+          os << (field.overridden ? " [overridden]" : " [final]");
+        os << ": ";
         printTypeRef(os, field.type);
         os << '\n';
       }
