@@ -105,6 +105,7 @@ module.exports = {
   DeclareInterface: ['id', 'typeParameters', 'extends', 'body'],
   DeclareModule: ['id', 'body'],
   DeclareModuleExports: ['typeAnnotation'],
+  DeclareNamespace: ['id', 'body'],
   DeclareOpaqueType: ['id', 'typeParameters', 'impltype', 'supertype'],
   DeclareTypeAlias: ['id', 'typeParameters', 'right'],
   DeclareVariable: ['id'],

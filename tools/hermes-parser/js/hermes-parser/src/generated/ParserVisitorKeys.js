@@ -197,6 +197,10 @@ export const HERMES_AST_VISITOR_KEYS = {
   DeclareModuleExports: {
     typeAnnotation: 'Node',
   },
+  DeclareNamespace: {
+    id: 'Node',
+    body: 'Node',
+  },
   DeclareOpaqueType: {
     id: 'Node',
     typeParameters: 'Node',

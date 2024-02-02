@@ -60,6 +60,7 @@ import type {
   DeclareInterface as DeclareInterfaceType,
   DeclareModule as DeclareModuleType,
   DeclareModuleExports as DeclareModuleExportsType,
+  DeclareNamespace as DeclareNamespaceType,
   DeclareOpaqueType as DeclareOpaqueTypeType,
   DeclareTypeAlias as DeclareTypeAliasType,
   DeclareVariable as DeclareVariableType,
@@ -407,13 +408,17 @@ export type DeclareInterfaceProps = {
 export type DeclareModuleProps = {
   +id: MaybeDetachedNode<DeclareModuleType['id']>,
   +body: MaybeDetachedNode<DeclareModuleType['body']>,
-  +kind: DeclareModuleType['kind'],
 };
 
 export type DeclareModuleExportsProps = {
   +typeAnnotation: MaybeDetachedNode<
     DeclareModuleExportsType['typeAnnotation'],
   >,
+};
+
+export type DeclareNamespaceProps = {
+  +id: MaybeDetachedNode<DeclareNamespaceType['id']>,
+  +body: MaybeDetachedNode<DeclareNamespaceType['body']>,
 };
 
 export type DeclareOpaqueTypeProps = {
@@ -1602,7 +1607,6 @@ export function DeclareModule(props: {
     type: 'DeclareModule',
     id: asDetachedNodeForCodeGen(props.id),
     body: asDetachedNodeForCodeGen(props.body),
-    kind: props.kind,
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1615,6 +1619,19 @@ export function DeclareModuleExports(props: {
   const node = detachedProps<DeclareModuleExportsType>(props.parent, {
     type: 'DeclareModuleExports',
     typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function DeclareNamespace(props: {
+  ...$ReadOnly<DeclareNamespaceProps>,
+  +parent?: ESNode,
+}): DetachedNode<DeclareNamespaceType> {
+  const node = detachedProps<DeclareNamespaceType>(props.parent, {
+    type: 'DeclareNamespace',
+    id: asDetachedNodeForCodeGen(props.id),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;

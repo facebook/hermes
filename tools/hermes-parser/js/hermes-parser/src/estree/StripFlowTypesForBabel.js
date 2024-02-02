@@ -23,6 +23,7 @@ import type {
   Program,
   ESNode,
   DeclareEnum,
+  DeclareNamespace,
   DeclareVariable,
   AnyTypeAnnotation,
   GenericTypeAnnotation,
@@ -74,6 +75,28 @@ function createAnyTypeAnnotation(node: ESNode): AnyTypeAnnotation {
  * Convert DeclareEnum nodes to DeclareVariable
  */
 function mapDeclareEnum(node: DeclareEnum): DeclareVariable {
+  return {
+    type: 'DeclareVariable',
+    kind: 'const',
+    id: nodeWith(node.id, {
+      typeAnnotation: {
+        type: 'TypeAnnotation',
+        typeAnnotation: createAnyTypeAnnotation(node.body),
+        loc: node.body.loc,
+        range: node.body.range,
+        parent: EMPTY_PARENT,
+      },
+    }),
+    loc: node.loc,
+    range: node.range,
+    parent: node.parent,
+  };
+}
+
+/**
+ * Convert DeclareNamespace nodes to DeclareVariable
+ */
+function mapDeclareNamespace(node: DeclareNamespace): DeclareVariable {
   return {
     type: 'DeclareVariable',
     kind: 'const',
@@ -176,6 +199,9 @@ export function transformProgram(
         }
         case 'DeclareEnum': {
           return mapDeclareEnum(node);
+        }
+        case 'DeclareNamespace': {
+          return mapDeclareNamespace(node);
         }
         case 'FunctionDeclaration':
         case 'FunctionExpression': {

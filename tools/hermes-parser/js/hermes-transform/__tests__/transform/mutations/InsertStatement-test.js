@@ -128,6 +128,7 @@ describe('InsertStatement', () => {
           'DeclareOpaqueType',
           'DeclareInterface',
           'DeclareModule',
+          'DeclareNamespace',
           ...DEFAULT_SKIP_STATEMENTS,
         ],
       });
@@ -182,6 +183,7 @@ describe('InsertStatement', () => {
           'DeclareOpaqueType',
           'DeclareInterface',
           'DeclareModule',
+          'DeclareNamespace',
           ...MODULE_DECLARATIONS,
         ],
       });

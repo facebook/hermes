@@ -69,6 +69,7 @@ import type {
   DeclareInterface,
   DeclareModule,
   DeclareModuleExports,
+  DeclareNamespace,
   DeclareOpaqueType,
   DeclareTypeAlias,
   DeclareVariable,
@@ -424,6 +425,11 @@ export function isDeclareModule(node /*: ESNode | Token */) /*: node is DeclareM
 
 export function isDeclareModuleExports(node /*: ESNode | Token */) /*: node is DeclareModuleExports */ {
   return node.type === 'DeclareModuleExports';
+}
+    
+
+export function isDeclareNamespace(node /*: ESNode | Token */) /*: node is DeclareNamespace */ {
+  return node.type === 'DeclareNamespace';
 }
     
 

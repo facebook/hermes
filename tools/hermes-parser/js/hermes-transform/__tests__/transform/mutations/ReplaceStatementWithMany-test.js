@@ -125,6 +125,7 @@ describe('ReplaceStatementWithMany', () => {
           'DeclareOpaqueType',
           'DeclareInterface',
           'DeclareModule',
+          'DeclareNamespace',
           ...DEFAULT_SKIP_STATEMENTS,
         ],
       });
@@ -179,6 +180,7 @@ describe('ReplaceStatementWithMany', () => {
           'DeclareOpaqueType',
           'DeclareInterface',
           'DeclareModule',
+          'DeclareNamespace',
           ...MODULE_DECLARATIONS,
         ],
       });

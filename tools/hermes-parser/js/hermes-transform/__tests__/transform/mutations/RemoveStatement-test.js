@@ -111,6 +111,7 @@ describe('RemoveStatement', () => {
           'DeclareOpaqueType',
           'DeclareInterface',
           'DeclareModule',
+          'DeclareNamespace',
           ...DEFAULT_SKIP_STATEMENTS,
         ],
       });
@@ -165,6 +166,7 @@ describe('RemoveStatement', () => {
           'DeclareOpaqueType',
           'DeclareInterface',
           'DeclareModule',
+          'DeclareNamespace',
           ...MODULE_DECLARATIONS,
         ],
       });

@@ -59,6 +59,7 @@ export function transformProgram(
         case 'DeclareInterface':
         case 'DeclareModule':
         case 'DeclareModuleExports':
+        case 'DeclareNamespace':
         case 'DeclareOpaqueType':
         case 'DeclareTypeAlias':
         case 'DeclareVariable':
