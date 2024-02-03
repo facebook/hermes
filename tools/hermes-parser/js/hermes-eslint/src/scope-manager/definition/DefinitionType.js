@@ -18,6 +18,7 @@ const DefinitionType = keyMirror({
   ComponentName: null,
   Enum: null,
   FunctionName: null,
+  HookName: null,
   ImplicitGlobalVariable: null,
   ImportBinding: null,
   Parameter: null,

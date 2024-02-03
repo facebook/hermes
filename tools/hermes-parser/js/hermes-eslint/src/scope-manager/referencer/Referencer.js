@@ -28,6 +28,7 @@ import type {
   DeclareExportAllDeclaration,
   DeclareExportDeclaration,
   DeclareFunction,
+  DeclareHook,
   DeclareInterface,
   DeclareModule,
   DeclareOpaqueType,
@@ -44,6 +45,7 @@ import type {
   ForStatement,
   FunctionDeclaration,
   FunctionExpression,
+  HookDeclaration,
   Identifier,
   ImportAttribute,
   ImportDeclaration,
@@ -87,9 +89,10 @@ import {TypeVisitor} from './TypeVisitor';
 import {Visitor} from './Visitor';
 import {
   CatchClauseDefinition,
+  ComponentNameDefinition,
   EnumDefinition,
   FunctionNameDefinition,
-  ComponentNameDefinition,
+  HookNameDefinition,
   ParameterDefinition,
   VariableDefinition,
 } from '../definition';
@@ -597,6 +600,42 @@ class Referencer extends Visitor {
     this.close(node);
   }
 
+  HookDeclaration(node: HookDeclaration): void {
+    const id = node.id;
+    // id is defined in upper scope
+    this.currentScope().defineIdentifier(id, new HookNameDefinition(id, node));
+
+    this.scopeManager.nestHookScope(node);
+
+    // hook type parameters can be referenced by hook params, so have to be declared first
+    this.visitType(node.typeParameters);
+    // Return type may reference type parameters but not hook parameters, so visit it before the parameters
+    this.visitType(node.returnType);
+
+    // Process parameter declarations.
+    for (const param of node.params) {
+      this.visitPattern(
+        param,
+        (pattern, info) => {
+          this.currentScope().defineIdentifier(
+            pattern,
+            new ParameterDefinition(pattern, node, info.rest),
+          );
+
+          this.referencingDefaultValue(pattern, info.assignments, null, true);
+        },
+        typeAnnotation => {
+          this.visitType(typeAnnotation);
+        },
+        {processRightHandNodes: true},
+      );
+    }
+
+    this.visitChildren(node.body);
+
+    this.close(node);
+  }
+
   FunctionDeclaration(node: FunctionDeclaration): void {
     this.visitFunction(node);
   }
@@ -845,6 +884,10 @@ class Referencer extends Visitor {
   }
 
   DeclareFunction(node: DeclareFunction): void {
+    this.visitType(node);
+  }
+
+  DeclareHook(node: DeclareHook): void {
     this.visitType(node);
   }
 

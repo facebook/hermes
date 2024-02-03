@@ -20,7 +20,9 @@ import type {
   DeclareInterface,
   DeclareClass,
   DeclareComponent,
+  DeclareHook,
   FunctionTypeAnnotation,
+  HookTypeAnnotation,
   TypeAlias,
   OpaqueType,
   InterfaceDeclaration,
@@ -42,7 +44,9 @@ class TypeScope extends ScopeBase<
   | DeclareInterface
   | DeclareClass
   | DeclareComponent
+  | DeclareHook
   | FunctionTypeAnnotation
+  | HookTypeAnnotation
   | TypeAlias
   | OpaqueType
   | InterfaceDeclaration,

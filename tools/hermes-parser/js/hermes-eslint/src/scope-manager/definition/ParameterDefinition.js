@@ -15,6 +15,8 @@ import type {
   Identifier,
   ComponentDeclaration,
   DeclareComponent,
+  DeclareHook,
+  HookDeclaration,
 } from 'hermes-estree';
 
 import {DefinitionType} from './DefinitionType';
@@ -22,7 +24,11 @@ import {DefinitionBase} from './DefinitionBase';
 
 class ParameterDefinition extends DefinitionBase<
   typeof DefinitionType.Parameter,
-  AFunction | ComponentDeclaration | DeclareComponent,
+  | AFunction
+  | ComponentDeclaration
+  | DeclareComponent
+  | HookDeclaration
+  | DeclareHook,
   null,
   Identifier,
 > {
