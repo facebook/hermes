@@ -1656,8 +1656,16 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
     memcpy(&*surl, sourceURL.c_str(), sourceURL.size());
 
     StackAlloc<SandboxValueOrError> resValueOrError(this);
-    vt_.evaluate_javascript_source(
-        this, resValueOrError, srt_, sbuf, surl, sourceURL.size());
+
+    // Call the appropriate function based on whether the buffer contains
+    // bytecode. Note that the buffer is released since it will now be managed
+    // by the runtime.
+    if (isHermesBytecode(buffer->data(), buffer->size()))
+      vt_.evaluate_hermes_bytecode(
+          this, resValueOrError, srt_, sbuf, surl, sourceURL.size());
+    else
+      vt_.evaluate_javascript_source(
+          this, resValueOrError, srt_, sbuf, surl, sourceURL.size());
 
     return intoJSIValue(*resValueOrError);
   }
