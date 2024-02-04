@@ -16,6 +16,7 @@ export * from './ComponentScope';
 export * from './ClassFieldInitializerScope';
 export * from './ClassScope';
 export * from './DeclareModuleScope';
+export * from './DeclareNamespaceScope';
 export * from './ForScope';
 export * from './FunctionExpressionNameScope';
 export * from './FunctionScope';

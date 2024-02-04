@@ -20,6 +20,7 @@ import {
   HookScope,
   ClassScope,
   DeclareModuleScope,
+  DeclareNamespaceScope,
   ForScope,
   FunctionExpressionNameScope,
   FunctionScope,
@@ -211,6 +212,14 @@ class ScopeManager {
   ): DeclareModuleScope {
     return this._nestScope(
       new DeclareModuleScope(this, this._assertCurrentScope(), node),
+    );
+  }
+
+  nestDeclareNamespaceScope(
+    node: DeclareNamespaceScope['block'],
+  ): DeclareNamespaceScope {
+    return this._nestScope(
+      new DeclareNamespaceScope(this, this._assertCurrentScope(), node),
     );
   }
 

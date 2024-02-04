@@ -22,6 +22,7 @@ import type {
   DeclareInterface,
   DeclareModule,
   DeclareModuleExports,
+  DeclareNamespace,
   DeclareOpaqueType,
   DeclareTypeAlias,
   DeclareVariable,
@@ -50,6 +51,7 @@ import {
   ClassNameDefinition,
   FunctionNameDefinition,
   HookNameDefinition,
+  NamespaceNameDefinition,
   TypeDefinition,
   TypeParameterDefinition,
   VariableDefinition,
@@ -257,6 +259,16 @@ class TypeVisitor extends Visitor {
     // definition that can be referenced.
     this.visit(node.body);
 
+    this._referencer.close(node);
+  }
+
+  DeclareNamespace(node: DeclareNamespace): void {
+    this._referencer
+      .currentScope()
+      .defineIdentifier(node.id, new NamespaceNameDefinition(node.id, node));
+
+    this._referencer.scopeManager.nestDeclareNamespaceScope(node);
+    this.visit(node.body);
     this._referencer.close(node);
   }
 

@@ -20,6 +20,7 @@ import type {
 import type {ClassFieldInitializerScope} from './ClassFieldInitializerScope';
 import type {ClassStaticBlockScope} from './ClassStaticBlockScope';
 import type {DeclareModuleScope} from './DeclareModuleScope';
+import type {DeclareNamespaceScope} from './DeclareNamespaceScope';
 import type {ComponentScope} from './ComponentScope';
 import type {FunctionScope} from './FunctionScope';
 import type {GlobalScope} from './GlobalScope';
@@ -135,7 +136,8 @@ type VariableScope =
   | FunctionScope
   | GlobalScope
   | ModuleScope
-  | DeclareModuleScope;
+  | DeclareModuleScope
+  | DeclareNamespaceScope;
 
 /* abstract */ class ScopeBase<
   +TType: ScopeTypeType,
@@ -252,7 +254,8 @@ type VariableScope =
       this.type === ScopeType.Function ||
       this.type === ScopeType.Global ||
       this.type === ScopeType.Module ||
-      this.type === ScopeType.DeclareModule
+      this.type === ScopeType.DeclareModule ||
+      this.type === ScopeType.DeclareNamespace
         ? // $FlowFixMe[incompatible-type] not possible to teach flow this is safe
           this
         : // $FlowFixMe[incompatible-use] upperScope can only be null for Global scope

@@ -1191,6 +1191,80 @@ describe('Declare statements', () => {
     expect(references[1].resolved).toBe(null);
   });
 
+  describe('DeclareNamespace', () => {
+    verifyHasScopes(
+      `
+        declare namespace Foo {
+          declare var V: typeof V;
+        }
+      `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'Foo',
+              type: DefinitionType.NamespaceName,
+              referenceCount: 0,
+            },
+          ],
+        },
+        {
+          type: ScopeType.DeclareNamespace,
+          variables: [
+            {
+              name: 'V',
+              type: DefinitionType.Variable,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ],
+    );
+  });
+
+  test('DeclareNamespace does not let definitions escape scope', () => {
+    const {scopeManager} = parseForESLint(`
+      declare namespace Foo {
+        declare var V: string;
+        declare type T = string;
+      }
+
+      (V: T);
+    `);
+
+    // All variables are defined in block scope within declare namespace scope
+    expect(scopeManager.scopes).toHaveLength(3);
+
+    expect(scopeManager.scopes[0].type).toEqual(ScopeType.Global);
+    expect(scopeManager.scopes[0].variables).toHaveLength(0);
+
+    expect(scopeManager.scopes[1].type).toEqual(ScopeType.Module);
+    expect(scopeManager.scopes[1].variables).toHaveLength(1);
+
+    expect(scopeManager.scopes[2].type).toEqual(ScopeType.DeclareNamespace);
+    expect(scopeManager.scopes[2].variables).toHaveLength(2);
+
+    // No references are resolved to the two variables in the declare module body
+    const variables = scopeManager.scopes[2].variables;
+    expect(variables[0].name).toEqual('V');
+    expect(variables[0].references).toHaveLength(0);
+    expect(variables[1].name).toEqual('T');
+    expect(variables[1].references).toHaveLength(0);
+
+    // Only the module scope contains references, however both are unresolved as they
+    // cannot be resolved to the names defined within the declare namespace body.
+    expect(scopeManager.scopes[0].references).toHaveLength(0);
+    expect(scopeManager.scopes[1].references).toHaveLength(2);
+    expect(scopeManager.scopes[2].references).toHaveLength(0);
+
+    const references = scopeManager.scopes[1].references;
+    expect(references[0].identifier.name).toEqual('V');
+    expect(references[0].resolved).toBe(null);
+    expect(references[1].identifier.name).toEqual('T');
+    expect(references[1].resolved).toBe(null);
+  });
+
   describe('DeclareModule DeclareModuleExports', () => {
     verifyHasScopes(
       `

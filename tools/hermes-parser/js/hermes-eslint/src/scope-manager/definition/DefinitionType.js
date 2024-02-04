@@ -16,6 +16,7 @@ const DefinitionType = keyMirror({
   CatchClause: null,
   ClassName: null,
   ComponentName: null,
+  NamespaceName: null,
   Enum: null,
   FunctionName: null,
   HookName: null,
