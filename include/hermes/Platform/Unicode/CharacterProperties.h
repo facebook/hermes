@@ -10,6 +10,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <string>
 
 namespace hermes {
 
@@ -103,6 +104,15 @@ class CodePointSet;
 /// \return a set containing all characters which are canonically equivalent to
 /// any character in \p set, following ES9 21.2.2.8.2.
 CodePointSet makeCanonicallyEquivalent(const CodePointSet &set, bool unicode);
+
+/// Insert ranges of codepoints into \p receiver based on the Unicode \p
+/// propertyName and \p propertyValue (for non-binary properties).
+/// \return true if codepoints were added to the set
+bool addUnicodePropertyRanges(
+    CodePointSet *receiver,
+    const std::string &propertyNameOrValue,
+    const std::string &propertyValue,
+    bool inverted);
 
 } // namespace hermes
 

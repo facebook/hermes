@@ -11,6 +11,8 @@
 #include <algorithm>
 #include <climits>
 #include <iterator>
+#include <string>
+#include <unordered_map>
 #include <utility>
 
 namespace hermes {
@@ -208,6 +210,84 @@ uint32_t canonicalize(uint32_t cp, bool unicode) {
     // No transform for this character, so it canonicalizes to itself.
     return cp;
   }
+}
+
+bool addUnicodePropertyRanges(
+    CodePointSet *receiver,
+    const std::string &propertyName,
+    const std::string &propertyValue,
+    bool inverted = false) {
+  auto key = propertyName;
+  auto propertyRanges = unicodePropertyRangeMap_BinaryProperty;
+  auto canonicalPropertyNameMap = canonicalPropertyNameMap_BinaryProperty;
+
+  if (propertyValue.empty()) {
+    // There was no property value, this is either a binary property or a value
+    // from General_Category, as per `LoneUnicodePropertyNameOrValue`.
+    if (canonicalPropertyNameMap.find(key) == canonicalPropertyNameMap.end()) {
+      // Not a binary property, assume it's a General_Category property value.
+      propertyRanges = unicodePropertyRangeMap_GeneralCategory;
+      canonicalPropertyNameMap = canonicalPropertyNameMap_GeneralCategory;
+    }
+  } else {
+    // There was a property value, assume the name is a category.
+    key = propertyValue;
+    if (propertyName == "General_Category" || propertyName == "gc") {
+      propertyRanges = unicodePropertyRangeMap_GeneralCategory;
+      canonicalPropertyNameMap = canonicalPropertyNameMap_GeneralCategory;
+    } else if (propertyName == "Script" || propertyName == "sc") {
+      propertyRanges = unicodePropertyRangeMap_Script;
+      canonicalPropertyNameMap = canonicalPropertyNameMap_Script;
+    } else if (propertyName == "Script_Extensions" || propertyName == "scx") {
+      // Script_Extensions is a superset of Script.
+      if (!addUnicodePropertyRanges(receiver, "Script", propertyValue)) {
+        return false;
+      }
+      propertyRanges = unicodePropertyRangeMap_ScriptExtensions;
+      canonicalPropertyNameMap = canonicalPropertyNameMap_Script;
+    } else {
+      return false;
+    }
+  }
+
+  // Canonicalize the property name.
+  auto canonicalKey = canonicalPropertyNameMap.find(key);
+  if (canonicalKey == canonicalPropertyNameMap.end()) {
+    return false;
+  }
+
+  auto codepointTable = propertyRanges.find(canonicalKey->second);
+  if (codepointTable == propertyRanges.end()) {
+    return false;
+  }
+
+  if (inverted) {
+    // When inverting the property, all of the ranges _around_ the property's
+    // ranges are added.
+    uint32_t last = 0;
+    for (const auto &[rangePtr, rangeSize] : codepointTable->second) {
+      std::for_each(
+          rangePtr,
+          rangePtr + rangeSize,
+          [&receiver, &last](const UnicodeRange &range) {
+            receiver->add(CodePointRange{last, range.first - last});
+            last = range.second + 1;
+          });
+      // Add the final range.
+      receiver->add(CodePointRange{last, UNICODE_MAX_VALUE - last});
+    }
+  } else {
+    for (const auto &[rangePtr, rangeSize] : codepointTable->second) {
+      std::for_each(
+          rangePtr,
+          rangePtr + rangeSize,
+          [&receiver](const UnicodeRange &range) {
+            const uint32_t length = range.second - range.first + 1;
+            receiver->add(CodePointRange{range.first, length});
+          });
+    }
+  }
+  return true;
 }
 
 } // namespace hermes
