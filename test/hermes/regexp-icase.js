@@ -53,3 +53,7 @@ print(/[\u03B1-\u03C9]/i.exec("\u03D1"));
 // CHECK-NEXT: ϑ
 print(/(.+)(ςΣ)(.+)(σ)/i.exec("Ὀδυσσεύς"));
 // CHECK-NEXT: Ὀδυσσεύς,Ὀδυ,σσ,εύ,ς
+print(/\p{Lu}+/ui.exec("aBc"));
+// CHECK-NEXT: aBc
+print(/[\p{Lu}]+/ui.exec("aBc"));
+// CHECK-NEXT: aBc
