@@ -827,6 +827,14 @@ class BracketNode : public Node {
     classes_.push_back(cls);
   }
 
+  bool addUnicodeProperty(
+      const std::string &propertyName,
+      const std::string &propertyValue,
+      bool inverted = false) {
+    return addUnicodePropertyRanges(
+        &codePointSet_, propertyName, propertyValue, inverted);
+  }
+
   virtual MatchConstraintSet matchConstraints() const override {
     MatchConstraintSet result = 0;
     if (!canMatchASCII())
