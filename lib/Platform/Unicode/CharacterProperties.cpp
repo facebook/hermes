@@ -86,13 +86,14 @@ bool isUnicodeCombiningMark(uint32_t cp) {
 bool isUnicodeDigit(uint32_t cp) {
   // "any character in the Unicode category “Decimal number (Nd)”"
   // 0-9 is the common case.
-  return (cp >= '0' && cp <= '9') || lookup(UNICODE_DIGIT, cp);
+  return (cp >= '0' && cp <= '9') ||
+      lookup(UNICODE_PROPERTY_GC_DECIMAL_NUMBER, cp);
 };
 
 bool isUnicodeConnectorPunctuation(uint32_t cp) {
   // "any character in the Unicode category “Connector punctuation (Pc)"
   // _ is the common case.
-  return cp == '_' || lookup(UNICODE_CONNECTOR_PUNCTUATION, cp);
+  return cp == '_' || lookup(UNICODE_PROPERTY_GC_CONNECTOR_PUNCTUATION, cp);
 }
 
 static uint32_t applyTransform(const UnicodeTransformRange &r, uint32_t cp) {
