@@ -97,6 +97,16 @@ inline bool isUnicodeIDContinue(uint32_t cp) {
       cp == UNICODE_ZWNJ || cp == UNICODE_ZWJ;
 }
 
+/// \return true if the codepoint is valid in a unicode property name
+inline bool isUnicodePropertyName(uint32_t ch) {
+  return ch == '_' || ((ch | 32) >= 'a' && (ch | 32) <= 'z');
+}
+
+/// \return true if the codepoint is valid in a unicode property value
+inline bool isUnicodePropertyValue(uint32_t ch) {
+  return isUnicodePropertyName(ch) || isUnicodeDigit(ch);
+}
+
 /// \return the canonicalized value of \p cp, following ES9 21.2.2.8.2.
 uint32_t canonicalize(uint32_t cp, bool unicode);
 

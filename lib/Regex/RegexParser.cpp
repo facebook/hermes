@@ -33,10 +33,19 @@ class Parser {
   struct ClassAtom {
     CodePoint codePoint = -1;
     llvh::Optional<CharacterClass> charClass{};
+    llvh::Optional<CharacterClassUnicodeProperty> property{};
 
     explicit ClassAtom(CodePoint cp) : codePoint(cp) {}
     ClassAtom(CharacterClass::Type cc, bool invert)
         : charClass(CharacterClass(cc, invert)) {}
+    ClassAtom(
+        const std::string &propertyName,
+        const std::string &propertyValue,
+        bool invert)
+        : property(CharacterClassUnicodeProperty(
+              propertyName,
+              propertyValue,
+              invert)) {}
   };
 
   // The regexp that we are building. This receives the results of our
@@ -719,12 +728,21 @@ class Parser {
     auto bracket = re_->startBracketList(negate);
 
     // Helper to add a ClassAtom to our bracket.
-    auto addClassAtom = [&bracket](const ClassAtom &atom) {
+    auto addClassAtom = [this, &bracket](const ClassAtom &atom) {
       if (atom.charClass) {
         bracket->addClass(*atom.charClass);
+      } else if (atom.property) {
+        if (!bracket->addUnicodeProperty(
+                atom.property->propertyName,
+                atom.property->propertyValue,
+                atom.property->inverted_)) {
+          setError(constants::ErrorType::InvalidPropertyName);
+          return false;
+        }
       } else {
         bracket->addChar(atom.codePoint);
       }
+      return true;
     };
 
     for (;;) {
@@ -745,7 +763,9 @@ class Parser {
 
       // See if we have a dash.
       if (!tryConsume('-')) {
-        addClassAtom(*first);
+        if (!addClassAtom(*first)) {
+          return;
+        }
         continue;
       }
 
@@ -759,24 +779,26 @@ class Parser {
       }
 
       // We have a range like [a-z].
-      // Ranges can't contain character classes: [\d-z] is invalid.
+      if (unicode &&
+          (first->property || second->property || first->charClass ||
+           second->charClass)) {
+        // Unicode mode does not allow ranges with properties or character
+        // classes: [\d-z] is invalid, so is [\p{Number}-z]
+        setError(constants::ErrorType::CharacterRange);
+        return;
+      }
+
       if (first->charClass || second->charClass) {
-        if (unicode) {
-          // The unicode path is an error.
-          setError(constants::ErrorType::CharacterRange);
-          return;
-        } else {
-          // The non-unicode path just pretends the range doesn't exist.
-          // /[\d-A]/ is the same as /[\dA-]/.
-          // Note we still have to process all three characters. For
-          // example:
-          // [\d-a-z] contains the atoms \d, -, a, -, z.
-          // It does NOT contain the range a-z.
-          addClassAtom(*first);
-          addClassAtom(ClassAtom('-'));
-          addClassAtom(*second);
-          continue;
-        }
+        // The non-unicode path just pretends the range doesn't exist.
+        // /[\d-A]/ is the same as /[\dA-]/.
+        // Note we still have to process all three characters. For
+        // example:
+        // [\d-a-z] contains the atoms \d, -, a, -, z.
+        // It does NOT contain the range a-z.
+        addClassAtom(*first);
+        addClassAtom(ClassAtom('-'));
+        addClassAtom(*second);
+        continue;
       }
 
       // Here we know it's a real range: [a-z] and not [\d-f].
@@ -826,6 +848,27 @@ class Parser {
           case 'W': {
             consume(ec);
             return ClassAtom(CharacterClass::Words, ec == 'W' /* invert */);
+          }
+
+          case 'p':
+          case 'P': {
+            if (flags_.unicode) {
+              consume(ec);
+              std::string propertyName;
+              std::string propertyValue;
+              if (!tryConsume('{') ||
+                  !tryConsumeUnicodePropertyValueExpression(
+                      propertyName, propertyValue)) {
+                setError(constants::ErrorType::InvalidPropertyName);
+                return llvh::None;
+              }
+              return ClassAtom(
+                  propertyName, propertyValue, ec == 'P' /* invert */);
+            } else {
+              // When not in Unicode mode, this is just a regular `p` or `P`
+              // (unnecessary) escape.
+              return ClassAtom(consumeCharacterEscape());
+            }
           }
 
           case 'b': {
@@ -1114,6 +1157,52 @@ class Parser {
     return 0;
   }
 
+  bool tryConsumeUnicodeProperty(
+      std::string &propertyName,
+      std::string &propertyValue) {
+    if (current_ == end_) {
+      return false;
+    }
+
+    while (auto ch = consumeCharIf(isUnicodePropertyName)) {
+      propertyName.push_back(*ch);
+    }
+    if (tryConsume('=')) {
+      while (auto ch = consumeCharIf(isUnicodePropertyValue)) {
+        propertyValue.push_back(*ch);
+      }
+    }
+
+    return true;
+  }
+
+  /// ES2018 22.2.1 UnicodePropertyValueExpression
+  /// Here the `\p{` or `\P{` has been consumed.
+  /// \return true if the expression was successfully parsed, \p propertyName
+  /// and \p propertyValue will contain the parsed values.
+  bool tryConsumeUnicodePropertyValueExpression(
+      std::string &propertyName,
+      std::string &propertyValue) {
+    // Non-unicode path does not support unicode property escapes.
+    if (!(flags_.unicode)) {
+      setError(constants::ErrorType::EscapeInvalid);
+      return false;
+    }
+
+    // Unicode path.
+    // Note that all \p and \P in Unicode regexps must result in a valid escape.
+    if (!tryConsumeUnicodeProperty(propertyName, propertyValue)) {
+      setError(constants::ErrorType::InvalidPropertyName);
+      return false;
+    }
+
+    if (!tryConsume('}')) {
+      setError(constants::ErrorType::InvalidPropertyName);
+      return false;
+    }
+    return true;
+  }
+
   /// 21.2.2.9 AtomEscape.
   /// Here the backslash has been consumed.
   void consumeAtomEscape() {
@@ -1141,6 +1230,32 @@ class Parser {
         consume(c);
         re_->pushCharClass({CharacterClass::Words, c == 'W' /* invert */});
         break;
+
+      case 'p':
+      case 'P': {
+        if (flags_.unicode) {
+          consume(c);
+          std::string propertyName;
+          std::string propertyValue;
+          if (!tryConsume('{') ||
+              !tryConsumeUnicodePropertyValueExpression(
+                  propertyName, propertyValue)) {
+            setError(constants::ErrorType::InvalidPropertyName);
+            return;
+          }
+          auto bracket = re_->startBracketList(c == 'P' /* invert */);
+          if (!bracket->addUnicodeProperty(propertyName, propertyValue)) {
+            setError(constants::ErrorType::InvalidPropertyName);
+            return;
+          }
+          break;
+        } else {
+          // When not in Unicode mode, this is just a regular `p` or `P`
+          // (unnecessary) escape.
+          re_->pushChar(consumeCharacterEscape());
+        }
+        break;
+      }
 
         // Note backreferences may NOT begin with 0.
       case '1':
