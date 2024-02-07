@@ -10,7 +10,7 @@
 
 #include "DeclCollector.h"
 
-#include "hermes/ADT/ScopedHashTable.h"
+#include "hermes/ADT/PersistentScopedMap.h"
 #include "hermes/AST/Context.h"
 #include "hermes/AST/RecursiveVisitor.h"
 #include "hermes/Sema/FlowContext.h"
@@ -63,9 +63,12 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   };
 
   /// The scoped binding table mapping from string to binding.
-  using TypeBindingTableTy = hermes::ScopedHashTable<UniqueString *, TypeDecl>;
+  using TypeBindingTableTy =
+      hermes::PersistentScopedMap<UniqueString *, TypeDecl>;
   using TypeBindingTableScopeTy =
-      hermes::ScopedHashTableScope<UniqueString *, TypeDecl>;
+      hermes::PersistentScopedMapScope<UniqueString *, TypeDecl>;
+  using TypeBindingTableScopePtrTy =
+      hermes::PersistentScopedMapScopePtr<UniqueString *, TypeDecl>;
 
   /// The currently lexically visible names of types.
   TypeBindingTableTy bindingTable_{};
