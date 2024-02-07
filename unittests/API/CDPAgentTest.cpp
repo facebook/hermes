@@ -954,6 +954,134 @@ TEST_F(CDPAgentTest, TestEvalOnCallFrameException) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
 
+TEST_F(CDPAgentTest, TestSetBreakpointById) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    debugger;      // line 1
+    Math.random(); //      2
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
+
+  std::string command;
+  llvh::raw_string_ostream commandStream{command};
+  ::hermes::JSONEmitter json{commandStream};
+  json.openDict();
+  json.emitKeyValue("method", "Debugger.setBreakpoint");
+  json.emitKeyValue("id", msgId);
+  json.emitKey("params");
+  json.openDict();
+  json.emitKey("location");
+  json.openDict();
+  json.emitKeyValue("scriptId", scriptID);
+  json.emitKeyValue("lineNumber", 2);
+  json.closeDict();
+  json.closeDict();
+  json.closeDict();
+  commandStream.flush();
+  cdpAgent_->handleCommand(command);
+
+  ensureSetBreakpointResponse(waitForMessage(), msgId++, scriptID, 2, 4);
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
+TEST_F(CDPAgentTest, TestRemoveBreakpoint) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    // [1] (line 2) hit debugger statement, set breakpoint on line 7
+    debugger;
+    var a = 1;
+
+    for (var i = 1; i <= 2; i++) {
+      // [1] (line 7) hit breakpoint and then remove it
+      a += i;
+    }
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // [1] (line 2) hit debugger statement, set breakpoint on line 7
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+
+  {
+    std::string command;
+    llvh::raw_string_ostream commandStream{command};
+    ::hermes::JSONEmitter json{commandStream};
+    json.openDict();
+    json.emitKeyValue("method", "Debugger.setBreakpoint");
+    json.emitKeyValue("id", msgId);
+    json.emitKey("params");
+    json.openDict();
+    json.emitKey("location");
+    json.openDict();
+    json.emitKeyValue("scriptId", scriptID);
+    json.emitKeyValue("lineNumber", 7);
+    json.closeDict();
+    json.closeDict();
+    json.closeDict();
+    commandStream.flush();
+    cdpAgent_->handleCommand(command);
+  }
+  auto resp = expectResponse(std::nullopt, msgId++);
+  EXPECT_EQ(
+      jsonScope_.getString(resp, {"result", "actualLocation", "scriptId"}),
+      scriptID);
+  EXPECT_EQ(
+      jsonScope_.getNumber(resp, {"result", "actualLocation", "lineNumber"}),
+      7);
+  EXPECT_EQ(
+      jsonScope_.getNumber(resp, {"result", "actualLocation", "columnNumber"}),
+      6);
+  auto breakpointId = jsonScope_.getString(resp, {"result", "breakpointId"});
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // [1] (line 7) hit breakpoint and then remove it
+  ensurePaused(waitForMessage(), "other", {{"global", 7, 1}});
+
+  {
+    std::string command;
+    llvh::raw_string_ostream commandStream{command};
+    ::hermes::JSONEmitter json{commandStream};
+    json.openDict();
+    json.emitKeyValue("method", "Debugger.removeBreakpoint");
+    json.emitKeyValue("id", msgId);
+    json.emitKey("params");
+    json.openDict();
+    json.emitKeyValue("breakpointId", breakpointId);
+    json.closeDict();
+    json.closeDict();
+    commandStream.flush();
+    cdpAgent_->handleCommand(command);
+  }
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Make sure the script runs to finish after this, which indicates it didn't
+  // get stopped by breakpoint in the second iteration of the loop.
+  waitForScheduledScripts();
+}
+
 TEST_F(CDPAgentTest, TestRuntimeEnable) {
   int msgId = 1;
 

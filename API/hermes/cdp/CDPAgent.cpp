@@ -210,6 +210,12 @@ void CDPAgentImpl::DomainAgents::handleCommand(
   } else if (command->method == "Debugger.evaluateOnCallFrame") {
     debuggerAgent_->evaluateOnCallFrame(
         static_cast<m::debugger::EvaluateOnCallFrameRequest &>(*command));
+  } else if (command->method == "Debugger.setBreakpoint") {
+    debuggerAgent_->setBreakpoint(
+        static_cast<m::debugger::SetBreakpointRequest &>(*command));
+  } else if (command->method == "Debugger.removeBreakpoint") {
+    debuggerAgent_->removeBreakpoint(
+        static_cast<m::debugger::RemoveBreakpointRequest &>(*command));
   } else if (command->method == "Runtime.enable") {
     runtimeAgent_->enable(static_cast<m::runtime::EnableRequest &>(*command));
   } else if (command->method == "Runtime.disable") {
