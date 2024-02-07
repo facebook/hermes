@@ -56,14 +56,14 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addSimpleStackPromotion();
   PM.addFunctionAnalysis();
   PM.addInlining();
-  PM.addFunctionAnalysis();
-  PM.addInlining();
   PM.addDCE();
   PM.addObjectStackPromotion();
   PM.addTypeInference();
   PM.addSimpleStackPromotion();
   PM.addInstSimplify();
   PM.addDCE();
+  PM.addFunctionAnalysis();
+  PM.addInlining();
   // SimpleStackPromotion doesn't remove unused functions, so run it after DCE
   // to ensure unused functions aren't capturing vars.
   PM.addSimpleStackPromotion();

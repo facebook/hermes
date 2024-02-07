@@ -574,92 +574,6 @@ function decrementArguments() {
 // CHKIR-NEXT:       ReturnInst 0: number
 // CHKIR-NEXT:function_end
 
-// CHKIR:*** AFTER FunctionAnalysis
-
-// CHKIR:function global(): any
-// CHKIR-NEXT:frame = []
-// CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %1 = CreateFunctionInst (:object) %decrementArguments(): functionCode
-// CHKIR-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "decrementArguments": string
-// CHKIR-NEXT:       ReturnInst undefined: undefined
-// CHKIR-NEXT:function_end
-
-// CHKIR:function decrementArguments(): any
-// CHKIR-NEXT:frame = [var3: any]
-// CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = AllocStackInst (:any) $i: any
-// CHKIR-NEXT:  %1 = CreateArgumentsLooseInst (:object)
-// CHKIR-NEXT:  %2 = LoadParamInst (:any) %<this>: any
-// CHKIR-NEXT:  %3 = CoerceThisNSInst (:object) %2: any
-// CHKIR-NEXT:  %4 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
-// CHKIR-NEXT:       StoreFrameInst undefined: undefined, [var3]: any
-// CHKIR-NEXT:  %6 = BinaryLessThanInst (:boolean) 0: number, 2: number
-// CHKIR-NEXT:       CondBranchInst %6: boolean, %BB1, %BB2
-// CHKIR-NEXT:%BB1:
-// CHKIR-NEXT:  %8 = PhiInst (:any) 0: number, %BB0, %11: number|bigint, %BB1
-// CHKIR-NEXT:  %9 = CreateFunctionInst (:object) %var1(): functionCode
-// CHKIR-NEXT:        StoreFrameInst %1: object, [var3]: any
-// CHKIR-NEXT:  %11 = UnaryIncInst (:number|bigint) %8: any
-// CHKIR-NEXT:  %12 = BinaryLessThanInst (:boolean) %11: number|bigint, 2: number
-// CHKIR-NEXT:        CondBranchInst %12: boolean, %BB1, %BB2
-// CHKIR-NEXT:%BB2:
-// CHKIR-NEXT:  %14 = PhiInst (:any) 0: number, %BB0, %11: number|bigint, %BB1
-// CHKIR-NEXT:  %15 = LoadFrameInst (:any) [var3]: any
-// CHKIR-NEXT:  %16 = BinarySubtractInst (:any) %15: any, 1: number
-// CHKIR-NEXT:        ReturnInst %16: any
-// CHKIR-NEXT:function_end
-
-// CHKIR:arrow var1(): any [allCallsitesKnownInStrictMode]
-// CHKIR-NEXT:frame = []
-// CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:       StoreFrameInst 0: number, [var3@decrementArguments]: any
-// CHKIR-NEXT:       ReturnInst 0: number
-// CHKIR-NEXT:function_end
-
-// CHKIR:*** AFTER Inlining
-
-// CHKIR:function global(): any
-// CHKIR-NEXT:frame = []
-// CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %1 = CreateFunctionInst (:object) %decrementArguments(): functionCode
-// CHKIR-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "decrementArguments": string
-// CHKIR-NEXT:       ReturnInst undefined: undefined
-// CHKIR-NEXT:function_end
-
-// CHKIR:function decrementArguments(): any
-// CHKIR-NEXT:frame = [var3: any]
-// CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = AllocStackInst (:any) $i: any
-// CHKIR-NEXT:  %1 = CreateArgumentsLooseInst (:object)
-// CHKIR-NEXT:  %2 = LoadParamInst (:any) %<this>: any
-// CHKIR-NEXT:  %3 = CoerceThisNSInst (:object) %2: any
-// CHKIR-NEXT:  %4 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
-// CHKIR-NEXT:       StoreFrameInst undefined: undefined, [var3]: any
-// CHKIR-NEXT:  %6 = BinaryLessThanInst (:boolean) 0: number, 2: number
-// CHKIR-NEXT:       CondBranchInst %6: boolean, %BB1, %BB2
-// CHKIR-NEXT:%BB1:
-// CHKIR-NEXT:  %8 = PhiInst (:any) 0: number, %BB0, %11: number|bigint, %BB1
-// CHKIR-NEXT:  %9 = CreateFunctionInst (:object) %var1(): functionCode
-// CHKIR-NEXT:        StoreFrameInst %1: object, [var3]: any
-// CHKIR-NEXT:  %11 = UnaryIncInst (:number|bigint) %8: any
-// CHKIR-NEXT:  %12 = BinaryLessThanInst (:boolean) %11: number|bigint, 2: number
-// CHKIR-NEXT:        CondBranchInst %12: boolean, %BB1, %BB2
-// CHKIR-NEXT:%BB2:
-// CHKIR-NEXT:  %14 = PhiInst (:any) 0: number, %BB0, %11: number|bigint, %BB1
-// CHKIR-NEXT:  %15 = LoadFrameInst (:any) [var3]: any
-// CHKIR-NEXT:  %16 = BinarySubtractInst (:any) %15: any, 1: number
-// CHKIR-NEXT:        ReturnInst %16: any
-// CHKIR-NEXT:function_end
-
-// CHKIR:arrow var1(): any [allCallsitesKnownInStrictMode]
-// CHKIR-NEXT:frame = []
-// CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:       StoreFrameInst 0: number, [var3@decrementArguments]: any
-// CHKIR-NEXT:       ReturnInst 0: number
-// CHKIR-NEXT:function_end
-
 // CHKIR:*** AFTER DCE
 
 // CHKIR:function global(): any
@@ -812,6 +726,66 @@ function decrementArguments() {
 // CHKIR-NEXT:function_end
 
 // CHKIR:*** AFTER DCE
+
+// CHKIR:function global(): undefined
+// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:%BB0:
+// CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
+// CHKIR-NEXT:  %1 = CreateFunctionInst (:object) %decrementArguments(): functionCode
+// CHKIR-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "decrementArguments": string
+// CHKIR-NEXT:       ReturnInst undefined: undefined
+// CHKIR-NEXT:function_end
+
+// CHKIR:function decrementArguments(): number
+// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:%BB0:
+// CHKIR-NEXT:  %0 = AllocStackInst (:undefined|object) $var3: any
+// CHKIR-NEXT:  %1 = CreateArgumentsLooseInst (:object)
+// CHKIR-NEXT:       StoreStackInst undefined: undefined, %0: undefined|object
+// CHKIR-NEXT:       CondBranchInst true: boolean, %BB1, %BB2
+// CHKIR-NEXT:%BB1:
+// CHKIR-NEXT:  %4 = PhiInst (:number) 0: number, %BB0, %6: number, %BB1
+// CHKIR-NEXT:       StoreStackInst %1: object, %0: undefined|object
+// CHKIR-NEXT:  %6 = FAddInst (:number) %4: number, 1: number
+// CHKIR-NEXT:  %7 = FLessThanInst (:boolean) %6: number, 2: number
+// CHKIR-NEXT:       CondBranchInst %7: boolean, %BB1, %BB2
+// CHKIR-NEXT:%BB2:
+// CHKIR-NEXT:  %9 = LoadStackInst (:undefined|object) %0: undefined|object
+// CHKIR-NEXT:  %10 = BinarySubtractInst (:number) %9: undefined|object, 1: number
+// CHKIR-NEXT:        ReturnInst %10: number
+// CHKIR-NEXT:function_end
+
+// CHKIR:*** AFTER FunctionAnalysis
+
+// CHKIR:function global(): undefined
+// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:%BB0:
+// CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
+// CHKIR-NEXT:  %1 = CreateFunctionInst (:object) %decrementArguments(): functionCode
+// CHKIR-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "decrementArguments": string
+// CHKIR-NEXT:       ReturnInst undefined: undefined
+// CHKIR-NEXT:function_end
+
+// CHKIR:function decrementArguments(): number
+// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:%BB0:
+// CHKIR-NEXT:  %0 = AllocStackInst (:undefined|object) $var3: any
+// CHKIR-NEXT:  %1 = CreateArgumentsLooseInst (:object)
+// CHKIR-NEXT:       StoreStackInst undefined: undefined, %0: undefined|object
+// CHKIR-NEXT:       CondBranchInst true: boolean, %BB1, %BB2
+// CHKIR-NEXT:%BB1:
+// CHKIR-NEXT:  %4 = PhiInst (:number) 0: number, %BB0, %6: number, %BB1
+// CHKIR-NEXT:       StoreStackInst %1: object, %0: undefined|object
+// CHKIR-NEXT:  %6 = FAddInst (:number) %4: number, 1: number
+// CHKIR-NEXT:  %7 = FLessThanInst (:boolean) %6: number, 2: number
+// CHKIR-NEXT:       CondBranchInst %7: boolean, %BB1, %BB2
+// CHKIR-NEXT:%BB2:
+// CHKIR-NEXT:  %9 = LoadStackInst (:undefined|object) %0: undefined|object
+// CHKIR-NEXT:  %10 = BinarySubtractInst (:number) %9: undefined|object, 1: number
+// CHKIR-NEXT:        ReturnInst %10: number
+// CHKIR-NEXT:function_end
+
+// CHKIR:*** AFTER Inlining
 
 // CHKIR:function global(): undefined
 // CHKIR-NEXT:frame = []

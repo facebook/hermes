@@ -12,6 +12,9 @@ function main() {
   return x[0] + 1;
 }
 
+// Prevent the function from being optimized out.
+sink(main);
+
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global(): undefined
@@ -25,5 +28,20 @@ function main() {
 // CHECK:function ""(exports: number): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %main(): functionCode
+// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "sink": string
+// CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function main(): number
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = AllocFastArrayInst (:object) 3: number
+// CHECK-NEXT:       FastArrayPushInst 1: number, %0: object
+// CHECK-NEXT:       FastArrayPushInst 2: number, %0: object
+// CHECK-NEXT:       FastArrayPushInst 3: number, %0: object
+// CHECK-NEXT:  %4 = FastArrayLoadInst (:number) %0: object, 0: number
+// CHECK-NEXT:  %5 = FAddInst (:number) %4: number, 1: number
+// CHECK-NEXT:       ReturnInst %5: number
 // CHECK-NEXT:function_end

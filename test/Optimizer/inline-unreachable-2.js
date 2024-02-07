@@ -25,13 +25,5 @@
 // CHECK:function global(): any [noReturn]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %main(): functionCode
-// CHECK-NEXT:  %1 = CallInst (:any) %0: object, %main(): functionCode, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:       UnreachableInst
-// CHECK-NEXT:function_end
-
-// CHECK:function main(): any [allCallsitesKnownInStrictMode,noReturn]
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ThrowInst 1: number
 // CHECK-NEXT:function_end
