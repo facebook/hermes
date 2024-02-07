@@ -461,34 +461,46 @@ static bool isTerminator(const Instruction *Inst) {
   return &*Inst->getParent()->rbegin() == Inst;
 }
 
+//===----------------------------------------------------------------------===//
+// Verifications for each individual instruction.
+
 bool Verifier::visitReturnInst(const ReturnInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       isTerminator(&Inst),
       "Return Instruction must be the last instruction of a basic block");
-  AssertWithMsg(
-      Inst.getNumSuccessors() == 0, "ReturnInst should not have successors");
+  AssertIWithMsg(
+      Inst,
+      Inst.getNumSuccessors() == 0,
+      "ReturnInst should not have successors");
   return true;
 }
 
 bool Verifier::visitSaveAndYieldInst(const SaveAndYieldInst &Inst) {
-  AssertWithMsg(isTerminator(&Inst), "SaveAndYield must be a terminator");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst, isTerminator(&Inst), "SaveAndYield must be a terminator");
+  AssertIWithMsg(
+      Inst,
       Inst.getParent()->getTerminator() == &Inst,
       "SaveAndYield must be the terminator");
   return true;
 }
 
 bool Verifier::visitBranchInst(const BranchInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       isTerminator(&Inst),
       "Branch Instruction must be the last instruction of a basic block");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       Inst.getNumSuccessors() == 1,
       "Branch Instruction should have only 1 successor");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       succ_contains(Inst.getParent(), Inst.getBranchDest()),
       "Branch Dest Basic Block does not match with successor pointer");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       pred_contains(Inst.getBranchDest(), Inst.getParent()),
       "BranchInst Basic Block not in the predecessor list of target block");
   return true;
@@ -501,7 +513,8 @@ bool Verifier::visitHBCStoreToEnvironmentInst(
 }
 bool Verifier::visitHBCLoadFromEnvironmentInst(
     const HBCLoadFromEnvironmentInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       Inst.getType() == Inst.getResolvedName()->getType(),
       "HBCLoadFromEnvironment type must be the same as the variable type");
   return true;
@@ -512,44 +525,52 @@ bool Verifier::visitHBCResolveEnvironment(const HBCResolveEnvironment &Inst) {
 }
 
 bool Verifier::visitAsNumberInst(const AsNumberInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       !isTerminator(&Inst),
       "Non-terminator cannot be the last instruction of a basic block");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       Inst.getType() == Type::createNumber(),
       "AsNumberInst must return a number type");
   return true;
 }
 
 bool Verifier::visitAsNumericInst(const AsNumericInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       !isTerminator(&Inst),
       "Non-terminator cannot be the last instruction of a basic block");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       Inst.getType().isSubsetOf(Type::createNumeric()),
       "AsNumericInst must return a numeric type");
   return true;
 }
 
 bool Verifier::visitAsInt32Inst(const AsInt32Inst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       !isTerminator(&Inst),
       "Non-terminator cannot be the last instruction of a basic block");
   return true;
 }
 
 bool Verifier::visitAddEmptyStringInst(const AddEmptyStringInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       !isTerminator(&Inst),
       "Non-terminator cannot be the last instruction of a basic block");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       Inst.getType() == Type::createString(),
       "AddEmptyStringInst must return a string type");
   return true;
 }
 
 bool Verifier::visitAllocStackInst(const AllocStackInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       &(Inst.getParent()->back()) != &Inst,
       "Alloca Instruction cannot be the last instruction of a basic block");
   return true;
@@ -557,21 +578,28 @@ bool Verifier::visitAllocStackInst(const AllocStackInst &Inst) {
 
 template <class T>
 bool Verifier::visitCondBranchLikeInst(const T &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       isTerminator(&Inst),
       "CondBranchInst must be the last instruction of a basic block");
-  AssertWithMsg(
-      Inst.getNumSuccessors() == 2, "CondBranchInst should have 2 successors");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
+      Inst.getNumSuccessors() == 2,
+      "CondBranchInst should have 2 successors");
+  AssertIWithMsg(
+      Inst,
       succ_contains(Inst.getParent(), Inst.getTrueDest()),
       "True dest should be a successor of CondBranchInst block");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       pred_contains(Inst.getTrueDest(), Inst.getParent()),
       "CondBranchInst block should be a predecessor of true dest");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       succ_contains(Inst.getParent(), Inst.getFalseDest()),
       "False dest should be a successor of CondBranchInst block");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       pred_contains(Inst.getFalseDest(), Inst.getParent()),
       "CondBranchInst block should be a predecessor of false dest");
   return true;
@@ -588,54 +616,65 @@ bool Verifier::visitUnaryOperatorInst(const UnaryOperatorInst &Inst) {
 }
 
 bool Verifier::visitTryStartInst(const TryStartInst &Inst) {
-  AssertWithMsg(isTerminator(&Inst), "TryStartInst must be a TermInst");
-  AssertWithMsg(
-      Inst.getNumSuccessors() == 2, "TryStartInst must have 2 successors");
-  AssertWithMsg(
+  AssertIWithMsg(Inst, isTerminator(&Inst), "TryStartInst must be a TermInst");
+  AssertIWithMsg(
+      Inst,
+      Inst.getNumSuccessors() == 2,
+      "TryStartInst must have 2 successors");
+  AssertIWithMsg(
+      Inst,
       Inst.getCatchTarget()->front().getKind() == ValueKind::CatchInstKind,
       "Catch Target of TryStartInst must begin with a CatchInst");
   return true;
 }
 
 bool Verifier::visitTryEndInst(const TryEndInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       &Inst == &Inst.getParent()->front(),
       "TryEndInst must be the first instruction of a block");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       pred_count(Inst.getParent()) == 1,
       "TryEndInst must have only one predecessor.");
   return true;
 }
 
 bool Verifier::visitStoreStackInst(const StoreStackInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       !llvh::isa<AllocStackInst>(Inst.getValue()),
       "Storing the address of stack location");
-  AssertWithMsg(!Inst.hasUsers(), "Store Instructions must not have users");
+  AssertIWithMsg(
+      Inst, !Inst.hasUsers(), "Store Instructions must not have users");
   return true;
 }
 
 bool Verifier::visitStoreFrameInst(const StoreFrameInst &Inst) {
-  AssertWithMsg(!Inst.hasUsers(), "Store Instructions must not have users");
+  AssertIWithMsg(
+      Inst, !Inst.hasUsers(), "Store Instructions must not have users");
   return true;
 }
 
 bool Verifier::visitLoadFrameInst(const LoadFrameInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       Inst.getType() == Inst.getLoadVariable()->getType(),
       "LoadFrameInst type must be the same as the variable type");
   return true;
 }
 
 bool Verifier::visitLoadStackInst(const LoadStackInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       Inst.getType() == Inst.getPtr()->getType(),
       "LoadStackInst type must be the same as the AllocStackInst type");
   return true;
 }
 
 bool Verifier::visitBaseCreateCallableInst(const BaseCreateCallableInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       llvh::isa<NormalFunction>(Inst.getFunctionCode()) ||
           llvh::isa<GeneratorFunction>(Inst.getFunctionCode()) ||
           llvh::isa<AsyncFunction>(Inst.getFunctionCode()),
@@ -656,7 +695,8 @@ bool Verifier::visitHBCCallWithArgCountInst(
   // NumArgumentsLiteral is not always a number literal. For example, it will be
   // lowered into HBCLoadConstant.
   if (auto *LN = llvh::dyn_cast<LiteralNumber>(Inst.getNumArgumentsLiteral())) {
-    AssertWithMsg(
+    AssertIWithMsg(
+        Inst,
         LN->getValue() == Inst.getNumArguments(),
         "HBCCallWithArgCountInst mismatched arg count");
   }
@@ -664,7 +704,8 @@ bool Verifier::visitHBCCallWithArgCountInst(
 }
 
 bool Verifier::visitHBCCallNInst(const HBCCallNInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       HBCCallNInst::kMinArgs <= Inst.getNumArguments() &&
           Inst.getNumArguments() <= HBCCallNInst::kMaxArgs,
       "CallNInst has too many args");
@@ -723,7 +764,8 @@ bool Verifier::visitTryStoreGlobalPropertyStrictInst(
 
 bool Verifier::visitBaseStoreOwnPropertyInst(
     const BaseStoreOwnPropertyInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       llvh::isa<LiteralBool>(
           Inst.getOperand(StoreOwnPropertyInst::IsEnumerableIdx)),
       "BaseStoreOwnPropertyInst::IsEnumerable must be a boolean literal");
@@ -735,15 +777,18 @@ bool Verifier::visitStoreOwnPropertyInst(const StoreOwnPropertyInst &Inst) {
 bool Verifier::visitStoreNewOwnPropertyInst(
     const StoreNewOwnPropertyInst &Inst) {
   ReturnIfNot(visitBaseStoreOwnPropertyInst(Inst));
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       Inst.getObject()->getType().isObjectType(),
       "StoreNewOwnPropertyInst::Object must be known to be an object");
   if (auto *LN = llvh::dyn_cast<LiteralNumber>(Inst.getProperty())) {
-    AssertWithMsg(
+    AssertIWithMsg(
+        Inst,
         LN->convertToArrayIndex().hasValue(),
         "StoreNewOwnPropertyInst::Property can only be an index-like number");
   } else {
-    AssertWithMsg(
+    AssertIWithMsg(
+        Inst,
         llvh::isa<LiteralString>(Inst.getProperty()),
         "StoreNewOwnPropertyInst::Property must be a string or number literal");
   }
@@ -751,7 +796,8 @@ bool Verifier::visitStoreNewOwnPropertyInst(
 }
 
 bool Verifier::visitStoreGetterSetterInst(const StoreGetterSetterInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       llvh::isa<LiteralBool>(
           Inst.getOperand(StoreGetterSetterInst::IsEnumerableIdx)),
       "StoreGetterSetterInsr::IsEnumerable must be a boolean constant");
@@ -765,16 +811,17 @@ bool Verifier::visitAllocObjectInst(const hermes::AllocObjectInst &Inst) {
 
 bool Verifier::visitAllocFastArrayInst(const hermes::AllocFastArrayInst &Inst) {
   LiteralNumber *size = Inst.getCapacity();
-  AssertWithMsg(
-      size->isUInt32Representible(), "Invalid AllocArrayInst size hint");
+  AssertIWithMsg(
+      Inst, size->isUInt32Representible(), "Invalid AllocArrayInst size hint");
   return true;
 }
 
 bool Verifier::visitAllocArrayInst(const hermes::AllocArrayInst &Inst) {
   LiteralNumber *size = Inst.getSizeHint();
-  AssertWithMsg(
-      size->isUInt32Representible(), "Invalid AllocArrayInst size hint");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst, size->isUInt32Representible(), "Invalid AllocArrayInst size hint");
+  AssertIWithMsg(
+      Inst,
       Inst.isLiteralArray(),
       "Array elements must be literal when registers are limited");
   return true;
@@ -787,8 +834,9 @@ bool Verifier::visitGetTemplateObjectInst(
 }
 
 bool Verifier::visitCreateArgumentsInst(const CreateArgumentsInst &Inst) {
-  AssertWithMsg(functionState, "functionState cannot be null");
-  AssertWithMsg(
+  AssertIWithMsg(Inst, functionState, "functionState cannot be null");
+  AssertIWithMsg(
+      Inst,
       !functionState->createArgumentsEncountered,
       "There should be only one CreateArgumentsInst in a function");
   functionState->createArgumentsEncountered = true;
@@ -798,11 +846,13 @@ bool Verifier::visitCreateArgumentsInst(const CreateArgumentsInst &Inst) {
   if (llvh::isa<GeneratorInnerFunction>(F)) {
     auto secondBB = F->begin();
     ++secondBB;
-    AssertWithMsg(
+    AssertIWithMsg(
+        Inst,
         BB == &*secondBB,
         "CreateArgumentsInst must be in the second basic block in generators");
   } else {
-    AssertWithMsg(
+    AssertIWithMsg(
+        Inst,
         BB == &*F->begin(),
         "CreateArgumentsInst must be in the first basic block");
   }
@@ -834,65 +884,83 @@ bool Verifier::visitBinaryOperatorInst(const hermes::BinaryOperatorInst &Inst) {
 }
 
 bool Verifier::visitCatchInst(const CatchInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       &Inst.getParent()->front() == &Inst,
       "Catch instruction must be the first in a basic block");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       pred_count(Inst.getParent()) == 1,
       "CatchInst must have only 1 predecessor.");
   return true;
 }
 
 bool Verifier::visitThrowInst(const ThrowInst &Inst) {
-  AssertWithMsg(isTerminator(&Inst), "ThrowInst must be a terminator");
-  AssertWithMsg(
-      Inst.getNumSuccessors() == 0, "ThrowInst should not have successors");
+  AssertIWithMsg(Inst, isTerminator(&Inst), "ThrowInst must be a terminator");
+  AssertIWithMsg(
+      Inst,
+      Inst.getNumSuccessors() == 0,
+      "ThrowInst should not have successors");
   return true;
 }
 
 bool Verifier::visitThrowTypeErrorInst(const ThrowTypeErrorInst &Inst) {
-  AssertWithMsg(isTerminator(&Inst), "ThrowTypeErrorInst must be a terminator");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst, isTerminator(&Inst), "ThrowTypeErrorInst must be a terminator");
+  AssertIWithMsg(
+      Inst,
       Inst.getNumSuccessors() == 0,
       "ThrowTypeErrorInst should not have successors");
   return true;
 }
 
 bool Verifier::visitGetNextPNameInst(const GetNextPNameInst &Inst) {
-  AssertWithMsg(
-      isTerminator(&Inst), "GetNextPNameInst must terminate the block");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst, isTerminator(&Inst), "GetNextPNameInst must terminate the block");
+  AssertIWithMsg(
+      Inst,
       Inst.getNumSuccessors() == 2,
       "GetNextPNameInst should have 2 successors");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       succ_contains(Inst.getParent(), Inst.getOnSomeDest()),
       "OnSome dest should be a successor of GetNextPNameInst block");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       pred_contains(Inst.getOnSomeDest(), Inst.getParent()),
       "GetNextPNameInst block should be a predecessor of OnSome dest");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       succ_contains(Inst.getParent(), Inst.getOnLastDest()),
       "OnLast dest should be a successor of GetNextPNameInst block");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       pred_contains(Inst.getOnLastDest(), Inst.getParent()),
       "GetNextPNameInst block should be a predecessor of OnLast dest");
   return true;
 }
 
 bool Verifier::visitGetPNamesInst(const GetPNamesInst &Inst) {
-  AssertWithMsg(isTerminator(&Inst), "GetPNamesInst must terminate the block");
-  AssertWithMsg(
-      Inst.getNumSuccessors() == 2, "GetPNamesInst should have 2 successors");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst, isTerminator(&Inst), "GetPNamesInst must terminate the block");
+  AssertIWithMsg(
+      Inst,
+      Inst.getNumSuccessors() == 2,
+      "GetPNamesInst should have 2 successors");
+  AssertIWithMsg(
+      Inst,
       succ_contains(Inst.getParent(), Inst.getOnSomeDest()),
       "OnSome dest should be a successor of GetPNamesInst block");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       pred_contains(Inst.getOnSomeDest(), Inst.getParent()),
       "GetPNamesInst block should be a predecessor of OnSome dest");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       succ_contains(Inst.getParent(), Inst.getOnEmptyDest()),
       "OnEmpty dest should be a successor of GetPNamesInst block");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       pred_contains(Inst.getOnEmptyDest(), Inst.getParent()),
       "GetPNamesInst block should be a predecessor of OnEmpty dest");
   return true;
@@ -923,10 +991,12 @@ bool Verifier::visitPhiInst(const hermes::PhiInst &Inst) {
   for (int i = 0, e = Inst.getNumEntries(); i < e; ++i) {
     auto pair = Inst.getEntry(i);
     BasicBlock *block = pair.second;
-    AssertWithMsg(
+    AssertIWithMsg(
+        Inst,
         pred_contains(Inst.getParent(), block),
         "Predecessor not covered by phi node!");
-    AssertWithMsg(
+    AssertIWithMsg(
+        Inst,
         succ_contains(block, Inst.getParent()),
         "Phi node should be Successor!");
 
@@ -935,10 +1005,12 @@ bool Verifier::visitPhiInst(const hermes::PhiInst &Inst) {
     // invariant would be more complicated, and requires care to maintain when
     // updating operands of the Phi.
     auto [it, first] = entries.insert(block);
-    AssertWithMsg(first, "Phi node has multiple entries for the same block");
+    AssertIWithMsg(
+        Inst, first, "Phi node has multiple entries for the same block");
   }
 
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       entries.size() == pred_count_unique(Inst.getParent()),
       "number of predecessors does not match phi inputs");
   return true;
@@ -946,29 +1018,37 @@ bool Verifier::visitPhiInst(const hermes::PhiInst &Inst) {
 
 template <class T>
 bool Verifier::visitSwitchLikeInst(const T &Inst) {
-  AssertWithMsg(isTerminator(&Inst), "SwitchInst must be a terminator");
+  AssertIWithMsg(Inst, isTerminator(&Inst), "SwitchInst must be a terminator");
 
-  AssertWithMsg(
-      Inst.getNumCasePair() > 0, "SwitchInst must have some case destinations");
+  AssertIWithMsg(
+      Inst,
+      Inst.getNumCasePair() > 0,
+      "SwitchInst must have some case destinations");
 
-  AssertWithMsg(Inst.getDefaultDestination(), "Invalid destination block");
+  AssertIWithMsg(
+      Inst, Inst.getDefaultDestination(), "Invalid destination block");
 
-  AssertWithMsg(Inst.getInputValue(), "Invalid input value");
+  AssertIWithMsg(Inst, Inst.getInputValue(), "Invalid input value");
 
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       Inst.getNumSuccessors() == Inst.getNumCasePair() + 1,
       "Number of successors of SwitchInst does not match.");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       succ_contains(Inst.getParent(), Inst.getDefaultDestination()),
       "Default destination must be a successor of SwitchInst block");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       pred_contains(Inst.getDefaultDestination(), Inst.getParent()),
       "SwitchInst block must be a predecessor of default destination.");
   for (unsigned idx = 0, e = Inst.getNumCasePair(); idx < e; ++idx) {
-    AssertWithMsg(
+    AssertIWithMsg(
+        Inst,
         succ_contains(Inst.getParent(), Inst.getCasePair(idx).second),
         "Case target must be a successor of SwitchInst block");
-    AssertWithMsg(
+    AssertIWithMsg(
+        Inst,
         pred_contains(Inst.getCasePair(idx).second, Inst.getParent()),
         "SwitchInst block must be a predecessor of case target");
   }
@@ -976,7 +1056,8 @@ bool Verifier::visitSwitchLikeInst(const T &Inst) {
   // Verify that each case is unique.
   llvh::SmallPtrSet<Literal *, 8> values;
   for (unsigned idx = 0, e = Inst.getNumCasePair(); idx < e; ++idx) {
-    AssertWithMsg(
+    AssertIWithMsg(
+        Inst,
         values.insert(Inst.getCasePair(idx).first).second,
         "switch values must be unique");
   }
@@ -990,7 +1071,8 @@ bool Verifier::visitSwitchInst(const hermes::SwitchInst &Inst) {
 bool Verifier::visitSwitchImmInst(const hermes::SwitchImmInst &Inst) {
   ReturnIfNot(visitSwitchLikeInst(Inst));
   for (unsigned idx = 0, e = Inst.getNumCasePair(); idx < e; ++idx) {
-    AssertWithMsg(
+    AssertIWithMsg(
+        Inst,
         Inst.getCasePair(idx).first->isUInt32Representible(),
         "case value must be a uint32");
   }
@@ -1026,10 +1108,12 @@ bool Verifier::visitHBCProfilePointInst(const HBCProfilePointInst &Inst) {
 bool Verifier::visitHBCAllocObjectFromBufferInst(
     const hermes::HBCAllocObjectFromBufferInst &Inst) {
   LiteralNumber *size = Inst.getSizeHint();
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       size->isUInt32Representible(),
       "Invalid HBCAllocObjectFromBufferInst size hint");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       Inst.getKeyValuePairCount() > 0,
       "Cannot allocate an empty HBCAllocObjectFromBufferInst");
   return true;
@@ -1037,7 +1121,8 @@ bool Verifier::visitHBCAllocObjectFromBufferInst(
 
 bool Verifier::visitAllocObjectLiteralInst(
     const hermes::AllocObjectLiteralInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       Inst.getKeyValuePairCount() > 0,
       "Cannot allocate an empty AllocObjectLiteralInst");
   return true;
@@ -1061,13 +1146,15 @@ bool Verifier::visitCompareBranchInst(const CompareBranchInst &Inst) {
 }
 
 bool Verifier::visitCreateGeneratorInst(const CreateGeneratorInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       llvh::isa<GeneratorInnerFunction>(Inst.getFunctionCode()),
       "CreateGeneratorInst must take a GeneratorInnerFunction");
   return true;
 }
 bool Verifier::visitStartGeneratorInst(const StartGeneratorInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       &Inst == &Inst.getParent()->front() &&
           Inst.getParent() == &Inst.getParent()->getParent()->front(),
       "StartGeneratorInst must be the first instruction of a function");
@@ -1078,7 +1165,8 @@ bool Verifier::visitResumeGeneratorInst(const ResumeGeneratorInst &Inst) {
 }
 
 bool Verifier::visitHBCCreateGeneratorInst(const HBCCreateGeneratorInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       llvh::isa<GeneratorInnerFunction>(Inst.getFunctionCode()),
       "HBCCreateGeneratorInst must take a GeneratorInnerFunction");
   return true;
@@ -1132,7 +1220,8 @@ bool Verifier::visitUnreachableInst(const UnreachableInst &Inst) {
 }
 
 bool Verifier::visitIteratorBeginInst(const IteratorBeginInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       llvh::isa<AllocStackInst>(Inst.getSourceOrNext()),
       "SourceOrNext must be an AllocStackInst");
   return true;
@@ -1142,7 +1231,8 @@ bool Verifier::visitIteratorNextInst(const IteratorNextInst &Inst) {
   return true;
 }
 bool Verifier::visitIteratorCloseInst(const IteratorCloseInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       llvh::isa<LiteralBool>(
           Inst.getOperand(IteratorCloseInst::IgnoreInnerExceptionIdx)),
       "IgnoreInnerException must be a LiteralBool in IteratorCloseInst");
@@ -1151,11 +1241,13 @@ bool Verifier::visitIteratorCloseInst(const IteratorCloseInst &Inst) {
 
 bool Verifier::visitGetNewTargetInst(GetNewTargetInst const &Inst) {
   auto definitionKind = Inst.getParent()->getParent()->getDefinitionKind();
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       definitionKind == Function::DefinitionKind::ES5Function ||
           definitionKind == Function::DefinitionKind::ES6Constructor,
       "GetNewTargetInst can only be used in ES6 constructors and ES5 functions");
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       Inst.getParent()->getParent()->getNewTargetParam() ==
           Inst.getOperand(GetNewTargetInst::GetNewTargetParamIdx),
       "GetNewTargetInst must use correct getNewTargetParam");
@@ -1164,7 +1256,8 @@ bool Verifier::visitGetNewTargetInst(GetNewTargetInst const &Inst) {
 
 bool Verifier::visitThrowIfInst(const ThrowIfInst &Inst) {
   const Type invTypes = Inst.getInvalidTypes()->getData();
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       !invTypes.isNoType() &&
           invTypes.isSubsetOf(
               Type::unionTy(Type::createEmpty(), Type::createUninit())),
@@ -1173,7 +1266,8 @@ bool Verifier::visitThrowIfInst(const ThrowIfInst &Inst) {
   // Note: we are not performing a subtraction and equality check here, because
   // if the invalid types and the input types are proven disjoint after
   // TypeInference, we deliberately don't return NoType.
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       Type::intersectTy(Inst.getType(), invTypes).isNoType(),
       "ThrowIfInst must throw away all invalid types");
 
@@ -1182,8 +1276,10 @@ bool Verifier::visitThrowIfInst(const ThrowIfInst &Inst) {
   // empty -> initialized
   // uninit -> initialized
   // So, it can never be empty after it has been checked for uninit.
-  AssertWithMsg(
-      !Inst.getType().canBeEmpty(), "ThrowIfInst can never return type Empty");
+  AssertIWithMsg(
+      Inst,
+      !Inst.getType().canBeEmpty(),
+      "ThrowIfInst can never return type Empty");
   return true;
 }
 
@@ -1218,13 +1314,15 @@ bool Verifier::visitStoreParentInst(const StoreParentInst &Inst) {
 }
 
 bool Verifier::visitFUnaryMathInst(const FUnaryMathInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       Inst.getArg()->getType().isNumberType() && Inst.getType().isNumberType(),
       "FUnaryMathInst wrong type");
   return true;
 }
 bool Verifier::visitFBinaryMathInst(const FBinaryMathInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       Inst.getLeft()->getType().isNumberType() &&
           Inst.getRight()->getType().isNumberType() &&
           Inst.getType().isNumberType(),
@@ -1232,7 +1330,8 @@ bool Verifier::visitFBinaryMathInst(const FBinaryMathInst &Inst) {
   return true;
 }
 bool Verifier::visitFCompareInst(const FCompareInst &Inst) {
-  AssertWithMsg(
+  AssertIWithMsg(
+      Inst,
       Inst.getLeft()->getType().isNumberType() &&
           Inst.getRight()->getType().isNumberType() &&
           Inst.getType().isBooleanType(),
@@ -1240,9 +1339,11 @@ bool Verifier::visitFCompareInst(const FCompareInst &Inst) {
   return true;
 }
 bool Verifier::visitStringConcatInst(const StringConcatInst &Inst) {
-  AssertWithMsg(Inst.getType().isStringType(), "StringConcat wrong type");
+  AssertIWithMsg(
+      Inst, Inst.getType().isStringType(), "StringConcat wrong type");
   for (unsigned i = 0, e = Inst.getNumOperands(); i < e; ++i) {
-    AssertWithMsg(
+    AssertIWithMsg(
+        Inst,
         Inst.getOperand(i)->getType().isStringType(),
         "StringConcat wrong type");
   }
