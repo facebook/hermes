@@ -131,6 +131,7 @@ function processModuleStatement(
           case 'EnumDeclaration':
           case 'FunctionDeclaration':
           case 'ComponentDeclaration':
+          case 'HookDeclaration':
           case 'InterfaceDeclaration':
           case 'ClassDeclaration': {
             const id = decl.id;
@@ -165,6 +166,7 @@ function processModuleStatement(
       switch (decl.type) {
         case 'FunctionDeclaration':
         case 'ComponentDeclaration':
+        case 'HookDeclaration':
         case 'ClassDeclaration': {
           const id = decl.id;
           if (id == null) {

@@ -54,6 +54,7 @@ export async function transformModule(
             case 'TypeParameter':
             case 'Enum':
             case 'ComponentName':
+            case 'HookName':
             case 'FunctionName': {
               refs.add(def.name);
               break;
@@ -296,6 +297,7 @@ export async function transformModule(
                 switch (stmt.declaration.type) {
                   case 'FunctionDeclaration':
                   case 'ClassDeclaration':
+                  case 'HookDeclaration':
                   case 'ComponentDeclaration': {
                     context.replaceNode(stmt, stmt.declaration, {
                       keepComments: true,
