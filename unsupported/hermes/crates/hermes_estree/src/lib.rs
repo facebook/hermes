@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 mod binding;
-mod generated;
 mod generated_extensions;
 mod js_value;
 mod range;
