@@ -244,7 +244,8 @@ bool Verifier::visitFunction(const Function &F) {
   // Verify all basic blocks are valid
   for (auto I = F.begin(); I != F.end(); I++) {
     AssertWithMsg(
-        I->getParent() == &F, "Basic Block's parent does not match functiion");
+        I->getParent() == &F,
+        bbLabel(*I) << "'s parent does not match function");
     ReturnIfNot(visitBasicBlock(*I));
   }
 
@@ -260,7 +261,7 @@ bool Verifier::visitFunction(const Function &F) {
     // Check for unreachable blocks.
     AssertWithMsg(
         D.isReachableFromEntry(&I),
-        "Basic Block unreachable from entry in the Dominance Tree");
+        bbLabel(I) << " unreachable from entry in the Dominance Tree");
 
     // Domination checks within a block are linear, so for huge blocks we get
     // quadratic runtime. To avoid this, we store a set of instructions we've
@@ -285,7 +286,9 @@ bool Verifier::visitFunction(const Function &F) {
           // Make sure that the incoming value dominates the incoming block.
           AssertWithMsg(
               D.dominates(inst->getParent(), block),
-              "Incoming PHI value must dominate incoming basic block");
+              "Incoming PHI value " << bbLabel(*inst->getParent())
+                                    << " must dominate incoming "
+                                    << bbLabel(*block));
         }
         continue;
       }
@@ -296,7 +299,8 @@ bool Verifier::visitFunction(const Function &F) {
         if (auto *InstOp = llvh::dyn_cast<Instruction>(Operand)) {
           AssertWithMsg(
               seen.count(InstOp) || D.properlyDominates(InstOp, &*II),
-              "Operand must dominates the Instruction");
+              "Operand " << iLabel(*InstOp) << " must dominate the Instruction "
+                         << iLabel(*II));
         }
       }
       seen.insert(&*II);
@@ -321,7 +325,8 @@ bool Verifier::verifyTryStructure(const Function &F) {
     if (llvh::isa<ReturnInst>(BB->getTerminator())) {
       AssertWithMsg(
           enclosingTry == nullptr,
-          "ReturnInst but not all TryStartInsts have been closed.");
+          "ReturnInst " << iLabel(*BB->getTerminator()) << " but Try "
+                        << iLabel(*enclosingTry) << " has not been closed.");
     } else if (auto *TSI = llvh::dyn_cast<TryStartInst>(BB->getTerminator())) {
       enclosingTry = TSI;
     }
@@ -332,9 +337,10 @@ bool Verifier::verifyTryStructure(const Function &F) {
       auto *succEnclosingTry = enclosingTry;
       if (llvh::isa<TryEndInst>(&succ->front()) ||
           llvh::isa<CatchInst>(&succ->front())) {
-        AssertWithMsg(
+        AssertIWithMsg(
+            succ->front(),
             enclosingTry != nullptr,
-            "TryEndInst/CatchInst outside of any TryStartInst context.");
+            "ending a try outside of any TryStartInst context.");
         assert(
             blockToEnclosingTry.find(enclosingTry->getParent()) !=
                 blockToEnclosingTry.end() &&
@@ -349,7 +355,10 @@ bool Verifier::verifyTryStructure(const Function &F) {
       if (!success) {
         AssertWithMsg(
             enclosingInfo->second == succEnclosingTry,
-            "BB is reachable from multiple different try contexts.");
+            bbLabel(*succ)
+                << " is reachable from multiple different TryStartInsts: "
+                << iLabel(*succEnclosingTry) << " and "
+                << iLabel(*enclosingInfo->second));
       } else {
         // Only expore this BB if we haven't visited it before.
         stack.push_back({succ, succEnclosingTry});
@@ -360,9 +369,9 @@ bool Verifier::verifyTryStructure(const Function &F) {
 }
 
 bool Verifier::visitBasicBlock(const BasicBlock &BB) {
-  AssertWithMsg(&BB.getContext() == Ctx, "Basic Block has wrong context");
+  AssertWithMsg(&BB.getContext() == Ctx, bbLabel(BB) << "has wrong context");
 
-  AssertWithMsg(BB.getTerminator(), "Basic block must have a terminator.");
+  AssertWithMsg(BB.getTerminator(), bbLabel(BB) << " must have a terminator.");
 
   ReturnIfNot(verifyAttributes(&BB));
 
@@ -370,12 +379,16 @@ bool Verifier::visitBasicBlock(const BasicBlock &BB) {
   for (auto I = succ_begin(&BB), E = succ_end(&BB); I != E; ++I) {
     AssertWithMsg(
         pred_contains(*I, &BB),
-        "Cannot find self in the predecessors of a successor");
+        "Cannot find self " << bbLabel(BB)
+                            << "in the predecessors of a successor "
+                            << bbLabel(**I));
   }
   for (auto I = pred_begin(&BB), E = pred_end(&BB); I != E; ++I) {
     AssertWithMsg(
         succ_contains(*I, &BB),
-        "Cannot find self in the successors of a predecessor");
+        "Cannot find self " << bbLabel(BB)
+                            << " in the successors of a predecessor "
+                            << bbLabel(**I));
   }
 
   // Indicates whether all the instructions in the block observed so far had
@@ -385,13 +398,15 @@ bool Verifier::visitBasicBlock(const BasicBlock &BB) {
   for (BasicBlock::const_iterator I = BB.begin(); I != BB.end(); I++) {
     AssertWithMsg(
         I->getParent() == &BB,
-        "Instruction's parent does not match basic block");
+        "Instruction " << iLabel(*I) << "'s parent " << bbLabel(*I->getParent())
+                       << " does not match " << bbLabel(BB));
 
     // Check that FirstInBlock instructions are not preceded by other
     // instructions.
     bool firstInBlock = I->getSideEffect().getFirstInBlock();
     visitingFirstInBlock &= firstInBlock;
-    AssertWithMsg(
+    AssertIWithMsg(
+        (*I),
         visitingFirstInBlock || !firstInBlock,
         "Unexpected FirstInBlock instruction.");
 
@@ -405,9 +420,10 @@ bool Verifier::visitBasicBlock(const BasicBlock &BB) {
 bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
   // TODO: Verify the instruction is valid, need switch/case on each
   // actual Instruction type
-  AssertWithMsg(&Inst.getContext() == Ctx, "Instruction has wrong context");
+  AssertIWithMsg(Inst, &Inst.getContext() == Ctx, "Wrong context");
 
-  AssertWithMsg(Inst.getSideEffect().isWellFormed(), "Ill-formed side effects");
+  AssertIWithMsg(
+      Inst, Inst.getSideEffect().isWellFormed(), "Ill-formed side effects");
 
   ReturnIfNot(verifyAttributes(&Inst));
 
@@ -416,12 +432,14 @@ bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
   // Verify all operands are valid
   for (unsigned i = 0; i < Inst.getNumOperands(); i++) {
     auto Operand = Inst.getOperand(i);
-    AssertWithMsg(Operand != nullptr, "Invalid operand");
-    AssertWithMsg(
+    AssertIWithMsg(Inst, Operand != nullptr, "Invalid operand");
+    AssertIWithMsg(
+        Inst,
         getUsersSetForValue(Operand).count(&Inst) == 1,
         "This instruction is not in the User list of the operand");
     if (llvh::isa<Variable>(Operand)) {
-      AssertWithMsg(
+      AssertIWithMsg(
+          Inst,
           llvh::isa<LoadFrameInst>(Inst) || llvh::isa<StoreFrameInst>(Inst) ||
               llvh::isa<HBCLoadFromEnvironmentInst>(Inst) ||
               llvh::isa<HBCStoreToEnvironmentInst>(Inst),
@@ -433,7 +451,8 @@ bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
     // strictly reads from the stack variable, it should go through a
     // LoadStackInst.
     if (llvh::isa<AllocStackInst>(Operand)) {
-      AssertWithMsg(
+      AssertIWithMsg(
+          Inst,
           llvh::isa<LoadStackInst>(Inst) ||
               Inst.getSideEffect().getWriteStack(),
           "Must write to stack operand.");
@@ -450,8 +469,8 @@ bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
 
   // Verify that terminator instructions never need to return a value.
   if (llvh::isa<TerminatorInst>(Inst)) {
-    AssertWithMsg(
-        Inst.getNumUsers() == 0, "Terminator Inst cannot return value.");
+    AssertIWithMsg(
+        Inst, Inst.getNumUsers() == 0, "Terminator Inst cannot return value.");
   }
 
   return true;
