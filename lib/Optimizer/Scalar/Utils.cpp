@@ -260,6 +260,8 @@ bool hermes::deleteUnusedFunctionsAndVariables(Module *M) {
       // it avoids leaving dangling references.
       for (auto *U : F->getUsers())
         toRemove.insert(U->getFunction());
+      for (auto *U : F->getFunctionScope()->getUsers())
+        toRemove.insert(U->getFunction());
       for (auto *V : F->getFunctionScope()->getVariables())
         for (auto *U : V->getUsers())
           toRemove.insert(U->getFunction());
