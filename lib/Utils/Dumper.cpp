@@ -33,7 +33,8 @@ IRPrinter::IRPrinter(
     Context &ctx,
     bool usePersistent,
     llvh::raw_ostream &ost,
-    bool escape)
+    bool escape,
+    bool labelAllInsts)
     : indent_(0),
       ctx_(ctx),
       sm_(ctx.getSourceErrorManager()),
@@ -43,7 +44,8 @@ IRPrinter::IRPrinter(
       tempNamer_(
           usePersistent && ctx.getPersistentIRNamer() ? nullptr
                                                       : new Namer(false)),
-      namer_(tempNamer_ ? *tempNamer_ : *ctx.getPersistentIRNamer()) {}
+      namer_(tempNamer_ ? *tempNamer_ : *ctx.getPersistentIRNamer()),
+      labelAllInsts_(labelAllInsts) {}
 
 std::string IRPrinter::escapeStr(llvh::StringRef name) {
   std::string s = name.str();
@@ -285,7 +287,7 @@ void IRPrinter::printFunctionVariables(Function *F) {
 
 bool IRPrinter::printInstructionDestination(Instruction *I) {
   unsigned number = namer_.getInstNumber(I);
-  if (I->hasOutput()) {
+  if (labelAllInsts_ || I->hasOutput()) {
     setColor(Color::Name);
     os_ << "%" << number;
     resetColor();
@@ -515,7 +517,7 @@ struct DottyPrinter : public IRVisitor<DottyPrinter, void> {
       Context &ctx,
       llvh::raw_ostream &ost,
       llvh::StringRef Title)
-      : os(ost), Printer(ctx, false, ost, /* escape output */ true) {
+      : os(ost), Printer(ctx, false, ost, /* escape output */ true, false) {
     Printer.disableColors();
     os << " digraph g {\n graph [ rankdir = \"TD\" ];\n";
     os << "labelloc=\"t\"; ";

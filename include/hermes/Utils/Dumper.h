@@ -209,18 +209,28 @@ class IRPrinter : public IRVisitor<IRPrinter, void> {
   /// State for naming values and variables.
   Namer &namer_;
 
+  /// If set to true then we should output a label for all instructions. If not,
+  /// then instructions that don't have an output will not have a label printed.
+  bool labelAllInsts_;
+
   /// \param ctx  the Context
   /// \param usePersistent whether to use the persistent namer from Context
   /// \param ost  output stream
   /// \param escape whether to escape the quote mark.
+  /// \param labelAllInsts whether to include labels on all instructions
   explicit IRPrinter(
       Context &ctx,
       bool usePersistent,
       llvh::raw_ostream &ost,
-      bool escape);
+      bool escape,
+      bool labelAllInsts);
 
-  explicit IRPrinter(Context &ctx, llvh::raw_ostream &ost, bool escape = false)
-      : IRPrinter(ctx, true, ost, escape) {}
+  explicit IRPrinter(
+      Context &ctx,
+      llvh::raw_ostream &ost,
+      bool escape = false,
+      bool labelAllInsts = false)
+      : IRPrinter(ctx, true, ost, escape, labelAllInsts) {}
 
   /// Force colors to off.
   void disableColors() {
