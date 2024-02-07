@@ -178,4 +178,8 @@ Command Command::eval(const String &src, uint32_t frameIndex) {
   return Command(DebugCommand::makeEval(frameIndex, src));
 }
 
+bool Command::isEval() {
+  return debugCommand_->type == ::hermes::vm::DebugCommandType::EVAL;
+}
+
 #endif // HERMES_ENABLE_DEBUGGER

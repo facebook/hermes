@@ -470,12 +470,12 @@ TEST_F(CDPAgentTest, TestEnableWhenAlreadyPaused) {
       {FrameInfo("global", 0, 1).setLineNumberMax(9)});
 
   // At this point we know the runtime thread is paused, so it should be safe to
-  // call setNextCommand() directly.
-  asyncDebuggerAPI_->setNextCommand(Command::continueExecution());
+  // call resumeFromPaused() directly.
+  asyncDebuggerAPI_->resumeFromPaused(AsyncDebugCommand::Continue);
 
   // After removing this callback, AsyncDebuggerAPI will still have another
   // callback registered by CDPAgent. Therefore, JS will not continue by itself.
-  // But because of the setNextCommand() in the previous line, removing the
+  // But because of the resumeFromPaused() in the previous line, removing the
   // callback should wake up the runtime thread and check that a next command
   // has been set.
   asyncDebuggerAPI_->removeDebuggerEventCallback_TS(eventCallbackID);
