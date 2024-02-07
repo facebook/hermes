@@ -2404,7 +2404,8 @@ class InstrGen {
 };
 
 /// Lower module IR to LIR, so it is suitable for register allocation.
-void lowerModuleIR(Module *M, bool optimize) {
+/// \return true if lowering completed successfully.
+bool lowerModuleIR(Module *M, bool optimize) {
   PassManager PM;
   // Lowering ExponentiationOperator and ThrowTypeError (in PeepholeLowering)
   // needs to run before LowerBuiltinCalls because it introduces calls to
@@ -2436,7 +2437,7 @@ void lowerModuleIR(Module *M, bool optimize) {
     // Drop unused LoadParamInsts.
     PM.addDCE();
   }
-  PM.run(M);
+  return PM.run(M);
 }
 
 /// Perform final lowering of a register-allocated function's IR.
@@ -2746,7 +2747,9 @@ void generateModule(
     Module *M,
     hermes::sh::LineDirectiveEmitter &OS,
     const BytecodeGenerationOptions &options) {
-  lowerModuleIR(M, options.optimizationEnabled);
+  if (!lowerModuleIR(M, options.optimizationEnabled)) {
+    return;
+  }
 
   if (options.verifyIR) {
     if (!verifyModule(*M, &llvh::errs(), VerificationMode::IR_LOWERED)) {

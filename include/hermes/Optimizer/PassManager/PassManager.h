@@ -57,7 +57,13 @@ class PassManager {
 
   void run(Function *F);
 
-  void run(Module *M);
+  /// Run all the passes added.
+  /// If IR verification is enabled:
+  ///  Verify the IR between every pass. On the first failure, stop running any
+  ///  more passes and \return false. If all passes verified correctly, \return
+  ///  true.
+  /// If IR verification is not enabled, \return true.
+  bool run(Module *M);
 };
 } // namespace hermes
 #undef DEBUG_TYPE

@@ -54,7 +54,7 @@ void PassManager::run(Function *F) {
   }
 }
 
-void PassManager::run(Module *M) {
+bool PassManager::run(Module *M) {
   llvh::SmallVector<Timer, 32> timers;
   std::unique_ptr<TimerGroup> timerGroup{nullptr};
   if (AreStatisticsEnabled()) {
@@ -113,10 +113,11 @@ void PassManager::run(Module *M) {
             {},
             {},
             llvh::Twine("IRVerifier failed after pass ") + P->getName());
-        return;
+        return false;
       }
     }
   }
+  return true;
 }
 } // namespace hermes
 
