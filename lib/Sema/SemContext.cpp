@@ -14,6 +14,42 @@ static llvh::FormattedString ind(unsigned level) {
   return llvh::left_justify("", level * 4);
 }
 
+FunctionInfo::FunctionInfo(
+    FunctionInfo *function,
+    FunctionInfo *parentFunction,
+    LexicalScope *parentScope)
+    : parentFunction(parentFunction),
+      parentScope(parentScope),
+      strict(function->strict),
+      customDirectives(function->customDirectives),
+      arrow(function->arrow),
+      simpleParameterList(function->simpleParameterList),
+      usesArguments(function->usesArguments),
+      containsArrowFunctions(function->containsArrowFunctions),
+      containsArrowFunctionsUsingArguments(
+          function->containsArrowFunctionsUsingArguments),
+      mayReachImplicitReturn(function->mayReachImplicitReturn),
+      numLabels(function->numLabels) {
+  assert(
+      function->imports.empty() &&
+      "generic functions have no ImportDeclarations");
+}
+
+LexicalScope::LexicalScope(
+    SemContext &semCtx,
+    LexicalScope *scope,
+    FunctionInfo *parentFunction,
+    LexicalScope *parentScope)
+    : depth(scope->depth),
+      parentFunction(parentFunction),
+      parentScope(parentScope),
+      hoistedFunctions(),
+      localEval(scope->localEval) {
+  for (Decl *decl : scope->decls) {
+    semCtx.cloneDeclIntoScope(decl, this);
+  }
+}
+
 SemContext::SemContext(Context &astContext) : kw(astContext) {}
 
 SemContext::~SemContext() = default;
@@ -29,6 +65,14 @@ FunctionInfo *SemContext::newFunction(
   return &functions_.back();
 }
 
+FunctionInfo *SemContext::prepareClonedFunction(
+    FunctionInfo *function,
+    FunctionInfo *newParentFunction,
+    LexicalScope *newParentScope) {
+  functions_.emplace_back(function, newParentFunction, newParentScope);
+  return &functions_.back();
+}
+
 LexicalScope *SemContext::newScope(
     FunctionInfo *parentFunction,
     LexicalScope *parentScope) {
@@ -38,12 +82,29 @@ LexicalScope *SemContext::newScope(
   return res;
 }
 
+LexicalScope *SemContext::prepareClonedScope(
+    LexicalScope *scope,
+    FunctionInfo *newParentFunction,
+    LexicalScope *newParentScope) {
+  scopes_.emplace_back(*this, scope, newParentFunction, newParentScope);
+  LexicalScope *res = &scopes_.back();
+  newParentFunction->scopes.push_back(res);
+  return res;
+}
+
 Decl *SemContext::newDeclInScope(
     UniqueString *name,
     Decl::Kind kind,
     LexicalScope *scope,
     Decl::Special special) {
   decls_.emplace_back(Identifier::getFromPointer(name), kind, special, scope);
+  auto res = &decls_.back();
+  scope->decls.push_back(res);
+  return res;
+}
+
+Decl *SemContext::cloneDeclIntoScope(Decl *decl, LexicalScope *scope) {
+  decls_.emplace_back(decl, scope);
   auto res = &decls_.back();
   scope->decls.push_back(res);
   return res;

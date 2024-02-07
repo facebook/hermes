@@ -7,6 +7,8 @@
 
 #include "DeclCollector.h"
 
+#define DEBUG_TYPE "DeclCollector"
+
 using namespace hermes::ESTree;
 
 namespace hermes {
@@ -20,6 +22,45 @@ namespace sema {
   std::unique_ptr<DeclCollector> dc(
       new DeclCollector(root, kw, recursionDepth, recursionDepthExceeded));
   dc->runImpl();
+  return dc;
+}
+
+std::unique_ptr<DeclCollector> DeclCollector::clone(
+    const DeclCollector &original,
+    const llvh::DenseMap<ESTree::Node *, ESTree::Node *> &clonedNodes) {
+  std::unique_ptr<DeclCollector> dc(new DeclCollector(
+      clonedNodes.lookup(original.root_),
+      original.kw_,
+      0,
+      std::function([](ESTree::Node *) {
+        // Recursion depth won't be exceeded.
+        llvm_unreachable("DeclCollector clone is non-recursive");
+      })));
+
+  // Clone scopes_.
+  for (const auto &[node, decls] : original.scopes_) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Cloning DeclCollector for: " << node->getNodeName()
+                     << '\n');
+    auto *newNode = clonedNodes.lookup(node);
+    assert(newNode && "Missing cloned node");
+    // Create the new declaration list in the new DeclCollector.
+    ScopeDecls &newDecls = dc->scopes_[newNode];
+    for (auto *decl : decls) {
+      LLVM_DEBUG(
+          llvh::dbgs() << "Cloning decl: " << node->getNodeName() << "@" << decl
+                       << '\n');
+      auto *newDecl = clonedNodes.lookup(decl);
+      assert(newDecl && "Missing cloned node");
+      newDecls.push_back(newDecl);
+    }
+  }
+
+  // Clone scopedFuncDecls_.
+  for (auto *decl : original.scopedFuncDecls_) {
+    dc->scopedFuncDecls_.push_back(clonedNodes.lookup(decl));
+  }
+
   return dc;
 }
 

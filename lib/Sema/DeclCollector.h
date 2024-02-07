@@ -45,6 +45,16 @@ class DeclCollector
       unsigned recursionDepth,
       const std::function<void(ESTree::Node *)> &recursionDepthExceeded);
 
+  /// Clone \p declCollector.
+  /// Called from ESTreeClone after the body of the function has been cloned,
+  /// so that we know the old->new node mapping for all the relevant AST nodes.
+  ///
+  /// \param clonedNodes the mapping from original node to cloned node,
+  ///   used to populate the tables in the newly created DeclCollector.
+  static std::unique_ptr<DeclCollector> clone(
+      const DeclCollector &declCollector,
+      const llvh::DenseMap<ESTree::Node *, ESTree::Node *> &clonedNodes);
+
   void dump(llvh::raw_ostream &os, unsigned indent = 0) const;
 
   /// \param node the AST node which could have created a scope.

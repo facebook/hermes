@@ -112,6 +112,14 @@ class Decl {
       : name(name), kind(kind), special(special), scope(scope) {}
   Decl(Identifier name, Kind kind, LexicalScope *scope)
       : Decl(name, kind, Special::NotSpecial, scope) {}
+  /// Cloning constructor.
+  /// Only invoked during ESTreeClone from cloneDeclIntoScope.
+  Decl(Decl *decl, LexicalScope *scope)
+      : Decl(decl->name, decl->kind, decl->special, scope) {
+    assert(
+        decl->customData == nullptr &&
+        "custom data shouldn't be populated during ESTreeClone");
+  }
 };
 
 /// Lexical scopes within a function.
@@ -146,6 +154,18 @@ class LexicalScope {
         parentScope(parentScope) {
     assert(parentFunction && "lexical scope must be in a function");
   }
+
+  /// Partial cloning constructor.
+  /// Does not copy hoistedFunctions, because those contain AST nodes.
+  /// Only called during ESTreeClone from prepareClonedScope.
+  /// \param scope the scope to clone.
+  /// \param parentFunction the parent function for the new scope.
+  /// \param parentScope the parent scope for the new scope.
+  LexicalScope(
+      SemContext &semCtx,
+      LexicalScope *scope,
+      FunctionInfo *parentFunction,
+      LexicalScope *parentScope);
 };
 
 /// Semantic information about functions.
@@ -216,6 +236,17 @@ class FunctionInfo {
         customDirectives(customDirectives),
         arrow(llvh::isa<ESTree::ArrowFunctionExpressionNode>(funcNode)) {}
 
+  /// Partial cloning constructor.
+  /// Called only from ESTreeClone via prepareClonedFunction.
+  /// Cannot copy the scopes because we don't know all the new scopes yet,
+  /// so ESTreeClone will populate them later.
+  /// \param parentFunction the parent function of the new FunctionInfo.
+  /// \param parentScope the parent scope of the new FunctionInfo.
+  FunctionInfo(
+      FunctionInfo *function,
+      FunctionInfo *parentFunction,
+      LexicalScope *parentScope);
+
   /// \return the top-level lexical scope of the function.
   LexicalScope *getFunctionScope() const {
     return scopes[0];
@@ -249,12 +280,25 @@ class SemContext {
       LexicalScope *parentScope,
       bool strict,
       CustomDirectives customDirectives);
+  /// Clone the function, without the AST nodes inside it.
+  /// Used from ESTreeClone prior to cloning the body AST of the function.
+  FunctionInfo *prepareClonedFunction(
+      FunctionInfo *function,
+      FunctionInfo *newParentFunction,
+      LexicalScope *newParentScope);
   /// \param parentFunction the function in which to put the scope, nullable.
   /// \param parentScope the parent lexical scope, nullable.
   /// \return a new lexical scope.
   LexicalScope *newScope(
       FunctionInfo *parentFunction,
       LexicalScope *parentScope);
+  /// Clone the scope, but the new scope won't have any hoisted functions.
+  /// Used from ESTreeClone prior to cloning the body AST of the scope.
+  /// Hoisted functions are handled separately.
+  LexicalScope *prepareClonedScope(
+      LexicalScope *scope,
+      FunctionInfo *newParentFunction,
+      LexicalScope *newParentScope);
   /// \param scope not nullable.
   /// \return a new declaration in \p scope.
   Decl *newDeclInScope(
@@ -262,6 +306,9 @@ class SemContext {
       Decl::Kind kind,
       LexicalScope *scope,
       Decl::Special special = Decl::Special::NotSpecial);
+  /// \param scope the new scope to clone into, not nullable.
+  /// \return a clone of \p oldDecl which lives in \p scope.
+  Decl *cloneDeclIntoScope(Decl *oldDecl, LexicalScope *scope);
 
   /// \return a new global property.
   Decl *newGlobal(UniqueString *name, Decl::Kind kind);

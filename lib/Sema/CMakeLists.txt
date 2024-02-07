@@ -12,6 +12,7 @@ add_hermes_library(hermesSema
     SemanticResolver.cpp SemanticResolver.h
     DeclCollector.cpp DeclCollector.h
     ScopedFunctionPromoter.cpp ScopedFunctionPromoter.h
+    ESTreeClone.cpp ESTreeClone.h
     CheckImplicitReturn.cpp
     FlowContext.cpp
     FlowTypesDumper.cpp FlowTypesDumper.h
