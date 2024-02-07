@@ -26,6 +26,8 @@ void registerCallsite(BaseCallInst *call, BaseCreateCallableInst *callee) {
   // Set the target/env operands if possible.
   if (llvh::isa<EmptySentinel>(call->getTarget())) {
     call->setTarget(callee->getFunctionCode());
+  }
+  if (llvh::isa<EmptySentinel>(call->getEnvironment())) {
     // If the closure is created in the same function as the call, we can
     // forward the environment directly to the call.
     if (callee->getParent()->getParent() == call->getParent()->getParent()) {
