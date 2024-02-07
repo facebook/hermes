@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-mod generated;
+include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 mod generated_extension;
 
 use generated_extension::Context;
