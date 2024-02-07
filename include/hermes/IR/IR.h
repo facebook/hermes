@@ -793,14 +793,14 @@ class Value {
   /// into Module if necessary in the future.
   /// Will create default Attributes if they don't exist already.
   /// \return the Attributes of this value.
-  Attributes &getAttributesRef(Module *) {
+  Attributes &getAttributesRef(const Module *) {
     return attributes_;
   }
   /// Takes a Module parameter to allow easily moving the attributes_ storage
   /// into Module if necessary in the future.
   /// \return the Attributes by value, because nonexistent attributes might not
   ///   be stored anywhere if/when we use a side table.
-  Attributes getAttributes(Module *) const {
+  Attributes getAttributes(const Module *) const {
     return attributes_;
   }
 
@@ -1427,7 +1427,7 @@ class Instruction
   llvh::Optional<Type> getInherentType();
 
   /// \return whether this instruction has an output value.
-  bool hasOutput();
+  bool hasOutput() const;
 
   /// \return whether this instruction is a typed instruction and should not,
   /// e.g. have its type inferred by TypeInference.

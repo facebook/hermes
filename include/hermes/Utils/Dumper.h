@@ -59,7 +59,7 @@ class ValueNamer {
 
   /// Map from an IR Value pointer, to a number associated with it, plus some
   /// extra data.
-  llvh::DenseMap<Value *, ValueT> map_{};
+  llvh::DenseMap<const Value *, ValueT> map_{};
 
   /// The current generation. This is stamped in every value when we visit it.
   /// When the generation changes, all values that were not visited in the last
@@ -82,7 +82,7 @@ class ValueNamer {
   /// Return the number associated with \p v. If \p v is not in the map, or is
   /// in the map bit associated with a different kind, a new number is
   /// allocated.
-  unsigned getNumber(Value *v);
+  unsigned getNumber(const Value *v);
 };
 
 /// Utility class to print unique variable name within a function.
@@ -155,11 +155,11 @@ class Namer {
   }
 
   /// Return the number associated with \p inst.
-  unsigned getInstNumber(Instruction *inst) {
+  unsigned getInstNumber(const Instruction *inst) {
     return curFunctionState_->instNamer.getNumber(inst);
   }
   /// Return the number associated with \p bb.
-  unsigned getBBNumber(BasicBlock *bb) {
+  unsigned getBBNumber(const BasicBlock *bb) {
     return curFunctionState_->bbNamer.getNumber(bb);
   }
   /// Return the unique printable name associated with \p var.

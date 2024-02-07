@@ -464,7 +464,7 @@ llvh::Optional<Type> Instruction::getInherentType() {
   }
 }
 
-bool Instruction::hasOutput() {
+bool Instruction::hasOutput() const {
   switch (getKind()) {
     default:
       llvm_unreachable("Invalid kind");

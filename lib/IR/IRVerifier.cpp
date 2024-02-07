@@ -11,6 +11,7 @@
 #include "hermes/IR/IRVisitor.h"
 #include "hermes/IR/Instrs.h"
 
+#include "hermes/Utils/Dumper.h"
 #include "llvh/ADT/DenseMap.h"
 #include "llvh/Support/Casting.h"
 
@@ -36,9 +37,11 @@ namespace {
 class Verifier : public InstructionVisitor<Verifier, bool> {
   class FunctionState; // Forward declaration of inner class.
 
+  const Module &M;
   Context *Ctx{nullptr};
   raw_ostream &OS;
   VerificationMode verificationMode;
+  irdumper::IRPrinter &printer;
   /// State for the function currently being verified.
   FunctionState *functionState{};
   /// Cached users of each value, lazily computed.
@@ -71,10 +74,14 @@ class Verifier : public InstructionVisitor<Verifier, bool> {
   }
 
  public:
-  explicit Verifier(raw_ostream &OS, VerificationMode mode)
-      : OS(OS), verificationMode(mode) {}
+  explicit Verifier(
+      const Module &M,
+      raw_ostream &OS,
+      VerificationMode mode,
+      irdumper::IRPrinter &printer)
+      : M(M), OS(OS), verificationMode(mode), printer(printer) {}
 
-  bool verify(const Module &M) {
+  bool verify() {
     Ctx = &M.getContext();
     return visitModule(M);
   };
@@ -119,16 +126,28 @@ class Verifier : public InstructionVisitor<Verifier, bool> {
 
   /// Assert that the attributes of \p val are allowed to be set, based on the
   /// kind of \p val.
-  LLVM_NODISCARD bool verifyAttributes(const Value *val, Module *M);
+  LLVM_NODISCARD bool verifyAttributes(const Value *val);
 
   /// A helper function for the Assert macros that prints the location of the
-  /// the problematic instruction, if available.
-  /// \param inst the optional instruction to print the location of.
+  /// the problematic instruction, if available. It also prints the
+  /// instruction/BB label.
+  /// \param inst the optional instruction to print the
+  /// location of.
   void _assertPrintLocation(const Instruction *inst);
 
   /// Verify that TryStart/EndInsts are balanced. Also, verify all Try bodies
   /// are reachable only through the enclosing TryStartInst.
   LLVM_NODISCARD bool verifyTryStructure(const Function &F);
+
+  /// Helper function to get the label of a BasicBlock.
+  llvh::format_object<unsigned> bbLabel(const BasicBlock &block) {
+    return llvh::format("%%BB%u", printer.namer_.getBBNumber(&block));
+  }
+
+  /// Helper function to get the label of an Instruction.
+  llvh::format_object<unsigned> iLabel(const Instruction &I) {
+    return llvh::format("%%%u", printer.namer_.getInstNumber(&I));
+  }
 };
 
 void Verifier::_assertPrintLocation(const Instruction *inst) {
@@ -149,6 +168,10 @@ void Verifier::_assertPrintLocation(const Instruction *inst) {
       }
     }
   }
+  if (inst) {
+    OS << " in " << bbLabel(*inst->getParent()) << ", " << iLabel(*inst);
+    ;
+  }
   OS << '\n';
 }
 
@@ -159,27 +182,34 @@ void Verifier::_assertPrintLocation(const Instruction *inst) {
     }                  \
   } while (0)
 
-// TODO: Need to make this accept format strings
+/// TODO: Need to make this accept format strings
+/// Check if \p C is false. If so, dump the module, forward the given
+/// arguments to OS, print function information and return false in the
+/// enclosing scope.
 #define AssertWithMsg(C, ...)        \
   do {                               \
     if (!(C)) {                      \
+      printer.visit(M);              \
       OS << __VA_ARGS__;             \
       _assertPrintLocation(nullptr); \
       return false;                  \
     }                                \
   } while (0)
 
+/// This macro is the same as AssertWithMsg, but it will also append the
+/// location information of the given instruction \p inst.
 #define AssertIWithMsg(inst, C, ...)                  \
   do {                                                \
     if (!(C)) {                                       \
+      printer.visit(M);                               \
       OS << inst.getKindStr() << ": " << __VA_ARGS__; \
       _assertPrintLocation(&inst);                    \
       return false;                                   \
     }                                                 \
   } while (0)
 
-bool Verifier::verifyAttributes(const Value *val, Module *M) {
-  const auto &attrs = val->getAttributes(M);
+bool Verifier::verifyAttributes(const Value *val) {
+  const auto &attrs = val->getAttributes(&M);
 #define ATTRIBUTE(valueKind, name, _string) \
   if (attrs.name)                           \
     AssertWithMsg(                          \
@@ -201,8 +231,7 @@ bool Verifier::visitModule(const Module &M) {
 bool Verifier::visitFunction(const Function &F) {
   AssertWithMsg(&F.getContext() == Ctx, "Function has wrong context");
 
-  AssertWithMsg(
-      verifyAttributes(&F, F.getParent()), "Invalid function attributes");
+  AssertWithMsg(verifyAttributes(&F), "Invalid function attributes");
 
   for (Value *newTargetUser : F.getNewTargetParam()->getUsers()) {
     AssertWithMsg(
@@ -335,7 +364,7 @@ bool Verifier::visitBasicBlock(const BasicBlock &BB) {
 
   AssertWithMsg(BB.getTerminator(), "Basic block must have a terminator.");
 
-  ReturnIfNot(verifyAttributes(&BB, BB.getParent()->getParent()));
+  ReturnIfNot(verifyAttributes(&BB));
 
   // Verify the mutual predecessor/successor relationship
   for (auto I = succ_begin(&BB), E = succ_end(&BB); I != E; ++I) {
@@ -380,7 +409,7 @@ bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
 
   AssertWithMsg(Inst.getSideEffect().isWellFormed(), "Ill-formed side effects");
 
-  ReturnIfNot(verifyAttributes(&Inst, Inst.getModule()));
+  ReturnIfNot(verifyAttributes(&Inst));
 
   bool const acceptsEmptyType = Inst.acceptsEmptyType();
 
@@ -1254,8 +1283,13 @@ bool hermes::verifyModule(
 #ifdef HERMES_SLOW_DEBUG
   raw_null_ostream NullStr;
   NullStr.SetUnbuffered();
-  Verifier V(OS ? *OS : NullStr, mode);
-  return V.verify(M);
+  raw_ostream &stream = OS ? *OS : NullStr;
+  Context &Ctx = M.getContext();
+  irdumper::IRPrinter printer(
+      Ctx, stream, /*escape*/ false, /*labelAllInsts*/ true);
+  Verifier V(M, stream, mode, printer);
+  bool result = V.verify();
+  return result;
 #else
   return true;
 #endif

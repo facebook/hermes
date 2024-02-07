@@ -2752,7 +2752,6 @@ void generateModule(
     if (!verifyModule(*M, &llvh::errs(), VerificationMode::IR_LOWERED)) {
       M->getContext().getSourceErrorManager().error(
           SMLoc{}, "Lowered IR verification failed");
-      M->dump(llvh::errs());
       return;
     }
   }

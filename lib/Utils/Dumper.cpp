@@ -109,7 +109,7 @@ void ValueNamer::nextGeneration() {
   currentGen_ ^= 1;
 }
 
-unsigned ValueNamer::getNumber(Value *v) {
+unsigned ValueNamer::getNumber(const Value *v) {
   ValueKind kind = v->getKind();
   auto [it, inserted] =
       map_.try_emplace(v, ValueT(kind, currentGen_, counter_));
