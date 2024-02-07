@@ -21,6 +21,7 @@ pub enum NodeKind {
     ArrowFunctionExpression,
     FunctionDeclaration,
     ComponentDeclaration,
+    HookDeclaration,
     _FunctionLikeLast,
     _StatementFirst,
     _LoopStatementFirst,
@@ -109,6 +110,7 @@ pub enum NodeKind {
     RestElement,
     AssignmentPattern,
     _PatternLast,
+    _JSXFirst,
     JSXIdentifier,
     JSXMemberExpression,
     JSXNamespacedName,
@@ -125,6 +127,8 @@ pub enum NodeKind {
     JSXFragment,
     JSXOpeningFragment,
     JSXClosingFragment,
+    _JSXLast,
+    _FlowFirst,
     ExistsTypeAnnotation,
     EmptyTypeAnnotation,
     StringTypeAnnotation,
@@ -141,6 +145,7 @@ pub enum NodeKind {
     BigIntTypeAnnotation,
     VoidTypeAnnotation,
     FunctionTypeAnnotation,
+    HookTypeAnnotation,
     FunctionTypeParam,
     ComponentTypeAnnotation,
     ComponentTypeParameter,
@@ -148,6 +153,7 @@ pub enum NodeKind {
     QualifiedTypeIdentifier,
     TypeofTypeAnnotation,
     KeyofTypeAnnotation,
+    TypeOperator,
     QualifiedTypeofIdentifier,
     TupleTypeAnnotation,
     TupleTypeSpreadElement,
@@ -170,12 +176,14 @@ pub enum NodeKind {
     DeclareInterface,
     DeclareClass,
     DeclareFunction,
+    DeclareHook,
     DeclareComponent,
     DeclareVariable,
     DeclareEnum,
     DeclareExportDeclaration,
     DeclareExportAllDeclaration,
     DeclareModule,
+    DeclareNamespace,
     DeclareModuleExports,
     InterfaceExtends,
     ClassImplements,
@@ -192,6 +200,7 @@ pub enum NodeKind {
     TypeParameter,
     TypeParameterInstantiation,
     TypeCastExpression,
+    AsExpression,
     InferredPredicate,
     DeclaredPredicate,
     EnumDeclaration,
@@ -204,6 +213,8 @@ pub enum NodeKind {
     EnumNumberMember,
     EnumBooleanMember,
     ComponentParameter,
+    _FlowLast,
+    _TSFirst,
     TSTypeAnnotation,
     TSAnyKeyword,
     TSNumberKeyword,
@@ -211,6 +222,10 @@ pub enum NodeKind {
     TSStringKeyword,
     TSSymbolKeyword,
     TSVoidKeyword,
+    TSUndefinedKeyword,
+    TSUnknownKeyword,
+    TSNeverKeyword,
+    TSBigIntKeyword,
     TSThisType,
     TSLiteralType,
     TSIndexedAccessType,
@@ -246,6 +261,7 @@ pub enum NodeKind {
     TSIndexSignature,
     TSCallSignatureDeclaration,
     TSModifiers,
+    _TSLast,
     _CoverFirst,
     CoverEmptyArgs,
     CoverTrailingComma,
@@ -291,6 +307,12 @@ extern "C" {
     pub fn hermes_get_ComponentDeclaration_body(node: NodePtr) -> NodePtr;
     pub fn hermes_get_ComponentDeclaration_typeParameters(node: NodePtr) -> NodePtrOpt;
     pub fn hermes_get_ComponentDeclaration_rendersType(node: NodePtr) -> NodePtrOpt;
+    // HookDeclaration
+    pub fn hermes_get_HookDeclaration_id(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_HookDeclaration_params(node: NodePtr) -> NodeListRef;
+    pub fn hermes_get_HookDeclaration_body(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_HookDeclaration_typeParameters(node: NodePtr) -> NodePtrOpt;
+    pub fn hermes_get_HookDeclaration_returnType(node: NodePtr) -> NodePtrOpt;
     // WhileStatement
     pub fn hermes_get_WhileStatement_body(node: NodePtr) -> NodePtr;
     pub fn hermes_get_WhileStatement_test(node: NodePtr) -> NodePtr;
@@ -597,6 +619,11 @@ extern "C" {
     pub fn hermes_get_FunctionTypeAnnotation_returnType(node: NodePtr) -> NodePtr;
     pub fn hermes_get_FunctionTypeAnnotation_rest(node: NodePtr) -> NodePtrOpt;
     pub fn hermes_get_FunctionTypeAnnotation_typeParameters(node: NodePtr) -> NodePtrOpt;
+    // HookTypeAnnotation
+    pub fn hermes_get_HookTypeAnnotation_params(node: NodePtr) -> NodeListRef;
+    pub fn hermes_get_HookTypeAnnotation_returnType(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_HookTypeAnnotation_rest(node: NodePtr) -> NodePtrOpt;
+    pub fn hermes_get_HookTypeAnnotation_typeParameters(node: NodePtr) -> NodePtrOpt;
     // FunctionTypeParam
     pub fn hermes_get_FunctionTypeParam_name(node: NodePtr) -> NodePtrOpt;
     pub fn hermes_get_FunctionTypeParam_typeAnnotation(node: NodePtr) -> NodePtr;
@@ -617,8 +644,12 @@ extern "C" {
     pub fn hermes_get_QualifiedTypeIdentifier_id(node: NodePtr) -> NodePtr;
     // TypeofTypeAnnotation
     pub fn hermes_get_TypeofTypeAnnotation_argument(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_TypeofTypeAnnotation_typeArguments(node: NodePtr) -> NodePtrOpt;
     // KeyofTypeAnnotation
     pub fn hermes_get_KeyofTypeAnnotation_argument(node: NodePtr) -> NodePtr;
+    // TypeOperator
+    pub fn hermes_get_TypeOperator_operator(node: NodePtr) -> NodeLabel;
+    pub fn hermes_get_TypeOperator_typeAnnotation(node: NodePtr) -> NodePtr;
     // QualifiedTypeofIdentifier
     pub fn hermes_get_QualifiedTypeofIdentifier_qualification(node: NodePtr) -> NodePtr;
     pub fn hermes_get_QualifiedTypeofIdentifier_id(node: NodePtr) -> NodePtr;
@@ -700,6 +731,8 @@ extern "C" {
     // DeclareFunction
     pub fn hermes_get_DeclareFunction_id(node: NodePtr) -> NodePtr;
     pub fn hermes_get_DeclareFunction_predicate(node: NodePtr) -> NodePtrOpt;
+    // DeclareHook
+    pub fn hermes_get_DeclareHook_id(node: NodePtr) -> NodePtr;
     // DeclareComponent
     pub fn hermes_get_DeclareComponent_id(node: NodePtr) -> NodePtr;
     pub fn hermes_get_DeclareComponent_params(node: NodePtr) -> NodeListRef;
@@ -722,7 +755,9 @@ extern "C" {
     // DeclareModule
     pub fn hermes_get_DeclareModule_id(node: NodePtr) -> NodePtr;
     pub fn hermes_get_DeclareModule_body(node: NodePtr) -> NodePtr;
-    pub fn hermes_get_DeclareModule_kind(node: NodePtr) -> NodeLabel;
+    // DeclareNamespace
+    pub fn hermes_get_DeclareNamespace_id(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_DeclareNamespace_body(node: NodePtr) -> NodePtr;
     // DeclareModuleExports
     pub fn hermes_get_DeclareModuleExports_typeAnnotation(node: NodePtr) -> NodePtr;
     // InterfaceExtends
@@ -787,6 +822,9 @@ extern "C" {
     // TypeCastExpression
     pub fn hermes_get_TypeCastExpression_expression(node: NodePtr) -> NodePtr;
     pub fn hermes_get_TypeCastExpression_typeAnnotation(node: NodePtr) -> NodePtr;
+    // AsExpression
+    pub fn hermes_get_AsExpression_expression(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_AsExpression_typeAnnotation(node: NodePtr) -> NodePtr;
     // DeclaredPredicate
     pub fn hermes_get_DeclaredPredicate_value(node: NodePtr) -> NodePtr;
     // EnumDeclaration
