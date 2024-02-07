@@ -5,8 +5,47 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+//===----------------------------------------------------------------------===//
+/// \file
+/// Typechecker for Flow-typed JS.
+///
+/// Variable type resolution:
+/// When entering a block, DeclareScopeTypes and AnnotateScopeDecls are called.
+/// DeclareScopeTypes creates Type* for all the bindings which create new types
+/// in the scope (type aliases and class declarations) and stores them in
+/// the binding table.
+/// AnnotateScopeDecls then annotates variable bindings with their types,
+/// either by using the explicitly annotated type or inferring them by visiting
+/// initializers when possible. The corresponding Decls are associated with the
+/// types when possible, 'any' if there was no better type that could be
+/// assigned.
+/// Once these two functions are done, the visitor is called on the AST nodes in
+/// the scope, skipping any initializers visited in AnnotateScopeDecls.
+/// When IdentifierNode is encountered, the corresponding Decl is looked up and
+/// the type is returned if it exists. Otherwise, any is returned.
+///
+/// Classes:
+/// All classes are handled in two phases: ParseClassType and the typechcking
+/// AST visitor.
+/// ParseClassType determines the fields and methods of the class as well as
+/// their types, resolves the super class, and ensures all the signatures on the
+/// fields/methods are valid.
+/// The bodies of methods are descended into during the AST visitor on
+/// ClassDeclarationNode.
+///
+/// Generic functions:
+/// Generic function declarations are detected during AnnotateScopeDecls and
+/// their Decl is marked as \c generic.
+/// The generic is registered as a GenericInfo in the FlowChecker, and nothing
+/// further is done.
+/// When a generic function is invoked, the AST is cloned (or an existing clone
+/// is used), the cloned AST is typechecked, and the type of the CallExpression
+/// is set to the result type of the cloned AST now that it has been annotated.
+//===----------------------------------------------------------------------===//
+
 #include "FlowChecker.h"
 
+#include "ESTreeClone.h"
 #include "hermes/Support/Conversions.h"
 
 #include "llvh/ADT/MapVector.h"
@@ -89,9 +128,9 @@ void FlowChecker::visit(ESTree::ProgramNode *node) {
   visitESTreeChildren(*this, node);
 }
 
-void FlowChecker::visit(ESTree::FunctionDeclarationNode *node) {
-  sema::Decl *decl = getDecl(llvh::cast<ESTree::IdentifierNode>(node->_id));
-  assert(decl && "function declaration must have been resolved");
+void FlowChecker::visitNonGenericFunctionDeclaration(
+    ESTree::FunctionDeclarationNode *node,
+    sema::Decl *decl) {
   Type *declType = getDeclType(decl);
 
   // If this declaration is of a global property, then it doesn't have a
@@ -113,7 +152,33 @@ void FlowChecker::visit(ESTree::FunctionDeclarationNode *node) {
   visitFunctionLike(node, node->_body, node->_params);
 }
 
+void FlowChecker::visit(ESTree::FunctionDeclarationNode *node) {
+  sema::Decl *decl = getDecl(llvh::cast<ESTree::IdentifierNode>(node->_id));
+  assert(decl && "function declaration must have been resolved");
+
+  // If it has type parameters, it's either a generic declaration
+  // or a specialization which should be typechecked directly at clone time
+  // by calling visitNonGenericFunctionDeclaration.
+  // e.g.
+  //   function foo() { bar<number() }
+  //   function bar<T>() {}
+  // will create bar<number> in after bar<T>, but we don't want to visit after
+  // visiting foo.
+  if (node->_typeParameters) {
+    return;
+  }
+
+  visitNonGenericFunctionDeclaration(node, decl);
+}
+
 void FlowChecker::visit(ESTree::FunctionExpressionNode *node) {
+  if (node->_typeParameters) {
+    sm_.error(
+        node->_typeParameters->getStartLoc(),
+        "ft: type parameters not supported on function expressions");
+    return;
+  }
+
   Type *ftype = parseFunctionType(
       node->_params, node->_returnType, node->_async, node->_generator);
   setNodeType(node, ftype);
@@ -137,6 +202,13 @@ void FlowChecker::visit(ESTree::FunctionExpressionNode *node) {
 }
 
 void FlowChecker::visit(ESTree::ArrowFunctionExpressionNode *node) {
+  if (node->_typeParameters) {
+    sm_.error(
+        node->_typeParameters->getStartLoc(),
+        "ft: type parameters not supported on function expressions");
+    return;
+  }
+
   Type *ftype = parseFunctionType(
       node->_params,
       node->_returnType,
@@ -574,15 +646,31 @@ class FlowChecker::ExprVisitor {
       return;
     }
 
+    if (decl->generic) {
+      bool isValid = false;
+      if (auto *call = llvh::dyn_cast<ESTree::CallExpressionLikeNode>(parent)) {
+        if (ESTree::getCallee(call) == node)
+          isValid = true;
+      }
+      if (!isValid) {
+        // Unspecialized generic functions are only allowed in calls.
+        // They can't be stored directly because they need type parameters.
+        outer_.sm_.error(
+            node->getSourceRange(),
+            "ft: invalid use of generic function outside of call");
+        return;
+      }
+    }
+
     // The type is either the type of the identifier or "any".
     Type *type = outer_.flowContext_.findDeclType(decl);
 
-    if (!type && !sema::Decl::isKindGlobal(decl->kind)) {
-      // Assume "any".
+    // Generic decls don't have types set because they aren't real values.
+    if (!type && !sema::Decl::isKindGlobal(decl->kind) && !decl->generic) {
+      // Assume "any" during the call to setNodeType below.
       // If we're in the same function as decl was declared,
       // then IRGen can report TDZ violations early when applicable.
       // See FlowChecker::AnnotateScopeDecls doc-comment.
-      type = outer_.flowContext_.getAny();
 
       // Report a warning because this is likely unintended.
       // The following code errors in Flow but not in untyped JS:
@@ -1452,6 +1540,11 @@ class FlowChecker::ExprVisitor {
             outer_.flowContext_.maybeCreateUnion(types)));
   }
 
+  void visit(ESTree::TypeParameterInstantiationNode *node) {
+    // Do nothing.
+    // These are handled in the parent node.
+  }
+
   void visit(ESTree::CallExpressionNode *node) {
     visitESTreeChildren(*this, node);
 
@@ -1463,6 +1556,27 @@ class FlowChecker::ExprVisitor {
             node, llvh::cast<ESTree::IdentifierNode>(methodCallee->_property));
         return;
       }
+    }
+
+    if (auto *identCallee =
+            llvh::dyn_cast<ESTree::IdentifierNode>(node->_callee)) {
+      sema::Decl *decl = outer_.getDecl(identCallee);
+      if (decl->generic) {
+        if (!node->_typeArguments) {
+          outer_.sm_.error(
+              node->_callee->getSourceRange(), "ft: type arguments required");
+          return;
+        }
+
+        outer_.resolveCallToGenericFunctionSpecialization(
+            node, identCallee, decl);
+      }
+    } else if (node->_typeArguments) {
+      // Generics handled above.
+      outer_.sm_.error(
+          node->_callee->getSourceRange(),
+          "ft: generic call only works on identifiers");
+      return;
     }
 
     Type *calleeType = outer_.getNodeTypeOrAny(node->_callee);
@@ -2827,10 +2941,13 @@ class FlowChecker::AnnotateScopeDecls {
   FlowChecker &outer;
 
  public:
-  AnnotateScopeDecls(FlowChecker &outer, const sema::ScopeDecls &decls)
+  AnnotateScopeDecls(
+      FlowChecker &outer,
+      const sema::ScopeDecls &decls,
+      ESTree::Node *scopeNode)
       : outer(outer) {
     setTypesForAnnotatedVariables(decls);
-    annotateAllScopeDecls(decls);
+    annotateAllScopeDecls(decls, scopeNode);
   }
 
  private:
@@ -2895,7 +3012,9 @@ class FlowChecker::AnnotateScopeDecls {
 
   /// Step 2 above.
   /// Visit all declarations and attempt to infer variable types.
-  void annotateAllScopeDecls(const sema::ScopeDecls &decls) {
+  void annotateAllScopeDecls(
+      const sema::ScopeDecls &decls,
+      ESTree::Node *scopeNode) {
     for (ESTree::Node *declNode : decls) {
       if (auto *declaration =
               llvh::dyn_cast<ESTree::VariableDeclarationNode>(declNode)) {
@@ -2907,7 +3026,17 @@ class FlowChecker::AnnotateScopeDecls {
               llvh::dyn_cast<ESTree::FunctionDeclarationNode>(declNode)) {
         // FunctionDeclaration.
         //
-        annotateFunctionDeclaration(funcDecl);
+        ESTree::Node *parent = nullptr;
+        if (auto *program = llvh::dyn_cast<ESTree::ProgramNode>(scopeNode)) {
+          parent = program;
+        } else if (
+            auto *func = llvh::dyn_cast<ESTree::FunctionLikeNode>(scopeNode)) {
+          parent = ESTree::getBlockStatement(func);
+        } else {
+          parent = scopeNode;
+          assert(llvh::isa<ESTree::BlockStatementNode>(parent));
+        }
+        annotateFunctionDeclaration(funcDecl, parent);
       } else if (
           auto *id = llvh::dyn_cast<ESTree::ImportDeclarationNode>(declNode)) {
         // ImportDeclaration.
@@ -3080,9 +3209,18 @@ class FlowChecker::AnnotateScopeDecls {
     return;
   }
 
-  void annotateFunctionDeclaration(ESTree::FunctionDeclarationNode *funcDecl) {
+  void annotateFunctionDeclaration(
+      ESTree::FunctionDeclarationNode *funcDecl,
+      ESTree::Node *parent) {
     auto *id = llvh::cast<ESTree::IdentifierNode>(funcDecl->_id);
     sema::Decl *decl = outer.getDecl(id);
+    if (funcDecl->_typeParameters) {
+      decl->generic = true;
+      outer.registerGeneric(
+          decl, funcDecl, parent, outer.bindingTable_.getCurrentScope());
+      return;
+    }
+
     Type *type = outer.parseFunctionType(
         funcDecl->_params,
         funcDecl->_returnType,
@@ -3143,7 +3281,7 @@ bool FlowChecker::resolveScopeTypesAndAnnotate(
   unsigned errorsBefore = sm_.getErrorCount();
 
   DeclareScopeTypes(*this, *decls, scope);
-  AnnotateScopeDecls(*this, *decls);
+  AnnotateScopeDecls(*this, *decls, scopeNode);
 
   // If there were any errors during annotation, fail.
   // Don't count errors that happened during typechecking other nodes.
@@ -3617,6 +3755,225 @@ Type *FlowChecker::processFunctionTypeAnnotation(
           /* isAsync */ false,
           /* isGenerator */ false),
       node);
+}
+
+bool FlowChecker::validateAndBindTypeParameters(
+    ESTree::TypeParameterDeclarationNode *params,
+    ESTree::TypeParameterInstantiationNode *typeArgsNode,
+    llvh::ArrayRef<Type *> typeArgTypes,
+    sema::LexicalScope *scope) {
+  size_t i = 0;
+  // Whether we had to stop early due to not enough generic type arguments.
+  bool tooFewTypeArgs = false;
+  for (ESTree::Node &tparam : params->_params) {
+    if (i >= typeArgTypes.size()) {
+      // Not enough type arguments provided, break and error.
+      tooFewTypeArgs = true;
+      break;
+    }
+    if (auto *paramName = llvh::dyn_cast<ESTree::TypeParameterNode>(&tparam)) {
+      if (paramName->_bound) {
+        sm_.warning(
+            paramName->_bound->getSourceRange(),
+            "type parameter bounds not yet supported");
+      }
+      if (paramName->_variance) {
+        sm_.warning(
+            paramName->_variance->getSourceRange(),
+            "type parameter variance not yet supported");
+      }
+      bindingTable_.try_emplace(
+          paramName->_name, TypeDecl{typeArgTypes[i], scope, &tparam});
+    } else {
+      sm_.error(
+          tparam.getSourceRange(),
+          "only named type parameters supported in generics");
+    }
+    ++i;
+  }
+
+  // Check that there aren't too many (or too few) type arguments provided.
+  if (tooFewTypeArgs || i != typeArgTypes.size()) {
+    sm_.error(
+        typeArgsNode->getSourceRange(),
+        llvh::Twine("type argument mismatch, expected ") +
+            llvh::Twine(params->_params.size()) + ", found " +
+            llvh::Twine(typeArgTypes.size()));
+    return false;
+  }
+
+  return true;
+}
+
+sema::Decl *FlowChecker::specializeGeneric(
+    sema::Decl *oldDecl,
+    ESTree::TypeParameterInstantiationNode *typeArgsNode,
+    sema::LexicalScope *scope) {
+  // Parse and populate the type arguments.
+  llvh::SmallVector<Type *, 2> typeArgTypes{};
+  for (ESTree::Node &arg : typeArgsNode->_params) {
+    Type *type = parseTypeAnnotation(&arg);
+    typeArgTypes.push_back(type);
+  }
+
+  return specializeGenericWithParsedTypes(
+      oldDecl, typeArgsNode, typeArgTypes, scope);
+}
+
+sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
+    sema::Decl *oldDecl,
+    ESTree::TypeParameterInstantiationNode *typeArgsNode,
+    llvh::ArrayRef<Type *> typeArgTypes,
+    sema::LexicalScope *scope) {
+  // Extract info from types.
+  GenericInfo::TypeArgsVector typeArgs{};
+  for (Type *type : typeArgTypes) {
+    assert(type->info && "missing type info for generic specialization");
+    typeArgs.push_back(type->info);
+  }
+
+  // Retrieve generic info and specialization if it exists.
+  GenericInfo &generic = getGenericInfoMustExist(oldDecl);
+  GenericInfo::TypeArgsRef typeArgsRef = typeArgs;
+  ESTree::Node *specialization = generic.getSpecialization(typeArgsRef);
+
+  // Whether to clone a new specialization in this run of the function.
+  bool doClone = !specialization;
+
+  /// \return the NodeList in which to insert new nodes into \p n.
+  auto getNodeList = [](ESTree::Node *n) -> ESTree::NodeList & {
+    switch (n->getKind()) {
+      case ESTree::NodeKind::Program:
+        return llvh::cast<ESTree::ProgramNode>(n)->_body;
+      case ESTree::NodeKind::BlockStatement:
+        return llvh::cast<ESTree::BlockStatementNode>(n)->_body;
+      default:
+        hermes_fatal("invalid node list");
+    }
+  };
+
+  // Create specialization if it doesn't exist.
+  // TODO: Determine if the actual clone can be deferred to avoid potential
+  // stack overflow by cloning from deep in the AST.
+  if (doClone) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Creating specialization for: " << oldDecl->name.str()
+                     << "\n");
+    specialization = cloneNode(
+        astContext_,
+        semContext_,
+        declCollectorMap_,
+        generic.originalNode,
+        scope->parentFunction,
+        scope);
+    if (!specialization) {
+      sm_.error(
+          typeArgsNode->getSourceRange(),
+          "failed to create specialization for generic function");
+      return nullptr;
+    }
+    auto &nodeList = getNodeList(generic.parent);
+    nodeList.insert(generic.originalNode->getIterator(), *specialization);
+    typeArgsRef =
+        generic.addSpecialization(*this, std::move(typeArgs), specialization);
+  }
+
+  // The new Decl for the specialization of the function declaration.
+  sema::Decl *newDecl = nullptr;
+  if (auto *func =
+          llvh::dyn_cast<ESTree::FunctionDeclarationNode>(specialization)) {
+    newDecl = getDecl(llvh::cast<ESTree::IdentifierNode>(
+        llvh::cast<ESTree::FunctionDeclarationNode>(specialization)->_id));
+  }
+
+  newDecl->generic = false;
+
+  // Perform the typechecking of the specialization if it was newly created.
+  if (doClone) {
+    TypeBindingTableScopePtrTy savedScope = bindingTable_.getCurrentScope();
+
+    // Activate the scope of the specialization..
+    bindingTable_.activateScope(generic.bindingTableScope);
+
+    auto onExit = llvh::make_scope_exit([this, &savedScope]() {
+      // Restore the previous scope.
+      bindingTable_.activateScope(savedScope);
+    });
+
+    {
+      // Put the parameter types in the binding table.
+      ESTree::TypeParameterDeclarationNode *typeParamsNode = nullptr;
+      if (auto *func =
+              llvh::dyn_cast<ESTree::FunctionDeclarationNode>(specialization)) {
+        typeParamsNode = llvh::cast<ESTree::TypeParameterDeclarationNode>(
+            ESTree::getTypeParameters(func));
+      }
+      assert(typeParamsNode);
+
+      ScopeRAII paramScope{*this};
+      bool populated = validateAndBindTypeParameters(
+          typeParamsNode, typeArgsNode, typeArgTypes, oldDecl->scope);
+      if (!populated) {
+        LLVM_DEBUG(llvh::dbgs() << "Failed to bind type parameters\n");
+        return nullptr;
+      }
+
+      if (auto *func =
+              llvh::dyn_cast<ESTree::FunctionDeclarationNode>(specialization)) {
+        // TODO: Determine if the actual function typecheck can be deferred to
+        // avoid potential stack overflow by cloning from deep in the AST.
+        typecheckGenericFunctionSpecialization(
+            func, typeArgsNode, typeArgTypes, oldDecl, newDecl);
+      }
+    }
+
+    assert(flowContext_.findDeclType(newDecl) && "expected valid type");
+  }
+
+  return newDecl;
+}
+
+void FlowChecker::resolveCallToGenericFunctionSpecialization(
+    ESTree::CallExpressionNode *node,
+    ESTree::IdentifierNode *callee,
+    sema::Decl *oldDecl) {
+  assert(oldDecl && "expected valid oldDecl");
+
+  sema::Decl *newDecl = specializeGeneric(
+      oldDecl,
+      llvh::cast<ESTree::TypeParameterInstantiationNode>(node->_typeArguments),
+      oldDecl->scope);
+
+  if (newDecl) {
+    semContext_.setExpressionDecl(callee, newDecl);
+    setNodeType(callee, getDeclType(newDecl));
+  }
+}
+
+void FlowChecker::typecheckGenericFunctionSpecialization(
+    ESTree::FunctionDeclarationNode *specialization,
+    ESTree::TypeParameterInstantiationNode *typeArgsNode,
+    llvh::ArrayRef<Type *> typeArgTypes,
+    sema::Decl *oldDecl,
+    sema::Decl *newDecl) {
+  LLVM_DEBUG(
+      llvh::dbgs() << "Typechecking generic function specialization: "
+                   << newDecl->name.str() << "\n");
+
+  // Record the type of the specialization.
+  Type *ftype = parseFunctionType(
+      ESTree::getParams(specialization),
+      ESTree::getReturnType(specialization),
+      ESTree::isAsync(specialization),
+      ESTree::isGenerator(specialization));
+  setNodeType(specialization, ftype);
+  // Specializations of function declarations always have an Identifier name.
+  auto *ident =
+      llvh::cast<ESTree::IdentifierNode>(ESTree::getIdentifier(specialization));
+  recordDecl(newDecl, ftype, ident, specialization);
+
+  // Run typechecker.
+  visitNonGenericFunctionDeclaration(specialization, newDecl);
 }
 
 void FlowChecker::registerGeneric(

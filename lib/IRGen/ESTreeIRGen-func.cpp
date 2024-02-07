@@ -66,6 +66,12 @@ void ESTreeIRGen::genFunctionDeclaration(
   Identifier functionName = Identifier::getFromPointer(id->_name);
   LLVM_DEBUG(llvh::dbgs() << "IRGen function \"" << functionName << "\".\n");
 
+  sema::Decl *decl = getIDDecl(id);
+  if (decl->generic) {
+    // Skip generics that aren't specialized.
+    return;
+  }
+
   Value *funcStorage = resolveIdentifier(id);
   assert(funcStorage && "Function declaration storage must have been resolved");
 

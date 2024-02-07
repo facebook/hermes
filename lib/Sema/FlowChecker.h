@@ -68,7 +68,7 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   FlowContext &flowContext_;
 
   /// Map of DeclCollector instances associated with every function.
-  const sema::DeclCollectorMapTy &declCollectorMap_;
+  sema::DeclCollectorMapTy &declCollectorMap_;
 
   /// Keywords we will be checking for.
   sema::Keywords &kw_;
@@ -235,6 +235,13 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   }
 
   void visit(ESTree::ProgramNode *node);
+
+  /// Run typechecking on a function that's known to not be generic.
+  /// Called from visit(FunctionDeclarationNode *) when there are no type
+  /// parameters, or after cloning a new specialization of a generic function.
+  void visitNonGenericFunctionDeclaration(
+      ESTree::FunctionDeclarationNode *node,
+      sema::Decl *decl);
 
   void visit(ESTree::FunctionDeclarationNode *node);
   void visit(ESTree::FunctionExpressionNode *node);
@@ -438,6 +445,73 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     return semContext_.getExpressionDecl(id);
   }
 
+  /// Add the \p typeArgTypes to the binding table based on the names provided
+  /// in \p node.
+  /// Ensure that there are the correct number of type arguments and that they
+  /// are valid to pass.
+  /// \param params the type parameter declaration.
+  /// \param typeArgsNode the type arguments to pass.
+  /// \param typeArgTypes the actual Types to instantiate the arguments with.
+  /// \param scope the lexical scope to associate with each TypeDecl.
+  /// \pre the binding table's scope is set to the new scope in which to place
+  ///   the bindings (i.e. a direct child of the binding table scope the generic
+  ///   was declared with).
+  /// \return true on success, false on failure and report an error.
+  LLVM_NODISCARD bool validateAndBindTypeParameters(
+      ESTree::TypeParameterDeclarationNode *params,
+      ESTree::TypeParameterInstantiationNode *typeArgsNode,
+      llvh::ArrayRef<Type *> typeArgTypes,
+      sema::LexicalScope *scope);
+
+  /// If necessary, specialize and typecheck the specialization of a generic
+  /// function.
+  /// Parses the type arguments in \p typeArgsNode.
+  /// \param node the call expression passing the type arguments
+  /// \param callee the name of the generic being called
+  /// \param oldDecl the original Decl for the non-specialized generic function
+  /// \return the new Decl for the specialization of the function,
+  ///   nullptr on error.
+  sema::Decl *specializeGeneric(
+      sema::Decl *oldDecl,
+      ESTree::TypeParameterInstantiationNode *typeArgsNode,
+      sema::LexicalScope *scope);
+
+  /// If necessary, specialize and typecheck the specialization of a generic
+  /// function.
+  /// \param node the call expression passing the type arguments
+  /// \param callee the name of the generic being called
+  /// \param oldDecl the original Decl for the non-specialized generic function
+  /// \return the new Decl for the specialization of the function,
+  ///   nullptr on error.
+  sema::Decl *specializeGenericWithParsedTypes(
+      sema::Decl *oldDecl,
+      ESTree::TypeParameterInstantiationNode *typeArgsNode,
+      llvh::ArrayRef<Type *> typeArgTypes,
+      sema::LexicalScope *scope);
+
+  /// If necessary, specialize and typecheck the specialization of a generic
+  /// function.
+  /// Set the type of the callee to the specialized version of the function.
+  /// \param node the call expression passing the type arguments
+  /// \param callee the name of the generic being called
+  /// \param oldDecl the original Decl for the non-specialized generic function
+  void resolveCallToGenericFunctionSpecialization(
+      ESTree::CallExpressionNode *node,
+      ESTree::IdentifierNode *callee,
+      sema::Decl *oldDecl);
+
+  /// Run the typechecker on a newly created specialization of a generic
+  /// function.
+  /// \param typeArgTypes the type arguments passed to the generic function.
+  /// \param oldDecl the original Decl for the non-specialized generic function.
+  /// \param newDecl the new Decl for the specialization of the function.
+  void typecheckGenericFunctionSpecialization(
+      ESTree::FunctionDeclarationNode *specialization,
+      ESTree::TypeParameterInstantiationNode *typeArgsNode,
+      llvh::ArrayRef<Type *> typeArgTypes,
+      sema::Decl *oldDecl,
+      sema::Decl *newDecl);
+
   /// Register the \p decl generic with its original AST \p node.
   /// Increment refcount of \p bindingTableScope so it can be kept alive and
   /// activated on specialization.
@@ -492,6 +566,9 @@ class FlowChecker::FunctionContext {
             outer.declCollectorMap_.find(declCollectorNode)->second.get()),
         functionType(functionType),
         thisParamType(thisParamType) {
+    assert(
+        outer.declCollectorMap_.count(declCollectorNode) &&
+        "no declCollector for this node");
     outer.curFunctionContext_ = this;
   }
 
