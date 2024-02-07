@@ -94,6 +94,12 @@ class Decl {
   Identifier const name;
   /// What kind of declaration it is.
   Kind kind;
+  /// Whether this is a generic declaration.
+  /// The type checker can use this flag to keep track of which declarations are
+  /// generic.
+  /// SemanticResolver itself doesn't set this flag because it has no
+  /// understanding of types.
+  bool generic = false;
   /// If this is a special declaration, identify which one.
   Special const special;
 
