@@ -34,6 +34,25 @@ NodeList &getParams(FunctionLikeNode *node) {
   }
 }
 
+Node *getTypeParameters(FunctionLikeNode *node) {
+  switch (node->getKind()) {
+    default:
+      assert(
+          node->getKind() == NodeKind::Program && "invalid FunctionLikeNode");
+      return nullptr;
+    case NodeKind::FunctionExpression:
+      return cast<FunctionExpressionNode>(node)->_typeParameters;
+    case NodeKind::ArrowFunctionExpression:
+      return cast<ArrowFunctionExpressionNode>(node)->_typeParameters;
+    case NodeKind::FunctionDeclaration:
+      return cast<FunctionDeclarationNode>(node)->_typeParameters;
+#if HERMES_PARSE_FLOW
+    case NodeKind::ComponentDeclaration:
+      return cast<ComponentDeclarationNode>(node)->_typeParameters;
+#endif
+  }
+}
+
 BlockStatementNode *getBlockStatement(FunctionLikeNode *node) {
   switch (node->getKind()) {
     default:

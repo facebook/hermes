@@ -1178,6 +1178,10 @@ Decoration *getDecoration(Node *n) {
 /// Return a reference to the parameter list of a FunctionLikeNode.
 NodeList &getParams(FunctionLikeNode *node);
 
+/// Return a reference to the type parameter list of a FunctionLikeNode,
+/// nullptr if it doesn't exist.
+Node *getTypeParameters(FunctionLikeNode *node);
+
 /// If the body of the function-like node is a block statement, return it,
 /// otherwise return nullptr.
 /// ProgramNode doesn't have a block statement body, as well as some arrow
