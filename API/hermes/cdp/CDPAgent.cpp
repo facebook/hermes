@@ -207,6 +207,9 @@ void CDPAgentImpl::DomainAgents::handleCommand(
   } else if (command->method == "Debugger.setPauseOnExceptions") {
     debuggerAgent_->setPauseOnExceptions(
         static_cast<m::debugger::SetPauseOnExceptionsRequest &>(*command));
+  } else if (command->method == "Debugger.evaluateOnCallFrame") {
+    debuggerAgent_->evaluateOnCallFrame(
+        static_cast<m::debugger::EvaluateOnCallFrameRequest &>(*command));
   } else if (command->method == "Runtime.enable") {
     runtimeAgent_->enable(static_cast<m::runtime::EnableRequest &>(*command));
   } else if (command->method == "Runtime.disable") {

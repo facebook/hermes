@@ -1445,6 +1445,7 @@ TEST_F(ConnectionTests, testAsyncPauseWhileRunning) {
   asyncRuntime.stop();
 }
 
+// Also implemented as CDPAgentTest::TestEvalOnCallFrame
 TEST_F(ConnectionTests, testEvalOnCallFrame) {
   int msgId = 1;
 
@@ -1702,6 +1703,7 @@ TEST_F(ConnectionTests, testRuntimeCompileScriptParseError) {
   asyncRuntime.stop();
 }
 
+// Also implemented as CDPAgentTest::TestEvalOnCallFrameException
 TEST_F(ConnectionTests, testEvalOnCallFrameException) {
   int msgId = 1;
 
