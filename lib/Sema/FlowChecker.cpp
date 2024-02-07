@@ -3619,5 +3619,45 @@ Type *FlowChecker::processFunctionTypeAnnotation(
       node);
 }
 
+void FlowChecker::registerGeneric(
+    sema::Decl *decl,
+    ESTree::Node *node,
+    ESTree::Node *parent,
+    const TypeBindingTableScopePtrTy &bindingScope) {
+  assert(decl->generic && "expected a generic decl");
+  GenericInfo &info = generics_.emplace_back(node, parent, bindingScope);
+  auto [it, inserted] = genericsMap_.try_emplace(decl, &info);
+  assert(inserted && "duplicate generic decl");
+  (void)it;
+}
+
+/// \return the generic info associated with \p decl.
+FlowChecker::GenericInfo &FlowChecker::getGenericInfoMustExist(
+    sema::Decl *decl) {
+  auto it = genericsMap_.find(decl);
+  assert(it != genericsMap_.end() && "generic was never registered");
+  return *it->second;
+}
+
+ESTree::Node *FlowChecker::GenericInfo::getSpecialization(
+    FlowChecker::GenericInfo::TypeArgsRef args) {
+  auto it = specializations.find(args);
+  if (it != specializations.end())
+    return it->second;
+  return nullptr;
+}
+
+FlowChecker::GenericInfo::TypeArgsRef
+FlowChecker::GenericInfo::addSpecialization(
+    FlowChecker &outer,
+    FlowChecker::GenericInfo::TypeArgsVector &&args,
+    ESTree::Node *node) {
+  outer.typeArgStorage_.emplace_back(std::move(args));
+  auto [it, inserted] = specializations.try_emplace(
+      TypeArgsRef{outer.typeArgStorage_.back()}, node);
+  assert(inserted && "double specialization not allowed");
+  return it->first;
+}
+
 } // namespace flow
 } // namespace hermes

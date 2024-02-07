@@ -20,6 +20,36 @@
 namespace hermes {
 namespace flow {
 
+/// Specialization to allow hashing of types in accordance with the
+/// TypeInfo::hash and TypeInfo::equals methods.
+struct TypeArrayDenseMapInfo
+    : public llvh::DenseMapInfo<llvh::ArrayRef<TypeInfo *>> {
+  // static inline T getEmptyKey();
+  // static inline T getTombstoneKey();
+  static unsigned getHashValue(llvh::ArrayRef<TypeInfo *> val) {
+    llvh::hash_code hash{0};
+    for (const TypeInfo *type : val)
+      hash = llvh::hash_combine(hash, type->hash());
+    return hash;
+  }
+  static bool isEqual(
+      llvh::ArrayRef<TypeInfo *> LHS,
+      llvh::ArrayRef<TypeInfo *> RHS) {
+    if (LHS == RHS)
+      return true;
+    auto const EMPTY = getEmptyKey();
+    auto const TOMB = getTombstoneKey();
+    if (LHS == EMPTY || LHS == TOMB || RHS == EMPTY || RHS == TOMB)
+      return false;
+    if (LHS.size() != RHS.size())
+      return false;
+    for (size_t i = 0, e = LHS.size(); i < e; ++i)
+      if (!LHS[i]->equals(RHS[i]))
+        return false;
+    return true;
+  }
+};
+
 /// Class the performs all resolution.
 /// Reports errors if validation fails.
 class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
@@ -85,6 +115,67 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// The current class context.
   ClassContext *curClassContext_ = nullptr;
 
+  /// Holds information needed on how to instantiate a generic.
+  class GenericInfo {
+   public:
+    /// Storage for type arguments.
+    /// The Type pointers point to the storage in FlowContext, so they're
+    /// stable.
+    /// SmallVector is usable here because once these vectors are added to
+    /// the typeArgStorage_ deque, they are never modified and won't move.
+    using TypeArgsVector = llvh::SmallVector<TypeInfo *, 2>;
+
+    /// Reference to a TypeArgs, used for storing in the DenseMap.
+    using TypeArgsRef = llvh::ArrayRef<TypeInfo *>;
+
+    /// Full AST for the generic.
+    /// e.g. if it's a generic function, this is the FunctionLikeNode.
+    ESTree::Node *originalNode;
+
+    /// Parent of the generic declaration.
+    /// Contains the NodeList to insert the AST into.
+    ESTree::Node *parent;
+
+    /// The binding table scope for the generic.
+    /// Activated when the generic is instantiated.
+    TypeBindingTableScopePtrTy bindingTableScope;
+
+    /// Map from the list of type arguments to the specialized, typechecked
+    /// resultant AST for the specialization.
+    llvh::DenseMap<TypeArgsRef, ESTree::Node *, TypeArrayDenseMapInfo>
+        specializations{};
+
+   public:
+    /// \param bindingTableScope takes shared ownership of the binding table
+    ///   scope.
+    GenericInfo(
+        ESTree::Node *originalNode,
+        ESTree::Node *parent,
+        const TypeBindingTableScopePtrTy &bindingTableScope)
+        : originalNode(originalNode),
+          parent(parent),
+          bindingTableScope(bindingTableScope) {
+      // We need to insert into the parent.
+      assert(
+          (llvh::isa<ESTree::ProgramNode>(parent) ||
+           llvh::isa<ESTree::BlockStatementNode>(parent)) &&
+          "Invalid parent");
+    }
+
+    GenericInfo(const GenericInfo &other) = delete;
+    GenericInfo operator=(const GenericInfo &other) = delete;
+
+    /// \return the specialization if it exists, otherwise nullptr.
+    ESTree::Node *getSpecialization(TypeArgsRef args);
+
+    /// Add the specialization for \p args to the \c specializations map.
+    /// \return a reference to the internal storage containing the type args.
+    TypeArgsRef addSpecialization(
+        FlowChecker &outer,
+        TypeArgsVector &&args,
+        ESTree::Node *node);
+  };
+
   /// Types associated with declarations.
   llvh::DenseMap<const sema::Decl *, Type *> &declTypes_;
   /// The AST node for every declaration. Used for reporting re-declarations.
@@ -102,6 +193,21 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// Mapping from native type names to their enum code. Populated by
   /// \c declareNativeTypes()
   llvh::DenseMap<UniqueString *, NativeCType> nativeTypes_;
+
+  /// Storage for the TypeArgs vectors.
+  /// Elements of typeArgStorage_ contain the storage for the keys in
+  /// \c GenericInfo::specializations.
+  /// Once stored here, the TypeArgsVectors are not modified, so TypeArgsRef
+  /// pointers into the vectors can be stored.
+  std::deque<const GenericInfo::TypeArgsVector> typeArgStorage_{};
+
+  /// Stable storage for the GenericInfo.
+  std::deque<GenericInfo> generics_;
+
+  /// Maps from the Decl to a reference to an element of \c generics_.
+  /// Populated values are not nullable.
+  /// Store a pointer to allow for empty/tombstone values in DenseMap.
+  llvh::DenseMap<const sema::Decl *, GenericInfo *> genericsMap_;
 
  public:
   explicit FlowChecker(
@@ -331,6 +437,22 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   sema::Decl *getDecl(ESTree::IdentifierNode *id) {
     return semContext_.getExpressionDecl(id);
   }
+
+  /// Register the \p decl generic with its original AST \p node.
+  /// Increment refcount of \p bindingTableScope so it can be kept alive and
+  /// activated on specialization.
+  /// \param decl the generic declaration.
+  /// \param node the original AST node.
+  /// \param parent the parent of \p node.
+  void registerGeneric(
+      sema::Decl *decl,
+      ESTree::Node *node,
+      ESTree::Node *parent,
+      const TypeBindingTableScopePtrTy &bindingTableScope);
+
+  /// \pre \p decl is a generic declaration that has been registered.
+  /// \return the generic info associated with \p decl.
+  GenericInfo &getGenericInfoMustExist(sema::Decl *decl);
 };
 
 class FlowChecker::FunctionContext {
