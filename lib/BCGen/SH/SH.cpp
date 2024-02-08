@@ -881,7 +881,9 @@ class InstrGen {
     int32_t delta = curScopeDepth.getValue() - instScopeDepth.getValue() - 1;
     os_.indent(2);
     generateRegister(inst);
-    os_ << " = _sh_ljs_get_env(shr, frame, " << delta << ");\n";
+    os_ << " = _sh_ljs_get_env(shr, _sh_ljs_get_env_from_closure(shr, frame["
+        << hbc::StackFrameLayout::CalleeClosureOrCB << "])"
+        << ", " << delta << ");\n";
   }
   void generateHBCGetArgumentsLengthInst(HBCGetArgumentsLengthInst &inst) {
     os_.indent(2);
@@ -1963,8 +1965,9 @@ class InstrGen {
     os_ << " = _sh_ljs_get_global_object(shr);\n";
   }
   void generateHBCCreateEnvironmentInst(HBCCreateEnvironmentInst &inst) {
-    os_ << "  _sh_ljs_create_environment(shr, frame, &";
-    generateRegister(inst);
+    os_ << "  _sh_ljs_create_environment(shr, _sh_ljs_get_env_from_closure(shr, frame["
+        << hbc::StackFrameLayout::CalleeClosureOrCB << "]),";
+    generateRegisterPtr(inst);
     os_ << ", " << envSize_ << ");\n";
   }
   void generateCoerceThisNSInst(CoerceThisNSInst &inst) {

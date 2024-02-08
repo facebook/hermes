@@ -423,26 +423,26 @@ extern "C" SHLegacyValue _sh_ljs_get_builtin_closure(
 
 extern "C" void _sh_ljs_create_environment(
     SHRuntime *shr,
-    SHLegacyValue *frame,
+    SHLegacyValue parentEnv,
     SHLegacyValue *result,
     uint32_t size) {
   Runtime &runtime = getRuntime(shr);
-  auto framePtr = StackFramePtr(toPHV(frame));
 
-  auto *parentEnv = framePtr.getCalleeClosureUnsafe()->getEnvironment(runtime);
-  // We are not allowed to store null object pointers in locals, so we convert
-  // a null pointer to JS Null.
-  result->raw = parentEnv
-      ? HermesValue::encodeObjectValueUnsafe(parentEnv).getRaw()
-      : HermesValue::encodeNullValue().getRaw();
+  // We are not allowed to store null object pointers in locals, so we have to
+  // use makeNullHandle for those.
+  const PinnedHermesValue *parentEnvPtr;
+  if (_sh_ljs_get_pointer(parentEnv)) {
+    result->raw = parentEnv.raw;
+    parentEnvPtr = toPHV(result);
+  } else {
+    parentEnvPtr =
+        runtime.makeNullHandle<Environment>().unsafeGetPinnedHermesValue();
+  }
 
   {
     GCScopeMarkerRAII marker{runtime};
     HermesValue res = Environment::create(
-        runtime,
-        _sh_ljs_is_null(*result) ? runtime.makeNullHandle<Environment>()
-                                 : Handle<Environment>::vmcast(toPHV(result)),
-        size);
+        runtime, Handle<Environment>::vmcast_or_null(parentEnvPtr), size);
     result->raw = res.getRaw();
   }
   // #ifdef HERMES_ENABLE_DEBUGGER
@@ -451,11 +451,9 @@ extern "C" void _sh_ljs_create_environment(
 }
 
 extern "C" SHLegacyValue
-_sh_ljs_get_env(SHRuntime *shr, SHLegacyValue *frame, uint32_t level) {
+_sh_ljs_get_env(SHRuntime *shr, SHLegacyValue startEnv, uint32_t level) {
   Runtime &runtime = getRuntime(shr);
-  Environment *curEnv = StackFramePtr(toPHV(frame))
-                            .getCalleeClosureUnsafe()
-                            ->getEnvironment(runtime);
+  Environment *curEnv = vmcast<Environment>(*toPHV(&startEnv));
   while (level--) {
     assert(curEnv && "invalid environment relative level");
     curEnv = curEnv->getParentEnvironment(runtime);

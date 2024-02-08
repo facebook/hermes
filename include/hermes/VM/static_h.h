@@ -375,23 +375,33 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_call_builtin(
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_get_builtin_closure(SHRuntime *shr, uint32_t builtinMethodID);
 
-/// Create a new environment with the specified size and the current function's
-/// environment as parent.
+/// Create a new environment with the specified \p size and \p parentEnv.
 /// \p result will contain the result on exit, but is also used as a temporary
 ///     (thus is not `const`).
 SHERMES_EXPORT void _sh_ljs_create_environment(
     SHRuntime *shr,
-    SHLegacyValue *frame,
+    SHLegacyValue parentEnv,
     SHLegacyValue *result,
     uint32_t size);
 
-/// Get the enclosing LJS environment, \p level levels up, where 0 represents
-/// the environment of the current function.
+/// Get the environment from the given \p closure. Note that the result should
+/// be handled with care, since it may be nullptr for the top level function,
+/// which cannot be stored in SHLocals.
+static inline SHLegacyValue _sh_ljs_get_env_from_closure(
+    SHRuntime *shr,
+    SHLegacyValue closure) {
+  SHCompressedPointer scp =
+      ((SHCallable *)_sh_ljs_get_pointer(closure))->environment;
+  return _sh_ljs_object(_sh_cp_decode(shr, scp));
+}
+
+/// Get the enclosing LJS environment, \p level levels up from \p startEnv,
+/// where 0 represents the environment of the current function.
 /// TODO: implement a "raw" version of this function returning a raw pointer,
 ///       as well as raw version of the other env-related functions, as soon
 ///       as we have the ability to mark unencoded pointers.
 SHERMES_EXPORT SHLegacyValue
-_sh_ljs_get_env(SHRuntime *shr, SHLegacyValue *frame, uint32_t level);
+_sh_ljs_get_env(SHRuntime *shr, SHLegacyValue startEnv, uint32_t level);
 
 /// Load the value at slot \p index from the given Environment \p env.
 static inline SHLegacyValue _sh_ljs_load_from_env(
