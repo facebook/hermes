@@ -94,6 +94,10 @@ class CDPAgentTest : public ::testing::Test {
   JSONObject *expectNotification(const std::string &method);
   JSONObject *expectResponse(const std::optional<std::string> &method, int id);
 
+  void sendRequest(
+      const std::string &method,
+      int id,
+      const std::function<void(::hermes::JSONEmitter &)> &setParameters = {});
   void sendParameterlessRequest(const std::string &method, int id);
   void sendAndCheckResponse(const std::string &method, int id);
   void sendEvalRequest(int id, int callFrameId, const std::string &expression);
@@ -122,7 +126,7 @@ class CDPAgentTest : public ::testing::Test {
 
   std::mutex testSignalMutex_;
   std::condition_variable testSignalCondition_;
-  bool testSignalled_;
+  bool testSignalled_ = false;
 
   std::mutex messageMutex_;
   std::condition_variable hasMessage_;
@@ -254,16 +258,29 @@ jsi::Value CDPAgentTest::shouldStop(
   return stopFlag_.load() ? jsi::Value(true) : jsi::Value(false);
 }
 
-void CDPAgentTest::sendParameterlessRequest(const std::string &method, int id) {
+void CDPAgentTest::sendRequest(
+    const std::string &method,
+    int id,
+    const std::function<void(::hermes::JSONEmitter &)> &setParameters) {
   std::string command;
   llvh::raw_string_ostream commandStream{command};
   ::hermes::JSONEmitter json{commandStream};
   json.openDict();
   json.emitKeyValue("method", method);
   json.emitKeyValue("id", id);
+  if (setParameters) {
+    json.emitKey("params");
+    json.openDict();
+    setParameters(json);
+    json.closeDict();
+  }
   json.closeDict();
   commandStream.flush();
   cdpAgent_->handleCommand(command);
+}
+
+void CDPAgentTest::sendParameterlessRequest(const std::string &method, int id) {
+  sendRequest(method, id);
 }
 
 void CDPAgentTest::sendAndCheckResponse(const std::string &method, int id) {
@@ -1113,12 +1130,16 @@ TEST_F(CDPAgentTest, RefuseDoubleRuntimeEnable) {
 TEST_F(CDPAgentTest, RefuseRuntimeOperationsWithoutEnable) {
   int msgId = 1;
 
-  // Verify disabling fails before enabling
+  // Disable
   sendParameterlessRequest("Runtime.disable", msgId);
   ensureErrorResponse(waitForMessage(), msgId++);
 
   // GetHeapUsage
   sendParameterlessRequest("Runtime.getHeapUsage", msgId);
+  ensureErrorResponse(waitForMessage(), msgId++);
+
+  // GlobalLexicalScopeNames
+  sendParameterlessRequest("Runtime.globalLexicalScopeNames", msgId);
   ensureErrorResponse(waitForMessage(), msgId++);
 }
 
@@ -1158,6 +1179,65 @@ TEST_F(CDPAgentTest, GetHeapUsage) {
   // more than 0.
   EXPECT_GT(jsonScope_.getNumber(resp, {"result", "usedSize"}), 0);
   EXPECT_GT(jsonScope_.getNumber(resp, {"result", "totalSize"}), 0);
+
+  // Let the script terminate
+  stopFlag_.store(true);
+}
+
+TEST_F(CDPAgentTest, RuntimeGlobalLexicalScopeNames) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Runtime.enable", msgId++);
+  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
+
+  scheduleScript(R"(
+    // Declare some globals to get the names of
+    let globalLet = "let";
+    const globalConst = "const";
+    var globalVar = "var";
+
+    // Call some functions with locals that should not show up in the list of
+    // globals
+    let func1 = () => {
+      let local1 = 111;
+      func2();
+    }
+
+    function func2() {
+      let func3 = () => {
+        let local3 = 333;
+        // Tell the test we're here
+        signalTest();
+        // Wait for the test to inspect the state
+        while (!shouldStop()) {}
+      }
+
+      let local2 = 222;
+      func3();
+    }
+
+    func1();
+  )");
+
+  waitForTestSignal();
+
+  sendRequest(
+      "Runtime.globalLexicalScopeNames",
+      msgId,
+      [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("executionContextId", kHermesExecutionContextId);
+      });
+
+  auto resp = expectResponse(std::nullopt, msgId++);
+
+  // Check for the "let" and "const" variables, excluding the "var" variable.
+  std::vector<std::string> expectedNames{"globalLet", "globalConst", "func1"};
+  uint32_t index = 0;
+  for (const std::string &expectedName : expectedNames) {
+    std::string name = jsonScope_.getString(
+        resp, {"result", "names", std::to_string(index++)});
+    EXPECT_EQ(name, expectedName);
+  }
 
   // Let the script terminate
   stopFlag_.store(true);
