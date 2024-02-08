@@ -3345,6 +3345,7 @@ TEST_F(ConnectionTests, DISABLED_testBasicProfilerOperation) {
   asyncRuntime.stop();
 }
 
+// Also implemented as CDPAgentTest::TestRuntimeGlobalLexicalScopeNames
 TEST_F(ConnectionTests, testGlobalLexicalScopeNames) {
   int msgId = 1;
   asyncRuntime.executeScriptAsync(R"(
