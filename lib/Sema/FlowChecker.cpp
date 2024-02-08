@@ -1495,9 +1495,9 @@ class FlowChecker::ExprVisitor {
           node->_left = outer_.implicitCheckedCast(node->_left, lt, cf);
           res = lt;
         } else {
-          // If we don't need a checked cast, rt is possibly narrower than lt,
-          // but never wider, so we want to use it as result.
-          res = rt;
+          // If we don't need a checked cast, opResType is possibly narrower
+          // than lt, but never wider, so we want to use it as result.
+          res = opResType;
         }
       }
     }
