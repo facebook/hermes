@@ -531,7 +531,8 @@ class IRBuilder {
   //                  Target specific insertions                              //
   //--------------------------------------------------------------------------//
 
-  HBCResolveEnvironment *createHBCResolveEnvironment(VariableScope *scope);
+  HBCResolveParentEnvironmentInst *createHBCResolveParentEnvironmentInst(
+      VariableScope *scope);
   HBCStoreToEnvironmentInst *
   createHBCStoreToEnvironmentInst(Value *env, Value *toPut, Variable *var);
   HBCLoadFromEnvironmentInst *createHBCLoadFromEnvironmentInst(
@@ -550,7 +551,7 @@ class IRBuilder {
 
   LoadParamInst *createLoadParamInst(JSDynamicParam *param);
 
-  HBCCreateEnvironmentInst *createHBCCreateEnvironmentInst();
+  HBCCreateFunctionEnvironmentInst *createHBCCreateFunctionEnvironmentInst();
 
   LIRGetThisNSInst *createLIRGetThisNSInst();
 

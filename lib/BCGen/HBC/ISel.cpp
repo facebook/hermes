@@ -1320,8 +1320,8 @@ void HBCISel::generateGetBuiltinClosureInst(
   BCFGen_->emitGetBuiltinClosure(output, Inst->getBuiltinIndex());
 }
 
-void HBCISel::generateHBCResolveEnvironment(
-    HBCResolveEnvironment *Inst,
+void HBCISel::generateHBCResolveParentEnvironmentInst(
+    HBCResolveParentEnvironmentInst *Inst,
     BasicBlock *next) {
   // We statically determine the relative depth delta of the current scope
   // and the scope that the variable belongs to. Such delta is used as
@@ -1339,12 +1339,12 @@ void HBCISel::generateHBCResolveEnvironment(
       curScopeDepth && curScopeDepth.getValue() >= instScopeDepth.getValue() &&
       "Cannot access variables in inner scopes");
   int32_t delta = curScopeDepth.getValue() - instScopeDepth.getValue();
-  assert(delta > 0 && "HBCResolveEnvironment for current scope");
+  assert(delta > 0 && "HBCResolveParentEnvironmentInst for current scope");
   if (std::numeric_limits<uint8_t>::max() < delta) {
     F_->getContext().getSourceErrorManager().error(
         Inst->getLocation(), "Variable environment is out-of-reach");
   }
-  BCFGen_->emitGetEnvironment(encodeValue(Inst), delta - 1);
+  BCFGen_->emitGetParentEnvironment(encodeValue(Inst), delta - 1);
 }
 void HBCISel::generateHBCStoreToEnvironmentInst(
     HBCStoreToEnvironmentInst *Inst,
@@ -1473,11 +1473,11 @@ void HBCISel::generateLoadParamInst(
   }
 }
 
-void HBCISel::generateHBCCreateEnvironmentInst(
-    hermes::HBCCreateEnvironmentInst *Inst,
+void HBCISel::generateHBCCreateFunctionEnvironmentInst(
+    hermes::HBCCreateFunctionEnvironmentInst *Inst,
     hermes::BasicBlock *next) {
   auto dstReg = encodeValue(Inst);
-  BCFGen_->emitCreateEnvironment(dstReg);
+  BCFGen_->emitCreateFunctionEnvironment(dstReg);
 }
 
 void HBCISel::generateHBCProfilePointInst(

@@ -62,7 +62,7 @@ DEF_VALUE(LoadFrameInst, Instruction)
 DEF_VALUE(LoadParamInst, Instruction)
 #ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCLoadConstInst, Instruction)
-DEF_VALUE(HBCResolveEnvironment, Instruction)
+DEF_VALUE(HBCResolveParentEnvironmentInst, Instruction)
 DEF_VALUE(HBCGetArgumentsLengthInst, Instruction)
 
 MARK_FIRST(HBCReifyArgumentsInst, Instruction)
@@ -220,7 +220,7 @@ DEF_VALUE(ResumeGeneratorInst, Instruction)
 DEF_VALUE(LIRGetThisNSInst, Instruction)
 #ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCGetGlobalObjectInst, Instruction)
-DEF_VALUE(HBCCreateEnvironmentInst, Instruction)
+DEF_VALUE(HBCCreateFunctionEnvironmentInst, Instruction)
 
 MARK_FIRST(HBCGetArgumentsPropByValInst, Instruction)
 DEF_VALUE(HBCGetArgumentsPropByValLooseInst, HBCGetArgumentsPropByValInst)

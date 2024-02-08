@@ -538,7 +538,8 @@ bool Verifier::visitHBCLoadFromEnvironmentInst(
       "HBCLoadFromEnvironment type must be the same as the variable type");
   return true;
 }
-bool Verifier::visitHBCResolveEnvironment(const HBCResolveEnvironment &Inst) {
+bool Verifier::visitHBCResolveParentEnvironmentInst(
+    const HBCResolveParentEnvironmentInst &Inst) {
   // Nothing to verify at this point.
   return true;
 }
@@ -1113,8 +1114,8 @@ bool Verifier::visitDeclareGlobalVarInst(const DeclareGlobalVarInst &Inst) {
   return true;
 }
 
-bool Verifier::visitHBCCreateEnvironmentInst(
-    const HBCCreateEnvironmentInst &Inst) {
+bool Verifier::visitHBCCreateFunctionEnvironmentInst(
+    const HBCCreateFunctionEnvironmentInst &Inst) {
   // Nothing to verify at this point.
   return true;
 }

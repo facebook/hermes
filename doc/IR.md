@@ -804,6 +804,26 @@ Arguments | %environment is the closure's environment, %body is the closure's bo
 Semantics | The instruction creates a new GeneratorInnerFunction access the environment and wraps it in a Generator.
 Effects | Does not read or write to memory.
 
+### HBCCreateFunctionEnvironmentInst
+
+HBCCreateFunctionEnvironmentInst | _
+--- | --- |
+Description | Create a new environment with the function's parent environment as its parent.
+Example | %0 = HBCCreateFunctionEnvironmentInst
+Arguments | None.
+Semantics | The instruction creates a new environment for a function.
+Effects | Does not read or write to memory.
+
+### HBCResolveParentEnvironmentInst
+
+HBCResolveParentEnvironmentInst | _
+--- | --- |
+Description | Traverse the chain of environments starting at the current function's parent to find a given environment.
+Example | %0 = HBCResolveParentEnvironmentInst %varScope
+Arguments | %varScope is the variable scope to resolve to.
+Semantics | The instruction resolves an environment that is a parent of the current function's environment.
+Effects | Does not read or write to memory.
+
 ### HBCAllocObjectFromBufferInst
 
 HBCAllocObjectFromBufferInst | _

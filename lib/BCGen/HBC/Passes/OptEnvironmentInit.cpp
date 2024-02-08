@@ -37,7 +37,7 @@ bool OptEnvironmentInit::runOnFunction(Function *F) {
     for (auto &I : BB) {
       auto *inst = &I;
 
-      if (auto *CE = llvh::dyn_cast<HBCCreateEnvironmentInst>(inst)) {
+      if (auto *CE = llvh::dyn_cast<HBCCreateFunctionEnvironmentInst>(inst)) {
         createdEnvs.insert(CE);
         continue;
       }

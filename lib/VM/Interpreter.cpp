@@ -1991,20 +1991,20 @@ tailCall:
         DISPATCH;
       }
 
-      CASE(GetEnvironment) {
+      CASE(GetParentEnvironment) {
         // The currently executing function must exist, so get the environment.
         Environment *curEnv =
             FRAME.getCalleeClosureUnsafe()->getEnvironment(runtime);
-        for (unsigned level = ip->iGetEnvironment.op2; level; --level) {
+        for (unsigned level = ip->iGetParentEnvironment.op2; level; --level) {
           assert(curEnv && "invalid environment relative level");
           curEnv = curEnv->getParentEnvironment(runtime);
         }
-        O1REG(GetEnvironment) = HermesValue::encodeObjectValue(curEnv);
-        ip = NEXTINST(GetEnvironment);
+        O1REG(GetParentEnvironment) = HermesValue::encodeObjectValue(curEnv);
+        ip = NEXTINST(GetParentEnvironment);
         DISPATCH;
       }
 
-      CASE(CreateEnvironment) {
+      CASE(CreateFunctionEnvironment) {
         tmpHandle = HermesValue::encodeObjectValueUnsafe(
             FRAME.getCalleeClosureUnsafe()->getEnvironment(runtime));
 
@@ -2015,12 +2015,12 @@ tailCall:
                 Handle<Environment>::vmcast_or_null(tmpHandle),
                 curCodeBlock->getEnvironmentSize()));
 
-        O1REG(CreateEnvironment) = envHV;
+        O1REG(CreateFunctionEnvironment) = envHV;
 #ifdef HERMES_ENABLE_DEBUGGER
         FRAME.getDebugEnvironmentRef() = envHV;
 #endif
         tmpHandle = HermesValue::encodeUndefinedValue();
-        ip = NEXTINST(CreateEnvironment);
+        ip = NEXTINST(CreateFunctionEnvironment);
         DISPATCH;
       }
 

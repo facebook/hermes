@@ -60,9 +60,9 @@ void updateToEntryInsertionPoint(IRBuilder &builder, Function *F) {
   auto &BB = F->front();
   auto it = BB.begin();
   auto end = BB.end();
-  // Skip all HBCCreateEnvironmentInst and FirstInBlock insts.
+  // Skip all HBCCreateFunctionEnvironmentInst and FirstInBlock insts.
   while (it != end &&
-         (llvh::isa<HBCCreateEnvironmentInst>(*it) ||
+         (llvh::isa<HBCCreateFunctionEnvironmentInst>(*it) ||
           it->getSideEffect().getFirstInBlock()))
     ++it;
 
@@ -286,11 +286,11 @@ bool LoadConstants::runOnFunction(Function *F) {
 Instruction *LowerLoadStoreFrameInst::getScope(
     IRBuilder &builder,
     Variable *var,
-    HBCCreateEnvironmentInst *captureScope) {
+    HBCCreateFunctionEnvironmentInst *captureScope) {
   if (var->getParent()->getFunction() != builder.getFunction()) {
     // If the variable is neither from the current scope,
     // we should get the proper scope for it.
-    return builder.createHBCResolveEnvironment(var->getParent());
+    return builder.createHBCResolveParentEnvironmentInst(var->getParent());
   } else {
     // Now we know that the variable belongs to the current scope.
     // We are going to conservatively assume the variable might get
@@ -316,8 +316,8 @@ bool LowerLoadStoreFrameInst::runOnFunction(Function *F) {
   // we currently use only the lexical nesting level to determine which parent
   // environment to use - we don't account for the case when an environment may
   // not be needed somewhere along the chain.
-  HBCCreateEnvironmentInst *captureScope =
-      builder.createHBCCreateEnvironmentInst();
+  HBCCreateFunctionEnvironmentInst *captureScope =
+      builder.createHBCCreateFunctionEnvironmentInst();
 
   for (BasicBlock &BB : F->getBasicBlockList()) {
     for (auto I = BB.begin(), E = BB.end(); I != E; /* nothing */) {

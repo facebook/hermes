@@ -514,7 +514,8 @@ class TypeInferenceImpl {
     // Return the type that has been inferred for the parameter.
     return inst->getParam()->getType();
   }
-  Type inferHBCResolveEnvironment(HBCResolveEnvironment *inst) {
+  Type inferHBCResolveParentEnvironmentInst(
+      HBCResolveParentEnvironmentInst *inst) {
     return Type::createEnvironment();
   }
   Type inferHBCGetArgumentsLengthInst(HBCGetArgumentsLengthInst *inst) {
@@ -780,7 +781,8 @@ class TypeInferenceImpl {
   Type inferHBCGetGlobalObjectInst(HBCGetGlobalObjectInst *inst) {
     return *inst->getInherentType();
   }
-  Type inferHBCCreateEnvironmentInst(HBCCreateEnvironmentInst *inst) {
+  Type inferHBCCreateFunctionEnvironmentInst(
+      HBCCreateFunctionEnvironmentInst *inst) {
     return Type::createEnvironment();
   }
   Type inferLIRGetThisNSInst(LIRGetThisNSInst *inst) {

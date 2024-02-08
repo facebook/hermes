@@ -869,7 +869,8 @@ class InstrGen {
       os_ << " = _sh_ljs_param(frame, " << index << ");\n";
     }
   }
-  void generateHBCResolveEnvironment(HBCResolveEnvironment &inst) {
+  void generateHBCResolveParentEnvironmentInst(
+      HBCResolveParentEnvironmentInst &inst) {
     llvh::Optional<int32_t> instScopeDepth =
         scopeAnalysis_.getScopeDepth(inst.getScope());
     llvh::Optional<int32_t> curScopeDepth =
@@ -1964,7 +1965,8 @@ class InstrGen {
     generateRegister(inst);
     os_ << " = _sh_ljs_get_global_object(shr);\n";
   }
-  void generateHBCCreateEnvironmentInst(HBCCreateEnvironmentInst &inst) {
+  void generateHBCCreateFunctionEnvironmentInst(
+      HBCCreateFunctionEnvironmentInst &inst) {
     os_ << "  _sh_ljs_create_environment(shr, _sh_ljs_get_env_from_closure(shr, frame["
         << hbc::StackFrameLayout::CalleeClosureOrCB << "]),";
     generateRegisterPtr(inst);

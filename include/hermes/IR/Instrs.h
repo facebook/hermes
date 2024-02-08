@@ -2989,15 +2989,18 @@ class ThrowIfInst : public Instruction {
   }
 };
 
-class HBCResolveEnvironment : public SingleOperandInst {
-  HBCResolveEnvironment(const HBCResolveEnvironment &) = delete;
-  void operator=(const HBCResolveEnvironment &) = delete;
+class HBCResolveParentEnvironmentInst : public SingleOperandInst {
+  HBCResolveParentEnvironmentInst(const HBCResolveParentEnvironmentInst &) =
+      delete;
+  void operator=(const HBCResolveParentEnvironmentInst &) = delete;
 
  public:
-  explicit HBCResolveEnvironment(VariableScope *scope)
-      : SingleOperandInst(ValueKind::HBCResolveEnvironmentKind, scope) {}
-  explicit HBCResolveEnvironment(
-      const HBCResolveEnvironment *src,
+  explicit HBCResolveParentEnvironmentInst(VariableScope *scope)
+      : SingleOperandInst(
+            ValueKind::HBCResolveParentEnvironmentInstKind,
+            scope) {}
+  explicit HBCResolveParentEnvironmentInst(
+      const HBCResolveParentEnvironmentInst *src,
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
@@ -3018,7 +3021,7 @@ class HBCResolveEnvironment : public SingleOperandInst {
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::HBCResolveEnvironmentKind;
+    return kind == ValueKind::HBCResolveParentEnvironmentInstKind;
   }
 };
 
@@ -3334,15 +3337,16 @@ class DeclareGlobalVarInst : public SingleOperandInst {
   }
 };
 
-class HBCCreateEnvironmentInst : public Instruction {
-  HBCCreateEnvironmentInst(const HBCCreateEnvironmentInst &) = delete;
-  void operator=(const HBCCreateEnvironmentInst &) = delete;
+class HBCCreateFunctionEnvironmentInst : public Instruction {
+  HBCCreateFunctionEnvironmentInst(const HBCCreateFunctionEnvironmentInst &) =
+      delete;
+  void operator=(const HBCCreateFunctionEnvironmentInst &) = delete;
 
  public:
-  explicit HBCCreateEnvironmentInst()
-      : Instruction(ValueKind::HBCCreateEnvironmentInstKind) {}
-  explicit HBCCreateEnvironmentInst(
-      const HBCCreateEnvironmentInst *src,
+  explicit HBCCreateFunctionEnvironmentInst()
+      : Instruction(ValueKind::HBCCreateFunctionEnvironmentInstKind) {}
+  explicit HBCCreateFunctionEnvironmentInst(
+      const HBCCreateFunctionEnvironmentInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
@@ -3359,7 +3363,7 @@ class HBCCreateEnvironmentInst : public Instruction {
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::HBCCreateEnvironmentInstKind;
+    return kind == ValueKind::HBCCreateFunctionEnvironmentInstKind;
   }
 };
 

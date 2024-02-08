@@ -41,7 +41,7 @@ class LowerLoadStoreFrameInst : public FunctionPass {
   Instruction *getScope(
       IRBuilder &builder,
       Variable *var,
-      HBCCreateEnvironmentInst *captureScope);
+      HBCCreateFunctionEnvironmentInst *captureScope);
 
  public:
   explicit LowerLoadStoreFrameInst()

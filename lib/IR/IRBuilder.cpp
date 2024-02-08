@@ -827,9 +827,9 @@ ResumeGeneratorInst *IRBuilder::createResumeGeneratorInst(
   return I;
 }
 
-HBCResolveEnvironment *IRBuilder::createHBCResolveEnvironment(
-    VariableScope *scope) {
-  auto RSC = new HBCResolveEnvironment(scope);
+HBCResolveParentEnvironmentInst *
+IRBuilder::createHBCResolveParentEnvironmentInst(VariableScope *scope) {
+  auto RSC = new HBCResolveParentEnvironmentInst(scope);
   insert(RSC);
   return RSC;
 }
@@ -891,8 +891,9 @@ LoadParamInst *IRBuilder::createLoadParamInst(JSDynamicParam *param) {
   return inst;
 }
 
-HBCCreateEnvironmentInst *IRBuilder::createHBCCreateEnvironmentInst() {
-  auto inst = new HBCCreateEnvironmentInst();
+HBCCreateFunctionEnvironmentInst *
+IRBuilder::createHBCCreateFunctionEnvironmentInst() {
+  auto inst = new HBCCreateFunctionEnvironmentInst();
   insert(inst);
   return inst;
 }
