@@ -226,6 +226,9 @@ void CDPAgentImpl::DomainAgents::handleCommand(
   } else if (command->method == "Runtime.globalLexicalScopeNames") {
     runtimeAgent_->globalLexicalScopeNames(
         static_cast<m::runtime::GlobalLexicalScopeNamesRequest &>(*command));
+  } else if (command->method == "Runtime.compileScript") {
+    runtimeAgent_->compileScript(
+        static_cast<m::runtime::CompileScriptRequest &>(*command));
   } else {
     messageCallback_(message::makeErrorResponse(
                          command->id,
