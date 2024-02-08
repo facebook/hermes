@@ -61,7 +61,7 @@ function f2() {
 // CHKLIR:function f1(): string|number
 // CHKLIR-NEXT:frame = [x: empty]
 // CHKLIR-NEXT:%BB0:
-// CHKLIR-NEXT:  %0 = HBCCreateEnvironmentInst (:environment)
+// CHKLIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %f1(): any, %parentScope: environment
 // CHKLIR-NEXT:  %1 = HBCLoadConstInst (:empty) empty: empty
 // CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: environment, %1: empty, [x]: empty
 // CHKLIR-NEXT:  %3 = ThrowIfInst (:any) %1: empty, type(empty)
@@ -74,7 +74,7 @@ function f2() {
 // CHKLIR:function f2(): undefined
 // CHKLIR-NEXT:frame = [x: empty|undefined|number, inner: undefined|object]
 // CHKLIR-NEXT:%BB0:
-// CHKLIR-NEXT:  %0 = HBCCreateEnvironmentInst (:environment)
+// CHKLIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %f2(): any, %parentScope: environment
 // CHKLIR-NEXT:  %1 = HBCLoadConstInst (:empty) empty: empty
 // CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: environment, %1: empty, [x]: empty|undefined|number
 // CHKLIR-NEXT:  %3 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -88,7 +88,7 @@ function f2() {
 // CHKLIR:function inner(): undefined|number
 // CHKLIR-NEXT:frame = []
 // CHKLIR-NEXT:%BB0:
-// CHKLIR-NEXT:  %0 = HBCResolveEnvironment (:environment) %f2(): any
+// CHKLIR-NEXT:  %0 = HBCResolveParentEnvironmentInst (:environment) %f2(): any, %parentScope: environment
 // CHKLIR-NEXT:  %1 = HBCLoadFromEnvironmentInst (:empty|undefined|number) %0: environment, [x@f2]: empty|undefined|number
 // CHKLIR-NEXT:  %2 = ThrowIfInst (:undefined|number) %1: empty|undefined|number, type(empty)
 // CHKLIR-NEXT:  %3 = HBCLoadConstInst (:number) 10: number

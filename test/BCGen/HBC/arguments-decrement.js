@@ -1374,9 +1374,9 @@ function decrementArguments() {
 // CHKIR:function global(): undefined
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: any
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: environment
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "decrementArguments": string
 // CHKIR-NEXT:       ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
@@ -1384,7 +1384,7 @@ function decrementArguments() {
 // CHKIR:function decrementArguments(): number
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %decrementArguments(): any, %parentScope: environment
 // CHKIR-NEXT:  %1 = CreateArgumentsLooseInst (:object)
 // CHKIR-NEXT:       BranchInst %BB1
 // CHKIR-NEXT:%BB1:
@@ -1402,9 +1402,9 @@ function decrementArguments() {
 // CHKIR:function global(): undefined
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: any
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: environment
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "decrementArguments": string
 // CHKIR-NEXT:       ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
@@ -1412,7 +1412,7 @@ function decrementArguments() {
 // CHKIR:function decrementArguments(): number
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %decrementArguments(): any, %parentScope: environment
 // CHKIR-NEXT:  %1 = CreateArgumentsLooseInst (:object)
 // CHKIR-NEXT:       BranchInst %BB1
 // CHKIR-NEXT:%BB1:
@@ -1430,9 +1430,9 @@ function decrementArguments() {
 // CHKIR:function global(): undefined
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: any
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: environment
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "decrementArguments": string
 // CHKIR-NEXT:       ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
@@ -1440,7 +1440,7 @@ function decrementArguments() {
 // CHKIR:function decrementArguments(): number
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %decrementArguments(): any, %parentScope: environment
 // CHKIR-NEXT:  %1 = CreateArgumentsLooseInst (:object)
 // CHKIR-NEXT:       BranchInst %BB1
 // CHKIR-NEXT:%BB1:
@@ -1458,9 +1458,9 @@ function decrementArguments() {
 // CHKIR:function global(): undefined
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: any
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: environment
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "decrementArguments": string
 // CHKIR-NEXT:       ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
@@ -1468,7 +1468,7 @@ function decrementArguments() {
 // CHKIR:function decrementArguments(): number
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %decrementArguments(): any, %parentScope: environment
 // CHKIR-NEXT:  %1 = CreateArgumentsLooseInst (:object)
 // CHKIR-NEXT:       BranchInst %BB1
 // CHKIR-NEXT:%BB1:
@@ -1486,9 +1486,9 @@ function decrementArguments() {
 // CHKIR:function global(): undefined
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: any
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: environment
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "decrementArguments": string
 // CHKIR-NEXT:       ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
@@ -1496,7 +1496,7 @@ function decrementArguments() {
 // CHKIR:function decrementArguments(): number
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %decrementArguments(): any, %parentScope: environment
 // CHKIR-NEXT:  %1 = CreateArgumentsLooseInst (:object)
 // CHKIR-NEXT:       BranchInst %BB1
 // CHKIR-NEXT:%BB1:
@@ -1514,9 +1514,9 @@ function decrementArguments() {
 // CHKIR:function global(): undefined
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: any
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: environment
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "decrementArguments": string
 // CHKIR-NEXT:       ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
@@ -1524,7 +1524,7 @@ function decrementArguments() {
 // CHKIR:function decrementArguments(): number
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %decrementArguments(): any, %parentScope: environment
 // CHKIR-NEXT:  %1 = CreateArgumentsLooseInst (:object)
 // CHKIR-NEXT:       BranchInst %BB1
 // CHKIR-NEXT:%BB1:
@@ -1542,9 +1542,9 @@ function decrementArguments() {
 // CHKIR:function global(): undefined
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: any
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: environment
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "decrementArguments": string
 // CHKIR-NEXT:       ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
@@ -1552,7 +1552,7 @@ function decrementArguments() {
 // CHKIR:function decrementArguments(): number
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %decrementArguments(): any, %parentScope: environment
 // CHKIR-NEXT:  %1 = AllocStackInst (:undefined|object) $arguments: any
 // CHKIR-NEXT:       StoreStackInst undefined: undefined, %1: undefined|object
 // CHKIR-NEXT:       BranchInst %BB1
@@ -1573,9 +1573,9 @@ function decrementArguments() {
 // CHKIR:function global(): undefined
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: any
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: environment
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "decrementArguments": string
 // CHKIR-NEXT:       ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
@@ -1583,7 +1583,7 @@ function decrementArguments() {
 // CHKIR:function decrementArguments(): number
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %decrementArguments(): any, %parentScope: environment
 // CHKIR-NEXT:  %1 = AllocStackInst (:undefined|object) $arguments: any
 // CHKIR-NEXT:       StoreStackInst undefined: undefined, %1: undefined|object
 // CHKIR-NEXT:       BranchInst %BB1
@@ -1604,9 +1604,9 @@ function decrementArguments() {
 // CHKIR:function global(): undefined
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: any
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: environment
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "decrementArguments": string
 // CHKIR-NEXT:       ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
@@ -1614,7 +1614,7 @@ function decrementArguments() {
 // CHKIR:function decrementArguments(): number
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %decrementArguments(): any, %parentScope: environment
 // CHKIR-NEXT:  %1 = AllocStackInst (:undefined|object) $arguments: any
 // CHKIR-NEXT:       StoreStackInst undefined: undefined, %1: undefined|object
 // CHKIR-NEXT:       BranchInst %BB1
@@ -1635,9 +1635,9 @@ function decrementArguments() {
 // CHKIR:function global(): undefined
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: any
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: environment
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "decrementArguments": string
 // CHKIR-NEXT:       ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
@@ -1645,7 +1645,7 @@ function decrementArguments() {
 // CHKIR:function decrementArguments(): number
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %decrementArguments(): any, %parentScope: environment
 // CHKIR-NEXT:  %1 = AllocStackInst (:undefined|object) $arguments: any
 // CHKIR-NEXT:       StoreStackInst undefined: undefined, %1: undefined|object
 // CHKIR-NEXT:       BranchInst %BB1
@@ -1666,9 +1666,9 @@ function decrementArguments() {
 // CHKIR:function global(): undefined
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: any
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: environment
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "decrementArguments": string
 // CHKIR-NEXT:       ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
@@ -1676,7 +1676,7 @@ function decrementArguments() {
 // CHKIR:function decrementArguments(): number
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %decrementArguments(): any, %parentScope: environment
 // CHKIR-NEXT:  %1 = AllocStackInst (:undefined|object) $arguments: any
 // CHKIR-NEXT:       StoreStackInst undefined: undefined, %1: undefined|object
 // CHKIR-NEXT:       BranchInst %BB1
@@ -1697,9 +1697,9 @@ function decrementArguments() {
 // CHKIR:function global(): undefined
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: any
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: environment
 // CHKIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "decrementArguments": string
 // CHKIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -1709,7 +1709,7 @@ function decrementArguments() {
 // CHKIR:function decrementArguments(): number
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %decrementArguments(): any, %parentScope: environment
 // CHKIR-NEXT:  %1 = AllocStackInst (:undefined|object) $arguments: any
 // CHKIR-NEXT:  %2 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHKIR-NEXT:       StoreStackInst %2: undefined, %1: undefined|object
@@ -1735,9 +1735,9 @@ function decrementArguments() {
 // CHKIR:function global(): undefined
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: any
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: environment
 // CHKIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "decrementArguments": string
 // CHKIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -1747,7 +1747,7 @@ function decrementArguments() {
 // CHKIR:function decrementArguments(): number
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %decrementArguments(): any, %parentScope: environment
 // CHKIR-NEXT:  %1 = AllocStackInst (:undefined|object) $arguments: any
 // CHKIR-NEXT:  %2 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHKIR-NEXT:       StoreStackInst %2: undefined, %1: undefined|object
@@ -1773,9 +1773,9 @@ function decrementArguments() {
 // CHKIR:function global(): undefined
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: any
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %0: environment
 // CHKIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "decrementArguments": string
 // CHKIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -1785,7 +1785,7 @@ function decrementArguments() {
 // CHKIR:function decrementArguments(): number
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %decrementArguments(): any, %parentScope: environment
 // CHKIR-NEXT:  %1 = AllocStackInst (:undefined|object) $arguments: any
 // CHKIR-NEXT:  %2 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHKIR-NEXT:       StoreStackInst %2: undefined, %1: undefined|object
@@ -1812,8 +1812,8 @@ function decrementArguments() {
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %1 = HBCCreateEnvironmentInst (:any)
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: any
+// CHKIR-NEXT:  %1 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: environment
 // CHKIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "decrementArguments": string
 // CHKIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -1823,7 +1823,7 @@ function decrementArguments() {
 // CHKIR:function decrementArguments(): number
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %decrementArguments(): any, %parentScope: environment
 // CHKIR-NEXT:  %1 = AllocStackInst (:undefined|object) $arguments: any
 // CHKIR-NEXT:  %2 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHKIR-NEXT:       StoreStackInst %2: undefined, %1: undefined|object
@@ -1850,8 +1850,8 @@ function decrementArguments() {
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %1 = HBCCreateEnvironmentInst (:any)
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: any
+// CHKIR-NEXT:  %1 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: environment
 // CHKIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "decrementArguments": string
 // CHKIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -1861,7 +1861,7 @@ function decrementArguments() {
 // CHKIR:function decrementArguments(): number
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %decrementArguments(): any, %parentScope: environment
 // CHKIR-NEXT:  %1 = AllocStackInst (:undefined|object) $arguments: any
 // CHKIR-NEXT:  %2 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHKIR-NEXT:       StoreStackInst %2: undefined, %1: undefined|object
@@ -1887,8 +1887,8 @@ function decrementArguments() {
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %1 = HBCCreateEnvironmentInst (:any)
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: any
+// CHKIR-NEXT:  %1 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: environment
 // CHKIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "decrementArguments": string
 // CHKIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -1923,8 +1923,8 @@ function decrementArguments() {
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %1 = HBCCreateEnvironmentInst (:any)
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: any
+// CHKIR-NEXT:  %1 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: environment
 // CHKIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "decrementArguments": string
 // CHKIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -1959,8 +1959,8 @@ function decrementArguments() {
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %1 = HBCCreateEnvironmentInst (:any)
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: any
+// CHKIR-NEXT:  %1 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: environment
 // CHKIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "decrementArguments": string
 // CHKIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -1973,8 +1973,8 @@ function decrementArguments() {
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %1 = HBCCreateEnvironmentInst (:any)
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: any
+// CHKIR-NEXT:  %1 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: environment
 // CHKIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "decrementArguments": string
 // CHKIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -1987,8 +1987,8 @@ function decrementArguments() {
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %1 = HBCCreateEnvironmentInst (:any)
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: any
+// CHKIR-NEXT:  %1 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: environment
 // CHKIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "decrementArguments": string
 // CHKIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -2001,8 +2001,8 @@ function decrementArguments() {
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %1 = HBCCreateEnvironmentInst (:any)
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: any
+// CHKIR-NEXT:  %1 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: environment
 // CHKIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "decrementArguments": string
 // CHKIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -2015,8 +2015,8 @@ function decrementArguments() {
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %1 = HBCCreateEnvironmentInst (:any)
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: any
+// CHKIR-NEXT:  %1 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: environment
 // CHKIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "decrementArguments": string
 // CHKIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -2029,8 +2029,8 @@ function decrementArguments() {
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %1 = HBCCreateEnvironmentInst (:any)
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: any
+// CHKIR-NEXT:  %1 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: environment
 // CHKIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "decrementArguments": string
 // CHKIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -2043,8 +2043,8 @@ function decrementArguments() {
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:       DeclareGlobalVarInst "decrementArguments": string
-// CHKIR-NEXT:  %1 = HBCCreateEnvironmentInst (:any)
-// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: any
+// CHKIR-NEXT:  %1 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// CHKIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, %1: environment
 // CHKIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "decrementArguments": string
 // CHKIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -2230,7 +2230,7 @@ function decrementArguments() {
 // CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "decrementArguments": string
-// CHKRA-NEXT:  $Reg0 = HBCCreateEnvironmentInst (:any)
+// CHKRA-NEXT:  $Reg0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHKRA-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %decrementArguments(): functionCode, $Reg0
 // CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
 // CHKRA-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg0, "decrementArguments": string

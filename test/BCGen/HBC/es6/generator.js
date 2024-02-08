@@ -53,7 +53,7 @@ function *args() {
 
 // CHECK:Function<global>(1 params, 9 registers, 0 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:    CreateEnvironment r0
+// CHECK-NEXT:    CreateFunctionEnvironment r0
 // CHECK-NEXT:    DeclareGlobalVar  "loop"
 // CHECK-NEXT:    DeclareGlobalVar  "args"
 // CHECK-NEXT:    CreateGeneratorClosure r1, r0, NCFunction<loop>
@@ -68,19 +68,19 @@ function *args() {
 // CHECK-NEXT:    Ret               r7
 
 // CHECK:NCFunction<loop>(2 params, 3 registers, 0 symbols):
-// CHECK-NEXT:    CreateEnvironment r0
+// CHECK-NEXT:    CreateFunctionEnvironment r0
 // CHECK-NEXT:    CreateGenerator   r1, r0, Function<?anon_0_loop>
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:NCFunction<args>(1 params, 3 registers, 0 symbols):
-// CHECK-NEXT:    CreateEnvironment r0
+// CHECK-NEXT:    CreateFunctionEnvironment r0
 // CHECK-NEXT:    CreateGenerator   r1, r0, Function<?anon_0_args>
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<?anon_0_loop>(2 params, 9 registers, 2 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
 // CHECK-NEXT:    StartGenerator
-// CHECK-NEXT:    CreateEnvironment r0
+// CHECK-NEXT:    CreateFunctionEnvironment r0
 // CHECK-NEXT:    ResumeGenerator   r2, r1
 // CHECK-NEXT:    Mov               r3, r1
 // CHECK-NEXT:    JmpTrue           L1, r3
@@ -123,7 +123,7 @@ function *args() {
 // CHECK:Function<?anon_0_args>(1 params, 7 registers, 0 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x0026, lexical 0x0000
 // CHECK-NEXT:    StartGenerator
-// CHECK-NEXT:    CreateEnvironment r0
+// CHECK-NEXT:    CreateFunctionEnvironment r0
 // CHECK-NEXT:    ResumeGenerator   r1, r0
 // CHECK-NEXT:    Mov               r2, r0
 // CHECK-NEXT:    JmpTrue           L1, r2

@@ -50,7 +50,7 @@ function foo(a) {
 // CHECK:Function<global>(1 params, 2 registers, 0 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
-// CHECK-NEXT:    CreateEnvironment r0
+// CHECK-NEXT:    CreateFunctionEnvironment r0
 // CHECK-NEXT:    CreateClosure     r1, r0, Function<foo>
 // CHECK-NEXT:    GetGlobalObject   r0
 // CHECK-NEXT:    PutByIdLoose      r0, r1, 1, "foo"

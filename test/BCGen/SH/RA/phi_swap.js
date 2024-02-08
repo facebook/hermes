@@ -23,7 +23,7 @@ function foo (a, b) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:                 DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  {loc0}    %1 = HBCCreateEnvironmentInst (:environment)
+// CHECK-NEXT:  {loc0}    %1 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHECK-NEXT:  {loc1}    %2 = HBCCreateFunctionInst (:object) %foo(): functionCode, {loc0} %1: environment
 // CHECK-NEXT:  {loc0}    %3 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:                 StorePropertyLooseInst {loc1} %2: object, {loc0} %3: object, "foo": string

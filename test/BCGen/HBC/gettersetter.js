@@ -45,7 +45,7 @@ var obj = {
 
 // CHECK:Function<global>(1 params, 5 registers, 0 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:    CreateEnvironment r1
+// CHECK-NEXT:    CreateFunctionEnvironment r1
 // CHECK-NEXT:    DeclareGlobalVar  "obj"
 // CHECK-NEXT:    NewObject         r2
 // CHECK-NEXT:    CreateClosure     r4, r1, Function<get b>

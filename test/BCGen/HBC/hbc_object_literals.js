@@ -79,8 +79,8 @@ var obj4 = {
 // IRGEN-NEXT:  %5 = HBCLoadConstInst (:number) 1: number
 // IRGEN-NEXT:  %6 = HBCLoadConstInst (:undefined) undefined: undefined
 // IRGEN-NEXT:       StorePropertyLooseInst %6: undefined, %4: object, "d": string
-// IRGEN-NEXT:  %8 = HBCCreateEnvironmentInst (:any)
-// IRGEN-NEXT:  %9 = HBCCreateFunctionInst (:object) %f(): functionCode, %8: any
+// IRGEN-NEXT:  %8 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// IRGEN-NEXT:  %9 = HBCCreateFunctionInst (:object) %f(): functionCode, %8: environment
 // IRGEN-NEXT:        StorePropertyLooseInst %9: object, %4: object, "f": string
 // IRGEN-NEXT:  %11 = HBCGetGlobalObjectInst (:object)
 // IRGEN-NEXT:        StorePropertyLooseInst %4: object, %11: object, "obj1": string
@@ -212,7 +212,7 @@ var obj4 = {
 // BCGEN-NEXT:    LoadConstUInt8    r3, 1
 // BCGEN-NEXT:    LoadConstUndefined r0
 // BCGEN-NEXT:    PutByIdLoose      r1, r0, 1, "d"
-// BCGEN-NEXT:    CreateEnvironment r2
+// BCGEN-NEXT:    CreateFunctionEnvironment r2
 // BCGEN-NEXT:    CreateClosure     r2, r2, Function<f>
 // BCGEN-NEXT:    PutByIdLoose      r1, r2, 2, "f"
 // BCGEN-NEXT:    GetGlobalObject   r2

@@ -66,7 +66,7 @@ function foo(p) {
 // CHECK-NEXT:[int 5]
 // CHECK-NEXT:Function<global>(1 params, 11 registers, 0 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:[@ 0] CreateEnvironment 0<Reg8>
+// CHECK-NEXT:[@ 0] CreateFunctionEnvironment 0<Reg8>
 // CHECK-NEXT:[@ 2] DeclareGlobalVar 5<UInt32>
 // CHECK-NEXT:[@ 7] CreateClosure 2<Reg8>, 0<Reg8>, 1<UInt16>
 // CHECK-NEXT:[@ 12] GetGlobalObject 1<Reg8>

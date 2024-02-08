@@ -27,7 +27,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA:function global(): undefined
 // LRA-NEXT:frame = []
 // LRA-NEXT:%BB0:
-// LRA-NEXT:  $Reg0 = HBCCreateEnvironmentInst (:any)
+// LRA-NEXT:  $Reg0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // LRA-NEXT:  $Reg1 = DeclareGlobalVarInst "foo1": string
 // LRA-NEXT:  $Reg1 = DeclareGlobalVarInst "foo2": string
 // LRA-NEXT:  $Reg1 = DeclareGlobalVarInst "foo3": string
@@ -140,7 +140,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 
 // BCGEN:Function<global>(1 params, 3 registers, 0 symbols):
 // BCGEN-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// BCGEN-NEXT:    CreateEnvironment r0
+// BCGEN-NEXT:    CreateFunctionEnvironment r0
 // BCGEN-NEXT:    DeclareGlobalVar  "foo1"
 // BCGEN-NEXT:    DeclareGlobalVar  "foo2"
 // BCGEN-NEXT:    DeclareGlobalVar  "foo3"

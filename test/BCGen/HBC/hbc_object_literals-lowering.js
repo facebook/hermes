@@ -53,22 +53,22 @@ function accessorObjectLiteral(func) {
 // IRGEN:function global(): undefined
 // IRGEN-NEXT:frame = []
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// IRGEN-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // IRGEN-NEXT:       DeclareGlobalVarInst "emitAllocObjectLiteral": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "nestedAllocObjectLiteral": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "numericPlaceholder": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "estimateBestNumElement": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "accessorObjectLiteral": string
-// IRGEN-NEXT:  %6 = HBCCreateFunctionInst (:object) %emitAllocObjectLiteral(): functionCode, %0: any
+// IRGEN-NEXT:  %6 = HBCCreateFunctionInst (:object) %emitAllocObjectLiteral(): functionCode, %0: environment
 // IRGEN-NEXT:  %7 = HBCGetGlobalObjectInst (:object)
 // IRGEN-NEXT:       StorePropertyLooseInst %6: object, %7: object, "emitAllocObjectLiteral": string
-// IRGEN-NEXT:  %9 = HBCCreateFunctionInst (:object) %nestedAllocObjectLiteral(): functionCode, %0: any
+// IRGEN-NEXT:  %9 = HBCCreateFunctionInst (:object) %nestedAllocObjectLiteral(): functionCode, %0: environment
 // IRGEN-NEXT:        StorePropertyLooseInst %9: object, %7: object, "nestedAllocObjectLiteral": string
-// IRGEN-NEXT:  %11 = HBCCreateFunctionInst (:object) %numericPlaceholder(): functionCode, %0: any
+// IRGEN-NEXT:  %11 = HBCCreateFunctionInst (:object) %numericPlaceholder(): functionCode, %0: environment
 // IRGEN-NEXT:        StorePropertyLooseInst %11: object, %7: object, "numericPlaceholder": string
-// IRGEN-NEXT:  %13 = HBCCreateFunctionInst (:object) %estimateBestNumElement(): functionCode, %0: any
+// IRGEN-NEXT:  %13 = HBCCreateFunctionInst (:object) %estimateBestNumElement(): functionCode, %0: environment
 // IRGEN-NEXT:        StorePropertyLooseInst %13: object, %7: object, "estimateBestNumElement": string
-// IRGEN-NEXT:  %15 = HBCCreateFunctionInst (:object) %accessorObjectLiteral(): functionCode, %0: any
+// IRGEN-NEXT:  %15 = HBCCreateFunctionInst (:object) %accessorObjectLiteral(): functionCode, %0: environment
 // IRGEN-NEXT:        StorePropertyLooseInst %15: object, %7: object, "accessorObjectLiteral": string
 // IRGEN-NEXT:  %17 = HBCLoadConstInst (:undefined) undefined: undefined
 // IRGEN-NEXT:        ReturnInst %17: undefined
@@ -119,8 +119,8 @@ function accessorObjectLiteral(func) {
 // IRGEN-NEXT:frame = []
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 4: number, "a": string, 10: number, "b": string, "test-str": string
-// IRGEN-NEXT:  %1 = HBCCreateEnvironmentInst (:any)
-// IRGEN-NEXT:  %2 = HBCCreateFunctionInst (:object) %"get c"(): functionCode, %1: any
+// IRGEN-NEXT:  %1 = HBCCreateFunctionEnvironmentInst (:environment) %accessorObjectLiteral(): any, %parentScope: environment
+// IRGEN-NEXT:  %2 = HBCCreateFunctionInst (:object) %"get c"(): functionCode, %1: environment
 // IRGEN-NEXT:  %3 = HBCLoadConstInst (:undefined) undefined: undefined
 // IRGEN-NEXT:  %4 = HBCLoadConstInst (:string) "c": string
 // IRGEN-NEXT:       StoreGetterSetterInst %2: object, %3: undefined, %0: object, %4: string, true: boolean

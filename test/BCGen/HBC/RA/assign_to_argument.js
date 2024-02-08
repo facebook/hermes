@@ -16,7 +16,7 @@ function foo(a) {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = HBCCreateEnvironmentInst (:any)
+// CHECK-NEXT:  $Reg0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %foo(): functionCode, $Reg0
 // CHECK-NEXT:  $Reg2 = HBCGetGlobalObjectInst (:object)
@@ -31,7 +31,7 @@ function foo(a) {
 // CHECK:function foo(a: any): any
 // CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = HBCCreateEnvironmentInst (:any)
+// CHECK-NEXT:  $Reg0 = HBCCreateFunctionEnvironmentInst (:environment) %foo(): any, %parentScope: environment
 // CHECK-NEXT:  $Reg1 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  $Reg2 = HBCStoreToEnvironmentInst $Reg0, $Reg1, [a]: any
 // CHECK-NEXT:  $Reg2 = HBCLoadFromEnvironmentInst (:any) $Reg0, [a]: any

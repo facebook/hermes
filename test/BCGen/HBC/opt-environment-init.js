@@ -84,8 +84,8 @@ function foo(o) {
 // CHKLIR-NEXT:frame = []
 // CHKLIR-NEXT:%BB0:
 // CHKLIR-NEXT:       DeclareGlobalVarInst "foo": string
-// CHKLIR-NEXT:  %1 = HBCCreateEnvironmentInst (:any)
-// CHKLIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %foo(): functionCode, %1: any
+// CHKLIR-NEXT:  %1 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// CHKLIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %foo(): functionCode, %1: environment
 // CHKLIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHKLIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "foo": string
 // CHKLIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -95,48 +95,48 @@ function foo(o) {
 // CHKLIR:function foo(o: any): object
 // CHKLIR-NEXT:frame = [cnt: number, flag: undefined|boolean, flag1: undefined|number, flag2: undefined|number]
 // CHKLIR-NEXT:%BB0:
-// CHKLIR-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHKLIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %foo(): any, %parentScope: environment
 // CHKLIR-NEXT:  %1 = HBCLoadConstInst (:number) 0: number
-// CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: any, %1: number, [cnt]: number
+// CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: environment, %1: number, [cnt]: number
 // CHKLIR-NEXT:  %3 = LoadParamInst (:any) %o: any
 // CHKLIR-NEXT:  %4 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHKLIR-NEXT:  %5 = HBCCallNInst (:any) %3: any, empty: any, empty: any, %4: undefined, %4: undefined
-// CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: any, %4: undefined, [flag2]: undefined|number
-// CHKLIR-NEXT:  %7 = HBCCreateFunctionInst (:object) %""(): functionCode, %0: any
+// CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: environment, %4: undefined, [flag2]: undefined|number
+// CHKLIR-NEXT:  %7 = HBCCreateFunctionInst (:object) %""(): functionCode, %0: environment
 // CHKLIR-NEXT:       ReturnInst %7: object
 // CHKLIR-NEXT:function_end
 
 // CHKLIR:function ""(): number
 // CHKLIR-NEXT:frame = []
 // CHKLIR-NEXT:%BB0:
-// CHKLIR-NEXT:  %0 = HBCResolveEnvironment (:any) %foo(): any
-// CHKLIR-NEXT:  %1 = HBCLoadFromEnvironmentInst (:undefined|boolean) %0: any, [flag@foo]: undefined|boolean
+// CHKLIR-NEXT:  %0 = HBCResolveParentEnvironmentInst (:environment) %foo(): any, %parentScope: environment
+// CHKLIR-NEXT:  %1 = HBCLoadFromEnvironmentInst (:undefined|boolean) %0: environment, [flag@foo]: undefined|boolean
 // CHKLIR-NEXT:       CondBranchInst %1: undefined|boolean, %BB1, %BB2
 // CHKLIR-NEXT:%BB2:
 // CHKLIR-NEXT:  %3 = HBCLoadConstInst (:boolean) true: boolean
 // CHKLIR-NEXT:       BranchInst %BB1
 // CHKLIR-NEXT:%BB1:
 // CHKLIR-NEXT:  %5 = PhiInst (:undefined|boolean) %1: undefined|boolean, %BB0, %3: boolean, %BB2
-// CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: any, %5: undefined|boolean, [flag@foo]: undefined|boolean
-// CHKLIR-NEXT:  %7 = HBCLoadFromEnvironmentInst (:undefined|number) %0: any, [flag1@foo]: undefined|number
+// CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: environment, %5: undefined|boolean, [flag@foo]: undefined|boolean
+// CHKLIR-NEXT:  %7 = HBCLoadFromEnvironmentInst (:undefined|number) %0: environment, [flag1@foo]: undefined|number
 // CHKLIR-NEXT:       CondBranchInst %7: undefined|number, %BB3, %BB4
 // CHKLIR-NEXT:%BB4:
 // CHKLIR-NEXT:  %9 = HBCLoadConstInst (:number) 1: number
 // CHKLIR-NEXT:        BranchInst %BB3
 // CHKLIR-NEXT:%BB3:
 // CHKLIR-NEXT:  %11 = PhiInst (:undefined|number) %7: undefined|number, %BB1, %9: number, %BB4
-// CHKLIR-NEXT:        HBCStoreToEnvironmentInst %0: any, %11: undefined|number, [flag1@foo]: undefined|number
-// CHKLIR-NEXT:  %13 = HBCLoadFromEnvironmentInst (:undefined|number) %0: any, [flag2@foo]: undefined|number
+// CHKLIR-NEXT:        HBCStoreToEnvironmentInst %0: environment, %11: undefined|number, [flag1@foo]: undefined|number
+// CHKLIR-NEXT:  %13 = HBCLoadFromEnvironmentInst (:undefined|number) %0: environment, [flag2@foo]: undefined|number
 // CHKLIR-NEXT:        CondBranchInst %13: undefined|number, %BB5, %BB6
 // CHKLIR-NEXT:%BB6:
 // CHKLIR-NEXT:  %15 = HBCLoadConstInst (:number) 2: number
 // CHKLIR-NEXT:        BranchInst %BB5
 // CHKLIR-NEXT:%BB5:
 // CHKLIR-NEXT:  %17 = PhiInst (:undefined|number) %13: undefined|number, %BB3, %15: number, %BB6
-// CHKLIR-NEXT:        HBCStoreToEnvironmentInst %0: any, %17: undefined|number, [flag2@foo]: undefined|number
-// CHKLIR-NEXT:  %19 = HBCLoadFromEnvironmentInst (:number) %0: any, [cnt@foo]: number
+// CHKLIR-NEXT:        HBCStoreToEnvironmentInst %0: environment, %17: undefined|number, [flag2@foo]: undefined|number
+// CHKLIR-NEXT:  %19 = HBCLoadFromEnvironmentInst (:number) %0: environment, [cnt@foo]: number
 // CHKLIR-NEXT:  %20 = HBCLoadConstInst (:number) 1: number
 // CHKLIR-NEXT:  %21 = FAddInst (:number) %19: number, %20: number
-// CHKLIR-NEXT:        HBCStoreToEnvironmentInst %0: any, %21: number, [cnt@foo]: number
+// CHKLIR-NEXT:        HBCStoreToEnvironmentInst %0: environment, %21: number, [cnt@foo]: number
 // CHKLIR-NEXT:        ReturnInst %21: number
 // CHKLIR-NEXT:function_end

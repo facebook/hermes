@@ -52,7 +52,7 @@ function dynamicProto(func, getProto) {
 // CHECK-NEXT:[int 4]
 // CHECK-NEXT:Function<global>(1 params, 3 registers, 0 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:    CreateEnvironment r0
+// CHECK-NEXT:    CreateFunctionEnvironment r0
 // CHECK-NEXT:    DeclareGlobalVar  "staticProto"
 // CHECK-NEXT:    DeclareGlobalVar  "dynamicProto"
 // CHECK-NEXT:    CreateClosure     r2, r0, Function<staticProto>

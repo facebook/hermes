@@ -25,7 +25,7 @@ function test_builtin(a) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  {loc0}    %0 = HBCCreateEnvironmentInst (:environment)
+// CHECK-NEXT:  {loc0}    %0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHECK-NEXT:                 DeclareGlobalVarInst "test_call": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "test_new": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "test_builtin": string

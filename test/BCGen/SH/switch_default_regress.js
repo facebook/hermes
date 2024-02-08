@@ -45,7 +45,7 @@ function foo(i) {
 // CHKLIR-NEXT:frame = []
 // CHKLIR-NEXT:%BB0:
 // CHKLIR-NEXT:       DeclareGlobalVarInst "foo": string
-// CHKLIR-NEXT:  %1 = HBCCreateEnvironmentInst (:environment)
+// CHKLIR-NEXT:  %1 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHKLIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %foo(): functionCode, %1: environment
 // CHKLIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHKLIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "foo": string

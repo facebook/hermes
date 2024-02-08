@@ -165,7 +165,7 @@ function test_could_be_int(func) {
 
 // CHKBC:Function<global>(1 params, 3 registers, 0 symbols):
 // CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHKBC-NEXT:    CreateEnvironment r0
+// CHKBC-NEXT:    CreateFunctionEnvironment r0
 // CHKBC-NEXT:    DeclareGlobalVar  "test_int_int"
 // CHKBC-NEXT:    DeclareGlobalVar  "test_int_uint"
 // CHKBC-NEXT:    DeclareGlobalVar  "test_uint_uint"

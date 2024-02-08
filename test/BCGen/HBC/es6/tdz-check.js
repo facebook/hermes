@@ -36,7 +36,7 @@ function foo() {
 
 // CHECK:Function<global>(1 params, 7 registers, 0 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:    CreateEnvironment r0
+// CHECK-NEXT:    CreateFunctionEnvironment r0
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
 // CHECK-NEXT:    CreateClosure     r1, r0, Function<foo>
 // CHECK-NEXT:    GetGlobalObject   r2
@@ -48,7 +48,7 @@ function foo() {
 
 // CHECK:Function<foo>(1 params, 5 registers, 1 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
-// CHECK-NEXT:    CreateEnvironment r0
+// CHECK-NEXT:    CreateFunctionEnvironment r0
 // CHECK-NEXT:    LoadConstEmpty    r1
 // CHECK-NEXT:    StoreToEnvironment r0, 0, r1
 // CHECK-NEXT:    LoadConstEmpty    r2

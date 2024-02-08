@@ -27,7 +27,7 @@ function bar(a,b,c,d,e,f,g,h) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = HBCCreateEnvironmentInst (:any)
+// CHECK-NEXT:  $Reg0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "bar": string
 // CHECK-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %foo(): functionCode, $Reg0

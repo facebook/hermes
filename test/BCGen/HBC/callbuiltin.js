@@ -31,7 +31,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA:function global(): any
 // CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  $Reg1 = HBCCreateEnvironmentInst (:any)
+// CHKRA-NEXT:  $Reg1 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "foo": string
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "shadows": string
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "checkNonStaticBuiltin": string
@@ -137,7 +137,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:[int 6]
 // CHKBC-NEXT:Function<global>(1 params, 13 registers, 0 symbols):
 // CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHKBC-NEXT:    CreateEnvironment r1
+// CHKBC-NEXT:    CreateFunctionEnvironment r1
 // CHKBC-NEXT:    DeclareGlobalVar  "foo"
 // CHKBC-NEXT:    DeclareGlobalVar  "shadows"
 // CHKBC-NEXT:    DeclareGlobalVar  "checkNonStaticBui"...

@@ -102,7 +102,7 @@ function f(x) {
 
 // CHECK:Function<global>(1 params, 3 registers, 0 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:[@ 0] CreateEnvironment 0<Reg8>
+// CHECK-NEXT:[@ 0] CreateFunctionEnvironment 0<Reg8>
 // CHECK-NEXT:[@ 2] DeclareGlobalVar 1<UInt32>
 // CHECK-NEXT:[@ 7] DeclareGlobalVar 2<UInt32>
 // CHECK-NEXT:[@ 12] CreateClosure 2<Reg8>, 0<Reg8>, 1<UInt16>

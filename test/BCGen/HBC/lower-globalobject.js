@@ -21,7 +21,7 @@ function foo() {
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "x": string
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "foo": string
-// CHKRA-NEXT:  $Reg0 = HBCCreateEnvironmentInst (:any)
+// CHKRA-NEXT:  $Reg0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHKRA-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %foo(): functionCode, $Reg0
 // CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
 // CHKRA-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg0, "foo": string
@@ -62,7 +62,7 @@ function foo() {
 // CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHKBC-NEXT:    DeclareGlobalVar  "x"
 // CHKBC-NEXT:    DeclareGlobalVar  "foo"
-// CHKBC-NEXT:    CreateEnvironment r0
+// CHKBC-NEXT:    CreateFunctionEnvironment r0
 // CHKBC-NEXT:    CreateClosure     r1, r0, Function<foo>
 // CHKBC-NEXT:    GetGlobalObject   r0
 // CHKBC-NEXT:    PutByIdLoose      r0, r1, 1, "foo"

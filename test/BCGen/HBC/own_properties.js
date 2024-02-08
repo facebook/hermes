@@ -20,9 +20,9 @@ function foo() {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHECK-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %2 = HBCCreateFunctionInst (:object) %foo(): functionCode, %0: any
+// CHECK-NEXT:  %2 = HBCCreateFunctionInst (:object) %foo(): functionCode, %0: environment
 // CHECK-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, %3: object, "foo": string
 // CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_0_ret: any
@@ -35,7 +35,7 @@ function foo() {
 // CHECK:function foo(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = HBCCreateEnvironmentInst (:any)
+// CHECK-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %foo(): any, %parentScope: environment
 // CHECK-NEXT:  %1 = AllocObjectInst (:object) 5: number, empty: any
 // CHECK-NEXT:  %2 = HBCLoadConstInst (:number) 1: number
 // CHECK-NEXT:       StoreNewOwnPropertyInst %2: number, %1: object, "a": string, true: boolean

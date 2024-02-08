@@ -18,7 +18,7 @@ function foo(x) {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = HBCCreateEnvironmentInst (:any)
+// CHECK-NEXT:  $Reg0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "sink": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %sink(): functionCode, $Reg0
@@ -37,7 +37,7 @@ function foo(x) {
 // CHECK:function sink(x: any, y: any, z: any): any
 // CHECK-NEXT:frame = [x: any, y: any, z: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = HBCCreateEnvironmentInst (:any)
+// CHECK-NEXT:  $Reg0 = HBCCreateFunctionEnvironmentInst (:environment) %sink(): any, %parentScope: environment
 // CHECK-NEXT:  $Reg1 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  $Reg2 = HBCStoreToEnvironmentInst $Reg0, $Reg1, [x]: any
 // CHECK-NEXT:  $Reg2 = LoadParamInst (:any) %y: any
@@ -51,7 +51,7 @@ function foo(x) {
 // CHECK:function foo(x: any): any
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = HBCCreateEnvironmentInst (:any)
+// CHECK-NEXT:  $Reg0 = HBCCreateFunctionEnvironmentInst (:environment) %foo(): any, %parentScope: environment
 // CHECK-NEXT:  $Reg1 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  $Reg2 = HBCStoreToEnvironmentInst $Reg0, $Reg1, [x]: any
 // CHECK-NEXT:  $Reg2 = HBCLoadFromEnvironmentInst (:any) $Reg0, [x]: any

@@ -18,7 +18,7 @@ function test_call_after_builtin() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:                 DeclareGlobalVarInst "test_call_after_builtin": string
-// CHECK-NEXT:  {loc0}    %1 = HBCCreateEnvironmentInst (:environment)
+// CHECK-NEXT:  {loc0}    %1 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHECK-NEXT:  {loc1}    %2 = HBCCreateFunctionInst (:object) %test_call_after_builtin(): functionCode, {loc0} %1: environment
 // CHECK-NEXT:  {loc0}    %3 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:                 StorePropertyLooseInst {loc1} %2: object, {loc0} %3: object, "test_call_after_builtin": string
@@ -32,7 +32,7 @@ function test_call_after_builtin() {
 // CHECK-NEXT:  {loc0}    %0 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  {loc1}    %1 = TryLoadGlobalPropertyInst (:any) {loc0} %0: object, "print": string
 // CHECK-NEXT:  {loc0}    %2 = AllocObjectInst (:object) 1: number, empty: any
-// CHECK-NEXT:  {loc2}    %3 = HBCCreateEnvironmentInst (:environment)
+// CHECK-NEXT:  {loc2}    %3 = HBCCreateFunctionEnvironmentInst (:environment) %test_call_after_builtin(): any, %parentScope: environment
 // CHECK-NEXT:  {loc2}    %4 = HBCCreateFunctionInst (:object) %valueOf(): functionCode, {loc2} %3: environment
 // CHECK-NEXT:                 StoreNewOwnPropertyInst {loc2} %4: object, {loc0} %2: object, "valueOf": string, true: boolean
 // CHECK-NEXT:  {stack[0]}  %6 = HBCLoadConstInst (:number) 3: number

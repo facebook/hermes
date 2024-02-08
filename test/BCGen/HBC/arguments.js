@@ -35,7 +35,7 @@ function check_phi_handling(x) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = HBCCreateEnvironmentInst (:any)
+// CHECK-NEXT:  $Reg0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "count": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "select": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "build": string
