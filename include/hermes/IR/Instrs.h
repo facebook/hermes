@@ -556,6 +556,59 @@ class StoreStackInst : public Instruction {
   }
 };
 
+/// Base class for instructions that always result in a scope. Its operand can
+/// be used to determine the VariableScope associated with the resulting scope.
+/// This is different from other base classes in that subclasses may perform
+/// very different functionality, but it makes it convenient to traverse,
+/// optimize, and verify the structure of scopes.
+/// Any operand that represents a scope must be a BaseScopeInst until register
+/// allocation, at which point inserting Movs will result in the loss of this
+/// invariant.
+class BaseScopeInst : public Instruction {
+  BaseScopeInst(const BaseScopeInst &) = delete;
+  void operator=(const BaseScopeInst &) = delete;
+
+ protected:
+  enum { VariableScopeIdx, LAST_IDX };
+
+  explicit BaseScopeInst(ValueKind kind, Value *variableScope)
+      : Instruction(kind) {
+    setType(*getInherentTypeImpl());
+    pushOperand(variableScope);
+  }
+
+ public:
+  explicit BaseScopeInst(
+      const BaseScopeInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {
+    setType(*getInherentTypeImpl());
+  }
+
+  VariableScope *getVariableScope() const {
+    return llvh::cast<VariableScope>(getOperand(VariableScopeIdx));
+  }
+
+  static llvh::Optional<Type> getInherentTypeImpl() {
+    return Type::createEnvironment();
+  }
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), BaseScopeInst);
+  }
+};
+
 class LoadFrameInst : public Instruction {
   LoadFrameInst(const LoadFrameInst &) = delete;
   void operator=(const LoadFrameInst &) = delete;
@@ -2989,31 +3042,18 @@ class ThrowIfInst : public Instruction {
   }
 };
 
-class HBCResolveParentEnvironmentInst : public SingleOperandInst {
+class HBCResolveParentEnvironmentInst : public BaseScopeInst {
   HBCResolveParentEnvironmentInst(const HBCResolveParentEnvironmentInst &) =
       delete;
   void operator=(const HBCResolveParentEnvironmentInst &) = delete;
 
  public:
   explicit HBCResolveParentEnvironmentInst(VariableScope *scope)
-      : SingleOperandInst(
-            ValueKind::HBCResolveParentEnvironmentInstKind,
-            scope) {}
+      : BaseScopeInst(ValueKind::HBCResolveParentEnvironmentInstKind, scope) {}
   explicit HBCResolveParentEnvironmentInst(
       const HBCResolveParentEnvironmentInst *src,
       llvh::ArrayRef<Value *> operands)
-      : SingleOperandInst(src, operands) {}
-
-  VariableScope *getScope() const {
-    return cast<VariableScope>(getSingleOperand());
-  }
-
-  static bool hasOutput() {
-    return true;
-  }
-  static bool isTyped() {
-    return false;
-  }
+      : BaseScopeInst(src, operands) {}
 
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setIdempotent();
@@ -3337,25 +3377,18 @@ class DeclareGlobalVarInst : public SingleOperandInst {
   }
 };
 
-class HBCCreateFunctionEnvironmentInst : public Instruction {
+class HBCCreateFunctionEnvironmentInst : public BaseScopeInst {
   HBCCreateFunctionEnvironmentInst(const HBCCreateFunctionEnvironmentInst &) =
       delete;
   void operator=(const HBCCreateFunctionEnvironmentInst &) = delete;
 
  public:
-  explicit HBCCreateFunctionEnvironmentInst()
-      : Instruction(ValueKind::HBCCreateFunctionEnvironmentInstKind) {}
+  explicit HBCCreateFunctionEnvironmentInst(VariableScope *scope)
+      : BaseScopeInst(ValueKind::HBCCreateFunctionEnvironmentInstKind, scope) {}
   explicit HBCCreateFunctionEnvironmentInst(
       const HBCCreateFunctionEnvironmentInst *src,
       llvh::ArrayRef<Value *> operands)
-      : Instruction(src, operands) {}
-
-  static bool hasOutput() {
-    return true;
-  }
-  static bool isTyped() {
-    return false;
-  }
+      : BaseScopeInst(src, operands) {}
 
   SideEffect getSideEffectImpl() const {
     return {};
@@ -3809,7 +3842,7 @@ class HBCCreateFunctionInst : public BaseCreateCallableInst {
  public:
   enum { EnvIdx = CreateFunctionInst::LAST_IDX };
 
-  explicit HBCCreateFunctionInst(Function *code, Value *env)
+  explicit HBCCreateFunctionInst(Function *code, BaseScopeInst *env)
       : BaseCreateCallableInst(ValueKind::HBCCreateFunctionInstKind, code) {
     setType(*getInherentTypeImpl());
     pushOperand(env);
@@ -3997,7 +4030,7 @@ class HBCCreateGeneratorInst : public BaseCreateLexicalChildInst {
  public:
   enum { EnvIdx = CreateGeneratorInst::LAST_IDX };
 
-  explicit HBCCreateGeneratorInst(Function *code, Value *env)
+  explicit HBCCreateGeneratorInst(Function *code, BaseScopeInst *env)
       : BaseCreateLexicalChildInst(
             ValueKind::HBCCreateGeneratorInstKind,
             code) {

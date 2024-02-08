@@ -1326,7 +1326,7 @@ void HBCISel::generateHBCResolveParentEnvironmentInst(
   // We statically determine the relative depth delta of the current scope
   // and the scope that the variable belongs to. Such delta is used as
   // the operand to get_scope instruction.
-  VariableScope *instScope = Inst->getScope();
+  VariableScope *instScope = Inst->getVariableScope();
   Optional<int32_t> instScopeDepth = scopeAnalysis_.getScopeDepth(instScope);
   Optional<int32_t> curScopeDepth =
       scopeAnalysis_.getScopeDepth(F_->getFunctionScope());

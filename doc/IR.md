@@ -809,8 +809,8 @@ Effects | Does not read or write to memory.
 HBCCreateFunctionEnvironmentInst | _
 --- | --- |
 Description | Create a new environment with the function's parent environment as its parent.
-Example | %0 = HBCCreateFunctionEnvironmentInst
-Arguments | None.
+Example | %0 = HBCCreateFunctionEnvironmentInst %varScope
+Arguments | %varScope is the variable scope that this instruction will produce.
 Semantics | The instruction creates a new environment for a function.
 Effects | Does not read or write to memory.
 

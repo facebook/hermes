@@ -892,8 +892,8 @@ LoadParamInst *IRBuilder::createLoadParamInst(JSDynamicParam *param) {
 }
 
 HBCCreateFunctionEnvironmentInst *
-IRBuilder::createHBCCreateFunctionEnvironmentInst() {
-  auto inst = new HBCCreateFunctionEnvironmentInst();
+IRBuilder::createHBCCreateFunctionEnvironmentInst(VariableScope *scope) {
+  auto inst = new HBCCreateFunctionEnvironmentInst(scope);
   insert(inst);
   return inst;
 }
@@ -980,7 +980,7 @@ GetBuiltinClosureInst *IRBuilder::createGetBuiltinClosureInst(
 
 HBCCreateFunctionInst *IRBuilder::createHBCCreateFunctionInst(
     Function *function,
-    Value *env) {
+    BaseScopeInst *env) {
   auto inst = new HBCCreateFunctionInst(function, env);
   insert(inst);
   return inst;
@@ -994,7 +994,7 @@ HBCSpillMovInst *IRBuilder::createHBCSpillMovInst(Instruction *value) {
 
 HBCCreateGeneratorInst *IRBuilder::createHBCCreateGeneratorInst(
     Function *function,
-    Value *env) {
+    BaseScopeInst *env) {
   auto *inst = new HBCCreateGeneratorInst(function, env);
   insert(inst);
   return inst;

@@ -506,7 +506,6 @@ class InstrGen {
  public:
   /// \p os is the output stream
   /// \p ra is the pre-ran register allocator for the current function
-  /// \p envSize is the environment size of the current function
   InstrGen(
       llvh::raw_ostream &os,
       sh::SHRegisterAllocator &ra,
@@ -514,7 +513,6 @@ class InstrGen {
       Function &F,
       ModuleGen &moduleGen,
       FunctionScopeAnalysis &scopeAnalysis,
-      unsigned envSize,
       uint32_t &nextCacheIdx,
       const llvh::DenseMap<BasicBlock *, size_t> &bbTryDepths)
       : os_(os),
@@ -524,7 +522,6 @@ class InstrGen {
         nativeContext_(F.getContext().getNativeContext()),
         moduleGen_(moduleGen),
         scopeAnalysis_(scopeAnalysis),
-        envSize_(envSize),
         nextCacheIdx_(nextCacheIdx),
         bbTryDepths_(bbTryDepths) {}
 
@@ -566,9 +563,6 @@ class InstrGen {
 
   /// Function scope analysis of the current module
   FunctionScopeAnalysis &scopeAnalysis_;
-
-  /// The size of this functions environment
-  unsigned envSize_;
 
   /// Starts out at 0 and increments every time a cache index is used
   uint32_t &nextCacheIdx_;
@@ -872,7 +866,7 @@ class InstrGen {
   void generateHBCResolveParentEnvironmentInst(
       HBCResolveParentEnvironmentInst &inst) {
     llvh::Optional<int32_t> instScopeDepth =
-        scopeAnalysis_.getScopeDepth(inst.getScope());
+        scopeAnalysis_.getScopeDepth(inst.getVariableScope());
     llvh::Optional<int32_t> curScopeDepth =
         scopeAnalysis_.getScopeDepth(inst.getFunction()->getFunctionScope());
     if (!instScopeDepth || !curScopeDepth) {
@@ -1970,7 +1964,7 @@ class InstrGen {
     os_ << "  _sh_ljs_create_environment(shr, _sh_ljs_get_env_from_closure(shr, frame["
         << hbc::StackFrameLayout::CalleeClosureOrCB << "]),";
     generateRegisterPtr(inst);
-    os_ << ", " << envSize_ << ");\n";
+    os_ << ", " << inst.getVariableScope()->getVariables().size() << ");\n";
   }
   void generateCoerceThisNSInst(CoerceThisNSInst &inst) {
     os_.indent(2);
@@ -2518,21 +2512,11 @@ void generateFunction(
   srcMgr.dumpCoords(OS, F.getSourceRange().Start);
   OS << '\n';
 
-  unsigned envSize = F.getFunctionScope()->getVariables().size();
-
   // Compute the try nesting depth of each basic block.
   auto [bbTryDepths, maxTryDepth] = getBlockTryDepths(&F);
 
   InstrGen instrGen(
-      OS,
-      RA,
-      bbMap,
-      F,
-      moduleGen,
-      scopeAnalysis,
-      envSize,
-      nextCacheIdx,
-      bbTryDepths);
+      OS, RA, bbMap, F, moduleGen, scopeAnalysis, nextCacheIdx, bbTryDepths);
 
   // Number of registers stored in the `locals` struct below.
   uint32_t localsSize = RA.getMaxRegisterUsage(sh::RegClass::LocalPtr);

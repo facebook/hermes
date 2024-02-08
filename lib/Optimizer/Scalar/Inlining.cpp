@@ -295,7 +295,7 @@ static Value *inlineFunction(
     } else if (
         llvh::isa<Label>(oldOp) || llvh::isa<Literal>(oldOp) ||
         llvh::isa<Function>(oldOp) || llvh::isa<Variable>(oldOp) ||
-        llvh::isa<EmptySentinel>(oldOp)) {
+        llvh::isa<EmptySentinel>(oldOp) || llvh::isa<VariableScope>(oldOp)) {
       // Labels, literals and variables are unchanged.
       newOp = oldOp;
     } else {

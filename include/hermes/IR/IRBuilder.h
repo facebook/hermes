@@ -551,7 +551,8 @@ class IRBuilder {
 
   LoadParamInst *createLoadParamInst(JSDynamicParam *param);
 
-  HBCCreateFunctionEnvironmentInst *createHBCCreateFunctionEnvironmentInst();
+  HBCCreateFunctionEnvironmentInst *createHBCCreateFunctionEnvironmentInst(
+      VariableScope *scope);
 
   LIRGetThisNSInst *createLIRGetThisNSInst();
 
@@ -587,12 +588,12 @@ class IRBuilder {
 
   HBCCreateFunctionInst *createHBCCreateFunctionInst(
       Function *function,
-      Value *env);
+      BaseScopeInst *env);
   HBCSpillMovInst *createHBCSpillMovInst(Instruction *value);
 
   HBCCreateGeneratorInst *createHBCCreateGeneratorInst(
       Function *function,
-      Value *env);
+      BaseScopeInst *env);
 
   HBCAllocObjectFromBufferInst *createHBCAllocObjectFromBufferInst(
       HBCAllocObjectFromBufferInst::ObjectPropertyMap prop_map,

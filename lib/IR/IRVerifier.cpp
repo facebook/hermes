@@ -1116,7 +1116,10 @@ bool Verifier::visitDeclareGlobalVarInst(const DeclareGlobalVarInst &Inst) {
 
 bool Verifier::visitHBCCreateFunctionEnvironmentInst(
     const HBCCreateFunctionEnvironmentInst &Inst) {
-  // Nothing to verify at this point.
+  AssertIWithMsg(
+      Inst,
+      Inst.getFunction()->getFunctionScope() == Inst.getVariableScope(),
+      "HBCCreateFunctionEnvironmentInst must take an ES5Function");
   return true;
 }
 

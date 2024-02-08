@@ -62,7 +62,6 @@ DEF_VALUE(LoadFrameInst, Instruction)
 DEF_VALUE(LoadParamInst, Instruction)
 #ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCLoadConstInst, Instruction)
-DEF_VALUE(HBCResolveParentEnvironmentInst, Instruction)
 DEF_VALUE(HBCGetArgumentsLengthInst, Instruction)
 
 MARK_FIRST(HBCReifyArgumentsInst, Instruction)
@@ -215,12 +214,18 @@ DEF_VALUE(GetBuiltinClosureInst, Instruction)
 DEF_VALUE(StartGeneratorInst, Instruction)
 DEF_VALUE(ResumeGeneratorInst, Instruction)
 
+MARK_FIRST(BaseScopeInst, Instruction)
+#ifdef INCLUDE_HBC_BACKEND
+DEF_VALUE(HBCResolveParentEnvironmentInst, BaseScopeInst)
+DEF_VALUE(HBCCreateFunctionEnvironmentInst, BaseScopeInst)
+#endif
+MARK_LAST(BaseScopeInst)
+
 // These are target dependent instructions:
 
 DEF_VALUE(LIRGetThisNSInst, Instruction)
 #ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCGetGlobalObjectInst, Instruction)
-DEF_VALUE(HBCCreateFunctionEnvironmentInst, Instruction)
 
 MARK_FIRST(HBCGetArgumentsPropByValInst, Instruction)
 DEF_VALUE(HBCGetArgumentsPropByValLooseInst, HBCGetArgumentsPropByValInst)

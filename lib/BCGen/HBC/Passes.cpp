@@ -317,7 +317,7 @@ bool LowerLoadStoreFrameInst::runOnFunction(Function *F) {
   // environment to use - we don't account for the case when an environment may
   // not be needed somewhere along the chain.
   HBCCreateFunctionEnvironmentInst *captureScope =
-      builder.createHBCCreateFunctionEnvironmentInst();
+      builder.createHBCCreateFunctionEnvironmentInst(F->getFunctionScope());
 
   for (BasicBlock &BB : F->getBasicBlockList()) {
     for (auto I = BB.begin(), E = BB.end(); I != E; /* nothing */) {
