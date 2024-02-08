@@ -540,7 +540,10 @@ bool Verifier::visitHBCLoadFromEnvironmentInst(
 }
 bool Verifier::visitHBCResolveParentEnvironmentInst(
     const HBCResolveParentEnvironmentInst &Inst) {
-  // Nothing to verify at this point.
+  AssertIWithMsg(
+      Inst,
+      Inst.getParentScopeParam() == Inst.getFunction()->getParentScopeParam(),
+      "parentScopeParam must be the JSDynamicParam in the Function.");
   return true;
 }
 
@@ -1120,6 +1123,10 @@ bool Verifier::visitHBCCreateFunctionEnvironmentInst(
       Inst,
       Inst.getFunction()->getFunctionScope() == Inst.getVariableScope(),
       "HBCCreateFunctionEnvironmentInst must take an ES5Function");
+  AssertIWithMsg(
+      Inst,
+      Inst.getParentScopeParam() == Inst.getFunction()->getParentScopeParam(),
+      "Using incorect parent scope parameter.");
   return true;
 }
 

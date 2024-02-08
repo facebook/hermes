@@ -532,7 +532,8 @@ class IRBuilder {
   //--------------------------------------------------------------------------//
 
   HBCResolveParentEnvironmentInst *createHBCResolveParentEnvironmentInst(
-      VariableScope *scope);
+      VariableScope *scope,
+      JSDynamicParam *parentScopeParam);
   HBCStoreToEnvironmentInst *
   createHBCStoreToEnvironmentInst(Value *env, Value *toPut, Variable *var);
   HBCLoadFromEnvironmentInst *createHBCLoadFromEnvironmentInst(
@@ -552,7 +553,8 @@ class IRBuilder {
   LoadParamInst *createLoadParamInst(JSDynamicParam *param);
 
   HBCCreateFunctionEnvironmentInst *createHBCCreateFunctionEnvironmentInst(
-      VariableScope *scope);
+      VariableScope *scope,
+      JSDynamicParam *parentScopeParam);
 
   LIRGetThisNSInst *createLIRGetThisNSInst();
 

@@ -194,6 +194,9 @@ Function::Function(
       externalScopes_(),
       functionScope_(this),
       newTargetParam_(this, parent_->getContext().getIdentifier("new.target")),
+      parentScopeParam_(
+          this,
+          parent_->getContext().getIdentifier("parentScope")),
       originalOrInferredName_(originalName),
       definitionKind_(definitionKind),
       strictMode_(strictMode),
@@ -203,6 +206,7 @@ Function::Function(
   setType(Type::createFunctionCode());
   // Determine the type of new.target.
   newTargetParam_.setType(functionNewTargetType(definitionKind_));
+  parentScopeParam_.setType(Type::createEnvironment());
 
   if (insertBefore) {
     assert(insertBefore != this && "Cannot insert a function before itself!");

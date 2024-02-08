@@ -809,8 +809,8 @@ Effects | Does not read or write to memory.
 HBCCreateFunctionEnvironmentInst | _
 --- | --- |
 Description | Create a new environment with the function's parent environment as its parent.
-Example | %0 = HBCCreateFunctionEnvironmentInst %varScope
-Arguments | %varScope is the variable scope that this instruction will produce.
+Example | %0 = HBCCreateFunctionEnvironmentInst %varScope, %parentScopeParam
+Arguments | %varScope is the variable scope that this instruction will produce. %parentScopeParam is dummy parameter used to model usage of the parent environment.
 Semantics | The instruction creates a new environment for a function.
 Effects | Does not read or write to memory.
 
@@ -819,8 +819,8 @@ Effects | Does not read or write to memory.
 HBCResolveParentEnvironmentInst | _
 --- | --- |
 Description | Traverse the chain of environments starting at the current function's parent to find a given environment.
-Example | %0 = HBCResolveParentEnvironmentInst %varScope
-Arguments | %varScope is the variable scope to resolve to.
+Example | %0 = HBCResolveParentEnvironmentInst %varScope, %parentScopeParam
+Arguments | %varScope is the variable scope to resolve to. %parentScopeParam is dummy parameter used to model usage of the parent environment.
 Semantics | The instruction resolves an environment that is a parent of the current function's environment.
 Effects | Does not read or write to memory.
 

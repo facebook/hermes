@@ -3047,13 +3047,23 @@ class HBCResolveParentEnvironmentInst : public BaseScopeInst {
       delete;
   void operator=(const HBCResolveParentEnvironmentInst &) = delete;
 
+  enum { ParentScopeParamIdx = BaseScopeInst::LAST_IDX };
+
  public:
-  explicit HBCResolveParentEnvironmentInst(VariableScope *scope)
-      : BaseScopeInst(ValueKind::HBCResolveParentEnvironmentInstKind, scope) {}
+  explicit HBCResolveParentEnvironmentInst(
+      VariableScope *scope,
+      JSDynamicParam *parentScopeParam)
+      : BaseScopeInst(ValueKind::HBCResolveParentEnvironmentInstKind, scope) {
+    pushOperand(parentScopeParam);
+  }
   explicit HBCResolveParentEnvironmentInst(
       const HBCResolveParentEnvironmentInst *src,
       llvh::ArrayRef<Value *> operands)
       : BaseScopeInst(src, operands) {}
+
+  JSDynamicParam *getParentScopeParam() const {
+    return cast<JSDynamicParam>(getOperand(ParentScopeParamIdx));
+  }
 
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setIdempotent();
@@ -3382,13 +3392,23 @@ class HBCCreateFunctionEnvironmentInst : public BaseScopeInst {
       delete;
   void operator=(const HBCCreateFunctionEnvironmentInst &) = delete;
 
+  enum { ParentScopeParamIdx = BaseScopeInst::LAST_IDX };
+
  public:
-  explicit HBCCreateFunctionEnvironmentInst(VariableScope *scope)
-      : BaseScopeInst(ValueKind::HBCCreateFunctionEnvironmentInstKind, scope) {}
+  explicit HBCCreateFunctionEnvironmentInst(
+      VariableScope *scope,
+      JSDynamicParam *parentScopeParam)
+      : BaseScopeInst(ValueKind::HBCCreateFunctionEnvironmentInstKind, scope) {
+    pushOperand(parentScopeParam);
+  }
   explicit HBCCreateFunctionEnvironmentInst(
       const HBCCreateFunctionEnvironmentInst *src,
       llvh::ArrayRef<Value *> operands)
       : BaseScopeInst(src, operands) {}
+
+  JSDynamicParam *getParentScopeParam() const {
+    return cast<JSDynamicParam>(getOperand(ParentScopeParamIdx));
+  }
 
   SideEffect getSideEffectImpl() const {
     return {};

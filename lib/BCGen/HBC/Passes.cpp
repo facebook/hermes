@@ -290,7 +290,8 @@ Instruction *LowerLoadStoreFrameInst::getScope(
   if (var->getParent()->getFunction() != builder.getFunction()) {
     // If the variable is neither from the current scope,
     // we should get the proper scope for it.
-    return builder.createHBCResolveParentEnvironmentInst(var->getParent());
+    return builder.createHBCResolveParentEnvironmentInst(
+        var->getParent(), builder.getFunction()->getParentScopeParam());
   } else {
     // Now we know that the variable belongs to the current scope.
     // We are going to conservatively assume the variable might get
@@ -317,7 +318,8 @@ bool LowerLoadStoreFrameInst::runOnFunction(Function *F) {
   // environment to use - we don't account for the case when an environment may
   // not be needed somewhere along the chain.
   HBCCreateFunctionEnvironmentInst *captureScope =
-      builder.createHBCCreateFunctionEnvironmentInst(F->getFunctionScope());
+      builder.createHBCCreateFunctionEnvironmentInst(
+          F->getFunctionScope(), F->getParentScopeParam());
 
   for (BasicBlock &BB : F->getBasicBlockList()) {
     for (auto I = BB.begin(), E = BB.end(); I != E; /* nothing */) {
