@@ -916,7 +916,13 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
 }
 
 void JSONStringifyer::operationQuote(StringView value) {
-  quoteStringForJSON(output_, value);
+  if (value.isASCII()) {
+    quoteStringForJSON(
+        output_, ASCIIRef{value.castToCharPtr(), value.length()});
+  } else {
+    quoteStringForJSON(
+        output_, UTF16Ref{value.castToChar16Ptr(), value.length()});
+  }
 }
 
 ExecutionStatus JSONStringifyer::operationJA() {

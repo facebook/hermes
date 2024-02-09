@@ -10,6 +10,8 @@
 
 #include "hermes/Platform/Unicode/CharacterProperties.h"
 
+#include "llvh/ADT/ArrayRef.h"
+
 namespace hermes {
 
 template <typename Output>
@@ -28,15 +30,15 @@ void appendUTF16Escaped(Output &output, char16_t cp) {
 // If there is a valid surrogate pair at position \p i in \p view, then write
 // both the high and low surrogate into \p output. Otherwise, write an escaped
 // UTF16 value into \p output. \return true if a pair was found.
-template <typename Output, typename StringView>
-bool handleSurrogate(Output &output, StringView view, size_t i) {
+template <typename Output, typename CharT>
+bool handleSurrogate(Output &output, llvh::ArrayRef<CharT> view, size_t i) {
   char16_t ch = view[i];
   assert(
       ch >= UNICODE_SURROGATE_FIRST && ch <= UNICODE_SURROGATE_LAST &&
       "charcter should be a surrogate character");
   // Handle well-formed-ness here: Represent unpaired surrogate code points as
   // JSON escape sequences.
-  if (isHighSurrogate(ch) && i + 1 < view.length()) {
+  if (isHighSurrogate(ch) && i + 1 < view.size()) {
     char16_t next = view[i + 1];
     if (isLowSurrogate(next)) {
       // We found a surrogate pair. Simply write both of them unescaped to the
@@ -53,16 +55,16 @@ bool handleSurrogate(Output &output, StringView view, size_t i) {
 }
 
 /// Quotes a string given by \p view and puts the quoted version into \p output.
-/// \p view should be utf16-encoded, and \p output will be as well.
+/// \p view must be utf16 or ASCII encoded.
 /// \post output is a container that has a sequential list of utf16 characters
 ///   that can be embedded into a JSON string.
-template <typename Output, typename StringView>
-void quoteStringForJSON(Output &output, StringView view) {
+template <typename Output, typename CharT>
+void quoteStringForJSON(Output &output, llvh::ArrayRef<CharT> view) {
   // Quote.1.
   output.push_back(u'"');
   // Quote.2.
-  for (size_t i = 0; i < view.length(); i++) {
-    char16_t ch = view[i];
+  for (size_t i = 0, e = view.size(); i < e; ++i) {
+    CharT ch = view[i];
 #define ESCAPE(ch, replace)    \
   case ch:                     \
     output.push_back(u'\\');   \
@@ -90,10 +92,19 @@ void quoteStringForJSON(Output &output, StringView view) {
             output.push_back(u'a' + (ch % 16 - 10));
           }
         } else {
-          if (ch >= UNICODE_SURROGATE_FIRST && ch <= UNICODE_SURROGATE_LAST) {
-            if (handleSurrogate(output, view, i)) {
-              // Found a valid surrogate pair, so skip over the next character.
-              i++;
+          // This check should only generate code when CharT is more than 1
+          // byte.
+          if constexpr (
+              std::numeric_limits<CharT>::max() >= UNICODE_SURROGATE_FIRST) {
+            if (ch >= UNICODE_SURROGATE_FIRST && ch <= UNICODE_SURROGATE_LAST) {
+              if (handleSurrogate(output, view, i)) {
+                // Found a valid surrogate pair, so skip over the next
+                // character.
+                i++;
+              }
+            } else {
+              // Quote.2.d.
+              output.push_back(ch);
             }
           } else {
             // Quote.2.d.
