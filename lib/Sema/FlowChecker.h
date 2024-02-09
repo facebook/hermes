@@ -74,20 +74,26 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   sema::Keywords &kw_;
 
   struct TypeDecl {
-    /// nullptr is used to indicate a forward declaration. This is a temporary
-    /// state while declaring all types in a scope.
+    /// nullptr is used to indicate a generic declaration.
     Type *type;
     /// The lexical scope in which the type was declared.
     /// TODO: this is not used, should we remove it?
     sema::LexicalScope *scope;
     /// Optional AST node for reporting re-declarations.
     ESTree::Node *astNode;
+    /// When this is a generic declaration, the Decl of the class.
+    sema::Decl *genericClassDecl;
     explicit TypeDecl(
         Type *type,
         sema::LexicalScope *scope,
-        ESTree::Node *astNode)
-        : type(type), scope(scope), astNode(astNode) {
-      assert(type && "type must be non-null");
+        ESTree::Node *astNode,
+        sema::Decl *genericClassDecl = nullptr)
+        : type(type),
+          scope(scope),
+          astNode(astNode),
+          genericClassDecl(genericClassDecl) {
+      assert(
+          (!type ^ !genericClassDecl) && "either we have a type or a generic");
       assert(scope && "scope must be non-null");
     }
   };
@@ -209,6 +215,31 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// Store a pointer to allow for empty/tombstone values in DenseMap.
   llvh::DenseMap<const sema::Decl *, GenericInfo *> genericsMap_;
 
+  /// Description of the generic that we have deferred typechecking for.
+  struct DeferredGenericClass {
+    /// The declaration node.
+    ESTree::ClassDeclarationNode *specialization;
+    /// The scope where the generic was defined,
+    /// with the parameter names bound to the corresponding type variables.
+    TypeBindingTableScopePtrTy scope;
+    /// The type for the deferred generic.
+    Type *classType;
+
+    DeferredGenericClass(
+        ESTree::ClassDeclarationNode *specialization,
+        TypeBindingTableScopePtrTy scope,
+        Type *declType)
+        : specialization(specialization), scope(scope), classType(declType) {}
+  };
+
+  /// List of generics that we haven't parsed yet because they might
+  /// refer to other generics that haven't been parsed yet.
+  std::vector<DeferredGenericClass> *deferredParseGenerics_ = nullptr;
+
+  /// Queue of the generics that we haven't finished typechecking yet,
+  /// which need their bodies typechecked.
+  std::deque<DeferredGenericClass> typecheckQueue_;
+
  public:
   explicit FlowChecker(
       Context &astContext,
@@ -246,6 +277,12 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   void visit(ESTree::FunctionDeclarationNode *node);
   void visit(ESTree::FunctionExpressionNode *node);
   void visit(ESTree::ArrowFunctionExpressionNode *node);
+
+  /// Run typechecking on the body of a class that we already have the type for.
+  void visitClassNode(
+      ESTree::Node *classNode,
+      ESTree::ClassBodyNode *body,
+      Type *classType);
 
   void visit(ESTree::ClassExpressionNode *node);
   void visit(ESTree::ClassDeclarationNode *node);
@@ -320,6 +357,9 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   LLVM_NODISCARD bool resolveScopeTypesAndAnnotate(
       ESTree::Node *scopeNode,
       sema::LexicalScope *scope);
+
+  /// Finish typechecking all the deferred nodes that have been queued up.
+  void drainTypecheckQueue();
 
   /// Record the declaration's type and declaring AST node, while checking for
   /// and reporting re-declarations.
@@ -534,6 +574,35 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       llvh::ArrayRef<Type *> typeArgTypes,
       sema::Decl *oldDecl,
       sema::Decl *newDecl);
+
+  /// Create the ClassType for the specialization.
+  /// Record the declaration in \p newDecl.
+  /// If deferredGenericSpecializations_ is set,
+  /// add the specialization to the list of deferred specializations.
+  /// Otherwise, parse immediately and enqueue a typecheck.
+  /// \param typeArgTypes the type arguments passed to the generic function.
+  /// \param oldDecl the original Decl for the non-specialized generic function.
+  /// \param newDecl the new Decl for the specialization of the function.
+  void typecheckGenericClassSpecialization(
+      ESTree::ClassDeclarationNode *specialization,
+      ESTree::TypeParameterInstantiationNode *typeArgsNode,
+      llvh::ArrayRef<Type *> typeArgTypes,
+      sema::Decl *oldDecl,
+      sema::Decl *newDecl);
+
+  /// Given a generic type for a class, resolve it into a class constructor.
+  /// Annotate the \p nameNode with the resolved ClassConstructorType.
+  /// \return the ClassType corresponding to the constructor.
+  Type *resolveGenericClassSpecialization(
+      ESTree::IdentifierNode *nameNode,
+      ESTree::TypeParameterInstantiationNode *typeArgsNode,
+      sema::Decl *oldDecl);
+
+  /// Given a generic type for a class, resolve it into a class constructor.
+  /// \return the ClassType corresponding to the constructor.
+  Type *resolveGenericClassSpecializationForType(
+      ESTree::GenericTypeAnnotationNode *genericTypeNode,
+      sema::Decl *oldDecl);
 
   /// Register the \p decl generic with its original AST \p node.
   /// Increment refcount of \p bindingTableScope so it can be kept alive and

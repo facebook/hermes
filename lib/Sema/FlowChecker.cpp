@@ -41,6 +41,46 @@
 /// When a generic function is invoked, the AST is cloned (or an existing clone
 /// is used), the cloned AST is typechecked, and the type of the CallExpression
 /// is set to the result type of the cloned AST now that it has been annotated.
+///
+/// Generic classes:
+/// Generic classes can also introduce new types into the scope,
+/// so they have to be handled differently from generic functions.
+/// The ParseClassType phase has to be deferred until the end of
+/// DeclareScopeTypes, because fields in a generic class may refer to fields in
+/// other generic classes which haven't been declared yet.
+/// This is done by the deferredParseGenerics_ field on FlowChecker.
+/// Deferring ParseClassType is only necessary during DeclareScopeTypes;
+/// if a class is specialized via a constructor call during the typechecking
+/// AST traversal phase, the scope types will already be declared so we can
+/// ParseClassType immediately.
+/// However, the bodies of the generic class's methods shouldn't be typechecked
+/// immediately. Instead they are put into a typecheckQueue_.
+/// \code
+///    class A<T> extends B<T> {
+///      constructor() {
+///        super();
+///      }
+///      foo(): void {}
+///    }
+///
+///    class B<T> {
+///      constructor() {}
+///      method(): void {
+///        new A<boolean>().foo();
+///      }
+///    }
+///
+///    new A<number>();
+/// \endcode
+/// If we eagerly typechecked:
+///   A<number>
+///   B<number> (via superClass)
+///   A<boolean> (via NewExpression)
+///   B<boolean> (via superClass)
+///   A<boolean> <- ERROR: A<boolean> not initialized yet
+/// Queueing the typechecking of the bodies until the very end means that we can
+/// use the ClassType immediately after ParseClassType, without having to deal
+/// with the creation of potentially more generic specializations recursively.
 //===----------------------------------------------------------------------===//
 
 #include "FlowChecker.h"
@@ -52,6 +92,7 @@
 #include "llvh/ADT/ScopeExit.h"
 #include "llvh/ADT/SetVector.h"
 #include "llvh/ADT/Twine.h"
+#include "llvh/Support/SaveAndRestore.h"
 
 #define DEBUG_TYPE "FlowChecker"
 
@@ -93,6 +134,7 @@ bool FlowChecker::run(ESTree::ProgramNode *rootNode) {
   if (!resolveScopeTypesAndAnnotate(rootNode, rootNode->getScope()))
     return false;
   visitESTreeNodeNoReplace(*this, rootNode);
+  drainTypecheckQueue();
   return sm_.getErrorCount() == 0;
 }
 
@@ -240,14 +282,26 @@ class FlowChecker::ParseClassType {
   ParseClassType(
       FlowChecker &outer,
       ESTree::Node *superClass,
+      ESTree::Node *superTypeParameters,
       ESTree::Node *body,
       Type *classType)
-      : outer_(outer), superClassType(resolveSuperClass(superClass)) {
+      : outer_(outer),
+        superClassType(
+            resolveSuperClass(outer, superClass, superTypeParameters)) {
+    LLVM_DEBUG(
+        llvh::dbgs()
+        << "ParseClassType for: "
+        << llvh::cast<ClassType>(classType->info)->getClassNameOrDefault().str()
+        << '\n');
+
     ClassType *superClassTypeInfo = nullptr;
     if (superClassType) {
       superClassTypeInfo = llvh::cast<ClassType>(superClassType->info);
       // Offset based on the superclass if necessary, to avoid overwriting
       // existing fields.
+      assert(
+          superClassTypeInfo->isInitialized() &&
+          "superClass must be initialized");
       nextFieldLayoutSlotIR = superClassTypeInfo->getFieldNameMap().size();
       nextMethodLayoutSlotIR =
           superClassTypeInfo->getHomeObjectTypeInfo()->getFieldNameMap().size();
@@ -286,15 +340,48 @@ class FlowChecker::ParseClassType {
   }
 
  private:
-  Type *resolveSuperClass(ESTree::Node *superClass) {
+  Type *resolveSuperClass(
+      FlowChecker &outer_,
+      ESTree::Node *superClass,
+      ESTree::Node *superTypeParameters) {
     if (!superClass)
       return nullptr;
-    if (!llvh::isa<ESTree::IdentifierNode>(superClass)) {
+    auto *superClassIdent = llvh::dyn_cast<ESTree::IdentifierNode>(superClass);
+    if (!superClassIdent) {
       outer_.sm_.error(
           superClass->getStartLoc(),
           "ft: only identifiers may be extended as superclasses");
       return nullptr;
     }
+
+    sema::Decl *superDecl = outer_.getDecl(superClassIdent);
+    if (superDecl->generic) {
+      // Superclass type parameters aren't stored in _superClass,
+      // but rather in a separate field in the class declaration itself,
+      // so we need to handle it separately here.
+      // Importantly, we can't defer the parsing of the superclass
+      // because we need to be able to read the type of the superclass
+      // to extend it.
+      llvh::SaveAndRestore<std::vector<DeferredGenericClass> *>
+          savedDeferredGenerics{outer_.deferredParseGenerics_, nullptr};
+      auto *superTypeParams =
+          llvh::cast_or_null<ESTree::TypeParameterInstantiationNode>(
+              superTypeParameters);
+      if (!superTypeParams) {
+        outer_.sm_.error(
+            superClassIdent->getSourceRange(),
+            "ft: missing type arguments for superclass");
+        return nullptr;
+      }
+      outer_.resolveGenericClassSpecialization(
+          superClassIdent, superTypeParams, superDecl);
+    } else if (superTypeParameters) {
+      outer_.sm_.error(
+          superTypeParameters->getStartLoc(),
+          "ft: type arguments are not allowed for non-generic classes");
+      return nullptr;
+    }
+
     Type *superType = outer_.flowContext_.findNodeType(superClass);
     if (!superType) {
       outer_.sm_.error(superClass->getStartLoc(), "ft: super type unknown");
@@ -376,6 +463,13 @@ class FlowChecker::ParseClassType {
       Type *classType,
       ESTree::MethodDefinitionNode *method) {
     auto *fe = llvh::cast<ESTree::FunctionExpressionNode>(method->_value);
+
+    if (fe->_typeParameters) {
+      outer_.sm_.error(
+          fe->_typeParameters->getSourceRange(),
+          "ft: type parameters not supported directly on methods");
+      return outer_.flowContext_.getAny();
+    }
 
     if (method->_kind == outer_.kw_.identConstructor) {
       // Constructor
@@ -473,12 +567,28 @@ class FlowChecker::ParseClassType {
   }
 };
 
+void FlowChecker::visitClassNode(
+    ESTree::Node *classNode,
+    ESTree::ClassBodyNode *body,
+    Type *classType) {
+  assert(
+      llvh::cast<ClassType>(classType->info)->isInitialized() &&
+      "trying to typecheck uninitialized class");
+  ClassContext classContext(*this, classType);
+  visitESTreeChildren(*this, body);
+}
+
 void FlowChecker::visit(ESTree::ClassExpressionNode *node) {
   visitExpression(node->_superClass, node);
 
   auto *id = llvh::cast_or_null<ESTree::IdentifierNode>(node->_id);
   Type *classType = flowContext_.createType();
-  ParseClassType(*this, node->_superClass, node->_body, classType);
+  ParseClassType(
+      *this,
+      node->_superClass,
+      node->_superTypeParameters,
+      node->_body,
+      classType);
 
   Type *consType =
       flowContext_.createType(flowContext_.createClassConstructor(classType));
@@ -501,22 +611,36 @@ void FlowChecker::visit(ESTree::ClassExpressionNode *node) {
     recordDecl(decl, consType, id, node);
   }
 
-  ClassContext classContext(*this, classType);
-  visitESTreeNode(*this, node->_body, node);
+  visitClassNode(
+      node, llvh::cast<ESTree::ClassBodyNode>(node->_body), classType);
 }
 
 void FlowChecker::visit(ESTree::ClassDeclarationNode *node) {
   sema::Decl *decl = getDecl(llvh::cast<ESTree::IdentifierNode>(node->_id));
   assert(decl && "class declaration must have been resolved");
+
+  // If it is generic, don't typecheck because typechecking will be done
+  // directly by draining the typecheck queue.
+  if (node->_typeParameters) {
+    return;
+  }
+
   auto *classType =
       llvh::cast<ClassConstructorType>(getDeclType(decl)->info)->getClassType();
 
-  ClassContext classContext(*this, classType);
-  visitESTreeNode(*this, node->_body, node);
+  visitClassNode(
+      node, llvh::cast<ESTree::ClassBodyNode>(node->_body), classType);
 }
 
 void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
   auto *fe = llvh::cast<ESTree::FunctionExpressionNode>(node->_value);
+
+  if (fe->_typeParameters) {
+    sm_.error(
+        fe->_typeParameters->getSourceRange(),
+        "ft: type parameters not supported directly on methods");
+    return;
+  }
 
   if (node->_kind == kw_.identConstructor) {
     FunctionContext functionContext(
@@ -650,6 +774,17 @@ class FlowChecker::ExprVisitor {
       bool isValid = false;
       if (auto *call = llvh::dyn_cast<ESTree::CallExpressionLikeNode>(parent)) {
         if (ESTree::getCallee(call) == node)
+          isValid = true;
+      }
+      if (auto *newExpr = llvh::dyn_cast<ESTree::NewExpressionNode>(parent)) {
+        if (newExpr->_callee == node)
+          isValid = true;
+      }
+      if (auto *classDecl =
+              llvh::dyn_cast<ESTree::ClassDeclarationNode>(parent)) {
+        if (classDecl->_id == node)
+          isValid = true;
+        if (classDecl->_superClass == node)
           isValid = true;
       }
       if (!isValid) {
@@ -2077,6 +2212,31 @@ class FlowChecker::ExprVisitor {
   void visit(ESTree::NewExpressionNode *node) {
     visitESTreeChildren(*this, node);
 
+    // Resolve generics using type arguments if necessary.
+    if (auto *identCallee =
+            llvh::dyn_cast<ESTree::IdentifierNode>(node->_callee)) {
+      sema::Decl *decl = outer_.getDecl(identCallee);
+      if (decl->generic) {
+        if (!node->_typeArguments) {
+          outer_.sm_.error(
+              node->_callee->getSourceRange(), "ft: type arguments required");
+          return;
+        }
+
+        outer_.resolveGenericClassSpecialization(
+            identCallee,
+            llvh::cast<ESTree::TypeParameterInstantiationNode>(
+                node->_typeArguments),
+            decl);
+      }
+    } else if (node->_typeArguments) {
+      // Generics handled above.
+      outer_.sm_.error(
+          node->_callee->getSourceRange(),
+          "ft: generic call only works on identifiers");
+      return;
+    }
+
     Type *calleeType = outer_.getNodeTypeOrAny(node->_callee);
     // If the callee has no type, we have nothing to do/check.
     if (llvh::isa<AnyType>(calleeType->info))
@@ -2530,6 +2690,8 @@ class FlowChecker::DeclareScopeTypes {
   const sema::ScopeDecls &decls;
   /// The current lexical scope.
   sema::LexicalScope *const scope;
+  /// The current lexical scope.
+  ESTree::Node *const scopeNode;
   /// Type aliases declared in this scope.
   llvh::SmallVector<Type *, 4> localTypeAliases{};
   /// Mapping from the LHS to the RHS type of a Type alias.
@@ -2547,15 +2709,25 @@ class FlowChecker::DeclareScopeTypes {
   /// independently of the non-recursive arms.
   llvh::SmallDenseSet<Type *> loopingUnionArms{};
 
+  /// The generic specializations to be parsed after the class body is parsed.
+  /// These have to be deferred here instead of in DeclareScopeTypes because
+  /// we have to not defer parsing the superClass, e.g.
+  std::vector<DeferredGenericClass> deferredParseGenerics{};
+
  public:
   DeclareScopeTypes(
       FlowChecker &outer,
       const sema::ScopeDecls &decls,
-      sema::LexicalScope *scope)
-      : outer(outer), decls(decls), scope(scope) {
+      sema::LexicalScope *scope,
+      ESTree::Node *scopeNode)
+      : outer(outer), decls(decls), scope(scope), scopeNode(scopeNode) {
+    llvh::SaveAndRestore savedDeferredGenerics{
+        outer.deferredParseGenerics_, &deferredParseGenerics};
+
     createForwardDeclarations();
     resolveAllAliases();
     completeForwardDeclarations();
+    parseDeferredGenericClasses();
   }
 
  private:
@@ -2579,6 +2751,15 @@ class FlowChecker::DeclareScopeTypes {
     return true;
   };
 
+  /// \return the parent of the generic (based on the scopeNode),
+  ///   in which to insert new generic specializations.
+  ESTree::Node *getGenericParentNode() const {
+    if (auto *funcNode = llvh::dyn_cast<ESTree::FunctionLikeNode>(scopeNode)) {
+      return ESTree::getBlockStatement(funcNode);
+    }
+    return scopeNode;
+  }
+
   /// Forward declare all classes and record all aliases for later processing.
   void createForwardDeclarations() {
     for (ESTree::Node *declNode : decls) {
@@ -2595,6 +2776,23 @@ class FlowChecker::DeclareScopeTypes {
         auto *id = llvh::cast<ESTree::IdentifierNode>(classNode->_id);
         if (isRedeclaration(id))
           continue;
+
+        sema::Decl *decl = outer.getDecl(id);
+        decl->generic = classNode->_typeParameters != nullptr;
+
+        if (decl->generic) {
+          // Avoid visiting the body of the class until we have an instance.
+          outer.bindingTable_.try_emplace(
+              id->_name, TypeDecl(nullptr, scope, declNode, decl));
+
+          outer.registerGeneric(
+              decl,
+              classNode,
+              getGenericParentNode(),
+              outer.bindingTable_.getCurrentScope());
+          continue;
+        }
+
         Type *newType = outer.flowContext_.createType(
             outer.flowContext_.createClass(
                 Identifier::getFromPointer(id->_name)),
@@ -2605,7 +2803,7 @@ class FlowChecker::DeclareScopeTypes {
             id->_name, TypeDecl(newType, scope, declNode));
 
         bool success = outer.recordDecl(
-            outer.getDecl(id),
+            decl,
             outer.flowContext_.createType(
                 outer.flowContext_.createClassConstructor(newType), classNode),
             id,
@@ -2717,6 +2915,12 @@ class FlowChecker::DeclareScopeTypes {
         // Not declared anywhere!
         outer.sm_.error(
             id->getStartLoc(), "ft: undefined type " + id->_name->str());
+        return outer.flowContext_.getAny();
+      }
+
+      if (typeDecl->genericClassDecl) {
+        outer.sm_.error(
+            gta->getSourceRange(), "ft: generics in aliases unsupported");
         return outer.flowContext_.getAny();
       }
 
@@ -2851,7 +3055,12 @@ class FlowChecker::DeclareScopeTypes {
       //     type D = number;
       auto *classNode = llvh::cast<ESTree::ClassDeclarationNode>(type->node);
       outer.visitExpression(classNode->_superClass, classNode);
-      ParseClassType(outer, classNode->_superClass, classNode->_body, type);
+      ParseClassType(
+          outer,
+          classNode->_superClass,
+          classNode->_superTypeParameters,
+          classNode->_body,
+          type);
     }
   }
 
@@ -2924,6 +3133,46 @@ class FlowChecker::DeclareScopeTypes {
       unionType->setCanonicalTypes(
           std::move(nonLoopingTypes), std::move(loopingTypes));
     }
+  }
+
+  /// Parse every element of deferredGenericSpecializations,
+  /// and enqueue them to be typechecked when the typecheckQueue is drained.
+  void parseDeferredGenericClasses() {
+    auto savedScope = outer.bindingTable_.getCurrentScope();
+
+    // It's possible we don't want to increment i every iteration,
+    // so don't do it in the loop update clause.
+    for (size_t i = 0; i < deferredParseGenerics.size(); ++i) {
+      // Move out because the vector may grow while we iterate over it.
+      DeferredGenericClass deferred{std::move(deferredParseGenerics[i])};
+      auto *specialization = deferred.specialization;
+
+      LLVM_DEBUG(
+          llvh::dbgs() << "Parsing deferred generic class: "
+                       << llvh::cast<ESTree::IdentifierNode>(
+                              specialization->_id)
+                              ->_name->str()
+                       << "\n");
+
+      outer.bindingTable_.activateScope(deferred.scope);
+
+      // Actually parse and move on to the next one.
+      // The superClass node has already been visited,
+      // and must have been parsed before the current one.
+      ParseClassType(
+          outer,
+          specialization->_superClass,
+          specialization->_superTypeParameters,
+          specialization->_body,
+          deferred.classType);
+
+      // Don't typecheck right now, because we need to parse everything in
+      // current scope before descending into child functions.
+      outer.typecheckQueue_.emplace_back(std::move(deferred));
+    }
+
+    outer.bindingTable_.activateScope(savedScope);
+    deferredParseGenerics.clear();
   }
 };
 
@@ -3292,12 +3541,34 @@ bool FlowChecker::resolveScopeTypesAndAnnotate(
   assert(scope && "declarations found but no lexical scope");
   unsigned errorsBefore = sm_.getErrorCount();
 
-  DeclareScopeTypes(*this, *decls, scope);
+  DeclareScopeTypes(*this, *decls, scope, scopeNode);
   AnnotateScopeDecls(*this, *decls, scopeNode);
 
   // If there were any errors during annotation, fail.
   // Don't count errors that happened during typechecking other nodes.
   return sm_.getErrorCount() == errorsBefore;
+}
+
+void FlowChecker::drainTypecheckQueue() {
+  auto savedScope = bindingTable_.getCurrentScope();
+
+  while (!typecheckQueue_.empty()) {
+    DeferredGenericClass deferred{std::move(typecheckQueue_.front())};
+    typecheckQueue_.pop_front();
+    ESTree::ClassDeclarationNode *specialization = deferred.specialization;
+    LLVM_DEBUG(
+        llvh::dbgs()
+        << "Typechecking deferred generic class: "
+        << llvh::cast<ESTree::IdentifierNode>(specialization->_id)->_name->str()
+        << "\n");
+    bindingTable_.activateScope(deferred.scope);
+    visitClassNode(
+        deferred.specialization,
+        llvh::cast<ESTree::ClassBodyNode>(specialization->_body),
+        deferred.classType);
+  }
+
+  bindingTable_.activateScope(savedScope);
 }
 
 /// Record the declaration's type and declaring AST node, while checking for
@@ -3491,6 +3762,18 @@ Type *FlowChecker::parseGenericTypeAnnotation(
   if (!td) {
     sm_.error(id->getSourceRange(), "ft: undefined type " + id->_name->str());
     return flowContext_.getAny();
+  }
+
+  if (td->genericClassDecl) {
+    // Resolve to the specialized class.
+    if (!node->_typeParameters) {
+      sm_.error(
+          node->getSourceRange(),
+          llvh::Twine("ft: missing generic arguments for '") +
+              id->_name->str() + "'");
+      return flowContext_.getAny();
+    }
+    return resolveGenericClassSpecializationForType(node, td->genericClassDecl);
   }
 
   return td->type;
@@ -3948,6 +4231,11 @@ sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
           llvh::dyn_cast<ESTree::FunctionDeclarationNode>(specialization)) {
     newDecl = getDecl(llvh::cast<ESTree::IdentifierNode>(
         llvh::cast<ESTree::FunctionDeclarationNode>(specialization)->_id));
+  } else if (
+      auto *classDecl =
+          llvh::dyn_cast<ESTree::ClassDeclarationNode>(specialization)) {
+    newDecl = getDecl(llvh::cast<ESTree::IdentifierNode>(
+        llvh::cast<ESTree::ClassDeclarationNode>(specialization)->_id));
   }
 
   newDecl->generic = false;
@@ -3971,7 +4259,13 @@ sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
               llvh::dyn_cast<ESTree::FunctionDeclarationNode>(specialization)) {
         typeParamsNode = llvh::cast<ESTree::TypeParameterDeclarationNode>(
             ESTree::getTypeParameters(func));
+      } else if (
+          auto *classDecl =
+              llvh::dyn_cast<ESTree::ClassDeclarationNode>(specialization)) {
+        typeParamsNode = llvh::cast<ESTree::TypeParameterDeclarationNode>(
+            classDecl->_typeParameters);
       }
+
       assert(typeParamsNode);
 
       ScopeRAII paramScope{*this};
@@ -3988,6 +4282,11 @@ sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
         // avoid potential stack overflow by cloning from deep in the AST.
         typecheckGenericFunctionSpecialization(
             func, typeArgsNode, typeArgTypes, oldDecl, newDecl);
+      } else if (
+          auto *classDecl =
+              llvh::dyn_cast<ESTree::ClassDeclarationNode>(specialization)) {
+        typecheckGenericClassSpecialization(
+            classDecl, typeArgsNode, typeArgTypes, oldDecl, newDecl);
       }
     }
 
@@ -4038,6 +4337,85 @@ void FlowChecker::typecheckGenericFunctionSpecialization(
 
   // Run typechecker.
   visitNonGenericFunctionDeclaration(specialization, newDecl);
+}
+
+void FlowChecker::typecheckGenericClassSpecialization(
+    ESTree::ClassDeclarationNode *specialization,
+    ESTree::TypeParameterInstantiationNode *typeArgsNode,
+    llvh::ArrayRef<Type *> typeArgTypes,
+    sema::Decl *oldDecl,
+    sema::Decl *newDecl) {
+  // Create the new type of the specialization.
+  auto *id = llvh::cast<ESTree::IdentifierNode>(specialization->_id);
+  assert(newDecl == getDecl(id) && "expected same decl");
+  Type *classType = flowContext_.createType(
+      flowContext_.createClass(Identifier::getFromPointer(id->_name)),
+      specialization);
+  Type *classConsType = flowContext_.createType(
+      flowContext_.createClassConstructor(classType), specialization);
+
+  bool recorded = recordDecl(newDecl, classConsType, id, specialization);
+  assert(recorded && "class constructor unexpectedly re-declared");
+  (void)recorded;
+
+  // Visit the super class first so that it gets enqueued/deferred before the
+  // child class.
+  visitExpression(specialization->_superClass, specialization);
+
+  if (deferredParseGenerics_) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Deferring parsing of generic class specialization: "
+                     << newDecl->name.str() << "\n");
+    deferredParseGenerics_->emplace_back(
+        specialization, bindingTable_.getCurrentScope(), classType);
+  } else {
+    ParseClassType(
+        *this,
+        specialization->_superClass,
+        specialization->_superTypeParameters,
+        specialization->_body,
+        classType);
+    typecheckQueue_.emplace_back(
+        specialization, bindingTable_.getCurrentScope(), classType);
+  }
+}
+
+Type *FlowChecker::resolveGenericClassSpecialization(
+    ESTree::IdentifierNode *nameNode,
+    ESTree::TypeParameterInstantiationNode *typeArgsNode,
+    sema::Decl *oldDecl) {
+  assert(oldDecl && "expected valid oldDecl");
+
+  sema::Decl *newDecl =
+      specializeGeneric(oldDecl, typeArgsNode, oldDecl->scope);
+
+  if (!newDecl)
+    return flowContext_.getAny();
+
+  Type *classConsType = getDeclType(newDecl);
+  // Set these unconditionally, but it's not actually necessary if this is
+  // called from a GenericTypeAnnotation.
+  semContext_.setExpressionDecl(nameNode, newDecl);
+  setNodeType(nameNode, classConsType);
+  return llvh::cast<ClassConstructorType>(classConsType->info)->getClassType();
+}
+
+Type *FlowChecker::resolveGenericClassSpecializationForType(
+    ESTree::GenericTypeAnnotationNode *genericTypeNode,
+    sema::Decl *oldDecl) {
+  assert(oldDecl && "expected valid oldDecl");
+
+  auto *typeArgsNode = llvh::cast<ESTree::TypeParameterInstantiationNode>(
+      genericTypeNode->_typeParameters);
+
+  sema::Decl *newDecl =
+      specializeGeneric(oldDecl, typeArgsNode, oldDecl->scope);
+
+  if (!newDecl)
+    return flowContext_.getAny();
+
+  Type *classConsType = getDeclType(newDecl);
+  return llvh::cast<ClassConstructorType>(classConsType->info)->getClassType();
 }
 
 void FlowChecker::registerGeneric(
