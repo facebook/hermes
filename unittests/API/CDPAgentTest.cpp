@@ -1099,6 +1099,79 @@ TEST_F(CDPAgentTest, TestRemoveBreakpoint) {
   waitForScheduledScripts();
 }
 
+TEST_F(CDPAgentTest, TestActivateBreakpoints) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    debugger;      // line 1
+    x=100          //      2
+    debugger;      //      3
+    x=101;         //      4
+  )");
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
+
+  // Set breakpoint #1
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 2);
+        json.closeDict();
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  // Set breakpoint #2
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 4);
+        json.closeDict();
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  // Disable breakpoints
+  sendRequest(
+      "Debugger.setBreakpointsActive",
+      msgId,
+      [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("active", false);
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  // Resume
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Expect first breakpoint to be skipped, now hitting line #3
+  ensurePaused(waitForMessage(), "other", {{"global", 3, 1}});
+
+  // Re-enable breakpoints
+  sendRequest(
+      "Debugger.setBreakpointsActive",
+      msgId,
+      [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("active", true);
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  // Resume and expect breakpoints to trigger again
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "other", {{"global", 4, 1}});
+
+  // Continue and exit
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
 TEST_F(CDPAgentTest, TestRuntimeEnable) {
   int msgId = 1;
 

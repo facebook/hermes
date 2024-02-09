@@ -113,6 +113,9 @@ class DebuggerDomainAgent : public DomainAgent {
   void setBreakpoint(const m::debugger::SetBreakpointRequest &req);
   /// Handles Debugger.removeBreakpoint
   void removeBreakpoint(const m::debugger::RemoveBreakpointRequest &req);
+  /// Handles Debugger.setBreakpointsActive
+  void setBreakpointsActive(
+      const m::debugger::SetBreakpointsActiveRequest &req);
 
  private:
   /// Handle an event originating from the runtime.
@@ -161,6 +164,11 @@ class DebuggerDomainAgent : public DomainAgent {
   /// CDP breakpoint IDs are assigned by the DebuggerDomainAgent. Keep track of
   /// the next available ID.
   CDPBreakpointID nextBreakpointID_ = 1;
+
+  /// Whether the currently installed breakpoints actually take effect. If
+  /// they're supposed to be inactive, then debugger agent will automatically
+  /// resume execution when breakpoints are hit.
+  bool breakpointsActive_ = true;
 
   /// Whether Debugger.enable was received and wasn't disabled by receiving
   /// Debugger.disable
