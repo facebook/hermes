@@ -203,6 +203,10 @@ void DebuggerDomainAgent::stepOver(const m::debugger::StepOverRequest &req) {
 
 void DebuggerDomainAgent::setPauseOnExceptions(
     const m::debugger::SetPauseOnExceptionsRequest &req) {
+  if (!checkDebuggerEnabled(req)) {
+    return;
+  }
+
   debugger::PauseOnThrowMode mode = debugger::PauseOnThrowMode::None;
 
   if (req.state == "none") {
@@ -261,6 +265,10 @@ void DebuggerDomainAgent::evaluateOnCallFrame(
 
 void DebuggerDomainAgent::setBreakpoint(
     const m::debugger::SetBreakpointRequest &req) {
+  if (!checkDebuggerEnabled(req)) {
+    return;
+  }
+
   CDPBreakpointDescription description;
   description.line = req.location.lineNumber;
   description.column = req.location.columnNumber;
@@ -341,6 +349,10 @@ void DebuggerDomainAgent::setBreakpointByUrl(
 
 void DebuggerDomainAgent::removeBreakpoint(
     const m::debugger::RemoveBreakpointRequest &req) {
+  if (!checkDebuggerEnabled(req)) {
+    return;
+  }
+
   auto cdpID = std::stoull(req.breakpointId);
   auto cdpBreakpoint = cdpBreakpoints_.find(cdpID);
   if (cdpBreakpoint == cdpBreakpoints_.end()) {
