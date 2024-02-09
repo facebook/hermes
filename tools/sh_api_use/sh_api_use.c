@@ -60,7 +60,8 @@ static SHLegacyValue sum(SHRuntime *shr) {
   locals.head.count = 5;
   locals.t4 = _sh_ljs_param(frame, 1);
   locals.t3 = _sh_ljs_param(frame, 2);
-  locals.t2 = _sh_ljs_get_env(shr, frame, 0);
+  locals.t2 =
+      _sh_ljs_get_env(shr, _sh_ljs_get_env_from_closure(shr, frame[-7]), 0);
   locals.t0 = _sh_ljs_double(0);
 
   if (!_sh_ljs_less_equal_rjs(shr, &locals.t4, &locals.t3))
@@ -85,7 +86,8 @@ static SHLegacyValue make(SHRuntime *shr) {
   locals.head.count = 1;
   locals.t0 = _sh_ljs_undefined();
 
-  _sh_ljs_create_environment(shr, frame, &locals.t0, 1);
+  _sh_ljs_create_environment(
+      shr, _sh_ljs_get_env_from_closure(shr, frame[-7]), &locals.t0, 1);
   _sh_ljs_store_to_env(shr, locals.t0, _sh_ljs_param(frame, 1), 0);
   locals.t0 =
       _sh_ljs_create_closure(shr, &locals.t0, sum, &s_function_info_table[1]);
@@ -107,7 +109,8 @@ static SHLegacyValue unit_main(SHRuntime *shr) {
   locals.t3 = _sh_ljs_undefined();
 
   _sh_ljs_declare_global_var(shr, s_symbols[2]);
-  _sh_ljs_create_environment(shr, frame, &locals.t0, 0);
+  _sh_ljs_create_environment(
+      shr, _sh_ljs_get_env_from_closure(shr, frame[-7]), &locals.t0, 0);
   locals.t1 =
       _sh_ljs_create_closure(shr, &locals.t0, make, &s_function_info_table[2]);
   locals.t0 = _sh_ljs_get_global_object(shr);
