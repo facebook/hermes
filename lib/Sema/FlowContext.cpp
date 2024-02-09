@@ -124,6 +124,8 @@ llvh::StringRef TypeInfo::getKindName() const {
       return "array";
     case TypeKind::Tuple:
       return "tuple";
+    case TypeKind::Generic:
+      return "generic";
   }
   llvm_unreachable("invalid TypeKind");
 }
