@@ -1114,3 +1114,82 @@ print(Array.prototype.at.call({length: 3, 0: 'a', 1: 'b', 2: 'c'}, -1));
 // CHECK-NEXT: c
 print(Array.prototype.at.call({length: 30}, 5));
 // CHECK-NEXT: undefined
+
+print('toReversed');
+// CHECK-LABEL: toReversed
+print(Array.prototype.toReversed.length);
+// CHECK-NEXT: 0
+var a = [1,2,3,4];
+print(a.toReversed().toString())
+// CHECK-NEXT: 4,3,2,1
+print(a.toString())
+// CHECK-NEXT: 1,2,3,4
+print(arrayEquals([ 1, 2, 3 ].toReversed(), [ 3, 2, 1 ]));
+// CHECK-NEXT: true
+print(Array.prototype.toReversed.call({length : 3, 0 : 'a', 1 : 'b', 2 : 'c'})
+          .toString())
+// CHECK-NEXT: c,b,a
+
+print('toSpliced');
+// CHECK-LABEL: toSpliced
+print(Array.prototype.toSpliced.length);
+// CHECK-NEXT: 2
+var a = [ 1, 2, 3, 4 ];
+print(a.toSpliced(0, 3, 7, 6, 5).toString())
+// CHECK-NEXT: 7,6,5,4
+print(a.toString())
+// CHECK-NEXT: 1,2,3,4
+print(arrayEquals([ 1, 2, 3, 4 ].toSpliced(), [ 1, 2, 3, 4 ]));
+// CHECK-NEXT: true
+print(arrayEquals([ 1, 2, 3, 4 ].toSpliced(2), [ 1, 2 ]));
+// CHECK-NEXT: true
+print(arrayEquals([ 1, 2, 3, 4 ].toSpliced(2, 2), [ 1, 2 ]));
+// CHECK-NEXT: true
+print(arrayEquals([ 1, 2, 3, 4 ].toSpliced(2, 1), [ 1, 2, 4 ]));
+// CHECK-NEXT: true
+print(arrayEquals([ 1, 2, 3, 4 ].toSpliced(2, 1, -3), [ 1, 2, -3, 4 ]));
+// CHECK-NEXT: true
+print(arrayEquals(
+    [ 1, 2, 3, 4 ].toSpliced(2, 1, '3a', '3b', '3c'),
+    [ 1, 2, '3a', '3b', '3c', 4 ]));
+// CHECK-NEXT: true
+print(arrayEquals([ 1, 2, 3, 4 ].toSpliced(2, 110, 'end'), [ 1, 2, 'end' ]));
+// CHECK-NEXT: true
+print(arrayEquals(
+    [ 1, 2, 3, 4 ].toSpliced(2, -110, 'notend'), [ 1, 2, 'notend', 3, 4 ]));
+// CHECK-NEXT: true
+print(Array.prototype
+          .toSpliced.call({length : 3, 0 : 'a', 1 : 'b', 2 : 'c'}, 0, 0, 0)
+          .toString())
+// CHECK-NEXT: 0,a,b,c
+
+print('with');
+// CHECK-LABEL: with
+print(Array.prototype.with.length);
+// CHECK-NEXT: 2
+var a = [1,2,3,4];
+print(a.with(0, 0).toString())
+// CHECK-NEXT: 0,2,3,4
+print(a.toString())
+// CHECK-NEXT: 1,2,3,4
+print(arrayEquals([ 1, 2, 3 ].with(0, 0), [ 0, 2, 3 ]));
+// CHECK-NEXT: true
+print(arrayEquals([ 1, 2, 3 ].with(1, 0), [ 1, 0, 3 ]));
+// CHECK-NEXT: true
+print(arrayEquals([ 1, 2, 3 ].with(-1, 30), [ 1, 2, 30 ]));
+// CHECK-NEXT: true
+print(Array.prototype.with.call({length : 3, 0 : 'a', 1 : 'b', 2 : 'c'}, 1, 'B')
+          .toString())
+// CHECK-NEXT: a,B,c
+try {
+  [].with(1, 1);
+} catch (e) {
+  print(e.name)
+}
+// CHECK-NEXT: RangeError
+try {
+  [].with(-2, 1);
+} catch (e) {
+  print(e.name)
+}
+// CHECK-NEXT: RangeError
