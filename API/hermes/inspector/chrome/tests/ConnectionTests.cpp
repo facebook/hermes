@@ -824,6 +824,7 @@ TEST_F(ConnectionTests, testStepOut) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
+// Also implemented as CDPAgentTest::TestSetBreakpointByUrl
 TEST_F(ConnectionTests, testSetBreakpoint) {
   int msgId = 1;
 
@@ -867,6 +868,7 @@ TEST_F(ConnectionTests, testSetBreakpoint) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
+// Also implemented as CDPAgentTest::TestSetMultiLocationBreakpoint
 TEST_F(ConnectionTests, testSetMultiLocationBreakpoint) {
   int msgId = 1;
 
@@ -947,6 +949,7 @@ TEST_F(ConnectionTests, testSetMultiLocationBreakpoint) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
+// Also implemented as CDPAgentTest::TestDeleteMultiLocationBreakpoint
 TEST_F(ConnectionTests, testDeleteMultiLocationBreakpoint) {
   int msgId = 1;
 
@@ -1017,6 +1020,7 @@ TEST_F(ConnectionTests, testDeleteMultiLocationBreakpoint) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
+// Also implemented as CDPAgentTest::TestApplyBreakpointsToNewLoadedScripts
 TEST_F(ConnectionTests, testApplyBreakpointsToLoadedScripts) {
   int msgId = 1;
 

@@ -214,20 +214,52 @@ void ensureEvalException(
   }
 }
 
-void ensureSetBreakpointResponse(
+m::debugger::BreakpointId ensureSetBreakpointResponse(
     const std::string &message,
     int id,
-    const std::string &scriptID,
-    long long lineNumber,
-    long long columnNumber) {
+    BreakpointLocation location) {
   JSLexer::Allocator allocator;
   JSONFactory factory(allocator);
   auto resp = mustMake<m::debugger::SetBreakpointResponse>(
       mustParseStrAsJsonObj(message, factory));
   EXPECT_EQ(resp.id, id);
-  EXPECT_EQ(resp.actualLocation.scriptId, scriptID);
-  EXPECT_EQ(resp.actualLocation.lineNumber, lineNumber);
-  EXPECT_EQ(resp.actualLocation.columnNumber.value(), columnNumber);
+  EXPECT_FALSE(resp.breakpointId.empty());
+  EXPECT_NE(
+      resp.breakpointId,
+      std::to_string(facebook::hermes::debugger::kInvalidBreakpoint));
+  if (location.scriptId) {
+    EXPECT_EQ(resp.actualLocation.scriptId, location.scriptId);
+  }
+  EXPECT_EQ(resp.actualLocation.lineNumber, location.lineNumber);
+  EXPECT_EQ(resp.actualLocation.columnNumber.value(), location.columnNumber);
+  return resp.breakpointId;
+}
+
+m::debugger::BreakpointId ensureSetBreakpointByUrlResponse(
+    const std::string &message,
+    int id,
+    std::vector<BreakpointLocation> locations) {
+  JSLexer::Allocator allocator;
+  JSONFactory factory(allocator);
+  auto resp = mustMake<m::debugger::SetBreakpointByUrlResponse>(
+      mustParseStrAsJsonObj(message, factory));
+  EXPECT_EQ(resp.id, id);
+  EXPECT_FALSE(resp.breakpointId.empty());
+  EXPECT_NE(
+      resp.breakpointId,
+      std::to_string(facebook::hermes::debugger::kInvalidBreakpoint));
+  EXPECT_EQ(resp.locations.size(), locations.size());
+  for (int i = 0; i < locations.size(); i++) {
+    if (locations[i].scriptId) {
+      EXPECT_EQ(resp.locations[i].scriptId, locations[i].scriptId);
+    }
+    EXPECT_EQ(resp.locations[i].lineNumber, locations[i].lineNumber);
+    if (locations[i].columnNumber) {
+      EXPECT_EQ(
+          resp.locations[i].columnNumber.value(), locations[i].columnNumber);
+    }
+  }
+  return resp.breakpointId;
 }
 
 struct JSONScope::Private {

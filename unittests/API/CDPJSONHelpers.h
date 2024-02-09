@@ -14,6 +14,7 @@ namespace facebook {
 namespace hermes {
 
 using namespace ::hermes::parser;
+namespace m = ::facebook::hermes::inspector_modern::chrome::message;
 
 struct JSONScope {
   JSONScope();
@@ -58,6 +59,30 @@ struct FrameInfo {
   std::string scriptId;
 };
 
+struct BreakpointLocation {
+  BreakpointLocation(long long lineNumber)
+      : scriptId(std::nullopt),
+        lineNumber(lineNumber),
+        columnNumber(std::nullopt) {}
+
+  BreakpointLocation(long long lineNumber, long long columnNumber)
+      : scriptId(std::nullopt),
+        lineNumber(lineNumber),
+        columnNumber(columnNumber) {}
+
+  BreakpointLocation(
+      std::string scriptId,
+      long long lineNumber,
+      long long columnNumber)
+      : scriptId(scriptId),
+        lineNumber(lineNumber),
+        columnNumber(columnNumber) {}
+
+  std::optional<std::string> scriptId;
+  long long lineNumber;
+  std::optional<long long> columnNumber;
+};
+
 template <typename T>
 std::unique_ptr<T> getValue(
     const std::string &message,
@@ -86,12 +111,15 @@ void ensureEvalException(
     const std::string &exceptionText,
     const std::vector<FrameInfo> infos);
 
-void ensureSetBreakpointResponse(
+m::debugger::BreakpointId ensureSetBreakpointResponse(
     const std::string &message,
     int id,
-    const std::string &scriptID,
-    long long lineNumber,
-    long long columnNumber);
+    BreakpointLocation location);
+
+m::debugger::BreakpointId ensureSetBreakpointByUrlResponse(
+    const std::string &message,
+    int id,
+    std::vector<BreakpointLocation> locations);
 
 } // namespace hermes
 } // namespace facebook
