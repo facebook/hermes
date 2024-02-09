@@ -13,6 +13,11 @@ namespace irgen {
 void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
   auto *id = llvh::cast<ESTree::IdentifierNode>(node->_id);
   sema::Decl *decl = getIDDecl(id);
+  if (decl->generic) {
+    // Skip generics that aren't specialized.
+    return;
+  }
+
   flow::Type *declType = flowContext_.findDeclType(decl);
   flow::ClassConstructorType *consType =
       llvh::dyn_cast_or_null<flow::ClassConstructorType>(
