@@ -122,6 +122,10 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   ClassContext *curClassContext_ = nullptr;
 
   /// Holds information needed on how to instantiate a generic.
+  /// \param Spec the type of the specialization, either ESTree::Node (for
+  ///   generics that clone the AST) or Type (for generic type aliases, which
+  ///   create a new Type).
+  template <class Spec>
   class GenericInfo {
    public:
     /// Storage for type arguments.
@@ -146,9 +150,8 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     /// Activated when the generic is instantiated.
     TypeBindingTableScopePtrTy bindingTableScope;
 
-    /// Map from the list of type arguments to the specialized, typechecked
-    /// resultant AST for the specialization.
-    llvh::DenseMap<TypeArgsRef, ESTree::Node *, TypeArrayDenseMapInfo>
+    /// Map from the list of type arguments to the specialization.
+    llvh::DenseMap<TypeArgsRef, Spec *, TypeArrayDenseMapInfo>
         specializations{};
 
    public:
@@ -172,14 +175,25 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     GenericInfo operator=(const GenericInfo &other) = delete;
 
     /// \return the specialization if it exists, otherwise nullptr.
-    ESTree::Node *getSpecialization(TypeArgsRef args);
+    Spec *getSpecialization(TypeArgsRef args) {
+      auto it = specializations.find(args);
+      if (it != specializations.end())
+        return it->second;
+      return nullptr;
+    }
 
     /// Add the specialization for \p args to the \c specializations map.
     /// \return a reference to the internal storage containing the type args.
     TypeArgsRef addSpecialization(
         FlowChecker &outer,
         TypeArgsVector &&args,
-        ESTree::Node *node);
+        Spec *specialization) {
+      outer.typeArgStorage_.emplace_back(std::move(args));
+      auto [it, inserted] = specializations.try_emplace(
+          TypeArgsRef{outer.typeArgStorage_.back()}, specialization);
+      assert(inserted && "double specialization not allowed");
+      return it->first;
+    }
   };
 
   /// Types associated with declarations.
@@ -205,15 +219,24 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// \c GenericInfo::specializations.
   /// Once stored here, the TypeArgsVectors are not modified, so TypeArgsRef
   /// pointers into the vectors can be stored.
-  std::deque<GenericInfo::TypeArgsVector> typeArgStorage_{};
+  std::deque<GenericInfo<ESTree::Node>::TypeArgsVector> typeArgStorage_{};
 
   /// Stable storage for the GenericInfo.
-  std::deque<GenericInfo> generics_;
+  std::deque<GenericInfo<ESTree::Node>> generics_;
 
   /// Maps from the Decl to a reference to an element of \c generics_.
   /// Populated values are not nullable.
   /// Store a pointer to allow for empty/tombstone values in DenseMap.
-  llvh::DenseMap<const sema::Decl *, GenericInfo *> genericsMap_;
+  llvh::DenseMap<const sema::Decl *, GenericInfo<ESTree::Node> *> genericsMap_;
+
+  /// Stable storage for the GenericInfo.
+  std::deque<GenericInfo<Type>> genericAliases_;
+
+  /// Maps from the Decl to a reference to an element of \c generics_.
+  /// Populated values are not nullable.
+  /// Store a pointer to allow for empty/tombstone values in DenseMap.
+  llvh::DenseMap<const ESTree::TypeAliasNode *, GenericInfo<Type> *>
+      genericAliasesMap_;
 
   /// Description of the generic that we have deferred typechecking for.
   struct DeferredGenericClass {
@@ -621,9 +644,25 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       ESTree::Node *parent,
       const TypeBindingTableScopePtrTy &bindingTableScope);
 
+  /// Register the \p decl generic with its original AST \p node.
+  /// Increment refcount of \p bindingTableScope so it can be kept alive and
+  /// activated on specialization.
+  /// \param decl the generic declaration.
+  /// \param node the original AST node.
+  /// \param parent the parent of \p node.
+  void registerGenericAlias(
+      ESTree::TypeAliasNode *node,
+      ESTree::Node *parent,
+      const TypeBindingTableScopePtrTy &bindingTableScope);
+
   /// \pre \p decl is a generic declaration that has been registered.
   /// \return the generic info associated with \p decl.
-  GenericInfo &getGenericInfoMustExist(sema::Decl *decl);
+  GenericInfo<ESTree::Node> &getGenericInfoMustExist(sema::Decl *decl);
+
+  /// \pre \p node is a generic type alias that has been registered.
+  /// \return the generic info associated with \p decl.
+  GenericInfo<Type> &getGenericAliasInfoMustExist(
+      const ESTree::TypeAliasNode *decl);
 };
 
 class FlowChecker::FunctionContext {
