@@ -199,7 +199,7 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// \c GenericInfo::specializations.
   /// Once stored here, the TypeArgsVectors are not modified, so TypeArgsRef
   /// pointers into the vectors can be stored.
-  std::deque<const GenericInfo::TypeArgsVector> typeArgStorage_{};
+  std::deque<GenericInfo::TypeArgsVector> typeArgStorage_{};
 
   /// Stable storage for the GenericInfo.
   std::deque<GenericInfo> generics_;
