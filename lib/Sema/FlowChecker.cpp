@@ -81,6 +81,13 @@
 /// Queueing the typechecking of the bodies until the very end means that we can
 /// use the ClassType immediately after ParseClassType, without having to deal
 /// with the creation of potentially more generic specializations recursively.
+///
+/// Generic type aliases:
+/// These are handled similarly to generic classes, but they don't require a new
+/// AST node (because IRGen doesn't read type aliases at all).
+/// The specialization is stored as a \c Type instead, and the resolution can be
+/// called from within DeclareScopeTypes or afterwards from the typechecking
+/// visitor.
 //===----------------------------------------------------------------------===//
 
 #include "FlowChecker.h"
@@ -2724,14 +2731,19 @@ class FlowChecker::FindLoopingTypes {
 /// 2. Resolve the aliases, checking for self-references.
 /// 3. Complete all forward declared types. They can now refer to the newly
 /// declared local types.
+///
+/// Generic type aliases are registered along with the other generics,
+/// but they don't require an AST node to be cloned during specialization
+/// (IRGen isn't going to look at it) so their specializations are just the
+/// resolved \c Type *.
 class FlowChecker::DeclareScopeTypes {
   /// Surrounding class.
   FlowChecker &outer;
-  /// Declarations collected by the semantic validator.
-  const sema::ScopeDecls &decls;
   /// The current lexical scope.
   sema::LexicalScope *const scope;
   /// The current lexical scope.
+  /// Only used when registering newly discovered generics,
+  /// nullptr when DeclareScopeTypes is called to resolve a generic type alias.
   ESTree::Node *const scopeNode;
   /// Type aliases declared in this scope.
   llvh::SmallVector<Type *, 4> localTypeAliases{};
@@ -2766,17 +2778,37 @@ class FlowChecker::DeclareScopeTypes {
       const sema::ScopeDecls &decls,
       sema::LexicalScope *scope,
       ESTree::Node *scopeNode)
-      : outer(outer), decls(decls), scope(scope), scopeNode(scopeNode) {
+      : outer(outer), scope(scope), scopeNode(scopeNode) {
     llvh::SaveAndRestore savedDeferredGenerics{
         outer.deferredParseGenerics_, &deferredParseGenerics};
 
-    createForwardDeclarations();
+    createForwardDeclarations(decls);
     resolveAllAliases();
     completeForwardDeclarations();
     parseDeferredGenericClasses();
   }
 
+  /// Run DeclareScopeTypes starting from a single generic type annotation.
+  /// \return the resolved type for the generic type alias specialization.
+  static Type *resolveGenericTypeAlias(
+      FlowChecker &outer,
+      ESTree::GenericTypeAnnotationNode *gta,
+      TypeDecl *typeDecl) {
+    DeclareScopeTypes declareScopeTypes(outer, typeDecl->scope);
+    llvh::SmallDenseSet<ESTree::TypeAliasNode *> visited{};
+    // Don't call createForwardDeclarations, because we're directly calling
+    // resolveTypeAnnotation and we don't have a list of decls.
+    Type *type = declareScopeTypes.resolveTypeAnnotation(gta, visited, 0);
+    declareScopeTypes.completeForwardDeclarations();
+    declareScopeTypes.parseDeferredGenericClasses();
+    return type;
+  }
+
  private:
+  // Create an empty DeclareScopeTypes, used for resolveGenericTypeAlias.
+  DeclareScopeTypes(FlowChecker &outer, sema::LexicalScope *scope)
+      : outer(outer), scope(scope), scopeNode(nullptr) {}
+
   // Check if a type declaration with the specified name exists in the current
   // scope. If it exists, generate an error and return true.
   // \return true if this is a redeclaration (i.e. it is an error).
@@ -2800,6 +2832,7 @@ class FlowChecker::DeclareScopeTypes {
   /// \return the parent of the generic (based on the scopeNode),
   ///   in which to insert new generic specializations.
   ESTree::Node *getGenericParentNode() const {
+    assert(scopeNode && "no scope node found");
     if (auto *funcNode = llvh::dyn_cast<ESTree::FunctionLikeNode>(scopeNode)) {
       return ESTree::getBlockStatement(funcNode);
     }
@@ -2807,7 +2840,7 @@ class FlowChecker::DeclareScopeTypes {
   }
 
   /// Forward declare all classes and record all aliases for later processing.
-  void createForwardDeclarations() {
+  void createForwardDeclarations(const sema::ScopeDecls &decls) {
     for (ESTree::Node *declNode : decls) {
       if (llvh::isa<ESTree::VariableDeclarationNode>(declNode) ||
           llvh::isa<ESTree::ImportDeclarationNode>(declNode) ||
@@ -2863,6 +2896,18 @@ class FlowChecker::DeclareScopeTypes {
         auto *id = llvh::cast<ESTree::IdentifierNode>(aliasNode->_id);
         if (isRedeclaration(id))
           continue;
+
+        // Generic type alias, register it but just move on.
+        if (aliasNode->_typeParameters) {
+          outer.bindingTable_.try_emplace(
+              id->_name, TypeDecl(nullptr, scope, aliasNode));
+          outer.registerGenericAlias(
+              aliasNode,
+              getGenericParentNode(),
+              outer.bindingTable_.getCurrentScope());
+          continue;
+        }
+
         Type *newType = outer.flowContext_.createType(declNode);
         localTypeAliases.push_back(newType);
         outer.bindingTable_.try_emplace(
@@ -2975,8 +3020,9 @@ class FlowChecker::DeclareScopeTypes {
         return outer.flowContext_.getAny();
       }
 
-      if (typeDecl->genericClassDecl) {
-        // Resolve to the specialized class.
+      if (!typeDecl->type) {
+        // Found a generic TypeDecl.
+        // Resolve to the generic specialization.
         if (!gta->_typeParameters) {
           outer.sm_.error(
               gta->getSourceRange(),
@@ -2986,8 +3032,9 @@ class FlowChecker::DeclareScopeTypes {
         }
 
         // Make a placeholder type to represent the generic type for now.
-        // The TypeInfo will be replaced with the concrete ClassType when we are
+        // The TypeInfo will be replaced with the concrete Type when we are
         // able to resolve TypeInfo for all type arguments.
+        // We don't yet care whether this is a generic class or type alias.
         Type *type = outer.flowContext_.createType(
             outer.flowContext_.getGenericInfo(), annotation);
         GenericTypeInstantiation instantiation{typeDecl, gta};
@@ -3071,7 +3118,7 @@ class FlowChecker::DeclareScopeTypes {
   /// repeating all the lookups.
   /// \post aliasType->info is non-null.
   void populateTypeAlias(Type *aliasType) {
-    if (aliasType->info)
+    if (aliasType->info && !llvh::isa<GenericType>(aliasType->info))
       return;
 
     // Recursion can occur through generic annotations and name aliases.
@@ -3118,21 +3165,35 @@ class FlowChecker::DeclareScopeTypes {
   /// Resolve the remaining forward declared types and canonicalize forward
   /// unions as much as possible.
   void completeForwardDeclarations() {
-    // Complete all forward-declared unions.
-    // First find all the recursive union arms.
-    for (Type *type : forwardUnions) {
-      FindLoopingTypes(loopingUnionArms, forwardGenericInstantiations, type);
-    }
-
-    // Now simplify and canonicalize as many union arms as possible.
-    for (Type *type : forwardUnions) {
-      llvh::SetVector<Type *> visited{};
-      completeForwardType(type, visited);
-    }
-    // Now simplify and canonicalize the foward generics.
-    for (auto &[type, generic] : forwardGenericInstantiations) {
-      llvh::SetVector<Type *> visited{};
-      completeForwardGeneric(type, generic, visited);
+    // Instantiating generic type aliases may cause new forward declarations
+    // to be created. To account for this, keep iterating until no more are
+    // introduced.
+    size_t unionIdx = 0;
+    size_t genericIdx = 0;
+    while (unionIdx < forwardUnions.size() ||
+           genericIdx < forwardGenericInstantiations.size()) {
+      // Complete all forward-declared unions.
+      // First find all the recursive union arms.
+      for (size_t i = unionIdx, e = forwardUnions.size(); i < e; ++i) {
+        Type *type = forwardUnions[i];
+        FindLoopingTypes(loopingUnionArms, forwardGenericInstantiations, type);
+      }
+      // Now simplify and canonicalize as many union arms as possible.
+      for (size_t e = forwardUnions.size(); unionIdx < e; ++unionIdx) {
+        Type *type = forwardUnions[unionIdx];
+        llvh::SetVector<Type *> visited{};
+        completeForwardType(type, visited);
+      }
+      // Now simplify and canonicalize the foward generics.
+      for (size_t e = forwardGenericInstantiations.size(); genericIdx < e;
+           ++genericIdx) {
+        // forwardGenericInstantiations may expand so we can't store the
+        // iterator.
+        auto &[type, generic] =
+            *(forwardGenericInstantiations.begin() + genericIdx);
+        llvh::SetVector<Type *> visited{};
+        completeForwardGeneric(type, generic, visited);
+      }
     }
 
     // Parse all forward-declared class types.
@@ -3157,16 +3218,26 @@ class FlowChecker::DeclareScopeTypes {
   /// Complete the forward declaration of the given \p type,
   /// replacing its \c info field with the resolved type.
   void completeForwardType(Type *type, llvh::SetVector<Type *> &visited) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Completing forward type: " << type << " "
+                     << type->info->getKindName() << '\n');
+
     if (llvh::isa<GenericType>(type->info)) {
       auto it = forwardGenericInstantiations.find(type);
       assert(it != forwardGenericInstantiations.end());
       completeForwardGeneric(type, it->second, visited);
-      return;
+      LLVM_DEBUG(
+          llvh::dbgs() << "Completed forward type: " << type << " "
+                       << type->info->getKindName() << '\n');
     }
+
+    // A forward generic may resolve to a union, which needs to be completed.
 
     if (auto *unionType = llvh::dyn_cast<UnionType>(type->info)) {
       completeForwardUnion(type, unionType, visited);
-      return;
+      LLVM_DEBUG(
+          llvh::dbgs() << "Completed forward type: " << type << " "
+                       << type->info->getKindName() << '\n');
     }
 
     // Nothing to do.
@@ -3275,11 +3346,72 @@ class FlowChecker::DeclareScopeTypes {
         llvh::make_scope_exit([&visited]() { visited.pop_back(); });
 
     TypeDecl *typeDecl = generic.typeDecl;
+    assert(!typeDecl->type && "typeDecl must be generic");
 
     for (Type *arg : generic.typeArgTypes) {
       if (forwardUnions.count(arg) || llvh::isa<GenericType>(arg->info)) {
         completeForwardType(arg, visited);
       }
+    }
+
+    if (!typeDecl->genericClassDecl) {
+      // No genericClassDecl, this is a generic type alias.
+      auto *aliasNode = llvh::cast<ESTree::TypeAliasNode>(typeDecl->astNode);
+      GenericInfo<Type> &genericInfo =
+          outer.getGenericAliasInfoMustExist(aliasNode);
+
+      GenericInfo<Type>::TypeArgsVector typeArgs;
+      for (Type *arg : generic.typeArgTypes)
+        typeArgs.push_back(arg->info);
+      GenericInfo<Type>::TypeArgsRef typeArgsRef = typeArgs;
+
+      if (Type *resolved = genericInfo.getSpecialization(typeArgs)) {
+        LLVM_DEBUG(
+            llvh::errs() << "Found specialization for " << type << " "
+                         << resolved << "\n");
+        typeAliasResolutions[type] = resolved;
+        populateTypeAlias(type);
+        return;
+      }
+
+      // This is not a generic class, it's a generic type alias.
+      // Specialize it with the provided arguments by resolving the type.
+      ScopeRAII paramScope{outer};
+      bool populated = outer.validateAndBindTypeParameters(
+          llvh::cast<ESTree::TypeParameterDeclarationNode>(
+              aliasNode->_typeParameters),
+          llvh::cast<ESTree::TypeParameterInstantiationNode>(
+              generic.annotation->_typeParameters),
+          generic.typeArgTypes,
+          scope);
+      if (!populated) {
+        LLVM_DEBUG(llvh::dbgs() << "Failed to bind type parameters\n");
+        type->info = outer.flowContext_.getAnyInfo();
+        return;
+      }
+
+      // Resolve the generic type alias to its specialization.
+      // This may add to forwardGenericInstantiations and forwardUnions.
+      llvh::SmallDenseSet<ESTree::TypeAliasNode *> visitedTypes{};
+      Type *resolved =
+          resolveTypeAnnotation(aliasNode->_right, visitedTypes, 0);
+
+      typeArgsRef =
+          genericInfo.addSpecialization(outer, std::move(typeArgs), resolved);
+
+      // The resolved type might not be complete, so we have to complete it
+      // before populating the type alias.
+      // We have to call FindLoopingTypes first, because we this type
+      // didn't exist when FindLoopingTypes was initially called.
+      if (forwardUnions.count(resolved) ||
+          llvh::isa<GenericType>(resolved->info)) {
+        FindLoopingTypes(
+            loopingUnionArms, forwardGenericInstantiations, resolved);
+        completeForwardType(resolved, visited);
+      }
+
+      type->info = resolved->info;
+      return;
     }
 
     assert(typeDecl->genericClassDecl && "Expected a generic class");
@@ -3928,8 +4060,7 @@ Type *FlowChecker::parseGenericTypeAnnotation(
     return flowContext_.getAny();
   }
 
-  if (td->genericClassDecl) {
-    // Resolve to the specialized class.
+  if (!td->type) {
     if (!node->_typeParameters) {
       sm_.error(
           node->getSourceRange(),
@@ -3937,7 +4068,14 @@ Type *FlowChecker::parseGenericTypeAnnotation(
               id->_name->str() + "'");
       return flowContext_.getAny();
     }
-    return resolveGenericClassSpecializationForType(node, td->genericClassDecl);
+    if (td->genericClassDecl) {
+      // Resolve to the specialized class.
+      return resolveGenericClassSpecializationForType(
+          node, td->genericClassDecl);
+    } else {
+      // This is a generic type alias.
+      return DeclareScopeTypes::resolveGenericTypeAlias(*this, node, td);
+    }
   }
 
   return td->type;

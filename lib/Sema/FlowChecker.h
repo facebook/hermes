@@ -81,7 +81,7 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     sema::LexicalScope *scope;
     /// Optional AST node for reporting re-declarations.
     ESTree::Node *astNode;
-    /// When this is a generic declaration, the Decl of the class.
+    /// When this is a class generic declaration, the Decl of the class.
     sema::Decl *genericClassDecl;
     explicit TypeDecl(
         Type *type,
@@ -92,9 +92,11 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
           scope(scope),
           astNode(astNode),
           genericClassDecl(genericClassDecl) {
-      assert(
-          (!type ^ !genericClassDecl) && "either we have a type or a generic");
+#ifndef NDEBUG
+      if (genericClassDecl)
+        assert(!type && "generic type must be null");
       assert(scope && "scope must be non-null");
+#endif
     }
   };
 
