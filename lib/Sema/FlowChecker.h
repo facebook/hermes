@@ -432,6 +432,29 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     return canAFlowIntoB(a, b, ThisFlowDirection::MethodOverride).canFlow;
   }
 
+  /// Try to narrow a union with a single non-optional arm to the non-optional
+  /// type so that it can be used in expressions.
+  /// Non-optional means non-null and non-void.
+  /// Used assuming that Flow has already determined that the type is
+  /// supposed to have been narrowed by some condition/assignment at this point.
+  /// \return narrowed type, or nullptr if the type is not a union with a single
+  /// non-optional arm.
+  static Type *getNonOptionalSingleType(Type *exprType);
+
+  /// Try to narrow the type of the node into the target type, provided that the
+  /// \p targetType is a non-optional arm of the optional \p exprType.
+  /// Used for AssignmentExpression or CallExpression arguments, e.g.
+  /// \param exprType the type of the expression.
+  /// \param targetType the type we want to narrow to.
+  /// \return (resType, cf) where resType is a type that \p exprType flows into,
+  /// and cf is the CanFlowResult for exprType into resType. If
+  /// exprType has been narrowed to resType, then cf.needCheckedCast is true,
+  /// and the caller needs to insert the implicit checked cast.
+  /// resType may be targetType if the checked cast should cast to targetType.
+  static std::pair<Type *, CanFlowResult> tryNarrowType(
+      Type *exprType,
+      Type *targetType);
+
   /// If \c canFlow.needCheckedCast is set and \c compile_ is set, allocate an
   /// implicit checked cast node from the specified \p argument to
   /// the specified type \p toType and return it. Otherwise return the argument.

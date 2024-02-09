@@ -703,6 +703,16 @@ class FlowChecker::ExprVisitor {
     Type *objType = outer_.getNodeTypeOrAny(node->_object);
     Type *resType = outer_.flowContext_.getAny();
 
+    // Attempt to narrow object type if it doesn't currently support member
+    // access.
+    if (Type *narrowedObjType = outer_.getNonOptionalSingleType(objType)) {
+      objType = narrowedObjType;
+      node->_object = outer_.implicitCheckedCast(
+          node->_object,
+          narrowedObjType,
+          {.canFlow = true, .needCheckedCast = true});
+    }
+
     if (auto *classType = llvh::dyn_cast<ClassType>(objType->info)) {
       if (node->_computed) {
         outer_.sm_.error(
@@ -1446,13 +1456,14 @@ class FlowChecker::ExprVisitor {
     Type *res;
 
     if (node->_operator->str() == "=") {
-      CanFlowResult cf = canAFlowIntoB(rt->info, lt->info);
+      auto [rtNarrow, cf] =
+          tryNarrowType(outer_.getNodeTypeOrAny(node->_right), lt);
       if (!cf.canFlow) {
         outer_.sm_.error(
             node->getSourceRange(), "ft: incompatible assignment types");
         res = lt;
       } else {
-        node->_right = outer_.implicitCheckedCast(node->_right, lt, cf);
+        node->_right = outer_.implicitCheckedCast(node->_right, rtNarrow, cf);
 
         // If we don't need a checked cast, rt is possibly narrower than lt, but
         // never wider, so we want to use it as result.
@@ -2165,8 +2176,9 @@ class FlowChecker::ExprVisitor {
 
       const TypedFunctionType::Param &param = params[argIndex];
       Type *expectedType = param.second;
-      CanFlowResult cf =
-          canAFlowIntoB(outer_.getNodeTypeOrAny(arg), expectedType);
+      Type *argType = outer_.getNodeTypeOrAny(arg);
+      auto [argTypeNarrow, cf] = tryNarrowType(argType, expectedType);
+
       if (!cf.canFlow) {
         outer_.sm_.error(
             arg->getSourceRange(),
@@ -2179,7 +2191,7 @@ class FlowChecker::ExprVisitor {
         // Insert the new node before the current node and erase the current
         // one.
         auto newIt = arguments.insert(
-            it, *outer_.implicitCheckedCast(arg, expectedType, cf));
+            it, *outer_.implicitCheckedCast(arg, argTypeNarrow, cf));
         arguments.erase(it);
         it = newIt;
       }
@@ -2272,15 +2284,14 @@ void FlowChecker::visit(ESTree::ReturnStatementNode *node) {
   Type *argType = node->_argument ? getNodeTypeOrAny(node->_argument)
                                   : flowContext_.getVoid();
 
-  CanFlowResult cf = canAFlowIntoB(argType, ftype->getReturnType());
+  auto [retTypeNarrow, cf] = tryNarrowType(argType, ftype->getReturnType());
   if (!cf.canFlow) {
     // TODO: pretty print types.
     sm_.error(
         node->getSourceRange(),
         "ft: return value incompatible with return type");
   }
-  node->_argument =
-      implicitCheckedCast(node->_argument, ftype->getReturnType(), cf);
+  node->_argument = implicitCheckedCast(node->_argument, retTypeNarrow, cf);
 }
 
 void FlowChecker::visit(ESTree::BlockStatementNode *node) {
@@ -2307,13 +2318,14 @@ void FlowChecker::visit(ESTree::VariableDeclarationNode *node) {
       sema::Decl *decl = getDecl(id);
       Type *lt = getDeclType(decl);
       Type *rt = getNodeTypeOrAny(declarator->_init);
-      CanFlowResult cf = canAFlowIntoB(rt, lt);
+      auto [rtNarrow, cf] = tryNarrowType(rt, lt);
       if (!cf.canFlow) {
         sm_.error(
             declarator->getSourceRange(),
             "ft: incompatible initialization type");
       } else {
-        declarator->_init = implicitCheckedCast(declarator->_init, lt, cf);
+        declarator->_init =
+            implicitCheckedCast(declarator->_init, rtNarrow, cf);
       }
     } else {
       Type *lt = getNodeTypeOrAny(declarator->_id);
@@ -3697,6 +3709,58 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
   }
 
   return {.canFlow = true};
+}
+
+Type *FlowChecker::getNonOptionalSingleType(Type *exprType) {
+  if (auto *unionTy = llvh::dyn_cast<UnionType>(exprType->info)) {
+    Type *singleType = nullptr;
+    // There is only one useful type to narrow to.
+    for (Type *unionArm : unionTy->getTypes()) {
+      if (llvh::isa<VoidType>(unionArm->info))
+        continue;
+      if (llvh::isa<NullType>(unionArm->info))
+        continue;
+      // Found a second type.
+      if (singleType) {
+        return nullptr;
+      }
+      singleType = unionArm;
+    }
+    return singleType;
+  }
+
+  return nullptr;
+}
+
+std::pair<Type *, FlowChecker::CanFlowResult> FlowChecker::tryNarrowType(
+    Type *exprType,
+    Type *targetType) {
+  // If the types are already compatible, no need to do anything.
+  auto cf = canAFlowIntoB(exprType, targetType);
+  if (cf.canFlow) {
+    // Signal a cast to the targetType in the caller if necessary.
+    return {cf.needCheckedCast ? targetType : exprType, cf};
+  }
+
+  // Try to narrow the expression type to a single type.
+  Type *narrowType = getNonOptionalSingleType(exprType);
+  if (!narrowType)
+    return {exprType, cf};
+
+  auto cfCast = canAFlowIntoB(narrowType, targetType);
+  if (!cfCast.canFlow) {
+    return {exprType, cf};
+  }
+
+  // Collapse the two chained checked casts into a single one.
+  if (cfCast.needCheckedCast) {
+    return {targetType, cfCast};
+  }
+
+  // Otherwise, going from narrowType to targetType doesn't require a checked
+  // cast, but we do need to cast to the narrowType.
+  cfCast.needCheckedCast = true;
+  return {narrowType, cfCast};
 }
 
 ESTree::Node *FlowChecker::implicitCheckedCast(
