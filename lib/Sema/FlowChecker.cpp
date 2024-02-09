@@ -4337,15 +4337,15 @@ sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
     llvh::ArrayRef<Type *> typeArgTypes,
     sema::LexicalScope *scope) {
   // Extract info from types.
-  GenericInfo::TypeArgsVector typeArgs{};
+  GenericInfo<ESTree::Node>::TypeArgsVector typeArgs{};
   for (Type *type : typeArgTypes) {
     assert(type->info && "missing type info for generic specialization");
     typeArgs.push_back(type->info);
   }
 
   // Retrieve generic info and specialization if it exists.
-  GenericInfo &generic = getGenericInfoMustExist(oldDecl);
-  GenericInfo::TypeArgsRef typeArgsRef = typeArgs;
+  GenericInfo<ESTree::Node> &generic = getGenericInfoMustExist(oldDecl);
+  GenericInfo<ESTree::Node>::TypeArgsRef typeArgsRef = typeArgs;
   ESTree::Node *specialization = generic.getSpecialization(typeArgsRef);
 
   // Whether to clone a new specialization in this run of the function.
@@ -4588,38 +4588,38 @@ void FlowChecker::registerGeneric(
     ESTree::Node *parent,
     const TypeBindingTableScopePtrTy &bindingScope) {
   assert(decl->generic && "expected a generic decl");
-  GenericInfo &info = generics_.emplace_back(node, parent, bindingScope);
+  GenericInfo<ESTree::Node> &info =
+      generics_.emplace_back(node, parent, bindingScope);
   auto [it, inserted] = genericsMap_.try_emplace(decl, &info);
   assert(inserted && "duplicate generic decl");
   (void)it;
 }
 
+void FlowChecker::registerGenericAlias(
+    ESTree::TypeAliasNode *node,
+    ESTree::Node *parent,
+    const TypeBindingTableScopePtrTy &bindingScope) {
+  GenericInfo<Type> &info =
+      genericAliases_.emplace_back(node, parent, bindingScope);
+  auto [it, inserted] = genericAliasesMap_.try_emplace(node, &info);
+  assert(inserted && "duplicate generic decl");
+  (void)it;
+}
+
 /// \return the generic info associated with \p decl.
-FlowChecker::GenericInfo &FlowChecker::getGenericInfoMustExist(
+FlowChecker::GenericInfo<ESTree::Node> &FlowChecker::getGenericInfoMustExist(
     sema::Decl *decl) {
   auto it = genericsMap_.find(decl);
   assert(it != genericsMap_.end() && "generic was never registered");
   return *it->second;
 }
 
-ESTree::Node *FlowChecker::GenericInfo::getSpecialization(
-    FlowChecker::GenericInfo::TypeArgsRef args) {
-  auto it = specializations.find(args);
-  if (it != specializations.end())
-    return it->second;
-  return nullptr;
-}
-
-FlowChecker::GenericInfo::TypeArgsRef
-FlowChecker::GenericInfo::addSpecialization(
-    FlowChecker &outer,
-    FlowChecker::GenericInfo::TypeArgsVector &&args,
-    ESTree::Node *node) {
-  outer.typeArgStorage_.emplace_back(std::move(args));
-  auto [it, inserted] = specializations.try_emplace(
-      TypeArgsRef{outer.typeArgStorage_.back()}, node);
-  assert(inserted && "double specialization not allowed");
-  return it->first;
+/// \return the generic info associated with \p decl.
+FlowChecker::GenericInfo<Type> &FlowChecker::getGenericAliasInfoMustExist(
+    const ESTree::TypeAliasNode *decl) {
+  auto it = genericAliasesMap_.find(decl);
+  assert(it != genericAliasesMap_.end() && "generic was never registered");
+  return *it->second;
 }
 
 } // namespace flow
