@@ -58,6 +58,7 @@ void FlowTypesDumper::printTypeDescription(
     case TypeKind::Boolean:
     case TypeKind::String:
     case TypeKind::CPtr:
+    case TypeKind::Generic:
     case TypeKind::Number:
     case TypeKind::BigInt:
     case TypeKind::Any:
@@ -204,6 +205,8 @@ void FlowTypesDumper::printAllTypes(
   auto printAll = [&os, this, &printed](const auto &all) {
     for (const Type &t : all) {
       // Don't print duplicate types.
+      if (!t.info)
+        continue;
       size_t number = getNumber(t.info);
       auto [it, inserted] = printed.insert(number);
       if (!inserted)

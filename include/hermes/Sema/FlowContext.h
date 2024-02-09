@@ -29,6 +29,7 @@ namespace flow {
   _HERMES_SEMA_FLOW_DEFKIND(Boolean) \
   _HERMES_SEMA_FLOW_DEFKIND(String)  \
   _HERMES_SEMA_FLOW_DEFKIND(CPtr)    \
+  _HERMES_SEMA_FLOW_DEFKIND(Generic) \
   _HERMES_SEMA_FLOW_DEFKIND(Number)  \
   _HERMES_SEMA_FLOW_DEFKIND(BigInt)  \
   _HERMES_SEMA_FLOW_DEFKIND(Any)     \
@@ -224,6 +225,9 @@ using NullType = SingleType<TypeKind::Null, PrimaryType>;
 using BooleanType = SingleType<TypeKind::Boolean, PrimaryType>;
 using StringType = SingleType<TypeKind::String, PrimaryType>;
 using CPtrType = SingleType<TypeKind::CPtr, PrimaryType>;
+/// Placeholder for unspecialized generic class or type alias.
+/// Must not escape the FlowChecker, and will be replaced by a concrete type.
+using GenericType = SingleType<TypeKind::Generic, PrimaryType>;
 using NumberType = SingleType<TypeKind::Number, PrimaryType>;
 using BigIntType = SingleType<TypeKind::BigInt, PrimaryType>;
 

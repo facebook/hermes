@@ -337,6 +337,11 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// may be reached. Report an error if it isn't valid.
   void checkImplicitReturnType(ESTree::FunctionLikeNode *node);
 
+  /// Forward declaration information for generic type instantiations in
+  /// aliases.
+  /// Needed by both DeclareScopeTypes and FindLoopingTypes.
+  class GenericTypeInstantiation;
+
   /// Resolve and declare all types named in a scope.
   class DeclareScopeTypes;
 

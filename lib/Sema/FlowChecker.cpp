@@ -2562,9 +2562,30 @@ void FlowChecker::checkImplicitReturnType(ESTree::FunctionLikeNode *node) {
   }
 }
 
+/// Forward declaration information for generic type instantiations in
+/// aliases.
+class FlowChecker::GenericTypeInstantiation {
+ public:
+  /// The generic TypeDecl.
+  TypeDecl *typeDecl;
+  /// The generic type annotation node.
+  ESTree::GenericTypeAnnotationNode *annotation;
+  /// The type arguments provided to the generic type annotation, may contain
+  /// incomplete unions or other forward-declared generics.
+  llvh::SmallVector<Type *, 2> typeArgTypes{};
+  GenericTypeInstantiation(
+      TypeDecl *typeDecl,
+      ESTree::GenericTypeAnnotationNode *annotation)
+      : typeDecl(typeDecl), annotation(annotation) {}
+};
+
 class FlowChecker::FindLoopingTypes {
   /// Output set to store the looping types in.
   llvh::SmallDenseSet<Type *> &loopingTypes;
+
+  /// Map from generic type annotations to their instantiations.
+  const llvh::MapVector<Type *, GenericTypeInstantiation>
+      &forwardGenericInstantiations;
 
   /// Visited set for the types so far.
   /// Use a SetVector so it can be quickly iterated to copy the types into
@@ -2574,8 +2595,13 @@ class FlowChecker::FindLoopingTypes {
  public:
   /// Finds looping types reachable from \p type.
   /// \param loopingTypes[in/out] set to populate with looping types.
-  FindLoopingTypes(llvh::SmallDenseSet<Type *> &loopingTypes, Type *type)
-      : loopingTypes(loopingTypes) {
+  FindLoopingTypes(
+      llvh::SmallDenseSet<Type *> &loopingTypes,
+      const llvh::MapVector<Type *, GenericTypeInstantiation>
+          &forwardGenericInstantiations,
+      Type *type)
+      : loopingTypes(loopingTypes),
+        forwardGenericInstantiations(forwardGenericInstantiations) {
     isTypeLooping(type);
   }
 
@@ -2602,26 +2628,41 @@ class FlowChecker::FindLoopingTypes {
     }
 
     switch (type->info->getKind()) {
-#define _HERMES_SEMA_FLOW_DEFKIND(name)                   \
-  case TypeKind::name:                                    \
-    return isLooping(llvh::cast<name##Type>(type->info)); \
+#define _HERMES_SEMA_FLOW_DEFKIND(name)                         \
+  case TypeKind::name:                                          \
+    return isLooping(type, llvh::cast<name##Type>(type->info)); \
     break;
       _HERMES_SEMA_FLOW_SINGLETONS _HERMES_SEMA_FLOW_COMPLEX_TYPES
 #undef _HERMES_SEMA_FLOW_DEFKIND
     }
   }
 
-  bool isLooping(SingletonType *) {
+  bool isLooping(Type *, SingletonType *) {
     // Nothing to do for singleton types.
     return false;
   }
 
-  bool isLooping(TypeWithId *type) {
+  /// GenericType needs special handling because it's not a singleton,
+  /// but has a list of type arguments that could be looping.
+  bool isLooping(Type *type, GenericType *) {
+    auto it = forwardGenericInstantiations.find(type);
+    assert(it != forwardGenericInstantiations.end() && "can't find generic");
+
+    bool result = false;
+    for (Type *t : it->second.typeArgTypes) {
+      if (isTypeLooping(t)) {
+        result = true;
+      }
+    }
+    return result;
+  }
+
+  bool isLooping(Type *, TypeWithId *type) {
     // Nominal type. Stop checking for recursion.
     return false;
   }
 
-  bool isLooping(UnionType *type) {
+  bool isLooping(Type *, UnionType *type) {
     bool result = false;
     for (Type *t : type->getTypes()) {
       if (isTypeLooping(t)) {
@@ -2633,11 +2674,11 @@ class FlowChecker::FindLoopingTypes {
     return result;
   }
 
-  bool isLooping(ArrayType *type) {
+  bool isLooping(Type *, ArrayType *type) {
     return isTypeLooping(type->getElement());
   }
 
-  bool isLooping(TupleType *type) {
+  bool isLooping(Type *, TupleType *type) {
     bool result = false;
     for (Type *t : type->getTypes()) {
       if (isTypeLooping(t)) {
@@ -2649,7 +2690,7 @@ class FlowChecker::FindLoopingTypes {
     return result;
   }
 
-  bool isLooping(TypedFunctionType *type) {
+  bool isLooping(Type *, TypedFunctionType *type) {
     bool result = false;
     result |= isTypeLooping(type->getReturnType());
     if (type->getThisParam()) {
@@ -2661,7 +2702,7 @@ class FlowChecker::FindLoopingTypes {
     return result;
   }
 
-  bool isLooping(NativeFunctionType *type) {
+  bool isLooping(Type *, NativeFunctionType *type) {
     bool result = false;
     result |= isTypeLooping(type->getReturnType());
     for (const auto &[name, paramType] : type->getParams()) {
@@ -2670,14 +2711,14 @@ class FlowChecker::FindLoopingTypes {
     return result;
   }
 
-  bool isLooping(UntypedFunctionType *type) {
+  bool isLooping(Type *, UntypedFunctionType *type) {
     return false;
   }
 };
 
 /// Type aliases combined with unions create a **dramatic complication**, since
 /// they can be mutually self recursive. We need to declare types in stages,
-/// first the "direct" ones, then resolve the aliases and unions.
+/// first the "direct" ones, then resolve the aliases, unions, and generics.
 ///
 /// 1. Iterate all scope types. Forward-declare all declared types as Type *.
 /// 2. Resolve the aliases, checking for self-references.
@@ -2700,6 +2741,11 @@ class FlowChecker::DeclareScopeTypes {
   /// Used for populating the LHS after resolving the RHS with
   /// resolveTypeAnnotation.
   llvh::SmallDenseMap<Type *, Type *> typeAliasResolutions{};
+  /// Keep track of the generic instantiations created during type alias
+  /// resolution, because they need to know the TypeInfo for the type aliases
+  /// to decide whether to make a new specialization.
+  llvh::MapVector<Type *, GenericTypeInstantiation>
+      forwardGenericInstantiations{};
   /// Keep track of all forward declarations of classes, so they can be
   /// completed.
   llvh::SmallVector<Type *, 4> forwardClassDecls{};
@@ -2866,6 +2912,17 @@ class FlowChecker::DeclareScopeTypes {
       if (llvh::isa<UnionType>(localType->info)) {
         forwardUnions.insert(localType);
       }
+
+      // If it's a generic, we'll have to resolve it as well.
+      // Forward declared generics will have their true types instantiated
+      // later.
+      if (llvh::isa<GenericType>(localType->info)) {
+        auto it =
+            forwardGenericInstantiations.find(typeAliasResolutions[localType]);
+        assert(it != forwardGenericInstantiations.end());
+        GenericTypeInstantiation copy = it->second;
+        forwardGenericInstantiations.insert({localType, copy});
+      }
     }
   }
 
@@ -2919,9 +2976,35 @@ class FlowChecker::DeclareScopeTypes {
       }
 
       if (typeDecl->genericClassDecl) {
-        outer.sm_.error(
-            gta->getSourceRange(), "ft: generics in aliases unsupported");
-        return outer.flowContext_.getAny();
+        // Resolve to the specialized class.
+        if (!gta->_typeParameters) {
+          outer.sm_.error(
+              gta->getSourceRange(),
+              llvh::Twine("ft: missing generic arguments for '") +
+                  id->_name->str() + "'");
+          return outer.flowContext_.getAny();
+        }
+
+        // Make a placeholder type to represent the generic type for now.
+        // The TypeInfo will be replaced with the concrete ClassType when we are
+        // able to resolve TypeInfo for all type arguments.
+        Type *type = outer.flowContext_.createType(
+            outer.flowContext_.getGenericInfo(), annotation);
+        GenericTypeInstantiation instantiation{typeDecl, gta};
+
+        // Populate the type arg Types.
+        ESTree::NodeList &args =
+            llvh::cast<ESTree::TypeParameterInstantiationNode>(
+                gta->_typeParameters)
+                ->_params;
+        for (ESTree::Node &node : args)
+          instantiation.typeArgTypes.push_back(
+              resolveTypeAnnotation(&node, visited, depth));
+
+        // Add the instantiation to the list of forward declarations,
+        // so that we can resolve them later.
+        forwardGenericInstantiations.insert({type, std::move(instantiation)});
+        return type;
       }
 
       // No need to recurse here because any references to this name will
@@ -3038,14 +3121,21 @@ class FlowChecker::DeclareScopeTypes {
     // Complete all forward-declared unions.
     // First find all the recursive union arms.
     for (Type *type : forwardUnions) {
-      FindLoopingTypes(loopingUnionArms, type);
-    }
-    // Now simplify and canonicalize as many union arms as possible.
-    for (Type *type : forwardUnions) {
-      completeForwardUnion(type, {});
+      FindLoopingTypes(loopingUnionArms, forwardGenericInstantiations, type);
     }
 
-    // Complete all forward-declared types.
+    // Now simplify and canonicalize as many union arms as possible.
+    for (Type *type : forwardUnions) {
+      llvh::SetVector<Type *> visited{};
+      completeForwardType(type, visited);
+    }
+    // Now simplify and canonicalize the foward generics.
+    for (auto &[type, generic] : forwardGenericInstantiations) {
+      llvh::SetVector<Type *> visited{};
+      completeForwardGeneric(type, generic, visited);
+    }
+
+    // Parse all forward-declared class types.
     for (Type *type : forwardClassDecls) {
       // This is necessary because we need to defer parsing the class to allow
       // using types defined after the class inside the class:
@@ -3064,15 +3154,37 @@ class FlowChecker::DeclareScopeTypes {
     }
   }
 
+  /// Complete the forward declaration of the given \p type,
+  /// replacing its \c info field with the resolved type.
+  void completeForwardType(Type *type, llvh::SetVector<Type *> &visited) {
+    if (llvh::isa<GenericType>(type->info)) {
+      auto it = forwardGenericInstantiations.find(type);
+      assert(it != forwardGenericInstantiations.end());
+      completeForwardGeneric(type, it->second, visited);
+      return;
+    }
+
+    if (auto *unionType = llvh::dyn_cast<UnionType>(type->info)) {
+      completeForwardUnion(type, unionType, visited);
+      return;
+    }
+
+    // Nothing to do.
+    return;
+  }
+
   /// DFS through unions starting at \p type so they get canonicalized in the
   /// right order when possible.
   /// After this function completes, the \c info field of \p type will contain
   /// either a UnionType with canonicalized arms or a single type (if everything
   /// has been deduplicated).
-  void completeForwardUnion(Type *type, llvh::SetVector<Type *> visited) {
-    // The union might have been turned into a single type by now.
-    UnionType *unionType = llvh::dyn_cast<UnionType>(type->info);
-    if (!unionType || unionType->getNumNonLoopingTypes() >= 0) {
+  /// Mutually recursive with completeForwardType and completeForwardGeneric.
+  void completeForwardUnion(
+      Type *type,
+      UnionType *unionType,
+      llvh::SetVector<Type *> &visited) {
+    assert(unionType && "Expected a union");
+    if (unionType->getNumNonLoopingTypes() >= 0) {
       // Already been completed.
       return;
     }
@@ -3095,8 +3207,10 @@ class FlowChecker::DeclareScopeTypes {
 
     for (Type *unionArm : unionType->getTypes()) {
       // Union contains a union, complete it so it can be flattened.
-      if (forwardUnions.count(unionArm)) {
-        completeForwardUnion(unionArm, visited);
+      // Or it's a forward-declared generic.
+      if (forwardUnions.count(unionArm) ||
+          llvh::isa<GenericType>(unionArm->info)) {
+        completeForwardType(unionArm, visited);
       }
 
       // Looping arms are separated for slow uniquing.
@@ -3133,6 +3247,56 @@ class FlowChecker::DeclareScopeTypes {
       unionType->setCanonicalTypes(
           std::move(nonLoopingTypes), std::move(loopingTypes));
     }
+  }
+
+  /// DFS step for forward-declared generic.
+  /// Specializes forward-declared generics when necessary, and when this step
+  /// completes, \p type will have a TypeInfo that is a real ClassType (no
+  /// longer Generic).
+  /// Mutually recursive with completeForwardType and completeForwardUnion.
+  void completeForwardGeneric(
+      Type *type,
+      const GenericTypeInstantiation &generic,
+      llvh::SetVector<Type *> &visited) {
+    if (!llvh::isa<GenericType>(type->info))
+      return;
+
+    if (!visited.insert(type)) {
+      // Already attempting to complete this type,
+      // but hit a cycle on this branch.
+      outer.sm_.error(
+          type->node->getSourceRange(),
+          "ft: type contains a circular reference to itself");
+      type->info = outer.flowContext_.getAnyInfo();
+      return;
+    }
+
+    auto popOnExit =
+        llvh::make_scope_exit([&visited]() { visited.pop_back(); });
+
+    TypeDecl *typeDecl = generic.typeDecl;
+
+    for (Type *arg : generic.typeArgTypes) {
+      if (forwardUnions.count(arg) || llvh::isa<GenericType>(arg->info)) {
+        completeForwardType(arg, visited);
+      }
+    }
+
+    assert(typeDecl->genericClassDecl && "Expected a generic class");
+    sema::Decl *newDecl = outer.specializeGenericWithParsedTypes(
+        typeDecl->genericClassDecl,
+        llvh::cast<ESTree::TypeParameterInstantiationNode>(
+            generic.annotation->_typeParameters),
+        generic.typeArgTypes,
+        typeDecl->genericClassDecl->scope);
+
+    if (!newDecl)
+      type->info = outer.flowContext_.getAnyInfo();
+
+    Type *classConsType = outer.getDeclType(newDecl);
+    type->info = llvh::cast<ClassConstructorType>(classConsType->info)
+                     ->getClassType()
+                     ->info;
   }
 
   /// Parse every element of deferredGenericSpecializations,

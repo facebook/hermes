@@ -284,6 +284,8 @@ Value *ESTreeIRGen::getDefaultInitValue(flow::Type *type) {
     case flow::TypeKind::Array:
     case flow::TypeKind::Tuple:
       return Builder.getLiteralPositiveZero();
+    case flow::TypeKind::Generic:
+      hermes_fatal("invalid typekind");
   }
 }
 
@@ -325,6 +327,8 @@ Type ESTreeIRGen::flowTypeToIRType(flow::Type *flowType) {
     case flow::TypeKind::Array:
     case flow::TypeKind::Tuple:
       return Type::createObject();
+    case flow::TypeKind::Generic:
+      hermes_fatal("invalid typekind");
   }
 }
 
