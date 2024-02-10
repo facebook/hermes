@@ -149,7 +149,7 @@ function M$react_index$useState<T>(
 /**
  * Initial value of the state
  */
-initial: T): [T, (value: T | ((prev: T) => T)) => void] {
+initial: T): [T, M$react_index$INTERNAL$SetState<T>] {
   const root: M$react_index$INTERNAL$Root = M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Root>(M$react_index$INTERNAL$workInProgressRoot);
   const fiber: M$react_index$INTERNAL$Fiber = M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(M$react_index$INTERNAL$workInProgressFiber);
   M$react_invariant$default(fiber !== null && root !== null, 'useState() called outside of render');
@@ -180,8 +180,8 @@ initial: T): [T, (value: T | ((prev: T) => T)) => void] {
   return [
   // Untyped check that the existing state value has the correct type,
   // This is safe if components follow the rules of hooks
-  M$sh_CHECKED_CAST$default<T>(state.value), (updater: T | ((prev: T) => T)): void => {
-    const update = new M$react_index$INTERNAL$Update<mixed>(fiber, M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$State<mixed>>(state), M$sh_CHECKED_CAST$default<T | ((prev: T) => T)>(updater));
+  M$sh_CHECKED_CAST$default<T>(state.value), (updater: M$react_index$INTERNAL$Updater<T>): void => {
+    const update = new M$react_index$INTERNAL$Update<mixed>(fiber, M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$State<mixed>>(state), M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Updater<mixed>>(updater));
     if (M$react_index$INTERNAL$workInProgressFiber !== null) {
       // called during render
       M$react_index$INTERNAL$renderPhaseUpdateQueue.push(update);
@@ -203,21 +203,19 @@ function M$react_index$callOnClickOrChange(id: string, event: any): void {
  * - T: the new value
  * - (prev: T) => T: a function to compute the new value from the old value
  */
-// type Updater<T> = T | ((prev: T) => T);
-
+type M$react_index$INTERNAL$Updater<T> = T | ((prev: T) => T);
 /**
  * The type of the setState function (second element of the array returned by useState).
  */
-// type SetState<T> = (value: Updater<T>) => void;
-
+type M$react_index$INTERNAL$SetState<T> = (value: M$react_index$INTERNAL$Updater<T>) => void;
 /**
  * A queued state update.
  */
 class M$react_index$INTERNAL$Update<T> {
   fiber: M$react_index$INTERNAL$Fiber;
   state: M$react_index$INTERNAL$State<T>;
-  updater: T | ((prev: T) => T);
-  constructor(fiber: M$react_index$INTERNAL$Fiber, state: M$react_index$INTERNAL$State<T>, updater: T | ((prev: T) => T)) {
+  updater: M$react_index$INTERNAL$Updater<T>;
+  constructor(fiber: M$react_index$INTERNAL$Fiber, state: M$react_index$INTERNAL$State<T>, updater: M$react_index$INTERNAL$Updater<T>) {
     this.fiber = fiber;
     this.state = state;
     this.updater = updater;

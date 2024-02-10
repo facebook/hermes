@@ -193,17 +193,16 @@ function M$react_index$callOnClickOrChange(id, event) {
   }
   callback(event);
 }
+
 /**
  * The type of value that may be passed to the setState function (second part of useState return value).
  * - T: the new value
  * - (prev: T) => T: a function to compute the new value from the old value
  */
-// type Updater<T> = T | ((prev: T) => T);
 
 /**
  * The type of the setState function (second element of the array returned by useState).
  */
-// type SetState<T> = (value: Updater<T>) => void;
 
 /**
  * A queued state update.
@@ -873,7 +872,8 @@ function M$index$INTERNAL$printIf1(i, str) {
   }
 }
 function M$index$INTERNAL$run(N) {
-  for (let i = 1; i <= N; ++i) {
+  // Warmup
+  for (let i = 1; i <= 100; ++i) {
     const root = M$react_index$createRoot();
     const rootElement = M$react_index$jsx(M$App$default, {}, null);
     M$index$INTERNAL$printIf1(i, root.render(rootElement));
@@ -886,6 +886,23 @@ function M$index$INTERNAL$run(N) {
     M$sh_microtask$drainMicrotaskQueue();
     M$index$INTERNAL$printIf1(i, root.render(rootElement));
   }
+  // Benchmark
+  var start = Date.now();
+  for (let i = 1; i <= N; ++i) {
+    const root = M$react_index$createRoot();
+    const rootElement = M$react_index$jsx(M$App$default, {}, null);
+    root.render(rootElement);
+    M$react_index$callOnClickOrChange('toggle-modal', null);
+    M$react_index$callOnClickOrChange('update-text', {
+      target: {
+        value: '!!!!! some text !!!!!'
+      }
+    });
+    M$sh_microtask$drainMicrotaskQueue();
+    root.render(rootElement);
+  }
+  var end = Date.now();
+  print(`${end - start} ms`);
 }
-M$index$INTERNAL$run(1);
+M$index$INTERNAL$run(10_000);
 //# sourceMappingURL=simple-stripped.js.map

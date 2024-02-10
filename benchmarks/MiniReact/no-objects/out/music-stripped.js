@@ -193,17 +193,16 @@ function M$react_index$callOnClickOrChange(id, event) {
   }
   callback(event);
 }
+
 /**
  * The type of value that may be passed to the setState function (second part of useState return value).
  * - T: the new value
  * - (prev: T) => T: a function to compute the new value from the old value
  */
-// type Updater<T> = T | ((prev: T) => T);
 
 /**
  * The type of the setState function (second element of the array returned by useState).
  */
-// type SetState<T> = (value: Updater<T>) => void;
 
 /**
  * A queued state update.

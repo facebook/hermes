@@ -21,7 +21,8 @@ function printIf1(i: number, str: string): void {
 }
 
 function run(N: number): void {
-  for (let i: number = 1; i <= N; ++i) {
+  // Warmup
+  for (let i: number = 1; i <= 100; ++i) {
     const root = React.createRoot();
     const rootElement = <App />;
     printIf1(i, root.render(rootElement));
@@ -33,6 +34,23 @@ function run(N: number): void {
     drainMicrotaskQueue();
     printIf1(i, root.render(rootElement));
   }
+
+  // Benchmark
+  var start = Date.now();
+  for (let i: number = 1; i <= N; ++i) {
+    const root = React.createRoot();
+    const rootElement = <App />;
+    root.render(rootElement);
+
+    React.callOnClickOrChange('toggle-modal', null);
+    React.callOnClickOrChange('update-text', {
+      target: {value: '!!!!! some text !!!!!'},
+    });
+    drainMicrotaskQueue();
+    root.render(rootElement);
+  }
+  var end = Date.now();
+  print(`${end - start} ms`);
 }
 
-run(1);
+run(10_000);

@@ -115,7 +115,7 @@ export function useState<T>(
    * Initial value of the state
    */
   initial: T,
-): [T, (value: T | ((prev: T) => T)) => void] {
+): [T, SetState<T>] {
   const root: Root = CHECKED_CAST<Root>(workInProgressRoot);
   const fiber: Fiber = CHECKED_CAST<Fiber>(workInProgressFiber);
   invariant(
@@ -151,11 +151,11 @@ export function useState<T>(
     // Untyped check that the existing state value has the correct type,
     // This is safe if components follow the rules of hooks
     CHECKED_CAST<T>(state.value),
-    (updater: T | ((prev: T) => T)): void => {
+    (updater: Updater<T>): void => {
       const update = new Update<mixed>(
         fiber,
         CHECKED_CAST<State<mixed>>(state),
-        CHECKED_CAST<T | ((prev: T) => T)>(updater),
+        CHECKED_CAST<Updater<mixed>>(updater),
       );
       if (workInProgressFiber !== null) {
         // called during render
@@ -181,12 +181,12 @@ export function callOnClickOrChange(id: string, event: any): void {
  * - T: the new value
  * - (prev: T) => T: a function to compute the new value from the old value
  */
-// type Updater<T> = T | ((prev: T) => T);
+type Updater<T> = T | ((prev: T) => T);
 
 /**
  * The type of the setState function (second element of the array returned by useState).
  */
-// type SetState<T> = (value: Updater<T>) => void;
+type SetState<T> = (value: Updater<T>) => void;
 
 /**
  * A queued state update.
@@ -194,9 +194,9 @@ export function callOnClickOrChange(id: string, event: any): void {
 class Update<T> {
   fiber: Fiber; // used to check state updates that occur during render to see if they came from the current component.
   state: State<T>;
-  updater: T | ((prev: T) => T); // Updater<T>;
+  updater: Updater<T>;
 
-  constructor(fiber: Fiber, state: State<T>, updater: T | ((prev: T) => T)) {
+  constructor(fiber: Fiber, state: State<T>, updater: Updater<T>) {
     this.fiber = fiber;
     this.state = state;
     this.updater = updater;
