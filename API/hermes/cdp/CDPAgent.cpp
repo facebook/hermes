@@ -250,6 +250,9 @@ void CDPAgentImpl::DomainAgents::handleCommand(
   } else if (command->method == "Runtime.getProperties") {
     runtimeAgent_->getProperties(
         static_cast<m::runtime::GetPropertiesRequest &>(*command));
+  } else if (command->method == "Runtime.evaluate") {
+    runtimeAgent_->evaluate(
+        static_cast<m::runtime::EvaluateRequest &>(*command));
   } else {
     messageCallback_(message::makeErrorResponse(
                          command->id,

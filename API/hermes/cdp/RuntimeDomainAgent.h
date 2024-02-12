@@ -42,6 +42,8 @@ class RuntimeDomainAgent : public DomainAgent {
   void compileScript(const m::runtime::CompileScriptRequest &req);
   /// Handles Runtime.getProperties request
   void getProperties(const m::runtime::GetPropertiesRequest &req);
+  /// Handles Runtime.evaluate request
+  void evaluate(const m::runtime::EvaluateRequest &req);
 
  private:
   bool checkRuntimeEnabled(const m::Request &req);

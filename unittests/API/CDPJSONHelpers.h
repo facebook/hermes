@@ -23,6 +23,8 @@ struct JSONScope {
   JSONObject *parseObject(const std::string &str);
   std::string getString(JSONObject *obj, std::vector<std::string> paths);
   long long getNumber(JSONObject *obj, std::vector<std::string> paths);
+  bool getBoolean(JSONObject *obj, std::vector<std::string> paths);
+  const JSONObject *getObject(JSONObject *obj, std::vector<std::string> paths);
 
   struct Private;
   std::unique_ptr<Private> private_;

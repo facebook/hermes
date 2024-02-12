@@ -34,8 +34,7 @@ void ensureOkResponse(const std::string &message, int id) {
   EXPECT_EQ(response.id, id);
 }
 
-template <typename T>
-std::unique_ptr<T> getValue(
+const JSONValue *getJSONValue(
     const JSONValue *value,
     std::vector<std::string> paths) {
   int numPaths = paths.size();
@@ -48,14 +47,27 @@ std::unique_ptr<T> getValue(
       EXPECT_TRUE(false);
     }
 
-    if (i != numPaths - 1) {
-      EXPECT_TRUE(value != nullptr);
-    } else {
-      std::unique_ptr<T> target = m::valueFromJson<T>(value);
-      return std::move(target);
-    }
+    EXPECT_TRUE(value != nullptr);
   }
-  ::hermes::hermes_fatal("Should never reach here");
+
+  return value;
+}
+
+template <typename T>
+std::unique_ptr<T> getValue(
+    const JSONValue *value,
+    std::vector<std::string> paths) {
+  value = getJSONValue(value, paths);
+  std::unique_ptr<T> target = m::valueFromJson<T>(value);
+  return std::move(target);
+}
+
+const JSONObject *getJSONObject(
+    const JSONValue *value,
+    std::vector<std::string> paths) {
+  value = getJSONValue(value, paths);
+  EXPECT_TRUE(JSONObject::classof(value));
+  return static_cast<const JSONObject *>(value);
 }
 
 template <typename T>
@@ -344,6 +356,16 @@ long long JSONScope::getNumber(
     JSONObject *obj,
     std::vector<std::string> paths) {
   return *getValue<long long>(obj, paths);
+}
+
+bool JSONScope::getBoolean(JSONObject *obj, std::vector<std::string> paths) {
+  return *getValue<bool>(obj, paths);
+}
+
+const JSONObject *JSONScope::getObject(
+    JSONObject *obj,
+    std::vector<std::string> paths) {
+  return getJSONObject(obj, paths);
 }
 
 } // namespace hermes
