@@ -17,6 +17,7 @@ add_hermes_library(hermesSema
     FlowContext.cpp
     FlowTypesDumper.cpp FlowTypesDumper.h
     FlowChecker.cpp FlowChecker.h
+    FlowChecker-expr.cpp
     FlowChecker-scopetypes.cpp
     LINK_OBJLIBS
     hermesSupport
