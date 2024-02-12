@@ -764,7 +764,7 @@ size_t raw_fd_ostream::preferred_buffer_size() const {
   if (IsWindowsConsole)
     return 0;
   return raw_ostream::preferred_buffer_size();
-#elif !defined(__minix)
+#elif !defined(__minix) && !(defined(__APPLE__) && defined(HERMES_IS_MOBILE_BUILD))
   // Minix has no st_blksize.
   assert(FD >= 0 && "File not yet open!");
   struct stat statbuf;
