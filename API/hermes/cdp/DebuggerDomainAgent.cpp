@@ -14,13 +14,18 @@ namespace hermes {
 namespace cdp {
 
 using namespace facebook::hermes::debugger;
+using namespace facebook::hermes::inspector_modern::chrome;
 
 DebuggerDomainAgent::DebuggerDomainAgent(
     int32_t executionContextID,
     HermesRuntime &runtime,
     AsyncDebuggerAPI &asyncDebugger,
-    SynchronizedOutboundCallback messageCallback)
-    : DomainAgent(executionContextID, std::move(messageCallback)),
+    SynchronizedOutboundCallback messageCallback,
+    std::shared_ptr<old_cdp::RemoteObjectsTable> objTable)
+    : DomainAgent(
+          executionContextID,
+          std::move(messageCallback),
+          std::move(objTable)),
       runtime_(runtime),
       asyncDebugger_(asyncDebugger),
       debuggerEventCallbackId_(kInvalidDebuggerEventCallbackID),
@@ -51,6 +56,7 @@ void DebuggerDomainAgent::handleDebuggerEvent(
     case DebuggerEventType::Resumed:
       if (paused_) {
         paused_ = false;
+        objTable_->releaseObjectGroup(BacktraceObjectGroup);
         sendNotificationToClient(m::debugger::ResumedNotification{});
       }
       break;
@@ -252,7 +258,7 @@ void DebuggerDomainAgent::evaluateOnCallFrame(
           *remoteObjPtr = m::runtime::makeRemoteObject(
               runtime_,
               result.value,
-              objTable_,
+              *objTable_,
               objectGroup,
               byValue,
               generatePreview);
@@ -387,7 +393,7 @@ void DebuggerDomainAgent::sendPausedNotificationToClient() {
   m::debugger::PausedNotification note;
   note.reason = "other";
   note.callFrames = m::debugger::makeCallFrames(
-      runtime_.getDebugger().getProgramState(), objTable_, runtime_);
+      runtime_.getDebugger().getProgramState(), *objTable_, runtime_);
   sendNotificationToClient(note);
 }
 
@@ -395,7 +401,7 @@ void DebuggerDomainAgent::sendPauseOnExceptionNotificationToClient() {
   m::debugger::PausedNotification note;
   note.reason = "exception";
   note.callFrames = m::debugger::makeCallFrames(
-      runtime_.getDebugger().getProgramState(), objTable_, runtime_);
+      runtime_.getDebugger().getProgramState(), *objTable_, runtime_);
   sendNotificationToClient(note);
 }
 

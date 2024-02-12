@@ -1819,6 +1819,7 @@ TEST_F(ConnectionTests, testLoadMultipleScripts) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
+// Also implemented as CDPAgentTest::GetProperties
 TEST_F(ConnectionTests, testGetProperties) {
   int msgId = 1;
   std::vector<std::string> objIds;
@@ -1918,6 +1919,7 @@ TEST_F(ConnectionTests, testGetProperties) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
+// Also implemented as CDPAgentTest::GetPropertiesOnlyOwn
 TEST_F(ConnectionTests, testGetPropertiesOnlyOwnProperties) {
   int msgId = 1;
 

@@ -88,12 +88,37 @@ std::unique_ptr<T> getValue(
     const std::string &message,
     std::vector<std::string> paths);
 
+struct PropInfo {
+  PropInfo(const std::string &type) : type(type) {}
+
+  PropInfo &setSubtype(const std::string &subtypeParam) {
+    subtype = subtypeParam;
+    return *this;
+  }
+
+  PropInfo &setValue(const std::string &v) {
+    value = v;
+    return *this;
+  }
+
+  PropInfo &setUnserializableValue(
+      const std::string &unserializableValueParam) {
+    unserializableValue = unserializableValueParam;
+    return *this;
+  }
+
+  std::string type;
+  std::optional<std::string> subtype;
+  std::optional<m::JSONBlob> value;
+  std::optional<std::string> unserializableValue;
+};
+
 void ensureErrorResponse(const std::string &message, int id);
 void ensureOkResponse(const std::string &message, int id);
 
 void ensureNotification(const std::string &message, const std::string &method);
 
-void ensurePaused(
+m::debugger::PausedNotification ensurePaused(
     const std::string &message,
     const std::string &reason,
     const std::vector<FrameInfo> &infos);
@@ -121,6 +146,9 @@ m::debugger::BreakpointId ensureSetBreakpointByUrlResponse(
     int id,
     std::vector<BreakpointLocation> locations);
 
+std::unordered_map<std::string, std::string> ensureProps(
+    const std::string &message,
+    const std::unordered_map<std::string, PropInfo> &infos);
 } // namespace hermes
 } // namespace facebook
 

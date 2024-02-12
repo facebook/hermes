@@ -6,6 +6,7 @@
  */
 
 #include <hermes/inspector/chrome/MessageConverters.h>
+#include <hermes/inspector/chrome/RemoteObjectConverters.h>
 #include <jsi/instrumentation.h>
 
 #include "RuntimeDomainAgent.h"
@@ -19,8 +20,12 @@ static const char *const kUserEnteredScriptIdPrefix = "userScript";
 RuntimeDomainAgent::RuntimeDomainAgent(
     int32_t executionContextID,
     HermesRuntime &runtime,
-    SynchronizedOutboundCallback messageCallback)
-    : DomainAgent(executionContextID, std::move(messageCallback)),
+    SynchronizedOutboundCallback messageCallback,
+    std::shared_ptr<old_cdp::RemoteObjectsTable> objTable)
+    : DomainAgent(
+          executionContextID,
+          std::move(messageCallback),
+          std::move(objTable)),
       runtime_(runtime),
       enabled_(false) {}
 
@@ -129,6 +134,33 @@ void RuntimeDomainAgent::compileScript(
   sendResponseToClient(resp);
 }
 
+void RuntimeDomainAgent::getProperties(
+    const m::runtime::GetPropertiesRequest &req) {
+  if (!checkRuntimeEnabled(req)) {
+    return;
+  }
+
+  bool generatePreview = req.generatePreview.value_or(false);
+  bool ownProperties = req.ownProperties.value_or(true);
+
+  std::string objGroup = objTable_->getObjectGroup(req.objectId);
+  auto scopePtr = objTable_->getScope(req.objectId);
+  auto valuePtr = objTable_->getValue(req.objectId);
+
+  m::runtime::GetPropertiesResponse resp;
+  resp.id = req.id;
+  if (scopePtr != nullptr) {
+    const debugger::ProgramState &state =
+        runtime_.getDebugger().getProgramState();
+    resp.result =
+        makePropsFromScope(*scopePtr, objGroup, state, generatePreview);
+  } else if (valuePtr != nullptr) {
+    resp.result =
+        makePropsFromValue(*valuePtr, objGroup, ownProperties, generatePreview);
+  }
+  sendResponseToClient(resp);
+}
+
 bool RuntimeDomainAgent::checkRuntimeEnabled(const m::Request &req) {
   if (!enabled_) {
     sendResponseToClient(m::makeErrorResponse(
@@ -136,6 +168,136 @@ bool RuntimeDomainAgent::checkRuntimeEnabled(const m::Request &req) {
     return false;
   }
   return true;
+}
+
+std::vector<m::runtime::PropertyDescriptor>
+RuntimeDomainAgent::makePropsFromScope(
+    std::pair<uint32_t, uint32_t> frameAndScopeIndex,
+    const std::string &objectGroup,
+    const debugger::ProgramState &state,
+    bool generatePreview) {
+  // Chrome represents variables in a scope as properties on a dummy object.
+  // We don't instantiate such dummy objects, we just pretended to have one.
+  // Chrome has now asked for its properties, so it's time to synthesize
+  // descriptions of the properties that the dummy object would have had.
+  std::vector<m::runtime::PropertyDescriptor> result;
+
+  uint32_t frameIndex = frameAndScopeIndex.first;
+  uint32_t scopeIndex = frameAndScopeIndex.second;
+  debugger::LexicalInfo lexicalInfo = state.getLexicalInfo(frameIndex);
+  uint32_t varCount = lexicalInfo.getVariablesCountInScope(scopeIndex);
+
+  // If this is the frame's local scope, include 'this'.
+  if (scopeIndex == 0) {
+    auto varInfo = state.getVariableInfoForThis(frameIndex);
+    m::runtime::PropertyDescriptor desc;
+    desc.name = varInfo.name;
+    desc.value = m::runtime::makeRemoteObject(
+        runtime_,
+        varInfo.value,
+        *objTable_,
+        objectGroup,
+        false,
+        generatePreview);
+    // Chrome only shows enumerable properties.
+    desc.enumerable = true;
+    result.emplace_back(std::move(desc));
+  }
+
+  // Then add each of the variables in this lexical scope.
+  for (uint32_t varIndex = 0; varIndex < varCount; varIndex++) {
+    debugger::VariableInfo varInfo =
+        state.getVariableInfo(frameIndex, scopeIndex, varIndex);
+
+    m::runtime::PropertyDescriptor desc;
+    desc.name = varInfo.name;
+    desc.value = m::runtime::makeRemoteObject(
+        runtime_,
+        varInfo.value,
+        *objTable_,
+        objectGroup,
+        false,
+        generatePreview);
+    desc.enumerable = true;
+
+    result.emplace_back(std::move(desc));
+  }
+
+  return result;
+}
+
+std::vector<m::runtime::PropertyDescriptor>
+RuntimeDomainAgent::makePropsFromValue(
+    const jsi::Value &value,
+    const std::string &objectGroup,
+    bool onlyOwnProperties,
+    bool generatePreview) {
+  std::vector<m::runtime::PropertyDescriptor> result;
+
+  if (value.isObject()) {
+    jsi::Runtime &runtime = runtime_;
+    jsi::Object obj = value.getObject(runtime);
+
+    // TODO(hypuk): obj.getPropertyNames only returns enumerable properties.
+    jsi::Array propNames = onlyOwnProperties
+        ? runtime.global()
+              .getPropertyAsObject(runtime, "Object")
+              .getPropertyAsFunction(runtime, "getOwnPropertyNames")
+              .call(runtime, obj)
+              .getObject(runtime)
+              .getArray(runtime)
+        : obj.getPropertyNames(runtime);
+
+    size_t propCount = propNames.length(runtime);
+    for (size_t i = 0; i < propCount; i++) {
+      jsi::String propName =
+          propNames.getValueAtIndex(runtime, i).getString(runtime);
+
+      m::runtime::PropertyDescriptor desc;
+      desc.name = propName.utf8(runtime);
+
+      try {
+        // Currently, we fetch the property even if it runs code.
+        // Chrome instead detects getters and makes you click to invoke.
+        jsi::Value propValue = obj.getProperty(runtime, propName);
+        desc.value = m::runtime::makeRemoteObject(
+            runtime,
+            propValue,
+            *objTable_,
+            objectGroup,
+            false,
+            generatePreview);
+      } catch (const jsi::JSError &err) {
+        // We fetched a property with a getter that threw. Show a placeholder.
+        // We could have added additional info, but the UI quickly gets messy.
+        desc.value = m::runtime::makeRemoteObject(
+            runtime,
+            jsi::String::createFromUtf8(runtime, "(Exception)"),
+            *objTable_,
+            objectGroup,
+            false,
+            generatePreview);
+      }
+
+      result.emplace_back(std::move(desc));
+    }
+
+    if (onlyOwnProperties) {
+      jsi::Value proto = runtime.global()
+                             .getPropertyAsObject(runtime, "Object")
+                             .getPropertyAsFunction(runtime, "getPrototypeOf")
+                             .call(runtime, obj);
+      if (!proto.isNull()) {
+        m::runtime::PropertyDescriptor desc;
+        desc.name = "__proto__";
+        desc.value = m::runtime::makeRemoteObject(
+            runtime, proto, *objTable_, objectGroup, false, generatePreview);
+        result.emplace_back(std::move(desc));
+      }
+    }
+  }
+
+  return result;
 }
 
 } // namespace cdp

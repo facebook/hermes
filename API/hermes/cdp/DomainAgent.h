@@ -12,6 +12,7 @@
 #include <string>
 
 #include <hermes/inspector/chrome/MessageTypes.h>
+#include <hermes/inspector/chrome/RemoteObjectsTable.h>
 #include <hermes/inspector/chrome/ThreadSafetyAnalysis.h>
 
 namespace facebook {
@@ -19,6 +20,7 @@ namespace hermes {
 namespace cdp {
 
 namespace m = ::facebook::hermes::inspector_modern::chrome::message;
+namespace old_cdp = ::facebook::hermes::inspector_modern::chrome;
 
 /// Fixed execution context ID because Hermes doesn't currently support realms
 /// or Web Workers.
@@ -67,9 +69,11 @@ class DomainAgent {
  protected:
   DomainAgent(
       int32_t executionContextID,
-      SynchronizedOutboundCallback messageCallback)
+      SynchronizedOutboundCallback messageCallback,
+      std::shared_ptr<old_cdp::RemoteObjectsTable> objTable)
       : executionContextID_(executionContextID),
-        messageCallback_(messageCallback) {}
+        messageCallback_(messageCallback),
+        objTable_(objTable) {}
 
   /// Sends the provided string back to the debug client
   void sendToClient(const std::string &str) {
@@ -91,6 +95,8 @@ class DomainAgent {
 
   /// Callback function to send CDP response back to the debug client
   SynchronizedOutboundCallback messageCallback_;
+
+  std::shared_ptr<old_cdp::RemoteObjectsTable> objTable_;
 };
 
 } // namespace cdp

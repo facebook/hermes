@@ -74,6 +74,13 @@ class CDPAgentImpl {
     /// CDPAgentImpl.
     SynchronizedOutboundCallback messageCallback_;
 
+    // Collection of objects that can be referenced by the debug client.
+    // Object IDs generated in one domain can be referenced from another,
+    // so this collection is shared amongst them all. No locking is needed,
+    // as it's guaranteed that there will never be multiple domain agents
+    // running at the same time.
+    std::shared_ptr<old_cdp::RemoteObjectsTable> objTable_;
+
     std::unique_ptr<DebuggerDomainAgent> debuggerAgent_;
     std::unique_ptr<RuntimeDomainAgent> runtimeAgent_;
   };
@@ -158,13 +165,18 @@ CDPAgentImpl::DomainAgents::DomainAgents(
     : executionContextID_(executionContextID),
       runtime_(runtime),
       asyncDebuggerAPI_(asyncDebuggerAPI),
-      messageCallback_(std::move(messageCallback)) {}
+      messageCallback_(std::move(messageCallback)),
+      objTable_(std::make_shared<old_cdp::RemoteObjectsTable>()) {}
 
 void CDPAgentImpl::DomainAgents::initialize() {
   debuggerAgent_ = std::make_unique<DebuggerDomainAgent>(
-      executionContextID_, runtime_, asyncDebuggerAPI_, messageCallback_);
+      executionContextID_,
+      runtime_,
+      asyncDebuggerAPI_,
+      messageCallback_,
+      objTable_);
   runtimeAgent_ = std::make_unique<RuntimeDomainAgent>(
-      executionContextID_, runtime_, messageCallback_);
+      executionContextID_, runtime_, messageCallback_, objTable_);
 }
 
 void CDPAgentImpl::DomainAgents::dispose() {
@@ -235,6 +247,9 @@ void CDPAgentImpl::DomainAgents::handleCommand(
   } else if (command->method == "Runtime.compileScript") {
     runtimeAgent_->compileScript(
         static_cast<m::runtime::CompileScriptRequest &>(*command));
+  } else if (command->method == "Runtime.getProperties") {
+    runtimeAgent_->getProperties(
+        static_cast<m::runtime::GetPropertiesRequest &>(*command));
   } else {
     messageCallback_(message::makeErrorResponse(
                          command->id,
