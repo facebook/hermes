@@ -367,8 +367,21 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// Needed by both DeclareScopeTypes and FindLoopingTypes.
   class GenericTypeInstantiation;
 
-  /// Resolve and declare all types named in a scope.
   class DeclareScopeTypes;
+
+  /// Resolve and declare all types named in a scope.
+  /// Necessary because it uses DeclareScopeTypes in FlowChecker-scopetypes.cpp.
+  void declareScopeTypes(
+      const sema::ScopeDecls &decls,
+      sema::LexicalScope *scope,
+      ESTree::Node *scopeNode);
+
+  /// Run DeclareScopeTypes starting from a single generic type annotation.
+  /// \return the resolved type for the generic type alias specialization.
+  /// Necessary because it uses DeclareScopeTypes in FlowChecker-scopetypes.cpp.
+  Type *resolveGenericTypeAlias(
+      ESTree::GenericTypeAnnotationNode *gta,
+      TypeDecl *typeDecl);
 
   /// Check whether a type contains loops (even indirectly).
   /// Determines whether it is considered "unsortable" in union arms.
@@ -448,8 +461,14 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   Type *parseGenericTypeAnnotation(ESTree::GenericTypeAnnotationNode *node);
   Type *parseFunctionTypeAnnotation(ESTree::FunctionTypeAnnotationNode *node);
 
-  /// Parse a class type into an already created (but empty) class.
   class ParseClassType;
+
+  /// Parse a class type into an already created (but empty) class.
+  void parseClassType(
+      ESTree::Node *superClass,
+      ESTree::Node *superTypeParameters,
+      ESTree::Node *body,
+      Type *classType);
 
   /// Visit the \p node for either resolution or parsing and call \p cb on each
   /// of the type annotations in it.
@@ -744,6 +763,52 @@ class FlowChecker::ClassContext {
     return llvh::cast<ClassType>(classType->info);
   }
 };
+
+template <typename AnnotationCB>
+Type *FlowChecker::processFunctionTypeAnnotation(
+    ESTree::FunctionTypeAnnotationNode *node,
+    AnnotationCB cb) {
+  if (node->_rest || node->_typeParameters) {
+    sm_.error(node->getSourceRange(), "unsupported function type params");
+  }
+
+  Type *thisType = node->_this
+      ? cb(llvh::cast<ESTree::FunctionTypeParamNode>(node->_this)
+               ->_typeAnnotation)
+      : nullptr;
+  Type *returnType = cb(node->_returnType);
+
+  llvh::SmallVector<TypedFunctionType::Param, 4> paramsList{};
+  for (ESTree::Node &n : node->_params) {
+    if (auto *param = llvh::dyn_cast<ESTree::FunctionTypeParamNode>(&n)) {
+      auto *id = llvh::cast_or_null<ESTree::IdentifierNode>(param->_name);
+      if (param->_optional) {
+        sm_.error(param->getSourceRange(), "unsupported optional parameter");
+      }
+      paramsList.emplace_back(
+          Identifier::getFromPointer(id ? id->_name : nullptr),
+          param->_typeAnnotation ? cb(param->_typeAnnotation) : nullptr);
+    } else {
+      sm_.warning(
+          n.getSourceRange(),
+          "ft: typing of pattern parameters not implemented, :any assumed");
+      size_t idx = paramsList.size();
+      paramsList.emplace_back(
+          astContext_.getIdentifier(
+              (llvh::Twine("?param_") + llvh::Twine(idx)).str()),
+          flowContext_.getAny());
+    }
+  }
+
+  return flowContext_.createType(
+      flowContext_.createFunction(
+          returnType,
+          thisType,
+          paramsList,
+          /* isAsync */ false,
+          /* isGenerator */ false),
+      node);
+}
 
 } // namespace flow
 } // namespace hermes
