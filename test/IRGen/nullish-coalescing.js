@@ -66,14 +66,14 @@ function f2(a, b) {
 // CHECK-NEXT:       StoreFrameInst %2: any, [b]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [a]: any
 // CHECK-NEXT:  %5 = BinaryEqualInst (:any) %4: any, null: null
-// CHECK-NEXT:       CondBranchInst %5: any, %BB1, %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:       ReturnInst 1: number
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:       ReturnInst 2: number
+// CHECK-NEXT:       CondBranchInst %5: any, %BB3, %BB4
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = LoadFrameInst (:any) [b]: any
-// CHECK-NEXT:        CondBranchInst %9: any, %BB3, %BB4
+// CHECK-NEXT:       ReturnInst 1: number
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:        CondBranchInst %4: any, %BB3, %BB4
+// CHECK-NEXT:       ReturnInst 2: number
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) [b]: any
+// CHECK-NEXT:        CondBranchInst %9: any, %BB1, %BB2
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:        CondBranchInst %4: any, %BB1, %BB2
 // CHECK-NEXT:function_end

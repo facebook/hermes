@@ -74,13 +74,13 @@ function testComplex(x, y, z) {
 // CHECK-NEXT:       StoreFrameInst %2: any, [y]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %4: any, "foo": string
-// CHECK-NEXT:       CondBranchInst %5: any, %BB1, %BB2
-// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       CondBranchInst %5: any, %BB2, %BB1
+// CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [y]: any
 // CHECK-NEXT:       StorePropertyLooseInst %7: any, %4: any, "foo": string
-// CHECK-NEXT:       BranchInst %BB1
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %10 = PhiInst (:any) %5: any, %BB0, %7: any, %BB2
+// CHECK-NEXT:       BranchInst %BB2
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %10 = PhiInst (:any) %5: any, %BB0, %7: any, %BB1
 // CHECK-NEXT:        ReturnInst %10: any
 // CHECK-NEXT:function_end
 
@@ -114,21 +114,21 @@ function testComplex(x, y, z) {
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %z: any
 // CHECK-NEXT:       StoreFrameInst %4: any, [z]: any
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:       CondBranchInst %6: any, %BB1, %BB2
-// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       CondBranchInst %6: any, %BB2, %BB1
+// CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_0_logical: any
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) [y]: any
 // CHECK-NEXT:        StoreStackInst %9: any, %8: any
-// CHECK-NEXT:        CondBranchInst %9: any, %BB3, %BB4
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %12 = PhiInst (:any) %6: any, %BB0, %17: any, %BB3
+// CHECK-NEXT:        CondBranchInst %9: any, %BB4, %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %12 = PhiInst (:any) %6: any, %BB0, %17: any, %BB4
 // CHECK-NEXT:        ReturnInst %12: any
-// CHECK-NEXT:%BB4:
+// CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %14 = LoadFrameInst (:any) [z]: any
 // CHECK-NEXT:        StoreStackInst %14: any, %8: any
-// CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:%BB3:
+// CHECK-NEXT:        BranchInst %BB4
+// CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %17 = LoadStackInst (:any) %8: any
 // CHECK-NEXT:        StoreFrameInst %17: any, [x]: any
-// CHECK-NEXT:        BranchInst %BB1
+// CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end

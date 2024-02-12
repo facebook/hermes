@@ -105,18 +105,18 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) globalObject: object, "sink": string
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %7 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %6: any
-// CHECK-NEXT:       BranchInst %BB3
+// CHECK-NEXT:       BranchInst %BB4
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:%BB4:
+// CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %11 = BinaryLessThanInst (:boolean) %10: any, 10: number
 // CHECK-NEXT:        CondBranchInst %11: boolean, %BB1, %BB2
-// CHECK-NEXT:%BB3:
+// CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %14 = BinaryAddInst (:any) %13: any, 1: number
 // CHECK-NEXT:        StoreFrameInst %14: any, [i]: any
-// CHECK-NEXT:        BranchInst %BB4
+// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_for_loop_break(): any
@@ -140,13 +140,13 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:       StoreFrameInst 0: number, [i]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %3 = BinaryLessThanInst (:boolean) %2: any, 10: number
-// CHECK-NEXT:       CondBranchInst %3: boolean, %BB1, %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:       CondBranchInst %3: boolean, %BB2, %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:       BranchInst %BB2
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       BranchInst %BB3
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_for_loop_continue(): any
@@ -158,18 +158,18 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:  %3 = BinaryLessThanInst (:boolean) %2: any, 10: number
 // CHECK-NEXT:       CondBranchInst %3: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:       BranchInst %BB3
+// CHECK-NEXT:       BranchInst %BB4
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:%BB4:
+// CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %8 = BinaryLessThanInst (:boolean) %7: any, 10: number
 // CHECK-NEXT:       CondBranchInst %8: boolean, %BB1, %BB2
-// CHECK-NEXT:%BB3:
+// CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %11 = BinaryAddInst (:any) %10: any, 1: number
 // CHECK-NEXT:        StoreFrameInst %11: any, [i]: any
-// CHECK-NEXT:        BranchInst %BB4
+// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_for_loop_continue_label(): any
@@ -179,22 +179,22 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:       StoreFrameInst 0: number, [i]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %3 = BinaryLessThanInst (:boolean) %2: any, 10: number
-// CHECK-NEXT:       CondBranchInst %3: boolean, %BB1, %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:       CondBranchInst %3: boolean, %BB2, %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:       BranchInst %BB4
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:       BranchInst %BB3
-// CHECK-NEXT:%BB5:
+// CHECK-NEXT:       BranchInst %BB5
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:       BranchInst %BB1
+// CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %9 = BinaryLessThanInst (:boolean) %8: any, 10: number
-// CHECK-NEXT:        CondBranchInst %9: boolean, %BB1, %BB2
-// CHECK-NEXT:%BB4:
+// CHECK-NEXT:        CondBranchInst %9: boolean, %BB2, %BB3
+// CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %12 = BinaryAddInst (:any) %11: any, 1: number
 // CHECK-NEXT:        StoreFrameInst %12: any, [i]: any
-// CHECK-NEXT:        BranchInst %BB5
+// CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:function_end
 
 // CHECK:function for_loop_match(a: any, b: any, c: any, d: any, e: any, f: any): any
@@ -230,11 +230,11 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:       BranchInst %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:       BranchInst %BB1
-// CHECK-NEXT:%BB2:
 // CHECK-NEXT:       BranchInst %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       BranchInst %BB1
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function test_init_update_exprs(param1: any): any
@@ -246,35 +246,35 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:       StoreFrameInst 0: number, [i]: any
 // CHECK-NEXT:       CondBranchInst false: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:       BranchInst %BB3
+// CHECK-NEXT:       BranchInst %BB4
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:       CondBranchInst false: boolean, %BB4, %BB5
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:       CondBranchInst false: boolean, %BB1, %BB2
+// CHECK-NEXT:       CondBranchInst false: boolean, %BB5, %BB6
 // CHECK-NEXT:%BB3:
+// CHECK-NEXT:       CondBranchInst false: boolean, %BB1, %BB2
+// CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %9 = AsNumericInst (:number|bigint) %8: any
 // CHECK-NEXT:  %10 = UnaryIncInst (:number|bigint) %9: number|bigint
 // CHECK-NEXT:        StoreFrameInst %10: number|bigint, [i]: any
-// CHECK-NEXT:        BranchInst %BB6
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        BranchInst %BB7
+// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB5:
+// CHECK-NEXT:        BranchInst %BB8
+// CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %14 = LoadFrameInst (:any) [param1]: any
-// CHECK-NEXT:        CondBranchInst false: boolean, %BB8, %BB9
-// CHECK-NEXT:%BB10:
-// CHECK-NEXT:        CondBranchInst false: boolean, %BB4, %BB5
+// CHECK-NEXT:        CondBranchInst false: boolean, %BB9, %BB10
 // CHECK-NEXT:%BB7:
+// CHECK-NEXT:        CondBranchInst false: boolean, %BB5, %BB6
+// CHECK-NEXT:%BB8:
 // CHECK-NEXT:  %17 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %18 = UnaryDecInst (:number|bigint) %17: any
 // CHECK-NEXT:        StoreFrameInst %18: number|bigint, [i]: any
-// CHECK-NEXT:        BranchInst %BB10
-// CHECK-NEXT:%BB8:
-// CHECK-NEXT:        BranchInst %BB11
+// CHECK-NEXT:        BranchInst %BB7
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:        ReturnInst undefined: undefined
-// CHECK-NEXT:%BB12:
-// CHECK-NEXT:        CondBranchInst false: boolean, %BB8, %BB9
-// CHECK-NEXT:%BB11:
 // CHECK-NEXT:        BranchInst %BB12
+// CHECK-NEXT:%BB10:
+// CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:%BB11:
+// CHECK-NEXT:        CondBranchInst false: boolean, %BB9, %BB10
+// CHECK-NEXT:%BB12:
+// CHECK-NEXT:        BranchInst %BB11
 // CHECK-NEXT:function_end

@@ -69,12 +69,12 @@ function logical_and_or(y, x, z) { return x && (y || z) }
 // CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_logical: any
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:       StoreStackInst %5: any, %4: any
-// CHECK-NEXT:       CondBranchInst %5: any, %BB1, %BB2
-// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       CondBranchInst %5: any, %BB2, %BB1
+// CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [y]: any
 // CHECK-NEXT:       StoreStackInst %8: any, %4: any
-// CHECK-NEXT:        BranchInst %BB1
-// CHECK-NEXT:%BB1:
+// CHECK-NEXT:        BranchInst %BB2
+// CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %11 = LoadStackInst (:any) %4: any
 // CHECK-NEXT:        ReturnInst %11: any
 // CHECK-NEXT:function_end
@@ -92,22 +92,22 @@ function logical_and_or(y, x, z) { return x && (y || z) }
 // CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_1_logical: any
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:       StoreStackInst %8: any, %7: any
-// CHECK-NEXT:        CondBranchInst %8: any, %BB1, %BB2
-// CHECK-NEXT:%BB3:
+// CHECK-NEXT:        CondBranchInst %8: any, %BB3, %BB4
+// CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) [z]: any
 // CHECK-NEXT:        StoreStackInst %11: any, %6: any
-// CHECK-NEXT:        BranchInst %BB4
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %14 = LoadStackInst (:any) %6: any
-// CHECK-NEXT:        ReturnInst %14: any
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %16 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:        StoreStackInst %16: any, %7: any
 // CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %14 = LoadStackInst (:any) %6: any
+// CHECK-NEXT:        ReturnInst %14: any
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %16 = LoadFrameInst (:any) [y]: any
+// CHECK-NEXT:        StoreStackInst %16: any, %7: any
+// CHECK-NEXT:        BranchInst %BB4
+// CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %19 = LoadStackInst (:any) %7: any
 // CHECK-NEXT:        StoreStackInst %19: any, %6: any
-// CHECK-NEXT:        CondBranchInst %19: any, %BB3, %BB4
+// CHECK-NEXT:        CondBranchInst %19: any, %BB1, %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function logical_and_or(y: any, x: any, z: any): any
@@ -127,15 +127,15 @@ function logical_and_or(y, x, z) { return x && (y || z) }
 // CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_1_logical: any
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) [y]: any
 // CHECK-NEXT:        StoreStackInst %11: any, %10: any
-// CHECK-NEXT:        CondBranchInst %11: any, %BB3, %BB4
+// CHECK-NEXT:        CondBranchInst %11: any, %BB4, %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %14 = LoadStackInst (:any) %6: any
 // CHECK-NEXT:        ReturnInst %14: any
-// CHECK-NEXT:%BB4:
+// CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %16 = LoadFrameInst (:any) [z]: any
 // CHECK-NEXT:        StoreStackInst %16: any, %10: any
-// CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:%BB3:
+// CHECK-NEXT:        BranchInst %BB4
+// CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %19 = LoadStackInst (:any) %10: any
 // CHECK-NEXT:        StoreStackInst %19: any, %6: any
 // CHECK-NEXT:        BranchInst %BB2

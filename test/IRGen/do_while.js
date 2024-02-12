@@ -66,12 +66,12 @@ function for_while_do_mixed_test(cond) {
 // CHECK-NEXT:       StoreFrameInst %0: any, [cond]: any
 // CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:       BranchInst %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB2:
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:       CondBranchInst %5: any, %BB1, %BB3
+// CHECK-NEXT:       CondBranchInst %5: any, %BB1, %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function do_while_break_test(cond: any): any
@@ -93,12 +93,12 @@ function for_while_do_mixed_test(cond) {
 // CHECK-NEXT:       StoreFrameInst %0: any, [cond]: any
 // CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:       BranchInst %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB2:
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:       CondBranchInst %5: any, %BB1, %BB3
+// CHECK-NEXT:       CondBranchInst %5: any, %BB1, %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function for_while_do_mixed_test(cond: any): any
@@ -113,28 +113,28 @@ function for_while_do_mixed_test(cond) {
 // CHECK-NEXT:       CondBranchInst %5: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:       CondBranchInst %7: any, %BB3, %BB4
+// CHECK-NEXT:       CondBranchInst %7: any, %BB5, %BB6
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:%BB5:
+// CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %11 = BinaryLessThanInst (:boolean) %10: any, 10: number
 // CHECK-NEXT:        CondBranchInst %11: boolean, %BB1, %BB2
-// CHECK-NEXT:%BB6:
+// CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %14 = AsNumericInst (:number|bigint) %13: any
 // CHECK-NEXT:  %15 = UnaryIncInst (:number|bigint) %14: number|bigint
 // CHECK-NEXT:        StoreFrameInst %15: number|bigint, [i]: any
-// CHECK-NEXT:        BranchInst %BB5
-// CHECK-NEXT:%BB3:
+// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:%BB5:
 // CHECK-NEXT:        BranchInst %BB7
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        BranchInst %BB6
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:        BranchInst %BB8
-// CHECK-NEXT:%BB9:
+// CHECK-NEXT:%BB6:
 // CHECK-NEXT:        BranchInst %BB4
+// CHECK-NEXT:%BB7:
+// CHECK-NEXT:        BranchInst %BB9
 // CHECK-NEXT:%BB8:
+// CHECK-NEXT:        BranchInst %BB6
+// CHECK-NEXT:%BB9:
 // CHECK-NEXT:  %22 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:        CondBranchInst %22: any, %BB7, %BB9
+// CHECK-NEXT:        CondBranchInst %22: any, %BB7, %BB8
 // CHECK-NEXT:function_end

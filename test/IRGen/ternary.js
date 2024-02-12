@@ -55,15 +55,15 @@ function test_three(x, one, two) {
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %z: any
 // CHECK-NEXT:       StoreFrameInst %4: any, [z]: any
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:       CondBranchInst %6: any, %BB1, %BB2
-// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       CondBranchInst %6: any, %BB2, %BB1
+// CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [z]: any
 // CHECK-NEXT:       BranchInst %BB3
-// CHECK-NEXT:%BB1:
+// CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [y]: any
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = PhiInst (:any) %10: any, %BB1, %8: any, %BB2
+// CHECK-NEXT:  %12 = PhiInst (:any) %10: any, %BB2, %8: any, %BB1
 // CHECK-NEXT:        ReturnInst %12: any
 // CHECK-NEXT:function_end
 
@@ -76,15 +76,15 @@ function test_three(x, one, two) {
 // CHECK-NEXT:       StoreFrameInst 16: number, [age]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [age]: any
 // CHECK-NEXT:  %5 = BinaryGreaterThanInst (:boolean) %4: any, 18: number
-// CHECK-NEXT:       CondBranchInst %5: boolean, %BB1, %BB2
-// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       CondBranchInst %5: boolean, %BB2, %BB1
+// CHECK-NEXT:%BB1:
 // CHECK-NEXT:       StoreFrameInst true: boolean, [stop]: any
 // CHECK-NEXT:       BranchInst %BB3
-// CHECK-NEXT:%BB1:
+// CHECK-NEXT:%BB2:
 // CHECK-NEXT:       StoreFrameInst 2: number, [age]: any
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %11 = PhiInst (:boolean|number) 2: number, %BB1, true: boolean, %BB2
+// CHECK-NEXT:  %11 = PhiInst (:boolean|number) 2: number, %BB2, true: boolean, %BB1
 // CHECK-NEXT:        ReturnInst %11: boolean|number
 // CHECK-NEXT:function_end
 
@@ -98,16 +98,16 @@ function test_three(x, one, two) {
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %two: any
 // CHECK-NEXT:       StoreFrameInst %4: any, [two]: any
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:       CondBranchInst %6: any, %BB1, %BB2
-// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       CondBranchInst %6: any, %BB2, %BB1
+// CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [two]: any
 // CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:%BB1:
+// CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) [one]: any
 // CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %14 = PhiInst (:any) %12: any, %BB1, %9: any, %BB2
+// CHECK-NEXT:  %14 = PhiInst (:any) %12: any, %BB2, %9: any, %BB1
 // CHECK-NEXT:        ReturnInst %14: any
 // CHECK-NEXT:function_end

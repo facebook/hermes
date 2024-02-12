@@ -46,9 +46,9 @@ function onlyDefault () {
 // CHECK:function onlyDefault(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:       BranchInst %BB1
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:%BB1:
 // CHECK-NEXT:       BranchInst %BB2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:function_end

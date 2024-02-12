@@ -40,10 +40,10 @@ function *foo() {
 // CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
 // CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: boolean
 // CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
-// CHECK-NEXT:       CondBranchInst %3: boolean, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:       TryStartInst %BB3, %BB4
+// CHECK-NEXT:       CondBranchInst %3: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
+// CHECK-NEXT:       TryStartInst %BB3, %BB4
+// CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %7 = CatchInst (:any)
@@ -54,15 +54,15 @@ function *foo() {
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %11 = ResumeGeneratorInst (:any) %9: boolean
 // CHECK-NEXT:  %12 = LoadStackInst (:boolean) %9: boolean
-// CHECK-NEXT:        CondBranchInst %12: boolean, %BB6, %BB7
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:        BranchInst %BB8
+// CHECK-NEXT:        CondBranchInst %12: boolean, %BB7, %BB6
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:        BranchInst %BB9
-// CHECK-NEXT:%BB9:
+// CHECK-NEXT:%BB7:
+// CHECK-NEXT:        BranchInst %BB8
+// CHECK-NEXT:%BB8:
 // CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        ReturnInst %11: any
-// CHECK-NEXT:%BB8:
+// CHECK-NEXT:%BB9:
 // CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

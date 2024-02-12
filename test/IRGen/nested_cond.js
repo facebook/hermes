@@ -38,18 +38,18 @@ function foo (a, b, c) {
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %c: any
 // CHECK-NEXT:       StoreFrameInst %4: any, [c]: any
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [a]: any
-// CHECK-NEXT:       CondBranchInst %6: any, %BB1, %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:       ReturnInst 1: number
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:       ReturnInst 2: number
+// CHECK-NEXT:       CondBranchInst %6: any, %BB3, %BB4
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) [b]: any
-// CHECK-NEXT:        CondBranchInst %10: any, %BB5, %BB3
+// CHECK-NEXT:       ReturnInst 1: number
 // CHECK-NEXT:%BB2:
+// CHECK-NEXT:       ReturnInst 2: number
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) [b]: any
+// CHECK-NEXT:        CondBranchInst %10: any, %BB5, %BB1
+// CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [c]: any
-// CHECK-NEXT:        CondBranchInst %12: any, %BB4, %BB1
+// CHECK-NEXT:        CondBranchInst %12: any, %BB2, %BB3
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %14 = LoadFrameInst (:any) [c]: any
-// CHECK-NEXT:        CondBranchInst %14: any, %BB3, %BB4
+// CHECK-NEXT:        CondBranchInst %14: any, %BB1, %BB2
 // CHECK-NEXT:function_end

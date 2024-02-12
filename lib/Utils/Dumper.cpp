@@ -402,10 +402,13 @@ void IRPrinter::visitFunction(
   auto *UF = const_cast<Function *>(&F);
   os_.indent(indent_);
   namer_.newFunction(&F);
-  // Number all instructions sequentially.
-  for (auto *BB : order)
+  for (auto *BB : order) {
+    // Number all basic blocks sequentially.
+    namer_.getBBNumber(BB);
+    // Number all instructions sequentially.
     for (auto &I : *BB)
       namer_.getInstNumber(&I);
+  }
 
   printFunctionHeader(UF);
   os_ << "\n";

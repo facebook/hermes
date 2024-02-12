@@ -43,19 +43,19 @@ function foo() {
 // CHECK:function foo(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:       BranchInst %BB1
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:       TryStartInst %BB3, %BB4
-// CHECK-NEXT:%BB5:
 // CHECK-NEXT:       BranchInst %BB2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       TryStartInst %BB4, %BB5
 // CHECK-NEXT:%BB3:
+// CHECK-NEXT:       BranchInst %BB1
+// CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %4 = CatchInst (:any)
 // CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "finally1": string
 // CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:       BranchInst %BB5
-// CHECK-NEXT:%BB4:
+// CHECK-NEXT:       BranchInst %BB3
+// CHECK-NEXT:%BB5:
 // CHECK-NEXT:       BranchInst %BB6
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "bar2": string
@@ -65,5 +65,5 @@ function foo() {
 // CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:  %13 = TryLoadGlobalPropertyInst (:any) globalObject: object, "finally1": string
 // CHECK-NEXT:  %14 = CallInst (:any) %13: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:        BranchInst %BB5
+// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:function_end

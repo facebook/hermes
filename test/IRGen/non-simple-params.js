@@ -48,12 +48,12 @@ function baz({a, b}) {
 // CHECK-NEXT:       StoreFrameInst %2: any, [a]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %b: any
 // CHECK-NEXT:  %5 = BinaryStrictlyNotEqualInst (:any) %4: any, undefined: undefined
-// CHECK-NEXT:       CondBranchInst %5: any, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = LoadFrameInst (:any) [a]: any
-// CHECK-NEXT:       BranchInst %BB1
+// CHECK-NEXT:       CondBranchInst %5: any, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = PhiInst (:any) %4: any, %BB0, %7: any, %BB2
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) [a]: any
+// CHECK-NEXT:       BranchInst %BB2
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %9 = PhiInst (:any) %4: any, %BB0, %7: any, %BB1
 // CHECK-NEXT:        StoreFrameInst %9: any, [b]: any
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) [a]: any
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [b]: any
@@ -68,20 +68,20 @@ function baz({a, b}) {
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [b]: any
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  %3 = BinaryStrictlyNotEqualInst (:any) %2: any, undefined: undefined
-// CHECK-NEXT:       CondBranchInst %3: any, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:       BranchInst %BB1
+// CHECK-NEXT:       CondBranchInst %3: any, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = PhiInst (:any) %2: any, %BB0, 10: number, %BB2
+// CHECK-NEXT:       BranchInst %BB2
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %6 = PhiInst (:any) %2: any, %BB0, 10: number, %BB1
 // CHECK-NEXT:       StoreFrameInst %6: any, [a]: any
 // CHECK-NEXT:  %8 = LoadParamInst (:any) %b: any
 // CHECK-NEXT:  %9 = BinaryStrictlyNotEqualInst (:any) %8: any, undefined: undefined
-// CHECK-NEXT:        CondBranchInst %9: any, %BB3, %BB4
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "glob": string
-// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:        CondBranchInst %9: any, %BB4, %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %13 = PhiInst (:any) %8: any, %BB1, %11: any, %BB4
+// CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "glob": string
+// CHECK-NEXT:        BranchInst %BB4
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %13 = PhiInst (:any) %8: any, %BB2, %11: any, %BB3
 // CHECK-NEXT:        StoreFrameInst %13: any, [b]: any
 // CHECK-NEXT:  %15 = LoadFrameInst (:any) [a]: any
 // CHECK-NEXT:  %16 = LoadFrameInst (:any) [b]: any

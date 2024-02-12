@@ -30,16 +30,16 @@ function foo(sink){
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %sink: any
-// CHECK-NEXT:       TryStartInst %BB1, %BB2
+// CHECK-NEXT:       TryStartInst %BB1, %BB3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %2 = CatchInst (:any)
-// CHECK-NEXT:       BranchInst %BB3
-// CHECK-NEXT:%BB3:
+// CHECK-NEXT:       BranchInst %BB2
+// CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:%BB2:
+// CHECK-NEXT:%BB3:
 // CHECK-NEXT:       BranchInst %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:       TryEndInst
-// CHECK-NEXT:       BranchInst %BB3
+// CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:function_end

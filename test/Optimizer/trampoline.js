@@ -73,17 +73,17 @@ function test_merge_blocks(x, y) {
 // CHECK:function test_catch_region(x: any, y: any, z: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:       TryStartInst %BB1, %BB2
+// CHECK-NEXT:       TryStartInst %BB1, %BB3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %1 = CatchInst (:any)
-// CHECK-NEXT:       BranchInst %BB3
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB2:
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:%BB3:
 // CHECK-NEXT:       BranchInst %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:       TryEndInst
-// CHECK-NEXT:       BranchInst %BB3
+// CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function test_cond_branch(x: any, y: any): any

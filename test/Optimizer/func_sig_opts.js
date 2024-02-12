@@ -226,11 +226,11 @@ function test_async() {
 // CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
 // CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: boolean
 // CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
-// CHECK-NEXT:       CondBranchInst %3: boolean, %BB1, %BB2
-// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       CondBranchInst %3: boolean, %BB2, %BB1
+// CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:       ReturnInst %5: any
-// CHECK-NEXT:%BB1:
+// CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end
 
@@ -248,10 +248,10 @@ function test_async() {
 // CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
 // CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: boolean
 // CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
-// CHECK-NEXT:       CondBranchInst %3: boolean, %BB1, %BB2
-// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       CondBranchInst %3: boolean, %BB2, %BB1
+// CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:       ReturnInst %5: any
-// CHECK-NEXT:%BB1:
+// CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end

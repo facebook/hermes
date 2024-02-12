@@ -107,13 +107,13 @@ fail2:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %cond: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [cond]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:       CondBranchInst %2: any, %BB1, %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:       CondBranchInst %2: any, %BB2, %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:       BranchInst %BB2
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       BranchInst %BB3
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:function_end
 
 // CHECK:function continue_label(cond: any): any
@@ -122,16 +122,16 @@ fail2:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %cond: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [cond]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:       CondBranchInst %2: any, %BB1, %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:       CondBranchInst %2: any, %BB2, %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:       BranchInst %BB4
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:       BranchInst %BB3
+// CHECK-NEXT:       BranchInst %BB4
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:       CondBranchInst %7: any, %BB1, %BB2
+// CHECK-NEXT:       CondBranchInst %7: any, %BB2, %BB3
 // CHECK-NEXT:function_end
 
 // CHECK:function nested_label(cond: any): any
@@ -140,24 +140,24 @@ fail2:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %cond: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [cond]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:       CondBranchInst %2: any, %BB1, %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:       CondBranchInst %2: any, %BB2, %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:       CondBranchInst %5: any, %BB4, %BB5
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:       BranchInst %BB3
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:       CondBranchInst %8: any, %BB1, %BB2
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:        BranchInst %BB6
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) [cond]: any
+// CHECK-NEXT:       CondBranchInst %5: any, %BB6, %BB7
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:        BranchInst %BB8
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) [cond]: any
+// CHECK-NEXT:       CondBranchInst %8: any, %BB2, %BB3
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:        BranchInst %BB7
+// CHECK-NEXT:        BranchInst %BB4
+// CHECK-NEXT:%BB6:
+// CHECK-NEXT:        BranchInst %BB8
+// CHECK-NEXT:%BB7:
+// CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:        CondBranchInst %13: any, %BB4, %BB5
+// CHECK-NEXT:        CondBranchInst %13: any, %BB6, %BB7
 // CHECK-NEXT:function_end

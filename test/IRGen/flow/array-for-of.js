@@ -59,33 +59,33 @@ return function main(x: number[]) {
 // CHECK-NEXT:        StoreFrameInst %11: number, [i]: any
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %14 = BinaryStrictlyEqualInst (:boolean) %13: any, 0: number
-// CHECK-NEXT:        CondBranchInst %14: boolean, %BB3, %BB4
+// CHECK-NEXT:        CondBranchInst %14: boolean, %BB5, %BB6
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        ReturnInst undefined: undefined
-// CHECK-NEXT:%BB5:
+// CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %17 = LoadStackInst (:number) %5: number
 // CHECK-NEXT:  %18 = FastArrayLengthInst (:number) %4: object
 // CHECK-NEXT:        CmpBrLessThanInst %17: number, %18: number, %BB1, %BB2
-// CHECK-NEXT:%BB6:
+// CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %20 = LoadStackInst (:number) %5: number
 // CHECK-NEXT:  %21 = FAddInst (:number) %20: number, 1: number
 // CHECK-NEXT:        StoreStackInst %21: number, %5: number
-// CHECK-NEXT:        BranchInst %BB5
-// CHECK-NEXT:%BB3:
+// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:%BB5:
 // CHECK-NEXT:        BranchInst %BB2
-// CHECK-NEXT:%BB4:
+// CHECK-NEXT:%BB6:
 // CHECK-NEXT:        BranchInst %BB7
 // CHECK-NEXT:%BB7:
 // CHECK-NEXT:  %26 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %27 = BinaryStrictlyEqualInst (:boolean) %26: any, 1: number
 // CHECK-NEXT:        CondBranchInst %27: boolean, %BB8, %BB9
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:        BranchInst %BB6
+// CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:%BB9:
 // CHECK-NEXT:        BranchInst %BB10
 // CHECK-NEXT:%BB10:
 // CHECK-NEXT:  %31 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %32 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %33 = CallInst (:any) %31: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %32: any
-// CHECK-NEXT:        BranchInst %BB6
+// CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:function_end

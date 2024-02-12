@@ -54,20 +54,20 @@
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:object) [f1@main]: object
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "a": string
-// CHECK-NEXT:       CondBranchInst %1: any, %BB1, %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %3 = PhiInst (:number) %5: number, %BB2, %11: number, %BB4
+// CHECK-NEXT:       CondBranchInst %1: any, %BB3, %BB2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %3 = PhiInst (:number) %5: number, %BB2, %11: number, %BB5
 // CHECK-NEXT:       ReturnInst %3: number
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = CallInst (:number) %0: object, %f1(): functionCode, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:       BranchInst %BB3
-// CHECK-NEXT:%BB1:
+// CHECK-NEXT:       BranchInst %BB1
+// CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "b": string
-// CHECK-NEXT:       CondBranchInst %7: any, %BB4, %BB5
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %9 = CallInst (:number) %0: object, %f1(): functionCode, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:        BranchInst %BB4
+// CHECK-NEXT:       CondBranchInst %7: any, %BB5, %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %11 = PhiInst (:number) %9: number, %BB5, 0: number, %BB1
-// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:  %9 = CallInst (:number) %0: object, %f1(): functionCode, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:        BranchInst %BB5
+// CHECK-NEXT:%BB5:
+// CHECK-NEXT:  %11 = PhiInst (:number) %9: number, %BB4, 0: number, %BB3
+// CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:function_end

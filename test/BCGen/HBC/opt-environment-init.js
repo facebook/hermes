@@ -54,25 +54,25 @@ function foo(o) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:undefined|boolean) [flag@foo]: undefined|boolean
-// CHECK-NEXT:       CondBranchInst %0: undefined|boolean, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:       BranchInst %BB1
+// CHECK-NEXT:       CondBranchInst %0: undefined|boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = PhiInst (:undefined|boolean) %0: undefined|boolean, %BB0, true: boolean, %BB2
+// CHECK-NEXT:       BranchInst %BB2
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %3 = PhiInst (:undefined|boolean) %0: undefined|boolean, %BB0, true: boolean, %BB1
 // CHECK-NEXT:       StoreFrameInst %3: undefined|boolean, [flag@foo]: undefined|boolean
 // CHECK-NEXT:  %5 = LoadFrameInst (:undefined|number) [flag1@foo]: undefined|number
-// CHECK-NEXT:       CondBranchInst %5: undefined|number, %BB3, %BB4
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:       BranchInst %BB3
+// CHECK-NEXT:       CondBranchInst %5: undefined|number, %BB4, %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %8 = PhiInst (:undefined|number) %5: undefined|number, %BB1, 1: number, %BB4
+// CHECK-NEXT:       BranchInst %BB4
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %8 = PhiInst (:undefined|number) %5: undefined|number, %BB2, 1: number, %BB3
 // CHECK-NEXT:       StoreFrameInst %8: undefined|number, [flag1@foo]: undefined|number
 // CHECK-NEXT:  %10 = LoadFrameInst (:undefined|number) [flag2@foo]: undefined|number
-// CHECK-NEXT:        CondBranchInst %10: undefined|number, %BB5, %BB6
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:        BranchInst %BB5
+// CHECK-NEXT:        CondBranchInst %10: undefined|number, %BB6, %BB5
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %13 = PhiInst (:undefined|number) %10: undefined|number, %BB3, 2: number, %BB6
+// CHECK-NEXT:        BranchInst %BB6
+// CHECK-NEXT:%BB6:
+// CHECK-NEXT:  %13 = PhiInst (:undefined|number) %10: undefined|number, %BB4, 2: number, %BB5
 // CHECK-NEXT:        StoreFrameInst %13: undefined|number, [flag2@foo]: undefined|number
 // CHECK-NEXT:  %15 = LoadFrameInst (:number) [cnt@foo]: number
 // CHECK-NEXT:  %16 = FAddInst (:number) %15: number, 1: number
@@ -111,28 +111,28 @@ function foo(o) {
 // CHKLIR-NEXT:%BB0:
 // CHKLIR-NEXT:  %0 = HBCResolveParentEnvironmentInst (:environment) %foo(): any, %parentScope: environment
 // CHKLIR-NEXT:  %1 = HBCLoadFromEnvironmentInst (:undefined|boolean) %0: environment, [flag@foo]: undefined|boolean
-// CHKLIR-NEXT:       CondBranchInst %1: undefined|boolean, %BB1, %BB2
-// CHKLIR-NEXT:%BB2:
-// CHKLIR-NEXT:  %3 = HBCLoadConstInst (:boolean) true: boolean
-// CHKLIR-NEXT:       BranchInst %BB1
+// CHKLIR-NEXT:       CondBranchInst %1: undefined|boolean, %BB2, %BB1
 // CHKLIR-NEXT:%BB1:
-// CHKLIR-NEXT:  %5 = PhiInst (:undefined|boolean) %1: undefined|boolean, %BB0, %3: boolean, %BB2
+// CHKLIR-NEXT:  %3 = HBCLoadConstInst (:boolean) true: boolean
+// CHKLIR-NEXT:       BranchInst %BB2
+// CHKLIR-NEXT:%BB2:
+// CHKLIR-NEXT:  %5 = PhiInst (:undefined|boolean) %1: undefined|boolean, %BB0, %3: boolean, %BB1
 // CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: environment, %5: undefined|boolean, [flag@foo]: undefined|boolean
 // CHKLIR-NEXT:  %7 = HBCLoadFromEnvironmentInst (:undefined|number) %0: environment, [flag1@foo]: undefined|number
-// CHKLIR-NEXT:       CondBranchInst %7: undefined|number, %BB3, %BB4
-// CHKLIR-NEXT:%BB4:
-// CHKLIR-NEXT:  %9 = HBCLoadConstInst (:number) 1: number
-// CHKLIR-NEXT:        BranchInst %BB3
+// CHKLIR-NEXT:       CondBranchInst %7: undefined|number, %BB4, %BB3
 // CHKLIR-NEXT:%BB3:
-// CHKLIR-NEXT:  %11 = PhiInst (:undefined|number) %7: undefined|number, %BB1, %9: number, %BB4
+// CHKLIR-NEXT:  %9 = HBCLoadConstInst (:number) 1: number
+// CHKLIR-NEXT:        BranchInst %BB4
+// CHKLIR-NEXT:%BB4:
+// CHKLIR-NEXT:  %11 = PhiInst (:undefined|number) %7: undefined|number, %BB2, %9: number, %BB3
 // CHKLIR-NEXT:        HBCStoreToEnvironmentInst %0: environment, %11: undefined|number, [flag1@foo]: undefined|number
 // CHKLIR-NEXT:  %13 = HBCLoadFromEnvironmentInst (:undefined|number) %0: environment, [flag2@foo]: undefined|number
-// CHKLIR-NEXT:        CondBranchInst %13: undefined|number, %BB5, %BB6
-// CHKLIR-NEXT:%BB6:
-// CHKLIR-NEXT:  %15 = HBCLoadConstInst (:number) 2: number
-// CHKLIR-NEXT:        BranchInst %BB5
+// CHKLIR-NEXT:        CondBranchInst %13: undefined|number, %BB6, %BB5
 // CHKLIR-NEXT:%BB5:
-// CHKLIR-NEXT:  %17 = PhiInst (:undefined|number) %13: undefined|number, %BB3, %15: number, %BB6
+// CHKLIR-NEXT:  %15 = HBCLoadConstInst (:number) 2: number
+// CHKLIR-NEXT:        BranchInst %BB6
+// CHKLIR-NEXT:%BB6:
+// CHKLIR-NEXT:  %17 = PhiInst (:undefined|number) %13: undefined|number, %BB4, %15: number, %BB5
 // CHKLIR-NEXT:        HBCStoreToEnvironmentInst %0: environment, %17: undefined|number, [flag2@foo]: undefined|number
 // CHKLIR-NEXT:  %19 = HBCLoadFromEnvironmentInst (:number) %0: environment, [cnt@foo]: number
 // CHKLIR-NEXT:  %20 = HBCLoadConstInst (:number) 1: number

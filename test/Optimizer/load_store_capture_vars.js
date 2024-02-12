@@ -158,17 +158,17 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:  %0 = AllocStackInst (:any) $a: any
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:       StoreStackInst %1: any, %0: any
-// CHECK-NEXT:       TryStartInst %BB1, %BB2
+// CHECK-NEXT:       TryStartInst %BB1, %BB3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = CatchInst (:any)
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %0: any
 // CHECK-NEXT:  %6 = BinaryAddInst (:string|number) %5: any, 100: number
 // CHECK-NEXT:       StoreStackInst %6: string|number, %0: any
-// CHECK-NEXT:       BranchInst %BB3
-// CHECK-NEXT:%BB3:
+// CHECK-NEXT:       BranchInst %BB2
+// CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %9 = LoadStackInst (:any) %0: any
 // CHECK-NEXT:        ReturnInst %9: any
-// CHECK-NEXT:%BB2:
+// CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %11 = LoadStackInst (:any) %0: any
 // CHECK-NEXT:  %12 = BinaryAddInst (:string|number) %11: any, 1: number
 // CHECK-NEXT:        StoreStackInst %12: string|number, %0: any
@@ -179,7 +179,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function postponed_store_in_use_block(x: any): undefined

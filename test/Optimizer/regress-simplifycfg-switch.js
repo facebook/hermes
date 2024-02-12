@@ -41,20 +41,20 @@ switch (0/0) {
 // CHKUNOPT-NEXT:%BB0:
 // CHKUNOPT-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
 // CHKUNOPT-NEXT:       StoreStackInst undefined: undefined, %0: any
-// CHKUNOPT-NEXT:       SwitchInst -0: number, %BB1, 0: number, %BB2
-// CHKUNOPT-NEXT:%BB3:
-// CHKUNOPT-NEXT:       SwitchInst NaN: number, %BB4, NaN: number, %BB5
+// CHKUNOPT-NEXT:       SwitchInst -0: number, %BB3, 0: number, %BB2
+// CHKUNOPT-NEXT:%BB1:
+// CHKUNOPT-NEXT:       SwitchInst NaN: number, %BB6, NaN: number, %BB5
 // CHKUNOPT-NEXT:%BB2:
 // CHKUNOPT-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHKUNOPT-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "0": string
 // CHKUNOPT-NEXT:       StoreStackInst %5: any, %0: any
-// CHKUNOPT-NEXT:       BranchInst %BB3
-// CHKUNOPT-NEXT:%BB1:
+// CHKUNOPT-NEXT:       BranchInst %BB1
+// CHKUNOPT-NEXT:%BB3:
 // CHKUNOPT-NEXT:  %8 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHKUNOPT-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "default": string
 // CHKUNOPT-NEXT:        StoreStackInst %9: any, %0: any
-// CHKUNOPT-NEXT:        BranchInst %BB3
-// CHKUNOPT-NEXT:%BB6:
+// CHKUNOPT-NEXT:        BranchInst %BB1
+// CHKUNOPT-NEXT:%BB4:
 // CHKUNOPT-NEXT:        StoreStackInst 0: number, %0: any
 // CHKUNOPT-NEXT:  %13 = LoadStackInst (:any) %0: any
 // CHKUNOPT-NEXT:        ReturnInst %13: any
@@ -62,12 +62,12 @@ switch (0/0) {
 // CHKUNOPT-NEXT:  %15 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHKUNOPT-NEXT:  %16 = CallInst (:any) %15: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "NaN": string
 // CHKUNOPT-NEXT:        StoreStackInst %16: any, %0: any
-// CHKUNOPT-NEXT:        BranchInst %BB6
-// CHKUNOPT-NEXT:%BB4:
+// CHKUNOPT-NEXT:        BranchInst %BB4
+// CHKUNOPT-NEXT:%BB6:
 // CHKUNOPT-NEXT:  %19 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHKUNOPT-NEXT:  %20 = CallInst (:any) %19: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "default": string
 // CHKUNOPT-NEXT:        StoreStackInst %20: any, %0: any
-// CHKUNOPT-NEXT:        BranchInst %BB6
+// CHKUNOPT-NEXT:        BranchInst %BB4
 // CHKUNOPT-NEXT:function_end
 
 // CHECK:function global(): any

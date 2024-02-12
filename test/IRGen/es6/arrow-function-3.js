@@ -36,12 +36,12 @@ function foo(x = () => this) {
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [x]: any
 // CHECK-NEXT:  %6 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %7 = BinaryStrictlyNotEqualInst (:any) %6: any, undefined: undefined
-// CHECK-NEXT:       CondBranchInst %7: any, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %x(): functionCode
-// CHECK-NEXT:        BranchInst %BB1
+// CHECK-NEXT:       CondBranchInst %7: any, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %11 = PhiInst (:any) %6: any, %BB0, %9: object, %BB2
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %x(): functionCode
+// CHECK-NEXT:        BranchInst %BB2
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %11 = PhiInst (:any) %6: any, %BB0, %9: object, %BB1
 // CHECK-NEXT:        StoreFrameInst %11: any, [x]: any
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %14 = CallInst (:any) %13: any, empty: any, empty: any, undefined: undefined, undefined: undefined

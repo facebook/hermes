@@ -81,10 +81,10 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %13 = IteratorNextInst (:any) %6: any, %12: any
 // CHECK-NEXT:  %14 = LoadStackInst (:any) %6: any
 // CHECK-NEXT:  %15 = BinaryStrictlyEqualInst (:any) %14: any, undefined: undefined
-// CHECK-NEXT:        CondBranchInst %15: any, %BB2, %BB3
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:        TryStartInst %BB4, %BB5
+// CHECK-NEXT:        CondBranchInst %15: any, %BB3, %BB2
 // CHECK-NEXT:%BB2:
+// CHECK-NEXT:        TryStartInst %BB4, %BB5
+// CHECK-NEXT:%BB3:
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %19 = CatchInst (:any)
@@ -124,10 +124,10 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %15 = IteratorNextInst (:any) %8: any, %14: any
 // CHECK-NEXT:  %16 = LoadStackInst (:any) %8: any
 // CHECK-NEXT:  %17 = BinaryStrictlyEqualInst (:any) %16: any, undefined: undefined
-// CHECK-NEXT:        CondBranchInst %17: any, %BB2, %BB3
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:        TryStartInst %BB4, %BB5
+// CHECK-NEXT:        CondBranchInst %17: any, %BB3, %BB2
 // CHECK-NEXT:%BB2:
+// CHECK-NEXT:        TryStartInst %BB4, %BB5
+// CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %20 = LoadFrameInst (:any) [ar]: any
 // CHECK-NEXT:        ReturnInst %20: any
 // CHECK-NEXT:%BB4:
@@ -168,10 +168,10 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %13 = IteratorNextInst (:any) %6: any, %12: any
 // CHECK-NEXT:  %14 = LoadStackInst (:any) %6: any
 // CHECK-NEXT:  %15 = BinaryStrictlyEqualInst (:any) %14: any, undefined: undefined
-// CHECK-NEXT:        CondBranchInst %15: any, %BB2, %BB3
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:        TryStartInst %BB4, %BB5
+// CHECK-NEXT:        CondBranchInst %15: any, %BB3, %BB2
 // CHECK-NEXT:%BB2:
+// CHECK-NEXT:        TryStartInst %BB4, %BB5
+// CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %18 = LoadFrameInst (:any) [sum]: any
 // CHECK-NEXT:        ReturnInst %18: any
 // CHECK-NEXT:%BB4:
@@ -185,20 +185,20 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %26 = BinaryLessThanInst (:boolean) %25: any, 0: number
 // CHECK-NEXT:        CondBranchInst %26: boolean, %BB6, %BB7
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:        BranchInst %BB8
-// CHECK-NEXT:%BB7:
 // CHECK-NEXT:        BranchInst %BB9
-// CHECK-NEXT:%BB9:
+// CHECK-NEXT:%BB7:
+// CHECK-NEXT:        BranchInst %BB8
+// CHECK-NEXT:%BB8:
 // CHECK-NEXT:  %30 = LoadFrameInst (:any) [sum]: any
 // CHECK-NEXT:  %31 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %32 = BinaryAddInst (:any) %30: any, %31: any
 // CHECK-NEXT:        StoreFrameInst %32: any, [sum]: any
 // CHECK-NEXT:        BranchInst %BB10
-// CHECK-NEXT:%BB8:
+// CHECK-NEXT:%BB9:
 // CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:  %36 = LoadStackInst (:any) %6: any
 // CHECK-NEXT:  %37 = IteratorCloseInst (:any) %36: any, false: boolean
-// CHECK-NEXT:        BranchInst %BB2
+// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB10:
 // CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB1
@@ -224,10 +224,10 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %13 = IteratorNextInst (:any) %6: any, %12: any
 // CHECK-NEXT:  %14 = LoadStackInst (:any) %6: any
 // CHECK-NEXT:  %15 = BinaryStrictlyEqualInst (:any) %14: any, undefined: undefined
-// CHECK-NEXT:        CondBranchInst %15: any, %BB2, %BB3
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:        TryStartInst %BB4, %BB5
+// CHECK-NEXT:        CondBranchInst %15: any, %BB3, %BB2
 // CHECK-NEXT:%BB2:
+// CHECK-NEXT:        TryStartInst %BB4, %BB5
+// CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %18 = LoadFrameInst (:any) [sum]: any
 // CHECK-NEXT:        ReturnInst %18: any
 // CHECK-NEXT:%BB4:
@@ -241,16 +241,16 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %26 = BinaryLessThanInst (:boolean) %25: any, 0: number
 // CHECK-NEXT:        CondBranchInst %26: boolean, %BB6, %BB7
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:        BranchInst %BB8
-// CHECK-NEXT:%BB7:
 // CHECK-NEXT:        BranchInst %BB9
-// CHECK-NEXT:%BB9:
+// CHECK-NEXT:%BB7:
+// CHECK-NEXT:        BranchInst %BB8
+// CHECK-NEXT:%BB8:
 // CHECK-NEXT:  %30 = LoadFrameInst (:any) [sum]: any
 // CHECK-NEXT:  %31 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %32 = BinaryAddInst (:any) %30: any, %31: any
 // CHECK-NEXT:        StoreFrameInst %32: any, [sum]: any
 // CHECK-NEXT:        BranchInst %BB10
-// CHECK-NEXT:%BB8:
+// CHECK-NEXT:%BB9:
 // CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:%BB10:

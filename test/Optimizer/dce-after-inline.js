@@ -41,15 +41,15 @@ return x;
 // CHECK:function ""(): number [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:       BranchInst %BB1
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:       ReturnInst %5: number
+// CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = PhiInst (:number) 10: number, %BB0, %5: number, %BB1
-// CHECK-NEXT:  %3 = PhiInst (:number) 0: number, %BB0, %6: number, %BB1
+// CHECK-NEXT:       ReturnInst %5: number
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %2 = PhiInst (:number) 10: number, %BB0, %5: number, %BB2
+// CHECK-NEXT:  %3 = PhiInst (:number) 0: number, %BB0, %6: number, %BB2
 // CHECK-NEXT:  %4 = FAddInst (:number) %2: number, 1: number
 // CHECK-NEXT:  %5 = FAddInst (:number) %2: number, %4: number
 // CHECK-NEXT:  %6 = FAddInst (:number) %3: number, 1: number
 // CHECK-NEXT:  %7 = FLessThanInst (:boolean) %6: number, 5: number
-// CHECK-NEXT:       CondBranchInst %7: boolean, %BB1, %BB2
+// CHECK-NEXT:       CondBranchInst %7: boolean, %BB2, %BB1
 // CHECK-NEXT:function_end

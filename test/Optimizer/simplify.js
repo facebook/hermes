@@ -920,10 +920,10 @@ function objectCond() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %y: any
 // CHECK-NEXT:  %1 = AsInt32Inst (:number) %0: any
-// CHECK-NEXT:       CondBranchInst %1: number, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:       ReturnInst 1: number
+// CHECK-NEXT:       CondBranchInst %1: number, %BB2, %BB1
 // CHECK-NEXT:%BB1:
+// CHECK-NEXT:       ReturnInst 1: number
+// CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst 2: number
 // CHECK-NEXT:function_end
 

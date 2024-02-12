@@ -110,23 +110,23 @@ function badThrow() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:       CondBranchInst %0: any, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:       CondBranchInst %1: any, %BB1, %BB3
+// CHECK-NEXT:       CondBranchInst %0: any, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = PhiInst (:number) 4: number, %BB3, 19: number, %BB0, 15: number, %BB2
+// CHECK-NEXT:       CondBranchInst %1: any, %BB2, %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %4 = PhiInst (:number) 4: number, %BB3, 19: number, %BB0, 15: number, %BB1
 // CHECK-NEXT:  %5 = FAddInst (:number) %4: number, 1: number
 // CHECK-NEXT:  %6 = BinarySubtractInst (:number) %0: any, 1: number
-// CHECK-NEXT:       CondBranchInst %6: number, %BB4, %BB5
+// CHECK-NEXT:       CondBranchInst %6: number, %BB5, %BB4
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:       BranchInst %BB1
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:       CondBranchInst %1: any, %BB6, %BB4
+// CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %10 = PhiInst (:any) 15: number, %BB6, %5: number, %BB5, %1: any, %BB1
+// CHECK-NEXT:       CondBranchInst %1: any, %BB6, %BB5
+// CHECK-NEXT:%BB5:
+// CHECK-NEXT:  %10 = PhiInst (:any) 15: number, %BB6, %5: number, %BB4, %1: any, %BB2
 // CHECK-NEXT:        ReturnInst %10: any
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:        BranchInst %BB4
+// CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:function_end
 
 // CHECK:function control_catch(x: any, y: any): number

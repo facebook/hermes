@@ -110,18 +110,18 @@ function check_phi_handling(x) {
 // CHECK-NEXT:  $Reg1 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  $Reg1 = StoreStackInst $Reg1, $Reg0
 // CHECK-NEXT:  $Reg1 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:  $Reg1 = CondBranchInst $Reg1, %BB1, %BB2
+// CHECK-NEXT:  $Reg1 = CondBranchInst $Reg1, %BB1, %BB3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  $Reg1 = AllocArrayInst (:object) 1: number, 1: number
 // CHECK-NEXT:  $Reg0 = MovInst (:object) $Reg1
-// CHECK-NEXT:  $Reg1 = BranchInst %BB3
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  $Reg0 = PhiInst (:undefined|object) $Reg0, %BB1, $Reg0, %BB2
+// CHECK-NEXT:  $Reg1 = BranchInst %BB2
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  $Reg0 = PhiInst (:undefined|object) $Reg0, %BB1, $Reg0, %BB3
 // CHECK-NEXT:  $Reg0 = MovInst (:undefined|object) $Reg0
 // CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
-// CHECK-NEXT:%BB2:
+// CHECK-NEXT:%BB3:
 // CHECK-NEXT:  $Reg1 = HBCReifyArgumentsLooseInst $Reg0
 // CHECK-NEXT:  $Reg0 = LoadStackInst (:undefined|object) $Reg0
 // CHECK-NEXT:  $Reg0 = MovInst (:undefined|object) $Reg0
-// CHECK-NEXT:  $Reg1 = BranchInst %BB3
+// CHECK-NEXT:  $Reg1 = BranchInst %BB2
 // CHECK-NEXT:function_end

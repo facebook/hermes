@@ -34,11 +34,11 @@ function foo(a = arguments) {
 // CHECK-NEXT:       StoreFrameInst undefined: undefined, [a]: any
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  %3 = BinaryStrictlyNotEqualInst (:any) %2: any, undefined: undefined
-// CHECK-NEXT:       CondBranchInst %3: any, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:       BranchInst %BB1
+// CHECK-NEXT:       CondBranchInst %3: any, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = PhiInst (:any) %2: any, %BB0, %0: object, %BB2
+// CHECK-NEXT:       BranchInst %BB2
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %6 = PhiInst (:any) %2: any, %BB0, %0: object, %BB1
 // CHECK-NEXT:       StoreFrameInst %6: any, [a]: any
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [a]: any
 // CHECK-NEXT:       ReturnInst %8: any

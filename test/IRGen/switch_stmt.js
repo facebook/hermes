@@ -114,55 +114,55 @@ function fallthrough(b) {
 // CHECK-NEXT:       StoreFrameInst %2: any, [x]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [day]: any
 // CHECK-NEXT:  %5 = BinaryStrictlyEqualInst (:any) 0: number, %4: any
-// CHECK-NEXT:       CondBranchInst %5: any, %BB1, %BB2
-// CHECK-NEXT:%BB3:
+// CHECK-NEXT:       CondBranchInst %5: any, %BB3, %BB4
+// CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [day]: any
 // CHECK-NEXT:       ReturnInst %7: any
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:       StoreFrameInst "?": string, [day]: any
-// CHECK-NEXT:        BranchInst %BB1
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:        StoreFrameInst "Sunday": string, [day]: any
-// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB2:
+// CHECK-NEXT:       StoreFrameInst "?": string, [day]: any
+// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:        StoreFrameInst "Sunday": string, [day]: any
+// CHECK-NEXT:        BranchInst %BB1
+// CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %13 = BinaryStrictlyEqualInst (:any) 1: number, %4: any
 // CHECK-NEXT:        CondBranchInst %13: any, %BB5, %BB6
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:        StoreFrameInst "Monday": string, [day]: any
-// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %17 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %18 = BinaryStrictlyEqualInst (:any) %17: any, %4: any
 // CHECK-NEXT:        CondBranchInst %18: any, %BB7, %BB8
 // CHECK-NEXT:%BB7:
 // CHECK-NEXT:        StoreFrameInst "Tuesday": string, [day]: any
-// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:  %22 = BinaryStrictlyEqualInst (:any) 3: number, %4: any
 // CHECK-NEXT:        CondBranchInst %22: any, %BB9, %BB10
 // CHECK-NEXT:%BB9:
 // CHECK-NEXT:        StoreFrameInst "Wednesday": string, [day]: any
-// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:%BB10:
 // CHECK-NEXT:  %26 = BinaryStrictlyEqualInst (:any) 4: number, %4: any
 // CHECK-NEXT:        CondBranchInst %26: any, %BB11, %BB12
 // CHECK-NEXT:%BB11:
 // CHECK-NEXT:        StoreFrameInst "Thursday": string, [day]: any
-// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:%BB12:
 // CHECK-NEXT:  %30 = BinaryStrictlyEqualInst (:any) 5: number, %4: any
 // CHECK-NEXT:        CondBranchInst %30: any, %BB13, %BB14
 // CHECK-NEXT:%BB13:
 // CHECK-NEXT:        StoreFrameInst "Friday": string, [day]: any
-// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:%BB14:
 // CHECK-NEXT:  %34 = BinaryStrictlyEqualInst (:any) 6: number, %4: any
 // CHECK-NEXT:        CondBranchInst %34: any, %BB15, %BB16
 // CHECK-NEXT:%BB15:
 // CHECK-NEXT:        StoreFrameInst "Saturday": string, [day]: any
-// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:%BB16:
-// CHECK-NEXT:        BranchInst %BB4
+// CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_xor(b: any): any
@@ -186,12 +186,12 @@ function fallthrough(b) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %b: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [b]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [b]: any
-// CHECK-NEXT:       SwitchInst %2: any, %BB1, 1: number, %BB2, 0: number, %BB3
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:       ReturnInst 0: number
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:       ReturnInst 1: number
+// CHECK-NEXT:       SwitchInst %2: any, %BB3, 1: number, %BB1, 0: number, %BB2
 // CHECK-NEXT:%BB1:
+// CHECK-NEXT:       ReturnInst 0: number
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       ReturnInst 1: number
+// CHECK-NEXT:%BB3:
 // CHECK-NEXT:       ReturnInst "invalid": string
 // CHECK-NEXT:function_end
 
@@ -233,18 +233,18 @@ function fallthrough(b) {
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [c]: any
 // CHECK-NEXT:  %6 = BinaryAddInst (:any) 1: number, %5: any
 // CHECK-NEXT:  %7 = BinaryStrictlyEqualInst (:any) %6: any, %4: any
-// CHECK-NEXT:       CondBranchInst %7: any, %BB1, %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:       CondBranchInst %7: any, %BB2, %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:        ReturnInst 9: number
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
+// CHECK-NEXT:        ReturnInst 9: number
+// CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) [c]: any
 // CHECK-NEXT:  %12 = BinaryAddInst (:any) 2: number, %11: any
 // CHECK-NEXT:  %13 = BinaryStrictlyEqualInst (:any) %12: any, %4: any
 // CHECK-NEXT:        CondBranchInst %13: any, %BB4, %BB5
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:        BranchInst %BB6
 // CHECK-NEXT:%BB6:
@@ -257,13 +257,13 @@ function fallthrough(b) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %b: any
 // CHECK-NEXT:       StoreFrameInst %0: any, [b]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [b]: any
-// CHECK-NEXT:       SwitchInst %2: any, %BB1, 0: number, %BB2, 1: number, %BB3
-// CHECK-NEXT:%BB4:
+// CHECK-NEXT:       SwitchInst %2: any, %BB4, 0: number, %BB2, 1: number, %BB3
+// CHECK-NEXT:%BB1:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:       BranchInst %BB1
-// CHECK-NEXT:%BB1:
 // CHECK-NEXT:       BranchInst %BB4
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:function_end

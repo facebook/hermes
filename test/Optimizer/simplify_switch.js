@@ -20,13 +20,13 @@ switch (8) { case 2: 6
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "x": string
-// CHECK-NEXT:       SwitchInst %0: any, %BB1, 2: number, %BB2, 44: number, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "cond": string
-// CHECK-NEXT:       CondBranchInst %2: any, %BB3, %BB1
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "cond": string
-// CHECK-NEXT:       CondBranchInst %4: any, %BB3, %BB1
+// CHECK-NEXT:       SwitchInst %0: any, %BB3, 2: number, %BB1, 44: number, %BB1
 // CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "cond": string
+// CHECK-NEXT:       CondBranchInst %2: any, %BB2, %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "cond": string
+// CHECK-NEXT:       CondBranchInst %4: any, %BB2, %BB3
+// CHECK-NEXT:%BB3:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -145,20 +145,20 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [obj]: any
 // CHECK-NEXT:       StoreStackInst %8: any, %5: any
 // CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_4_prop: any
-// CHECK-NEXT:        GetPNamesInst %4: any, %5: any, %6: number, %7: number, %BB1, %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:        GetPNamesInst %4: any, %5: any, %6: number, %7: number, %BB2, %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:        GetNextPNameInst %10: any, %5: any, %6: number, %7: number, %4: any, %BB1, %BB4
+// CHECK-NEXT:        BranchInst %BB1
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:        GetNextPNameInst %10: any, %5: any, %6: number, %7: number, %4: any, %BB2, %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %15 = LoadStackInst (:any) %10: any
 // CHECK-NEXT:        StoreFrameInst %15: any, [prop]: any
 // CHECK-NEXT:  %17 = LoadPropertyInst (:any) globalObject: object, "sink": string
 // CHECK-NEXT:  %18 = LoadFrameInst (:any) [prop]: any
 // CHECK-NEXT:  %19 = CallInst (:any) %17: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %18: any
-// CHECK-NEXT:        BranchInst %BB1
+// CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function check_var_decl_for_in_loop(obj: any): any

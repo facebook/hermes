@@ -72,13 +72,13 @@ print(glob);
 // CHKRA-NEXT:  $Reg3 = MovInst (:any) $Reg3
 // CHKRA-NEXT:  $Reg1 = BranchInst %BB1
 // CHKRA-NEXT:%BB1:
-// CHKRA-NEXT:  $Reg3 = PhiInst (:any) $Reg3, %BB0, $Reg3, %BB2
+// CHKRA-NEXT:  $Reg3 = PhiInst (:any) $Reg3, %BB0, $Reg3, %BB3
 // CHKRA-NEXT:  $Reg1 = MovInst (:any) $Reg3
-// CHKRA-NEXT:  $Reg4 = CondBranchInst $Reg2, %BB3, %BB2
-// CHKRA-NEXT:%BB3:
-// CHKRA-NEXT:  $Reg4 = StorePropertyLooseInst $Reg0, $Reg2, "foo": string
-// CHKRA-NEXT:  $Reg4 = BranchInst %BB2
+// CHKRA-NEXT:  $Reg4 = CondBranchInst $Reg2, %BB2, %BB3
 // CHKRA-NEXT:%BB2:
+// CHKRA-NEXT:  $Reg4 = StorePropertyLooseInst $Reg0, $Reg2, "foo": string
+// CHKRA-NEXT:  $Reg4 = BranchInst %BB3
+// CHKRA-NEXT:%BB3:
 // CHKRA-NEXT:  $Reg3 = MovInst (:any) $Reg2
 // CHKRA-NEXT:  $Reg0 = CondBranchInst $Reg3, %BB1, %BB4
 // CHKRA-NEXT:%BB4:

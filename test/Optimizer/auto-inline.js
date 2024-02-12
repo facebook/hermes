@@ -81,12 +81,12 @@ function foo4(a) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:       CondBranchInst %0: any, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %2 = PhiInst (:any) %0: any, %BB1, 10: number, %BB0
-// CHECK-NEXT:       ReturnInst %2: any
+// CHECK-NEXT:       CondBranchInst %0: any, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:       BranchInst %BB2
+// CHECK-NEXT:  %2 = PhiInst (:any) %0: any, %BB2, 10: number, %BB0
+// CHECK-NEXT:       ReturnInst %2: any
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:function_end
 
 // CHECK:function foo4(a: any): any
