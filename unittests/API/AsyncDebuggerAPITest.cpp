@@ -315,6 +315,11 @@ TEST_F(AsyncDebuggerAPITest, ResumeFromPausedTest) {
   EXPECT_EQ(finalEvent, DebuggerEventType::Resumed);
 }
 
+// This test seemingly has a data race because it calls resumeFromPaused() from
+// a non-runtime thread. But that's being done to ensure the only thing being
+// signaled is due to DebuggerEventCallback being removed. So disable this test
+// when running with ThreadSanitizer.
+#if !defined(__has_feature) || !__has_feature(thread_sanitizer)
 TEST_F(AsyncDebuggerAPITest, NotifyDueToEventCallbacksTest) {
   // This needs to be a while-loop because Explicit AsyncBreak will only happen
   // while there is JS to run
@@ -365,6 +370,7 @@ TEST_F(AsyncDebuggerAPITest, NotifyDueToEventCallbacksTest) {
 
   asyncDebuggerAPI_->removeDebuggerEventCallback_TS(callbackID);
 }
+#endif
 
 TEST_F(AsyncDebuggerAPITest, NoDebuggerEventCallbackTest) {
   scheduleScript("debugger;");
