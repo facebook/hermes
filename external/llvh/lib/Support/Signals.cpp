@@ -103,7 +103,7 @@ static FormattedNumber format_ptr(void *PC) {
 }
 
 /// Helper that launches llvm-symbolizer and symbolizes a backtrace.
-LLVM_ATTRIBUTE_USED
+[[maybe_unused]]
 static bool printSymbolizedStackTrace(StringRef Argv0, void **StackTrace,
                                       int Depth, llvh::raw_ostream &OS) {
   if (DisableSymbolicationFlag)
