@@ -329,8 +329,12 @@ jobs:
       - run:
           name: Set up dependencies
           command: |
-            choco install -y cmake --installargs 'ADD_CMAKE_TO_PATH=System'
-            ln -s $Env:PYTHON_DIR\python.exe $Env:PYTHON_DIR\python3.exe
+            choco install -y --no-progress cmake --version 3.14.7 --installargs 'ADD_CMAKE_TO_PATH=System'
+            if (-not $?) { throw "Failed to install CMake" }
+            choco install -y --no-progress python3
+            if (-not $?) { throw "Failed to install Python" }
+            Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
+            refreshenv
       - run:
           name: Run Hermes regression tests
           command: |
@@ -377,6 +381,8 @@ jobs:
             if (-not $?) { throw "Failed to install CMake" }
             choco install -y --no-progress python3
             if (-not $?) { throw "Failed to install Python" }
+            Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
+            refreshenv
 
       - run:
           name: Assemble Windows runtime dependencies
