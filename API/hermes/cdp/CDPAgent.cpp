@@ -7,6 +7,7 @@
 
 #include "CDPAgent.h"
 #include "DebuggerDomainAgent.h"
+#include "ProfilerDomainAgent.h"
 #include "RuntimeDomainAgent.h"
 
 #include <hermes/inspector/chrome/MessageConverters.h>
@@ -83,6 +84,7 @@ class CDPAgentImpl {
 
     std::unique_ptr<DebuggerDomainAgent> debuggerAgent_;
     std::unique_ptr<RuntimeDomainAgent> runtimeAgent_;
+    std::unique_ptr<ProfilerDomainAgent> profilerAgent_;
   };
 
   /// Callback function for sending CDP response back. This is using the
@@ -177,11 +179,14 @@ void CDPAgentImpl::DomainAgents::initialize() {
       objTable_);
   runtimeAgent_ = std::make_unique<RuntimeDomainAgent>(
       executionContextID_, runtime_, messageCallback_, objTable_);
+  profilerAgent_ = std::make_unique<ProfilerDomainAgent>(
+      executionContextID_, runtime_, messageCallback_, objTable_);
 }
 
 void CDPAgentImpl::DomainAgents::dispose() {
   debuggerAgent_.reset();
   runtimeAgent_.reset();
+  profilerAgent_.reset();
 }
 
 void CDPAgentImpl::DomainAgents::handleCommand(
@@ -253,6 +258,10 @@ void CDPAgentImpl::DomainAgents::handleCommand(
   } else if (command->method == "Runtime.evaluate") {
     runtimeAgent_->evaluate(
         static_cast<m::runtime::EvaluateRequest &>(*command));
+  } else if (command->method == "Profiler.start") {
+    profilerAgent_->start(static_cast<m::profiler::StartRequest &>(*command));
+  } else if (command->method == "Profiler.stop") {
+    profilerAgent_->stop(static_cast<m::profiler::StopRequest &>(*command));
   } else {
     messageCallback_(message::makeErrorResponse(
                          command->id,

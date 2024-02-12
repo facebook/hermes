@@ -7,7 +7,9 @@
 
 #ifdef HERMES_ENABLE_DEBUGGER
 
+#include <chrono>
 #include <future>
+#include <thread>
 
 #include <gtest/gtest.h>
 
@@ -20,6 +22,8 @@
 #include <hermes/inspector/chrome/JSONValueInterfaces.h>
 #include <hermes/inspector/chrome/tests/SerialExecutor.h>
 
+#include <llvh/ADT/ScopeExit.h>
+
 #include "CDPJSONHelpers.h"
 
 #if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
@@ -31,6 +35,7 @@ using namespace facebook::hermes::debugger;
 using namespace facebook::hermes::inspector_modern::chrome;
 using namespace facebook::hermes;
 using namespace facebook;
+using namespace std::chrono_literals;
 using namespace std::placeholders;
 
 constexpr auto kDefaultUrl = "url";
@@ -1956,6 +1961,42 @@ TEST_F(CDPAgentTest, RuntimeEvaluateException) {
       0);
 
   // Let the script terminate
+  stopFlag_.store(true);
+}
+
+TEST_F(CDPAgentTest, TestBasicProfilerOperation) {
+  runtime_->registerForProfiling();
+  auto clearInDidPause =
+      llvh::make_scope_exit([this] { runtime_->unregisterForProfiling(); });
+  int msgId = 1;
+
+  scheduleScript(R"(
+      while(!shouldStop());
+  )");
+
+  // Start the sampling profiler. At this point it is not safe to manipulate the
+  // VM, so...
+  sendAndCheckResponse("Profiler.start", msgId++);
+
+  // Keep the profiler running for a small amount of time to allow for some
+  // samples to be collected.
+  std::this_thread::sleep_for(500ms);
+
+  // Being re-attached to the VM, send the stop sampling profile request.
+  sendParameterlessRequest("Profiler.stop", msgId);
+  auto resp = expectResponse(std::nullopt, msgId++);
+  auto nodes = jsonScope_.getArray(resp, {"result", "profile", "nodes"});
+  EXPECT_GT(nodes->size(), 0);
+  EXPECT_LT(
+      jsonScope_.getNumber(resp, {"result", "profile", "startTime"}),
+      jsonScope_.getNumber(resp, {"result", "profile", "endTime"}));
+  auto samples = jsonScope_.getArray(resp, {"result", "profile", "samples"});
+  auto timeDeltas =
+      jsonScope_.getArray(resp, {"result", "profile", "timeDeltas"});
+  EXPECT_GT(samples->size(), 0);
+  EXPECT_EQ(samples->size(), timeDeltas->size());
+
+  // break out of loop
   stopFlag_.store(true);
 }
 

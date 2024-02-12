@@ -34,6 +34,7 @@ if(HERMES_ENABLE_DEBUGGER)
     cdp/CDPAgent.cpp
     cdp/DebuggerDomainAgent.cpp
     cdp/RuntimeDomainAgent.cpp
+    cdp/ProfilerDomainAgent.cpp
   )
 
   set(INSPECTOR_API_SOURCES
