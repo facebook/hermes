@@ -147,6 +147,10 @@ class Normalizer:
         if "args" in rec:
             # Args is an array of values, normalize each one if it's an object
             rec["args"] = [self.normalize_value(v) for v in rec["args"]]
+
+        if "thisArg" in rec:
+            rec["thisArg"] = self.normalize_value(rec["thisArg"])
+
         return rec
 
 
