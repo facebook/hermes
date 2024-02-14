@@ -166,7 +166,6 @@ function processModuleStatement(
       switch (decl.type) {
         case 'FunctionDeclaration':
         case 'ComponentDeclaration':
-        case 'HookDeclaration':
         case 'ClassDeclaration': {
           const id = decl.id;
           if (id == null) {
@@ -184,6 +183,11 @@ function processModuleStatement(
             exported: 'default',
           });
           break;
+        }
+        case 'HookDeclaration': {
+          throw new Error(
+            `export default hook declarations not supported as they lose their hook specific name of "${decl.id.name}" in "${moduleGraphNode.file}"`,
+          );
         }
         default: {
           throw new Error(
