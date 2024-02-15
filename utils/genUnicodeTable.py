@@ -130,6 +130,18 @@ struct UnicodeTransformRange {
     /// The modulo amount.
     unsigned modulo:8;
 };
+
+/// A mapping entry from a name to a canonical name.
+struct NameMapEntry {
+    std::string_view name;
+    std::string_view canonical;
+};
+
+/// A mapping entry from a name to an array of UnicodeRange entries.
+struct RangeMapEntry {
+    std::string_view name;
+    llvh::ArrayRef<llvh::ArrayRef<UnicodeRange>> value;
+};
 """,
         today=str(datetime.date.today()),
         sha1s="\n".join(
@@ -321,32 +333,45 @@ def print_property_range_mapping(
     canonical_names,
     cpp_name,
     compound_properties={},
-    extra_entries=[],
+    extra_entries={},
     exclude_names=set(),
 ):
-    entries = [
-        '{{ "{name}", {{ {ranges} }} }},'.format(
-            name=canonical_name,
-            ranges=", ".join(
-                "{{ {inner_name}, std::size({inner_name}) }}".format(
-                    inner_name=cpp_name(inner_name)
-                )
-                for inner_name in sorted(
-                    compound_properties.get(canonical_name, [canonical_name])
-                )
-            ),
-        )
-        for canonical_name in sorted(canonical_names.keys())
-        if canonical_name not in exclude_names
-    ]
-    entries.extend(
-        f'{{ "{name}", {{ {{ {cpp_var_name}, std::size({cpp_var_name}) }} }} }},'
-        for name, cpp_var_name in extra_entries
+    all_canonical_names = sorted(
+        [name for name in canonical_names.keys() if name not in exclude_names]
+        + list(extra_entries.keys())
     )
+
+    for canonical_name in all_canonical_names:
+        entries = [
+            "{{ {inner_name} }},".format(
+                # "{{ {inner_name}, std::size({inner_name}) }},".format(
+                inner_name=extra_entries.get(inner_name, cpp_name(inner_name))
+            )
+            for inner_name in sorted(
+                compound_properties.get(canonical_name, [canonical_name])
+            )
+        ]
+        print_template(
+            """
+    static constexpr llvh::ArrayRef<UnicodeRange> ${var_name}_${canonical_name}[] {
+    ${entries}
+    };
+    """,
+            var_name=var_name,
+            canonical_name=canonical_name,
+            entries="\n".join(entries),
+        )
+
+    entries = [
+        '{{ "{name}", {xxx} }},'.format(
+            name=canonical_name, xxx=f"{var_name}_{canonical_name}"
+        )
+        for canonical_name in all_canonical_names
+    ]
 
     print_template(
         """
-static const std::unordered_map<std::string, std::vector<std::pair<const UnicodeRange *, size_t>>> ${var_name} = {
+static constexpr RangeMapEntry ${var_name}[] = {
 ${entries}
 };
 """,
@@ -358,15 +383,17 @@ ${entries}
 def print_property_canonical_name_mapping(var_name, name_mapping):
     print_template(
         """
-static const std::unordered_map<std::string, std::string> ${var_name} = {
+static constexpr NameMapEntry ${var_name}[] = {
 ${entries}
 };
 """,
         var_name=var_name,
         entries="\n".join(
-            f'{{ "{other_name}", "{canonical_name}" }},'
-            for canonical_name, other_names in name_mapping.items()
-            for other_name in sorted(other_names)
+            sorted(
+                f'{{ "{other_name}", "{canonical_name}" }},'
+                for canonical_name, other_names in name_mapping.items()
+                for other_name in other_names
+            )
         ),
     )
 
@@ -472,9 +499,9 @@ def print_script_properties(property_value_aliases_lines, scripts_lines):
         "unicodePropertyRangeMap_Script",
         property_aliases,
         cpp_name,
-        extra_entries=[
-            ("Unknown", "UNICODE_PROPERTY_GC_UNASSIGNED"),
-        ],
+        extra_entries={
+            "Unknown": "UNICODE_PROPERTY_GC_UNASSIGNED",
+        },
         exclude_names="Unknown",
     )
 
