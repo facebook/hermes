@@ -13,7 +13,7 @@ The Hermes REPL will also use libreadline, if available.
 
 To install dependencies on Ubuntu:
 
-    apt install cmake git ninja-build libicu-dev python3 zip libreadline-dev
+    apt install git openssh-client cmake build-essential libicu-dev zip python3 tzdata
 
 On Arch Linux:
 
