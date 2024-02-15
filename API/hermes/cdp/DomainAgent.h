@@ -13,7 +13,15 @@
 
 #include <hermes/inspector/chrome/MessageTypes.h>
 #include <hermes/inspector/chrome/RemoteObjectsTable.h>
-#include <hermes/inspector/chrome/ThreadSafetyAnalysis.h>
+
+#if defined(__clang__) && (!defined(SWIG)) && \
+    defined(_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS)
+#include <hermes/ThreadSafetyAnalysis.h>
+#else
+#ifndef TSA_GUARDED_BY
+#define TSA_GUARDED_BY(x)
+#endif
+#endif
 
 namespace facebook {
 namespace hermes {
