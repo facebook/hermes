@@ -584,7 +584,8 @@ jobs:
               -DCMAKE_BUILD_TYPE=Debug -DHERMES_UNICODE_LITE=ON \
               -DCMAKE_CXX_FLAGS=-O2  -DCMAKE_C_FLAGS=-O2 \
               -DCMAKE_EXE_LINKER_FLAGS="-sALLOW_MEMORY_GROWTH=1 -sSTACK_SIZE=256KB" \
-              -DHERMES_ENABLE_DEBUGGER=OFF -DHERMES_SLOW_DEBUG=OFF
+              -DHERMES_ENABLE_DEBUGGER=OFF -DHERMES_SLOW_DEBUG=OFF \
+              -DHERMES_IS_MOBILE_BUILD=ON
 
             cmake --build build_wasm_dbg --target hermesSandboxImpl -j 4
             ./wabt-1.0.33/bin/wasm2c build_wasm_dbg/API/hermes_sandbox/hermesSandboxImpl.wasm -n hermes \
@@ -596,7 +597,7 @@ jobs:
               -DIMPORT_HERMESC=build_host/ImportHermesc.cmake \
               -DCMAKE_BUILD_TYPE=Release -DHERMES_UNICODE_LITE=ON \
               -DCMAKE_EXE_LINKER_FLAGS="-sALLOW_MEMORY_GROWTH=1 -sSTACK_SIZE=256KB -g2" \
-              -DHERMES_ENABLE_DEBUGGER=OFF
+              -DHERMES_ENABLE_DEBUGGER=OFF -DHERMES_IS_MOBILE_BUILD=ON
 
             cmake --build build_wasm_opt --target hermesSandboxImpl -j 4
             ./wabt-1.0.33/bin/wasm2c build_wasm_opt/API/hermes_sandbox/hermesSandboxImpl.wasm -n hermes \
