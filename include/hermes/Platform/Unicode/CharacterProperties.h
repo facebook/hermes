@@ -120,8 +120,8 @@ CodePointSet makeCanonicallyEquivalent(const CodePointSet &set, bool unicode);
 /// \return true if codepoints were added to the set
 bool addUnicodePropertyRanges(
     CodePointSet *receiver,
-    const std::string &propertyNameOrValue,
-    const std::string &propertyValue,
+    const std::string_view &propertyNameOrValue,
+    const std::string_view &propertyValue,
     bool inverted);
 
 } // namespace hermes
