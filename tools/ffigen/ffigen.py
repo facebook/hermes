@@ -52,6 +52,7 @@ simple_type_mapping = {
     "long long int": "c_longlong",
     "long long unsigned int": "c_ulonglong",
     "bool": "c_bool",
+    "_Bool": "c_bool",
     "float": "c_float",
     "void": "void",
     "double": "c_double",
