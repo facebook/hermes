@@ -83,7 +83,7 @@ class HERMES_EXPORT AsyncDebuggerAPI : private debugger::EventObserver {
   /// Must be destroyed on the runtime thread or when you're sure nothing is
   /// interacting with the runtime. Must be destroyed before destroying
   /// HermesRuntime.
-  ~AsyncDebuggerAPI();
+  ~AsyncDebuggerAPI() override;
 
   /// Add a callback function to invoke when the runtime pauses due to various
   /// conditions such as hitting a "debugger;" statement. Can be called from any
