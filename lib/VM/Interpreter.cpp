@@ -9,6 +9,7 @@
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/Runtime.h"
 
+#include "hermes/BCGen/SerializedLiteralParser.h"
 #include "hermes/Inst/InstDecode.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/SlowAssert.h"

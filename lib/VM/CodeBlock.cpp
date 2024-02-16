@@ -18,7 +18,6 @@
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule.h"
-#include "hermes/VM/SerializedLiteralParser.h"
 
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/ErrorHandling.h"
@@ -27,7 +26,6 @@ namespace hermes {
 namespace vm {
 
 using namespace hermes::inst;
-using SLP = SerializedLiteralParser;
 
 #ifdef HERMES_SLOW_DEBUG
 

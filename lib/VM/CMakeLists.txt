@@ -61,7 +61,6 @@ set(source_files
   Profiler/SamplingProfilerWindows.cpp
   Profiler/SamplingProfilerSampler.cpp
   SegmentedArray.cpp
-  SerializedLiteralParser.cpp
   SingleObject.cpp
   StackFrame.cpp
   StackTracesTree.cpp

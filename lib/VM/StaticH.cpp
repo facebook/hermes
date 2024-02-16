@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "hermes/BCGen/SerializedLiteralParser.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/FastArray.h"
 #include "hermes/VM/Interpreter.h"
@@ -12,7 +13,6 @@
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/JSRegExp.h"
 #include "hermes/VM/PropertyAccessor.h"
-#include "hermes/VM/SerializedLiteralParser.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StaticHUtils.h"
 #include "hermes/VM/StringBuilder.h"
