@@ -587,23 +587,42 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
       runtime, curCodeBlock, numLiterals, keyBufferIndex);
   auto obj = runtime.makeHandle(JSObject::create(runtime, clazz));
 
-  auto valGen =
-      curCodeBlock->getObjectBufferValueIter(valBufferIndex, numLiterals);
+  // Set up the visitor to populate property values in the object.
+  struct {
+    void visitStringID(StringID id) {
+      auto shv = SmallHermesValue::encodeStringValue(
+          runtimeModule->getStringPrimFromStringIDMayAllocate(id), runtime);
+      JSObject::setNamedSlotValueUnsafe(obj.get(), runtime, i++, shv);
+    }
+    void visitNumber(double d) {
+      auto shv = SmallHermesValue::encodeNumberValue(d, runtime);
+      JSObject::setNamedSlotValueUnsafe(obj.get(), runtime, i++, shv);
+    }
+    void visitNull() {
+      static constexpr auto shv = SmallHermesValue::encodeNullValue();
+      JSObject::setNamedSlotValueUnsafe(obj.get(), runtime, i++, shv);
+    }
+    void visitBool(bool b) {
+      auto shv = SmallHermesValue::encodeBoolValue(b);
+      JSObject::setNamedSlotValueUnsafe(obj.get(), runtime, i++, shv);
+    }
 
-  uint32_t propIndex = 0;
-  // keyGen should always have the same amount of elements as valGen
-  while (valGen.hasNext()) {
-    // Explicitly make sure valGen.get() is called before obj.get() so that
-    // any allocation in valGen.get() won't invalidate the raw pointer
-    // returned from obj.get().
-    auto val = valGen.get(runtime);
-    auto shv = SmallHermesValue::encodeHermesValue(val, runtime);
-    // We made this object, it's not a Proxy.
-    JSObject::setNamedSlotValueUnsafe(obj.get(), runtime, propIndex, shv);
-    ++propIndex;
-  }
+    Handle<JSObject> obj;
+    Runtime &runtime;
+    RuntimeModule *runtimeModule;
+    size_t i;
+  } v{obj, runtime, curCodeBlock->getRuntimeModule(), 0};
 
-  return createPseudoHandle(HermesValue::encodeObjectValue(*obj));
+  // Visit each value in the given buffer, and set it in the object.
+  SerializedLiteralParser::parse(
+      curCodeBlock->getRuntimeModule()
+          ->getBytecode()
+          ->getObjectValueBuffer()
+          .slice(valBufferIndex),
+      numLiterals,
+      v);
+
+  return createPseudoHandle(obj.getHermesValue());
 }
 
 CallResult<PseudoHandle<>> Interpreter::createArrayFromBuffer(

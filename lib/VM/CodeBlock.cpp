@@ -159,14 +159,6 @@ int32_t CodeBlock::findCatchTargetOffset(uint32_t exceptionOffset) {
       functionID_, exceptionOffset);
 }
 
-SLP CodeBlock::getObjectBufferValueIter(uint32_t idx, unsigned int numLiterals)
-    const {
-  return SLP{
-      runtimeModule_->getBytecode()->getObjectValueBuffer().slice(idx),
-      numLiterals,
-      runtimeModule_};
-}
-
 SymbolID CodeBlock::getNameMayAllocate() const {
 #ifndef HERMESVM_LEAN
   if (isLazy()) {
