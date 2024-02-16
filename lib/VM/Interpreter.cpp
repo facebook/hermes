@@ -638,14 +638,38 @@ CallResult<PseudoHandle<>> Interpreter::createArrayFromBuffer(
   auto arr = *arrRes;
   JSArray::setStorageEndIndex(arr, runtime, numElements);
 
-  auto iter = curCodeBlock->getArrayBufferIter(bufferIndex, numLiterals);
-  JSArray::size_type i = 0;
-  while (iter.hasNext()) {
-    // NOTE: we must get the value in a separate step to guarantee ordering.
-    const auto value =
-        SmallHermesValue::encodeHermesValue(iter.get(runtime), runtime);
-    JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, value);
-  }
+  // Set up the visitor to populate literal elements in the array.
+  struct {
+    void visitStringID(StringID id) {
+      auto shv = SmallHermesValue::encodeStringValue(
+          runtimeModule->getStringPrimFromStringIDMayAllocate(id), runtime);
+      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+    }
+    void visitNumber(double d) {
+      auto shv = SmallHermesValue::encodeNumberValue(d, runtime);
+      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+    }
+    void visitNull() {
+      constexpr auto shv = SmallHermesValue::encodeNullValue();
+      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+    }
+    void visitBool(bool b) {
+      auto shv = SmallHermesValue::encodeBoolValue(b);
+      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+    }
+
+    Handle<JSArray> arr;
+    Runtime &runtime;
+    RuntimeModule *runtimeModule;
+    JSArray::size_type i;
+  } v{arr, runtime, curCodeBlock->getRuntimeModule(), 0};
+
+  // Visit each serialized value in the given buffer.
+  SerializedLiteralParser::parse(
+      curCodeBlock->getRuntimeModule()->getBytecode()->getArrayBuffer().slice(
+          bufferIndex),
+      numLiterals,
+      v);
 
   return createPseudoHandle(HermesValue::encodeObjectValue(*arr));
 }
