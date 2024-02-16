@@ -12,6 +12,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include <hermes/hermes.h>
@@ -32,6 +33,15 @@ struct State;
 /// Utility struct to configure the initial state of the CDP session.
 struct INSPECTOR_EXPORT CDPHandlerSessionConfig {
   bool isRuntimeDomainEnabled{false};
+};
+
+/// Configuration for the execution context managed by the CDPHandler.
+struct INSPECTOR_EXPORT CDPHandlerExecutionContextDescription {
+  int32_t id{};
+  std::string origin;
+  std::string name;
+  std::optional<std::string> auxData;
+  bool shouldSendNotifications{};
 };
 
 /// CDPHandler processes CDP messages between the client and the debugger.
@@ -56,7 +66,9 @@ class INSPECTOR_EXPORT CDPHandler {
       bool waitForDebugger,
       bool processConsoleAPI,
       std::shared_ptr<State> state,
-      const CDPHandlerSessionConfig &sessionConfig);
+      const CDPHandlerSessionConfig &sessionConfig,
+      std::optional<CDPHandlerExecutionContextDescription>
+          executionContextDescription);
 
  public:
   /// Creating a CDPHandler enables the debugger on the provided runtime. This
@@ -68,7 +80,9 @@ class INSPECTOR_EXPORT CDPHandler {
       bool waitForDebugger = false,
       bool processConsoleAPI = true,
       std::shared_ptr<State> state = nullptr,
-      const CDPHandlerSessionConfig &sessionConfig = {});
+      const CDPHandlerSessionConfig &sessionConfig = {},
+      std::optional<CDPHandlerExecutionContextDescription>
+          executionContextDescription = std::nullopt);
   /// Temporarily kept to allow React Native build to still work
   static std::shared_ptr<CDPHandler> create(
       std::unique_ptr<RuntimeAdapter> adapter,
@@ -76,7 +90,9 @@ class INSPECTOR_EXPORT CDPHandler {
       bool waitForDebugger = false,
       bool processConsoleAPI = true,
       std::shared_ptr<State> state = nullptr,
-      const CDPHandlerSessionConfig &sessionConfig = {});
+      const CDPHandlerSessionConfig &sessionConfig = {},
+      std::optional<CDPHandlerExecutionContextDescription>
+          executionContextDescription = std::nullopt);
   ~CDPHandler();
 
   /// getTitle returns the name of the friendly name of the runtime that's shown
