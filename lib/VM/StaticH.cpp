@@ -1328,6 +1328,9 @@ static Handle<HiddenClass> getHiddenClassForBuffer(
     void visitNull() {
       llvm_unreachable("Object literal key cannot be null.");
     }
+    void visitUndefined() {
+      llvm_unreachable("Object literal key cannot be undefined.");
+    }
     void visitBool(bool) {
       llvm_unreachable("Object literal key cannot be a bool.");
     }
@@ -1395,6 +1398,12 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
     void visitNull() {
       constexpr auto shv = SmallHermesValue::encodeNullValue();
       JSObject::setNamedSlotValueUnsafe(*obj, runtime, i++, shv);
+    }
+    void visitUndefined() {
+      assert(
+          JSObject::getNamedSlotValueUnsafe(*obj, runtime, i).isUndefined() &&
+          "Uninitialized object slot is not undefined.");
+      i++;
     }
     void visitBool(bool b) {
       auto shv = SmallHermesValue::encodeBoolValue(b);
@@ -1472,6 +1481,10 @@ extern "C" SHLegacyValue _sh_ljs_new_array_with_buffer(
       }
       void visitNull() {
         constexpr auto shv = SmallHermesValue::encodeNullValue();
+        JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+      }
+      void visitUndefined() {
+        constexpr auto shv = SmallHermesValue::encodeUndefinedValue();
         JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
       }
       void visitBool(bool b) {

@@ -82,7 +82,7 @@ function foo(p) {
 
 // CHECK:Function<>(1 params, 2 registers, 0 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x000d, lexical 0x0000
-// CHECK-NEXT:[@ 0] NewObjectWithBuffer 0<Reg8>, 3<UInt16>, 3<UInt16>, 3<UInt16>, 9<UInt16>
+// CHECK-NEXT:[@ 0] NewObjectWithBuffer 0<Reg8>, 3<UInt16>, 3<UInt16>, 5<UInt16>, 9<UInt16>
 // CHECK-NEXT:[@ 10] LoadThisNS 1<Reg8>
 // CHECK-NEXT:[@ 12] PutByIdLoose 0<Reg8>, 1<Reg8>, 1<UInt8>, 6<UInt16>
 // CHECK-NEXT:[@ 18] Ret 0<Reg8>

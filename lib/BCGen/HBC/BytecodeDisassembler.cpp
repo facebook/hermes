@@ -108,12 +108,6 @@ namespace {
 std::string SLPToString(SLG::TagType tag, const unsigned char *buff, int *ind) {
   std::string rBracket{"]"};
   switch (tag) {
-    case SLG::ByteStringTag: {
-      uint8_t val = llvh::support::endian::read<uint8_t, 1>(
-          buff + *ind, llvh::support::endianness::little);
-      *ind += 1;
-      return std::string("[String ") + std::to_string(val) + rBracket;
-    }
     case SLG::ShortStringTag: {
       uint16_t val = llvh::support::endian::read<uint16_t, 1>(
           buff + *ind, llvh::support::endianness::little);
@@ -140,6 +134,8 @@ std::string SLPToString(SLG::TagType tag, const unsigned char *buff, int *ind) {
     }
     case SLG::NullTag:
       return "null";
+    case SLG::UndefinedTag:
+      return "undefined";
     case SLG::TrueTag:
       return "true";
     case SLG::FalseTag:

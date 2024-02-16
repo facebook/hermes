@@ -42,14 +42,6 @@ parse(llvh::ArrayRef<uint8_t> buf, unsigned int totalLen, Visitor &v) {
     SerializedLiteralGenerator::TagType type =
         tag & SerializedLiteralGenerator::TagMask;
     switch (type) {
-      case SerializedLiteralGenerator::ByteStringTag:
-        while (leftInSeq-- && totalLen--) {
-          uint8_t val = llvh::support::endian::read<uint8_t, 1>(
-              &buf[bufIdx], llvh::support::endianness::little);
-          v.visitStringID(val);
-          bufIdx += 1;
-        }
-        break;
       case SerializedLiteralGenerator::ShortStringTag:
         while (leftInSeq-- && totalLen--) {
           uint16_t val = llvh::support::endian::read<uint16_t, 1>(
@@ -85,6 +77,10 @@ parse(llvh::ArrayRef<uint8_t> buf, unsigned int totalLen, Visitor &v) {
       case SerializedLiteralGenerator::NullTag:
         while (leftInSeq-- && totalLen--)
           v.visitNull();
+        break;
+      case SerializedLiteralGenerator::UndefinedTag:
+        while (leftInSeq-- && totalLen--)
+          v.visitUndefined();
         break;
       case SerializedLiteralGenerator::TrueTag:
         while (leftInSeq-- && totalLen--)

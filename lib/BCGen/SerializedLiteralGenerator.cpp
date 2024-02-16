@@ -47,7 +47,8 @@ void serializeValueToBuffer(
 bool SerializedLiteralGenerator::isSerializableLiteral(Value *V) {
   return V &&
       (llvh::isa<LiteralNull>(V) || llvh::isa<LiteralBool>(V) ||
-       llvh::isa<LiteralNumber>(V) || llvh::isa<LiteralString>(V));
+       llvh::isa<LiteralUndefined>(V) || llvh::isa<LiteralNumber>(V) ||
+       llvh::isa<LiteralString>(V));
 }
 
 uint32_t SerializedLiteralGenerator::serializeBuffer(
@@ -97,10 +98,8 @@ uint32_t SerializedLiteralGenerator::serializeBuffer(
 
         if (ind > UINT16_MAX) {
           newTag = LongStringTag;
-        } else if (ind > UINT8_MAX) {
-          newTag = ShortStringTag;
         } else {
-          newTag = ByteStringTag;
+          newTag = ShortStringTag;
         }
         break;
       }
@@ -110,6 +109,9 @@ uint32_t SerializedLiteralGenerator::serializeBuffer(
         break;
       case ValueKind::LiteralNullKind:
         newTag = NullTag;
+        break;
+      case ValueKind::LiteralUndefinedKind:
+        newTag = UndefinedTag;
         break;
       default:
         hermes_fatal("Invalid Literal Kind");
@@ -148,14 +150,13 @@ uint32_t SerializedLiteralGenerator::serializeBuffer(
 
         if (stringID > UINT16_MAX) {
           serializeValueToBuffer<uint32_t>(stringID, tmpSeqBuffer);
-        } else if (stringID > UINT8_MAX) {
-          serializeValueToBuffer<uint16_t>(stringID, tmpSeqBuffer);
         } else {
-          serializeValueToBuffer<uint8_t>(stringID, tmpSeqBuffer);
+          serializeValueToBuffer<uint16_t>(stringID, tmpSeqBuffer);
         }
         break;
       }
       case ValueKind::LiteralBoolKind:
+      case ValueKind::LiteralUndefinedKind:
       case ValueKind::LiteralNullKind:
         /* no-op */
         break;
