@@ -35,6 +35,7 @@ if(HERMES_ENABLE_DEBUGGER)
     cdp/DebuggerDomainAgent.cpp
     cdp/RuntimeDomainAgent.cpp
     cdp/ProfilerDomainAgent.cpp
+    cdp/ConsoleMessage.cpp
   )
 
   set(INSPECTOR_API_SOURCES
@@ -55,6 +56,8 @@ add_hermes_library(synthTraceParser SynthTraceParser.cpp LINK_LIBS hermesSupport
 
 # All remaining targets in this file use both exceptions and RTTI.
 set(HERMES_ENABLE_EH_RTTI ON)
+
+add_subdirectory(cdp)
 
 # List the files that define exported functions explicitly, and they can link
 # against the internal functionality they need.

@@ -14,6 +14,7 @@ set(APITestsSources
   ${HERMES_JSI_DIR}/jsi/test/testlib.cpp
   AsyncDebuggerAPITest.cpp
   CDPAgentTest.cpp
+  ConsoleMessageTest.cpp
   SynchronizedCallbackTest.cpp
   ../../API/hermes/inspector/chrome/tests/SerialExecutor.cpp
   DebuggerTest.cpp
@@ -53,7 +54,8 @@ set(LLVM_ENABLE_RTTI ON)
 add_hermes_unittest(APITests ${APITestsSources})
 
 target_link_libraries(APITests libhermes compileJS SegmentTestCompile traceInterpreter
-                               timerStats hermesABIRuntimeWrapper hermesabi hermesSandboxRuntime)
+                               timerStats hermesABIRuntimeWrapper hermesabi hermesSandboxRuntime
+                               cdpInternal)
 
 add_hermes_unittest(APILeanTests APILeanTest.cpp)
 target_link_libraries(APILeanTests libhermes_lean jsi)
