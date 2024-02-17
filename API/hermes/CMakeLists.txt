@@ -32,17 +32,17 @@ if(HERMES_ENABLE_DEBUGGER)
 
   set(CDP_API_SOURCES
     cdp/CDPAgent.cpp
-    cdp/DebuggerDomainAgent.cpp
-    cdp/RuntimeDomainAgent.cpp
-    cdp/ProfilerDomainAgent.cpp
     cdp/ConsoleMessage.cpp
+    cdp/DebuggerDomainAgent.cpp
+    cdp/ProfilerDomainAgent.cpp
+    cdp/RemoteObjectsTable.cpp
+    cdp/RuntimeDomainAgent.cpp
   )
 
   set(INSPECTOR_API_SOURCES
     inspector/chrome/CallbackOStream.cpp
     inspector/chrome/CDPHandler.cpp
     inspector/chrome/RemoteObjectConverters.cpp
-    inspector/chrome/RemoteObjectsTable.cpp
     inspector/RuntimeAdapter.cpp
     ${CDP_API_SOURCES}
     ${INSPECTOR_NO_EH_RTTI_SOURCES}

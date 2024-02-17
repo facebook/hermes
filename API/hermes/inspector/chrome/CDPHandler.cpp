@@ -20,12 +20,12 @@
 #include <unordered_set>
 
 #include <hermes/DebuggerAPI.h>
+#include <hermes/cdp/RemoteObjectsTable.h>
 #include <hermes/hermes.h>
 #include <hermes/inspector/RuntimeAdapter.h>
 #include <hermes/inspector/chrome/CallbackOStream.h>
 #include <hermes/inspector/chrome/MessageConverters.h>
 #include <hermes/inspector/chrome/RemoteObjectConverters.h>
-#include <hermes/inspector/chrome/RemoteObjectsTable.h>
 #include <jsi/instrumentation.h>
 #include <llvh/ADT/MapVector.h>
 #include <llvh/ADT/ScopeExit.h>
@@ -485,7 +485,7 @@ class CDPHandlerImpl : public message::RequestHandler,
   // objTable_ is protected by the inspector lock. It should only be accessed
   // when the VM is paused, e.g. in an InspectorObserver callback or in an
   // executeIfEnabled callback.
-  RemoteObjectsTable objTable_;
+  cdp::RemoteObjectsTable objTable_;
 
   bool breakpointsActive_ = true;
   /// Tracks whether we are already in a didPause callback to detect recursive
@@ -1044,7 +1044,7 @@ class CallFunctionOnArgument {
   /// maybeObjectId_ is not empty but references an unknown object.
   jsi::Value value(
       jsi::Runtime &rt,
-      RemoteObjectsTable &objTable,
+      cdp::RemoteObjectsTable &objTable,
       jsi::Value evaldValue) const {
     if (maybeObjectId_) {
       assert(evaldValue.isUndefined() && "expected undefined placeholder");
@@ -1059,7 +1059,7 @@ class CallFunctionOnArgument {
   /// be found.
   static jsi::Value getValueFromId(
       jsi::Runtime &rt,
-      RemoteObjectsTable &objTable,
+      cdp::RemoteObjectsTable &objTable,
       m::runtime::RemoteObjectId objId) {
     if (const jsi::Value *ptr = objTable.getValue(objId)) {
       return jsi::Value(rt, *ptr);
@@ -1090,7 +1090,7 @@ class CallFunctionOnRunner {
   /// method on the expression built by the CallFunctionOnBuilder below.
   jsi::Value operator()(
       jsi::Runtime &rt,
-      RemoteObjectsTable &objTable,
+      cdp::RemoteObjectsTable &objTable,
       const facebook::hermes::debugger::EvalResult &evalResult) {
     // The eval result is an array [a0, a1, ..., an, func] (see
     // CallFunctionOnBuilder below).
@@ -1139,7 +1139,7 @@ class CallFunctionOnRunner {
   /// undefined, or the placeholder indicating that globalThis should be used.
   jsi::Object getJsThis(
       jsi::Runtime &rt,
-      RemoteObjectsTable &objTable,
+      cdp::RemoteObjectsTable &objTable,
       jsi::Value evaldThis) const {
     // In the future we may support multiple execution context ids; for now,
     // there's only one.
@@ -2127,7 +2127,7 @@ void CDPHandlerImpl::processPendingDesiredExecutions(
       sendPausedNotificationToClient();
     } else /* running */ {
       awaitingDebuggerOnStart_ = false;
-      objTable_.releaseObjectGroup(BacktraceObjectGroup);
+      objTable_.releaseObjectGroup(cdp::BacktraceObjectGroup);
       sendNotificationToClient(m::debugger::ResumedNotification{});
     }
   }

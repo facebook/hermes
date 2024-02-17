@@ -31,8 +31,7 @@ int64_t toId(const std::string &objId) {
 
 namespace facebook {
 namespace hermes {
-namespace inspector_modern {
-namespace chrome {
+namespace cdp {
 
 const char *BacktraceObjectGroup = "backtrace";
 
@@ -138,7 +137,6 @@ void RemoteObjectsTable::releaseObjectGroup(const std::string &objectGroup) {
   groupToIds_.erase(it);
 }
 
-} // namespace chrome
-} // namespace inspector_modern
+} // namespace cdp
 } // namespace hermes
 } // namespace facebook

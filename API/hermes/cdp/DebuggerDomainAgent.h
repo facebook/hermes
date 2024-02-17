@@ -80,7 +80,7 @@ class DebuggerDomainAgent : public DomainAgent {
       HermesRuntime &runtime,
       debugger::AsyncDebuggerAPI &asyncDebugger,
       SynchronizedOutboundCallback messageCallback,
-      std::shared_ptr<old_cdp::RemoteObjectsTable> objTable_);
+      std::shared_ptr<RemoteObjectsTable> objTable_);
   ~DebuggerDomainAgent();
 
   /// Handles Debugger.enable request

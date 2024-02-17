@@ -22,7 +22,7 @@ RuntimeDomainAgent::RuntimeDomainAgent(
     int32_t executionContextID,
     HermesRuntime &runtime,
     SynchronizedOutboundCallback messageCallback,
-    std::shared_ptr<old_cdp::RemoteObjectsTable> objTable)
+    std::shared_ptr<RemoteObjectsTable> objTable)
     : DomainAgent(
           executionContextID,
           std::move(messageCallback),
