@@ -260,7 +260,7 @@ throwTypeError(void *ctx, Runtime &runtime, NativeArgs) {
 // NOTE: when declaring more global symbols, don't forget to update
 // "Libhermes.h".
 void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
-  GCScope gcScope{runtime, "initGlobalObject", 330};
+  GCScope gcScope{runtime, "initGlobalObject", 350};
 
   // Not enumerable, not writable, not configurable.
   DefinePropertyFlags constantDPF =
@@ -564,6 +564,9 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
           runtime, Handle<JSObject>::vmcast(&runtime.functionPrototype))
           .getHermesValue();
 
+  // "Forward declaration" of TextEncoder.prototype.
+  runtime.textEncoderPrototype = JSObject::create(runtime).getHermesValue();
+
   // Object constructor.
   createObjectConstructor(runtime);
 
@@ -666,6 +669,9 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
 
   // AsyncFunction constructor (not directly exposed in the global object).
   createAsyncFunctionConstructor(runtime);
+
+  // TextEncoder constructor.
+  createTextEncoderConstructor(runtime);
 
   // %GeneratorPrototype%.
   populateGeneratorPrototype(runtime);

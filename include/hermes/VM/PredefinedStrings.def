@@ -484,6 +484,8 @@ STR(squareSymbolSearch, "[Symbol.search]")
 STR(squareSymbolReplace, "[Symbol.replace]")
 STR(squareSymbolSplit, "[Symbol.split]")
 
+STR(TextEncoder, "TextEncoder")
+
 #ifdef HERMES_ENABLE_INTL
 // TODO T65916424: Consider how we can move these out of the
 // predefined strings table.
