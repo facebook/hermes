@@ -545,7 +545,7 @@ class Parser {
     auto hi = consumeCharIf(isHighSurrogate);
     auto lo = consumeCharIf(isLowSurrogate);
     if (hi && lo) {
-      return decodeSurrogatePair(*hi, *lo);
+      return utf16SurrogatePairToCodePoint(*hi, *lo);
     }
     current_ = saved;
     return llvh::None;
@@ -559,7 +559,7 @@ class Parser {
     auto saved = current_;
     auto hi = consumeCharIf(isHighSurrogate);
     auto lo = consumeCharIf(isLowSurrogate);
-    if (hi && lo && lambdaPredicate(decodeSurrogatePair(*hi, *lo))) {
+    if (hi && lo && lambdaPredicate(utf16SurrogatePairToCodePoint(*hi, *lo))) {
       str.push_back(*hi);
       str.push_back(*lo);
       return true;
@@ -1099,7 +1099,7 @@ class Parser {
         if (tryConsume("\\u")) {
           if (auto lo = tryConsumeHexDigits(4)) {
             if (isLowSurrogate(*lo)) {
-              return decodeSurrogatePair(*hi, *lo);
+              return utf16SurrogatePairToCodePoint(*hi, *lo);
             }
           }
         }

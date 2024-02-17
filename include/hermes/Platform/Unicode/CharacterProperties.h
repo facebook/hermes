@@ -59,10 +59,14 @@ inline bool isLowSurrogate(uint32_t cp) {
   return UTF16_LOW_SURROGATE <= cp && cp <= UNICODE_SURROGATE_LAST;
 }
 
-/// Decode a surrogate pair [\p hi, \p lo] into a code point.
-inline uint32_t decodeSurrogatePair(uint32_t hi, uint32_t lo) {
-  assert(isHighSurrogate(hi) && isLowSurrogate(lo) && "Not a surrogate pair");
-  return ((hi - UTF16_HIGH_SURROGATE) << 10) + (lo - UTF16_LOW_SURROGATE) +
+//===----------------------------------------------------------------------===//
+// ES14 11.1.3
+
+/// Decode a surrogate pair [\p lead, \p trail] into a code point.
+inline uint32_t utf16SurrogatePairToCodePoint(uint32_t lead, uint32_t trail) {
+  assert(
+      isHighSurrogate(lead) && isLowSurrogate(trail) && "Not a surrogate pair");
+  return ((lead - UTF16_HIGH_SURROGATE) << 10) + (trail - UTF16_LOW_SURROGATE) +
       0x10000;
 }
 
