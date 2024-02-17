@@ -64,3 +64,59 @@ print(result.length, result.join(' '));
 result = encoder.encode('\u{D83D}');
 print(result.length, result.join(' '));
 // CHECK-NEXT: 3 239 191 189
+
+result = new Uint8Array(4);
+
+try {
+  const b = {};
+  TextEncoder.prototype.encodeInto.call(b, '', result);
+} catch (e) {
+  print(e.message);
+  // CHECK-NEXT: TextEncoder.prototype.encodeInto() called on non-TextEncoder object
+}
+
+// Test the ASCII case that just fits within the provided buffer
+let stats = encoder.encodeInto('test', result);
+print(stats.read, stats.written);
+// CHECK-NEXT: 4 4
+print(result[0], result[1], result[2], result[3]);
+// CHECK-NEXT: 116 101 115 116
+
+stats = encoder.encodeInto('', result);
+print(stats.read, stats.written);
+// CHECK-NEXT: 0 0
+
+// ASCII case that does NOT fit within the provided buffer
+stats = encoder.encodeInto('testing', result);
+print(stats.read, stats.written);
+// CHECK-NEXT: 4 4
+print(result[0], result[1], result[2], result[3]);
+// CHECK-NEXT: 116 101 115 116
+
+// ASCII case that is smaller than the provided buffer
+stats = encoder.encodeInto('abc', result);
+print(stats.read, stats.written);
+// CHECK-NEXT: 3 3
+print(result[0], result[1], result[2]);
+// CHECK-NEXT: 97 98 99
+
+// UTF-16 case that fits within the provided buffer
+stats = encoder.encodeInto('\u{2191}', result);
+print(stats.read, stats.written);
+// CHECK-NEXT: 1 3
+print(result[0], result[1], result[2]);
+// CHECK-NEXT: 226 134 145
+
+// UTF-16 case that does NOT fit within the provided buffer
+stats = encoder.encodeInto('\u{2191}\u{2192}', result);
+print(stats.read, stats.written);
+// CHECK-NEXT: 1 3
+print(result[0], result[1], result[2]);
+// CHECK-NEXT: 226 134 145
+
+// Surrogate case that just fits within the provided buffer
+stats = encoder.encodeInto('\u{D83D}\u{DE03}', result);
+print(stats.read, stats.written);
+// CHECK-NEXT: 2 4
+print(result[0], result[1], result[2], result[3]);
+// CHECK-NEXT: 240 159 152 131

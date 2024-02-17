@@ -486,6 +486,9 @@ STR(squareSymbolSplit, "[Symbol.split]")
 
 STR(TextEncoder, "TextEncoder")
 STR(encode, "encode")
+STR(encodeInto, "encodeInto")
+STR(read, "read")
+STR(written, "written")
 STR(encoding, "encoding")
 STR(utf8, "utf-8")
 

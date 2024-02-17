@@ -51,6 +51,14 @@ Handle<JSObject> createTextEncoderConstructor(Runtime &runtime) {
       textEncoderPrototypeEncode,
       1);
 
+  defineMethod(
+      runtime,
+      textEncoderPrototype,
+      Predefined::getSymbolID(Predefined::encodeInto),
+      nullptr,
+      textEncoderPrototypeEncodeInto,
+      2);
+
   auto cons = defineSystemConstructor<JSObject>(
       runtime,
       Predefined::getSymbolID(Predefined::TextEncoder),
@@ -180,6 +188,101 @@ textEncoderPrototypeEncode(void *, Runtime &runtime, NativeArgs args) {
         typedArray->begin(runtime), converted.data(), converted.length());
     return typedArray.getHermesValue();
   }
+}
+
+CallResult<HermesValue>
+textEncoderPrototypeEncodeInto(void *, Runtime &runtime, NativeArgs args) {
+  GCScope gcScope{runtime};
+  auto selfHandle = args.dyncastThis<JSObject>();
+  NamedPropertyDescriptor desc;
+  bool exists = JSObject::getOwnNamedDescriptor(
+      selfHandle,
+      runtime,
+      Predefined::getSymbolID(Predefined::InternalPropertyTextEncoderType),
+      desc);
+  if (LLVM_UNLIKELY(!exists)) {
+    return runtime.raiseTypeError(
+        "TextEncoder.prototype.encodeInto() called on non-TextEncoder object");
+  }
+
+  auto strRes = toString_RJS(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  Handle<StringPrimitive> string = runtime.makeHandle(std::move(*strRes));
+
+  Handle<Uint8Array> typedArray = args.dyncastArg<Uint8Array>(1);
+  if (LLVM_UNLIKELY(!typedArray)) {
+    return runtime.raiseTypeError("The second argument should be a Uint8Array");
+  }
+
+  if (LLVM_UNLIKELY(!typedArray->attached(runtime))) {
+    return runtime.raiseTypeError(
+        "TextEncoder.prototype.encodeInto() called on a detached Uint8Array");
+  }
+
+  PseudoHandle<JSObject> objRes = JSObject::create(runtime, 2);
+  Handle<JSObject> obj = runtime.makeHandle(objRes.get());
+
+  uint32_t numRead = 0;
+  uint32_t numWritten = 0;
+
+  if (LLVM_UNLIKELY(string->getStringLength() == 0)) {
+    numRead = 0;
+    numWritten = 0;
+  } else if (string->isASCII()) {
+    // ASCII string can trivially be converted to UTF-8 because ASCII is a
+    // strict subset. However, since the output array size is provided by the
+    // caller, we will only copy as much length as provided.
+    llvh::ArrayRef<char> strRef = string->getStringRef<char>();
+
+    uint32_t copiedLength =
+        std::min(string->getStringLength(), typedArray->getLength());
+
+    std::memcpy(typedArray->begin(runtime), strRef.data(), copiedLength);
+
+    numRead = copiedLength;
+    numWritten = copiedLength;
+  } else {
+    // Convert UTF-16 to the given Uint8Array
+    llvh::ArrayRef<char16_t> strRef = string->getStringRef<char16_t>();
+    std::pair<uint32_t, uint32_t> result =
+        convertUTF16ToUTF8BufferWithReplacements(
+            llvh::makeMutableArrayRef<uint8_t>(
+                typedArray->begin(runtime), typedArray->getLength()),
+            strRef);
+    numRead = result.first;
+    numWritten = result.second;
+  }
+
+  // Construct the result JSObject containing information about how much data
+  // was converted
+  auto numReadHandle =
+      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(numRead));
+  auto numWrittenHandle =
+      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(numWritten));
+
+  auto res = JSObject::defineNewOwnProperty(
+      obj,
+      runtime,
+      Predefined::getSymbolID(Predefined::read),
+      PropertyFlags::defaultNewNamedPropertyFlags(),
+      numReadHandle);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  res = JSObject::defineNewOwnProperty(
+      obj,
+      runtime,
+      Predefined::getSymbolID(Predefined::written),
+      PropertyFlags::defaultNewNamedPropertyFlags(),
+      numWrittenHandle);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return obj.getHermesValue();
 }
 
 } // namespace vm
