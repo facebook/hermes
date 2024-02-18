@@ -356,7 +356,7 @@ int pages_in_ram(const void *p, size_t sz, llvh::SmallVectorImpl<int> *runs) {
 uint64_t peak_rss() {
   PROCESS_MEMORY_COUNTERS pmc;
   auto ret = GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
-  if (ret != 0) {
+  if (ret == 0) {
     // failed
     return 0;
   }
@@ -366,7 +366,7 @@ uint64_t peak_rss() {
 uint64_t current_rss() {
   PROCESS_MEMORY_COUNTERS pmc;
   auto ret = GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
-  if (ret != 0) {
+  if (ret == 0) {
     // failed
     return 0;
   }
