@@ -41,7 +41,7 @@ and build a host hermesc at `$HERMES_WS_DIR/build_host_hermesc`.
 # Building Hermes With Emscripten and CMake
 
     cmake -S ${HermesSourcePath?} -B build \
-          -DCMAKE_TOOLCHAIN_FILE=${EmscriptenRoot?}/emscripten/cmake/Modules/Platform/Emscripten.cmake \
+          -DCMAKE_TOOLCHAIN_FILE=${EmscriptenRoot?}/cmake/Modules/Platform/Emscripten.cmake \
           -DCMAKE_BUILD_TYPE=MinSizeRel \
           -DEMSCRIPTEN_FASTCOMP=1 \
           -DCMAKE_EXE_LINKER_FLAGS="-s NODERAWFS=1 -s WASM=0 -s ALLOW_MEMORY_GROWTH=1"
