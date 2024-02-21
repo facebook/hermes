@@ -768,7 +768,7 @@ function mapStatementList(
 
         if (node.declaration?.type === 'HookDeclaration') {
           const comp = mapHookDeclaration(node.declaration);
-          newBody.push(comp);
+          newBody.push(nodeWith(node, {declaration: comp}));
           break;
         }
 
@@ -787,7 +787,7 @@ function mapStatementList(
 
         if (node.declaration?.type === 'HookDeclaration') {
           const comp = mapHookDeclaration(node.declaration);
-          newBody.push(comp);
+          newBody.push(nodeWith(node, {declaration: comp}));
           break;
         }
 

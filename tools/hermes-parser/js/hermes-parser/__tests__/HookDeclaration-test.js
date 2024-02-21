@@ -143,4 +143,44 @@ describe('HookDeclaration', () => {
         `);
     });
   });
+
+  describe('Export default hook', () => {
+    const code = `
+      export default hook useFoo2(...{prop}: Props) {}
+    `;
+
+    test('ESTree', async () => {
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+          "export default function useFoo2(...{
+            prop
+          }: Props) {}"
+        `);
+    });
+  });
+
+  describe('Export named hook', () => {
+    const code = `
+      export hook useFoo2(...{prop}: Props) {}
+    `;
+
+    test('ESTree', async () => {
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+          "export function useFoo2(...{
+            prop
+          }: Props) {}"
+        `);
+    });
+  });
 });
