@@ -65,20 +65,23 @@ void SerialExecutor::run() {
       wakeUpSig_.wait(lock, [this] { return !tasks_.empty() || shouldStop_; });
     }
 
-    if (shouldStop_) {
-      return;
-    }
-
     // Make sure we do *NOT* hold a lock to mutex_ as we execute the given
     // task. Otherwise, this can lead to a deadlock if the given task calls
     // add(), which in turn requests a lock to mutex_.  However, we do want to
     // hold the lock anytime that we interact with the tasks queue.
     std::unique_lock<std::mutex> lock(mutex_);
-    std::function<void()> task = tasks_.front();
-    lock.unlock();
-    task();
-    lock.lock();
-    tasks_.pop_front();
+
+    while (!tasks_.empty()) {
+      std::function<void()> task = tasks_.front();
+      lock.unlock();
+      task();
+      lock.lock();
+      tasks_.pop_front();
+    }
+
+    if (shouldStop_) {
+      return;
+    }
   }
 }
 
