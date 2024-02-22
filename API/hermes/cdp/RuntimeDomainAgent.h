@@ -44,6 +44,8 @@ class RuntimeDomainAgent : public DomainAgent {
   void getProperties(const m::runtime::GetPropertiesRequest &req);
   /// Handles Runtime.evaluate request
   void evaluate(const m::runtime::EvaluateRequest &req);
+  /// Handles Runtime.callFunctionOn request
+  void callFunctionOn(const m::runtime::CallFunctionOnRequest &req);
 
  private:
   bool checkRuntimeEnabled(const m::Request &req);

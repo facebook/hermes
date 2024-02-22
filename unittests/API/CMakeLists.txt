@@ -6,6 +6,7 @@
 set(NO_EH_RTTI_SOURCES
   CDPJSONHelpers.cpp
   ../../API/hermes/inspector/chrome/JSONValueInterfaces.cpp
+  ../../API/hermes/inspector/chrome/MessageInterfaces.cpp
   ../../API/hermes/inspector/chrome/MessageTypes.cpp
   )
 set(APITestsSources

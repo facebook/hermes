@@ -56,6 +56,25 @@ T waitFor(
   return future.get();
 }
 
+m::runtime::CallArgument makeValueCallArgument(std::string val) {
+  m::runtime::CallArgument ret;
+  ret.value = val;
+  return ret;
+}
+
+m::runtime::CallArgument makeUnserializableCallArgument(std::string val) {
+  m::runtime::CallArgument ret;
+  ret.unserializableValue = std::move(val);
+  return ret;
+}
+
+m::runtime::CallArgument makeObjectIdCallArgument(
+    m::runtime::RemoteObjectId objectId) {
+  m::runtime::CallArgument ret;
+  ret.objectId = std::move(objectId);
+  return ret;
+}
+
 class CDPAgentTest : public ::testing::Test {
  public:
   void handleRuntimeTask(RuntimeTask task) {
@@ -1998,6 +2017,244 @@ TEST_F(CDPAgentTest, DISABLED_TestBasicProfilerOperation) {
 
   // break out of loop
   stopFlag_.store(true);
+}
+
+TEST_F(CDPAgentTest, RuntimeCallFunctionOnObject) {
+  int msgId = 1;
+
+  // Start a script
+  sendAndCheckResponse("Runtime.enable", msgId++);
+  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
+  sendAndCheckResponse("Debugger.enable", msgId++);
+  scheduleScript(R"(debugger;)");
+  expectNotification("Debugger.scriptParsed");
+
+  auto pausedNote = ensurePaused(waitForMessage(), "other", {{"global", 0, 1}});
+
+  // create a new Object() that will be used as "this" below.
+  m::runtime::RemoteObjectId thisId;
+  {
+    sendRequest("Runtime.evaluate", msgId, [](::hermes::JSONEmitter &params) {
+      params.emitKeyValue("expression", "new Object()");
+      params.emitKeyValue("generatePreview", true);
+    });
+
+    auto resp = expectResponse(std::nullopt, msgId++);
+    thisId = jsonScope_.getString(resp, {"result", "result", "objectId"});
+  }
+
+  // expectedPropInfos are properties that are expected to exist in thisId.
+  // It is modified by addMember (below).
+  std::unordered_map<std::string, PropInfo> expectedPropInfos;
+
+  // Add __proto__ as it always exists.
+  expectedPropInfos.emplace("__proto__", PropInfo("object"));
+
+  /// addMember sends Runtime.callFunctionOn() requests with a function
+  /// declaration that simply adds a new property called \p propName with
+  /// type \p type to the remote object \p id. \p ca is the property's value.
+  /// The new property must not exist in \p id unless \p allowRedefinition is
+  /// true.
+  auto addMember = [&](const m::runtime::RemoteObjectId id,
+                       const char *type,
+                       const char *propName,
+                       m::runtime::CallArgument ca,
+                       bool allowRedefinition = false) {
+    auto it = expectedPropInfos.emplace(propName, PropInfo(type));
+
+    EXPECT_TRUE(allowRedefinition || it.second)
+        << "property \"" << propName << "\" redefined.";
+
+    if (ca.value) {
+      it.first->second.setValue(*ca.value);
+    }
+
+    if (ca.unserializableValue) {
+      it.first->second.setUnserializableValue(*ca.unserializableValue);
+    }
+
+    m::runtime::CallFunctionOnRequest req;
+    req.id = msgId;
+    req.functionDeclaration =
+        std::string("function(e){const r=\"") + propName + "\"; this[r]=e,r}";
+    req.arguments = std::vector<m::runtime::CallArgument>{};
+    req.arguments->push_back(std::move(ca));
+    req.objectId = thisId;
+
+    cdpAgent_->handleCommand(
+        serializeRuntimeCallFunctionOnRequest(std::move(req)));
+    expectResponse(std::nullopt, msgId++);
+  };
+
+  addMember(thisId, "boolean", "b", makeValueCallArgument("true"));
+  addMember(thisId, "number", "num", makeValueCallArgument("12"));
+  addMember(thisId, "string", "str", makeValueCallArgument("\"string value\""));
+  addMember(thisId, "object", "self_ref", makeObjectIdCallArgument(thisId));
+  addMember(
+      thisId, "number", "inf", makeUnserializableCallArgument("Infinity"));
+  addMember(
+      thisId, "number", "ni", makeUnserializableCallArgument("-Infinity"));
+  addMember(thisId, "number", "nan", makeUnserializableCallArgument("NaN"));
+
+  /// ensures that \p objId has all of the expected properties; Returns the
+  /// runtime::RemoteObjectId for the "self_ref" property (which must exist).
+  auto verifyObjShape = [&](const m::runtime::RemoteObjectId &objId)
+      -> std::optional<std::string> {
+    auto objProps = getAndEnsureProps(msgId++, objId, expectedPropInfos);
+    EXPECT_TRUE(objProps.count("__proto__"));
+    auto objPropIt = objProps.find("self_ref");
+    if (objPropIt == objProps.end()) {
+      EXPECT_TRUE(false) << "missing \"self_ref\" property.";
+      return {};
+    }
+    return objPropIt->second;
+  };
+
+  // Verify that thisId has the correct shape.
+  auto selfRefId = verifyObjShape(thisId);
+  ASSERT_TRUE(selfRefId);
+  // Then verify that the self reference has the correct shape. If thisId does
+  // not have the "self_ref" property the call to verifyObjShape will return an
+  // empty Optional, as well as report an error.
+  selfRefId = verifyObjShape(*selfRefId);
+  ASSERT_TRUE(selfRefId);
+
+  // Now we modify the self reference, which should cause thisId to change
+  // as well.
+  const bool kAllowRedefinition = true;
+
+  addMember(
+      *selfRefId,
+      "number",
+      "num",
+      makeValueCallArgument("42"),
+      kAllowRedefinition);
+
+  addMember(
+      *selfRefId, "number", "neg_zero", makeUnserializableCallArgument("-0"));
+
+  verifyObjShape(thisId);
+
+  // Let the script terminate
+  sendAndCheckResponse("Debugger.resume", msgId++);
+}
+
+TEST_F(CDPAgentTest, RuntimeCallFunctionOnExecutionContext) {
+  int msgId = 1;
+
+  // Start a script
+  sendAndCheckResponse("Runtime.enable", msgId++);
+  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
+  sendAndCheckResponse("Debugger.enable", msgId++);
+  scheduleScript(R"(debugger;)");
+  expectNotification("Debugger.scriptParsed");
+  auto pausedNote = ensurePaused(waitForMessage(), "other", {{"global", 0, 1}});
+
+  /// helper that returns a map with all of \p objId 's members.
+  auto getProps = [this, &msgId](const m::runtime::RemoteObjectId &objId) {
+    sendRequest(
+        "Runtime.getProperties", msgId++, [objId](::hermes::JSONEmitter &json) {
+          json.emitKeyValue("objectId", objId);
+        });
+    auto resp = parseRuntimeGetPropertiesResponse(waitForMessage());
+
+    std::unordered_map<std::string, std::optional<m::runtime::RemoteObject>>
+        properties;
+    for (auto &propertyDescriptor : resp.result) {
+      properties[propertyDescriptor.name] = std::move(propertyDescriptor.value);
+    }
+    return properties;
+  };
+
+  // globalThisId is the inspector's object Id for globalThis.
+  m::runtime::RemoteObjectId globalThisId;
+  {
+    sendRequest("Runtime.evaluate", msgId, [](::hermes::JSONEmitter &params) {
+      params.emitKeyValue("expression", "globalThis");
+      params.emitKeyValue("generatePreview", true);
+    });
+
+    auto resp = expectResponse(std::nullopt, msgId++);
+    globalThisId = jsonScope_.getString(resp, {"result", "result", "objectId"});
+  }
+
+  // This test table has all of the new fields we want to add to globalThis,
+  // plus the Runtime.CallArgument to be sent to the inspector.
+  struct {
+    const char *propName;
+    m::runtime::CallArgument callArg;
+  } tests[] = {
+      {"callFunctionOnTestMember1", makeValueCallArgument("10")},
+      {"callFunctionOnTestMember2", makeValueCallArgument("\"string\"")},
+      {"callFunctionOnTestMember3", makeUnserializableCallArgument("NaN")},
+      {"callFunctionOnTestMember4", makeUnserializableCallArgument("-0")},
+  };
+
+  // sanity-check that our test fields don't exist in global this.
+  {
+    auto currProps = getProps(globalThisId);
+    for (const auto &test : tests) {
+      EXPECT_EQ(currProps.count(test.propName), 0) << test.propName;
+    }
+  }
+
+  auto addMember = [this, &msgId](
+                       const char *propName, m::runtime::CallArgument &ca) {
+    m::runtime::CallFunctionOnRequest req;
+    req.id = msgId;
+    req.functionDeclaration =
+        std::string("function(e){const r=\"") + propName + "\"; this[r]=e,r}";
+    // Don't have an easy way to copy these, so...
+    req.arguments = std::vector<m::runtime::CallArgument>{};
+    req.arguments->push_back(std::move(ca));
+    req.executionContextId = 1;
+
+    cdpAgent_->handleCommand(
+        serializeRuntimeCallFunctionOnRequest(std::move(req)));
+    expectResponse(std::nullopt, msgId++);
+
+    // n.b. we're only borrowing the CallArgument, so give it back...
+    ca = std::move(req.arguments->at(0));
+  };
+
+  for (auto &test : tests) {
+    addMember(test.propName, test.callArg);
+  }
+
+  {
+    auto currProps = getProps(globalThisId);
+    for (const auto &test : tests) {
+      auto it = currProps.find(test.propName);
+
+      // there should be a property named test.propName in globalThis.
+      ASSERT_TRUE(it != currProps.end()) << test.propName;
+
+      // and it should have a value.
+      ASSERT_TRUE(it->second) << test.propName;
+
+      if (it->second->value.has_value()) {
+        // the property has a value, so make sure that's what's being expected.
+        auto actual = it->second->value;
+        auto expected = test.callArg.value;
+        ASSERT_TRUE(expected.has_value()) << test.propName;
+        ASSERT_TRUE(
+            jsonValsEQ(jsonScope_.parse(*actual), jsonScope_.parse(*expected)))
+            << test.propName;
+      } else if (it->second->unserializableValue.has_value()) {
+        // the property has an unserializable value, so make sure that's what's
+        // being expected.
+        auto actual = it->second->unserializableValue;
+        auto expected = test.callArg.unserializableValue;
+        ASSERT_TRUE(expected.has_value()) << test.propName;
+        EXPECT_EQ(*actual, *expected) << test.propName;
+      } else {
+        FAIL() << "No value or unserializable value in " << test.propName;
+      }
+    }
+  }
+
+  // Let the script terminate
+  sendAndCheckResponse("Debugger.resume", msgId++);
 }
 
 #endif // HERMES_ENABLE_DEBUGGER

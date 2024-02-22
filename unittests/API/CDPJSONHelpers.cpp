@@ -339,6 +339,19 @@ m::debugger::BreakpointId ensureSetBreakpointByUrlResponse(
   return resp.breakpointId;
 }
 
+std::string serializeRuntimeCallFunctionOnRequest(
+    const m::runtime::CallFunctionOnRequest &&req) {
+  return req.toJsonStr();
+}
+
+m::runtime::GetPropertiesResponse parseRuntimeGetPropertiesResponse(
+    const std::string &json) {
+  JSLexer::Allocator allocator;
+  JSONFactory factory(allocator);
+  return mustMake<m::runtime::GetPropertiesResponse>(
+      mustParseStrAsJsonObj(json, factory));
+}
+
 struct JSONScope::Private {
   Private() : allocator(), factory(allocator) {}
 
@@ -349,6 +362,10 @@ struct JSONScope::Private {
 JSONScope::JSONScope() : private_(std::make_unique<Private>()) {}
 
 JSONScope::~JSONScope() {}
+
+JSONValue *JSONScope::parse(const std::string &json) {
+  return mustParseStr(json, private_->factory);
+}
 
 JSONObject *JSONScope::parseObject(const std::string &json) {
   return mustParseStrAsJsonObj(json, private_->factory);

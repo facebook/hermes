@@ -258,6 +258,9 @@ void CDPAgentImpl::DomainAgents::handleCommand(
   } else if (command->method == "Runtime.evaluate") {
     runtimeAgent_->evaluate(
         static_cast<m::runtime::EvaluateRequest &>(*command));
+  } else if (command->method == "Runtime.callFunctionOn") {
+    runtimeAgent_->callFunctionOn(
+        static_cast<m::runtime::CallFunctionOnRequest &>(*command));
   } else if (command->method == "Profiler.start") {
     profilerAgent_->start(static_cast<m::profiler::StartRequest &>(*command));
   } else if (command->method == "Profiler.stop") {
