@@ -910,8 +910,7 @@ class FlowChecker::ExprVisitor {
     Type *res;
 
     if (node->_operator->str() == "=") {
-      auto [rtNarrow, cf] =
-          tryNarrowType(outer_.getNodeTypeOrAny(node->_right), lt);
+      auto [rtNarrow, cf] = tryNarrowType(rt, lt);
       if (!cf.canFlow) {
         outer_.sm_.error(
             node->getSourceRange(), "ft: incompatible assignment types");
