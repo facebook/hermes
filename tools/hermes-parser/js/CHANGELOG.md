@@ -1,3 +1,9 @@
+## 0.19.2
+
+### `hermes-parser`
+
+* Bug fixes in preparation of new feature rollout
+
 ## 0.19.1
 
 ### `hermes-eslint`
