@@ -10,11 +10,12 @@
 # Usage: genUnicodeTable.py
 
 import datetime
+from functools import reduce
 import hashlib
 import sys
 import urllib.request
 from string import Template
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 
 class UnicodeDataFiles:
@@ -131,16 +132,30 @@ struct UnicodeTransformRange {
     unsigned modulo:8;
 };
 
-/// A mapping entry from a name to a canonical name.
-struct NameMapEntry {
-    std::string_view name;
-    std::string_view canonical;
+/// A reference to a string pool entry.
+struct StringPoolRef {
+  unsigned offset:16;
+  unsigned size:16;
 };
 
-/// A mapping entry from a name to an array of UnicodeRange entries.
+/// A reference to a UnicodeRange pool entry.
+struct UnicodeRangePoolRef {
+  unsigned offset:16;
+  unsigned size:16;
+};
+
+/// A reference to a string pool name that maps to a string pool canonical name.
+struct NameMapEntry {
+    StringPoolRef name;
+    StringPoolRef canonical;
+};
+
+/// A reference to a string pool name that maps to a range array pool offset
+/// and size.
 struct RangeMapEntry {
-    std::string_view name;
-    llvh::ArrayRef<llvh::ArrayRef<UnicodeRange>> value;
+  StringPoolRef name;
+  unsigned rangeArrayPoolOffset:16;
+  unsigned rangeArraySize:16;
 };
 """,
         today=str(datetime.date.today()),
@@ -202,6 +217,8 @@ def print_categories(unicode_data_lines):
     categories = [
         "UNICODE_LETTERS Lu Ll Lt Lm Lo Nl",
         "UNICODE_COMBINING_MARK Mn Mc",
+        "UNICODE_DIGIT Nd",
+        "UNICODE_CONNECTOR_PUNCTUATION Pc",
     ]
     for cat in categories:
         run_interval(unicode_data_lines, cat.split())
@@ -309,95 +326,6 @@ def parse_codepoint_ranges(lines, pred):
     return ranges
 
 
-def print_property_ranges(property_ranges, cpp_name, get_args):
-    for canonical_name, ranges in property_ranges.items():
-        print_template(
-            """
-// Unicode properties: ${args}
-// static constexpr uint32_t ${name}_SIZE = $interval_count;
-static constexpr UnicodeRange ${name}[] = {
-${intervals}
-};
-        """,
-            args=" ".join(get_args(canonical_name)),
-            name=cpp_name(canonical_name),
-            interval_count=len(ranges),
-            intervals="\n".join(
-                f"{{ {hex(start)}, {hex(end)} }}," for (start, end) in ranges
-            ),
-        )
-
-
-def print_property_range_mapping(
-    var_name,
-    canonical_names,
-    cpp_name,
-    compound_properties={},
-    extra_entries={},
-    exclude_names=set(),
-):
-    all_canonical_names = sorted(
-        [name for name in canonical_names.keys() if name not in exclude_names]
-        + list(extra_entries.keys())
-    )
-
-    for canonical_name in all_canonical_names:
-        entries = [
-            "{{ {inner_name} }},".format(
-                # "{{ {inner_name}, std::size({inner_name}) }},".format(
-                inner_name=extra_entries.get(inner_name, cpp_name(inner_name))
-            )
-            for inner_name in sorted(
-                compound_properties.get(canonical_name, [canonical_name])
-            )
-        ]
-        print_template(
-            """
-    static constexpr llvh::ArrayRef<UnicodeRange> ${var_name}_${canonical_name}[] {
-    ${entries}
-    };
-    """,
-            var_name=var_name,
-            canonical_name=canonical_name,
-            entries="\n".join(entries),
-        )
-
-    entries = [
-        '{{ "{name}", {xxx} }},'.format(
-            name=canonical_name, xxx=f"{var_name}_{canonical_name}"
-        )
-        for canonical_name in all_canonical_names
-    ]
-
-    print_template(
-        """
-static constexpr RangeMapEntry ${var_name}[] = {
-${entries}
-};
-""",
-        var_name=var_name,
-        entries="\n".join(entries),
-    )
-
-
-def print_property_canonical_name_mapping(var_name, name_mapping):
-    print_template(
-        """
-static constexpr NameMapEntry ${var_name}[] = {
-${entries}
-};
-""",
-        var_name=var_name,
-        entries="\n".join(
-            sorted(
-                f'{{ "{other_name}", "{canonical_name}" }},'
-                for canonical_name, other_names in name_mapping.items()
-                for other_name in other_names
-            )
-        ),
-    )
-
-
 def parse_property_aliases(lines, get_canonical_name):
     property_aliases = {}
     for line in lines:
@@ -408,230 +336,428 @@ def parse_property_aliases(lines, get_canonical_name):
     return property_aliases
 
 
-def print_general_category_properties(
-    property_value_aliases_lines, derived_general_category_lines
-):
-    """
-    Allowed non-binary "General_Category" Unicode character properties.
-    """
-    property_aliases = parse_property_aliases(
-        property_value_aliases_lines,
-        get_canonical_name=lambda fields: fields[1] if fields[0] == "gc" else None,
-    )
+class UnicodePropertyCategory:
+    def __init__(self, parent=None):
+        self.parent = parent
+        self._aliases = {}
+        self._range_array_pool = OrderedDict()
 
-    known_keys = set(property_aliases.keys())
-    property_ranges = parse_codepoint_ranges(
-        derived_general_category_lines,
-        lambda canonical_name: canonical_name in known_keys,
-    )
+    def all_names(self):
+        # This is sorted so the C++ code can use a binary search.
+        return sorted(
+            {
+                (alias, name)
+                for name, aliases in self._aliases.items()
+                for alias in aliases
+            }
+        )
 
-    def cpp_name(name):
-        return "UNICODE_PROPERTY_GC_" + property_aliases[name][1].upper()
+    def range_array_pool(self):
+        # This is sorted so the C++ code can use a binary search.
+        return sorted(self._range_array_pool.items())
 
-    print_property_canonical_name_mapping(
-        "canonicalPropertyNameMap_GeneralCategory", property_aliases
-    )
+    def add_aliases(self, name, aliases):
+        if name in self._aliases:
+            raise ValueError(f"Duplicate name {name}")
+        elif name not in aliases:
+            raise ValueError(f"Canonical name {name} not in aliases")
+        self._aliases[name] = aliases
 
-    print_property_ranges(
-        property_ranges,
-        cpp_name,
-        get_args=lambda canonical_name: property_aliases[canonical_name],
-    )
+        if self.parent is not None:
+            self.parent.add_aliases(name, aliases)
 
-    # These General_Category properties are never directly associated with
-    # codepoints, but exist conceptually as unions of other properties.
-    #
-    # <https://www.unicode.org/reports/tr44/#General_Category_Values>
-    COMPOUND_GC_PROPERTIES = {
-        "C": ["Cc", "Cf", "Cn", "Co", "Cs"],
-        "L": ["Ll", "Lm", "Lo", "Lt", "Lu"],
-        "LC": ["Ll", "Lt", "Lu"],
-        "M": ["Mc", "Me", "Mn"],
-        "N": ["Nd", "Nl", "No"],
-        "P": ["Pc", "Pd", "Pe", "Pf", "Pi", "Po", "Ps"],
-        "S": ["Sc", "Sk", "Sm", "So"],
-        "Z": ["Zl", "Zp", "Zs"],
-    }
-    print_property_range_mapping(
-        "unicodePropertyRangeMap_GeneralCategory",
-        property_aliases,
-        cpp_name,
-        COMPOUND_GC_PROPERTIES,
-    )
+    def mark_range_pool(self, name, ranges=None):
+        if self.parent is not None:
+            self.parent.mark_range_pool(name, ranges)
 
+    def mark_range_array_pool(self, name, canonical_names):
+        if name in self._range_array_pool:
+            raise ValueError(f"Duplicate name {name}")
 
-def print_script_properties(property_value_aliases_lines, scripts_lines):
-    """
-    Allowed non-binary "Script" Unicode character properties.
-    """
-    property_aliases = parse_property_aliases(
-        property_value_aliases_lines,
-        get_canonical_name=lambda fields: fields[2] if fields[0] == "sc" else None,
-    )
+        size = len(canonical_names)
 
-    # This property is fiction, and is never directly referenced in the
-    # codepoint data. Instead, Katakana (Kana) and Hiragana (Hira) are used
-    # separately.
-    #
-    # <https://www.unicode.org/reports/tr44/#Allowed_Changes>
-    del property_aliases["Katakana_Or_Hiragana"]
-
-    known_keys = set(property_aliases.keys())
-    property_ranges = parse_codepoint_ranges(
-        scripts_lines,
-        lambda canonical_name: canonical_name in known_keys,
-    )
-
-    def cpp_name(canonical_name):
-        return "UNICODE_PROPERTY_SC_" + canonical_name.upper()
-
-    print_property_canonical_name_mapping(
-        "canonicalPropertyNameMap_Script", property_aliases
-    )
-
-    print_property_ranges(
-        property_ranges,
-        cpp_name,
-        get_args=lambda canonical_name: property_aliases[canonical_name],
-    )
-
-    print_property_range_mapping(
-        "unicodePropertyRangeMap_Script",
-        property_aliases,
-        cpp_name,
-        extra_entries={
-            "Unknown": "UNICODE_PROPERTY_GC_UNASSIGNED",
-        },
-        exclude_names="Unknown",
-    )
-
-
-def print_script_extensions_properties(
-    property_value_aliases_lines, script_extensions_lines
-):
-    """
-    Allowed non-binary "Script_Extensions" Unicode character properties.
-    """
-    property_aliases = parse_property_aliases(
-        property_value_aliases_lines,
-        get_canonical_name=lambda fields: fields[1] if fields[0] == "sc" else None,
-    )
-    reverse_property_aliases = parse_property_aliases(
-        property_value_aliases_lines,
-        get_canonical_name=lambda fields: fields[2] if fields[0] == "sc" else None,
-    )
-
-    raw_property_ranges = parse_codepoint_ranges(
-        script_extensions_lines, lambda _: True
-    )
-    property_ranges = defaultdict(list)
-    for key, ranges in raw_property_ranges.items():
-        for short_key in key.split():
-            canonical_name = property_aliases[short_key][1]
-            property_ranges[canonical_name].extend(ranges)
-
-    # Trim aliases that are not used.
-    for short_key, aliases in property_aliases.items():
-        canonical_name = aliases[1]
-        if canonical_name in reverse_property_aliases and not property_ranges.get(
-            aliases[1]
+        if all(
+            canonical_name in self._range_array_pool
+            for canonical_name in canonical_names
         ):
-            del reverse_property_aliases[canonical_name]
+            # This is an overlapping compound property, refer back to the first
+            # existing pool entry.
+            self._range_array_pool[name] = (
+                self._range_array_pool[canonical_names[0]][0],
+                size,
+            )
+        else:
+            self._range_array_pool[name] = (self.parent._range_array_pool_index, size)
+            for canonical_name in canonical_names:
+                self._range_array_pool[canonical_name] = (
+                    self.parent._range_array_pool_index,
+                    1,
+                )
+                self.parent._range_array_pool_index += 1
 
-    def cpp_name(canonical_name):
-        return "UNICODE_PROPERTY_SCX_" + canonical_name.upper()
-
-    # There is no canonical name mapping for Script_Extensions, instead the one
-    # for Script is reused.
-
-    print_property_ranges(
-        property_ranges, cpp_name, get_args=lambda name: reverse_property_aliases[name]
-    )
-
-    print_property_range_mapping(
-        "unicodePropertyRangeMap_ScriptExtensions",
-        reverse_property_aliases,
-        cpp_name,
-    )
+    def get_range(self, name):
+        return self.parent._range_pool.get(name)
 
 
-def print_binary_properties(
-    unicode_data_lines,
-    property_aliases_lines,
-    prop_list_lines,
-    derived_core_properties_lines,
-    derived_normalization_props_lines,
-    derived_binary_properties_lines,
-    emoji_data_lines,
-):
-    """
-    Allowed binary properties explicitly provided by ECMA262.
+class UnicodeProperties:
+    INCLUDE_COMMENTS = True
 
-    <https://tc39.es/ecma262/multipage/text-processing.html#table-binary-unicode-properties>
-    """
-    property_aliases = {
-        canonical_name: []
-        for canonical_name in "ASCII ASCII_Hex_Digit Alphabetic Bidi_Control Bidi_Mirrored "
-        "Case_Ignorable Cased Changes_When_Casefolded Changes_When_Casemapped "
-        "Changes_When_Lowercased Changes_When_NFKC_Casefolded "
-        "Changes_When_Titlecased Changes_When_Uppercased Dash "
-        "Default_Ignorable_Code_Point Deprecated Diacritic Emoji "
-        "Emoji_Component Emoji_Modifier Emoji_Modifier_Base Emoji_Presentation "
-        "Extended_Pictographic Extender Grapheme_Base Grapheme_Extend "
-        "Hex_Digit IDS_Binary_Operator IDS_Trinary_Operator ID_Continue "
-        "ID_Start Ideographic Join_Control Logical_Order_Exception Lowercase "
-        "Math Noncharacter_Code_Point Pattern_Syntax Pattern_White_Space "
-        "Quotation_Mark Radical Regional_Indicator Sentence_Terminal "
-        "Soft_Dotted Terminal_Punctuation Unified_Ideograph Uppercase "
-        "Variation_Selector White_Space XID_Continue XID_Start".split()
-    }
+    def __init__(self):
+        self.general_category_pool = UnicodePropertyCategory(parent=self)
+        self.binary_property_pool = UnicodePropertyCategory(parent=self)
+        self.script_property_pool = UnicodePropertyCategory(parent=self)
+        self.script_extensions_property_pool = UnicodePropertyCategory(parent=self)
+        self._names = set()
+        self._range_pool_index = 0
+        self._range_pool = OrderedDict()
+        self._range_array_pool_index = 0
+        self._metrics = defaultdict(lambda: 0)
 
-    for line in property_aliases_lines:
-        fields = split_fields(line)
-        canonical_name = fields[1]
-        if canonical_name in property_aliases:
-            assert (
-                len(property_aliases[canonical_name]) == 0
-            ), "Duplicate canonical name"
-            property_aliases[canonical_name] = list(set(fields))
+    def log_metrics(self):
+        print(
+            f"""
+string_offset_bits: {self._metrics['string_offset'].bit_length()}
+string_size_bits: {self._metrics['string_size'].bit_length()}
+range_pool_offset_bits: {self._metrics['range_pool_offset'].bit_length()}
+range_pool_size_bits: {self._metrics['range_pool_size'].bit_length()}
+range_array_pool_offset_bits: {self._metrics['range_array_pool_offset'].bit_length()}
+range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()}
+              """,
+            file=sys.stderr,
+        )
 
-    known_keys = set(property_aliases.keys())
-    pred = lambda canonical_name: canonical_name in known_keys
-    property_ranges = {
-        **parse_codepoint_ranges(prop_list_lines, pred),
-        **parse_codepoint_ranges(derived_core_properties_lines, pred),
-        **parse_codepoint_ranges(derived_normalization_props_lines, pred),
-        **parse_codepoint_ranges(derived_binary_properties_lines, pred),
-        **parse_codepoint_ranges(emoji_data_lines, pred),
-    }
+    def add_aliases(self, name, aliases):
+        self._names.add(name)
+        self._names.update(aliases)
 
-    # Manually add cases that are not part of the enumerations.
-    # <https://unicode.org/reports/tr18/#General_Category_Property>
-    property_aliases["ASCII"] = ["ASCII"]
-    property_ranges["ASCII"] = [(0x0, 0x7F)]
+    def mark_range_pool(self, name, ranges=None):
+        if name in self._range_pool:
+            raise ValueError(f"Duplicate name {name}")
 
-    property_aliases["Any"] = ["Any"]
-    property_ranges["Any"] = [(0x0, 0x10FFFF)]
+        self._range_pool[name] = (self._range_pool_index, ranges)
+        if ranges:
+            self._range_pool_index += len(ranges)
 
-    property_aliases["Assigned"] = ["Assigned"]
-    property_ranges["Assigned"] = get_assigned_codepoints(unicode_data_lines)
+    def gather_general_category_properties(self):
+        gc_property_aliases = parse_property_aliases(
+            UnicodeDataFiles.get_lines("PropertyValueAliases.txt"),
+            get_canonical_name=lambda fields: fields[1] if fields[0] == "gc" else None,
+        )
+        gc_property_ranges = parse_codepoint_ranges(
+            UnicodeDataFiles.get_lines("DerivedGeneralCategory.txt"),
+            lambda canonical_name: canonical_name in gc_property_aliases.keys(),
+        )
 
-    def cpp_name(canonical_name):
-        return "UNICODE_PROPERTY_BINARY_" + canonical_name.upper()
+        pool = self.general_category_pool
 
-    print_property_canonical_name_mapping(
-        "canonicalPropertyNameMap_BinaryProperty", property_aliases
-    )
+        # Update the string pool with the GC property names and aliases
+        for name, aliases in gc_property_aliases.items():
+            pool.add_aliases(name, aliases)
 
-    print_property_ranges(
-        property_ranges,
-        cpp_name,
-        get_args=lambda canonical_name: property_aliases[canonical_name],
-    )
+        # These General_Category properties are never directly associated with
+        # codepoints, but exist conceptually as unions of other properties.
+        #
+        # NOTE: It's important that any ranges shared by compound groups overlap,
+        #       so that the offset+size can be contiguous for each of them.
+        #
+        # <https://www.unicode.org/reports/tr44/#General_Category_Values>
+        COMPOUND_GC_PROPERTIES = {
+            "C": ["Cc", "Cf", "Cn", "Co", "Cs"],
+            "L": ["Ll", "Lt", "Lu", "Lm", "Lo"],
+            "LC": ["Ll", "Lt", "Lu"],
+            "M": ["Mc", "Me", "Mn"],
+            "N": ["Nd", "Nl", "No"],
+            "P": ["Pc", "Pd", "Pe", "Pf", "Pi", "Po", "Ps"],
+            "S": ["Sc", "Sk", "Sm", "So"],
+            "Z": ["Zl", "Zp", "Zs"],
+        }
 
-    print_property_range_mapping(
-        "unicodePropertyRangeMap_BinaryProperty", property_aliases, cpp_name
-    )
+        cat = "General_Category"
+        for compound_name, canonical_names in COMPOUND_GC_PROPERTIES.items():
+            pool.mark_range_pool((cat, compound_name))
+
+            for canonical_name in canonical_names:
+                ranges = gc_property_ranges[canonical_name]
+                if pool.get_range((cat, canonical_name)) is None:
+                    pool.mark_range_pool((cat, canonical_name), ranges)
+
+            pool.mark_range_array_pool(compound_name, canonical_names)
+
+        # Add any extra ranges that are not part of the compound groups.
+        for canonical_name, ranges in gc_property_ranges.items():
+            if pool.get_range((cat, canonical_name)) is None:
+                pool.mark_range_pool((cat, canonical_name), ranges)
+                pool.mark_range_array_pool(canonical_name, [canonical_name])
+
+    def gather_binary_properties(self):
+        """
+        Gather allowed binary properties explicitly provided by ECMA262.
+
+        <https://tc39.es/ecma262/multipage/text-processing.html#table-binary-unicode-properties>
+        """
+        binary_property_aliases = {
+            canonical_name: []
+            for canonical_name in "ASCII ASCII_Hex_Digit Alphabetic Bidi_Control Bidi_Mirrored "
+            "Case_Ignorable Cased Changes_When_Casefolded Changes_When_Casemapped "
+            "Changes_When_Lowercased Changes_When_NFKC_Casefolded "
+            "Changes_When_Titlecased Changes_When_Uppercased Dash "
+            "Default_Ignorable_Code_Point Deprecated Diacritic Emoji "
+            "Emoji_Component Emoji_Modifier Emoji_Modifier_Base Emoji_Presentation "
+            "Extended_Pictographic Extender Grapheme_Base Grapheme_Extend "
+            "Hex_Digit IDS_Binary_Operator IDS_Trinary_Operator ID_Continue "
+            "ID_Start Ideographic Join_Control Logical_Order_Exception Lowercase "
+            "Math Noncharacter_Code_Point Pattern_Syntax Pattern_White_Space "
+            "Quotation_Mark Radical Regional_Indicator Sentence_Terminal "
+            "Soft_Dotted Terminal_Punctuation Unified_Ideograph Uppercase "
+            "Variation_Selector White_Space XID_Continue XID_Start".split()
+        }
+
+        for line in UnicodeDataFiles.get_lines("PropertyAliases.txt"):
+            fields = split_fields(line)
+            canonical_name = fields[1]
+            if canonical_name in binary_property_aliases:
+                assert (
+                    len(binary_property_aliases[canonical_name]) == 0
+                ), "Duplicate canonical name"
+                binary_property_aliases[canonical_name] = list(set(fields))
+
+        pred = lambda canonical_name: canonical_name in binary_property_aliases.keys()
+        binary_property_ranges = {
+            **parse_codepoint_ranges(UnicodeDataFiles.get_lines("PropList.txt"), pred),
+            **parse_codepoint_ranges(
+                UnicodeDataFiles.get_lines("DerivedCoreProperties.txt"), pred
+            ),
+            **parse_codepoint_ranges(
+                UnicodeDataFiles.get_lines("DerivedNormalizationProps.txt"), pred
+            ),
+            **parse_codepoint_ranges(
+                UnicodeDataFiles.get_lines("DerivedBinaryProperties.txt"), pred
+            ),
+            **parse_codepoint_ranges(
+                UnicodeDataFiles.get_lines("emoji-data.txt"), pred
+            ),
+        }
+
+        # Manually add cases that are not part of the enumerations.
+        # <https://unicode.org/reports/tr18/#General_Category_Property>
+        binary_property_aliases["ASCII"] = ["ASCII"]
+        binary_property_ranges["ASCII"] = [(0x0, 0x7F)]
+
+        binary_property_aliases["Any"] = ["Any"]
+        binary_property_ranges["Any"] = [(0x0, 0x10FFFF)]
+
+        binary_property_aliases["Assigned"] = ["Assigned"]
+        binary_property_ranges["Assigned"] = get_assigned_codepoints(
+            UnicodeDataFiles.get_lines("UnicodeData.txt")
+        )
+
+        pool = self.binary_property_pool
+
+        # Update the string pool with the binary property names and aliases
+        for name, aliases in binary_property_aliases.items():
+            pool.add_aliases(name, aliases)
+
+        cat = "Binary"
+        for canonical_name, ranges in binary_property_ranges.items():
+            if pool.get_range((cat, canonical_name)) is None:
+                pool.mark_range_pool((cat, canonical_name), ranges)
+            pool.mark_range_array_pool(canonical_name, [canonical_name])
+
+    def gather_script_properties(self):
+        script_property_aliases = parse_property_aliases(
+            UnicodeDataFiles.get_lines("PropertyValueAliases.txt"),
+            get_canonical_name=lambda fields: fields[2] if fields[0] == "sc" else None,
+        )
+
+        # This property is fictional, and is never directly referenced in the
+        # codepoint data. Instead, Katakana (Kana) and Hiragana (Hira) are used
+        # separately.
+        #
+        # <https://www.unicode.org/reports/tr44/#Allowed_Changes>
+        del script_property_aliases["Katakana_Or_Hiragana"]
+
+        script_property_ranges = parse_codepoint_ranges(
+            UnicodeDataFiles.get_lines("Scripts.txt"),
+            lambda canonical_name: canonical_name in script_property_aliases,
+        )
+
+        pool = self.script_property_pool
+        # Update the string pool with the script property names and aliases
+        for name, aliases in script_property_aliases.items():
+            pool.add_aliases(name, aliases)
+
+        cat = "Script"
+        for canonical_name, ranges in script_property_ranges.items():
+            if pool.get_range((cat, canonical_name)) is None:
+                pool.mark_range_pool((cat, canonical_name), ranges)
+                pool.mark_range_array_pool(canonical_name, [canonical_name])
+
+        # Manually map the "Zzzz" / "Unknown" script property to the "Cn" /
+        # "Unassigned"  range.
+        pool._range_array_pool[
+            "Unknown"
+        ] = self.general_category_pool._range_array_pool["Cn"]
+
+    def gather_script_extension_properties(self):
+        script_property_aliases = parse_property_aliases(
+            UnicodeDataFiles.get_lines("PropertyValueAliases.txt"),
+            get_canonical_name=lambda fields: fields[1] if fields[0] == "sc" else None,
+        )
+        raw_property_ranges = parse_codepoint_ranges(
+            UnicodeDataFiles.get_lines("ScriptExtensions.txt"), lambda _: True
+        )
+        script_extensions_property_ranges = defaultdict(list)
+        for key, ranges in raw_property_ranges.items():
+            for short_key in key.split():
+                canonical_name = script_property_aliases[short_key][1]
+                script_extensions_property_ranges[canonical_name].extend(ranges)
+
+        pool = self.script_extensions_property_pool
+        # Update the string pool with the script property names and aliases
+        for name, aliases in script_property_aliases.items():
+            pool.add_aliases(name, aliases)
+
+        cat = "Script_Extensions"
+        for canonical_name, ranges in script_extensions_property_ranges.items():
+            if pool.get_range((cat, canonical_name)) is None:
+                pool.mark_range_pool((cat, canonical_name), ranges)
+            pool.mark_range_array_pool(canonical_name, [canonical_name])
+
+    def print_template(self):
+        all_strings = sorted(
+            self._names,
+            key=lambda name: (len(name), name),
+            reverse=True,
+        )
+        string_pool = reduce(
+            lambda acc, item: acc if item in acc else acc + item,
+            all_strings,
+            "",
+        )
+
+        def string_coord(name):
+            offset = string_pool.index(name)
+            size = len(name)
+            self._metrics["string_offset"] = max(self._metrics["string_offset"], offset)
+            self._metrics["string_size"] = max(self._metrics["string_size"], size)
+            assert offset + size < 0xFFFF, "String pool offset+size exceeds uint16_t"
+            return f"{{ {offset}, {size} }}"
+
+        def _range_pool():
+            for (cat, name), (offset, ranges) in self._range_pool.items():
+                if self.INCLUDE_COMMENTS:
+                    yield f"// {cat}: {name}"
+                if ranges:
+                    yield "".join(
+                        f"{{ {as_hex(start)}, {as_hex(end)} }},"
+                        for start, end in ranges
+                    )
+
+        def _range_array_pool():
+            for (cat, name), (offset, ranges) in self._range_pool.items():
+                if self.INCLUDE_COMMENTS:
+                    yield f"// {cat}: {name}"
+                if ranges is not None:
+                    size = len(ranges)
+                    assert (
+                        offset + size < 0xFFFF
+                    ), "Range array offset+size exceeds uint16_t"
+                    self._metrics["range_pool_offset"] = max(
+                        self._metrics["range_pool_offset"], offset
+                    )
+                    self._metrics["range_pool_size"] = max(
+                        self._metrics["range_pool_size"], size
+                    )
+                    yield f"{{ {offset}, {size} }},"
+
+        def _build_name_map(pool):
+            for alias, name in pool.all_names():
+                if self.INCLUDE_COMMENTS:
+                    yield f'// "{alias}", "{name}"'
+                yield f"{{ {string_coord(alias)}, {string_coord(name)} }},"
+
+        def _build_range_map(pool):
+            for name, (offset, size) in pool.range_array_pool():
+                if self.INCLUDE_COMMENTS:
+                    yield f'// "{name}"'
+                assert (
+                    offset + size < 0xFFFF
+                ), "Range array map offset+size exceeds uint16_t"
+                self._metrics["range_array_pool_offset"] = max(
+                    self._metrics["range_array_pool_offset"], offset
+                )
+                self._metrics["range_array_pool_size"] = max(
+                    self._metrics["range_array_pool_size"], size
+                )
+                yield f"{{ {string_coord(name)}, {offset}, {size} }},"
+
+        print_template(
+            """
+static constexpr std::string_view UNICODE_DATA_STRING_POOL = "${string_pool}";
+
+static constexpr UnicodeRange UNICODE_RANGE_POOL[] = {
+${range_pool}
+};
+
+static constexpr UnicodeRangePoolRef UNICODE_RANGE_ARRAY_POOL[] {
+${range_array_pool}
+};
+
+static constexpr NameMapEntry canonicalPropertyNameMap_GeneralCategory[] = {
+${name_map_general_category}
+};
+
+static constexpr RangeMapEntry unicodePropertyRangeMap_GeneralCategory[] = {
+${range_map_general_category}
+};
+
+static constexpr NameMapEntry canonicalPropertyNameMap_BinaryProperty[] = {
+${name_map_binary_property}
+};
+
+static constexpr RangeMapEntry unicodePropertyRangeMap_BinaryProperty[] = {
+${range_map_binary_property}
+};
+
+static constexpr NameMapEntry canonicalPropertyNameMap_Script[] = {
+${name_map_script_property}
+};
+
+static constexpr RangeMapEntry unicodePropertyRangeMap_Script[] = {
+${range_map_script_property}
+};
+
+static constexpr RangeMapEntry unicodePropertyRangeMap_ScriptExtensions[] = {
+${range_map_script_extensions_property}
+};
+    """,
+            string_pool=string_pool,
+            range_pool="\n".join(_range_pool()),
+            range_array_pool="\n".join(_range_array_pool()),
+            name_map_general_category="\n".join(
+                _build_name_map(self.general_category_pool)
+            ),
+            range_map_general_category="\n".join(
+                _build_range_map(self.general_category_pool)
+            ),
+            name_map_binary_property="\n".join(
+                _build_name_map(self.binary_property_pool)
+            ),
+            range_map_binary_property="\n".join(
+                _build_range_map(self.binary_property_pool)
+            ),
+            name_map_script_property="\n".join(
+                _build_name_map(self.script_property_pool)
+            ),
+            range_map_script_property="\n".join(
+                _build_range_map(self.script_property_pool)
+            ),
+            # NOTE: There is no canonical name mapping for Script_Extensions,
+            # instead the one for Script is reused.
+            range_map_script_extensions_property="\n".join(
+                _build_range_map(self.script_extensions_property_pool)
+            ),
+        )
 
 
 def stride_from(p1, p2):
@@ -802,27 +928,13 @@ if __name__ == "__main__":
     print_header()
 
     print_categories(UnicodeDataFiles.get_lines("UnicodeData.txt"))
-    print_general_category_properties(
-        UnicodeDataFiles.get_lines("PropertyValueAliases.txt"),
-        UnicodeDataFiles.get_lines("DerivedGeneralCategory.txt"),
-    )
-    print_script_properties(
-        UnicodeDataFiles.get_lines("PropertyValueAliases.txt"),
-        UnicodeDataFiles.get_lines("Scripts.txt"),
-    )
-    print_script_extensions_properties(
-        UnicodeDataFiles.get_lines("PropertyValueAliases.txt"),
-        UnicodeDataFiles.get_lines("ScriptExtensions.txt"),
-    )
-    print_binary_properties(
-        UnicodeDataFiles.get_lines("UnicodeData.txt"),
-        UnicodeDataFiles.get_lines("PropertyAliases.txt"),
-        UnicodeDataFiles.get_lines("PropList.txt"),
-        UnicodeDataFiles.get_lines("DerivedCoreProperties.txt"),
-        UnicodeDataFiles.get_lines("DerivedNormalizationProps.txt"),
-        UnicodeDataFiles.get_lines("DerivedBinaryProperties.txt"),
-        UnicodeDataFiles.get_lines("emoji-data.txt"),
-    )
+
+    unicode_properties = UnicodeProperties()
+    unicode_properties.gather_general_category_properties()
+    unicode_properties.gather_binary_properties()
+    unicode_properties.gather_script_properties()
+    unicode_properties.gather_script_extension_properties()
+    unicode_properties.print_template()
 
     casemap = CaseMap(
         unicode_data_lines=UnicodeDataFiles.get_lines("UnicodeData.txt"),
