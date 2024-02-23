@@ -32,8 +32,7 @@ declare module Foo {}
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "kind": "CommonJS"
+// CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
 declare module "Foo" {}
@@ -46,8 +45,7 @@ declare module "Foo" {}
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "kind": "CommonJS"
+// CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
 declare module Mod {
@@ -80,8 +78,7 @@ declare module Mod {
 // CHECK-NEXT:             "default": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "kind": "CommonJS"
+// CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
 declare module Mod {
@@ -104,8 +101,7 @@ declare module Mod {
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "kind": "ES"
+// CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
 declare module Mod {
@@ -166,8 +162,7 @@ declare module Mod {
 // CHECK-NEXT:             "default": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "kind": "ES"
+// CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
 declare module WithImport {
@@ -201,8 +196,7 @@ declare module WithImport {
 // CHECK-NEXT:             "importKind": "type"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "kind": "CommonJS"
+// CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
 declare module Bar {
@@ -239,8 +233,7 @@ declare module Bar {
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "kind": "CommonJS"
+// CHECK-NEXT:       }
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]
