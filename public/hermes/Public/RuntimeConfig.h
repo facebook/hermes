@@ -58,7 +58,7 @@ class PinnedHermesValue;
   F(constexpr, bool, OptimizedEval, false)                             \
                                                                        \
   /* Whether to emit async break check instructions in eval code */    \
-  F(constexpr, bool, AsyncBreakCheckInEval, false)                     \
+  F(constexpr, bool, AsyncBreakCheckInEval, true)                      \
                                                                        \
   /* Support for ES6 Promise. */                                       \
   F(constexpr, bool, ES6Promise, true)                                 \
