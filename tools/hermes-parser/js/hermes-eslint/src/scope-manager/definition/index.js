@@ -20,6 +20,7 @@ export * from './FunctionNameDefinition';
 export * from './HookNameDefinition';
 export * from './ImplicitGlobalVariableDefinition';
 export * from './ImportBindingDefinition';
+export * from './NamespaceNameDefinition';
 export * from './ParameterDefinition';
 export * from './TypeDefinition';
 export * from './TypeParameterDefinition';

@@ -31,6 +31,7 @@ import type {
   DeclareHook,
   DeclareInterface,
   DeclareModule,
+  DeclareNamespace,
   DeclareOpaqueType,
   DeclareTypeAlias,
   DeclareVariable,
@@ -896,6 +897,10 @@ class Referencer extends Visitor {
   }
 
   DeclareModuleExports(node: DeclareModuleExports): void {
+    this.visitType(node);
+  }
+
+  DeclareNamespace(node: DeclareNamespace): void {
     this.visitType(node);
   }
 
