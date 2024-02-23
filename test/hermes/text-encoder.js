@@ -14,3 +14,12 @@ print('TextEncoder');
 var encoder = new TextEncoder();
 print(Object.prototype.toString.call(encoder));
 // CHECK-NEXT: [object TextEncoder]
+
+const desc = Object.getOwnPropertyDescriptor(TextEncoder.prototype, 'encoding');
+print(desc.enumerable);
+// CHECK-NEXT: true
+print(desc.configurable);
+// CHECK-NEXT: true
+
+print(encoder.encoding);
+// CHECK-NEXT: utf-8

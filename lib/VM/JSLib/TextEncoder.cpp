@@ -25,6 +25,20 @@ Handle<JSObject> createTextEncoderConstructor(Runtime &runtime) {
       runtime.getPredefinedStringHandle(Predefined::TextEncoder),
       dpf);
 
+  // Based on
+  // Object.getOwnPropertyDescriptor(TextEncoder.prototype, 'encoding'), both
+  // Chrome and Safari have the 'encoding' property as enumerable and
+  // configurable. We set things up to be the same.
+  defineAccessor(
+      runtime,
+      textEncoderPrototype,
+      Predefined::getSymbolID(Predefined::encoding),
+      nullptr,
+      textEncoderPrototypeEncoding,
+      nullptr,
+      /* enumerable */ true,
+      /* configurable */ true);
+
   auto cons = defineSystemConstructor<JSObject>(
       runtime,
       Predefined::getSymbolID(Predefined::TextEncoder),
@@ -52,7 +66,41 @@ textEncoderConstructor(void *, Runtime &runtime, NativeArgs args) {
   }
 
   auto selfHandle = args.vmcastThis<JSObject>();
+
+  auto valueHandle = Runtime::getUndefinedValue();
+  if (LLVM_UNLIKELY(
+          JSObject::defineNewOwnProperty(
+              selfHandle,
+              runtime,
+              Predefined::getSymbolID(
+                  Predefined::InternalPropertyTextEncoderType),
+              PropertyFlags::defaultNewNamedPropertyFlags(),
+              valueHandle) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
   return selfHandle.getHermesValue();
+}
+
+CallResult<HermesValue>
+textEncoderPrototypeEncoding(void *, Runtime &runtime, NativeArgs args) {
+  GCScope gcScope{runtime};
+
+  auto selfHandle = args.dyncastThis<JSObject>();
+
+  NamedPropertyDescriptor desc;
+  bool exists = JSObject::getOwnNamedDescriptor(
+      selfHandle,
+      runtime,
+      Predefined::getSymbolID(Predefined::InternalPropertyTextEncoderType),
+      desc);
+  if (LLVM_UNLIKELY(!exists)) {
+    return runtime.raiseTypeError(
+        "TextEncoder.prototype.encoding called on non-TextEncoder object");
+  }
+
+  return HermesValue::encodeStringValue(
+      runtime.getPredefinedString(Predefined::utf8));
 }
 
 } // namespace vm

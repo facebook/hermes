@@ -31,6 +31,7 @@ NAMED_PROP(IntlNativeType)
 NAMED_PROP(NativeState)
 NAMED_PROP(ArrayBufferExternalFinalizer)
 NAMED_PROP(ExternalMemoryPressure)
+NAMED_PROP(TextEncoderType)
 
 #undef PROP
 #undef NAMED_PROP
