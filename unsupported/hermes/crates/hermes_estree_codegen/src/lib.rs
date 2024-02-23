@@ -9,4 +9,5 @@ mod codegen;
 
 pub use codegen::estree;
 pub use codegen::estree_hermes;
+pub use codegen::estree_hermes_mod;
 pub use codegen::estree_mod;

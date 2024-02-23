@@ -64,6 +64,25 @@ pub fn estree_hermes() -> String {
     )
 }
 
+/// Returns estree_herems that can be included indirectly
+pub fn estree_hermes_mod() -> String {
+    let src = include_str!("./ecmascript.json");
+    let grammar: Grammar = serde_json::from_str(src).unwrap();
+    let raw = grammar.codegen_hermes();
+    let in_mod = quote! {
+        pub mod generated {
+            #raw
+        }
+    };
+
+    let parsed = syn::parse_file(&in_mod.to_string()).unwrap();
+    format!(
+        "// {}generated\n{}",
+        '\u{0040}',
+        prettyplease::unparse(&parsed)
+    )
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Grammar {
