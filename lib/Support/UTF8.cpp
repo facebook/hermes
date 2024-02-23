@@ -85,6 +85,13 @@ bool convertUTF16ToUTF8WithReplacements(
       continue;
     }
 
+    // The following logic is a combination of ES14 11.1.4 CodePointAt() and
+    // what https://infra.spec.whatwg.org/#strings says about what to do with
+    // singular surrogates: "To convert a string into a scalar value string,
+    // replace any surrogates with U+FFFD." Therefore, if we encounter any lone
+    // surrogate, replace the value with UNICODE_REPLACEMENT_CHARACTER (U+FFFD).
+    // The result of this process is that the enclosing for-loop processes only
+    // scalar values (aka a code point that is not a surrogate).
     char32_t c32;
     if (isLowSurrogate(cur[0])) {
       // Unpaired low surrogate.
@@ -104,6 +111,8 @@ bool convertUTF16ToUTF8WithReplacements(
       c32 = c;
     }
 
+    // The code point to be converted here is guaranteed to be a valid unicode
+    // code point and not a surrogate. Because of the conversion above.
     char buff[UTF8CodepointMaxBytes];
     char *ptr = buff;
     encodeUTF8(ptr, c32);
