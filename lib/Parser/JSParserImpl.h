@@ -307,7 +307,6 @@ class JSParserImpl {
 #endif
 
 #if HERMES_PARSE_TS
-  UniqueString *namespaceIdent_;
   UniqueString *readonlyIdent_;
   UniqueString *neverIdent_;
   UniqueString *undefinedIdent_;
@@ -315,10 +314,8 @@ class JSParserImpl {
 #endif
 
 #if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+  UniqueString *namespaceIdent_;
   UniqueString *isIdent_;
-#endif
-
-#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
   UniqueString *inferIdent_;
 #endif
 
@@ -1205,6 +1202,7 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseDeclareClassFlow(SMLoc start);
   Optional<ESTree::Node *> parseDeclareExportFlow(SMLoc start);
   Optional<ESTree::Node *> parseDeclareModuleFlow(SMLoc start);
+  Optional<ESTree::Node *> parseDeclareNamespaceFlow(SMLoc start);
 
   Optional<ESTree::Node *> parseExportTypeDeclarationFlow(SMLoc start);
 

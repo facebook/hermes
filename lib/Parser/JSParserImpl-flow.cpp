@@ -111,6 +111,9 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFLow(SMLoc start) {
   if (check(moduleIdent_)) {
     return parseDeclareModuleFlow(start);
   }
+  if (check(namespaceIdent_)) {
+    return parseDeclareNamespaceFlow(start);
+  }
   if (check(TokenKind::rw_var, TokenKind::rw_const) || check(letIdent_)) {
     ESTree::NodeLabel kind = tok_->getResWordOrIdentifier();
     advance();
@@ -1128,6 +1131,54 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareModuleFlow(SMLoc start) {
 
   return setLocation(
       start, body, new (context_) ESTree::DeclareModuleNode(id, body));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseDeclareNamespaceFlow(SMLoc start) {
+  assert(check(namespaceIdent_));
+  advance(JSLexer::GrammarContext::Type);
+
+  // declare namespace Identifier {[opt]
+  //                   ^
+  if (!need(
+          TokenKind::identifier,
+          "in namespace declaration",
+          "start of declaration",
+          start))
+    return None;
+  ESTree::Node *id = setLocation(
+      tok_,
+      tok_,
+      new (context_)
+          ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
+  advance(JSLexer::GrammarContext::Type);
+
+  // declare namespace Identifier {
+  //                              ^
+  SMLoc bodyStart = tok_->getStartLoc();
+  if (!eat(
+          TokenKind::l_brace,
+          JSLexer::GrammarContext::Type,
+          "in namespace declaration",
+          "start of declaration",
+          start))
+    return None;
+
+  ESTree::NodeList declarations{};
+
+  while (!check(TokenKind::r_brace)) {
+    if (!parseStatementListItem(Param{}, AllowImportExport::Yes, declarations))
+      return None;
+  }
+
+  SMLoc bodyEnd = advance(JSLexer::GrammarContext::Type).End;
+
+  ESTree::Node *body = setLocation(
+      bodyStart,
+      bodyEnd,
+      new (context_) ESTree::BlockStatementNode(std::move(declarations)));
+
+  return setLocation(
+      start, body, new (context_) ESTree::DeclareNamespaceNode(id, body));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseDeclareClassFlow(SMLoc start) {

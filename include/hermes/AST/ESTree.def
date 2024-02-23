@@ -928,6 +928,10 @@ ESTREE_NODE_2_ARGS(
     DeclareModule, Flow,
     NodePtr, id, false,
     NodePtr, body, false)
+ESTREE_NODE_2_ARGS(
+    DeclareNamespace, Flow,
+    NodePtr, id, false,
+    NodePtr, body, false)
 ESTREE_NODE_1_ARGS(
     DeclareModuleExports, Flow,
     NodePtr, typeAnnotation, false)
