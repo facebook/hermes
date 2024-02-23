@@ -37,11 +37,21 @@ print(/\p{Decimal_Number}/u.exec("1"));
 print(/[\p{Decimal_Number}]+/u.exec("123"));
 // CHECK-NEXT: 123
 
+// Not a Unicode regex, so `\p` is just a literal.
 print(/\p{Nd}/.exec("p{Nd}"));
 // CHECK-NEXT: p{Nd}
-
 print(/\P{Nd}/.exec("P{Nd}"));
 // CHECK-NEXT: P{Nd}
+
+// Compound categories
+print(/\p{N}/u.exec("1"));
+// CHECK-NEXT: 1
+print(/\p{N}/u.exec("a"));
+// CHECK-NEXT: null
+print(/\p{L}/u.exec("a"));
+// CHECK-NEXT: a
+print(/\p{L}/u.exec("1"));
+// CHECK-NEXT: null
 
 // U+FFFF is unassigned (as of Unicode 15.1.0).
 print(hexCodePointAt(/\p{Unassigned}/u.exec("\u{FFFF}")[0]));
