@@ -1,3 +1,8 @@
+## 0.19.1
+
+### `hermes-eslint`
+* Scope analysis support for `DeclareNamespace` nodes
+
 ## 0.19.0
 
 ### `flow-api-translator`
