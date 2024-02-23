@@ -23,9 +23,8 @@ android {
         arguments "-DHERMES_FACEBOOK_BUILD=${rootProject.ext.facebookBuild}"
         arguments "-DANDROID_STL=c++_shared"
         arguments "-DANDROID_PIE=True"
-        arguments "-DANDROID_LD=lld"
         arguments "-DIMPORT_HERMESC=${rootProject.ext.hermesC}"
-        arguments "-DHERMES_SLOW_DEBUG=False"
+        arguments "-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True"
         arguments "-DHERMES_BUILD_SHARED_JSI=True"
         targets "libhermes"
       }
@@ -37,7 +36,7 @@ android {
 
   externalNativeBuild {
     cmake {
-      version "3.18.1"
+      version "3.22.1"
       path "../../CMakeLists.txt"
       buildStagingDirectory = "${rootProject.ext.hermes_ws}/staging/hermes"
       buildStagingDirectory.mkdirs()
