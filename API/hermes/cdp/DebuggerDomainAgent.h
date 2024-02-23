@@ -23,7 +23,6 @@ namespace cdp {
 
 namespace m = ::facebook::hermes::cdp::message;
 
-namespace {
 /// Details about a single Hermes breakpoint, implied by a CDP breakpoint.
 struct HermesBreakpoint {
   debugger::BreakpointID breakpointID;
@@ -67,7 +66,6 @@ struct HermesBreakpointLocation {
   debugger::BreakpointID id;
   debugger::SourceLocation location;
 };
-} // namespace
 
 /// Handler for the "Debugger" domain of CDP. Accepts events from the runtime,
 /// and CDP requests from the debug client belonging to the "Debugger" domain.
