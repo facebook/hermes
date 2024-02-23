@@ -16,11 +16,11 @@ jobs:
     steps:
       - name: Get current date
         id: date
-        run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
       - name: Get the target SHA
         id: targetSha
-        run: echo "::set-output name=targetSha::$(if [ -z "$TARGET_SHA" ]; then echo $GITHUB_SHA; else echo $TARGET_SHA; fi)"
+        run: echo "targetSha=$(if [ -z "$TARGET_SHA" ]; then echo $GITHUB_SHA; else echo $TARGET_SHA; fi)" >> $GITHUB_OUTPUT
         env:
           TARGET_SHA: ${{ github.event.inputs.targetSha }}
 
