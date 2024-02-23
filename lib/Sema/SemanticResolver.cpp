@@ -933,6 +933,14 @@ void SemanticResolver::visit(ComponentDeclarationNode *componentDecl) {
       componentDecl->_params);
 }
 
+void SemanticResolver::visit(HookDeclarationNode *hookDecl) {
+  visitFunctionLike(
+      hookDecl,
+      llvh::cast<ESTree::IdentifierNode>(hookDecl->_id),
+      hookDecl->_body,
+      hookDecl->_params);
+}
+
 #endif
 
 #if HERMES_PARSE_TS

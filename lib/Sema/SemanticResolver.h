@@ -231,6 +231,7 @@ class SemanticResolver
   void visit(ESTree::TypeCastExpressionNode *node);
   void visit(ESTree::AsExpressionNode *node);
   void visit(ESTree::ComponentDeclarationNode *componentDecl);
+  void visit(ESTree::HookDeclarationNode *hookDecl);
 #endif
 #if HERMES_PARSE_TS
   void visit(ESTree::TSTypeAliasDeclarationNode *node);
