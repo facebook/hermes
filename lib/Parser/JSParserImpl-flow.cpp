@@ -2244,7 +2244,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeofTypeAnnotationFlow() {
   }
 
   ESTree::Node *typeArguments = nullptr;
-  if (check(TokenKind::less)) {
+  if (check(TokenKind::less) && !lexer_.isNewLineBeforeCurrentToken()) {
     auto optTypeArgs = parseTypeArgsFlow();
     if (!optTypeArgs)
       return None;
