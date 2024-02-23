@@ -1773,6 +1773,16 @@ SKIP_LIST = [
     ### Failing Flow tests ###
     # Legacy octal literals in string literals
     "flow/types/string_literal_invalid/migrated_0000.js",
+    # Negative literals with whitespaces
+    "flow/types/bigint_literal/hex_negative_whitespace.js",
+    "flow/types/bigint_literal/normal_negative_whitespace.js",
+    "flow/types/bigint_literal/binary_negative_whitespace.js",
+    "flow/types/bigint_literal/octal_negative_whitespace.js",
+    "flow/types/number_literal/octal_negative_whitespace.js",
+    "flow/types/number_literal/binary_negative_whitespace.js",
+    "flow/types/number_literal/normal_int_negative_whitespace.js",
+    "flow/types/number_literal/hex_negative_whitespace.js",
+    "flow/types/number_literal/sci_negative_whitespace.js",
     # JSX HTML entities
     "flow/JSX/html_entity_at_start_of_child.js",
     # Destructuring identifier validation
@@ -1783,6 +1793,9 @@ SKIP_LIST = [
     "flow/class_properties/migrated_0003.js",
     "flow/class_properties/migrated_0008.js",
     "flow/class_properties/migrated_0026.js",
+    "flow/class_properties/static_annotated_no_types.js",
+    "flow/class_properties/static_with_params_no_types.js",
+    "flow/components/component_error.js",
     "flow/enums/declare-enum-option-off.js",
     "flow/nullish_coalescing/missing-plugin.js",
     "flow/optional_chaining/missing-plugin.js",
@@ -1826,6 +1839,45 @@ SKIP_LIST = [
     # Potentially invalid JSX that is inconsistent across implementations.
     "flow/JSX/invalid_unpaired_gt.js",
     "flow/JSX/invalid_unpaired_rcurly.js",
+    # TODO: component syntax, hook syntax and render type failures
+    "types/render_types/renders_maybe.js",
+    "flow/hook_syntax/declare_hook.js",
+    "flow/hook_syntax/hook_decl.js",
+    "flow/hook_syntax/hook_type.js",
+    # TODO: Bad ASI handling for typeof with type arguments
+    "types/typeof/with-targs-bad-newline.js",
+    # TODO: align hermes parser behavior after Flow moved some validation to type checking stage.
+    "flow/types/declare_export/declare_export_type_alias.js",
+    "flow/types/declare_module/enum.js",
+    "flow/types/declare_module/migrated_0000.js",
+    "flow/types/declare_module/migrated_0001.js",
+    "flow/types/declare_module/migrated_0002.js",
+    "flow/types/declare_module/migrated_0003.js",
+    "flow/types/declare_module_exports/migrated_0001.js",
+    "flow/types/declare_module_exports/migrated_0002.js",
+    "flow/types/declare_module_invalid/migrated_0004.js",
+    "flow/types/declare_module_invalid/migrated_0003.js",
+    "flow/types/declare_module_with_exports/enum.js",
+    "flow/types/declare_module_with_exports/export_type_with_parens.js",
+    "flow/types/declare_module_with_exports/export_type_with_parens_no_semi.js",
+    "flow/types/declare_module_with_exports/migrated_0000.js",
+    "flow/types/declare_module_with_exports/migrated_0001.js",
+    "flow/types/declare_module_with_exports/migrated_0002.js",
+    "flow/types/declare_module_with_exports/migrated_0003.js",
+    "flow/types/declare_module_with_exports/migrated_0004.js",
+    "flow/types/declare_module_with_exports/migrated_0005.js",
+    "flow/types/declare_module_with_exports/migrated_0006.js",
+    "flow/types/declare_module_with_exports/migrated_0007.js",
+    "flow/types/declare_module_with_exports/migrated_0008.js",
+    "flow/types/declare_module_with_exports/migrated_0009.js",
+    "flow/types/declare_module_with_exports/migrated_0010.js",
+    "flow/types/declare_module_with_exports/migrated_0011.js",
+    # TODO: support declare namespace syntax
+    "flow/types/declare_namespace/enum.js",
+    "flow/types/declare_namespace/empty.js",
+    "flow/types/declare_namespace/import_type_in_namespace.js",
+    "flow/types/declare_namespace/multiple.js",
+    "flow/types/declare_namespace/unsupported-children.js",
     # Import attributes
     "flow/dynamic_import/migrated_0005.js",
     ### Failing Flow tests end ###

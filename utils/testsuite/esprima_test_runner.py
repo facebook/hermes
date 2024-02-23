@@ -338,6 +338,7 @@ class EsprimaTestRunner:
         extra_args = []
         if "flow" in suite:
             extra_args.append("-parse-flow")
+            extra_args.append("-Xparse-component-syntax")
             extra_args.append("-parse-jsx")
             extra_args.append("-Xinclude-empty-ast-nodes")
         elif "JSX" in filename:
