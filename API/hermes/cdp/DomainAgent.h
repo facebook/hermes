@@ -29,10 +29,6 @@ namespace cdp {
 
 namespace m = ::facebook::hermes::cdp::message;
 
-/// Fixed execution context ID because Hermes doesn't currently support realms
-/// or Web Workers.
-static constexpr int32_t kHermesExecutionContextId = 1;
-
 /// A wrapper around std::function<void(...)> to make it safe to use from
 /// multiple threads. The wrapper implements an invalidate function so that one
 /// thread can clean up the underlying std::function in a thread-safe way.

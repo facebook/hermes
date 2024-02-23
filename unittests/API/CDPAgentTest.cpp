@@ -1473,14 +1473,6 @@ TEST_F(CDPAgentTest, TestRuntimeEnable) {
   // Verify enable gets an "OK" response
   sendAndCheckResponse("Runtime.enable", msgId++);
 
-  // Verify the hard-coded execution context is announced.
-  auto note = expectNotification("Runtime.executionContextCreated");
-  EXPECT_EQ(
-      jsonScope_.getNumber(note, {"params", "context", "id"}),
-      kHermesExecutionContextId);
-  EXPECT_EQ(
-      jsonScope_.getString(note, {"params", "context", "name"}), "hermes");
-
   // Verify disable gets an "OK" response
   sendAndCheckResponse("Runtime.disable", msgId++);
 }
@@ -1488,7 +1480,6 @@ TEST_F(CDPAgentTest, TestRuntimeEnable) {
 TEST_F(CDPAgentTest, RefuseDoubleRuntimeEnable) {
   int msgId = 1;
   sendAndCheckResponse("Runtime.enable", msgId++);
-  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
 
   // Verify enabling a second time fails
   sendParameterlessRequest("Runtime.enable", msgId);
@@ -1515,7 +1506,6 @@ TEST_F(CDPAgentTest, GetHeapUsage) {
   int msgId = 1;
 
   sendAndCheckResponse("Runtime.enable", msgId++);
-  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
 
   scheduleScript(R"(
     // Allocate some objects
@@ -1556,7 +1546,6 @@ TEST_F(CDPAgentTest, RuntimeGlobalLexicalScopeNames) {
   int msgId = 1;
 
   sendAndCheckResponse("Runtime.enable", msgId++);
-  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
 
   scheduleScript(R"(
     // Declare some globals to get the names of
@@ -1593,7 +1582,7 @@ TEST_F(CDPAgentTest, RuntimeGlobalLexicalScopeNames) {
       "Runtime.globalLexicalScopeNames",
       msgId,
       [](::hermes::JSONEmitter &json) {
-        json.emitKeyValue("executionContextId", kHermesExecutionContextId);
+        json.emitKeyValue("executionContextId", kTestExecutionContextId);
       });
 
   auto resp = expectResponse(std::nullopt, msgId++);
@@ -1615,7 +1604,6 @@ TEST_F(CDPAgentTest, RuntimeCompileScript) {
   int msgId = 1;
 
   sendAndCheckResponse("Runtime.enable", msgId++);
-  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
 
   // Compile a valid script
   sendRequest("Runtime.compileScript", msgId, [](::hermes::JSONEmitter &json) {
@@ -1633,7 +1621,6 @@ TEST_F(CDPAgentTest, RuntimeCompileScriptParseError) {
   int msgId = 1;
 
   sendAndCheckResponse("Runtime.enable", msgId++);
-  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
 
   // Compile an invalid script
   sendRequest("Runtime.compileScript", msgId, [](::hermes::JSONEmitter &json) {
@@ -1655,7 +1642,6 @@ TEST_F(CDPAgentTest, GetProperties) {
 
   // Start a script
   sendAndCheckResponse("Runtime.enable", msgId++);
-  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
   sendAndCheckResponse("Debugger.enable", msgId++);
   scheduleScript(R"(
     function foo() {
@@ -1752,7 +1738,6 @@ TEST_F(CDPAgentTest, GetPropertiesOnlyOwn) {
 
   // Start a script
   sendAndCheckResponse("Runtime.enable", msgId++);
-  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
   sendAndCheckResponse("Debugger.enable", msgId++);
   scheduleScript(R"(
     function foo() {
@@ -1811,7 +1796,6 @@ TEST_F(CDPAgentTest, RuntimeEvaluate) {
 
   // Start a script
   sendAndCheckResponse("Runtime.enable", msgId++);
-  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
   scheduleScript(R"(
     var globalVar = "omega";
     var booleanVar = true;
@@ -1881,7 +1865,6 @@ TEST_F(CDPAgentTest, RuntimeEvaluateWhilePaused) {
 
   // Start a script
   sendAndCheckResponse("Runtime.enable", msgId++);
-  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
   sendAndCheckResponse("Debugger.enable", msgId++);
   scheduleScript(R"(
     var inGlobalScope = 123;
@@ -1925,7 +1908,6 @@ TEST_F(CDPAgentTest, RuntimeEvaluateReturnByValue) {
 
   // Start a script
   sendAndCheckResponse("Runtime.enable", msgId++);
-  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
   scheduleScript(R"(while(!shouldStop());)");
 
   // We expect this JSON object to be evaluated and return by value, so
@@ -1962,7 +1944,6 @@ TEST_F(CDPAgentTest, RuntimeEvaluateException) {
 
   // Start a script
   sendAndCheckResponse("Runtime.enable", msgId++);
-  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
   scheduleScript(R"(while(!shouldStop()) {})");
 
   // Evaluate something that throws
@@ -2027,7 +2008,6 @@ TEST_F(CDPAgentTest, RuntimeCallFunctionOnObject) {
 
   // Start a script
   sendAndCheckResponse("Runtime.enable", msgId++);
-  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
   sendAndCheckResponse("Debugger.enable", msgId++);
   scheduleScript(R"(debugger;)");
   expectNotification("Debugger.scriptParsed");
@@ -2147,7 +2127,6 @@ TEST_F(CDPAgentTest, RuntimeCallFunctionOnExecutionContext) {
 
   // Start a script
   sendAndCheckResponse("Runtime.enable", msgId++);
-  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
   sendAndCheckResponse("Debugger.enable", msgId++);
   scheduleScript(R"(debugger;)");
   expectNotification("Debugger.scriptParsed");
@@ -2210,7 +2189,7 @@ TEST_F(CDPAgentTest, RuntimeCallFunctionOnExecutionContext) {
     // Don't have an easy way to copy these, so...
     req.arguments = std::vector<m::runtime::CallArgument>{};
     req.arguments->push_back(std::move(ca));
-    req.executionContextId = 1;
+    req.executionContextId = kTestExecutionContextId;
 
     cdpAgent_->handleCommand(
         serializeRuntimeCallFunctionOnRequest(std::move(req)));
