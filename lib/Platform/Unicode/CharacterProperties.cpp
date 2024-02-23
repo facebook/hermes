@@ -85,14 +85,13 @@ bool isUnicodeCombiningMark(uint32_t cp) {
 bool isUnicodeDigit(uint32_t cp) {
   // "any character in the Unicode category “Decimal number (Nd)”"
   // 0-9 is the common case.
-  return (cp >= '0' && cp <= '9') ||
-      lookup(UNICODE_PROPERTY_GC_DECIMAL_NUMBER, cp);
+  return (cp >= '0' && cp <= '9') || lookup(UNICODE_DIGIT, cp);
 };
 
 bool isUnicodeConnectorPunctuation(uint32_t cp) {
   // "any character in the Unicode category “Connector punctuation (Pc)"
   // _ is the common case.
-  return cp == '_' || lookup(UNICODE_PROPERTY_GC_CONNECTOR_PUNCTUATION, cp);
+  return cp == '_' || lookup(UNICODE_CONNECTOR_PUNCTUATION, cp);
 }
 
 static uint32_t applyTransform(const UnicodeTransformRange &r, uint32_t cp) {
@@ -212,17 +211,39 @@ uint32_t canonicalize(uint32_t cp, bool unicode) {
   }
 }
 
-/// Find a \p NameMapEntry or \p RangeMapEntry by matching \p name.
+/// Find a \p NameMapEntry by matching a string \p name.
 template <class T>
-const T *findUnicodeMapEntryByName(
-    const T *begin,
-    const T *end,
-    const std::string_view &name) {
-  auto it =
-      std::lower_bound(begin, end, name, [](const T &a, std::string_view b) {
-        return a.name < b;
+const T *
+findNameMapEntry(const T *begin, const T *end, const std::string_view &name) {
+  auto it = std::lower_bound(
+      begin, end, name, [](const T &a, const std::string_view &b) {
+        return UNICODE_DATA_STRING_POOL.compare(a.name.offset, a.name.size, b) <
+            0;
       });
-  if (it == end || it->name != name) {
+  if (it == end ||
+      UNICODE_DATA_STRING_POOL.compare(it->name.offset, it->name.size, name) !=
+          0) {
+    return end;
+  }
+  return it;
+}
+
+/// Find a \p RangeMapEntry by matching a \p StringPoolRef for the canonical
+/// name.
+template <class T>
+const T *
+findRangeMapEntry(const T *begin, const T *end, const StringPoolRef &poolRef) {
+  auto it = std::lower_bound(
+      begin, end, poolRef, [](const T &a, const StringPoolRef &b) {
+        return UNICODE_DATA_STRING_POOL.compare(
+                   a.name.offset,
+                   a.name.size,
+                   UNICODE_DATA_STRING_POOL,
+                   b.offset,
+                   b.size) < 0;
+      });
+  if (it == end ||
+      (it->name.offset != poolRef.offset && it->name.size != poolRef.size)) {
     return end;
   }
   return it;
@@ -234,93 +255,89 @@ bool addUnicodePropertyRanges(
     const std::string_view &propertyValue,
     bool inverted = false) {
   auto key = propertyName;
-  auto propertyRanges = unicodePropertyRangeMap_BinaryProperty;
-  auto propertyRangesEnd =
-      propertyRanges + std::size(unicodePropertyRangeMap_BinaryProperty);
-  auto canonicalPropertyNameMap = canonicalPropertyNameMap_BinaryProperty;
-  auto canonicalPropertyNameMapEnd = canonicalPropertyNameMap +
-      std::size(canonicalPropertyNameMap_BinaryProperty);
+  auto rangeMapStart = std::begin(unicodePropertyRangeMap_BinaryProperty);
+  auto rangeMapEnd = std::end(unicodePropertyRangeMap_BinaryProperty);
+  auto nameMapStart = std::begin(canonicalPropertyNameMap_BinaryProperty);
+  auto nameMapEnd = std::end(canonicalPropertyNameMap_BinaryProperty);
 
   if (propertyValue.empty()) {
     // There was no property value, this is either a binary property or a value
     // from General_Category, as per `LoneUnicodePropertyNameOrValue`.
-    if (findUnicodeMapEntryByName(
-            canonicalPropertyNameMap, canonicalPropertyNameMapEnd, key) ==
-        canonicalPropertyNameMapEnd) {
-      propertyRanges = unicodePropertyRangeMap_GeneralCategory;
-      propertyRangesEnd =
-          propertyRanges + std::size(unicodePropertyRangeMap_GeneralCategory);
-      canonicalPropertyNameMap = canonicalPropertyNameMap_GeneralCategory;
-      canonicalPropertyNameMapEnd = canonicalPropertyNameMap +
-          std::size(canonicalPropertyNameMap_GeneralCategory);
+    if (findNameMapEntry(nameMapStart, nameMapEnd, key) == nameMapEnd) {
+      rangeMapStart = std::begin(unicodePropertyRangeMap_GeneralCategory);
+      rangeMapEnd = std::end(unicodePropertyRangeMap_GeneralCategory);
+      nameMapStart = std::begin(canonicalPropertyNameMap_GeneralCategory);
+      nameMapEnd = std::end(canonicalPropertyNameMap_GeneralCategory);
     }
   } else {
     // There was a property value, assume the name is a category.
     key = propertyValue;
     if (propertyName == "General_Category" || propertyName == "gc") {
-      propertyRanges = unicodePropertyRangeMap_GeneralCategory;
-      propertyRangesEnd =
-          propertyRanges + std::size(unicodePropertyRangeMap_GeneralCategory);
-      canonicalPropertyNameMap = canonicalPropertyNameMap_GeneralCategory;
-      canonicalPropertyNameMapEnd = canonicalPropertyNameMap +
-          std::size(canonicalPropertyNameMap_GeneralCategory);
+      rangeMapStart = std::begin(unicodePropertyRangeMap_GeneralCategory);
+      rangeMapEnd = std::end(unicodePropertyRangeMap_GeneralCategory);
+      nameMapStart = std::begin(canonicalPropertyNameMap_GeneralCategory);
+      nameMapEnd = std::end(canonicalPropertyNameMap_GeneralCategory);
     } else if (propertyName == "Script" || propertyName == "sc") {
-      propertyRanges = unicodePropertyRangeMap_Script;
-      propertyRangesEnd =
-          propertyRanges + std::size(unicodePropertyRangeMap_Script);
-      canonicalPropertyNameMap = canonicalPropertyNameMap_Script;
-      canonicalPropertyNameMapEnd =
-          canonicalPropertyNameMap + std::size(canonicalPropertyNameMap_Script);
+      rangeMapStart = std::begin(unicodePropertyRangeMap_Script);
+      rangeMapEnd = std::end(unicodePropertyRangeMap_Script);
+      nameMapStart = std::begin(canonicalPropertyNameMap_Script);
+      nameMapEnd = std::end(canonicalPropertyNameMap_Script);
     } else if (propertyName == "Script_Extensions" || propertyName == "scx") {
       // Script_Extensions is a superset of Script.
       if (!addUnicodePropertyRanges(receiver, "Script", propertyValue)) {
         return false;
       }
-      propertyRanges = unicodePropertyRangeMap_ScriptExtensions;
-      propertyRangesEnd =
-          propertyRanges + std::size(unicodePropertyRangeMap_ScriptExtensions);
-      canonicalPropertyNameMap = canonicalPropertyNameMap_Script;
-      canonicalPropertyNameMapEnd =
-          canonicalPropertyNameMap + std::size(canonicalPropertyNameMap_Script);
+      rangeMapStart = std::begin(unicodePropertyRangeMap_ScriptExtensions);
+      rangeMapEnd = std::end(unicodePropertyRangeMap_ScriptExtensions);
+      nameMapStart = std::begin(canonicalPropertyNameMap_Script);
+      nameMapEnd = std::end(canonicalPropertyNameMap_Script);
     } else {
       return false;
     }
   }
 
   // Canonicalize the property name.
-  auto canonicalKey = findUnicodeMapEntryByName(
-      canonicalPropertyNameMap, canonicalPropertyNameMapEnd, key);
-  if (canonicalKey == canonicalPropertyNameMapEnd) {
+  auto canonicalNameEntry = findNameMapEntry(nameMapStart, nameMapEnd, key);
+  if (canonicalNameEntry == nameMapEnd) {
     return false;
   }
 
-  // Look up the property ranges table by the canonical name.
-  auto codepointTable = findUnicodeMapEntryByName(
-      propertyRanges, propertyRangesEnd, canonicalKey->canonical);
-  if (codepointTable == propertyRangesEnd) {
+  // Look up the range arrays for the property.
+  auto rangeMapEntry = findRangeMapEntry(
+      rangeMapStart, rangeMapEnd, canonicalNameEntry->canonical);
+  if (rangeMapEntry == rangeMapEnd) {
     return false;
   }
 
-  if (inverted) {
-    // When inverting the property, all of the ranges _around_ the
-    // property's ranges are added.
-    uint32_t last = 0;
-    for (const auto &ranges : codepointTable->value) {
-      for (const auto &range : ranges) {
-        receiver->add(CodePointRange{last, range.first - last});
-        last = range.second + 1;
+  auto rangeArrayPoolStart = std::next(
+      std::begin(UNICODE_RANGE_ARRAY_POOL),
+      rangeMapEntry->rangeArrayPoolOffset);
+  auto rangeArrayPoolEnd =
+      std::next(rangeArrayPoolStart, rangeMapEntry->rangeArraySize);
+
+  for (auto rangePoolRef = rangeArrayPoolStart;
+       rangePoolRef != rangeArrayPoolEnd;
+       ++rangePoolRef) {
+    auto rangePoolStart =
+        std::next(std::begin(UNICODE_RANGE_POOL), rangePoolRef->offset);
+    auto rangePoolEnd = std::next(rangePoolStart, rangePoolRef->size);
+
+    if (inverted) {
+      uint32_t last = 0;
+      for (auto range = rangePoolStart; range != rangePoolEnd; ++range) {
+        receiver->add(CodePointRange{last, range->first - last});
+        last = range->second + 1;
       }
-    }
-    // Add the final range.
-    receiver->add(CodePointRange{last, UNICODE_MAX_VALUE - last});
-  } else {
-    for (const auto &ranges : codepointTable->value) {
-      for (const auto &range : ranges) {
-        const uint32_t length = range.second - range.first + 1;
-        receiver->add(CodePointRange{range.first, length});
+      // Add the final range.
+      receiver->add(CodePointRange{last, UNICODE_MAX_VALUE - last});
+    } else {
+      for (auto range = rangePoolStart; range != rangePoolEnd; ++range) {
+        const uint32_t length = range->second - range->first + 1;
+        receiver->add(CodePointRange{range->first, length});
       }
     }
   }
+
   return true;
 }
 
