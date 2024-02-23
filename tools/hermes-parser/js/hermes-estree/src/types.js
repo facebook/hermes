@@ -189,6 +189,7 @@ export type ESNode =
   | TypeParameterInstantiation
   | ComponentDeclaration
   | ComponentParameter
+  | HookDeclaration
   | EnumDeclaration
   | EnumNumberBody
   | EnumStringBody
@@ -236,6 +237,7 @@ export type Statement =
   | DebuggerStatement
   | DeclareClass
   | DeclareComponent
+  | DeclareHook
   | DeclareVariable
   | DeclareEnum
   | DeclareFunction
@@ -251,6 +253,7 @@ export type Statement =
   | ForOfStatement
   | ForStatement
   | FunctionDeclaration
+  | HookDeclaration
   | IfStatement
   | InterfaceDeclaration
   | LabeledStatement
@@ -399,6 +402,15 @@ export interface ComponentDeclaration extends BaseNode {
   +id: Identifier;
   +params: $ReadOnlyArray<ComponentParameterAndRestElement>;
   +rendersType: null | RendersType;
+  +typeParameters: null | TypeParameterDeclaration;
+}
+
+export interface HookDeclaration extends BaseNode {
+  +type: 'HookDeclaration';
+  +id: Identifier;
+  +body: BlockStatement;
+  +params: $ReadOnlyArray<FunctionParameter>;
+  +returnType: null | TypeAnnotation;
   +typeParameters: null | TypeParameterDeclaration;
 }
 
@@ -1048,7 +1060,8 @@ export interface ImportNamespaceSpecifier extends BaseNode {
 export type DefaultDeclaration =
   | FunctionDeclaration
   | ClassDeclaration
-  | ComponentDeclaration;
+  | ComponentDeclaration
+  | HookDeclaration;
 export type NamedDeclaration =
   | DefaultDeclaration
   | VariableDeclaration
@@ -1144,6 +1157,7 @@ export type TypeAnnotationType =
   | TypeOperator
   | TypePredicate
   | FunctionTypeAnnotation
+  | HookTypeAnnotation
   | ComponentTypeAnnotation
   | ObjectTypeAnnotation
   | IndexedAccessType
@@ -1372,6 +1386,13 @@ export interface FunctionTypeParam extends BaseNode {
   +optional: boolean;
 
   +parent: FunctionTypeAnnotation;
+}
+export interface HookTypeAnnotation extends BaseNode {
+  +type: 'HookTypeAnnotation';
+  +params: $ReadOnlyArray<FunctionTypeParam>;
+  +returnType: TypeAnnotationType;
+  +rest: null | FunctionTypeParam;
+  +typeParameters: null | TypeParameterDeclaration;
 }
 
 export interface ComponentTypeAnnotation extends BaseNode {
@@ -1654,6 +1675,7 @@ export interface EnumDefaultedMember extends BaseNode {
 export type DeclaredNode =
   | DeclareClass
   | DeclareComponent
+  | DeclareHook
   | DeclareVariable
   | DeclareEnum
   | DeclareFunction
@@ -1683,6 +1705,16 @@ export interface DeclareComponent extends BaseNode {
   +rest: null | ComponentTypeParameter;
   +typeParameters: null | TypeParameterDeclaration;
   +rendersType: null | RendersType;
+}
+
+export interface DeclareHook extends BaseNode {
+  +type: 'DeclareHook';
+  // the hook signature is stored as a type annotation on the ID
+  +id: interface extends Identifier {
+    +typeAnnotation: interface extends TypeAnnotation {
+      +typeAnnotation: HookTypeAnnotation,
+    },
+  };
 }
 
 export interface DeclareVariable extends BaseNode {
@@ -1746,6 +1778,7 @@ export interface DeclareExportDefaultDeclaration
     | DeclareClass
     | DeclareFunction
     | DeclareComponent
+    | DeclareHook
     | TypeAnnotationType;
   +default: true;
   // default cannot have a source
@@ -1760,6 +1793,7 @@ export interface DeclareExportDeclarationNamedWithDeclaration
     | DeclareClass
     | DeclareFunction
     | DeclareComponent
+    | DeclareHook
     | DeclareInterface
     | DeclareOpaqueType
     | DeclareVariable

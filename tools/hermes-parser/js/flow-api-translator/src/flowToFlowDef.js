@@ -24,6 +24,7 @@ import type {
   ComponentTypeParameter,
   DeclareClass,
   DeclareComponent,
+  DeclareHook,
   DeclareFunction,
   DeclareOpaqueType,
   DeclareVariable,
@@ -36,6 +37,7 @@ import type {
   FunctionParameter,
   FunctionTypeAnnotation,
   FunctionTypeParam,
+  HookDeclaration,
   Identifier,
   ImportDeclaration,
   InterfaceDeclaration,
@@ -372,6 +374,10 @@ function convertStatement(
       const [result, deps] = convertComponentDeclaration(stmt, context);
       return [result, deps];
     }
+    case 'HookDeclaration': {
+      const [result, deps] = convertHookDeclaration(stmt, context);
+      return [result, deps];
+    }
     case 'FunctionDeclaration': {
       const [result, deps] = convertFunctionDeclaration(stmt, context);
       return [result, deps];
@@ -631,6 +637,19 @@ function convertExportDeclaration(
   switch (decl.type) {
     case 'ComponentDeclaration': {
       const [declDecl, deps] = convertComponentDeclaration(decl, context);
+      return [
+        opts.default
+          ? t.DeclareExportDefaultDeclaration({
+              declaration: declDecl,
+            })
+          : t.DeclareExportDeclarationNamedWithDeclaration({
+              declaration: declDecl,
+            }),
+        deps,
+      ];
+    }
+    case 'HookDeclaration': {
+      const [declDecl, deps] = convertHookDeclaration(decl, context);
       return [
         opts.default
           ? t.DeclareExportDefaultDeclaration({
@@ -1222,6 +1241,48 @@ function convertComponentParameters(
     },
     [[], null, []],
   );
+}
+
+function convertHookDeclaration(
+  hook: HookDeclaration,
+  context: TranslationContext,
+): TranslatedResult<DeclareHook> {
+  const id = hook.id;
+  const returnType: TypeAnnotation =
+    hook.returnType ??
+    // $FlowFixMe[incompatible-type]
+    t.TypeAnnotation({typeAnnotation: t.VoidTypeAnnotation()});
+
+  const [resultReturnType, returnDeps] = convertTypeAnnotation(
+    returnType,
+    hook,
+    context,
+  );
+
+  const [resultParams, restParam, paramsDeps] = convertFunctionParameters(
+    hook.params,
+    context,
+  );
+
+  const [resultTypeParams, typeParamsDeps] =
+    convertTypeParameterDeclarationOrNull(hook.typeParameters, context);
+
+  const resultFunc = t.FunctionTypeAnnotation({
+    params: resultParams,
+    returnType: resultReturnType,
+    rest: restParam,
+    typeParameters: resultTypeParams,
+  });
+
+  const funcDeps = [...paramsDeps, ...returnDeps, ...typeParamsDeps];
+
+  return [
+    t.DeclareHook({
+      name: id.name,
+      functionType: resultFunc,
+    }),
+    [...funcDeps],
+  ];
 }
 
 function convertFunctionDeclaration(

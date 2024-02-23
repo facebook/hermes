@@ -1529,7 +1529,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       "elementTypes"
     ],
     "TypeofTypeAnnotation": [
-      "argument"
+      "argument",
+      "typeArguments"
     ],
     "TypeAlias": [
       "id",
@@ -2037,6 +2038,22 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     "DeclareEnum": [
       "id",
       "body"
+    ],
+    "DeclareHook": [
+      "id"
+    ],
+    "HookDeclaration": [
+      "id",
+      "params",
+      "body",
+      "typeParameters",
+      "returnType"
+    ],
+    "HookTypeAnnotation": [
+      "params",
+      "returnType",
+      "rest",
+      "typeParameters"
     ],
     "InferTypeAnnotation": [
       "typeParameter"
@@ -2784,6 +2801,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           case "using":
           case "yield":
           case "let":
+          case "component":
+          case "hook":
           case "type": {
             const ancestorNeitherAsNorSatisfies = path.findAncestor(
               (node2) => !isBinaryCastExpression(node2)
@@ -3316,6 +3335,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     "DeclareExportAllDeclaration",
     "DeclareExportDeclaration",
     "DeclareFunction",
+    "DeclareHook",
     "DeclareInterface",
     "DeclareModule",
     "DeclareModuleExports",
@@ -3331,6 +3351,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     "ForOfStatement",
     "ForStatement",
     "FunctionDeclaration",
+    "HookDeclaration",
     "IfStatement",
     "ImportDeclaration",
     "InterfaceDeclaration",
@@ -6087,7 +6108,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     const isFlowShorthandWithOneArg = (isObjectTypePropertyAFunction(parent) || isTypeAnnotationAFunction(parent) || parent.type === "TypeAlias" || parent.type === "UnionTypeAnnotation" || parent.type === "TSUnionType" || parent.type === "IntersectionTypeAnnotation" || parent.type === "FunctionTypeAnnotation" && parent.returnType === functionNode) && parameters.length === 1 && parameters[0].name === null && // `type q = (this: string) => void;`
     functionNode.this !== parameters[0] && parameters[0].typeAnnotation && functionNode.typeParameters === null && isSimpleType(parameters[0].typeAnnotation) && !functionNode.rest;
     if (isFlowShorthandWithOneArg) {
-      if (options2.arrowParens === "always") {
+      if (options2.arrowParens === "always" || functionNode.type === "HookTypeAnnotation") {
         return ["(", ...printed, ")"];
       }
       return printed;
@@ -6404,6 +6425,20 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         (node, key) => key === "typeAnnotation" && node.type === "Identifier",
         (node, key) => key === "id" && node.type === "DeclareFunction"
       ) || /*
+      
+          /*
+          Flow
+      
+          ```js
+          declare hook foo(): void;
+                              ^^^^^^^^ `TypeAnnotation`
+          ```
+          */
+      path.match(
+        (node) => node.type === "TypeAnnotation",
+        (node, key) => key === "typeAnnotation" && node.type === "Identifier",
+        (node, key) => key === "id" && node.type === "DeclareHook"
+      ) || /*
           Flow
       
           ```js
@@ -6475,6 +6510,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   var flowDeclareNodeTypes = /* @__PURE__ */ new Set([
     "DeclareClass",
     "DeclareComponent",
+    "DeclareHook",
     "DeclareFunction",
     "DeclareVariable",
     "DeclareExportDeclaration",
@@ -6634,6 +6670,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     "DeclareComponent",
     "DeclareClass",
     "DeclareFunction",
+    "DeclareHook",
+    "HookDeclaration",
     "TSDeclareFunction",
     "EnumDeclaration"
   ]);
@@ -8666,7 +8704,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         parent
       } = path;
       const parentParent = path.grandparent;
-      if (!(parent.type === "ArrowFunctionExpression" || parent.type === "FunctionExpression" || parent.type === "FunctionDeclaration" || parent.type === "ComponentDeclaration" || parent.type === "ObjectMethod" || parent.type === "ClassMethod" || parent.type === "ClassPrivateMethod" || parent.type === "ForStatement" || parent.type === "WhileStatement" || parent.type === "DoWhileStatement" || parent.type === "DoExpression" || parent.type === "CatchClause" && !parentParent.finalizer || parent.type === "TSModuleDeclaration" || parent.type === "TSDeclareFunction" || node.type === "StaticBlock")) {
+      if (!(parent.type === "ArrowFunctionExpression" || parent.type === "FunctionExpression" || parent.type === "FunctionDeclaration" || parent.type === "ComponentDeclaration" || parent.type === "HookDeclaration" || parent.type === "ObjectMethod" || parent.type === "ClassMethod" || parent.type === "ClassPrivateMethod" || parent.type === "ForStatement" || parent.type === "WhileStatement" || parent.type === "DoWhileStatement" || parent.type === "DoExpression" || parent.type === "CatchClause" && !parentParent.finalizer || parent.type === "TSModuleDeclaration" || parent.type === "TSDeclareFunction" || node.type === "StaticBlock")) {
         parts.push(hardline);
       }
     }
@@ -9603,6 +9641,76 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return printed;
   }
 
+  // src/language-js/print/hook.js
+  function printHook(path, options2, print3) {
+    const { node } = path;
+    const parts = ["hook"];
+    if (node.id) {
+      parts.push(" ", print3("id"));
+    }
+    const parametersDoc = printFunctionParameters(
+      path,
+      print3,
+      options2,
+      false,
+      true
+    );
+    const returnTypeDoc = printReturnType(path, print3);
+    const shouldGroupParameters = shouldGroupFunctionParameters(
+      node,
+      returnTypeDoc
+    );
+    parts.push(
+      group([
+        shouldGroupParameters ? group(parametersDoc) : parametersDoc,
+        returnTypeDoc
+      ]),
+      node.body ? " " : "",
+      print3("body")
+    );
+    return parts;
+  }
+  function printDeclareHook(path, options2, print3) {
+    const { node } = path;
+    const parts = [printDeclareToken(path), "hook"];
+    if (node.id) {
+      parts.push(" ", print3("id"));
+    }
+    if (options2.semi) {
+      parts.push(";");
+    }
+    return parts;
+  }
+  function isDeclareHookTypeAnnotation(path) {
+    var _a;
+    const { node } = path;
+    return node.type === "HookTypeAnnotation" && ((_a = path.getParentNode(2)) == null ? void 0 : _a.type) === "DeclareHook";
+  }
+  function printHookTypeAnnotation(path, options2, print3) {
+    const { node } = path;
+    const parts = [];
+    parts.push(isDeclareHookTypeAnnotation(path) ? "" : "hook ");
+    let parametersDoc = printFunctionParameters(
+      path,
+      print3,
+      options2,
+      /* expandArg */
+      false,
+      /* printTypeParams */
+      true
+    );
+    const returnTypeDoc = [];
+    returnTypeDoc.push(
+      isDeclareHookTypeAnnotation(path) ? ": " : " => ",
+      print3("returnType")
+    );
+    if (shouldGroupFunctionParameters(node, returnTypeDoc)) {
+      parametersDoc = group(parametersDoc);
+    }
+    parts.push(parametersDoc, returnTypeDoc);
+    return group(parts);
+  }
+
   // src/language-js/print/flow.js
   function printFlow(path, options2, print3) {
     const { node } = path;
@@ -9619,6 +9727,12 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return printComponentParameter(path, options2, print3);
       case "ComponentTypeParameter":
         return printComponentTypeParameter(path, options2, print3);
+      case "HookDeclaration":
+        return printHook(path, options2, print3);
+      case "DeclareHook":
+        return printDeclareHook(path, options2, print3);
+      case "HookTypeAnnotation":
+        return printHookTypeAnnotation(path, options2, print3);
       case "DeclareClass":
         return printClass(path, options2, print3);
       case "DeclareFunction":

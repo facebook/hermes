@@ -181,6 +181,9 @@ export const HERMES_AST_VISITOR_KEYS = {
     id: 'Node',
     predicate: 'Node',
   },
+  DeclareHook: {
+    id: 'Node',
+  },
   DeclareInterface: {
     id: 'Node',
     typeParameters: 'Node',
@@ -310,6 +313,19 @@ export const HERMES_AST_VISITOR_KEYS = {
   },
   GenericTypeAnnotation: {
     id: 'Node',
+    typeParameters: 'Node',
+  },
+  HookDeclaration: {
+    id: 'Node',
+    params: 'NodeList',
+    body: 'Node',
+    typeParameters: 'Node',
+    returnType: 'Node',
+  },
+  HookTypeAnnotation: {
+    params: 'NodeList',
+    returnType: 'Node',
+    rest: 'Node',
     typeParameters: 'Node',
   },
   Identifier: {

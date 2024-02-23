@@ -28,6 +28,7 @@ const NODES_WITH_SPECIAL_HANDLING = new Set([
   'ClassDeclaration',
   'DeclareExportDeclaration',
   'DeclareFunction',
+  'DeclareHook',
   'ExportNamedDeclaration',
   'Identifier',
   'NullLiteral',

@@ -165,6 +165,7 @@ export function transformProgram(
         case 'TupleTypeLabeledElement':
         case 'TupleTypeSpreadElement':
         case 'ComponentTypeAnnotation':
+        case 'HookTypeAnnotation':
         case 'TypeOperator':
         case 'TypePredicate': {
           // Babel does not support these generic types, so convert to any

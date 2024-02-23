@@ -37,6 +37,9 @@ import type {
   DestructuringObjectProperty,
   VariableDeclaration,
   ModuleDeclaration,
+  DeclareHook,
+  DeclareFunction,
+  HookDeclaration,
   Statement,
   AssignmentPattern,
   BindingName,
@@ -589,6 +592,60 @@ function mapComponentDeclaration(node: ComponentDeclaration): {
   return {comp, forwardRefDetails};
 }
 
+function mapDeclareHook(node: DeclareHook): DeclareFunction {
+  return {
+    type: 'DeclareFunction',
+    id: {
+      type: 'Identifier',
+      name: node.id.name,
+      optional: node.id.optional,
+      typeAnnotation: {
+        type: 'TypeAnnotation',
+        typeAnnotation: {
+          type: 'FunctionTypeAnnotation',
+          this: null,
+          params: node.id.typeAnnotation.typeAnnotation.params,
+          typeParameters: node.id.typeAnnotation.typeAnnotation.typeParameters,
+          rest: node.id.typeAnnotation.typeAnnotation.rest,
+          returnType: node.id.typeAnnotation.typeAnnotation.returnType,
+          loc: node.id.typeAnnotation.typeAnnotation.loc,
+          range: node.id.typeAnnotation.typeAnnotation.range,
+          parent: node.id.typeAnnotation.typeAnnotation.parent,
+        },
+        loc: node.id.typeAnnotation.loc,
+        range: node.id.typeAnnotation.range,
+        parent: node.id.typeAnnotation.parent,
+      },
+      loc: node.id.loc,
+      range: node.id.range,
+      parent: node.id.parent,
+    },
+    loc: node.loc,
+    range: node.range,
+    parent: node.parent,
+    predicate: null,
+  };
+}
+
+function mapHookDeclaration(node: HookDeclaration): FunctionDeclaration {
+  const comp = {
+    type: 'FunctionDeclaration',
+    id: node.id && shallowCloneNode(node.id),
+    typeParameters: node.typeParameters,
+    params: node.params,
+    returnType: node.returnType,
+    body: node.body,
+    async: false,
+    generator: false,
+    predicate: null,
+    loc: node.loc,
+    range: node.range,
+    parent: node.parent,
+  };
+
+  return comp;
+}
+
 /**
  * Scan a list of statements and return the position of the
  * first statement that contains a reference to a given component
@@ -664,6 +721,11 @@ function mapStatementList(
         mapComponentDeclarationIntoList(node, newBody);
         break;
       }
+      case 'HookDeclaration': {
+        const decl = mapHookDeclaration(node);
+        newBody.push(decl);
+        break;
+      }
       case 'ExportNamedDeclaration': {
         if (node.declaration?.type === 'ComponentDeclaration') {
           mapComponentDeclarationIntoList(
@@ -703,6 +765,12 @@ function mapStatementList(
           break;
         }
 
+        if (node.declaration?.type === 'HookDeclaration') {
+          const comp = mapHookDeclaration(node.declaration);
+          newBody.push(comp);
+          break;
+        }
+
         newBody.push(node);
         break;
       }
@@ -713,6 +781,12 @@ function mapStatementList(
             newBody,
             componentOrRef => nodeWith(node, {declaration: componentOrRef}),
           );
+          break;
+        }
+
+        if (node.declaration?.type === 'HookDeclaration') {
+          const comp = mapHookDeclaration(node.declaration);
+          newBody.push(comp);
           break;
         }
 
@@ -738,6 +812,9 @@ export function transformProgram(
         case 'DeclareComponent': {
           return mapDeclareComponent(node);
         }
+        case 'DeclareHook': {
+          return mapDeclareHook(node);
+        }
         case 'Program':
         case 'BlockStatement': {
           return nodeWith(node, {body: mapStatementList(node.body)});
@@ -753,6 +830,13 @@ export function transformProgram(
           throw createSyntaxError(
             node,
             `Components must be defined at the top level of a module or within a ` +
+              `BlockStatement, instead got parent of "${node.parent?.type}".`,
+          );
+        }
+        case 'HookDeclaration': {
+          throw createSyntaxError(
+            node,
+            `Hooks must be defined at the top level of a module or within a ` +
               `BlockStatement, instead got parent of "${node.parent?.type}".`,
           );
         }

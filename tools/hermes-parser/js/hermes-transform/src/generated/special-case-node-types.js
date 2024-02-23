@@ -21,3 +21,4 @@ export * from './special-case-node-types/Literal';
 export * from './special-case-node-types/ObjectTypeProperty';
 export * from './special-case-node-types/misc';
 export * from './special-case-node-types/Property';
+export * from './special-case-node-types/DeclareHook';

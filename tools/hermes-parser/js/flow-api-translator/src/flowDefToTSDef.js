@@ -1034,6 +1034,23 @@ const getTransforms = (
             ];
           }
 
+          // TS doesn't support direct default export for declare'd functions
+          case 'DeclareHook': {
+            const functionDecl = transform.DeclareHook(declaration);
+            const name = declaration.id.name;
+            return [
+              functionDecl,
+              {
+                type: 'ExportDefaultDeclaration',
+                declaration: {
+                  type: 'Identifier',
+                  name,
+                },
+                exportKind: 'value',
+              },
+            ];
+          }
+
           // Flow's declare export default Identifier is ambiguous.
           // the Identifier might reference a type, or it might reference a value
           // - If it's a value, then that's all good, TS supports that.
@@ -1174,6 +1191,13 @@ const getTransforms = (
                 return [
                   {
                     declaration: transform.DeclareComponent(node.declaration),
+                    exportKind: 'value',
+                  },
+                ];
+              case 'DeclareHook':
+                return [
+                  {
+                    declaration: transform.DeclareHook(node.declaration),
                     exportKind: 'value',
                   },
                 ];
@@ -1377,6 +1401,29 @@ const getTransforms = (
         },
       ];
     },
+    DeclareHook(node: FlowESTree.DeclareHook): TSESTree.TSDeclareFunction {
+      // the hook params/returnType are stored as an annotation on the ID...
+      const id = transform.Identifier(node.id, false);
+      const functionInfo = transform.FunctionTypeAnnotation(
+        node.id.typeAnnotation.typeAnnotation,
+      );
+
+      return {
+        type: 'TSDeclareFunction',
+        async: false,
+        body: undefined,
+        declare: true,
+        expression: false,
+        generator: false,
+        id: {
+          type: 'Identifier',
+          name: id.name,
+        },
+        params: functionInfo.params,
+        returnType: functionInfo.returnType,
+        typeParameters: functionInfo.typeParameters,
+      };
+    },
     DeclareFunction(
       node: FlowESTree.DeclareFunction,
     ): TSESTree.TSDeclareFunction {
@@ -1557,6 +1604,7 @@ const getTransforms = (
         switch (node.declaration.type) {
           case 'ClassDeclaration':
           case 'ComponentDeclaration':
+          case 'HookDeclaration':
           case 'FunctionDeclaration':
           case 'VariableDeclaration':
             // These cases shouldn't happen in flow defs because they have their own special
@@ -1617,10 +1665,10 @@ const getTransforms = (
       };
     },
     FunctionTypeAnnotation(
-      node: FlowESTree.FunctionTypeAnnotation,
+      node: FlowESTree.FunctionTypeAnnotation | FlowESTree.HookTypeAnnotation,
     ): TSESTree.TSFunctionType {
       const params = node.params.map(transform.FunctionTypeParam);
-      if (node.this != null) {
+      if (node.type === 'FunctionTypeAnnotation' && node.this != null) {
         params.unshift({
           type: 'Identifier',
           name: 'this',
