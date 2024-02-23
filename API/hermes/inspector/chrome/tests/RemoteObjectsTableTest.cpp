@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-#include <hermes/cdp/RemoteObjectsTable.h>
+#include <hermes/inspector/chrome/RemoteObjectsTable.h>
 
 namespace facebook {
 namespace hermes {
@@ -18,15 +18,15 @@ namespace {
 
 struct TestContext {
   TestContext() {
-    scope1 = table.addScope(std::make_pair(1, 1), cdp::BacktraceObjectGroup);
-    scope2 = table.addScope(std::make_pair(2, 1), cdp::ConsoleObjectGroup);
+    scope1 = table.addScope(std::make_pair(1, 1), BacktraceObjectGroup);
+    scope2 = table.addScope(std::make_pair(2, 1), ConsoleObjectGroup);
     scope3 = table.addScope(std::make_pair(3, 1), "");
-    value1 = table.addValue(jsi::Value(1.5), cdp::BacktraceObjectGroup);
-    value2 = table.addValue(jsi::Value(2.5), cdp::BacktraceObjectGroup);
+    value1 = table.addValue(jsi::Value(1.5), BacktraceObjectGroup);
+    value2 = table.addValue(jsi::Value(2.5), BacktraceObjectGroup);
     value3 = table.addValue(jsi::Value(3.5), "");
   }
 
-  cdp::RemoteObjectsTable table;
+  RemoteObjectsTable table;
   std::string scope1;
   std::string scope2;
   std::string scope3;
@@ -62,11 +62,11 @@ TEST(RemoteObjectsTableTest, TestGetValue) {
 TEST(RemoteObjectsTableTest, TestGetObjectGroup) {
   TestContext ctx;
 
-  EXPECT_EQ(ctx.table.getObjectGroup(ctx.scope1), cdp::BacktraceObjectGroup);
-  EXPECT_EQ(ctx.table.getObjectGroup(ctx.scope2), cdp::ConsoleObjectGroup);
+  EXPECT_EQ(ctx.table.getObjectGroup(ctx.scope1), BacktraceObjectGroup);
+  EXPECT_EQ(ctx.table.getObjectGroup(ctx.scope2), ConsoleObjectGroup);
   EXPECT_EQ(ctx.table.getObjectGroup(ctx.scope3), "");
-  EXPECT_EQ(ctx.table.getObjectGroup(ctx.value1), cdp::BacktraceObjectGroup);
-  EXPECT_EQ(ctx.table.getObjectGroup(ctx.value2), cdp::BacktraceObjectGroup);
+  EXPECT_EQ(ctx.table.getObjectGroup(ctx.value1), BacktraceObjectGroup);
+  EXPECT_EQ(ctx.table.getObjectGroup(ctx.value2), BacktraceObjectGroup);
   EXPECT_EQ(ctx.table.getObjectGroup(ctx.value3), "");
 }
 
@@ -91,7 +91,7 @@ TEST(RemoteObjectsTableTest, TestReleaseObject) {
 TEST(RemoteObjectsTableTest, TestReleaseObjectGroup) {
   TestContext ctx;
 
-  ctx.table.releaseObjectGroup(cdp::BacktraceObjectGroup);
+  ctx.table.releaseObjectGroup(BacktraceObjectGroup);
   std::string scope4 = ctx.table.addScope(std::make_pair(4, 1), "");
   std::string value4 = ctx.table.addValue(jsi::Value(4.5), "");
 

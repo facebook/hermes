@@ -9,9 +9,9 @@
 
 #include <hermes/inspector/chrome/MessageConverters.h>
 #include <hermes/inspector/chrome/RemoteObjectConverters.h>
+#include <hermes/inspector/chrome/RemoteObjectsTable.h>
 #include <jsi/instrumentation.h>
 
-#include "RemoteObjectsTable.h"
 #include "RuntimeDomainAgent.h"
 
 namespace facebook {
@@ -257,7 +257,7 @@ RuntimeDomainAgent::RuntimeDomainAgent(
     int32_t executionContextID,
     HermesRuntime &runtime,
     SynchronizedOutboundCallback messageCallback,
-    std::shared_ptr<RemoteObjectsTable> objTable)
+    std::shared_ptr<old_cdp::RemoteObjectsTable> objTable)
     : DomainAgent(
           executionContextID,
           std::move(messageCallback),

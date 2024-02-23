@@ -137,7 +137,7 @@ m::debugger::CallFrame m::debugger::makeCallFrame(
     uint32_t callFrameIndex,
     const h::debugger::CallFrameInfo &callFrameInfo,
     const h::debugger::LexicalInfo &lexicalInfo,
-    cdp::RemoteObjectsTable &objTable,
+    RemoteObjectsTable &objTable,
     jsi::Runtime &runtime,
     const facebook::hermes::debugger::ProgramState &state) {
   m::debugger::CallFrame result;
@@ -153,7 +153,7 @@ m::debugger::CallFrame m::debugger::makeCallFrame(
     m::debugger::Scope scope;
     scope.type = "local";
     scope.object.objectId = objTable.addScope(
-        std::make_pair(callFrameIndex, 0), cdp::BacktraceObjectGroup);
+        std::make_pair(callFrameIndex, 0), BacktraceObjectGroup);
     scope.object.type = "object";
     scope.object.className = "Object";
     result.scopeChain.emplace_back(std::move(scope));
@@ -167,7 +167,7 @@ m::debugger::CallFrame m::debugger::makeCallFrame(
     // TODO: Get the parent closure's name
     scope.name = std::to_string(scopeIndex);
     scope.object.objectId = objTable.addScope(
-        std::make_pair(callFrameIndex, scopeIndex), cdp::BacktraceObjectGroup);
+        std::make_pair(callFrameIndex, scopeIndex), BacktraceObjectGroup);
     scope.object.type = "object";
     scope.object.className = "Object";
     result.scopeChain.emplace_back(std::move(scope));
@@ -178,7 +178,7 @@ m::debugger::CallFrame m::debugger::makeCallFrame(
     m::debugger::Scope scope;
     scope.type = "global";
     scope.object.objectId =
-        objTable.addValue(runtime.global(), cdp::BacktraceObjectGroup);
+        objTable.addValue(runtime.global(), BacktraceObjectGroup);
     scope.object.type = "object";
     scope.object.className = "Object";
     result.scopeChain.emplace_back(std::move(scope));
@@ -186,15 +186,14 @@ m::debugger::CallFrame m::debugger::makeCallFrame(
 
   result.thisObj.type = "object";
   result.thisObj.objectId = objTable.addValue(
-      state.getVariableInfoForThis(callFrameIndex).value,
-      cdp::BacktraceObjectGroup);
+      state.getVariableInfoForThis(callFrameIndex).value, BacktraceObjectGroup);
 
   return result;
 }
 
 std::vector<m::debugger::CallFrame> m::debugger::makeCallFrames(
     const h::debugger::ProgramState &state,
-    cdp::RemoteObjectsTable &objTable,
+    RemoteObjectsTable &objTable,
     jsi::Runtime &runtime) {
   const h::debugger::StackTrace &stackTrace = state.getStackTrace();
   uint32_t count = stackTrace.callFrameCount();
@@ -216,7 +215,7 @@ std::vector<m::debugger::CallFrame> m::debugger::makeCallFrames(
 m::runtime::RemoteObject m::runtime::makeRemoteObject(
     facebook::jsi::Runtime &runtime,
     const facebook::jsi::Value &value,
-    cdp::RemoteObjectsTable &objTable,
+    RemoteObjectsTable &objTable,
     const std::string &objectGroup,
     bool byValue,
     bool generatePreview) {

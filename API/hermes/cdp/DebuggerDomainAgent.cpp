@@ -21,7 +21,7 @@ DebuggerDomainAgent::DebuggerDomainAgent(
     HermesRuntime &runtime,
     AsyncDebuggerAPI &asyncDebugger,
     SynchronizedOutboundCallback messageCallback,
-    std::shared_ptr<RemoteObjectsTable> objTable)
+    std::shared_ptr<old_cdp::RemoteObjectsTable> objTable)
     : DomainAgent(
           executionContextID,
           std::move(messageCallback),

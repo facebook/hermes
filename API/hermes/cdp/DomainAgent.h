@@ -11,8 +11,8 @@
 #include <mutex>
 #include <string>
 
-#include <hermes/cdp/RemoteObjectsTable.h>
 #include <hermes/inspector/chrome/MessageTypes.h>
+#include <hermes/inspector/chrome/RemoteObjectsTable.h>
 
 #if defined(__clang__) && (!defined(SWIG)) && \
     defined(_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS)
@@ -78,7 +78,7 @@ class DomainAgent {
   DomainAgent(
       int32_t executionContextID,
       SynchronizedOutboundCallback messageCallback,
-      std::shared_ptr<RemoteObjectsTable> objTable)
+      std::shared_ptr<old_cdp::RemoteObjectsTable> objTable)
       : executionContextID_(executionContextID),
         messageCallback_(messageCallback),
         objTable_(objTable) {}
@@ -105,7 +105,7 @@ class DomainAgent {
   /// Callback function to send CDP response back to the debug client
   SynchronizedOutboundCallback messageCallback_;
 
-  std::shared_ptr<RemoteObjectsTable> objTable_;
+  std::shared_ptr<old_cdp::RemoteObjectsTable> objTable_;
 };
 
 } // namespace cdp
