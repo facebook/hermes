@@ -207,7 +207,7 @@ class Cursor {
       CodeUnit lo = forwards_ ? current_[1] : current_[-1];
       if (isHighSurrogate(hi) && isLowSurrogate(lo)) {
         current_ += forwards_ ? 2 : -2;
-        return decodeSurrogatePair(hi, lo);
+        return utf16SurrogatePairToCodePoint(hi, lo);
       }
     }
     return consume();

@@ -96,7 +96,7 @@ bool convertUTF16ToUTF8WithReplacements(
         c32 = UNICODE_REPLACEMENT_CHARACTER;
       } else {
         // Decode surrogate pair and increment, because we consumed two chars.
-        c32 = decodeSurrogatePair(cur[0], cur[1]);
+        c32 = utf16SurrogatePairToCodePoint(cur[0], cur[1]);
         ++cur;
       }
     } else {
