@@ -1841,9 +1841,6 @@ SKIP_LIST = [
     "flow/JSX/invalid_unpaired_rcurly.js",
     # TODO: component syntax, hook syntax and render type failures
     "types/render_types/renders_maybe.js",
-    "flow/hook_syntax/declare_hook.js",
-    "flow/hook_syntax/hook_decl.js",
-    "flow/hook_syntax/hook_type.js",
     # TODO: Bad ASI handling for typeof with type arguments
     "types/typeof/with-targs-bad-newline.js",
     # TODO: align hermes parser behavior after Flow moved some validation to type checking stage.
