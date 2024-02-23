@@ -597,9 +597,16 @@ void FlowChecker::visit(ESTree::ClassExpressionNode *node) {
   visitExpression(node->_superClass, node);
 
   auto *id = llvh::cast_or_null<ESTree::IdentifierNode>(node->_id);
-  Type *classType = flowContext_.createType();
+  Type *classType = flowContext_.createType(flowContext_.createClass(
+      id ? Identifier::getFromPointer(id->_name) : Identifier{}));
+
+  unsigned errorsBefore = sm_.getErrorCount();
   parseClassType(
       node->_superClass, node->_superTypeParameters, node->_body, classType);
+  if (sm_.getErrorCount() != errorsBefore) {
+    // Failed to parse class.
+    return;
+  }
 
   Type *consType =
       flowContext_.createType(flowContext_.createClassConstructor(classType));
@@ -667,7 +674,14 @@ void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
     auto optField = curClassContext_->getClassTypeInfo()
                         ->getHomeObjectTypeInfo()
                         ->findField(Identifier::getFromPointer(id->_name));
-    assert(optField.hasValue() && "method must have been registered");
+    if (!optField.hasValue()) {
+      // This only happens if the class failed to parse, avoid assertion
+      // failures (defensive programming).
+      sm_.error(
+          id->getSourceRange(),
+          llvh::Twine("ft: cannot find method: ") + id->_name->str());
+      return;
+    }
     Type *funcType = optField->getField()->type;
 
     // Typecheck overriding methods.
