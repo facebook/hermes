@@ -29,6 +29,26 @@ pub fn estree() -> String {
     )
 }
 
+/// Returns prettyplease-formatted Rust source for estree, can be included directly
+pub fn estree_mod() -> String {
+    let src = include_str!("./ecmascript.json");
+    let grammar: Grammar = serde_json::from_str(src).unwrap();
+    let raw = grammar.codegen();
+    let in_mod = quote! {
+        pub mod generated {
+            #raw
+        }
+    };
+
+    let parsed = syn::parse_file(&in_mod.to_string()).unwrap();
+
+    format!(
+        "// {}generated\n{}",
+        '\u{0040}',
+        prettyplease::unparse(&parsed)
+    )
+}
+
 /// Returns prettyplease-formatted Rust source for converting HermesParser results
 /// into estree
 pub fn estree_hermes() -> String {
