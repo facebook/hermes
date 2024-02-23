@@ -300,6 +300,7 @@ class JSParserImpl {
   UniqueString *assertsIdent_;
 
   UniqueString *componentIdent_;
+  UniqueString *hookIdent_;
   UniqueString *rendersIdent_;
   UniqueString *rendersMaybeOperator_;
   UniqueString *rendersStarOperator_;
@@ -525,6 +526,10 @@ class JSParserImpl {
     if (context_.getParseFlow()) {
       if (context_.getParseFlowComponentSyntax() &&
           checkComponentDeclarationFlow()) {
+        return true;
+      }
+      if (context_.getParseFlowComponentSyntax() &&
+          checkHookDeclarationFlow()) {
         return true;
       }
       if (check(opaqueIdent_)) {
@@ -1154,6 +1159,8 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseComponentDeclarationFlow(
       SMLoc start,
       bool declare);
+  bool checkHookDeclarationFlow();
+  Optional<ESTree::Node *> parseHookDeclarationFlow(SMLoc start);
 
   /// This is for parsing the `renders` clause that comes after component
   /// declarations, declared components, and component types, but not for

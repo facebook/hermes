@@ -161,6 +161,10 @@ void SemanticValidator::visit(ComponentDeclarationNode *componentDecl) {
       componentDecl->_params,
       componentDecl->_body);
 }
+/// Process a hook declaration by creating a new FunctionContext.
+void SemanticValidator::visit(HookDeclarationNode *hookDecl) {
+  visitFunction(hookDecl, hookDecl->_id, hookDecl->_params, hookDecl->_body);
+}
 #endif
 
 /// Ensure that the left side of for-in is an l-value.
@@ -804,6 +808,17 @@ void SemanticValidator::visitParamsAndBody(FunctionLikeNode *node) {
       }
       visitBody(fe->_body, fe);
       visitESTreeNode(*this, fe->_rendersType, fe);
+      break;
+    }
+    case NodeKind::HookDeclaration: {
+      auto *fe = cast<ESTree::HookDeclarationNode>(node);
+      visitESTreeNode(*this, fe->_id, fe);
+      for (auto &param : fe->_params) {
+        llvh::SaveAndRestore<bool> oldIsFormalParams{isFormalParams_, true};
+        visitESTreeNode(*this, &param, fe);
+      }
+      visitBody(fe->_body, fe);
+      visitESTreeNode(*this, fe->_returnType, fe);
       break;
     }
 #endif
