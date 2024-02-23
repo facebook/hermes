@@ -913,7 +913,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
     void invalidate() override {
 #ifdef ASSERT_ON_DANGLING_VM_REFS
       assert(
-          ((1 << 31) & refCount_) == 0 &&
+          ((1u << 31) & refCount_) == 0 &&
           "This PointerValue was left dangling after the Runtime was destroyed.");
 #endif
       dec();
@@ -951,7 +951,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       // dangling. Setting the second-top bit ensures that accidental
       // over-calling the dec() function doesn't clear the top bit without
       // complicating the implementation of dec().
-      refCount_ |= 0b11 << 30;
+      refCount_ |= 0b11u << 30;
     }
 #endif
 
