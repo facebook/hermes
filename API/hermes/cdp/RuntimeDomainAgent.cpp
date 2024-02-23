@@ -7,9 +7,9 @@
 
 #include <sstream>
 
-#include <hermes/inspector/chrome/MessageConverters.h>
-#include <hermes/inspector/chrome/RemoteObjectConverters.h>
-#include <hermes/inspector/chrome/RemoteObjectsTable.h>
+#include <hermes/cdp/MessageConverters.h>
+#include <hermes/cdp/RemoteObjectConverters.h>
+#include <hermes/cdp/RemoteObjectsTable.h>
 #include <jsi/instrumentation.h>
 
 #include "RuntimeDomainAgent.h"
@@ -17,8 +17,6 @@
 namespace facebook {
 namespace hermes {
 namespace cdp {
-
-using namespace facebook::hermes::inspector_modern::chrome;
 
 static const char *const kUserEnteredScriptIdPrefix = "userScript";
 static const char *const kEvaluatedCodeUrl = "?eval";
@@ -257,7 +255,7 @@ RuntimeDomainAgent::RuntimeDomainAgent(
     int32_t executionContextID,
     HermesRuntime &runtime,
     SynchronizedOutboundCallback messageCallback,
-    std::shared_ptr<old_cdp::RemoteObjectsTable> objTable)
+    std::shared_ptr<RemoteObjectsTable> objTable)
     : DomainAgent(
           executionContextID,
           std::move(messageCallback),

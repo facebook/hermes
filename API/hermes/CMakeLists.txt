@@ -14,6 +14,10 @@ if(HERMES_ENABLE_DEBUGGER)
   # Some inspector sources need to be built without RTTI because they consume
   # internal data structures compiled without RTTI.
   set(INSPECTOR_NO_EH_RTTI_SOURCES
+    cdp/JSONValueInterfaces.cpp
+    cdp/MessageConverters.cpp
+    cdp/MessageInterfaces.cpp
+    cdp/MessageTypes.cpp
     inspector/chrome/JSONValueInterfaces.cpp
     inspector/chrome/MessageConverters.cpp
     inspector/chrome/MessageInterfaces.cpp
@@ -32,10 +36,13 @@ if(HERMES_ENABLE_DEBUGGER)
 
   set(CDP_API_SOURCES
     cdp/CDPAgent.cpp
-    cdp/DebuggerDomainAgent.cpp
-    cdp/RuntimeDomainAgent.cpp
-    cdp/ProfilerDomainAgent.cpp
+    cdp/CallbackOStream.cpp
     cdp/ConsoleMessage.cpp
+    cdp/DebuggerDomainAgent.cpp
+    cdp/ProfilerDomainAgent.cpp
+    cdp/RemoteObjectConverters.cpp
+    cdp/RemoteObjectsTable.cpp
+    cdp/RuntimeDomainAgent.cpp
   )
 
   set(INSPECTOR_API_SOURCES

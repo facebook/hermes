@@ -11,8 +11,8 @@
 #include <mutex>
 #include <string>
 
-#include <hermes/inspector/chrome/MessageTypes.h>
-#include <hermes/inspector/chrome/RemoteObjectsTable.h>
+#include <hermes/cdp/MessageTypes.h>
+#include <hermes/cdp/RemoteObjectsTable.h>
 
 #if defined(__clang__) && (!defined(SWIG)) && \
     defined(_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS)
@@ -27,8 +27,7 @@ namespace facebook {
 namespace hermes {
 namespace cdp {
 
-namespace m = ::facebook::hermes::inspector_modern::chrome::message;
-namespace old_cdp = ::facebook::hermes::inspector_modern::chrome;
+namespace m = ::facebook::hermes::cdp::message;
 
 /// Fixed execution context ID because Hermes doesn't currently support realms
 /// or Web Workers.
@@ -78,7 +77,7 @@ class DomainAgent {
   DomainAgent(
       int32_t executionContextID,
       SynchronizedOutboundCallback messageCallback,
-      std::shared_ptr<old_cdp::RemoteObjectsTable> objTable)
+      std::shared_ptr<RemoteObjectsTable> objTable)
       : executionContextID_(executionContextID),
         messageCallback_(messageCallback),
         objTable_(objTable) {}
@@ -105,7 +104,7 @@ class DomainAgent {
   /// Callback function to send CDP response back to the debug client
   SynchronizedOutboundCallback messageCallback_;
 
-  std::shared_ptr<old_cdp::RemoteObjectsTable> objTable_;
+  std::shared_ptr<RemoteObjectsTable> objTable_;
 };
 
 } // namespace cdp

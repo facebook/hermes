@@ -5,8 +5,8 @@ set -e
 DIR=$(cd -P "$(dirname "$(readlink "${BASH_SOURCE[0]}" || echo "${BASH_SOURCE[0]}")")" && pwd)
 
 MSGTYPES_PATH="${DIR}/message_types.txt"
-HEADER_PATH="${DIR}/../chrome/MessageTypes.h"
-CPP_PATH="${DIR}/../chrome/MessageTypes.cpp"
+HEADER_PATH="${DIR}/../MessageTypes.h"
+CPP_PATH="${DIR}/../MessageTypes.cpp"
 
 FBSOURCE=$(hg root)
 CLANG_FORMAT="${FBSOURCE}/tools/third-party/clang-format/clang-format"

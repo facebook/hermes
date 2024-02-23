@@ -14,7 +14,7 @@ namespace facebook {
 namespace hermes {
 namespace cdp {
 
-namespace m = ::facebook::hermes::inspector_modern::chrome::message;
+namespace m = ::facebook::hermes::cdp::message;
 
 /// Handler for the "Runtime" domain of CDP. Accepts CDP requests belonging to
 /// the "Runtime" domain from the debug client. Produces CDP responses and
@@ -26,7 +26,7 @@ class RuntimeDomainAgent : public DomainAgent {
       int32_t executionContextID,
       HermesRuntime &runtime_,
       SynchronizedOutboundCallback messageCallback,
-      std::shared_ptr<old_cdp::RemoteObjectsTable> objTable);
+      std::shared_ptr<RemoteObjectsTable> objTable);
   ~RuntimeDomainAgent();
 
   /// Handles Runtime.enable request

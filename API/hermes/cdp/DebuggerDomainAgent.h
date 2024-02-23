@@ -12,8 +12,8 @@
 #include <string>
 
 #include <hermes/AsyncDebuggerAPI.h>
+#include <hermes/cdp/MessageConverters.h>
 #include <hermes/hermes.h>
-#include <hermes/inspector/chrome/MessageConverters.h>
 
 #include "DomainAgent.h"
 
@@ -21,7 +21,7 @@ namespace facebook {
 namespace hermes {
 namespace cdp {
 
-namespace m = ::facebook::hermes::inspector_modern::chrome::message;
+namespace m = ::facebook::hermes::cdp::message;
 
 namespace {
 /// Details about a single Hermes breakpoint, implied by a CDP breakpoint.
@@ -80,7 +80,7 @@ class DebuggerDomainAgent : public DomainAgent {
       HermesRuntime &runtime,
       debugger::AsyncDebuggerAPI &asyncDebugger,
       SynchronizedOutboundCallback messageCallback,
-      std::shared_ptr<old_cdp::RemoteObjectsTable> objTable_);
+      std::shared_ptr<RemoteObjectsTable> objTable_);
   ~DebuggerDomainAgent();
 
   /// Handles Debugger.enable request

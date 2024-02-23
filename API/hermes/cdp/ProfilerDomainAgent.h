@@ -8,8 +8,8 @@
 #ifndef HERMES_CDP_PROFILERDOMAINAGENT_H
 #define HERMES_CDP_PROFILERDOMAINAGENT_H
 
+#include <hermes/cdp/MessageConverters.h>
 #include <hermes/hermes.h>
-#include <hermes/inspector/chrome/MessageConverters.h>
 
 #include "DomainAgent.h"
 
@@ -25,7 +25,7 @@ class ProfilerDomainAgent : public DomainAgent {
       int32_t executionContextID,
       HermesRuntime &runtime,
       SynchronizedOutboundCallback messageCallback,
-      std::shared_ptr<old_cdp::RemoteObjectsTable> objTable);
+      std::shared_ptr<RemoteObjectsTable> objTable);
   ~ProfilerDomainAgent() = default;
 
   void start(const m::profiler::StartRequest &req);
