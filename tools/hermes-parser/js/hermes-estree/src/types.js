@@ -243,6 +243,7 @@ export type Statement =
   | DeclareFunction
   | DeclareInterface
   | DeclareModule
+  | DeclareNamespace
   | DeclareOpaqueType
   | DeclareTypeAlias
   | DoWhileStatement
@@ -1743,6 +1744,12 @@ export interface DeclareFunction extends BaseNode {
 export interface DeclareModule extends BaseNode {
   +type: 'DeclareModule';
   +id: StringLiteral | Identifier;
+  +body: BlockStatement;
+}
+
+export interface DeclareNamespace extends BaseNode {
+  +type: 'DeclareNamespace';
+  +id: Identifier;
   +body: BlockStatement;
 }
 

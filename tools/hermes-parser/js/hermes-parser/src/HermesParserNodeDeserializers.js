@@ -1303,7 +1303,14 @@ function deserializeDeclareModule() {
     loc: this.addEmptyLoc(),
     id: this.deserializeNode(),
     body: this.deserializeNode(),
-    kind: this.deserializeString(),
+  };
+}
+function deserializeDeclareNamespace() {
+  return {
+    type: 'DeclareNamespace',
+    loc: this.addEmptyLoc(),
+    id: this.deserializeNode(),
+    body: this.deserializeNode(),
   };
 }
 function deserializeDeclareModuleExports() {
@@ -2104,6 +2111,7 @@ module.exports = [
   deserializeDeclareExportDeclaration,
   deserializeDeclareExportAllDeclaration,
   deserializeDeclareModule,
+  deserializeDeclareNamespace,
   deserializeDeclareModuleExports,
   deserializeInterfaceExtends,
   deserializeClassImplements,

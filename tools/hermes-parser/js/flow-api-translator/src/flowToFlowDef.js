@@ -410,6 +410,7 @@ function convertStatement(
     case 'DeclareVariable':
     case 'DeclareFunction':
     case 'DeclareModule':
+    case 'DeclareNamespace':
     case 'DeclareInterface':
     case 'DeclareTypeAlias':
     case 'DeclareOpaqueType':
