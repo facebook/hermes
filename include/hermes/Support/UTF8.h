@@ -245,6 +245,16 @@ bool convertUTF16ToUTF8WithReplacements(
     llvh::ArrayRef<char16_t> input,
     size_t maxCharacters = 0);
 
+/// Convert a UTF-16 encoded string \p input to a pre-allocated UTF-8 buffer
+/// \p outBuffer of length \p outBufferLength, replacing unpaired surrogates
+/// halves with the Unicode replacement character.
+/// \return a std::pair with the first element being the number of UTF-16
+///   characters converted, and the second element being the number of UTF-8
+///   characters written
+std::pair<uint32_t, uint32_t> convertUTF16ToUTF8BufferWithReplacements(
+    llvh::MutableArrayRef<uint8_t> outBuffer,
+    llvh::ArrayRef<char16_t> input);
+
 } // namespace hermes
 
 #endif // HERMES_SUPPORT_UTF8_H
