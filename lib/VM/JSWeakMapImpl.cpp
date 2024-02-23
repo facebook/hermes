@@ -141,7 +141,7 @@ void JSWeakMapImplBase::_snapshotAddEdgesImpl(
         HeapSnapshot::EdgeType::Internal, "map", self->getMapID(gc));
   }
 
-  // Add edges to objects pointed by WeakRef keys.
+  // Add edges to objects pointed by WeakRef keys and its mapped values.
   uint32_t edge_index = 0;
   for (const auto &key : self->set_) {
     // Skip if the ref is not valid.
@@ -152,7 +152,24 @@ void JSWeakMapImplBase::_snapshotAddEdgesImpl(
     snap.addNamedEdge(
         HeapSnapshot::EdgeType::Weak,
         indexName,
-        gc.getObjectID(key.ref.getKeyNoBarrierUnsafe(gc.getPointerBase())));
+        gc.getObjectID(key.ref.getKeyNonNull(gc.getPointerBase(), gc)));
+
+    auto mappedValue = key.ref.getMappedValue(gc);
+    // TODO(T175014649): nodes for numbers may not exist since they are not seen
+    // by PrimitiveNodeAcceptor. We can't simply add them in
+    // _snapshotAddNodesImpl() either, because PrimitiveNodeAcceptor may see the
+    // same number in a heap object and the assertion of not writing duplicate
+    // node will fail.
+    if (mappedValue.isNumber()) {
+      continue;
+    }
+    if (auto id = gc.getSnapshotID(mappedValue)) {
+      snap.addNamedEdge(
+          HeapSnapshot::EdgeType::Internal,
+          // Add a suffix to distinguish key and value.
+          indexName + "[value]",
+          id.getValue());
+    }
   }
 }
 

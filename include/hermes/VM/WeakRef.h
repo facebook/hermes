@@ -130,9 +130,11 @@ class WeakMapEntryRef {
       : slot_(
             runtime.getHeap().allocWeakMapEntrySlot(key, value, ownerMapPtr)) {}
 
-  /// \return a pointer to the key object.
-  GCCell *getKeyNoBarrierUnsafe(PointerBase &base) const {
-    return slot_->key.getNoBarrierUnsafe(base);
+  /// \return a pointer to the key object with read barrier. This should not be
+  /// called when the weak ref key object is collected.
+  GCCell *getKeyNonNull(PointerBase &base, GC &gc) const {
+    assert(isKeyValid() && "tried to access collected weak ref object");
+    return slot_->key.getNonNull(base, gc);
   }
 
   /// \return The mapped value by the the key object.

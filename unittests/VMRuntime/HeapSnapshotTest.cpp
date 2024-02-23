@@ -882,8 +882,8 @@ TEST_F(HeapSnapshotRuntimeTest, WeakMapTest) {
           "JSWeakMap",
           mapID,
           map->getAllocatedSize(),
-          firstNamed + 2));
-  EXPECT_EQ(nodesAndEdges.second.size(), firstNamed + 2);
+          firstNamed + 3));
+  EXPECT_EQ(nodesAndEdges.second.size(), firstNamed + 3);
 
   // Test the native edge.
   const auto nativeMapID = map->getMapID(runtime.getHeap());
