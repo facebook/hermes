@@ -43,18 +43,6 @@ void wasm2c_hermes_instantiate(w2c_hermes*, struct w2c_env*, struct w2c_hermes__
 void wasm2c_hermes_free(w2c_hermes*);
 wasm_rt_func_type_t wasm2c_hermes_get_func_type(uint32_t param_count, uint32_t result_count, ...);
 
-/* import: 'env' '__syscall_lstat64' */
-u32 w2c_env_0x5F_syscall_lstat64(struct w2c_env*, u32, u32);
-
-/* import: 'env' '__syscall_newfstatat' */
-u32 w2c_env_0x5F_syscall_newfstatat(struct w2c_env*, u32, u32, u32, u32);
-
-/* import: 'env' '__syscall_stat64' */
-u32 w2c_env_0x5F_syscall_stat64(struct w2c_env*, u32, u32);
-
-/* import: 'env' '__syscall_unlinkat' */
-u32 w2c_env_0x5F_syscall_unlinkat(struct w2c_env*, u32, u32, u32);
-
 /* import: 'env' 'emscripten_notify_memory_growth' */
 void w2c_env_emscripten_notify_memory_growth(struct w2c_env*, u32);
 

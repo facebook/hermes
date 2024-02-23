@@ -2089,26 +2089,6 @@ extern "C" {
 #define WASI_CLOCKID_REALTIME 0
 #define WASI_CLOCKID_MONOTONIC 1
 
-/* import: 'env' '__syscall_lstat64' */
-u32 w2c_env_0x5F_syscall_lstat64(struct w2c_env *, u32, u32) {
-  return WASI_ENOSYS;
-}
-
-/* import: 'env' '__syscall_newfstatat' */
-u32 w2c_env_0x5F_syscall_newfstatat(struct w2c_env *, u32, u32, u32, u32) {
-  return WASI_ENOSYS;
-}
-
-/* import: 'env' '__syscall_stat64' */
-u32 w2c_env_0x5F_syscall_stat64(struct w2c_env *, u32, u32) {
-  return WASI_ENOSYS;
-}
-
-/* import: 'env' '__syscall_unlinkat' */
-u32 w2c_env_0x5F_syscall_unlinkat(struct w2c_env *, u32, u32, u32) {
-  return WASI_ENOSYS;
-}
-
 /* import: 'wasi_snapshot_preview1' 'environ_get' */
 u32 w2c_wasi__snapshot__preview1_environ_get(
     struct w2c_wasi__snapshot__preview1 *,
