@@ -280,7 +280,9 @@ llvh::ErrorOr<void *> vm_commit(void *p, size_t sz) {
   return result;
 }
 
-void vm_uncommit(void *, size_t) {}
+void vm_uncommit(void *p, size_t sz) {
+  VirtualFree(p, sz, MEM_DECOMMIT);
+}
 
 void vm_hugepage(void *p, size_t sz) {
   assert(
