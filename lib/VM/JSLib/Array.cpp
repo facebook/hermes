@@ -123,6 +123,27 @@ Handle<JSObject> createArrayConstructor(Runtime &runtime) {
       (void *)IterationKind::Entry,
       arrayPrototypeIterator,
       0);
+  defineMethod(
+      runtime,
+      arrayPrototype,
+      Predefined::getSymbolID(Predefined::toReversed),
+      nullptr,
+      arrayPrototypeToReversed,
+      0);
+  defineMethod(
+      runtime,
+      arrayPrototype,
+      Predefined::getSymbolID(Predefined::toSpliced),
+      nullptr,
+      arrayPrototypeToSpliced,
+      2);
+  defineMethod(
+      runtime,
+      arrayPrototype,
+      Predefined::getSymbolID(Predefined::with),
+      nullptr,
+      arrayPrototypeWith,
+      2);
 
   auto propValue = runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
       arrayPrototype, runtime, Predefined::getSymbolID(Predefined::values)));
@@ -541,6 +562,26 @@ arrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
 }
 
+static inline CallResult<uint32_t>
+lengthOfArrayLike(Runtime &runtime, Handle<JSObject> O, Handle<JSArray> jsArr) {
+  if (LLVM_LIKELY(jsArr)) {
+    // Fast path for getting the length.
+    return JSArray::getLength(jsArr.get(), runtime);
+  }
+  // Slow path
+  CallResult<PseudoHandle<>> propRes = JSObject::getNamed_RJS(
+      O, runtime, Predefined::getSymbolID(Predefined::length));
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto lenRes = toLength(runtime, runtime.makeHandle(std::move(*propRes)));
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return lenRes->getNumber();
+}
+
 // 23.1.3.1
 CallResult<HermesValue>
 arrayPrototypeAt(void *, Runtime &runtime, NativeArgs args) {
@@ -554,23 +595,11 @@ arrayPrototypeAt(void *, Runtime &runtime, NativeArgs args) {
 
   // 2. Let len be ? LengthOfArrayLike(O).
   Handle<JSArray> jsArr = Handle<JSArray>::dyn_vmcast(O);
-  uint32_t len = 0;
-  if (LLVM_LIKELY(jsArr)) {
-    // Fast path for getting the length.
-    len = JSArray::getLength(jsArr.get(), runtime);
-  } else {
-    // Slow path
-    CallResult<PseudoHandle<>> propRes = JSObject::getNamed_RJS(
-        O, runtime, Predefined::getSymbolID(Predefined::length));
-    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    auto lenRes = toLength(runtime, runtime.makeHandle(std::move(*propRes)));
-    if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    len = lenRes->getNumber();
+  auto lenRes = lengthOfArrayLike(runtime, O, jsArr);
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
   }
+  auto len = lenRes.getValue();
 
   // 3. Let relativeIndex be ? ToIntegerOrInfinity(index).
   auto idx = args.getArgHandle(0);
@@ -3502,6 +3531,407 @@ arrayPrototypeIncludes(void *, Runtime &runtime, NativeArgs args) {
 
   // 8. Return false.
   return HermesValue::encodeBoolValue(false);
+}
+
+/// ES14.0 23.1.3.33
+CallResult<HermesValue>
+arrayPrototypeToReversed(void *, Runtime &runtime, NativeArgs args) {
+  GCScope gcScope{runtime};
+
+  // 1. Let O be ? ToObject(this value).
+  auto oRes = toObject(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(oRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto O = runtime.makeHandle<JSObject>(*oRes);
+
+  // 2. Let len be ? LengthOfArrayLike(O).
+  Handle<JSArray> jsArr = Handle<JSArray>::dyn_vmcast(O);
+  auto lenRes = lengthOfArrayLike(runtime, O, jsArr);
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto len = lenRes.getValue();
+
+  // 3. Let A be ArrayCreate(len).
+  auto ARes = JSArray::create(runtime, len, len);
+  if (LLVM_UNLIKELY(ARes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto A = ARes.getValue();
+
+  // 4. Let k be 0.
+  double k = 0;
+
+  MutableHandle<> kHandle{runtime};
+  MutableHandle<> fromHandle{runtime};
+  MutableHandle<> fromValueHandle{runtime};
+
+  auto marker = gcScope.createMarker();
+  // 5. Repeat, while k < len,
+  while (k < len) {
+    gcScope.flushToMarker(marker);
+
+    double from = len - k - 1;
+    // 5a. Let from be ! ToString(𝔽(len - k - 1)).
+    fromHandle = HermesValue::encodeUntrustedNumberValue(from);
+
+    // 5b. Let Pk be ! ToString(𝔽(k)).
+    kHandle = HermesValue::encodeTrustedNumberValue(k);
+
+    // 5c. Let fromValue be ? Get(O, from).
+    if (LLVM_LIKELY(jsArr)) {
+      const SmallHermesValue elm = jsArr->at(runtime, from);
+      // If the element is not empty, we can return it directly here.
+      // Otherwise, we must proceed to the slow path.
+      if (!elm.isEmpty()) {
+        fromValueHandle = elm.unboxToHV(runtime);
+      }
+    }
+    // Slow path
+    else {
+      CallResult<PseudoHandle<>> propRes =
+          JSObject::getComputed_RJS(O, runtime, fromHandle);
+      if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      fromValueHandle = propRes->getHermesValue();
+    }
+
+    // 5d. Perform ! CreateDataPropertyOrThrow(A, Pk, fromValue).
+    if (LLVM_UNLIKELY(
+            JSObject::defineOwnComputedPrimitive(
+                A,
+                runtime,
+                kHandle,
+                DefinePropertyFlags::getDefaultNewPropertyFlags(),
+                fromValueHandle,
+                PropOpFlags().plusThrowOnError()) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    // 5e. Set k to k + 1.
+    ++k;
+  }
+
+  return A.getHermesValue();
+}
+
+/// Copies \p count elements from \p from (or \p fromArr if is simple array)
+static inline CallResult<double> arrayCopyHelper(
+    Runtime &runtime,
+    GCScope &gcScope,
+    Handle<JSObject> from,
+    Handle<JSArray> fromArr,
+    uint32_t fromStartIndex,
+    Handle<JSArray> to,
+    uint32_t toStartIndex,
+    uint32_t count) {
+  MutableHandle<> fromIndexHandle{runtime};
+  MutableHandle<> toIndexHandle{runtime};
+  MutableHandle<> fromValueHandle{runtime};
+
+  auto marker = gcScope.createMarker();
+  double i = 0;
+
+  while (i < count) {
+    gcScope.flushToMarker(marker);
+    auto fromIndex = fromStartIndex + i;
+
+    if (LLVM_LIKELY(fromArr)) {
+      const SmallHermesValue elem = fromArr->at(runtime, fromIndex);
+      if (!elem.isEmpty()) {
+        fromValueHandle = elem.unboxToHV(runtime);
+      }
+    }
+    // Slow path
+    else {
+      fromIndexHandle = HermesValue::encodeTrustedNumberValue(fromIndex);
+
+      CallResult<PseudoHandle<>> propRes =
+          JSObject::getComputed_RJS(from, runtime, fromIndexHandle);
+      if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      fromValueHandle = propRes->getHermesValue();
+    }
+
+    toIndexHandle = HermesValue::encodeTrustedNumberValue(toStartIndex + i);
+
+    if (LLVM_UNLIKELY(
+            JSObject::defineOwnComputedPrimitive(
+                to,
+                runtime,
+                toIndexHandle,
+                DefinePropertyFlags::getDefaultNewPropertyFlags(),
+                fromValueHandle,
+                PropOpFlags().plusThrowOnError()) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    ++i;
+  }
+
+  return i;
+}
+
+/// ES14.0 23.1.3.35
+CallResult<HermesValue>
+arrayPrototypeToSpliced(void *, Runtime &runtime, NativeArgs args) {
+  GCScope gcScope{runtime};
+
+  // 1. Let O be ? ToObject(this value).
+  auto oRes = toObject(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(oRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto O = runtime.makeHandle<JSObject>(*oRes);
+
+  // 2. Let len be ? LengthOfArrayLike(O).
+  Handle<JSArray> jsArr = Handle<JSArray>::dyn_vmcast(O);
+  auto lenRes = lengthOfArrayLike(runtime, O, jsArr);
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double len = lenRes.getValue();
+
+  // 3. Let relativeIndex be ? ToIntegerOrInfinity(index).
+  auto relativeStartRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(relativeStartRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // Use double here, because ToInteger may return Infinity.
+  double relativeStart = relativeStartRes->getNumber();
+
+  // 4. If relativeStart is -∞, let actualStart be 0.
+  // 5. Else if relativeStart < 0, let actualStart be max(len + relativeStart,
+  // 0).
+  // 6. Else, let actualStart be min(relativeStart, len).
+  double actualStart = relativeStart < 0 ? std::max(len + relativeStart, 0.0)
+                                         : std::min(relativeStart, len);
+
+  uint32_t argCount = args.getArgCount();
+  uint64_t actualSkipCount;
+  uint64_t insertCount;
+
+  switch (argCount) {
+    // 8. If start is not present, then
+    case 0:
+      insertCount = 0;
+      // 8a. Let actualSkipCount be 0.
+      actualSkipCount = 0;
+      break;
+    // 9. Else if skipCount is not present, then
+    case 1:
+      insertCount = 0;
+      // 9a. Let actualSkipCount be len - actualStart.
+      actualSkipCount = len - actualStart;
+      break;
+    // 10. Else
+    default: {
+      // 10a. Let sc be ? ToIntegerOrInfinity(skipCount).
+      auto skipCountRes = toIntegerOrInfinity(runtime, args.getArgHandle(1));
+      if (LLVM_UNLIKELY(skipCountRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+
+      insertCount = argCount - 2;
+
+      // 10b. Let actualSkipCount be the result of clamping dc between 0 and len
+      // - actualStart.
+      actualSkipCount =
+          std::min(std::max(skipCountRes->getNumber(), 0.0), len - actualStart);
+    }
+  }
+
+  // 11. Let newLen be len + insertCount - actualSkipCount.
+  auto lenAfterInsert = len + insertCount - actualSkipCount;
+
+  // 12. If newLen > 253 - 1, throw a TypeError exception.
+  if (LLVM_UNLIKELY(
+          // lenAfterInsert < len ||
+          lenAfterInsert - actualSkipCount > (1LLU << 53) - 1)) {
+    return runtime.raiseTypeError(
+        "Array.prototype.toSpliced result out of space");
+  }
+
+  // 13. Let A be ArrayCreate(len).
+  auto ARes = JSArray::create(runtime, lenAfterInsert, lenAfterInsert);
+  if (LLVM_UNLIKELY(ARes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto A = ARes.getValue();
+
+  // 14. Let i be 0
+  double i = 0;
+  MutableHandle<> insertIndexHandle{runtime};
+
+  // 15. Let r be actualStart + actualSkipCount.
+  uint64_t r = actualStart + actualSkipCount;
+
+  uint64_t paramIndex = 2;
+
+  Handle<JSArray> fromArr = Handle<JSArray>::dyn_vmcast(O);
+
+  // 16a - 16d
+  // Copy elements from original array O from beginning until actualStart into
+  // new array A
+  auto copyRes =
+      arrayCopyHelper(runtime, gcScope, O, fromArr, 0, A, 0, actualStart);
+  if (LLVM_UNLIKELY(copyRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  i += copyRes.getValue();
+
+  // 17. For each element E of items, do
+  while (paramIndex < argCount) {
+    // 17a. Let Pi be ! ToString(𝔽(i)).
+    insertIndexHandle = HermesValue::encodeTrustedNumberValue(i);
+
+    // 17b. Perform ! CreateDataPropertyOrThrow(A, Pi, E).
+    if (LLVM_UNLIKELY(
+            JSObject::defineOwnComputedPrimitive(
+                A,
+                runtime,
+                insertIndexHandle,
+                DefinePropertyFlags::getDefaultNewPropertyFlags(),
+                args.getArgHandle(paramIndex),
+                PropOpFlags().plusThrowOnError()) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    // 17c. Set i to i + 1.
+    ++i;
+    ++paramIndex;
+  }
+
+  // 18a - 18f
+  // Copy remaining elements from original array O including skipCount into new
+  // array A
+  copyRes = arrayCopyHelper(
+      runtime, gcScope, O, fromArr, r, A, i, lenAfterInsert - i);
+  if (LLVM_UNLIKELY(copyRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  i += copyRes.getValue();
+
+  return A.getHermesValue();
+}
+
+/// ES14.0 23.1.3.39
+CallResult<HermesValue>
+arrayPrototypeWith(void *, Runtime &runtime, NativeArgs args) {
+  GCScope gcScope{runtime};
+
+  // 1. Let O be ? ToObject(this value).
+  auto oRes = toObject(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(oRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto O = runtime.makeHandle<JSObject>(*oRes);
+
+  // 2. Let len be ? LengthOfArrayLike(O).
+  Handle<JSArray> jsArr = Handle<JSArray>::dyn_vmcast(O);
+  auto lenRes = lengthOfArrayLike(runtime, O, jsArr);
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto len = lenRes.getValue();
+
+  // 3. Let relativeIndex be ? ToIntegerOrInfinity(index).
+  auto relativeIndexRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(relativeIndexRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // Use double here, because ToInteger may return Infinity.
+  double relativeIndex = relativeIndexRes->getNumber();
+
+  double actualIndex = 0;
+  // 4. If relativeIndex ≥ 0, let actualIndex be relativeIndex.
+  if (relativeIndex >= 0) {
+    actualIndex = relativeIndex;
+  }
+  // 5. Else, let actualIndex be len + relativeIndex.
+  else {
+    actualIndex = len + relativeIndex;
+  }
+
+  // 6. If actualIndex ≥ len or actualIndex < 0, throw a RangeError exception.
+  if (actualIndex < 0 || actualIndex >= len) {
+    return runtime.raiseRangeError("invalid or out-of-range index");
+  }
+
+  // 7. Let A be ArrayCreate(len).
+  auto ARes = JSArray::create(runtime, len, len);
+  if (LLVM_UNLIKELY(ARes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto A = ARes.getValue();
+
+  // 8. Let k be 0.
+  double k = 0;
+
+  MutableHandle<> kHandle{runtime};
+  MutableHandle<> fromValueHandle{runtime};
+
+  auto marker = gcScope.createMarker();
+  // 9. Repeat, while k < len,
+  while (k < len) {
+    gcScope.flushToMarker(marker);
+
+    // 9a. Let Pk be the result of ? Get(O, ! ToString(k)).
+    kHandle = HermesValue::encodeUntrustedNumberValue(k);
+    auto PkRes = JSObject::getComputed_RJS(O, runtime, kHandle);
+    if (LLVM_UNLIKELY(PkRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    // 9b. If k is actualIndex, let fromValue be value.
+    if (k == actualIndex) {
+      fromValueHandle = args.getArgHandle(1);
+    }
+    // 9c. Else, let fromValue be ? Get(O, Pk).
+    else {
+      if (LLVM_LIKELY(jsArr)) {
+        const SmallHermesValue elm = jsArr->at(runtime, k);
+        // If the element is not empty, we can return it directly here.
+        // Otherwise, we must proceed to the slow path.
+        if (!elm.isEmpty()) {
+          fromValueHandle = elm.unboxToHV(runtime);
+        }
+      }
+      // Slow path
+      else {
+        CallResult<PseudoHandle<>> propRes =
+            JSObject::getComputed_RJS(O, runtime, kHandle);
+        if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        fromValueHandle = propRes->getHermesValue();
+      }
+    }
+
+    // 9d. Perform ! CreateDataPropertyOrThrow(A, Pk, fromValue).
+    if (LLVM_UNLIKELY(
+            JSObject::defineOwnComputedPrimitive(
+                A,
+                runtime,
+                kHandle,
+                DefinePropertyFlags::getDefaultNewPropertyFlags(),
+                fromValueHandle,
+                PropOpFlags().plusThrowOnError()) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    // 9e. Set k to k + 1.
+    ++k;
+  }
+
+  return A.getHermesValue();
 }
 
 CallResult<HermesValue> arrayOf(void *, Runtime &runtime, NativeArgs args) {
