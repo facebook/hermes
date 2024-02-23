@@ -58,6 +58,14 @@ typedef struct SHJmpBuf SHJmpBuf;
 typedef struct SHLocals SHLocals;
 typedef struct SHUnit SHUnit;
 
+#ifdef __EMSCRIPTEN__
+/// In Emscripten builds, allow the integrator to provide a callback to
+/// synchronously notify the VM that a timeout has occurred. This should be
+/// checked whenever we check for timeouts.
+extern "C" bool test_wasm_host_timeout();
+extern "C" bool test_and_clear_wasm_host_timeout();
+#endif
+
 namespace hermes {
 // Forward declaration.
 class JSONEmitter;
@@ -1372,7 +1380,11 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
   /// \return whether any async break is requested or not.
   bool hasAsyncBreak() const {
-    return asyncBreakRequestFlag_.load(std::memory_order_relaxed) != 0;
+    return asyncBreakRequestFlag_.load(std::memory_order_relaxed) != 0
+#ifdef __EMSCRIPTEN__
+        || test_wasm_host_timeout()
+#endif
+        ;
   }
 
   /// \return whether async break was requested or not for \p reasonBits. Clear
@@ -1396,8 +1408,12 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// \return whether timeout async break was requested or not. Clear the
   /// timeout request bit afterward.
   bool testAndClearTimeoutAsyncBreakRequest() {
-    return testAndClearAsyncBreakRequest(
-        (uint8_t)AsyncBreakReasonBits::Timeout);
+    return testAndClearAsyncBreakRequest((uint8_t)AsyncBreakReasonBits::Timeout)
+#ifdef __EMSCRIPTEN__
+        // Avoid the short-circuiting logic to make sure we clear both.
+        | test_and_clear_wasm_host_timeout()
+#endif
+        ;
   }
 
   /// Request the interpreter loop to take an asynchronous break

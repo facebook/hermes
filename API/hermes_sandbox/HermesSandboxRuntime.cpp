@@ -852,6 +852,10 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
   /// causing a stack overflow.
   bool activeJSError_ = false;
 
+  /// Whether the integrator has requested we terminate execution with a timeout
+  /// exception.
+  std::atomic<bool> asyncTimeout_{false};
+
 #ifndef NDEBUG
   /// Counter to track heap allocations that cannot be managed by a LIFOAlloc.
   /// This helps ensure that these allocations are correctly cleaned up.
@@ -1622,6 +1626,24 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
     assert(numAllocs_ == 0 && "Dangling heap allocations.");
   }
 
+  void asyncTriggerTimeout() override {
+    asyncTimeout_.store(true, std::memory_order_relaxed);
+  }
+
+  /// Return true if an asynchronous timeout has been triggered.
+  bool testAsyncTimeout() {
+    return asyncTimeout_.load(std::memory_order_relaxed);
+  }
+
+  /// Clear the asynchronous timeout flag if it's set, and returns its value.
+  bool testAndClearAsyncTimeout() {
+    // Optimistically try loading first, before doing the more expensive atomic
+    // CAS.
+    if (!testAsyncTimeout())
+      return false;
+    return asyncTimeout_.exchange(false, std::memory_order_relaxed);
+  }
+
   Value evaluateJavaScript(
       const std::shared_ptr<const Buffer> &buffer,
       const std::string &sourceURL) override {
@@ -2176,6 +2198,20 @@ u32 w2c_hermes__import_getentropy(
   auto r = std::random_device()();
   memcpy(&*bufPtr, &r, std::min<size_t>(sizeof(r), length));
   return 0;
+}
+
+/* import: 'hermes_import' 'test_timeout' */
+u32 w2c_hermes__import_test_timeout(struct w2c_hermes__import *modPtr) {
+  auto *mod = reinterpret_cast<w2c_hermes *>(modPtr);
+  return static_cast<HermesSandboxRuntimeImpl *>(mod)->testAsyncTimeout();
+}
+
+/* import: 'hermes_import' 'test_and_clear_timeout' */
+u32 w2c_hermes__import_test_and_clear_timeout(
+    struct w2c_hermes__import *modPtr) {
+  auto *mod = reinterpret_cast<w2c_hermes *>(modPtr);
+  return static_cast<HermesSandboxRuntimeImpl *>(mod)
+      ->testAndClearAsyncTimeout();
 }
 
 /* import: 'wasi_snapshot_preview1' 'proc_exit' */

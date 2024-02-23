@@ -61,6 +61,12 @@ void w2c_env_emscripten_notify_memory_growth(struct w2c_env*, u32);
 /* import: 'hermes_import' 'getentropy' */
 u32 w2c_hermes__import_getentropy(struct w2c_hermes__import*, u32, u32);
 
+/* import: 'hermes_import' 'test_and_clear_timeout' */
+u32 w2c_hermes__import_test_and_clear_timeout(struct w2c_hermes__import*);
+
+/* import: 'hermes_import' 'test_timeout' */
+u32 w2c_hermes__import_test_timeout(struct w2c_hermes__import*);
+
 /* import: 'wasi_snapshot_preview1' 'clock_time_get' */
 u32 w2c_wasi__snapshot__preview1_clock_time_get(struct w2c_wasi__snapshot__preview1*, u32, u64, u32);
 
