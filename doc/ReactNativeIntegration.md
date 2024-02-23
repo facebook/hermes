@@ -5,90 +5,35 @@ title: React Native Integration
 
 ## Using a custom Hermes build in a React Native app
 
-To make Hermes usable in a React Native app we need to perform the following steps:
+Since React Native 0.69, Hermes is shipped as part of the React Native distribution. We call this [bundled hermes](https://reactnative.dev/architecture/bundled-hermes).
 
-1. Package a Hermes build into a npm package structure.
-2. Register this npm package with Yarn for use in other local projects.
-3. Link the npm package registered with Yarn into the React Native tree for our app.
+If you wish to customize Hermes and use it inside your React Native app, you can do so by using the `REACT_NATIVE_OVERRIDE_HERMES_DIR` environment variable. This variable allows you to specify a folder where you can store your custom copy of the Hermes repository.
 
-### Making a Hermes npm package
-
-A Hermes npm package combines:
-* Hermes CLI tools in binary form. These are used to compile JavaScript to bytecode when packaging up an app release.
-* Pre-compiled release and debug versions of the native Hermes library for Android targets.
-
-The interface between Hermes and React Native changes over time, so if you are
-not using the main branch of both, you may want to consider matching the
-Hermes version with your app's React Native version. E.g. `git checkout v0.5.0`
-to build for `react-native@0.63`.
-
-#### Dependencies
-
-To make a Hermes npm package, first follow the instructions on [building Hermes](BuildingAndRunning.md) to create a **Release Build** of Hermes. This will be the source of CLI binaries for use in the npm.
-
-As we will be compiling native libraries for Android, we first need to setup a suitable development environment. This subject is covered in more detail elsewhere, for example in the guide on [building React Native From Source](https://github.com/facebook/react-native/wiki/Building-from-source). However, a rough guide to the external dependencies for macOS/Linux is as follows:
-
-* Node.js
-* JDK (1.8+)
-* Yarn
-* The Android Native Development Kit (NDK)
-* The Android Software Development Kit (SDK)
-
-> Note the Android SDK is typically downloaded and installed automatically as part of the flow in Android Studio. If you are following this common route, be sure to note the location Android Studio uses to install the SDK.
-
-#### Build environment
-
-Ensure the following variables are present and set correctly in your environment:
-
-* `ANDROID_NDK` - the root of your Android NDK install. E.g. `/opt/android_ndk/r15c`.
-* `ANDROID_SDK`, `ANDROID_HOME`, and `ANDROID_SDK_ROOT` - the root of your Android SDK install. E.g. `/opt/android_sdk`.
-* `JAVA_HOME` - the root of your Java Runtime Environment (JRE) install. Note a JRE instance is typically available in a sub-directory of a JDK install. E.g. `/opt/jdk-1.8/jre`
-* `HERMES_WS_DIR` - The root of your workspace where the `hermes` git checkout directory and `build_release` Release Build directory should already be subdirectories. E.g. `$HOME/workspace`.
-
-Make sure the `node` and `yarn` binaries are available in your system PATH.
-
-#### Package build
-
-To make a Hermes npm package, check that you already followed the [Building Hermes](BuildingAndRunning.md) instructions for a **Release Build**. The `build_release` directory will be the source of CLI binaries for use in the npm.
-
-```shell
-# Package CLI binaries for the current platform
-(cd $HERMES_WS_DIR/build_release && ninja github-cli-release)
-
-# Package Android libraries
-(cd $HERMES_WS_DIR/hermes/android && ./gradlew githubRelease)
-
-# Copy the above to the NPM directory
-cp $HERMES_WS_DIR/build_android/distributions/hermes-runtime-android-v*.tar.gz $HERMES_WS_DIR/hermes/npm
-cp $HERMES_WS_DIR/build_release/github/hermes-cli-*-v*.tar.gz $HERMES_WS_DIR/hermes/npm
-
-# Create NPMs
-(cd $HERMES_WS_DIR/hermes/npm && yarn install && yarn run unpack-builds-dev && yarn run create-npms-dev)
+```bash
+export REACT_NATIVE_OVERRIDE_HERMES_DIR=/path/to/your/hermes/repo
 ```
 
-The NPM bundles can now be found in `$HERMES_WS_DIR/hermes/npm/*.tgz`
+If you set this variable, React Native will use the Hermes build from the specified directory instead of the one that comes with the React Native distribution.
 
+> [!NOTE]
+> If you are making changes to the compiler in Hermes, be sure to make sure you test your app in release mode as this enables bytecode compilation in advance.
 
-### Linking Hermes into a React Native app
+### Instructions for Android
 
-To use your custom Hermes npm package in an app, first make sure the app works with a normal release of Hermes by following [instructions in the React Native docs](https://reactnative.dev/docs/hermes).
+On Android, once you set the `REACT_NATIVE_OVERRIDE_HERMES_DIR` environment variable, make sure you also:
 
-Next, install the Hermes npm package into your app as a dependency, and (if
-running react-native from source) into react-native as well.  For example,
-assuming your project is in the directory `$AWESOME_PROJECT` you would run this
-command:
+1. Enable a build from source following the instructions in the [React Native website](https://reactnative.dev/contributing/how-to-build-from-source#update-your-project-to-build-from-source).
+2. Re-run the Android app with the `yarn android` command.
 
-```shell
-# Install the Hermes NPM to be used by the project
-( cd ${AWESOME_PROJECT?} && yarn add $HERMES_WS_DIR/hermes/npm/hermes-engine-v*.tgz )
+### Instructions for iOS
 
-# If running react-native from source, install it there as well
-( cd ${AWESOME_PROJECT?}/node_modules/react-native && yarn add $HERMES_WS_DIR/hermes/npm/hermes-engine-v*.tgz )
+On iOS, once you set the `REACT_NATIVE_OVERRIDE_HERMES_DIR` environment variable, make sure you also:
+
+1. Enable a build from source by installing the pods as follows:
+```bash
+BUILD_FROM_SOURCE=true bundle exec pod install
 ```
-
-You can now develop your app in the normal way.
-
-> Note: if you are making changes to the compiler in Hermes, be sure to make sure you test your app in release mode as this enables bytecode compilation in advance.
+2. Re-run the iOS app with the `yarn ios` command.
 
 ## Reporting native crashes
 
@@ -127,8 +72,14 @@ For React Native versions before 0.69 (i.e. hermes-engine 0.11.0 and previous ve
 
 Download the `hermes-runtime-android-vX.Y.Z.tar.gz` file for your version, unpack the tar file, then run `ndk-stack` using the contained directory as described in the paragraph above.
 
-#### React Native >= 0.69
+#### React Native 0.69 and 0.70
 
-For React Native versions after and including 0.69, you can find the debug symbols in the [GitHub release](https://github.com/facebook/react-native/releases) corresponding to the React Native version you used to build your application. 
+For React Native versions 0.69 and 0.70, you can find the debug symbols in the [GitHub release](https://github.com/facebook/react-native/releases) corresponding to the React Native version you used to build your application.
 
 For instance for [React Native 0.70.6](https://github.com/facebook/react-native/releases/tag/v0.70.6), you can find the `hermes-native-symbols-v0.70.6.zip` file with the debug symbols inside.
+
+#### React Native >= 0.71
+
+For React Native versions 0.71 and above, the debug symbols are uploaded to Maven Central together with the `react-native` and `hermes-engine` artifacts. You don't need to manually download the debug symbols at all, as they will be available to you when you build your apps locally.
+
+You can just invoke the `ndk-stack` command suggested above and the symbolication will just work.
