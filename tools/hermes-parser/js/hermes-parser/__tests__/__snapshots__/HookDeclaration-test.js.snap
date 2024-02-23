@@ -48,6 +48,270 @@ exports[`HookDeclaration Basic ESTree 1`] = `
 }
 `;
 
+exports[`HookDeclaration Export default hook Babel 1`] = `
+{
+  "body": [
+    {
+      "declaration": {
+        "__hookDeclaration": true,
+        "async": false,
+        "body": {
+          "body": [],
+          "directives": [],
+          "type": "BlockStatement",
+        },
+        "generator": false,
+        "id": {
+          "name": "useFoo2",
+          "type": "Identifier",
+        },
+        "params": [
+          {
+            "argument": {
+              "properties": [
+                {
+                  "computed": false,
+                  "key": {
+                    "name": "prop",
+                    "type": "Identifier",
+                  },
+                  "method": false,
+                  "shorthand": true,
+                  "type": "ObjectProperty",
+                  "value": {
+                    "name": "prop",
+                    "type": "Identifier",
+                  },
+                },
+              ],
+              "type": "ObjectPattern",
+            },
+            "type": "RestElement",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "id": {
+                  "name": "Props",
+                  "type": "Identifier",
+                },
+                "type": "GenericTypeAnnotation",
+                "typeParameters": null,
+              },
+            },
+          },
+        ],
+        "type": "FunctionDeclaration",
+      },
+      "type": "ExportDefaultDeclaration",
+    },
+  ],
+  "type": "Program",
+}
+`;
+
+exports[`HookDeclaration Export default hook ESTree 1`] = `
+{
+  "body": [
+    {
+      "declaration": {
+        "body": {
+          "body": [],
+          "type": "BlockStatement",
+        },
+        "id": {
+          "name": "useFoo2",
+          "optional": false,
+          "type": "Identifier",
+          "typeAnnotation": null,
+        },
+        "params": [
+          {
+            "argument": {
+              "properties": [
+                {
+                  "computed": false,
+                  "key": {
+                    "name": "prop",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
+                  },
+                  "kind": "init",
+                  "method": false,
+                  "shorthand": true,
+                  "type": "Property",
+                  "value": {
+                    "name": "prop",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
+                  },
+                },
+              ],
+              "type": "ObjectPattern",
+              "typeAnnotation": {
+                "type": "TypeAnnotation",
+                "typeAnnotation": {
+                  "id": {
+                    "name": "Props",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
+                  },
+                  "type": "GenericTypeAnnotation",
+                  "typeParameters": null,
+                },
+              },
+            },
+            "type": "RestElement",
+          },
+        ],
+        "returnType": null,
+        "type": "HookDeclaration",
+        "typeParameters": null,
+      },
+      "type": "ExportDefaultDeclaration",
+    },
+  ],
+  "type": "Program",
+}
+`;
+
+exports[`HookDeclaration Export named hook Babel 1`] = `
+{
+  "body": [
+    {
+      "declaration": {
+        "__hookDeclaration": true,
+        "async": false,
+        "body": {
+          "body": [],
+          "directives": [],
+          "type": "BlockStatement",
+        },
+        "generator": false,
+        "id": {
+          "name": "useFoo2",
+          "type": "Identifier",
+        },
+        "params": [
+          {
+            "argument": {
+              "properties": [
+                {
+                  "computed": false,
+                  "key": {
+                    "name": "prop",
+                    "type": "Identifier",
+                  },
+                  "method": false,
+                  "shorthand": true,
+                  "type": "ObjectProperty",
+                  "value": {
+                    "name": "prop",
+                    "type": "Identifier",
+                  },
+                },
+              ],
+              "type": "ObjectPattern",
+            },
+            "type": "RestElement",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "id": {
+                  "name": "Props",
+                  "type": "Identifier",
+                },
+                "type": "GenericTypeAnnotation",
+                "typeParameters": null,
+              },
+            },
+          },
+        ],
+        "type": "FunctionDeclaration",
+      },
+      "exportKind": "value",
+      "source": null,
+      "specifiers": [],
+      "type": "ExportNamedDeclaration",
+    },
+  ],
+  "type": "Program",
+}
+`;
+
+exports[`HookDeclaration Export named hook ESTree 1`] = `
+{
+  "body": [
+    {
+      "declaration": {
+        "body": {
+          "body": [],
+          "type": "BlockStatement",
+        },
+        "id": {
+          "name": "useFoo2",
+          "optional": false,
+          "type": "Identifier",
+          "typeAnnotation": null,
+        },
+        "params": [
+          {
+            "argument": {
+              "properties": [
+                {
+                  "computed": false,
+                  "key": {
+                    "name": "prop",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
+                  },
+                  "kind": "init",
+                  "method": false,
+                  "shorthand": true,
+                  "type": "Property",
+                  "value": {
+                    "name": "prop",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
+                  },
+                },
+              ],
+              "type": "ObjectPattern",
+              "typeAnnotation": {
+                "type": "TypeAnnotation",
+                "typeAnnotation": {
+                  "id": {
+                    "name": "Props",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
+                  },
+                  "type": "GenericTypeAnnotation",
+                  "typeParameters": null,
+                },
+              },
+            },
+            "type": "RestElement",
+          },
+        ],
+        "returnType": null,
+        "type": "HookDeclaration",
+        "typeParameters": null,
+      },
+      "exportKind": "value",
+      "source": null,
+      "specifiers": [],
+      "type": "ExportNamedDeclaration",
+    },
+  ],
+  "type": "Program",
+}
+`;
+
 exports[`HookDeclaration Params Babel 1`] = `
 {
   "body": [
