@@ -17,6 +17,7 @@ import {
   BlockScope,
   CatchScope,
   ComponentScope,
+  HookScope,
   ClassScope,
   DeclareModuleScope,
   ForScope,
@@ -230,6 +231,12 @@ class ScopeManager {
   nestComponentScope(node: ComponentScope['block']): ComponentScope {
     return this._nestScope(
       new ComponentScope(this, this._assertCurrentScope(), node),
+    );
+  }
+
+  nestHookScope(node: HookScope['block']): HookScope {
+    return this._nestScope(
+      new HookScope(this, this._assertCurrentScope(), node),
     );
   }
 

@@ -18,6 +18,7 @@ import type {
   DeclareExportDeclaration,
   DeclareComponent,
   DeclareFunction,
+  DeclareHook,
   DeclareInterface,
   DeclareModule,
   DeclareModuleExports,
@@ -27,6 +28,7 @@ import type {
   ESNode,
   FunctionTypeAnnotation,
   FunctionTypeParam,
+  HookTypeAnnotation,
   GenericTypeAnnotation,
   Identifier,
   InterfaceDeclaration,
@@ -47,6 +49,7 @@ import {
   ComponentNameDefinition,
   ClassNameDefinition,
   FunctionNameDefinition,
+  HookNameDefinition,
   TypeDefinition,
   TypeParameterDefinition,
   VariableDefinition,
@@ -92,6 +95,7 @@ class TypeVisitor extends Visitor {
       | DeclareClass
       | DeclareComponent
       | FunctionTypeAnnotation
+      | HookTypeAnnotation
       | TypeAlias
       | OpaqueType
       | InterfaceDeclaration,
@@ -233,6 +237,15 @@ class TypeVisitor extends Visitor {
     this.visit(node.predicate);
   }
 
+  DeclareHook(node: DeclareHook): void {
+    this._referencer
+      .currentScope()
+      .defineIdentifier(node.id, new HookNameDefinition(node.id, node));
+
+    // the function type is stored as an annotation on the ID
+    this.visit(node.id.typeAnnotation);
+  }
+
   DeclareInterface(node: DeclareInterface): void {
     this.visitInterfaceDeclaration(node);
   }
@@ -282,6 +295,19 @@ class TypeVisitor extends Visitor {
     // e.g. 'foo' is a parameter name in a type that should not be treated like a
     // definition or reference in `type T = (foo: string) => void`.
     this.visit(node.typeAnnotation);
+  }
+
+  HookTypeAnnotation(node: HookTypeAnnotation): void {
+    const hasTypeScope = this.maybeCreateTypeScope(node);
+
+    this.visit(node.typeParameters);
+    this.visitArray(node.params);
+    this.visit(node.returnType);
+    this.visit(node.rest);
+
+    if (hasTypeScope) {
+      this._referencer.close(node);
+    }
   }
 
   ComponentTypeAnnotation(node: ComponentTypeAnnotation): void {

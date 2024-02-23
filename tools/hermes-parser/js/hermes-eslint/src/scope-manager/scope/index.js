@@ -19,6 +19,7 @@ export * from './DeclareModuleScope';
 export * from './ForScope';
 export * from './FunctionExpressionNameScope';
 export * from './FunctionScope';
+export * from './HookScope';
 export * from './GlobalScope';
 export * from './ModuleScope';
 export * from './Scope';

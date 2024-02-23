@@ -17,6 +17,7 @@ export * from './Definition';
 export * from './DefinitionType';
 export * from './EnumDefinition';
 export * from './FunctionNameDefinition';
+export * from './HookNameDefinition';
 export * from './ImplicitGlobalVariableDefinition';
 export * from './ImportBindingDefinition';
 export * from './ParameterDefinition';
