@@ -4,6 +4,7 @@ exports[`HookDeclaration Basic Babel 1`] = `
 {
   "body": [
     {
+      "__hookDeclaration": true,
       "async": false,
       "body": {
         "body": [],
@@ -51,6 +52,7 @@ exports[`HookDeclaration Params Babel 1`] = `
 {
   "body": [
     {
+      "__hookDeclaration": true,
       "async": false,
       "body": {
         "body": [],
@@ -199,6 +201,7 @@ exports[`HookDeclaration default params Babel 1`] = `
 {
   "body": [
     {
+      "__hookDeclaration": true,
       "async": false,
       "body": {
         "body": [],
@@ -301,6 +304,7 @@ exports[`HookDeclaration rest params 2 Babel 1`] = `
 {
   "body": [
     {
+      "__hookDeclaration": true,
       "async": false,
       "body": {
         "body": [],
@@ -423,6 +427,7 @@ exports[`HookDeclaration rest params Babel 1`] = `
 {
   "body": [
     {
+      "__hookDeclaration": true,
       "async": false,
       "body": {
         "body": [],
@@ -511,6 +516,7 @@ exports[`HookDeclaration return type Babel 1`] = `
 {
   "body": [
     {
+      "__hookDeclaration": true,
       "async": false,
       "body": {
         "body": [],
@@ -569,6 +575,7 @@ exports[`HookDeclaration type parameters Babel 1`] = `
 {
   "body": [
     {
+      "__hookDeclaration": true,
       "async": false,
       "body": {
         "body": [],

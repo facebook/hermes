@@ -631,6 +631,7 @@ function mapHookDeclaration(node: HookDeclaration): FunctionDeclaration {
   const comp = {
     type: 'FunctionDeclaration',
     id: node.id && shallowCloneNode(node.id),
+    __hookDeclaration: true,
     typeParameters: node.typeParameters,
     params: node.params,
     returnType: node.returnType,
