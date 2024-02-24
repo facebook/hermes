@@ -63,6 +63,7 @@ class CDPAgentImpl {
     /// handler.
     void handleCommand(std::shared_ptr<message::Request> command);
 
+   private:
     /// Execution context ID associated with the HermesRuntime. This is used by
     /// domain agents when sending notifications to identify the runtime the
     /// notification is coming from.
