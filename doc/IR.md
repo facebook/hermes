@@ -819,8 +819,8 @@ Effects | Does not read or write to memory.
 HBCResolveParentEnvironmentInst | _
 --- | --- |
 Description | Traverse the chain of environments starting at the current function's parent to find a given environment.
-Example | %0 = HBCResolveParentEnvironmentInst %varScope, %parentScopeParam
-Arguments | %varScope is the variable scope to resolve to. %parentScopeParam is dummy parameter used to model usage of the parent environment.
+Example | %0 = HBCResolveParentEnvironmentInst %varScope, %numLevels, %parentScopeParam
+Arguments | %varScope is the variable scope to resolve to. %numLevels is the number of scopes up from the current function's parent that the result will be found. %parentScopeParam is dummy parameter used to model usage of the parent environment.
 Semantics | The instruction resolves an environment that is a parent of the current function's environment.
 Effects | Does not read or write to memory.
 

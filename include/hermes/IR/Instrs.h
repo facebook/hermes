@@ -3047,13 +3047,15 @@ class HBCResolveParentEnvironmentInst : public BaseScopeInst {
       delete;
   void operator=(const HBCResolveParentEnvironmentInst &) = delete;
 
-  enum { ParentScopeParamIdx = BaseScopeInst::LAST_IDX };
-
  public:
+  enum { NumLevelsIdx = BaseScopeInst::LAST_IDX, ParentScopeParamIdx };
+
   explicit HBCResolveParentEnvironmentInst(
       VariableScope *scope,
+      LiteralNumber *numLevels,
       JSDynamicParam *parentScopeParam)
       : BaseScopeInst(ValueKind::HBCResolveParentEnvironmentInstKind, scope) {
+    pushOperand(numLevels);
     pushOperand(parentScopeParam);
   }
   explicit HBCResolveParentEnvironmentInst(
@@ -3063,6 +3065,10 @@ class HBCResolveParentEnvironmentInst : public BaseScopeInst {
 
   JSDynamicParam *getParentScopeParam() const {
     return cast<JSDynamicParam>(getOperand(ParentScopeParamIdx));
+  }
+
+  uint32_t getNumLevels() const {
+    return cast<LiteralNumber>(getOperand(NumLevelsIdx))->asUInt32();
   }
 
   SideEffect getSideEffectImpl() const {

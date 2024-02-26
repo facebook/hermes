@@ -830,8 +830,10 @@ ResumeGeneratorInst *IRBuilder::createResumeGeneratorInst(
 HBCResolveParentEnvironmentInst *
 IRBuilder::createHBCResolveParentEnvironmentInst(
     VariableScope *scope,
+    LiteralNumber *numLevels,
     JSDynamicParam *parentScopeParam) {
-  auto *inst = new HBCResolveParentEnvironmentInst(scope, parentScopeParam);
+  auto *inst =
+      new HBCResolveParentEnvironmentInst(scope, numLevels, parentScopeParam);
   insert(inst);
   return inst;
 }

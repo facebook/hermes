@@ -111,7 +111,7 @@ function daa(a) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %daa_capture(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = HBCResolveParentEnvironmentInst (:environment) %daa(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = HBCResolveParentEnvironmentInst (:environment) %daa(): any, 0: number, %parentScope: environment
 // CHECK-NEXT:  %2 = HBCLoadFromEnvironmentInst (:any) %1: environment, [b@daa]: any
 // CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end
@@ -170,7 +170,7 @@ function daa(a) {
 // CHKOPT:function daa_capture(): undefined|string|number
 // CHKOPT-NEXT:frame = []
 // CHKOPT-NEXT:%BB0:
-// CHKOPT-NEXT:  %0 = HBCResolveParentEnvironmentInst (:environment) %daa(): any, %parentScope: environment
+// CHKOPT-NEXT:  %0 = HBCResolveParentEnvironmentInst (:environment) %daa(): any, 0: number, %parentScope: environment
 // CHKOPT-NEXT:  %1 = HBCLoadFromEnvironmentInst (:undefined|string|number) %0: environment, [b@daa]: undefined|string|number
 // CHKOPT-NEXT:       ReturnInst %1: undefined|string|number
 // CHKOPT-NEXT:function_end

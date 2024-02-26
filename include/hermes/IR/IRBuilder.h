@@ -533,6 +533,7 @@ class IRBuilder {
 
   HBCResolveParentEnvironmentInst *createHBCResolveParentEnvironmentInst(
       VariableScope *scope,
+      LiteralNumber *numLevels,
       JSDynamicParam *parentScopeParam);
   HBCStoreToEnvironmentInst *
   createHBCStoreToEnvironmentInst(Value *env, Value *toPut, Variable *var);

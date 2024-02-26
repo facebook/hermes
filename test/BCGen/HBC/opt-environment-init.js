@@ -109,7 +109,7 @@ function foo(o) {
 // CHKLIR:function ""(): number
 // CHKLIR-NEXT:frame = []
 // CHKLIR-NEXT:%BB0:
-// CHKLIR-NEXT:  %0 = HBCResolveParentEnvironmentInst (:environment) %foo(): any, %parentScope: environment
+// CHKLIR-NEXT:  %0 = HBCResolveParentEnvironmentInst (:environment) %foo(): any, 0: number, %parentScope: environment
 // CHKLIR-NEXT:  %1 = HBCLoadFromEnvironmentInst (:undefined|boolean) %0: environment, [flag@foo]: undefined|boolean
 // CHKLIR-NEXT:       CondBranchInst %1: undefined|boolean, %BB2, %BB1
 // CHKLIR-NEXT:%BB1:

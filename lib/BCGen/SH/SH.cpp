@@ -513,7 +513,6 @@ class InstrGen {
       const llvh::DenseMap<BasicBlock *, unsigned> &bbMap,
       Function &F,
       ModuleGen &moduleGen,
-      FunctionScopeAnalysis &scopeAnalysis,
       uint32_t &nextCacheIdx,
       const llvh::DenseMap<BasicBlock *, size_t> &bbTryDepths)
       : os_(os),
@@ -522,7 +521,6 @@ class InstrGen {
         F_(F),
         nativeContext_(F.getContext().getNativeContext()),
         moduleGen_(moduleGen),
-        scopeAnalysis_(scopeAnalysis),
         nextCacheIdx_(nextCacheIdx),
         bbTryDepths_(bbTryDepths) {}
 
@@ -561,9 +559,6 @@ class InstrGen {
 
   /// The state for the module currently being emitted.
   ModuleGen &moduleGen_;
-
-  /// Function scope analysis of the current module
-  FunctionScopeAnalysis &scopeAnalysis_;
 
   /// Starts out at 0 and increments every time a cache index is used
   uint32_t &nextCacheIdx_;
@@ -866,20 +861,11 @@ class InstrGen {
   }
   void generateHBCResolveParentEnvironmentInst(
       HBCResolveParentEnvironmentInst &inst) {
-    llvh::Optional<int32_t> instScopeDepth =
-        scopeAnalysis_.getScopeDepth(inst.getVariableScope());
-    llvh::Optional<int32_t> curScopeDepth =
-        scopeAnalysis_.getScopeDepth(inst.getFunction()->getFunctionScope());
-    if (!instScopeDepth || !curScopeDepth) {
-      // This function did not have any CreateFunctionInst, it is dead.
-      return;
-    }
-    int32_t delta = curScopeDepth.getValue() - instScopeDepth.getValue() - 1;
     os_.indent(2);
     generateRegister(inst);
     os_ << " = _sh_ljs_get_env(shr, _sh_ljs_get_env_from_closure(shr, frame["
         << hbc::StackFrameLayout::CalleeClosureOrCB << "])"
-        << ", " << delta << ");\n";
+        << ", " << inst.getNumLevels() << ");\n";
   }
   void generateHBCGetArgumentsLengthInst(HBCGetArgumentsLengthInst &inst) {
     os_.indent(2);
@@ -2463,7 +2449,6 @@ void generateFunction(
     Function &F,
     hermes::sh::LineDirectiveEmitter &OS,
     ModuleGen &moduleGen,
-    FunctionScopeAnalysis &scopeAnalysis,
     uint32_t &nextCacheIdx,
     BytecodeGenerationOptions options) {
   auto PO = hermes::postOrderAnalysis(&F);
@@ -2518,8 +2503,7 @@ void generateFunction(
   // Compute the try nesting depth of each basic block.
   auto [bbTryDepths, maxTryDepth] = getBlockTryDepths(&F);
 
-  InstrGen instrGen(
-      OS, RA, bbMap, F, moduleGen, scopeAnalysis, nextCacheIdx, bbTryDepths);
+  InstrGen instrGen(OS, RA, bbMap, F, moduleGen, nextCacheIdx, bbTryDepths);
 
   // Number of registers stored in the `locals` struct below.
   uint32_t localsSize = RA.getMaxRegisterUsage(sh::RegClass::LocalPtr);
@@ -2801,7 +2785,7 @@ static SHNativeFuncInfo s_function_info_table[];
   }
 
   for (auto &F : *M)
-    generateFunction(F, OS, moduleGen, scopeAnalysis, nextCacheIdx, options);
+    generateFunction(F, OS, moduleGen, nextCacheIdx, options);
 
   if (options.format == DumpBytecode || options.format == EmitBundle) {
     moduleGen.literalBuffers.generate(OS);

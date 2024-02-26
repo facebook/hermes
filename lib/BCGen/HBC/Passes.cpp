@@ -233,6 +233,11 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     return true;
   }
 
+  if (llvh::isa<HBCResolveParentEnvironmentInst>(Inst) &&
+      opIndex == HBCResolveParentEnvironmentInst::NumLevelsIdx) {
+    return true;
+  }
+
   return false;
 }
 

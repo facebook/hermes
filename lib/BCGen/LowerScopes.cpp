@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "hermes/IR/Analysis.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/Instrs.h"
@@ -19,29 +20,46 @@ class LowerScopes {
   /// The module being lowered.
   Module *M_;
 
+  /// Scope analysis to use when determining the depth of resolved scopes.
+  FunctionScopeAnalysis scopeAnalysis_;
+
   /// Decide the correct scope to use when dealing with given variable.
   Instruction *getScope(
       IRBuilder &builder,
       Variable *var,
       HBCCreateFunctionEnvironmentInst *captureScope) {
-    if (var->getParent()->getFunction() != builder.getFunction()) {
-      // If the variable is neither from the current scope,
-      // we should get the proper scope for it.
+    llvh::Optional<int32_t> varDepth =
+        scopeAnalysis_.getScopeDepth(var->getParent());
+    llvh::Optional<int32_t> curDepth =
+        scopeAnalysis_.getScopeDepth(builder.getFunction()->getFunctionScope());
+    if (!varDepth || !curDepth) {
+      // If we cannot identify the depth, this is unreachable, insert a dummy.
       return builder.createHBCResolveParentEnvironmentInst(
-          var->getParent(), builder.getFunction()->getParentScopeParam());
-    } else {
-      // Now we know that the variable belongs to the current scope.
-      // We are going to conservatively assume the variable might get
-      // captured. Hence we use the newly created scope.
-      // This will not cause performance issue as long as optimization
-      // is enabled, because every variable will be moved to stack
-      // if not being captured.
-      return captureScope;
+          var->getParent(),
+          builder.getLiteralPositiveZero(),
+          builder.getFunction()->getParentScopeParam());
     }
+    if (int32_t diff = *curDepth - *varDepth) {
+      assert(diff > 0 && "Variable is from an inner scope.");
+      // If the variable is from an outer scope, resolve to it. Subtract one
+      // from diff because the instruction will start from the parent of the
+      // current function.
+      return builder.createHBCResolveParentEnvironmentInst(
+          var->getParent(),
+          builder.getLiteralNumber(diff - 1),
+          builder.getFunction()->getParentScopeParam());
+    }
+    // Now we know that the variable belongs to the current scope.
+    // We are going to conservatively assume the variable might get
+    // captured. Hence we use the newly created scope.
+    // This will not cause performance issue as long as optimization
+    // is enabled, because every variable will be moved to stack
+    // if not being captured.
+    return captureScope;
   }
 
  public:
-  LowerScopes(Module *M) : M_{M} {}
+  LowerScopes(Module *M) : M_{M}, scopeAnalysis_{M->getTopLevelFunction()} {}
 
   bool run() {
     bool changed = false;

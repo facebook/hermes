@@ -1323,28 +1323,12 @@ void HBCISel::generateGetBuiltinClosureInst(
 void HBCISel::generateHBCResolveParentEnvironmentInst(
     HBCResolveParentEnvironmentInst *Inst,
     BasicBlock *next) {
-  // We statically determine the relative depth delta of the current scope
-  // and the scope that the variable belongs to. Such delta is used as
-  // the operand to get_scope instruction.
-  VariableScope *instScope = Inst->getVariableScope();
-  Optional<int32_t> instScopeDepth = scopeAnalysis_.getScopeDepth(instScope);
-  Optional<int32_t> curScopeDepth =
-      scopeAnalysis_.getScopeDepth(F_->getFunctionScope());
-  if (!instScopeDepth || !curScopeDepth) {
-    // the function did not have any CreateFunctionInst, this function is dead.
-    emitUnreachableIfDebug();
-    return;
-  }
-  assert(
-      curScopeDepth && curScopeDepth.getValue() >= instScopeDepth.getValue() &&
-      "Cannot access variables in inner scopes");
-  int32_t delta = curScopeDepth.getValue() - instScopeDepth.getValue();
-  assert(delta > 0 && "HBCResolveParentEnvironmentInst for current scope");
+  auto delta = Inst->getNumLevels();
   if (std::numeric_limits<uint8_t>::max() < delta) {
     F_->getContext().getSourceErrorManager().error(
         Inst->getLocation(), "Variable environment is out-of-reach");
   }
-  BCFGen_->emitGetParentEnvironment(encodeValue(Inst), delta - 1);
+  BCFGen_->emitGetParentEnvironment(encodeValue(Inst), delta);
 }
 void HBCISel::generateHBCStoreToEnvironmentInst(
     HBCStoreToEnvironmentInst *Inst,

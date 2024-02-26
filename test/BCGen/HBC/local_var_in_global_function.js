@@ -59,7 +59,7 @@ print(e);
 // RA:function local(): any
 // RA-NEXT:frame = []
 // RA-NEXT:%BB0:
-// RA-NEXT:  $Reg0 = HBCResolveParentEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// RA-NEXT:  $Reg0 = HBCResolveParentEnvironmentInst (:environment) %global(): any, 0: number, %parentScope: environment
 // RA-NEXT:  $Reg0 = HBCLoadFromEnvironmentInst (:any) $Reg0, [e@global]: any
 // RA-NEXT:  $Reg0 = ReturnInst $Reg0
 // RA-NEXT:function_end
