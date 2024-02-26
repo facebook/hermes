@@ -22,6 +22,7 @@ namespace cdp {
 using OutboundMessageFunc = std::function<void(const std::string &)>;
 
 class CDPAgentImpl;
+class CDPDebugAPI;
 
 /// An agent for interacting with the provided \p runtime and
 /// \p asyncDebuggerAPI via CDP messages in the Debugger, Runtime, Profiler,
@@ -40,8 +41,7 @@ class HERMES_EXPORT CDPAgent {
   /// methods.
   CDPAgent(
       int32_t executionContextID,
-      HermesRuntime &runtime,
-      debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
+      CDPDebugAPI &cdpDebugAPI,
       debugger::EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
       OutboundMessageFunc messageCallback);
 
@@ -50,8 +50,7 @@ class HERMES_EXPORT CDPAgent {
   /// runtime will not be accessed during execution of this function.
   static std::unique_ptr<CDPAgent> create(
       int32_t executionContextID,
-      HermesRuntime &runtime,
-      debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
+      CDPDebugAPI &cdpDebugAPI,
       debugger::EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
       OutboundMessageFunc messageCallback);
 

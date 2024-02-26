@@ -17,6 +17,7 @@
 #include <hermes/CompileJS.h>
 #include <hermes/Support/JSONEmitter.h>
 #include <hermes/cdp/CDPAgent.h>
+#include <hermes/cdp/CDPDebugAPI.h>
 #include <hermes/cdp/DomainAgent.h>
 #include <hermes/cdp/JSONValueInterfaces.h>
 #include <hermes/hermes.h>
@@ -148,7 +149,7 @@ class CDPAgentTest : public ::testing::Test {
       bool ownProperties = true);
 
   std::unique_ptr<HermesRuntime> runtime_;
-  std::unique_ptr<AsyncDebuggerAPI> asyncDebuggerAPI_;
+  std::unique_ptr<CDPDebugAPI> cdpDebugAPI_;
   std::unique_ptr<facebook::hermes::inspector_modern::chrome::SerialExecutor>
       runtimeThread_;
   std::unique_ptr<CDPAgent> cdpAgent_;
@@ -200,12 +201,11 @@ void CDPAgentTest::SetUp() {
           0,
           std::bind(&CDPAgentTest::signalTest, this, _1, _2, _3, _4)));
 
-  asyncDebuggerAPI_ = AsyncDebuggerAPI::create(*runtime_);
+  cdpDebugAPI_ = CDPDebugAPI::create(*runtime_);
 
   cdpAgent_ = CDPAgent::create(
       kTestExecutionContextId,
-      *runtime_,
-      *asyncDebuggerAPI_,
+      *cdpDebugAPI_,
       std::bind(&CDPAgentTest::handleRuntimeTask, this, _1),
       std::bind(&CDPAgentTest::handleResponse, this, _1));
 }
@@ -221,7 +221,7 @@ void CDPAgentTest::TearDown() {
   // could destroy things on non-runtime thread _IF_ you know for sure that's
   // ok, but TSAN doesn't know that.
   runtimeThread_->add([this]() {
-    asyncDebuggerAPI_.reset();
+    cdpDebugAPI_.reset();
     runtime_.reset();
   });
 
@@ -389,11 +389,7 @@ TEST_F(CDPAgentTest, IssuesStartupTask) {
 
   // Trigger the startup task
   auto cdpAgent = CDPAgent::create(
-      kTestExecutionContextId,
-      *runtime_,
-      *asyncDebuggerAPI_,
-      handleTask,
-      handleMessage);
+      kTestExecutionContextId, *cdpDebugAPI_, handleTask, handleMessage);
 
   ASSERT_TRUE(gotTask);
 }
@@ -407,11 +403,7 @@ TEST_F(CDPAgentTest, IssuesShutdownTask) {
   OutboundMessageFunc handleMessage = [](const std::string &message) {};
 
   auto cdpAgent = CDPAgent::create(
-      kTestExecutionContextId,
-      *runtime_,
-      *asyncDebuggerAPI_,
-      handleTask,
-      handleMessage);
+      kTestExecutionContextId, *cdpDebugAPI_, handleTask, handleMessage);
 
   // Ignore the startup task
   gotTask = false;
@@ -431,11 +423,7 @@ TEST_F(CDPAgentTest, IssuesCommandHandlingTask) {
   OutboundMessageFunc handleMessage = [](const std::string &message) {};
 
   auto cdpAgent = CDPAgent::create(
-      kTestExecutionContextId,
-      *runtime_,
-      *asyncDebuggerAPI_,
-      handleTask,
-      handleMessage);
+      kTestExecutionContextId, *cdpDebugAPI_, handleTask, handleMessage);
 
   // Ignore the startup task
   gotTask = false;
@@ -461,11 +449,7 @@ TEST_F(CDPAgentTest, RejectsMalformedMethods) {
       runtimeThread_->add([this, task]() { task(*runtime_); });
     };
     cdpAgent = CDPAgent::create(
-        kTestExecutionContextId,
-        *runtime_,
-        *asyncDebuggerAPI_,
-        handleTask,
-        handleMessage);
+        kTestExecutionContextId, *cdpDebugAPI_, handleTask, handleMessage);
 
     // Send a command with no domain delimiter in the method. Just format the
     // JSON manually, as there is no Request object for this fake method.
@@ -490,11 +474,7 @@ TEST_F(CDPAgentTest, RejectsUnknownDomains) {
       runtimeThread_->add([this, task]() { task(*runtime_); });
     };
     cdpAgent = CDPAgent::create(
-        kTestExecutionContextId,
-        *runtime_,
-        *asyncDebuggerAPI_,
-        handleTask,
-        handleMessage);
+        kTestExecutionContextId, *cdpDebugAPI_, handleTask, handleMessage);
 
     // Send a command with a properly-formatted domain, but unrecognized by the
     // CDP Agent. Just format the JSON manually, as there is no Request object
@@ -533,9 +513,10 @@ TEST_F(CDPAgentTest, TestEnableWhenAlreadyPaused) {
 
   // Before Debugger.enable, register another debug client and trigger a pause
   DebuggerEventCallbackID eventCallbackID;
+  AsyncDebuggerAPI &asyncDebuggerAPI = cdpDebugAPI_->asyncDebuggerAPI();
   waitFor<bool>(
-      [this, &eventCallbackID](auto promise) {
-        eventCallbackID = asyncDebuggerAPI_->addDebuggerEventCallback_TS(
+      [this, &asyncDebuggerAPI, &eventCallbackID](auto promise) {
+        eventCallbackID = asyncDebuggerAPI.addDebuggerEventCallback_TS(
             [promise](
                 HermesRuntime &runtime,
                 AsyncDebuggerAPI &asyncDebugger,
@@ -565,12 +546,12 @@ TEST_F(CDPAgentTest, TestEnableWhenAlreadyPaused) {
 
   // After removing this callback, AsyncDebuggerAPI will still have another
   // callback registered by CDPAgent. Therefore, JS will not continue by itself.
-  asyncDebuggerAPI_->removeDebuggerEventCallback_TS(eventCallbackID);
+  asyncDebuggerAPI.removeDebuggerEventCallback_TS(eventCallbackID);
   // Have to manually resume it:
-  waitFor<bool>([this](auto promise) {
-    asyncDebuggerAPI_->triggerInterrupt_TS(
-        [this, promise](HermesRuntime &runtime) {
-          asyncDebuggerAPI_->resumeFromPaused(AsyncDebugCommand::Continue);
+  waitFor<bool>([&asyncDebuggerAPI](auto promise) {
+    asyncDebuggerAPI.triggerInterrupt_TS(
+        [&asyncDebuggerAPI, promise](HermesRuntime &runtime) {
+          asyncDebuggerAPI.resumeFromPaused(AsyncDebugCommand::Continue);
           promise->set_value(true);
         });
   });

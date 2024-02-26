@@ -43,6 +43,8 @@ if(HERMES_ENABLE_DEBUGGER)
     cdp/RemoteObjectConverters.cpp
     cdp/RemoteObjectsTable.cpp
     cdp/RuntimeDomainAgent.cpp
+    cdp/ConsoleMessage.cpp
+    cdp/CDPDebugAPI.cpp
   )
 
   set(INSPECTOR_API_SOURCES
