@@ -70,6 +70,7 @@ class CDPAgentImpl {
     int32_t executionContextID_;
     HermesRuntime &runtime_;
     debugger::AsyncDebuggerAPI &asyncDebuggerAPI_;
+    ConsoleMessageDispatcher &consoleMessageDispatcher_;
 
     /// Callback function for sending CDP response back. Same as the one in
     /// CDPAgentImpl.
@@ -166,6 +167,7 @@ CDPAgentImpl::DomainAgents::DomainAgents(
     : executionContextID_(executionContextID),
       runtime_(cdpDebugAPI.runtime()),
       asyncDebuggerAPI_(cdpDebugAPI.asyncDebuggerAPI()),
+      consoleMessageDispatcher_(cdpDebugAPI.consoleMessageDispatcher_),
       messageCallback_(std::move(messageCallback)),
       objTable_(std::make_shared<RemoteObjectsTable>()) {}
 
@@ -177,7 +179,11 @@ void CDPAgentImpl::DomainAgents::initialize() {
       messageCallback_,
       objTable_);
   runtimeAgent_ = std::make_unique<RuntimeDomainAgent>(
-      executionContextID_, runtime_, messageCallback_, objTable_);
+      executionContextID_,
+      runtime_,
+      messageCallback_,
+      objTable_,
+      consoleMessageDispatcher_);
   profilerAgent_ = std::make_unique<ProfilerDomainAgent>(
       executionContextID_, runtime_, messageCallback_, objTable_);
 }

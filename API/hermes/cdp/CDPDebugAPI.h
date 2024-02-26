@@ -40,6 +40,8 @@ class HERMES_EXPORT CDPDebugAPI {
     return *asyncDebuggerAPI_;
   }
 
+  void addConsoleMessage(ConsoleMessage message);
+
  private:
   /// Allow CDPAgentImpl (but not integrators) to access
   /// consoleMessageStorage_.
@@ -50,6 +52,7 @@ class HERMES_EXPORT CDPDebugAPI {
   HermesRuntime &runtime_;
   std::unique_ptr<debugger::AsyncDebuggerAPI> asyncDebuggerAPI_;
   ConsoleMessageStorage consoleMessageStorage_;
+  ConsoleMessageDispatcher consoleMessageDispatcher_;
 };
 
 } // namespace cdp
