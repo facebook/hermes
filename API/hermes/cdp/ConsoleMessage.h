@@ -8,6 +8,7 @@
 #ifndef HERMES_CDP_CDPCONSOLEMESSAGESTORAGE_H
 #define HERMES_CDP_CDPCONSOLEMESSAGESTORAGE_H
 
+#include <optional>
 #include <queue>
 #include <unordered_map>
 
@@ -62,6 +63,7 @@ class ConsoleMessageStorage {
 
   const std::deque<ConsoleMessage> &messages() const;
   size_t discarded() const;
+  std::optional<double> oldestTimestamp() const;
 
  private:
   /// Maximum number of messages to cache.

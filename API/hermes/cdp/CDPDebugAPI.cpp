@@ -31,6 +31,7 @@ CDPDebugAPI::CDPDebugAPI(HermesRuntime &runtime, size_t maxCachedMessages)
 
 void CDPDebugAPI::addConsoleMessage(ConsoleMessage message) {
   consoleMessageDispatcher_.deliverMessage(message);
+  consoleMessageStorage_.addMessage(std::move(message));
 }
 
 } // namespace cdp

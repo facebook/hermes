@@ -46,6 +46,13 @@ size_t ConsoleMessageStorage::discarded() const {
   return numConsoleMessagesDiscardedFromCache_;
 }
 
+std::optional<double> ConsoleMessageStorage::oldestTimestamp() const {
+  if (consoleMessageCache_.size() == 0) {
+    return std::nullopt;
+  }
+  return consoleMessageCache_.front().timestamp;
+}
+
 } // namespace cdp
 } // namespace hermes
 } // namespace facebook

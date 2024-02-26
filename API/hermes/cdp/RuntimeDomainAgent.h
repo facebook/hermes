@@ -28,6 +28,7 @@ class RuntimeDomainAgent : public DomainAgent {
       HermesRuntime &runtime,
       SynchronizedOutboundCallback messageCallback,
       std::shared_ptr<RemoteObjectsTable> objTable,
+      ConsoleMessageStorage &consoleMessageStorage,
       ConsoleMessageDispatcher &consoleMessageDispatcher);
   ~RuntimeDomainAgent();
 
@@ -66,6 +67,7 @@ class RuntimeDomainAgent : public DomainAgent {
       bool generatePreview);
 
   HermesRuntime &runtime_;
+  ConsoleMessageStorage &consoleMessageStorage_;
   ConsoleMessageDispatcher &consoleMessageDispatcher_;
 
   /// Whether Runtime.enable was received and wasn't disabled by receiving

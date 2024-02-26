@@ -256,12 +256,14 @@ RuntimeDomainAgent::RuntimeDomainAgent(
     HermesRuntime &runtime,
     SynchronizedOutboundCallback messageCallback,
     std::shared_ptr<RemoteObjectsTable> objTable,
+    ConsoleMessageStorage &consoleMessageStorage,
     ConsoleMessageDispatcher &consoleMessageDispatcher)
     : DomainAgent(
           executionContextID,
           std::move(messageCallback),
           std::move(objTable)),
       runtime_(runtime),
+      consoleMessageStorage_(consoleMessageStorage),
       consoleMessageDispatcher_(consoleMessageDispatcher),
       enabled_(false) {
   consoleMessageRegistration_ = consoleMessageDispatcher_.subscribe(
@@ -287,6 +289,32 @@ void RuntimeDomainAgent::enable(const m::runtime::EnableRequest &req) {
   // Enable
   enabled_ = true;
   sendResponseToClient(m::makeOkResponse(req.id));
+
+  // Send any buffered console messages.
+  size_t numConsoleMessagesDiscardedFromCache =
+      consoleMessageStorage_.discarded();
+
+  if (numConsoleMessagesDiscardedFromCache != 0) {
+    std::ostringstream oss;
+    oss << "Only limited number of console messages can be cached. "
+        << numConsoleMessagesDiscardedFromCache
+        << (numConsoleMessagesDiscardedFromCache == 1 ? " message was"
+                                                      : " messages were")
+
+        << " discarded at the beginning.";
+    jsi::Value arg = jsi::String::createFromAscii(runtime_, oss.str());
+    std::vector<jsi::Value> args;
+    args.push_back(std::move(arg));
+
+    consoleAPICalled(ConsoleMessage(
+        *consoleMessageStorage_.oldestTimestamp() - 0.1,
+        ConsoleAPIType::kWarning,
+        std::move(args)));
+  }
+
+  for (auto &message : consoleMessageStorage_.messages()) {
+    consoleAPICalled(message);
+  }
 }
 
 void RuntimeDomainAgent::disable(const m::runtime::DisableRequest &req) {
