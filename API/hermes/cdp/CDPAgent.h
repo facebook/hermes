@@ -63,6 +63,10 @@ class HERMES_EXPORT CDPAgent {
   /// arbitrary threads.
   void handleCommand(std::string json);
 
+  /// Enable the Runtime domain without processing a CDP command or send a CDP
+  /// response. This can be called from arbitrary threads.
+  void enableRuntimeDomain();
+
  private:
   /// This should be a unique_ptr to provide predictable destruction time lined
   /// up with when CDPAgent is destroyed. Do not use shared_ptr.

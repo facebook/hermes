@@ -32,6 +32,9 @@ class RuntimeDomainAgent : public DomainAgent {
       ConsoleMessageDispatcher &consoleMessageDispatcher);
   ~RuntimeDomainAgent();
 
+  /// Enables the Runtime domain without processing CDP message or send a CDP
+  /// response. It will still send CDP notifications if needed.
+  void enable();
   /// Handles Runtime.enable request
   void enable(const m::runtime::EnableRequest &req);
   /// Handles Runtime.disable request
