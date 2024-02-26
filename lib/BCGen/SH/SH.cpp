@@ -14,6 +14,7 @@
 #include "hermes/BCGen/HBC/Passes.h"
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/BCGen/LowerBuiltinCalls.h"
+#include "hermes/BCGen/LowerScopes.h"
 #include "hermes/BCGen/LowerStoreInstrs.h"
 #include "hermes/BCGen/Lowering.h"
 #include "hermes/BCGen/MovElimination.h"
@@ -2420,7 +2421,7 @@ bool lowerModuleIR(Module *M, bool optimize) {
   // TODO Consider supporting LowerSwitchIntoJumpTables for optimization
   PM.addPass(new SwitchLowering());
   PM.addPass(sh::createLoadConstants());
-  PM.addPass(new hbc::LowerLoadStoreFrameInst());
+  PM.addPass(createLowerScopes());
   if (optimize) {
     // Lowers AllocObjects and its sequential literal properties into a single
     // HBCAllocObjectFromBufferInst

@@ -1369,7 +1369,7 @@ function decrementArguments() {
 // CHKIR-NEXT:       ReturnInst %6: number
 // CHKIR-NEXT:function_end
 
-// CHKIR:*** AFTER LowerLoadStoreFrameInst
+// CHKIR:*** AFTER LowerScopes
 
 // CHKIR:function global(): undefined
 // CHKIR-NEXT:frame = []

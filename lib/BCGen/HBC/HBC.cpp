@@ -16,6 +16,7 @@
 #include "hermes/BCGen/HBC/Passes/PeepholeLowering.h"
 #include "hermes/BCGen/HBC/TraverseLiteralStrings.h"
 #include "hermes/BCGen/LowerBuiltinCalls.h"
+#include "hermes/BCGen/LowerScopes.h"
 #include "hermes/BCGen/LowerStoreInstrs.h"
 #include "hermes/BCGen/Lowering.h"
 #include "hermes/BCGen/MovElimination.h"
@@ -58,7 +59,7 @@ void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
   // needs to run before LowerBuiltinCalls because it introduces calls to
   // HermesInternal.
   PM.addPass(new PeepholeLowering());
-  PM.addPass(new LowerLoadStoreFrameInst());
+  PM.addPass(createLowerScopes());
   if (options.optimizationEnabled) {
     // OptEnvironmentInit needs to run before LowerConstants.
     PM.addPass(new OptEnvironmentInit());

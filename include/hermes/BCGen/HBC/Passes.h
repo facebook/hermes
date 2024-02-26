@@ -35,21 +35,6 @@ class LoadConstants : public FunctionPass {
   bool runOnFunction(Function *F) override;
 };
 
-/// Lower LoadFrameInst, StoreFrameInst and CreateFunctionInst.
-class LowerLoadStoreFrameInst : public FunctionPass {
-  /// Decide the correct scope to use when dealing with given variable.
-  Instruction *getScope(
-      IRBuilder &builder,
-      Variable *var,
-      HBCCreateFunctionEnvironmentInst *captureScope);
-
- public:
-  explicit LowerLoadStoreFrameInst()
-      : FunctionPass("LowerLoadStoreFrameInst") {}
-  ~LowerLoadStoreFrameInst() override = default;
-  bool runOnFunction(Function *F) override;
-};
-
 // Lower uses of the JS `arguments` array into HBC*Arguments* instructions.
 class LowerArgumentsArray : public FunctionPass {
  private:
