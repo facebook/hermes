@@ -18,11 +18,15 @@ use hermes_diagnostics::Diagnostic;
 use hermes_estree::Program;
 use juno_support::NullTerminatedBuf;
 
-pub fn parse(source: &str, _file: &str) -> Result<Program, Vec<Diagnostic>> {
+pub fn parse(
+    source: &str,
+    _file: &str,
+    dialect: ParserDialect,
+) -> Result<Program, Vec<Diagnostic>> {
     let buf = NullTerminatedBuf::from_str_check(source);
     let result = HermesParser::parse(
         ParserFlags {
-            dialect: ParserDialect::TypeScript,
+            dialect,
             enable_jsx: true,
             store_doc_block: true,
             strict_mode: true,

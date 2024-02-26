@@ -1,0 +1,82 @@
+---
+source: crates/hermes_parser/tests/parser_test.rs
+expression: "format!(\"Input:\\n{input}\\n\\nOutput:\\n{output}\")"
+input_file: crates/hermes_parser/tests/fixtures/function.js
+---
+Input:
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+function field() {
+    return "Hello";
+}
+
+Output:
+{
+  "type": "Program",
+  "body": [
+    {
+      "type": "FunctionDeclaration",
+      "id": {
+        "type": "Identifier",
+        "name": "field",
+        "typeAnnotation": null,
+        "loc": null,
+        "range": [
+          201,
+          206
+        ]
+      },
+      "params": [],
+      "body": {
+        "type": "BlockStatement",
+        "body": [
+          {
+            "type": "ReturnStatement",
+            "argument": {
+              "type": "StringLiteral",
+              "value": "Hello",
+              "loc": null,
+              "range": [
+                222,
+                229
+              ]
+            },
+            "loc": null,
+            "range": [
+              215,
+              230
+            ]
+          }
+        ],
+        "loc": null,
+        "range": [
+          209,
+          232
+        ]
+      },
+      "generator": false,
+      "async": false,
+      "loc": null,
+      "range": [
+        192,
+        232
+      ],
+      "loc": null,
+      "range": [
+        192,
+        232
+      ]
+    }
+  ],
+  "sourceType": "script",
+  "loc": null,
+  "range": [
+    192,
+    232
+  ]
+}

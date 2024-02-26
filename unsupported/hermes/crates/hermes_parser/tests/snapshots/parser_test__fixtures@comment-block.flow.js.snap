@@ -1,0 +1,61 @@
+---
+source: crates/hermes_parser/tests/parser_test.rs
+expression: "format!(\"Input:\\n{input}\\n\\nOutput:\\n{output}\")"
+input_file: crates/hermes_parser/tests/fixtures/comment-block.flow.js
+---
+Input:
+// @flow
+
+/*
+Block
+*/
+function fn(){}
+
+
+Output:
+{
+  "type": "Program",
+  "body": [
+    {
+      "type": "FunctionDeclaration",
+      "id": {
+        "type": "Identifier",
+        "name": "fn",
+        "typeAnnotation": null,
+        "loc": null,
+        "range": [
+          31,
+          33
+        ]
+      },
+      "params": [],
+      "body": {
+        "type": "BlockStatement",
+        "body": [],
+        "loc": null,
+        "range": [
+          35,
+          37
+        ]
+      },
+      "generator": false,
+      "async": false,
+      "loc": null,
+      "range": [
+        22,
+        37
+      ],
+      "loc": null,
+      "range": [
+        22,
+        37
+      ]
+    }
+  ],
+  "sourceType": "script",
+  "loc": null,
+  "range": [
+    22,
+    37
+  ]
+}

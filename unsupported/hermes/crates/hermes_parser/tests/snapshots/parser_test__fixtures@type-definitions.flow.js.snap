@@ -1,0 +1,33 @@
+---
+source: crates/hermes_parser/tests/parser_test.rs
+expression: "format!(\"Input:\\n{input}\\n\\nOutput:\\n{output}\")"
+input_file: crates/hermes_parser/tests/fixtures/type-definitions.flow.js
+---
+Input:
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/* TODO
+// User
+type User = {
+    // name
+    name: string,
+};
+*/
+
+
+Output:
+{
+  "type": "Program",
+  "body": [],
+  "sourceType": "script",
+  "loc": null,
+  "range": [
+    258,
+    258
+  ]
+}
