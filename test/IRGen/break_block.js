@@ -21,16 +21,17 @@ x = 2;
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "x": string
-// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
+// CHECK-NEXT:  %2 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %2: any
 // CHECK-NEXT:       StorePropertyLooseInst 0: number, globalObject: object, "x": string
 // CHECK-NEXT:       StorePropertyLooseInst 0: number, globalObject: object, "x": string
-// CHECK-NEXT:       StoreStackInst 0: number, %1: any
+// CHECK-NEXT:       StoreStackInst 0: number, %2: any
 // CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       StorePropertyLooseInst 2: number, globalObject: object, "x": string
-// CHECK-NEXT:       StoreStackInst 2: number, %1: any
-// CHECK-NEXT:  %9 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:        ReturnInst %9: any
+// CHECK-NEXT:       StoreStackInst 2: number, %2: any
+// CHECK-NEXT:  %10 = LoadStackInst (:any) %2: any
+// CHECK-NEXT:        ReturnInst %10: any
 // CHECK-NEXT:function_end

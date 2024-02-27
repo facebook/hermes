@@ -33,23 +33,42 @@ return x;
 // CHECK:function global(): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): functionCode
-// CHECK-NEXT:  %1 = CallInst (:number) %0: object, %""(): functionCode, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:       ReturnInst %1: number
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
+// CHECK-NEXT:  %2 = CallInst (:number) %1: object, %""(): functionCode, %0: environment, undefined: undefined, undefined: undefined
+// CHECK-NEXT:       ReturnInst %2: number
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): number [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:frame = [x: number, leaf: object]
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %""(): any, %0: environment
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %leaf(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [leaf]: object
+// CHECK-NEXT:       StoreFrameInst %1: environment, 10: number, [x]: number
 // CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:       ReturnInst %5: number
+// CHECK-NEXT:       ReturnInst %11: number
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %2 = PhiInst (:number) 10: number, %BB0, %5: number, %BB2
-// CHECK-NEXT:  %3 = PhiInst (:number) 0: number, %BB0, %6: number, %BB2
-// CHECK-NEXT:  %4 = FAddInst (:number) %2: number, 1: number
-// CHECK-NEXT:  %5 = FAddInst (:number) %2: number, %4: number
-// CHECK-NEXT:  %6 = FAddInst (:number) %3: number, 1: number
-// CHECK-NEXT:  %7 = FLessThanInst (:boolean) %6: number, 5: number
-// CHECK-NEXT:       CondBranchInst %7: boolean, %BB2, %BB1
+// CHECK-NEXT:  %7 = PhiInst (:number) 0: number, %BB0, %13: number, %BB2
+// CHECK-NEXT:  %8 = GetClosureScopeInst (:environment) %""(): any, %2: object
+// CHECK-NEXT:  %9 = LoadFrameInst (:number) %8: environment, [x]: number
+// CHECK-NEXT:  %10 = FAddInst (:number) %9: number, 1: number
+// CHECK-NEXT:  %11 = FAddInst (:number) %9: number, %10: number
+// CHECK-NEXT:        StoreFrameInst %8: environment, %11: number, [x]: number
+// CHECK-NEXT:  %13 = FAddInst (:number) %7: number, 1: number
+// CHECK-NEXT:  %14 = FLessThanInst (:boolean) %13: number, 5: number
+// CHECK-NEXT:        CondBranchInst %14: boolean, %BB2, %BB1
+// CHECK-NEXT:function_end
+
+// CHECK:function leaf(): undefined [allCallsitesKnownInStrictMode]
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = LoadFrameInst (:number) %0: environment, [x@""]: number
+// CHECK-NEXT:  %2 = FAddInst (:number) %1: number, 1: number
+// CHECK-NEXT:  %3 = FAddInst (:number) %1: number, %2: number
+// CHECK-NEXT:       StoreFrameInst %0: environment, %3: number, [x@""]: number
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

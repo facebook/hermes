@@ -20,23 +20,24 @@ try {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = [e: any]
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "result": string
-// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
+// CHECK-NEXT:  %2 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %2: any
 // CHECK-NEXT:       TryStartInst %BB1, %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = CatchInst (:any)
-// CHECK-NEXT:       StoreFrameInst %4: any, [e]: any
+// CHECK-NEXT:  %5 = CatchInst (:any)
+// CHECK-NEXT:       StoreFrameInst %0: environment, %5: any, [e]: any
 // CHECK-NEXT:       StorePropertyLooseInst false: boolean, globalObject: object, "result": string
-// CHECK-NEXT:       StoreStackInst false: boolean, %1: any
+// CHECK-NEXT:       StoreStackInst false: boolean, %2: any
 // CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %9 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:        ReturnInst %9: any
+// CHECK-NEXT:  %10 = LoadStackInst (:any) %2: any
+// CHECK-NEXT:        ReturnInst %10: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:        StoreStackInst %12: any, %1: any
+// CHECK-NEXT:  %12 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
+// CHECK-NEXT:  %13 = CallInst (:any) %12: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:        StoreStackInst %13: any, %2: any
 // CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:        TryEndInst

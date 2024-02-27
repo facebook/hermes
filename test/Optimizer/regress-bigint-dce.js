@@ -25,6 +25,7 @@ function f8_ok() { 1 * "a"; }
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "f1_throws": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f2_throws": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f3_ok": string
@@ -33,22 +34,22 @@ function f8_ok() { 1 * "a"; }
 // CHECK-NEXT:       DeclareGlobalVarInst "f6_ok": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f7_ok": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f8_ok": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %f1_throws(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "f1_throws": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %f2_throws(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "f2_throws": string
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %f3_ok(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "f3_ok": string
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %f4_ok(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %14: object, globalObject: object, "f4_ok": string
-// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %f5_ok(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %16: object, globalObject: object, "f5_ok": string
-// CHECK-NEXT:  %18 = CreateFunctionInst (:object) %f6_ok(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %18: object, globalObject: object, "f6_ok": string
-// CHECK-NEXT:  %20 = CreateFunctionInst (:object) %f7_ok(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %20: object, globalObject: object, "f7_ok": string
-// CHECK-NEXT:  %22 = CreateFunctionInst (:object) %f8_ok(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %22: object, globalObject: object, "f8_ok": string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %f1_throws(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "f1_throws": string
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %f2_throws(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "f2_throws": string
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %f3_ok(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "f3_ok": string
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %f4_ok(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %15: object, globalObject: object, "f4_ok": string
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %f5_ok(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %17: object, globalObject: object, "f5_ok": string
+// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %0: environment, %f6_ok(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %19: object, globalObject: object, "f6_ok": string
+// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %0: environment, %f7_ok(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %21: object, globalObject: object, "f7_ok": string
+// CHECK-NEXT:  %23 = CreateFunctionInst (:object) %0: environment, %f8_ok(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %23: object, globalObject: object, "f8_ok": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

@@ -31,18 +31,21 @@ function foo() {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
-// CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:       StoreStackInst undefined: undefined, %3: any
-// CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:       ReturnInst %5: any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
+// CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %4: any
+// CHECK-NEXT:  %6 = LoadStackInst (:any) %4: any
+// CHECK-NEXT:       ReturnInst %6: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
 // CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       ReturnInst undefined: undefined
@@ -51,19 +54,19 @@ function foo() {
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %4 = CatchInst (:any)
-// CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "finally1": string
-// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %6 = CatchInst (:any)
+// CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "finally1": string
+// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:       BranchInst %BB6
+// CHECK-NEXT:        BranchInst %BB6
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "bar2": string
-// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "bar2": string
+// CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        BranchInst %BB7
 // CHECK-NEXT:%BB7:
 // CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %13 = TryLoadGlobalPropertyInst (:any) globalObject: object, "finally1": string
-// CHECK-NEXT:  %14 = CallInst (:any) %13: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %15 = TryLoadGlobalPropertyInst (:any) globalObject: object, "finally1": string
+// CHECK-NEXT:  %16 = CallInst (:any) %15: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:function_end

@@ -46,45 +46,46 @@ function foo(fn, x) {
 // CHECK-NEXT:    Mov               r5, r3
 // CHECK-NEXT:    Ret               r5
 
-// CHECK:Function<foo>(3 params, 31 registers, 2 symbols):
+// CHECK:Function<foo>(3 params, 32 registers, 2 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
-// CHECK-NEXT:    CreateFunctionEnvironment r0
-// CHECK-NEXT:    LoadParam         r1, 1
-// CHECK-NEXT:    StoreToEnvironment r0, 0, r1
-// CHECK-NEXT:    LoadParam         r2, 2
-// CHECK-NEXT:    StoreToEnvironment r0, 1, r2
-// CHECK-NEXT:    LoadFromEnvironment r3, r0, 0
-// CHECK-NEXT:    LoadConstZero     r5
-// CHECK-NEXT:    Mov               r4, r5
-// CHECK-NEXT:    LoadFromEnvironment r6, r0, 1
-// CHECK-NEXT:    NewArray          r7, 0
-// CHECK-NEXT:    Mov               r8, r4
+// CHECK-NEXT:    GetParentEnvironment r0, 0
+// CHECK-NEXT:    CreateEnvironment r1, r0, 2
+// CHECK-NEXT:    LoadParam         r2, 1
+// CHECK-NEXT:    StoreToEnvironment r1, 0, r2
+// CHECK-NEXT:    LoadParam         r3, 2
+// CHECK-NEXT:    StoreToEnvironment r1, 1, r3
+// CHECK-NEXT:    LoadFromEnvironment r4, r1, 0
+// CHECK-NEXT:    LoadConstZero     r6
+// CHECK-NEXT:    Mov               r5, r6
+// CHECK-NEXT:    LoadFromEnvironment r7, r1, 1
+// CHECK-NEXT:    NewArray          r8, 0
+// CHECK-NEXT:    Mov               r9, r5
+// CHECK-NEXT:    Mov               r23, r8
 // CHECK-NEXT:    Mov               r22, r7
-// CHECK-NEXT:    Mov               r21, r6
-// CHECK-NEXT:    Mov               r20, r8
-// CHECK-NEXT:    CallBuiltin       r9, "HermesBuiltin.arraySpread", 4
-// CHECK-NEXT:    Mov               r4, r9
-// CHECK-NEXT:    LoadConstUndefined r10
-// CHECK-NEXT:    Mov               r22, r3
-// CHECK-NEXT:    Mov               r21, r7
-// CHECK-NEXT:    Mov               r20, r10
-// CHECK-NEXT:    CallBuiltin       r11, "HermesBuiltin.apply", 4
-// CHECK-NEXT:    LoadFromEnvironment r11, r0, 0
-// CHECK-NEXT:    LoadConstZero     r13
-// CHECK-NEXT:    Mov               r12, r13
-// CHECK-NEXT:    LoadFromEnvironment r14, r0, 1
-// CHECK-NEXT:    NewArray          r15, 0
-// CHECK-NEXT:    Mov               r16, r12
+// CHECK-NEXT:    Mov               r21, r9
+// CHECK-NEXT:    CallBuiltin       r10, "HermesBuiltin.arraySpread", 4
+// CHECK-NEXT:    Mov               r5, r10
+// CHECK-NEXT:    LoadConstUndefined r11
+// CHECK-NEXT:    Mov               r23, r4
+// CHECK-NEXT:    Mov               r22, r8
+// CHECK-NEXT:    Mov               r21, r11
+// CHECK-NEXT:    CallBuiltin       r12, "HermesBuiltin.apply", 4
+// CHECK-NEXT:    LoadFromEnvironment r12, r1, 0
+// CHECK-NEXT:    LoadConstZero     r14
+// CHECK-NEXT:    Mov               r13, r14
+// CHECK-NEXT:    LoadFromEnvironment r15, r1, 1
+// CHECK-NEXT:    NewArray          r16, 0
+// CHECK-NEXT:    Mov               r17, r13
+// CHECK-NEXT:    Mov               r23, r16
 // CHECK-NEXT:    Mov               r22, r15
-// CHECK-NEXT:    Mov               r21, r14
-// CHECK-NEXT:    Mov               r20, r16
-// CHECK-NEXT:    CallBuiltin       r17, "HermesBuiltin.arraySpread", 4
-// CHECK-NEXT:    Mov               r12, r17
-// CHECK-NEXT:    Mov               r22, r11
-// CHECK-NEXT:    Mov               r21, r15
-// CHECK-NEXT:    CallBuiltin       r18, "HermesBuiltin.apply", 3
-// CHECK-NEXT:    LoadConstUndefined r18
-// CHECK-NEXT:    Ret               r18
+// CHECK-NEXT:    Mov               r21, r17
+// CHECK-NEXT:    CallBuiltin       r18, "HermesBuiltin.arraySpread", 4
+// CHECK-NEXT:    Mov               r13, r18
+// CHECK-NEXT:    Mov               r23, r12
+// CHECK-NEXT:    Mov               r22, r16
+// CHECK-NEXT:    CallBuiltin       r19, "HermesBuiltin.apply", 3
+// CHECK-NEXT:    LoadConstUndefined r19
+// CHECK-NEXT:    Ret               r19
 
 // CHECK:Debug filename table:
 // CHECK-NEXT:  0: {{.*}}spread-arguments.js
@@ -97,10 +98,10 @@ function foo(fn, x) {
 // CHECK-NEXT:    bc 2: line 10 col 1
 // CHECK-NEXT:    bc 14: line 10 col 1
 // CHECK-NEXT:  0x000a  function idx 1, starts at line 10 col 1
-// CHECK-NEXT:    bc 45: line 11 col 5
-// CHECK-NEXT:    bc 63: line 11 col 5
-// CHECK-NEXT:    bc 96: line 12 col 9
-// CHECK-NEXT:    bc 109: line 12 col 9
+// CHECK-NEXT:    bc 53: line 11 col 5
+// CHECK-NEXT:    bc 71: line 11 col 5
+// CHECK-NEXT:    bc 104: line 12 col 9
+// CHECK-NEXT:    bc 117: line 12 col 9
 // CHECK-NEXT:  0x001a  end of debug source table
 
 // CHECK:Debug lexical table:

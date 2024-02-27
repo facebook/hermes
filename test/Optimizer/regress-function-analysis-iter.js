@@ -36,38 +36,50 @@
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %main(): functionCode
-// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %main(): functionCode, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %main(): functionCode
+// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %main(): functionCode, %0: environment, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): undefined [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:frame = [f1: object]
+// CHECK-NEXT:frame = [f1: object, f2: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f1(): functionCode
-// CHECK-NEXT:       StoreFrameInst %0: object, [f1]: object
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %main(): any, %0: environment
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %f1(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [f1]: object
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %f2(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [f2]: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f1(): number [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst (:object) [f1@main]: object
-// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "a": string
-// CHECK-NEXT:       CondBranchInst %1: any, %BB3, %BB2
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %main(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = LoadFrameInst (:object) %0: environment, [f1@main]: object
+// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "a": string
+// CHECK-NEXT:       CondBranchInst %2: any, %BB3, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = PhiInst (:number) %5: number, %BB2, %11: number, %BB5
-// CHECK-NEXT:       ReturnInst %3: number
+// CHECK-NEXT:  %4 = PhiInst (:number) %6: number, %BB2, %12: number, %BB5
+// CHECK-NEXT:       ReturnInst %4: number
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = CallInst (:number) %0: object, %f1(): functionCode, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %6 = CallInst (:number) %1: object, %f1(): functionCode, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "b": string
-// CHECK-NEXT:       CondBranchInst %7: any, %BB5, %BB4
+// CHECK-NEXT:  %8 = TryLoadGlobalPropertyInst (:any) globalObject: object, "b": string
+// CHECK-NEXT:       CondBranchInst %8: any, %BB5, %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %9 = CallInst (:number) %0: object, %f1(): functionCode, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %10 = CallInst (:number) %1: object, %f1(): functionCode, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %11 = PhiInst (:number) %9: number, %BB4, 0: number, %BB3
+// CHECK-NEXT:  %12 = PhiInst (:number) %10: number, %BB4, 0: number, %BB3
 // CHECK-NEXT:        BranchInst %BB1
+// CHECK-NEXT:function_end
+
+// CHECK:function f2(cb: object): any [allCallsitesKnownInStrictMode,unreachable]
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

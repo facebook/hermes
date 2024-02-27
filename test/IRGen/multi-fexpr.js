@@ -56,140 +56,157 @@ function test_captured_let_in_finally() {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "test_fexpr_in_while_cond": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_captured_fexpr_in_while": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_captured_fexpr_in_finally": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_captured_let_in_finally": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test_fexpr_in_while_cond(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "test_fexpr_in_while_cond": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %test_captured_fexpr_in_while(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "test_captured_fexpr_in_while": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %test_captured_fexpr_in_finally(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "test_captured_fexpr_in_finally": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %test_captured_let_in_finally(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "test_captured_let_in_finally": string
-// CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:        StoreStackInst undefined: undefined, %12: any
-// CHECK-NEXT:  %14 = LoadStackInst (:any) %12: any
-// CHECK-NEXT:        ReturnInst %14: any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %test_fexpr_in_while_cond(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "test_fexpr_in_while_cond": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %test_captured_fexpr_in_while(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "test_captured_fexpr_in_while": string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %test_captured_fexpr_in_finally(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "test_captured_fexpr_in_finally": string
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %test_captured_let_in_finally(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "test_captured_let_in_finally": string
+// CHECK-NEXT:  %13 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %13: any
+// CHECK-NEXT:  %15 = LoadStackInst (:any) %13: any
+// CHECK-NEXT:        ReturnInst %15: any
 // CHECK-NEXT:function_end
 
 // CHECK:function test_fexpr_in_while_cond(): any
 // CHECK-NEXT:frame = [f: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f(): functionCode
-// CHECK-NEXT:       StoreFrameInst %0: object, [f]: any
-// CHECK-NEXT:       CondBranchInst %0: object, %BB1, %BB2
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test_fexpr_in_while_cond(): any, %0: environment
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %f(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [f]: any
+// CHECK-NEXT:       CondBranchInst %2: object, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %f(): functionCode
-// CHECK-NEXT:       StoreFrameInst %5: object, [f]: any
-// CHECK-NEXT:       CondBranchInst %5: object, %BB1, %BB2
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %f(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %7: object, [f]: any
+// CHECK-NEXT:       CondBranchInst %7: object, %BB1, %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function test_captured_fexpr_in_while(): any
 // CHECK-NEXT:frame = [fexpr: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %fexpr(): functionCode
-// CHECK-NEXT:       StoreFrameInst %0: object, [fexpr]: any
-// CHECK-NEXT:  %2 = CallInst (:any) %0: object, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:       CondBranchInst %2: any, %BB1, %BB2
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test_captured_fexpr_in_while(): any, %0: environment
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %fexpr(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [fexpr]: any
+// CHECK-NEXT:  %4 = CallInst (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:       CondBranchInst %4: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %fexpr(): functionCode
-// CHECK-NEXT:       StoreFrameInst %6: object, [fexpr]: any
-// CHECK-NEXT:  %8 = CallInst (:any) %6: object, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:       CondBranchInst %8: any, %BB1, %BB2
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %fexpr(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %8: object, [fexpr]: any
+// CHECK-NEXT:  %10 = CallInst (:any) %8: object, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:        CondBranchInst %10: any, %BB1, %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function test_captured_fexpr_in_finally(): any
 // CHECK-NEXT:frame = [fexpr: any]
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test_captured_fexpr_in_finally(): any, %0: environment
 // CHECK-NEXT:       TryStartInst %BB1, %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = CatchInst (:any)
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %"fexpr 1#"(): functionCode
-// CHECK-NEXT:       StoreFrameInst %2: object, [fexpr]: any
-// CHECK-NEXT:  %4 = CallInst (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:       ThrowInst %1: any
+// CHECK-NEXT:  %3 = CatchInst (:any)
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %"fexpr 1#"(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [fexpr]: any
+// CHECK-NEXT:  %6 = CallInst (:any) %4: object, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:       ThrowInst %3: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:       BranchInst %BB4
+// CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
+// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %"fexpr 1#"(): functionCode
-// CHECK-NEXT:        StoreFrameInst %11: object, [fexpr]: any
-// CHECK-NEXT:  %13 = CallInst (:any) %11: object, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %1: environment, %"fexpr 1#"(): functionCode
+// CHECK-NEXT:        StoreFrameInst %1: environment, %13: object, [fexpr]: any
+// CHECK-NEXT:  %15 = CallInst (:any) %13: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function test_captured_let_in_finally(): any
 // CHECK-NEXT:frame = [x: any, fexpr: any]
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test_captured_let_in_finally(): any, %0: environment
 // CHECK-NEXT:       TryStartInst %BB1, %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = CatchInst (:any)
-// CHECK-NEXT:       StoreFrameInst undefined: undefined, [x]: any
+// CHECK-NEXT:  %3 = CatchInst (:any)
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [x]: any
 // CHECK-NEXT:       StorePropertyLooseInst 0: number, globalObject: object, "glob": string
-// CHECK-NEXT:       StoreFrameInst undefined: undefined, [x]: any
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %"fexpr 2#"(): functionCode
-// CHECK-NEXT:       StoreFrameInst %5: object, [fexpr]: any
-// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "glob": string
-// CHECK-NEXT:       ThrowInst %1: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [x]: any
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %"fexpr 2#"(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %7: object, [fexpr]: any
+// CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "glob": string
+// CHECK-NEXT:        ThrowInst %3: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:        StoreFrameInst undefined: undefined, [x]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, undefined: undefined, [x]: any
 // CHECK-NEXT:        StorePropertyLooseInst 0: number, globalObject: object, "glob": string
-// CHECK-NEXT:        StoreFrameInst undefined: undefined, [x]: any
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %"fexpr 2#"(): functionCode
-// CHECK-NEXT:        StoreFrameInst %15: object, [fexpr]: any
-// CHECK-NEXT:        StorePropertyLooseInst %15: object, globalObject: object, "glob": string
+// CHECK-NEXT:        StoreFrameInst %1: environment, undefined: undefined, [x]: any
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %1: environment, %"fexpr 2#"(): functionCode
+// CHECK-NEXT:        StoreFrameInst %1: environment, %17: object, [fexpr]: any
+// CHECK-NEXT:        StorePropertyLooseInst %17: object, globalObject: object, "glob": string
 // CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function f(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %test_fexpr_in_while_cond(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %f(): any, %0: environment
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function fexpr(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "cond": string
-// CHECK-NEXT:       CondBranchInst %0: any, %BB1, %BB2
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %test_captured_fexpr_in_while(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %fexpr(): any, %0: environment
+// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "cond": string
+// CHECK-NEXT:       CondBranchInst %2: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = LoadFrameInst (:any) [fexpr@test_captured_fexpr_in_while]: any
-// CHECK-NEXT:       StorePropertyLooseInst %2: any, globalObject: object, "globalFunc": string
+// CHECK-NEXT:  %4 = ResolveScopeInst (:environment) %test_captured_fexpr_in_while(): any, %1: environment
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) %4: environment, [fexpr@test_captured_fexpr_in_while]: any
+// CHECK-NEXT:       StorePropertyLooseInst %5: any, globalObject: object, "globalFunc": string
 // CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "something": string
-// CHECK-NEXT:       ReturnInst %6: any
+// CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "something": string
+// CHECK-NEXT:        ReturnInst %9: any
 // CHECK-NEXT:function_end
 
 // CHECK:function "fexpr 1#"(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "glob": string
-// CHECK-NEXT:       CondBranchInst %0: any, %BB2, %BB1
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %test_captured_fexpr_in_finally(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %"fexpr 1#"(): any, %0: environment
+// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "glob": string
+// CHECK-NEXT:       CondBranchInst %2: any, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = LoadFrameInst (:any) [fexpr@test_captured_fexpr_in_finally]: any
-// CHECK-NEXT:       StorePropertyLooseInst %2: any, globalObject: object, "glob": string
+// CHECK-NEXT:  %4 = ResolveScopeInst (:environment) %test_captured_fexpr_in_finally(): any, %1: environment
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) %4: environment, [fexpr@test_captured_fexpr_in_finally]: any
+// CHECK-NEXT:       StorePropertyLooseInst %5: any, globalObject: object, "glob": string
 // CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       BranchInst %BB3
@@ -200,6 +217,9 @@ function test_captured_let_in_finally() {
 // CHECK:function "fexpr 2#"(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:       StoreFrameInst 10: number, [x@test_captured_let_in_finally]: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %test_captured_let_in_finally(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %"fexpr 2#"(): any, %0: environment
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %test_captured_let_in_finally(): any, %1: environment
+// CHECK-NEXT:       StoreFrameInst %2: environment, 10: number, [x@test_captured_let_in_finally]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -23,9 +23,12 @@ function bar() {
 // CHECK:function bar(): any [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst (:any) [foo@""]: any
-// CHECK-NEXT:  %1 = CheckedTypeCastInst (:object) %0: any, type(object)
-// CHECK-NEXT:  %2 = CallInst [njsf] (:any) %1: object, %foo(): functionCode, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %3 = CheckedTypeCastInst (:undefined) %2: any, type(undefined)
-// CHECK-NEXT:       ReturnInst %3: undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %bar(): any, %0: environment
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %""(): any, %1: environment
+// CHECK-NEXT:  %3 = LoadFrameInst (:any) %2: environment, [foo@""]: any
+// CHECK-NEXT:  %4 = CheckedTypeCastInst (:object) %3: any, type(object)
+// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %4: object, %foo(): functionCode, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %6 = CheckedTypeCastInst (:undefined) %5: any, type(undefined)
+// CHECK-NEXT:       ReturnInst %6: undefined
 // CHECK-NEXT:function_end

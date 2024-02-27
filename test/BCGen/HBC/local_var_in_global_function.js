@@ -30,7 +30,7 @@ print(e);
 // RA:function global(): any
 // RA-NEXT:frame = [e: any]
 // RA-NEXT:%BB0:
-// RA-NEXT:  $Reg1 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// RA-NEXT:  $Reg1 = CreateScopeInst (:environment) %global(): any, empty: any
 // RA-NEXT:  $Reg0 = DeclareGlobalVarInst "inner": string
 // RA-NEXT:  $Reg0 = DeclareGlobalVarInst "e": string
 // RA-NEXT:  $Reg2 = HBCLoadConstInst (:string) "global": string
@@ -39,8 +39,8 @@ print(e);
 // RA-NEXT:  $Reg2 = TryStartInst %BB1, %BB2
 // RA-NEXT:%BB1:
 // RA-NEXT:  $Reg2 = CatchInst (:any)
-// RA-NEXT:  $Reg2 = HBCStoreToEnvironmentInst $Reg1, $Reg2, [e]: any
-// RA-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %local(): functionCode, $Reg1
+// RA-NEXT:  $Reg2 = StoreFrameInst $Reg1, $Reg2, [e]: any
+// RA-NEXT:  $Reg1 = CreateFunctionInst (:object) $Reg1, %local(): functionCode
 // RA-NEXT:  $Reg1 = StorePropertyLooseInst $Reg1, $Reg0, "local": string
 // RA-NEXT:  $Reg3 = TryLoadGlobalPropertyInst (:any) $Reg0, "print": string
 // RA-NEXT:  $Reg1 = TryLoadGlobalPropertyInst (:any) $Reg0, "local": string
@@ -59,7 +59,7 @@ print(e);
 // RA:function local(): any
 // RA-NEXT:frame = []
 // RA-NEXT:%BB0:
-// RA-NEXT:  $Reg0 = HBCResolveParentEnvironmentInst (:environment) %global(): any, 0: number, %parentScope: environment
-// RA-NEXT:  $Reg0 = HBCLoadFromEnvironmentInst (:any) $Reg0, [e@global]: any
+// RA-NEXT:  $Reg0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// RA-NEXT:  $Reg0 = LoadFrameInst (:any) $Reg0, [e@global]: any
 // RA-NEXT:  $Reg0 = ReturnInst $Reg0
 // RA-NEXT:function_end
