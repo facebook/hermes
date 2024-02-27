@@ -339,6 +339,16 @@ Arguments | %variablescope is the VariableScope corresponding to the enclosing s
 Semantics | The instruction retrieves the requested scope, which must be %numLevels up from the starting scope.
 Effects | Does not read or write to memory.
 
+### GetClosureScopeInst
+
+GetClosureScopeInst | _
+--- | --- |
+Description | Retrieve the scope from the given closure.
+Example | %0 = GetClosureScopeInst %varScope, %closure
+Arguments | %varScope is the VariableScope that describes the resulting scope. %closure is the closure from which to read the scope.
+Semantics | The instruction returns the scope stored in the given closure.
+Effects | Does not read or write to memory.
+
 ### CreateFunctionInst
 
 CreateFunctionInst | _

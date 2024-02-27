@@ -884,6 +884,13 @@ class InstrGen {
       HBCResolveParentEnvironmentInst &inst) {
     hermes_fatal("HBCResolveEnvironment is not used by SH.");
   }
+  void generateGetClosureScopeInst(GetClosureScopeInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_get_env_from_closure(shr, ";
+    generateRegister(*inst.getClosure());
+    os_ << ");";
+  }
   void generateHBCGetArgumentsLengthInst(HBCGetArgumentsLengthInst &inst) {
     os_.indent(2);
     generateRegister(inst);

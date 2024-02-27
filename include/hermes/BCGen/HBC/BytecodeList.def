@@ -225,6 +225,11 @@ DEFINE_OPCODE_2(GetParentEnvironment, Reg8, UInt8)
 /// Arg3 is the number of levels up the scope chain to go.
 DEFINE_OPCODE_3(GetEnvironment, Reg8, Reg8, UInt8)
 
+/// Get the environment from a closure.
+/// Arg1 is the destination.
+/// Arg2 is the closure from which to read.
+DEFINE_OPCODE_2(GetClosureEnvironment, Reg8, Reg8)
+
 /// Store a value in an environment.
 /// StoreNPToEnvironment[L] store a non-pointer value in an environment
 /// Arg1 is the environment (as fetched by GetEnvironment).

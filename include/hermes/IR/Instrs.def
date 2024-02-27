@@ -209,6 +209,7 @@ DEF_VALUE(GetParentScopeInst, BaseScopeInst)
 DEF_VALUE(CreateScopeInst, BaseScopeInst)
 DEF_VALUE(ResolveScopeInst, BaseScopeInst)
 DEF_VALUE(LIRResolveScopeInst, BaseScopeInst)
+DEF_VALUE(GetClosureScopeInst, BaseScopeInst)
 #ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCResolveParentEnvironmentInst, BaseScopeInst)
 DEF_VALUE(HBCCreateFunctionEnvironmentInst, BaseScopeInst)

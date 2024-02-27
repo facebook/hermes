@@ -2014,6 +2014,13 @@ tailCall:
         ip = NEXTINST(GetParentEnvironment);
         DISPATCH;
       }
+      CASE(GetClosureEnvironment) {
+        O1REG(GetClosureEnvironment) = HermesValue::encodeObjectValue(
+            vmcast<Callable>(O2REG(GetClosureEnvironment))
+                ->getEnvironment(runtime));
+        ip = NEXTINST(GetClosureEnvironment);
+        DISPATCH;
+      }
 
       CASE(CreateEnvironment) {
         CAPTURE_IP_ASSIGN(

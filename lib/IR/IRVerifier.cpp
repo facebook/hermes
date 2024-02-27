@@ -1151,6 +1151,10 @@ bool Verifier::visitLIRResolveScopeInst(
     const hermes::LIRResolveScopeInst &Inst) {
   return true;
 }
+bool Verifier::visitGetClosureScopeInst(
+    const hermes::GetClosureScopeInst &Inst) {
+  return true;
+}
 
 bool Verifier::visitHBCProfilePointInst(const HBCProfilePointInst &Inst) {
   // Nothing to verify at this point.
