@@ -776,6 +776,10 @@ class TypeInferenceImpl {
     return Type::createAnyType();
   }
 
+  Type inferGetParentScopeInst(GetParentScopeInst *inst) {
+    return *inst->getInherentType();
+  }
+
   // These are target dependent instructions:
 
   Type inferHBCGetGlobalObjectInst(HBCGetGlobalObjectInst *inst) {

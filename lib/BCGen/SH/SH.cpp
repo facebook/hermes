@@ -859,6 +859,13 @@ class InstrGen {
       os_ << " = _sh_ljs_param(frame, " << index << ");\n";
     }
   }
+  void generateGetParentScopeInst(GetParentScopeInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+
+    os_ << " = _sh_ljs_get_env_from_closure(shr, frame["
+        << hbc::StackFrameLayout::CalleeClosureOrCB << "]);";
+  }
   void generateHBCResolveParentEnvironmentInst(
       HBCResolveParentEnvironmentInst &inst) {
     os_.indent(2);
