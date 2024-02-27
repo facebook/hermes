@@ -865,6 +865,8 @@ class ESTreeIRGen {
   ///   or inferred according to the rules of ES6.
   /// \param functionNode is the ESTree function node (declaration, expression,
   ///   object method).
+  /// \param parentScope is the VariableScope of the enclosing function, or null
+  ///   if there isn't one.
   /// \param superClassNode is the extends clause of the current class, if
   ///   available. Used for super calls.
   /// \param isGeneratorInnerFunction whether this is a GeneratorInnerFunction.
@@ -872,6 +874,7 @@ class ESTreeIRGen {
   Function *genES5Function(
       Identifier originalName,
       ESTree::FunctionLikeNode *functionNode,
+      VariableScope *parentScope,
       ESTree::Node *superClassNode = nullptr,
       bool isGeneratorInnerFunction = false);
 
@@ -885,7 +888,8 @@ class ESTreeIRGen {
   /// \return the outer Function.
   Function *genGeneratorFunction(
       Identifier originalName,
-      ESTree::FunctionLikeNode *functionNode);
+      ESTree::FunctionLikeNode *functionNode,
+      VariableScope *parentScope);
 
   /// Generate the IR for an async function: it desugars async function to a
   /// generator function wrapped in a call to the JS builtin `spawnAsync` and
@@ -900,7 +904,8 @@ class ESTreeIRGen {
   /// \return the async Function.
   Function *genAsyncFunction(
       Identifier originalName,
-      ESTree::FunctionLikeNode *functionNode);
+      ESTree::FunctionLikeNode *functionNode,
+      VariableScope *parentScope);
 
   /// In the beginning of an ES5 function, initialize the special captured
   /// variables needed by arrow functions, constructors and methods.
@@ -929,11 +934,14 @@ class ESTreeIRGen {
   /// function.
   ///     When "No", only set the .length of the resultant function.
   ///     Used for the outer function of generator functions, e.g.
+  /// \param parentScope the VariableScope of the enclosing function, or null if
+  /// emitting the top level function.
   void emitFunctionPrologue(
       ESTree::FunctionLikeNode *funcNode,
       BasicBlock *entry,
       InitES5CaptureState doInitES5CaptureState,
-      DoEmitDeclarations doEmitDeclarations);
+      DoEmitDeclarations doEmitDeclarations,
+      VariableScope *parentScope);
 
   /// Declare all variables in the scope, except parameters (which are handled
   /// separately). Variables that obey TDZ are initialized to empty.

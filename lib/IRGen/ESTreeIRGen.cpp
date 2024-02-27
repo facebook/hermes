@@ -147,7 +147,8 @@ void ESTreeIRGen::doIt() {
       Program,
       Builder.createBasicBlock(topLevelFunction),
       InitES5CaptureState::Yes,
-      DoEmitDeclarations::Yes);
+      DoEmitDeclarations::Yes,
+      nullptr);
 
   Value *retVal;
   {
@@ -187,7 +188,7 @@ void ESTreeIRGen::doCJSModule(
   }
 
   Identifier functionName = Builder.createIdentifier("cjs_module");
-  Function *newFunc = genES5Function(functionName, func);
+  Function *newFunc = genES5Function(functionName, func, nullptr);
 
   drainCompilationQueue();
 
