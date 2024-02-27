@@ -19,3 +19,5 @@ let SymbolTypeAnnotation: symbol;
 let BigIntLiteralTypeAnnotation: 10n;
 let ExistsTypeAnnotation: *;
 let BooleanLiteralTypeAnnotation: true;
+let GenericTypeAnnotation: T;
+let FunctionTypeAnnotation: (this: User, str: string, bool?: boolean, ...nums: Array<number>) => void;

@@ -1147,7 +1147,65 @@
         "AnyTypeAnnotation": {},
         "MixedTypeAnnotation": {},
         "BigIntTypeAnnotation": {},
-        "VoidTypeAnnotation": {}
+        "VoidTypeAnnotation": {},
+        "FunctionTypeAnnotation": {
+            "fields": {
+                "params": {
+                    "type": "Vec<FunctionTypeParam>",
+                    "optional": true
+                },
+                "this":{
+                    "type": "Option<FunctionTypeParam>",
+                    "optional": true
+                },
+                "returnType": {
+                    "type": "FlowTypeAnnotation"
+                },
+                "rest": {
+                    "type": "Option<FunctionTypeParam>",
+                    "optional": true
+                },
+                "type_parameters": {
+                    "type": "Option<TypeParameterInstantiation>",
+                    "optional": true,
+                    "rename": "typeParameters"
+                }
+            }
+        },
+        "FunctionTypeParam": {
+            "fields": {
+                "name": {
+                    "type": "Option<Identifier>",
+                    "optional": true
+                },
+                "type_annotation": {
+                    "type": "FlowTypeAnnotation",
+                    "rename": "typeAnnotation"
+                },
+                "optional": {
+                    "type": "bool"
+                }
+            }
+        },
+        "GenericTypeAnnotation": {
+            "fields": {
+                "id": {
+                    "type": "Identifier"
+                },
+                "type_parameters": {
+                    "type": "Option<TypeParameterInstantiation>",
+                    "optional": true,
+                    "rename": "typeParameters"
+                }
+            }
+        },
+        "TypeParameterInstantiation": {
+            "fields": {
+                "params": {
+                    "type": "Vec<FlowTypeAnnotation>"
+                }
+            }
+        }
     },
     "enums": {
         "Statement": [
@@ -1352,7 +1410,9 @@
             "AnyTypeAnnotation",
             "MixedTypeAnnotation",
             "BigIntTypeAnnotation",
-            "VoidTypeAnnotation"
+            "VoidTypeAnnotation",
+            "FunctionTypeAnnotation",
+            "GenericTypeAnnotation"
         ]
     },
     "operators": {
