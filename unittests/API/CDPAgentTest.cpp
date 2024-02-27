@@ -1539,28 +1539,24 @@ TEST_F(CDPAgentTest, TestRuntimeEnable) {
   sendAndCheckResponse("Runtime.disable", msgId++);
 }
 
-TEST_F(CDPAgentTest, RefuseDoubleRuntimeEnable) {
+TEST_F(CDPAgentTest, AllowDoubleRuntimeEnable) {
   int msgId = 1;
   sendAndCheckResponse("Runtime.enable", msgId++);
 
-  // Verify enabling a second time fails
-  sendParameterlessRequest("Runtime.enable", msgId);
-  ensureErrorResponse(waitForMessage(), msgId++);
+  // Verify enabling a second time succeeds
+  sendAndCheckResponse("Runtime.enable", msgId++);
 }
 
 TEST_F(CDPAgentTest, RefuseRuntimeOperationsWithoutEnable) {
   int msgId = 1;
 
-  // Disable
-  sendParameterlessRequest("Runtime.disable", msgId);
-  ensureErrorResponse(waitForMessage(), msgId++);
+  sendAndCheckResponse("Runtime.disable", msgId++);
 
-  // GetHeapUsage
-  sendParameterlessRequest("Runtime.getHeapUsage", msgId);
-  ensureErrorResponse(waitForMessage(), msgId++);
-
-  // GlobalLexicalScopeNames
-  sendParameterlessRequest("Runtime.globalLexicalScopeNames", msgId);
+  sendRequest("Runtime.compileScript", msgId, [](::hermes::JSONEmitter &json) {
+    json.emitKeyValue("persistScript", true);
+    json.emitKeyValue("sourceURL", "none");
+    json.emitKeyValue("expression", "1+1");
+  });
   ensureErrorResponse(waitForMessage(), msgId++);
 }
 
