@@ -93,6 +93,8 @@ class CDPAgentTest : public ::testing::Test {
   void SetUp() override;
   void TearDown() override;
 
+  void setupRuntimeTestInfra();
+
   void scheduleScript(
       const std::string &script,
       const std::string &url = kDefaultUrl,
@@ -169,6 +171,16 @@ class CDPAgentTest : public ::testing::Test {
 };
 
 void CDPAgentTest::SetUp() {
+  setupRuntimeTestInfra();
+
+  cdpAgent_ = CDPAgent::create(
+      kTestExecutionContextId,
+      *cdpDebugAPI_,
+      std::bind(&CDPAgentTest::handleRuntimeTask, this, _1),
+      std::bind(&CDPAgentTest::handleResponse, this, _1));
+}
+
+void CDPAgentTest::setupRuntimeTestInfra() {
 #if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
   // Give the runtime thread the same stack size as the main thread. The runtime
   // thread is the main thread of the HermesRuntime.
@@ -202,12 +214,6 @@ void CDPAgentTest::SetUp() {
           std::bind(&CDPAgentTest::signalTest, this, _1, _2, _3, _4)));
 
   cdpDebugAPI_ = CDPDebugAPI::create(*runtime_);
-
-  cdpAgent_ = CDPAgent::create(
-      kTestExecutionContextId,
-      *cdpDebugAPI_,
-      std::bind(&CDPAgentTest::handleRuntimeTask, this, _1),
-      std::bind(&CDPAgentTest::handleResponse, this, _1));
 }
 
 void CDPAgentTest::TearDown() {
@@ -1373,6 +1379,81 @@ TEST_F(CDPAgentTest, TestRemoveBreakpoint) {
   // Make sure the script runs to finish after this, which indicates it didn't
   // get stopped by breakpoint in the second iteration of the loop.
   waitForScheduledScripts();
+}
+
+TEST_F(CDPAgentTest, TestRestoreState) {
+  int msgId = 1;
+
+  // First, create a breakpoint that will be persisted.
+  sendAndCheckResponse("Debugger.enable", msgId++);
+  sendRequest(
+      "Debugger.setBreakpointByUrl", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("url", kDefaultUrl);
+        json.emitKeyValue("lineNumber", 3);
+        json.emitKeyValue("columnNumber", 0);
+      });
+  ensureSetBreakpointByUrlResponse(waitForMessage(), msgId++, {});
+
+  for (int i = 0; i < 2; i++) {
+    std::shared_ptr<State> state;
+    if (i == 0) {
+      // Save CDPAgent state on non-runtime thread and shut everything down.
+      state = cdpAgent_->getState();
+      cdpAgent_.reset();
+      waitFor<bool>([this](auto promise) {
+        runtimeThread_->add([this, promise]() {
+          cdpDebugAPI_.reset();
+          promise->set_value(true);
+        });
+      });
+    } else {
+      // Save CDPAgent state on the runtime thread and shut everything down.
+      waitFor<bool>([this, &state](auto promise) {
+        runtimeThread_->add([this, &state, promise]() {
+          state = cdpAgent_->getState();
+          cdpAgent_.reset();
+          cdpDebugAPI_.reset();
+          promise->set_value(true);
+        });
+      });
+    }
+    // Can't destroy runtime_ in the runtimeThread_ due to handleRuntimeTask()
+    // still uses runtime_.
+    runtimeThread_.reset();
+    runtime_.reset();
+
+    // Set everything up again, but with the persisted state this time for
+    // CDPAgent.
+    setupRuntimeTestInfra();
+    cdpAgent_ = CDPAgent::create(
+        kTestExecutionContextId,
+        *cdpDebugAPI_,
+        std::bind(&CDPAgentTest::handleRuntimeTask, this, _1),
+        std::bind(&CDPAgentTest::handleResponse, this, _1),
+        state);
+
+    sendAndCheckResponse("Debugger.enable", msgId++);
+    scheduleScript(R"(
+      var a = 1 + 2;
+      var b = a / 2;
+      var c = a + b; // (line 3) hit breakpoint
+      var d = b - c;
+      var e = c * d;
+      var f = 10;
+    )");
+    ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+    // Check that CDPAgent was restored with previously set breakpoint and
+    // pauses on new script
+    auto resolution = expectNotification("Debugger.breakpointResolved");
+    auto resolvedLineNumber =
+        jsonScope_.getNumber(resolution, {"params", "location", "lineNumber"});
+    EXPECT_EQ(resolvedLineNumber, 3);
+    ensurePaused(waitForMessage(), "other", {{"global", 3, 1}});
+
+    sendAndCheckResponse("Debugger.resume", msgId++);
+    ensureNotification(waitForMessage(), "Debugger.resumed");
+  }
 }
 
 TEST_F(CDPAgentTest, TestActivateBreakpoints) {

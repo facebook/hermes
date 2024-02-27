@@ -23,6 +23,7 @@ using OutboundMessageFunc = std::function<void(const std::string &)>;
 
 class CDPAgentImpl;
 class CDPDebugAPI;
+struct State;
 
 /// An agent for interacting with the provided \p runtime and
 /// \p asyncDebuggerAPI via CDP messages in the Debugger, Runtime, Profiler,
@@ -43,7 +44,8 @@ class HERMES_EXPORT CDPAgent {
       int32_t executionContextID,
       CDPDebugAPI &cdpDebugAPI,
       debugger::EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
-      OutboundMessageFunc messageCallback);
+      OutboundMessageFunc messageCallback,
+      std::shared_ptr<State> state);
 
  public:
   /// Create a new CDP Agent. This can be done on an arbitrary thread; the
@@ -52,7 +54,8 @@ class HERMES_EXPORT CDPAgent {
       int32_t executionContextID,
       CDPDebugAPI &cdpDebugAPI,
       debugger::EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
-      OutboundMessageFunc messageCallback);
+      OutboundMessageFunc messageCallback,
+      std::shared_ptr<State> state = nullptr);
 
   /// Destroy the CDP Agent. This can be done on an arbitrary thread.
   /// It's expected that the integrator will continue to process any runtime
@@ -67,10 +70,40 @@ class HERMES_EXPORT CDPAgent {
   /// response. This can be called from arbitrary threads.
   void enableRuntimeDomain();
 
+  /// Extract state to be persisted across reloads. This can be called from
+  /// arbitrary threads.
+  std::shared_ptr<State> getState();
+
  private:
   /// This should be a unique_ptr to provide predictable destruction time lined
   /// up with when CDPAgent is destroyed. Do not use shared_ptr.
   std::unique_ptr<CDPAgentImpl> impl_;
+};
+
+/// Public-facing wrapper for internal CDP state that can be preserved across
+/// reloads.
+struct HERMES_EXPORT State {
+  /// Incomplete type that stores the actual state.
+  struct Private;
+
+  /// Custom deleter allowing the incomplete type to be used in a unique_ptr.
+  struct PrivateDeleter {
+    void operator()(Private *privateState) const;
+  };
+
+  /// Create a new wrapper with the provided \p privateState.
+  explicit State(std::unique_ptr<Private, PrivateDeleter> &&privateState)
+      : privateState_(std::move(privateState)) {}
+  ~State();
+
+  /// Get the wrapped state.
+  Private &get() {
+    return *privateState_.get();
+  }
+
+ private:
+  /// Pointer to the actual stored state, hidden from users of this wrapper.
+  std::unique_ptr<Private, PrivateDeleter> privateState_;
 };
 
 } // namespace cdp
