@@ -293,6 +293,10 @@ class IRBuilder {
       VariableScope *scope,
       JSDynamicParam *parentScopeParam);
 
+  CreateScopeInst *createCreateScopeInst(
+      VariableScope *scope,
+      Value *parentScope);
+
   LoadStackInst *createLoadStackInst(AllocStackInst *ptr);
 
   LoadFrameInst *createLoadFrameInst(Variable *ptr);

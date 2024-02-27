@@ -309,6 +309,16 @@ Arguments | %varScope is the VariableScope that describes the parent environment
 Semantics | The instruction returns the enclosing environment of the currently executing function.
 Effects | Does not read or write to memory.
 
+### CreateScopeInst
+
+CreateScopeInst | _
+--- | --- |
+Description | Creates a new scope which can be used to store variables.
+Example | %0 = CreateScopeInst %variablescope, %parentScope
+Arguments | %variablescope is a VariableScope describing the variables stored in the produced scope. %parentScope is the scope to use as the parent of the new scope, or EmptySentinel if the scope does not have a parent.
+Semantics | The instruction creates a new scope which can be used to store/retrieve variables, and allow inner functions to access variables in an enclosing scope.
+Effects | Does not read or write to memory.
+
 ### CreateFunction
 
 CreateFunction | _

@@ -1136,6 +1136,13 @@ bool Verifier::visitGetParentScopeInst(const GetParentScopeInst &Inst) {
       "Using incorect parent scope parameter.");
   return true;
 }
+bool Verifier::visitCreateScopeInst(const CreateScopeInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      Inst.getFunction()->getFunctionScope() == Inst.getVariableScope(),
+      "Can only create scope for the enclosing function.");
+  return true;
+}
 
 bool Verifier::visitHBCProfilePointInst(const HBCProfilePointInst &Inst) {
   // Nothing to verify at this point.

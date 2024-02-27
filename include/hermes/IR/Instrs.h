@@ -640,6 +640,35 @@ class GetParentScopeInst : public BaseScopeInst {
   }
 };
 
+class CreateScopeInst : public BaseScopeInst {
+  CreateScopeInst(const CreateScopeInst &) = delete;
+  void operator=(const CreateScopeInst &) = delete;
+
+  enum { ParentScopeIdx = BaseScopeInst::LAST_IDX };
+
+ public:
+  explicit CreateScopeInst(VariableScope *scope, Value *parentScope)
+      : BaseScopeInst(ValueKind::CreateScopeInstKind, scope) {
+    pushOperand(parentScope);
+  }
+  explicit CreateScopeInst(
+      const CreateScopeInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseScopeInst(src, operands) {}
+
+  Value *getParentScope() const {
+    return getOperand(ParentScopeIdx);
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::CreateScopeInstKind;
+  }
+};
+
 class LoadFrameInst : public Instruction {
   LoadFrameInst(const LoadFrameInst &) = delete;
   void operator=(const LoadFrameInst &) = delete;
