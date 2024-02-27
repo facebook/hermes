@@ -27,6 +27,12 @@ let ExistsTypeAnnotation: *;
 let BooleanLiteralTypeAnnotation: true;
 let GenericTypeAnnotation: T;
 let FunctionTypeAnnotation: (this: User, str: string, bool?: boolean, ...nums: Array<number>) => void;
+type NullableTypeAnnotation = ?string;
+type QualifiedTypeIdentifier = Foo.Bar;
+type TypeofTypeAnnotation = typeof Foo;
+type QualifiedTypeofIdentifier = typeof Foo.Bar;
+type QualifiedTypeofIdentifierNested = typeof Foo.Bar.Mark;
+type KeyofTypeAnnotation = keyof T;
 
 
 Output:
@@ -919,12 +925,314 @@ Output:
         704,
         806
       ]
+    },
+    {
+      "type": "TypeAlias",
+      "id": {
+        "type": "Identifier",
+        "name": "NullableTypeAnnotation",
+        "typeAnnotation": null,
+        "loc": null,
+        "range": [
+          812,
+          834
+        ]
+      },
+      "typeParameters": null,
+      "right": {
+        "type": "NullableTypeAnnotation",
+        "typeAnnotation": {
+          "type": "StringTypeAnnotation",
+          "loc": null,
+          "range": [
+            838,
+            844
+          ]
+        },
+        "loc": null,
+        "range": [
+          837,
+          844
+        ]
+      },
+      "loc": null,
+      "range": [
+        807,
+        845
+      ]
+    },
+    {
+      "type": "TypeAlias",
+      "id": {
+        "type": "Identifier",
+        "name": "QualifiedTypeIdentifier",
+        "typeAnnotation": null,
+        "loc": null,
+        "range": [
+          851,
+          874
+        ]
+      },
+      "typeParameters": null,
+      "right": {
+        "type": "GenericTypeAnnotation",
+        "id": {
+          "type": "QualifiedTypeIdentifier",
+          "qualification": {
+            "type": "Identifier",
+            "name": "Foo",
+            "typeAnnotation": null,
+            "loc": null,
+            "range": [
+              877,
+              880
+            ]
+          },
+          "id": {
+            "type": "Identifier",
+            "name": "Bar",
+            "typeAnnotation": null,
+            "loc": null,
+            "range": [
+              881,
+              884
+            ]
+          },
+          "loc": null,
+          "range": [
+            877,
+            884
+          ]
+        },
+        "typeParameters": null,
+        "loc": null,
+        "range": [
+          877,
+          884
+        ]
+      },
+      "loc": null,
+      "range": [
+        846,
+        885
+      ]
+    },
+    {
+      "type": "TypeAlias",
+      "id": {
+        "type": "Identifier",
+        "name": "TypeofTypeAnnotation",
+        "typeAnnotation": null,
+        "loc": null,
+        "range": [
+          891,
+          911
+        ]
+      },
+      "typeParameters": null,
+      "right": {
+        "type": "TypeofTypeAnnotation",
+        "argument": {
+          "type": "Identifier",
+          "name": "Foo",
+          "typeAnnotation": null,
+          "loc": null,
+          "range": [
+            921,
+            924
+          ]
+        },
+        "loc": null,
+        "range": [
+          914,
+          924
+        ]
+      },
+      "loc": null,
+      "range": [
+        886,
+        925
+      ]
+    },
+    {
+      "type": "TypeAlias",
+      "id": {
+        "type": "Identifier",
+        "name": "QualifiedTypeofIdentifier",
+        "typeAnnotation": null,
+        "loc": null,
+        "range": [
+          931,
+          956
+        ]
+      },
+      "typeParameters": null,
+      "right": {
+        "type": "TypeofTypeAnnotation",
+        "argument": {
+          "type": "QualifiedTypeofIdentifier",
+          "qualification": {
+            "type": "Identifier",
+            "name": "Foo",
+            "typeAnnotation": null,
+            "loc": null,
+            "range": [
+              966,
+              969
+            ]
+          },
+          "id": {
+            "type": "Identifier",
+            "name": "Bar",
+            "typeAnnotation": null,
+            "loc": null,
+            "range": [
+              970,
+              973
+            ]
+          },
+          "loc": null,
+          "range": [
+            966,
+            973
+          ]
+        },
+        "loc": null,
+        "range": [
+          959,
+          973
+        ]
+      },
+      "loc": null,
+      "range": [
+        926,
+        974
+      ]
+    },
+    {
+      "type": "TypeAlias",
+      "id": {
+        "type": "Identifier",
+        "name": "QualifiedTypeofIdentifierNested",
+        "typeAnnotation": null,
+        "loc": null,
+        "range": [
+          980,
+          1011
+        ]
+      },
+      "typeParameters": null,
+      "right": {
+        "type": "TypeofTypeAnnotation",
+        "argument": {
+          "type": "QualifiedTypeofIdentifier",
+          "qualification": {
+            "type": "QualifiedTypeofIdentifier",
+            "qualification": {
+              "type": "Identifier",
+              "name": "Foo",
+              "typeAnnotation": null,
+              "loc": null,
+              "range": [
+                1021,
+                1024
+              ]
+            },
+            "id": {
+              "type": "Identifier",
+              "name": "Bar",
+              "typeAnnotation": null,
+              "loc": null,
+              "range": [
+                1025,
+                1028
+              ]
+            },
+            "loc": null,
+            "range": [
+              1021,
+              1028
+            ]
+          },
+          "id": {
+            "type": "Identifier",
+            "name": "Mark",
+            "typeAnnotation": null,
+            "loc": null,
+            "range": [
+              1029,
+              1033
+            ]
+          },
+          "loc": null,
+          "range": [
+            1021,
+            1033
+          ]
+        },
+        "loc": null,
+        "range": [
+          1014,
+          1033
+        ]
+      },
+      "loc": null,
+      "range": [
+        975,
+        1034
+      ]
+    },
+    {
+      "type": "TypeAlias",
+      "id": {
+        "type": "Identifier",
+        "name": "KeyofTypeAnnotation",
+        "typeAnnotation": null,
+        "loc": null,
+        "range": [
+          1040,
+          1059
+        ]
+      },
+      "typeParameters": null,
+      "right": {
+        "type": "KeyofTypeAnnotation",
+        "argument": {
+          "type": "GenericTypeAnnotation",
+          "id": {
+            "type": "Identifier",
+            "name": "T",
+            "typeAnnotation": null,
+            "loc": null,
+            "range": [
+              1068,
+              1069
+            ]
+          },
+          "typeParameters": null,
+          "loc": null,
+          "range": [
+            1068,
+            1069
+          ]
+        },
+        "loc": null,
+        "range": [
+          1062,
+          1069
+        ]
+      },
+      "loc": null,
+      "range": [
+        1035,
+        1070
+      ]
     }
   ],
   "sourceType": "script",
   "loc": null,
   "range": [
     192,
-    806
+    1070
   ]
 }
