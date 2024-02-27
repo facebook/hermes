@@ -1991,6 +1991,17 @@ tailCall:
         DISPATCH;
       }
 
+      CASE(GetEnvironment) {
+        Environment *curEnv = vmcast<Environment>(O2REG(GetEnvironment));
+        for (unsigned level = ip->iGetEnvironment.op3; level; --level) {
+          assert(curEnv && "invalid environment relative level");
+          curEnv = curEnv->getParentEnvironment(runtime);
+        }
+        O1REG(GetEnvironment) = HermesValue::encodeObjectValue(curEnv);
+        ip = NEXTINST(GetEnvironment);
+        DISPATCH;
+      }
+
       CASE(GetParentEnvironment) {
         // The currently executing function must exist, so get the environment.
         Environment *curEnv =
@@ -2001,6 +2012,19 @@ tailCall:
         }
         O1REG(GetParentEnvironment) = HermesValue::encodeObjectValue(curEnv);
         ip = NEXTINST(GetParentEnvironment);
+        DISPATCH;
+      }
+
+      CASE(CreateEnvironment) {
+        CAPTURE_IP_ASSIGN(
+            HermesValue envHV,
+            Environment::create(
+                runtime,
+                Handle<Environment>::vmcast(&O2REG(CreateEnvironment)),
+                ip->iCreateEnvironment.op3));
+
+        O1REG(CreateEnvironment) = envHV;
+        ip = NEXTINST(CreateEnvironment);
         DISPATCH;
       }
 
