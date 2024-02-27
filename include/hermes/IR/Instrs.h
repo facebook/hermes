@@ -669,6 +669,72 @@ class CreateScopeInst : public BaseScopeInst {
   }
 };
 
+class ResolveScopeInst : public BaseScopeInst {
+  ResolveScopeInst(const ResolveScopeInst &) = delete;
+  void operator=(const ResolveScopeInst &) = delete;
+
+  enum { StartScopeIdx = BaseScopeInst::LAST_IDX };
+
+ public:
+  explicit ResolveScopeInst(VariableScope *varScope, BaseScopeInst *startScope)
+      : BaseScopeInst(ValueKind::ResolveScopeInstKind, varScope) {
+    pushOperand(startScope);
+  }
+  explicit ResolveScopeInst(
+      const ResolveScopeInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseScopeInst(src, operands) {}
+
+  Instruction *getStartScope() const {
+    return cast<Instruction>(getOperand(StartScopeIdx));
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setIdempotent();
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::ResolveScopeInstKind;
+  }
+};
+
+class LIRResolveScopeInst : public BaseScopeInst {
+  LIRResolveScopeInst(const LIRResolveScopeInst &) = delete;
+  void operator=(const LIRResolveScopeInst &) = delete;
+
+ public:
+  enum { StartScopeIdx = BaseScopeInst::LAST_IDX, NumLevelsIdx };
+
+  explicit LIRResolveScopeInst(
+      VariableScope *varScope,
+      BaseScopeInst *startScope,
+      LiteralNumber *numLevels)
+      : BaseScopeInst(ValueKind::LIRResolveScopeInstKind, varScope) {
+    pushOperand(startScope);
+    pushOperand(numLevels);
+  }
+  explicit LIRResolveScopeInst(
+      const LIRResolveScopeInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseScopeInst(src, operands) {}
+
+  Instruction *getStartScope() const {
+    return cast<Instruction>(getOperand(StartScopeIdx));
+  }
+
+  uint32_t getNumLevels() const {
+    return cast<LiteralNumber>(getOperand(NumLevelsIdx))->asUInt32();
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setIdempotent();
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::LIRResolveScopeInstKind;
+  }
+};
+
 class LoadFrameInst : public Instruction {
   LoadFrameInst(const LoadFrameInst &) = delete;
   void operator=(const LoadFrameInst &) = delete;

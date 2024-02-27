@@ -866,6 +866,16 @@ class InstrGen {
     os_ << " = _sh_ljs_get_env_from_closure(shr, frame["
         << hbc::StackFrameLayout::CalleeClosureOrCB << "]);";
   }
+  void generateResolveScopeInst(ResolveScopeInst &inst) {
+    hermes_fatal("ResolveScopeInst should have been lowered.");
+  }
+  void generateLIRResolveScopeInst(LIRResolveScopeInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_get_env(shr, ";
+    generateRegister(*inst.getStartScope());
+    os_ << ", " << inst.getNumLevels() << ");\n";
+  }
   void generateHBCResolveParentEnvironmentInst(
       HBCResolveParentEnvironmentInst &inst) {
     os_.indent(2);

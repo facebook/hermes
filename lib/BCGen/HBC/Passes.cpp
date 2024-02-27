@@ -237,6 +237,10 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
       opIndex == HBCResolveParentEnvironmentInst::NumLevelsIdx) {
     return true;
   }
+  if (llvh::isa<LIRResolveScopeInst>(Inst) &&
+      opIndex == LIRResolveScopeInst::NumLevelsIdx) {
+    return true;
+  }
 
   return false;
 }

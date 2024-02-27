@@ -1326,6 +1326,24 @@ void HBCISel::generateGetParentScopeInst(
   BCFGen_->emitGetParentEnvironment(encodeValue(Inst), 0);
 }
 
+void HBCISel::generateResolveScopeInst(
+    ResolveScopeInst *Inst,
+    BasicBlock *next) {
+  llvm_unreachable("ResolveScopeInst should have been lowered.");
+}
+
+void HBCISel::generateLIRResolveScopeInst(
+    hermes::LIRResolveScopeInst *Inst,
+    hermes::BasicBlock *next) {
+  auto delta = Inst->getNumLevels();
+  if (std::numeric_limits<uint8_t>::max() < delta) {
+    F_->getContext().getSourceErrorManager().error(
+        Inst->getLocation(), "Variable environment is out-of-reach");
+  }
+  BCFGen_->emitGetEnvironment(
+      encodeValue(Inst), encodeValue(Inst->getStartScope()), delta);
+}
+
 void HBCISel::generateHBCResolveParentEnvironmentInst(
     HBCResolveParentEnvironmentInst *Inst,
     BasicBlock *next) {
