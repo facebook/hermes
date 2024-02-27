@@ -136,7 +136,8 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
       compiledEntities_[key] = func;
     }
 
-    consFunction = Builder.createCreateFunctionInst(func);
+    consFunction =
+        Builder.createCreateFunctionInst(curFunction()->functionScope, func);
   }
   emitStore(consFunction, getDeclData(decl), true);
 
@@ -146,7 +147,9 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
   if (superClass) {
     auto it = classConstructors_.find(classType->getSuperClassInfo());
     assert(it != classConstructors_.end() && "missing super class constructor");
-    vtable = Builder.createLoadFrameInst(it->second.homeObjectVar);
+    auto *RSI = Builder.createResolveScopeInstIfNeeded(
+        it->second.homeObjectVar->getParent(), curFunction()->functionScope);
+    vtable = Builder.createLoadFrameInst(RSI, it->second.homeObjectVar);
     // TODO: This will be known to be the actual type when we properly use an
     // instruction for class creation, but for now we need an object here
     // because we want to use PrLoad on it.
@@ -162,7 +165,8 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
       Builder.createIdentifier(
           llvh::Twine("?") + classType->getClassName().str() + ".prototype"),
       flowTypeToIRType(classType->getHomeObjectType()));
-  Builder.createStoreFrameInst(homeObject, homeObjectVar);
+  Builder.createStoreFrameInst(
+      curFunction()->functionScope, homeObject, homeObjectVar);
 
   // Check to make sure this is a valid class definition,
   // because there may have been errors.

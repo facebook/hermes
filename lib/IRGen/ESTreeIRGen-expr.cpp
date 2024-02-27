@@ -928,8 +928,10 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitSuperLoad(
     // Lookup method on the parent, return thisValue in the result to
     // correctly populate 'this' argument.
     auto it = classConstructors_.find(classType);
+    auto *RSI = Builder.createResolveScopeInstIfNeeded(
+        it->second.homeObjectVar->getParent(), curFunction()->functionScope);
     Value *superHomeObject =
-        Builder.createLoadFrameInst(it->second.homeObjectVar);
+        Builder.createLoadFrameInst(RSI, it->second.homeObjectVar);
     return MemberExpressionResult{
         Builder.createPrLoadInst(
             superHomeObject,
@@ -2191,7 +2193,10 @@ Value *ESTreeIRGen::genIdentifierExpression(
   if (decl->special == sema::Decl::Special::Arguments) {
     // If it is captured, we must use the captured value.
     if (curFunction()->capturedArguments) {
-      return Builder.createLoadFrameInst(curFunction()->capturedArguments);
+      auto *capturedArguments = curFunction()->capturedArguments;
+      auto *RSI = Builder.createResolveScopeInstIfNeeded(
+          capturedArguments->getParent(), curFunction()->functionScope);
+      return Builder.createLoadFrameInst(RSI, capturedArguments);
     }
 
     return curFunction()->createArgumentsInst;
@@ -2246,8 +2251,11 @@ Value *ESTreeIRGen::genMetaProperty(ESTree::MetaPropertyNode *MP) {
       }
 
       // If it is a variable, we must issue a load.
-      if (auto *V = llvh::dyn_cast<Variable>(value))
-        return Builder.createLoadFrameInst(V);
+      if (auto *V = llvh::dyn_cast<Variable>(value)) {
+        auto *RSI = Builder.createResolveScopeInstIfNeeded(
+            V->getParent(), curFunction()->functionScope);
+        return Builder.createLoadFrameInst(RSI, V);
+      }
 
       return value;
     }
@@ -2293,8 +2301,10 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
     // Since the callee has already been loaded at this point, we know that the
     // constructor has already beenn created and initialized. This means that we
     // do not need to perform any TDZ check on the home object variable.
+    auto *RSI = Builder.createResolveScopeInstIfNeeded(
+        it->second.homeObjectVar->getParent(), curFunction()->functionScope);
     auto *proto = Builder.createUnionNarrowTrustedInst(
-        Builder.createLoadFrameInst(it->second.homeObjectVar),
+        Builder.createLoadFrameInst(RSI, it->second.homeObjectVar),
         Type::createObject());
     Value *newInst = emitClassAllocation(classType, proto);
 
@@ -2417,7 +2427,9 @@ Value *ESTreeIRGen::genThisExpression() {
     assert(
         curFunction()->capturedThis &&
         "arrow function must have a captured this");
-    return Builder.createLoadFrameInst(curFunction()->capturedThis);
+    auto *RSI = Builder.createResolveScopeInstIfNeeded(
+        curFunction()->capturedThis->getParent(), curFunction()->functionScope);
+    return Builder.createLoadFrameInst(RSI, curFunction()->capturedThis);
   }
   return curFunction()->jsParams[0];
 }

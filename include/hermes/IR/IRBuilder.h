@@ -287,7 +287,9 @@ class IRBuilder {
 
   AddEmptyStringInst *createAddEmptyStringInst(Value *val);
 
-  CreateFunctionInst *createCreateFunctionInst(Function *code);
+  CreateFunctionInst *createCreateFunctionInst(
+      BaseScopeInst *scope,
+      Function *code);
 
   GetParentScopeInst *createGetParentScopeInst(
       VariableScope *scope,
@@ -314,11 +316,12 @@ class IRBuilder {
 
   LoadStackInst *createLoadStackInst(AllocStackInst *ptr);
 
-  LoadFrameInst *createLoadFrameInst(Variable *ptr);
+  LoadFrameInst *createLoadFrameInst(BaseScopeInst *scope, Variable *ptr);
 
   StoreStackInst *createStoreStackInst(Value *storedValue, AllocStackInst *ptr);
 
-  StoreFrameInst *createStoreFrameInst(Value *storedValue, Variable *ptr);
+  StoreFrameInst *
+  createStoreFrameInst(BaseScopeInst *scope, Value *storedValue, Variable *ptr);
 
   CallInst *createCallInst(
       Value *callee,
@@ -544,6 +547,7 @@ class IRBuilder {
       BasicBlock *nextBlock);
 
   CreateGeneratorInst *createCreateGeneratorInst(
+      BaseScopeInst *scope,
       GeneratorInnerFunction *innerFn);
 
   StartGeneratorInst *createStartGeneratorInst();

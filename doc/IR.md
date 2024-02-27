@@ -212,9 +212,9 @@ Effects | Does not read or write from memory.
 LoadFrameInst | _
 --- | --- |
 Description | Loads a value from a variable.
-Example |  %1 = LoadFrameInst %0
-Arguments | The variable from which the instruction loads.
-Semantics | The the instruction reads from a variable. The address must be a valid variable.
+Example |  %1 = LoadFrameInst %scope, %variable
+Arguments | %variable is a location in %scope to load from.
+Semantics | The the instruction reads from a variable. The variable must be valid and found in the given scope.
 Effects | Reads from memory.
 
 
@@ -233,9 +233,9 @@ Effects | Reads from memory.
 StoreFrameInst | _
 --- | --- |
 Description | Stores a value to a frame variable.
-Example |  %1 = StoreFrameInst %value, %variable
-Arguments | %value is the value to be stored. %address is the reference to the variable where the value will be stored.
-Semantics | The the instruction saves a value to memory. The address must be a valid variable.
+Example |  %1 = StoreFrameInst %scope, %value, %variable
+Arguments | %value is the value to be stored. %variable is a variable in %scope where where the value will be stored.
+Semantics | The the instruction saves a value to memory. The variable must be a real variable found in the scope.
 Effects | Writes to memory.
 
 ### StoreStackInst
@@ -339,14 +339,14 @@ Arguments | %variablescope is the VariableScope corresponding to the enclosing s
 Semantics | The instruction retrieves the requested scope, which must be %numLevels up from the starting scope.
 Effects | Does not read or write to memory.
 
-### CreateFunction
+### CreateFunctionInst
 
-CreateFunction | _
+CreateFunctionInst | _
 --- | --- |
 Description | Constructs a new function into the current scope from its code representation.
-Example | %0 = CreateFunction %function,
-Arguments | %function is the function that represents the code of the generated closure.
-Semantics | The instruction creates a new closure that may access the lexical scope of the calling function
+Example | %0 = CreateFunction %scope, %function
+Arguments | %function is the function that represents the code of the generated closure. %scope is the surrounding environment.
+Semantics | The instruction creates a new closure that may access the lexical scope of the current function
 Effects | Does not read or write to memory.
 
 ### BinaryOperatorInst

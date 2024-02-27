@@ -474,8 +474,18 @@ void HBCISel::generateUnaryOperatorInst(
       break;
   }
 }
-void HBCISel::generateLoadFrameInst(LoadFrameInst *Inst, BasicBlock *next) {
-  llvm_unreachable("LoadFrameInst should have been lowered.");
+void HBCISel::generateLoadFrameInst(
+    hermes::LoadFrameInst *Inst,
+    hermes::BasicBlock *next) {
+  auto dstReg = encodeValue(Inst);
+  Variable *var = Inst->getLoadVariable();
+  auto envReg = encodeValue(Inst->getScope());
+  auto varIdx = encodeValue(var);
+  if (varIdx <= UINT8_MAX) {
+    BCFGen_->emitLoadFromEnvironment(dstReg, envReg, varIdx);
+  } else {
+    BCFGen_->emitLoadFromEnvironmentL(dstReg, envReg, varIdx);
+  }
 }
 void HBCISel::generatePhiInst(PhiInst *Inst, BasicBlock *next) {
   // PhiInst has been translated into a sequence of MOVs in RegAlloc
@@ -833,7 +843,23 @@ void HBCISel::generateStoreStackInst(StoreStackInst *Inst, BasicBlock *next) {
   llvm_unreachable("StoreStackInst should have been lowered.");
 }
 void HBCISel::generateStoreFrameInst(StoreFrameInst *Inst, BasicBlock *next) {
-  llvm_unreachable("StoreFrameInst should have been lowered.");
+  Variable *var = Inst->getVariable();
+  auto valueReg = encodeValue(Inst->getValue());
+  auto envReg = encodeValue(Inst->getScope());
+  auto varIdx = encodeValue(var);
+  if (Inst->getValue()->getType().isNonPtr()) {
+    if (varIdx <= UINT8_MAX) {
+      BCFGen_->emitStoreNPToEnvironment(envReg, varIdx, valueReg);
+    } else {
+      BCFGen_->emitStoreNPToEnvironmentL(envReg, varIdx, valueReg);
+    }
+  } else {
+    if (varIdx <= UINT8_MAX) {
+      BCFGen_->emitStoreToEnvironment(envReg, varIdx, valueReg);
+    } else {
+      BCFGen_->emitStoreToEnvironmentL(envReg, varIdx, valueReg);
+    }
+  }
 }
 void HBCISel::generateAllocStackInst(AllocStackInst *Inst, BasicBlock *next) {
   // This is a no-op.
@@ -885,8 +911,30 @@ void HBCISel::generateGetTemplateObjectInst(
 }
 void HBCISel::generateCreateFunctionInst(
     CreateFunctionInst *Inst,
-    BasicBlock *next) {
-  llvm_unreachable("CreateFunctionInst should have been lowered.");
+    BasicBlock *) {
+  auto env = encodeValue(Inst->getScope());
+  auto output = encodeValue(Inst);
+  auto code = BCFGen_->getFunctionID(Inst->getFunctionCode());
+  bool isGen = llvh::isa<GeneratorFunction>(Inst->getFunctionCode());
+  bool isAsync = llvh::isa<AsyncFunction>(Inst->getFunctionCode());
+  if (LLVM_LIKELY(code <= UINT16_MAX)) {
+    // Most of the cases, function index will be less than 2^16.
+    if (isAsync) {
+      BCFGen_->emitCreateAsyncClosure(output, env, code);
+    } else if (isGen) {
+      BCFGen_->emitCreateGeneratorClosure(output, env, code);
+    } else {
+      BCFGen_->emitCreateClosure(output, env, code);
+    }
+  } else {
+    if (isAsync) {
+      BCFGen_->emitCreateAsyncClosureLongIndex(output, env, code);
+    } else if (isGen) {
+      BCFGen_->emitCreateGeneratorClosureLongIndex(output, env, code);
+    } else {
+      BCFGen_->emitCreateClosureLongIndex(output, env, code);
+    }
+  }
 }
 
 void HBCISel::generateHBCCreateFunctionInst(
@@ -1018,7 +1066,15 @@ void HBCISel::generateSaveAndYieldInst(
 void HBCISel::generateCreateGeneratorInst(
     CreateGeneratorInst *Inst,
     BasicBlock *next) {
-  llvm_unreachable("CreateGeneratorInst should have been lowered");
+  auto env = encodeValue(Inst->getScope());
+  auto output = encodeValue(Inst);
+  auto code = BCFGen_->getFunctionID(Inst->getFunctionCode());
+  if (LLVM_LIKELY(code <= UINT16_MAX)) {
+    // Most of the cases, function index will be less than 2^16.
+    BCFGen_->emitCreateGenerator(output, env, code);
+  } else {
+    BCFGen_->emitCreateGeneratorLongIndex(output, env, code);
+  }
 }
 void HBCISel::generateHBCCreateGeneratorInst(
     HBCCreateGeneratorInst *Inst,
