@@ -145,10 +145,6 @@ DEF_VALUE(ThrowIfInst, Instruction)
 DEF_VALUE(IteratorBeginInst, Instruction)
 DEF_VALUE(IteratorNextInst, Instruction)
 DEF_VALUE(IteratorCloseInst, Instruction)
-#ifdef INCLUDE_HBC_BACKEND
-DEF_VALUE(HBCStoreToEnvironmentInst, Instruction)
-DEF_VALUE(HBCLoadFromEnvironmentInst, Instruction)
-#endif
 
 MARK_FIRST(CreateArgumentsInst, Instruction)
 DEF_VALUE(CreateArgumentsLooseInst, CreateArgumentsInst)
@@ -159,15 +155,9 @@ MARK_FIRST(BaseCreateLexicalChildInst, Instruction)
 
 MARK_FIRST(BaseCreateCallableInst, BaseCreateLexicalChildInst)
 DEF_VALUE(CreateFunctionInst, BaseCreateCallableInst)
-#ifdef INCLUDE_HBC_BACKEND
-DEF_VALUE(HBCCreateFunctionInst, BaseCreateCallableInst)
-#endif
 MARK_LAST(BaseCreateCallableInst)
 
 DEF_VALUE(CreateGeneratorInst, BaseCreateLexicalChildInst)
-#ifdef INCLUDE_HBC_BACKEND
-DEF_VALUE(HBCCreateGeneratorInst, BaseCreateLexicalChildInst)
-#endif
 MARK_LAST(BaseCreateLexicalChildInst)
 
 MARK_FIRST(TerminatorInst, Instruction)

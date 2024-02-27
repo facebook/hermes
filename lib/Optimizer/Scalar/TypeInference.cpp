@@ -116,16 +116,9 @@ static Type inferMemoryLocationType(Value *addr) {
         break;
       }
 
-      case ValueKind::HBCStoreToEnvironmentInstKind: {
-        auto *SE = cast<HBCStoreToEnvironmentInst>(U);
-        storedVal = SE->getStoredValue();
-        break;
-      }
-
       // Loads do not change the type of the memory location.
       case ValueKind::LoadFrameInstKind:
       case ValueKind::LoadStackInstKind:
-      case ValueKind::HBCLoadFromEnvironmentInstKind:
         continue;
 
       default:
@@ -656,12 +649,6 @@ class TypeInferenceImpl {
   Type inferIteratorCloseInst(IteratorCloseInst *inst) {
     return Type::createAnyType();
   }
-  Type inferHBCStoreToEnvironmentInst(HBCStoreToEnvironmentInst *inst) {
-    return Type::createNoType();
-  }
-  Type inferHBCLoadFromEnvironmentInst(HBCLoadFromEnvironmentInst *inst) {
-    return inst->getResolvedName()->getType();
-  }
   Type inferUnreachableInst(UnreachableInst *inst) {
     return Type::createNoType();
   }
@@ -670,12 +657,6 @@ class TypeInferenceImpl {
     return *inst->getInherentType();
   }
   Type inferCreateGeneratorInst(CreateGeneratorInst *inst) {
-    return *inst->getInherentType();
-  }
-  Type inferHBCCreateFunctionInst(HBCCreateFunctionInst *inst) {
-    return *inst->getInherentType();
-  }
-  Type inferHBCCreateGeneratorInst(HBCCreateGeneratorInst *inst) {
     return *inst->getInherentType();
   }
 

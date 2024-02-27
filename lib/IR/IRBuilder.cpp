@@ -887,23 +887,6 @@ IRBuilder::createHBCResolveParentEnvironmentInst(
   return inst;
 }
 
-HBCStoreToEnvironmentInst *IRBuilder::createHBCStoreToEnvironmentInst(
-    Value *env,
-    Value *toPut,
-    Variable *var) {
-  auto PSI = new HBCStoreToEnvironmentInst(env, toPut, var);
-  insert(PSI);
-  return PSI;
-}
-
-HBCLoadFromEnvironmentInst *IRBuilder::createHBCLoadFromEnvironmentInst(
-    Value *env,
-    Variable *var) {
-  auto GSI = new HBCLoadFromEnvironmentInst(env, var);
-  insert(GSI);
-  return GSI;
-}
-
 SwitchImmInst *IRBuilder::createSwitchImmInst(
     Value *input,
     BasicBlock *defaultBlock,
@@ -1033,24 +1016,8 @@ GetBuiltinClosureInst *IRBuilder::createGetBuiltinClosureInst(
   return inst;
 }
 
-HBCCreateFunctionInst *IRBuilder::createHBCCreateFunctionInst(
-    Function *function,
-    BaseScopeInst *env) {
-  auto inst = new HBCCreateFunctionInst(function, env);
-  insert(inst);
-  return inst;
-}
-
 HBCSpillMovInst *IRBuilder::createHBCSpillMovInst(Instruction *value) {
   auto *inst = new HBCSpillMovInst(value);
-  insert(inst);
-  return inst;
-}
-
-HBCCreateGeneratorInst *IRBuilder::createHBCCreateGeneratorInst(
-    Function *function,
-    BaseScopeInst *env) {
-  auto *inst = new HBCCreateGeneratorInst(function, env);
   insert(inst);
   return inst;
 }
