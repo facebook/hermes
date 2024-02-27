@@ -36,15 +36,15 @@ function foo (a, b) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {loc1}    %0 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  {loc0}    %1 = LoadParamInst (:any) %b: any
-// CHECK-NEXT:  {loc1}    %2 = MovInst (:any) {loc1} %0: any
-// CHECK-NEXT:  {loc0}    %3 = MovInst (:any) {loc0} %1: any
+// CHECK-NEXT:  {loc0}    %2 = MovInst (:any) {loc0} %1: any
+// CHECK-NEXT:  {loc1}    %3 = MovInst (:any) {loc1} %0: any
 // CHECK-NEXT:                 BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  {loc1}    %5 = PhiInst (:any) {loc1} %2: any, %BB0, {loc1} %9: any, %BB1
-// CHECK-NEXT:  {loc0}    %6 = PhiInst (:any) {loc0} %3: any, %BB0, {loc0} %10: any, %BB1
-// CHECK-NEXT:  {loc2}    %7 = MovInst (:any) {loc1} %5: any
-// CHECK-NEXT:  {loc0}    %8 = MovInst (:any) {loc0} %6: any
-// CHECK-NEXT:  {loc1}    %9 = MovInst (:any) {loc0} %8: any
-// CHECK-NEXT:  {loc0}   %10 = MovInst (:any) {loc2} %7: any
+// CHECK-NEXT:  {loc0}    %5 = PhiInst (:any) {loc0} %2: any, %BB0, {loc0} %9: any, %BB1
+// CHECK-NEXT:  {loc1}    %6 = PhiInst (:any) {loc1} %3: any, %BB0, {loc1} %10: any, %BB1
+// CHECK-NEXT:  {loc2}    %7 = MovInst (:any) {loc0} %5: any
+// CHECK-NEXT:  {loc1}    %8 = MovInst (:any) {loc1} %6: any
+// CHECK-NEXT:  {loc0}    %9 = MovInst (:any) {loc1} %8: any
+// CHECK-NEXT:  {loc1}   %10 = MovInst (:any) {loc2} %7: any
 // CHECK-NEXT:                 BranchInst %BB1
 // CHECK-NEXT:function_end
