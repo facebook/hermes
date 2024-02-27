@@ -12,7 +12,6 @@
 #include "hermes/BCGen/HBC/ISel.h"
 #include "hermes/BCGen/HBC/Passes.h"
 #include "hermes/BCGen/HBC/Passes/InsertProfilePoint.h"
-#include "hermes/BCGen/HBC/Passes/OptEnvironmentInit.h"
 #include "hermes/BCGen/HBC/Passes/PeepholeLowering.h"
 #include "hermes/BCGen/HBC/TraverseLiteralStrings.h"
 #include "hermes/BCGen/LowerBuiltinCalls.h"
@@ -62,7 +61,7 @@ void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
   PM.addPass(createLowerScopes());
   if (options.optimizationEnabled) {
     // OptEnvironmentInit needs to run before LowerConstants.
-    PM.addPass(new OptEnvironmentInit());
+    PM.addPass(createOptEnvironmentInit());
   }
   // LowerBuilinCalls needs to run before the rest of the lowering.
   PM.addPass(new LowerBuiltinCalls());
