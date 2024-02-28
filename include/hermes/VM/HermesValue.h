@@ -327,6 +327,13 @@ class HermesValue : public HermesValueBase {
   inline bool isNumber() const {
     return isDouble();
   }
+  inline bool isNaN() const {
+    // Mask out the sign bit since it does not affect whether the value is a
+    // NaN. All the other bits must be equal to the NaN bit pattern, since we
+    // only use the quiet NaN to represent NaN.
+    uint64_t kMask = llvh::maskLeadingZeros<uint64_t>(1);
+    return (this->raw & kMask) == (encodeNaNValue().raw & kMask);
+  }
 
   inline RawType getRaw() const {
     return this->raw;
