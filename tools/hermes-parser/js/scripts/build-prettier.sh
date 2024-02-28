@@ -15,7 +15,7 @@ HERMES_PARSER_JS="$XPLAT/hermes/tools/hermes-parser/js"
 HERMES_PARSER_DIST="$HERMES_PARSER_JS/hermes-parser/dist"
 PRETTIER_DIR="$HERMES_PARSER_JS/prettier-hermes-v2-backport"
 PLUGIN_DIR="$HERMES_PARSER_JS/prettier-plugin-hermes-parser"
-PRETTIER_YARN="$PRETTIER_DIR/.yarn/releases/yarn-3.6.3.cjs"
+PRETTIER_YARN="$PRETTIER_DIR/.yarn/releases/yarn-4.1.0.cjs"
 
 if [ ! -d "$HERMES_PARSER_DIST" ]; then
     echo "$HERMES_PARSER_DIST does not exist, running initial build"
@@ -51,14 +51,14 @@ fi
 
 # Install Deps
 echo "Running yarn install"
-$PRETTIER_YARN install
+node $PRETTIER_YARN install
 
 echo "Copying hermes-parser dist folder into node_modules"
 cp -r "$HERMES_PARSER_DIST" "./node_modules/hermes-parser/"
 
 # Build prettier
 echo "Building assets"
-$PRETTIER_YARN build --no-minify
+node $PRETTIER_YARN build --no-minify
 
 # Copy assets to prettier plugin dir
 echo "Copy assets"

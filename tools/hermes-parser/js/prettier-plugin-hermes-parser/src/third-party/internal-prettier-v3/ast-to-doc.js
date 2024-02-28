@@ -13,13 +13,13 @@
       typeof globalThis !== "undefined"
         ? globalThis
         : typeof global !== "undefined"
-        ? global
-        : typeof self !== "undefined"
-        ? self
-        : this || {};
+          ? global
+          : typeof self !== "undefined"
+            ? self
+            : this || {};
     root.astToDoc = interopModuleDefault();
   }
-})(function() {
+})(function () {
   "use strict";
   var __create = Object.create;
   var __defProp = Object.defineProperty;
@@ -101,26 +101,49 @@
       exports.codeFrameColumns = codeFrameColumns2;
       exports.default = _default;
       var _highlight = (init_babel_highlight(), __toCommonJS(babel_highlight_exports));
-      var _chalk2 = require_chalk();
-      var chalk4 = _chalk2;
+      var _chalk = _interopRequireWildcard(require_chalk(), true);
+      function _getRequireWildcardCache(e) {
+        if ("function" != typeof WeakMap)
+          return null;
+        var r = /* @__PURE__ */ new WeakMap(), t = /* @__PURE__ */ new WeakMap();
+        return (_getRequireWildcardCache = function(e2) {
+          return e2 ? t : r;
+        })(e);
+      }
+      function _interopRequireWildcard(e, r) {
+        if (!r && e && e.__esModule)
+          return e;
+        if (null === e || "object" != typeof e && "function" != typeof e)
+          return { default: e };
+        var t = _getRequireWildcardCache(r);
+        if (t && t.has(e))
+          return t.get(e);
+        var n = { __proto__: null }, a = Object.defineProperty && Object.getOwnPropertyDescriptor;
+        for (var u in e)
+          if ("default" !== u && Object.prototype.hasOwnProperty.call(e, u)) {
+            var i = a ? Object.getOwnPropertyDescriptor(e, u) : null;
+            i && (i.get || i.set) ? Object.defineProperty(n, u, i) : n[u] = e[u];
+          }
+        return n.default = e, t && t.set(e, n), n;
+      }
       var chalkWithForcedColor = void 0;
       function getChalk(forceColor) {
         if (forceColor) {
           var _chalkWithForcedColor;
-          (_chalkWithForcedColor = chalkWithForcedColor) != null ? _chalkWithForcedColor : chalkWithForcedColor = new chalk4.constructor({
+          (_chalkWithForcedColor = chalkWithForcedColor) != null ? _chalkWithForcedColor : chalkWithForcedColor = new _chalk.default.constructor({
             enabled: true,
             level: 1
           });
           return chalkWithForcedColor;
         }
-        return chalk4;
+        return _chalk.default;
       }
       var deprecationWarningShown = false;
-      function getDefs(chalk5) {
+      function getDefs(chalk4) {
         return {
-          gutter: chalk5.grey,
-          marker: chalk5.red.bold,
-          message: chalk5.red.bold
+          gutter: chalk4.grey,
+          marker: chalk4.red.bold,
+          message: chalk4.red.bold
         };
       }
       var NEWLINE = /\r\n|[\n\r\u2028\u2029]/;
@@ -182,8 +205,8 @@
       }
       function codeFrameColumns2(rawLines, loc, opts = {}) {
         const highlighted = (opts.highlightCode || opts.forceColor) && (0, _highlight.shouldHighlight)(opts);
-        const chalk5 = getChalk(opts.forceColor);
-        const defs = getDefs(chalk5);
+        const chalk4 = getChalk(opts.forceColor);
+        const defs = getDefs(chalk4);
         const maybeHighlight = (chalkFn, string) => {
           return highlighted ? chalkFn(string) : string;
         };
@@ -222,7 +245,7 @@
 ${frame}`;
         }
         if (highlighted) {
-          return chalk5.reset(frame);
+          return chalk4.reset(frame);
         } else {
           return frame;
         }
@@ -896,6 +919,30 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }, { get: () => assert });
   var assert_default = assert;
 
+  // src/utils/is-object.js
+  function isObject(object) {
+    return object !== null && typeof object === "object";
+  }
+  var is_object_default = isObject;
+
+  // src/utils/ast-utils.js
+  function* getChildren(node, options) {
+    const { getVisitorKeys, filter = () => true } = options;
+    const isMatchedNode = (node2) => is_object_default(node2) && filter(node2);
+    for (const key of getVisitorKeys(node)) {
+      const value = node[key];
+      if (Array.isArray(value)) {
+        for (const child of value) {
+          if (isMatchedNode(child)) {
+            yield child;
+          }
+        }
+      } else if (isMatchedNode(value)) {
+        yield value;
+      }
+    }
+  }
+
   // src/utils/skip.js
   function skip(characters) {
     return (text, startIndex, options) => {
@@ -970,30 +1017,6 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return Array.isArray(object) && object.length > 0;
   }
   var is_non_empty_array_default = isNonEmptyArray;
-
-  // src/utils/is-object.js
-  function isObject(object) {
-    return object !== null && typeof object === "object";
-  }
-  var is_object_default = isObject;
-
-  // src/utils/ast-utils.js
-  function* getChildren(node, options) {
-    const { getVisitorKeys, filter = () => true } = options;
-    const isMatchedNode = (node2) => is_object_default(node2) && filter(node2);
-    for (const key of getVisitorKeys(node)) {
-      const value = node[key];
-      if (Array.isArray(value)) {
-        for (const child of value) {
-          if (isMatchedNode(child)) {
-            yield child;
-          }
-        }
-      } else if (isMatchedNode(value)) {
-        yield value;
-      }
-    }
-  }
 
   // src/main/create-get-visitor-keys-function.js
   var nonTraversableKeys = /* @__PURE__ */ new Set([
@@ -1166,7 +1189,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         ast: ast2,
         isLastComment
       } = context;
-      if (options2.parser === "json" || options2.parser === "json5" || options2.parser === "__js_expression" || options2.parser === "__ts_expression" || options2.parser === "__vue_expression" || options2.parser === "__vue_ts_expression") {
+      if (options2.parser === "json" || options2.parser === "json5" || options2.parser === "jsonc" || options2.parser === "__js_expression" || options2.parser === "__ts_expression" || options2.parser === "__vue_expression" || options2.parser === "__vue_ts_expression") {
         if (locStart(comment) - locStart(ast2) <= 0) {
           addLeadingComment(ast2, comment);
           continue;
@@ -1442,6 +1465,35 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
   }
 
+  // src/main/create-print-pre-check-function.js
+  function createPrintPreCheckFunction(options) {
+    if (true) {
+      return () => {
+      };
+    }
+    const getVisitorKeys = create_get_visitor_keys_function_default(
+      options.printer.getVisitorKeys
+    );
+    return function(path) {
+      if (path.isRoot) {
+        return;
+      }
+      const { key, parent } = path;
+      const visitorKeys = getVisitorKeys(parent);
+      if (visitorKeys.includes(key)) {
+        return;
+      }
+      throw Object.assign(new Error("Calling `print()` on non-node object."), {
+        parentNode: parent,
+        allowedProperties: visitorKeys,
+        printingProperty: key,
+        printingValue: path.node,
+        pathStack: path.stack.length > 5 ? ["...", ...path.stack.slice(-5)] : [...path.stack]
+      });
+    };
+  }
+  var create_print_pre_check_function_default = createPrintPreCheckFunction;
+
   // src/common/errors.js
   var ConfigError = class extends Error {
     name = "ConfigError";
@@ -1461,7 +1513,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         "end": Infinity,
         "step": 1
       },
-      "description": "Print (to stderr) where a cursor at the given position would move to after formatting.\nThis option cannot be used with --range-start and --range-end.",
+      "description": "Print (to stderr) where a cursor at the given position would move to after formatting.",
       "cliCategory": "Editor"
     },
     "endOfLine": {
@@ -1563,6 +1615,10 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           "description": "JSON5"
         },
         {
+          "value": "jsonc",
+          "description": "JSON with Comments"
+        },
+        {
           "value": "json-stringify",
           "description": "JSON.stringify"
         },
@@ -1638,7 +1694,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         "end": Infinity,
         "step": 1
       },
-      "description": "Format code ending at a given character offset (exclusive).\nThe range will extend forwards to the end of the selected statement.\nThis option cannot be used with --cursor-offset.",
+      "description": "Format code ending at a given character offset (exclusive).\nThe range will extend forwards to the end of the selected statement.",
       "cliCategory": "Editor"
     },
     "rangeStart": {
@@ -1650,7 +1706,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         "end": Infinity,
         "step": 1
       },
-      "description": "Format code starting at a given character offset.\nThe range will extend backwards to the start of the first line containing the selected statement.\nThis option cannot be used with --cursor-offset.",
+      "description": "Format code starting at a given character offset.\nThe range will extend backwards to the start of the first line containing the selected statement.",
       "cliCategory": "Editor"
     },
     "requirePragma": {
@@ -1772,20 +1828,19 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   var get_interpreter_default = void 0;
 
   // src/utils/infer-parser.js
-  var getFileBasename = (file) => file.split(/[/\\]/).pop();
-  function getLanguageByFilename(languages, filename) {
-    if (!filename) {
+  var getFileBasename = (file) => String(file).split(/[/\\]/).pop();
+  function getLanguageByFileName(languages, file) {
+    if (!file) {
       return;
     }
-    const basename = getFileBasename(filename).toLowerCase();
+    const basename = getFileBasename(file).toLowerCase();
     return languages.find(
-      (language) => {
-        var _a, _b;
-        return ((_a = language.extensions) == null ? void 0 : _a.some((extension) => basename.endsWith(extension))) || ((_b = language.filenames) == null ? void 0 : _b.some((name) => name.toLowerCase() === basename));
-      }
+      ({ filenames }) => filenames == null ? void 0 : filenames.some((name) => name.toLowerCase() === basename)
+    ) ?? languages.find(
+      ({ extensions }) => extensions == null ? void 0 : extensions.some((extension) => basename.endsWith(extension))
     );
   }
-  function getLanguageByName(languages, languageName) {
+  function getLanguageByLanguageName(languages, languageName) {
     if (!languageName) {
       return;
     }
@@ -1800,10 +1855,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       return;
     }
     return languages.find(
-      (language) => {
-        var _a;
-        return (_a = language.interpreters) == null ? void 0 : _a.includes(interpreter);
-      }
+      ({ interpreters }) => interpreters == null ? void 0 : interpreters.includes(interpreter)
     );
   }
   function inferParser(options, fileInfo) {
@@ -1813,7 +1865,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         plugin.languages ?? []
       )
     );
-    const language = getLanguageByName(languages, fileInfo.language) ?? getLanguageByFilename(languages, fileInfo.physicalFile) ?? getLanguageByFilename(languages, fileInfo.file) ?? getLanguageByInterpreter(languages, fileInfo.physicalFile);
+    const language = getLanguageByLanguageName(languages, fileInfo.language) ?? getLanguageByFileName(languages, fileInfo.physicalFile) ?? getLanguageByFileName(languages, fileInfo.file) ?? getLanguageByInterpreter(languages, fileInfo.physicalFile);
     return language == null ? void 0 : language.parsers[0];
   }
   var infer_parser_default = inferParser;
@@ -2644,7 +2696,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     if (optionInfo.redirect) {
       handlers.redirect = (value) => !value ? void 0 : {
-        to: {
+        to: typeof optionInfo.redirect === "string" ? optionInfo.redirect : {
           key: optionInfo.redirect.option,
           value: optionInfo.redirect.value
         }
@@ -2676,16 +2728,36 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }
   var normalize_options_default = normalizeOptions;
 
+  // scripts/build/shims/array-find-last.js
+  var arrayFindLast = (isOptionalObject, array2, callback) => {
+    if (isOptionalObject && (array2 === void 0 || array2 === null)) {
+      return;
+    }
+    if (array2.findLast) {
+      return array2.findLast(callback);
+    }
+    for (let index = array2.length - 1; index >= 0; index--) {
+      const element = array2[index];
+      if (callback(element, index, array2)) {
+        return element;
+      }
+    }
+  };
+  var array_find_last_default = arrayFindLast;
+
   // src/main/parser-and-printer.js
   function getParserPluginByParserName(plugins, parserName) {
     if (!parserName) {
       throw new Error("parserName is required.");
     }
-    for (let index = plugins.length - 1; index >= 0; index--) {
-      const plugin = plugins[index];
-      if (plugin.parsers && Object.prototype.hasOwnProperty.call(plugin.parsers, parserName)) {
-        return plugin;
-      }
+    const plugin = array_find_last_default(
+      /* isOptionalObject*/
+      false,
+      plugins,
+      (plugin2) => plugin2.parsers && Object.prototype.hasOwnProperty.call(plugin2.parsers, parserName)
+    );
+    if (plugin) {
+      return plugin;
     }
     let message = `Couldn't resolve parser "${parserName}".`;
     if (true) {
@@ -2697,11 +2769,14 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     if (!astFormat) {
       throw new Error("astFormat is required.");
     }
-    for (let index = plugins.length - 1; index >= 0; index--) {
-      const plugin = plugins[index];
-      if (plugin.printers && Object.prototype.hasOwnProperty.call(plugin.printers, astFormat)) {
-        return plugin;
-      }
+    const plugin = array_find_last_default(
+      /* isOptionalObject*/
+      false,
+      plugins,
+      (plugin2) => plugin2.printers && Object.prototype.hasOwnProperty.call(plugin2.printers, astFormat)
+    );
+    if (plugin) {
+      return plugin;
     }
     let message = `Couldn't find plugin for AST format "${astFormat}".`;
     if (true) {
@@ -2913,35 +2988,6 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     const doc = printAstToDoc2(ast, options);
     return stripTrailingHardline(doc);
   }
-
-  // src/main/create-print-pre-check-function.js
-  function createPrintPreCheckFunction(options) {
-    if (true) {
-      return () => {
-      };
-    }
-    const getVisitorKeys = create_get_visitor_keys_function_default(
-      options.printer.getVisitorKeys
-    );
-    return function(path) {
-      if (path.isRoot) {
-        return;
-      }
-      const { key, parent } = path;
-      const visitorKeys = getVisitorKeys(parent);
-      if (visitorKeys.includes(key)) {
-        return;
-      }
-      throw Object.assign(new Error("Calling `print()` on non-node object."), {
-        parentNode: parent,
-        allowedProperties: visitorKeys,
-        printingProperty: key,
-        printingValue: path.node,
-        pathStack: path.stack.length > 5 ? ["...", ...path.stack.slice(-5)] : [...path.stack]
-      });
-    };
-  }
-  var create_print_pre_check_function_default = createPrintPreCheckFunction;
 
   // src/main/print-ignored.js
   function printIgnored(path, options) {

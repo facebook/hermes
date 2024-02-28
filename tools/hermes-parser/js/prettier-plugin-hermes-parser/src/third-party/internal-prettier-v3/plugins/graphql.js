@@ -13,14 +13,14 @@
       typeof globalThis !== "undefined"
         ? globalThis
         : typeof global !== "undefined"
-        ? global
-        : typeof self !== "undefined"
-        ? self
-        : this || {};
+          ? global
+          : typeof self !== "undefined"
+            ? self
+            : this || {};
     root.prettierPlugins = root.prettierPlugins || {};
     root.prettierPlugins.graphql = interopModuleDefault();
   }
-})(function() {
+})(function () {
   "use strict";
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -146,32 +146,6 @@
     return parts;
   }
 
-  // src/utils/skip-newline.js
-  function skipNewline(text, startIndex, options2) {
-    const backwards = Boolean(options2 == null ? void 0 : options2.backwards);
-    if (startIndex === false) {
-      return false;
-    }
-    const character = text.charAt(startIndex);
-    if (backwards) {
-      if (text.charAt(startIndex - 1) === "\r" && character === "\n") {
-        return startIndex - 2;
-      }
-      if (character === "\n" || character === "\r" || character === "\u2028" || character === "\u2029") {
-        return startIndex - 1;
-      }
-    } else {
-      if (character === "\r" && text.charAt(startIndex + 1) === "\n") {
-        return startIndex + 2;
-      }
-      if (character === "\n" || character === "\r" || character === "\u2028" || character === "\u2029") {
-        return startIndex + 1;
-      }
-    }
-    return startIndex;
-  }
-  var skip_newline_default = skipNewline;
-
   // src/utils/skip.js
   function skip(characters) {
     return (text, startIndex, options2) => {
@@ -203,6 +177,44 @@
   var skipToLineEnd = skip(",; 	");
   var skipEverythingButNewLine = skip(/[^\n\r]/);
 
+  // src/utils/skip-newline.js
+  function skipNewline(text, startIndex, options2) {
+    const backwards = Boolean(options2 == null ? void 0 : options2.backwards);
+    if (startIndex === false) {
+      return false;
+    }
+    const character = text.charAt(startIndex);
+    if (backwards) {
+      if (text.charAt(startIndex - 1) === "\r" && character === "\n") {
+        return startIndex - 2;
+      }
+      if (character === "\n" || character === "\r" || character === "\u2028" || character === "\u2029") {
+        return startIndex - 1;
+      }
+    } else {
+      if (character === "\r" && text.charAt(startIndex + 1) === "\n") {
+        return startIndex + 2;
+      }
+      if (character === "\n" || character === "\r" || character === "\u2028" || character === "\u2029") {
+        return startIndex + 1;
+      }
+    }
+    return startIndex;
+  }
+  var skip_newline_default = skipNewline;
+
+  // src/utils/has-newline.js
+  function hasNewline(text, startIndex, options2 = {}) {
+    const idx = skipSpaces(
+      text,
+      options2.backwards ? startIndex - 1 : startIndex,
+      options2
+    );
+    const idx2 = skip_newline_default(text, idx, options2);
+    return idx !== idx2;
+  }
+  var has_newline_default = hasNewline;
+
   // src/utils/skip-inline-comment.js
   function skipInlineComment(text, startIndex) {
     if (startIndex === false) {
@@ -230,18 +242,6 @@
     return startIndex;
   }
   var skip_trailing_comment_default = skipTrailingComment;
-
-  // src/utils/has-newline.js
-  function hasNewline(text, startIndex, options2 = {}) {
-    const idx = skipSpaces(
-      text,
-      options2.backwards ? startIndex - 1 : startIndex,
-      options2
-    );
-    const idx2 = skip_newline_default(text, idx, options2);
-    return idx !== idx2;
-  }
-  var has_newline_default = hasNewline;
 
   // src/utils/is-next-line-empty.js
   function isNextLineEmpty(text, startIndex) {
@@ -278,22 +278,6 @@
     }
   };
   var unexpected_node_error_default = UnexpectedNodeError;
-
-  // src/language-graphql/pragma.js
-  function hasPragma(text) {
-    return /^\s*#[^\S\n]*@(?:format|prettier)\s*(?:\n|$)/.test(text);
-  }
-  function insertPragma(text) {
-    return "# @format\n\n" + text;
-  }
-
-  // src/language-graphql/loc.js
-  function locStart(nodeOrToken) {
-    return nodeOrToken.kind === "Comment" ? nodeOrToken.start : nodeOrToken.loc.start;
-  }
-  function locEnd(nodeOrToken) {
-    return nodeOrToken.kind === "Comment" ? nodeOrToken.end : nodeOrToken.loc.end;
-  }
 
   // node_modules/to-fast-properties/index.js
   var fastProto = null;
@@ -506,6 +490,22 @@
   var getVisitorKeys = create_get_visitor_keys_default(QueryDocumentKeys, "kind");
   var get_visitor_keys_default = getVisitorKeys;
 
+  // src/language-graphql/loc.js
+  function locStart(nodeOrToken) {
+    return nodeOrToken.loc.start;
+  }
+  function locEnd(nodeOrToken) {
+    return nodeOrToken.loc.end;
+  }
+
+  // src/language-graphql/pragma.js
+  function hasPragma(text) {
+    return /^\s*#[^\S\n]*@(?:format|prettier)\s*(?:\n|$)/.test(text);
+  }
+  function insertPragma(text) {
+    return "# @format\n\n" + text;
+  }
+
   // src/language-graphql/print/description.js
   function printDescription(path, options2, print) {
     const { node } = path;
@@ -653,7 +653,7 @@
         return ["...", node.typeCondition ? [" on ", print("typeCondition")] : "", printDirectives(path, print, node), " ", print("selectionSet")];
       case "UnionTypeExtension":
       case "UnionTypeDefinition":
-        return group([description_default(path, options2, print), group([node.kind === "UnionTypeExtension" ? "extend " : "", "union ", print("name"), printDirectives(path, print, node), node.types.length > 0 ? [" =", ifBreak("", " "), indent([ifBreak([line, "  "]), join([line, "| "], path.map(print, "types"))])] : ""])]);
+        return group([description_default(path, options2, print), group([node.kind === "UnionTypeExtension" ? "extend " : "", "union ", print("name"), printDirectives(path, print, node), node.types.length > 0 ? [" =", ifBreak("", " "), indent([ifBreak([line, "| "]), join([line, "| "], path.map(print, "types"))])] : ""])]);
       case "ScalarTypeExtension":
       case "ScalarTypeDefinition":
         return [description_default(path, options2, print), node.kind === "ScalarTypeExtension" ? "extend " : "", "scalar ", print("name"), printDirectives(path, print, node)];
@@ -727,9 +727,9 @@
     }
     return group(["(", indent([softline, join([ifBreak("", ", "), softline], path.map(print, "variableDefinitions"))]), softline, ")"]);
   }
-  function clean(node, newNode) {
-    if (node.kind === "StringValue" && node.block && !node.value.includes("\n")) {
-      newNode.value = newNode.value.trim();
+  function clean(original, cloned) {
+    if (original.kind === "StringValue" && original.block && !original.value.includes("\n")) {
+      cloned.value = original.value.trim();
     }
   }
   clean.ignoredProperties = /* @__PURE__ */ new Set(["loc", "comments"]);
@@ -750,6 +750,84 @@
     getVisitorKeys: get_visitor_keys_default
   };
   var printer_graphql_default = printer;
+
+  // src/language-graphql/languages.evaluate.js
+  var languages_evaluate_default = [
+    {
+      "linguistLanguageId": 139,
+      "name": "GraphQL",
+      "type": "data",
+      "color": "#e10098",
+      "extensions": [
+        ".graphql",
+        ".gql",
+        ".graphqls"
+      ],
+      "tmScope": "source.graphql",
+      "aceMode": "text",
+      "parsers": [
+        "graphql"
+      ],
+      "vscodeLanguageIds": [
+        "graphql"
+      ]
+    }
+  ];
+
+  // src/common/common-options.evaluate.js
+  var common_options_evaluate_default = {
+    "bracketSpacing": {
+      "category": "Common",
+      "type": "boolean",
+      "default": true,
+      "description": "Print spaces between brackets.",
+      "oppositeDescription": "Do not print spaces between brackets."
+    },
+    "singleQuote": {
+      "category": "Common",
+      "type": "boolean",
+      "default": false,
+      "description": "Use single quotes instead of double quotes."
+    },
+    "proseWrap": {
+      "category": "Common",
+      "type": "choice",
+      "default": "preserve",
+      "description": "How to wrap prose.",
+      "choices": [
+        {
+          "value": "always",
+          "description": "Wrap prose if it exceeds the print width."
+        },
+        {
+          "value": "never",
+          "description": "Do not wrap prose."
+        },
+        {
+          "value": "preserve",
+          "description": "Wrap prose as-is."
+        }
+      ]
+    },
+    "bracketSameLine": {
+      "category": "Common",
+      "type": "boolean",
+      "default": false,
+      "description": "Put > of opening tags on the last line instead of on a new line."
+    },
+    "singleAttributePerLine": {
+      "category": "Common",
+      "type": "boolean",
+      "default": false,
+      "description": "Enforce single attribute per line in HTML, Vue and JSX."
+    }
+  };
+
+  // src/language-graphql/options.js
+  var options = {
+    bracketSpacing: common_options_evaluate_default.bracketSpacing
+  };
+  var options_default = options;
 
   // src/language-graphql/parser-graphql.js
   var parser_graphql_exports = {};
@@ -3064,7 +3142,7 @@ spurious results.`);
     const { startToken, endToken } = ast.loc;
     for (let token = startToken; token !== endToken; token = token.next) {
       if (token.kind === "Comment") {
-        comments.push(token);
+        comments.push({ ...token, loc: { start: token.start, end: token.end } });
       }
     }
     return comments;
@@ -3099,84 +3177,6 @@ spurious results.`);
     locStart,
     locEnd
   };
-
-  // src/language-graphql/languages.evaluate.js
-  var languages_evaluate_default = [
-    {
-      "linguistLanguageId": 139,
-      "name": "GraphQL",
-      "type": "data",
-      "color": "#e10098",
-      "extensions": [
-        ".graphql",
-        ".gql",
-        ".graphqls"
-      ],
-      "tmScope": "source.graphql",
-      "aceMode": "text",
-      "parsers": [
-        "graphql"
-      ],
-      "vscodeLanguageIds": [
-        "graphql"
-      ]
-    }
-  ];
-
-  // src/common/common-options.evaluate.js
-  var common_options_evaluate_default = {
-    "bracketSpacing": {
-      "category": "Common",
-      "type": "boolean",
-      "default": true,
-      "description": "Print spaces between brackets.",
-      "oppositeDescription": "Do not print spaces between brackets."
-    },
-    "singleQuote": {
-      "category": "Common",
-      "type": "boolean",
-      "default": false,
-      "description": "Use single quotes instead of double quotes."
-    },
-    "proseWrap": {
-      "category": "Common",
-      "type": "choice",
-      "default": "preserve",
-      "description": "How to wrap prose.",
-      "choices": [
-        {
-          "value": "always",
-          "description": "Wrap prose if it exceeds the print width."
-        },
-        {
-          "value": "never",
-          "description": "Do not wrap prose."
-        },
-        {
-          "value": "preserve",
-          "description": "Wrap prose as-is."
-        }
-      ]
-    },
-    "bracketSameLine": {
-      "category": "Common",
-      "type": "boolean",
-      "default": false,
-      "description": "Put > of opening tags on the last line instead of on a new line."
-    },
-    "singleAttributePerLine": {
-      "category": "Common",
-      "type": "boolean",
-      "default": false,
-      "description": "Enforce single attribute per line in HTML, Vue and JSX."
-    }
-  };
-
-  // src/language-graphql/options.js
-  var options = {
-    bracketSpacing: common_options_evaluate_default.bracketSpacing
-  };
-  var options_default = options;
 
   // src/language-graphql/index.js
   var printers = {
