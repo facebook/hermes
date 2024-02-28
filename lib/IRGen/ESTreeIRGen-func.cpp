@@ -75,9 +75,12 @@ void ESTreeIRGen::genFunctionDeclaration(
   Value *funcStorage = resolveIdentifier(id);
   assert(funcStorage && "Function declaration storage must have been resolved");
 
-  Function *newFunc = func->_async ? genAsyncFunction(functionName, func)
-      : func->_generator           ? genGeneratorFunction(functionName, func)
-                                   : genES5Function(functionName, func);
+  auto *newFuncParentScope = curFunction()->function->getFunctionScope();
+  Function *newFunc = func->_async
+      ? genAsyncFunction(functionName, func, newFuncParentScope)
+      : func->_generator
+      ? genGeneratorFunction(functionName, func, newFuncParentScope)
+      : genES5Function(functionName, func, newFuncParentScope);
 
   // Store the newly created closure into a frame variable with the same name.
   auto *newClosure = Builder.createCreateFunctionInst(newFunc);
@@ -102,9 +105,12 @@ Value *ESTreeIRGen::genFunctionExpression(
   Identifier originalNameIden =
       id ? Identifier::getFromPointer(id->_name) : nameHint;
 
-  Function *newFunc = FE->_async ? genAsyncFunction(originalNameIden, FE)
-      : FE->_generator           ? genGeneratorFunction(originalNameIden, FE)
-                       : genES5Function(originalNameIden, FE, superClassNode);
+  auto *parentScope = curFunction()->function->getFunctionScope();
+  Function *newFunc = FE->_async
+      ? genAsyncFunction(originalNameIden, FE, parentScope)
+      : FE->_generator
+      ? genGeneratorFunction(originalNameIden, FE, parentScope)
+      : genES5Function(originalNameIden, FE, parentScope, superClassNode);
 
   Value *closure = Builder.createCreateFunctionInst(newFunc);
 
@@ -150,7 +156,9 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
                       AF,
                       capturedThis = curFunction()->capturedThis,
                       capturedNewTarget = curFunction()->capturedNewTarget,
-                      capturedArguments = curFunction()->capturedArguments]() {
+                      capturedArguments = curFunction()->capturedArguments,
+                      parentScope =
+                          curFunction()->function->getFunctionScope()] {
     FunctionContext newFunctionContext{this, newFunc, AF->getSemInfo()};
 
     // Propagate captured "this", "new.target" and "arguments" from parents.
@@ -162,7 +170,8 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
         AF,
         Builder.createBasicBlock(newFunc),
         InitES5CaptureState::No,
-        DoEmitDeclarations::Yes);
+        DoEmitDeclarations::Yes,
+        parentScope);
 
     genStatement(AF->_body);
     emitFunctionEpilogue(Builder.getLiteralUndefined());
@@ -177,6 +186,7 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
 Function *ESTreeIRGen::genES5Function(
     Identifier originalName,
     ESTree::FunctionLikeNode *functionNode,
+    VariableScope *parentScope,
     ESTree::Node *superClassNode,
     bool isGeneratorInnerFunction) {
   assert(functionNode && "Function AST cannot be null");
@@ -213,7 +223,8 @@ Function *ESTreeIRGen::genES5Function(
                       functionNode,
                       isGeneratorInnerFunction,
                       superClassNode,
-                      body]() {
+                      body,
+                      parentScope] {
     FunctionContext newFunctionContext{
         this, newFunction, functionNode->getSemInfo()};
     newFunctionContext.superClassNode_ = superClassNode;
@@ -240,7 +251,8 @@ Function *ESTreeIRGen::genES5Function(
             functionNode,
             prologueBB,
             InitES5CaptureState::Yes,
-            DoEmitDeclarations::Yes);
+            DoEmitDeclarations::Yes,
+            parentScope);
       } else {
         // If there are non-simple params, then we must add a new
         // yield/resume. The `.next()` call will occur once in the outer
@@ -256,7 +268,8 @@ Function *ESTreeIRGen::genES5Function(
             functionNode,
             prologueBB,
             InitES5CaptureState::Yes,
-            DoEmitDeclarations::Yes);
+            DoEmitDeclarations::Yes,
+            parentScope);
         Builder.createSaveAndYieldInst(
             Builder.getLiteralUndefined(), entryPointBB);
 
@@ -272,7 +285,8 @@ Function *ESTreeIRGen::genES5Function(
           functionNode,
           Builder.createBasicBlock(newFunction),
           InitES5CaptureState::Yes,
-          DoEmitDeclarations::Yes);
+          DoEmitDeclarations::Yes,
+          parentScope);
     }
 
     genStatement(body);
@@ -291,7 +305,8 @@ Function *ESTreeIRGen::genES5Function(
 
 Function *ESTreeIRGen::genGeneratorFunction(
     Identifier originalName,
-    ESTree::FunctionLikeNode *functionNode) {
+    ESTree::FunctionLikeNode *functionNode,
+    VariableScope *parentScope) {
   assert(functionNode && "Function AST cannot be null");
 
   if (Value *compiled =
@@ -313,7 +328,11 @@ Function *ESTreeIRGen::genGeneratorFunction(
       functionNode->getSourceRange(),
       /* insertBefore */ nullptr);
 
-  auto compileFunc = [this, outerFn, functionNode, originalName]() {
+  auto compileFunc = [this,
+                      outerFn,
+                      functionNode,
+                      originalName,
+                      parentScope]() {
     FunctionContext outerFnContext{this, outerFn, functionNode->getSemInfo()};
 
     // Build the inner function. This must be done in the outerFnContext
@@ -321,6 +340,7 @@ Function *ESTreeIRGen::genGeneratorFunction(
     auto *innerFn = genES5Function(
         genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
         functionNode,
+        outerFn->getFunctionScope(),
         /* classNode */ nullptr,
         true);
 
@@ -328,7 +348,8 @@ Function *ESTreeIRGen::genGeneratorFunction(
         functionNode,
         Builder.createBasicBlock(outerFn),
         InitES5CaptureState::Yes,
-        DoEmitDeclarations::No);
+        DoEmitDeclarations::No,
+        parentScope);
 
     // Create a generator function, which will store the arguments.
     auto *gen = Builder.createCreateGeneratorInst(
@@ -353,7 +374,8 @@ Function *ESTreeIRGen::genGeneratorFunction(
 
 Function *ESTreeIRGen::genAsyncFunction(
     Identifier originalName,
-    ESTree::FunctionLikeNode *functionNode) {
+    ESTree::FunctionLikeNode *functionNode,
+    VariableScope *parentScope) {
   assert(functionNode && "Function AST cannot be null");
 
   if (auto *compiled = findCompiledEntity(functionNode, ExtraKey::AsyncOuter))
@@ -373,14 +395,19 @@ Function *ESTreeIRGen::genAsyncFunction(
       functionNode->getSourceRange(),
       /* insertBefore */ nullptr);
 
-  auto compileFunc = [this, asyncFn, functionNode, originalName]() {
+  auto compileFunc = [this,
+                      asyncFn,
+                      functionNode,
+                      originalName,
+                      parentScope]() {
     FunctionContext asyncFnContext{this, asyncFn, functionNode->getSemInfo()};
 
     // Build the inner generator. This must be done in the outerFnContext
     // since it's lexically considered a child function.
     auto *gen = genGeneratorFunction(
         genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
-        functionNode);
+        functionNode,
+        asyncFn->getFunctionScope());
 
     // The outer async function need not emit code for parameters.
     // It would simply delegate `arguments` object down to inner generator.
@@ -389,7 +416,8 @@ Function *ESTreeIRGen::genAsyncFunction(
         functionNode,
         Builder.createBasicBlock(asyncFn),
         InitES5CaptureState::Yes,
-        DoEmitDeclarations::No);
+        DoEmitDeclarations::No,
+        parentScope);
 
     auto *genClosure = Builder.createCreateFunctionInst(gen);
     auto *thisArg = curFunction()->jsParams[0];
@@ -449,7 +477,8 @@ void ESTreeIRGen::emitFunctionPrologue(
     ESTree::FunctionLikeNode *funcNode,
     BasicBlock *entry,
     InitES5CaptureState doInitES5CaptureState,
-    DoEmitDeclarations doEmitDeclarations) {
+    DoEmitDeclarations doEmitDeclarations,
+    VariableScope *parentScope) {
   auto *newFunc = curFunction()->function;
   auto *semInfo = curFunction()->getSemInfo();
 
