@@ -201,6 +201,10 @@ static std::pair<bool, size_t> canBeInlined(Function *F) {
         case ValueKind::CreateArgumentsLooseInstKind:
         case ValueKind::CreateArgumentsStrictInstKind:
 
+        // If it has variables, don't inline it right now.
+        // TODO: Inlining will require moving Variables between functions.
+        case ValueKind::CreateScopeInstKind:
+
         // TODO: Support inlining this by replacing it with the closure's scope.
         case ValueKind::GetParentScopeInstKind:
 

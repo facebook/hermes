@@ -346,6 +346,14 @@ GetParentScopeInst *IRBuilder::createGetParentScopeInst(
   return GPS;
 }
 
+CreateScopeInst *IRBuilder::createCreateScopeInst(
+    VariableScope *scope,
+    Value *parentScope) {
+  auto CSI = new CreateScopeInst(scope, parentScope);
+  insert(CSI);
+  return CSI;
+}
+
 LoadFrameInst *IRBuilder::createLoadFrameInst(Variable *ptr) {
   auto LI = new LoadFrameInst(ptr);
   insert(LI);

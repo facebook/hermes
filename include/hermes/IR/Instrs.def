@@ -216,6 +216,7 @@ DEF_VALUE(ResumeGeneratorInst, Instruction)
 
 MARK_FIRST(BaseScopeInst, Instruction)
 DEF_VALUE(GetParentScopeInst, BaseScopeInst)
+DEF_VALUE(CreateScopeInst, BaseScopeInst)
 #ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCResolveParentEnvironmentInst, BaseScopeInst)
 DEF_VALUE(HBCCreateFunctionEnvironmentInst, BaseScopeInst)

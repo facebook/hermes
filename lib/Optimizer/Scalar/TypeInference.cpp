@@ -779,6 +779,9 @@ class TypeInferenceImpl {
   Type inferGetParentScopeInst(GetParentScopeInst *inst) {
     return *inst->getInherentType();
   }
+  Type inferCreateScopeInst(CreateScopeInst *inst) {
+    return *inst->getInherentType();
+  }
 
   // These are target dependent instructions:
 

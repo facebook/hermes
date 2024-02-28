@@ -1463,6 +1463,22 @@ void HBCISel::generateLoadParamInst(
   }
 }
 
+void HBCISel::generateCreateScopeInst(
+    hermes::CreateScopeInst *Inst,
+    hermes::BasicBlock *next) {
+  auto dstReg = encodeValue(Inst);
+  Value *parent = Inst->getParentScope();
+  // Check if this is the top level scope.
+  if (llvh::isa<EmptySentinel>(parent)) {
+    BCFGen_->emitCreateFunctionEnvironment(dstReg);
+  } else {
+    BCFGen_->emitCreateEnvironment(
+        dstReg,
+        encodeValue(parent),
+        Inst->getVariableScope()->getVariables().size());
+  }
+}
+
 void HBCISel::generateHBCCreateFunctionEnvironmentInst(
     hermes::HBCCreateFunctionEnvironmentInst *Inst,
     hermes::BasicBlock *next) {
