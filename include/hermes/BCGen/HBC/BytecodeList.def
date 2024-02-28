@@ -219,6 +219,12 @@ DEFINE_OPCODE_3(IsIn, Reg8, Reg8, Reg8)
 /// closure, 1 retrieves its parent, etc.
 DEFINE_OPCODE_2(GetParentEnvironment, Reg8, UInt8)
 
+/// Get an environment by traversing the scope chain.
+/// Arg1 is the destination.
+/// Arg2 is the environment from which to start traversing.
+/// Arg3 is the number of levels up the scope chain to go.
+DEFINE_OPCODE_3(GetEnvironment, Reg8, Reg8, UInt8)
+
 /// Store a value in an environment.
 /// StoreNPToEnvironment[L] store a non-pointer value in an environment
 /// Arg1 is the environment (as fetched by GetEnvironment).
@@ -244,8 +250,15 @@ DEFINE_OPCODE_1(GetGlobalObject, Reg8)
 DEFINE_OPCODE_1(GetNewTarget, Reg8)
 
 /// Create a new environment, using the current function's enclosing environment
-/// as the parent, and store it in Arg0.
+/// as the parent.
+/// Arg1 is the destination.
 DEFINE_OPCODE_1(CreateFunctionEnvironment, Reg8)
+
+/// Create a new environment with the given parent.
+/// Arg1 is the destination.
+/// Arg2 is the parent environment to use.
+/// Arg3 is the size of the new environment.
+DEFINE_OPCODE_3(CreateEnvironment, Reg8, Reg8, UInt32)
 
 /// Declare a global variable by string table index.
 /// The variable will be set to undefined.
@@ -396,7 +409,7 @@ DEFINE_OPCODE_4(GetPNameList, Reg8, Reg8, Reg8, Reg8)
 DEFINE_OPCODE_5(GetNextPName, Reg8, Reg8, Reg8, Reg8, Reg8)
 
 ///!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-/// NOTE: the ordering of the Call instructions is important. The "long" 
+/// NOTE: the ordering of the Call instructions is important. The "long"
 /// versions are defined after the "short" versions. It is important for
 /// efficiency that all Calls have contiguous opcodes, with wider
 /// instructions appearing after narrower ones.
