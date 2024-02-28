@@ -59,6 +59,10 @@ llvh::ArrayRef<StoredComment> JSParser::getStoredComments() const {
   return impl_->getLexer().getStoredComments();
 }
 
+std::vector<StoredComment> JSParser::moveStoredComments() const {
+  return impl_->getLexer().moveStoredComments();
+}
+
 llvh::ArrayRef<StoredToken> JSParser::getStoredTokens() const {
   return impl_->getLexer().getStoredTokens();
 }

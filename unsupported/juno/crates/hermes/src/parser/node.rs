@@ -12,7 +12,7 @@ use std::ptr::NonNull;
 use super::generated_ffi::NodeKind;
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct SMLoc {
     ptr: *const u8,
 }
@@ -34,7 +34,7 @@ impl SMLoc {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct SMRange {
     pub start: SMLoc,
     pub end: SMLoc,
@@ -47,7 +47,7 @@ impl SMRange {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct StringRef {
     data: *const u8,
     length: usize,
@@ -61,6 +61,16 @@ impl StringRef {
         } else {
             unsafe { std::slice::from_raw_parts(self.data, self.length) }
         }
+    }
+}
+
+impl std::fmt::Display for StringRef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(
+            f,
+            "{}",
+            crate::utf::utf8_with_surrogates_to_string_lossy(self.as_slice())
+        )
     }
 }
 
@@ -236,4 +246,38 @@ pub struct Node {
     pub parens: u32,
     pub source_range: SMRange,
     pub debug_loc: SMLoc,
+}
+
+#[repr(C)]
+#[derive(Debug, PartialEq)]
+pub enum CommentKind {
+    /// Comment that begins with "//".
+    Line,
+    /// Comment that is delimited by "/*" and "*/".
+    Block,
+    /// Comment that begins with "#!" and starts at the first byte of the file
+    Hashbang,
+}
+
+#[repr(C)]
+pub struct Comment {
+    pub kind: CommentKind,
+    pub source_range: SMRange,
+}
+
+impl Comment {
+    /// return the comment with delimiters (//, /*, */, #!) stripped, converted from herems code
+    pub fn get_string(&self) -> StringRef {
+        let start = self.source_range.start.as_ptr().wrapping_add(2);
+        let end = if self.kind == CommentKind::Block {
+            self.source_range.end.as_ptr().wrapping_sub(2)
+        } else {
+            self.source_range.end.as_ptr()
+        };
+
+        return StringRef {
+            data: start,
+            length: unsafe { end.offset_from(start) as usize },
+        };
+    }
 }

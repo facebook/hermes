@@ -431,6 +431,8 @@ struct ParserFlags {
   ParserDialect dialect = ParserDialect::JavaScript;
   /// Store doc-comment block at the top of the file.
   bool storeDocBlock = false;
+  /// Store all comments
+  bool storeComments = false;
 };
 
 enum class DiagKind : uint32_t {
@@ -534,6 +536,9 @@ struct ParserContext {
   /// Doc block at the top of the file.
   std::string docBlock_{};
 
+  /// Comments
+  std::vector<parser::StoredComment> comments_{};
+
   explicit ParserContext() {
     context_.getSourceErrorManager().setDiagHandler(
         [](const llvh::SMDiagnostic &diag, void *ctx) {
@@ -622,6 +627,11 @@ hermes_parser_parse(ParserFlags flags, const char *source, size_t len) {
 
   parser::JSParser parser(
       parserCtx->context_, parserCtx->bufId_, hermes::parser::FullParse);
+
+  if (flags.storeComments) {
+    parser.setStoreComments(true);
+  }
+
   auto ast = parser.parse();
 
   if (!parserCtx->firstError_) {
@@ -631,6 +641,9 @@ hermes_parser_parse(ParserFlags flags, const char *source, size_t len) {
     } else {
       parser.registerMagicURLs();
       parserCtx->ast_ = *ast;
+      if (flags.storeComments) {
+        parserCtx->comments_ = parser.moveStoredComments();
+      }
     }
   }
   return parserCtx.release();
@@ -730,4 +743,10 @@ extern "C" DataRef hermes_get_node_name(ESTree::Node *n) {
 /// parse time.
 extern "C" DataRef hermes_parser_get_doc_block(ParserContext *parserCtx) {
   return toDataRef(parserCtx->docBlock_);
+}
+
+/// \return all comments for the file if storeComments was provided at
+/// parse time.
+extern "C" DataRef hermes_parser_get_comments(ParserContext *parserCtx) {
+  return toDataRef(parserCtx->comments_);
 }

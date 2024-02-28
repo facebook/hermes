@@ -87,6 +87,8 @@ class JSParser {
 
   llvh::ArrayRef<StoredComment> getStoredComments() const;
 
+  std::vector<StoredComment> moveStoredComments() const;
+
   llvh::ArrayRef<StoredToken> getStoredTokens() const;
 
   void setStoreComments(bool storeComments);

@@ -18,6 +18,7 @@ use super::node::NodePtr;
 use super::node::NodePtrOpt;
 use super::node::SMLoc;
 use super::node::StringRef;
+use crate::parser::Comment;
 use crate::utf::utf8_with_surrogates_to_string_lossy;
 
 #[repr(u8)]
@@ -55,6 +56,8 @@ pub struct ParserFlags {
     pub dialect: ParserDialect,
     /// Store doc-comment block at the top of the file.
     pub store_doc_block: bool,
+    /// Store comments
+    pub store_comments: bool,
 }
 
 impl Default for ParserFlags {
@@ -64,6 +67,7 @@ impl Default for ParserFlags {
             enable_jsx: false,
             dialect: ParserDialect::JavaScript,
             store_doc_block: false,
+            store_comments: false,
         }
     }
 }
@@ -243,6 +247,8 @@ extern "C" {
     fn hermes_get_node_name(node: NodePtr) -> DataRef<'static, u8>;
     /// Return the doc block for the file if `storeDocBlock` was provided at parse time.
     fn hermes_parser_get_doc_block<'a>(parser_ctx: *const ParserContext) -> DataRef<'a, u8>;
+    /// Return comments for the file if `storeComments` was provided at parse time.
+    fn hermes_parser_get_comments<'a>(parser_ctx: *const ParserContext) -> DataRef<'a, Comment>;
 }
 
 pub struct HermesParser<'a> {
@@ -347,12 +353,18 @@ impl HermesParser<'_> {
     pub fn node_name(n: &Node) -> &str {
         unsafe { std::str::from_utf8_unchecked(hermes_get_node_name(NodePtr::new(n)).as_slice()) }
     }
+
+    /// Return a slice containing all comments.
+    pub fn comments(&self) -> &[Comment] {
+        unsafe { hermes_parser_get_comments(self.parser_ctx).as_slice() }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::super::generated_ffi::NodeKind;
     use super::*;
+    use crate::parser::CommentKind;
 
     #[test]
     fn good_parse() {
@@ -396,5 +408,71 @@ mod tests {
             p.magic_comment(MagicCommentKind::SourceMappingUrl).unwrap(),
             "my map URL"
         );
+    }
+
+    #[test]
+    fn comments() {
+        let buf = NullTerminatedBuf::from_str_check(
+            r#"
+/*
+    Comment 0
+*/
+var p = 0;
+// Comment 1
+var foo; // Comment 2
+/* Comment 3 */
+"#,
+        );
+        let p = HermesParser::parse(
+            ParserFlags {
+                strict_mode: false,
+                enable_jsx: false,
+                dialect: ParserDialect::JavaScript,
+                store_doc_block: false,
+                store_comments: true,
+            },
+            &buf,
+        );
+        assert!(!p.has_errors());
+        let comments = p.comments();
+        assert_eq!(comments.len(), 4);
+        assert_eq!(comments[0].kind, CommentKind::Block);
+        assert_eq!(comments[0].get_string().to_string(), "\n    Comment 0\n");
+        assert_eq!(
+            p.find_coord(comments[0].source_range.start).unwrap(),
+            Coord { line: 2, offset: 0 }
+        );
+        assert_eq!(
+            p.find_coord(comments[0].source_range.end).unwrap(),
+            Coord { line: 4, offset: 2 }
+        );
+        assert_eq!(comments[1].kind, CommentKind::Line);
+        assert_eq!(comments[1].get_string().to_string(), " Comment 1");
+        assert_eq!(
+            p.find_coord(comments[1].source_range.start).unwrap(),
+            Coord { line: 6, offset: 0 }
+        );
+        assert_eq!(
+            p.find_coord(comments[1].source_range.end).unwrap(),
+            Coord {
+                line: 6,
+                offset: 12
+            }
+        );
+        assert_eq!(comments[2].kind, CommentKind::Line);
+        assert_eq!(comments[2].get_string().to_string(), " Comment 2");
+        assert_eq!(
+            p.find_coord(comments[2].source_range.start).unwrap(),
+            Coord { line: 7, offset: 9 }
+        );
+        assert_eq!(
+            p.find_coord(comments[2].source_range.end).unwrap(),
+            Coord {
+                line: 7,
+                offset: 21
+            }
+        );
+        assert_eq!(comments[3].kind, CommentKind::Block);
+        assert_eq!(comments[3].get_string().to_string(), " Comment 3 ");
     }
 }
