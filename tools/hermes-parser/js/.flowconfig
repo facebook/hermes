@@ -13,7 +13,6 @@ name=hermes-parser
 emoji=true
 file_watcher=watchman
 lazy_mode=true
-exact_by_default=true
 module.system=node
 munge_underscores=true
 ; Yarn workspaces hoist packages to the top level node_modules, causing module resolution errors if
@@ -27,7 +26,6 @@ module.name_mapper='^prettier-plugin-hermes-parser$' -> '<PROJECT_ROOT>/prettier
 experimental.component_syntax=parsing
 experimental.global_find_ref=true
 enums=true
-casting_syntax=both
 
 [version]
 ^0.229.2
