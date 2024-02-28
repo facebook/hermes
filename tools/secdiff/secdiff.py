@@ -64,6 +64,7 @@ class State:
         self.top = 0
         self.left = 0
         self.right = 1
+        self.cache = {}
 
     def section_text(self, i):
         """Get the lines for section i"""
@@ -108,6 +109,8 @@ class State:
         """
         Compute a simple side-by-side diff using the difflib Differ.
         """
+        if (self.left, self.right) in self.cache:
+            return self.cache[(self.left, self.right)]
         left = []
         right = []
         differ = Differ()
@@ -129,6 +132,7 @@ class State:
             elif line[0] == "-":
                 # Added on the left.
                 left.append(line)
+        self.cache[(self.left, self.right)] = (left, right)
         return (left, right)
 
 
