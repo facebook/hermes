@@ -39,3 +39,6 @@ var x = 10;
 x **= 2;
 print(x);
 // CHECK-NEXT: 100
+
+print("a" ** 3 + "b" ** 2);
+// CHECK-NEXT: NaN

@@ -43,9 +43,11 @@ inline Value *lowerBinaryExponentiationInst(
     IRBuilder::InstructionDestroyer &destroyer) {
   destroyer.add(BO);
   builder.setInsertionPoint(BO);
-  return builder.createCallBuiltinInst(
+  auto *CBI = builder.createCallBuiltinInst(
       BuiltinMethod::HermesBuiltin_exponentiationOperator,
       {BO->getLeftHandSide(), BO->getRightHandSide()});
+  CBI->setType(BO->getType());
+  return CBI;
 }
 
 } // namespace hermes
