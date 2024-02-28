@@ -338,6 +338,14 @@ CreateFunctionInst *IRBuilder::createCreateFunctionInst(Function *code) {
   return CFI;
 }
 
+GetParentScopeInst *IRBuilder::createGetParentScopeInst(
+    VariableScope *scope,
+    JSDynamicParam *parentScopeParam) {
+  auto GPS = new GetParentScopeInst(scope, parentScopeParam);
+  insert(GPS);
+  return GPS;
+}
+
 LoadFrameInst *IRBuilder::createLoadFrameInst(Variable *ptr) {
   auto LI = new LoadFrameInst(ptr);
   insert(LI);

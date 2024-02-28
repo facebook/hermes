@@ -201,6 +201,9 @@ static std::pair<bool, size_t> canBeInlined(Function *F) {
         case ValueKind::CreateArgumentsLooseInstKind:
         case ValueKind::CreateArgumentsStrictInstKind:
 
+        // TODO: Support inlining this by replacing it with the closure's scope.
+        case ValueKind::GetParentScopeInstKind:
+
         // TODO: We haven't added the ability to copy inner functions to the
         // function which is being inlined into.
         case ValueKind::CreateFunctionInstKind:

@@ -1320,6 +1320,12 @@ void HBCISel::generateGetBuiltinClosureInst(
   BCFGen_->emitGetBuiltinClosure(output, Inst->getBuiltinIndex());
 }
 
+void HBCISel::generateGetParentScopeInst(
+    GetParentScopeInst *Inst,
+    hermes::BasicBlock *next) {
+  BCFGen_->emitGetParentEnvironment(encodeValue(Inst), 0);
+}
+
 void HBCISel::generateHBCResolveParentEnvironmentInst(
     HBCResolveParentEnvironmentInst *Inst,
     BasicBlock *next) {

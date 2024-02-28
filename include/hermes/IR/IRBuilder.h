@@ -289,6 +289,10 @@ class IRBuilder {
 
   CreateFunctionInst *createCreateFunctionInst(Function *code);
 
+  GetParentScopeInst *createGetParentScopeInst(
+      VariableScope *scope,
+      JSDynamicParam *parentScopeParam);
+
   LoadStackInst *createLoadStackInst(AllocStackInst *ptr);
 
   LoadFrameInst *createLoadFrameInst(Variable *ptr);

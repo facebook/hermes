@@ -299,6 +299,16 @@ Arguments | %x and %y are the operands of the binary operation, %BB1 is the 'Tru
 Semantics | The instruction follows the rules of JavaScript for each one of the binary operators defined in the instruction. If the condition is evaluated as 'True' the program jumps to the 'True' block. Otherwise the program jumps to the 'False' block.
 Effects | May read and write memory.
 
+### GetParentScopeInst
+
+GetParentScopeInst | _
+--- | --- |
+Description | Retrieve the parent scope of the current function.
+Example | %0 = GetParentScopeInst %varScope, %parentScopeParam
+Arguments | %varScope is the VariableScope that describes the parent environment. %parentScopeParam is dummy parameter used to model usage of the parent environment.
+Semantics | The instruction returns the enclosing environment of the currently executing function.
+Effects | Does not read or write to memory.
+
 ### CreateFunction
 
 CreateFunction | _
