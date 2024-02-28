@@ -1,3 +1,8 @@
+## 0.20.0
+
+### `prettier-plugin-hermes-parser`
+* Added support for newer unreleased Flow syntax
+
 ## 0.19.2
 
 ### `hermes-parser`
