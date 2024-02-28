@@ -319,6 +319,26 @@ Arguments | %variablescope is a VariableScope describing the variables stored in
 Semantics | The instruction creates a new scope which can be used to store/retrieve variables, and allow inner functions to access variables in an enclosing scope.
 Effects | Does not read or write to memory.
 
+### ResolveScopeInst
+
+ResolveScopeInst | _
+--- | --- |
+Description | Traverse the scope chain to retrieve an enclosing scope.
+Example | %0 = ResolveScopeInst %variablescope, %startScope
+Arguments | %variablescope is the VariableScope corresponding to the enclosing scope to retrieve. %startScope is the scope from which to start traversing.
+Semantics | The instruction retrieves the requested scope, which must be reachable from the starting scope.
+Effects | Does not read or write to memory.
+
+### LIRResolveScopeInst
+
+LIRResolveScopeInst | _
+--- | --- |
+Description | Traverse the scope chain to retrieve an enclosing scope.
+Example | %0 = LIRResolveScopeInst %variablescope, %startScope, %numLevels
+Arguments | %variablescope is the VariableScope corresponding to the enclosing scope to retrieve. %startScope is the scope from which to start traversing. %numLevels is the number of levels to walk up the chain.
+Semantics | The instruction retrieves the requested scope, which must be %numLevels up from the starting scope.
+Effects | Does not read or write to memory.
+
 ### CreateFunction
 
 CreateFunction | _

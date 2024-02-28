@@ -354,6 +354,23 @@ CreateScopeInst *IRBuilder::createCreateScopeInst(
   return CSI;
 }
 
+ResolveScopeInst *IRBuilder::createResolveScopeInst(
+    VariableScope *scope,
+    BaseScopeInst *startScope) {
+  auto RSI = new ResolveScopeInst(scope, startScope);
+  insert(RSI);
+  return RSI;
+}
+
+LIRResolveScopeInst *IRBuilder::createLIRResolveScopeInst(
+    VariableScope *scope,
+    BaseScopeInst *startScope,
+    LiteralNumber *numLevels) {
+  auto LRSI = new LIRResolveScopeInst(scope, startScope, numLevels);
+  insert(LRSI);
+  return LRSI;
+}
+
 LoadFrameInst *IRBuilder::createLoadFrameInst(Variable *ptr) {
   auto LI = new LoadFrameInst(ptr);
   insert(LI);

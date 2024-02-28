@@ -1042,6 +1042,14 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
   }
 }
 
+BaseScopeInst *ESTreeIRGen::emitResolveScopeInstIfNeeded(
+    VariableScope *targetVarScope,
+    CreateScopeInst *startScope) {
+  if (startScope->getVariableScope() == targetVarScope)
+    return startScope;
+  return Builder.createResolveScopeInst(targetVarScope, startScope);
+}
+
 void ESTreeIRGen::drainCompilationQueue() {
   while (!compilationQueue_.empty()) {
     compilationQueue_.front()();

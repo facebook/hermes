@@ -782,6 +782,12 @@ class TypeInferenceImpl {
   Type inferCreateScopeInst(CreateScopeInst *inst) {
     return *inst->getInherentType();
   }
+  Type inferResolveScopeInst(ResolveScopeInst *inst) {
+    return *inst->getInherentType();
+  }
+  Type inferLIRResolveScopeInst(LIRResolveScopeInst *inst) {
+    return *inst->getInherentType();
+  }
 
   // These are target dependent instructions:
 

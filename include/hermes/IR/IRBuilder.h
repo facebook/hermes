@@ -297,6 +297,15 @@ class IRBuilder {
       VariableScope *scope,
       Value *parentScope);
 
+  ResolveScopeInst *createResolveScopeInst(
+      VariableScope *scope,
+      BaseScopeInst *startScope);
+
+  LIRResolveScopeInst *createLIRResolveScopeInst(
+      VariableScope *scope,
+      BaseScopeInst *startScope,
+      LiteralNumber *numLevels);
+
   LoadStackInst *createLoadStackInst(AllocStackInst *ptr);
 
   LoadFrameInst *createLoadFrameInst(Variable *ptr);

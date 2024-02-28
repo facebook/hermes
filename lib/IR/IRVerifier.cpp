@@ -1143,6 +1143,13 @@ bool Verifier::visitCreateScopeInst(const CreateScopeInst &Inst) {
       "Can only create scope for the enclosing function.");
   return true;
 }
+bool Verifier::visitResolveScopeInst(const ResolveScopeInst &Inst) {
+  return true;
+}
+bool Verifier::visitLIRResolveScopeInst(
+    const hermes::LIRResolveScopeInst &Inst) {
+  return true;
+}
 
 bool Verifier::visitHBCProfilePointInst(const HBCProfilePointInst &Inst) {
   // Nothing to verify at this point.
