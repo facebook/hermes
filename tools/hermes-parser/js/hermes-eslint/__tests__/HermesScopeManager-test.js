@@ -252,18 +252,24 @@ describe('QualifiedTypeofIdentifier', () => {
   test('References values', () => {
     const {scopeManager} = parseForESLint(`
       import foo from 'foo';
-      (1: typeof foo.bar);
+      import type bar from 'foo';
+      (1: typeof foo.bar<bar>);
     `);
 
     // Verify that scope contains single value reference to 'foo'
     const scope = scopeManager.scopes[1];
-    expect(scope.variables).toHaveLength(1);
+    expect(scope.variables).toHaveLength(2);
 
-    const variable = scope.variables[0];
-    expect(variable.name).toEqual('foo');
-    expect(variable.references).toHaveLength(1);
-    expect(variable.references[0].isValueReference).toBe(true);
-    expect(variable.references[0].isTypeReference).toBe(false);
+    const foo = scope.variables[0];
+    expect(foo.name).toEqual('foo');
+    expect(foo.references).toHaveLength(1);
+    expect(foo.references[0].isValueReference).toBe(true);
+    expect(foo.references[0].isTypeReference).toBe(false);
+    const bar = scope.variables[1];
+    expect(bar.name).toEqual('bar');
+    expect(bar.references).toHaveLength(1);
+    expect(bar.references[0].isValueReference).toBe(false);
+    expect(bar.references[0].isTypeReference).toBe(true);
   });
   test('Does not reference types', () => {
     const {scopeManager} = parseForESLint(`

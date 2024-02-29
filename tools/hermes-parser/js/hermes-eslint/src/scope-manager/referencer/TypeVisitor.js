@@ -431,6 +431,7 @@ class TypeVisitor extends Visitor {
 
     // typeof annotations can only reference values!
     this._referencer.currentScope().referenceValue(identifier);
+    this.visit(node.typeArguments);
   }
 
   TypeParameter(node: TypeParameter): void {
