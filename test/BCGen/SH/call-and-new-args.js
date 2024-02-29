@@ -81,6 +81,6 @@ function test_builtin(a) {
 // CHECK-NEXT:  {stack[4]}  %2 = ImplicitMovInst (:undefined) undefined: undefined
 // CHECK-NEXT:  {stack[3]}  %3 = ImplicitMovInst (:empty) empty: empty
 // CHECK-NEXT:  {stack[2]}  %4 = ImplicitMovInst (:undefined) undefined: undefined
-// CHECK-NEXT:  {loc0}    %5 = CallBuiltinInst (:any) [HermesBuiltin.exponentiationOperator]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, {stack[1]} %0: any, {stack[0]} %1: number
-// CHECK-NEXT:                 ReturnInst {loc0} %5: any
+// CHECK-NEXT:  {np0}     %5 = CallBuiltinInst (:number) [HermesBuiltin.exponentiationOperator]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, {stack[1]} %0: any, {stack[0]} %1: number
+// CHECK-NEXT:                 ReturnInst {np0} %5: number
 // CHECK-NEXT:function_end
