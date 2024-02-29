@@ -111,6 +111,12 @@ OptValue<uint32_t> toArrayIndex(StringView str) {
 }
 
 bool isSameValue(HermesValue x, HermesValue y) {
+  // Check for NaN before checking the tag. We have to do this because NaNs may
+  // differ in the sign bit, which may result in the tag comparison below
+  // incorrectly returning false.
+  if (LLVM_UNLIKELY(x.isNaN()) && y.isNaN())
+    return true;
+
   if (x.getTag() != y.getTag()) {
     // If the tags are different, they must be different.
     return false;
