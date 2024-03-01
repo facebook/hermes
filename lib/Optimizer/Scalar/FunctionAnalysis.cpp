@@ -189,10 +189,6 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
 void analyzeFunctionCallsites(Function *F) {
   Module *M = F->getParent();
 
-  if (F->getAttributesRef(M)._allCallsitesKnownInStrictMode) {
-    return;
-  }
-
   // Attempt to start from a position of knowing all callsites.
   F->getAttributesRef(M)._allCallsitesKnownInStrictMode = true;
 
