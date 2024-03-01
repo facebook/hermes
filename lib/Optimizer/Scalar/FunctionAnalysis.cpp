@@ -22,15 +22,19 @@ namespace {
 /// if they haven't been set yet.
 /// \param call the Call instruction being analyzed.
 /// \param callee the expected callee of the call instruction.
-void registerCallsite(BaseCallInst *call, BaseCreateCallableInst *callee) {
+/// \param isDominated whether the call is known to be dominated by the callee.
+void registerCallsite(
+    BaseCallInst *call,
+    BaseCreateCallableInst *callee,
+    bool isDominated) {
   // Set the target/env operands if possible.
   if (llvh::isa<EmptySentinel>(call->getTarget())) {
     call->setTarget(callee->getFunctionCode());
   }
   if (llvh::isa<EmptySentinel>(call->getEnvironment())) {
-    // If the closure is created in the same function as the call, we can
-    // forward the environment directly to the call.
-    if (callee->getParent()->getParent() == call->getParent()->getParent()) {
+    // If the closure is known to dominate the call, we can forward the
+    // environment directly to the call.
+    if (isDominated) {
       if (auto *create = llvh::dyn_cast<HBCCreateFunctionInst>(callee)) {
         // TODO: This can be done unconditionally once we store environments
         // along with all CreateFunctionInsts as well.
@@ -83,17 +87,21 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
   // The users of the elements of this list can then be iterated to find calls,
   // ways for the closure to escape, and anything else we want to analyze.
   // When the list is empty, we're done analyzing \p create.
-  llvh::SmallVector<Instruction *, 2> worklist{};
+  // The second element of the pair is a flag indicating whether the \p create
+  // is known to dominate the instruction. This is useful for optimizations
+  // where we want to forward the closure or one of its operands.
+  llvh::SmallVector<llvh::PointerIntPair<Instruction *, 1>, 2> worklist{};
 
   // Use a set to avoid revisiting the same Instruction.
   // For example, if the same function is stored to two vars we need
   // to avoid going back and forth between the corresponding loads.
   llvh::SmallPtrSet<Instruction *, 2> visited{};
 
-  worklist.push_back(create);
+  worklist.push_back({create, 1});
   while (!worklist.empty()) {
     // Instruction whose result is known to be the closure.
-    Instruction *closureInst = worklist.pop_back_val();
+    Instruction *closureInst = worklist.back().getPointer();
+    bool isDominated = worklist.pop_back_val().getInt();
 
     if (!visited.insert(closureInst).second) {
       // Already visited.
@@ -108,7 +116,7 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
           F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
         }
         if (call->getCallee() == closureInst) {
-          registerCallsite(call, create);
+          registerCallsite(call, create, isDominated);
         }
         continue;
       }
@@ -133,7 +141,7 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
                 ->getType()
                 .canBeObject() &&
             "The result UnionNarrowTrusted of closure is not object");
-        worklist.push_back(closureUser);
+        worklist.push_back({closureUser, isDominated});
         continue;
       }
 
@@ -146,7 +154,7 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
             CC->getCheckedValue()->getType().canBeObject() &&
             "closure type is not object");
         if (CC->getType().canBeObject()) {
-          worklist.push_back(closureUser);
+          worklist.push_back({closureUser, isDominated});
           continue;
         }
       }
@@ -170,7 +178,7 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
                 "only Store and Load can use variables");
             continue;
           }
-          worklist.push_back(load);
+          worklist.push_back({load, 0});
         }
         continue;
       }
