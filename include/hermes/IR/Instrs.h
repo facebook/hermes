@@ -769,17 +769,23 @@ class LoadFrameInst : public Instruction {
   void operator=(const LoadFrameInst &) = delete;
 
  public:
-  enum { VariableIdx };
+  enum { ScopeIdx, VariableIdx };
 
-  explicit LoadFrameInst(Variable *alloc)
+  explicit LoadFrameInst(BaseScopeInst *scope, Variable *alloc)
       : Instruction(ValueKind::LoadFrameInstKind) {
+    assert(scope->getVariableScope() == alloc->getParent());
     setType(alloc->getType());
+    pushOperand(scope);
     pushOperand(alloc);
   }
   explicit LoadFrameInst(
       const LoadFrameInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  Instruction *getScope() const {
+    return cast<Instruction>(getOperand(ScopeIdx));
+  }
 
   Variable *getLoadVariable() const {
     return cast<Variable>(getOperand(VariableIdx));
@@ -811,8 +817,11 @@ class StoreFrameInst : public Instruction {
   void operator=(const StoreFrameInst &) = delete;
 
  public:
-  enum { StoredValueIdx, VariableIdx };
+  enum { ScopeIdx, StoredValueIdx, VariableIdx };
 
+  Instruction *getScope() const {
+    return llvh::cast<Instruction>(getOperand(ScopeIdx));
+  }
   Value *getValue() const {
     return getOperand(StoredValueIdx);
   }
@@ -820,8 +829,13 @@ class StoreFrameInst : public Instruction {
     return cast<Variable>(getOperand(VariableIdx));
   }
 
-  explicit StoreFrameInst(Value *storedValue, Variable *ptr)
+  explicit StoreFrameInst(
+      BaseScopeInst *scope,
+      Value *storedValue,
+      Variable *ptr)
       : Instruction(ValueKind::StoreFrameInstKind) {
+    assert(scope->getVariableScope() == ptr->getParent());
+    pushOperand(scope);
     pushOperand(storedValue);
     pushOperand(ptr);
   }
@@ -858,18 +872,26 @@ class BaseCreateLexicalChildInst : public Instruction {
   void operator=(const BaseCreateLexicalChildInst &) = delete;
 
  protected:
-  explicit BaseCreateLexicalChildInst(ValueKind kind, Function *code)
+  explicit BaseCreateLexicalChildInst(
+      ValueKind kind,
+      BaseScopeInst *scope,
+      Function *code)
       : Instruction(kind) {
+    pushOperand(scope);
     pushOperand(code);
   }
 
  public:
-  enum { FunctionCodeIdx, LAST_IDX };
+  enum { ScopeIdx, FunctionCodeIdx, LAST_IDX };
 
   explicit BaseCreateLexicalChildInst(
       const BaseCreateLexicalChildInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  Instruction *getScope() const {
+    return cast<Instruction>(getOperand(ScopeIdx));
+  }
 
   Function *getFunctionCode() const {
     return cast<Function>(getOperand(FunctionCodeIdx));
@@ -897,8 +919,11 @@ class BaseCreateCallableInst : public BaseCreateLexicalChildInst {
   void operator=(const BaseCreateCallableInst &) = delete;
 
  protected:
-  explicit BaseCreateCallableInst(ValueKind kind, Function *code)
-      : BaseCreateLexicalChildInst(kind, code) {
+  explicit BaseCreateCallableInst(
+      ValueKind kind,
+      BaseScopeInst *scope,
+      Function *code)
+      : BaseCreateLexicalChildInst(kind, scope, code) {
     setType(*getInherentTypeImpl());
   }
 
@@ -923,8 +948,8 @@ class CreateFunctionInst : public BaseCreateCallableInst {
   void operator=(const CreateFunctionInst &) = delete;
 
  public:
-  explicit CreateFunctionInst(Function *code)
-      : BaseCreateCallableInst(ValueKind::CreateFunctionInstKind, code) {
+  explicit CreateFunctionInst(BaseScopeInst *scope, Function *code)
+      : BaseCreateCallableInst(ValueKind::CreateFunctionInstKind, scope, code) {
     assert(
         (llvh::isa<NormalFunction>(code) ||
          llvh::isa<GeneratorFunction>(code) ||
@@ -4024,7 +4049,10 @@ class HBCCreateFunctionInst : public BaseCreateCallableInst {
   enum { EnvIdx = CreateFunctionInst::LAST_IDX };
 
   explicit HBCCreateFunctionInst(Function *code, BaseScopeInst *env)
-      : BaseCreateCallableInst(ValueKind::HBCCreateFunctionInstKind, code) {
+      : BaseCreateCallableInst(
+            ValueKind::HBCCreateFunctionInstKind,
+            env,
+            code) {
     setType(*getInherentTypeImpl());
     pushOperand(env);
   }
@@ -4183,9 +4211,12 @@ class CreateGeneratorInst : public BaseCreateLexicalChildInst {
   void operator=(const CreateGeneratorInst &) = delete;
 
  public:
-  explicit CreateGeneratorInst(GeneratorInnerFunction *genFunction)
+  explicit CreateGeneratorInst(
+      BaseScopeInst *scope,
+      GeneratorInnerFunction *genFunction)
       : BaseCreateLexicalChildInst(
             ValueKind::CreateGeneratorInstKind,
+            scope,
             genFunction) {
     setType(*getInherentTypeImpl());
   }
@@ -4214,6 +4245,7 @@ class HBCCreateGeneratorInst : public BaseCreateLexicalChildInst {
   explicit HBCCreateGeneratorInst(Function *code, BaseScopeInst *env)
       : BaseCreateLexicalChildInst(
             ValueKind::HBCCreateGeneratorInstKind,
+            env,
             code) {
     pushOperand(env);
     setType(*getInherentTypeImpl());

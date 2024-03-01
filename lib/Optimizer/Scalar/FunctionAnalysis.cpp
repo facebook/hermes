@@ -34,13 +34,8 @@ void registerCallsite(
   if (llvh::isa<EmptySentinel>(call->getEnvironment())) {
     // If the closure is known to dominate the call, we can forward the
     // environment directly to the call.
-    if (isDominated) {
-      if (auto *create = llvh::dyn_cast<HBCCreateFunctionInst>(callee)) {
-        // TODO: This can be done unconditionally once we store environments
-        // along with all CreateFunctionInsts as well.
-        call->setEnvironment(create->getEnvironment());
-      }
-    }
+    if (isDominated)
+      call->setEnvironment(callee->getScope());
   }
 }
 
