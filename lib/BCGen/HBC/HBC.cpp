@@ -367,9 +367,6 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
   }
   assert(BMGen.getEntryPointIndex() != -1 && "Entry point not added");
 
-  // Construct the relative function scope depth map.
-  FunctionScopeAnalysis scopeAnalysis{lexicalTopLevel};
-
   // Allow reusing the debug cache between functions
   FileAndSourceMapIdCache debugCache{};
 
@@ -406,8 +403,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
 
       funcGen =
           BytecodeFunctionGenerator::create(BMGen, RA.getMaxRegisterUsage());
-      HBCISel hbciSel(
-          &F, funcGen.get(), RA, scopeAnalysis, options, debugCache);
+      HBCISel hbciSel(&F, funcGen.get(), RA, options, debugCache);
       hbciSel.generate(sourceMapGen);
     }
 

@@ -87,10 +87,6 @@ class HBCISel {
   /// The register allocator.
   HVMRegisterAllocator &RA_;
 
-  /// The function scope depth analysis, used to determine the lexical parents
-  /// and scope depth of each function.
-  FunctionScopeAnalysis &scopeAnalysis_;
-
   /// For each Basic Block, we map to its beginning instruction location
   /// and the next basic block. We need this information to resolve jump
   /// targets and exception handler table.
@@ -197,13 +193,11 @@ class HBCISel {
       Function *F,
       BytecodeFunctionGenerator *BCFGen,
       HVMRegisterAllocator &RA,
-      FunctionScopeAnalysis &scopeAnalysis,
       const BytecodeGenerationOptions &options,
       FileAndSourceMapIdCache &debugIdCache)
       : F_(F),
         BCFGen_(BCFGen),
         RA_(RA),
-        scopeAnalysis_(scopeAnalysis),
         bytecodeGenerationOptions_(options),
         fileAndSourceMapIdCache_(debugIdCache) {
     protoIdent_ = F->getContext().getIdentifier("__proto__");

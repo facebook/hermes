@@ -2779,9 +2779,6 @@ void generateModule(
   uint32_t nextCacheIdx = 0;
   ModuleGen moduleGen{M};
 
-  auto topLevelFunc = M->getTopLevelFunction();
-  FunctionScopeAnalysis scopeAnalysis{topLevelFunc};
-
   if (options.format == DumpBytecode || options.format == EmitBundle) {
     if (!isValidSHUnitName(options.unitName))
       hermes_fatal("Invalid unit name passed to SH backend.");

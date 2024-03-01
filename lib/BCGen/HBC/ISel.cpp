@@ -313,10 +313,14 @@ void HBCISel::addDebugLexicalInfo() {
   if (F_->getContext().getDebugInfoSetting() != DebugInfoSetting::ALL)
     return;
 
-  // Set the lexical parent.
-  Function *parent = scopeAnalysis_.getLexicalParent(F_);
-  if (parent)
-    BCFGen_->setLexicalParentID(BCFGen_->getFunctionID(parent));
+  // Set the lexical parent by finding the function in which a closure is
+  // created with F_, if any.
+  for (auto *U : F_->getUsers()) {
+    if (llvh::isa<BaseCreateLexicalChildInst>(U)) {
+      BCFGen_->setLexicalParentID(BCFGen_->getFunctionID(U->getFunction()));
+      break;
+    }
+  }
 
   std::vector<Identifier> names;
   for (const Variable *var : F_->getFunctionScope()->getVariables())
