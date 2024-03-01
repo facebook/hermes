@@ -83,7 +83,8 @@ void ESTreeIRGen::genFunctionDeclaration(
       : genES5Function(functionName, func, newFuncParentScope);
 
   // Store the newly created closure into a frame variable with the same name.
-  auto *newClosure = Builder.createCreateFunctionInst(newFunc);
+  auto *newClosure =
+      Builder.createCreateFunctionInst(curFunction()->functionScope, newFunc);
 
   emitStore(newClosure, funcStorage, true);
 }
@@ -112,7 +113,8 @@ Value *ESTreeIRGen::genFunctionExpression(
       ? genGeneratorFunction(originalNameIden, FE, parentScope)
       : genES5Function(originalNameIden, FE, parentScope, superClassNode);
 
-  Value *closure = Builder.createCreateFunctionInst(newFunc);
+  Value *closure =
+      Builder.createCreateFunctionInst(curFunction()->functionScope, newFunc);
 
   if (id)
     emitStore(closure, resolveIdentifier(id), true);
@@ -125,7 +127,8 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
     Identifier nameHint) {
   // Check if already compiled.
   if (Value *compiled = findCompiledEntity(AF)) {
-    return Builder.createCreateFunctionInst(llvh::cast<Function>(compiled));
+    return Builder.createCreateFunctionInst(
+        curFunction()->functionScope, llvh::cast<Function>(compiled));
   }
 
   LLVM_DEBUG(
@@ -180,7 +183,8 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
   enqueueCompilation(AF, ExtraKey::Normal, newFunc, compileFunc);
 
   // Emit CreateFunctionInst after we have restored the builder state.
-  return Builder.createCreateFunctionInst(newFunc);
+  return Builder.createCreateFunctionInst(
+      curFunction()->functionScope, newFunc);
 }
 
 Function *ESTreeIRGen::genES5Function(
@@ -353,6 +357,7 @@ Function *ESTreeIRGen::genGeneratorFunction(
 
     // Create a generator function, which will store the arguments.
     auto *gen = Builder.createCreateGeneratorInst(
+        curFunction()->functionScope,
         llvh::cast<GeneratorInnerFunction>(innerFn));
 
     if (!hasSimpleParams(functionNode)) {
@@ -419,7 +424,8 @@ Function *ESTreeIRGen::genAsyncFunction(
         DoEmitDeclarations::No,
         parentScope);
 
-    auto *genClosure = Builder.createCreateFunctionInst(gen);
+    auto *genClosure =
+        Builder.createCreateFunctionInst(curFunction()->functionScope, gen);
     auto *thisArg = curFunction()->jsParams[0];
     auto *argumentsList = curFunction()->createArgumentsInst;
 
@@ -520,6 +526,18 @@ void ESTreeIRGen::emitFunctionPrologue(
         newFunc->isStrictMode() ? thisVal
                                 : Builder.createCoerceThisNSInst(thisVal));
   }
+
+  // Create the function level scope for this function. If a parent scope is
+  // provided, use it, otherwise, this function does not have a lexical parent.
+  Value *baseScope;
+  if (parentScope) {
+    baseScope = Builder.createGetParentScopeInst(
+        parentScope, newFunc->getParentScopeParam());
+  } else {
+    baseScope = Builder.getEmptySentinel();
+  }
+  curFunction()->functionScope =
+      Builder.createCreateScopeInst(newFunc->getFunctionScope(), baseScope);
 
   if (doInitES5CaptureState != InitES5CaptureState::No)
     initCaptureStateInES5FunctionHelper();
@@ -643,6 +661,7 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
     if (init) {
       assert(var);
       Builder.createStoreFrameInst(
+          curFunction()->functionScope,
           var->getObeysTDZ() ? (Literal *)Builder.getLiteralEmpty()
                              : (Literal *)Builder.getLiteralUndefined(),
           var);
@@ -683,6 +702,7 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
     if (!semInfo->simpleParameterList) {
       var->setObeysTDZ(tdz);
       Builder.createStoreFrameInst(
+          curFunction()->functionScope,
           tdz ? (Literal *)Builder.getLiteralEmpty()
               : (Literal *)Builder.getLiteralUndefined(),
           var);

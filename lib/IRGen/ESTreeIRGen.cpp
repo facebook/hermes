@@ -918,6 +918,8 @@ Value *ESTreeIRGen::emitOptionalInitialization(
 Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
   if (auto *var = llvh::dyn_cast<Variable>(from)) {
     Instruction *res;
+    auto *RSI = emitResolveScopeInstIfNeeded(
+        var->getParent(), curFunction()->functionScope);
     if (var->getObeysTDZ()) {
       // We don't need to perform a runtime check for TDZ when in the
       // variable's function, since we know whether it has been initialized.
@@ -948,15 +950,15 @@ Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
           res = thr;
         } else {
           res = Builder.createUnionNarrowTrustedInst(
-              Builder.createLoadFrameInst(var),
+              Builder.createLoadFrameInst(RSI, var),
               Type::subtractTy(var->getType(), Type::createEmpty()));
         }
       } else {
         res = Builder.createThrowIfInst(
-            Builder.createLoadFrameInst(var), Type::createEmpty());
+            Builder.createLoadFrameInst(RSI, var), Type::createEmpty());
       }
     } else {
-      res = Builder.createLoadFrameInst(var);
+      res = Builder.createLoadFrameInst(RSI, var);
     }
 
     return res;
@@ -975,6 +977,8 @@ Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
 Instruction *
 ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
   if (auto *var = llvh::dyn_cast<Variable>(ptr)) {
+    auto *RSI = emitResolveScopeInstIfNeeded(
+        var->getParent(), curFunction()->functionScope);
     if (declInit) {
       assert(
           var->getParent()->getFunction() == curFunction()->function &&
@@ -1016,7 +1020,7 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
         } else {
           // Must verify whether the variable is initialized.
           Builder.createThrowIfInst(
-              Builder.createLoadFrameInst(var), Type::createEmpty());
+              Builder.createLoadFrameInst(RSI, var), Type::createEmpty());
         }
       }
       if (var->getIsConst()) {
@@ -1029,7 +1033,7 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
       }
     }
 
-    return Builder.createStoreFrameInst(storedValue, var);
+    return Builder.createStoreFrameInst(RSI, storedValue, var);
   } else if (auto *globalProp = llvh::dyn_cast<GlobalObjectProperty>(ptr)) {
     if (globalProp->isDeclared() || !Builder.getFunction()->isStrictMode()) {
       return Builder.createStorePropertyInst(

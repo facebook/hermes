@@ -170,10 +170,6 @@ bool operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     return true;
   }
 
-  if (llvh::isa<HBCResolveParentEnvironmentInst>(Inst) &&
-      opIndex == HBCResolveParentEnvironmentInst::NumLevelsIdx) {
-    return true;
-  }
   if (llvh::isa<LIRResolveScopeInst>(Inst) &&
       opIndex == LIRResolveScopeInst::NumLevelsIdx) {
     return true;

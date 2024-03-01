@@ -839,7 +839,11 @@ class InstrGen {
     genStringConst(inst.getName()) << ");\n";
   }
   void generateLoadFrameInst(LoadFrameInst &inst) {
-    hermes_fatal("LoadFrameInst should have been lowered.");
+    os_.indent(2);
+    generateValue(inst);
+    os_ << " = _sh_ljs_load_from_env(";
+    generateValue(*inst.getScope());
+    os_ << ", " << inst.getLoadVariable()->getIndexInVariableList() << ");\n";
   }
   void generateHBCLoadConstInst(HBCLoadConstInst &inst) {
     os_.indent(2);
@@ -878,11 +882,7 @@ class InstrGen {
   }
   void generateHBCResolveParentEnvironmentInst(
       HBCResolveParentEnvironmentInst &inst) {
-    os_.indent(2);
-    generateRegister(inst);
-    os_ << " = _sh_ljs_get_env(shr, _sh_ljs_get_env_from_closure(shr, frame["
-        << hbc::StackFrameLayout::CalleeClosureOrCB << "])"
-        << ", " << inst.getNumLevels()->asUInt32() << ");\n";
+    hermes_fatal("HBCResolveEnvironment is not used by SH.");
   }
   void generateGetClosureScopeInst(GetClosureScopeInst &inst) {
     os_.indent(2);
@@ -1464,7 +1464,11 @@ class InstrGen {
     hermes_fatal("StoreStackInst should have been lowered.");
   }
   void generateStoreFrameInst(StoreFrameInst &inst) {
-    hermes_fatal("StoreFrameInst should have been lowered.");
+    os_ << "  _sh_ljs_store_to_env(shr, ";
+    generateValue(*inst.getScope());
+    os_ << ",";
+    generateValue(*inst.getValue());
+    os_ << ", " << inst.getVariable()->getIndexInVariableList() << ");\n";
   }
   void generateAllocStackInst(AllocStackInst &inst) {
     // This is a no-op.
@@ -1640,7 +1644,19 @@ class InstrGen {
     os_ << "abort();\n";
   }
   void generateCreateFunctionInst(CreateFunctionInst &inst) {
-    hermes_fatal("CreateFunctionInst should have been lowered.");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_create_closure"
+        << "(shr, &";
+    generateRegister(*inst.getScope());
+    os_ << ", ";
+    moduleGen_.nativeFunctionTable.generateFunctionLabel(
+        inst.getFunctionCode(), os_);
+    os_ << ", ";
+    os_ << "&s_function_info_table["
+        << moduleGen_.nativeFunctionTable.getIndex(inst.getFunctionCode())
+        << "]"
+        << ");\n";
   }
   void generateCreateGeneratorInst(CreateGeneratorInst &inst) {
     unimplemented(inst);
@@ -1982,10 +1998,7 @@ class InstrGen {
   }
   void generateHBCCreateFunctionEnvironmentInst(
       HBCCreateFunctionEnvironmentInst &inst) {
-    os_ << "  _sh_ljs_create_environment(shr, _sh_ljs_get_env_from_closure(shr, frame["
-        << hbc::StackFrameLayout::CalleeClosureOrCB << "]),";
-    generateRegisterPtr(inst);
-    os_ << ", " << inst.getVariableScope()->getVariables().size() << ");\n";
+    hermes_fatal("HBCCreateEnvironmentInst is not used by SH.");
   }
   void generateCoerceThisNSInst(CoerceThisNSInst &inst) {
     os_.indent(2);
