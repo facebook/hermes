@@ -689,6 +689,10 @@ class ResolveScopeInst : public BaseScopeInst {
     return cast<Instruction>(getOperand(StartScopeIdx));
   }
 
+  void setStartScope(BaseScopeInst *scope) {
+    setOperand(scope, StartScopeIdx);
+  }
+
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setIdempotent();
   }
