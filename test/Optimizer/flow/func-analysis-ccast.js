@@ -20,7 +20,7 @@ function bar() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function bar(): any [allCallsitesKnownInStrictMode]
+// CHECK:function bar(): any [allCallsitesKnownInStrictMode,unreachable]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [foo@""]: any

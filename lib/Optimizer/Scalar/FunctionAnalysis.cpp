@@ -223,6 +223,13 @@ void analyzeFunctionCallsites(Function *F) {
                      << '\n');
     F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
   }
+
+  // If all callsites are known, and none of the users are calls, then the
+  // function is unreachable.
+  if (F->getAttributesRef(M)._allCallsitesKnownInStrictMode) {
+    F->getAttributesRef(M).unreachable =
+        !llvh::any_of(F->getUsers(), llvh::isa<BaseCallInst, Instruction *>);
+  }
 }
 
 } // namespace
