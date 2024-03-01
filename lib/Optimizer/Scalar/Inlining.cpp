@@ -205,9 +205,6 @@ static std::pair<bool, size_t> canBeInlined(Function *F) {
         // TODO: Inlining will require moving Variables between functions.
         case ValueKind::CreateScopeInstKind:
 
-        // TODO: Support inlining this by replacing it with the closure's scope.
-        case ValueKind::GetParentScopeInstKind:
-
         // TODO: We haven't added the ability to copy inner functions to the
         // function which is being inlined into.
         case ValueKind::CreateFunctionInstKind:
@@ -352,6 +349,23 @@ static Value *inlineFunction(
         operandMap[&I] = CI->getNewTarget();
         continue;
       }
+
+      if (auto *GPS = llvh::dyn_cast<GetParentScopeInst>(&I)) {
+        // If the call already had an environment populated, just use that.
+        // Otherwise, get the environment from the closure.
+        if (auto *callScope =
+                llvh::dyn_cast<BaseScopeInst>(CI->getEnvironment())) {
+          assert(
+              callScope->getVariableScope() == GPS->getVariableScope() &&
+              "Call scope must match function's parent.");
+          operandMap[&I] = callScope;
+        } else {
+          operandMap[&I] = builder.createGetClosureScopeInst(
+              GPS->getVariableScope(), CI->getCallee());
+        }
+        continue;
+      }
+
       assert(!llvh::isa<LIRGetThisNSInst>(I) && "Not allowed during inlining");
 
       // Translate the operands.
