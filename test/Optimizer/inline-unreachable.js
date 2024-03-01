@@ -45,9 +45,8 @@ function main() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %main(): any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %retval(): functionCode
-// CHECK-NEXT:       ReturnInst %2: object
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %retval(): functionCode
+// CHECK-NEXT:       ReturnInst %1: object
 // CHECK-NEXT:function_end
 
 // CHECK:function retval(): undefined [noReturn]

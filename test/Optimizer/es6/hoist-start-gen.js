@@ -31,9 +31,8 @@ function *foo() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %?anon_0_foo(): functionCode
-// CHECK-NEXT:       ReturnInst %2: object
+// CHECK-NEXT:  %1 = CreateGeneratorInst (:object) %0: environment, %?anon_0_foo(): functionCode
+// CHECK-NEXT:       ReturnInst %1: object
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_foo(): any

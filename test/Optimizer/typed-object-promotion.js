@@ -38,12 +38,11 @@ print(foo.x, foo.y);
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %""(): any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %Foo(): functionCode
-// CHECK-NEXT:  %3 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:       StorePropertyStrictInst %3: object, %2: object, "prototype": string
-// CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number, 2: number
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %Foo(): functionCode
+// CHECK-NEXT:  %2 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:       StorePropertyStrictInst %2: object, %1: object, "prototype": string
+// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number, 2: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

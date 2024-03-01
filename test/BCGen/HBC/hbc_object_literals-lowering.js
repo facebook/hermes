@@ -119,7 +119,7 @@ function accessorObjectLiteral(func) {
 // IRGEN-NEXT:frame = []
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 4: number, "a": string, 10: number, "b": string, "test-str": string
-// IRGEN-NEXT:  %1 = HBCCreateFunctionEnvironmentInst (:environment) %accessorObjectLiteral(): any, %parentScope: environment
+// IRGEN-NEXT:  %1 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
 // IRGEN-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %"get c"(): functionCode
 // IRGEN-NEXT:  %3 = HBCLoadConstInst (:undefined) undefined: undefined
 // IRGEN-NEXT:  %4 = HBCLoadConstInst (:string) "c": string
