@@ -122,8 +122,15 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
         continue;
       }
 
-      // Getting the closure scope does not leak the closure.
       if (llvh::isa<GetClosureScopeInst>(closureUser)) {
+        // If the callable dominates this user, replace this instruction with
+        // directly retrieving the scope from it. It will now be unused, but we
+        // avoid deleting any instructions in FunctionAnalysis since we are
+        // iterating over the IR, so it will be deleted by DCE.
+        if (isDominated)
+          closureUser->replaceAllUsesWith(create->getScope());
+
+        // Getting the closure scope does not leak the closure.
         continue;
       }
 
