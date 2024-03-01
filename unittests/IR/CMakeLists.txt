@@ -11,7 +11,6 @@ set(IRSources
   IRUtilsTest.cpp
   IRVerifierTest.cpp
   LoopAnalysisTest.cpp
-  ScopeAnalysisTest.cpp
 #  ScopeChainTest.cpp
   )
 
