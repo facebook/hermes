@@ -58,26 +58,29 @@ function test4(f) {
 // CHECK:function global(): string
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "test1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test2": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test3": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test4": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test1(): functionCode
-// CHECK-NEXT:       StorePropertyStrictInst %4: object, globalObject: object, "test1": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %test2(): functionCode
-// CHECK-NEXT:       StorePropertyStrictInst %6: object, globalObject: object, "test2": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %test3(): functionCode
-// CHECK-NEXT:       StorePropertyStrictInst %8: object, globalObject: object, "test3": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %test4(): functionCode
-// CHECK-NEXT:        StorePropertyStrictInst %10: object, globalObject: object, "test4": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %test1(): functionCode
+// CHECK-NEXT:       StorePropertyStrictInst %5: object, globalObject: object, "test1": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %test2(): functionCode
+// CHECK-NEXT:       StorePropertyStrictInst %7: object, globalObject: object, "test2": string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %test3(): functionCode
+// CHECK-NEXT:        StorePropertyStrictInst %9: object, globalObject: object, "test3": string
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %test4(): functionCode
+// CHECK-NEXT:        StorePropertyStrictInst %11: object, globalObject: object, "test4": string
 // CHECK-NEXT:        ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
 // CHECK:function test1(): undefined
 // CHECK-NEXT:frame = [f: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f(): functionCode
-// CHECK-NEXT:       StoreFrameInst %0: object, [f]: object
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test1(): any, %0: environment
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %f(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [f]: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -90,17 +93,21 @@ function test4(f) {
 // CHECK:function test3(): object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %"f3 1#"(): functionCode
-// CHECK-NEXT:       ReturnInst %0: object
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test3(): any, %0: environment
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %"f3 1#"(): functionCode
+// CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
 // CHECK:function test4(f: any): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %""(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %1: object
-// CHECK-NEXT:       ReturnInst %2: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test4(): any, %0: environment
+// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %""(): functionCode
+// CHECK-NEXT:  %4 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: object
+// CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end
 
 // CHECK:function f(x: any): any [allCallsitesKnownInStrictMode,unreachable]

@@ -14,12 +14,13 @@ var x = typeof foo;
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "x": string
-// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
-// CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %4 = UnaryTypeofInst (:string) %3: any
-// CHECK-NEXT:       StorePropertyStrictInst %4: string, globalObject: object, "x": string
-// CHECK-NEXT:  %6 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:       ReturnInst %6: any
+// CHECK-NEXT:  %2 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %2: any
+// CHECK-NEXT:  %4 = LoadPropertyInst (:any) globalObject: object, "foo": string
+// CHECK-NEXT:  %5 = UnaryTypeofInst (:string) %4: any
+// CHECK-NEXT:       StorePropertyStrictInst %5: string, globalObject: object, "x": string
+// CHECK-NEXT:  %7 = LoadStackInst (:any) %2: any
+// CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:function_end

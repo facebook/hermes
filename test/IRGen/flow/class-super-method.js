@@ -36,39 +36,42 @@ class B extends A {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:       StoreStackInst undefined: undefined, %0: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): functionCode
-// CHECK-NEXT:  %3 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:  %4 = CallInst [njsf] (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: object
-// CHECK-NEXT:       StoreStackInst %4: any, %0: any
-// CHECK-NEXT:  %6 = LoadStackInst (:any) %0: any
-// CHECK-NEXT:       ReturnInst %6: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
+// CHECK-NEXT:  %4 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object
+// CHECK-NEXT:       StoreStackInst %5: any, %1: any
+// CHECK-NEXT:  %7 = LoadStackInst (:any) %1: any
+// CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(exports: any): any
 // CHECK-NEXT:frame = [exports: any, A: any, B: any, ?A.prototype: object, ?B.prototype: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %exports: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [exports]: any
-// CHECK-NEXT:       StoreFrameInst undefined: undefined, [A]: any
-// CHECK-NEXT:       StoreFrameInst undefined: undefined, [B]: any
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %A(): functionCode
-// CHECK-NEXT:       StoreFrameInst %4: object, [A]: any
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %f(): functionCode
-// CHECK-NEXT:  %7 = AllocObjectLiteralInst (:object) "f": string, %6: object
-// CHECK-NEXT:       StoreFrameInst %7: object, [?A.prototype]: object
-// CHECK-NEXT:       StorePropertyStrictInst %7: object, %4: object, "prototype": string
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) [A]: any
-// CHECK-NEXT:  %11 = CheckedTypeCastInst (:object) %10: any, type(object)
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %B(): functionCode
-// CHECK-NEXT:        StoreFrameInst %12: object, [B]: any
-// CHECK-NEXT:  %14 = LoadFrameInst (:object) [?A.prototype]: object
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %"f 1#"(): functionCode
-// CHECK-NEXT:  %16 = AllocObjectLiteralInst (:object) "f": string, %15: object
-// CHECK-NEXT:        StoreParentInst %14: object, %16: object
-// CHECK-NEXT:        StoreFrameInst %16: object, [?B.prototype]: object
-// CHECK-NEXT:        StorePropertyStrictInst %16: object, %12: object, "prototype": string
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %""(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %exports: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [exports]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [A]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [B]: any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %A(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [A]: any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %f(): functionCode
+// CHECK-NEXT:  %9 = AllocObjectLiteralInst (:object) "f": string, %8: object
+// CHECK-NEXT:        StoreFrameInst %1: environment, %9: object, [?A.prototype]: object
+// CHECK-NEXT:        StorePropertyStrictInst %9: object, %6: object, "prototype": string
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [A]: any
+// CHECK-NEXT:  %13 = CheckedTypeCastInst (:object) %12: any, type(object)
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %1: environment, %B(): functionCode
+// CHECK-NEXT:        StoreFrameInst %1: environment, %14: object, [B]: any
+// CHECK-NEXT:  %16 = LoadFrameInst (:object) %1: environment, [?A.prototype]: object
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %1: environment, %"f 1#"(): functionCode
+// CHECK-NEXT:  %18 = AllocObjectLiteralInst (:object) "f": string, %17: object
+// CHECK-NEXT:        StoreParentInst %16: object, %18: object
+// CHECK-NEXT:        StoreFrameInst %1: environment, %18: object, [?B.prototype]: object
+// CHECK-NEXT:        StorePropertyStrictInst %18: object, %14: object, "prototype": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -76,11 +79,13 @@ class B extends A {
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
-// CHECK-NEXT:  %1 = LoadParamInst (:number) %x: number
-// CHECK-NEXT:       StoreFrameInst %1: number, [x]: any
-// CHECK-NEXT:  %3 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %4 = CheckedTypeCastInst (:number) %3: any, type(number)
-// CHECK-NEXT:       PrStoreInst %4: number, %0: object, 0: number, "x": string, true: boolean
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
+// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %A(): any, %1: environment
+// CHECK-NEXT:  %3 = LoadParamInst (:number) %x: number
+// CHECK-NEXT:       StoreFrameInst %2: environment, %3: number, [x]: any
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) %2: environment, [x]: any
+// CHECK-NEXT:  %6 = CheckedTypeCastInst (:number) %5: any, type(number)
+// CHECK-NEXT:       PrStoreInst %6: number, %0: object, 0: number, "x": string, true: boolean
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -88,25 +93,30 @@ class B extends A {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
-// CHECK-NEXT:  %1 = PrLoadInst (:number) %0: object, 0: number, "x": string
-// CHECK-NEXT:  %2 = BinaryMultiplyInst (:any) %1: number, 10: number
-// CHECK-NEXT:  %3 = CheckedTypeCastInst (:number) %2: any, type(number)
-// CHECK-NEXT:       ReturnInst %3: number
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
+// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %f(): any, %1: environment
+// CHECK-NEXT:  %3 = PrLoadInst (:number) %0: object, 0: number, "x": string
+// CHECK-NEXT:  %4 = BinaryMultiplyInst (:any) %3: number, 10: number
+// CHECK-NEXT:  %5 = CheckedTypeCastInst (:number) %4: any, type(number)
+// CHECK-NEXT:       ReturnInst %5: number
 // CHECK-NEXT:function_end
 
 // CHECK:function B(x: number): any [typed]
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
-// CHECK-NEXT:  %1 = LoadParamInst (:number) %x: number
-// CHECK-NEXT:       StoreFrameInst %1: number, [x]: any
-// CHECK-NEXT:  %3 = LoadFrameInst (:any) [A@""]: any
-// CHECK-NEXT:  %4 = CheckedTypeCastInst (:object) %3: any, type(object)
-// CHECK-NEXT:  %5 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %7 = CheckedTypeCastInst (:number) %6: any, type(number)
-// CHECK-NEXT:  %8 = CallInst [njsf] (:any) %4: object, empty: any, empty: any, %5: undefined|object, %0: object, %7: number
-// CHECK-NEXT:  %9 = CheckedTypeCastInst (:undefined) %8: any, type(undefined)
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
+// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %B(): any, %1: environment
+// CHECK-NEXT:  %3 = LoadParamInst (:number) %x: number
+// CHECK-NEXT:       StoreFrameInst %2: environment, %3: number, [x]: any
+// CHECK-NEXT:  %5 = ResolveScopeInst (:environment) %""(): any, %2: environment
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %5: environment, [A@""]: any
+// CHECK-NEXT:  %7 = CheckedTypeCastInst (:object) %6: any, type(object)
+// CHECK-NEXT:  %8 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) %2: environment, [x]: any
+// CHECK-NEXT:  %10 = CheckedTypeCastInst (:number) %9: any, type(number)
+// CHECK-NEXT:  %11 = CallInst [njsf] (:any) %7: object, empty: any, empty: any, %8: undefined|object, %0: object, %10: number
+// CHECK-NEXT:  %12 = CheckedTypeCastInst (:undefined) %11: any, type(undefined)
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -114,11 +124,14 @@ class B extends A {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
-// CHECK-NEXT:  %1 = LoadFrameInst (:object) [?A.prototype@""]: object
-// CHECK-NEXT:  %2 = PrLoadInst (:object) %1: object, 0: number, "f": string
-// CHECK-NEXT:  %3 = CallInst [njsf] (:any) %2: object, empty: any, empty: any, undefined: undefined, %0: object
-// CHECK-NEXT:  %4 = CheckedTypeCastInst (:number) %3: any, type(number)
-// CHECK-NEXT:  %5 = BinaryAddInst (:any) %4: number, 23: number
-// CHECK-NEXT:  %6 = CheckedTypeCastInst (:number) %5: any, type(number)
-// CHECK-NEXT:       ReturnInst %6: number
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
+// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %"f 1#"(): any, %1: environment
+// CHECK-NEXT:  %3 = ResolveScopeInst (:environment) %""(): any, %2: environment
+// CHECK-NEXT:  %4 = LoadFrameInst (:object) %3: environment, [?A.prototype@""]: object
+// CHECK-NEXT:  %5 = PrLoadInst (:object) %4: object, 0: number, "f": string
+// CHECK-NEXT:  %6 = CallInst [njsf] (:any) %5: object, empty: any, empty: any, undefined: undefined, %0: object
+// CHECK-NEXT:  %7 = CheckedTypeCastInst (:number) %6: any, type(number)
+// CHECK-NEXT:  %8 = BinaryAddInst (:any) %7: number, 23: number
+// CHECK-NEXT:  %9 = CheckedTypeCastInst (:number) %8: any, type(number)
+// CHECK-NEXT:        ReturnInst %9: number
 // CHECK-NEXT:function_end

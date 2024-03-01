@@ -23,32 +23,35 @@ function sink(x, y) {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "y": string
 // CHECK-NEXT:       DeclareGlobalVarInst "sink": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %sink(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "sink": string
-// CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:       StoreStackInst undefined: undefined, %4: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %sink(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "sink": string
+// CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %5: any
 // CHECK-NEXT:       StorePropertyLooseInst 2: number, globalObject: object, "y": string
-// CHECK-NEXT:  %7 = LoadPropertyInst (:any) globalObject: object, "y": string
-// CHECK-NEXT:       StorePropertyLooseInst 3: number, %7: any, "bar": string
-// CHECK-NEXT:       StoreStackInst 3: number, %4: any
-// CHECK-NEXT:  %10 = LoadPropertyInst (:any) globalObject: object, "sink": string
-// CHECK-NEXT:  %11 = LoadPropertyInst (:any) globalObject: object, "y": string
-// CHECK-NEXT:  %12 = CallInst (:any) %10: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %11: any
-// CHECK-NEXT:        StoreStackInst %12: any, %4: any
-// CHECK-NEXT:  %14 = LoadStackInst (:any) %4: any
-// CHECK-NEXT:        ReturnInst %14: any
+// CHECK-NEXT:  %8 = LoadPropertyInst (:any) globalObject: object, "y": string
+// CHECK-NEXT:       StorePropertyLooseInst 3: number, %8: any, "bar": string
+// CHECK-NEXT:        StoreStackInst 3: number, %5: any
+// CHECK-NEXT:  %11 = LoadPropertyInst (:any) globalObject: object, "sink": string
+// CHECK-NEXT:  %12 = LoadPropertyInst (:any) globalObject: object, "y": string
+// CHECK-NEXT:  %13 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: any
+// CHECK-NEXT:        StoreStackInst %13: any, %5: any
+// CHECK-NEXT:  %15 = LoadStackInst (:any) %5: any
+// CHECK-NEXT:        ReturnInst %15: any
 // CHECK-NEXT:function_end
 
 // CHECK:function sink(x: any, y: any): any
 // CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [x]: any
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:       StoreFrameInst %2: any, [y]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %5 = LoadPropertyInst (:any) %4: any, "bar": string
-// CHECK-NEXT:       ReturnInst %5: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %sink(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [y]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %7 = LoadPropertyInst (:any) %6: any, "bar": string
+// CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:function_end

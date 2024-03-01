@@ -19,19 +19,20 @@ process = null;
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "a": string
-// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
+// CHECK-NEXT:  %2 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %2: any
 // CHECK-NEXT:       StorePropertyStrictInst 10: number, globalObject: object, "a": string
-// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %5 = LoadPropertyInst (:any) globalObject: object, "a": string
-// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "process": string
-// CHECK-NEXT:  %7 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %5: any, %6: any
-// CHECK-NEXT:       StoreStackInst %7: any, %1: any
-// CHECK-NEXT:       TryStoreGlobalPropertyStrictInst null: null, globalObject: object, "process": string
-// CHECK-NEXT:        StoreStackInst null: null, %1: any
-// CHECK-NEXT:  %11 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:        ReturnInst %11: any
+// CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %6 = LoadPropertyInst (:any) globalObject: object, "a": string
+// CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "process": string
+// CHECK-NEXT:  %8 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %6: any, %7: any
+// CHECK-NEXT:       StoreStackInst %8: any, %2: any
+// CHECK-NEXT:        TryStoreGlobalPropertyStrictInst null: null, globalObject: object, "process": string
+// CHECK-NEXT:        StoreStackInst null: null, %2: any
+// CHECK-NEXT:  %12 = LoadStackInst (:any) %2: any
+// CHECK-NEXT:        ReturnInst %12: any
 // CHECK-NEXT:function_end
 
 // OPT-CHECK:function global(): null

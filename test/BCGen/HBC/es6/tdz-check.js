@@ -46,14 +46,15 @@ function foo() {
 // CHECK-NEXT:    Mov               r5, r3
 // CHECK-NEXT:    Ret               r5
 
-// CHECK:Function<foo>(1 params, 5 registers, 1 symbols):
+// CHECK:Function<foo>(1 params, 6 registers, 1 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
-// CHECK-NEXT:    CreateFunctionEnvironment r0
-// CHECK-NEXT:    LoadConstEmpty    r1
-// CHECK-NEXT:    StoreToEnvironment r0, 0, r1
+// CHECK-NEXT:    GetParentEnvironment r0, 0
+// CHECK-NEXT:    CreateEnvironment r1, r0, 1
 // CHECK-NEXT:    LoadConstEmpty    r2
-// CHECK-NEXT:    ThrowIfEmpty      r3, r2
-// CHECK-NEXT:    Ret               r3
+// CHECK-NEXT:    StoreToEnvironment r1, 0, r2
+// CHECK-NEXT:    LoadConstEmpty    r3
+// CHECK-NEXT:    ThrowIfEmpty      r4, r3
+// CHECK-NEXT:    Ret               r4
 
 // CHECK:Debug filename table:
 // CHECK-NEXT:  0: {{.*}}tdz-check.js
@@ -66,7 +67,7 @@ function foo() {
 // CHECK-NEXT:    bc 2: line 10 col 1
 // CHECK-NEXT:    bc 14: line 10 col 1
 // CHECK-NEXT:  0x000a  function idx 1, starts at line 10 col 1
-// CHECK-NEXT:    bc 10: line 11 col 12
+// CHECK-NEXT:    bc 18: line 11 col 12
 // CHECK-NEXT:  0x0011  end of debug source table
 
 // CHECK:Debug lexical table:

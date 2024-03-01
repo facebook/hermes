@@ -42,59 +42,66 @@ fail2:
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "bar": string
 // CHECK-NEXT:       DeclareGlobalVarInst "continue_test": string
 // CHECK-NEXT:       DeclareGlobalVarInst "break_test": string
 // CHECK-NEXT:       DeclareGlobalVarInst "break_label": string
 // CHECK-NEXT:       DeclareGlobalVarInst "continue_label": string
 // CHECK-NEXT:       DeclareGlobalVarInst "nested_label": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %bar(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "bar": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %continue_test(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "continue_test": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %break_test(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "break_test": string
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %break_label(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "break_label": string
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %continue_label(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %14: object, globalObject: object, "continue_label": string
-// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %nested_label(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %16: object, globalObject: object, "nested_label": string
-// CHECK-NEXT:  %18 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:        StoreStackInst undefined: undefined, %18: any
-// CHECK-NEXT:  %20 = LoadStackInst (:any) %18: any
-// CHECK-NEXT:        ReturnInst %20: any
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %bar(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "bar": string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %continue_test(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "continue_test": string
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %break_test(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "break_test": string
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %break_label(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "break_label": string
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %continue_label(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %15: object, globalObject: object, "continue_label": string
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %nested_label(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %17: object, globalObject: object, "nested_label": string
+// CHECK-NEXT:  %19 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %19: any
+// CHECK-NEXT:  %21 = LoadStackInst (:any) %19: any
+// CHECK-NEXT:        ReturnInst %21: any
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %bar(): any, %0: environment
 // CHECK-NEXT:       ReturnInst 1: number
 // CHECK-NEXT:function_end
 
 // CHECK:function continue_test(cond: any): any
 // CHECK-NEXT:frame = [cond: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %cond: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [cond]: any
-// CHECK-NEXT:  %2 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:       CondBranchInst %2: any, %BB1, %BB2
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %continue_test(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %cond: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [cond]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [cond]: any
+// CHECK-NEXT:       CondBranchInst %4: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:       CondBranchInst %6: any, %BB1, %BB2
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [cond]: any
+// CHECK-NEXT:       CondBranchInst %8: any, %BB1, %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function break_test(cond: any): any
 // CHECK-NEXT:frame = [cond: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %cond: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [cond]: any
-// CHECK-NEXT:  %2 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:       CondBranchInst %2: any, %BB1, %BB2
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %break_test(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %cond: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [cond]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [cond]: any
+// CHECK-NEXT:       CondBranchInst %4: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB2:
@@ -104,10 +111,12 @@ fail2:
 // CHECK:function break_label(cond: any): any
 // CHECK-NEXT:frame = [cond: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %cond: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [cond]: any
-// CHECK-NEXT:  %2 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:       CondBranchInst %2: any, %BB2, %BB3
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %break_label(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %cond: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [cond]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [cond]: any
+// CHECK-NEXT:       CondBranchInst %4: any, %BB2, %BB3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
@@ -119,10 +128,12 @@ fail2:
 // CHECK:function continue_label(cond: any): any
 // CHECK-NEXT:frame = [cond: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %cond: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [cond]: any
-// CHECK-NEXT:  %2 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:       CondBranchInst %2: any, %BB2, %BB3
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %continue_label(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %cond: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [cond]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [cond]: any
+// CHECK-NEXT:       CondBranchInst %4: any, %BB2, %BB3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
@@ -130,27 +141,29 @@ fail2:
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %7 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:       CondBranchInst %7: any, %BB2, %BB3
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [cond]: any
+// CHECK-NEXT:        CondBranchInst %9: any, %BB2, %BB3
 // CHECK-NEXT:function_end
 
 // CHECK:function nested_label(cond: any): any
 // CHECK-NEXT:frame = [cond: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %cond: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [cond]: any
-// CHECK-NEXT:  %2 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:       CondBranchInst %2: any, %BB2, %BB3
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %nested_label(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %cond: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [cond]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [cond]: any
+// CHECK-NEXT:       CondBranchInst %4: any, %BB2, %BB3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:       CondBranchInst %5: any, %BB6, %BB7
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [cond]: any
+// CHECK-NEXT:       CondBranchInst %7: any, %BB6, %BB7
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:       CondBranchInst %8: any, %BB2, %BB3
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [cond]: any
+// CHECK-NEXT:        CondBranchInst %10: any, %BB2, %BB3
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:%BB6:
@@ -158,6 +171,6 @@ fail2:
 // CHECK-NEXT:%BB7:
 // CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %13 = LoadFrameInst (:any) [cond]: any
-// CHECK-NEXT:        CondBranchInst %13: any, %BB6, %BB7
+// CHECK-NEXT:  %15 = LoadFrameInst (:any) %1: environment, [cond]: any
+// CHECK-NEXT:        CondBranchInst %15: any, %BB6, %BB7
 // CHECK-NEXT:function_end

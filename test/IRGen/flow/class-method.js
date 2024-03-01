@@ -22,39 +22,42 @@ print(new C().method());
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:       StoreStackInst undefined: undefined, %0: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %""(): functionCode
-// CHECK-NEXT:  %3 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:  %4 = CallInst [njsf] (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: object
-// CHECK-NEXT:       StoreStackInst %4: any, %0: any
-// CHECK-NEXT:  %6 = LoadStackInst (:any) %0: any
-// CHECK-NEXT:       ReturnInst %6: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
+// CHECK-NEXT:  %4 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object
+// CHECK-NEXT:       StoreStackInst %5: any, %1: any
+// CHECK-NEXT:  %7 = LoadStackInst (:any) %1: any
+// CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(exports: any): any
 // CHECK-NEXT:frame = [exports: any, C: any, ?C.prototype: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %exports: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [exports]: any
-// CHECK-NEXT:       StoreFrameInst undefined: undefined, [C]: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %C(): functionCode
-// CHECK-NEXT:       StoreFrameInst %3: object, [C]: any
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %method(): functionCode
-// CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) "method": string, %5: object
-// CHECK-NEXT:       StoreFrameInst %6: object, [?C.prototype]: object
-// CHECK-NEXT:       StorePropertyStrictInst %6: object, %3: object, "prototype": string
-// CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) [C]: any
-// CHECK-NEXT:  %11 = CheckedTypeCastInst (:object) %10: any, type(object)
-// CHECK-NEXT:  %12 = LoadFrameInst (:object) [?C.prototype]: object
-// CHECK-NEXT:  %13 = UnionNarrowTrustedInst (:object) %12: object
-// CHECK-NEXT:  %14 = AllocObjectInst (:object) 0: number, %13: object
-// CHECK-NEXT:  %15 = LoadParentInst (:object) %14: object
-// CHECK-NEXT:  %16 = PrLoadInst (:object) %15: object, 0: number, "method": string
-// CHECK-NEXT:  %17 = CallInst [njsf] (:any) %16: object, %method(): functionCode, empty: any, undefined: undefined, %14: object
-// CHECK-NEXT:  %18 = CheckedTypeCastInst (:number) %17: any, type(number)
-// CHECK-NEXT:  %19 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %18: number
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %""(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %exports: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [exports]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [C]: any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %C(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %5: object, [C]: any
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %method(): functionCode
+// CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) "method": string, %7: object
+// CHECK-NEXT:       StoreFrameInst %1: environment, %8: object, [?C.prototype]: object
+// CHECK-NEXT:        StorePropertyStrictInst %8: object, %5: object, "prototype": string
+// CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [C]: any
+// CHECK-NEXT:  %13 = CheckedTypeCastInst (:object) %12: any, type(object)
+// CHECK-NEXT:  %14 = LoadFrameInst (:object) %1: environment, [?C.prototype]: object
+// CHECK-NEXT:  %15 = UnionNarrowTrustedInst (:object) %14: object
+// CHECK-NEXT:  %16 = AllocObjectInst (:object) 0: number, %15: object
+// CHECK-NEXT:  %17 = LoadParentInst (:object) %16: object
+// CHECK-NEXT:  %18 = PrLoadInst (:object) %17: object, 0: number, "method": string
+// CHECK-NEXT:  %19 = CallInst [njsf] (:any) %18: object, %method(): functionCode, empty: any, undefined: undefined, %16: object
+// CHECK-NEXT:  %20 = CheckedTypeCastInst (:number) %19: any, type(number)
+// CHECK-NEXT:  %21 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %20: number
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -67,5 +70,7 @@ print(new C().method());
 // CHECK:function method(): any [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %method(): any, %0: environment
 // CHECK-NEXT:       ReturnInst 1: number
 // CHECK-NEXT:function_end

@@ -20,9 +20,10 @@ function g12(z) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "g12": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %g12(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "g12": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %g12(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "g12": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

@@ -20,9 +20,9 @@ function foo() {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %2 = HBCCreateFunctionInst (:object) %foo(): functionCode, %0: environment
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
 // CHECK-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, %3: object, "foo": string
 // CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_0_ret: any
@@ -35,17 +35,18 @@ function foo() {
 // CHECK:function foo(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %foo(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = AllocObjectInst (:object) 5: number, empty: any
-// CHECK-NEXT:  %2 = HBCLoadConstInst (:number) 1: number
-// CHECK-NEXT:       StoreNewOwnPropertyInst %2: number, %1: object, "a": string, true: boolean
-// CHECK-NEXT:  %4 = HBCLoadConstInst (:number) 2: number
-// CHECK-NEXT:       StoreNewOwnPropertyInst %4: number, %1: object, 10: number, true: boolean
-// CHECK-NEXT:  %6 = HBCLoadConstInst (:number) 3: number
-// CHECK-NEXT:       StoreNewOwnPropertyInst %6: number, %1: object, 11: number, true: boolean
-// CHECK-NEXT:  %8 = HBCLoadConstInst (:number) 4: number
-// CHECK-NEXT:       StoreNewOwnPropertyInst %8: number, %1: object, "999999999999999999999999": string, true: boolean
-// CHECK-NEXT:  %10 = HBCLoadConstInst (:number) 5: number
-// CHECK-NEXT:        StoreOwnPropertyInst %10: number, %1: object, 42: number, true: boolean
-// CHECK-NEXT:        ReturnInst %1: object
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
+// CHECK-NEXT:  %2 = AllocObjectInst (:object) 5: number, empty: any
+// CHECK-NEXT:  %3 = HBCLoadConstInst (:number) 1: number
+// CHECK-NEXT:       StoreNewOwnPropertyInst %3: number, %2: object, "a": string, true: boolean
+// CHECK-NEXT:  %5 = HBCLoadConstInst (:number) 2: number
+// CHECK-NEXT:       StoreNewOwnPropertyInst %5: number, %2: object, 10: number, true: boolean
+// CHECK-NEXT:  %7 = HBCLoadConstInst (:number) 3: number
+// CHECK-NEXT:       StoreNewOwnPropertyInst %7: number, %2: object, 11: number, true: boolean
+// CHECK-NEXT:  %9 = HBCLoadConstInst (:number) 4: number
+// CHECK-NEXT:        StoreNewOwnPropertyInst %9: number, %2: object, "999999999999999999999999": string, true: boolean
+// CHECK-NEXT:  %11 = HBCLoadConstInst (:number) 5: number
+// CHECK-NEXT:        StoreOwnPropertyInst %11: number, %2: object, 42: number, true: boolean
+// CHECK-NEXT:        ReturnInst %2: object
 // CHECK-NEXT:function_end

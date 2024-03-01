@@ -115,25 +115,25 @@ function switch_neg(x) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "f": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "regress1": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "jump_table": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "string_switch": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "switch_uint32": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "switch_neg": string
-// CHECK-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %f(): functionCode, $Reg0
+// CHECK-NEXT:  $Reg2 = CreateFunctionInst (:object) $Reg0, %f(): functionCode
 // CHECK-NEXT:  $Reg1 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg1, "f": string
-// CHECK-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %regress1(): functionCode, $Reg0
+// CHECK-NEXT:  $Reg2 = CreateFunctionInst (:object) $Reg0, %regress1(): functionCode
 // CHECK-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg1, "regress1": string
-// CHECK-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %jump_table(): functionCode, $Reg0
+// CHECK-NEXT:  $Reg2 = CreateFunctionInst (:object) $Reg0, %jump_table(): functionCode
 // CHECK-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg1, "jump_table": string
-// CHECK-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %string_switch(): functionCode, $Reg0
+// CHECK-NEXT:  $Reg2 = CreateFunctionInst (:object) $Reg0, %string_switch(): functionCode
 // CHECK-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg1, "string_switch": string
-// CHECK-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %switch_uint32(): functionCode, $Reg0
+// CHECK-NEXT:  $Reg2 = CreateFunctionInst (:object) $Reg0, %switch_uint32(): functionCode
 // CHECK-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg1, "switch_uint32": string
-// CHECK-NEXT:  $Reg0 = HBCCreateFunctionInst (:object) %switch_neg(): functionCode, $Reg0
+// CHECK-NEXT:  $Reg0 = CreateFunctionInst (:object) $Reg0, %switch_neg(): functionCode
 // CHECK-NEXT:  $Reg0 = StorePropertyLooseInst $Reg0, $Reg1, "switch_neg": string
 // CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
