@@ -1623,22 +1623,6 @@ class InstrGen {
     os_ << ", " << boolStr(inst.getIgnoreInnerException());
     os_ << ");\n";
   }
-  void generateHBCStoreToEnvironmentInst(HBCStoreToEnvironmentInst &inst) {
-    os_ << "  _sh_ljs_store_to_env(shr, ";
-    generateValue(*inst.getEnvironment());
-    os_ << ",";
-    generateValue(*inst.getStoredValue());
-    os_ << ", " << inst.getResolvedName()->getIndexInVariableList();
-    genStringComment(inst.getResolvedName()->getName().str()) << ");\n";
-  }
-  void generateHBCLoadFromEnvironmentInst(HBCLoadFromEnvironmentInst &inst) {
-    os_.indent(2);
-    generateValue(inst);
-    os_ << " = _sh_ljs_load_from_env(";
-    generateValue(*inst.getEnvironment());
-    os_ << ", " << inst.getResolvedName()->getIndexInVariableList();
-    genStringComment(inst.getResolvedName()->getName().str()) << ");\n";
-  }
   void generateUnreachableInst(UnreachableInst &inst) {
     os_.indent(2);
     os_ << "abort();\n";
@@ -1659,24 +1643,6 @@ class InstrGen {
         << ");\n";
   }
   void generateCreateGeneratorInst(CreateGeneratorInst &inst) {
-    unimplemented(inst);
-  }
-  void generateHBCCreateFunctionInst(HBCCreateFunctionInst &inst) {
-    os_.indent(2);
-    generateRegister(inst);
-    os_ << " = _sh_ljs_create_closure"
-        << "(shr, &";
-    generateRegister(*inst.getEnvironment());
-    os_ << ", ";
-    moduleGen_.nativeFunctionTable.generateFunctionLabel(
-        inst.getFunctionCode(), os_);
-    os_ << ", ";
-    os_ << "&s_function_info_table["
-        << moduleGen_.nativeFunctionTable.getIndex(inst.getFunctionCode())
-        << "]"
-        << ");\n";
-  }
-  void generateHBCCreateGeneratorInst(HBCCreateGeneratorInst &inst) {
     unimplemented(inst);
   }
   void generateBranchInst(BranchInst &inst) {
