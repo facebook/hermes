@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/BCGen/HBC/Passes/OptEnvironmentInit.h"
-
+#include "hermes/BCGen/Lowering.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/Support/Statistic.h"
 
@@ -19,10 +18,10 @@ STATISTIC(
     "Number of store undefined instructions removed");
 
 namespace hermes {
-namespace hbc {
 
-bool OptEnvironmentInit::runOnFunction(Function *F) {
-  IRBuilder builder{F};
+/// Eliminate any stores of undefined to newly created environments, since we
+/// know the VM will always initialize slots in an environment to undefined.
+static bool optEnvironmentInit(Function *F) {
   bool changed = false;
 
   for (auto &BB : *F) {
@@ -79,7 +78,17 @@ bool OptEnvironmentInit::runOnFunction(Function *F) {
   return changed;
 }
 
-} // namespace hbc
+Pass *createOptEnvironmentInit() {
+  class ThisPass : public FunctionPass {
+   public:
+    explicit ThisPass() : FunctionPass("OptEnvironmentInit") {}
+    ~ThisPass() override = default;
+    bool runOnFunction(Function *F) override {
+      return optEnvironmentInit(F);
+    }
+  };
+  return new ThisPass();
+}
 } // namespace hermes
 
 #undef DEBUG_TYPE
