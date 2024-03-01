@@ -74,54 +74,6 @@ class LoopAnalysis {
   BasicBlock *getLoopPreheader(const BasicBlock *BB) const;
 };
 
-/// This analysis generates the scope info for each function.
-/// Global code has scope depth of 0. All other functions
-/// have depth bigger than 0.
-class FunctionScopeAnalysis {
-  struct ScopeData {
-    /// The parent of the function for which scope data was computed.
-    Function *parent;
-
-    /// The depth in the scope chain. The global scope has depth 0, each
-    /// function nesting level increases this by 1. Placeholder functions (which
-    /// represent the lexical environment in local eval) have negative depths.
-    int32_t depth;
-
-    /// Indicates that the function has no scope data, because while the
-    /// function was added to the bytecode module, no instruction could be found
-    /// to create it.
-    bool orphaned;
-
-    ScopeData(
-        Function *parent = nullptr,
-        int32_t depth = 0,
-        bool orphaned = false)
-        : parent(parent), depth(depth), orphaned(orphaned) {}
-
-    /// Convenience function. \return an orphaned ScopeData.
-    static ScopeData orphan() {
-      return ScopeData(nullptr, 0, true);
-    }
-  };
-  using LexicalScopeMap = llvh::DenseMap<const Function *, ScopeData>;
-  LexicalScopeMap lexicalScopeMap_{};
-
-  /// Recursively calculate the scope data of a function \p F.
-  /// \return the ScopeData of the function.
-  ScopeData calculateFunctionScopeData(Function *F);
-
- public:
-  explicit FunctionScopeAnalysis(const Function *entryPoint) {
-    lexicalScopeMap_[entryPoint] = ScopeData(nullptr, 0);
-  }
-
-  /// Lazily get the scope depth of \p VS.
-  llvh::Optional<int32_t> getScopeDepth(VariableScope *VS);
-
-  /// Lazily get the lexical parent of \p F, or nullptr if none.
-  Function *getLexicalParent(Function *F);
-};
-
 /// A namespace encapsulating utilities for implementing optimization passes
 /// based on a DFS visit of a dominator tree.
 namespace DomTreeDFS {

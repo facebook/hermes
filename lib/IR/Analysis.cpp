@@ -197,67 +197,6 @@ BasicBlock *LoopAnalysis::getLoopPreheader(const BasicBlock *BB) const {
   return nullptr;
 }
 
-FunctionScopeAnalysis::ScopeData
-FunctionScopeAnalysis::calculateFunctionScopeData(Function *F) {
-  if (lexicalScopeMap_.find(F) == lexicalScopeMap_.end()) {
-    // If the function is a CommonJS module,
-    // then it won't have a CreateFunctionInst, so calculate the depth manually.
-    Module *module = F->getParent();
-    if (module->findCJSModule(F)) {
-      return ScopeData{module->getTopLevelFunction(), 1, false};
-    }
-
-    // To find the scope data of a function, we try to locate the
-    // CreateFunctionInst that creates this function. The scope of F
-    // will be 1 more than the scope depth of the CreateFunctionInst.
-    Function *Parent = nullptr;
-    for (Instruction *user : F->getUsers()) {
-      if (llvh::isa<BaseCreateLexicalChildInst>(user)) {
-        // Found the CreateFunctionInst.
-        // It's possible there are more CreateFunctionInsts for F,
-        // but all instances would occur at the same scope depth
-        // and use the same variables, so it's safe to use the first one here.
-        assert(
-            !Parent ||
-            Parent == user->getParent()->getParent() &&
-                "different parent functions for same Function");
-        Parent = user->getParent()->getParent();
-      }
-    }
-    // Because the calculation is done lazily, any function requested
-    // must have a CreateFunctionInst.
-    if (Parent == nullptr) {
-      LLVM_DEBUG(
-          dbgs() << "Function \"" << F->getInternalName()
-                 << "\" has no CreateFunctionInst\n");
-      lexicalScopeMap_[F] = ScopeData::orphan();
-      return lexicalScopeMap_[F];
-    }
-    ScopeData parentData = calculateFunctionScopeData(Parent);
-    if (!parentData.orphaned) {
-      lexicalScopeMap_[F] = ScopeData(Parent, parentData.depth + 1);
-    } else {
-      lexicalScopeMap_[F] = ScopeData::orphan();
-    }
-  }
-  return lexicalScopeMap_[F];
-}
-
-Optional<int32_t> FunctionScopeAnalysis::getScopeDepth(VariableScope *VS) {
-  if (ExternalScope *ES = llvh::dyn_cast<ExternalScope>(VS)) {
-    return ES->getDepth();
-  } else {
-    ScopeData sd = calculateFunctionScopeData(VS->getFunction());
-    if (sd.orphaned)
-      return llvh::None;
-    return sd.depth;
-  }
-}
-
-Function *FunctionScopeAnalysis::getLexicalParent(Function *F) {
-  return calculateFunctionScopeData(F).parent;
-}
-
 std::pair<llvh::DenseMap<BasicBlock *, size_t>, size_t>
 hermes::getBlockTryDepths(Function *F) {
   // Map basic blocks inside a try to the number of try statements they are
