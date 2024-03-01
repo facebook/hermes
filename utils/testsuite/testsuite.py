@@ -292,7 +292,7 @@ def generateSource(content, strict, suite, flags):
 evalMatcher = re.compile(r"\beval\s*\(")
 indirectEvalMatcher = re.compile(r"\(.*,\s*eval\)\s*\(")
 assignEvalMatcher = re.compile(r"=\s*eval\s*;")
-withMatcher = re.compile(r"\bwith\s*\(")
+withMatcher = re.compile(r"(?<!\.)\bwith\s*\(") # Ignores the with statement but keeps the [TypedArray|Array].prototype.with function
 constMatcher = re.compile(r"\bconst\b")
 negativeMatcher = re.compile(
     r"""
