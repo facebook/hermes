@@ -2419,6 +2419,10 @@ bool lowerModuleIR(Module *M, bool optimize) {
   PM.addPass(new hbc::DedupReifyArguments());
   // TODO Consider supporting LowerSwitchIntoJumpTables for optimization
   PM.addPass(new SwitchLowering());
+  // OptEnvironmentInit checks for LiteralUndefined, so it needs to run before
+  // LoadConstants.
+  if (optimize)
+    PM.addPass(createOptEnvironmentInit());
   PM.addPass(sh::createLoadConstants());
   PM.addPass(createLowerScopes());
   if (optimize) {

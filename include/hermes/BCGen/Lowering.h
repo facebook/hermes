@@ -19,6 +19,8 @@
 
 namespace hermes {
 
+Pass *createOptEnvironmentInit();
+
 /// Lowers switches to a sequence of IFs.
 class SwitchLowering : public FunctionPass {
  public:
