@@ -34,12 +34,17 @@ TEST(IRVerifierTest, ScopeAnalysisTest) {
 
   auto Gbb = Builder.createBasicBlock(G);
   Builder.setInsertionBlock(Gbb);
-  Builder.createCreateFunctionInst(F1);
-  Builder.createCreateFunctionInst(F2);
+  auto *Gscope = Builder.createCreateScopeInst(
+      G->getFunctionScope(), Builder.getEmptySentinel());
+  Builder.createCreateFunctionInst(Gscope, F1);
+  Builder.createCreateFunctionInst(Gscope, F2);
 
   auto F1bb = Builder.createBasicBlock(F1);
+  auto *F1GPS = Builder.createGetParentScopeInst(
+      G->getFunctionScope(), F1->getParentScopeParam());
+  auto *F1scope = Builder.createCreateScopeInst(F1->getFunctionScope(), F1GPS);
   Builder.setInsertionBlock(F1bb);
-  Builder.createCreateFunctionInst(F11);
+  Builder.createCreateFunctionInst(F1scope, F11);
 
   FunctionScopeAnalysis fsa{M.getTopLevelFunction()};
   EXPECT_EQ(0, fsa.getScopeDepth(G->getFunctionScope()));

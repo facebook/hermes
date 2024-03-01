@@ -37,35 +37,35 @@ bool OptEnvironmentInit::runOnFunction(Function *F) {
     for (auto &I : BB) {
       auto *inst = &I;
 
-      if (auto *CE = llvh::dyn_cast<HBCCreateFunctionEnvironmentInst>(inst)) {
-        createdEnvs.insert(CE);
+      if (auto *CSI = llvh::dyn_cast<CreateScopeInst>(inst)) {
+        createdEnvs.insert(CSI);
         continue;
       }
 
       // Note that in practice we don't currently generate code to exercise
       // these checks below.
-      if (auto *SE = llvh::dyn_cast<HBCStoreToEnvironmentInst>(inst)) {
+      if (auto *SFI = llvh::dyn_cast<StoreFrameInst>(inst)) {
         // Are we storing in one of the environments created in this BB?
         // If not, we could be storing anywhere, including in the created
         // envs, so unfortunately we have to abort. This could happen if the
         // same environment is resolved with a separate instructtion.
-        if (!createdEnvs.count(SE->getEnvironment()))
+        if (!createdEnvs.count(SFI->getScope()))
           break;
 
         // If we are not storing undefined, mark the slot as written.
-        if (!llvh::isa<LiteralUndefined>(SE->getStoredValue())) {
-          writtenSlots.insert(SE->getResolvedName());
+        if (!llvh::isa<LiteralUndefined>(SFI->getValue())) {
+          writtenSlots.insert(SFI->getVariable());
           continue;
         }
 
         // If that slot has already been written to, ignore it.
-        if (writtenSlots.count(SE->getResolvedName()))
+        if (writtenSlots.count(SFI->getVariable()))
           continue;
 
         // Success! We can eliminate this store.
         ++NumStoreUndefinedRemoved;
         changed = true;
-        destroyer.add(SE);
+        destroyer.add(SFI);
         continue;
       }
 

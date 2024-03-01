@@ -166,6 +166,9 @@ class FunctionContext {
   /// their declaring function.
   llvh::DenseSet<Variable *> initializedTDZVars{};
 
+  /// The CreateScopeInst that creates the scope for this function.
+  CreateScopeInst *functionScope{};
+
   /// Initialize a new function context, while preserving the previous one.
   /// \param irGen the associated ESTreeIRGen object.
   /// \param function the newly created Function IR node.
