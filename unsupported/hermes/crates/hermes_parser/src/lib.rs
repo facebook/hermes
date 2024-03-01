@@ -30,6 +30,7 @@ pub fn parse(
             enable_jsx: true,
             store_doc_block: true,
             strict_mode: true,
+            store_comments: false,
         },
         &buf,
     );
