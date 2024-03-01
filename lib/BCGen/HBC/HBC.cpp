@@ -12,6 +12,7 @@
 #include "hermes/BCGen/HBC/ISel.h"
 #include "hermes/BCGen/HBC/Passes.h"
 #include "hermes/BCGen/HBC/Passes/InsertProfilePoint.h"
+#include "hermes/BCGen/HBC/Passes/OptParentEnvironment.h"
 #include "hermes/BCGen/HBC/Passes/PeepholeLowering.h"
 #include "hermes/BCGen/HBC/TraverseLiteralStrings.h"
 #include "hermes/BCGen/LowerBuiltinCalls.h"
@@ -79,6 +80,7 @@ void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
   PM.addPass(new SwitchLowering());
   PM.addPass(new LoadConstants());
   if (options.optimizationEnabled) {
+    PM.addPass(createOptParentEnvironment());
     // Lowers AllocObjects and its sequential literal properties into a single
     // HBCAllocObjectFromBufferInst
     PM.addPass(new LowerAllocObject());

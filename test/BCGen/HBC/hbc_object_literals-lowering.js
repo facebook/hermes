@@ -119,14 +119,13 @@ function accessorObjectLiteral(func) {
 // IRGEN-NEXT:frame = []
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 4: number, "a": string, 10: number, "b": string, "test-str": string
-// IRGEN-NEXT:  %1 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// IRGEN-NEXT:  %2 = CreateScopeInst (:environment) %accessorObjectLiteral(): any, %1: environment
-// IRGEN-NEXT:  %3 = CreateFunctionInst (:object) %2: environment, %"get c"(): functionCode
-// IRGEN-NEXT:  %4 = HBCLoadConstInst (:undefined) undefined: undefined
-// IRGEN-NEXT:  %5 = HBCLoadConstInst (:string) "c": string
-// IRGEN-NEXT:       StoreGetterSetterInst %3: object, %4: undefined, %0: object, %5: string, true: boolean
-// IRGEN-NEXT:  %7 = HBCLoadConstInst (:null) null: null
-// IRGEN-NEXT:       StoreNewOwnPropertyInst %7: null, %0: object, "d": string, true: boolean
+// IRGEN-NEXT:  %1 = HBCCreateFunctionEnvironmentInst (:environment) %accessorObjectLiteral(): any, %parentScope: environment
+// IRGEN-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %"get c"(): functionCode
+// IRGEN-NEXT:  %3 = HBCLoadConstInst (:undefined) undefined: undefined
+// IRGEN-NEXT:  %4 = HBCLoadConstInst (:string) "c": string
+// IRGEN-NEXT:       StoreGetterSetterInst %2: object, %3: undefined, %0: object, %4: string, true: boolean
+// IRGEN-NEXT:  %6 = HBCLoadConstInst (:null) null: null
+// IRGEN-NEXT:       StoreNewOwnPropertyInst %6: null, %0: object, "d": string, true: boolean
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 

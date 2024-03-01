@@ -99,16 +99,15 @@ function foo(o) {
 // CHKLIR:function foo(o: any): object
 // CHKLIR-NEXT:frame = [cnt: number, flag: undefined|boolean, flag1: undefined|number, flag2: undefined|number]
 // CHKLIR-NEXT:%BB0:
-// CHKLIR-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHKLIR-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
-// CHKLIR-NEXT:  %2 = HBCLoadConstInst (:number) 0: number
-// CHKLIR-NEXT:       StoreFrameInst %1: environment, %2: number, [cnt]: number
-// CHKLIR-NEXT:  %4 = LoadParamInst (:any) %o: any
-// CHKLIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHKLIR-NEXT:  %6 = HBCCallNInst (:any) %4: any, empty: any, empty: any, %5: undefined, %5: undefined
-// CHKLIR-NEXT:       StoreFrameInst %1: environment, %5: undefined, [flag2]: undefined|number
-// CHKLIR-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %""(): functionCode
-// CHKLIR-NEXT:       ReturnInst %8: object
+// CHKLIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %foo(): any, %parentScope: environment
+// CHKLIR-NEXT:  %1 = HBCLoadConstInst (:number) 0: number
+// CHKLIR-NEXT:       StoreFrameInst %0: environment, %1: number, [cnt]: number
+// CHKLIR-NEXT:  %3 = LoadParamInst (:any) %o: any
+// CHKLIR-NEXT:  %4 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKLIR-NEXT:  %5 = HBCCallNInst (:any) %3: any, empty: any, empty: any, %4: undefined, %4: undefined
+// CHKLIR-NEXT:       StoreFrameInst %0: environment, %4: undefined, [flag2]: undefined|number
+// CHKLIR-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
+// CHKLIR-NEXT:       ReturnInst %7: object
 // CHKLIR-NEXT:function_end
 
 // CHKLIR:function ""(): number
