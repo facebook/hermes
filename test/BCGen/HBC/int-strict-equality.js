@@ -58,18 +58,19 @@ function test_could_be_int(func) {
 // CHKIR:function global(): undefined
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
+// CHKIR-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHKIR-NEXT:       DeclareGlobalVarInst "test_int_int": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "test_int_uint": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "test_uint_uint": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "test_could_be_int": string
-// CHKIR-NEXT:  %4 = CreateFunctionInst (:object) %test_int_int(): functionCode
-// CHKIR-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "test_int_int": string
-// CHKIR-NEXT:  %6 = CreateFunctionInst (:object) %test_int_uint(): functionCode
-// CHKIR-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "test_int_uint": string
-// CHKIR-NEXT:  %8 = CreateFunctionInst (:object) %test_uint_uint(): functionCode
-// CHKIR-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "test_uint_uint": string
-// CHKIR-NEXT:  %10 = CreateFunctionInst (:object) %test_could_be_int(): functionCode
-// CHKIR-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "test_could_be_int": string
+// CHKIR-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %test_int_int(): functionCode
+// CHKIR-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "test_int_int": string
+// CHKIR-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %test_int_uint(): functionCode
+// CHKIR-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "test_int_uint": string
+// CHKIR-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %test_uint_uint(): functionCode
+// CHKIR-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "test_uint_uint": string
+// CHKIR-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %test_could_be_int(): functionCode
+// CHKIR-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "test_could_be_int": string
 // CHKIR-NEXT:        ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
 

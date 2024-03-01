@@ -28,25 +28,28 @@ function foo2(x) {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo2": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %foo1(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo1": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %foo2(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "foo2": string
-// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:       StoreStackInst undefined: undefined, %6: any
-// CHECK-NEXT:  %8 = LoadStackInst (:any) %6: any
-// CHECK-NEXT:       ReturnInst %8: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %foo1(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "foo1": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %foo2(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "foo2": string
+// CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %7: any
+// CHECK-NEXT:  %9 = LoadStackInst (:any) %7: any
+// CHECK-NEXT:        ReturnInst %9: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo1(x: any): any
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [x]: any
-// CHECK-NEXT:  %2 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:       SwitchInst %2: any, %BB1, 10: number, %BB2, 11: number, %BB3
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %foo1(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:       SwitchInst %4: any, %BB1, 10: number, %BB2, 11: number, %BB3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
@@ -58,10 +61,12 @@ function foo2(x) {
 // CHECK:function foo2(x: any): any
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [x]: any
-// CHECK-NEXT:  %2 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:       SwitchInst %2: any, %BB1, 10: number, %BB2, "10": string, %BB3
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %foo2(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:       SwitchInst %4: any, %BB1, 10: number, %BB2, "10": string, %BB3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:

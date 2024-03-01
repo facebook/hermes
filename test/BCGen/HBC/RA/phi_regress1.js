@@ -44,8 +44,8 @@ print(glob);
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "glob": string
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "bad": string
-// CHKRA-NEXT:  $Reg0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
-// CHKRA-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %bad(): functionCode, $Reg0
+// CHKRA-NEXT:  $Reg0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHKRA-NEXT:  $Reg1 = CreateFunctionInst (:object) $Reg0, %bad(): functionCode
 // CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
 // CHKRA-NEXT:  $Reg1 = StorePropertyLooseInst $Reg1, $Reg0, "bad": string
 // CHKRA-NEXT:  $Reg4 = HBCLoadConstInst (:null) null: null

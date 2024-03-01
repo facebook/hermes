@@ -36,12 +36,13 @@ function outer2(){
 // CHECK:function global(): string
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "outer": string
 // CHECK-NEXT:       DeclareGlobalVarInst "outer2": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %outer(): functionCode
-// CHECK-NEXT:       StorePropertyStrictInst %2: object, globalObject: object, "outer": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %outer2(): functionCode
-// CHECK-NEXT:       StorePropertyStrictInst %4: object, globalObject: object, "outer2": string
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %outer(): functionCode
+// CHECK-NEXT:       StorePropertyStrictInst %3: object, globalObject: object, "outer": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %outer2(): functionCode
+// CHECK-NEXT:       StorePropertyStrictInst %5: object, globalObject: object, "outer2": string
 // CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
@@ -54,12 +55,14 @@ function outer2(){
 // CHECK:function outer2(): object
 // CHECK-NEXT:frame = [foo: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): functionCode
-// CHECK-NEXT:       StoreFrameInst %0: object, [foo]: object
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %bar(): functionCode
-// CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: object, "prototype": string
-// CHECK-NEXT:  %4 = LoadPropertyInst (:any) %0: object, "prototype": string
-// CHECK-NEXT:       ReturnInst %0: object
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %outer2(): any, %0: environment
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [foo]: object
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %bar(): functionCode
+// CHECK-NEXT:  %5 = LoadPropertyInst (:any) %4: object, "prototype": string
+// CHECK-NEXT:  %6 = LoadPropertyInst (:any) %2: object, "prototype": string
+// CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): undefined|object

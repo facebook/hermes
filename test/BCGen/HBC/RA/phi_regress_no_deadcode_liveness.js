@@ -15,8 +15,8 @@ function b(d=([[[[{z:[{}]}]]]]=arguments)) {}
 // CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "b": string
-// CHKRA-NEXT:  $Reg0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
-// CHKRA-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %b(): functionCode, $Reg0
+// CHKRA-NEXT:  $Reg0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHKRA-NEXT:  $Reg1 = CreateFunctionInst (:object) $Reg0, %b(): functionCode
 // CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
 // CHKRA-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg0, "b": string
 // CHKRA-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined

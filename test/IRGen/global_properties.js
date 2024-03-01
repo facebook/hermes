@@ -28,63 +28,64 @@ print(undefined);
 // NOOPT:function global(): any
 // NOOPT-NEXT:frame = []
 // NOOPT-NEXT:%BB0:
-// NOOPT-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
-// NOOPT-NEXT:       StoreStackInst undefined: undefined, %0: any
-// NOOPT-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// NOOPT-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Object": string
-// NOOPT-NEXT:  %4 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: any
-// NOOPT-NEXT:       StoreStackInst %4: any, %0: any
-// NOOPT-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// NOOPT-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Function": string
-// NOOPT-NEXT:  %8 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %7: any
-// NOOPT-NEXT:       StoreStackInst %8: any, %0: any
-// NOOPT-NEXT:  %10 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// NOOPT-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Array": string
-// NOOPT-NEXT:  %12 = CallInst (:any) %10: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %11: any
-// NOOPT-NEXT:        StoreStackInst %12: any, %0: any
-// NOOPT-NEXT:  %14 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// NOOPT-NEXT:  %15 = TryLoadGlobalPropertyInst (:any) globalObject: object, "String": string
-// NOOPT-NEXT:  %16 = CallInst (:any) %14: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %15: any
-// NOOPT-NEXT:        StoreStackInst %16: any, %0: any
-// NOOPT-NEXT:  %18 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// NOOPT-NEXT:  %19 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Boolean": string
-// NOOPT-NEXT:  %20 = CallInst (:any) %18: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %19: any
-// NOOPT-NEXT:        StoreStackInst %20: any, %0: any
-// NOOPT-NEXT:  %22 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// NOOPT-NEXT:  %23 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Number": string
-// NOOPT-NEXT:  %24 = CallInst (:any) %22: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %23: any
-// NOOPT-NEXT:        StoreStackInst %24: any, %0: any
-// NOOPT-NEXT:  %26 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// NOOPT-NEXT:  %27 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Math": string
-// NOOPT-NEXT:  %28 = CallInst (:any) %26: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %27: any
-// NOOPT-NEXT:        StoreStackInst %28: any, %0: any
-// NOOPT-NEXT:  %30 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// NOOPT-NEXT:  %31 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Date": string
-// NOOPT-NEXT:  %32 = CallInst (:any) %30: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %31: any
-// NOOPT-NEXT:        StoreStackInst %32: any, %0: any
-// NOOPT-NEXT:  %34 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// NOOPT-NEXT:  %35 = TryLoadGlobalPropertyInst (:any) globalObject: object, "RegExp": string
-// NOOPT-NEXT:  %36 = CallInst (:any) %34: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %35: any
-// NOOPT-NEXT:        StoreStackInst %36: any, %0: any
-// NOOPT-NEXT:  %38 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// NOOPT-NEXT:  %39 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Error": string
-// NOOPT-NEXT:  %40 = CallInst (:any) %38: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %39: any
-// NOOPT-NEXT:        StoreStackInst %40: any, %0: any
-// NOOPT-NEXT:  %42 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// NOOPT-NEXT:  %43 = TryLoadGlobalPropertyInst (:any) globalObject: object, "JSON": string
-// NOOPT-NEXT:  %44 = CallInst (:any) %42: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %43: any
-// NOOPT-NEXT:        StoreStackInst %44: any, %0: any
-// NOOPT-NEXT:  %46 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// NOOPT-NEXT:  %47 = CallInst (:any) %46: any, empty: any, empty: any, undefined: undefined, undefined: undefined, Infinity: number
-// NOOPT-NEXT:        StoreStackInst %47: any, %0: any
-// NOOPT-NEXT:  %49 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// NOOPT-NEXT:  %50 = CallInst (:any) %49: any, empty: any, empty: any, undefined: undefined, undefined: undefined, NaN: number
-// NOOPT-NEXT:        StoreStackInst %50: any, %0: any
-// NOOPT-NEXT:  %52 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// NOOPT-NEXT:  %53 = CallInst (:any) %52: any, empty: any, empty: any, undefined: undefined, undefined: undefined, undefined: undefined
-// NOOPT-NEXT:        StoreStackInst %53: any, %0: any
-// NOOPT-NEXT:  %55 = LoadStackInst (:any) %0: any
-// NOOPT-NEXT:        ReturnInst %55: any
+// NOOPT-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// NOOPT-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
+// NOOPT-NEXT:       StoreStackInst undefined: undefined, %1: any
+// NOOPT-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// NOOPT-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Object": string
+// NOOPT-NEXT:  %5 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: any
+// NOOPT-NEXT:       StoreStackInst %5: any, %1: any
+// NOOPT-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// NOOPT-NEXT:  %8 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Function": string
+// NOOPT-NEXT:  %9 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %8: any
+// NOOPT-NEXT:        StoreStackInst %9: any, %1: any
+// NOOPT-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// NOOPT-NEXT:  %12 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Array": string
+// NOOPT-NEXT:  %13 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: any
+// NOOPT-NEXT:        StoreStackInst %13: any, %1: any
+// NOOPT-NEXT:  %15 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// NOOPT-NEXT:  %16 = TryLoadGlobalPropertyInst (:any) globalObject: object, "String": string
+// NOOPT-NEXT:  %17 = CallInst (:any) %15: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %16: any
+// NOOPT-NEXT:        StoreStackInst %17: any, %1: any
+// NOOPT-NEXT:  %19 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// NOOPT-NEXT:  %20 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Boolean": string
+// NOOPT-NEXT:  %21 = CallInst (:any) %19: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %20: any
+// NOOPT-NEXT:        StoreStackInst %21: any, %1: any
+// NOOPT-NEXT:  %23 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// NOOPT-NEXT:  %24 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Number": string
+// NOOPT-NEXT:  %25 = CallInst (:any) %23: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %24: any
+// NOOPT-NEXT:        StoreStackInst %25: any, %1: any
+// NOOPT-NEXT:  %27 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// NOOPT-NEXT:  %28 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Math": string
+// NOOPT-NEXT:  %29 = CallInst (:any) %27: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %28: any
+// NOOPT-NEXT:        StoreStackInst %29: any, %1: any
+// NOOPT-NEXT:  %31 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// NOOPT-NEXT:  %32 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Date": string
+// NOOPT-NEXT:  %33 = CallInst (:any) %31: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %32: any
+// NOOPT-NEXT:        StoreStackInst %33: any, %1: any
+// NOOPT-NEXT:  %35 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// NOOPT-NEXT:  %36 = TryLoadGlobalPropertyInst (:any) globalObject: object, "RegExp": string
+// NOOPT-NEXT:  %37 = CallInst (:any) %35: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %36: any
+// NOOPT-NEXT:        StoreStackInst %37: any, %1: any
+// NOOPT-NEXT:  %39 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// NOOPT-NEXT:  %40 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Error": string
+// NOOPT-NEXT:  %41 = CallInst (:any) %39: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %40: any
+// NOOPT-NEXT:        StoreStackInst %41: any, %1: any
+// NOOPT-NEXT:  %43 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// NOOPT-NEXT:  %44 = TryLoadGlobalPropertyInst (:any) globalObject: object, "JSON": string
+// NOOPT-NEXT:  %45 = CallInst (:any) %43: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %44: any
+// NOOPT-NEXT:        StoreStackInst %45: any, %1: any
+// NOOPT-NEXT:  %47 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// NOOPT-NEXT:  %48 = CallInst (:any) %47: any, empty: any, empty: any, undefined: undefined, undefined: undefined, Infinity: number
+// NOOPT-NEXT:        StoreStackInst %48: any, %1: any
+// NOOPT-NEXT:  %50 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// NOOPT-NEXT:  %51 = CallInst (:any) %50: any, empty: any, empty: any, undefined: undefined, undefined: undefined, NaN: number
+// NOOPT-NEXT:        StoreStackInst %51: any, %1: any
+// NOOPT-NEXT:  %53 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// NOOPT-NEXT:  %54 = CallInst (:any) %53: any, empty: any, empty: any, undefined: undefined, undefined: undefined, undefined: undefined
+// NOOPT-NEXT:        StoreStackInst %54: any, %1: any
+// NOOPT-NEXT:  %56 = LoadStackInst (:any) %1: any
+// NOOPT-NEXT:        ReturnInst %56: any
 // NOOPT-NEXT:function_end
 
 // OPT:function global(): any

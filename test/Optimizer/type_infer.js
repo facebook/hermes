@@ -51,16 +51,17 @@ function test_unary(x) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "sink": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_one": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_unary": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %sink(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "sink": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %test_one(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "test_one": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %test_unary(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "test_unary": string
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %sink(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "sink": string
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %test_one(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "test_one": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %test_unary(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "test_unary": string
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function sink(): undefined

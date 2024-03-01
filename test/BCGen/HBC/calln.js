@@ -27,22 +27,22 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA:function global(): undefined
 // LRA-NEXT:frame = []
 // LRA-NEXT:%BB0:
-// LRA-NEXT:  $Reg0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// LRA-NEXT:  $Reg0 = CreateScopeInst (:environment) %global(): any, empty: any
 // LRA-NEXT:  $Reg1 = DeclareGlobalVarInst "foo1": string
 // LRA-NEXT:  $Reg1 = DeclareGlobalVarInst "foo2": string
 // LRA-NEXT:  $Reg1 = DeclareGlobalVarInst "foo3": string
 // LRA-NEXT:  $Reg1 = DeclareGlobalVarInst "foo4": string
 // LRA-NEXT:  $Reg1 = DeclareGlobalVarInst "foo5": string
-// LRA-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %foo1(): functionCode, $Reg0
+// LRA-NEXT:  $Reg2 = CreateFunctionInst (:object) $Reg0, %foo1(): functionCode
 // LRA-NEXT:  $Reg1 = HBCGetGlobalObjectInst (:object)
 // LRA-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg1, "foo1": string
-// LRA-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %foo2(): functionCode, $Reg0
+// LRA-NEXT:  $Reg2 = CreateFunctionInst (:object) $Reg0, %foo2(): functionCode
 // LRA-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg1, "foo2": string
-// LRA-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %foo3(): functionCode, $Reg0
+// LRA-NEXT:  $Reg2 = CreateFunctionInst (:object) $Reg0, %foo3(): functionCode
 // LRA-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg1, "foo3": string
-// LRA-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %foo4(): functionCode, $Reg0
+// LRA-NEXT:  $Reg2 = CreateFunctionInst (:object) $Reg0, %foo4(): functionCode
 // LRA-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg1, "foo4": string
-// LRA-NEXT:  $Reg0 = HBCCreateFunctionInst (:object) %foo5(): functionCode, $Reg0
+// LRA-NEXT:  $Reg0 = CreateFunctionInst (:object) $Reg0, %foo5(): functionCode
 // LRA-NEXT:  $Reg0 = StorePropertyLooseInst $Reg0, $Reg1, "foo5": string
 // LRA-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
 // LRA-NEXT:  $Reg0 = ReturnInst $Reg0

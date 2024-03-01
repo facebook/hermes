@@ -23,8 +23,8 @@ function main(x, y, z) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 = DeclareGlobalVarInst "main": string
-// CHECK-NEXT:  $Reg0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  $Reg1 = HBCCreateFunctionInst (:object) %main(): functionCode, $Reg0
+// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  $Reg1 = CreateFunctionInst (:object) $Reg0, %main(): functionCode
 // CHECK-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg0, "main": string
 // CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined

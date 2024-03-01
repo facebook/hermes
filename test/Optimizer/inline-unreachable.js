@@ -34,17 +34,20 @@ function main() {
 // CHECK:function global(): string
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "main": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): functionCode
-// CHECK-NEXT:       StorePropertyStrictInst %1: object, globalObject: object, "main": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %main(): functionCode
+// CHECK-NEXT:       StorePropertyStrictInst %2: object, globalObject: object, "main": string
 // CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %retval(): functionCode
-// CHECK-NEXT:       ReturnInst %0: object
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %main(): any, %0: environment
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %retval(): functionCode
+// CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
 // CHECK:function retval(): undefined [noReturn]

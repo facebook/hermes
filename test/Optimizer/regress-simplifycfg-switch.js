@@ -39,49 +39,51 @@ switch (0/0) {
 // CHKUNOPT:function global(): any
 // CHKUNOPT-NEXT:frame = []
 // CHKUNOPT-NEXT:%BB0:
-// CHKUNOPT-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
-// CHKUNOPT-NEXT:       StoreStackInst undefined: undefined, %0: any
+// CHKUNOPT-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHKUNOPT-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
+// CHKUNOPT-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHKUNOPT-NEXT:       SwitchInst -0: number, %BB3, 0: number, %BB2
 // CHKUNOPT-NEXT:%BB1:
 // CHKUNOPT-NEXT:       SwitchInst NaN: number, %BB6, NaN: number, %BB5
 // CHKUNOPT-NEXT:%BB2:
-// CHKUNOPT-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHKUNOPT-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "0": string
-// CHKUNOPT-NEXT:       StoreStackInst %5: any, %0: any
+// CHKUNOPT-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHKUNOPT-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "0": string
+// CHKUNOPT-NEXT:       StoreStackInst %6: any, %1: any
 // CHKUNOPT-NEXT:       BranchInst %BB1
 // CHKUNOPT-NEXT:%BB3:
-// CHKUNOPT-NEXT:  %8 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHKUNOPT-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "default": string
-// CHKUNOPT-NEXT:        StoreStackInst %9: any, %0: any
+// CHKUNOPT-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHKUNOPT-NEXT:  %10 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "default": string
+// CHKUNOPT-NEXT:        StoreStackInst %10: any, %1: any
 // CHKUNOPT-NEXT:        BranchInst %BB1
 // CHKUNOPT-NEXT:%BB4:
-// CHKUNOPT-NEXT:        StoreStackInst 0: number, %0: any
-// CHKUNOPT-NEXT:  %13 = LoadStackInst (:any) %0: any
-// CHKUNOPT-NEXT:        ReturnInst %13: any
+// CHKUNOPT-NEXT:        StoreStackInst 0: number, %1: any
+// CHKUNOPT-NEXT:  %14 = LoadStackInst (:any) %1: any
+// CHKUNOPT-NEXT:        ReturnInst %14: any
 // CHKUNOPT-NEXT:%BB5:
-// CHKUNOPT-NEXT:  %15 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHKUNOPT-NEXT:  %16 = CallInst (:any) %15: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "NaN": string
-// CHKUNOPT-NEXT:        StoreStackInst %16: any, %0: any
+// CHKUNOPT-NEXT:  %16 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHKUNOPT-NEXT:  %17 = CallInst (:any) %16: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "NaN": string
+// CHKUNOPT-NEXT:        StoreStackInst %17: any, %1: any
 // CHKUNOPT-NEXT:        BranchInst %BB4
 // CHKUNOPT-NEXT:%BB6:
-// CHKUNOPT-NEXT:  %19 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHKUNOPT-NEXT:  %20 = CallInst (:any) %19: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "default": string
-// CHKUNOPT-NEXT:        StoreStackInst %20: any, %0: any
+// CHKUNOPT-NEXT:  %20 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHKUNOPT-NEXT:  %21 = CallInst (:any) %20: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "default": string
+// CHKUNOPT-NEXT:        StoreStackInst %21: any, %1: any
 // CHKUNOPT-NEXT:        BranchInst %BB4
 // CHKUNOPT-NEXT:function_end
 
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:       StoreStackInst undefined: undefined, %0: any
-// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "0": string
-// CHECK-NEXT:       StoreStackInst %3: any, %0: any
-// CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "default": string
-// CHECK-NEXT:       StoreStackInst %6: any, %0: any
-// CHECK-NEXT:       StoreStackInst 0: number, %0: any
-// CHECK-NEXT:  %9 = LoadStackInst (:any) %0: any
-// CHECK-NEXT:        ReturnInst %9: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
+// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "0": string
+// CHECK-NEXT:       StoreStackInst %4: any, %1: any
+// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "default": string
+// CHECK-NEXT:       StoreStackInst %7: any, %1: any
+// CHECK-NEXT:       StoreStackInst 0: number, %1: any
+// CHECK-NEXT:  %10 = LoadStackInst (:any) %1: any
+// CHECK-NEXT:        ReturnInst %10: any
 // CHECK-NEXT:function_end

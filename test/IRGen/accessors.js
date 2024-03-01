@@ -23,39 +23,46 @@ var x = {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "x": string
-// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
-// CHECK-NEXT:  %3 = AllocObjectInst (:object) 3: number, empty: any
-// CHECK-NEXT:       StoreNewOwnPropertyInst null: null, %3: object, "1": string, true: boolean
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %"get a"(): functionCode
-// CHECK-NEXT:       StoreGetterSetterInst %5: object, undefined: undefined, %3: object, "a": string, true: boolean
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %"get 1"(): functionCode
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %"set 1"(): functionCode
-// CHECK-NEXT:       StoreGetterSetterInst %7: object, %8: object, %3: object, "1": string, true: boolean
-// CHECK-NEXT:        StoreNewOwnPropertyInst null: null, %3: object, "b": string, true: boolean
-// CHECK-NEXT:        StoreOwnPropertyInst 12: number, %3: object, "b": string, true: boolean
-// CHECK-NEXT:        StorePropertyLooseInst %3: object, globalObject: object, "x": string
-// CHECK-NEXT:  %13 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:        ReturnInst %13: any
+// CHECK-NEXT:  %2 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %2: any
+// CHECK-NEXT:  %4 = AllocObjectInst (:object) 3: number, empty: any
+// CHECK-NEXT:       StoreNewOwnPropertyInst null: null, %4: object, "1": string, true: boolean
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %"get a"(): functionCode
+// CHECK-NEXT:       StoreGetterSetterInst %6: object, undefined: undefined, %4: object, "a": string, true: boolean
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %"get 1"(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %"set 1"(): functionCode
+// CHECK-NEXT:        StoreGetterSetterInst %8: object, %9: object, %4: object, "1": string, true: boolean
+// CHECK-NEXT:        StoreNewOwnPropertyInst null: null, %4: object, "b": string, true: boolean
+// CHECK-NEXT:        StoreOwnPropertyInst 12: number, %4: object, "b": string, true: boolean
+// CHECK-NEXT:        StorePropertyLooseInst %4: object, globalObject: object, "x": string
+// CHECK-NEXT:  %14 = LoadStackInst (:any) %2: any
+// CHECK-NEXT:        ReturnInst %14: any
 // CHECK-NEXT:function_end
 
 // CHECK:function "get a"(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %"get a"(): any, %0: environment
 // CHECK-NEXT:       ReturnInst "a": string
 // CHECK-NEXT:function_end
 
 // CHECK:function "get 1"(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %"get 1"(): any, %0: environment
 // CHECK-NEXT:       ReturnInst 21: number
 // CHECK-NEXT:function_end
 
 // CHECK:function "set 1"(x: any): any
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [x]: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %"set 1"(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

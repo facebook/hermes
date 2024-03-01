@@ -24,16 +24,20 @@ class C {
 // CHECK:function foo(x: number): any [typed]
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:number) %x: number
-// CHECK-NEXT:       StoreFrameInst %0: number, [x]: any
-// CHECK-NEXT:  %2 = LoadFrameInst (:any) [C@""]: any
-// CHECK-NEXT:  %3 = CheckedTypeCastInst (:object) %2: any, type(object)
-// CHECK-NEXT:  %4 = LoadFrameInst (:object) [?C.prototype@""]: object
-// CHECK-NEXT:  %5 = UnionNarrowTrustedInst (:object) %4: object
-// CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) "x": string, 0: number
-// CHECK-NEXT:       StoreParentInst %5: object, %6: object
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %9 = CheckedTypeCastInst (:number) %8: any, type(number)
-// CHECK-NEXT:  %10 = CallInst (:any) %3: object, %C(): functionCode, empty: any, %3: object, %6: object, %9: number
-// CHECK-NEXT:        ReturnInst %6: object
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:number) %x: number
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: number, [x]: any
+// CHECK-NEXT:  %4 = ResolveScopeInst (:environment) %""(): any, %1: environment
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) %4: environment, [C@""]: any
+// CHECK-NEXT:  %6 = CheckedTypeCastInst (:object) %5: any, type(object)
+// CHECK-NEXT:  %7 = ResolveScopeInst (:environment) %""(): any, %1: environment
+// CHECK-NEXT:  %8 = LoadFrameInst (:object) %7: environment, [?C.prototype@""]: object
+// CHECK-NEXT:  %9 = UnionNarrowTrustedInst (:object) %8: object
+// CHECK-NEXT:  %10 = AllocObjectLiteralInst (:object) "x": string, 0: number
+// CHECK-NEXT:        StoreParentInst %9: object, %10: object
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %13 = CheckedTypeCastInst (:number) %12: any, type(number)
+// CHECK-NEXT:  %14 = CallInst (:any) %6: object, %C(): functionCode, empty: any, %6: object, %10: object, %13: number
+// CHECK-NEXT:        ReturnInst %10: object
 // CHECK-NEXT:function_end

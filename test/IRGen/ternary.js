@@ -30,84 +30,91 @@ function test_three(x, one, two) {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "test_one": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_two": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_three": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %test_one(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "test_one": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %test_two(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "test_two": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %test_three(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "test_three": string
-// CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:        StoreStackInst undefined: undefined, %9: any
-// CHECK-NEXT:  %11 = LoadStackInst (:any) %9: any
-// CHECK-NEXT:        ReturnInst %11: any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %test_one(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "test_one": string
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %test_two(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "test_two": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %test_three(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "test_three": string
+// CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %10: any
+// CHECK-NEXT:  %12 = LoadStackInst (:any) %10: any
+// CHECK-NEXT:        ReturnInst %12: any
 // CHECK-NEXT:function_end
 
 // CHECK:function test_one(x: any, y: any, z: any): any
 // CHECK-NEXT:frame = [x: any, y: any, z: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [x]: any
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:       StoreFrameInst %2: any, [y]: any
-// CHECK-NEXT:  %4 = LoadParamInst (:any) %z: any
-// CHECK-NEXT:       StoreFrameInst %4: any, [z]: any
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:       CondBranchInst %6: any, %BB2, %BB1
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test_one(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [y]: any
+// CHECK-NEXT:  %6 = LoadParamInst (:any) %z: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [z]: any
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:       CondBranchInst %8: any, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) [z]: any
-// CHECK-NEXT:       BranchInst %BB3
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [z]: any
+// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) [y]: any
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [y]: any
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = PhiInst (:any) %10: any, %BB2, %8: any, %BB1
-// CHECK-NEXT:        ReturnInst %12: any
+// CHECK-NEXT:  %14 = PhiInst (:any) %12: any, %BB2, %10: any, %BB1
+// CHECK-NEXT:        ReturnInst %14: any
 // CHECK-NEXT:function_end
 
 // CHECK:function test_two(): any
 // CHECK-NEXT:frame = [stop: any, age: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:       StoreFrameInst undefined: undefined, [stop]: any
-// CHECK-NEXT:       StoreFrameInst undefined: undefined, [age]: any
-// CHECK-NEXT:       StoreFrameInst false: boolean, [stop]: any
-// CHECK-NEXT:       StoreFrameInst 16: number, [age]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) [age]: any
-// CHECK-NEXT:  %5 = BinaryGreaterThanInst (:boolean) %4: any, 18: number
-// CHECK-NEXT:       CondBranchInst %5: boolean, %BB2, %BB1
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test_two(): any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [stop]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [age]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, false: boolean, [stop]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, 16: number, [age]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [age]: any
+// CHECK-NEXT:  %7 = BinaryGreaterThanInst (:boolean) %6: any, 18: number
+// CHECK-NEXT:       CondBranchInst %7: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:       StoreFrameInst true: boolean, [stop]: any
-// CHECK-NEXT:       BranchInst %BB3
+// CHECK-NEXT:       StoreFrameInst %1: environment, true: boolean, [stop]: any
+// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:       StoreFrameInst 2: number, [age]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, 2: number, [age]: any
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %11 = PhiInst (:boolean|number) 2: number, %BB2, true: boolean, %BB1
-// CHECK-NEXT:        ReturnInst %11: boolean|number
+// CHECK-NEXT:  %13 = PhiInst (:boolean|number) 2: number, %BB2, true: boolean, %BB1
+// CHECK-NEXT:        ReturnInst %13: boolean|number
 // CHECK-NEXT:function_end
 
 // CHECK:function test_three(x: any, one: any, two: any): any
 // CHECK-NEXT:frame = [x: any, one: any, two: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [x]: any
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %one: any
-// CHECK-NEXT:       StoreFrameInst %2: any, [one]: any
-// CHECK-NEXT:  %4 = LoadParamInst (:any) %two: any
-// CHECK-NEXT:       StoreFrameInst %4: any, [two]: any
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:       CondBranchInst %6: any, %BB2, %BB1
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test_three(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %one: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [one]: any
+// CHECK-NEXT:  %6 = LoadParamInst (:any) %two: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [two]: any
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:       CondBranchInst %8: any, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) [two]: any
-// CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [two]: any
+// CHECK-NEXT:  %11 = CallInst (:any) %10: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %11 = LoadFrameInst (:any) [one]: any
-// CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [one]: any
+// CHECK-NEXT:  %14 = CallInst (:any) %13: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %14 = PhiInst (:any) %12: any, %BB2, %9: any, %BB1
-// CHECK-NEXT:        ReturnInst %14: any
+// CHECK-NEXT:  %16 = PhiInst (:any) %14: any, %BB2, %11: any, %BB1
+// CHECK-NEXT:        ReturnInst %16: any
 // CHECK-NEXT:function_end

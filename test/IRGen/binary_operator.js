@@ -78,181 +78,190 @@
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:       DeclareGlobalVarInst "assignment_test": string
 // CHECK-NEXT:       DeclareGlobalVarInst "member_test": string
 // CHECK-NEXT:       DeclareGlobalVarInst "binary_ops": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %foo(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "foo": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %assignment_test(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "assignment_test": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %member_test(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "member_test": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %binary_ops(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "binary_ops": string
-// CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:        StoreStackInst undefined: undefined, %12: any
-// CHECK-NEXT:  %14 = LoadStackInst (:any) %12: any
-// CHECK-NEXT:        ReturnInst %14: any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "foo": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %assignment_test(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "assignment_test": string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %member_test(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "member_test": string
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %binary_ops(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "binary_ops": string
+// CHECK-NEXT:  %13 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %13: any
+// CHECK-NEXT:  %15 = LoadStackInst (:any) %13: any
+// CHECK-NEXT:        ReturnInst %15: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(x: any, y: any): any
 // CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [x]: any
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:       StoreFrameInst %2: any, [y]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:       StoreFrameInst %4: any, [x]: any
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %7 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %8 = BinaryAddInst (:any) %6: any, %7: any
-// CHECK-NEXT:       StoreFrameInst %8: any, [x]: any
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %11 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %12 = BinarySubtractInst (:any) %10: any, %11: any
-// CHECK-NEXT:        StoreFrameInst %12: any, [x]: any
-// CHECK-NEXT:  %14 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %15 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %16 = BinaryMultiplyInst (:any) %14: any, %15: any
-// CHECK-NEXT:        StoreFrameInst %16: any, [x]: any
-// CHECK-NEXT:  %18 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %19 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %20 = BinaryDivideInst (:any) %18: any, %19: any
-// CHECK-NEXT:        StoreFrameInst %20: any, [x]: any
-// CHECK-NEXT:  %22 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %23 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %24 = BinaryModuloInst (:any) %22: any, %23: any
-// CHECK-NEXT:        StoreFrameInst %24: any, [x]: any
-// CHECK-NEXT:  %26 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %27 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %28 = BinaryLeftShiftInst (:any) %26: any, %27: any
-// CHECK-NEXT:        StoreFrameInst %28: any, [x]: any
-// CHECK-NEXT:  %30 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %31 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %32 = BinaryRightShiftInst (:any) %30: any, %31: any
-// CHECK-NEXT:        StoreFrameInst %32: any, [x]: any
-// CHECK-NEXT:  %34 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %35 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %36 = BinaryUnsignedRightShiftInst (:any) %34: any, %35: any
-// CHECK-NEXT:        StoreFrameInst %36: any, [x]: any
-// CHECK-NEXT:  %38 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %39 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %40 = BinaryAndInst (:any) %38: any, %39: any
-// CHECK-NEXT:        StoreFrameInst %40: any, [x]: any
-// CHECK-NEXT:  %42 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %43 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %44 = BinaryXorInst (:any) %42: any, %43: any
-// CHECK-NEXT:        StoreFrameInst %44: any, [x]: any
-// CHECK-NEXT:  %46 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %47 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %48 = BinaryOrInst (:any) %46: any, %47: any
-// CHECK-NEXT:        StoreFrameInst %48: any, [x]: any
-// CHECK-NEXT:  %50 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %51 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:        StorePropertyLooseInst %51: any, %50: any, "t": string
-// CHECK-NEXT:  %53 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %54 = LoadPropertyInst (:any) %53: any, "t": string
-// CHECK-NEXT:  %55 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %56 = BinaryAddInst (:any) %54: any, %55: any
-// CHECK-NEXT:        StorePropertyLooseInst %56: any, %53: any, "t": string
-// CHECK-NEXT:  %58 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %59 = LoadPropertyInst (:any) %58: any, "t": string
-// CHECK-NEXT:  %60 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %61 = BinarySubtractInst (:any) %59: any, %60: any
-// CHECK-NEXT:        StorePropertyLooseInst %61: any, %58: any, "t": string
-// CHECK-NEXT:  %63 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %64 = LoadPropertyInst (:any) %63: any, "t": string
-// CHECK-NEXT:  %65 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %66 = BinaryMultiplyInst (:any) %64: any, %65: any
-// CHECK-NEXT:        StorePropertyLooseInst %66: any, %63: any, "t": string
-// CHECK-NEXT:  %68 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %69 = LoadPropertyInst (:any) %68: any, "t": string
-// CHECK-NEXT:  %70 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %71 = BinaryDivideInst (:any) %69: any, %70: any
-// CHECK-NEXT:        StorePropertyLooseInst %71: any, %68: any, "t": string
-// CHECK-NEXT:  %73 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %74 = LoadPropertyInst (:any) %73: any, "t": string
-// CHECK-NEXT:  %75 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %76 = BinaryModuloInst (:any) %74: any, %75: any
-// CHECK-NEXT:        StorePropertyLooseInst %76: any, %73: any, "t": string
-// CHECK-NEXT:  %78 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %79 = LoadPropertyInst (:any) %78: any, "t": string
-// CHECK-NEXT:  %80 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %81 = BinaryLeftShiftInst (:any) %79: any, %80: any
-// CHECK-NEXT:        StorePropertyLooseInst %81: any, %78: any, "t": string
-// CHECK-NEXT:  %83 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %84 = LoadPropertyInst (:any) %83: any, "t": string
-// CHECK-NEXT:  %85 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %86 = BinaryRightShiftInst (:any) %84: any, %85: any
-// CHECK-NEXT:        StorePropertyLooseInst %86: any, %83: any, "t": string
-// CHECK-NEXT:  %88 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %89 = LoadPropertyInst (:any) %88: any, "t": string
-// CHECK-NEXT:  %90 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %91 = BinaryUnsignedRightShiftInst (:any) %89: any, %90: any
-// CHECK-NEXT:        StorePropertyLooseInst %91: any, %88: any, "t": string
-// CHECK-NEXT:  %93 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %94 = LoadPropertyInst (:any) %93: any, "t": string
-// CHECK-NEXT:  %95 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %96 = BinaryAndInst (:any) %94: any, %95: any
-// CHECK-NEXT:        StorePropertyLooseInst %96: any, %93: any, "t": string
-// CHECK-NEXT:  %98 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %99 = LoadPropertyInst (:any) %98: any, "t": string
-// CHECK-NEXT:  %100 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %101 = BinaryXorInst (:any) %99: any, %100: any
-// CHECK-NEXT:         StorePropertyLooseInst %101: any, %98: any, "t": string
-// CHECK-NEXT:  %103 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %104 = LoadPropertyInst (:any) %103: any, "t": string
-// CHECK-NEXT:  %105 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %106 = BinaryOrInst (:any) %104: any, %105: any
-// CHECK-NEXT:         StorePropertyLooseInst %106: any, %103: any, "t": string
-// CHECK-NEXT:  %108 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %109 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %110 = BinaryEqualInst (:boolean) %108: any, %109: any
-// CHECK-NEXT:         ReturnInst %110: boolean
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [y]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [x]: any
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %10 = BinaryAddInst (:any) %8: any, %9: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %10: any, [x]: any
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %14 = BinarySubtractInst (:any) %12: any, %13: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %14: any, [x]: any
+// CHECK-NEXT:  %16 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %17 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %18 = BinaryMultiplyInst (:any) %16: any, %17: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %18: any, [x]: any
+// CHECK-NEXT:  %20 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %21 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %22 = BinaryDivideInst (:any) %20: any, %21: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %22: any, [x]: any
+// CHECK-NEXT:  %24 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %25 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %26 = BinaryModuloInst (:any) %24: any, %25: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %26: any, [x]: any
+// CHECK-NEXT:  %28 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %29 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %30 = BinaryLeftShiftInst (:any) %28: any, %29: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %30: any, [x]: any
+// CHECK-NEXT:  %32 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %33 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %34 = BinaryRightShiftInst (:any) %32: any, %33: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %34: any, [x]: any
+// CHECK-NEXT:  %36 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %37 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %38 = BinaryUnsignedRightShiftInst (:any) %36: any, %37: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %38: any, [x]: any
+// CHECK-NEXT:  %40 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %41 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %42 = BinaryAndInst (:any) %40: any, %41: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %42: any, [x]: any
+// CHECK-NEXT:  %44 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %45 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %46 = BinaryXorInst (:any) %44: any, %45: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %46: any, [x]: any
+// CHECK-NEXT:  %48 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %49 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %50 = BinaryOrInst (:any) %48: any, %49: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %50: any, [x]: any
+// CHECK-NEXT:  %52 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %53 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:        StorePropertyLooseInst %53: any, %52: any, "t": string
+// CHECK-NEXT:  %55 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %56 = LoadPropertyInst (:any) %55: any, "t": string
+// CHECK-NEXT:  %57 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %58 = BinaryAddInst (:any) %56: any, %57: any
+// CHECK-NEXT:        StorePropertyLooseInst %58: any, %55: any, "t": string
+// CHECK-NEXT:  %60 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %61 = LoadPropertyInst (:any) %60: any, "t": string
+// CHECK-NEXT:  %62 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %63 = BinarySubtractInst (:any) %61: any, %62: any
+// CHECK-NEXT:        StorePropertyLooseInst %63: any, %60: any, "t": string
+// CHECK-NEXT:  %65 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %66 = LoadPropertyInst (:any) %65: any, "t": string
+// CHECK-NEXT:  %67 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %68 = BinaryMultiplyInst (:any) %66: any, %67: any
+// CHECK-NEXT:        StorePropertyLooseInst %68: any, %65: any, "t": string
+// CHECK-NEXT:  %70 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %71 = LoadPropertyInst (:any) %70: any, "t": string
+// CHECK-NEXT:  %72 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %73 = BinaryDivideInst (:any) %71: any, %72: any
+// CHECK-NEXT:        StorePropertyLooseInst %73: any, %70: any, "t": string
+// CHECK-NEXT:  %75 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %76 = LoadPropertyInst (:any) %75: any, "t": string
+// CHECK-NEXT:  %77 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %78 = BinaryModuloInst (:any) %76: any, %77: any
+// CHECK-NEXT:        StorePropertyLooseInst %78: any, %75: any, "t": string
+// CHECK-NEXT:  %80 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %81 = LoadPropertyInst (:any) %80: any, "t": string
+// CHECK-NEXT:  %82 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %83 = BinaryLeftShiftInst (:any) %81: any, %82: any
+// CHECK-NEXT:        StorePropertyLooseInst %83: any, %80: any, "t": string
+// CHECK-NEXT:  %85 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %86 = LoadPropertyInst (:any) %85: any, "t": string
+// CHECK-NEXT:  %87 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %88 = BinaryRightShiftInst (:any) %86: any, %87: any
+// CHECK-NEXT:        StorePropertyLooseInst %88: any, %85: any, "t": string
+// CHECK-NEXT:  %90 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %91 = LoadPropertyInst (:any) %90: any, "t": string
+// CHECK-NEXT:  %92 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %93 = BinaryUnsignedRightShiftInst (:any) %91: any, %92: any
+// CHECK-NEXT:        StorePropertyLooseInst %93: any, %90: any, "t": string
+// CHECK-NEXT:  %95 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %96 = LoadPropertyInst (:any) %95: any, "t": string
+// CHECK-NEXT:  %97 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %98 = BinaryAndInst (:any) %96: any, %97: any
+// CHECK-NEXT:        StorePropertyLooseInst %98: any, %95: any, "t": string
+// CHECK-NEXT:  %100 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %101 = LoadPropertyInst (:any) %100: any, "t": string
+// CHECK-NEXT:  %102 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %103 = BinaryXorInst (:any) %101: any, %102: any
+// CHECK-NEXT:         StorePropertyLooseInst %103: any, %100: any, "t": string
+// CHECK-NEXT:  %105 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %106 = LoadPropertyInst (:any) %105: any, "t": string
+// CHECK-NEXT:  %107 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %108 = BinaryOrInst (:any) %106: any, %107: any
+// CHECK-NEXT:         StorePropertyLooseInst %108: any, %105: any, "t": string
+// CHECK-NEXT:  %110 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %111 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %112 = BinaryEqualInst (:boolean) %110: any, %111: any
+// CHECK-NEXT:         ReturnInst %112: boolean
 // CHECK-NEXT:function_end
 
 // CHECK:function assignment_test(x: any, y: any): any
 // CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [x]: any
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:       StoreFrameInst %2: any, [y]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:       StoreFrameInst %4: any, [x]: any
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %7 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %8 = BinaryAddInst (:any) %6: any, %7: any
-// CHECK-NEXT:       StoreFrameInst %8: any, [x]: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %assignment_test(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [y]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [x]: any
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %10 = BinaryAddInst (:any) %8: any, %9: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %10: any, [x]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function member_test(x: any, y: any): any
 // CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [x]: any
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:       StoreFrameInst %2: any, [y]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %5 = LoadPropertyInst (:any) %4: any, "t": string
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %7 = BinaryAddInst (:any) %5: any, %6: any
-// CHECK-NEXT:       StorePropertyLooseInst %7: any, %4: any, "t": string
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %member_test(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [y]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %7 = LoadPropertyInst (:any) %6: any, "t": string
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %9 = BinaryAddInst (:any) %7: any, %8: any
+// CHECK-NEXT:        StorePropertyLooseInst %9: any, %6: any, "t": string
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function binary_ops(x: any, y: any): any
 // CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [x]: any
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:       StoreFrameInst %2: any, [y]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %6 = BinaryUnsignedRightShiftInst (:any) %4: any, %5: any
-// CHECK-NEXT:       ReturnInst %6: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %binary_ops(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [y]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %8 = BinaryUnsignedRightShiftInst (:any) %6: any, %7: any
+// CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:function_end

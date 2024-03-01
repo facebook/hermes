@@ -24,64 +24,73 @@ function test2(x,y) {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "sink0": string
 // CHECK-NEXT:       DeclareGlobalVarInst "sink1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test2": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %sink0(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "sink0": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %sink1(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "sink1": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %test1(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "test1": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %test2(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "test2": string
-// CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:        StoreStackInst undefined: undefined, %12: any
-// CHECK-NEXT:  %14 = LoadStackInst (:any) %12: any
-// CHECK-NEXT:        ReturnInst %14: any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %sink0(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "sink0": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %sink1(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "sink1": string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %test1(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "test1": string
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %test2(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "test2": string
+// CHECK-NEXT:  %13 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %13: any
+// CHECK-NEXT:  %15 = LoadStackInst (:any) %13: any
+// CHECK-NEXT:        ReturnInst %15: any
 // CHECK-NEXT:function_end
 
 // CHECK:function sink0(a: any): any
 // CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [a]: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %sink0(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [a]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function sink1(a: any): any
 // CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [a]: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %sink1(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [a]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test1(x: any, y: any): any
 // CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [x]: any
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:       StoreFrameInst %2: any, [y]: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test1(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [y]: any
 // CHECK-NEXT:       ReturnInst 3: number
 // CHECK-NEXT:function_end
 
 // CHECK:function test2(x: any, y: any): any
 // CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [x]: any
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:       StoreFrameInst %2: any, [y]: any
-// CHECK-NEXT:  %4 = LoadPropertyInst (:any) globalObject: object, "sink0": string
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %7 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %5: any, %6: any
-// CHECK-NEXT:  %8 = LoadPropertyInst (:any) globalObject: object, "sink1": string
-// CHECK-NEXT:  %9 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %11 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %9: any, %10: any
-// CHECK-NEXT:        ReturnInst %11: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test2(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [y]: any
+// CHECK-NEXT:  %6 = LoadPropertyInst (:any) globalObject: object, "sink0": string
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %9 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %7: any, %8: any
+// CHECK-NEXT:  %10 = LoadPropertyInst (:any) globalObject: object, "sink1": string
+// CHECK-NEXT:  %11 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %13 = CallInst (:any) %10: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %11: any, %12: any
+// CHECK-NEXT:        ReturnInst %13: any
 // CHECK-NEXT:function_end

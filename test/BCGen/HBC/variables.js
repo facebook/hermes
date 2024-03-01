@@ -33,18 +33,18 @@ function daa(a) {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "a": string
 // CHECK-NEXT:       DeclareGlobalVarInst "bar": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:       DeclareGlobalVarInst "daa": string
-// CHECK-NEXT:  %5 = HBCCreateFunctionInst (:object) %bar(): functionCode, %0: environment
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %bar(): functionCode
 // CHECK-NEXT:  %6 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:       StorePropertyStrictInst %5: object, %6: object, "bar": string
-// CHECK-NEXT:  %8 = HBCCreateFunctionInst (:object) %foo(): functionCode, %0: environment
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
 // CHECK-NEXT:  %9 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:        StorePropertyStrictInst %8: object, %9: object, "foo": string
-// CHECK-NEXT:  %11 = HBCCreateFunctionInst (:object) %daa(): functionCode, %0: environment
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %daa(): functionCode
 // CHECK-NEXT:  %12 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:        StorePropertyStrictInst %11: object, %12: object, "daa": string
 // CHECK-NEXT:  %14 = AllocStackInst (:any) $?anon_0_ret: any
@@ -63,73 +63,77 @@ function daa(a) {
 // CHECK:function bar(a: any): any
 // CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %bar(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:       HBCStoreToEnvironmentInst %0: environment, %1: any, [a]: any
-// CHECK-NEXT:  %3 = HBCLoadFromEnvironmentInst (:any) %0: environment, [a]: any
-// CHECK-NEXT:       ReturnInst %3: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %bar(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [a]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [a]: any
+// CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(a: any): any
 // CHECK-NEXT:frame = [a: any, b: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %foo(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:       HBCStoreToEnvironmentInst %0: environment, %1: any, [a]: any
-// CHECK-NEXT:  %3 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:       HBCStoreToEnvironmentInst %0: environment, %3: undefined, [b]: any
-// CHECK-NEXT:  %5 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  %6 = LoadPropertyInst (:any) %5: object, "bar": string
-// CHECK-NEXT:  %7 = HBCLoadFromEnvironmentInst (:any) %0: environment, [a]: any
-// CHECK-NEXT:  %8 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [a]: any
+// CHECK-NEXT:  %4 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: undefined, [b]: any
+// CHECK-NEXT:  %6 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  %7 = LoadPropertyInst (:any) %6: object, "bar": string
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [a]: any
 // CHECK-NEXT:  %9 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  %10 = HBCCallNInst (:any) %6: any, empty: any, empty: any, %8: undefined, %9: undefined, %7: any
-// CHECK-NEXT:        HBCStoreToEnvironmentInst %0: environment, %10: any, [b]: any
-// CHECK-NEXT:  %12 = HBCLoadFromEnvironmentInst (:any) %0: environment, [b]: any
-// CHECK-NEXT:        ReturnInst %12: any
+// CHECK-NEXT:  %10 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %11 = HBCCallNInst (:any) %7: any, empty: any, empty: any, %9: undefined, %10: undefined, %8: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %11: any, [b]: any
+// CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [b]: any
+// CHECK-NEXT:        ReturnInst %13: any
 // CHECK-NEXT:function_end
 
 // CHECK:function daa(a: any): any
 // CHECK-NEXT:frame = [a: any, b: any, daa_capture: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %daa(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:       HBCStoreToEnvironmentInst %0: environment, %1: any, [a]: any
-// CHECK-NEXT:  %3 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:       HBCStoreToEnvironmentInst %0: environment, %3: undefined, [b]: any
-// CHECK-NEXT:  %5 = HBCCreateFunctionInst (:object) %daa_capture(): functionCode, %0: environment
-// CHECK-NEXT:       HBCStoreToEnvironmentInst %0: environment, %5: object, [daa_capture]: any
-// CHECK-NEXT:  %7 = HBCLoadFromEnvironmentInst (:any) %0: environment, [a]: any
-// CHECK-NEXT:  %8 = HBCLoadConstInst (:number) 1: number
-// CHECK-NEXT:  %9 = BinaryAddInst (:any) %7: any, %8: number
-// CHECK-NEXT:        HBCStoreToEnvironmentInst %0: environment, %9: any, [b]: any
-// CHECK-NEXT:  %11 = HBCLoadFromEnvironmentInst (:any) %0: environment, [daa_capture]: any
-// CHECK-NEXT:        ReturnInst %11: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %daa(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [a]: any
+// CHECK-NEXT:  %4 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: undefined, [b]: any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %daa_capture(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [daa_capture]: any
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [a]: any
+// CHECK-NEXT:  %9 = HBCLoadConstInst (:number) 1: number
+// CHECK-NEXT:  %10 = BinaryAddInst (:any) %8: any, %9: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %10: any, [b]: any
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [daa_capture]: any
+// CHECK-NEXT:        ReturnInst %12: any
 // CHECK-NEXT:function_end
 
 // CHECK:function daa_capture(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %daa_capture(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = HBCResolveParentEnvironmentInst (:environment) %daa(): any, 0: number, %parentScope: environment
-// CHECK-NEXT:  %2 = HBCLoadFromEnvironmentInst (:any) %1: environment, [b@daa]: any
-// CHECK-NEXT:       ReturnInst %2: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %daa(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %daa_capture(): any, %0: environment
+// CHECK-NEXT:  %2 = LIRResolveScopeInst (:environment) %daa(): any, %1: environment, 1: number
+// CHECK-NEXT:  %3 = LoadFrameInst (:any) %2: environment, [b@daa]: any
+// CHECK-NEXT:       ReturnInst %3: any
 // CHECK-NEXT:function_end
 
 // CHKOPT:function global(): any
 // CHKOPT-NEXT:frame = []
 // CHKOPT-NEXT:%BB0:
-// CHKOPT-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// CHKOPT-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHKOPT-NEXT:       DeclareGlobalVarInst "a": string
 // CHKOPT-NEXT:       DeclareGlobalVarInst "bar": string
 // CHKOPT-NEXT:       DeclareGlobalVarInst "foo": string
 // CHKOPT-NEXT:       DeclareGlobalVarInst "daa": string
-// CHKOPT-NEXT:  %5 = HBCCreateFunctionInst (:object) %bar(): functionCode, %0: environment
+// CHKOPT-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %bar(): functionCode
 // CHKOPT-NEXT:  %6 = HBCGetGlobalObjectInst (:object)
 // CHKOPT-NEXT:       StorePropertyStrictInst %5: object, %6: object, "bar": string
-// CHKOPT-NEXT:  %8 = HBCCreateFunctionInst (:object) %foo(): functionCode, %0: environment
+// CHKOPT-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
 // CHKOPT-NEXT:       StorePropertyStrictInst %8: object, %6: object, "foo": string
-// CHKOPT-NEXT:  %10 = HBCCreateFunctionInst (:object) %daa(): functionCode, %0: environment
+// CHKOPT-NEXT:  %10 = CreateFunctionInst (:object) %0: environment, %daa(): functionCode
 // CHKOPT-NEXT:        StorePropertyStrictInst %10: object, %6: object, "daa": string
 // CHKOPT-NEXT:  %12 = HBCLoadConstInst (:number) 5: number
 // CHKOPT-NEXT:        StorePropertyStrictInst %12: number, %6: object, "a": string
@@ -158,19 +162,20 @@ function daa(a) {
 // CHKOPT:function daa(a: any): object
 // CHKOPT-NEXT:frame = [b: undefined|string|number]
 // CHKOPT-NEXT:%BB0:
-// CHKOPT-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %daa(): any, %parentScope: environment
-// CHKOPT-NEXT:  %1 = LoadParamInst (:any) %a: any
-// CHKOPT-NEXT:  %2 = HBCLoadConstInst (:number) 1: number
-// CHKOPT-NEXT:  %3 = BinaryAddInst (:string|number) %1: any, %2: number
-// CHKOPT-NEXT:       HBCStoreToEnvironmentInst %0: environment, %3: string|number, [b]: undefined|string|number
-// CHKOPT-NEXT:  %5 = HBCCreateFunctionInst (:object) %daa_capture(): functionCode, %0: environment
-// CHKOPT-NEXT:       ReturnInst %5: object
+// CHKOPT-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHKOPT-NEXT:  %1 = CreateScopeInst (:environment) %daa(): any, %0: environment
+// CHKOPT-NEXT:  %2 = LoadParamInst (:any) %a: any
+// CHKOPT-NEXT:  %3 = HBCLoadConstInst (:number) 1: number
+// CHKOPT-NEXT:  %4 = BinaryAddInst (:string|number) %2: any, %3: number
+// CHKOPT-NEXT:       StoreFrameInst %1: environment, %4: string|number, [b]: undefined|string|number
+// CHKOPT-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %daa_capture(): functionCode
+// CHKOPT-NEXT:       ReturnInst %6: object
 // CHKOPT-NEXT:function_end
 
 // CHKOPT:function daa_capture(): undefined|string|number
 // CHKOPT-NEXT:frame = []
 // CHKOPT-NEXT:%BB0:
-// CHKOPT-NEXT:  %0 = HBCResolveParentEnvironmentInst (:environment) %daa(): any, 0: number, %parentScope: environment
-// CHKOPT-NEXT:  %1 = HBCLoadFromEnvironmentInst (:undefined|string|number) %0: environment, [b@daa]: undefined|string|number
+// CHKOPT-NEXT:  %0 = GetParentScopeInst (:environment) %daa(): any, %parentScope: environment
+// CHKOPT-NEXT:  %1 = LoadFrameInst (:undefined|string|number) %0: environment, [b@daa]: undefined|string|number
 // CHKOPT-NEXT:       ReturnInst %1: undefined|string|number
 // CHKOPT-NEXT:function_end

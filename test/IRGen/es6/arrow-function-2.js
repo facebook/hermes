@@ -29,16 +29,17 @@ function outer2() {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "outer1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "outer2": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %outer1(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "outer1": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %outer2(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "outer2": string
-// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:       StoreStackInst undefined: undefined, %6: any
-// CHECK-NEXT:  %8 = LoadStackInst (:any) %6: any
-// CHECK-NEXT:       ReturnInst %8: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %outer1(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "outer1": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %outer2(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "outer2": string
+// CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %7: any
+// CHECK-NEXT:  %9 = LoadStackInst (:any) %7: any
+// CHECK-NEXT:        ReturnInst %9: any
 // CHECK-NEXT:function_end
 
 // CHECK:function outer1(): any
@@ -46,15 +47,17 @@ function outer2() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
-// CHECK-NEXT:       StoreFrameInst %1: object, [?anon_0_this]: any
-// CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
-// CHECK-NEXT:       StoreFrameInst %3: undefined|object, [?anon_1_new.target]: undefined|object
-// CHECK-NEXT:       StoreFrameInst undefined: undefined, [innerArrow1]: any
-// CHECK-NEXT:       StoreFrameInst undefined: undefined, [innerArrow2]: any
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %innerArrow1(): functionCode
-// CHECK-NEXT:       StoreFrameInst %7: object, [innerArrow1]: any
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %innerArrow2(): functionCode
-// CHECK-NEXT:        StoreFrameInst %9: object, [innerArrow2]: any
+// CHECK-NEXT:  %2 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %3 = CreateScopeInst (:environment) %outer1(): any, %2: environment
+// CHECK-NEXT:       StoreFrameInst %3: environment, %1: object, [?anon_0_this]: any
+// CHECK-NEXT:  %5 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
+// CHECK-NEXT:       StoreFrameInst %3: environment, %5: undefined|object, [?anon_1_new.target]: undefined|object
+// CHECK-NEXT:       StoreFrameInst %3: environment, undefined: undefined, [innerArrow1]: any
+// CHECK-NEXT:       StoreFrameInst %3: environment, undefined: undefined, [innerArrow2]: any
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %3: environment, %innerArrow1(): functionCode
+// CHECK-NEXT:        StoreFrameInst %3: environment, %9: object, [innerArrow1]: any
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %3: environment, %innerArrow2(): functionCode
+// CHECK-NEXT:        StoreFrameInst %3: environment, %11: object, [innerArrow2]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -63,32 +66,40 @@ function outer2() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
-// CHECK-NEXT:       StoreFrameInst %1: object, [?anon_0_this]: any
-// CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
-// CHECK-NEXT:       StoreFrameInst %3: undefined|object, [?anon_1_new.target]: undefined|object
-// CHECK-NEXT:       StoreFrameInst undefined: undefined, [inner3]: any
-// CHECK-NEXT:       StoreFrameInst undefined: undefined, [innerArrow4]: any
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %inner3(): functionCode
-// CHECK-NEXT:       StoreFrameInst %7: object, [inner3]: any
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %innerArrow4(): functionCode
-// CHECK-NEXT:        StoreFrameInst %9: object, [innerArrow4]: any
+// CHECK-NEXT:  %2 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %3 = CreateScopeInst (:environment) %outer2(): any, %2: environment
+// CHECK-NEXT:       StoreFrameInst %3: environment, %1: object, [?anon_0_this]: any
+// CHECK-NEXT:  %5 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
+// CHECK-NEXT:       StoreFrameInst %3: environment, %5: undefined|object, [?anon_1_new.target]: undefined|object
+// CHECK-NEXT:       StoreFrameInst %3: environment, undefined: undefined, [inner3]: any
+// CHECK-NEXT:       StoreFrameInst %3: environment, undefined: undefined, [innerArrow4]: any
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %3: environment, %inner3(): functionCode
+// CHECK-NEXT:        StoreFrameInst %3: environment, %9: object, [inner3]: any
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %3: environment, %innerArrow4(): functionCode
+// CHECK-NEXT:        StoreFrameInst %3: environment, %11: object, [innerArrow4]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow innerArrow1(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst (:any) [?anon_0_this@outer1]: any
-// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "x": string
-// CHECK-NEXT:       ReturnInst %1: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %outer1(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %innerArrow1(): any, %0: environment
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %outer1(): any, %1: environment
+// CHECK-NEXT:  %3 = LoadFrameInst (:any) %2: environment, [?anon_0_this@outer1]: any
+// CHECK-NEXT:  %4 = LoadPropertyInst (:any) %3: any, "x": string
+// CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end
 
 // CHECK:arrow innerArrow2(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst (:any) [?anon_0_this@outer1]: any
-// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "y": string
-// CHECK-NEXT:       ReturnInst %1: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %outer1(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %innerArrow2(): any, %0: environment
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %outer1(): any, %1: environment
+// CHECK-NEXT:  %3 = LoadFrameInst (:any) %2: environment, [?anon_0_this@outer1]: any
+// CHECK-NEXT:  %4 = LoadPropertyInst (:any) %3: any, "y": string
+// CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end
 
 // CHECK:function inner3(): any
@@ -96,25 +107,33 @@ function outer2() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
-// CHECK-NEXT:  %2 = LoadPropertyInst (:any) %1: object, "a": string
-// CHECK-NEXT:       ReturnInst %2: any
+// CHECK-NEXT:  %2 = GetParentScopeInst (:environment) %outer2(): any, %parentScope: environment
+// CHECK-NEXT:  %3 = CreateScopeInst (:environment) %inner3(): any, %2: environment
+// CHECK-NEXT:  %4 = LoadPropertyInst (:any) %1: object, "a": string
+// CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end
 
 // CHECK:arrow innerArrow4(): any
 // CHECK-NEXT:frame = [nestedInnerArrow5: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:       StoreFrameInst undefined: undefined, [nestedInnerArrow5]: any
-// CHECK-NEXT:  %1 = LoadFrameInst (:any) [?anon_0_this@outer2]: any
-// CHECK-NEXT:       StorePropertyLooseInst 10: number, %1: any, "b": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %nestedInnerArrow5(): functionCode
-// CHECK-NEXT:       StoreFrameInst %3: object, [nestedInnerArrow5]: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %outer2(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %innerArrow4(): any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [nestedInnerArrow5]: any
+// CHECK-NEXT:  %3 = ResolveScopeInst (:environment) %outer2(): any, %1: environment
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %3: environment, [?anon_0_this@outer2]: any
+// CHECK-NEXT:       StorePropertyLooseInst 10: number, %4: any, "b": string
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %nestedInnerArrow5(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [nestedInnerArrow5]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow nestedInnerArrow5(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst (:any) [?anon_0_this@outer2]: any
-// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "b": string
-// CHECK-NEXT:       ReturnInst %1: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %innerArrow4(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %nestedInnerArrow5(): any, %0: environment
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %outer2(): any, %1: environment
+// CHECK-NEXT:  %3 = LoadFrameInst (:any) %2: environment, [?anon_0_this@outer2]: any
+// CHECK-NEXT:  %4 = LoadPropertyInst (:any) %3: any, "b": string
+// CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end

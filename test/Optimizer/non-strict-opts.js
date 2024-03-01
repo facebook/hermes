@@ -21,17 +21,20 @@ function main()  {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "main": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "main": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %main(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "main": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): functionCode
-// CHECK-NEXT:  %1 = CallInst (:string) %0: object, %foo(): functionCode, empty: any, undefined: undefined, undefined: undefined, 2: number
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %main(): any, %0: environment
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
+// CHECK-NEXT:  %3 = CallInst (:string) %2: object, %foo(): functionCode, %1: environment, undefined: undefined, undefined: undefined, 2: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

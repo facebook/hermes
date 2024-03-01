@@ -20,18 +20,21 @@ function outer1() {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "outer1": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %outer1(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "outer1": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %outer1(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "outer1": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function outer1(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %dontInline(): functionCode
-// CHECK-NEXT:  %1 = CallInst (:any) %0: object, %dontInline(): functionCode, empty: any, undefined: undefined, undefined: undefined, 1: number
-// CHECK-NEXT:       ReturnInst %1: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %outer1(): any, %0: environment
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %dontInline(): functionCode
+// CHECK-NEXT:  %3 = CallInst (:any) %2: object, %dontInline(): functionCode, %1: environment, undefined: undefined, undefined: undefined, 1: number
+// CHECK-NEXT:       ReturnInst %3: any
 // CHECK-NEXT:function_end
 
 // CHECK:function dontInline(): any [allCallsitesKnownInStrictMode]

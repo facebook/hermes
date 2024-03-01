@@ -27,13 +27,13 @@ function bar(a,b,c,d,e,f,g,h) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "bar": string
-// CHECK-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %foo(): functionCode, $Reg0
+// CHECK-NEXT:  $Reg2 = CreateFunctionInst (:object) $Reg0, %foo(): functionCode
 // CHECK-NEXT:  $Reg1 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg1, "foo": string
-// CHECK-NEXT:  $Reg0 = HBCCreateFunctionInst (:object) %bar(): functionCode, $Reg0
+// CHECK-NEXT:  $Reg0 = CreateFunctionInst (:object) $Reg0, %bar(): functionCode
 // CHECK-NEXT:  $Reg0 = StorePropertyLooseInst $Reg0, $Reg1, "bar": string
 // CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  $Reg0 = ReturnInst $Reg0

@@ -25,12 +25,13 @@ foo()
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
-// CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:       ReturnInst %4: any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
+// CHECK-NEXT:  %4 = LoadPropertyInst (:any) globalObject: object, "foo": string
+// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:       ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): number

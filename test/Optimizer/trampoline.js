@@ -41,18 +41,19 @@ function test_merge_blocks(x, y) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "test_one": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_catch_region": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_cond_branch": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_merge_blocks": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test_one(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "test_one": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %test_catch_region(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "test_catch_region": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %test_cond_branch(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "test_cond_branch": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %test_merge_blocks(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "test_merge_blocks": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %test_one(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "test_one": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %test_catch_region(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "test_catch_region": string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %test_cond_branch(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "test_cond_branch": string
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %test_merge_blocks(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "test_merge_blocks": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

@@ -25,20 +25,23 @@ foo()
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
-// CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:       StoreStackInst undefined: undefined, %3: any
-// CHECK-NEXT:  %5 = LoadPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:       StoreStackInst %6: any, %3: any
-// CHECK-NEXT:  %8 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:       ReturnInst %8: any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
+// CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %4: any
+// CHECK-NEXT:  %6 = LoadPropertyInst (:any) globalObject: object, "foo": string
+// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:       StoreStackInst %7: any, %4: any
+// CHECK-NEXT:  %9 = LoadStackInst (:any) %4: any
+// CHECK-NEXT:        ReturnInst %9: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
 // CHECK-NEXT:       ReturnInst "hi": string
 // CHECK-NEXT:function_end

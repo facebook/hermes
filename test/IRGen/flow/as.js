@@ -16,10 +16,12 @@ function test_as(): number {
 // CHECK:function test_as(): any [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Math": string
-// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "PI": string
-// CHECK-NEXT:  %2 = CheckedTypeCastInst (:number) %1: any, type(number)
-// CHECK-NEXT:  %3 = BinaryMultiplyInst (:any) %2: number, 3: number
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test_as(): any, %0: environment
+// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Math": string
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: any, "PI": string
 // CHECK-NEXT:  %4 = CheckedTypeCastInst (:number) %3: any, type(number)
-// CHECK-NEXT:       ReturnInst %4: number
+// CHECK-NEXT:  %5 = BinaryMultiplyInst (:any) %4: number, 3: number
+// CHECK-NEXT:  %6 = CheckedTypeCastInst (:number) %5: any, type(number)
+// CHECK-NEXT:       ReturnInst %6: number
 // CHECK-NEXT:function_end

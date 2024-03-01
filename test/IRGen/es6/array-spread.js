@@ -17,52 +17,56 @@ function foo(x) {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
-// CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:       StoreStackInst undefined: undefined, %3: any
-// CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:       ReturnInst %5: any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
+// CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %4: any
+// CHECK-NEXT:  %6 = LoadStackInst (:any) %4: any
+// CHECK-NEXT:       ReturnInst %6: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(x: any): any
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %0: any, [x]: any
-// CHECK-NEXT:  %2 = AllocStackInst (:number) $nextIndex: any
-// CHECK-NEXT:       StoreStackInst 0: number, %2: number
-// CHECK-NEXT:  %4 = LoadStackInst (:number) %2: number
-// CHECK-NEXT:  %5 = BinaryAddInst (:any) %4: number, 1: number
-// CHECK-NEXT:       StoreStackInst %5: any, %2: number
-// CHECK-NEXT:  %7 = LoadStackInst (:number) %2: number
-// CHECK-NEXT:  %8 = BinaryAddInst (:any) %7: number, 1: number
-// CHECK-NEXT:       StoreStackInst %8: any, %2: number
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %11 = AllocArrayInst (:object) 4: number, 1: number, 2: number
-// CHECK-NEXT:  %12 = LoadStackInst (:number) %2: number
-// CHECK-NEXT:  %13 = CallBuiltinInst (:number) [HermesBuiltin.arraySpread]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %11: object, %10: any, %12: number
-// CHECK-NEXT:        StoreStackInst %13: number, %2: number
-// CHECK-NEXT:  %15 = LoadStackInst (:number) %2: number
-// CHECK-NEXT:        StoreOwnPropertyInst 3: number, %11: object, %15: number, true: boolean
-// CHECK-NEXT:  %17 = LoadStackInst (:number) %2: number
-// CHECK-NEXT:  %18 = BinaryAddInst (:any) %17: number, 1: number
-// CHECK-NEXT:        StoreStackInst %18: any, %2: number
-// CHECK-NEXT:  %20 = LoadStackInst (:number) %2: number
-// CHECK-NEXT:        StoreOwnPropertyInst 4: number, %11: object, %20: number, true: boolean
-// CHECK-NEXT:  %22 = LoadStackInst (:number) %2: number
-// CHECK-NEXT:  %23 = BinaryAddInst (:any) %22: number, 1: number
-// CHECK-NEXT:        StoreStackInst %23: any, %2: number
-// CHECK-NEXT:        ReturnInst %11: object
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
+// CHECK-NEXT:  %4 = AllocStackInst (:number) $nextIndex: any
+// CHECK-NEXT:       StoreStackInst 0: number, %4: number
+// CHECK-NEXT:  %6 = LoadStackInst (:number) %4: number
+// CHECK-NEXT:  %7 = BinaryAddInst (:any) %6: number, 1: number
+// CHECK-NEXT:       StoreStackInst %7: any, %4: number
+// CHECK-NEXT:  %9 = LoadStackInst (:number) %4: number
+// CHECK-NEXT:  %10 = BinaryAddInst (:any) %9: number, 1: number
+// CHECK-NEXT:        StoreStackInst %10: any, %4: number
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %13 = AllocArrayInst (:object) 4: number, 1: number, 2: number
+// CHECK-NEXT:  %14 = LoadStackInst (:number) %4: number
+// CHECK-NEXT:  %15 = CallBuiltinInst (:number) [HermesBuiltin.arraySpread]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %13: object, %12: any, %14: number
+// CHECK-NEXT:        StoreStackInst %15: number, %4: number
+// CHECK-NEXT:  %17 = LoadStackInst (:number) %4: number
+// CHECK-NEXT:        StoreOwnPropertyInst 3: number, %13: object, %17: number, true: boolean
+// CHECK-NEXT:  %19 = LoadStackInst (:number) %4: number
+// CHECK-NEXT:  %20 = BinaryAddInst (:any) %19: number, 1: number
+// CHECK-NEXT:        StoreStackInst %20: any, %4: number
+// CHECK-NEXT:  %22 = LoadStackInst (:number) %4: number
+// CHECK-NEXT:        StoreOwnPropertyInst 4: number, %13: object, %22: number, true: boolean
+// CHECK-NEXT:  %24 = LoadStackInst (:number) %4: number
+// CHECK-NEXT:  %25 = BinaryAddInst (:any) %24: number, 1: number
+// CHECK-NEXT:        StoreStackInst %25: any, %4: number
+// CHECK-NEXT:        ReturnInst %13: object
 // CHECK-NEXT:function_end
 
 // OPT:function global(): undefined
 // OPT-NEXT:frame = []
 // OPT-NEXT:%BB0:
+// OPT-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // OPT-NEXT:       DeclareGlobalVarInst "foo": string
-// OPT-NEXT:  %1 = CreateFunctionInst (:object) %foo(): functionCode
-// OPT-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
+// OPT-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// OPT-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
 // OPT-NEXT:       ReturnInst undefined: undefined
 // OPT-NEXT:function_end
 

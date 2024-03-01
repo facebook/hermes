@@ -48,18 +48,19 @@ function foo4(a) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo2": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo3": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo4": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %foo1(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "foo1": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %foo2(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "foo2": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %foo3(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "foo3": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %foo4(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "foo4": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %foo1(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "foo1": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %foo2(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "foo2": string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %foo3(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "foo3": string
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %foo4(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "foo4": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

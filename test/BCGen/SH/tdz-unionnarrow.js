@@ -29,71 +29,83 @@ function f2() {
 // CHKIR:function f1(): any
 // CHKIR-NEXT:frame = [x: any|empty]
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:       StoreFrameInst empty: empty, [x]: any|empty
-// CHKIR-NEXT:  %1 = ThrowIfInst (:any) empty: empty, type(empty)
-// CHKIR-NEXT:  %2 = UnionNarrowTrustedInst (:any) empty: empty
-// CHKIR-NEXT:  %3 = BinaryAddInst (:any) %2: any, 1: number
-// CHKIR-NEXT:       ReturnInst %3: any
+// CHKIR-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHKIR-NEXT:  %1 = CreateScopeInst (:environment) %f1(): any, %0: environment
+// CHKIR-NEXT:       StoreFrameInst %1: environment, empty: empty, [x]: any|empty
+// CHKIR-NEXT:  %3 = ThrowIfInst (:any) empty: empty, type(empty)
+// CHKIR-NEXT:  %4 = UnionNarrowTrustedInst (:any) empty: empty
+// CHKIR-NEXT:  %5 = BinaryAddInst (:any) %4: any, 1: number
+// CHKIR-NEXT:       ReturnInst %5: any
 // CHKIR-NEXT:function_end
 
 // CHKIR:function f2(): any
 // CHKIR-NEXT:frame = [x: any|empty, inner: any]
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:       StoreFrameInst empty: empty, [x]: any|empty
-// CHKIR-NEXT:       StoreFrameInst undefined: undefined, [inner]: any
-// CHKIR-NEXT:  %2 = CreateFunctionInst (:object) %inner(): functionCode
-// CHKIR-NEXT:       StoreFrameInst %2: object, [inner]: any
-// CHKIR-NEXT:       StoreFrameInst undefined: undefined, [x]: any|empty
+// CHKIR-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHKIR-NEXT:  %1 = CreateScopeInst (:environment) %f2(): any, %0: environment
+// CHKIR-NEXT:       StoreFrameInst %1: environment, empty: empty, [x]: any|empty
+// CHKIR-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [inner]: any
+// CHKIR-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %inner(): functionCode
+// CHKIR-NEXT:       StoreFrameInst %1: environment, %4: object, [inner]: any
+// CHKIR-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [x]: any|empty
 // CHKIR-NEXT:       ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
 
 // CHKIR:function inner(): any
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = LoadFrameInst (:any|empty) [x@f2]: any|empty
-// CHKIR-NEXT:  %1 = ThrowIfInst (:any) %0: any|empty, type(empty)
-// CHKIR-NEXT:       StoreFrameInst 10: number, [x@f2]: any|empty
-// CHKIR-NEXT:  %3 = LoadFrameInst (:any|empty) [x@f2]: any|empty
-// CHKIR-NEXT:  %4 = UnionNarrowTrustedInst (:any) %3: any|empty
-// CHKIR-NEXT:       ReturnInst %4: any
+// CHKIR-NEXT:  %0 = GetParentScopeInst (:environment) %f2(): any, %parentScope: environment
+// CHKIR-NEXT:  %1 = CreateScopeInst (:environment) %inner(): any, %0: environment
+// CHKIR-NEXT:  %2 = ResolveScopeInst (:environment) %f2(): any, %1: environment
+// CHKIR-NEXT:  %3 = LoadFrameInst (:any|empty) %2: environment, [x@f2]: any|empty
+// CHKIR-NEXT:  %4 = ThrowIfInst (:any) %3: any|empty, type(empty)
+// CHKIR-NEXT:       StoreFrameInst %2: environment, 10: number, [x@f2]: any|empty
+// CHKIR-NEXT:  %6 = ResolveScopeInst (:environment) %f2(): any, %1: environment
+// CHKIR-NEXT:  %7 = LoadFrameInst (:any|empty) %6: environment, [x@f2]: any|empty
+// CHKIR-NEXT:  %8 = UnionNarrowTrustedInst (:any) %7: any|empty
+// CHKIR-NEXT:       ReturnInst %8: any
 // CHKIR-NEXT:function_end
 
 // CHKLIR:function f1(): string|number
 // CHKLIR-NEXT:frame = [x: empty]
 // CHKLIR-NEXT:%BB0:
-// CHKLIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %f1(): any, %parentScope: environment
-// CHKLIR-NEXT:  %1 = HBCLoadConstInst (:empty) empty: empty
-// CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: environment, %1: empty, [x]: empty
-// CHKLIR-NEXT:  %3 = ThrowIfInst (:any) %1: empty, type(empty)
-// CHKLIR-NEXT:  %4 = UnionNarrowTrustedInst (:any) %1: empty
-// CHKLIR-NEXT:  %5 = HBCLoadConstInst (:number) 1: number
-// CHKLIR-NEXT:  %6 = BinaryAddInst (:string|number) %4: any, %5: number
-// CHKLIR-NEXT:       ReturnInst %6: string|number
+// CHKLIR-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHKLIR-NEXT:  %1 = CreateScopeInst (:environment) %f1(): any, %0: environment
+// CHKLIR-NEXT:  %2 = HBCLoadConstInst (:empty) empty: empty
+// CHKLIR-NEXT:       StoreFrameInst %1: environment, %2: empty, [x]: empty
+// CHKLIR-NEXT:  %4 = ThrowIfInst (:any) %2: empty, type(empty)
+// CHKLIR-NEXT:  %5 = UnionNarrowTrustedInst (:any) %2: empty
+// CHKLIR-NEXT:  %6 = HBCLoadConstInst (:number) 1: number
+// CHKLIR-NEXT:  %7 = BinaryAddInst (:string|number) %5: any, %6: number
+// CHKLIR-NEXT:       ReturnInst %7: string|number
 // CHKLIR-NEXT:function_end
 
 // CHKLIR:function f2(): undefined
 // CHKLIR-NEXT:frame = [x: empty|undefined|number, inner: undefined|object]
 // CHKLIR-NEXT:%BB0:
-// CHKLIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %f2(): any, %parentScope: environment
-// CHKLIR-NEXT:  %1 = HBCLoadConstInst (:empty) empty: empty
-// CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: environment, %1: empty, [x]: empty|undefined|number
-// CHKLIR-NEXT:  %3 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: environment, %3: undefined, [inner]: undefined|object
-// CHKLIR-NEXT:  %5 = HBCCreateFunctionInst (:object) %inner(): functionCode, %0: environment
-// CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: environment, %5: object, [inner]: undefined|object
-// CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: environment, %3: undefined, [x]: empty|undefined|number
-// CHKLIR-NEXT:       ReturnInst %3: undefined
+// CHKLIR-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHKLIR-NEXT:  %1 = CreateScopeInst (:environment) %f2(): any, %0: environment
+// CHKLIR-NEXT:  %2 = HBCLoadConstInst (:empty) empty: empty
+// CHKLIR-NEXT:       StoreFrameInst %1: environment, %2: empty, [x]: empty|undefined|number
+// CHKLIR-NEXT:  %4 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKLIR-NEXT:       StoreFrameInst %1: environment, %4: undefined, [inner]: undefined|object
+// CHKLIR-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %inner(): functionCode
+// CHKLIR-NEXT:       StoreFrameInst %1: environment, %6: object, [inner]: undefined|object
+// CHKLIR-NEXT:       StoreFrameInst %1: environment, %4: undefined, [x]: empty|undefined|number
+// CHKLIR-NEXT:       ReturnInst %4: undefined
 // CHKLIR-NEXT:function_end
 
 // CHKLIR:function inner(): undefined|number
 // CHKLIR-NEXT:frame = []
 // CHKLIR-NEXT:%BB0:
-// CHKLIR-NEXT:  %0 = HBCResolveParentEnvironmentInst (:environment) %f2(): any, 0: number, %parentScope: environment
-// CHKLIR-NEXT:  %1 = HBCLoadFromEnvironmentInst (:empty|undefined|number) %0: environment, [x@f2]: empty|undefined|number
-// CHKLIR-NEXT:  %2 = ThrowIfInst (:undefined|number) %1: empty|undefined|number, type(empty)
-// CHKLIR-NEXT:  %3 = HBCLoadConstInst (:number) 10: number
-// CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: environment, %3: number, [x@f2]: empty|undefined|number
-// CHKLIR-NEXT:  %5 = HBCLoadFromEnvironmentInst (:empty|undefined|number) %0: environment, [x@f2]: empty|undefined|number
-// CHKLIR-NEXT:  %6 = UnionNarrowTrustedInst (:undefined|number) %5: empty|undefined|number
-// CHKLIR-NEXT:       ReturnInst %6: undefined|number
+// CHKLIR-NEXT:  %0 = GetParentScopeInst (:environment) %f2(): any, %parentScope: environment
+// CHKLIR-NEXT:  %1 = CreateScopeInst (:environment) %inner(): any, %0: environment
+// CHKLIR-NEXT:  %2 = LIRResolveScopeInst (:environment) %f2(): any, %1: environment, 1: number
+// CHKLIR-NEXT:  %3 = LoadFrameInst (:empty|undefined|number) %2: environment, [x@f2]: empty|undefined|number
+// CHKLIR-NEXT:  %4 = ThrowIfInst (:undefined|number) %3: empty|undefined|number, type(empty)
+// CHKLIR-NEXT:  %5 = HBCLoadConstInst (:number) 10: number
+// CHKLIR-NEXT:       StoreFrameInst %2: environment, %5: number, [x@f2]: empty|undefined|number
+// CHKLIR-NEXT:  %7 = LoadFrameInst (:empty|undefined|number) %2: environment, [x@f2]: empty|undefined|number
+// CHKLIR-NEXT:  %8 = UnionNarrowTrustedInst (:undefined|number) %7: empty|undefined|number
+// CHKLIR-NEXT:       ReturnInst %8: undefined|number
 // CHKLIR-NEXT:function_end

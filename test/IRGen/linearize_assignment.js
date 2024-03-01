@@ -14,12 +14,13 @@ a.x = a = 42;
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:       StoreStackInst undefined: undefined, %0: any
-// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "a": string
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
+// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "a": string
 // CHECK-NEXT:       StorePropertyLooseInst 42: number, globalObject: object, "a": string
-// CHECK-NEXT:       StorePropertyLooseInst 42: number, %2: any, "x": string
-// CHECK-NEXT:       StoreStackInst 42: number, %0: any
-// CHECK-NEXT:  %6 = LoadStackInst (:any) %0: any
-// CHECK-NEXT:       ReturnInst %6: any
+// CHECK-NEXT:       StorePropertyLooseInst 42: number, %3: any, "x": string
+// CHECK-NEXT:       StoreStackInst 42: number, %1: any
+// CHECK-NEXT:  %7 = LoadStackInst (:any) %1: any
+// CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:function_end

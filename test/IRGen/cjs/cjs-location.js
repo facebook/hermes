@@ -16,13 +16,15 @@ x = 10;
 // CHECK-NEXT:source location: [<global>:1:1 ... <global>:1:1)
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:; <global>:1:1
-// CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:; <global>:1:1
-// CHECK-NEXT:       StoreStackInst undefined: undefined, %0: any
+// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:; <global>:1:1
-// CHECK-NEXT:  %2 = LoadStackInst (:any) %0: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:; <global>:1:1
-// CHECK-NEXT:       ReturnInst %2: any
+// CHECK-NEXT:  %3 = LoadStackInst (:any) %1: any
+// CHECK-NEXT:; <global>:1:1
+// CHECK-NEXT:       ReturnInst %3: any
 // CHECK-NEXT:function_end
 
 // CHECK:function cjs_module(exports: any, require: any, module: any): any
@@ -30,17 +32,19 @@ x = 10;
 // CHECK-NEXT:source location: [<stdin>:10:1 ... <stdin>:10:8)
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %exports: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %cjs_module(): any, empty: any
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:       StoreFrameInst %0: any, [exports]: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %exports: any
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %require: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, %1: any, [exports]: any
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:       StoreFrameInst %2: any, [require]: any
+// CHECK-NEXT:  %3 = LoadParamInst (:any) %require: any
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %4 = LoadParamInst (:any) %module: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, %3: any, [require]: any
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:       StoreFrameInst %4: any, [module]: any
+// CHECK-NEXT:  %5 = LoadParamInst (:any) %module: any
+// CHECK-NEXT:; <stdin>:10:1
+// CHECK-NEXT:       StoreFrameInst %0: environment, %5: any, [module]: any
 // CHECK-NEXT:; <stdin>:10:3
 // CHECK-NEXT:       StorePropertyLooseInst 10: number, globalObject: object, "x": string
 // CHECK-NEXT:; <stdin>:10:7

@@ -67,43 +67,46 @@ function *args() {
 // CHECK-NEXT:    Mov               r7, r5
 // CHECK-NEXT:    Ret               r7
 
-// CHECK:NCFunction<loop>(2 params, 3 registers, 0 symbols):
-// CHECK-NEXT:    CreateFunctionEnvironment r0
-// CHECK-NEXT:    CreateGenerator   r1, r0, Function<?anon_0_loop>
-// CHECK-NEXT:    Ret               r1
+// CHECK:NCFunction<loop>(2 params, 4 registers, 0 symbols):
+// CHECK-NEXT:    GetParentEnvironment r0, 0
+// CHECK-NEXT:    CreateEnvironment r1, r0, 0
+// CHECK-NEXT:    CreateGenerator   r2, r1, Function<?anon_0_loop>
+// CHECK-NEXT:    Ret               r2
 
-// CHECK:NCFunction<args>(1 params, 3 registers, 0 symbols):
-// CHECK-NEXT:    CreateFunctionEnvironment r0
-// CHECK-NEXT:    CreateGenerator   r1, r0, Function<?anon_0_args>
-// CHECK-NEXT:    Ret               r1
+// CHECK:NCFunction<args>(1 params, 4 registers, 0 symbols):
+// CHECK-NEXT:    GetParentEnvironment r0, 0
+// CHECK-NEXT:    CreateEnvironment r1, r0, 0
+// CHECK-NEXT:    CreateGenerator   r2, r1, Function<?anon_0_args>
+// CHECK-NEXT:    Ret               r2
 
 // CHECK:Function<?anon_0_loop>(2 params, 9 registers, 2 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
 // CHECK-NEXT:    StartGenerator
-// CHECK-NEXT:    CreateFunctionEnvironment r0
-// CHECK-NEXT:    ResumeGenerator   r2, r1
-// CHECK-NEXT:    Mov               r3, r1
-// CHECK-NEXT:    JmpTrue           L1, r3
-// CHECK-NEXT:    LoadParam         r1, 1
-// CHECK-NEXT:    StoreToEnvironment r0, 0, r1
-// CHECK-NEXT:    LoadConstUndefined r3
-// CHECK-NEXT:    StoreNPToEnvironment r0, 1, r3
-// CHECK-NEXT:    LoadConstZero     r4
-// CHECK-NEXT:    StoreNPToEnvironment r0, 1, r4
-// CHECK-NEXT:    GetGlobalObject   r5
-// CHECK-NEXT:    TryGetById        r6, r5, 1, "y"
-// CHECK-NEXT:    JmpFalse          L2, r6
+// CHECK-NEXT:    ResumeGenerator   r1, r0
+// CHECK-NEXT:    Mov               r2, r0
+// CHECK-NEXT:    JmpTrue           L1, r2
+// CHECK-NEXT:    GetParentEnvironment r0, 0
+// CHECK-NEXT:    CreateEnvironment r2, r0, 2
+// CHECK-NEXT:    LoadParam         r3, 1
+// CHECK-NEXT:    StoreToEnvironment r2, 0, r3
+// CHECK-NEXT:    LoadConstUndefined r4
+// CHECK-NEXT:    StoreNPToEnvironment r2, 1, r4
+// CHECK-NEXT:    LoadConstZero     r5
+// CHECK-NEXT:    StoreNPToEnvironment r2, 1, r5
+// CHECK-NEXT:    GetGlobalObject   r6
+// CHECK-NEXT:    TryGetById        r7, r6, 1, "y"
+// CHECK-NEXT:    JmpFalse          L2, r7
 // CHECK-NEXT:L5:
-// CHECK-NEXT:    LoadFromEnvironment r1, r0, 0
-// CHECK-NEXT:    LoadFromEnvironment r3, r0, 1
+// CHECK-NEXT:    LoadFromEnvironment r0, r2, 0
+// CHECK-NEXT:    LoadFromEnvironment r3, r2, 1
 // CHECK-NEXT:    ToNumeric         r4, r3
 // CHECK-NEXT:    Inc               r5, r4
-// CHECK-NEXT:    StoreToEnvironment r0, 1, r5
-// CHECK-NEXT:    GetByVal          r6, r1, r4
+// CHECK-NEXT:    StoreToEnvironment r2, 1, r5
+// CHECK-NEXT:    GetByVal          r6, r0, r4
 // CHECK-NEXT:    SaveGenerator     L3
 // CHECK-NEXT:    Ret               r6
 // CHECK-NEXT:L3:
-// CHECK-NEXT:    ResumeGenerator   r1, r7
+// CHECK-NEXT:    ResumeGenerator   r0, r7
 // CHECK-NEXT:    Mov               r3, r7
 // CHECK-NEXT:    JmpTrue           L4, r3
 // CHECK-NEXT:    GetGlobalObject   r3
@@ -115,27 +118,28 @@ function *args() {
 // CHECK-NEXT:    Ret               r3
 // CHECK-NEXT:L4:
 // CHECK-NEXT:    CompleteGenerator
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L1:
 // CHECK-NEXT:    CompleteGenerator
-// CHECK-NEXT:    Ret               r2
+// CHECK-NEXT:    Ret               r1
 
-// CHECK:Function<?anon_0_args>(1 params, 7 registers, 0 symbols):
+// CHECK:Function<?anon_0_args>(1 params, 8 registers, 0 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x0026, lexical 0x0000
 // CHECK-NEXT:    StartGenerator
-// CHECK-NEXT:    CreateFunctionEnvironment r0
 // CHECK-NEXT:    ResumeGenerator   r1, r0
 // CHECK-NEXT:    Mov               r2, r0
 // CHECK-NEXT:    JmpTrue           L1, r2
 // CHECK-NEXT:    LoadConstUndefined r2
 // CHECK-NEXT:    Mov               r0, r2
-// CHECK-NEXT:    LoadConstZero     r3
-// CHECK-NEXT:    GetArgumentsPropByValLoose r4, r3, r0
+// CHECK-NEXT:    GetParentEnvironment r3, 0
+// CHECK-NEXT:    CreateEnvironment r4, r3, 0
+// CHECK-NEXT:    LoadConstZero     r4
+// CHECK-NEXT:    GetArgumentsPropByValLoose r5, r4, r0
 // CHECK-NEXT:    SaveGenerator     L2
-// CHECK-NEXT:    Ret               r4
+// CHECK-NEXT:    Ret               r5
 // CHECK-NEXT:L2:
-// CHECK-NEXT:    ResumeGenerator   r0, r5
-// CHECK-NEXT:    Mov               r2, r5
+// CHECK-NEXT:    ResumeGenerator   r0, r6
+// CHECK-NEXT:    Mov               r2, r6
 // CHECK-NEXT:    JmpTrue           L3, r2
 // CHECK-NEXT:    LoadConstUndefined r2
 // CHECK-NEXT:    CompleteGenerator
@@ -160,16 +164,16 @@ function *args() {
 // CHECK-NEXT:    bc 19: line 10 col 1
 // CHECK-NEXT:    bc 32: line 10 col 1
 // CHECK-NEXT:  0x0010  function idx 3, starts at line 10 col 1
-// CHECK-NEXT:    bc 33: line 12 col 10
-// CHECK-NEXT:    bc 50: line 13 col 14
-// CHECK-NEXT:    bc 60: line 13 col 12
-// CHECK-NEXT:    bc 64: line 13 col 5
-// CHECK-NEXT:    bc 68: line 13 col 5
-// CHECK-NEXT:    bc 79: line 12 col 10
+// CHECK-NEXT:    bc 41: line 12 col 10
+// CHECK-NEXT:    bc 58: line 13 col 14
+// CHECK-NEXT:    bc 68: line 13 col 12
+// CHECK-NEXT:    bc 72: line 13 col 5
+// CHECK-NEXT:    bc 76: line 13 col 5
+// CHECK-NEXT:    bc 87: line 12 col 10
 // CHECK-NEXT:  0x0026  function idx 4, starts at line 18 col 1
-// CHECK-NEXT:    bc 19: line 19 col 18
-// CHECK-NEXT:    bc 23: line 19 col 3
-// CHECK-NEXT:    bc 27: line 19 col 3
+// CHECK-NEXT:    bc 27: line 19 col 18
+// CHECK-NEXT:    bc 31: line 19 col 3
+// CHECK-NEXT:    bc 35: line 19 col 3
 // CHECK-NEXT:  0x0033  end of debug source table
 
 // CHECK:Debug lexical table:

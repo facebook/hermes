@@ -31,61 +31,65 @@ function foo(o) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(o: any): object
 // CHECK-NEXT:frame = [cnt: number, flag: undefined|boolean, flag1: undefined|number, flag2: undefined|number]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %o: any
-// CHECK-NEXT:       StoreFrameInst undefined: undefined, [flag]: undefined|boolean
-// CHECK-NEXT:       StoreFrameInst undefined: undefined, [flag1]: undefined|number
-// CHECK-NEXT:       StoreFrameInst 0: number, [cnt]: number
-// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:       StoreFrameInst undefined: undefined, [flag2]: undefined|number
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %""(): functionCode
-// CHECK-NEXT:       ReturnInst %6: object
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %o: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [flag]: undefined|boolean
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [flag1]: undefined|number
+// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [cnt]: number
+// CHECK-NEXT:  %6 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [flag2]: undefined|number
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %""(): functionCode
+// CHECK-NEXT:       ReturnInst %8: object
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst (:undefined|boolean) [flag@foo]: undefined|boolean
-// CHECK-NEXT:       CondBranchInst %0: undefined|boolean, %BB2, %BB1
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %foo(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = LoadFrameInst (:undefined|boolean) %0: environment, [flag@foo]: undefined|boolean
+// CHECK-NEXT:       CondBranchInst %1: undefined|boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %3 = PhiInst (:undefined|boolean) %0: undefined|boolean, %BB0, true: boolean, %BB1
-// CHECK-NEXT:       StoreFrameInst %3: undefined|boolean, [flag@foo]: undefined|boolean
-// CHECK-NEXT:  %5 = LoadFrameInst (:undefined|number) [flag1@foo]: undefined|number
-// CHECK-NEXT:       CondBranchInst %5: undefined|number, %BB4, %BB3
+// CHECK-NEXT:  %4 = PhiInst (:undefined|boolean) %1: undefined|boolean, %BB0, true: boolean, %BB1
+// CHECK-NEXT:       StoreFrameInst %0: environment, %4: undefined|boolean, [flag@foo]: undefined|boolean
+// CHECK-NEXT:  %6 = LoadFrameInst (:undefined|number) %0: environment, [flag1@foo]: undefined|number
+// CHECK-NEXT:       CondBranchInst %6: undefined|number, %BB4, %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:       BranchInst %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %8 = PhiInst (:undefined|number) %5: undefined|number, %BB2, 1: number, %BB3
-// CHECK-NEXT:       StoreFrameInst %8: undefined|number, [flag1@foo]: undefined|number
-// CHECK-NEXT:  %10 = LoadFrameInst (:undefined|number) [flag2@foo]: undefined|number
-// CHECK-NEXT:        CondBranchInst %10: undefined|number, %BB6, %BB5
+// CHECK-NEXT:  %9 = PhiInst (:undefined|number) %6: undefined|number, %BB2, 1: number, %BB3
+// CHECK-NEXT:        StoreFrameInst %0: environment, %9: undefined|number, [flag1@foo]: undefined|number
+// CHECK-NEXT:  %11 = LoadFrameInst (:undefined|number) %0: environment, [flag2@foo]: undefined|number
+// CHECK-NEXT:        CondBranchInst %11: undefined|number, %BB6, %BB5
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:        BranchInst %BB6
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %13 = PhiInst (:undefined|number) %10: undefined|number, %BB4, 2: number, %BB5
-// CHECK-NEXT:        StoreFrameInst %13: undefined|number, [flag2@foo]: undefined|number
-// CHECK-NEXT:  %15 = LoadFrameInst (:number) [cnt@foo]: number
-// CHECK-NEXT:  %16 = FAddInst (:number) %15: number, 1: number
-// CHECK-NEXT:        StoreFrameInst %16: number, [cnt@foo]: number
-// CHECK-NEXT:        ReturnInst %16: number
+// CHECK-NEXT:  %14 = PhiInst (:undefined|number) %11: undefined|number, %BB4, 2: number, %BB5
+// CHECK-NEXT:        StoreFrameInst %0: environment, %14: undefined|number, [flag2@foo]: undefined|number
+// CHECK-NEXT:  %16 = LoadFrameInst (:number) %0: environment, [cnt@foo]: number
+// CHECK-NEXT:  %17 = FAddInst (:number) %16: number, 1: number
+// CHECK-NEXT:        StoreFrameInst %0: environment, %17: number, [cnt@foo]: number
+// CHECK-NEXT:        ReturnInst %17: number
 // CHECK-NEXT:function_end
 
 // CHKLIR:function global(): undefined
 // CHKLIR-NEXT:frame = []
 // CHKLIR-NEXT:%BB0:
 // CHKLIR-NEXT:       DeclareGlobalVarInst "foo": string
-// CHKLIR-NEXT:  %1 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
-// CHKLIR-NEXT:  %2 = HBCCreateFunctionInst (:object) %foo(): functionCode, %1: environment
+// CHKLIR-NEXT:  %1 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHKLIR-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
 // CHKLIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHKLIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "foo": string
 // CHKLIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -95,48 +99,49 @@ function foo(o) {
 // CHKLIR:function foo(o: any): object
 // CHKLIR-NEXT:frame = [cnt: number, flag: undefined|boolean, flag1: undefined|number, flag2: undefined|number]
 // CHKLIR-NEXT:%BB0:
-// CHKLIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %foo(): any, %parentScope: environment
-// CHKLIR-NEXT:  %1 = HBCLoadConstInst (:number) 0: number
-// CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: environment, %1: number, [cnt]: number
-// CHKLIR-NEXT:  %3 = LoadParamInst (:any) %o: any
-// CHKLIR-NEXT:  %4 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHKLIR-NEXT:  %5 = HBCCallNInst (:any) %3: any, empty: any, empty: any, %4: undefined, %4: undefined
-// CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: environment, %4: undefined, [flag2]: undefined|number
-// CHKLIR-NEXT:  %7 = HBCCreateFunctionInst (:object) %""(): functionCode, %0: environment
-// CHKLIR-NEXT:       ReturnInst %7: object
+// CHKLIR-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHKLIR-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
+// CHKLIR-NEXT:  %2 = HBCLoadConstInst (:number) 0: number
+// CHKLIR-NEXT:       StoreFrameInst %1: environment, %2: number, [cnt]: number
+// CHKLIR-NEXT:  %4 = LoadParamInst (:any) %o: any
+// CHKLIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKLIR-NEXT:  %6 = HBCCallNInst (:any) %4: any, empty: any, empty: any, %5: undefined, %5: undefined
+// CHKLIR-NEXT:       StoreFrameInst %1: environment, %5: undefined, [flag2]: undefined|number
+// CHKLIR-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %""(): functionCode
+// CHKLIR-NEXT:       ReturnInst %8: object
 // CHKLIR-NEXT:function_end
 
 // CHKLIR:function ""(): number
 // CHKLIR-NEXT:frame = []
 // CHKLIR-NEXT:%BB0:
-// CHKLIR-NEXT:  %0 = HBCResolveParentEnvironmentInst (:environment) %foo(): any, 0: number, %parentScope: environment
-// CHKLIR-NEXT:  %1 = HBCLoadFromEnvironmentInst (:undefined|boolean) %0: environment, [flag@foo]: undefined|boolean
+// CHKLIR-NEXT:  %0 = GetParentScopeInst (:environment) %foo(): any, %parentScope: environment
+// CHKLIR-NEXT:  %1 = LoadFrameInst (:undefined|boolean) %0: environment, [flag@foo]: undefined|boolean
 // CHKLIR-NEXT:       CondBranchInst %1: undefined|boolean, %BB2, %BB1
 // CHKLIR-NEXT:%BB1:
 // CHKLIR-NEXT:  %3 = HBCLoadConstInst (:boolean) true: boolean
 // CHKLIR-NEXT:       BranchInst %BB2
 // CHKLIR-NEXT:%BB2:
 // CHKLIR-NEXT:  %5 = PhiInst (:undefined|boolean) %1: undefined|boolean, %BB0, %3: boolean, %BB1
-// CHKLIR-NEXT:       HBCStoreToEnvironmentInst %0: environment, %5: undefined|boolean, [flag@foo]: undefined|boolean
-// CHKLIR-NEXT:  %7 = HBCLoadFromEnvironmentInst (:undefined|number) %0: environment, [flag1@foo]: undefined|number
+// CHKLIR-NEXT:       StoreFrameInst %0: environment, %5: undefined|boolean, [flag@foo]: undefined|boolean
+// CHKLIR-NEXT:  %7 = LoadFrameInst (:undefined|number) %0: environment, [flag1@foo]: undefined|number
 // CHKLIR-NEXT:       CondBranchInst %7: undefined|number, %BB4, %BB3
 // CHKLIR-NEXT:%BB3:
 // CHKLIR-NEXT:  %9 = HBCLoadConstInst (:number) 1: number
 // CHKLIR-NEXT:        BranchInst %BB4
 // CHKLIR-NEXT:%BB4:
 // CHKLIR-NEXT:  %11 = PhiInst (:undefined|number) %7: undefined|number, %BB2, %9: number, %BB3
-// CHKLIR-NEXT:        HBCStoreToEnvironmentInst %0: environment, %11: undefined|number, [flag1@foo]: undefined|number
-// CHKLIR-NEXT:  %13 = HBCLoadFromEnvironmentInst (:undefined|number) %0: environment, [flag2@foo]: undefined|number
+// CHKLIR-NEXT:        StoreFrameInst %0: environment, %11: undefined|number, [flag1@foo]: undefined|number
+// CHKLIR-NEXT:  %13 = LoadFrameInst (:undefined|number) %0: environment, [flag2@foo]: undefined|number
 // CHKLIR-NEXT:        CondBranchInst %13: undefined|number, %BB6, %BB5
 // CHKLIR-NEXT:%BB5:
 // CHKLIR-NEXT:  %15 = HBCLoadConstInst (:number) 2: number
 // CHKLIR-NEXT:        BranchInst %BB6
 // CHKLIR-NEXT:%BB6:
 // CHKLIR-NEXT:  %17 = PhiInst (:undefined|number) %13: undefined|number, %BB4, %15: number, %BB5
-// CHKLIR-NEXT:        HBCStoreToEnvironmentInst %0: environment, %17: undefined|number, [flag2@foo]: undefined|number
-// CHKLIR-NEXT:  %19 = HBCLoadFromEnvironmentInst (:number) %0: environment, [cnt@foo]: number
+// CHKLIR-NEXT:        StoreFrameInst %0: environment, %17: undefined|number, [flag2@foo]: undefined|number
+// CHKLIR-NEXT:  %19 = LoadFrameInst (:number) %0: environment, [cnt@foo]: number
 // CHKLIR-NEXT:  %20 = HBCLoadConstInst (:number) 1: number
 // CHKLIR-NEXT:  %21 = FAddInst (:number) %19: number, %20: number
-// CHKLIR-NEXT:        HBCStoreToEnvironmentInst %0: environment, %21: number, [cnt@foo]: number
+// CHKLIR-NEXT:        StoreFrameInst %0: environment, %21: number, [cnt@foo]: number
 // CHKLIR-NEXT:        ReturnInst %21: number
 // CHKLIR-NEXT:function_end

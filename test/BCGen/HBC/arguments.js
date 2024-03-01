@@ -35,22 +35,22 @@ function check_phi_handling(x) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "count": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "select": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "build": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "buffalobuffalo": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "check_phi_handling": string
-// CHECK-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %count(): functionCode, $Reg0
+// CHECK-NEXT:  $Reg2 = CreateFunctionInst (:object) $Reg0, %count(): functionCode
 // CHECK-NEXT:  $Reg1 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg1, "count": string
-// CHECK-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %select(): functionCode, $Reg0
+// CHECK-NEXT:  $Reg2 = CreateFunctionInst (:object) $Reg0, %select(): functionCode
 // CHECK-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg1, "select": string
-// CHECK-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %build(): functionCode, $Reg0
+// CHECK-NEXT:  $Reg2 = CreateFunctionInst (:object) $Reg0, %build(): functionCode
 // CHECK-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg1, "build": string
-// CHECK-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %buffalobuffalo(): functionCode, $Reg0
+// CHECK-NEXT:  $Reg2 = CreateFunctionInst (:object) $Reg0, %buffalobuffalo(): functionCode
 // CHECK-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg1, "buffalobuffalo": string
-// CHECK-NEXT:  $Reg0 = HBCCreateFunctionInst (:object) %check_phi_handling(): functionCode, $Reg0
+// CHECK-NEXT:  $Reg0 = CreateFunctionInst (:object) $Reg0, %check_phi_handling(): functionCode
 // CHECK-NEXT:  $Reg0 = StorePropertyLooseInst $Reg0, $Reg1, "check_phi_handling": string
 // CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  $Reg0 = ReturnInst $Reg0

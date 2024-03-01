@@ -20,41 +20,42 @@ var {} = x;
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "b": string
 // CHECK-NEXT:       DeclareGlobalVarInst "rest": string
 // CHECK-NEXT:       DeclareGlobalVarInst "d": string
-// CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:       StoreStackInst undefined: undefined, %3: any
-// CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "x": string
-// CHECK-NEXT:  %6 = LoadPropertyInst (:any) %5: any, "a": string
-// CHECK-NEXT:       StorePropertyLooseInst %6: any, globalObject: object, "b": string
-// CHECK-NEXT:  %8 = TryLoadGlobalPropertyInst (:any) globalObject: object, "x": string
-// CHECK-NEXT:  %9 = LoadPropertyInst (:any) %8: any, "a": string
-// CHECK-NEXT:        StorePropertyLooseInst %9: any, globalObject: object, "b": string
-// CHECK-NEXT:  %11 = AllocObjectInst (:object) 1: number, null: null
-// CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %11: object, "a": string, true: boolean
-// CHECK-NEXT:  %13 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:  %14 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %13: object, %8: any, %11: object
-// CHECK-NEXT:        StorePropertyLooseInst %14: any, globalObject: object, "rest": string
-// CHECK-NEXT:  %16 = TryLoadGlobalPropertyInst (:any) globalObject: object, "x": string
-// CHECK-NEXT:  %17 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %18 = CallInst (:any) %17: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %19 = LoadPropertyInst (:any) %16: any, %18: any
-// CHECK-NEXT:        StorePropertyLooseInst %19: any, globalObject: object, "b": string
-// CHECK-NEXT:  %21 = LoadPropertyInst (:any) %16: any, "c": string
-// CHECK-NEXT:        StorePropertyLooseInst %21: any, globalObject: object, "d": string
-// CHECK-NEXT:  %23 = AllocObjectInst (:object) 2: number, null: null
-// CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %23: object, "c": string, true: boolean
-// CHECK-NEXT:        StorePropertyLooseInst 0: number, %23: object, %18: any
-// CHECK-NEXT:  %26 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:  %27 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %26: object, %16: any, %23: object
-// CHECK-NEXT:        StorePropertyLooseInst %27: any, globalObject: object, "rest": string
-// CHECK-NEXT:  %29 = TryLoadGlobalPropertyInst (:any) globalObject: object, "x": string
-// CHECK-NEXT:  %30 = BinaryEqualInst (:any) %29: any, null: null
-// CHECK-NEXT:        CondBranchInst %30: any, %BB1, %BB2
+// CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %4: any
+// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "x": string
+// CHECK-NEXT:  %7 = LoadPropertyInst (:any) %6: any, "a": string
+// CHECK-NEXT:       StorePropertyLooseInst %7: any, globalObject: object, "b": string
+// CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "x": string
+// CHECK-NEXT:  %10 = LoadPropertyInst (:any) %9: any, "a": string
+// CHECK-NEXT:        StorePropertyLooseInst %10: any, globalObject: object, "b": string
+// CHECK-NEXT:  %12 = AllocObjectInst (:object) 1: number, null: null
+// CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %12: object, "a": string, true: boolean
+// CHECK-NEXT:  %14 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %15 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %14: object, %9: any, %12: object
+// CHECK-NEXT:        StorePropertyLooseInst %15: any, globalObject: object, "rest": string
+// CHECK-NEXT:  %17 = TryLoadGlobalPropertyInst (:any) globalObject: object, "x": string
+// CHECK-NEXT:  %18 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
+// CHECK-NEXT:  %19 = CallInst (:any) %18: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %20 = LoadPropertyInst (:any) %17: any, %19: any
+// CHECK-NEXT:        StorePropertyLooseInst %20: any, globalObject: object, "b": string
+// CHECK-NEXT:  %22 = LoadPropertyInst (:any) %17: any, "c": string
+// CHECK-NEXT:        StorePropertyLooseInst %22: any, globalObject: object, "d": string
+// CHECK-NEXT:  %24 = AllocObjectInst (:object) 2: number, null: null
+// CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %24: object, "c": string, true: boolean
+// CHECK-NEXT:        StorePropertyLooseInst 0: number, %24: object, %19: any
+// CHECK-NEXT:  %27 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %28 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %27: object, %17: any, %24: object
+// CHECK-NEXT:        StorePropertyLooseInst %28: any, globalObject: object, "rest": string
+// CHECK-NEXT:  %30 = TryLoadGlobalPropertyInst (:any) globalObject: object, "x": string
+// CHECK-NEXT:  %31 = BinaryEqualInst (:any) %30: any, null: null
+// CHECK-NEXT:        CondBranchInst %31: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:        ThrowTypeErrorInst "Cannot destructure 'undefined' or 'null'.": string
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %33 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:        ReturnInst %33: any
+// CHECK-NEXT:  %34 = LoadStackInst (:any) %4: any
+// CHECK-NEXT:        ReturnInst %34: any
 // CHECK-NEXT:function_end
