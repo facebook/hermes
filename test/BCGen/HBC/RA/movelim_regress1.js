@@ -38,23 +38,23 @@ function fib(n) {
 // CHECK-NEXT:  $Reg5 = HBCLoadConstInst (:number) 0: number
 // CHECK-NEXT:  $Reg1 = BinaryGreaterThanInst (:boolean) $Reg6, $Reg5
 // CHECK-NEXT:  $Reg4 = HBCLoadConstInst (:number) 1: number
+// CHECK-NEXT:  $Reg3 = MovInst (:number) $Reg4
+// CHECK-NEXT:  $Reg2 = MovInst (:number) $Reg5
 // CHECK-NEXT:  $Reg6 = MovInst (:any) $Reg6
-// CHECK-NEXT:  $Reg3 = MovInst (:number) $Reg5
-// CHECK-NEXT:  $Reg2 = MovInst (:number) $Reg4
-// CHECK-NEXT:  $Reg0 = MovInst (:number) $Reg3
+// CHECK-NEXT:  $Reg0 = MovInst (:number) $Reg2
 // CHECK-NEXT:  $Reg1 = CondBranchInst $Reg1, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  $Reg6 = PhiInst (:any) $Reg6, %BB0, $Reg6, %BB1
 // CHECK-NEXT:  $Reg3 = PhiInst (:number) $Reg3, %BB0, $Reg3, %BB1
 // CHECK-NEXT:  $Reg2 = PhiInst (:number) $Reg2, %BB0, $Reg2, %BB1
-// CHECK-NEXT:  $Reg8 = FAddInst (:number) $Reg3, $Reg2
+// CHECK-NEXT:  $Reg6 = PhiInst (:any) $Reg6, %BB0, $Reg6, %BB1
+// CHECK-NEXT:  $Reg8 = FAddInst (:number) $Reg2, $Reg3
 // CHECK-NEXT:  $Reg6 = BinarySubtractInst (:number) $Reg6, $Reg4
 // CHECK-NEXT:  $Reg1 = FGreaterThanInst (:boolean) $Reg6, $Reg5
-// CHECK-NEXT:  $Reg7 = MovInst (:number) $Reg2
+// CHECK-NEXT:  $Reg7 = MovInst (:number) $Reg3
+// CHECK-NEXT:  $Reg3 = MovInst (:number) $Reg8
+// CHECK-NEXT:  $Reg2 = MovInst (:number) $Reg7
 // CHECK-NEXT:  $Reg6 = MovInst (:number) $Reg6
-// CHECK-NEXT:  $Reg3 = MovInst (:number) $Reg7
-// CHECK-NEXT:  $Reg2 = MovInst (:number) $Reg8
-// CHECK-NEXT:  $Reg0 = MovInst (:number) $Reg3
+// CHECK-NEXT:  $Reg0 = MovInst (:number) $Reg2
 // CHECK-NEXT:  $Reg1 = CondBranchInst $Reg1, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  $Reg0 = PhiInst (:number) $Reg0, %BB0, $Reg0, %BB1
