@@ -560,11 +560,6 @@ class IRBuilder {
       VariableScope *scope,
       LiteralNumber *numLevels,
       JSDynamicParam *parentScopeParam);
-  HBCStoreToEnvironmentInst *
-  createHBCStoreToEnvironmentInst(Value *env, Value *toPut, Variable *var);
-  HBCLoadFromEnvironmentInst *createHBCLoadFromEnvironmentInst(
-      Value *env,
-      Variable *var);
 
   SwitchImmInst *createSwitchImmInst(
       Value *input,
@@ -614,14 +609,7 @@ class IRBuilder {
   GetBuiltinClosureInst *createGetBuiltinClosureInst(
       BuiltinMethod::Enum builtinIndex);
 
-  HBCCreateFunctionInst *createHBCCreateFunctionInst(
-      Function *function,
-      BaseScopeInst *env);
   HBCSpillMovInst *createHBCSpillMovInst(Instruction *value);
-
-  HBCCreateGeneratorInst *createHBCCreateGeneratorInst(
-      Function *function,
-      BaseScopeInst *env);
 
   HBCAllocObjectFromBufferInst *createHBCAllocObjectFromBufferInst(
       HBCAllocObjectFromBufferInst::ObjectPropertyMap prop_map,
