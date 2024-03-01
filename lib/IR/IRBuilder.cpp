@@ -332,8 +332,10 @@ AddEmptyStringInst *IRBuilder::createAddEmptyStringInst(Value *val) {
   return I;
 }
 
-CreateFunctionInst *IRBuilder::createCreateFunctionInst(Function *code) {
-  auto CFI = new CreateFunctionInst(code);
+CreateFunctionInst *IRBuilder::createCreateFunctionInst(
+    BaseScopeInst *scope,
+    Function *code) {
+  auto CFI = new CreateFunctionInst(scope, code);
   insert(CFI);
   return CFI;
 }
@@ -379,8 +381,11 @@ GetClosureScopeInst *IRBuilder::createGetClosureScopeInst(
   return GCSI;
 }
 
-LoadFrameInst *IRBuilder::createLoadFrameInst(Variable *ptr) {
-  auto LI = new LoadFrameInst(ptr);
+LoadFrameInst *IRBuilder::createLoadFrameInst(
+    BaseScopeInst *scope,
+    Variable *ptr) {
+  assert(scope->getVariableScope() == ptr->getParent());
+  auto LI = new LoadFrameInst(scope, ptr);
   insert(LI);
   return LI;
 }
@@ -392,9 +397,11 @@ LoadStackInst *IRBuilder::createLoadStackInst(AllocStackInst *ptr) {
 }
 
 StoreFrameInst *IRBuilder::createStoreFrameInst(
+    BaseScopeInst *scope,
     Value *storedValue,
     Variable *ptr) {
-  auto SI = new StoreFrameInst(storedValue, ptr);
+  assert(scope->getVariableScope() == ptr->getParent());
+  auto SI = new StoreFrameInst(scope, storedValue, ptr);
   insert(SI);
   return SI;
 }
@@ -849,8 +856,9 @@ SaveAndYieldInst *IRBuilder::createSaveAndYieldInst(
 }
 
 CreateGeneratorInst *IRBuilder::createCreateGeneratorInst(
+    BaseScopeInst *scope,
     GeneratorInnerFunction *innerFn) {
-  auto *I = new CreateGeneratorInst(innerFn);
+  auto *I = new CreateGeneratorInst(scope, innerFn);
   insert(I);
   return I;
 }

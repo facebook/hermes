@@ -582,6 +582,7 @@ void ESTreeIRGen::genScopedForLoop(
   Builder.setInsertionBlock(loopBlock);
   Builder.setLocation(loop->_body->getDebugLoc());
   // TODO: create a scope.
+  auto *functionScope = curFunction()->functionScope;
 
   // Declare the new variables in the new scope and copy the declared variables
   // into the new ones. Change the decls to resolve to the "new" variables, so
@@ -608,10 +609,10 @@ void ESTreeIRGen::genScopedForLoop(
     // Note that we are using a direct load/store, which doesn't check TDZ. If
     // our thinking is correct, all variables declared in the for(;;) must have
     // been initialized.
-    Instruction *val = Builder.createLoadFrameInst(oldVar);
+    Value *val = Builder.createLoadFrameInst(functionScope, oldVar);
     if (val->getType().canBeEmpty())
       val = Builder.createUnionNarrowTrustedInst(val, newVar->getType());
-    Builder.createStoreFrameInst(val, newVar);
+    Builder.createStoreFrameInst(functionScope, val, newVar);
 
     // Update the declaration to resolve to the new variable.
     setDeclData(decl, newVar);
@@ -648,7 +649,9 @@ void ESTreeIRGen::genScopedForLoop(
   // Copy the new vars back into the old ones.
   for (const auto &mapping : vars) {
     Builder.createStoreFrameInst(
-        Builder.createLoadFrameInst(mapping.newVar), mapping.oldVar);
+        functionScope,
+        Builder.createLoadFrameInst(functionScope, mapping.newVar),
+        mapping.oldVar);
     // Update the declaration to resolve to the old variable.
     setDeclData(mapping.decl, mapping.oldVar);
   }

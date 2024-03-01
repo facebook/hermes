@@ -95,6 +95,8 @@ class Verifier : public InstructionVisitor<Verifier, bool> {
 
   LLVM_NODISCARD bool visitBaseStoreOwnPropertyInst(
       const BaseStoreOwnPropertyInst &Inst);
+  LLVM_NODISCARD bool visitBaseCreateLexicalChildInst(
+      const BaseCreateLexicalChildInst &Inst);
   LLVM_NODISCARD bool visitBaseCreateCallableInst(
       const BaseCreateCallableInst &Inst);
 
@@ -695,7 +697,21 @@ bool Verifier::visitLoadStackInst(const LoadStackInst &Inst) {
   return true;
 }
 
+bool Verifier::visitBaseCreateLexicalChildInst(
+    const hermes::BaseCreateLexicalChildInst &Inst) {
+  auto *VS = llvh::cast<BaseScopeInst>(Inst.getScope())->getVariableScope();
+
+  // Verify that any GetParentScope inside the function produces the same
+  // VariableScope that the function is being created with.
+  for (auto *U : Inst.getFunctionCode()->getParentScopeParam()->getUsers())
+    if (auto *GPSI = llvh::dyn_cast<GetParentScopeInst>(U))
+      AssertIWithMsg(
+          Inst, GPSI->getVariableScope() == VS, "Parent scope mismatch.");
+  return true;
+}
+
 bool Verifier::visitBaseCreateCallableInst(const BaseCreateCallableInst &Inst) {
+  ReturnIfNot(visitBaseCreateLexicalChildInst(Inst));
   AssertIWithMsg(
       Inst,
       llvh::isa<NormalFunction>(Inst.getFunctionCode()) ||
@@ -1201,6 +1217,7 @@ bool Verifier::visitCompareBranchInst(const CompareBranchInst &Inst) {
 }
 
 bool Verifier::visitCreateGeneratorInst(const CreateGeneratorInst &Inst) {
+  ReturnIfNot(visitBaseCreateLexicalChildInst(Inst));
   AssertIWithMsg(
       Inst,
       llvh::isa<GeneratorInnerFunction>(Inst.getFunctionCode()),
@@ -1220,6 +1237,7 @@ bool Verifier::visitResumeGeneratorInst(const ResumeGeneratorInst &Inst) {
 }
 
 bool Verifier::visitHBCCreateGeneratorInst(const HBCCreateGeneratorInst &Inst) {
+  ReturnIfNot(visitBaseCreateLexicalChildInst(Inst));
   AssertIWithMsg(
       Inst,
       llvh::isa<GeneratorInnerFunction>(Inst.getFunctionCode()),
