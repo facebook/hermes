@@ -442,11 +442,9 @@ bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
     if (llvh::isa<Variable>(Operand)) {
       AssertIWithMsg(
           Inst,
-          llvh::isa<LoadFrameInst>(Inst) || llvh::isa<StoreFrameInst>(Inst) ||
-              llvh::isa<HBCLoadFromEnvironmentInst>(Inst) ||
-              llvh::isa<HBCStoreToEnvironmentInst>(Inst),
+          llvh::isa<LoadFrameInst>(Inst) || llvh::isa<StoreFrameInst>(Inst),
           "Variable can only be accessed in "
-          "LoadFrame/StoreFrame/HBCLoadFromEnvironmentInst/HBCStoreToEnvironmentInst Inst.");
+          "LoadFrame/StoreFrame Inst.");
     }
 
     // Most instructions that accepts a stack operand must write to it. If it
@@ -527,19 +525,6 @@ bool Verifier::visitBranchInst(const BranchInst &Inst) {
   return true;
 }
 
-bool Verifier::visitHBCStoreToEnvironmentInst(
-    const HBCStoreToEnvironmentInst &Inst) {
-  // Nothing to verify at this point.
-  return true;
-}
-bool Verifier::visitHBCLoadFromEnvironmentInst(
-    const HBCLoadFromEnvironmentInst &Inst) {
-  AssertIWithMsg(
-      Inst,
-      Inst.getType() == Inst.getResolvedName()->getType(),
-      "HBCLoadFromEnvironment type must be the same as the variable type");
-  return true;
-}
 bool Verifier::visitHBCResolveParentEnvironmentInst(
     const HBCResolveParentEnvironmentInst &Inst) {
   AssertIWithMsg(
@@ -1236,15 +1221,6 @@ bool Verifier::visitResumeGeneratorInst(const ResumeGeneratorInst &Inst) {
   return true;
 }
 
-bool Verifier::visitHBCCreateGeneratorInst(const HBCCreateGeneratorInst &Inst) {
-  ReturnIfNot(visitBaseCreateLexicalChildInst(Inst));
-  AssertIWithMsg(
-      Inst,
-      llvh::isa<GeneratorInnerFunction>(Inst.getFunctionCode()),
-      "HBCCreateGeneratorInst must take a GeneratorInnerFunction");
-  return true;
-}
-
 bool Verifier::visitLIRGetThisNSInst(const LIRGetThisNSInst &Inst) {
   // Nothing to verify at this point.
   return true;
@@ -1282,9 +1258,6 @@ bool Verifier::visitGetConstructedObjectInst(
   return true;
 }
 
-bool Verifier::visitHBCCreateFunctionInst(const HBCCreateFunctionInst &Inst) {
-  return visitBaseCreateCallableInst(Inst);
-}
 bool Verifier::visitHBCSpillMovInst(const HBCSpillMovInst &Inst) {
   return true;
 }

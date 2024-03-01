@@ -834,26 +834,6 @@ Arguments | None.
 Semantics | The instruction returns a reference to the "global" object.
 Effects | Does not read or write to memory.
 
-### HBCCreateFunction
-
-HBCCreateFunction | _
---- | --- |
-Description | Create a new closure capturing the specified environment and using the specified body
-Example | %0 = HBCCreateFunction %environment, %body,
-Arguments | %environment is the closure's environment. %body is the closure's body.
-Semantics | The instruction creates a new closure that may access the specified environment.
-Effects | Does not read or write to memory.
-
-### HBCCreateGenerator
-
-CreateGenerator | _
---- | --- |
-Description | Constructs a new Generator into the current scope from its code representation.
-Example | %0 = CreateGenerator %environment, %body,
-Arguments | %environment is the closure's environment, %body is the closure's body.
-Semantics | The instruction creates a new GeneratorInnerFunction access the environment and wraps it in a Generator.
-Effects | Does not read or write to memory.
-
 ### HBCCreateFunctionEnvironmentInst
 
 HBCCreateFunctionEnvironmentInst | _

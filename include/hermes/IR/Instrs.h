@@ -3261,101 +3261,6 @@ class HBCResolveParentEnvironmentInst : public BaseScopeInst {
   }
 };
 
-class HBCStoreToEnvironmentInst : public Instruction {
-  HBCStoreToEnvironmentInst(const HBCStoreToEnvironmentInst &) = delete;
-  void operator=(const HBCStoreToEnvironmentInst &) = delete;
-
- public:
-  enum { EnvIdx, ValueIdx, NameIdx };
-
-  explicit HBCStoreToEnvironmentInst(Value *env, Value *toPut, Variable *var)
-      : Instruction(ValueKind::HBCStoreToEnvironmentInstKind) {
-    pushOperand(env);
-    pushOperand(toPut);
-    pushOperand(var);
-  }
-  explicit HBCStoreToEnvironmentInst(
-      const HBCStoreToEnvironmentInst *src,
-      llvh::ArrayRef<Value *> operands)
-      : Instruction(src, operands) {}
-
-  Variable *getResolvedName() const {
-    return cast<Variable>(getOperand(NameIdx));
-  }
-  Value *getEnvironment() const {
-    return getOperand(EnvIdx);
-  }
-  Value *getStoredValue() const {
-    return getOperand(ValueIdx);
-  }
-
-  static bool hasOutput() {
-    return false;
-  }
-  static bool isTyped() {
-    return false;
-  }
-
-  SideEffect getSideEffectImpl() const {
-    return SideEffect{}.setWriteFrame().setIdempotent();
-  }
-
-  bool acceptsEmptyTypeImpl() const {
-    return true;
-  }
-
-  static bool classof(const Value *V) {
-    ValueKind kind = V->getKind();
-    return kind == ValueKind::HBCStoreToEnvironmentInstKind;
-  }
-};
-
-class HBCLoadFromEnvironmentInst : public Instruction {
-  HBCLoadFromEnvironmentInst(const HBCLoadFromEnvironmentInst &) = delete;
-  void operator=(const HBCLoadFromEnvironmentInst &) = delete;
-
- public:
-  enum { EnvIdx, NameIdx };
-
-  explicit HBCLoadFromEnvironmentInst(Value *env, Variable *var)
-      : Instruction(ValueKind::HBCLoadFromEnvironmentInstKind) {
-    setType(var->getType());
-    pushOperand(env);
-    pushOperand(var);
-  }
-  explicit HBCLoadFromEnvironmentInst(
-      const HBCLoadFromEnvironmentInst *src,
-      llvh::ArrayRef<Value *> operands)
-      : Instruction(src, operands) {}
-
-  Variable *getResolvedName() const {
-    return cast<Variable>(getOperand(NameIdx));
-  }
-  Value *getEnvironment() const {
-    return getOperand(EnvIdx);
-  }
-
-  static bool hasOutput() {
-    return true;
-  }
-  static bool isTyped() {
-    return false;
-  }
-
-  SideEffect getSideEffectImpl() const {
-    return SideEffect{}.setReadFrame().setIdempotent();
-  }
-
-  bool acceptsEmptyTypeImpl() const {
-    return true;
-  }
-
-  static bool classof(const Value *V) {
-    ValueKind kind = V->getKind();
-    return kind == ValueKind::HBCLoadFromEnvironmentInstKind;
-  }
-};
-
 class SwitchImmInst : public TerminatorInst {
   SwitchImmInst(const SwitchImmInst &) = delete;
   void operator=(const SwitchImmInst &) = delete;
@@ -4040,37 +3945,6 @@ class GetConstructedObjectInst : public Instruction {
   }
 };
 
-/// Creating a closure in HBC requires an explicit environment.
-class HBCCreateFunctionInst : public BaseCreateCallableInst {
-  HBCCreateFunctionInst(const HBCCreateFunctionInst &) = delete;
-  void operator=(const HBCCreateFunctionInst &) = delete;
-
- public:
-  enum { EnvIdx = CreateFunctionInst::LAST_IDX };
-
-  explicit HBCCreateFunctionInst(Function *code, BaseScopeInst *env)
-      : BaseCreateCallableInst(
-            ValueKind::HBCCreateFunctionInstKind,
-            env,
-            code) {
-    setType(*getInherentTypeImpl());
-    pushOperand(env);
-  }
-  explicit HBCCreateFunctionInst(
-      const HBCCreateFunctionInst *src,
-      llvh::ArrayRef<Value *> operands)
-      : BaseCreateCallableInst(src, operands) {}
-
-  Value *getEnvironment() const {
-    return getOperand(EnvIdx);
-  }
-
-  static bool classof(const Value *V) {
-    ValueKind kind = V->getKind();
-    return kind == ValueKind::HBCCreateFunctionInstKind;
-  }
-};
-
 /// Identical to a Mov, except it should never be eliminated.
 /// Elimination will undo spilling and cause failures during bc gen.
 class HBCSpillMovInst : public SingleOperandInst {
@@ -4231,41 +4105,6 @@ class CreateGeneratorInst : public BaseCreateLexicalChildInst {
 
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::CreateGeneratorInstKind;
-  }
-};
-
-/// Creating a closure in HBC requires an explicit environment.
-class HBCCreateGeneratorInst : public BaseCreateLexicalChildInst {
-  HBCCreateGeneratorInst(const HBCCreateGeneratorInst &) = delete;
-  void operator=(const HBCCreateGeneratorInst &) = delete;
-
- public:
-  enum { EnvIdx = CreateGeneratorInst::LAST_IDX };
-
-  explicit HBCCreateGeneratorInst(Function *code, BaseScopeInst *env)
-      : BaseCreateLexicalChildInst(
-            ValueKind::HBCCreateGeneratorInstKind,
-            env,
-            code) {
-    pushOperand(env);
-    setType(*getInherentTypeImpl());
-  }
-  explicit HBCCreateGeneratorInst(
-      const HBCCreateGeneratorInst *src,
-      llvh::ArrayRef<Value *> operands)
-      : BaseCreateLexicalChildInst(src, operands) {}
-
-  static llvh::Optional<Type> getInherentTypeImpl() {
-    return Type::createObject();
-  }
-
-  Value *getEnvironment() const {
-    return getOperand(EnvIdx);
-  }
-
-  static bool classof(const Value *V) {
-    ValueKind kind = V->getKind();
-    return kind == ValueKind::HBCCreateGeneratorInstKind;
   }
 };
 

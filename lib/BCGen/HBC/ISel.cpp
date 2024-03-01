@@ -941,34 +941,6 @@ void HBCISel::generateCreateFunctionInst(
   }
 }
 
-void HBCISel::generateHBCCreateFunctionInst(
-    HBCCreateFunctionInst *Inst,
-    BasicBlock *) {
-  auto env = encodeValue(Inst->getEnvironment());
-  auto output = encodeValue(Inst);
-  auto code = BCFGen_->getFunctionID(Inst->getFunctionCode());
-  bool isGen = llvh::isa<GeneratorFunction>(Inst->getFunctionCode());
-  bool isAsync = llvh::isa<AsyncFunction>(Inst->getFunctionCode());
-  if (LLVM_LIKELY(code <= UINT16_MAX)) {
-    // Most of the cases, function index will be less than 2^16.
-    if (isAsync) {
-      BCFGen_->emitCreateAsyncClosure(output, env, code);
-    } else if (isGen) {
-      BCFGen_->emitCreateGeneratorClosure(output, env, code);
-    } else {
-      BCFGen_->emitCreateClosure(output, env, code);
-    }
-  } else {
-    if (isAsync) {
-      BCFGen_->emitCreateAsyncClosureLongIndex(output, env, code);
-    } else if (isGen) {
-      BCFGen_->emitCreateGeneratorClosureLongIndex(output, env, code);
-    } else {
-      BCFGen_->emitCreateClosureLongIndex(output, env, code);
-    }
-  }
-}
-
 void HBCISel::generateHBCAllocObjectFromBufferInst(
     HBCAllocObjectFromBufferInst *Inst,
     BasicBlock *next) {
@@ -1071,19 +1043,6 @@ void HBCISel::generateCreateGeneratorInst(
     CreateGeneratorInst *Inst,
     BasicBlock *next) {
   auto env = encodeValue(Inst->getScope());
-  auto output = encodeValue(Inst);
-  auto code = BCFGen_->getFunctionID(Inst->getFunctionCode());
-  if (LLVM_LIKELY(code <= UINT16_MAX)) {
-    // Most of the cases, function index will be less than 2^16.
-    BCFGen_->emitCreateGenerator(output, env, code);
-  } else {
-    BCFGen_->emitCreateGeneratorLongIndex(output, env, code);
-  }
-}
-void HBCISel::generateHBCCreateGeneratorInst(
-    HBCCreateGeneratorInst *Inst,
-    BasicBlock *next) {
-  auto env = encodeValue(Inst->getEnvironment());
   auto output = encodeValue(Inst);
   auto code = BCFGen_->getFunctionID(Inst->getFunctionCode());
   if (LLVM_LIKELY(code <= UINT16_MAX)) {
@@ -1423,40 +1382,6 @@ void HBCISel::generateGetClosureScopeInst(
   BCFGen_->emitGetClosureEnvironment(output, closure);
 }
 
-void HBCISel::generateHBCStoreToEnvironmentInst(
-    HBCStoreToEnvironmentInst *Inst,
-    BasicBlock *next) {
-  Variable *var = Inst->getResolvedName();
-  auto valueReg = encodeValue(Inst->getStoredValue());
-  auto envReg = encodeValue(Inst->getEnvironment());
-  auto varIdx = encodeValue(var);
-  if (Inst->getStoredValue()->getType().isNonPtr()) {
-    if (varIdx <= UINT8_MAX) {
-      BCFGen_->emitStoreNPToEnvironment(envReg, varIdx, valueReg);
-    } else {
-      BCFGen_->emitStoreNPToEnvironmentL(envReg, varIdx, valueReg);
-    }
-  } else {
-    if (varIdx <= UINT8_MAX) {
-      BCFGen_->emitStoreToEnvironment(envReg, varIdx, valueReg);
-    } else {
-      BCFGen_->emitStoreToEnvironmentL(envReg, varIdx, valueReg);
-    }
-  }
-}
-void HBCISel::generateHBCLoadFromEnvironmentInst(
-    HBCLoadFromEnvironmentInst *Inst,
-    BasicBlock *next) {
-  auto dstReg = encodeValue(Inst);
-  Variable *var = Inst->getResolvedName();
-  auto envReg = encodeValue(Inst->getEnvironment());
-  auto varIdx = encodeValue(var);
-  if (varIdx <= UINT8_MAX) {
-    BCFGen_->emitLoadFromEnvironment(dstReg, envReg, varIdx);
-  } else {
-    BCFGen_->emitLoadFromEnvironmentL(dstReg, envReg, varIdx);
-  }
-}
 void HBCISel::generateHBCLoadConstInst(
     hermes::HBCLoadConstInst *Inst,
     hermes::BasicBlock *next) {
