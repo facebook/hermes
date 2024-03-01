@@ -28,21 +28,24 @@ function outer(a, b) {
 // CHECK:function global(): string
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "outer": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %outer(): functionCode
-// CHECK-NEXT:       StorePropertyStrictInst %1: object, globalObject: object, "outer": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %outer(): functionCode
+// CHECK-NEXT:       StorePropertyStrictInst %2: object, globalObject: object, "outer": string
 // CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
 // CHECK:function outer(a: any, b: any): string|number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f3(): functionCode
-// CHECK-NEXT:  %1 = CallInst (:string|number) %0: object, %f3(): functionCode, empty: any, undefined: undefined, 0: number, 10: number
-// CHECK-NEXT:  %2 = BinaryAddInst (:string|number) 1734: number, %1: string|number
-// CHECK-NEXT:  %3 = CallInst (:string|number) %0: object, %f3(): functionCode, empty: any, undefined: undefined, 0: number, 100: number
-// CHECK-NEXT:  %4 = BinaryAddInst (:string|number) %2: string|number, %3: string|number
-// CHECK-NEXT:       ReturnInst %4: string|number
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %outer(): any, %0: environment
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %f3(): functionCode
+// CHECK-NEXT:  %3 = CallInst (:string|number) %2: object, %f3(): functionCode, %1: environment, undefined: undefined, 0: number, 10: number
+// CHECK-NEXT:  %4 = BinaryAddInst (:string|number) 1734: number, %3: string|number
+// CHECK-NEXT:  %5 = CallInst (:string|number) %2: object, %f3(): functionCode, %1: environment, undefined: undefined, 0: number, 100: number
+// CHECK-NEXT:  %6 = BinaryAddInst (:string|number) %4: string|number, %5: string|number
+// CHECK-NEXT:       ReturnInst %6: string|number
 // CHECK-NEXT:function_end
 
 // CHECK:function f3(x: number): string|number [allCallsitesKnownInStrictMode]

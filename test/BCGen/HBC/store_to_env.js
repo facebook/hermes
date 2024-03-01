@@ -65,7 +65,8 @@ function foo() {
 
 // CHECK:Function<foo>(1 params, 11 registers, 3 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
-// CHECK-NEXT:    CreateFunctionEnvironment r0
+// CHECK-NEXT:    GetParentEnvironment r0, 0
+// CHECK-NEXT:    CreateEnvironment r0, r0, 3
 // CHECK-NEXT:    LoadConstInt      r1, 1234
 // CHECK-NEXT:    StoreNPToEnvironment r0, 0, r1
 // CHECK-NEXT:    GetGlobalObject   r1
@@ -115,9 +116,9 @@ function foo() {
 // CHECK-NEXT:    bc 0: line 10 col 1
 // CHECK-NEXT:    bc 14: line 10 col 1
 // CHECK-NEXT:  0x000a  function idx 1, starts at line 10 col 1
-// CHECK-NEXT:    bc 14: line 14 col 21
-// CHECK-NEXT:    bc 20: line 14 col 27
-// CHECK-NEXT:    bc 32: line 14 col 27
+// CHECK-NEXT:    bc 22: line 14 col 21
+// CHECK-NEXT:    bc 28: line 14 col 27
+// CHECK-NEXT:    bc 40: line 14 col 27
 // CHECK-NEXT:  0x0017  function idx 2, starts at line 17 col 18
 // CHECK-NEXT:    bc 20: line 21 col 9
 // CHECK-NEXT:    bc 32: line 21 col 14
