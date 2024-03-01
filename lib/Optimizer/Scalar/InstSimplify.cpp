@@ -895,6 +895,32 @@ class InstSimplifyImpl {
     return nullptr;
   }
 
+  OptValue<Value *> simplifyResolveScopeInst(ResolveScopeInst *RSI) {
+    auto *curScope = llvh::cast<BaseScopeInst>(RSI->getStartScope());
+    while (true) {
+      // If we have walked to the point where the scope is the target scope,
+      // just use that.
+      if (curScope->getVariableScope() == RSI->getVariableScope())
+        return curScope;
+
+      // If this is not a CreateScopeInst, we can't walk up any further.
+      auto *CSI = llvh::dyn_cast<CreateScopeInst>(curScope);
+      if (!CSI)
+        break;
+
+      // Try the next scope in the chain.
+      curScope = llvh::cast<BaseScopeInst>(CSI->getParentScope());
+    }
+
+    // If we were able to walk up to a scope that is closer to the target,
+    // update the starting scope.
+    if (curScope != RSI->getStartScope()) {
+      RSI->setStartScope(curScope);
+      return RSI;
+    }
+    return nullptr;
+  }
+
   /// Try to simplify the instruction \p I.
   /// \returns one of:
   ///   - nullptr if the instruction cannot be simplified.
@@ -941,6 +967,8 @@ class InstSimplifyImpl {
         return simplifyUnionNarrowTrusted(cast<UnionNarrowTrustedInst>(I));
       case ValueKind::CheckedTypeCastInstKind:
         return simplifyCheckedTypeCast(cast<CheckedTypeCastInst>(I));
+      case ValueKind::ResolveScopeInstKind:
+        return simplifyResolveScopeInst(cast<ResolveScopeInst>(I));
 
       default:
         // TODO: handle other kinds of instructions.
