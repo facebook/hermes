@@ -57,10 +57,10 @@
 // CHECK:function bar(): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = [i: number]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AllocStackInst (:number) $i: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
 // CHECK-NEXT:  %1 = AllocStackInst (:number) $i: any
-// CHECK-NEXT:  %2 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
-// CHECK-NEXT:  %3 = CreateScopeInst (:environment) %bar(): any, %2: environment
+// CHECK-NEXT:  %2 = AllocStackInst (:number) $i: any
+// CHECK-NEXT:  %3 = CreateScopeInst (:environment) %bar(): any, %0: environment
 // CHECK-NEXT:       TryStartInst %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = CatchInst (:any)
@@ -73,24 +73,24 @@
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %12 = LoadStackInst (:number) %1: number
-// CHECK-NEXT:        StoreStackInst %12: number, %0: number
+// CHECK-NEXT:        StoreStackInst %12: number, %2: number
 // CHECK-NEXT:  %14 = LoadStackInst (:boolean) %9: boolean
 // CHECK-NEXT:        CondBranchInst %14: boolean, %BB4, %BB5
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %16 = LoadStackInst (:number) %0: number
+// CHECK-NEXT:  %16 = LoadStackInst (:number) %2: number
 // CHECK-NEXT:  %17 = FLessThanInst (:boolean) %16: number, 100: number
 // CHECK-NEXT:        CondBranchInst %17: boolean, %BB6, %BB7
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %19 = LoadFrameInst (:object) %2: environment, [arr@""]: object
+// CHECK-NEXT:  %19 = LoadFrameInst (:object) %0: environment, [arr@""]: object
 // CHECK-NEXT:  %20 = LoadPropertyInst (:any) %19: object, "push": string
 // CHECK-NEXT:  %21 = CreateFunctionInst (:object) %3: environment, %" 1#"(): functionCode
 // CHECK-NEXT:  %22 = CallInst (:any) %20: any, empty: any, empty: any, undefined: undefined, %19: object, %21: object
-// CHECK-NEXT:  %23 = LoadStackInst (:number) %0: number
+// CHECK-NEXT:  %23 = LoadStackInst (:number) %2: number
 // CHECK-NEXT:  %24 = FAddInst (:number) %23: number, 1: number
-// CHECK-NEXT:        StoreStackInst %24: number, %0: number
+// CHECK-NEXT:        StoreStackInst %24: number, %2: number
 // CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %27 = LoadStackInst (:number) %0: number
+// CHECK-NEXT:  %27 = LoadStackInst (:number) %2: number
 // CHECK-NEXT:        StoreStackInst %27: number, %1: number
 // CHECK-NEXT:        StoreFrameInst %3: environment, %27: number, [i]: number
 // CHECK-NEXT:        StoreStackInst false: boolean, %9: boolean

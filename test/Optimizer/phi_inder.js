@@ -54,18 +54,18 @@ function recursive_phi(x) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = PhiInst (:string|number) 1: number, %BB0, %9: string|number, %BB3
-// CHECK-NEXT:  %3 = PhiInst (:string|number) "hi": string, %BB0, %10: string|number, %BB3
-// CHECK-NEXT:  %4 = PhiInst (:number) 0: number, %BB0, %11: number, %BB3
+// CHECK-NEXT:  %2 = PhiInst (:number) 0: number, %BB0, %11: number, %BB3
+// CHECK-NEXT:  %3 = PhiInst (:string|number) "hi": string, %BB0, %9: string|number, %BB3
+// CHECK-NEXT:  %4 = PhiInst (:string|number) 1: number, %BB0, %10: string|number, %BB3
 // CHECK-NEXT:  %5 = BinaryGreaterThanInst (:boolean) %0: any, 3: number
 // CHECK-NEXT:       CondBranchInst %5: boolean, %BB4, %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = BinaryAddInst (:string|number) %9: string|number, %10: string|number
+// CHECK-NEXT:  %7 = BinaryAddInst (:string|number) %10: string|number, %9: string|number
 // CHECK-NEXT:       ReturnInst %7: string|number
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = PhiInst (:string|number) %3: string|number, %BB4, %2: string|number, %BB1
-// CHECK-NEXT:  %10 = PhiInst (:string|number) %2: string|number, %BB4, %3: string|number, %BB1
-// CHECK-NEXT:  %11 = FAddInst (:number) %4: number, 1: number
+// CHECK-NEXT:  %9 = PhiInst (:string|number) %4: string|number, %BB4, %3: string|number, %BB1
+// CHECK-NEXT:  %10 = PhiInst (:string|number) %3: string|number, %BB4, %4: string|number, %BB1
+// CHECK-NEXT:  %11 = FAddInst (:number) %2: number, 1: number
 // CHECK-NEXT:  %12 = FLessThanInst (:boolean) %11: number, 10: number
 // CHECK-NEXT:        CondBranchInst %12: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB4:

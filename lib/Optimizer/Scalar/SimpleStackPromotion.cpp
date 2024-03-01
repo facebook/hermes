@@ -50,61 +50,70 @@ bool tryPromoteConstVariable(Variable *var) {
   return true;
 }
 
-/// If \p var is only ever stored to in its owning function \p func, create a
-/// copy of \p var on the stack. Use this stack variable for any loads from \p
-/// var in \p func. Note that the stores to the frame are not deleted, which
-/// means that loads in inner functions will continue to work correctly.
+/// If \p var is only ever stored to by directly writing to a CreateScopeInst,
+/// create a copy of \p var on the stack. Use this stack variable for any loads
+/// from \p var in \p func. Note that the stores to the frame are not deleted,
+/// which means that indirect loads through scope resolution instructions will
+/// continue to work correctly.
 /// \return true if the variable was promoted.
 bool tryCopyToStack(Variable *var) {
   auto *func = var->getParent()->getFunction();
-  bool hasLoadInOwningFunction = false;
-  bool hasStoreInInnerFunction = false;
-  for (auto *U : var->getUsers()) {
-    bool owningFunc = U->getParent()->getParent() == func;
-    if (llvh::isa<LoadFrameInst>(U))
-      hasLoadInOwningFunction |= owningFunc;
-    else
-      hasStoreInInnerFunction |= !owningFunc;
-  }
+  bool hasIndirectStore = false;
+  for (auto *U : var->getUsers())
+    if (auto *SFI = llvh::dyn_cast<StoreFrameInst>(U))
+      hasIndirectStore |= !llvh::isa<CreateScopeInst>(SFI->getScope());
 
-  // If the variable is stored to from an inner function, we cannot attempt to
-  // create a copy of it on the stack. Note that this applies even if all stores
-  // are in the same inner function, because recursive invocations of that
-  // function need to modify the same frame variable.
-  // Likewise, if it doesn't have any loads that can use the new stack value, we
-  // don't need to create it. The latter prevents us from repeatedly creating
-  // new stack variables every time the pass runs.
-  if (hasStoreInInnerFunction || !hasLoadInOwningFunction)
+  // If the variable is stored to by resolving from an inner scope, we cannot
+  // attempt to create a copy of it on the stack. Note that this applies even if
+  // all stores use the same scope operand, because in an inner function,
+  // recursive invocations of that function need to modify the same frame
+  // variable.
+  if (hasIndirectStore)
     return false;
 
   LLVM_DEBUG(llvh::dbgs() << "Promoting Variable: " << var->getName() << "\n");
 
   IRBuilder builder(func->getParent());
-
-  // AllocStack will be inserted at the very start of the function, after any
-  // FirstInBlock instructions.
-  auto insertAt = func->begin()->begin();
-  while (insertAt->getSideEffect().getFirstInBlock())
-    ++insertAt;
-  builder.setInsertionPoint(&*insertAt);
-  auto *stackVar = builder.createAllocStackInst(var->getName(), var->getType());
-
   IRBuilder::InstructionDestroyer destroyer;
 
+  // Map from a scope to the stack location that holds the value of var in that
+  // scope.
+  llvh::SmallDenseMap<CreateScopeInst *, AllocStackInst *> allocs;
+
   for (auto *U : var->getUsers()) {
-    // Replace all loads in the owning function with loads from the stack.
-    if (llvh::isa<LoadFrameInst>(U)) {
-      if (U->getParent()->getParent() == func) {
-        builder.setInsertionPoint(U);
-        auto *loadStack = builder.createLoadStackInst(stackVar);
-        U->replaceAllUsesWith(loadStack);
-        destroyer.add(U);
+    // Replace all loads directly from a CreateScopeInst with loads from the
+    // stack.
+    if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(U)) {
+      if (auto *CSI = llvh::dyn_cast<CreateScopeInst>(LFI->getScope())) {
+        // Create an AllocStackInst for this scope if one doesn't exist.
+        auto *&alloc = allocs[CSI];
+        if (!alloc) {
+          builder.setInsertionPoint(CSI);
+          alloc = builder.createAllocStackInst(var->getName(), var->getType());
+        }
+
+        // Replace the frame load with a load from the stack.
+        builder.setInsertionPoint(LFI);
+        auto *loadStack = builder.createLoadStackInst(alloc);
+        LFI->replaceAllUsesWith(loadStack);
+        destroyer.add(LFI);
       }
-    } else {
-      // Duplicate all stores so they also store to the stack.
-      auto *store = llvh::cast<StoreFrameInst>(U);
-      builder.setInsertionPoint(store);
-      builder.createStoreStackInst(store->getValue(), stackVar);
+    }
+  }
+
+  // If none of the loads were eligible, nothing changed.
+  if (allocs.empty())
+    return false;
+
+  for (auto *U : var->getUsers()) {
+    // Duplicate all stores so they also store to the stack location (if one
+    // exists).
+    if (auto *SFI = llvh::dyn_cast<StoreFrameInst>(U)) {
+      auto *CSI = llvh::cast<CreateScopeInst>(SFI->getScope());
+      if (auto *alloc = allocs.lookup(CSI)) {
+        builder.setInsertionPoint(SFI);
+        builder.createStoreStackInst(SFI->getValue(), alloc);
+      }
     }
   }
 

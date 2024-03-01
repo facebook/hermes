@@ -31,9 +31,12 @@ function outer(a, b) {
 // CHECK-NEXT:function_end
 
 // CHECK:function outer(a: any, b: any): string|number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:  %1 = BinaryAddInst (:string|number) %0: any, 1: number
-// CHECK-NEXT:       ReturnInst %1: string|number
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %outer(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [a]: any
+// CHECK-NEXT:  %4 = BinaryAddInst (:string|number) %2: any, 1: number
+// CHECK-NEXT:       ReturnInst %4: string|number
 // CHECK-NEXT:function_end
