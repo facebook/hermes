@@ -62,14 +62,16 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addSimpleStackPromotion();
   PM.addInstSimplify();
   PM.addDCE();
+  PM.addMem2Reg();
   PM.addFunctionAnalysis();
   PM.addInlining();
+  PM.addDCE();
   // SimpleStackPromotion doesn't remove unused functions, so run it after DCE
   // to ensure unused functions aren't capturing vars.
   PM.addSimpleStackPromotion();
   PM.addFrameLoadStoreOpts();
-  PM.addFunctionAnalysis();
   PM.addMem2Reg();
+  PM.addFunctionAnalysis();
   PM.addObjectStackPromotion();
 
   // Run type inference before CSE so that we can better reason about binopt.
