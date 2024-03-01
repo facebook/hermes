@@ -35,13 +35,12 @@ exports.next = next
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %""(): any, %0: environment
-// CHECK-NEXT:  %2 = LoadParamInst (:object) %exports: object
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %next(): functionCode
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %Cls(): functionCode
-// CHECK-NEXT:  %5 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:       StorePropertyStrictInst %5: object, %4: object, "prototype": string
-// CHECK-NEXT:       StorePropertyStrictInst %3: object, %2: object, "next": string
+// CHECK-NEXT:  %1 = LoadParamInst (:object) %exports: object
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %next(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %Cls(): functionCode
+// CHECK-NEXT:  %4 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:       StorePropertyStrictInst %4: object, %3: object, "prototype": string
+// CHECK-NEXT:       StorePropertyStrictInst %2: object, %1: object, "next": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

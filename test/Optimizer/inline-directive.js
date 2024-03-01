@@ -24,14 +24,5 @@
 // CHECK:function global(): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:number) %1: object, %""(): functionCode, %0: environment, undefined: undefined, 0: number
-// CHECK-NEXT:       ReturnInst %2: number
-// CHECK-NEXT:function_end
-
-// CHECK:function ""(): number [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst 10: number
 // CHECK-NEXT:function_end

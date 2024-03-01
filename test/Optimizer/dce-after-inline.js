@@ -40,21 +40,17 @@ return x;
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): number [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:frame = [x: number]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %""(): any, %0: environment
-// CHECK-NEXT:       StoreFrameInst %1: environment, 10: number, [x]: number
 // CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:       ReturnInst %8: number
+// CHECK-NEXT:       ReturnInst %5: number
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = PhiInst (:number) 0: number, %BB0, %10: number, %BB2
-// CHECK-NEXT:  %6 = LoadFrameInst (:number) %1: environment, [x]: number
-// CHECK-NEXT:  %7 = FAddInst (:number) %6: number, 1: number
-// CHECK-NEXT:  %8 = FAddInst (:number) %6: number, %7: number
-// CHECK-NEXT:       StoreFrameInst %1: environment, %8: number, [x]: number
-// CHECK-NEXT:  %10 = FAddInst (:number) %5: number, 1: number
-// CHECK-NEXT:  %11 = FLessThanInst (:boolean) %10: number, 5: number
-// CHECK-NEXT:        CondBranchInst %11: boolean, %BB2, %BB1
+// CHECK-NEXT:  %2 = PhiInst (:number) 10: number, %BB0, %5: number, %BB2
+// CHECK-NEXT:  %3 = PhiInst (:number) 0: number, %BB0, %6: number, %BB2
+// CHECK-NEXT:  %4 = FAddInst (:number) %2: number, 1: number
+// CHECK-NEXT:  %5 = FAddInst (:number) %2: number, %4: number
+// CHECK-NEXT:  %6 = FAddInst (:number) %3: number, 1: number
+// CHECK-NEXT:  %7 = FLessThanInst (:boolean) %6: number, 5: number
+// CHECK-NEXT:       CondBranchInst %7: boolean, %BB2, %BB1
 // CHECK-NEXT:function_end

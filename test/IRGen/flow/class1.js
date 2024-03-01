@@ -40,25 +40,23 @@ return [dotProduct, Vec2D];
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %""(): any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %" 1#"(): functionCode
-// CHECK-NEXT:  %3 = CallInst [njsf] (:object) %2: object, %" 1#"(): functionCode, %1: environment, undefined: undefined, 0: number
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %" 1#"(): functionCode
+// CHECK-NEXT:  %2 = CallInst [njsf] (:object) %1: object, %" 1#"(): functionCode, %0: environment, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function " 1#"(): object [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %" 1#"(): any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %dotProduct(): functionCode
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %Vec2D(): functionCode
-// CHECK-NEXT:  %4 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:       StorePropertyStrictInst %4: object, %3: object, "prototype": string
-// CHECK-NEXT:  %6 = AllocFastArrayInst (:object) 2: number
-// CHECK-NEXT:       FastArrayPushInst %2: object, %6: object
-// CHECK-NEXT:       FastArrayPushInst %3: object, %6: object
-// CHECK-NEXT:       ReturnInst %6: object
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %dotProduct(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %Vec2D(): functionCode
+// CHECK-NEXT:  %3 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:       StorePropertyStrictInst %3: object, %2: object, "prototype": string
+// CHECK-NEXT:  %5 = AllocFastArrayInst (:object) 2: number
+// CHECK-NEXT:       FastArrayPushInst %1: object, %5: object
+// CHECK-NEXT:       FastArrayPushInst %2: object, %5: object
+// CHECK-NEXT:       ReturnInst %5: object
 // CHECK-NEXT:function_end
 
 // CHECK:function dotProduct(a: object, b: object): number [typed]

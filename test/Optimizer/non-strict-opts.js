@@ -32,9 +32,8 @@ function main()  {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %main(): any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
-// CHECK-NEXT:  %3 = CallInst (:string) %2: object, %foo(): functionCode, %1: environment, undefined: undefined, undefined: undefined, 2: number
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:  %2 = CallInst (:string) %1: object, %foo(): functionCode, %0: environment, undefined: undefined, undefined: undefined, 2: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

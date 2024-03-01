@@ -54,6 +54,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addFrameLoadStoreOpts();
   PM.addMem2Reg();
   PM.addSimpleStackPromotion();
+  PM.addScopeElimination();
   PM.addFunctionAnalysis();
   PM.addInlining();
   PM.addDCE();
@@ -71,6 +72,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addSimpleStackPromotion();
   PM.addFrameLoadStoreOpts();
   PM.addMem2Reg();
+  PM.addScopeElimination();
   PM.addFunctionAnalysis();
   PM.addObjectStackPromotion();
 

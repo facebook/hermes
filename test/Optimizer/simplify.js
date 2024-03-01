@@ -954,24 +954,23 @@ function objectCond() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %unary_ops(): any, %0: environment
-// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "number": string
-// CHECK-NEXT:  %4 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "object": string
-// CHECK-NEXT:  %5 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "string": string
-// CHECK-NEXT:  %6 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "boolean": string
-// CHECK-NEXT:  %7 = CreateRegExpInst (:object) "a+b": string, "": string
-// CHECK-NEXT:  %8 = UnaryTypeofInst (:string) %7: object
-// CHECK-NEXT:  %9 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %8: string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %1: environment, %""(): functionCode
-// CHECK-NEXT:  %11 = UnaryTypeofInst (:string) %10: object
-// CHECK-NEXT:  %12 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %11: string
-// CHECK-NEXT:  %13 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, -9: number
-// CHECK-NEXT:  %14 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, -1: number
-// CHECK-NEXT:  %15 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, -0: number
-// CHECK-NEXT:  %16 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, -0: number
-// CHECK-NEXT:  %17 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, NaN: number
-// CHECK-NEXT:  %18 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, true: boolean
+// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "number": string
+// CHECK-NEXT:  %3 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "object": string
+// CHECK-NEXT:  %4 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "string": string
+// CHECK-NEXT:  %5 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "boolean": string
+// CHECK-NEXT:  %6 = CreateRegExpInst (:object) "a+b": string, "": string
+// CHECK-NEXT:  %7 = UnaryTypeofInst (:string) %6: object
+// CHECK-NEXT:  %8 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %7: string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
+// CHECK-NEXT:  %10 = UnaryTypeofInst (:string) %9: object
+// CHECK-NEXT:  %11 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %10: string
+// CHECK-NEXT:  %12 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, -9: number
+// CHECK-NEXT:  %13 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, -1: number
+// CHECK-NEXT:  %14 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, -0: number
+// CHECK-NEXT:  %15 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, -0: number
+// CHECK-NEXT:  %16 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, NaN: number
+// CHECK-NEXT:  %17 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, true: boolean
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

@@ -34,16 +34,15 @@ function main() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %main(): any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %f(): functionCode
-// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "flag": string
-// CHECK-NEXT:       CondBranchInst %3: any, %BB1, %BB2
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %f(): functionCode
+// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "flag": string
+// CHECK-NEXT:       CondBranchInst %2: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %g(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %g(): functionCode
 // CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = PhiInst (:object) %5: object, %BB1, %2: object, %BB0
-// CHECK-NEXT:  %8 = CallInst (:any) %7: object, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %6 = PhiInst (:object) %4: object, %BB1, %1: object, %BB0
+// CHECK-NEXT:  %7 = CallInst (:any) %6: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

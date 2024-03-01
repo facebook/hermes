@@ -65,9 +65,8 @@ function g14(z) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %g14(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %m(): any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %"w 1#"(): functionCode
-// CHECK-NEXT:       StoreFrameInst %0: environment, %2: object, [w@g14]: object
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %"w 1#"(): functionCode
+// CHECK-NEXT:       StoreFrameInst %0: environment, %1: object, [w@g14]: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
