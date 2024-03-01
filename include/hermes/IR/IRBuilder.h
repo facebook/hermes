@@ -306,6 +306,10 @@ class IRBuilder {
       BaseScopeInst *startScope,
       LiteralNumber *numLevels);
 
+  GetClosureScopeInst *createGetClosureScopeInst(
+      VariableScope *scope,
+      Value *closure);
+
   LoadStackInst *createLoadStackInst(AllocStackInst *ptr);
 
   LoadFrameInst *createLoadFrameInst(Variable *ptr);

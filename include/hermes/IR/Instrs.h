@@ -735,6 +735,35 @@ class LIRResolveScopeInst : public BaseScopeInst {
   }
 };
 
+class GetClosureScopeInst : public BaseScopeInst {
+  GetClosureScopeInst(const GetClosureScopeInst &) = delete;
+  void operator=(const GetClosureScopeInst &) = delete;
+
+  enum { ClosureIdx = BaseScopeInst::LAST_IDX };
+
+ public:
+  explicit GetClosureScopeInst(VariableScope *varScope, Value *closure)
+      : BaseScopeInst(ValueKind::GetClosureScopeInstKind, varScope) {
+    pushOperand(closure);
+  }
+  explicit GetClosureScopeInst(
+      const GetClosureScopeInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseScopeInst(src, operands) {}
+
+  Value *getClosure() {
+    return cast<Instruction>(getOperand(ClosureIdx));
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setIdempotent();
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::GetClosureScopeInstKind;
+  }
+};
+
 class LoadFrameInst : public Instruction {
   LoadFrameInst(const LoadFrameInst &) = delete;
   void operator=(const LoadFrameInst &) = delete;

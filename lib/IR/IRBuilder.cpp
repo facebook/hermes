@@ -371,6 +371,14 @@ LIRResolveScopeInst *IRBuilder::createLIRResolveScopeInst(
   return LRSI;
 }
 
+GetClosureScopeInst *IRBuilder::createGetClosureScopeInst(
+    VariableScope *scope,
+    Value *closure) {
+  auto *GCSI = new GetClosureScopeInst(scope, closure);
+  insert(GCSI);
+  return GCSI;
+}
+
 LoadFrameInst *IRBuilder::createLoadFrameInst(Variable *ptr) {
   auto LI = new LoadFrameInst(ptr);
   insert(LI);

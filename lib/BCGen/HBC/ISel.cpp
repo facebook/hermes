@@ -1354,6 +1354,15 @@ void HBCISel::generateHBCResolveParentEnvironmentInst(
   }
   BCFGen_->emitGetParentEnvironment(encodeValue(Inst), delta);
 }
+
+void HBCISel::generateGetClosureScopeInst(
+    hermes::GetClosureScopeInst *Inst,
+    hermes::BasicBlock *next) {
+  auto output = encodeValue(Inst);
+  auto closure = encodeValue(Inst->getClosure());
+  BCFGen_->emitGetClosureEnvironment(output, closure);
+}
+
 void HBCISel::generateHBCStoreToEnvironmentInst(
     HBCStoreToEnvironmentInst *Inst,
     BasicBlock *next) {

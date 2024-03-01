@@ -788,6 +788,9 @@ class TypeInferenceImpl {
   Type inferLIRResolveScopeInst(LIRResolveScopeInst *inst) {
     return *inst->getInherentType();
   }
+  Type inferGetClosureScopeInst(GetClosureScopeInst *inst) {
+    return *inst->getInherentType();
+  }
 
   // These are target dependent instructions:
 

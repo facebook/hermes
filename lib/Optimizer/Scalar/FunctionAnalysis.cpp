@@ -127,6 +127,11 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
         continue;
       }
 
+      // Getting the closure scope does not leak the closure.
+      if (llvh::isa<GetClosureScopeInst>(closureUser)) {
+        continue;
+      }
+
       // UnionNarrowTrustedInst is a cast, the result is the same as its input.
       // That means we can add it to the worklist to follow it.
       if (llvh::isa<UnionNarrowTrustedInst>(closureUser)) {
