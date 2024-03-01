@@ -20,32 +20,35 @@ function g14(z) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "g14": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %g14(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "g14": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %g14(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "g14": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function g14(z: any): undefined|object
 // CHECK-NEXT:frame = [w: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %z: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %w(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: object, [w]: object
-// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "k": string
-// CHECK-NEXT:  %4 = BinaryMultiplyInst (:number) %3: any, 1: number
-// CHECK-NEXT:  %5 = BinaryGreaterThanInst (:boolean) %0: any, %4: number
-// CHECK-NEXT:       CondBranchInst %5: boolean, %BB1, %BB2
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %g14(): any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %z: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %w(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [w]: object
+// CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "k": string
+// CHECK-NEXT:  %6 = BinaryMultiplyInst (:number) %5: any, 1: number
+// CHECK-NEXT:  %7 = BinaryGreaterThanInst (:boolean) %2: any, %6: number
+// CHECK-NEXT:       CondBranchInst %7: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %8 = LoadFrameInst (:object) [w]: object
-// CHECK-NEXT:  %9 = CallInst (:any) %8: object, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %10 = BinaryAddInst (:string|number) %9: any, 1: number
-// CHECK-NEXT:  %11 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %10: string|number
-// CHECK-NEXT:  %12 = AllocObjectInst (:object) 1: number, empty: any
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %m(): functionCode
-// CHECK-NEXT:        StoreNewOwnPropertyInst %13: object, %12: object, "m": string, true: boolean
-// CHECK-NEXT:        ReturnInst %12: object
+// CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %10 = LoadFrameInst (:object) %1: environment, [w]: object
+// CHECK-NEXT:  %11 = CallInst (:any) %10: object, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %12 = BinaryAddInst (:string|number) %11: any, 1: number
+// CHECK-NEXT:  %13 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: string|number
+// CHECK-NEXT:  %14 = AllocObjectInst (:object) 1: number, empty: any
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %1: environment, %m(): functionCode
+// CHECK-NEXT:        StoreNewOwnPropertyInst %15: object, %14: object, "m": string, true: boolean
+// CHECK-NEXT:        ReturnInst %14: object
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -61,8 +64,10 @@ function g14(z) {
 // CHECK:function m(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %"w 1#"(): functionCode
-// CHECK-NEXT:       StoreFrameInst %0: object, [w@g14]: object
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %g14(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %m(): any, %0: environment
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %"w 1#"(): functionCode
+// CHECK-NEXT:       StoreFrameInst %0: environment, %2: object, [w@g14]: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

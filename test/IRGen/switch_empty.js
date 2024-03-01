@@ -23,21 +23,24 @@ function onlyDefault () {
 // CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "empty": string
 // CHECK-NEXT:       DeclareGlobalVarInst "onlyDefault": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %empty(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "empty": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %onlyDefault(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "onlyDefault": string
-// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:       StoreStackInst undefined: undefined, %6: any
-// CHECK-NEXT:  %8 = LoadStackInst (:any) %6: any
-// CHECK-NEXT:       ReturnInst %8: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %empty(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "empty": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %onlyDefault(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "onlyDefault": string
+// CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %7: any
+// CHECK-NEXT:  %9 = LoadStackInst (:any) %7: any
+// CHECK-NEXT:        ReturnInst %9: any
 // CHECK-NEXT:function_end
 
 // CHECK:function empty(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %empty(): any, %0: environment
 // CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       ReturnInst undefined: undefined
@@ -46,6 +49,8 @@ function onlyDefault () {
 // CHECK:function onlyDefault(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %onlyDefault(): any, %0: environment
 // CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       ReturnInst undefined: undefined

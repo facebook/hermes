@@ -22,12 +22,13 @@ function f2(){
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "f1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f2": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %f1(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "f1": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %f2(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "f2": string
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %f1(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "f1": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %f2(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "f2": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

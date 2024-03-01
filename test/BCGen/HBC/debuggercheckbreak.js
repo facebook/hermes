@@ -57,7 +57,7 @@ function test1() {
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<test1>(1 params, 18 registers, 0 symbols):
-// CHECK-NEXT:Offset in debug table: source 0x0011, lexical 0x0002
+// CHECK-NEXT:Offset in debug table: source 0x0014, lexical 0x0002
 // CHECK-NEXT:    LoadConstUInt8    r6, 1
 // CHECK-NEXT:    GetGlobalObject   r1
 // CHECK-NEXT:    LoadConstUndefined r0
@@ -108,10 +108,11 @@ function test1() {
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
 // CHECK-NEXT:    bc 0: line 10 col 1
+// CHECK-NEXT:    bc 5: line 10 col 1
 // CHECK-NEXT:    bc 7: line 10 col 1
 // CHECK-NEXT:    bc 14: line 10 col 1
 // CHECK-NEXT:    bc 23: line 21 col 1
-// CHECK-NEXT:  0x0011  function idx 1, starts at line 10 col 1
+// CHECK-NEXT:  0x0014  function idx 1, starts at line 10 col 1
 // CHECK-NEXT:    bc 16: line 13 col 9
 // CHECK-NEXT:    bc 22: line 13 col 20
 // CHECK-NEXT:    bc 27: line 13 col 20
@@ -127,7 +128,7 @@ function test1() {
 // CHECK-NEXT:    bc 101: line 20 col 3
 // CHECK-NEXT:    bc 107: line 20 col 8
 // CHECK-NEXT:    bc 112: line 21 col 1
-// CHECK-NEXT:  0x0048  end of debug source table
+// CHECK-NEXT:  0x004b  end of debug source table
 
 // CHECK:Debug lexical table:
 // CHECK-NEXT:  0x0000  lexical parent: none, variable count: 0

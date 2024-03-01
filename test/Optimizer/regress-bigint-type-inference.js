@@ -27,30 +27,35 @@
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): functionCode
-// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %""(): functionCode, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
+// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %""(): functionCode, %0: environment, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): functionCode
-// CHECK-NEXT:  %1 = CallInst (:number|bigint) %0: object, %foo(): functionCode, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %3 = UnaryTypeofInst (:string) %1: number|bigint
-// CHECK-NEXT:  %4 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: string, %1: number|bigint
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %""(): any, %0: environment
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
+// CHECK-NEXT:  %3 = CallInst (:number|bigint) %2: object, %foo(): functionCode, %1: environment, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %5 = UnaryTypeofInst (:string) %3: number|bigint
+// CHECK-NEXT:  %6 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %5: string, %3: number|bigint
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): number|bigint [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %o(): functionCode
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %" 1#"(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %1: object, %0: object, "valueOf": string
-// CHECK-NEXT:  %3 = UnaryMinusInst (:number|bigint) %0: object
-// CHECK-NEXT:       ReturnInst %3: number|bigint
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %o(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %" 1#"(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %3: object, %2: object, "valueOf": string
+// CHECK-NEXT:  %5 = UnaryMinusInst (:number|bigint) %2: object
+// CHECK-NEXT:       ReturnInst %5: number|bigint
 // CHECK-NEXT:function_end
 
 // CHECK:function o(): undefined

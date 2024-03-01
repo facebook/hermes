@@ -22,13 +22,13 @@ function negzero(f) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = HBCCreateFunctionEnvironmentInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %global(): any, empty: any
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "poszero": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "negzero": string
-// CHECK-NEXT:  $Reg2 = HBCCreateFunctionInst (:object) %poszero(): functionCode, $Reg0
+// CHECK-NEXT:  $Reg2 = CreateFunctionInst (:object) $Reg0, %poszero(): functionCode
 // CHECK-NEXT:  $Reg1 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg1, "poszero": string
-// CHECK-NEXT:  $Reg0 = HBCCreateFunctionInst (:object) %negzero(): functionCode, $Reg0
+// CHECK-NEXT:  $Reg0 = CreateFunctionInst (:object) $Reg0, %negzero(): functionCode
 // CHECK-NEXT:  $Reg0 = StorePropertyLooseInst $Reg0, $Reg1, "negzero": string
 // CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
