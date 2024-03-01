@@ -9,6 +9,7 @@
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/Runtime.h"
 
+#include "hermes/BCGen/SerializedLiteralParser.h"
 #include "hermes/Inst/InstDecode.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/SlowAssert.h"
@@ -516,27 +517,53 @@ static Handle<HiddenClass> getHiddenClassForBuffer(
           JSObject::numOverlapSlots<JSObject>()));
 
   GCScopeMarkerRAII marker{runtime};
-  auto keyGen =
-      curCodeBlock->getObjectBufferKeyIter(keyBufferIndex, numLiterals);
-  while (keyGen.hasNext()) {
-    auto key = keyGen.get(runtime);
-    SymbolID sym = [&] {
-      if (key.isSymbol())
-        return ID(key.getSymbol().unsafeGetIndex());
 
-      assert(key.isNumber() && "Key must be symbol or number");
-      tmpHandleKey = key;
-      // Note that since this handle has been created, the associated symbol
-      // will be automatically kept alive until we flush the marker.
+  // Set up the visitor to populate keys in the hidden class.
+  struct {
+    void visitStringID(StringID id) {
+      SymbolID sym = ID(id);
+      auto addResult = HiddenClass::addProperty(
+          clazz, runtime, sym, PropertyFlags::defaultNewNamedPropertyFlags());
+      clazz = addResult->first;
+      marker.flush();
+    }
+    void visitNumber(double d) {
+      tmpHandleKey = HermesValue::encodeTrustedNumberValue(d);
       // valueToSymbolID cannot fail because the key is known to be uint32.
       Handle<SymbolID> symHandle = *valueToSymbolID(runtime, tmpHandleKey);
-      return *symHandle;
-    }();
-    auto addResult = HiddenClass::addProperty(
-        clazz, runtime, sym, PropertyFlags::defaultNewNamedPropertyFlags());
-    clazz = addResult->first;
-    marker.flush();
-  }
+      auto addResult = HiddenClass::addProperty(
+          clazz,
+          runtime,
+          *symHandle,
+          PropertyFlags::defaultNewNamedPropertyFlags());
+      clazz = addResult->first;
+      marker.flush();
+    }
+    void visitNull() {
+      llvm_unreachable("Keys cannot be null");
+    }
+    void visitUndefined() {
+      llvm_unreachable("Keys cannot be undefined");
+    }
+    void visitBool(bool b) {
+      llvm_unreachable("Keys cannot be boolean");
+    }
+
+    MutableHandle<HiddenClass> &clazz;
+    MutableHandle<> &tmpHandleKey;
+    GCScopeMarkerRAII &marker;
+    Runtime &runtime;
+    CodeBlock *curCodeBlock;
+  } v{clazz, tmpHandleKey, marker, runtime, curCodeBlock};
+
+  // Visit each literal in the buffer and add it as a property.
+  SerializedLiteralParser::parse(
+      curCodeBlock->getRuntimeModule()
+          ->getBytecode()
+          ->getObjectKeyBuffer()
+          .slice(keyBufferIndex),
+      numLiterals,
+      v);
 
   if (LLVM_LIKELY(!clazz->isDictionary())) {
     assert(
@@ -564,62 +591,48 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
       runtime, curCodeBlock, numLiterals, keyBufferIndex);
   auto obj = runtime.makeHandle(JSObject::create(runtime, clazz));
 
-  auto valGen =
-      curCodeBlock->getObjectBufferValueIter(valBufferIndex, numLiterals);
-
-#ifndef NDEBUG
-  auto keyGen =
-      curCodeBlock->getObjectBufferKeyIter(keyBufferIndex, numLiterals);
-#endif
-
-  uint32_t propIndex = 0;
-  // keyGen should always have the same amount of elements as valGen
-  while (valGen.hasNext()) {
-#ifndef NDEBUG
-    {
-      GCScopeMarkerRAII marker{runtime};
-      // keyGen points to an element in the key buffer, which means it will
-      // only ever generate a Number or a Symbol. This means it will never
-      // allocate memory, and it is safe to not use a Handle.
-      SymbolID stringIdResult{};
-      auto key = keyGen.get(runtime);
-      if (key.isSymbol()) {
-        stringIdResult = ID(key.getSymbol().unsafeGetIndex());
-      } else {
-        auto keyHandle = runtime.makeHandle(
-            HermesValue::encodeTrustedNumberValue(key.getNumber()));
-        auto idRes = valueToSymbolID(runtime, keyHandle);
-        assert(
-            idRes != ExecutionStatus::EXCEPTION &&
-            "valueToIdentifier() failed for uint32_t value");
-        stringIdResult = **idRes;
-      }
-      NamedPropertyDescriptor desc;
-      auto pos = HiddenClass::findProperty(
-          clazz,
-          runtime,
-          stringIdResult,
-          PropertyFlags::defaultNewNamedPropertyFlags(),
-          desc);
-      assert(
-          pos &&
-          "Should find this property in cached hidden class property table.");
-      assert(
-          desc.slot == propIndex &&
-          "propIndex should be the same as recorded in hidden class table.");
+  // Set up the visitor to populate property values in the object.
+  struct {
+    void visitStringID(StringID id) {
+      auto shv = SmallHermesValue::encodeStringValue(
+          runtimeModule->getStringPrimFromStringIDMayAllocate(id), runtime);
+      JSObject::setNamedSlotValueUnsafe(obj.get(), runtime, i++, shv);
     }
-#endif
-    // Explicitly make sure valGen.get() is called before obj.get() so that
-    // any allocation in valGen.get() won't invalidate the raw pointer
-    // returned from obj.get().
-    auto val = valGen.get(runtime);
-    auto shv = SmallHermesValue::encodeHermesValue(val, runtime);
-    // We made this object, it's not a Proxy.
-    JSObject::setNamedSlotValueUnsafe(obj.get(), runtime, propIndex, shv);
-    ++propIndex;
-  }
+    void visitNumber(double d) {
+      auto shv = SmallHermesValue::encodeNumberValue(d, runtime);
+      JSObject::setNamedSlotValueUnsafe(obj.get(), runtime, i++, shv);
+    }
+    void visitNull() {
+      static constexpr auto shv = SmallHermesValue::encodeNullValue();
+      JSObject::setNamedSlotValueUnsafe(obj.get(), runtime, i++, shv);
+    }
+    void visitUndefined() {
+      assert(
+          JSObject::getNamedSlotValueUnsafe(*obj, runtime, i).isUndefined() &&
+          "Uninitialized object slot is not undefined.");
+      ++i;
+    }
+    void visitBool(bool b) {
+      auto shv = SmallHermesValue::encodeBoolValue(b);
+      JSObject::setNamedSlotValueUnsafe(obj.get(), runtime, i++, shv);
+    }
 
-  return createPseudoHandle(HermesValue::encodeObjectValue(*obj));
+    Handle<JSObject> obj;
+    Runtime &runtime;
+    RuntimeModule *runtimeModule;
+    size_t i;
+  } v{obj, runtime, curCodeBlock->getRuntimeModule(), 0};
+
+  // Visit each value in the given buffer, and set it in the object.
+  SerializedLiteralParser::parse(
+      curCodeBlock->getRuntimeModule()
+          ->getBytecode()
+          ->getObjectValueBuffer()
+          .slice(valBufferIndex),
+      numLiterals,
+      v);
+
+  return createPseudoHandle(obj.getHermesValue());
 }
 
 CallResult<PseudoHandle<>> Interpreter::createArrayFromBuffer(
@@ -638,14 +651,42 @@ CallResult<PseudoHandle<>> Interpreter::createArrayFromBuffer(
   auto arr = *arrRes;
   JSArray::setStorageEndIndex(arr, runtime, numElements);
 
-  auto iter = curCodeBlock->getArrayBufferIter(bufferIndex, numLiterals);
-  JSArray::size_type i = 0;
-  while (iter.hasNext()) {
-    // NOTE: we must get the value in a separate step to guarantee ordering.
-    const auto value =
-        SmallHermesValue::encodeHermesValue(iter.get(runtime), runtime);
-    JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, value);
-  }
+  // Set up the visitor to populate literal elements in the array.
+  struct {
+    void visitStringID(StringID id) {
+      auto shv = SmallHermesValue::encodeStringValue(
+          runtimeModule->getStringPrimFromStringIDMayAllocate(id), runtime);
+      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+    }
+    void visitNumber(double d) {
+      auto shv = SmallHermesValue::encodeNumberValue(d, runtime);
+      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+    }
+    void visitNull() {
+      constexpr auto shv = SmallHermesValue::encodeNullValue();
+      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+    }
+    void visitUndefined() {
+      constexpr auto shv = SmallHermesValue::encodeUndefinedValue();
+      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+    }
+    void visitBool(bool b) {
+      auto shv = SmallHermesValue::encodeBoolValue(b);
+      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+    }
+
+    Handle<JSArray> arr;
+    Runtime &runtime;
+    RuntimeModule *runtimeModule;
+    JSArray::size_type i;
+  } v{arr, runtime, curCodeBlock->getRuntimeModule(), 0};
+
+  // Visit each serialized value in the given buffer.
+  SerializedLiteralParser::parse(
+      curCodeBlock->getRuntimeModule()->getBytecode()->getArrayBuffer().slice(
+          bufferIndex),
+      numLiterals,
+      v);
 
   return createPseudoHandle(HermesValue::encodeObjectValue(*arr));
 }

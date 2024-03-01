@@ -16,7 +16,6 @@
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/Profiler.h"
 #include "hermes/VM/PropertyCache.h"
-#include "hermes/VM/SerializedLiteralParser.h"
 #include "llvh/ADT/DenseSet.h"
 #include "llvh/ADT/Optional.h"
 #include "llvh/Support/TrailingObjects.h"
@@ -143,18 +142,6 @@ class CodeBlock final
   /// each function emits its bytecode in order. This is used for error
   /// backtraces when debug info is not present.
   uint32_t getVirtualOffset() const;
-
-  SerializedLiteralParser getArrayBufferIter(
-      uint32_t idx,
-      unsigned int numLiterals) const;
-
-  SerializedLiteralParser getObjectBufferKeyIter(
-      uint32_t idx,
-      unsigned int numLiterals) const;
-
-  SerializedLiteralParser getObjectBufferValueIter(
-      uint32_t idx,
-      unsigned int numLiterals) const;
 
   RuntimeModule *getRuntimeModule() const {
     return runtimeModule_;

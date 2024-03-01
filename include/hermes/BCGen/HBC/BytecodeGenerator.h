@@ -431,7 +431,7 @@ class BytecodeModuleGenerator {
 
   /// Serializes the array of literals given into a compact char buffer.
   /// The serialization format can be found in:
-  /// include/hermes/VM/SerializedLiteralParser.h
+  /// include/hermes/BCGen/SerializedLiteralGenerator.h
   /// This function serializes the literals, and checks to see if the exact
   /// byte pattern is already present in \buff. If it is, it simply returns
   /// its offset in \buff. If it isn't, the function appends it and returns

@@ -11,18 +11,8 @@ add_hermes_library(hermesBackend
   LowerScopes.cpp
   Exceptions.cpp
   SerializedLiteralGenerator.cpp
-  SerializedLiteralParserBase.cpp
   LINK_OBJLIBS hermesFrontend hermesOptimizer
 )
-
-add_hermes_library(hermesBackendLean
-  SerializedLiteralParserBase.cpp
-  LINK_OBJLIBS
-  hermesSupport
-  hermesPublic
-)
-
-target_compile_definitions(hermesBackendLean_obj PUBLIC HERMESVM_LEAN)
 
 add_subdirectory(HBC)
 add_subdirectory(SH)

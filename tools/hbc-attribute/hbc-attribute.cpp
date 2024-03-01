@@ -326,13 +326,6 @@ class UsageCounter : public BytecodeVisitor {
 
     unsigned bundleOffset = (uintptr_t)(*ind + buff - bundleStart_);
     switch (tag) {
-      case SLG::ByteStringTag: {
-        uint8_t val = llvh::support::endian::read<uint8_t, 1>(
-            buff + *ind, llvh::support::endianness::little);
-        appendRecord("data:literalbuffer:bytestring", bundleOffset, 1);
-        countStringLiteral(val);
-        *ind += 1;
-      } break;
       case SLG::ShortStringTag: {
         uint16_t val = llvh::support::endian::read<uint16_t, 1>(
             buff + *ind, llvh::support::endianness::little);
@@ -356,6 +349,7 @@ class UsageCounter : public BytecodeVisitor {
         *ind += 4;
       } break;
       case SLG::NullTag:
+      case SLG::UndefinedTag:
       case SLG::TrueTag:
       case SLG::FalseTag:
         break;

@@ -18,7 +18,6 @@
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule.h"
-#include "hermes/VM/SerializedLiteralParser.h"
 
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/ErrorHandling.h"
@@ -27,7 +26,6 @@ namespace hermes {
 namespace vm {
 
 using namespace hermes::inst;
-using SLP = SerializedLiteralParser;
 
 #ifdef HERMES_SLOW_DEBUG
 
@@ -157,30 +155,6 @@ CodeBlock *CodeBlock::createCodeBlock(
 int32_t CodeBlock::findCatchTargetOffset(uint32_t exceptionOffset) {
   return runtimeModule_->getBytecode()->findCatchTargetOffset(
       functionID_, exceptionOffset);
-}
-
-SLP CodeBlock::getArrayBufferIter(uint32_t idx, unsigned int numLiterals)
-    const {
-  return SLP{
-      runtimeModule_->getBytecode()->getArrayBuffer().slice(idx),
-      numLiterals,
-      runtimeModule_};
-}
-
-SLP CodeBlock::getObjectBufferKeyIter(uint32_t idx, unsigned int numLiterals)
-    const {
-  return SLP{
-      runtimeModule_->getBytecode()->getObjectKeyBuffer().slice(idx),
-      numLiterals,
-      nullptr};
-}
-
-SLP CodeBlock::getObjectBufferValueIter(uint32_t idx, unsigned int numLiterals)
-    const {
-  return SLP{
-      runtimeModule_->getBytecode()->getObjectValueBuffer().slice(idx),
-      numLiterals,
-      runtimeModule_};
 }
 
 SymbolID CodeBlock::getNameMayAllocate() const {

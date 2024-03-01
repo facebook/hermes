@@ -76,7 +76,9 @@ class SerializedLiteralGenerator {
   static constexpr TagType NumberTag = 3 << 4;
   static constexpr TagType LongStringTag = 4 << 4;
   static constexpr TagType ShortStringTag = 5 << 4;
-  static constexpr TagType ByteStringTag = 6 << 4;
+  // TODO: Evaluate restoring ByteStringTag by using a different serialization
+  // scheme.
+  static constexpr TagType UndefinedTag = 6 << 4;
   static constexpr TagType IntegerTag = 7 << 4;
   static constexpr TagType TagMask = 0x70;
 
