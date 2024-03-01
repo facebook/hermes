@@ -1885,6 +1885,9 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   VariableScope *getFunctionScope() {
     return &functionScope_;
   }
+  const VariableScope *getFunctionScope() const {
+    return &functionScope_;
+  }
 
   void addBlock(BasicBlock *BB);
 

@@ -92,6 +92,7 @@ class Verifier : public InstructionVisitor<Verifier, bool> {
   LLVM_NODISCARD bool visitModule(const Module &M);
   LLVM_NODISCARD bool visitFunction(const Function &F);
   LLVM_NODISCARD bool visitBasicBlock(const BasicBlock &BB);
+  LLVM_NODISCARD bool visitVariableScope(const VariableScope &VS);
 
   LLVM_NODISCARD bool visitBaseStoreOwnPropertyInst(
       const BaseStoreOwnPropertyInst &Inst);
@@ -226,6 +227,7 @@ bool Verifier::visitModule(const Module &M) {
     AssertWithMsg(
         I->getParent() == &M, "Function's parent does not match module");
     ReturnIfNot(visitFunction(*I));
+    ReturnIfNot(visitVariableScope(*I->getFunctionScope()));
   }
   return true;
 }
@@ -419,6 +421,28 @@ bool Verifier::visitBasicBlock(const BasicBlock &BB) {
   return true;
 }
 
+bool Verifier::visitVariableScope(const hermes::VariableScope &VS) {
+  // Check that the scope has a single uniquely identifiable parent.
+  llvh::Optional<VariableScope *> parentVS;
+  for (auto *U : VS.getUsers()) {
+    auto *CSI = llvh::dyn_cast<CreateScopeInst>(U);
+    if (!CSI)
+      continue;
+
+    // Found a creation of this scope, retrieve the parent from it, if any.
+    VariableScope *curParentVS = nullptr;
+    if (auto *parentScope =
+            llvh::dyn_cast<BaseScopeInst>(CSI->getParentScope()))
+      curParentVS = parentScope->getVariableScope();
+    if (!parentVS)
+      parentVS = curParentVS;
+    AssertWithMsg(
+        parentVS == curParentVS,
+        "VariableScope has multiple different parents.");
+  }
+  return true;
+}
+
 bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
   // TODO: Verify the instruction is valid, need switch/case on each
   // actual Instruction type
@@ -456,6 +480,21 @@ bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
           llvh::isa<LoadStackInst>(Inst) ||
               Inst.getSideEffect().getWriteStack(),
           "Must write to stack operand.");
+    }
+
+    // Scope instructions can only be used by certain instructions, in order to
+    // make their nesting and usage analyzable.
+    // TODO: Once we run the IRVerifier after register allocation, we may need
+    // to allow for lower level Mov/SpillMov instructions as well.
+    if (llvh::isa<BaseScopeInst>(Operand)) {
+      AssertIWithMsg(
+          Inst,
+          llvh::isa<BaseCallInst>(Inst) || llvh::isa<CreateScopeInst>(Inst) ||
+              llvh::isa<ResolveScopeInst>(Inst) ||
+              llvh::isa<LIRResolveScopeInst>(Inst) ||
+              llvh::isa<BaseCreateLexicalChildInst>(Inst) ||
+              llvh::isa<LoadFrameInst>(Inst) || llvh::isa<StoreFrameInst>(Inst),
+          "BaseScopeInst can only be an operand to certain instructions.");
     }
 
     if (Operand->getType().canBeEmpty()) {
@@ -663,6 +702,11 @@ bool Verifier::visitStoreStackInst(const StoreStackInst &Inst) {
 bool Verifier::visitStoreFrameInst(const StoreFrameInst &Inst) {
   AssertIWithMsg(
       Inst, !Inst.hasUsers(), "Store Instructions must not have users");
+  AssertIWithMsg(
+      Inst,
+      llvh::cast<BaseScopeInst>(Inst.getScope())->getVariableScope() ==
+          Inst.getVariable()->getParent(),
+      "Loading from different scope than the variable's scope.");
   return true;
 }
 
@@ -671,6 +715,11 @@ bool Verifier::visitLoadFrameInst(const LoadFrameInst &Inst) {
       Inst,
       Inst.getType() == Inst.getLoadVariable()->getType(),
       "LoadFrameInst type must be the same as the variable type");
+  AssertIWithMsg(
+      Inst,
+      llvh::cast<BaseScopeInst>(Inst.getScope())->getVariableScope() ==
+          Inst.getLoadVariable()->getParent(),
+      "Storing to different scope than the variable's scope.");
   return true;
 }
 
