@@ -491,6 +491,24 @@ TEST_F(CDPAgentTest, CDPAgentRejectsUnknownDomains) {
   });
 }
 
+TEST_F(CDPAgentTest, DebuggerAllowDoubleEnable) {
+  int msgId = 1;
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  // Verify enabling a second time succeeds
+  sendAndCheckResponse("Debugger.enable", msgId++);
+}
+
+TEST_F(CDPAgentTest, DebuggerAllowDoubleDisable) {
+  int msgId = 1;
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  sendAndCheckResponse("Debugger.disable", msgId++);
+
+  // Verify disabling a second time succeeds
+  sendAndCheckResponse("Debugger.disable", msgId++);
+}
+
 TEST_F(CDPAgentTest, DebuggerScriptsOnEnable) {
   int msgId = 1;
 
@@ -1454,6 +1472,15 @@ TEST_F(CDPAgentTest, DebuggerRestoreState) {
     sendAndCheckResponse("Debugger.resume", msgId++);
     ensureNotification(waitForMessage(), "Debugger.resumed");
   }
+}
+
+TEST_F(CDPAgentTest, DebuggerDeactivateBreakpointsWhileDisabled) {
+  int msgId = 1;
+  sendRequest(
+      "Debugger.setBreakpointsActive", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("active", false);
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
 }
 
 TEST_F(CDPAgentTest, DebuggerActivateBreakpoints) {

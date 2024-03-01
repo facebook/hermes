@@ -107,10 +107,7 @@ std::unique_ptr<DebuggerDomainState> DebuggerDomainAgent::getState() {
 
 void DebuggerDomainAgent::enable(const m::debugger::EnableRequest &req) {
   if (enabled_) {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id,
-        m::ErrorCode::InvalidRequest,
-        "Debugger domain already enabled"));
+    sendResponseToClient(m::makeOkResponse(req.id));
     return;
   }
   enabled_ = true;
@@ -169,7 +166,8 @@ void DebuggerDomainAgent::enable(const m::debugger::EnableRequest &req) {
 }
 
 void DebuggerDomainAgent::disable(const m::debugger::DisableRequest &req) {
-  if (!checkDebuggerEnabled(req)) {
+  if (!enabled_) {
+    sendResponseToClient(m::makeOkResponse(req.id));
     return;
   }
 
@@ -410,7 +408,8 @@ void DebuggerDomainAgent::removeBreakpoint(
 
 void DebuggerDomainAgent::setBreakpointsActive(
     const m::debugger::SetBreakpointsActiveRequest &req) {
-  if (!checkDebuggerEnabled(req)) {
+  if (!enabled_) {
+    sendResponseToClient(m::makeOkResponse(req.id));
     return;
   }
   breakpointsActive_ = req.active;
