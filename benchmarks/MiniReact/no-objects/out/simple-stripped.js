@@ -531,10 +531,8 @@ class M$react_index$INTERNAL$Root {
       }
     } else if (typeof children === 'string') {
       if (prevChild === null || M$sh_CHECKED_CAST$default(prevChild).type.kind !== 'text') {
-        const child = new M$react_index$INTERNAL$Fiber({
-          kind: 'text',
-          text: children
-        }, {}, null);
+        const type = new M$react_index$INTERNAL$FiberTypeText(M$sh_CHECKED_CAST$default(children));
+        const child = new M$react_index$INTERNAL$Fiber(type, {}, null);
         parent.child = child;
       } else {
         M$sh_CHECKED_CAST$default(M$sh_CHECKED_CAST$default(prevChild).type).text = M$sh_CHECKED_CAST$default(children);
@@ -666,22 +664,12 @@ class M$react_index$INTERNAL$Fiber {
 function M$react_index$jsx(type, props, key) {
   'inline';
 
-  return {
-    type: type,
-    props: props,
-    key: key,
-    ref: null
-  };
+  return new M$react_index$INTERNAL$React$Element(type, props, key, null);
 }
 function M$react_index$Fragment(props) {
   'inline';
 
-  return {
-    type: M$react_index$INTERNAL$REACT_FRAGMENT_TYPE,
-    props: props,
-    key: null,
-    ref: null
-  };
+  return new M$react_index$INTERNAL$React$Element(M$react_index$INTERNAL$REACT_FRAGMENT_TYPE, props, null, null);
 }
 function M$react_index$forwardRef(comp) {
   return props => comp(props, null);

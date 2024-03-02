@@ -614,7 +614,8 @@ class Root {
         prevChild === null ||
         CHECKED_CAST<Fiber>(prevChild).type.kind !== 'text'
       ) {
-        const child = new Fiber({kind: 'text', text: children}, {}, null);
+        const type = new FiberTypeText(CHECKED_CAST<string>(children));
+        const child = new Fiber(type, {}, null);
         parent.child = child;
       } else {
         CHECKED_CAST<FiberTypeText>(CHECKED_CAST<Fiber>(prevChild).type).text =
@@ -793,22 +794,12 @@ export function jsx(
   key: React$Key | null,
 ): React$MixedElement {
   'inline';
-  return {
-    type: type,
-    props: props,
-    key: key,
-    ref: null,
-  };
+  return new React$Element<React$ElementType>(type, props, key, null);
 }
 
 export function Fragment(props: Props): React$MixedElement {
   'inline';
-  return {
-    type: REACT_FRAGMENT_TYPE,
-    props: props,
-    key: null,
-    ref: null,
-  };
+  return new React$Element<React$ElementType>(REACT_FRAGMENT_TYPE, props, null, null);
 }
 
 export function forwardRef(
