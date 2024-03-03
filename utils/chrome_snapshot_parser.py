@@ -132,10 +132,12 @@ def main():
             edges.append(
                 {
                     "type": real_type,
-                    "name_or_index": strings[name_or_index]
-                    if real_type
-                    in ("context", "property", "internal", "shortcut", "weak")
-                    else name_or_index,
+                    "name_or_index": (
+                        strings[name_or_index]
+                        if real_type
+                        in ("context", "property", "internal", "shortcut", "weak")
+                        else name_or_index
+                    ),
                     # Instead of printing the index, print the ID of the node
                     # pointed to. to_node points to the start of a node chunk,
                     # and the ID is the 3rd element in that chunk (zero-based

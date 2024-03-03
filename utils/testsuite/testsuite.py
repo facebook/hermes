@@ -529,9 +529,11 @@ def runTest(
     if skiplisted and not test_skiplist:
         printVerbose(
             "Skipping test in skiplist{}: {}".format(
-                " (permanently)"
-                if skippedType is TestFlag.TEST_PERMANENTLY_SKIPPED
-                else "",
+                (
+                    " (permanently)"
+                    if skippedType is TestFlag.TEST_PERMANENTLY_SKIPPED
+                    else ""
+                ),
                 filename,
             )
         )
