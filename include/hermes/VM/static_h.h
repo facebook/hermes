@@ -71,6 +71,8 @@ typedef struct SHUnit {
   bool dirty;
   /// Currently registered with an active runtime.
   bool in_use;
+  /// The ScriptID allocated from the Runtime when the unit is in use.
+  uint32_t script_id;
 
   /// Number of symbols (strings).
   uint32_t num_symbols;

@@ -1077,7 +1077,7 @@ CallResult<HermesValue> Runtime::runBytecode(
   Handle<Domain> domain = makeHandle(Domain::create(*this));
 
   auto runtimeModuleRes = RuntimeModule::create(
-      *this, domain, nextScriptId_++, std::move(bytecode), flags, sourceURL);
+      *this, domain, allocateScriptId(), std::move(bytecode), flags, sourceURL);
   if (LLVM_UNLIKELY(runtimeModuleRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

@@ -561,9 +561,11 @@ auto Debugger::getNativeCallFrameInfo(const SHUnit *unit, SHSrcLoc loc) const
   // If unit is nonnull then we have a valid location and can use the fields
   // in loc. Otherwise, it is an unknown location.
   if (unit) {
-    // TODO: Set the function name and file ID.
+    // TODO: Set the function name if we have it.
+    frameInfo.functionName = "(native)";
     frameInfo.location.line = loc.line;
     frameInfo.location.column = loc.column;
+    frameInfo.location.fileId = unit->script_id;
   } else {
     frameInfo.functionName = "(native)";
   }

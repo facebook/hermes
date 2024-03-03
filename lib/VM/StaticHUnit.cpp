@@ -85,6 +85,7 @@ extern "C" SHLegacyValue _sh_unit_init(SHRuntime *shr, SHUnit *unit) {
     abort();
   }
   unit->in_use = true;
+  unit->script_id = runtime.allocateScriptId();
 
   // If the unit is dirty, clean the property cache.
   if (unit->dirty) {
