@@ -19,6 +19,7 @@
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/InterpreterState.h"
 #include "hermes/VM/RuntimeModule.h"
+#include "hermes/VM/static_h.h"
 #include "llvh/ADT/DenseSet.h"
 #include "llvh/ADT/MapVector.h"
 
@@ -546,6 +547,9 @@ class Debugger {
   /// into it \p ipOffset.
   CallFrameInfo getCallFrameInfo(const CodeBlock *codeBlock, uint32_t offset)
       const;
+
+  /// \return a CallFrameInfo for a given SHUnit \p unit and SHSrcLoc \p loc.
+  CallFrameInfo getNativeCallFrameInfo(const SHUnit *unit, SHSrcLoc loc) const;
 
   /// Get the jump target for an instruction (if it is a jump).
   llvh::Optional<uint32_t> findJumpTarget(CodeBlock *block, uint32_t offset);

@@ -555,6 +555,22 @@ auto Debugger::getCallFrameInfo(const CodeBlock *codeBlock, uint32_t ipOffset)
   return frameInfo;
 }
 
+auto Debugger::getNativeCallFrameInfo(const SHUnit *unit, SHSrcLoc loc) const
+    -> CallFrameInfo {
+  CallFrameInfo frameInfo;
+  // If unit is nonnull then we have a valid location and can use the fields
+  // in loc. Otherwise, it is an unknown location.
+  if (unit) {
+    // TODO: Set the function name and file ID.
+    frameInfo.location.line = loc.line;
+    frameInfo.location.column = loc.column;
+  } else {
+    frameInfo.functionName = "(native)";
+  }
+
+  return frameInfo;
+}
+
 auto Debugger::getStackTrace(InterpreterState state) const -> StackTrace {
   using fhd::CallFrameInfo;
   GCScopeMarkerRAII marker{runtime_};
@@ -1002,8 +1018,18 @@ HermesValue Debugger::getExceptionAsEvalResult(
       const auto stackTraceCopy = *stackTracePtr;
       std::vector<CallFrameInfo> frames;
       frames.reserve(stackTraceCopy.size());
-      for (const StackTraceInfo &sti : stackTraceCopy)
-        frames.push_back(getCallFrameInfo(sti.codeBlock, sti.bytecodeOffset));
+      for (const auto &frame : stackTraceCopy) {
+        if (auto *bcFrame = std::get_if<BytecodeStackTraceInfo>(&frame)) {
+          frames.push_back(
+              getCallFrameInfo(bcFrame->codeBlock, bcFrame->bytecodeOffset));
+        } else if (
+            auto *nativeFrame = std::get_if<NativeStackTraceInfo>(&frame)) {
+          frames.push_back(
+              getNativeCallFrameInfo(nativeFrame->first, nativeFrame->second));
+        } else {
+          assert(false && "Unknown stack frame type");
+        }
+      }
       outMetadata->exceptionDetails.stackTrace_ = StackTrace{std::move(frames)};
     }
   }
@@ -1330,7 +1356,7 @@ auto Debugger::getLoadedScripts() const -> std::vector<SourceLocation> {
     loc.fileId = resolveScriptId(&runtimeModule, debugSrcLoc->filenameId);
     loc.line = debugSrcLoc->line;
     loc.column = debugSrcLoc->column;
-    loc.fileName = debugInfo->getFilenameByID(debugSrcLoc->filenameId);
+    loc.fileName = debugInfo->getUTF8FilenameByID(debugSrcLoc->filenameId);
 
     loadedScripts.push_back(loc);
   }
