@@ -98,7 +98,7 @@ def measure_executable(path):
 
     # Humanize and order the resulting metrics
     result = OrderedDict()
-    for (key, size) in metrics.items():
+    for key, size in metrics.items():
         result[key] = human_readable_size(size)
     result["name"] = os.path.basename(path)
     result["sha1"] = subprocess.check_output(["openssl", "sha1", path]).split()[1]

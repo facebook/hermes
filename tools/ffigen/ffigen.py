@@ -61,6 +61,7 @@ simple_type_mapping = {
 # Mapping from the ID for a type to its XML element.
 id_to_element = {}
 
+
 # Mapping from the ID for a type to the corresponding type name in SH.
 def to_sh_name(id):
     elem = id_to_element[id]
