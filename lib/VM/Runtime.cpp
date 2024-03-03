@@ -327,6 +327,10 @@ Runtime::Runtime(
   }
   stackPointer_ = registerStackStart_;
 
+  static_assert(
+      sizeof(SHUnit::script_id) == sizeof(facebook::hermes::debugger::ScriptID),
+      "ScriptID size mismatch");
+
   // Setup the "root" stack frame.
   setCurrentFrameToTopOfStack();
   // Allocate the "reserved" registers in the root frame.

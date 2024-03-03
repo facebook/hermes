@@ -874,10 +874,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
   /// \return the newly allocated script ID, incrementing the internal counter.
   facebook::hermes::debugger::ScriptID allocateScriptId() {
-    static_assert(
-        sizeof(SHUnit::script_id) ==
-            sizeof(facebook::hermes::debugger::ScriptID),
-        "ScriptID size mismatch");
     return nextScriptId_++;
   }
 
