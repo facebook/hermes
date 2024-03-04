@@ -38,6 +38,7 @@ struct SynthTraceTest : public ::testing::Test {
         ::hermes::vm::RuntimeConfig::Builder()
             .withSynthTraceMode(
                 ::hermes::vm::SynthTraceMode::TracingAndReplaying)
+            .withMicrotaskQueue(true)
             .build();
     // We pass "forReplay = true" below, to prevent the TracingHermesRuntime
     // from interactions it does automatically on non-replay runs.
@@ -1516,6 +1517,24 @@ HermesInternal.enqueueJob(inc);
   {
     auto &rt = *replayRt;
     EXPECT_EQ(eval(rt, "x").asNumber(), 3);
+  }
+}
+
+TEST_F(JobQueueReplayTest, QueueMicrotask) {
+  {
+    auto &rt = *traceRt;
+    auto microtask =
+        eval(rt, "var x = 3; function updateX() { x = 4; }; updateX")
+            .asObject(rt)
+            .asFunction(rt);
+    rt.queueMicrotask(microtask);
+    rt.drainMicrotasks();
+    EXPECT_EQ(eval(rt, "x").asNumber(), 4);
+  }
+  replay();
+  {
+    auto &rt = *replayRt;
+    EXPECT_EQ(eval(rt, "x").asNumber(), 4);
   }
 }
 
