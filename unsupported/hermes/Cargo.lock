@@ -164,6 +164,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "hermes_comments"
+version = "0.1.0"
+dependencies = [
+ "hermes_estree",
+ "hermes_parser",
+ "insta",
+ "serde_json",
+]
+
+[[package]]
 name = "hermes_diagnostics"
 version = "0.1.0"
 dependencies = [

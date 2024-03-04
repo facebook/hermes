@@ -19,6 +19,7 @@ hermes_estree_codegen = { path = "crates/hermes_estree_codegen" }
 hermes_parser = { path = "crates/hermes_parser" }
 hermes_semantic_analysis = { path = "crates/hermes_semantic_analysis" }
 hermes_utils = { path = "crates/hermes_utils" }
+hermes_comments = { path = "crates/hermes_comments" }
 
 # dependencies
 indexmap = { version = "2.0.0", features = ["serde"] }
