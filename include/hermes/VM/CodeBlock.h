@@ -144,10 +144,6 @@ class CodeBlock final
   /// backtraces when debug info is not present.
   uint32_t getVirtualOffset() const;
 
-  SerializedLiteralParser getObjectBufferKeyIter(
-      uint32_t idx,
-      unsigned int numLiterals) const;
-
   SerializedLiteralParser getObjectBufferValueIter(
       uint32_t idx,
       unsigned int numLiterals) const;
