@@ -1199,19 +1199,6 @@ bool TypeInferenceImpl::runOnFunctions(llvh::ArrayRef<Function *> functions) {
     }
   } while (localChanged);
 
-#ifndef NDEBUG
-  // Validate that all instructions that need to have types do.
-  for (Function *F : functions) {
-    for (auto &BB : *F) {
-      for (auto &I : BB) {
-        assert(
-            (I.getType().isNoType() ^ I.hasOutput()) &&
-            "Instructions are NoType iff they have no outputs");
-      }
-    }
-  }
-#endif
-
   // Since we always infer from scratch, the inference has always "changed".
   return true;
 }

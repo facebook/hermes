@@ -451,6 +451,13 @@ bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
   AssertIWithMsg(
       Inst, Inst.getSideEffect().isWellFormed(), "Ill-formed side effects");
 
+  if (Inst.getType().isNoType()) {
+    AssertIWithMsg(Inst, !Inst.hasOutput(), "NoType instruction has output");
+  } else {
+    AssertIWithMsg(
+        Inst, Inst.hasOutput(), "Instruction with type does not have output");
+  }
+
   ReturnIfNot(verifyAttributes(&Inst));
 
   bool const acceptsEmptyType = Inst.acceptsEmptyType();
