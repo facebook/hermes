@@ -346,7 +346,7 @@ void CDPAgentImpl::DomainAgents::handleCommand(
     messageCallback_(message::makeErrorResponse(
                          command->id,
                          message::ErrorCode::MethodNotFound,
-                         "Unsupported domain '" + command->method + "'")
+                         "Unsupported method '" + command->method + "'")
                          .toJsonStr());
   }
 }
