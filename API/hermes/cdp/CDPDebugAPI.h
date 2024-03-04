@@ -40,6 +40,10 @@ class HERMES_EXPORT CDPDebugAPI {
     return *asyncDebuggerAPI_;
   }
 
+  /// Adds a console message to the current CDPDebugAPI instance,
+  /// broadcasting it to all current agents, and storing it for
+  /// future agents (within buffer limitations). This function
+  /// must only be called from the runtime thread.
   void addConsoleMessage(ConsoleMessage message);
 
  private:
