@@ -31,24 +31,6 @@ return [dotProduct, Vec2D];
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
-// CHECK-NEXT:  %2 = CallInst [njsf] (:undefined) %1: object, %""(): functionCode, %0: environment, undefined: undefined, 0: number, 0: number
-// CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function ""(exports: number): undefined [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %" 1#"(): functionCode
-// CHECK-NEXT:  %2 = CallInst [njsf] (:object) %1: object, %" 1#"(): functionCode, %0: environment, undefined: undefined, 0: number
-// CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function " 1#"(): object [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %dotProduct(): functionCode
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %Vec2D(): functionCode
 // CHECK-NEXT:  %3 = AllocObjectInst (:object) 0: number, empty: any
@@ -56,7 +38,7 @@ return [dotProduct, Vec2D];
 // CHECK-NEXT:  %5 = AllocFastArrayInst (:object) 2: number
 // CHECK-NEXT:       FastArrayPushInst %1: object, %5: object
 // CHECK-NEXT:       FastArrayPushInst %2: object, %5: object
-// CHECK-NEXT:       ReturnInst %5: object
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function dotProduct(a: object, b: object): number [typed]

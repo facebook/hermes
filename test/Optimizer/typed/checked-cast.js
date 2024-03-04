@@ -25,17 +25,7 @@ exports.next = next
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
-// CHECK-NEXT:  %2 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:  %3 = CallInst [njsf] (:undefined) %1: object, %""(): functionCode, %0: environment, undefined: undefined, 0: number, %2: object
-// CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function ""(exports: object): undefined [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = LoadParamInst (:object) %exports: object
+// CHECK-NEXT:  %1 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %next(): functionCode
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %Cls(): functionCode
 // CHECK-NEXT:  %4 = AllocObjectInst (:object) 0: number, empty: any

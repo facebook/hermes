@@ -173,15 +173,6 @@ static std::vector<Function *> orderFunctions(Module *M) {
 ///   \c numSignificantInstructions the number of instructions that
 ///   aren't param/return. Only valid when canInline=true.
 static std::pair<bool, size_t> canBeInlined(Function *F) {
-  // If it has variables, don't inline it right now.
-  // TODO: Inlining will require moving Variables between functions.
-  if (!F->getFunctionScope()->getVariables().empty()) {
-    LLVM_DEBUG(
-        llvh::dbgs() << "Cannot inline function '" << F->getInternalNameStr()
-                     << "': has captured variables\n");
-    return {false, 0};
-  }
-
   size_t numSignificantInstructions = 0;
 
   // Allow inlining between functions of different strictness,
@@ -205,9 +196,8 @@ static std::pair<bool, size_t> canBeInlined(Function *F) {
         // TODO: Inlining will require moving Variables between functions.
         case ValueKind::CreateScopeInstKind:
 
-        // TODO: We haven't added the ability to copy inner functions to the
-        // function which is being inlined into.
-        case ValueKind::CreateFunctionInstKind:
+        // CreateGenerator cannot be inlined because it implicitly accesses the
+        // current closure and arguments.
         case ValueKind::CreateGeneratorInstKind:
           // Fail.
           LLVM_DEBUG(
