@@ -74,7 +74,9 @@ class TerminatorInst : public Instruction {
   void operator=(const TerminatorInst &) = delete;
 
  protected:
-  explicit TerminatorInst(ValueKind K) : Instruction(K) {}
+  explicit TerminatorInst(ValueKind K) : Instruction(K) {
+    setType(Type::createNoType());
+  }
 
  public:
   explicit TerminatorInst(
@@ -527,6 +529,7 @@ class StoreStackInst : public Instruction {
 
   explicit StoreStackInst(Value *storedValue, AllocStackInst *ptr)
       : Instruction(ValueKind::StoreStackInstKind) {
+    setType(Type::createNoType());
     pushOperand(storedValue);
     pushOperand(ptr);
   }
@@ -839,6 +842,7 @@ class StoreFrameInst : public Instruction {
       Variable *ptr)
       : Instruction(ValueKind::StoreFrameInstKind) {
     assert(scope->getVariableScope() == ptr->getParent());
+    setType(Type::createNoType());
     pushOperand(scope);
     pushOperand(storedValue);
     pushOperand(ptr);
@@ -1347,6 +1351,7 @@ class BaseStorePropertyInst : public Instruction {
       Value *object,
       Value *property)
       : Instruction(kind) {
+    setType(Type::createNoType());
     pushOperand(storedValue);
     pushOperand(object);
     pushOperand(property);
@@ -1549,6 +1554,7 @@ class BaseStoreOwnPropertyInst : public Instruction {
       Value *property,
       LiteralBool *isEnumerable)
       : Instruction(kind) {
+    setType(Type::createNoType());
     pushOperand(storedValue);
     pushOperand(object);
     pushOperand(property);
@@ -1692,6 +1698,7 @@ class StoreGetterSetterInst : public Instruction {
       Value *property,
       LiteralBool *isEnumerable)
       : Instruction(ValueKind::StoreGetterSetterInstKind) {
+    setType(Type::createNoType());
     pushOperand(storedGetter);
     pushOperand(storedSetter);
     pushOperand(object);
@@ -2889,7 +2896,9 @@ class TryEndInst : public Instruction {
   void operator=(const TryEndInst &) = delete;
 
  public:
-  explicit TryEndInst() : Instruction(ValueKind::TryEndInstKind) {}
+  explicit TryEndInst() : Instruction(ValueKind::TryEndInstKind) {
+    setType(Type::createNoType());
+  }
   explicit TryEndInst(const TryEndInst *src, llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
@@ -3077,7 +3086,9 @@ class DebuggerInst : public Instruction {
   void operator=(const DebuggerInst &) = delete;
 
  public:
-  explicit DebuggerInst() : Instruction(ValueKind::DebuggerInstKind) {}
+  explicit DebuggerInst() : Instruction(ValueKind::DebuggerInstKind) {
+    setType(Type::createNoType());
+  }
   explicit DebuggerInst(
       const DebuggerInst *src,
       llvh::ArrayRef<Value *> operands)
@@ -3455,7 +3466,9 @@ class DeclareGlobalVarInst : public SingleOperandInst {
   enum { NameIdx = 0 };
 
   explicit DeclareGlobalVarInst(LiteralString *value)
-      : SingleOperandInst(ValueKind::DeclareGlobalVarInstKind, value) {}
+      : SingleOperandInst(ValueKind::DeclareGlobalVarInstKind, value) {
+    setType(Type::createNoType());
+  }
   explicit DeclareGlobalVarInst(
       const DeclareGlobalVarInst *src,
       llvh::ArrayRef<Value *> operands)
@@ -3524,7 +3537,9 @@ class HBCProfilePointInst : public Instruction {
  public:
   explicit HBCProfilePointInst(uint16_t pointIndex)
       : Instruction(ValueKind::HBCProfilePointInstKind),
-        pointIndex_(pointIndex) {}
+        pointIndex_(pointIndex) {
+    setType(Type::createNoType());
+  }
 
   explicit HBCProfilePointInst(
       const HBCProfilePointInst *src,
@@ -3794,7 +3809,9 @@ class HBCReifyArgumentsInst : public SingleOperandInst {
 
  protected:
   explicit HBCReifyArgumentsInst(ValueKind kind, AllocStackInst *reg)
-      : SingleOperandInst(kind, reg) {}
+      : SingleOperandInst(kind, reg) {
+    setType(Type::createNoType());
+  }
   explicit HBCReifyArgumentsInst(
       const HBCReifyArgumentsInst *src,
       llvh::ArrayRef<Value *> operands)
@@ -4118,7 +4135,9 @@ class StartGeneratorInst : public Instruction {
 
  public:
   explicit StartGeneratorInst()
-      : Instruction(ValueKind::StartGeneratorInstKind) {}
+      : Instruction(ValueKind::StartGeneratorInstKind) {
+    setType(Type::createNoType());
+  }
   explicit StartGeneratorInst(
       const StartGeneratorInst *src,
       llvh::ArrayRef<Value *> operands)
