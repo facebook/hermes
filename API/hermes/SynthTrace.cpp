@@ -336,6 +336,14 @@ bool SynthTrace::CreateObjectRecord::operator==(const Record &that) const {
   return objID_ == thatCasted.objID_;
 }
 
+bool SynthTrace::QueueMicrotaskRecord::operator==(const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  const auto &thatCasted = dynamic_cast<const QueueMicrotaskRecord &>(that);
+  return callbackID_ == thatCasted.callbackID_;
+}
+
 bool SynthTrace::DrainMicrotasksRecord::operator==(const Record &that) const {
   if (!Record::operator==(that)) {
     return false;
@@ -634,6 +642,11 @@ void SynthTrace::HasPropertyRecord::toJSONInternal(JSONEmitter &json) const {
 #endif
 }
 
+void SynthTrace::QueueMicrotaskRecord::toJSONInternal(JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKeyValue("callbackID", callbackID_);
+}
+
 void SynthTrace::DrainMicrotasksRecord::toJSONInternal(
     JSONEmitter &json) const {
   Record::toJSONInternal(json);
@@ -831,6 +844,7 @@ llvh::raw_ostream &operator<<(
     CASE(CreatePropNameID);
     CASE(CreateHostObject);
     CASE(CreateHostFunction);
+    CASE(QueueMicrotask);
     CASE(DrainMicrotasks);
     CASE(GetProperty);
     CASE(SetProperty);
@@ -877,6 +891,7 @@ std::istream &operator>>(std::istream &is, SynthTrace::RecordType &type) {
   CASE(CreatePropNameID)
   CASE(CreateHostObject)
   CASE(CreateHostFunction)
+  CASE(QueueMicrotask)
   CASE(DrainMicrotasks)
   CASE(GetProperty)
   CASE(SetProperty)

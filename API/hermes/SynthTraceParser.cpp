@@ -266,6 +266,13 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
         trace.emplace_back<SynthTrace::CreateObjectRecord>(
             timeFromStart, objID->getValue());
         break;
+      case RecordType::QueueMicrotask: {
+        auto callbackID =
+            getNumberAs<SynthTrace::ObjectID>(obj->get("callbackID"));
+        trace.emplace_back<SynthTrace::QueueMicrotaskRecord>(
+            timeFromStart, callbackID);
+        break;
+      }
       case RecordType::DrainMicrotasks: {
         int maxMicrotasksHint = getNumberAs<int>(obj->get("maxMicrotasksHint"));
         trace.emplace_back<SynthTrace::DrainMicrotasksRecord>(
