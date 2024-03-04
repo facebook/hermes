@@ -94,8 +94,7 @@ std::pair<uint32_t, uint32_t> BytecodeModuleGenerator::addObjectBuffer(
 
 std::unique_ptr<BytecodeFunction>
 BytecodeFunctionGenerator::generateBytecodeFunction(
-    Function::DefinitionKind definitionKind,
-    ValueKind valueKind,
+    Function::ProhibitInvoke prohibitInvoke,
     bool strictMode,
     uint32_t paramCount,
     uint32_t environmentSize,
@@ -113,30 +112,15 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
       highestReadCacheIndex_,
       highestWriteCacheIndex_};
 
-  switch (definitionKind) {
-    case Function::DefinitionKind::ES6Arrow:
-    case Function::DefinitionKind::ES6Method:
+  switch (prohibitInvoke) {
+    case Function::ProhibitInvoke::ProhibitNone:
+      header.flags.prohibitInvoke = FunctionHeaderFlag::ProhibitNone;
+      break;
+    case Function::ProhibitInvoke::ProhibitConstruct:
       header.flags.prohibitInvoke = FunctionHeaderFlag::ProhibitConstruct;
       break;
-    case Function::DefinitionKind::ES6Constructor:
+    case Function::ProhibitInvoke::ProhibitCall:
       header.flags.prohibitInvoke = FunctionHeaderFlag::ProhibitCall;
-      break;
-    default:
-      // ES9.0 9.2.3 step 4 states that generator functions and async
-      // functions cannot be constructed.
-      // We place this check outside the `DefinitionKind` because generator
-      // functions may also be ES6 methods, for example, and are not included
-      // in the DefinitionKind enum.
-      // Note that we only have to check for GeneratorFunctionKind in this
-      // case, because ES6 methods are already checked above, and ES6
-      // constructors are prohibited from being generator functions.
-      // As such, this is the only case in which we must change the
-      // prohibitInvoke flag based on valueKind.
-      header.flags.prohibitInvoke =
-          (valueKind == ValueKind::GeneratorFunctionKind ||
-           valueKind == ValueKind::AsyncFunctionKind)
-          ? FunctionHeaderFlag::ProhibitConstruct
-          : FunctionHeaderFlag::ProhibitNone;
       break;
   }
 
@@ -321,8 +305,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
         : getStringID(functions[i]->getOriginalOrInferredName().str());
 
     std::unique_ptr<BytecodeFunction> func = BFG.generateBytecodeFunction(
-        F->getDefinitionKind(),
-        F->getKind(),
+        F->getProhibitInvoke(),
         F->isStrictMode(),
         F->getExpectedParamCountIncludingThis(),
         F->getFunctionScope()->getVariables().size(),

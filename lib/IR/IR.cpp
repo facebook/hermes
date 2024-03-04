@@ -290,6 +290,22 @@ llvh::Optional<llvh::StringRef> Function::getSourceRepresentationStr() const {
   }
 }
 
+Function::ProhibitInvoke Function::getProhibitInvoke() const {
+  // ES6 constructors must be invoked as constructors.
+  if (definitionKind_ == DefinitionKind::ES6Constructor)
+    return ProhibitInvoke::ProhibitCall;
+
+  // Generators, async functions, methods, and arrow functions may not be
+  // invoked as constructors.
+  if (getKind() == ValueKind::GeneratorFunctionKind ||
+      getKind() == ValueKind::AsyncFunctionKind ||
+      definitionKind_ == DefinitionKind::ES6Arrow ||
+      definitionKind_ == DefinitionKind::ES6Method)
+    return ProhibitInvoke::ProhibitConstruct;
+
+  return ProhibitInvoke::ProhibitNone;
+}
+
 BasicBlock::BasicBlock(Function *parent)
     : Value(ValueKind::BasicBlockKind), Parent(parent) {
   assert(Parent && "Invalid parent function");

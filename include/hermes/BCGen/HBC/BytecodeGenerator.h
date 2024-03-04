@@ -123,8 +123,7 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   /// string table. We guarantee that the string table at runtime will
   /// have at least one entry for this purpose.
   std::unique_ptr<BytecodeFunction> generateBytecodeFunction(
-      Function::DefinitionKind definitionKind,
-      ValueKind valueKind,
+      Function::ProhibitInvoke prohibitInvoke,
       bool strictMode,
       uint32_t paramCount,
       uint32_t environmentSize,

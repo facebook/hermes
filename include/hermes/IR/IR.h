@@ -1747,6 +1747,13 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     ES6Method,
   };
 
+  /// Enum describing restrictions on how this function may be invoked.
+  enum class ProhibitInvoke {
+    ProhibitNone,
+    ProhibitConstruct,
+    ProhibitCall,
+  };
+
   /// \return true when every callsite of this Function is absolutely known
   /// and analyzable, even in the presence of Error structured stack trace.
   bool allCallsitesKnown() const {
@@ -1759,6 +1766,10 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   bool allCallsitesKnownExceptErrorStructuredStackTrace() const {
     return getAttributes(parent_)._allCallsitesKnownInStrictMode;
   }
+
+  /// \return a ProhibitInvoke value representing restrictions on how this
+  /// function may be invoked.
+  ProhibitInvoke getProhibitInvoke() const;
 
  private:
   /// The Module owning this function.

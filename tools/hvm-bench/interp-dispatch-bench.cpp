@@ -151,9 +151,8 @@ L1:
   BM->setFunction(
       0,
       BFG->generateBytecodeFunction(
-          hermes::Function::DefinitionKind::ES5Function,
-          hermes::ValueKind::NormalFunctionKind,
-          true,
+          hermes::Function::ProhibitInvoke::ProhibitNone,
+          /* strictMode */ true,
           0,
           0));
   runtimeModule->initializeWithoutCJSModulesMayAllocate(

@@ -410,9 +410,8 @@ inline CodeBlock *createCodeBlock(
   BM->setFunction(
       0,
       BFG->generateBytecodeFunction(
-          Function::DefinitionKind::ES5Function,
-          ValueKind::NormalFunctionKind,
-          true,
+          Function::ProhibitInvoke::ProhibitNone,
+          /* strictMode */ true,
           0,
           0));
   runtimeModule->initializeWithoutCJSModulesMayAllocate(
