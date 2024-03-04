@@ -1712,26 +1712,6 @@ class FuncVariableScope : public VariableScope {
   }
 };
 
-/// An ExternalScope is a container for variables injected from the environment,
-/// i.e. upvars from an enclosing scope. These variables are stored at a given
-/// depth in the scope chain.
-class ExternalScope : public VariableScope {
-  /// The scope depth represented by this external scope
-  const int32_t depth_ = 0;
-
- public:
-  ExternalScope(Function *function, int32_t depth);
-
-  /// \return the scope depth
-  int32_t getDepth() const {
-    return depth_;
-  }
-
-  static bool classof(const Value *V) {
-    return V->getKind() == ValueKind::ExternalScopeKind;
-  }
-};
-
 class Function : public llvh::ilist_node_with_parent<Function, Module>,
                  public Value {
   Function(const Function &) = delete;
@@ -1774,9 +1754,6 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
  private:
   /// The Module owning this function.
   Module *parent_;
-
-  /// List of external scopes owned by this function. Deleted upon destruction.
-  llvh::SmallVector<VariableScope *, 4> externalScopes_;
 
   /// The function scope - it is always the first scope in the scope list.
   FuncVariableScope functionScope_;
@@ -1886,12 +1863,6 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
 
   /// \return the Context of the parent module.
   Context &getContext() const;
-
-  /// Add a new scope to the function.
-  /// This is delete'd in our destructor.
-  void addExternalScope(ExternalScope *scope) {
-    externalScopes_.push_back(scope);
-  }
 
   VariableScope *getFunctionScope() {
     return &functionScope_;

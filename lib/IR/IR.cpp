@@ -159,11 +159,6 @@ bool VariableScope::isGlobalScope() const {
   return function_->isGlobalScope() && function_->getFunctionScope() == this;
 }
 
-ExternalScope::ExternalScope(Function *function, int32_t depth)
-    : VariableScope(ValueKind::ExternalScopeKind, function), depth_(depth) {
-  function->addExternalScope(this);
-}
-
 /// Determine the type of a function's \c new.target, based on the function's
 /// \c DefinitionKind.
 static Type functionNewTargetType(Function::DefinitionKind defKind) {
@@ -191,7 +186,6 @@ Function::Function(
     Function *insertBefore)
     : Value(kind),
       parent_(parent),
-      externalScopes_(),
       functionScope_(this),
       newTargetParam_(this, parent_->getContext().getIdentifier("new.target")),
       parentScopeParam_(
@@ -227,10 +221,6 @@ Function::~Function() {
   for (auto *p : jsDynamicParams_) {
     Value::destroy(p);
   }
-
-  // Free all external scopes.
-  for (auto *ES : externalScopes_)
-    Value::destroy(ES);
 }
 
 bool Function::isGlobalScope() const {

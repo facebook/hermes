@@ -48,7 +48,6 @@ DEF_VALUE(JSDynamicParam, Value)
 DEF_VALUE(BasicBlock, Value)
 MARK_FIRST(VariableScope, Value)
 DEF_VALUE(FuncVariableScope, VariableScope)
-DEF_VALUE(ExternalScope, VariableScope)
 MARK_LAST(VariableScope)
 
 MARK_FIRST(Function, Value)
