@@ -1,3 +1,11 @@
+## 0.20.1
+
+### `hermes-eslint`
+* Scope analysis support for typeof nodes with type arguments
+
+### `babel-plugin-syntax-hermes-parser`
+* Support for use in beta releases of Babel 8
+
 ## 0.20.0
 
 ### `prettier-plugin-hermes-parser`
