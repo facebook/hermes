@@ -9,6 +9,8 @@ use std::env;
 
 use hermes_estree::SourceType;
 use hermes_parser::parse;
+use hermes_parser::ParserDialect;
+use hermes_parser::ParserFlags;
 use insta::assert_snapshot;
 use insta::glob;
 
@@ -22,16 +24,27 @@ fn fixtures() {
     glob!("fixtures/**.js", |path| {
         println!("fixture {}", path.to_str().unwrap());
         let input = std::fs::read_to_string(path).unwrap();
-        let mut ast = parse(
+        let result = parse(
             &input,
             path.to_str().unwrap(),
-            hermes_parser::ParserDialect::FlowDetect,
+            ParserFlags {
+                strict_mode: true,
+                enable_jsx: false,
+                dialect: ParserDialect::Flow,
+                store_doc_block: false,
+                store_comments: true,
+            },
         )
         .unwrap();
+        let mut ast = result.ast;
+        let comments = result.comments;
         // TODO: hack to prevent changing lots of fixtures all at once
         ast.source_type = SourceType::Script;
         let output = serde_json::to_string_pretty(&ast).unwrap();
         let output = output.trim();
-        assert_snapshot!(format!("Input:\n{input}\n\nOutput:\n{output}"));
+        let comments_json = serde_json::to_string_pretty(&comments).unwrap();
+        assert_snapshot!(format!(
+            "Input:\n{input}\n\nOutput:\n{output}\n\nComments:{comments_json}"
+        ));
     });
 }

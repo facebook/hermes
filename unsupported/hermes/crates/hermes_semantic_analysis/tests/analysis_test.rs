@@ -8,6 +8,7 @@
 use std::fmt::Write;
 
 use hermes_parser::parse;
+use hermes_parser::ParserFlags;
 use hermes_semantic_analysis::analyze;
 use hermes_semantic_analysis::AnalyzeOptions;
 use insta::assert_snapshot;
@@ -20,9 +21,9 @@ fn fixtures() {
     glob!("fixtures/**.js", |path| {
         println!("fixture {}", path.to_str().unwrap());
         let input = std::fs::read_to_string(path).unwrap();
-        let ast = parse(&input, path.to_str().unwrap()).unwrap();
+        let result = parse(&input, path.to_str().unwrap(), ParserFlags::default()).unwrap();
         let mut analysis = analyze(
-            &ast,
+            &result.ast,
             AnalyzeOptions {
                 globals: vec![
                     "Array".to_string(),
