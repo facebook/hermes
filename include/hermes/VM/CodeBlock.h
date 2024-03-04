@@ -16,7 +16,6 @@
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/Profiler.h"
 #include "hermes/VM/PropertyCache.h"
-#include "hermes/VM/SerializedLiteralParser.h"
 #include "llvh/ADT/DenseSet.h"
 #include "llvh/ADT/Optional.h"
 #include "llvh/Support/TrailingObjects.h"

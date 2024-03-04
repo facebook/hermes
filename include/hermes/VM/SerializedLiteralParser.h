@@ -7,8 +7,6 @@
 
 #ifndef HERMES_VM_SERIALIZEDLITERALPARSER_H
 #define HERMES_VM_SERIALIZEDLITERALPARSER_H
-
-#include "hermes/BCGen/SerializedLiteralParserBase.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/VM/HermesValue.h"
 #include "llvh/ADT/ArrayRef.h"
