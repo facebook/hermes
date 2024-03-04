@@ -182,7 +182,7 @@ impl FromHermes for TemplateElement {
             tail,
             value,
             loc: None,
-            range: Some(range),
+            range,
         }
     }
 }
@@ -205,7 +205,7 @@ impl FromHermes for AssignmentProperty {
             is_computed,
             is_shorthand,
             loc,
-            range: Some(range),
+            range,
         }
     }
 }
@@ -232,10 +232,10 @@ impl FromHermes for FunctionDeclaration {
                 is_generator,
                 is_async,
                 loc: loc.clone(),
-                range: Some(range),
+                range,
             },
             loc,
-            range: Some(range),
+            range,
         }
     }
 }
@@ -262,10 +262,10 @@ impl FromHermes for FunctionExpression {
                 is_generator,
                 is_async,
                 loc: loc.clone(),
-                range: Some(range),
+                range,
             },
             loc,
-            range: Some(range),
+            range,
         }
     }
 }
@@ -295,11 +295,11 @@ impl FromHermes for ArrowFunctionExpression {
                 is_generator,
                 is_async,
                 loc: loc.clone(),
-                range: Some(range),
+                range,
             },
             is_expression,
             loc,
-            range: Some(range),
+            range,
         }
     }
 }
@@ -323,7 +323,7 @@ impl FromHermes for ClassDeclaration {
                 body,
             },
             loc,
-            range: Some(range),
+            range,
         }
     }
 }
@@ -346,7 +346,7 @@ impl FromHermes for ClassExpression {
                 body,
             },
             loc,
-            range: Some(range),
+            range,
         }
     }
 }

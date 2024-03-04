@@ -18,6 +18,7 @@ pub use hermes::parser::ParserFlags;
 use hermes::utf::utf8_with_surrogates_to_string;
 use hermes_diagnostics::Diagnostic;
 use hermes_estree::Program;
+use hermes_estree::SourceRange;
 use juno_support::NullTerminatedBuf;
 
 pub struct ParseResult {
@@ -39,7 +40,14 @@ pub fn parse(
             .iter()
             .map(|diag| {
                 let message = utf8_with_surrogates_to_string(diag.message.as_slice()).unwrap();
-                Diagnostic::invalid_syntax(message, None)
+                Diagnostic::invalid_syntax(
+                    message,
+                    // TODO: Use location informaiton from DiagMessage
+                    SourceRange {
+                        start: 0,
+                        end: std::num::NonZeroU32::new(1).unwrap(),
+                    },
+                )
             })
             .collect());
     }

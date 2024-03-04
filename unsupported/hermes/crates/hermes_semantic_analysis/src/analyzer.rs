@@ -62,7 +62,7 @@ pub struct UnresolvedReference {
     pub ast: AstNode,
     pub name: String,
     pub kind: ReferenceKind,
-    pub range: Option<SourceRange>,
+    pub range: SourceRange,
     // The next declaration id at the time the reference was created
     // this is used to detect a subset of TDZ violations, where a
     // reference is trivially known to refer to a let/const declaration
@@ -226,7 +226,7 @@ impl Analyzer {
         name: &str,
         ast: AstNode,
         kind: ReferenceKind,
-        range: Option<SourceRange>,
+        range: SourceRange,
     ) {
         self.unresolved.push(UnresolvedReference {
             scope: self.current,
@@ -306,7 +306,7 @@ impl Analyzer {
         left: &ForInInit,
         right: &Expression,
         body: &Statement,
-        _range: Option<SourceRange>,
+        _range: SourceRange,
     ) {
         let mut for_scope: Option<ScopeId> = None;
         match left {

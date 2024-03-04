@@ -31,7 +31,7 @@ impl Default for SourceType {
 }
 
 impl Pattern {
-    pub fn range(&self) -> Option<SourceRange> {
+    pub fn range(&self) -> SourceRange {
         match self {
             Self::ArrayPattern(pattern) => pattern.range,
             Self::AssignmentPattern(pattern) => pattern.range,
@@ -43,7 +43,7 @@ impl Pattern {
 }
 
 impl ImportDeclarationSpecifier {
-    pub fn range(&self) -> Option<SourceRange> {
+    pub fn range(&self) -> SourceRange {
         match self {
             Self::ImportDefaultSpecifier(specifier) => specifier.range,
             Self::ImportNamespaceSpecifier(specifier) => specifier.range,
