@@ -578,8 +578,13 @@ class InstSimplifyImpl {
           changed = true;
         }
       }
+
+      // Check if the function uses the supplied new.target. Note that we have
+      // to leave new.target intact for functions that have restrictions on how
+      // they are called, since it is used to generate the runtime error.
       if (!F->getNewTargetParam()->hasUsers() &&
-          !llvh::isa<LiteralUndefined>(CI->getNewTarget())) {
+          !llvh::isa<LiteralUndefined>(CI->getNewTarget()) &&
+          F->getProhibitInvoke() == Function::ProhibitInvoke::ProhibitNone) {
         // The function does not use the supplied new.target param, replace it
         // with undefined. This has two advantages:
         // 1. It removes a usage of the closure, making it easier to analyze and

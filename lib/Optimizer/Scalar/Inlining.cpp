@@ -545,6 +545,29 @@ bool Inlining::runOnModule(Module *M) {
         continue;
       }
 
+      // We cannot inline into a potentially constructing call if the callee
+      // does not permit construction.
+      if (!CI->getNewTarget()->getType().isUndefinedType() &&
+          FC->getProhibitInvoke() ==
+              Function::ProhibitInvoke::ProhibitConstruct) {
+        LLVM_DEBUG(
+            llvh::dbgs() << "Cannot inline non-constructor '"
+                         << FC->getInternalNameStr()
+                         << "' into constructor call\n");
+        continue;
+      }
+
+      // We cannot inline a constructor if it is possible for the invocation to
+      // not be a constructor call.
+      if (CI->getNewTarget()->getType().canBeUndefined() &&
+          FC->getProhibitInvoke() == Function::ProhibitInvoke::ProhibitCall) {
+        LLVM_DEBUG(
+            llvh::dbgs() << "Cannot inline constructor '"
+                         << FC->getInternalNameStr()
+                         << "' into potentially non-constructor call\n");
+        continue;
+      }
+
       LLVM_DEBUG(llvh::dbgs() << "Inlining function '"
                               << FC->getInternalNameStr() << "' ";
                  FC->getContext().getSourceErrorManager().dumpCoords(

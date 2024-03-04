@@ -7,14 +7,16 @@
 
 // RUN: %hermes -O %s | %FileCheck --match-full-lines %s
 
-var arrow1 = () => { print("in arrow"); }
+(function () {
+  var arrow1 = () => { print("in arrow"); }
 
-try {
+  try {
     new arrow1();
-} catch (e) {
+  } catch (e) {
     print("caught", e.name, e.message);
 //CHECK: caught TypeError Function is not a constructor
-}
+  }
 
-arrow1();
+  arrow1();
 //CHECK-NEXT: in arrow
+})();
