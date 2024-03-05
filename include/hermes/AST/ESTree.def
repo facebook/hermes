@@ -1024,6 +1024,9 @@ ESTREE_NODE_2_ARGS(
     AsExpression, Flow,
     NodePtr, expression, false,
     NodePtr, typeAnnotation, false)
+ESTREE_NODE_1_ARGS(
+    AsConstExpression, Flow,
+    NodePtr, expression, false)
 
 ESTREE_NODE_0_ARGS(InferredPredicate, Flow)
 ESTREE_NODE_1_ARGS(
