@@ -9,6 +9,7 @@
 
 // Test if we can eliminate loads from a captured variable across basic blocks
 // when the loads occur before the capture.
+// TODO: We currently do not perform this optimisation.
 function foo(sink){
     var x = 0;
     if (a) sink(x++);
@@ -39,30 +40,32 @@ function foo(sink){
 // CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "a": string
 // CHECK-NEXT:       CondBranchInst %4: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:       StoreFrameInst %1: environment, 1: number, [x]: number
-// CHECK-NEXT:  %7 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 0: number
-// CHECK-NEXT:       BranchInst %BB2
+// CHECK-NEXT:  %6 = LoadFrameInst (:number) %1: environment, [x]: number
+// CHECK-NEXT:  %7 = FAddInst (:number) %6: number, 1: number
+// CHECK-NEXT:       StoreFrameInst %1: environment, %7: number, [x]: number
+// CHECK-NEXT:  %9 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %6: number
+// CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "b": string
-// CHECK-NEXT:        CondBranchInst %9: any, %BB3, %BB4
+// CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "b": string
+// CHECK-NEXT:        CondBranchInst %11: any, %BB3, %BB4
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %11 = LoadFrameInst (:number) %1: environment, [x]: number
-// CHECK-NEXT:  %12 = FAddInst (:number) %11: number, 1: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %12: number, [x]: number
-// CHECK-NEXT:  %14 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %11: number
+// CHECK-NEXT:  %13 = LoadFrameInst (:number) %1: environment, [x]: number
+// CHECK-NEXT:  %14 = FAddInst (:number) %13: number, 1: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %14: number, [x]: number
+// CHECK-NEXT:  %16 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %13: number
 // CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %16 = TryLoadGlobalPropertyInst (:any) globalObject: object, "c": string
-// CHECK-NEXT:        CondBranchInst %16: any, %BB5, %BB6
+// CHECK-NEXT:  %18 = TryLoadGlobalPropertyInst (:any) globalObject: object, "c": string
+// CHECK-NEXT:        CondBranchInst %18: any, %BB5, %BB6
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %18 = LoadFrameInst (:number) %1: environment, [x]: number
-// CHECK-NEXT:  %19 = FAddInst (:number) %18: number, 1: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %19: number, [x]: number
-// CHECK-NEXT:  %21 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %18: number
+// CHECK-NEXT:  %20 = LoadFrameInst (:number) %1: environment, [x]: number
+// CHECK-NEXT:  %21 = FAddInst (:number) %20: number, 1: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %21: number, [x]: number
+// CHECK-NEXT:  %23 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %20: number
 // CHECK-NEXT:        BranchInst %BB6
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %23 = CreateFunctionInst (:object) %1: environment, %""(): functionCode
-// CHECK-NEXT:        ReturnInst %23: object
+// CHECK-NEXT:  %25 = CreateFunctionInst (:object) %1: environment, %""(): functionCode
+// CHECK-NEXT:        ReturnInst %25: object
 // CHECK-NEXT:function_end
 
 // CHECK:arrow ""(): number

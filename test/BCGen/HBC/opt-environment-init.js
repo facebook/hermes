@@ -46,11 +46,12 @@ function foo(o) {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %o: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [flag]: undefined|boolean
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [flag1]: undefined|number
-// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [cnt]: number
-// CHECK-NEXT:  %6 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [flag2]: undefined|number
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %""(): functionCode
-// CHECK-NEXT:       ReturnInst %8: object
+// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [cnt]: number
+// CHECK-NEXT:  %7 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [flag2]: undefined|number
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %1: environment, %""(): functionCode
+// CHECK-NEXT:        ReturnInst %9: object
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): number

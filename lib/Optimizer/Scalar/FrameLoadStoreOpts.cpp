@@ -32,12 +32,6 @@
 /// loads/stores that may manipulate it from such an instruction. For example,
 /// this means that we can deduplicate loads across a function call, as long as
 /// we know that there are no capturing stores.
-///
-/// This analysis is further refined in the entry basic block of a function. We
-/// know that none of the variables owned by the function are captured at the
-/// start of it, so as we iterate through the entry block, we incrementally
-/// build information about which variables are captured. This allows us to
-/// optimise variables before the closure that captures them is created.
 
 namespace hermes {
 namespace {
@@ -134,52 +128,11 @@ class FunctionLoadStoreOptimizer {
     }
   }
 
-  /// Add the variables owned by \p src that the function \p F is capturing into
-  /// \p cv. Notice that the function F may have sub-closures that capture
-  /// variables. This method does a recursive scan and collects all captured
-  /// variables.
-  void collectCapturedVariables(CapturedVariables &cv, Function *inner) {
-    assert(inner != F_ && "Cannot collect captured variables from src itself.");
-    // For all instructions in the function:
-    for (auto &BB : *inner) {
-      for (auto &I : BB) {
-        // Recursively check capturing functions by inspecting the created
-        // closure.
-        if (auto *CF = llvh::dyn_cast<BaseCreateLexicalChildInst>(&I)) {
-          collectCapturedVariables(cv, CF->getFunctionCode());
-          continue;
-        }
-
-        if (auto *LF = llvh::dyn_cast<LoadFrameInst>(&I)) {
-          if (LF->getLoadVariable()->getParent()->getFunction() == F_)
-            cv.loads.insert(LF->getLoadVariable());
-          continue;
-        }
-
-        if (auto *SF = llvh::dyn_cast<StoreFrameInst>(&I)) {
-          if (SF->getVariable()->getParent()->getFunction() == F_)
-            cv.stores.insert(SF->getVariable());
-          continue;
-        }
-      }
-    }
-  }
-
   /// Attempts to replace loads from the frame in \p BB with loads from stack
   /// locations that have been populated by a previous load or store to the same
   /// variable. Uses capture information from globalCV_ to determine whether
   /// intervening operations may store to the variable and prevent forwarding.
   bool eliminateLoads(BasicBlock *BB) {
-    // In the entry block, we can perform more precise analysis by tracking
-    // exactly when variables owned by F_ are actually captured. Create an empty
-    // CapturedVariables that will be incrementally updated as we progress
-    // through the entry block. This is set to None in all subsequent blocks.
-    // TODO: Factor out analysis of owned variables, and analyse them across the
-    // entire function.
-    llvh::Optional<CapturedVariables> entryCV;
-    if (BB == &*F_->begin())
-      entryCV.emplace();
-
     // Compute the set of variables that currently have valid values in their
     // corresponding stack location. Loads from these variables may be
     // eliminated. The stack location is only valid if it is valid in all
@@ -229,27 +182,14 @@ class FunctionLoadStoreOptimizer {
         continue;
       }
 
-      // Collect the captured variables of newly created closures if we're in
-      // the entry block.
-      if (auto *CLCI = llvh::dyn_cast<BaseCreateLexicalChildInst>(&I)) {
-        if (entryCV)
-          collectCapturedVariables(*entryCV, CLCI->getFunctionCode());
-        continue;
-      }
-
       // Invalidate the variable storage if the instruction may execute
       // capturing stores that write the variable.
       if (I.getSideEffect().getExecuteJS()) {
         for (auto it = validVariables.begin(); it != validVariables.end();
              ++it) {
-          // Use incremental capture information in the entry block for owned
-          // variables, and global information for everything else.
-          bool ownedVar = (*it)->getParent()->getFunction() == F_;
-          const auto &cv = entryCV && ownedVar ? *entryCV : globalCV_;
-
           // If there are any captured stores of the variable, the value may be
           // updated, so the stack location is no longer valid.
-          if (cv.stores.count(*it))
+          if (globalCV_.stores.count(*it))
             validVariables.erase(it);
         }
       }
@@ -267,15 +207,6 @@ class FunctionLoadStoreOptimizer {
   /// Attempts to remove redundant stores to the frame in \p BB when we can
   /// determine they cannot be observed.
   bool eliminateStores(BasicBlock *BB) {
-    // See comment in eliminateLoads above.
-    // Note that for store elimination, being in the entry block is also
-    // relevant because it implies that the block is not in a try, which means
-    // that stores to variables owned by the current function can be eliminated
-    // across instructions that may throw.
-    llvh::Optional<CapturedVariables> entryCV;
-    if (BB == &*F_->begin())
-      entryCV.emplace();
-
     // Map from a Variable to the last store to it that we have not found to be
     // observable yet. If an entry exists when a subsequent store is
     // encountered, the entry's store is not observable and may be eliminated.
@@ -308,32 +239,12 @@ class FunctionLoadStoreOptimizer {
         continue;
       }
 
-      // Collect the captured variables of newly created closures if we're in
-      // the entry block.
-      if (auto *CLCI = llvh::dyn_cast<BaseCreateLexicalChildInst>(&I)) {
-        if (entryCV)
-          collectCapturedVariables(*entryCV, CLCI->getFunctionCode());
-        continue;
-      }
-
       // Invalidate the store frame storage if the instruction may execute
       // capturing loads that observe this store, or throw an exception that
       // allows prior stores to be observed.
       auto sideEffect = I.getSideEffect();
-      if (sideEffect.getExecuteJS() || sideEffect.getThrow()) {
-        for (auto it = prevStores.begin(); it != prevStores.end(); it++) {
-          // If this variable is owned by the current function, and we are in
-          // the entry block, we know that throwing an exception will not make
-          // the store observable. So if the variable does not have any captures
-          // that load it, we know the previous store is not observable yet, and
-          // can leave it in prevStores.
-          bool ownedVar = it->first->getParent()->getFunction() == F_;
-          if (entryCV && ownedVar && !entryCV->loads.count(it->first))
-            continue;
-
-          prevStores.erase(it);
-        }
-      }
+      if (sideEffect.getExecuteJS() || sideEffect.getThrow())
+        prevStores.clear();
     }
     return changed;
   }

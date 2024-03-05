@@ -11,6 +11,7 @@ function bar() { }
 
 // The first stores to k1, k2, k3 can be eliminated since the variables haven't
 // been captured yet.
+// TODO: We currently do not perform this optimization
 function main(p) {
   var k1 = bar();
   var k2 = bar();
@@ -75,17 +76,20 @@ function outer() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %main(): any, %0: environment
-// CHECK-NEXT:  %2 = LoadPropertyInst (:any) globalObject: object, "bar": string
-// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:       StoreFrameInst %1: environment, %3: any, [k1]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [k1]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [k2]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [k3]: any
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) globalObject: object, "bar": string
 // CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [k2]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [k1]: any
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) globalObject: object, "bar": string
 // CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:        StoreFrameInst %1: environment, %9: any, [k3]: any
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %1: environment, %""(): functionCode
-// CHECK-NEXT:        ReturnInst %11: object
+// CHECK-NEXT:        StoreFrameInst %1: environment, %9: any, [k2]: any
+// CHECK-NEXT:  %11 = LoadPropertyInst (:any) globalObject: object, "bar": string
+// CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:        StoreFrameInst %1: environment, %12: any, [k3]: any
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %1: environment, %""(): functionCode
+// CHECK-NEXT:        ReturnInst %14: object
 // CHECK-NEXT:function_end
 
 // CHECK:function outer(): object
