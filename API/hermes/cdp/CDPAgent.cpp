@@ -63,7 +63,7 @@ class CDPAgentImpl {
   void enableRuntimeDomain();
 
   /// Extract state to be persisted across reloads.
-  std::shared_ptr<State> getState();
+  std::unique_ptr<State> getState();
 
  private:
   /// Collection of domain-specific message handlers. These handlers require
@@ -209,14 +209,14 @@ void CDPAgentImpl::enableRuntimeDomain() {
       });
 }
 
-std::shared_ptr<State> CDPAgentImpl::getState() {
+std::unique_ptr<State> CDPAgentImpl::getState() {
   // This function might not be called on the runtime thread. Functions on
   // DomainAgents expect to be called on the runtime thread because they
   // manipulate the runtime. In this case, it's still fine to call
   // getDebuggerDomainState() because internally it's protected by a mutex so no
   // DomainAgents functions can simultaneously manipulate the runtime and get
   // the state.
-  return std::make_shared<State>(
+  return std::make_unique<State>(
       std::unique_ptr<State::Private, State::PrivateDeleter>(
           new State::Private(domainAgents_->getDebuggerDomainState()),
           State::PrivateDeleter()));
@@ -403,7 +403,7 @@ void CDPAgent::enableRuntimeDomain() {
   impl_->enableRuntimeDomain();
 }
 
-std::shared_ptr<State> CDPAgent::getState() {
+std::unique_ptr<State> CDPAgent::getState() {
   return impl_->getState();
 }
 
