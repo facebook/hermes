@@ -698,10 +698,6 @@ add_subdirectory(${HERMES_JSI_DIR}/jsi ${CMAKE_CURRENT_BINARY_DIR}/jsi)
 set(BUILD_SHARED_LIBS ${save_BUILD_SHARED_LIBS})
 set(CMAKE_POSITION_INDEPENDENT_CODE ${save_CMAKE_POSITION_INDEPENDENT_CODE})
 
-if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/facebook)
-    add_subdirectory(facebook)
-endif()
-
 # Configure the test suites
 #
 if(HERMES_ENABLE_TEST_SUITE)
