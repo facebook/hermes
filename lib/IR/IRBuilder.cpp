@@ -79,12 +79,6 @@ GeneratorInnerFunction *IRBuilder::createGeneratorInnerFunction(
       M, OriginalName, definitionKind, strictMode, sourceRange, insertBefore);
 }
 
-ExternalScope *IRBuilder::createExternalScope(
-    Function *function,
-    int32_t depth) {
-  return new ExternalScope(function, depth);
-}
-
 Function *IRBuilder::createTopLevelFunction(
     bool strictMode,
     CustomDirectives customDirectives,
