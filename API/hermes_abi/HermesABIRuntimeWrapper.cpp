@@ -710,6 +710,10 @@ class HermesABIRuntimeWrapper : public Runtime {
     return evaluateJavaScript(sjp, sjp->sourceURL());
   }
 
+  void queueMicrotask(const Function & /*callback*/) override {
+    THROW_UNIMPLEMENTED();
+  }
+
   bool drainMicrotasks(int maxMicrotasksHint = -1) override {
     return unwrap(vtable_->drain_microtasks(abiRt_, maxMicrotasksHint));
   }

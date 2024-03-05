@@ -1701,6 +1701,10 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
     return evaluateJavaScript(sjp, sjp->sourceURL());
   }
 
+  void queueMicrotask(const Function & /*callback*/) override {
+    THROW_UNIMPLEMENTED();
+  }
+
   bool drainMicrotasks(int maxMicrotasksHint = -1) override {
     SandboxBoolOrError resBoolOrError{
         vt_.drain_microtasks(this, srt_, maxMicrotasksHint)};
