@@ -72,12 +72,10 @@ TEST(IRVerifierTest, ReturnInstTest) {
   auto Body = Builder.createBasicBlock(F);
   Builder.setInsertionBlock(Body);
   auto Return = Builder.createReturnInst(Arg1);
-  Return->setType(Type::createNumber());
 
   // Everything should pass so far
   EXPECT_TRUE(verifyModule(M));
 
-  Return->setType(Type::createNumber());
   Builder.createReturnInst(Arg1);
   // This will also fail as there are now multiple return instrs in the BB
   EXPECT_FALSE(verifyModule(M));
