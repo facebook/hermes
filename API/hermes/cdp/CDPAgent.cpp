@@ -53,7 +53,7 @@ class CDPAgentImpl {
   ~CDPAgentImpl();
 
   /// Schedule initialization of handlers for each message domain.
-  void initializeDomainAgents(std::shared_ptr<State> state);
+  void initializeDomainAgents(std::unique_ptr<State> state);
 
   /// Process a CDP command encoded in \p json.
   void handleCommand(std::string json);
@@ -177,11 +177,12 @@ CDPAgentImpl::~CDPAgentImpl() {
   messageCallback_.invalidate();
 }
 
-void CDPAgentImpl::initializeDomainAgents(std::shared_ptr<State> state) {
+void CDPAgentImpl::initializeDomainAgents(std::unique_ptr<State> state) {
   // Call DomainAgents::initialize on the runtime thread.
+  std::shared_ptr<State> initialState = std::move(state);
   runtimeTaskRunner_.enqueueTask(
-      [domainAgents = domainAgents_, state](HermesRuntime &) {
-        domainAgents->initialize(state);
+      [domainAgents = domainAgents_, initialState](HermesRuntime &) {
+        domainAgents->initialize(initialState);
       });
 }
 
@@ -370,13 +371,13 @@ std::unique_ptr<CDPAgent> CDPAgent::create(
     CDPDebugAPI &cdpDebugAPI,
     EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
     OutboundMessageFunc messageCallback,
-    std::shared_ptr<State> state) {
+    std::unique_ptr<State> state) {
   return std::unique_ptr<CDPAgent>(new CDPAgent(
       executionContextID,
       cdpDebugAPI,
       enqueueRuntimeTaskCallback,
       messageCallback,
-      state));
+      std::move(state)));
 }
 
 CDPAgent::CDPAgent(
@@ -384,13 +385,13 @@ CDPAgent::CDPAgent(
     CDPDebugAPI &cdpDebugAPI,
     EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
     OutboundMessageFunc messageCallback,
-    std::shared_ptr<State> state)
+    std::unique_ptr<State> state)
     : impl_(std::make_unique<CDPAgentImpl>(
           executionContextID,
           cdpDebugAPI,
           enqueueRuntimeTaskCallback,
           SynchronizedOutboundCallback(messageCallback))) {
-  impl_->initializeDomainAgents(state);
+  impl_->initializeDomainAgents(std::move(state));
 }
 
 CDPAgent::~CDPAgent() {}

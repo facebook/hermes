@@ -1413,7 +1413,7 @@ TEST_F(CDPAgentTest, DebuggerRestoreState) {
   ensureSetBreakpointByUrlResponse(waitForMessage(), msgId++, {});
 
   for (int i = 0; i < 2; i++) {
-    std::shared_ptr<State> state;
+    std::unique_ptr<State> state;
     if (i == 0) {
       // Save CDPAgent state on non-runtime thread and shut everything down.
       state = cdpAgent_->getState();
@@ -1448,7 +1448,7 @@ TEST_F(CDPAgentTest, DebuggerRestoreState) {
         *cdpDebugAPI_,
         std::bind(&CDPAgentTest::handleRuntimeTask, this, _1),
         std::bind(&CDPAgentTest::handleResponse, this, _1),
-        state);
+        std::move(state));
 
     sendAndCheckResponse("Debugger.enable", msgId++);
     scheduleScript(R"(
