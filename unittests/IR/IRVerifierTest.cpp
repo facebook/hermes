@@ -71,7 +71,7 @@ TEST(IRVerifierTest, ReturnInstTest) {
 
   auto Body = Builder.createBasicBlock(F);
   Builder.setInsertionBlock(Body);
-  auto Return = Builder.createReturnInst(Arg1);
+  Builder.createReturnInst(Arg1);
 
   // Everything should pass so far
   EXPECT_TRUE(verifyModule(M));
