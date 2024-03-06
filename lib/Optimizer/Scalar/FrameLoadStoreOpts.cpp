@@ -23,15 +23,19 @@
 /// For loads, the key idea is that if there are no instructions that may write
 /// a variable between two loads or a store and a load to it, the second load
 /// may be eliminated. This is accomplished by creating a mirror of the variable
-/// on the stack and invalidating it when a call may store to it.
+/// on the stack and invalidating it when a call may store to it. To simplify
+/// the analysis and avoid aliasing considerations, this is only done in
+/// functions where all accesses to a given variable go through the same scope
+/// instruction.
+///
 /// For stores, the idea is that if there are no instructions that may read a
 /// variable between two stores, then the first store is redundant.
 ///
-/// In both cases, the analysis is refined to allow instructions with
-/// side-effects in the middle, by checking whether a variable has capturing
-/// loads/stores that may manipulate it from such an instruction. For example,
-/// this means that we can deduplicate loads across a function call, as long as
-/// we know that there are no capturing stores.
+/// For loads, the analysis is refined to allow instructions with side-effects
+/// in the middle, by checking whether a variable has capturing stores that may
+/// manipulate it from such an instruction. For example, this means that we can
+/// deduplicate loads across a function call, as long as we know that there are
+/// no capturing stores.
 
 namespace hermes {
 namespace {
@@ -90,26 +94,49 @@ class FunctionLoadStoreOptimizer {
   /// For each variable that is loaded from in F_, create an alloca that can
   /// be used to perform load elimination, and set it in \c variableAllocas_.
   void createVariableAllocas() {
-    IRBuilder builder(F_);
-    // Insert the alloca at the start of the function, after any FirstInBlock
-    // instructions.
-    auto insertAt = F_->begin()->begin();
-    while (insertAt->getSideEffect().getFirstInBlock())
-      ++insertAt;
-    builder.setInsertionPoint(&*insertAt);
-
+    // Map from a Variable to a pair where:
+    // 1. The first element records the unique scope instruction that it is
+    //    accessed from in this function, or nullptr if it is accessed through
+    //    multiple scopes instructions.
+    // 2. The second element records whether the variable has been loaded from.
+    llvh::DenseMap<Variable *, std::pair<Instruction *, bool>> variableScopes;
     for (BasicBlock *BB : PO_) {
       for (Instruction &I : *BB) {
         if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(&I)) {
           Variable *V = LFI->getLoadVariable();
-          // If there isn't already an alloca for V, create one and insert it
-          // into the map.
-          auto [it, first] = variableAllocas_.try_emplace(V, nullptr);
-          if (first)
-            it->second =
-                builder.createAllocStackInst(V->getName(), V->getType());
+          auto [it, inserted] =
+              variableScopes.try_emplace(V, LFI->getScope(), true);
+          // If the variable was previously recorded as being accessed through a
+          // different scope instruction, clear the scope.
+          if (!inserted && it->second.first != LFI->getScope())
+            it->second.first = nullptr;
+          // Record that we have seen a load.
+          it->second.second = true;
+        }
+        if (auto *SFI = llvh::dyn_cast<StoreFrameInst>(&I)) {
+          Variable *V = SFI->getVariable();
+          auto [it, inserted] =
+              variableScopes.try_emplace(V, SFI->getScope(), false);
+          // If the variable was previously recorded as being accessed through a
+          // different scope instruction, clear the scope.
+          if (!inserted && it->second.first != SFI->getScope())
+            it->second.first = nullptr;
         }
       }
+    }
+
+    IRBuilder builder(F_);
+    for (auto [V, scopeAndLoaded] : variableScopes) {
+      auto [scope, loaded] = scopeAndLoaded;
+      // If the variable is accessed through multiple scope instructions, we
+      // cannot create an alloca for it. If it is never loaded from, there is no
+      // point creating an alloca.
+      if (!scope || !loaded)
+        continue;
+      builder.setInsertionPoint(scope);
+      auto *ASI = builder.createAllocStackInst(V->getName(), V->getType());
+      auto [it, first] = variableAllocas_.try_emplace(V, ASI);
+      assert(first && "Variable already has an alloca");
     }
   }
 
@@ -164,18 +191,20 @@ class FunctionLoadStoreOptimizer {
       if (auto *LF = llvh::dyn_cast<LoadFrameInst>(&I)) {
         // Check if we already have a valid value for the load in its
         // corresponding stack location. If so, use it, otherwise, populate it.
-        builder.setInsertionPointAfter(LF);
         auto *V = LF->getLoadVariable();
-        auto *alloca = variableAllocas_.lookup(LF->getLoadVariable());
-        if (validVariables.insert(V).second) {
-          // No entry currently exists, store the result of this load to the
-          // stack.
-          builder.createStoreStackInst(LF, alloca);
-        } else {
-          // We already have a known value for this variable. Replace the load
-          // with it.
-          LF->replaceAllUsesWith(builder.createLoadStackInst(alloca));
-          destroyer.add(LF);
+        auto it = variableAllocas_.find(V);
+        if (it != variableAllocas_.end()) {
+          builder.setInsertionPointAfter(LF);
+          if (validVariables.insert(V).second) {
+            // No entry currently exists, store the result of this load to the
+            // stack.
+            builder.createStoreStackInst(LF, it->second);
+          } else {
+            // We already have a known value for this variable. Replace the load
+            // with it.
+            LF->replaceAllUsesWith(builder.createLoadStackInst(it->second));
+            destroyer.add(LF);
+          }
         }
 
         changed = true;
@@ -223,10 +252,12 @@ class FunctionLoadStoreOptimizer {
         auto [it, inserted] = prevStores.try_emplace(SF->getVariable(), SF);
 
         if (!inserted) {
-          // There is a previous store, delete it and make this the previous
-          // store.
-          destroyer.add(it->second);
-          changed = true;
+          // There is a previous store, if it was to the same scope, delete it.
+          if (it->second->getScope() == SF->getScope()) {
+            destroyer.add(it->second);
+            changed = true;
+          }
+          // Make this the previous store.
           it->second = SF;
         }
         continue;
@@ -279,13 +310,13 @@ bool runFrameLoadStoreOpts(Module *M) {
   for (Function &F : *M) {
     for (Variable *V : F.getFunctionScope()->getVariables()) {
       for (Instruction *I : V->getUsers()) {
-        if (I->getParent()->getParent() != &F) {
-          if (llvh::isa<LoadFrameInst>(I)) {
+        if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(I)) {
+          if (!llvh::isa<CreateScopeInst>(LFI->getScope()))
             cv.loads.insert(V);
-          } else {
-            assert(llvh::isa<StoreFrameInst>(I) && "No other valid user");
+        } else {
+          auto *SFI = llvh::cast<StoreFrameInst>(I);
+          if (!llvh::isa<CreateScopeInst>(SFI->getScope()))
             cv.stores.insert(V);
-          }
         }
       }
     }
