@@ -2217,14 +2217,8 @@ Value *ESTreeIRGen::genIdentifierExpression(
   }
 
   LLVM_DEBUG(
-      llvh::dbgs() << "Found variable " << StrName << " in function \""
-                   << (llvh::isa<GlobalObjectProperty>(Var)
-                           ? llvh::StringRef("global")
-                           : cast<Variable>(Var)
-                                 ->getParent()
-                                 ->getFunction()
-                                 ->getInternalNameStr())
-                   << "\"\n");
+      llvh::dbgs() << "Found variable " << StrName << " accessed in function \""
+                   << curFunction()->function->getInternalNameStr() << "\"\n");
 
   // Typeof <variable> does not throw.
   return emitLoad(Var, afterTypeOf);

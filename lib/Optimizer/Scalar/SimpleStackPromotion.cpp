@@ -52,12 +52,11 @@ bool tryPromoteConstVariable(Variable *var) {
 
 /// If \p var is only ever stored to by directly writing to a CreateScopeInst,
 /// create a copy of \p var on the stack. Use this stack variable for any loads
-/// from \p var in \p func. Note that the stores to the frame are not deleted,
-/// which means that indirect loads through scope resolution instructions will
-/// continue to work correctly.
+/// from \p var. Note that the stores to the frame are not deleted, which means
+/// that indirect loads through scope resolution instructions will continue to
+/// work correctly.
 /// \return true if the variable was promoted.
-bool tryCopyToStack(Variable *var) {
-  auto *func = var->getParent()->getFunction();
+bool tryCopyToStack(Module *M, Variable *var) {
   bool hasIndirectStore = false;
   for (auto *U : var->getUsers())
     if (auto *SFI = llvh::dyn_cast<StoreFrameInst>(U))
@@ -73,7 +72,7 @@ bool tryCopyToStack(Variable *var) {
 
   LLVM_DEBUG(llvh::dbgs() << "Promoting Variable: " << var->getName() << "\n");
 
-  IRBuilder builder(func->getParent());
+  IRBuilder builder(M);
   IRBuilder::InstructionDestroyer destroyer;
 
   // Map from a scope to the stack location that holds the value of var in that
@@ -139,34 +138,23 @@ bool tryDeleteStoreOnlyVariable(Variable *var) {
   return true;
 }
 
-/// Run SimpleStackPromotion on a single function.
-/// Iterates all variables of \p func, replacing them usage of them with SSA and
-/// stack values.
-bool runOnFunction(Function *F) {
+/// Run SimpleStackPromotion on a single variable \p var.
+bool runOnVariable(Module *M, Variable *var) {
   bool changed = false;
-  LLVM_DEBUG(
-      llvh::dbgs() << "Promoting variables in " << F->getInternalNameStr()
-                   << "\n");
 
-  llvh::SmallVectorImpl<Variable *> &vars =
-      F->getFunctionScope()->getVariables();
-  for (Variable *var : vars) {
-    // Attempt to replace var with a literal if possible. Note that this removes
-    // all loads and stores from var, so we can skip the rest of the pass.
-    if (tryPromoteConstVariable(var)) {
-      changed = true;
-      continue;
-    }
-    // Try creating a copy of the variable on the stack if it is only ever
-    // stored to in the owning function. This allows us to eliminate all loads
-    // from the variable in the owning function.
-    changed |= tryCopyToStack(var);
-    // If the variable no longer has any loads at all, delete any remaining
-    // stores. This may happen because the program never loads from the
-    // variable, or because all loads from the variable were in the owning
-    // function as well, and were therefore eliminated by the stack copy.
-    changed |= tryDeleteStoreOnlyVariable(var);
-  }
+  // Attempt to replace var with a literal if possible. Note that this removes
+  // all loads and stores from var, so we can skip the rest of the pass.
+  if (tryPromoteConstVariable(var))
+    return true;
+  // Try creating a copy of the variable on the stack if it is only ever
+  // stored to in the owning function. This allows us to eliminate all loads
+  // from the variable in the owning function.
+  changed |= tryCopyToStack(M, var);
+  // If the variable no longer has any loads at all, delete any remaining
+  // stores. This may happen because the program never loads from the
+  // variable, or because all loads from the variable were in the owning
+  // function as well, and were therefore eliminated by the stack copy.
+  changed |= tryDeleteStoreOnlyVariable(var);
 
   return changed;
 }
@@ -178,7 +166,8 @@ bool runOnFunction(Function *F) {
 bool runSimpleStackPromotion(Module *M) {
   bool changed = false;
   for (Function &func : *M)
-    changed |= runOnFunction(&func);
+    for (Variable *var : func.getFunctionScope()->getVariables())
+      changed |= runOnVariable(M, var);
   changed |= deleteUnusedVariables(M);
   return changed;
 }

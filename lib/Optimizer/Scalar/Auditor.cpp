@@ -24,11 +24,8 @@ STATISTIC(
     CallsProp,
     "Number of call instructions: callee obtained from prop lookup");
 STATISTIC(
-    CallsFrameGlobal,
-    "Number of call instructions: callee obtained from top-level frame");
-STATISTIC(
-    CallsFrameLocal,
-    "Number of call instructions: callee obtained from local frame");
+    CallsFrame,
+    "Number of call instructions: callee obtained from frame");
 STATISTIC(
     CallsStack,
     "Number of call instructions: callee obtained from stack");
@@ -70,13 +67,7 @@ static void auditCallInstructions(Function *F) {
             CallsProp += 1;
             break;
           case ValueKind::LoadFrameInstKind: {
-            auto *LFI = cast<LoadFrameInst>(callee);
-            Variable *V = LFI->getLoadVariable();
-            if (V->getParent()->isGlobalScope()) {
-              CallsFrameGlobal += 1;
-            } else {
-              CallsFrameLocal += 1;
-            }
+            CallsFrame += 1;
           } break;
           case ValueKind::LoadStackInstKind:
             CallsStack += 1;
