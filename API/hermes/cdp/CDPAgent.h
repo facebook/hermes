@@ -23,7 +23,42 @@ using OutboundMessageFunc = std::function<void(const std::string &)>;
 
 class CDPAgentImpl;
 class CDPDebugAPI;
-struct State;
+
+/// Public-facing wrapper for internal CDP state that can be preserved across
+/// reloads.
+struct HERMES_EXPORT State {
+  /// Incomplete type that stores the actual state.
+  struct Private;
+
+  /// Create a new empty wrapper.
+  State();
+  /// Create a new wrapper with the provided \p privateState.
+  explicit State(std::unique_ptr<Private> privateState);
+
+  State(const State &other) = delete;
+  State &operator=(const State &other) = delete;
+  State(State &&other) noexcept;
+  State &operator=(State &&other) noexcept;
+  ~State();
+
+  inline operator bool() const {
+    return privateState_ != nullptr;
+  }
+
+  /// Get the wrapped state.
+  inline Private &operator*() {
+    return *privateState_.get();
+  }
+
+  /// Get the wrapped state.
+  inline Private *operator->() {
+    return privateState_.get();
+  }
+
+ private:
+  /// Pointer to the actual stored state, hidden from users of this wrapper.
+  std::unique_ptr<Private> privateState_;
+};
 
 /// An agent for interacting with the provided \p runtime and
 /// \p asyncDebuggerAPI via CDP messages in the Debugger, Runtime, Profiler,
@@ -45,7 +80,7 @@ class HERMES_EXPORT CDPAgent {
       CDPDebugAPI &cdpDebugAPI,
       debugger::EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
       OutboundMessageFunc messageCallback,
-      std::unique_ptr<State> state);
+      State state);
 
  public:
   /// Create a new CDP Agent. This can be done on an arbitrary thread; the
@@ -55,7 +90,7 @@ class HERMES_EXPORT CDPAgent {
       CDPDebugAPI &cdpDebugAPI,
       debugger::EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
       OutboundMessageFunc messageCallback,
-      std::unique_ptr<State> state = nullptr);
+      State state = {});
 
   /// Destroy the CDP Agent. This can be done on an arbitrary thread.
   /// It's expected that the integrator will continue to process any runtime
@@ -72,32 +107,12 @@ class HERMES_EXPORT CDPAgent {
 
   /// Extract state to be persisted across reloads. This can be called from
   /// arbitrary threads.
-  std::unique_ptr<State> getState();
+  State getState();
 
  private:
   /// This should be a unique_ptr to provide predictable destruction time lined
   /// up with when CDPAgent is destroyed. Do not use shared_ptr.
   std::unique_ptr<CDPAgentImpl> impl_;
-};
-
-/// Public-facing wrapper for internal CDP state that can be preserved across
-/// reloads.
-struct HERMES_EXPORT State {
-  /// Incomplete type that stores the actual state.
-  struct Private;
-
-  /// Create a new wrapper with the provided \p privateState.
-  explicit State(std::unique_ptr<Private> privateState);
-  ~State();
-
-  /// Get the wrapped state.
-  Private &get() {
-    return *privateState_.get();
-  }
-
- private:
-  /// Pointer to the actual stored state, hidden from users of this wrapper.
-  std::unique_ptr<Private> privateState_;
 };
 
 } // namespace cdp

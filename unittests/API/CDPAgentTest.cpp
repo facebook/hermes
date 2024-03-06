@@ -1412,7 +1412,7 @@ TEST_F(CDPAgentTest, DebuggerRestoreState) {
   ensureSetBreakpointByUrlResponse(waitForMessage(), msgId++, {});
 
   for (int i = 0; i < 2; i++) {
-    std::unique_ptr<State> state;
+    State state;
     if (i == 0) {
       // Save CDPAgent state on non-runtime thread and shut everything down.
       state = cdpAgent_->getState();
