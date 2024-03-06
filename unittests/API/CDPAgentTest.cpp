@@ -2113,8 +2113,7 @@ TEST_F(CDPAgentTest, RuntimeCallFunctionOnObject) {
     req.arguments->push_back(std::move(ca));
     req.objectId = thisId;
 
-    cdpAgent_->handleCommand(
-        serializeRuntimeCallFunctionOnRequest(std::move(req)));
+    cdpAgent_->handleCommand(serializeRuntimeCallFunctionOnRequest(req));
     expectResponse(std::nullopt, msgId++);
   };
 
@@ -2240,8 +2239,7 @@ TEST_F(CDPAgentTest, RuntimeCallFunctionOnExecutionContext) {
     req.arguments->push_back(std::move(ca));
     req.executionContextId = kTestExecutionContextId;
 
-    cdpAgent_->handleCommand(
-        serializeRuntimeCallFunctionOnRequest(std::move(req)));
+    cdpAgent_->handleCommand(serializeRuntimeCallFunctionOnRequest(req));
     expectResponse(std::nullopt, msgId++);
 
     // n.b. we're only borrowing the CallArgument, so give it back...

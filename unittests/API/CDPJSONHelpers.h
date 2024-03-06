@@ -156,7 +156,7 @@ std::unordered_map<std::string, std::string> ensureProps(
     const std::unordered_map<std::string, PropInfo> &infos);
 
 std::string serializeRuntimeCallFunctionOnRequest(
-    const m::runtime::CallFunctionOnRequest &&req);
+    const m::runtime::CallFunctionOnRequest &req);
 m::runtime::GetPropertiesResponse parseRuntimeGetPropertiesResponse(
     const std::string &json);
 
