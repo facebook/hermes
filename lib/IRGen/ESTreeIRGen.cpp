@@ -921,11 +921,12 @@ Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
     auto *RSI = emitResolveScopeInstIfNeeded(
         var->getParent(), curFunction()->functionScope);
     if (var->getObeysTDZ()) {
-      // We don't need to perform a runtime check for TDZ when in the
-      // variable's function, since we know whether it has been initialized.
-      if (var->getParent()->getFunction() == curFunction()->function) {
+      // We don't need to perform a runtime check for TDZ when we are directly
+      // loading from a CreateScopeInst, since we know whether it has been
+      // initialized.
+      if (auto *CSI = llvh::dyn_cast<CreateScopeInst>(RSI)) {
         // If not initialized, throw.
-        if (curFunction()->initializedTDZVars.count(var) == 0) {
+        if (curFunction()->initializedTDZVars.count({var, CSI}) == 0) {
           // Report an error or warning using the builder's location.
           assert(
               Builder.getLocation().isValid() &&
@@ -981,12 +982,13 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
         var->getParent(), curFunction()->functionScope);
     if (declInit) {
       assert(
-          var->getParent()->getFunction() == curFunction()->function &&
-          "variable must be initialized in its own function");
+          llvh::isa<CreateScopeInst>(RSI) &&
+          "variable must be initialized by direct write to created scope");
 
       // If this is a TDZ variable, record that it has been initialized.
       if (var->getObeysTDZ()) {
-        curFunction()->initializedTDZVars.insert(var);
+        curFunction()->initializedTDZVars.insert(
+            {var, llvh::cast<CreateScopeInst>(RSI)});
         // Note that a variable can be initialized more than once, for example
         // when a "var" declaration is shadowed by a catch variable or a
         // parameter.
@@ -994,9 +996,10 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
     } else {
       if (var->getObeysTDZ()) {
         // We don't need to perform a runtime check for TDZ when in the
-        // variable's function, since we know whether it has been initialized.
-        if (var->getParent()->getFunction() == curFunction()->function) {
-          if (curFunction()->initializedTDZVars.count(var) == 0) {
+        // directly writing to the result of a CreateScopeInst, since we know
+        // whether it has been initialized.
+        if (auto *CSI = llvh::dyn_cast<CreateScopeInst>(RSI)) {
+          if (curFunction()->initializedTDZVars.count({var, CSI}) == 0) {
             // Report an error or warning using the builder's location.
             assert(
                 Builder.getLocation().isValid() &&
