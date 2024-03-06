@@ -32,11 +32,10 @@ struct State::Private {
   std::unique_ptr<DebuggerDomainState> debuggerDomainState;
 };
 
-State::~State() = default;
+State::State(std::unique_ptr<Private> privateState)
+    : privateState_(std::move(privateState)) {}
 
-void State::PrivateDeleter::operator()(State::Private *privateState) const {
-  delete privateState;
-}
+State::~State() = default;
 
 /// Implementation of the CDP Agent. This class accepts CDP commands from
 /// arbitrary threads and delivers them to the appropriate, domain-specific
@@ -217,10 +216,8 @@ std::unique_ptr<State> CDPAgentImpl::getState() {
   // getDebuggerDomainState() because internally it's protected by a mutex so no
   // DomainAgents functions can simultaneously manipulate the runtime and get
   // the state.
-  return std::make_unique<State>(
-      std::unique_ptr<State::Private, State::PrivateDeleter>(
-          new State::Private(domainAgents_->getDebuggerDomainState()),
-          State::PrivateDeleter()));
+  return std::make_unique<State>(std::make_unique<State::Private>(
+      domainAgents_->getDebuggerDomainState()));
 }
 
 CDPAgentImpl::DomainAgents::DomainAgents(

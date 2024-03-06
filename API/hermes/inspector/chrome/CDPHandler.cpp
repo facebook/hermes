@@ -119,11 +119,10 @@ struct State::Private {
       breakpointDescriptions;
 };
 
-State::~State() = default;
+State::State(std::unique_ptr<Private> privateState)
+    : privateState_(std::move(privateState)) {}
 
-void State::PrivateDeleter::operator()(State::Private *privateState) const {
-  delete privateState;
-}
+State::~State() = default;
 
 struct Script {
   uint32_t fileId{};
@@ -692,8 +691,7 @@ void CDPHandlerImpl::handle(std::string str) {
 
 std::unique_ptr<State> CDPHandlerImpl::getState() {
   return std::make_unique<State>(
-      std::unique_ptr<State::Private, State::PrivateDeleter>(
-          new State::Private(cdpBreakpoints_), State::PrivateDeleter()));
+      std::make_unique<State::Private>(cdpBreakpoints_));
 }
 
 void CDPHandlerImpl::handleConsoleAPI(ConsoleMessageInfo info) {
