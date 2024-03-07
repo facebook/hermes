@@ -88,18 +88,14 @@ function getParentKey(target: ESNode): $ReadOnly<
 > {
   const parent = target.parent;
   for (const key of getVisitorKeys(parent)) {
-    if (
-      isNode(
-        // $FlowExpectedError[prop-missing]
-        parent[key],
-      )
-    ) {
-      if (parent[key] === target) {
+    const child = (parent: $FlowFixMe)[key];
+    if (isNode(child)) {
+      if (child === target) {
         return {type: 'single', parent, key};
       }
-    } else if (Array.isArray(parent[key])) {
-      for (let i = 0; i < parent[key].length; i += 1) {
-        const current = parent[key][i];
+    } else if (Array.isArray(child)) {
+      for (let i = 0; i < child.length; i += 1) {
+        const current = child[i];
         const originalNode = getOriginalNode(current);
         if (current === target || originalNode === target) {
           return {type: 'array', parent, key, targetIndex: i};

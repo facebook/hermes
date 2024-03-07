@@ -241,8 +241,16 @@ const fileContents = `\
 import type {
   ESNode,
   Token,
+  AFunction,
+  ClassMember,
+  BigIntLiteral,
+  BooleanLiteral,
+  NullLiteral,
+  NumericLiteral,
+  RegExpLiteral,
+  StringLiteral,
 ${nodeTypesToImport.map(n => `  ${n}`).join(',\n')},
-} from 'hermes-estree';
+} from '../types';
 */
 
 ${predicateFunctions.join('\n')}

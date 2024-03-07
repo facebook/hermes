@@ -81,7 +81,7 @@ function HEADER(flow: FlowStyle, skipFormat: boolean): string {
 
 // lint directives to let us do some basic validation of generated files
 /* eslint no-undef: 'error', no-unused-vars: ['error', {vars: "local"}], no-redeclare: 'error' */
-/* global $NonMaybeType, Partial, $ReadOnly, $ReadOnlyArray */
+/* global $NonMaybeType, Partial, $ReadOnly, $ReadOnlyArray, $FlowFixMe */
 
 'use strict';
 

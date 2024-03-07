@@ -16,7 +16,7 @@
 
 // lint directives to let us do some basic validation of generated files
 /* eslint no-undef: 'error', no-unused-vars: ['error', {vars: "local"}], no-redeclare: 'error' */
-/* global $NonMaybeType, Partial, $ReadOnly, $ReadOnlyArray */
+/* global $NonMaybeType, Partial, $ReadOnly, $ReadOnlyArray, $FlowFixMe */
 
 'use strict';
 
@@ -24,6 +24,14 @@
 import type {
   ESNode,
   Token,
+  AFunction,
+  ClassMember,
+  BigIntLiteral,
+  BooleanLiteral,
+  NullLiteral,
+  NumericLiteral,
+  RegExpLiteral,
+  StringLiteral,
   Identifier,
   JSXIdentifier,
   JSXText,
@@ -32,6 +40,7 @@ import type {
   ArrayPattern,
   ArrayTypeAnnotation,
   ArrowFunctionExpression,
+  AsConstExpression,
   AsExpression,
   AssignmentExpression,
   AssignmentPattern,
@@ -199,7 +208,7 @@ import type {
   LineComment,
   BlockComment,
   MostTokens,
-} from 'hermes-estree';
+} from '../types';
 */
 
 
@@ -240,6 +249,11 @@ export function isArrayTypeAnnotation(node /*: ESNode | Token */) /*: node is Ar
 
 export function isArrowFunctionExpression(node /*: ESNode | Token */) /*: node is ArrowFunctionExpression */ {
   return node.type === 'ArrowFunctionExpression';
+}
+    
+
+export function isAsConstExpression(node /*: ESNode | Token */) /*: node is AsConstExpression */ {
+  return node.type === 'AsConstExpression';
 }
     
 

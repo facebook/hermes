@@ -175,9 +175,7 @@ export function traverseWithContext<T = TraversalContextBase>(
   // add all the selectors from the visitor as listeners
   Object.keys(selectors).forEach(selector => {
     // flow doesn't want us to be general here - but it's safe
-    // $FlowExpectedError[incompatible-type]
-    // $FlowExpectedError[prop-missing]
-    const listener: ?EmitterListener = selectors[selector];
+    const listener: ?EmitterListener = (selectors: $FlowFixMe)[selector];
     if (listener) {
       emitter.on(selector, listener);
     }

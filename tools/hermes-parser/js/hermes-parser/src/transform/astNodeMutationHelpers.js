@@ -171,14 +171,13 @@ export function nodeWith<T: ESNode>(
   // Check if this will actually result in a change, maintaining referential equality is important.
   const willBeUnchanged = Object.entries(overrideProps).every(
     ([key, value]) => {
+      const node_: $FlowFixMe = node;
       if (Array.isArray(value)) {
-        // $FlowExpectedError[prop-missing]
-        return Array.isArray(node[key])
-          ? arrayIsEqual(node[key], value)
+        return Array.isArray(node_[key])
+          ? arrayIsEqual(node_[key], value)
           : false;
       }
-      // $FlowExpectedError[prop-missing]
-      return node[key] === value;
+      return node_[key] === value;
     },
   );
   if (willBeUnchanged) {

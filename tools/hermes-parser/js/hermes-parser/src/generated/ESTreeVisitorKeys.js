@@ -17,7 +17,7 @@
 
 // lint directives to let us do some basic validation of generated files
 /* eslint no-undef: 'error', no-unused-vars: ['error', {vars: "local"}], no-redeclare: 'error' */
-/* global $NonMaybeType, Partial, $ReadOnly, $ReadOnlyArray */
+/* global $NonMaybeType, Partial, $ReadOnly, $ReadOnlyArray, $FlowFixMe */
 
 'use strict';
 
@@ -34,6 +34,7 @@ module.exports = {
     'returnType',
     'predicate',
   ],
+  AsConstExpression: ['expression'],
   AsExpression: ['expression', 'typeAnnotation'],
   AssignmentExpression: ['left', 'right'],
   AssignmentPattern: ['left', 'right'],

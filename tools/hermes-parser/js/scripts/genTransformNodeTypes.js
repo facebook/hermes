@@ -62,7 +62,7 @@ export type ${node.name}Props = {};
 export function ${node.name}(props: {
   +parent?: ESNode,
 } = {...null}): DetachedNode<${node.name}Type> {
-  return detachedProps<${node.name}Type>(props.parent, {
+  return detachedProps<${node.name}Type>((props.parent: $FlowFixMe), {
     type: '${type}',
   });
 }
@@ -98,10 +98,10 @@ export type ${node.name}Props = {
     nodeTypeFunctions.push(
       `\
 export function ${node.name}(props: {
-  ...$ReadOnly<${node.name}Props>,
+  ...${node.name}Props,
   +parent?: ESNode,
 }): DetachedNode<${node.name}Type> {
-  const node = detachedProps<${node.name}Type>(props.parent, {
+  const node = detachedProps<${node.name}Type>((props.parent: $FlowFixMe), {
     type: '${type}',
     ${node.arguments
       .map(arg => {
@@ -122,7 +122,7 @@ export function ${node.name}(props: {
       .filter(Boolean)
       .join(',\n')},
   });
-  setParentPointersInDirectChildren(node);
+  setParentPointersInDirectChildren((node: $FlowFixMe));
   return node;
 }
 `,

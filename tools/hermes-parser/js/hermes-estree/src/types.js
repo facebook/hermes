@@ -465,6 +465,7 @@ export type Expression =
   | ChainExpression
   | TypeCastExpression
   | AsExpression
+  | AsConstExpression
   | JSXFragment
   | JSXElement;
 
@@ -1535,6 +1536,10 @@ export interface AsExpression extends BaseNode {
   +type: 'AsExpression';
   +expression: Expression;
   +typeAnnotation: TypeAnnotationType;
+}
+export interface AsConstExpression extends BaseNode {
+  +type: 'AsConstExpression';
+  +expression: AsConstExpression;
 }
 
 interface BaseInterfaceNode extends BaseNode {
