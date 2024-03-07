@@ -161,7 +161,7 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
   // Store the home object in a variable so that we can reference it later,
   // e.g. when we emit method calls.
   Variable *homeObjectVar = Builder.createVariable(
-      curFunction()->function->getFunctionScope(),
+      curFunction()->functionScope->getVariableScope(),
       Builder.createIdentifier(
           llvh::Twine("?") + classType->getClassName().str() + ".prototype"),
       flowTypeToIRType(classType->getHomeObjectType()));

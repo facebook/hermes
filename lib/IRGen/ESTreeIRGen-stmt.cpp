@@ -600,7 +600,7 @@ void ESTreeIRGen::genScopedForLoop(
     // Create a copy of the variable. Note that it doesn't need TDZ, since we
     // are initializing it here.
     Variable *newVar = Builder.createVariable(
-        function->getFunctionScope(),
+        curFunction()->functionScope->getVariableScope(),
         decl->name,
         Type::subtractTy(oldVar->getType(), Type::createEmpty()));
 

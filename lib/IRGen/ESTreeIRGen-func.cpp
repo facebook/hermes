@@ -75,7 +75,7 @@ void ESTreeIRGen::genFunctionDeclaration(
   Value *funcStorage = resolveIdentifier(id);
   assert(funcStorage && "Function declaration storage must have been resolved");
 
-  auto *newFuncParentScope = curFunction()->function->getFunctionScope();
+  auto *newFuncParentScope = curFunction()->functionScope->getVariableScope();
   Function *newFunc = func->_async
       ? genAsyncFunction(functionName, func, newFuncParentScope)
       : func->_generator
@@ -106,7 +106,7 @@ Value *ESTreeIRGen::genFunctionExpression(
   Identifier originalNameIden =
       id ? Identifier::getFromPointer(id->_name) : nameHint;
 
-  auto *parentScope = curFunction()->function->getFunctionScope();
+  auto *parentScope = curFunction()->functionScope->getVariableScope();
   Function *newFunc = FE->_async
       ? genAsyncFunction(originalNameIden, FE, parentScope)
       : FE->_generator
@@ -161,7 +161,7 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
                       capturedNewTarget = curFunction()->capturedNewTarget,
                       capturedArguments = curFunction()->capturedArguments,
                       parentScope =
-                          curFunction()->function->getFunctionScope()] {
+                          curFunction()->functionScope->getVariableScope()] {
     FunctionContext newFunctionContext{this, newFunc, AF->getSemInfo()};
 
     // Propagate captured "this", "new.target" and "arguments" from parents.
@@ -339,21 +339,21 @@ Function *ESTreeIRGen::genGeneratorFunction(
                       parentScope]() {
     FunctionContext outerFnContext{this, outerFn, functionNode->getSemInfo()};
 
-    // Build the inner function. This must be done in the outerFnContext
-    // since it's lexically considered a child function.
-    auto *innerFn = genES5Function(
-        genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
-        functionNode,
-        outerFn->getFunctionScope(),
-        /* classNode */ nullptr,
-        true);
-
     emitFunctionPrologue(
         functionNode,
         Builder.createBasicBlock(outerFn),
         InitES5CaptureState::Yes,
         DoEmitDeclarations::No,
         parentScope);
+
+    // Build the inner function. This must be done in the outerFnContext
+    // since it's lexically considered a child function.
+    auto *innerFn = genES5Function(
+        genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
+        functionNode,
+        curFunction()->functionScope->getVariableScope(),
+        /* classNode */ nullptr,
+        true);
 
     // Create a generator function, which will store the arguments.
     auto *gen = Builder.createCreateGeneratorInst(
@@ -407,13 +407,6 @@ Function *ESTreeIRGen::genAsyncFunction(
                       parentScope]() {
     FunctionContext asyncFnContext{this, asyncFn, functionNode->getSemInfo()};
 
-    // Build the inner generator. This must be done in the outerFnContext
-    // since it's lexically considered a child function.
-    auto *gen = genGeneratorFunction(
-        genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
-        functionNode,
-        asyncFn->getFunctionScope());
-
     // The outer async function need not emit code for parameters.
     // It would simply delegate `arguments` object down to inner generator.
     // This avoid emitting code e.g. destructuring parameters twice.
@@ -423,6 +416,13 @@ Function *ESTreeIRGen::genAsyncFunction(
         InitES5CaptureState::Yes,
         DoEmitDeclarations::No,
         parentScope);
+
+    // Build the inner generator. This must be done in the outerFnContext
+    // since it's lexically considered a child function.
+    auto *gen = genGeneratorFunction(
+        genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
+        functionNode,
+        curFunction()->functionScope->getVariableScope());
 
     auto *genClosure =
         Builder.createCreateFunctionInst(curFunction()->functionScope, gen);
@@ -451,7 +451,7 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
   if (!curFunction()->getSemInfo()->containsArrowFunctions)
     return;
 
-  auto *scope = curFunction()->function->getFunctionScope();
+  auto *scope = curFunction()->functionScope->getVariableScope();
 
   // "this".
   auto *th = Builder.createVariable(
@@ -581,7 +581,7 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
         if (!decl->customData) {
           bool tdz = Mod->getContext().getCodeGenerationSettings().enableTDZ;
           var = Builder.createVariable(
-              func->getFunctionScope(),
+              curFunction()->functionScope->getVariableScope(),
               decl->name,
               tdz ? Type::unionTy(Type::createAnyType(), Type::createEmpty())
                   : Type::createAnyType());
@@ -617,7 +617,9 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
 
         if (!decl->customData) {
           var = Builder.createVariable(
-              func->getFunctionScope(), decl->name, Type::createAnyType());
+              curFunction()->functionScope->getVariableScope(),
+              decl->name,
+              Type::createAnyType());
           var->setIsConst(decl->kind == sema::Decl::Kind::Import);
           setDeclData(decl, var);
         } else {
@@ -692,7 +694,7 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
     bool tdz = !semInfo->simpleParameterList &&
         Mod->getContext().getCodeGenerationSettings().enableTDZ;
     Variable *var = Builder.createVariable(
-        newFunc->getFunctionScope(),
+        curFunction()->functionScope->getVariableScope(),
         decl->name,
         tdz ? Type::unionTy(Type::createAnyType(), Type::createEmpty())
             : Type::createAnyType());
