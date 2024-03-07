@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "hermes/Support/StackOverflowGuard.h"
 #define DEBUG_TYPE "vm"
 #include "hermes/VM/Runtime.h"
 
@@ -265,9 +266,12 @@ Runtime::Runtime(
       stackPointer_(),
       crashMgr_(runtimeConfig.getCrashMgr()),
 #ifdef HERMES_CHECK_NATIVE_STACK
-      nativeStackGap_(std::max(
+      overflowGuard_(StackOverflowGuard::nativeStackGuard(std::max(
           runtimeConfig.getNativeStackGap(),
-          kMinSupportedNativeStackGap)),
+          kMinSupportedNativeStackGap))),
+#else
+      overflowGuard_(StackOverflowGuard::depthCounterGuard(
+          Runtime::MAX_NATIVE_CALL_FRAME_DEPTH)),
 #endif
       crashCallbackKey_(
           crashMgr_->registerCallback([this](int fd) { crashCallback(fd); })),
@@ -1960,19 +1964,6 @@ static std::string &llvmStreamableToString(const T &v) {
   strstrm << v;
   strstrm.flush();
   return buf;
-}
-
-bool Runtime::isNativeStackOverflowingSlowPath() {
-#ifdef HERMES_CHECK_NATIVE_STACK
-  auto [highPtr, size] = oscompat::thread_stack_bounds(nativeStackGap_);
-  nativeStackHigh_ = (const char *)highPtr;
-  nativeStackSize_ = size;
-  return LLVM_UNLIKELY(
-      (uintptr_t)nativeStackHigh_ - (uintptr_t)__builtin_frame_address(0) >
-      nativeStackSize_);
-#else
-  return false;
-#endif
 }
 
 /****************************************************************************

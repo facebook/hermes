@@ -11,6 +11,7 @@
 
 #include "llvh/ADT/SmallVector.h"
 #include "llvh/Support/TrailingObjects.h"
+#include "llvh/Support/raw_ostream.h"
 
 // This file contains the machinery for executing a regexp compiled to bytecode.
 
@@ -400,6 +401,10 @@ struct Context {
   /// This is effectively a timeout on the regexp execution.
   uint32_t backtracksRemaining_ = kBacktrackLimit;
 
+  /// Used to guard against stack overflow. Either uses real stack
+  /// checking or call depth counter checking.
+  StackOverflowGuard overflowGuard_;
+
   Context(
       llvh::ArrayRef<uint8_t> bytecodeStream,
       constants::MatchFlagType flags,
@@ -407,14 +412,16 @@ struct Context {
       const CodeUnit *first,
       const CodeUnit *last,
       uint32_t markedCount,
-      uint32_t loopCount)
+      uint32_t loopCount,
+      StackOverflowGuard guard)
       : bytecodeStream_(bytecodeStream),
         flags_(flags),
         syntaxFlags_(syntaxFlags),
         first_(first),
         last_(last),
         markedCount_(markedCount),
-        loopCount_(loopCount) {}
+        loopCount_(loopCount),
+        overflowGuard_(guard) {}
 
   /// Run the given State \p state, by starting at its cursor and acting on its
   /// ip_ until the match succeeds or fails. If \p onlyAtStart is set, only
@@ -467,6 +474,15 @@ struct Context {
       BacktrackStack &bts);
 
  private:
+  /// \return true if the native stack is overflowing. This will either use real
+  /// stack checking or a simple depth counter.
+  bool isStackOverflowing() {
+#ifndef HERMES_CHECK_NATIVE_STACK
+    overflowGuard_.callDepth++;
+#endif
+    return overflowGuard_.isOverflowing();
+  }
+
   /// Do initialization of the given state before it enters the loop body
   /// described by the LoopInsn \p loop, including setting up any backtracking
   /// state.
@@ -990,6 +1006,12 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
       (c.forwards() || locsToCheckCount == 1) &&
       "Can only check one location when cursor is backwards");
 
+  // Make sure we are not exceeding the set limit of the amount of times we can
+  // recurse.
+  if (isStackOverflowing()) {
+    return ExecutionStatus::STACK_OVERFLOW;
+  }
+
   // Macro used when a state fails to match.
 #define BACKTRACK()                            \
   do {                                         \
@@ -1317,9 +1339,13 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
             // anything.
             s->ip_ += sizeof(LookaroundInsn);
             auto match = this->match(s, true /* onlyAtStart */);
-            // There were no errors and we matched something (so non-null
-            // return)
-            matched = match && match.getValue();
+            // If the match errored out due to stack overflow, then we need to
+            // return an error here as well.
+            if (LLVM_UNLIKELY(!match)) {
+              return match.getStatus();
+            }
+            // We got a match if the value is non-null.
+            matched = match.getValue() != nullptr;
             c.setCurrentPointer(savedState.cursor_.currentPointer());
             c.setForwards(savedState.cursor_.forwards());
 
@@ -1514,7 +1540,8 @@ MatchRuntimeResult searchWithBytecodeImpl(
     uint32_t start,
     uint32_t length,
     std::vector<CapturedRange> *m,
-    constants::MatchFlagType matchFlags) {
+    constants::MatchFlagType matchFlags,
+    StackOverflowGuard guard) {
   assert(
       bytecode.size() >= sizeof(RegexBytecodeHeader) && "Bytecode too small");
   auto header = reinterpret_cast<const RegexBytecodeHeader *>(bytecode.data());
@@ -1535,7 +1562,8 @@ MatchRuntimeResult searchWithBytecodeImpl(
       first,
       first + length,
       header->markedCount,
-      header->loopCount);
+      header->loopCount,
+      guard);
   State<Traits> state{cursor, markedCount, loopCount};
 
   // We check only one location if either the regex pattern constrains us to, or
@@ -1571,9 +1599,10 @@ MatchRuntimeResult searchWithBytecode(
     uint32_t start,
     uint32_t length,
     std::vector<CapturedRange> *m,
-    constants::MatchFlagType matchFlags) {
+    constants::MatchFlagType matchFlags,
+    StackOverflowGuard guard) {
   return searchWithBytecodeImpl<char16_t, UTF16RegexTraits>(
-      bytecode, first, start, length, m, matchFlags);
+      bytecode, first, start, length, m, matchFlags, guard);
 }
 
 MatchRuntimeResult searchWithBytecode(
@@ -1582,9 +1611,10 @@ MatchRuntimeResult searchWithBytecode(
     uint32_t start,
     uint32_t length,
     std::vector<CapturedRange> *m,
-    constants::MatchFlagType matchFlags) {
+    constants::MatchFlagType matchFlags,
+    StackOverflowGuard guard) {
   return searchWithBytecodeImpl<char, ASCIIRegexTraits>(
-      bytecode, first, start, length, m, matchFlags);
+      bytecode, first, start, length, m, matchFlags, guard);
 }
 
 } // namespace regex
