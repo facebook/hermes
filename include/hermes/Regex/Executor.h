@@ -10,6 +10,7 @@
 
 #include "hermes/Regex/RegexBytecode.h"
 #include "hermes/Regex/RegexTypes.h"
+#include "hermes/Support/StackOverflowGuard.h"
 
 // This file contains the machinery for executing a regexp compiled to bytecode.
 
@@ -57,16 +58,25 @@ struct CapturedRange {
 /// Search using the compiled regex represented by \p bytecode with the flags \p
 /// matchFlags. If the search succeeds, populate \p captures with the capture
 /// groups.
-/// \return true if some portion of the string matched the regex represented by
-/// the bytecode, false otherwise.
-/// This is the char16_t overload.
+/// \param guard is used to implement stack overflow prevention.
+/// \return true if some portion of the string matched the regex
+/// represented by the bytecode, false otherwise. This is the char16_t overload.
 MatchRuntimeResult searchWithBytecode(
     llvh::ArrayRef<uint8_t> bytecode,
     const char16_t *first,
     uint32_t start,
     uint32_t length,
     std::vector<CapturedRange> *captures,
-    constants::MatchFlagType matchFlags);
+    constants::MatchFlagType matchFlags,
+    StackOverflowGuard guard =
+#ifdef HERMES_CHECK_NATIVE_STACK
+        StackOverflowGuard::nativeStackGuard(
+            512 * 1024) // this is a conservative gap that should work in
+                        // sanitizer builds
+#else
+        StackOverflowGuard::depthCounterGuard(128)
+#endif
+);
 
 /// This is the ASCII overload.
 MatchRuntimeResult searchWithBytecode(
@@ -75,7 +85,16 @@ MatchRuntimeResult searchWithBytecode(
     uint32_t start,
     uint32_t length,
     std::vector<CapturedRange> *captures,
-    constants::MatchFlagType matchFlags);
+    constants::MatchFlagType matchFlags,
+    StackOverflowGuard guard =
+#ifdef HERMES_CHECK_NATIVE_STACK
+        StackOverflowGuard::nativeStackGuard(
+            512 * 1024) // this is a conservative gap that should work in
+                        // sanitizer builds
+#else
+        StackOverflowGuard::depthCounterGuard(128)
+#endif
+);
 
 } // namespace regex
 } // namespace hermes
