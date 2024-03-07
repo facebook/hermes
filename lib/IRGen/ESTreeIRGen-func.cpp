@@ -564,8 +564,6 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
   if (!scope)
     return;
 
-  Function *func = curFunction()->function;
-
   for (sema::Decl *decl : scope->decls) {
     Variable *var = nullptr;
     bool init = false;
