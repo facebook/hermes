@@ -53,6 +53,11 @@
                 "body": {
                     "type": "Option<FunctionBody>"
                 },
+                "return_type": {
+                    "type": "Option<TypeAnnotation>",
+                    "rename": "returnType",
+                    "optional": true
+                },
                 "is_generator": {
                     "type": "bool",
                     "optional": true,
@@ -1160,8 +1165,9 @@
                     "type": "Option<FunctionTypeParam>",
                     "optional": true
                 },
-                "returnType": {
-                    "type": "FlowTypeAnnotation"
+                "return_type": {
+                    "type": "FlowTypeAnnotation",
+                    "rename": "returnType"
                 },
                 "rest": {
                     "type": "Option<FunctionTypeParam>",

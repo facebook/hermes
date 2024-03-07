@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-/* TODO:
 function field(user: User): string {
     return "Hello";
 }
-*/

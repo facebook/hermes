@@ -12,6 +12,7 @@ use hermes::parser::hermes_get_ArrowFunctionExpression_body;
 use hermes::parser::hermes_get_ArrowFunctionExpression_expression;
 use hermes::parser::hermes_get_ArrowFunctionExpression_id;
 use hermes::parser::hermes_get_ArrowFunctionExpression_params;
+use hermes::parser::hermes_get_ArrowFunctionExpression_returnType;
 use hermes::parser::hermes_get_ClassDeclaration_body;
 use hermes::parser::hermes_get_ClassDeclaration_id;
 use hermes::parser::hermes_get_ClassDeclaration_superClass;
@@ -23,11 +24,13 @@ use hermes::parser::hermes_get_FunctionDeclaration_body;
 use hermes::parser::hermes_get_FunctionDeclaration_generator;
 use hermes::parser::hermes_get_FunctionDeclaration_id;
 use hermes::parser::hermes_get_FunctionDeclaration_params;
+use hermes::parser::hermes_get_FunctionDeclaration_returnType;
 use hermes::parser::hermes_get_FunctionExpression_async;
 use hermes::parser::hermes_get_FunctionExpression_body;
 use hermes::parser::hermes_get_FunctionExpression_generator;
 use hermes::parser::hermes_get_FunctionExpression_id;
 use hermes::parser::hermes_get_FunctionExpression_params;
+use hermes::parser::hermes_get_FunctionExpression_returnType;
 use hermes::parser::hermes_get_Property_computed;
 use hermes::parser::hermes_get_Property_key;
 use hermes::parser::hermes_get_Property_kind;
@@ -63,6 +66,7 @@ use hermes_estree::Pattern;
 use hermes_estree::SourceRange;
 use hermes_estree::TemplateElement;
 use hermes_estree::TemplateElementValue;
+use hermes_estree::TypeAnnotation;
 use juno_support::NullTerminatedBuf;
 use serde::Serialize;
 
@@ -220,6 +224,10 @@ impl FromHermes for FunctionDeclaration {
             |node| Pattern::convert(cx, node),
         );
         let body = FunctionBody::convert(cx, unsafe { hermes_get_FunctionDeclaration_body(node) });
+        let return_type = convert_option(
+            unsafe { hermes_get_FunctionDeclaration_returnType(node) },
+            |node| TypeAnnotation::convert(cx, node),
+        );
         let is_generator = unsafe { hermes_get_FunctionDeclaration_generator(node) };
         let is_async = unsafe { hermes_get_FunctionDeclaration_async(node) };
         let loc = None;
@@ -229,6 +237,7 @@ impl FromHermes for FunctionDeclaration {
                 id,
                 params,
                 body: Some(body),
+                return_type,
                 is_generator,
                 is_async,
                 loc: loc.clone(),
@@ -250,6 +259,10 @@ impl FromHermes for FunctionExpression {
             |node| Pattern::convert(cx, node),
         );
         let body = FunctionBody::convert(cx, unsafe { hermes_get_FunctionExpression_body(node) });
+        let return_type = convert_option(
+            unsafe { hermes_get_FunctionExpression_returnType(node) },
+            |node| TypeAnnotation::convert(cx, node),
+        );
         let is_generator = unsafe { hermes_get_FunctionExpression_generator(node) };
         let is_async = unsafe { hermes_get_FunctionExpression_async(node) };
         let loc = None;
@@ -259,6 +272,7 @@ impl FromHermes for FunctionExpression {
                 id,
                 params,
                 body: Some(body),
+                return_type,
                 is_generator,
                 is_async,
                 loc: loc.clone(),
@@ -282,6 +296,10 @@ impl FromHermes for ArrowFunctionExpression {
         );
         let body =
             FunctionBody::convert(cx, unsafe { hermes_get_ArrowFunctionExpression_body(node) });
+        let return_type = convert_option(
+            unsafe { hermes_get_ArrowFunctionExpression_returnType(node) },
+            |node| TypeAnnotation::convert(cx, node),
+        );
         let is_generator = unsafe { hermes_get_FunctionExpression_generator(node) };
         let is_async = unsafe { hermes_get_ArrowFunctionExpression_async(node) };
         let is_expression = unsafe { hermes_get_ArrowFunctionExpression_expression(node) };
@@ -292,6 +310,7 @@ impl FromHermes for ArrowFunctionExpression {
                 id,
                 params,
                 body: Some(body),
+                return_type,
                 is_generator,
                 is_async,
                 loc: loc.clone(),
