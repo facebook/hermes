@@ -4663,6 +4663,10 @@ class LoadParentInst : public Instruction {
     return getOperand(ObjectIdx);
   }
 
+  const Value *getObject() const {
+    return getOperand(ObjectIdx);
+  }
+
   static bool hasOutput() {
     return true;
   }
@@ -4701,6 +4705,13 @@ class StoreParentInst : public Instruction {
     return getOperand(StoredValueIdx);
   }
   Value *getObject() {
+    return getOperand(ObjectIdx);
+  }
+
+  const Value *getStoredValue() const {
+    return getOperand(StoredValueIdx);
+  }
+  const Value *getObject() const {
     return getOperand(ObjectIdx);
   }
 

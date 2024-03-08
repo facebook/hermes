@@ -1409,9 +1409,21 @@ bool Verifier::visitFastArrayLengthInst(const FastArrayLengthInst &Inst) {
 }
 
 bool Verifier::visitLoadParentInst(const LoadParentInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      Inst.getObject()->getType().isObjectType(),
+      "input object value must be of object type");
   return true;
 }
 bool Verifier::visitStoreParentInst(const StoreParentInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      Inst.getObject()->getType().isObjectType(),
+      "input object value must be of object type");
+  AssertIWithMsg(
+      Inst,
+      Inst.getStoredValue()->getType().isObjectType(),
+      "stored value must be an object");
   return true;
 }
 
