@@ -20,7 +20,7 @@ using namespace hermes::parser;
 namespace facebook {
 namespace hermes {
 
-void ensureErrorResponse(const std::string &message, int id) {
+void ensureErrorResponse(const std::string &message, long long id) {
   JSLexer::Allocator allocator;
   JSONFactory factory(allocator);
   auto response =
@@ -28,7 +28,7 @@ void ensureErrorResponse(const std::string &message, int id) {
   EXPECT_EQ(response.id, id);
 }
 
-void ensureOkResponse(const std::string &message, int id) {
+void ensureOkResponse(const std::string &message, long long id) {
   JSLexer::Allocator allocator;
   JSONFactory factory(allocator);
   auto response =
@@ -215,7 +215,7 @@ std::unordered_map<std::string, std::string> ensureProps(
 
 void ensureEvalResponse(
     const std::string &message,
-    int id,
+    long long id,
     const char *expectedValue) {
   JSLexer::Allocator allocator;
   JSONFactory factory(allocator);
@@ -232,7 +232,7 @@ void ensureEvalResponse(
 
 void ensureEvalResponse(
     const std::string &message,
-    int id,
+    long long id,
     bool expectedValue) {
   JSLexer::Allocator allocator;
   JSONFactory factory(allocator);
@@ -245,7 +245,10 @@ void ensureEvalResponse(
   EXPECT_FALSE(resp.exceptionDetails.has_value());
 }
 
-void ensureEvalResponse(const std::string &message, int id, int expectedValue) {
+void ensureEvalResponse(
+    const std::string &message,
+    long long id,
+    int expectedValue) {
   JSLexer::Allocator allocator;
   JSONFactory factory(allocator);
   auto resp = mustMake<m::debugger::EvaluateOnCallFrameResponse>(
