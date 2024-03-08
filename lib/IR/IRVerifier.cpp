@@ -713,7 +713,7 @@ bool Verifier::visitStoreFrameInst(const StoreFrameInst &Inst) {
       Inst,
       llvh::cast<BaseScopeInst>(Inst.getScope())->getVariableScope() ==
           Inst.getVariable()->getParent(),
-      "Loading from different scope than the variable's scope.");
+      "Storing to different scope than the variable's scope.");
   return true;
 }
 
@@ -726,7 +726,7 @@ bool Verifier::visitLoadFrameInst(const LoadFrameInst &Inst) {
       Inst,
       llvh::cast<BaseScopeInst>(Inst.getScope())->getVariableScope() ==
           Inst.getLoadVariable()->getParent(),
-      "Storing to different scope than the variable's scope.");
+      "Loading from different scope than the variable's scope.");
   return true;
 }
 
