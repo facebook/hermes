@@ -87,7 +87,7 @@ class CDPAgentTest : public ::testing::Test {
   }
 
  protected:
-  static constexpr int32_t kTestExecutionContextId = 1;
+  static constexpr int32_t kTestExecutionContextId_ = 1;
 
   void SetUp() override;
   void TearDown() override;
@@ -173,7 +173,7 @@ void CDPAgentTest::SetUp() {
   setupRuntimeTestInfra();
 
   cdpAgent_ = CDPAgent::create(
-      kTestExecutionContextId,
+      kTestExecutionContextId_,
       *cdpDebugAPI_,
       std::bind(&CDPAgentTest::handleRuntimeTask, this, _1),
       std::bind(&CDPAgentTest::handleResponse, this, _1));
@@ -394,7 +394,7 @@ TEST_F(CDPAgentTest, CDPAgentIssuesStartupTask) {
 
   // Trigger the startup task
   auto cdpAgent = CDPAgent::create(
-      kTestExecutionContextId, *cdpDebugAPI_, handleTask, handleMessage);
+      kTestExecutionContextId_, *cdpDebugAPI_, handleTask, handleMessage);
 
   ASSERT_TRUE(gotTask);
 }
@@ -408,7 +408,7 @@ TEST_F(CDPAgentTest, CDPAgentIssuesShutdownTask) {
   OutboundMessageFunc handleMessage = [](const std::string &message) {};
 
   auto cdpAgent = CDPAgent::create(
-      kTestExecutionContextId, *cdpDebugAPI_, handleTask, handleMessage);
+      kTestExecutionContextId_, *cdpDebugAPI_, handleTask, handleMessage);
 
   // Ignore the startup task
   gotTask = false;
@@ -428,7 +428,7 @@ TEST_F(CDPAgentTest, CDPAgentIssuesCommandHandlingTask) {
   OutboundMessageFunc handleMessage = [](const std::string &message) {};
 
   auto cdpAgent = CDPAgent::create(
-      kTestExecutionContextId, *cdpDebugAPI_, handleTask, handleMessage);
+      kTestExecutionContextId_, *cdpDebugAPI_, handleTask, handleMessage);
 
   // Ignore the startup task
   gotTask = false;
@@ -454,7 +454,7 @@ TEST_F(CDPAgentTest, CDPAgentRejectsMalformedMethods) {
       runtimeThread_->add([this, task]() { task(*runtime_); });
     };
     cdpAgent = CDPAgent::create(
-        kTestExecutionContextId, *cdpDebugAPI_, handleTask, handleMessage);
+        kTestExecutionContextId_, *cdpDebugAPI_, handleTask, handleMessage);
 
     // Send a command with no domain delimiter in the method. Just format the
     // JSON manually, as there is no Request object for this fake method.
@@ -479,7 +479,7 @@ TEST_F(CDPAgentTest, CDPAgentRejectsUnknownDomains) {
       runtimeThread_->add([this, task]() { task(*runtime_); });
     };
     cdpAgent = CDPAgent::create(
-        kTestExecutionContextId, *cdpDebugAPI_, handleTask, handleMessage);
+        kTestExecutionContextId_, *cdpDebugAPI_, handleTask, handleMessage);
 
     // Send a command with a properly-formatted domain, but unrecognized by the
     // CDP Agent. Just format the JSON manually, as there is no Request object
@@ -1445,7 +1445,7 @@ TEST_F(CDPAgentTest, DebuggerRestoreState) {
     // CDPAgent.
     setupRuntimeTestInfra();
     cdpAgent_ = CDPAgent::create(
-        kTestExecutionContextId,
+        kTestExecutionContextId_,
         *cdpDebugAPI_,
         std::bind(&CDPAgentTest::handleRuntimeTask, this, _1),
         std::bind(&CDPAgentTest::handleResponse, this, _1),
@@ -1673,7 +1673,7 @@ TEST_F(CDPAgentTest, RuntimeGlobalLexicalScopeNames) {
       "Runtime.globalLexicalScopeNames",
       msgId,
       [](::hermes::JSONEmitter &json) {
-        json.emitKeyValue("executionContextId", kTestExecutionContextId);
+        json.emitKeyValue("executionContextId", kTestExecutionContextId_);
       });
 
   auto resp = expectResponse(std::nullopt, msgId++);
@@ -2243,7 +2243,7 @@ TEST_F(CDPAgentTest, RuntimeCallFunctionOnExecutionContext) {
     // Don't have an easy way to copy these, so...
     req.arguments = std::vector<m::runtime::CallArgument>{};
     req.arguments->push_back(std::move(ca));
-    req.executionContextId = kTestExecutionContextId;
+    req.executionContextId = kTestExecutionContextId_;
 
     cdpAgent_->handleCommand(serializeRuntimeCallFunctionOnRequest(req));
     expectResponse(std::nullopt, msgId++);
@@ -2331,7 +2331,7 @@ TEST_F(CDPAgentTest, RuntimeConsoleLog) {
   EXPECT_EQ(jsonScope_.getNumber(note, {"params", "timestamp"}), kTimestamp);
   EXPECT_EQ(
       jsonScope_.getNumber(note, {"params", "executionContextId"}),
-      kTestExecutionContextId);
+      kTestExecutionContextId_);
   EXPECT_EQ(jsonScope_.getString(note, {"params", "type"}), "warning");
 
   EXPECT_EQ(jsonScope_.getArray(note, {"params", "args"})->size(), 3);
