@@ -118,7 +118,9 @@ struct PropInfo {
   std::optional<std::string> unserializableValue;
 };
 
-void ensureErrorResponse(const std::string &message, long long id);
+/// Ensure that \p message is a an error response with the given \p id,
+/// and return the error description.
+std::string ensureErrorResponse(const std::string &message, long long id);
 void ensureOkResponse(const std::string &message, long long id);
 
 void ensureNotification(const std::string &message, const std::string &method);

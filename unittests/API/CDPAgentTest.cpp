@@ -119,6 +119,12 @@ class CDPAgentTest : public ::testing::Test {
   void expectNothing();
   JSONObject *expectNotification(const std::string &method);
   JSONObject *expectResponse(const std::optional<std::string> &method, int id);
+  /// Wait for a message, validate that it is an error with the specified
+  /// \p messageID, and assert that the error description contains the
+  /// specified \p substring.
+  void expectErrorMessageContaining(
+      const std::string &substring,
+      long long messageID);
 
   void sendRequest(
       const std::string &method,
@@ -287,6 +293,13 @@ JSONObject *CDPAgentTest::expectResponse(
   }
   EXPECT_EQ(jsonScope_.getNumber(response, {"id"}), id);
   return response;
+}
+
+void CDPAgentTest::expectErrorMessageContaining(
+    const std::string &substring,
+    long long messageID) {
+  std::string errorMessage = ensureErrorResponse(waitForMessage(), messageID);
+  ASSERT_NE(errorMessage.find(substring), std::string::npos);
 }
 
 jsi::Value CDPAgentTest::shouldStop(
@@ -2477,6 +2490,50 @@ TEST_F(CDPAgentTest, ProfilerBasicOperation) {
   EXPECT_LE(
       jsonScope_.getNumber(resp, {"result", "profile", "startTime"}),
       jsonScope_.getNumber(resp, {"result", "profile", "endTime"}));
+}
+
+TEST_F(CDPAgentTest, RuntimeValidatesExecutionContextId) {
+  auto setStopFlag = llvh::make_scope_exit([this] {
+    // break out of loop
+    stopFlag_.store(true);
+  });
+
+  int msgId = 1;
+
+  // Start a script
+  sendAndCheckResponse("Runtime.enable", msgId++);
+  scheduleScript(R"(while(!shouldStop());)");
+
+  constexpr auto kExecutionContextSubstring = "execution context id";
+
+  sendRequest(
+      "Runtime.globalLexicalScopeNames",
+      msgId,
+      [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("executionContextId", kTestExecutionContextId_ + 1);
+      });
+  expectErrorMessageContaining(kExecutionContextSubstring, msgId++);
+
+  sendRequest("Runtime.compileScript", msgId, [](::hermes::JSONEmitter &json) {
+    json.emitKeyValue("persistScript", true);
+    json.emitKeyValue("sourceURL", "none");
+    json.emitKeyValue("expression", "1+1");
+    json.emitKeyValue("executionContextId", kTestExecutionContextId_ + 1);
+  });
+  expectErrorMessageContaining(kExecutionContextSubstring, msgId++);
+
+  sendRequest("Runtime.evaluate", msgId, [](::hermes::JSONEmitter &params) {
+    params.emitKeyValue("expression", R"("0: " + globalVar)");
+    params.emitKeyValue("contextId", kTestExecutionContextId_ + 1);
+  });
+  expectErrorMessageContaining(kExecutionContextSubstring, msgId++);
+
+  m::runtime::CallFunctionOnRequest req;
+  req.id = msgId;
+  req.functionDeclaration = std::string("function(){}");
+  req.executionContextId = kTestExecutionContextId_ + 1;
+  cdpAgent_->handleCommand(serializeRuntimeCallFunctionOnRequest(req));
+  expectErrorMessageContaining(kExecutionContextSubstring, msgId++);
 }
 
 #endif // HERMES_ENABLE_DEBUGGER

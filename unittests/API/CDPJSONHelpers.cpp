@@ -20,12 +20,13 @@ using namespace hermes::parser;
 namespace facebook {
 namespace hermes {
 
-void ensureErrorResponse(const std::string &message, long long id) {
+std::string ensureErrorResponse(const std::string &message, long long id) {
   JSLexer::Allocator allocator;
   JSONFactory factory(allocator);
   auto response =
       mustMake<m::ErrorResponse>(mustParseStrAsJsonObj(message, factory));
   EXPECT_EQ(response.id, id);
+  return response.message;
 }
 
 void ensureOkResponse(const std::string &message, long long id) {
