@@ -1199,3 +1199,6 @@ try {
   print(e.name)
 }
 // CHECK-NEXT: RangeError
+var obj = {length: 2 ** 32};
+try { Array.prototype.with.call(obj, 0, 123) } catch (e) { print(e.name) }
+// CHECK-NEXT: RangeError
