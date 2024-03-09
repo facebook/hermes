@@ -230,8 +230,11 @@ Function *ESTreeIRGen::genBasicFunction(
   }
 
   auto compileFunc = [this,
+                      functionKind,
                       newFunction,
                       functionNode,
+                      classNode = curClassNode(),
+                      classType = curClassType(),
                       isGeneratorInnerFunction,
                       superClassNode,
                       body,
@@ -239,6 +242,7 @@ Function *ESTreeIRGen::genBasicFunction(
     FunctionContext newFunctionContext{
         this, newFunction, functionNode->getSemInfo()};
     newFunctionContext.superClassNode_ = superClassNode;
+    ClassContext newClassContext{this, classNode, classType};
 
     if (isGeneratorInnerFunction) {
       // StartGeneratorInst
@@ -298,6 +302,17 @@ Function *ESTreeIRGen::genBasicFunction(
           InitES5CaptureState::Yes,
           DoEmitDeclarations::Yes,
           parentScope);
+    }
+
+    if (functionKind == Function::DefinitionKind::ES6Constructor) {
+      assert(
+          classNode && classType &&
+          "Class should be set for constructor function.");
+      // If we're compiling a constructor with no superclass, emit the
+      // field inits at the start.
+      if (classNode->_superClass == nullptr) {
+        emitFieldInitCall(classType);
+      }
     }
 
     genStatement(body);
@@ -811,6 +826,109 @@ void ESTreeIRGen::emitFunctionEpilogue(Value *returnValue) {
 
   // Delete any unreachable blocks produced while emitting this function.
   deleteUnreachableBasicBlocks(curFunction()->function);
+}
+
+Function *ESTreeIRGen::genFieldInitFunction() {
+  ESTree::ClassDeclarationNode *classNode = curClass()->getClassNode();
+  sema::FunctionInfo *initFuncInfo =
+      ESTree::getDecoration<ESTree::ClassLikeDecoration>(classNode)
+          ->fieldInitFunctionInfo;
+  if (initFuncInfo == nullptr) {
+    return nullptr;
+  }
+
+  auto initFunc = llvh::cast<Function>(Builder.createFunction(
+      (llvh::Twine("<instance_members_initializer:") +
+       curClass()->getClassType()->getClassName().str() + ">")
+          .str(),
+      Function::DefinitionKind::ES5Function,
+      true /*strictMode*/));
+
+  auto compileFunc = [this,
+                      initFunc,
+                      initFuncInfo,
+                      classNode = classNode,
+                      classType = curClass()->getClassType(),
+                      parentScope =
+                          curFunction()->function->getFunctionScope()]() {
+    FunctionContext newFunctionContext{this, initFunc, initFuncInfo};
+    ClassContext newClassContext{this, classNode, classType};
+
+    auto *prologueBB = Builder.createBasicBlock(initFunc);
+    Builder.setInsertionBlock(prologueBB);
+
+    emitFunctionPrologue(
+        nullptr,
+        prologueBB,
+        InitES5CaptureState::No,
+        DoEmitDeclarations::No,
+        parentScope);
+
+    auto *classBody = llvh::dyn_cast<ESTree::ClassBodyNode>(classNode->_body);
+    for (ESTree::Node &it : classBody->_body) {
+      if (auto *prop = llvh::dyn_cast<ESTree::ClassPropertyNode>(&it)) {
+        if (prop->_value) {
+          Value *value = genExpression(prop->_value);
+          emitFieldStore(classType, prop->_key, genThisExpression(), value);
+        }
+      }
+    }
+
+    emitFunctionEpilogue(Builder.getLiteralUndefined());
+    initFunc->setReturnType(Type::createUndefined());
+  };
+  enqueueCompilation(
+      classNode, ExtraKey::ImplicitFieldInitializer, initFunc, compileFunc);
+  return initFunc;
+}
+
+void ESTreeIRGen::emitCreateFieldInitFunction() {
+  Function *initFunc = genFieldInitFunction();
+  if (initFunc == nullptr) {
+    return;
+  }
+
+  ClassFieldInitInfo &classInfo =
+      classFieldInitInfo_[curClass()->getClassType()];
+
+  classInfo.fieldInitFunction = initFunc;
+
+  CreateFunctionInst *createFieldInitFunc =
+      Builder.createCreateFunctionInst(curFunction()->functionScope, initFunc);
+  Variable *fieldInitFuncVar = Builder.createVariable(
+      curFunction()->function->getFunctionScope(),
+      (llvh::Twine("<fieldInitFuncVar:") +
+       curClass()->getClassType()->getClassName().str() + ">"),
+      Type::createObject());
+  Builder.createStoreFrameInst(
+      curFunction()->functionScope, createFieldInitFunc, fieldInitFuncVar);
+  classInfo.fieldInitFunctionVar = fieldInitFuncVar;
+}
+
+void ESTreeIRGen::emitFieldInitCall(flow::ClassType *classType) {
+  auto iter = classFieldInitInfo_.find(classType);
+  if (iter == classFieldInitInfo_.end()) {
+    return;
+  }
+  Function *fieldInitFunc = iter->second.fieldInitFunction;
+  Variable *fieldInitFuncVar = iter->second.fieldInitFunctionVar;
+  assert(
+      fieldInitFuncVar &&
+      "If entry is in classFieldInitInfo_, var should be set");
+  ResolveScopeInst *varScope = Builder.createResolveScopeInst(
+      fieldInitFuncVar->getParent(), curFunction()->functionScope);
+  Value *funcVal = Builder.createLoadFrameInst(varScope, fieldInitFuncVar);
+
+  funcVal->setType(Type::createObject());
+  Builder
+      .createCallInst(
+          funcVal,
+          fieldInitFunc,
+          Builder.getEmptySentinel(),
+          /*newTarget*/ Builder.getLiteralUndefined(),
+          genThisExpression(),
+          /*args*/ {})
+      ->setType(Type::createUndefined());
 }
 
 void ESTreeIRGen::genDummyFunction(Function *dummy) {

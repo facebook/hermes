@@ -38,6 +38,14 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
     superClass = genExpression(node->_superClass);
   }
 
+  // Declare that we're curently compiling the given class (node and type).
+  ClassContext classContext(this, node, classType);
+
+  // Create the implicit field initializer function; store the closure
+  // for it in a variable, and save that variable in a table indexed by
+  // the ClassDeclarationNode.
+  emitCreateFieldInitFunction();
+
   // Emit the explicit constructor, if present.
   Value *consFunction;
   Identifier consName = classType->getClassName().isValid()
@@ -90,7 +98,7 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
         Function::DefinitionKind::ES6Constructor);
   } else {
     // The constructor is implicit.
-    consFunction = genImplicitConstructor(node, consName, superClass);
+    consFunction = genImplicitConstructor(consName, superClass);
   }
   emitStore(consFunction, getDeclData(decl), true);
 
@@ -145,7 +153,6 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
 }
 
 CreateFunctionInst *ESTreeIRGen::genImplicitConstructor(
-    ESTree::ClassDeclarationNode *node,
     const Identifier &consName,
     Value *superClass) {
   // Create an empty constructor.
@@ -153,7 +160,7 @@ CreateFunctionInst *ESTreeIRGen::genImplicitConstructor(
     // TODO: An implicit constructor has to pass all arguments along to the
     // parent class.
     Mod->getContext().getSourceErrorManager().error(
-        node->getStartLoc(),
+        curClass()->getClassNode()->getStartLoc(),
         "inherited classes implicit constructor unsupported, "
         "add an explicit constructor");
   }
@@ -163,15 +170,16 @@ CreateFunctionInst *ESTreeIRGen::genImplicitConstructor(
   // function compilation (because the function is trivial).
   // This way we avoid making multiple implicit constructors for the same
   // classType, allowing us to populate the target operand of CallInsts.
-  if (Value *found =
-          findCompiledEntity(node, ExtraKey::ImplicitClassConstructor)) {
+  if (Value *found = findCompiledEntity(
+          curClass()->getClassNode(), ExtraKey::ImplicitClassConstructor)) {
     func = llvh::cast<Function>(found);
   } else {
     IRBuilder::SaveRestore saveState{Builder};
 
     // Retrieve the FunctionInfo for the implicit constructor, which must exist.
     sema::FunctionInfo *funcInfo =
-        ESTree::getDecoration<ESTree::ClassLikeDecoration>(node)
+        ESTree::getDecoration<ESTree::ClassLikeDecoration>(
+            curClass()->getClassNode())
             ->implicitCtorFunctionInfo;
     assert(
         funcInfo &&
@@ -186,8 +194,11 @@ CreateFunctionInst *ESTreeIRGen::genImplicitConstructor(
     auto compileFunc = [this,
                         func,
                         funcInfo,
+                        classNode = curClass()->getClassNode(),
+                        classType = curClass()->getClassType(),
                         parentScope =
-                            curFunction()->function->getFunctionScope()]() {
+                            curFunction()->function->getFunctionScope(),
+                        funcScope = curFunction()->functionScope]() {
       FunctionContext newFunctionContext{this, func, funcInfo};
 
       auto *prologueBB = Builder.createBasicBlock(func);
@@ -200,10 +211,15 @@ CreateFunctionInst *ESTreeIRGen::genImplicitConstructor(
           DoEmitDeclarations::No,
           parentScope);
 
+      emitFieldInitCall(classType);
+
       emitFunctionEpilogue(Builder.getLiteralUndefined());
     };
     enqueueCompilation(
-        node, ExtraKey::ImplicitClassConstructor, func, compileFunc);
+        curClass()->getClassNode(),
+        ExtraKey::ImplicitClassConstructor,
+        func,
+        compileFunc);
   }
 
   return Builder.createCreateFunctionInst(curFunction()->functionScope, func);
@@ -352,6 +368,21 @@ Type ESTreeIRGen::flowTypeToIRType(flow::Type *flowType) {
     case flow::TypeKind::Generic:
       hermes_fatal("invalid typekind");
   }
+}
+
+ClassContext::ClassContext(
+    ESTreeIRGen *irGen,
+    ESTree::ClassDeclarationNode *classNode,
+    flow::ClassType *classType)
+    : irGen_(irGen),
+      classNode_(classNode),
+      classType_(classType),
+      oldContext_(irGen->classContext_) {
+  irGen->classContext_ = this;
+}
+
+ClassContext::~ClassContext() {
+  irGen_->classContext_ = oldContext_;
 }
 
 } // namespace irgen

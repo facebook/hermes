@@ -63,9 +63,9 @@ class C1 extends C0 {
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:                Decl %d.5 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.5
-// CHECK-NEXT:                Decl %d.5 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.6
 // CHECK-NEXT:        Func strict

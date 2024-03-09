@@ -467,6 +467,10 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
   Value *callee;
   Value *target = Builder.getEmptySentinel();
   Value *newTarget = Builder.getLiteralUndefined();
+  // If this is nonnull, the call is a super() call, and
+  // we should call the field initialization function for the
+  // given class type immediately after.
+  flow::ClassType *fieldInitClassType = nullptr;
 
   // Handle MemberExpression expression calls that sets the 'this' property.
   if (auto *Mem = llvh::dyn_cast<ESTree::MemberExpressionNode>(call->_callee)) {
@@ -510,12 +514,18 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
     callee = genExpression(curFunction()->superClassNode_);
     newTarget = Builder.createGetNewTargetInst(
         curFunction()->function->getNewTargetParam());
+    // Must call the field init function immediately after.
+    fieldInitClassType = curClass()->getClassType();
   } else {
     thisVal = Builder.getLiteralUndefined();
     callee = genExpression(call->_callee);
   }
 
-  return emitCall(call, callee, target, thisVal, newTarget);
+  Value *res = emitCall(call, callee, target, thisVal, newTarget);
+  if (fieldInitClassType) {
+    emitFieldInitCall(fieldInitClassType);
+  }
+  return res;
 }
 
 Value *ESTreeIRGen::genOptionalCallExpr(
@@ -2310,10 +2320,13 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
         Type::createObject());
     Value *newInst = emitClassAllocation(classType, proto);
 
-    // If there is an explicit constructor, invoke it. Note that there is
-    // always a dummy one, which we even loaded (for TDZ), but there is no need
-    // to invoke it.
-    if (classType->getConstructorType()) {
+    // Call the constructor, if necessary.  There is always a constructor,
+    // either explicit or implicit.  We will load an implicit ctor (for
+    // TDZ), but there is no need to invoke it unless it performs field
+    // initializations (which is true iff it is present in the
+    // classFieldInitInfo_ table).
+    if (classType->getConstructorType() ||
+        (classFieldInitInfo_.find(classType) != classFieldInitInfo_.end())) {
       CallInst::ArgumentList args;
       for (auto &arg : N->_arguments)
         args.push_back(genExpression(&arg));

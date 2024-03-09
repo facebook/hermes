@@ -216,6 +216,39 @@ class FunctionContext {
   }
 };
 
+// A context structure (pushed/popped within class declarations) for
+// conveying info about the current class, for use in compiling
+// constructors and related implicit methods.
+class ClassContext {
+ public:
+  ClassContext(
+      ESTreeIRGen *irGen,
+      ESTree::ClassDeclarationNode *classNode,
+      flow::ClassType *classType);
+
+  ~ClassContext();
+
+  /// The node of the innermost class we are currently compiliing.
+  ESTree::ClassDeclarationNode *getClassNode() const {
+    return classNode_;
+  }
+
+  /// The type of the innermost class we are currently compiliing.
+  flow::ClassType *getClassType() const {
+    return classType_;
+  }
+
+ private:
+  /// Pointer to the "outer" object this is associated with.
+  ESTreeIRGen *const irGen_;
+  /// The node, and type, of the innermost class we are currently compiliing.
+  ESTree::ClassDeclarationNode *classNode_;
+  flow::ClassType *classType_;
+
+  // The previous context; restored as current on destruction.
+  ClassContext *oldContext_;
+};
+
 enum class ControlFlowChange { Break, Continue };
 
 /// A link in the stack of surrounding try/catch statements we are maintaining
@@ -359,6 +392,7 @@ class LReference {
 /// Performs lowering of the JSON ESTree down to Hermes IR.
 class ESTreeIRGen {
   friend class FunctionContext;
+  friend class ClassContext;
   friend class LReference;
 
   using BasicBlockListType = llvh::SmallVector<BasicBlock *, 4>;
@@ -378,6 +412,9 @@ class ESTreeIRGen {
   /// This points to the current function's context. It is saved and restored
   /// whenever we enter a nested function.
   FunctionContext *functionContext_{};
+  /// This points to the current class context. It is saved and restored
+  /// whenever we enter a nested class declaration.
+  ClassContext *classContext_{};
 
   /// The type of the key stored in \c compiledEntities_. It is a pair of an
   /// AST node pointer and an extra key, which is a small integer value.
@@ -390,10 +427,13 @@ class ESTreeIRGen {
   /// used to distinguish between different values that may be associated with
   /// the same node.
   enum class ExtraKey : unsigned {
-    Normal,
-    GeneratorOuter,
-    AsyncOuter,
-    ImplicitClassConstructor,
+    // These apply for function-like nodes.
+    Normal = 0,
+    GeneratorOuter = 1,
+    AsyncOuter = 2,
+    // These apply for class-like nodes.
+    ImplicitClassConstructor = 0,
+    ImplicitFieldInitializer = 1,
   };
 
   /// Map from an AST node to a "compiled entity", which is usually a Function.
@@ -410,7 +450,7 @@ class ESTreeIRGen {
   llvh::DenseMap<CompiledMapKey, Value *> compiledEntities_{};
 
   /// Data about the IR representation of a class type.
-  struct ClassInfo {
+  struct ClassConstructorInfo {
     /// Constructor function for the class.
     /// Used for populating Construct targets
     Function *constructorFunc;
@@ -418,12 +458,27 @@ class ESTreeIRGen {
     /// The variable containing the ".prototype" object, used as the vtable.
     Variable *homeObjectVar;
 
-    ClassInfo(Function *constructorFunc, Variable *homeObjectVar)
+    ClassConstructorInfo(Function *constructorFunc, Variable *homeObjectVar)
         : constructorFunc(constructorFunc), homeObjectVar(homeObjectVar) {}
   };
 
   /// Map from a class type to IR information about the class.
-  llvh::DenseMap<flow::ClassType *, ClassInfo> classConstructors_{};
+  llvh::DenseMap<flow::ClassType *, ClassConstructorInfo> classConstructors_{};
+
+  struct ClassFieldInitInfo {
+    // For classes with field initializations:
+    //  * The Function for the implicit field init function.
+    Function *fieldInitFunction{};
+    //  * The variable that holds the closure value of the implicit field init
+    //    function.
+    Variable *fieldInitFunctionVar{};
+
+    ClassFieldInitInfo() = default;
+  };
+
+  /// Map from a class type to information related to field initializations for
+  /// the class.
+  llvh::DenseMap<flow::ClassType *, ClassFieldInitInfo> classFieldInitInfo_{};
 
   /// Map from a field on the home object to the IR function that it is
   /// guaranteed to be, if any.
@@ -546,14 +601,13 @@ class ESTreeIRGen {
 
   void genClassDeclaration(ESTree::ClassDeclarationNode *node);
 
-  // Assumes \p node is a class with no explicit constructor.  The \p consName
-  // argument is the constructor name for the class.  If the
-  // class has a superclass, \p superClass is non-null and is a
-  // reference to that class.  Generates code for the implicit constructor,
-  // and emits and returns the instruction to create a closure object
-  // for it.
+  // Assumes that the class of the current class context has no
+  // explicit constructor.  The \p consName argument is the
+  // constructor name for that class.  If the class has a superclass,
+  // \p superClass is non-null and is a reference to that class.
+  // Generates code for the implicit constructor, and emits and
+  // returns the instruction to create a closure object for it.
   CreateFunctionInst *genImplicitConstructor(
-      ESTree::ClassDeclarationNode *node,
       const Identifier &consName,
       Value *superClass);
 
@@ -910,6 +964,8 @@ class ESTreeIRGen {
   /// \param isGeneratorInnerFunction whether this is a GeneratorInnerFunction.
   /// \returns a new Function.
   /// \param functionKind is the proper kind for this function.
+  /// \param ctorClass is the class containing functionNode, if functionNode
+  ///  is for a constructor.
   /// \returns a new Function.
   Function *genBasicFunction(
       Identifier originalName,
@@ -1012,6 +1068,26 @@ class ESTreeIRGen {
   ///   instead.
   void emitFunctionEpilogue(Value *returnValue);
 
+  /// Generates (if necessary) the field init function for the class
+  /// of the current class context.  This function performs any
+  /// necessary field initializations for that class.  (This should
+  /// only be called by emitCreateFieldInitFunction, below.)
+  ///
+  /// \return the generated function, or else nullptr if the class has no field
+  /// initializers.
+  Function *genFieldInitFunction();
+
+  /// If there is a field init function associated with the class of
+  /// the current class context, emits the instruction for creating
+  /// the closure for that function, stores the result of that a
+  /// variable in the scope containing the class declaration, and
+  /// associates the variable with the class type in a table within
+  /// the ESTreeIRGen object.
+  void emitCreateFieldInitFunction();
+
+  /// Emit a call to the field init function for in \p classType.
+  void emitFieldInitCall(flow::ClassType *classType);
+
   /// Generate a body for a dummy function so that it doesn't crash the
   /// backend when encountered.
   static void genDummyFunction(Function *dummy);
@@ -1022,6 +1098,16 @@ class ESTreeIRGen {
   inline FunctionContext *curFunction() {
     assert(functionContext_ && "No active function context");
     return functionContext_;
+  }
+
+  inline ClassContext *curClass() {
+    return classContext_;
+  }
+  inline ESTree::ClassDeclarationNode *curClassNode() {
+    return classContext_ ? classContext_->getClassNode() : nullptr;
+  }
+  inline flow::ClassType *curClassType() {
+    return classContext_ ? classContext_->getClassType() : nullptr;
   }
 
   /// Resolve the identifier node to the corresponding variable or global prop
