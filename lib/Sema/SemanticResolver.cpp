@@ -1862,7 +1862,8 @@ void ClassContext::createImplicitConstructorFunctionInfo() {
       resolver_.curFunctionInfo(),
       resolver_.curScope_,
       /*strict*/ true,
-      CustomDirectives{});
+      CustomDirectives{
+          .sourceVisibility = SourceVisibility::Default, .alwaysInline = true});
   // This is callled for the side effect of associating the new scope with
   // implicitCtor.  We don't need the value now, but we will later.
   (void)resolver_.semCtx_.newScope(implicitCtor, resolver_.curScope_);

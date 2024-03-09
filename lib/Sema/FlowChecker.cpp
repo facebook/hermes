@@ -855,6 +855,12 @@ void FlowChecker::visit(ESTree::VariableDeclarationNode *node) {
   }
 }
 
+void FlowChecker::visit(ESTree::ClassPropertyNode *node) {
+  if (node->_value) {
+    visitExpression(node->_value, node);
+  }
+}
+
 void FlowChecker::visit(ESTree::CatchClauseNode *node) {
   ScopeRAII scope(*this);
   if (!resolveScopeTypesAndAnnotate(node, node->getScope()))

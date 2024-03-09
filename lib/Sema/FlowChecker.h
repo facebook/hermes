@@ -334,6 +334,7 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   void visit(ESTree::ReturnStatementNode *node);
   void visit(ESTree::BlockStatementNode *node);
   void visit(ESTree::VariableDeclarationNode *node);
+  void visit(ESTree::ClassPropertyNode *node);
 
   void visit(ESTree::CatchClauseNode *node);
 
