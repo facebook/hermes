@@ -1785,7 +1785,7 @@ FunctionContext::FunctionContext(
     : resolver_(resolver),
       prevContext_(resolver.curFunctionContext_),
       semInfo(resolver.semCtx_.newFunction(
-          node,
+          SemContext::nodeIsArrow(node),
           parentSemInfo,
           resolver.curScope_,
           strict,

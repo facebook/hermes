@@ -54,14 +54,22 @@ SemContext::SemContext(Context &astContext) : kw(astContext) {}
 
 SemContext::~SemContext() = default;
 
+/*static*/
+FuncIsArrow SemContext::nodeIsArrow(ESTree::Node *node) {
+  if (node && llvh::isa<ESTree::ArrowFunctionExpressionNode>(node)) {
+    return FuncIsArrow::Yes;
+  }
+  return FuncIsArrow::No;
+}
+
 FunctionInfo *SemContext::newFunction(
-    ESTree::FunctionLikeNode *funcNode,
+    FuncIsArrow isArrow,
     FunctionInfo *parentFunction,
     LexicalScope *parentScope,
     bool strict,
     CustomDirectives customDirectives) {
   functions_.emplace_back(
-      funcNode, parentFunction, parentScope, strict, customDirectives);
+      isArrow, parentFunction, parentScope, strict, customDirectives);
   return &functions_.back();
 }
 

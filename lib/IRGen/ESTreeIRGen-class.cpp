@@ -102,43 +102,8 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
         node->_superClass,
         Function::DefinitionKind::ES6Constructor);
   } else {
-    // Create an empty constructor.
-    if (superClass) {
-      // TODO: An implicit constructor has to pass all arguments along to the
-      // parent class.
-      Mod->getContext().getSourceErrorManager().error(
-          node->getStartLoc(),
-          "inherited classes implicit constructor unsupported, "
-          "add an explicit constructor");
-    }
-    Function *func;
-
-    // Use the compiledEntities_ cache even though we're not enqueuing a
-    // function compilation (because the function is trivial).
-    // This way we avoid making multiple implicit constructors for the same
-    // classType, allowing us to populate the target operand of CallInsts.
-    if (Value *found =
-            findCompiledEntity(node, ExtraKey::ImplicitClassConstructor)) {
-      func = llvh::cast<Function>(found);
-    } else {
-      IRBuilder::SaveRestore saveState{Builder};
-      func = Builder.createFunction(
-          consName,
-          Function::DefinitionKind::ES5Function,
-          true,
-          CustomDirectives{
-              .sourceVisibility = SourceVisibility::Default,
-              .alwaysInline = true});
-      func->addJSThisParam();
-      func->setExpectedParamCountIncludingThis(1);
-      Builder.setInsertionBlock(Builder.createBasicBlock(func));
-      Builder.createReturnInst(Builder.getLiteralUndefined());
-      CompiledMapKey key(node, (unsigned)ExtraKey::ImplicitClassConstructor);
-      compiledEntities_[key] = func;
-    }
-
-    consFunction =
-        Builder.createCreateFunctionInst(curFunction()->functionScope, func);
+    // The constructor is implicit.
+    consFunction = genImplicitConstructor(node, consName, superClass);
   }
   emitStore(consFunction, getDeclData(decl), true);
 
@@ -190,6 +155,69 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
       homeObject,
       consFunction,
       Builder.getLiteralString(kw_.identPrototype->str()));
+}
+
+CreateFunctionInst *ESTreeIRGen::genImplicitConstructor(
+    ESTree::ClassDeclarationNode *node,
+    const Identifier &consName,
+    Value *superClass) {
+  // Create an empty constructor.
+  if (superClass) {
+    // TODO: An implicit constructor has to pass all arguments along to the
+    // parent class.
+    Mod->getContext().getSourceErrorManager().error(
+        node->getStartLoc(),
+        "inherited classes implicit constructor unsupported, "
+        "add an explicit constructor");
+  }
+  Function *func;
+
+  // Use the compiledEntities_ cache even though we're not enqueuing a
+  // function compilation (because the function is trivial).
+  // This way we avoid making multiple implicit constructors for the same
+  // classType, allowing us to populate the target operand of CallInsts.
+  if (Value *found =
+          findCompiledEntity(node, ExtraKey::ImplicitClassConstructor)) {
+    func = llvh::cast<Function>(found);
+  } else {
+    IRBuilder::SaveRestore saveState{Builder};
+    CustomDirectives customDirectives{
+        .sourceVisibility = SourceVisibility::Default, .alwaysInline = true};
+    func = Builder.createFunction(
+        consName,
+        Function::DefinitionKind::ES5Function,
+        true,
+        customDirectives);
+    sema::FunctionInfo *funcInfo = semCtx_.newFunction(
+        sema::FuncIsArrow::No,
+        curFunction()->getSemInfo(),
+        nullptr,
+        /*strict*/ true,
+        customDirectives);
+    auto compileFunc = [this,
+                        func,
+                        funcInfo,
+                        parentScope =
+                            curFunction()->function->getFunctionScope()]() {
+      FunctionContext newFunctionContext{this, func, funcInfo};
+
+      auto *prologueBB = Builder.createBasicBlock(func);
+      Builder.setInsertionBlock(prologueBB);
+
+      emitFunctionPrologue(
+          nullptr,
+          prologueBB,
+          InitES5CaptureState::No,
+          DoEmitDeclarations::No,
+          parentScope);
+
+      emitFunctionEpilogue(Builder.getLiteralUndefined());
+    };
+    enqueueCompilation(
+        node, ExtraKey::ImplicitClassConstructor, func, compileFunc);
+  }
+
+  return Builder.createCreateFunctionInst(curFunction()->functionScope, func);
 }
 
 Value *ESTreeIRGen::emitClassAllocation(

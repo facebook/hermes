@@ -546,6 +546,17 @@ class ESTreeIRGen {
 
   void genClassDeclaration(ESTree::ClassDeclarationNode *node);
 
+  // Assumes \p node is a class with no explicit constructor.  The \p consName
+  // argument is the constructor name for the class.  If the
+  // class has a superclass, \p superClass is non-null and is a
+  // reference to that class.  Generates code for the implicit constructor,
+  // and emits and returns the instruction to create a closure object
+  // for it.
+  CreateFunctionInst *genImplicitConstructor(
+      ESTree::ClassDeclarationNode *node,
+      const Identifier &consName,
+      Value *superClass);
+
   /// Emit code to allocate the '.prototype' object for the class,
   /// referred to in the spec as the [[HomeObject]] of the constructor function.
   /// \param superClass if non-null the superClass of the class.

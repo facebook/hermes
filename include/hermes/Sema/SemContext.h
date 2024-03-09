@@ -174,6 +174,9 @@ class LexicalScope {
       LexicalScope *parentScope);
 };
 
+// An enum indicating whether a function expression is an arrow function.
+enum class FuncIsArrow { Yes, No };
+
 /// Semantic information about functions.
 class FunctionInfo {
  public:
@@ -230,8 +233,10 @@ class FunctionInfo {
     return numLabels++;
   }
 
+  /// The \p isArrowFunctionExpression arg indicates whether the function is
+  /// an arrow function.
   FunctionInfo(
-      ESTree::FunctionLikeNode *funcNode,
+      FuncIsArrow isArrowFunctionExpression,
       FunctionInfo *parentFunction,
       LexicalScope *parentScope,
       bool strict,
@@ -240,7 +245,7 @@ class FunctionInfo {
         parentScope(parentScope),
         strict(strict),
         customDirectives(customDirectives),
-        arrow(llvh::isa<ESTree::ArrowFunctionExpressionNode>(funcNode)) {}
+        arrow(isArrowFunctionExpression == FuncIsArrow::Yes) {}
 
   /// Partial cloning constructor.
   /// Called only from ESTreeClone via prepareClonedFunction.
@@ -277,11 +282,14 @@ class SemContext {
   explicit SemContext(Context &astContext);
   ~SemContext();
 
+  /// \p node may be null, in which case the answer is No.
+  static FuncIsArrow nodeIsArrow(ESTree::Node *node);
+
   /// \param parentFunction may be null.
   /// \param parentScope may be null.
   /// \return a new function.
   FunctionInfo *newFunction(
-      ESTree::FunctionLikeNode *funcNode,
+      FuncIsArrow isArrow,
       FunctionInfo *parentFunction,
       LexicalScope *parentScope,
       bool strict,

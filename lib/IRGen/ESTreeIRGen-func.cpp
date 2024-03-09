@@ -765,12 +765,15 @@ uint32_t ESTreeIRGen::countExpectedArgumentsIncludingThis(
     ESTree::FunctionLikeNode *funcNode) {
   // Start at 1 to account for "this".
   uint32_t count = 1;
-  for (auto &param : ESTree::getParams(funcNode)) {
-    if (llvh::isa<ESTree::AssignmentPatternNode>(param)) {
-      // Found an initializer, stop counting expected arguments.
-      break;
+  // Implicit functions, whose funcNode is null, take no arguments.
+  if (funcNode) {
+    for (auto &param : ESTree::getParams(funcNode)) {
+      if (llvh::isa<ESTree::AssignmentPatternNode>(param)) {
+        // Found an initializer, stop counting expected arguments.
+        break;
+      }
+      ++count;
     }
-    ++count;
   }
   return count;
 }
