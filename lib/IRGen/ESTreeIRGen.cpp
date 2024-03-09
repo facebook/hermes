@@ -188,7 +188,7 @@ void ESTreeIRGen::doCJSModule(
   }
 
   Identifier functionName = Builder.createIdentifier("cjs_module");
-  Function *newFunc = genES5Function(functionName, func, nullptr);
+  Function *newFunc = genBasicFunction(functionName, func, nullptr);
 
   drainCompilationQueue();
 

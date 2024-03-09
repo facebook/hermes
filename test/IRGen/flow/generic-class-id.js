@@ -74,7 +74,7 @@ const s: string = i2.val;
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function ID(val: number): any [typed]
+// CHECK:constructor ID(val: number): any [typed]
 // CHECK-NEXT:frame = [val: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
@@ -88,7 +88,7 @@ const s: string = i2.val;
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function "ID 1#"(val: string): any [typed]
+// CHECK:constructor "ID 1#"(val: string): any [typed]
 // CHECK-NEXT:frame = [val: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object

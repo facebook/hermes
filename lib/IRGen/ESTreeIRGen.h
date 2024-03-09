@@ -858,18 +858,24 @@ class ESTreeIRGen {
   /// \param superClassNode the current superclass, used for generating method
   ///   code. Needed because we need to store this information in
   ///   FunctionContext due to the enqueueCompilation mechanism.
+  /// \param functionKind the kind of the function being created.
+  ///   ES5Function by default, but may also be ES6Constructor.
   Value *genFunctionExpression(
       ESTree::FunctionExpressionNode *FE,
       Identifier nameHint,
-      ESTree::Node *superClassNode = nullptr);
+      ESTree::Node *superClassNode = nullptr,
+      Function::DefinitionKind functionKind =
+          Function::DefinitionKind::ES5Function);
 
   /// Generate IR for ArrowFunctionExpression.
   Value *genArrowFunctionExpression(
       ESTree::ArrowFunctionExpressionNode *AF,
       Identifier nameHint);
 
-  /// Generate IR for an ES5 function (function declaration or expression).
-  /// The body may optionally be lazy.
+  /// Generate IR for a function (function declaration or expression) that is
+  /// not a generator, async, or arrow function.  Constructors are "basic",
+  /// under this definition. The body may optionally be lazy.
+  ///
   /// \param originalName is the original non-unique name specified by the user
   ///   or inferred according to the rules of ES6.
   /// \param functionNode is the ESTree function node (declaration, expression,
@@ -880,12 +886,16 @@ class ESTreeIRGen {
   ///   available. Used for super calls.
   /// \param isGeneratorInnerFunction whether this is a GeneratorInnerFunction.
   /// \returns a new Function.
-  Function *genES5Function(
+  /// \param functionKind is the proper kind for this function.
+  /// \returns a new Function.
+  Function *genBasicFunction(
       Identifier originalName,
       ESTree::FunctionLikeNode *functionNode,
       VariableScope *parentScope,
       ESTree::Node *superClassNode = nullptr,
-      bool isGeneratorInnerFunction = false);
+      bool isGeneratorInnerFunction = false,
+      Function::DefinitionKind functionKind =
+          Function::DefinitionKind::ES5Function);
 
   /// Generate the IR for two functions: an outer GeneratorFunction and an inner
   /// GeneratorInnerFunction. The outer function runs CreateGenerator on the

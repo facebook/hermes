@@ -80,7 +80,7 @@ void ESTreeIRGen::genFunctionDeclaration(
       ? genAsyncFunction(functionName, func, newFuncParentScope)
       : func->_generator
       ? genGeneratorFunction(functionName, func, newFuncParentScope)
-      : genES5Function(functionName, func, newFuncParentScope);
+      : genBasicFunction(functionName, func, newFuncParentScope);
 
   // Store the newly created closure into a frame variable with the same name.
   auto *newClosure =
@@ -92,7 +92,8 @@ void ESTreeIRGen::genFunctionDeclaration(
 Value *ESTreeIRGen::genFunctionExpression(
     ESTree::FunctionExpressionNode *FE,
     Identifier nameHint,
-    ESTree::Node *superClassNode) {
+    ESTree::Node *superClassNode,
+    Function::DefinitionKind functionKind) {
   if (FE->_async && FE->_generator) {
     Builder.getModule()->getContext().getSourceErrorManager().error(
         FE->getSourceRange(), Twine("async generators are unsupported"));
@@ -109,9 +110,14 @@ Value *ESTreeIRGen::genFunctionExpression(
   auto *parentScope = curFunction()->functionScope->getVariableScope();
   Function *newFunc = FE->_async
       ? genAsyncFunction(originalNameIden, FE, parentScope)
-      : FE->_generator
-      ? genGeneratorFunction(originalNameIden, FE, parentScope)
-      : genES5Function(originalNameIden, FE, parentScope, superClassNode);
+      : FE->_generator ? genGeneratorFunction(originalNameIden, FE, parentScope)
+                       : genBasicFunction(
+                             originalNameIden,
+                             FE,
+                             parentScope,
+                             superClassNode,
+                             /*isGeneratorInnerFunction*/ false,
+                             functionKind);
 
   Value *closure =
       Builder.createCreateFunctionInst(curFunction()->functionScope, newFunc);
@@ -187,12 +193,13 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
       curFunction()->functionScope, newFunc);
 }
 
-Function *ESTreeIRGen::genES5Function(
+Function *ESTreeIRGen::genBasicFunction(
     Identifier originalName,
     ESTree::FunctionLikeNode *functionNode,
     VariableScope *parentScope,
     ESTree::Node *superClassNode,
-    bool isGeneratorInnerFunction) {
+    bool isGeneratorInnerFunction,
+    Function::DefinitionKind functionKind) {
   assert(functionNode && "Function AST cannot be null");
 
   // Check if already compiled.
@@ -211,7 +218,7 @@ Function *ESTreeIRGen::genES5Function(
             /* insertBefore */ nullptr)
       : llvh::cast<Function>(Builder.createFunction(
             originalName,
-            Function::DefinitionKind::ES5Function,
+            functionKind,
             ESTree::isStrict(functionNode->strictness),
             functionNode->getSemInfo()->customDirectives,
             functionNode->getSourceRange(),
@@ -348,7 +355,7 @@ Function *ESTreeIRGen::genGeneratorFunction(
 
     // Build the inner function. This must be done in the outerFnContext
     // since it's lexically considered a child function.
-    auto *innerFn = genES5Function(
+    auto *innerFn = genBasicFunction(
         genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
         functionNode,
         curFunction()->functionScope->getVariableScope(),

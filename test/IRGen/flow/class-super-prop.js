@@ -70,7 +70,7 @@ class B extends A {
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function A(x: number): any [typed]
+// CHECK:constructor A(x: number): any [typed]
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
@@ -84,7 +84,7 @@ class B extends A {
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function B(x: number): any [typed]
+// CHECK:constructor B(x: number): any [typed]
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
@@ -95,10 +95,10 @@ class B extends A {
 // CHECK-NEXT:  %5 = ResolveScopeInst (:environment) %""(): any, %2: environment
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) %5: environment, [A@""]: any
 // CHECK-NEXT:  %7 = CheckedTypeCastInst (:object) %6: any, type(object)
-// CHECK-NEXT:  %8 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
+// CHECK-NEXT:  %8 = GetNewTargetInst (:object) %new.target: object
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) %2: environment, [x]: any
 // CHECK-NEXT:  %10 = CheckedTypeCastInst (:number) %9: any, type(number)
-// CHECK-NEXT:  %11 = CallInst [njsf] (:any) %7: object, empty: any, empty: any, %8: undefined|object, %0: object, %10: number
+// CHECK-NEXT:  %11 = CallInst [njsf] (:any) %7: object, empty: any, empty: any, %8: object, %0: object, %10: number
 // CHECK-NEXT:  %12 = CheckedTypeCastInst (:undefined) %11: any, type(undefined)
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

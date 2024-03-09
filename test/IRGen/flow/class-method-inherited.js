@@ -91,7 +91,7 @@ new D().inherited();
 // CHECK-NEXT:       ReturnInst 1: number
 // CHECK-NEXT:function_end
 
-// CHECK:function D(): any [typed]
+// CHECK:constructor D(): any [typed]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
@@ -100,7 +100,7 @@ new D().inherited();
 // CHECK-NEXT:  %3 = ResolveScopeInst (:environment) %""(): any, %2: environment
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) %3: environment, [C@""]: any
 // CHECK-NEXT:  %5 = CheckedTypeCastInst (:object) %4: any, type(object)
-// CHECK-NEXT:  %6 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
-// CHECK-NEXT:  %7 = CallInst (:any) %5: object, empty: any, empty: any, %6: undefined|object, %0: object
+// CHECK-NEXT:  %6 = GetNewTargetInst (:object) %new.target: object
+// CHECK-NEXT:  %7 = CallInst (:any) %5: object, empty: any, empty: any, %6: object, %0: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

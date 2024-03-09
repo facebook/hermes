@@ -99,7 +99,8 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
     consFunction = genFunctionExpression(
         llvh::cast<ESTree::FunctionExpressionNode>(consMethod->_value),
         consName,
-        node->_superClass);
+        node->_superClass,
+        Function::DefinitionKind::ES6Constructor);
   } else {
     // Create an empty constructor.
     if (superClass) {
