@@ -19,6 +19,7 @@ using DeclarationFileListTy = std::vector<ESTree::ProgramNode *>;
 
 namespace sema {
 
+class ClassContext;
 class FunctionContext;
 class SemContext;
 
@@ -52,6 +53,9 @@ class SemanticResolver
 
   /// Current function context.
   FunctionContext *curFunctionContext_ = nullptr;
+
+  /// Current class context.
+  ClassContext *curClassContext_ = nullptr;
 
   /// Current lexical scope.
   LexicalScope *curScope_{nullptr};
@@ -240,6 +244,7 @@ class SemanticResolver
   void visit(ESTree::TSAsExpressionNode *node);
 #endif
 
+  friend class ClassContext;
   friend class FunctionContext;
   friend class ESTree::RecursionDepthTracker<SemanticResolver>;
 
@@ -443,6 +448,10 @@ class FunctionContext {
       bool strict,
       CustomDirectives customDirectives);
 
+  explicit FunctionContext(
+      SemanticResolver &resolver,
+      FunctionInfo *newFunctionFin);
+
   ~FunctionContext();
 
   /// \return true if this is the "global scope" function context, in other
@@ -461,6 +470,31 @@ inline FunctionInfo *SemanticResolver::curFunctionInfo() {
 const FunctionInfo *SemanticResolver::curFunctionInfo() const {
   return functionContext()->semInfo;
 }
+
+/// A "context" (an RAII class that records state on entry to a scope, and
+/// restores the previous state on exit from the scope) recording information
+/// about the current class when the semantic resolver is within a class.
+class ClassContext {
+ public:
+  /// Create a class context for the class with the given \p classDeclaration.
+  ClassContext(SemanticResolver &resolver, ESTree::ClassLikeNode *classNode);
+
+  /// The caller asserts that the class of the current context
+  /// has field initializers.  On first call for a \p classDecoration, creates a
+  /// FunctionInfo for an implicit function to do the field initializations.
+  /// On subsequent calls, return that FunctionInfo.
+  FunctionInfo *getOrCreateFieldInitFunctionInfo();
+
+  ~ClassContext();
+
+ private:
+  SemanticResolver &resolver_;
+  ClassContext *const prevContext_;
+
+  /// The (decorator of) the class of the context.  Will store the
+  /// member initializer function info if one is required.
+  ESTree::ClassLikeNode *classNode_;
+};
 
 /// Visitor pass for marking variables as Unresolvable based on local `eval()`
 /// or `with`.

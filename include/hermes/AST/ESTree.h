@@ -383,6 +383,14 @@ class MemberExpressionLikeDecoration {};
 
 class ClassExpressionDecoration : public ScopeDecorationBase {};
 
+class ClassLikeDecoration {
+ public:
+  // If non-null, the decorated class has field initializers, and
+  // this is the FunctionInfo for the synthetic Function in which those
+  // initializations are done.
+  sema::FunctionInfo *fieldInitFunctionInfo{};
+};
+
 /// Identifiers keep track of which variable they have been resolved to,
 /// to avoid having to keep looking this up in a side table.
 /// Some identifiers may be marked "unresolvable", so the user must check
@@ -533,6 +541,10 @@ struct DecoratorTrait<ProgramNode> {
 template <>
 struct DecoratorTrait<ClassExpressionNode> {
   using Type = ClassExpressionDecoration;
+};
+template <>
+struct DecoratorTrait<ClassLikeNode> {
+  using Type = ClassLikeDecoration;
 };
 
 } // namespace detail

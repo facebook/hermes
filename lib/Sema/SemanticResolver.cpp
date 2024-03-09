@@ -656,11 +656,14 @@ void SemanticResolver::visit(ESTree::ImportDeclarationNode *importDecl) {
 void SemanticResolver::visit(ESTree::ClassDeclarationNode *node) {
   // Classes must be in strict mode.
   llvh::SaveAndRestore<bool> oldStrict{curFunctionInfo()->strict, true};
+  ClassContext classCtx(*this, node);
   visitESTreeChildren(*this, node);
 }
 void SemanticResolver::visit(ESTree::ClassExpressionNode *node) {
   // Classes must be in strict mode.
   llvh::SaveAndRestore<bool> oldStrict{curFunctionInfo()->strict, true};
+
+  ClassContext classCtx(*this, node);
 
   if (ESTree::IdentifierNode *ident =
           llvh::dyn_cast_or_null<IdentifierNode>(node->_id)) {
@@ -706,12 +709,11 @@ void SemanticResolver::visit(ESTree::ClassPropertyNode *node) {
 
   // Visit the init expression, since it needs to be resolved.
   if (node->_value) {
-    sm_.error(
-        node->getSourceRange(), "property initialization is not supported yet");
-    if (0) {
-      // TODO: visit the properties in the context of a synthetic method.
-      visitESTreeNode(*this, node->_value, node);
-    }
+    // We visit the initializer expression in the context of a synthesized
+    // method that performs the initializations.
+    FunctionContext funcCtx(
+        *this, curClassContext_->getOrCreateFieldInitFunctionInfo());
+    visitESTreeNode(*this, node->_value, node);
   }
 }
 
@@ -1804,6 +1806,16 @@ FunctionContext::FunctionContext(
   node->setSemInfo(this->semInfo);
 }
 
+FunctionContext::FunctionContext(
+    SemanticResolver &resolver,
+    FunctionInfo *newFunctionInfo)
+    : resolver_(resolver),
+      prevContext_(resolver.curFunctionContext_),
+      semInfo(newFunctionInfo),
+      node(nullptr) {
+  resolver.curFunctionContext_ = this;
+}
+
 FunctionContext::~FunctionContext() {
   // If requested, save the collected declarations.
   if (resolver_.saveDecls_ && decls)
@@ -1822,6 +1834,34 @@ UniqueString *FunctionContext::getFunctionName() const {
       return idNode->_name;
   }
   return nullptr;
+}
+
+ClassContext::ClassContext(SemanticResolver &resolver, ClassLikeNode *classNode)
+    : resolver_(resolver),
+      prevContext_(resolver.curClassContext_),
+      classNode_(classNode) {
+  resolver.curClassContext_ = this;
+};
+
+FunctionInfo *ClassContext::getOrCreateFieldInitFunctionInfo() {
+  auto *classDecoration = getDecoration<ClassLikeDecoration>(classNode_);
+  if (classDecoration->fieldInitFunctionInfo == nullptr) {
+    FunctionInfo *fieldInitFunc = resolver_.semCtx_.newFunction(
+        FuncIsArrow::No,
+        resolver_.curFunctionInfo(),
+        resolver_.curScope_,
+        /*strict*/ true,
+        CustomDirectives{});
+    // This is callled for the side effect of associating the new scope with
+    // fieldInitFunc.  We don't need the value now, but we will later.
+    (void)resolver_.semCtx_.newScope(fieldInitFunc, resolver_.curScope_);
+    classDecoration->fieldInitFunctionInfo = fieldInitFunc;
+  }
+  return classDecoration->fieldInitFunctionInfo;
+}
+
+ClassContext::~ClassContext() {
+  resolver_.curClassContext_ = prevContext_;
 }
 
 //===----------------------------------------------------------------------===//

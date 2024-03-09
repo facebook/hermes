@@ -481,8 +481,9 @@ ESTREE_NODE_6_ARGS(
     NodeBoolean, method, false,
     NodeBoolean, shorthand, false)
 
+ESTREE_FIRST(ClassLike, Base)
 ESTREE_NODE_7_ARGS(
-    ClassDeclaration, Base,
+    ClassDeclaration, ClassLike,
     NodePtr, id, true,
     NodePtr, typeParameters, true,
     NodePtr, superClass, true,
@@ -496,7 +497,7 @@ ESTREE_IGNORE_IF_EMPTY(ClassDeclaration, implements)
 ESTREE_IGNORE_IF_EMPTY(ClassDeclaration, decorators)
 
 ESTREE_NODE_7_ARGS(
-    ClassExpression, Base,
+    ClassExpression, ClassLike,
     NodePtr, id, true,
     NodePtr, typeParameters, true,
     NodePtr, superClass, true,
@@ -508,6 +509,7 @@ ESTREE_IGNORE_IF_EMPTY(ClassExpression, typeParameters)
 ESTREE_IGNORE_IF_EMPTY(ClassExpression, superTypeParameters)
 ESTREE_IGNORE_IF_EMPTY(ClassExpression, implements)
 ESTREE_IGNORE_IF_EMPTY(ClassExpression, decorators)
+ESTREE_LAST(ClassLike)
 
 ESTREE_NODE_1_ARGS(
     ClassBody, Base,
