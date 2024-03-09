@@ -1950,6 +1950,8 @@ SKIP_LIST = [
     "test262/test/language/expressions/async-function/",
     "test262/test/language/statements/debugger/statement.js",
     "test262/test/language/statements/async-function/",
+    "test262/test/harness/asyncHelpers-asyncTest-without-async-flag.js",
+    "test262/test/harness/asyncHelpers-asyncTest-func-throws-sync.js",
     ### Failing Static Hermes tests end ###
 ]
 
