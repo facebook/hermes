@@ -949,6 +949,24 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitSuperLoad(
       Builder.getLiteralUndefined(), nullptr, Builder.getLiteralUndefined()};
 }
 
+void ESTreeIRGen::emitFieldStore(
+    flow::ClassType *classType,
+    ESTree::Node *prop,
+    Value *object,
+    Value *value) {
+  auto propName = Identifier::getFromPointer(
+      llvh::cast<ESTree::IdentifierNode>(prop)->_name);
+  auto optFieldLookup = classType->findField(propName);
+  assert(optFieldLookup && "field lookup must succeed after typechecking");
+  size_t fieldIndex = optFieldLookup->getField()->layoutSlotIR;
+  Builder.createPrStoreInst(
+      value,
+      object,
+      fieldIndex,
+      Builder.getLiteralString(propName),
+      flowTypeToIRType(optFieldLookup->getField()->type).isNonPtr());
+}
+
 void ESTreeIRGen::emitMemberStore(
     ESTree::MemberExpressionNode *mem,
     Value *storedValue,
@@ -957,17 +975,7 @@ void ESTreeIRGen::emitMemberStore(
   if (auto *classType = llvh::dyn_cast<flow::ClassType>(
           flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
     if (!mem->_computed) {
-      auto propName = Identifier::getFromPointer(
-          llvh::cast<ESTree::IdentifierNode>(mem->_property)->_name);
-      auto optFieldLookup = classType->findField(propName);
-      assert(optFieldLookup && "field lookup must succeed after typechecking");
-      size_t fieldIndex = optFieldLookup->getField()->layoutSlotIR;
-      Builder.createPrStoreInst(
-          storedValue,
-          baseValue,
-          fieldIndex,
-          Builder.getLiteralString(propName),
-          flowTypeToIRType(optFieldLookup->getField()->type).isNonPtr());
+      emitFieldStore(classType, mem->_property, baseValue, storedValue);
       return;
     }
   }

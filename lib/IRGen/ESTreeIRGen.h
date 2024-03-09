@@ -705,6 +705,18 @@ class ESTreeIRGen {
       Value *baseValue,
       Value *propValue);
 
+  /// emitMemberStore for the specific case where the member if a class
+  /// field.
+  /// \param classType the class containing the field
+  /// \param prop the name of the field, assumed to be an IdentifierNode.
+  /// \param object to store into
+  /// \param value to store.
+  void emitFieldStore(
+      flow::ClassType *classType,
+      ESTree::Node *prop,
+      Value *object,
+      Value *value);
+
   /// Load a member property from a super.property expression.
   MemberExpressionResult emitSuperLoad(
       ESTree::SuperNode *superNode,
