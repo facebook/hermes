@@ -33,8 +33,6 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
 
   flow::ClassType *classType = consType->getClassTypeInfo();
 
-  auto *classBody = ESTree::cast<ESTree::ClassBodyNode>(node->_body);
-
   Value *superClass = nullptr;
   if (node->_superClass) {
     superClass = genExpression(node->_superClass);
@@ -46,19 +44,8 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
       ? classType->getClassName()
       : Identifier();
   if (classType->getConstructorType()) {
-    // Find the constructor method.
-    auto it = std::find_if(
-        classBody->_body.begin(),
-        classBody->_body.end(),
-        [this](const ESTree::Node &n) {
-          if (auto *method = llvh::dyn_cast<ESTree::MethodDefinitionNode>(&n))
-            if (method->_kind == kw_.identConstructor)
-              return true;
-          return false;
-        });
-    assert(it != classBody->_body.end() && "constructor must exist");
-
-    auto *consMethod = llvh::cast<ESTree::MethodDefinitionNode>(&*it);
+    ESTree::MethodDefinitionNode *consMethod = semCtx_.getConstructor(node);
+    assert(consMethod && "constructor must exist");
 
     // Check that 'super()' call is the first statement in SH for derived
     // classes.
@@ -181,19 +168,21 @@ CreateFunctionInst *ESTreeIRGen::genImplicitConstructor(
     func = llvh::cast<Function>(found);
   } else {
     IRBuilder::SaveRestore saveState{Builder};
-    CustomDirectives customDirectives{
-        .sourceVisibility = SourceVisibility::Default, .alwaysInline = true};
+
+    // Retrieve the FunctionInfo for the implicit constructor, which must exist.
+    sema::FunctionInfo *funcInfo =
+        ESTree::getDecoration<ESTree::ClassLikeDecoration>(node)
+            ->implicitCtorFunctionInfo;
+    assert(
+        funcInfo &&
+        "Semantic resolver failed to decorate class with implicit ctor");
+
     func = Builder.createFunction(
         consName,
         Function::DefinitionKind::ES5Function,
         true,
-        customDirectives);
-    sema::FunctionInfo *funcInfo = semCtx_.newFunction(
-        sema::FuncIsArrow::No,
-        curFunction()->getSemInfo(),
-        nullptr,
-        /*strict*/ true,
-        customDirectives);
+        funcInfo->customDirectives);
+
     auto compileFunc = [this,
                         func,
                         funcInfo,

@@ -261,6 +261,37 @@ void SemContext::setDeclarationDecl(ESTree::IdentifierNode *node, Decl *decl) {
   }
 }
 
+ESTree::MethodDefinitionNode *SemContext::getConstructor(
+    ESTree::ClassLikeNode *node) {
+  ESTree::ClassBodyNode *classBody = nullptr;
+  switch (node->getKind()) {
+    default:
+      assert(false && "ClassLikeNode has only two subtypes.");
+      return nullptr;
+    case ESTree::NodeKind::ClassDeclaration:
+      classBody = llvh::cast<ESTree::ClassBodyNode>(
+          llvh::cast<ESTree::ClassDeclarationNode>(node)->_body);
+      break;
+    case ESTree::NodeKind::ClassExpression:
+      classBody = llvh::cast<ESTree::ClassBodyNode>(
+          llvh::cast<ESTree::ClassExpressionNode>(node)->_body);
+      break;
+  }
+  auto it = std::find_if(
+      classBody->_body.begin(),
+      classBody->_body.end(),
+      [this](const ESTree::Node &n) {
+        if (auto *method = llvh::dyn_cast<ESTree::MethodDefinitionNode>(&n))
+          if (method->_kind == kw.identConstructor)
+            return true;
+        return false;
+      });
+  if (it == classBody->_body.end()) {
+    return nullptr;
+  }
+  return llvh::cast<ESTree::MethodDefinitionNode>(&*it);
+}
+
 void SemContext::setExpressionDecl(ESTree::IdentifierNode *node, Decl *decl) {
   using ID = ESTree::IdentifierDecoration;
 

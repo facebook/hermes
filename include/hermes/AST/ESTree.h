@@ -385,6 +385,11 @@ class ClassExpressionDecoration : public ScopeDecorationBase {};
 
 class ClassLikeDecoration {
  public:
+  // If non-null, the decorated class has in implicit contructor,
+  // and this is the FunctionInfo for the synthetic Function for
+  // that constructor.
+  sema::FunctionInfo *implicitCtorFunctionInfo{};
+
   // If non-null, the decorated class has field initializers, and
   // this is the FunctionInfo for the synthetic Function in which those
   // initializations are done.

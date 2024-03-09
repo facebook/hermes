@@ -64,13 +64,19 @@ class C<Props> {
 // CHECK-NEXT:            Decl %d.6 'C' Class : %class_constructor.12
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:                Decl %d.7 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:                Decl %d.7 'arguments' Var Arguments
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.6
 // CHECK-NEXT:                Decl %d.8 'b' Let
 // CHECK-NEXT:                Decl %d.9 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:            Scope %s.7
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.8
 // CHECK-NEXT:                Decl %d.10 'b' Let : %class.6
 // CHECK-NEXT:                Decl %d.11 'arguments' Var Arguments
 

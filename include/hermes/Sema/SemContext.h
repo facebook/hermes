@@ -381,6 +381,9 @@ class SemContext {
     setDeclarationDecl(node, decl);
   }
 
+  /// \return the constructor of a class, if it has one, else nullptr.
+  ESTree::MethodDefinitionNode *getConstructor(ESTree::ClassLikeNode *node);
+
  private:
   /// Storage for all functions.
   std::deque<FunctionInfo> functions_{};

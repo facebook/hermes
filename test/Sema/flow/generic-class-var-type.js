@@ -79,15 +79,19 @@ new F<number>();
 // CHECK-NEXT:            Decl %d.9 'F' Class : %class_constructor.15
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:                Decl %d.10 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.4
-// CHECK-NEXT:                Decl %d.11 'arguments' Var Arguments
+// CHECK-NEXT:                Decl %d.10 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.5
-// CHECK-NEXT:                Decl %d.12 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.6
+// CHECK-NEXT:                Decl %d.11 'arguments' Var Arguments
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.7
+// CHECK-NEXT:                Decl %d.12 'arguments' Var Arguments
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.8
 // CHECK-NEXT:                Decl %d.13 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1

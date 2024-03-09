@@ -479,11 +479,23 @@ class ClassContext {
   /// Create a class context for the class with the given \p classDeclaration.
   ClassContext(SemanticResolver &resolver, ESTree::ClassLikeNode *classNode);
 
+  /// May only be called after the body of the current class has been
+  /// visited, and hasConstructor, below, is valid.  If the current
+  /// class has no explicit constructor, creates a FunctionInfo for an
+  /// implicit constructor, and stores it in the context.  Will be
+  /// returned by subsequent getImplicitConstructorFunctionInfo calls,
+  /// below.
+  void createImplicitConstructorFunctionInfo();
+
   /// The caller asserts that the class of the current context
   /// has field initializers.  On first call for a \p classDecoration, creates a
   /// FunctionInfo for an implicit function to do the field initializations.
   /// On subsequent calls, return that FunctionInfo.
   FunctionInfo *getOrCreateFieldInitFunctionInfo();
+
+  /// Whether the class has an explicit constructor.  Only valid after
+  /// the body of the class has been visited.
+  bool hasConstructor = false;
 
   ~ClassContext();
 

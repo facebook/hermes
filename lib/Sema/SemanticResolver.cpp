@@ -653,12 +653,15 @@ void SemanticResolver::visit(ESTree::ImportDeclarationNode *importDecl) {
   curFunctionInfo()->imports.push_back(importDecl);
   visitESTreeChildren(*this, importDecl);
 }
+
 void SemanticResolver::visit(ESTree::ClassDeclarationNode *node) {
   // Classes must be in strict mode.
   llvh::SaveAndRestore<bool> oldStrict{curFunctionInfo()->strict, true};
   ClassContext classCtx(*this, node);
   visitESTreeChildren(*this, node);
+  curClassContext_->createImplicitConstructorFunctionInfo();
 }
+
 void SemanticResolver::visit(ESTree::ClassExpressionNode *node) {
   // Classes must be in strict mode.
   llvh::SaveAndRestore<bool> oldStrict{curFunctionInfo()->strict, true};
@@ -680,6 +683,7 @@ void SemanticResolver::visit(ESTree::ClassExpressionNode *node) {
     // Otherwise, no extra scope needed, just move on.
     visitESTreeChildren(*this, node);
   }
+  curClassContext_->createImplicitConstructorFunctionInfo();
 }
 
 void SemanticResolver::visit(PrivateNameNode *node) {
@@ -979,6 +983,9 @@ void SemanticResolver::visitFunctionLike(
       curFunctionInfo()->customDirectives};
   if (method) {
     newFuncCtx.isConstructor = method->_kind == kw_.identConstructor;
+    if (newFuncCtx.isConstructor) {
+      curClassContext_->hasConstructor = true;
+    }
   }
 
   if (compile_ && ESTree::isAsync(node) && ESTree::isGenerator(node)) {
@@ -1843,6 +1850,25 @@ ClassContext::ClassContext(SemanticResolver &resolver, ClassLikeNode *classNode)
   resolver.curClassContext_ = this;
 };
 
+void ClassContext::createImplicitConstructorFunctionInfo() {
+  // Do nothing if the class has an explicit constructor.
+  if (hasConstructor) {
+    return;
+  }
+  auto *classDecoration = getDecoration<ClassLikeDecoration>(classNode_);
+  assert(classDecoration->implicitCtorFunctionInfo == nullptr);
+  FunctionInfo *implicitCtor = resolver_.semCtx_.newFunction(
+      FuncIsArrow::No,
+      resolver_.curFunctionInfo(),
+      resolver_.curScope_,
+      /*strict*/ true,
+      CustomDirectives{});
+  // This is callled for the side effect of associating the new scope with
+  // implicitCtor.  We don't need the value now, but we will later.
+  (void)resolver_.semCtx_.newScope(implicitCtor, resolver_.curScope_);
+  classDecoration->implicitCtorFunctionInfo = implicitCtor;
+}
+
 FunctionInfo *ClassContext::getOrCreateFieldInitFunctionInfo() {
   auto *classDecoration = getDecoration<ClassLikeDecoration>(classNode_);
   if (classDecoration->fieldInitFunctionInfo == nullptr) {
@@ -1851,7 +1877,9 @@ FunctionInfo *ClassContext::getOrCreateFieldInitFunctionInfo() {
         resolver_.curFunctionInfo(),
         resolver_.curScope_,
         /*strict*/ true,
-        CustomDirectives{});
+        CustomDirectives{
+            .sourceVisibility = SourceVisibility::Default,
+            .alwaysInline = true});
     // This is callled for the side effect of associating the new scope with
     // fieldInitFunc.  We don't need the value now, but we will later.
     (void)resolver_.semCtx_.newScope(fieldInitFunc, resolver_.curScope_);

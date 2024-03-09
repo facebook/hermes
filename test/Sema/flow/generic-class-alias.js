@@ -104,6 +104,10 @@ let z: Z;
 // CHECK-NEXT:            Decl %d.11 'C' Class : %class_constructor.24
 // CHECK-NEXT:            Decl %d.12 'C' Class : %class_constructor.25
 // CHECK-NEXT:            Decl %d.13 'C' Class : %class_constructor.26
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.3
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.4
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement

@@ -45,6 +45,10 @@ class B<T> extends A {}
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:                Decl %d.6 'b' Parameter : %class.5
 // CHECK-NEXT:                Decl %d.7 'arguments' Var Arguments
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.5
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
