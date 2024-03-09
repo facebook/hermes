@@ -567,7 +567,7 @@ arrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
 }
 
-static inline CallResult<uint32_t>
+static inline CallResult<uint64_t>
 lengthOfArrayLike(Runtime &runtime, Handle<JSObject> O, Handle<JSArray> jsArr) {
   if (LLVM_LIKELY(jsArr)) {
     // Fast path for getting the length.
@@ -3562,7 +3562,11 @@ arrayPrototypeToReversed(void *, Runtime &runtime, NativeArgs args) {
   auto len = lenRes.getValue();
 
   // 3. Let A be ArrayCreate(len).
-  auto ARes = JSArray::create(runtime, len, len);
+  uint32_t len32 = truncateToUInt32(len);
+  if (LLVM_UNLIKELY(len32 != len)) {
+    return runtime.raiseRangeError("invalid array length");
+  }
+  auto ARes = JSArray::create(runtime, len32, len32);
   if (LLVM_UNLIKELY(ARes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -3766,7 +3770,11 @@ arrayPrototypeToSpliced(void *, Runtime &runtime, NativeArgs args) {
   }
 
   // 13. Let A be ArrayCreate(len).
-  auto ARes = JSArray::create(runtime, lenAfterInsert, lenAfterInsert);
+  uint32_t lenAfterInsert32 = truncateToUInt32(lenAfterInsert);
+  if (LLVM_UNLIKELY(lenAfterInsert32 != lenAfterInsert)) {
+    return runtime.raiseRangeError("invalid array length");
+  }
+  auto ARes = JSArray::create(runtime, lenAfterInsert32, lenAfterInsert32);
   if (LLVM_UNLIKELY(ARes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -3873,7 +3881,11 @@ arrayPrototypeWith(void *, Runtime &runtime, NativeArgs args) {
   }
 
   // 7. Let A be ArrayCreate(len).
-  auto ARes = JSArray::create(runtime, len, len);
+  uint32_t len32 = truncateToUInt32(len);
+  if (LLVM_UNLIKELY(len32 != len)) {
+    return runtime.raiseRangeError("invalid array length");
+  }
+  auto ARes = JSArray::create(runtime, len32, len32);
   if (LLVM_UNLIKELY(ARes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
