@@ -29,6 +29,12 @@ Handle<JSObject> createSetConstructor(Runtime &runtime) {
       setPrototypeAdd,
       1);
 
+  {
+    auto propValue = runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
+        setPrototype, runtime, Predefined::getSymbolID(Predefined::add)));
+    runtime.setPrototypeAdd = std::move(propValue);
+  }
+
   defineMethod(
       runtime,
       setPrototype,
@@ -161,43 +167,39 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
   }
 
   // Fast path
-  // If the iterable is an array, then we can do for-loop.
-  if (Handle<JSArray> arr = args.dyncastArg<JSArray>(0)) {
-    MutableHandle<HermesValue> indexHandle{runtime};
+  const bool originalAdd =
+      adder.getHermesValue().getRaw() == runtime.setPrototypeAdd.getRaw();
+  // If the adder is the default one, we can call JSSet::addValue directly.
+  if (LLVM_LIKELY(originalAdd)) {
+    // If the iterable is an array, then we can do for-loop.
+    if (Handle<JSArray> arr = args.dyncastArg<JSArray>(0)) {
+      MutableHandle<HermesValue> tmpHandle{runtime};
 
-    for (JSArray::size_type i = 0; i < JSArray::getLength(arr.get(), runtime);
-         i++) {
-      GCScopeMarkerRAII marker{runtime};
+      for (JSArray::size_type i = 0; i < JSArray::getLength(arr.get(), runtime);
+           i++) {
+        GCScopeMarkerRAII marker{runtime};
 
-      // Add each element to the set.
-      auto element = arr.get()->at(runtime, i);
-      if (LLVM_LIKELY(!element.isEmpty())) {
-        if (LLVM_UNLIKELY(
-                Callable::executeCall1(
-                    adder, runtime, selfHandle, element.unboxToHV(runtime)) ==
-                ExecutionStatus::EXCEPTION)) {
-          return ExecutionStatus::EXCEPTION;
-        }
-      } else {
-        indexHandle = HermesValue::encodeUntrustedNumberValue(i);
-        CallResult<PseudoHandle<>> valueRes =
-            JSObject::getComputed_RJS(arr, runtime, indexHandle);
-        if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
-          return ExecutionStatus::EXCEPTION;
-        }
+        // Add each element to the set.
+        auto element = arr.get()->at(runtime, i);
+        if (LLVM_LIKELY(!element.isEmpty())) {
+          tmpHandle = element.unboxToHV(runtime);
+          JSSet::addValue(selfHandle, runtime, tmpHandle, tmpHandle);
+        } else {
+          tmpHandle = HermesValue::encodeUntrustedNumberValue(i);
+          CallResult<PseudoHandle<>> valueRes =
+              JSObject::getComputed_RJS(arr, runtime, tmpHandle);
+          if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
+            return ExecutionStatus::EXCEPTION;
+          }
 
-        if (LLVM_UNLIKELY(
-                Callable::executeCall1(
-                    adder, runtime, selfHandle, valueRes->getHermesValue()) ==
-                ExecutionStatus::EXCEPTION)) {
-          return ExecutionStatus::EXCEPTION;
+          tmpHandle = valueRes->getHermesValue();
+          JSSet::addValue(selfHandle, runtime, tmpHandle, tmpHandle);
         }
       }
+
+      return selfHandle.getHermesValue();
     }
-
-    return selfHandle.getHermesValue();
   }
-
   // Slow path
   auto iterRes = getCheckedIterator(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
