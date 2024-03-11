@@ -961,22 +961,18 @@ TEST_F(CDPAgentTest, DebuggerEvalOnCallFrame) {
   ensureEvalResponse(waitForMessage(), msgId + 1, 42);
   msgId += 2;
 
-  /* TODO: This needs Runtime domain capability
   // [2.2] run eval statement that returns object
   frame = 0;
-  sendEvalRequest(msgId + 0, frame, "objectVar");
-  ensureEvalResponse(
-      waitForMessage(),
-      msgId + 0,
+  sendEvalRequest(msgId, frame, "objectVar");
+  auto objectId = ensureObjectEvalResponse(waitForMessage(), msgId++);
+
+  getAndEnsureProps(
+      msgId++,
+      objectId,
       {{"number", PropInfo("number").setValue("1")},
        {"bool", PropInfo("boolean").setValue("false")},
        {"str", PropInfo("string").setValue("\"string\"")},
        {"__proto__", PropInfo("object")}});
-
-  // msgId is increased by 2 because expectEvalResponse will make additional
-  // request with expectProps.
-  msgId += 2;
-  */
 
   // [3] resume
   sendAndCheckResponse("Debugger.resume", msgId++);
