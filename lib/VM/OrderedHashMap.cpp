@@ -35,6 +35,12 @@ CallResult<PseudoHandle<HashMapEntry>> HashMapEntry::create(Runtime &runtime) {
   return createPseudoHandle(runtime.makeAFixed<HashMapEntry>());
 }
 
+CallResult<PseudoHandle<HashMapEntry>> HashMapEntry::createLongLived(
+    Runtime &runtime) {
+  return createPseudoHandle(
+      runtime.makeAFixed<HashMapEntry, HasFinalizer::No, LongLived::Yes>());
+}
+
 //===----------------------------------------------------------------------===//
 // class OrderedHashMap
 
@@ -241,7 +247,11 @@ ExecutionStatus OrderedHashMap::insert(
     return ExecutionStatus::RETURNED;
   }
   // Create a new entry, set the key and value.
-  auto crtRes = HashMapEntry::create(runtime);
+  // Allocate the new entry in the same generation as the hash table to avoid
+  // pointers from old gen to young gen.
+  auto crtRes = runtime.getHeap().inYoungGen(self->hashTable_.get(runtime))
+      ? HashMapEntry::create(runtime)
+      : HashMapEntry::createLongLived(runtime);
   if (LLVM_UNLIKELY(crtRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

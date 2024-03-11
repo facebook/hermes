@@ -49,6 +49,9 @@ class HashMapEntry final : public GCCell {
 
   static CallResult<PseudoHandle<HashMapEntry>> create(Runtime &runtime);
 
+  static CallResult<PseudoHandle<HashMapEntry>> createLongLived(
+      Runtime &runtime);
+
   /// Indicates whether this entry has been deleted.
   bool isDeleted() const {
     assert(key.isEmpty() == value.isEmpty() && "Inconsistent deleted status");
