@@ -44,9 +44,12 @@ struct DebuggerAPITest : public ::testing::Test {
   TestEventObserver observer;
 
   DebuggerAPITest()
-      : rt(makeHermesRuntime(((hermes::vm::RuntimeConfig::Builder())
-                                  .withEnableBlockScoping(true)
-                                  .build()))) {
+      : rt(makeHermesRuntime(
+            ((hermes::vm::RuntimeConfig::Builder())
+                 .withEnableBlockScoping(true)
+                 .withCompilationMode(
+                     hermes::vm::CompilationMode::ForceLazyCompilation)
+                 .build()))) {
     rt->getDebugger().setEventObserver(&observer);
   }
 };
@@ -144,7 +147,11 @@ TEST_F(DebuggerAPITest, GetLoadedScriptsTest) {
 
   bool foundJavaScript = false;
   bool foundTestJs = false;
-  rt->debugJavaScript("var x = 2;", "Test.js", {});
+  // Use a script containing a function (in combination with forced lazy
+  // compilation in the test setup) to cause multiple runtime modules for this
+  // single script, allowing this test to verify we don't get duplicate
+  // results.
+  rt->debugJavaScript("(function(){var x = 2;})()", "Test.js", {});
   scripts = rt->getDebugger().getLoadedScripts();
   EXPECT_EQ(scripts.size(), 2);
   for (auto script : scripts) {
