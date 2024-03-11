@@ -26,10 +26,10 @@ class HashMapEntry final : public GCCell {
   static const VTable vt;
 
   /// The key.
-  GCHermesValue key;
+  GCSmallHermesValue key;
 
   /// The value.
-  GCHermesValue value;
+  GCSmallHermesValue value;
 
   /// Previous entry in insertion order.
   GCPointer<HashMapEntry> prevIterationEntry{nullptr};
@@ -57,8 +57,8 @@ class HashMapEntry final : public GCCell {
 
   /// Mark this entry as deleted.
   void markDeleted(Runtime &runtime) {
-    key.setNonPtr(HermesValue::encodeEmptyValue(), runtime.getHeap());
-    value.setNonPtr(HermesValue::encodeEmptyValue(), runtime.getHeap());
+    key.setNonPtr(SmallHermesValue::encodeEmptyValue(), runtime.getHeap());
+    value.setNonPtr(SmallHermesValue::encodeEmptyValue(), runtime.getHeap());
   }
 }; // HashMapEntry
 
