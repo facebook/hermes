@@ -786,7 +786,7 @@ void SemanticResolver::visit(ESTree::CallExpressionNode *node) {
   }
 
   if (llvh::isa<SuperNode>(node->_callee)) {
-    if (!functionContext()->isConstructor) {
+    if (!functionContext()->nearestNonArrow()->isConstructor) {
       sm_.error(
           node->getSourceRange(), "super() call only allowed in constructor");
     }
@@ -1841,6 +1841,15 @@ UniqueString *FunctionContext::getFunctionName() const {
       return idNode->_name;
   }
   return nullptr;
+}
+
+const FunctionContext *FunctionContext::nearestNonArrow() const {
+  const FunctionContext *cur = this;
+  while (cur->semInfo->arrow) {
+    cur = cur->prevContext_;
+  }
+  assert(cur && "All contexts should have a non-arrow ancestor.");
+  return cur;
 }
 
 ClassContext::ClassContext(SemanticResolver &resolver, ClassLikeNode *classNode)

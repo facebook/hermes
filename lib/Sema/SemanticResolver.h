@@ -462,6 +462,11 @@ class FunctionContext {
 
   /// \return the optional function name, or nullptr.
   UniqueString *getFunctionName() const;
+
+  /// Returns the nearest non-arrow (non-proper) ancestor of the current
+  /// FunctionContext that is not for an arrow function.  This will always
+  /// exist.
+  const FunctionContext *nearestNonArrow() const;
 };
 
 inline FunctionInfo *SemanticResolver::curFunctionInfo() {
