@@ -160,6 +160,45 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("Property 'add' for Set is not callable");
   }
 
+  // Fast path
+  // If the iterable is an array, then we can do for-loop.
+  if (Handle<JSArray> arr = args.dyncastArg<JSArray>(0)) {
+    MutableHandle<HermesValue> indexHandle{runtime};
+
+    for (JSArray::size_type i = 0; i < JSArray::getLength(arr.get(), runtime);
+         i++) {
+      GCScopeMarkerRAII marker{runtime};
+
+      // Add each element to the set.
+      auto element = arr.get()->at(runtime, i);
+      if (LLVM_LIKELY(!element.isEmpty())) {
+        if (LLVM_UNLIKELY(
+                Callable::executeCall1(
+                    adder, runtime, selfHandle, element.unboxToHV(runtime)) ==
+                ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+      } else {
+        indexHandle = HermesValue::encodeUntrustedNumberValue(i);
+        CallResult<PseudoHandle<>> valueRes =
+            JSObject::getComputed_RJS(arr, runtime, indexHandle);
+        if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+
+        if (LLVM_UNLIKELY(
+                Callable::executeCall1(
+                    adder, runtime, selfHandle, valueRes->getHermesValue()) ==
+                ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+      }
+    }
+
+    return selfHandle.getHermesValue();
+  }
+
+  // Slow path
   auto iterRes = getCheckedIterator(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
