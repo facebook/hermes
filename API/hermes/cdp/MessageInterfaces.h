@@ -9,6 +9,7 @@
 #define HERMES_CDP_MESSAGEINTERFACES_H
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <variant>
@@ -53,7 +54,7 @@ struct Request : public Serializable {
 struct Response : public Serializable {
   Response() = default;
 
-  long long id = 0;
+  std::optional<long long> id = std::nullopt;
 };
 
 /// Notifications are sent from the target to the debugger. This is used to

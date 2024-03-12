@@ -452,6 +452,30 @@ TEST_F(CDPAgentTest, CDPAgentIssuesCommandHandlingTask) {
   ASSERT_TRUE(gotTask);
 }
 
+TEST_F(CDPAgentTest, CDPAgentRejectsMalformedJson) {
+  std::unique_ptr<CDPAgent> cdpAgent;
+
+  waitFor<bool>([this, &cdpAgent](auto promise) {
+    OutboundMessageFunc handleMessage = [this,
+                                         promise](const std::string &message) {
+      // Ensure the invalid JSON is reported
+      JSONObject *resp = jsonScope_.parseObject(message);
+      EXPECT_EQ(
+          jsonScope_.getString(resp, {"error", "message"}), "Malformed JSON");
+      promise->set_value(true);
+    };
+
+    EnqueueRuntimeTaskFunc handleTask = [this](RuntimeTask task) {
+      runtimeThread_->add([this, task]() { task(*runtime_); });
+    };
+    cdpAgent = CDPAgent::create(
+        kTestExecutionContextId_, *cdpDebugAPI_, handleTask, handleMessage);
+
+    // Send a command that's not valid JSON
+    cdpAgent->handleCommand("_");
+  });
+}
+
 TEST_F(CDPAgentTest, CDPAgentRejectsMalformedMethods) {
   int commandID = 1;
   std::unique_ptr<CDPAgent> cdpAgent;
