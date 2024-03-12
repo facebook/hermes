@@ -254,6 +254,7 @@ class CallFunctionOnBuilder {
 RuntimeDomainAgent::RuntimeDomainAgent(
     int32_t executionContextID,
     HermesRuntime &runtime,
+    debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
     SynchronizedOutboundCallback messageCallback,
     std::shared_ptr<RemoteObjectsTable> objTable,
     ConsoleMessageStorage &consoleMessageStorage,
@@ -263,6 +264,7 @@ RuntimeDomainAgent::RuntimeDomainAgent(
           std::move(messageCallback),
           std::move(objTable)),
       runtime_(runtime),
+      asyncDebuggerAPI_(asyncDebuggerAPI),
       consoleMessageStorage_(consoleMessageStorage),
       consoleMessageDispatcher_(consoleMessageDispatcher),
       enabled_(false) {
@@ -343,11 +345,24 @@ void RuntimeDomainAgent::globalLexicalScopeNames(
     return;
   }
 
+  if (!asyncDebuggerAPI_.isPaused()) {
+    sendResponseToClient(m::makeErrorResponse(
+        req.id,
+        m::ErrorCode::InvalidRequest,
+        "Cannot get global scope names unless execution is paused"));
+    return;
+  }
+
   const debugger::ProgramState &state =
       runtime_.getDebugger().getProgramState();
+  assert(
+      state.getStackTrace().callFrameCount() > 0 &&
+      "Paused with no call frames");
   const debugger::LexicalInfo &lexicalInfo = state.getLexicalInfo(0);
   debugger::ScopeDepth scopeCount = lexicalInfo.getScopesCount();
   if (scopeCount == 0) {
+    sendResponseToClient(m::makeErrorResponse(
+        req.id, m::ErrorCode::InvalidRequest, "No scope descriptor"));
     return;
   }
   const debugger::ScopeDepth globalScopeIndex = scopeCount - 1;
@@ -415,10 +430,26 @@ void RuntimeDomainAgent::getProperties(
   m::runtime::GetPropertiesResponse resp;
   resp.id = req.id;
   if (scopePtr != nullptr) {
+    if (!asyncDebuggerAPI_.isPaused()) {
+      sendResponseToClient(m::makeErrorResponse(
+          req.id,
+          m::ErrorCode::InvalidRequest,
+          "Cannot get scope properties unless execution is paused"));
+      return;
+    }
     const debugger::ProgramState &state =
         runtime_.getDebugger().getProgramState();
-    resp.result =
+    auto result =
         makePropsFromScope(*scopePtr, objGroup, state, generatePreview);
+    if (!result) {
+      sendResponseToClient(m::makeErrorResponse(
+          req.id,
+          m::ErrorCode::InvalidRequest,
+          "Could not inspect specified scope"));
+      return;
+    }
+    resp.result = std::move(*result);
+
   } else if (valuePtr != nullptr) {
     resp.result =
         makePropsFromValue(*valuePtr, objGroup, ownProperties, generatePreview);
@@ -552,7 +583,7 @@ bool RuntimeDomainAgent::validateExecutionContextId(
   return false;
 }
 
-std::vector<m::runtime::PropertyDescriptor>
+std::optional<std::vector<m::runtime::PropertyDescriptor>>
 RuntimeDomainAgent::makePropsFromScope(
     std::pair<uint32_t, uint32_t> frameAndScopeIndex,
     const std::string &objectGroup,
@@ -566,7 +597,13 @@ RuntimeDomainAgent::makePropsFromScope(
 
   uint32_t frameIndex = frameAndScopeIndex.first;
   uint32_t scopeIndex = frameAndScopeIndex.second;
+  if (frameIndex >= state.getStackTrace().callFrameCount()) {
+    return std::nullopt;
+  }
   debugger::LexicalInfo lexicalInfo = state.getLexicalInfo(frameIndex);
+  if (scopeIndex >= lexicalInfo.getScopesCount()) {
+    return std::nullopt;
+  }
   uint32_t varCount = lexicalInfo.getVariablesCountInScope(scopeIndex);
 
   // If this is the frame's local scope, include 'this'.

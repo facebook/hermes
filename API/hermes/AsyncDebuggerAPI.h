@@ -117,6 +117,11 @@ class HERMES_EXPORT AsyncDebuggerAPI : private debugger::EventObserver {
   /// Should only be called from the runtime thread.
   bool isWaitingForCommand();
 
+  /// Whether the runtime is currently paused for any reason (e.g. script
+  /// parsed, running interrupts, or waiting for a command).
+  /// Should only be called from the runtime thread.
+  bool isPaused();
+
   /// Provide the next action to perform. Should only be called from the runtime
   /// thread and only if the next command is expected to be set.
   bool resumeFromPaused(AsyncDebugCommand command);

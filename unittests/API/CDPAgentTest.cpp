@@ -1727,6 +1727,22 @@ TEST_F(CDPAgentTest, RuntimeGlobalLexicalScopeNames) {
   }
 }
 
+TEST_F(CDPAgentTest, RuntimeGlobalLexicalScopeNamesOnEmptyStack) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Runtime.enable", msgId++);
+
+  sendRequest(
+      "Runtime.globalLexicalScopeNames",
+      msgId,
+      [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("executionContextId", kTestExecutionContextId_);
+      });
+
+  // Can't get lexical scopes on an empty stack.
+  ensureErrorResponse(waitForMessage(), msgId);
+}
+
 TEST_F(CDPAgentTest, RuntimeCompileScript) {
   int msgId = 1;
 

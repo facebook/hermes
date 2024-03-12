@@ -259,6 +259,7 @@ void CDPAgentImpl::DomainAgents::initialize(State state) {
   runtimeAgent_ = std::make_unique<RuntimeDomainAgent>(
       executionContextID_,
       runtime_,
+      asyncDebuggerAPI_,
       messageCallback_,
       objTable_,
       consoleMessageStorage_,
