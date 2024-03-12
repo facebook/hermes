@@ -28,7 +28,6 @@ void HashMapEntryBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("value", &self->value);
   mb.addField("prevIterationEntry", &self->prevIterationEntry);
   mb.addField("nextIterationEntry", &self->nextIterationEntry);
-  mb.addField("nextEntryInBucket", &self->nextEntryInBucket);
 }
 
 CallResult<PseudoHandle<HashMapEntry>> HashMapEntry::create(Runtime &runtime) {
@@ -97,60 +96,57 @@ void OrderedHashMap::removeLinkedListNode(
 }
 
 static HashMapEntry *castToMapEntry(SmallHermesValue shv, PointerBase &base) {
-  if (shv.isEmpty())
+  if (!shv.isObject())
     return nullptr;
   return vmcast<HashMapEntry>(shv.getObject(base));
 }
 
-HashMapEntry *OrderedHashMap::lookupInBucket(
+std::pair<HashMapEntry *, uint32_t> OrderedHashMap::lookupInBucket(
     Runtime &runtime,
     uint32_t bucket,
     HermesValue key) {
   assert(
       hashTable_.getNonNull(runtime)->size(runtime) == capacity_ &&
       "Inconsistent capacity");
-  auto *entry = castToMapEntry(
-      hashTable_.getNonNull(runtime)->at(runtime, bucket), runtime);
-  while (entry && !isSameValueZero(entry->key, key)) {
-    entry = entry->nextEntryInBucket.get(runtime);
+  [[maybe_unused]] const uint32_t firstBucket = bucket;
+
+  const uint32_t mask = capacity_ - 1;
+
+  // Each bucket must be either empty, deleted (Null) or HashMapEntry.
+  while (true) {
+    auto shv = hashTable_.getNonNull(runtime)->at(runtime, bucket);
+    if (shv.isEmpty()) {
+      break;
+    }
+
+    if (!isDeleted(shv)) {
+      assert(shv.isObject());
+      auto *entry = vmcast<HashMapEntry>(shv.getObject(runtime));
+      if (isSameValueZero(entry->key, key)) {
+        return {entry, bucket};
+      }
+    }
+
+    bucket = (bucket + 1) & mask;
+    assert(bucket != firstBucket && "Hash table has wrapped around");
   }
-  return entry;
+
+  return {nullptr, bucket};
 }
 
-ExecutionStatus OrderedHashMap::rehashIfNecessary(
+ExecutionStatus OrderedHashMap::rehash(
     Handle<OrderedHashMap> self,
-    Runtime &runtime) {
-  uint32_t newCapacity = self->capacity_;
+    Runtime &runtime,
+    bool beforeAdd) {
   // NOTE: we have ensured that self->capacity_ * 4 never overflows uint32_t by
   // setting MAX_CAPACITY to the appropriate value. self->size_ is always <=
   // self->capacity_, so this applies to self->size_ as well.
   static_assert(
       MAX_CAPACITY <= UINT32_MAX / 4,
       "Avoid overflow checks on multiplying capacity by 4");
-  if (self->size_ * 4 > self->capacity_ * 3) {
-    // Load factor is more than 0.75, need to increase the capacity.
-    newCapacity = self->capacity_ * 2;
-    if (LLVM_UNLIKELY(newCapacity > MAX_CAPACITY)) {
-      // We maintain the invariant that the capacity_ is a power of two.
-      // Therefore, if doubling would exceed the max, we revert to the
-      // previous value.  (Assert the invariant to make it clear.)
-      assert(
-          (self->capacity_ & (self->capacity_ - 1)) == 0 &&
-          "capacity_ must be power of 2");
-      newCapacity = self->capacity_;
-    }
-  } else if (
-      self->size_ * 4 < self->capacity_ && self->capacity_ > INITIAL_CAPACITY) {
-    // Load factor is less than 0.25, and we are not at initial cap.
-    newCapacity = self->capacity_ / 2;
-  }
-  if (newCapacity == self->capacity_) {
-    // No need to rehash.
-    return ExecutionStatus::RETURNED;
-  }
-  assert(
-      self->size_ && self->firstIterationEntry_ && self->lastIterationEntry_ &&
-      "We should never be rehashing when there are no elements");
+
+  const uint32_t newCapacity =
+      nextCapacity(self->capacity_, self->size_ + (beforeAdd ? 1 : 0));
 
   // Set new capacity first to update the hash function.
   self->capacity_ = newCapacity;
@@ -165,41 +161,30 @@ ExecutionStatus OrderedHashMap::rehashIfNecessary(
 
   // Now re-add all entries to the hash table.
   MutableHandle<HashMapEntry> entry{runtime};
-  MutableHandle<HashMapEntry> oldNextInBucket{runtime};
   MutableHandle<> keyHandle{runtime};
   GCScopeMarkerRAII marker{runtime};
-  for (unsigned i = 0,
-                len = self->hashTable_.getNonNull(runtime)->size(runtime);
-       i < len;
-       ++i) {
-    entry = castToMapEntry(
-        self->hashTable_.getNonNull(runtime)->at(runtime, i), runtime);
-    while (entry) {
+  entry = self->iteratorNext(runtime, nullptr);
+  while (entry) {
+    if (!entry->isDeleted()) {
       marker.flush();
       keyHandle = entry->key;
       uint32_t bucket = hashToBucket(self, runtime, keyHandle);
-      oldNextInBucket = entry->nextEntryInBucket.get(runtime);
-      if (newHashTable->at(runtime, bucket).isEmpty()) {
-        // Empty bucket.
-        entry->nextEntryInBucket.setNull(runtime.getHeap());
-      } else {
-        // There are already a bucket head.
-        entry->nextEntryInBucket.set(
-            runtime,
-            vmcast<HashMapEntry>(
-                newHashTable->at(runtime, bucket).getObject(runtime)),
-            runtime.getHeap());
+      [[maybe_unused]] const uint32_t firstBucket = bucket;
+      while (!newHashTable->at(runtime, bucket).isEmpty()) {
+        // Find another bucket if it is not empty.
+        bucket = (bucket + 1) & (self->capacity_ - 1);
+        assert(firstBucket != bucket && "Hash table is full!");
       }
-      // Update bucket head to the new entry.
+      // Set the new entry to the bucket.
       newHashTable->set(
           runtime,
           bucket,
           SmallHermesValue::encodeObjectValue(*entry, runtime));
-
-      entry = *oldNextInBucket;
     }
+    entry = self->iteratorNext(runtime, entry.get());
   }
 
+  self->deletedCount_ = 0;
   self->hashTable_.setNonNull(runtime, newHashTable.get(), runtime.getHeap());
   assert(
       self->hashTable_.getNonNull(runtime)->size(runtime) == self->capacity_ &&
@@ -212,7 +197,7 @@ bool OrderedHashMap::has(
     Runtime &runtime,
     Handle<> key) {
   auto bucket = hashToBucket(self, runtime, key);
-  return self->lookupInBucket(runtime, bucket, key.getHermesValue());
+  return self->lookupInBucket(runtime, bucket, key.getHermesValue()).first;
 }
 
 HashMapEntry *OrderedHashMap::find(
@@ -220,7 +205,7 @@ HashMapEntry *OrderedHashMap::find(
     Runtime &runtime,
     Handle<> key) {
   auto bucket = hashToBucket(self, runtime, key);
-  return self->lookupInBucket(runtime, bucket, key.getHermesValue());
+  return self->lookupInBucket(runtime, bucket, key.getHermesValue()).first;
 }
 
 HermesValue OrderedHashMap::get(
@@ -240,12 +225,32 @@ ExecutionStatus OrderedHashMap::insert(
     Handle<> key,
     Handle<> value) {
   uint32_t bucket = hashToBucket(self, runtime, key);
-  if (auto *entry =
-          self->lookupInBucket(runtime, bucket, key.getHermesValue())) {
-    // Element already exists, update value and return.
+
+  // Find the bucket for this key. It the entry already exists, update the value
+  // and return.
+  HashMapEntry *entry = nullptr;
+  std::tie(entry, bucket) =
+      self->lookupInBucket(runtime, bucket, key.getHermesValue());
+  if (entry) {
+    // Element for the key already exists, update value and return.
     entry->value.set(value.get(), runtime.getHeap());
     return ExecutionStatus::RETURNED;
   }
+
+  // Run rehash if necessary before inserting.
+  if (shouldRehash(self->capacity_, self->size_, self->deletedCount_)) {
+    if (LLVM_UNLIKELY(
+            self->rehash(self, runtime, true) == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    // Find a new empty bucket after rehash.
+    bucket = hashToBucket(self, runtime, key);
+    std::tie(entry, bucket) =
+        self->lookupInBucket(runtime, bucket, key.getHermesValue());
+    assert(!entry && "After rehash, we must be able to find an empty bucket");
+  }
+
   // Create a new entry, set the key and value.
   // Allocate the new entry in the same generation as the hash table to avoid
   // pointers from old gen to young gen.
@@ -258,14 +263,6 @@ ExecutionStatus OrderedHashMap::insert(
   auto newMapEntry = runtime.makeHandle(std::move(*crtRes));
   newMapEntry->key.set(key.get(), runtime.getHeap());
   newMapEntry->value.set(value.get(), runtime.getHeap());
-  auto *curBucketFront = castToMapEntry(
-      self->hashTable_.getNonNull(runtime)->at(runtime, bucket), runtime);
-  if (curBucketFront) {
-    // If the bucket we are inserting to is not empty, we maintain the
-    // linked list properly.
-    newMapEntry->nextEntryInBucket.set(
-        runtime, curBucketFront, runtime.getHeap());
-  }
   // Set the newly inserted entry as the front of this bucket chain.
   self->hashTable_.getNonNull(runtime)->set(
       runtime,
@@ -297,7 +294,7 @@ ExecutionStatus OrderedHashMap::insert(
   }
 
   self->size_++;
-  return self->rehashIfNecessary(self, runtime);
+  return ExecutionStatus::RETURNED;
 }
 
 bool OrderedHashMap::erase(
@@ -305,35 +302,18 @@ bool OrderedHashMap::erase(
     Runtime &runtime,
     Handle<> key) {
   uint32_t bucket = hashToBucket(self, runtime, key);
-  HashMapEntry *prevEntry = nullptr;
-  auto *entry = castToMapEntry(
-      self->hashTable_.getNonNull(runtime)->at(runtime, bucket), runtime);
-  while (entry && !isSameValueZero(entry->key, key.getHermesValue())) {
-    prevEntry = entry;
-    entry = entry->nextEntryInBucket.get(runtime);
-  }
+  HashMapEntry *entry = nullptr;
+  std::tie(entry, bucket) =
+      self->lookupInBucket(runtime, bucket, key.getHermesValue());
   if (!entry) {
     // Element does not exist.
     return false;
   }
 
-  if (prevEntry) {
-    // The entry we are deleting has a previous entry, update the link.
-    prevEntry->nextEntryInBucket.set(
-        runtime, entry->nextEntryInBucket, runtime.getHeap());
-  } else {
-    // The entry we are erasing is the front entry in the bucket, we need
-    // to update the bucket head to the next entry in the bucket, if not
-    // any, set to empty value.
-    self->hashTable_.getNonNull(runtime)->set(
-        runtime,
-        bucket,
-        entry->nextEntryInBucket
-            ? SmallHermesValue::encodeObjectValue(entry->nextEntryInBucket)
-            : SmallHermesValue::encodeEmptyValue());
-  }
-
+  // Mark the bucket as deleted. We remove this in rehash.
+  deleteBucket(self, runtime, bucket);
   entry->markDeleted(runtime);
+  self->deletedCount_++;
   self->size_--;
 
   // Now delete the entry from the iteration linked list.
@@ -345,7 +325,8 @@ bool OrderedHashMap::erase(
     self->removeLinkedListNode(runtime, entry, runtime.getHeap());
   }
 
-  self->rehashIfNecessary(self, runtime);
+  if (shouldShrink(self->capacity_, self->size_))
+    self->rehash(self, runtime);
 
   return true;
 }
@@ -379,9 +360,8 @@ void OrderedHashMap::clear(Runtime &runtime) {
     auto entry =
         castToMapEntry(hashTable_.getNonNull(runtime)->at(runtime, i), runtime);
     // Delete every element reachable from the hash table.
-    while (entry) {
+    if (entry) {
       entry->markDeleted(runtime);
-      entry = entry->nextEntryInBucket.get(runtime);
     }
     // Clear every element in the hash table.
     hashTable_.getNonNull(runtime)->setNonPtr(

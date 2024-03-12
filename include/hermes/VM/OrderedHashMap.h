@@ -37,9 +37,6 @@ class HashMapEntry final : public GCCell {
   /// Next entry in insertion order.
   GCPointer<HashMapEntry> nextIterationEntry{nullptr};
 
-  /// Next entry in the hash table bucket.
-  GCPointer<HashMapEntry> nextEntryInBucket{nullptr};
-
   static constexpr CellKind getCellKind() {
     return CellKind::HashMapEntryKind;
   }
@@ -66,20 +63,24 @@ class HashMapEntry final : public GCCell {
 }; // HashMapEntry
 
 /// OrderedHashMap is a gc-managed hash map that maintains insertion order.
-/// The map contains two conceptual parts: a standard chained hash table,
-/// to store and lookup HermesValue; a linked list to maintain the insertion
-/// order.
+/// The map contains two conceptual parts: a standard hash table with open
+/// addressing, to store and lookup HermesValue; a linked list to maintain the
+/// insertion order.
 /// When an element is added, it's always appended to the end of the linked
-/// list. When an element is deleted, we mark it as deleted and remove it
-/// from the linked list, unless it's the last element.
-/// Iterators are pointers to the entries, which are always linked according
-/// to insertion order.
-/// When the size of the hash table becomes unreasonably large or small
-/// comparing to the number of alive elements, we will rehash the table.
-/// We always make sure that any entry at any moment can successfully find
-/// the next entry according to insertion order, and rely on GC to manage
-/// the "deleted" entries", free them when no more iterators are before
-/// that entry.
+/// list. When an element is deleted, we put a tombstone value in the hash table
+/// and mark the element as deleted, and remove it from the linked list, unless
+/// it's the last element.
+/// Iterators are pointers to the entries, which are always linked according to
+/// insertion order.
+/// When the number of alive elements and deleted elements exceeds threasholds,
+/// we will rehash the table. We always make sure that any entry at any moment
+/// can successfully find the next entry according to insertion order, and rely
+/// on GC to manage the "deleted" entries", free them when no more iterators are
+/// before that entry.
+/// We chose linear probing for open addressing. It's simple and possibly faster
+/// than quadratic probing because of memory locality. With a simple test case
+/// to insert integers as keys, we didn't see any performance gain with
+/// quadratic probing.
 class OrderedHashMap final : public GCCell {
   friend void OrderedHashMapBuildMeta(
       const GCCell *cell,
@@ -168,6 +169,10 @@ class OrderedHashMap final : public GCCell {
   /// Number of alive entries in the storage.
   uint32_t size_{0};
 
+  /// Number of deleted entries in the storage. They will be wiped during
+  /// rehash.
+  uint32_t deletedCount_{0};
+
   /// Hash a HermesValue to an index to our hash table.
   static uint32_t
   hashToBucket(Handle<OrderedHashMap> self, Runtime &runtime, Handle<> key) {
@@ -181,16 +186,64 @@ class OrderedHashMap final : public GCCell {
   /// Remove a node from the linked list.
   void removeLinkedListNode(Runtime &runtime, HashMapEntry *entry, GC &gc);
 
-  /// Lookup an entry with key as \p key in a given \p bucket.
-  HashMapEntry *
+  /// Lookup an entry with key as \p key in a given \p bucket (hash).
+  /// \return The pair of the entry found and the index for it. The entry can be
+  /// nullptr if the key doesn't exist. In that case, the index is the index of
+  /// the available bucket for the give key.
+  std::pair<HashMapEntry *, uint32_t>
   lookupInBucket(Runtime &runtime, uint32_t bucket, HermesValue key);
 
-  /// Adjust the capacity of the hashtable and rehash if necessary.
-  /// We make decisions based on the Load Factor (size / capacity).
-  /// Rehash if load factor is outside of the range of [0.25, 0.75].
-  static ExecutionStatus rehashIfNecessary(
-      Handle<OrderedHashMap> self,
-      Runtime &runtime);
+  /// Adjust the capacity of the hashtable and rehash.
+  /// The new capacity will be calculated by nextCapacity().
+  /// Note that this fun will always run rehash even if the new capacity is same
+  /// as before. In such case, all the deleted bucket will be removed and become
+  /// empty bucket.
+  /// \param beforeAdd if true, we use current size + 1 to calculate the new
+  /// capacity. Otherwise, we use current size to calculate the new capacity.
+  static ExecutionStatus
+  rehash(Handle<OrderedHashMap> self, Runtime &runtime, bool beforeAdd = false);
+
+  /// Determine if we should shrink the hash table basedon the current key count
+  /// and capacity.
+  static bool shouldShrink(uint32_t capacity, uint32_t keyCount) {
+    return 8 * keyCount <= capacity &&
+        capacity > OrderedHashMap::INITIAL_CAPACITY;
+  }
+
+  static const uint32_t kRehashFactor = 2;
+
+  /// Determine if we should rehash the hash table based on the current key
+  /// count, delete count and capacity.
+  static bool
+  shouldRehash(uint32_t capacity, uint32_t keyCount, uint32_t deleteCount) {
+    return kRehashFactor * (keyCount + deleteCount) >= capacity;
+  }
+
+  /// Calculate the next capacity based on the current capacity and key count.
+  static uint32_t nextCapacity(uint32_t capacity, uint32_t keyCount) {
+    if (!capacity)
+      return OrderedHashMap::INITIAL_CAPACITY;
+
+    if (shouldShrink(capacity, keyCount)) {
+      assert((capacity / kRehashFactor) >= OrderedHashMap::INITIAL_CAPACITY);
+      return capacity / kRehashFactor;
+    }
+
+    return capacity * kRehashFactor;
+  }
+
+  /// Check if the bucket is deleted or not.
+  static bool isDeleted(SmallHermesValue bucket) {
+    return bucket.isNull();
+  }
+
+  /// Mark the bucket as deleted.
+  static void
+  deleteBucket(Handle<OrderedHashMap> self, Runtime &runtime, uint32_t bucket) {
+    /// Use NullValue to indicate that the bucket is deleted.
+    self->hashTable_.getNonNull(runtime)->set(
+        runtime, bucket, SmallHermesValue::encodeNullValue());
+  }
 }; // OrderedHashMap
 } // namespace vm
 } // namespace hermes
