@@ -118,8 +118,8 @@ class JSMapImpl final : public JSObject {
          entry = self->storage_.getNonNull(runtime)->iteratorNext(
              runtime, entry.get())) {
       marker.flush();
-      HermesValue key = entry->key;
-      HermesValue value = entry->value;
+      SmallHermesValue key = entry->key;
+      SmallHermesValue value = entry->value;
       assert(!key.isEmpty() && "Invalid key encountered");
       assert(!value.isEmpty() && "Invalid value encountered");
       if (LLVM_UNLIKELY(
@@ -127,8 +127,8 @@ class JSMapImpl final : public JSObject {
                   callbackfn,
                   runtime,
                   thisArg,
-                  value,
-                  key,
+                  value.unboxToHV(runtime),
+                  key.unboxToHV(runtime),
                   self.getHermesValue()) == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -221,10 +221,10 @@ class JSMapIteratorImpl final : public JSObject {
       if (self->itr_) {
         switch (self->iterationKind_) {
           case IterationKind::Key:
-            value = self->itr_.getNonNull(runtime)->key;
+            value = self->itr_.getNonNull(runtime)->key.unboxToHV(runtime);
             break;
           case IterationKind::Value:
-            value = self->itr_.getNonNull(runtime)->value;
+            value = self->itr_.getNonNull(runtime)->value.unboxToHV(runtime);
             break;
           case IterationKind::Entry: {
             // If we are iterating both key and value, we need to create an
@@ -234,9 +234,9 @@ class JSMapIteratorImpl final : public JSObject {
               return ExecutionStatus::EXCEPTION;
             }
             auto arrHandle = *arrRes;
-            value = self->itr_.getNonNull(runtime)->key;
+            value = self->itr_.getNonNull(runtime)->key.unboxToHV(runtime);
             JSArray::setElementAt(arrHandle, runtime, 0, value);
-            value = self->itr_.getNonNull(runtime)->value;
+            value = self->itr_.getNonNull(runtime)->value.unboxToHV(runtime);
             JSArray::setElementAt(arrHandle, runtime, 1, value);
             value = arrHandle.getHermesValue();
             break;

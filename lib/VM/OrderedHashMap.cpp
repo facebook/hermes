@@ -122,7 +122,7 @@ std::pair<HashMapEntry *, uint32_t> OrderedHashMap::lookupInBucket(
     if (!isDeleted(shv)) {
       assert(shv.isObject());
       auto *entry = vmcast<HashMapEntry>(shv.getObject(runtime));
-      if (isSameValueZero(entry->key, key)) {
+      if (isSameValueZero(entry->key.unboxToHV(runtime), key)) {
         return {entry, bucket};
       }
     }
@@ -167,7 +167,7 @@ ExecutionStatus OrderedHashMap::rehash(
   while (entry) {
     if (!entry->isDeleted()) {
       marker.flush();
-      keyHandle = entry->key;
+      keyHandle = entry->key.unboxToHV(runtime);
       uint32_t bucket = hashToBucket(self, runtime, keyHandle);
       [[maybe_unused]] const uint32_t firstBucket = bucket;
       while (!newHashTable->at(runtime, bucket).isEmpty()) {
@@ -216,7 +216,7 @@ HermesValue OrderedHashMap::get(
   if (!entry) {
     return HermesValue::encodeUndefinedValue();
   }
-  return entry->value;
+  return entry->value.unboxToHV(runtime);
 }
 
 ExecutionStatus OrderedHashMap::insert(
@@ -228,13 +228,19 @@ ExecutionStatus OrderedHashMap::insert(
 
   // Find the bucket for this key. It the entry already exists, update the value
   // and return.
-  HashMapEntry *entry = nullptr;
-  std::tie(entry, bucket) =
-      self->lookupInBucket(runtime, bucket, key.getHermesValue());
-  if (entry) {
-    // Element for the key already exists, update value and return.
-    entry->value.set(value.get(), runtime.getHeap());
-    return ExecutionStatus::RETURNED;
+  {
+    // Note that SmallHermesValue::encodeHermesValue() may allocate, so we need
+    // to call it before getting raw pointer for entry.
+    auto shv =
+        SmallHermesValue::encodeHermesValue(value.getHermesValue(), runtime);
+    HashMapEntry *entry = nullptr;
+    std::tie(entry, bucket) =
+        self->lookupInBucket(runtime, bucket, key.getHermesValue());
+    if (entry) {
+      // Element for the key already exists, update value and return.
+      entry->value.set(shv, runtime.getHeap());
+      return ExecutionStatus::RETURNED;
+    }
   }
 
   // Run rehash if necessary before inserting.
@@ -246,6 +252,7 @@ ExecutionStatus OrderedHashMap::insert(
 
     // Find a new empty bucket after rehash.
     bucket = hashToBucket(self, runtime, key);
+    HashMapEntry *entry = nullptr;
     std::tie(entry, bucket) =
         self->lookupInBucket(runtime, bucket, key.getHermesValue());
     assert(!entry && "After rehash, we must be able to find an empty bucket");
@@ -260,9 +267,14 @@ ExecutionStatus OrderedHashMap::insert(
   if (LLVM_UNLIKELY(crtRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
+
+  // Note that SmallHermesValue::encodeHermesValue() may allocate, so we need to
+  // call it and set to newMapEntry one at a time.
   auto newMapEntry = runtime.makeHandle(std::move(*crtRes));
-  newMapEntry->key.set(key.get(), runtime.getHeap());
-  newMapEntry->value.set(value.get(), runtime.getHeap());
+  auto k = SmallHermesValue::encodeHermesValue(key.getHermesValue(), runtime);
+  newMapEntry->key.set(std::move(k), runtime.getHeap());
+  auto v = SmallHermesValue::encodeHermesValue(value.getHermesValue(), runtime);
+  newMapEntry->value.set(std::move(v), runtime.getHeap());
   // Set the newly inserted entry as the front of this bucket chain.
   self->hashTable_.getNonNull(runtime)->set(
       runtime,
