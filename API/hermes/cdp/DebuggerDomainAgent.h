@@ -90,6 +90,9 @@ class DebuggerDomainAgent : public DomainAgent {
   /// Extract state to be persisted across reloads.
   std::unique_ptr<DebuggerDomainState> getState();
 
+  /// Enables the Debugger domain without processing CDP message or sending a
+  /// CDP response. It will still send CDP notifications if needed.
+  void enable();
   /// Handles Debugger.enable request
   /// @cdp Debugger.enable If domain is already enabled, will return success.
   void enable(const m::debugger::EnableRequest &req);
