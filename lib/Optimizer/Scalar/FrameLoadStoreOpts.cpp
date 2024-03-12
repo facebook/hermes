@@ -136,6 +136,7 @@ class FunctionLoadStoreOptimizer {
       builder.setInsertionPoint(scope);
       auto *ASI = builder.createAllocStackInst(V->getName(), V->getType());
       auto [it, first] = variableAllocas_.try_emplace(V, ASI);
+      (void)first;
       assert(first && "Variable already has an alloca");
     }
   }
