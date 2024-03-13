@@ -14,7 +14,8 @@
     "flow-enums-runtime": "^0.0.6",
     "hermes-eslint": "0.20.1",
     "hermes-estree": "0.20.1",
-    "hermes-parser": "0.20.1"
+    "hermes-parser": "0.20.1",
+    "string-width": "4.2.3"
   },
   "peerDependencies": {
     "prettier": "^3.0.0 || ^2.7.1",
