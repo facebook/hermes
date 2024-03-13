@@ -22,7 +22,7 @@ export function testFixtures(
   only?: string = '',
 ) {
   const FIXTURES = glob
-    .sync(`${fixturesDir}/**/spec.js`)
+    .sync(`${fixturesDir}/**/spec.{js,ts}`)
     .map(file => {
       const parsed = path.parse(file);
       const contents = fs.readFileSync(file, 'utf8');

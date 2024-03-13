@@ -13,11 +13,13 @@
 import type {MapperOptions} from './flowImportTo';
 
 import {parse, print} from 'hermes-transform';
+import {parse as parseTS} from '@typescript-eslint/parser';
 import {visitorKeys as tsVisitorKeys} from '@typescript-eslint/visitor-keys';
 import flowToFlowDef from './flowToFlowDef';
 import {flowDefToTSDef} from './flowDefToTSDef';
 import {flowToJS} from './flowToJS';
 import {flowImportTo} from './flowImportTo';
+import {TSDefToFlowDef} from './TSDefToFlowDef';
 
 export async function translateFlowToFlowDef(
   code: string,
@@ -70,6 +72,32 @@ export async function translateFlowToJS(
   const jsAST = flowToJS(ast, code, scopeManager);
 
   return print(jsAST, code, prettierOptions);
+}
+
+/**
+ * This translator is very experimental and unstable.
+ *
+ * It is not written with productionizing it in mind, but instead used to evaluate how close Flow
+ * is to TypeScript.
+ *
+ * If you are going to use it anyways, you agree that you are calling a potentially broken function
+ * without any guarantee.
+ *
+ * @deprecated
+ */
+export async function unstable_translateTSDefToFlowDef(
+  code: string,
+  prettierOptions: {...} = {},
+): Promise<string> {
+  const ast = parseTS(code, {loc: true});
+  if (ast == null) {
+    throw `Failed to parse ${code} with @typescript-eslint/parser`;
+  }
+  const [flowAST, mutatedCode] = TSDefToFlowDef(code, ast, {
+    recoverFromErrors: false,
+  });
+
+  return print(flowAST, mutatedCode, prettierOptions);
 }
 
 export type {MapperOptions as FlowImportsMapperOptions};
