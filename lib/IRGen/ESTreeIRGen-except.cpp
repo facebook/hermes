@@ -33,6 +33,10 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
               tryStmt,
               tryStmt->_finalizer->getDebugLoc(),
               [this](ESTree::Node *node, ControlFlowChange, BasicBlock *) {
+                // This may be invoked multiple times if there are multiple
+                // returns/breaks.
+                FunctionContext::AllowRecompileRAII allowRecompile(
+                    *curFunction());
                 genStatement(cast<ESTree::TryStatementNode>(node)->_finalizer);
               });
         } else {
@@ -47,6 +51,9 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
       // emitNormalCleanup.
       [this, tryStmt]() {
         if (tryStmt->_finalizer) {
+          // We may be recompiling the finally block if there are returns/breaks
+          // in the body.
+          FunctionContext::AllowRecompileRAII allowRecompile(*curFunction());
           genStatement(tryStmt->_finalizer);
           Builder.setLocation(SourceErrorManager::convertEndToLocation(
               tryStmt->_finalizer->getSourceRange()));

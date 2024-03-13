@@ -20,3 +20,11 @@ try{
   }
 }
 
+(function () {
+  try{
+    return;
+    return;
+  } finally {
+    let x = 0;
+  }
+})();

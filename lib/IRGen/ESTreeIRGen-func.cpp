@@ -594,7 +594,7 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
       case sema::Decl::Kind::Const:
       case sema::Decl::Kind::Class:
         assert(
-            ((curFunction()->debugAllowRecompileCounter != 0) ^
+            ((curFunction()->debugAllowRecompileCounter != 0) ||
              (decl->customData == nullptr)) &&
             "customData can be bound only if recompiling AST");
 
@@ -631,7 +631,7 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
         // set. Ordinarily we shouldn't be evaluating the same declarations
         // twice, except when we are compiling the body of a "finally" handler.
         assert(
-            ((curFunction()->debugAllowRecompileCounter != 0) ^
+            ((curFunction()->debugAllowRecompileCounter != 0) ||
              (decl->customData == nullptr)) &&
             "customData can be bound only if recompiling AST");
 
@@ -666,7 +666,7 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
       case sema::Decl::Kind::GlobalProperty:
       case sema::Decl::Kind::UndeclaredGlobalProperty: {
         assert(
-            ((curFunction()->debugAllowRecompileCounter != 0) ^
+            ((curFunction()->debugAllowRecompileCounter != 0) ||
              (decl->customData == nullptr)) &&
             "customData can be bound only if recompiling AST");
 
