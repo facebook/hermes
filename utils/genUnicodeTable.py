@@ -693,6 +693,8 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
 
         print_template(
             """
+#ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
+
 static constexpr std::string_view UNICODE_DATA_STRING_POOL = "${string_pool}";
 
 static constexpr UnicodeRange UNICODE_RANGE_POOL[] = {
@@ -730,6 +732,8 @@ ${range_map_script_property}
 static constexpr RangeMapEntry unicodePropertyRangeMap_ScriptExtensions[] = {
 ${range_map_script_extensions_property}
 };
+
+#endif
     """,
             string_pool=string_pool,
             range_pool="\n".join(_range_pool()),
@@ -935,6 +939,8 @@ if __name__ == "__main__":
     unicode_properties.gather_script_properties()
     unicode_properties.gather_script_extension_properties()
     unicode_properties.print_template()
+    # Show information about bit sizes for the string and range pools.
+    # unicode_properties.log_metrics()
 
     casemap = CaseMap(
         unicode_data_lines=UnicodeDataFiles.get_lines("UnicodeData.txt"),

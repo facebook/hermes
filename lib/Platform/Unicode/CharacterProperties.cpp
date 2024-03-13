@@ -211,6 +211,8 @@ uint32_t canonicalize(uint32_t cp, bool unicode) {
   }
 }
 
+#ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
+
 /// Find a \p NameMapEntry by matching a string \p name.
 template <class T>
 const T *
@@ -340,5 +342,17 @@ bool addUnicodePropertyRanges(
 
   return true;
 }
+
+#else
+
+bool addUnicodePropertyRanges(
+    CodePointSet *receiver,
+    const std::string_view &propertyName,
+    const std::string_view &propertyValue,
+    bool inverted = false) {
+  return false;
+}
+
+#endif
 
 } // namespace hermes

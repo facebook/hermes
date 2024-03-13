@@ -2185,6 +2185,9 @@ void printHermesVersion(
 #ifdef HERMESVM_CONTIGUOUS_HEAP
       << "    Contiguous Heap\n"
 #endif
+#ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
+      << "    Unicode RegExp Property Escapes\n"
+#endif
       << "    Zip file input\n";
   }
 }
