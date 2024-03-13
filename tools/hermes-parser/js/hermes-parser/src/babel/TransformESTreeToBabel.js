@@ -987,6 +987,9 @@ function transformNode(node: ESNodeOrBabelNode): ESNodeOrBabelNode | null {
       };
       return node;
     }
+    case 'AsConstExpression': {
+      return node.expression;
+    }
 
     /**
      * Babel has a different format for Literals

@@ -159,6 +159,7 @@ export function isExpression(node /*: ESNode */) /*: node is Expression */ {
     node.type === 'ChainExpression' ||
     node.type === 'TypeCastExpression' ||
     node.type === 'AsExpression' ||
+    node.type === 'AsConstExpression' ||
     node.type === 'JSXFragment' ||
     node.type === 'JSXElement'
   );

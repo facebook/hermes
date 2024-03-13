@@ -1539,7 +1539,7 @@ export interface AsExpression extends BaseNode {
 }
 export interface AsConstExpression extends BaseNode {
   +type: 'AsConstExpression';
-  +expression: AsConstExpression;
+  +expression: Expression;
 }
 
 interface BaseInterfaceNode extends BaseNode {
