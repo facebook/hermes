@@ -2064,6 +2064,12 @@ UNSUPPORTED_FEATURES = [
     "u180e",
 ]
 
+# Mapping of Hermes features to test262 features, for use in dynamic feature
+# skipping.
+CONFIGURABLE_HERMES_FEATURES = {
+    "Unicode RegExp Property Escapes": "regexp-unicode-property-escapes",
+}
+
 PERMANENT_UNSUPPORTED_FEATURES = [
     "Atomics",
     "IsHTMLDDA",
