@@ -850,6 +850,7 @@ class Parser {
             return ClassAtom(CharacterClass::Words, ec == 'W' /* invert */);
           }
 
+#ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
           case 'p':
           case 'P': {
             if (flags_.unicode) {
@@ -870,6 +871,7 @@ class Parser {
               return ClassAtom(consumeCharacterEscape());
             }
           }
+#endif
 
           case 'b': {
             // "Return the CharSet containing the single character <BS>
@@ -1231,6 +1233,7 @@ class Parser {
         re_->pushCharClass({CharacterClass::Words, c == 'W' /* invert */});
         break;
 
+#ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
       case 'p':
       case 'P': {
         if (flags_.unicode) {
@@ -1256,6 +1259,7 @@ class Parser {
         }
         break;
       }
+#endif
 
         // Note backreferences may NOT begin with 0.
       case '1':
