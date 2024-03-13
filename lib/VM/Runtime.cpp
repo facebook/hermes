@@ -539,9 +539,11 @@ void Runtime::markRoots(
     acceptor.beginRootSection(RootAcceptor::Section::RuntimeInstanceVars);
     for (auto &clazz : rootClazzes_)
       acceptor.accept(clazz, "rootClass");
+#define RUNTIME_HV_FIELD_PROTOTYPE(name)
 #define RUNTIME_HV_FIELD_INSTANCE(name) acceptor.accept((name), #name);
 #define RUNTIME_HV_FIELD_INSTANCE_INIT(name, init) \
   RUNTIME_HV_FIELD_INSTANCE(name)
+#define RUNTIME_HV_FIELD_RUNTIMEMODULE(name)
 #include "hermes/VM/RuntimeHermesValueFields.def"
     acceptor.endRootSection();
   }
@@ -549,6 +551,9 @@ void Runtime::markRoots(
   {
     MarkRootsPhaseTimer timer(*this, RootAcceptor::Section::RuntimeModules);
     acceptor.beginRootSection(RootAcceptor::Section::RuntimeModules);
+#define RUNTIME_HV_FIELD_PROTOTYPE(name)
+#define RUNTIME_HV_FIELD_INSTANCE(name)
+#define RUNTIME_HV_FIELD_INSTANCE_INIT(name, init)
 #define RUNTIME_HV_FIELD_RUNTIMEMODULE(name) acceptor.accept(name);
 #include "hermes/VM/RuntimeHermesValueFields.def"
 #undef RUNTIME_HV_FIELD_RUNTIMEMODULE
@@ -609,6 +614,9 @@ void Runtime::markRoots(
     acceptor.beginRootSection(RootAcceptor::Section::Prototypes);
     // Prototypes.
 #define RUNTIME_HV_FIELD_PROTOTYPE(name) MARK(name);
+#define RUNTIME_HV_FIELD_INSTANCE(name)
+#define RUNTIME_HV_FIELD_INSTANCE_INIT(name, init)
+#define RUNTIME_HV_FIELD_RUNTIMEMODULE(name)
 #include "hermes/VM/RuntimeHermesValueFields.def"
 #undef RUNTIME_HV_FIELD_PROTOTYPE
     acceptor.acceptPtr(objectPrototypeRawPtr, "objectPrototype");

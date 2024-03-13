@@ -6,20 +6,19 @@
  */
 
 #ifndef RUNTIME_HV_FIELD_PROTOTYPE
-#define RUNTIME_HV_FIELD_PROTOTYPE(name)
+#error "RUNTIME_HV_FIELD_PROTOTYPE must be defined"
 #endif
 
 #ifndef RUNTIME_HV_FIELD_INSTANCE
-#define RUNTIME_HV_FIELD_INSTANCE(name)
+#error "RUNTIME_HV_FIELD_INSTANCE must be defined"
 #endif
 
 #ifndef RUNTIME_HV_FIELD_INSTANCE_INIT
-#define RUNTIME_HV_FIELD_INSTANCE_INIT(name, init) \
-  RUNTIME_HV_FIELD_INSTANCE(name)
+#error "RUNTIME_HV_FIELD_INSTANCE_INIT must be defined"
 #endif
 
 #ifndef RUNTIME_HV_FIELD_RUNTIMEMODULE
-#define RUNTIME_HV_FIELD_RUNTIMEMODULE(name)
+#error "RUNTIME_HV_FIELD_RUNTIMEMODULE must be defined"
 #endif
 
 RUNTIME_HV_FIELD_PROTOTYPE(objectPrototype)
