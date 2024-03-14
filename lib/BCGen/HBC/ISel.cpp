@@ -1475,9 +1475,10 @@ void HBCISel::generateCreateScopeInst(
     hermes::BasicBlock *next) {
   auto dstReg = encodeValue(Inst);
   Value *parent = Inst->getParentScope();
+  size_t scopeSize = Inst->getVariableScope()->getVariables().size();
   // Check if this is the top level scope.
   if (llvh::isa<EmptySentinel>(parent)) {
-    BCFGen_->emitCreateFunctionEnvironment(dstReg);
+    BCFGen_->emitCreateTopLevelEnvironment(dstReg, scopeSize);
   } else {
     BCFGen_->emitCreateEnvironment(
         dstReg,
@@ -1490,7 +1491,11 @@ void HBCISel::generateHBCCreateFunctionEnvironmentInst(
     hermes::HBCCreateFunctionEnvironmentInst *Inst,
     hermes::BasicBlock *next) {
   auto dstReg = encodeValue(Inst);
-  BCFGen_->emitCreateFunctionEnvironment(dstReg);
+  static_assert(
+      HBCCreateFunctionEnvironmentInst::kMaxScopeSize == UINT8_MAX,
+      "IR max size does not match bytecode");
+  BCFGen_->emitCreateFunctionEnvironment(
+      dstReg, Inst->getVariableScope()->getVariables().size());
 }
 
 void HBCISel::generateHBCProfilePointInst(

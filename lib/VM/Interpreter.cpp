@@ -2072,7 +2072,7 @@ tailCall:
             Environment::create(
                 runtime,
                 Handle<Environment>::vmcast_or_null(tmpHandle),
-                curCodeBlock->getEnvironmentSize()));
+                ip->iCreateFunctionEnvironment.op2));
 
         O1REG(CreateFunctionEnvironment) = envHV;
 #ifdef HERMES_ENABLE_DEBUGGER
@@ -2080,6 +2080,22 @@ tailCall:
 #endif
         tmpHandle = HermesValue::encodeUndefinedValue();
         ip = NEXTINST(CreateFunctionEnvironment);
+        DISPATCH;
+      }
+
+      CASE(CreateTopLevelEnvironment) {
+        CAPTURE_IP_ASSIGN(
+            HermesValue envHV,
+            Environment::create(
+                runtime,
+                Runtime::makeNullHandle<Environment>(),
+                ip->iCreateTopLevelEnvironment.op2));
+
+        O1REG(CreateTopLevelEnvironment) = envHV;
+#ifdef HERMES_ENABLE_DEBUGGER
+        FRAME.getDebugEnvironmentRef() = envHV;
+#endif
+        ip = NEXTINST(CreateTopLevelEnvironment);
         DISPATCH;
       }
 

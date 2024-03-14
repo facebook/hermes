@@ -3503,10 +3503,16 @@ class HBCCreateFunctionEnvironmentInst : public BaseScopeInst {
   enum { ParentScopeParamIdx = BaseScopeInst::LAST_IDX };
 
  public:
+  static constexpr size_t kMaxScopeSize = UINT8_MAX;
+
   explicit HBCCreateFunctionEnvironmentInst(
       VariableScope *scope,
       JSDynamicParam *parentScopeParam)
       : BaseScopeInst(ValueKind::HBCCreateFunctionEnvironmentInstKind, scope) {
+    assert(
+        scope->getVariables().size() <=
+            HBCCreateFunctionEnvironmentInst::kMaxScopeSize &&
+        "Scope is too large");
     pushOperand(parentScopeParam);
   }
   explicit HBCCreateFunctionEnvironmentInst(

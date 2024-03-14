@@ -1255,9 +1255,7 @@ void BytecodeDisassembler::disassemble(raw_ostream &OS) {
 
     dumpFunctionName(OS, *bcProvider_, funcId, functionHeader, options_);
     OS << "(" << functionHeader.paramCount() << " params, "
-       << functionHeader.frameSize() << " registers, "
-       << static_cast<unsigned int>(functionHeader.environmentSize())
-       << " symbols)";
+       << functionHeader.frameSize() << " registers)";
     OS << ":\n";
 
     auto *funcDebugOffsets = bcProvider_->getDebugOffsets(funcId);

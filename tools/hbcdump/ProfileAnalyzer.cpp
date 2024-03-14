@@ -426,9 +426,7 @@ class FunctionBasicBlockStatsVisitor : public hbc::PrettyDisassembleVisitor {
     os_ << "Function<" << functionName << ">";
     if (strncmp(functionName.data(), "global", functionName.size()) != 0) {
       os_ << "(" << functionHeader.paramCount() << " params, "
-          << functionHeader.frameSize() << " registers, "
-          << static_cast<unsigned int>(functionHeader.environmentSize())
-          << " symbols)";
+          << functionHeader.frameSize() << " registers)";
     }
     os_ << ":\n";
     os_ << "Percentage in trace: "

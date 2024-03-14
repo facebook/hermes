@@ -27,17 +27,21 @@ static bool runOptParentEnvironment(Function *F) {
   for (auto &BB : *F) {
     for (auto &I : BB) {
       if (auto *CSI = llvh::dyn_cast<CreateScopeInst>(&I)) {
-        // Convert a CreateScopeInst that creates a child of the current
-        // function's parent scope to HBCCreateFunctionEnvironmentInst.
-        if (llvh::isa<GetParentScopeInst>(CSI->getParentScope())) {
-          builder.setInsertionPoint(CSI);
-          builder.setLocation(CSI->getLocation());
-          auto *newInst = builder.createHBCCreateFunctionEnvironmentInst(
-              CSI->getVariableScope(), F->getParentScopeParam());
-          CSI->replaceAllUsesWith(newInst);
-          destroyer.add(CSI);
-          changed = true;
-        }
+        // Check that the parent is the parent of this function, and that the
+        // size will fit in the HBCCreateFunctionEnvironment instruction.
+        if (!llvh::isa<GetParentScopeInst>(CSI->getParentScope()) ||
+            CSI->getVariableScope()->getVariables().size() >
+                HBCCreateFunctionEnvironmentInst::kMaxScopeSize)
+          continue;
+
+        // Convert the CreateScopeInst to HBCCreateFunctionEnvironmentInst.
+        builder.setInsertionPoint(CSI);
+        builder.setLocation(CSI->getLocation());
+        auto *newInst = builder.createHBCCreateFunctionEnvironmentInst(
+            CSI->getVariableScope(), F->getParentScopeParam());
+        CSI->replaceAllUsesWith(newInst);
+        destroyer.add(CSI);
+        changed = true;
       } else if (auto *LRSI = llvh::dyn_cast<LIRResolveScopeInst>(&I)) {
         // Convert a ResolveScopeInst that starts from the parent scope
         // to HBCResolveParentEnvironmentInst.

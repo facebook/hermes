@@ -257,7 +257,15 @@ DEFINE_OPCODE_1(GetNewTarget, Reg8)
 /// Create a new environment, using the current function's enclosing environment
 /// as the parent.
 /// Arg1 is the destination.
-DEFINE_OPCODE_1(CreateFunctionEnvironment, Reg8)
+/// Arg2 is the size of the new environment.
+DEFINE_OPCODE_2(CreateFunctionEnvironment, Reg8, UInt8)
+
+/// Create a top level environment, without a parent.
+/// TODO: Consider removing this in favor of using CreateEnvironment by using a
+///       different scheme for encoding the top level environment.
+/// Arg1 is the destination.
+/// Arg2 is the size of the new environment.
+DEFINE_OPCODE_2(CreateTopLevelEnvironment, Reg8, UInt32)
 
 /// Create a new environment with the given parent.
 /// Arg1 is the destination.
