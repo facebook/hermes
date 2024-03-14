@@ -26,10 +26,12 @@ using namespace facebook::hermes::debugger;
 struct State::Private {
   /// Create a new state object, storing any values that should be persisted
   /// across sessions.
-  explicit Private(std::unique_ptr<DebuggerDomainState> debuggerState)
-      : debuggerDomainState(std::move(debuggerState)) {}
+  explicit Private(std::unique_ptr<DomainState> debuggerState)
+      : debuggerAgentState(std::move(debuggerState)) {
+    assert(debuggerAgentState != nullptr && "State cannot be null");
+  }
 
-  std::unique_ptr<DebuggerDomainState> debuggerDomainState;
+  std::unique_ptr<DomainState> debuggerAgentState;
 };
 
 State::State() : privateState_(nullptr) {}
@@ -54,11 +56,12 @@ class CDPAgentImpl {
       int32_t executionContextID,
       CDPDebugAPI &cdpDebugAPI,
       EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
-      SynchronizedOutboundCallback messageCallback);
+      SynchronizedOutboundCallback messageCallback,
+      State &state);
   ~CDPAgentImpl();
 
   /// Schedule initialization of handlers for each message domain.
-  void initializeDomainAgents(State state);
+  void initializeDomainAgents();
 
   /// Process a CDP command encoded in \p json.
   void handleCommand(std::string json);
@@ -84,10 +87,11 @@ class CDPAgentImpl {
     DomainAgents(
         int32_t executionContextID,
         CDPDebugAPI &cdpDebugAPI,
-        SynchronizedOutboundCallback messageCallback);
+        SynchronizedOutboundCallback messageCallback,
+        std::unique_ptr<DomainState> debuggerAgentState);
 
     /// Create the domain handlers and subscribing to any external events.
-    void initialize(State state);
+    void initialize();
 
     /// Releasing any domain handlers and event subscriptions.
     void dispose();
@@ -105,36 +109,34 @@ class CDPAgentImpl {
     void enableDebuggerDomain();
 
     /// Get the Debugger domain state to be persisted.
-    std::unique_ptr<DebuggerDomainState> getDebuggerDomainState();
+    std::unique_ptr<DomainState> getDebuggerAgentState();
 
    private:
     /// Execution context ID associated with the HermesRuntime. This is used by
     /// domain agents when sending notifications to identify the runtime the
     /// notification is coming from.
-    int32_t executionContextID_ TSA_GUARDED_BY(mutex_);
-    HermesRuntime &runtime_ TSA_GUARDED_BY(mutex_);
-    debugger::AsyncDebuggerAPI &asyncDebuggerAPI_ TSA_GUARDED_BY(mutex_);
-    ConsoleMessageStorage &consoleMessageStorage_ TSA_GUARDED_BY(mutex_);
-    ConsoleMessageDispatcher &consoleMessageDispatcher_ TSA_GUARDED_BY(mutex_);
+    int32_t executionContextID_;
+    HermesRuntime &runtime_;
+    debugger::AsyncDebuggerAPI &asyncDebuggerAPI_;
+    ConsoleMessageStorage &consoleMessageStorage_;
+    ConsoleMessageDispatcher &consoleMessageDispatcher_;
 
     /// Callback function for sending CDP response back. Same as the one in
     /// CDPAgentImpl.
-    SynchronizedOutboundCallback messageCallback_ TSA_GUARDED_BY(mutex_);
+    SynchronizedOutboundCallback messageCallback_;
 
     // Collection of objects that can be referenced by the debug client.
     // Object IDs generated in one domain can be referenced from another,
     // so this collection is shared amongst them all. No locking is needed,
     // as it's guaranteed that there will never be multiple domain agents
     // running at the same time.
-    std::shared_ptr<RemoteObjectsTable> objTable_ TSA_GUARDED_BY(mutex_);
+    std::shared_ptr<RemoteObjectsTable> objTable_;
 
-    std::unique_ptr<DebuggerDomainAgent> debuggerAgent_ TSA_GUARDED_BY(mutex_);
-    std::unique_ptr<RuntimeDomainAgent> runtimeAgent_ TSA_GUARDED_BY(mutex_);
-    std::unique_ptr<ProfilerDomainAgent> profilerAgent_ TSA_GUARDED_BY(mutex_);
+    std::unique_ptr<DebuggerDomainAgent> debuggerAgent_;
+    std::unique_ptr<RuntimeDomainAgent> runtimeAgent_;
+    std::unique_ptr<ProfilerDomainAgent> profilerAgent_;
 
-    /// Used for protecting getDebuggerDomainState() that might be called from
-    /// multiple threads.
-    std::mutex mutex_;
+    std::unique_ptr<DomainState> debuggerAgentState_;
   };
 
   /// Callback function for sending CDP response back. This is using the
@@ -153,15 +155,19 @@ CDPAgentImpl::CDPAgentImpl(
     int32_t executionContextID,
     CDPDebugAPI &cdpDebugAPI,
     EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
-    SynchronizedOutboundCallback messageCallback)
+    SynchronizedOutboundCallback messageCallback,
+    State &state)
     : messageCallback_(std::move(messageCallback)),
       runtimeTaskRunner_(
           cdpDebugAPI.asyncDebuggerAPI(),
-          enqueueRuntimeTaskCallback),
+          std::move(enqueueRuntimeTaskCallback)),
       domainAgents_(std::make_shared<DomainAgents>(
           executionContextID,
           cdpDebugAPI,
-          messageCallback_)) {}
+          messageCallback_,
+          (state && state->debuggerAgentState)
+              ? std::move(state->debuggerAgentState)
+              : std::make_unique<DomainState>())) {}
 
 CDPAgentImpl::~CDPAgentImpl() {
   // Call DomainAgents::dispose on the runtime thread, only keeping a copy of
@@ -190,16 +196,10 @@ CDPAgentImpl::~CDPAgentImpl() {
   messageCallback_.invalidate();
 }
 
-void CDPAgentImpl::initializeDomainAgents(State state) {
-  // Call DomainAgents::initialize on the runtime thread.
-  // NOTE: std::function is copyable but State isn't, so we need to pass it
-  // through a shared_ptr.
-  std::shared_ptr<State> stateHolder =
-      std::make_shared<State>(std::move(state));
+void CDPAgentImpl::initializeDomainAgents() {
   runtimeTaskRunner_.enqueueTask(
-      [domainAgents = domainAgents_,
-       stateHolder = std::move(stateHolder)](HermesRuntime &) {
-        domainAgents->initialize(std::move(*stateHolder));
+      [domainAgents = domainAgents_](HermesRuntime &) {
+        domainAgents->initialize();
       });
 }
 
@@ -236,41 +236,36 @@ void CDPAgentImpl::enableDebuggerDomain() {
 }
 
 State CDPAgentImpl::getState() {
-  // This function might not be called on the runtime thread. Functions on
-  // DomainAgents expect to be called on the runtime thread because they
-  // manipulate the runtime. In this case, it's still fine to call
-  // getDebuggerDomainState() because internally it's protected by a mutex so no
-  // DomainAgents functions can simultaneously manipulate the runtime and get
-  // the state.
-  return State(std::make_unique<State::Private>(
-      domainAgents_->getDebuggerDomainState()));
+  return State(
+      std::make_unique<State::Private>(domainAgents_->getDebuggerAgentState()));
 }
 
 CDPAgentImpl::DomainAgents::DomainAgents(
     int32_t executionContextID,
     CDPDebugAPI &cdpDebugAPI,
-    SynchronizedOutboundCallback messageCallback)
+    SynchronizedOutboundCallback messageCallback,
+    std::unique_ptr<DomainState> debuggerAgentState)
     : executionContextID_(executionContextID),
       runtime_(cdpDebugAPI.runtime()),
       asyncDebuggerAPI_(cdpDebugAPI.asyncDebuggerAPI()),
       consoleMessageStorage_(cdpDebugAPI.consoleMessageStorage_),
       consoleMessageDispatcher_(cdpDebugAPI.consoleMessageDispatcher_),
       messageCallback_(std::move(messageCallback)),
-      objTable_(std::make_shared<RemoteObjectsTable>()) {}
+      objTable_(std::make_shared<RemoteObjectsTable>()),
+      debuggerAgentState_(std::move(debuggerAgentState)) {
+  assert(
+      debuggerAgentState_ != nullptr &&
+      "debuggerAgentState_ shouldn't ever be null");
+}
 
-void CDPAgentImpl::DomainAgents::initialize(State state) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  std::unique_ptr<DebuggerDomainState> debuggerState = nullptr;
-  if (state) {
-    debuggerState = std::move(state->debuggerDomainState);
-  }
+void CDPAgentImpl::DomainAgents::initialize() {
   debuggerAgent_ = std::make_unique<DebuggerDomainAgent>(
       executionContextID_,
       runtime_,
       asyncDebuggerAPI_,
       messageCallback_,
       objTable_,
-      std::move(debuggerState));
+      *debuggerAgentState_);
   runtimeAgent_ = std::make_unique<RuntimeDomainAgent>(
       executionContextID_,
       runtime_,
@@ -284,7 +279,6 @@ void CDPAgentImpl::DomainAgents::initialize(State state) {
 }
 
 void CDPAgentImpl::DomainAgents::dispose() {
-  std::lock_guard<std::mutex> lock(mutex_);
   debuggerAgent_.reset();
   runtimeAgent_.reset();
   profilerAgent_.reset();
@@ -292,7 +286,6 @@ void CDPAgentImpl::DomainAgents::dispose() {
 
 void CDPAgentImpl::DomainAgents::handleCommand(
     std::shared_ptr<message::Request> command) {
-  std::lock_guard<std::mutex> lock(mutex_);
   size_t domainLength = command->method.find('.');
   if (domainLength == std::string::npos) {
     messageCallback_(message::makeErrorResponse(
@@ -377,22 +370,16 @@ void CDPAgentImpl::DomainAgents::handleCommand(
 }
 
 void CDPAgentImpl::DomainAgents::enableRuntimeDomain() {
-  std::lock_guard<std::mutex> lock(mutex_);
   runtimeAgent_->enable();
 }
 
 void CDPAgentImpl::DomainAgents::enableDebuggerDomain() {
-  std::lock_guard<std::mutex> lock(mutex_);
   debuggerAgent_->enable();
 }
 
-std::unique_ptr<DebuggerDomainState>
-CDPAgentImpl::DomainAgents::getDebuggerDomainState() {
-  std::lock_guard<std::mutex> lock(mutex_);
-  if (!debuggerAgent_) {
-    return nullptr;
-  }
-  return debuggerAgent_->getState();
+std::unique_ptr<DomainState>
+CDPAgentImpl::DomainAgents::getDebuggerAgentState() {
+  return debuggerAgentState_->copy();
 }
 
 std::unique_ptr<CDPAgent> CDPAgent::create(
@@ -419,8 +406,9 @@ CDPAgent::CDPAgent(
           executionContextID,
           cdpDebugAPI,
           enqueueRuntimeTaskCallback,
-          SynchronizedOutboundCallback(messageCallback))) {
-  impl_->initializeDomainAgents(std::move(state));
+          SynchronizedOutboundCallback(messageCallback),
+          state)) {
+  impl_->initializeDomainAgents();
 }
 
 CDPAgent::~CDPAgent() {}

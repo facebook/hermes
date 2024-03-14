@@ -16,6 +16,7 @@
 #include <hermes/hermes.h>
 
 #include "DomainAgent.h"
+#include "DomainState.h"
 
 namespace facebook {
 namespace hermes {
@@ -34,7 +35,17 @@ struct HermesBreakpoint {
 using CDPBreakpointID = uint32_t;
 
 /// Description of where breakpoints should be created.
-struct CDPBreakpointDescription {
+struct CDPBreakpointDescription : public StateValue {
+  ~CDPBreakpointDescription() override = default;
+  std::unique_ptr<StateValue> copy() const override {
+    auto value = std::make_unique<CDPBreakpointDescription>();
+    value->line = line;
+    value->column = column;
+    value->condition = condition;
+    value->url = url;
+    return value;
+  }
+
   /// Determines whether this breakpoint can be persisted across sessions
   bool persistable() const {
     // Only persist breakpoints that can apply to future scripts (i.e.
@@ -67,11 +78,6 @@ struct HermesBreakpointLocation {
   debugger::SourceLocation location;
 };
 
-struct DebuggerDomainState {
-  std::unordered_map<CDPBreakpointID, CDPBreakpointDescription>
-      breakpointDescriptions;
-};
-
 /// Handler for the "Debugger" domain of CDP. Accepts events from the runtime,
 /// and CDP requests from the debug client belonging to the "Debugger" domain.
 /// Produces CDP responses and events belonging to the "Debugger" domain. All
@@ -84,11 +90,8 @@ class DebuggerDomainAgent : public DomainAgent {
       debugger::AsyncDebuggerAPI &asyncDebugger,
       SynchronizedOutboundCallback messageCallback,
       std::shared_ptr<RemoteObjectsTable> objTable_,
-      std::unique_ptr<DebuggerDomainState> state);
+      DomainState &state);
   ~DebuggerDomainAgent();
-
-  /// Extract state to be persisted across reloads.
-  std::unique_ptr<DebuggerDomainState> getState();
 
   /// Enables the Debugger domain without processing CDP message or sending a
   /// CDP response. It will still send CDP notifications if needed.
@@ -181,6 +184,8 @@ class DebuggerDomainAgent : public DomainAgent {
   /// CDP breakpoint IDs are assigned by the DebuggerDomainAgent. Keep track of
   /// the next available ID.
   CDPBreakpointID nextBreakpointID_ = 1;
+
+  DomainState &state_;
 
   /// Whether the currently installed breakpoints actually take effect. If
   /// they're supposed to be inactive, then debugger agent will automatically
