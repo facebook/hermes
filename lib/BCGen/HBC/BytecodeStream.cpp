@@ -7,6 +7,9 @@
 
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 
+#include "hermes/BCGen/HBC/Bytecode.h"
+#include "hermes/BCGen/HBC/DebugInfo.h"
+
 using namespace hermes;
 using namespace hbc;
 

@@ -8,27 +8,19 @@
 #ifndef HERMES_BCGEN_HBC_BYTECODESTREAM_H
 #define HERMES_BCGEN_HBC_BYTECODESTREAM_H
 
-#include "llvh/Support/SHA1.h"
-#include "llvh/Support/raw_ostream.h"
-
 #include "hermes/BCGen/Exceptions.h"
-#include "hermes/BCGen/HBC/Bytecode.h"
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
-#include "hermes/BCGen/HBC/DebugInfo.h"
 #include "hermes/BCGen/HBC/StreamVector.h"
 #include "hermes/Public/Buffer.h"
 #include "hermes/Support/SHA1.h"
 #include "hermes/Utils/Options.h"
 
-namespace llvh {
-class raw_ostream;
-} // namespace llvh
+#include "llvh/Support/SHA1.h"
+#include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
 struct RegExpTableEntry;
 namespace hbc {
-using llvh::ArrayRef;
-using llvh::raw_ostream;
 
 class BytecodeFunction;
 class BytecodeModule;
@@ -38,7 +30,7 @@ class BytecodeSerializer {
       BytecodeSerializer &);
 
   /// Output Stream
-  raw_ostream &os_;
+  llvh::raw_ostream &os_;
   // Module being serialized.
   BytecodeModule *bytecodeModule_;
   /// Options controlling bytecode generation.
@@ -60,7 +52,7 @@ class BytecodeSerializer {
   static constexpr uint32_t INFO_ALIGNMENT = 4;
 
   template <typename T>
-  void writeBinaryArray(const ArrayRef<T> array) {
+  void writeBinaryArray(const llvh::ArrayRef<T> array) {
     size_t size = sizeof(T) * array.size();
     if (!isLayout_) {
       outputHasher_.update(llvh::ArrayRef<uint8_t>(
@@ -72,7 +64,7 @@ class BytecodeSerializer {
 
   template <typename T>
   void writeBinary(const T &structure) {
-    return writeBinaryArray(ArrayRef<T>{&structure, 1});
+    return writeBinaryArray(llvh::ArrayRef<T>{&structure, 1});
   }
 
   /// Padding the binary according to the \p alignment.
@@ -128,7 +120,7 @@ class BytecodeSerializer {
 
  public:
   explicit BytecodeSerializer(
-      raw_ostream &OS,
+      llvh::raw_ostream &OS,
       BytecodeGenerationOptions options = BytecodeGenerationOptions::defaults())
       : os_(OS), options_(options) {}
 
