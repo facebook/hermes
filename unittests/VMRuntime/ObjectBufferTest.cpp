@@ -144,6 +144,8 @@ TEST_F(ObjectBufferTest, TestNewObjectWithBuffer) {
   BFG->setHighestWriteCacheIndex(255);
   BFG->bytecodeGenerationComplete();
   auto F = Builder.createTopLevelFunction(true);
+  F->addJSThisParam();
+  F->setExpectedParamCountIncludingThis(1);
   BMG.addFunction(F);
   BMG.setFunctionGenerator(F, std::move(BFG));
 

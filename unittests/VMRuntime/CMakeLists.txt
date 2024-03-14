@@ -15,12 +15,12 @@ set(RTSources
   ArrayStorageTest.cpp
   Base64UtilTest.cpp
   BigIntPrimitiveTest.cpp
-  # BytecodeProviderTest.cpp
+  BytecodeProviderTest.cpp
   CallResultTest.cpp
   CardObjectBoundaryNCTest.cpp
   CardTableNCTest.cpp
   CastingTest.cpp
-  # CodeCoverageProfilerTest.cpp
+  CodeCoverageProfilerTest.cpp
   CopyableVectorTest.cpp
   CrashManagerTest.cpp
   DateUtilTest.cpp
@@ -37,13 +37,13 @@ set(RTSources
   GCOOMTest.cpp
   GCReturnUnusedMemoryTest.cpp
   GCSanitizeHandlesTest.cpp
-  # HeapSnapshotTest.cpp
+  HeapSnapshotTest.cpp
   HermesValueTest.cpp
   HiddenClassTest.cpp
   IdentifierTableTest.cpp
   InstrumentationAPITest.cpp
   InternalPropertiesTest.cpp
-  # InterpreterTest.cpp
+  InterpreterTest.cpp
   JSLibTest.cpp
   JSONParseTest.cpp
   JSTypedArrayTest.cpp
@@ -51,19 +51,19 @@ set(RTSources
   NativeFunctionTest.cpp
   NativeStateTest.cpp
   MarkBitArrayNCTest.cpp
-  # ObjectBufferTest.cpp
+  ObjectBufferTest.cpp
   ObjectModelTest.cpp
   OperationsTest.cpp
   PredefinedStringsTest.cpp
   HandleTest.cpp
   RuntimeConfigTest.cpp
-  # SamplingHeapProfilerTest.cpp
-  # SamplingProfilerTest.cpp
+  SamplingHeapProfilerTest.cpp
+  SamplingProfilerTest.cpp
   SegmentedArrayTest.cpp
   SmallHermesValueTest.cpp
   SmallXStringTest.cpp
-  # StaticBuiltinsTest.cpp
-  # StackTracesTreeTest.cpp
+  StaticBuiltinsTest.cpp
+  StackTracesTreeTest.cpp
   StorageProviderTest.cpp
   StringBuilderTest.cpp
   StringPrimitiveTest.cpp
