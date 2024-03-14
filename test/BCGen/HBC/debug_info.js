@@ -64,27 +64,15 @@ function Fc() {
 
 // CHECK:Debug lexical table:
 // CHECK-NEXT:  0x{{[0-9a-f]+}}  lexical parent: none, variable count: 0
-// CHECK-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 0, variable count: 2
-// CHECK-NEXT:    "v1a"
-// CHECK-NEXT:    "v2a"
-// CHECK-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 0, variable count: 1
-// CHECK-NEXT:    "v1b"
-// CHECK-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 0, variable count: 2
-// CHECK-NEXT:    "v1c"
-// CHECK-NEXT:    "Fcc"
-// CHECK-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 3, variable count: 1
-// CHECK-NEXT:    "v1cc"
+// CHECK-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 0, variable count: 0
+// CHECK-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 0, variable count: 0
+// CHECK-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 0, variable count: 0
+// CHECK-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 3, variable count: 0
 // CHECK-NEXT:  0x{{[0-9a-f]+}}  end of debug lexical table
 // UNICODE:Debug lexical table:
 // UNICODE-NEXT:  0x{{[0-9a-f]+}}  lexical parent: none, variable count: 0
-// UNICODE-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 0, variable count: 2
-// UNICODE-NEXT:    "v1a"
-// UNICODE-NEXT:    "v2a"
-// UNICODE-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 0, variable count: 1
-// UNICODE-NEXT:    "v1b"
-// UNICODE-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 0, variable count: 2
-// UNICODE-NEXT:    "v1c"
-// UNICODE-NEXT:    "Fcc"
-// UNICODE-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 3, variable count: 1
-// UNICODE-NEXT:    "v1cc"
+// UNICODE-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 0, variable count: 0
+// UNICODE-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 0, variable count: 0
+// UNICODE-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 0, variable count: 0
+// UNICODE-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 3, variable count: 0
 // UNICODE-NEXT:  0x{{[0-9a-f]+}}  end of debug lexical table

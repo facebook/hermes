@@ -321,11 +321,6 @@ void HBCISel::addDebugLexicalInfo() {
       break;
     }
   }
-
-  std::vector<Identifier> names;
-  for (const Variable *var : F_->getFunctionScope()->getVariables())
-    names.push_back(var->getName());
-  BCFGen_->setDebugVariableNames(std::move(names));
 }
 
 void HBCISel::populatePropertyCachingInfo() {
