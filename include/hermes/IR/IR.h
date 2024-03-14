@@ -1666,13 +1666,10 @@ class VariableScope : public Value {
   /// The variables associated with this scope.
   VariableListType variables_;
 
- protected:
-  /// VariableScope is abstract and should not be constructed directly. Use a
-  /// subclass such as Function.
-  VariableScope(ValueKind kind, Function *function)
-      : Value(kind), function_(function) {}
-
  public:
+  VariableScope(Function *function)
+      : Value(ValueKind::VariableScopeKind), function_(function) {}
+
   /// \return the function where the scope is declared.
   Function *getFunction() const {
     return function_;
@@ -1699,16 +1696,7 @@ class VariableScope : public Value {
   }
 
   static bool classof(const Value *V) {
-    return HERMES_IR_KIND_IN_CLASS(V->getKind(), VariableScope);
-  }
-};
-
-class FuncVariableScope : public VariableScope {
- public:
-  FuncVariableScope(Function *function)
-      : VariableScope(ValueKind::FuncVariableScopeKind, function) {}
-  static bool classof(const Value *V) {
-    return V->getKind() == ValueKind::FuncVariableScopeKind;
+    return V->getKind() == ValueKind::VariableScopeKind;
   }
 };
 
@@ -1756,7 +1744,7 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   Module *parent_;
 
   /// The function scope - it is always the first scope in the scope list.
-  FuncVariableScope functionScope_;
+  VariableScope functionScope_;
 
   /// The basic blocks in this function.
   BasicBlockListType BasicBlockList{};
