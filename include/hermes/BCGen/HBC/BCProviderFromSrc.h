@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_BCGEN_HBC_BYTECODEPROVIDERFROMSRC_H
-#define HERMES_BCGEN_HBC_BYTECODEPROVIDERFROMSRC_H
+#ifndef HERMES_BCGEN_HBC_BCPROVIDERFROMSRC_H
+#define HERMES_BCGEN_HBC_BCPROVIDERFROMSRC_H
 
+#include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/BCGen/HBC/Bytecode.h"
-#include "hermes/BCGen/HBC/BytecodeDataProvider.h"
 
 #include "llvh/ADT/Optional.h"
 
@@ -223,4 +223,4 @@ class BCProviderLazy final : public BCProviderBase {
 } // namespace hbc
 } // namespace hermes
 
-#endif // HERMES_BCGEN_HBC_BYTECODEPROVIDERFROMSRC_H
+#endif // HERMES_BCGEN_HBC_BCPROVIDERFROMSRC_H

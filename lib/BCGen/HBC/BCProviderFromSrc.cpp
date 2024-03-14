@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
+#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/Parser/JSParser.h"

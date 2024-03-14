@@ -8,7 +8,7 @@
 #ifndef HERMES_BCGEN_HBC_BYTECODEDISASSEMBLER_H
 #define HERMES_BCGEN_HBC_BYTECODEDISASSEMBLER_H
 
-#include "hermes/BCGen/HBC/BytecodeDataProvider.h"
+#include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/BCGen/HBC/DisassemblyOptions.h"
 #include "hermes/BCGen/SerializedLiteralGenerator.h"
 #include "hermes/Inst/Inst.h"

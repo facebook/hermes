@@ -33,8 +33,8 @@
 /// If, on the other hand, it is faster, then we can focus on higher level
 /// optimizations.
 //===----------------------------------------------------------------------===//
+#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Domain.h"
 #include "hermes/VM/Operations.h"

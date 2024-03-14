@@ -10,9 +10,9 @@
 #include "llvh/Support/Compiler.h"
 
 #include "hermes/ADT/ManagedChunkedList.h"
-#include "hermes/BCGen/HBC/BytecodeDataProvider.h"
+#include "hermes/BCGen/HBC/BCProvider.h"
+#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/DebuggerAPI.h"
 #include "hermes/Platform/Logging.h"
 #include "hermes/Public/JSOutOfMemoryError.h"

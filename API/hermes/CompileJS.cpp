@@ -7,7 +7,7 @@
 
 #include "CompileJS.h"
 
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
+#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "hermes/Optimizer/PassManager/Pipeline.h"
 #include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/Support/Algorithms.h"

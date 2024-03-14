@@ -7,8 +7,8 @@
 
 #include "hermes/BCGen/HBC/BytecodeFormConverter.h"
 
+#include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/BCGen/HBC/Bytecode.h"
-#include "hermes/BCGen/HBC/BytecodeDataProvider.h"
 #include "hermes/Inst/Inst.h"
 #include "hermes/Inst/InstDecode.h"
 #include "hermes/Support/Algorithms.h"

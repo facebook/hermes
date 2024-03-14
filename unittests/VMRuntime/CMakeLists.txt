@@ -15,7 +15,7 @@ set(RTSources
   ArrayStorageTest.cpp
   Base64UtilTest.cpp
   BigIntPrimitiveTest.cpp
-  BytecodeProviderTest.cpp
+  BCProviderTest.cpp
   CallResultTest.cpp
   CardObjectBoundaryNCTest.cpp
   CardTableNCTest.cpp

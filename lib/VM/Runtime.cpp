@@ -8,8 +8,8 @@
 #define DEBUG_TYPE "vm"
 #include "hermes/VM/Runtime.h"
 
-#include "hermes/BCGen/HBC/BytecodeDataProvider.h"
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
+#include "hermes/BCGen/HBC/BCProvider.h"
+#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Platform/Logging.h"

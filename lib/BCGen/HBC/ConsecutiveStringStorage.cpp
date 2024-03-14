@@ -8,7 +8,7 @@
 #define DEBUG_TYPE "stringstorage"
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
 
-#include "hermes/BCGen/HBC/BytecodeDataProvider.h"
+#include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/Support/HashString.h"
 #include "hermes/Support/JenkinsHash.h"
 #include "hermes/Support/Statistic.h"

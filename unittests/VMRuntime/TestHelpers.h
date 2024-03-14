@@ -8,8 +8,8 @@
 #ifndef HERMES_UNITTESTS_VMRUNTIME_TESTHELPERS_H
 #define HERMES_UNITTESTS_VMRUNTIME_TESTHELPERS_H
 
+#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/Public/GCConfig.h"
 #include "hermes/Public/JSOutOfMemoryError.h"
 #include "hermes/Public/RuntimeConfig.h"

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_BCGEN_HBC_BYTECODEDATAPROVIDER_H
-#define HERMES_BCGEN_HBC_BYTECODEDATAPROVIDER_H
+#ifndef HERMES_BCGEN_HBC_BCPROVIDER_H
+#define HERMES_BCGEN_HBC_BCPROVIDER_H
 
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/BCGen/HBC/DebugInfo.h"
@@ -513,4 +513,4 @@ class BCProviderFromBuffer final : public BCProviderBase {
 } // namespace hbc
 } // namespace hermes
 
-#endif // HERMES_BCGEN_HBC_BYTECODEDATAPROVIDER_H
+#endif // HERMES_BCGEN_HBC_BCPROVIDER_H

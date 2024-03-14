@@ -8,7 +8,7 @@
 #ifndef HERMES_VM_RUNTIMEMODULE_H
 #define HERMES_VM_RUNTIMEMODULE_H
 
-#include "hermes/BCGen/HBC/BytecodeDataProvider.h"
+#include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/Public/DebuggerTypes.h"
 #include "hermes/Support/HashString.h"
 #include "hermes/VM/CodeBlock.h"

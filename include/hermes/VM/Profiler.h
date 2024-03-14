@@ -32,7 +32,7 @@
 #endif
 
 #if defined(HERMESVM_PROFILER_JSFUNCTION)
-#include "hermes/BCGen/HBC/BytecodeDataProvider.h"
+#include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/VM/SymbolID.h"
 
 namespace hermes {

@@ -7,7 +7,7 @@
 
 #include "hermes/VM/RuntimeModule.h"
 
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
+#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "hermes/Support/PerfSection.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Domain.h"

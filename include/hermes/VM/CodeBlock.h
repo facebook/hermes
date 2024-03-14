@@ -8,7 +8,7 @@
 #ifndef HERMES_VM_CODEBLOCK_H
 #define HERMES_VM_CODEBLOCK_H
 
-#include "hermes/BCGen/HBC/BytecodeDataProvider.h"
+#include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/Inst/Inst.h"
 #include "hermes/Support/SourceErrorManager.h"

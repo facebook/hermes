@@ -10,7 +10,7 @@
 #include "hermes_abi/hermes_abi.h"
 
 #include "hermes/ADT/ManagedChunkedList.h"
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
+#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/HostModel.h"

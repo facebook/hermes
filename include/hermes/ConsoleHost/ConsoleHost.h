@@ -8,7 +8,7 @@
 #ifndef HERMES_CONSOLEHOST_CONSOLEHOST_H
 #define HERMES_CONSOLEHOST_CONSOLEHOST_H
 
-#include "hermes/BCGen/HBC/BytecodeDataProvider.h"
+#include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/CompilerDriver/CompilerDriver.h"
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/MemorySizeParser.h"

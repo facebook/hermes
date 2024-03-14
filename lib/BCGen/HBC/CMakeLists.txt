@@ -9,8 +9,8 @@ add_hermes_library(hermesHBCBackend
   Bytecode.cpp
   BytecodeStream.cpp
   BytecodeGenerator.cpp
-  BytecodeDataProvider.cpp
-  BytecodeProviderFromSrc.cpp
+  BCProvider.cpp
+  BCProviderFromSrc.cpp
   BytecodeDisassembler.cpp
   BytecodeFormConverter.cpp
   ConsecutiveStringStorage.cpp
@@ -34,7 +34,7 @@ add_hermes_library(hermesHBCBackend
 )
 
 add_hermes_library(hermesHBCBackendLean
-  BytecodeDataProvider.cpp
+  BCProvider.cpp
   ConsecutiveStringStorage.cpp
   DebugInfo.cpp
   SimpleBytecodeBuilder.cpp

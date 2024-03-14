@@ -8,9 +8,9 @@
 #ifndef HERMES_BCGEN_HBC_HBC_H
 #define HERMES_BCGEN_HBC_HBC_H
 
+#include "hermes/BCGen/HBC/BCProvider.h"
+#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "hermes/BCGen/HBC/Bytecode.h"
-#include "hermes/BCGen/HBC/BytecodeDataProvider.h"
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/IR/IR.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/Support/SHA1.h"

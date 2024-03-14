@@ -8,8 +8,8 @@
 #ifndef HERMES_COMPILERDRIVER_COMPILERDRIVER_H
 #define HERMES_COMPILERDRIVER_COMPILERDRIVER_H
 
-#include "hermes/BCGen/HBC/BytecodeDataProvider.h"
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
+#include "hermes/BCGen/HBC/BCProvider.h"
+#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "llvh/Support/raw_ostream.h"
 
 namespace hermes {

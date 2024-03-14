@@ -7,7 +7,7 @@
 
 #include "TracingRuntime.h"
 
-#include <hermes/BCGen/HBC/BytecodeDataProvider.h>
+#include <hermes/BCGen/HBC/BCProvider.h>
 #include <hermes/Platform/Logging.h>
 #include <hermes/Support/Algorithms.h>
 #include <hermes/Support/JSONEmitter.h>
