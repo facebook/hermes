@@ -82,6 +82,9 @@ class BytecodeFunction {
   void setInfoOffset(uint32_t offset) {
     header_.infoOffset = offset;
   }
+  uint32_t getInfoOffset() const {
+    return header_.infoOffset;
+  }
 
   bool isStrictMode() const {
     return header_.flags.strictMode;

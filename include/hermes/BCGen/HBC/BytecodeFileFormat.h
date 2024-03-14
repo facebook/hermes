@@ -319,34 +319,44 @@ struct SmallFuncHeader {
 
   FunctionHeaderFlag flags{};
 
-  /// Make a small header equivalent to 'large' if all values fit,
-  /// else set overflowed with large.infoOffset as large's offset.
+  /// Make a small header equivalent to \p large, which is known to fit.
   SmallFuncHeader(const FunctionHeader &large) {
+    assert(canFitInSmallHeader(large) && "header does not fit");
     std::memset(this, 0, sizeof(SmallFuncHeader)); // Avoid leaking junk.
 
-#define CHECK_COPY_FIELD(api_type, store_type, name, bits) \
-  if (large.name > (1U << bits) - 1) {                     \
-    setLargeHeaderOffset(large.infoOffset);                \
-    return;                                                \
-  }                                                        \
-  name = large.name;
+#define COPY_FIELD(api_type, store_type, name, bits) name = large.name;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wtype-limits"
-    FUNC_HEADER_FIELDS(CHECK_COPY_FIELD)
+    FUNC_HEADER_FIELDS(COPY_FIELD)
 #pragma GCC diagnostic pop
-#undef CHECK_COPY_FIELD
+#undef COPY_FIELD
 
     flags = large.flags;
-    assert(!flags.overflowed);
   }
 
-  void setLargeHeaderOffset(uint32_t largeHeaderOffset) {
+  /// Make a small header that stores an offset to a full size FunctionHeader at
+  /// \p largeHeaderOffset.
+  SmallFuncHeader(uint32_t largeHeaderOffset) {
+    std::memset(this, 0, sizeof(SmallFuncHeader)); // Avoid leaking junk.
     flags.overflowed = true;
     // Can use any fields to store the large offset; pick two big ones.
     offset = largeHeaderOffset & 0xffff;
     infoOffset = largeHeaderOffset >> 16;
   }
 
+  /// Check if the fields in \p large will fit in a small header.
+  /// \return true if it will fit, or false if any of the fields would overflow.
+  static bool canFitInSmallHeader(const FunctionHeader &large) {
+#define CHECK_FIELD(api_type, store_type, name, bits) \
+  if (large.name > (1U << bits) - 1)                  \
+    return false;
+    FUNC_HEADER_FIELDS(CHECK_FIELD)
+#undef CHECK_FIELD
+    return true;
+  }
+
+  /// Get the offset of the large header from a small header that is known to
+  /// have overflowed.
   uint32_t getLargeHeaderOffset() const {
     assert(flags.overflowed);
     return (infoOffset << 16) | offset;

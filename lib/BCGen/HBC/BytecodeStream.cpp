@@ -83,7 +83,10 @@ void BytecodeSerializer::serializeFunctionTable(BytecodeModule &BM) {
       entry->mutableFlags().hasDebugInfo = false;
     }
     FunctionHeader header = entry->getHeader();
-    writeBinary(SmallFuncHeader(header));
+    if (!SmallFuncHeader::canFitInSmallHeader(header))
+      writeBinary(SmallFuncHeader(entry->getInfoOffset()));
+    else
+      writeBinary(SmallFuncHeader(header));
   }
 }
 
@@ -235,7 +238,7 @@ void BytecodeSerializer::serializeFunctionInfo(BytecodeFunction &BF) {
 
   // Write large header if it doesn't fit in a small.
   FunctionHeader header = BF.getHeader();
-  if (SmallFuncHeader(header).flags.overflowed) {
+  if (!SmallFuncHeader::canFitInSmallHeader(header)) {
     pad(INFO_ALIGNMENT);
     writeBinary(header);
   }
