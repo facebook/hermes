@@ -16,6 +16,7 @@ set(APITestsSources
   AsyncDebuggerAPITest.cpp
   CDPAgentTest.cpp
   ConsoleMessageTest.cpp
+  DomainStateTest.cpp
   SynchronizedCallbackTest.cpp
   ../../API/hermes/inspector/chrome/tests/SerialExecutor.cpp
   DebuggerTest.cpp

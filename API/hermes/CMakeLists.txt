@@ -45,6 +45,7 @@ if(HERMES_ENABLE_DEBUGGER)
     cdp/RuntimeDomainAgent.cpp
     cdp/ConsoleMessage.cpp
     cdp/CDPDebugAPI.cpp
+    cdp/DomainState.cpp
   )
 
   set(INSPECTOR_API_SOURCES
@@ -88,7 +89,7 @@ if(HERMES_THREAD_SAFETY_ANALYSIS)
   )
   if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     set_property(SOURCE ${TSA_SOURCES} APPEND_STRING PROPERTY
-      COMPILE_FLAGS "-Wthread-safety -Werror=thread-safety-analysis -D_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS")
+      COMPILE_FLAGS "-Wthread-safety -Werror=thread-safety-analysis -Werror=thread-safety-precise -D_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS")
   endif()
 endif()
 
