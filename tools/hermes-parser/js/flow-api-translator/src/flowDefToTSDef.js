@@ -1030,7 +1030,8 @@ const getTransforms = (
         superClass:
           superClass == null
             ? null
-            : transform.Identifier(superClass.id, false),
+            : // Bug: superclass.id can be qualified
+              transform.Identifier((superClass.id: $FlowFixMe), false),
         superTypeParameters:
           superClass?.typeParameters == null
             ? undefined
@@ -2871,7 +2872,8 @@ const getTransforms = (
       return {
         type: 'TSInterfaceHeritage',
         loc: DUMMY_LOC,
-        expression: transform.Identifier(node.id, false),
+        // Bug: node.id can be qualified
+        expression: transform.Identifier((node.id: $FlowFixMe), false),
         typeParameters:
           node.typeParameters == null
             ? undefined
@@ -2892,7 +2894,8 @@ const getTransforms = (
             ...node.extends.map(ex => ({
               type: 'TSTypeReference',
               loc: DUMMY_LOC,
-              typeName: transform.Identifier(ex.id, false),
+              // Bug: ex.id can be qualified
+              typeName: transform.Identifier((ex.id: $FlowFixMe), false),
               typeParameters:
                 ex.typeParameters == null
                   ? undefined

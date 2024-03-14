@@ -1557,7 +1557,7 @@ export interface InterfaceDeclaration extends BaseInterfaceDeclaration {
 
 export interface InterfaceExtends extends BaseNode {
   +type: 'InterfaceExtends';
-  +id: Identifier;
+  +id: Identifier | QualifiedTypeIdentifier;
   +typeParameters: null | TypeParameterInstantiation;
 
   +parent: InterfaceDeclaration | DeclareInterface;

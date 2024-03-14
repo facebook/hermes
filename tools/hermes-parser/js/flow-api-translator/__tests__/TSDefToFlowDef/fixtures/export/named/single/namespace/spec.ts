@@ -7,4 +7,6 @@
  * @format
  */
 
-interface Foo extends Bar, Baz, Boz.Booz {}
+export namespace Foo {
+  const foo: string;
+}
