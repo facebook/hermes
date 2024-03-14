@@ -11,6 +11,7 @@
 #include "hermes/VM/Profiler/CodeCoverageProfiler.h"
 
 #include "llvh/ADT/StringRef.h"
+#include "llvh/Support/Compiler.h"
 #include "llvh/Support/raw_ostream.h"
 
 #include <algorithm>
@@ -116,6 +117,10 @@ TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnused) {
 
 // Right now, this just tests that we can simultaneously run two code coverage
 // profilers.
+// Disabled for Apple ASAN builds because it causes a native stack overflow
+// as a result of the large minimum stack gap.
+// Consider enabling it again with larger stack for std::async.
+#if !(LLVM_ADDRESS_SANITIZER_BUILD && defined(__APPLE__))
 TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnusedTwoRuntimes) {
   auto runtime2 = newRuntime();
   GCScope scope{*runtime2};
@@ -159,6 +164,7 @@ TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnusedTwoRuntimes) {
     EXPECT_FALSE(isFuncExecuted(rt, executedFuncInfos, funcUnused));
   }
 }
+#endif
 
 TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleModules) {
   hbc::CompileFlags flags;
