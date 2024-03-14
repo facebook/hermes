@@ -107,7 +107,7 @@
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadFrameInst (:object) %0: environment, [bar@""]: object
-// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %bar(): functionCode, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %bar(): functionCode, %0: environment, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

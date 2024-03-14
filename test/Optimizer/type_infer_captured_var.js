@@ -33,13 +33,11 @@
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): object
-// CHECK-NEXT:frame = [res: number, bar: object]
+// CHECK-NEXT:frame = [res: number]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %""(): any, %0: environment
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %bar(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [bar]: object
 // CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [res]: number
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
@@ -48,16 +46,8 @@
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = LoadFrameInst (:object) %0: environment, [bar@""]: object
-// CHECK-NEXT:  %2 = GetClosureScopeInst (:environment) %""(): any, %1: object
-// CHECK-NEXT:  %3 = LoadFrameInst (:number) %2: environment, [res@""]: number
-// CHECK-NEXT:  %4 = BinaryAddInst (:number) %3: number, 123: number
-// CHECK-NEXT:       StoreFrameInst %2: environment, %4: number, [res@""]: number
+// CHECK-NEXT:  %1 = LoadFrameInst (:number) %0: environment, [res@""]: number
+// CHECK-NEXT:  %2 = FAddInst (:number) %1: number, 123: number
+// CHECK-NEXT:       StoreFrameInst %0: environment, %2: number, [res@""]: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function bar(o: any): undefined [allCallsitesKnownInStrictMode,unreachable]
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

@@ -63,13 +63,13 @@
 // CHECK-NEXT:  %4 = PhiInst (:number) %6: number, %BB2, %12: number, %BB5
 // CHECK-NEXT:       ReturnInst %4: number
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = CallInst (:number) %1: object, %f1(): functionCode, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %6 = CallInst (:number) %1: object, %f1(): functionCode, %0: environment, undefined: undefined, 0: number
 // CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %8 = TryLoadGlobalPropertyInst (:any) globalObject: object, "b": string
 // CHECK-NEXT:       CondBranchInst %8: any, %BB5, %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %10 = CallInst (:number) %1: object, %f1(): functionCode, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %10 = CallInst (:number) %1: object, %f1(): functionCode, %0: environment, undefined: undefined, 0: number
 // CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %12 = PhiInst (:number) %10: number, %BB4, 0: number, %BB3

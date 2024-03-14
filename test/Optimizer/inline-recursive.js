@@ -41,6 +41,6 @@
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %main(): any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadFrameInst (:object) %0: environment, [f@main]: object
-// CHECK-NEXT:  %2 = CallInst (:any) %1: object, %f(): functionCode, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %2 = CallInst (:any) %1: object, %f(): functionCode, %0: environment, undefined: undefined, 0: number
 // CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

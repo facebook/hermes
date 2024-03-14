@@ -22,24 +22,21 @@ namespace {
 /// if they haven't been set yet.
 /// \param call the Call instruction being analyzed.
 /// \param callee the expected callee of the call instruction.
-/// \param isDominated whether the call is known to be dominated by the callee.
+/// \param scope the scope instruction that should be populated on the call, or
+///        null if the scope is not available.
 void registerCallsite(
     BaseCallInst *call,
     BaseCreateCallableInst *callee,
-    bool isDominated) {
+    Instruction *scope) {
   // Set the target/env operands if possible.
   if (llvh::isa<EmptySentinel>(call->getTarget())) {
     call->setTarget(callee->getFunctionCode());
   }
 
   // Check if the function uses its parent scope, and populate it if possible.
-  if (llvh::isa<EmptySentinel>(call->getEnvironment()) &&
-      callee->getFunctionCode()->getParentScopeParam()->hasUsers()) {
-    // If the closure is known to dominate the call, we can forward the
-    // environment directly to the call.
-    if (isDominated)
-      call->setEnvironment(callee->getScope());
-  }
+  if (scope && llvh::isa<EmptySentinel>(call->getEnvironment()) &&
+      callee->getFunctionCode()->getParentScopeParam()->hasUsers())
+    call->setEnvironment(scope);
 }
 
 /// Check if the call \p CI which uses the closure \p C may leak the closure
@@ -78,28 +75,38 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
   Function *F = create->getFunctionCode();
   Module *M = F->getParent();
 
+  /// Define an element in the worklist below.
+  struct UserAndScope {
+    /// An instruction that is known to have the value of the closure at
+    /// runtime.
+    Instruction *closure;
+
+    /// An instruction that is known to produce the scope of the closure at the
+    /// point where the closure is used.
+    Instruction *scope;
+  };
+
   // List of instructions whose result we know is the same closure created by
-  // \p create.
+  // \p create, and the associated scope at the point of the instruction.
   // Initially populated with \p create itself, it also can contain
   // LoadFrameInst, casts, etc.
   // The users of the elements of this list can then be iterated to find calls,
   // ways for the closure to escape, and anything else we want to analyze.
   // When the list is empty, we're done analyzing \p create.
-  // The second element of the pair is a flag indicating whether the \p create
-  // is known to dominate the instruction. This is useful for optimizations
-  // where we want to forward the closure or one of its operands.
-  llvh::SmallVector<llvh::PointerIntPair<Instruction *, 1>, 2> worklist{};
+  llvh::SmallVector<UserAndScope, 2> worklist{};
 
   // Use a set to avoid revisiting the same Instruction.
   // For example, if the same function is stored to two vars we need
   // to avoid going back and forth between the corresponding loads.
   llvh::SmallPtrSet<Instruction *, 2> visited{};
 
-  worklist.push_back({create, 1});
+  worklist.push_back({create, create->getScope()});
   while (!worklist.empty()) {
     // Instruction whose result is known to be the closure.
-    Instruction *closureInst = worklist.back().getPointer();
-    bool isDominated = worklist.pop_back_val().getInt();
+    Instruction *closureInst = worklist.back().closure;
+
+    // Instruction whose result is known to be the scope of the closure.
+    auto *knownScope = worklist.pop_back_val().scope;
 
     if (!visited.insert(closureInst).second) {
       // Already visited.
@@ -114,7 +121,7 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
           F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
         }
         if (call->getCallee() == closureInst) {
-          registerCallsite(call, create, isDominated);
+          registerCallsite(call, create, knownScope);
         }
         continue;
       }
@@ -126,12 +133,12 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
       }
 
       if (llvh::isa<GetClosureScopeInst>(closureUser)) {
-        // If the callable dominates this user, replace this instruction with
-        // directly retrieving the scope from it. It will now be unused, but we
-        // avoid deleting any instructions in FunctionAnalysis since we are
-        // iterating over the IR, so it will be deleted by DCE.
-        if (isDominated)
-          closureUser->replaceAllUsesWith(create->getScope());
+        // If the scope is available, replace this instruction with it. It will
+        // now be unused, but we avoid deleting any instructions in
+        // FunctionAnalysis since we are iterating over the IR, so it will be
+        // deleted by DCE.
+        if (knownScope)
+          closureUser->replaceAllUsesWith(knownScope);
 
         // Getting the closure scope does not leak the closure.
         continue;
@@ -151,7 +158,7 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
                 ->getType()
                 .canBeObject() &&
             "The result UnionNarrowTrusted of closure is not object");
-        worklist.push_back({closureUser, isDominated});
+        worklist.push_back({closureUser, knownScope});
         continue;
       }
 
@@ -164,7 +171,7 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
             CC->getCheckedValue()->getType().canBeObject() &&
             "closure type is not object");
         if (CC->getType().canBeObject()) {
-          worklist.push_back({closureUser, isDominated});
+          worklist.push_back({closureUser, knownScope});
           continue;
         }
       }
@@ -178,6 +185,13 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
           F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
           continue;
         }
+
+        // If the scope is the same as the scope we are storing into, we know
+        // that the scope of the closure will always just be a pointer back to
+        // the scope. We can therefore can propagate it by simply using the
+        // scope at the point it is loaded.
+        bool propagateScope = store->getScope() == knownScope;
+
         for (Instruction *varUser : var->getUsers()) {
           auto *load = llvh::dyn_cast<LoadFrameInst>(varUser);
           if (!load) {
@@ -188,7 +202,8 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
                 "only Store and Load can use variables");
             continue;
           }
-          worklist.push_back({load, 0});
+          worklist.push_back(
+              {load, propagateScope ? load->getScope() : nullptr});
         }
         continue;
       }
