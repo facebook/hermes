@@ -304,8 +304,8 @@ struct FunctionHeader {
 /// Compact version of FunctionHeader. Fits most functions.
 /// Has two possible states, indicated by 'overflowed' flag:
 /// !overflowed: all fields are valid.
-/// overflowed: only flags and getLargeHeaderOffset() are valid,
-///             and at the latter is a FunctionHeader.
+/// overflowed: only getLargeHeaderOffset() is valid, and at the
+///             latter is a FunctionHeader.
 /// Note that msvc and compatible compilers will not put bitfields
 /// of the same type in the same memory, so don't mix uint8_t and
 /// uint32_t if you want them packed next to each other.
@@ -323,7 +323,7 @@ struct SmallFuncHeader {
   /// else set overflowed with large.infoOffset as large's offset.
   SmallFuncHeader(const FunctionHeader &large) {
     std::memset(this, 0, sizeof(SmallFuncHeader)); // Avoid leaking junk.
-    flags = large.flags;
+
 #define CHECK_COPY_FIELD(api_type, store_type, name, bits) \
   if (large.name > (1U << bits) - 1) {                     \
     setLargeHeaderOffset(large.infoOffset);                \
@@ -335,6 +335,8 @@ struct SmallFuncHeader {
     FUNC_HEADER_FIELDS(CHECK_COPY_FIELD)
 #pragma GCC diagnostic pop
 #undef CHECK_COPY_FIELD
+
+    flags = large.flags;
     assert(!flags.overflowed);
   }
 

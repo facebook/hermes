@@ -643,22 +643,25 @@ std::pair<
     const hbc::DebugOffsets *>
 BCProviderFromBuffer::getExceptionTableAndDebugOffsets(
     uint32_t functionID) const {
-  const auto &header = functionHeaders_[functionID];
   const auto *buf = bufferPtr_;
 
-  // Get the correct offset for function info depending on overflow flag. Skip
-  // large header if any (we don't need to parse it, since we're only using
-  // flags below, which are also valid for overflowed small headers).
-  if (header.flags.overflowed) {
-    buf += header.getLargeHeaderOffset();
+  const auto &smallHeader = functionHeaders_[functionID];
+  hbc::FunctionHeaderFlag flags = smallHeader.flags;
+
+  // Get the correct offset and flags for function info depending on overflow
+  // flag.
+  if (flags.overflowed) {
+    buf += smallHeader.getLargeHeaderOffset();
+    // Replace the flags with those from the actual header.
+    flags = reinterpret_cast<const hbc::FunctionHeader *>(buf)->flags;
     buf += sizeof(hbc::FunctionHeader);
   } else {
-    buf += header.infoOffset;
+    buf += smallHeader.infoOffset;
   }
 
   // Deserialize exception table.
   llvh::ArrayRef<hbc::HBCExceptionHandlerInfo> exceptionTable{};
-  if (header.flags.hasExceptionHandler) {
+  if (flags.hasExceptionHandler) {
     align(buf);
     const auto *exceptionHeader =
         castData<hbc::ExceptionHandlerTableHeader>(buf);
@@ -668,7 +671,7 @@ BCProviderFromBuffer::getExceptionTableAndDebugOffsets(
 
   // Deserialize debug offsets.
   const hbc::DebugOffsets *debugOffsets = nullptr;
-  if (header.flags.hasDebugInfo) {
+  if (flags.hasDebugInfo) {
     align(buf);
     debugOffsets = castData<hbc::DebugOffsets>(buf);
   }
