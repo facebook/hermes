@@ -97,7 +97,6 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
     Function::ProhibitInvoke prohibitInvoke,
     bool strictMode,
     uint32_t paramCount,
-    uint32_t environmentSize,
     uint32_t nameID) {
   if (!complete_) {
     bytecodeGenerationComplete();
@@ -107,7 +106,6 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
       bytecodeSize_,
       paramCount,
       frameSize_,
-      environmentSize,
       nameID,
       highestReadCacheIndex_,
       highestWriteCacheIndex_};
@@ -308,7 +306,6 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
         F->getProhibitInvoke(),
         F->isStrictMode(),
         F->getExpectedParamCountIncludingThis(),
-        F->getFunctionScope()->getVariables().size(),
         functionNameId);
 
     if (F->isLazy()) {

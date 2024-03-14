@@ -126,7 +126,6 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
       Function::ProhibitInvoke prohibitInvoke,
       bool strictMode,
       uint32_t paramCount,
-      uint32_t environmentSize,
       uint32_t nameID = 0);
 
   unsigned getFunctionID(Function *F);

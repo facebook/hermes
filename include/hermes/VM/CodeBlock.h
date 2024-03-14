@@ -126,9 +126,6 @@ class CodeBlock final
   uint32_t getFrameSize() const {
     return functionHeader_.frameSize();
   }
-  uint32_t getEnvironmentSize() const {
-    return functionHeader_.environmentSize();
-  }
   uint32_t getFunctionID() const {
     return functionID_;
   }

@@ -266,7 +266,7 @@ static_assert(
   V(uint32_t, uint32_t, infoOffset, 25)          \
   V(uint32_t, uint32_t, frameSize, 7)            \
   /* fourth word, with flags below */            \
-  V(uint32_t, uint8_t, environmentSize, 8)       \
+  V(uint32_t, uint8_t, dummy, 8)                 \
   V(uint8_t, uint8_t, highestReadCacheIndex, 8)  \
   V(uint8_t, uint8_t, highestWriteCacheIndex, 8)
 
@@ -286,7 +286,6 @@ struct FunctionHeader {
       uint32_t size,
       uint32_t paramCount,
       uint32_t frameSize,
-      uint32_t envSize,
       uint32_t functionNameID,
       uint8_t hiRCacheIndex,
       uint8_t hiWCacheIndex)
@@ -296,7 +295,7 @@ struct FunctionHeader {
         functionName(functionNameID),
         infoOffset(0),
         frameSize(frameSize),
-        environmentSize(envSize),
+        dummy(0),
         highestReadCacheIndex(hiRCacheIndex),
         highestWriteCacheIndex(hiWCacheIndex) {}
 };
