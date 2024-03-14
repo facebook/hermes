@@ -89,7 +89,7 @@ export async function unstable_translateTSDefToFlowDef(
   code: string,
   prettierOptions: {...} = {},
 ): Promise<string> {
-  const ast = parseTS(code, {loc: true});
+  const ast = parseTS(code, {loc: true, range: true, sourceType: 'module'});
   if (ast == null) {
     throw `Failed to parse ${code} with @typescript-eslint/parser`;
   }
