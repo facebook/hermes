@@ -2804,6 +2804,20 @@ tailCall:
         ip = NEXTINST(Add);
         DISPATCH;
       }
+      CASE(AddS) {
+        CAPTURE_IP(
+            res = StringPrimitive::concat(
+                runtime,
+                Handle<StringPrimitive>::vmcast(&O2REG(AddS)),
+                Handle<StringPrimitive>::vmcast(&O3REG(AddS))));
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        O1REG(AddS) = res.getValue();
+        ip = NEXTINST(AddS);
+        DISPATCH;
+      }
 
       CASE(BitNot) {
         if (LLVM_LIKELY(O2REG(BitNot).isNumber())) { /* Fast-path. */

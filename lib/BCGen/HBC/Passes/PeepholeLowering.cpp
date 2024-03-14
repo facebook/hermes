@@ -87,6 +87,15 @@ class DoLower {
   Value *lowerStringConcat(StringConcatInst *SCI) {
     destroyer_.add(SCI);
     builder_.setInsertionPoint(SCI);
+    if (SCI->getNumOperands() == 1) {
+      // One string is a noop.
+      return SCI->getOperand(0);
+    }
+    if (SCI->getNumOperands() == 2) {
+      // Two strings can be concatenated with HBCStringConcatInst.
+      return builder_.createHBCStringConcatInst(
+          SCI->getOperand(0), SCI->getOperand(1));
+    }
     auto *firstString = SCI->getOperand(0);
     CallInst::ArgumentList restOfStrings;
     for (size_t i = 1, e = SCI->getNumOperands(); i < e; ++i) {

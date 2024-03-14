@@ -142,7 +142,7 @@ function switch_neg(x) {
 // CHECK:function f(x: any): string
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg1 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  $Reg2 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  $Reg0 = BranchInst %BB10
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:string) "regular": string
@@ -152,37 +152,33 @@ function switch_neg(x) {
 // CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:string) "fall": string
-// CHECK-NEXT:  $Reg3 = MovInst (:string) $Reg0
+// CHECK-NEXT:  $Reg1 = MovInst (:string) $Reg0
 // CHECK-NEXT:  $Reg0 = BranchInst %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  $Reg3 = PhiInst (:string) $Reg3, %BB3, $Reg3, %BB6
-// CHECK-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  $Reg0 = TryLoadGlobalPropertyInst (:any) $Reg0, "HermesInternal": string
-// CHECK-NEXT:  $Reg2 = LoadPropertyInst (:any) $Reg0, "concat": string
-// CHECK-NEXT:  $Reg1 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  $Reg1 = PhiInst (:string) $Reg1, %BB3, $Reg1, %BB6
 // CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:string) "through": string
-// CHECK-NEXT:  $Reg0 = HBCCallNInst (:any) $Reg2, empty: any, empty: any, $Reg1, $Reg3, $Reg0
+// CHECK-NEXT:  $Reg0 = HBCStringConcatInst (:string) $Reg1, $Reg0
 // CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:string) "default": string
 // CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  $Reg3 = HBCLoadConstInst (:string) "": string
+// CHECK-NEXT:  $Reg1 = HBCLoadConstInst (:string) "": string
 // CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:number) 4: number
-// CHECK-NEXT:  $Reg3 = MovInst (:string) $Reg3
-// CHECK-NEXT:  $Reg0 = CmpBrStrictlyEqualInst $Reg0, $Reg1, %BB4, %BB5
+// CHECK-NEXT:  $Reg1 = MovInst (:string) $Reg1
+// CHECK-NEXT:  $Reg0 = CmpBrStrictlyEqualInst $Reg0, $Reg2, %BB4, %BB5
 // CHECK-NEXT:%BB7:
 // CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:number) 3: number
-// CHECK-NEXT:  $Reg0 = CmpBrStrictlyEqualInst $Reg0, $Reg1, %BB3, %BB6
+// CHECK-NEXT:  $Reg0 = CmpBrStrictlyEqualInst $Reg0, $Reg2, %BB3, %BB6
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:number) 2: number
-// CHECK-NEXT:  $Reg0 = CmpBrStrictlyEqualInst $Reg0, $Reg1, %BB2, %BB7
+// CHECK-NEXT:  $Reg0 = CmpBrStrictlyEqualInst $Reg0, $Reg2, %BB2, %BB7
 // CHECK-NEXT:%BB9:
 // CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:number) 1: number
-// CHECK-NEXT:  $Reg0 = CmpBrStrictlyEqualInst $Reg0, $Reg1, %BB2, %BB8
+// CHECK-NEXT:  $Reg0 = CmpBrStrictlyEqualInst $Reg0, $Reg2, %BB2, %BB8
 // CHECK-NEXT:%BB10:
 // CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:number) 0: number
-// CHECK-NEXT:  $Reg0 = CmpBrStrictlyEqualInst $Reg0, $Reg1, %BB1, %BB9
+// CHECK-NEXT:  $Reg0 = CmpBrStrictlyEqualInst $Reg0, $Reg2, %BB1, %BB9
 // CHECK-NEXT:function_end
 
 // CHECK:function regress1(w: any): any [noReturn]

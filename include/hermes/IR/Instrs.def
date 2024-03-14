@@ -253,6 +253,7 @@ DEF_TAG(FGreaterThanOrEqualInst, FCompareInst)
 END_VALUE(FCompareInst)
 
 DEF_VALUE(StringConcatInst, Instruction)
+DEF_VALUE(HBCStringConcatInst, Instruction)
 
 DEF_VALUE(UnionNarrowTrustedInst, Instruction)
 DEF_VALUE(CheckedTypeCastInst, Instruction)

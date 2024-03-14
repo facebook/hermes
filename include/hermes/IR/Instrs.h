@@ -4912,6 +4912,53 @@ class StringConcatInst : public Instruction {
   }
 };
 
+class HBCStringConcatInst : public Instruction {
+  HBCStringConcatInst(const HBCStringConcatInst &) = delete;
+  void operator=(const HBCStringConcatInst &) = delete;
+
+ public:
+  enum { LeftIdx, RightIdx };
+
+  explicit HBCStringConcatInst(Value *left, Value *right)
+      : Instruction(ValueKind::HBCStringConcatInstKind) {
+    setType(Type::createString());
+    pushOperand(left);
+    pushOperand(right);
+  }
+  explicit HBCStringConcatInst(
+      const HBCStringConcatInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  Value *getLeft() {
+    return getOperand(LeftIdx);
+  }
+  const Value *getLeft() const {
+    return getOperand(LeftIdx);
+  }
+  Value *getRight() {
+    return getOperand(RightIdx);
+  }
+  const Value *getRight() const {
+    return getOperand(RightIdx);
+  }
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return true;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::HBCStringConcatInstKind;
+  }
+};
+
 class UnionNarrowTrustedInst : public SingleOperandInst {
   UnionNarrowTrustedInst(const UnionNarrowTrustedInst &) = delete;
   void operator=(const UnionNarrowTrustedInst &) = delete;

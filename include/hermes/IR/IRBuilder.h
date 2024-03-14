@@ -664,6 +664,7 @@ class IRBuilder {
   FCompareInst *createFCompareInst(ValueKind kind, Value *left, Value *right);
 
   StringConcatInst *createStringConcatInst(llvh::ArrayRef<Value *> operands);
+  HBCStringConcatInst *createHBCStringConcatInst(Value *left, Value *right);
 
   UnionNarrowTrustedInst *createUnionNarrowTrustedInst(Value *value, Type type);
   CheckedTypeCastInst *createCheckedTypeCastInst(Value *value, Type type);

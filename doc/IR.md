@@ -1014,6 +1014,16 @@ Arguments | %op1 to %opN are the input values which must be strings.
 Semantics | Perform the specified concatenation on strings.
 Effects | None
 
+### HBCStringConcat
+
+HBCStringConcat | _
+--- |-----------------------------------------------|
+Description | Concatenate 2 strings and return the resultant string.
+Example | StringConcat (:string), %left (:string), %right (:string)
+Arguments | %left and %right are the input values which must be strings.
+Semantics | Perform the specified concatenation on strings.
+Effects | None
+
 ### UnionNarrowTrusted
 
 UnionNarrowTrusted | _

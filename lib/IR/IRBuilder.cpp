@@ -1179,6 +1179,14 @@ StringConcatInst *IRBuilder::createStringConcatInst(
   return inst;
 }
 
+HBCStringConcatInst *IRBuilder::createHBCStringConcatInst(
+    Value *left,
+    Value *right) {
+  auto *inst = new HBCStringConcatInst(left, right);
+  insert(inst);
+  return inst;
+}
+
 UnionNarrowTrustedInst *IRBuilder::createUnionNarrowTrustedInst(
     Value *value,
     Type type) {

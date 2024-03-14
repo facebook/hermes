@@ -853,6 +853,9 @@ class TypeInferenceImpl {
   Type inferStringConcatInst(StringConcatInst *inst) {
     hermes_fatal("typed instruction");
   }
+  Type inferHBCStringConcatInst(HBCStringConcatInst *inst) {
+    hermes_fatal("typed instruction");
+  }
   Type inferUnionNarrowTrustedInst(UnionNarrowTrustedInst *inst) {
     auto res = Type::intersectTy(
         inst->getSavedResultType(), inst->getSingleOperand()->getType());

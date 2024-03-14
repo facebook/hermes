@@ -161,6 +161,9 @@ DEFINE_OPCODE_3(Add, Reg8, Reg8, Reg8)
 /// Arg1 = Arg2 + Arg3 (Numeric addition, skips number check)
 DEFINE_OPCODE_3(AddN, Reg8, Reg8, Reg8)
 
+/// Arg1 = Arg2 + Arg3 (String concat, skips string check)
+DEFINE_OPCODE_3(AddS, Reg8, Reg8, Reg8)
+
 /// Arg1 = Arg2 * Arg3 (JS multiplication)
 DEFINE_OPCODE_3(Mul, Reg8, Reg8, Reg8)
 

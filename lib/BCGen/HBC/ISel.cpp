@@ -1780,7 +1780,15 @@ void HBCISel::generateCreateArgumentsStrictInst(
   hermes_fatal("CreateArgumentsStrictInst not supported.");
 }
 void HBCISel::generateStringConcatInst(StringConcatInst *inst, BasicBlock *) {
-  hermes_fatal("StringConcatInst not supported.");
+  hermes_fatal("StringConcatInst should be lowered.");
+}
+void HBCISel::generateHBCStringConcatInst(
+    HBCStringConcatInst *inst,
+    BasicBlock *) {
+  BCFGen_->emitAddS(
+      encodeValue(inst),
+      encodeValue(inst->getLeft()),
+      encodeValue(inst->getRight()));
 }
 
 void HBCISel::generate(BasicBlock *BB, BasicBlock *next) {

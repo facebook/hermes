@@ -1460,6 +1460,9 @@ class InstrGen {
     }
     os_ << ");\n";
   }
+  void generateHBCStringConcatInst(HBCStringConcatInst &inst) {
+    hermes_fatal("HBCStringConcatInst not generated in native backend");
+  }
   void generateStoreStackInst(StoreStackInst &inst) {
     hermes_fatal("StoreStackInst should have been lowered.");
   }

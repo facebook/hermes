@@ -1461,6 +1461,19 @@ bool Verifier::visitStringConcatInst(const StringConcatInst &Inst) {
   }
   return true;
 }
+bool Verifier::visitHBCStringConcatInst(const HBCStringConcatInst &Inst) {
+  AssertIWithMsg(
+      Inst, Inst.getType().isStringType(), "HBCStringConcat wrong type");
+  AssertIWithMsg(
+      Inst,
+      Inst.getLeft()->getType().isStringType(),
+      "HBCStringConcat left operand wrong type");
+  AssertIWithMsg(
+      Inst,
+      Inst.getRight()->getType().isStringType(),
+      "HBCStringConcat right operand wrong type");
+  return true;
+}
 
 bool Verifier::visitUnionNarrowTrustedInst(const UnionNarrowTrustedInst &Inst) {
   return true;
