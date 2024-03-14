@@ -152,7 +152,7 @@ TEST_F(ObjectBufferTest, TestNewObjectWithBuffer) {
   auto *runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
 
   runtimeModule->initializeWithoutCJSModulesMayAllocate(
-      BCProviderFromSrc::createBCProviderFromSrc(BMG.generate()));
+      BCProviderFromSrc::createFromBytecodeModule(BMG.generate()));
 
   auto codeBlock = runtimeModule->getCodeBlockMayAllocate(0);
   CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};

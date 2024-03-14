@@ -415,7 +415,7 @@ inline CodeBlock *createCodeBlock(
           0,
           0));
   runtimeModule->initializeWithoutCJSModulesMayAllocate(
-      hbc::BCProviderFromSrc::createBCProviderFromSrc(std::move(BM)));
+      hbc::BCProviderFromSrc::createFromBytecodeModule(std::move(BM)));
   return runtimeModule->getCodeBlockMayAllocate(0);
 }
 

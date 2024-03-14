@@ -75,7 +75,6 @@ CallResult<HermesValue> evalInEnvironment(
         "JavaScript",
         nullptr,
         compileFlags,
-        scopeChain,
         {},
         nullptr,
         runOptimizationPasses);

@@ -156,7 +156,7 @@ L1:
           0,
           0));
   runtimeModule->initializeWithoutCJSModulesMayAllocate(
-      BCProviderFromSrc::createBCProviderFromSrc(std::move(BM)));
+      BCProviderFromSrc::createFromBytecodeModule(std::move(BM)));
   auto codeBlock = CodeBlock::createCodeBlock(
       runtimeModule,
       runtimeModule->getBytecode()->getFunctionHeader(0),

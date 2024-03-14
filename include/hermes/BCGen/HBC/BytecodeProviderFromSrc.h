@@ -76,6 +76,7 @@ class BCProviderFromSrc final : public BCProviderBase {
   /// BytecodeModule and set to the local member.
   void createDebugInfo() override {}
 
+ public:
   /// Creates a BCProviderFromSrc by compiling the given JavaScript and
   /// optionally optimizing it with the supplied callback.
   /// \param buffer the JavaScript source to compile, encoded in utf-8. It is
@@ -85,7 +86,6 @@ class BCProviderFromSrc final : public BCProviderBase {
   ///     errors, stack traces, etc.
   /// \param sourceMap optional input source map for \p buffer.
   /// \param compileFlags self explanatory
-  /// \param scopeChain a scope chain for local variable resolution
   /// \param diagHandler handler for errors/warnings/notes.
   /// \param diagContext opaque data that will be passed to diagHandler.
   /// \param runOptimizationPasses if optimization is enabled in the settings
@@ -99,84 +99,23 @@ class BCProviderFromSrc final : public BCProviderBase {
   /// \return a BCProvider and an empty error, or a null BCProvider and an error
   ///     message (if diagHandler was provided, the error message is "error").
   static std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
-  createBCProviderFromSrcImpl(
-      std::unique_ptr<Buffer> buffer,
-      llvh::StringRef sourceURL,
-      std::unique_ptr<SourceMap> sourceMap,
-      const CompileFlags &compileFlags,
-      const ScopeChain &scopeChain,
-      SourceErrorManager::DiagHandlerTy diagHandler,
-      void *diagContext,
-      const std::function<void(Module &)> &runOptimizationPasses,
-      const BytecodeGenerationOptions &defaultBytecodeGenerationOptions);
-
- public:
-  static std::unique_ptr<BCProviderFromSrc> createBCProviderFromSrc(
-      std::unique_ptr<hbc::BytecodeModule> module) {
-    return std::unique_ptr<BCProviderFromSrc>(
-        new BCProviderFromSrc(std::move(module)));
-  }
-
-  /// Creates a BCProviderFromSrc by compiling the given JavaScript.
-  /// \param buffer the JavaScript source to compile, encoded in utf-8. It is
-  ///     required to have null termination ('\0') in the byte past the end,
-  ///     in other words `assert(buffer.data()[buffer.size()] == 0)`.
-  /// \param sourceURL this will be used as the "file name" of the buffer for
-  ///     errors, stack traces, etc.
-  /// \param compileFlags self explanatory
-  ///
-  /// \return a BCProvider and an empty error, or a null BCProvider and an error
-  ///     message.
-  static std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
-  createBCProviderFromSrc(
-      std::unique_ptr<Buffer> buffer,
-      llvh::StringRef sourceURL,
-      const CompileFlags &compileFlags);
-
-  /// Creates a BCProviderFromSrc by compiling the given JavaScript.
-  /// \param buffer the JavaScript source to compile, encoded in utf-8. It is
-  ///     required to have null termination ('\0') in the byte past the end,
-  ///     in other words `assert(buffer.data()[buffer.size()] == 0)`.
-  /// \param sourceURL this will be used as the "file name" of the buffer for
-  ///     errors, stack traces, etc.
-  /// \param sourceMap optional input source map for \p buffer.
-  /// \param compileFlags self explanatory
-  ///
-  /// \return a BCProvider and an empty error, or a null BCProvider and an error
-  ///     message.
-  static std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
-  createBCProviderFromSrc(
-      std::unique_ptr<Buffer> buffer,
-      llvh::StringRef sourceURL,
-      std::unique_ptr<SourceMap> sourceMap,
-      const CompileFlags &compileFlags);
-
-  /// Creates a BCProviderFromSrc by compiling the given JavaScript.
-  /// \param buffer the JavaScript source to compile, encoded in utf-8. It is
-  ///     required to have null termination ('\0') in the byte past the end,
-  ///     in other words `assert(buffer.data()[buffer.size()] == 0)`.
-  /// \param sourceURL this will be used as the "file name" of the buffer for
-  ///     errors, stack traces, etc.
-  /// \param sourceMap optional input source map for \p buffer.
-  /// \param compileFlags self explanatory
-  /// \param scopeChain a scope chain for local variable resolution
-  /// \param diagHandler optional handler for errors/warnings/notes.
-  /// \param diagContext opaque data that will be passed to diagHandler.
-  ///
-  /// \return a BCProvider and an empty error, or a null BCProvider and an error
-  ///     message (if diagHandler was provided, the error message is "error").
-  static std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
   createBCProviderFromSrc(
       std::unique_ptr<Buffer> buffer,
       llvh::StringRef sourceURL,
       std::unique_ptr<SourceMap> sourceMap,
       const CompileFlags &compileFlags,
-      const ScopeChain &scopeChain,
-      SourceErrorManager::DiagHandlerTy diagHandler = nullptr,
+      SourceErrorManager::DiagHandlerTy diagHandler = {},
       void *diagContext = nullptr,
       const std::function<void(Module &)> &runOptimizationPasses = {},
       const BytecodeGenerationOptions &defaultBytecodeGenerationOptions =
           BytecodeGenerationOptions::defaults());
+
+  /// Wrap an existing BytecodeModule in a BCProviderFromSrc.
+  static std::unique_ptr<BCProviderFromSrc> createFromBytecodeModule(
+      std::unique_ptr<hbc::BytecodeModule> module) {
+    return std::unique_ptr<BCProviderFromSrc>(
+        new BCProviderFromSrc(std::move(module)));
+  }
 
   RuntimeFunctionHeader getFunctionHeader(uint32_t functionID) const override {
     return RuntimeFunctionHeader(&module_->getFunction(functionID).getHeader());

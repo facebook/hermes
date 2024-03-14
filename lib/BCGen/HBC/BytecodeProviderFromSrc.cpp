@@ -78,51 +78,8 @@ std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
 BCProviderFromSrc::createBCProviderFromSrc(
     std::unique_ptr<Buffer> buffer,
     llvh::StringRef sourceURL,
-    const CompileFlags &compileFlags) {
-  return createBCProviderFromSrc(
-      std::move(buffer), sourceURL, /*sourceMap*/ nullptr, compileFlags);
-}
-
-std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
-BCProviderFromSrc::createBCProviderFromSrc(
-    std::unique_ptr<Buffer> buffer,
-    llvh::StringRef sourceURL,
-    std::unique_ptr<SourceMap> sourceMap,
-    const CompileFlags &compileFlags) {
-  return createBCProviderFromSrc(
-      std::move(buffer), sourceURL, std::move(sourceMap), compileFlags, {}, {});
-}
-
-std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
-BCProviderFromSrc::createBCProviderFromSrc(
-    std::unique_ptr<Buffer> buffer,
-    llvh::StringRef sourceURL,
     std::unique_ptr<SourceMap> sourceMap,
     const CompileFlags &compileFlags,
-    const ScopeChain &scopeChain,
-    SourceErrorManager::DiagHandlerTy diagHandler,
-    void *diagContext,
-    const std::function<void(Module &)> &runOptimizationPasses,
-    const BytecodeGenerationOptions &defaultBytecodeGenerationOptions) {
-  return createBCProviderFromSrcImpl(
-      std::move(buffer),
-      sourceURL,
-      std::move(sourceMap),
-      compileFlags,
-      scopeChain,
-      diagHandler,
-      diagContext,
-      runOptimizationPasses,
-      defaultBytecodeGenerationOptions);
-}
-
-std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
-BCProviderFromSrc::createBCProviderFromSrcImpl(
-    std::unique_ptr<Buffer> buffer,
-    llvh::StringRef sourceURL,
-    std::unique_ptr<SourceMap> sourceMap,
-    const CompileFlags &compileFlags,
-    const ScopeChain &scopeChain,
     SourceErrorManager::DiagHandlerTy diagHandler,
     void *diagContext,
     const std::function<void(Module &)> &runOptimizationPasses,
@@ -251,9 +208,9 @@ BCProviderFromSrc::createBCProviderFromSrcImpl(
   if (context->getSourceErrorManager().getErrorCount() > 0) {
     return {nullptr, getErrorString()};
   }
-  auto bytecode = createBCProviderFromSrc(std::move(BM));
-  bytecode->singleFunction_ = isSingleFunctionExpression(parsed.getValue());
-  return {std::move(bytecode), std::string{}};
+  auto result = createFromBytecodeModule(std::move(BM));
+  result->singleFunction_ = isSingleFunctionExpression(parsed.getValue());
+  return {std::move(result), std::string{}};
 }
 
 BCProviderLazy::BCProviderLazy(hbc::BytecodeFunction *bytecodeFunction)

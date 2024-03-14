@@ -74,7 +74,6 @@ bool compileJS(
       sourceURL,
       std::move(sourceMap),
       flags,
-      {} /* scopeChain */,
       diagHandler ? diagHandlerAdapter : nullptr,
       diagHandler,
       optimize ? runFullOptimizationPasses : nullptr);

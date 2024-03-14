@@ -1727,7 +1727,7 @@ CompileResult generateBytecodeForExecution(
     }
 
     result.bytecodeProvider =
-        hbc::BCProviderFromSrc::createBCProviderFromSrc(std::move(BM));
+        hbc::BCProviderFromSrc::createFromBytecodeModule(std::move(BM));
   } else {
     llvm_unreachable("Invalid bytecode kind for execution");
     result = InvalidFlags;
@@ -1773,7 +1773,7 @@ CompileResult generateBytecodeForSerialization(
 
     if (cl::DumpTarget == DumpBytecode) {
       std::unique_ptr<hbc::BCProviderFromSrc> provider =
-          hbc::BCProviderFromSrc::createBCProviderFromSrc(
+          hbc::BCProviderFromSrc::createFromBytecodeModule(
               std::move(bytecodeModule));
       provider->setSourceHash(sourceHash);
       disassembleBytecode(std::move(provider));
