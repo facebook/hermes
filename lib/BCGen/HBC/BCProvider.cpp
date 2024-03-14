@@ -646,18 +646,14 @@ BCProviderFromBuffer::getExceptionTableAndDebugOffsets(
   const auto *buf = bufferPtr_;
 
   const auto &smallHeader = functionHeaders_[functionID];
-  hbc::FunctionHeaderFlag flags = smallHeader.flags;
+  // Small headers do not contain exception handlers or debug info.
+  if (!smallHeader.flags.overflowed)
+    return {{}, nullptr};
 
-  // Get the correct offset and flags for function info depending on overflow
-  // flag.
-  if (flags.overflowed) {
-    buf += smallHeader.getLargeHeaderOffset();
-    // Replace the flags with those from the actual header.
-    flags = reinterpret_cast<const hbc::FunctionHeader *>(buf)->flags;
-    buf += sizeof(hbc::FunctionHeader);
-  } else {
-    buf += smallHeader.infoOffset;
-  }
+  buf += smallHeader.getLargeHeaderOffset();
+  hbc::FunctionHeaderFlag flags =
+      reinterpret_cast<const hbc::FunctionHeader *>(buf)->flags;
+  buf += sizeof(hbc::FunctionHeader);
 
   // Deserialize exception table.
   llvh::ArrayRef<hbc::HBCExceptionHandlerInfo> exceptionTable{};

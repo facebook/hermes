@@ -86,7 +86,12 @@ void BytecodeSerializer::serializeFunctionTable(BytecodeModule &BM) {
       entry->mutableFlags().hasDebugInfo = false;
     }
     FunctionHeader header = entry->getHeader();
-    if (!SmallFuncHeader::canFitInSmallHeader(header))
+
+    // If an infoOffset has been set, create a header with the offset. Note that
+    // since the infoOffset is set by serializeFunctionInfo, this may differ
+    // between the layout and final runs, but this is fine because it is the
+    // same size.
+    if (isLayout_ || entry->getInfoOffset())
       writeBinary(SmallFuncHeader(entry->getInfoOffset()));
     else
       writeBinary(SmallFuncHeader(header));
@@ -233,18 +238,23 @@ void BytecodeSerializer::serializeFunctionsBytecode(BytecodeModule &BM) {
 }
 
 void BytecodeSerializer::serializeFunctionInfo(BytecodeFunction &BF) {
+  FunctionHeader header = BF.getHeader();
+  // We only need function info if the function has exceptions, debug info, or
+  // its header does not fit in a small header. Otherwise, we can skip it.
+  if (!header.flags.hasExceptionHandler && !header.flags.hasDebugInfo &&
+      SmallFuncHeader::canFitInSmallHeader(header))
+    return;
+
   // Set the offset of this function's info. Any subsection that is present is
   // aligned to INFO_ALIGNMENT, so we also align the recorded offset to that.
-  if (isLayout_) {
-    BF.setInfoOffset(llvh::alignTo(loc_, INFO_ALIGNMENT));
-  }
+  auto infoOffset = llvh::alignTo(loc_, INFO_ALIGNMENT);
+  assert((isLayout_ || infoOffset == BF.getInfoOffset()) && "Offset mismatch");
+  BF.setInfoOffset(infoOffset);
 
   // Write large header if it doesn't fit in a small.
-  FunctionHeader header = BF.getHeader();
-  if (!SmallFuncHeader::canFitInSmallHeader(header)) {
-    pad(INFO_ALIGNMENT);
-    writeBinary(header);
-  }
+
+  pad(INFO_ALIGNMENT);
+  writeBinary(header);
 
   // Serialize exception handlers.
   serializeExceptionHandlerTable(BF);

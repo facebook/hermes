@@ -959,9 +959,20 @@ BytecodeSectionWalker::BytecodeSectionWalker(
       bcProvider->getCJSModuleTable().end());
 
   auto firstFuncStart = bcProvider->getBytecode(0);
-  auto firstFuncHeader = bcProvider->getFunctionHeader(0);
-  auto firstFuncInfoStart = bytecodeStart + firstFuncHeader.infoOffset();
   auto debugInfoStart = bytecodeStart + fileHeader->debugInfoOffset;
+
+  // If there is no func info, the func info starts and ends at the debug info
+  // start.
+  auto firstFuncInfoStart = debugInfoStart;
+
+  // Iterate to find the first function that actually has info allocated for it.
+  for (const auto &header : bcProvider->getSmallFunctionHeaders()) {
+    if (header.flags.overflowed) {
+      firstFuncInfoStart = bytecodeStart + header.getLargeHeaderOffset();
+      break;
+    }
+  }
+
   addSection("Function body", firstFuncStart, firstFuncInfoStart);
   addSection("Function info", firstFuncInfoStart, debugInfoStart);
   addSection(

@@ -262,11 +262,8 @@ static_assert(
   /* second word */                              \
   V(uint32_t, uint32_t, bytecodeSizeInBytes, 15) \
   V(uint32_t, uint32_t, functionName, 17)        \
-  /* third word */                               \
-  V(uint32_t, uint32_t, infoOffset, 25)          \
-  V(uint32_t, uint32_t, frameSize, 7)            \
-  /* fourth word, with flags below */            \
-  V(uint32_t, uint8_t, dummy, 8)                 \
+  /* third word, with flags below */             \
+  V(uint32_t, uint8_t, frameSize, 8)             \
   V(uint8_t, uint8_t, highestReadCacheIndex, 8)  \
   V(uint8_t, uint8_t, highestWriteCacheIndex, 8)
 
@@ -293,9 +290,7 @@ struct FunctionHeader {
         paramCount(paramCount),
         bytecodeSizeInBytes(size),
         functionName(functionNameID),
-        infoOffset(0),
         frameSize(frameSize),
-        dummy(0),
         highestReadCacheIndex(hiRCacheIndex),
         highestWriteCacheIndex(hiWCacheIndex) {}
 };
@@ -340,7 +335,7 @@ struct SmallFuncHeader {
     flags.overflowed = true;
     // Can use any fields to store the large offset; pick two big ones.
     offset = largeHeaderOffset & 0xffff;
-    infoOffset = largeHeaderOffset >> 16;
+    functionName = largeHeaderOffset >> 16;
   }
 
   /// Check if the fields in \p large will fit in a small header.
@@ -358,19 +353,15 @@ struct SmallFuncHeader {
   /// have overflowed.
   uint32_t getLargeHeaderOffset() const {
     assert(flags.overflowed);
-    return (infoOffset << 16) | offset;
+    return (functionName << 16) | offset;
   }
 };
 
-// Sizes of file and function headers are tuned for good cache line packing.
+// Sizes of file headers are tuned for good cache line packing.
 // If you change their size, try to avoid headers crossing cache lines.
 static_assert(
     sizeof(BytecodeFileHeader) % 32 == 0,
     "BytecodeFileHeader size should be cache friendly");
-
-static_assert(
-    32 % sizeof(SmallFuncHeader) == 0,
-    "SmallFuncHeader size should be cache friendly");
 
 struct ExceptionHandlerTableHeader {
   uint32_t count;

@@ -48,6 +48,9 @@ class BytecodeFunction {
   /// Offsets of this function in debug info.
   DebugOffsets debugOffsets_{};
 
+  /// Offset of the function info entry for this function, or 0 if none exists.
+  uint32_t infoOffset = 0;
+
   /// List of exception handlers.
   std::vector<HBCExceptionHandlerInfo> exceptions_;
 
@@ -80,10 +83,10 @@ class BytecodeFunction {
   }
 
   void setInfoOffset(uint32_t offset) {
-    header_.infoOffset = offset;
+    infoOffset = offset;
   }
   uint32_t getInfoOffset() const {
-    return header_.infoOffset;
+    return infoOffset;
   }
 
   bool isStrictMode() const {

@@ -132,9 +132,21 @@ static ExecutionStatus diffFiles(
     fileSizes[i].push_back(lastFuncEnd - start);
 
     // function info, debug info
-    auto firstFuncHeader = bytecode->getFunctionHeader(0);
-    auto funcInfoStart = firstFuncHeader.infoOffset();
     auto debugInfoStart = fileHeader->debugInfoOffset;
+
+    // If there is no func info, the func info starts and ends at the debug info
+    // start.
+    auto funcInfoStart = debugInfoStart;
+
+    // Iterate to find the first function that actually has info allocated for
+    // it.
+    for (const auto &header : bytecode->getSmallFunctionHeaders()) {
+      if (header.flags.overflowed) {
+        funcInfoStart = header.getLargeHeaderOffset();
+        break;
+      }
+    }
+
     fileSizes[i].push_back(debugInfoStart - funcInfoStart);
     fileSizes[i].push_back(fileHeader->fileLength - debugInfoStart);
 
