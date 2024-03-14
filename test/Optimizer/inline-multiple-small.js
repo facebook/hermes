@@ -40,9 +40,9 @@ function outer(a, b) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %f3(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:string|number) %1: object, %f3(): functionCode, %0: environment, undefined: undefined, 0: number, 10: number
+// CHECK-NEXT:  %2 = CallInst (:string|number) %1: object, %f3(): functionCode, empty: any, undefined: undefined, 0: number, 10: number
 // CHECK-NEXT:  %3 = BinaryAddInst (:string|number) 1734: number, %2: string|number
-// CHECK-NEXT:  %4 = CallInst (:string|number) %1: object, %f3(): functionCode, %0: environment, undefined: undefined, 0: number, 100: number
+// CHECK-NEXT:  %4 = CallInst (:string|number) %1: object, %f3(): functionCode, empty: any, undefined: undefined, 0: number, 100: number
 // CHECK-NEXT:  %5 = BinaryAddInst (:string|number) %3: string|number, %4: string|number
 // CHECK-NEXT:       ReturnInst %5: string|number
 // CHECK-NEXT:function_end

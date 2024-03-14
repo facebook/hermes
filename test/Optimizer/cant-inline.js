@@ -32,7 +32,7 @@ function outer1() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %dontInline(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:any) %1: object, %dontInline(): functionCode, %0: environment, undefined: undefined, undefined: undefined, 1: number
+// CHECK-NEXT:  %2 = CallInst (:any) %1: object, %dontInline(): functionCode, empty: any, undefined: undefined, undefined: undefined, 1: number
 // CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end
 

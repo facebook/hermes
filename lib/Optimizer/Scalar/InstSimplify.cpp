@@ -595,6 +595,14 @@ class InstSimplifyImpl {
         CI->setNewTarget(builder_.getLiteralUndefined());
         changed = true;
       }
+
+      // Check if the function uses the supplied scope operand. If it does not,
+      // remove it, to eliminate a user of the scope.
+      if (!F->getParentScopeParam()->hasUsers() &&
+          !llvh::isa<EmptySentinel>(CI->getEnvironment())) {
+        CI->setEnvironment(builder_.getEmptySentinel());
+        changed = true;
+      }
     }
 
     return changed ? CI : nullptr;

@@ -52,7 +52,7 @@ function ctor_load_store_test() {
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %use_this(): functionCode
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) %1: object, "prototype": string
 // CHECK-NEXT:  %3 = CreateThisInst (:object) %2: any, %1: object
-// CHECK-NEXT:  %4 = CallInst (:object) %1: object, %use_this(): functionCode, %0: environment, undefined: undefined, %3: object, 12: number
+// CHECK-NEXT:  %4 = CallInst (:object) %1: object, %use_this(): functionCode, empty: any, undefined: undefined, %3: object, 12: number
 // CHECK-NEXT:       ReturnInst %3: object
 // CHECK-NEXT:function_end
 

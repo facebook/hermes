@@ -33,7 +33,7 @@ function main()  {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:string) %1: object, %foo(): functionCode, %0: environment, undefined: undefined, undefined: undefined, 2: number
+// CHECK-NEXT:  %2 = CallInst (:string) %1: object, %foo(): functionCode, empty: any, undefined: undefined, undefined: undefined, 2: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

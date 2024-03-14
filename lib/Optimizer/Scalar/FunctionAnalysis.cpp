@@ -31,7 +31,10 @@ void registerCallsite(
   if (llvh::isa<EmptySentinel>(call->getTarget())) {
     call->setTarget(callee->getFunctionCode());
   }
-  if (llvh::isa<EmptySentinel>(call->getEnvironment())) {
+
+  // Check if the function uses its parent scope, and populate it if possible.
+  if (llvh::isa<EmptySentinel>(call->getEnvironment()) &&
+      callee->getFunctionCode()->getParentScopeParam()->hasUsers()) {
     // If the closure is known to dominate the call, we can forward the
     // environment directly to the call.
     if (isDominated)

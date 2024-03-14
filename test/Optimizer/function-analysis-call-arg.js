@@ -35,7 +35,7 @@ function main() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %f(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %f(): functionCode, %0: environment, undefined: undefined, undefined: undefined, %1: object
+// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %f(): functionCode, empty: any, undefined: undefined, undefined: undefined, %1: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
