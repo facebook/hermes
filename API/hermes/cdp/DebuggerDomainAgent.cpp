@@ -269,22 +269,29 @@ void DebuggerDomainAgent::evaluateOnCallFrame(
     return;
   }
 
+  // Copy members of req before returning from this function.
+  long long reqId = req.id;
+  std::string objectGroup = req.objectGroup.value_or("");
+  bool byValue = req.returnByValue.value_or(false);
+  bool generatePreview = req.generatePreview.value_or(false);
+
   uint32_t frameIndex = (uint32_t)atoi(req.callFrameId.c_str());
   asyncDebugger_.evalWhilePaused(
       req.expression,
       frameIndex,
-      [&req, this](HermesRuntime &runtime, const debugger::EvalResult &result) {
+      [reqId,
+       objectGroup = std::move(objectGroup),
+       byValue,
+       generatePreview,
+       this](HermesRuntime &runtime, const debugger::EvalResult &result) {
         m::debugger::EvaluateOnCallFrameResponse resp;
-        resp.id = req.id;
+        resp.id = reqId;
         if (result.isException) {
           resp.exceptionDetails =
               m::runtime::makeExceptionDetails(result.exceptionDetails);
         } else {
           auto remoteObjPtr = std::make_shared<m::runtime::RemoteObject>();
 
-          std::string objectGroup = req.objectGroup.value_or("");
-          bool byValue = req.returnByValue.value_or(false);
-          bool generatePreview = req.generatePreview.value_or(false);
           *remoteObjPtr = m::runtime::makeRemoteObject(
               runtime_,
               result.value,
