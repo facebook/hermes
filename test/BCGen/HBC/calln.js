@@ -138,9 +138,9 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:i4[ASCII, 18..21] #D0BDA900: foo4
 // BCGEN-NEXT:i5[ASCII, 22..25] #D0BDAD11: foo5
 
-// BCGEN:Function<global>(1 params, 3 registers, 0 symbols):
+// BCGEN:Function<global>(1 params, 3 registers):
 // BCGEN-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// BCGEN-NEXT:    CreateFunctionEnvironment r0
+// BCGEN-NEXT:    CreateTopLevelEnvironment r0, 0
 // BCGEN-NEXT:    DeclareGlobalVar  "foo1"
 // BCGEN-NEXT:    DeclareGlobalVar  "foo2"
 // BCGEN-NEXT:    DeclareGlobalVar  "foo3"
@@ -160,14 +160,14 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:    LoadConstUndefined r0
 // BCGEN-NEXT:    Ret               r0
 
-// BCGEN:Function<foo1>(2 params, 10 registers, 0 symbols):
+// BCGEN:Function<foo1>(2 params, 10 registers):
 // BCGEN-NEXT:Offset in debug table: source 0x0022, lexical 0x0000
 // BCGEN-NEXT:    LoadParam         r1, 1
 // BCGEN-NEXT:    LoadConstUndefined r0
 // BCGEN-NEXT:    Call1             r1, r1, r0
 // BCGEN-NEXT:    Ret               r0
 
-// BCGEN:Function<foo2>(2 params, 12 registers, 0 symbols):
+// BCGEN:Function<foo2>(2 params, 12 registers):
 // BCGEN-NEXT:Offset in debug table: source 0x0029, lexical 0x0000
 // BCGEN-NEXT:    LoadParam         r2, 1
 // BCGEN-NEXT:    LoadConstUndefined r0
@@ -175,7 +175,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:    Call2             r1, r2, r0, r1
 // BCGEN-NEXT:    Ret               r0
 
-// BCGEN:Function<foo3>(2 params, 14 registers, 0 symbols):
+// BCGEN:Function<foo3>(2 params, 14 registers):
 // BCGEN-NEXT:Offset in debug table: source 0x0030, lexical 0x0000
 // BCGEN-NEXT:    LoadParam         r3, 1
 // BCGEN-NEXT:    LoadConstUndefined r0
@@ -184,7 +184,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:    Call3             r1, r3, r0, r2, r1
 // BCGEN-NEXT:    Ret               r0
 
-// BCGEN:Function<foo4>(2 params, 16 registers, 0 symbols):
+// BCGEN:Function<foo4>(2 params, 16 registers):
 // BCGEN-NEXT:Offset in debug table: source 0x0037, lexical 0x0000
 // BCGEN-NEXT:    LoadParam         r4, 1
 // BCGEN-NEXT:    LoadConstUndefined r0
@@ -194,7 +194,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:    Call4             r1, r4, r0, r3, r2, r1
 // BCGEN-NEXT:    Ret               r0
 
-// BCGEN:Function<foo5>(2 params, 18 registers, 0 symbols):
+// BCGEN:Function<foo5>(2 params, 18 registers):
 // BCGEN-NEXT:Offset in debug table: source 0x003e, lexical 0x0000
 // BCGEN-NEXT:    LoadParam         r5, 1
 // BCGEN-NEXT:    LoadConstUndefined r0
@@ -214,16 +214,16 @@ function foo5(f) { f(1, 2, 3, 4); }
 
 // BCGEN:Debug source table:
 // BCGEN-NEXT:  0x0000  function idx 0, starts at line 13 col 1
-// BCGEN-NEXT:    bc 2: line 13 col 1
-// BCGEN-NEXT:    bc 7: line 13 col 1
-// BCGEN-NEXT:    bc 12: line 13 col 1
-// BCGEN-NEXT:    bc 17: line 13 col 1
-// BCGEN-NEXT:    bc 22: line 13 col 1
-// BCGEN-NEXT:    bc 34: line 13 col 1
-// BCGEN-NEXT:    bc 45: line 13 col 1
-// BCGEN-NEXT:    bc 56: line 13 col 1
-// BCGEN-NEXT:    bc 67: line 13 col 1
-// BCGEN-NEXT:    bc 78: line 13 col 1
+// BCGEN-NEXT:    bc 6: line 13 col 1
+// BCGEN-NEXT:    bc 11: line 13 col 1
+// BCGEN-NEXT:    bc 16: line 13 col 1
+// BCGEN-NEXT:    bc 21: line 13 col 1
+// BCGEN-NEXT:    bc 26: line 13 col 1
+// BCGEN-NEXT:    bc 38: line 13 col 1
+// BCGEN-NEXT:    bc 49: line 13 col 1
+// BCGEN-NEXT:    bc 60: line 13 col 1
+// BCGEN-NEXT:    bc 71: line 13 col 1
+// BCGEN-NEXT:    bc 82: line 13 col 1
 // BCGEN-NEXT:  0x0022  function idx 1, starts at line 13 col 1
 // BCGEN-NEXT:    bc 5: line 13 col 21
 // BCGEN-NEXT:  0x0029  function idx 2, starts at line 15 col 1

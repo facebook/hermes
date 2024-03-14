@@ -12,7 +12,7 @@ function foo() {
     return [[], [], []];
 }
 
-//CHECK-LABEL:Function<foo>(1 params, 2 registers, 0 symbols):
+//CHECK-LABEL:Function<foo>(1 params, 2 registers):
 //CHECK-NEXT:Offset in debug table: {{.*}}
 //CHECK-NEXT:[@ 0] NewArray 0<Reg8>, 3<UInt16>
 //CHECK-NEXT:[@ 4] NewArray 1<Reg8>, 0<UInt16>

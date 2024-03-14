@@ -7,7 +7,7 @@
 
 // RUN: %hermes -target=HBC -dump-bytecode -pretty-disassemble=false -O %s | %FileCheck --match-full-lines %s
 
-//CHECK-LABEL:Function<fibonacci>(2 params, {{[0-9]+}} registers, 0 symbols):
+//CHECK-LABEL:Function<fibonacci>(2 params, {{[0-9]+}} registers):
 //CHECK-NEXT:Offset in debug table: {{.*}}
 //CHECK-NEXT:[@ {{.*}}] LoadParam 5<Reg8>, 1<UInt8>
 //CHECK-NEXT:[@ {{.*}}] LoadConstUInt8 0<Reg8>, 1<UInt8>

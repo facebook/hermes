@@ -50,9 +50,9 @@ function dynamicProto(func, getProto) {
 // CHECK-NEXT:[int 2]
 // CHECK-NEXT:[int 3]
 // CHECK-NEXT:[int 4]
-// CHECK-NEXT:Function<global>(1 params, 3 registers, 0 symbols):
+// CHECK-NEXT:Function<global>(1 params, 3 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:    CreateFunctionEnvironment r0
+// CHECK-NEXT:    CreateTopLevelEnvironment r0, 0
 // CHECK-NEXT:    DeclareGlobalVar  "staticProto"
 // CHECK-NEXT:    DeclareGlobalVar  "dynamicProto"
 // CHECK-NEXT:    CreateClosure     r2, r0, Function<staticProto>
@@ -63,7 +63,7 @@ function dynamicProto(func, getProto) {
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<staticProto>(1 params, 12 registers, 0 symbols):
+// CHECK:Function<staticProto>(1 params, 12 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
 // CHECK-NEXT:    NewObjectWithBuffer r0, 3, 3, 0, 0
 // CHECK-NEXT:    LoadConstNull     r2
@@ -71,7 +71,7 @@ function dynamicProto(func, getProto) {
 // CHECK-NEXT:    CallBuiltin       r1, "HermesBuiltin.silentSetPrototypeOf", 3
 // CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<dynamicProto>(3 params, 13 registers, 0 symbols):
+// CHECK:Function<dynamicProto>(3 params, 13 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0017, lexical 0x0000
 // CHECK-NEXT:    NewObject         r0
 // CHECK-NEXT:    LoadParam         r1, 1
@@ -94,10 +94,10 @@ function dynamicProto(func, getProto) {
 
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 11 col 1
-// CHECK-NEXT:    bc 2: line 11 col 1
-// CHECK-NEXT:    bc 7: line 11 col 1
-// CHECK-NEXT:    bc 19: line 11 col 1
-// CHECK-NEXT:    bc 30: line 11 col 1
+// CHECK-NEXT:    bc 6: line 11 col 1
+// CHECK-NEXT:    bc 11: line 11 col 1
+// CHECK-NEXT:    bc 23: line 11 col 1
+// CHECK-NEXT:    bc 34: line 11 col 1
 // CHECK-NEXT:  0x0010  function idx 1, starts at line 11 col 1
 // CHECK-NEXT:    bc 15: line 12 col 10
 // CHECK-NEXT:  0x0017  function idx 2, starts at line 15 col 1

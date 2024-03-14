@@ -11,7 +11,7 @@
 // This tests disassembleBytecode in CompilerDriver.cpp
 // RUN: %hermes -emit-binary -O -target=HBC -out %t %s && %hermes -dump-bytecode -pretty-disassemble=false -b %t | %FileCheck %s --match-full-lines
 
-//CHECK-LABEL:Function<test_one>(3 params, 7 registers, 0 symbols):
+//CHECK-LABEL:Function<test_one>(3 params, 7 registers):
 //CHECK-NEXT:Offset in debug table: {{.*}}
 //CHECK-NEXT:[@ {{.*}}] LoadParam 5<Reg8>, 1<UInt8>
 //CHECK-NEXT:[@ {{.*}}] Mov 3<Reg8>, 5<Reg8>

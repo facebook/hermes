@@ -17,7 +17,7 @@ function foo(p) {
   delete obj[p];
 }
 
-//CHECK-LABEL:Function<foo>(2 params, 4 registers, 0 symbols):
+//CHECK-LABEL:Function<foo>(2 params, 4 registers):
 //CHECK-NEXT:Offset in debug table: {{.*}}
 //CHECK-NEXT:[@ {{.*}}] LoadParam 1<Reg8>, 1<UInt8>
 //CHECK-NEXT:[@ {{.*}}] NewObject 0<Reg8>

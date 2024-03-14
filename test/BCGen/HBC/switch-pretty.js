@@ -100,9 +100,9 @@ function f(x) {
 // CHECK-NEXT:i1[ASCII, 0..0] #00019A16: g
 // CHECK-NEXT:i2[ASCII, 6..6] #00019E07: f
 
-// CHECK:Function<global>(1 params, 3 registers, 0 symbols):
+// CHECK:Function<global>(1 params, 3 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:    CreateFunctionEnvironment r0
+// CHECK-NEXT:    CreateTopLevelEnvironment r0, 0
 // CHECK-NEXT:    DeclareGlobalVar  "g"
 // CHECK-NEXT:    DeclareGlobalVar  "f"
 // CHECK-NEXT:    CreateClosure     r2, r0, Function<g>
@@ -113,11 +113,11 @@ function f(x) {
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<g>(1 params, 1 registers, 0 symbols):
+// CHECK:Function<g>(1 params, 1 registers):
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<f>(2 params, 11 registers, 0 symbols):
+// CHECK:Function<f>(2 params, 11 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r0, 1
 // CHECK-NEXT:    SwitchImm         r0, 292, L18, 0, 16
@@ -265,10 +265,10 @@ function f(x) {
 
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
-// CHECK-NEXT:    bc 2: line 10 col 1
-// CHECK-NEXT:    bc 7: line 10 col 1
-// CHECK-NEXT:    bc 19: line 10 col 1
-// CHECK-NEXT:    bc 30: line 10 col 1
+// CHECK-NEXT:    bc 6: line 10 col 1
+// CHECK-NEXT:    bc 11: line 10 col 1
+// CHECK-NEXT:    bc 23: line 10 col 1
+// CHECK-NEXT:    bc 34: line 10 col 1
 // CHECK-NEXT:  0x0010  function idx 2, starts at line 12 col 1
 // CHECK-NEXT:    bc 119: line 23 col 13
 // CHECK-NEXT:    bc 126: line 23 col 14

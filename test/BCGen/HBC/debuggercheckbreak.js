@@ -45,10 +45,10 @@ function test1() {
 // CHECK-NEXT:i3[ASCII, 14..18] #13935A76: test1
 // CHECK-NEXT:i4[ASCII, 19..24] #50223B1A: random
 
-// CHECK:Function<global>(1 params, 2 registers, 0 symbols):
+// CHECK:Function<global>(1 params, 2 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "test1"
-// CHECK-NEXT:    CreateFunctionEnvironment r0
+// CHECK-NEXT:    CreateTopLevelEnvironment r0, 0
 // CHECK-NEXT:    CreateClosure     r1, r0, Function<test1>
 // CHECK-NEXT:    GetGlobalObject   r0
 // CHECK-NEXT:    PutByIdLoose      r0, r1, 1, "test1"
@@ -56,7 +56,7 @@ function test1() {
 // CHECK-NEXT:    AsyncBreakCheck
 // CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<test1>(1 params, 18 registers, 0 symbols):
+// CHECK:Function<test1>(1 params, 18 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0014, lexical 0x0002
 // CHECK-NEXT:    LoadConstUInt8    r6, 1
 // CHECK-NEXT:    GetGlobalObject   r1
@@ -109,9 +109,9 @@ function test1() {
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
 // CHECK-NEXT:    bc 0: line 10 col 1
 // CHECK-NEXT:    bc 5: line 10 col 1
-// CHECK-NEXT:    bc 7: line 10 col 1
-// CHECK-NEXT:    bc 14: line 10 col 1
-// CHECK-NEXT:    bc 23: line 21 col 1
+// CHECK-NEXT:    bc 11: line 10 col 1
+// CHECK-NEXT:    bc 18: line 10 col 1
+// CHECK-NEXT:    bc 27: line 21 col 1
 // CHECK-NEXT:  0x0014  function idx 1, starts at line 10 col 1
 // CHECK-NEXT:    bc 16: line 13 col 9
 // CHECK-NEXT:    bc 22: line 13 col 20

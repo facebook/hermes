@@ -64,23 +64,23 @@ function foo(p) {
 // CHECK-NEXT:[String 1]
 // CHECK-NEXT:null
 // CHECK-NEXT:[int 5]
-// CHECK-NEXT:Function<global>(1 params, 11 registers, 0 symbols):
+// CHECK-NEXT:Function<global>(1 params, 11 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:[@ 0] CreateFunctionEnvironment 0<Reg8>
-// CHECK-NEXT:[@ 2] DeclareGlobalVar 5<UInt32>
-// CHECK-NEXT:[@ 7] CreateClosure 2<Reg8>, 0<Reg8>, 1<UInt16>
-// CHECK-NEXT:[@ 12] GetGlobalObject 1<Reg8>
-// CHECK-NEXT:[@ 14] PutByIdLoose 1<Reg8>, 2<Reg8>, 1<UInt8>, 5<UInt16>
-// CHECK-NEXT:[@ 20] CreateClosure 1<Reg8>, 0<Reg8>, 2<UInt16>
-// CHECK-NEXT:[@ 25] LoadConstUndefined 0<Reg8>
-// CHECK-NEXT:[@ 27] Call1 0<Reg8>, 1<Reg8>, 0<Reg8>
-// CHECK-NEXT:[@ 31] Ret 0<Reg8>
+// CHECK-NEXT:[@ 0] CreateTopLevelEnvironment 0<Reg8>, 0<UInt32>
+// CHECK-NEXT:[@ 6] DeclareGlobalVar 5<UInt32>
+// CHECK-NEXT:[@ 11] CreateClosure 2<Reg8>, 0<Reg8>, 1<UInt16>
+// CHECK-NEXT:[@ 16] GetGlobalObject 1<Reg8>
+// CHECK-NEXT:[@ 18] PutByIdLoose 1<Reg8>, 2<Reg8>, 1<UInt8>, 5<UInt16>
+// CHECK-NEXT:[@ 24] CreateClosure 1<Reg8>, 0<Reg8>, 2<UInt16>
+// CHECK-NEXT:[@ 29] LoadConstUndefined 0<Reg8>
+// CHECK-NEXT:[@ 31] Call1 0<Reg8>, 1<Reg8>, 0<Reg8>
+// CHECK-NEXT:[@ 35] Ret 0<Reg8>
 
-// CHECK:Function<foo>(2 params, 1 registers, 0 symbols):
+// CHECK:Function<foo>(2 params, 1 registers):
 // CHECK-NEXT:[@ 0] NewObjectWithBuffer 0<Reg8>, 2<UInt16>, 2<UInt16>, 0<UInt16>, 0<UInt16>
 // CHECK-NEXT:[@ 10] Ret 0<Reg8>
 
-// CHECK:Function<>(1 params, 2 registers, 0 symbols):
+// CHECK:Function<>(1 params, 2 registers):
 // CHECK-NEXT:Offset in debug table: source 0x000d, lexical 0x0000
 // CHECK-NEXT:[@ 0] NewObjectWithBuffer 0<Reg8>, 3<UInt16>, 3<UInt16>, 3<UInt16>, 9<UInt16>
 // CHECK-NEXT:[@ 10] LoadThisNS 1<Reg8>
@@ -95,9 +95,9 @@ function foo(p) {
 
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
-// CHECK-NEXT:    bc 2: line 10 col 1
-// CHECK-NEXT:    bc 14: line 10 col 1
-// CHECK-NEXT:    bc 27: line 25 col 2
+// CHECK-NEXT:    bc 6: line 10 col 1
+// CHECK-NEXT:    bc 18: line 10 col 1
+// CHECK-NEXT:    bc 31: line 25 col 2
 // CHECK-NEXT:  0x000d  function idx 2, starts at line 18 col 2
 // CHECK-NEXT:    bc 12: line 19 col 12
 // CHECK-NEXT:  0x0014  end of debug source table

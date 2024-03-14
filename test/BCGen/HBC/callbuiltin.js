@@ -135,9 +135,9 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:[int 20]
 // CHKBC-NEXT:[int 30]
 // CHKBC-NEXT:[int 6]
-// CHKBC-NEXT:Function<global>(1 params, 13 registers, 0 symbols):
+// CHKBC-NEXT:Function<global>(1 params, 13 registers):
 // CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHKBC-NEXT:    CreateFunctionEnvironment r1
+// CHKBC-NEXT:    CreateTopLevelEnvironment r1, 0
 // CHKBC-NEXT:    DeclareGlobalVar  "foo"
 // CHKBC-NEXT:    DeclareGlobalVar  "shadows"
 // CHKBC-NEXT:    DeclareGlobalVar  "checkNonStaticBui"...
@@ -156,13 +156,13 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:    Call2             r0, r2, r1, r0
 // CHKBC-NEXT:    Ret               r0
 
-// CHKBC:Function<foo>(2 params, 10 registers, 0 symbols):
+// CHKBC:Function<foo>(2 params, 10 registers):
 // CHKBC-NEXT:Offset in debug table: source 0x0022, lexical 0x0000
 // CHKBC-NEXT:    LoadParam         r1, 1
 // CHKBC-NEXT:    CallBuiltin       r0, "Object.keys", 2
 // CHKBC-NEXT:    Ret               r0
 
-// CHKBC:Function<shadows>(1 params, 13 registers, 0 symbols):
+// CHKBC:Function<shadows>(1 params, 13 registers):
 // CHKBC-NEXT:Offset in debug table: source 0x0029, lexical 0x0000
 // CHKBC-NEXT:    NewObject         r3
 // CHKBC-NEXT:    GetGlobalObject   r0
@@ -174,7 +174,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:    Call2             r1, r2, r3, r1
 // CHKBC-NEXT:    Ret               r0
 
-// CHKBC:Function<checkNonStaticBuiltin>(1 params, 13 registers, 0 symbols):
+// CHKBC:Function<checkNonStaticBuiltin>(1 params, 13 registers):
 // CHKBC-NEXT:Offset in debug table: source 0x0039, lexical 0x0000
 // CHKBC-NEXT:    GetGlobalObject   r0
 // CHKBC-NEXT:    TryGetById        r3, r0, 1, "HermesInternal"
@@ -192,16 +192,16 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 
 // CHKBC:Debug source table:
 // CHKBC-NEXT:  0x0000  function idx 0, starts at line 12 col 1
-// CHKBC-NEXT:    bc 2: line 12 col 1
-// CHKBC-NEXT:    bc 7: line 12 col 1
-// CHKBC-NEXT:    bc 12: line 12 col 1
-// CHKBC-NEXT:    bc 24: line 12 col 1
-// CHKBC-NEXT:    bc 35: line 12 col 1
-// CHKBC-NEXT:    bc 46: line 12 col 1
-// CHKBC-NEXT:    bc 52: line 26 col 1
-// CHKBC-NEXT:    bc 58: line 26 col 7
-// CHKBC-NEXT:    bc 75: line 26 col 10
-// CHKBC-NEXT:    bc 80: line 26 col 6
+// CHKBC-NEXT:    bc 6: line 12 col 1
+// CHKBC-NEXT:    bc 11: line 12 col 1
+// CHKBC-NEXT:    bc 16: line 12 col 1
+// CHKBC-NEXT:    bc 28: line 12 col 1
+// CHKBC-NEXT:    bc 39: line 12 col 1
+// CHKBC-NEXT:    bc 50: line 12 col 1
+// CHKBC-NEXT:    bc 56: line 26 col 1
+// CHKBC-NEXT:    bc 62: line 26 col 7
+// CHKBC-NEXT:    bc 79: line 26 col 10
+// CHKBC-NEXT:    bc 84: line 26 col 6
 // CHKBC-NEXT:  0x0022  function idx 1, starts at line 12 col 1
 // CHKBC-NEXT:    bc 3: line 13 col 23
 // CHKBC-NEXT:  0x0029  function idx 2, starts at line 17 col 1

@@ -58,18 +58,18 @@ function foo() {
 // CHKBC-NEXT:i1[ASCII, 6..8] #9290584E: foo
 // CHKBC-NEXT:i2[ASCII, 9..9] #0001E7F9: x
 
-// CHKBC:Function<global>(1 params, 2 registers, 0 symbols):
+// CHKBC:Function<global>(1 params, 2 registers):
 // CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHKBC-NEXT:    DeclareGlobalVar  "x"
 // CHKBC-NEXT:    DeclareGlobalVar  "foo"
-// CHKBC-NEXT:    CreateFunctionEnvironment r0
+// CHKBC-NEXT:    CreateTopLevelEnvironment r0, 0
 // CHKBC-NEXT:    CreateClosure     r1, r0, Function<foo>
 // CHKBC-NEXT:    GetGlobalObject   r0
 // CHKBC-NEXT:    PutByIdLoose      r0, r1, 1, "foo"
 // CHKBC-NEXT:    LoadConstUndefined r0
 // CHKBC-NEXT:    Ret               r0
 
-// CHKBC:Function<foo>(1 params, 1 registers, 0 symbols):
+// CHKBC:Function<foo>(1 params, 1 registers):
 // CHKBC-NEXT:Offset in debug table: source 0x000d, lexical 0x0000
 // CHKBC-NEXT:    GetGlobalObject   r0
 // CHKBC-NEXT:    GetByIdShort      r0, r0, 1, "x"
@@ -85,7 +85,7 @@ function foo() {
 // CHKBC-NEXT:  0x0000  function idx 0, starts at line 11 col 1
 // CHKBC-NEXT:    bc 0: line 11 col 1
 // CHKBC-NEXT:    bc 5: line 11 col 1
-// CHKBC-NEXT:    bc 19: line 11 col 1
+// CHKBC-NEXT:    bc 23: line 11 col 1
 // CHKBC-NEXT:  0x000d  function idx 1, starts at line 13 col 1
 // CHKBC-NEXT:    bc 2: line 14 col 10
 // CHKBC-NEXT:  0x0014  end of debug source table

@@ -47,17 +47,17 @@ function foo(a) {
 // CHECK-NEXT:s0[ASCII, 0..5]: global
 // CHECK-NEXT:i1[ASCII, 6..8] #9290584E: foo
 
-// CHECK:Function<global>(1 params, 2 registers, 0 symbols):
+// CHECK:Function<global>(1 params, 2 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
-// CHECK-NEXT:    CreateFunctionEnvironment r0
+// CHECK-NEXT:    CreateTopLevelEnvironment r0, 0
 // CHECK-NEXT:    CreateClosure     r1, r0, Function<foo>
 // CHECK-NEXT:    GetGlobalObject   r0
 // CHECK-NEXT:    PutByIdLoose      r0, r1, 1, "foo"
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<foo>(2 params, 12 registers, 0 symbols):
+// CHECK:Function<foo>(2 params, 12 registers):
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r2, 1
 // CHECK-NEXT:L10:
@@ -113,7 +113,7 @@ function foo(a) {
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
 // CHECK-NEXT:    bc 0: line 10 col 1
-// CHECK-NEXT:    bc 14: line 10 col 1
+// CHECK-NEXT:    bc 18: line 10 col 1
 // CHECK-NEXT:  0x000a  function idx 1, starts at line 10 col 1
 // CHECK-NEXT:    bc 3: line 11 col 3
 // CHECK-NEXT:    bc 5: line 12 col 6

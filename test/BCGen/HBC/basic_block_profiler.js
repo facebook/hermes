@@ -45,7 +45,7 @@ try {
 // CHECK-NEXT:i5[ASCII, 27..31] #834F633C: stack
 // CHECK-NEXT:i6[ASCII, 32..36] #A689F65B: print
 
-// CHECK:Function<global>(1 params, 15 registers, 0 symbols):
+// CHECK:Function<global>(1 params, 15 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    ProfilePoint      10
 // CHECK-NEXT:    DeclareGlobalVar  "condition"

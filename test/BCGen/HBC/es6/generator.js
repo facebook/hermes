@@ -51,9 +51,9 @@ function *args() {
 // CHECK-NEXT:  Function ID 3 -> s0
 // CHECK-NEXT:  Function ID 4 -> s0
 
-// CHECK:Function<global>(1 params, 9 registers, 0 symbols):
+// CHECK:Function<global>(1 params, 9 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:    CreateFunctionEnvironment r0
+// CHECK-NEXT:    CreateTopLevelEnvironment r0, 0
 // CHECK-NEXT:    DeclareGlobalVar  "loop"
 // CHECK-NEXT:    DeclareGlobalVar  "args"
 // CHECK-NEXT:    CreateGeneratorClosure r1, r0, NCFunction<loop>
@@ -67,19 +67,19 @@ function *args() {
 // CHECK-NEXT:    Mov               r7, r5
 // CHECK-NEXT:    Ret               r7
 
-// CHECK:NCFunction<loop>(2 params, 4 registers, 0 symbols):
+// CHECK:NCFunction<loop>(2 params, 4 registers):
 // CHECK-NEXT:    GetParentEnvironment r0, 0
 // CHECK-NEXT:    CreateEnvironment r1, r0, 0
 // CHECK-NEXT:    CreateGenerator   r2, r1, Function<?anon_0_loop>
 // CHECK-NEXT:    Ret               r2
 
-// CHECK:NCFunction<args>(1 params, 4 registers, 0 symbols):
+// CHECK:NCFunction<args>(1 params, 4 registers):
 // CHECK-NEXT:    GetParentEnvironment r0, 0
 // CHECK-NEXT:    CreateEnvironment r1, r0, 0
 // CHECK-NEXT:    CreateGenerator   r2, r1, Function<?anon_0_args>
 // CHECK-NEXT:    Ret               r2
 
-// CHECK:Function<?anon_0_loop>(2 params, 9 registers, 2 symbols):
+// CHECK:Function<?anon_0_loop>(2 params, 9 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
 // CHECK-NEXT:    StartGenerator
 // CHECK-NEXT:    ResumeGenerator   r1, r0
@@ -123,7 +123,7 @@ function *args() {
 // CHECK-NEXT:    CompleteGenerator
 // CHECK-NEXT:    Ret               r1
 
-// CHECK:Function<?anon_0_args>(1 params, 8 registers, 0 symbols):
+// CHECK:Function<?anon_0_args>(1 params, 8 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0026, lexical 0x0000
 // CHECK-NEXT:    StartGenerator
 // CHECK-NEXT:    ResumeGenerator   r1, r0
@@ -159,10 +159,10 @@ function *args() {
 
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
-// CHECK-NEXT:    bc 2: line 10 col 1
-// CHECK-NEXT:    bc 7: line 10 col 1
-// CHECK-NEXT:    bc 19: line 10 col 1
-// CHECK-NEXT:    bc 32: line 10 col 1
+// CHECK-NEXT:    bc 6: line 10 col 1
+// CHECK-NEXT:    bc 11: line 10 col 1
+// CHECK-NEXT:    bc 23: line 10 col 1
+// CHECK-NEXT:    bc 36: line 10 col 1
 // CHECK-NEXT:  0x0010  function idx 3, starts at line 10 col 1
 // CHECK-NEXT:    bc 41: line 12 col 10
 // CHECK-NEXT:    bc 58: line 13 col 14

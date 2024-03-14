@@ -14,7 +14,7 @@ function foo (a) {
     print("This\nis един long Unicode string=", sum);
 }
 
-//CHECK-LABEL:Function<foo>(2 params, {{[0-9]+}} registers, 0 symbols):
+//CHECK-LABEL:Function<foo>(2 params, {{[0-9]+}} registers):
 //CHECK-NEXT:Offset in debug table: {{.*}}
 //CHECK-NEXT:    LoadParam         r0, 1
 //CHECK-NEXT:    Dec               r1, r0

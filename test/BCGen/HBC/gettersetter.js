@@ -43,9 +43,9 @@ var obj = {
 // CHECK-NEXT:s7[ASCII, 21..25]: set b
 // CHECK-NEXT:i8[ASCII, 26..28] #DC53DBCF: obj
 
-// CHECK:Function<global>(1 params, 5 registers, 0 symbols):
+// CHECK:Function<global>(1 params, 5 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:    CreateFunctionEnvironment r1
+// CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
 // CHECK-NEXT:    DeclareGlobalVar  "obj"
 // CHECK-NEXT:    NewObject         r2
 // CHECK-NEXT:    CreateClosure     r4, r1, Function<get b>
@@ -63,19 +63,19 @@ var obj = {
 // CHECK-NEXT:    PutByIdLoose      r1, r2, 1, "obj"
 // CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<get b>(1 params, 1 registers, 0 symbols):
+// CHECK:Function<get b>(1 params, 1 registers):
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<set b>(2 params, 1 registers, 0 symbols):
+// CHECK:Function<set b>(2 params, 1 registers):
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<get c>(1 params, 1 registers, 0 symbols):
+// CHECK:Function<get c>(1 params, 1 registers):
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<set d>(2 params, 1 registers, 0 symbols):
+// CHECK:Function<set d>(2 params, 1 registers):
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    Ret               r0
 
@@ -87,11 +87,11 @@ var obj = {
 
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
-// CHECK-NEXT:    bc 2: line 10 col 1
-// CHECK-NEXT:    bc 23: line 10 col 11
-// CHECK-NEXT:    bc 40: line 10 col 11
-// CHECK-NEXT:    bc 55: line 10 col 11
-// CHECK-NEXT:    bc 63: line 10 col 9
+// CHECK-NEXT:    bc 6: line 10 col 1
+// CHECK-NEXT:    bc 27: line 10 col 11
+// CHECK-NEXT:    bc 44: line 10 col 11
+// CHECK-NEXT:    bc 59: line 10 col 11
+// CHECK-NEXT:    bc 67: line 10 col 9
 // CHECK-NEXT:  0x0013  end of debug source table
 
 // CHECK:Debug lexical table:

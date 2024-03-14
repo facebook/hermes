@@ -11,7 +11,7 @@ function foo(x) {
   this.x = x;
 }
 
-//CHECK-LABEL:Function<bar>(1 params, {{[0-9]+}} registers, 0 symbols):
+//CHECK-LABEL:Function<bar>(1 params, {{[0-9]+}} registers):
 //CHECK-NEXT:Offset in debug table: {{.*}}
 //CHECK-NEXT:{{.*}} GetGlobalObject 0<Reg8>
 //CHECK-NEXT:{{.*}} GetByIdShort 2<Reg8>, 0<Reg8>, 1<UInt8>, 2<UInt8>

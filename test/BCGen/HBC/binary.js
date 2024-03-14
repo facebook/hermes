@@ -57,9 +57,9 @@ function foo() { return; }
 // CHECK-NEXT:i1[ASCII, 6..11] #A5D4F6F9: binary
 // CHECK-NEXT:i2[ASCII, 12..14] #9290584E: foo
 
-// CHECK:Function<global>(1 params, 3 registers, 0 symbols):
+// CHECK:Function<global>(1 params, 3 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:    CreateFunctionEnvironment r0
+// CHECK-NEXT:    CreateTopLevelEnvironment r0, 0
 // CHECK-NEXT:    DeclareGlobalVar  "binary"
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
 // CHECK-NEXT:    CreateClosure     r2, r0, Function<binary>
@@ -70,7 +70,7 @@ function foo() { return; }
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<binary>(1 params, 11 registers, 0 symbols):
+// CHECK:Function<binary>(1 params, 11 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
 // CHECK-NEXT:    GetGlobalObject   r0
 // CHECK-NEXT:    GetByIdShort      r1, r0, 1, "foo"
@@ -100,7 +100,7 @@ function foo() { return; }
 // CHECK-NEXT:    StrictNeq         r0, r1, r0
 // CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<foo>(1 params, 1 registers, 0 symbols):
+// CHECK:Function<foo>(1 params, 1 registers):
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    Ret               r0
 
@@ -112,10 +112,10 @@ function foo() { return; }
 
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
-// CHECK-NEXT:    bc 2: line 10 col 1
-// CHECK-NEXT:    bc 7: line 10 col 1
-// CHECK-NEXT:    bc 19: line 10 col 1
-// CHECK-NEXT:    bc 30: line 10 col 1
+// CHECK-NEXT:    bc 6: line 10 col 1
+// CHECK-NEXT:    bc 11: line 10 col 1
+// CHECK-NEXT:    bc 23: line 10 col 1
+// CHECK-NEXT:    bc 34: line 10 col 1
 // CHECK-NEXT:  0x0010  function idx 1, starts at line 10 col 1
 // CHECK-NEXT:    bc 2: line 11 col 11
 // CHECK-NEXT:    bc 9: line 11 col 14

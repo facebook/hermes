@@ -164,9 +164,9 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:i3[ASCII, 31..42] #B424DF91: test_int_int
 // CHKBC-NEXT:i4[ASCII, 42..58] #7CF5E44C: test_could_be_int
 
-// CHKBC:Function<global>(1 params, 3 registers, 0 symbols):
+// CHKBC:Function<global>(1 params, 3 registers):
 // CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHKBC-NEXT:    CreateFunctionEnvironment r0
+// CHKBC-NEXT:    CreateTopLevelEnvironment r0, 0
 // CHKBC-NEXT:    DeclareGlobalVar  "test_int_int"
 // CHKBC-NEXT:    DeclareGlobalVar  "test_int_uint"
 // CHKBC-NEXT:    DeclareGlobalVar  "test_uint_uint"
@@ -183,7 +183,7 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:    LoadConstUndefined r0
 // CHKBC-NEXT:    Ret               r0
 
-// CHKBC:Function<test_int_int>(3 params, 2 registers, 0 symbols):
+// CHKBC:Function<test_int_int>(3 params, 2 registers):
 // CHKBC-NEXT:    LoadParam         r0, 1
 // CHKBC-NEXT:    ToInt32           r0, r0
 // CHKBC-NEXT:    LoadParam         r1, 2
@@ -195,7 +195,7 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:L1:
 // CHKBC-NEXT:    Ret               r0
 
-// CHKBC:Function<test_int_uint>(3 params, 3 registers, 0 symbols):
+// CHKBC:Function<test_int_uint>(3 params, 3 registers):
 // CHKBC-NEXT:Offset in debug table: source 0x001c, lexical 0x0000
 // CHKBC-NEXT:    LoadParam         r0, 1
 // CHKBC-NEXT:    ToInt32           r0, r0
@@ -209,7 +209,7 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:L1:
 // CHKBC-NEXT:    Ret               r0
 
-// CHKBC:Function<test_uint_uint>(3 params, 3 registers, 0 symbols):
+// CHKBC:Function<test_uint_uint>(3 params, 3 registers):
 // CHKBC-NEXT:Offset in debug table: source 0x0023, lexical 0x0000
 // CHKBC-NEXT:    LoadParam         r0, 1
 // CHKBC-NEXT:    LoadConstZero     r2
@@ -223,7 +223,7 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:L1:
 // CHKBC-NEXT:    Ret               r0
 
-// CHKBC:Function<test_could_be_int>(2 params, 12 registers, 0 symbols):
+// CHKBC:Function<test_could_be_int>(2 params, 12 registers):
 // CHKBC-NEXT:Offset in debug table: source 0x002d, lexical 0x0000
 // CHKBC-NEXT:    LoadParam         r2, 1
 // CHKBC-NEXT:    LoadConstUndefined r1
@@ -250,14 +250,14 @@ function test_could_be_int(func) {
 
 // CHKBC:Debug source table:
 // CHKBC-NEXT:  0x0000  function idx 0, starts at line 12 col 1
-// CHKBC-NEXT:    bc 2: line 12 col 1
-// CHKBC-NEXT:    bc 7: line 12 col 1
-// CHKBC-NEXT:    bc 12: line 12 col 1
-// CHKBC-NEXT:    bc 17: line 12 col 1
-// CHKBC-NEXT:    bc 29: line 12 col 1
-// CHKBC-NEXT:    bc 40: line 12 col 1
-// CHKBC-NEXT:    bc 51: line 12 col 1
-// CHKBC-NEXT:    bc 62: line 12 col 1
+// CHKBC-NEXT:    bc 6: line 12 col 1
+// CHKBC-NEXT:    bc 11: line 12 col 1
+// CHKBC-NEXT:    bc 16: line 12 col 1
+// CHKBC-NEXT:    bc 21: line 12 col 1
+// CHKBC-NEXT:    bc 33: line 12 col 1
+// CHKBC-NEXT:    bc 44: line 12 col 1
+// CHKBC-NEXT:    bc 55: line 12 col 1
+// CHKBC-NEXT:    bc 66: line 12 col 1
 // CHKBC-NEXT:  0x001c  function idx 2, starts at line 23 col 1
 // CHKBC-NEXT:    bc 11: line 25 col 7
 // CHKBC-NEXT:  0x0023  function idx 3, starts at line 34 col 1

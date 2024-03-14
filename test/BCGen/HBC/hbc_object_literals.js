@@ -202,7 +202,7 @@ var obj4 = {
 // BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:[int 1]
-// BCGEN-NEXT:Function<global>(1 params, 5 registers, 0 symbols):
+// BCGEN-NEXT:Function<global>(1 params, 5 registers):
 // BCGEN-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // BCGEN-NEXT:    DeclareGlobalVar  "obj1"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj2"
@@ -212,7 +212,7 @@ var obj4 = {
 // BCGEN-NEXT:    LoadConstUInt8    r3, 1
 // BCGEN-NEXT:    LoadConstUndefined r0
 // BCGEN-NEXT:    PutByIdLoose      r1, r0, 1, "d"
-// BCGEN-NEXT:    CreateFunctionEnvironment r2
+// BCGEN-NEXT:    CreateTopLevelEnvironment r2, 0
 // BCGEN-NEXT:    CreateClosure     r2, r2, Function<f>
 // BCGEN-NEXT:    PutByIdLoose      r1, r2, 2, "f"
 // BCGEN-NEXT:    GetGlobalObject   r2
@@ -245,7 +245,7 @@ var obj4 = {
 // BCGEN-NEXT:    PutByIdLoose      r2, r1, 6, "obj4"
 // BCGEN-NEXT:    Ret               r0
 
-// BCGEN:Function<f>(1 params, 1 registers, 0 symbols):
+// BCGEN:Function<f>(1 params, 1 registers):
 // BCGEN-NEXT:    LoadConstUndefined r0
 // BCGEN-NEXT:    Ret               r0
 
@@ -262,9 +262,8 @@ var obj4 = {
 // BCGEN-NEXT:    bc 10: line 11 col 1
 // BCGEN-NEXT:    bc 15: line 11 col 1
 // BCGEN-NEXT:    bc 35: line 11 col 12
-// BCGEN-NEXT:    bc 48: line 11 col 12
-// BCGEN-NEXT:    bc 56: line 11 col 10
-// BCGEN-NEXT:    bc 64: line 15 col 12
+// BCGEN-NEXT:    bc 52: line 11 col 12
+// BCGEN-NEXT:    bc 60: line 11 col 10
 // BCGEN-NEXT:    bc 68: line 15 col 12
 // BCGEN-NEXT:    bc 72: line 15 col 12
 // BCGEN-NEXT:    bc 76: line 15 col 12
@@ -282,11 +281,12 @@ var obj4 = {
 // BCGEN-NEXT:    bc 124: line 15 col 12
 // BCGEN-NEXT:    bc 128: line 15 col 12
 // BCGEN-NEXT:    bc 132: line 15 col 12
-// BCGEN-NEXT:    bc 136: line 15 col 10
-// BCGEN-NEXT:    bc 152: line 37 col 12
-// BCGEN-NEXT:    bc 156: line 37 col 10
-// BCGEN-NEXT:    bc 172: line 53 col 12
-// BCGEN-NEXT:    bc 176: line 53 col 10
+// BCGEN-NEXT:    bc 136: line 15 col 12
+// BCGEN-NEXT:    bc 140: line 15 col 10
+// BCGEN-NEXT:    bc 156: line 37 col 12
+// BCGEN-NEXT:    bc 160: line 37 col 10
+// BCGEN-NEXT:    bc 176: line 53 col 12
+// BCGEN-NEXT:    bc 180: line 53 col 10
 // BCGEN-NEXT:  0x005e  end of debug source table
 
 // BCGEN:Debug lexical table:

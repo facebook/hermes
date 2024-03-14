@@ -53,19 +53,19 @@ function foo() {
 // CHECK-NEXT:i6[ASCII, 25..29] #A689F65B: print
 // CHECK-NEXT:i7[ASCII, 30..38] #807C5F3D: prototype
 
-// CHECK:Function<global>(1 params, 2 registers, 0 symbols):
+// CHECK:Function<global>(1 params, 2 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
-// CHECK-NEXT:    CreateFunctionEnvironment r0
+// CHECK-NEXT:    CreateTopLevelEnvironment r0, 0
 // CHECK-NEXT:    CreateClosure     r1, r0, Function<foo>
 // CHECK-NEXT:    GetGlobalObject   r0
 // CHECK-NEXT:    PutByIdLoose      r0, r1, 1, "foo"
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<foo>(1 params, 11 registers, 3 symbols):
+// CHECK:Function<foo>(1 params, 11 registers):
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
-// CHECK-NEXT:    CreateFunctionEnvironment r0
+// CHECK-NEXT:    CreateFunctionEnvironment r0, 3
 // CHECK-NEXT:    LoadConstInt      r1, 1234
 // CHECK-NEXT:    StoreNPToEnvironment r0, 0, r1
 // CHECK-NEXT:    GetGlobalObject   r1
@@ -81,7 +81,7 @@ function foo() {
 // CHECK-NEXT:    CreateClosure     r0, r0, Function<bar>
 // CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<bar>(1 params, 14 registers, 0 symbols):
+// CHECK:Function<bar>(1 params, 14 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0017, lexical 0x0000
 // CHECK-NEXT:    GetParentEnvironment r1, 0
 // CHECK-NEXT:    LoadFromEnvironment r2, r1, 0
@@ -113,11 +113,11 @@ function foo() {
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
 // CHECK-NEXT:    bc 0: line 10 col 1
-// CHECK-NEXT:    bc 14: line 10 col 1
+// CHECK-NEXT:    bc 18: line 10 col 1
 // CHECK-NEXT:  0x000a  function idx 1, starts at line 10 col 1
-// CHECK-NEXT:    bc 14: line 14 col 21
-// CHECK-NEXT:    bc 20: line 14 col 27
-// CHECK-NEXT:    bc 32: line 14 col 27
+// CHECK-NEXT:    bc 15: line 14 col 21
+// CHECK-NEXT:    bc 21: line 14 col 27
+// CHECK-NEXT:    bc 33: line 14 col 27
 // CHECK-NEXT:  0x0017  function idx 2, starts at line 17 col 18
 // CHECK-NEXT:    bc 20: line 21 col 9
 // CHECK-NEXT:    bc 32: line 21 col 14
