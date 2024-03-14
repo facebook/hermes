@@ -106,10 +106,6 @@ class BytecodeFunction {
   /// bytecode serialisation code when it is aligning the jump tables.
   ArrayRef<uint32_t> getJumpTablesOnly() const;
 
-  bool hasExceptionHandlers() const {
-    return exceptions_.size() > 0;
-  }
-
   uint32_t getExceptionHandlerCount() const {
     return exceptions_.size();
   }
@@ -118,18 +114,15 @@ class BytecodeFunction {
     return exceptions_;
   }
 
-  bool hasDebugInfo() const {
-    return debugOffsets_.sourceLocations != DebugOffsets::NO_OFFSET ||
-        debugOffsets_.lexicalData != DebugOffsets::NO_OFFSET;
-  }
-
   const DebugOffsets *getDebugOffsets() const {
     return &debugOffsets_;
   }
 
   void setDebugOffsets(DebugOffsets offsets) {
     debugOffsets_ = offsets;
-    header_.flags.hasDebugInfo = hasDebugInfo();
+    header_.flags.hasDebugInfo =
+        debugOffsets_.sourceLocations != DebugOffsets::NO_OFFSET ||
+        debugOffsets_.lexicalData != DebugOffsets::NO_OFFSET;
   }
 
   LazyCompilationData *getLazyCompilationData() const {

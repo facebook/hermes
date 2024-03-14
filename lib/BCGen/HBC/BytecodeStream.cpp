@@ -145,7 +145,7 @@ void BytecodeSerializer::serializeFunctionSourceTable(BytecodeModule &BM) {
 
 // ==================== Exception Handler Table =====================
 void BytecodeSerializer::serializeExceptionHandlerTable(BytecodeFunction &BF) {
-  if (!BF.hasExceptionHandlers())
+  if (!BF.getHeader().flags.hasExceptionHandler)
     return;
 
   pad(INFO_ALIGNMENT);
@@ -168,7 +168,7 @@ void BytecodeSerializer::serializeObjectBuffer(BytecodeModule &BM) {
 }
 
 void BytecodeSerializer::serializeDebugOffsets(BytecodeFunction &BF) {
-  if (options_.stripDebugInfoSection || !BF.hasDebugInfo()) {
+  if (!BF.getHeader().flags.hasDebugInfo) {
     return;
   }
 
