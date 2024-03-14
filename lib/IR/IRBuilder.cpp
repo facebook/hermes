@@ -1315,7 +1315,6 @@ Instruction *IRBuilder::cloneInst(
     llvh::ArrayRef<Value *> operands) {
   Instruction *inst;
   switch (source->getKind()) {
-#define INCLUDE_ALL_INSTRS
 #define DEF_VALUE(name, parent)                    \
   case ValueKind::name##Kind:                      \
     inst = new name(cast<name>(source), operands); \
@@ -1326,7 +1325,6 @@ Instruction *IRBuilder::cloneInst(
     break;
 
 #include "hermes/IR/Instrs.def"
-#undef INCLUDE_ALL_INSTRS
     default:
       llvm_unreachable("invalid kind");
   }

@@ -11,8 +11,6 @@
 #include "hermes/IR/IR.h"
 #include "hermes/IR/Instrs.h"
 
-#define INCLUDE_ALL_INSTRS
-
 namespace hermes {
 
 /// IRVisitorBase - This is a simple visitor class for Hermes IR nodes, allowing
@@ -105,5 +103,4 @@ class InstructionVisitor : public IRVisitorBase<ImplClass, ValueRetTy> {
 
 } // end namespace hermes
 
-#undef INCLUDE_ALL_INSTRS
 #endif

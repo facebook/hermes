@@ -568,7 +568,6 @@ class SideEffect {
 
 enum class ValueKind : uint8_t {
   First_ValueKind,
-#define INCLUDE_ALL_INSTRS
 #define DEF_VALUE(CLASS, PARENT) CLASS##Kind,
 #define BEGIN_VALUE(CLASS, PARENT) First_##CLASS##Kind,
 #define DEF_TAG(NAME, PARENT) NAME##Kind,
@@ -577,7 +576,6 @@ enum class ValueKind : uint8_t {
 #define MARK_FIRST(CLASS, PARENT) First_##CLASS##Kind,
 #define MARK_LAST(CLASS) Last_##CLASS##Kind,
 #include "hermes/IR/ValueKinds.def"
-#undef INCLUDE_ALL_INSTRS
   Last_ValueKind,
 };
 

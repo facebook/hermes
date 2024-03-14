@@ -19,8 +19,6 @@
 #include <set>
 #include <type_traits>
 
-#define INCLUDE_ALL_INSTRS
-
 using namespace hermes;
 
 // Make sure the ValueKinds.def tree is consistent with the class hierarchy.

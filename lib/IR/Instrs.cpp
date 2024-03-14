@@ -15,8 +15,6 @@
 #include "hermes/IR/IRVisitor.h"
 #include "hermes/IR/Instrs.h"
 
-#define INCLUDE_ALL_INSTRS
-
 using namespace hermes;
 
 unsigned TerminatorInst::getNumSuccessors() const {

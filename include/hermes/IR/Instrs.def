@@ -34,10 +34,6 @@
 #define END_TERMINATOR(NAME) END_VALUE(NAME)
 #endif
 
-#if defined(INCLUDE_ALL_INSTRS) || defined(INCLUDE_HBC_INSTRS)
-#define INCLUDE_HBC_BACKEND
-#endif
-
 BEGIN_VALUE(UnaryOperatorInst, Instruction)
 DEF_TAG(UnaryVoidInst, UnaryOperatorInst)
 DEF_TAG(UnaryTypeofInst, UnaryOperatorInst)
@@ -60,7 +56,6 @@ DEF_VALUE(DirectEvalInst, Instruction)
 DEF_VALUE(DeclareGlobalVarInst, Instruction)
 DEF_VALUE(LoadFrameInst, Instruction)
 DEF_VALUE(LoadParamInst, Instruction)
-#ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCLoadConstInst, Instruction)
 DEF_VALUE(HBCGetArgumentsLengthInst, Instruction)
 
@@ -70,7 +65,6 @@ DEF_VALUE(HBCReifyArgumentsLooseInst, HBCReifyArgumentsInst)
 MARK_LAST(HBCReifyArgumentsInst)
 
 DEF_VALUE(HBCSpillMovInst, Instruction)
-#endif
 
 DEF_VALUE(PhiInst, Instruction)
 
@@ -192,9 +186,7 @@ MARK_FIRST(BaseCallInst, Instruction)
 DEF_VALUE(CallInst, BaseCallInst)
 DEF_VALUE(CallBuiltinInst, BaseCallInst)
 DEF_VALUE(HBCCallWithArgCountInst, BaseCallInst)
-#ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCCallNInst, BaseCallInst)
-#endif
 MARK_LAST(BaseCallInst)
 
 DEF_VALUE(CreateThisInst, Instruction)
@@ -210,16 +202,13 @@ DEF_VALUE(CreateScopeInst, BaseScopeInst)
 DEF_VALUE(ResolveScopeInst, BaseScopeInst)
 DEF_VALUE(LIRResolveScopeInst, BaseScopeInst)
 DEF_VALUE(GetClosureScopeInst, BaseScopeInst)
-#ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCResolveParentEnvironmentInst, BaseScopeInst)
 DEF_VALUE(HBCCreateFunctionEnvironmentInst, BaseScopeInst)
-#endif
 MARK_LAST(BaseScopeInst)
 
 // These are target dependent instructions:
 
 DEF_VALUE(LIRGetThisNSInst, Instruction)
-#ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCGetGlobalObjectInst, Instruction)
 
 MARK_FIRST(HBCGetArgumentsPropByValInst, Instruction)
@@ -229,7 +218,6 @@ MARK_LAST(HBCGetArgumentsPropByValInst)
 
 DEF_VALUE(HBCAllocObjectFromBufferInst, Instruction)
 DEF_VALUE(HBCProfilePointInst, Instruction)
-#endif
 
 DEF_VALUE(PrLoadInst, Instruction)
 DEF_VALUE(PrStoreInst, Instruction)
@@ -272,8 +260,6 @@ DEF_VALUE(LIRDeadValueInst, Instruction)
 
 DEF_VALUE(NativeCallInst, Instruction)
 DEF_VALUE(GetNativeRuntimeInst, Instruction)
-
-#undef INCLUDE_HBC_BACKEND
 
 // Don't undef these if this file is being included in ValueKinds.def, since
 // these macros are still used after the #include.

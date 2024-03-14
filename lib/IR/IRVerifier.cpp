@@ -25,8 +25,6 @@ using namespace hermes;
 
 namespace {
 
-#define INCLUDE_ALL_INSTRS
-
 /// IR Verifier - the verifier checks some basic properties of the IR to make
 /// sure that it is not incorrect. For example, it checks that instructions are
 /// dominated by their oparands and that the entry block has no predecessors.
