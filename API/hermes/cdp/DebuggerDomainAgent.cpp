@@ -61,9 +61,7 @@ DebuggerDomainAgent::DebuggerDomainAgent(
 }
 
 DebuggerDomainAgent::~DebuggerDomainAgent() {
-  // Also remove DebuggerEventCallback here in case we don't receive a
-  // Debugger.disable command prior to destruction.
-  asyncDebugger_.removeDebuggerEventCallback_TS(debuggerEventCallbackId_);
+  cleanUp();
 }
 
 void DebuggerDomainAgent::handleDebuggerEvent(
@@ -169,26 +167,28 @@ void DebuggerDomainAgent::enable(const m::debugger::EnableRequest &req) {
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
-void DebuggerDomainAgent::disable(const m::debugger::DisableRequest &req) {
-  if (!enabled_) {
-    sendResponseToClient(m::makeOkResponse(req.id));
-    return;
-  }
-
+void DebuggerDomainAgent::cleanUp() {
   // This doesn't support other debug clients also setting breakpoints. If we
   // need that functionality, then we might need to track breakpoints set by
   // this client and only remove those.
   runtime_.getDebugger().deleteAllBreakpoints();
 
-  asyncDebugger_.removeDebuggerEventCallback_TS(debuggerEventCallbackId_);
-  debuggerEventCallbackId_ = kInvalidDebuggerEventCallbackID;
+  if (debuggerEventCallbackId_ != kInvalidDebuggerEventCallbackID) {
+    asyncDebugger_.removeDebuggerEventCallback_TS(debuggerEventCallbackId_);
+    debuggerEventCallbackId_ = kInvalidDebuggerEventCallbackID;
+  }
+
   // This doesn't work well if there are other debug clients that also toggle
   // this flag. If we need that functionality, then DebuggerAPI needs to be
   // changed.
   runtime_.getDebugger().setShouldPauseOnScriptLoad(false);
+}
 
+void DebuggerDomainAgent::disable(const m::debugger::DisableRequest &req) {
+  if (enabled_) {
+    cleanUp();
+  }
   enabled_ = false;
-
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
