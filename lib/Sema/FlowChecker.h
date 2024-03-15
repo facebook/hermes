@@ -459,6 +459,7 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   Type *parseNullableTypeAnnotation(ESTree::NullableTypeAnnotationNode *node);
   Type *parseArrayTypeAnnotation(ESTree::ArrayTypeAnnotationNode *node);
   Type *parseTupleTypeAnnotation(ESTree::TupleTypeAnnotationNode *node);
+  Type *parseObjectTypeAnnotation(ESTree::ObjectTypeAnnotationNode *node);
   Type *parseGenericTypeAnnotation(ESTree::GenericTypeAnnotationNode *node);
   Type *parseFunctionTypeAnnotation(ESTree::FunctionTypeAnnotationNode *node);
 
@@ -497,6 +498,7 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   static CanFlowResult canAFlowIntoB(TypeInfo *a, TypeInfo *b);
   static CanFlowResult canAFlowIntoB(ClassType *a, ClassType *b);
   static CanFlowResult canAFlowIntoB(TupleType *a, TupleType *b);
+  static CanFlowResult canAFlowIntoB(ExactObjectType *a, ExactObjectType *b);
 
   /// How to handle 'this' parameters when checking if function types can flow.
   enum class ThisFlowDirection {
@@ -685,6 +687,12 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// \return the generic info associated with \p decl.
   GenericInfo<Type> &getGenericAliasInfoMustExist(
       const ESTree::TypeAliasNode *decl);
+
+  /// \param key the property key to attempt to convert to an identifier,
+  ///   e.g. StringLiteralNode, IdentifierNode, or NumericLiteralNode.
+  /// \return the identifier that represents the property key, or nullptr if
+  ///   the key cannot be converted.
+  UniqueString *propertyKeyAsIdentifier(ESTree::Node *Key);
 };
 
 class FlowChecker::FunctionContext {

@@ -199,6 +199,27 @@ class FlowChecker::ExprVisitor {
                   classType->getClassNameOrDefault());
         }
       }
+    } else if (
+        auto *exactObjType = llvh::dyn_cast<ExactObjectType>(objType->info)) {
+      if (node->_computed) {
+        // TODO: determine what this should do for real.
+        // Flow allows this and just returns 'any' (deliberately unsound).
+        outer_.sm_.error(
+            node->_property->getSourceRange(),
+            "ft: computed access to exact object types not supported");
+        resType = outer_.flowContext_.getAny();
+      } else {
+        auto id = llvh::cast<ESTree::IdentifierNode>(node->_property);
+        auto optFieldIdx =
+            exactObjType->findField(Identifier::getFromPointer(id->_name));
+        if (!optFieldIdx) {
+          outer_.sm_.error(
+              node->_property->getSourceRange(),
+              "ft: property " + id->_name->str() + " not defined in object");
+        }
+        const auto &field = exactObjType->getFields()[*optFieldIdx];
+        resType = field.type;
+      }
     } else if (auto *arrayType = llvh::dyn_cast<ArrayType>(objType->info)) {
       if (node->_computed) {
         resType = arrayType->getElement();

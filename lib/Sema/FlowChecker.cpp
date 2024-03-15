@@ -1438,6 +1438,9 @@ Type *FlowChecker::parseTypeAnnotation(ESTree::Node *node) {
     case ESTree::NodeKind::TupleTypeAnnotation:
       return parseTupleTypeAnnotation(
           llvh::cast<ESTree::TupleTypeAnnotationNode>(node));
+    case ESTree::NodeKind::ObjectTypeAnnotation:
+      return parseObjectTypeAnnotation(
+          llvh::cast<ESTree::ObjectTypeAnnotationNode>(node));
     case ESTree::NodeKind::GenericTypeAnnotation:
       return parseGenericTypeAnnotation(
           llvh::cast<ESTree::GenericTypeAnnotationNode>(node));
@@ -1490,6 +1493,101 @@ Type *FlowChecker::parseTupleTypeAnnotation(
     types.push_back(parseTypeAnnotation(&n));
   }
   return flowContext_.createType(flowContext_.createTuple(types), node);
+}
+
+Type *FlowChecker::parseObjectTypeAnnotation(
+    ESTree::ObjectTypeAnnotationNode *node) {
+  if (!node->_indexers.empty()) {
+    sm_.error(
+        node->_indexers.front().getStartLoc(),
+        "ft: indexers are not supported in object types");
+    return flowContext_.getAny();
+  }
+  if (!node->_callProperties.empty()) {
+    sm_.error(
+        node->_callProperties.front().getStartLoc(),
+        "ft: call properties are not supported in object types");
+    return flowContext_.getAny();
+  }
+  if (!node->_internalSlots.empty()) {
+    sm_.error(
+        node->_internalSlots.front().getStartLoc(),
+        "ft: internal slots are not supported in object types");
+    return flowContext_.getAny();
+  }
+  if (node->_inexact) {
+    sm_.error(
+        node->getStartLoc(), "ft: inexact object types are not supported");
+    return flowContext_.getAny();
+  }
+
+  llvh::SmallVector<ExactObjectType::Field, 4> fields{};
+  // Used for checking for duplicate names.
+  llvh::SmallDenseSet<UniqueString *> names{};
+  for (auto &n : node->_properties) {
+    auto *prop = llvh::dyn_cast<ESTree::ObjectTypePropertyNode>(&n);
+    if (!prop) {
+      sm_.error(n.getSourceRange(), "ft: unsupported object type property");
+      continue;
+    }
+    if (prop->_variance) {
+      sm_.error(
+          n.getSourceRange(), "ft: object type variance is not supported");
+      continue;
+    }
+    if (prop->_static) {
+      sm_.error(
+          n.getSourceRange(),
+          "ft: object type static property is not supported");
+      continue;
+    }
+    if (prop->_proto) {
+      sm_.error(
+          n.getSourceRange(),
+          "ft: object type __proto__ property is not supported");
+      continue;
+    }
+    if (prop->_method) {
+      sm_.error(
+          n.getSourceRange(),
+          "ft: object type method property is not supported");
+      continue;
+    }
+    if (prop->_optional) {
+      sm_.error(
+          n.getSourceRange(),
+          "ft: object type optional property is not supported");
+      continue;
+    }
+    if (prop->_kind != kw_.identInit) {
+      sm_.error(n.getSourceRange(), "ft: object type accessors not supported");
+      continue;
+    }
+
+    UniqueString *name = propertyKeyAsIdentifier(prop->_key);
+    if (!name) {
+      sm_.error(
+          prop->_key->getSourceRange(), "ft: unsupported object type key");
+      continue;
+    }
+
+    // Check for duplicates.
+    auto [it, inserted] = names.insert(name);
+    if (!inserted) {
+      sm_.error(
+          prop->_key->getSourceRange(),
+          llvh::Twine("ft: duplicate object type property: ") + name->str());
+      continue;
+    }
+
+    // Found a property we support, add it to the list.
+    fields.emplace_back(
+        Identifier::getFromPointer(name), parseTypeAnnotation(prop->_value));
+  }
+
+  // It's possible we've failed on one of the properties, just continue
+  // with an empty object type because we're going to fail anyway.
+  return flowContext_.createType(flowContext_.createExactObject(fields), node);
 }
 
 Type *FlowChecker::parseGenericTypeAnnotation(
@@ -1602,6 +1700,15 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     return canAFlowIntoB(tupleA, tupleB);
   }
 
+  // Objects are invariant, so if `a` is an object, `b` must be an object with
+  // the same types.
+  if (auto *objectA = llvh::dyn_cast<ExactObjectType>(a)) {
+    auto *objectB = llvh::dyn_cast<ExactObjectType>(b);
+    if (!objectB)
+      return {};
+    return canAFlowIntoB(objectA, objectB);
+  }
+
   if (ClassType *classA = llvh::dyn_cast<ClassType>(a)) {
     ClassType *classB = llvh::dyn_cast<ClassType>(b);
     if (!classB)
@@ -1647,6 +1754,26 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     if (!aTypes[i]->info->equals(bTypes[i]->info)) {
       return {};
     }
+  }
+
+  return {.canFlow = true};
+}
+
+FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
+    ExactObjectType *a,
+    ExactObjectType *b) {
+  auto aFields = a->getFields();
+  auto bFields = b->getFields();
+  if (aFields.size() != bFields.size()) {
+    return {};
+  }
+
+  for (size_t i = 0, e = aFields.size(); i < e; ++i) {
+    // TODO: This will be more complex when we allow variance in object types.
+    if (aFields[i].name != bFields[i].name)
+      return {};
+    if (!aFields[i].type->info->equals(bFields[i].type->info))
+      return {};
   }
 
   return {.canFlow = true};
@@ -2159,6 +2286,36 @@ FlowChecker::GenericInfo<Type> &FlowChecker::getGenericAliasInfoMustExist(
   auto it = genericAliasesMap_.find(decl);
   assert(it != genericAliasesMap_.end() && "generic was never registered");
   return *it->second;
+}
+
+UniqueString *FlowChecker::propertyKeyAsIdentifier(ESTree::Node *Key) {
+  // Handle String Literals.
+  // http://www.ecma-international.org/ecma-262/6.0/#sec-literals-string-literals
+  if (auto *Lit = llvh::dyn_cast<ESTree::StringLiteralNode>(Key)) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Loading String Literal \"" << Lit->_value << "\"\n");
+    return Lit->_value;
+  }
+
+  // Handle identifiers as if they are String Literals.
+  if (auto *Iden = llvh::dyn_cast<ESTree::IdentifierNode>(Key)) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Loading String Literal \"" << Iden->_name << "\"\n");
+    return Iden->_name;
+  }
+
+  // Handle Number Literals.
+  // http://www.ecma-international.org/ecma-262/6.0/#sec-literals-numeric-literals
+  if (auto *Lit = llvh::dyn_cast<ESTree::NumericLiteralNode>(Key)) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Loading Numeric Literal \"" << Lit->_value << "\"\n");
+    char buf[NUMBER_TO_STRING_BUF_SIZE];
+    auto len = numberToString(Lit->_value, buf, sizeof(buf));
+    return astContext_.getIdentifier(llvh::StringRef{buf, len})
+        .getUnderlyingPointer();
+  }
+
+  return nullptr;
 }
 
 } // namespace flow
