@@ -30,6 +30,8 @@ let u: U;
 // CHECK-NEXT:%function.6 = function(a: string): %function.7
 // CHECK-NEXT:%function.7 = function(a: boolean): %function.6
 // CHECK-NEXT:%union.8 = union(%function.2 | %function.5)
+// CHECK-NEXT:%object.9 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -104,4 +106,4 @@ let u: U;
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            Id 'u' [D:E:%d.2 'u']
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.9

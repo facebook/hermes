@@ -15,6 +15,8 @@ type B = (this: number, number) => string;
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%function.2 = function(number): string
 // CHECK-NEXT:%function.3 = function(this: number, number): string
+// CHECK-NEXT:%object.4 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -44,4 +46,4 @@ type B = (this: number, number) => string;
 // CHECK-NEXT:                            FunctionTypeParam
 // CHECK-NEXT:                                NumberTypeAnnotation
 // CHECK-NEXT:                            StringTypeAnnotation
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.4

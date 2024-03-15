@@ -32,6 +32,8 @@ var c2: C_crazy;
 // CHECK-NEXT:})
 // CHECK-NEXT:%class.6 = class( {
 // CHECK-NEXT:})
+// CHECK-NEXT:%object.10 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -89,4 +91,4 @@ var c2: C_crazy;
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            Id 'c2' [D:E:%d.4 'c2']
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.10

@@ -21,6 +21,8 @@ return function foo(x: any): string {
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%function.2 = function(x: any): string
+// CHECK-NEXT:%object.3 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -58,4 +60,4 @@ return function foo(x: any): string {
 // CHECK-NEXT:                                        Id 'x' [D:E:%d.4 'x'] : any
 // CHECK-NEXT:                                ReturnStatement
 // CHECK-NEXT:                                    Id 'res' [D:E:%d.5 'res'] : string
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.3

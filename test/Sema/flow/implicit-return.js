@@ -75,6 +75,8 @@ function main(x) {
 // CHECK-NEXT:%union.2 = union(void | null | number)
 // CHECK-NEXT:%function.3 = function(): %union.2
 // CHECK-NEXT:%function.4 = function(): number
+// CHECK-NEXT:%object.5 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -237,4 +239,4 @@ function main(x) {
 // CHECK-NEXT:                                                BlockStatement Scope %s.26
 // CHECK-NEXT:                                                    ReturnStatement
 // CHECK-NEXT:                                                        NumericLiteral : number
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.5

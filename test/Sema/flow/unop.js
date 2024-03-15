@@ -28,6 +28,11 @@ delete o.a;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
+// CHECK-NEXT:%object.2 = object({
+// CHECK-NEXT:  a: number
+// CHECK-NEXT:})
+// CHECK-NEXT:%object.3 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -97,7 +102,7 @@ delete o.a;
 // CHECK-NEXT:                            Id 'y' [D:E:%d.4 'y'] : bigint
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            ObjectExpression
+// CHECK-NEXT:                            ObjectExpression : %object.2
 // CHECK-NEXT:                                Property
 // CHECK-NEXT:                                    Id 'a'
 // CHECK-NEXT:                                    NumericLiteral : number
@@ -107,4 +112,4 @@ delete o.a;
 // CHECK-NEXT:                            MemberExpression : any
 // CHECK-NEXT:                                Id 'o' [D:E:%d.5 'o'] : any
 // CHECK-NEXT:                                Id 'a'
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.3

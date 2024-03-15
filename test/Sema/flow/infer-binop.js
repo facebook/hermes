@@ -15,6 +15,8 @@ let y = x + 1;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
+// CHECK-NEXT:%object.2 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -44,4 +46,4 @@ let y = x + 1;
 // CHECK-NEXT:                                Id 'x' [D:E:%d.2 'x'] : number
 // CHECK-NEXT:                                NumericLiteral : number
 // CHECK-NEXT:                            Id 'y' [D:E:%d.3 'y']
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.2

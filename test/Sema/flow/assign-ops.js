@@ -17,6 +17,8 @@ function f(x: any, n: number) {
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%function.2 = function(x: any, n: number): any
+// CHECK-NEXT:%object.3 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -54,4 +56,4 @@ function f(x: any, n: number) {
 // CHECK-NEXT:                                    ImplicitCheckedCast : number
 // CHECK-NEXT:                                        Id 'n' [D:E:%d.5 'n'] : number
 // CHECK-NEXT:                                    Id 'x' [D:E:%d.4 'x'] : any
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.3

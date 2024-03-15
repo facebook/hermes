@@ -46,6 +46,8 @@ class BBB<T> {
 // CHECK-NEXT:%function.8 = function(this: %class.7, root: %class.2, val: number): void
 // CHECK-NEXT:%class.9 = class( {
 // CHECK-NEXT:})
+// CHECK-NEXT:%object.11 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -126,4 +128,4 @@ class BBB<T> {
 // CHECK-NEXT:                                            MemberExpression
 // CHECK-NEXT:                                                Id 'root' [D:E:%d.7 'root']
 // CHECK-NEXT:                                                Id 'x'
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.11

@@ -25,6 +25,8 @@ w++;
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%union.2 = union(number | bigint)
+// CHECK-NEXT:%object.3 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -74,4 +76,4 @@ w++;
 // CHECK-NEXT:                    ExpressionStatement
 // CHECK-NEXT:                        UpdateExpression : any
 // CHECK-NEXT:                            Id 'w' [D:E:%d.5 'w'] : any
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.3

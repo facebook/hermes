@@ -27,6 +27,8 @@ let z;
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%function.2 = function(): void
+// CHECK-NEXT:%object.3 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -79,4 +81,4 @@ let z;
 // CHECK-NEXT:                                    VariableDeclaration
 // CHECK-NEXT:                                        VariableDeclarator
 // CHECK-NEXT:                                            Id 'z' [D:E:%d.6 'z']
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.3

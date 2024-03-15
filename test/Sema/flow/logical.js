@@ -25,6 +25,8 @@
 // CHECK-NEXT:%union.2 = union(void | null | number)
 // CHECK-NEXT:%union.3 = union(null | number)
 // CHECK-NEXT:%function.4 = function(x: %union.2, y: %union.3, z: number): any
+// CHECK-NEXT:%object.5 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -88,4 +90,4 @@
 // CHECK-NEXT:                                            LogicalExpression : number
 // CHECK-NEXT:                                                Id 'z' [D:E:%d.7 'z'] : number
 // CHECK-NEXT:                                                Id 'z' [D:E:%d.7 'z'] : number
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.5

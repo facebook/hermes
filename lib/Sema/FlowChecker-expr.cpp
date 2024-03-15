@@ -500,6 +500,65 @@ class FlowChecker::ExprVisitor {
     outer_.setNodeType(node, outer_.flowContext_.createType(arrTy));
   }
 
+  void visit(ESTree::ObjectExpressionNode *node, ESTree::Node *parent) {
+    visitESTreeChildren(*this, node);
+
+    // Failed to make an object type that matches the properties,
+    // assume 'any' and continue.
+    bool assumeAny = false;
+
+    // Fields of the object.
+    llvh::SmallVector<ExactObjectType::Field, 4> fields;
+    // Name of the key, mapping to index in the fields vector.
+    llvh::SmallDenseMap<UniqueString *, size_t> names;
+
+    for (ESTree::Node &node : node->_properties) {
+      auto *prop = llvh::dyn_cast<ESTree::PropertyNode>(&node);
+      // prop->_kind being "init" makes sure this isn't a getter/setter.
+      if (!prop || prop->_computed || prop->_kind != outer_.kw_.identInit ||
+          prop->_method) {
+        // Exact object type doesn't support this, so bail.
+        outer_.sm_.warning(
+            node.getSourceRange(),
+            "ft: unsupported property for typed object, assuming 'any'");
+        assumeAny = true;
+        break;
+      }
+
+      UniqueString *name = outer_.propertyKeyAsIdentifier(prop->_key);
+      if (!name || name == outer_.kw_.identProto) {
+        outer_.sm_.warning(
+            prop->_key->getSourceRange(),
+            "ft: unsupported key for typed object, assuming 'any'");
+        assumeAny = true;
+        break;
+      }
+
+      Type *valueType = outer_.getNodeTypeOrAny(prop->_value);
+
+      // Handle duplicate keys.
+      auto [it, inserted] = names.try_emplace(name, fields.size());
+      if (inserted) {
+        // New field.
+        fields.emplace_back(Identifier::getFromPointer(name), valueType);
+      } else {
+        // Existing field, update the type to the later value's type.
+        fields[it->second].type = valueType;
+      }
+    }
+
+    if (assumeAny) {
+      // Failed to make an object type that matches the properties.
+      outer_.flowContext_.setNodeType(node, outer_.flowContext_.getAny());
+      return;
+    }
+
+    outer_.setNodeType(
+        node,
+        outer_.flowContext_.createType(
+            outer_.flowContext_.createExactObject(fields), node));
+  }
+
   void visit(ESTree::SpreadElementNode *node) {
     // Do nothing for the spread element itself, handled by the parent.
     visitESTreeChildren(*this, node);

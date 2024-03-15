@@ -24,6 +24,8 @@ id<string>('a');
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%function.2 = function(x: number): number
 // CHECK-NEXT:%function.3 = function(x: string): string
+// CHECK-NEXT:%object.4 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -111,4 +113,4 @@ id<string>('a');
 // CHECK-NEXT:                            TypeParameterInstantiation
 // CHECK-NEXT:                                StringTypeAnnotation
 // CHECK-NEXT:                            StringLiteral : string
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.4

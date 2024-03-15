@@ -21,6 +21,8 @@ function foo(c: [number, string][]) {
 // CHECK-NEXT:%tuple.2 = tuple(number, string)
 // CHECK-NEXT:%array.3 = array(%tuple.2)
 // CHECK-NEXT:%function.4 = function(c: %array.3): any
+// CHECK-NEXT:%object.5 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -60,4 +62,4 @@ function foo(c: [number, string][]) {
 // CHECK-NEXT:                                            Id 'b' [D:E:%d.7 'b'] : any
 // CHECK-NEXT:                                Id 'c' [D:E:%d.4 'c'] : %array.3
 // CHECK-NEXT:                                BlockStatement Scope %s.5
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.5

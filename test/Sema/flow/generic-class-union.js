@@ -33,6 +33,8 @@ class B {
 // CHECK-NEXT:})
 // CHECK-NEXT:%class.8 = class( {
 // CHECK-NEXT:})
+// CHECK-NEXT:%object.10 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -75,4 +77,4 @@ class B {
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            ClassProperty : %union.5
 // CHECK-NEXT:                                Id 'val'
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.10

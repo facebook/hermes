@@ -20,6 +20,8 @@ let v7 = /1/;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
+// CHECK-NEXT:%object.2 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -73,4 +75,4 @@ let v7 = /1/;
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            RegExpLiteral : any
 // CHECK-NEXT:                            Id 'v7' [D:E:%d.8 'v7']
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.2

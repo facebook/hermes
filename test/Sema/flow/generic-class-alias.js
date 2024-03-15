@@ -85,6 +85,8 @@ let z: Z;
 // CHECK-NEXT:})
 // CHECK-NEXT:%class.17 = class( {
 // CHECK-NEXT:})
+// CHECK-NEXT:%object.27 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -258,4 +260,4 @@ let z: Z;
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            Id 'z' [D:E:%d.5 'z']
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.27

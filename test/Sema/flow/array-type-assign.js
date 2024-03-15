@@ -27,6 +27,8 @@ let a5: number[] = ([]: (number|number)[]);
 // CHECK-NEXT:%union.4 = union(string | %array.2)
 // CHECK-NEXT:%array.3 = array(number)
 // CHECK-NEXT:%array.5 = array(%union.4)
+// CHECK-NEXT:%object.6 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -92,4 +94,4 @@ let a5: number[] = ([]: (number|number)[]);
 // CHECK-NEXT:                            TypeCastExpression : %array.3
 // CHECK-NEXT:                                ArrayExpression : %array.3
 // CHECK-NEXT:                            Id 'a5' [D:E:%d.6 'a5']
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.6

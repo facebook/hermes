@@ -11,6 +11,7 @@ function foo(t: {x: number}): void {
   let a: {y: number} = t;
   let b: {x: string} = t;
   let c: {x: number, y: string} = t;
+  let d: {x: number} = {x: "hi"};
 }
 
 // Auto-generated content below. Please do not modify manually.
@@ -24,4 +25,7 @@ function foo(t: {x: number}): void {
 // CHECK-NEXT:{{.*}}exact-object-error.js:13:7: error: ft: incompatible initialization type
 // CHECK-NEXT:  let c: {x: number, y: string} = t;
 // CHECK-NEXT:      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// CHECK-NEXT:Emitted 3 errors. exiting.
+// CHECK-NEXT:{{.*}}exact-object-error.js:14:7: error: ft: incompatible initialization type
+// CHECK-NEXT:  let d: {x: number} = {x: "hi"};
+// CHECK-NEXT:      ^~~~~~~~~~~~~~~~~~~~~~~~~~
+// CHECK-NEXT:Emitted 4 errors. exiting.

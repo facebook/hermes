@@ -14,6 +14,8 @@ let x = c_null;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
+// CHECK-NEXT:%object.2 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -43,4 +45,4 @@ let x = c_null;
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            Id 'c_null' [D:E:%d.3 'c_null'] : c_ptr
 // CHECK-NEXT:                            Id 'x' [D:E:%d.4 'x']
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.2

@@ -23,6 +23,8 @@ switch (i) {
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%array.2 = array(number)
+// CHECK-NEXT:%object.3 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -63,4 +65,4 @@ switch (i) {
 // CHECK-NEXT:                        SwitchCase
 // CHECK-NEXT:                            Id 'i' [D:E:%d.3 'i'] : number
 // CHECK-NEXT:                            BreakStatement
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.3

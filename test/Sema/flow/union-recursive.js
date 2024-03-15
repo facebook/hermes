@@ -23,6 +23,8 @@ let c: C;
 // CHECK-NEXT:%union.2 = union(number | %array.3)
 // CHECK-NEXT:%union.4 = union(string | number | %array.3)
 // CHECK-NEXT:%array.3 = array(%union.2)
+// CHECK-NEXT:%object.5 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -75,4 +77,4 @@ let c: C;
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            Id 'c' [D:E:%d.4 'c']
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.5

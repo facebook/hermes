@@ -20,6 +20,8 @@
 // CHECK-NEXT:%function.2 = function(x: number): string
 // CHECK-NEXT:%function.3 = function(this: number, x: number): string
 // CHECK-NEXT:%function.4 = function(a: %function.2, b: %function.2, c: %function.3): any
+// CHECK-NEXT:%object.5 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -50,4 +52,4 @@
 // CHECK-NEXT:                            Id 'b' [D:E:%d.5 'b']
 // CHECK-NEXT:                            Id 'c' [D:E:%d.6 'c']
 // CHECK-NEXT:                            BlockStatement
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.5

@@ -19,6 +19,8 @@ let a: A = [];
 // CHECK-NEXT:%array.2 = array(%array.3)
 // CHECK-NEXT:%array.3 = array(%array.4)
 // CHECK-NEXT:%array.4 = array(number)
+// CHECK-NEXT:%object.5 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -57,4 +59,4 @@ let a: A = [];
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            ArrayExpression : %array.2
 // CHECK-NEXT:                            Id 'a' [D:E:%d.2 'a']
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.5

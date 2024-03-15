@@ -32,6 +32,8 @@ c1 = new C<number | string>('abc');
 // CHECK-NEXT:%function.4 = function(this: %class.3, x: %union.2): void
 // CHECK-NEXT:%class.5 = class( {
 // CHECK-NEXT:})
+// CHECK-NEXT:%object.7 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -114,4 +116,4 @@ c1 = new C<number | string>('abc');
 // CHECK-NEXT:                                        NumberTypeAnnotation
 // CHECK-NEXT:                                        StringTypeAnnotation
 // CHECK-NEXT:                                StringLiteral : string
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.7

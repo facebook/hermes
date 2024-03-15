@@ -25,6 +25,8 @@ let u: U;
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%array.2 = array(%array.2)
+// CHECK-NEXT:%object.3 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -80,4 +82,4 @@ let u: U;
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            Id 'u' [D:E:%d.3 'u']
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.3

@@ -42,6 +42,8 @@ const s: string = i2.val;
 // CHECK-NEXT:%function.7 = function(this: %class.6, val: string): void
 // CHECK-NEXT:%class.8 = class( {
 // CHECK-NEXT:})
+// CHECK-NEXT:%object.10 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -158,4 +160,4 @@ const s: string = i2.val;
 // CHECK-NEXT:                                Id 'i2' [D:E:%d.5 'i2'] : %class.6
 // CHECK-NEXT:                                Id 'val'
 // CHECK-NEXT:                            Id 's' [D:E:%d.6 's']
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.10

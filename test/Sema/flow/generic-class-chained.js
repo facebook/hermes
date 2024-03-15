@@ -39,13 +39,15 @@ class C<T> {
 // CHECK-NEXT:%class.6 = class( {
 // CHECK-NEXT:  foo [final]: %untyped_function.1
 // CHECK-NEXT:})
-// CHECK-NEXT:%class.8 = class(C {
-// CHECK-NEXT:  %homeObject: %class.9
+// CHECK-NEXT:%object.8 = object({
 // CHECK-NEXT:})
-// CHECK-NEXT:%class_constructor.10 = class_constructor(%class.8)
-// CHECK-NEXT:%function.11 = function(this: %class.8): void
-// CHECK-NEXT:%class.9 = class( {
-// CHECK-NEXT:  run [final]: %function.11
+// CHECK-NEXT:%class.9 = class(C {
+// CHECK-NEXT:  %homeObject: %class.10
+// CHECK-NEXT:})
+// CHECK-NEXT:%class_constructor.11 = class_constructor(%class.9)
+// CHECK-NEXT:%function.12 = function(this: %class.9): void
+// CHECK-NEXT:%class.10 = class( {
+// CHECK-NEXT:  run [final]: %function.12
 // CHECK-NEXT:})
 
 // CHECK:SemContext
@@ -59,7 +61,7 @@ class C<T> {
 // CHECK-NEXT:            Decl %d.4 'C' Class
 // CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
 // CHECK-NEXT:            Decl %d.6 'B' Class : %class_constructor.7
-// CHECK-NEXT:            Decl %d.7 'C' Class : %class_constructor.10
+// CHECK-NEXT:            Decl %d.7 'C' Class : %class_constructor.11
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:        Func strict
@@ -75,7 +77,7 @@ class C<T> {
 // CHECK-NEXT:            Scope %s.7
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.8
-// CHECK-NEXT:                Decl %d.11 'c' Let : %class.8
+// CHECK-NEXT:                Decl %d.11 'c' Let : %class.9
 // CHECK-NEXT:                Decl %d.12 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.9
@@ -103,15 +105,15 @@ class C<T> {
 // CHECK-NEXT:                                    BlockStatement
 // CHECK-NEXT:                                        VariableDeclaration
 // CHECK-NEXT:                                            VariableDeclarator
-// CHECK-NEXT:                                                NewExpression : %class.8
-// CHECK-NEXT:                                                    Id 'C' [D:E:%d.7 'C'] : %class_constructor.10
+// CHECK-NEXT:                                                NewExpression : %class.9
+// CHECK-NEXT:                                                    Id 'C' [D:E:%d.7 'C'] : %class_constructor.11
 // CHECK-NEXT:                                                    TypeParameterInstantiation
 // CHECK-NEXT:                                                        NumberTypeAnnotation
 // CHECK-NEXT:                                                Id 'c' [D:E:%d.11 'c']
 // CHECK-NEXT:                                        ExpressionStatement
 // CHECK-NEXT:                                            CallExpression : void
-// CHECK-NEXT:                                                MemberExpression : %function.11
-// CHECK-NEXT:                                                    Id 'c' [D:E:%d.11 'c'] : %class.8
+// CHECK-NEXT:                                                MemberExpression : %function.12
+// CHECK-NEXT:                                                    Id 'c' [D:E:%d.11 'c'] : %class.9
 // CHECK-NEXT:                                                    Id 'run'
 // CHECK-NEXT:                    ClassDeclaration
 // CHECK-NEXT:                        Id 'B' [D:E:%d.3 'B']
@@ -139,9 +141,9 @@ class C<T> {
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
 // CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                            MethodDefinition : %function.11
+// CHECK-NEXT:                            MethodDefinition : %function.12
 // CHECK-NEXT:                                Id 'run'
-// CHECK-NEXT:                                FunctionExpression : %function.11
+// CHECK-NEXT:                                FunctionExpression : %function.12
 // CHECK-NEXT:                                    BlockStatement
 // CHECK-NEXT:                    ClassDeclaration
 // CHECK-NEXT:                        Id 'C' [D:E:%d.4 'C']
@@ -152,4 +154,4 @@ class C<T> {
 // CHECK-NEXT:                                Id 'run'
 // CHECK-NEXT:                                FunctionExpression
 // CHECK-NEXT:                                    BlockStatement
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.8

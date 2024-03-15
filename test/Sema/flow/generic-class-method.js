@@ -50,6 +50,8 @@ class C<Props> {
 // CHECK-NEXT:%class.10 = class( {
 // CHECK-NEXT:  foo [final]: %function.14
 // CHECK-NEXT:})
+// CHECK-NEXT:%object.15 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -146,4 +148,4 @@ class C<Props> {
 // CHECK-NEXT:                                                MemberExpression
 // CHECK-NEXT:                                                    Id 'b' [D:E:%d.8 'b']
 // CHECK-NEXT:                                                    Id 'func'
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.15

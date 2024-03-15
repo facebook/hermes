@@ -20,6 +20,8 @@
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%function.2 = function(): void
+// CHECK-NEXT:%object.3 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -57,4 +59,4 @@
 // CHECK-NEXT:                                        CallExpression : any
 // CHECK-NEXT:                                            Id 'foo' [D:E:%d.4 'foo'] : %untyped_function.1
 // CHECK-NEXT:                                            NumericLiteral : number
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.3

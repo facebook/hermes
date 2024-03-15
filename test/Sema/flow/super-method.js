@@ -48,6 +48,8 @@ class B extends A {
 // CHECK-NEXT:%class.8 = class( extends %class.4 {
 // CHECK-NEXT:  f [final]: %function.11
 // CHECK-NEXT:})
+// CHECK-NEXT:%object.12 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -110,4 +112,4 @@ class B extends A {
 // CHECK-NEXT:                                                MemberExpression : %function.10
 // CHECK-NEXT:                                                    Super : %class.2
 // CHECK-NEXT:                                                    Id 'f'
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.12

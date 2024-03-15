@@ -49,6 +49,8 @@ class C1 extends C0 {
 // CHECK-NEXT:%function.6 = function(this: %class.5): void
 // CHECK-NEXT:%class.7 = class( extends %class.3 {
 // CHECK-NEXT:})
+// CHECK-NEXT:%object.10 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -136,4 +138,4 @@ class C1 extends C0 {
 // CHECK-NEXT:                                                            Super : %class.2
 // CHECK-NEXT:                                                            Id 'm'
 // CHECK-NEXT:                                                    NumericLiteral : number
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.10

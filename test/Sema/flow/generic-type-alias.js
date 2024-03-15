@@ -50,6 +50,8 @@ var d: A<string>;
 // CHECK-NEXT:%class.15 = class( {
 // CHECK-NEXT:})
 // CHECK-NEXT:%array.14 = array(%union.10)
+// CHECK-NEXT:%object.17 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -153,4 +155,4 @@ var d: A<string>;
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            Id 'd' [D:E:%d.5 'd']
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.17

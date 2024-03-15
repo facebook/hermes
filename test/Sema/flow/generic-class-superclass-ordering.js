@@ -67,6 +67,8 @@ class D {
 // CHECK-NEXT:%function.17 = function(this: %class.16): void
 // CHECK-NEXT:%class.18 = class( extends %class.12 {
 // CHECK-NEXT:})
+// CHECK-NEXT:%object.20 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -205,4 +207,4 @@ class D {
 // CHECK-NEXT:                                FunctionExpression : %function.3
 // CHECK-NEXT:                                    Id 'val' [D:E:%d.14 'val']
 // CHECK-NEXT:                                    BlockStatement
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.20

@@ -20,6 +20,8 @@ let c = Math.random();
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
+// CHECK-NEXT:%object.2 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -81,4 +83,4 @@ let c = Math.random();
 // CHECK-NEXT:                                    Id 'Math' [D:E:%d.1 'Math'] : any
 // CHECK-NEXT:                                    Id 'random'
 // CHECK-NEXT:                            Id 'c' [D:E:%d.6 'c']
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.2

@@ -18,6 +18,8 @@ let zz = foo(function name() {});
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%union.2 = union(string | number)
+// CHECK-NEXT:%object.3 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -65,4 +67,4 @@ let zz = foo(function name() {});
 // CHECK-NEXT:                                    Id 'name' [D:E:%d.8 'name']
 // CHECK-NEXT:                                    BlockStatement
 // CHECK-NEXT:                            Id 'zz' [D:E:%d.6 'zz']
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.3

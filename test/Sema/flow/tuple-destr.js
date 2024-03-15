@@ -25,6 +25,8 @@ let [anyNumber, anyString]: [number, string] = anyVar; // implicit checked cast
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%tuple.2 = tuple(number, string)
 // CHECK-NEXT:%tuple.3 = tuple(number, boolean, %tuple.2)
+// CHECK-NEXT:%object.4 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -116,4 +118,4 @@ let [anyNumber, anyString]: [number, string] = anyVar; // implicit checked cast
 // CHECK-NEXT:                            ArrayPattern : %tuple.2
 // CHECK-NEXT:                                Id 'anyNumber' [D:E:%d.16 'anyNumber'] : number
 // CHECK-NEXT:                                Id 'anyString' [D:E:%d.17 'anyString'] : string
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.4

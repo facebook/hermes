@@ -20,6 +20,8 @@ function f(a: any, u: number|string, n: number) {
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%union.2 = union(string | number)
 // CHECK-NEXT:%function.3 = function(a: any, u: %union.2, n: number): any
+// CHECK-NEXT:%object.4 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -66,4 +68,4 @@ function f(a: any, u: number|string, n: number) {
 // CHECK-NEXT:                                        Id 'n' [D:E:%d.6 'n'] : number
 // CHECK-NEXT:                                        ImplicitCheckedCast : number
 // CHECK-NEXT:                                            Id 'a' [D:E:%d.4 'a'] : any
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.4

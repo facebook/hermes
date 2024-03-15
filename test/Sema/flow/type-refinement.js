@@ -55,6 +55,8 @@ function retval(c: C | null): C {
 // CHECK-NEXT:%function.8 = function(c: %union.4): %class.2
 // CHECK-NEXT:%union.9 = union(void | %class.2)
 // CHECK-NEXT:%function.10 = function(c: %class.2, cv: %union.9): void
+// CHECK-NEXT:%object.11 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -184,4 +186,4 @@ function retval(c: C | null): C {
 // CHECK-NEXT:                                ReturnStatement
 // CHECK-NEXT:                                    NewExpression : %class.2
 // CHECK-NEXT:                                        Id 'C' [D:E:%d.2 'C'] : %class_constructor.5
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.11

@@ -17,6 +17,8 @@ let z: bool = x[1]
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%tuple.2 = tuple(number, boolean)
+// CHECK-NEXT:%object.3 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -55,4 +57,4 @@ let z: bool = x[1]
 // CHECK-NEXT:                                Id 'x' [D:E:%d.2 'x'] : %tuple.2
 // CHECK-NEXT:                                NumericLiteral : number
 // CHECK-NEXT:                            Id 'z' [D:E:%d.4 'z']
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.3

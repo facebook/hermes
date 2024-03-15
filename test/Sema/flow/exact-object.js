@@ -29,6 +29,8 @@ let tdup: {x: string, y: bool} = {x: 3, x: 'hi', y: true};
 // CHECK-NEXT:  x: string
 // CHECK-NEXT:  y: boolean
 // CHECK-NEXT:})
+// CHECK-NEXT:%object.4 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -57,11 +59,10 @@ let tdup: {x: string, y: bool} = {x: 3, x: 'hi', y: true};
 // CHECK-NEXT:                                NumberTypeAnnotation
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            ImplicitCheckedCast : %object.2
-// CHECK-NEXT:                                ObjectExpression
-// CHECK-NEXT:                                    Property
-// CHECK-NEXT:                                        Id 'x'
-// CHECK-NEXT:                                        NumericLiteral : number
+// CHECK-NEXT:                            ObjectExpression : %object.2
+// CHECK-NEXT:                                Property
+// CHECK-NEXT:                                    Id 'x'
+// CHECK-NEXT:                                    NumericLiteral : number
 // CHECK-NEXT:                            Id 't' [D:E:%d.2 't']
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
@@ -87,16 +88,15 @@ let tdup: {x: string, y: bool} = {x: 3, x: 'hi', y: true};
 // CHECK-NEXT:                            NumericLiteral : number
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            ImplicitCheckedCast : %object.3
-// CHECK-NEXT:                                ObjectExpression
-// CHECK-NEXT:                                    Property
-// CHECK-NEXT:                                        Id 'x'
-// CHECK-NEXT:                                        NumericLiteral : number
-// CHECK-NEXT:                                    Property
-// CHECK-NEXT:                                        Id 'x'
-// CHECK-NEXT:                                        StringLiteral : string
-// CHECK-NEXT:                                    Property
-// CHECK-NEXT:                                        Id 'y'
-// CHECK-NEXT:                                        BooleanLiteral : boolean
+// CHECK-NEXT:                            ObjectExpression : %object.3
+// CHECK-NEXT:                                Property
+// CHECK-NEXT:                                    Id 'x'
+// CHECK-NEXT:                                    NumericLiteral : number
+// CHECK-NEXT:                                Property
+// CHECK-NEXT:                                    Id 'x'
+// CHECK-NEXT:                                    StringLiteral : string
+// CHECK-NEXT:                                Property
+// CHECK-NEXT:                                    Id 'y'
+// CHECK-NEXT:                                    BooleanLiteral : boolean
 // CHECK-NEXT:                            Id 'tdup' [D:E:%d.6 'tdup']
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.4

@@ -23,6 +23,8 @@ function d(): [number, bool] {
 // CHECK-NEXT:%tuple.3 = tuple(number, %union.2)
 // CHECK-NEXT:%tuple.4 = tuple(number, boolean)
 // CHECK-NEXT:%function.5 = function(): %tuple.4
+// CHECK-NEXT:%object.6 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -74,4 +76,4 @@ function d(): [number, bool] {
 // CHECK-NEXT:                                ArrayExpression : %tuple.4
 // CHECK-NEXT:                                    NumericLiteral : number
 // CHECK-NEXT:                                    BooleanLiteral : boolean
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.6

@@ -30,6 +30,8 @@ class B<T> extends A {}
 // CHECK-NEXT:})
 // CHECK-NEXT:%class.6 = class( extends %class.3 {
 // CHECK-NEXT:})
+// CHECK-NEXT:%object.9 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -76,4 +78,4 @@ class B<T> extends A {}
 // CHECK-NEXT:                            TypeParameter
 // CHECK-NEXT:                        Id 'A' [D:E:%d.2 'A']
 // CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.9

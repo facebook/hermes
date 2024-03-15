@@ -62,6 +62,8 @@ new F<number>();
 // CHECK-NEXT:%class.14 = class( {
 // CHECK-NEXT:  inc [final]: %function.16
 // CHECK-NEXT:})
+// CHECK-NEXT:%object.17 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -173,4 +175,4 @@ new F<number>();
 // CHECK-NEXT:                            Id 'F' [D:E:%d.9 'F'] : %class_constructor.15
 // CHECK-NEXT:                            TypeParameterInstantiation
 // CHECK-NEXT:                                NumberTypeAnnotation
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.17

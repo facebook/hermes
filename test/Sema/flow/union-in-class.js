@@ -26,6 +26,8 @@ class C {
 // CHECK-NEXT:%union.5 = union(null | string | number)
 // CHECK-NEXT:%class.4 = class( {
 // CHECK-NEXT:})
+// CHECK-NEXT:%object.7 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -54,4 +56,4 @@ class C {
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            ClassProperty : %union.5
 // CHECK-NEXT:                                Id 'x'
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.7

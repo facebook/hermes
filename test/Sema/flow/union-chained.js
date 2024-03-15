@@ -16,6 +16,8 @@ type D = number | string;
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%union.2 = union(string | number)
+// CHECK-NEXT:%object.3 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -55,4 +57,4 @@ type D = number | string;
 // CHECK-NEXT:                        UnionTypeAnnotation
 // CHECK-NEXT:                            NumberTypeAnnotation
 // CHECK-NEXT:                            StringTypeAnnotation
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.3

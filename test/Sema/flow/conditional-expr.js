@@ -19,6 +19,8 @@
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%function.2 = function(b: boolean, x: number, y: number, z: string): any
 // CHECK-NEXT:%union.3 = union(string | number)
+// CHECK-NEXT:%object.4 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -66,4 +68,4 @@
 // CHECK-NEXT:                                                Id 'b' [D:E:%d.5 'b'] : boolean
 // CHECK-NEXT:                                                Id 'z' [D:E:%d.8 'z'] : string
 // CHECK-NEXT:                                                Id 'x' [D:E:%d.6 'x'] : number
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.4

@@ -26,6 +26,8 @@ id<number | string>('a');
 // CHECK-NEXT:%function.3 = function(x: string): string
 // CHECK-NEXT:%union.4 = union(string | number)
 // CHECK-NEXT:%function.5 = function(x: %union.4): %union.4
+// CHECK-NEXT:%object.6 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -137,4 +139,4 @@ id<number | string>('a');
 // CHECK-NEXT:                                    NumberTypeAnnotation
 // CHECK-NEXT:                                    StringTypeAnnotation
 // CHECK-NEXT:                            StringLiteral : string
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.6

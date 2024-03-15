@@ -12,6 +12,8 @@ try {} catch (e) { let x: number = 1; }
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
+// CHECK-NEXT:%object.2 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -40,4 +42,4 @@ try {} catch (e) { let x: number = 1; }
 // CHECK-NEXT:                                    VariableDeclarator
 // CHECK-NEXT:                                        NumericLiteral : number
 // CHECK-NEXT:                                        Id 'x' [D:E:%d.4 'x']
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.2

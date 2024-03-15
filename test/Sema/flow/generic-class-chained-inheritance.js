@@ -57,6 +57,8 @@ class C<T> extends B<T> {
 // CHECK-NEXT:%class.12 = class( extends %class.7 {
 // CHECK-NEXT:})
 // CHECK-NEXT:%union.14 = union(null | %class.10)
+// CHECK-NEXT:%object.15 = object({
+// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -174,4 +176,4 @@ class C<T> extends B<T> {
 // CHECK-NEXT:                                        ExpressionStatement
 // CHECK-NEXT:                                            CallExpression
 // CHECK-NEXT:                                                Super
-// CHECK-NEXT:            ObjectExpression
+// CHECK-NEXT:            ObjectExpression : %object.15
