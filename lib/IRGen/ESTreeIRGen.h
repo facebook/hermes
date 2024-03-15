@@ -686,6 +686,12 @@ class ESTreeIRGen {
   Value *genArrayFromElements(ESTree::NodeList &list);
 
   Value *genObjectExpr(ESTree::ObjectExpressionNode *Expr);
+
+  /// Generate IR for the typed object literal \p Expr.
+  Value *genTypedObjectExpr(
+      ESTree::ObjectExpressionNode *Expr,
+      flow::ExactObjectType *type);
+
   Value *genArrayExpr(ESTree::ArrayExpressionNode *Expr);
   Value *genCallExpr(ESTree::CallExpressionNode *call);
   Value *emitNativeCall(

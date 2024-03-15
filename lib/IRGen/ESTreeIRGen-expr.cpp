@@ -860,6 +860,25 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
     }
   }
 
+  if (auto *objType = llvh::dyn_cast<flow::ExactObjectType>(
+          flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
+    if (!mem->_computed) {
+      auto propName = Identifier::getFromPointer(
+          llvh::cast<ESTree::IdentifierNode>(mem->_property)->_name);
+      auto optIndex = objType->findField(propName);
+      assert(optIndex.hasValue() && "Expected field to exist");
+      const auto &field = objType->getFields()[*optIndex];
+      return MemberExpressionResult{
+          Builder.createPrLoadInst(
+              baseValue,
+              *optIndex,
+              Builder.getLiteralString(propName),
+              flowTypeToIRType(field.type)),
+          nullptr,
+          baseValue};
+    }
+  }
+
   // Check if we are loading an array element, and generate the typed IR.
   // NOTE: This is required for correctness, since a regular property load from
   // a FastArray will simply return undefined if it is out-of-bounds.
@@ -987,6 +1006,23 @@ void ESTreeIRGen::emitMemberStore(
     if (!mem->_computed) {
       emitFieldStore(classType, mem->_property, baseValue, storedValue);
       return;
+    }
+  }
+
+  if (auto *objType = llvh::dyn_cast<flow::ExactObjectType>(
+          flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
+    if (!mem->_computed) {
+      auto propName = Identifier::getFromPointer(
+          llvh::cast<ESTree::IdentifierNode>(mem->_property)->_name);
+      auto optIndex = objType->findField(propName);
+      assert(optIndex.hasValue() && "Expected field to exist");
+      const auto &field = objType->getFields()[*optIndex];
+      Builder.createPrStoreInst(
+          storedValue,
+          baseValue,
+          *optIndex,
+          Builder.getLiteralString(propName),
+          flowTypeToIRType(field.type).isNonPtr());
     }
   }
 
@@ -1189,6 +1225,11 @@ static llvh::StringRef propertyKeyAsString(
 
 Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
   LLVM_DEBUG(llvh::dbgs() << "Initializing a new object\n");
+
+  if (flow::ExactObjectType *objType = llvh::dyn_cast<flow::ExactObjectType>(
+          flowContext_.getNodeTypeOrAny(Expr)->info)) {
+    return genTypedObjectExpr(Expr, objType);
+  }
 
   /// Store information about a property. Is it an accessor (getter/setter) or
   /// a value, and the actual value.
@@ -1499,6 +1540,85 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
   // Return the newly allocated object (because this is an expression, not a
   // statement).
   return Obj;
+}
+
+/// Generate IR for the typed object literal \p Expr.
+Value *ESTreeIRGen::genTypedObjectExpr(
+    ESTree::ObjectExpressionNode *Expr,
+    flow::ExactObjectType *type) {
+  // Evaluate the value expressions and keep pointers to the vales.
+  // Mapping from property name to value and PrLoad index.
+  // If Value is nullptr, then the value was already emitted as part of the
+  // object literal and shouldn't be PrStored.
+  // The order of PrStores doesn't matter because they have no side effects,
+  // it just needs to be deterministic, so use MapVector for iteration.
+  llvh::SmallMapVector<Identifier, std::pair<Value *, size_t>, 8>
+      storedValues{};
+  llvh::SmallVector<char, 32> stringStorage{};
+  for (auto &node : Expr->_properties) {
+    auto *prop = llvh::cast<ESTree::PropertyNode>(&node);
+    assert(
+        !prop->_computed && !prop->_method && prop->_kind->str() == "init" &&
+        "Unexpected property kind in typechecked object");
+
+    stringStorage.clear();
+    Identifier propName = Builder.createIdentifier(
+        propertyKeyAsString(stringStorage, prop->_key));
+
+    auto optIndex = type->findField(propName);
+    assert(optIndex.hasValue() && "Expected field to exist");
+
+    Value *storedValue = genExpression(prop->_value);
+    // Overwrite the previous value if there is one.
+    // We've already run the expression for side effects.
+    storedValues[propName] = {storedValue, *optIndex};
+  }
+
+  // TODO: Have a specific instruction for allocating an object
+  // that uses the prop map, makes a sealed object, uses uninitialized fields
+  // instead of default init value, etc.
+
+  // Allocate the object with the correct property names.
+  AllocObjectLiteralInst::ObjectPropertyMap propMap{};
+  propMap.reserve(type->getFields().size());
+  for (size_t i = 0, e = type->getFields().size(); i < e; ++i) {
+    const auto &field = type->getFields()[i];
+    auto it = storedValues.find(field.name);
+    assert(
+        it != storedValues.end() &&
+        "Missing stored value in typechecked object literal");
+    // Use a literal if possible, otherwise use the default init value.
+    // Avoid putting non-literals here because we want to emit PrStore
+    // instead of StoreNewOwnPropertyInst.
+    Value *initValue = nullptr;
+    if (llvh::isa<Literal>(it->second.first)) {
+      initValue = it->second.first;
+      // Prevent emitting PrStore later for literals.
+      it->second.first = nullptr;
+      assert(it->second.second == i && "Stored value must have same index");
+    } else {
+      initValue = getDefaultInitValue(field.type);
+    }
+    propMap.emplace_back(Builder.getLiteralString(field.name), initValue);
+  }
+
+  Value *result = propMap.empty()
+      ? static_cast<Value *>(Builder.createAllocObjectInst(0))
+      : static_cast<Value *>(Builder.createAllocObjectLiteralInst(propMap));
+
+  // Store the remaining non-literal properties.
+  for (const auto &[name, valueAndIdx] : storedValues) {
+    const auto &[storedValue, idx] = valueAndIdx;
+    if (storedValue)
+      Builder.createPrStoreInst(
+          storedValue,
+          result,
+          idx,
+          propMap[idx].first,
+          flowTypeToIRType(type->getFields()[idx].type).isNonPtr());
+  }
+
+  return result;
 }
 
 Value *ESTreeIRGen::genSequenceExpr(ESTree::SequenceExpressionNode *Sq) {
