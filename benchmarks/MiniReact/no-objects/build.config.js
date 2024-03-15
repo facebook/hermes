@@ -40,6 +40,10 @@ function createConfig(benchmarkName) {
               {enableBabelRuntime: false},
             ],
           ],
+          assumptions: {
+            setClassMethods: true,
+            noClassCalls: true,
+          },
         },
       },
     },
