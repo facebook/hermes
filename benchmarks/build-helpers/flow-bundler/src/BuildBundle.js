@@ -25,6 +25,7 @@ export type BundleOutOptions = {
   babelConfig?: ?{
     presets?: ?Array<string | [string, {...}]>,
     plugins?: ?Array<string | [string, {...}]>,
+    assumptions?: ?{[string]: boolean},
   },
 };
 
@@ -140,6 +141,9 @@ export async function buildBundles(
         ? babelConfig.presets
         : null;
 
+    const babelAssumptions =
+      babelConfig?.assumptions != null ? babelConfig.assumptions : undefined;
+
     let transformedBundleAST = bundleAST;
     if (babelPlugins != null || babelPresets != null) {
       const transformedBundle = transformFromAstSync(bundleAST, fileMapping, {
@@ -148,6 +152,7 @@ export async function buildBundles(
         filename: outPath,
         plugins: babelPlugins,
         presets: babelPresets,
+        assumptions: babelAssumptions,
       });
       transformedBundleAST = transformedBundle.ast;
     }
