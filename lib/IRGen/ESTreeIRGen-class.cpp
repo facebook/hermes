@@ -321,6 +321,7 @@ Value *ESTreeIRGen::getDefaultInitValue(flow::Type *type) {
     case flow::TypeKind::ClassConstructor:
     case flow::TypeKind::Array:
     case flow::TypeKind::Tuple:
+    case flow::TypeKind::ExactObject:
       return Builder.getLiteralPositiveZero();
     case flow::TypeKind::Generic:
       hermes_fatal("invalid typekind");
@@ -364,6 +365,7 @@ Type ESTreeIRGen::flowTypeToIRType(flow::Type *flowType) {
       return Type::createObject();
     case flow::TypeKind::Array:
     case flow::TypeKind::Tuple:
+    case flow::TypeKind::ExactObject:
       return Type::createObject();
     case flow::TypeKind::Generic:
       hermes_fatal("invalid typekind");

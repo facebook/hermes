@@ -124,6 +124,8 @@ llvh::StringRef TypeInfo::getKindName() const {
       return "array";
     case TypeKind::Tuple:
       return "tuple";
+    case TypeKind::ExactObject:
+      return "object";
     case TypeKind::Generic:
       return "generic";
   }
@@ -454,6 +456,49 @@ bool TupleType::_equalsImpl(const TupleType *other, CompareState &state) const {
 
 unsigned TupleType::_hashImpl() const {
   return (unsigned)llvh::hash_combine((unsigned)TypeKind::Tuple, types_.size());
+}
+
+hermes::OptValue<size_t> ExactObjectType::findField(Identifier id) const {
+  auto it = fieldNameMap_.find(id);
+  if (it == fieldNameMap_.end())
+    return llvh::None;
+  return it->second;
+}
+
+int ExactObjectType::_compareImpl(
+    const ExactObjectType *other,
+    CompareState &state) const {
+  return lexicographicalComparison(
+      fields_.begin(),
+      fields_.end(),
+      other->fields_.begin(),
+      other->fields_.end(),
+      [&state](const Field &ta, const Field &tb) {
+        if (int tmp = ta.name.str().compare(tb.name.str()))
+          return tmp;
+        if (int tmp = ta.type->info->compare(tb.type->info, state))
+          return tmp;
+        return 0;
+      });
+}
+
+bool ExactObjectType::_equalsImpl(
+    const ExactObjectType *other,
+    CompareState &state) const {
+  if (fields_.size() != other->fields_.size())
+    return false;
+  for (size_t i = 0, e = fields_.size(); i < e; ++i) {
+    if (fields_[i].name != other->fields_[i].name)
+      return {};
+    if (!fields_[i].type->info->equals(other->fields_[i].type->info, state))
+      return false;
+  }
+  return true;
+}
+
+unsigned ExactObjectType::_hashImpl() const {
+  return (unsigned)llvh::hash_combine(
+      (unsigned)TypeKind::ExactObject, fields_.size());
 }
 
 /// Compare two instances of the same TypeKind.

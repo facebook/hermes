@@ -172,7 +172,7 @@ void FlowTypesDumper::printTypeDescription(
       os << ')';
       break;
 
-    case TypeKind::Tuple:
+    case TypeKind::Tuple: {
       os << '(';
       bool first = true;
       for (Type *t : llvh::cast<TupleType>(type)->getTypes()) {
@@ -183,6 +183,18 @@ void FlowTypesDumper::printTypeDescription(
       }
       os << ')';
       break;
+    }
+
+    case TypeKind::ExactObject: {
+      os << "({\n";
+      for (const auto &field : llvh::cast<ExactObjectType>(type)->getFields()) {
+        os << "  " << field.name << ": ";
+        printTypeRef(os, field.type);
+        os << '\n';
+      }
+      os << "})";
+      break;
+    }
   }
 
   os << '\n';

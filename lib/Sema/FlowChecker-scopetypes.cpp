@@ -167,6 +167,18 @@ class FlowChecker::FindLoopingTypes {
     return result;
   }
 
+  bool isLooping(Type *, ExactObjectType *type) {
+    bool result = false;
+    for (const auto &field : type->getFields()) {
+      if (isTypeLooping(field.type)) {
+        // Don't return here, have to run on all types so that if there's
+        // looping union arms in multiple fields, they get registered.
+        result = true;
+      }
+    }
+    return result;
+  }
+
   bool isLooping(Type *, TypedFunctionType *type) {
     bool result = false;
     result |= isTypeLooping(type->getReturnType());

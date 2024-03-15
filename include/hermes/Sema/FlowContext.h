@@ -39,6 +39,7 @@ namespace flow {
   _HERMES_SEMA_FLOW_DEFKIND(Union)           \
   _HERMES_SEMA_FLOW_DEFKIND(Array)           \
   _HERMES_SEMA_FLOW_DEFKIND(Tuple)           \
+  _HERMES_SEMA_FLOW_DEFKIND(ExactObject)     \
   _HERMES_SEMA_FLOW_DEFKIND(UntypedFunction) \
   _HERMES_SEMA_FLOW_DEFKIND(TypedFunction)   \
   _HERMES_SEMA_FLOW_DEFKIND(NativeFunction)  \
@@ -419,6 +420,63 @@ class TupleType : public TypeInfo {
 
   static bool classof(const TypeInfo *t) {
     return t->getKind() == TypeKind::Tuple;
+  }
+};
+
+/// A type representing an ordered, named list of fields in an object.
+/// ExactObject types with different field orders can't flow into each other.
+class ExactObjectType : public TypeInfo {
+ public:
+  /// Represents a field in an object.
+  struct Field {
+    /// The name of the field.
+    Identifier name;
+    /// The type of the field.
+    Type *type;
+
+    Field(Identifier name, Type *type) : name(name), type(type) {}
+  };
+
+ private:
+  /// The list of fields on the object, in order.
+  llvh::SmallVector<Field, 4> fields_{};
+
+  /// Map from field name to field index.
+  /// Contains all fields in this exact object.
+  llvh::SmallDenseMap<Identifier, size_t, 4> fieldNameMap_{};
+
+ public:
+  /// Initialize a new instance.
+  explicit ExactObjectType(llvh::ArrayRef<Field> fields)
+      : TypeInfo(TypeKind::ExactObject) {
+    // Populate the fields_.
+    fields_.append(fields.begin(), fields.end());
+
+    // Populate the fieldNameMap_.
+    fieldNameMap_.reserve(fields.size());
+    size_t index = 0;
+    for (const auto &f : fields_) {
+      fieldNameMap_[f.name] = index++;
+    }
+  }
+
+  /// \return the fields in order.
+  llvh::ArrayRef<Field> getFields() const {
+    return fields_;
+  }
+
+  /// \return the field index for the given identifier, None if not found.
+  hermes::OptValue<size_t> findField(Identifier id) const;
+
+  /// Compare two instances of the same TypeKind.
+  int _compareImpl(const ExactObjectType *other, CompareState &state) const;
+  /// Compare two instances of the same TypeKind.
+  bool _equalsImpl(const ExactObjectType *other, CompareState &state) const;
+  /// Calculate the type-specific hash.
+  unsigned _hashImpl() const;
+
+  static bool classof(const TypeInfo *t) {
+    return t->getKind() == TypeKind::ExactObject;
   }
 };
 
@@ -860,6 +918,10 @@ class FlowContext {
   }
   TupleType *createTuple(llvh::ArrayRef<Type *> types) {
     return &allocTuple_.emplace_back(types);
+  }
+  ExactObjectType *createExactObject(
+      llvh::ArrayRef<ExactObjectType::Field> fields) {
+    return &allocExactObject_.emplace_back(fields);
   }
   TypedFunctionType *createFunction(
       Type *returnType,
