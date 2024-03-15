@@ -427,8 +427,11 @@ class TypeInferenceImpl {
     return newTy != originalTy;
   }
 
-  /// Run type inference on a the provided set of functions to a fixed point.
-  bool runOnFunctions(llvh::ArrayRef<Function *> functions);
+  /// Run type inference on a the provided set of functions and variables to a
+  /// fixed point.
+  bool runOnFunctionsAndVars(
+      llvh::ArrayRef<Function *> functions,
+      llvh::ArrayRef<Variable *> vars);
 
   Type inferSingleOperandInst(SingleOperandInst *inst) {
     hermes_fatal("This is not a concrete instruction");
@@ -1029,11 +1032,6 @@ class TypeInferenceImpl {
       prePassTypes_.try_emplace(P, P->getType());
       P->setType(Type::createNoType());
     }
-    // Variables
-    for (auto *V : f->getFunctionScope()->getVariables()) {
-      prePassTypes_.try_emplace(V, V->getType());
-      V->setType(Type::createNoType());
-    }
     // Return type
     prePassTypes_.try_emplace(f, f->getReturnType());
     f->setReturnType(Type::createNoType());
@@ -1117,16 +1115,22 @@ class TypeInferenceImpl {
   }
 };
 
-bool TypeInferenceImpl::runOnFunctions(llvh::ArrayRef<Function *> functions) {
+bool TypeInferenceImpl::runOnFunctionsAndVars(
+    llvh::ArrayRef<Function *> functions,
+    llvh::ArrayRef<Variable *> vars) {
   LLVM_DEBUG(
       dbgs() << "\nStart Type Inference on " << functions.size()
-             << " functions.\n");
+             << " functions and " << vars.size() << "vars.\n");
 
-  for (Function *F : functions) {
-    // Begin by clearing the existing types and storing pre-pass types.
-    // This prevents us from relying on the previous inference pass's type info,
-    // which can be too loose (if things have been simplified, etc.).
+  // Begin by clearing the existing types and storing pre-pass types.
+  // This prevents us from relying on the previous inference pass's type info,
+  // which can be too loose (if things have been simplified, etc.).
+  for (Function *F : functions)
     clearTypesInFunction(F);
+
+  for (Variable *V : vars) {
+    prePassTypes_.try_emplace(V, V->getType());
+    V->setType(Type::createNoType());
   }
 
   // Inferring the types of instructions can help us figure out the types of
@@ -1175,12 +1179,10 @@ bool TypeInferenceImpl::runOnFunctions(llvh::ArrayRef<Function *> functions) {
       LLVM_DEBUG(dbgs() << ">> Inferred function return type\n");
     localChanged |= inferredRetType;
 
-    // Infer type of F's variables.
+    // Infer type of the supplied variables.
     bool inferredVarType = false;
-    for (Function *F : functions) {
-      for (auto *V : F->getFunctionScope()->getVariables()) {
-        inferredVarType |= inferMemoryType(V);
-      }
+    for (auto *var : vars) {
+      inferredVarType |= inferMemoryType(var);
     }
     if (inferredVarType)
       LLVM_DEBUG(dbgs() << ">> Inferred variable type\n");
@@ -1206,18 +1208,22 @@ bool TypeInferenceImpl::runOnFunctions(llvh::ArrayRef<Function *> functions) {
   return true;
 }
 
+/// Type of a group of functions and variables that should be processed
+/// together by type inference.
+using Partition = std::pair<std::vector<Function *>, std::vector<Variable *>>;
+
 /// Partition the functions in \p M into groups such that each group contains
-/// all functions that have usages (either direct or via their variables) within
-/// the same group, and no usages outside the group.
-static std::vector<std::vector<Function *>> partitionFunctions(Module *M) {
+/// all functions and variables that have usages within the same group, and no
+/// usages outside the group.
+static std::vector<Partition> partitionFunctionsAndVars(Module *M) {
   // EquivalenceClasses basically implements union-find (disjoint-set).
-  // This is convenient for finding all the functions that share variables
-  // or use each other.
-  llvh::EquivalenceClasses<const Function *> funcGroups{};
+  // This is convenient for finding all the functions use each other, as well as
+  // their shared variables.
+  llvh::EquivalenceClasses<const Value *> groups{};
   for (Function &F : *M) {
     // Add the function to the equivalence class, in case it doesn't have any
     // users or captured vars, we will create a new group.
-    funcGroups.insert(&F);
+    groups.insert(&F);
 
     // NOTE: unionSets automatically inserts both arguments if they don't exist
     // before unioning.
@@ -1225,14 +1231,18 @@ static std::vector<std::vector<Function *>> partitionFunctions(Module *M) {
     // Include any users of the function, to account for known callsites
     // as well as closure creation.
     for (const Instruction *user : F.getUsers()) {
-      funcGroups.unionSets(&F, user->getFunction());
+      groups.unionSets(&F, user->getFunction());
     }
+  }
 
-    // Include any functions that capture the function's variables,
-    // to allow those variables to be inferred.
+  // Iterate over all the variables, and union them with the functions that use
+  // them. This ensures that all functions that access a variable are in the
+  // same group as the variable. Unlike with functions, we disregard variables
+  // that are unused, since there is nothing to meaningfully infer.
+  for (Function &F : *M) {
     for (const Variable *V : F.getFunctionScope()->getVariables()) {
       for (const Instruction *user : V->getUsers()) {
-        funcGroups.unionSets(&F, user->getFunction());
+        groups.unionSets(V, user->getFunction());
       }
     }
   }
@@ -1243,30 +1253,44 @@ static std::vector<std::vector<Function *>> partitionFunctions(Module *M) {
   // keys and we want a deterministic ordering.
 
   // Map from leader to index so we can use findLeader.
-  llvh::DenseMap<const Function *, unsigned> funcGroupIndices;
+  llvh::DenseMap<const Value *, unsigned> groupIndices;
   // List of the groups, where group i has a leader and
-  // funcGroupIndices[leader] == i.
-  std::vector<std::vector<Function *>> funcGroupsVec;
+  // groupIndices[leader] == i.
+  std::vector<Partition> res;
   for (Function &F : *M) {
-    const Function *leader = *funcGroups.findLeader(&F);
-    auto [it, inserted] =
-        funcGroupIndices.try_emplace(leader, funcGroupsVec.size());
-    if (inserted) {
-      funcGroupsVec.emplace_back(1, &F);
-    } else {
-      funcGroupsVec[it->second].push_back(&F);
+    const Value *leader = *groups.findLeader(&F);
+    auto [it, inserted] = groupIndices.try_emplace(leader, res.size());
+    if (inserted)
+      res.emplace_back();
+
+    res[it->second].first.push_back(&F);
+  }
+
+  for (Function &F : *M) {
+    for (Variable *V : F.getFunctionScope()->getVariables()) {
+      // Skip Variables that are not in a group, since they are unused.
+      auto leaderIt = groups.findLeader(V);
+      if (leaderIt == groups.member_end())
+        continue;
+
+      // Any variable that is in a group must have an associated function that
+      // uses it, which would have already been inserted.
+      const Value *leader = *leaderIt;
+      auto it = groupIndices.find(leader);
+      assert(it != groupIndices.end() && "Group not found");
+      res[it->second].second.push_back(V);
     }
   }
-  return funcGroupsVec;
+  return res;
 }
 
 bool TypeInferenceImpl::runOnModule(Module *M) {
   bool changed = false;
   LLVM_DEBUG(dbgs() << "\nStart Type Inference on Module\n");
 
-  auto partitionedFuncs = partitionFunctions(M);
-  for (const auto &funcGroup : partitionedFuncs) {
-    changed |= runOnFunctions(funcGroup);
+  auto partitionedFuncsAndVars = partitionFunctionsAndVars(M);
+  for (const auto &[funcs, vars] : partitionedFuncsAndVars) {
+    changed |= runOnFunctionsAndVars(funcs, vars);
   }
   return changed;
 }
