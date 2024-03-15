@@ -1,14 +1,20 @@
-This is the `no-deps` MiniReact benchmark with objects and unsupported generic
+This is the `no-objects` MiniReact benchmark with objects and other unsupported
 features removed.
 
 # Setup
 
 ```
-(cd ~/builds; cmake -S ~/fbsource/xplat/static_h/benchmarks/ -B benchmarksdebug -G Ninja -DHERMES_BUILD=~/builds/shdebug -DHERMES_SRC=~/fbsource/xplat/static_h) && (cd benchmarks/build-helpers/flow-bundler; yarn install)
+(cd ~/builds; cmake -S ~/fbsource/xplat/static_h/benchmarks/ -B benchmarksdebug -G Ninja -DHERMES_BUILD=~/builds/shdebug -DHERMES_SRC=~/fbsource/xplat/static_h) && (cd ~/fbsource/xplat/static_h/benchmarks/build-helpers/flow-bundler; yarn install)
 ```
 
-# Run
+# Run with Static Hermes
 
 ```
-./benchmarks/build-helpers/flow-bundler/bin/flow-bundler --root benchmarks/MiniReact/no-objects/src/ --out benchmarks/MiniReact/no-objects/MiniReact.js benchmarks/MiniReact/no-objects/src/index.js --es5 --strip-types && (cd ~/builds/shdebug/; ninja hermesvm shermes && ./bin/shermes -typed -exec -g -source-map ~/fbsource/xplat/static_h/benchmarks/MiniReact/no-objects/MiniReact.js.map ~/fbsource/xplat/static_h/benchmarks/MiniReact/no-objects/MiniReact.js)
+~/fbsource/xplat/static_h/benchmarks/MiniReact/no-objects/build.sh && (cd ~/builds/shdebug/; ninja hermesvm shermes && ./bin/shermes -typed -exec -g ~/fbsource/xplat/static_h/benchmarks/MiniReact/no-objects/out/simple.js)
+```
+
+# Run with Hermes
+
+```
+~/fbsource/xplat/static_h/benchmarks/MiniReact/no-objects/build.sh && (cd ~/builds/shdebug/; ninja hermesvm hermes && ./bin/hermes -exec -g ~/fbsource/xplat/static_h/benchmarks/MiniReact/no-objects/out/simple-es5.js)
 ```
