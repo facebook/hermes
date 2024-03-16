@@ -175,12 +175,10 @@ class OrderedHashMap final : public GCCell {
 
   /// Hash a HermesValue to an index to our hash table.
   static uint32_t
-  hashToBucket(Handle<OrderedHashMap> self, Runtime &runtime, Handle<> key) {
+  hashToBucket(uint32_t capacity, Runtime &runtime, Handle<> key) {
     auto hash = runtime.gcStableHashHermesValue(key);
-    assert(
-        (self->capacity_ & (self->capacity_ - 1)) == 0 &&
-        "capacity_ must be power of 2");
-    return hash & (self->capacity_ - 1);
+    assert((capacity & (capacity - 1)) == 0 && "capacity_ must be power of 2");
+    return hash & (capacity - 1);
   }
 
   /// Remove a node from the linked list.
