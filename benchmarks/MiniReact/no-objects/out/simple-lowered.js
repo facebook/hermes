@@ -1,16 +1,5 @@
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
-function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
-function _possibleConstructorReturn(self, call) { if (call && (typeof call === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
-function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
-function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
-function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
-function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
-function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i]; return arr2; }
-function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
-function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, _toPropertyKey(descriptor.key), descriptor); } }
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 function _toPropertyKey(arg) { var key = _toPrimitive(arg, "string"); return typeof key === "symbol" ? key : String(key); }
@@ -42,9 +31,9 @@ function M$sh_CHECKED_CAST$default(value) {
   return value;
 }
 /* file: packages/sh/microtask.js */
-var M$sh_microtask$INTERNAL$microtaskQueue = [];
+let M$sh_microtask$INTERNAL$microtaskQueue = [];
 function M$sh_microtask$drainMicrotaskQueue() {
-  for (var i = 0; i < M$sh_microtask$INTERNAL$microtaskQueue.length; i++) {
+  for (let i = 0; i < M$sh_microtask$INTERNAL$microtaskQueue.length; i++) {
     M$sh_microtask$INTERNAL$microtaskQueue[i]();
     M$sh_microtask$INTERNAL$microtaskQueue[i] = undefined;
   }
@@ -55,29 +44,29 @@ function M$sh_microtask$queueMicrotask(callback) {
 }
 /* file: packages/sh/fastarray.js */
 function M$sh_fastarray$join(arr, sep) {
-  var result = '';
-  for (var i = 0, e = arr.length; i < e; ++i) {
+  let result = '';
+  for (let i = 0, e = arr.length; i < e; ++i) {
     if (i !== 0) result += sep;
     result += arr[i];
   }
   return result;
 }
 function M$sh_fastarray$reduce(arr, fn, initialValue) {
-  var acc = initialValue;
-  for (var i = 0, e = arr.length; i < e; ++i) {
+  let acc = initialValue;
+  for (let i = 0, e = arr.length; i < e; ++i) {
     acc = fn(acc, arr[i], i);
   }
   return acc;
 }
 function M$sh_fastarray$map(arr, fn) {
-  var output = [];
-  for (var i = 0, e = arr.length; i < e; ++i) {
+  const output = [];
+  for (let i = 0, e = arr.length; i < e; ++i) {
     output.push(fn(arr[i], i));
   }
   return output;
 }
 function M$sh_fastarray$includes(arr, searchElement) {
-  for (var i = 0, e = arr.length; i < e; ++i) {
+  for (let i = 0, e = arr.length; i < e; ++i) {
     if (arr[i] === searchElement) {
       return true;
     }
@@ -86,8 +75,8 @@ function M$sh_fastarray$includes(arr, searchElement) {
 }
 /* file: packages/react/index.js */
 function M$react_index$INTERNAL$padString(str, len) {
-  var result = '';
-  for (var i = 0; i < len; i++) {
+  let result = '';
+  for (let i = 0; i < len; i++) {
     result += str;
   }
   return result;
@@ -111,9 +100,13 @@ function M$react_index$INTERNAL$padString(str, len) {
 //   key: React$Key | null,
 //   ref: any,
 // |};
-var M$react_index$INTERNAL$React$Element = /*#__PURE__*/_createClass(function M$react_index$INTERNAL$React$Element(type, props, key, ref) {
+let M$react_index$INTERNAL$React$Element = /*#__PURE__*/_createClass(function M$react_index$INTERNAL$React$Element(type, props, key, ref) {
   "use strict";
 
+  this.type = void 0;
+  this.props = void 0;
+  this.key = void 0;
+  this.ref = void 0;
   this.type = type;
   this.props = props;
   this.key = key;
@@ -123,25 +116,25 @@ var M$react_index$INTERNAL$React$Element = /*#__PURE__*/_createClass(function M$
  * The type of the key that React uses to determine where items in a new list
  * have moved.
  */
-var M$react_index$INTERNAL$REACT_FRAGMENT_TYPE = 1 /* Symbol.for('react.fragment') */;
+const M$react_index$INTERNAL$REACT_FRAGMENT_TYPE = 1 /* Symbol.for('react.fragment') */;
 /* eslint-disable lint/strictly-null, lint/react-state-props-mutation, lint/flow-react-element */
 
 /**
  * The current root
  */
-var M$react_index$INTERNAL$workInProgressRoot = null;
+let M$react_index$INTERNAL$workInProgressRoot = null;
 /**
  * The currently rendering fiber. Only set when a component is being rendered.
  */
-var M$react_index$INTERNAL$workInProgressFiber = null;
+let M$react_index$INTERNAL$workInProgressFiber = null;
 /**
  * The previous state hook, or null if no state hook has been evaluated yet.
  */
-var M$react_index$INTERNAL$workInProgressState = null;
+let M$react_index$INTERNAL$workInProgressState = null;
 /**
  * Queue of updates triggered *during* render.
  */
-var M$react_index$INTERNAL$renderPhaseUpdateQueue = [];
+const M$react_index$INTERNAL$renderPhaseUpdateQueue = [];
 /**
  * Public API to create a new "root", this is where React attaches rendering to a host element.
  * In our case we don't actually have a real host, and currently only "render" to strings.
@@ -159,14 +152,14 @@ function M$react_index$useState(
  * Initial value of the state
  */
 initial) {
-  var root = M$sh_CHECKED_CAST$default(M$react_index$INTERNAL$workInProgressRoot);
-  var fiber = M$sh_CHECKED_CAST$default(M$react_index$INTERNAL$workInProgressFiber);
+  const root = M$sh_CHECKED_CAST$default(M$react_index$INTERNAL$workInProgressRoot);
+  const fiber = M$sh_CHECKED_CAST$default(M$react_index$INTERNAL$workInProgressFiber);
   M$react_invariant$default(fiber !== null && root !== null, 'useState() called outside of render');
-  var state;
-  var _workInProgressState = M$react_index$INTERNAL$workInProgressState;
+  let state;
+  const _workInProgressState = M$react_index$INTERNAL$workInProgressState;
   if (_workInProgressState === null) {
     // Get or initialize the first state on the fiber
-    var nextState = fiber.state;
+    let nextState = fiber.state;
     if (nextState === null) {
       nextState = new M$react_index$INTERNAL$State(initial);
       fiber.state = nextState;
@@ -175,22 +168,22 @@ initial) {
     // can't statically prove this
     state = M$sh_CHECKED_CAST$default(nextState);
   } else {
-    var _nextState = M$sh_CHECKED_CAST$default(_workInProgressState).next;
-    if (_nextState === null) {
-      _nextState = new M$react_index$INTERNAL$State(initial);
-      M$sh_CHECKED_CAST$default(_workInProgressState).next = _nextState;
+    let nextState = M$sh_CHECKED_CAST$default(_workInProgressState).next;
+    if (nextState === null) {
+      nextState = new M$react_index$INTERNAL$State(initial);
+      M$sh_CHECKED_CAST$default(_workInProgressState).next = nextState;
     }
     // NOTE: in case of a re-render we assume that the hook types match but
     // can't statically prove this
-    state = M$sh_CHECKED_CAST$default(_nextState);
+    state = M$sh_CHECKED_CAST$default(nextState);
   }
   // NOTE: this should just work because of subtying, State<T> should be subtype of State<mixed>
   M$react_index$INTERNAL$workInProgressState = M$sh_CHECKED_CAST$default(state);
   return [
   // Untyped check that the existing state value has the correct type,
   // This is safe if components follow the rules of hooks
-  M$sh_CHECKED_CAST$default(state.value), function (updater) {
-    var update = new M$react_index$INTERNAL$Update(fiber, M$sh_CHECKED_CAST$default(state), M$sh_CHECKED_CAST$default(updater));
+  M$sh_CHECKED_CAST$default(state.value), updater => {
+    const update = new M$react_index$INTERNAL$Update(fiber, M$sh_CHECKED_CAST$default(state), M$sh_CHECKED_CAST$default(updater));
     if (M$react_index$INTERNAL$workInProgressFiber !== null) {
       // called during render
       M$react_index$INTERNAL$renderPhaseUpdateQueue.push(update);
@@ -199,9 +192,9 @@ initial) {
     }
   }];
 }
-var M$react_index$INTERNAL$callbacks = new Map();
+const M$react_index$INTERNAL$callbacks = new Map();
 function M$react_index$callOnClickOrChange(id, event) {
-  var callback = M$react_index$INTERNAL$callbacks.get(id);
+  const callback = M$react_index$INTERNAL$callbacks.get(id);
   if (callback == null) {
     throw new Error('No callback registered with id: ' + id);
   }
@@ -220,71 +213,76 @@ function M$react_index$callOnClickOrChange(id, event) {
 /**
  * A queued state update.
  */
-var M$react_index$INTERNAL$Update = /*#__PURE__*/function () {
+let M$react_index$INTERNAL$Update = /*#__PURE__*/function () {
   "use strict";
 
   function M$react_index$INTERNAL$Update(fiber, state, updater) {
+    this.fiber = void 0;
+    this.state = void 0;
+    this.updater = void 0;
     this.fiber = fiber;
     this.state = state;
     this.updater = updater;
   }
   var _proto = M$react_index$INTERNAL$Update.prototype;
   _proto.run = function run() {
-    var state = this.state;
-    var value = state.value;
-    var updater = this.updater;
+    const state = this.state;
+    let value = state.value;
+    const updater = this.updater;
     if (typeof updater === 'function') {
       // NOTE: The type of Updater<T> is meant to expresss `T (not function) | T (function of T => T)`
       // thus the fact that updater is a function here menas its a function of T => T.
-      var fn = M$sh_CHECKED_CAST$default(updater);
+      const fn = M$sh_CHECKED_CAST$default(updater);
       value = fn(state.value);
     } else {
       // NOTE: The type of Updater<T> is meant to expresss `T (not function) | T (function of T => T)`
       // thus the fact that updater is *not* a function here means it is a T
       value = M$sh_CHECKED_CAST$default(updater);
     }
-    var changed = !Object.is(state.value, value);
+    const changed = !Object.is(state.value, value);
     state.value = value;
     return changed;
   };
   return _createClass(M$react_index$INTERNAL$Update);
 }();
-var M$react_index$INTERNAL$Root = /*#__PURE__*/function () {
+let M$react_index$INTERNAL$Root = /*#__PURE__*/function () {
   "use strict";
 
   function M$react_index$INTERNAL$Root() {
+    this.root = void 0;
+    this.element = void 0;
+    this.updateQueue = void 0;
     this.root = null;
     this.element = null;
     this.updateQueue = [];
   }
   var _proto2 = M$react_index$INTERNAL$Root.prototype;
   _proto2.notify = function notify(update) {
-    var _this = this;
     this.updateQueue.push(update);
     if (this.updateQueue.length === 1) {
-      M$sh_microtask$queueMicrotask(function () {
-        var element = _this.element;
+      M$sh_microtask$queueMicrotask(() => {
+        const element = this.element;
         M$react_invariant$default(element !== null, 'Expected an element to be set after rendering');
-        _this.doWork(M$sh_CHECKED_CAST$default(element));
+        this.doWork(M$sh_CHECKED_CAST$default(element));
       });
     }
   };
   _proto2.render = function render(element) {
     M$react_invariant$default(M$react_index$INTERNAL$workInProgressFiber === null && M$react_index$INTERNAL$workInProgressState === null, 'Cannot render, an existing render is in progress');
-    var hasChanges = element !== this.element;
+    const hasChanges = element !== this.element;
     this.element = element;
     if (hasChanges) {
       this.doWork(element);
     }
     M$react_invariant$default(this.root !== null, 'Expected root to be rendered');
-    var root = M$sh_CHECKED_CAST$default(this.root);
-    var output = [];
+    const root = M$sh_CHECKED_CAST$default(this.root);
+    const output = [];
     this.printFiber(root, output, 0);
     return M$sh_fastarray$join(output, '\n');
   };
   _proto2.doWork = function doWork(element) {
-    var mustRender = this.root === null;
-    for (var update of this.updateQueue) {
+    let mustRender = this.root === null;
+    for (const update of this.updateQueue) {
       mustRender = update.run() || mustRender;
     }
     this.updateQueue = [];
@@ -295,14 +293,14 @@ var M$react_index$INTERNAL$Root = /*#__PURE__*/function () {
     // and then processing its children
     // eslint-disable-next-line consistent-this
     M$react_index$INTERNAL$workInProgressRoot = this;
-    var fiber = this.root;
+    let fiber = this.root;
     if (fiber === null) {
       fiber = this.mountFiber(element, null);
       this.root = fiber;
     }
     while (fiber !== null) {
       // Render the fiber, which creates child/sibling nodes
-      var fiber2 = M$sh_CHECKED_CAST$default(fiber);
+      let fiber2 = M$sh_CHECKED_CAST$default(fiber);
       this.renderFiber(fiber2);
       // advance to the next fiber
       if (fiber2.child !== null) {
@@ -325,18 +323,14 @@ var M$react_index$INTERNAL$Root = /*#__PURE__*/function () {
     switch (fiber.type.kind) {
       case 'host':
         {
-          var tag = M$sh_CHECKED_CAST$default(fiber.type).tag;
-          var padStr = M$react_index$INTERNAL$padString(' ', level);
-          var str = padStr + '<' + tag;
-          for (var _ref of Object.entries(fiber.props)) {
-            var _JSON$stringify;
-            var _ref2 = _slicedToArray(_ref, 2);
-            var propName = _ref2[0];
-            var propValue = _ref2[1];
+          const tag = M$sh_CHECKED_CAST$default(fiber.type).tag;
+          const padStr = M$react_index$INTERNAL$padString(' ', level);
+          let str = padStr + '<' + tag;
+          for (const [propName, propValue] of Object.entries(fiber.props)) {
             if (propValue == null || typeof propValue === 'function') {
               continue;
             }
-            str += ` ${propName}=${(_JSON$stringify = JSON.stringify(propValue)) != null ? _JSON$stringify : 'undefined'}`;
+            str += ` ${propName}=${JSON.stringify(propValue) ?? 'undefined'}`;
           }
           if (fiber.child == null) {
             str += ' />';
@@ -351,7 +345,7 @@ var M$react_index$INTERNAL$Root = /*#__PURE__*/function () {
         }
       case 'text':
         {
-          var text = M$sh_CHECKED_CAST$default(fiber.type).text;
+          const text = M$sh_CHECKED_CAST$default(fiber.type).text;
           if (text !== '') {
             out.push(M$react_index$INTERNAL$padString(' ', level) + text);
           }
@@ -366,7 +360,7 @@ var M$react_index$INTERNAL$Root = /*#__PURE__*/function () {
     }
   };
   _proto2.printChildren = function printChildren(fiber, out, level) {
-    var current = fiber.child;
+    let current = fiber.child;
     while (current !== null) {
       this.printFiber(M$sh_CHECKED_CAST$default(current), out, level);
       current = M$sh_CHECKED_CAST$default(current).sibling;
@@ -380,14 +374,14 @@ var M$react_index$INTERNAL$Root = /*#__PURE__*/function () {
         case 'component':
           {
             M$react_invariant$default(M$react_index$INTERNAL$renderPhaseUpdateQueue.length === 0, 'Expected no queued render updates');
-            var render = M$sh_CHECKED_CAST$default(fiber.type).component;
-            var element = render(fiber.props);
-            var iterationCount = 0;
+            const render = M$sh_CHECKED_CAST$default(fiber.type).component;
+            let element = render(fiber.props);
+            let iterationCount = 0;
             while (M$react_index$INTERNAL$renderPhaseUpdateQueue.length !== 0) {
               iterationCount++;
               M$react_invariant$default(iterationCount < 1000, 'Possible infinite loop with setState during render');
-              var hasChanges = false;
-              for (var update of M$react_index$INTERNAL$renderPhaseUpdateQueue) {
+              let hasChanges = false;
+              for (const update of M$react_index$INTERNAL$renderPhaseUpdateQueue) {
                 M$react_invariant$default(update.fiber === fiber, 'setState() during render is currently only supported when updating the component ' + 'being rendered. Setting state from another component is not supported.');
                 hasChanges = update.run() || hasChanges;
               }
@@ -402,13 +396,13 @@ var M$react_index$INTERNAL$Root = /*#__PURE__*/function () {
           }
         case 'host':
           {
-            var id = fiber.props.id;
+            const id = fiber.props.id;
             if (id != null) {
-              var onClick = fiber.props.onClick;
+              const onClick = fiber.props.onClick;
               if (onClick != null) {
                 M$react_index$INTERNAL$callbacks.set(id, onClick);
               }
-              var onChange = fiber.props.onChange;
+              const onChange = fiber.props.onChange;
               if (onChange != null) {
                 M$react_index$INTERNAL$callbacks.set(id, onChange);
               }
@@ -432,30 +426,32 @@ var M$react_index$INTERNAL$Root = /*#__PURE__*/function () {
     }
   };
   _proto2.mountFiber = function mountFiber(elementOrString, parent) {
-    var fiber;
+    let fiber;
     // TODO: Support Array of Node's being returned from a component.
     if (typeof elementOrString === 'object') {
-      var element = M$sh_CHECKED_CAST$default(elementOrString);
+      const element = M$sh_CHECKED_CAST$default(elementOrString);
       if (typeof element.type === 'function') {
-        var component = M$sh_CHECKED_CAST$default(element.type);
-        var type = new M$react_index$INTERNAL$FiberTypeComponent(component);
+        const component = M$sh_CHECKED_CAST$default(element.type);
+        const type = new M$react_index$INTERNAL$FiberTypeComponent(component);
         fiber = new M$react_index$INTERNAL$Fiber(type, element.props, element.key);
       } else if (typeof element.type === 'string') {
         M$react_invariant$default(typeof element.type === 'string', 'Expected a host component name such as "div" or "span", got ' + typeof element.type);
-        var _type = new M$react_index$INTERNAL$FiberTypeHost(M$sh_CHECKED_CAST$default(element.type));
+        const type = new M$react_index$INTERNAL$FiberTypeHost(M$sh_CHECKED_CAST$default(element.type));
         M$react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
         // const {children, ...props} = element.props;
-        var children = element.props.children;
-        var _props = Object.assign({}, element.props);
-        delete _props.children;
-        fiber = new M$react_index$INTERNAL$Fiber(_type, _props, element.key);
+        const children = element.props.children;
+        const props = {
+          ...element.props
+        };
+        delete props.children;
+        fiber = new M$react_index$INTERNAL$Fiber(type, props, element.key);
         this.mountChildren(children, fiber);
       } else {
         switch (element.type) {
           case M$react_index$INTERNAL$REACT_FRAGMENT_TYPE:
             {
-              var _type2 = new M$react_index$INTERNAL$FiberTypeFragment();
-              fiber = new M$react_index$INTERNAL$Fiber(_type2, element.props, element.key);
+              const type = new M$react_index$INTERNAL$FiberTypeFragment();
+              fiber = new M$react_index$INTERNAL$Fiber(type, element.props, element.key);
               this.mountChildren(element.props.children, fiber);
               break;
             }
@@ -466,8 +462,8 @@ var M$react_index$INTERNAL$Root = /*#__PURE__*/function () {
         }
       }
     } else if (typeof elementOrString === 'string') {
-      var _type3 = new M$react_index$INTERNAL$FiberTypeText(M$sh_CHECKED_CAST$default(elementOrString));
-      fiber = new M$react_index$INTERNAL$Fiber(_type3, {}, null);
+      const type = new M$react_index$INTERNAL$FiberTypeText(M$sh_CHECKED_CAST$default(elementOrString));
+      fiber = new M$react_index$INTERNAL$Fiber(type, {}, null);
     } else {
       throw new Error(`Unexpected element type of ${typeof elementOrString}`);
     }
@@ -476,71 +472,73 @@ var M$react_index$INTERNAL$Root = /*#__PURE__*/function () {
   };
   _proto2.mountChildren = function mountChildren(children, parentFiber) {
     if (Array.isArray(children)) {
-      var _prev = null;
-      for (var childElement of M$sh_CHECKED_CAST$default(children)) {
+      let prev = null;
+      for (const childElement of M$sh_CHECKED_CAST$default(children)) {
         if (childElement == null) {
           continue;
         }
-        var child = this.mountFiber(M$sh_CHECKED_CAST$default(childElement), parentFiber);
-        if (_prev !== null) {
-          M$sh_CHECKED_CAST$default(_prev).sibling = child;
+        const child = this.mountFiber(M$sh_CHECKED_CAST$default(childElement), parentFiber);
+        if (prev !== null) {
+          M$sh_CHECKED_CAST$default(prev).sibling = child;
         } else {
           // set parent to point to first child
           parentFiber.child = child;
         }
-        _prev = child;
+        prev = child;
       }
     } else if (children != null) {
-      var _child = this.mountFiber(children, parentFiber);
-      parentFiber.child = _child;
+      const child = this.mountFiber(children, parentFiber);
+      parentFiber.child = child;
     }
   };
   _proto2.reconcileFiber = function reconcileFiber(parent, prevChild, element) {
     if (prevChild !== null && M$sh_CHECKED_CAST$default(prevChild).type === element.type) {
-      var _prevChild = M$sh_CHECKED_CAST$default(_prevChild);
+      let prevChild = M$sh_CHECKED_CAST$default(prevChild);
       // Only host and fragment nodes have to be reconciled: otherwise this is a
       // function component and its children will be reconciled when they are later
       // emitted in a host position (ie as a direct result of render)
-      switch (_prevChild.type.kind) {
+      switch (prevChild.type.kind) {
         case 'host':
           {
             M$react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
             // const {children, ...props} = element.props;
-            var children = element.props.children;
-            var _props2 = Object.assign({}, element.props);
-            delete _props2.children;
-            _prevChild.props = _props2;
-            this.reconcileChildren(_prevChild, children);
+            const children = element.props.children;
+            const props = {
+              ...element.props
+            };
+            delete props.children;
+            prevChild.props = props;
+            this.reconcileChildren(prevChild, children);
             break;
           }
         case 'fragment':
           {
             M$react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
-            var _children = element.props.children;
-            this.reconcileChildren(_prevChild, _children);
+            const children = element.props.children;
+            this.reconcileChildren(prevChild, children);
             break;
           }
         case 'component':
           {
             M$react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
-            _prevChild.props = element.props;
+            prevChild.props = element.props;
             break;
           }
         default:
           {
-            throw new Error(`Unknown node kind ${_prevChild.type.kind}`);
+            throw new Error(`Unknown node kind ${prevChild.type.kind}`);
           }
       }
-      return _prevChild;
+      return prevChild;
     } else {
-      var child = this.mountFiber(element, parent);
+      const child = this.mountFiber(element, parent);
       return child;
     }
   };
   _proto2.reconcileChildren = function reconcileChildren(parent, children) {
-    var prevChild = parent.child;
+    const prevChild = parent.child;
     if (Array.isArray(children)) {
-      var childrenArray = M$sh_CHECKED_CAST$default(children);
+      let childrenArray = M$sh_CHECKED_CAST$default(children);
       // Fast-path for empty and single-element arrays
       if (childrenArray.length === 0) {
         parent.child = null;
@@ -552,8 +550,8 @@ var M$react_index$INTERNAL$Root = /*#__PURE__*/function () {
       }
     } else if (typeof children === 'string') {
       if (prevChild === null || M$sh_CHECKED_CAST$default(prevChild).type.kind !== 'text') {
-        var type = new M$react_index$INTERNAL$FiberTypeText(M$sh_CHECKED_CAST$default(children));
-        var child = new M$react_index$INTERNAL$Fiber(type, {}, null);
+        const type = new M$react_index$INTERNAL$FiberTypeText(M$sh_CHECKED_CAST$default(children));
+        const child = new M$react_index$INTERNAL$Fiber(type, {}, null);
         parent.child = child;
       } else {
         M$sh_CHECKED_CAST$default(M$sh_CHECKED_CAST$default(prevChild).type).text = M$sh_CHECKED_CAST$default(children);
@@ -571,20 +569,19 @@ var M$react_index$INTERNAL$Root = /*#__PURE__*/function () {
   _proto2.reconcileMultipleChildren = function reconcileMultipleChildren(parent, children) {
     M$react_invariant$default(children.length > 1, 'Expected children to have multiple elements');
     // map existing children by key to make subsequent lookup O(log n)
-    var keyedChildren = new Map();
-    var current = parent.child;
+    const keyedChildren = new Map();
+    let current = parent.child;
     while (current !== null) {
       if (M$sh_CHECKED_CAST$default(current).key !== null) {
         keyedChildren.set(M$sh_CHECKED_CAST$default(current).key, current);
       }
       current = M$sh_CHECKED_CAST$default(current).sibling;
     }
-    var prev = null; // previous fiber at this key/index
-    var prevByIndex = parent.child; // keep track of prev fiber at this index
-    for (var childElement of children) {
-      var _ref3;
-      var prevFiber = (_ref3 = childElement.key != null ? keyedChildren.get(childElement.key) : null) != null ? _ref3 : prevByIndex;
-      var child = void 0;
+    let prev = null; // previous fiber at this key/index
+    let prevByIndex = parent.child; // keep track of prev fiber at this index
+    for (const childElement of children) {
+      const prevFiber = (childElement.key != null ? keyedChildren.get(childElement.key) : null) ?? prevByIndex;
+      let child;
       if (prevFiber != null) {
         child = this.reconcileFiber(parent, prevFiber, childElement);
       } else {
@@ -621,57 +618,57 @@ var M$react_index$INTERNAL$Root = /*#__PURE__*/function () {
 //       kind: 'text',
 //       text: string,
 //     };
-var M$react_index$INTERNAL$FiberType = /*#__PURE__*/_createClass(function M$react_index$INTERNAL$FiberType(kind) {
+let M$react_index$INTERNAL$FiberType = /*#__PURE__*/_createClass(function M$react_index$INTERNAL$FiberType(kind) {
   "use strict";
 
+  this.kind = void 0;
   this.kind = kind;
 });
-var M$react_index$INTERNAL$FiberTypeComponent = /*#__PURE__*/function (_M$react_index$INTERN) {
+let M$react_index$INTERNAL$FiberTypeComponent = /*#__PURE__*/function (_M$react_index$INTERN) {
   "use strict";
 
   _inherits(M$react_index$INTERNAL$FiberTypeComponent, _M$react_index$INTERN);
-  var _super = _createSuper(M$react_index$INTERNAL$FiberTypeComponent);
   function M$react_index$INTERNAL$FiberTypeComponent(component) {
-    var _this2;
-    _this2 = _super.call(this, 'component');
-    _this2.component = component;
-    return _this2;
+    var _this;
+    _this = _M$react_index$INTERN.call(this, 'component') || this;
+    _this.component = void 0;
+    _this.component = component;
+    return _this;
   }
   return _createClass(M$react_index$INTERNAL$FiberTypeComponent);
 }(M$react_index$INTERNAL$FiberType);
-var M$react_index$INTERNAL$FiberTypeHost = /*#__PURE__*/function (_M$react_index$INTERN2) {
+let M$react_index$INTERNAL$FiberTypeHost = /*#__PURE__*/function (_M$react_index$INTERN2) {
   "use strict";
 
   _inherits(M$react_index$INTERNAL$FiberTypeHost, _M$react_index$INTERN2);
-  var _super2 = _createSuper(M$react_index$INTERNAL$FiberTypeHost);
   function M$react_index$INTERNAL$FiberTypeHost(tag) {
-    var _this3;
-    _this3 = _super2.call(this, 'host');
-    _this3.tag = tag;
-    return _this3;
+    var _this2;
+    _this2 = _M$react_index$INTERN2.call(this, 'host') || this;
+    _this2.tag = void 0;
+    _this2.tag = tag;
+    return _this2;
   }
   return _createClass(M$react_index$INTERNAL$FiberTypeHost);
 }(M$react_index$INTERNAL$FiberType);
-var M$react_index$INTERNAL$FiberTypeFragment = /*#__PURE__*/function (_M$react_index$INTERN3) {
+let M$react_index$INTERNAL$FiberTypeFragment = /*#__PURE__*/function (_M$react_index$INTERN3) {
   "use strict";
 
   _inherits(M$react_index$INTERNAL$FiberTypeFragment, _M$react_index$INTERN3);
-  var _super3 = _createSuper(M$react_index$INTERNAL$FiberTypeFragment);
   function M$react_index$INTERNAL$FiberTypeFragment() {
-    return _super3.call(this, 'fragment');
+    return _M$react_index$INTERN3.call(this, 'fragment') || this;
   }
   return _createClass(M$react_index$INTERNAL$FiberTypeFragment);
 }(M$react_index$INTERNAL$FiberType);
-var M$react_index$INTERNAL$FiberTypeText = /*#__PURE__*/function (_M$react_index$INTERN4) {
+let M$react_index$INTERNAL$FiberTypeText = /*#__PURE__*/function (_M$react_index$INTERN4) {
   "use strict";
 
   _inherits(M$react_index$INTERNAL$FiberTypeText, _M$react_index$INTERN4);
-  var _super4 = _createSuper(M$react_index$INTERNAL$FiberTypeText);
   function M$react_index$INTERNAL$FiberTypeText(text) {
-    var _this4;
-    _this4 = _super4.call(this, 'text');
-    _this4.text = text;
-    return _this4;
+    var _this3;
+    _this3 = _M$react_index$INTERN4.call(this, 'text') || this;
+    _this3.text = void 0;
+    _this3.text = text;
+    return _this3;
   }
   return _createClass(M$react_index$INTERNAL$FiberTypeText);
 }(M$react_index$INTERNAL$FiberType);
@@ -683,9 +680,12 @@ var M$react_index$INTERNAL$FiberTypeText = /*#__PURE__*/function (_M$react_index
 /**
  * Data storage for the useState() hook
  */
-var M$react_index$INTERNAL$State = /*#__PURE__*/_createClass(function M$react_index$INTERNAL$State(value) {
+let M$react_index$INTERNAL$State = /*#__PURE__*/_createClass(function M$react_index$INTERNAL$State(value) {
   "use strict";
 
+  this.value = void 0;
+  this.next = void 0;
+  this.prev = void 0;
   this.value = value;
   this.next = null;
   this.prev = null;
@@ -694,9 +694,16 @@ var M$react_index$INTERNAL$State = /*#__PURE__*/_createClass(function M$react_in
  * Represents a node in the UI tree, and may correspond to a user-defined function component,
  * a host node, or a text node.
  */
-var M$react_index$INTERNAL$Fiber = /*#__PURE__*/_createClass(function M$react_index$INTERNAL$Fiber(type, props, key) {
+let M$react_index$INTERNAL$Fiber = /*#__PURE__*/_createClass(function M$react_index$INTERNAL$Fiber(type, props, key) {
   "use strict";
 
+  this.type = void 0;
+  this.props = void 0;
+  this.parent = void 0;
+  this.child = void 0;
+  this.sibling = void 0;
+  this.state = void 0;
+  this.key = void 0;
   this.type = type;
   this.props = props;
   this.key = key;
@@ -716,9 +723,7 @@ function M$react_index$Fragment(props) {
   return new M$react_index$INTERNAL$React$Element(M$react_index$INTERNAL$REACT_FRAGMENT_TYPE, props, null, null);
 }
 function M$react_index$forwardRef(comp) {
-  return function (props) {
-    return comp(props, null);
-  };
+  return props => comp(props, null);
 }
 /* file: app/simple/App.js */
 function M$App$INTERNAL$Button(props) {
@@ -743,9 +748,9 @@ function M$App$INTERNAL$TextArea(props) {
   }, null);
 }
 function M$App$INTERNAL$Select(props) {
-  var children = [];
-  for (var i = 0; i < props.options.length; i++) {
-    var option = props.options[i];
+  const children = [];
+  for (let i = 0; i < props.options.length; i++) {
+    const option = props.options[i];
     children.push(M$react_index$jsx('option', {
       value: option.value,
       children: option.label
@@ -828,53 +833,29 @@ function M$App$INTERNAL$Tooltip(props) {
   }, null);
 }
 function M$App$default(props) {
-  var _M$react_index$useSta = M$react_index$useState(''),
-    _M$react_index$useSta2 = _slicedToArray(_M$react_index$useSta, 2),
-    text = _M$react_index$useSta2[0],
-    setText = _M$react_index$useSta2[1];
-  var _M$react_index$useSta3 = M$react_index$useState(0),
-    _M$react_index$useSta4 = _slicedToArray(_M$react_index$useSta3, 2),
-    number = _M$react_index$useSta4[0],
-    setNumber = _M$react_index$useSta4[1];
-  var _M$react_index$useSta5 = M$react_index$useState(false),
-    _M$react_index$useSta6 = _slicedToArray(_M$react_index$useSta5, 2),
-    isChecked = _M$react_index$useSta6[0],
-    setIsChecked = _M$react_index$useSta6[1];
-  var _M$react_index$useSta7 = M$react_index$useState(false),
-    _M$react_index$useSta8 = _slicedToArray(_M$react_index$useSta7, 2),
-    isSelected = _M$react_index$useSta8[0],
-    setIsSelected = _M$react_index$useSta8[1];
-  var _M$react_index$useSta9 = M$react_index$useState(false),
-    _M$react_index$useSta10 = _slicedToArray(_M$react_index$useSta9, 2),
-    isOpen = _M$react_index$useSta10[0],
-    setIsOpen = _M$react_index$useSta10[1];
-  var _M$react_index$useSta11 = M$react_index$useState(true),
-    _M$react_index$useSta12 = _slicedToArray(_M$react_index$useSta11, 2),
-    isTooltipOpen = _M$react_index$useSta12[0],
-    setIsTooltipOpen = _M$react_index$useSta12[1];
+  const [text, setText] = M$react_index$useState('');
+  const [number, setNumber] = M$react_index$useState(0);
+  const [isChecked, setIsChecked] = M$react_index$useState(false);
+  const [isSelected, setIsSelected] = M$react_index$useState(false);
+  const [isOpen, setIsOpen] = M$react_index$useState(false);
+  const [isTooltipOpen, setIsTooltipOpen] = M$react_index$useState(true);
   return M$react_index$jsx('div', {
     children: [M$react_index$jsx('h1', {
       children: 'React Benchmark'
     }, null), M$react_index$jsx(M$App$INTERNAL$Button, {
       id: "toggle-modal",
-      onClick: function onClick() {
-        return setIsOpen(!isOpen);
-      },
+      onClick: () => setIsOpen(!isOpen),
       children: 'Toggle Modal'
     }, null), M$react_index$jsx(M$App$INTERNAL$Modal, {
       isOpen: isOpen,
-      onClose: function onClose() {
-        return setIsOpen(false);
-      },
+      onClose: () => setIsOpen(false),
       children: [M$react_index$jsx('h2', {
         children: 'Modal Content'
       }, null), M$react_index$jsx('p', {
         children: 'This is some modal content.'
       }, null), M$react_index$jsx(M$App$INTERNAL$Tooltip, {
         isOpen: isTooltipOpen,
-        onClose: function onClose() {
-          return setIsTooltipOpen(false);
-        },
+        onClose: () => setIsTooltipOpen(false),
         children: [M$react_index$jsx('h3', {
           children: 'Tooltip Content'
         }, null), M$react_index$jsx('p', {
@@ -887,14 +868,10 @@ function M$App$default(props) {
       }, null), M$react_index$jsx(M$App$INTERNAL$Input, {
         id: "update-text",
         value: text,
-        onChange: function onChange(e) {
-          return setText(e.target.value);
-        }
+        onChange: e => setText(e.target.value)
       }, null), M$react_index$jsx(M$App$INTERNAL$TextArea, {
         value: text,
-        onChange: function onChange(e) {
-          return setText(e.target.value);
-        }
+        onChange: e => setText(e.target.value)
       }, null), M$react_index$jsx(M$App$INTERNAL$Select, {
         options: [{
           label: 'Option 1',
@@ -906,27 +883,19 @@ function M$App$default(props) {
           label: 'Option 3',
           value: 3
         }],
-        onChange: function onChange(e) {
-          return setNumber(parseInt(e.target.value));
-        }
+        onChange: e => setNumber(parseInt(e.target.value))
       }, null), M$react_index$jsx(M$App$INTERNAL$Checkbox, {
         checked: isChecked,
-        onChange: function onChange(e) {
-          return setIsChecked(e.target.checked);
-        }
+        onChange: e => setIsChecked(e.target.checked)
       }, null), M$react_index$jsx(M$App$INTERNAL$Radio, {
         checked: isSelected,
-        onChange: function onChange(e) {
-          return setIsSelected(e.target.checked);
-        }
+        onChange: e => setIsSelected(e.target.checked)
       }, null), M$react_index$jsx(M$App$INTERNAL$Slider, {
         min: 0,
         max: 100,
         step: 1,
         value: number,
-        onChange: function onChange(e) {
-          return setNumber(parseInt(e.target.value));
-        }
+        onChange: e => setNumber(parseInt(e.target.value))
       }, null), M$react_index$jsx(M$App$INTERNAL$ProgressBar, {
         progress: number
       }, null), M$react_index$jsx(M$App$INTERNAL$Spinner, {}, null)]
@@ -943,9 +912,9 @@ function M$index$INTERNAL$printIf1(i, str) {
 }
 function M$index$INTERNAL$run(N) {
   // Warmup
-  for (var i = 1; i <= 100; ++i) {
-    var root = M$react_index$createRoot();
-    var rootElement = M$react_index$jsx(M$App$default, {}, null);
+  for (let i = 1; i <= 100; ++i) {
+    const root = M$react_index$createRoot();
+    const rootElement = M$react_index$jsx(M$App$default, {}, null);
     M$index$INTERNAL$printIf1(i, root.render(rootElement));
     M$react_index$callOnClickOrChange('toggle-modal', null);
     M$react_index$callOnClickOrChange('update-text', {
@@ -958,10 +927,10 @@ function M$index$INTERNAL$run(N) {
   }
   // Benchmark
   var start = Date.now();
-  for (var _i = 1; _i <= N; ++_i) {
-    var _root = M$react_index$createRoot();
-    var _rootElement = M$react_index$jsx(M$App$default, {}, null);
-    _root.render(_rootElement);
+  for (let i = 1; i <= N; ++i) {
+    const root = M$react_index$createRoot();
+    const rootElement = M$react_index$jsx(M$App$default, {}, null);
+    root.render(rootElement);
     M$react_index$callOnClickOrChange('toggle-modal', null);
     M$react_index$callOnClickOrChange('update-text', {
       target: {
@@ -969,10 +938,10 @@ function M$index$INTERNAL$run(N) {
       }
     });
     M$sh_microtask$drainMicrotaskQueue();
-    _root.render(_rootElement);
+    root.render(rootElement);
   }
   var end = Date.now();
   print(`${end - start} ms`);
 }
-M$index$INTERNAL$run(10000);
-//# sourceMappingURL=simple-es5.js.map
+M$index$INTERNAL$run(10_000);
+//# sourceMappingURL=simple-lowered.js.map

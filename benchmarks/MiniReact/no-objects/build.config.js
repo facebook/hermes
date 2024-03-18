@@ -29,20 +29,32 @@ function createConfig(benchmarkName) {
           ],
         },
       },
-      [`${benchmarkName}-es5.js`]: {
+      [`${benchmarkName}-lowered.js`]: {
         babelConfig: {
-          presets: [
+          plugins: [
             [
-              // This preset lives in the flow-bundler repo
-              require.resolve('metro-react-native-babel-preset', {
+              require.resolve('@babel/plugin-transform-class-properties', {
+                paths: [FLOW_BUNDLER_ROOT],
+              }),
+              {enableBabelRuntime: false},
+            ],
+            // This plugin lives in the flow-bundler repo
+            require.resolve('@babel/plugin-transform-flow-strip-types', {
+              paths: [FLOW_BUNDLER_ROOT],
+            }),
+            [
+              require.resolve('@babel/plugin-transform-classes', {
                 paths: [FLOW_BUNDLER_ROOT],
               }),
               {enableBabelRuntime: false},
             ],
           ],
           assumptions: {
-            setClassMethods: true,
+            constantSuper: true,
             noClassCalls: true,
+            setClassMethods: true,
+            setPublicClassFields: true,
+            superIsCallableConstructor: true,
           },
         },
       },
