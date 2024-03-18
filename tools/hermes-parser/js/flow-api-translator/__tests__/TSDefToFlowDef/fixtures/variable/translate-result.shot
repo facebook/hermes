@@ -6,5 +6,7 @@ exports[`TSDefToFlowDef variable 1`] = `
 declare const foo: string;
 
 declare let foo: string;
+
+declare const unannotated: any;
 "
 `;

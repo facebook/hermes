@@ -10,3 +10,4 @@
 declare var foo: string;
 declare const foo: string;
 declare let foo: string;
+declare const unannotated;
