@@ -79,12 +79,31 @@ export async function buildBundles(
  `;
 
   const fileMapping: {[string]: string} = {};
+  // $FlowExpectedError[unclear-type]
+  const bodyArrayAST: Array<any> = [];
+  const IIFEAST = {
+    type: 'ExpressionStatement',
+    expression: {
+      type: 'CallExpression',
+      callee: {
+        type: 'FunctionExpression',
+        id: null,
+        params: [],
+        body: {
+          type: 'BlockStatement',
+          body: bodyArrayAST,
+          directives: [],
+        },
+      },
+      arguments: [],
+    },
+    leadingComments: [{type: 'CommentBlock', value: bundleHeader}],
+  };
   const bundleAST = {
     type: 'File',
     program: {
       type: 'Program',
-      // $FlowExpectedError[unclear-type]
-      body: [] as Array<any>,
+      body: [IIFEAST],
       directives: [],
     },
   };
@@ -106,17 +125,8 @@ export async function buildBundles(
 
     const babelAST = hermesASTToBabel(ast, relativeFilePath);
 
-    bundleAST.program.body.push(...babelAST.program.body);
+    bodyArrayAST.push(...babelAST.program.body);
     fileMapping[relativeFilePath] = file.code;
-  }
-
-  // Add bundle docblock comment
-  if (bundleAST.program.body.length > 0) {
-    const firstStmt = bundleAST.program.body[0];
-    firstStmt.leadingComments = [
-      {type: 'CommentBlock', value: bundleHeader},
-      ...(firstStmt.leadingComments ?? []),
-    ];
   }
 
   for (const [outFilename, bundleOutOptions] of Object.entries(

@@ -16,5 +16,5 @@ features removed.
 # Run with Hermes
 
 ```
-~/fbsource/xplat/static_h/benchmarks/MiniReact/no-objects/build.sh && (cd ~/builds/shdebug/; ninja hermesvm hermes && ./bin/hermes -exec -g ~/fbsource/xplat/static_h/benchmarks/MiniReact/no-objects/out/simple-es5.js)
+~/fbsource/xplat/static_h/benchmarks/MiniReact/no-objects/build.sh && (cd ~/builds/shdebug/; ninja hermesvm hermes && ./bin/hermes -exec -g ~/fbsource/xplat/static_h/benchmarks/MiniReact/no-objects/out/simple-lowered.js)
 ```
