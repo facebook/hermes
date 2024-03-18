@@ -46,30 +46,10 @@ function parse(originalText: string): Program {
 }
 
 /**
- * Create a prettier plugin config for prettier v3 which adds
- * hermes parser support.
- */
-function createPrettierV3HermesPlugin(): HermesPlugin {
-  return {
-    // $FlowExpectedError[unsafe-getters-setters]
-    get parsers() {
-      // Lazy require this module as its only available in prettier v3.
-      const flowPlugin = require('prettier/plugins/flow');
-      return {
-        hermes: {
-          ...flowPlugin.parsers.flow,
-          parse,
-        },
-      };
-    },
-  };
-}
-
-/**
  * Create a prettier plugin config for prettier v2 which adds
  * hermes parser support and patches in prettier v3 printing logic.
  */
-function createPrettierV2HermesPlugin(): HermesPlugin {
+function createPrettierHermesPlugin(): HermesPlugin {
   // Lazy require custom prettier v3 internals
   const {
     getFlowPlugin,
@@ -189,18 +169,4 @@ function createPrettierV2HermesPlugin(): HermesPlugin {
   };
 }
 
-function getPrettierFlowPlugin(): HermesPlugin {
-  const {version} = require('prettier');
-
-  if (version.startsWith('3.')) {
-    return createPrettierV3HermesPlugin();
-  }
-
-  if (version.startsWith('2.')) {
-    return createPrettierV2HermesPlugin();
-  }
-
-  throw new Error(`Unsupported prettier version: ${version}`);
-}
-
-module.exports = (getPrettierFlowPlugin(): HermesPlugin);
+module.exports = (createPrettierHermesPlugin(): HermesPlugin);
