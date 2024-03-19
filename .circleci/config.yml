@@ -40,7 +40,7 @@ workflows:
 # Default settings for Apple jobs (apple-runtime, test-apple-runtime)
 apple_defaults: &apple_defaults
   macos:
-    xcode: 13.4.1
+    xcode: 15.3
   resource_class: macos.m1.medium.gen1
   working_directory: ~/hermes
   environment:
@@ -168,7 +168,10 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            brew install cmake ninja
+            brew install ninja
+            # TODO: See comment in build-apple-runtime.
+            brew update
+            brew install cmake
       - run:
           name: Build the test application
           command: |
@@ -189,8 +192,17 @@ jobs:
             xcodebuild test \
               -workspace ApplePlatformsIntegrationTests.xcworkspace \
               -configuration Debug \
-              -destination 'platform=iOS Simulator,name=iPhone 11' \
+              -destination 'platform=iOS Simulator,name=iPhone 15' \
               -scheme ApplePlatformsIntegrationMobileTests
+          working_directory: test/ApplePlatformsIntegrationTestApp
+      - run:
+          name: Test Apple Vision application
+          command: |
+            xcodebuild test \
+              -workspace ApplePlatformsIntegrationTests.xcworkspace \
+              -configuration Debug \
+              -destination 'platform=visionOS Simulator,name=Apple Vision Pro' \
+              -scheme ApplePlatformsIntegrationVisionOSTests
           working_directory: test/ApplePlatformsIntegrationTestApp
 
   build-apple-runtime:
@@ -207,8 +219,13 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            brew install cmake ninja
+            brew install ninja
             sudo gem install cocoapods
+            # TODO: Building for Apple Vision Pro requires a newer version of
+            # CMake than is available by default. Remove "brew update" once the
+            # CircleCI image contains CMake > 3.29.2.
+            brew update
+            brew install cmake
       - run:
           name: Build the iOS frameworks
           command: ./utils/build-ios-framework.sh
@@ -222,6 +239,8 @@ jobs:
             - ~/hermes/build_catalyst
             - ~/hermes/build_iphonesimulator
             - ~/hermes/build_macosx
+            - ~/hermes/build_xros
+            - ~/hermes/build_xrsimulator
             - ~/hermes/destroot
 
   package-apple-runtime:
@@ -236,8 +255,10 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            brew install cmake ninja
             sudo gem install cocoapods
+            # TODO: See comment in build-apple-runtime.
+            brew update
+            brew install cmake
       - run:
           name: Package the framework
           command: |
@@ -265,7 +286,7 @@ jobs:
 
   macos:
     macos:
-      xcode: 13.4.1
+      xcode: 13.4.1 
     steps:
       - checkout:
           path: hermes
@@ -303,7 +324,7 @@ jobs:
 
   test-macos:
     macos:
-      xcode: 13.4.1
+      xcode: 13.4.1 
     steps:
       - checkout:
           path: hermes
@@ -680,7 +701,7 @@ jobs:
 
   test-macos-test262:
     macos:
-      xcode: 13.4.1
+      xcode: 13.4.1 
     steps:
       - checkout:
           path: hermes
