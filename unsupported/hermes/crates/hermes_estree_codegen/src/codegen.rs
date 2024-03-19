@@ -153,7 +153,7 @@ impl Grammar {
             use std::num::NonZeroU32;
             use serde::ser::{Serializer, SerializeMap};
             use serde::{Serialize,Deserialize};
-            use crate::{JsValue, Binding, SourceRange, Number, ESTreeNode};
+            use crate::{JsValue, Binding, SourceRange, Number, ESTreeNode, Range};
 
             #(#object_defs)*
 
@@ -167,7 +167,7 @@ impl Grammar {
                 const VISIT_NODE: bool = false;
                 /// Execute on every node if `VISIT_NODE` is `true`
                 /// return `true` to stop traversing into children
-                fn visit_node<T: ESTreeNode>(&mut self, node: &'ast T) -> bool {
+                fn visit_node<T: ESTreeNode + Range>(&mut self, node: &'ast T) -> bool {
                     return false;
                 }
 
@@ -377,11 +377,14 @@ impl Node {
             }
 
             impl ESTreeNode for #name {
-                fn range(&self) -> SourceRange {
-                    self.range
-                }
                 fn as_node_enum(&self) -> Node {
                     Node::#name(self)
+                }
+            }
+
+            impl Range for #name {
+                fn range(&self) -> SourceRange {
+                    self.range
                 }
             }
 
@@ -752,6 +755,12 @@ impl Enum {
                 })
             }
         }
+
+        let range_variants = sorted_variants.iter().map(|name| {
+            let variant = format_ident!("{}", name);
+            quote!(Self::#variant(node) => node.range())
+        });
+
         quote! {
             #[derive(Serialize, Clone, Debug)]
             #[serde(untagged)]
@@ -773,6 +782,14 @@ impl Enum {
                     )?;
                     match tagged.0 {
                         #(#tag_matches),*
+                    }
+                }
+            }
+
+            impl Range for #name {
+                fn range(&self) -> SourceRange {
+                    match self {
+                        #(#range_variants),*
                     }
                 }
             }

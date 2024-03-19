@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use hermes_estree::ESTreeNode;
 use hermes_estree::Node;
 use hermes_estree::Program;
+use hermes_estree::Range;
 use hermes_estree::Visitor;
 use hermes_parser::Comment;
 
@@ -29,7 +30,7 @@ impl<'a> Visitor<'a> for CommentAttachmentVisitor<'a> {
         }
     }
 
-    fn visit_node<T: ESTreeNode>(&mut self, node: &'a T) -> bool {
+    fn visit_node<T: ESTreeNode + Range>(&mut self, node: &'a T) -> bool {
         if self.idx >= self.comments.len() {
             return true;
         }
