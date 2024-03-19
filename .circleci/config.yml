@@ -40,7 +40,7 @@ workflows:
 # Default settings for Apple jobs (apple-runtime, test-apple-runtime)
 apple_defaults: &apple_defaults
   macos:
-    xcode: 13.4.1
+    xcode: 15.2
   resource_class: macos.m1.medium.gen1
   working_directory: ~/hermes
   environment:
@@ -191,6 +191,15 @@ jobs:
               -configuration Debug \
               -destination 'platform=iOS Simulator,name=iPhone 11' \
               -scheme ApplePlatformsIntegrationMobileTests
+          working_directory: test/ApplePlatformsIntegrationTestApp
+      - run:
+          name: Test Apple Vision application
+          command: |
+            xcodebuild test \
+              -workspace ApplePlatformsIntegrationTests.xcworkspace \
+              -configuration Debug \
+              -destination 'platform=visionOS Simulator,name=Apple Vision Pro' \
+              -scheme ApplePlatformsIntegrationVisionOSTests
           working_directory: test/ApplePlatformsIntegrationTestApp
 
   build-apple-runtime:
