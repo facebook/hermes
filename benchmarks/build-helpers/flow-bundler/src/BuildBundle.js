@@ -81,29 +81,11 @@ export async function buildBundles(
   const fileMapping: {[string]: string} = {};
   // $FlowExpectedError[unclear-type]
   const bodyArrayAST: Array<any> = [];
-  const IIFEAST = {
-    type: 'ExpressionStatement',
-    expression: {
-      type: 'CallExpression',
-      callee: {
-        type: 'FunctionExpression',
-        id: null,
-        params: [],
-        body: {
-          type: 'BlockStatement',
-          body: bodyArrayAST,
-          directives: [],
-        },
-      },
-      arguments: [],
-    },
-    leadingComments: [{type: 'CommentBlock', value: bundleHeader}],
-  };
   const bundleAST = {
     type: 'File',
     program: {
       type: 'Program',
-      body: [IIFEAST],
+      body: bodyArrayAST,
       directives: [],
     },
   };
@@ -167,9 +149,36 @@ export async function buildBundles(
       transformedBundleAST = transformedBundle.ast;
     }
 
+    // Wrap the bundle contents with an IIFE and add a header comment
+    const IIFEAST = {
+      type: 'ExpressionStatement',
+      expression: {
+        type: 'CallExpression',
+        callee: {
+          type: 'FunctionExpression',
+          id: null,
+          params: [],
+          body: {
+            type: 'BlockStatement',
+            body: [...transformedBundleAST.program.body],
+            directives: [],
+          },
+        },
+        arguments: [],
+      },
+      leadingComments: [{type: 'CommentBlock', value: bundleHeader}],
+    };
+    const wrappedBundleAST = {
+      ...transformedBundleAST,
+      program: {
+        ...transformedBundleAST.program,
+        body: [IIFEAST],
+      },
+    };
+
     // Generate bundle
     const bundleSource = generate(
-      transformedBundleAST,
+      wrappedBundleAST,
       {sourceMaps: true},
       fileMapping,
     );
