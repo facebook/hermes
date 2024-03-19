@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::collections::HashMap;
 use std::env;
 
 use hermes_comments::*;
@@ -43,14 +42,13 @@ fn fixtures() {
         let mut ast = result.ast;
         let comments = result.comments;
         ast.source_type = SourceType::Script;
-        let attached_comments: HashMap<String, Node<'_>> =
-            find_nodes_after_comments(&ast, &comments);
-        let mut result: Vec<(String, Node)> = attached_comments.into_iter().collect();
-        result.sort_by(|(comment1, _), (comment2, _)| comment1.trim().cmp(comment2.trim()));
+        let mut attached_comments = find_nodes_after_comments(&ast, &comments);
+        attached_comments
+            .sort_by(|(comment1, _), (comment2, _)| comment1.trim().cmp(comment2.trim()));
         assert_snapshot!(format!(
             "Input:\n{}\n\nOutput:\n{}",
             input,
-            serde_json::to_string_pretty(&result).unwrap()
+            serde_json::to_string_pretty(&attached_comments).unwrap()
         ))
     });
 }

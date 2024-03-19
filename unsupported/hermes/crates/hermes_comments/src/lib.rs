@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::collections::HashMap;
-
 use hermes_estree::ESTreeNode;
 use hermes_estree::Node;
 use hermes_estree::Program;
@@ -17,7 +15,7 @@ use hermes_parser::Comment;
 struct CommentAttachmentVisitor<'a> {
     comments: &'a [Comment],
     idx: usize,
-    attached_comments: HashMap<String, Node<'a>>,
+    attached_comments: Vec<(&'a str, Node<'a>)>,
 }
 
 impl<'a> Visitor<'a> for CommentAttachmentVisitor<'a> {
@@ -46,10 +44,8 @@ impl<'a> Visitor<'a> for CommentAttachmentVisitor<'a> {
             }
         }
         if found_node {
-            self.attached_comments.insert(
-                self.comments[self.idx - 1].value.clone(),
-                node.as_node_enum(),
-            );
+            self.attached_comments
+                .push((&self.comments[self.idx - 1].value, node.as_node_enum()));
             return true;
         }
         false
@@ -65,7 +61,7 @@ impl<'a> CommentAttachmentVisitor<'a> {
         }
     }
 
-    fn result(self) -> HashMap<String, Node<'a>> {
+    fn result(self) -> Vec<(&'a str, Node<'a>)> {
         self.attached_comments
     }
 }
@@ -75,7 +71,7 @@ impl<'a> CommentAttachmentVisitor<'a> {
 pub fn find_nodes_after_comments<'a>(
     program: &'a Program,
     comments: &'a [Comment],
-) -> HashMap<String, Node<'a>> {
+) -> Vec<(&'a str, Node<'a>)> {
     let mut comment_attachment_visitor = CommentAttachmentVisitor::new(comments);
     comment_attachment_visitor.visit_program(program);
     comment_attachment_visitor.result()
