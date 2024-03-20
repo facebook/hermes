@@ -1759,12 +1759,27 @@ tailCall:
 
       CASE(Ret) {
 #ifdef HERMES_ENABLE_DEBUGGER
-        // Check for an async debugger request.
-        if (uint8_t asyncFlags =
-                runtime.testAndClearDebuggerAsyncBreakRequest()) {
-          RUN_DEBUGGER_ASYNC_BREAK(asyncFlags);
-          gcScope.flushToSmallCount(KEEP_HANDLES);
-          DISPATCH;
+        // Check for an async debugger request, but skip it if we're single
+        // stepping. The only case where we'd be single stepping a Ret is if it
+        // was replaced with Debugger OpCode and we're coming here from
+        // stepFunction(). This does take away a chance to handle AsyncBreak. An
+        // AsyncBreak request could be either Explicit or Implicit. The Explicit
+        // case is to have the program being executed to pause. There isn't a
+        // need to pause at a particular location. Also, since we just came from
+        // a breakpoint, handling Explicit AsyncBreak for single step isn't so
+        // important. The other possible kind is an Implicit AsyncBreak, which
+        // is used for debug clients to interrupt the runtime to execute their
+        // own code. Not processing AsyncBreak just means that the Implicit
+        // AsyncBreak needs to wait for the next opportunity to interrupt the
+        // runtime, which should be fine. There is no contract for when the
+        // interrupt should happen.
+        if (!SingleStep) {
+          if (uint8_t asyncFlags =
+                  runtime.testAndClearDebuggerAsyncBreakRequest()) {
+            RUN_DEBUGGER_ASYNC_BREAK(asyncFlags);
+            gcScope.flushToSmallCount(KEEP_HANDLES);
+            DISPATCH;
+          }
         }
 #endif
 

@@ -124,6 +124,11 @@ class Interpreter {
       Handle<> value,
       bool strictMode);
 
+  /// Processes OpCodes. This function can be recursively called. For example,
+  /// while processing a Debugger OpCode, we might call stepFunction to single
+  /// step an instruction. Another example might be whenever we process
+  /// AsyncBreak, the DebuggerAPI observer might return an EVAL DebugCommand or
+  /// call into evaluateJavaScript and trigger a nested interpretFunction call.
   /// Inlining this function is forbidden because it stores label values in a
   /// local static variable. Due to a bug in LLVM, it may sometimes be inlined
   /// anyway, so explicitly mark it as noinline.

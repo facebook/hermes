@@ -1230,6 +1230,47 @@ TEST_F(CDPAgentTest, DebuggerSetBreakpointByUrl) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
 
+// This test specifically exercises the case when a breakpoint is placed on the
+// return statement. In this case, we replace the Ret OpCode with a Debugger
+// OpCode. There used to be a bug in this situation where it becomes impossible
+// to move past the Ret OpCode.
+TEST_F(CDPAgentTest, DebuggerBreakpointOnReturn) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    debugger; // [1] (line 1) hit debugger statement, set breakpoint on line 3
+    function demo() {
+      return; // [2] (line 3) hit breakpoint
+    }
+    demo();
+  )");
+
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+  // [1] (line 1) hit debugger statement, set breakpoint on line 3
+  ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
+  sendRequest(
+      "Debugger.setBreakpointByUrl", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("url", kDefaultUrl);
+        json.emitKeyValue("lineNumber", 3);
+      });
+  ensureSetBreakpointByUrlResponse(waitForMessage(), msgId++, {{3}});
+
+  // Resume and have the script call demo()
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Hit the breakpoint installed on the Ret OpCode
+  ensurePaused(waitForMessage(), "other", {{"demo", 3, 2}, {"global", 5, 1}});
+
+  // Expect doing a step over will get execution back out to the global scope
+  sendAndCheckResponse("Debugger.stepOver", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "other", {{"global", 5, 1}});
+}
+
 TEST_F(CDPAgentTest, DebuggerSetMultiLocationBreakpoint) {
   int msgId = 1;
 
