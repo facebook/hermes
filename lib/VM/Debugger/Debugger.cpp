@@ -197,6 +197,20 @@ void Debugger::breakAtPossibleNextInstructions(InterpreterState &state) {
   }
 }
 
+inst::OpCode Debugger::getRealOpCode(CodeBlock *block, uint32_t offset) const {
+  auto breakpointOpt = getBreakpointLocation(block, offset);
+  if (breakpointOpt) {
+    const auto *inst =
+        reinterpret_cast<const inst::Inst *>(&(breakpointOpt->opCode));
+    return inst->opCode;
+  }
+
+  auto opcodes = block->getOpcodeArray();
+  assert(offset < opcodes.size() && "opCode offset out of bounds");
+  const auto *inst = reinterpret_cast<const inst::Inst *>(&opcodes[offset]);
+  return inst->opCode;
+}
+
 ExecutionStatus Debugger::runDebugger(
     Debugger::RunReason runReason,
     InterpreterState &state) {
@@ -265,7 +279,7 @@ ExecutionStatus Debugger::runDebugger(
           while (!locationOpt.hasValue() || locationOpt->statement == 0 ||
                  sameStatementDifferentInstruction(state, preStepState_)) {
             // Move to the next source location.
-            OpCode curCode = state.codeBlock->getOpCode(state.offset);
+            OpCode curCode = getRealOpCode(state.codeBlock, state.offset);
 
             if (curCode == OpCode::Ret) {
               // We're stepping out now.
@@ -424,7 +438,7 @@ ExecutionStatus Debugger::debuggerLoop(
             // NOTE: this loop doesn't actually allocate any handles presently,
             // but it could, and clearing all handles is really cheap.
             gcScope.flushToSmallCount(KEEP_HANDLES);
-            OpCode curCode = state.codeBlock->getOpCode(state.offset);
+            OpCode curCode = getRealOpCode(state.codeBlock, state.offset);
 
             if (curCode == OpCode::Ret) {
               breakpointCaller();
@@ -910,10 +924,10 @@ ExecutionStatus Debugger::stepInstruction(InterpreterState &state) {
   auto *codeBlock = state.codeBlock;
   uint32_t offset = state.offset;
   assert(
-      codeBlock->getOpCode(offset) != OpCode::Ret &&
+      getRealOpCode(codeBlock, offset) != OpCode::Ret &&
       "can't stepInstruction in Ret, use step-out semantics instead");
   assert(
-      shouldSingleStep(codeBlock->getOpCode(offset)) &&
+      shouldSingleStep(getRealOpCode(codeBlock, offset)) &&
       "can't stepInstruction through Call, use step-in semantics instead");
   auto locationOpt = getBreakpointLocation(codeBlock, offset);
   ExecutionStatus status;

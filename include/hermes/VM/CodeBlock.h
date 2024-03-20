@@ -290,13 +290,6 @@ class CodeBlock final
   }
 
 #ifdef HERMES_ENABLE_DEBUGGER
-  inst::OpCode getOpCode(uint32_t offset) const {
-    auto opcodes = getOpcodeArray();
-    assert(offset < opcodes.size() && "opCode offset out of bounds");
-    const auto *inst = reinterpret_cast<const inst::Inst *>(&opcodes[offset]);
-    return inst->opCode;
-  }
-
   /// Installs in the debugger instruction into the opcode stream
   /// at location \p offset.
   /// Requires that there's a breakpoint registered at \p offset.
