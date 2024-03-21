@@ -536,7 +536,7 @@ if (NOT ICU_FOUND)
 
   # FindICU uses ICU_ROOT variable as a hint
   # Include 'uc' twice for static libraries that depend on each other.
-  find_global_package(ICU 52 COMPONENTS uc i18n data uc)
+  find_global_package(ICU 67 COMPONENTS uc i18n data uc)
 
   set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_FIND_LIBRARY_SUFFIXES_OLD}")
 
