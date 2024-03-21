@@ -1926,6 +1926,14 @@ CompileResult processSourceFiles(
     return ParsingFailed;
   }
 
+  // Verify the IR before we run optimizations on it.
+  if (cl::VerifyIR) {
+    if (!verifyModule(M, &llvh::errs())) {
+      llvh::errs() << "IRGen produced invalid IR\n";
+      return VerificationFailed;
+    }
+  }
+
   // Run custom optimization pipeline.
   if (!cl::CustomOptimize.empty()) {
     std::vector<std::string> opts(
@@ -1953,14 +1961,6 @@ CompileResult processSourceFiles(
   if (auto N = context->getSourceErrorManager().getErrorCount()) {
     llvh::errs() << "Emitted " << N << " errors. exiting.\n";
     return OptimizationFailed;
-  }
-
-  // In dbg builds, verify the module before we emit bytecode.
-  if (cl::VerifyIR) {
-    if (!verifyModule(M, &llvh::errs())) {
-      M.dump(llvh::errs());
-      return VerificationFailed;
-    }
   }
 
   if (cl::DumpTarget == DumpIR) {

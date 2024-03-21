@@ -952,6 +952,15 @@ bool compileFromCommandLineOptions() {
     llvh::errs() << "Emitted " << N << " errors. exiting.\n";
     return false;
   }
+
+  // Verify the IR before we run optimizations on it.
+  if (cli::VerifyIR) {
+    if (!verifyModule(M, &llvh::errs())) {
+      llvh::errs() << "IRGen produced invalid IR\n";
+      return false;
+    }
+  }
+
   if (!cli::CustomOptimize.empty()) {
     if (!runCustomOptimizationPasses(M, cli::CustomOptimize)) {
       llvh::errs() << "Invalid custom optimizations selected.\n\n"
@@ -977,14 +986,6 @@ bool compileFromCommandLineOptions() {
   if (auto N = context->getSourceErrorManager().getErrorCount()) {
     llvh::errs() << "Emitted " << N << " errors. exiting.\n";
     return false;
-  }
-
-  // In dbg builds, verify the module before we emit bytecode.
-  if (cli::VerifyIR) {
-    if (!verifyModule(M, &llvh::errs())) {
-      M.dump(llvh::errs());
-      return false;
-    }
   }
 
   if (cli::OutputLevel == OutputLevelKind::IR) {
