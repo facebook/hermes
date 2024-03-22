@@ -17,6 +17,8 @@ using namespace facebook::hermes::debugger;
 
 static const char *const kBreakpointsKey = "breakpoints";
 
+enum class PausedNotificationReason { kException, kOther, kStep };
+
 DebuggerDomainAgent::DebuggerDomainAgent(
     int32_t executionContextID,
     HermesRuntime &runtime,
@@ -77,7 +79,7 @@ void DebuggerDomainAgent::handleDebuggerEvent(
       break;
     case DebuggerEventType::Exception:
       paused_ = true;
-      sendPauseOnExceptionNotificationToClient();
+      sendPausedNotificationToClient(PausedNotificationReason::kException);
       break;
     case DebuggerEventType::Resumed:
       if (paused_) {
@@ -89,17 +91,26 @@ void DebuggerDomainAgent::handleDebuggerEvent(
     case DebuggerEventType::Breakpoint:
       if (breakpointsActive_) {
         paused_ = true;
-        sendPausedNotificationToClient();
+        sendPausedNotificationToClient(PausedNotificationReason::kOther);
       } else {
         asyncDebugger_.resumeFromPaused(AsyncDebugCommand::Continue);
       }
       break;
     case DebuggerEventType::DebuggerStatement:
+      paused_ = true;
+      sendPausedNotificationToClient(PausedNotificationReason::kOther);
+      break;
     case DebuggerEventType::StepFinish:
+      paused_ = true;
+      sendPausedNotificationToClient(PausedNotificationReason::kStep);
+      break;
     case DebuggerEventType::ExplicitPause:
       paused_ = true;
-      sendPausedNotificationToClient();
+      sendPausedNotificationToClient(PausedNotificationReason::kOther);
       break;
+    default:
+      assert(false && "unknown DebuggerEventType");
+      asyncDebugger_.resumeFromPaused(AsyncDebugCommand::Continue);
   }
 }
 
@@ -157,7 +168,7 @@ void DebuggerDomainAgent::enable() {
   // clients and the program could have already been paused.
   if (asyncDebugger_.isWaitingForCommand()) {
     paused_ = true;
-    sendPausedNotificationToClient();
+    sendPausedNotificationToClient(PausedNotificationReason::kOther);
   }
 }
 
@@ -433,17 +444,23 @@ void DebuggerDomainAgent::setBreakpointsActive(
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
-void DebuggerDomainAgent::sendPausedNotificationToClient() {
+void DebuggerDomainAgent::sendPausedNotificationToClient(
+    PausedNotificationReason reason) {
   m::debugger::PausedNotification note;
-  note.reason = "other";
-  note.callFrames = m::debugger::makeCallFrames(
-      runtime_.getDebugger().getProgramState(), *objTable_, runtime_);
-  sendNotificationToClient(note);
-}
-
-void DebuggerDomainAgent::sendPauseOnExceptionNotificationToClient() {
-  m::debugger::PausedNotification note;
-  note.reason = "exception";
+  switch (reason) {
+    case PausedNotificationReason::kException:
+      note.reason = "exception";
+      break;
+    case PausedNotificationReason::kOther:
+      note.reason = "other";
+      break;
+    case PausedNotificationReason::kStep:
+      note.reason = "step";
+      break;
+    default:
+      assert(false && "unknown PausedNotificationReason");
+      note.reason = "other";
+  }
   note.callFrames = m::debugger::makeCallFrames(
       runtime_.getDebugger().getProgramState(), *objTable_, runtime_);
   sendNotificationToClient(note);
