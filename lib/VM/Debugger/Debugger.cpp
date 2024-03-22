@@ -296,6 +296,7 @@ ExecutionStatus Debugger::runDebugger(
             if (shouldSingleStep(curCode)) {
               ExecutionStatus status = stepInstruction(state);
               if (status == ExecutionStatus::EXCEPTION) {
+                breakpointExceptionHandler(state);
                 isDebugging_ = false;
                 return status;
               }
