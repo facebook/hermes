@@ -49,22 +49,19 @@ class Value;
 /// bytes, doubles take up eight bytes, and integers and long strings take up
 /// four bytes. All values are serialized in little-endian format.
 class SerializedLiteralGenerator {
- private:
+ public:
   /// String lookup functions.
   using StringLookupFn = std::function<unsigned int(llvh::StringRef)>;
-  StringLookupFn getIdentifierID_;
-  StringLookupFn getStringID_;
-  /// Whether to perform de-duplication optimization or not.
-  bool deDuplicate_;
+
+ private:
+  const StringLookupFn &getIdentifierID_;
+  const StringLookupFn &getStringID_;
 
  public:
   SerializedLiteralGenerator(
-      StringLookupFn getIdentifierID,
-      StringLookupFn getStringID,
-      bool deDuplicate)
-      : getIdentifierID_(getIdentifierID),
-        getStringID_(getStringID),
-        deDuplicate_(deDuplicate) {}
+      const StringLookupFn &getIdentifierID,
+      const StringLookupFn &getStringID)
+      : getIdentifierID_(getIdentifierID), getStringID_(getStringID) {}
 
   using TagType = unsigned char;
 
@@ -86,10 +83,10 @@ class SerializedLiteralGenerator {
   /// literal that may be serialized into the object literal buffer.
   static bool isSerializableLiteral(Value *V);
 
-  /// Serialize input \p literals into \p buff.
+  /// Serialize input \p literals and append into \p buff.
   /// \p isKeyBuffer: whether this is generating object literal key buffer or
   /// not.
-  uint32_t serializeBuffer(
+  void serializeBuffer(
       llvh::ArrayRef<Literal *> literals,
       std::vector<unsigned char> &buff,
       bool isKeyBuffer);

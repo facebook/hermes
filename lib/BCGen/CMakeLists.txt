@@ -12,6 +12,7 @@ add_hermes_library(hermesBackend
   Exceptions.cpp
   SerializedLiteralGenerator.cpp
   OptEnvironmentInit.cpp
+  LiteralBufferBuilder.cpp
   LINK_OBJLIBS hermesFrontend hermesOptimizer
 )
 

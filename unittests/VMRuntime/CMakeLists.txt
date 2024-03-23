@@ -51,7 +51,6 @@ set(RTSources
   NativeFunctionTest.cpp
   NativeStateTest.cpp
   MarkBitArrayNCTest.cpp
-  ObjectBufferTest.cpp
   ObjectModelTest.cpp
   OperationsTest.cpp
   PredefinedStringsTest.cpp

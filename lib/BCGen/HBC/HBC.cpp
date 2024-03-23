@@ -15,6 +15,7 @@
 #include "hermes/BCGen/HBC/Passes/OptParentEnvironment.h"
 #include "hermes/BCGen/HBC/Passes/PeepholeLowering.h"
 #include "hermes/BCGen/HBC/TraverseLiteralStrings.h"
+#include "hermes/BCGen/LiteralBufferBuilder.h"
 #include "hermes/BCGen/LowerBuiltinCalls.h"
 #include "hermes/BCGen/LowerScopes.h"
 #include "hermes/BCGen/LowerStoreInstrs.h"
@@ -167,8 +168,7 @@ UniquingStringLiteralAccumulator stringAccumulatorFromBCProvider(
   return UniquingStringLiteralAccumulator{
       std::move(css), std::move(isIdentifier)};
 }
-
-} // namespace
+}; // namespace
 
 std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
     Module *M,
@@ -326,6 +326,16 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
 
     BMGen.initializeStringTable(UniquingStringLiteralAccumulator::toTable(
         std::move(strings), options.optimizationEnabled));
+  }
+
+  // Generate the serialized literal buffers.
+  {
+    BMGen.initializeSerializedLiterals(LiteralBufferBuilder::generate(
+        M,
+        shouldGenerate,
+        [&BMGen](llvh::StringRef str) { return BMGen.getIdentifierID(str); },
+        [&BMGen](llvh::StringRef str) { return BMGen.getStringID(str); },
+        options.optimizationEnabled));
   }
 
   // Add each function to BMGen so that each function has a unique ID.

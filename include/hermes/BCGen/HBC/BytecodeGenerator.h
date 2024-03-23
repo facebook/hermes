@@ -18,6 +18,7 @@
 #include "hermes/BCGen/HBC/DebugInfo.h"
 #include "hermes/BCGen/HBC/UniquingFilenameTable.h"
 #include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
+#include "hermes/BCGen/LiteralBufferBuilder.h"
 #include "hermes/BCGen/SerializedLiteralGenerator.h"
 #include "hermes/IR/IR.h"
 #include "hermes/Regex/RegexSerialization.h"
@@ -275,9 +276,6 @@ class BytecodeModuleGenerator {
   DenseMap<Function *, std::unique_ptr<BytecodeFunctionGenerator>>
       functionGenerators_{};
 
-  /// Generate literals buffer for object/array.
-  SerializedLiteralGenerator literalGenerator_;
-
   /// The mapping from strings to ID for strings in the resulting bytecode
   /// module.
   StringLiteralTable stringTable_{};
@@ -319,6 +317,11 @@ class BytecodeModuleGenerator {
   /// They are stored as chars in order to shorten bytecode size
   std::vector<unsigned char> objValBuffer_{};
 
+  /// A map from instruction to literal offset in the corresponding buffers.
+  /// \c arrayBuffer_, \c objKeyBuffer_, \c objValBuffer_.
+  /// This map is populated before instruction selection.
+  LiteralBufferBuilder::LiteralOffsetMapTy literalOffsetMap_{};
+
   /// Options controlling bytecode generation.
   BytecodeGenerationOptions options_;
 
@@ -341,11 +344,7 @@ class BytecodeModuleGenerator {
   /// Constructor which enables optimizations if \p optimizationEnabled is set.
   BytecodeModuleGenerator(
       BytecodeGenerationOptions options = BytecodeGenerationOptions::defaults())
-      : literalGenerator_(
-            [this](llvh::StringRef str) { return getIdentifierID(str); },
-            [this](llvh::StringRef str) { return getStringID(str); },
-            options.optimizationEnabled),
-        options_(options) {}
+      : options_(options) {}
 
   /// Add a function to functionIDMap_ if not already exist. Returns the ID.
   unsigned addFunction(Function *F);
@@ -391,6 +390,11 @@ class BytecodeModuleGenerator {
   /// \return the index of the bigint in the table.
   uint32_t addBigInt(bigint::ParsedBigInt bigint);
 
+  /// Set the serialized literal tables that this generator will use. Once set,
+  /// no further modifications are possible.
+  /// \param bufs containing the serialized literals.
+  void initializeSerializedLiterals(LiteralBufferBuilder::Result &&bufs);
+
   /// Adds a compiled regexp to the module table.
   /// \return the index of the regexp in the table.
   uint32_t addRegExp(CompiledRegExp *regexp);
@@ -416,17 +420,6 @@ class BytecodeModuleGenerator {
   /// \param stringID the index of the corresponding source in the string table.
   void addFunctionSource(uint32_t functionID, uint32_t stringID);
 
-  /// Returns the starting offset of the elements.
-  uint32_t addArrayBuffer(ArrayRef<Literal *> elements);
-
-  /// Add to the the object buffer using \keys as the array of keys, and
-  /// \vals as the array of values.
-  /// Returns a pair where the first value is the object's offset into the
-  /// key buffer, and the second value is its offset into the value buffer.
-  std::pair<uint32_t, uint32_t> addObjectBuffer(
-      ArrayRef<Literal *> keys,
-      ArrayRef<Literal *> vals);
-
   /// Serializes the array of literals given into a compact char buffer.
   /// The serialization format can be found in:
   /// include/hermes/BCGen/SerializedLiteralGenerator.h
@@ -444,6 +437,18 @@ class BytecodeModuleGenerator {
       ArrayRef<Literal *> literals,
       std::vector<unsigned char> &buff,
       bool isKeyBuffer);
+
+  /// For a given instruction \p inst that has an associated serialized literal,
+  /// obtain the offset of the literal in the associated buffer. In case of
+  /// an object literal, it is a pair of offsets (key and value). In case of
+  /// array literal, only the first offset is used.
+  LiteralBufferBuilder::LiteralOffset serializedLiteralOffsetFor(
+      const Instruction *inst) const {
+    assert(
+        literalOffsetMap_.count(inst) &&
+        "instruction has no serialized literal");
+    return literalOffsetMap_.find(inst)->second;
+  }
 
   /// \return a BytecodeModule.
   std::unique_ptr<BytecodeModule> generate();

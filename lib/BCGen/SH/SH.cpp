@@ -13,6 +13,7 @@
 #include "hermes/AST/NativeContext.h"
 #include "hermes/BCGen/HBC/Passes.h"
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
+#include "hermes/BCGen/LiteralBufferBuilder.h"
 #include "hermes/BCGen/LowerBuiltinCalls.h"
 #include "hermes/BCGen/LowerScopes.h"
 #include "hermes/BCGen/LowerStoreInstrs.h"
@@ -174,8 +175,6 @@ class SHStringTable {
 };
 
 class SHLiteralBuffers {
-  SerializedLiteralGenerator literalGenerator_;
-
  public:
   /// Table of constants used to initialize constant arrays.
   /// They are stored as chars in order to shorten bytecode size.
@@ -189,31 +188,36 @@ class SHLiteralBuffers {
   /// They are stored as chars in order to shorten bytecode size
   std::vector<unsigned char> objValBuffer{};
 
-  explicit SHLiteralBuffers(SHStringTable &stringTable)
-      : literalGenerator_(
-            [&stringTable](llvh::StringRef str) {
-              return stringTable.add(str);
-            },
-            [&stringTable](llvh::StringRef str) {
-              return stringTable.add(str);
-            },
-            true) {}
+  /// A map from instruction to literal offset in the corresponding buffers.
+  /// \c arrayBuffer, \c objKeyBuffer, \c objValBuffer.
+  LiteralBufferBuilder::LiteralOffsetMapTy literalOffsetMap{};
 
-  /// Returns the starting offset of the elements.
-  uint32_t addArrayBuffer(ArrayRef<Literal *> elements) {
-    return literalGenerator_.serializeBuffer(elements, arrayBuffer, false);
+  explicit SHLiteralBuffers(
+      Module *M,
+      SHStringTable &table,
+      bool optimizationEnabled) {
+    LiteralBufferBuilder::Result bufs = LiteralBufferBuilder::generate(
+        M,
+        [](const Function *) { return true; },
+        [&table](llvh::StringRef str) { return table.add(str); },
+        [&table](llvh::StringRef str) { return table.add(str); },
+        optimizationEnabled);
+    arrayBuffer = std::move(bufs.arrayBuffer);
+    objKeyBuffer = std::move(bufs.keyBuffer);
+    objValBuffer = std::move(bufs.valBuffer);
+    literalOffsetMap = std::move(bufs.offsetMap);
   }
 
-  /// Add to the the object buffer using \keys as the array of keys, and
-  /// \vals as the array of values.
-  /// Returns a pair where the first value is the object's offset into the
-  /// key buffer, and the second value is its offset into the value buffer.
-  std::pair<uint32_t, uint32_t> addObjectBuffer(
-      ArrayRef<Literal *> keys,
-      ArrayRef<Literal *> vals) {
-    return std::pair<uint32_t, uint32_t>{
-        literalGenerator_.serializeBuffer(keys, objKeyBuffer, true),
-        literalGenerator_.serializeBuffer(vals, objValBuffer, false)};
+  /// For a given instruction \p inst that has an associated serialized literal,
+  /// obtain the offset of the literal in the associated buffer. In case of
+  /// an object literal, it is a pair of offsets (key and value). In case of
+  /// array literal, only the first offset is used.
+  LiteralBufferBuilder::LiteralOffset serializedLiteralOffsetFor(
+      const Instruction *inst) const {
+    assert(
+        literalOffsetMap.count(inst) &&
+        "instruction has no serialized literal");
+    return literalOffsetMap.find(inst)->second;
   }
 
   void generate(llvh::raw_ostream &os) const {
@@ -472,8 +476,8 @@ struct ModuleGen {
   /// Table of JS native functions
   SHNativeJSFunctionTable nativeFunctionTable;
 
-  explicit ModuleGen(Module *M)
-      : literalBuffers{stringTable},
+  explicit ModuleGen(Module *M, bool optimizationEnabled)
+      : literalBuffers{M, stringTable, optimizationEnabled},
         srcLocationTable{stringTable},
         nativeFunctionTable{M, stringTable} {}
 };
@@ -1501,17 +1505,13 @@ class InstrGen {
     if (elementCount == 0) {
       os_ << "_sh_ljs_new_array(shr, " << sizeHint << ")";
     } else {
-      llvh::SmallVector<Literal *, 8> elements;
-      for (unsigned i = 0, e = inst.getElementCount(); i < e; ++i) {
-        elements.push_back(cast<Literal>(inst.getArrayElement(i)));
-      }
-      auto bufIndex = moduleGen_.literalBuffers.addArrayBuffer(
-          ArrayRef<Literal *>{elements});
+      auto bufIndex =
+          moduleGen_.literalBuffers.serializedLiteralOffsetFor(&inst);
 
       os_ << "_sh_ljs_new_array_with_buffer(shr, &THIS_UNIT, ";
       os_ << sizeHint << ", ";
       os_ << elementCount << ", ";
-      os_ << bufIndex << ")";
+      os_ << bufIndex.first << ")";
     }
     os_ << ";\n";
   }
@@ -2039,9 +2039,7 @@ class InstrGen {
     uint32_t sizeHint =
         std::min((uint32_t)UINT16_MAX, inst.getSizeHint()->asUInt32());
 
-    auto buffIdxs = moduleGen_.literalBuffers.addObjectBuffer(
-        llvh::ArrayRef<Literal *>{objKeys}, llvh::ArrayRef<Literal *>{objVals});
-
+    auto buffIdxs = moduleGen_.literalBuffers.serializedLiteralOffsetFor(&inst);
     auto cacheIdx = moduleGen_.objectLiteralClassCache.getCacheIndex(
         buffIdxs.first, numLiterals);
 
@@ -2763,7 +2761,7 @@ void generateModule(
   // TODO: Share cache indices where the property name is the same and
   // -reuse-prop-cache is passed in.
   uint32_t nextCacheIdx = 0;
-  ModuleGen moduleGen{M};
+  ModuleGen moduleGen{M, options.optimizationEnabled};
 
   if (options.format == DumpBytecode || options.format == EmitBundle) {
     if (!isValidSHUnitName(options.unitName))
