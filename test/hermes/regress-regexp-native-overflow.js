@@ -15,3 +15,10 @@ try {
   print(e);
   // CHECK: RangeError: Maximum regex stack depth reached
 }
+
+try {
+  // This regex should execute fine.
+  new RegExp("(?=A)").exec('b'.repeat(10000));
+  print("success");
+  // CHECK-NEXT: success
+} catch (e) {}
