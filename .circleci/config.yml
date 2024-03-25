@@ -40,7 +40,7 @@ workflows:
 # Default settings for Apple jobs (apple-runtime, test-apple-runtime)
 apple_defaults: &apple_defaults
   macos:
-    xcode: 15.2
+    xcode: 15.3
   resource_class: macos.m1.medium.gen1
   working_directory: ~/hermes
   environment:
@@ -54,7 +54,7 @@ jobs:
   android:
     executor:
       name: android/android-machine
-      tag: 2022.04.1
+      tag: default
     working_directory: /home/circleci
     environment:
       HERMES_WS_DIR: /home/circleci
@@ -168,6 +168,7 @@ jobs:
       - run:
           name: Install dependencies
           command: |
+            brew update
             brew install cmake ninja
       - run:
           name: Build the test application
@@ -189,7 +190,7 @@ jobs:
             xcodebuild test \
               -workspace ApplePlatformsIntegrationTests.xcworkspace \
               -configuration Debug \
-              -destination 'platform=iOS Simulator,name=iPhone 11' \
+              -destination 'platform=iOS Simulator,name=iPhone 15' \
               -scheme ApplePlatformsIntegrationMobileTests
           working_directory: test/ApplePlatformsIntegrationTestApp
       - run:
@@ -216,6 +217,7 @@ jobs:
       - run:
           name: Install dependencies
           command: |
+            brew update
             brew install cmake ninja
             sudo gem install cocoapods
       - run:
@@ -231,6 +233,8 @@ jobs:
             - ~/hermes/build_catalyst
             - ~/hermes/build_iphonesimulator
             - ~/hermes/build_macosx
+            - ~/hermes/build_xros
+            - ~/hermes/build_xrsimulator
             - ~/hermes/destroot
 
   package-apple-runtime:
@@ -245,6 +249,7 @@ jobs:
       - run:
           name: Install dependencies
           command: |
+            brew update
             brew install cmake ninja
             sudo gem install cocoapods
       - run:
@@ -274,13 +279,14 @@ jobs:
 
   macos:
     macos:
-      xcode: 13.4.1
+      xcode: 15.3 
     steps:
       - checkout:
           path: hermes
       - run:
           name: Install dependencies
           command: |
+            brew update
             brew install cmake ninja
       - run:
           name: Build macOS CLI
@@ -312,13 +318,14 @@ jobs:
 
   test-macos:
     macos:
-      xcode: 13.4.1
+      xcode: 15.3 
     steps:
       - checkout:
           path: hermes
       - run:
           name: Install dependencies
           command: |
+            brew update
             brew install cmake
       - run:
           name: Run MacOS regression tests in debug mode
@@ -625,7 +632,7 @@ jobs:
   test-e2e:
     executor:
       name: android/android-machine
-      tag: 2023.06.1
+      tag: default
     working_directory: /home/circleci
     environment:
       REACT_NATIVE_OVERRIDE_HERMES_DIR: /home/circleci/hermes
@@ -659,7 +666,7 @@ jobs:
   test-e2e-intl:
     executor:
       name: android/android-machine
-      tag: 2022.04.1
+      tag: default
     working_directory: /home/circleci
     environment:
       HERMES_WS_DIR: /home/circleci
@@ -689,13 +696,14 @@ jobs:
 
   test-macos-test262:
     macos:
-      xcode: 13.4.1
+      xcode: 15.3 
     steps:
       - checkout:
           path: hermes
       - run:
           name: Setup dependencies
           command: |
+            brew update
             brew install cmake ninja
             # Check out test262 at a pinned revision to reduce flakiness
             git clone https://github.com/tc39/test262
