@@ -844,12 +844,44 @@ TEST_F(CDPAgentTest, DebuggerStepOver) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 
   // [2] (line 7): step over
-  ensurePaused(waitForMessage(), "other", {{"global", 7, 1}});
+  ensurePaused(waitForMessage(), "step", {{"global", 7, 1}});
   sendAndCheckResponse("Debugger.stepOver", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
 
   // [3] (line 8): resume
-  ensurePaused(waitForMessage(), "other", {{"global", 8, 1}});
+  ensurePaused(waitForMessage(), "step", {{"global", 8, 1}});
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
+TEST_F(CDPAgentTest, DebuggerStepOverThrow) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    try {
+      var a = 1 + 2;
+      debugger;             // [1] (line 3) hit debugger statement, step over
+      throw new Error(a);   // [2] (line 4) step over
+    } catch (e) {
+      var b = a + a;        // [3] (line 6) resume
+    }
+  )");
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+  // [1] (line 3): hit debugger statement, step over
+  ensurePaused(waitForMessage(), "other", {{"global", 3, 1}});
+  sendAndCheckResponse("Debugger.stepOver", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // [2] (line 4): step over
+  ensurePaused(waitForMessage(), "step", {{"global", 4, 1}});
+  sendAndCheckResponse("Debugger.stepOver", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // [3] (line 6): resume
+  ensurePaused(waitForMessage(), "step", {{"global", 6, 1}});
   sendAndCheckResponse("Debugger.resume", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
@@ -880,12 +912,12 @@ TEST_F(CDPAgentTest, DebuggerStepIn) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 
   // [2] (line 7): step in
-  ensurePaused(waitForMessage(), "other", {{"global", 7, 1}});
+  ensurePaused(waitForMessage(), "step", {{"global", 7, 1}});
   sendAndCheckResponse("Debugger.stepInto", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
 
   // [3] (line 2): resume
-  ensurePaused(waitForMessage(), "other", {{"addOne", 2, 2}, {"global", 7, 1}});
+  ensurePaused(waitForMessage(), "step", {{"addOne", 2, 2}, {"global", 7, 1}});
   sendAndCheckResponse("Debugger.resume", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
@@ -916,12 +948,12 @@ TEST_F(CDPAgentTest, DebuggerStepOut) {
 
   // [2] (line 4) step out
   ensurePaused(
-      waitForMessage(), "other", {{"addSquares", 4, 2}, {"global", 8, 1}});
+      waitForMessage(), "step", {{"addSquares", 4, 2}, {"global", 8, 1}});
   sendAndCheckResponse("Debugger.stepOut", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
 
   // [3] (line 8): resume
-  ensurePaused(waitForMessage(), "other", {{"global", 8, 1}});
+  ensurePaused(waitForMessage(), "step", {{"global", 8, 1}});
   sendAndCheckResponse("Debugger.resume", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
@@ -1225,7 +1257,7 @@ TEST_F(CDPAgentTest, DebuggerSetBreakpointByUrl) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 
   // [3] (line 6) resume
-  ensurePaused(waitForMessage(), "other", {{"global", 6, 1}});
+  ensurePaused(waitForMessage(), "step", {{"global", 6, 1}});
   sendAndCheckResponse("Debugger.resume", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
@@ -1268,7 +1300,7 @@ TEST_F(CDPAgentTest, DebuggerBreakpointOnReturn) {
   // Expect doing a step over will get execution back out to the global scope
   sendAndCheckResponse("Debugger.stepOver", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
-  ensurePaused(waitForMessage(), "other", {{"global", 5, 1}});
+  ensurePaused(waitForMessage(), "step", {{"global", 5, 1}});
 }
 
 TEST_F(CDPAgentTest, DebuggerSetMultiLocationBreakpoint) {

@@ -15,6 +15,7 @@
  */
 
 #include "wasm-rt-impl.h"
+#include "wasm-rt-fb.h"
 
 #include <assert.h>
 #include <math.h>
@@ -145,7 +146,8 @@ static void os_cleanup_signal_handler(void) {
 static void* os_mmap(size_t size) {
   int map_prot = PROT_NONE;
   int map_flags = MAP_ANONYMOUS | MAP_PRIVATE;
-  uint8_t* addr = mmap(NULL, size, map_prot, map_flags, -1, 0);
+  void *hint = get_mmap_hint();
+  uint8_t *addr = mmap(hint, size, map_prot, map_flags, -1, 0);
   if (addr == MAP_FAILED)
     return NULL;
   return addr;

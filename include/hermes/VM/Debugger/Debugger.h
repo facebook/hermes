@@ -554,7 +554,7 @@ class Debugger {
   llvh::Optional<uint32_t> findJumpTarget(CodeBlock *block, uint32_t offset);
 
   /// Set breakpoints at all possible next instructions after the current one.
-  void breakAtPossibleNextInstructions(InterpreterState &state);
+  void breakAtPossibleNextInstructions(const InterpreterState &state);
 
   /// Get the actual OpCode produced from the source without being affected by
   /// any user installed breakpoint "Debugger" OpCode overrides.
