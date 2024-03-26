@@ -5,103 +5,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "hermes/Platform/Intl/BCP47Parser.h"
 #include "hermes/Platform/Intl/PlatformIntl.h"
 
 #include <deque>
 #include <string>
 #include <unordered_map>
-#include "llvh/Support/ConvertUTF.h"
-#include "unicode/uloc.h"
 
 using namespace ::facebook;
 using namespace ::hermes;
 
 namespace hermes {
 namespace platform_intl {
-
-vm::CallResult<std::u16string> UTF8toUTF16(
-    vm::Runtime &runtime,
-    std::string_view in) {
-  std::u16string out;
-  size_t length = in.length();
-  out.resize(length);
-  const llvh::UTF8 *sourceStart = reinterpret_cast<const llvh::UTF8 *>(&in[0]);
-  const llvh::UTF8 *sourceEnd = sourceStart + length;
-  llvh::UTF16 *targetStart = reinterpret_cast<llvh::UTF16 *>(&out[0]);
-  llvh::UTF16 *targetEnd = targetStart + out.size();
-  llvh::ConversionResult convRes = ConvertUTF8toUTF16(
-      &sourceStart,
-      sourceEnd,
-      &targetStart,
-      targetEnd,
-      llvh::lenientConversion);
-  if (convRes != llvh::ConversionResult::conversionOK) {
-    return runtime.raiseRangeError("utf8 to utf16 conversion failed");
-  }
-  out.resize(reinterpret_cast<char16_t *>(targetStart) - &out[0]);
-  return out;
-}
-
-vm::CallResult<std::string> UTF16toUTF8(
-    vm::Runtime &runtime,
-    std::u16string in) {
-  std::string out;
-  size_t length = in.length();
-  out.resize(length);
-  const llvh::UTF16 *sourceStart =
-      reinterpret_cast<const llvh::UTF16 *>(&in[0]);
-  const llvh::UTF16 *sourceEnd = sourceStart + length;
-  llvh::UTF8 *targetStart = reinterpret_cast<llvh::UTF8 *>(&out[0]);
-  llvh::UTF8 *targetEnd = targetStart + out.size();
-  llvh::ConversionResult convRes = ConvertUTF16toUTF8(
-      &sourceStart,
-      sourceEnd,
-      &targetStart,
-      targetEnd,
-      llvh::lenientConversion);
-  if (convRes != llvh::ConversionResult::conversionOK) {
-    return runtime.raiseRangeError("utf16 to utf8 conversion failed");
-  }
-  out.resize(reinterpret_cast<char *>(targetStart) - &out[0]);
-  return out;
-}
-
-// roughly translates to
-// https://tc39.es/ecma402/#sec-canonicalizeunicodelocaleid while doing some
-// minimal tag validation
-vm::CallResult<std::u16string> canonicalizeUnicodeLocaleID(
-    vm::Runtime &runtime,
-    const std::u16string &locale) {
-  if (locale.length() == 0) {
-    return runtime.raiseRangeError("RangeError: Invalid language tag");
-  }
-
-  auto conversion = UTF16toUTF8(runtime, locale);
-  const char *locale8 = conversion.getValue().c_str();
-
-  UErrorCode status = U_ZERO_ERROR;
-  int32_t parsedLength = 0;
-  char localeID[ULOC_FULLNAME_CAPACITY] = {0};
-  char languageTag[ULOC_FULLNAME_CAPACITY] = {0};
-
-  int32_t forLangTagResultLength = uloc_forLanguageTag(
-      locale8, localeID, ULOC_FULLNAME_CAPACITY, &parsedLength, &status);
-  if (forLangTagResultLength < 0 ||
-      parsedLength < static_cast<int32_t>(locale.length()) ||
-      status == U_ILLEGAL_ARGUMENT_ERROR) {
-    return runtime.raiseRangeError(
-        vm::TwineChar16("Invalid language tag: ") + vm::TwineChar16(locale8));
-  }
-
-  int32_t toLangTagResultLength = uloc_toLanguageTag(
-      localeID, languageTag, ULOC_FULLNAME_CAPACITY, true, &status);
-  if (toLangTagResultLength <= 0) {
-    return runtime.raiseRangeError(
-        vm::TwineChar16("Invalid language tag: ") + vm::TwineChar16(locale8));
-  }
-
-  return UTF8toUTF16(runtime, languageTag);
-}
+namespace {
 
 // https://tc39.es/ecma402/#sec-canonicalizelocalelist
 vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
@@ -112,36 +28,36 @@ vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
     return std::vector<std::u16string>{};
   }
   // 2. Let seen be a new empty List
-  std::vector<std::u16string> seen = std::vector<std::u16string>{};
+  std::vector<std::u16string> seen;
 
   // 3. If Type(locales) is String or Type(locales) is Object and locales has an
   // [[InitializedLocale]] internal slot, then
   // 4. Else
-  //  > Windows/Apple don't support Locale object -
-  //  https://tc39.es/ecma402/#locale-objects > As of now, 'locales' can only be
-  //  a string list/array. Validation occurs in NormalizeLangugeTag for windows.
-  //  > This function just takes a vector of strings.
-  // 5-7. Let len be ? ToLength(? Get(O, "length")). Let k be 0. Repeat, while k
-  // < len
-  for (size_t k = 0; k < locales.size(); k++) {
-    // minimal tag validation is done with ICU, ChakraCore\V8 does not do tag
-    // validation with ICU, may be missing needed API 7.c.iii.1 Let tag be
-    // kValue[[locale]]
-    std::u16string tag = locales[k];
-    // 7.c.vi Let canonicalizedTag be CanonicalizeUnicodeLocaleID(tag)
-    auto canonicalizedTag = canonicalizeUnicodeLocaleID(runtime, tag);
-    if (LLVM_UNLIKELY(canonicalizedTag == vm::ExecutionStatus::EXCEPTION)) {
-      return vm::ExecutionStatus::EXCEPTION;
-    }
+  // We don't yet support Locale object -
+  // https://402.ecma-international.org/8.0/#locale-objects As of now, 'locales'
+  // can only be a string list/array. Validation occurs in normalizeLocaleList,
+  // so this function just takes a vector of strings.
+  // 5. Let len be ? ToLength(? Get(O, "length")).
+  // 6. Let k be 0.
+  // 7. Repeat, while k < len
+  for (const auto &locale : locales) {
+    // 7.c.vi. Let canonicalizedTag be CanonicalizeUnicodeLocaleId(tag).
+    auto parsedOpt = ParsedLocaleIdentifier::parse(locale);
+    if (!parsedOpt)
+      return runtime.raiseRangeError(
+          vm::TwineChar16("Invalid language tag: ") +
+          vm::TwineChar16(locale.c_str()));
+    auto canonicalizedTag = parsedOpt->canonicalize();
+
     // 7.c.vii. If canonicalizedTag is not an element of seen, append
     // canonicalizedTag as the last element of seen.
-    if (std::find(seen.begin(), seen.end(), canonicalizedTag.getValue()) ==
-        seen.end()) {
-      seen.push_back(std::move(canonicalizedTag.getValue()));
+    if (std::find(seen.begin(), seen.end(), canonicalizedTag) == seen.end()) {
+      seen.push_back(std::move(canonicalizedTag));
     }
   }
   return seen;
 }
+} //namespace
 
 // https://tc39.es/ecma402/#sec-intl.getcanonicallocales
 vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
