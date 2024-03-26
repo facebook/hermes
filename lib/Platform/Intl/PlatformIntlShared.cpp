@@ -177,6 +177,55 @@ std::optional<bool> getOptionBool(
   return value->second.getBool();
 }
 
+/// https://402.ecma-international.org/8.0/#sec-defaultnumberoption
+vm::CallResult<std::optional<uint8_t>> defaultNumberOption(
+    vm::Runtime &runtime,
+    const std::u16string &property,
+    std::optional<Option> value,
+    const std::uint8_t minimum,
+    const std::uint8_t maximum,
+    std::optional<uint8_t> fallback) {
+  //  1. If value is undefined, return fallback.
+  if (!value) {
+    return fallback;
+  }
+  //  2. Set value to ? ToNumber(value).
+  //  3. If value is NaN or less than minimum or greater than maximum, throw a
+  //  RangeError exception.
+  if (std::isnan(value->getNumber()) || value->getNumber() < minimum ||
+      value->getNumber() > maximum) {
+    return runtime.raiseRangeError(
+        vm::TwineChar16(property.c_str()) +
+        vm::TwineChar16(" value is invalid."));
+  }
+  //  4. Return floor(value).
+  return std::optional<uint8_t>(std::floor(value->getNumber()));
+}
+
+/// https://402.ecma-international.org/8.0/#sec-getnumberoption
+vm::CallResult<std::optional<uint8_t>> getNumberOption(
+    vm::Runtime &runtime,
+    const Options &options,
+    const std::u16string &property,
+    const std::uint8_t minimum,
+    const std::uint8_t maximum,
+    std::optional<uint8_t> fallback) {
+  //  1. Assert: Type(options) is Object.
+  //  2. Let value be ? Get(options, property).
+  std::optional<Option> value;
+  auto iter = options.find(property);
+  if (iter != options.end()) {
+    value = Option(iter->second);
+  }
+  //  3. Return ? DefaultNumberOption(value, minimum, maximum, fallback).
+  auto defaultNumber =
+      defaultNumberOption(runtime, property, value, minimum, maximum, fallback);
+  if (LLVM_UNLIKELY(defaultNumber == vm::ExecutionStatus::EXCEPTION)) {
+    return vm::ExecutionStatus::EXCEPTION;
+  }
+  return std::optional<uint8_t>(defaultNumber.getValue());
+}
+
 // Implementation of
 // https://402.ecma-international.org/8.0/#sec-todatetimeoptions
 vm::CallResult<Options> toDateTimeOptions(
@@ -261,6 +310,20 @@ vm::CallResult<Options> toDateTimeOptions(
   }
   // 13. return options
   return options;
+}
+
+// https://402.ecma-international.org/8.0/#sec-case-sensitivity-and-case-mapping
+std::u16string toASCIIUppercase(std::u16string_view tz) {
+  std::u16string result;
+  std::uint8_t offset = 'a' - 'A';
+  for (char16_t c16 : tz) {
+    if (c16 >= 'a' && c16 <= 'z') {
+      result.push_back((char)c16 - offset);
+    } else {
+      result.push_back(c16);
+    }
+  }
+  return result;
 }
 
 } // namespace platform_intl

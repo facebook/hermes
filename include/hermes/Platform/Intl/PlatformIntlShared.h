@@ -60,6 +60,24 @@ vm::CallResult<Options> toDateTimeOptions(
     Options options,
     std::u16string_view required,
     std::u16string_view defaults);
+
+std::u16string toASCIIUppercase(std::u16string_view tz);
+
+vm::CallResult<std::optional<uint8_t>> defaultNumberOption(
+    vm::Runtime &runtime,
+    const std::u16string &property,
+    std::optional<Option> value,
+    const std::uint8_t minimum,
+    const std::uint8_t maximum,
+    std::optional<uint8_t> fallback);
+
+vm::CallResult<std::optional<uint8_t>> getNumberOption(
+    vm::Runtime &runtime,
+    const Options &options,
+    const std::u16string &property,
+    const std::uint8_t minimum,
+    const std::uint8_t maximum,
+    std::optional<uint8_t> fallback);
 } // namespace platform_intl
 } // namespace hermes
 
