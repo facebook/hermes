@@ -12,12 +12,52 @@
 #include <deque>
 #include <string>
 #include <unordered_map>
+#include "unicode/udat.h"
+#include "llvh/Support/ConvertUTF.h"
 
 using namespace ::facebook;
 using namespace ::hermes;
 
 namespace hermes {
 namespace platform_intl {
+namespace {
+  vm::CallResult<std::u16string> UTF8toUTF16(vm::Runtime &runtime, std::string_view in) {
+    std::u16string out;
+    size_t length = in.length();
+    out.resize(length);
+    const llvh::UTF8 *sourceStart = reinterpret_cast<const llvh::UTF8 *>(&in[0]);
+    const llvh::UTF8 *sourceEnd = sourceStart + length;
+    llvh::UTF16 *targetStart = reinterpret_cast<llvh::UTF16 *>(&out[0]);
+    llvh::UTF16 *targetEnd = targetStart + out.size();
+    llvh::ConversionResult convRes = ConvertUTF8toUTF16(
+        &sourceStart,
+        sourceEnd,
+        &targetStart,
+        targetEnd,
+        llvh::lenientConversion);
+    if (convRes != llvh::ConversionResult::conversionOK) {
+      return runtime.raiseRangeError("utf8 to utf16 conversion failed");
+    }
+    out.resize(reinterpret_cast<char16_t *>(targetStart) - &out[0]);
+    return out;
+  }
+
+  const std::vector<std::u16string> &getAvailableLocales(vm::Runtime &runtime) {
+    static const std::vector<std::u16string> *availableLocales = [&runtime] {
+      auto *vec = new std::vector<std::u16string>();
+
+      for (int32_t i = 0, count = uloc_countAvailable(); i < count; i++) {
+        auto locale = uloc_getAvailable(i);
+        vec->push_back(UTF8toUTF16(runtime, locale).getValue());
+      }
+
+      return vec;
+    }();
+
+    return *availableLocales;
+  }
+
+} // namespace
 
 // https://tc39.es/ecma402/#sec-intl.getcanonicallocales
 vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
@@ -82,8 +122,8 @@ double Collator::compare(
 namespace {
 // Implementation of
 // https://402.ecma-international.org/8.0/#datetimeformat-objects
-struct DateTimeFormatDummy : DateTimeFormat {
-  DateTimeFormatDummy(const char16_t *l) : locale(l) {}
+struct DateTimeFormatICU : DateTimeFormat {
+  DateTimeFormatICU(const char16_t *l) : locale(l) {}
   std::u16string locale;
 };
 } // namespace
@@ -91,24 +131,31 @@ struct DateTimeFormatDummy : DateTimeFormat {
 DateTimeFormat::DateTimeFormat() = default;
 DateTimeFormat::~DateTimeFormat() = default;
 
+// Implementation of
+// https://402.ecma-international.org/8.0/#sec-intl.datetimeformat.supportedlocalesof
 vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
-  return std::vector<std::u16string>{u"en-CA", u"de-DE"};
+  // 1. Let availableLocales be %DateTimeFormat%.[[AvailableLocales]].
+  // 2. Let requestedLocales be ? CanonicalizeLocaleList(locales).
+  auto requestedLocales = getCanonicalLocales(runtime, locales);
+  const std::vector<std::u16string> &availableLocales = getAvailableLocales(runtime);
+  // 3. Return ? (availableLocales, requestedLocales, options).
+  return supportedLocales(availableLocales, requestedLocales.getValue());
 }
 
 vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
-  return std::make_unique<DateTimeFormatDummy>(u"en-US");
+  return std::make_unique<DateTimeFormatICU>(u"en-US");
 }
 
 Options DateTimeFormat::resolvedOptions() noexcept {
   Options options;
   options.emplace(
-      u"locale", Option(static_cast<DateTimeFormatDummy *>(this)->locale));
+      u"locale", Option(static_cast<DateTimeFormatICU *>(this)->locale));
   options.emplace(u"numeric", Option(false));
   return options;
 }
