@@ -6,6 +6,8 @@
 add_hermes_library(hermesBCP47Parser STATIC BCP47Parser.cpp)
 
 if(HERMES_ENABLE_INTL)
+  add_hermes_library(hermesIntlShared STATIC PlatformIntlShared.cpp LINK_LIBS hermesPublic hermesBCP47Parser)
+
   if(HERMES_IS_ANDROID)
     add_hermes_library(hermesPlatformIntl STATIC PlatformIntlAndroid.cpp
         LINK_LIBS fbjni::fbjni hermesPublic
@@ -25,6 +27,7 @@ if(HERMES_ENABLE_INTL)
     add_hermes_library(hermesPlatformIntl STATIC PlatformIntlICU.cpp
         LINK_LIBS
         hermesBCP47Parser
+        hermesIntlShared
         hermesPublic
     )
   endif()
