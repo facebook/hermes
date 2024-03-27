@@ -407,13 +407,14 @@ namespace {
 // https://402.ecma-international.org/8.0/#datetimeformat-objects
 struct DateTimeFormatICU : DateTimeFormat {
  public:
-  DateTimeFormatICU(const char16_t *l) : locale(l) {}
+  DateTimeFormatICU() = default;
   std::u16string locale;
 
   vm::ExecutionStatus initialize(
       vm::Runtime &runtime,
       const std::vector<std::u16string> &locales,
       const Options &inputOptions) noexcept;
+  Options resolvedOptions() noexcept;
  private:
   UDateFormat *getUDateFormatter(vm::Runtime &runtime);
   vm::CallResult<std::u16string> getDefaultHourCycle(vm::Runtime &runtime);
@@ -1093,16 +1094,55 @@ vm::CallResult<std::u16string> DateTimeFormatICU::getDefaultHourCycle(
 vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
-    const Options &options) noexcept {
-  return std::make_unique<DateTimeFormatICU>(u"en-US");
+    const Options &inputOptions) noexcept {
+  auto instance = std::make_unique<DateTimeFormatICU>();
+  if (LLVM_UNLIKELY(
+          instance->initialize(runtime, locales, inputOptions) ==
+          vm::ExecutionStatus::EXCEPTION)) {
+    return vm::ExecutionStatus::EXCEPTION;
+  }
+  return instance;
+}
+
+// Implementer note: This method corresponds roughly to
+// https://402.ecma-international.org/8.0/#sec-intl.datetimeformat.prototype.resolvedoptions
+Options DateTimeFormatICU::resolvedOptions() noexcept {
+  Options options;
+  options.emplace(u"locale", Option(locale_));
+  options.emplace(u"timeZone", Option(timeZone_));
+  if (calendar_)
+    options.emplace(u"calendar", Option(*calendar_));
+  if (hourCycle_.has_value()) {
+    options.emplace(u"hourCycle", *hourCycle_);
+    options.emplace(u"hour12", hourCycle_ == u"h11" || hourCycle_ == u"h12");
+  }
+  if (weekday_.has_value())
+    options.emplace(u"weekday", *weekday_);
+  if (era_.has_value())
+    options.emplace(u"era", *era_);
+  if (year_.has_value())
+    options.emplace(u"year", *year_);
+  if (month_.has_value())
+    options.emplace(u"month", *month_);
+  if (day_.has_value())
+    options.emplace(u"day", *day_);
+  if (hour_.has_value())
+    options.emplace(u"hour", *hour_);
+  if (minute_.has_value())
+    options.emplace(u"minute", *minute_);
+  if (second_.has_value())
+    options.emplace(u"second", *second_);
+  if (timeZoneName_.has_value())
+    options.emplace(u"timeZoneName", *timeZoneName_);
+  if (dateStyle_.has_value())
+    options.emplace(u"dateStyle", *dateStyle_);
+  if (timeStyle_.has_value())
+    options.emplace(u"timeStyle", *timeStyle_);
+  return options;
 }
 
 Options DateTimeFormat::resolvedOptions() noexcept {
-  Options options;
-  options.emplace(
-      u"locale", Option(static_cast<DateTimeFormatICU *>(this)->locale));
-  options.emplace(u"numeric", Option(false));
-  return options;
+  return static_cast<DateTimeFormatICU *>(this)->resolvedOptions();
 }
 
 std::u16string DateTimeFormat::format(double jsTimeValue) noexcept {
