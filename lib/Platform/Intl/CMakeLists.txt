@@ -26,10 +26,10 @@ if(HERMES_ENABLE_INTL)
   else()
     add_hermes_library(hermesPlatformIntl STATIC PlatformIntlICU.cpp
         LINK_LIBS
-        ${ICU_LIBS}
         hermesBCP47Parser
         hermesIntlShared
         hermesPublic
     )
+    hermes_link_icu(hermesPlatformIntl)
   endif()
 endif()
