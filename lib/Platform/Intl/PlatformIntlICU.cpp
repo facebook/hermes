@@ -48,6 +48,30 @@ vm::CallResult<std::u16string> UTF8toUTF16(vm::Runtime &runtime, std::string_vie
   return out;
 }
 
+vm::CallResult<std::string> UTF16toUTF8(
+    vm::Runtime &runtime,
+    std::u16string in) {
+  std::string out;
+  size_t length = in.length();
+  out.resize(length);
+  const llvh::UTF16 *sourceStart =
+      reinterpret_cast<const llvh::UTF16 *>(&in[0]);
+  const llvh::UTF16 *sourceEnd = sourceStart + length;
+  llvh::UTF8 *targetStart = reinterpret_cast<llvh::UTF8 *>(&out[0]);
+  llvh::UTF8 *targetEnd = targetStart + out.size();
+  llvh::ConversionResult convRes = ConvertUTF16toUTF8(
+      &sourceStart,
+      sourceEnd,
+      &targetStart,
+      targetEnd,
+      llvh::lenientConversion);
+  if (convRes != llvh::ConversionResult::conversionOK) {
+    return runtime.raiseRangeError("utf16 to utf8 conversion failed");
+  }
+  out.resize(reinterpret_cast<char *>(targetStart) - &out[0]);
+  return out;
+}
+
 const std::vector<std::u16string> &getAvailableLocales(vm::Runtime &runtime) {
   static const std::vector<std::u16string> *availableLocales = [&runtime] {
     auto *vec = new std::vector<std::u16string>();
@@ -417,6 +441,8 @@ struct DateTimeFormatICU : DateTimeFormat {
       const std::vector<std::u16string> &locales,
       const Options &inputOptions) noexcept;
  private:
+  UDateFormat *getUDateFormatter(vm::Runtime &runtime);
+
   // https://402.ecma-international.org/8.0/#sec-properties-of-intl-datetimeformat-instances
   // Intl.DateTimeFormat instances have an [[InitializedDateTimeFormat]]
   // internal slot.
@@ -468,6 +494,8 @@ struct DateTimeFormatICU : DateTimeFormat {
   // with values "full", "long", "medium", or "short".
   std::optional<std::u16string> dateStyle_;
   std::optional<std::u16string> timeStyle_;
+  std::string locale8_;
+  UDateFormat *dateTimeFormatter_;
 };
 } // namespace
 
@@ -573,6 +601,13 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
       runtime, getAvailableLocales(runtime), *requestedLocalesRes, opt, relevantExtensionKeys);
   // 18. Set dateTimeFormat.[[Locale]] to r.[[locale]].
   locale_ = std::move(r.locale);
+
+  auto conversion = UTF16toUTF8(runtime, locale_);
+  if (conversion.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+    return conversion.getStatus();
+  }
+  locale8_ = conversion.getValue(); // store the UTF8 version of locale since it
+                                    // is used in almost all other functions
   // 19. Let calendar be r.[[ca]].
   auto caIt = r.extensions.find(u"ca");
   // 20. Set dateTimeFormat.[[Calendar]] to calendar.
@@ -805,8 +840,234 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
     // i. Let pattern be bestFormat.[[pattern]].
     // ii. Let rangePatterns be bestFormat.[[rangePatterns]].
   }
-
+  // 41. Set dateTimeFormat.[[Pattern]] to pattern.
+  // 42. Set dateTimeFormat.[[RangePatterns]] to rangePatterns.
+  // 43. Return dateTimeFormat.
+  dateTimeFormatter_ = getUDateFormatter(runtime);
   return vm::ExecutionStatus::RETURNED;
+}
+
+// gets the UDateFormat with options set in initialize
+UDateFormat *DateTimeFormatICU::getUDateFormatter(vm::Runtime &runtime) {
+  static std::u16string eLong = u"long", eShort = u"short", eNarrow = u"narrow",
+                        eMedium = u"medium", eFull = u"full",
+                        eNumeric = u"numeric", eTwoDigit = u"2-digit",
+                        eShortOffset = u"shortOffset",
+                        eLongOffset = u"longOffset",
+                        eShortGeneric = u"shortGeneric",
+                        eLongGeneric = u"longGeneric";
+
+  // timeStyle and dateStyle cannot be used in conjunction with the other
+  // options.
+  if (timeStyle_.has_value() || dateStyle_.has_value()) {
+    UDateFormatStyle dateStyleRes = UDAT_DEFAULT;
+    UDateFormatStyle timeStyleRes = UDAT_DEFAULT;
+
+    if (dateStyle_.has_value()) {
+      if (dateStyle_ == eFull)
+        dateStyleRes = UDAT_FULL;
+      else if (dateStyle_ == eLong)
+        dateStyleRes = UDAT_LONG;
+      else if (dateStyle_ == eMedium)
+        dateStyleRes = UDAT_MEDIUM;
+      else if (dateStyle_ == eShort)
+        dateStyleRes = UDAT_SHORT;
+    }
+
+    if (timeStyle_.has_value()) {
+      if (timeStyle_ == eFull)
+        timeStyleRes = UDAT_FULL;
+      else if (timeStyle_ == eLong)
+        timeStyleRes = UDAT_LONG;
+      else if (timeStyle_ == eMedium)
+        timeStyleRes = UDAT_MEDIUM;
+      else if (timeStyle_ == eShort)
+        timeStyleRes = UDAT_SHORT;
+    }
+
+    UErrorCode status = U_ZERO_ERROR;
+    UDateFormat *dtf;
+    // if timezone is specified, use that instead, else use default
+    if (!timeZone_.empty()) {
+      const UChar *timeZoneRes =
+          reinterpret_cast<const UChar *>(timeZone_.c_str());
+      int32_t timeZoneLength = timeZone_.length();
+      dtf = udat_open(
+          timeStyleRes,
+          dateStyleRes,
+          &locale8_[0],
+          timeZoneRes,
+          timeZoneLength,
+          nullptr,
+          -1,
+          &status);
+    } else {
+      dtf = udat_open(
+          timeStyleRes,
+          dateStyleRes,
+          &locale8_[0],
+          nullptr,
+          -1,
+          nullptr,
+          -1,
+          &status);
+    }
+    assert(status == U_ZERO_ERROR);
+    return dtf;
+  }
+
+  // Else: lets create the skeleton
+  std::u16string skeleton = u"";
+  if (weekday_.has_value()) {
+    if (weekday_ == eNarrow)
+      skeleton += u"EEEEE";
+    else if (weekday_ == eLong)
+      skeleton += u"EEEE";
+    else if (weekday_ == eShort)
+      skeleton += u"EEE";
+  }
+
+  if (timeZoneName_.has_value()) {
+    if (timeZoneName_ == eShort)
+      skeleton += u"z";
+    else if (timeZoneName_ == eLong)
+      skeleton += u"zzzz";
+    else if (timeZoneName_ == eShortOffset)
+      skeleton += u"O";
+    else if (timeZoneName_ == eLongOffset)
+      skeleton += u"OOOO";
+    else if (timeZoneName_ == eShortGeneric)
+      skeleton += u"v";
+    else if (timeZoneName_ == eLongGeneric)
+      skeleton += u"vvvv";
+  }
+
+  if (era_.has_value()) {
+    if (era_ == eNarrow)
+      skeleton += u"GGGGG";
+    else if (era_ == eShort)
+      skeleton += u"G";
+    else if (era_ == eLong)
+      skeleton += u"GGGG";
+  }
+
+  if (year_.has_value()) {
+    if (year_ == eNumeric)
+      skeleton += u"y";
+    else if (year_ == eTwoDigit)
+      skeleton += u"yy";
+  }
+
+  if (month_.has_value()) {
+    if (month_ == eTwoDigit)
+      skeleton += u"MM";
+    else if (month_ == eNumeric)
+      skeleton += u'M';
+    else if (month_ == eNarrow)
+      skeleton += u"MMMMM";
+    else if (month_ == eShort)
+      skeleton += u"MMM";
+    else if (month_ == eLong)
+      skeleton += u"MMMM";
+  }
+
+  if (day_.has_value()) {
+    if (day_ == eNumeric)
+      skeleton += u"d";
+    else if (day_ == eTwoDigit)
+      skeleton += u"dd";
+  }
+
+  if (hour_.has_value()) {
+    if (hourCycle_ == u"h12") {
+      if (hour_ == eNumeric)
+        skeleton += u"h";
+      else if (hour_ == eTwoDigit)
+        skeleton += u"hh";
+    } else if (hourCycle_ == u"h24") {
+      if (hour_ == eNumeric)
+        skeleton += u"k";
+      else if (hour_ == eTwoDigit)
+        skeleton += u"kk";
+    } else if (hourCycle_ == u"h23") {
+      if (hour_ == eNumeric)
+        skeleton += u"k";
+      else if (hour_ == eTwoDigit)
+        skeleton += u"KK";
+    } else {
+      if (hour_ == eNumeric)
+        skeleton += u"h";
+      else if (hour_ == eTwoDigit)
+        skeleton += u"HH";
+    }
+  }
+
+  if (minute_.has_value()) {
+    if (minute_ == eNumeric)
+      skeleton += u"m";
+    else if (minute_ == eTwoDigit)
+      skeleton += u"mm";
+  }
+
+  if (second_.has_value()) {
+    if (second_ == eNumeric)
+      skeleton += u"s";
+    else if (second_ == eTwoDigit)
+      skeleton += u"ss";
+  }
+
+  UErrorCode status = U_ZERO_ERROR;
+  std::u16string bestpattern;
+  int32_t patternLength;
+
+  UDateTimePatternGenerator *dtpGenerator = udatpg_open(&locale8_[0], &status);
+  patternLength = udatpg_getBestPatternWithOptions(
+      dtpGenerator,
+      &skeleton[0],
+      -1,
+      UDATPG_MATCH_ALL_FIELDS_LENGTH,
+      nullptr,
+      0,
+      &status);
+
+  if (status == U_BUFFER_OVERFLOW_ERROR) {
+    status = U_ZERO_ERROR;
+    bestpattern.resize(patternLength);
+    udatpg_getBestPatternWithOptions(
+        dtpGenerator,
+        &skeleton[0],
+        skeleton.length(),
+        UDATPG_MATCH_ALL_FIELDS_LENGTH,
+        &bestpattern[0],
+        patternLength,
+        &status);
+  }
+
+  // if timezone is specified, use that instead, else use default
+  if (!timeZone_.empty()) {
+    const UChar *timeZoneRes =
+        reinterpret_cast<const UChar *>(timeZone_.c_str());
+    int32_t timeZoneLength = timeZone_.length();
+    return udat_open(
+        UDAT_PATTERN,
+        UDAT_PATTERN,
+        &locale8_[0],
+        timeZoneRes,
+        timeZoneLength,
+        &bestpattern[0],
+        patternLength,
+        &status);
+  } else {
+    return udat_open(
+        UDAT_PATTERN,
+        UDAT_PATTERN,
+        &locale8_[0],
+        nullptr,
+        -1,
+        &bestpattern[0],
+        patternLength,
+        &status);
+  }
 }
 
 vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
