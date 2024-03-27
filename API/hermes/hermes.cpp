@@ -1429,11 +1429,6 @@ HermesRuntimeImpl::prepareJavaScriptWithSourceMap(
   hermesLog(
       "HermesVM", "Prepare JS on %s.", isBytecode ? "bytecode" : "source");
 #endif
-  // Save the first few bytes of the buffer so that we can later append them
-  // to any error message.
-  uint8_t bufPrefix[16];
-  const size_t bufSize = buffer->size();
-  memcpy(bufPrefix, buffer->data(), std::min(sizeof(bufPrefix), bufSize));
 
   // Construct the BC provider either from buffer or source.
   if (isBytecode) {
@@ -1468,24 +1463,9 @@ HermesRuntimeImpl::prepareJavaScriptWithSourceMap(
 #endif
   }
   if (!bcErr.first) {
-    std::string storage;
-    llvh::raw_string_ostream os(storage);
-    os << " Buffer size " << bufSize << " starts with: ";
-    for (size_t i = 0; i < sizeof(bufPrefix) && i < bufSize; ++i)
-      os << llvh::format_hex_no_prefix(bufPrefix[i], 2);
-    std::string bufferModes = "";
-    for (const auto &mode : ::hermes::oscompat::get_vm_protect_modes(
-             jsiBuffer->data(), jsiBuffer->size())) {
-      // We only expect one match, but if there are multiple, we want to know.
-      bufferModes += mode;
-    }
-    if (!bufferModes.empty()) {
-      os << " and has protection mode(s): " << bufferModes;
-    }
-    LOG_EXCEPTION_CAUSE(
-        "Compiling JS failed: %s, %s", bcErr.second.c_str(), os.str().c_str());
+    LOG_EXCEPTION_CAUSE("Compiling JS failed: %s", bcErr.second.c_str());
     throw jsi::JSINativeException(
-        "Compiling JS failed: " + std::move(bcErr.second) + os.str());
+        "Compiling JS failed: " + std::move(bcErr.second));
   }
   return std::make_shared<const HermesPreparedJavaScript>(
       std::move(bcErr.first), runtimeFlags, std::move(sourceURL));
