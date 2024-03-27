@@ -325,32 +325,6 @@ std::u16string getDefaultTimeZone(vm::Runtime &runtime) {
   return tz;
 }
 
-vm::CallResult<std::u16string> getDefaultHourCycle(vm::Runtime &runtime) {
-  Locale locale;
-  auto status = U_ZERO_ERROR;
-  DateTimePatternGenerator *generator = DateTimePatternGenerator::createInstance(locale, status);
-
-  if (U_FAILURE(status)) {
-    return runtime.raiseRangeError("failed to get default hour cycle.");
-  }
-
-  auto dateFormatPattern = generator->getDefaultHourCycle(status);
-  if (U_FAILURE(status)) {
-    return runtime.raiseRangeError("failed to get default hour cycle.");
-  }
-
-
-  if (dateFormatPattern == UDAT_HOUR_CYCLE_11) {
-    return u"h11";
-  } else if (dateFormatPattern == UDAT_HOUR_CYCLE_12) {
-    return u"h12";
-  } else if (dateFormatPattern == UDAT_HOUR_CYCLE_23) {
-    return u"h23";
-  }
-
-  return u"h24";
-}
-
 // https://402.ecma-international.org/8.0/#sec-canonicalizetimezonename
 std::u16string canonicalizeTimeZoneName(std::u16string_view tz) {
   // 1. Let ianaTimeZone be the Zone or Link name of the IANA Time Zone Database
@@ -442,6 +416,7 @@ struct DateTimeFormatICU : DateTimeFormat {
       const Options &inputOptions) noexcept;
  private:
   UDateFormat *getUDateFormatter(vm::Runtime &runtime);
+  vm::CallResult<std::u16string> getDefaultHourCycle(vm::Runtime &runtime);
 
   // https://402.ecma-international.org/8.0/#sec-properties-of-intl-datetimeformat-instances
   // Intl.DateTimeFormat instances have an [[InitializedDateTimeFormat]]
@@ -1068,6 +1043,51 @@ UDateFormat *DateTimeFormatICU::getUDateFormatter(vm::Runtime &runtime) {
         patternLength,
         &status);
   }
+}
+
+vm::CallResult<std::u16string> DateTimeFormatICU::getDefaultHourCycle(
+    vm::Runtime &runtime) {
+  UErrorCode status = U_ZERO_ERROR;
+  std::u16string myString;
+  // open the default UDateFormat and Pattern of locale
+  UDateFormat *defaultDTF = udat_open(
+      UDAT_DEFAULT,
+      UDAT_DEFAULT,
+      &locale8_[0],
+      nullptr,
+      -1,
+      nullptr,
+      -1,
+      &status);
+  int32_t size = udat_toPattern(defaultDTF, true, nullptr, 0, &status);
+  if (status == U_BUFFER_OVERFLOW_ERROR) {
+    status = U_ZERO_ERROR;
+    myString.resize(size + 1);
+    udat_toPattern(defaultDTF, true, &myString[0], 40, &status);
+    assert(status <= 0); // Check for errors
+    udat_close(defaultDTF);
+    // find the default hour cycle and return it
+    for (int32_t i = 0; i < size; i++) {
+      char16_t ch = myString[i];
+      switch (ch) {
+        case 'K':
+          return u"h11";
+          break;
+        case 'h':
+          return u"h12";
+          break;
+        case 'H':
+          return u"h23";
+          break;
+        case 'k':
+          return u"h24";
+          break;
+      }
+    }
+  }
+
+  // There should always be a default hour cycle, return an exception if not
+  return vm::ExecutionStatus::EXCEPTION;
 }
 
 vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
