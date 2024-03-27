@@ -24,6 +24,8 @@
 namespace hermes {
 namespace vm {
 
+class LocalTimeOffsetCache;
+
 //===----------------------------------------------------------------------===//
 // Conversion constants
 
@@ -40,6 +42,10 @@ constexpr double MS_PER_SECOND = 1000;
 constexpr double MS_PER_MINUTE = MS_PER_SECOND * SECONDS_PER_MINUTE;
 constexpr double MS_PER_HOUR = MS_PER_MINUTE * MINUTES_PER_HOUR;
 constexpr double MS_PER_DAY = MS_PER_HOUR * HOURS_PER_DAY;
+
+// Time value ranges from ES2024 21.4.1.1.
+constexpr int64_t TIME_RANGE_SECS = SECONDS_PER_DAY * 100000000LL;
+constexpr int64_t TIME_RANGE_MS = TIME_RANGE_SECS * MS_PER_SECOND;
 
 //===----------------------------------------------------------------------===//
 // Current time
@@ -106,10 +112,6 @@ double localTZA();
 //===----------------------------------------------------------------------===//
 // ES5.1 15.9.1.8
 
-/// Daylight saving time adjustment, in milliseconds, at time \p t.
-/// \param t timestamp in milliseconds.
-double daylightSavingTA(double t);
-
 namespace detail {
 // Exposed for test only
 int32_t equivalentTime(int64_t epochSecs);
@@ -118,11 +120,11 @@ int32_t equivalentTime(int64_t epochSecs);
 // ES5.1 15.9.1.9
 
 /// Conversion from UTC to local time.
-double localTime(double t);
+double localTime(double t, LocalTimeOffsetCache &);
 
 /// Conversion from local time to UTC.
 /// Spec refers to this as the UTC() function.
-double utcTime(double t);
+double utcTime(double t, LocalTimeOffsetCache &);
 
 //===----------------------------------------------------------------------===//
 // ES5.1 15.9.1.10
@@ -269,7 +271,7 @@ void timeTZString(double t, double tza, llvh::SmallVectorImpl<char> &buf);
 ///   - Date.parse(x.toISOString())
 /// We can extend this to support other formats as well, when the given str
 /// does not conform to the 15.9.1.15 format.
-double parseDate(StringView str);
+double parseDate(StringView str, LocalTimeOffsetCache &);
 
 } // namespace vm
 } // namespace hermes

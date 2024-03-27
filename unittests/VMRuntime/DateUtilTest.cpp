@@ -7,6 +7,7 @@
 
 #include "TestHelpers.h"
 
+#include "hermes/VM/JSLib/DateCache.h"
 #include "hermes/VM/JSLib/DateUtil.h"
 
 #include <cstdlib>
@@ -122,12 +123,32 @@ TEST(DateUtilTest, WeekDayTest) {
 }
 
 namespace {
+/// Return a global instance of LocalTimeOffsetCache for testing
+/// localTime()/utcTime().
+static LocalTimeOffsetCache &getLocalTimeOffsetCache() {
+  static LocalTimeOffsetCache cache;
+  return cache;
+}
+
 /// `localtime_r()` called in localTZA() caches the timezone. To correctly
 /// handle different timezones in a single test, let's call `tzset()` explicitly
 /// to update the cached timezone.
 void setTimeZone(const char *tzname) {
   hermes::oscompat::set_env("TZ", tzname);
-  ::tzset();
+  getLocalTimeOffsetCache().reset();
+}
+
+double localTime(double t) {
+  return hermes::vm::localTime(t, getLocalTimeOffsetCache());
+}
+
+double utcTime(double t) {
+  return hermes::vm::utcTime(t, getLocalTimeOffsetCache());
+}
+
+/// A wrapper that implements the deleted daylightSavingTA() function.
+double daylightSavingTA(double timeMs) {
+  return getLocalTimeOffsetCache().daylightSavingOffsetInMs(timeMs);
 }
 } // namespace
 
