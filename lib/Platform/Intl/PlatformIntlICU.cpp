@@ -272,7 +272,7 @@ class TimeZoneNames {
   TimeZoneNames() {
     StringEnumeration *icuTimeZones = TimeZone::createEnumeration();
     UErrorCode status = U_ZERO_ERROR;
-    int32_t *resultLength;
+    int32_t *resultLength = new int32_t();
     auto *zoneId = icuTimeZones->unext(resultLength, status);
 
     while (zoneId != nullptr && status == U_ZERO_ERROR) {
