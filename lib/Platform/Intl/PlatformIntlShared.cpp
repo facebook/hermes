@@ -54,6 +54,13 @@ vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
   return seen;
 }
 
+// https://tc39.es/ecma402/#sec-intl.getcanonicallocales
+vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
+    vm::Runtime &runtime,
+    const std::vector<std::u16string> &locales) {
+  return canonicalizeLocaleList(runtime, locales);
+}
+
 // https://402.ecma-international.org/8.0/#sec-bestavailablelocale
 std::optional<std::u16string> bestAvailableLocale(
     const std::vector<std::u16string> &availableLocales,

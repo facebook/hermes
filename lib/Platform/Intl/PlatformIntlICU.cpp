@@ -365,13 +365,6 @@ std::u16string canonicalizeTimeZoneName(std::u16string_view tz) {
   return ianaTimeZone;
 }
 
-// https://tc39.es/ecma402/#sec-intl.getcanonicallocales
-vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
-    vm::Runtime &runtime,
-    const std::vector<std::u16string> &locales) {
-  return canonicalizeLocaleList(runtime, locales);
-}
-
 // Not yet implemented.
 vm::CallResult<std::u16string> toLocaleLowerCase(
     vm::Runtime &runtime,

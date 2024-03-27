@@ -25,8 +25,11 @@ struct ResolvedLocale {
   std::unordered_map<std::u16string, std::u16string> extensions;
 };
 
-// https://tc39.es/ecma402/#sec-canonicalizelocalelist
 vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
+    vm::Runtime &runtime,
+    const std::vector<std::u16string> &locales);
+
+vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales);
 
