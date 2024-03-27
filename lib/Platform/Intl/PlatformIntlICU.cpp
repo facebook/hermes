@@ -252,9 +252,10 @@ class TimeZoneNames {
     int32_t *resultLength;
     auto *zoneId = icuTimeZones->unext(resultLength, status);
 
-    while (zoneId != NULL && status == U_ZERO_ERROR) {
+    while (zoneId != nullptr && status == U_ZERO_ERROR) {
       auto upper = toASCIIUppercase(zoneId);
       timeZoneNamesMap_.emplace(std::move(upper), std::move(zoneId));
+      zoneId = icuTimeZones->unext(resultLength, status);
     }
   }
 
@@ -408,13 +409,14 @@ namespace {
 struct DateTimeFormatICU : DateTimeFormat {
  public:
   DateTimeFormatICU() = default;
-  std::u16string locale;
 
   vm::ExecutionStatus initialize(
       vm::Runtime &runtime,
       const std::vector<std::u16string> &locales,
       const Options &inputOptions) noexcept;
   Options resolvedOptions() noexcept;
+
+  std::u16string format(double jsTimeValue) noexcept;
  private:
   UDateFormat *getUDateFormatter(vm::Runtime &runtime);
   vm::CallResult<std::u16string> getDefaultHourCycle(vm::Runtime &runtime);
@@ -1145,9 +1147,26 @@ Options DateTimeFormat::resolvedOptions() noexcept {
   return static_cast<DateTimeFormatICU *>(this)->resolvedOptions();
 }
 
+std::u16string DateTimeFormatICU::format(double jsTimeValue) noexcept {
+  auto timeInSeconds = jsTimeValue;
+  UDate date = UDate(timeInSeconds);
+  UErrorCode status = U_ZERO_ERROR;
+  std::u16string formattedDate;
+  int32_t myStrlen = 0;
+
+  myStrlen = udat_format(dateTimeFormatter_, date, nullptr, myStrlen, nullptr, &status);
+  if (status == U_BUFFER_OVERFLOW_ERROR) {
+    status = U_ZERO_ERROR;
+    formattedDate.resize(myStrlen);
+    udat_format(dateTimeFormatter_, date, &formattedDate[0], myStrlen, nullptr, &status);
+  }
+
+  assert(status <= 0); // Check for errors
+  return formattedDate;
+}
+
 std::u16string DateTimeFormat::format(double jsTimeValue) noexcept {
-  auto s = std::to_string(jsTimeValue);
-  return std::u16string(s.begin(), s.end());
+  return static_cast<DateTimeFormatICU *>(this)->format(jsTimeValue);
 }
 
 std::vector<std::unordered_map<std::u16string, std::u16string>>
