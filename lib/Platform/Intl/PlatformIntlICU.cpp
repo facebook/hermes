@@ -10,15 +10,15 @@
 #include "hermes/Platform/Intl/PlatformIntlShared.h"
 
 #include <deque>
+#include <shared_mutex>
 #include <string>
 #include <unordered_map>
-#include <shared_mutex>
+#include "llvh/Support/ConvertUTF.h"
+#include "unicode/dtptngen.h"
 #include "unicode/strenum.h"
 #include "unicode/timezone.h"
-#include "unicode/unistr.h"
 #include "unicode/udat.h"
-#include "unicode/dtptngen.h"
-#include "llvh/Support/ConvertUTF.h"
+#include "unicode/unistr.h"
 
 using namespace ::facebook;
 using namespace ::hermes;
@@ -27,7 +27,9 @@ using namespace U_ICU_NAMESPACE;
 namespace hermes {
 namespace platform_intl {
 namespace {
-vm::CallResult<std::u16string> UTF8toUTF16(vm::Runtime &runtime, std::string_view in) {
+vm::CallResult<std::u16string> UTF8toUTF16(
+    vm::Runtime &runtime,
+    std::string_view in) {
   std::u16string out;
   size_t length = in.length();
   out.resize(length);
@@ -340,7 +342,6 @@ std::u16string getDefaultTimeZone(vm::Runtime &runtime) {
   std::string timeZoneId;
   unicodeTz.toUTF8String(timeZoneId);
 
-
   std::u16string tz = UTF8toUTF16(runtime, timeZoneId).getValue();
 
   validTimeZoneNames().update(tz);
@@ -438,6 +439,7 @@ struct DateTimeFormatICU : DateTimeFormat {
   Options resolvedOptions() noexcept;
 
   std::u16string format(double jsTimeValue) noexcept;
+
  private:
   UDateFormat *getUDateFormatter(vm::Runtime &runtime);
   vm::CallResult<std::u16string> getDefaultHourCycle(vm::Runtime &runtime);
@@ -510,7 +512,8 @@ vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
   // 1. Let availableLocales be %DateTimeFormat%.[[AvailableLocales]].
   // 2. Let requestedLocales be ? CanonicalizeLocaleList(locales).
   auto requestedLocales = getCanonicalLocales(runtime, locales);
-  const std::vector<std::u16string> &availableLocales = getAvailableLocales(runtime);
+  const std::vector<std::u16string> &availableLocales =
+      getAvailableLocales(runtime);
   // 3. Return ? (availableLocales, requestedLocales, options).
   return supportedLocales(availableLocales, requestedLocales.getValue());
 }
@@ -597,7 +600,11 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
   static constexpr std::u16string_view relevantExtensionKeys[] = {
       u"ca", u"nu", u"hc"};
   auto r = resolveLocale(
-      runtime, getAvailableLocales(runtime), *requestedLocalesRes, opt, relevantExtensionKeys);
+      runtime,
+      getAvailableLocales(runtime),
+      *requestedLocalesRes,
+      opt,
+      relevantExtensionKeys);
   // 18. Set dateTimeFormat.[[Locale]] to r.[[locale]].
   locale_ = std::move(r.locale);
 
@@ -764,7 +771,8 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
   if (LLVM_UNLIKELY(timeZoneNameRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   timeZoneName_ = *timeZoneNameRes;
-  // NOTE: We don't have access to localeData, instead we'll defer to ICU::Locale
+  // NOTE: We don't have access to localeData, instead we'll defer to
+  // ICU::Locale
   // 36. If dateStyle is not undefined or timeStyle is not undefined, then
   // a. For each row in Table 4, except the header row, do
   // i. Let prop be the name given in the Property column of the row.
@@ -1175,11 +1183,18 @@ std::u16string DateTimeFormatICU::format(double jsTimeValue) noexcept {
   std::u16string formattedDate;
   int32_t myStrlen = 0;
 
-  myStrlen = udat_format(dateTimeFormatter_, date, nullptr, myStrlen, nullptr, &status);
+  myStrlen = udat_format(
+      dateTimeFormatter_, date, nullptr, myStrlen, nullptr, &status);
   if (status == U_BUFFER_OVERFLOW_ERROR) {
     status = U_ZERO_ERROR;
     formattedDate.resize(myStrlen);
-    udat_format(dateTimeFormatter_, date, &formattedDate[0], myStrlen, nullptr, &status);
+    udat_format(
+        dateTimeFormatter_,
+        date,
+        &formattedDate[0],
+        myStrlen,
+        nullptr,
+        &status);
   }
 
   assert(status <= 0); // Check for errors

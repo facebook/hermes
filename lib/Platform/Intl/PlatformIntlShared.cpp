@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// This file includes shared code between Apple and Windows implementation of Intl APIs
+// This file includes shared code between Apple and Windows implementation of
+// Intl APIs
 #include "hermes/Platform/Intl/BCP47Parser.h"
 #include "hermes/Platform/Intl/PlatformIntl.h"
 
