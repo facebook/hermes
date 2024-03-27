@@ -78,13 +78,34 @@ const std::vector<std::u16string> &getAvailableLocales(vm::Runtime &runtime) {
 
     for (int32_t i = 0, count = uloc_countAvailable(); i < count; i++) {
       auto locale = uloc_getAvailable(i);
-      vec->push_back(UTF8toUTF16(runtime, locale).getValue());
+      auto u16locale = UTF8toUTF16(runtime, locale).getValue();
+
+      // ICU sometimes gives locale identifiers with an underscore instead
+      // of a dash. We only consider dashes valid, so fix up any identifiers we
+      // get from ICU.
+      std::replace(u16locale.begin(), u16locale.end(), u'_', u'-');
+      vec->push_back(u16locale);
     }
 
     return vec;
   }();
 
   return *availableLocales;
+}
+
+const std::u16string &getDefaultLocale(vm::Runtime &runtime) {
+  // UTF8toUTF16(runtime, uloc_getDefault()).getValue();
+  static const std::u16string *defaultLocale = new std::u16string([&runtime] {
+    // Environment variable used for testing only
+    auto defaultLocale = UTF8toUTF16(runtime, uloc_getDefault()).getValue();
+
+    // See the comment in getAvailableLocales.
+    std::replace(defaultLocale.begin(), defaultLocale.end(), u'_', u'-');
+    if (auto parsed = ParsedLocaleIdentifier::parse(defaultLocale))
+      return parsed->canonicalize();
+    return std::u16string(u"und");
+  }());
+  return *defaultLocale;
 }
 
 /// https://402.ecma-international.org/8.0/#sec-lookupmatcher
@@ -121,7 +142,7 @@ LocaleMatch lookupMatcher(
     }
   }
   // availableLocale was undefined, so set result.[[locale]] to defLocale.
-  result.locale = UTF8toUTF16(runtime, uloc_getDefault()).getValue();
+  result.locale = getDefaultLocale(runtime);
   // 5. Return result.
   return result;
 }
