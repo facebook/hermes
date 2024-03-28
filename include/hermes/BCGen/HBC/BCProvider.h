@@ -119,7 +119,7 @@ class BCProviderBase {
   llvh::ArrayRef<unsigned char> bigIntStorage_{};
 
   llvh::ArrayRef<RegExpTableEntry> regExpTable_{};
-  llvh::ArrayRef<unsigned char> regExpStorage_{};
+  llvh::ArrayRef<uint8_t> regExpStorage_{};
 
   /// The segment ID corresponding to the bytecode module.
   uint32_t segmentID_;

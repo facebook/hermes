@@ -142,7 +142,9 @@ class BytecodeFunction {
   }
 };
 
-// This class represents the in-memory representation of the bytecode module.
+/// This class represents the in-memory representation of the bytecode module.
+/// It contains pointers into Context, so it must not outlive the associated
+/// Context.
 class BytecodeModule {
   using FunctionList = std::vector<std::unique_ptr<BytecodeFunction>>;
   using SerializableBufferTy = std::vector<unsigned char>;
@@ -175,12 +177,8 @@ class BytecodeModule {
   /// The buffer with bigint literal bytes.
   std::vector<uint8_t> bigIntStorage_;
 
-  /// The regexp bytecode buffer.
-  std::vector<unsigned char> regExpStorage_;
-
-  /// The regexp bytecode table. This is a list of pairs of (offset, lengths)
-  /// into regExpStorage_.
-  std::vector<RegExpTableEntry> regExpTable_;
+  /// The list of unique RegExp objects.
+  UniquingRegExpTable regExpTable_;
 
   /// A table containing debug info (if compiled with -g).
   DebugInfo debugInfo_;
@@ -229,8 +227,7 @@ class BytecodeModule {
       std::vector<unsigned char> &&stringStorage,
       std::vector<bigint::BigIntTableEntry> &&bigIntTable,
       std::vector<uint8_t> &&bigIntStorage,
-      std::vector<RegExpTableEntry> &&regExpTable,
-      std::vector<unsigned char> &&regExpStorage,
+      UniquingRegExpTable &&regExpTable,
       uint32_t globalFunctionIndex,
       std::vector<unsigned char> &&arrayBuffer,
       std::vector<unsigned char> &&objKeyBuffer,
@@ -247,7 +244,6 @@ class BytecodeModule {
         stringStorage_(std::move(stringStorage)),
         bigIntTable_(std::move(bigIntTable)),
         bigIntStorage_(std::move(bigIntStorage)),
-        regExpStorage_(std::move(regExpStorage)),
         regExpTable_(std::move(regExpTable)),
         arrayBuffer_(std::move(arrayBuffer)),
         objKeyBuffer_(std::move(objKeyBuffer)),
@@ -323,11 +319,11 @@ class BytecodeModule {
   }
 
   llvh::ArrayRef<RegExpTableEntry> getRegExpTable() const {
-    return regExpTable_;
+    return regExpTable_.getEntryList();
   }
 
-  llvh::ArrayRef<unsigned char> getRegExpStorage() const {
-    return regExpStorage_;
+  llvh::ArrayRef<uint8_t> getRegExpStorage() const {
+    return regExpTable_.getBytecodeBuffer();
   }
 
   uint32_t getSegmentID() const {

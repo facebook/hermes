@@ -24,10 +24,6 @@ class raw_ostream;
 /// Support for statically compiling regexps.
 namespace hermes {
 
-/// RegExpBytecode is the bytecode form of a CompiledRegExp, and simply a list
-/// of bytes.
-using RegExpBytecode = std::vector<unsigned char>;
-
 /// A RegExpTableEntry is simply an (offset, length) pair for bytecode.
 struct RegExpTableEntry {
   uint32_t offset;
@@ -94,6 +90,12 @@ class UniquingRegExpTable {
   /// List of pointers to compiled regexps.
   std::vector<CompiledRegExp *> regexps_;
 
+  /// Entry list for the regexp table, can be taken by the BytecodeGenerator.
+  std::vector<RegExpTableEntry> entryList_;
+
+  /// Bytecode buffer, pointed to by the keysToIndex_ map.
+  std::vector<uint8_t> bytecodeBuffer_;
+
   /// RegExps are uniqued according to their pattern and flags. Note that a
   /// regexp pattern is logically UCS-2 (or UTF-16 with the 'u' flag). We match
   /// StringStorage in that we represent this as UTF-8, except that UTF-16
@@ -110,6 +112,8 @@ class UniquingRegExpTable {
 
  public:
   UniquingRegExpTable() = default;
+  UniquingRegExpTable(UniquingRegExpTable &&) = default;
+  UniquingRegExpTable &operator=(UniquingRegExpTable &&) = default;
 
   /// Adds a regexp to the table if not already present.
   /// \return the ID of the regexp.
@@ -120,6 +124,13 @@ class UniquingRegExpTable {
 
     uint32_t index = regexps_.size();
     regexps_.push_back(regexp);
+    entryList_.push_back(
+        {(uint32_t)bytecodeBuffer_.size(),
+         (uint32_t)regexp->getBytecode().size()});
+    bytecodeBuffer_.insert(
+        bytecodeBuffer_.end(),
+        regexp->getBytecode().begin(),
+        regexp->getBytecode().end());
     keysToIndex_[keyFor(*regexps_.back())] = index;
     return index;
   }
@@ -130,10 +141,14 @@ class UniquingRegExpTable {
   }
 
   /// Return the regexp entry list.
-  std::vector<RegExpTableEntry> getEntryList() const;
+  llvh::ArrayRef<RegExpTableEntry> getEntryList() const {
+    return entryList_;
+  }
 
   /// Return the combined bytecode buffer.
-  RegExpBytecode getBytecodeBuffer() const;
+  llvh::ArrayRef<uint8_t> getBytecodeBuffer() const {
+    return bytecodeBuffer_;
+  }
 
   /// Disassemble the regexp bytecode, printing the result to the output stream.
   void disassemble(llvh::raw_ostream &OS) const;

@@ -362,27 +362,6 @@ llvh::ArrayRef<uint8_t> CompiledRegExp::getBytecode() const {
   return bytecode_;
 }
 
-std::vector<RegExpTableEntry> UniquingRegExpTable::getEntryList() const {
-  std::vector<RegExpTableEntry> result;
-  result.reserve(regexps_.size());
-  uint32_t offset = 0;
-  for (const auto &re : regexps_) {
-    uint32_t size = re->getBytecode().size();
-    result.push_back(RegExpTableEntry{offset, size});
-    offset += size;
-  }
-  return result;
-}
-
-RegExpBytecode UniquingRegExpTable::getBytecodeBuffer() const {
-  RegExpBytecode result;
-  for (const auto &re : regexps_) {
-    auto bytecode = re->getBytecode();
-    result.insert(result.end(), bytecode.begin(), bytecode.end());
-  }
-  return result;
-}
-
 void UniquingRegExpTable::disassemble(llvh::raw_ostream &OS) const {
   uint32_t index = 0;
   // Note that regexp patterns and flags are read without interpreting escapes
