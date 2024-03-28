@@ -176,9 +176,12 @@ void BytecodeFunctionGenerator::bytecodeGenerationComplete() {
 }
 
 unsigned BytecodeModuleGenerator::addFunction(Function *F) {
-  lazyFunctions_ |= F->isLazy();
-  asyncFunctions_ |= llvh::isa<AsyncFunction>(F);
-  return functionIDMap_.allocate(F);
+  auto [it, inserted] = functionIDMap_.insert({F, bm_->getNumFunctions()});
+  if (inserted) {
+    bm_->addFunction();
+    bm_->getBytecodeOptionsMut().hasAsync |= llvh::isa<AsyncFunction>(F);
+  }
+  return it->second;
 }
 
 void BytecodeModuleGenerator::setFunctionGenerator(
@@ -255,32 +258,26 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() && {
   valid_ = false;
 
   assert(
-      functionIDMap_.getElements().size() == functionGenerators_.size() &&
+      functionIDMap_.size() == functionGenerators_.size() &&
       "Missing functions.");
 
   BytecodeOptions &bytecodeOptions = bm_->getBytecodeOptionsMut();
-  bytecodeOptions.hasAsync = asyncFunctions_;
   bytecodeOptions.staticBuiltins = options_.staticBuiltinsEnabled;
+
   bytecodeOptions.cjsModulesStaticallyResolved =
       !bm_->getCJSModuleTableStatic().empty();
 
   // The BytecodeModule was newly created by this generator.
-  assert(
-      bm_->getNumFunctions() == 0 && "Cannot generate after adding functions");
-  bm_->resizeFunctionList(functionGenerators_.size());
-
   DebugInfoGenerator debugInfoGen{std::move(filenameTable_)};
 
   const uint32_t strippedFunctionNameId =
       options_.stripFunctionNames ? bm_->getStringID(kStrippedFunctionName) : 0;
-  auto functions = functionIDMap_.getElements();
-  for (unsigned i = 0, e = functions.size(); i < e; ++i) {
-    auto *F = functions[i];
+  for (auto [F, functionID] : functionIDMap_) {
     auto &BFG = *functionGenerators_[F];
 
     uint32_t functionNameId = options_.stripFunctionNames
         ? strippedFunctionNameId
-        : bm_->getStringID(functions[i]->getOriginalOrInferredName().str());
+        : bm_->getStringID(F->getOriginalOrInferredName().str());
 
     std::unique_ptr<BytecodeFunction> func = BFG.generateBytecodeFunction(
         F->getProhibitInvoke(),
@@ -294,12 +291,12 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() && {
 
     if (BFG.hasDebugInfo()) {
       uint32_t sourceLocOffset = debugInfoGen.appendSourceLocations(
-          BFG.getSourceLocation(), i, BFG.getDebugLocations());
+          BFG.getSourceLocation(), functionID, BFG.getDebugLocations());
       uint32_t lexicalDataOffset = debugInfoGen.appendLexicalData(
           BFG.getLexicalParentID(), BFG.getDebugVariableNames());
       func->setDebugOffsets({sourceLocOffset, lexicalDataOffset});
     }
-    bm_->setFunction(i, std::move(func));
+    bm_->setFunction(functionID, std::move(func));
   }
 
   bm_->setDebugInfo(debugInfoGen.serializeWithMove());

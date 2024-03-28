@@ -219,9 +219,10 @@ class BytecodeModule {
   /// Create an empty BytecodeModule with no functions.
   explicit BytecodeModule() = default;
 
-  /// Resize the function table to \p size, filling new elements with nullptrs.
-  void resizeFunctionList(uint32_t size) {
-    functions_.resize(size);
+  /// Add an uncompiled BytecodeFunction to the table, to track that we will
+  /// eventually compile it.
+  void addFunction() {
+    functions_.push_back(nullptr);
   }
   const FunctionList &getFunctionTable() const {
     return functions_;

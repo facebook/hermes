@@ -25,6 +25,8 @@
 #include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/OptValue.h"
+
+#include "llvh/ADT/MapVector.h"
 #include "llvh/ADT/StringRef.h"
 
 namespace hermes {
@@ -35,32 +37,6 @@ using std::move;
 using std::unique_ptr;
 
 const char *const kStrippedFunctionName = "function-name-stripped";
-
-/// An allocation table that assigns a sequential integer ID
-/// to each newly added element. To support both fast lookup
-/// and sequential iteration, we use both DenseMap and SmallVector
-/// to store the data in different format.
-template <typename T>
-class AllocationTable {
-  DenseMap<T, unsigned> indexMap_{};
-  SmallVector<T, 8> elements_{};
-
- public:
-  unsigned allocate(T val) {
-    auto it = indexMap_.find(val);
-    if (it != indexMap_.end()) {
-      return it->second;
-    }
-    auto nextId = indexMap_.size();
-    indexMap_[val] = nextId;
-    elements_.push_back(val);
-    return nextId;
-  }
-
-  const ArrayRef<T> getElements() const {
-    return elements_;
-  }
-};
 
 class BytecodeModuleGenerator;
 
@@ -84,9 +60,6 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
 
   /// Lexical parent function ID, i.e. the lexically containing function.
   OptValue<uint32_t> lexicalParentID_{};
-
-  /// Whether there are any lazy functions present.
-  bool lazyFunctions_{false};
 
   /// The size (in bytes) of the bytecode array in this function.
   uint32_t bytecodeSize_{0};
@@ -274,7 +247,7 @@ class BytecodeModuleGenerator {
   std::unique_ptr<BytecodeModule> bm_;
 
   /// Mapping from Function * to a sequential ID.
-  AllocationTable<Function *> functionIDMap_{};
+  llvh::MapVector<Function *, unsigned> functionIDMap_{};
 
   /// Mapping from Function * to it's BytecodeFunctionGenerator *.
   DenseMap<Function *, std::unique_ptr<BytecodeFunctionGenerator>>
@@ -292,12 +265,6 @@ class BytecodeModuleGenerator {
   /// Options controlling bytecode generation.
   BytecodeGenerationOptions options_;
 
-  /// Whether there are any lazy functions present.
-  bool lazyFunctions_{false};
-
-  /// Whether there are any async functions present.
-  bool asyncFunctions_{false};
-
   /// Indicate whether this generator is still valid.
   /// We need this because one can only call the generate() function
   /// once, and after that, this generator is no longer valid because
@@ -310,7 +277,10 @@ class BytecodeModuleGenerator {
       BytecodeGenerationOptions options = BytecodeGenerationOptions::defaults())
       : bm_(new BytecodeModule()), options_(options) {}
 
-  /// Add a function to functionIDMap_ if not already exist. Returns the ID.
+  /// Add a function to request generating bytecode for it if it doesn't
+  /// already exist.
+  /// The associated BytecodeFunction will be nullptr until it's generated.
+  /// \return the function ID.
   unsigned addFunction(Function *F);
 
   /// Add a function to the list of functions.
