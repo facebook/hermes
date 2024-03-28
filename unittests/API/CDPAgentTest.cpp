@@ -2272,13 +2272,7 @@ TEST_F(CDPAgentTest, RuntimeEvaluateException) {
 TEST_F(CDPAgentTest, RuntimeCallFunctionOnObject) {
   int msgId = 1;
 
-  // Start a script
   sendAndCheckResponse("Runtime.enable", msgId++);
-  sendAndCheckResponse("Debugger.enable", msgId++);
-  scheduleScript(R"(debugger;)");
-  expectNotification("Debugger.scriptParsed");
-
-  auto pausedNote = ensurePaused(waitForMessage(), "other", {{"global", 0, 1}});
 
   // create a new Object() that will be used as "this" below.
   m::runtime::RemoteObjectId thisId;
@@ -2382,20 +2376,12 @@ TEST_F(CDPAgentTest, RuntimeCallFunctionOnObject) {
       *selfRefId, "number", "neg_zero", makeUnserializableCallArgument("-0"));
 
   verifyObjShape(thisId);
-
-  // Let the script terminate
-  sendAndCheckResponse("Debugger.resume", msgId++);
 }
 
 TEST_F(CDPAgentTest, RuntimeCallFunctionOnExecutionContext) {
   int msgId = 1;
 
-  // Start a script
   sendAndCheckResponse("Runtime.enable", msgId++);
-  sendAndCheckResponse("Debugger.enable", msgId++);
-  scheduleScript(R"(debugger;)");
-  expectNotification("Debugger.scriptParsed");
-  auto pausedNote = ensurePaused(waitForMessage(), "other", {{"global", 0, 1}});
 
   /// helper that returns a map with all of \p objId 's members.
   auto getProps = [this, &msgId](const m::runtime::RemoteObjectId &objId) {
@@ -2498,9 +2484,6 @@ TEST_F(CDPAgentTest, RuntimeCallFunctionOnExecutionContext) {
       }
     }
   }
-
-  // Let the script terminate
-  sendAndCheckResponse("Debugger.resume", msgId++);
 }
 
 TEST_F(CDPAgentTest, RuntimeConsoleLog) {
