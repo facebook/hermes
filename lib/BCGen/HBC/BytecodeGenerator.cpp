@@ -183,7 +183,7 @@ unsigned BytecodeModuleGenerator::addFunction(Function *F) {
 
 void BytecodeModuleGenerator::setFunctionGenerator(
     Function *F,
-    unique_ptr<BytecodeFunctionGenerator> BFG) {
+    std::unique_ptr<BytecodeFunctionGenerator> BFG) {
   assert(
       functionGenerators_.find(F) == functionGenerators_.end() &&
       "Adding same function twice.");
@@ -193,36 +193,37 @@ void BytecodeModuleGenerator::setFunctionGenerator(
 }
 
 unsigned BytecodeModuleGenerator::getStringID(llvh::StringRef str) const {
-  return stringTable_.getStringID(str);
+  return bm_->getStringID(str);
 }
 
 unsigned BytecodeModuleGenerator::getIdentifierID(llvh::StringRef str) const {
-  return stringTable_.getIdentifierID(str);
+  return bm_->getIdentifierID(str);
 }
 
 void BytecodeModuleGenerator::initializeStringTable(
     StringLiteralTable stringTable) {
-  assert(stringTable_.empty() && "String table must be empty");
-  stringTable_ = std::move(stringTable);
+  bm_->initializeStringTable(std::move(stringTable));
 }
 
 uint32_t BytecodeModuleGenerator::addBigInt(bigint::ParsedBigInt bigint) {
-  return bigIntTable_.addBigInt(std::move(bigint));
+  return bm_->addBigInt(std::move(bigint));
 }
 
 void BytecodeModuleGenerator::initializeSerializedLiterals(
     LiteralBufferBuilder::Result &&bufs) {
   assert(
-      arrayBuffer_.empty() && objKeyBuffer_.empty() && objValBuffer_.empty() &&
-      literalOffsetMap_.empty() && "serialized literals already initialized");
-  arrayBuffer_ = std::move(bufs.arrayBuffer);
-  objKeyBuffer_ = std::move(bufs.keyBuffer);
-  objValBuffer_ = std::move(bufs.valBuffer);
+      bm_->getArrayBuffer().empty() && bm_->getObjectBuffer().first.empty() &&
+      bm_->getObjectBuffer().second.empty() && literalOffsetMap_.empty() &&
+      "serialized literals already initialized");
+  bm_->initializeSerializedLiterals(
+      std::move(bufs.arrayBuffer),
+      std::move(bufs.keyBuffer),
+      std::move(bufs.valBuffer));
   literalOffsetMap_ = std::move(bufs.offsetMap);
 }
 
 uint32_t BytecodeModuleGenerator::addRegExp(CompiledRegExp *regexp) {
-  return regExpTable_.addRegExp(regexp);
+  return bm_->addRegExp(regexp);
 }
 
 uint32_t BytecodeModuleGenerator::addFilename(llvh::StringRef filename) {
@@ -232,26 +233,22 @@ uint32_t BytecodeModuleGenerator::addFilename(llvh::StringRef filename) {
 void BytecodeModuleGenerator::addCJSModule(
     uint32_t functionID,
     uint32_t nameID) {
-  assert(
-      cjsModulesStatic_.empty() &&
-      "Statically resolved modules must be in cjsModulesStatic_");
-  cjsModules_.push_back({nameID, functionID});
+  bm_->addCJSModule(functionID, nameID);
 }
 
 void BytecodeModuleGenerator::addCJSModuleStatic(
     uint32_t moduleID,
     uint32_t functionID) {
-  assert(cjsModules_.empty() && "Unresolved modules must be in cjsModules_");
-  cjsModulesStatic_.push_back({moduleID, functionID});
+  bm_->addCJSModuleStatic(moduleID, functionID);
 }
 
 void BytecodeModuleGenerator::addFunctionSource(
     uint32_t functionID,
     uint32_t stringID) {
-  functionSourceTable_.push_back({functionID, stringID});
+  bm_->addFunctionSource(functionID, stringID);
 }
 
-std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
+std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() && {
   assert(
       valid_ &&
       "BytecodeModuleGenerator::generate() cannot be called more than once");
@@ -261,29 +258,21 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
       functionIDMap_.getElements().size() == functionGenerators_.size() &&
       "Missing functions.");
 
-  BytecodeOptions bytecodeOptions;
+  BytecodeOptions &bytecodeOptions = bm_->getBytecodeOptionsMut();
   bytecodeOptions.hasAsync = asyncFunctions_;
   bytecodeOptions.staticBuiltins = options_.staticBuiltinsEnabled;
-  bytecodeOptions.cjsModulesStaticallyResolved = !cjsModulesStatic_.empty();
-  std::unique_ptr<BytecodeModule> BM{new BytecodeModule(
-      functionGenerators_.size(),
-      std::move(stringTable_),
-      std::move(bigIntTable_),
-      std::move(regExpTable_),
-      entryPointIndex_,
-      std::move(arrayBuffer_),
-      std::move(objKeyBuffer_),
-      std::move(objValBuffer_),
-      segmentID_,
-      std::move(cjsModules_),
-      std::move(cjsModulesStatic_),
-      std::move(functionSourceTable_),
-      bytecodeOptions)};
+  bytecodeOptions.cjsModulesStaticallyResolved =
+      !bm_->getCJSModuleTableStatic().empty();
+
+  // The BytecodeModule was newly created by this generator.
+  assert(
+      bm_->getNumFunctions() == 0 && "Cannot generate after adding functions");
+  bm_->resizeFunctionList(functionGenerators_.size());
 
   DebugInfoGenerator debugInfoGen{std::move(filenameTable_)};
 
   const uint32_t strippedFunctionNameId =
-      options_.stripFunctionNames ? BM->getStringID(kStrippedFunctionName) : 0;
+      options_.stripFunctionNames ? bm_->getStringID(kStrippedFunctionName) : 0;
   auto functions = functionIDMap_.getElements();
   for (unsigned i = 0, e = functions.size(); i < e; ++i) {
     auto *F = functions[i];
@@ -291,7 +280,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
 
     uint32_t functionNameId = options_.stripFunctionNames
         ? strippedFunctionNameId
-        : BM->getStringID(functions[i]->getOriginalOrInferredName().str());
+        : bm_->getStringID(functions[i]->getOriginalOrInferredName().str());
 
     std::unique_ptr<BytecodeFunction> func = BFG.generateBytecodeFunction(
         F->getProhibitInvoke(),
@@ -310,11 +299,11 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
           BFG.getLexicalParentID(), BFG.getDebugVariableNames());
       func->setDebugOffsets({sourceLocOffset, lexicalDataOffset});
     }
-    BM->setFunction(i, std::move(func));
+    bm_->setFunction(i, std::move(func));
   }
 
-  BM->setDebugInfo(debugInfoGen.serializeWithMove());
-  return BM;
+  bm_->setDebugInfo(debugInfoGen.serializeWithMove());
+  return std::move(bm_);
 }
 
 } // namespace hbc

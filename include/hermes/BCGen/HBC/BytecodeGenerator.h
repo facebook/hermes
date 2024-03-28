@@ -269,6 +269,10 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
 /// This class is used by the hermes backend.
 /// It wraps all data required to generate the module.
 class BytecodeModuleGenerator {
+  /// The bytecode module being generated.
+  /// Never nullptr while this BytecodeModuleGenerator is valid_.
+  std::unique_ptr<BytecodeModule> bm_;
+
   /// Mapping from Function * to a sequential ID.
   AllocationTable<Function *> functionIDMap_{};
 
@@ -276,46 +280,9 @@ class BytecodeModuleGenerator {
   DenseMap<Function *, std::unique_ptr<BytecodeFunctionGenerator>>
       functionGenerators_{};
 
-  /// The mapping from strings to ID for strings in the resulting bytecode
-  /// module.
-  StringLiteralTable stringTable_{};
-
-  /// A module-wide parsed bigint table.
-  bigint::UniquingBigIntTable bigIntTable_{};
-
-  /// A module-wide compiled regexp table.
-  UniquingRegExpTable regExpTable_;
-
   /// A module-wide filename table, kept separate from the main string table.
   /// This allows us to serialize the filenames as part of the debug info.
   UniquingFilenameTable filenameTable_{};
-
-  /// The ID of this segment.
-  uint32_t segmentID_{0};
-
-  /// A record of all the CJS modules registered in this run of generation.
-  /// List of pairs: (filename ID, function index).
-  std::vector<std::pair<uint32_t, uint32_t>> cjsModules_;
-
-  /// A record of all the CJS modules resolved in this run of generation.
-  /// List of pairs: (module ID, function index).
-  std::vector<std::pair<uint32_t, uint32_t>> cjsModulesStatic_;
-
-  /// A record of all the function with non-default source representation,
-  /// List of pairs: (function ID, string ID).
-  std::vector<std::pair<uint32_t, uint32_t>> functionSourceTable_;
-
-  /// Table of constants used to initialize constant arrays.
-  /// They are stored as chars in order to shorten bytecode size.
-  std::vector<unsigned char> arrayBuffer_{};
-
-  /// Table of constants used to initialize object keys.
-  /// They are stored as chars in order to shorten bytecode size
-  std::vector<unsigned char> objKeyBuffer_{};
-
-  /// Table of constants used to initialize object values.
-  /// They are stored as chars in order to shorten bytecode size
-  std::vector<unsigned char> objValBuffer_{};
 
   /// A map from instruction to literal offset in the corresponding buffers.
   /// \c arrayBuffer_, \c objKeyBuffer_, \c objValBuffer_.
@@ -337,14 +304,11 @@ class BytecodeModuleGenerator {
   /// the content has been modified during generation.
   bool valid_{true};
 
-  /// The entry point of the function (usually the global function).
-  int entryPointIndex_{-1};
-
  public:
   /// Constructor which enables optimizations if \p optimizationEnabled is set.
   BytecodeModuleGenerator(
       BytecodeGenerationOptions options = BytecodeGenerationOptions::defaults())
-      : options_(options) {}
+      : bm_(new BytecodeModule()), options_(options) {}
 
   /// Add a function to functionIDMap_ if not already exist. Returns the ID.
   unsigned addFunction(Function *F);
@@ -356,12 +320,12 @@ class BytecodeModuleGenerator {
 
   /// Gets the index of the entry point function (global function).
   int getEntryPointIndex() const {
-    return entryPointIndex_;
+    return bm_->getGlobalFunctionIndex();
   }
 
   /// Sets the index of the entry point function (global function).
   void setEntryPointIndex(int index) {
-    entryPointIndex_ = index;
+    bm_->setGlobalFunctionIndex(index);
   }
 
   /// \returns the index of the bigint in this module's bigint table if it
@@ -405,7 +369,7 @@ class BytecodeModuleGenerator {
 
   /// Set the segment ID for this module.
   void setSegmentID(uint32_t id) {
-    segmentID_ = id;
+    bm_->setSegmentID(id);
   }
 
   /// Adds a CJS module entry to the table.
@@ -451,7 +415,7 @@ class BytecodeModuleGenerator {
   }
 
   /// \return a BytecodeModule.
-  std::unique_ptr<BytecodeModule> generate();
+  std::unique_ptr<BytecodeModule> generate() &&;
 };
 } // namespace hbc
 } // namespace hermes

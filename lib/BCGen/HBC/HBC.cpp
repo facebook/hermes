@@ -410,7 +410,7 @@ std::unique_ptr<BytecodeModule> generateBytecodeModule(
     BMGen.setFunctionGenerator(&F, std::move(funcGen));
   }
 
-  return BMGen.generate();
+  return std::move(BMGen).generate();
 }
 
 } // namespace hbc

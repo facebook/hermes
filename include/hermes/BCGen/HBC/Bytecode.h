@@ -211,43 +211,18 @@ class BytecodeModule {
   BytecodeOptions options_{};
 
  public:
-  /// Used during serialization.
-  explicit BytecodeModule(
-      uint32_t functionCount,
-      StringLiteralTable &&stringTable,
-      bigint::UniquingBigIntTable &&bigIntTable,
-      UniquingRegExpTable &&regExpTable,
-      uint32_t globalFunctionIndex,
-      std::vector<unsigned char> &&arrayBuffer,
-      std::vector<unsigned char> &&objKeyBuffer,
-      std::vector<unsigned char> &&objValBuffer,
-      uint32_t segmentID,
-      std::vector<std::pair<uint32_t, uint32_t>> &&cjsModuleTable,
-      std::vector<std::pair<uint32_t, uint32_t>> &&cjsModuleTableStatic,
-      std::vector<std::pair<uint32_t, uint32_t>> &&functionSourceTable,
-      BytecodeOptions options)
-      : globalFunctionIndex_(globalFunctionIndex),
-        stringKinds_(stringTable.getStringKinds()),
-        identifierHashes_(stringTable.getIdentifierHashes()),
-        stringTable_(std::move(stringTable)),
-        bigIntTable_(std::move(bigIntTable)),
-        regExpTable_(std::move(regExpTable)),
-        arrayBuffer_(std::move(arrayBuffer)),
-        objKeyBuffer_(std::move(objKeyBuffer)),
-        objValBuffer_(std::move(objValBuffer)),
-        segmentID_(segmentID),
-        cjsModuleTable_(std::move(cjsModuleTable)),
-        cjsModuleTableStatic_(std::move(cjsModuleTableStatic)),
-        functionSourceTable_(std::move(functionSourceTable)),
-        options_(options) {
-    functions_.resize(functionCount);
-  }
-
   /// Create a simple BytecodeModule with only functionCount set.
   explicit BytecodeModule(uint32_t functionCount) {
     functions_.resize(functionCount);
   }
 
+  /// Create an empty BytecodeModule with no functions.
+  explicit BytecodeModule() = default;
+
+  /// Resize the function table to \p size, filling new elements with nullptrs.
+  void resizeFunctionList(uint32_t size) {
+    functions_.resize(size);
+  }
   const FunctionList &getFunctionTable() const {
     return functions_;
   }
@@ -255,6 +230,9 @@ class BytecodeModule {
     return functions_.size();
   }
 
+  void setGlobalFunctionIndex(uint32_t global) {
+    globalFunctionIndex_ = global;
+  }
   uint32_t getGlobalFunctionIndex() const {
     return globalFunctionIndex_;
   }
@@ -266,6 +244,15 @@ class BytecodeModule {
 
   BytecodeFunction &getGlobalCode() {
     return getFunction(globalFunctionIndex_);
+  }
+
+  /// Initialize the BytecodeModule with the given string table.
+  /// Create the stringKinds_ and identifierHashes_ fields.
+  void initializeStringTable(StringLiteralTable &&stringTable) {
+    assert(stringTable_.empty() && "String table must be empty");
+    stringKinds_ = stringTable.getStringKinds();
+    identifierHashes_ = stringTable.getIdentifierHashes();
+    stringTable_ = std::move(stringTable);
   }
 
   llvh::ArrayRef<StringKind::Entry> getStringKinds() const {
@@ -281,6 +268,9 @@ class BytecodeModule {
     return identifierHashes_;
   }
 
+  unsigned getIdentifierID(llvh::StringRef str) const {
+    return stringTable_.getIdentifierID(str);
+  }
   unsigned getStringID(llvh::StringRef str) const {
     return stringTable_.getStringID(str);
   }
@@ -301,12 +291,22 @@ class BytecodeModule {
     return stringTable_.getStringStorageView();
   }
 
+  uint32_t addBigInt(bigint::ParsedBigInt &&bigint) {
+    return bigIntTable_.addBigInt(std::move(bigint));
+  }
+
   llvh::ArrayRef<bigint::BigIntTableEntry> getBigIntTable() const {
     return bigIntTable_.getEntryList();
   }
 
   llvh::ArrayRef<uint8_t> getBigIntStorage() const {
     return bigIntTable_.getDigitsBuffer();
+  }
+
+  /// Add a new RegExp to the module.
+  /// \param regExp the RegExp object to add, stored in the Context.
+  uint32_t addRegExp(CompiledRegExp *regExp) {
+    return regExpTable_.addRegExp(regExp);
   }
 
   llvh::ArrayRef<RegExpTableEntry> getRegExpTable() const {
@@ -317,17 +317,38 @@ class BytecodeModule {
     return regExpTable_.getBytecodeBuffer();
   }
 
+  void setSegmentID(uint32_t segmentID) {
+    segmentID_ = segmentID;
+  }
   uint32_t getSegmentID() const {
     return segmentID_;
+  }
+
+  void addCJSModule(uint32_t functionID, uint32_t nameID) {
+    assert(
+        cjsModuleTableStatic_.empty() &&
+        "Statically resolved modules must be in cjsModulesStatic_");
+    cjsModuleTable_.push_back({nameID, functionID});
   }
 
   llvh::ArrayRef<std::pair<uint32_t, uint32_t>> getCJSModuleTable() const {
     return cjsModuleTable_;
   }
 
+  void addCJSModuleStatic(uint32_t moduleID, uint32_t functionID) {
+    assert(
+        cjsModuleTableStatic_.empty() &&
+        "Statically resolved modules must be in cjsModulesStatic_");
+    cjsModuleTableStatic_.push_back({moduleID, functionID});
+  }
+
   llvh::ArrayRef<std::pair<uint32_t, uint32_t>> getCJSModuleTableStatic()
       const {
     return cjsModuleTableStatic_;
+  }
+
+  void addFunctionSource(uint32_t functionID, uint32_t stringID) {
+    functionSourceTable_.push_back({functionID, stringID});
   }
 
   llvh::ArrayRef<std::pair<uint32_t, uint32_t>> getFunctionSourceTable() const {
@@ -340,6 +361,16 @@ class BytecodeModule {
 
   void setDebugInfo(DebugInfo info) {
     debugInfo_ = std::move(info);
+  }
+
+  /// Set the three buffers based on the buffers passed in.
+  void initializeSerializedLiterals(
+      std::vector<unsigned char> &&arrayBuffer,
+      std::vector<unsigned char> &&objKeyBuffer,
+      std::vector<unsigned char> &&objValBuffer) {
+    arrayBuffer_ = std::move(arrayBuffer);
+    objKeyBuffer_ = std::move(objKeyBuffer);
+    objValBuffer_ = std::move(objValBuffer);
   }
 
   uint32_t getArrayBufferSize() const {
@@ -381,6 +412,9 @@ class BytecodeModule {
   /// Populate the source map \p sourceMap with the debug information.
   void populateSourceMap(SourceMapGenerator *sourceMap) const;
 
+  BytecodeOptions &getBytecodeOptionsMut() {
+    return options_;
+  }
   BytecodeOptions getBytecodeOptions() const {
     return options_;
   }
