@@ -268,8 +268,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
   std::unique_ptr<BytecodeModule> BM{new BytecodeModule(
       functionGenerators_.size(),
       std::move(stringTable_),
-      bigIntTable_.getEntryList(),
-      bigIntTable_.getDigitsBuffer(),
+      std::move(bigIntTable_),
       std::move(regExpTable_),
       entryPointIndex_,
       std::move(arrayBuffer_),

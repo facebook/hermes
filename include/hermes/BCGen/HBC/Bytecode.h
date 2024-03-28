@@ -167,12 +167,8 @@ class BytecodeModule {
   /// The global string table to represent each string in the string storage.
   StringLiteralTable stringTable_;
 
-  /// The bigint digit table. This is a list of pairs of (offset, lengths)
-  /// into bigIntStorage_.
-  std::vector<bigint::BigIntTableEntry> bigIntTable_;
-
-  /// The buffer with bigint literal bytes.
-  std::vector<uint8_t> bigIntStorage_;
+  /// The global bigint table for assigning IDs to bigints.
+  bigint::UniquingBigIntTable bigIntTable_;
 
   /// The list of unique RegExp objects.
   UniquingRegExpTable regExpTable_;
@@ -219,8 +215,7 @@ class BytecodeModule {
   explicit BytecodeModule(
       uint32_t functionCount,
       StringLiteralTable &&stringTable,
-      std::vector<bigint::BigIntTableEntry> &&bigIntTable,
-      std::vector<uint8_t> &&bigIntStorage,
+      bigint::UniquingBigIntTable &&bigIntTable,
       UniquingRegExpTable &&regExpTable,
       uint32_t globalFunctionIndex,
       std::vector<unsigned char> &&arrayBuffer,
@@ -236,7 +231,6 @@ class BytecodeModule {
         identifierHashes_(stringTable.getIdentifierHashes()),
         stringTable_(std::move(stringTable)),
         bigIntTable_(std::move(bigIntTable)),
-        bigIntStorage_(std::move(bigIntStorage)),
         regExpTable_(std::move(regExpTable)),
         arrayBuffer_(std::move(arrayBuffer)),
         objKeyBuffer_(std::move(objKeyBuffer)),
@@ -308,11 +302,11 @@ class BytecodeModule {
   }
 
   llvh::ArrayRef<bigint::BigIntTableEntry> getBigIntTable() const {
-    return bigIntTable_;
+    return bigIntTable_.getEntryList();
   }
 
   llvh::ArrayRef<uint8_t> getBigIntStorage() const {
-    return bigIntStorage_;
+    return bigIntTable_.getDigitsBuffer();
   }
 
   llvh::ArrayRef<RegExpTableEntry> getRegExpTable() const {
