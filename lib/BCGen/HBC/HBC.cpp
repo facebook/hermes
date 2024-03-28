@@ -32,10 +32,12 @@
 #include "hermes/Support/PerfSection.h"
 #include "hermes/Support/UTF8.h"
 
+#include "llvh/Support/raw_ostream.h"
+
 #define DEBUG_TYPE "hbc-backend"
 
-using namespace hermes;
-using namespace hbc;
+namespace hermes {
+namespace hbc {
 
 namespace {
 
@@ -170,23 +172,6 @@ UniquingStringLiteralAccumulator stringAccumulatorFromBCProvider(
 }
 }; // namespace
 
-std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
-    Module *M,
-    Function *entryPoint,
-    const BytecodeGenerationOptions &options,
-    hermes::OptValue<uint32_t> segment,
-    SourceMapGenerator *sourceMapGen,
-    std::unique_ptr<BCProviderBase> baseBCProvider) {
-  return generateBytecodeModule(
-      M,
-      entryPoint,
-      entryPoint,
-      options,
-      segment,
-      sourceMapGen,
-      std::move(baseBCProvider));
-}
-
 /// Encode a Unicode codepoint into a UTF8 sequence and append it to \p
 /// storage. Code points above 0xFFFF are encoded into UTF16, and the
 /// resulting surrogate pair values are encoded individually into UTF8.
@@ -210,9 +195,8 @@ static inline void appendUnicodeToStorage(
   storage.append(buf, d);
 }
 
-std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
+std::unique_ptr<BytecodeModule> generateBytecodeModule(
     Module *M,
-    Function *lexicalTopLevel,
     Function *entryPoint,
     const BytecodeGenerationOptions &options,
     hermes::OptValue<uint32_t> segment,
@@ -429,36 +413,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
   return BMGen.generate();
 }
 
-std::unique_ptr<BytecodeModule> hbc::generateBytecode(
-    Module *M,
-    raw_ostream &OS,
-    const BytecodeGenerationOptions &options,
-    const SHA1 &sourceHash,
-    hermes::OptValue<uint32_t> segment,
-    SourceMapGenerator *sourceMapGen,
-    std::unique_ptr<BCProviderBase> baseBCProvider) {
-  auto BM = generateBytecodeModule(
-      M,
-      M->getTopLevelFunction(),
-      options,
-      segment,
-      sourceMapGen,
-      std::move(baseBCProvider));
-
-  if (!BM) {
-    return {};
-  }
-
-  if (options.format == OutputFormatKind::EmitBundle) {
-    assert(BM != nullptr);
-    BytecodeSerializer BS{OS, options};
-    BS.serialize(*BM, sourceHash);
-  }
-  // Now that the BytecodeFunctions know their offsets into the stream, we can
-  // populate the source map.
-  if (sourceMapGen)
-    BM->populateSourceMap(sourceMapGen);
-  return BM;
-}
+} // namespace hbc
+} // namespace hermes
 
 #undef DEBUG_TYPE

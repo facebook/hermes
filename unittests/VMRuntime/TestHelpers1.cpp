@@ -62,10 +62,18 @@ std::vector<uint8_t> hermes::bytecodeForSource(
       reinterpret_cast<const uint8_t *>(source), strlen(source)});
   llvh::SmallVector<char, 0> bytecodeVector;
   llvh::raw_svector_ostream OS(bytecodeVector);
-  BytecodeSerializer BS{OS, bytecodeGenOpts};
-  auto BM = generateBytecode(
-      &M, OS, bytecodeGenOpts, sourceHash, llvh::None, sourceMapGen, nullptr);
+  std::unique_ptr<BytecodeModule> BM = generateBytecodeModule(
+      &M, M.getTopLevelFunction(), bytecodeGenOpts, llvh::None, sourceMapGen);
   assert(BM != nullptr && "Failed to generate bytecode module");
+
+  if (bytecodeGenOpts.format == OutputFormatKind::EmitBundle) {
+    hbc::BytecodeSerializer BS{OS, bytecodeGenOpts};
+    BS.serialize(*BM, sourceHash);
+  }
+  // Now that the BytecodeFunctions know their offsets into the stream, we
+  // can populate the source map.
+  if (sourceMapGen)
+    BM->populateSourceMap(sourceMapGen);
 
   return std::vector<uint8_t>{bytecodeVector.begin(), bytecodeVector.end()};
 }

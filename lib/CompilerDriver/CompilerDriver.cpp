@@ -1757,14 +1757,25 @@ CompileResult generateBytecodeForSerialization(
       // have one owner.
       baseBytecodeMap.erase(itr);
     }
-    auto bytecodeModule = hbc::generateBytecode(
-        &M,
-        OS,
-        genOptions,
-        sourceHash,
-        segment,
-        sourceMapGenOrNull,
-        std::move(baseBCProvider));
+    std::unique_ptr<hbc::BytecodeModule> bytecodeModule =
+        hbc::generateBytecodeModule(
+            &M,
+            M.getTopLevelFunction(),
+            genOptions,
+            segment,
+            sourceMapGenOrNull,
+            std::move(baseBCProvider));
+
+    if (bytecodeModule) {
+      if (genOptions.format == OutputFormatKind::EmitBundle) {
+        hbc::BytecodeSerializer BS{OS, genOptions};
+        BS.serialize(*bytecodeModule, sourceHash);
+      }
+      // Now that the BytecodeFunctions know their offsets into the stream, we
+      // can populate the source map.
+      if (sourceMapGenOrNull)
+        bytecodeModule->populateSourceMap(sourceMapGenOrNull);
+    }
 
     if (auto N = M.getContext().getSourceErrorManager().getErrorCount()) {
       llvh::errs() << "Emitted " << N << " errors in the backend. exiting.\n";
