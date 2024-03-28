@@ -90,6 +90,16 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
         new BytecodeFunctionGenerator(BMGen, frameSize));
   }
 
+  /// \return the generator for the current BytecodeModule.
+  BytecodeModuleGenerator &getBytecodeModuleGenerator() {
+    return BMGen_;
+  }
+
+  /// \return the generator for the current BytecodeModule.
+  const BytecodeModuleGenerator &getBytecodeModuleGenerator() const {
+    return BMGen_;
+  }
+
   /// Create a bytecode function.
   /// \p nameID is an index to the string table representing the name
   /// of this function. If unspecified, the creator basically don't
@@ -235,7 +245,6 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   /// Signal that bytecode generation is finalized.
   void bytecodeGenerationComplete();
 
-  friend class HBCISel;
   friend class BytecodeModuleGenerator;
 };
 

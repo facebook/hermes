@@ -12,9 +12,9 @@
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/HBC.h"
-#include "hermes/BCGen/HBC/ISel.h"
-#include "hermes/BCGen/HBC/Passes.h"
+#include "hermes/BCGen/HBC/HVMRegisterAllocator.h"
 #include "hermes/BCGen/MovElimination.h"
+#include "hermes/BCGen/RegAlloc.h"
 
 namespace hermes {
 namespace hbc {

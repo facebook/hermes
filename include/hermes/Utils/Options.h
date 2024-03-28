@@ -8,6 +8,8 @@
 #ifndef HERMES_UTILS_OPTIONS_H
 #define HERMES_UTILS_OPTIONS_H
 
+#include "llvh/ADT/StringRef.h"
+
 namespace hermes {
 
 enum OutputFormatKind {

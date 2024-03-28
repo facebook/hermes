@@ -5,7 +5,7 @@
 
 add_hermes_library(hermesHBCBackend
   HBC.cpp
-  ISel.cpp
+  ISel.cpp ISel.h
   Bytecode.cpp
   BytecodeStream.cpp
   BytecodeGenerator.cpp

@@ -7,6 +7,7 @@
 
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 
+#include "ISel.h"
 #include "LoweringPipelines.h"
 #include "hermes/BCGen/HBC/HVMRegisterAllocator.h"
 #include "hermes/BCGen/HBC/Passes.h"
@@ -308,8 +309,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() && {
     // run ISel.
     std::unique_ptr<BytecodeFunctionGenerator> funcGen =
         BytecodeFunctionGenerator::create(*this, RA.getMaxRegisterUsage());
-    HBCISel hbciSel = HBCISel(F, &*funcGen, RA, options_, debugCache);
-    hbciSel.generate(sourceMapGen_);
+    runHBCISel(F, &*funcGen, RA, options_, debugCache, sourceMapGen_);
 
     if (funcGen->hasEncodingError()) {
       F->getParent()->getContext().getSourceErrorManager().error(
