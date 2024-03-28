@@ -45,6 +45,16 @@ State &State::operator=(State &&other) noexcept = default;
 
 State::~State() = default;
 
+/// Determine which queues should be used to handle a CDP message, based
+/// on the \p method of the message.
+static TaskQueues messageTaskQueues(const std::string &method) {
+  if (method == "Runtime.evaluate") {
+    return TaskQueues::Integrator;
+  }
+
+  return TaskQueues::All;
+}
+
 /// Implementation of the CDP Agent. This class accepts CDP commands from
 /// arbitrary threads and delivers them to the appropriate, domain-specific
 /// message handler on the runtime thread. This class also manages the lifetime
@@ -214,11 +224,12 @@ void CDPAgentImpl::handleCommand(std::string json) {
   }
 
   // Call DomainAgents::handleCommand on the runtime thread.
-  runtimeTaskRunner_.enqueueTask(
-      [domainAgents = domainAgents_,
-       command = std::move(command)](HermesRuntime &) {
-        domainAgents->handleCommand(std::move(command));
-      });
+  TaskQueues queues = messageTaskQueues(command->method);
+  RuntimeTask task = [domainAgents = domainAgents_,
+                      command = std::move(command)](HermesRuntime &) mutable {
+    domainAgents->handleCommand(std::move(command));
+  };
+  runtimeTaskRunner_.enqueueTask(task, queues);
 }
 
 void CDPAgentImpl::enableRuntimeDomain() {
