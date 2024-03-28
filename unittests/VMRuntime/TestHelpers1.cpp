@@ -67,8 +67,7 @@ std::vector<uint8_t> hermes::bytecodeForSource(
   assert(BM != nullptr && "Failed to generate bytecode module");
 
   if (bytecodeGenOpts.format == OutputFormatKind::EmitBundle) {
-    hbc::BytecodeSerializer BS{OS, bytecodeGenOpts};
-    BS.serialize(*BM, sourceHash);
+    hbc::serializeBytecodeModule(*BM, sourceHash, OS, bytecodeGenOpts);
   }
   // Now that the BytecodeFunctions know their offsets into the stream, we
   // can populate the source map.

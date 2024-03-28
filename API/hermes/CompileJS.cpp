@@ -85,11 +85,12 @@ bool compileJS(
   BytecodeGenerationOptions opts(::hermes::EmitBundle);
   opts.optimizationEnabled = optimize;
 
-  hbc::BytecodeSerializer BS{bcstream, opts};
-  BS.serialize(
+  hbc::serializeBytecodeModule(
       *res.first->getBytecodeModule(),
       llvh::SHA1::hash(llvh::makeArrayRef(
-          reinterpret_cast<const uint8_t *>(str.data()), str.size())));
+          reinterpret_cast<const uint8_t *>(str.data()), str.size())),
+      bcstream,
+      opts);
 
   // Flush to string.
   bcstream.flush();

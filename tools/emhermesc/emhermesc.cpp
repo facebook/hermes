@@ -163,11 +163,12 @@ extern "C" CompileResult *hermesCompileToBytecode(
   BytecodeGenerationOptions opts(::hermes::EmitBundle);
   opts.optimizationEnabled = false;
 
-  hbc::BytecodeSerializer BS{bcstream, opts};
-  BS.serialize(
+  hbc::serializeBytecodeModule(
       *res.first->getBytecodeModule(),
       llvh::SHA1::hash(llvh::makeArrayRef(
-          reinterpret_cast<const uint8_t *>(source), sourceSize - 1)));
+          reinterpret_cast<const uint8_t *>(source), sourceSize - 1)),
+      bcstream,
+      opts);
 
   return compileRes.release();
 }

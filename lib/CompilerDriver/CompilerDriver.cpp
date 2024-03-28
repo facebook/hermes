@@ -1768,8 +1768,8 @@ CompileResult generateBytecodeForSerialization(
 
     if (bytecodeModule) {
       if (genOptions.format == OutputFormatKind::EmitBundle) {
-        hbc::BytecodeSerializer BS{OS, genOptions};
-        BS.serialize(*bytecodeModule, sourceHash);
+        hbc::serializeBytecodeModule(
+            *bytecodeModule, sourceHash, OS, genOptions);
       }
       // Now that the BytecodeFunctions know their offsets into the stream, we
       // can populate the source map.
