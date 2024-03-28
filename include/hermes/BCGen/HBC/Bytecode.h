@@ -8,8 +8,6 @@
 #ifndef HERMES_BCGEN_HBC_BYTECODE_H
 #define HERMES_BCGEN_HBC_BYTECODE_H
 
-#include "llvh/ADT/ArrayRef.h"
-
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/BCGen/HBC/BytecodeInstructionGenerator.h"
 #include "hermes/BCGen/HBC/BytecodeStream.h"
@@ -22,14 +20,14 @@
 #include "hermes/Support/StringTableEntry.h"
 #include "hermes/Utils/Options.h"
 
+#include "llvh/ADT/ArrayRef.h"
+
 #include <memory>
 
 namespace hermes {
 class SourceMapGenerator;
 
 namespace hbc {
-
-using llvh::ArrayRef;
 
 // This class represents the in-memory representation of the bytecode function.
 class BytecodeFunction {
@@ -96,25 +94,25 @@ class BytecodeFunction {
 
   /// Return the entire opcode array for execution, including the inlined jump
   /// tables.
-  ArrayRef<opcode_atom_t> getOpcodeArray() const {
+  llvh::ArrayRef<opcode_atom_t> getOpcodeArray() const {
     return opcodesAndJumpTables_;
   }
 
   /// Return only the opcodes for serialisation. The jump tables need to be
   /// accessed separately so they can be correctly inlined.
-  ArrayRef<opcode_atom_t> getOpcodesOnly() const {
+  llvh::ArrayRef<opcode_atom_t> getOpcodesOnly() const {
     return {opcodesAndJumpTables_.data(), header_.bytecodeSizeInBytes};
   }
 
   /// Return the jump table portion of the opcode array. This is useful for the
   /// bytecode serialisation code when it is aligning the jump tables.
-  ArrayRef<uint32_t> getJumpTablesOnly() const;
+  llvh::ArrayRef<uint32_t> getJumpTablesOnly() const;
 
   uint32_t getExceptionHandlerCount() const {
     return exceptions_.size();
   }
 
-  ArrayRef<HBCExceptionHandlerInfo> getExceptionHandlers() const {
+  llvh::ArrayRef<HBCExceptionHandlerInfo> getExceptionHandlers() const {
     return exceptions_;
   }
 
@@ -378,7 +376,7 @@ class BytecodeModule {
     return arrayBuffer_.size();
   }
 
-  ArrayRef<unsigned char> getArrayBuffer() const {
+  llvh::ArrayRef<unsigned char> getArrayBuffer() const {
     return arrayBuffer_;
   }
 
@@ -394,20 +392,20 @@ class BytecodeModule {
 
   /// Returns a pair of arrays, where the first array represents the
   /// object keys and the second array represents the object values.
-  std::pair<ArrayRef<unsigned char>, ArrayRef<unsigned char>> getObjectBuffer()
-      const {
+  std::pair<llvh::ArrayRef<unsigned char>, llvh::ArrayRef<unsigned char>>
+  getObjectBuffer() const {
     return {
-        ArrayRef<unsigned char>(objKeyBuffer_),
-        ArrayRef<unsigned char>(objValBuffer_)};
+        llvh::ArrayRef<unsigned char>(objKeyBuffer_),
+        llvh::ArrayRef<unsigned char>(objValBuffer_)};
   }
 
   /// Returns a pair, where the first element is the key buffer starting at
   /// keyIdx and the second element is the value buffer starting at valIdx
-  std::pair<ArrayRef<unsigned char>, ArrayRef<unsigned char>>
+  std::pair<llvh::ArrayRef<unsigned char>, llvh::ArrayRef<unsigned char>>
   getObjectBufferAtOffset(unsigned keyIdx, unsigned valIdx) const {
     return {
-        ArrayRef<unsigned char>(objKeyBuffer_).slice(keyIdx),
-        ArrayRef<unsigned char>(objValBuffer_).slice(valIdx)};
+        llvh::ArrayRef<unsigned char>(objKeyBuffer_).slice(keyIdx),
+        llvh::ArrayRef<unsigned char>(objValBuffer_).slice(valIdx)};
   }
 
   /// Populate the source map \p sourceMap with the debug information.

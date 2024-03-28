@@ -6,12 +6,13 @@
  */
 
 #include "hermes/BCGen/HBC/Bytecode.h"
+
 #include "hermes/SourceMap/SourceMapGenerator.h"
 
 #include "llvh/ADT/SmallVector.h"
 
-using namespace hermes;
-using namespace hbc;
+namespace hermes {
+namespace hbc {
 
 void BytecodeModule::setFunction(
     uint32_t index,
@@ -40,7 +41,7 @@ void BytecodeModule::populateSourceMap(SourceMapGenerator *sourceMap) const {
       sourceMap, std::move(functionOffsets), segmentID_);
 }
 
-ArrayRef<uint32_t> BytecodeFunction::getJumpTablesOnly() const {
+llvh::ArrayRef<uint32_t> BytecodeFunction::getJumpTablesOnly() const {
   // The jump tables (if there are any) start at the nearest 4-byte boundary
   // from the end of the opcodes.
   uint32_t jumpTableStartIdx =
@@ -58,3 +59,6 @@ ArrayRef<uint32_t> BytecodeFunction::getJumpTablesOnly() const {
 
   return {jumpTableStart, jumpTableSize};
 }
+
+} // namespace hbc
+} // namespace hermes
