@@ -7,24 +7,20 @@
 
 #include "hermes/BCGen/HBC/HBC.h"
 
+#include "LoweringPipelines.h"
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/BytecodeStream.h"
-#include "hermes/BCGen/HBC/ISel.h"
 #include "hermes/BCGen/HBC/Passes.h"
 #include "hermes/BCGen/HBC/Passes/InsertProfilePoint.h"
 #include "hermes/BCGen/HBC/Passes/OptParentEnvironment.h"
 #include "hermes/BCGen/HBC/Passes/PeepholeLowering.h"
 #include "hermes/BCGen/HBC/TraverseLiteralStrings.h"
-#include "hermes/BCGen/LiteralBufferBuilder.h"
 #include "hermes/BCGen/LowerBuiltinCalls.h"
 #include "hermes/BCGen/LowerScopes.h"
 #include "hermes/BCGen/LowerStoreInstrs.h"
 #include "hermes/BCGen/Lowering.h"
 #include "hermes/BCGen/MovElimination.h"
-#include "hermes/IR/Analysis.h"
-#include "hermes/IR/CFG.h"
 #include "hermes/IR/IR.h"
-#include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/IRVerifier.h"
 #include "hermes/IR/Instrs.h"
 #include "hermes/Optimizer/PassManager/Pass.h"
@@ -40,103 +36,6 @@ namespace hermes {
 namespace hbc {
 
 namespace {
-
-// If we have less than this number of instructions in a Function, and we're
-// not compiling in optimized mode, take shortcuts during register allocation.
-// 250 was chosen so that registers will fit in a single byte even after some
-// have been reserved for function parameters.
-const unsigned kFastRegisterAllocationThreshold = 250;
-
-// If register allocation is expected to take more than this number of bytes of
-// RAM, and we're not trying to optimize, use a simpler pass to reduce compile
-// time memory usage.
-const uint64_t kRegisterAllocationMemoryLimit = 10L * 1024 * 1024;
-
-/// Lower module IR to LIR, so it is suitable for register allocation.
-void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
-  if (M->isLowered())
-    return;
-
-  PassManager PM;
-  // Lowering ExponentiationOperator and ThrowTypeError (in PeepholeLowering)
-  // needs to run before LowerBuiltinCalls because it introduces calls to
-  // HermesInternal.
-  PM.addPass(new PeepholeLowering());
-  PM.addPass(createLowerScopes());
-  if (options.optimizationEnabled) {
-    // OptEnvironmentInit needs to run before LowerConstants.
-    PM.addPass(createOptEnvironmentInit());
-  }
-  // LowerBuilinCalls needs to run before the rest of the lowering.
-  PM.addPass(new LowerBuiltinCalls());
-  PM.addPass(new LowerCalls());
-  // It is important to run LowerNumericProperties before LoadConstants
-  // as LowerNumericProperties could generate new constants.
-  PM.addPass(new LowerNumericProperties());
-  // Lower AllocObjectLiteral into a mixture of HBCAllocObjectFromBufferInst,
-  // AllocObjectInst, StoreNewOwnPropertyInst and StorePropertyInst.
-  PM.addPass(new LowerAllocObjectLiteral());
-  PM.addPass(new LowerArgumentsArray());
-  PM.addPass(new LimitAllocArray(UINT16_MAX));
-  PM.addPass(new DedupReifyArguments());
-  PM.addPass(new LowerSwitchIntoJumpTables());
-  PM.addPass(new SwitchLowering());
-  PM.addPass(new LoadConstants());
-  if (options.optimizationEnabled) {
-    PM.addPass(createOptParentEnvironment());
-    // Lowers AllocObjects and its sequential literal properties into a single
-    // HBCAllocObjectFromBufferInst
-    PM.addPass(new LowerAllocObject());
-    // Reduce comparison and conditional jump to single comparison jump
-    PM.addPass(new LowerCondBranch());
-    // Turn Calls into CallNs.
-    // Move loads to child blocks if possible.
-    PM.addCodeMotion();
-    // Eliminate common HBCLoadConstInsts.
-    // TODO(T140823187): Run before CodeMotion too.
-    // Avoid pushing HBCLoadConstInsts down into individual blocks,
-    // preventing their elimination.
-    PM.addCSE();
-    // Drop unused LoadParamInsts.
-    PM.addDCE();
-  }
-
-  // Move StartGenerator instructions to the start of functions.
-  PM.addHoistStartGenerator();
-
-  PM.run(M);
-  M->setLowered(true);
-
-  if (options.verifyIR &&
-      !verifyModule(*M, &llvh::errs(), VerificationMode::IR_LOWERED)) {
-    M->getContext().getSourceErrorManager().error(
-        SMLoc{}, "Lowered IR verification failed");
-    M->dump(llvh::errs());
-    return;
-  }
-}
-
-/// Perform final lowering of a register-allocated function's IR.
-void lowerAllocatedFunctionIR(
-    Function *F,
-    HVMRegisterAllocator &RA,
-    const BytecodeGenerationOptions &options) {
-  PassManager PM;
-  PM.addPass(new LowerStoreInstrs(RA));
-  PM.addPass(new InitCallFrame(RA));
-  if (options.optimizationEnabled) {
-    PM.addPass(new MovElimination(RA));
-    PM.addPass(new RecreateCheapValues(RA));
-    PM.addPass(new LoadConstantValueNumbering(RA));
-  }
-  PM.addPass(new SpillRegisters(RA));
-  if (options.basicBlockProfiling) {
-    // Insert after all other passes so that it sees final basic block
-    // list.
-    PM.addPass(new InsertProfilePoint());
-  }
-  PM.run(F);
-}
 
 /// Used in delta optimizing mode.
 /// \return a UniquingStringLiteralAccumulator seeded with strings  from a
@@ -208,7 +107,7 @@ std::unique_ptr<BytecodeModule> generateBytecodeModule(
   if (options.format == DumpLIR)
     M->dump();
 
-  BytecodeModuleGenerator BMGen(options);
+  BytecodeModuleGenerator BMGen(options, sourceMapGen);
 
   if (segment) {
     BMGen.setSegmentID(*segment);
@@ -361,55 +260,6 @@ std::unique_ptr<BytecodeModule> generateBytecodeModule(
     }
   }
   assert(BMGen.getEntryPointIndex() != -1 && "Entry point not added");
-
-  // Allow reusing the debug cache between functions
-  FileAndSourceMapIdCache debugCache{};
-
-  // Bytecode generation for each function.
-  for (auto &F : *M) {
-    if (!shouldGenerate(&F)) {
-      continue;
-    }
-
-    std::unique_ptr<BytecodeFunctionGenerator> funcGen;
-
-    if (F.isLazy()) {
-      funcGen = BytecodeFunctionGenerator::create(BMGen, 0);
-    } else {
-      HVMRegisterAllocator RA(&F);
-      if (!options.optimizationEnabled) {
-        RA.setFastPassThreshold(kFastRegisterAllocationThreshold);
-        RA.setMemoryLimit(kRegisterAllocationMemoryLimit);
-      }
-      auto PO = postOrderAnalysis(&F);
-      /// The order of the blocks is reverse-post-order, which is a simply
-      /// topological sort.
-      llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
-      RA.allocate(order);
-
-      if (options.format == DumpRA) {
-        RA.dump();
-      }
-
-      lowerAllocatedFunctionIR(&F, RA, options);
-
-      if (options.format == DumpLRA)
-        RA.dump();
-
-      funcGen =
-          BytecodeFunctionGenerator::create(BMGen, RA.getMaxRegisterUsage());
-      HBCISel hbciSel(&F, funcGen.get(), RA, options, debugCache);
-      hbciSel.generate(sourceMapGen);
-    }
-
-    if (funcGen->hasEncodingError()) {
-      M->getContext().getSourceErrorManager().error(
-          F.getSourceRange().Start, "Error encoding bytecode");
-      return nullptr;
-    }
-    BMGen.setFunctionGenerator(&F, std::move(funcGen));
-  }
-
   return std::move(BMGen).generate();
 }
 

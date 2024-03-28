@@ -275,8 +275,8 @@ class DebugInfoGenerator {
   std::vector<uint8_t> sourcesData_{};
 
   /// String storage for filenames.
-  /// ConsecutiveStringStorage is not copy-constructible or copy-assignable.
-  ConsecutiveStringStorage filenameStrings_;
+  /// UniquingFilenameTable is not copy-constructible or copy-assignable.
+  UniquingFilenameTable filenameTable_;
 
   /// List of files mapping file ID to source location offsets.
   DebugInfo::DebugFileRegionList files_{};
@@ -303,15 +303,19 @@ class DebugInfoGenerator {
   }
 
   /// No copy constructor or copy assignment operator.
-  /// Note that filenameStrings_ is of type ConsecutiveStringStorage, which
-  /// is not copy-constructible or copy-assignable.
+  /// Note that filenameStrings_ is not copy-constructible or copy-assignable.
   DebugInfoGenerator(const DebugInfoGenerator &) = delete;
   DebugInfoGenerator &operator=(const DebugInfoGenerator &) = delete;
 
  public:
-  explicit DebugInfoGenerator(UniquingFilenameTable &&filenameTable);
+  explicit DebugInfoGenerator();
 
   DebugInfoGenerator(DebugInfoGenerator &&) = default;
+
+  /// Add a new filename to the table, returning an index into the table.
+  uint32_t addFilename(llvh::StringRef filename) {
+    return filenameTable_.addFilename(filename);
+  }
 
   uint32_t appendSourceLocations(
       const DebugSourceLocation &start,

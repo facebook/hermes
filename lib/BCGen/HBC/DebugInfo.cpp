@@ -417,9 +417,7 @@ uint32_t DebugInfoGenerator::appendSourceLocations(
   return startOffset;
 }
 
-DebugInfoGenerator::DebugInfoGenerator(UniquingFilenameTable &&filenameTable)
-    : filenameStrings_(
-          UniquingFilenameTable::toStorage(std::move(filenameTable))) {
+DebugInfoGenerator::DebugInfoGenerator() {
   // Initialize the empty data entry in debug lexical table.
   assert(
       lexicalData_.size() == kEmptyLexicalDataOffset &&
@@ -453,7 +451,7 @@ DebugInfo DebugInfoGenerator::serializeWithMove() {
   combinedData.insert(
       combinedData.end(), lexicalData_.begin(), lexicalData_.end());
   return DebugInfo(
-      std::move(filenameStrings_),
+      UniquingFilenameTable::toStorage(std::move(filenameTable_)),
       std::move(files_),
       lexicalStart,
       StreamVector<uint8_t>(std::move(combinedData)));

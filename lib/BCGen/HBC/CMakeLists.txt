@@ -21,6 +21,7 @@ add_hermes_library(hermesHBCBackend
   TraverseLiteralStrings.cpp
   UniquingFilenameTable.cpp
   UniquingStringLiteralTable.cpp
+  LoweringPipelines.cpp LoweringPipelines.h
   Passes/InsertProfilePoint.cpp
   Passes/OptParentEnvironment.cpp
   Passes/PeepholeLowering.cpp

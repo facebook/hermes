@@ -7,7 +7,16 @@
 
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 
+#include "LoweringPipelines.h"
+#include "hermes/BCGen/HBC/HVMRegisterAllocator.h"
+#include "hermes/BCGen/HBC/Passes.h"
+#include "hermes/BCGen/HBC/Passes/InsertProfilePoint.h"
+#include "hermes/BCGen/LowerBuiltinCalls.h"
+#include "hermes/BCGen/LowerStoreInstrs.h"
+#include "hermes/BCGen/Lowering.h"
 #include "hermes/FrontEndDefs/Builtins.h"
+#include "hermes/IR/Analysis.h"
+#include "hermes/Optimizer/PassManager/PassManager.h"
 
 #include "llvh/ADT/SmallString.h"
 #include "llvh/Support/Format.h"
@@ -16,6 +25,17 @@
 
 namespace hermes {
 namespace hbc {
+
+// If we have less than this number of instructions in a Function, and we're
+// not compiling in optimized mode, take shortcuts during register allocation.
+// 250 was chosen so that registers will fit in a single byte even after some
+// have been reserved for function parameters.
+const unsigned kFastRegisterAllocationThreshold = 250;
+
+// If register allocation is expected to take more than this number of bytes of
+// RAM, and we're not trying to optimize, use a simpler pass to reduce compile
+// time memory usage.
+const uint64_t kRegisterAllocationMemoryLimit = 10L * 1024 * 1024;
 
 unsigned BytecodeFunctionGenerator::getStringID(LiteralString *value) const {
   return BMGen_.getStringID(value->getValue().str());
@@ -184,17 +204,6 @@ unsigned BytecodeModuleGenerator::addFunction(Function *F) {
   return it->second;
 }
 
-void BytecodeModuleGenerator::setFunctionGenerator(
-    Function *F,
-    std::unique_ptr<BytecodeFunctionGenerator> BFG) {
-  assert(
-      functionGenerators_.find(F) == functionGenerators_.end() &&
-      "Adding same function twice.");
-  assert(
-      !BFG->hasEncodingError() && "Error should have been reported already.");
-  functionGenerators_[F] = std::move(BFG);
-}
-
 unsigned BytecodeModuleGenerator::getStringID(llvh::StringRef str) const {
   return bm_->getStringID(str);
 }
@@ -230,7 +239,7 @@ uint32_t BytecodeModuleGenerator::addRegExp(CompiledRegExp *regexp) {
 }
 
 uint32_t BytecodeModuleGenerator::addFilename(llvh::StringRef filename) {
-  return filenameTable_.addFilename(filename);
+  return debugInfoGenerator_.addFilename(filename);
 }
 
 void BytecodeModuleGenerator::addCJSModule(
@@ -257,49 +266,76 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() && {
       "BytecodeModuleGenerator::generate() cannot be called more than once");
   valid_ = false;
 
-  assert(
-      functionIDMap_.size() == functionGenerators_.size() &&
-      "Missing functions.");
-
   BytecodeOptions &bytecodeOptions = bm_->getBytecodeOptionsMut();
-  bytecodeOptions.staticBuiltins = options_.staticBuiltinsEnabled;
-
   bytecodeOptions.cjsModulesStaticallyResolved =
       !bm_->getCJSModuleTableStatic().empty();
 
-  // The BytecodeModule was newly created by this generator.
-  DebugInfoGenerator debugInfoGen{std::move(filenameTable_)};
+  // Allow reusing the debug cache between functions
+  FileAndSourceMapIdCache debugCache{};
 
   const uint32_t strippedFunctionNameId =
       options_.stripFunctionNames ? bm_->getStringID(kStrippedFunctionName) : 0;
   for (auto [F, functionID] : functionIDMap_) {
-    auto &BFG = *functionGenerators_[F];
+    if (F->isLazy()) {
+      hermes_fatal("lazy compilation not supported");
+    }
+
+    // Run register allocation.
+    HVMRegisterAllocator RA(F);
+    if (!options_.optimizationEnabled) {
+      RA.setFastPassThreshold(kFastRegisterAllocationThreshold);
+      RA.setMemoryLimit(kRegisterAllocationMemoryLimit);
+    }
+    auto PO = postOrderAnalysis(F);
+    /// The order of the blocks is reverse-post-order, which is a simply
+    /// topological sort.
+    llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
+    RA.allocate(order);
+
+    if (options_.format == DumpRA)
+      RA.dump();
+
+    lowerAllocatedFunctionIR(F, RA, options_);
+
+    if (options_.format == DumpLRA)
+      RA.dump();
 
     uint32_t functionNameId = options_.stripFunctionNames
         ? strippedFunctionNameId
         : bm_->getStringID(F->getOriginalOrInferredName().str());
 
-    std::unique_ptr<BytecodeFunction> func = BFG.generateBytecodeFunction(
+    // Use the register allocated IR to make a BytecodeFunctionGenerator and
+    // run ISel.
+    std::unique_ptr<BytecodeFunctionGenerator> funcGen =
+        BytecodeFunctionGenerator::create(*this, RA.getMaxRegisterUsage());
+    HBCISel hbciSel = HBCISel(F, &*funcGen, RA, options_, debugCache);
+    hbciSel.generate(sourceMapGen_);
+
+    if (funcGen->hasEncodingError()) {
+      F->getParent()->getContext().getSourceErrorManager().error(
+          F->getSourceRange().Start, "Error encoding bytecode");
+      return nullptr;
+    }
+
+    std::unique_ptr<BytecodeFunction> func = funcGen->generateBytecodeFunction(
         F->getProhibitInvoke(),
         F->isStrictMode(),
         F->getExpectedParamCountIncludingThis(),
         functionNameId);
 
-    if (F->isLazy()) {
-      hermes_fatal("lazy compilation not supported");
-    }
-
-    if (BFG.hasDebugInfo()) {
-      uint32_t sourceLocOffset = debugInfoGen.appendSourceLocations(
-          BFG.getSourceLocation(), functionID, BFG.getDebugLocations());
-      uint32_t lexicalDataOffset = debugInfoGen.appendLexicalData(
-          BFG.getLexicalParentID(), BFG.getDebugVariableNames());
+    if (funcGen->hasDebugInfo()) {
+      uint32_t sourceLocOffset = debugInfoGenerator_.appendSourceLocations(
+          funcGen->getSourceLocation(),
+          functionID,
+          funcGen->getDebugLocations());
+      uint32_t lexicalDataOffset = debugInfoGenerator_.appendLexicalData(
+          funcGen->getLexicalParentID(), funcGen->getDebugVariableNames());
       func->setDebugOffsets({sourceLocOffset, lexicalDataOffset});
     }
     bm_->setFunction(functionID, std::move(func));
   }
 
-  bm_->setDebugInfo(debugInfoGen.serializeWithMove());
+  bm_->setDebugInfo(debugInfoGenerator_.serializeWithMove());
   return std::move(bm_);
 }
 

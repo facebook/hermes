@@ -249,13 +249,9 @@ class BytecodeModuleGenerator {
   /// Mapping from Function * to a sequential ID.
   llvh::MapVector<Function *, unsigned> functionIDMap_{};
 
-  /// Mapping from Function * to it's BytecodeFunctionGenerator *.
-  DenseMap<Function *, std::unique_ptr<BytecodeFunctionGenerator>>
-      functionGenerators_{};
-
-  /// A module-wide filename table, kept separate from the main string table.
-  /// This allows us to serialize the filenames as part of the debug info.
-  UniquingFilenameTable filenameTable_{};
+  /// Generates debug information.
+  /// Stores the filename table.
+  DebugInfoGenerator debugInfoGenerator_;
 
   /// A map from instruction to literal offset in the corresponding buffers.
   /// \c arrayBuffer_, \c objKeyBuffer_, \c objValBuffer_.
@@ -265,6 +261,9 @@ class BytecodeModuleGenerator {
   /// Options controlling bytecode generation.
   BytecodeGenerationOptions options_;
 
+  /// The source map generator to use (nullptr if none).
+  SourceMapGenerator *sourceMapGen_;
+
   /// Indicate whether this generator is still valid.
   /// We need this because one can only call the generate() function
   /// once, and after that, this generator is no longer valid because
@@ -272,10 +271,17 @@ class BytecodeModuleGenerator {
   bool valid_{true};
 
  public:
-  /// Constructor which enables optimizations if \p optimizationEnabled is set.
+  /// Constructor which enables optimizations if \p options.optimizationEnabled
+  /// is set.
   BytecodeModuleGenerator(
-      BytecodeGenerationOptions options = BytecodeGenerationOptions::defaults())
-      : bm_(new BytecodeModule()), options_(options) {}
+      BytecodeGenerationOptions options = BytecodeGenerationOptions::defaults(),
+      SourceMapGenerator *sourceMapGen = nullptr)
+      : bm_(new BytecodeModule()),
+        options_(options),
+        sourceMapGen_(sourceMapGen) {
+    bm_->getBytecodeOptionsMut().staticBuiltins =
+        options_.staticBuiltinsEnabled;
+  }
 
   /// Add a function to request generating bytecode for it if it doesn't
   /// already exist.
