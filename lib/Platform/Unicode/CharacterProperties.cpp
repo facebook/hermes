@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <climits>
 #include <iterator>
+#include <string>
 #include <utility>
 
 namespace hermes {
@@ -209,5 +210,149 @@ uint32_t canonicalize(uint32_t cp, bool unicode) {
     return cp;
   }
 }
+
+#ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
+
+/// Find a \p NameMapEntry by matching a string \p name.
+template <class T>
+const T *
+findNameMapEntry(const T *begin, const T *end, const std::string_view &name) {
+  auto it = std::lower_bound(
+      begin, end, name, [](const T &a, const std::string_view &b) {
+        return UNICODE_DATA_STRING_POOL.compare(a.name.offset, a.name.size, b) <
+            0;
+      });
+  if (it == end ||
+      UNICODE_DATA_STRING_POOL.compare(it->name.offset, it->name.size, name) !=
+          0) {
+    return end;
+  }
+  return it;
+}
+
+/// Find a \p RangeMapEntry by matching a \p StringPoolRef for the canonical
+/// name.
+template <class T>
+const T *
+findRangeMapEntry(const T *begin, const T *end, const StringPoolRef &poolRef) {
+  auto it = std::lower_bound(
+      begin, end, poolRef, [](const T &a, const StringPoolRef &b) {
+        return UNICODE_DATA_STRING_POOL.compare(
+                   a.name.offset,
+                   a.name.size,
+                   UNICODE_DATA_STRING_POOL,
+                   b.offset,
+                   b.size) < 0;
+      });
+  if (it == end ||
+      (it->name.offset != poolRef.offset && it->name.size != poolRef.size)) {
+    return end;
+  }
+  return it;
+}
+
+bool addUnicodePropertyRanges(
+    CodePointSet *receiver,
+    const std::string_view &propertyName,
+    const std::string_view &propertyValue,
+    bool inverted = false) {
+  auto key = propertyName;
+  auto rangeMapStart = std::begin(unicodePropertyRangeMap_BinaryProperty);
+  auto rangeMapEnd = std::end(unicodePropertyRangeMap_BinaryProperty);
+  auto nameMapStart = std::begin(canonicalPropertyNameMap_BinaryProperty);
+  auto nameMapEnd = std::end(canonicalPropertyNameMap_BinaryProperty);
+
+  if (propertyValue.empty()) {
+    // There was no property value, this is either a binary property or a value
+    // from General_Category, as per `LoneUnicodePropertyNameOrValue`.
+    if (findNameMapEntry(nameMapStart, nameMapEnd, key) == nameMapEnd) {
+      rangeMapStart = std::begin(unicodePropertyRangeMap_GeneralCategory);
+      rangeMapEnd = std::end(unicodePropertyRangeMap_GeneralCategory);
+      nameMapStart = std::begin(canonicalPropertyNameMap_GeneralCategory);
+      nameMapEnd = std::end(canonicalPropertyNameMap_GeneralCategory);
+    }
+  } else {
+    // There was a property value, assume the name is a category.
+    key = propertyValue;
+    if (propertyName == "General_Category" || propertyName == "gc") {
+      rangeMapStart = std::begin(unicodePropertyRangeMap_GeneralCategory);
+      rangeMapEnd = std::end(unicodePropertyRangeMap_GeneralCategory);
+      nameMapStart = std::begin(canonicalPropertyNameMap_GeneralCategory);
+      nameMapEnd = std::end(canonicalPropertyNameMap_GeneralCategory);
+    } else if (propertyName == "Script" || propertyName == "sc") {
+      rangeMapStart = std::begin(unicodePropertyRangeMap_Script);
+      rangeMapEnd = std::end(unicodePropertyRangeMap_Script);
+      nameMapStart = std::begin(canonicalPropertyNameMap_Script);
+      nameMapEnd = std::end(canonicalPropertyNameMap_Script);
+    } else if (propertyName == "Script_Extensions" || propertyName == "scx") {
+      // Script_Extensions is a superset of Script.
+      if (!addUnicodePropertyRanges(receiver, "Script", propertyValue)) {
+        return false;
+      }
+      rangeMapStart = std::begin(unicodePropertyRangeMap_ScriptExtensions);
+      rangeMapEnd = std::end(unicodePropertyRangeMap_ScriptExtensions);
+      nameMapStart = std::begin(canonicalPropertyNameMap_Script);
+      nameMapEnd = std::end(canonicalPropertyNameMap_Script);
+    } else {
+      return false;
+    }
+  }
+
+  // Canonicalize the property name.
+  auto canonicalNameEntry = findNameMapEntry(nameMapStart, nameMapEnd, key);
+  if (canonicalNameEntry == nameMapEnd) {
+    return false;
+  }
+
+  // Look up the range arrays for the property.
+  auto rangeMapEntry = findRangeMapEntry(
+      rangeMapStart, rangeMapEnd, canonicalNameEntry->canonical);
+  if (rangeMapEntry == rangeMapEnd) {
+    return false;
+  }
+
+  auto rangeArrayPoolStart = std::next(
+      std::begin(UNICODE_RANGE_ARRAY_POOL),
+      rangeMapEntry->rangeArrayPoolOffset);
+  auto rangeArrayPoolEnd =
+      std::next(rangeArrayPoolStart, rangeMapEntry->rangeArraySize);
+
+  for (auto rangePoolRef = rangeArrayPoolStart;
+       rangePoolRef != rangeArrayPoolEnd;
+       ++rangePoolRef) {
+    auto rangePoolStart =
+        std::next(std::begin(UNICODE_RANGE_POOL), rangePoolRef->offset);
+    auto rangePoolEnd = std::next(rangePoolStart, rangePoolRef->size);
+
+    if (inverted) {
+      uint32_t last = 0;
+      for (auto range = rangePoolStart; range != rangePoolEnd; ++range) {
+        receiver->add(CodePointRange{last, range->first - last});
+        last = range->second + 1;
+      }
+      // Add the final range.
+      receiver->add(CodePointRange{last, UNICODE_MAX_VALUE - last});
+    } else {
+      for (auto range = rangePoolStart; range != rangePoolEnd; ++range) {
+        const uint32_t length = range->second - range->first + 1;
+        receiver->add(CodePointRange{range->first, length});
+      }
+    }
+  }
+
+  return true;
+}
+
+#else
+
+bool addUnicodePropertyRanges(
+    CodePointSet *receiver,
+    const std::string_view &propertyName,
+    const std::string_view &propertyValue,
+    bool inverted = false) {
+  return false;
+}
+
+#endif
 
 } // namespace hermes

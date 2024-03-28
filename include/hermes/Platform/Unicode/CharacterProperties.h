@@ -10,6 +10,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <string>
 
 namespace hermes {
 
@@ -100,6 +101,16 @@ inline bool isUnicodeIDContinue(uint32_t cp) {
       cp == UNICODE_ZWNJ || cp == UNICODE_ZWJ;
 }
 
+/// \return true if the codepoint is valid in a unicode property name
+inline bool isUnicodePropertyName(uint32_t ch) {
+  return ch == '_' || ((ch | 32) >= 'a' && (ch | 32) <= 'z');
+}
+
+/// \return true if the codepoint is valid in a unicode property value
+inline bool isUnicodePropertyValue(uint32_t ch) {
+  return isUnicodePropertyName(ch) || isUnicodeDigit(ch);
+}
+
 /// \return the canonicalized value of \p cp, following ES9 21.2.2.8.2.
 uint32_t canonicalize(uint32_t cp, bool unicode);
 
@@ -107,6 +118,15 @@ class CodePointSet;
 /// \return a set containing all characters which are canonically equivalent to
 /// any character in \p set, following ES9 21.2.2.8.2.
 CodePointSet makeCanonicallyEquivalent(const CodePointSet &set, bool unicode);
+
+/// Insert ranges of codepoints into \p receiver based on the Unicode \p
+/// propertyName and \p propertyValue (for non-binary properties).
+/// \return true if codepoints were added to the set
+bool addUnicodePropertyRanges(
+    CodePointSet *receiver,
+    const std::string_view &propertyNameOrValue,
+    const std::string_view &propertyValue,
+    bool inverted);
 
 } // namespace hermes
 

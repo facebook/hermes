@@ -29,6 +29,7 @@ try:
         PERMANENT_UNSUPPORTED_FEATURES,
         SKIP_LIST,
         UNSUPPORTED_FEATURES,
+        CONFIGURABLE_HERMES_FEATURES,
     )
 except ImportError:
     import esprima_test_runner as esprima
@@ -42,6 +43,7 @@ except ImportError:
         PERMANENT_UNSUPPORTED_FEATURES,
         SKIP_LIST,
         UNSUPPORTED_FEATURES,
+        CONFIGURABLE_HERMES_FEATURES,
     )
 
 
@@ -322,6 +324,9 @@ featuresMatcher = re.compile(r"\s*features:\s*\[(.*)\]")
 # Alternate features syntax has "features:" and then bullet points using "-".
 featuresMatcher2 = re.compile(r"\s*features:\s*\n(.*)\*\/", re.MULTILINE | re.DOTALL)
 
+# Match the "Features" output of `hermes --version`.
+hermesFeaturesMatcher = re.compile(r"\s*Features:\s*\n(.*\n)", re.MULTILINE | re.DOTALL)
+
 
 def getSuite(filename):
     suite = None
@@ -394,7 +399,7 @@ TestContentParameters = namedtuple(
 )
 
 
-def testShouldRun(filename, content):
+def testShouldRun(filename, content, unsupported_features):
     suite = getSuite(filename)
 
     # Determine flags and strict modes before deciding to skip a test case.
@@ -477,7 +482,7 @@ def testShouldRun(filename, content):
             )
         features.discard("")
         for f in features:
-            if f in UNSUPPORTED_FEATURES + PERMANENT_UNSUPPORTED_FEATURES:
+            if f in unsupported_features or f in PERMANENT_UNSUPPORTED_FEATURES:
                 return TestContentParameters(
                     False,
                     "Skipping unsupported feature: " + f,
@@ -508,6 +513,7 @@ def runTest(
     esprima_runner,
     lazy,
     test_intl,
+    unsupported_features,
 ):
     """
     Runs a single js test pointed by filename
@@ -559,7 +565,7 @@ def runTest(
         content = test_contents.read().decode("utf-8")
 
     shouldRun, skipReason, permanent, flags, strictModes = testShouldRun(
-        filename, content
+        filename, content, unsupported_features
     )
 
     js_sources = []
@@ -1015,6 +1021,25 @@ def test_workdir(workdir, nuke_workdir, **kwargs):
     )
 
 
+def get_hermes_features(binary_path):
+    """
+    Run `hermes --version` and extract the features from the output.
+    """
+    hermes_path = path.join(binary_path, "hermes")
+    try:
+        output = subprocess.check_output(
+            [hermes_path, "--version"], stderr=subprocess.STDOUT
+        )
+        features = hermesFeaturesMatcher.search(output.decode("utf-8"))
+        if features is not None:
+            return {feature.strip() for feature in features.group(1).splitlines()}
+        else:
+            return set()
+    except subprocess.CalledProcessError as e:
+        print("Failed to run hermes --version: " + e.output.decode("utf-8"))
+        sys.exit(1)
+
+
 def run(
     paths,
     chunk,
@@ -1038,6 +1063,15 @@ def run(
     global verbose
 
     verbose = is_verbose
+
+    # Build a set of unsupported features that include features that can be
+    # configured in Hermes.
+    hermes_features = get_hermes_features(binary_path)
+    unsupported_features = set(UNSUPPORTED_FEATURES) | {
+        test262_feature
+        for hermes_feature, test262_feature in CONFIGURABLE_HERMES_FEATURES.items()
+        if hermes_feature not in hermes_features
+    }
 
     onlyfiles = []
     tests_home = None
@@ -1118,6 +1152,7 @@ def run(
                 esprima_runner,
                 lazy,
                 test_intl,
+                unsupported_features,
             ),
             onlyfiles,
             rangeLeft,

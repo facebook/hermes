@@ -2157,7 +2157,7 @@ UNSUPPORTED_FEATURES = [
     "json-superset",
     "let",
     "new.target",
-    "regexp-unicode-property-escapes",
+    "regexp-v-flag",
     "resizable-arraybuffer",
     "string-trimming",
     "super",
@@ -2178,6 +2178,12 @@ UNSUPPORTED_FEATURES = [
     "array-grouping",
     "symbols-as-weakmap-keys",
 ]
+
+# Mapping of Hermes features to test262 features, for use in dynamic feature
+# skipping.
+CONFIGURABLE_HERMES_FEATURES = {
+    "Unicode RegExp Property Escapes": "regexp-unicode-property-escapes",
+}
 
 PERMANENT_UNSUPPORTED_FEATURES = [
     "Atomics",
