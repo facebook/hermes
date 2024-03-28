@@ -613,7 +613,8 @@ auto Debugger::getCallFrameInfo(const CodeBlock *codeBlock, uint32_t ipOffset)
   return frameInfo;
 }
 
-auto Debugger::getStackTrace(InterpreterState state) const -> StackTrace {
+auto Debugger::getStackTrace(const CodeBlock *codeBlock, uint32_t ipOffset)
+    const -> StackTrace {
   using fhd::CallFrameInfo;
   GCScopeMarkerRAII marker{runtime_};
   MutableHandle<> displayName{runtime_};
@@ -621,9 +622,7 @@ auto Debugger::getStackTrace(InterpreterState state) const -> StackTrace {
   std::vector<CallFrameInfo> frames;
   // Note that we are iterating backwards from the top.
   // Also note that each frame saves its caller's code block and IP. The initial
-  // one comes from the paused state.
-  const CodeBlock *codeBlock = state.codeBlock;
-  uint32_t ipOffset = state.offset;
+  // ones come from the passed in params.
   GCScopeMarkerRAII marker2{runtime_};
   for (auto cf : runtime_.getStackFrames()) {
     marker2.flush();
