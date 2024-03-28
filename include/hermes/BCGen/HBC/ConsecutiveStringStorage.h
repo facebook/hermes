@@ -122,6 +122,12 @@ class ConsecutiveStringStorage {
     return std::move(strTable_);
   };
 
+  /// \returns a view to the current table.
+  StringStorageRefTy getStringStorageView() const {
+    ensureTableValid();
+    return storage_;
+  }
+
   /// \returns a reference to the string storage. Notice that whoever receives
   /// the table may temper, swap or destroy the content. Hence after this
   /// call, the string table is no longer valid to use.

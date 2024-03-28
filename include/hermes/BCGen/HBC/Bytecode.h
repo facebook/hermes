@@ -15,6 +15,7 @@
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/DebugInfo.h"
 #include "hermes/BCGen/HBC/StringKind.h"
+#include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/BigIntSupport.h"
@@ -163,12 +164,8 @@ class BytecodeModule {
   /// marked as identifiers, in order.
   std::vector<uint32_t> identifierHashes_;
 
-  /// The global string table, a list of <offset, length> pair to represent
-  /// each string in the string storage.
-  std::vector<StringTableEntry> stringTable_;
-
-  /// The global string storage. A sequence of bytes.
-  std::vector<unsigned char> stringStorage_;
+  /// The global string table to represent each string in the string storage.
+  StringLiteralTable stringTable_;
 
   /// The bigint digit table. This is a list of pairs of (offset, lengths)
   /// into bigIntStorage_.
@@ -221,10 +218,7 @@ class BytecodeModule {
   /// Used during serialization.
   explicit BytecodeModule(
       uint32_t functionCount,
-      std::vector<StringKind::Entry> &&stringKinds,
-      std::vector<uint32_t> &&identifierHashes,
-      std::vector<StringTableEntry> &&stringTable,
-      std::vector<unsigned char> &&stringStorage,
+      StringLiteralTable &&stringTable,
       std::vector<bigint::BigIntTableEntry> &&bigIntTable,
       std::vector<uint8_t> &&bigIntStorage,
       UniquingRegExpTable &&regExpTable,
@@ -238,10 +232,9 @@ class BytecodeModule {
       std::vector<std::pair<uint32_t, uint32_t>> &&functionSourceTable,
       BytecodeOptions options)
       : globalFunctionIndex_(globalFunctionIndex),
-        stringKinds_(std::move(stringKinds)),
-        identifierHashes_(std::move(identifierHashes)),
+        stringKinds_(stringTable.getStringKinds()),
+        identifierHashes_(stringTable.getIdentifierHashes()),
         stringTable_(std::move(stringTable)),
-        stringStorage_(std::move(stringStorage)),
         bigIntTable_(std::move(bigIntTable)),
         bigIntStorage_(std::move(bigIntStorage)),
         regExpTable_(std::move(regExpTable)),
@@ -294,20 +287,24 @@ class BytecodeModule {
     return identifierHashes_;
   }
 
+  unsigned getStringID(llvh::StringRef str) const {
+    return stringTable_.getStringID(str);
+  }
+
   uint32_t getStringTableSize() const {
-    return stringTable_.size();
+    return stringTable_.count();
   }
 
   StringTableEntry::StringTableRefTy getStringTable() const {
-    return stringTable_;
+    return stringTable_.getStringTableView();
   }
 
   uint32_t getStringStorageSize() const {
-    return stringStorage_.size();
+    return stringTable_.getStringStorageView().size();
   }
 
   StringTableEntry::StringStorageRefTy getStringStorage() const {
-    return stringStorage_;
+    return stringTable_.getStringStorageView();
   }
 
   llvh::ArrayRef<bigint::BigIntTableEntry> getBigIntTable() const {

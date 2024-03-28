@@ -261,19 +261,13 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
       functionIDMap_.getElements().size() == functionGenerators_.size() &&
       "Missing functions.");
 
-  auto kinds = stringTable_.getStringKinds();
-  auto hashes = stringTable_.getIdentifierHashes();
-
   BytecodeOptions bytecodeOptions;
   bytecodeOptions.hasAsync = asyncFunctions_;
   bytecodeOptions.staticBuiltins = options_.staticBuiltinsEnabled;
   bytecodeOptions.cjsModulesStaticallyResolved = !cjsModulesStatic_.empty();
   std::unique_ptr<BytecodeModule> BM{new BytecodeModule(
       functionGenerators_.size(),
-      std::move(kinds),
-      std::move(hashes),
-      stringTable_.acquireStringTable(),
-      stringTable_.acquireStringStorage(),
+      std::move(stringTable_),
       bigIntTable_.getEntryList(),
       bigIntTable_.getDigitsBuffer(),
       std::move(regExpTable_),
@@ -290,7 +284,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
   DebugInfoGenerator debugInfoGen{std::move(filenameTable_)};
 
   const uint32_t strippedFunctionNameId =
-      options_.stripFunctionNames ? getStringID(kStrippedFunctionName) : 0;
+      options_.stripFunctionNames ? BM->getStringID(kStrippedFunctionName) : 0;
   auto functions = functionIDMap_.getElements();
   for (unsigned i = 0, e = functions.size(); i < e; ++i) {
     auto *F = functions[i];
@@ -298,7 +292,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
 
     uint32_t functionNameId = options_.stripFunctionNames
         ? strippedFunctionNameId
-        : getStringID(functions[i]->getOriginalOrInferredName().str());
+        : BM->getStringID(functions[i]->getOriginalOrInferredName().str());
 
     std::unique_ptr<BytecodeFunction> func = BFG.generateBytecodeFunction(
         F->getProhibitInvoke(),

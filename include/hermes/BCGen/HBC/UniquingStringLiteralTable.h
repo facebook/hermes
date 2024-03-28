@@ -64,6 +64,15 @@ struct StringLiteralTable final : public StringLiteralIDMapping {
   inline std::vector<StringTableEntry> acquireStringTable();
   inline std::vector<unsigned char> acquireStringStorage();
 
+  /// \return a view of the string table entries in the underlying storage.
+  StringTableEntry::StringTableRefTy getStringTableView() const {
+    return storage_.getStringTableView();
+  }
+  /// \return a view of the string table storage.
+  StringTableEntry::StringStorageRefTy getStringStorageView() const {
+    return storage_.getStringStorageView();
+  }
+
   /// \returns a list of hashes corresponding to the strings marked as
   /// identifiers, in their order in the underlying storage.
   std::vector<uint32_t> getIdentifierHashes() const;
