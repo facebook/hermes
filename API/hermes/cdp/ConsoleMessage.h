@@ -14,6 +14,8 @@
 
 #include <jsi/jsi.h>
 
+#include <hermes/Public/DebuggerTypes.h>
+
 namespace facebook {
 namespace hermes {
 namespace cdp {
@@ -46,6 +48,7 @@ struct ConsoleMessage {
   double timestamp;
   ConsoleAPIType type;
   std::vector<jsi::Value> args;
+  debugger::StackTrace stackTrace{};
 
   ConsoleMessage(
       double timestamp,

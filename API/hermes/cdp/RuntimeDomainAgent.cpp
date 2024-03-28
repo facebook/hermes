@@ -768,6 +768,11 @@ void RuntimeDomainAgent::consoleAPICalled(const ConsoleMessage &message) {
   note.type = consoleMessageTypeName(message.type);
   note.timestamp = message.timestamp;
   note.executionContextId = executionContextID_;
+  if (message.stackTrace.callFrameCount() > 0) {
+    note.stackTrace = m::runtime::StackTrace{};
+    note.stackTrace->callFrames =
+        m::runtime::makeCallFrames(message.stackTrace);
+  }
 
   for (auto &arg : message.args) {
     note.args.push_back(m::runtime::makeRemoteObject(
