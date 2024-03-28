@@ -8,8 +8,6 @@
 #ifndef HERMES_BCGEN_HBC_BYTECODEGENERATOR_H
 #define HERMES_BCGEN_HBC_BYTECODEGENERATOR_H
 
-#include "llvh/ADT/DenseMap.h"
-
 #include "hermes/BCGen/Exceptions.h"
 #include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/BCGen/HBC/Bytecode.h"
@@ -26,15 +24,12 @@
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/OptValue.h"
 
+#include "llvh/ADT/DenseMap.h"
 #include "llvh/ADT/MapVector.h"
 #include "llvh/ADT/StringRef.h"
 
 namespace hermes {
 namespace hbc {
-using llvh::DenseMap;
-using llvh::SmallVector;
-using std::move;
-using std::unique_ptr;
 
 const char *const kStrippedFunctionName = "function-name-stripped";
 
@@ -301,7 +296,7 @@ class BytecodeModuleGenerator {
   /// Add a function to the list of functions.
   void setFunctionGenerator(
       Function *F,
-      unique_ptr<BytecodeFunctionGenerator> BFG);
+      std::unique_ptr<BytecodeFunctionGenerator> BFG);
 
   /// Gets the index of the entry point function (global function).
   int getEntryPointIndex() const {

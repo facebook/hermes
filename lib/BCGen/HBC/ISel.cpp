@@ -130,7 +130,7 @@ class HBCISel {
 
   /// The list of all jump instructions and jump targets that require
   /// relocation and address resolution.
-  SmallVector<Relocation, 8> relocations_{};
+  llvh::SmallVector<Relocation, 8> relocations_{};
 
   /// A map of instructions to bytecode locations for debug info.
   DenseMap<Instruction *, offset_t> debugInstructionOffset_{};
