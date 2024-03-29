@@ -7,7 +7,7 @@
 
 #include "LoweringPipelines.h"
 
-#include "hermes/BCGen/HBC/BytecodeGenerator.h"
+#include "BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/HVMRegisterAllocator.h"
 #include "hermes/BCGen/HBC/Passes.h"

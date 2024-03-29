@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/BCGen/HBC/BytecodeGenerator.h"
+#include "BytecodeGenerator.h"
 
 #include "ISel.h"
 #include "LoweringPipelines.h"

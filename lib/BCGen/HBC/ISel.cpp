@@ -7,7 +7,7 @@
 
 #include "ISel.h"
 
-#include "hermes/BCGen/HBC/BytecodeGenerator.h"
+#include "BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/HBC/HVMRegisterAllocator.h"
 #include "hermes/BCGen/MovElimination.h"

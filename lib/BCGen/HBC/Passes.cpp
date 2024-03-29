@@ -7,7 +7,7 @@
 
 #include "hermes/BCGen/HBC/Passes.h"
 
-#include "hermes/BCGen/HBC/BytecodeGenerator.h"
+#include "BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/HBC/HVMRegisterAllocator.h"

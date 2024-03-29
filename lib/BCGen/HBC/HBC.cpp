@@ -7,7 +7,7 @@
 
 #include "hermes/BCGen/HBC/HBC.h"
 
-#include "hermes/BCGen/HBC/BytecodeGenerator.h"
+#include "BytecodeGenerator.h"
 #include "hermes/Support/PerfSection.h"
 
 #include "llvh/Support/raw_ostream.h"

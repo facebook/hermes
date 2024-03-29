@@ -9,7 +9,6 @@
 #define HERMES_BCGEN_HBC_PASSES_H
 
 #include "hermes/BCGen/HBC/Bytecode.h"
-#include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/HBC/HVMRegisterAllocator.h"
