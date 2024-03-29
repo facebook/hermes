@@ -15,7 +15,7 @@ using namespace ::hermes;
 namespace hermes {
 namespace platform_intl {
 
-// https://tc39.es/ecma402/#sec-canonicalizelocalelist
+/// https://402.ecma-international.org/8.0/#sec-canonicalizelocalelist
 vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales) {
@@ -54,14 +54,14 @@ vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
   return seen;
 }
 
-// https://tc39.es/ecma402/#sec-intl.getcanonicallocales
+/// https://402.ecma-international.org/8.0/#sec-intl.getcanonicallocales
 vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales) {
   return canonicalizeLocaleList(runtime, locales);
 }
 
-// https://402.ecma-international.org/8.0/#sec-bestavailablelocale
+/// https://402.ecma-international.org/8.0/#sec-bestavailablelocale
 std::optional<std::u16string> bestAvailableLocale(
     const std::vector<std::u16string> &availableLocales,
     const std::u16string &locale) {
@@ -93,7 +93,7 @@ std::optional<std::u16string> bestAvailableLocale(
   }
 }
 
-// https://402.ecma-international.org/8.0/#sec-lookupsupportedlocales
+/// https://402.ecma-international.org/8.0/#sec-lookupsupportedlocales
 std::vector<std::u16string> lookupSupportedLocales(
     const std::vector<std::u16string> &availableLocales,
     const std::vector<std::u16string> &requestedLocales) {
@@ -235,7 +235,7 @@ vm::CallResult<std::optional<uint8_t>> getNumberOption(
 }
 
 // Implementation of
-// https://402.ecma-international.org/8.0/#sec-todatetimeoptions
+/// https://402.ecma-international.org/8.0/#sec-todatetimeoptions
 vm::CallResult<Options> toDateTimeOptions(
     vm::Runtime &runtime,
     Options options,
@@ -320,7 +320,7 @@ vm::CallResult<Options> toDateTimeOptions(
   return options;
 }
 
-// https://402.ecma-international.org/8.0/#sec-case-sensitivity-and-case-mapping
+/// https://402.ecma-international.org/8.0/#sec-case-sensitivity-and-case-mapping
 std::u16string toASCIIUppercase(std::u16string_view tz) {
   std::u16string result;
   std::uint8_t offset = 'a' - 'A';
