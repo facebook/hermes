@@ -18,7 +18,6 @@ add_hermes_library(hermesHBCBackend
   Passes.cpp
   SimpleBytecodeBuilder.cpp
   StringKind.cpp
-  TraverseLiteralStrings.cpp
   UniquingFilenameTable.cpp
   UniquingStringLiteralTable.cpp
   LoweringPipelines.cpp LoweringPipelines.h

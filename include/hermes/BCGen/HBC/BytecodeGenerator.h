@@ -245,10 +245,17 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
 
 /// This class is used by the hermes backend.
 /// It wraps all data required to generate the module.
+/// To use it, construct a BytecodeModuleGenerator and then add any functions to
+/// generate using \c addFunction.
+/// Then, \c generate will populate and return a BytecodeModule containing only
+/// the functions which were added.
 class BytecodeModuleGenerator {
   /// The bytecode module being generated.
   /// Never nullptr while this BytecodeModuleGenerator is valid_.
   std::unique_ptr<BytecodeModule> bm_;
+
+  /// The IR Module for which we're generating bytecode.
+  Module *M_;
 
   /// Mapping from Function * to a sequential ID.
   llvh::MapVector<Function *, unsigned> functionIDMap_{};
@@ -268,6 +275,23 @@ class BytecodeModuleGenerator {
   /// The source map generator to use (nullptr if none).
   SourceMapGenerator *sourceMapGen_;
 
+  /// Base bytecode used in delta optimizing mode.
+  /// When it is not null and optimization is turned on, we optimize for the
+  /// delta.
+  std::unique_ptr<BCProviderBase> baseBCProvider_;
+
+  /// Mapping of the source text UTF-8 to the modified UTF-16-like
+  /// representation used by string literal encoding.
+  /// See appendUnicodeToStorage.
+  /// If a function source isn't in this map, then it's entirely ASCII and can
+  /// be added to the string table unmodified.
+  /// This allows us to add strings to the StringLiteralTable,
+  /// which will convert actual UTF-8 to UTF-16 automatically if it's detected,
+  /// meaning we'd not be able to directly look up the original function source
+  /// in the table.
+  llvh::DenseMap<llvh::StringRef, llvh::SmallVector<char, 32>>
+      unicodeFunctionSources_{};
+
   /// Indicate whether this generator is still valid.
   /// We need this because one can only call the generate() function
   /// once, and after that, this generator is no longer valid because
@@ -278,25 +302,29 @@ class BytecodeModuleGenerator {
   /// Constructor which enables optimizations if \p options.optimizationEnabled
   /// is set.
   BytecodeModuleGenerator(
+      Module *M,
       BytecodeGenerationOptions options = BytecodeGenerationOptions::defaults(),
-      SourceMapGenerator *sourceMapGen = nullptr)
+      SourceMapGenerator *sourceMapGen = nullptr,
+      std::unique_ptr<BCProviderBase> baseBCProvider = nullptr)
       : bm_(new BytecodeModule()),
+        M_(M),
         options_(options),
-        sourceMapGen_(sourceMapGen) {
+        sourceMapGen_(sourceMapGen),
+        baseBCProvider_(std::move(baseBCProvider)) {
     bm_->getBytecodeOptionsMut().staticBuiltins =
         options_.staticBuiltinsEnabled;
   }
+
+  /// \return a BytecodeModule.
+  std::unique_ptr<BytecodeModule> generate(
+      Function *entryPoint,
+      hermes::OptValue<uint32_t> segment) &&;
 
   /// Add a function to request generating bytecode for it if it doesn't
   /// already exist.
   /// The associated BytecodeFunction will be nullptr until it's generated.
   /// \return the function ID.
   unsigned addFunction(Function *F);
-
-  /// Add a function to the list of functions.
-  void setFunctionGenerator(
-      Function *F,
-      std::unique_ptr<BytecodeFunctionGenerator> BFG);
 
   /// Gets the index of the entry point function (global function).
   int getEntryPointIndex() const {
@@ -323,12 +351,6 @@ class BytecodeModuleGenerator {
   /// table, or it is not marked as an identifier, an assertion failure will be
   /// triggered, if assertions are enabled.
   unsigned getIdentifierID(llvh::StringRef str) const;
-
-  /// Set the string table this generator uses to find the IDs for strings.
-  /// Once it is set, this table will not be further modified -- all strings
-  /// must be added beforehand.  This can only be called once on a given
-  /// generator.
-  void initializeStringTable(StringLiteralTable stringTable);
 
   /// Adds a parsed bigint to the module table.
   /// \return the index of the bigint in the table.
@@ -394,8 +416,13 @@ class BytecodeModuleGenerator {
     return literalOffsetMap_.find(inst)->second;
   }
 
-  /// \return a BytecodeModule.
-  std::unique_ptr<BytecodeModule> generate() &&;
+ private:
+  /// Collects all strings in the functions which have been added to the
+  /// functionIDMap_ and populates the string table in the BytecodeModule.
+  /// Populates unicodeFunctionSources_ if reencoding of function sources was
+  /// required.
+  /// Must be called exactly once per generation.
+  void collectStrings();
 };
 } // namespace hbc
 } // namespace hermes
