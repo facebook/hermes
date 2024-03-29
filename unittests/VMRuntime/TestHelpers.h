@@ -9,7 +9,7 @@
 #define HERMES_UNITTESTS_VMRUNTIME_TESTHELPERS_H
 
 #include "hermes/BCGen/HBC/BCProviderFromSrc.h"
-#include "hermes/BCGen/HBC/BytecodeGenerator.h"
+#include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 #include "hermes/Public/GCConfig.h"
 #include "hermes/Public/JSOutOfMemoryError.h"
 #include "hermes/Public/RuntimeConfig.h"
@@ -402,20 +402,14 @@ inline bool operator==(HermesValue a, HermesValue b) {
 /// Helper function to create a CodeBlock that correspond to a single function
 /// generated from \p BFG. The generated code block will be part of the \p
 /// runtimeModule.
-inline CodeBlock *createCodeBlock(
+inline CodeBlock *createSimpleCodeBlock(
     RuntimeModule *runtimeModule,
     Runtime &,
-    hbc::BytecodeFunctionGenerator *BFG) {
-  std::unique_ptr<hbc::BytecodeModule> BM(new hbc::BytecodeModule(1));
-  BM->setFunction(
-      0,
-      BFG->generateBytecodeFunction(
-          Function::ProhibitInvoke::ProhibitNone,
-          /* strictMode */ true,
-          0,
-          0));
+    hbc::SimpleBytecodeBuilder &builder) {
+  auto buffer = builder.generateBytecodeBuffer();
   runtimeModule->initializeWithoutCJSModulesMayAllocate(
-      hbc::BCProviderFromSrc::createFromBytecodeModule(std::move(BM)));
+      hbc::BCProviderFromBuffer::createBCProviderFromBuffer(std::move(buffer))
+          .first);
   return runtimeModule->getCodeBlockMayAllocate(0);
 }
 

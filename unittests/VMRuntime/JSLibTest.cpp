@@ -7,7 +7,7 @@
 
 #include "TestHelpers.h"
 
-#include "hermes/BCGen/HBC/BytecodeGenerator.h"
+#include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 #include "hermes/VM/JSDate.h"
 #include "hermes/VM/JSLib/Sorting.h"
 #include "hermes/VM/PropertyAccessor.h"
@@ -461,11 +461,12 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
     dpf.enumerable = 1;
     auto runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
 
-    BytecodeModuleGenerator BMG;
-    auto BFG = BytecodeFunctionGenerator::create(BMG, 1);
-    BFG->emitLoadConstDouble(0, 18);
-    BFG->emitRet(0);
-    auto codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
+    SimpleBytecodeBuilder BMG;
+    BytecodeInstructionGenerator BFG;
+    BFG.emitLoadConstDouble(0, 18);
+    BFG.emitRet(0);
+    BMG.addFunction(1, 1, BFG.acquireBytecode());
+    auto *codeBlock = createSimpleCodeBlock(runtimeModule, runtime, BMG);
     auto getter = runtime.makeHandle<JSFunction>(JSFunction::create(
         runtime,
         runtimeModule->getDomain(runtime),

@@ -7,7 +7,6 @@
 
 #include "TestHelpers.h"
 
-#include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/VM/JSDate.h"
 
 using namespace hermes::vm;

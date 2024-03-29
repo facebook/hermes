@@ -7,7 +7,7 @@
 
 #include "TestHelpers.h"
 
-#include "hermes/BCGen/HBC/BytecodeGenerator.h"
+#include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Operations.h"
@@ -93,24 +93,22 @@ class InterpreterFunctionTest : public RuntimeTestFixture {
  private:
   Handle<Domain> domain;
   RuntimeModule *runtimeModule;
-  BytecodeModuleGenerator BMG;
+  SimpleBytecodeBuilder builder;
   bool hasRun = false;
   CallResult<HermesValue> result{ExecutionStatus::EXCEPTION};
 
  protected:
-  std::unique_ptr<BytecodeFunctionGenerator> BFG;
+  BytecodeInstructionGenerator instGen;
 
   InterpreterFunctionTest()
       : RuntimeTestFixture(),
         domain(runtime.makeHandle(Domain::create(runtime))),
-        runtimeModule(RuntimeModule::createUninitialized(runtime, domain)) {
-    BFG = BytecodeFunctionGenerator::create(BMG, 1);
-  }
+        runtimeModule(RuntimeModule::createUninitialized(runtime, domain)) {}
 
   CallResult<HermesValue> run() {
     assert(!hasRun);
-    BFG->bytecodeGenerationComplete();
-    auto *codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
+    builder.addFunction(1, 1, instGen.acquireBytecode());
+    auto *codeBlock = createSimpleCodeBlock(runtimeModule, runtime, builder);
     ScopedNativeCallFrame frame(
         runtime,
         0,
@@ -162,28 +160,26 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
   StringID resultID = 2;
 
   const int FRAME_SIZE = 16;
-  BytecodeModuleGenerator BMG;
-  auto BFG = BytecodeFunctionGenerator::create(BMG, FRAME_SIZE);
+  SimpleBytecodeBuilder builder;
+  BytecodeInstructionGenerator instGen;
 
-  BFG->emitLoadConstDoubleDirect(0, 10);
-  BFG->emitLoadConstDoubleDirect(1, 2);
-  BFG->emitSubN(2, 0, 1);
-  BFG->emitGetGlobalObject(0);
-  BFG->emitGetById(1, 0, 1, printID);
-  BFG->emitLoadConstUndefined(3);
-  BFG->emitMov(
+  instGen.emitLoadConstDoubleDirect(0, 10);
+  instGen.emitLoadConstDoubleDirect(1, 2);
+  instGen.emitSubN(2, 0, 1);
+  instGen.emitGetGlobalObject(0);
+  instGen.emitGetById(1, 0, 1, printID);
+  instGen.emitLoadConstUndefined(3);
+  instGen.emitMov(
       static_cast<unsigned>(FRAME_SIZE + StackFrameLayout::ThisArg), 3);
-  BFG->emitLoadConstString(
+  instGen.emitLoadConstString(
       static_cast<unsigned>(FRAME_SIZE + StackFrameLayout::FirstArg), resultID);
-  BFG->emitMov(
+  instGen.emitMov(
       static_cast<unsigned>(FRAME_SIZE + StackFrameLayout::FirstArg - 1), 2);
-  BFG->emitCall(3, 1, 3);
-  BFG->emitRet(2);
-  BFG->setHighestReadCacheIndex(1);
-  BFG->setHighestWriteCacheIndex(0);
+  instGen.emitCall(3, 1, 3);
+  instGen.emitRet(2);
 
-  BFG->bytecodeGenerationComplete();
-  auto codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
+  builder.addFunction(1, FRAME_SIZE, instGen.acquireBytecode(), 1, 0);
+  auto *codeBlock = createSimpleCodeBlock(runtimeModule, runtime, builder);
 
   ASSERT_EQ(detail::mapStringMayAllocate(*runtimeModule, "print"), printID);
   ASSERT_EQ(detail::mapStringMayAllocate(*runtimeModule, "result="), resultID);
@@ -243,7 +239,7 @@ L2:
   std::map<int, int> labels{};
   std::map<int, int> jmps{};
 
-  auto emit = [&](BytecodeFunctionGenerator &builder, int pass) {
+  auto emit = [&](BytecodeInstructionGenerator &builder, int pass) {
     builder.emitLoadParam(0, 1);
     builder.emitMov(1, 0);
     builder.emitLoadConstDoubleDirect(2, 1);
@@ -257,17 +253,16 @@ L2:
 
   // Pass 0 - resolve labels.
   {
-    BytecodeModuleGenerator BMG;
-    auto BFG = BytecodeFunctionGenerator::create(BMG, 3);
-    emit(*BFG, 0);
+    BytecodeInstructionGenerator instGen;
+    emit(instGen, 0);
   }
 
   // Pass 1 - build the actual code.
-  BytecodeModuleGenerator BMG;
-  auto BFG = BytecodeFunctionGenerator::create(BMG, 3);
-  emit(*BFG, 1);
-  BFG->bytecodeGenerationComplete();
-  auto codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
+  SimpleBytecodeBuilder builder;
+  BytecodeInstructionGenerator instGen;
+  emit(instGen, 1);
+  builder.addFunction(1, 3, instGen.acquireBytecode());
+  auto *codeBlock = createSimpleCodeBlock(runtimeModule, runtime, builder);
 
   CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
   {
@@ -316,7 +311,7 @@ L1:
   std::map<int, int> jmps{};
   const unsigned FRAME_SIZE = 16;
 
-  auto emit = [&](BytecodeFunctionGenerator &builder, int pass) {
+  auto emit = [&](BytecodeInstructionGenerator &builder, int pass) {
     builder.emitLoadParam(0, 1);
     builder.emitLoadConstDoubleDirect(1, 2);
     JCOND(builder.emitJGreater, L(1), 0, 1);
@@ -333,19 +328,16 @@ L1:
 
   // Pass 0 - resolve labels.
   {
-    BytecodeModuleGenerator BMG;
-    auto BFG = BytecodeFunctionGenerator::create(BMG, FRAME_SIZE);
-    emit(*BFG, 0);
+    BytecodeInstructionGenerator instGen;
+    emit(instGen, 0);
   }
 
   // Pass 1 - build the actual code.
-  BytecodeModuleGenerator BMG;
-  auto BFG = BytecodeFunctionGenerator::create(BMG, FRAME_SIZE);
-  emit(*BFG, 1);
-  BFG->setHighestReadCacheIndex(255);
-  BFG->setHighestWriteCacheIndex(255);
-  BFG->bytecodeGenerationComplete();
-  auto codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
+  SimpleBytecodeBuilder BMG;
+  BytecodeInstructionGenerator instGen;
+  emit(instGen, 1);
+  BMG.addFunction(1, FRAME_SIZE, instGen.acquireBytecode(), 255, 255);
+  auto *codeBlock = createSimpleCodeBlock(runtimeModule, runtime, BMG);
 
   Handle<JSFunction> factFn = runtime.makeHandle(JSFunction::create(
       runtime,
@@ -405,31 +397,31 @@ L1:
 }
 
 TEST_F(InterpreterFunctionTest, GetByIdSlowPathChecksForExceptions) {
-  BFG->emitLoadConstUndefined(0);
-  BFG->emitGetById(0, 0, 0, 0);
-  BFG->emitRet(0);
+  instGen.emitLoadConstUndefined(0);
+  instGen.emitGetById(0, 0, 0, 0);
+  instGen.emitRet(0);
   ASSERT_EQ(ExecutionStatus::EXCEPTION, run());
 }
 
 TEST_F(InterpreterFunctionTest, PutByIdSlowPathChecksForExceptions) {
-  BFG->emitLoadConstUndefined(0);
-  BFG->emitPutByIdStrict(0, 0, 0, 0);
-  BFG->emitRet(0);
+  instGen.emitLoadConstUndefined(0);
+  instGen.emitPutByIdStrict(0, 0, 0, 0);
+  instGen.emitRet(0);
   ASSERT_EQ(ExecutionStatus::EXCEPTION, run());
 }
 
 TEST_F(InterpreterFunctionTest, TestNot) {
-  BFG->emitLoadConstFalse(0);
-  BFG->emitNot(0, 0);
-  BFG->emitRet(0);
+  instGen.emitLoadConstFalse(0);
+  instGen.emitNot(0, 0);
+  instGen.emitRet(0);
   ASSERT_EQ(ExecutionStatus::RETURNED, run());
   EXPECT_TRUE(getResultAsBool());
 }
 
 TEST_F(InterpreterFunctionTest, TestToString) {
-  BFG->emitLoadConstFalse(0);
-  BFG->emitAddEmptyString(0, 0);
-  BFG->emitRet(0);
+  instGen.emitLoadConstFalse(0);
+  instGen.emitAddEmptyString(0, 0);
+  instGen.emitRet(0);
   ASSERT_EQ(ExecutionStatus::RETURNED, run());
   SmallU16String<8> tmp;
   getResultAsString()->appendUTF16String(tmp);

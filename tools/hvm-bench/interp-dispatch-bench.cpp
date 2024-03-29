@@ -34,7 +34,7 @@
 /// optimizations.
 //===----------------------------------------------------------------------===//
 #include "hermes/BCGen/HBC/BCProviderFromSrc.h"
-#include "hermes/BCGen/HBC/BytecodeGenerator.h"
+#include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Domain.h"
 #include "hermes/VM/Operations.h"
@@ -111,7 +111,7 @@ L1:
 
   const unsigned FRAME_SIZE = 9;
 
-  auto emit = [&](BytecodeFunctionGenerator &builder, int pass) {
+  auto emit = [&](BytecodeInstructionGenerator &builder, int pass) {
     builder.emitLoadParam(0, 1);
     builder.emitLoadConstDoubleDirect(1, 0);
     builder.emitLoadConstDoubleDirect(4, 1);
@@ -136,32 +136,22 @@ L1:
 
   // Pass 0 - resolve labels.
   {
-    BytecodeModuleGenerator BMG;
-    auto BFG = BytecodeFunctionGenerator::create(BMG, FRAME_SIZE);
-    emit(*BFG, 0);
+    BytecodeInstructionGenerator BFG;
+    emit(BFG, 0);
   }
 
   // Pass 1 - build the actual code.
 
-  BytecodeModuleGenerator BMG;
-  auto BFG = BytecodeFunctionGenerator::create(BMG, FRAME_SIZE);
-  emit(*BFG, 1);
+  SimpleBytecodeBuilder BMG;
+  BytecodeInstructionGenerator BFG;
+  emit(BFG, 1);
+  BMG.addFunction(2, FRAME_SIZE, BFG.acquireBytecode());
+  auto buffer = BMG.generateBytecodeBuffer();
 
-  std::unique_ptr<BytecodeModule> BM(new BytecodeModule(1));
-  BM->setFunction(
-      0,
-      BFG->generateBytecodeFunction(
-          hermes::Function::ProhibitInvoke::ProhibitNone,
-          /* strictMode */ true,
-          0,
-          0));
   runtimeModule->initializeWithoutCJSModulesMayAllocate(
-      BCProviderFromSrc::createFromBytecodeModule(std::move(BM)));
-  auto codeBlock = CodeBlock::createCodeBlock(
-      runtimeModule,
-      runtimeModule->getBytecode()->getFunctionHeader(0),
-      runtimeModule->getBytecode()->getBytecode(0),
-      0);
+      BCProviderFromBuffer::createBCProviderFromBuffer(std::move(buffer))
+          .first);
+  auto *codeBlock = runtimeModule->getCodeBlockMayAllocate(0);
 
   ScopedNativeCallFrame newFrame{
       runtime, 2, nullptr, false, HermesValue::encodeUndefinedValue()};

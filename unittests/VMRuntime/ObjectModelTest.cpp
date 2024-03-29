@@ -7,7 +7,7 @@
 
 #include "TestHelpers.h"
 
-#include "hermes/BCGen/HBC/BytecodeGenerator.h"
+#include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 #include "hermes/VM/JSDate.h"
 #include "hermes/VM/PropertyAccessor.h"
 
@@ -34,11 +34,12 @@ static inline Handle<Callable> makeSimpleJSFunction(
   if (runtimeModule->getBytecode()) {
     codeBlock = runtimeModule->getCodeBlockMayAllocate(0);
   } else {
-    BytecodeModuleGenerator BMG;
-    auto BFG = BytecodeFunctionGenerator::create(BMG, 1);
-    BFG->emitLoadConstDoubleDirect(0, 10.0);
-    BFG->emitRet(0);
-    codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
+    SimpleBytecodeBuilder builder;
+    BytecodeInstructionGenerator instGen;
+    instGen.emitLoadConstDoubleDirect(0, 10.0);
+    instGen.emitRet(0);
+    builder.addFunction(1, 1, instGen.acquireBytecode());
+    codeBlock = createSimpleCodeBlock(runtimeModule, runtime, builder);
   }
   return runtime.makeHandle<JSFunction>(JSFunction::create(
       runtime,

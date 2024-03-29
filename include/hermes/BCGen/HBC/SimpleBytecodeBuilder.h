@@ -33,14 +33,22 @@ class SimpleBytecodeBuilder {
     uint32_t frameSize;
     /// The opcodes.
     std::vector<opcode_atom_t> opcodes;
+    /// Header field for number of read cache slots.
+    uint8_t highestReadCacheIndex;
+    /// Header field for number of write cache slots.
+    uint8_t highestWriteCacheIndex;
 
     SimpleFunction(
         uint32_t paramCount,
         uint32_t frameSize,
-        std::vector<opcode_atom_t> &&opcodes)
+        std::vector<opcode_atom_t> &&opcodes,
+        uint8_t highestReadCacheIndex = 0,
+        uint8_t highestWriteCacheIndex = 0)
         : paramCount(paramCount),
           frameSize(frameSize),
-          opcodes(std::move(opcodes)) {
+          opcodes(std::move(opcodes)),
+          highestReadCacheIndex(highestReadCacheIndex),
+          highestWriteCacheIndex(highestWriteCacheIndex) {
       assert(paramCount > 0 && "paramCount must include 'this'");
     }
   };
@@ -52,11 +60,22 @@ class SimpleBytecodeBuilder {
  public:
   /// Add a function to the builder. We only need the \p frameSize and
   /// \p opcodes.
+  /// \param highestReadCacheIndex the highestReadCacheIndex to set on the
+  /// FunctionHeader.
+  /// \param highestWriteCacheIndex the highestWriteCacheIndex to set on the
+  /// FunctionHeader.
   void addFunction(
       uint32_t paramCount,
       uint32_t frameSize,
-      std::vector<opcode_atom_t> &&opcodes) {
-    functions_.emplace_back(paramCount, frameSize, std::move(opcodes));
+      std::vector<opcode_atom_t> &&opcodes,
+      uint8_t highestReadCacheIndex = 0,
+      uint8_t highestWriteCacheIndex = 0) {
+    functions_.emplace_back(
+        paramCount,
+        frameSize,
+        std::move(opcodes),
+        highestReadCacheIndex,
+        highestWriteCacheIndex);
   }
 
   /// Generate the bytecode buffer given the list of functions in the builder.
