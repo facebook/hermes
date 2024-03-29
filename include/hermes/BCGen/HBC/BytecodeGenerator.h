@@ -33,7 +33,200 @@ namespace hbc {
 
 const char *const kStrippedFunctionName = "function-name-stripped";
 
-class BytecodeModuleGenerator;
+class BytecodeFunctionGenerator;
+
+/// This class is used by the hermes backend.
+/// It wraps all data required to generate the module.
+/// To use it, construct a BytecodeModuleGenerator and then add any functions to
+/// generate using \c addFunction.
+/// Then, \c generate will populate and return a BytecodeModule containing only
+/// the functions which were added.
+class BytecodeModuleGenerator {
+  /// The bytecode module being generated.
+  /// Never nullptr while this BytecodeModuleGenerator is valid_.
+  std::unique_ptr<BytecodeModule> bm_;
+
+  /// The IR Module for which we're generating bytecode.
+  Module *M_;
+
+  /// Mapping from Function * to a sequential ID.
+  llvh::MapVector<Function *, unsigned> functionIDMap_{};
+
+  /// Generates debug information.
+  /// Stores the filename table.
+  DebugInfoGenerator debugInfoGenerator_;
+
+  /// A map from instruction to literal offset in the corresponding buffers.
+  /// \c arrayBuffer_, \c objKeyBuffer_, \c objValBuffer_.
+  /// This map is populated before instruction selection.
+  LiteralBufferBuilder::LiteralOffsetMapTy literalOffsetMap_{};
+
+  /// Options controlling bytecode generation.
+  BytecodeGenerationOptions options_;
+
+  /// The source map generator to use (nullptr if none).
+  SourceMapGenerator *sourceMapGen_;
+
+  /// Base bytecode used in delta optimizing mode.
+  /// When it is not null and optimization is turned on, we optimize for the
+  /// delta.
+  std::unique_ptr<BCProviderBase> baseBCProvider_;
+
+  /// Mapping of the source text UTF-8 to the modified UTF-16-like
+  /// representation used by string literal encoding.
+  /// See appendUnicodeToStorage.
+  /// If a function source isn't in this map, then it's entirely ASCII and can
+  /// be added to the string table unmodified.
+  /// This allows us to add strings to the StringLiteralTable,
+  /// which will convert actual UTF-8 to UTF-16 automatically if it's detected,
+  /// meaning we'd not be able to directly look up the original function source
+  /// in the table.
+  llvh::DenseMap<llvh::StringRef, llvh::SmallVector<char, 32>>
+      unicodeFunctionSources_{};
+
+  /// Indicate whether this generator is still valid.
+  /// We need this because one can only call the generate() function
+  /// once, and after that, this generator is no longer valid because
+  /// the content has been modified during generation.
+  bool valid_{true};
+
+ public:
+  /// Constructor which enables optimizations if \p options.optimizationEnabled
+  /// is set.
+  BytecodeModuleGenerator(
+      Module *M,
+      BytecodeGenerationOptions options = BytecodeGenerationOptions::defaults(),
+      SourceMapGenerator *sourceMapGen = nullptr,
+      std::unique_ptr<BCProviderBase> baseBCProvider = nullptr)
+      : bm_(new BytecodeModule()),
+        M_(M),
+        options_(options),
+        sourceMapGen_(sourceMapGen),
+        baseBCProvider_(std::move(baseBCProvider)) {
+    bm_->getBytecodeOptionsMut().staticBuiltins =
+        options_.staticBuiltinsEnabled;
+  }
+
+  /// \return a BytecodeModule.
+  std::unique_ptr<BytecodeModule> generate(
+      Function *entryPoint,
+      hermes::OptValue<uint32_t> segment) &&;
+
+  /// Add a function to request generating bytecode for it if it doesn't
+  /// already exist.
+  /// The associated BytecodeFunction will be nullptr until it's generated.
+  /// \return the function ID.
+  unsigned addFunction(Function *F);
+
+  /// Gets the index of the entry point function (global function).
+  int getEntryPointIndex() const {
+    return bm_->getGlobalFunctionIndex();
+  }
+
+  /// Sets the index of the entry point function (global function).
+  void setEntryPointIndex(int index) {
+    bm_->setGlobalFunctionIndex(index);
+  }
+
+  /// \returns the index of the string in this module's string table if it
+  /// exists.  If the string does not exist will trigger an assertion failure
+  /// if assertions are enabled.
+  unsigned getStringID(llvh::StringRef str) const {
+    return bm_->getStringID(str);
+  }
+
+  /// \returns the index of the string in this module's string table, assuming
+  /// it exists and is an identifier.  If the string does not exist in the
+  /// table, or it is not marked as an identifier, an assertion failure will be
+  /// triggered, if assertions are enabled.
+  unsigned getIdentifierID(llvh::StringRef str) const {
+    return bm_->getIdentifierID(str);
+  }
+
+  /// Adds a parsed bigint to the module table.
+  /// \return the index of the bigint in the table.
+  uint32_t addBigInt(bigint::ParsedBigInt bigint) {
+    return bm_->addBigInt(std::move(bigint));
+  }
+
+  /// Set the serialized literal tables that this generator will use. Once set,
+  /// no further modifications are possible.
+  /// \param bufs containing the serialized literals.
+  void initializeSerializedLiterals(LiteralBufferBuilder::Result &&bufs);
+
+  /// Adds a compiled regexp to the module table.
+  /// \return the index of the regexp in the table.
+  uint32_t addRegExp(CompiledRegExp *regexp) {
+    return bm_->addRegExp(regexp);
+  }
+
+  /// Add filename to the filename table.
+  /// \return the index of the string.
+  uint32_t addFilename(llvh::StringRef filename) {
+    return debugInfoGenerator_.addFilename(filename);
+  }
+
+  /// Set the segment ID for this module.
+  void setSegmentID(uint32_t id) {
+    bm_->setSegmentID(id);
+  }
+
+  /// Adds a CJS module entry to the table.
+  void addCJSModule(uint32_t functionID, uint32_t nameID) {
+    bm_->addCJSModule(functionID, nameID);
+  }
+
+  /// Adds a statically-resolved CJS module entry to the table.
+  /// \param moduleID the index of the CJS module (incremented each call).
+  void addCJSModuleStatic(uint32_t moduleID, uint32_t functionID) {
+    bm_->addCJSModuleStatic(moduleID, functionID);
+  }
+
+  /// Adds a function source entry to the table.
+  /// \param functionID the index of the function.
+  /// \param stringID the index of the corresponding source in the string table.
+  void addFunctionSource(uint32_t functionID, uint32_t stringID) {
+    bm_->addFunctionSource(functionID, stringID);
+  }
+
+  /// Serializes the array of literals given into a compact char buffer.
+  /// The serialization format can be found in:
+  /// include/hermes/BCGen/SerializedLiteralGenerator.h
+  /// This function serializes the literals, and checks to see if the exact
+  /// byte pattern is already present in \buff. If it is, it simply returns
+  /// its offset in \buff. If it isn't, the function appends it and returns
+  /// its offset.
+  /// NOTE: Since it simply does a byte by byte search, it can return indices
+  /// that don't correspond to any previously inserted literals.
+  ///   e.g. When serialized, [int 24833]'s last two bytes are equivalent to
+  ///   [String 1], and if they are added separately, serializeBuffer would
+  ///   return the offset of the last two bytes instead of appending
+  ///   [String 1] to the buffer.
+  uint32_t serializeBuffer(
+      ArrayRef<Literal *> literals,
+      std::vector<unsigned char> &buff,
+      bool isKeyBuffer);
+
+  /// For a given instruction \p inst that has an associated serialized literal,
+  /// obtain the offset of the literal in the associated buffer. In case of
+  /// an object literal, it is a pair of offsets (key and value). In case of
+  /// array literal, only the first offset is used.
+  LiteralBufferBuilder::LiteralOffset serializedLiteralOffsetFor(
+      const Instruction *inst) const {
+    assert(
+        literalOffsetMap_.count(inst) &&
+        "instruction has no serialized literal");
+    return literalOffsetMap_.find(inst)->second;
+  }
+
+ private:
+  /// Collects all strings in the functions which have been added to the
+  /// functionIDMap_ and populates the string table in the BytecodeModule.
+  /// Populates unicodeFunctionSources_ if reencoding of function sources was
+  /// required.
+  /// Must be called exactly once per generation.
+  void collectStrings();
+};
 
 /// This class is used by the hermes backend.
 /// It wraps all data required to generate the bytecode for a function.
@@ -109,31 +302,51 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
 
   unsigned getFunctionID(Function *F);
 
-  /// \return the ID in the bytecode's bigint table for a given literal string
-  /// \p value.
-  unsigned getBigIntID(LiteralBigInt *value) const;
-
   /// \return the ID in the bytecode's string table for a given literal string
   /// \p value.
-  unsigned getStringID(LiteralString *value) const;
+  unsigned getStringID(LiteralString *value) const {
+    return BMGen_.getStringID(value->getValue().str());
+  }
 
   /// \return the ID in the bytecode's string table for a given literal string
   /// \p value, assuming it has been registered for us as an identifier.
-  unsigned getIdentifierID(LiteralString *value) const;
+  unsigned getIdentifierID(LiteralString *value) const {
+    return BMGen_.getIdentifierID(value->getValue().str());
+  }
 
   /// Adds a parsed bigint to the module table.
   /// \return the index of the bigint in the table.
-  uint32_t addBigInt(bigint::ParsedBigInt bigint);
+  uint32_t addBigInt(bigint::ParsedBigInt bigint) {
+    assert(
+        !complete_ &&
+        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
+    return BMGen_.addBigInt(std::move(bigint));
+  }
 
   /// Adds a compiled regexp to the module table.
   /// \return the index of the regexp in the table.
-  uint32_t addRegExp(CompiledRegExp *regexp);
+  uint32_t addRegExp(CompiledRegExp *regexp) {
+    assert(
+        !complete_ &&
+        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
+    return BMGen_.addRegExp(regexp);
+  }
 
   /// Add filename to the filename table.
   /// \return the index of the string.
-  uint32_t addFilename(llvh::StringRef filename);
+  uint32_t addFilename(llvh::StringRef filename) {
+    assert(
+        !complete_ &&
+        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
+    return BMGen_.addFilename(filename);
+  }
 
-  void addExceptionHandler(HBCExceptionHandlerInfo info);
+  void addExceptionHandler(HBCExceptionHandlerInfo info) {
+    assert(
+        !complete_ &&
+        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
+    exceptionHandlers_.push_back(info);
+  }
 
   /// Set the source location of the function definition.
   void setSourceLocation(const DebugSourceLocation &location) {
@@ -235,7 +448,14 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   }
 
   /// Set the jump table for this function, if any.
-  void setJumpTable(std::vector<uint32_t> &&jumpTable);
+  void setJumpTable(std::vector<uint32_t> &&jumpTable) {
+    assert(
+        !complete_ &&
+        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
+    assert(!jumpTable.empty() && "invoked with no jump table");
+
+    jumpTable_ = std::move(jumpTable);
+  }
 
   /// Signal that bytecode generation is finalized.
   void bytecodeGenerationComplete();
@@ -243,187 +463,6 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   friend class BytecodeModuleGenerator;
 };
 
-/// This class is used by the hermes backend.
-/// It wraps all data required to generate the module.
-/// To use it, construct a BytecodeModuleGenerator and then add any functions to
-/// generate using \c addFunction.
-/// Then, \c generate will populate and return a BytecodeModule containing only
-/// the functions which were added.
-class BytecodeModuleGenerator {
-  /// The bytecode module being generated.
-  /// Never nullptr while this BytecodeModuleGenerator is valid_.
-  std::unique_ptr<BytecodeModule> bm_;
-
-  /// The IR Module for which we're generating bytecode.
-  Module *M_;
-
-  /// Mapping from Function * to a sequential ID.
-  llvh::MapVector<Function *, unsigned> functionIDMap_{};
-
-  /// Generates debug information.
-  /// Stores the filename table.
-  DebugInfoGenerator debugInfoGenerator_;
-
-  /// A map from instruction to literal offset in the corresponding buffers.
-  /// \c arrayBuffer_, \c objKeyBuffer_, \c objValBuffer_.
-  /// This map is populated before instruction selection.
-  LiteralBufferBuilder::LiteralOffsetMapTy literalOffsetMap_{};
-
-  /// Options controlling bytecode generation.
-  BytecodeGenerationOptions options_;
-
-  /// The source map generator to use (nullptr if none).
-  SourceMapGenerator *sourceMapGen_;
-
-  /// Base bytecode used in delta optimizing mode.
-  /// When it is not null and optimization is turned on, we optimize for the
-  /// delta.
-  std::unique_ptr<BCProviderBase> baseBCProvider_;
-
-  /// Mapping of the source text UTF-8 to the modified UTF-16-like
-  /// representation used by string literal encoding.
-  /// See appendUnicodeToStorage.
-  /// If a function source isn't in this map, then it's entirely ASCII and can
-  /// be added to the string table unmodified.
-  /// This allows us to add strings to the StringLiteralTable,
-  /// which will convert actual UTF-8 to UTF-16 automatically if it's detected,
-  /// meaning we'd not be able to directly look up the original function source
-  /// in the table.
-  llvh::DenseMap<llvh::StringRef, llvh::SmallVector<char, 32>>
-      unicodeFunctionSources_{};
-
-  /// Indicate whether this generator is still valid.
-  /// We need this because one can only call the generate() function
-  /// once, and after that, this generator is no longer valid because
-  /// the content has been modified during generation.
-  bool valid_{true};
-
- public:
-  /// Constructor which enables optimizations if \p options.optimizationEnabled
-  /// is set.
-  BytecodeModuleGenerator(
-      Module *M,
-      BytecodeGenerationOptions options = BytecodeGenerationOptions::defaults(),
-      SourceMapGenerator *sourceMapGen = nullptr,
-      std::unique_ptr<BCProviderBase> baseBCProvider = nullptr)
-      : bm_(new BytecodeModule()),
-        M_(M),
-        options_(options),
-        sourceMapGen_(sourceMapGen),
-        baseBCProvider_(std::move(baseBCProvider)) {
-    bm_->getBytecodeOptionsMut().staticBuiltins =
-        options_.staticBuiltinsEnabled;
-  }
-
-  /// \return a BytecodeModule.
-  std::unique_ptr<BytecodeModule> generate(
-      Function *entryPoint,
-      hermes::OptValue<uint32_t> segment) &&;
-
-  /// Add a function to request generating bytecode for it if it doesn't
-  /// already exist.
-  /// The associated BytecodeFunction will be nullptr until it's generated.
-  /// \return the function ID.
-  unsigned addFunction(Function *F);
-
-  /// Gets the index of the entry point function (global function).
-  int getEntryPointIndex() const {
-    return bm_->getGlobalFunctionIndex();
-  }
-
-  /// Sets the index of the entry point function (global function).
-  void setEntryPointIndex(int index) {
-    bm_->setGlobalFunctionIndex(index);
-  }
-
-  /// \returns the index of the bigint in this module's bigint table if it
-  /// exists.  If the bigint does not exist will trigger an assertion failure
-  /// if assertions are enabled.
-  unsigned getBigIntID(llvh::StringRef str) const;
-
-  /// \returns the index of the string in this module's string table if it
-  /// exists.  If the string does not exist will trigger an assertion failure
-  /// if assertions are enabled.
-  unsigned getStringID(llvh::StringRef str) const;
-
-  /// \returns the index of the string in this module's string table, assuming
-  /// it exists and is an identifier.  If the string does not exist in the
-  /// table, or it is not marked as an identifier, an assertion failure will be
-  /// triggered, if assertions are enabled.
-  unsigned getIdentifierID(llvh::StringRef str) const;
-
-  /// Adds a parsed bigint to the module table.
-  /// \return the index of the bigint in the table.
-  uint32_t addBigInt(bigint::ParsedBigInt bigint);
-
-  /// Set the serialized literal tables that this generator will use. Once set,
-  /// no further modifications are possible.
-  /// \param bufs containing the serialized literals.
-  void initializeSerializedLiterals(LiteralBufferBuilder::Result &&bufs);
-
-  /// Adds a compiled regexp to the module table.
-  /// \return the index of the regexp in the table.
-  uint32_t addRegExp(CompiledRegExp *regexp);
-
-  /// Add filename to the filename table.
-  /// \return the index of the string.
-  uint32_t addFilename(llvh::StringRef str);
-
-  /// Set the segment ID for this module.
-  void setSegmentID(uint32_t id) {
-    bm_->setSegmentID(id);
-  }
-
-  /// Adds a CJS module entry to the table.
-  void addCJSModule(uint32_t functionID, uint32_t nameID);
-
-  /// Adds a statically-resolved CJS module entry to the table.
-  /// \param moduleID the index of the CJS module (incremented each call).
-  void addCJSModuleStatic(uint32_t moduleID, uint32_t functionID);
-
-  /// Adds a function source entry to the table.
-  /// \param functionID the index of the function.
-  /// \param stringID the index of the corresponding source in the string table.
-  void addFunctionSource(uint32_t functionID, uint32_t stringID);
-
-  /// Serializes the array of literals given into a compact char buffer.
-  /// The serialization format can be found in:
-  /// include/hermes/BCGen/SerializedLiteralGenerator.h
-  /// This function serializes the literals, and checks to see if the exact
-  /// byte pattern is already present in \buff. If it is, it simply returns
-  /// its offset in \buff. If it isn't, the function appends it and returns
-  /// its offset.
-  /// NOTE: Since it simply does a byte by byte search, it can return indices
-  /// that don't correspond to any previously inserted literals.
-  ///   e.g. When serialized, [int 24833]'s last two bytes are equivalent to
-  ///   [String 1], and if they are added separately, serializeBuffer would
-  ///   return the offset of the last two bytes instead of appending
-  ///   [String 1] to the buffer.
-  uint32_t serializeBuffer(
-      ArrayRef<Literal *> literals,
-      std::vector<unsigned char> &buff,
-      bool isKeyBuffer);
-
-  /// For a given instruction \p inst that has an associated serialized literal,
-  /// obtain the offset of the literal in the associated buffer. In case of
-  /// an object literal, it is a pair of offsets (key and value). In case of
-  /// array literal, only the first offset is used.
-  LiteralBufferBuilder::LiteralOffset serializedLiteralOffsetFor(
-      const Instruction *inst) const {
-    assert(
-        literalOffsetMap_.count(inst) &&
-        "instruction has no serialized literal");
-    return literalOffsetMap_.find(inst)->second;
-  }
-
- private:
-  /// Collects all strings in the functions which have been added to the
-  /// functionIDMap_ and populates the string table in the BytecodeModule.
-  /// Populates unicodeFunctionSources_ if reencoding of function sources was
-  /// required.
-  /// Must be called exactly once per generation.
-  void collectStrings();
-};
 } // namespace hbc
 } // namespace hermes
 

@@ -71,44 +71,6 @@ static UniquingStringLiteralAccumulator stringAccumulatorFromBCProvider(
       std::move(css), std::move(isIdentifier)};
 }
 
-unsigned BytecodeFunctionGenerator::getStringID(LiteralString *value) const {
-  return BMGen_.getStringID(value->getValue().str());
-}
-
-unsigned BytecodeFunctionGenerator::getIdentifierID(
-    LiteralString *value) const {
-  return BMGen_.getIdentifierID(value->getValue().str());
-}
-
-uint32_t BytecodeFunctionGenerator::addBigInt(bigint::ParsedBigInt bigint) {
-  assert(
-      !complete_ &&
-      "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
-  return BMGen_.addBigInt(std::move(bigint));
-}
-
-uint32_t BytecodeFunctionGenerator::addRegExp(CompiledRegExp *regexp) {
-  assert(
-      !complete_ &&
-      "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
-  return BMGen_.addRegExp(regexp);
-}
-
-uint32_t BytecodeFunctionGenerator::addFilename(llvh::StringRef filename) {
-  assert(
-      !complete_ &&
-      "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
-  return BMGen_.addFilename(filename);
-}
-
-void BytecodeFunctionGenerator::addExceptionHandler(
-    HBCExceptionHandlerInfo info) {
-  assert(
-      !complete_ &&
-      "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
-  exceptionHandlers_.push_back(info);
-}
-
 void BytecodeFunctionGenerator::addDebugSourceLocation(
     const DebugSourceLocation &info) {
   assert(
@@ -122,16 +84,6 @@ void BytecodeFunctionGenerator::addDebugSourceLocation(
   } else {
     debugLocations_.push_back(info);
   }
-}
-
-void BytecodeFunctionGenerator::setJumpTable(
-    std::vector<uint32_t> &&jumpTable) {
-  assert(
-      !complete_ &&
-      "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
-  assert(!jumpTable.empty() && "invoked with no jump table");
-
-  jumpTable_ = std::move(jumpTable);
 }
 
 std::unique_ptr<BytecodeFunction>
@@ -238,18 +190,6 @@ unsigned BytecodeModuleGenerator::addFunction(Function *F) {
   return it->second;
 }
 
-unsigned BytecodeModuleGenerator::getStringID(llvh::StringRef str) const {
-  return bm_->getStringID(str);
-}
-
-unsigned BytecodeModuleGenerator::getIdentifierID(llvh::StringRef str) const {
-  return bm_->getIdentifierID(str);
-}
-
-uint32_t BytecodeModuleGenerator::addBigInt(bigint::ParsedBigInt bigint) {
-  return bm_->addBigInt(std::move(bigint));
-}
-
 void BytecodeModuleGenerator::initializeSerializedLiterals(
     LiteralBufferBuilder::Result &&bufs) {
   assert(
@@ -261,32 +201,6 @@ void BytecodeModuleGenerator::initializeSerializedLiterals(
       std::move(bufs.keyBuffer),
       std::move(bufs.valBuffer));
   literalOffsetMap_ = std::move(bufs.offsetMap);
-}
-
-uint32_t BytecodeModuleGenerator::addRegExp(CompiledRegExp *regexp) {
-  return bm_->addRegExp(regexp);
-}
-
-uint32_t BytecodeModuleGenerator::addFilename(llvh::StringRef filename) {
-  return debugInfoGenerator_.addFilename(filename);
-}
-
-void BytecodeModuleGenerator::addCJSModule(
-    uint32_t functionID,
-    uint32_t nameID) {
-  bm_->addCJSModule(functionID, nameID);
-}
-
-void BytecodeModuleGenerator::addCJSModuleStatic(
-    uint32_t moduleID,
-    uint32_t functionID) {
-  bm_->addCJSModuleStatic(moduleID, functionID);
-}
-
-void BytecodeModuleGenerator::addFunctionSource(
-    uint32_t functionID,
-    uint32_t stringID) {
-  bm_->addFunctionSource(functionID, stringID);
 }
 
 /// \return true if and only if a literal string operand at index \p idx of
