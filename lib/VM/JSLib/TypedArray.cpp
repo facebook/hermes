@@ -1746,6 +1746,64 @@ typedArrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
 }
 
+/// ES14.0 23.2.3.32
+CallResult<HermesValue>
+typedArrayPrototypeToReversed(void *, Runtime &runtime, NativeArgs args) {
+  GCScope gcScope{runtime};
+
+  // 2. Perform ? ValidateTypedArray(O).
+  if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
+      ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 1. Let O be this value
+  auto self = args.vmcastThis<JSTypedArrayBase>();
+
+  // 3. Let len be O.[[ArrayLength]].
+  double len = self->getLength();
+
+  // 4. Let A be ? TypedArrayCreateSameType(O, « 𝔽(len) »).
+  auto aRes = JSTypedArrayBase::allocateSpecies(runtime, self, len);
+  if (LLVM_UNLIKELY(aRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto A = aRes.getValue();
+
+  // 5. Let k be 0.
+  double k = 0;
+  MutableHandle<> kHandle{runtime};
+  MutableHandle<> fromValueHandle{runtime};
+
+  auto marker = gcScope.createMarker();
+  // 6. Repeat, while k < len,
+  while (k < len) {
+    gcScope.flushToMarker(marker);
+
+    // 6a. Let from be ! ToString(𝔽(length - k - 1)).
+    double from = len - k - 1;
+
+    // 6b. Let Pk be ! ToString(𝔽(k)).
+    kHandle = HermesValue::encodeTrustedNumberValue(k);
+
+    // 6c. Let fromValue be ? Get(O, from).
+    fromValueHandle =
+        JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, from);
+
+    // 6d. Perform ! Set(A, Pk, fromValue, true).
+    if (LLVM_UNLIKELY(
+            A->setOwnIndexed(A, runtime, k, fromValueHandle) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    // 6e. Set k to k + 1.
+    ++k;
+  }
+
+  return A.getHermesValue();
+}
+
 Handle<JSObject> createTypedArrayBaseConstructor(Runtime &runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime.typedArrayBasePrototype);
 
@@ -2042,6 +2100,14 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime &runtime) {
       Predefined::getSymbolID(Predefined::toLocaleString),
       nullptr,
       typedArrayPrototypeToLocaleString,
+      0);
+
+  defineMethod(
+      runtime,
+      proto,
+      Predefined::getSymbolID(Predefined::toReversed),
+      nullptr,
+      typedArrayPrototypeToReversed,
       0);
 
   // TypedArrayBase.xxx
