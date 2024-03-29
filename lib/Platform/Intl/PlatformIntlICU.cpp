@@ -19,14 +19,15 @@ namespace hermes {
 namespace platform_intl {
 namespace {
 
-// https://tc39.es/ecma402/#sec-canonicalizelocalelist
+/// https://402.ecma-international.org/8.0/#sec-canonicalizelocalelist
 vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales) {
-  // 1. If locales is undefined, then a. Return a new empty list
-  if (locales.empty()) {
-    return std::vector<std::u16string>{};
-  }
+  // 1. If locales is undefined, then
+  //   a. Return a new empty List
+  // Not needed, this validation occurs closer to VM in 'normalizeLocales'.
+  // 2. Let seen be a new empty List.
+  std::vector<std::u16string> seen;
   // 2. Let seen be a new empty List
   std::vector<std::u16string> seen;
 
