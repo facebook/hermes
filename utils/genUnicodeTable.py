@@ -16,6 +16,7 @@ import sys
 import urllib.request
 from string import Template
 from collections import defaultdict, OrderedDict
+from typing import Iterable, Union
 
 
 class UnicodeDataFiles:
@@ -53,7 +54,7 @@ class UnicodeDataFiles:
         return cls.__cache[filename]
 
     @classmethod
-    def __local_or_fetch(cls, url, filename):
+    def __local_or_fetch(cls, url, filename) -> bytes:
         """Read a local file's contents or fetch them from a URL."""
         try:
             with open(filename, "rb") as f:
@@ -70,7 +71,7 @@ class UnicodeDataFiles:
                 return data
 
     @classmethod
-    def __data_to_lines(cls, data):
+    def __data_to_lines(cls, data) -> Iterable[str]:
         return [
             line
             for line in data.decode("utf-8").splitlines()
@@ -78,11 +79,11 @@ class UnicodeDataFiles:
         ]
 
     @classmethod
-    def get_lines(cls, filename):
+    def get_lines(cls, filename) -> Iterable[str]:
         return cls.get(filename)["lines"]
 
     @classmethod
-    def get_sha1(cls, filename):
+    def get_sha1(cls, filename) -> str:
         return cls.get(filename)["sha1"]
 
 
@@ -266,21 +267,38 @@ def get_assigned_codepoints(unicode_data_lines):
     return intervals
 
 
-def split_fields(line):
+def split_fields(line) -> list[str]:
+    """
+    Split a semicolon-separated line into fields, ignoring comments.
+    """
     return [f.strip() for f in line.split("#")[0].split(";")]
 
 
-def parse_range(range_str):
+# A Unicode codepoint range, represented as a tuple of (start, end).
+range_tuple = tuple[int, int]
+
+
+def parse_range(range_str) -> range_tuple:
+    """
+    Parse the alternative codepoint range format, e.g. "1..10", or "1" into a
+    tuple of `(range_start, range_end)`.
+    """
     start, end = range_str.split("..") if ".." in range_str else (range_str, range_str)
     return (int(start, 16), int(end, 16))
 
 
-def parse_codepoint_ranges(lines, pred):
+def parse_codepoint_ranges(lines: Iterable[str], pred) -> dict[str, list[range_tuple]]:
     """
-    From an iterable of lines, build a dict mapping canonical property names to
-    lists of Unicode codepoint ranges (start, end) for those properties.
+    Create a mapping of canonical property names to lists of Unicode codepoint
+    ranges (start, end) for those properties, from the lines of a Unicode
+    Database data file.
 
     Codepoint ranges will be merged if they are adjacent.
+
+    Example input:
+
+        0000..001F    ; Cc # Cc       [32] <control-0000>-<control-001F>
+        0020          ; Zs # Zs       [1] SPACE
     """
     ranges = defaultdict(list)
     last_name = None
@@ -288,6 +306,7 @@ def parse_codepoint_ranges(lines, pred):
     last_cp = 0
     openi = False
     for line in lines:
+        # Ignore empty lines and comment lines.
         if not line or line.startswith("#"):
             continue
 
@@ -326,7 +345,25 @@ def parse_codepoint_ranges(lines, pred):
     return ranges
 
 
-def parse_property_aliases(lines, get_canonical_name):
+def parse_property_aliases(
+    lines: Iterable[str], get_canonical_name
+) -> dict[str, list[str]]:
+    """
+    Create a mapping of canonical property names to lists of aliases, from the
+    lines of a Unicode Database data file.
+
+    Example input:
+
+        gc ; Cc                               ; Control                          ; cntrl
+        gc ; Cf                               ; Format
+
+    Example output:
+
+        {
+            "Cc": ["Control", "cntrl"],
+            "Cf": ["Format"],
+        }
+    """
     property_aliases = {}
     for line in lines:
         fields = split_fields(line)
@@ -336,13 +373,27 @@ def parse_property_aliases(lines, get_canonical_name):
     return property_aliases
 
 
-class UnicodePropertyCategory:
-    def __init__(self, parent=None):
-        self.parent = parent
-        self._aliases = {}
-        self._range_array_pool = OrderedDict()
+# A range pool entry, represented as a tuple of `(offset, size)`.
+range_array_pool_entry = tuple[int, int]
 
-    def all_names(self):
+
+class UnicodePropertyCategory:
+    """
+    A pool of property names and aliases, and codepoint range arrays, that exist
+    with `UnicodeProperties` as the parent, and represent a specific category of
+    Unicode properties, such as "General_Category" or "Script".
+    """
+
+    def __init__(self, parent=None):
+        self.parent: UnicodeProperties = parent
+        self._aliases: dict[str, list[str]] = {}
+        self._range_array_pool: dict[str, range_array_pool_entry] = OrderedDict()
+
+    def all_names(self) -> list[tuple[str, str]]:
+        """
+        Sorted list of `(alias, canonical_name)` tuples for all know property
+        names in this pool.
+        """
         # This is sorted so the C++ code can use a binary search.
         return sorted(
             {
@@ -353,10 +404,17 @@ class UnicodePropertyCategory:
         )
 
     def range_array_pool(self):
+        """
+        Sorted list of `(name, (offset, size))` tuples for the range array pool
+        data.
+        """
         # This is sorted so the C++ code can use a binary search.
         return sorted(self._range_array_pool.items())
 
     def add_aliases(self, name, aliases):
+        """
+        See `UnicodeProperties.add_aliases`.
+        """
         if name in self._aliases:
             raise ValueError(f"Duplicate name {name}")
         elif name not in aliases:
@@ -366,11 +424,25 @@ class UnicodePropertyCategory:
         if self.parent is not None:
             self.parent.add_aliases(name, aliases)
 
-    def mark_range_pool(self, name, ranges=None):
+    def mark_range_pool(self, category: str, name: str, ranges=None):
+        """
+        See `UnicodeProperties.mark_range_pool`.
+        """
         if self.parent is not None:
-            self.parent.mark_range_pool(name, ranges)
+            self.parent.mark_range_pool(category, name, ranges)
 
-    def mark_range_array_pool(self, name, canonical_names):
+    def mark_range_array_pool(self, name: str, canonical_names: list[str]):
+        """
+        For a compound property, mark the index and size of the compound
+        property's ranges.
+
+        For example: "C" is a compound property that refers to the ranges of the
+        "Cc", "Cf", "Cn", "Co", and "Cs" properties.
+
+        If all the canonical names are already in the range array pool, then
+        this is an overlapping compound property, and the marked entry instead
+        refers back to the existing pool entry, instead of adding a new one.
+        """
         if name in self._range_array_pool:
             raise ValueError(f"Duplicate name {name}")
 
@@ -381,7 +453,7 @@ class UnicodePropertyCategory:
             for canonical_name in canonical_names
         ):
             # This is an overlapping compound property, refer back to the first
-            # existing pool entry.
+            # existing pool entry, and do not increment the tracking index.
             self._range_array_pool[name] = (
                 self._range_array_pool[canonical_names[0]][0],
                 size,
@@ -395,11 +467,34 @@ class UnicodePropertyCategory:
                 )
                 self.parent._range_array_pool_index += 1
 
-    def get_range(self, name):
-        return self.parent._range_pool.get(name)
+    def get_range(
+        self, category: str, name: str
+    ) -> Union[range_array_pool_entry, None]:
+        return self.parent._range_pool.get((category, name))
+
+
+# Tuple of `(offset, (range_pool_index, ranges))` for a range pool entry.
+range_pool_entry = tuple[int, tuple[int, Union[None, list[range_tuple]]]]
 
 
 class UnicodeProperties:
+    """
+    The parent pool for all Unicode property categories, which share common
+    string, range, and range array pools. The point of the pools is to
+    generate code that is able to efficiently reference the large amount of
+    Unicode property data, by using indexes into shared pools.
+
+    The string pool is a shared pool of all property names and aliases, which
+    contains all canonical names and aliases.
+
+    The range pool is a shared pool of all codepoint ranges, which is referenced
+    by a canonical name.
+
+    The range array pool is a shared pool of codepoint range arrays, which is
+    referenced by a conical name, and refers to one or more ranges in the range
+    pool.
+    """
+
     INCLUDE_COMMENTS = True
 
     def __init__(self):
@@ -407,9 +502,25 @@ class UnicodeProperties:
         self.binary_property_pool = UnicodePropertyCategory(parent=self)
         self.script_property_pool = UnicodePropertyCategory(parent=self)
         self.script_extensions_property_pool = UnicodePropertyCategory(parent=self)
+
+        # All seen names, that comprise the shared string pool.
         self._names = set()
+
+        # Mapping of `(category, name)` to `(offset, ranges)` for the range
+        # pool, which is shared across the other property pools.
+        #
+        # The offset is used by the individual range array pools, to refer back
+        # to the shared range pool, and the individual ranges are used to build
+        # the shared range pool data.
+        self._range_pool: dict[str, range_pool_entry] = OrderedDict()
+
+        # Track the offset into the range pool, every time a new range is marked
+        # the index is incremented by the size of the new range.
         self._range_pool_index = 0
-        self._range_pool = OrderedDict()
+
+        # Track the offset into the shared range array pool, every time a new
+        # range array is added to one of the property pools, this is incremented
+        # by 1.
         self._range_array_pool_index = 0
         self._metrics = defaultdict(lambda: 0)
 
@@ -426,19 +537,44 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
             file=sys.stderr,
         )
 
-    def add_aliases(self, name, aliases):
+    def add_aliases(self, name: str, aliases: list[str]):
+        """
+        Add a name and aliases to the shared string pool.
+        """
         self._names.add(name)
         self._names.update(aliases)
 
-    def mark_range_pool(self, name, ranges=None):
-        if name in self._range_pool:
-            raise ValueError(f"Duplicate name {name}")
+    def mark_range_pool(self, category: str, name: str, ranges=None):
+        """
+        Mark a range pool entry, with optional codepoint ranges.
 
-        self._range_pool[name] = (self._range_pool_index, ranges)
+        The category is necessary to disambiguate in cases where the name itself
+        may not be unique across properties, such as `Scripts` and
+        `Script_Extensions` where they share names.
+        """
+        key = (category, name)
+        if key in self._range_pool:
+            raise ValueError(f"Duplicate key {key}")
+
+        self._range_pool[key] = (self._range_pool_index, ranges)
         if ranges:
             self._range_pool_index += len(ranges)
 
     def gather_general_category_properties(self):
+        """
+        Gather the aliases and codepoint ranges for General_Category properties,
+        into the shared string and range pools.
+
+        Example aliases input:
+
+            gc ; Cc                               ; Control                          ; cntrl
+            gc ; Cf                               ; Format
+
+        Example codepoint input:
+
+            00D8..00DE    ; Lu #   [7] LATIN CAPITAL LETTER O WITH STROKE..LATIN CAPITAL LETTER THORN
+            0100          ; Lu #       LATIN CAPITAL LETTER A WITH MACRON
+        """
         gc_property_aliases = parse_property_aliases(
             UnicodeDataFiles.get_lines("PropertyValueAliases.txt"),
             get_canonical_name=lambda fields: fields[1] if fields[0] == "gc" else None,
@@ -450,7 +586,8 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
 
         pool = self.general_category_pool
 
-        # Update the string pool with the GC property names and aliases
+        # Update the string pool with the General_Category property names and
+        # aliases.
         for name, aliases in gc_property_aliases.items():
             pool.add_aliases(name, aliases)
 
@@ -474,26 +611,36 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
 
         cat = "General_Category"
         for compound_name, canonical_names in COMPOUND_GC_PROPERTIES.items():
-            pool.mark_range_pool((cat, compound_name))
+            pool.mark_range_pool(cat, compound_name)
 
             for canonical_name in canonical_names:
                 ranges = gc_property_ranges[canonical_name]
-                if pool.get_range((cat, canonical_name)) is None:
-                    pool.mark_range_pool((cat, canonical_name), ranges)
+                if pool.get_range(cat, canonical_name) is None:
+                    pool.mark_range_pool(cat, canonical_name, ranges)
 
             pool.mark_range_array_pool(compound_name, canonical_names)
 
         # Add any extra ranges that are not part of the compound groups.
         for canonical_name, ranges in gc_property_ranges.items():
-            if pool.get_range((cat, canonical_name)) is None:
-                pool.mark_range_pool((cat, canonical_name), ranges)
+            if pool.get_range(cat, canonical_name) is None:
+                pool.mark_range_pool(cat, canonical_name, ranges)
                 pool.mark_range_array_pool(canonical_name, [canonical_name])
 
     def gather_binary_properties(self):
         """
-        Gather allowed binary properties explicitly provided by ECMA262.
+        Gather allowed binary (in the true/false sense) property aliases and
+        codepoint ranges, explicitly given by ECMA262, into the shared string
+        and range pools.
 
         <https://tc39.es/ecma262/multipage/text-processing.html#table-binary-unicode-properties>
+
+        Example property aliases input:
+
+            # Alias ; Canonical name  ; Additional alias
+
+            AHex    ; ASCII_Hex_Digit
+            Alpha   ; Alphabetic
+            WSpace  ; White_Space     ; space
         """
         binary_property_aliases = {
             canonical_name: []
@@ -521,20 +668,33 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
                 ), "Duplicate canonical name"
                 binary_property_aliases[canonical_name] = list(set(fields))
 
-        pred = lambda canonical_name: canonical_name in binary_property_aliases.keys()
+        is_known_name_or_alias = (
+            lambda canonical_name: canonical_name in binary_property_aliases.keys()
+        )
         binary_property_ranges = {
-            **parse_codepoint_ranges(UnicodeDataFiles.get_lines("PropList.txt"), pred),
+            # Used for binary properties such as `ASCII_Hex_Digit`.
             **parse_codepoint_ranges(
-                UnicodeDataFiles.get_lines("DerivedCoreProperties.txt"), pred
+                UnicodeDataFiles.get_lines("PropList.txt"), is_known_name_or_alias
             ),
+            # Used for general category properties such as `Cased_Letter`.
             **parse_codepoint_ranges(
-                UnicodeDataFiles.get_lines("DerivedNormalizationProps.txt"), pred
+                UnicodeDataFiles.get_lines("DerivedCoreProperties.txt"),
+                is_known_name_or_alias,
             ),
+            # Used for case folding properties such as `Changes_When_Casefolded`.
             **parse_codepoint_ranges(
-                UnicodeDataFiles.get_lines("DerivedBinaryProperties.txt"), pred
+                UnicodeDataFiles.get_lines("DerivedNormalizationProps.txt"),
+                is_known_name_or_alias,
             ),
+            # Used for binary properties such as `Bidi_Mirrored`.
             **parse_codepoint_ranges(
-                UnicodeDataFiles.get_lines("emoji-data.txt"), pred
+                UnicodeDataFiles.get_lines("DerivedBinaryProperties.txt"),
+                is_known_name_or_alias,
+            ),
+            # Used for emoji-related binary properties such as
+            # `Emoji_Presentation`.
+            **parse_codepoint_ranges(
+                UnicodeDataFiles.get_lines("emoji-data.txt"), is_known_name_or_alias
             ),
         }
 
@@ -559,11 +719,27 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
 
         cat = "Binary"
         for canonical_name, ranges in binary_property_ranges.items():
-            if pool.get_range((cat, canonical_name)) is None:
-                pool.mark_range_pool((cat, canonical_name), ranges)
+            if pool.get_range(cat, canonical_name) is None:
+                pool.mark_range_pool(cat, canonical_name, ranges)
             pool.mark_range_array_pool(canonical_name, [canonical_name])
 
     def gather_script_properties(self):
+        """
+        Gather script property aliases and codepoint ranges, as they exist in
+        the Unicode Database, into the string and range pools.
+
+        Example property values aliases input:
+
+            # Category ; Alias ; Canonical name
+
+            sc         ; Arab  ; Arabic
+            sc         ; Latn  ; Latin
+
+        Example scripts input:
+
+            0041..005A    ; Latin # L&  [26] LATIN CAPITAL LETTER A..LATIN CAPITAL LETTER Z
+            0600..0604    ; Arabic # Cf   [5] ARABIC NUMBER SIGN..ARABIC SIGN SAMVAT
+        """
         script_property_aliases = parse_property_aliases(
             UnicodeDataFiles.get_lines("PropertyValueAliases.txt"),
             get_canonical_name=lambda fields: fields[2] if fields[0] == "sc" else None,
@@ -588,17 +764,30 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
 
         cat = "Script"
         for canonical_name, ranges in script_property_ranges.items():
-            if pool.get_range((cat, canonical_name)) is None:
-                pool.mark_range_pool((cat, canonical_name), ranges)
+            if pool.get_range(cat, canonical_name) is None:
+                pool.mark_range_pool(cat, canonical_name, ranges)
                 pool.mark_range_array_pool(canonical_name, [canonical_name])
 
         # Manually map the "Zzzz" / "Unknown" script property to the "Cn" /
-        # "Unassigned"  range.
-        pool._range_array_pool[
-            "Unknown"
-        ] = self.general_category_pool._range_array_pool["Cn"]
+        # "Unassigned" range.
+        pool._range_array_pool["Unknown"] = (
+            self.general_category_pool._range_array_pool["Cn"]
+        )
 
     def gather_script_extension_properties(self):
+        """
+        Gather script extension codepoint ranges, as they exist in the Unicode
+        Database, into the range pool.
+
+        NOTE: Script extensions don't have their own names, instead they re-use
+        the Script property names. However, the ranges are references by the
+        alias, not the canonical name, which differs from how scripts are
+        handled.
+
+        Example script extensions input:
+
+            0363..036F    ; Latn # Mn  [13] COMBINING LATIN SMALL LETTER A..COMBINING LATIN SMALL LETTER X
+        """
         script_property_aliases = parse_property_aliases(
             UnicodeDataFiles.get_lines("PropertyValueAliases.txt"),
             get_canonical_name=lambda fields: fields[1] if fields[0] == "sc" else None,
@@ -609,6 +798,8 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
         script_extensions_property_ranges = defaultdict(list)
         for key, ranges in raw_property_ranges.items():
             for short_key in key.split():
+                # Script extension codepoints use the script property alias, not
+                # the canonical name.
                 canonical_name = script_property_aliases[short_key][1]
                 script_extensions_property_ranges[canonical_name].extend(ranges)
 
@@ -619,11 +810,16 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
 
         cat = "Script_Extensions"
         for canonical_name, ranges in script_extensions_property_ranges.items():
-            if pool.get_range((cat, canonical_name)) is None:
-                pool.mark_range_pool((cat, canonical_name), ranges)
+            if pool.get_range(cat, canonical_name) is None:
+                pool.mark_range_pool(cat, canonical_name, ranges)
             pool.mark_range_array_pool(canonical_name, [canonical_name])
 
     def print_template(self):
+        """
+        Produce the generated C++ code for the gathered Unicode properties data.
+
+        This includes the string pool, range pool, and range array pool data.
+        """
         all_strings = sorted(
             self._names,
             key=lambda name: (len(name), name),
@@ -636,6 +832,13 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
         )
 
         def string_coord(name):
+            """
+            Build a string pool lookup reference for a given name.
+
+            Example output:
+
+                { offset, size }
+            """
             offset = string_pool.index(name)
             size = len(name)
             self._metrics["string_offset"] = max(self._metrics["string_offset"], offset)
@@ -644,6 +847,18 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
             return f"{{ {offset}, {size} }}"
 
         def _range_pool():
+            """
+            Using the range pool, generate the UnicodeRange entries for the C++
+            code, that reference the shared range pool.
+
+            Example output:
+
+                static constexpr UnicodeRange UNICODE_RANGE_POOL[] = {
+                    // General_Category: Cc
+                    {0x0000, 0x001F},
+                    {0x007F, 0x009F},
+                };
+            """
             for (cat, name), (offset, ranges) in self._range_pool.items():
                 if self.INCLUDE_COMMENTS:
                     yield f"// {cat}: {name}"
@@ -654,6 +869,19 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
                     )
 
         def _range_array_pool():
+            """
+            Using the range array pool, generate the UnicodeRangePoolRef entries
+            for the C++ code, that reference the shared range pool.
+
+            Example output:
+
+                static constexpr UnicodeRangePoolRef UNICODE_RANGE_ARRAY_POOL[] {
+                    // General_Category: Cc
+                    {0, 2},
+                    // General_Category: Cf
+                    {2, 21},
+                };
+            """
             for (cat, name), (offset, ranges) in self._range_pool.items():
                 if self.INCLUDE_COMMENTS:
                     yield f"// {cat}: {name}"
@@ -670,13 +898,39 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
                     )
                     yield f"{{ {offset}, {size} }},"
 
-        def _build_name_map(pool):
+        def _build_name_map(pool: UnicodePropertyCategory):
+            """
+            For a given pool, build the NameMapEntry entries for the C++ code,
+            that reference the shared string pool.
+
+            Example output:
+
+                static constexpr NameMapEntry canonicalPropertyNameMap_GeneralCategory[] = {
+                    // "C", "C"
+                    {{18, 1}, {18, 1}},
+                    // "Cased_Letter", "LC"
+                    {{1368, 12}, {3008, 2}},
+                };
+            """
             for alias, name in pool.all_names():
                 if self.INCLUDE_COMMENTS:
                     yield f'// "{alias}", "{name}"'
                 yield f"{{ {string_coord(alias)}, {string_coord(name)} }},"
 
         def _build_range_map(pool):
+            """
+            For a given pool, build the RangeMapEntry entries for the C++ code,
+            that reference the shared range array pool.
+
+            Example output:
+
+                static constexpr RangeMapEntry unicodePropertyRangeMap_GeneralCategory[] = {
+                    // "C"
+                    {{18, 1}, 0, 5},
+                    // "Cc"
+                    {{3018, 2}, 0, 1},
+                };
+            """
             for name, (offset, size) in pool.range_array_pool():
                 if self.INCLUDE_COMMENTS:
                     yield f'// "{name}"'
