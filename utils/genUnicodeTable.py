@@ -17,6 +17,8 @@ import urllib.request
 from string import Template
 from collections import defaultdict, OrderedDict
 from typing import Iterable, Union
+from itertools import islice
+from textwrap import indent
 
 
 class UnicodeDataFiles:
@@ -863,10 +865,14 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
                 if self.INCLUDE_COMMENTS:
                     yield f"// {cat}: {name}"
                 if ranges:
-                    yield "".join(
-                        f"{{ {as_hex(start)}, {as_hex(end)} }},"
-                        for start, end in ranges
-                    )
+                    # Manually batch the ranges into 3 per line, because
+                    # clang-format wants to format them to a single item per
+                    # line.
+                    for batch in batched(ranges, 3):
+                        yield "".join(
+                            f"{{{as_hex(start)}, {as_hex(end)}}},".ljust(20)
+                            for start, end in batch
+                        ).strip()
 
         def _range_array_pool():
             """
@@ -951,9 +957,11 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
 
 static constexpr std::string_view UNICODE_DATA_STRING_POOL = "${string_pool}";
 
+// clang-format off
 static constexpr UnicodeRange UNICODE_RANGE_POOL[] = {
 ${range_pool}
 };
+// clang-format on
 
 static constexpr UnicodeRangePoolRef UNICODE_RANGE_ARRAY_POOL[] {
 ${range_array_pool}
@@ -990,7 +998,7 @@ ${range_map_script_extensions_property}
 #endif
     """,
             string_pool=string_pool,
-            range_pool="\n".join(_range_pool()),
+            range_pool=indent("\n".join(_range_pool()), "    "),
             range_array_pool="\n".join(_range_array_pool()),
             name_map_general_category="\n".join(
                 _build_name_map(self.general_category_pool)
@@ -1028,6 +1036,22 @@ def delta_within(p):
 
 def as_hex(cp):
     return "0x%.4X" % cp
+
+
+def batched(iterable, n):
+    """
+    Roughly equivalent to `itertools.batched` from Python 3.12, according to the
+    Python3 documentation for batched.
+
+    <https://docs.python.org/3/library/itertools.html#itertools.batched>
+
+    >>> batched('ABCDEFG', 3) # ['ABC', 'DEF', 'G']
+    """
+    if n < 1:
+        raise ValueError("n must be at least one")
+    it = iter(iterable)
+    while batch := tuple(islice(it, n)):
+        yield batch
 
 
 class DeltaMapBlock(object):
