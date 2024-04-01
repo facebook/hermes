@@ -213,7 +213,8 @@ uint32_t canonicalize(uint32_t cp, bool unicode) {
 
 #ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
 
-/// Find a \p NameMapEntry by matching a string \p name.
+/// Find a matching entry (such as \p NameMapEntry or \p RangeMapEntry) by
+/// matching a string \p name against the entry's \p name field.
 template <class T>
 const T *
 findNameMapEntry(const T *begin, const T *end, const std::string_view &name) {
@@ -225,28 +226,7 @@ findNameMapEntry(const T *begin, const T *end, const std::string_view &name) {
   if (it == end ||
       UNICODE_DATA_STRING_POOL.compare(it->name.offset, it->name.size, name) !=
           0) {
-    return end;
-  }
-  return it;
-}
-
-/// Find a \p RangeMapEntry by matching a \p StringPoolRef for the canonical
-/// name.
-template <class T>
-const T *
-findRangeMapEntry(const T *begin, const T *end, const StringPoolRef &poolRef) {
-  auto it = std::lower_bound(
-      begin, end, poolRef, [](const T &a, const StringPoolRef &b) {
-        return UNICODE_DATA_STRING_POOL.compare(
-                   a.name.offset,
-                   a.name.size,
-                   UNICODE_DATA_STRING_POOL,
-                   b.offset,
-                   b.size) < 0;
-      });
-  if (it == end ||
-      (it->name.offset != poolRef.offset && it->name.size != poolRef.size)) {
-    return end;
+    return nullptr;
   }
   return it;
 }
@@ -265,7 +245,7 @@ bool addUnicodePropertyRanges(
   if (propertyValue.empty()) {
     // There was no property value, this is either a binary property or a value
     // from General_Category, as per `LoneUnicodePropertyNameOrValue`.
-    if (findNameMapEntry(nameMapStart, nameMapEnd, key) == nameMapEnd) {
+    if (findNameMapEntry(nameMapStart, nameMapEnd, key) == nullptr) {
       rangeMapStart = std::begin(unicodePropertyRangeMap_GeneralCategory);
       rangeMapEnd = std::end(unicodePropertyRangeMap_GeneralCategory);
       nameMapStart = std::begin(canonicalPropertyNameMap_GeneralCategory);
@@ -300,14 +280,18 @@ bool addUnicodePropertyRanges(
 
   // Canonicalize the property name.
   auto canonicalNameEntry = findNameMapEntry(nameMapStart, nameMapEnd, key);
-  if (canonicalNameEntry == nameMapEnd) {
+  if (canonicalNameEntry == nullptr) {
     return false;
   }
 
   // Look up the range arrays for the property.
-  auto rangeMapEntry = findRangeMapEntry(
-      rangeMapStart, rangeMapEnd, canonicalNameEntry->canonical);
-  if (rangeMapEntry == rangeMapEnd) {
+  auto rangeMapEntry = findNameMapEntry(
+      rangeMapStart,
+      rangeMapEnd,
+      UNICODE_DATA_STRING_POOL.substr(
+          canonicalNameEntry->canonical.offset,
+          canonicalNameEntry->canonical.size));
+  if (rangeMapEntry == nullptr) {
     return false;
   }
 
