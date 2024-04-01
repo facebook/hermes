@@ -270,6 +270,7 @@ bool addUnicodePropertyRanges(
       }
       rangeMapStart = std::begin(unicodePropertyRangeMap_ScriptExtensions);
       rangeMapEnd = std::end(unicodePropertyRangeMap_ScriptExtensions);
+      // Since Script_Extensions is a superset of Script, they share a name map.
       nameMapStart = std::begin(canonicalPropertyNameMap_Script);
       nameMapEnd = std::end(canonicalPropertyNameMap_Script);
     } else {
