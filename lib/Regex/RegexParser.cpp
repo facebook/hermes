@@ -1173,6 +1173,7 @@ class Parser {
       while (auto ch = consumeCharIf(isUnicodePropertyValue)) {
         propertyValue.push_back(*ch);
       }
+      return !propertyValue.empty();
     }
 
     return true;
