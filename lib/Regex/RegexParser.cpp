@@ -1186,11 +1186,9 @@ class Parser {
   bool tryConsumeUnicodePropertyValueExpression(
       std::string &propertyName,
       std::string &propertyValue) {
-    // Non-unicode path does not support unicode property escapes.
-    if (!(flags_.unicode)) {
-      setError(constants::ErrorType::EscapeInvalid);
-      return false;
-    }
+    assert(
+        flags_.unicode &&
+        "Non-unicode regexps do not support property escapes");
 
     // Unicode path.
     // Note that all \p and \P in Unicode regexps must result in a valid escape.
