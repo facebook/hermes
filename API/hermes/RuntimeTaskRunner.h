@@ -17,6 +17,11 @@ namespace debugger {
 using RuntimeTask = std::function<void(HermesRuntime &)>;
 using EnqueueRuntimeTaskFunc = std::function<void(RuntimeTask)>;
 
+enum class TaskQueues {
+  All,
+  Integrator,
+};
+
 /// Helper for users of AsyncDebuggerAPI that makes it easy to find the
 /// earliest opportunity to use the runtime. There are two ways to become
 /// the exclusive user of the runtime:
@@ -41,10 +46,10 @@ class RuntimeTaskRunner
 
   /// Schedule a task to be run with access to the runtime at the earliest
   /// opportunity. Before returning, the task is added to the relevant task
-  /// queues managed by the \p AsyncDebuggerAPI and the intergator, with no
+  /// queues managed by the \p AsyncDebuggerAPI and/or the intergator, with no
   /// lingering references to the \p RuntimeTaskRunner. Thus, tasks can be
   /// enqueued even if the task runner will be destroyed shortly after.
-  void enqueueTask(RuntimeTask task);
+  void enqueueTask(RuntimeTask task, TaskQueues queues = TaskQueues::All);
 
  private:
   /// API where the runtime can be obtained when JavaScript is running.

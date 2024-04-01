@@ -131,6 +131,80 @@ TEST_F(DebuggerAPITest, SingleFrameStackTraceTest) {
       "tester", observer.stackTraces[2].callFrameForIndex(2).functionName);
 }
 
+TEST_F(DebuggerAPITest, CaptureStackTraceTest) {
+  using namespace facebook;
+
+  // Make sure when we're not in the interpreter loop, captureStackTrace() works
+  // and just return 0 call frames.
+  StackTrace stackTrace = rt->getDebugger().captureStackTrace();
+  ASSERT_EQ(stackTrace.callFrameCount(), 0);
+
+  jsi::Function captureStackTrace = jsi::Function::createFromHostFunction(
+      *rt,
+      jsi::PropNameID::forAscii(*rt, "captureStackTrace"),
+      0,
+      [&stackTrace](
+          jsi::Runtime &runtime, const jsi::Value &, const jsi::Value *, size_t)
+          -> jsi::Value {
+        stackTrace = static_cast<HermesRuntime &>(runtime)
+                         .getDebugger()
+                         .captureStackTrace();
+        return jsi::Value::undefined();
+      });
+  rt->global().setProperty(*rt, "captureStackTrace", captureStackTrace);
+
+  eval(R"(
+    function level3() {
+      captureStackTrace(); // line 3
+    }
+
+    function level2() {
+      level3();            // line 7
+    }
+
+    function level1() {
+      level2();            // line 11
+    }
+
+    level1();              // line 14
+  )");
+
+  ASSERT_EQ(stackTrace.callFrameCount(), 6);
+
+  CallFrameInfo frame = stackTrace.callFrameForIndex(0);
+  ASSERT_EQ(frame.functionName, "level3");
+  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileId, 2);
+  ASSERT_EQ(frame.location.line, 3);
+
+  frame = stackTrace.callFrameForIndex(1);
+  ASSERT_EQ(frame.functionName, "level3");
+  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileId, 2);
+  ASSERT_EQ(frame.location.line, 3);
+
+  frame = stackTrace.callFrameForIndex(2);
+  ASSERT_EQ(frame.functionName, "level2");
+  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileId, 2);
+  ASSERT_EQ(frame.location.line, 7);
+
+  frame = stackTrace.callFrameForIndex(3);
+  ASSERT_EQ(frame.functionName, "level1");
+  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileId, 2);
+  ASSERT_EQ(frame.location.line, 11);
+
+  frame = stackTrace.callFrameForIndex(4);
+  ASSERT_EQ(frame.functionName, "global");
+  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileId, 2);
+  ASSERT_EQ(frame.location.line, 14);
+
+  frame = stackTrace.callFrameForIndex(5);
+  ASSERT_EQ(frame.functionName, "(native)");
+}
+
 TEST_F(DebuggerAPITest, GetLoadedScriptsTest) {
   // Don't use the member runtime, as we don't want to
   // trigger the observer on script loads.

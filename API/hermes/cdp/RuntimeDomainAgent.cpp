@@ -19,7 +19,9 @@ namespace hermes {
 namespace cdp {
 
 static const char *const kUserEnteredScriptIdPrefix = "userScript";
-static const char *const kEvaluatedCodeUrl = "?eval";
+
+// Chrome does not assign a URL to evaluated scripts
+static const char *const kEvaluatedCodeUrl = "";
 
 namespace {
 /// Runtime.CallArguments can have their values specified "inline", or they
@@ -768,6 +770,11 @@ void RuntimeDomainAgent::consoleAPICalled(const ConsoleMessage &message) {
   note.type = consoleMessageTypeName(message.type);
   note.timestamp = message.timestamp;
   note.executionContextId = executionContextID_;
+  if (message.stackTrace.callFrameCount() > 0) {
+    note.stackTrace = m::runtime::StackTrace{};
+    note.stackTrace->callFrames =
+        m::runtime::makeCallFrames(message.stackTrace);
+  }
 
   for (auto &arg : message.args) {
     note.args.push_back(m::runtime::makeRemoteObject(

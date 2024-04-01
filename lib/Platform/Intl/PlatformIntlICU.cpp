@@ -496,8 +496,7 @@ struct DateTimeFormatICU : DateTimeFormat {
 DateTimeFormat::DateTimeFormat() = default;
 DateTimeFormat::~DateTimeFormat() = default;
 
-// Implementation of
-// https://402.ecma-international.org/8.0/#sec-intl.datetimeformat.supportedlocalesof
+/// https://402.ecma-international.org/8.0/#sec-intl.datetimeformat.supportedlocalesof
 vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,

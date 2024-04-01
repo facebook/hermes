@@ -54,7 +54,7 @@ jobs:
   android:
     executor:
       name: android/android-machine
-      tag: 2022.04.1
+      tag: 2024.01.1
     working_directory: /home/circleci
     environment:
       HERMES_WS_DIR: /home/circleci
@@ -616,7 +616,7 @@ jobs:
   test-e2e:
     executor:
       name: android/android-machine
-      tag: 2023.06.1
+      tag: 2024.01.1
     working_directory: /home/circleci
     environment:
       REACT_NATIVE_OVERRIDE_HERMES_DIR: /home/circleci/hermes
@@ -650,7 +650,7 @@ jobs:
   test-e2e-intl:
     executor:
       name: android/android-machine
-      tag: 2022.04.1
+      tag: 2024.01.1
     working_directory: /home/circleci
     environment:
       HERMES_WS_DIR: /home/circleci
