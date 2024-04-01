@@ -216,10 +216,9 @@ uint32_t canonicalize(uint32_t cp, bool unicode) {
 /// Find a matching entry (such as \p NameMapEntry or \p RangeMapEntry) by
 /// matching a string \p name against the entry's \p name field.
 template <class T>
-const T *
-findNameMapEntry(const T *begin, const T *end, const std::string_view &name) {
-  auto it = std::lower_bound(
-      begin, end, name, [](const T &a, const std::string_view &b) {
+const T *findNameMapEntry(const T *begin, const T *end, std::string_view name) {
+  auto it =
+      std::lower_bound(begin, end, name, [](const T &a, std::string_view b) {
         return UNICODE_DATA_STRING_POOL.compare(a.name.offset, a.name.size, b) <
             0;
       });
@@ -233,8 +232,8 @@ findNameMapEntry(const T *begin, const T *end, const std::string_view &name) {
 
 bool addUnicodePropertyRanges(
     CodePointSet *receiver,
-    const std::string_view &propertyName,
-    const std::string_view &propertyValue,
+    std::string_view propertyName,
+    std::string_view propertyValue,
     bool inverted = false) {
   auto key = propertyName;
   auto rangeMapStart = std::begin(unicodePropertyRangeMap_BinaryProperty);
@@ -331,8 +330,8 @@ bool addUnicodePropertyRanges(
 
 bool addUnicodePropertyRanges(
     CodePointSet *receiver,
-    const std::string_view &propertyName,
-    const std::string_view &propertyValue,
+    std::string_view propertyName,
+    std::string_view propertyValue,
     bool inverted = false) {
   return false;
 }
