@@ -1407,7 +1407,13 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       // TODO (T46136220): Set the .name property for anonymous functions that
       // are values for computed property keys.
       auto *key = genExpression(prop->_key);
-      auto *value = genExpression(prop->_value);
+      auto *value = prop->_method
+          ? genFunctionExpression(
+                llvh::cast<ESTree::FunctionExpressionNode>(prop->_value),
+                Identifier{},
+                nullptr,
+                Function::DefinitionKind::ES6Method)
+          : genExpression(prop->_value, Identifier{});
       if (prop->_kind->str() == "get") {
         Builder.createStoreGetterSetterInst(
             value,
@@ -1516,7 +1522,14 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
 
     // Always generate the values, even if we don't need it, for the side
     // effects.
-    auto value = genExpression(prop->_value, Builder.createIdentifier(keyStr));
+    auto nameHint = Builder.createIdentifier(keyStr);
+    auto *value = prop->_method
+        ? genFunctionExpression(
+              llvh::cast<ESTree::FunctionExpressionNode>(prop->_value),
+              nameHint,
+              nullptr,
+              Function::DefinitionKind::ES6Method)
+        : genExpression(prop->_value, nameHint);
 
     // Only store the value if it won't be overwritten.
     if (propMap[keyStr].valueNode == prop->_value) {

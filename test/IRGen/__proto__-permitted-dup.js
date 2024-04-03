@@ -164,7 +164,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:        ReturnInst %4: object
 // CHECK-NEXT:function_end
 
-// CHECK:function __proto__(x: any, y: any): any
+// CHECK:method __proto__(x: any, y: any): any
 // CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %protoDupMethod1(): any, %parentScope: environment
@@ -179,7 +179,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:function_end
 
-// CHECK:function "__proto__ 1#"(x: any, y: any): any
+// CHECK:method "__proto__ 1#"(x: any, y: any): any
 // CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %protoDupMethod2(): any, %parentScope: environment
