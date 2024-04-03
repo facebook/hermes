@@ -16,7 +16,7 @@ import sys
 import urllib.request
 from string import Template
 from collections import defaultdict, OrderedDict
-from typing import Iterable, Union
+from typing import Iterable, Optional
 from itertools import islice
 from textwrap import indent
 
@@ -426,12 +426,14 @@ class UnicodePropertyCategory:
         if self.parent is not None:
             self.parent.add_aliases(name, aliases)
 
-    def mark_range_pool(self, category: str, name: str, ranges=None):
+    def mark_range_pool(
+        self, category: str, name: str, ranges=None, offset=None, size=None
+    ):
         """
         See `UnicodeProperties.mark_range_pool`.
         """
         if self.parent is not None:
-            self.parent.mark_range_pool(category, name, ranges)
+            self.parent.mark_range_pool(category, name, ranges, offset, size)
 
     def mark_range_array_pool(self, name: str, canonical_names: list[str]):
         """
@@ -456,27 +458,39 @@ class UnicodePropertyCategory:
         ):
             # This is an overlapping compound property, refer back to the first
             # existing pool entry, and do not increment the tracking index.
+            offset = self._range_array_pool[canonical_names[0]][0]
             self._range_array_pool[name] = (
-                self._range_array_pool[canonical_names[0]][0],
+                offset,
                 size,
             )
+            return offset
         else:
-            self._range_array_pool[name] = (self.parent._range_array_pool_index, size)
+            offset = self.parent._range_array_pool_index
+            self._range_array_pool[name] = (offset, size)
             for canonical_name in canonical_names:
                 self._range_array_pool[canonical_name] = (
                     self.parent._range_array_pool_index,
                     1,
                 )
                 self.parent._range_array_pool_index += 1
+            return offset
 
-    def get_range(
-        self, category: str, name: str
-    ) -> Union[range_array_pool_entry, None]:
+    def mark_range_array_pool_manual(self, name: str, offset: int, size: int):
+        """
+        Like `mark_range_array_pool` but use manually provided offset and size.
+        """
+        if name in self._range_array_pool:
+            raise ValueError(f"Duplicate name {name}")
+
+        self._range_array_pool[name] = (offset, size)
+        self.parent._range_array_pool_index += 1
+
+    def get_range(self, category: str, name: str) -> Optional[range_array_pool_entry]:
         return self.parent._range_pool.get((category, name))
 
 
-# Tuple of `(offset, (range_pool_index, ranges))` for a range pool entry.
-range_pool_entry = tuple[int, tuple[int, Union[None, list[range_tuple]]]]
+# Tuple of `(offset, (range_pool_index, ranges, size))` for a range pool entry.
+range_pool_entry = tuple[int, tuple[int, Optional[list[range_tuple]], Optional[int]]]
 
 
 class UnicodeProperties:
@@ -546,7 +560,14 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
         self._names.add(name)
         self._names.update(aliases)
 
-    def mark_range_pool(self, category: str, name: str, ranges=None):
+    def mark_range_pool(
+        self,
+        category: str,
+        name: str,
+        ranges: list[int] = None,
+        offset: int = None,
+        size: int = None,
+    ):
         """
         Mark a range pool entry, with optional codepoint ranges.
 
@@ -558,7 +579,8 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
         if key in self._range_pool:
             raise ValueError(f"Duplicate key {key}")
 
-        self._range_pool[key] = (self._range_pool_index, ranges)
+        pool_offset = self._range_pool_index if offset is None else offset
+        self._range_pool[key] = (pool_offset, ranges, size)
         if ranges:
             self._range_pool_index += len(ranges)
 
@@ -727,8 +749,17 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
 
     def gather_script_properties(self):
         """
-        Gather script property aliases and codepoint ranges, as they exist in
-        the Unicode Database, into the string and range pools.
+        Gather script and script extensions property aliases and codepoint
+        ranges, as they exist in the Unicode Database, into the string and range
+        pools.
+
+        Script and script extensions are interleaved so that the ranges are
+        contiguous.
+
+        NOTE: Script extensions don't have their own names, instead they re-use
+        the Script property names. However, the ranges are referenced by the
+        alias, not the canonical name, which differs from how scripts are
+        handled.
 
         Example property values aliases input:
 
@@ -759,62 +790,72 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
             lambda canonical_name: canonical_name in script_property_aliases,
         )
 
-        pool = self.script_property_pool
-        # Update the string pool with the script property names and aliases
-        for name, aliases in script_property_aliases.items():
-            pool.add_aliases(name, aliases)
-
-        cat = "Script"
-        for canonical_name, ranges in script_property_ranges.items():
-            if pool.get_range(cat, canonical_name) is None:
-                pool.mark_range_pool(cat, canonical_name, ranges)
-                pool.mark_range_array_pool(canonical_name, [canonical_name])
-
-        # Manually map the "Zzzz" / "Unknown" script property to the "Cn" /
-        # "Unassigned" range.
-        pool._range_array_pool["Unknown"] = (
-            self.general_category_pool._range_array_pool["Cn"]
-        )
-
-    def gather_script_extension_properties(self):
-        """
-        Gather script extension codepoint ranges, as they exist in the Unicode
-        Database, into the range pool.
-
-        NOTE: Script extensions don't have their own names, instead they re-use
-        the Script property names. However, the ranges are references by the
-        alias, not the canonical name, which differs from how scripts are
-        handled.
-
-        Example script extensions input:
-
-            0363..036F    ; Latn # Mn  [13] COMBINING LATIN SMALL LETTER A..COMBINING LATIN SMALL LETTER X
-        """
-        script_property_aliases = parse_property_aliases(
+        script_property_aliases_by_alias = parse_property_aliases(
             UnicodeDataFiles.get_lines("PropertyValueAliases.txt"),
             get_canonical_name=lambda fields: fields[1] if fields[0] == "sc" else None,
         )
         raw_property_ranges = parse_codepoint_ranges(
             UnicodeDataFiles.get_lines("ScriptExtensions.txt"), lambda _: True
         )
+        # Because script extension codepoints are referenced by the script
+        # property alias, not the canonical name, the ranges need to be manually
+        # remapped.
         script_extensions_property_ranges = defaultdict(list)
         for key, ranges in raw_property_ranges.items():
             for short_key in key.split():
                 # Script extension codepoints use the script property alias, not
                 # the canonical name.
-                canonical_name = script_property_aliases[short_key][1]
+                canonical_name = script_property_aliases_by_alias[short_key][1]
                 script_extensions_property_ranges[canonical_name].extend(ranges)
 
-        pool = self.script_extensions_property_pool
+        pool = self.script_property_pool
+        ext_pool = self.script_extensions_property_pool
         # Update the string pool with the script property names and aliases
         for name, aliases in script_property_aliases.items():
             pool.add_aliases(name, aliases)
 
-        cat = "Script_Extensions"
-        for canonical_name, ranges in script_extensions_property_ranges.items():
+        cat = "Script"
+        ext_cat = "Script_Extensions"
+        for canonical_name, ranges in script_property_ranges.items():
             if pool.get_range(cat, canonical_name) is None:
                 pool.mark_range_pool(cat, canonical_name, ranges)
-            pool.mark_range_array_pool(canonical_name, [canonical_name])
+            script_range_array_offset = pool.mark_range_array_pool(
+                canonical_name, [canonical_name]
+            )
+
+            # Script extensions are a superset of the script property ranges,
+            # they are added immediately after the corresponding script so that
+            # the ranges are contiguous.
+            ext_ranges = script_extensions_property_ranges[canonical_name]
+            if ext_ranges and ext_pool.get_range(ext_cat, canonical_name) is None:
+                script_range_offset = pool.get_range(cat, canonical_name)[0]
+                ext_pool.mark_range_pool(
+                    ext_cat,
+                    canonical_name,
+                    ext_ranges,
+                    # Start the range pool offset at the same offset as the
+                    # corresponding script, and extend the size to include both
+                    # the script and script extension ranges.
+                    offset=script_range_offset,
+                    size=len(ranges) + len(ext_ranges),
+                )
+                # Manually mark the range array pool entry for the script
+                # extension. This is necessary because the script extension
+                # needs to refer to offset for the script, and cover a range of
+                # 2, but still only increment the range array pool index by 1.
+                ext_pool.mark_range_array_pool_manual(
+                    canonical_name,
+                    script_range_array_offset,
+                    # This is size 2 because it is the script range (1) script
+                    # and the extension range (1).
+                    2,
+                )
+
+        # Manually map the "Zzzz" / "Unknown" script property to the "Cn" /
+        # "Unassigned" range.
+        pool._range_array_pool["Unknown"] = (
+            self.general_category_pool._range_array_pool["Cn"]
+        )
 
     def print_template(self):
         """
@@ -861,7 +902,7 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
                     {0x007F, 0x009F},
                 };
             """
-            for (cat, name), (offset, ranges) in self._range_pool.items():
+            for (cat, name), (offset, ranges, range_size) in self._range_pool.items():
                 if self.INCLUDE_COMMENTS:
                     yield f"// {cat}: {name}"
                 if ranges:
@@ -888,11 +929,11 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
                     {2, 21},
                 };
             """
-            for (cat, name), (offset, ranges) in self._range_pool.items():
+            for (cat, name), (offset, ranges, range_size) in self._range_pool.items():
                 if self.INCLUDE_COMMENTS:
                     yield f"// {cat}: {name}"
                 if ranges is not None:
-                    size = len(ranges)
+                    size = len(ranges) if range_size is None else range_size
                     assert (
                         offset + size < 0xFFFF
                     ), "Range array offset+size exceeds uint16_t"
@@ -923,7 +964,7 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
                     yield f'// "{alias}", "{name}"'
                 yield f"{{ {string_coord(alias)}, {string_coord(name)} }},"
 
-        def _build_range_map(pool):
+        def _build_range_map(pool: UnicodePropertyCategory):
             """
             For a given pool, build the RangeMapEntry entries for the C++ code,
             that reference the shared range array pool.
@@ -1215,7 +1256,6 @@ if __name__ == "__main__":
     unicode_properties.gather_general_category_properties()
     unicode_properties.gather_binary_properties()
     unicode_properties.gather_script_properties()
-    unicode_properties.gather_script_extension_properties()
     unicode_properties.print_template()
     # Show information about bit sizes for the string and range pools.
     # unicode_properties.log_metrics()
