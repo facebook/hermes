@@ -142,11 +142,17 @@ class Verifier : public InstructionVisitor<Verifier, bool> {
 
   /// Helper function to get the label of a BasicBlock.
   llvh::format_object<unsigned> bbLabel(const BasicBlock &block) {
+    // Ensure the namer has the correct per-function state set up correctly
+    // before we ask it for the BB number.
+    printer.namer_.newFunction(block.getParent());
     return llvh::format("%%BB%u", printer.namer_.getBBNumber(&block));
   }
 
   /// Helper function to get the label of an Instruction.
   llvh::format_object<unsigned> iLabel(const Instruction &I) {
+    // Ensure the namer has the correct per-function state set up correctly
+    // before we ask it for the inst number.
+    printer.namer_.newFunction(I.getParent()->getParent());
     return llvh::format("%%%u", printer.namer_.getInstNumber(&I));
   }
 };
