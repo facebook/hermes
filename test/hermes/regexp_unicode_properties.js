@@ -77,9 +77,25 @@ print(/\p{Script=Latin}+/u.exec("Ave"));
 print(/\p{Script_Extensions=Latin}+/u.exec("Ave"));
 // CHECK-NEXT: Ave
 
+// U+202F only exists in script extensions for Latin.
+print(/\p{Script=Latin}/u.exec("\u{202F}"));
+// CHECK-NEXT: null
+print(hexCodePointAt(/\p{Script_Extensions=Latin}/u.exec("\u{202F}")[0]));
+// CHECK-NEXT: 202F
+
+// U+30A0 only exists in script extensions for Hira / Kana.
+print(/\p{Script=Hira}/u.exec("\u{30A0}"));
+// CHECK-NEXT: null
+print(/\p{Script=Kana}/u.exec("\u{30A0}"));
+// CHECK-NEXT: null
+print(hexCodePointAt(/\p{Script_Extensions=Hira}/u.exec("\u{30A0}")[0]));
+// CHECK-NEXT: 30A0
+print(hexCodePointAt(/\p{Script_Extensions=Kana}/u.exec("\u{30A0}")[0]));
+// CHECK-NEXT: 30A0
+
+// CJK ideographs are not in the Latin script.
 print(/\p{Script=Latin}+/u.exec("\u{4f60}\u{597d}"));
 // CHECK-NEXT: null
-
 print(/\p{Script_Extensions=Latin}+/u.exec("\u{4f60}\u{597d}"));
 // CHECK-NEXT: null
 
