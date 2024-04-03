@@ -212,6 +212,7 @@ impl Grammar {
             use hermes::parser::{NodePtr, NodeKind, NodeLabel };
             use hermes::utf::{utf8_with_surrogates_to_string};
             use hermes_diagnostics::DiagnosticsResult;
+            use hermes_diagnostics::Diagnostic;
             use crate::generated_extension::*;
 
             #(#nodes)*
@@ -550,8 +551,10 @@ impl Node {
             impl FromHermes for #name {
                 fn convert(cx: &mut Context, node: NodePtr) -> DiagnosticsResult<Self> {
                     let node_ref = node.as_ref();
-                    assert_eq!(node_ref.kind, NodeKind::#type_);
                     let range = convert_range(cx, node);
+                    if node_ref.kind != NodeKind::#type_ {
+                        return Err(vec![Diagnostic::invariant(format!("Expected node kind {:?}, got node kind {:?}.", NodeKind::#type_, node_ref.kind), range)]);
+                    }
                     #(#fields)*
                     Ok(Self {
                         #(#field_names,)*
@@ -895,7 +898,12 @@ impl Enum {
                     let node_ref = node.as_ref();
                     match node_ref.kind {
                         #(#tag_matches),*
-                        _ => panic!("Unexpected node kind `{:?}` for `{}`", node_ref.kind, #name_str)
+                        _ => {
+                            let range = convert_range(cx, node);
+                            Err(vec![
+                                Diagnostic::invariant(format!("Unexpected node kind `{:?}` for `{}`", node_ref.kind, #name_str), range)
+                            ])
+                        }
                     }
                 }
             }
