@@ -9,6 +9,7 @@ include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 mod generated_extension;
 
 use generated_extension::convert_comment;
+use generated_extension::convert_smloc;
 pub use generated_extension::Comment;
 use generated_extension::Context;
 use generated_extension::FromHermes;
@@ -40,12 +41,12 @@ pub fn parse(
             .iter()
             .map(|diag| {
                 let message = utf8_with_surrogates_to_string(diag.message.as_slice()).unwrap();
+                let start = convert_smloc(&cx, diag.loc) as u32;
                 Diagnostic::invalid_syntax(
                     message,
-                    // TODO: Use location informaiton from DiagMessage
                     SourceRange {
-                        start: 0,
-                        end: std::num::NonZeroU32::new(1).unwrap(),
+                        start,
+                        end: std::num::NonZeroU32::new(start + 1).unwrap(),
                     },
                 )
             })

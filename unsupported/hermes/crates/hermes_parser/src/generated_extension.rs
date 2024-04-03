@@ -46,6 +46,7 @@ use hermes::parser::NodePtr;
 use hermes::parser::NodePtrOpt;
 use hermes::parser::NodeString;
 use hermes::parser::NodeStringOpt;
+use hermes::parser::SMLoc;
 use hermes::parser::SMRange;
 use hermes::utf::utf8_with_surrogates_to_string;
 use hermes_diagnostics::DiagnosticsResult;
@@ -131,11 +132,13 @@ pub fn convert_range(cx: &Context, node: NodePtr) -> SourceRange {
     convert_smrange(cx, range)
 }
 
+pub fn convert_smloc(cx: &Context, loc: SMLoc) -> usize {
+    (loc.as_ptr() as usize) - cx.start
+}
+
 pub fn convert_smrange(cx: &Context, range: SMRange) -> SourceRange {
-    let absolute_start: usize = range.start.as_ptr() as usize;
-    let start = absolute_start - cx.start;
-    let absolute_end: usize = range.end.as_ptr() as usize;
-    let end = absolute_end - cx.start;
+    let start = convert_smloc(cx, range.start);
+    let end = convert_smloc(cx, range.end);
     SourceRange {
         start: start as u32,
         end: NonZeroU32::new(end as u32).unwrap(),

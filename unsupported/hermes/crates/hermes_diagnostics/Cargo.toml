@@ -21,3 +21,4 @@ hermes_estree = { workspace = true }
 miette = { workspace = true }
 thiserror = { workspace = true }
 static_assertions = { workspace = true }
+typetag = { workspace = true }

@@ -83,7 +83,7 @@ impl Diagnostic {
     ) -> Self {
         Self(Box::new(DiagnosticData {
             message: Box::new(message),
-            span: Some(source_span_from_range(range)),
+            span: source_span_from_range(range),
             related_information: Vec::new(),
             severity,
             data: Vec::new(),
@@ -124,7 +124,7 @@ impl Diagnostic {
             .related_information
             .push(DiagnosticRelatedInformation {
                 message: Box::new(message),
-                span: Some(source_span_from_range(range)),
+                span: source_span_from_range(range),
             });
         self
     }
@@ -133,7 +133,11 @@ impl Diagnostic {
         &self.0.message
     }
 
-    pub fn span(&self) -> Option<SourceSpan> {
+    pub fn into_message(self) -> impl DiagnosticDisplay {
+        self.0.message
+    }
+
+    pub fn span(&self) -> SourceSpan {
         self.0.span
     }
 
@@ -191,20 +195,16 @@ impl miette::Diagnostic for Diagnostic {
         let related_items = &self.0.related_information;
         let mut spans: Vec<miette::LabeledSpan> = Vec::new();
         for related in related_items {
-            if let Some(span) = related.span {
-                spans.push(miette::LabeledSpan::new_with_span(
-                    Some(related.message.to_string()),
-                    span,
-                ))
-            }
+            spans.push(miette::LabeledSpan::new_with_span(
+                Some(related.message.to_string()),
+                related.span,
+            ))
         }
         if spans.is_empty() {
-            if let Some(span) = self.0.span {
-                spans.push(miette::LabeledSpan::new_with_span(
-                    Some(self.0.message.to_string()),
-                    span,
-                ))
-            }
+            spans.push(miette::LabeledSpan::new_with_span(
+                Some(self.0.message.to_string()),
+                self.0.span,
+            ))
         }
         Some(Box::new(spans.into_iter()))
     }
@@ -219,7 +219,7 @@ struct DiagnosticData {
     message: Box<dyn DiagnosticDisplay>,
 
     /// The primary location of this diagnostic.
-    span: Option<SourceSpan>,
+    span: SourceSpan,
 
     /// Related diagnostic information, such as other definitions in the case of
     /// a duplicate definition error.
@@ -240,16 +240,18 @@ pub struct DiagnosticRelatedInformation {
     pub message: Box<dyn DiagnosticDisplay>,
 
     /// The location of this related diagnostic information.
-    pub span: Option<SourceSpan>,
+    pub span: SourceSpan,
 }
 
 /// Trait for diagnostic messages to allow structs that capture
 /// some data and can lazily convert it to a message.
+#[typetag::serialize(tag = "type")]
 pub trait DiagnosticDisplay: Debug + Display + Send + Sync {}
 
 /// Automatically implement the trait if constraints are met, so that
 /// implementors don't need to.
-impl<T> DiagnosticDisplay for T where T: Debug + Display + Send + Sync {}
+#[typetag::serialize]
+impl<T> DiagnosticDisplay for T where T: Debug + Display + Send + Sync + typetag::Serialize {}
 
 impl From<Diagnostic> for Diagnostics {
     fn from(diagnostic: Diagnostic) -> Self {
