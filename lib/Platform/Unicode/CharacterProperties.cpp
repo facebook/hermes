@@ -235,11 +235,9 @@ const T *findNameMapEntry(
   return it;
 }
 
-bool addUnicodePropertyRanges(
-    CodePointSet *receiver,
+llvh::ArrayRef<UnicodeRangePoolRef> unicodePropertyRanges(
     std::string_view propertyName,
-    std::string_view propertyValue,
-    bool inverted = false) {
+    std::string_view propertyValue) {
   auto key = propertyName;
   llvh::ArrayRef<RangeMapEntry> rangeMap;
   llvh::ArrayRef<NameMapEntry> nameMap;
@@ -263,22 +261,18 @@ bool addUnicodePropertyRanges(
       rangeMap = unicodePropertyRangeMap_Script;
       nameMap = canonicalPropertyNameMap_Script;
     } else if (propertyName == "Script_Extensions" || propertyName == "scx") {
-      // Script_Extensions is a superset of Script.
-      if (!addUnicodePropertyRanges(receiver, "Script", propertyValue)) {
-        return false;
-      }
       rangeMap = unicodePropertyRangeMap_ScriptExtensions;
       // Since Script_Extensions is a superset of Script, they share a name map.
       nameMap = canonicalPropertyNameMap_Script;
     } else {
-      return false;
+      return llvh::ArrayRef<UnicodeRangePoolRef>();
     }
   }
 
   // Canonicalize the property name.
   auto canonicalNameEntry = findNameMapEntry(nameMap, key);
   if (canonicalNameEntry == nullptr) {
-    return false;
+    return llvh::ArrayRef<UnicodeRangePoolRef>();
   }
 
   // Look up the range arrays for the property.
@@ -288,12 +282,18 @@ bool addUnicodePropertyRanges(
           canonicalNameEntry->canonical.offset,
           canonicalNameEntry->canonical.size));
   if (rangeMapEntry == nullptr) {
-    return false;
+    return llvh::ArrayRef<UnicodeRangePoolRef>();
   }
 
-  llvh::ArrayRef rangeArrayPool{
+  return llvh::ArrayRef{
       &UNICODE_RANGE_ARRAY_POOL[rangeMapEntry->rangeArrayPoolOffset],
       rangeMapEntry->rangeArraySize};
+}
+
+void addRangeArrayPoolToBracket(
+    CodePointSet *receiver,
+    const llvh::ArrayRef<UnicodeRangePoolRef> rangeArrayPool,
+    bool inverted) {
   for (auto rangePoolRef : rangeArrayPool) {
     auto rangePool = llvh::ArrayRef<UnicodeRange>{
         &UNICODE_RANGE_POOL[rangePoolRef.offset], rangePoolRef.size};
@@ -313,19 +313,20 @@ bool addUnicodePropertyRanges(
       }
     }
   }
-
-  return true;
 }
 
 #else
 
-bool addUnicodePropertyRanges(
-    CodePointSet *receiver,
+llvh::ArrayRef<UnicodeRangePoolRef> unicodePropertyRanges(
     std::string_view propertyName,
-    std::string_view propertyValue,
-    bool inverted = false) {
-  return false;
+    std::string_view propertyValue) {
+  return llvh::ArrayRef<UnicodeRangePoolRef>();
 }
+
+void addRangeArrayPoolToBracket(
+    CodePointSet *receiver,
+    const llvh::ArrayRef<UnicodeRangePoolRef> rangeArrayPool,
+    bool inverted) {}
 
 #endif
 

@@ -12,6 +12,8 @@
 #include <cstdint>
 #include <string>
 
+#include "llvh/ADT/ArrayRef.h"
+
 namespace hermes {
 
 const uint32_t UNICODE_MAX_VALUE = 0x10FFFF;
@@ -115,13 +117,19 @@ class CodePointSet;
 /// any character in \p set, following ES9 21.2.2.8.2.
 CodePointSet makeCanonicallyEquivalent(const CodePointSet &set, bool unicode);
 
-/// Insert ranges of codepoints into \p receiver based on the Unicode \p
-/// propertyName and \p propertyValue (for non-binary properties).
-/// \return true if codepoints were added to the set
-bool addUnicodePropertyRanges(
+struct UnicodeRangePoolRef;
+
+// Create a codepoint range array from a Unicode \p propertyName and \p
+// propertyValue.
+llvh::ArrayRef<UnicodeRangePoolRef> unicodePropertyRanges(
+    std::string_view propertyName,
+    std::string_view propertyValue);
+
+/// Add a codepoint range array of codepoints to \p receiver, typically used in
+/// conjuction with unicodePropertyRanges.
+void addRangeArrayPoolToBracket(
     CodePointSet *receiver,
-    std::string_view propertyNameOrValue,
-    std::string_view propertyValue,
+    const llvh::ArrayRef<UnicodeRangePoolRef> rangeArrayPool,
     bool inverted);
 
 } // namespace hermes

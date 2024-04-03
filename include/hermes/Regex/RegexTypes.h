@@ -22,6 +22,9 @@
 #include "llvh/ADT/SmallString.h"
 
 namespace hermes {
+
+struct UnicodeRangePoolRef;
+
 namespace regex {
 namespace constants {
 
@@ -214,21 +217,17 @@ struct CharacterClass {
   CharacterClass(Type type, bool invert) : type_(type), inverted_(invert) {}
 };
 
-// Type wrapping up a unicode property, like \p{Letter} or \P{Number}.
-struct CharacterClassUnicodeProperty {
-  std::string propertyName;
-  std::string propertyValue;
+// Type wrapping up a Unicode codepoint range array.
+struct CharacterClassCodepointRanges {
+  llvh::ArrayRef<UnicodeRangePoolRef> rangeArray;
 
   // Whether the class is inverted (\P instead of \p).
   bool inverted_;
 
-  CharacterClassUnicodeProperty(
-      std::string propertyName,
-      std::string propertyValue,
+  CharacterClassCodepointRanges(
+      llvh::ArrayRef<UnicodeRangePoolRef> rangeArray,
       bool inverted)
-      : propertyName(std::move(propertyName)),
-        propertyValue(std::move(propertyValue)),
-        inverted_(inverted) {}
+      : rangeArray(rangeArray), inverted_(inverted) {}
 };
 
 // Struct representing flags which may be used when constructing the RegExp

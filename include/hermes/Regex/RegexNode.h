@@ -827,12 +827,10 @@ class BracketNode : public Node {
     classes_.push_back(cls);
   }
 
-  bool addUnicodeProperty(
-      const std::string &propertyName,
-      const std::string &propertyValue,
+  void addCodePointRanges(
+      llvh::ArrayRef<UnicodeRangePoolRef> rangeArray,
       bool inverted = false) {
-    return addUnicodePropertyRanges(
-        &codePointSet_, propertyName, propertyValue, inverted);
+    addRangeArrayPoolToBracket(&codePointSet_, rangeArray, inverted);
   }
 
   virtual MatchConstraintSet matchConstraints() const override {

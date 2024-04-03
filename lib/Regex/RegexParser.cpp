@@ -33,19 +33,13 @@ class Parser {
   struct ClassAtom {
     CodePoint codePoint = -1;
     llvh::Optional<CharacterClass> charClass{};
-    llvh::Optional<CharacterClassUnicodeProperty> property{};
+    llvh::Optional<CharacterClassCodepointRanges> codePointRanges{};
 
     explicit ClassAtom(CodePoint cp) : codePoint(cp) {}
     ClassAtom(CharacterClass::Type cc, bool invert)
         : charClass(CharacterClass(cc, invert)) {}
-    ClassAtom(
-        const std::string &propertyName,
-        const std::string &propertyValue,
-        bool invert)
-        : property(CharacterClassUnicodeProperty(
-              propertyName,
-              propertyValue,
-              invert)) {}
+    ClassAtom(llvh::ArrayRef<UnicodeRangePoolRef> ranges, bool invert)
+        : codePointRanges(CharacterClassCodepointRanges(ranges, invert)) {}
   };
 
   // The regexp that we are building. This receives the results of our
@@ -728,17 +722,12 @@ class Parser {
     auto bracket = re_->startBracketList(negate);
 
     // Helper to add a ClassAtom to our bracket.
-    auto addClassAtom = [this, &bracket](const ClassAtom &atom) {
+    auto addClassAtom = [&bracket](const ClassAtom &atom) {
       if (atom.charClass) {
         bracket->addClass(*atom.charClass);
-      } else if (atom.property) {
-        if (!bracket->addUnicodeProperty(
-                atom.property->propertyName,
-                atom.property->propertyValue,
-                atom.property->inverted_)) {
-          setError(constants::ErrorType::InvalidPropertyName);
-          return false;
-        }
+      } else if (atom.codePointRanges) {
+        bracket->addCodePointRanges(
+            atom.codePointRanges->rangeArray, atom.codePointRanges->inverted_);
       } else {
         bracket->addChar(atom.codePoint);
       }
@@ -780,8 +769,8 @@ class Parser {
 
       // We have a range like [a-z].
       if (unicode &&
-          (first->property || second->property || first->charClass ||
-           second->charClass)) {
+          (first->codePointRanges || second->codePointRanges ||
+           first->charClass || second->charClass)) {
         // Unicode mode does not allow ranges with properties or character
         // classes: [\d-z] is invalid, so is [\p{Number}-z]
         setError(constants::ErrorType::CharacterRange);
@@ -863,8 +852,14 @@ class Parser {
                 setError(constants::ErrorType::InvalidPropertyName);
                 return llvh::None;
               }
-              return ClassAtom(
-                  propertyName, propertyValue, ec == 'P' /* invert */);
+
+              auto codePointRanges =
+                  unicodePropertyRanges(propertyName, propertyValue);
+              if (codePointRanges.empty()) {
+                setError(constants::ErrorType::InvalidPropertyName);
+                return llvh::None;
+              }
+              return ClassAtom(codePointRanges, ec == 'P' /* invert */);
             } else {
               // When not in Unicode mode, this is just a regular `p` or `P`
               // (unnecessary) escape.
@@ -1246,10 +1241,13 @@ class Parser {
             return;
           }
           auto bracket = re_->startBracketList(c == 'P' /* invert */);
-          if (!bracket->addUnicodeProperty(propertyName, propertyValue)) {
+          auto codePointRanges =
+              unicodePropertyRanges(propertyName, propertyValue);
+          if (codePointRanges.empty()) {
             setError(constants::ErrorType::InvalidPropertyName);
             return;
           }
+          bracket->addCodePointRanges(codePointRanges);
           break;
         } else {
           // When not in Unicode mode, this is just a regular `p` or `P`
