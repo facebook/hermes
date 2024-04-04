@@ -526,6 +526,13 @@ static opt<bool> ReusePropCache(
 static CLFlag
     Inline('f', "inline", true, "inlining of functions", CompilerCategory);
 
+static opt<bool> LegacyMem2Reg(
+    "Xlegacy-mem2reg",
+    init(false),
+    Hidden,
+    desc("Use the legacy Mem2Reg pass."),
+    cat(CompilerCategory));
+
 static CLFlag StripFunctionNames(
     'f',
     "strip-function-names",
@@ -1068,6 +1075,8 @@ std::shared_ptr<Context> createContext(
   optimizationOpts.staticBuiltins =
       cl::StaticBuiltins == cl::StaticBuiltinSetting::ForceOn;
   optimizationOpts.staticRequire = cl::StaticRequire;
+
+  optimizationOpts.useLegacyMem2Reg = cl::LegacyMem2Reg;
 
   auto context = std::make_shared<Context>(
       std::move(codeGenOpts),

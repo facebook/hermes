@@ -40,6 +40,13 @@ void hermes::runFullOptimizationPasses(Module &M) {
   LLVM_DEBUG(dbgs() << "Running -O3 optimizations...\n");
   PassManager PM;
 
+  auto addMem2Reg = [&PM, &M]() {
+    if (M.getContext().getOptimizationSettings().useLegacyMem2Reg)
+      PM.addMem2Reg();
+    else
+      PM.addSimpleMem2Reg();
+  };
+
   // Add the optimization passes.
 
   // We need to fold constant strings before staticrequire.
@@ -52,7 +59,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addSimplifyCFG();
   PM.addSimpleStackPromotion();
   PM.addFrameLoadStoreOpts();
-  PM.addMem2Reg();
+  addMem2Reg();
   PM.addSimpleStackPromotion();
   PM.addScopeElimination();
   PM.addFunctionAnalysis();
@@ -63,7 +70,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addSimpleStackPromotion();
   PM.addInstSimplify();
   PM.addDCE();
-  PM.addMem2Reg();
+  addMem2Reg();
   PM.addFunctionAnalysis();
   PM.addInlining();
   PM.addDCE();
@@ -71,7 +78,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
   // to ensure unused functions aren't capturing vars.
   PM.addSimpleStackPromotion();
   PM.addFrameLoadStoreOpts();
-  PM.addMem2Reg();
+  addMem2Reg();
   PM.addScopeElimination();
   PM.addFunctionAnalysis();
   PM.addObjectStackPromotion();
@@ -87,7 +94,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addDCE();
   PM.addSimplifyCFG();
   PM.addFrameLoadStoreOpts();
-  PM.addMem2Reg();
+  addMem2Reg();
   PM.addAuditor();
 
   PM.addTypeInference();

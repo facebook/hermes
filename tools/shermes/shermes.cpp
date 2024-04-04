@@ -391,6 +391,13 @@ cl::opt<unsigned> InlineMaxSize(
     cl::Hidden,
     cl::cat(CompilerCategory));
 
+static cl::opt<bool> LegacyMem2Reg(
+    "Xlegacy-mem2reg",
+    cl::init(false),
+    cl::Hidden,
+    cl::desc("Use the legacy Mem2Reg pass."),
+    cl::cat(CompilerCategory));
+
 CLFlag StripFunctionNames(
     'f',
     "strip-function-names",
@@ -601,6 +608,8 @@ std::shared_ptr<Context> createContext() {
       cli::StaticBuiltins == StaticBuiltinSetting::ForceOn;
   // optimizationOpts.staticRequire = cl::StaticRequire;
   //
+
+  optimizationOpts.useLegacyMem2Reg = cli::LegacyMem2Reg;
 
   NativeSettings nativeSettings{};
   nativeSettings.emitCheckNativeStack = cli::CheckNativeStack;

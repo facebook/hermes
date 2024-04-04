@@ -67,6 +67,10 @@ struct OptimizationSettings {
 
   /// Attempt to resolve CommonJS require() calls at compile time.
   bool staticRequire{false};
+
+  /// Whether to use old Mem2Reg pass instead of SimpleMem2Reg. This may produce
+  /// better code for irreducible CFGs.
+  bool useLegacyMem2Reg{false};
 };
 
 enum class DebugInfoSetting {
