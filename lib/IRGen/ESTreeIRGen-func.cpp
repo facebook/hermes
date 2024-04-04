@@ -850,7 +850,7 @@ Function *ESTreeIRGen::genFieldInitFunction() {
                       classNode = classNode,
                       classType = curClass()->getClassType(),
                       parentScope =
-                          curFunction()->function->getFunctionScope()]() {
+                          curFunction()->functionScope->getVariableScope()] {
     FunctionContext newFunctionContext{this, initFunc, initFuncInfo};
     ClassContext newClassContext{this, classNode, classType};
 
@@ -896,7 +896,7 @@ void ESTreeIRGen::emitCreateFieldInitFunction() {
   CreateFunctionInst *createFieldInitFunc =
       Builder.createCreateFunctionInst(curFunction()->functionScope, initFunc);
   Variable *fieldInitFuncVar = Builder.createVariable(
-      curFunction()->function->getFunctionScope(),
+      curFunction()->functionScope->getVariableScope(),
       (llvh::Twine("<fieldInitFuncVar:") +
        curClass()->getClassType()->getClassName().str() + ">"),
       Type::createObject());

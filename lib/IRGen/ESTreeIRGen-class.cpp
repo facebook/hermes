@@ -197,8 +197,7 @@ CreateFunctionInst *ESTreeIRGen::genImplicitConstructor(
                         classNode = curClass()->getClassNode(),
                         classType = curClass()->getClassType(),
                         parentScope =
-                            curFunction()->function->getFunctionScope(),
-                        funcScope = curFunction()->functionScope]() {
+                            curFunction()->functionScope->getVariableScope()] {
       FunctionContext newFunctionContext{this, func, funcInfo};
 
       auto *prologueBB = Builder.createBasicBlock(func);
