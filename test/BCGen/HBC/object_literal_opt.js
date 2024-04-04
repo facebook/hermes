@@ -81,11 +81,10 @@ function foo(p) {
 // CHECK-NEXT:[@ 10] Ret 0<Reg8>
 
 // CHECK:Function<>(1 params, 2 registers):
-// CHECK-NEXT:Offset in debug table: source 0x000d, lexical 0x0000
 // CHECK-NEXT:[@ 0] NewObjectWithBuffer 0<Reg8>, 3<UInt16>, 3<UInt16>, 3<UInt16>, 9<UInt16>
 // CHECK-NEXT:[@ 10] LoadThisNS 1<Reg8>
-// CHECK-NEXT:[@ 12] PutByIdLoose 0<Reg8>, 1<Reg8>, 1<UInt8>, 6<UInt16>
-// CHECK-NEXT:[@ 18] Ret 0<Reg8>
+// CHECK-NEXT:[@ 12] PutOwnBySlotIdx 0<Reg8>, 1<Reg8>, 1<UInt8>
+// CHECK-NEXT:[@ 16] Ret 0<Reg8>
 
 // CHECK:Debug filename table:
 // CHECK-NEXT:  0: {{.*}}object_literal_opt.js
@@ -98,9 +97,7 @@ function foo(p) {
 // CHECK-NEXT:    bc 6: line 10 col 1
 // CHECK-NEXT:    bc 18: line 10 col 1
 // CHECK-NEXT:    bc 31: line 25 col 2
-// CHECK-NEXT:  0x000d  function idx 2, starts at line 18 col 2
-// CHECK-NEXT:    bc 12: line 19 col 12
-// CHECK-NEXT:  0x0014  end of debug source table
+// CHECK-NEXT:  0x000d  end of debug source table
 
 // CHECK:Debug lexical table:
 // CHECK-NEXT:  0x0000  lexical parent: none, variable count: 0

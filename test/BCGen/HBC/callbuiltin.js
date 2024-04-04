@@ -67,10 +67,10 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA:function shadows(): undefined
 // CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  $Reg3 = AllocObjectInst (:object) 1: number, empty: any
+// CHKRA-NEXT:  $Reg3 = HBCAllocObjectFromBufferInst (:object) 1: number, "keys": string, null: null
 // CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
 // CHKRA-NEXT:  $Reg0 = TryLoadGlobalPropertyInst (:any) $Reg0, "print": string
-// CHKRA-NEXT:  $Reg0 = StoreNewOwnPropertyInst $Reg0, $Reg3, "keys": string, true: boolean
+// CHKRA-NEXT:  $Reg0 = PrStoreInst $Reg0, $Reg3, 0: number, "keys": string, false: boolean
 // CHKRA-NEXT:  $Reg2 = LoadPropertyInst (:any) $Reg3, "keys": string
 // CHKRA-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHKRA-NEXT:  $Reg1 = HBCLoadConstInst (:string) "evil": string
@@ -130,11 +130,13 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:[String 6]
 // CHKBC-NEXT:[String 3]
 // CHKBC-NEXT:[int 5]
+// CHKBC-NEXT:[String 10]
 // CHKBC-NEXT:Object Value Buffer:
 // CHKBC-NEXT:[int 10]
 // CHKBC-NEXT:[int 20]
 // CHKBC-NEXT:[int 30]
 // CHKBC-NEXT:[int 6]
+// CHKBC-NEXT:null
 // CHKBC-NEXT:Function<global>(1 params, 13 registers):
 // CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHKBC-NEXT:    CreateTopLevelEnvironment r1, 0
@@ -164,10 +166,10 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 
 // CHKBC:Function<shadows>(1 params, 13 registers):
 // CHKBC-NEXT:Offset in debug table: source 0x0029, lexical 0x0000
-// CHKBC-NEXT:    NewObject         r3
+// CHKBC-NEXT:    NewObjectWithBuffer r3, 1, 1, 9, 17
 // CHKBC-NEXT:    GetGlobalObject   r0
 // CHKBC-NEXT:    TryGetById        r0, r0, 1, "print"
-// CHKBC-NEXT:    PutNewOwnByIdShort r3, r0, "keys"
+// CHKBC-NEXT:    PutOwnBySlotIdx   r3, r0, 0
 // CHKBC-NEXT:    GetByIdShort      r2, r3, 2, "keys"
 // CHKBC-NEXT:    LoadConstUndefined r0
 // CHKBC-NEXT:    LoadConstString   r1, "evil"
@@ -175,7 +177,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Function<checkNonStaticBuiltin>(1 params, 13 registers):
-// CHKBC-NEXT:Offset in debug table: source 0x0039, lexical 0x0000
+// CHKBC-NEXT:Offset in debug table: source 0x0036, lexical 0x0000
 // CHKBC-NEXT:    GetGlobalObject   r0
 // CHKBC-NEXT:    TryGetById        r3, r0, 1, "HermesInternal"
 // CHKBC-NEXT:    GetByIdShort      r2, r3, 2, "concat"
@@ -205,15 +207,14 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:  0x0022  function idx 1, starts at line 12 col 1
 // CHKBC-NEXT:    bc 3: line 13 col 23
 // CHKBC-NEXT:  0x0029  function idx 2, starts at line 17 col 1
-// CHKBC-NEXT:    bc 4: line 18 col 25
-// CHKBC-NEXT:    bc 10: line 18 col 18
-// CHKBC-NEXT:    bc 14: line 19 col 16
-// CHKBC-NEXT:    bc 25: line 19 col 16
-// CHKBC-NEXT:  0x0039  function idx 3, starts at line 22 col 1
+// CHKBC-NEXT:    bc 12: line 18 col 25
+// CHKBC-NEXT:    bc 22: line 19 col 16
+// CHKBC-NEXT:    bc 33: line 19 col 16
+// CHKBC-NEXT:  0x0036  function idx 3, starts at line 22 col 1
 // CHKBC-NEXT:    bc 2: line 23 col 3
 // CHKBC-NEXT:    bc 8: line 23 col 24
 // CHKBC-NEXT:    bc 19: line 23 col 24
-// CHKBC-NEXT:  0x0046  end of debug source table
+// CHKBC-NEXT:  0x0043  end of debug source table
 
 // CHKBC:Debug lexical table:
 // CHKBC-NEXT:  0x0000  lexical parent: none, variable count: 0

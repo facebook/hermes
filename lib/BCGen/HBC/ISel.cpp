@@ -1829,9 +1829,14 @@ void HBCISel::generatePrLoadInst(PrLoadInst *inst, BasicBlock *) {
   F_->getContext().getSourceErrorManager().error(
       inst->getLocation(), inst->getKindStr() + " not implemented");
 }
-void HBCISel::generatePrStoreInst(PrStoreInst *inst, BasicBlock *) {
-  F_->getContext().getSourceErrorManager().error(
-      inst->getLocation(), inst->getKindStr() + " not implemented");
+void HBCISel::generatePrStoreInst(PrStoreInst *Inst, BasicBlock *) {
+  auto valueReg = encodeValue(Inst->getOperand(PrStoreInst::StoredValueIdx));
+  auto objReg = encodeValue(Inst->getObject());
+  if (Inst->getPropIndex() <= UINT8_MAX) {
+    BCFGen_->emitPutOwnBySlotIdx(objReg, valueReg, Inst->getPropIndex());
+  } else {
+    BCFGen_->emitPutOwnBySlotIdxLong(objReg, valueReg, Inst->getPropIndex());
+  }
 }
 
 void HBCISel::generateFCompareInst(FCompareInst *Inst, BasicBlock *) {

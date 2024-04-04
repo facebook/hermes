@@ -46,10 +46,14 @@ function dynamicProto(func, getProto) {
 // CHECK-NEXT:[String 1]
 // CHECK-NEXT:[String 2]
 // CHECK-NEXT:[String 3]
+// CHECK-NEXT:[String 1]
+// CHECK-NEXT:[String 2]
 // CHECK-NEXT:Object Value Buffer:
 // CHECK-NEXT:[int 2]
 // CHECK-NEXT:[int 3]
 // CHECK-NEXT:[int 4]
+// CHECK-NEXT:null
+// CHECK-NEXT:[int 10]
 // CHECK-NEXT:Function<global>(1 params, 3 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    CreateTopLevelEnvironment r0, 0
@@ -73,13 +77,11 @@ function dynamicProto(func, getProto) {
 
 // CHECK:Function<dynamicProto>(3 params, 13 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0017, lexical 0x0000
-// CHECK-NEXT:    NewObject         r0
+// CHECK-NEXT:    NewObjectWithBuffer r0, 2, 2, 4, 13
 // CHECK-NEXT:    LoadParam         r1, 1
 // CHECK-NEXT:    LoadConstUndefined r2
 // CHECK-NEXT:    Call1             r1, r1, r2
-// CHECK-NEXT:    PutNewOwnByIdShort r0, r1, "a"
-// CHECK-NEXT:    LoadConstUInt8    r1, 10
-// CHECK-NEXT:    PutNewOwnByIdShort r0, r1, "b"
+// CHECK-NEXT:    PutOwnBySlotIdx   r0, r1, 0
 // CHECK-NEXT:    LoadParam         r1, 2
 // CHECK-NEXT:    Call1             r3, r1, r2
 // CHECK-NEXT:    Mov               r4, r0
@@ -101,12 +103,10 @@ function dynamicProto(func, getProto) {
 // CHECK-NEXT:  0x0010  function idx 1, starts at line 11 col 1
 // CHECK-NEXT:    bc 15: line 12 col 10
 // CHECK-NEXT:  0x0017  function idx 2, starts at line 15 col 1
-// CHECK-NEXT:    bc 7: line 16 col 18
-// CHECK-NEXT:    bc 11: line 16 col 10
-// CHECK-NEXT:    bc 18: line 16 col 10
-// CHECK-NEXT:    bc 25: line 16 col 48
-// CHECK-NEXT:    bc 32: line 16 col 29
-// CHECK-NEXT:  0x002a  end of debug source table
+// CHECK-NEXT:    bc 15: line 16 col 18
+// CHECK-NEXT:    bc 26: line 16 col 48
+// CHECK-NEXT:    bc 33: line 16 col 29
+// CHECK-NEXT:  0x0024  end of debug source table
 
 // CHECK:Debug lexical table:
 // CHECK-NEXT:  0x0000  lexical parent: none, variable count: 0

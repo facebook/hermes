@@ -281,89 +281,18 @@ bool LowerAllocObject::runOnFunction(Function *F) {
   return changed;
 }
 
-// Number of bytes saved for serializing a literal into the buffer.
-// Estimated with the example of an integer. Substract the cost of serializing
-// the int and a 1-byte tag.
-static constexpr int32_t kLiteralSavedBytes = static_cast<int32_t>(
-    sizeof(inst::LoadConstIntInst) + sizeof(inst::PutNewOwnByIdInst) -
-    sizeof(int32_t) - 1);
-// Number of bytes cost for serializing a non-literal into the buffer.
-// Cost includes a 1-byte tag and replacing with a longer put instruction.
-static constexpr int32_t kNonLiteralCostBytes = static_cast<int32_t>(
-    1 + sizeof(inst::PutByIdLooseInst) - sizeof(inst::PutNewOwnByIdInst));
-// Max number of non-literals we allow to serialize into the buffer.
-// The number is chosen to be small and can allow most literals to be serialized
-// for most cases.
-static constexpr uint32_t kNonLiteralPlaceholderLimit = 3;
-
 static bool canSerialize(Value *V) {
   if (auto *LCI = llvh::dyn_cast_or_null<HBCLoadConstInst>(V))
     return SerializedLiteralGenerator::isSerializableLiteral(LCI->getConst());
   return false;
 }
 
-uint32_t LowerAllocObject::estimateBestNumElemsToSerialize(
-    const StoreList &users,
-    bool hasParent) {
-  // We want to track curSaving to avoid serializing too many place holders
-  // which ends up causing a big size regression.
-  // We set curSaving to be the delta of the size of two instructions to avoid
-  // serializing a literal object with only one entry, which turns out to
-  // significantly increase bytecode size.
-  int32_t curSaving = static_cast<int32_t>(sizeof(inst::NewObjectInst)) -
-      static_cast<int32_t>(sizeof(inst::NewObjectWithBufferInst));
-  // If there is a parent set on the new object, account for the CallBuiltin to
-  // explicitly set it.
-  if (hasParent)
-    curSaving -= sizeof(inst::CallBuiltinInst);
-  int32_t maxSaving = 0;
-  uint32_t optimumStopIndex = 0;
-  uint32_t nonLiteralPlaceholderCount = 0;
-
-  uint32_t curSize = 0;
-  for (StoreNewOwnPropertyInst *I : users) {
-    ++curSize;
-    assert(
-        (llvh::isa<LiteralString>(I->getProperty()) ||
-         llvh::isa<LiteralNumber>(I->getProperty())) &&
-        "StoreNewOwnPropertyInst property must be literal.");
-    if (canSerialize(I->getStoredValue())) {
-      // Property Value is a literal that's not undefined.
-      curSaving += kLiteralSavedBytes;
-      if (curSaving > maxSaving) {
-        maxSaving = curSaving;
-        optimumStopIndex = curSize;
-      }
-    } else {
-      // Property Value is computed. we could try to store a null as
-      // placeholder, and set the proper value latter.
-      if (llvh::isa<LiteralNumber>(I->getProperty())) {
-        // If the key is a number, we can't set it latter with PutById, so
-        // have to skip it. We only need to check if it's an instance of
-        // LiteralNumber because LowerNumericProperties must have lowered any
-        // number-like property to LiteralNumber.
-        // We don't need to stop the whole process because a numeric literal
-        // property can be inserted in any order. So it's safe to skip it
-        // in the lowering.
-        continue;
-      }
-      if (nonLiteralPlaceholderCount == kNonLiteralPlaceholderLimit) {
-        // We have reached the maximum number of place holders we can put.
-        break;
-      }
-      nonLiteralPlaceholderCount++;
-      curSaving -= kNonLiteralCostBytes;
-    }
-  }
-  return optimumStopIndex;
-}
-
 bool LowerAllocObject::lowerAllocObjectBuffer(
     AllocObjectInst *allocInst,
     const StoreList &users,
     uint32_t maxSize) {
-  auto size = estimateBestNumElemsToSerialize(
-      users, !llvh::isa<EmptySentinel>(allocInst->getParentObject()));
+  uint32_t size = users.size();
+  // Skip processing for objects that contain 0 properties.
   if (size == 0) {
     return false;
   }
@@ -393,6 +322,9 @@ bool LowerAllocObject::lowerAllocObjectBuffer(
           std::pair<Literal *, Literal *>(propLiteral, loadInst->getConst()));
       I->eraseFromParent();
     } else if (llvh::isa<LiteralString>(propLiteral)) {
+      // This index is used to write the unserializable value directly into the
+      // correct slot after the object is created from the buffer.
+      size_t curSlotIdx = prop_map.size();
       // If prop is a literal number, there is no need to put it into the
       // buffer or change the instruction.
       // Otherwise, use null as placeholder, and
@@ -406,11 +338,21 @@ bool LowerAllocObject::lowerAllocObjectBuffer(
       // StorePropertyInst.
       builder.setLocation(I->getLocation());
       builder.setInsertionPoint(I);
-      auto *NI = builder.createStorePropertyInst(
-          I->getStoredValue(), I->getObject(), I->getProperty());
-      I->replaceAllUsesWith(NI);
+      auto *PSI = builder.createPrStoreInst(
+          I->getStoredValue(),
+          I->getObject(),
+          curSlotIdx,
+          cast<LiteralString>(propLiteral),
+          I->getStoredValue()->getType().isNonPtr());
+      I->replaceAllUsesWith(PSI);
       I->eraseFromParent();
     }
+  }
+
+  // If we did not discover any StoreNewOwnPropertyInst that we can collapse
+  // into a buffer-backed object, then return.
+  if (prop_map.size() == 0) {
+    return false;
   }
 
   builder.setLocation(allocInst->getLocation());
@@ -470,51 +412,17 @@ bool LowerAllocObjectLiteral::lowerAlloc(AllocObjectLiteralInst *allocInst) {
   return true;
 }
 
-uint32_t LowerAllocObjectLiteral::estimateBestNumElemsToSerialize(
-    AllocObjectLiteralInst *allocInst) {
-  // Reuse calc logic from LowerAllocObject.
-  int32_t curSaving = static_cast<int32_t>(sizeof(inst::NewObjectInst)) -
-      static_cast<int32_t>(sizeof(inst::NewObjectWithBufferInst));
-  int32_t maxSaving = 0;
-  uint32_t optimumStopIndex = 0;
-  uint32_t nonLiteralPlaceholderCount = 0;
-
-  uint32_t curSize = 0;
-  for (unsigned i = 0; i < allocInst->getKeyValuePairCount(); i++) {
-    ++curSize;
-    Literal *key = allocInst->getKey(i);
-    Value *value = allocInst->getValue(i);
-    if (SerializedLiteralGenerator::isSerializableLiteral(value)) {
-      curSaving += kLiteralSavedBytes;
-      if (curSaving > maxSaving) {
-        maxSaving = curSaving;
-        optimumStopIndex = curSize;
-      }
-    } else {
-      if (llvh::isa<LiteralNumber>(key)) {
-        continue;
-      }
-      if (nonLiteralPlaceholderCount == kNonLiteralPlaceholderLimit) {
-        // We have reached the maximum number of place holders we can put.
-        break;
-      }
-      nonLiteralPlaceholderCount++;
-      curSaving -= kNonLiteralCostBytes;
-    }
-  }
-  return optimumStopIndex;
-}
-
 bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
     AllocObjectLiteralInst *allocInst) {
   Function *F = allocInst->getParent()->getParent();
   IRBuilder builder(F);
 
   auto maxSize = (unsigned)UINT16_MAX;
-  auto size = estimateBestNumElemsToSerialize(allocInst);
+  uint32_t size = allocInst->getKeyValuePairCount();
   size = std::min(maxSize, size);
 
-  // Should not create HBCAllocObjectFromBufferInst.
+  // Should not create HBCAllocObjectFromBufferInst for an object with 0
+  // properties.
   if (size == 0) {
     return lowerAlloc(allocInst);
   }
@@ -543,10 +451,21 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
       propMap.push_back(std::pair<Literal *, Literal *>(
           propLiteral, llvh::cast<Literal>(value)));
     } else if (llvh::isa<LiteralString>(propLiteral)) {
+      // We will be adding in this property to the buffer with a placeholder
+      // value, which we should patch with the correct value after object
+      // construction. We can do this using PrStore, since we know the shape of
+      // the object. The slot index to use for this property is the current
+      // propMap size, since that is where there property will sit once we
+      // insert it into the map.
+      builder.createPrStoreInst(
+          value,
+          allocInst,
+          propMap.size(),
+          cast<LiteralString>(propLiteral),
+          value->getType().isNonPtr());
       // LiteralString key with undefined / non-constant value.
       propMap.push_back(std::pair<Literal *, Literal *>(
           propLiteral, builder.getLiteralNull()));
-      builder.createStorePropertyInst(value, allocInst, key);
     } else {
       // LiteralNumber key with undefined / non-constant value.
       // No need to put Null in the buffer, as numeric properties can

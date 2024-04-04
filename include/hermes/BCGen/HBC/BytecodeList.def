@@ -336,6 +336,14 @@ DEFINE_OPCODE_3(PutNewOwnByIdLong, Reg8, Reg8, UInt32)
 OPERAND_STRING_ID(PutNewOwnByIdShort, 3)
 OPERAND_STRING_ID(PutNewOwnById, 3)
 OPERAND_STRING_ID(PutNewOwnByIdLong, 3)
+	
+/// Set an existing own property identified at a slot index.
+/// Arg1 is the destination object.
+/// Arg2 is the value to write.
+/// Arg3 is the hidden class slot index.
+/// Arg1[Arg3] = Arg2;
+DEFINE_OPCODE_3(PutOwnBySlotIdx, Reg8, Reg8, UInt8)
+DEFINE_OPCODE_3(PutOwnBySlotIdxLong, Reg8, Reg8, UInt32)
 
 /// Create a new non-enumerable own property on an object. This is the same as
 /// PutNewOwnById, but creates the property with different enumerability.

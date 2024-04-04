@@ -22,15 +22,14 @@ var o;
 o = {__proto__: proto1, a: 10, __proto__(x,y) { return x + y;}}
 print(Object.getPrototypeOf(o) === proto1);
 print(o.__proto__(35,7));
-//CHKBC: NewObjectWithParent r
-//CHKBC-NOT: CallBuiltin
+//CHKBC: NewObjectWithBuffer r
 //CHECK: true
 //CHECK-NEXT: 42
 
 o = {__proto__(x,y) { return x + y;}, __proto__: proto1, a: 10}
 print(Object.getPrototypeOf(o) === proto1);
 print(o.__proto__(35,8));
-//CHKBC: NewObject r
+//CHKBC: NewObjectWithBuffer r
 //CHKBC: CallBuiltin
 //CHECK-NEXT: true
 //CHECK-NEXT: 43

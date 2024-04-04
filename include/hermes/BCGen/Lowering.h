@@ -69,11 +69,6 @@ class LowerAllocObject : public FunctionPass {
       AllocObjectInst *allocInst,
       const StoreList &users,
       uint32_t maxSize);
-  /// Estimate best number of elements to serialize into the buffer.
-  /// Try optimizing for max bytecode size saving.
-  uint32_t estimateBestNumElemsToSerialize(
-      const StoreList &users,
-      bool hasParent);
 };
 
 /// Lowers AllocObjectLiterals which target object literals with
@@ -87,7 +82,6 @@ class LowerAllocObjectLiteral : public FunctionPass {
   bool runOnFunction(Function *F) override;
 
  private:
-  uint32_t estimateBestNumElemsToSerialize(AllocObjectLiteralInst *allocInst);
   bool lowerAlloc(AllocObjectLiteralInst *allocInst);
   bool lowerAllocObjectBuffer(AllocObjectLiteralInst *allocInst);
 };

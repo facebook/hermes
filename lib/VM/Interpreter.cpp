@@ -3218,6 +3218,28 @@ tailCall:
       ip = nextIP;
       DISPATCH;
     }
+      CASE(PutOwnBySlotIdxLong) {
+        nextIP = NEXTINST(PutOwnBySlotIdxLong);
+        idVal = ip->iPutOwnBySlotIdxLong.op3;
+        goto putOwnBySlotIdx;
+      }
+      CASE(PutOwnBySlotIdx) {
+        nextIP = NEXTINST(PutOwnBySlotIdx);
+        idVal = ip->iPutOwnBySlotIdx.op3;
+      }
+    putOwnBySlotIdx : {
+      assert(
+          O1REG(PutOwnBySlotIdx).isObject() &&
+          "Object argument of PutOwnBySlotIdx must be an object");
+      auto *obj = vmcast<JSObject>(O1REG(PutOwnBySlotIdx));
+      CAPTURE_IP_ASSIGN(
+          SmallHermesValue shv,
+          SmallHermesValue::encodeHermesValue(O2REG(PutOwnBySlotIdx), runtime));
+      CAPTURE_IP(JSObject::setNamedSlotValueUnsafe(obj, runtime, idVal, shv));
+      gcScope.flushToSmallCount(KEEP_HANDLES);
+      ip = nextIP;
+      DISPATCH;
+    }
 
       CASE(DelByIdLooseLong) {
         idVal = ip->iDelByIdLooseLong.op3;
