@@ -19,8 +19,6 @@ namespace hermes::sh {
 /// narrows input's type to the result type.
 Pass *createLowerNanBoxedUnionNarrowTrusted();
 
-Pass *createLowerAllocObjectLiteral();
-
 /// Lower literal values to the appropriate LoadConst instruction.
 Pass *createLoadConstants();
 

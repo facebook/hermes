@@ -9,7 +9,6 @@ add_hermes_library(hermesSHBackend
   LoadConstants.cpp
   RecreateCheapValues.cpp
   LowerNanBoxedUnionNarrowT.cpp
-  LowerAllocObjectLiteral.cpp
   PeepholeLowering.cpp
   SH.cpp
   SHRegAlloc.cpp SHRegAlloc.h
