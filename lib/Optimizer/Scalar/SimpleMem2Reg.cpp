@@ -31,12 +31,6 @@
 
 #include <queue>
 
-using namespace hermes;
-using llvh::dbgs;
-using llvh::SmallPtrSet;
-using llvh::SmallVector;
-using llvh::SmallVectorImpl;
-
 STATISTIC(NumPhi, "Number of Phi inserted");
 STATISTIC(NumAlloc, "Number of AllocStack removed");
 
@@ -44,10 +38,16 @@ STATISTIC(NumLoad, "Number of loads eliminated");
 STATISTIC(NumStore, "Number of stores eliminated");
 STATISTIC(NumSOL, "Number of store only locations");
 
+namespace hermes {
+namespace {
+
 using BlockSet = llvh::DenseSet<BasicBlock *>;
 using BlockToInstMap = llvh::DenseMap<BasicBlock *, Instruction *>;
 
-static bool promoteLoads(BasicBlock *BB) {
+/// Eliminate loads in \p BB by coalescing multiple loads from the same stack
+/// location, and eliminating loads from locations that are stored to in the
+/// same basic block.
+bool promoteLoads(BasicBlock *BB) {
   // Uncaptured AllocStack instructions don't alias with other memory locations
   // and may only be accessed by LoadStack/StoreStack instructions. We can
   // optimize them without inspecting side effects. Even 'call' instructions
@@ -78,6 +78,7 @@ static bool promoteLoads(BasicBlock *BB) {
         if (auto *ASI = llvh::dyn_cast<AllocStackInst>(II->getOperand(i)))
           knownStackValues.erase(ASI);
       }
+      continue;
     }
 
     // Try to replace the LoadStack with a recently saved value.
@@ -107,7 +108,9 @@ static bool promoteLoads(BasicBlock *BB) {
   return changed;
 }
 
-static bool eliminateStores(
+/// Eliminate stores in \p BB by coalescing multiple stores to the same stack
+/// location.
+bool eliminateStores(
     BasicBlock *BB,
     llvh::ArrayRef<AllocStackInst *> unsafeAllocas) {
   // A list of un-clobbered stack store instructions.
@@ -124,32 +127,31 @@ static bool eliminateStores(
     // Try to delete the previous store based on the current store.
     if (auto *SS = llvh::dyn_cast<StoreStackInst>(II)) {
       auto *AS = SS->getPtr();
-      auto entry = prevStoreStack.find(AS);
 
-      if (entry != prevStoreStack.end()) {
+      auto [entry, inserted] = prevStoreStack.try_emplace(AS, SS);
+
+      if (!inserted) {
         // Found store-after-store. Mark the previous store for deletion.
-        if (entry->second) {
-          destroyer.add(entry->second);
-          ++NumStore;
-          changed = true;
-        }
-
+        destroyer.add(entry->second);
+        ++NumStore;
+        changed = true;
         entry->second = SS;
-        continue;
       }
 
-      prevStoreStack[AS] = SS;
       continue;
     }
 
     auto sideEffect = II->getSideEffect();
 
     // If this instruction can read from the stack, we should invalidate all of
-    // its stack operands.
+    // its stack operands. Note that this should only affect non-LoadStack
+    // instructions (and therefore only affect unsafe allocas), since any
+    // LoadStack instruction that accesses a location that has been stored to
+    // will have been eliminated by promoteLoads.
     if (sideEffect.getReadStack()) {
       for (size_t i = 0, e = II->getNumOperands(); i < e; ++i)
         if (auto *AS = llvh::dyn_cast<AllocStackInst>(II->getOperand(i)))
-          prevStoreStack[AS] = nullptr;
+          prevStoreStack.erase(AS);
     }
 
     // Note that we deliberately fall through to the below check since reading
@@ -158,18 +160,16 @@ static bool eliminateStores(
     // If this instruction may throw, we cannot coalesce stores to unsafe
     // allocas across it, since the stored value may be observed if the thrown
     // exception is caught.
-    if (sideEffect.getThrow()) {
-      for (auto *A : unsafeAllocas) {
-        prevStoreStack[A] = nullptr;
-      }
-    }
+    if (sideEffect.getThrow())
+      for (auto *A : unsafeAllocas)
+        prevStoreStack.erase(A);
   }
 
   return changed;
 }
 
 /// \returns true if the instruction has non-store uses, like loads.
-static bool hasNonStoreUses(AllocStackInst *ASI) {
+bool hasNonStoreUses(AllocStackInst *ASI) {
   for (auto *U : ASI->getUsers()) {
     if (!llvh::isa<StoreStackInst>(U))
       return true;
@@ -178,7 +178,7 @@ static bool hasNonStoreUses(AllocStackInst *ASI) {
   return false;
 }
 
-static bool eliminateStoreOnlyLocations(BasicBlock *BB) {
+bool eliminateStoreOnlyLocations(BasicBlock *BB) {
   bool changed = false;
   IRBuilder::InstructionDestroyer destroyer;
 
@@ -207,7 +207,7 @@ static bool eliminateStoreOnlyLocations(BasicBlock *BB) {
 /// \returns true if \p ASI is used in a try block, or is used by an
 /// instruction other than LoadStackInst/StoreStackInst (like GetPNamesInst).
 /// In that case it is not subject to SSA conversion.
-static bool isUnsafeStackLocation(
+bool isUnsafeStackLocation(
     AllocStackInst *ASI,
     const llvh::DenseMap<BasicBlock *, size_t> &blockTryDepths) {
   // For all users of the stack allocation:
@@ -234,10 +234,10 @@ static bool isUnsafeStackLocation(
 /// Collect all of the allocas in the program in two lists. \p allocas that are
 /// optimizable, and \p unsafe, which are allocas that we can't optimize because
 /// they are used in try blocks or non-load/store instructions.
-static void collectStackAllocations(
+void collectStackAllocations(
     Function *F,
-    SmallVectorImpl<AllocStackInst *> &allocas,
-    SmallVectorImpl<AllocStackInst *> &unsafe) {
+    llvh::SmallVectorImpl<AllocStackInst *> &allocas,
+    llvh::SmallVectorImpl<AllocStackInst *> &unsafe) {
   // Collect all of the basic blocks that are enclosed by try's.
   auto [blockTryDepths, maxTryDepth] = getBlockTryDepths(F);
 
@@ -249,12 +249,10 @@ static void collectStackAllocations(
         continue;
 
       // Check if the stack location is safe for SSA conversion.
-      if (isUnsafeStackLocation(ASI, blockTryDepths)) {
+      if (isUnsafeStackLocation(ASI, blockTryDepths))
         unsafe.push_back(ASI);
-        continue;
-      }
-
-      allocas.push_back(ASI);
+      else
+        allocas.push_back(ASI);
     }
   }
 }
@@ -265,14 +263,12 @@ using DomTreeLevelMap = llvh::DenseMap<DomTreeNode *, unsigned>;
 using DomTreeNodePair = std::pair<DomTreeNode *, unsigned>;
 using NodePriorityQueue = std::priority_queue<
     DomTreeNodePair,
-    SmallVector<DomTreeNodePair, 32>,
+    llvh::SmallVector<DomTreeNodePair, 32>,
     llvh::less_second>;
 
 /// Compute the dominator tree levels for our graph.
-static void computeDomTreeLevels(
-    DominanceInfo *DT,
-    DomTreeLevelMap &DomTreeLevels) {
-  SmallVector<DomTreeNode *, 32> worklist;
+void computeDomTreeLevels(DominanceInfo *DT, DomTreeLevelMap &DomTreeLevels) {
+  llvh::SmallVector<DomTreeNode *, 32> worklist;
   DomTreeNode *root = DT->getRootNode();
 
   // Root starts at zero.
@@ -291,7 +287,7 @@ static void computeDomTreeLevels(
   }
 }
 
-static Value *getLiveOutValue(
+Value *getLiveOutValue(
     BasicBlock *startBB,
     BlockToInstMap &phiLoc,
     DominanceInfo &DT,
@@ -322,7 +318,7 @@ static Value *getLiveOutValue(
 
 /// \returns the live-in value for basic block \p BB knowing that we've placed
 /// phi nodes in the blocks \p phiLoc.
-static Value *getLiveInValue(
+Value *getLiveInValue(
     BasicBlock *BB,
     BlockToInstMap &phiLoc,
     DominanceInfo &DT,
@@ -353,7 +349,7 @@ static Value *getLiveInValue(
   return getLiveOutValue(IDom->getBlock(), phiLoc, DT, stores);
 }
 
-static void promoteAllocStackToSSA(
+void promoteAllocStackToSSA(
     AllocStackInst *ASI,
     DominanceInfo &DT,
     DomTreeLevelMap &domTreeLevels) {
@@ -379,7 +375,7 @@ static void promoteAllocStackToSSA(
   // A list of nodes for which we already calculated the dominator frontier.
   llvh::SmallPtrSet<DomTreeNode *, 32> visited;
 
-  SmallVector<DomTreeNode *, 32> worklist;
+  llvh::SmallVector<DomTreeNode *, 32> worklist;
 
   // Scan all of the definitions in the function bottom-up using the priority
   // queue.
@@ -475,8 +471,8 @@ static void promoteAllocStackToSSA(
     NumPhi++;
     auto *phi = cast<PhiInst>(phiLoc[BB]);
 
-    SmallVector<BasicBlock *, 4> preds(predecessors(BB));
-    SmallPtrSet<BasicBlock *, 4> processed{};
+    llvh::SmallVector<BasicBlock *, 4> preds(predecessors(BB));
+    llvh::SmallPtrSet<BasicBlock *, 4> processed{};
     for (auto *pred : preds) {
       // The predecessor list can contain duplicates. Just skip them.
       if (!processed.insert(pred).second)
@@ -511,7 +507,7 @@ static void promoteAllocStackToSSA(
 
 /// Optimize PHI nodes in \p F where all incoming values that are not self-edges
 /// are the same, by replacing them with that single source value.
-static bool simplifyPhiInsts(Function *F) {
+bool simplifyPhiInsts(Function *F) {
   bool changed = false;
   bool localChanged;
   do {
@@ -538,7 +534,7 @@ static bool simplifyPhiInsts(Function *F) {
   return changed;
 }
 
-static bool mem2reg(Function *F) {
+bool mem2reg(Function *F) {
   bool changed = false;
   DominanceInfo D(F);
 
@@ -547,16 +543,16 @@ static bool mem2reg(Function *F) {
   computeDomTreeLevels(&D, domTreeLevels);
 
   // a list of stack allocations to promote.
-  SmallVector<AllocStackInst *, 16> allocations;
+  llvh::SmallVector<AllocStackInst *, 16> allocations;
 
   // a list of stack allocations that are unsafe to optimize.
-  SmallVector<AllocStackInst *, 16> unsafeAllocations;
+  llvh::SmallVector<AllocStackInst *, 16> unsafeAllocations;
 
   collectStackAllocations(F, allocations, unsafeAllocations);
 
   LLVM_DEBUG(
-      dbgs() << "Optimizing loads and stores in " << F->getInternalNameStr()
-             << "\n");
+      llvh::dbgs() << "Optimizing loads and stores in "
+                   << F->getInternalNameStr() << "\n");
 
   for (auto &it : *F) {
     BasicBlock *BB = &it;
@@ -582,7 +578,9 @@ static bool mem2reg(Function *F) {
   return changed;
 }
 
-Pass *hermes::createSimpleMem2Reg() {
+} // namespace
+
+Pass *createSimpleMem2Reg() {
   class ThisPass : public FunctionPass {
    public:
     explicit ThisPass() : hermes::FunctionPass("SimpleMem2Reg") {}
@@ -594,5 +592,7 @@ Pass *hermes::createSimpleMem2Reg() {
   };
   return new ThisPass();
 }
+
+} // namespace hermes
 
 #undef DEBUG_TYPE
