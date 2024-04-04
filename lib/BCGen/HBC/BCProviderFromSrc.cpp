@@ -61,9 +61,8 @@ BCProviderFromSrc::BCProviderFromSrc(
   regExpStorage_ = module_->getRegExpStorage();
   regExpTable_ = module_->getRegExpTable();
 
-  arrayBuffer_ = module_->getArrayBuffer();
-  objKeyBuffer_ = module_->getObjectBuffer().first;
-  objValueBuffer_ = module_->getObjectBuffer().second;
+  literalValueBuffer_ = module_->getLiteralValueBuffer();
+  objKeyBuffer_ = module_->getObjectKeyBuffer();
 
   segmentID_ = module_->getSegmentID();
   cjsModuleTable_ = module_->getCJSModuleTable();

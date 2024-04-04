@@ -21,7 +21,7 @@ var z = [{}];
 //CHECK-NEXT:  i6[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: z
 
 
-//CHECK-LABEL:Array Buffer:
+//CHECK-LABEL:Literal Value Buffer:
 //CHECK-NEXT:true
 //CHECK-NEXT:false
 //CHECK-NEXT:[int 0]

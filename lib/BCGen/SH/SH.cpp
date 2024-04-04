@@ -176,20 +176,16 @@ class SHStringTable {
 
 class SHLiteralBuffers {
  public:
-  /// Table of constants used to initialize constant arrays.
+  /// Table of constants used to initialize constant arrays/object values.
   /// They are stored as chars in order to shorten bytecode size.
-  std::vector<unsigned char> arrayBuffer{};
+  std::vector<unsigned char> literalValueBuffer{};
 
   /// Table of constants used to initialize object keys.
   /// They are stored as chars in order to shorten bytecode size
   std::vector<unsigned char> objKeyBuffer{};
 
-  /// Table of constants used to initialize object values.
-  /// They are stored as chars in order to shorten bytecode size
-  std::vector<unsigned char> objValBuffer{};
-
   /// A map from instruction to literal offset in the corresponding buffers.
-  /// \c arrayBuffer, \c objKeyBuffer, \c objValBuffer.
+  /// \c arrayBuffer, \c objKeyBuffer, \c objliteralValBuffer.
   LiteralBufferBuilder::LiteralOffsetMapTy literalOffsetMap{};
 
   explicit SHLiteralBuffers(
@@ -202,9 +198,8 @@ class SHLiteralBuffers {
         [&table](llvh::StringRef str) { return table.add(str); },
         [&table](llvh::StringRef str) { return table.add(str); },
         optimizationEnabled);
-    arrayBuffer = std::move(bufs.arrayBuffer);
+    literalValueBuffer = std::move(bufs.literalValBuffer);
     objKeyBuffer = std::move(bufs.keyBuffer);
-    objValBuffer = std::move(bufs.valBuffer);
     literalOffsetMap = std::move(bufs.offsetMap);
   }
 
@@ -221,9 +216,8 @@ class SHLiteralBuffers {
   }
 
   void generate(llvh::raw_ostream &os) const {
+    generateBuffer(os, "s_literal_val_buffer", literalValueBuffer);
     generateBuffer(os, "s_obj_key_buffer", objKeyBuffer);
-    generateBuffer(os, "s_obj_val_buffer", objValBuffer);
-    generateBuffer(os, "s_array_buffer", arrayBuffer);
   }
 
  private:
@@ -2819,10 +2813,8 @@ static SHNativeFuncInfo s_function_info_table[];
        << ".strings = s_strings, .symbols = s_symbols, .prop_cache = s_prop_cache,"
        << ".obj_key_buffer = s_obj_key_buffer, .obj_key_buffer_size = "
        << moduleGen.literalBuffers.objKeyBuffer.size() << ", "
-       << ".obj_val_buffer = s_obj_val_buffer, .obj_val_buffer_size = "
-       << moduleGen.literalBuffers.objValBuffer.size() << ", "
-       << ".array_buffer = s_array_buffer, .array_buffer_size = "
-       << moduleGen.literalBuffers.arrayBuffer.size() << ", "
+       << ".literal_val_buffer = s_literal_val_buffer, .literal_val_buffer_size = "
+       << moduleGen.literalBuffers.literalValueBuffer.size() << ", "
        << ".object_literal_key_info = s_object_literal_key_info, "
        << ".object_literal_class_cache = s_object_literal_class_cache, "
        << ".num_object_literal_class_cache_entries = "

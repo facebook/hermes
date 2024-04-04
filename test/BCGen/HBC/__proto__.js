@@ -42,18 +42,18 @@ function dynamicProto(func, getProto) {
 // CHECK-NEXT:i4[ASCII, 8..19] #E721285C: dynamicProto
 // CHECK-NEXT:i5[ASCII, 20..30] #99489473: staticProto
 
-// CHECK:Object Key Buffer:
-// CHECK-NEXT:[String 1]
-// CHECK-NEXT:[String 2]
-// CHECK-NEXT:[String 3]
-// CHECK-NEXT:[String 1]
-// CHECK-NEXT:[String 2]
-// CHECK-NEXT:Object Value Buffer:
+// CHECK:Literal Value Buffer:
 // CHECK-NEXT:[int 2]
 // CHECK-NEXT:[int 3]
 // CHECK-NEXT:[int 4]
 // CHECK-NEXT:null
 // CHECK-NEXT:[int 10]
+// CHECK-NEXT:Object Key Buffer:
+// CHECK-NEXT:[String 1]
+// CHECK-NEXT:[String 2]
+// CHECK-NEXT:[String 3]
+// CHECK-NEXT:[String 1]
+// CHECK-NEXT:[String 2]
 // CHECK-NEXT:Function<global>(1 params, 3 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    CreateTopLevelEnvironment r0, 0

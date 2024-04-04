@@ -83,9 +83,9 @@ class BytecodeSerializer {
 
   void serializeDebugInfo(BytecodeModule &BM);
 
-  void serializeArrayBuffer(BytecodeModule &BM);
+  void serializeLiteralValueBuffer(BytecodeModule &BM);
 
-  void serializeObjectBuffer(BytecodeModule &BM);
+  void serializeObjectKeysBuffer(BytecodeModule &BM);
 
   void serializeExceptionHandlerTable(BytecodeFunction &BF);
 
@@ -102,9 +102,8 @@ class BytecodeSerializer {
   void visitSmallStringTable();
   void visitOverflowStringTable();
   void visitStringStorage();
-  void visitArrayBuffer();
+  void visitLiteralValueBuffer();
   void visitObjectKeyBuffer();
-  void visitObjectValueBuffer();
   void visitBigIntTable();
   void visitBigIntStorage();
   void visitRegExpTable();
@@ -143,9 +142,8 @@ void BytecodeSerializer::serialize(BytecodeModule &BM, const SHA1 &sourceHash) {
       static_cast<uint32_t>(BM.getBigIntStorage().size()),
       static_cast<uint32_t>(BM.getRegExpTable().size()),
       static_cast<uint32_t>(BM.getRegExpStorage().size()),
-      BM.getArrayBufferSize(),
+      BM.getLiteralValueBufferSize(),
       BM.getObjectKeyBufferSize(),
-      BM.getObjectValueBufferSize(),
       BM.getSegmentID(),
       cjsModuleCount,
       static_cast<uint32_t>(BM.getFunctionSourceTable().size()),
@@ -271,16 +269,13 @@ void BytecodeSerializer::serializeExceptionHandlerTable(BytecodeFunction &BF) {
   writeBinaryArray(BF.getExceptionHandlers());
 }
 
-// ========================= Array Buffer ==========================
-void BytecodeSerializer::serializeArrayBuffer(BytecodeModule &BM) {
-  writeBinaryArray(BM.getArrayBuffer());
+// ========================= Buffers ==========================
+void BytecodeSerializer::serializeLiteralValueBuffer(BytecodeModule &BM) {
+  writeBinaryArray(BM.getLiteralValueBuffer());
 }
 
-void BytecodeSerializer::serializeObjectBuffer(BytecodeModule &BM) {
-  auto objectKeyValBufferPair = BM.getObjectBuffer();
-
-  writeBinaryArray(objectKeyValBufferPair.first);
-  writeBinaryArray(objectKeyValBufferPair.second);
+void BytecodeSerializer::serializeObjectKeysBuffer(BytecodeModule &BM) {
+  writeBinaryArray(BM.getObjectKeyBuffer());
 }
 
 void BytecodeSerializer::serializeDebugOffsets(BytecodeFunction &BF) {
@@ -414,21 +409,14 @@ void BytecodeSerializer::visitStringStorage() {
   writeBinaryArray(bytecodeModule_->getStringStorage());
 }
 
-void BytecodeSerializer::visitArrayBuffer() {
+void BytecodeSerializer::visitLiteralValueBuffer() {
   pad(BYTECODE_ALIGNMENT);
-  serializeArrayBuffer(*bytecodeModule_);
+  writeBinaryArray(bytecodeModule_->getLiteralValueBuffer());
 }
 
 void BytecodeSerializer::visitObjectKeyBuffer() {
   pad(BYTECODE_ALIGNMENT);
-  auto objectKeyValBufferPair = bytecodeModule_->getObjectBuffer();
-  writeBinaryArray(objectKeyValBufferPair.first);
-}
-
-void BytecodeSerializer::visitObjectValueBuffer() {
-  pad(BYTECODE_ALIGNMENT);
-  auto objectKeyValBufferPair = bytecodeModule_->getObjectBuffer();
-  writeBinaryArray(objectKeyValBufferPair.second);
+  writeBinaryArray(bytecodeModule_->getObjectKeyBuffer());
 }
 
 void BytecodeSerializer::visitBigIntTable() {

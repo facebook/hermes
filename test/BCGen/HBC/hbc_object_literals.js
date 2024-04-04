@@ -149,7 +149,33 @@ var obj4 = {
 // BCGEN-NEXT:i22[ASCII, 36..36] #0001C360: q
 // BCGEN-NEXT:i23[ASCII, 37..37] #0001CF53: r
 
-// BCGEN:Object Key Buffer:
+// BCGEN:Literal Value Buffer:
+// BCGEN-NEXT:[String 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:null
+// BCGEN-NEXT:null
+// BCGEN-NEXT:true
+// BCGEN-NEXT:null
+// BCGEN-NEXT:[int 2]
+// BCGEN-NEXT:null
+// BCGEN-NEXT:null
+// BCGEN-NEXT:null
+// BCGEN-NEXT:null
+// BCGEN-NEXT:null
+// BCGEN-NEXT:null
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:Object Key Buffer:
 // BCGEN-NEXT:[String 3]
 // BCGEN-NEXT:[String 9]
 // BCGEN-NEXT:[String 10]
@@ -187,32 +213,6 @@ var obj4 = {
 // BCGEN-NEXT:[String 6]
 // BCGEN-NEXT:[String 21]
 // BCGEN-NEXT:[String 22]
-// BCGEN-NEXT:Object Value Buffer:
-// BCGEN-NEXT:[String 1]
-// BCGEN-NEXT:[int 1]
-// BCGEN-NEXT:null
-// BCGEN-NEXT:null
-// BCGEN-NEXT:true
-// BCGEN-NEXT:null
-// BCGEN-NEXT:[int 2]
-// BCGEN-NEXT:null
-// BCGEN-NEXT:null
-// BCGEN-NEXT:null
-// BCGEN-NEXT:null
-// BCGEN-NEXT:null
-// BCGEN-NEXT:null
-// BCGEN-NEXT:[int 1]
-// BCGEN-NEXT:[int 1]
-// BCGEN-NEXT:[int 1]
-// BCGEN-NEXT:[int 1]
-// BCGEN-NEXT:[int 1]
-// BCGEN-NEXT:[int 1]
-// BCGEN-NEXT:[int 1]
-// BCGEN-NEXT:[int 1]
-// BCGEN-NEXT:[int 1]
-// BCGEN-NEXT:[int 1]
-// BCGEN-NEXT:[int 1]
-// BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:Function<global>(1 params, 4 registers):
 // BCGEN-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // BCGEN-NEXT:    DeclareGlobalVar  "obj1"

@@ -424,7 +424,7 @@ class UsageCounter : public BytecodeVisitor {
             inst->iNewObjectWithBuffer.op4,
             inst->iNewObjectWithBuffer.op3);
         countSerializedLiterals(
-            bcProvider_->getObjectValueBuffer(),
+            bcProvider_->getLiteralValueBuffer(),
             inst->iNewObjectWithBuffer.op5,
             inst->iNewObjectWithBuffer.op3);
         break;
@@ -434,19 +434,19 @@ class UsageCounter : public BytecodeVisitor {
             inst->iNewObjectWithBufferLong.op4,
             inst->iNewObjectWithBufferLong.op3);
         countSerializedLiterals(
-            bcProvider_->getObjectValueBuffer(),
+            bcProvider_->getLiteralValueBuffer(),
             inst->iNewObjectWithBufferLong.op5,
             inst->iNewObjectWithBufferLong.op3);
         break;
       case OpCode::NewArrayWithBuffer:
         countSerializedLiterals(
-            bcProvider_->getArrayBuffer(),
+            bcProvider_->getLiteralValueBuffer(),
             inst->iNewArrayWithBuffer.op4,
             inst->iNewArrayWithBuffer.op3);
         break;
       case OpCode::NewArrayWithBufferLong:
         countSerializedLiterals(
-            bcProvider_->getArrayBuffer(),
+            bcProvider_->getLiteralValueBuffer(),
             inst->iNewArrayWithBufferLong.op4,
             inst->iNewArrayWithBufferLong.op3);
         break;

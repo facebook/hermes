@@ -300,14 +300,14 @@ class BytecodeDisassembler {
   /// Print the content of the string storage.
   void disassembleStringStorage(raw_ostream &OS);
 
-  /// Print the content of the array buffer table into \p OS.
-  void disassembleArrayBuffer(raw_ostream &OS);
+  /// Print the content of the literal value buffer table into \p OS.
+  void disassembleLiteralValueBuffer(raw_ostream &OS);
 
   /// Print the content of the bigint storage.
   void disassembleBigIntStorage(raw_ostream &OS);
 
-  /// Print the content of the object buffer table into \p OS.
-  void disassembleObjectBuffer(raw_ostream &OS);
+  /// Print the content of the object key buffer table into \p OS.
+  void disassembleObjectKeyBuffer(raw_ostream &OS);
 
   /// Print the contents of the CJS module table to \p OS,
   /// if it contains any entries.

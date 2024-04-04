@@ -111,9 +111,8 @@ class BCProviderBase {
   llvh::ArrayRef<uint32_t> identifierHashes_{};
   llvh::ArrayRef<unsigned char> stringStorage_{};
 
-  llvh::ArrayRef<unsigned char> arrayBuffer_{};
+  llvh::ArrayRef<unsigned char> literalValueBuffer_{};
   llvh::ArrayRef<unsigned char> objKeyBuffer_{};
-  llvh::ArrayRef<unsigned char> objValueBuffer_{};
 
   llvh::ArrayRef<bigint::BigIntTableEntry> bigIntTable_{};
   llvh::ArrayRef<unsigned char> bigIntStorage_{};
@@ -174,14 +173,11 @@ class BCProviderBase {
   llvh::ArrayRef<unsigned char> getStringStorage() const {
     return stringStorage_;
   }
-  llvh::ArrayRef<unsigned char> getArrayBuffer() const {
-    return arrayBuffer_;
+  llvh::ArrayRef<unsigned char> getLiteralValueBuffer() const {
+    return literalValueBuffer_;
   }
   llvh::ArrayRef<unsigned char> getObjectKeyBuffer() const {
     return objKeyBuffer_;
-  }
-  llvh::ArrayRef<unsigned char> getObjectValueBuffer() const {
-    return objValueBuffer_;
   }
   llvh::ArrayRef<bigint::BigIntTableEntry> getBigIntTable() const {
     return bigIntTable_;

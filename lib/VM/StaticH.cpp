@@ -1364,11 +1364,12 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
     SHUnit *unit,
     uint32_t sizeHint,
     uint32_t literalCacheID,
-    uint32_t valBufferIndex) {
+    uint32_t literalValBufferIndex) {
   Runtime &runtime = getRuntime(shr);
   GCScopeMarkerRAII marker{runtime};
   llvh::ArrayRef keyBuffer{unit->obj_key_buffer, unit->obj_key_buffer_size};
-  llvh::ArrayRef valBuffer{unit->obj_val_buffer, unit->obj_val_buffer_size};
+  llvh::ArrayRef literalValBuffer{
+      unit->literal_val_buffer, unit->literal_val_buffer_size};
 
   auto [keyBufferIndex, numLiterals] =
       unit->object_literal_key_info[literalCacheID];
@@ -1408,7 +1409,7 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
   } v{obj, runtime, unit, 0};
 
   SerializedLiteralParser::parse(
-      valBuffer.slice(valBufferIndex), numLiterals, v);
+      literalValBuffer.slice(literalValBufferIndex), numLiterals, v);
 
   return obj.getHermesValue();
 }
@@ -1436,7 +1437,8 @@ extern "C" SHLegacyValue _sh_ljs_new_array_with_buffer(
   // Create a new array using the built-in constructor, and initialize
   // the elements from a literal array buffer.
   Runtime &runtime = getRuntime(shr);
-  llvh::ArrayRef arrayBuffer{unit->array_buffer, unit->array_buffer_size};
+  llvh::ArrayRef arrayBuffer{
+      unit->literal_val_buffer, unit->literal_val_buffer_size};
 
   CallResult<HermesValue> arrayRes = [&runtime, numElements]() {
     GCScopeMarkerRAII marker{runtime};

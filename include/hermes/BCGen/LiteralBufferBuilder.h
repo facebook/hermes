@@ -20,9 +20,8 @@ using LiteralOffsetMapTy = llvh::DenseMap<const Instruction *, LiteralOffset>;
 
 /// The LiteralBufferBuilder will build this struct as its output.
 struct Result {
-  std::vector<unsigned char> arrayBuffer;
+  std::vector<unsigned char> literalValBuffer;
   std::vector<unsigned char> keyBuffer;
-  std::vector<unsigned char> valBuffer;
   LiteralOffsetMapTy offsetMap;
 };
 

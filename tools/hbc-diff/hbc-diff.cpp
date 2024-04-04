@@ -25,15 +25,14 @@ enum ExecutionStatus {
   LoadFileFailed,
 };
 
-static std::array<const char *, 15> sectionNames = {
+static std::array<const char *, 14> sectionNames = {
     {"Total",
      "Function headers",
      "Small string table",
      "Overflow string table",
      "String storage",
-     "Array buffer",
+     "Literal value buffer",
      "Object key buffer",
-     "Object value buffer",
      "Regexp table",
      "Regexp storage",
      "CommonJS module table",
@@ -102,9 +101,8 @@ static ExecutionStatus diffFiles(
         bytecode->getOverflowStringTableEntries().size() *
         sizeof(hbc::OverflowStringTableEntry));
     fileSizes[i].push_back(bytecode->getStringStorage().size());
-    fileSizes[i].push_back(bytecode->getArrayBuffer().size());
+    fileSizes[i].push_back(bytecode->getLiteralValueBuffer().size());
     fileSizes[i].push_back(bytecode->getObjectKeyBuffer().size());
-    fileSizes[i].push_back(bytecode->getObjectValueBuffer().size());
     fileSizes[i].push_back(
         bytecode->getRegExpTable().size() * sizeof(RegExpTableEntry));
     fileSizes[i].push_back(bytecode->getRegExpStorage().size());

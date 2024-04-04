@@ -83,9 +83,8 @@ struct BytecodeFileHeader {
   uint32_t bigIntStorageSize; // Bytes in the bigint table.
   uint32_t regExpCount;
   uint32_t regExpStorageSize;
-  uint32_t arrayBufferSize;
+  uint32_t literalValueBufferSize;
   uint32_t objKeyBufferSize;
-  uint32_t objValueBufferSize;
   uint32_t segmentID; // The ID of this segment.
   uint32_t cjsModuleCount; // Number of modules.
   uint32_t functionSourceCount; // Number of function sources preserved.
@@ -94,7 +93,7 @@ struct BytecodeFileHeader {
 
   // Insert any padding to make function headers that follow this file header
   // less likely to cross cache lines.
-  uint8_t padding[19];
+  uint8_t padding[23];
 
   BytecodeFileHeader(
       uint64_t magic,
@@ -112,9 +111,8 @@ struct BytecodeFileHeader {
       uint32_t bigIntStorageSize,
       uint32_t regExpCount,
       uint32_t regExpStorageSize,
-      uint32_t arrayBufferSize,
+      uint32_t literalValueBufferSize,
       uint32_t objKeyBufferSize,
-      uint32_t objValueBufferSize,
       uint32_t segmentID,
       uint32_t cjsModuleCount,
       uint32_t functionSourceCount,
@@ -135,9 +133,8 @@ struct BytecodeFileHeader {
         bigIntStorageSize(bigIntStorageSize),
         regExpCount(regExpCount),
         regExpStorageSize(regExpStorageSize),
-        arrayBufferSize(arrayBufferSize),
+        literalValueBufferSize(literalValueBufferSize),
         objKeyBufferSize(objKeyBufferSize),
-        objValueBufferSize(objValueBufferSize),
         segmentID(segmentID),
         cjsModuleCount(cjsModuleCount),
         functionSourceCount(functionSourceCount),
@@ -409,9 +406,8 @@ void visitBytecodeSegmentsInOrder(Visitor &visitor) {
   visitor.visitSmallStringTable();
   visitor.visitOverflowStringTable();
   visitor.visitStringStorage();
-  visitor.visitArrayBuffer();
+  visitor.visitLiteralValueBuffer();
   visitor.visitObjectKeyBuffer();
-  visitor.visitObjectValueBuffer();
   visitor.visitBigIntTable();
   visitor.visitBigIntStorage();
   visitor.visitRegExpTable();
@@ -457,14 +453,11 @@ struct BytecodeFileFields {
   /// The character buffer used for string storage.
   Array<uint8_t> stringStorage;
 
-  /// Buffer for array literals.
-  Array<uint8_t> arrayBuffer;
+  /// Buffer for array/object value literals.
+  Array<uint8_t> literalValueBuffer;
 
   /// Buffer for object keys.
   Array<uint8_t> objKeyBuffer;
-
-  /// Buffer for object values.
-  Array<uint8_t> objValueBuffer;
 
   /// List of bigint literals.
   Array<bigint::BigIntTableEntry> bigIntTable;

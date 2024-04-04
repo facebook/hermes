@@ -193,13 +193,11 @@ unsigned BytecodeModuleGenerator::addFunction(Function *F) {
 void BytecodeModuleGenerator::initializeSerializedLiterals(
     LiteralBufferBuilder::Result &&bufs) {
   assert(
-      bm_->getArrayBuffer().empty() && bm_->getObjectBuffer().first.empty() &&
-      bm_->getObjectBuffer().second.empty() && literalOffsetMap_.empty() &&
+      bm_->getLiteralValueBuffer().empty() &&
+      bm_->getObjectKeyBuffer().empty() && literalOffsetMap_.empty() &&
       "serialized literals already initialized");
   bm_->initializeSerializedLiterals(
-      std::move(bufs.arrayBuffer),
-      std::move(bufs.keyBuffer),
-      std::move(bufs.valBuffer));
+      std::move(bufs.literalValBuffer), std::move(bufs.keyBuffer));
   literalOffsetMap_ = std::move(bufs.offsetMap);
 }
 

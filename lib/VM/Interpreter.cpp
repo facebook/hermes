@@ -618,7 +618,7 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
   SerializedLiteralParser::parse(
       curCodeBlock->getRuntimeModule()
           ->getBytecode()
-          ->getObjectValueBuffer()
+          ->getLiteralValueBuffer()
           .slice(valBufferIndex),
       numLiterals,
       v);
@@ -670,8 +670,10 @@ CallResult<PseudoHandle<>> Interpreter::createArrayFromBuffer(
 
   // Visit each serialized value in the given buffer.
   SerializedLiteralParser::parse(
-      curCodeBlock->getRuntimeModule()->getBytecode()->getArrayBuffer().slice(
-          bufferIndex),
+      curCodeBlock->getRuntimeModule()
+          ->getBytecode()
+          ->getLiteralValueBuffer()
+          .slice(bufferIndex),
       numLiterals,
       v);
 

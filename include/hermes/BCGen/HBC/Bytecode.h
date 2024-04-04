@@ -174,14 +174,11 @@ class BytecodeModule {
   /// A table containing debug info (if compiled with -g).
   DebugInfo debugInfo_;
 
-  /// Array Buffer table.
-  SerializableBufferTy arrayBuffer_;
+  /// Object/Array Literal Value Buffer table.
+  SerializableBufferTy literalValueBuffer_;
 
   /// Object Key Buffer table.
   SerializableBufferTy objKeyBuffer_;
-
-  /// Object Value Buffer table.
-  SerializableBufferTy objValBuffer_;
 
   /// The segment ID corresponding to this BytecodeModule.
   /// This uniquely identifies this BytecodeModule within a set of modules
@@ -362,22 +359,12 @@ class BytecodeModule {
     debugInfo_ = std::move(info);
   }
 
-  /// Set the three buffers based on the buffers passed in.
+  /// Initialize the literal buffers.
   void initializeSerializedLiterals(
-      std::vector<unsigned char> &&arrayBuffer,
-      std::vector<unsigned char> &&objKeyBuffer,
-      std::vector<unsigned char> &&objValBuffer) {
-    arrayBuffer_ = std::move(arrayBuffer);
+      std::vector<unsigned char> &&literalValueBuffer,
+      std::vector<unsigned char> &&objKeyBuffer) {
+    literalValueBuffer_ = std::move(literalValueBuffer);
     objKeyBuffer_ = std::move(objKeyBuffer);
-    objValBuffer_ = std::move(objValBuffer);
-  }
-
-  uint32_t getArrayBufferSize() const {
-    return arrayBuffer_.size();
-  }
-
-  llvh::ArrayRef<unsigned char> getArrayBuffer() const {
-    return arrayBuffer_;
   }
 
   /// Returns the amount of bytes in the object key buffer
@@ -385,18 +372,19 @@ class BytecodeModule {
     return objKeyBuffer_.size();
   }
 
-  /// Returns the amount of bytes in the object value buffer
-  uint32_t getObjectValueBufferSize() const {
-    return objValBuffer_.size();
+  /// Returns the amount of bytes in the literal value buffer.
+  uint32_t getLiteralValueBufferSize() const {
+    return literalValueBuffer_.size();
   }
 
-  /// Returns a pair of arrays, where the first array represents the
-  /// object keys and the second array represents the object values.
-  std::pair<llvh::ArrayRef<unsigned char>, llvh::ArrayRef<unsigned char>>
-  getObjectBuffer() const {
-    return {
-        llvh::ArrayRef<unsigned char>(objKeyBuffer_),
-        llvh::ArrayRef<unsigned char>(objValBuffer_)};
+  /// Returns a reference to the literal value buffer.
+  llvh::ArrayRef<unsigned char> getLiteralValueBuffer() const {
+    return literalValueBuffer_;
+  }
+
+  /// Returns a reference to the object keys.
+  llvh::ArrayRef<unsigned char> getObjectKeyBuffer() const {
+    return llvh::ArrayRef<unsigned char>(objKeyBuffer_);
   }
 
   /// Returns a pair, where the first element is the key buffer starting at
@@ -405,7 +393,7 @@ class BytecodeModule {
   getObjectBufferAtOffset(unsigned keyIdx, unsigned valIdx) const {
     return {
         llvh::ArrayRef<unsigned char>(objKeyBuffer_).slice(keyIdx),
-        llvh::ArrayRef<unsigned char>(objValBuffer_).slice(valIdx)};
+        llvh::ArrayRef<unsigned char>(literalValueBuffer_).slice(valIdx)};
   }
 
   /// Populate the source map \p sourceMap with the debug information.

@@ -264,19 +264,15 @@ bool BytecodeFileFields<Mutable>::populateFromBuffer(
       f.stringStorage =
           castArrayRef<unsigned char>(buf, h->stringStorageSize, end);
     }
-    void visitArrayBuffer() {
+    void visitLiteralValueBuffer() {
       align(buf);
-      f.arrayBuffer = castArrayRef<unsigned char>(buf, h->arrayBufferSize, end);
+      f.literalValueBuffer =
+          castArrayRef<unsigned char>(buf, h->literalValueBufferSize, end);
     }
     void visitObjectKeyBuffer() {
       align(buf);
       f.objKeyBuffer =
           castArrayRef<unsigned char>(buf, h->objKeyBufferSize, end);
-    }
-    void visitObjectValueBuffer() {
-      align(buf);
-      f.objValueBuffer =
-          castArrayRef<unsigned char>(buf, h->objValueBufferSize, end);
     }
     void visitBigIntTable() {
       align(buf);
@@ -572,9 +568,8 @@ BCProviderFromBuffer::BCProviderFromBuffer(
   stringTableEntries_ = fields.stringTableEntries.data();
   overflowStringTableEntries_ = fields.stringTableOverflowEntries;
   stringStorage_ = fields.stringStorage;
-  arrayBuffer_ = fields.arrayBuffer;
+  literalValueBuffer_ = fields.literalValueBuffer;
   objKeyBuffer_ = fields.objKeyBuffer;
-  objValueBuffer_ = fields.objValueBuffer;
   bigIntTable_ = fields.bigIntTable;
   bigIntStorage_ = fields.bigIntStorage;
   regExpTable_ = fields.regExpTable;

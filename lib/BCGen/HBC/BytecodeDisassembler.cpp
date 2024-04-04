@@ -254,33 +254,32 @@ void BytecodeDisassembler::disassembleStringStorage(raw_ostream &OS) {
 }
 
 /// NOTE: The output might not show the value of every literal used
-/// by NewArrayWithBuffer (explained in serializeBuffer's header).
-void BytecodeDisassembler::disassembleArrayBuffer(raw_ostream &OS) {
-  auto arrayBuffer = bcProvider_->getArrayBuffer();
-  if (arrayBuffer.size() == 0)
+/// by array/objects (explained in serializeBuffer's header).
+void BytecodeDisassembler::disassembleLiteralValueBuffer(raw_ostream &OS) {
+  auto literalValueBuffer = bcProvider_->getLiteralValueBuffer();
+  if (literalValueBuffer.size() == 0)
     return;
 
-  OS << "Array Buffer:\n";
+  OS << "Literal Value Buffer:\n";
   int ind = 0;
-  while ((size_t)ind < arrayBuffer.size()) {
-    std::pair<int, SLG::TagType> tag = checkBufferTag(arrayBuffer.data() + ind);
+  while ((size_t)ind < literalValueBuffer.size()) {
+    std::pair<int, SLG::TagType> tag =
+        checkBufferTag(literalValueBuffer.data() + ind);
     ind += (tag.first > 0x0f ? 2 : 1);
     for (int i = 0; i < tag.first; i++) {
-      OS << SLPToString(tag.second, arrayBuffer.data(), &ind) << "\n";
+      OS << SLPToString(tag.second, literalValueBuffer.data(), &ind) << "\n";
     }
   }
 }
 
 /// NOTE: The output might not show the value of every literal used
 /// by NewObjectWithBuffer (explained in serializeBuffer's header).
-void BytecodeDisassembler::disassembleObjectBuffer(raw_ostream &OS) {
+void BytecodeDisassembler::disassembleObjectKeyBuffer(raw_ostream &OS) {
   auto objKeyBuffer = bcProvider_->getObjectKeyBuffer();
-  auto objValueBuffer = bcProvider_->getObjectValueBuffer();
   if (objKeyBuffer.size() == 0)
     return;
 
   int keyInd = 0;
-  int valInd = 0;
 
   OS << "Object Key Buffer:\n";
   while ((size_t)keyInd < objKeyBuffer.size()) {
@@ -289,16 +288,6 @@ void BytecodeDisassembler::disassembleObjectBuffer(raw_ostream &OS) {
     keyInd += (keyTag.first > 0x0f ? 2 : 1);
     for (int i = 0; i < keyTag.first; i++) {
       OS << SLPToString(keyTag.second, objKeyBuffer.data(), &keyInd) << "\n";
-    }
-  }
-
-  OS << "Object Value Buffer:\n";
-  while ((size_t)valInd < objValueBuffer.size()) {
-    std::pair<int, SLG::TagType> valTag =
-        checkBufferTag(objValueBuffer.data() + valInd);
-    valInd += (valTag.first > 0x0f ? 2 : 1);
-    for (int i = 0; i < valTag.first; i++) {
-      OS << SLPToString(valTag.second, objValueBuffer.data(), &valInd) << "\n";
     }
   }
 }
@@ -930,17 +919,13 @@ BytecodeSectionWalker::BytecodeSectionWalker(
       bcProvider->getStringStorage().begin(),
       bcProvider->getStringStorage().end());
   addSection(
-      "Array buffer",
-      bcProvider->getArrayBuffer().begin(),
-      bcProvider->getArrayBuffer().end());
+      "Literal value buffer",
+      bcProvider->getLiteralValueBuffer().begin(),
+      bcProvider->getLiteralValueBuffer().end());
   addSection(
       "Object key buffer",
       bcProvider->getObjectKeyBuffer().begin(),
       bcProvider->getObjectKeyBuffer().end());
-  addSection(
-      "Object value buffer",
-      bcProvider->getObjectValueBuffer().begin(),
-      bcProvider->getObjectValueBuffer().end());
   addSection(
       "BigInt storage",
       bcProvider->getBigIntStorage().begin(),
@@ -1253,8 +1238,8 @@ void BytecodeDisassembler::disassemble(raw_ostream &OS) {
 
   disassembleBytecodeFileHeader(OS);
   disassembleStringStorage(OS);
-  disassembleArrayBuffer(OS);
-  disassembleObjectBuffer(OS);
+  disassembleLiteralValueBuffer(OS);
+  disassembleObjectKeyBuffer(OS);
   disassembleBigIntStorage(OS);
   disassembleCJSModuleTable(OS);
   disassembleFunctionSourceTable(OS);

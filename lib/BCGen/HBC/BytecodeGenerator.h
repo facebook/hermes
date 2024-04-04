@@ -57,7 +57,7 @@ class BytecodeModuleGenerator {
   DebugInfoGenerator debugInfoGenerator_;
 
   /// A map from instruction to literal offset in the corresponding buffers.
-  /// \c arrayBuffer_, \c objKeyBuffer_, \c objValBuffer_.
+  /// \c arrayBuffer_, \c objKeyBuffer_, \c objliteralValBuffer_.
   /// This map is populated before instruction selection.
   LiteralBufferBuilder::LiteralOffsetMapTy literalOffsetMap_{};
 

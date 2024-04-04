@@ -105,14 +105,10 @@ typedef struct SHUnit {
   const unsigned char *obj_key_buffer;
   /// Size of object key buffer.
   uint32_t obj_key_buffer_size;
-  /// Object value buffer.
-  const unsigned char *obj_val_buffer;
-  /// Size of object value buffer.
-  uint32_t obj_val_buffer_size;
-  /// Array value buffer.
-  const unsigned char *array_buffer;
-  /// Size of array value buffer.
-  uint32_t array_buffer_size;
+  /// Object/Array value buffer.
+  const unsigned char *literal_val_buffer;
+  /// Size of value buffer.
+  uint32_t literal_val_buffer_size;
 
   /// Size of the object literal class cache.
   uint32_t num_object_literal_class_cache_entries;
@@ -660,7 +656,7 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_new_object_with_buffer(
     SHUnit *unit,
     uint32_t sizeHint,
     uint32_t literalCacheID,
-    uint32_t valBufferIndex);
+    uint32_t literalValBufferIndex);
 
 /// \p sizeHint the size of the resultant array.
 SHERMES_EXPORT SHLegacyValue

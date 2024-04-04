@@ -122,72 +122,70 @@ class Builder {
   /// of allocating a new one every time.
   std::vector<unsigned char> tempBuffer_{};
 
-  /// Each element is a serialized array literal.
-  UniquedStringVector arrays_{};
+  /// Each element is the values portion of a serialized object literal or
+  /// array.
+  UniquedStringVector values_{};
 
   /// Each element records the instruction whose literal was serialized at the
-  /// corresponding index in \c arrays_.
-  std::vector<const Instruction *> arraysInst_{};
+  /// corresponding index in \c values_.
+  std::vector<std::pair<const Instruction *, size_t>> arraysInst_{};
 
   /// Each element is the keys portion of a serialized object literal.
   UniquedStringVector objKeys_{};
 
-  /// Each element is the values portion of a serialized object literal.
-  UniquedStringVector objVals_{};
-
   /// Each element records the instruction whose literal was serialized at the
-  /// corresponding index in \c objKeys_/objVals_.
-  std::vector<const Instruction *> objInst_{};
+  /// corresponding indices in \c objKeys_/values_. Note that the indicies may
+  /// not be the same, since values_ is shared between object and array literal
+  /// values.
+  std::vector<std::pair<const Instruction *, std::pair<size_t, size_t>>>
+      objInst_{};
 };
 
 LiteralBufferBuilder::Result Builder::generate() {
   traverse();
 
   // Construct the serialized storage, optionally optimizing it.
-  hbc::ConsecutiveStringStorage arrayStorage{
-      arrays_.beginSet(), arrays_.endSet(), std::true_type{}, optimize_};
+  hbc::ConsecutiveStringStorage valStorage{
+      values_.beginSet(), values_.endSet(), std::true_type{}, optimize_};
   hbc::ConsecutiveStringStorage keyStorage{
       objKeys_.beginSet(), objKeys_.endSet(), std::true_type{}, optimize_};
-  hbc::ConsecutiveStringStorage valStorage{
-      objVals_.beginSet(), objVals_.endSet(), std::true_type{}, optimize_};
 
   // Populate the offset map.
   LiteralOffsetMapTy literalOffsetMap{};
 
-  // Visit all array literals.
+  // Visit all object/array literal values.
   // Cast these to const to make sure we're calling the correct overload and no
   // longer modifying the underlying storage.
-  auto arrayView =
-      const_cast<const hbc::ConsecutiveStringStorage &>(arrayStorage)
-          .getStringTableView();
-  for (size_t i = 0, e = arraysInst_.size(); i != e; ++i) {
-    assert(
-        literalOffsetMap.count(arraysInst_[i]) == 0 &&
-        "instruction literal can't be serialized twice");
-    uint32_t arrayIndexInSet = arrays_.indexInSet(i);
-    literalOffsetMap[arraysInst_[i]] =
-        LiteralOffset{arrayView[arrayIndexInSet].getOffset(), UINT32_MAX};
-  }
-
-  // Visit all object literals - they are split in two buffers.
-  auto keyView = const_cast<const hbc::ConsecutiveStringStorage &>(keyStorage)
-                     .getStringTableView();
   auto valView = const_cast<const hbc::ConsecutiveStringStorage &>(valStorage)
                      .getStringTableView();
-  for (size_t i = 0, e = objInst_.size(); i != e; ++i) {
+  for (size_t i = 0, e = arraysInst_.size(); i != e; ++i) {
+    const auto [Inst, idx] = arraysInst_[i];
     assert(
-        literalOffsetMap.count(objInst_[i]) == 0 &&
+        literalOffsetMap.count(Inst) == 0 &&
         "instruction literal can't be serialized twice");
-    uint32_t keyIndexInSet = objKeys_.indexInSet(i);
-    uint32_t valIndexInSet = objVals_.indexInSet(i);
-    literalOffsetMap[objInst_[i]] = LiteralOffset{
+    uint32_t arrayIndexInSet = values_.indexInSet(idx);
+    literalOffsetMap[Inst] =
+        LiteralOffset{valView[arrayIndexInSet].getOffset(), UINT32_MAX};
+  }
+
+  // Visit all object literals.
+  auto keyView = const_cast<const hbc::ConsecutiveStringStorage &>(keyStorage)
+                     .getStringTableView();
+  for (size_t i = 0, e = objInst_.size(); i != e; ++i) {
+    const auto [Inst, indices] = objInst_[i];
+    const auto [keyIdx, valIdx] = indices;
+    assert(
+        literalOffsetMap.count(Inst) == 0 &&
+        "instruction literal can't be serialized twice");
+    uint32_t keyIndexInSet = objKeys_.indexInSet(keyIdx);
+    uint32_t valIndexInSet = values_.indexInSet(valIdx);
+    literalOffsetMap[Inst] = LiteralOffset{
         keyView[keyIndexInSet].getOffset(), valView[valIndexInSet].getOffset()};
   }
 
   return {
-      arrayStorage.acquireStringStorage(),
-      keyStorage.acquireStringStorage(),
       valStorage.acquireStringStorage(),
+      keyStorage.acquireStringStorage(),
       std::move(literalOffsetMap)};
 }
 
@@ -229,8 +227,8 @@ void Builder::serializeLiteralFor(AllocArrayInst *AAI) {
     elements.push_back(cast<Literal>(AAI->getArrayElement(i)));
   }
 
-  serializeInto(arrays_, elements, false);
-  arraysInst_.push_back(AAI);
+  arraysInst_.push_back({AAI, values_.size()});
+  serializeInto(values_, elements, false);
 }
 
 void Builder::serializeLiteralFor(HBCAllocObjectFromBufferInst *AOFB) {
@@ -246,12 +244,9 @@ void Builder::serializeLiteralFor(HBCAllocObjectFromBufferInst *AOFB) {
     objVals.push_back(cast<Literal>(keyValuePair.second));
   }
 
+  objInst_.push_back({AOFB, {objKeys_.size(), values_.size()}});
   serializeInto(objKeys_, objKeys, true);
-  serializeInto(objVals_, objVals, false);
-  assert(
-      objKeys_.size() == objVals_.size() &&
-      "objKeys_ and objVals_ must be the same size");
-  objInst_.push_back(AOFB);
+  serializeInto(values_, objVals, false);
 }
 } // namespace
 

@@ -52,18 +52,18 @@ function foo(p) {
 // CHECK-NEXT:i6[ASCII, 14..18] #C6C55603: hello
 // CHECK-NEXT:i7[ASCII, 19..19] #0001E7F9: x
 
-// CHECK:Object Key Buffer:
-// CHECK-NEXT:[String 3]
-// CHECK-NEXT:[String 4]
-// CHECK-NEXT:[String 5]
-// CHECK-NEXT:[String 6]
-// CHECK-NEXT:[String 7]
-// CHECK-NEXT:Object Value Buffer:
+// CHECK:Literal Value Buffer:
 // CHECK-NEXT:[int 0]
 // CHECK-NEXT:[int 1]
 // CHECK-NEXT:[String 1]
 // CHECK-NEXT:null
 // CHECK-NEXT:[int 5]
+// CHECK-NEXT:Object Key Buffer:
+// CHECK-NEXT:[String 3]
+// CHECK-NEXT:[String 4]
+// CHECK-NEXT:[String 5]
+// CHECK-NEXT:[String 6]
+// CHECK-NEXT:[String 7]
 // CHECK-NEXT:Function<global>(1 params, 11 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:[@ 0] CreateTopLevelEnvironment 0<Reg8>, 0<UInt32>

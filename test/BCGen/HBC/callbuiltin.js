@@ -125,18 +125,18 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:i11[ASCII, 69..75] #65FB9C2E: shadows
 // CHKBC-NEXT:i12[ASCII, 76..80] #A689F65B: print
 
-// CHKBC:Object Key Buffer:
-// CHKBC-NEXT:[String 4]
-// CHKBC-NEXT:[String 6]
-// CHKBC-NEXT:[String 3]
-// CHKBC-NEXT:[int 5]
-// CHKBC-NEXT:[String 10]
-// CHKBC-NEXT:Object Value Buffer:
+// CHKBC:Literal Value Buffer:
 // CHKBC-NEXT:[int 10]
 // CHKBC-NEXT:[int 20]
 // CHKBC-NEXT:[int 30]
 // CHKBC-NEXT:[int 6]
 // CHKBC-NEXT:null
+// CHKBC-NEXT:Object Key Buffer:
+// CHKBC-NEXT:[String 4]
+// CHKBC-NEXT:[String 6]
+// CHKBC-NEXT:[String 3]
+// CHKBC-NEXT:[int 5]
+// CHKBC-NEXT:[String 10]
 // CHKBC-NEXT:Function<global>(1 params, 13 registers):
 // CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHKBC-NEXT:    CreateTopLevelEnvironment r1, 0
