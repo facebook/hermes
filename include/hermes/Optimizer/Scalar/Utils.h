@@ -49,6 +49,10 @@ bool deleteIncomingBlockFromPhis(
     BasicBlock *blockToModify,
     BasicBlock *incoming);
 
+/// If all of the incoming values to the Phi that are not self-edges are the
+/// same, return that value. Otherwise return nullptr.
+Value *getSinglePhiValue(PhiInst *P);
+
 /// Position a builder on the arrow between \p from and \p to.
 /// This can be used to insert instructions to be run on the transition from one
 /// block to another. After this call, the blocks may no longer be neighbors

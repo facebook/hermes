@@ -509,6 +509,35 @@ static void promoteAllocStackToSSA(
   LLVM_DEBUG(llvh::dbgs() << " Finished placing Phis \n");
 }
 
+/// Optimize PHI nodes in \p F where all incoming values that are not self-edges
+/// are the same, by replacing them with that single source value.
+static bool simplifyPhiInsts(Function *F) {
+  bool changed = false;
+  bool localChanged;
+  do {
+    localChanged = false;
+    for (auto &BB : *F) {
+      IRBuilder::InstructionDestroyer destroyer;
+      for (auto &I : BB) {
+        auto *P = llvh::dyn_cast<PhiInst>(&I);
+        if (!P)
+          break;
+
+        // The PHI has a single incoming value. Replace all uses of the PHI with
+        // the incoming value.
+        if (auto *incoming = getSinglePhiValue(P)) {
+          localChanged = true;
+          P->replaceAllUsesWith(incoming);
+          destroyer.add(P);
+        }
+      }
+    }
+    changed |= localChanged;
+  } while (localChanged);
+
+  return changed;
+}
+
 static bool mem2reg(Function *F) {
   bool changed = false;
   DominanceInfo D(F);
@@ -547,6 +576,8 @@ static bool mem2reg(Function *F) {
   for (auto *ASI : allocations) {
     promoteAllocStackToSSA(ASI, D, domTreeLevels);
   }
+
+  simplifyPhiInsts(F);
 
   return changed;
 }

@@ -472,27 +472,7 @@ class InstSimplifyImpl {
     // the same, by replacing them with that single source value. Note that Phis
     // that have no inputs, or where all inputs are self-edges, must be dead,
     // and will be left untouched.
-    Value *incoming = nullptr;
-    for (int i = 0, e = P->getNumEntries(); i < e; i++) {
-      auto E = P->getEntry(i);
-      // Ignore self edges.
-      if (E.first == P)
-        continue;
-
-      // Record the first valid input.
-      if (!incoming) {
-        incoming = E.first;
-        continue;
-      }
-
-      // Found another unique value. Bail out.
-      if (incoming != E.first)
-        return nullptr;
-    }
-
-    // The PHI has a single incoming value. Replace all uses of the PHI with
-    // the incoming value.
-    return incoming;
+    return getSinglePhiValue(P);
   }
 
   Value *simplifyCondBranchInst(CondBranchInst *CBI) {

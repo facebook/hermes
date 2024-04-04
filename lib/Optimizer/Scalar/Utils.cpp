@@ -129,6 +129,28 @@ bool hermes::deleteIncomingBlockFromPhis(
   return changed;
 }
 
+Value *hermes::getSinglePhiValue(PhiInst *P) {
+  Value *incoming = nullptr;
+  for (int i = 0, e = P->getNumEntries(); i < e; i++) {
+    auto E = P->getEntry(i);
+    // Ignore self edges.
+    if (E.first == P)
+      continue;
+
+    // Record the first valid input.
+    if (!incoming) {
+      incoming = E.first;
+      continue;
+    }
+
+    // Found another unique value. Bail out.
+    if (incoming != E.first)
+      return nullptr;
+  }
+
+  return incoming;
+}
+
 void hermes::splitCriticalEdge(
     IRBuilder *builder,
     BasicBlock *from,
