@@ -43,24 +43,22 @@ function foo(sink) {
 // CHECK-NEXT:  %1 = BinaryLessThanInst (:boolean) 0: number, %0: any
 // CHECK-NEXT:       CondBranchInst %1: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = PhiInst (:any) undefined: undefined, %BB0, %8: any, %BB3
-// CHECK-NEXT:  %4 = PhiInst (:number) 0: number, %BB0, %9: number, %BB3
-// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %3 = PhiInst (:number) 0: number, %BB0, %7: number, %BB3
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       CondBranchInst %0: any, %BB4, %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %8 = PhiInst (:any) %12: any, %BB6, %3: any, %BB1, %12: any, %BB5
-// CHECK-NEXT:  %9 = FAddInst (:number) %4: number, 1: number
-// CHECK-NEXT:  %10 = BinaryLessThanInst (:boolean) %9: number, %0: any
-// CHECK-NEXT:        CondBranchInst %10: boolean, %BB1, %BB2
+// CHECK-NEXT:  %7 = FAddInst (:number) %3: number, 1: number
+// CHECK-NEXT:  %8 = BinaryLessThanInst (:boolean) %7: number, %0: any
+// CHECK-NEXT:       CondBranchInst %8: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %12 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %13 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:        CondBranchInst %13: any, %BB5, %BB6
+// CHECK-NEXT:  %10 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %11 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:        CondBranchInst %11: any, %BB5, %BB6
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %15 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %13 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:        CondBranchInst %12: any, %BB5, %BB3
+// CHECK-NEXT:        CondBranchInst %10: any, %BB5, %BB3
 // CHECK-NEXT:function_end
