@@ -220,8 +220,12 @@ void Builder::serializeInto(
 }
 
 void Builder::serializeLiteralFor(AllocArrayInst *AAI) {
+  unsigned e = AAI->getElementCount();
+  if (!e)
+    return;
+
   llvh::SmallVector<Literal *, 8> elements;
-  for (unsigned i = 0, e = AAI->getElementCount(); i < e; ++i) {
+  for (unsigned i = 0; i < e; ++i) {
     elements.push_back(cast<Literal>(AAI->getArrayElement(i)));
   }
 
