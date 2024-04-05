@@ -19,33 +19,22 @@ static bool eliminateScopeIfEmpty(VariableScope *VS) {
   if (!VS->getVariables().empty())
     return false;
 
+  VariableScope *parentVarScope = VS->getParentScope();
+  // We cannot eliminate root scopes, since they are created with EmptySentinel
+  // as the parent operand to CreateScopeInst, which cannot propagate into the
+  // rest of the IR.
+  if (!parentVarScope)
+    return false;
+
   IRBuilder::InstructionDestroyer destroyer;
-  VariableScope *parentVarScope = nullptr;
+
   for (auto *U : VS->getUsers()) {
     if (auto *CSI = llvh::dyn_cast<CreateScopeInst>(U)) {
-      if (llvh::isa<EmptySentinel>(CSI->getParentScope())) {
-        // This is a root scope, and cannot be eliminated.
-        assert(!parentVarScope && "VS has multiple parent scopes");
-        return false;
-      }
-
-      // Check that there is a parent scope that we can use to replace this
-      // with.
-      auto *parentScope = llvh::cast<BaseScopeInst>(CSI->getParentScope());
-      if (!parentVarScope)
-        parentVarScope = parentScope->getVariableScope();
-      assert(
-          parentVarScope == parentScope->getVariableScope() &&
-          "VS has multiple parent scopes");
-
       // Eliminate this scope creation by just replacing it with its parent.
-      CSI->replaceAllUsesWith(parentScope);
+      CSI->replaceAllUsesWith(CSI->getParentScope());
       destroyer.add(CSI);
     }
   }
-
-  if (!parentVarScope)
-    return false;
 
   // Update any scope retrieval instructions (like GetParentScope and
   // ResolveScope) to now reference the parent scope directly.
