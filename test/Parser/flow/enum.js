@@ -120,6 +120,50 @@ enum E {
 // CHECK-NEXT:     },
 
 enum E {
+  A = -1,
+  B = -2,
+}
+
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "EnumDeclaration",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "E"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "EnumNumberBody",
+// CHECK-NEXT:         "members": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "EnumNumberMember",
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "A"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "init": {
+// CHECK-NEXT:               "type": "NumericLiteral",
+// CHECK-NEXT:               "value": -1,
+// CHECK-NEXT:               "raw": "-1"
+// CHECK-NEXT:             }
+// CHECK-NEXT:           },
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "EnumNumberMember",
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "B"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "init": {
+// CHECK-NEXT:               "type": "NumericLiteral",
+// CHECK-NEXT:               "value": -2,
+// CHECK-NEXT:               "raw": "-2"
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "explicitType": false,
+// CHECK-NEXT:         "hasUnknownMembers": false
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+enum E {
   A = true,
   B = false,
 }

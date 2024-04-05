@@ -3941,6 +3941,24 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumMemberFlow() {
           new (context_) ESTree::StringLiteralNode(tok_->getStringLiteral()));
       member = setLocation(
           id, tok_, new (context_) ESTree::EnumStringMemberNode(id, init));
+    } else if (check(TokenKind::minus)) {
+      SMLoc start = tok_->getStartLoc();
+      advance();
+      if (check(TokenKind::numeric_literal)) {
+        // Negate the literal.
+        double value = -tok_->getNumericLiteral();
+        ESTree::Node *init = setLocation(
+            start, tok_, new (context_) ESTree::NumericLiteralNode(value));
+        member = setLocation(
+            id, tok_, new (context_) ESTree::EnumNumberMemberNode(id, init));
+      } else {
+        errorExpected(
+            TokenKind::numeric_literal,
+            "in negated enum member initializer",
+            "start of negated enum member",
+            id->getStartLoc());
+        return None;
+      }
     } else if (check(TokenKind::numeric_literal)) {
       ESTree::Node *init = setLocation(
           tok_,
