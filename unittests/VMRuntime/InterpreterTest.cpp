@@ -479,18 +479,16 @@ TEST_F(InterpreterTest, FrameSizeTest) {
   StringID getSPID = 1;
 
   const unsigned FRAME_SIZE = 16;
-  BytecodeModuleGenerator BMG;
-  auto BFG = BytecodeFunctionGenerator::create(BMG, FRAME_SIZE);
+  SimpleBytecodeBuilder builder;
+  BytecodeInstructionGenerator instGen;
 
-  BFG->emitGetGlobalObject(0);
-  BFG->emitGetById(1, 0, 1, getSPID);
-  BFG->emitCall(0, 1, 0);
-  BFG->emitRet(0);
-  BFG->setHighestReadCacheIndex(1);
-  BFG->setHighestWriteCacheIndex(0);
+  instGen.emitGetGlobalObject(0);
+  instGen.emitGetById(1, 0, 1, getSPID);
+  instGen.emitCall(0, 1, 0);
+  instGen.emitRet(0);
 
-  BFG->bytecodeGenerationComplete();
-  auto codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
+  builder.addFunction(1, FRAME_SIZE, instGen.acquireBytecode(), 1, 0);
+  auto *codeBlock = createSimpleCodeBlock(runtimeModule, runtime, builder);
 
   ASSERT_EQ(detail::mapStringMayAllocate(*runtimeModule, "getSP"), getSPID);
 
