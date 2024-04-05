@@ -324,8 +324,8 @@ Effects | Does not read or write to memory.
 ResolveScopeInst | _
 --- | --- |
 Description | Traverse the scope chain to retrieve an enclosing scope.
-Example | %0 = ResolveScopeInst %variablescope, %startScope
-Arguments | %variablescope is the VariableScope corresponding to the enclosing scope to retrieve. %startScope is the scope from which to start traversing.
+Example | %0 = ResolveScopeInst %variablescope, %startVarScope, %startScope
+Arguments | %variablescope is the VariableScope corresponding to the enclosing scope to retrieve. %startScope is the scope from which to start traversing. %startVarScope is the VariableScope associated with %startScope.
 Semantics | The instruction retrieves the requested scope, which must be reachable from the starting scope.
 Effects | Does not read or write to memory.
 

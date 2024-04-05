@@ -151,7 +151,7 @@ function func4() {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS6: any, %0: environment
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS6.innerArrow2]: any
 // CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %4 = ResolveScopeInst (:environment) %VS3: any, %1: environment
+// CHECK-NEXT:  %4 = ResolveScopeInst (:environment) %VS3: any, %VS6: any, %1: environment
 // CHECK-NEXT:  %5 = LoadFrameInst (:undefined|object) %4: environment, [%VS3.?anon_1_new.target]: undefined|object
 // CHECK-NEXT:  %6 = BinaryStrictlyNotEqualInst (:boolean) %5: undefined|object, undefined: undefined
 // CHECK-NEXT:  %7 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %6: boolean
@@ -168,7 +168,7 @@ function func4() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS6: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS7: any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS3: any, %1: environment
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS3: any, %VS7: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:undefined|object) %2: environment, [%VS3.?anon_1_new.target]: undefined|object
 // CHECK-NEXT:       ReturnInst %3: undefined|object
 // CHECK-NEXT:function_end

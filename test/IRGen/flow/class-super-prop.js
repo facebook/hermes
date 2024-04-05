@@ -96,7 +96,7 @@ class B extends A {
 // CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS3: any, %1: environment
 // CHECK-NEXT:  %3 = LoadParamInst (:number) %x: number
 // CHECK-NEXT:       StoreFrameInst %2: environment, %3: number, [%VS3.x]: any
-// CHECK-NEXT:  %5 = ResolveScopeInst (:environment) %VS1: any, %2: environment
+// CHECK-NEXT:  %5 = ResolveScopeInst (:environment) %VS1: any, %VS3: any, %2: environment
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) %5: environment, [%VS1.A]: any
 // CHECK-NEXT:  %7 = CheckedTypeCastInst (:object) %6: any, type(object)
 // CHECK-NEXT:  %8 = GetNewTargetInst (:object) %new.target: object

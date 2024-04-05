@@ -301,6 +301,7 @@ class IRBuilder {
 
   ResolveScopeInst *createResolveScopeInst(
       VariableScope *scope,
+      VariableScope *startVarScope,
       BaseScopeInst *startScope);
 
   LIRResolveScopeInst *createLIRResolveScopeInst(

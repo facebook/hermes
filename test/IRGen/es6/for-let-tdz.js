@@ -383,7 +383,7 @@ function foo_var() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS7: any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS1: any, %1: environment
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS1: any, %VS7: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:any|empty) %2: environment, [%VS1.i]: any|empty
 // CHECK-NEXT:  %4 = ThrowIfInst (:any) %3: any|empty, type(empty)
 // CHECK-NEXT:       ReturnInst %4: any
@@ -395,7 +395,7 @@ function foo_var() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS8: any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS1: any, %1: environment
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS1: any, %VS8: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:any|empty) %2: environment, [%VS1.i]: any|empty
 // CHECK-NEXT:  %4 = ThrowIfInst (:any) %3: any|empty, type(empty)
 // CHECK-NEXT:       ReturnInst %4: any
@@ -407,7 +407,7 @@ function foo_var() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS9: any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS1: any, %1: environment
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS1: any, %VS9: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:any|empty) %2: environment, [%VS1.i]: any|empty
 // CHECK-NEXT:  %4 = ThrowIfInst (:any) %3: any|empty, type(empty)
 // CHECK-NEXT:       ReturnInst %4: any
@@ -419,7 +419,7 @@ function foo_var() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS10: any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS2: any, %1: environment
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS2: any, %VS10: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:any|empty) %2: environment, [%VS2.i]: any|empty
 // CHECK-NEXT:  %4 = ThrowIfInst (:any) %3: any|empty, type(empty)
 // CHECK-NEXT:       ReturnInst %4: any
@@ -431,7 +431,7 @@ function foo_var() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS11: any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS2: any, %1: environment
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS2: any, %VS11: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:any|empty) %2: environment, [%VS2.i]: any|empty
 // CHECK-NEXT:  %4 = ThrowIfInst (:any) %3: any|empty, type(empty)
 // CHECK-NEXT:       ReturnInst %4: any
@@ -443,7 +443,7 @@ function foo_var() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS3: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS12: any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS3: any, %1: environment
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS3: any, %VS12: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:any|empty) %2: environment, [%VS3.i]: any|empty
 // CHECK-NEXT:  %4 = ThrowIfInst (:any) %3: any|empty, type(empty)
 // CHECK-NEXT:       ReturnInst %4: any
@@ -455,7 +455,7 @@ function foo_var() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS3: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS13: any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS3: any, %1: environment
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS3: any, %VS13: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:any|empty) %2: environment, [%VS3.i]: any|empty
 // CHECK-NEXT:  %4 = ThrowIfInst (:any) %3: any|empty, type(empty)
 // CHECK-NEXT:       ReturnInst %4: any
@@ -467,7 +467,7 @@ function foo_var() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS4: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS14: any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS4: any, %1: environment
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS4: any, %VS14: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:any|empty) %2: environment, [%VS4.i]: any|empty
 // CHECK-NEXT:  %4 = ThrowIfInst (:any) %3: any|empty, type(empty)
 // CHECK-NEXT:       ReturnInst %4: any

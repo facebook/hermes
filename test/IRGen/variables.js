@@ -140,9 +140,9 @@ function level0(x) {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %z: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS7.z]: any
 // CHECK-NEXT:  %4 = LoadPropertyInst (:any) globalObject: object, "sink": string
-// CHECK-NEXT:  %5 = ResolveScopeInst (:environment) %VS3: any, %1: environment
+// CHECK-NEXT:  %5 = ResolveScopeInst (:environment) %VS3: any, %VS7: any, %1: environment
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) %5: environment, [%VS3.x]: any
-// CHECK-NEXT:  %7 = ResolveScopeInst (:environment) %VS5: any, %1: environment
+// CHECK-NEXT:  %7 = ResolveScopeInst (:environment) %VS5: any, %VS7: any, %1: environment
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) %7: environment, [%VS5.y]: any
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS7.z]: any
 // CHECK-NEXT:  %10 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %6: any, %8: any, %9: any

@@ -908,7 +908,7 @@ class InstSimplifyImpl {
     // If we were able to walk up to a scope that is closer to the target,
     // update the starting scope.
     if (curScope != RSI->getStartScope()) {
-      RSI->setStartScope(curScope);
+      RSI->setStartScope(curScope->getVariableScope(), curScope);
       return RSI;
     }
     return nullptr;

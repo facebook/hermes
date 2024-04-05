@@ -58,15 +58,15 @@ function check1() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS1: any, %1: environment
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS1: any, %VS2: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:any|empty) %2: environment, [%VS1.x]: any|empty
 // CHECK-NEXT:  %4 = ThrowIfInst (:any) %3: any|empty, type(empty)
 // CHECK-NEXT:  %5 = UnaryIncInst (:number|bigint) %4: any
-// CHECK-NEXT:  %6 = ResolveScopeInst (:environment) %VS1: any, %1: environment
+// CHECK-NEXT:  %6 = ResolveScopeInst (:environment) %VS1: any, %VS2: any, %1: environment
 // CHECK-NEXT:  %7 = LoadFrameInst (:any|empty) %6: environment, [%VS1.x]: any|empty
 // CHECK-NEXT:  %8 = ThrowIfInst (:any) %7: any|empty, type(empty)
 // CHECK-NEXT:       StoreFrameInst %6: environment, %5: number|bigint, [%VS1.x]: any|empty
-// CHECK-NEXT:  %10 = ResolveScopeInst (:environment) %VS1: any, %1: environment
+// CHECK-NEXT:  %10 = ResolveScopeInst (:environment) %VS1: any, %VS2: any, %1: environment
 // CHECK-NEXT:  %11 = LoadFrameInst (:any|empty) %10: environment, [%VS1.y]: any|empty
 // CHECK-NEXT:  %12 = ThrowIfInst (:any) %11: any|empty, type(empty)
 // CHECK-NEXT:        ReturnInst %12: any
@@ -109,12 +109,12 @@ function check1() {
 // CHKDIS-NEXT:%BB0:
 // CHKDIS-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHKDIS-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
-// CHKDIS-NEXT:  %2 = ResolveScopeInst (:environment) %VS1: any, %1: environment
+// CHKDIS-NEXT:  %2 = ResolveScopeInst (:environment) %VS1: any, %VS2: any, %1: environment
 // CHKDIS-NEXT:  %3 = LoadFrameInst (:any) %2: environment, [%VS1.x]: any
 // CHKDIS-NEXT:  %4 = UnaryIncInst (:number|bigint) %3: any
-// CHKDIS-NEXT:  %5 = ResolveScopeInst (:environment) %VS1: any, %1: environment
+// CHKDIS-NEXT:  %5 = ResolveScopeInst (:environment) %VS1: any, %VS2: any, %1: environment
 // CHKDIS-NEXT:       StoreFrameInst %5: environment, %4: number|bigint, [%VS1.x]: any
-// CHKDIS-NEXT:  %7 = ResolveScopeInst (:environment) %VS1: any, %1: environment
+// CHKDIS-NEXT:  %7 = ResolveScopeInst (:environment) %VS1: any, %VS2: any, %1: environment
 // CHKDIS-NEXT:  %8 = LoadFrameInst (:any) %7: environment, [%VS1.y]: any
 // CHKDIS-NEXT:       ReturnInst %8: any
 // CHKDIS-NEXT:function_end

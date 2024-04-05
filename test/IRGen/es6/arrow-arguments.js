@@ -123,7 +123,7 @@ function bar() {
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS4.arrow2]: any
-// CHECK-NEXT:  %3 = ResolveScopeInst (:environment) %VS2: any, %1: environment
+// CHECK-NEXT:  %3 = ResolveScopeInst (:environment) %VS2: any, %VS4: any, %1: environment
 // CHECK-NEXT:  %4 = LoadFrameInst (:object) %3: environment, [%VS2.?anon_2_arguments]: object
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %4: object, 1: number
 // CHECK-NEXT:       StorePropertyStrictInst %5: any, globalObject: object, "dummy": string
@@ -161,7 +161,7 @@ function bar() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS4: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS6: any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS2: any, %1: environment
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS2: any, %VS6: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:object) %2: environment, [%VS2.?anon_2_arguments]: object
 // CHECK-NEXT:  %4 = LoadPropertyInst (:any) %3: object, 2: number
 // CHECK-NEXT:       StorePropertyStrictInst %4: any, globalObject: object, "dummy": string
@@ -174,7 +174,7 @@ function bar() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS5: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS7: any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS5: any, %1: environment
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS5: any, %VS7: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:object) %2: environment, [%VS5.?anon_2_arguments]: object
 // CHECK-NEXT:  %4 = LoadPropertyInst (:any) %3: object, 1: number
 // CHECK-NEXT:       StorePropertyStrictInst %4: any, globalObject: object, "dummy": string

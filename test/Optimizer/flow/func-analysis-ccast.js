@@ -28,7 +28,7 @@ function bar() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS0: any, %1: environment
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS0: any, %VS1: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:any) %2: environment, [%VS0.foo]: any
 // CHECK-NEXT:  %4 = CheckedTypeCastInst (:object) %3: any, type(object)
 // CHECK-NEXT:  %5 = CallInst [njsf] (:any) %4: object, %foo(): functionCode, %2: environment, undefined: undefined, undefined: undefined

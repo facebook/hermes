@@ -114,7 +114,7 @@ class B extends A {
 // CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS4: any, %1: environment
 // CHECK-NEXT:  %3 = LoadParamInst (:number) %x: number
 // CHECK-NEXT:       StoreFrameInst %2: environment, %3: number, [%VS4.x]: any
-// CHECK-NEXT:  %5 = ResolveScopeInst (:environment) %VS1: any, %2: environment
+// CHECK-NEXT:  %5 = ResolveScopeInst (:environment) %VS1: any, %VS4: any, %2: environment
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) %5: environment, [%VS1.A]: any
 // CHECK-NEXT:  %7 = CheckedTypeCastInst (:object) %6: any, type(object)
 // CHECK-NEXT:  %8 = GetNewTargetInst (:object) %new.target: object
@@ -132,7 +132,7 @@ class B extends A {
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS5: any, %1: environment
-// CHECK-NEXT:  %3 = ResolveScopeInst (:environment) %VS1: any, %2: environment
+// CHECK-NEXT:  %3 = ResolveScopeInst (:environment) %VS1: any, %VS5: any, %2: environment
 // CHECK-NEXT:  %4 = LoadFrameInst (:object) %3: environment, [%VS1.?A.prototype]: object
 // CHECK-NEXT:  %5 = PrLoadInst (:object) %4: object, 0: number, "f": string
 // CHECK-NEXT:  %6 = CallInst [njsf] (:any) %5: object, empty: any, empty: any, undefined: undefined, %0: object

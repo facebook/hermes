@@ -31,10 +31,10 @@ class C {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:number) %x: number
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: number, [%VS1.x]: any
-// CHECK-NEXT:  %4 = ResolveScopeInst (:environment) %VS0: any, %1: environment
+// CHECK-NEXT:  %4 = ResolveScopeInst (:environment) %VS0: any, %VS1: any, %1: environment
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) %4: environment, [%VS0.C]: any
 // CHECK-NEXT:  %6 = CheckedTypeCastInst (:object) %5: any, type(object)
-// CHECK-NEXT:  %7 = ResolveScopeInst (:environment) %VS0: any, %1: environment
+// CHECK-NEXT:  %7 = ResolveScopeInst (:environment) %VS0: any, %VS1: any, %1: environment
 // CHECK-NEXT:  %8 = LoadFrameInst (:object) %7: environment, [%VS0.?C.prototype]: object
 // CHECK-NEXT:  %9 = UnionNarrowTrustedInst (:object) %8: object
 // CHECK-NEXT:  %10 = AllocObjectLiteralInst (:object) "x": string, 0: number

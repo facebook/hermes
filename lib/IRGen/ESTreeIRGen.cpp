@@ -1056,7 +1056,8 @@ BaseScopeInst *ESTreeIRGen::emitResolveScopeInstIfNeeded(
     CreateScopeInst *startScope) {
   if (startScope->getVariableScope() == targetVarScope)
     return startScope;
-  return Builder.createResolveScopeInst(targetVarScope, startScope);
+  return Builder.createResolveScopeInst(
+      targetVarScope, startScope->getVariableScope(), startScope);
 }
 
 void ESTreeIRGen::drainCompilationQueue() {

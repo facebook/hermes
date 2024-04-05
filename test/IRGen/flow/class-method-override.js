@@ -147,7 +147,7 @@ function foo(c: C, d: D){
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS6: any, %1: environment
-// CHECK-NEXT:  %3 = ResolveScopeInst (:environment) %VS1: any, %2: environment
+// CHECK-NEXT:  %3 = ResolveScopeInst (:environment) %VS1: any, %VS6: any, %2: environment
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) %3: environment, [%VS1.C]: any
 // CHECK-NEXT:  %5 = CheckedTypeCastInst (:object) %4: any, type(object)
 // CHECK-NEXT:  %6 = GetNewTargetInst (:object) %new.target: object

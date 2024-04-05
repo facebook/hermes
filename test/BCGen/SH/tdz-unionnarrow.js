@@ -61,11 +61,11 @@ function f2() {
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
 // CHKIR-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
-// CHKIR-NEXT:  %2 = ResolveScopeInst (:environment) %VS2: any, %1: environment
+// CHKIR-NEXT:  %2 = ResolveScopeInst (:environment) %VS2: any, %VS3: any, %1: environment
 // CHKIR-NEXT:  %3 = LoadFrameInst (:any|empty) %2: environment, [%VS2.x]: any|empty
 // CHKIR-NEXT:  %4 = ThrowIfInst (:any) %3: any|empty, type(empty)
 // CHKIR-NEXT:       StoreFrameInst %2: environment, 10: number, [%VS2.x]: any|empty
-// CHKIR-NEXT:  %6 = ResolveScopeInst (:environment) %VS2: any, %1: environment
+// CHKIR-NEXT:  %6 = ResolveScopeInst (:environment) %VS2: any, %VS3: any, %1: environment
 // CHKIR-NEXT:  %7 = LoadFrameInst (:any|empty) %6: environment, [%VS2.x]: any|empty
 // CHKIR-NEXT:  %8 = UnionNarrowTrustedInst (:any) %7: any|empty
 // CHKIR-NEXT:       ReturnInst %8: any

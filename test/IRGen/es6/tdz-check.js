@@ -135,7 +135,7 @@ function check4() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS3: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS5: any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS3: any, %1: environment
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS3: any, %VS5: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:any|empty) %2: environment, [%VS3.x]: any|empty
 // CHECK-NEXT:  %4 = ThrowIfInst (:any) %3: any|empty, type(empty)
 // CHECK-NEXT:  %5 = BinaryAddInst (:any) %4: any, 1: number

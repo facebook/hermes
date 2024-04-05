@@ -676,11 +676,15 @@ class ResolveScopeInst : public BaseScopeInst {
   ResolveScopeInst(const ResolveScopeInst &) = delete;
   void operator=(const ResolveScopeInst &) = delete;
 
-  enum { StartScopeIdx = BaseScopeInst::LAST_IDX };
+  enum { StartVarScopeIdx = BaseScopeInst::LAST_IDX, StartScopeIdx };
 
  public:
-  explicit ResolveScopeInst(VariableScope *varScope, BaseScopeInst *startScope)
+  explicit ResolveScopeInst(
+      VariableScope *varScope,
+      VariableScope *startVarScope,
+      Instruction *startScope)
       : BaseScopeInst(ValueKind::ResolveScopeInstKind, varScope) {
+    pushOperand(startVarScope);
     pushOperand(startScope);
   }
   explicit ResolveScopeInst(
@@ -688,11 +692,15 @@ class ResolveScopeInst : public BaseScopeInst {
       llvh::ArrayRef<Value *> operands)
       : BaseScopeInst(src, operands) {}
 
+  VariableScope *getStartVarScope() const {
+    return cast<VariableScope>(getOperand(StartVarScopeIdx));
+  }
   Instruction *getStartScope() const {
     return cast<Instruction>(getOperand(StartScopeIdx));
   }
 
-  void setStartScope(BaseScopeInst *scope) {
+  void setStartScope(VariableScope *startVarScope, Instruction *scope) {
+    setOperand(startVarScope, StartVarScopeIdx);
     setOperand(scope, StartScopeIdx);
   }
 

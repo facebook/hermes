@@ -358,8 +358,9 @@ CreateScopeInst *IRBuilder::createCreateScopeInst(
 
 ResolveScopeInst *IRBuilder::createResolveScopeInst(
     VariableScope *scope,
+    VariableScope *startVarScope,
     BaseScopeInst *startScope) {
-  auto RSI = new ResolveScopeInst(scope, startScope);
+  auto RSI = new ResolveScopeInst(scope, startVarScope, startScope);
   insert(RSI);
   return RSI;
 }
