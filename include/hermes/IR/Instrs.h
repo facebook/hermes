@@ -722,7 +722,7 @@ class LIRResolveScopeInst : public BaseScopeInst {
 
   explicit LIRResolveScopeInst(
       VariableScope *varScope,
-      BaseScopeInst *startScope,
+      Instruction *startScope,
       LiteralNumber *numLevels)
       : BaseScopeInst(ValueKind::LIRResolveScopeInstKind, varScope) {
     pushOperand(startScope);
@@ -786,9 +786,8 @@ class LoadFrameInst : public Instruction {
  public:
   enum { ScopeIdx, VariableIdx };
 
-  explicit LoadFrameInst(BaseScopeInst *scope, Variable *alloc)
+  explicit LoadFrameInst(Instruction *scope, Variable *alloc)
       : Instruction(ValueKind::LoadFrameInstKind) {
-    assert(scope->getVariableScope() == alloc->getParent());
     setType(alloc->getType());
     pushOperand(scope);
     pushOperand(alloc);
@@ -844,12 +843,8 @@ class StoreFrameInst : public Instruction {
     return cast<Variable>(getOperand(VariableIdx));
   }
 
-  explicit StoreFrameInst(
-      BaseScopeInst *scope,
-      Value *storedValue,
-      Variable *ptr)
+  explicit StoreFrameInst(Instruction *scope, Value *storedValue, Variable *ptr)
       : Instruction(ValueKind::StoreFrameInstKind) {
-    assert(scope->getVariableScope() == ptr->getParent());
     setType(Type::createNoType());
     pushOperand(scope);
     pushOperand(storedValue);
@@ -890,7 +885,7 @@ class BaseCreateLexicalChildInst : public Instruction {
  protected:
   explicit BaseCreateLexicalChildInst(
       ValueKind kind,
-      BaseScopeInst *scope,
+      Instruction *scope,
       Function *code)
       : Instruction(kind) {
     pushOperand(scope);
@@ -937,7 +932,7 @@ class BaseCreateCallableInst : public BaseCreateLexicalChildInst {
  protected:
   explicit BaseCreateCallableInst(
       ValueKind kind,
-      BaseScopeInst *scope,
+      Instruction *scope,
       Function *code)
       : BaseCreateLexicalChildInst(kind, scope, code) {
     setType(*getInherentTypeImpl());
@@ -964,7 +959,7 @@ class CreateFunctionInst : public BaseCreateCallableInst {
   void operator=(const CreateFunctionInst &) = delete;
 
  public:
-  explicit CreateFunctionInst(BaseScopeInst *scope, Function *code)
+  explicit CreateFunctionInst(Instruction *scope, Function *code)
       : BaseCreateCallableInst(ValueKind::CreateFunctionInstKind, scope, code) {
     assert(
         (llvh::isa<NormalFunction>(code) ||
@@ -4121,7 +4116,7 @@ class CreateGeneratorInst : public BaseCreateLexicalChildInst {
 
  public:
   explicit CreateGeneratorInst(
-      BaseScopeInst *scope,
+      Instruction *scope,
       GeneratorInnerFunction *genFunction)
       : BaseCreateLexicalChildInst(
             ValueKind::CreateGeneratorInstKind,

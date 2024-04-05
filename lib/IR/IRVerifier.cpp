@@ -716,11 +716,15 @@ bool Verifier::visitStoreStackInst(const StoreStackInst &Inst) {
 bool Verifier::visitStoreFrameInst(const StoreFrameInst &Inst) {
   AssertIWithMsg(
       Inst, !Inst.hasUsers(), "Store Instructions must not have users");
+  auto *scope = Inst.getScope();
   AssertIWithMsg(
-      Inst,
-      llvh::cast<BaseScopeInst>(Inst.getScope())->getVariableScope() ==
-          Inst.getVariable()->getParent(),
-      "Storing to different scope than the variable's scope.");
+      Inst, scope->getType().isEnvironmentType(), "Wrong scope type");
+  if (auto *BSI = llvh::dyn_cast<BaseScopeInst>(scope)) {
+    AssertIWithMsg(
+        Inst,
+        BSI->getVariableScope() == Inst.getVariable()->getParent(),
+        "Storing to different scope than the variable's scope.");
+  }
   return true;
 }
 
@@ -729,11 +733,15 @@ bool Verifier::visitLoadFrameInst(const LoadFrameInst &Inst) {
       Inst,
       Inst.getType() == Inst.getLoadVariable()->getType(),
       "LoadFrameInst type must be the same as the variable type");
+  auto *scope = Inst.getScope();
   AssertIWithMsg(
-      Inst,
-      llvh::cast<BaseScopeInst>(Inst.getScope())->getVariableScope() ==
-          Inst.getLoadVariable()->getParent(),
-      "Loading from different scope than the variable's scope.");
+      Inst, scope->getType().isEnvironmentType(), "Wrong scope type");
+  if (auto *BSI = llvh::dyn_cast<BaseScopeInst>(scope)) {
+    AssertIWithMsg(
+        Inst,
+        BSI->getVariableScope() == Inst.getLoadVariable()->getParent(),
+        "Loading from different scope than the variable's scope.");
+  }
   return true;
 }
 
@@ -747,14 +755,21 @@ bool Verifier::visitLoadStackInst(const LoadStackInst &Inst) {
 
 bool Verifier::visitBaseCreateLexicalChildInst(
     const hermes::BaseCreateLexicalChildInst &Inst) {
-  auto *VS = llvh::cast<BaseScopeInst>(Inst.getScope())->getVariableScope();
-
+  auto *scope = Inst.getScope();
+  AssertIWithMsg(
+      Inst, scope->getType().isEnvironmentType(), "Wrong scope type");
   // Verify that any GetParentScope inside the function produces the same
   // VariableScope that the function is being created with.
-  for (auto *U : Inst.getFunctionCode()->getParentScopeParam()->getUsers())
-    if (auto *GPSI = llvh::dyn_cast<GetParentScopeInst>(U))
-      AssertIWithMsg(
-          Inst, GPSI->getVariableScope() == VS, "Parent scope mismatch.");
+  if (auto *BSI = llvh::dyn_cast<BaseScopeInst>(scope)) {
+    for (auto *U : Inst.getFunctionCode()->getParentScopeParam()->getUsers()) {
+      if (auto *GPSI = llvh::dyn_cast<GetParentScopeInst>(U)) {
+        AssertIWithMsg(
+            Inst,
+            GPSI->getVariableScope() == BSI->getVariableScope(),
+            "Parent scope mismatch.");
+      }
+    }
+  }
   return true;
 }
 

@@ -889,26 +889,31 @@ class InstSimplifyImpl {
   }
 
   OptValue<Value *> simplifyResolveScopeInst(ResolveScopeInst *RSI) {
-    auto *curScope = llvh::cast<BaseScopeInst>(RSI->getStartScope());
-    while (true) {
+    auto *curScope = RSI->getStartScope();
+    BaseScopeInst *lastBSI = nullptr;
+    while (auto *BSI = llvh::dyn_cast<BaseScopeInst>(curScope)) {
       // If we have walked to the point where the scope is the target scope,
       // just use that.
-      if (curScope->getVariableScope() == RSI->getVariableScope())
+      if (BSI->getVariableScope() == RSI->getVariableScope())
         return curScope;
 
+      // Record this instruction in case we advance to a non-BaseScopeInst.
+      lastBSI = BSI;
+
       // If this is not a CreateScopeInst, we can't walk up any further.
-      auto *CSI = llvh::dyn_cast<CreateScopeInst>(curScope);
+      auto *CSI = llvh::dyn_cast<CreateScopeInst>(BSI);
       if (!CSI)
         break;
 
-      // Try the next scope in the chain.
-      curScope = llvh::cast<BaseScopeInst>(CSI->getParentScope());
+      // Try the next scope in the chain. We know that the parent scope must be
+      // an instruction, because we cannot resolve past the root scope.
+      curScope = llvh::cast<Instruction>(CSI->getParentScope());
     }
 
     // If we were able to walk up to a scope that is closer to the target,
     // update the starting scope.
-    if (curScope != RSI->getStartScope()) {
-      RSI->setStartScope(curScope->getVariableScope(), curScope);
+    if (lastBSI) {
+      RSI->setStartScope(lastBSI->getVariableScope(), lastBSI);
       return RSI;
     }
     return nullptr;

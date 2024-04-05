@@ -73,8 +73,7 @@ class LowerScopes {
           // Lower ResolveScopeInst into LIRResolveScopeInst by computing the
           // depth delta.
           uint32_t resDepth = getScopeDepth(RSI->getVariableScope());
-          auto *startScope = llvh::cast<BaseScopeInst>(RSI->getStartScope());
-          uint32_t startDepth = getScopeDepth(startScope->getVariableScope());
+          uint32_t startDepth = getScopeDepth(RSI->getStartVarScope());
 
           assert(
               startDepth >= resDepth &&
@@ -85,7 +84,7 @@ class LowerScopes {
           builder.setLocation(Inst->getLocation());
           auto *newInst = builder.createLIRResolveScopeInst(
               RSI->getVariableScope(),
-              startScope,
+              RSI->getStartScope(),
               builder.getLiteralNumber(diff));
           Inst->replaceAllUsesWith(newInst);
           Inst->eraseFromParent();

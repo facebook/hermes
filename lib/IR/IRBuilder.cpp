@@ -333,7 +333,7 @@ AddEmptyStringInst *IRBuilder::createAddEmptyStringInst(Value *val) {
 }
 
 CreateFunctionInst *IRBuilder::createCreateFunctionInst(
-    BaseScopeInst *scope,
+    Instruction *scope,
     Function *code) {
   auto CFI = new CreateFunctionInst(scope, code);
   insert(CFI);
@@ -359,7 +359,7 @@ CreateScopeInst *IRBuilder::createCreateScopeInst(
 ResolveScopeInst *IRBuilder::createResolveScopeInst(
     VariableScope *scope,
     VariableScope *startVarScope,
-    BaseScopeInst *startScope) {
+    Instruction *startScope) {
   auto RSI = new ResolveScopeInst(scope, startVarScope, startScope);
   insert(RSI);
   return RSI;
@@ -367,7 +367,7 @@ ResolveScopeInst *IRBuilder::createResolveScopeInst(
 
 LIRResolveScopeInst *IRBuilder::createLIRResolveScopeInst(
     VariableScope *scope,
-    BaseScopeInst *startScope,
+    Instruction *startScope,
     LiteralNumber *numLevels) {
   auto LRSI = new LIRResolveScopeInst(scope, startScope, numLevels);
   insert(LRSI);
@@ -383,9 +383,8 @@ GetClosureScopeInst *IRBuilder::createGetClosureScopeInst(
 }
 
 LoadFrameInst *IRBuilder::createLoadFrameInst(
-    BaseScopeInst *scope,
+    Instruction *scope,
     Variable *ptr) {
-  assert(scope->getVariableScope() == ptr->getParent());
   auto LI = new LoadFrameInst(scope, ptr);
   insert(LI);
   return LI;
@@ -398,10 +397,9 @@ LoadStackInst *IRBuilder::createLoadStackInst(AllocStackInst *ptr) {
 }
 
 StoreFrameInst *IRBuilder::createStoreFrameInst(
-    BaseScopeInst *scope,
+    Instruction *scope,
     Value *storedValue,
     Variable *ptr) {
-  assert(scope->getVariableScope() == ptr->getParent());
   auto SI = new StoreFrameInst(scope, storedValue, ptr);
   insert(SI);
   return SI;
@@ -857,7 +855,7 @@ SaveAndYieldInst *IRBuilder::createSaveAndYieldInst(
 }
 
 CreateGeneratorInst *IRBuilder::createCreateGeneratorInst(
-    BaseScopeInst *scope,
+    Instruction *scope,
     GeneratorInnerFunction *innerFn) {
   auto *I = new CreateGeneratorInst(scope, innerFn);
   insert(I);
