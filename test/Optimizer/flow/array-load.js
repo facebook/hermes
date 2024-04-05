@@ -17,10 +17,11 @@ sink(main);
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %main(): functionCode
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "sink": string
 // CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %1: object
@@ -28,7 +29,6 @@ sink(main);
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocFastArrayInst (:object) 3: number
 // CHECK-NEXT:       FastArrayPushInst 1: number, %0: object

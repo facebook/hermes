@@ -33,10 +33,11 @@ function outer2(){
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): string
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "outer": string
 // CHECK-NEXT:       DeclareGlobalVarInst "outer2": string
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %outer(): functionCode
@@ -47,18 +48,18 @@ function outer2(){
 // CHECK-NEXT:function_end
 
 // CHECK:function outer(a: any, b: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [foo: object]
+
 // CHECK:function outer2(): object
-// CHECK-NEXT:frame = [foo: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %outer2(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [foo]: object
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS1.foo]: object
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %bar(): functionCode
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %4: object, "prototype": string
 // CHECK-NEXT:  %6 = LoadPropertyInst (:any) %2: object, "prototype": string
@@ -66,14 +67,12 @@ function outer2(){
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): undefined|object
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
 // CHECK-NEXT:       ReturnInst %0: undefined|object
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): object [allCallsitesKnownInStrictMode,unreachable]
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end

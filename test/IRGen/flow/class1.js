@@ -27,10 +27,11 @@ return [dotProduct, Vec2D];
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %dotProduct(): functionCode
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %Vec2D(): functionCode
 // CHECK-NEXT:  %3 = AllocObjectInst (:object) 0: number, empty: any
@@ -42,7 +43,6 @@ return [dotProduct, Vec2D];
 // CHECK-NEXT:function_end
 
 // CHECK:function dotProduct(a: object, b: object): number [typed]
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %a: object
 // CHECK-NEXT:  %1 = LoadParamInst (:object) %b: object
@@ -57,7 +57,6 @@ return [dotProduct, Vec2D];
 // CHECK-NEXT:function_end
 
 // CHECK:constructor Vec2D(x: number, y: number): undefined [typed]
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = LoadParamInst (:number) %y: number

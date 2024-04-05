@@ -19,10 +19,11 @@ print(new C().method());
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
@@ -33,24 +34,25 @@ print(new C().method());
 // CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [exports: any, C: any, ?C.prototype: object]
+
 // CHECK:function ""(exports: any): any
-// CHECK-NEXT:frame = [exports: any, C: any, ?C.prototype: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %""(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %exports: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [exports]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [C]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.exports]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.C]: any
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %C(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %5: object, [C]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %5: object, [%VS1.C]: any
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %method(): functionCode
 // CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) "method": string, %7: object
-// CHECK-NEXT:       StoreFrameInst %1: environment, %8: object, [?C.prototype]: object
+// CHECK-NEXT:       StoreFrameInst %1: environment, %8: object, [%VS1.?C.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %8: object, %5: object, "prototype": string
 // CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [C]: any
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS1.C]: any
 // CHECK-NEXT:  %13 = CheckedTypeCastInst (:object) %12: any, type(object)
-// CHECK-NEXT:  %14 = LoadFrameInst (:object) %1: environment, [?C.prototype]: object
+// CHECK-NEXT:  %14 = LoadFrameInst (:object) %1: environment, [%VS1.?C.prototype]: object
 // CHECK-NEXT:  %15 = UnionNarrowTrustedInst (:object) %14: object
 // CHECK-NEXT:  %16 = AllocObjectInst (:object) 0: number, %15: object
 // CHECK-NEXT:  %17 = LoadParentInst (:object) %16: object
@@ -61,18 +63,20 @@ print(new C().method());
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS2 []
+
 // CHECK:function C(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %C(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS3 []
+
 // CHECK:function method(): any [typed]
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %method(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
 // CHECK-NEXT:       ReturnInst 1: number
 // CHECK-NEXT:function_end

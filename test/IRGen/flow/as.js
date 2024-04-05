@@ -13,11 +13,14 @@ function test_as(): number {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 [exports: any, test_as: any]
+
+// CHECK:scope %VS1 []
+
 // CHECK:function test_as(): any [typed]
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test_as(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Math": string
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: any, "PI": string
 // CHECK-NEXT:  %4 = CheckedTypeCastInst (:number) %3: any, type(number)

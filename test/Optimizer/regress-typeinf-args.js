@@ -55,10 +55,11 @@ function test4(f) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): string
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "test1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test2": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test3": string
@@ -74,34 +75,32 @@ function test4(f) {
 // CHECK-NEXT:        ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [f: object]
+
 // CHECK:function test1(): undefined
-// CHECK-NEXT:frame = [f: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test1(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %f(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [f]: object
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS1.f]: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test2(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test3(): object
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %"f3 1#"(): functionCode
 // CHECK-NEXT:       ReturnInst %1: object
 // CHECK-NEXT:function_end
 
 // CHECK:function test4(f: any): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
 // CHECK-NEXT:  %3 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %2: object
@@ -109,19 +108,16 @@ function test4(f) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f(x: any): any [allCallsitesKnownInStrictMode,unreachable]
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       UnreachableInst
 // CHECK-NEXT:function_end
 
 // CHECK:function "f3 1#"(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(p: any): any [noReturn]
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %p: any
 // CHECK-NEXT:       ThrowInst %0: any

@@ -68,8 +68,9 @@ var obj4 = {
 
 // Auto-generated content below. Please do not modify manually.
 
+// IRGEN:scope %VS0 []
+
 // IRGEN:function global(): undefined
-// IRGEN-NEXT:frame = []
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:       DeclareGlobalVarInst "obj1": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "obj2": string
@@ -78,7 +79,7 @@ var obj4 = {
 // IRGEN-NEXT:  %4 = HBCAllocObjectFromBufferInst (:object) 7: number, "a": string, "hello": string, "b": string, 1: number, "c": string, null: null, "d": string, null: null, "e": string, true: boolean, "f": string, null: null, "g": string, 2: number
 // IRGEN-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
 // IRGEN-NEXT:       PrStoreInst %5: undefined, %4: object, 3: number, "d": string, true: boolean
-// IRGEN-NEXT:  %7 = CreateScopeInst (:environment) %global(): any, empty: any
+// IRGEN-NEXT:  %7 = CreateScopeInst (:environment) %VS0: any, empty: any
 // IRGEN-NEXT:  %8 = CreateFunctionInst (:object) %7: environment, %f(): functionCode
 // IRGEN-NEXT:       PrStoreInst %8: object, %4: object, 5: number, "f": string, false: boolean
 // IRGEN-NEXT:  %10 = HBCGetGlobalObjectInst (:object)
@@ -101,7 +102,6 @@ var obj4 = {
 // IRGEN-NEXT:function_end
 
 // IRGEN:function f(): undefined
-// IRGEN-NEXT:frame = []
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCLoadConstInst (:undefined) undefined: undefined
 // IRGEN-NEXT:       ReturnInst %0: undefined

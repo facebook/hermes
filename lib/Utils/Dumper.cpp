@@ -130,8 +130,8 @@ unsigned ValueNamer::getNumber(const Value *v) {
 VariableNamer::Name VariableNamer::getName(Variable *var) {
   auto [varIt, newVar] = varMap_.try_emplace(var, 0);
   if (newVar) {
-    varIt->second = ++namesCounts_[std::make_pair(
-        var->getParent()->getFunction(), var->getName())];
+    varIt->second =
+        ++namesCounts_[std::make_pair(var->getParent(), var->getName())];
   }
 
   return Name{var->getName(), varIt->second - 1};
@@ -215,16 +215,10 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
   } else if (auto F = dyn_cast<Function>(V)) {
     os_ << "%" << quoteStr(ctx.toString(F->getInternalName())) << "()";
   } else if (auto VS = dyn_cast<VariableScope>(V)) {
-    os_ << "%" << quoteStr(ctx.toString(VS->getFunction()->getInternalName()))
-        << "()";
+    os_ << "%VS" << namer_.getScopeNumber(VS);
   } else if (auto VR = dyn_cast<Variable>(V)) {
-    os_ << "[" << namer_.getVarName(VR);
-    if (I->getParent()->getParent() != VR->getParent()->getFunction()) {
-      llvh::StringRef scopeName =
-          VR->getParent()->getFunction()->getInternalNameStr();
-      os_ << "@" << quoteStr(scopeName);
-    }
-    os_ << "]";
+    os_ << "[%VS" << namer_.getScopeNumber(VR->getParent()) << "."
+        << namer_.getVarName(VR) << "]";
   } else if (auto *lt = llvh::dyn_cast<LiteralIRType>(V)) {
     os_ << "type(" << lt->getData() << ")";
   } else if (auto *NS = llvh::dyn_cast<LiteralNativeSignature>(V)) {
@@ -271,10 +265,11 @@ void IRPrinter::printFunctionHeader(Function *F) {
   os_ << " " << F->getAttributes(F->getParent()).getDescriptionStr();
 }
 
-void IRPrinter::printFunctionVariables(Function *F) {
+void IRPrinter::visitVariableScope(const hermes::VariableScope &VS) {
   bool first = true;
-  os_ << "frame = [";
-  for (auto V : F->getFunctionScope()->getVariables()) {
+  os_.indent(indent_);
+  os_ << "scope %VS" << namer_.getScopeNumber(&VS) << " [";
+  for (auto *V : VS.getVariables()) {
     if (!first) {
       os_ << ", ";
     }
@@ -282,7 +277,7 @@ void IRPrinter::printFunctionVariables(Function *F) {
     printTypeLabel(V);
     first = false;
   }
-  os_ << "]";
+  os_ << "]\n\n";
 }
 
 bool IRPrinter::printInstructionDestination(Instruction *I) {
@@ -400,19 +395,24 @@ void IRPrinter::visitFunction(
   }
 
   auto *UF = const_cast<Function *>(&F);
-  os_.indent(indent_);
   namer_.newFunction(&F);
   for (auto *BB : order) {
     // Number all basic blocks sequentially.
     namer_.getBBNumber(BB);
     // Number all instructions sequentially.
-    for (auto &I : *BB)
+    for (auto &I : *BB) {
       namer_.getInstNumber(&I);
+
+      // Dump the scopes that are being encountered for the first time.
+      for (size_t i = 0; i < I.getNumOperands(); i++)
+        if (auto *VS = dyn_cast<VariableScope>(I.getOperand(i)))
+          if (dumpedScopes_.insert(VS).second)
+            visit(*VS);
+    }
   }
 
+  os_.indent(indent_);
   printFunctionHeader(UF);
-  os_ << "\n";
-  printFunctionVariables(UF);
   os_ << "\n";
 
   const auto &codeGenOpts = F.getContext().getCodeGenerationSettings();

@@ -27,10 +27,11 @@ function test_two(x,y,z) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "test_one": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_two": string
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %test_one(): functionCode
@@ -41,7 +42,6 @@ function test_two(x,y,z) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_one(x: any, y: any, z: any): string
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %y: any
@@ -54,7 +54,6 @@ function test_two(x,y,z) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_two(x: any, y: any, z: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -38,10 +38,11 @@ function test_merge_blocks(x, y) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "test_one": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_catch_region": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_cond_branch": string
@@ -58,7 +59,6 @@ function test_merge_blocks(x, y) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_one(x: any, y: any, z: any): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %y: any
@@ -72,7 +72,6 @@ function test_merge_blocks(x, y) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_catch_region(x: any, y: any, z: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       TryStartInst %BB1, %BB3
 // CHECK-NEXT:%BB1:
@@ -88,14 +87,12 @@ function test_merge_blocks(x, y) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_cond_branch(x: any, y: any): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:       ReturnInst %0: any
 // CHECK-NEXT:function_end
 
 // CHECK:function test_merge_blocks(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %y: any

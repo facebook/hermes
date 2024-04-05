@@ -29,10 +29,11 @@ function f5(x) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHKIR:scope %VS0 []
+
 // CHKIR:function global(): undefined
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHKIR-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHKIR-NEXT:       DeclareGlobalVarInst "f1": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "f2": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "f3": string
@@ -52,7 +53,6 @@ function f5(x) {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function f1(): any
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "HermesInternal": string
 // CHKIR-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "concat": string
@@ -61,19 +61,16 @@ function f5(x) {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function f2(): string
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:       ReturnInst "world": string
 // CHKIR-NEXT:function_end
 
 // CHKIR:function f3(): string
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:       ReturnInst "": string
 // CHKIR-NEXT:function_end
 
 // CHKIR:function f4(): any
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "HermesInternal": string
 // CHKIR-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "concat": string
@@ -82,7 +79,6 @@ function f5(x) {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function f5(x: any): any
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHKIR-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "HermesInternal": string

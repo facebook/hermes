@@ -14,11 +14,12 @@ function test_call_after_builtin() {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:                 DeclareGlobalVarInst "test_call_after_builtin": string
-// CHECK-NEXT:  {loc0}    %1 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  {loc0}    %1 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  {loc1}    %2 = CreateFunctionInst (:object) {loc0} %1: environment, %test_call_after_builtin(): functionCode
 // CHECK-NEXT:  {loc0}    %3 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:                 StorePropertyLooseInst {loc1} %2: object, {loc0} %3: object, "test_call_after_builtin": string
@@ -26,13 +27,14 @@ function test_call_after_builtin() {
 // CHECK-NEXT:                 ReturnInst {np0} %5: undefined
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS0 []
+
 // CHECK:function test_call_after_builtin(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {loc0}    %0 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  {loc0}    %1 = TryLoadGlobalPropertyInst (:any) {loc0} %0: object, "print": string
 // CHECK-NEXT:  {loc1}    %2 = HBCAllocObjectFromBufferInst (:object) 1: number, "valueOf": string, null: null
-// CHECK-NEXT:  {loc2}    %3 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  {loc2}    %3 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  {loc2}    %4 = CreateFunctionInst (:object) {loc2} %3: environment, %valueOf(): functionCode
 // CHECK-NEXT:                 PrStoreInst {loc2} %4: object, {loc1} %2: object, 0: number, "valueOf": string, false: boolean
 // CHECK-NEXT:  {stack[0]}  %6 = HBCLoadConstInst (:number) 3: number
@@ -50,7 +52,6 @@ function test_call_after_builtin() {
 // CHECK-NEXT:function_end
 
 // CHECK:arrow valueOf(): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {np0}     %0 = HBCLoadConstInst (:number) 2: number
 // CHECK-NEXT:                 ReturnInst {np0} %0: number

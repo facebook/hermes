@@ -17,10 +17,11 @@ function foo(p1, p2, p3) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// OPT-CHECK:scope %VS0 []
+
 // OPT-CHECK:function global(): undefined
-// OPT-CHECK-NEXT:frame = []
 // OPT-CHECK-NEXT:%BB0:
-// OPT-CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// OPT-CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // OPT-CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // OPT-CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
 // OPT-CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
@@ -28,7 +29,6 @@ function foo(p1, p2, p3) {
 // OPT-CHECK-NEXT:function_end
 
 // OPT-CHECK:function foo(p1: any, p2: any, p3: any): undefined
-// OPT-CHECK-NEXT:frame = []
 // OPT-CHECK-NEXT:%BB0:
 // OPT-CHECK-NEXT:  %0 = LoadParamInst (:any) %p1: any
 // OPT-CHECK-NEXT:  %1 = LoadParamInst (:any) %p2: any
@@ -39,10 +39,11 @@ function foo(p1, p2, p3) {
 // OPT-CHECK-NEXT:       ReturnInst undefined: undefined
 // OPT-CHECK-NEXT:function_end
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
@@ -52,31 +53,32 @@ function foo(p1, p2, p3) {
 // CHECK-NEXT:       ReturnInst %6: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [p1: any, p2: any, p3: any, t: any, z: any, k: any]
+
 // CHECK:function foo(p1: any, p2: any, p3: any): any
-// CHECK-NEXT:frame = [p1: any, p2: any, p3: any, t: any, z: any, k: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %p1: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [p1]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.p1]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %p2: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [p2]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS1.p2]: any
 // CHECK-NEXT:  %6 = LoadParamInst (:any) %p3: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [p3]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [t]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [z]: any
-// CHECK-NEXT:        StoreFrameInst %1: environment, undefined: undefined, [k]: any
-// CHECK-NEXT:  %11 = LoadFrameInst (:any) %1: environment, [p1]: any
-// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [p2]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [%VS1.p3]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.t]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.z]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, undefined: undefined, [%VS1.k]: any
+// CHECK-NEXT:  %11 = LoadFrameInst (:any) %1: environment, [%VS1.p1]: any
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS1.p2]: any
 // CHECK-NEXT:  %13 = BinaryAddInst (:any) %11: any, %12: any
-// CHECK-NEXT:        StoreFrameInst %1: environment, %13: any, [t]: any
-// CHECK-NEXT:  %15 = LoadFrameInst (:any) %1: environment, [p2]: any
-// CHECK-NEXT:  %16 = LoadFrameInst (:any) %1: environment, [p3]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %13: any, [%VS1.t]: any
+// CHECK-NEXT:  %15 = LoadFrameInst (:any) %1: environment, [%VS1.p2]: any
+// CHECK-NEXT:  %16 = LoadFrameInst (:any) %1: environment, [%VS1.p3]: any
 // CHECK-NEXT:  %17 = BinaryAddInst (:any) %15: any, %16: any
-// CHECK-NEXT:        StoreFrameInst %1: environment, %17: any, [z]: any
-// CHECK-NEXT:  %19 = LoadFrameInst (:any) %1: environment, [z]: any
-// CHECK-NEXT:  %20 = LoadFrameInst (:any) %1: environment, [t]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %17: any, [%VS1.z]: any
+// CHECK-NEXT:  %19 = LoadFrameInst (:any) %1: environment, [%VS1.z]: any
+// CHECK-NEXT:  %20 = LoadFrameInst (:any) %1: environment, [%VS1.t]: any
 // CHECK-NEXT:  %21 = BinaryAddInst (:any) %19: any, %20: any
-// CHECK-NEXT:        StoreFrameInst %1: environment, %21: any, [k]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %21: any, [%VS1.k]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

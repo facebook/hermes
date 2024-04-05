@@ -30,10 +30,11 @@ function shadow(arguments) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "cheap": string
 // CHECK-NEXT:       DeclareGlobalVarInst "expensive": string
 // CHECK-NEXT:       DeclareGlobalVarInst "cond": string
@@ -52,24 +53,26 @@ function shadow(arguments) {
 // CHECK-NEXT:        ReturnInst %15: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 []
+
 // CHECK:function cheap(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
-// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %cheap(): any, %1: environment
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS1: any, %1: environment
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %0: object, "length": string
 // CHECK-NEXT:  %4 = LoadPropertyInst (:any) %0: object, 0: number
 // CHECK-NEXT:  %5 = BinaryAddInst (:any) %3: any, %4: any
 // CHECK-NEXT:       ReturnInst %5: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS2 []
+
 // CHECK:function expensive(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
-// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %expensive(): any, %1: environment
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS2: any, %1: environment
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %0: object, "length": string
 // CHECK-NEXT:  %4 = LoadPropertyInst (:any) globalObject: object, "cheap": string
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: object
@@ -79,12 +82,13 @@ function shadow(arguments) {
 // CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS3 []
+
 // CHECK:function cond(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
-// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %cond(): any, %1: environment
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS3: any, %1: environment
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %0: object, "length": string
 // CHECK-NEXT:       CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
@@ -96,14 +100,15 @@ function shadow(arguments) {
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS4 [arguments: any]
+
 // CHECK:function shadow(arguments: any): any
-// CHECK-NEXT:frame = [arguments: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %shadow(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %arguments: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [arguments]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [arguments]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS4.arguments]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS4.arguments]: any
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %4: any, "length": string
 // CHECK-NEXT:       ReturnInst %5: any
 // CHECK-NEXT:function_end

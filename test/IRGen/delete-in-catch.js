@@ -17,17 +17,18 @@ try {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 [e: any]
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = [e: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "result": string
 // CHECK-NEXT:  %2 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %2: any
 // CHECK-NEXT:       TryStartInst %BB1, %BB3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = CatchInst (:any)
-// CHECK-NEXT:       StoreFrameInst %0: environment, %5: any, [e]: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, %5: any, [%VS0.e]: any
 // CHECK-NEXT:       StorePropertyLooseInst false: boolean, globalObject: object, "result": string
 // CHECK-NEXT:       StoreStackInst false: boolean, %2: any
 // CHECK-NEXT:       BranchInst %BB2

@@ -15,10 +15,11 @@ function foo(fn, x) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
@@ -28,28 +29,29 @@ function foo(fn, x) {
 // CHECK-NEXT:       ReturnInst %6: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [fn: any, x: any]
+
 // CHECK:function foo(fn: any, x: any): any
-// CHECK-NEXT:frame = [fn: any, x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %fn: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [fn]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.fn]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [x]: any
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [fn]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS1.x]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS1.fn]: any
 // CHECK-NEXT:  %7 = AllocStackInst (:number) $nextIndex: any
 // CHECK-NEXT:       StoreStackInst 0: number, %7: number
-// CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
 // CHECK-NEXT:  %10 = AllocArrayInst (:object) 0: number
 // CHECK-NEXT:  %11 = LoadStackInst (:number) %7: number
 // CHECK-NEXT:  %12 = CallBuiltinInst (:number) [HermesBuiltin.arraySpread]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %10: object, %9: any, %11: number
 // CHECK-NEXT:        StoreStackInst %12: number, %7: number
 // CHECK-NEXT:  %14 = CallBuiltinInst (:any) [HermesBuiltin.apply]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %6: any, %10: object, undefined: undefined
-// CHECK-NEXT:  %15 = LoadFrameInst (:any) %1: environment, [fn]: any
+// CHECK-NEXT:  %15 = LoadFrameInst (:any) %1: environment, [%VS1.fn]: any
 // CHECK-NEXT:  %16 = AllocStackInst (:number) $nextIndex: any
 // CHECK-NEXT:        StoreStackInst 0: number, %16: number
-// CHECK-NEXT:  %18 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %18 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
 // CHECK-NEXT:  %19 = AllocArrayInst (:object) 0: number
 // CHECK-NEXT:  %20 = LoadStackInst (:number) %16: number
 // CHECK-NEXT:  %21 = CallBuiltinInst (:number) [HermesBuiltin.arraySpread]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %19: object, %18: any, %20: number
@@ -58,10 +60,11 @@ function foo(fn, x) {
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
+// OPT:scope %VS0 []
+
 // OPT:function global(): undefined
-// OPT-NEXT:frame = []
 // OPT-NEXT:%BB0:
-// OPT-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// OPT-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // OPT-NEXT:       DeclareGlobalVarInst "foo": string
 // OPT-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
 // OPT-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
@@ -69,7 +72,6 @@ function foo(fn, x) {
 // OPT-NEXT:function_end
 
 // OPT:function foo(fn: any, x: any): undefined
-// OPT-NEXT:frame = []
 // OPT-NEXT:%BB0:
 // OPT-NEXT:  %0 = LoadParamInst (:any) %fn: any
 // OPT-NEXT:  %1 = LoadParamInst (:any) %x: any

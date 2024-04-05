@@ -112,10 +112,11 @@ function switch_neg(x) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "f": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "regress1": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "jump_table": string
@@ -140,7 +141,6 @@ function switch_neg(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f(x: any): string
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg2 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  $Reg0 = BranchInst %BB10
@@ -182,7 +182,6 @@ function switch_neg(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function regress1(w: any): any [noReturn]
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg6 = LoadParamInst (:any) %w: any
 // CHECK-NEXT:  $Reg5 = HBCLoadConstInst (:number) 0: number
@@ -208,7 +207,6 @@ function switch_neg(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function jump_table(x: any): undefined|string
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  $Reg0 = SwitchImmInst $Reg0, %BB1, 0: number, 11: number, 0: number, %BB2, 1: number, %BB3, 2: number, %BB4, 3: number, %BB5, 4: number, %BB6, 5: number, %BB7, 6: number, %BB8, 8: number, %BB9, 9: number, %BB10, 10: number, %BB11
@@ -248,7 +246,6 @@ function switch_neg(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function string_switch(x: any): undefined|number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg1 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  $Reg0 = BranchInst %BB7
@@ -276,7 +273,6 @@ function switch_neg(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function switch_uint32(x: any): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  $Reg0 = SwitchImmInst $Reg0, %BB1, 2147483648: number, 10: number, 2147483648: number, %BB2, 2147483649: number, %BB2, 2147483650: number, %BB2, 2147483651: number, %BB2, 2147483652: number, %BB2, 2147483653: number, %BB2, 2147483654: number, %BB2, 2147483655: number, %BB2, 2147483656: number, %BB2, 2147483657: number, %BB2
@@ -289,7 +285,6 @@ function switch_neg(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function switch_neg(x: any): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg1 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  $Reg0 = BranchInst %BB11

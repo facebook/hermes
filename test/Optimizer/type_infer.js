@@ -48,10 +48,11 @@ function test_unary(x) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "sink": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_one": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_unary": string
@@ -65,13 +66,11 @@ function test_unary(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function sink(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_one(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %y: any
@@ -101,7 +100,6 @@ function test_unary(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_unary(x: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "sink": string

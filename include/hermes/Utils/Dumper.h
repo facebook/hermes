@@ -87,8 +87,9 @@ class ValueNamer {
 
 /// Utility class to print unique variable name within a function.
 class VariableNamer {
-  /// Map from a function+name to number of occurrences.
-  llvh::DenseMap<std::pair<Function *, Identifier>, unsigned> namesCounts_{};
+  /// Map from a scope+name to number of occurrences.
+  llvh::DenseMap<std::pair<VariableScope *, Identifier>, unsigned>
+      namesCounts_{};
   /// Map from variable to suffix.
   llvh::DenseMap<Variable *, unsigned> varMap_{};
 
@@ -119,6 +120,9 @@ class Namer {
     }
   };
   VariableNamer varNamer{};
+
+  /// Namer for scope metadata.
+  ValueNamer scopeNamer{};
 
   /// Whether the state should persist across functions.
   bool const persistent_;
@@ -166,6 +170,10 @@ class Namer {
   VariableNamer::Name getVarName(Variable *var) {
     return varNamer.getName(var);
   }
+  /// Return the number associated with \p VS.
+  unsigned getScopeNumber(const VariableScope *VS) {
+    return scopeNamer.getNumber(VS);
+  }
 };
 
 llvh::raw_ostream &operator<<(
@@ -189,6 +197,11 @@ class IRPrinter : public IRVisitor<IRPrinter, void> {
 
   /// A non-peristent namer used when one isn't provided by Context.
   std::unique_ptr<Namer> tempNamer_;
+
+  /// The set of scopes that have been dumped. This is used to ensure that
+  /// scopes are only dumped once right before the first function that uses
+  /// them.
+  llvh::DenseSet<VariableScope *> dumpedScopes_;
 
  public:
   /// Indexes in a pallette of colors for IR dumps.
@@ -240,7 +253,6 @@ class IRPrinter : public IRVisitor<IRPrinter, void> {
   virtual ~IRPrinter() = default;
 
   virtual void printFunctionHeader(Function *F);
-  virtual void printFunctionVariables(Function *F);
   virtual void printValueLabel(Instruction *I, Value *V, unsigned opIndex);
   virtual void printTypeLabel(Value *v);
   virtual void printInstruction(Instruction *I);
@@ -263,6 +275,7 @@ class IRPrinter : public IRVisitor<IRPrinter, void> {
   void visitInstruction(const Instruction &I);
   void visitBasicBlock(const BasicBlock &BB);
   void visitFunction(const Function &F);
+  void visitVariableScope(const VariableScope &VS);
   void visitFunction(const Function &F, llvh::ArrayRef<BasicBlock *> order);
   void visitModule(const Module &M);
 

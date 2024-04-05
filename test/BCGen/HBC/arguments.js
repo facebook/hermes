@@ -32,10 +32,11 @@ function check_phi_handling(x) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "count": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "select": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "build": string
@@ -57,7 +58,6 @@ function check_phi_handling(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function count(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 = AllocStackInst (:undefined|object) $arguments: any
 // CHECK-NEXT:  $Reg1 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -68,7 +68,6 @@ function check_phi_handling(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function select(x: any): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg1 = AllocStackInst (:undefined|object) $arguments: any
 // CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -81,7 +80,6 @@ function check_phi_handling(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function build(): object
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 = AllocStackInst (:undefined|object) $arguments: any
 // CHECK-NEXT:  $Reg1 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -92,7 +90,6 @@ function check_phi_handling(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function buffalobuffalo(): string|number|bigint
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 = AllocStackInst (:undefined|object) $arguments: any
 // CHECK-NEXT:  $Reg1 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -104,7 +101,6 @@ function check_phi_handling(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function check_phi_handling(x: any): object
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 = AllocStackInst (:undefined|object) $arguments: any
 // CHECK-NEXT:  $Reg1 = HBCLoadConstInst (:undefined) undefined: undefined

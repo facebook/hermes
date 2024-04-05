@@ -20,10 +20,11 @@ function ctor_this_test() {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): string
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "ctor_this_test": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %ctor_this_test(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %2: object, globalObject: object, "ctor_this_test": string
@@ -31,9 +32,8 @@ function ctor_this_test() {
 // CHECK-NEXT:function_end
 
 // CHECK:function ctor_this_test(): object
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %use_this(): functionCode
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) %1: object, "prototype": string
 // CHECK-NEXT:  %3 = CreateThisInst (:object) %2: any, %1: object
@@ -42,7 +42,6 @@ function ctor_this_test() {
 // CHECK-NEXT:function_end
 
 // CHECK:function use_this(k: number): object [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:       StorePropertyStrictInst 12: number, %0: object, "k": string

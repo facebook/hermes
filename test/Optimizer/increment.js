@@ -22,10 +22,11 @@ foo()
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
@@ -35,7 +36,6 @@ foo()
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst 10: number
 // CHECK-NEXT:function_end

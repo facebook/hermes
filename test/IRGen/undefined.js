@@ -19,10 +19,11 @@ undefined;
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:       DeclareGlobalVarInst "undefined": string
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
@@ -38,13 +39,14 @@ undefined;
 // CHECK-NEXT:        ReturnInst %12: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [undefined: any]
+
 // CHECK:function foo(): any
-// CHECK-NEXT:frame = [undefined: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [undefined]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, 5: number, [undefined]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [undefined]: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.undefined]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, 5: number, [%VS1.undefined]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS1.undefined]: any
 // CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end

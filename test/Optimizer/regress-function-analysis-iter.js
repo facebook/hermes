@@ -33,30 +33,31 @@
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %main(): functionCode
 // CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %main(): functionCode, %0: environment, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [f1: object]
+
 // CHECK:function main(): undefined [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:frame = [f1: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %main(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %f1(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [f1]: object
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS1.f1]: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f1(): number [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %main(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = LoadFrameInst (:object) %0: environment, [f1@main]: object
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %1 = LoadFrameInst (:object) %0: environment, [%VS1.f1]: object
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "a": string
 // CHECK-NEXT:       CondBranchInst %2: any, %BB3, %BB2
 // CHECK-NEXT:%BB1:

@@ -39,12 +39,13 @@ print(glob);
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHKRA:scope %VS0 []
+
 // CHKRA:function global(): any
-// CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "glob": string
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "bad": string
-// CHKRA-NEXT:  $Reg0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHKRA-NEXT:  $Reg0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHKRA-NEXT:  $Reg1 = CreateFunctionInst (:object) $Reg0, %bad(): functionCode
 // CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
 // CHKRA-NEXT:  $Reg1 = StorePropertyLooseInst $Reg1, $Reg0, "bad": string
@@ -64,7 +65,6 @@ print(glob);
 // CHKRA-NEXT:function_end
 
 // CHKRA:function bad(param1: any, param2: any): null
-// CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  $Reg3 = LoadParamInst (:any) %param1: any
 // CHKRA-NEXT:  $Reg2 = LoadParamInst (:any) %param2: any

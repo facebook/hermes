@@ -15,10 +15,11 @@ function three() { return z; return z;}
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "one": string
 // CHECK-NEXT:       DeclareGlobalVarInst "two": string
 // CHECK-NEXT:       DeclareGlobalVarInst "three": string
@@ -34,29 +35,32 @@ function three() { return z; return z;}
 // CHECK-NEXT:        ReturnInst %12: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 []
+
 // CHECK:function one(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %one(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "s": string
 // CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end
+
+// CHECK:scope %VS2 []
 
 // CHECK:function two(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %two(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "s": string
 // CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS3 []
+
 // CHECK:function three(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %three(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "z": string
 // CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end

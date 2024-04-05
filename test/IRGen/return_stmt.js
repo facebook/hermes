@@ -37,10 +37,11 @@ function test5() {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "test0": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test2": string
@@ -65,58 +66,61 @@ function test5() {
 // CHECK-NEXT:        ReturnInst %21: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [x: any, y: any]
+
 // CHECK:function test0(x: any, y: any): any
-// CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test0(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.x]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [y]: any
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS1.y]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
 // CHECK-NEXT:       CondBranchInst %6: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
 // CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS1.y]: any
 // CHECK-NEXT:        ReturnInst %10: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS2 [x: any, y: any]
+
 // CHECK:function test1(x: any, y: any): any
-// CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test1(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.x]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [y]: any
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS2.y]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS2.x]: any
 // CHECK-NEXT:       CondBranchInst %6: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS2.y]: any
 // CHECK-NEXT:        ReturnInst %9: any
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS3 [x: any, y: any]
+
 // CHECK:function test2(x: any, y: any): any
-// CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test2(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.x]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [y]: any
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS3.y]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS3.x]: any
 // CHECK-NEXT:       CondBranchInst %6: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS3.x]: any
 // CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        BranchInst %BB3
@@ -124,36 +128,39 @@ function test5() {
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS4 [x: any, y: any]
+
 // CHECK:function test3(x: any, y: any): any
-// CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test3(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS4.x]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [y]: any
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS4.y]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS4.x]: any
 // CHECK-NEXT:       ReturnInst %6: any
 // CHECK-NEXT:function_end
+
+// CHECK:scope %VS5 [x: any, y: any]
 
 // CHECK:function test4(x: any, y: any): any
-// CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test4(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS5: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS5.x]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [y]: any
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS5.y]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS5.x]: any
 // CHECK-NEXT:       ReturnInst %6: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS6 []
+
 // CHECK:function test5(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test5(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS6: any, %0: environment
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

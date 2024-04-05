@@ -22,10 +22,11 @@ function foo() {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHKLOOSE:scope %VS0 []
+
 // CHKLOOSE:function global(): any
-// CHKLOOSE-NEXT:frame = []
 // CHKLOOSE-NEXT:%BB0:
-// CHKLOOSE-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHKLOOSE-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHKLOOSE-NEXT:       DeclareGlobalVarInst "init": string
 // CHKLOOSE-NEXT:       DeclareGlobalVarInst "f": string
 // CHKLOOSE-NEXT:       DeclareGlobalVarInst "foo": string
@@ -37,31 +38,34 @@ function foo() {
 // CHKLOOSE-NEXT:       ReturnInst %8: any
 // CHKLOOSE-NEXT:function_end
 
+// CHKLOOSE:scope %VS1 [f: any]
+
 // CHKLOOSE:function foo(): any
-// CHKLOOSE-NEXT:frame = [f: any]
 // CHKLOOSE-NEXT:%BB0:
-// CHKLOOSE-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHKLOOSE-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
-// CHKLOOSE-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [f]: any
-// CHKLOOSE-NEXT:  %3 = LoadFrameInst (:any) %1: environment, [f]: any
+// CHKLOOSE-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHKLOOSE-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHKLOOSE-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.f]: any
+// CHKLOOSE-NEXT:  %3 = LoadFrameInst (:any) %1: environment, [%VS1.f]: any
 // CHKLOOSE-NEXT:       StorePropertyLooseInst %3: any, globalObject: object, "init": string
 // CHKLOOSE-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %f(): functionCode
-// CHKLOOSE-NEXT:       StoreFrameInst %1: environment, %5: object, [f]: any
+// CHKLOOSE-NEXT:       StoreFrameInst %1: environment, %5: object, [%VS1.f]: any
 // CHKLOOSE-NEXT:       ReturnInst undefined: undefined
 // CHKLOOSE-NEXT:function_end
+
+// CHKLOOSE:scope %VS2 []
 
 // CHKLOOSE:function f(): any
-// CHKLOOSE-NEXT:frame = []
 // CHKLOOSE-NEXT:%BB0:
-// CHKLOOSE-NEXT:  %0 = GetParentScopeInst (:environment) %foo(): any, %parentScope: environment
-// CHKLOOSE-NEXT:  %1 = CreateScopeInst (:environment) %f(): any, %0: environment
+// CHKLOOSE-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHKLOOSE-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHKLOOSE-NEXT:       ReturnInst undefined: undefined
 // CHKLOOSE-NEXT:function_end
 
+// CHKSTRICT:scope %VS0 []
+
 // CHKSTRICT:function global(): any
-// CHKSTRICT-NEXT:frame = []
 // CHKSTRICT-NEXT:%BB0:
-// CHKSTRICT-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHKSTRICT-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHKSTRICT-NEXT:       DeclareGlobalVarInst "init": string
 // CHKSTRICT-NEXT:       DeclareGlobalVarInst "f": string
 // CHKSTRICT-NEXT:       DeclareGlobalVarInst "foo": string
@@ -73,22 +77,24 @@ function foo() {
 // CHKSTRICT-NEXT:       ReturnInst %8: any
 // CHKSTRICT-NEXT:function_end
 
+// CHKSTRICT:scope %VS1 [f: any]
+
 // CHKSTRICT:function foo(): any
-// CHKSTRICT-NEXT:frame = [f: any]
 // CHKSTRICT-NEXT:%BB0:
-// CHKSTRICT-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHKSTRICT-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
+// CHKSTRICT-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHKSTRICT-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHKSTRICT-NEXT:  %2 = LoadPropertyInst (:any) globalObject: object, "f": string
 // CHKSTRICT-NEXT:       StorePropertyStrictInst %2: any, globalObject: object, "init": string
 // CHKSTRICT-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %f(): functionCode
-// CHKSTRICT-NEXT:       StoreFrameInst %1: environment, %4: object, [f]: any
+// CHKSTRICT-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS1.f]: any
 // CHKSTRICT-NEXT:       ReturnInst undefined: undefined
 // CHKSTRICT-NEXT:function_end
 
+// CHKSTRICT:scope %VS2 []
+
 // CHKSTRICT:function f(): any
-// CHKSTRICT-NEXT:frame = []
 // CHKSTRICT-NEXT:%BB0:
-// CHKSTRICT-NEXT:  %0 = GetParentScopeInst (:environment) %foo(): any, %parentScope: environment
-// CHKSTRICT-NEXT:  %1 = CreateScopeInst (:environment) %f(): any, %0: environment
+// CHKSTRICT-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHKSTRICT-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHKSTRICT-NEXT:       ReturnInst undefined: undefined
 // CHKSTRICT-NEXT:function_end

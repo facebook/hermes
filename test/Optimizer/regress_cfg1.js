@@ -19,10 +19,11 @@ f();
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "f": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %f(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "f": string
@@ -32,7 +33,6 @@ f();
 // CHECK-NEXT:function_end
 
 // CHECK:function f(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

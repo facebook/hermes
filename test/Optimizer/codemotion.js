@@ -93,10 +93,11 @@ function code_sinking_in_loop(x, y) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "hoist_branch": string
 // CHECK-NEXT:       DeclareGlobalVarInst "hoist_branch_window": string
 // CHECK-NEXT:       DeclareGlobalVarInst "no_hoist_inc_dec": string
@@ -128,7 +129,6 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:function_end
 
 // CHECK:function hoist_branch(x: any, y: any): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %y: any
@@ -146,7 +146,6 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:function_end
 
 // CHECK:function hoist_branch_window(x: any, y: any): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %y: any
@@ -167,7 +166,6 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:function_end
 
 // CHECK:function no_hoist_inc_dec(x: any, y: any): number|bigint
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %y: any
@@ -184,7 +182,6 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:function_end
 
 // CHECK:function hoist_loop(x: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = BinaryLessThanInst (:boolean) 0: number, %0: any
@@ -201,7 +198,6 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:function_end
 
 // CHECK:function hoist_loop_expression(a: any, b: any, call: any): any [noReturn]
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %b: any
@@ -218,7 +214,6 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:function_end
 
 // CHECK:function hoist_from_multiblock_loop(x: any): any [noReturn]
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = AsNumberInst (:number) %0: any
@@ -237,7 +232,6 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:function_end
 
 // CHECK:function hoist_with_dependencies_in_loop(x: any, y: any): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %y: any
@@ -256,7 +250,6 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:function_end
 
 // CHECK:function code_sinking(x: any, y: any): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %y: any
@@ -271,7 +264,6 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:function_end
 
 // CHECK:function code_sinking_in_loop(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %y: any

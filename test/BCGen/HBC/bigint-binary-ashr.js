@@ -16,10 +16,11 @@ function numberPlusBigInt() {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHKIR:scope %VS0 []
+
 // CHKIR:function global(): undefined
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHKIR-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHKIR-NEXT:       DeclareGlobalVarInst "numberPlusBigInt": string
 // CHKIR-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %numberPlusBigInt(): functionCode
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "numberPlusBigInt": string
@@ -27,7 +28,6 @@ function numberPlusBigInt() {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function numberPlusBigInt(): number
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
 // CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 2: number

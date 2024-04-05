@@ -1680,6 +1680,10 @@ class VariableScope : public Value {
   VariableListType &getVariables() {
     return variables_;
   }
+  /// \returns a list of variables.
+  llvh::ArrayRef<Variable *> getVariables() const {
+    return variables_;
+  }
 
   /// Add a variable \p V to the variable list.
   void addVariable(Variable *V) {

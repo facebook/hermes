@@ -72,10 +72,11 @@ function badThrow() {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "simple": string
 // CHECK-NEXT:       DeclareGlobalVarInst "control_flow": string
 // CHECK-NEXT:       DeclareGlobalVarInst "control_catch": string
@@ -95,7 +96,6 @@ function badThrow() {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple(x: any, y: any): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:       CondBranchInst %0: any, %BB1, %BB2
@@ -107,7 +107,6 @@ function badThrow() {
 // CHECK-NEXT:function_end
 
 // CHECK:function control_flow(x: any, y: any): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %y: any
@@ -131,7 +130,6 @@ function badThrow() {
 // CHECK-NEXT:function_end
 
 // CHECK:function control_catch(x: any, y: any): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocStackInst (:number) $t: any
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %x: any
@@ -160,7 +158,6 @@ function badThrow() {
 // CHECK-NEXT:function_end
 
 // CHECK:function multi(x: any, y: any): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:       CondBranchInst %0: any, %BB1, %BB2
@@ -174,7 +171,6 @@ function badThrow() {
 // CHECK-NEXT:function_end
 
 // CHECK:function badThrow(): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocStackInst (:number) $result: any
 // CHECK-NEXT:       StoreStackInst -1: number, %0: number

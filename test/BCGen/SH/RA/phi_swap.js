@@ -19,11 +19,12 @@ function foo (a, b) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:                 DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  {loc0}    %1 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  {loc0}    %1 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  {loc1}    %2 = CreateFunctionInst (:object) {loc0} %1: environment, %foo(): functionCode
 // CHECK-NEXT:  {loc0}    %3 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:                 StorePropertyLooseInst {loc1} %2: object, {loc0} %3: object, "foo": string
@@ -32,7 +33,6 @@ function foo (a, b) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(a: any, b: any): any [noReturn]
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {loc1}    %0 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  {loc0}    %1 = LoadParamInst (:any) %b: any

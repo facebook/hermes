@@ -23,10 +23,11 @@ function test_member_access(obj, param) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:       DeclareGlobalVarInst "bar": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_member_access": string
@@ -42,51 +43,54 @@ function test_member_access(obj, param) {
 // CHECK-NEXT:        ReturnInst %12: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [a: any, b: any, c: any]
+
 // CHECK:function foo(a: any, b: any, c: any): any
-// CHECK-NEXT:frame = [a: any, b: any, c: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [a]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.a]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %b: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [b]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS1.b]: any
 // CHECK-NEXT:  %6 = LoadParamInst (:any) %c: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [c]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [%VS1.c]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS2 [x: any, y: any, z: any]
+
 // CHECK:function bar(x: any, y: any, z: any): any
-// CHECK-NEXT:frame = [x: any, y: any, z: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %bar(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.x]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [y]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS2.y]: any
 // CHECK-NEXT:  %6 = LoadParamInst (:any) %z: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [z]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [%VS2.z]: any
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [x]: any
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [y]: any
-// CHECK-NEXT:  %11 = LoadFrameInst (:any) %1: environment, [z]: any
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS2.x]: any
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS2.y]: any
+// CHECK-NEXT:  %11 = LoadFrameInst (:any) %1: environment, [%VS2.z]: any
 // CHECK-NEXT:  %12 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %9: any, %10: any, %11: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS3 [obj: any, param: any]
+
 // CHECK:function test_member_access(obj: any, param: any): any
-// CHECK-NEXT:frame = [obj: any, param: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test_member_access(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %obj: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [obj]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.obj]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %param: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [param]: any
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [obj]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS3.param]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS3.obj]: any
 // CHECK-NEXT:  %7 = LoadPropertyInst (:any) %6: any, "foo": string
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [param]: any
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS3.param]: any
 // CHECK-NEXT:  %9 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, %6: any, %8: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

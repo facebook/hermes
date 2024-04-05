@@ -28,10 +28,11 @@ function backwards_branch() {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "backwards_branch": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %backwards_branch(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "backwards_branch": string
@@ -39,7 +40,6 @@ function backwards_branch() {
 // CHECK-NEXT:function_end
 
 // CHECK:function backwards_branch(): undefined [noReturn]
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB1:

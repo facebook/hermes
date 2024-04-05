@@ -11,11 +11,12 @@ function b(d=([[[[{z:[{}]}]]]]=arguments)) {}
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHKRA:scope %VS0 []
+
 // CHKRA:function global(): undefined
-// CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "b": string
-// CHKRA-NEXT:  $Reg0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHKRA-NEXT:  $Reg0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHKRA-NEXT:  $Reg1 = CreateFunctionInst (:object) $Reg0, %b(): functionCode
 // CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
 // CHKRA-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg0, "b": string
@@ -24,7 +25,6 @@ function b(d=([[[[{z:[{}]}]]]]=arguments)) {}
 // CHKRA-NEXT:function_end
 
 // CHKRA:function b(d: any): undefined
-// CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  $Reg3 = AllocStackInst (:undefined|object) $arguments: any
 // CHKRA-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined

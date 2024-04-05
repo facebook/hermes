@@ -24,10 +24,11 @@ function foo5(f) { f(1, 2, 3, 4); }
 
 // Auto-generated content below. Please do not modify manually.
 
+// LRA:scope %VS0 []
+
 // LRA:function global(): undefined
-// LRA-NEXT:frame = []
 // LRA-NEXT:%BB0:
-// LRA-NEXT:  $Reg0 = CreateScopeInst (:environment) %global(): any, empty: any
+// LRA-NEXT:  $Reg0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // LRA-NEXT:  $Reg1 = DeclareGlobalVarInst "foo1": string
 // LRA-NEXT:  $Reg1 = DeclareGlobalVarInst "foo2": string
 // LRA-NEXT:  $Reg1 = DeclareGlobalVarInst "foo3": string
@@ -49,7 +50,6 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:function_end
 
 // LRA:function foo1(f: any): undefined
-// LRA-NEXT:frame = []
 // LRA-NEXT:%BB0:
 // LRA-NEXT:  $Reg1 = LoadParamInst (:any) %f: any
 // LRA-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -59,7 +59,6 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:function_end
 
 // LRA:function foo2(f: any): undefined
-// LRA-NEXT:frame = []
 // LRA-NEXT:%BB0:
 // LRA-NEXT:  $Reg2 = LoadParamInst (:any) %f: any
 // LRA-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -71,7 +70,6 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:function_end
 
 // LRA:function foo3(f: any): undefined
-// LRA-NEXT:frame = []
 // LRA-NEXT:%BB0:
 // LRA-NEXT:  $Reg3 = LoadParamInst (:any) %f: any
 // LRA-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -85,7 +83,6 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:function_end
 
 // LRA:function foo4(f: any): undefined
-// LRA-NEXT:frame = []
 // LRA-NEXT:%BB0:
 // LRA-NEXT:  $Reg4 = LoadParamInst (:any) %f: any
 // LRA-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -101,7 +98,6 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:function_end
 
 // LRA:function foo5(f: any): undefined
-// LRA-NEXT:frame = []
 // LRA-NEXT:%BB0:
 // LRA-NEXT:  $Reg5 = LoadParamInst (:any) %f: any
 // LRA-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined

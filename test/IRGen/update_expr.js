@@ -26,10 +26,11 @@ function update_variable_test3(x) { return --x; }
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "update_field_test0": string
 // CHECK-NEXT:       DeclareGlobalVarInst "update_field_test1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "update_field_test2": string
@@ -60,14 +61,15 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:        ReturnInst %27: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [o: any]
+
 // CHECK:function update_field_test0(o: any): any
-// CHECK-NEXT:frame = [o: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %update_field_test0(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %o: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [o]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [o]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.o]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS1.o]: any
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %4: any, "f": string
 // CHECK-NEXT:  %6 = AsNumericInst (:number|bigint) %5: any
 // CHECK-NEXT:  %7 = UnaryIncInst (:number|bigint) %6: number|bigint
@@ -75,14 +77,15 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:       ReturnInst %6: number|bigint
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS2 [o: any]
+
 // CHECK:function update_field_test1(o: any): any
-// CHECK-NEXT:frame = [o: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %update_field_test1(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %o: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [o]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [o]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.o]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS2.o]: any
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %4: any, "f": string
 // CHECK-NEXT:  %6 = AsNumericInst (:number|bigint) %5: any
 // CHECK-NEXT:  %7 = UnaryDecInst (:number|bigint) %6: number|bigint
@@ -90,84 +93,90 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:       ReturnInst %6: number|bigint
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS3 [o: any]
+
 // CHECK:function update_field_test2(o: any): any
-// CHECK-NEXT:frame = [o: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %update_field_test2(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %o: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [o]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [o]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.o]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS3.o]: any
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %4: any, "f": string
 // CHECK-NEXT:  %6 = UnaryIncInst (:number|bigint) %5: any
 // CHECK-NEXT:       StorePropertyLooseInst %6: number|bigint, %4: any, "f": string
 // CHECK-NEXT:       ReturnInst %6: number|bigint
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS4 [o: any]
+
 // CHECK:function update_field_test3(o: any): any
-// CHECK-NEXT:frame = [o: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %update_field_test3(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %o: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [o]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [o]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS4.o]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS4.o]: any
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %4: any, "f": string
 // CHECK-NEXT:  %6 = UnaryDecInst (:number|bigint) %5: any
 // CHECK-NEXT:       StorePropertyLooseInst %6: number|bigint, %4: any, "f": string
 // CHECK-NEXT:       ReturnInst %6: number|bigint
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS5 [x: any]
+
 // CHECK:function update_variable_test0(x: any): any
-// CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %update_variable_test0(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS5: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS5.x]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS5.x]: any
 // CHECK-NEXT:  %5 = AsNumericInst (:number|bigint) %4: any
 // CHECK-NEXT:  %6 = UnaryIncInst (:number|bigint) %5: number|bigint
-// CHECK-NEXT:       StoreFrameInst %1: environment, %6: number|bigint, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: number|bigint, [%VS5.x]: any
 // CHECK-NEXT:       ReturnInst %5: number|bigint
 // CHECK-NEXT:function_end
+
+// CHECK:scope %VS6 [x: any]
 
 // CHECK:function update_variable_test1(x: any): any
-// CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %update_variable_test1(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS6: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS6.x]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS6.x]: any
 // CHECK-NEXT:  %5 = AsNumericInst (:number|bigint) %4: any
 // CHECK-NEXT:  %6 = UnaryDecInst (:number|bigint) %5: number|bigint
-// CHECK-NEXT:       StoreFrameInst %1: environment, %6: number|bigint, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: number|bigint, [%VS6.x]: any
 // CHECK-NEXT:       ReturnInst %5: number|bigint
 // CHECK-NEXT:function_end
+
+// CHECK:scope %VS7 [x: any]
 
 // CHECK:function update_variable_test2(x: any): any
-// CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %update_variable_test2(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS7: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS7.x]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS7.x]: any
 // CHECK-NEXT:  %5 = UnaryIncInst (:number|bigint) %4: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %5: number|bigint, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %5: number|bigint, [%VS7.x]: any
 // CHECK-NEXT:       ReturnInst %5: number|bigint
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS8 [x: any]
+
 // CHECK:function update_variable_test3(x: any): any
-// CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %update_variable_test3(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS8: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS8.x]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS8.x]: any
 // CHECK-NEXT:  %5 = UnaryDecInst (:number|bigint) %4: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %5: number|bigint, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %5: number|bigint, [%VS8.x]: any
 // CHECK-NEXT:       ReturnInst %5: number|bigint
 // CHECK-NEXT:function_end

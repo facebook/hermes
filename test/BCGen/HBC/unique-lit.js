@@ -22,10 +22,11 @@ function foo(x) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "a": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "b": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "foo": string
@@ -39,14 +40,17 @@ function foo(x) {
 // CHECK-NEXT:  $Reg6 = ReturnInst $Reg5
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS0 []
+
+// CHECK:scope %VS1 [x: any]
+
 // CHECK:function foo(x: any): any
-// CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  $Reg1 = CreateScopeInst (:environment) %foo(): any, $Reg0
+// CHECK-NEXT:  $Reg0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  $Reg1 = CreateScopeInst (:environment) %VS1: any, $Reg0
 // CHECK-NEXT:  $Reg2 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:  $Reg3 = StoreFrameInst $Reg1, $Reg2, [x]: any
-// CHECK-NEXT:  $Reg3 = LoadFrameInst (:any) $Reg1, [x]: any
+// CHECK-NEXT:  $Reg3 = StoreFrameInst $Reg1, $Reg2, [%VS1.x]: any
+// CHECK-NEXT:  $Reg3 = LoadFrameInst (:any) $Reg1, [%VS1.x]: any
 // CHECK-NEXT:  $Reg4 = CondBranchInst $Reg3, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:number) 10: number
@@ -63,13 +67,14 @@ function foo(x) {
 // CHECK-NEXT:  $Reg1 = ReturnInst $Reg0
 // CHECK-NEXT:function_end
 
+// CHKOPT:scope %VS0 []
+
 // CHKOPT:function global(): undefined
-// CHKOPT-NEXT:frame = []
 // CHKOPT-NEXT:%BB0:
 // CHKOPT-NEXT:  $Reg0 = DeclareGlobalVarInst "a": string
 // CHKOPT-NEXT:  $Reg0 = DeclareGlobalVarInst "b": string
 // CHKOPT-NEXT:  $Reg0 = DeclareGlobalVarInst "foo": string
-// CHKOPT-NEXT:  $Reg0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHKOPT-NEXT:  $Reg0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHKOPT-NEXT:  $Reg1 = CreateFunctionInst (:object) $Reg0, %foo(): functionCode
 // CHKOPT-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
 // CHKOPT-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg0, "foo": string
@@ -78,7 +83,6 @@ function foo(x) {
 // CHKOPT-NEXT:function_end
 
 // CHKOPT:function foo(x: any): undefined
-// CHKOPT-NEXT:frame = []
 // CHKOPT-NEXT:%BB0:
 // CHKOPT-NEXT:  $Reg1 = HBCLoadConstInst (:number) 10: number
 // CHKOPT-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)

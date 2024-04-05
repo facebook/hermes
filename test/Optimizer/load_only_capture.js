@@ -25,10 +25,11 @@ function load_dedup(foo){
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "load_only_capture": string
 // CHECK-NEXT:       DeclareGlobalVarInst "load_dedup": string
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %load_only_capture(): functionCode
@@ -38,14 +39,15 @@ function load_dedup(foo){
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [i: number]
+
 // CHECK:function load_only_capture(leak: any, foreach: any, n: any): number
-// CHECK-NEXT:frame = [i: number]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %load_only_capture(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %leak: any
 // CHECK-NEXT:  %3 = LoadParamInst (:any) %n: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [i]: number
+// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS1.i]: number
 // CHECK-NEXT:  %5 = BinaryLessThanInst (:boolean) 0: number, %3: any
 // CHECK-NEXT:       CondBranchInst %5: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
@@ -53,7 +55,7 @@ function load_dedup(foo){
 // CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %""(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, %2: any, "k": string
 // CHECK-NEXT:  %10 = FAddInst (:number) %7: number, 1: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %10: number, [i]: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %10: number, [%VS1.i]: number
 // CHECK-NEXT:  %12 = BinaryLessThanInst (:boolean) %10: number, %3: any
 // CHECK-NEXT:        CondBranchInst %12: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB2:
@@ -61,34 +63,33 @@ function load_dedup(foo){
 // CHECK-NEXT:        ReturnInst %14: number
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS2 [foo: any, x: any]
+
 // CHECK:function load_dedup(foo: any): object
-// CHECK-NEXT:frame = [foo: any, x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %load_dedup(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %foo: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [foo]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.foo]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.x]: any
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %bar(): functionCode
 // CHECK-NEXT:  %6 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [%VS2.x]: any
 // CHECK-NEXT:       ReturnInst %5: object
 // CHECK-NEXT:function_end
 
 // CHECK:arrow ""(): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %load_only_capture(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = LoadFrameInst (:number) %0: environment, [i@load_only_capture]: number
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %1 = LoadFrameInst (:number) %0: environment, [%VS1.i]: number
 // CHECK-NEXT:       ReturnInst %1: number
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %load_dedup(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = LoadFrameInst (:any) %0: environment, [foo@load_dedup]: any
-// CHECK-NEXT:  %2 = LoadFrameInst (:any) %0: environment, [x@load_dedup]: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
+// CHECK-NEXT:  %1 = LoadFrameInst (:any) %0: environment, [%VS2.foo]: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any) %0: environment, [%VS2.x]: any
 // CHECK-NEXT:  %3 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %2: any
 // CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end

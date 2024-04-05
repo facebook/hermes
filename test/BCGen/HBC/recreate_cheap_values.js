@@ -19,10 +19,11 @@ function negzero(f) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "poszero": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "negzero": string
 // CHECK-NEXT:  $Reg2 = CreateFunctionInst (:object) $Reg0, %poszero(): functionCode
@@ -35,7 +36,6 @@ function negzero(f) {
 // CHECK-NEXT:function_end
 
 // CHECK:function poszero(f: any): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg2 = LoadParamInst (:any) %f: any
 // CHECK-NEXT:  $Reg1 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -48,7 +48,6 @@ function negzero(f) {
 // CHECK-NEXT:function_end
 
 // CHECK:function negzero(f: any): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg2 = LoadParamInst (:any) %f: any
 // CHECK-NEXT:  $Reg1 = HBCLoadConstInst (:undefined) undefined: undefined

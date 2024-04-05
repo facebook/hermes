@@ -17,7 +17,6 @@ switch (8) { case 2: 6
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "x": string
 // CHECK-NEXT:       SwitchInst %0: any, %BB3, 2: number, %BB1, 44: number, %BB1

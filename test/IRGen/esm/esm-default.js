@@ -13,35 +13,38 @@ export default function() {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = LoadStackInst (:any) %1: any
 // CHECK-NEXT:       ReturnInst %3: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [exports: any, require: any, module: any]
+
 // CHECK:function cjs_module(exports: any, require: any, module: any): any
-// CHECK-NEXT:frame = [exports: any, require: any, module: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %cjs_module(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS1: any, empty: any
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %exports: any
-// CHECK-NEXT:       StoreFrameInst %0: environment, %1: any, [exports]: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, %1: any, [%VS1.exports]: any
 // CHECK-NEXT:  %3 = LoadParamInst (:any) %require: any
-// CHECK-NEXT:       StoreFrameInst %0: environment, %3: any, [require]: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, %3: any, [%VS1.require]: any
 // CHECK-NEXT:  %5 = LoadParamInst (:any) %module: any
-// CHECK-NEXT:       StoreFrameInst %0: environment, %5: any, [module]: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, %5: any, [%VS1.module]: any
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, %1: any, "?default": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS2 []
+
 // CHECK:function ""(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %cjs_module(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %""(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:       ReturnInst 400: number
 // CHECK-NEXT:function_end

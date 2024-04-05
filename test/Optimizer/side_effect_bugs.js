@@ -14,10 +14,11 @@ function test0() {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "test0": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %test0(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "test0": string
@@ -25,7 +26,6 @@ function test0() {
 // CHECK-NEXT:function_end
 
 // CHECK:function test0(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = BinaryInInst (:boolean) "foo": string, true: boolean
 // CHECK-NEXT:       ReturnInst undefined: undefined

@@ -48,10 +48,11 @@ function cse_unary(a) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo_with_cf": string
 // CHECK-NEXT:       DeclareGlobalVarInst "check_operator_kind": string
@@ -71,7 +72,6 @@ function cse_unary(a) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(dim: any): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %dim: any
 // CHECK-NEXT:  %1 = BinaryEqualInst (:boolean) %0: any, %0: any
@@ -82,7 +82,6 @@ function cse_unary(a) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo_with_cf(dim: any): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %dim: any
 // CHECK-NEXT:  %1 = BinaryEqualInst (:boolean) %0: any, %0: any
@@ -98,7 +97,6 @@ function cse_unary(a) {
 // CHECK-NEXT:function_end
 
 // CHECK:function check_operator_kind(i: any): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %i: any
 // CHECK-NEXT:  %1 = AsInt32Inst (:number) %0: any
@@ -110,7 +108,6 @@ function cse_unary(a) {
 // CHECK-NEXT:function_end
 
 // CHECK:function cse_this_instr(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
@@ -120,7 +117,6 @@ function cse_unary(a) {
 // CHECK-NEXT:function_end
 
 // CHECK:function cse_unary(a: any): number|bigint
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  %1 = UnaryIncInst (:number|bigint) %0: any

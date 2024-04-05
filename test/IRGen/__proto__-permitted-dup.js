@@ -41,10 +41,11 @@ function protoDupAccessor3(func) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "protoDupComputed": string
 // CHECK-NEXT:       DeclareGlobalVarInst "protoDupMethod1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "protoDupMethod2": string
@@ -69,14 +70,15 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:        ReturnInst %21: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [func: any]
+
 // CHECK:function protoDupComputed(func: any): any
-// CHECK-NEXT:frame = [func: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %protoDupComputed(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [func]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [func]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.func]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS1.func]: any
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %6 = AllocObjectInst (:object) 2: number, %5: any
 // CHECK-NEXT:       StoreOwnPropertyInst null: null, %6: object, "__proto__": string, true: boolean
@@ -84,14 +86,15 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:       ReturnInst %6: object
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS2 [func: any]
+
 // CHECK:function protoDupMethod1(func: any): any
-// CHECK-NEXT:frame = [func: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %protoDupMethod1(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [func]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [func]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.func]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS2.func]: any
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %6 = AllocObjectInst (:object) 2: number, %5: any
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %__proto__(): functionCode
@@ -100,31 +103,33 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:        ReturnInst %6: object
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS3 [func: any]
+
 // CHECK:function protoDupMethod2(func: any): any
-// CHECK-NEXT:frame = [func: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %protoDupMethod2(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [func]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.func]: any
 // CHECK-NEXT:  %4 = AllocObjectInst (:object) 2: number, empty: any
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %"__proto__ 1#"(): functionCode
 // CHECK-NEXT:       StoreNewOwnPropertyInst %5: object, %4: object, "__proto__": string, true: boolean
-// CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [func]: any
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [%VS3.func]: any
 // CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %9 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object, %8: any
 // CHECK-NEXT:        StoreNewOwnPropertyInst 42: number, %4: object, "a": string, true: boolean
 // CHECK-NEXT:        ReturnInst %4: object
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS4 [func: any]
+
 // CHECK:function protoDupAccessor1(func: any): any
-// CHECK-NEXT:frame = [func: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %protoDupAccessor1(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [func]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [func]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS4.func]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS4.func]: any
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %6 = AllocObjectInst (:object) 1: number, %5: any
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %"get __proto__"(): functionCode
@@ -132,14 +137,15 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:       ReturnInst %6: object
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS5 [func: any]
+
 // CHECK:function protoDupAccessor2(func: any): any
-// CHECK-NEXT:frame = [func: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %protoDupAccessor2(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS5: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [func]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [func]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS5.func]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS5.func]: any
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %6 = AllocObjectInst (:object) 1: number, %5: any
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %"set __proto__"(): functionCode
@@ -147,85 +153,92 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:       ReturnInst %6: object
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS6 [func: any]
+
 // CHECK:function protoDupAccessor3(func: any): any
-// CHECK-NEXT:frame = [func: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %protoDupAccessor3(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS6: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [func]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS6.func]: any
 // CHECK-NEXT:  %4 = AllocObjectInst (:object) 1: number, empty: any
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %"get __proto__ 1#"(): functionCode
 // CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %"set __proto__ 1#"(): functionCode
 // CHECK-NEXT:       StoreGetterSetterInst %5: object, %6: object, %4: object, "__proto__": string, true: boolean
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [func]: any
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS6.func]: any
 // CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %10 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object, %9: any
 // CHECK-NEXT:        ReturnInst %4: object
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS7 [x: any, y: any]
+
 // CHECK:method __proto__(x: any, y: any): any
-// CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %protoDupMethod1(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %__proto__(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS7: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS7.x]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [y]: any
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [x]: any
-// CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS7.y]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS7.x]: any
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [%VS7.y]: any
 // CHECK-NEXT:  %8 = BinaryAddInst (:any) %6: any, %7: any
 // CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:function_end
+
+// CHECK:scope %VS8 [x: any, y: any]
 
 // CHECK:method "__proto__ 1#"(x: any, y: any): any
-// CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %protoDupMethod2(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %"__proto__ 1#"(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS3: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS8: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS8.x]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [y]: any
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [x]: any
-// CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [y]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS8.y]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS8.x]: any
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [%VS8.y]: any
 // CHECK-NEXT:  %8 = BinaryAddInst (:any) %6: any, %7: any
 // CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS9 []
+
 // CHECK:function "get __proto__"(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %protoDupAccessor1(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %"get __proto__"(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS4: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS9: any, %0: environment
 // CHECK-NEXT:       ReturnInst 33: number
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS10 [_: any]
+
 // CHECK:function "set __proto__"(_: any): any
-// CHECK-NEXT:frame = [_: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %protoDupAccessor2(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %"set __proto__"(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS5: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS10: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %_: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [_]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS10._]: any
 // CHECK-NEXT:       ReturnInst 44: number
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS11 []
+
 // CHECK:function "get __proto__ 1#"(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %protoDupAccessor3(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %"get __proto__ 1#"(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS6: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS11: any, %0: environment
 // CHECK-NEXT:       ReturnInst 33: number
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS12 [_: any]
+
 // CHECK:function "set __proto__ 1#"(_: any): any
-// CHECK-NEXT:frame = [_: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %protoDupAccessor3(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %"set __proto__ 1#"(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS6: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS12: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %_: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [_]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS12._]: any
 // CHECK-NEXT:       ReturnInst 44: number
 // CHECK-NEXT:function_end

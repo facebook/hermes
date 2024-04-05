@@ -11,7 +11,6 @@ var arr = [{a: 1}, {b: 2}, {c: 3}, {d: 4}];
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 = DeclareGlobalVarInst "arr": string
 // CHECK-NEXT:  $Reg1 = AllocArrayInst (:object) 4: number

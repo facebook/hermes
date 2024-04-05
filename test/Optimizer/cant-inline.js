@@ -17,10 +17,11 @@ function outer1() {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "outer1": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %outer1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "outer1": string
@@ -28,16 +29,14 @@ function outer1() {
 // CHECK-NEXT:function_end
 
 // CHECK:function outer1(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %dontInline(): functionCode
 // CHECK-NEXT:  %2 = CallInst (:any) %1: object, %dontInline(): functionCode, empty: any, undefined: undefined, undefined: undefined, 1: number
 // CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end
 
 // CHECK:function dontInline(): any [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CallBuiltinInst (:any) [HermesBuiltin.copyRestArgs]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst %0: any

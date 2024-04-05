@@ -25,10 +25,11 @@ print(undefined);
 
 // Auto-generated content below. Please do not modify manually.
 
+// NOOPT:scope %VS0 []
+
 // NOOPT:function global(): any
-// NOOPT-NEXT:frame = []
 // NOOPT-NEXT:%BB0:
-// NOOPT-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// NOOPT-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // NOOPT-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
 // NOOPT-NEXT:       StoreStackInst undefined: undefined, %1: any
 // NOOPT-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
@@ -89,7 +90,6 @@ print(undefined);
 // NOOPT-NEXT:function_end
 
 // OPT:function global(): any
-// OPT-NEXT:frame = []
 // OPT-NEXT:%BB0:
 // OPT-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // OPT-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Object": string

@@ -17,10 +17,11 @@ x[1] = false;
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
@@ -31,30 +32,31 @@ x[1] = false;
 // CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [exports: any, x: any, y: any, z: any]
+
 // CHECK:function ""(exports: any): any
-// CHECK-NEXT:frame = [exports: any, x: any, y: any, z: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %""(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %exports: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [exports]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [x]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [y]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [z]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.exports]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.y]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.z]: any
 // CHECK-NEXT:  %7 = AllocObjectLiteralInst (:object) "0": string, 1: number, "1": string, true: boolean
-// CHECK-NEXT:       StoreFrameInst %1: environment, %7: object, [x]: any
-// CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %7: object, [%VS1.x]: any
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
 // CHECK-NEXT:  %10 = CheckedTypeCastInst (:object) %9: any, type(object)
 // CHECK-NEXT:  %11 = PrLoadInst (:number) %10: object, 0: number, "0": string
-// CHECK-NEXT:        StoreFrameInst %1: environment, %11: number, [y]: any
-// CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %11: number, [%VS1.y]: any
+// CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
 // CHECK-NEXT:  %14 = CheckedTypeCastInst (:object) %13: any, type(object)
 // CHECK-NEXT:  %15 = PrLoadInst (:boolean) %14: object, 1: number, "1": string
-// CHECK-NEXT:        StoreFrameInst %1: environment, %15: boolean, [z]: any
-// CHECK-NEXT:  %17 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %15: boolean, [%VS1.z]: any
+// CHECK-NEXT:  %17 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
 // CHECK-NEXT:  %18 = CheckedTypeCastInst (:object) %17: any, type(object)
 // CHECK-NEXT:        PrStoreInst 2: number, %18: object, 0: number, "0": string, true: boolean
-// CHECK-NEXT:  %20 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %20 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
 // CHECK-NEXT:  %21 = CheckedTypeCastInst (:object) %20: any, type(object)
 // CHECK-NEXT:        PrStoreInst false: boolean, %21: object, 1: number, "1": string, true: boolean
 // CHECK-NEXT:        ReturnInst undefined: undefined

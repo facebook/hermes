@@ -27,10 +27,11 @@ delete_test()
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "unary_operator_test": string
 // CHECK-NEXT:       DeclareGlobalVarInst "delete_test": string
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %unary_operator_test(): functionCode
@@ -49,28 +50,30 @@ delete_test()
 // CHECK-NEXT:        ReturnInst %15: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [x: any]
+
 // CHECK:function unary_operator_test(x: any): any
-// CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %unary_operator_test(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.x]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
 // CHECK-NEXT:  %5 = AsNumberInst (:number) %4: any
 // CHECK-NEXT:       ReturnInst %5: number
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS2 [o: any]
+
 // CHECK:function delete_test(o: any): any
-// CHECK-NEXT:frame = [o: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %delete_test(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %o: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [o]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [o]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.o]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS2.o]: any
 // CHECK-NEXT:  %5 = DeletePropertyLooseInst (:any) %4: any, "f": string
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [o]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS2.o]: any
 // CHECK-NEXT:  %7 = DeletePropertyLooseInst (:any) %6: any, 3: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -30,17 +30,17 @@ return x;
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
 // CHECK-NEXT:  %2 = CallInst (:number) %1: object, %""(): functionCode, %0: environment, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst %2: number
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): number [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB1:

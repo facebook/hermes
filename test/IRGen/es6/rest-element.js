@@ -26,10 +26,11 @@ function f4(t) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "f1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f2": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f3": string
@@ -48,15 +49,16 @@ function f4(t) {
 // CHECK-NEXT:        ReturnInst %15: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [t: any, a: any]
+
 // CHECK:function f1(t: any): any
-// CHECK-NEXT:frame = [t: any, a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %f1(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %t: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [t]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [a]: any
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) %1: environment, [t]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.t]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.a]: any
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) %1: environment, [%VS1.t]: any
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_iter: any
 // CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_1_sourceOrNext: any
 // CHECK-NEXT:       StoreStackInst %5: any, %7: any
@@ -85,7 +87,7 @@ function f4(t) {
 // CHECK-NEXT:  %28 = LoadStackInst (:number) %16: number
 // CHECK-NEXT:        TryStartInst %BB5, %BB7
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:        StoreFrameInst %1: environment, %15: object, [a]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %15: object, [%VS1.a]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %32 = CatchInst (:any)
@@ -110,16 +112,17 @@ function f4(t) {
 // CHECK-NEXT:        ThrowInst %45: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS2 [t: any, b: any, c: any]
+
 // CHECK:function f2(t: any): any
-// CHECK-NEXT:frame = [t: any, b: any, c: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %f2(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %t: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [t]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [b]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [c]: any
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [t]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.t]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.b]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.c]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS2.t]: any
 // CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_0_iter: any
 // CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_1_sourceOrNext: any
 // CHECK-NEXT:       StoreStackInst %6: any, %8: any
@@ -203,7 +206,7 @@ function f4(t) {
 // CHECK-NEXT:        BranchInst %BB18
 // CHECK-NEXT:%BB18:
 // CHECK-NEXT:  %71 = LoadStackInst (:any) %60: any
-// CHECK-NEXT:        StoreFrameInst %1: environment, %71: any, [b]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %71: any, [%VS2.b]: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %60: any
 // CHECK-NEXT:  %74 = LoadStackInst (:any) %58: any
 // CHECK-NEXT:        CondBranchInst %74: any, %BB21, %BB19
@@ -219,7 +222,7 @@ function f4(t) {
 // CHECK-NEXT:        BranchInst %BB21
 // CHECK-NEXT:%BB21:
 // CHECK-NEXT:  %84 = LoadStackInst (:any) %60: any
-// CHECK-NEXT:        StoreFrameInst %1: environment, %84: any, [c]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %84: any, [%VS2.c]: any
 // CHECK-NEXT:  %86 = LoadStackInst (:any) %58: any
 // CHECK-NEXT:        CondBranchInst %86: any, %BB23, %BB22
 // CHECK-NEXT:%BB22:
@@ -240,19 +243,20 @@ function f4(t) {
 // CHECK-NEXT:        ThrowInst %97: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS3 [t: any, d: any]
+
 // CHECK:function f3(t: any): any
-// CHECK-NEXT:frame = [t: any, d: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %f3(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %t: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [t]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [d]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.t]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS3.d]: any
 // CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_0_iter: any
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_1_base: any
 // CHECK-NEXT:  %7 = AllocStackInst (:number) $?anon_2_idx: any
 // CHECK-NEXT:  %8 = AllocStackInst (:number) $?anon_3_size: any
-// CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [t]: any
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS3.t]: any
 // CHECK-NEXT:        StoreStackInst %9: any, %6: any
 // CHECK-NEXT:  %11 = AllocStackInst (:any) $?anon_4_prop: any
 // CHECK-NEXT:        GetPNamesInst %5: any, %6: any, %7: number, %8: number, %BB1, %BB2
@@ -290,7 +294,7 @@ function f4(t) {
 // CHECK-NEXT:  %38 = LoadStackInst (:number) %26: number
 // CHECK-NEXT:        TryStartInst %BB8, %BB10
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:        StoreFrameInst %1: environment, %25: object, [d]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %25: object, [%VS3.d]: any
 // CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:  %42 = CatchInst (:any)
@@ -315,16 +319,17 @@ function f4(t) {
 // CHECK-NEXT:        ThrowInst %55: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS4 [t: any, a: any, b: any]
+
 // CHECK:function f4(t: any): any
-// CHECK-NEXT:frame = [t: any, a: any, b: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %f4(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %t: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [t]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [a]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [b]: any
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [t]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS4.t]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS4.a]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS4.b]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS4.t]: any
 // CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_0_iter: any
 // CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_1_sourceOrNext: any
 // CHECK-NEXT:       StoreStackInst %6: any, %8: any
@@ -351,7 +356,7 @@ function f4(t) {
 // CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %28 = LoadStackInst (:any) %14: any
-// CHECK-NEXT:        StoreFrameInst %1: environment, %28: any, [a]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %28: any, [%VS4.a]: any
 // CHECK-NEXT:        TryStartInst %BB8, %BB10
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %31 = LoadStackInst (:any) %8: any
@@ -422,7 +427,7 @@ function f4(t) {
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %72: any
 // CHECK-NEXT:        BranchInst %BB24
 // CHECK-NEXT:%BB22:
-// CHECK-NEXT:  %82 = LoadFrameInst (:any) %1: environment, [b]: any
+// CHECK-NEXT:  %82 = LoadFrameInst (:any) %1: environment, [%VS4.b]: any
 // CHECK-NEXT:        BranchInst %BB23
 // CHECK-NEXT:%BB23:
 // CHECK-NEXT:        TryEndInst

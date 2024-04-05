@@ -15,10 +15,11 @@ function foo(x) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "sink": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  $Reg1 = CreateFunctionInst (:object) $Reg0, %sink(): functionCode
@@ -34,29 +35,35 @@ function foo(x) {
 // CHECK-NEXT:  $Reg8 = ReturnInst $Reg7
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS0 []
+
+// CHECK:scope %VS1 [x: any, y: any, z: any]
+
 // CHECK:function sink(x: any, y: any, z: any): any
-// CHECK-NEXT:frame = [x: any, y: any, z: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  $Reg1 = CreateScopeInst (:environment) %sink(): any, $Reg0
+// CHECK-NEXT:  $Reg0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  $Reg1 = CreateScopeInst (:environment) %VS1: any, $Reg0
 // CHECK-NEXT:  $Reg2 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:  $Reg3 = StoreFrameInst $Reg1, $Reg2, [x]: any
+// CHECK-NEXT:  $Reg3 = StoreFrameInst $Reg1, $Reg2, [%VS1.x]: any
 // CHECK-NEXT:  $Reg3 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:  $Reg4 = StoreFrameInst $Reg1, $Reg3, [y]: any
+// CHECK-NEXT:  $Reg4 = StoreFrameInst $Reg1, $Reg3, [%VS1.y]: any
 // CHECK-NEXT:  $Reg4 = LoadParamInst (:any) %z: any
-// CHECK-NEXT:  $Reg5 = StoreFrameInst $Reg1, $Reg4, [z]: any
+// CHECK-NEXT:  $Reg5 = StoreFrameInst $Reg1, $Reg4, [%VS1.z]: any
 // CHECK-NEXT:  $Reg5 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  $Reg6 = ReturnInst $Reg5
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS0 []
+
+// CHECK:scope %VS1 [x: any]
+
 // CHECK:function foo(x: any): any
-// CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  $Reg1 = CreateScopeInst (:environment) %foo(): any, $Reg0
+// CHECK-NEXT:  $Reg0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  $Reg1 = CreateScopeInst (:environment) %VS1: any, $Reg0
 // CHECK-NEXT:  $Reg2 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:  $Reg3 = StoreFrameInst $Reg1, $Reg2, [x]: any
-// CHECK-NEXT:  $Reg3 = LoadFrameInst (:any) $Reg1, [x]: any
+// CHECK-NEXT:  $Reg3 = StoreFrameInst $Reg1, $Reg2, [%VS1.x]: any
+// CHECK-NEXT:  $Reg3 = LoadFrameInst (:any) $Reg1, [%VS1.x]: any
 // CHECK-NEXT:  $Reg4 = LoadPropertyInst (:any) $Reg3, "sink": string
 // CHECK-NEXT:  $Reg5 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  $Reg6 = HBCLoadConstInst (:number) 1: number

@@ -447,10 +447,11 @@ function objectCond() {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "add_sub_num": string
 // CHECK-NEXT:       DeclareGlobalVarInst "modulo_num": string
 // CHECK-NEXT:       DeclareGlobalVarInst "logic_ops_test": string
@@ -554,7 +555,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function add_sub_num(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number
@@ -579,7 +579,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function modulo_num(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number
@@ -599,7 +598,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function logic_ops_test(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 3: number
@@ -622,7 +620,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function add_str(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "hello world": string
@@ -632,7 +629,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function add_empty_str(x: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "sink": string
@@ -645,7 +641,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function add_empty_str_simplify(x: any): string
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = AddEmptyStringInst (:string) %0: any
@@ -653,7 +648,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function add_null(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 3: number
@@ -665,7 +659,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function mul_null(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 0: number
@@ -677,7 +670,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function left_shift_num(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 8: number
@@ -691,7 +683,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function left_shift_null(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 0: number
@@ -703,7 +694,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function left_shift_undefined(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 0: number
@@ -715,7 +705,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function right_shift_num(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 4: number
@@ -732,7 +721,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function right_shift_null(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 0: number
@@ -744,7 +732,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function right_shift_undefined(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 0: number
@@ -756,7 +743,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function right_shift_bool(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 0: number
@@ -771,7 +757,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function unsigned_right_shift_bool(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number
@@ -782,7 +767,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function unsigned_right_shift_compound_assgmt(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number
@@ -790,7 +774,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function unsigned_right_shift_num(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 4: number
@@ -807,7 +790,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function add_undef(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, NaN: number
@@ -819,7 +801,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function comp_num(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %y: any
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
@@ -844,7 +825,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function equality(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %y: any
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
@@ -869,7 +849,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function arith(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 4: number
@@ -879,7 +858,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function undef_test(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = BinaryGreaterThanOrEqualInst (:boolean) undefined: undefined, undefined: undefined
@@ -910,14 +888,12 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(y: any): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:       ReturnInst 8: number
 // CHECK-NEXT:function_end
 
 // CHECK:function strip_bang(y: any): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %y: any
 // CHECK-NEXT:  %1 = AsInt32Inst (:number) %0: any
@@ -929,7 +905,6 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function turn_unary_plus_into_as_number(y: any): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %y: any
 // CHECK-NEXT:  %1 = AsNumberInst (:number) %0: any
@@ -937,13 +912,11 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function turn_unary_plus_on_literal_into_result(): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst 5: number
 // CHECK-NEXT:function_end
 
 // CHECK:function turn_bitor_into_as_int32(y: any): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %y: any
 // CHECK-NEXT:  %1 = AsInt32Inst (:number) %0: any
@@ -951,9 +924,8 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function unary_ops(x: any, y: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "number": string
 // CHECK-NEXT:  %3 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "object": string
@@ -975,20 +947,17 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_phi(a: any): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst 4: number
 // CHECK-NEXT:function_end
 
 // CHECK:function if_inline(d: any): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:       ReturnInst 10: number
 // CHECK-NEXT:function_end
 
 // CHECK:function simplify_switch(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 7: number
@@ -998,13 +967,11 @@ function objectCond() {
 // CHECK-NEXT:function_end
 
 // CHECK:function objectCond(): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst 1: number
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

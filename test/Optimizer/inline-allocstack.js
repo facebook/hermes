@@ -32,42 +32,45 @@
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): object
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
 // CHECK-NEXT:  %2 = CallInst (:object) %1: object, %""(): functionCode, %0: environment, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [arr: object, bar: object]
+
 // CHECK:function ""(): object [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:frame = [arr: object, bar: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %""(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %bar(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [bar]: object
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS1.bar]: object
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
 // CHECK-NEXT:  %5 = AllocArrayInst (:object) 0: number
-// CHECK-NEXT:       StoreFrameInst %1: environment, %5: object, [arr]: object
+// CHECK-NEXT:       StoreFrameInst %1: environment, %5: object, [%VS1.arr]: object
 // CHECK-NEXT:       ReturnInst %4: object
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS2 [i: number]
+
 // CHECK:function bar(): undefined [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:frame = [i: number]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = AllocStackInst (:number) $i: any
 // CHECK-NEXT:  %2 = AllocStackInst (:number) $i: any
-// CHECK-NEXT:  %3 = CreateScopeInst (:environment) %bar(): any, %0: environment
+// CHECK-NEXT:  %3 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:       TryStartInst %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = CatchInst (:any)
 // CHECK-NEXT:       ThrowInst %5: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       StoreStackInst 0: number, %1: number
-// CHECK-NEXT:       StoreFrameInst %3: environment, 0: number, [i]: number
+// CHECK-NEXT:       StoreFrameInst %3: environment, 0: number, [%VS2.i]: number
 // CHECK-NEXT:  %9 = AllocStackInst (:boolean) $?anon_2_first: any
 // CHECK-NEXT:        StoreStackInst true: boolean, %9: boolean
 // CHECK-NEXT:        BranchInst %BB3
@@ -81,7 +84,7 @@
 // CHECK-NEXT:  %17 = FLessThanInst (:boolean) %16: number, 100: number
 // CHECK-NEXT:        CondBranchInst %17: boolean, %BB6, %BB7
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %19 = LoadFrameInst (:object) %0: environment, [arr@""]: object
+// CHECK-NEXT:  %19 = LoadFrameInst (:object) %0: environment, [%VS1.arr]: object
 // CHECK-NEXT:  %20 = LoadPropertyInst (:any) %19: object, "push": string
 // CHECK-NEXT:  %21 = CreateFunctionInst (:object) %3: environment, %" 1#"(): functionCode
 // CHECK-NEXT:  %22 = CallInst (:any) %20: any, empty: any, empty: any, undefined: undefined, %19: object, %21: object
@@ -92,7 +95,7 @@
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %27 = LoadStackInst (:number) %2: number
 // CHECK-NEXT:        StoreStackInst %27: number, %1: number
-// CHECK-NEXT:        StoreFrameInst %3: environment, %27: number, [i]: number
+// CHECK-NEXT:        StoreFrameInst %3: environment, %27: number, [%VS2.i]: number
 // CHECK-NEXT:        StoreStackInst false: boolean, %9: boolean
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB7:
@@ -103,18 +106,16 @@
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = LoadFrameInst (:object) %0: environment, [bar@""]: object
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %1 = LoadFrameInst (:object) %0: environment, [%VS1.bar]: object
 // CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %bar(): functionCode, %0: environment, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow " 1#"(): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %bar(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = LoadFrameInst (:number) %0: environment, [i@bar]: number
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
+// CHECK-NEXT:  %1 = LoadFrameInst (:number) %0: environment, [%VS2.i]: number
 // CHECK-NEXT:       ReturnInst %1: number
 // CHECK-NEXT:function_end

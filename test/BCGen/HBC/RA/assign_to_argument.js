@@ -13,10 +13,11 @@ function foo(a) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  $Reg1 = CreateFunctionInst (:object) $Reg0, %foo(): functionCode
 // CHECK-NEXT:  $Reg2 = HBCGetGlobalObjectInst (:object)
@@ -28,15 +29,18 @@ function foo(a) {
 // CHECK-NEXT:  $Reg6 = ReturnInst $Reg5
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS0 []
+
+// CHECK:scope %VS1 [a: any]
+
 // CHECK:function foo(a: any): any
-// CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  $Reg1 = CreateScopeInst (:environment) %foo(): any, $Reg0
+// CHECK-NEXT:  $Reg0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  $Reg1 = CreateScopeInst (:environment) %VS1: any, $Reg0
 // CHECK-NEXT:  $Reg2 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:  $Reg3 = StoreFrameInst $Reg1, $Reg2, [a]: any
-// CHECK-NEXT:  $Reg3 = LoadFrameInst (:any) $Reg1, [a]: any
-// CHECK-NEXT:  $Reg4 = StoreFrameInst $Reg1, $Reg3, [a]: any
+// CHECK-NEXT:  $Reg3 = StoreFrameInst $Reg1, $Reg2, [%VS1.a]: any
+// CHECK-NEXT:  $Reg3 = LoadFrameInst (:any) $Reg1, [%VS1.a]: any
+// CHECK-NEXT:  $Reg4 = StoreFrameInst $Reg1, $Reg3, [%VS1.a]: any
 // CHECK-NEXT:  $Reg4 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  $Reg5 = ReturnInst $Reg4
 // CHECK-NEXT:function_end

@@ -22,10 +22,11 @@ function test_builtin(a) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  {loc0}    %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  {loc0}    %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:                 DeclareGlobalVarInst "test_call": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "test_new": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "test_builtin": string
@@ -41,7 +42,6 @@ function test_builtin(a) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_call(bar: any): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {stack[5]}  %0 = LoadParamInst (:any) %bar: any
 // CHECK-NEXT:  {np4}     %1 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -56,7 +56,6 @@ function test_builtin(a) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_new(bar: any): object
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {loc0}    %0 = LoadParamInst (:any) %bar: any
 // CHECK-NEXT:  {loc1}    %1 = LoadPropertyInst (:any) {loc0} %0: any, "prototype": string
@@ -74,7 +73,6 @@ function test_builtin(a) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_builtin(a: any): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {stack[1]}  %0 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  {stack[0]}  %1 = HBCLoadConstInst (:number) 3: number

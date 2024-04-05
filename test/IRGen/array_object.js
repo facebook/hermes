@@ -20,10 +20,11 @@ function foo(param) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
@@ -33,27 +34,28 @@ function foo(param) {
 // CHECK-NEXT:       ReturnInst %6: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [param: any, obj: any, foo: any]
+
 // CHECK:function foo(param: any): any
-// CHECK-NEXT:frame = [param: any, obj: any, foo: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %param: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [param]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [obj]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [foo]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.param]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.obj]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.foo]: any
 // CHECK-NEXT:  %6 = AllocObjectInst (:object) 2: number, empty: any
 // CHECK-NEXT:       StoreNewOwnPropertyInst 2: number, %6: object, "1": string, true: boolean
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [param]: any
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS1.param]: any
 // CHECK-NEXT:       StoreNewOwnPropertyInst %8: any, %6: object, "key": string, true: boolean
-// CHECK-NEXT:        StoreFrameInst %1: environment, %6: object, [obj]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %6: object, [%VS1.obj]: any
 // CHECK-NEXT:  %11 = AllocArrayInst (:object) 4: number, 1: number, 2: number, 3: number, 4: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %11: object, [foo]: any
-// CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [obj]: any
-// CHECK-NEXT:  %14 = LoadFrameInst (:any) %1: environment, [foo]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %11: object, [%VS1.foo]: any
+// CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [%VS1.obj]: any
+// CHECK-NEXT:  %14 = LoadFrameInst (:any) %1: environment, [%VS1.foo]: any
 // CHECK-NEXT:        StorePropertyLooseInst %14: any, %13: any, "field": string
-// CHECK-NEXT:  %16 = LoadFrameInst (:any) %1: environment, [foo]: any
-// CHECK-NEXT:  %17 = LoadFrameInst (:any) %1: environment, [obj]: any
+// CHECK-NEXT:  %16 = LoadFrameInst (:any) %1: environment, [%VS1.foo]: any
+// CHECK-NEXT:  %17 = LoadFrameInst (:any) %1: environment, [%VS1.obj]: any
 // CHECK-NEXT:        StorePropertyLooseInst %17: any, %16: any, 5: number
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

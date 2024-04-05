@@ -21,10 +21,11 @@ function baz() {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:       DeclareGlobalVarInst "bar": string
 // CHECK-NEXT:       DeclareGlobalVarInst "baz": string
@@ -40,11 +41,12 @@ function baz() {
 // CHECK-NEXT:        ReturnInst %12: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 []
+
 // CHECK:function foo(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "eval": string
 // CHECK-NEXT:  %3 = GetBuiltinClosureInst (:object) [globalThis.eval]: number
 // CHECK-NEXT:       CmpBrStrictlyEqualInst %2: any, %3: object, %BB1, %BB2
@@ -59,11 +61,12 @@ function baz() {
 // CHECK-NEXT:        ReturnInst %9: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS2 []
+
 // CHECK:function bar(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %bar(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "eval": string
 // CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Math": string
 // CHECK-NEXT:  %4 = LoadPropertyInst (:any) globalObject: object, "foo": string
@@ -81,11 +84,12 @@ function baz() {
 // CHECK-NEXT:        ReturnInst %12: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS3 []
+
 // CHECK:function baz(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %baz(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "eval": string
 // CHECK-NEXT:  %3 = GetBuiltinClosureInst (:object) [globalThis.eval]: number
 // CHECK-NEXT:       CmpBrStrictlyEqualInst %2: any, %3: object, %BB1, %BB2

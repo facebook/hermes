@@ -29,11 +29,12 @@ print(bench(4e6, 100))
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHINT:scope %VS0 []
+
 // CHINT:function global(): any
-// CHINT-NEXT:frame = []
 // CHINT-NEXT:%BB0:
 // CHINT-NEXT:            %0            = DeclareGlobalVarInst "bench": string
-// CHINT-NEXT:  {loc0}    %1 [2...3)    = CreateScopeInst (:environment) %global(): any, empty: any
+// CHINT-NEXT:  {loc0}    %1 [2...3)    = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHINT-NEXT:  {loc1}    %2 [3...5)    = CreateFunctionInst (:object) %1: environment, %bench(): functionCode
 // CHINT-NEXT:  {loc0}    %3 [4...7)    = HBCGetGlobalObjectInst (:object)
 // CHINT-NEXT:            %4            = StorePropertyStrictInst %2: object, %3: object, "bench": string
@@ -48,7 +49,6 @@ print(bench(4e6, 100))
 // CHINT-NEXT:function_end
 
 // CHINT:function bench(lc: any, fc: any): string|number
-// CHINT-NEXT:frame = []
 // CHINT-NEXT:%BB0:
 // CHINT-NEXT:  {loc3}    %0 [1...33)   = LoadParamInst (:any) %fc: any
 // CHINT-NEXT:  {loc0}    %1 [2...3)    = LoadParamInst (:any) %lc: any
@@ -92,11 +92,12 @@ print(bench(4e6, 100))
 // CHINT-NEXT:           %35            = ReturnInst %34: string|number
 // CHINT-NEXT:function_end
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:                 DeclareGlobalVarInst "bench": string
-// CHECK-NEXT:  {loc0}    %1 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  {loc0}    %1 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  {loc1}    %2 = CreateFunctionInst (:object) {loc0} %1: environment, %bench(): functionCode
 // CHECK-NEXT:  {loc0}    %3 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:                 StorePropertyStrictInst {loc1} %2: object, {loc0} %3: object, "bench": string
@@ -111,7 +112,6 @@ print(bench(4e6, 100))
 // CHECK-NEXT:function_end
 
 // CHECK:function bench(lc: any, fc: any): string|number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {loc3}    %0 = LoadParamInst (:any) %fc: any
 // CHECK-NEXT:  {loc0}    %1 = LoadParamInst (:any) %lc: any

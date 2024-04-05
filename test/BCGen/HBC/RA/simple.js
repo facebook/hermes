@@ -19,11 +19,12 @@ function main(x, y, z) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 = DeclareGlobalVarInst "main": string
-// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  $Reg1 = CreateFunctionInst (:object) $Reg0, %main(): functionCode
 // CHECK-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg0, "main": string
@@ -32,7 +33,6 @@ function main(x, y, z) {
 // CHECK-NEXT:function_end
 
 // CHECK:function main(x: any, y: any, z: any): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg7 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  $Reg6 = LoadParamInst (:any) %y: any

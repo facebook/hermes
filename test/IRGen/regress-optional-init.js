@@ -15,10 +15,11 @@ function foo(param = a || b) {}
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "a": string
 // CHECK-NEXT:       DeclareGlobalVarInst "b": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
@@ -30,12 +31,13 @@ function foo(param = a || b) {}
 // CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [param: any]
+
 // CHECK:function foo(param: any): any
-// CHECK-NEXT:frame = [param: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [param]: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.param]: any
 // CHECK-NEXT:  %3 = LoadParamInst (:any) %param: any
 // CHECK-NEXT:  %4 = BinaryStrictlyNotEqualInst (:any) %3: any, undefined: undefined
 // CHECK-NEXT:       CondBranchInst %4: any, %BB2, %BB1
@@ -46,7 +48,7 @@ function foo(param = a || b) {}
 // CHECK-NEXT:       CondBranchInst %7: any, %BB4, %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %10 = PhiInst (:any) %3: any, %BB0, %16: any, %BB4
-// CHECK-NEXT:        StoreFrameInst %1: environment, %10: any, [param]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %10: any, [%VS1.param]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %13 = LoadPropertyInst (:any) globalObject: object, "b": string

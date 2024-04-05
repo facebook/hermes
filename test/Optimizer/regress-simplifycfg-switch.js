@@ -36,10 +36,11 @@ switch (0/0) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHKUNOPT:scope %VS0 []
+
 // CHKUNOPT:function global(): any
-// CHKUNOPT-NEXT:frame = []
 // CHKUNOPT-NEXT:%BB0:
-// CHKUNOPT-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHKUNOPT-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHKUNOPT-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
 // CHKUNOPT-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHKUNOPT-NEXT:       SwitchInst -0: number, %BB3, 0: number, %BB2
@@ -71,10 +72,11 @@ switch (0/0) {
 // CHKUNOPT-NEXT:        BranchInst %BB4
 // CHKUNOPT-NEXT:function_end
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string

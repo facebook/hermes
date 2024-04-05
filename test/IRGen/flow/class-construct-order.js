@@ -21,22 +21,25 @@ class C {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 [exports: any, foo: any, C: any, ?C.prototype: object]
+
+// CHECK:scope %VS1 [x: any]
+
 // CHECK:function foo(x: number): any [typed]
-// CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:number) %x: number
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: number, [x]: any
-// CHECK-NEXT:  %4 = ResolveScopeInst (:environment) %""(): any, %1: environment
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) %4: environment, [C@""]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: number, [%VS1.x]: any
+// CHECK-NEXT:  %4 = ResolveScopeInst (:environment) %VS0: any, %1: environment
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) %4: environment, [%VS0.C]: any
 // CHECK-NEXT:  %6 = CheckedTypeCastInst (:object) %5: any, type(object)
-// CHECK-NEXT:  %7 = ResolveScopeInst (:environment) %""(): any, %1: environment
-// CHECK-NEXT:  %8 = LoadFrameInst (:object) %7: environment, [?C.prototype@""]: object
+// CHECK-NEXT:  %7 = ResolveScopeInst (:environment) %VS0: any, %1: environment
+// CHECK-NEXT:  %8 = LoadFrameInst (:object) %7: environment, [%VS0.?C.prototype]: object
 // CHECK-NEXT:  %9 = UnionNarrowTrustedInst (:object) %8: object
 // CHECK-NEXT:  %10 = AllocObjectLiteralInst (:object) "x": string, 0: number
 // CHECK-NEXT:        StoreParentInst %9: object, %10: object
-// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
 // CHECK-NEXT:  %13 = CheckedTypeCastInst (:number) %12: any, type(number)
 // CHECK-NEXT:  %14 = CallInst (:any) %6: object, %C(): functionCode, empty: any, %6: object, %10: object, %13: number
 // CHECK-NEXT:        ReturnInst %10: object

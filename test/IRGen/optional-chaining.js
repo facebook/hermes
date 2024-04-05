@@ -45,10 +45,11 @@ function f9(a) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "f1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f2": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f3": string
@@ -82,14 +83,15 @@ function f9(a) {
 // CHECK-NEXT:        ReturnInst %30: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [a: any]
+
 // CHECK:function f1(a: any): any
-// CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %f1(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [a]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [a]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.a]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS1.a]: any
 // CHECK-NEXT:  %5 = BinaryEqualInst (:any) %4: any, null: null
 // CHECK-NEXT:       CondBranchInst %5: any, %BB2, %BB3
 // CHECK-NEXT:%BB1:
@@ -102,14 +104,15 @@ function f9(a) {
 // CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS2 [f: any]
+
 // CHECK:function f2(f: any): any
-// CHECK-NEXT:frame = [f: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %f2(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %f: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [f]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [f]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.f]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS2.f]: any
 // CHECK-NEXT:  %5 = BinaryEqualInst (:any) %4: any, null: null
 // CHECK-NEXT:       CondBranchInst %5: any, %BB2, %BB3
 // CHECK-NEXT:%BB1:
@@ -122,14 +125,15 @@ function f9(a) {
 // CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS3 [a: any]
+
 // CHECK:function f3(a: any): any
-// CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %f3(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [a]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [a]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.a]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS3.a]: any
 // CHECK-NEXT:  %5 = BinaryEqualInst (:any) %4: any, null: null
 // CHECK-NEXT:       CondBranchInst %5: any, %BB2, %BB3
 // CHECK-NEXT:%BB1:
@@ -143,14 +147,15 @@ function f9(a) {
 // CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS4 [a: any]
+
 // CHECK:function f4(a: any): any
-// CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %f4(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [a]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [a]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS4.a]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS4.a]: any
 // CHECK-NEXT:  %5 = BinaryEqualInst (:any) %4: any, null: null
 // CHECK-NEXT:       CondBranchInst %5: any, %BB2, %BB3
 // CHECK-NEXT:%BB1:
@@ -165,14 +170,15 @@ function f9(a) {
 // CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS5 [a: any]
+
 // CHECK:function f5(a: any): any
-// CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %f5(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS5: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [a]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [a]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS5.a]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS5.a]: any
 // CHECK-NEXT:  %5 = BinaryEqualInst (:any) %4: any, null: null
 // CHECK-NEXT:       CondBranchInst %5: any, %BB2, %BB3
 // CHECK-NEXT:%BB1:
@@ -186,14 +192,15 @@ function f9(a) {
 // CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS6 [a: any]
+
 // CHECK:function f6(a: any): any
-// CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %f6(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS6: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [a]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [a]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS6.a]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS6.a]: any
 // CHECK-NEXT:  %5 = BinaryEqualInst (:any) %4: any, null: null
 // CHECK-NEXT:       CondBranchInst %5: any, %BB2, %BB3
 // CHECK-NEXT:%BB1:
@@ -208,14 +215,15 @@ function f9(a) {
 // CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS7 [a: any]
+
 // CHECK:function f7(a: any): any
-// CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %f7(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS7: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [a]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [a]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS7.a]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS7.a]: any
 // CHECK-NEXT:  %5 = BinaryEqualInst (:any) %4: any, null: null
 // CHECK-NEXT:       CondBranchInst %5: any, %BB2, %BB3
 // CHECK-NEXT:%BB1:
@@ -233,14 +241,15 @@ function f9(a) {
 // CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS8 [a: any]
+
 // CHECK:function f8(a: any): any
-// CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %f8(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS8: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [a]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [a]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS8.a]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS8.a]: any
 // CHECK-NEXT:  %5 = BinaryEqualInst (:any) %4: any, null: null
 // CHECK-NEXT:       CondBranchInst %5: any, %BB2, %BB3
 // CHECK-NEXT:%BB1:
@@ -261,14 +270,15 @@ function f9(a) {
 // CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS9 [a: any]
+
 // CHECK:function f9(a: any): any
-// CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %f9(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS9: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [a]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [a]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS9.a]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS9.a]: any
 // CHECK-NEXT:  %5 = BinaryEqualInst (:any) %4: any, null: null
 // CHECK-NEXT:       CondBranchInst %5: any, %BB2, %BB3
 // CHECK-NEXT:%BB1:

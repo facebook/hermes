@@ -34,10 +34,11 @@ function f5(o) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "f1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f2": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f3": string
@@ -59,15 +60,16 @@ function f5(o) {
 // CHECK-NEXT:        ReturnInst %18: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [t: any, a: any]
+
 // CHECK:function f1(t: any): any
-// CHECK-NEXT:frame = [t: any, a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %f1(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %t: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [t]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [a]: any
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) %1: environment, [t]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.t]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.a]: any
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) %1: environment, [%VS1.t]: any
 // CHECK-NEXT:  %6 = BinaryEqualInst (:any) %5: any, null: null
 // CHECK-NEXT:       CondBranchInst %6: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
@@ -75,70 +77,73 @@ function f5(o) {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %9 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %10 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %9: object, %5: any, undefined: undefined
-// CHECK-NEXT:        StoreFrameInst %1: environment, %10: any, [a]: any
-// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [a]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %10: any, [%VS1.a]: any
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS1.a]: any
 // CHECK-NEXT:        ReturnInst %12: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS2 [t: any, a: any, b: any, rest: any]
+
 // CHECK:function f2(t: any): any
-// CHECK-NEXT:frame = [t: any, a: any, b: any, rest: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %f2(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %t: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [t]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [a]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [b]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [rest]: any
-// CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [t]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.t]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.a]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.b]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.rest]: any
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [%VS2.t]: any
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) %7: any, "a": string
-// CHECK-NEXT:       StoreFrameInst %1: environment, %8: any, [a]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %8: any, [%VS2.a]: any
 // CHECK-NEXT:  %10 = LoadPropertyInst (:any) %7: any, "b": string
-// CHECK-NEXT:        StoreFrameInst %1: environment, %10: any, [b]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %10: any, [%VS2.b]: any
 // CHECK-NEXT:  %12 = AllocObjectInst (:object) 2: number, null: null
 // CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %12: object, "a": string, true: boolean
 // CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %12: object, "b": string, true: boolean
 // CHECK-NEXT:  %15 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %16 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %15: object, %7: any, %12: object
-// CHECK-NEXT:        StoreFrameInst %1: environment, %16: any, [rest]: any
-// CHECK-NEXT:  %18 = LoadFrameInst (:any) %1: environment, [rest]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %16: any, [%VS2.rest]: any
+// CHECK-NEXT:  %18 = LoadFrameInst (:any) %1: environment, [%VS2.rest]: any
 // CHECK-NEXT:        ReturnInst %18: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS3 [t: any, a: any, rest: any]
+
 // CHECK:function f3(t: any): any
-// CHECK-NEXT:frame = [t: any, a: any, rest: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %f3(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %t: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [t]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [a]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [rest]: any
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [t]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.t]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS3.a]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS3.rest]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS3.t]: any
 // CHECK-NEXT:  %7 = LoadPropertyInst (:any) %6: any, "a": string
-// CHECK-NEXT:       StoreFrameInst %1: environment, %7: any, [a]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %7: any, [%VS3.a]: any
 // CHECK-NEXT:  %9 = AllocObjectInst (:object) 1: number, null: null
 // CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %9: object, "a": string, true: boolean
 // CHECK-NEXT:  %11 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %12 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %11: object, %6: any, %9: object
-// CHECK-NEXT:        StoreFrameInst %1: environment, %12: any, [rest]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %12: any, [%VS3.rest]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS4 [o: any, t: any, a: any]
+
 // CHECK:function f4(o: any, t: any): any
-// CHECK-NEXT:frame = [o: any, t: any, a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %f4(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %o: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [o]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS4.o]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %t: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [t]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [a]: any
-// CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [t]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS4.t]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS4.a]: any
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [%VS4.t]: any
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) %7: any, "a": string
-// CHECK-NEXT:       StoreFrameInst %1: environment, %8: any, [a]: any
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [o]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %8: any, [%VS4.a]: any
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS4.o]: any
 // CHECK-NEXT:  %11 = AllocObjectInst (:object) 1: number, null: null
 // CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %11: object, "a": string, true: boolean
 // CHECK-NEXT:  %13 = AllocObjectInst (:object) 0: number, empty: any
@@ -147,24 +152,25 @@ function f5(o) {
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS5 [o: any, a: any, rest: any]
+
 // CHECK:function f5(o: any): any
-// CHECK-NEXT:frame = [o: any, a: any, rest: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %f5(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS5: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %o: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [o]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [a]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [rest]: any
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [o]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS5.o]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS5.a]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS5.rest]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS5.o]: any
 // CHECK-NEXT:  %7 = LoadPropertyInst (:any) %6: any, "a": string
-// CHECK-NEXT:       StoreFrameInst %1: environment, %7: any, [a]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %7: any, [%VS5.a]: any
 // CHECK-NEXT:  %9 = LoadPropertyInst (:any) %6: any, "a": string
-// CHECK-NEXT:        StoreFrameInst %1: environment, %9: any, [a]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %9: any, [%VS5.a]: any
 // CHECK-NEXT:  %11 = AllocObjectInst (:object) 1: number, null: null
 // CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %11: object, "a": string, true: boolean
 // CHECK-NEXT:  %13 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %14 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %13: object, %6: any, %11: object
-// CHECK-NEXT:        StoreFrameInst %1: environment, %14: any, [rest]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %14: any, [%VS5.rest]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

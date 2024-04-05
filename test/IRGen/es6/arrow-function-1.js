@@ -13,15 +13,16 @@ var func2 = () => { return 11; }
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 [?anon_0_this: any, ?anon_1_new.target: undefined|object]
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: undefined|object]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
-// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %global(): any, empty: any
-// CHECK-NEXT:       StoreFrameInst %2: environment, %1: object, [?anon_0_this]: any
+// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       StoreFrameInst %2: environment, %1: object, [%VS0.?anon_0_this]: any
 // CHECK-NEXT:  %4 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
-// CHECK-NEXT:       StoreFrameInst %2: environment, %4: undefined|object, [?anon_1_new.target]: undefined|object
+// CHECK-NEXT:       StoreFrameInst %2: environment, %4: undefined|object, [%VS0.?anon_1_new.target]: undefined|object
 // CHECK-NEXT:       DeclareGlobalVarInst "func1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "func2": string
 // CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_2_ret: any
@@ -34,18 +35,20 @@ var func2 = () => { return 11; }
 // CHECK-NEXT:        ReturnInst %14: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 []
+
 // CHECK:arrow func1(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %func1(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:       ReturnInst 10: number
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS2 []
+
 // CHECK:arrow func2(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %func2(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:       ReturnInst 11: number
 // CHECK-NEXT:function_end

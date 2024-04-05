@@ -22,7 +22,6 @@
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global(): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst 10: number
 // CHECK-NEXT:function_end

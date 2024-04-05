@@ -54,10 +54,11 @@ function neg() {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHKIR:scope %VS0 []
+
 // CHKIR:function global(): undefined
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHKIR-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHKIR-NEXT:       DeclareGlobalVarInst "add": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "shl": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "asr": string
@@ -98,7 +99,6 @@ function neg() {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function add(): string|number
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
 // CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 2: number
@@ -110,7 +110,6 @@ function neg() {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function shl(): number
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
 // CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 2: number
@@ -122,7 +121,6 @@ function neg() {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function asr(): number
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
 // CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 2: number
@@ -134,7 +132,6 @@ function neg() {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function div(): number
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
 // CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 2: number
@@ -146,7 +143,6 @@ function neg() {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function mul(): number
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
 // CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 2: number
@@ -158,7 +154,6 @@ function neg() {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function rem(): number
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
 // CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 2: number
@@ -170,7 +165,6 @@ function neg() {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function sub(): number
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "a": string
 // CHKIR-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
@@ -181,7 +175,6 @@ function neg() {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function and(): number
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
 // CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 2: number
@@ -193,7 +186,6 @@ function neg() {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function or(): number
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
 // CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 2: number
@@ -205,7 +197,6 @@ function neg() {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function xor(): number
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
 // CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 2: number
@@ -217,7 +208,6 @@ function neg() {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function not(): number
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "a": string
 // CHKIR-NEXT:  %1 = UnaryTildeInst (:number|bigint) %0: any
@@ -226,7 +216,6 @@ function neg() {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function neg(): number
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "a": string
 // CHKIR-NEXT:  %1 = UnaryMinusInst (:number|bigint) %0: any

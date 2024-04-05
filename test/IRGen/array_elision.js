@@ -14,10 +14,11 @@ function func() {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "func": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %func(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "func": string
@@ -27,14 +28,15 @@ function func() {
 // CHECK-NEXT:       ReturnInst %6: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [foo: any]
+
 // CHECK:function func(): any
-// CHECK-NEXT:frame = [foo: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %func(): any, %0: environment
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [foo]: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.foo]: any
 // CHECK-NEXT:  %3 = AllocArrayInst (:object) 3: number
 // CHECK-NEXT:       StoreOwnPropertyInst "a": string, %3: object, 2: number, true: boolean
-// CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [foo]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [%VS1.foo]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

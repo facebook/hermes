@@ -21,7 +21,6 @@ for (var i=0 ; i < 3; ++i) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global(): undefined|object
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 = DeclareGlobalVarInst "a": string
 // CHECK-NEXT:  $Reg0 = DeclareGlobalVarInst "x": string

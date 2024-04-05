@@ -15,10 +15,11 @@ function test_assignment_expr() {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "test_assignment_expr": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %test_assignment_expr(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "test_assignment_expr": string
@@ -28,15 +29,16 @@ function test_assignment_expr() {
 // CHECK-NEXT:       ReturnInst %6: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [y: any, x: any]
+
 // CHECK:function test_assignment_expr(): any
-// CHECK-NEXT:frame = [y: any, x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %test_assignment_expr(): any, %0: environment
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [y]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [x]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [y]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, 4: number, [y]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, 4: number, [x]: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.y]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS1.y]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, 4: number, [%VS1.y]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, 4: number, [%VS1.x]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

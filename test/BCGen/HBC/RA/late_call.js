@@ -24,10 +24,11 @@ function bar(a,b,c,d,e,f,g,h) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "bar": string
 // CHECK-NEXT:  $Reg2 = CreateFunctionInst (:object) $Reg0, %foo(): functionCode
@@ -40,14 +41,12 @@ function bar(a,b,c,d,e,f,g,h) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:number) 0: number
 // CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(a: any, b: any, c: any, d: any, e: any, f: any, g: any, h: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg9 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  $Reg0 = LoadParamInst (:any) %b: any

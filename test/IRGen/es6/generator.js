@@ -41,10 +41,11 @@ var initializer = function*(x = foo()) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "simple": string
 // CHECK-NEXT:       DeclareGlobalVarInst "useResult": string
 // CHECK-NEXT:       DeclareGlobalVarInst "loop": string
@@ -72,75 +73,83 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:        ReturnInst %24: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 []
+
 // CHECK:function simple(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %simple(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %?anon_0_simple(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS2 []
+
 // CHECK:function useResult(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %useResult(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %?anon_0_useResult(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS3 []
+
 // CHECK:function loop(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %loop(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
 // CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %?anon_0_loop(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS4 []
+
 // CHECK:function simple2(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %simple2(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
 // CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %?anon_0_simple2(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS5 []
+
 // CHECK:function yieldStar(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %yieldStar(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS5: any, %0: environment
 // CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %?anon_0_yieldStar(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS6 []
+
 // CHECK:function destr(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %destr(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS6: any, %0: environment
 // CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %?anon_0_destr(): functionCode
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: object, "next": string
 // CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, %2: object
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS7 []
+
 // CHECK:function initializer(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %initializer(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS7: any, %0: environment
 // CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %?anon_0_initializer(): functionCode
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: object, "next": string
 // CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, %2: object
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS8 []
+
 // CHECK:function ?anon_0_simple(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StartGeneratorInst
 // CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
@@ -148,8 +157,8 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
 // CHECK-NEXT:       CondBranchInst %3: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = GetParentScopeInst (:environment) %simple(): any, %parentScope: environment
-// CHECK-NEXT:  %6 = CreateScopeInst (:environment) %?anon_0_simple(): any, %5: environment
+// CHECK-NEXT:  %5 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %6 = CreateScopeInst (:environment) %VS8: any, %5: environment
 // CHECK-NEXT:  %7 = AllocStackInst (:boolean) $?anon_1_isReturn: any
 // CHECK-NEXT:       SaveAndYieldInst 1: number, %BB3
 // CHECK-NEXT:%BB2:
@@ -164,8 +173,9 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:        ReturnInst %10: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS9 [x: any]
+
 // CHECK:function ?anon_0_useResult(): any
-// CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StartGeneratorInst
 // CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
@@ -173,9 +183,9 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
 // CHECK-NEXT:       CondBranchInst %3: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = GetParentScopeInst (:environment) %useResult(): any, %parentScope: environment
-// CHECK-NEXT:  %6 = CreateScopeInst (:environment) %?anon_0_useResult(): any, %5: environment
-// CHECK-NEXT:       StoreFrameInst %6: environment, undefined: undefined, [x]: any
+// CHECK-NEXT:  %5 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
+// CHECK-NEXT:  %6 = CreateScopeInst (:environment) %VS9: any, %5: environment
+// CHECK-NEXT:       StoreFrameInst %6: environment, undefined: undefined, [%VS9.x]: any
 // CHECK-NEXT:  %8 = AllocStackInst (:boolean) $?anon_1_isReturn: any
 // CHECK-NEXT:       SaveAndYieldInst 1: number, %BB3
 // CHECK-NEXT:%BB2:
@@ -185,14 +195,15 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %12 = LoadStackInst (:boolean) %8: boolean
 // CHECK-NEXT:        CondBranchInst %12: boolean, %BB5, %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:        StoreFrameInst %6: environment, %11: any, [x]: any
+// CHECK-NEXT:        StoreFrameInst %6: environment, %11: any, [%VS9.x]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:        ReturnInst %11: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS10 [x: any, i: any]
+
 // CHECK:function ?anon_0_loop(x: any): any
-// CHECK-NEXT:frame = [x: any, i: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StartGeneratorInst
 // CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
@@ -200,21 +211,21 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
 // CHECK-NEXT:       CondBranchInst %3: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = GetParentScopeInst (:environment) %loop(): any, %parentScope: environment
-// CHECK-NEXT:  %6 = CreateScopeInst (:environment) %?anon_0_loop(): any, %5: environment
+// CHECK-NEXT:  %5 = GetParentScopeInst (:environment) %VS3: any, %parentScope: environment
+// CHECK-NEXT:  %6 = CreateScopeInst (:environment) %VS10: any, %5: environment
 // CHECK-NEXT:  %7 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %6: environment, %7: any, [x]: any
-// CHECK-NEXT:       StoreFrameInst %6: environment, undefined: undefined, [i]: any
-// CHECK-NEXT:        StoreFrameInst %6: environment, 0: number, [i]: any
+// CHECK-NEXT:       StoreFrameInst %6: environment, %7: any, [%VS10.x]: any
+// CHECK-NEXT:       StoreFrameInst %6: environment, undefined: undefined, [%VS10.i]: any
+// CHECK-NEXT:        StoreFrameInst %6: environment, 0: number, [%VS10.i]: any
 // CHECK-NEXT:        CondBranchInst true: boolean, %BB3, %BB4
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        ReturnInst %2: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %13 = LoadFrameInst (:any) %6: environment, [x]: any
-// CHECK-NEXT:  %14 = LoadFrameInst (:any) %6: environment, [i]: any
+// CHECK-NEXT:  %13 = LoadFrameInst (:any) %6: environment, [%VS10.x]: any
+// CHECK-NEXT:  %14 = LoadFrameInst (:any) %6: environment, [%VS10.i]: any
 // CHECK-NEXT:  %15 = AsNumericInst (:number|bigint) %14: any
 // CHECK-NEXT:  %16 = UnaryIncInst (:number|bigint) %15: number|bigint
-// CHECK-NEXT:        StoreFrameInst %6: environment, %16: number|bigint, [i]: any
+// CHECK-NEXT:        StoreFrameInst %6: environment, %16: number|bigint, [%VS10.i]: any
 // CHECK-NEXT:  %18 = LoadPropertyInst (:any) %13: any, %15: number|bigint
 // CHECK-NEXT:  %19 = AllocStackInst (:boolean) $?anon_1_isReturn: any
 // CHECK-NEXT:        SaveAndYieldInst %18: any, %BB6
@@ -232,8 +243,9 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:        ReturnInst %23: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS11 []
+
 // CHECK:function ?anon_0_simple2(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StartGeneratorInst
 // CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
@@ -241,8 +253,8 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
 // CHECK-NEXT:       CondBranchInst %3: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = GetParentScopeInst (:environment) %simple2(): any, %parentScope: environment
-// CHECK-NEXT:  %6 = CreateScopeInst (:environment) %?anon_0_simple2(): any, %5: environment
+// CHECK-NEXT:  %5 = GetParentScopeInst (:environment) %VS4: any, %parentScope: environment
+// CHECK-NEXT:  %6 = CreateScopeInst (:environment) %VS11: any, %5: environment
 // CHECK-NEXT:  %7 = AllocStackInst (:boolean) $?anon_1_isReturn: any
 // CHECK-NEXT:       SaveAndYieldInst 1: number, %BB3
 // CHECK-NEXT:%BB2:
@@ -257,8 +269,9 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:        ReturnInst %10: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS12 []
+
 // CHECK:function ?anon_0_yieldStar(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StartGeneratorInst
 // CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
@@ -266,8 +279,8 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
 // CHECK-NEXT:       CondBranchInst %3: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = GetParentScopeInst (:environment) %yieldStar(): any, %parentScope: environment
-// CHECK-NEXT:  %6 = CreateScopeInst (:environment) %?anon_0_yieldStar(): any, %5: environment
+// CHECK-NEXT:  %5 = GetParentScopeInst (:environment) %VS5: any, %parentScope: environment
+// CHECK-NEXT:  %6 = CreateScopeInst (:environment) %VS12: any, %5: environment
 // CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
 // CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %9 = GetBuiltinClosureInst (:object) [globalThis.Symbol]: number
@@ -356,8 +369,9 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:        ThrowTypeErrorInst "yield* delegate must have a .throw() method": string
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS13 [x: any]
+
 // CHECK:function ?anon_0_destr(?anon_2_param: any): any
-// CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StartGeneratorInst
 // CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
@@ -366,9 +380,9 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:       CondBranchInst %3: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = AllocStackInst (:boolean) $?anon_1_isReturn_entry: any
-// CHECK-NEXT:  %6 = GetParentScopeInst (:environment) %destr(): any, %parentScope: environment
-// CHECK-NEXT:  %7 = CreateScopeInst (:environment) %?anon_0_destr(): any, %6: environment
-// CHECK-NEXT:       StoreFrameInst %7: environment, undefined: undefined, [x]: any
+// CHECK-NEXT:  %6 = GetParentScopeInst (:environment) %VS6: any, %parentScope: environment
+// CHECK-NEXT:  %7 = CreateScopeInst (:environment) %VS13: any, %6: environment
+// CHECK-NEXT:       StoreFrameInst %7: environment, undefined: undefined, [%VS13.x]: any
 // CHECK-NEXT:  %9 = LoadParamInst (:any) %?anon_2_param: any
 // CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_3_iter: any
 // CHECK-NEXT:  %11 = AllocStackInst (:any) $?anon_4_sourceOrNext: any
@@ -398,7 +412,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:        BranchInst %BB6
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %32 = LoadStackInst (:any) %17: any
-// CHECK-NEXT:        StoreFrameInst %7: environment, %32: any, [x]: any
+// CHECK-NEXT:        StoreFrameInst %7: environment, %32: any, [%VS13.x]: any
 // CHECK-NEXT:  %34 = LoadStackInst (:any) %15: any
 // CHECK-NEXT:        CondBranchInst %34: any, %BB8, %BB7
 // CHECK-NEXT:%BB7:
@@ -408,7 +422,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:        SaveAndYieldInst undefined: undefined, %BB3
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %40 = LoadFrameInst (:any) %7: environment, [x]: any
+// CHECK-NEXT:  %40 = LoadFrameInst (:any) %7: environment, [%VS13.x]: any
 // CHECK-NEXT:  %41 = AllocStackInst (:boolean) $?anon_8_isReturn: any
 // CHECK-NEXT:        SaveAndYieldInst %40: any, %BB11
 // CHECK-NEXT:%BB10:
@@ -423,8 +437,9 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:        ReturnInst %44: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS14 [x: any]
+
 // CHECK:function ?anon_0_initializer(x: any): any
-// CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StartGeneratorInst
 // CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
@@ -433,9 +448,9 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:       CondBranchInst %3: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = AllocStackInst (:boolean) $?anon_1_isReturn_entry: any
-// CHECK-NEXT:  %6 = GetParentScopeInst (:environment) %initializer(): any, %parentScope: environment
-// CHECK-NEXT:  %7 = CreateScopeInst (:environment) %?anon_0_initializer(): any, %6: environment
-// CHECK-NEXT:       StoreFrameInst %7: environment, undefined: undefined, [x]: any
+// CHECK-NEXT:  %6 = GetParentScopeInst (:environment) %VS7: any, %parentScope: environment
+// CHECK-NEXT:  %7 = CreateScopeInst (:environment) %VS14: any, %6: environment
+// CHECK-NEXT:       StoreFrameInst %7: environment, undefined: undefined, [%VS14.x]: any
 // CHECK-NEXT:  %9 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %10 = BinaryStrictlyNotEqualInst (:any) %9: any, undefined: undefined
 // CHECK-NEXT:        CondBranchInst %10: any, %BB5, %BB4
@@ -451,7 +466,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %19 = PhiInst (:any) %9: any, %BB1, %17: any, %BB4
-// CHECK-NEXT:        StoreFrameInst %7: environment, %19: any, [x]: any
+// CHECK-NEXT:        StoreFrameInst %7: environment, %19: any, [%VS14.x]: any
 // CHECK-NEXT:        SaveAndYieldInst undefined: undefined, %BB3
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %22 = AllocStackInst (:boolean) $?anon_2_isReturn: any

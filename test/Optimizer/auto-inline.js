@@ -45,10 +45,11 @@ function foo4(a) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo2": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo3": string
@@ -65,13 +66,11 @@ function foo4(a) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo1(a: any): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst 100: number
 // CHECK-NEXT:function_end
 
 // CHECK:function foo2(a: any): string|number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  %1 = BinaryAddInst (:string|number) %0: any, 10: number
@@ -79,7 +78,6 @@ function foo4(a) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo3(a: any): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:       CondBranchInst %0: any, %BB2, %BB1
@@ -91,7 +89,6 @@ function foo4(a) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo4(a: any): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  %1 = BinaryLessThanInst (:boolean) %0: any, 0: number

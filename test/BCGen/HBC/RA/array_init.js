@@ -22,7 +22,6 @@ var exp_then_elision_array = [1, 2, t, t + 1,,,"b"];
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 = DeclareGlobalVarInst "const_array": string
 // CHECK-NEXT:  $Reg0 = DeclareGlobalVarInst "t": string

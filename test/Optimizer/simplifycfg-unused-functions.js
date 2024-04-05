@@ -28,10 +28,11 @@ function outer() {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "outer": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %outer(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "outer": string
@@ -39,15 +40,13 @@ function outer() {
 // CHECK-NEXT:function_end
 
 // CHECK:function outer(): object
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %simplified(): functionCode
 // CHECK-NEXT:       ReturnInst %1: object
 // CHECK-NEXT:function_end
 
 // CHECK:function simplified(list: any): undefined
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

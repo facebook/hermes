@@ -55,10 +55,11 @@ function test_could_be_int(func) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHKIR:scope %VS0 []
+
 // CHKIR:function global(): undefined
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHKIR-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHKIR-NEXT:       DeclareGlobalVarInst "test_int_int": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "test_int_uint": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "test_uint_uint": string
@@ -75,7 +76,6 @@ function test_could_be_int(func) {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function test_int_int(x: any, y: any): undefined|number
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHKIR-NEXT:  %1 = LoadParamInst (:any) %y: any
@@ -90,7 +90,6 @@ function test_could_be_int(func) {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function test_int_uint(x: any, y: any): undefined|number
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHKIR-NEXT:  %1 = LoadParamInst (:any) %y: any
@@ -105,7 +104,6 @@ function test_could_be_int(func) {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function test_uint_uint(x: any, y: any): undefined|number
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHKIR-NEXT:  %1 = LoadParamInst (:any) %y: any
@@ -120,7 +118,6 @@ function test_could_be_int(func) {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function test_could_be_int(func: any): undefined|number
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = LoadParamInst (:any) %func: any
 // CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined

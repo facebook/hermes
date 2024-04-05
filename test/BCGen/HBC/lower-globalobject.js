@@ -16,12 +16,13 @@ function foo() {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHKRA:scope %VS0 []
+
 // CHKRA:function global(): undefined
-// CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "x": string
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "foo": string
-// CHKRA-NEXT:  $Reg0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHKRA-NEXT:  $Reg0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHKRA-NEXT:  $Reg1 = CreateFunctionInst (:object) $Reg0, %foo(): functionCode
 // CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
 // CHKRA-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg0, "foo": string
@@ -30,7 +31,6 @@ function foo() {
 // CHKRA-NEXT:function_end
 
 // CHKRA:function foo(): any
-// CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
 // CHKRA-NEXT:  $Reg0 = LoadPropertyInst (:any) $Reg0, "x": string

@@ -19,10 +19,11 @@ function main() {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "main": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %main(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "main": string
@@ -35,26 +36,28 @@ function main() {
 // CHECK-NEXT:        ReturnInst %9: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [foo: any, capture_me: any]
+
 // CHECK:function main(): any
-// CHECK-NEXT:frame = [foo: any, capture_me: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %main(): any, %0: environment
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [foo]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [capture_me]: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.foo]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.capture_me]: any
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [foo]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS1.foo]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS2 [x: any]
+
 // CHECK:function foo(x: any): any
-// CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %main(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %foo(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
-// CHECK-NEXT:  %4 = ResolveScopeInst (:environment) %main(): any, %1: environment
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) %4: environment, [capture_me@main]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.x]: any
+// CHECK-NEXT:  %4 = ResolveScopeInst (:environment) %VS1: any, %1: environment
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) %4: environment, [%VS1.capture_me]: any
 // CHECK-NEXT:       ReturnInst %5: any
 // CHECK-NEXT:function_end

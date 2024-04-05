@@ -14,10 +14,11 @@ var x = y;
 // CHECK:{{.*}}undeclared_strict.js:10:9: warning: the variable "y" was not declared in function "global"
 // CHECK-NEXT:var x = y;
 // CHECK-NEXT:        ^
-// CHECK-NEXT:function global(): any
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "x": string
 // CHECK-NEXT:  %2 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %2: any

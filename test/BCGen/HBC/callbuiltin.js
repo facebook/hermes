@@ -28,10 +28,11 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHKRA:scope %VS0 []
+
 // CHKRA:function global(): any
-// CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  $Reg1 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHKRA-NEXT:  $Reg1 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "foo": string
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "shadows": string
 // CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "checkNonStaticBuiltin": string
@@ -56,7 +57,6 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:function_end
 
 // CHKRA:function foo(x: any): any
-// CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  $Reg1 = LoadParamInst (:any) %x: any
 // CHKRA-NEXT:  $Reg2 = ImplicitMovInst (:undefined) undefined: undefined
@@ -65,7 +65,6 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:function_end
 
 // CHKRA:function shadows(): undefined
-// CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  $Reg3 = HBCAllocObjectFromBufferInst (:object) 1: number, "keys": string, null: null
 // CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
@@ -81,7 +80,6 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:function_end
 
 // CHKRA:function checkNonStaticBuiltin(): undefined
-// CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
 // CHKRA-NEXT:  $Reg3 = TryLoadGlobalPropertyInst (:any) $Reg0, "HermesInternal": string

@@ -20,13 +20,16 @@ function bar() {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 [exports: any, foo: any, bar: any]
+
+// CHECK:scope %VS1 []
+
 // CHECK:function bar(): any [allCallsitesKnownInStrictMode,unreachable]
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %bar(): any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %""(): any, %1: environment
-// CHECK-NEXT:  %3 = LoadFrameInst (:any) %2: environment, [foo@""]: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS0: any, %1: environment
+// CHECK-NEXT:  %3 = LoadFrameInst (:any) %2: environment, [%VS0.foo]: any
 // CHECK-NEXT:  %4 = CheckedTypeCastInst (:object) %3: any, type(object)
 // CHECK-NEXT:  %5 = CallInst [njsf] (:any) %4: object, %foo(): functionCode, %2: environment, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %6 = CheckedTypeCastInst (:undefined) %5: any, type(undefined)

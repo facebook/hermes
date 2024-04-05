@@ -19,10 +19,11 @@ return function f(x: any, n: number) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
@@ -33,47 +34,50 @@ return function f(x: any, n: number) {
 // CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [exports: any]
+
 // CHECK:function ""(exports: any): any
-// CHECK-NEXT:frame = [exports: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %""(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %exports: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [exports]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.exports]: any
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %" 1#"(): functionCode
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS2 [f: any]
+
 // CHECK:function " 1#"(): any
-// CHECK-NEXT:frame = [f: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %""(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %" 1#"(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %f(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [f]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS2.f]: any
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS3 [x: any, n: any]
+
 // CHECK:function f(x: any, n: number): any [typed]
-// CHECK-NEXT:frame = [x: any, n: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %" 1#"(): any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %f(): any, %0: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [x]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.x]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:number) %n: number
-// CHECK-NEXT:       StoreFrameInst %1: environment, %4: number, [n]: any
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [n]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: number, [%VS3.n]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS3.n]: any
 // CHECK-NEXT:  %7 = CheckedTypeCastInst (:number) %6: any, type(number)
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS3.x]: any
 // CHECK-NEXT:  %9 = BinaryAddInst (:any) %7: number, %8: any
 // CHECK-NEXT:  %10 = CheckedTypeCastInst (:number) %9: any, type(number)
-// CHECK-NEXT:        StoreFrameInst %1: environment, %10: number, [n]: any
-// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [n]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %10: number, [%VS3.n]: any
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS3.n]: any
 // CHECK-NEXT:  %13 = CheckedTypeCastInst (:number) %12: any, type(number)
-// CHECK-NEXT:  %14 = LoadFrameInst (:any) %1: environment, [x]: any
+// CHECK-NEXT:  %14 = LoadFrameInst (:any) %1: environment, [%VS3.x]: any
 // CHECK-NEXT:  %15 = BinarySubtractInst (:any) %13: number, %14: any
 // CHECK-NEXT:  %16 = CheckedTypeCastInst (:number) %15: any, type(number)
-// CHECK-NEXT:        StoreFrameInst %1: environment, %16: number, [n]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %16: number, [%VS3.n]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

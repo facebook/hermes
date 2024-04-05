@@ -12,7 +12,6 @@
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global(): number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:number) 42: number
 // CHECK-NEXT:  $Reg0 = ReturnInst $Reg0

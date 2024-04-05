@@ -15,10 +15,11 @@ function foo(a = arguments) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): any
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
@@ -28,13 +29,14 @@ function foo(a = arguments) {
 // CHECK-NEXT:       ReturnInst %6: any
 // CHECK-NEXT:function_end
 
+// CHECK:scope %VS1 [a: any]
+
 // CHECK:function foo(a: any): any
-// CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
-// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %foo(): any, %1: environment
-// CHECK-NEXT:       StoreFrameInst %2: environment, undefined: undefined, [a]: any
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS1: any, %1: environment
+// CHECK-NEXT:       StoreFrameInst %2: environment, undefined: undefined, [%VS1.a]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  %5 = BinaryStrictlyNotEqualInst (:any) %4: any, undefined: undefined
 // CHECK-NEXT:       CondBranchInst %5: any, %BB2, %BB1
@@ -42,7 +44,7 @@ function foo(a = arguments) {
 // CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = PhiInst (:any) %4: any, %BB0, %0: object, %BB1
-// CHECK-NEXT:       StoreFrameInst %2: environment, %8: any, [a]: any
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) %2: environment, [a]: any
+// CHECK-NEXT:       StoreFrameInst %2: environment, %8: any, [%VS1.a]: any
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %2: environment, [%VS1.a]: any
 // CHECK-NEXT:        ReturnInst %10: any
 // CHECK-NEXT:function_end

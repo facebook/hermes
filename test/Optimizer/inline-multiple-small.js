@@ -25,10 +25,11 @@ function outer(a, b) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHECK:scope %VS0 []
+
 // CHECK:function global(): string
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "outer": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %outer(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %2: object, globalObject: object, "outer": string
@@ -36,9 +37,8 @@ function outer(a, b) {
 // CHECK-NEXT:function_end
 
 // CHECK:function outer(a: any, b: any): string|number
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %global(): any, %parentScope: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %f3(): functionCode
 // CHECK-NEXT:  %2 = CallInst (:string|number) %1: object, %f3(): functionCode, empty: any, undefined: undefined, 0: number, 10: number
 // CHECK-NEXT:  %3 = BinaryAddInst (:string|number) 1734: number, %2: string|number
@@ -48,7 +48,6 @@ function outer(a, b) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f3(x: number): string|number [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:number) %x: number
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "globalThis": string

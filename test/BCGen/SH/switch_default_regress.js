@@ -20,10 +20,11 @@ function foo(i) {
 
 // Auto-generated content below. Please do not modify manually.
 
+// CHKIR:scope %VS0 []
+
 // CHKIR:function global(): undefined
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHKIR-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHKIR-NEXT:       DeclareGlobalVarInst "foo": string
 // CHKIR-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
@@ -31,7 +32,6 @@ function foo(i) {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function foo(i: any): any
-// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = LoadParamInst (:any) %i: any
 // CHKIR-NEXT:       SwitchInst %0: any, %BB1, 0: number, %BB2, 1: number, %BB1
@@ -42,11 +42,12 @@ function foo(i) {
 // CHKIR-NEXT:       BranchInst %BB1
 // CHKIR-NEXT:function_end
 
+// CHKLIR:scope %VS0 []
+
 // CHKLIR:function global(): undefined
-// CHKLIR-NEXT:frame = []
 // CHKLIR-NEXT:%BB0:
 // CHKLIR-NEXT:       DeclareGlobalVarInst "foo": string
-// CHKLIR-NEXT:  %1 = CreateScopeInst (:environment) %global(): any, empty: any
+// CHKLIR-NEXT:  %1 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHKLIR-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
 // CHKLIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHKLIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "foo": string
@@ -55,7 +56,6 @@ function foo(i) {
 // CHKLIR-NEXT:function_end
 
 // CHKLIR:function foo(i: any): any
-// CHKLIR-NEXT:frame = []
 // CHKLIR-NEXT:%BB0:
 // CHKLIR-NEXT:  %0 = LoadParamInst (:any) %i: any
 // CHKLIR-NEXT:       BranchInst %BB4
