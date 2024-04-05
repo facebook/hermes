@@ -558,8 +558,8 @@ void ESTreeIRGen::emitFunctionPrologue(
   } else {
     baseScope = Builder.getEmptySentinel();
   }
-  curFunction()->functionScope =
-      Builder.createCreateScopeInst(Builder.createVariableScope(), baseScope);
+  curFunction()->functionScope = Builder.createCreateScopeInst(
+      Builder.createVariableScope(parentScope), baseScope);
 
   if (doInitES5CaptureState != InitES5CaptureState::No)
     initCaptureStateInES5FunctionHelper();

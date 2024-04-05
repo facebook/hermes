@@ -529,6 +529,32 @@ int Variable::getIndexInVariableList() const {
   llvm_unreachable("Cannot find variable in the variable list");
 }
 
+VariableScope::VariableScope(VariableScope *parentScope)
+    : Value(ValueKind::VariableScopeKind), parentScope_(parentScope) {
+  if (parentScope)
+    parentScope->children_.push_back(*this);
+}
+
+void VariableScope::removeFromScopeChain() {
+  // Update all children to now be children of the parent.
+  for (auto &child : children_)
+    child.parentScope_ = parentScope_;
+
+  // Remove this scope from the parent's children list (if any), and transfer
+  // all children to it.
+  if (parentScope_) {
+    parentScope_->children_.remove(*this);
+    parentScope_->children_.splice(parentScope_->children_.begin(), children_);
+  } else {
+    // Clear the children list so we don't do any work on subsequent calls to
+    // this function.
+    children_.clear();
+  }
+
+  // Clear the parent scope, so this operation is idempotent.
+  parentScope_ = nullptr;
+}
+
 void BasicBlock::push_back(Instruction *I) {
   InstList.push_back(I);
 }

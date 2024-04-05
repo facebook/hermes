@@ -228,6 +228,10 @@ bool hermes::deleteUnusedVariables(Module *M) {
   for (auto it = scopeList.begin(); it != scopeList.end();) {
     // If the scope is unused, delete the whole scope.
     if (!it->hasUsers()) {
+      // Remove the scope from its parent. Note that its children are also dead,
+      // but may still have users in dead functions, so just move them to the
+      // parent and leave it to function DCE to eliminate their usage.
+      it->removeFromScopeChain();
       scopeList.erase(it++);
       continue;
     }

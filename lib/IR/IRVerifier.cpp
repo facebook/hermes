@@ -427,22 +427,24 @@ bool Verifier::visitBasicBlock(const BasicBlock &BB) {
 }
 
 bool Verifier::visitVariableScope(const hermes::VariableScope &VS) {
-  // Check that the scope has a single uniquely identifiable parent.
-  llvh::Optional<VariableScope *> parentVS;
   for (auto *U : VS.getUsers()) {
     auto *CSI = llvh::dyn_cast<CreateScopeInst>(U);
     if (!CSI)
       continue;
 
-    // Found a creation of this scope, retrieve the parent from it, if any.
-    VariableScope *curParentVS = nullptr;
+    // Found a creation of this scope, retrieve the expected value of the
+    // parent, if possible.
+    VariableScope *curParentVS;
     if (auto *parentScope =
             llvh::dyn_cast<BaseScopeInst>(CSI->getParentScope()))
       curParentVS = parentScope->getVariableScope();
-    if (!parentVS)
-      parentVS = curParentVS;
+    else if (llvh::isa<EmptySentinel>(CSI->getParentScope()))
+      curParentVS = nullptr;
+    else
+      continue;
+
     AssertWithMsg(
-        parentVS == curParentVS,
+        VS.getParentScope() == curParentVS,
         "VariableScope has multiple different parents.");
   }
   return true;

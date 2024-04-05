@@ -1654,15 +1654,29 @@ struct ilist_alloc_traits<::hermes::BasicBlock> {
 
 namespace hermes {
 
-/// VariableScope is a lexical scope.
-class VariableScope : public Value, public llvh::ilist_node<VariableScope> {
+/// VariableScope is a lexical scope. This inherits from ilist_node twice, once
+/// for its owning list in the module, and again for the child list that each
+/// scope is part of. The ilist_tags used are just templated on type of the
+/// owner of the specific list, but they could be any type in principle.
+class VariableScope
+    : public Value,
+      public llvh::ilist_node<VariableScope, llvh::ilist_tag<Module>>,
+      public llvh::ilist_node<VariableScope, llvh::ilist_tag<VariableScope>> {
   using VariableListType = llvh::SmallVector<Variable *, 8>;
 
   /// The variables associated with this scope.
   VariableListType variables_;
 
+  /// The VariableScope representing the parent of this scope, or null if no
+  /// such scope exists.
+  VariableScope *parentScope_;
+
+  /// The list of children of this VariableScope. This is necessary so we can
+  /// update their parents if this scope is eliminated.
+  llvh::simple_ilist<VariableScope, llvh::ilist_tag<VariableScope>> children_;
+
  public:
-  VariableScope() : Value(ValueKind::VariableScopeKind) {}
+  VariableScope(VariableScope *parentScope);
 
   /// \returns a list of variables.
   VariableListType &getVariables() {
@@ -1677,6 +1691,15 @@ class VariableScope : public Value, public llvh::ilist_node<VariableScope> {
   void addVariable(Variable *V) {
     variables_.push_back(V);
   }
+
+  /// Get the parent scope, which may be null if there isn't one.
+  VariableScope *getParentScope() const {
+    return parentScope_;
+  }
+
+  /// Remove this scope from the scope chain, by moving all of its children to
+  /// instead be children of its parent.
+  void removeFromScopeChain();
 
   ~VariableScope() {
     // Free all variables.
@@ -2162,7 +2185,8 @@ class Module : public Value {
 
  public:
   using FunctionListType = llvh::iplist<Function>;
-  using VariableScopeListType = llvh::iplist<VariableScope>;
+  using VariableScopeListType =
+      llvh::iplist<VariableScope, llvh::ilist_tag<Module>>;
 
   using RawStringList = std::vector<LiteralString *>;
 

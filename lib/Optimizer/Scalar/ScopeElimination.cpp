@@ -50,6 +50,7 @@ static bool eliminateScopeIfEmpty(VariableScope *VS) {
   // Update any scope retrieval instructions (like GetParentScope and
   // ResolveScope) to now reference the parent scope directly.
   VS->replaceAllUsesWith(parentVarScope);
+  VS->removeFromScopeChain();
   return true;
 }
 
