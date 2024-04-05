@@ -175,6 +175,12 @@ Variable *IRBuilder::createVariable(
   return createVariable(Parent, createIdentifier(Name), type);
 }
 
+VariableScope *IRBuilder::createVariableScope() {
+  auto *newScope = new VariableScope();
+  M->getVariableScopes().push_back(newScope);
+  return newScope;
+}
+
 LiteralNumber *IRBuilder::getLiteralNumber(double value) {
   return M->getLiteralNumber(value);
 }

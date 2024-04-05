@@ -180,7 +180,6 @@ Function::Function(
     Function *insertBefore)
     : Value(kind),
       parent_(parent),
-      functionScope_(),
       newTargetParam_(this, parent_->getContext().getIdentifier("new.target")),
       parentScopeParam_(
           this,

@@ -231,8 +231,9 @@ bool Verifier::visitModule(const Module &M) {
     AssertWithMsg(
         I->getParent() == &M, "Function's parent does not match module");
     ReturnIfNot(visitFunction(*I));
-    ReturnIfNot(visitVariableScope(*I->getFunctionScope()));
   }
+  for (auto &VS : M.getVariableScopes())
+    ReturnIfNot(visitVariableScope(VS));
   return true;
 }
 
@@ -1182,10 +1183,6 @@ bool Verifier::visitHBCCreateFunctionEnvironmentInst(
     const HBCCreateFunctionEnvironmentInst &Inst) {
   AssertIWithMsg(
       Inst,
-      Inst.getFunction()->getFunctionScope() == Inst.getVariableScope(),
-      "HBCCreateFunctionEnvironmentInst must take an ES5Function");
-  AssertIWithMsg(
-      Inst,
       Inst.getParentScopeParam() == Inst.getFunction()->getParentScopeParam(),
       "Using incorect parent scope parameter.");
   return true;
@@ -1198,10 +1195,6 @@ bool Verifier::visitGetParentScopeInst(const GetParentScopeInst &Inst) {
   return true;
 }
 bool Verifier::visitCreateScopeInst(const CreateScopeInst &Inst) {
-  AssertIWithMsg(
-      Inst,
-      Inst.getFunction()->getFunctionScope() == Inst.getVariableScope(),
-      "Can only create scope for the enclosing function.");
   return true;
 }
 bool Verifier::visitResolveScopeInst(const ResolveScopeInst &Inst) {

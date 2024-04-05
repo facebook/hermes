@@ -1655,7 +1655,7 @@ struct ilist_alloc_traits<::hermes::BasicBlock> {
 namespace hermes {
 
 /// VariableScope is a lexical scope.
-class VariableScope : public Value {
+class VariableScope : public Value, public llvh::ilist_node<VariableScope> {
   using VariableListType = llvh::SmallVector<Variable *, 8>;
 
   /// The variables associated with this scope.
@@ -1732,9 +1732,6 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
  private:
   /// The Module owning this function.
   Module *parent_;
-
-  /// The function scope - it is always the first scope in the scope list.
-  VariableScope functionScope_;
 
   /// The basic blocks in this function.
   BasicBlockListType BasicBlockList{};
@@ -1841,13 +1838,6 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
 
   /// \return the Context of the parent module.
   Context &getContext() const;
-
-  VariableScope *getFunctionScope() {
-    return &functionScope_;
-  }
-  const VariableScope *getFunctionScope() const {
-    return &functionScope_;
-  }
 
   void addBlock(BasicBlock *BB);
 
@@ -2155,6 +2145,13 @@ struct ilist_alloc_traits<::hermes::Function> {
   }
 };
 
+template <>
+struct ilist_alloc_traits<::hermes::VariableScope> {
+  static void deleteNode(::hermes::VariableScope *V) {
+    ::hermes::Value::destroy(V);
+  }
+};
+
 } // namespace llvh
 
 namespace hermes {
@@ -2165,6 +2162,7 @@ class Module : public Value {
 
  public:
   using FunctionListType = llvh::iplist<Function>;
+  using VariableScopeListType = llvh::iplist<VariableScope>;
 
   using RawStringList = std::vector<LiteralString *>;
 
@@ -2183,6 +2181,9 @@ class Module : public Value {
   Function *topLevelFunction_{};
 
   FunctionListType FunctionList{};
+
+  /// List of all the VariableScopes owned by this module.
+  VariableScopeListType variableScopes_{};
 
   GlobalObject globalObject_{};
   LiteralEmpty literalEmpty{};
@@ -2300,6 +2301,14 @@ class Module : public Value {
     // If the top level function hasn't been overridden, return the first
     // function.
     return topLevelFunction_;
+  }
+
+  /// Get the list of variable scopes owned by this module.
+  VariableScopeListType &getVariableScopes() {
+    return variableScopes_;
+  }
+  const VariableScopeListType &getVariableScopes() const {
+    return variableScopes_;
   }
 
   /// Create the specified global property if it doesn't exist. If it does

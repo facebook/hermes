@@ -142,6 +142,9 @@ class IRBuilder {
   Variable *
   createVariable(VariableScope *Parent, const llvh::Twine &Name, Type type);
 
+  /// Create a new VariableScope in the module.
+  VariableScope *createVariableScope();
+
   /// Create a new literal number of value \p value.
   LiteralNumber *getLiteralNumber(double value);
 

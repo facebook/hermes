@@ -224,9 +224,16 @@ BasicBlock *hermes::splitBasicBlock(
 
 bool hermes::deleteUnusedVariables(Module *M) {
   bool changed = false;
-  for (Function &F : *M) {
-    llvh::SmallVectorImpl<Variable *> &vars =
-        F.getFunctionScope()->getVariables();
+  auto &scopeList = M->getVariableScopes();
+  for (auto it = scopeList.begin(); it != scopeList.end();) {
+    // If the scope is unused, delete the whole scope.
+    if (!it->hasUsers()) {
+      scopeList.erase(it++);
+      continue;
+    }
+
+    llvh::SmallVectorImpl<Variable *> &vars = it->getVariables();
+    ++it;
     // Delete variables without any users. Do this in a separate loop since we
     // are putting vars in an invalid state.
     for (Variable *&var : vars) {
@@ -277,16 +284,11 @@ bool hermes::deleteUnusedFunctionsAndVariables(Module *M) {
     for (size_t i = 0; i < toRemove.size(); ++i) {
       auto *F = toRemove[i];
 
-      // All users of F, and all users of variables from F must also be dead.
-      // Add them to the worklist. This is also necessary for correctness since
-      // it avoids leaving dangling references.
+      // All users of F must also be dead so add them to the worklist. This is
+      // also necessary for correctness since it avoids leaving dangling
+      // references.
       for (auto *U : F->getUsers())
         toRemove.insert(U->getFunction());
-      for (auto *U : F->getFunctionScope()->getUsers())
-        toRemove.insert(U->getFunction());
-      for (auto *V : F->getFunctionScope()->getVariables())
-        for (auto *U : V->getUsers())
-          toRemove.insert(U->getFunction());
 
       F->eraseFromParentNoDestroy();
       toDestroy.push_back(F);

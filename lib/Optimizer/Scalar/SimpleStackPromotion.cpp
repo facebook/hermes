@@ -165,8 +165,8 @@ bool runOnVariable(Module *M, Variable *var) {
 /// function, to allow local values to be forwarded.
 bool runSimpleStackPromotion(Module *M) {
   bool changed = false;
-  for (Function &func : *M)
-    for (Variable *var : func.getFunctionScope()->getVariables())
+  for (auto &VS : M->getVariableScopes())
+    for (Variable *var : VS.getVariables())
       changed |= runOnVariable(M, var);
   changed |= deleteUnusedVariables(M);
   return changed;

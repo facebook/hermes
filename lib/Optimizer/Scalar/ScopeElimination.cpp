@@ -55,8 +55,8 @@ static bool eliminateScopeIfEmpty(VariableScope *VS) {
 
 static bool runScopeElimination(Module *M) {
   bool changed = false;
-  for (auto &F : *M)
-    changed |= eliminateScopeIfEmpty(F.getFunctionScope());
+  for (auto &VS : M->getVariableScopes())
+    changed |= eliminateScopeIfEmpty(&VS);
   return changed;
 }
 

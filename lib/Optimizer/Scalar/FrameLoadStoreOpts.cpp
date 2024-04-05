@@ -308,8 +308,8 @@ bool runFrameLoadStoreOpts(Module *M) {
   CapturedVariables cv;
   // Collect information about all capturing loads and stores for every
   // variable in the module.
-  for (Function &F : *M) {
-    for (Variable *V : F.getFunctionScope()->getVariables()) {
+  for (auto &VS : M->getVariableScopes()) {
+    for (Variable *V : VS.getVariables()) {
       for (Instruction *I : V->getUsers()) {
         if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(I)) {
           if (!llvh::isa<CreateScopeInst>(LFI->getScope()))

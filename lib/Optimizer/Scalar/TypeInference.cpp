@@ -1239,8 +1239,8 @@ static std::vector<Partition> partitionFunctionsAndVars(Module *M) {
   // them. This ensures that all functions that access a variable are in the
   // same group as the variable. Unlike with functions, we disregard variables
   // that are unused, since there is nothing to meaningfully infer.
-  for (Function &F : *M) {
-    for (const Variable *V : F.getFunctionScope()->getVariables()) {
+  for (VariableScope &VS : M->getVariableScopes()) {
+    for (const Variable *V : VS.getVariables()) {
       for (const Instruction *user : V->getUsers()) {
         groups.unionSets(V, user->getFunction());
       }
@@ -1266,8 +1266,8 @@ static std::vector<Partition> partitionFunctionsAndVars(Module *M) {
     res[it->second].first.push_back(&F);
   }
 
-  for (Function &F : *M) {
-    for (Variable *V : F.getFunctionScope()->getVariables()) {
+  for (VariableScope &VS : M->getVariableScopes()) {
+    for (Variable *V : VS.getVariables()) {
       // Skip Variables that are not in a group, since they are unused.
       auto leaderIt = groups.findLeader(V);
       if (leaderIt == groups.member_end())
