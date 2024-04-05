@@ -1658,23 +1658,11 @@ namespace hermes {
 class VariableScope : public Value {
   using VariableListType = llvh::SmallVector<Variable *, 8>;
 
-  /// The function where the scope is declared.
-  Function *function_;
-
   /// The variables associated with this scope.
   VariableListType variables_;
 
  public:
-  VariableScope(Function *function)
-      : Value(ValueKind::VariableScopeKind), function_(function) {}
-
-  /// \return the function where the scope is declared.
-  Function *getFunction() const {
-    return function_;
-  }
-
-  /// Return true if this is the global function scope.
-  bool isGlobalScope() const;
+  VariableScope() : Value(ValueKind::VariableScopeKind) {}
 
   /// \returns a list of variables.
   VariableListType &getVariables() {

@@ -153,10 +153,6 @@ std::string Attributes::getDescriptionStr() const {
   return result;
 }
 
-bool VariableScope::isGlobalScope() const {
-  return function_->isGlobalScope() && function_->getFunctionScope() == this;
-}
-
 /// Determine the type of a function's \c new.target, based on the function's
 /// \c DefinitionKind.
 static Type functionNewTargetType(Function::DefinitionKind defKind) {
@@ -184,7 +180,7 @@ Function::Function(
     Function *insertBefore)
     : Value(kind),
       parent_(parent),
-      functionScope_(this),
+      functionScope_(),
       newTargetParam_(this, parent_->getContext().getIdentifier("new.target")),
       parentScopeParam_(
           this,
