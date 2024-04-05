@@ -31,21 +31,11 @@ new Foo();
 
 // CHECK:scope %VS0 []
 
+// CHECK:scope %VS1 [?O.prototype: object]
+
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
-// CHECK-NEXT:  %2 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  %3 = HBCLoadConstInst (:number) 0: number
-// CHECK-NEXT:  %4 = CallInst [njsf] (:undefined) %1: object, %""(): functionCode, %0: environment, %2: undefined, %3: number, %3: number
-// CHECK-NEXT:       ReturnInst %2: undefined
-// CHECK-NEXT:function_end
-
-// CHECK:scope %VS1 [?O.prototype: object]
-
-// CHECK:function ""(exports: number): undefined [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS1.?O.prototype]: object

@@ -43,14 +43,6 @@
 // CHECK:function global(): object
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %main(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:object) %1: object, %main(): functionCode, %0: environment, undefined: undefined, 0: number
-// CHECK-NEXT:       ReturnInst %2: object
-// CHECK-NEXT:function_end
-
-// CHECK:function main(): object [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %updateEventTarget(): functionCode
 // CHECK-NEXT:       ReturnInst %1: object
 // CHECK-NEXT:function_end
