@@ -216,7 +216,7 @@ uint32_t canonicalize(uint32_t cp, bool unicode) {
 /// Find a matching entry (such as \p NameMapEntry or \p RangeMapEntry) by
 /// matching a string \p name against the entry's \p name field.
 template <class T>
-const T *findNameMapEntry(
+static const T *findMapEntry(
     const llvh::ArrayRef<T> &arrayRef,
     const std::string_view name) {
   auto it = std::lower_bound(
@@ -238,45 +238,51 @@ const T *findNameMapEntry(
 llvh::ArrayRef<UnicodeRangePoolRef> unicodePropertyRanges(
     std::string_view propertyName,
     std::string_view propertyValue) {
-  auto key = propertyName;
+  const NameMapEntry *canonicalNameEntry;
   llvh::ArrayRef<RangeMapEntry> rangeMap;
-  llvh::ArrayRef<NameMapEntry> nameMap;
 
   if (propertyValue.empty()) {
-    rangeMap = unicodePropertyRangeMap_BinaryProperty;
-    nameMap = canonicalPropertyNameMap_BinaryProperty;
     // There was no property value, this is either a binary property or a value
     // from General_Category, as per `LoneUnicodePropertyNameOrValue`.
-    if (findNameMapEntry(nameMap, key) == nullptr) {
+    if ((canonicalNameEntry = findMapEntry(
+             llvh::ArrayRef(canonicalPropertyNameMap_BinaryProperty),
+             propertyName))) {
+      rangeMap = unicodePropertyRangeMap_BinaryProperty;
+    } else if ((canonicalNameEntry = findMapEntry(
+                    llvh::ArrayRef(canonicalPropertyNameMap_GeneralCategory),
+                    propertyName))) {
       rangeMap = unicodePropertyRangeMap_GeneralCategory;
-      nameMap = canonicalPropertyNameMap_GeneralCategory;
     }
   } else {
     // There was a property value, assume the name is a category.
-    key = propertyValue;
-    if (propertyName == "General_Category" || propertyName == "gc") {
+    if ((propertyName == "General_Category" || propertyName == "gc") &&
+        (canonicalNameEntry = findMapEntry(
+             llvh::ArrayRef(canonicalPropertyNameMap_GeneralCategory),
+             propertyValue))) {
       rangeMap = unicodePropertyRangeMap_GeneralCategory;
-      nameMap = canonicalPropertyNameMap_GeneralCategory;
-    } else if (propertyName == "Script" || propertyName == "sc") {
+    } else if (
+        (propertyName == "Script" || propertyName == "sc") &&
+        (canonicalNameEntry = findMapEntry(
+             llvh::ArrayRef(canonicalPropertyNameMap_Script), propertyValue))) {
       rangeMap = unicodePropertyRangeMap_Script;
-      nameMap = canonicalPropertyNameMap_Script;
-    } else if (propertyName == "Script_Extensions" || propertyName == "scx") {
+    } else if (
+        (propertyName == "Script_Extensions" || propertyName == "scx") &&
+        // Since Script_Extensions is a superset of Script, they share
+        // a name map.
+        (canonicalNameEntry = findMapEntry(
+             llvh::ArrayRef(canonicalPropertyNameMap_Script), propertyValue))) {
       rangeMap = unicodePropertyRangeMap_ScriptExtensions;
-      // Since Script_Extensions is a superset of Script, they share a name map.
-      nameMap = canonicalPropertyNameMap_Script;
     } else {
       return llvh::ArrayRef<UnicodeRangePoolRef>();
     }
   }
 
-  // Canonicalize the property name.
-  auto canonicalNameEntry = findNameMapEntry(nameMap, key);
   if (canonicalNameEntry == nullptr) {
     return llvh::ArrayRef<UnicodeRangePoolRef>();
   }
 
   // Look up the range arrays for the property.
-  auto rangeMapEntry = findNameMapEntry(
+  auto rangeMapEntry = findMapEntry(
       rangeMap,
       UNICODE_DATA_STRING_POOL.substr(
           canonicalNameEntry->canonical.offset,
