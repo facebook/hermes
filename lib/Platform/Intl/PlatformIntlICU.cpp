@@ -419,8 +419,8 @@ double Collator::compare(
 }
 
 namespace {
-// Implementation of
-// https://402.ecma-international.org/8.0/#datetimeformat-objects
+/// Implementation of
+/// https://402.ecma-international.org/8.0/#datetimeformat-objects
 struct DateTimeFormatICU : DateTimeFormat {
  public:
   DateTimeFormatICU() = default;
