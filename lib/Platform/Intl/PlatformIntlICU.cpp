@@ -493,7 +493,7 @@ struct DateTimeFormatICU : DateTimeFormat {
   std::optional<std::u16string> timeStyle_;
   // UTF-8 version of locale_. Used for ICU calls.
   std::string locale8_;
-
+  // Internal initialized ICU date formatter.
   UDateFormat *dateTimeFormatter_;
 };
 } // namespace
