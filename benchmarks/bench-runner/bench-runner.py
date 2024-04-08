@@ -60,7 +60,7 @@ def main():
     argparser.add_argument(
         "-b",
         "--binary",
-        help="Path to hermes or synth executable",
+        help="Path to runtime or synth executable",
         required=True,
         action="store",
     )
@@ -75,6 +75,13 @@ def main():
     runtimeGroup.add_argument("--v8", help="Use the V8 VM", action="store_true")
     runtimeGroup.add_argument("--v8jitless", help="Use the V8 VM",
                               action="store_true")
+    argparser.add_argument(
+        "-l",
+        "--label",
+        help="extra label for runtime",
+        required=True,
+        action="store",
+    )
 
     argparser.add_argument(
         "-c",
@@ -224,7 +231,8 @@ def main():
     generalResults = {name: metrics["general"] for name, metrics in results.items()}
 
     print("Ran each benchmark {} times".format(args.count))
-    output.generalResults(args.out, runtime, generalResults, formatter)
+    runtimeName = (runtime + " (" + args.label + ")") if args.label else runtime
+    output.generalResults(args.out, runtimeName, generalResults, formatter)
 
 
 if __name__ == "__main__":

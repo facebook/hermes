@@ -21,25 +21,46 @@ def printMerged(jsonObjs):
                   width=output.AsciiTableFormatter.colWidth))
     print("=" * nColumns * output.AsciiTableFormatter.colWidth)
 
-    firstJsonObjDec = jsonObjs[0]
-    firstRunnerResults = firstJsonObjDec[0]["results"]
-
+    firstJsonObjEncoded = jsonObjs[0]
+    firstJsonObj = firstJsonObjEncoded[0]
+    firstRunnerName = firstJsonObj["runtime"]
+    firstRunnerResults = firstJsonObj["results"]
+    # dicts matching runtime names (for runtimes other than firstRunnerName)
+    # to the sequence of ratios for the runtime wrt the firstRunner
+    runtimeToRatioSeq = dict()
     for benchmark in benchmarks:
         firstRunnerMean = firstRunnerResults[benchmark]["totalTime"]["mean"]
+        n = 0
         for jsonObjDec in jsonObjs:
             jsonObj = jsonObjDec[0]
             runtime = jsonObj["runtime"]
+            if not runtime in runtimeToRatioSeq:
+                runtimeToRatioSeq[runtime] = []
             results = jsonObj["results"]
             if not benchmark in results:
                 continue
             bmResults = results[benchmark]
             bmMean = bmResults["totalTime"]["mean"]
+            ratio = bmMean / firstRunnerMean
+            runtimeToRatioSeq[runtime].append(ratio)
             metric = stats.Metric(bmResults["totalTime"]["samples"])
             print(row_fmt.format(runtime, benchmark,
                                  output.secondsAndBounds(metric),
-                                 "{:6.2f}".format(bmMean / firstRunnerMean),
+                                 "{:7.3f}".format(ratio),
                                  width=output.AsciiTableFormatter.colWidth))
         print("-" * nColumns * output.AsciiTableFormatter.colWidth)
+
+    for jsonObjDec in jsonObjs:
+        jsonObj = jsonObjDec[0]
+        runtime = jsonObj["runtime"]
+        prod = 1
+        n = 0;
+        seq = runtimeToRatioSeq[runtime]
+        for ratio in seq:
+            prod *= ratio
+        print(row_fmt.format(runtime, "geomean", "",
+                             "{:7.3f}".format(prod ** (1/len(seq))),
+                             width=output.AsciiTableFormatter.colWidth))
 
 
 def main():
