@@ -424,6 +424,9 @@ namespace {
 struct DateTimeFormatICU : DateTimeFormat {
  public:
   DateTimeFormatICU() = default;
+  ~DateTimeFormatICU() {
+    udat_close(dateTimeFormatter_);
+  };
 
   vm::ExecutionStatus initialize(
       vm::Runtime &runtime,
@@ -488,7 +491,9 @@ struct DateTimeFormatICU : DateTimeFormat {
   // with values "full", "long", "medium", or "short".
   std::optional<std::u16string> dateStyle_;
   std::optional<std::u16string> timeStyle_;
+  // UTF-8 version of locale_. Used for ICU calls.
   std::string locale8_;
+
   UDateFormat *dateTimeFormatter_;
 };
 } // namespace
