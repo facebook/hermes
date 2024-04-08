@@ -435,7 +435,7 @@ struct DateTimeFormatICU : DateTimeFormat {
 
  private:
   UDateFormat *getUDateFormatter(vm::Runtime &runtime);
-  vm::CallResult<std::u16string> getDefaultHourCycle(vm::Runtime &runtime);
+  std::u16string getDefaultHourCycle();
 
   // https://402.ecma-international.org/8.0/#sec-properties-of-intl-datetimeformat-instances
   // Intl.DateTimeFormat instances have an [[InitializedDateTimeFormat]]
@@ -796,7 +796,7 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
     // 40. Else,
   } else {
     // a. Let hcDefault be dataLocaleData.[[hourCycle]].
-    auto hcDefault = getDefaultHourCycle(runtime).getValue();
+    auto hcDefault = getDefaultHourCycle();
     // b. Let hc be dateTimeFormat.[[HourCycle]].
     auto hc = hourCycle_;
     // c. If hc is null, then
@@ -1069,8 +1069,7 @@ UDateFormat *DateTimeFormatICU::getUDateFormatter(vm::Runtime &runtime) {
   }
 }
 
-vm::CallResult<std::u16string> DateTimeFormatICU::getDefaultHourCycle(
-    vm::Runtime &runtime) {
+std::u16string DateTimeFormatICU::getDefaultHourCycle() {
   UErrorCode status = U_ZERO_ERROR;
   std::u16string myString;
   // open the default UDateFormat and Pattern of locale
@@ -1110,8 +1109,7 @@ vm::CallResult<std::u16string> DateTimeFormatICU::getDefaultHourCycle(
     }
   }
 
-  // There should always be a default hour cycle, return an exception if not
-  return vm::ExecutionStatus::EXCEPTION;
+  return u"h24";
 }
 
 vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
