@@ -848,13 +848,13 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
 
 // gets the UDateFormat with options set in initialize
 UDateFormat *DateTimeFormatICU::getUDateFormatter(vm::Runtime &runtime) {
-  static std::u16string eLong = u"long", eShort = u"short", eNarrow = u"narrow",
-                        eMedium = u"medium", eFull = u"full",
-                        eNumeric = u"numeric", eTwoDigit = u"2-digit",
-                        eShortOffset = u"shortOffset",
-                        eLongOffset = u"longOffset",
-                        eShortGeneric = u"shortGeneric",
-                        eLongGeneric = u"longGeneric";
+  static constexpr std::u16string_view kLong = u"long", kShort = u"short", kNarrow = u"narrow",
+                                       keMedium = u"medium", kFull = u"full",
+                                       kNumeric = u"numeric", kTwoDigit = u"2-digit",
+                                       kShortOffset = u"shortOffset",
+                                       kLongOffset = u"longOffset",
+                                       kShortGeneric = u"shortGeneric",
+                                       kLongGeneric = u"longGeneric";
 
   // timeStyle and dateStyle cannot be used in conjunction with the other
   // options.
@@ -863,24 +863,24 @@ UDateFormat *DateTimeFormatICU::getUDateFormatter(vm::Runtime &runtime) {
     UDateFormatStyle timeStyleRes = UDAT_DEFAULT;
 
     if (dateStyle_.has_value()) {
-      if (dateStyle_ == eFull)
+      if (dateStyle_ == kFull)
         dateStyleRes = UDAT_FULL;
-      else if (dateStyle_ == eLong)
+      else if (dateStyle_ == kLong)
         dateStyleRes = UDAT_LONG;
-      else if (dateStyle_ == eMedium)
+      else if (dateStyle_ == keMedium)
         dateStyleRes = UDAT_MEDIUM;
-      else if (dateStyle_ == eShort)
+      else if (dateStyle_ == kShort)
         dateStyleRes = UDAT_SHORT;
     }
 
     if (timeStyle_.has_value()) {
-      if (timeStyle_ == eFull)
+      if (timeStyle_ == kFull)
         timeStyleRes = UDAT_FULL;
-      else if (timeStyle_ == eLong)
+      else if (timeStyle_ == kLong)
         timeStyleRes = UDAT_LONG;
-      else if (timeStyle_ == eMedium)
+      else if (timeStyle_ == keMedium)
         timeStyleRes = UDAT_MEDIUM;
-      else if (timeStyle_ == eShort)
+      else if (timeStyle_ == kShort)
         timeStyleRes = UDAT_SHORT;
     }
 
@@ -918,100 +918,100 @@ UDateFormat *DateTimeFormatICU::getUDateFormatter(vm::Runtime &runtime) {
   // Else: lets create the skeleton
   std::u16string skeleton = u"";
   if (weekday_.has_value()) {
-    if (weekday_ == eNarrow)
+    if (weekday_ == kNarrow)
       skeleton += u"EEEEE";
-    else if (weekday_ == eLong)
+    else if (weekday_ == kLong)
       skeleton += u"EEEE";
-    else if (weekday_ == eShort)
+    else if (weekday_ == kShort)
       skeleton += u"EEE";
   }
 
   if (timeZoneName_.has_value()) {
-    if (timeZoneName_ == eShort)
+    if (timeZoneName_ == kShort)
       skeleton += u"z";
-    else if (timeZoneName_ == eLong)
+    else if (timeZoneName_ == kLong)
       skeleton += u"zzzz";
-    else if (timeZoneName_ == eShortOffset)
+    else if (timeZoneName_ == kShortOffset)
       skeleton += u"O";
-    else if (timeZoneName_ == eLongOffset)
+    else if (timeZoneName_ == kLongOffset)
       skeleton += u"OOOO";
-    else if (timeZoneName_ == eShortGeneric)
+    else if (timeZoneName_ == kShortGeneric)
       skeleton += u"v";
-    else if (timeZoneName_ == eLongGeneric)
+    else if (timeZoneName_ == kLongGeneric)
       skeleton += u"vvvv";
   }
 
   if (era_.has_value()) {
-    if (era_ == eNarrow)
+    if (era_ == kNarrow)
       skeleton += u"GGGGG";
-    else if (era_ == eShort)
+    else if (era_ == kShort)
       skeleton += u"G";
-    else if (era_ == eLong)
+    else if (era_ == kLong)
       skeleton += u"GGGG";
   }
 
   if (year_.has_value()) {
-    if (year_ == eNumeric)
+    if (year_ == kNumeric)
       skeleton += u"y";
-    else if (year_ == eTwoDigit)
+    else if (year_ == kTwoDigit)
       skeleton += u"yy";
   }
 
   if (month_.has_value()) {
-    if (month_ == eTwoDigit)
+    if (month_ == kTwoDigit)
       skeleton += u"MM";
-    else if (month_ == eNumeric)
+    else if (month_ == kNumeric)
       skeleton += u'M';
-    else if (month_ == eNarrow)
+    else if (month_ == kNarrow)
       skeleton += u"MMMMM";
-    else if (month_ == eShort)
+    else if (month_ == kShort)
       skeleton += u"MMM";
-    else if (month_ == eLong)
+    else if (month_ == kLong)
       skeleton += u"MMMM";
   }
 
   if (day_.has_value()) {
-    if (day_ == eNumeric)
+    if (day_ == kNumeric)
       skeleton += u"d";
-    else if (day_ == eTwoDigit)
+    else if (day_ == kTwoDigit)
       skeleton += u"dd";
   }
 
   if (hour_.has_value()) {
     if (hourCycle_ == u"h12") {
-      if (hour_ == eNumeric)
+      if (hour_ == kNumeric)
         skeleton += u"h";
-      else if (hour_ == eTwoDigit)
+      else if (hour_ == kTwoDigit)
         skeleton += u"hh";
     } else if (hourCycle_ == u"h24") {
-      if (hour_ == eNumeric)
+      if (hour_ == kNumeric)
         skeleton += u"k";
-      else if (hour_ == eTwoDigit)
+      else if (hour_ == kTwoDigit)
         skeleton += u"kk";
     } else if (hourCycle_ == u"h23") {
-      if (hour_ == eNumeric)
+      if (hour_ == kNumeric)
         skeleton += u"k";
-      else if (hour_ == eTwoDigit)
+      else if (hour_ == kTwoDigit)
         skeleton += u"KK";
     } else {
-      if (hour_ == eNumeric)
+      if (hour_ == kNumeric)
         skeleton += u"h";
-      else if (hour_ == eTwoDigit)
+      else if (hour_ == kTwoDigit)
         skeleton += u"HH";
     }
   }
 
   if (minute_.has_value()) {
-    if (minute_ == eNumeric)
+    if (minute_ == kNumeric)
       skeleton += u"m";
-    else if (minute_ == eTwoDigit)
+    else if (minute_ == kTwoDigit)
       skeleton += u"mm";
   }
 
   if (second_.has_value()) {
-    if (second_ == eNumeric)
+    if (second_ == kNumeric)
       skeleton += u"s";
-    else if (second_ == eTwoDigit)
+    else if (second_ == kTwoDigit)
       skeleton += u"ss";
   }
 
