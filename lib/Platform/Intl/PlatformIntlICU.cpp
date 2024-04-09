@@ -853,9 +853,11 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
 
 // gets the UDateFormat with options set in initialize
 UDateFormat *DateTimeFormatICU::getUDateFormatter(vm::Runtime &runtime) {
-  static constexpr std::u16string_view kLong = u"long", kShort = u"short", kNarrow = u"narrow",
+  static constexpr std::u16string_view kLong = u"long", kShort = u"short",
+                                       kNarrow = u"narrow",
                                        keMedium = u"medium", kFull = u"full",
-                                       kNumeric = u"numeric", kTwoDigit = u"2-digit",
+                                       kNumeric = u"numeric",
+                                       kTwoDigit = u"2-digit",
                                        kShortOffset = u"shortOffset",
                                        kLongOffset = u"longOffset",
                                        kShortGeneric = u"shortGeneric",
