@@ -282,6 +282,21 @@ hermesInternalGetRuntimeProperties(void *, Runtime &runtime, NativeArgs args) {
   }
 #endif
 
+  const bool debuggerEnabled =
+#ifdef HERMES_ENABLE_DEBUGGER
+      true
+#else
+      false
+#endif
+      ;
+
+  tmpHandle = HermesValue::encodeBoolValue(debuggerEnabled);
+  if (LLVM_UNLIKELY(
+          addProperty(tmpHandle, "Debugger Enabled") ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
   const char *cjsModuleMode = getCJSModuleModeDescription(runtime);
   auto cjsModuleModeRes =
       StringPrimitive::create(runtime, createASCIIRef(cjsModuleMode));
