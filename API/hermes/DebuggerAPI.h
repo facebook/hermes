@@ -264,6 +264,10 @@ class HERMES_EXPORT Debugger {
   /// \return whether the debugger should pause after a script was loaded.
   bool getShouldPauseOnScriptLoad() const;
 
+  /// \return the thrown value if paused on an exception, or
+  /// jsi::Value::undefined() if not.
+  ::facebook::jsi::Value getThrownValue();
+
  private:
   friend std::unique_ptr<HermesRuntime> hermes::makeHermesRuntime(
       const ::hermes::vm::RuntimeConfig &);
@@ -459,6 +463,9 @@ class Debugger {
   void setShouldPauseOnScriptLoad(bool flag) {}
   bool getShouldPauseOnScriptLoad() const {
     return false;
+  }
+  ::facebook::jsi::Value getThrownValue() {
+    return ::facebook::jsi::Value::undefined();
   }
 
  private:

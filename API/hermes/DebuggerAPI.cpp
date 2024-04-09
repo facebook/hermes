@@ -104,6 +104,11 @@ Debugger::Debugger(
   });
 }
 
+::facebook::jsi::Value Debugger::getThrownValue() {
+  auto hv = vmRuntime_.getThrownValue();
+  return jsiValueFromHermesValue(hv);
+}
+
 String Debugger::getSourceMappingUrl(uint32_t fileId) const {
   return impl_->getSourceMappingUrl(fileId);
 }

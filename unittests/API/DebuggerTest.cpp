@@ -19,6 +19,7 @@ struct TestEventObserver : public debugger::EventObserver {
   std::vector<PauseReason> pauseReasons;
   std::vector<StackTrace> stackTraces;
   std::vector<LexicalInfo> lexicalInfos;
+  std::vector<std::string> thrownValueStrings;
 
   Command didPause(Debugger &debugger) override {
     auto &state = debugger.getProgramState();
@@ -31,8 +32,18 @@ struct TestEventObserver : public debugger::EventObserver {
       lexicalInfos.push_back(debugger.getProgramState().getLexicalInfo(i));
     }
 
+    thrownValueStrings.push_back(
+        debugger.getThrownValue().toString(*runtime_).utf8(*runtime_));
+
     return Command::continueExecution();
   }
+
+  void setRuntime(std::shared_ptr<HermesRuntime> runtime) {
+    runtime_ = runtime;
+  }
+
+ private:
+  std::shared_ptr<HermesRuntime> runtime_;
 };
 
 struct DebuggerAPITest : public ::testing::Test {
@@ -48,6 +59,7 @@ struct DebuggerAPITest : public ::testing::Test {
                                   .withEnableBlockScoping(true)
                                   .build()))) {
     rt->getDebugger().setEventObserver(&observer);
+    observer.setRuntime(rt);
   }
 };
 
@@ -203,6 +215,60 @@ TEST_F(DebuggerAPITest, CaptureStackTraceTest) {
 
   frame = stackTrace.callFrameForIndex(5);
   ASSERT_EQ(frame.functionName, "(native)");
+}
+
+TEST_F(DebuggerAPITest, ExceptionDetailsFromDidPauseTest) {
+  using namespace facebook;
+
+  rt->getDebugger().setPauseOnThrowMode(PauseOnThrowMode::All);
+
+  try {
+    eval(R"(
+      try {
+        throw new Error('test');
+      } catch (e) {
+        throw 123;
+      }
+    )");
+  } catch (jsi::JSError &err) {
+    EXPECT_EQ(123, err.value().getNumber());
+  }
+
+  ASSERT_EQ(
+      std::vector<PauseReason>(
+          {PauseReason::Exception, PauseReason::Exception}),
+      observer.pauseReasons);
+
+  ASSERT_EQ(
+      std::vector<std::string>({"Error: test", "123"}),
+      observer.thrownValueStrings);
+}
+
+TEST_F(DebuggerAPITest, GetEmptyThownValueTest) {
+  using namespace facebook;
+
+  // Before execution
+  EXPECT_TRUE(rt->getDebugger().getThrownValue().isUndefined());
+
+  eval(R"(
+    debugger;
+
+    try {
+      throw new Error('test');
+    } catch (e) {
+      debugger;
+    }
+
+    debugger;
+  )");
+
+  // During execution: before throwing, while catching, and after try/catch
+  ASSERT_EQ(
+      std::vector<std::string>({"undefined", "undefined", "undefined"}),
+      observer.thrownValueStrings);
+
+  // After execution
+  EXPECT_TRUE(rt->getDebugger().getThrownValue().isUndefined());
 }
 
 TEST_F(DebuggerAPITest, GetLoadedScriptsTest) {
