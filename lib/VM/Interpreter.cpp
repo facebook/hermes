@@ -138,8 +138,8 @@ CallResult<PseudoHandle<JSGenerator>> Interpreter::createGenerator_RJS(
     return ExecutionStatus::EXCEPTION;
   }
 
-  auto generatorFunction = runtime.makeHandle(vmcast<JSGeneratorFunction>(
-      runtime.getCurrentFrame().getCalleeClosureUnsafe()));
+  auto generatorFunction = runtime.makeHandle(
+      vmcast<JSFunction>(runtime.getCurrentFrame().getCalleeClosureUnsafe()));
 
   auto prototypeProp = JSObject::getNamed_RJS(
       generatorFunction,
@@ -1920,10 +1920,9 @@ tailCall:
       auto *runtimeModule = curCodeBlock->getRuntimeModule();
       CAPTURE_IP(
           O1REG(CreateClosure) =
-              JSFunction::create(
+              JSFunction::createWithInferredParent(
                   runtime,
                   runtimeModule->getDomain(runtime),
-                  Handle<JSObject>::vmcast(&runtime.functionPrototype),
                   Handle<Environment>::vmcast(&O2REG(CreateClosure)),
                   runtimeModule->getCodeBlockMayAllocate(idVal))
                   .getHermesValue());
@@ -1951,32 +1950,6 @@ tailCall:
               runtimeModule->getDomain(runtime),
               Handle<JSObject>::vmcast(&runtime.asyncFunctionPrototype),
               Handle<Environment>::vmcast(&O2REG(CreateAsyncClosure)),
-              runtimeModule->getCodeBlockMayAllocate(idVal))
-              .getHermesValue());
-      gcScope.flushToSmallCount(KEEP_HANDLES);
-      ip = nextIP;
-      DISPATCH;
-    }
-
-      CASE(CreateGeneratorClosure) {
-        idVal = ip->iCreateGeneratorClosure.op3;
-        nextIP = NEXTINST(CreateGeneratorClosure);
-        goto createGeneratorClosure;
-      }
-      CASE(CreateGeneratorClosureLongIndex) {
-        idVal = ip->iCreateGeneratorClosureLongIndex.op3;
-        nextIP = NEXTINST(CreateGeneratorClosureLongIndex);
-        goto createGeneratorClosure;
-      }
-    createGeneratorClosure : {
-      auto *runtimeModule = curCodeBlock->getRuntimeModule();
-      CAPTURE_IP_ASSIGN(
-          O1REG(CreateGeneratorClosure),
-          JSGeneratorFunction::create(
-              runtime,
-              runtimeModule->getDomain(runtime),
-              Handle<JSObject>::vmcast(&runtime.generatorFunctionPrototype),
-              Handle<Environment>::vmcast(&O2REG(CreateGeneratorClosure)),
               runtimeModule->getCodeBlockMayAllocate(idVal))
               .getHermesValue());
       gcScope.flushToSmallCount(KEEP_HANDLES);

@@ -89,6 +89,7 @@ void BytecodeFunctionGenerator::addDebugSourceLocation(
 std::unique_ptr<BytecodeFunction>
 BytecodeFunctionGenerator::generateBytecodeFunction(
     Function::ProhibitInvoke prohibitInvoke,
+    ValueKind valueKind,
     bool strictMode,
     uint32_t paramCount,
     uint32_t nameID) {
@@ -113,6 +114,18 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
       break;
     case Function::ProhibitInvoke::ProhibitCall:
       header.flags.prohibitInvoke = FunctionHeaderFlag::ProhibitCall;
+      break;
+  }
+
+  switch (valueKind) {
+    case ValueKind::GeneratorFunctionKind:
+      header.flags.kind = FunctionHeaderFlag::GeneratorFunction;
+      break;
+    case ValueKind::AsyncFunctionKind:
+      header.flags.kind = FunctionHeaderFlag::AsyncFunction;
+      break;
+    default:
+      header.flags.kind = FunctionHeaderFlag::NormalFunction;
       break;
   }
 
@@ -480,6 +493,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate(
 
     std::unique_ptr<BytecodeFunction> func = funcGen->generateBytecodeFunction(
         F->getProhibitInvoke(),
+        F->getKind(),
         F->isStrictMode(),
         F->getExpectedParamCountIncludingThis(),
         functionNameId);

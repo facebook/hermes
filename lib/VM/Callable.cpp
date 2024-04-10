@@ -74,7 +74,7 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
   if (auto jsFun = Handle<JSFunction>::dyn_vmcast(fn)) {
     const CodeBlock *codeBlock = jsFun->getCodeBlock(runtime);
     // Create empty object for prototype.
-    auto prototypeParent = vmisa<JSGeneratorFunction>(*jsFun)
+    auto prototypeParent = Callable::isGeneratorFunction(runtime, *jsFun)
         ? Handle<JSObject>::vmcast(&runtime.generatorPrototype)
         : Handle<JSObject>::vmcast(&runtime.objectPrototype);
 
@@ -85,7 +85,7 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
     // generator functions.
     auto prototypeObjectHandle =
         codeBlock->getHeaderFlags().isCallProhibited(/* construct */ true) &&
-            !vmisa<JSGeneratorFunction>(*jsFun)
+            !Callable::isGeneratorFunction(runtime, *jsFun)
         ? Runtime::makeNullHandle<JSObject>()
         : runtime.makeHandle(JSObject::create(runtime, prototypeParent));
 
@@ -194,7 +194,7 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
     pf.configurable = 0;
     DEFINE_PROP(selfHandle, P::prototype, prototypeObjectHandle);
 
-    if (LLVM_LIKELY(!vmisa<JSGeneratorFunction>(*selfHandle))) {
+    if (LLVM_LIKELY(!Callable::isGeneratorFunction(runtime, *selfHandle))) {
       // Set the 'constructor' property in the prototype object.
       // This must not be set for GeneratorFunctions, because
       // prototypes must not point back to their constructors.
@@ -210,6 +210,14 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
   return ExecutionStatus::RETURNED;
 
 #undef DEFINE_PROP
+}
+
+bool Callable::isGeneratorFunction(Runtime &runtime, Callable *fn) {
+  if (auto *jsFun = dyn_vmcast<JSFunction>(fn)) {
+    return jsFun->getCodeBlock(runtime)->getHeaderFlags().kind ==
+        hbc::FunctionHeaderFlag::GeneratorFunction;
+  }
+  return false;
 }
 
 /// Execute this function with no arguments. This is just a convenience
@@ -1223,6 +1231,18 @@ PseudoHandle<JSFunction> JSFunction::create(
   return self;
 }
 
+PseudoHandle<JSFunction> JSFunction::createWithInferredParent(
+    Runtime &runtime,
+    Handle<Domain> domain,
+    Handle<Environment> envHandle,
+    CodeBlock *codeBlock) {
+  auto parentHandle = codeBlock->getHeaderFlags().kind ==
+          hbc::FunctionHeaderFlag::GeneratorFunction
+      ? Handle<JSObject>::vmcast(&runtime.generatorFunctionPrototype)
+      : Handle<JSObject>::vmcast(&runtime.functionPrototype);
+  return create(runtime, domain, parentHandle, envHandle, codeBlock);
+}
+
 #ifdef HERMES_MEMORY_INSTRUMENTATION
 void JSFunction::addLocationToSnapshot(
     HeapSnapshot &snap,
@@ -1333,62 +1353,6 @@ PseudoHandle<JSAsyncFunction> JSAsyncFunction::create(
       parentHandle,
       runtime.getHiddenClassForPrototype(
           *parentHandle, numOverlapSlots<JSAsyncFunction>()),
-      envHandle,
-      codeBlock);
-  auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
-  self->flags_.lazyObject = 1;
-  return self;
-}
-
-//===----------------------------------------------------------------------===//
-// class JSGeneratorFunction
-
-const CallableVTable JSGeneratorFunction::vt{
-    {
-        VTable(
-            CellKind::JSGeneratorFunctionKind,
-            cellSize<JSGeneratorFunction>(),
-            nullptr,
-            nullptr,
-            nullptr
-#ifdef HERMES_MEMORY_INSTRUMENTATION
-            ,
-            VTable::HeapSnapshotMetadata {
-              HeapSnapshot::NodeType::Closure,
-                  JSGeneratorFunction::_snapshotNameImpl,
-                  JSGeneratorFunction::_snapshotAddEdgesImpl, nullptr, nullptr
-            }
-#endif
-            ),
-        JSGeneratorFunction::_getOwnIndexedRangeImpl,
-        JSGeneratorFunction::_haveOwnIndexedImpl,
-        JSGeneratorFunction::_getOwnIndexedPropertyFlagsImpl,
-        JSGeneratorFunction::_getOwnIndexedImpl,
-        JSGeneratorFunction::_setOwnIndexedImpl,
-        JSGeneratorFunction::_deleteOwnIndexedImpl,
-        JSGeneratorFunction::_checkAllOwnIndexedImpl,
-    },
-    JSGeneratorFunction::_newObjectImpl,
-    JSGeneratorFunction::_callImpl};
-
-void JSGeneratorFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSGeneratorFunction>());
-  JSFunctionBuildMeta(cell, mb);
-  mb.setVTable(&JSGeneratorFunction::vt);
-}
-
-PseudoHandle<JSGeneratorFunction> JSGeneratorFunction::create(
-    Runtime &runtime,
-    Handle<Domain> domain,
-    Handle<JSObject> parentHandle,
-    Handle<Environment> envHandle,
-    CodeBlock *codeBlock) {
-  auto *cell = runtime.makeAFixed<JSGeneratorFunction, kHasFinalizer>(
-      runtime,
-      domain,
-      parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSGeneratorFunction>()),
       envHandle,
       codeBlock);
   auto self = JSObjectInit::initToPseudoHandle(runtime, cell);

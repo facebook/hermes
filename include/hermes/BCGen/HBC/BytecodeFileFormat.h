@@ -221,6 +221,12 @@ union FunctionHeaderFlag {
     ProhibitNone = 2,
   };
 
+  enum {
+    NormalFunction = 0,
+    GeneratorFunction = 1,
+    AsyncFunction = 2,
+  };
+
   struct {
     /// Which kinds of calls are prohibited, constructed from the above enum.
     uint8_t prohibitInvoke : 2;
@@ -228,11 +234,13 @@ union FunctionHeaderFlag {
     bool hasExceptionHandler : 1;
     bool hasDebugInfo : 1;
     bool overflowed : 1;
+    uint8_t kind : 2;
   };
   uint8_t flags;
 
   FunctionHeaderFlag() {
     flags = 0;
+    kind = NormalFunction;
     prohibitInvoke = ProhibitNone;
   }
 

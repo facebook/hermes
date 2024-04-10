@@ -186,6 +186,9 @@ class Callable : public JSObject {
       Handle<JSObject> prototypeObjectHandle,
       WritablePrototype writablePrototype);
 
+  /// \return true if \p fn is a generator function.
+  static bool isGeneratorFunction(Runtime &runtime, Callable *fn);
+
   /// Execute this function with no arguments. This is just a convenience
   /// helper method; it actually invokes the interpreter recursively.
   static CallResult<PseudoHandle<>> executeCall0(
@@ -1054,6 +1057,14 @@ class JSFunction : public Callable {
       Handle<Environment> envHandle,
       CodeBlock *codeBlock);
 
+  /// Create a Function with the prototype property set to new Object(). The
+  /// parent is inferred by the CodeBlock's function header information.
+  static PseudoHandle<JSFunction> createWithInferredParent(
+      Runtime &runtime,
+      Handle<Domain> domain,
+      Handle<Environment> envHandle,
+      CodeBlock *codeBlock);
+
   /// Create a Function with no environment and a CodeBlock simply returning
   /// undefined, with the prototype property auto-initialized to new Object().
   static PseudoHandle<JSFunction> create(
@@ -1149,61 +1160,6 @@ class JSAsyncFunction final : public JSFunction {
   }
 
   JSAsyncFunction(
-      Runtime &runtime,
-      Handle<Domain> domain,
-      Handle<JSObject> parent,
-      Handle<HiddenClass> clazz,
-      Handle<Environment> environment,
-      CodeBlock *codeBlock)
-      : Super(runtime, domain, parent, clazz, environment, codeBlock) {
-    assert(
-        !vt.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&
-        "kHasFinalizer invalid value");
-  }
-};
-
-/// A function which interprets code and returns a Generator when called.
-/// Needs a separate class because it must be a different CellKind from
-/// JSFunction.
-class JSGeneratorFunction final : public JSFunction {
-  using Super = JSFunction;
-
-  static constexpr auto kHasFinalizer = HasFinalizer::No;
-
- public:
-  static const CallableVTable vt;
-
-  /// Create a GeneratorFunction.
-  static PseudoHandle<JSGeneratorFunction> create(
-      Runtime &runtime,
-      Handle<Domain> domain,
-      Handle<JSObject> parentHandle,
-      Handle<Environment> envHandle,
-      CodeBlock *codeBlock);
-
-  /// Create a GeneratorFunction with no environment and a CodeBlock simply
-  /// returning undefined, with the prototype property auto-initialized to new
-  /// Object().
-  static PseudoHandle<JSGeneratorFunction> create(
-      Runtime &runtime,
-      Handle<JSObject> parentHandle) {
-    return create(
-        runtime,
-        runtime.makeHandle(Domain::create(runtime)),
-        parentHandle,
-        runtime.makeNullHandle<Environment>(),
-        runtime.getEmptyCodeBlock());
-  }
-
-  static constexpr CellKind getCellKind() {
-    return CellKind::JSGeneratorFunctionKind;
-  }
-  static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::JSGeneratorFunctionKind;
-  }
-
- public:
-  JSGeneratorFunction(
       Runtime &runtime,
       Handle<Domain> domain,
       Handle<JSObject> parent,
