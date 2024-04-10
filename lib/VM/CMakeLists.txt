@@ -32,7 +32,6 @@ set(source_files
   JSDataView.cpp
   JSDate.cpp
   JSError.cpp
-  JSGenerator.cpp
   JSGeneratorObject.cpp
   JSObject.cpp
   JSProxy.cpp

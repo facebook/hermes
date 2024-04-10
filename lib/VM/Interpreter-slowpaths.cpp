@@ -20,17 +20,6 @@
 namespace hermes {
 namespace vm {
 
-void Interpreter::saveGenerator(
-    Runtime &runtime,
-    PinnedHermesValue *frameRegs,
-    const Inst *resumeIP) {
-  auto *innerFn =
-      vmcast<GeneratorInnerFunction>(FRAME.getCalleeClosureUnsafe());
-  innerFn->saveStack(runtime);
-  innerFn->setNextIP(runtime, resumeIP);
-  innerFn->setState(GeneratorInnerFunction::State::SuspendedYield);
-}
-
 ExecutionStatus Interpreter::caseDirectEval(
     Runtime &runtime,
     PinnedHermesValue *frameRegs,

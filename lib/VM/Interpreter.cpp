@@ -20,7 +20,6 @@
 #include "hermes/VM/HandleRootOwner-inline.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSError.h"
-#include "hermes/VM/JSGenerator.h"
 #include "hermes/VM/JSGeneratorObject.h"
 #include "hermes/VM/JSProxy.h"
 #include "hermes/VM/JSRegExp.h"
@@ -1666,58 +1665,6 @@ tailCall:
           goto exception;
         gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(CallBuiltinLong);
-        DISPATCH;
-      }
-
-      CASE(CompleteGenerator) {
-        auto *innerFn = vmcast<GeneratorInnerFunction>(
-            runtime.getCurrentFrame().getCalleeClosureUnsafe());
-        innerFn->setState(GeneratorInnerFunction::State::Completed);
-        ip = NEXTINST(CompleteGenerator);
-        DISPATCH;
-      }
-
-      CASE(SaveGenerator) {
-        DONT_CAPTURE_IP(
-            saveGenerator(runtime, frameRegs, IPADD(ip->iSaveGenerator.op1)));
-        ip = NEXTINST(SaveGenerator);
-        DISPATCH;
-      }
-      CASE(SaveGeneratorLong) {
-        DONT_CAPTURE_IP(saveGenerator(
-            runtime, frameRegs, IPADD(ip->iSaveGeneratorLong.op1)));
-        ip = NEXTINST(SaveGeneratorLong);
-        DISPATCH;
-      }
-
-      CASE(StartGenerator) {
-        auto *innerFn = vmcast<GeneratorInnerFunction>(
-            runtime.getCurrentFrame().getCalleeClosureUnsafe());
-        if (innerFn->getState() ==
-            GeneratorInnerFunction::State::SuspendedStart) {
-          nextIP = NEXTINST(StartGenerator);
-        } else {
-          nextIP = innerFn->getNextIP(runtime);
-          innerFn->restoreStack(runtime);
-        }
-        innerFn->setState(GeneratorInnerFunction::State::Executing);
-        ip = nextIP;
-        DISPATCH;
-      }
-
-      CASE(ResumeGenerator) {
-        auto *innerFn = vmcast<GeneratorInnerFunction>(
-            runtime.getCurrentFrame().getCalleeClosureUnsafe());
-        O2REG(ResumeGenerator) = HermesValue::encodeBoolValue(
-            innerFn->getAction() == GeneratorInnerFunction::Action::Return);
-        // Write the result last in case it is the same register as O2REG.
-        O1REG(ResumeGenerator) = innerFn->getResult().unboxToHV(runtime);
-        innerFn->clearResult(runtime);
-        if (innerFn->getAction() == GeneratorInnerFunction::Action::Throw) {
-          runtime.setThrownValue(O1REG(ResumeGenerator));
-          goto exception;
-        }
-        ip = NEXTINST(ResumeGenerator);
         DISPATCH;
       }
 

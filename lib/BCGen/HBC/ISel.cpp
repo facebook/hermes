@@ -1187,10 +1187,7 @@ void HBCISel::generateSwitchInst(SwitchInst *Inst, BasicBlock *next) {
 void HBCISel::generateSaveAndYieldInst(
     SaveAndYieldInst *Inst,
     BasicBlock *next) {
-  auto result = encodeValue(Inst->getResult());
-  auto loc = BCFGen_->emitSaveGeneratorLong(0);
-  registerLongJump(loc, Inst->getNextBlock());
-  BCFGen_->emitRet(result);
+  llvm_unreachable("SaveAndYieldInst should have been lowered");
 }
 void HBCISel::generateCreateGeneratorInst(
     CreateGeneratorInst *Inst,
@@ -1208,14 +1205,12 @@ void HBCISel::generateCreateGeneratorInst(
 void HBCISel::generateStartGeneratorInst(
     StartGeneratorInst *Inst,
     BasicBlock *next) {
-  BCFGen_->emitStartGenerator();
+  llvm_unreachable("StartGeneratorInst should have been lowered");
 }
 void HBCISel::generateResumeGeneratorInst(
     ResumeGeneratorInst *Inst,
     BasicBlock *next) {
-  auto value = encodeValue(Inst);
-  auto isReturn = encodeValue(Inst->getIsReturn());
-  BCFGen_->emitResumeGenerator(value, isReturn);
+  llvm_unreachable("ResumeGeneratorInst should have been lowered");
 }
 
 void HBCISel::generateCondBranchInst(CondBranchInst *Inst, BasicBlock *next) {

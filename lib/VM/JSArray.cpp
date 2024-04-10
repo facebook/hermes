@@ -437,8 +437,7 @@ CallResult<Handle<Arguments>> Arguments::create(
   DEFINE_PROP(
       selfHandle, P::SymbolIterator, Handle<>(&runtime.arrayPrototypeValues));
 
-  if (strictMode ||
-      LLVM_UNLIKELY(vmisa<GeneratorInnerFunction>(*curFunction))) {
+  if (strictMode) {
     // Define .callee and .caller properties: throw always in strict mode
     // or for GeneratorInnerFunction, because GeneratorInnerFunction isn't
     // visible to users.
