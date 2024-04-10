@@ -543,6 +543,7 @@ class IRBuilder {
 
   SaveAndYieldInst *createSaveAndYieldInst(
       Value *result,
+      LiteralBool *isDelegated,
       BasicBlock *nextBlock);
 
   CreateGeneratorInst *createCreateGeneratorInst(

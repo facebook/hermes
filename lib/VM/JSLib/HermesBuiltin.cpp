@@ -180,22 +180,6 @@ hermesBuiltinThrowTypeError(void *, Runtime &runtime, NativeArgs args) {
   return runtime.raiseTypeError(args.getArgHandle(0));
 }
 
-/// Set the isDelegated flag on the GeneratorInnerFunction which calls
-/// this function.
-/// \pre the caller must be an interpreted GeneratorInnerFunction
-/// \return `undefined`
-CallResult<HermesValue>
-hermesBuiltinGeneratorSetDelegated(void *, Runtime &runtime, NativeArgs args) {
-  auto *gen = dyn_vmcast<GeneratorInnerFunction>(
-      runtime.getCurrentFrame().getPreviousFrame().getCalleeClosureOrCBRef());
-  if (!gen) {
-    return runtime.raiseTypeError(
-        "generatorSetDelegated can only be called as part of yield*");
-  }
-  gen->setIsDelegated(true);
-  return HermesValue::encodeUndefinedValue();
-}
-
 namespace {
 
 CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
@@ -815,11 +799,6 @@ void createHermesBuiltins(
       B::HermesBuiltin_throwTypeError,
       P::throwTypeError,
       hermesBuiltinThrowTypeError,
-      1);
-  defineInternMethod(
-      B::HermesBuiltin_generatorSetDelegated,
-      P::generatorSetDelegated,
-      hermesBuiltinGeneratorSetDelegated,
       1);
   defineInternMethod(
       B::HermesBuiltin_copyDataProperties,

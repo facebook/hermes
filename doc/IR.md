@@ -743,8 +743,8 @@ Effects | Reads and writes memory. Restores the stack based on saved state, and 
 SaveAndYield | _
 --- | --- |
 Description | Saves information needed to resume generator execution and yield.
-Example |  %0 = SaveAndYield %value, %next
-Arguments | %value is the value to yield, %next is the next BasicBlock to execute upon resuming, which must begin with a ResumeGeneratorInst (generated alongside SaveAndYield).
+Example |  %0 = SaveAndYield %value, %isDelegated, %next
+Arguments | %value is the value to yield, %isDelegated determines if the value to be yielded should be wrapped (true when inside a yield*), %next is the next BasicBlock to execute upon resuming, which must begin with a ResumeGeneratorInst (generated alongside SaveAndYield).
 Semantics | Saves the frame variables and the next IP to the closure, and yield execution.
 Effects | Reads and writes to memory, may throw or execute.
 

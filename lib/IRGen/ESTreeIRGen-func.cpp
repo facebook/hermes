@@ -287,7 +287,9 @@ Function *ESTreeIRGen::genBasicFunction(
             DoEmitDeclarations::Yes,
             parentScope);
         Builder.createSaveAndYieldInst(
-            Builder.getLiteralUndefined(), entryPointBB);
+            Builder.getLiteralUndefined(),
+            Builder.getLiteralBool(false),
+            entryPointBB);
 
         // Actual entry point of function from the caller's perspective.
         Builder.setInsertionBlock(entryPointBB);

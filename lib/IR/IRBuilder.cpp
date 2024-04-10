@@ -848,8 +848,9 @@ DebuggerInst *IRBuilder::createDebuggerInst() {
 
 SaveAndYieldInst *IRBuilder::createSaveAndYieldInst(
     Value *result,
+    LiteralBool *isDelegated,
     BasicBlock *nextBlock) {
-  auto *I = new SaveAndYieldInst(result, nextBlock);
+  auto *I = new SaveAndYieldInst(result, isDelegated, nextBlock);
   insert(I);
   return I;
 }

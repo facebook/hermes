@@ -3370,19 +3370,27 @@ class SaveAndYieldInst : public TerminatorInst {
   void operator=(const SaveAndYieldInst &) = delete;
 
  public:
-  enum { ResultIdx, NextBlockIdx };
+  enum { ResultIdx, IsDelegatedIdx, NextBlockIdx };
 
   Value *getResult() const {
     return getOperand(ResultIdx);
+  }
+
+  bool getIsDelegated() const {
+    return llvh::cast<LiteralBool>(getOperand(IsDelegatedIdx))->getValue();
   }
 
   BasicBlock *getNextBlock() const {
     return cast<BasicBlock>(getOperand(NextBlockIdx));
   }
 
-  explicit SaveAndYieldInst(Value *result, BasicBlock *nextBlock)
+  explicit SaveAndYieldInst(
+      Value *result,
+      LiteralBool *isDelegated,
+      BasicBlock *nextBlock)
       : TerminatorInst(ValueKind::SaveAndYieldInstKind) {
     pushOperand(result);
+    pushOperand(isDelegated);
     pushOperand(nextBlock);
   }
   explicit SaveAndYieldInst(

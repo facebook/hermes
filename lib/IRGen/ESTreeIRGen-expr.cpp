@@ -1665,7 +1665,7 @@ Value *ESTreeIRGen::genYieldOrAwaitExpr(Value *value) {
   auto *resumeIsReturn = Builder.createAllocStackInst(
       genAnonymousLabelName("isReturn"), Type::createBoolean());
 
-  Builder.createSaveAndYieldInst(value, next);
+  Builder.createSaveAndYieldInst(value, Builder.getLiteralBool(false), next);
   Builder.setInsertionBlock(next);
   return genResumeGenerator(
       GenFinally::Yes,
@@ -1691,8 +1691,6 @@ Value *ESTreeIRGen::genYieldOrAwaitExpr(Value *value) {
 /// - Code for `finally` is also emitted here.
 ///
 /// yieldNextRes: Yield the result of the next() call
-/// - Calls HermesInternal.generatorSetDelegated so that the result is not
-///   wrapped by the VM in an IterResult object.
 ///
 /// exit: Returns `result` which should have the final results stored in it.
 ///
@@ -1765,8 +1763,8 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
   // BB then ResumeGenerator. This is because other BBs need to jump to
   // ResumeGenerator after completing a different SaveAndYield.
   Builder.setInsertionBlock(yieldNextRes);
-  genBuiltinCall(BuiltinMethod::HermesBuiltin_generatorSetDelegated, {});
-  Builder.createSaveAndYieldInst(nextResult, resumeGenTryStartBB);
+  Builder.createSaveAndYieldInst(
+      nextResult, Builder.getLiteralBool(true), resumeGenTryStartBB);
 
   Builder.setInsertionBlock(resumeGenTryStartBB);
   emitTryCatchScaffolding(
@@ -1837,10 +1835,10 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
 
                 // x. Else, set received to GeneratorYield(innerReturnResult).
                 Builder.setInsertionBlock(isNotDoneBB);
-                genBuiltinCall(
-                    BuiltinMethod::HermesBuiltin_generatorSetDelegated, {});
                 Builder.createSaveAndYieldInst(
-                    innerReturnResult, resumeGenTryStartBB);
+                    innerReturnResult,
+                    Builder.getLiteralBool(true),
+                    resumeGenTryStartBB);
 
                 // If return is undefined, return Completion(received).
                 Builder.setInsertionBlock(noReturnBB);
@@ -1910,8 +1908,8 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
 
         // ii. 8. Else, set received to GeneratorYield(innerResult).
         Builder.setInsertionBlock(isNotDoneBB);
-        genBuiltinCall(BuiltinMethod::HermesBuiltin_generatorSetDelegated, {});
-        Builder.createSaveAndYieldInst(innerResult, resumeGenTryStartBB);
+        Builder.createSaveAndYieldInst(
+            innerResult, Builder.getLiteralBool(true), resumeGenTryStartBB);
 
         // NOTE: If iterator does not have a throw method, this throw is
         // going to terminate the yield* loop. But first we need to give
