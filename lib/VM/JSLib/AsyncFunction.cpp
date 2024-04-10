@@ -32,8 +32,8 @@ Handle<JSObject> createAsyncFunctionConstructor(Runtime &runtime) {
       nullptr,
       asyncFunctionConstructor,
       1,
-      NativeConstructor::creatorFunction<JSAsyncFunction>,
-      CellKind::JSAsyncFunctionKind));
+      NativeConstructor::creatorFunction<JSFunction>,
+      CellKind::JSFunctionKind));
 
   /// has a "name" property whose value is "AsyncFunction".
   /// 26.7.2.1 AsyncFunction.length

@@ -189,6 +189,9 @@ class Callable : public JSObject {
   /// \return true if \p fn is a generator function.
   static bool isGeneratorFunction(Runtime &runtime, Callable *fn);
 
+  /// \return true if \p fn is an async function.
+  static bool isAsyncFunction(Runtime &runtime, Callable *fn);
+
   /// Execute this function with no arguments. This is just a convenience
   /// helper method; it actually invokes the interpreter recursively.
   static CallResult<PseudoHandle<>> executeCall0(
@@ -1117,60 +1120,6 @@ class JSFunction : public Callable {
   _snapshotAddLocationsImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
   static void _snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
 #endif
-};
-
-/// A function which interprets code and returns a Async Function when called.
-/// Needs a separate class because it must be a different CellKind from
-/// JSFunction.
-class JSAsyncFunction final : public JSFunction {
-  using Super = JSFunction;
-
-  static constexpr auto kHasFinalizer = HasFinalizer::No;
-
- public:
-  static const CallableVTable vt;
-
-  /// Create a AsyncFunction.
-  static PseudoHandle<JSAsyncFunction> create(
-      Runtime &runtime,
-      Handle<Domain> domain,
-      Handle<JSObject> parentHandle,
-      Handle<Environment> envHandle,
-      CodeBlock *codeBlock);
-
-  /// Create a AsyncFunction with no environment and a CodeBlock simply
-  /// returning undefined, with the prototype property auto-initialized to new
-  /// Object().
-  static PseudoHandle<JSAsyncFunction> create(
-      Runtime &runtime,
-      Handle<JSObject> parentHandle) {
-    return create(
-        runtime,
-        runtime.makeHandle(Domain::create(runtime)),
-        parentHandle,
-        runtime.makeNullHandle<Environment>(),
-        runtime.getEmptyCodeBlock());
-  }
-
-  static constexpr CellKind getCellKind() {
-    return CellKind::JSAsyncFunctionKind;
-  }
-  static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::JSAsyncFunctionKind;
-  }
-
-  JSAsyncFunction(
-      Runtime &runtime,
-      Handle<Domain> domain,
-      Handle<JSObject> parent,
-      Handle<HiddenClass> clazz,
-      Handle<Environment> environment,
-      CodeBlock *codeBlock)
-      : Super(runtime, domain, parent, clazz, environment, codeBlock) {
-    assert(
-        !vt.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&
-        "kHasFinalizer invalid value");
-  }
 };
 
 /// A function which can save its state and yield execution to the caller.

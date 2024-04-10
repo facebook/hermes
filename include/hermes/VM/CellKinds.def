@@ -98,7 +98,6 @@ CELL_KIND(NativeConstructor)
 CELL_CLASS(JSCallableProxy, "CallableProxy")
 CELL_KIND(FinalizableNativeFunction)
 CELL_KIND(GeneratorInnerFunction)
-CELL_KIND(JSAsyncFunction)
 CELL_CLASS(JSFunction, "Function")
 
 CELL_KIND(BigIntPrimitive)

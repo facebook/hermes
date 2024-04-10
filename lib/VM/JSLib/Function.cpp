@@ -174,7 +174,7 @@ functionPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
   }
 
   SmallU16String<64> strBuf{};
-  if (vmisa<JSAsyncFunction>(*func)) {
+  if (Callable::isAsyncFunction(runtime, *func)) {
     strBuf.append("async function ");
   } else if (Callable::isGeneratorFunction(runtime, *func)) {
     strBuf.append("function *");

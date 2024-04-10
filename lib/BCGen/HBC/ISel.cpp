@@ -1099,20 +1099,11 @@ void HBCISel::generateCreateFunctionInst(
   auto env = encodeValue(Inst->getScope());
   auto output = encodeValue(Inst);
   auto code = BCFGen_->getFunctionID(Inst->getFunctionCode());
-  bool isAsync = llvh::isa<AsyncFunction>(Inst->getFunctionCode());
   if (LLVM_LIKELY(code <= UINT16_MAX)) {
     // Most of the cases, function index will be less than 2^16.
-    if (isAsync) {
-      BCFGen_->emitCreateAsyncClosure(output, env, code);
-    } else {
-      BCFGen_->emitCreateClosure(output, env, code);
-    }
+    BCFGen_->emitCreateClosure(output, env, code);
   } else {
-    if (isAsync) {
-      BCFGen_->emitCreateAsyncClosureLongIndex(output, env, code);
-    } else {
-      BCFGen_->emitCreateClosureLongIndex(output, env, code);
-    }
+    BCFGen_->emitCreateClosureLongIndex(output, env, code);
   }
 }
 

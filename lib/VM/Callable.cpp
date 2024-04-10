@@ -220,6 +220,14 @@ bool Callable::isGeneratorFunction(Runtime &runtime, Callable *fn) {
   return false;
 }
 
+bool Callable::isAsyncFunction(Runtime &runtime, Callable *fn) {
+  if (auto *jsFun = dyn_vmcast<JSFunction>(fn)) {
+    return jsFun->getCodeBlock(runtime)->getHeaderFlags().kind ==
+        hbc::FunctionHeaderFlag::AsyncFunction;
+  }
+  return false;
+}
+
 /// Execute this function with no arguments. This is just a convenience
 /// helper method; it actually invokes the interpreter recursively.
 CallResult<PseudoHandle<>> Callable::executeCall0(
@@ -1236,10 +1244,21 @@ PseudoHandle<JSFunction> JSFunction::createWithInferredParent(
     Handle<Domain> domain,
     Handle<Environment> envHandle,
     CodeBlock *codeBlock) {
-  auto parentHandle = codeBlock->getHeaderFlags().kind ==
-          hbc::FunctionHeaderFlag::GeneratorFunction
-      ? Handle<JSObject>::vmcast(&runtime.generatorFunctionPrototype)
-      : Handle<JSObject>::vmcast(&runtime.functionPrototype);
+  PinnedHermesValue *parent;
+  if (codeBlock->getHeaderFlags().kind ==
+      hbc::FunctionHeaderFlag::GeneratorFunction) {
+    parent = &runtime.generatorFunctionPrototype;
+  } else if (
+      codeBlock->getHeaderFlags().kind ==
+      hbc::FunctionHeaderFlag::AsyncFunction) {
+    parent = &runtime.asyncFunctionPrototype;
+  } else {
+    assert(
+        codeBlock->getHeaderFlags().kind ==
+        hbc::FunctionHeaderFlag::NormalFunction);
+    parent = &runtime.functionPrototype;
+  }
+  auto parentHandle = Handle<JSObject>::vmcast(parent);
   return create(runtime, domain, parentHandle, envHandle, codeBlock);
 }
 
@@ -1303,62 +1322,6 @@ void JSFunction::_snapshotAddLocationsImpl(
   self->addLocationToSnapshot(snap, gc.getObjectID(self), gc);
 }
 #endif
-
-//===----------------------------------------------------------------------===//
-// class JSAsyncFunction
-
-const CallableVTable JSAsyncFunction::vt{
-    {
-        VTable(
-            CellKind::JSAsyncFunctionKind,
-            cellSize<JSAsyncFunction>(),
-            nullptr,
-            nullptr,
-            nullptr
-#ifdef HERMES_MEMORY_INSTRUMENTATION
-            ,
-            VTable::HeapSnapshotMetadata {
-              HeapSnapshot::NodeType::Closure,
-                  JSAsyncFunction::_snapshotNameImpl,
-                  JSAsyncFunction::_snapshotAddEdgesImpl, nullptr, nullptr
-            }
-#endif
-            ),
-        JSAsyncFunction::_getOwnIndexedRangeImpl,
-        JSAsyncFunction::_haveOwnIndexedImpl,
-        JSAsyncFunction::_getOwnIndexedPropertyFlagsImpl,
-        JSAsyncFunction::_getOwnIndexedImpl,
-        JSAsyncFunction::_setOwnIndexedImpl,
-        JSAsyncFunction::_deleteOwnIndexedImpl,
-        JSAsyncFunction::_checkAllOwnIndexedImpl,
-    },
-    JSAsyncFunction::_newObjectImpl,
-    JSAsyncFunction::_callImpl};
-
-void JSAsyncFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSAsyncFunction>());
-  JSFunctionBuildMeta(cell, mb);
-  mb.setVTable(&JSAsyncFunction::vt);
-}
-
-PseudoHandle<JSAsyncFunction> JSAsyncFunction::create(
-    Runtime &runtime,
-    Handle<Domain> domain,
-    Handle<JSObject> parentHandle,
-    Handle<Environment> envHandle,
-    CodeBlock *codeBlock) {
-  auto *cell = runtime.makeAFixed<JSAsyncFunction, kHasFinalizer>(
-      runtime,
-      domain,
-      parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSAsyncFunction>()),
-      envHandle,
-      codeBlock);
-  auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
-  self->flags_.lazyObject = 1;
-  return self;
-}
 
 //===----------------------------------------------------------------------===//
 // class GeneratorInnerFunction

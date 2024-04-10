@@ -587,15 +587,6 @@ DEFINE_OPCODE_3(CreateClosureLongIndex, Reg8, Reg8, UInt32)
 OPERAND_FUNCTION_ID(CreateClosure, 3)
 OPERAND_FUNCTION_ID(CreateClosureLongIndex, 3)
 
-/// Create a closure for an AsyncFunction.
-/// Arg1 is the register in which to store the closure.
-/// Arg2 is the current environment.
-/// Arg3 is index in the function table.
-DEFINE_OPCODE_3(CreateAsyncClosure, Reg8, Reg8, UInt16)
-DEFINE_OPCODE_3(CreateAsyncClosureLongIndex, Reg8, Reg8, UInt32)
-OPERAND_FUNCTION_ID(CreateAsyncClosure, 3)
-OPERAND_FUNCTION_ID(CreateAsyncClosureLongIndex, 3)
-
 /// Allocate an empty, uninitialized object (immediately before a constructor).
 /// Arg1 is the destination register.
 /// Arg2 is the prototype to assign it.

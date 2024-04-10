@@ -430,7 +430,6 @@ NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSSymbol>)
 NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSWeakMap>)
 NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSWeakSet>)
 NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSWeakRef>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSAsyncFunction>)
 
 #define TYPED_ARRAY(name, type) \
   NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<name##Array>)
