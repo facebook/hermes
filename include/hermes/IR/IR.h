@@ -99,10 +99,12 @@ class Type {
 #define NUM_BIT_TO_VAL(XX) (1 << NumTypeKind::XX)
 #define NUM_IS_VAL(XX) (numBitmask_ == (1 << NumTypeKind::XX))
 
-  // All possible types including "empty".
+  // All possible types including "empty" and "uninit", but not including
+  // special internal types that are never mixed with other types.
   static constexpr uint16_t TYPE_ANY_EMPTY_UNINIT_MASK =
-      (1u << TypeKind::LAST_TYPE) - 1;
-  // All possible types except "empty".
+      ((1u << TypeKind::LAST_TYPE) - 1) & ~BIT_TO_VAL(Environment) &
+      ~BIT_TO_VAL(FunctionCode);
+  // All of the above types except "empty" and "uninit".
   static constexpr uint16_t TYPE_ANY_MASK =
       TYPE_ANY_EMPTY_UNINIT_MASK & ~BIT_TO_VAL(Empty) & ~BIT_TO_VAL(Uninit);
 
