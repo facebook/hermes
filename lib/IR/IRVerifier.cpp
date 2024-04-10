@@ -556,6 +556,10 @@ bool Verifier::visitSaveAndYieldInst(const SaveAndYieldInst &Inst) {
       Inst,
       Inst.getParent()->getTerminator() == &Inst,
       "SaveAndYield must be the terminator");
+  AssertIWithMsg(
+      Inst,
+      !M.areGeneratorsLowered(),
+      "Should not exist after generators are lowered");
   return true;
 }
 
@@ -1292,9 +1296,17 @@ bool Verifier::visitStartGeneratorInst(const StartGeneratorInst &Inst) {
       &Inst == &Inst.getParent()->front() &&
           Inst.getParent() == &Inst.getParent()->getParent()->front(),
       "StartGeneratorInst must be the first instruction of a function");
+  AssertIWithMsg(
+      Inst,
+      !M.areGeneratorsLowered(),
+      "Should not exist after generators are lowered");
   return true;
 }
 bool Verifier::visitResumeGeneratorInst(const ResumeGeneratorInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      !M.areGeneratorsLowered(),
+      "Should not exist after generators are lowered");
   return true;
 }
 
