@@ -1473,6 +1473,8 @@ class Instruction
   void insertBefore(Instruction *InsertPos);
   void insertAfter(Instruction *InsertPos);
   void moveBefore(Instruction *Later);
+  // Move this instruction to the position described by \p iter.
+  void moveBefore(self_iterator iter);
   void removeFromParent();
   void eraseFromParent();
 

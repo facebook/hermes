@@ -5,12 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "hermes/BCGen/GeneratorResumeMethod.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/IRUtils.h"
 #include "hermes/IR/Instrs.h"
 #include "hermes/Optimizer/PassManager/Pass.h"
+#include "hermes/Optimizer/Scalar/Utils.h"
 
 namespace hermes {
 namespace {
@@ -47,6 +49,15 @@ class LowerToStateMachine {
   /// Builder used to generate IR.
   IRBuilder builder_;
 
+  /// Represents the GeneratorState internal slot.
+  /// ES6.0 25.3.2.
+  enum class State {
+    SuspendedStart,
+    SuspendedYield,
+    Executing,
+    Completed,
+  };
+
  public:
   explicit LowerToStateMachine(
       Module *M,
@@ -71,11 +82,39 @@ class LowerToStateMachine {
   /// function. Local here refers to instructions referencing local parameters,
   /// and AllocStackInsts.
   void moveLocalsToOuter();
+
+  /// Lower ResumeGeneratorInst.
+  void lowerResumeGenerator(
+      LoadParamInst *actionParam,
+      LoadParamInst *valueParam,
+      Variable *genState);
 };
 
 void LowerToStateMachine::convert() {
   setupScopes();
   moveLocalsToOuter();
+
+  // The inner function will take 2 parameters: action, value. Action
+  // communicates what method was called on the generator: next, return, or
+  // throw. For return and throw actions, value will hold the parameter that was
+  // passed.
+  auto *actionParam =
+      inner_->addJSDynamicParam(builder_.createIdentifier("action"));
+  actionParam->setType(Type::createUint32());
+  auto *valueParam =
+      inner_->addJSDynamicParam(builder_.createIdentifier("value"));
+  movePastFirstInBlock(builder_, &*inner_->begin());
+  auto *loadActionParam = builder_.createLoadParamInst(actionParam);
+  auto *loadValueParam = builder_.createLoadParamInst(valueParam);
+
+  // This variable holds the state of the generator, directly corresponding to
+  // ES6.0 25.3.2.
+  Variable *genState = builder_.createVariable(
+      getParentOuterScope_->getVariableScope(),
+      "generator_state",
+      Type::createInt32());
+
+  lowerResumeGenerator(loadActionParam, loadValueParam, genState);
 }
 
 void LowerToStateMachine::setupScopes() {
@@ -263,6 +302,76 @@ void LowerToStateMachine::moveLocalsToOuter() {
 
   // Clear out the original parameters in inner_, except for 'this'.
   innerFuncParams.resize(1);
+}
+
+void LowerToStateMachine::lowerResumeGenerator(
+    LoadParamInst *actionParam,
+    LoadParamInst *valueParam,
+    Variable *genState) {
+  IRBuilder::InstructionDestroyer destroyer{};
+  // This variable holds the value to return if the user executed .return().
+  // Store this in a variable because it potentially needs to persist across
+  // multiple generator invocations.
+  Variable *valueToReturn = builder_.createVariable(
+      getParentOuterScope_->getVariableScope(),
+      "return_value",
+      Type::createAnyType());
+  for (BasicBlock &BB : *inner_) {
+    for (auto iter = BB.begin(), end = BB.end(); iter != end; ++iter) {
+      Instruction *I = &*iter;
+      auto *RGI = llvh::dyn_cast<ResumeGeneratorInst>(I);
+      if (!RGI)
+        continue;
+      // All of the instructions we generate here should contain the same
+      // location information as RGI.
+      builder_.setLocation(RGI->getLocation());
+      // RGI checks: if .throw(valueParam) was called, then throw valueParam.
+      // We are going to split the current basic block at this RGI, and put
+      // the check for .throw at the end of this block.
+      ++iter;
+      auto *throwBlockBB = builder_.createBasicBlock(inner_);
+      auto *restOfInstsBB = splitBasicBlock(
+          &BB,
+          iter,
+          [&BB, this, throwBlockBB, actionParam](BasicBlock *restOfInstsBB) {
+            // Now put the check at the end of this block.
+            builder_.setInsertionBlock(&BB);
+            return builder_.createCompareBranchInst(
+                actionParam,
+                builder_.getLiteralNumber((uint8_t)Action::Throw),
+                ValueKind::CmpBrStrictlyEqualInstKind,
+                throwBlockBB,
+                restOfInstsBB);
+          });
+
+      builder_.setInsertionBlock(throwBlockBB);
+      builder_.createStoreFrameInst(
+          getParentOuterScope_,
+          builder_.getLiteralNumber((uint8_t)State::Completed),
+          genState);
+      builder_.createThrowInst(valueParam);
+
+      // Else, RGI takes an AllocStackInst and writes a boolean value to it.
+      // Write true iff the method called on the generator was
+      // .return(valueParam). The return value of RGI is valueParam.
+      builder_.setInsertionPoint(&*restOfInstsBB->begin());
+      builder_.createStoreFrameInst(
+          getParentOuterScope_, valueParam, valueToReturn);
+      auto *loadReturnVar =
+          builder_.createLoadFrameInst(getParentOuterScope_, valueToReturn);
+      RGI->replaceAllUsesWith(loadReturnVar);
+      auto *isReturn = builder_.createFCompareInst(
+          ValueKind::FEqualInstKind,
+          actionParam,
+          builder_.getLiteralNumber((uint8_t)Action::Return));
+      builder_.createStoreStackInst(
+          isReturn, llvh::cast<AllocStackInst>(RGI->getIsReturn()));
+      destroyer.add(RGI);
+      // There can't be anymore ResumeGeneratorInsts in this BB, so skip to
+      // the next one.
+      break;
+    }
+  }
 }
 
 } // namespace

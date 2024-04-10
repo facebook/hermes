@@ -428,8 +428,9 @@ static bool terminateNoReturnCalls(Function *F) {
 
       // Split block after call instruction.
       builder.setInsertionPointAfter(CI);
-      auto *unreachable = builder.createUnreachableInst();
-      splitBasicBlock(BB, it, unreachable);
+      splitBasicBlock(BB, it, [&builder](BasicBlock *) {
+        return builder.createUnreachableInst();
+      });
       changed = true;
       break;
     }

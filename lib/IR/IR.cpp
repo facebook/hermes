@@ -389,13 +389,16 @@ void Instruction::insertAfter(Instruction *InsertPos) {
       InsertPos->getIterator(), this);
 }
 
-void Instruction::moveBefore(Instruction *Later) {
-  if (this == Later)
+void Instruction::moveBefore(self_iterator iter) {
+  if (getIterator() == iter)
     return;
-
   getParent()->getInstList().remove(this);
-  Later->getParent()->getInstList().insert(Later->getIterator(), this);
-  setParent(Later->getParent());
+  iter->getParent()->getInstList().insert(iter, this);
+  setParent(iter->getParent());
+}
+
+void Instruction::moveBefore(Instruction *Later) {
+  moveBefore(Later->getIterator());
 }
 
 void BasicBlock::remove(Instruction *I) {

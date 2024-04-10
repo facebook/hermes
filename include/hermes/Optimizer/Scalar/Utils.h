@@ -8,8 +8,10 @@
 #ifndef HERMES_OPTIMIZER_SCALAR_UTILS_H
 #define HERMES_OPTIMIZER_SCALAR_UTILS_H
 
+#include "hermes/IR/CFG.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
+#include "hermes/IR/IRUtils.h"
 #include "hermes/IR/Instrs.h"
 #include "llvh/ADT/DenseSet.h"
 #include "llvh/ADT/SmallVector.h"
@@ -60,15 +62,39 @@ Value *getSinglePhiValue(PhiInst *P);
 void splitCriticalEdge(IRBuilder *builder, BasicBlock *from, BasicBlock *to);
 
 /// Split a basic block into two at the specified instruction.
-/// The instructions before \p it are retained in \p BB, while those after \p it
-/// are moved into a newly-created successor basic block.
-/// Phi instructions in successors of \p BB will be updated to refer to the new
-/// BasicBlock, and \p newTerm will be used to terminate the original block.
-/// \return the newly created basic block.
+/// The instructions before \p it are retained in \p BB, while those after and
+/// including \p it are moved into a newly-created successor basic block. Phi
+/// instructions in successors of \p BB will be updated to refer to the new
+/// BasicBlock. \p makeTerminator is called with the new basic block and returns
+/// a TerminatorInst used to terminate the original block. \return the newly
+/// created basic block.
+template <typename CB>
 BasicBlock *splitBasicBlock(
     BasicBlock *BB,
     BasicBlock::InstListType::iterator it,
-    TerminatorInst *newTerm);
+    CB makeTerminator) {
+  Function *F = BB->getParent();
+
+  IRBuilder builder(F);
+  auto *newBB = builder.createBasicBlock(F);
+
+  for (auto *succ : successors(BB))
+    updateIncomingPhiValues(succ, BB, newBB);
+
+  // Move the instructions after the split point into the new BB.
+  newBB->getInstList().splice(
+      newBB->end(), BB->getInstList(), it, BB->getInstList().end());
+
+  // setParent is not called by splice, so add it ourselves.
+  for (auto &movedInst : *newBB)
+    movedInst.setParent(newBB);
+
+  auto *newTerm = makeTerminator(newBB);
+  newTerm->moveBefore(BB->end());
+  newTerm->setParent(BB);
+
+  return newBB;
+}
 
 /// Delete all variables that have no remaining uses.
 /// \return true if anything was deleted, false otherwise.
