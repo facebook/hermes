@@ -512,6 +512,7 @@ bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
               llvh::isa<GetParentScopeInst>(Inst) ||
               llvh::isa<LIRResolveScopeInst>(Inst) ||
               llvh::isa<BaseCreateLexicalChildInst>(Inst) ||
+              llvh::isa<LoadStackInst>(Inst) ||
               llvh::isa<StoreStackInst>(Inst) || llvh::isa<PhiInst>(Inst) ||
               llvh::isa<LoadFrameInst>(Inst) || llvh::isa<StoreFrameInst>(Inst),
           "Environments can only be an operand to certain instructions.");
