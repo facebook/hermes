@@ -33,6 +33,7 @@ set(source_files
   JSDate.cpp
   JSError.cpp
   JSGenerator.cpp
+  JSGeneratorObject.cpp
   JSObject.cpp
   JSProxy.cpp
   JSRegExp.cpp
