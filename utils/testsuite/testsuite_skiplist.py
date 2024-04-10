@@ -1943,13 +1943,7 @@ SKIP_LIST = [
     "flow/dynamic_import/migrated_0005.js",
     ### Failing Flow tests end ###
     ### Failing Static Hermes tests ###
-    "test262/test/built-ins/Object/seal/seal-asyncfunction.js",
-    "test262/test/built-ins/Object/seal/seal-generatorfunction.js",
-    "test262/test/language/expressions/in/rhs-yield-present.js",
-    "test262/test/built-ins/AsyncFunction/",
-    "test262/test/language/expressions/async-function/",
     "test262/test/language/statements/debugger/statement.js",
-    "test262/test/language/statements/async-function/",
     "test262/test/harness/asyncHelpers-asyncTest-without-async-flag.js",
     "test262/test/harness/asyncHelpers-asyncTest-func-throws-sync.js",
     ### Failing Static Hermes tests end ###
@@ -2104,6 +2098,10 @@ PERMANENT_SKIP_LIST = [
     "flow/JSX_invalid/migrated_0000.js",
     # Flow has a very different way of representing namespace exports.
     "flow/ES6/modules/migrated_0008.js",
+    # Constuctor calls on generator functions. No calls are currently checked in SH.
+    "test262/test/language/statements/generators/invoke-as-constructor.js",
+    "test262/test/language/expressions/generators/invoke-as-constructor.js",
+    "test262/test/built-ins/AsyncFunction/instance-construct-throws.js",
 ]
 
 HANDLESAN_SKIP_LIST = [
@@ -2186,9 +2184,6 @@ UNSUPPORTED_FEATURES = [
     "String.prototype.isWellFormed",
     "array-grouping",
     "symbols-as-weakmap-keys",
-    # Static Hermes does not support generators yet.
-    "async-functions",
-    "generators",
 ]
 
 PERMANENT_UNSUPPORTED_FEATURES = [
