@@ -996,9 +996,9 @@ UDateFormat *DateTimeFormatICU::getUDateFormatter(vm::Runtime &runtime) {
         skeleton += u"kk";
     } else if (hourCycle_ == u"h23") {
       if (hour_ == kNumeric)
-        skeleton += u"k";
+        skeleton += u"H";
       else if (hour_ == kTwoDigit)
-        skeleton += u"KK";
+        skeleton += u"HH";
     } else {
       if (hour_ == kNumeric)
         skeleton += u"h";
