@@ -144,6 +144,14 @@ class LowerToStateMachine {
       LoadParamInst *valueParam,
       Variable *genState);
 
+  /// Find all values that are used across basic blocks without proper
+  /// dominance. Move these values to the outer function.
+  void moveCrossingValuesToOuter();
+
+  /// Find PhiInsts that have an entry block which is not a predecessor of the
+  /// PhiInst. Move these instructions to the outer function.
+  void moveInnerPhisToOuter(DominanceInfo &D);
+
   /// Create a BB to handle being in the 'Completed' state of the generator.
   BasicBlock *createCompletedStateBlock(
       LoadParamInst *action,
@@ -181,6 +189,11 @@ void LowerToStateMachine::convert() {
 
   lowerResumeGenerator(loadActionParam, loadValueParam, genState);
   lowerToSwitch(loadActionParam, loadValueParam, genState);
+  // Creating the switch will break the connection between user BBs in the
+  // process. Values that flow between the newly disjointed BBs are illegal and
+  // should be moved to the closure. So do the promotion after these
+  // operations.
+  moveCrossingValuesToOuter();
 }
 
 void LowerToStateMachine::setupScopes() {
@@ -873,6 +886,103 @@ BasicBlock *LowerToStateMachine::createCompletedStateBlock(
   return checkIsThrowBB;
 }
 
+void LowerToStateMachine::moveCrossingValuesToOuter() {
+  DominanceInfo D(inner_);
+  // Move PhiInsts first. That promotion can potentially localize the
+  // lifetime of a value to a single BB, obviating the need to lift it
+  // additionally into the outer scope in this pass.
+  moveInnerPhisToOuter(D);
+
+  for (BasicBlock &BB : *inner_) {
+    for (Instruction &I : BB) {
+      // Store the illegal users separately as we cannot modify the users list
+      // as we iterate it.
+      llvh::SmallVector<Instruction *, 2> illegalUsers;
+      for (const auto &user : I.getUsers()) {
+        if (llvh::isa<PhiInst>(user)) {
+          // Phis were already processed.
+          continue;
+        }
+        BasicBlock *userBB = user->getParent();
+        if (userBB != &BB && !D.properlyDominates(&BB, userBB)) {
+          illegalUsers.push_back(user);
+        }
+      }
+      if (illegalUsers.empty())
+        continue;
+
+      // The current instruction is used across a BB it does not dominate. Store
+      // the value of the instruction into the environment, and replace the
+      // illegal usages with a read.
+      Variable *storedValueOfI = builder_.createVariable(
+          getParentOuterScope_->getVariableScope(), I.getName(), I.getType());
+      // This is a small optimization to reduce the number of reads to the
+      // replacement variable we need to create for each illegal user. Illegal
+      // users that reside in the same block can all share the same single read
+      // from the variable.
+      llvh::DenseMap<BasicBlock *, LoadFrameInst *> loadFramePerBlock;
+      moveBuilderAfter(&I, builder_);
+      builder_.createStoreFrameInst(getParentOuterScope_, &I, storedValueOfI);
+      for (const auto &user : illegalUsers) {
+        auto *userBB = user->getParent();
+        LoadFrameInst *&load = loadFramePerBlock[userBB];
+        if (!load) {
+          movePastFirstInBlock(builder_, userBB);
+          load = builder_.createLoadFrameInst(
+              getParentOuterScope_, storedValueOfI);
+        }
+        moveBuilderTo(user, builder_);
+        user->replaceFirstOperandWith(&I, load);
+      }
+    }
+  }
+}
+
+/// \return true if an entry BasicBlock in \p PI is not a predecessor of
+/// the BasicBlock \p PI resides in.
+static bool shouldMovePhiInst(
+    PhiInst *PI,
+    const llvh::DenseSet<BasicBlock *> &predBBs) {
+  for (size_t i = 0, e = PI->getNumEntries(); i < e; ++i) {
+    auto [_, valBB] = PI->getEntry(i);
+    if (!predBBs.count(valBB)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void LowerToStateMachine::moveInnerPhisToOuter(DominanceInfo &D) {
+  IRBuilder::InstructionDestroyer destroyer{};
+  for (BasicBlock &BB : *inner_) {
+    llvh::DenseSet<BasicBlock *> predBBs;
+    predBBs.insert(pred_begin(&BB), pred_end(&BB));
+    for (Instruction &I : BB) {
+      if (auto *PI = llvh::dyn_cast<PhiInst>(&I)) {
+        if (!shouldMovePhiInst(PI, predBBs))
+          continue;
+        auto outerVar = builder_.createVariable(
+            getParentOuterScope_->getVariableScope(),
+            PI->getName(),
+            PI->getType());
+        for (size_t i = 0, e = PI->getNumEntries(); i < e; ++i) {
+          // For each possible value that PhiInst can take, create a
+          // corresponding storeFrameInst in the BB it needs to come from in
+          // order to have that value. The PhiInst will then read from the
+          // frame to obtain the value.
+          const auto &[val, predBB] = PI->getEntry(i);
+          moveBuilderTo(&predBB->back(), builder_);
+          builder_.createStoreFrameInst(getParentOuterScope_, val, outerVar);
+        }
+        moveBuilderTo(PI, builder_);
+        auto loadReplacement =
+            builder_.createLoadFrameInst(getParentOuterScope_, outerVar);
+        PI->replaceAllUsesWith(loadReplacement);
+        destroyer.add(PI);
+      }
+    }
+  }
+}
 } // namespace
 
 /// \return the corresponding NormalFunction for the given \p outer
