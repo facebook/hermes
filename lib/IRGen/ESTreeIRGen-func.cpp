@@ -8,6 +8,7 @@
 #include "ESTreeIRGen.h"
 
 #include "hermes/IR/IRUtils.h"
+#include "hermes/IR/Instrs.h"
 #include "llvh/ADT/SmallString.h"
 
 namespace hermes {
@@ -368,19 +369,22 @@ Function *ESTreeIRGen::genGeneratorFunction(
         DoEmitDeclarations::No,
         parentScope);
 
-    // Build the inner function. This must be done in the outerFnContext
-    // since it's lexically considered a child function.
+    // Build the inner function. This must be done in the parentScope since
+    // generator functions don't create a scope.
     auto *innerFn = genBasicFunction(
         genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
         functionNode,
-        curFunction()->functionScope->getVariableScope(),
+        parentScope,
         /* classNode */ nullptr,
         true);
 
+    // Generator functions do not create their own scope, so use the parent's
+    // scope.
+    GetParentScopeInst *parentScopeInst = Builder.createGetParentScopeInst(
+        parentScope, curFunction()->function->getParentScopeParam());
     // Create a generator function, which will store the arguments.
     auto *gen = Builder.createCreateGeneratorInst(
-        curFunction()->functionScope,
-        llvh::cast<GeneratorInnerFunction>(innerFn));
+        parentScopeInst, llvh::cast<GeneratorInnerFunction>(innerFn));
 
     if (!hasSimpleParams(functionNode)) {
       // If there are non-simple params, step the inner function once to
@@ -558,8 +562,12 @@ void ESTreeIRGen::emitFunctionPrologue(
   } else {
     baseScope = Builder.getEmptySentinel();
   }
-  curFunction()->functionScope = Builder.createCreateScopeInst(
-      Builder.createVariableScope(parentScope), baseScope);
+  // GeneratorFunctions should not have a scope created. It will be created
+  // later during a lowering pass.
+  if (!llvh::isa<GeneratorFunction>(curFunction()->function)) {
+    curFunction()->functionScope = Builder.createCreateScopeInst(
+        Builder.createVariableScope(parentScope), baseScope);
+  }
 
   if (doInitES5CaptureState != InitES5CaptureState::No)
     initCaptureStateInES5FunctionHelper();

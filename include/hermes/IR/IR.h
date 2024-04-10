@@ -1957,6 +1957,10 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     statementCount_ = llvh::None;
   }
 
+  auto &getJSDynamicParams() {
+    return jsDynamicParams_;
+  }
+
   const auto &getJSDynamicParams() const {
     return jsDynamicParams_;
   }
@@ -2275,6 +2279,9 @@ class Module : public Value {
   /// Set to true when lowerIR has been called on this Module.
   bool isLowered_{false};
 
+  /// Set to true when generator functions have been lowered.
+  bool areGeneratorsLowered_{false};
+
  public:
   explicit Module(std::shared_ptr<Context> ctx)
       : Value(ValueKind::ModuleKind), Ctx(std::move(ctx)) {}
@@ -2463,6 +2470,14 @@ class Module : public Value {
 
   void setLowered(bool isLowered) {
     isLowered_ = isLowered;
+  }
+
+  bool areGeneratorsLowered() const {
+    return areGeneratorsLowered_;
+  }
+
+  void setGeneratorsLowered(bool lowered) {
+    areGeneratorsLowered_ = lowered;
   }
 
   inline iterator begin() {

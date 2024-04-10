@@ -54,22 +54,6 @@ llvh::SmallVector<Instruction *, 4> getInsertionPointsAfter(
   return points;
 }
 
-/// Update the insertion point of the builder to the "entry insertion point"
-/// of the function, which is where we insert new lowered instructions that must
-/// execute on entry.
-void updateToEntryInsertionPoint(IRBuilder &builder, Function *F) {
-  auto &BB = F->front();
-  auto it = BB.begin();
-  auto end = BB.end();
-  // Skip all HBCCreateFunctionEnvironmentInst and FirstInBlock insts.
-  while (it != end &&
-         (llvh::isa<HBCCreateFunctionEnvironmentInst>(*it) ||
-          it->getSideEffect().getFirstInBlock()))
-    ++it;
-
-  builder.setInsertionPoint(&*it);
-}
-
 } // namespace
 
 bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
@@ -316,7 +300,7 @@ CreateArgumentsInst *LowerArgumentsArray::getCreateArgumentsInst(Function *F) {
 
 bool LowerArgumentsArray::runOnFunction(Function *F) {
   IRBuilder builder(F);
-  updateToEntryInsertionPoint(builder, F);
+  movePastFirstInBlock(builder, &*F->begin());
 
   CreateArgumentsInst *createArguments = getCreateArgumentsInst(F);
   if (!createArguments) {

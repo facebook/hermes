@@ -85,4 +85,13 @@ void updateIncomingPhiValues(
   }
 }
 
+void movePastFirstInBlock(IRBuilder &builder, BasicBlock *BB) {
+  auto it = BB->begin();
+  auto end = BB->end();
+  // Skip all FirstInBlock insts.
+  while (it != end && it->getSideEffect().getFirstInBlock())
+    ++it;
+  builder.setInsertionPoint(&*it);
+}
+
 } // namespace hermes

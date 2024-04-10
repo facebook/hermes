@@ -507,6 +507,7 @@ bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
               llvh::isa<ResolveScopeInst>(Inst) ||
               llvh::isa<LIRResolveScopeInst>(Inst) ||
               llvh::isa<BaseCreateLexicalChildInst>(Inst) ||
+              llvh::isa<StoreStackInst>(Inst) || llvh::isa<PhiInst>(Inst) ||
               llvh::isa<LoadFrameInst>(Inst) || llvh::isa<StoreFrameInst>(Inst),
           "BaseScopeInst can only be an operand to certain instructions.");
     }
@@ -1277,6 +1278,10 @@ bool Verifier::visitCreateGeneratorInst(const CreateGeneratorInst &Inst) {
       Inst,
       llvh::isa<GeneratorInnerFunction>(Inst.getFunctionCode()),
       "CreateGeneratorInst must take a GeneratorInnerFunction");
+  AssertIWithMsg(
+      Inst,
+      llvh::isa<BaseScopeInst>(Inst.getScope()),
+      "CreateGeneratorInst must take a BaseScopeInst");
   return true;
 }
 bool Verifier::visitStartGeneratorInst(const StartGeneratorInst &Inst) {

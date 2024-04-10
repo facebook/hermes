@@ -10,6 +10,7 @@ add_hermes_library(hermesOptimizer
   Optimizer/Scalar/CSE.cpp
   Optimizer/Scalar/CodeMotion.cpp
   Optimizer/Scalar/DCE.cpp
+  Optimizer/Scalar/LowerGeneratorFunction.cpp
   Optimizer/Scalar/Mem2Reg.cpp
   Optimizer/Scalar/SimpleMem2Reg.cpp
   Optimizer/Scalar/FrameLoadStoreOpts.cpp

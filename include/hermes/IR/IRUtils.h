@@ -8,10 +8,13 @@
 #ifndef HERMES_IR_IRUTILS_H
 #define HERMES_IR_IRUTILS_H
 
+#include "hermes/IR/IRBuilder.h"
+
 namespace hermes {
 
 class BasicBlock;
 class Function;
+class IRBuilder;
 
 /// Delete all unreachable basic blocks from \p F.
 /// \return true if anything was deleted, false otherwise.
@@ -23,6 +26,10 @@ void updateIncomingPhiValues(
     BasicBlock *blockToFix,
     BasicBlock *previousBlock,
     BasicBlock *newBlock);
+
+/// Update the insertion point of the builder to the beginning of \p BB,
+/// skipping past any initial FirstInBlock instructions.
+void movePastFirstInBlock(IRBuilder &builder, BasicBlock *BB);
 
 } // namespace hermes
 

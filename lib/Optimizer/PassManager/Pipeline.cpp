@@ -49,6 +49,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
 
   // Add the optimization passes.
 
+  PM.addLowerGeneratorFunction();
   // We need to fold constant strings before staticrequire.
   PM.addInstSimplify();
   PM.addResolveStaticRequire();
@@ -109,6 +110,8 @@ void hermes::runFullOptimizationPasses(Module &M) {
 void hermes::runDebugOptimizationPasses(Module &M) {
   LLVM_DEBUG(dbgs() << "Running -Og optimizations...\n");
   PassManager PM;
+
+  PM.addLowerGeneratorFunction();
 
   PM.addInstSimplify();
   PM.addResolveStaticRequire();

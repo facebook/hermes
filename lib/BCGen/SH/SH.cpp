@@ -2417,6 +2417,7 @@ class InstrGen {
 /// \return true if lowering completed successfully.
 bool lowerModuleIR(Module *M, bool optimize) {
   PassManager PM;
+  PM.addLowerGeneratorFunction();
   // Lowering ExponentiationOperator and ThrowTypeError (in PeepholeLowering)
   // needs to run before LowerBuiltinCalls because it introduces calls to
   // HermesInternal.
