@@ -179,8 +179,6 @@ ResolvedLocale resolveLocale(
     // and remove this temporary once we have constexpr std::u16string.
     std::u16string key{keyView};
     // a. Let foundLocaleData be localeData.[[<foundLocale>]].
-    // NOTE: We don't actually have access to the underlying locale data, so we
-    // accept everything and defer to NSLocale.
     // b. Assert: Type(foundLocaleData) is Record.
     // c. Let keyLocaleData be foundLocaleData.[[<key>]].
     // d. Assert: Type(keyLocaleData) is List.
@@ -268,7 +266,7 @@ namespace {
 class TimeZoneNames {
  public:
   /// Initializing the underlying map with all known time zone names in
-  /// NSTimeZone.
+  /// ICU::TimeZone
   TimeZoneNames() {
     StringEnumeration *icuTimeZones = TimeZone::createEnumeration();
     UErrorCode status = U_ZERO_ERROR;
@@ -454,10 +452,6 @@ struct DateTimeFormatICU : DateTimeFormat {
   std::optional<std::u16string> calendar_;
   // [[NumberingSystem]] is a String value with the "type" given in Unicode
   // Technical Standard 35 for the numbering system used for formatting.
-  // NOTE: Even though NSDateFormatter formats date and time using different
-  // numbering systems based on its "locale" value, it does not allow to set/get
-  // the numbering system value explicitly. So we consider this feature
-  // unsupported.
   // [[TimeZone]] is a String value with the IANA time zone name of the time
   // zone used for formatting.
   std::u16string timeZone_;
