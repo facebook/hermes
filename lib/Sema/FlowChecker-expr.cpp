@@ -1156,7 +1156,9 @@ class FlowChecker::ExprVisitor {
       ESTree::ConditionalExpressionNode *node,
       ESTree::Node *parent,
       Type *constraint) {
-    visitESTreeChildren(*this, node, nullptr);
+    visitESTreeNode(*this, node->_test, node, nullptr);
+    visitESTreeNode(*this, node->_consequent, node, constraint);
+    visitESTreeNode(*this, node->_alternate, node, constraint);
 
     Type *types[2]{
         outer_.getNodeTypeOrAny(node->_consequent),
