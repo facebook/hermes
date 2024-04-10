@@ -11,7 +11,8 @@
 //===----------------------------------------------------------------------===//
 #include "JSLibInternal.h"
 
-#include "hermes/VM/JSGenerator.h"
+#include "hermes/BCGen/GeneratorResumeMethod.h"
+#include "hermes/VM/JSGeneratorObject.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/Runtime.h"
 
@@ -25,23 +26,23 @@ void populateGeneratorPrototype(Runtime &runtime) {
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::next),
-      nullptr,
-      generatorPrototypeNext,
+      (void *)Action::Next,
+      generatorPrototypeResume,
       1);
 
   defineMethod(
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::returnStr),
-      /* isThrow */ (void *)false,
-      generatorPrototypeReturnOrThrow,
+      (void *)Action::Return,
+      generatorPrototypeResume,
       1);
   defineMethod(
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::throwStr),
-      /* isThrow */ (void *)true,
-      generatorPrototypeReturnOrThrow,
+      (void *)Action::Throw,
+      generatorPrototypeResume,
       1);
 
   auto dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
@@ -66,132 +67,42 @@ void populateGeneratorPrototype(Runtime &runtime) {
 }
 
 // ES6.0 25.3.3.2.
-static CallResult<Handle<JSGenerator>> generatorValidate(
+static CallResult<Handle<JSGeneratorObject>> generatorValidate(
     Runtime &runtime,
     Handle<> value) {
-  auto generator = Handle<JSGenerator>::dyn_vmcast(value);
+  auto generator = Handle<JSGeneratorObject>::dyn_vmcast(value);
   if (!generator) {
     return runtime.raiseTypeError(
         "Generator functions must be called on generators");
   }
-
-  if (JSGenerator::getInnerFunction(runtime, *generator)->getState() ==
-      GeneratorInnerFunction::State::Executing) {
-    return runtime.raiseTypeError(
-        "Generator functions may not be called on executing generators");
-  }
-
   return generator;
 }
 
-// ES6.0 25.3.3.3.
-// Placed separately from generatorPrototypeNext for readability and for simpler
-// comparison to the spec.
-static CallResult<Handle<JSObject>> generatorResume(
-    Runtime &runtime,
-    Handle<GeneratorInnerFunction> generator,
-    Handle<> value) {
-  if (generator->getState() == GeneratorInnerFunction::State::Completed) {
-    return createIterResultObject(runtime, Runtime::getUndefinedValue(), true);
-  }
-  auto valueRes = GeneratorInnerFunction::callInnerFunction(
-      generator, runtime, value, GeneratorInnerFunction::Action::Next);
-  if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
-    generator->setState(GeneratorInnerFunction::State::Completed);
-    return ExecutionStatus::EXCEPTION;
-  }
-  if (LLVM_UNLIKELY(generator->isDelegated())) {
-    generator->setIsDelegated(false);
-    return runtime.makeHandle<JSObject>(std::move(*valueRes));
-  }
-  return createIterResultObject(
-      runtime,
-      runtime.makeHandle(std::move(*valueRes)),
-      generator->getState() == GeneratorInnerFunction::State::Completed);
-}
-
+// The logic for ES6.0 25.3.1.(2|3|4) is handled by the inner
+// function. All we have to do here is give it the proper action and value.
 CallResult<HermesValue>
-generatorPrototypeNext(void *, Runtime &runtime, NativeArgs args) {
+generatorPrototypeResume(void *ctx, Runtime &runtime, NativeArgs args) {
   auto generatorRes = generatorValidate(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(generatorRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-
-  auto result = generatorResume(
+  Action action = *reinterpret_cast<Action *>(&ctx);
+  auto innerFunc = runtime.makeHandle(
+      JSGeneratorObject::getInnerFunction(runtime, generatorRes->get()));
+  auto value = args.getArgHandle(0);
+  auto valueRes = Callable::executeCall2(
+      innerFunc,
       runtime,
-      runtime.makeHandle(
-          JSGenerator::getInnerFunction(runtime, generatorRes->get())),
-      args.getArgHandle(0));
-  if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
+      innerFunc,
+      HermesValue::encodeTrustedNumberValue((uint8_t)action),
+      value.getHermesValue());
+  if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return result->getHermesValue();
-}
-
-// ES6.0 25.3.3.4.
-// Placed separately from generatorPrototypeReturnOrThrow for readability
-// and for simpler comparison to the spec.
-static CallResult<Handle<JSObject>> generatorResumeAbrupt(
-    Runtime &runtime,
-    Handle<GeneratorInnerFunction> generator,
-    Handle<> value,
-    bool isThrow) {
-  if (generator->getState() == GeneratorInnerFunction::State::SuspendedStart) {
-    // If state is "suspendedStart", then
-    // Set generator’s [[GeneratorState]] internal slot to "completed".
-    generator->setState(GeneratorInnerFunction::State::Completed);
-  }
-
-  if (generator->getState() == GeneratorInnerFunction::State::Completed) {
-    if (!isThrow) {
-      // abruptCompletion.[[type]] is return.
-      return createIterResultObject(runtime, value, true);
-    }
-    runtime.setThrownValue(*value);
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  // Assert: state is "suspendedYield".
   assert(
-      generator->getState() == GeneratorInnerFunction::State::SuspendedYield);
-
-  auto action = isThrow ? GeneratorInnerFunction::Action::Throw
-                        : GeneratorInnerFunction::Action::Return;
-  auto valueRes = GeneratorInnerFunction::callInnerFunction(
-      generator, runtime, value, action);
-  if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
-    generator->setState(GeneratorInnerFunction::State::Completed);
-    return ExecutionStatus::EXCEPTION;
-  }
-  if (LLVM_UNLIKELY(generator->isDelegated())) {
-    generator->setIsDelegated(false);
-    return runtime.makeHandle<JSObject>(std::move(*valueRes));
-  }
-  return createIterResultObject(
-      runtime,
-      runtime.makeHandle(std::move(*valueRes)),
-      generator->getState() == GeneratorInnerFunction::State::Completed);
-}
-
-CallResult<HermesValue>
-generatorPrototypeReturnOrThrow(void *ctx, Runtime &runtime, NativeArgs args) {
-  bool isThrow = static_cast<bool>(ctx);
-
-  auto generatorRes = generatorValidate(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(generatorRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  auto result = generatorResumeAbrupt(
-      runtime,
-      runtime.makeHandle(
-          JSGenerator::getInnerFunction(runtime, generatorRes->get())),
-      args.getArgHandle(0),
-      isThrow);
-  if (result == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  return result->getHermesValue();
+      (*valueRes)->isObject() &&
+      "inner generator function must return an object");
+  return valueRes->getHermesValue();
 }
 
 } // namespace vm
