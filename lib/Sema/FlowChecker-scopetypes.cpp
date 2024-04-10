@@ -674,7 +674,7 @@ class FlowChecker::DeclareScopeTypes {
       //     };
       //     type D = number;
       auto *classNode = llvh::cast<ESTree::ClassDeclarationNode>(type->node);
-      outer.visitExpression(classNode->_superClass, classNode);
+      outer.visitExpression(classNode->_superClass, classNode, nullptr);
       outer.parseClassType(
           classNode->_superClass,
           classNode->_superTypeParameters,

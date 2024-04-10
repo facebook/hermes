@@ -5,6 +5,23 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+//===----------------------------------------------------------------------===//
+/// \file
+/// Typechecking visitors for expressions.
+///
+/// Expressions can have types inferred by using a 'constraint' type provided to
+/// the visitExpression function. The constraint type is propagated through the
+/// AST by the ExprVisitor, allowing us to recursively match parts of the
+/// constraint and choose which types to emit for nested expressions.
+/// The visitor may emit errors for expressions which aren't able to match the
+/// constraint when it is provided, and may add implicitCheckedCasts in the AST
+/// when needed to match the constraint.
+/// However, the caller that provided the constraint cannot rely on the actual
+/// type of the checked node being equal to the type of the constraint that was
+/// passed in, so the caller still needs to check the type and report errors or
+/// insert its own casts itself.
+//===----------------------------------------------------------------------===//
+
 #include "FlowChecker.h"
 
 #define DEBUG_TYPE "FlowChecker"
@@ -26,28 +43,38 @@ class FlowChecker::ExprVisitor {
   }
 
   /// Default case for all ignored nodes, we still want to visit their children.
-  void visit(ESTree::Node *node) {
+  void visit(ESTree::Node *node, ESTree::Node *parent, Type *constraint) {
     if (0) {
       LLVM_DEBUG(
           llvh::dbgs() << "Unsupported node " << node->getNodeName()
                        << " in expr context\n");
       llvm_unreachable("invalid node in expression context");
     } else {
-      visitESTreeChildren(*this, node);
+      visitESTreeChildren(*this, node, nullptr);
     }
   }
 
-  void visit(ESTree::FunctionExpressionNode *node) {
+  void visit(
+      ESTree::FunctionExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
     return outer_.visit(node);
   }
-  void visit(ESTree::ArrowFunctionExpressionNode *node) {
+  void visit(
+      ESTree::ArrowFunctionExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
     return outer_.visit(node);
   }
-  void visit(ESTree::ClassExpressionNode *node) {
+  void visit(
+      ESTree::ClassExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
     return outer_.visit(node);
   }
 
-  void visit(ESTree::IdentifierNode *node, ESTree::Node *parent) {
+  void
+  visit(ESTree::IdentifierNode *node, ESTree::Node *parent, Type *constraint) {
     // Skip cases where the identifier isn't a variable.
     // TODO: these should be dealt with by the parent node.
     if (auto *prop = llvh::dyn_cast<ESTree::PropertyNode>(parent)) {
@@ -140,7 +167,10 @@ class FlowChecker::ExprVisitor {
     outer_.setNodeType(node, type ? type : outer_.flowContext_.getAny());
   }
 
-  void visit(ESTree::ThisExpressionNode *node) {
+  void visit(
+      ESTree::ThisExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
     outer_.setNodeType(
         node,
         outer_.curFunctionContext_->thisParamType
@@ -148,11 +178,14 @@ class FlowChecker::ExprVisitor {
             : outer_.flowContext_.getAny());
   }
 
-  void visit(ESTree::MemberExpressionNode *node) {
+  void visit(
+      ESTree::MemberExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
     // TODO: types
-    visitESTreeNode(*this, node->_object, node);
+    visitESTreeNode(*this, node->_object, node, nullptr);
     if (node->_computed)
-      visitESTreeNode(*this, node->_property, node);
+      visitESTreeNode(*this, node->_property, node, nullptr);
 
     Type *objType = outer_.getNodeTypeOrAny(node->_object);
     Type *resType = outer_.flowContext_.getAny();
@@ -287,14 +320,17 @@ class FlowChecker::ExprVisitor {
 
     outer_.setNodeType(node, resType);
   }
-  void visit(ESTree::OptionalMemberExpressionNode *node) {
+  void visit(
+      ESTree::OptionalMemberExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
     // TODO: types
     outer_.sm_.warning(
         node->getSourceRange(),
         "ft: optional member expression not implemented");
-    visitESTreeNode(*this, node->_object, node);
+    visitESTreeNode(*this, node->_object, node, nullptr);
     if (node->_computed)
-      visitESTreeNode(*this, node->_property, node);
+      visitESTreeNode(*this, node->_property, node, nullptr);
   }
 
   void visitExplicitCast(
@@ -308,7 +344,7 @@ class FlowChecker::ExprVisitor {
     // casting an empty array literal, the resulting type of the cast can be
     // used to set the element type of the array.
     outer_.setNodeType(node, resTy);
-    visitESTreeNode(*this, expression, node);
+    visitESTreeNode(*this, expression, node, nullptr);
 
     auto *expTy = outer_.getNodeTypeOrAny(expression);
     auto cf = canAFlowIntoB(expTy->info, resTy->info);
@@ -318,7 +354,10 @@ class FlowChecker::ExprVisitor {
     }
   }
 
-  void visit(ESTree::TypeCastExpressionNode *node) {
+  void visit(
+      ESTree::TypeCastExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
     visitExplicitCast(
         node,
         node->_expression,
@@ -326,12 +365,18 @@ class FlowChecker::ExprVisitor {
             ->_typeAnnotation);
   }
 
-  void visit(ESTree::AsExpressionNode *node) {
+  void visit(
+      ESTree::AsExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
     visitExplicitCast(node, node->_expression, node->_typeAnnotation);
   }
 
-  void visit(ESTree::ArrayExpressionNode *node, ESTree::Node *parent) {
-    visitESTreeChildren(*this, node);
+  void visit(
+      ESTree::ArrayExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
+    visitESTreeChildren(*this, node, nullptr);
 
     /// Given an element in the array expression, determine its type.
     auto getElementType = [this](const ESTree::Node *elem) -> Type * {
@@ -500,8 +545,11 @@ class FlowChecker::ExprVisitor {
     outer_.setNodeType(node, outer_.flowContext_.createType(arrTy));
   }
 
-  void visit(ESTree::ObjectExpressionNode *node, ESTree::Node *parent) {
-    visitESTreeChildren(*this, node);
+  void visit(
+      ESTree::ObjectExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
+    visitESTreeChildren(*this, node, nullptr);
 
     // Failed to make an object type that matches the properties,
     // assume 'any' and continue.
@@ -559,42 +607,68 @@ class FlowChecker::ExprVisitor {
             outer_.flowContext_.createExactObject(fields), node));
   }
 
-  void visit(ESTree::SpreadElementNode *node) {
+  void visit(
+      ESTree::SpreadElementNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
     // Do nothing for the spread element itself, handled by the parent.
-    visitESTreeChildren(*this, node);
+    visitESTreeChildren(*this, node, nullptr);
   }
 
-  void visit(ESTree::NullLiteralNode *node) {
+  void
+  visit(ESTree::NullLiteralNode *node, ESTree::Node *parent, Type *constraint) {
     outer_.setNodeType(node, outer_.flowContext_.getNull());
   }
-  void visit(ESTree::BooleanLiteralNode *node) {
+  void visit(
+      ESTree::BooleanLiteralNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
     outer_.setNodeType(node, outer_.flowContext_.getBoolean());
   }
-  void visit(ESTree::StringLiteralNode *node) {
+  void visit(
+      ESTree::StringLiteralNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
     outer_.setNodeType(node, outer_.flowContext_.getString());
   }
-  void visit(ESTree::TemplateLiteralNode *node) {
+  void visit(
+      ESTree::TemplateLiteralNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
     for (ESTree::Node &quasi : node->_quasis)
       outer_.setNodeType(&quasi, outer_.flowContext_.getString());
-    visitESTreeNodeList(*this, node->_expressions, node);
+    visitESTreeNodeList(*this, node->_expressions, node, nullptr);
     outer_.setNodeType(node, outer_.flowContext_.getString());
   }
-  void visit(ESTree::NumericLiteralNode *node) {
+  void visit(
+      ESTree::NumericLiteralNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
     outer_.setNodeType(node, outer_.flowContext_.getNumber());
   }
-  void visit(ESTree::RegExpLiteralNode *node) {
+  void visit(
+      ESTree::RegExpLiteralNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
     outer_.setNodeType(node, outer_.flowContext_.getAny());
   }
-  void visit(ESTree::BigIntLiteralNode *node) {
+  void visit(
+      ESTree::BigIntLiteralNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
     outer_.setNodeType(node, outer_.flowContext_.getBigInt());
   }
-  void visit(ESTree::SHBuiltinNode *node) {
+  void
+  visit(ESTree::SHBuiltinNode *node, ESTree::Node *parent, Type *constraint) {
     // SHBuiltin handled at the call expression level.
-    visitESTreeChildren(*this, node);
+    visitESTreeChildren(*this, node, nullptr);
   }
 
-  void visit(ESTree::UpdateExpressionNode *node) {
-    visitESTreeNode(*this, node->_argument, node);
+  void visit(
+      ESTree::UpdateExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
+    visitESTreeNode(*this, node->_argument, node, nullptr);
     Type *type = outer_.getNodeTypeOrAny(node->_argument);
     if (llvh::isa<NumberType>(type->info) ||
         llvh::isa<BigIntType>(type->info)) {
@@ -822,9 +896,12 @@ class FlowChecker::ExprVisitor {
     return nullptr;
   }
 
-  void visit(ESTree::BinaryExpressionNode *node) {
-    visitESTreeNode(*this, node->_left, node);
-    visitESTreeNode(*this, node->_right, node);
+  void visit(
+      ESTree::BinaryExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
+    visitESTreeNode(*this, node->_left, node, nullptr);
+    visitESTreeNode(*this, node->_right, node, nullptr);
     Type *lt = outer_.getNodeTypeOrAny(node->_left);
     Type *rt = outer_.getNodeTypeOrAny(node->_right);
 
@@ -898,8 +975,11 @@ class FlowChecker::ExprVisitor {
     return nullptr;
   }
 
-  void visit(ESTree::UnaryExpressionNode *node) {
-    visitESTreeNode(*this, node->_argument, node);
+  void visit(
+      ESTree::UnaryExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
+    visitESTreeNode(*this, node->_argument, node, nullptr);
     Type *argType = outer_.getNodeTypeOrAny(node->_argument);
 
     Type *res;
@@ -918,9 +998,12 @@ class FlowChecker::ExprVisitor {
     outer_.setNodeType(node, res);
   }
 
-  void visit(ESTree::LogicalExpressionNode *node) {
-    visitESTreeNode(*this, node->_left, node);
-    visitESTreeNode(*this, node->_right, node);
+  void visit(
+      ESTree::LogicalExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
+    visitESTreeNode(*this, node->_left, node, nullptr);
+    visitESTreeNode(*this, node->_right, node, nullptr);
     Type *left = outer_.flowContext_.getNodeTypeOrAny(node->_left);
     Type *right = outer_.flowContext_.getNodeTypeOrAny(node->_right);
 
@@ -969,9 +1052,12 @@ class FlowChecker::ExprVisitor {
     NullishCoalesceKind, // ??=
   };
 
-  void visit(ESTree::AssignmentExpressionNode *node) {
-    visitESTreeNode(*this, node->_left, node);
-    visitESTreeNode(*this, node->_right, node);
+  void visit(
+      ESTree::AssignmentExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
+    visitESTreeNode(*this, node->_left, node, nullptr);
+    visitESTreeNode(*this, node->_right, node, nullptr);
 
     auto logicalAssign =
         llvh::StringSwitch<OptValue<LogicalAssignmentOp>>(
@@ -1048,7 +1134,10 @@ class FlowChecker::ExprVisitor {
     outer_.setNodeType(node, res);
   }
 
-  void visit(ESTree::ArrayPatternNode *node) {
+  void visit(
+      ESTree::ArrayPatternNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
     // For now, this just marks the array pattern (used on the LHS of assignment
     // expressions) as a tuple, so that it can be used with destructuring.
     // This isn't called from variable declaration nodes here, because
@@ -1058,7 +1147,7 @@ class FlowChecker::ExprVisitor {
     // TODO: Determine how to destructure from arrays.
 
     // Annotate the children of the array pattern.
-    visitESTreeChildren(*this, node);
+    visitESTreeChildren(*this, node, nullptr);
 
     llvh::SmallVector<Type *, 4> types;
     for (ESTree::Node &elem : node->_elements) {
@@ -1070,8 +1159,11 @@ class FlowChecker::ExprVisitor {
             outer_.flowContext_.createTuple(types), node));
   }
 
-  void visit(ESTree::ConditionalExpressionNode *node) {
-    visitESTreeChildren(*this, node);
+  void visit(
+      ESTree::ConditionalExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
+    visitESTreeChildren(*this, node, nullptr);
 
     Type *types[2]{
         outer_.getNodeTypeOrAny(node->_consequent),
@@ -1084,13 +1176,19 @@ class FlowChecker::ExprVisitor {
             outer_.flowContext_.maybeCreateUnion(types)));
   }
 
-  void visit(ESTree::TypeParameterInstantiationNode *node) {
+  void visit(
+      ESTree::TypeParameterInstantiationNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
     // Do nothing.
     // These are handled in the parent node.
   }
 
-  void visit(ESTree::CallExpressionNode *node) {
-    visitESTreeChildren(*this, node);
+  void visit(
+      ESTree::CallExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
+    visitESTreeChildren(*this, node, nullptr);
 
     // Check for $SHBuiltin.
     if (auto *methodCallee =
@@ -1602,13 +1700,19 @@ class FlowChecker::ExprVisitor {
     return true;
   };
 
-  void visit(ESTree::OptionalCallExpressionNode *node) {
+  void visit(
+      ESTree::OptionalCallExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
     outer_.sm_.error(
         node->getSourceRange(), "ft: optional call expression not supported");
   }
 
-  void visit(ESTree::NewExpressionNode *node) {
-    visitESTreeChildren(*this, node);
+  void visit(
+      ESTree::NewExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
+    visitESTreeChildren(*this, node, nullptr);
 
     // Resolve generics using type arguments if necessary.
     if (auto *identCallee =
@@ -1670,7 +1774,7 @@ class FlowChecker::ExprVisitor {
     }
   }
 
-  void visit(ESTree::SuperNode *node, ESTree::Node *parent) {
+  void visit(ESTree::SuperNode *node, ESTree::Node *parent, Type *constraint) {
     if (!outer_.curClassContext_) {
       outer_.sm_.error(
           node->getSourceRange(), "ft: super only supported in class");
@@ -1759,9 +1863,12 @@ class FlowChecker::ExprVisitor {
   }
 };
 
-void FlowChecker::visitExpression(ESTree::Node *node, ESTree::Node *parent) {
+void FlowChecker::visitExpression(
+    ESTree::Node *node,
+    ESTree::Node *parent,
+    Type *constraint) {
   ExprVisitor v(*this);
-  visitESTreeNode(v, node, parent);
+  visitESTreeNode(v, node, parent, constraint);
 }
 
 } // namespace flow

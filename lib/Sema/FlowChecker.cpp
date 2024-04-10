@@ -594,7 +594,7 @@ void FlowChecker::visitClassNode(
 }
 
 void FlowChecker::visit(ESTree::ClassExpressionNode *node) {
-  visitExpression(node->_superClass, node);
+  visitExpression(node->_superClass, node, nullptr);
 
   auto *id = llvh::cast_or_null<ESTree::IdentifierNode>(node->_id);
   Type *classType = flowContext_.createType(flowContext_.createClass(
@@ -719,29 +719,29 @@ void FlowChecker::visit(ESTree::IdentifierNode *identifierNode) {
 }
 
 void FlowChecker::visit(ESTree::ExpressionStatementNode *node) {
-  visitExpression(node->_expression, node);
+  visitExpression(node->_expression, node, nullptr);
 }
 
 void FlowChecker::visit(ESTree::IfStatementNode *node) {
-  visitExpression(node->_test, node);
+  visitExpression(node->_test, node, nullptr);
   visitESTreeNode(*this, node->_consequent, node);
   visitESTreeNode(*this, node->_alternate, node);
 }
 void FlowChecker::visit(ESTree::SwitchStatementNode *node) {
-  visitExpression(node->_discriminant, node);
+  visitExpression(node->_discriminant, node, nullptr);
   visitESTreeNodeList(*this, node->_cases, node);
 }
 void FlowChecker::visit(ESTree::SwitchCaseNode *node) {
-  visitExpression(node->_test, node);
+  visitExpression(node->_test, node, nullptr);
   visitESTreeNodeList(*this, node->_consequent, node);
 }
 void FlowChecker::visit(ESTree::WhileStatementNode *node) {
-  visitExpression(node->_test, node);
+  visitExpression(node->_test, node, nullptr);
   visitESTreeNode(*this, node->_body, node);
 }
 void FlowChecker::visit(ESTree::DoWhileStatementNode *node) {
   visitESTreeNode(*this, node->_body, node);
-  visitExpression(node->_test, node);
+  visitExpression(node->_test, node, nullptr);
 }
 void FlowChecker::visit(ESTree::ForOfStatementNode *node) {
   if (!resolveScopeTypesAndAnnotate(node, node->getScope()))
@@ -749,8 +749,8 @@ void FlowChecker::visit(ESTree::ForOfStatementNode *node) {
   if (llvh::isa<ESTree::VariableDeclarationNode>(node->_left))
     visitESTreeNode(*this, node->_left, node);
   else
-    visitExpression(node->_left, node);
-  visitExpression(node->_right, node);
+    visitExpression(node->_left, node, nullptr);
+  visitExpression(node->_right, node, nullptr);
   visitESTreeNode(*this, node->_body, node);
 }
 void FlowChecker::visit(ESTree::ForInStatementNode *node) {
@@ -759,8 +759,8 @@ void FlowChecker::visit(ESTree::ForInStatementNode *node) {
   if (llvh::isa<ESTree::VariableDeclarationNode>(node->_left))
     visitESTreeNode(*this, node->_left, node);
   else
-    visitExpression(node->_left, node);
-  visitExpression(node->_right, node);
+    visitExpression(node->_left, node, nullptr);
+  visitExpression(node->_right, node, nullptr);
   visitESTreeNode(*this, node->_body, node);
 }
 void FlowChecker::visit(ESTree::ForStatementNode *node) {
@@ -770,16 +770,16 @@ void FlowChecker::visit(ESTree::ForStatementNode *node) {
     if (llvh::isa<ESTree::VariableDeclarationNode>(node->_init))
       visitESTreeNode(*this, node->_init, node);
     else
-      visitExpression(node->_init, node);
+      visitExpression(node->_init, node, nullptr);
   }
-  visitExpression(node->_test, node);
-  visitExpression(node->_update, node);
+  visitExpression(node->_test, node, nullptr);
+  visitExpression(node->_update, node, nullptr);
   visitESTreeNode(*this, node->_body, node);
 }
 
 void FlowChecker::visit(ESTree::ReturnStatementNode *node) {
   // TODO: type check the return value.
-  visitExpression(node->_argument, node);
+  visitExpression(node->_argument, node, nullptr);
 
   auto *ftype = llvh::dyn_cast<TypedFunctionType>(
       curFunctionContext_->functionType->info);
@@ -822,7 +822,7 @@ void FlowChecker::visit(ESTree::VariableDeclarationNode *node) {
     if (it != visitedInits_.end())
       visitedInits_.erase(it);
     else
-      visitExpression(declarator->_init, declarator);
+      visitExpression(declarator->_init, declarator, nullptr);
     if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(declarator->_id)) {
       if (!declarator->_init)
         continue;
@@ -857,7 +857,7 @@ void FlowChecker::visit(ESTree::VariableDeclarationNode *node) {
 
 void FlowChecker::visit(ESTree::ClassPropertyNode *node) {
   if (node->_value) {
-    visitExpression(node->_value, node);
+    visitExpression(node->_value, node, nullptr);
   }
 }
 
@@ -989,7 +989,7 @@ class FlowChecker::AnnotateScopeDecls {
                  llvh::isa<ESTree::StringLiteralNode>(declarator->_init) ||
                  llvh::isa<ESTree::RegExpLiteralNode>(declarator->_init) ||
                  llvh::isa<ESTree::BigIntLiteralNode>(declarator->_init))) {
-              outer.visitExpression(declarator->_init, declarator);
+              outer.visitExpression(declarator->_init, declarator, nullptr);
               outer.recordDecl(
                   outer.getDecl(id),
                   outer.getNodeTypeOrAny(declarator->_init),
@@ -1069,7 +1069,7 @@ class FlowChecker::AnnotateScopeDecls {
     /// \return the inferred type, or nullptr if no inference was possible.
     auto tryInferInitExpression =
         [this](ESTree::VariableDeclaratorNode *declarator) -> Type * {
-      outer.visitExpression(declarator->_init, declarator);
+      outer.visitExpression(declarator->_init, declarator, nullptr);
       outer.visitedInits_.insert(declarator->_init);
       if (Type *inferred = outer.flowContext_.findNodeType(declarator->_init)) {
         return inferred;
@@ -2191,7 +2191,7 @@ void FlowChecker::typecheckGenericClassSpecialization(
 
   // Visit the super class first so that it gets enqueued/deferred before the
   // child class.
-  visitExpression(specialization->_superClass, specialization);
+  visitExpression(specialization->_superClass, specialization, nullptr);
 
   if (deferredParseGenerics_) {
     LLVM_DEBUG(

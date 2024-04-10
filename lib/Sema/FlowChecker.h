@@ -320,7 +320,10 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   class ExprVisitor;
 
   /// Invoke the expression visitor.
-  void visitExpression(ESTree::Node *node, ESTree::Node *parent);
+  /// \param constraint the constraint the visitor will attempt to match.
+  /// See file comment in FlowChecker-expr.cpp for details.
+  void
+  visitExpression(ESTree::Node *node, ESTree::Node *parent, Type *constraint);
 
   void visit(ESTree::ExpressionStatementNode *node);
   void visit(ESTree::IfStatementNode *node);
