@@ -1811,6 +1811,10 @@ CallResult<bool> isConstructor(Runtime &runtime, Callable *callable) {
     return !func->getCodeBlock(runtime)->getHeaderFlags().isCallProhibited(
         true);
   }
+  if (auto *nativeFunc = dyn_vmcast<NativeJSFunction>(callable)) {
+    return nativeFunc->getFunctionInfo()->prohibit_invoke !=
+        ProhibitInvoke::Construct;
+  }
 
   // We check for NativeFunction since those are defined to not be
   // constructible, with the exception of NativeConstructor.

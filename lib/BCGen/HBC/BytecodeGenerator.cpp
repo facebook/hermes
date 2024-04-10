@@ -105,30 +105,8 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
       highestReadCacheIndex_,
       highestWriteCacheIndex_};
 
-  switch (prohibitInvoke) {
-    case Function::ProhibitInvoke::ProhibitNone:
-      header.flags.prohibitInvoke = FunctionHeaderFlag::ProhibitNone;
-      break;
-    case Function::ProhibitInvoke::ProhibitConstruct:
-      header.flags.prohibitInvoke = FunctionHeaderFlag::ProhibitConstruct;
-      break;
-    case Function::ProhibitInvoke::ProhibitCall:
-      header.flags.prohibitInvoke = FunctionHeaderFlag::ProhibitCall;
-      break;
-  }
-
-  switch (valueKind) {
-    case ValueKind::GeneratorFunctionKind:
-      header.flags.kind = FunctionHeaderFlag::GeneratorFunction;
-      break;
-    case ValueKind::AsyncFunctionKind:
-      header.flags.kind = FunctionHeaderFlag::AsyncFunction;
-      break;
-    default:
-      header.flags.kind = FunctionHeaderFlag::NormalFunction;
-      break;
-  }
-
+  header.flags.prohibitInvoke = computeProhibitInvoke(prohibitInvoke);
+  header.flags.kind = computeFuncKind(valueKind);
   header.flags.strictMode = strictMode;
   header.flags.hasExceptionHandler = exceptionHandlers_.size();
 

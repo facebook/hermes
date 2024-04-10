@@ -8,6 +8,7 @@
 #ifndef HERMES_BCGEN_HBC_BYTECODEFILEFORMAT_H
 #define HERMES_BCGEN_HBC_BYTECODEFILEFORMAT_H
 
+#include "hermes/BCGen/FunctionInfo.h"
 #include "hermes/BCGen/HBC/BytecodeVersion.h"
 #include "hermes/BCGen/HBC/StringKind.h"
 #include "hermes/Regex/RegexSerialization.h"
@@ -215,20 +216,9 @@ struct OverflowStringTableEntry {
 };
 
 union FunctionHeaderFlag {
-  enum {
-    ProhibitCall = 0,
-    ProhibitConstruct = 1,
-    ProhibitNone = 2,
-  };
-
-  enum {
-    NormalFunction = 0,
-    GeneratorFunction = 1,
-    AsyncFunction = 2,
-  };
-
   struct {
-    /// Which kinds of calls are prohibited, constructed from the above enum.
+    /// Which kinds of calls are prohibited, constructed from enum
+    /// ProhibitInvoke.
     uint8_t prohibitInvoke : 2;
     bool strictMode : 1;
     bool hasExceptionHandler : 1;
@@ -240,8 +230,8 @@ union FunctionHeaderFlag {
 
   FunctionHeaderFlag() {
     flags = 0;
-    kind = NormalFunction;
-    prohibitInvoke = ProhibitNone;
+    kind = FuncKind::Normal;
+    prohibitInvoke = ProhibitInvoke::None;
   }
 
   /// \return true if the specified kind of invocation is prohibited by the

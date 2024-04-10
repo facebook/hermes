@@ -11,6 +11,7 @@
 #include "LoweringPasses.h"
 #include "SHRegAlloc.h"
 #include "hermes/AST/NativeContext.h"
+#include "hermes/BCGen/FunctionInfo.h"
 #include "hermes/BCGen/HBC/Passes.h"
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/BCGen/LiteralBufferBuilder.h"
@@ -445,9 +446,12 @@ class SHNativeJSFunctionTable {
     for (const Function *F : sortedKeys) {
       uint32_t nameIdx = stringTable_.add(F->getOriginalOrInferredName().str());
       uint32_t argCount = F->getExpectedParamCountIncludingThis() - 1;
+      auto kindVal = F->getKind();
       OS.indent(2);
       OS << "{ .unit = &THIS_UNIT, .name_index = " << nameIdx
-         << ", .arg_count = " << argCount << " },\n";
+         << ", .arg_count = " << argCount << ", .prohibit_invoke = "
+         << computeProhibitInvoke(F->getProhibitInvoke())
+         << ", .kind = " << computeFuncKind(kindVal) << " },\n";
     }
     OS << "};\n";
   }

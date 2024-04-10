@@ -192,6 +192,11 @@ class Callable : public JSObject {
   /// \return true if \p fn is an async function.
   static bool isAsyncFunction(Runtime &runtime, Callable *fn);
 
+  /// \return the inferred parent of a Callable based on its \p kind.
+  static inline Handle<JSObject> inferredParent(
+      Runtime &runtime,
+      FuncKind kind);
+
   /// Execute this function with no arguments. This is just a convenience
   /// helper method; it actually invokes the interpreter recursively.
   static CallResult<PseudoHandle<>> executeCall0(
@@ -345,6 +350,19 @@ class Callable : public JSObject {
       Runtime &runtime,
       Handle<JSObject> parentHandle);
 };
+
+Handle<JSObject> Callable::inferredParent(Runtime &runtime, FuncKind kind) {
+  PinnedHermesValue *parent;
+  if (kind == FuncKind::Generator) {
+    parent = &runtime.generatorFunctionPrototype;
+  } else if (kind == FuncKind::Async) {
+    parent = &runtime.asyncFunctionPrototype;
+  } else {
+    assert(kind == FuncKind::Normal && "Unsupported function kind");
+    parent = &runtime.functionPrototype;
+  }
+  return Handle<JSObject>::vmcast(parent);
+}
 
 void Callable::staticAsserts() {
   static_assert(sizeof(Callable) == sizeof(SHCallable));

@@ -7,6 +7,7 @@
 
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 
+#include "hermes/BCGen/FunctionInfo.h"
 #include "hermes/BCGen/HBC/Bytecode.h"
 #include "hermes/BCGen/SerializedLiteralGenerator.h"
 #include "hermes/FrontEndDefs/Builtins.h"
@@ -66,10 +67,10 @@ static void dumpFunctionName(
     const RuntimeFunctionHeader &functionHeader,
     DisassemblyOptions options) {
   switch (functionHeader.flags().prohibitInvoke) {
-    case FunctionHeaderFlag::ProhibitCall:
+    case ProhibitInvoke::Call:
       OS << "Constructor";
       break;
-    case FunctionHeaderFlag::ProhibitConstruct:
+    case ProhibitInvoke::Construct:
       OS << "NCFunction";
       break;
     default:

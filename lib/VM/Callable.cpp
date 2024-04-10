@@ -7,6 +7,7 @@
 
 #include "hermes/VM/Callable.h"
 
+#include "hermes/BCGen/FunctionInfo.h"
 #include "hermes/VM/ArrayLike.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/JSDataView.h"
@@ -111,17 +112,22 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
         "failed to define length and name of bound function");
     (void)res;
   } else if (auto nativeFun = Handle<NativeJSFunction>::dyn_vmcast(fn)) {
-    auto prototypeParent = /*vmisa<JSGeneratorFunction>(*jsFun)
-                         ? Handle<JSObject>::vmcast(&runtime.generatorPrototype)
-                         :*/
-        Handle<JSObject>::vmcast(&runtime.objectPrototype);
+    auto prototypeParent = Callable::isGeneratorFunction(runtime, *nativeFun)
+        ? Handle<JSObject>::vmcast(&runtime.generatorPrototype)
+        : Handle<JSObject>::vmcast(&runtime.objectPrototype);
+
     // According to ES12 26.7.4, AsyncFunction instances do not have a
     // 'prototype' property, hence we need to set an null handle here.
+    // Functions that cannot be used with `new` should also not define a
+    // 'prototype' property, such as arrow functions per 15.3.4, except for
+    // generator functions.
     auto prototypeObjectHandle =
-        /*vmisa<JSAsyncFunction>(*jsFun)
+        nativeFun->getFunctionInfo()->prohibit_invoke ==
+                ProhibitInvoke::Construct &&
+            !Callable::isGeneratorFunction(runtime, *nativeFun)
         ? Runtime::makeNullHandle<JSObject>()
-        :*/
-        runtime.makeHandle(JSObject::create(runtime, prototypeParent));
+        : runtime.makeHandle(JSObject::create(runtime, prototypeParent));
+
     const SHNativeFuncInfo *funcInfo = nativeFun->getFunctionInfo();
     assert(funcInfo && "funcInfo cannot be null for a lazy NativeJSFunction");
     const SHUnit *unit = funcInfo->unit;
@@ -215,7 +221,9 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
 bool Callable::isGeneratorFunction(Runtime &runtime, Callable *fn) {
   if (auto *jsFun = dyn_vmcast<JSFunction>(fn)) {
     return jsFun->getCodeBlock(runtime)->getHeaderFlags().kind ==
-        hbc::FunctionHeaderFlag::GeneratorFunction;
+        FuncKind::Generator;
+  } else if (auto *nativeFun = dyn_vmcast<NativeJSFunction>(fn)) {
+    return nativeFun->getFunctionInfo()->kind == FuncKind::Generator;
   }
   return false;
 }
@@ -223,7 +231,9 @@ bool Callable::isGeneratorFunction(Runtime &runtime, Callable *fn) {
 bool Callable::isAsyncFunction(Runtime &runtime, Callable *fn) {
   if (auto *jsFun = dyn_vmcast<JSFunction>(fn)) {
     return jsFun->getCodeBlock(runtime)->getHeaderFlags().kind ==
-        hbc::FunctionHeaderFlag::AsyncFunction;
+        FuncKind::Async;
+  } else if (auto *nativeFun = dyn_vmcast<NativeJSFunction>(fn)) {
+    return nativeFun->getFunctionInfo()->kind == FuncKind::Async;
   }
   return false;
 }
@@ -1244,21 +1254,8 @@ PseudoHandle<JSFunction> JSFunction::createWithInferredParent(
     Handle<Domain> domain,
     Handle<Environment> envHandle,
     CodeBlock *codeBlock) {
-  PinnedHermesValue *parent;
-  if (codeBlock->getHeaderFlags().kind ==
-      hbc::FunctionHeaderFlag::GeneratorFunction) {
-    parent = &runtime.generatorFunctionPrototype;
-  } else if (
-      codeBlock->getHeaderFlags().kind ==
-      hbc::FunctionHeaderFlag::AsyncFunction) {
-    parent = &runtime.asyncFunctionPrototype;
-  } else {
-    assert(
-        codeBlock->getHeaderFlags().kind ==
-        hbc::FunctionHeaderFlag::NormalFunction);
-    parent = &runtime.functionPrototype;
-  }
-  auto parentHandle = Handle<JSObject>::vmcast(parent);
+  auto parentHandle = Callable::inferredParent(
+      runtime, (FuncKind)codeBlock->getHeaderFlags().kind);
   return create(runtime, domain, parentHandle, envHandle, codeBlock);
 }
 

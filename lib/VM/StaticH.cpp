@@ -489,11 +489,13 @@ static SHLegacyValue createClosure(
     const SHNativeFuncInfo *funcInfo) {
   Runtime &runtime = getRuntime(shr);
   GCScopeMarkerRAII marker{runtime};
+  auto parentHandle =
+      Callable::inferredParent(runtime, (FuncKind)funcInfo->kind);
 
   SHLegacyValue res =
       NativeJSFunction::create(
           runtime,
-          Handle<JSObject>::vmcast(&runtime.functionPrototype),
+          parentHandle,
           _sh_ljs_is_null(*env) ? runtime.makeNullHandle<Environment>()
                                 : Handle<Environment>::vmcast(toPHV(env)),
           func,

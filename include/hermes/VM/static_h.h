@@ -54,6 +54,10 @@ typedef struct SHNativeFuncInfo {
   uint32_t name_index;
   /// The number of arguments this function takes.
   uint32_t arg_count;
+  /// Which kind of function, constructed from enum FuncKind.
+  uint8_t kind : 2;
+  /// Which kinds of calls are prohibited, constructed from enum ProhibitInvoke.
+  uint8_t prohibit_invoke : 2;
 } SHNativeFuncInfo;
 
 /// SHUnit describes a compilation unit.
