@@ -22,7 +22,7 @@ class Interpreter {
  public:
   /// Allocate a generator for the specified function and the specified
   /// environment. \param funcIndex function index in the global function table.
-  static CallResult<PseudoHandle<JSGenerator>> createGenerator_RJS(
+  static CallResult<PseudoHandle<JSGeneratorObject>> createGenerator_RJS(
       Runtime &runtime,
       RuntimeModule *runtimeModule,
       unsigned funcIndex,

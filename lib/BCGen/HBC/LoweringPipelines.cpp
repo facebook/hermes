@@ -29,6 +29,9 @@ void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
     return;
 
   PassManager PM;
+  // LowerGeneratorFunction produces ThrowTypeErrorInst, so it should run before
+  // PeepholeLowering.
+  PM.addLowerGeneratorFunction();
   // Lowering ExponentiationOperator and ThrowTypeError (in PeepholeLowering)
   // needs to run before LowerBuiltinCalls because it introduces calls to
   // HermesInternal.

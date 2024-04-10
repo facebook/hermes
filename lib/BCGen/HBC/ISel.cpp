@@ -1167,12 +1167,6 @@ void HBCISel::generateBranchInst(BranchInst *Inst, BasicBlock *next) {
 }
 void HBCISel::generateReturnInst(ReturnInst *Inst, BasicBlock *next) {
   auto value = encodeValue(Inst->getValue());
-  Function *F = Inst->getParent()->getParent();
-  if (llvh::isa<GeneratorInnerFunction>(F)) {
-    // Generator inner functions must complete before `return`,
-    // unlike when they yield.
-    BCFGen_->emitCompleteGenerator();
-  }
   BCFGen_->emitRet(value);
 }
 void HBCISel::generateThrowInst(ThrowInst *Inst, BasicBlock *next) {

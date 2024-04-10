@@ -21,6 +21,7 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSGenerator.h"
+#include "hermes/VM/JSGeneratorObject.h"
 #include "hermes/VM/JSProxy.h"
 #include "hermes/VM/JSRegExp.h"
 #include "hermes/VM/JSTypedArray.h"
@@ -121,22 +122,18 @@ namespace vm {
     }                                                            \
   } while (0)
 
-CallResult<PseudoHandle<JSGenerator>> Interpreter::createGenerator_RJS(
+CallResult<PseudoHandle<JSGeneratorObject>> Interpreter::createGenerator_RJS(
     Runtime &runtime,
     RuntimeModule *runtimeModule,
     unsigned funcIndex,
     Handle<Environment> envHandle,
     NativeArgs args) {
-  auto gifRes = GeneratorInnerFunction::create(
+  auto gifRes = JSFunction::create(
       runtime,
       runtimeModule->getDomain(runtime),
       Handle<JSObject>::vmcast(&runtime.functionPrototype),
       envHandle,
-      runtimeModule->getCodeBlockMayAllocate(funcIndex),
-      args);
-  if (LLVM_UNLIKELY(gifRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
+      runtimeModule->getCodeBlockMayAllocate(funcIndex));
 
   auto generatorFunction = runtime.makeHandle(
       vmcast<JSFunction>(runtime.getCurrentFrame().getCalleeClosureUnsafe()));
@@ -152,7 +149,8 @@ CallResult<PseudoHandle<JSGenerator>> Interpreter::createGenerator_RJS(
       ? runtime.makeHandle<JSObject>(prototypeProp->get())
       : Handle<JSObject>::vmcast(&runtime.generatorPrototype);
 
-  return JSGenerator::create(runtime, *gifRes, prototype);
+  return JSGeneratorObject::create(
+      runtime, runtime.makeHandle(std::move(gifRes)), prototype);
 }
 
 CallResult<Handle<Arguments>> Interpreter::reifyArgumentsSlowPath(
