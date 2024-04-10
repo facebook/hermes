@@ -11,6 +11,8 @@ function f1(x: [number, string]) {}
 f1([1, "abc"]);
 let v1: [number, string] = flag ? [1, "abc"] : [2, "def"];
 let v2: [number, string] = flag || [3, "def"];
+let v3: [number, string];
+v3 = [4, "def"];
 
 // Auto-generated content below. Please do not modify manually.
 
@@ -31,12 +33,13 @@ let v2: [number, string] = flag || [3, "def"];
 // CHECK-NEXT:            Decl %d.3 'f1' ScopedFunction : %function.3
 // CHECK-NEXT:            Decl %d.4 'v1' Let : %tuple.2
 // CHECK-NEXT:            Decl %d.5 'v2' Let : %tuple.2
-// CHECK-NEXT:            Decl %d.6 'arguments' Var Arguments
+// CHECK-NEXT:            Decl %d.6 'v3' Let : %tuple.2
+// CHECK-NEXT:            Decl %d.7 'arguments' Var Arguments
 // CHECK-NEXT:            hoistedFunction f1
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:                Decl %d.7 'x' Parameter : %tuple.2
-// CHECK-NEXT:                Decl %d.8 'arguments' Var Arguments
+// CHECK-NEXT:                Decl %d.8 'x' Parameter : %tuple.2
+// CHECK-NEXT:                Decl %d.9 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
@@ -46,7 +49,7 @@ let v2: [number, string] = flag || [3, "def"];
 // CHECK-NEXT:                BlockStatement
 // CHECK-NEXT:                    FunctionDeclaration : %function.3
 // CHECK-NEXT:                        Id 'f1' [D:E:%d.3 'f1']
-// CHECK-NEXT:                        Id 'x' [D:E:%d.7 'x']
+// CHECK-NEXT:                        Id 'x' [D:E:%d.8 'x']
 // CHECK-NEXT:                        BlockStatement
 // CHECK-NEXT:                    ExpressionStatement
 // CHECK-NEXT:                        CallExpression : any
@@ -74,4 +77,13 @@ let v2: [number, string] = flag || [3, "def"];
 // CHECK-NEXT:                                        NumericLiteral : number
 // CHECK-NEXT:                                        StringLiteral : string
 // CHECK-NEXT:                            Id 'v2' [D:E:%d.5 'v2']
+// CHECK-NEXT:                    VariableDeclaration
+// CHECK-NEXT:                        VariableDeclarator
+// CHECK-NEXT:                            Id 'v3' [D:E:%d.6 'v3']
+// CHECK-NEXT:                    ExpressionStatement
+// CHECK-NEXT:                        AssignmentExpression : %tuple.2
+// CHECK-NEXT:                            Id 'v3' [D:E:%d.6 'v3'] : %tuple.2
+// CHECK-NEXT:                            ArrayExpression : %tuple.2
+// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                StringLiteral : string
 // CHECK-NEXT:            ObjectExpression : %object.5

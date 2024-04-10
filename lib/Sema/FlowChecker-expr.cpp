@@ -1049,9 +1049,6 @@ class FlowChecker::ExprVisitor {
       ESTree::AssignmentExpressionNode *node,
       ESTree::Node *parent,
       Type *constraint) {
-    visitESTreeNode(*this, node->_left, node, nullptr);
-    visitESTreeNode(*this, node->_right, node, nullptr);
-
     auto logicalAssign =
         llvh::StringSwitch<OptValue<LogicalAssignmentOp>>(
             node->_operator->str())
@@ -1064,11 +1061,16 @@ class FlowChecker::ExprVisitor {
       return;
     }
 
+    // No constraint provided for the LHS.
+    visitESTreeNode(*this, node->_left, node, nullptr);
     Type *lt = outer_.getNodeTypeOrAny(node->_left);
-    Type *rt = outer_.getNodeTypeOrAny(node->_right);
-    Type *res;
 
+    Type *res;
     if (node->_operator->str() == "=") {
+      // Use the type of the LHS as the constraint for the RHS for '='.
+      visitESTreeNode(*this, node->_right, node, lt);
+      Type *rt = outer_.getNodeTypeOrAny(node->_right);
+
       auto [rtNarrow, cf] = tryNarrowType(rt, lt);
       if (!cf.canFlow) {
         outer_.sm_.error(
@@ -1084,6 +1086,9 @@ class FlowChecker::ExprVisitor {
         res = cf.needCheckedCast ? lt : rt;
       }
     } else {
+      visitESTreeNode(*this, node->_right, node, nullptr);
+      Type *rt = outer_.getNodeTypeOrAny(node->_right);
+
       Type *opResType = determineBinopType(
           assignKind(node->_operator->str()),
           lt->info->getKind(),
