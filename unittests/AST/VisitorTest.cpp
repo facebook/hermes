@@ -279,4 +279,79 @@ TEST(VisitorTest, MutateNodeList) {
           ->_value);
 }
 
+TEST(VisitorTest, ExtraInfoTest) {
+  Context context;
+
+  ESTree::NodeList seq{};
+  seq.push_back(*new (context) ESTree::NumericLiteralNode(1));
+
+  auto *seqExpr = new (context) ESTree::SequenceExpressionNode(std::move(seq));
+  auto *expr = new (context) ESTree::BinaryExpressionNode(
+      new (context) ESTree::NullLiteralNode(),
+      seqExpr,
+      context.getStringTable().getString("+"));
+
+  class Visitor {
+   public:
+    llvh::SmallVector<ESTree::Node *, 4> path{};
+
+    explicit Visitor() {}
+
+    bool incRecursionDepth(ESTree::Node *) {
+      return true;
+    }
+    void decRecursionDepth() {}
+
+    void visit(ESTree::Node *node, ESTree::Node *parent, int extra) {
+      path.push_back(node);
+      ESTree::visitESTreeChildren(*this, node, 3);
+    }
+
+    void
+    visit(ESTree::BinaryExpressionNode *node, ESTree::Node *parent, int extra) {
+      path.push_back(node);
+      EXPECT_EQ(extra, 1);
+      ESTree::visitESTreeNode(*this, node->_left, node, 2);
+      ESTree::visitESTreeNode(*this, node->_right, node, 2);
+    }
+
+    void visit(ESTree::NullLiteralNode *node, ESTree::Node *parent, int extra) {
+      path.push_back(node);
+      EXPECT_EQ(extra, 2);
+    }
+
+    void
+    visit(ESTree::NumericLiteralNode *node, ESTree::Node *parent, int extra) {
+      path.push_back(node);
+      EXPECT_EQ(extra, 3);
+    }
+  };
+
+  {
+    Visitor v{};
+    ESTree::visitESTreeNodeNoReplace(v, expr, nullptr, 1);
+    ASSERT_EQ(4, v.path.size());
+    EXPECT_TRUE(llvh::isa<ESTree::BinaryExpressionNode>(v.path[0]));
+    EXPECT_TRUE(llvh::isa<ESTree::NullLiteralNode>(v.path[1]));
+    EXPECT_TRUE(llvh::isa<ESTree::SequenceExpressionNode>(v.path[2]));
+    EXPECT_TRUE(llvh::isa<ESTree::NumericLiteralNode>(v.path[3]));
+  }
+
+  {
+    Visitor v{};
+    ESTree::visitESTreeChildren(v, expr, 2);
+    ASSERT_EQ(3, v.path.size());
+    EXPECT_TRUE(llvh::isa<ESTree::NullLiteralNode>(v.path[0]));
+    EXPECT_TRUE(llvh::isa<ESTree::SequenceExpressionNode>(v.path[1]));
+    EXPECT_TRUE(llvh::isa<ESTree::NumericLiteralNode>(v.path[2]));
+  }
+
+  {
+    Visitor v{};
+    visitESTreeNodeList(v, seqExpr->_expressions, seqExpr, 3);
+    ASSERT_EQ(1, v.path.size());
+    EXPECT_TRUE(llvh::isa<ESTree::NumericLiteralNode>(v.path[0]));
+  }
+}
+
 } // end anonymous namespace
