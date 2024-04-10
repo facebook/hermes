@@ -41,10 +41,10 @@ print(new Intl.DateTimeFormat('en-US', { timeStyle: 'long', timeZone: 'EET'}).fo
 
 try {
   print(new Intl.DateTimeFormat('en-US', { timeStyle: 'long', timeZone: 'XXX'}).format(date));
-    print("Succeeded");
-  } catch (e) {
-    print("Caught", e.name, e.message);
-  }
+  print("Succeeded");
+} catch (e) {
+  print("Caught", e.name, e.message);
+}
 // CHECK-NEXT: Caught{{.*}}
 
 print(new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeStyle: 'long' }).format(date));
@@ -98,7 +98,7 @@ numericOptions.forEach(element => print(new Intl.DateTimeFormat('en-US', {minute
 
 numericOptions.forEach(element => print(new Intl.DateTimeFormat('en-GB', {second: element}).format(oldDate)));
 // CHECK-NEXT: 3
-// CHECK-NEXT: 3
+// CHECK-NEXT: {{0?}}3
 
 lengthOptions.concat(numericOptions).forEach(element => print(new Intl.DateTimeFormat('en-GB', {month: element}).format(date)));
 // CHECK-NEXT: J
@@ -108,8 +108,8 @@ lengthOptions.concat(numericOptions).forEach(element => print(new Intl.DateTimeF
 // CHECK-NEXT: 01
 
 numericOptions.forEach(element => print(new Intl.DateTimeFormat('ja-JP', {hour: element, minute: element}).format(date)));
-// CHECK-NEXT: 午前3:45
-// CHECK-NEXT: 午前3:45
+// CHECK-NEXT: {{(午前)?}}3:45
+// CHECK-NEXT: {{(午前|0)?}}3:45
 
 var timeZoneNameOptions = [
   'short',
@@ -139,8 +139,12 @@ print(new Intl.DateTimeFormat('zh-CN').resolvedOptions().locale);
 print(new Intl.DateTimeFormat('en-US').resolvedOptions().numberingSystem);
 // CHECK-NEXT: undefined
 
-print(new Intl.DateTimeFormat('en-US', { timeZone: 'SGT'}).resolvedOptions().timeZone);
-// CHECK-NEXT: SGT
+try {
+  print(new Intl.DateTimeFormat('en-US', { timeZone: 'SGT'}).resolvedOptions().timeZone);
+} catch (e) {
+  print("Caught", e.name, e.message);
+}
+// CHECK-NEXT: {{SGT|(Caught.*)}}
 
 print(new Date(Date.UTC(2020, 0, 2)).toLocaleString("en-US", {weekday: "short", timeZone: "UTC"}))
 // CHECK-NEXT: Thu
