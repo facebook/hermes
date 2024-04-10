@@ -13,6 +13,7 @@
 #include "hermes/IR/Instrs.h"
 #include "hermes/Optimizer/PassManager/Pass.h"
 #include "hermes/Support/Statistic.h"
+#include "llvh/ADT/MapVector.h"
 
 #include "llvh/ADT/SetOperations.h"
 #include "llvh/Support/Debug.h"
@@ -94,18 +95,20 @@ class FunctionLoadStoreOptimizer {
   /// For each variable that is loaded from in F_, create an alloca that can
   /// be used to perform load elimination, and set it in \c variableAllocas_.
   void createVariableAllocas() {
-    // Map from a Variable to a pair where:
+    // MapVector from a Variable to a pair where:
     // 1. The first element records the unique scope instruction that it is
     //    accessed from in this function, or nullptr if it is accessed through
     //    multiple scopes instructions.
     // 2. The second element records whether the variable has been loaded from.
-    llvh::DenseMap<Variable *, std::pair<Instruction *, bool>> variableScopes;
+    // We use a MapVector to provide a stable iteration order, so we produce the
+    // same IR every time.
+    llvh::MapVector<Variable *, std::pair<Instruction *, bool>> variableScopes;
     for (BasicBlock *BB : PO_) {
       for (Instruction &I : *BB) {
         if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(&I)) {
           Variable *V = LFI->getLoadVariable();
           auto [it, inserted] =
-              variableScopes.try_emplace(V, LFI->getScope(), true);
+              variableScopes.insert({V, {LFI->getScope(), true}});
           // If the variable was previously recorded as being accessed through a
           // different scope instruction, clear the scope.
           if (!inserted && it->second.first != LFI->getScope())
@@ -116,7 +119,7 @@ class FunctionLoadStoreOptimizer {
         if (auto *SFI = llvh::dyn_cast<StoreFrameInst>(&I)) {
           Variable *V = SFI->getVariable();
           auto [it, inserted] =
-              variableScopes.try_emplace(V, SFI->getScope(), false);
+              variableScopes.insert({V, {SFI->getScope(), false}});
           // If the variable was previously recorded as being accessed through a
           // different scope instruction, clear the scope.
           if (!inserted && it->second.first != SFI->getScope())
