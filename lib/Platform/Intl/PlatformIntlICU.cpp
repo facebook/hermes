@@ -14,6 +14,11 @@
 #include <string>
 #include <unordered_map>
 #include "llvh/Support/ConvertUTF.h"
+
+// ICU changed the default UChar type on version 59, but we still need to support 52+
+// However, ICU allows us to manually set a type for UChar using UCHAR_TYPE so UChar isn't platform dependent.
+#define UCHAR_TYPE char16_t
+
 #include "unicode/dtptngen.h"
 #include "unicode/strenum.h"
 #include "unicode/timezone.h"

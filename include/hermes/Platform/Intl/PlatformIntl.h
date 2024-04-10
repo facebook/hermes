@@ -9,7 +9,6 @@
 #define HERMES_PLATFORMINTL_PLATFORMINTL_H
 
 #ifdef HERMES_ENABLE_INTL
-#define UCHAR_TYPE char16_t
 
 #include "hermes/VM/CallResult.h"
 #include "hermes/VM/DecoratedObject.h"
