@@ -995,8 +995,8 @@ class FlowChecker::ExprVisitor {
       ESTree::LogicalExpressionNode *node,
       ESTree::Node *parent,
       Type *constraint) {
-    visitESTreeNode(*this, node->_left, node, nullptr);
-    visitESTreeNode(*this, node->_right, node, nullptr);
+    visitESTreeNode(*this, node->_left, node, constraint);
+    visitESTreeNode(*this, node->_right, node, constraint);
     Type *left = outer_.flowContext_.getNodeTypeOrAny(node->_left);
     Type *right = outer_.flowContext_.getNodeTypeOrAny(node->_right);
 
