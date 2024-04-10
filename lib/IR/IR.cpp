@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "hermes/IR/CFG.h"
 #include "llvh/ADT/SetVector.h"
 #include "llvh/ADT/SmallString.h"
 #include "llvh/Support/Casting.h"
@@ -600,6 +601,19 @@ Context &Function::getContext() const {
 
 void Function::addBlock(BasicBlock *BB) {
   BasicBlockList.push_back(BB);
+}
+
+void Function::moveBlockToEntry(BasicBlock *newEntry) {
+  assert(
+      std::find_if(
+          BasicBlockList.begin(),
+          BasicBlockList.end(),
+          [newEntry](auto &BB) { return &BB == newEntry; }) !=
+          BasicBlockList.end() &&
+      "block not in function");
+  assert(pred_count(newEntry) == 0 && "block should not have any predecessors");
+  BasicBlockList.remove(iterator(newEntry));
+  BasicBlockList.push_front(newEntry);
 }
 
 JSDynamicParam *Function::addJSDynamicParam(Identifier name) {

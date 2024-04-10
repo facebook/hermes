@@ -5,8 +5,46 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+//===----------------------------------------------------------------------===//
+/// \file
+///
+// The core idea of this pass is to transform the sequence of yield instructions
+// within the generator function to one large switch statement that branches to
+// the correct spot in the function. Each target block of a SaveAndYieldInst
+// will occupy a slot in this switch statement. Each SaveAndYieldInst will then
+// turn into an instruction that modifies the switch variable to point to the
+// next block that the function should resume from.
+//
+// Exceptions:
+// As a result of this new switch structure, we cannot retain the TryStartInsts
+// that existed in the function originally. It would be invalid for the main
+// switch to jump immediately into the middle of a block that was enclosed in a
+// try. So, we remove all of the user's try instructions, and wrap the execution
+// of all user blocks in one single try.  If an exception is thrown, we have to
+// figure out which user block would have caught it, had we not removed all the
+// try instructions. The exception handler we install needs to modify the switch
+// variable to point to the correct user handler, then restart the execution of
+// the main switch again. The installed handler recovers the information it
+// needs by using another switch and switch variable. All of the try
+// instructions (TryStart/Catch/TryEnd) modify the exception handler switch
+// variable with a unique number. This is enough information to be able to
+// recover which user error handler block we should jump to when an exception is
+// thrown.
+//
+// All 'local' instructions must be removed from the inner function and lifted
+// into the outer function as a variable. Local here means any instructions that
+// refer to stack values, such as AllocStackInst or instructions that read
+// paramters.
+//
+// The creation of the switch changes the dominance structure between the
+// existing blocks. Values that now cross blocks without proper dominance need
+// to be lifted into the outer closure.
+//
+//===----------------------------------------------------------------------===//
+
 #include "hermes/BCGen/GeneratorResumeMethod.h"
 #include "hermes/FrontEndDefs/Builtins.h"
+#include "hermes/IR/CFG.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/IRUtils.h"
@@ -27,6 +65,17 @@ static void moveBuilderTo(Instruction *I, IRBuilder &builder) {
 static void moveBuilderAfter(Instruction *I, IRBuilder &builder) {
   builder.setLocation(I->getLocation());
   builder.setInsertionPointAfter(I);
+}
+
+/// ES6.0 7.4.7
+/// \return ReturnInst of object {value: \p val, done: \p done}.
+static ReturnInst *
+emitReturnIterResultObject(IRBuilder &builder, Value *val, bool done) {
+  AllocObjectLiteralInst::ObjectPropertyMap props{};
+  props.push_back({builder.getLiteralString("value"), val});
+  props.push_back(
+      {builder.getLiteralString("done"), builder.getLiteralBool(done)});
+  return builder.createReturnInst(builder.createAllocObjectLiteralInst(props));
 }
 
 /// This class will perform a transformation of the IR for a given pair of inner
@@ -88,6 +137,22 @@ class LowerToStateMachine {
       LoadParamInst *actionParam,
       LoadParamInst *valueParam,
       Variable *genState);
+
+  /// Lower the inner function to a switch.
+  void lowerToSwitch(
+      LoadParamInst *actionParam,
+      LoadParamInst *valueParam,
+      Variable *genState);
+
+  /// Create a BB to handle being in the 'Completed' state of the generator.
+  BasicBlock *createCompletedStateBlock(
+      LoadParamInst *action,
+      LoadParamInst *value);
+
+  /// Construct a map from BB to enclosing trys, accounting for TryEnd/Catch.
+  /// \return None if there were no trys in the function.
+  llvh::Optional<llvh::DenseMap<BasicBlock *, TryStartInst *>>
+  findEnclosingTrysPerBlock(Function *F);
 };
 
 void LowerToStateMachine::convert() {
@@ -115,6 +180,7 @@ void LowerToStateMachine::convert() {
       Type::createInt32());
 
   lowerResumeGenerator(loadActionParam, loadValueParam, genState);
+  lowerToSwitch(loadActionParam, loadValueParam, genState);
 }
 
 void LowerToStateMachine::setupScopes() {
@@ -372,6 +438,439 @@ void LowerToStateMachine::lowerResumeGenerator(
       break;
     }
   }
+}
+
+/// Helper class for creating a SwitchInst.
+class SwitchBuilder {
+  IRBuilder &builder_;
+  /// Values the switch index can take.
+  SwitchInst::ValueListType values_{};
+  /// Branches of the switch.
+  SwitchInst::BasicBlockListType switchTargets_{};
+  /// BB -> value in the switch that leads to it.
+  llvh::DenseMap<BasicBlock *, size_t> bbMapping_{};
+
+ public:
+  explicit SwitchBuilder(IRBuilder &builder) : builder_(builder) {}
+
+  /// \return the index \p BB occupies in the switch. If \p BB is not in the
+  /// switch, then add it.
+  size_t getBBIdx(BasicBlock *BB) {
+    auto idx = bbMapping_.size();
+    auto [pair, didInsert] = bbMapping_.try_emplace(BB, idx);
+    if (didInsert) {
+      values_.push_back(builder_.getLiteralNumber(idx));
+      switchTargets_.push_back(BB);
+    }
+    return pair->second;
+  }
+
+  /// Construct and \return the SwitchInst.
+  SwitchInst *generate(Value *operand, BasicBlock *defaultBlock) {
+    return builder_.createSwitchInst(
+        operand, defaultBlock, values_, switchTargets_);
+  }
+
+  /// \return number of cases in the switch.
+  size_t size() const {
+    return values_.size();
+  }
+};
+
+void LowerToStateMachine::lowerToSwitch(
+    LoadParamInst *actionParam,
+    LoadParamInst *valueParam,
+    Variable *genState) {
+  // Collect the original user blocks, before we created any.
+  llvh::SmallVector<BasicBlock *, 6> userBBs;
+  for (auto &BB : *inner_) {
+    userBBs.push_back(&BB);
+  }
+
+  // Before we modify anything, record the relationship of each block to its
+  // enclosing try.
+  auto blockToEnclosingTry = findEnclosingTrysPerBlock(inner_);
+  // If there are no existing trys, then we will not create a try of our own.
+  // Instead we simply let all exceptions bubble up out of the inner function,
+  // which is what should happen since there are no trys anywhere.
+  bool hasExistingTrys = blockToEnclosingTry.hasValue();
+
+  // This is the main switch that will contain all target blocks of
+  // SaveAndYieldInsts and all catch handlers of a try-catch.
+  SwitchBuilder mainSwitch(builder_);
+  Variable *switchIdx = builder_.createVariable(
+      getParentOuterScope_->getVariableScope(), "idx", Type::createInt32());
+
+  // Original entry point to the function.
+  auto *oldBeginBB = &*inner_->begin();
+  // New entry point to the function.
+  auto *newBeginBB = builder_.createBasicBlock(inner_);
+  inner_->moveBlockToEntry(newBeginBB);
+  // Execute the switch, potentially wrapped in a try.
+  auto *executeSwitchBB = builder_.createBasicBlock(inner_);
+  // Holds the switch that jumps to the correct user block after yields.
+  auto *userCodeSwitchBB = builder_.createBasicBlock(inner_);
+
+  // We begin by checking the current state of the generator.
+  // If executing, throw.
+  // Else, if the generator is completed, go to completedStateBB
+  // Else, dispatch to switch.
+  auto *throwBecauseExecutingBB = builder_.createBasicBlock(inner_);
+  auto *checkIfCompletedBB = builder_.createBasicBlock(inner_);
+  builder_.setInsertionBlock(newBeginBB);
+  builder_.createCompareBranchInst(
+      builder_.createLoadFrameInst(getParentOuterScope_, genState),
+      builder_.getLiteralNumber((uint8_t)State::Executing),
+      ValueKind::CmpBrStrictlyEqualInstKind,
+      throwBecauseExecutingBB,
+      checkIfCompletedBB);
+  // Move these instructions to the new beginning block so that they don't cross
+  // any blocks without dominance.
+  getParentOuterScope_->moveBefore(newBeginBB->begin());
+  actionParam->moveBefore(newBeginBB->begin());
+  valueParam->moveBefore(newBeginBB->begin());
+
+  builder_.setInsertionBlock(throwBecauseExecutingBB);
+  builder_.createStoreFrameInst(
+      getParentOuterScope_,
+      builder_.getLiteralNumber((uint8_t)State::Completed),
+      genState);
+  builder_.createThrowTypeErrorInst(builder_.getLiteralString(
+      "Generator functions may not be called on executing generators"));
+
+  auto *completedStateBB = createCompletedStateBlock(actionParam, valueParam);
+  // If the state of the generator is completed, go to completedStateBB. Else,
+  // try to execute the main switch.
+  builder_.setInsertionBlock(checkIfCompletedBB);
+  builder_.createCompareBranchInst(
+      builder_.createLoadFrameInst(getParentOuterScope_, genState),
+      builder_.getLiteralNumber((uint8_t)State::Completed),
+      ValueKind::CmpBrStrictlyEqualInstKind,
+      completedStateBB,
+      executeSwitchBB);
+
+  // Initialize the main switch index and generator state variables.
+  builder_.setInsertionPoint(CGI_);
+  // oldBeginBB is where the original first BB instructions are. This should
+  // be the first case that is executed, so initialize the switch index
+  // variable to the correct index.
+  // Use createGeneratorScopeArg_ here since we are emitting this IR in the
+  // outer function.
+  builder_.createStoreFrameInst(
+      newOuterScope_,
+      builder_.getLiteralNumber(mainSwitch.getBBIdx(oldBeginBB)),
+      switchIdx);
+  builder_.createStoreFrameInst(
+      newOuterScope_,
+      builder_.getLiteralNumber((uint8_t)State::SuspendedStart),
+      genState);
+
+  // This switch will be executed when an exception is thrown and is responsible
+  // for setting up switchIdx to point to the correct block for the user catch
+  // handler.
+  SwitchBuilder exceptionSwitch(builder_);
+  Variable *exceptionSwitchIdx = nullptr;
+  // This BB guards the entire execution of user blocks.
+  BasicBlock *surroundingCatchBB = nullptr;
+  // The top level catch will propagate the caught error to the user
+  // handlers via this value.
+  Variable *thrownValPlaceholder = nullptr;
+  // The default case in the exception handler switch is to simply re-throw the
+  // exception. Also mark the generator as completed.
+  BasicBlock *rethrowBB = nullptr;
+  size_t rethrowBBIdx = 0;
+  if (hasExistingTrys) {
+    thrownValPlaceholder = builder_.createVariable(
+        getParentOuterScope_->getVariableScope(),
+        "catchVal",
+        Type::createAnyType());
+    rethrowBB = builder_.createBasicBlock(inner_);
+    builder_.setInsertionBlock(rethrowBB);
+    builder_.createStoreFrameInst(
+        getParentOuterScope_,
+        builder_.getLiteralNumber((uint8_t)State::Completed),
+        genState);
+    auto loadVal = builder_.createLoadFrameInst(
+        getParentOuterScope_, thrownValPlaceholder);
+    builder_.createThrowInst(loadVal);
+    rethrowBBIdx = exceptionSwitch.getBBIdx(rethrowBB);
+    builder_.setInsertionPoint(CGI_);
+    // Initialize the exception index to rethrow idx, which is equivalent to
+    // being outside of any try body.
+    exceptionSwitchIdx = builder_.createVariable(
+        getParentOuterScope_->getVariableScope(),
+        "exception_handler_idx",
+        Type::createInt32());
+    builder_.createStoreFrameInst(
+        newOuterScope_,
+        builder_.getLiteralNumber(rethrowBBIdx),
+        exceptionSwitchIdx);
+    // Wrap execution of switch in a try.
+    builder_.setInsertionBlock(executeSwitchBB);
+    surroundingCatchBB = builder_.createBasicBlock(inner_);
+    builder_.createTryStartInst(userCodeSwitchBB, surroundingCatchBB);
+  } else {
+    // Don't wrap execution of switch in a try.
+    builder_.setInsertionBlock(executeSwitchBB);
+    builder_.createBranchInst(userCodeSwitchBB);
+  }
+
+  // This holds the mapping of user error handler to the exception switch index
+  // that will lead to the execution of that handler.
+  llvh::DenseMap<BasicBlock *, size_t> handlersToExceptionSwitchIdx;
+  // Get the index in handlersToExceptionSwitchIdx that would execute \p BB, or
+  // return rethrowBBIdx if \p BB is not enclosed in any try.
+  auto getEnclosingHandlerIdx = [rethrowBBIdx,
+                                 &blockToEnclosingTry,
+                                 &handlersToExceptionSwitchIdx](
+                                    BasicBlock *BB) {
+    // Check to see if BB is enclosed in a try. If so, the index is the user
+    // handler of the enclosing TryStartInst. If not, use the index for the
+    // re-throwing block.
+    size_t idx = rethrowBBIdx;
+    auto enclosing = blockToEnclosingTry->find(BB);
+    if (enclosing != blockToEnclosingTry->end() && enclosing->second) {
+      idx = handlersToExceptionSwitchIdx[enclosing->second->getCatchTarget()];
+    }
+    return idx;
+  };
+
+  // Emit IR to return an iteration result object, potentially wrapped in a
+  // block with a TryEnd. builder_ should be set in the desired location for the
+  // return to be emitted before calling.
+  auto emitInnerReturn = [this, hasExistingTrys](
+                             Value *val, bool isDelegated, bool done) {
+    // If there are existing trys, then end the try in a separate BB before we
+    // emit the return instruction.
+    if (hasExistingTrys) {
+      auto *tryEndBB = builder_.createBasicBlock(inner_);
+      builder_.createBranchInst(tryEndBB);
+      builder_.setInsertionBlock(tryEndBB);
+      builder_.createTryEndInst();
+    }
+    if (isDelegated) {
+      // Delegated yields (yield*) should not wrap the given value in an
+      // iteration object.
+      builder_.createReturnInst(val);
+    } else {
+      emitReturnIterResultObject(builder_, val, done);
+    }
+  };
+
+  IRBuilder::InstructionDestroyer destroyer{};
+  for (auto *BB : userBBs) {
+    for (Instruction &I : *BB) {
+      if (auto *SGI = llvh::dyn_cast<StartGeneratorInst>(&I)) {
+        // We've already replicated the semantics of StartGeneratorInst, so
+        // remove it.
+        destroyer.add(SGI);
+      } else if (auto *YI = llvh::dyn_cast<SaveAndYieldInst>(&I)) {
+        // Return a value, and set switchIdx to jump to the next block
+        // specified in the parameter of SaveAndYieldInst.
+        auto *nextBB = YI->getNextBlock();
+        // We want to execute nextBB via the switch on the next function
+        // invocation. Add nextBB to the switch, and set the switch index
+        // variable correctly.
+        size_t idx = mainSwitch.getBBIdx(nextBB);
+        moveBuilderTo(YI, builder_);
+        builder_.createStoreFrameInst(
+            getParentOuterScope_, builder_.getLiteralNumber(idx), switchIdx);
+        builder_.createStoreFrameInst(
+            getParentOuterScope_,
+            builder_.getLiteralNumber((uint8_t)State::SuspendedYield),
+            genState);
+        emitInnerReturn(
+            YI->getResult(),
+            /*isDelegated*/ YI->getIsDelegated(),
+            /*done*/ false);
+        destroyer.add(YI);
+      } else if (auto *TSI = llvh::dyn_cast<TryStartInst>(&I)) {
+        auto *userCatchBB = TSI->getCatchTarget();
+        // Replace the catch with a read from the variable holding the thrown
+        // value.
+        auto *catchInst = llvh::cast<CatchInst>(&*userCatchBB->begin());
+        moveBuilderTo(catchInst, builder_);
+        catchInst->replaceAllUsesWith(builder_.createLoadFrameInst(
+            getParentOuterScope_, thrownValPlaceholder));
+        destroyer.add(catchInst);
+        // Entering into the catch handler changes what handler should be
+        // called if an exception is thrown.
+        builder_.createStoreFrameInst(
+            getParentOuterScope_,
+            builder_.getLiteralNumber(getEnclosingHandlerIdx(userCatchBB)),
+            exceptionSwitchIdx);
+
+        // This block will be dispatched to from the top level catch switch. It
+        // is responsible for setting up the main switch index to point to the
+        // correct user catch handler.
+        auto *setupUserHandlerBB = builder_.createBasicBlock(inner_);
+        builder_.setInsertionBlock(setupUserHandlerBB);
+        builder_.createStoreFrameInst(
+            getParentOuterScope_,
+            builder_.getLiteralNumber(mainSwitch.getBBIdx(userCatchBB)),
+            switchIdx);
+        builder_.createBranchInst(executeSwitchBB);
+        size_t setupBBIdx = exceptionSwitch.getBBIdx(setupUserHandlerBB);
+        handlersToExceptionSwitchIdx.insert({userCatchBB, setupBBIdx});
+
+        // The try body should update the exception switch index to point at
+        // setupUserHandlerBB.
+        auto *tryBody = TSI->getTryBody();
+        movePastFirstInBlock(builder_, tryBody);
+        builder_.createStoreFrameInst(
+            getParentOuterScope_,
+            builder_.getLiteralNumber(setupBBIdx),
+            exceptionSwitchIdx);
+
+        // Turn the TryStartInst into an unconditional branch to the try body.
+        moveBuilderTo(TSI, builder_);
+        auto *branch = builder_.createBranchInst(tryBody);
+        TSI->replaceAllUsesWith(branch);
+        destroyer.add(TSI);
+      } else if (auto *TEI = llvh::dyn_cast<TryEndInst>(&I)) {
+        // TryEndInst needs to update the exception switch index because it
+        // changes what handler should be invoked if an exception were to be
+        // thrown.
+        moveBuilderTo(TEI, builder_);
+        builder_.createStoreFrameInst(
+            getParentOuterScope_,
+            builder_.getLiteralNumber(getEnclosingHandlerIdx(BB)),
+            exceptionSwitchIdx);
+        destroyer.add(TEI);
+      } else if (auto *RI = llvh::dyn_cast<ReturnInst>(&I)) {
+        // ReturnInsts from IRGen have special semantics: they are meant to
+        // complete the generator.
+        moveBuilderTo(RI, builder_);
+        builder_.createStoreFrameInst(
+            getParentOuterScope_,
+            builder_.getLiteralNumber((uint8_t)State::Completed),
+            genState);
+        emitInnerReturn(
+            RI->getValue(),
+            /*isDelegated*/ false,
+            /*done*/ true);
+        destroyer.add(RI);
+      }
+    }
+  }
+
+  auto *defaultMainSwitchBB = builder_.createBasicBlock(inner_);
+  builder_.setInsertionBlock(defaultMainSwitchBB);
+  // The switch index should always be hitting a value we explicitly defined, so
+  // this should never execute.
+  builder_.createUnreachableInst();
+
+  builder_.setInsertionBlock(userCodeSwitchBB);
+  builder_.createStoreFrameInst(
+      getParentOuterScope_,
+      builder_.getLiteralNumber((uint8_t)State::Executing),
+      genState);
+  mainSwitch.generate(
+      builder_.createLoadFrameInst(getParentOuterScope_, switchIdx),
+      defaultMainSwitchBB);
+
+  if (hasExistingTrys) {
+    auto *defaultExceptionSwitchBB = builder_.createBasicBlock(inner_);
+    builder_.setInsertionBlock(defaultExceptionSwitchBB);
+    // The switch index should always be hitting a value we explicitly defined,
+    // so this should never execute.
+    builder_.createUnreachableInst();
+
+    // Set the thrown value placeholder variable and execute the switch.
+    builder_.setInsertionBlock(surroundingCatchBB);
+    auto *catchVal = builder_.createCatchInst();
+    builder_.createStoreFrameInst(
+        getParentOuterScope_, catchVal, thrownValPlaceholder);
+    exceptionSwitch.generate(
+        builder_.createLoadFrameInst(getParentOuterScope_, exceptionSwitchIdx),
+        defaultExceptionSwitchBB);
+  }
+}
+
+llvh::Optional<llvh::DenseMap<BasicBlock *, TryStartInst *>>
+LowerToStateMachine::findEnclosingTrysPerBlock(Function *F) {
+  bool hasTry = false;
+  // Stack of basic blocks to visit, and the TryStartInst on entry of that
+  // block.
+  llvh::SmallVector<std::pair<BasicBlock *, TryStartInst *>, 4> stack;
+  // Holds a mapping from basic block -> innermost enclosing TryStartInst,
+  // accounting for Catch/TryEnd.
+  llvh::DenseMap<BasicBlock *, TryStartInst *> blockToEnclosingTry;
+  stack.emplace_back(&*F->begin(), nullptr);
+  blockToEnclosingTry[&*F->begin()] = nullptr;
+  while (!stack.empty()) {
+    auto [BB, enclosingTry] = stack.pop_back_val();
+    if (auto *TSI = llvh::dyn_cast<TryStartInst>(BB->getTerminator())) {
+      enclosingTry = TSI;
+      hasTry = true;
+    }
+    for (auto *succ : successors(BB)) {
+      // If succ starts with a TryEndInst or CatchInst, pop off to the
+      // nearest try.
+      auto *succEnclosingTry = enclosingTry;
+      if (llvh::isa<TryEndInst>(&succ->front()) ||
+          llvh::isa<CatchInst>(&succ->front())) {
+        assert(
+            blockToEnclosingTry.find(enclosingTry->getParent()) !=
+                blockToEnclosingTry.end() &&
+            "enclosingTry should already be in map.");
+        succEnclosingTry = blockToEnclosingTry[enclosingTry->getParent()];
+      }
+      auto [enclosingInfo, success] =
+          blockToEnclosingTry.try_emplace(succ, succEnclosingTry);
+      if (success) {
+        // Only explore this BB if we haven't visited it before.
+        stack.push_back({succ, succEnclosingTry});
+      }
+    }
+  }
+  if (hasTry) {
+    return blockToEnclosingTry;
+  } else {
+    return llvh::None;
+  }
+}
+
+BasicBlock *LowerToStateMachine::createCompletedStateBlock(
+    LoadParamInst *actionParam,
+    LoadParamInst *valueParam) {
+  // The done state functionally replicates ResumeGeneratorInst.
+  // 1. If the method called was .throw(X), then throw X
+  // 2. Else if the method called was .return(X), then return X
+  // 3. Else, return undefined
+
+  auto *checkIsThrowBB = builder_.createBasicBlock(inner_);
+  auto *throwValueBB = builder_.createBasicBlock(inner_);
+  auto *checkIsReturnBB = builder_.createBasicBlock(inner_);
+  auto *returnValueBB = builder_.createBasicBlock(inner_);
+  auto *returnUndefBB = builder_.createBasicBlock(inner_);
+
+  builder_.setInsertionBlock(checkIsThrowBB);
+  builder_.createCompareBranchInst(
+      actionParam,
+      builder_.getLiteralNumber((uint8_t)Action::Throw),
+      ValueKind::CmpBrStrictlyEqualInstKind,
+      throwValueBB,
+      checkIsReturnBB);
+
+  builder_.setInsertionBlock(checkIsReturnBB);
+  builder_.createCompareBranchInst(
+      actionParam,
+      builder_.getLiteralNumber((uint8_t)Action::Return),
+      ValueKind::CmpBrStrictlyEqualInstKind,
+      returnValueBB,
+      returnUndefBB);
+
+  builder_.setInsertionBlock(returnUndefBB);
+  emitReturnIterResultObject(builder_, builder_.getLiteralUndefined(), true);
+
+  builder_.setInsertionBlock(returnValueBB);
+  emitReturnIterResultObject(builder_, valueParam, true);
+
+  builder_.setInsertionBlock(throwValueBB);
+  builder_.createThrowInst(valueParam);
+
+  return checkIsThrowBB;
 }
 
 } // namespace

@@ -1866,6 +1866,10 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
 
   void addBlock(BasicBlock *BB);
 
+  /// Set \p newEntry as the entry block to this function.
+  /// \p newEntry must already exist in this function's BasicBlockList.
+  void moveBlockToEntry(BasicBlock *newEntry);
+
   /// Add a new JS parameter.
   JSDynamicParam *addJSDynamicParam(Identifier name);
   /// Add the "this" JS parameter.
