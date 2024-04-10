@@ -1181,8 +1181,6 @@ class FlowChecker::ExprVisitor {
       ESTree::CallExpressionNode *node,
       ESTree::Node *parent,
       Type *constraint) {
-    visitESTreeChildren(*this, node, nullptr);
-
     // Check for $SHBuiltin.
     if (auto *methodCallee =
             llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee)) {
@@ -1197,6 +1195,7 @@ class FlowChecker::ExprVisitor {
             llvh::dyn_cast<ESTree::IdentifierNode>(node->_callee)) {
       sema::Decl *decl = outer_.getDecl(identCallee);
       if (decl->generic) {
+        // TODO: Visit arguments here to infer the type arguments.
         if (!node->_typeArguments) {
           outer_.sm_.error(
               node->_callee->getSourceRange(), "ft: type arguments required");
@@ -1214,10 +1213,16 @@ class FlowChecker::ExprVisitor {
       return;
     }
 
+    // Don't visit the arguments yet, since we may be able to constrain their
+    // types using the type of the function.
+    visitESTreeNode(*this, node->_callee, node, nullptr);
     Type *calleeType = outer_.getNodeTypeOrAny(node->_callee);
+
     // If the callee has no type, we have nothing to do/check.
-    if (llvh::isa<AnyType>(calleeType->info))
+    if (llvh::isa<AnyType>(calleeType->info)) {
+      visitESTreeNodeList(*this, node->_arguments, node, nullptr);
       return;
+    }
 
     if (!llvh::isa<BaseFunctionType>(calleeType->info)) {
       outer_.sm_.error(
@@ -1227,6 +1232,7 @@ class FlowChecker::ExprVisitor {
 
     // If the callee is an untyped function, we have nothing to check.
     if (llvh::isa<UntypedFunctionType>(calleeType->info)) {
+      visitESTreeNodeList(*this, node->_arguments, node, nullptr);
       outer_.setNodeType(node, outer_.flowContext_.getAny());
       return;
     }
@@ -1237,7 +1243,23 @@ class FlowChecker::ExprVisitor {
     if (auto *ftype = llvh::dyn_cast<TypedFunctionType>(calleeType->info)) {
       returnType = ftype->getReturnType();
       params = ftype->getParams();
+    } else {
+      auto *nftype = llvh::cast<NativeFunctionType>(calleeType->info);
+      returnType = nftype->getReturnType();
+      params = nftype->getParams();
+    }
 
+    size_t i = 0;
+    for (ESTree::Node &argNode : node->_arguments) {
+      // Constrain types of arguments before visiting when possible.
+      Type *argConstraint = i < params.size() ? params[i].second : nullptr;
+      // Don't bother with error reporting here, we'll report them later
+      // when we actually try to typecheck the arguments.
+      visitESTreeNodeNoReplace(*this, &argNode, node, argConstraint);
+      ++i;
+    }
+
+    if (auto *ftype = llvh::dyn_cast<TypedFunctionType>(calleeType->info)) {
       Type *expectedThisType = ftype->getThisParam()
           ? ftype->getThisParam()
           : outer_.flowContext_.getAny();
@@ -1291,10 +1313,6 @@ class FlowChecker::ExprVisitor {
           return;
         }
       }
-    } else {
-      auto *nftype = llvh::cast<NativeFunctionType>(calleeType->info);
-      returnType = nftype->getReturnType();
-      params = nftype->getParams();
     }
 
     outer_.setNodeType(node, returnType);
@@ -1334,16 +1352,35 @@ class FlowChecker::ExprVisitor {
       return;
     }
     ESTree::Node *callee = &*it;
+    visitESTreeNode(*this, callee, call, nullptr);
+
+    /// Visit the rest of the arguments without any constraints,
+    /// starting at \c it.
+    auto visitRemainingArgumentsWithoutConstraint =
+        [this, &it, call]() -> void {
+      for (auto e = call->_arguments.end(); it != e; ++it) {
+        ESTree::Node *arg = &*it;
+        visitESTreeNode(*this, arg, call, nullptr);
+      }
+    };
+
     Type *calleeType = outer_.getNodeTypeOrAny(callee);
     // If the callee has no type, we have nothing to do/check.
-    if (llvh::isa<AnyType>(calleeType->info))
+    if (llvh::isa<AnyType>(calleeType->info)) {
+      ++it;
+      visitRemainingArgumentsWithoutConstraint();
       return;
+    }
     if (!llvh::isa<BaseFunctionType>(calleeType->info)) {
+      ++it;
+      visitRemainingArgumentsWithoutConstraint();
       outer_.sm_.error(
           callee->getSourceRange(), "ft: callee is not a function");
       return;
     }
     if (llvh::isa<NativeFunctionType>(calleeType->info)) {
+      ++it;
+      visitRemainingArgumentsWithoutConstraint();
       outer_.sm_.error(
           callee->getSourceRange(),
           "ft: callee is a native function, cannot use $SHBuiltin.call");
@@ -1353,6 +1390,8 @@ class FlowChecker::ExprVisitor {
 
     // If the callee is an untyped function, we have nothing to check.
     if (!ftype) {
+      ++it;
+      visitRemainingArgumentsWithoutConstraint();
       outer_.setNodeType(call, outer_.flowContext_.getAny());
       return;
     }
@@ -1365,6 +1404,16 @@ class FlowChecker::ExprVisitor {
           call->getSourceRange(), "ft: call requires at least two arguments");
       return;
     }
+
+    size_t i = 0;
+    for (auto e = call->_arguments.end(); it != e; ++it) {
+      Type *constraint = i < ftype->getParams().size()
+          ? ftype->getParams()[i].second
+          : nullptr;
+      visitESTreeNodeNoReplace(*this, &*it, call, constraint);
+      ++i;
+    }
+
     Type *expectedThisType = ftype->getThisParam()
         ? ftype->getThisParam()
         : outer_.flowContext_.getAny();
@@ -1382,6 +1431,7 @@ class FlowChecker::ExprVisitor {
 
   /// SHBuiltin.c_null().
   void checkSHBuiltinCNull(ESTree::CallExpressionNode *call) {
+    visitESTreeChildren(*this, call, nullptr);
     // Check the number and types of arguments.
     if (call->_arguments.size() != 0) {
       outer_.sm_.error(call->getSourceRange(), "ft: c_null takes no arguments");
@@ -1392,6 +1442,7 @@ class FlowChecker::ExprVisitor {
 
   /// SHBuiltin.c_native_runtime().
   void checkSHBuiltinCNativeRuntime(ESTree::CallExpressionNode *call) {
+    visitESTreeChildren(*this, call, nullptr);
     // Check the number and types of arguments.
     if (call->_arguments.size() != 0) {
       outer_.sm_.error(
@@ -1403,6 +1454,7 @@ class FlowChecker::ExprVisitor {
 
   /// $SHBuiltin.extern_c({options}, function name():result {...})
   void checkSHBuiltinExternC(ESTree::CallExpressionNode *call) {
+    visitESTreeChildren(*this, call, nullptr);
     // Check the number and types of arguments.
     if (call->_arguments.size() != 2) {
       outer_.sm_.error(
