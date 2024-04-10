@@ -89,12 +89,23 @@ static_assert(
     std::is_trivially_copyable<RuntimeFunctionHeader>::value,
     "RuntimeFunctionHeader should be trivially copyable");
 
+/// The kind of BCProvider, used for downcasting.
+enum class BCProviderKind {
+  BCProviderFromBuffer,
+  BCProviderFromSrc,
+  BCProviderLazy,
+};
+
 /// Base class designed to provide bytecode data. We use this class
 /// to abstract different ways of constructing bytecode from different
 /// code paths: eval vs bytecode file. The design goal is to make the
 /// code path of loading from bytecode file more efficient.
 class BCProviderBase {
  protected:
+  /// The kind of the BCProvider.
+  /// Allows casting with llvh::cast etc.
+  BCProviderKind kind_;
+
   /// Storing information about the bytecode, needed when it is loaded by the
   /// runtime.
   BytecodeOptions options_{};
@@ -148,6 +159,12 @@ class BCProviderBase {
   virtual void createDebugInfo() = 0;
 
  public:
+  explicit BCProviderBase(BCProviderKind kind) : kind_(kind) {}
+
+  /// \return the kind of the BCProvider.
+  BCProviderKind getKind() const {
+    return kind_;
+  }
   /// Getters for every private data member.
   BytecodeOptions getBytecodeOptions() const {
     return options_;
@@ -503,6 +520,10 @@ class BCProviderFromBuffer final : public BCProviderBase {
 
   bool isLazy() const override {
     return false;
+  }
+
+  static bool classof(const BCProviderBase *provider) {
+    return provider->getKind() == BCProviderKind::BCProviderFromBuffer;
   }
 };
 

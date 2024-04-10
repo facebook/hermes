@@ -167,7 +167,7 @@ RuntimeModule *RuntimeModule::createLazyModule(
   // Set the bcProvider's BytecodeModule to point to the parent's.
   assert(parent->isInitialized() && "Parent module must have been initialized");
 
-  auto *bcFunction = &((hbc::BCProviderFromSrc *)parent->getBytecode())
+  auto *bcFunction = &llvh::cast<hbc::BCProviderFromSrc>(parent->getBytecode())
                           ->getBytecodeModule()
                           ->getFunction(functionID);
 

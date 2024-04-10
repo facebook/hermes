@@ -9,6 +9,7 @@
 
 #include "hermes/VM/CodeBlock.h"
 
+#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "hermes/BCGen/HBC/Bytecode.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/IRGen/IRGen.h"

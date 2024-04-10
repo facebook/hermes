@@ -162,6 +162,10 @@ class BCProviderFromSrc final : public BCProviderBase {
   void setSourceHash(const SHA1 &hash) {
     sourceHash_ = hash;
   };
+
+  static bool classof(const BCProviderBase *provider) {
+    return provider->getKind() == BCProviderKind::BCProviderFromSrc;
+  }
 };
 
 /// BCProviderLazy is used during lazy compilation. When a function is created
@@ -217,6 +221,10 @@ class BCProviderLazy final : public BCProviderBase {
   /// \return the pointer to the BytecodeFunction.
   hbc::BytecodeFunction *getBytecodeFunction() {
     return bytecodeFunction_;
+  }
+
+  static bool classof(const BCProviderBase *provider) {
+    return provider->getKind() == BCProviderKind::BCProviderLazy;
   }
 };
 #endif // HERMESVM_LEAN

@@ -43,7 +43,8 @@ bool isSingleFunctionExpression(ESTree::NodePtr ast) {
 
 BCProviderFromSrc::BCProviderFromSrc(
     std::unique_ptr<hbc::BytecodeModule> module)
-    : module_(std::move(module)) {
+    : BCProviderBase(BCProviderKind::BCProviderFromSrc),
+      module_(std::move(module)) {
   options_ = module_->getBytecodeOptions();
 
   functionCount_ = module_->getNumFunctions();
@@ -213,7 +214,8 @@ BCProviderFromSrc::createBCProviderFromSrc(
 }
 
 BCProviderLazy::BCProviderLazy(hbc::BytecodeFunction *bytecodeFunction)
-    : bytecodeFunction_(bytecodeFunction) {
+    : BCProviderBase(BCProviderKind::BCProviderLazy),
+      bytecodeFunction_(bytecodeFunction) {
   // Lazy module should always contain one function to begin with.
   functionCount_ = 1;
 }

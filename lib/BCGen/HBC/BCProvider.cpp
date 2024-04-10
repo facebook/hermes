@@ -548,7 +548,8 @@ void BCProviderFromBuffer::startPageAccessTracker() {
 BCProviderFromBuffer::BCProviderFromBuffer(
     std::unique_ptr<const Buffer> buffer,
     BytecodeForm form)
-    : buffer_(std::move(buffer)),
+    : BCProviderBase(BCProviderKind::BCProviderFromBuffer),
+      buffer_(std::move(buffer)),
       bufferPtr_(buffer_->data()),
       end_(bufferPtr_ + buffer_->size()) {
   ConstBytecodeFileFields fields;
