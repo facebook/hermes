@@ -951,7 +951,7 @@ UDateFormat *DateTimeFormatICU::getUDateFormatter(vm::Runtime &runtime) {
     if (era_ == kNarrow)
       skeleton += u"GGGGG";
     else if (era_ == kShort)
-      skeleton += u"G";
+      skeleton += u"GG";
     else if (era_ == kLong)
       skeleton += u"GGGG";
   }
