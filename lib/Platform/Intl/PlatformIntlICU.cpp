@@ -865,8 +865,8 @@ UDateFormat *DateTimeFormatICU::getUDateFormatter(vm::Runtime &runtime) {
   // timeStyle and dateStyle cannot be used in conjunction with the other
   // options.
   if (timeStyle_.has_value() || dateStyle_.has_value()) {
-    UDateFormatStyle dateStyleRes = UDAT_DEFAULT;
-    UDateFormatStyle timeStyleRes = UDAT_DEFAULT;
+    UDateFormatStyle dateStyleRes = UDAT_NONE;
+    UDateFormatStyle timeStyleRes = UDAT_NONE;
 
     if (dateStyle_.has_value()) {
       if (dateStyle_ == kFull)
