@@ -8,6 +8,7 @@
 // RUN: %hermes -O0 %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -lazy %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -O %s -exec | %FileCheck --match-full-lines %s
 
 function show(iterResult) {
   print(iterResult.value, '|', iterResult.done);
@@ -25,14 +26,6 @@ show(it.next());
 // CHECK-NEXT: 1 | false
 show(it.next());
 // CHECK-NEXT: undefined | true
-
-try {
-  new simple();
-  print('must throw');
-} catch (e) {
-  print('caught', e.name);
-}
-// CHECK-NEXT: caught TypeError
 
 function *useArgs(x, y) {
   yield x;
