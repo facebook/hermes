@@ -50,6 +50,16 @@ inline Value *lowerBinaryExponentiationInst(
   return CBI;
 }
 
+/// Lower the given \p call by removing its environment operand. This ensures
+/// that we do not allocate a register for it.
+inline Value *stripEnvFromCall(CallInst *call, IRBuilder &builder) {
+  if (llvh::isa<EmptySentinel>(call->getEnvironment()))
+    return nullptr;
+
+  call->setEnvironment(builder.getEmptySentinel());
+  return call;
+}
+
 } // namespace hermes
 
 #endif

@@ -26,7 +26,8 @@ class PeepholeLowering {
     for (auto &BB : *F_) {
       for (auto &I : BB) {
         if (Value *replaceVal = peep(&I)) {
-          I.replaceAllUsesWith(replaceVal);
+          if (replaceVal != &I)
+            I.replaceAllUsesWith(replaceVal);
           changed = true;
         }
       }
@@ -39,8 +40,8 @@ class PeepholeLowering {
   /// instructions need to be created and inserted in the correct position by
   /// using the builder. Instructions for deletion should be inserted in the
   /// destroyer in the correct order (users first). If a change is made, a
-  /// non-null value must be returned; it will be used to replace all uses of
-  /// \p I.
+  /// non-null value must be returned; if it is different from \p I, it will be
+  /// used to replace all uses of \p I.
   Value *peep(Instruction *I) {
     switch (I->getKind()) {
       case ValueKind::CoerceThisNSInstKind: {
@@ -50,6 +51,9 @@ class PeepholeLowering {
       case ValueKind::BinaryExponentiationInstKind: {
         return lowerBinaryExponentiationInst(
             llvh::cast<BinaryOperatorInst>(I), builder_, destroyer_);
+      }
+      case ValueKind::CallInstKind: {
+        return stripEnvFromCall(llvh::cast<CallInst>(I), builder_);
       }
       default:
         return nullptr;
