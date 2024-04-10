@@ -26,4 +26,12 @@ typedef uint16_t char16_t;
 #endif // _MSC_VER
 #endif // !defined(HERMES_EXPORT)
 
+/// \macro SHERMES_NO_SANITIZE
+/// Disable a particular sanitizer for a function.
+#if __has_attribute(no_sanitize)
+#define SHERMES_NO_SANITIZE(KIND) __attribute__((no_sanitize(KIND)))
+#else
+#define SHERMES_NO_SANITIZE(KIND)
+#endif
+
 #endif // HERMES_SH_CONFIG_H

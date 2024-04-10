@@ -772,7 +772,9 @@ SHERMES_EXPORT __attribute__((const)) int32_t _sh_to_int32_double_slow_path(
 
 /// C version of the hermes::truncateToInt32 function.
 /// Inlines the fast path for SH to use, calls out to the slow path.
-static inline int32_t _sh_to_int32_double(double d) {
+static inline int32_t _sh_to_int32_double(double d)
+    SHERMES_NO_SANITIZE("float-cast-overflow");
+inline int32_t _sh_to_int32_double(double d) {
   // ARM64 has different behavior when the double value can't fit into
   // int64_t (results in 2^63-1 instead of -2^63 on x86-64), and 2^63-1 can't
   // be represented precisely in double, so it's converted to 2^63. The result

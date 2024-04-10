@@ -43,6 +43,7 @@ int32_t truncateToInt32SlowPath(double d);
 /// NaN and Infinity are always converted to 0. The rest of the numbers are
 /// converted to a (conceptually) infinite-width integer and the low 32 bits of
 /// the integer are then returned.
+int32_t truncateToInt32(double d) LLVM_NO_SANITIZE("float-cast-overflow");
 inline int32_t truncateToInt32(double d) {
   // ARM64 has different behavior when the double value can't fit into
   // int64_t (results in 2^63-1 instead of -2^63 on x86-64), and 2^63-1 can't
