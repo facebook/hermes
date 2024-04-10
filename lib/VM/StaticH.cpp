@@ -10,6 +10,7 @@
 #include "hermes/VM/FastArray.h"
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/JSArray.h"
+#include "hermes/VM/JSGeneratorObject.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/JSRegExp.h"
 #include "hermes/VM/PropertyAccessor.h"
@@ -503,6 +504,52 @@ static SHLegacyValue createClosure(
           0)
           .getHermesValue();
   return res;
+}
+
+extern "C" SHLegacyValue _sh_ljs_create_generator_object(
+    SHRuntime *shr,
+    const SHLegacyValue *env,
+    SHLegacyValue (*func)(SHRuntime *),
+    const SHNativeFuncInfo *funcInfo) {
+  assert(
+      !_sh_ljs_is_null(*env) && "inner generator cannot have null environment");
+  Runtime &runtime = getRuntime(shr);
+
+  auto genObjRes =
+      [&runtime, env, func, funcInfo]() -> CallResult<SHLegacyValue> {
+    GCScopeMarkerRAII marker{runtime};
+    Handle<NativeJSFunction> innerFunc = NativeJSFunction::create(
+        runtime,
+        Handle<JSObject>::vmcast(&runtime.functionPrototype),
+        Handle<Environment>::vmcast(toPHV(env)),
+        func,
+        funcInfo,
+        0);
+    auto generatorFunction = runtime.makeHandle(vmcast<NativeJSFunction>(
+        runtime.getCurrentFrame().getCalleeClosureUnsafe()));
+    assert(
+        generatorFunction->getFunctionInfo()->kind == FuncKind::Generator &&
+        "should be called from a generator function");
+
+    auto prototypeProp = JSObject::getNamed_RJS(
+        generatorFunction,
+        runtime,
+        Predefined::getSymbolID(Predefined::prototype));
+    if (LLVM_UNLIKELY(prototypeProp == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    Handle<JSObject> prototype = vmisa<JSObject>(prototypeProp->get())
+        ? runtime.makeHandle<JSObject>(prototypeProp->get())
+        : Handle<JSObject>::vmcast(&runtime.generatorPrototype);
+    return JSGeneratorObject::create(runtime, innerFunc, prototype)
+        ->getHermesValue();
+  }();
+
+  if (genObjRes == ExecutionStatus::EXCEPTION)
+    _sh_throw_current(shr);
+
+  return *genObjRes;
 }
 
 extern "C" SHLegacyValue _sh_ljs_create_closure(

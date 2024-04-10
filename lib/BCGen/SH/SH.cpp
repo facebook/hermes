@@ -1644,7 +1644,19 @@ class InstrGen {
         << ");\n";
   }
   void generateCreateGeneratorInst(CreateGeneratorInst &inst) {
-    unimplemented(inst);
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_create_generator_object"
+        << "(shr, &";
+    generateRegister(*inst.getScope());
+    os_ << ", ";
+    moduleGen_.nativeFunctionTable.generateFunctionLabel(
+        inst.getFunctionCode(), os_);
+    os_ << ", ";
+    os_ << "&s_function_info_table["
+        << moduleGen_.nativeFunctionTable.getIndex(inst.getFunctionCode())
+        << "]"
+        << ");\n";
   }
   void generateBranchInst(BranchInst &inst) {
     os_ << "  goto ";

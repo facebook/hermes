@@ -436,6 +436,15 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_create_closure(
     SHLegacyValue (*func)(SHRuntime *),
     const SHNativeFuncInfo *funcInfo);
 
+/// Create a generator object.
+/// \param env Should not be null.
+/// \param funcInfo Should not be null.
+SHERMES_EXPORT SHLegacyValue _sh_ljs_create_generator_object(
+    SHRuntime *shr,
+    const SHLegacyValue *env,
+    SHLegacyValue (*func)(SHRuntime *),
+    const SHNativeFuncInfo *funcInfo);
+
 SHERMES_EXPORT SHLegacyValue _sh_ljs_get_global_object(SHRuntime *shr);
 SHERMES_EXPORT void _sh_ljs_declare_global_var(SHRuntime *shr, SHSymbolID name);
 
