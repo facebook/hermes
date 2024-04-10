@@ -778,11 +778,10 @@ void FlowChecker::visit(ESTree::ForStatementNode *node) {
 }
 
 void FlowChecker::visit(ESTree::ReturnStatementNode *node) {
-  // TODO: type check the return value.
-  visitExpression(node->_argument, node, nullptr);
-
   auto *ftype = llvh::dyn_cast<TypedFunctionType>(
       curFunctionContext_->functionType->info);
+  visitExpression(
+      node->_argument, node, ftype ? ftype->getReturnType() : nullptr);
 
   // Untyped function, can't check the return type.
   if (!ftype) {
@@ -819,10 +818,16 @@ void FlowChecker::visit(ESTree::VariableDeclarationNode *node) {
     // Avoid visiting the initializer if it was already visited while inferring
     // the type of the declaration. Remove the entry from the set.
     auto it = visitedInits_.find(declarator->_init);
-    if (it != visitedInits_.end())
+    if (it != visitedInits_.end()) {
       visitedInits_.erase(it);
-    else
-      visitExpression(declarator->_init, declarator, nullptr);
+    } else {
+      Type *constraint = nullptr;
+      if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(declarator->_id)) {
+        sema::Decl *decl = getDecl(id);
+        constraint = flowContext_.findDeclType(decl);
+      }
+      visitExpression(declarator->_init, declarator, constraint);
+    }
     if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(declarator->_id)) {
       if (!declarator->_init)
         continue;

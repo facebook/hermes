@@ -15,6 +15,7 @@ let c = ([1, true]: [number, bool]);
 function d(): [number, bool] {
   return [1, true];
 }
+let e: [[number, bool], string] = [[1, true], "hi"];
 
 // Auto-generated content below. Please do not modify manually.
 
@@ -22,8 +23,9 @@ function d(): [number, bool] {
 // CHECK-NEXT:%union.2 = union(boolean | string)
 // CHECK-NEXT:%tuple.3 = tuple(number, %union.2)
 // CHECK-NEXT:%tuple.4 = tuple(number, boolean)
-// CHECK-NEXT:%function.5 = function(): %tuple.4
-// CHECK-NEXT:%object.6 = object({
+// CHECK-NEXT:%tuple.5 = tuple(%tuple.4, string)
+// CHECK-NEXT:%function.6 = function(): %tuple.4
+// CHECK-NEXT:%object.7 = object({
 // CHECK-NEXT:})
 
 // CHECK:SemContext
@@ -35,12 +37,13 @@ function d(): [number, bool] {
 // CHECK-NEXT:            Decl %d.2 'a' Let : %tuple.3
 // CHECK-NEXT:            Decl %d.3 'b' Let : %tuple.4
 // CHECK-NEXT:            Decl %d.4 'c' Let : %tuple.4
-// CHECK-NEXT:            Decl %d.5 'd' ScopedFunction : %function.5
-// CHECK-NEXT:            Decl %d.6 'arguments' Var Arguments
+// CHECK-NEXT:            Decl %d.5 'd' ScopedFunction : %function.6
+// CHECK-NEXT:            Decl %d.6 'e' Let : %tuple.5
+// CHECK-NEXT:            Decl %d.7 'arguments' Var Arguments
 // CHECK-NEXT:            hoistedFunction d
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:                Decl %d.7 'arguments' Var Arguments
+// CHECK-NEXT:                Decl %d.8 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
@@ -69,11 +72,19 @@ function d(): [number, bool] {
 // CHECK-NEXT:                                    NumericLiteral : number
 // CHECK-NEXT:                                    BooleanLiteral : boolean
 // CHECK-NEXT:                            Id 'c' [D:E:%d.4 'c']
-// CHECK-NEXT:                    FunctionDeclaration : %function.5
+// CHECK-NEXT:                    FunctionDeclaration : %function.6
 // CHECK-NEXT:                        Id 'd' [D:E:%d.5 'd']
 // CHECK-NEXT:                        BlockStatement
 // CHECK-NEXT:                            ReturnStatement
 // CHECK-NEXT:                                ArrayExpression : %tuple.4
 // CHECK-NEXT:                                    NumericLiteral : number
 // CHECK-NEXT:                                    BooleanLiteral : boolean
-// CHECK-NEXT:            ObjectExpression : %object.6
+// CHECK-NEXT:                    VariableDeclaration
+// CHECK-NEXT:                        VariableDeclarator
+// CHECK-NEXT:                            ArrayExpression : %tuple.5
+// CHECK-NEXT:                                ArrayExpression : %tuple.4
+// CHECK-NEXT:                                    NumericLiteral : number
+// CHECK-NEXT:                                    BooleanLiteral : boolean
+// CHECK-NEXT:                                StringLiteral : string
+// CHECK-NEXT:                            Id 'e' [D:E:%d.6 'e']
+// CHECK-NEXT:            ObjectExpression : %object.7

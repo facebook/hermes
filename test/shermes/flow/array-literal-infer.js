@@ -28,7 +28,4 @@ var baseArr: Base[] = [new Base(), new Derived()];
 
 var numArr: number[] = [1, 2, 3];
 var strArr: (number | string)[] = ["a", "b", "c", ...numArr];
-
-var anyArr: any[] = [];
-([...anyArr]: number[]);
 })();

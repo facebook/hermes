@@ -343,8 +343,7 @@ class FlowChecker::ExprVisitor {
     // while we are visiting the expression being cast. For instance, if we are
     // casting an empty array literal, the resulting type of the cast can be
     // used to set the element type of the array.
-    outer_.setNodeType(node, resTy);
-    visitESTreeNode(*this, expression, node, nullptr);
+    visitESTreeNode(*this, expression, node, resTy);
 
     auto *expTy = outer_.getNodeTypeOrAny(expression);
     auto cf = canAFlowIntoB(expTy->info, resTy->info);
@@ -352,6 +351,8 @@ class FlowChecker::ExprVisitor {
       outer_.sm_.error(
           node->getSourceRange(), "ft: cast from incompatible type");
     }
+
+    outer_.setNodeType(node, resTy);
   }
 
   void visit(
@@ -372,177 +373,169 @@ class FlowChecker::ExprVisitor {
     visitExplicitCast(node, node->_expression, node->_typeAnnotation);
   }
 
+  /// Visits an array expression as a tuple given the \p constraint and its
+  /// TypeInfo \p tupleTy.
+  void visitArrayExpressionAsTuple(
+      ESTree::ArrayExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint,
+      TupleType *tupleTy) {
+    assert(
+        constraint && tupleTy && constraint->info == tupleTy &&
+        "must have a tuple type");
+    auto &elements = node->_elements;
+    size_t i = 0;
+    bool tooFewTupleElements = false;
+    for (auto it = elements.begin(); it != elements.end(); ++it, ++i) {
+      if (i >= tupleTy->getTypes().size()) {
+        tooFewTupleElements = true;
+        break;
+      }
+      ESTree::Node *elem = &*it;
+      Type *constraintElemTy = tupleTy->getTypes()[i];
+      visitESTreeNodeNoReplace(*this, elem, node, constraintElemTy);
+      if (llvh::isa<ESTree::SpreadElementNode>(elem)) {
+        outer_.sm_.error(
+            elem->getSourceRange(), "ft: tuple spread element not supported");
+        continue;
+      }
+      // Check that the actual type is compatible with the constraint.
+      Type *actualElemTy = outer_.getNodeTypeOrAny(elem);
+      CanFlowResult cf = canAFlowIntoB(actualElemTy, constraintElemTy);
+      if (!cf.canFlow) {
+        outer_.sm_.error(
+            elem->getSourceRange(),
+            llvh::Twine("ft: incompatible tuple element type at index: ") +
+                llvh::Twine(i));
+        continue;
+      }
+      // Add a checked cast if needed.
+      if (cf.canFlow && cf.needCheckedCast) {
+        auto newIt = elements.insert(
+            it, *outer_.implicitCheckedCast(elem, constraintElemTy, cf));
+        elements.erase(it);
+        it = newIt;
+      }
+    }
+
+    if (tooFewTupleElements || i != tupleTy->getTypes().size()) {
+      outer_.sm_.error(
+          node->getSourceRange(),
+          llvh::Twine("ft: incompatible tuple type, expected ") +
+              llvh::Twine(tupleTy->getTypes().size()) + " elements, found " +
+              llvh::Twine(elements.size()));
+      outer_.setNodeType(node, outer_.flowContext_.getAny());
+      return;
+    }
+
+    outer_.setNodeType(node, constraint);
+  }
+
+  /// Visits an array expression as an array.
+  /// \param constraint the constraint on the array type.
+  /// \param constraintArrTy optional, the ArrayType info on \p constraint.
+  void visitArrayExpressionAsArray(
+      ESTree::ArrayExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint,
+      ArrayType *constraintArrTy) {
+    assert(
+        (constraint ? constraint->info : nullptr) == constraintArrTy &&
+        "incorrect info");
+
+    Type *constraintElemTy =
+        constraintArrTy ? constraintArrTy->getElement() : nullptr;
+    // Construct a union of all the element types if there's no constraint.
+    llvh::SmallSetVector<Type *, 4> elTypes{};
+    auto &elements = node->_elements;
+    size_t i = 0;
+    for (auto it = elements.begin(); it != elements.end(); ++it, ++i) {
+      ESTree::Node *elem = &*it;
+
+      Type *actualElemTy = nullptr;
+      if (auto *spread = llvh::dyn_cast<ESTree::SpreadElementNode>(elem)) {
+        Type *constraintSpreadElemTy = constraintArrTy ? constraint : nullptr;
+        visitESTreeNodeNoReplace(
+            *this, spread->_argument, node, constraintSpreadElemTy);
+        auto *spreadTy = outer_.getNodeTypeOrAny(spread->_argument);
+        auto *spreadArrTy = llvh::dyn_cast<ArrayType>(spreadTy->info);
+        if (!spreadArrTy) {
+          // TODO: Handle spread of non-arrays.
+          outer_.sm_.error(
+              spread->_argument->getSourceRange(),
+              "ft: spread argument must be an array");
+          continue;
+        }
+        actualElemTy = spreadArrTy->getElement();
+      } else {
+        visitESTreeNodeNoReplace(*this, elem, node, constraintElemTy);
+        actualElemTy = outer_.getNodeTypeOrAny(elem);
+      }
+
+      elTypes.insert(actualElemTy);
+      if (constraintElemTy) {
+        // If there's a constraint on the element type, check that each
+        // element conforms and insert implicit casts when necessary.
+        CanFlowResult cf = canAFlowIntoB(actualElemTy, constraintElemTy);
+        if (!cf.canFlow) {
+          outer_.sm_.error(
+              elem->getSourceRange(),
+              llvh::Twine("ft: incompatible array element type at index: ") +
+                  llvh::Twine(i));
+          continue;
+        }
+        // Add a checked cast if needed. Skip spread elements, since we need
+        // to cast each element they produce, rather than the spread itself.
+        if (cf.needCheckedCast) {
+          if (llvh::isa<ESTree::SpreadElementNode>(elem)) {
+            // We don't support spread elements with checked casts yet,
+            // because we have to cast each element individually,
+            outer_.sm_.error(
+                elem->getSourceRange(),
+                "ft: spread element with checked cast not supported");
+          } else {
+            auto newIt = elements.insert(
+                it, *outer_.implicitCheckedCast(elem, constraintElemTy, cf));
+            elements.erase(it);
+            it = newIt;
+          }
+        }
+      }
+    }
+
+    if (constraint) {
+      outer_.setNodeType(node, constraint);
+    } else if (elTypes.empty()) {
+      // If there's no elements in the union, then just use 'any'.
+      outer_.sm_.warning(
+          node->getSourceRange(),
+          "ft: empty array with no context, assuming 'any' array");
+      outer_.setNodeType(node, outer_.flowContext_.getAny());
+    } else {
+      // Otherwise, construct a union of all the element types.
+      outer_.setNodeType(
+          node,
+          outer_.flowContext_.createType(
+              outer_.flowContext_.createArray(outer_.flowContext_.createType(
+                  outer_.flowContext_.maybeCreateUnion(
+                      elTypes.getArrayRef())))));
+    }
+  }
+
   void visit(
       ESTree::ArrayExpressionNode *node,
       ESTree::Node *parent,
       Type *constraint) {
-    visitESTreeChildren(*this, node, nullptr);
-
-    /// Given an element in the array expression, determine its type.
-    auto getElementType = [this](const ESTree::Node *elem) -> Type * {
-      if (auto *spread = llvh::dyn_cast<ESTree::SpreadElementNode>(elem)) {
-        // The type of a spread element depends on its argument.
-        auto *spreadTy = outer_.getNodeTypeOrAny(spread->_argument);
-        // If we are spreading an array, use the type of the array.
-        if (auto *spreadArrTy = llvh::dyn_cast<ArrayType>(spreadTy->info))
-          return spreadArrTy->getElement();
-        // TODO: Handle spread of non-arrays.
-        outer_.sm_.error(
-            spread->_argument->getSourceRange(),
-            "ft: spread argument must be an array");
-        return outer_.flowContext_.getAny();
-      }
-      return outer_.flowContext_.getNodeTypeOrAny(elem);
-    };
-
-    /// Try using the given element type \p elTy for this array. If any elements
-    /// are incompatible with the given type, report an error, otherwise, set
-    /// the type of the array.
-    auto tryArrayElementType = [node, this, getElementType](Type *elTy) {
-      auto &elements = node->_elements;
-      size_t i = 0;
-      for (auto it = elements.begin(); it != elements.end(); ++it) {
-        ESTree::Node *arg = &*it;
-        Type *argTy = getElementType(arg);
-        auto cf = canAFlowIntoB(argTy->info, elTy->info);
-        if (!cf.canFlow) {
-          outer_.sm_.error(
-              arg->getSourceRange(),
-              llvh::Twine("ft: incompatible array element type at index: ") +
-                  llvh::Twine(i));
-          return;
-        }
-        // Add a checked cast if needed. Skip spread elements, since we need to
-        // cast each element they produce, rather than the spread itself.
-        if (cf.needCheckedCast && !llvh::isa<ESTree::SpreadElementNode>(arg)) {
-          auto newIt =
-              elements.insert(it, *outer_.implicitCheckedCast(arg, elTy, cf));
-          elements.erase(it);
-          it = newIt;
-        }
-
-        ++i;
-      }
-      auto *arrTy = outer_.flowContext_.createArray(elTy);
-      outer_.setNodeType(node, outer_.flowContext_.createType(arrTy));
-    };
-
-    /// Make the tuple type of the array expression based on its elements.
-    auto tryTupleType = [node, this, getElementType](
-                            Type *target, TupleType *targetTuple) -> void {
-      auto &elements = node->_elements;
-      size_t i = 0;
-      // Whether we had to stop early due to not enough tuple elements.
-      bool fail = false;
-      for (ESTree::Node &arg : elements) {
-        if (i >= targetTuple->getTypes().size()) {
-          fail = true;
-          break;
-        }
-
-        Type *targetTy = targetTuple->getTypes()[i];
-        Type *argTy = getElementType(&arg);
-        auto cf = canAFlowIntoB(argTy->info, targetTy->info);
-        if (!cf.canFlow) {
-          outer_.sm_.error(
-              arg.getSourceRange(),
-              llvh::Twine("ft: incompatible tuple element type at index: ") +
-                  llvh::Twine(i));
-          return;
-        }
-        ++i;
-      }
-      if (fail || i != targetTuple->getTypes().size()) {
-        outer_.sm_.error(
-            node->getSourceRange(),
-            llvh::Twine("ft: incompatible tuple type, expected ") +
-                llvh::Twine(targetTuple->getTypes().size()) +
-                " elements, found " + llvh::Twine(elements.size()));
-        outer_.setNodeType(node, outer_.flowContext_.getAny());
-        return;
-      }
-      outer_.setNodeType(node, target);
-    };
-
-    // First, try to determine the desired element type from surrounding
-    // context. For instance, this lets us determine the type of empty array
-    // literals. If the type of an element is incompatible, it is okay to fail
-    // here, since we can point to the exact element that is incompatible.
-
-    // If this array expression initializes a variable, try the type of that
-    // variable.
-    if (auto *declarator =
-            llvh::dyn_cast<ESTree::VariableDeclaratorNode>(parent)) {
-      if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(declarator->_id)) {
-        sema::Decl *decl = outer_.getDecl(id);
-        // It's possible we're just trying to infer the type of the declarator
-        // right now, so it's possible `findDeclType` returns nullptr.
-        if (Type *declType = outer_.flowContext_.findDeclType(decl)) {
-          if (auto *arrTy = llvh::dyn_cast<ArrayType>(declType->info)) {
-            tryArrayElementType(arrTy->getElement());
-            return;
-          }
-          if (auto *tupleTy = llvh::dyn_cast<TupleType>(declType->info)) {
-            tryTupleType(declType, tupleTy);
-            return;
-          }
-        }
-      }
-    }
-
-    // If this array expression is immediately cast to something else, try using
-    // the type we are casting to.
-    if (llvh::isa<ESTree::TypeCastExpressionNode>(parent) ||
-        llvh::isa<ESTree::AsExpressionNode>(parent)) {
-      auto *resTy = outer_.getNodeTypeOrAny(parent);
-      if (auto *arrTy = llvh::dyn_cast<ArrayType>(resTy->info)) {
-        tryArrayElementType(arrTy->getElement());
-        return;
-      }
-      if (auto *tupleTy = llvh::dyn_cast<TupleType>(resTy->info)) {
-        tryTupleType(resTy, tupleTy);
-        return;
-      }
-    }
-
-    // If this is a returned literal, try the type of the function.
-    if (llvh::isa<ESTree::ReturnStatementNode>(parent)) {
-      if (auto *ftype = llvh::dyn_cast<TypedFunctionType>(
-              outer_.curFunctionContext_->functionType->info)) {
-        if (auto *arrTy = llvh::dyn_cast<ArrayType>(ftype)) {
-          tryArrayElementType(arrTy->getElement());
-          return;
-        }
-        if (auto *tupleTy =
-                llvh::dyn_cast<TupleType>(ftype->getReturnType()->info)) {
-          tryTupleType(ftype->getReturnType(), tupleTy);
-          return;
-        }
-      }
-    }
-
-    // In principle, we could use the type of an enclosing array literal where
-    // this literal is being spread or nested. However, we leave that
-    // unsupported for now, as the enclosing literal would not have its type set
-    // at this point.
-
-    // We could not determine the type from the context, infer it from the
-    // elements.
-    Type *elTy;
-    if (node->_elements.empty()) {
-      // If there are no elements, we can't infer the type, so use 'any'.
-      elTy = outer_.flowContext_.getAny();
+    if (auto *tupleTy = llvh::dyn_cast_or_null<TupleType>(
+            constraint ? constraint->info : nullptr)) {
+      // The type of ArrayExpression is only Tuple when that constraint was
+      // passed in from above.
+      visitArrayExpressionAsTuple(node, parent, constraint, tupleTy);
     } else {
-      // Construct a union of all the element types.
-      llvh::SmallSetVector<Type *, 4> elTypes;
-      for (const auto &arg : node->_elements)
-        elTypes.insert(getElementType(&arg));
-
-      elTy = outer_.flowContext_.createType(
-          outer_.flowContext_.maybeCreateUnion(elTypes.getArrayRef()), node);
+      auto *constraintArrTy = llvh::dyn_cast_or_null<ArrayType>(
+          constraint ? constraint->info : nullptr);
+      visitArrayExpressionAsArray(node, parent, constraint, constraintArrTy);
     }
-    auto *arrTy = outer_.flowContext_.createArray(elTy);
-    outer_.setNodeType(node, outer_.flowContext_.createType(arrTy));
   }
 
   void visit(
