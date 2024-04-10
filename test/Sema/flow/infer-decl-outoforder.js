@@ -72,6 +72,7 @@ let z;
 // CHECK-NEXT:                                        VariableDeclarator
 // CHECK-NEXT:                                            BinaryExpression : any
 // CHECK-NEXT:                                                Id 'y' [D:E:%d.5 'y'] : number
+// CHECK-NEXT:                                                BinOp +
 // CHECK-NEXT:                                                Id 'z' [D:E:%d.6 'z'] : any
 // CHECK-NEXT:                                            Id 'x' [D:E:%d.4 'x']
 // CHECK-NEXT:                                    VariableDeclaration

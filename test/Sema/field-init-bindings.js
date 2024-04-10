@@ -60,6 +60,7 @@ function f(i) {
 // CHECK-NEXT:                VariableDeclarator
 // CHECK-NEXT:                    BinaryExpression
 // CHECK-NEXT:                        Id 'i' [D:E:%d.2 'i']
+// CHECK-NEXT:                        BinOp +
 // CHECK-NEXT:                        NumericLiteral
 // CHECK-NEXT:                    Id 'j' [D:E:%d.3 'j']
 // CHECK-NEXT:            ClassDeclaration
@@ -99,6 +100,7 @@ function f(i) {
 // CHECK-NEXT:                    MemberExpression
 // CHECK-NEXT:                        Id 'a0' [D:E:%d.6 'a0']
 // CHECK-NEXT:                        Id 'x'
+// CHECK-NEXT:                    BinOp +
 // CHECK-NEXT:                    MemberExpression
 // CHECK-NEXT:                        Id 'a1' [D:E:%d.7 'a1']
 // CHECK-NEXT:                        Id 'x'

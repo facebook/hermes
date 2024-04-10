@@ -25,6 +25,11 @@ class ASTPrinter {
   flow::FlowTypesDumper *flowDumper_;
   const flow::FlowContext *flowContext_;
   unsigned depth_ = 0;
+  /// BinaryExpressionNode with operator {+,-} is linearized so can be visited
+  /// iteratively rather than recursively. Set this field to true to skip
+  /// visiting the children node of a BinaryExpressionNode again in its
+  /// visit() function.
+  bool parentLinearized_ = false;
 
  public:
   ASTPrinter(
@@ -48,7 +53,8 @@ class ASTPrinter {
     return false;
   }
   bool shouldVisit(ESTree::Node *V) {
-    return true;
+    // If current parent node has been linearized, skip visiting children node.
+    return !parentLinearized_;
   }
 
   void enter(ESTree::Node *V) {
@@ -58,6 +64,32 @@ class ASTPrinter {
     printNodeType(V);
     printScopeRef(V);
     os_ << '\n';
+  }
+  void enter(ESTree::BinaryExpressionNode *V) {
+    // Still print the BinaryExpressionNode itself.
+    enter(static_cast<ESTree::Node *>(V));
+
+    if (V->_operator == semCtx_.kw.identPlus ||
+        V->_operator == semCtx_.kw.identMinus) {
+      auto list = ESTree::linearizeLeft(V, {"+", "-"});
+
+      list[0]->_left->visit(*this);
+      for (auto *e : list) {
+        // The operator is also printed to make it clear.
+        os_ << llvh::left_justify("", depth_ * 4);
+        os_ << "BinOp " << list[0]->_operator->str() << "\n";
+        e->_right->visit(*this);
+      }
+
+      // Set this to true after visiting all its children nodes above, so that
+      // this state is immediately used by calls of shouldVisit() on all
+      // children nodes in BinaryExpressionNode::visit(), and then gets reset in
+      // the leave() function. Essentially, innermost BinaryExpressionNode is
+      // handled first, so it won't interfere with the `parentLinearized_` value
+      // of outer BinaryExpressionNode.
+      parentLinearized_ = true;
+      return;
+    }
   }
   void enter(ESTree::IdentifierNode *V) {
     ++depth_;
@@ -91,6 +123,11 @@ class ASTPrinter {
   }
   void leave(ESTree::Node *V) {
     --depth_;
+  }
+  void leave(ESTree::BinaryExpressionNode *V) {
+    leave(static_cast<ESTree::Node *>(V));
+    // BinaryExpressionNode has been handled, reset to false.
+    parentLinearized_ = false;
   }
 
  private:

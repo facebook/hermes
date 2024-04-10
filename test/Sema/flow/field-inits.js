@@ -98,6 +98,7 @@ class C1 extends C0 {
 // CHECK-NEXT:                                                    MemberExpression : any
 // CHECK-NEXT:                                                        ThisExpression : %class.2
 // CHECK-NEXT:                                                        Id 'x'
+// CHECK-NEXT:                                                    BinOp +
 // CHECK-NEXT:                                                    NumericLiteral : number
 // CHECK-NEXT:                    ClassDeclaration
 // CHECK-NEXT:                        Id 'C1' [D:E:%d.3 'C1']
@@ -110,6 +111,7 @@ class C1 extends C0 {
 // CHECK-NEXT:                                        MemberExpression : %function.9
 // CHECK-NEXT:                                            Super : %class.2
 // CHECK-NEXT:                                            Id 'm'
+// CHECK-NEXT:                                    BinOp +
 // CHECK-NEXT:                                    NumericLiteral : number
 // CHECK-NEXT:                            ClassProperty : number
 // CHECK-NEXT:                                Id 'y'
@@ -119,6 +121,7 @@ class C1 extends C0 {
 // CHECK-NEXT:                                    MemberExpression : any
 // CHECK-NEXT:                                        ThisExpression : any
 // CHECK-NEXT:                                        Id 'x'
+// CHECK-NEXT:                                    BinOp +
 // CHECK-NEXT:                                    NumericLiteral : number
 // CHECK-NEXT:                            MethodDefinition : %function.6
 // CHECK-NEXT:                                Id 'constructor'
@@ -137,5 +140,6 @@ class C1 extends C0 {
 // CHECK-NEXT:                                                        MemberExpression : %function.9
 // CHECK-NEXT:                                                            Super : %class.2
 // CHECK-NEXT:                                                            Id 'm'
+// CHECK-NEXT:                                                    BinOp +
 // CHECK-NEXT:                                                    NumericLiteral : number
 // CHECK-NEXT:            ObjectExpression : %object.10

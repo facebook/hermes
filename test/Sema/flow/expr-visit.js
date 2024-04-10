@@ -42,5 +42,6 @@ while (x + 1) {}
 // CHECK-NEXT:                        BlockStatement Scope %s.3
 // CHECK-NEXT:                        BinaryExpression : number
 // CHECK-NEXT:                            Id 'x' [D:E:%d.2 'x'] : number
+// CHECK-NEXT:                            BinOp +
 // CHECK-NEXT:                            NumericLiteral : number
 // CHECK-NEXT:            ObjectExpression : %object.2
