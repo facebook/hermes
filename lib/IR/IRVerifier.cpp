@@ -496,20 +496,25 @@ bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
           "Must write to stack operand.");
     }
 
-    // Scope instructions can only be used by certain instructions, in order to
-    // make their nesting and usage analyzable.
-    // TODO: Once we run the IRVerifier after register allocation, we may need
-    // to allow for lower level Mov/SpillMov instructions as well.
-    if (llvh::isa<BaseScopeInst>(Operand)) {
+    // Scope instructions should only be stored in places where they can be
+    // analyzed and are invisible to user code.
+    if (Operand->getType().canBeType(Type::createEnvironment())) {
+      AssertIWithMsg(
+          Inst,
+          Operand->getType().isEnvironmentType(),
+          "Environment should not be mixed with other types");
       AssertIWithMsg(
           Inst,
           llvh::isa<BaseCallInst>(Inst) || llvh::isa<CreateScopeInst>(Inst) ||
               llvh::isa<ResolveScopeInst>(Inst) ||
+              llvh::isa<HBCCreateFunctionEnvironmentInst>(Inst) ||
+              llvh::isa<HBCResolveParentEnvironmentInst>(Inst) ||
+              llvh::isa<GetParentScopeInst>(Inst) ||
               llvh::isa<LIRResolveScopeInst>(Inst) ||
               llvh::isa<BaseCreateLexicalChildInst>(Inst) ||
               llvh::isa<StoreStackInst>(Inst) || llvh::isa<PhiInst>(Inst) ||
               llvh::isa<LoadFrameInst>(Inst) || llvh::isa<StoreFrameInst>(Inst),
-          "BaseScopeInst can only be an operand to certain instructions.");
+          "Environments can only be an operand to certain instructions.");
     }
 
     if (Operand->getType().canBeEmpty()) {
