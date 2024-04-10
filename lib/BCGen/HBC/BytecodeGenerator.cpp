@@ -7,7 +7,6 @@
 
 #include "BytecodeGenerator.h"
 
-#include "ISel.h"
 #include "LoweringPipelines.h"
 #include "hermes/BCGen/HBC/HVMRegisterAllocator.h"
 #include "hermes/BCGen/HBC/Passes.h"
@@ -88,34 +87,53 @@ void BytecodeFunctionGenerator::addDebugSourceLocation(
 
 std::unique_ptr<BytecodeFunction>
 BytecodeFunctionGenerator::generateBytecodeFunction(
-    Function::ProhibitInvoke prohibitInvoke,
-    ValueKind valueKind,
-    bool strictMode,
-    uint32_t paramCount,
-    uint32_t nameID) {
-  if (!complete_) {
-    bytecodeGenerationComplete();
+    Function *F,
+    uint32_t functionID,
+    uint32_t nameID,
+    BytecodeModuleGenerator &BMGen,
+    HVMRegisterAllocator &RA,
+    BytecodeGenerationOptions options,
+    FileAndSourceMapIdCache &debugCache,
+    SourceMapGenerator *sourceMapGen,
+    DebugInfoGenerator &debugInfoGenerator) {
+  BytecodeFunctionGenerator funcGen{BMGen, RA.getMaxRegisterUsage()};
+
+  runHBCISel(F, &funcGen, RA, options, debugCache, sourceMapGen);
+  if (funcGen.hasEncodingError()) {
+    F->getParent()->getContext().getSourceErrorManager().error(
+        F->getSourceRange().Start, "Error encoding bytecode");
+    return nullptr;
   }
+  assert(
+      funcGen.complete_ && "ISel did not complete BytecodeFunctionGenerator");
 
   FunctionHeader header{
-      bytecodeSize_,
-      paramCount,
-      frameSize_,
+      funcGen.bytecodeSize_,
+      F->getExpectedParamCountIncludingThis(),
+      funcGen.frameSize_,
       nameID,
-      highestReadCacheIndex_,
-      highestWriteCacheIndex_};
+      funcGen.highestReadCacheIndex_,
+      funcGen.highestWriteCacheIndex_};
 
-  header.flags.prohibitInvoke = computeProhibitInvoke(prohibitInvoke);
-  header.flags.kind = computeFuncKind(valueKind);
-  header.flags.strictMode = strictMode;
-  header.flags.hasExceptionHandler = exceptionHandlers_.size();
+  header.flags.prohibitInvoke = computeProhibitInvoke(F->getProhibitInvoke());
+  header.flags.kind = computeFuncKind(F->getKind());
+  header.flags.strictMode = F->isStrictMode();
+  header.flags.hasExceptionHandler = funcGen.exceptionHandlers_.size();
 
-  return std::make_unique<BytecodeFunction>(
-      std::move(opcodes_), std::move(header), std::move(exceptionHandlers_));
-}
+  auto bcFunc = std::make_unique<BytecodeFunction>(
+      std::move(funcGen.opcodes_),
+      std::move(header),
+      std::move(funcGen.exceptionHandlers_));
 
-unsigned BytecodeFunctionGenerator::getFunctionID(Function *F) {
-  return BMGen_.addFunction(F);
+  if (funcGen.hasDebugInfo()) {
+    uint32_t sourceLocOffset = debugInfoGenerator.appendSourceLocations(
+        funcGen.getSourceLocation(), functionID, funcGen.getDebugLocations());
+    uint32_t lexicalDataOffset = debugInfoGenerator.appendLexicalData(
+        funcGen.getLexicalParentID(), funcGen.getDebugVariableNames());
+    bcFunc->setDebugOffsets({sourceLocOffset, lexicalDataOffset});
+  }
+
+  return bcFunc;
 }
 
 void BytecodeFunctionGenerator::shrinkJump(offset_t loc) {
@@ -459,32 +477,20 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate(
 
     // Use the register allocated IR to make a BytecodeFunctionGenerator and
     // run ISel.
-    std::unique_ptr<BytecodeFunctionGenerator> funcGen =
-        BytecodeFunctionGenerator::create(*this, RA.getMaxRegisterUsage());
-    runHBCISel(F, &*funcGen, RA, options_, debugCache, sourceMapGen_);
-
-    if (funcGen->hasEncodingError()) {
-      F->getParent()->getContext().getSourceErrorManager().error(
-          F->getSourceRange().Start, "Error encoding bytecode");
+    std::unique_ptr<BytecodeFunction> func =
+        BytecodeFunctionGenerator::generateBytecodeFunction(
+            F,
+            functionID,
+            functionNameId,
+            *this,
+            RA,
+            options_,
+            debugCache,
+            sourceMapGen_,
+            debugInfoGenerator_);
+    if (!func)
       return nullptr;
-    }
 
-    std::unique_ptr<BytecodeFunction> func = funcGen->generateBytecodeFunction(
-        F->getProhibitInvoke(),
-        F->getKind(),
-        F->isStrictMode(),
-        F->getExpectedParamCountIncludingThis(),
-        functionNameId);
-
-    if (funcGen->hasDebugInfo()) {
-      uint32_t sourceLocOffset = debugInfoGenerator_.appendSourceLocations(
-          funcGen->getSourceLocation(),
-          functionID,
-          funcGen->getDebugLocations());
-      uint32_t lexicalDataOffset = debugInfoGenerator_.appendLexicalData(
-          funcGen->getLexicalParentID(), funcGen->getDebugVariableNames());
-      func->setDebugOffsets({sourceLocOffset, lexicalDataOffset});
-    }
     bm_->setFunction(functionID, std::move(func));
   }
 
