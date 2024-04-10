@@ -2388,6 +2388,9 @@ Value *ESTreeIRGen::genMetaProperty(ESTree::MetaPropertyNode *MP) {
         case Function::DefinitionKind::ES6Arrow:
           value = curFunction()->capturedNewTarget;
           break;
+        // Generators cannot be invoked with new, so new.target will be
+        // undefined.
+        case Function::DefinitionKind::GeneratorInner:
         case Function::DefinitionKind::ES6Method:
           value = Builder.getLiteralUndefined();
           break;

@@ -946,13 +946,14 @@ bool Verifier::visitCreateArgumentsInst(const CreateArgumentsInst &Inst) {
 
   BasicBlock *BB = Inst.getParent();
   Function *F = BB->getParent();
-  if (llvh::isa<GeneratorInnerFunction>(F)) {
+  if (!M.areGeneratorsLowered() &&
+      F->getDefinitionKind() == Function::DefinitionKind::GeneratorInner) {
     auto secondBB = F->begin();
     ++secondBB;
     AssertIWithMsg(
         Inst,
         BB == &*secondBB,
-        "CreateArgumentsInst must be in the second basic block in generators");
+        "CreateArgumentsInst must be in the second basic block in unlowered inner generators");
   } else {
     AssertIWithMsg(
         Inst,
@@ -1276,7 +1277,8 @@ bool Verifier::visitCreateGeneratorInst(const CreateGeneratorInst &Inst) {
   ReturnIfNot(visitBaseCreateLexicalChildInst(Inst));
   AssertIWithMsg(
       Inst,
-      llvh::isa<GeneratorInnerFunction>(Inst.getFunctionCode()),
+      Inst.getFunctionCode()->getDefinitionKind() ==
+          Function::DefinitionKind::GeneratorInner,
       "CreateGeneratorInst must take a GeneratorInnerFunction");
   AssertIWithMsg(
       Inst,

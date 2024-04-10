@@ -279,8 +279,10 @@ bool LoadConstants::runOnFunction(Function *F) {
 
 CreateArgumentsInst *LowerArgumentsArray::getCreateArgumentsInst(Function *F) {
   // CreateArgumentsInst is always in the first block in normal functions,
-  // but is in the second block in GeneratorInnerFunctions.
-  if (llvh::isa<GeneratorInnerFunction>(F)) {
+  // but is in the second block in unlowered inner generator functions.
+  bool gensLowered = F->getParent()->areGeneratorsLowered();
+  if (!gensLowered &&
+      F->getDefinitionKind() == Function::DefinitionKind::GeneratorInner) {
     for (BasicBlock *succ : F->front().getTerminator()->successors()) {
       for (auto &inst : *succ) {
         if (auto *target = llvh::dyn_cast<CreateArgumentsInst>(&inst)) {

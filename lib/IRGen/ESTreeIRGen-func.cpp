@@ -194,7 +194,7 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
       curFunction()->functionScope, newFunc);
 }
 
-Function *ESTreeIRGen::genBasicFunction(
+NormalFunction *ESTreeIRGen::genBasicFunction(
     Identifier originalName,
     ESTree::FunctionLikeNode *functionNode,
     VariableScope *parentScope,
@@ -205,19 +205,24 @@ Function *ESTreeIRGen::genBasicFunction(
 
   // Check if already compiled.
   if (Value *compiled = findCompiledEntity(functionNode))
-    return llvh::cast<Function>(compiled);
+    return llvh::cast<NormalFunction>(compiled);
 
   auto *body = ESTree::getBlockStatement(functionNode);
   assert(body && "body of ES5 function cannot be null");
 
-  Function *newFunction = isGeneratorInnerFunction
-      ? Builder.createGeneratorInnerFunction(
+  NormalFunction *newFunction = isGeneratorInnerFunction
+      ? Builder.createFunction(
             originalName,
-            Function::DefinitionKind::ES5Function,
+            Function::DefinitionKind::GeneratorInner,
             ESTree::isStrict(functionNode->strictness),
+            // TODO(T84292546): change to 'Sensitive' once the outer gen fn name
+            // is used in the err stack trace instead of the inner gen fn name.
+            CustomDirectives{
+                .sourceVisibility = SourceVisibility::HideSource,
+                .alwaysInline = false},
             functionNode->getSourceRange(),
             /* insertBefore */ nullptr)
-      : llvh::cast<Function>(Builder.createFunction(
+      : (Builder.createFunction(
             originalName,
             functionKind,
             ESTree::isStrict(functionNode->strictness),
@@ -385,8 +390,7 @@ Function *ESTreeIRGen::genGeneratorFunction(
     GetParentScopeInst *parentScopeInst = Builder.createGetParentScopeInst(
         parentScope, curFunction()->function->getParentScopeParam());
     // Create a generator function, which will store the arguments.
-    auto *gen = Builder.createCreateGeneratorInst(
-        parentScopeInst, llvh::cast<GeneratorInnerFunction>(innerFn));
+    auto *gen = Builder.createCreateGeneratorInst(parentScopeInst, innerFn);
 
     if (!hasSimpleParams(functionNode)) {
       // If there are non-simple params, step the inner function once to

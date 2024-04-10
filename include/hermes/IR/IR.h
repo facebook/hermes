@@ -1728,6 +1728,9 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     ES6Constructor,
     ES6Arrow,
     ES6Method,
+    // This corresponds to the synthetic function we create in IRGen, which is
+    // the inner generator function passed as the argument to CreateGenerator.
+    GeneratorInner,
   };
 
   /// Enum describing restrictions on how this function may be invoked.
@@ -2101,39 +2104,6 @@ class GeneratorFunction final : public Function {
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::GeneratorFunctionKind;
-  }
-};
-
-/// The "inner" generator function, invoked by the .next() generator machinery.
-class GeneratorInnerFunction final : public Function {
- public:
-  explicit GeneratorInnerFunction(
-      Module *parent,
-      Identifier originalName,
-      DefinitionKind definitionKind,
-      bool strictMode,
-      SMRange sourceRange,
-      Function *insertBefore)
-      : Function(
-            ValueKind::GeneratorInnerFunctionKind,
-            parent,
-            originalName,
-            definitionKind,
-            strictMode,
-            // TODO(T84292546): change to 'Sensitive' once the outer gen fn name
-            //  is used in the err stack trace instead of the inner gen fn name.
-            CustomDirectives{
-                .sourceVisibility = SourceVisibility::HideSource,
-                .alwaysInline = false},
-            sourceRange,
-            insertBefore) {
-    setType(Type::createFunctionCode());
-    setReturnType(Type::createAnyType());
-  }
-
-  static bool classof(const Value *V) {
-    ValueKind kind = V->getKind();
-    return kind == ValueKind::GeneratorInnerFunctionKind;
   }
 };
 

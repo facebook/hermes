@@ -64,21 +64,6 @@ GeneratorFunction *IRBuilder::createGeneratorFunction(
       insertBefore);
 }
 
-GeneratorInnerFunction *IRBuilder::createGeneratorInnerFunction(
-    Identifier OriginalName,
-    Function::DefinitionKind definitionKind,
-    bool strictMode,
-    SMRange sourceRange,
-    Function *insertBefore) {
-  if (!OriginalName.isValid()) {
-    // Function must have a name, even it's empty.
-    // Eventually we will give it a properly inferred name.
-    OriginalName = createIdentifier("");
-  }
-  return new GeneratorInnerFunction(
-      M, OriginalName, definitionKind, strictMode, sourceRange, insertBefore);
-}
-
 Function *IRBuilder::createTopLevelFunction(
     bool strictMode,
     CustomDirectives customDirectives,
@@ -857,7 +842,7 @@ SaveAndYieldInst *IRBuilder::createSaveAndYieldInst(
 
 CreateGeneratorInst *IRBuilder::createCreateGeneratorInst(
     Instruction *scope,
-    GeneratorInnerFunction *innerFn) {
+    NormalFunction *innerFn) {
   auto *I = new CreateGeneratorInst(scope, innerFn);
   insert(I);
   return I;

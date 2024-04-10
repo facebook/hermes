@@ -87,7 +87,7 @@ class LowerToStateMachine {
   /// Outer generator function.
   GeneratorFunction *outer_;
   /// Inner generator function.
-  GeneratorInnerFunction *inner_;
+  NormalFunction *inner_;
   /// The instruction that creates the inner generator function.
   CreateGeneratorInst *CGI_;
   /// Scope instruction operand passed to the CreateGenerator instruction.
@@ -113,7 +113,7 @@ class LowerToStateMachine {
       GeneratorFunction *outer,
       CreateGeneratorInst *CGI)
       : outer_(outer),
-        inner_(llvh::cast<GeneratorInnerFunction>(CGI->getFunctionCode())),
+        inner_(llvh::cast<NormalFunction>(CGI->getFunctionCode())),
         CGI_(CGI),
         newOuterScope_(nullptr),
         getParentOuterScope_(nullptr),

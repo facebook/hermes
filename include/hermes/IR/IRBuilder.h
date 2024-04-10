@@ -103,17 +103,6 @@ class IRBuilder {
       SMRange sourceRange = SMRange{},
       Function *insertBefore = nullptr);
 
-  /// Create a new GeneratorInnerFunction and add it to the Module.
-  /// \param OriginalName the original name specified by the user.
-  /// \param insertBefore Another function in the module where this function
-  ///   should be inserted before. If null, appends to the end of the module.
-  GeneratorInnerFunction *createGeneratorInnerFunction(
-      Identifier OriginalName,
-      Function::DefinitionKind definitionKind,
-      bool strictMode,
-      SMRange sourceRange = SMRange{},
-      Function *insertBefore = nullptr);
-
   /// Create the top level function representing the global scope.
   Function *createTopLevelFunction(
       bool strictMode,
@@ -548,7 +537,7 @@ class IRBuilder {
 
   CreateGeneratorInst *createCreateGeneratorInst(
       Instruction *scope,
-      GeneratorInnerFunction *innerFn);
+      NormalFunction *innerFn);
 
   StartGeneratorInst *createStartGeneratorInst();
 

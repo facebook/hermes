@@ -51,7 +51,6 @@ DEF_VALUE(VariableScope, Value)
 MARK_FIRST(Function, Value)
 DEF_VALUE(NormalFunction, Function)
 DEF_VALUE(GeneratorFunction, Function)
-DEF_VALUE(GeneratorInnerFunction, Function)
 DEF_VALUE(AsyncFunction, Function)
 MARK_LAST(Function)
 

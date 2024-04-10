@@ -14,9 +14,11 @@
 using namespace hermes;
 
 bool HoistStartGenerator::runOnFunction(Function *F) {
-  auto *innerFn = llvh::dyn_cast<GeneratorInnerFunction>(F);
-  if (!innerFn) {
-    // StartGenerator is only in GeneratorInnerFunction.
+  // StartGenerator is only in unlowered inner generator functions.
+  if (F->getParent()->areGeneratorsLowered()) {
+    return false;
+  }
+  if (F->getDefinitionKind() != Function::DefinitionKind::GeneratorInner) {
     return false;
   }
 

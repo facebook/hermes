@@ -974,9 +974,9 @@ class TypeInferenceImpl {
     Type originalTy = F->getReturnType();
     Type returnTy = originalTy;
 
-    if (llvh::isa<GeneratorInnerFunction>(F)) {
-      // GeneratorInnerFunctions may be called with `.return()` at the start,
-      // with any value of any type.
+    // Inner generator functions may be called with `.return()` with any value
+    // of any type.
+    if (F->getDefinitionKind() == Function::DefinitionKind::GeneratorInner) {
       F->setReturnType(Type::createAnyType());
       checkAndSetPrePassType(F);
       return F->getReturnType() != originalTy;

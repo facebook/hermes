@@ -4123,9 +4123,7 @@ class CreateGeneratorInst : public BaseCreateLexicalChildInst {
   void operator=(const CreateGeneratorInst &) = delete;
 
  public:
-  explicit CreateGeneratorInst(
-      Instruction *scope,
-      GeneratorInnerFunction *genFunction)
+  explicit CreateGeneratorInst(Instruction *scope, NormalFunction *genFunction)
       : BaseCreateLexicalChildInst(
             ValueKind::CreateGeneratorInstKind,
             scope,

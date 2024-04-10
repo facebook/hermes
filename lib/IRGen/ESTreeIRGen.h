@@ -973,7 +973,7 @@ class ESTreeIRGen {
   /// \param ctorClass is the class containing functionNode, if functionNode
   ///  is for a constructor.
   /// \returns a new Function.
-  Function *genBasicFunction(
+  NormalFunction *genBasicFunction(
       Identifier originalName,
       ESTree::FunctionLikeNode *functionNode,
       VariableScope *parentScope,
