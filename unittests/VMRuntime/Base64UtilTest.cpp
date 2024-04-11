@@ -148,7 +148,7 @@ TEST_F(Base64UtilTest, DecodeInvalid) {
   CallResult<StringBuilder> builder =
       StringBuilder::createStringBuilder(runtime, outputLength);
 
-  std::array<char, 5> hasNegative = {'A', 'b', 'c', -15, '\0'};
+  std::array<char, 5> hasNegative = {'A', 'b', 'c', (char)-15, '\0'};
   EXPECT_FALSE(base64Decode(createASCIIRef(hasNegative.data()), *builder));
 
   EXPECT_FALSE(base64Decode(createASCIIRef("==="), *builder));
