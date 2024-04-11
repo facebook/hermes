@@ -310,7 +310,6 @@ assignEvalMatcher = re.compile(r"=\s*eval\s*;")
 withMatcher = re.compile(
     r"(?<!\.)\bwith\s*\("
 )  # Ignores the with statement but keeps the [TypedArray|Array].prototype.with function
-constMatcher = re.compile(r"\bconst\b")
 negativeMatcher = re.compile(
     r"""
     /\*---.*
@@ -473,10 +472,6 @@ def testShouldRun(filename, content):
         if withMatcher.search(content):
             return TestContentParameters(
                 False, "Skipping test with with()", True, flags, strictModes
-            )
-        if constMatcher.search(content):
-            return TestContentParameters(
-                False, "Skipping test with 'const'", False, flags, strictModes
             )
 
     if suite and "test262" in suite:
@@ -671,6 +666,7 @@ def runTest(
                             path.join(binary_path, "hermesc"),
                             js_source,
                             "-hermes-parser",
+                            "-test262",
                             "-emit-binary",
                             "-out",
                             fileToRun,
