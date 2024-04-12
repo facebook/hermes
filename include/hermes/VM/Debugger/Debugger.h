@@ -233,8 +233,10 @@ class Debugger {
     return isDebugging_;
   }
 
-  // \return the stack trace for the state given by \p state.
-  StackTrace getStackTrace(InterpreterState state) const;
+  /// Should only be called when there is a current frame. Do not call while not
+  /// in the interpreter loop.
+  /// \return the current stack trace.
+  StackTrace getStackTrace() const;
 
   llvh::Optional<const BreakpointLocation> getBreakpointLocation(
       const inst::Inst *ip) const {

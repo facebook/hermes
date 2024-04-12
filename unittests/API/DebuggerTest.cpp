@@ -12,6 +12,8 @@
 #include <hermes/hermes.h>
 #include <memory>
 
+#include <llvh/ADT/ScopeExit.h>
+
 using namespace facebook::hermes;
 using namespace facebook::hermes::debugger;
 
@@ -20,11 +22,16 @@ struct TestEventObserver : public debugger::EventObserver {
   std::vector<StackTrace> stackTraces;
   std::vector<LexicalInfo> lexicalInfos;
   std::vector<std::string> thrownValueStrings;
+  bool useCaptureStackTrace = false;
 
   Command didPause(Debugger &debugger) override {
     auto &state = debugger.getProgramState();
     pauseReasons.push_back(state.getPauseReason());
-    stackTraces.push_back(state.getStackTrace());
+    if (useCaptureStackTrace) {
+      stackTraces.push_back(debugger.captureStackTrace());
+    } else {
+      stackTraces.push_back(state.getStackTrace());
+    }
 
     auto &stackTrace = stackTraces.back();
     uint32_t frameCount = stackTrace.callFrameCount();
@@ -195,6 +202,180 @@ TEST_F(DebuggerAPITest, GetEmptyThownValueTest) {
 
   // After execution
   EXPECT_TRUE(rt->getDebugger().getThrownValue().isUndefined());
+}
+
+TEST_F(DebuggerAPITest, CaptureStackTraceTest) {
+  auto setCaptureStackTraceFlag =
+      llvh::make_scope_exit([this] { observer.useCaptureStackTrace = false; });
+  using namespace facebook;
+
+  // Make sure when we're not in the interpreter loop, captureStackTrace() works
+  // and just return 0 call frames.
+  StackTrace stackTrace = rt->getDebugger().captureStackTrace();
+  ASSERT_EQ(stackTrace.callFrameCount(), 0);
+
+  jsi::Function captureStackTrace = jsi::Function::createFromHostFunction(
+      *rt,
+      jsi::PropNameID::forAscii(*rt, "captureStackTrace"),
+      0,
+      [&stackTrace](
+          jsi::Runtime &runtime, const jsi::Value &, const jsi::Value *, size_t)
+          -> jsi::Value {
+        stackTrace = static_cast<HermesRuntime &>(runtime)
+                         .getDebugger()
+                         .captureStackTrace();
+        return jsi::Value::undefined();
+      });
+  rt->global().setProperty(*rt, "captureStackTrace", captureStackTrace);
+
+  // Test for using captureStackTrace from a HostFunction
+  eval(R"(
+    function level4() {
+      captureStackTrace();      // line 3
+    }
+
+    function level3() {
+      level4(...arguments);     // line 7
+    }
+
+    function level2() {
+      level3.call();            // line 11
+    }
+
+    function level1() {
+      var lvl2 = level2.bind();
+      lvl2();                   // line 16
+    }
+
+    level1();                   // line 19
+  )");
+
+  ASSERT_EQ(stackTrace.callFrameCount(), 9);
+
+  uint32_t frameIndex = 0;
+
+  // Even though the JavaScript looks like it should have the top frame being
+  // the level3() function, the top call frame is actually a
+  // FinalizedNativeFunction corresponding to the HostFunction. It'll be
+  // displayed as "(native)".
+  CallFrameInfo frame = stackTrace.callFrameForIndex(frameIndex++);
+  ASSERT_EQ(frame.functionName, "(native)");
+  ASSERT_EQ(frame.location.fileName, "");
+  ASSERT_EQ(frame.location.fileId, kInvalidLocation);
+  ASSERT_EQ(frame.location.line, kInvalidLocation);
+
+  // Next 2 frames are for the `level4(...arguments)` call. This causes the
+  // JSFunction to be called through hermesBuiltinApply, which creates an
+  // additional native call frame.
+  frame = stackTrace.callFrameForIndex(frameIndex++);
+  ASSERT_EQ(frame.functionName, "level4");
+  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileId, 2);
+  ASSERT_EQ(frame.location.line, 3);
+  frame = stackTrace.callFrameForIndex(frameIndex++);
+  ASSERT_EQ(frame.functionName, "(native)");
+  ASSERT_EQ(frame.location.fileName, "");
+  ASSERT_EQ(frame.location.fileId, kInvalidLocation);
+  ASSERT_EQ(frame.location.line, kInvalidLocation);
+
+  // Next 2 frames are for the `level3.call()` call. This causes the JSFunction
+  // to be called through functionPrototypeCall, which creates an additional
+  // native call frame.
+  frame = stackTrace.callFrameForIndex(frameIndex++);
+  ASSERT_EQ(frame.functionName, "level3");
+  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileId, 2);
+  ASSERT_EQ(frame.location.line, 7);
+  frame = stackTrace.callFrameForIndex(frameIndex++);
+  ASSERT_EQ(frame.functionName, "(native)");
+  ASSERT_EQ(frame.location.fileName, "");
+  ASSERT_EQ(frame.location.fileId, kInvalidLocation);
+  ASSERT_EQ(frame.location.line, kInvalidLocation);
+
+  // This is for the `lvl2()` BoundFuntion call after creating the bound
+  // function via function.prototype.bind. This doesn't create additional native
+  // call frame, but it does have the characteristic that it has a null
+  // savedCodeBlock. This is handled in getStackTrace() when getting savedIP and
+  // savedCodeBlock to properly transition to the correct CodeBlock for the
+  // "level1" frame.
+  frame = stackTrace.callFrameForIndex(frameIndex++);
+  ASSERT_EQ(frame.functionName, "level2");
+  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileId, 2);
+  ASSERT_EQ(frame.location.line, 11);
+
+  frame = stackTrace.callFrameForIndex(frameIndex++);
+  ASSERT_EQ(frame.functionName, "level1");
+  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileId, 2);
+  ASSERT_EQ(frame.location.line, 16);
+
+  frame = stackTrace.callFrameForIndex(frameIndex++);
+  ASSERT_EQ(frame.functionName, "global");
+  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileId, 2);
+  ASSERT_EQ(frame.location.line, 19);
+
+  frame = stackTrace.callFrameForIndex(frameIndex++);
+  ASSERT_EQ(frame.functionName, "(native)");
+  ASSERT_EQ(frame.location.fileName, "");
+  ASSERT_EQ(frame.location.fileId, kInvalidLocation);
+  ASSERT_EQ(frame.location.line, kInvalidLocation);
+
+  // Test for using captureStackTrace while in didPause()
+  observer.useCaptureStackTrace = true;
+  eval(R"(
+    function level3() {
+      debugger;            // line 3
+    }
+
+    function level2() {
+      level3();            // line 7
+    }
+
+    function level1() {
+      level2();            // line 11
+    }
+
+    level1();              // line 14
+  )");
+
+  stackTrace = observer.stackTraces[0];
+
+  frameIndex = 0;
+
+  // When called from didPause() due to the debugger; statement, there isn't an
+  // extra indirection like the HostFunction case. The top frame is the level3()
+  // call frame.
+  frame = stackTrace.callFrameForIndex(frameIndex++);
+  ASSERT_EQ(frame.functionName, "level3");
+  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileId, 3);
+  ASSERT_EQ(frame.location.line, 3);
+
+  frame = stackTrace.callFrameForIndex(frameIndex++);
+  ASSERT_EQ(frame.functionName, "level2");
+  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileId, 3);
+  ASSERT_EQ(frame.location.line, 7);
+
+  frame = stackTrace.callFrameForIndex(frameIndex++);
+  ASSERT_EQ(frame.functionName, "level1");
+  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileId, 3);
+  ASSERT_EQ(frame.location.line, 11);
+
+  frame = stackTrace.callFrameForIndex(frameIndex++);
+  ASSERT_EQ(frame.functionName, "global");
+  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileId, 3);
+  ASSERT_EQ(frame.location.line, 14);
+
+  frame = stackTrace.callFrameForIndex(frameIndex++);
+  ASSERT_EQ(frame.functionName, "(native)");
+  ASSERT_EQ(frame.location.fileName, "");
+  ASSERT_EQ(frame.location.fileId, kInvalidLocation);
+  ASSERT_EQ(frame.location.line, kInvalidLocation);
 }
 
 TEST_F(DebuggerAPITest, GetLoadedScriptsTest) {
