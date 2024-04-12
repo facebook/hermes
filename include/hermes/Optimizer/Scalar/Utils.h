@@ -89,9 +89,7 @@ BasicBlock *splitBasicBlock(
   for (auto &movedInst : *newBB)
     movedInst.setParent(newBB);
 
-  auto *newTerm = makeTerminator(newBB);
-  newTerm->moveBefore(BB->end());
-  newTerm->setParent(BB);
+  makeTerminator(newBB);
 
   return newBB;
 }

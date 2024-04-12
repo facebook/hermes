@@ -1472,11 +1472,14 @@ class Instruction
   /// occurrence of \p From.
   void replaceFirstOperandWith(Value *OldValue, Value *NewValue);
 
+  /// Move or insert an instruction at a given position. We deliberately do not
+  /// have iterator versions of these methods because these functions rely on
+  /// the position being a valid instruction (which is not the case with end
+  /// iterators, for instance).
   void insertBefore(Instruction *InsertPos);
   void insertAfter(Instruction *InsertPos);
   void moveBefore(Instruction *Later);
-  // Move this instruction to the position described by \p iter.
-  void moveBefore(self_iterator iter);
+
   void removeFromParent();
   void eraseFromParent();
 

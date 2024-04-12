@@ -415,7 +415,7 @@ void LowerToStateMachine::lowerResumeGenerator(
           [&BB, this, throwBlockBB, actionParam](BasicBlock *restOfInstsBB) {
             // Now put the check at the end of this block.
             builder_.setInsertionBlock(&BB);
-            return builder_.createCompareBranchInst(
+            builder_.createCompareBranchInst(
                 actionParam,
                 builder_.getLiteralNumber((uint8_t)Action::Throw),
                 ValueKind::CmpBrStrictlyEqualInstKind,
@@ -531,17 +531,23 @@ void LowerToStateMachine::lowerToSwitch(
   auto *throwBecauseExecutingBB = builder_.createBasicBlock(inner_);
   auto *checkIfCompletedBB = builder_.createBasicBlock(inner_);
   builder_.setInsertionBlock(newBeginBB);
+
+  auto *loadState =
+      builder_.createLoadFrameInst(getParentOuterScope_, genState);
+  // Move these instructions to the new beginning block so that
+  // they don't cross any blocks without dominance.
+  valueParam->moveBefore(loadState);
+  actionParam->moveBefore(loadState);
+
+  // Note also that this must be before genState since it is an operand.
+  getParentOuterScope_->moveBefore(loadState);
+
   builder_.createCompareBranchInst(
-      builder_.createLoadFrameInst(getParentOuterScope_, genState),
+      loadState,
       builder_.getLiteralNumber((uint8_t)State::Executing),
       ValueKind::CmpBrStrictlyEqualInstKind,
       throwBecauseExecutingBB,
       checkIfCompletedBB);
-  // Move these instructions to the new beginning block so that they don't cross
-  // any blocks without dominance.
-  getParentOuterScope_->moveBefore(newBeginBB->begin());
-  actionParam->moveBefore(newBeginBB->begin());
-  valueParam->moveBefore(newBeginBB->begin());
 
   builder_.setInsertionBlock(throwBecauseExecutingBB);
   builder_.createStoreFrameInst(

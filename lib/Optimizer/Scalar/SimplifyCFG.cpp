@@ -427,9 +427,9 @@ static bool terminateNoReturnCalls(Function *F) {
       ++it;
 
       // Split block after call instruction.
-      builder.setInsertionPointAfter(CI);
-      splitBasicBlock(BB, it, [&builder](BasicBlock *) {
-        return builder.createUnreachableInst();
+      splitBasicBlock(BB, it, [&builder, BB](BasicBlock *) {
+        builder.setInsertionBlock(BB);
+        builder.createUnreachableInst();
       });
       changed = true;
       break;
