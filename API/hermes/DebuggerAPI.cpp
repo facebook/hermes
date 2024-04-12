@@ -10,7 +10,6 @@
 #include "DebuggerAPI.h"
 
 #include "hermes.h"
-#include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Debugger/DebugCommand.h"
 #include "hermes/VM/Debugger/Debugger.h"
 #include "hermes/VM/HermesValue.h"
@@ -21,7 +20,6 @@
 #include <memory>
 
 using namespace ::facebook::hermes::debugger;
-using ::hermes::vm::CodeBlock;
 using ::hermes::vm::DebugCommand;
 using ::hermes::vm::HermesValue;
 using ::hermes::vm::InterpreterState;
@@ -87,8 +85,7 @@ Debugger::Debugger(
         if (!eventObserver_)
           return DebugCommand::makeContinue();
         state_.pauseReason_ = reason;
-        state_.stackTrace_ =
-            impl_->getStackTrace(state.codeBlock, state.offset);
+        state_.stackTrace_ = impl_->getStackTrace(state);
         state_.evalResult_.value = jsiValueFromHermesValue(evalResult);
         state_.evalResult_.isException = evalResultMd.isException;
         state_.evalResult_.exceptionDetails = evalResultMd.exceptionDetails;
@@ -115,18 +112,6 @@ String Debugger::getSourceMappingUrl(uint32_t fileId) const {
 
 std::vector<SourceLocation> Debugger::getLoadedScripts() const {
   return impl_->getLoadedScripts();
-}
-
-StackTrace Debugger::captureStackTrace() const {
-  const ::hermes::inst::Inst *ip = vmRuntime_.getCurrentIP();
-  if (ip == nullptr) {
-    // We're not currently in the interpreter loop, so just return empty stack.
-    return StackTrace{};
-  }
-  const CodeBlock *codeBlock;
-  std::tie(codeBlock, ip) = vmRuntime_.getCurrentInterpreterLocation(ip);
-  uint32_t offset = codeBlock->getOffsetOf(ip);
-  return impl_->getStackTrace(codeBlock, offset);
 }
 
 uint64_t Debugger::setBreakpoint(SourceLocation loc) {

@@ -1476,14 +1476,15 @@ class HERMES_EMPTY_BASES Runtime : public PointerBase,
         HermesValue::encodeNativePointer(getCurrentIP());
   }
 
+ private:
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   /// Given the current last known IP used in the interpreter loop, returns the
   /// last known CodeBlock and IP combination. IP must not be null as this
-  /// suggests we're not in the interpreter loop, and there will be no CodeBlock
+  /// suggests we're not in the interpter loop, and there will be no CodeBlock
   /// to find.
   std::pair<const CodeBlock *, const inst::Inst *>
   getCurrentInterpreterLocation(const inst::Inst *initialSearchIP);
 
-#ifdef HERMES_MEMORY_INSTRUMENTATION
  public:
   /// Return a StackTraceTreeNode for the last known interpreter bytecode
   /// location. Returns nullptr if we're not in the interpeter loop, or
