@@ -106,6 +106,28 @@ llvh::SmallVector<BaseCallInst *, 2> hermes::getKnownCallsites(Function *F) {
   return result;
 }
 
+BasicBlock *hermes::splitBasicBlock(
+    BasicBlock *BB,
+    BasicBlock::InstListType::iterator it) {
+  Function *F = BB->getParent();
+
+  IRBuilder builder(F);
+  auto *newBB = builder.createBasicBlock(F);
+
+  for (auto *succ : successors(BB))
+    updateIncomingPhiValues(succ, BB, newBB);
+
+  // Move the instructions after the split point into the new BB.
+  newBB->getInstList().splice(
+      newBB->end(), BB->getInstList(), it, BB->getInstList().end());
+
+  // setParent is not called by splice, so add it ourselves.
+  for (auto &movedInst : *newBB)
+    movedInst.setParent(newBB);
+
+  return newBB;
+}
+
 /// Delete all incoming arrows from \p incoming in PhiInsts in \p blockToModify.
 bool hermes::deleteIncomingBlockFromPhis(
     BasicBlock *blockToModify,

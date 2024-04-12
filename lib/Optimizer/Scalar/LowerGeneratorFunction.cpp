@@ -409,19 +409,16 @@ void LowerToStateMachine::lowerResumeGenerator(
       // the check for .throw at the end of this block.
       ++iter;
       auto *throwBlockBB = builder_.createBasicBlock(inner_);
-      auto *restOfInstsBB = splitBasicBlock(
-          &BB,
-          iter,
-          [&BB, this, throwBlockBB, actionParam](BasicBlock *restOfInstsBB) {
-            // Now put the check at the end of this block.
-            builder_.setInsertionBlock(&BB);
-            builder_.createCompareBranchInst(
-                actionParam,
-                builder_.getLiteralNumber((uint8_t)Action::Throw),
-                ValueKind::CmpBrStrictlyEqualInstKind,
-                throwBlockBB,
-                restOfInstsBB);
-          });
+      auto *restOfInstsBB = splitBasicBlock(&BB, iter);
+
+      // Now put the check at the end of this block.
+      builder_.setInsertionBlock(&BB);
+      builder_.createCompareBranchInst(
+          actionParam,
+          builder_.getLiteralNumber((uint8_t)Action::Throw),
+          ValueKind::CmpBrStrictlyEqualInstKind,
+          throwBlockBB,
+          restOfInstsBB);
 
       builder_.setInsertionBlock(throwBlockBB);
       builder_.createStoreFrameInst(

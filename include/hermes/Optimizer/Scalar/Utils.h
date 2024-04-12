@@ -65,34 +65,12 @@ void splitCriticalEdge(IRBuilder *builder, BasicBlock *from, BasicBlock *to);
 /// The instructions before \p it are retained in \p BB, while those after and
 /// including \p it are moved into a newly-created successor basic block. Phi
 /// instructions in successors of \p BB will be updated to refer to the new
-/// BasicBlock. \p makeTerminator is called with the new basic block and returns
-/// a TerminatorInst used to terminate the original block. \return the newly
-/// created basic block.
-template <typename CB>
+/// BasicBlock. Note that the caller must ensure that a terminator is inserted
+/// to \p BB after the split.
+/// \return the newly created basic block.
 BasicBlock *splitBasicBlock(
     BasicBlock *BB,
-    BasicBlock::InstListType::iterator it,
-    CB makeTerminator) {
-  Function *F = BB->getParent();
-
-  IRBuilder builder(F);
-  auto *newBB = builder.createBasicBlock(F);
-
-  for (auto *succ : successors(BB))
-    updateIncomingPhiValues(succ, BB, newBB);
-
-  // Move the instructions after the split point into the new BB.
-  newBB->getInstList().splice(
-      newBB->end(), BB->getInstList(), it, BB->getInstList().end());
-
-  // setParent is not called by splice, so add it ourselves.
-  for (auto &movedInst : *newBB)
-    movedInst.setParent(newBB);
-
-  makeTerminator(newBB);
-
-  return newBB;
-}
+    BasicBlock::InstListType::iterator it);
 
 /// Delete all variables that have no remaining uses.
 /// \return true if anything was deleted, false otherwise.
