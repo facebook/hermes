@@ -8,11 +8,30 @@
 const WebSocket = require('ws');
 const { spawn } = require('child_process');
 const fs = require('fs');
+const ChromeLauncher = require('chrome-launcher');
+const {Launcher: EdgeLauncher} = require('chromium-edge-launcher');
 
 const port = 9999;
 const devtoolsVersion = "60127beb442528082b3f6eff7392267e145262c3";
 const url = `https://chrome-devtools-frontend.appspot.com/serve_file/@${devtoolsVersion}/js_app.html?ws=127.0.0.1%3A${port}`;
+function openUrl() {
+  const options = { startingUrl: url };
+  try {
+    ChromeLauncher.launch(options);
+  } catch (e) {
+    try {
+      EdgeLauncher.launch(options);
+    } catch (e) {
+      throw new Error(
+        'Unable to find a browser on the host to open the debugger. ' +
+          'Supported browsers: Google Chrome, Microsoft Edge.\n' +
+          url,
+      );
+    }
+  }
+}
 
+const openKey = 'o';
 const exitKey = 'x';
 
 const connectIcon = '⚡';
@@ -191,15 +210,18 @@ childProcess.on('close', () => {
 process.stdin.setRawMode(true);
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', (key) => {
-  if (key === exitKey) {
+  if (key === openKey) {
+    openUrl();
+  } else if (key === exitKey) {
     childProcess.kill();
     process.exit();
   }
 });
 
-console.log(`Running. Visit ${url} to start debugging.
+console.log(`Running. Press '${openKey}' (or visit ${url}) to start debugging.
 
 Commands:
+${openKey} open DevTools
 ${exitKey} exit
 
 Event format: <event type> <client ID> <message>
