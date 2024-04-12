@@ -127,15 +127,16 @@ CallResult<PseudoHandle<JSGeneratorObject>> Interpreter::createGenerator_RJS(
     unsigned funcIndex,
     Handle<Environment> envHandle,
     NativeArgs args) {
-  auto gifRes = JSFunction::create(
+  auto innerFuncPH = JSFunction::create(
       runtime,
       runtimeModule->getDomain(runtime),
       Handle<JSObject>::vmcast(&runtime.functionPrototype),
       envHandle,
       runtimeModule->getCodeBlockMayAllocate(funcIndex));
+  auto innerFunc = runtime.makeHandle(std::move(innerFuncPH));
 
-  auto generatorFunction = runtime.makeHandle(
-      vmcast<JSFunction>(runtime.getCurrentFrame().getCalleeClosureUnsafe()));
+  auto generatorFunction = Handle<JSFunction>::vmcast(
+      runtime.getCurrentFrame().getCalleeClosureHandleUnsafe());
 
   auto prototypeProp = JSObject::getNamed_RJS(
       generatorFunction,
@@ -148,8 +149,7 @@ CallResult<PseudoHandle<JSGeneratorObject>> Interpreter::createGenerator_RJS(
       ? runtime.makeHandle<JSObject>(prototypeProp->get())
       : Handle<JSObject>::vmcast(&runtime.generatorPrototype);
 
-  return JSGeneratorObject::create(
-      runtime, runtime.makeHandle(std::move(gifRes)), prototype);
+  return JSGeneratorObject::create(runtime, innerFunc, prototype);
 }
 
 CallResult<Handle<Arguments>> Interpreter::reifyArgumentsSlowPath(
