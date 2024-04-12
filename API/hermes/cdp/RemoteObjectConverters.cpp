@@ -203,6 +203,23 @@ std::vector<m::debugger::CallFrame> m::debugger::makeCallFrames(
 
   for (uint32_t i = 0; i < count; i++) {
     h::debugger::CallFrameInfo callFrameInfo = stackTrace.callFrameForIndex(i);
+
+    // @cdp This is not explicitly documented for Debugger.CallFrame in the
+    // protocol spec, but Chrome DevTools filters out any frames that don't have
+    // a valid script in DebuggerModel.ts:
+    // https://github.com/facebookexperimental/rn-chrome-devtools-frontend/blob/9a23d4c7c4c2d1a3d9e913af38d6965f474c4284/front_end/core/sdk/DebuggerModel.ts#L1200
+    //
+    // Furthermore, V8 filters out any frame that isn't user JavaScript in
+    // StackFrameBuilder as it visits each frame:
+    // https://source.chromium.org/chromium/chromium/src/+/main:v8/src/execution/isolate.cc;l=1439;drc=6a1467666bf8f85bb49fe3d37fce5eba67763061
+    //
+    // The expectation is that there is no native frames for Debugger.CallFrame,
+    // so we filter them out here as well.
+    if (callFrameInfo.location.fileId ==
+        ::facebook::hermes::debugger::kInvalidLocation) {
+      continue;
+    }
+
     h::debugger::LexicalInfo lexicalInfo = state.getLexicalInfo(i);
 
     result.emplace_back(

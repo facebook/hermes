@@ -814,6 +814,47 @@ TEST_F(CDPAgentTest, DebuggerTestDebuggerStatement) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
 
+TEST_F(CDPAgentTest, DebuggerFiltersNativeFrames) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  // `debugger;` statement won't work unless Debugger domain is enabled, so
+  // call `scheduleScript()` after sending `Debugger.enable`.
+  scheduleScript(R"(
+    function level4() {
+      debugger;             // line 2
+    }
+    function level3() {
+      // This inserts a native frame due to calling via hermesBuiltinApply
+      level4(...arguments); // line 6
+    }
+    function level2() {
+      // This inserts a native frame due to calling via functionPrototypeApply
+      level3.apply();       // line 10
+    }
+    function level1() {
+      // This inserts a native frame due to calling via functionPrototypeCall
+      level2.call();        // line 14
+    }
+    level1();               // line 16
+  )");
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+  // Check that no native frames are emitted. The Debugger.CallFrameId won't be
+  // sequential.
+  ensurePaused(
+      waitForMessage(),
+      "other",
+      {{"0", "level4", 2, 2},
+       {"2", "level3", 6, 2},
+       {"4", "level2", 10, 2},
+       {"6", "level1", 14, 2},
+       {"7", "global", 16, 1}});
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
 TEST_F(CDPAgentTest, DebuggerStepOver) {
   int msgId = 1;
 
@@ -2577,7 +2618,16 @@ TEST_F(CDPAgentTest, RuntimeConsoleLog) {
 
   // Generate message
   sendRequest("Runtime.evaluate", msgId, [](::hermes::JSONEmitter &params) {
-    params.emitKeyValue("expression", R"(consoleLog();)");
+    params.emitKeyValue("expression", R"(
+      function level2() {
+        consoleLog();
+      }
+      function level1() {
+        // This creates a native frame due to executing via hermesBuiltinApply
+        level2(...arguments);
+      }
+      level1();
+    )");
   });
 
   // Validate notification
@@ -2600,9 +2650,21 @@ TEST_F(CDPAgentTest, RuntimeConsoleLog) {
       jsonScope_.getString(note, {"params", "args", "0", "value"}),
       kStringValue);
 
+  auto callFrames =
+      jsonScope_.getArray(note, {"params", "stackTrace", "callFrames"});
+  EXPECT_EQ(callFrames->size(), 3);
   EXPECT_EQ(
-      jsonScope_.getArray(note, {"params", "stackTrace", "callFrames"})->size(),
-      2);
+      jsonScope_.getString(
+          note, {"params", "stackTrace", "callFrames", "0", "functionName"}),
+      "level2");
+  EXPECT_EQ(
+      jsonScope_.getString(
+          note, {"params", "stackTrace", "callFrames", "1", "functionName"}),
+      "level1");
+  EXPECT_EQ(
+      jsonScope_.getString(
+          note, {"params", "stackTrace", "callFrames", "2", "functionName"}),
+      "global");
 
   EXPECT_EQ(
       jsonScope_.getString(note, {"params", "args", "1", "type"}), "object");
