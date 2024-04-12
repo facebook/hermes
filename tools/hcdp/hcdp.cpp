@@ -153,6 +153,19 @@ static void debugScript(std::string scriptSource, std::string scriptUrl) {
   }
 }
 
+/// Returns the filename from a given path, or the entire path if no filename
+/// delimiter could be found.
+static std::string getFilename(const std::string &path) {
+  size_t lastSlashIndex = path.find_last_of('/');
+  if (lastSlashIndex == std::string::npos) {
+    lastSlashIndex = path.find_last_of('\\');
+    if (lastSlashIndex == std::string::npos) {
+      return path;
+    }
+  }
+  return path.substr(lastSlashIndex + 1);
+}
+
 } // namespace hermes
 
 using namespace hermes;
@@ -170,7 +183,7 @@ int main(int argc, char **argv) {
   if (!script) {
     std::cerr << "Failed to read script at " << scriptPath << std::endl;
   }
-  std::string filename = std::filesystem::path(scriptPath).filename().string();
+  std::string filename = getFilename(scriptPath);
   debugScript(std::move(*script), std::move(filename));
   return EXIT_SUCCESS;
 }
