@@ -11,7 +11,7 @@
 #include <memory>
 #include <mutex>
 
-#include "SerialExecutor.h"
+#include <hermes/SerialExecutor/SerialExecutor.h>
 
 #include <hermes/hermes.h>
 #include <jsi/jsi.h>
@@ -144,7 +144,7 @@ class AsyncHermesRuntime {
       size_t count);
 
   std::shared_ptr<HermesRuntime> runtime_;
-  std::unique_ptr<SerialExecutor> executor_;
+  std::unique_ptr<::hermes::SerialExecutor> executor_;
   std::atomic<bool> stopFlag_{};
   std::promise<jsi::Value> storedValue_;
   bool hasStoredValue_{false};

@@ -19,7 +19,7 @@ namespace inspector_modern {
 namespace chrome {
 
 AsyncHermesRuntime::AsyncHermesRuntime(bool veryLazy)
-    : executor_(std::make_unique<SerialExecutor>()) {
+    : executor_(std::make_unique<::hermes::SerialExecutor>()) {
   using namespace std::placeholders;
 
   auto builder = ::hermes::vm::RuntimeConfig::Builder();
