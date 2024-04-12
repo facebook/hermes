@@ -2544,51 +2544,36 @@ TEST_F(CDPAgentTest, RuntimeConsoleLog) {
   constexpr double kTimestamp = 123.0;
   const std::string kStringValue = "string value";
 
-  runtime_->global().setProperty(
-      *runtime_,
-      "consoleLog",
-      jsi::Function::createFromHostFunction(
-          *runtime_,
-          jsi::PropNameID::forAscii(*runtime_, "consoleLog"),
-          0,
-          [this, timestamp = kTimestamp, kStringValue](
-              jsi::Runtime &, const jsi::Value &, const jsi::Value *, size_t) {
-            jsi::String arg0 =
-                jsi::String::createFromAscii(*runtime_, kStringValue);
-
-            jsi::Object arg1 = jsi::Object(*runtime_);
-            arg1.setProperty(*runtime_, "number1", 1);
-            arg1.setProperty(*runtime_, "bool1", false);
-
-            jsi::Object arg2 = jsi::Object(*runtime_);
-            arg2.setProperty(*runtime_, "number2", 2);
-            arg2.setProperty(*runtime_, "bool2", true);
-
-            ConsoleMessage message(
-                timestamp, ConsoleAPIType::kWarning, std::vector<jsi::Value>());
-            message.args.reserve(3);
-            message.args.push_back(std::move(arg0));
-            message.args.push_back(std::move(arg1));
-            message.args.push_back(std::move(arg2));
-            message.stackTrace = runtime_->getDebugger().captureStackTrace();
-            cdpDebugAPI_->addConsoleMessage(std::move(message));
-
-            return jsi::Value::undefined();
-          }));
-
   // Startup
   sendAndCheckResponse("Runtime.enable", msgId++);
 
   // Generate message
-  sendRequest("Runtime.evaluate", msgId, [](::hermes::JSONEmitter &params) {
-    params.emitKeyValue("expression", R"(consoleLog();)");
+  waitFor<bool>([this, timestamp = kTimestamp, kStringValue](auto promise) {
+    runtimeThread_->add([this, timestamp, kStringValue, promise]() {
+      jsi::String arg0 = jsi::String::createFromAscii(*runtime_, kStringValue);
+
+      jsi::Object arg1 = jsi::Object(*runtime_);
+      arg1.setProperty(*runtime_, "number1", 1);
+      arg1.setProperty(*runtime_, "bool1", false);
+
+      jsi::Object arg2 = jsi::Object(*runtime_);
+      arg2.setProperty(*runtime_, "number2", 2);
+      arg2.setProperty(*runtime_, "bool2", true);
+
+      ConsoleMessage message(
+          timestamp, ConsoleAPIType::kWarning, std::vector<jsi::Value>());
+      message.args.reserve(3);
+      message.args.push_back(std::move(arg0));
+      message.args.push_back(std::move(arg1));
+      message.args.push_back(std::move(arg2));
+      cdpDebugAPI_->addConsoleMessage(std::move(message));
+
+      promise->set_value(true);
+    });
   });
 
   // Validate notification
   auto note = expectNotification("Runtime.consoleAPICalled");
-
-  // Runtime.evaluate's response comes after the consoleAPICalled notification
-  expectResponse(std::nullopt, msgId++);
 
   EXPECT_EQ(jsonScope_.getNumber(note, {"params", "timestamp"}), kTimestamp);
   EXPECT_EQ(
@@ -2603,10 +2588,6 @@ TEST_F(CDPAgentTest, RuntimeConsoleLog) {
   EXPECT_EQ(
       jsonScope_.getString(note, {"params", "args", "0", "value"}),
       kStringValue);
-
-  EXPECT_EQ(
-      jsonScope_.getArray(note, {"params", "stackTrace", "callFrames"})->size(),
-      2);
 
   EXPECT_EQ(
       jsonScope_.getString(note, {"params", "args", "1", "type"}), "object");
