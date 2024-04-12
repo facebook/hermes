@@ -1,0 +1,8 @@
+{
+  "name": "hcdp",
+  "version": "1.0.0",
+  "description": "Hermes CDP",
+  "dependencies": {
+    "ws": "^8.16.0"
+  }
+}
