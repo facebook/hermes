@@ -641,9 +641,9 @@ Effects | Does not read or write memory.
 
 TryEndInst | _
 --- | --- |
-Description | Mark the end of the try blocks.
-Example | %0 = TryEndInst
-Arguments | This instruction does not have arguments.
+Description | A terminator that marks the end of the try blocks.
+Example | %0 = TryEndInst %CatchBlock, %BranchDest
+Arguments | The active catch block and the destination block to branch to.
 Semantics | This is a nop, used only for tracking the end of try blocks.
 Effects | Technically this instruction itself does not touch memory, however we mark it as may write to prevent optimizations going pass this instruction.
 

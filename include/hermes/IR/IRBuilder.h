@@ -359,7 +359,7 @@ class IRBuilder {
       BasicBlock *tryBodyBlock,
       BasicBlock *catchTargetBlock);
 
-  TryEndInst *createTryEndInst();
+  TryEndInst *createTryEndInst(BasicBlock *catchBlock, BasicBlock *branchBlock);
 
   DeletePropertyInst *createDeletePropertyInst(Value *object, Value *property);
   DeletePropertyLooseInst *createDeletePropertyLooseInst(

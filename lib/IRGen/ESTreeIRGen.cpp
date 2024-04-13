@@ -385,7 +385,7 @@ void ESTreeIRGen::emitIteratorCloseSlow(
     emitTryCatchScaffolding(
         noReturn,
         // emitBody.
-        [this, returnMethod, &iteratorRecord]() {
+        [this, returnMethod, &iteratorRecord](BasicBlock * /*catchBlock*/) {
           Builder.createCallInst(
               returnMethod,
               /* newTarget */ Builder.getLiteralUndefined(),
@@ -480,9 +480,10 @@ void ESTreeIRGen::emitDestructuringArray(
         lref->emitStore(Builder.createLoadStackInst(value));
       } else {
         // If we can't store without side effects, wrap the store in try/catch.
-        emitTryWithSharedHandler(&handler, [this, &lref, value]() {
-          lref->emitStore(Builder.createLoadStackInst(value));
-        });
+        emitTryWithSharedHandler(
+            &handler, [this, &lref, value](BasicBlock * /*catchBlock*/) {
+              lref->emitStore(Builder.createLoadStackInst(value));
+            });
       }
       lref.reset();
     }
@@ -521,7 +522,8 @@ void ESTreeIRGen::emitDestructuringArray(
         lref.reset();
       }
       emitTryWithSharedHandler(
-          &handler, [this, &lref, value, target, declInit]() {
+          &handler,
+          [this, &lref, value, target, declInit](BasicBlock * /*catchBlock*/) {
             // Store the previous value, if we have one.
             if (lref && !lref->isEmpty())
               lref->emitStore(Builder.createLoadStackInst(value));
@@ -701,9 +703,10 @@ void ESTreeIRGen::emitRestElement(
   if (canCreateLRefWithoutSideEffects(rest->_argument)) {
     lref = createLRef(rest->_argument, declInit);
   } else {
-    emitTryWithSharedHandler(handler, [this, &lref, rest, declInit]() {
-      lref = createLRef(rest->_argument, declInit);
-    });
+    emitTryWithSharedHandler(
+        handler, [this, &lref, rest, declInit](BasicBlock * /*catchBlock*/) {
+          lref = createLRef(rest->_argument, declInit);
+        });
   }
 
   auto *A = Builder.createAllocArrayInst({}, 0);
@@ -732,7 +735,7 @@ void ESTreeIRGen::emitRestElement(
   // to do is to what we would if this was a for-of loop doing the same thing.
   // See section BindingRestElement:...BindingIdentifier, step f and g:
   // https://www.ecma-international.org/ecma-262/9.0/index.html#sec-destructuring-binding-patterns-runtime-semantics-iteratorbindinginitialization
-  emitTryWithSharedHandler(handler, [this, stepValue, A, nVal]() {
+  emitTryWithSharedHandler(handler, [this, stepValue, A, nVal](BasicBlock *) {
     Builder.createStorePropertyInst(stepValue, A, nVal);
   });
   // ++n;
@@ -747,7 +750,8 @@ void ESTreeIRGen::emitRestElement(
   if (lref->canStoreWithoutSideEffects()) {
     lref->emitStore(A);
   } else {
-    emitTryWithSharedHandler(handler, [&lref, A]() { lref->emitStore(A); });
+    emitTryWithSharedHandler(
+        handler, [&lref, A](BasicBlock *) { lref->emitStore(A); });
   }
 }
 

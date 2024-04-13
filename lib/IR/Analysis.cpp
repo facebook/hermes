@@ -217,10 +217,9 @@ hermes::getBlockTryDepths(Function *F) {
   while (!stack.empty()) {
     auto [BB, depth] = stack.pop_back_val();
 
-    // If the block starts with a TryEndInst or CatchInst, it ends the nearest
+    // If the block starts with a CatchInst, it ends the nearest
     // try, decrement the depth for this block and all successors.
-    if (llvh::isa<TryEndInst>(&BB->front()) ||
-        llvh::isa<CatchInst>(&BB->front()))
+    if (llvh::isa<CatchInst>(&BB->front()))
       --depth;
 
     if (depth) {
@@ -228,12 +227,20 @@ hermes::getBlockTryDepths(Function *F) {
       blockTryDepths.try_emplace(BB, depth);
     }
 
-    // If the block ends with a TryStartInst, increment the depth
-    size_t newDepth =
-        llvh::isa<TryStartInst>(BB->getTerminator()) ? depth + 1 : depth;
-    for (auto *succ : successors(BB))
-      if (visited.insert(succ).second)
-        stack.push_back({succ, newDepth});
+    if (auto *TEI = llvh::dyn_cast<TryEndInst>(BB->getTerminator())) {
+      // If the block ends with a TryEndInst, decrement the depth and handle
+      // only the branch target successor.
+      --depth;
+      if (visited.insert(TEI->getBranchDest()).second)
+        stack.emplace_back(TEI->getBranchDest(), depth);
+    } else {
+      // If the block ends with a TryStartInst, increment the depth
+      if (llvh::isa<TryStartInst>(BB->getTerminator()))
+        ++depth;
+      for (auto *succ : successors(BB))
+        if (visited.insert(succ).second)
+          stack.emplace_back(succ, depth);
+    }
   }
   return {std::move(blockTryDepths), maxDepth};
 }

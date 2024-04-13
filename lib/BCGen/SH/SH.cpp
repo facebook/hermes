@@ -1594,8 +1594,11 @@ class InstrGen {
     os_ << ");\n";
   }
   void generateTryEndInst(TryEndInst &inst) {
-    os_ << "  _sh_end_try(shr, &jmpBuf" << bbTryDepths_.lookup(inst.getParent())
-        << ");\n";
+    os_ << "  _sh_end_try(shr, &jmpBuf"
+        << bbTryDepths_.lookup(inst.getBranchDest()) << ");\n";
+    os_ << "  goto ";
+    generateBasicBlockLabel(inst.getBranchDest(), os_, bbMap_);
+    os_ << ";";
   }
   void generateGetNewTargetInst(GetNewTargetInst &inst) {
     os_.indent(2);

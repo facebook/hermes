@@ -179,10 +179,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:  %15 = CallInst (:any) %14: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %16 = BinaryAddInst (:string|number) %12: string|number, 2: number
 // CHECK-NEXT:        StoreStackInst %16: string|number, %0: any
-// CHECK-NEXT:        BranchInst %BB4
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:        BranchInst %BB2
+// CHECK-NEXT:        TryEndInst %BB1, %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS2 [x: any]

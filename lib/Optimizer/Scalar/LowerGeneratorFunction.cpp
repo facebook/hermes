@@ -654,15 +654,14 @@ void LowerToStateMachine::lowerToSwitch(
   // Emit IR to return an iteration result object, potentially wrapped in a
   // block with a TryEnd. builder_ should be set in the desired location for the
   // return to be emitted before calling.
-  auto emitInnerReturn = [this, hasExistingTrys](
+  auto emitInnerReturn = [this, surroundingCatchBB](
                              Value *val, bool isDelegated, bool done) {
     // If there are existing trys, then end the try in a separate BB before we
     // emit the return instruction.
-    if (hasExistingTrys) {
-      auto *tryEndBB = builder_.createBasicBlock(inner_);
-      builder_.createBranchInst(tryEndBB);
-      builder_.setInsertionBlock(tryEndBB);
-      builder_.createTryEndInst();
+    if (surroundingCatchBB) {
+      auto *nextBlock = builder_.createBasicBlock(inner_);
+      builder_.createTryEndInst(surroundingCatchBB, nextBlock);
+      builder_.setInsertionBlock(nextBlock);
     }
     if (isDelegated) {
       // Delegated yields (yield*) should not wrap the given value in an
@@ -750,8 +749,10 @@ void LowerToStateMachine::lowerToSwitch(
         moveBuilderTo(TEI, builder_);
         builder_.createStoreFrameInst(
             getParentOuterScope_,
-            builder_.getLiteralNumber(getEnclosingHandlerIdx(BB)),
+            builder_.getLiteralNumber(
+                getEnclosingHandlerIdx(TEI->getBranchDest())),
             exceptionSwitchIdx);
+        builder_.createBranchInst(TEI->getBranchDest());
         destroyer.add(TEI);
       } else if (auto *RI = llvh::dyn_cast<ReturnInst>(&I)) {
         // ReturnInsts from IRGen have special semantics: they are meant to
@@ -816,32 +817,39 @@ LowerToStateMachine::findEnclosingTrysPerBlock(Function *F) {
   blockToEnclosingTry[&*F->begin()] = nullptr;
   while (!stack.empty()) {
     auto [BB, enclosingTry] = stack.pop_back_val();
+    // If this BB ends with a TryStartInst, store the try body block here.
+    BasicBlock *tryBody = nullptr;
+
     if (auto *TSI = llvh::dyn_cast<TryStartInst>(BB->getTerminator())) {
-      enclosingTry = TSI;
+      tryBody = TSI->getTryBody();
       hasTry = true;
+    } else if (llvh::isa<TryEndInst>(BB->getTerminator())) {
+      // If this block ends with a TryEnd, pop off to the nearest try.
+      assert(
+          enclosingTry && "encountered TryEnd without an enclosing TryStart");
+      assert(
+          blockToEnclosingTry.find(enclosingTry->getParent()) !=
+              blockToEnclosingTry.end() &&
+          "enclosingTry should already be in map.");
+      enclosingTry = blockToEnclosingTry[enclosingTry->getParent()];
     }
+
     for (auto *succ : successors(BB)) {
-      // If succ starts with a TryEndInst or CatchInst, pop off to the
-      // nearest try.
-      auto *succEnclosingTry = enclosingTry;
-      if (llvh::isa<TryEndInst>(&succ->front()) ||
-          llvh::isa<CatchInst>(&succ->front())) {
-        assert(
-            blockToEnclosingTry.find(enclosingTry->getParent()) !=
-                blockToEnclosingTry.end() &&
-            "enclosingTry should already be in map.");
-        succEnclosingTry = blockToEnclosingTry[enclosingTry->getParent()];
-      }
-      auto [enclosingInfo, success] =
+      // Only update the enclosing try when we are going to enter the try body.
+      auto *succEnclosingTry = succ == tryBody
+          ? llvh::cast<TryStartInst>(BB->getTerminator())
+          : enclosingTry;
+
+      auto [_, inserted] =
           blockToEnclosingTry.try_emplace(succ, succEnclosingTry);
-      if (success) {
+      if (inserted) {
         // Only explore this BB if we haven't visited it before.
         stack.push_back({succ, succEnclosingTry});
       }
     }
   }
   if (hasTry) {
-    return blockToEnclosingTry;
+    return {std::move(blockToEnclosingTry)};
   } else {
     return llvh::None;
   }

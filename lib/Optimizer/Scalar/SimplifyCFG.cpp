@@ -23,16 +23,6 @@ using namespace hermes;
 
 STATISTIC(NumSB, "Number of static branches simplified");
 
-/// \returns true if the control-flow edge between \p src to \p dest crosses
-/// a catch region.
-static bool isCrossCatchRegionBranch(BasicBlock *src, BasicBlock *dest) {
-  auto kind = dest->front().getKind();
-  if (kind == ValueKind::TryStartInstKind ||
-      kind == ValueKind::TryEndInstKind || kind == ValueKind::CatchInstKind)
-    return true;
-  return false;
-}
-
 /// \returns true if the block \b BB is an input to a PHI node.
 static bool isUsedInPhiNode(BasicBlock *BB) {
   for (auto use : BB->getUsers())
@@ -350,9 +340,8 @@ static bool optimizeStaticBranches(Function *F) {
     if (dest == BB)
       continue;
 
-    // Don't handle edges that go across any catch region.
-    if (isCrossCatchRegionBranch(BB, dest))
-      continue;
+    // NOTE: we know that this edge cannot go across any catch regions because
+    // only TryEndInst can leave a try block.
 
     // Handle branches used in phi nodes specially.
     if (isUsedInPhiNode(BB)) {

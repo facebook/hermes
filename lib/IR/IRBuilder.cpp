@@ -273,8 +273,10 @@ TryStartInst *IRBuilder::createTryStartInst(
   return I;
 }
 
-TryEndInst *IRBuilder::createTryEndInst() {
-  auto *I = new TryEndInst();
+TryEndInst *IRBuilder::createTryEndInst(
+    BasicBlock *catchBlock,
+    BasicBlock *branchBlock) {
+  auto *I = new TryEndInst(catchBlock, branchBlock);
   insert(I);
   return I;
 }

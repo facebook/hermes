@@ -56,10 +56,7 @@
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %13 = CallInst (:undefined) %4: object, %throwTDZ(): functionCode, %1: environment, undefined: undefined, undefined: undefined
-// CHECK-NEXT:        BranchInst %BB4
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:        BranchInst %BB2
+// CHECK-NEXT:        TryEndInst %BB1, %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function throwTDZ(): undefined [allCallsitesKnownInStrictMode]

@@ -65,10 +65,9 @@ function foo() {
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "bar2": string
 // CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:        BranchInst %BB7
+// CHECK-NEXT:        TryEndInst %BB4, %BB7
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %15 = TryLoadGlobalPropertyInst (:any) globalObject: object, "finally1": string
-// CHECK-NEXT:  %16 = CallInst (:any) %15: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %14 = TryLoadGlobalPropertyInst (:any) globalObject: object, "finally1": string
+// CHECK-NEXT:  %15 = CallInst (:any) %14: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:function_end

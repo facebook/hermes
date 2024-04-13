@@ -262,21 +262,19 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:        StoreFrameInst %1: environment, %18: any, [%VS2.i]: any
 // CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:        BranchInst %BB8
+// CHECK-NEXT:        TryEndInst %BB1, %BB8
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %22 = LoadFrameInst (:any) %1: environment, [%VS2.i]: any
 // CHECK-NEXT:  %23 = AsNumericInst (:number|bigint) %22: any
 // CHECK-NEXT:  %24 = UnaryIncInst (:number|bigint) %23: number|bigint
 // CHECK-NEXT:        StoreFrameInst %1: environment, %24: number|bigint, [%VS2.i]: any
-// CHECK-NEXT:        BranchInst %BB7
+// CHECK-NEXT:        TryEndInst %BB4, %BB7
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %30 = LoadFrameInst (:any) %1: environment, [%VS2.i]: any
-// CHECK-NEXT:  %31 = BinaryAddInst (:any) %30: any, 3: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %31: any, [%VS2.i]: any
+// CHECK-NEXT:  %28 = LoadFrameInst (:any) %1: environment, [%VS2.i]: any
+// CHECK-NEXT:  %29 = BinaryAddInst (:any) %28: any, 3: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %29: any, [%VS2.i]: any
 // CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end
 
@@ -305,12 +303,11 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %15 = AsNumericInst (:number|bigint) %14: any
 // CHECK-NEXT:  %16 = UnaryIncInst (:number|bigint) %15: number|bigint
 // CHECK-NEXT:        StoreFrameInst %1: environment, %16: number|bigint, [%VS3.i]: any
-// CHECK-NEXT:        BranchInst %BB4
+// CHECK-NEXT:        TryEndInst %BB1, %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %20 = LoadFrameInst (:any) %1: environment, [%VS3.i]: any
-// CHECK-NEXT:  %21 = BinaryAddInst (:any) %20: any, 2: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %21: any, [%VS3.i]: any
+// CHECK-NEXT:  %19 = LoadFrameInst (:any) %1: environment, [%VS3.i]: any
+// CHECK-NEXT:  %20 = BinaryAddInst (:any) %19: any, 2: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %20: any, [%VS3.i]: any
 // CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end
 
@@ -337,27 +334,24 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [%VS4.i]: any
 // CHECK-NEXT:  %14 = BinaryAddInst (:any) %13: any, 2: number
 // CHECK-NEXT:        StoreFrameInst %1: environment, %14: any, [%VS4.i]: any
-// CHECK-NEXT:        BranchInst %BB7
+// CHECK-NEXT:        TryEndInst %BB1, %BB7
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %17 = LoadFrameInst (:any) %1: environment, [%VS4.i]: any
 // CHECK-NEXT:  %18 = AsNumericInst (:number|bigint) %17: any
 // CHECK-NEXT:  %19 = UnaryIncInst (:number|bigint) %18: number|bigint
 // CHECK-NEXT:        StoreFrameInst %1: environment, %19: number|bigint, [%VS4.i]: any
-// CHECK-NEXT:        BranchInst %BB5
+// CHECK-NEXT:        TryEndInst %BB3, %BB5
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:        BranchInst %BB6
+// CHECK-NEXT:        TryEndInst %BB1, %BB6
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %25 = LoadFrameInst (:any) %1: environment, [%VS4.i]: any
-// CHECK-NEXT:  %26 = BinaryAddInst (:any) %25: any, 3: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %26: any, [%VS4.i]: any
+// CHECK-NEXT:  %23 = LoadFrameInst (:any) %1: environment, [%VS4.i]: any
+// CHECK-NEXT:  %24 = BinaryAddInst (:any) %23: any, 3: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %24: any, [%VS4.i]: any
 // CHECK-NEXT:        ReturnInst "c": string
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %30 = LoadFrameInst (:any) %1: environment, [%VS4.i]: any
-// CHECK-NEXT:  %31 = BinaryAddInst (:any) %30: any, 3: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %31: any, [%VS4.i]: any
+// CHECK-NEXT:  %27 = LoadFrameInst (:any) %1: environment, [%VS4.i]: any
+// CHECK-NEXT:  %28 = BinaryAddInst (:any) %27: any, 3: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %28: any, [%VS4.i]: any
 // CHECK-NEXT:        ReturnInst "c": string
 // CHECK-NEXT:function_end
 
@@ -391,7 +385,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:        StoreFrameInst %1: environment, %18: any, [%VS5.i]: any
 // CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:        BranchInst %BB29
+// CHECK-NEXT:        TryEndInst %BB1, %BB29
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %22 = LoadFrameInst (:any) %1: environment, [%VS5.i]: any
 // CHECK-NEXT:  %23 = AsNumericInst (:number|bigint) %22: any
@@ -405,7 +399,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:        StoreFrameInst %1: environment, %29: any, [%VS5.i]: any
 // CHECK-NEXT:        ThrowInst %27: any
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:        BranchInst %BB28
+// CHECK-NEXT:        TryEndInst %BB4, %BB28
 // CHECK-NEXT:%BB9:
 // CHECK-NEXT:        TryStartInst %BB10, %BB12
 // CHECK-NEXT:%BB10:
@@ -416,7 +410,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:        StoreFrameInst %1: environment, %37: any, [%VS5.i]: any
 // CHECK-NEXT:        BranchInst %BB11
 // CHECK-NEXT:%BB11:
-// CHECK-NEXT:        BranchInst %BB27
+// CHECK-NEXT:        TryEndInst %BB7, %BB27
 // CHECK-NEXT:%BB12:
 // CHECK-NEXT:  %41 = LoadFrameInst (:any) %1: environment, [%VS5.i]: any
 // CHECK-NEXT:  %42 = BinaryAddInst (:any) %41: any, 5: number
@@ -429,7 +423,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:        StoreFrameInst %1: environment, %47: any, [%VS5.i]: any
 // CHECK-NEXT:        ThrowInst %45: any
 // CHECK-NEXT:%BB14:
-// CHECK-NEXT:        BranchInst %BB26
+// CHECK-NEXT:        TryEndInst %BB10, %BB26
 // CHECK-NEXT:%BB15:
 // CHECK-NEXT:        TryStartInst %BB16, %BB18
 // CHECK-NEXT:%BB16:
@@ -440,63 +434,52 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:        StoreFrameInst %1: environment, %55: any, [%VS5.i]: any
 // CHECK-NEXT:        BranchInst %BB17
 // CHECK-NEXT:%BB17:
-// CHECK-NEXT:        BranchInst %BB25
+// CHECK-NEXT:        TryEndInst %BB13, %BB25
 // CHECK-NEXT:%BB18:
 // CHECK-NEXT:  %59 = LoadFrameInst (:any) %1: environment, [%VS5.i]: any
 // CHECK-NEXT:  %60 = BinaryAddInst (:any) %59: any, 8: number
 // CHECK-NEXT:        StoreFrameInst %1: environment, %60: any, [%VS5.i]: any
-// CHECK-NEXT:        BranchInst %BB19
+// CHECK-NEXT:        TryEndInst %BB16, %BB19
 // CHECK-NEXT:%BB19:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:        BranchInst %BB20
+// CHECK-NEXT:        TryEndInst %BB13, %BB20
 // CHECK-NEXT:%BB20:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %66 = LoadFrameInst (:any) %1: environment, [%VS5.i]: any
-// CHECK-NEXT:  %67 = BinaryAddInst (:any) %66: any, 10: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %67: any, [%VS5.i]: any
-// CHECK-NEXT:        BranchInst %BB21
+// CHECK-NEXT:  %64 = LoadFrameInst (:any) %1: environment, [%VS5.i]: any
+// CHECK-NEXT:  %65 = BinaryAddInst (:any) %64: any, 10: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %65: any, [%VS5.i]: any
+// CHECK-NEXT:        TryEndInst %BB10, %BB21
 // CHECK-NEXT:%BB21:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:        BranchInst %BB22
+// CHECK-NEXT:        TryEndInst %BB7, %BB22
 // CHECK-NEXT:%BB22:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %73 = LoadFrameInst (:any) %1: environment, [%VS5.i]: any
-// CHECK-NEXT:  %74 = BinaryAddInst (:any) %73: any, 7: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %74: any, [%VS5.i]: any
-// CHECK-NEXT:        BranchInst %BB23
+// CHECK-NEXT:  %69 = LoadFrameInst (:any) %1: environment, [%VS5.i]: any
+// CHECK-NEXT:  %70 = BinaryAddInst (:any) %69: any, 7: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %70: any, [%VS5.i]: any
+// CHECK-NEXT:        TryEndInst %BB4, %BB23
 // CHECK-NEXT:%BB23:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:        BranchInst %BB24
+// CHECK-NEXT:        TryEndInst %BB1, %BB24
 // CHECK-NEXT:%BB24:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %80 = LoadFrameInst (:any) %1: environment, [%VS5.i]: any
-// CHECK-NEXT:  %81 = BinaryAddInst (:any) %80: any, 3: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %81: any, [%VS5.i]: any
+// CHECK-NEXT:  %74 = LoadFrameInst (:any) %1: environment, [%VS5.i]: any
+// CHECK-NEXT:  %75 = BinaryAddInst (:any) %74: any, 3: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %75: any, [%VS5.i]: any
 // CHECK-NEXT:        ReturnInst "a": string
 // CHECK-NEXT:%BB25:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %85 = LoadFrameInst (:any) %1: environment, [%VS5.i]: any
-// CHECK-NEXT:  %86 = BinaryAddInst (:any) %85: any, 10: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %86: any, [%VS5.i]: any
+// CHECK-NEXT:  %78 = LoadFrameInst (:any) %1: environment, [%VS5.i]: any
+// CHECK-NEXT:  %79 = BinaryAddInst (:any) %78: any, 10: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %79: any, [%VS5.i]: any
 // CHECK-NEXT:        BranchInst %BB14
 // CHECK-NEXT:%BB26:
-// CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB11
 // CHECK-NEXT:%BB27:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %92 = LoadFrameInst (:any) %1: environment, [%VS5.i]: any
-// CHECK-NEXT:  %93 = BinaryAddInst (:any) %92: any, 7: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %93: any, [%VS5.i]: any
+// CHECK-NEXT:  %83 = LoadFrameInst (:any) %1: environment, [%VS5.i]: any
+// CHECK-NEXT:  %84 = BinaryAddInst (:any) %83: any, 7: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %84: any, [%VS5.i]: any
 // CHECK-NEXT:        BranchInst %BB8
 // CHECK-NEXT:%BB28:
-// CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB29:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %99 = LoadFrameInst (:any) %1: environment, [%VS5.i]: any
-// CHECK-NEXT:  %100 = BinaryAddInst (:any) %99: any, 3: number
-// CHECK-NEXT:         StoreFrameInst %1: environment, %100: any, [%VS5.i]: any
-// CHECK-NEXT:         BranchInst %BB2
+// CHECK-NEXT:  %88 = LoadFrameInst (:any) %1: environment, [%VS5.i]: any
+// CHECK-NEXT:  %89 = BinaryAddInst (:any) %88: any, 3: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %89: any, [%VS5.i]: any
+// CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS6 [i: any, e: any, e#1: any, e#2: any]
@@ -529,120 +512,112 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:        StoreFrameInst %1: environment, %18: any, [%VS6.i]: any
 // CHECK-NEXT:        TryStartInst %BB8, %BB10
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:        BranchInst %BB32
+// CHECK-NEXT:        TryEndInst %BB1, %BB32
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %22 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
 // CHECK-NEXT:  %23 = AsNumericInst (:number|bigint) %22: any
 // CHECK-NEXT:  %24 = UnaryIncInst (:number|bigint) %23: number|bigint
 // CHECK-NEXT:        StoreFrameInst %1: environment, %24: number|bigint, [%VS6.i]: any
-// CHECK-NEXT:        BranchInst %BB7
+// CHECK-NEXT:        TryEndInst %BB4, %BB7
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %29 = CatchInst (:any)
-// CHECK-NEXT:  %30 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
-// CHECK-NEXT:  %31 = BinaryAddInst (:any) %30: any, 4: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %31: any, [%VS6.i]: any
+// CHECK-NEXT:  %28 = CatchInst (:any)
+// CHECK-NEXT:  %29 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
+// CHECK-NEXT:  %30 = BinaryAddInst (:any) %29: any, 4: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %30: any, [%VS6.i]: any
 // CHECK-NEXT:        TryStartInst %BB24, %BB26
 // CHECK-NEXT:%BB9:
 // CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB10:
 // CHECK-NEXT:        TryStartInst %BB11, %BB13
 // CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %36 = CatchInst (:any)
-// CHECK-NEXT:        StoreFrameInst %1: environment, %36: any, [%VS6.e#1]: any
-// CHECK-NEXT:  %38 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
-// CHECK-NEXT:  %39 = BinaryAddInst (:any) %38: any, 3: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %39: any, [%VS6.i]: any
+// CHECK-NEXT:  %35 = CatchInst (:any)
+// CHECK-NEXT:        StoreFrameInst %1: environment, %35: any, [%VS6.e#1]: any
+// CHECK-NEXT:  %37 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
+// CHECK-NEXT:  %38 = BinaryAddInst (:any) %37: any, 3: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %38: any, [%VS6.i]: any
 // CHECK-NEXT:        BranchInst %BB12
 // CHECK-NEXT:%BB12:
-// CHECK-NEXT:        BranchInst %BB15
+// CHECK-NEXT:        TryEndInst %BB8, %BB15
 // CHECK-NEXT:%BB13:
-// CHECK-NEXT:  %43 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
-// CHECK-NEXT:  %44 = BinaryAddInst (:any) %43: any, 2: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %44: any, [%VS6.i]: any
-// CHECK-NEXT:        BranchInst %BB14
+// CHECK-NEXT:  %42 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
+// CHECK-NEXT:  %43 = BinaryAddInst (:any) %42: any, 2: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %43: any, [%VS6.i]: any
+// CHECK-NEXT:        TryEndInst %BB11, %BB14
 // CHECK-NEXT:%BB14:
-// CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB12
 // CHECK-NEXT:%BB15:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %50 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
-// CHECK-NEXT:  %51 = BinaryAddInst (:any) %50: any, 4: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %51: any, [%VS6.i]: any
+// CHECK-NEXT:  %47 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
+// CHECK-NEXT:  %48 = BinaryAddInst (:any) %47: any, 4: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %48: any, [%VS6.i]: any
 // CHECK-NEXT:        TryStartInst %BB16, %BB18
 // CHECK-NEXT:%BB16:
-// CHECK-NEXT:  %54 = CatchInst (:any)
-// CHECK-NEXT:  %55 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
-// CHECK-NEXT:  %56 = BinaryAddInst (:any) %55: any, 7: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %56: any, [%VS6.i]: any
-// CHECK-NEXT:        ThrowInst %54: any
+// CHECK-NEXT:  %51 = CatchInst (:any)
+// CHECK-NEXT:  %52 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
+// CHECK-NEXT:  %53 = BinaryAddInst (:any) %52: any, 7: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %53: any, [%VS6.i]: any
+// CHECK-NEXT:        ThrowInst %51: any
 // CHECK-NEXT:%BB17:
 // CHECK-NEXT:        BranchInst %BB9
 // CHECK-NEXT:%BB18:
 // CHECK-NEXT:        TryStartInst %BB19, %BB21
 // CHECK-NEXT:%BB19:
-// CHECK-NEXT:  %61 = CatchInst (:any)
-// CHECK-NEXT:        StoreFrameInst %1: environment, %61: any, [%VS6.e#2]: any
-// CHECK-NEXT:  %63 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
-// CHECK-NEXT:  %64 = BinaryAddInst (:any) %63: any, 6: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %64: any, [%VS6.i]: any
+// CHECK-NEXT:  %58 = CatchInst (:any)
+// CHECK-NEXT:        StoreFrameInst %1: environment, %58: any, [%VS6.e#2]: any
+// CHECK-NEXT:  %60 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
+// CHECK-NEXT:  %61 = BinaryAddInst (:any) %60: any, 6: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %61: any, [%VS6.i]: any
 // CHECK-NEXT:        BranchInst %BB20
 // CHECK-NEXT:%BB20:
-// CHECK-NEXT:        BranchInst %BB23
+// CHECK-NEXT:        TryEndInst %BB16, %BB23
 // CHECK-NEXT:%BB21:
-// CHECK-NEXT:  %68 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
-// CHECK-NEXT:  %69 = BinaryAddInst (:any) %68: any, 5: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %69: any, [%VS6.i]: any
-// CHECK-NEXT:        BranchInst %BB22
+// CHECK-NEXT:  %65 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
+// CHECK-NEXT:  %66 = BinaryAddInst (:any) %65: any, 5: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %66: any, [%VS6.i]: any
+// CHECK-NEXT:        TryEndInst %BB19, %BB22
 // CHECK-NEXT:%BB22:
-// CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB20
 // CHECK-NEXT:%BB23:
-// CHECK-NEXT:        TryEndInst
+// CHECK-NEXT:  %70 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
+// CHECK-NEXT:  %71 = BinaryAddInst (:any) %70: any, 7: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %71: any, [%VS6.i]: any
+// CHECK-NEXT:        BranchInst %BB17
+// CHECK-NEXT:%BB24:
+// CHECK-NEXT:  %74 = CatchInst (:any)
 // CHECK-NEXT:  %75 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
 // CHECK-NEXT:  %76 = BinaryAddInst (:any) %75: any, 7: number
 // CHECK-NEXT:        StoreFrameInst %1: environment, %76: any, [%VS6.i]: any
-// CHECK-NEXT:        BranchInst %BB17
-// CHECK-NEXT:%BB24:
-// CHECK-NEXT:  %79 = CatchInst (:any)
-// CHECK-NEXT:  %80 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
-// CHECK-NEXT:  %81 = BinaryAddInst (:any) %80: any, 7: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %81: any, [%VS6.i]: any
-// CHECK-NEXT:        ThrowInst %79: any
+// CHECK-NEXT:        ThrowInst %74: any
 // CHECK-NEXT:%BB25:
-// CHECK-NEXT:        ThrowInst %29: any
+// CHECK-NEXT:        ThrowInst %28: any
 // CHECK-NEXT:%BB26:
 // CHECK-NEXT:        TryStartInst %BB27, %BB29
 // CHECK-NEXT:%BB27:
-// CHECK-NEXT:  %86 = CatchInst (:any)
-// CHECK-NEXT:        StoreFrameInst %1: environment, %86: any, [%VS6.e#2]: any
-// CHECK-NEXT:  %88 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
-// CHECK-NEXT:  %89 = BinaryAddInst (:any) %88: any, 6: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %89: any, [%VS6.i]: any
+// CHECK-NEXT:  %81 = CatchInst (:any)
+// CHECK-NEXT:        StoreFrameInst %1: environment, %81: any, [%VS6.e#2]: any
+// CHECK-NEXT:  %83 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
+// CHECK-NEXT:  %84 = BinaryAddInst (:any) %83: any, 6: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %84: any, [%VS6.i]: any
 // CHECK-NEXT:        BranchInst %BB28
 // CHECK-NEXT:%BB28:
-// CHECK-NEXT:        BranchInst %BB31
+// CHECK-NEXT:        TryEndInst %BB24, %BB31
 // CHECK-NEXT:%BB29:
-// CHECK-NEXT:  %93 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
-// CHECK-NEXT:  %94 = BinaryAddInst (:any) %93: any, 5: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %94: any, [%VS6.i]: any
-// CHECK-NEXT:        BranchInst %BB30
+// CHECK-NEXT:  %88 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
+// CHECK-NEXT:  %89 = BinaryAddInst (:any) %88: any, 5: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %89: any, [%VS6.i]: any
+// CHECK-NEXT:        TryEndInst %BB27, %BB30
 // CHECK-NEXT:%BB30:
-// CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB28
 // CHECK-NEXT:%BB31:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %100 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
-// CHECK-NEXT:  %101 = BinaryAddInst (:any) %100: any, 7: number
-// CHECK-NEXT:         StoreFrameInst %1: environment, %101: any, [%VS6.i]: any
-// CHECK-NEXT:         BranchInst %BB25
+// CHECK-NEXT:  %93 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
+// CHECK-NEXT:  %94 = BinaryAddInst (:any) %93: any, 7: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %94: any, [%VS6.i]: any
+// CHECK-NEXT:        BranchInst %BB25
 // CHECK-NEXT:%BB32:
-// CHECK-NEXT:         TryEndInst
-// CHECK-NEXT:  %105 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
-// CHECK-NEXT:  %106 = BinaryAddInst (:any) %105: any, 8: number
-// CHECK-NEXT:         StoreFrameInst %1: environment, %106: any, [%VS6.i]: any
+// CHECK-NEXT:  %97 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
+// CHECK-NEXT:  %98 = BinaryAddInst (:any) %97: any, 8: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %98: any, [%VS6.i]: any
 // CHECK-NEXT:         BranchInst %BB2
 // CHECK-NEXT:function_end
 
@@ -696,32 +671,28 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %35 = AsNumericInst (:number|bigint) %34: any
 // CHECK-NEXT:  %36 = UnaryIncInst (:number|bigint) %35: number|bigint
 // CHECK-NEXT:        StoreFrameInst %1: environment, %36: number|bigint, [%VS7.i]: any
-// CHECK-NEXT:        BranchInst %BB9
+// CHECK-NEXT:        TryEndInst %BB7, %BB9
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:        BranchInst %BB10
+// CHECK-NEXT:        TryEndInst %BB5, %BB10
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %42 = LoadFrameInst (:any) %1: environment, [%VS7.i]: any
-// CHECK-NEXT:  %43 = BinaryAddInst (:any) %42: any, 3: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %43: any, [%VS7.i]: any
+// CHECK-NEXT:  %40 = LoadFrameInst (:any) %1: environment, [%VS7.i]: any
+// CHECK-NEXT:  %41 = BinaryAddInst (:any) %40: any, 3: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %41: any, [%VS7.i]: any
 // CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:%BB11:
-// CHECK-NEXT:        BranchInst %BB14
+// CHECK-NEXT:        TryEndInst %BB5, %BB14
 // CHECK-NEXT:%BB12:
 // CHECK-NEXT:        BranchInst %BB13
 // CHECK-NEXT:%BB13:
-// CHECK-NEXT:        BranchInst %BB15
+// CHECK-NEXT:        TryEndInst %BB5, %BB15
 // CHECK-NEXT:%BB14:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %50 = LoadFrameInst (:any) %1: environment, [%VS7.i]: any
-// CHECK-NEXT:  %51 = BinaryAddInst (:any) %50: any, 3: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %51: any, [%VS7.i]: any
+// CHECK-NEXT:  %47 = LoadFrameInst (:any) %1: environment, [%VS7.i]: any
+// CHECK-NEXT:  %48 = BinaryAddInst (:any) %47: any, 3: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %48: any, [%VS7.i]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB15:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %55 = LoadFrameInst (:any) %1: environment, [%VS7.i]: any
-// CHECK-NEXT:  %56 = BinaryAddInst (:any) %55: any, 3: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %56: any, [%VS7.i]: any
+// CHECK-NEXT:  %51 = LoadFrameInst (:any) %1: environment, [%VS7.i]: any
+// CHECK-NEXT:  %52 = BinaryAddInst (:any) %51: any, 3: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %52: any, [%VS7.i]: any
 // CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:function_end

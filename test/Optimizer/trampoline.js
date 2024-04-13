@@ -80,10 +80,7 @@ function test_merge_blocks(x, y) {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:       BranchInst %BB4
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:       TryEndInst
-// CHECK-NEXT:       BranchInst %BB2
+// CHECK-NEXT:       TryEndInst %BB1, %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function test_cond_branch(x: any, y: any): any

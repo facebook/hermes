@@ -101,9 +101,8 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %26 = LoadFrameInst (:any) %1: environment, [%VS1.cb]: any
 // CHECK-NEXT:  %27 = LoadFrameInst (:any) %1: environment, [%VS1.i]: any
 // CHECK-NEXT:  %28 = CallInst (:any) %26: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %27: any
-// CHECK-NEXT:        BranchInst %BB6
+// CHECK-NEXT:        TryEndInst %BB4, %BB6
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:function_end
 
@@ -150,9 +149,8 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %31 = UnaryIncInst (:number|bigint) %30: number|bigint
 // CHECK-NEXT:        StoreFrameInst %1: environment, %31: number|bigint, [%VS2.i]: any
 // CHECK-NEXT:        StorePropertyLooseInst %17: any, %28: any, %30: number|bigint
-// CHECK-NEXT:        BranchInst %BB6
+// CHECK-NEXT:        TryEndInst %BB4, %BB6
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:function_end
 
@@ -196,7 +194,7 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %28 = BinaryLessThanInst (:boolean) %27: any, 0: number
 // CHECK-NEXT:        CondBranchInst %28: boolean, %BB6, %BB7
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:        BranchInst %BB9
+// CHECK-NEXT:        TryEndInst %BB4, %BB9
 // CHECK-NEXT:%BB7:
 // CHECK-NEXT:        BranchInst %BB8
 // CHECK-NEXT:%BB8:
@@ -204,14 +202,12 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %33 = LoadFrameInst (:any) %1: environment, [%VS3.i]: any
 // CHECK-NEXT:  %34 = BinaryAddInst (:any) %32: any, %33: any
 // CHECK-NEXT:        StoreFrameInst %1: environment, %34: any, [%VS3.sum]: any
-// CHECK-NEXT:        BranchInst %BB10
+// CHECK-NEXT:        TryEndInst %BB4, %BB10
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %38 = LoadStackInst (:any) %8: any
-// CHECK-NEXT:  %39 = IteratorCloseInst (:any) %38: any, false: boolean
+// CHECK-NEXT:  %37 = LoadStackInst (:any) %8: any
+// CHECK-NEXT:  %38 = IteratorCloseInst (:any) %37: any, false: boolean
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:function_end
 
@@ -255,7 +251,7 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %28 = BinaryLessThanInst (:boolean) %27: any, 0: number
 // CHECK-NEXT:        CondBranchInst %28: boolean, %BB6, %BB7
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:        BranchInst %BB9
+// CHECK-NEXT:        TryEndInst %BB4, %BB9
 // CHECK-NEXT:%BB7:
 // CHECK-NEXT:        BranchInst %BB8
 // CHECK-NEXT:%BB8:
@@ -263,11 +259,9 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %33 = LoadFrameInst (:any) %1: environment, [%VS4.i]: any
 // CHECK-NEXT:  %34 = BinaryAddInst (:any) %32: any, %33: any
 // CHECK-NEXT:        StoreFrameInst %1: environment, %34: any, [%VS4.sum]: any
-// CHECK-NEXT:        BranchInst %BB10
+// CHECK-NEXT:        TryEndInst %BB4, %BB10
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:function_end

@@ -151,10 +151,7 @@ function badThrow() {
 // CHECK-NEXT:        ThrowInst 3: number
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:        StoreStackInst 19: number, %0: number
-// CHECK-NEXT:        BranchInst %BB7
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:        BranchInst %BB2
+// CHECK-NEXT:        TryEndInst %BB3, %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function multi(x: any, y: any): number

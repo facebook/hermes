@@ -1151,11 +1151,12 @@ void HBCISel::generateCreateRegExpInst(
       encodeValue(Inst), patternStrID, flagsStrID, reBytecodeID);
 }
 void HBCISel::generateTryEndInst(TryEndInst *Inst, BasicBlock *next) {
-  // This is a no-op.
-  // TryEndInst is used to mark the end of a try region to construct
-  // the list of basic blocks covered by a catch.
-  // The range of try regions are stored in exception handlers,
-  // and are therefore not encoded in the instruction stream.
+  auto *dst = Inst->getBranchDest();
+  if (dst == next)
+    return;
+
+  auto loc = BCFGen_->emitJmpLong(0);
+  registerLongJump(loc, dst);
 }
 void HBCISel::generateBranchInst(BranchInst *Inst, BasicBlock *next) {
   auto *dst = Inst->getBranchDest();

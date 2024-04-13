@@ -134,12 +134,11 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
 // CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:        BranchInst %BB4
+// CHECK-NEXT:        TryEndInst %BB1, %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %1: environment, %"fexpr 1#"(): functionCode
-// CHECK-NEXT:        StoreFrameInst %1: environment, %13: object, [%VS3.fexpr]: any
-// CHECK-NEXT:  %15 = CallInst (:any) %13: object, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %1: environment, %"fexpr 1#"(): functionCode
+// CHECK-NEXT:        StoreFrameInst %1: environment, %12: object, [%VS3.fexpr]: any
+// CHECK-NEXT:  %14 = CallInst (:any) %12: object, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end
 
@@ -162,15 +161,14 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:        BranchInst %BB4
+// CHECK-NEXT:        TryEndInst %BB1, %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        StoreFrameInst %1: environment, undefined: undefined, [%VS4.x]: any
 // CHECK-NEXT:        StorePropertyLooseInst 0: number, globalObject: object, "glob": string
 // CHECK-NEXT:        StoreFrameInst %1: environment, undefined: undefined, [%VS4.x]: any
-// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %1: environment, %"fexpr 2#"(): functionCode
-// CHECK-NEXT:        StoreFrameInst %1: environment, %17: object, [%VS4.fexpr]: any
-// CHECK-NEXT:        StorePropertyLooseInst %17: object, globalObject: object, "glob": string
+// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %1: environment, %"fexpr 2#"(): functionCode
+// CHECK-NEXT:        StoreFrameInst %1: environment, %16: object, [%VS4.fexpr]: any
+// CHECK-NEXT:        StorePropertyLooseInst %16: object, globalObject: object, "glob": string
 // CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end
 

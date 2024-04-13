@@ -263,6 +263,8 @@ class SurroundingTry {
   /// TryStatementNode, but in some cases that require internal try/catch
   /// statements, it can be something different.
   ESTree::Node *const node;
+  /// The catch block of the try statement.
+  BasicBlock *catchBlock;
   /// Optional debug location to be used for the TryEnd instruction.
   SMLoc const tryEndLoc{};
 
@@ -279,11 +281,13 @@ class SurroundingTry {
   SurroundingTry(
       FunctionContext *functionContext,
       ESTree::Node *node,
+      BasicBlock *catchBlock,
       SMLoc tryEndLoc = {},
       GenFinalizerCB genFinalizer = {})
       : functionContext_(functionContext),
         outer(functionContext->surroundingTry),
         node(node),
+        catchBlock(catchBlock),
         tryEndLoc(tryEndLoc),
         genFinalizer(std::move(genFinalizer)) {
     // Push.
@@ -1414,13 +1418,12 @@ BasicBlock *ESTreeIRGen::emitTryCatchScaffolding(
   Builder.setInsertionBlock(tryBodyBlock);
 
   // Generate IR for the body of Try
-  emitBody();
+  emitBody(catchBlock);
 
-  // Emit TryEnd in a new block.
-  auto *tryEndBlock = Builder.createBasicBlock(function);
-  Builder.createBranchInst(tryEndBlock);
-  Builder.setInsertionBlock(tryEndBlock);
-  Builder.createTryEndInst();
+  // Emit TryEnd.
+  auto *cleanupBlock = Builder.createBasicBlock(function);
+  Builder.createTryEndInst(catchBlock, cleanupBlock);
+  Builder.setInsertionBlock(cleanupBlock);
 
   emitNormalCleanup();
 

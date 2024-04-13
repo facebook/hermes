@@ -331,37 +331,44 @@ bool Verifier::verifyTryStructure(const Function &F) {
   blockToEnclosingTry[&*F.begin()] = nullptr;
   while (!stack.empty()) {
     auto [BB, enclosingTry] = stack.pop_back_val();
+    // If this BB ends with a TryStartInst, store the try body block here.
+    BasicBlock *tryBody = nullptr;
+
     if (llvh::isa<ReturnInst>(BB->getTerminator())) {
       AssertWithMsg(
           enclosingTry == nullptr,
           "ReturnInst " << iLabel(*BB->getTerminator()) << " but Try "
                         << iLabel(*enclosingTry) << " has not been closed.");
     } else if (auto *TSI = llvh::dyn_cast<TryStartInst>(BB->getTerminator())) {
-      enclosingTry = TSI;
+      tryBody = TSI->getTryBody();
+    } else if (auto *TEI = llvh::dyn_cast<TryEndInst>(BB->getTerminator())) {
+      // If this block ends with a TryEnd, pop off to the nearest try.
+      AssertIWithMsg(
+          (*BB->getTerminator()),
+          enclosingTry != nullptr,
+          "ending a try outside of any TryStartInst context.");
+      AssertIWithMsg(
+          (*BB->getTerminator()),
+          enclosingTry->getCatchTarget() == TEI->getCatchTarget(),
+          "TryEndInst does not match TryStartInst.");
+      assert(
+          blockToEnclosingTry.find(enclosingTry->getParent()) !=
+              blockToEnclosingTry.end() &&
+          "enclosingTry should already be in map.");
+      enclosingTry = blockToEnclosingTry[enclosingTry->getParent()];
     }
 
     for (auto *succ : successors(BB)) {
-      // If succ starts with a TryEndInst or CatchInst, pop off to the
-      // nearest try.
-      auto *succEnclosingTry = enclosingTry;
-      if (llvh::isa<TryEndInst>(&succ->front()) ||
-          llvh::isa<CatchInst>(&succ->front())) {
-        AssertIWithMsg(
-            succ->front(),
-            enclosingTry != nullptr,
-            "ending a try outside of any TryStartInst context.");
-        assert(
-            blockToEnclosingTry.find(enclosingTry->getParent()) !=
-                blockToEnclosingTry.end() &&
-            "enclosingTry should already be in map.");
-        succEnclosingTry = blockToEnclosingTry[enclosingTry->getParent()];
-      }
+      // Only update the enclosing try when we are going to enter the try body.
+      auto *succEnclosingTry = succ == tryBody
+          ? llvh::cast<TryStartInst>(BB->getTerminator())
+          : enclosingTry;
 
       // If BB already exists in blockToEnclosingTry and has a different
       // enclosing TryStartInst, error out.
-      auto [enclosingInfo, success] =
+      auto [enclosingInfo, inserted] =
           blockToEnclosingTry.insert({succ, succEnclosingTry});
-      if (!success) {
+      if (!inserted) {
         AssertWithMsg(
             enclosingInfo->second == succEnclosingTry,
             bbLabel(*succ)
@@ -703,14 +710,6 @@ bool Verifier::visitTryStartInst(const TryStartInst &Inst) {
 }
 
 bool Verifier::visitTryEndInst(const TryEndInst &Inst) {
-  AssertIWithMsg(
-      Inst,
-      &Inst == &Inst.getParent()->front(),
-      "TryEndInst must be the first instruction of a block");
-  AssertIWithMsg(
-      Inst,
-      pred_count(Inst.getParent()) == 1,
-      "TryEndInst must have only one predecessor.");
   return true;
 }
 
@@ -1002,10 +1001,23 @@ bool Verifier::visitCatchInst(const CatchInst &Inst) {
       Inst,
       &Inst.getParent()->front() == &Inst,
       "Catch instruction must be the first in a basic block");
+  unsigned tryStarts = 0;
+  unsigned nonTryEnds = 0;
+  for (const auto &predBB : predecessors(Inst.getParent())) {
+    if (llvh::isa<TryStartInst>(predBB->getTerminator())) {
+      ++tryStarts;
+    } else if (!llvh::isa<TryEndInst>(predBB->getTerminator())) {
+      ++nonTryEnds;
+    }
+  }
   AssertIWithMsg(
       Inst,
-      pred_count(Inst.getParent()) == 1,
-      "CatchInst must have only 1 predecessor.");
+      tryStarts == 1,
+      "CatchInst must have exactly one TryStart predecessor.");
+  AssertIWithMsg(
+      Inst,
+      nonTryEnds == 0,
+      "CatchInst must have only TryStart and TryEnd predecessors.");
   return true;
 }
 

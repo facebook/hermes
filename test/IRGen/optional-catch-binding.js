@@ -50,8 +50,7 @@ function foo(f, g) {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) %1: environment, [%VS1.f]: any
 // CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:        TryEndInst %BB1, %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        ReturnInst %12: any
 // CHECK-NEXT:function_end

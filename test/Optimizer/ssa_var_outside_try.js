@@ -39,8 +39,5 @@ function foo(sink){
 // CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:       BranchInst %BB4
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:       TryEndInst
-// CHECK-NEXT:       BranchInst %BB2
+// CHECK-NEXT:       TryEndInst %BB1, %BB2
 // CHECK-NEXT:function_end

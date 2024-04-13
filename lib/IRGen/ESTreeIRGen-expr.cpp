@@ -1776,11 +1776,12 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
        received,
        resumeGenTryStartBB,
        &iteratorRecord,
-       tryEndBB]() {
+       tryEndBB](BasicBlock *catchBlock) {
         // Generate IR for the body of Try
         SurroundingTry thisTry{
             curFunction(),
             Y,
+            catchBlock,
             {},
             [this, &iteratorRecord, received, resumeGenTryStartBB](
                 ESTree::Node *, ControlFlowChange cfc, BasicBlock *) {

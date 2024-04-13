@@ -298,7 +298,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:        TryStartInst %BB8, %BB9
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:        BranchInst %BB16
+// CHECK-NEXT:        TryEndInst %BB8, %BB16
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:  %33 = CatchInst (:any)
 // CHECK-NEXT:  %34 = CallBuiltinInst (:any) [HermesBuiltin.getMethod]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: any, "throw": string
@@ -310,43 +310,41 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:        CondBranchInst %38: boolean, %BB10, %BB7
 // CHECK-NEXT:%BB10:
 // CHECK-NEXT:        StoreStackInst %36: any, %15: any
-// CHECK-NEXT:        BranchInst %BB11
+// CHECK-NEXT:        TryEndInst %BB8, %BB11
 // CHECK-NEXT:%BB11:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %43 = CallBuiltinInst (:any) [HermesBuiltin.getMethod]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: any, "return": string
-// CHECK-NEXT:        CmpBrStrictlyEqualInst %43: any, undefined: undefined, %BB13, %BB12
+// CHECK-NEXT:  %42 = CallBuiltinInst (:any) [HermesBuiltin.getMethod]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: any, "return": string
+// CHECK-NEXT:        CmpBrStrictlyEqualInst %42: any, undefined: undefined, %BB13, %BB12
 // CHECK-NEXT:%BB12:
-// CHECK-NEXT:  %45 = LoadStackInst (:any) %15: any
-// CHECK-NEXT:  %46 = CallInst (:any) %43: any, empty: any, empty: any, undefined: undefined, %12: any, %45: any
-// CHECK-NEXT:  %47 = CallBuiltinInst (:any) [HermesBuiltin.ensureObject]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %46: any, "iterator.return() did not return an object": string
-// CHECK-NEXT:  %48 = LoadPropertyInst (:any) %46: any, "done": string
-// CHECK-NEXT:        CondBranchInst %48: any, %BB14, %BB15
+// CHECK-NEXT:  %44 = LoadStackInst (:any) %15: any
+// CHECK-NEXT:  %45 = CallInst (:any) %42: any, empty: any, empty: any, undefined: undefined, %12: any, %44: any
+// CHECK-NEXT:  %46 = CallBuiltinInst (:any) [HermesBuiltin.ensureObject]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %45: any, "iterator.return() did not return an object": string
+// CHECK-NEXT:  %47 = LoadPropertyInst (:any) %45: any, "done": string
+// CHECK-NEXT:        CondBranchInst %47: any, %BB14, %BB15
 // CHECK-NEXT:%BB13:
 // CHECK-NEXT:        ReturnInst %36: any
 // CHECK-NEXT:%BB14:
-// CHECK-NEXT:  %51 = LoadPropertyInst (:any) %46: any, "value": string
-// CHECK-NEXT:        ReturnInst %51: any
+// CHECK-NEXT:  %50 = LoadPropertyInst (:any) %45: any, "value": string
+// CHECK-NEXT:        ReturnInst %50: any
 // CHECK-NEXT:%BB15:
-// CHECK-NEXT:        SaveAndYieldInst %46: any, true: boolean, %BB6
+// CHECK-NEXT:        SaveAndYieldInst %45: any, true: boolean, %BB6
 // CHECK-NEXT:%BB16:
-// CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB17:
-// CHECK-NEXT:  %56 = CallInst (:any) %34: any, empty: any, empty: any, undefined: undefined, %12: any, %33: any
-// CHECK-NEXT:  %57 = CallBuiltinInst (:any) [HermesBuiltin.ensureObject]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %56: any, "iterator.throw() did not return an object": string
-// CHECK-NEXT:  %58 = LoadPropertyInst (:any) %56: any, "done": string
-// CHECK-NEXT:        CondBranchInst %58: any, %BB19, %BB20
+// CHECK-NEXT:  %54 = CallInst (:any) %34: any, empty: any, empty: any, undefined: undefined, %12: any, %33: any
+// CHECK-NEXT:  %55 = CallBuiltinInst (:any) [HermesBuiltin.ensureObject]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %54: any, "iterator.throw() did not return an object": string
+// CHECK-NEXT:  %56 = LoadPropertyInst (:any) %54: any, "done": string
+// CHECK-NEXT:        CondBranchInst %56: any, %BB19, %BB20
 // CHECK-NEXT:%BB18:
-// CHECK-NEXT:  %60 = CallBuiltinInst (:any) [HermesBuiltin.getMethod]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: any, "return": string
-// CHECK-NEXT:        CmpBrStrictlyEqualInst %60: any, undefined: undefined, %BB22, %BB21
+// CHECK-NEXT:  %58 = CallBuiltinInst (:any) [HermesBuiltin.getMethod]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: any, "return": string
+// CHECK-NEXT:        CmpBrStrictlyEqualInst %58: any, undefined: undefined, %BB22, %BB21
 // CHECK-NEXT:%BB19:
-// CHECK-NEXT:        StoreStackInst %56: any, %18: any
+// CHECK-NEXT:        StoreStackInst %54: any, %18: any
 // CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB20:
-// CHECK-NEXT:        SaveAndYieldInst %56: any, true: boolean, %BB6
+// CHECK-NEXT:        SaveAndYieldInst %54: any, true: boolean, %BB6
 // CHECK-NEXT:%BB21:
-// CHECK-NEXT:  %65 = CallInst (:any) %60: any, empty: any, empty: any, undefined: undefined, %12: any
-// CHECK-NEXT:  %66 = CallBuiltinInst (:any) [HermesBuiltin.ensureObject]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %65: any, "iterator.return() did not return an object": string
+// CHECK-NEXT:  %63 = CallInst (:any) %58: any, empty: any, empty: any, undefined: undefined, %12: any
+// CHECK-NEXT:  %64 = CallBuiltinInst (:any) [HermesBuiltin.ensureObject]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %63: any, "iterator.return() did not return an object": string
 // CHECK-NEXT:        BranchInst %BB22
 // CHECK-NEXT:%BB22:
 // CHECK-NEXT:        ThrowTypeErrorInst "yield* delegate must have a .throw() method": string

@@ -2894,16 +2894,28 @@ class TryStartInst : public TerminatorInst {
   }
 };
 
-class TryEndInst : public Instruction {
+class TryEndInst : public TerminatorInst {
   TryEndInst(const TryEndInst &) = delete;
   void operator=(const TryEndInst &) = delete;
 
  public:
-  explicit TryEndInst() : Instruction(ValueKind::TryEndInstKind) {
+  enum { CatchTargetBlockIdx, BranchDestIdx };
+
+  explicit TryEndInst(BasicBlock *catchBlock, BasicBlock *branchBlock)
+      : TerminatorInst(ValueKind::TryEndInstKind) {
     setType(Type::createNoType());
+    pushOperand(catchBlock);
+    pushOperand(branchBlock);
   }
   explicit TryEndInst(const TryEndInst *src, llvh::ArrayRef<Value *> operands)
-      : Instruction(src, operands) {}
+      : TerminatorInst(src, operands) {}
+
+  BasicBlock *getCatchTarget() const {
+    return cast<BasicBlock>(getOperand(CatchTargetBlockIdx));
+  }
+  BasicBlock *getBranchDest() const {
+    return cast<BasicBlock>(getOperand(BranchDestIdx));
+  }
 
   static bool hasOutput() {
     return false;
@@ -2913,12 +2925,22 @@ class TryEndInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return SideEffect::createUnknown().setFirstInBlock();
+    return SideEffect::createUnknown();
   }
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::TryEndInstKind;
+  }
+
+  unsigned getNumSuccessorsImpl() const {
+    return 2;
+  }
+  BasicBlock *getSuccessorImpl(unsigned idx) const {
+    return cast<BasicBlock>(getOperand(idx));
+  }
+  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
+    setOperand(B, idx);
   }
 };
 

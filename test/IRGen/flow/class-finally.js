@@ -50,15 +50,14 @@ try {} finally { class C {} }
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:        BranchInst %BB4
+// CHECK-NEXT:        TryEndInst %BB1, %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:        TryEndInst
 // CHECK-NEXT:        StoreFrameInst %1: environment, undefined: undefined, [%VS1.C]: any
-// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %1: environment, %C(): functionCode
-// CHECK-NEXT:        StoreFrameInst %1: environment, %17: object, [%VS1.C]: any
-// CHECK-NEXT:  %19 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:        StoreFrameInst %1: environment, %19: object, [%VS1.?C.prototype]: object
-// CHECK-NEXT:        StorePropertyStrictInst %19: object, %17: object, "prototype": string
+// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %1: environment, %C(): functionCode
+// CHECK-NEXT:        StoreFrameInst %1: environment, %16: object, [%VS1.C]: any
+// CHECK-NEXT:  %18 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %18: object, [%VS1.?C.prototype]: object
+// CHECK-NEXT:        StorePropertyStrictInst %18: object, %16: object, "prototype": string
 // CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end
 

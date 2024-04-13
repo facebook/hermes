@@ -822,11 +822,13 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
   emitTryCatchScaffolding(
       getNextBlock,
       // emitBody.
-      [this, forOfStmt, nextValue, &iteratorRecord, getNextBlock]() {
+      [this, forOfStmt, nextValue, &iteratorRecord, getNextBlock](
+          BasicBlock *catchBlock) {
         // Generate IR for the body of Try
         SurroundingTry thisTry{
             curFunction(),
             forOfStmt,
+            catchBlock,
             {},
             [this, &iteratorRecord, getNextBlock](
                 ESTree::Node *,

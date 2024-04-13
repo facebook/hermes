@@ -60,8 +60,7 @@ bar();
 // CHECK-NEXT:  %1 = CatchInst (:any)
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:       BranchInst %BB3
+// CHECK-NEXT:       TryEndInst %BB1, %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:       TryEndInst
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

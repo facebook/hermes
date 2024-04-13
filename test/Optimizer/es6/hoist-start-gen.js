@@ -58,11 +58,11 @@ function *foo() {
 // CHECK-NEXT:        StoreFrameInst %4: environment, 2: number, [%VS1.idx]: number
 // CHECK-NEXT:        StoreStackInst 1: number, %2: number
 // CHECK-NEXT:        StoreFrameInst %4: environment, 1: number, [%VS1.generator_state]: number
-// CHECK-NEXT:        BranchInst %BB26
+// CHECK-NEXT:        TryEndInst %BB22, %BB26
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:        StoreStackInst 3: number, %2: number
 // CHECK-NEXT:        StoreFrameInst %4: environment, 3: number, [%VS1.generator_state]: number
-// CHECK-NEXT:        BranchInst %BB24
+// CHECK-NEXT:        TryEndInst %BB22, %BB24
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %17 = LoadFrameInst (:any) %4: environment, [%VS1.catchVal]: any
 // CHECK-NEXT:        StoreStackInst %17: any, %3: any
@@ -74,12 +74,12 @@ function *foo() {
 // CHECK-NEXT:        StoreFrameInst %4: environment, 0: number, [%VS1.exception_handler_idx]: number
 // CHECK-NEXT:        StoreStackInst 3: number, %2: number
 // CHECK-NEXT:        StoreFrameInst %4: environment, 3: number, [%VS1.generator_state]: number
-// CHECK-NEXT:        BranchInst %BB27
+// CHECK-NEXT:        TryEndInst %BB22, %BB25
 // CHECK-NEXT:%BB7:
 // CHECK-NEXT:        StoreFrameInst %4: environment, 0: number, [%VS1.exception_handler_idx]: number
 // CHECK-NEXT:        StoreStackInst 3: number, %2: number
 // CHECK-NEXT:        StoreFrameInst %4: environment, 3: number, [%VS1.generator_state]: number
-// CHECK-NEXT:        BranchInst %BB25
+// CHECK-NEXT:        TryEndInst %BB22, %BB27
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:        StoreStackInst 3: number, %2: number
 // CHECK-NEXT:        StoreFrameInst %4: environment, 3: number, [%VS1.generator_state]: number
@@ -93,7 +93,7 @@ function *foo() {
 // CHECK-NEXT:        ThrowInst %0: any
 // CHECK-NEXT:%BB11:
 // CHECK-NEXT:  %38 = FEqualInst (:boolean) %1: number, 2: number
-// CHECK-NEXT:        CondBranchInst %38: boolean, %BB6, %BB7
+// CHECK-NEXT:        CondBranchInst %38: boolean, %BB7, %BB6
 // CHECK-NEXT:%BB12:
 // CHECK-NEXT:        TryStartInst %BB22, %BB13
 // CHECK-NEXT:%BB13:
@@ -135,21 +135,17 @@ function *foo() {
 // CHECK-NEXT:        StoreFrameInst %4: environment, 1: number, [%VS1.idx]: number
 // CHECK-NEXT:        BranchInst %BB12
 // CHECK-NEXT:%BB24:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %69 = AllocObjectLiteralInst (:object) "value": string, %0: any, "done": string, true: boolean
-// CHECK-NEXT:        ReturnInst %69: object
+// CHECK-NEXT:  %68 = AllocObjectLiteralInst (:object) "value": string, %0: any, "done": string, true: boolean
+// CHECK-NEXT:        ReturnInst %68: object
 // CHECK-NEXT:%BB25:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %72 = AllocObjectLiteralInst (:object) "value": string, undefined: undefined, "done": string, true: boolean
-// CHECK-NEXT:        ReturnInst %72: object
+// CHECK-NEXT:  %70 = AllocObjectLiteralInst (:object) "value": string, undefined: undefined, "done": string, true: boolean
+// CHECK-NEXT:        ReturnInst %70: object
 // CHECK-NEXT:%BB26:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %75 = AllocObjectLiteralInst (:object) "value": string, 0: number, "done": string, false: boolean
-// CHECK-NEXT:        ReturnInst %75: object
+// CHECK-NEXT:  %72 = AllocObjectLiteralInst (:object) "value": string, 0: number, "done": string, false: boolean
+// CHECK-NEXT:        ReturnInst %72: object
 // CHECK-NEXT:%BB27:
-// CHECK-NEXT:        TryEndInst
-// CHECK-NEXT:  %78 = AllocObjectLiteralInst (:object) "value": string, %0: any, "done": string, true: boolean
-// CHECK-NEXT:        ReturnInst %78: object
+// CHECK-NEXT:  %74 = AllocObjectLiteralInst (:object) "value": string, %0: any, "done": string, true: boolean
+// CHECK-NEXT:        ReturnInst %74: object
 // CHECK-NEXT:%BB28:
 // CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:%BB29:

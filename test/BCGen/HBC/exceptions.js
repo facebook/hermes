@@ -60,10 +60,9 @@ function foo(a) {
 // CHECK:Function<foo>(2 params, 12 registers):
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r2, 1
-// CHECK-NEXT:L10:
+// CHECK-NEXT:L9:
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    Call1             r0, r2, r0
-// CHECK-NEXT:L11:
 // CHECK-NEXT:    Jmp               L2
 // CHECK-NEXT:L1:
 // CHECK-NEXT:    Catch             r1
@@ -71,7 +70,6 @@ function foo(a) {
 // CHECK-NEXT:    Mov               r3, r1
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    Call1             r0, r3, r0
-// CHECK-NEXT:L9:
 // CHECK-NEXT:    Jmp               L4
 // CHECK-NEXT:L3:
 // CHECK-NEXT:    Catch             r3
@@ -98,10 +96,10 @@ function foo(a) {
 // CHECK-NEXT:    Throw             r0
 
 // CHECK:Exception Handlers:
-// CHECK-NEXT:0: start = L8, end = L9, target = L3
-// CHECK-NEXT:1: start = L10, end = L11, target = L1
+// CHECK-NEXT:0: start = L8, end = L3, target = L3
+// CHECK-NEXT:1: start = L9, end = L1, target = L1
 // CHECK-NEXT:2: start = L8, end = L4, target = L5
-// CHECK-NEXT:3: start = L10, end = L2, target = L6
+// CHECK-NEXT:3: start = L9, end = L2, target = L6
 // CHECK-NEXT:4: start = L5, end = L6, target = L6
 
 // CHECK:Debug filename table:
