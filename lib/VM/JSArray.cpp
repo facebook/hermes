@@ -368,10 +368,12 @@ const ObjectVTable Arguments::vt{
         nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
         ,
-        VTable::HeapSnapshotMetadata {
-          HeapSnapshot::NodeType::Object, nullptr,
-              Arguments::_snapshotAddEdgesImpl, nullptr, nullptr
-        }
+        VTable::HeapSnapshotMetadata{
+            HeapSnapshot::NodeType::Object,
+            nullptr,
+            Arguments::_snapshotAddEdgesImpl,
+            nullptr,
+            nullptr}
 #endif
         ),
     Arguments::_getOwnIndexedRangeImpl,
@@ -485,10 +487,12 @@ const ObjectVTable JSArray::vt{
         nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
         ,
-        VTable::HeapSnapshotMetadata {
-          HeapSnapshot::NodeType::Object, nullptr,
-              JSArray::_snapshotAddEdgesImpl, nullptr, nullptr
-        }
+        VTable::HeapSnapshotMetadata{
+            HeapSnapshot::NodeType::Object,
+            nullptr,
+            JSArray::_snapshotAddEdgesImpl,
+            nullptr,
+            nullptr}
 #endif
         ),
     JSArray::_getOwnIndexedRangeImpl,

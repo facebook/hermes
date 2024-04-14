@@ -408,8 +408,7 @@ void IRPrinter::visitFunction(const Function &F) {
   }
 
   os.indent(Indent);
-  os << "function_end"
-     << "\n";
+  os << "function_end" << "\n";
   os << "\n";
 }
 

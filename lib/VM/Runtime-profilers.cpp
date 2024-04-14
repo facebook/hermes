@@ -49,8 +49,7 @@ void Runtime::dumpOpcodeStats(llvh::raw_ostream &os) const {
   stream << "Opcodes sorted by total time:\n"
          << std::left << std::setfill(' ') << std::setw(25)
          << "==Opcode==" << std::setw(22) << "==Time Spent==" << std::setw(11)
-         << "==Frequency=="
-         << "\n";
+         << "==Frequency==" << "\n";
   for (uint32_t i = 0; i < idx.size(); ++i) {
     stream << std::left << std::setfill(' ') << std::setw(25)
            << inst::getOpCodeString(static_cast<inst::OpCode>(idx[i])).data()
@@ -60,8 +59,7 @@ void Runtime::dumpOpcodeStats(llvh::raw_ostream &os) const {
   stream << "\nOpcodes sorted by frequency:\n"
          << std::left << std::setfill(' ') << std::setw(25)
          << "==Opcode==" << std::setw(22) << "==Time Spent==" << std::setw(11)
-         << "==Frequency=="
-         << "\n";
+         << "==Frequency==" << "\n";
   for (uint32_t i = 0; i < idx_freq.size(); ++i) {
     size_t op = idx_freq[i];
     stream << std::left << std::setfill(' ') << std::setw(25)

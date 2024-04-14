@@ -148,9 +148,12 @@ struct VTable {
 #ifdef HERMES_MEMORY_INSTRUMENTATION
       ,
       HeapSnapshotMetadata snapshotMetaData =
-          HeapSnapshotMetadata {
-            HeapSnapshot::NodeType::Object, nullptr, nullptr, nullptr, nullptr
-          }
+          HeapSnapshotMetadata{
+              HeapSnapshot::NodeType::Object,
+              nullptr,
+              nullptr,
+              nullptr,
+              nullptr}
 #endif
       )
       : kind(kind),

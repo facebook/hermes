@@ -61,7 +61,7 @@ static llvh::DenseMap<const void *, const char *> funcNames() {
   // Creator functions are overloaded, we have to cast them to CreatorFunction *
   // first.
 #define NATIVE_CONSTRUCTOR(func) \
-  (void *)(NativeConstructor::CreatorFunction *) func,
+  (void *)(NativeConstructor::CreatorFunction *)func,
 #include "hermes/VM/NativeFunctions.def"
 #undef NATIVE_FUNCTION
 #undef NATIVE_CONSTRUCTOR

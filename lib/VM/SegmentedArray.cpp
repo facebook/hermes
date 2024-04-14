@@ -22,9 +22,12 @@ const VTable SegmentedArrayBase<HVType>::Segment::vt(
     nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
     ,
-    VTable::HeapSnapshotMetadata {
-      HeapSnapshot::NodeType::Array, nullptr, nullptr, nullptr, nullptr
-    }
+    VTable::HeapSnapshotMetadata{
+        HeapSnapshot::NodeType::Array,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr}
 #endif
 );
 
@@ -78,9 +81,12 @@ const VTable SegmentedArrayBase<HVType>::vt(
     _trimSizeCallback
 #ifdef HERMES_MEMORY_INSTRUMENTATION
     ,
-    VTable::HeapSnapshotMetadata {
-      HeapSnapshot::NodeType::Array, nullptr, nullptr, nullptr, nullptr
-    }
+    VTable::HeapSnapshotMetadata{
+        HeapSnapshot::NodeType::Array,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr}
 #endif
 );
 

@@ -332,8 +332,7 @@ class BigIntPrimitive final
     template <typename... Args>
     explicit SafeBigIntRef(Runtime &rt, Args &&...args)
 #ifndef HERMES_SLOW_DEBUG
-        : BigIntRefTy{std::forward<Args>(args)...} {
-    }
+        : BigIntRefTy{std::forward<Args>(args)...} {}
 #else // HERMES_SLOW_DEBUG
         : BigIntRefTy{std::forward<Args>(args)...}, noAlloc(rt) {
     }

@@ -67,7 +67,7 @@ ExecutionStatus JSONLexer::advanceHelper(bool forKey) {
     WORD(u'f', FalseString, JSONTokenKind::False);
     WORD(u'n', NullString, JSONTokenKind::Null);
 
-    // clang-format off
+      // clang-format off
     case u'-':
     case u'0': case u'1': case u'2': case u'3': case u'4':
     case u'5': case u'6': case u'7': case u'8': case u'9':

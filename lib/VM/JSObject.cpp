@@ -35,11 +35,12 @@ const ObjectVTable JSObject::vt{
         nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
         ,
-        VTable::HeapSnapshotMetadata {
-          HeapSnapshot::NodeType::Object, JSObject::_snapshotNameImpl,
-              JSObject::_snapshotAddEdgesImpl, nullptr,
-              JSObject::_snapshotAddLocationsImpl
-        }
+        VTable::HeapSnapshotMetadata{
+            HeapSnapshot::NodeType::Object,
+            JSObject::_snapshotNameImpl,
+            JSObject::_snapshotAddEdgesImpl,
+            nullptr,
+            JSObject::_snapshotAddLocationsImpl}
 #endif
         ),
     JSObject::_getOwnIndexedRangeImpl,

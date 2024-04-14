@@ -80,8 +80,8 @@ uint32_t &InlineCacheProfiler::getHiddenClassArrayIndex() {
   return hcIdx_;
 }
 
-llvh::DenseMap<InlineCacheProfiler::ClassId, int32_t>
-    &InlineCacheProfiler::getClassIdtoIndexMap() {
+llvh::DenseMap<InlineCacheProfiler::ClassId, int32_t> &
+InlineCacheProfiler::getClassIdtoIndexMap() {
   return classIdToIdx_;
 }
 

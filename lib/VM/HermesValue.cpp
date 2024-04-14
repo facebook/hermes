@@ -37,9 +37,8 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, HermesValue hv) {
     case HermesValue::ETag::Str1:
     case HermesValue::ETag::Str2: {
       auto *cell = static_cast<GCCell *>(hv.getPointer());
-      OS << "[String "
-         << ":" << (cell ? cell->getDebugAllocationId() : 0) << " "
-         << llvh::format_hex((uintptr_t)cell, 10);
+      OS << "[String " << ":" << (cell ? cell->getDebugAllocationId() : 0)
+         << " " << llvh::format_hex((uintptr_t)cell, 10);
       // Note contained StringPrimitive may be NULL.
       if (hv.getString()) {
         llvh::SmallVector<char16_t, 16> storage;
@@ -55,9 +54,8 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, HermesValue hv) {
     case HermesValue::ETag::BigInt1:
     case HermesValue::ETag::BigInt2: {
       auto *cell = static_cast<GCCell *>(hv.getPointer());
-      OS << "[BigInt "
-         << ":" << (cell ? cell->getDebugAllocationId() : 0) << " "
-         << llvh::format_hex((uintptr_t)cell, 10);
+      OS << "[BigInt " << ":" << (cell ? cell->getDebugAllocationId() : 0)
+         << " " << llvh::format_hex((uintptr_t)cell, 10);
       // Note contained BigIntPrimitive may be NULL.
       if (hv.getBigInt()) {
         llvh::ArrayRef<uint8_t> storage = hv.getBigInt()->getRawDataCompact();

@@ -609,8 +609,7 @@ void ProfileAnalyzer::dumpBasicBlockStats() {
       << llvh::left_justify("Hits(#)", 12)
       << llvh::left_justify("Avg Loop(#)", 12)
       << llvh::left_justify("ProfileIndex", 12)
-      << llvh::left_justify("Function", 24) << "Source"
-      << "\n";
+      << llvh::left_justify("Function", 24) << "Source" << "\n";
   for (const auto &entry : blockRuntimeStats) {
     if (maxOutputCount-- == 0) {
       break;

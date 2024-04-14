@@ -979,9 +979,8 @@ void BytecodeSectionWalker::printSectionRanges(bool human) {
     std::stringstream ss;
     if (human) {
       ss << "0x" << std::hex << std::setfill('0')
-         << sectionStarts_[i] - bytecodeStart_ << ", "
-         << "0x" << std::hex << std::setfill('0')
-         << sectionEnds_[i] - bytecodeStart_ << ")\n";
+         << sectionStarts_[i] - bytecodeStart_ << ", " << "0x" << std::hex
+         << std::setfill('0') << sectionEnds_[i] - bytecodeStart_ << ")\n";
     } else {
       ss << sectionStarts_[i] - bytecodeStart_ << ", "
          << sectionEnds_[i] - bytecodeStart_ << ")\n";
@@ -1043,15 +1042,12 @@ void BytecodeDisassembler::disassembleFunctionPretty(
   // Print out switch jump tables, if any.
   auto &switchInsts = jumpVisitor.getSwitchIntructions();
   if (!switchInsts.empty()) {
-    OS << "\n "
-       << "Jump Tables: \n";
+    OS << "\n " << "Jump Tables: \n";
     for (auto *inst : switchInsts) {
-      OS << "  "
-         << "offset " << inst->iSwitchImm.op2 << "\n";
+      OS << "  " << "offset " << inst->iSwitchImm.op2 << "\n";
       switchJumpTableForEach(
           inst, [&](uint32_t jmpIdx, int32_t offset, const uint8_t *dest) {
-            OS << "   " << jmpIdx << " : "
-               << "L" << jumpTargets[dest] << "\n";
+            OS << "   " << jmpIdx << " : " << "L" << jumpTargets[dest] << "\n";
           });
     }
   }
@@ -1069,11 +1065,9 @@ void BytecodeDisassembler::disassembleFunctionRaw(
   // Print out switch jump tables, if any.
   auto &switchInsts = disassembleVisitor.getSwitchIntructions();
   if (!switchInsts.empty()) {
-    OS << "\n "
-       << "Jump Tables: \n";
+    OS << "\n " << "Jump Tables: \n";
     for (auto *inst : switchInsts) {
-      OS << "  "
-         << "offset " << inst->iSwitchImm.op2 << "\n";
+      OS << "  " << "offset " << inst->iSwitchImm.op2 << "\n";
       switchJumpTableForEach(
           inst, [&](uint32_t jmpIdx, int32_t offset, const uint8_t *dest) {
             OS << "   " << jmpIdx << " : " << offset << "\n";

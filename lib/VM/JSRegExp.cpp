@@ -37,11 +37,12 @@ const ObjectVTable JSRegExp::vt{
         nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
         ,
-        VTable::HeapSnapshotMetadata {
-          HeapSnapshot::NodeType::Regexp, JSRegExp::_snapshotNameImpl,
-              JSRegExp::_snapshotAddEdgesImpl, JSRegExp::_snapshotAddNodesImpl,
-              nullptr
-        }
+        VTable::HeapSnapshotMetadata{
+            HeapSnapshot::NodeType::Regexp,
+            JSRegExp::_snapshotNameImpl,
+            JSRegExp::_snapshotAddEdgesImpl,
+            JSRegExp::_snapshotAddNodesImpl,
+            nullptr}
 #endif
 
         ),

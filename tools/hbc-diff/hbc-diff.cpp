@@ -185,8 +185,7 @@ static ExecutionStatus diffFiles(
 
 int main(int argc, char **argv) {
   if (argc < 3 || argc > 4) {
-    llvh::errs() << "usage: hbc-diff [-h] <filename1> <filename2>"
-                 << "\n";
+    llvh::errs() << "usage: hbc-diff [-h] <filename1> <filename2>" << "\n";
     return ExecutionFailed;
   }
   bool humanize = false;

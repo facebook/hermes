@@ -39,7 +39,7 @@ class MutableHandle;
 
 /// Define HERMESVM_DEBUG_TRACK_GCSCOPE_HANDLES in debug mode to enable
 /// statistical tracking of handles per GCScope.
-//#define HERMESVM_DEBUG_TRACK_GCSCOPE_HANDLES
+// #define HERMESVM_DEBUG_TRACK_GCSCOPE_HANDLES
 
 // We can only track handles in debug mode.
 #if defined(NDEBUG) && defined(HERMESVM_DEBUG_TRACK_GCSCOPE_HANDLES)
