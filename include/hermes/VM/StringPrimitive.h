@@ -843,11 +843,12 @@ const VTable DynamicStringPrimitive<T, Uniqued>::vt = VTable(
     nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
     ,
-    VTable::HeapSnapshotMetadata {
-      HeapSnapshot::NodeType::String,
-          DynamicStringPrimitive<T, Uniqued>::_snapshotNameImpl, nullptr,
-          nullptr, nullptr
-    }
+    VTable::HeapSnapshotMetadata{
+        HeapSnapshot::NodeType::String,
+        DynamicStringPrimitive<T, Uniqued>::_snapshotNameImpl,
+        nullptr,
+        nullptr,
+        nullptr}
 #endif
 );
 
@@ -869,12 +870,12 @@ const VTable ExternalStringPrimitive<T>::vt = VTable(
     nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
     ,
-    VTable::HeapSnapshotMetadata {
-      HeapSnapshot::NodeType::String,
-          ExternalStringPrimitive<T>::_snapshotNameImpl,
-          ExternalStringPrimitive<T>::_snapshotAddEdgesImpl,
-          ExternalStringPrimitive<T>::_snapshotAddNodesImpl, nullptr
-    }
+    VTable::HeapSnapshotMetadata{
+        HeapSnapshot::NodeType::String,
+        ExternalStringPrimitive<T>::_snapshotNameImpl,
+        ExternalStringPrimitive<T>::_snapshotAddEdgesImpl,
+        ExternalStringPrimitive<T>::_snapshotAddNodesImpl,
+        nullptr}
 #endif
 );
 
@@ -890,12 +891,12 @@ const VTable BufferedStringPrimitive<T>::vt = VTable(
     nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
     ,
-    VTable::HeapSnapshotMetadata {
-      HeapSnapshot::NodeType::String,
-          BufferedStringPrimitive<T>::_snapshotNameImpl,
-          BufferedStringPrimitive<T>::_snapshotAddEdgesImpl,
-          BufferedStringPrimitive<T>::_snapshotAddNodesImpl, nullptr
-    }
+    VTable::HeapSnapshotMetadata{
+        HeapSnapshot::NodeType::String,
+        BufferedStringPrimitive<T>::_snapshotNameImpl,
+        BufferedStringPrimitive<T>::_snapshotAddEdgesImpl,
+        BufferedStringPrimitive<T>::_snapshotAddNodesImpl,
+        nullptr}
 #endif
 );
 

@@ -17,8 +17,8 @@ namespace vm {
 
 // We intentionally leak these static members to avoid a case where they are
 // accessed after they are destroyed during shutdown.
-/* static */ std::unordered_set<CodeCoverageProfiler *>
-    &CodeCoverageProfiler::allProfilers() {
+/* static */ std::unordered_set<CodeCoverageProfiler *> &
+CodeCoverageProfiler::allProfilers() {
   static auto *const allProfilers =
       new std::unordered_set<CodeCoverageProfiler *>();
   return *allProfilers;

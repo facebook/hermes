@@ -219,10 +219,12 @@ const ObjectVTable JSWeakMapImpl<C>::vt{
         nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
         ,
-        VTable::HeapSnapshotMetadata {
-          HeapSnapshot::NodeType::Object, nullptr, _snapshotAddEdgesImpl,
-              _snapshotAddNodesImpl, nullptr
-        }
+        VTable::HeapSnapshotMetadata{
+            HeapSnapshot::NodeType::Object,
+            nullptr,
+            _snapshotAddEdgesImpl,
+            _snapshotAddNodesImpl,
+            nullptr}
 #endif
         ),
     JSWeakMapImpl::_getOwnIndexedRangeImpl,

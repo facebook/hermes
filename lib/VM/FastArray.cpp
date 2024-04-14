@@ -33,10 +33,12 @@ const ObjectVTable FastArray::vt{
         nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
         ,
-        VTable::HeapSnapshotMetadata {
-          HeapSnapshot::NodeType::Object, nullptr,
-              FastArray::_snapshotAddEdgesImpl, nullptr, nullptr
-        }
+        VTable::HeapSnapshotMetadata{
+            HeapSnapshot::NodeType::Object,
+            nullptr,
+            FastArray::_snapshotAddEdgesImpl,
+            nullptr,
+            nullptr}
 #endif
         ),
     FastArray::_getOwnIndexedRangeImpl,

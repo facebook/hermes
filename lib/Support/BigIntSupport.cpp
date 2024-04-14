@@ -507,8 +507,8 @@ class BigIntLiteralParsingToolBox {
   using StringRefT = typename ConcreteParserTraits<ConcreteParser>::StringRefT;
 
   // The underlying string's char type.
-  using CharT = std::remove_cv_t<std::remove_reference_t<decltype(
-      *typename StringRefT::const_iterator{})>>;
+  using CharT = std::remove_cv_t<std::remove_reference_t<
+      decltype(*typename StringRefT::const_iterator{})>>;
 
   BigIntLiteralParsingToolBox(
       StringRefT str,

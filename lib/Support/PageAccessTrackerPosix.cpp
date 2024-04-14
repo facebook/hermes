@@ -138,9 +138,8 @@ sigmux_action PageAccessTracker::signalHandler(
     return SIGMUX_CONTINUE_SEARCH;
   }
   // Mark the page readable so we can continue execution.
-  void *accessedPage =
-      (void
-           *)((uintptr_t)si->si_addr / tracker->pageSize_ * tracker->pageSize_);
+  void *accessedPage = (void *)((uintptr_t)si->si_addr / tracker->pageSize_ *
+                                tracker->pageSize_);
   if (mprotect(accessedPage, tracker->pageSize_, PROT_READ) != 0) {
     _exit(EXIT_FAILURE);
   }

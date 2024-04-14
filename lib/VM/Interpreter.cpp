@@ -1497,7 +1497,7 @@ tailCall:
         ip = NEXTINST(LoadThisNS);
         DISPATCH;
       }
-    coerceThisSlowPath : {
+    coerceThisSlowPath: {
       CAPTURE_IP(res = toObject(runtime, tmpHandle));
       if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
         goto exception;
@@ -1581,7 +1581,7 @@ tailCall:
         goto doCall;
       }
 
-    doCall : {
+    doCall: {
 #ifdef HERMES_ENABLE_DEBUGGER
       // Check for an async debugger request.
       if (uint8_t asyncFlags =
@@ -1861,7 +1861,7 @@ tailCall:
         nextIP = NEXTINST(CreateClosureLongIndex);
         goto createClosure;
       }
-    createClosure : {
+    createClosure: {
       auto *runtimeModule = curCodeBlock->getRuntimeModule();
       CAPTURE_IP(
           O1REG(CreateClosure) =
@@ -2090,7 +2090,7 @@ tailCall:
         idVal = ip->iGetById.op4;
         nextIP = NEXTINST(GetById);
       }
-    getById : {
+    getById: {
       ++NumGetById;
       // NOTE: it is safe to use OnREG(GetById) here because all instructions
       // have the same layout: opcode, registers, non-register operands, i.e.
@@ -2313,7 +2313,7 @@ tailCall:
         idVal = ip->iPutByIdStrict.op4;
         nextIP = NEXTINST(PutByIdStrict);
       }
-    putById : {
+    putById: {
       ++NumPutById;
       if (LLVM_LIKELY(O1REG(PutByIdLoose).isObject())) {
         CAPTURE_IP_ASSIGN(
@@ -2490,7 +2490,7 @@ tailCall:
         nextIP = NEXTINST(PutOwnByIndex);
         idVal = ip->iPutOwnByIndex.op3;
       }
-    putOwnByIndex : {
+    putOwnByIndex: {
       tmpHandle = HermesValue::encodeTrustedNumberValue(idVal);
       CAPTURE_IP(JSObject::defineOwnComputedPrimitive(
           Handle<JSObject>::vmcast(&O1REG(PutOwnByIndex)),
@@ -3091,7 +3091,7 @@ tailCall:
         nextIP = NEXTINST(PutNewOwnById);
         idVal = ip->iPutNewOwnById.op3;
       }
-    putOwnById : {
+    putOwnById: {
       assert(
           O1REG(PutNewOwnById).isObject() &&
           "Object argument of PutNewOwnById must be an object");
@@ -3121,7 +3121,7 @@ tailCall:
         nextIP = NEXTINST(PutOwnBySlotIdx);
         idVal = ip->iPutOwnBySlotIdx.op3;
       }
-    putOwnBySlotIdx : {
+    putOwnBySlotIdx: {
       assert(
           O1REG(PutOwnBySlotIdx).isObject() &&
           "Object argument of PutOwnBySlotIdx must be an object");
@@ -3159,7 +3159,7 @@ tailCall:
         strictMode = true;
         nextIP = NEXTINST(DelByIdStrict);
       }
-    DelById : {
+    DelById: {
       auto defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);
       if (LLVM_LIKELY(O2REG(DelByIdLoose).isObject())) {
         CAPTURE_IP_ASSIGN(
@@ -3337,7 +3337,7 @@ tailCall:
         nextIP = NEXTINST(LoadConstBigIntLongIndex);
         goto doLoadConstBigInt;
       }
-    doLoadConstBigInt : {
+    doLoadConstBigInt: {
       CAPTURE_IP_ASSIGN(
           auto res,
           BigIntPrimitive::fromBytes(

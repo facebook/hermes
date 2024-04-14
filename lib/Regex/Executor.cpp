@@ -1386,7 +1386,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           base = reinterpret_cast<const Insn *>(&bytecode[s->ip_]);
           // Note fall through.
 
-        runLoop : {
+        runLoop: {
           const BeginLoopInsn *loop = llvh::cast<BeginLoopInsn>(base);
           auto &loopData = s->getLoop(loop->loopId);
           uint32_t iteration = loopData.iterations;
@@ -1464,7 +1464,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           base = reinterpret_cast<const Insn *>(&bytecode[s->ip_]);
           // Note: fall-through.
 
-        runSimpleLoop : {
+        runSimpleLoop: {
           const BeginSimpleLoopInsn *loop =
               llvh::cast<BeginSimpleLoopInsn>(base);
           // Since this is a simple loop, we'll always need to explore both

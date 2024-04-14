@@ -24,9 +24,12 @@ const VTable ArrayStorageBase<HVType>::vt(
     _trimSizeCallback
 #ifdef HERMES_MEMORY_INSTRUMENTATION
     ,
-    VTable::HeapSnapshotMetadata {
-      HeapSnapshot::NodeType::Array, nullptr, nullptr, nullptr, nullptr
-    }
+    VTable::HeapSnapshotMetadata{
+        HeapSnapshot::NodeType::Array,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr}
 #endif
 );
 

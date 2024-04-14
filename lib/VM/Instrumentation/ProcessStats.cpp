@@ -84,8 +84,7 @@ ProcessStats::Info getProcessStatSnapshot() {
 } // namespace
 
 void ProcessStats::Info::printJSON(llvh::raw_ostream &os) {
-  os << "{\n "
-     << "\t\"Integral of RSS kBms\": " << RSSkB << ",\n"
+  os << "{\n " << "\t\"Integral of RSS kBms\": " << RSSkB << ",\n"
      << "\t\"Integral of VA kBms\": " << VAkB << "\n"
      << "}\n";
 }

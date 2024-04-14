@@ -20,7 +20,8 @@ __declspec(dllexport)
 #else // _MSC_VER
 __attribute__((visibility("default")))
 #endif // _MSC_VER
-    const struct HermesABIVTable *get_hermes_abi_vtable();
+const struct HermesABIVTable *
+get_hermes_abi_vtable();
 
 #ifdef __cplusplus
 }

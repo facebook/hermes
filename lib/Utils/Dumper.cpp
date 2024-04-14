@@ -428,8 +428,7 @@ void IRPrinter::visitFunction(
   }
 
   os_.indent(indent_);
-  os_ << "function_end"
-      << "\n";
+  os_ << "function_end" << "\n";
   os_ << "\n";
 }
 

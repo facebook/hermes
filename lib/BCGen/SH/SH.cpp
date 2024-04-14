@@ -1634,8 +1634,7 @@ class InstrGen {
   void generateCreateFunctionInst(CreateFunctionInst &inst) {
     os_.indent(2);
     generateRegister(inst);
-    os_ << " = _sh_ljs_create_closure"
-        << "(shr, &";
+    os_ << " = _sh_ljs_create_closure" << "(shr, &";
     generateRegister(*inst.getScope());
     os_ << ", ";
     moduleGen_.nativeFunctionTable.generateFunctionLabel(
@@ -1643,14 +1642,12 @@ class InstrGen {
     os_ << ", ";
     os_ << "&s_function_info_table["
         << moduleGen_.nativeFunctionTable.getIndex(inst.getFunctionCode())
-        << "]"
-        << ");\n";
+        << "]" << ");\n";
   }
   void generateCreateGeneratorInst(CreateGeneratorInst &inst) {
     os_.indent(2);
     generateRegister(inst);
-    os_ << " = _sh_ljs_create_generator_object"
-        << "(shr, &";
+    os_ << " = _sh_ljs_create_generator_object" << "(shr, &";
     generateRegister(*inst.getScope());
     os_ << ", ";
     moduleGen_.nativeFunctionTable.generateFunctionLabel(
@@ -1658,8 +1655,7 @@ class InstrGen {
     os_ << ", ";
     os_ << "&s_function_info_table["
         << moduleGen_.nativeFunctionTable.getIndex(inst.getFunctionCode())
-        << "]"
-        << ");\n";
+        << "]" << ");\n";
   }
   void generateBranchInst(BranchInst &inst) {
     os_ << "  goto ";
@@ -2841,8 +2837,7 @@ static SHNativeFuncInfo s_function_info_table[];
        << moduleGen.objectLiteralClassCache.size() << ", "
        << ".source_locations = s_source_locations, "
        << ".source_locations_size = " << moduleGen.srcLocationTable.size()
-       << ", "
-       << ".unit_main = _0_global, "
+       << ", " << ".unit_main = _0_global, "
        << ".unit_main_info = &s_function_info_table[0], "
        << ".unit_name = \"sh_compiled\" };\n";
     if (options.emitMain) {

@@ -767,8 +767,8 @@ __attribute__((const)) static inline double _sh_mod_double(double a, double b) {
 /// Annotated ((const)) to let the compiler know that the function will not
 /// read/write global memory at all (it's just doing math), allowing for
 /// optimizations around the locals struct.
-SHERMES_EXPORT __attribute__((const)) int32_t _sh_to_int32_double_slow_path(
-    double d);
+SHERMES_EXPORT __attribute__((const)) int32_t
+_sh_to_int32_double_slow_path(double d);
 
 /// C version of the hermes::truncateToInt32 function.
 /// Inlines the fast path for SH to use, calls out to the slow path.

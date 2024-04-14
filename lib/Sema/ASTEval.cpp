@@ -43,8 +43,8 @@ bool astFoldBinaryExpression(
   } else if (BE->_operator == kw.identPipe) {
     res = hermes::truncateToInt32(left) | hermes::truncateToInt32(right);
   } else if (BE->_operator == kw.identLessLess) {
-    res =
-        (int32_t)(hermes::truncateToUInt32(left) << (hermes::truncateToUInt32(right) & 0x1f));
+    res = (int32_t)(hermes::truncateToUInt32(left)
+                    << (hermes::truncateToUInt32(right) & 0x1f));
   } else if (BE->_operator == kw.identGreaterGreater) {
     res = hermes::truncateToInt32(left) >>
         (hermes::truncateToUInt32(right) & 0x1f);

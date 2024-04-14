@@ -22,10 +22,12 @@ const ObjectVTable JSWeakRef::vt{
         nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
         ,
-        VTable::HeapSnapshotMetadata {
-          HeapSnapshot::NodeType::Object, nullptr,
-              JSWeakRef::_snapshotAddEdgesImpl, nullptr, nullptr
-        }
+        VTable::HeapSnapshotMetadata{
+            HeapSnapshot::NodeType::Object,
+            nullptr,
+            JSWeakRef::_snapshotAddEdgesImpl,
+            nullptr,
+            nullptr}
 #endif
         ),
     JSWeakRef::_getOwnIndexedRangeImpl,

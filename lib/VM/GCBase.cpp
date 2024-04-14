@@ -691,8 +691,7 @@ void GCBase::DebugHeapInfo::assertInvariants() const {
 }
 #endif
 
-void GCBase::dump(llvh::raw_ostream &, bool) { /* nop */
-}
+void GCBase::dump(llvh::raw_ostream &, bool) { /* nop */ }
 
 void GCBase::printStats(JSONEmitter &json) {
   json.emitKeyValue("type", "hermes");
@@ -1077,8 +1076,8 @@ void GCBase::IDTracker::moveObject(
   }
 }
 
-llvh::SmallVector<HeapSnapshot::NodeID, 1>
-    &GCBase::IDTracker::getExtraNativeIDs(HeapSnapshot::NodeID node) {
+llvh::SmallVector<HeapSnapshot::NodeID, 1> &
+GCBase::IDTracker::getExtraNativeIDs(HeapSnapshot::NodeID node) {
   std::lock_guard<Mutex> lk{mtx_};
   // The operator[] will default construct the vector to be empty if it doesn't
   // exist.

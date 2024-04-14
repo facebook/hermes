@@ -329,8 +329,8 @@ void DictPropertyMap::dump() {
   OS << "  Descriptors[" << descriptorCapacity_ << "]:\n";
   for (unsigned i = 0; i < descriptorCapacity_; ++i) {
     auto *pair = getDescriptorPairs() + i;
-    OS << "    (" << pair->first << ", "
-       << "(slot=" << pair->second.slot << "))\n";
+    OS << "    (" << pair->first << ", " << "(slot=" << pair->second.slot
+       << "))\n";
   }
 }
 

@@ -509,10 +509,12 @@ const CallableVTable BoundFunction::vt{
             nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
             ,
-            VTable::HeapSnapshotMetadata {
-              HeapSnapshot::NodeType::Closure, BoundFunction::_snapshotNameImpl,
-                  BoundFunction::_snapshotAddEdgesImpl, nullptr, nullptr
-            }
+            VTable::HeapSnapshotMetadata{
+                HeapSnapshot::NodeType::Closure,
+                BoundFunction::_snapshotNameImpl,
+                BoundFunction::_snapshotAddEdgesImpl,
+                nullptr,
+                nullptr}
 #endif
             ),
         BoundFunction::_getOwnIndexedRangeImpl,
@@ -835,11 +837,12 @@ const CallableVTable NativeJSFunction::vt{
             nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
             ,
-            VTable::HeapSnapshotMetadata {
-              HeapSnapshot::NodeType::Closure,
-                  NativeJSFunction::_snapshotNameImpl,
-                  NativeJSFunction::_snapshotAddEdgesImpl, nullptr, nullptr
-            }
+            VTable::HeapSnapshotMetadata{
+                HeapSnapshot::NodeType::Closure,
+                NativeJSFunction::_snapshotNameImpl,
+                NativeJSFunction::_snapshotAddEdgesImpl,
+                nullptr,
+                nullptr}
 #endif
             ),
         NativeJSFunction::_getOwnIndexedRangeImpl,
@@ -978,11 +981,12 @@ const CallableVTable NativeFunction::vt{
             nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
             ,
-            VTable::HeapSnapshotMetadata {
-              HeapSnapshot::NodeType::Closure,
-                  NativeFunction::_snapshotNameImpl,
-                  NativeFunction::_snapshotAddEdgesImpl, nullptr, nullptr
-            }
+            VTable::HeapSnapshotMetadata{
+                HeapSnapshot::NodeType::Closure,
+                NativeFunction::_snapshotNameImpl,
+                NativeFunction::_snapshotAddEdgesImpl,
+                nullptr,
+                nullptr}
 #endif
             ),
         NativeFunction::_getOwnIndexedRangeImpl,
@@ -1150,11 +1154,12 @@ const CallableVTable NativeConstructor::vt{
             nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
             ,
-            VTable::HeapSnapshotMetadata {
-              HeapSnapshot::NodeType::Closure,
-                  NativeConstructor::_snapshotNameImpl,
-                  NativeConstructor::_snapshotAddEdgesImpl, nullptr, nullptr
-            }
+            VTable::HeapSnapshotMetadata{
+                HeapSnapshot::NodeType::Closure,
+                NativeConstructor::_snapshotNameImpl,
+                NativeConstructor::_snapshotAddEdgesImpl,
+                nullptr,
+                nullptr}
 #endif
             ),
         NativeConstructor::_getOwnIndexedRangeImpl,
@@ -1204,11 +1209,12 @@ const CallableVTable JSFunction::vt{
             nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
             ,
-            VTable::HeapSnapshotMetadata {
-              HeapSnapshot::NodeType::Closure, JSFunction::_snapshotNameImpl,
-                  JSFunction::_snapshotAddEdgesImpl, nullptr,
-                  JSFunction::_snapshotAddLocationsImpl
-            }
+            VTable::HeapSnapshotMetadata{
+                HeapSnapshot::NodeType::Closure,
+                JSFunction::_snapshotNameImpl,
+                JSFunction::_snapshotAddEdgesImpl,
+                nullptr,
+                JSFunction::_snapshotAddLocationsImpl}
 #endif
             ),
         JSFunction::_getOwnIndexedRangeImpl,

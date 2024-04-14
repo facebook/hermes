@@ -1670,9 +1670,8 @@ ExecutionStatus Runtime::forEachPublicNativeBuiltin(
     LLVM_DEBUG(llvh::dbgs() << publicNativeBuiltins[methodIndex].name << "\n");
     // Find the object first, if it changed.
     bool frozen = (publicNativeBuiltins[methodIndex].object & FROZEN_FLAG) != 0;
-    auto objectName =
-        (Predefined::
-             Str)(publicNativeBuiltins[methodIndex].object & ~FROZEN_FLAG);
+    auto objectName = (Predefined::Str)(
+        publicNativeBuiltins[methodIndex].object & ~FROZEN_FLAG);
     if (objectName != lastObjectName) {
       auto objectID = Predefined::getSymbolID(objectName);
       // Avoid running any JS here to avoid modifying the builtins while
