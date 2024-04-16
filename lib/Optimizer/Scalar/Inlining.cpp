@@ -328,6 +328,7 @@ static Value *inlineFunction(
         // scope.
         ScopeCreationInst *inlineeParentScopeCreation =
             getInlineeParentScopeCreation();
+        (void)csi;
         assert(
             inlineeParentScopeCreation->getCreatedScopeDesc() ==
                 operandMap[csi->getCreatedScopeDesc()] &&
