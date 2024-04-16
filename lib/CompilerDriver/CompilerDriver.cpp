@@ -526,6 +526,13 @@ static opt<bool> ReusePropCache(
 static CLFlag
     Inline('f', "inline", true, "inlining of functions", CompilerCategory);
 
+static opt<unsigned> InlineMaxSize(
+    "Xinline-max-size",
+    cl::init(1),
+    cl::desc("Suppress inlining of functions larger than the given size"),
+    cl::Hidden,
+    cl::cat(CompilerCategory));
+
 static opt<bool> LegacyMem2Reg(
     "Xlegacy-mem2reg",
     init(false),
@@ -1067,6 +1074,7 @@ std::shared_ptr<Context> createContext(
 
   optimizationOpts.inlining =
       cl::OptimizationLevel != cl::OptLevel::O0 && cl::Inline;
+  optimizationOpts.inlineMaxSize = cl::InlineMaxSize;
 
   optimizationOpts.reusePropCache = cl::ReusePropCache;
 
