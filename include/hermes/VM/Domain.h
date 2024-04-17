@@ -90,7 +90,8 @@ class Domain final : public GCCell {
   llvh::DenseMap<SymbolID, uint32_t> cjsModuleTable_{};
 
   /// RuntimeModules owned by this Domain.
-  /// These will be freed from the Domain destructor.
+  /// These will be freed by Runtime when marking weak roots, if the Domain is
+  /// dead.
   CopyableVector<RuntimeModule *> runtimeModules_{};
 
   /// The require() function stub that is used when using requireFast() calls
@@ -217,8 +218,7 @@ class Domain final : public GCCell {
   PseudoHandle<NativeFunction> getThrowingRequire(Runtime &runtime) const;
 
  private:
-  /// Destroy associated RuntimeModules.
-  ~Domain();
+  ~Domain() = default;
 
   /// Free all non-GC managed resources associated with the object.
   static void _finalizeImpl(GCCell *cell, GC &gc);
