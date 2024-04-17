@@ -57,12 +57,6 @@ void Domain::_finalizeImpl(GCCell *cell, GC &gc) {
   self->~Domain();
 }
 
-Domain::~Domain() {
-  for (RuntimeModule *rm : runtimeModules_) {
-    delete rm;
-  }
-}
-
 PseudoHandle<NativeFunction> Domain::getThrowingRequire(
     Runtime &runtime) const {
   return createPseudoHandle(throwingRequire_.get(runtime));

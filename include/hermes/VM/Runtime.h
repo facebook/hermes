@@ -1011,6 +1011,11 @@ class HERMES_EMPTY_BASES Runtime : public PointerBase,
   void markWeakRoots(WeakRootAcceptor &weakAcceptor, bool markLongLived)
       override;
 
+  /// Iterate over runtimeModuleList_ and mark each RuntimeModule's WeakRoot to
+  /// its owning Domain. If the domain is dead, destroy the RuntimeModule and
+  /// remove it from runtimeModuleList_.
+  void markDomainRefInRuntimeModules(WeakRootAcceptor &weakRootAcceptor);
+
   /// See documentation on \c GCBase::GCCallbacks.
   void markRootsForCompleteMarking(
       RootAndSlotAcceptorWithNames &acceptor) override;
@@ -1233,7 +1238,9 @@ class HERMES_EMPTY_BASES Runtime : public PointerBase,
   RuntimeModule *specialCodeBlockRuntimeModule_{};
 
   /// A list of all active runtime modules. Each \c RuntimeModule adds itself
-  /// on construction and removes itself on destruction.
+  /// on construction and removes itself on destruction. When marking weak
+  /// roots, scan each RuntimeModule and destroy it if the owning Domain is
+  /// dead (each RuntimeModule has a WeakRoot to its owning Domain).
   RuntimeModuleList runtimeModuleList_{};
 
   /// Optional record of the last few executed bytecodes in case of a crash.

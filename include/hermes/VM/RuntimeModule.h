@@ -223,10 +223,12 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   LLVM_NODISCARD ExecutionStatus
   initializeMayAllocate(std::shared_ptr<hbc::BCProvider> &&bytecode);
 
-  /// Prepares this RuntimeModule for the systematic destruction of all modules.
-  /// Normal destruction is reference counted, but when the Runtime shuts down,
-  /// we ignore that count and delete all in an arbitrary order.
-  void prepareForRuntimeShutdown();
+  /// Prepares this RuntimeModule for the systematic destruction of modules (
+  /// either in Runtime destructor or Runtime::markDomainRefInRuntimeModules()).
+  /// One RuntimeModule may refer CodeBlocks from another RuntimeMoudle, which
+  /// could be destroyed first, so we must set pointers of these CodeBlocks to
+  /// nullptr before destroying them.
+  void prepareForDestruction();
 
   /// For opcodes that use a stringID as identifier explicitly, we know that
   /// the compiler would have marked the stringID as identifier, and hence
@@ -360,6 +362,11 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// Mark the weak reference to the Domain which owns this RuntimeModule.
   void markDomainRef(WeakRootAcceptor &acceptor) {
     acceptor.acceptWeak(domain_);
+  }
+
+  /// \return True if the weak root to the owning Domain is empty.
+  bool isOwningDomainDead() const {
+    return !domain_;
   }
 
   /// \return an estimate of the size of additional memory used by this
