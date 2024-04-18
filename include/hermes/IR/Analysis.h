@@ -188,6 +188,11 @@ class Visitor {
 std::pair<llvh::DenseMap<BasicBlock *, size_t>, size_t> getBlockTryDepths(
     Function *F);
 
+/// Construct a map from BB to enclosing trys, accounting for TryEnd/Catch.
+/// \return None if there were no trys in the function.
+llvh::Optional<llvh::DenseMap<BasicBlock *, TryStartInst *>>
+findEnclosingTrysPerBlock(Function *F);
+
 } // end namespace hermes
 
 #endif

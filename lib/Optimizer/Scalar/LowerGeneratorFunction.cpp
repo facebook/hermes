@@ -44,6 +44,7 @@
 
 #include "hermes/BCGen/GeneratorResumeMethod.h"
 #include "hermes/FrontEndDefs/Builtins.h"
+#include "hermes/IR/Analysis.h"
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
@@ -156,11 +157,6 @@ class LowerToStateMachine {
   BasicBlock *createCompletedStateBlock(
       LoadParamInst *action,
       LoadParamInst *value);
-
-  /// Construct a map from BB to enclosing trys, accounting for TryEnd/Catch.
-  /// \return None if there were no trys in the function.
-  llvh::Optional<llvh::DenseMap<BasicBlock *, TryStartInst *>>
-  findEnclosingTrysPerBlock(Function *F);
 };
 
 void LowerToStateMachine::convert() {
@@ -801,57 +797,6 @@ void LowerToStateMachine::lowerToSwitch(
     exceptionSwitch.generate(
         builder_.createLoadFrameInst(getParentOuterScope_, exceptionSwitchIdx),
         defaultExceptionSwitchBB);
-  }
-}
-
-llvh::Optional<llvh::DenseMap<BasicBlock *, TryStartInst *>>
-LowerToStateMachine::findEnclosingTrysPerBlock(Function *F) {
-  bool hasTry = false;
-  // Stack of basic blocks to visit, and the TryStartInst on entry of that
-  // block.
-  llvh::SmallVector<std::pair<BasicBlock *, TryStartInst *>, 4> stack;
-  // Holds a mapping from basic block -> innermost enclosing TryStartInst,
-  // accounting for Catch/TryEnd.
-  llvh::DenseMap<BasicBlock *, TryStartInst *> blockToEnclosingTry;
-  stack.emplace_back(&*F->begin(), nullptr);
-  blockToEnclosingTry[&*F->begin()] = nullptr;
-  while (!stack.empty()) {
-    auto [BB, enclosingTry] = stack.pop_back_val();
-    // If this BB ends with a TryStartInst, store the try body block here.
-    BasicBlock *tryBody = nullptr;
-
-    if (auto *TSI = llvh::dyn_cast<TryStartInst>(BB->getTerminator())) {
-      tryBody = TSI->getTryBody();
-      hasTry = true;
-    } else if (llvh::isa<TryEndInst>(BB->getTerminator())) {
-      // If this block ends with a TryEnd, pop off to the nearest try.
-      assert(
-          enclosingTry && "encountered TryEnd without an enclosing TryStart");
-      assert(
-          blockToEnclosingTry.find(enclosingTry->getParent()) !=
-              blockToEnclosingTry.end() &&
-          "enclosingTry should already be in map.");
-      enclosingTry = blockToEnclosingTry[enclosingTry->getParent()];
-    }
-
-    for (auto *succ : successors(BB)) {
-      // Only update the enclosing try when we are going to enter the try body.
-      auto *succEnclosingTry = succ == tryBody
-          ? llvh::cast<TryStartInst>(BB->getTerminator())
-          : enclosingTry;
-
-      auto [_, inserted] =
-          blockToEnclosingTry.try_emplace(succ, succEnclosingTry);
-      if (inserted) {
-        // Only explore this BB if we haven't visited it before.
-        stack.push_back({succ, succEnclosingTry});
-      }
-    }
-  }
-  if (hasTry) {
-    return {std::move(blockToEnclosingTry)};
-  } else {
-    return llvh::None;
   }
 }
 
