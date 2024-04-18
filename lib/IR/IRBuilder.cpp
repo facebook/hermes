@@ -253,14 +253,18 @@ CatchInst *IRBuilder::createCatchInst() {
   return CI;
 }
 
-ThrowInst *IRBuilder::createThrowInst(Value *thrownValue) {
-  auto *TI = new ThrowInst(thrownValue);
+ThrowInst *IRBuilder::createThrowInst(
+    Value *thrownValue,
+    BasicBlock *catchTarget) {
+  auto *TI = new ThrowInst(thrownValue, catchTarget);
   insert(TI);
   return TI;
 }
 
-ThrowTypeErrorInst *IRBuilder::createThrowTypeErrorInst(Value *message) {
-  auto *TI = new ThrowTypeErrorInst(message);
+ThrowTypeErrorInst *IRBuilder::createThrowTypeErrorInst(
+    Value *message,
+    BasicBlock *catchTarget) {
+  auto *TI = new ThrowTypeErrorInst(message, catchTarget);
   insert(TI);
   return TI;
 }

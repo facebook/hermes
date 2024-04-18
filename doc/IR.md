@@ -612,8 +612,8 @@ Effects | May read and write memory.
 ThrowInst | _
 --- | --- |
 Description | This instruction will throw an exception.
-Example | %0 = ThrowInst %e
-Arguments | This instruction takes one parameter, which is the register that contains the exception value
+Example | %0 = ThrowInst %e, %catchTarget
+Arguments | This instruction takes one required operand, which is the register that contains the exception value. The second operand is optional and indicates the closest surrounding catch block; it must be present if there is one, and must be missing otherwise.
 Semantics | This instruction is a terminator instruction that will transition the control to the CatchInst that covers this instruction with closest scope.
 Effects | May read and write memory.
 

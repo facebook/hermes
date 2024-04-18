@@ -351,9 +351,13 @@ class IRBuilder {
 
   CatchInst *createCatchInst();
 
-  ThrowInst *createThrowInst(Value *thrownValue);
+  ThrowInst *createThrowInst(
+      Value *thrownValue,
+      BasicBlock *catchTarget = nullptr);
 
-  ThrowTypeErrorInst *createThrowTypeErrorInst(Value *message);
+  ThrowTypeErrorInst *createThrowTypeErrorInst(
+      Value *message,
+      BasicBlock *catchTarget = nullptr);
 
   TryStartInst *createTryStartInst(
       BasicBlock *tryBodyBlock,

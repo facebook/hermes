@@ -2541,9 +2541,14 @@ class BaseThrowInst : public TerminatorInst {
   void operator=(const BaseThrowInst &) = delete;
 
  protected:
-  explicit BaseThrowInst(ValueKind kind, Value *throwInfo)
+  explicit BaseThrowInst(
+      ValueKind kind,
+      Value *throwInfo,
+      BasicBlock *optionalCatchTarget)
       : TerminatorInst(kind) {
     pushOperand(throwInfo);
+    if (optionalCatchTarget)
+      pushOperand(optionalCatchTarget);
   }
   explicit BaseThrowInst(
       const BaseThrowInst *src,
@@ -2551,12 +2556,43 @@ class BaseThrowInst : public TerminatorInst {
       : TerminatorInst(src, operands) {}
 
  public:
-  /// ThrowInfoIdx is the index of a value that determines what is thrown. Its
+  /// - ThrowInfoIdx is the index of a value that determines what is thrown. Its
   /// interpretation depends on the instruction.
-  enum { ThrowInfoIdx };
+  /// - CatchTargetBlockIdx is the optional index of the surrounding catch
+  /// block, if there is one.
+  enum { ThrowInfoIdx, CatchTargetBlockIdx };
 
   Value *getThrowInfo() const {
     return getOperand(ThrowInfoIdx);
+  }
+
+  /// \return whether this instruction has the optional catch target.
+  bool hasCatchTarget() const {
+    return getNumOperands() > CatchTargetBlockIdx;
+  }
+  /// \return the catch target, which must be present.
+  BasicBlock *getCatchTarget() const {
+    assert(hasCatchTarget() && "no catch target");
+    return cast<BasicBlock>(getOperand(CatchTargetBlockIdx));
+  }
+  /// \return the catch target, or nullptr if there is none.
+  BasicBlock *getOptionalCatchTarget() const {
+    return hasCatchTarget() ? getCatchTarget() : nullptr;
+  }
+  /// Update the catch target to match \p optionalCatchTarget, adding or
+  /// removing as necessary.
+  void updateCatchTarget(BasicBlock *optionalCatchTarget) {
+    if (optionalCatchTarget) {
+      // Add the catch target.
+      if (!hasCatchTarget())
+        pushOperand(optionalCatchTarget);
+      else
+        setOperand(optionalCatchTarget, CatchTargetBlockIdx);
+    } else {
+      // Remove the catch target.
+      if (hasCatchTarget())
+        removeOperand(CatchTargetBlockIdx);
+    }
   }
 
   static bool hasOutput() {
@@ -2577,13 +2613,15 @@ class BaseThrowInst : public TerminatorInst {
   }
 
   unsigned getNumSuccessorsImpl() const {
-    return 0;
+    return getNumOperands() - CatchTargetBlockIdx;
   }
   BasicBlock *getSuccessorImpl(unsigned idx) const {
-    llvm_unreachable("ThrowBaseInst has no successor!");
+    assert(idx < getNumSuccessorsImpl() && "invalid BaseThrowInst successor");
+    return llvh::cast<BasicBlock>(getOperand(idx + CatchTargetBlockIdx));
   }
-  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
-    llvm_unreachable("ThrowBaseInst has no successor!");
+  void setSuccessorImpl(unsigned idx, BasicBlock *BB) {
+    assert(idx < getNumSuccessorsImpl() && "invalid BaseThrowInst successor");
+    setOperand(BB, idx + CatchTargetBlockIdx);
   }
 };
 
@@ -2592,8 +2630,11 @@ class ThrowInst : public BaseThrowInst {
   void operator=(const ThrowInst &) = delete;
 
  public:
-  explicit ThrowInst(Value *thrownValue)
-      : BaseThrowInst(ValueKind::ThrowInstKind, thrownValue) {}
+  explicit ThrowInst(Value *thrownValue, BasicBlock *optionalCatchTarget)
+      : BaseThrowInst(
+            ValueKind::ThrowInstKind,
+            thrownValue,
+            optionalCatchTarget) {}
   explicit ThrowInst(const ThrowInst *src, llvh::ArrayRef<Value *> operands)
       : BaseThrowInst(src, operands) {}
 
@@ -2612,8 +2653,11 @@ class ThrowTypeErrorInst : public BaseThrowInst {
   void operator=(const ThrowTypeErrorInst &) = delete;
 
  public:
-  explicit ThrowTypeErrorInst(Value *message)
-      : BaseThrowInst(ValueKind::ThrowTypeErrorInstKind, message) {}
+  explicit ThrowTypeErrorInst(Value *message, BasicBlock *optionalCatchTarget)
+      : BaseThrowInst(
+            ValueKind::ThrowTypeErrorInstKind,
+            message,
+            optionalCatchTarget) {}
   explicit ThrowTypeErrorInst(
       const ThrowTypeErrorInst *src,
       llvh::ArrayRef<Value *> operands)
