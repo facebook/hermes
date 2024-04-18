@@ -11,6 +11,7 @@
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/Parser/JSONParser.h"
 
+#include <cstdio>
 #include <set>
 #include <vector>
 
@@ -288,6 +289,19 @@ void ProfileAnalyzer::dumpInstructionStats() {
   // Sort the result by instruction frequency in descending order.
   std::vector<std::pair<OpCode, uint64_t>> sortedElements(
       instSummary.begin(), instSummary.end());
+  // Remove the ProfilePoint instruction.
+  const auto &profilePointIter = std::find_if(
+      sortedElements.begin(),
+      sortedElements.end(),
+      [](const std::pair<OpCode, uint64_t> &elem) {
+        return elem.first == OpCode::ProfilePoint;
+      });
+  // Replace with the last element.
+  if (profilePointIter != sortedElements.end()) {
+    *profilePointIter = sortedElements.back();
+    sortedElements.pop_back();
+  }
+  // Now sort.
   std::sort(
       sortedElements.begin(),
       sortedElements.end(),
@@ -295,8 +309,19 @@ void ProfileAnalyzer::dumpInstructionStats() {
         return x.second > y.second;
       });
 
+  uint64_t sum = 0;
+  for (const auto &elem : sortedElements) {
+    sum += elem.second;
+  }
+  double sumD = static_cast<double>(sum);
+
   for (const auto &entry : sortedElements) {
-    os_ << getOpCodeString(entry.first) << ": " << entry.second << "\n";
+    os_ << llvh::format(
+               "%30s:%15lld:%8.2f%%",
+               getOpCodeString(entry.first).str().c_str(),
+               entry.second,
+               100.0 * static_cast<double>(entry.second) / sumD)
+        << "\n";
   }
 }
 
