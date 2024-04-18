@@ -2100,21 +2100,6 @@ tailCall:
         auto cacheIdx = ip->iGetById.op3;
         auto *cacheEntry = curCodeBlock->getReadCacheEntry(cacheIdx);
 
-#ifdef HERMESVM_PROFILER_BB
-        {
-          HERMES_SLOW_ASSERT(
-              gcScope.getHandleCountDbg() == KEEP_HANDLES &&
-              "unaccounted handles were created");
-          auto objHandle = runtime.makeHandle(obj);
-          auto cacheHCPtr = vmcast_or_null<HiddenClass>(static_cast<GCCell *>(
-              cacheEntry->clazz.get(runtime, runtime.getHeap())));
-          CAPTURE_IP(runtime.recordHiddenClass(
-              curCodeBlock, ip, ID(idVal), obj->getClass(runtime), cacheHCPtr));
-          // obj may be moved by GC due to recordHiddenClass
-          obj = objHandle.get();
-        }
-        gcScope.flushToSmallCount(KEEP_HANDLES);
-#endif
         CompressedPointer clazzPtr{obj->getClassGCPtr()};
 #ifndef NDEBUG
         if (vmcast<HiddenClass>(clazzPtr.getNonNull(runtime))->isDictionary())
@@ -2323,25 +2308,6 @@ tailCall:
         auto cacheIdx = ip->iPutByIdLoose.op3;
         auto *cacheEntry = curCodeBlock->getWriteCacheEntry(cacheIdx);
 
-#ifdef HERMESVM_PROFILER_BB
-        {
-          HERMES_SLOW_ASSERT(
-              gcScope.getHandleCountDbg() == KEEP_HANDLES &&
-              "unaccounted handles were created");
-          auto shvHandle = runtime.makeHandle(shv.toHV(runtime));
-          auto objHandle = runtime.makeHandle(obj);
-          auto cacheHCPtr = vmcast_or_null<HiddenClass>(static_cast<GCCell *>(
-              cacheEntry->clazz.get(runtime, runtime.getHeap())));
-          CAPTURE_IP(runtime.recordHiddenClass(
-              curCodeBlock, ip, ID(idVal), obj->getClass(runtime), cacheHCPtr));
-          // shv/obj may be invalidated by recordHiddenClass
-          if (shv.isPointer())
-            shv.unsafeUpdatePointer(
-                static_cast<GCCell *>(shvHandle->getPointer()), runtime);
-          obj = objHandle.get();
-        }
-        gcScope.flushToSmallCount(KEEP_HANDLES);
-#endif
         CompressedPointer clazzPtr{obj->getClassGCPtr()};
         // If we have a cache hit, reuse the cached offset and immediately
         // return the property.

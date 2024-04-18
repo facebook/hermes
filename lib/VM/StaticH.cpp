@@ -621,7 +621,8 @@ static inline void putById_RJS(
     SmallHermesValue shv = SmallHermesValue::encodeHermesValue(*value, runtime);
     auto *obj = vmcast<JSObject>(*target);
 
-#ifdef HERMESVM_PROFILER_BB
+    // #ifdef HERMESVM_PROFILER_BB
+#if 0
     {
       HERMES_SLOW_ASSERT(
           gcScope.getHandleCountDbg() == KEEP_HANDLES &&
@@ -824,21 +825,6 @@ static inline HermesValue getById_RJS(
   if (LLVM_LIKELY(source->isObject())) {
     auto *obj = vmcast<JSObject>(*source);
 
-#ifdef HERMESVM_PROFILER_BB
-    {
-      HERMES_SLOW_ASSERT(
-          gcScope.getHandleCountDbg() == KEEP_HANDLES &&
-          "unaccounted handles were created");
-      auto objHandle = runtime.makeHandle(obj);
-      auto cacheHCPtr = vmcast_or_null<HiddenClass>(static_cast<GCCell *>(
-          cacheEntry->clazz.get(runtime, runtime.getHeap())));
-      CAPTURE_IP(runtime.recordHiddenClass(
-          curCodeBlock, ip, ID(idVal), obj->getClass(runtime), cacheHCPtr));
-      // obj may be moved by GC due to recordHiddenClass
-      *obj = vmcast<JSObject>(*source);
-    }
-    gcScope.flushToSmallCount(KEEP_HANDLES);
-#endif
     CompressedPointer clazzPtr{obj->getClassGCPtr()};
 #ifndef NDEBUG
     // if (vmcast<HiddenClass>(clazzPtr.getNonNull(runtime))->isDictionary())

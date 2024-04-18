@@ -9,6 +9,7 @@
 
 #include "hermes/CompilerDriver/CompilerDriver.h"
 #include "hermes/Support/MemoryBuffer.h"
+#include "hermes/Support/OutputStream.h"
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Domain.h"
@@ -390,7 +391,19 @@ bool executeHBCBytecodeImpl(
 
 #ifdef HERMESVM_PROFILER_BB
   if (options.basicBlockProfiling) {
-    runtime->getBasicBlockExecutionInfo().dump(llvh::errs());
+    OutputStream profilingFileOS(llvh::errs());
+    if (!options.profilingOutFile.empty()) {
+      if (!profilingFileOS.open(
+              options.profilingOutFile, llvh::sys::fs::F_Text)) {
+        llvh::errs() << "Failed to open file '" << options.profilingOutFile
+                     << "'; writing to stderr instead.\n";
+      }
+    }
+    runtime->getBasicBlockExecutionInfo().dump(profilingFileOS.os());
+    if (!profilingFileOS.close()) {
+      llvh::errs() << "Failed to close profiling file '"
+                   << options.profilingOutFile << "'.\n";
+    }
   }
 #endif
 

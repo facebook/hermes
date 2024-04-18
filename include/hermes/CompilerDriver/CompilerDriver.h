@@ -95,6 +95,7 @@ void printHermesCompilerVersion(llvh::raw_ostream &s);
 namespace cl {
 /// The following flags are used by both the compiler and the VM driver.
 extern llvh::cl::opt<bool> BasicBlockProfiling;
+extern llvh::cl::opt<std::string> ProfilingOutFile;
 extern llvh::cl::opt<bool> EnableEval;
 extern llvh::cl::opt<bool> ES6Class;
 extern llvh::cl::opt<bool> VerifyIR;

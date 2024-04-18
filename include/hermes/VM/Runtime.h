@@ -40,10 +40,6 @@
 #include "hermes/VM/TwineChar16.h"
 #include "hermes/VM/VMExperiments.h"
 
-#ifdef HERMESVM_PROFILER_BB
-#include "hermes/VM/Profiler/InlineCacheProfiler.h"
-#endif
-
 #include "llvh/ADT/DenseMap.h"
 #include "llvh/ADT/SmallVector.h"
 
@@ -975,33 +971,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// Called when various GC events(e.g. collection start/end) happen.
   void onGCEvent(GCEventKind kind, const std::string &extraInfo);
 
-#ifdef HERMESVM_PROFILER_BB
-  using ClassId = InlineCacheProfiler::ClassId;
-
-  /// Get filename, line number, and column number from
-  /// code block and instruction pointer. It returns true if it succeeds.
-  llvh::Optional<std::tuple<std::string, uint32_t, uint32_t>>
-  getIPSourceLocation(const CodeBlock *codeBlock, const Inst *ip);
-
-  /// Inserts the Hidden class as a root to prevent it from being garbage
-  /// collected.
-  void preventHCGC(HiddenClass *hc);
-
-  /// Inserts Hidden Classes into InlineCacheProfiler
-  void recordHiddenClass(
-      CodeBlock *codeBlock,
-      const Inst *cacheMissInst,
-      SymbolID symbolID,
-      HiddenClass *objectHiddenClass,
-      HiddenClass *cachedHiddenClass);
-
-  /// Resolve HiddenClass pointers from its hidden class Id.
-  HiddenClass *resolveHiddenClassId(ClassId classId);
-
-  /// Dumps inline cache profiler info.
-  void getInlineCacheProfilerInfo(llvh::raw_ostream &ostream);
-#endif
-
   /// Called by the GC at the beginning of a collection. This method informs the
   /// GC of all runtime roots.  The \p markLongLived argument
   /// indicates whether root data structures that contain only
@@ -1332,9 +1301,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
 #ifdef HERMESVM_PROFILER_BB
   BasicBlockExecutionInfo basicBlockExecInfo_;
-
-  /// Store all inline caching miss information.
-  InlineCacheProfiler inlineCacheProfiler_;
 #endif
 
   /// ScriptIDs to use for new RuntimeModules coming in.

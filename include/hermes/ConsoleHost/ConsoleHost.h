@@ -129,6 +129,10 @@ struct ExecuteOptions {
   /// Enable basic block profiling.
   bool basicBlockProfiling{false};
 
+  // If non-empty, write profiling output to this file, rather than
+  // to stderr.
+  std::string profilingOutFile;
+
   /// Stop after creating the RuntimeModule.
   bool stopAfterInit{false};
 

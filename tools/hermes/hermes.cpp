@@ -103,6 +103,7 @@ static int executeHBCBytecodeFromCL(
           .build();
 
   options.basicBlockProfiling = cl::BasicBlockProfiling;
+  options.profilingOutFile = cl::ProfilingOutFile;
 
   options.stopAfterInit = false;
   options.timeLimit = flags.ExecutionTimeLimit;

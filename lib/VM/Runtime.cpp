@@ -55,7 +55,6 @@
 #ifdef HERMESVM_PROFILER_BB
 #include "hermes/VM/IterationKind.h"
 #include "hermes/VM/JSArray.h"
-#include "hermes/VM/Profiler/InlineCacheProfiler.h"
 #include "llvh/ADT/DenseMap.h"
 #endif
 
@@ -410,12 +409,6 @@ Runtime::Runtime(
 
   symbolRegistry_.init(*this);
 
-  // BB Profiler need to be ready before running internal bytecode.
-#ifdef HERMESVM_PROFILER_BB
-  inlineCacheProfiler_.setHiddenClassArray(
-      ignoreAllocationFailure(JSArray::create(*this, 4, 4)).get());
-#endif
-
   codeCoverageProfiler_->disable();
   // Execute our internal bytecode.
   auto jsBuiltinsObj = runInternalJavaScript();
@@ -677,12 +670,6 @@ void Runtime::markRoots(
     if (codeCoverageProfiler_) {
       codeCoverageProfiler_->markRoots(acceptor);
     }
-#ifdef HERMESVM_PROFILER_BB
-    auto *&hiddenClassArray = inlineCacheProfiler_.getHiddenClassArray();
-    if (hiddenClassArray) {
-      acceptor.acceptPtr(hiddenClassArray);
-    }
-#endif
     acceptor.endRootSection();
   }
 
@@ -2168,88 +2155,6 @@ void Runtime::onGCEvent(GCEventKind kind, const std::string &extraInfo) {
     gcEventCallback_(kind, extraInfo.c_str());
   }
 }
-
-#ifdef HERMESVM_PROFILER_BB
-
-llvh::Optional<std::tuple<std::string, uint32_t, uint32_t>>
-Runtime::getIPSourceLocation(const CodeBlock *codeBlock, const Inst *ip) {
-  auto bytecodeOffs = codeBlock->getOffsetOf(ip);
-  auto blockSourceCode = codeBlock->getDebugSourceLocationsOffset();
-
-  if (!blockSourceCode) {
-    return llvh::None;
-  }
-  auto debugInfo = codeBlock->getRuntimeModule()->getBytecode()->getDebugInfo();
-  auto sourceLocation = debugInfo->getLocationForAddress(
-      blockSourceCode.getValue(), bytecodeOffs);
-  if (!sourceLocation) {
-    return llvh::None;
-  }
-  auto filename = debugInfo->getUTF8FilenameByID(sourceLocation->filenameId);
-  auto line = sourceLocation->line;
-  auto col = sourceLocation->column;
-  return std::make_tuple(filename, line, col);
-}
-
-void Runtime::preventHCGC(HiddenClass *hc) {
-  auto &classIdToIdxMap = inlineCacheProfiler_.getClassIdtoIndexMap();
-  auto &hcIdx = inlineCacheProfiler_.getHiddenClassArrayIndex();
-  auto ret = classIdToIdxMap.insert(
-      std::pair<ClassId, uint32_t>(getHeap().getObjectID(hc), hcIdx));
-  if (ret.second) {
-    auto *hiddenClassArray = inlineCacheProfiler_.getHiddenClassArray();
-    JSArray::setElementAt(
-        makeHandle(hiddenClassArray), *this, hcIdx++, makeHandle(hc));
-  }
-}
-
-void Runtime::recordHiddenClass(
-    CodeBlock *codeBlock,
-    const Inst *cacheMissInst,
-    SymbolID symbolID,
-    HiddenClass *objectHiddenClass,
-    HiddenClass *cachedHiddenClass) {
-  auto offset = codeBlock->getOffsetOf(cacheMissInst);
-
-  // inline caching hit
-  if (objectHiddenClass == cachedHiddenClass) {
-    inlineCacheProfiler_.insertICHit(codeBlock, offset);
-    return;
-  }
-
-  // inline caching miss
-  assert(objectHiddenClass != nullptr && "object hidden class should exist");
-  // prevent object hidden class from being GC-ed
-  preventHCGC(objectHiddenClass);
-  ClassId objectHiddenClassId = getHeap().getObjectID(objectHiddenClass);
-  // prevent cached hidden class from being GC-ed
-  ClassId cachedHiddenClassId =
-      static_cast<ClassId>(GCBase::IDTracker::kInvalidNode);
-  if (cachedHiddenClass != nullptr) {
-    preventHCGC(cachedHiddenClass);
-    cachedHiddenClassId = getHeap().getObjectID(cachedHiddenClass);
-  }
-  // add the record to inline caching profiler
-  inlineCacheProfiler_.insertICMiss(
-      codeBlock, offset, symbolID, objectHiddenClassId, cachedHiddenClassId);
-}
-
-void Runtime::getInlineCacheProfilerInfo(llvh::raw_ostream &ostream) {
-  inlineCacheProfiler_.dumpRankedInlineCachingMisses(*this, ostream);
-}
-
-HiddenClass *Runtime::resolveHiddenClassId(ClassId classId) {
-  if (classId == static_cast<ClassId>(GCBase::IDTracker::kInvalidNode)) {
-    return nullptr;
-  }
-  auto &classIdToIdxMap = inlineCacheProfiler_.getClassIdtoIndexMap();
-  auto *hiddenClassArray = inlineCacheProfiler_.getHiddenClassArray();
-  auto hcHermesVal =
-      hiddenClassArray->at(*this, classIdToIdxMap[classId]).unboxToHV(*this);
-  return vmcast<HiddenClass>(hcHermesVal);
-}
-
-#endif
 
 ExecutionStatus Runtime::notifyTimeout() {
   // TODO: allow a vector of callbacks.
