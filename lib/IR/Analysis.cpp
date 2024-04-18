@@ -245,34 +245,81 @@ hermes::getBlockTryDepths(Function *F) {
   return {std::move(blockTryDepths), maxDepth};
 }
 
-llvh::Optional<llvh::DenseMap<BasicBlock *, TryStartInst *>>
-hermes::findEnclosingTrysPerBlock(Function *F) {
-  bool hasTry = false;
+namespace {
+/// A Java-like iterator that returns basic blocks (in an undefined order) and
+/// provides the closest surrounding try (if any) for each. Additionally, it
+/// constructs a map from basic block to a surrounding try. The map can be
+/// moved out after the iterator has finished.
+class SurroundingTryBlockIterator {
+  bool hasTry_ = false;
   // Stack of basic blocks to visit, and the TryStartInst on entry of that
   // block.
-  llvh::SmallVector<std::pair<BasicBlock *, TryStartInst *>, 4> stack;
+  llvh::SmallVector<std::pair<BasicBlock *, TryStartInst *>, 4> stack_;
   // Holds a mapping from basic block -> innermost enclosing TryStartInst,
   // accounting for Catch/TryEnd.
-  llvh::DenseMap<BasicBlock *, TryStartInst *> blockToEnclosingTry;
-  stack.emplace_back(&*F->begin(), nullptr);
-  blockToEnclosingTry[&*F->begin()] = nullptr;
-  while (!stack.empty()) {
-    auto [BB, enclosingTry] = stack.pop_back_val();
+  llvh::DenseMap<BasicBlock *, TryStartInst *> blockToEnclosingTry_;
+
+  /// The current basic block.
+  BasicBlock *BB_;
+  /// The innermost enclosing TryStartInst for the current basic block.
+  TryStartInst *enclosingTry_;
+
+ public:
+  explicit SurroundingTryBlockIterator(Function *F) {
+    stack_.emplace_back(&*F->begin(), nullptr);
+    blockToEnclosingTry_[&*F->begin()] = nullptr;
+  }
+
+  /// Return true if the function has at least one try block.
+  bool hasTry() const {
+    return hasTry_;
+  }
+
+  /// Returns the current basic block. Successors can be modified but will
+  /// have no effect on the iterator.
+  BasicBlock *getBB() const {
+    return BB_;
+  }
+
+  /// Returns the innermost enclosing TryStartInst for the current basic block.
+  TryStartInst *getEnclosingTry() const {
+    return enclosingTry_;
+  }
+
+  /// Return a reference to the BB -> surrounding try map. It can be moved out.
+  /// This method can only be called once iteration has completed.
+  llvh::DenseMap<BasicBlock *, TryStartInst *> &getBlockToEnclosingTry() {
+    assert(
+        stack_.empty() && "Cannot access blockToEnclosingTry while iterating");
+    return blockToEnclosingTry_;
+  }
+
+  /// The main iteration method. Returns true if there is a current block and
+  /// that can be queried, followed by another call to next(). Returns false
+  /// if iteration has completed.
+  bool next() {
+    if (stack_.empty())
+      return false;
+
+    auto [BB, enclosingTry] = stack_.pop_back_val();
+    BB_ = BB;
+    enclosingTry_ = enclosingTry;
+
     // If this BB ends with a TryStartInst, store the try body block here.
     BasicBlock *tryBody = nullptr;
 
     if (auto *TSI = llvh::dyn_cast<TryStartInst>(BB->getTerminator())) {
       tryBody = TSI->getTryBody();
-      hasTry = true;
+      hasTry_ = true;
     } else if (llvh::isa<TryEndInst>(BB->getTerminator())) {
       // If this block ends with a TryEnd, pop off to the nearest try.
       assert(
           enclosingTry && "encountered TryEnd without an enclosing TryStart");
       assert(
-          blockToEnclosingTry.find(enclosingTry->getParent()) !=
-              blockToEnclosingTry.end() &&
+          blockToEnclosingTry_.find(enclosingTry->getParent()) !=
+              blockToEnclosingTry_.end() &&
           "enclosingTry should already be in map.");
-      enclosingTry = blockToEnclosingTry[enclosingTry->getParent()];
+      enclosingTry = blockToEnclosingTry_[enclosingTry->getParent()];
     }
 
     for (auto *succ : successors(BB)) {
@@ -282,15 +329,26 @@ hermes::findEnclosingTrysPerBlock(Function *F) {
           : enclosingTry;
 
       auto [_, inserted] =
-          blockToEnclosingTry.try_emplace(succ, succEnclosingTry);
+          blockToEnclosingTry_.try_emplace(succ, succEnclosingTry);
       if (inserted) {
         // Only explore this BB if we haven't visited it before.
-        stack.push_back({succ, succEnclosingTry});
+        stack_.push_back({succ, succEnclosingTry});
       }
     }
+
+    return true;
   }
-  if (hasTry) {
-    return {std::move(blockToEnclosingTry)};
+};
+} // anonymous namespace
+
+llvh::Optional<llvh::DenseMap<BasicBlock *, TryStartInst *>>
+hermes::findEnclosingTrysPerBlock(Function *F) {
+  SurroundingTryBlockIterator it(F);
+  while (it.next())
+    ;
+
+  if (it.hasTry()) {
+    return {std::move(it.getBlockToEnclosingTry())};
   } else {
     return llvh::None;
   }
