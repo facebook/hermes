@@ -2536,19 +2536,28 @@ class CatchInst : public Instruction {
   }
 };
 
-class ThrowInst : public TerminatorInst {
-  ThrowInst(const ThrowInst &) = delete;
-  void operator=(const ThrowInst &) = delete;
+class BaseThrowInst : public TerminatorInst {
+  BaseThrowInst(const BaseThrowInst &) = delete;
+  void operator=(const BaseThrowInst &) = delete;
+
+ protected:
+  explicit BaseThrowInst(ValueKind kind, Value *throwInfo)
+      : TerminatorInst(kind) {
+    pushOperand(throwInfo);
+  }
+  explicit BaseThrowInst(
+      const BaseThrowInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : TerminatorInst(src, operands) {}
 
  public:
-  enum { ThrownValueIdx };
+  /// ThrowInfoIdx is the index of a value that determines what is thrown. Its
+  /// interpretation depends on the instruction.
+  enum { ThrowInfoIdx };
 
-  explicit ThrowInst(Value *thrownValue)
-      : TerminatorInst(ValueKind::ThrowInstKind) {
-    pushOperand(thrownValue);
+  Value *getThrowInfo() const {
+    return getOperand(ThrowInfoIdx);
   }
-  explicit ThrowInst(const ThrowInst *src, llvh::ArrayRef<Value *> operands)
-      : TerminatorInst(src, operands) {}
 
   static bool hasOutput() {
     return false;
@@ -2561,69 +2570,61 @@ class ThrowInst : public TerminatorInst {
     return SideEffect{}.setThrow();
   }
 
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::ThrowInstKind ||
+        kind == ValueKind::ThrowTypeErrorInstKind;
+  }
+
+  unsigned getNumSuccessorsImpl() const {
+    return 0;
+  }
+  BasicBlock *getSuccessorImpl(unsigned idx) const {
+    llvm_unreachable("ThrowBaseInst has no successor!");
+  }
+  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
+    llvm_unreachable("ThrowBaseInst has no successor!");
+  }
+};
+
+class ThrowInst : public BaseThrowInst {
+  ThrowInst(const ThrowInst &) = delete;
+  void operator=(const ThrowInst &) = delete;
+
+ public:
+  explicit ThrowInst(Value *thrownValue)
+      : BaseThrowInst(ValueKind::ThrowInstKind, thrownValue) {}
+  explicit ThrowInst(const ThrowInst *src, llvh::ArrayRef<Value *> operands)
+      : BaseThrowInst(src, operands) {}
+
   Value *getThrownValue() const {
-    return getOperand(ThrownValueIdx);
+    return getThrowInfo();
   }
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::ThrowInstKind;
   }
-
-  unsigned getNumSuccessorsImpl() const {
-    return 0;
-  }
-  BasicBlock *getSuccessorImpl(unsigned idx) const {
-    llvm_unreachable("ThrowInst has no successor!");
-  }
-  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
-    llvm_unreachable("ThrowInst has no successor!");
-  }
 };
 
-class ThrowTypeErrorInst : public TerminatorInst {
+class ThrowTypeErrorInst : public BaseThrowInst {
   ThrowTypeErrorInst(const ThrowTypeErrorInst &) = delete;
   void operator=(const ThrowTypeErrorInst &) = delete;
 
  public:
-  enum { MessageIdx };
-
   explicit ThrowTypeErrorInst(Value *message)
-      : TerminatorInst(ValueKind::ThrowTypeErrorInstKind) {
-    pushOperand(message);
-  }
+      : BaseThrowInst(ValueKind::ThrowTypeErrorInstKind, message) {}
   explicit ThrowTypeErrorInst(
       const ThrowTypeErrorInst *src,
       llvh::ArrayRef<Value *> operands)
-      : TerminatorInst(src, operands) {}
-
-  static bool hasOutput() {
-    return false;
-  }
-  static bool isTyped() {
-    return false;
-  }
-
-  SideEffect getSideEffectImpl() const {
-    return SideEffect{}.setThrow();
-  }
+      : BaseThrowInst(src, operands) {}
 
   Value *getMessage() const {
-    return getOperand(MessageIdx);
+    return getThrowInfo();
   }
 
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::ThrowTypeErrorInstKind;
-  }
-
-  unsigned getNumSuccessorsImpl() const {
-    return 0;
-  }
-  BasicBlock *getSuccessorImpl(unsigned idx) const {
-    llvm_unreachable("ThrowInst has no successor!");
-  }
-  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
-    llvm_unreachable("ThrowInst has no successor!");
   }
 };
 
