@@ -132,9 +132,7 @@ void ESTreeIRGen::doIt() {
   LLVM_DEBUG(llvh::dbgs() << "Found Program decl.\n");
 
   // The function which will "execute" the module.
-  Function *topLevelFunction;
-
-  topLevelFunction = Builder.createTopLevelFunction(
+  Function *const topLevelFunction = Builder.createTopLevelFunction(
       ESTree::isStrict(Program->strictness),
       Program->getSemInfo()->customDirectives,
       Program->getSourceRange());

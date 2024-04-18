@@ -98,6 +98,9 @@ class LowerToStateMachine {
   BaseScopeInst *getParentOuterScope_;
   /// Builder used to generate IR.
   IRBuilder builder_;
+  /// Set to true if the resulting function contains try blocks. Used to decide
+  /// whether to run fixupCatchTargets.
+  bool resultContainsTrys_ = false;
 
   /// Represents the GeneratorState internal slot.
   /// ES6.0 25.3.2.
@@ -190,6 +193,10 @@ void LowerToStateMachine::convert() {
   // should be moved to the closure. So do the promotion after these
   // operations.
   moveCrossingValuesToOuter();
+
+  // If the result contains trys, fixup the throws.
+  if (resultContainsTrys_)
+    fixupCatchTargets(inner_);
 }
 
 void LowerToStateMachine::setupScopes() {
@@ -798,6 +805,8 @@ void LowerToStateMachine::lowerToSwitch(
         builder_.createLoadFrameInst(getParentOuterScope_, exceptionSwitchIdx),
         defaultExceptionSwitchBB);
   }
+
+  resultContainsTrys_ = hasExistingTrys;
 }
 
 BasicBlock *LowerToStateMachine::createCompletedStateBlock(

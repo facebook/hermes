@@ -7,6 +7,7 @@
 
 #include "ESTreeIRGen.h"
 
+#include "hermes/IR/Analysis.h"
 #include "hermes/IR/IRUtils.h"
 #include "hermes/IR/Instrs.h"
 #include "llvh/ADT/SmallString.h"
@@ -838,8 +839,7 @@ void ESTreeIRGen::emitFunctionEpilogue(Value *returnValue) {
 
   curFunction()->function->clearStatementCount();
 
-  // Delete any unreachable blocks produced while emitting this function.
-  deleteUnreachableBasicBlocks(curFunction()->function);
+  onCompiledFunction(curFunction()->function);
 }
 
 Function *ESTreeIRGen::genFieldInitFunction() {
@@ -984,6 +984,13 @@ Function *ESTreeIRGen::genSyntaxErrorFunction(
       Builder.getLiteralString(error)));
 
   return function;
+}
+
+void ESTreeIRGen::onCompiledFunction(hermes::Function *F) {
+  // Delete any unreachable blocks produced while emitting this function.
+  deleteUnreachableBasicBlocks(curFunction()->function);
+
+  fixupCatchTargets(F);
 }
 
 } // namespace irgen

@@ -67,7 +67,7 @@ function *foo() {
 // CHECK-NEXT:  %17 = LoadFrameInst (:any) %4: environment, [%VS1.catchVal]: any
 // CHECK-NEXT:        StoreStackInst %17: any, %3: any
 // CHECK-NEXT:        StoreFrameInst %4: environment, 0: number, [%VS1.exception_handler_idx]: number
-// CHECK-NEXT:        ThrowInst %17: any
+// CHECK-NEXT:        ThrowInst %17: any, %BB22
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:        CmpBrStrictlyEqualInst %1: number, 1: number, %BB10, %BB11
 // CHECK-NEXT:%BB6:
@@ -83,14 +83,14 @@ function *foo() {
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:        StoreStackInst 3: number, %2: number
 // CHECK-NEXT:        StoreFrameInst %4: environment, 3: number, [%VS1.generator_state]: number
-// CHECK-NEXT:        ThrowInst %0: any
+// CHECK-NEXT:        ThrowInst %0: any, %BB22
 // CHECK-NEXT:%BB9:
 // CHECK-NEXT:  %33 = FEqualInst (:boolean) %1: number, 2: number
 // CHECK-NEXT:        CondBranchInst %33: boolean, %BB3, %BB2
 // CHECK-NEXT:%BB10:
 // CHECK-NEXT:        StoreStackInst 3: number, %2: number
 // CHECK-NEXT:        StoreFrameInst %4: environment, 3: number, [%VS1.generator_state]: number
-// CHECK-NEXT:        ThrowInst %0: any
+// CHECK-NEXT:        ThrowInst %0: any, %BB22
 // CHECK-NEXT:%BB11:
 // CHECK-NEXT:  %38 = FEqualInst (:boolean) %1: number, 2: number
 // CHECK-NEXT:        CondBranchInst %38: boolean, %BB7, %BB6

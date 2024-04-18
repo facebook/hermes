@@ -46,7 +46,7 @@ constructCatchMapHelper(
 
   // Stack to DFS through the CFG.
   llvh::SmallVector<BasicBlock *, 4> stack;
-  // Track each of the basic blocks that start with a TryEndInst corresponding
+  // Track each of the basic blocks that follow a TryEndInst corresponding
   // to the current try.
   llvh::SmallPtrSet<BasicBlock *, 4> tryEndBlocks;
 
@@ -71,6 +71,8 @@ constructCatchMapHelper(
         // This block marks the end of a try region. Add its successor to
         // tryEndBlocks but not to the stack. It will be visited by the caller.
         tryEndBlocks.insert(tryEndInst->getBranchDest());
+      } else if (llvh::isa<BaseThrowInst>(currentBlock->getTerminator())) {
+        // Do nothing. Don't follow the catch target.
       } else {
         // Common case: no TryStartInst, we add successors to the stack.
         for (BasicBlock *successor : successors(currentBlock)) {

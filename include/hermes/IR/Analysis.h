@@ -193,6 +193,11 @@ std::pair<llvh::DenseMap<BasicBlock *, size_t>, size_t> getBlockTryDepths(
 llvh::Optional<llvh::DenseMap<BasicBlock *, TryStartInst *>>
 findEnclosingTrysPerBlock(Function *F);
 
+/// Update that all throw terminators to have correct catch targets: the closest
+/// surrounding catch or null, of there is none.
+/// \return true if anything changed.
+bool fixupCatchTargets(Function *F);
+
 } // end namespace hermes
 
 #endif

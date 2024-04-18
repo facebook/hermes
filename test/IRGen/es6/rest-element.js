@@ -461,7 +461,7 @@ function f4(t) {
 // CHECK-NEXT:         BranchInst %BB34
 // CHECK-NEXT:%BB34:
 // CHECK-NEXT:  %108 = LoadStackInst (:any) %71: any
-// CHECK-NEXT:         ThrowInst %108: any
+// CHECK-NEXT:         ThrowInst %108: any, %BB16
 // CHECK-NEXT:%BB35:
 // CHECK-NEXT:         BranchInst %BB17
 // CHECK-NEXT:%BB36:

@@ -1102,6 +1102,10 @@ class ESTreeIRGen {
   /// backend when encountered.
   static void genDummyFunction(Function *dummy);
 
+  /// Invoked after IR for a function has been emitted to perform any needed
+  /// adjustments. Specifically, it updates all catch targets.
+  void onCompiledFunction(Function *F);
+
   /// @}
 
  private:

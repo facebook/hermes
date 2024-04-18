@@ -219,7 +219,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:        BranchInst %BB7
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %24 = LoadFrameInst (:any) %1: environment, [%VS1.i]: any
-// CHECK-NEXT:        ThrowInst %24: any
+// CHECK-NEXT:        ThrowInst %24: any, %BB1
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %26 = LoadFrameInst (:any) %1: environment, [%VS1.i]: any
 // CHECK-NEXT:  %27 = BinaryLessThanInst (:boolean) %26: any, 10: number
@@ -397,7 +397,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %28 = LoadFrameInst (:any) %1: environment, [%VS5.i]: any
 // CHECK-NEXT:  %29 = BinaryAddInst (:any) %28: any, 7: number
 // CHECK-NEXT:        StoreFrameInst %1: environment, %29: any, [%VS5.i]: any
-// CHECK-NEXT:        ThrowInst %27: any
+// CHECK-NEXT:        ThrowInst %27: any, %BB4
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:        TryEndInst %BB4, %BB28
 // CHECK-NEXT:%BB9:
@@ -421,7 +421,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %46 = LoadFrameInst (:any) %1: environment, [%VS5.i]: any
 // CHECK-NEXT:  %47 = BinaryAddInst (:any) %46: any, 10: number
 // CHECK-NEXT:        StoreFrameInst %1: environment, %47: any, [%VS5.i]: any
-// CHECK-NEXT:        ThrowInst %45: any
+// CHECK-NEXT:        ThrowInst %45: any, %BB10
 // CHECK-NEXT:%BB14:
 // CHECK-NEXT:        TryEndInst %BB10, %BB26
 // CHECK-NEXT:%BB15:
@@ -557,7 +557,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %52 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
 // CHECK-NEXT:  %53 = BinaryAddInst (:any) %52: any, 7: number
 // CHECK-NEXT:        StoreFrameInst %1: environment, %53: any, [%VS6.i]: any
-// CHECK-NEXT:        ThrowInst %51: any
+// CHECK-NEXT:        ThrowInst %51: any, %BB1
 // CHECK-NEXT:%BB17:
 // CHECK-NEXT:        BranchInst %BB9
 // CHECK-NEXT:%BB18:
@@ -588,9 +588,9 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %75 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
 // CHECK-NEXT:  %76 = BinaryAddInst (:any) %75: any, 7: number
 // CHECK-NEXT:        StoreFrameInst %1: environment, %76: any, [%VS6.i]: any
-// CHECK-NEXT:        ThrowInst %74: any
+// CHECK-NEXT:        ThrowInst %74: any, %BB1
 // CHECK-NEXT:%BB25:
-// CHECK-NEXT:        ThrowInst %28: any
+// CHECK-NEXT:        ThrowInst %28: any, %BB1
 // CHECK-NEXT:%BB26:
 // CHECK-NEXT:        TryStartInst %BB27, %BB29
 // CHECK-NEXT:%BB27:

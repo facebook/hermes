@@ -8,6 +8,7 @@
 #define DEBUG_TYPE "inline"
 #include "hermes/Optimizer/Scalar/Inlining.h"
 
+#include "hermes/IR/Analysis.h"
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/IRUtils.h"
@@ -499,6 +500,7 @@ bool Inlining::runOnModule(Module *M) {
 
   // Record all functions that have had a call inlined into them so that we can
   // any newly created dead blocks in a single pass.
+  // We also use this to fixup all inlined throws.
   llvh::SmallDenseSet<Function *, 8> intoFunctions;
   std::vector<Function *> functionOrder = orderFunctions(M);
 
@@ -592,8 +594,11 @@ bool Inlining::runOnModule(Module *M) {
   }
 
   // Remove all unreachable blocks.
-  for (Function *F : intoFunctions)
+  // Fixup all throws.
+  for (Function *F : intoFunctions) {
     changed |= deleteUnreachableBasicBlocks(F);
+    changed |= fixupCatchTargets(F);
+  }
 
   return changed;
 }

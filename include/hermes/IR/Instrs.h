@@ -2581,18 +2581,25 @@ class BaseThrowInst : public TerminatorInst {
   }
   /// Update the catch target to match \p optionalCatchTarget, adding or
   /// removing as necessary.
-  void updateCatchTarget(BasicBlock *optionalCatchTarget) {
+  /// \return true if anything changed.
+  bool updateCatchTarget(BasicBlock *optionalCatchTarget) {
     if (optionalCatchTarget) {
       // Add the catch target.
-      if (!hasCatchTarget())
+      if (!hasCatchTarget()) {
         pushOperand(optionalCatchTarget);
-      else
+        return true;
+      } else if (getOperand(CatchTargetBlockIdx) != optionalCatchTarget) {
         setOperand(optionalCatchTarget, CatchTargetBlockIdx);
+        return true;
+      }
     } else {
       // Remove the catch target.
-      if (hasCatchTarget())
+      if (hasCatchTarget()) {
         removeOperand(CatchTargetBlockIdx);
+        return true;
+      }
     }
+    return false;
   }
 
   static bool hasOutput() {

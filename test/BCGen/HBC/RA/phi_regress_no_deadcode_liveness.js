@@ -262,7 +262,7 @@ function b(d=([[[[{z:[{}]}]]]]=arguments)) {}
 // CHKRA-NEXT:  $Reg13 = BranchInst %BB53
 // CHKRA-NEXT:%BB53:
 // CHKRA-NEXT:  $Reg12 = LoadStackInst (:any) $Reg12
-// CHKRA-NEXT:  $Reg12 = ThrowInst $Reg12
+// CHKRA-NEXT:  $Reg12 = ThrowInst $Reg12, %BB36
 // CHKRA-NEXT:%BB54:
 // CHKRA-NEXT:  $Reg15 = LoadStackInst (:any) $Reg10
 // CHKRA-NEXT:  $Reg15 = IteratorCloseInst (:any) $Reg15, false: boolean
@@ -275,7 +275,7 @@ function b(d=([[[[{z:[{}]}]]]]=arguments)) {}
 // CHKRA-NEXT:  $Reg10 = BranchInst %BB57
 // CHKRA-NEXT:%BB57:
 // CHKRA-NEXT:  $Reg9 = LoadStackInst (:any) $Reg9
-// CHKRA-NEXT:  $Reg9 = ThrowInst $Reg9
+// CHKRA-NEXT:  $Reg9 = ThrowInst $Reg9, %BB27
 // CHKRA-NEXT:%BB58:
 // CHKRA-NEXT:  $Reg15 = LoadStackInst (:any) $Reg7
 // CHKRA-NEXT:  $Reg15 = IteratorCloseInst (:any) $Reg15, false: boolean
@@ -288,7 +288,7 @@ function b(d=([[[[{z:[{}]}]]]]=arguments)) {}
 // CHKRA-NEXT:  $Reg7 = BranchInst %BB61
 // CHKRA-NEXT:%BB61:
 // CHKRA-NEXT:  $Reg6 = LoadStackInst (:any) $Reg6
-// CHKRA-NEXT:  $Reg6 = ThrowInst $Reg6
+// CHKRA-NEXT:  $Reg6 = ThrowInst $Reg6, %BB18
 // CHKRA-NEXT:%BB62:
 // CHKRA-NEXT:  $Reg15 = LoadStackInst (:any) $Reg4
 // CHKRA-NEXT:  $Reg15 = IteratorCloseInst (:any) $Reg15, false: boolean
@@ -301,7 +301,7 @@ function b(d=([[[[{z:[{}]}]]]]=arguments)) {}
 // CHKRA-NEXT:  $Reg4 = BranchInst %BB65
 // CHKRA-NEXT:%BB65:
 // CHKRA-NEXT:  $Reg1 = LoadStackInst (:any) $Reg1
-// CHKRA-NEXT:  $Reg1 = ThrowInst $Reg1
+// CHKRA-NEXT:  $Reg1 = ThrowInst $Reg1, %BB9
 // CHKRA-NEXT:%BB66:
 // CHKRA-NEXT:  $Reg15 = LoadStackInst (:any) $Reg2
 // CHKRA-NEXT:  $Reg15 = IteratorCloseInst (:any) $Reg15, false: boolean

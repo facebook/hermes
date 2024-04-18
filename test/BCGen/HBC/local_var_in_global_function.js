@@ -54,7 +54,7 @@ print(e);
 // RA-NEXT:  $Reg0 = ReturnInst $Reg0
 // RA-NEXT:%BB2:
 // RA-NEXT:  $Reg2 = HBCLoadConstInst (:string) "local": string
-// RA-NEXT:  $Reg2 = ThrowInst $Reg2
+// RA-NEXT:  $Reg2 = ThrowInst $Reg2, %BB1
 // RA-NEXT:function_end
 
 // RA:scope %VS0 [e: any]

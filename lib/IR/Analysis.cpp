@@ -233,6 +233,8 @@ hermes::getBlockTryDepths(Function *F) {
       --depth;
       if (visited.insert(TEI->getBranchDest()).second)
         stack.emplace_back(TEI->getBranchDest(), depth);
+    } else if (llvh::isa<BaseThrowInst>(BB->getTerminator())) {
+      // Do nothing.
     } else {
       // If the block ends with a TryStartInst, increment the depth
       if (llvh::isa<TryStartInst>(BB->getTerminator()))
@@ -320,6 +322,19 @@ class SurroundingTryBlockIterator {
               blockToEnclosingTry_.end() &&
           "enclosingTry should already be in map.");
       enclosingTry = blockToEnclosingTry_[enclosingTry->getParent()];
+    } else if (auto *BTI = llvh::dyn_cast<BaseThrowInst>(BB->getTerminator())) {
+      // If this block ends with a BaseThrowInst with a catch target, pop off to
+      // the nearest try.
+      if (BTI->hasCatchTarget()) {
+        assert(
+            enclosingTry &&
+            "encountered BaseThrowInst with catch target without an enclosing TryStart");
+        assert(
+            blockToEnclosingTry_.find(enclosingTry->getParent()) !=
+                blockToEnclosingTry_.end() &&
+            "BaseThrowInst's enclosingTry should already be in map.");
+        enclosingTry = blockToEnclosingTry_[enclosingTry->getParent()];
+      }
     }
 
     for (auto *succ : successors(BB)) {
@@ -352,6 +367,23 @@ hermes::findEnclosingTrysPerBlock(Function *F) {
   } else {
     return llvh::None;
   }
+}
+
+bool hermes::fixupCatchTargets(Function *F) {
+  SurroundingTryBlockIterator it(F);
+  bool changed = false;
+
+  while (it.next()) {
+    BasicBlock *BB = it.getBB();
+    TryStartInst *enclosingTry = it.getEnclosingTry();
+
+    if (auto *BTI = llvh::dyn_cast<BaseThrowInst>(BB->getTerminator())) {
+      changed |= BTI->updateCatchTarget(
+          enclosingTry ? enclosingTry->getCatchTarget() : nullptr);
+    }
+  }
+
+  return changed;
 }
 
 #undef DEBUG_TYPE

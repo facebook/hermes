@@ -196,7 +196,7 @@ var [a, [b = 1, c] = [,2]] = x;
 // CHECK-NEXT:         BranchInst %BB45
 // CHECK-NEXT:%BB45:
 // CHECK-NEXT:  %135 = LoadStackInst (:any) %75: any
-// CHECK-NEXT:         ThrowInst %135: any
+// CHECK-NEXT:         ThrowInst %135: any, %BB18
 // CHECK-NEXT:%BB46:
 // CHECK-NEXT:         BranchInst %BB19
 // CHECK-NEXT:%BB47:

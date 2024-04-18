@@ -341,6 +341,10 @@ bool Verifier::verifyTryStructure(const Function &F) {
                         << iLabel(*enclosingTry) << " has not been closed.");
     } else if (auto *TSI = llvh::dyn_cast<TryStartInst>(BB->getTerminator())) {
       tryBody = TSI->getTryBody();
+      AssertIWithMsg(
+          (*TSI),
+          llvh::isa<CatchInst>(TSI->getCatchTarget()->front()),
+          "Catch target must start with a CatchInst.");
     } else if (auto *TEI = llvh::dyn_cast<TryEndInst>(BB->getTerminator())) {
       // If this block ends with a TryEnd, pop off to the nearest try.
       AssertIWithMsg(
@@ -356,6 +360,18 @@ bool Verifier::verifyTryStructure(const Function &F) {
               blockToEnclosingTry.end() &&
           "enclosingTry should already be in map.");
       enclosingTry = blockToEnclosingTry[enclosingTry->getParent()];
+    } else if (auto *BTI = llvh::dyn_cast<BaseThrowInst>(BB->getTerminator())) {
+      if (BTI->hasCatchTarget()) {
+        AssertIWithMsg(
+            (*BB->getTerminator()),
+            enclosingTry != nullptr,
+            "throw with catch tarhet outside of any TryStartInst context.");
+        assert(
+            blockToEnclosingTry.find(enclosingTry->getParent()) !=
+                blockToEnclosingTry.end() &&
+            "throw's enclosingTry should already be in map.");
+        enclosingTry = blockToEnclosingTry[enclosingTry->getParent()];
+      }
     }
 
     for (auto *succ : successors(BB)) {
@@ -381,6 +397,37 @@ bool Verifier::verifyTryStructure(const Function &F) {
       }
     }
   }
+
+  // Verify that the optional catch target is set correctly for all throws.
+  for (auto &BB : F) {
+    const TryStartInst *enclosingTry = blockToEnclosingTry.lookup(&BB);
+    for (auto &I : BB) {
+      auto *BTI = llvh::dyn_cast<BaseThrowInst>(&I);
+      if (!BTI)
+        continue;
+      if (BTI->hasCatchTarget()) {
+        AssertIWithMsg(
+            (*BTI),
+            enclosingTry != nullptr,
+            "BaseThrowInst "
+                << iLabel(*BTI)
+                << " has catch target outside of any TryStartInst context.");
+        AssertIWithMsg(
+            (*BTI),
+            enclosingTry &&
+                enclosingTry->getCatchTarget() == BTI->getCatchTarget(),
+            "BaseThrowInst " << iLabel(*BTI)
+                             << " with incorrect catch target.");
+      } else {
+        AssertIWithMsg(
+            (*BTI),
+            enclosingTry == nullptr,
+            "BaseThrowInst without a catch target "
+                << iLabel(*BTI) << " inside a TryStartInst context.");
+      }
+    }
+  }
+
   return true;
 }
 
@@ -1002,12 +1049,22 @@ bool Verifier::visitCatchInst(const CatchInst &Inst) {
       &Inst.getParent()->front() == &Inst,
       "Catch instruction must be the first in a basic block");
   unsigned tryStarts = 0;
-  unsigned nonTryEnds = 0;
+  unsigned normalInsts = 0;
   for (const auto &predBB : predecessors(Inst.getParent())) {
-    if (llvh::isa<TryStartInst>(predBB->getTerminator())) {
+    if (auto *TSI = llvh::dyn_cast<TryStartInst>(predBB->getTerminator())) {
       ++tryStarts;
-    } else if (!llvh::isa<TryEndInst>(predBB->getTerminator())) {
-      ++nonTryEnds;
+      AssertIWithMsg(
+          (*TSI),
+          TSI->getCatchTarget() == Inst.getParent(),
+          "CatchInst must be the catch target of its TryStartInst.");
+    } else if (
+        auto *TEI = llvh::dyn_cast<TryEndInst>(predBB->getTerminator())) {
+      AssertIWithMsg(
+          (*TEI),
+          TEI->getCatchTarget() == Inst.getParent(),
+          "CatchInst must be the catch target of its TryEndInst.");
+    } else if (!llvh::isa<BaseThrowInst>(predBB->getTerminator())) {
+      ++normalInsts;
     }
   }
   AssertIWithMsg(
@@ -1016,27 +1073,19 @@ bool Verifier::visitCatchInst(const CatchInst &Inst) {
       "CatchInst must have exactly one TryStart predecessor.");
   AssertIWithMsg(
       Inst,
-      nonTryEnds == 0,
+      normalInsts == 0,
       "CatchInst must have only TryStart and TryEnd predecessors.");
   return true;
 }
 
 bool Verifier::visitThrowInst(const ThrowInst &Inst) {
   AssertIWithMsg(Inst, isTerminator(&Inst), "ThrowInst must be a terminator");
-  AssertIWithMsg(
-      Inst,
-      Inst.getNumSuccessors() == 0,
-      "ThrowInst should not have successors");
   return true;
 }
 
 bool Verifier::visitThrowTypeErrorInst(const ThrowTypeErrorInst &Inst) {
   AssertIWithMsg(
       Inst, isTerminator(&Inst), "ThrowTypeErrorInst must be a terminator");
-  AssertIWithMsg(
-      Inst,
-      Inst.getNumSuccessors() == 0,
-      "ThrowTypeErrorInst should not have successors");
   return true;
 }
 
