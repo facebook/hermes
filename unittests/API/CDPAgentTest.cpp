@@ -2868,6 +2868,28 @@ TEST_F(CDPAgentTest, RuntimeConsoleBuffer) {
   }
 }
 
+TEST_F(CDPAgentTest, RuntimeDiscardConsoleEntries) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Runtime.enable", msgId++);
+
+  waitFor<bool>([this](auto promise) {
+    runtimeThread_->add([this, promise]() {
+      cdpDebugAPI_->addConsoleMessage(
+          ConsoleMessage{0.0, ConsoleAPIType::kLog, std::vector<jsi::Value>()});
+      promise->set_value(true);
+    });
+  });
+
+  expectNotification("Runtime.consoleAPICalled");
+
+  sendAndCheckResponse("Runtime.discardConsoleEntries", msgId++);
+  sendAndCheckResponse("Runtime.disable", msgId++);
+  sendAndCheckResponse("Runtime.enable", msgId++);
+
+  expectNothing();
+}
+
 TEST_F(CDPAgentTest, ProfilerBasicOperation) {
   auto setStopFlag = llvh::make_scope_exit([this] {
     // break out of loop

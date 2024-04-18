@@ -326,6 +326,14 @@ void RuntimeDomainAgent::disable(const m::runtime::DisableRequest &req) {
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
+void RuntimeDomainAgent::discardConsoleEntries(
+    const m::runtime::DiscardConsoleEntriesRequest &req) {
+  // Allow this message even if domain is not enabled to match V8 behavior.
+
+  consoleMessageStorage_.clear();
+  sendResponseToClient(m::makeOkResponse(req.id));
+}
+
 void RuntimeDomainAgent::getHeapUsage(
     const m::runtime::GetHeapUsageRequest &req) {
   // Allow this message even if domain is not enabled to match V8 behavior.

@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<8903bc0e900a8cad42ef2719b464641b>>
+// @generated SignedSource<<443255d7dd433634cec8a92c7d4f1d4c>>
 
 #pragma once
 
@@ -59,6 +59,7 @@ struct CompileScriptResponse;
 struct ConsoleAPICalledNotification;
 struct CustomPreview;
 struct DisableRequest;
+struct DiscardConsoleEntriesRequest;
 struct EnableRequest;
 struct EntryPreview;
 struct EvaluateRequest;
@@ -153,6 +154,7 @@ struct RequestHandler {
   virtual void handle(const runtime::CallFunctionOnRequest &req) = 0;
   virtual void handle(const runtime::CompileScriptRequest &req) = 0;
   virtual void handle(const runtime::DisableRequest &req) = 0;
+  virtual void handle(const runtime::DiscardConsoleEntriesRequest &req) = 0;
   virtual void handle(const runtime::EnableRequest &req) = 0;
   virtual void handle(const runtime::EvaluateRequest &req) = 0;
   virtual void handle(const runtime::GetHeapUsageRequest &req) = 0;
@@ -195,6 +197,7 @@ struct NoopRequestHandler : public RequestHandler {
   void handle(const runtime::CallFunctionOnRequest &req) override {}
   void handle(const runtime::CompileScriptRequest &req) override {}
   void handle(const runtime::DisableRequest &req) override {}
+  void handle(const runtime::DiscardConsoleEntriesRequest &req) override {}
   void handle(const runtime::EnableRequest &req) override {}
   void handle(const runtime::EvaluateRequest &req) override {}
   void handle(const runtime::GetHeapUsageRequest &req) override {}
@@ -847,6 +850,15 @@ struct runtime::CompileScriptRequest : public Request {
 struct runtime::DisableRequest : public Request {
   DisableRequest();
   static std::unique_ptr<DisableRequest> tryMake(const JSONObject *obj);
+
+  JSONValue *toJsonVal(JSONFactory &factory) const override;
+  void accept(RequestHandler &handler) const override;
+};
+
+struct runtime::DiscardConsoleEntriesRequest : public Request {
+  DiscardConsoleEntriesRequest();
+  static std::unique_ptr<DiscardConsoleEntriesRequest> tryMake(
+      const JSONObject *obj);
 
   JSONValue *toJsonVal(JSONFactory &factory) const override;
   void accept(RequestHandler &handler) const override;
