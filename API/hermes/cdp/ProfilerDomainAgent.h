@@ -39,4 +39,4 @@ class ProfilerDomainAgent : public DomainAgent {
 } // namespace hermes
 } // namespace facebook
 
-#endif // HERMES_CDP_DEBUGGERDOMAINAGENT_H
+#endif // HERMES_CDP_PROFILERDOMAINAGENT_H
