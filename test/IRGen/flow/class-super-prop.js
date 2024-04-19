@@ -96,14 +96,13 @@ class B extends A {
 // CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS3: any, %1: environment
 // CHECK-NEXT:  %3 = LoadParamInst (:number) %x: number
 // CHECK-NEXT:       StoreFrameInst %2: environment, %3: number, [%VS3.x]: any
-// CHECK-NEXT:  %5 = ResolveScopeInst (:environment) %VS1: any, %VS3: any, %2: environment
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) %5: environment, [%VS1.A]: any
-// CHECK-NEXT:  %7 = CheckedTypeCastInst (:object) %6: any, type(object)
-// CHECK-NEXT:  %8 = GetNewTargetInst (:object) %new.target: object
-// CHECK-NEXT:  %9 = LoadFrameInst (:any) %2: environment, [%VS3.x]: any
-// CHECK-NEXT:  %10 = CheckedTypeCastInst (:number) %9: any, type(number)
-// CHECK-NEXT:  %11 = CallInst [njsf] (:any) %7: object, empty: any, empty: any, %8: object, %0: object, %10: number
-// CHECK-NEXT:  %12 = CheckedTypeCastInst (:undefined) %11: any, type(undefined)
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) %1: environment, [%VS1.A]: any
+// CHECK-NEXT:  %6 = CheckedTypeCastInst (:object) %5: any, type(object)
+// CHECK-NEXT:  %7 = GetNewTargetInst (:object) %new.target: object
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %2: environment, [%VS3.x]: any
+// CHECK-NEXT:  %9 = CheckedTypeCastInst (:number) %8: any, type(number)
+// CHECK-NEXT:  %10 = CallInst [njsf] (:any) %6: object, empty: any, empty: any, %7: object, %0: object, %9: number
+// CHECK-NEXT:  %11 = CheckedTypeCastInst (:undefined) %10: any, type(undefined)
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

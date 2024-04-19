@@ -87,18 +87,15 @@ function check_after_check() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS1: any, %VS3: any, %1: environment
-// CHECK-NEXT:  %3 = LoadFrameInst (:any|empty) %2: environment, [%VS1.x]: any|empty
-// CHECK-NEXT:  %4 = ThrowIfInst (:any) %3: any|empty, type(empty)
-// CHECK-NEXT:       StoreFrameInst %2: environment, 10: number, [%VS1.x]: any|empty
-// CHECK-NEXT:  %6 = ResolveScopeInst (:environment) %VS1: any, %VS3: any, %1: environment
-// CHECK-NEXT:  %7 = LoadFrameInst (:any) %6: environment, [%VS1.p]: any
-// CHECK-NEXT:       CondBranchInst %7: any, %BB1, %BB2
+// CHECK-NEXT:  %2 = LoadFrameInst (:any|empty) %0: environment, [%VS1.x]: any|empty
+// CHECK-NEXT:  %3 = ThrowIfInst (:any) %2: any|empty, type(empty)
+// CHECK-NEXT:       StoreFrameInst %0: environment, 10: number, [%VS1.x]: any|empty
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) %0: environment, [%VS1.p]: any
+// CHECK-NEXT:       CondBranchInst %5: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ResolveScopeInst (:environment) %VS1: any, %VS3: any, %1: environment
-// CHECK-NEXT:  %10 = LoadFrameInst (:any|empty) %9: environment, [%VS1.x]: any|empty
-// CHECK-NEXT:  %11 = ThrowIfInst (:any) %10: any|empty, type(empty)
-// CHECK-NEXT:        ReturnInst %11: any
+// CHECK-NEXT:  %7 = LoadFrameInst (:any|empty) %0: environment, [%VS1.x]: any|empty
+// CHECK-NEXT:  %8 = ThrowIfInst (:any) %7: any|empty, type(empty)
+// CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB3:
@@ -113,33 +110,28 @@ function check_after_check() {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %p: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS4.p]: any
-// CHECK-NEXT:  %4 = ResolveScopeInst (:environment) %VS2: any, %VS4: any, %1: environment
-// CHECK-NEXT:  %5 = LoadFrameInst (:any|empty) %4: environment, [%VS2.x]: any|empty
-// CHECK-NEXT:  %6 = ThrowIfInst (:any) %5: any|empty, type(empty)
-// CHECK-NEXT:  %7 = UnaryIncInst (:number|bigint) %6: any
-// CHECK-NEXT:  %8 = ResolveScopeInst (:environment) %VS2: any, %VS4: any, %1: environment
-// CHECK-NEXT:  %9 = LoadFrameInst (:any|empty) %8: environment, [%VS2.x]: any|empty
-// CHECK-NEXT:  %10 = ThrowIfInst (:any) %9: any|empty, type(empty)
-// CHECK-NEXT:        StoreFrameInst %8: environment, %7: number|bigint, [%VS2.x]: any|empty
-// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS4.p]: any
-// CHECK-NEXT:        CondBranchInst %12: any, %BB1, %BB2
+// CHECK-NEXT:  %4 = LoadFrameInst (:any|empty) %0: environment, [%VS2.x]: any|empty
+// CHECK-NEXT:  %5 = ThrowIfInst (:any) %4: any|empty, type(empty)
+// CHECK-NEXT:  %6 = UnaryIncInst (:number|bigint) %5: any
+// CHECK-NEXT:  %7 = LoadFrameInst (:any|empty) %0: environment, [%VS2.x]: any|empty
+// CHECK-NEXT:  %8 = ThrowIfInst (:any) %7: any|empty, type(empty)
+// CHECK-NEXT:       StoreFrameInst %0: environment, %6: number|bigint, [%VS2.x]: any|empty
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS4.p]: any
+// CHECK-NEXT:        CondBranchInst %10: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %14 = ResolveScopeInst (:environment) %VS2: any, %VS4: any, %1: environment
-// CHECK-NEXT:  %15 = LoadFrameInst (:any|empty) %14: environment, [%VS2.x]: any|empty
+// CHECK-NEXT:  %12 = LoadFrameInst (:any|empty) %0: environment, [%VS2.x]: any|empty
+// CHECK-NEXT:  %13 = ThrowIfInst (:any) %12: any|empty, type(empty)
+// CHECK-NEXT:  %14 = UnaryIncInst (:number|bigint) %13: any
+// CHECK-NEXT:  %15 = LoadFrameInst (:any|empty) %0: environment, [%VS2.x]: any|empty
 // CHECK-NEXT:  %16 = ThrowIfInst (:any) %15: any|empty, type(empty)
-// CHECK-NEXT:  %17 = UnaryIncInst (:number|bigint) %16: any
-// CHECK-NEXT:  %18 = ResolveScopeInst (:environment) %VS2: any, %VS4: any, %1: environment
-// CHECK-NEXT:  %19 = LoadFrameInst (:any|empty) %18: environment, [%VS2.x]: any|empty
-// CHECK-NEXT:  %20 = ThrowIfInst (:any) %19: any|empty, type(empty)
-// CHECK-NEXT:        StoreFrameInst %18: environment, %17: number|bigint, [%VS2.x]: any|empty
+// CHECK-NEXT:        StoreFrameInst %0: environment, %14: number|bigint, [%VS2.x]: any|empty
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %24 = ResolveScopeInst (:environment) %VS2: any, %VS4: any, %1: environment
-// CHECK-NEXT:  %25 = LoadFrameInst (:any|empty) %24: environment, [%VS2.x]: any|empty
-// CHECK-NEXT:  %26 = ThrowIfInst (:any) %25: any|empty, type(empty)
-// CHECK-NEXT:        ReturnInst %26: any
+// CHECK-NEXT:  %20 = LoadFrameInst (:any|empty) %0: environment, [%VS2.x]: any|empty
+// CHECK-NEXT:  %21 = ThrowIfInst (:any) %20: any|empty, type(empty)
+// CHECK-NEXT:        ReturnInst %21: any
 // CHECK-NEXT:function_end
 
 // CHKOPT:scope %VS0 []
@@ -197,18 +189,15 @@ function check_after_check() {
 // CHKOPT-NEXT:%BB0:
 // CHKOPT-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHKOPT-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
-// CHKOPT-NEXT:  %2 = ResolveScopeInst (:environment) %VS1: any, %VS3: any, %1: environment
-// CHKOPT-NEXT:  %3 = LoadFrameInst (:empty|undefined|number) %2: environment, [%VS1.x]: empty|undefined|number
-// CHKOPT-NEXT:  %4 = ThrowIfInst (:undefined|number) %3: empty|undefined|number, type(empty)
-// CHKOPT-NEXT:       StoreFrameInst %2: environment, 10: number, [%VS1.x]: empty|undefined|number
-// CHKOPT-NEXT:  %6 = ResolveScopeInst (:environment) %VS1: any, %VS3: any, %1: environment
-// CHKOPT-NEXT:  %7 = LoadFrameInst (:any) %6: environment, [%VS1.p]: any
-// CHKOPT-NEXT:       CondBranchInst %7: any, %BB1, %BB2
+// CHKOPT-NEXT:  %2 = LoadFrameInst (:empty|undefined|number) %0: environment, [%VS1.x]: empty|undefined|number
+// CHKOPT-NEXT:  %3 = ThrowIfInst (:undefined|number) %2: empty|undefined|number, type(empty)
+// CHKOPT-NEXT:       StoreFrameInst %0: environment, 10: number, [%VS1.x]: empty|undefined|number
+// CHKOPT-NEXT:  %5 = LoadFrameInst (:any) %0: environment, [%VS1.p]: any
+// CHKOPT-NEXT:       CondBranchInst %5: any, %BB1, %BB2
 // CHKOPT-NEXT:%BB1:
-// CHKOPT-NEXT:  %9 = ResolveScopeInst (:environment) %VS1: any, %VS3: any, %1: environment
-// CHKOPT-NEXT:  %10 = LoadFrameInst (:empty|undefined|number) %9: environment, [%VS1.x]: empty|undefined|number
-// CHKOPT-NEXT:  %11 = UnionNarrowTrustedInst (:undefined|number) %10: empty|undefined|number
-// CHKOPT-NEXT:        ReturnInst %11: undefined|number
+// CHKOPT-NEXT:  %7 = LoadFrameInst (:empty|undefined|number) %0: environment, [%VS1.x]: empty|undefined|number
+// CHKOPT-NEXT:  %8 = UnionNarrowTrustedInst (:undefined|number) %7: empty|undefined|number
+// CHKOPT-NEXT:       ReturnInst %8: undefined|number
 // CHKOPT-NEXT:%BB2:
 // CHKOPT-NEXT:        BranchInst %BB3
 // CHKOPT-NEXT:%BB3:
@@ -223,27 +212,22 @@ function check_after_check() {
 // CHKOPT-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
 // CHKOPT-NEXT:  %2 = LoadParamInst (:any) %p: any
 // CHKOPT-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS4.p]: any
-// CHKOPT-NEXT:  %4 = ResolveScopeInst (:environment) %VS2: any, %VS4: any, %1: environment
-// CHKOPT-NEXT:  %5 = LoadFrameInst (:empty|number) %4: environment, [%VS2.x]: empty|number
-// CHKOPT-NEXT:  %6 = ThrowIfInst (:number) %5: empty|number, type(empty)
-// CHKOPT-NEXT:  %7 = UnaryIncInst (:number) %6: number
-// CHKOPT-NEXT:  %8 = ResolveScopeInst (:environment) %VS2: any, %VS4: any, %1: environment
-// CHKOPT-NEXT:       StoreFrameInst %8: environment, %7: number, [%VS2.x]: empty|number
-// CHKOPT-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS4.p]: any
-// CHKOPT-NEXT:        CondBranchInst %10: any, %BB1, %BB2
+// CHKOPT-NEXT:  %4 = LoadFrameInst (:empty|number) %0: environment, [%VS2.x]: empty|number
+// CHKOPT-NEXT:  %5 = ThrowIfInst (:number) %4: empty|number, type(empty)
+// CHKOPT-NEXT:  %6 = UnaryIncInst (:number) %5: number
+// CHKOPT-NEXT:       StoreFrameInst %0: environment, %6: number, [%VS2.x]: empty|number
+// CHKOPT-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS4.p]: any
+// CHKOPT-NEXT:       CondBranchInst %8: any, %BB1, %BB2
 // CHKOPT-NEXT:%BB1:
-// CHKOPT-NEXT:  %12 = ResolveScopeInst (:environment) %VS2: any, %VS4: any, %1: environment
-// CHKOPT-NEXT:  %13 = LoadFrameInst (:empty|number) %12: environment, [%VS2.x]: empty|number
-// CHKOPT-NEXT:  %14 = UnionNarrowTrustedInst (:number) %13: empty|number
-// CHKOPT-NEXT:  %15 = UnaryIncInst (:number) %14: number
-// CHKOPT-NEXT:  %16 = ResolveScopeInst (:environment) %VS2: any, %VS4: any, %1: environment
-// CHKOPT-NEXT:        StoreFrameInst %16: environment, %15: number, [%VS2.x]: empty|number
+// CHKOPT-NEXT:  %10 = LoadFrameInst (:empty|number) %0: environment, [%VS2.x]: empty|number
+// CHKOPT-NEXT:  %11 = UnionNarrowTrustedInst (:number) %10: empty|number
+// CHKOPT-NEXT:  %12 = UnaryIncInst (:number) %11: number
+// CHKOPT-NEXT:        StoreFrameInst %0: environment, %12: number, [%VS2.x]: empty|number
 // CHKOPT-NEXT:        BranchInst %BB3
 // CHKOPT-NEXT:%BB2:
 // CHKOPT-NEXT:        BranchInst %BB3
 // CHKOPT-NEXT:%BB3:
-// CHKOPT-NEXT:  %20 = ResolveScopeInst (:environment) %VS2: any, %VS4: any, %1: environment
-// CHKOPT-NEXT:  %21 = LoadFrameInst (:empty|number) %20: environment, [%VS2.x]: empty|number
-// CHKOPT-NEXT:  %22 = UnionNarrowTrustedInst (:number) %21: empty|number
-// CHKOPT-NEXT:        ReturnInst %22: number
+// CHKOPT-NEXT:  %16 = LoadFrameInst (:empty|number) %0: environment, [%VS2.x]: empty|number
+// CHKOPT-NEXT:  %17 = UnionNarrowTrustedInst (:number) %16: empty|number
+// CHKOPT-NEXT:        ReturnInst %17: number
 // CHKOPT-NEXT:function_end

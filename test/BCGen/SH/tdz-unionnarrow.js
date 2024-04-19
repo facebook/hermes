@@ -61,14 +61,12 @@ function f2() {
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
 // CHKIR-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
-// CHKIR-NEXT:  %2 = ResolveScopeInst (:environment) %VS2: any, %VS3: any, %1: environment
-// CHKIR-NEXT:  %3 = LoadFrameInst (:any|empty) %2: environment, [%VS2.x]: any|empty
-// CHKIR-NEXT:  %4 = ThrowIfInst (:any) %3: any|empty, type(empty)
-// CHKIR-NEXT:       StoreFrameInst %2: environment, 10: number, [%VS2.x]: any|empty
-// CHKIR-NEXT:  %6 = ResolveScopeInst (:environment) %VS2: any, %VS3: any, %1: environment
-// CHKIR-NEXT:  %7 = LoadFrameInst (:any|empty) %6: environment, [%VS2.x]: any|empty
-// CHKIR-NEXT:  %8 = UnionNarrowTrustedInst (:any) %7: any|empty
-// CHKIR-NEXT:       ReturnInst %8: any
+// CHKIR-NEXT:  %2 = LoadFrameInst (:any|empty) %0: environment, [%VS2.x]: any|empty
+// CHKIR-NEXT:  %3 = ThrowIfInst (:any) %2: any|empty, type(empty)
+// CHKIR-NEXT:       StoreFrameInst %0: environment, 10: number, [%VS2.x]: any|empty
+// CHKIR-NEXT:  %5 = LoadFrameInst (:any|empty) %0: environment, [%VS2.x]: any|empty
+// CHKIR-NEXT:  %6 = UnionNarrowTrustedInst (:any) %5: any|empty
+// CHKIR-NEXT:       ReturnInst %6: any
 // CHKIR-NEXT:function_end
 
 // CHKLIR:scope %VS0 []
@@ -103,18 +101,14 @@ function f2() {
 // CHKLIR-NEXT:       ReturnInst %6: undefined
 // CHKLIR-NEXT:function_end
 
-// CHKLIR:scope %VS3 []
-
 // CHKLIR:function inner(): undefined|number
 // CHKLIR-NEXT:%BB0:
 // CHKLIR-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
-// CHKLIR-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
-// CHKLIR-NEXT:  %2 = LIRResolveScopeInst (:environment) %VS2: any, %1: environment, 1: number
-// CHKLIR-NEXT:  %3 = LoadFrameInst (:empty|undefined|number) %2: environment, [%VS2.x]: empty|undefined|number
-// CHKLIR-NEXT:  %4 = ThrowIfInst (:undefined|number) %3: empty|undefined|number, type(empty)
-// CHKLIR-NEXT:  %5 = HBCLoadConstInst (:number) 10: number
-// CHKLIR-NEXT:       StoreFrameInst %2: environment, %5: number, [%VS2.x]: empty|undefined|number
-// CHKLIR-NEXT:  %7 = LoadFrameInst (:empty|undefined|number) %2: environment, [%VS2.x]: empty|undefined|number
-// CHKLIR-NEXT:  %8 = UnionNarrowTrustedInst (:undefined|number) %7: empty|undefined|number
-// CHKLIR-NEXT:       ReturnInst %8: undefined|number
+// CHKLIR-NEXT:  %1 = LoadFrameInst (:empty|undefined|number) %0: environment, [%VS2.x]: empty|undefined|number
+// CHKLIR-NEXT:  %2 = ThrowIfInst (:undefined|number) %1: empty|undefined|number, type(empty)
+// CHKLIR-NEXT:  %3 = HBCLoadConstInst (:number) 10: number
+// CHKLIR-NEXT:       StoreFrameInst %0: environment, %3: number, [%VS2.x]: empty|undefined|number
+// CHKLIR-NEXT:  %5 = LoadFrameInst (:empty|undefined|number) %0: environment, [%VS2.x]: empty|undefined|number
+// CHKLIR-NEXT:  %6 = UnionNarrowTrustedInst (:undefined|number) %5: empty|undefined|number
+// CHKLIR-NEXT:       ReturnInst %6: undefined|number
 // CHKLIR-NEXT:function_end

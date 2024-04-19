@@ -57,7 +57,6 @@ function main() {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.x]: any
-// CHECK-NEXT:  %4 = ResolveScopeInst (:environment) %VS1: any, %VS2: any, %1: environment
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) %4: environment, [%VS1.capture_me]: any
-// CHECK-NEXT:       ReturnInst %5: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %0: environment, [%VS1.capture_me]: any
+// CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end

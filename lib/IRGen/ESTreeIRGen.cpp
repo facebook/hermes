@@ -7,6 +7,8 @@
 
 #include "ESTreeIRGen.h"
 
+#include "hermes/IR/IRUtils.h"
+
 #include "llvh/ADT/SetVector.h"
 #include "llvh/ADT/StringSet.h"
 #include "llvh/Support/Debug.h"
@@ -1053,11 +1055,14 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
 
 Instruction *ESTreeIRGen::emitResolveScopeInstIfNeeded(
     VariableScope *targetVarScope) {
-  auto *startScope = curFunction()->functionScope;
-  if (startScope->getVariableScope() == targetVarScope)
+  auto [startScope, startVarScope] = getResolveScopeStart(
+      curFunction()->functionScope,
+      curFunction()->functionScope->getVariableScope(),
+      targetVarScope);
+  if (startVarScope == targetVarScope)
     return startScope;
   return Builder.createResolveScopeInst(
-      targetVarScope, startScope->getVariableScope(), startScope);
+      targetVarScope, startVarScope, startScope);
 }
 
 void ESTreeIRGen::drainCompilationQueue() {

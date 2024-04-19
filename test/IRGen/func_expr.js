@@ -120,9 +120,8 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS6: any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS2: any, %VS6: any, %1: environment
-// CHECK-NEXT:  %3 = LoadFrameInst (:any) %2: environment, [%VS2.x]: any
-// CHECK-NEXT:       ReturnInst %3: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any) %0: environment, [%VS2.x]: any
+// CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS7 []
@@ -142,9 +141,8 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS4: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS8: any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS4: any, %VS8: any, %1: environment
-// CHECK-NEXT:  %3 = LoadFrameInst (:any) %2: environment, [%VS4.some_local_name]: any
-// CHECK-NEXT:       ReturnInst %3: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any) %0: environment, [%VS4.some_local_name]: any
+// CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS9 []

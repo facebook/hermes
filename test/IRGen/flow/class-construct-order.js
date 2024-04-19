@@ -31,16 +31,14 @@ class C {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:number) %x: number
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: number, [%VS1.x]: any
-// CHECK-NEXT:  %4 = ResolveScopeInst (:environment) %VS0: any, %VS1: any, %1: environment
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) %4: environment, [%VS0.C]: any
-// CHECK-NEXT:  %6 = CheckedTypeCastInst (:object) %5: any, type(object)
-// CHECK-NEXT:  %7 = ResolveScopeInst (:environment) %VS0: any, %VS1: any, %1: environment
-// CHECK-NEXT:  %8 = LoadFrameInst (:object) %7: environment, [%VS0.?C.prototype]: object
-// CHECK-NEXT:  %9 = UnionNarrowTrustedInst (:object) %8: object
-// CHECK-NEXT:  %10 = AllocObjectLiteralInst (:object) "x": string, 0: number
-// CHECK-NEXT:        StoreParentInst %9: object, %10: object
-// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
-// CHECK-NEXT:  %13 = CheckedTypeCastInst (:number) %12: any, type(number)
-// CHECK-NEXT:  %14 = CallInst (:any) %6: object, %C(): functionCode, empty: any, %6: object, %10: object, %13: number
-// CHECK-NEXT:        ReturnInst %10: object
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %0: environment, [%VS0.C]: any
+// CHECK-NEXT:  %5 = CheckedTypeCastInst (:object) %4: any, type(object)
+// CHECK-NEXT:  %6 = LoadFrameInst (:object) %0: environment, [%VS0.?C.prototype]: object
+// CHECK-NEXT:  %7 = UnionNarrowTrustedInst (:object) %6: object
+// CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) "x": string, 0: number
+// CHECK-NEXT:       StoreParentInst %7: object, %8: object
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
+// CHECK-NEXT:  %11 = CheckedTypeCastInst (:number) %10: any, type(number)
+// CHECK-NEXT:  %12 = CallInst (:any) %5: object, %C(): functionCode, empty: any, %5: object, %8: object, %11: number
+// CHECK-NEXT:        ReturnInst %8: object
 // CHECK-NEXT:function_end

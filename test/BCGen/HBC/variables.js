@@ -120,9 +120,8 @@ function daa(a) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS3: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
-// CHECK-NEXT:  %2 = LIRResolveScopeInst (:environment) %VS3: any, %1: environment, 1: number
-// CHECK-NEXT:  %3 = LoadFrameInst (:any) %2: environment, [%VS3.b]: any
-// CHECK-NEXT:       ReturnInst %3: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any) %0: environment, [%VS3.b]: any
+// CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end
 
 // CHKOPT:scope %VS0 []

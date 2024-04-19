@@ -147,11 +147,10 @@ function foo(c: C, d: D){
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS6: any, %1: environment
-// CHECK-NEXT:  %3 = ResolveScopeInst (:environment) %VS1: any, %VS6: any, %2: environment
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %3: environment, [%VS1.C]: any
-// CHECK-NEXT:  %5 = CheckedTypeCastInst (:object) %4: any, type(object)
-// CHECK-NEXT:  %6 = GetNewTargetInst (:object) %new.target: object
-// CHECK-NEXT:  %7 = CallInst (:any) %5: object, empty: any, empty: any, %6: object, %0: object
+// CHECK-NEXT:  %3 = LoadFrameInst (:any) %1: environment, [%VS1.C]: any
+// CHECK-NEXT:  %4 = CheckedTypeCastInst (:object) %3: any, type(object)
+// CHECK-NEXT:  %5 = GetNewTargetInst (:object) %new.target: object
+// CHECK-NEXT:  %6 = CallInst (:any) %4: object, empty: any, empty: any, %5: object, %0: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

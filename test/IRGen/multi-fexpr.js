@@ -190,15 +190,14 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "cond": string
 // CHECK-NEXT:       CondBranchInst %2: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ResolveScopeInst (:environment) %VS2: any, %VS6: any, %1: environment
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) %4: environment, [%VS2.fexpr]: any
-// CHECK-NEXT:       StorePropertyLooseInst %5: any, globalObject: object, "globalFunc": string
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %0: environment, [%VS2.fexpr]: any
+// CHECK-NEXT:       StorePropertyLooseInst %4: any, globalObject: object, "globalFunc": string
 // CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "something": string
-// CHECK-NEXT:        ReturnInst %9: any
+// CHECK-NEXT:  %8 = TryLoadGlobalPropertyInst (:any) globalObject: object, "something": string
+// CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS7 []
@@ -210,9 +209,8 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "glob": string
 // CHECK-NEXT:       CondBranchInst %2: any, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ResolveScopeInst (:environment) %VS3: any, %VS7: any, %1: environment
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) %4: environment, [%VS3.fexpr]: any
-// CHECK-NEXT:       StorePropertyLooseInst %5: any, globalObject: object, "glob": string
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %0: environment, [%VS3.fexpr]: any
+// CHECK-NEXT:       StorePropertyLooseInst %4: any, globalObject: object, "glob": string
 // CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       BranchInst %BB3
@@ -226,7 +224,6 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS4: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS8: any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS4: any, %VS8: any, %1: environment
-// CHECK-NEXT:       StoreFrameInst %2: environment, 10: number, [%VS4.x]: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, 10: number, [%VS4.x]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

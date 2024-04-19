@@ -89,10 +89,9 @@ function outer2() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS1: any, %VS3: any, %1: environment
-// CHECK-NEXT:  %3 = LoadFrameInst (:any) %2: environment, [%VS1.?anon_0_this]: any
-// CHECK-NEXT:  %4 = LoadPropertyInst (:any) %3: any, "x": string
-// CHECK-NEXT:       ReturnInst %4: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any) %0: environment, [%VS1.?anon_0_this]: any
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: any, "x": string
+// CHECK-NEXT:       ReturnInst %3: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS4 []
@@ -101,10 +100,9 @@ function outer2() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS1: any, %VS4: any, %1: environment
-// CHECK-NEXT:  %3 = LoadFrameInst (:any) %2: environment, [%VS1.?anon_0_this]: any
-// CHECK-NEXT:  %4 = LoadPropertyInst (:any) %3: any, "y": string
-// CHECK-NEXT:       ReturnInst %4: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any) %0: environment, [%VS1.?anon_0_this]: any
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: any, "y": string
+// CHECK-NEXT:       ReturnInst %3: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS5 []
@@ -126,11 +124,10 @@ function outer2() {
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS6: any, %0: environment
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS6.nestedInnerArrow5]: any
-// CHECK-NEXT:  %3 = ResolveScopeInst (:environment) %VS2: any, %VS6: any, %1: environment
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %3: environment, [%VS2.?anon_0_this]: any
-// CHECK-NEXT:       StorePropertyLooseInst 10: number, %4: any, "b": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %nestedInnerArrow5(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS6.nestedInnerArrow5]: any
+// CHECK-NEXT:  %3 = LoadFrameInst (:any) %0: environment, [%VS2.?anon_0_this]: any
+// CHECK-NEXT:       StorePropertyLooseInst 10: number, %3: any, "b": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %nestedInnerArrow5(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %5: object, [%VS6.nestedInnerArrow5]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -140,7 +137,7 @@ function outer2() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS6: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS7: any, %0: environment
-// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS2: any, %VS7: any, %1: environment
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS2: any, %VS6: any, %0: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:any) %2: environment, [%VS2.?anon_0_this]: any
 // CHECK-NEXT:  %4 = LoadPropertyInst (:any) %3: any, "b": string
 // CHECK-NEXT:       ReturnInst %4: any
