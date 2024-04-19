@@ -122,12 +122,12 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
   // Store the home object in a variable so that we can reference it later,
   // e.g. when we emit method calls.
   Variable *homeObjectVar = Builder.createVariable(
-      curFunction()->functionScope->getVariableScope(),
+      curFunction()->curScope->getVariableScope(),
       Builder.createIdentifier(
           llvh::Twine("?") + classType->getClassName().str() + ".prototype"),
       flowTypeToIRType(classType->getHomeObjectType()));
   Builder.createStoreFrameInst(
-      curFunction()->functionScope, homeObject, homeObjectVar);
+      curFunction()->curScope, homeObject, homeObjectVar);
 
   // Check to make sure this is a valid class definition,
   // because there may have been errors.
@@ -197,7 +197,7 @@ CreateFunctionInst *ESTreeIRGen::genImplicitConstructor(
                         classNode = curClass()->getClassNode(),
                         classType = curClass()->getClassType(),
                         parentScope =
-                            curFunction()->functionScope->getVariableScope()] {
+                            curFunction()->curScope->getVariableScope()] {
       FunctionContext newFunctionContext{this, func, funcInfo};
 
       auto *prologueBB = Builder.createBasicBlock(func);
@@ -221,7 +221,7 @@ CreateFunctionInst *ESTreeIRGen::genImplicitConstructor(
         compileFunc);
   }
 
-  return Builder.createCreateFunctionInst(curFunction()->functionScope, func);
+  return Builder.createCreateFunctionInst(curFunction()->curScope, func);
 }
 
 Value *ESTreeIRGen::emitClassAllocation(

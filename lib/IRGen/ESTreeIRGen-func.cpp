@@ -77,7 +77,7 @@ void ESTreeIRGen::genFunctionDeclaration(
   Value *funcStorage = resolveIdentifier(id);
   assert(funcStorage && "Function declaration storage must have been resolved");
 
-  auto *newFuncParentScope = curFunction()->functionScope->getVariableScope();
+  auto *newFuncParentScope = curFunction()->curScope->getVariableScope();
   Function *newFunc = func->_async
       ? genAsyncFunction(functionName, func, newFuncParentScope)
       : func->_generator
@@ -86,7 +86,7 @@ void ESTreeIRGen::genFunctionDeclaration(
 
   // Store the newly created closure into a frame variable with the same name.
   auto *newClosure =
-      Builder.createCreateFunctionInst(curFunction()->functionScope, newFunc);
+      Builder.createCreateFunctionInst(curFunction()->curScope, newFunc);
 
   emitStore(newClosure, funcStorage, true);
 }
@@ -109,7 +109,7 @@ Value *ESTreeIRGen::genFunctionExpression(
   Identifier originalNameIden =
       id ? Identifier::getFromPointer(id->_name) : nameHint;
 
-  auto *parentScope = curFunction()->functionScope->getVariableScope();
+  auto *parentScope = curFunction()->curScope->getVariableScope();
   Function *newFunc = FE->_async
       ? genAsyncFunction(originalNameIden, FE, parentScope)
       : FE->_generator ? genGeneratorFunction(originalNameIden, FE, parentScope)
@@ -122,7 +122,7 @@ Value *ESTreeIRGen::genFunctionExpression(
                              functionKind);
 
   Value *closure =
-      Builder.createCreateFunctionInst(curFunction()->functionScope, newFunc);
+      Builder.createCreateFunctionInst(curFunction()->curScope, newFunc);
 
   if (id)
     emitStore(closure, resolveIdentifier(id), true);
@@ -136,7 +136,7 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
   // Check if already compiled.
   if (Value *compiled = findCompiledEntity(AF)) {
     return Builder.createCreateFunctionInst(
-        curFunction()->functionScope, llvh::cast<Function>(compiled));
+        curFunction()->curScope, llvh::cast<Function>(compiled));
   }
 
   LLVM_DEBUG(
@@ -169,7 +169,7 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
                       capturedNewTarget = curFunction()->capturedNewTarget,
                       capturedArguments = curFunction()->capturedArguments,
                       parentScope =
-                          curFunction()->functionScope->getVariableScope()] {
+                          curFunction()->curScope->getVariableScope()] {
     FunctionContext newFunctionContext{this, newFunc, AF->getSemInfo()};
 
     // Propagate captured "this", "new.target" and "arguments" from parents.
@@ -191,8 +191,7 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
   enqueueCompilation(AF, ExtraKey::Normal, newFunc, compileFunc);
 
   // Emit CreateFunctionInst after we have restored the builder state.
-  return Builder.createCreateFunctionInst(
-      curFunction()->functionScope, newFunc);
+  return Builder.createCreateFunctionInst(curFunction()->curScope, newFunc);
 }
 
 NormalFunction *ESTreeIRGen::genBasicFunction(
@@ -455,10 +454,10 @@ Function *ESTreeIRGen::genAsyncFunction(
     auto *gen = genGeneratorFunction(
         genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
         functionNode,
-        curFunction()->functionScope->getVariableScope());
+        curFunction()->curScope->getVariableScope());
 
     auto *genClosure =
-        Builder.createCreateFunctionInst(curFunction()->functionScope, gen);
+        Builder.createCreateFunctionInst(curFunction()->curScope, gen);
     auto *thisArg = curFunction()->jsParams[0];
     auto *argumentsList = curFunction()->createArgumentsInst;
 
@@ -484,7 +483,7 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
   if (!curFunction()->getSemInfo()->containsArrowFunctions)
     return;
 
-  auto *scope = curFunction()->functionScope->getVariableScope();
+  auto *scope = curFunction()->curScope->getVariableScope();
 
   // "this".
   auto *th = Builder.createVariable(
@@ -572,7 +571,7 @@ void ESTreeIRGen::emitFunctionPrologue(
   // GeneratorFunctions should not have a scope created. It will be created
   // later during a lowering pass.
   if (!llvh::isa<GeneratorFunction>(curFunction()->function)) {
-    curFunction()->functionScope = Builder.createCreateScopeInst(
+    curFunction()->curScope = Builder.createCreateScopeInst(
         Builder.createVariableScope(parentScope), baseScope);
   }
 
@@ -616,7 +615,7 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
         if (!decl->customData) {
           bool tdz = Mod->getContext().getCodeGenerationSettings().enableTDZ;
           var = Builder.createVariable(
-              curFunction()->functionScope->getVariableScope(),
+              curFunction()->curScope->getVariableScope(),
               decl->name,
               tdz ? Type::unionTy(Type::createAnyType(), Type::createEmpty())
                   : Type::createAnyType());
@@ -652,7 +651,7 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
 
         if (!decl->customData) {
           var = Builder.createVariable(
-              curFunction()->functionScope->getVariableScope(),
+              curFunction()->curScope->getVariableScope(),
               decl->name,
               Type::createAnyType());
           var->setIsConst(decl->kind == sema::Decl::Kind::Import);
@@ -698,7 +697,7 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
     if (init) {
       assert(var);
       Builder.createStoreFrameInst(
-          curFunction()->functionScope,
+          curFunction()->curScope,
           var->getObeysTDZ() ? (Literal *)Builder.getLiteralEmpty()
                              : (Literal *)Builder.getLiteralUndefined(),
           var);
@@ -729,7 +728,7 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
     bool tdz = !semInfo->simpleParameterList &&
         Mod->getContext().getCodeGenerationSettings().enableTDZ;
     Variable *var = Builder.createVariable(
-        curFunction()->functionScope->getVariableScope(),
+        curFunction()->curScope->getVariableScope(),
         decl->name,
         tdz ? Type::unionTy(Type::createAnyType(), Type::createEmpty())
             : Type::createAnyType());
@@ -739,7 +738,7 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
     if (!semInfo->simpleParameterList) {
       var->setObeysTDZ(tdz);
       Builder.createStoreFrameInst(
-          curFunction()->functionScope,
+          curFunction()->curScope,
           tdz ? (Literal *)Builder.getLiteralEmpty()
               : (Literal *)Builder.getLiteralUndefined(),
           var);
@@ -864,7 +863,7 @@ Function *ESTreeIRGen::genFieldInitFunction() {
                       classNode = classNode,
                       classType = curClass()->getClassType(),
                       parentScope =
-                          curFunction()->functionScope->getVariableScope()] {
+                          curFunction()->curScope->getVariableScope()] {
     FunctionContext newFunctionContext{this, initFunc, initFuncInfo};
     ClassContext newClassContext{this, classNode, classType};
 
@@ -908,14 +907,14 @@ void ESTreeIRGen::emitCreateFieldInitFunction() {
   classInfo.fieldInitFunction = initFunc;
 
   CreateFunctionInst *createFieldInitFunc =
-      Builder.createCreateFunctionInst(curFunction()->functionScope, initFunc);
+      Builder.createCreateFunctionInst(curFunction()->curScope, initFunc);
   Variable *fieldInitFuncVar = Builder.createVariable(
-      curFunction()->functionScope->getVariableScope(),
+      curFunction()->curScope->getVariableScope(),
       (llvh::Twine("<fieldInitFuncVar:") +
        curClass()->getClassType()->getClassName().str() + ">"),
       Type::createObject());
   Builder.createStoreFrameInst(
-      curFunction()->functionScope, createFieldInitFunc, fieldInitFuncVar);
+      curFunction()->curScope, createFieldInitFunc, fieldInitFuncVar);
   classInfo.fieldInitFunctionVar = fieldInitFuncVar;
 }
 

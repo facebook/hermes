@@ -927,8 +927,7 @@ Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
       // We don't need to perform a runtime check for TDZ when in the
       // variable's function, since we know whether it has been initialized.
       // TODO(T182345760): Move this TDZ check into the resolver.
-      if (var->getParent() ==
-          curFunction()->functionScope->getVariableScope()) {
+      if (var->getParent() == curFunction()->curScope->getVariableScope()) {
         // If not initialized, throw.
         if (curFunction()->initializedTDZVars.count(var) == 0) {
           // Report an error or warning using the builder's location.
@@ -986,8 +985,7 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
     // TODO(T182345760): Move the TDZ tracking and checking into the resolver.
     if (declInit) {
       assert(
-          var->getParent() ==
-              curFunction()->functionScope->getVariableScope() &&
+          var->getParent() == curFunction()->curScope->getVariableScope() &&
           "variable must be initialized in its own function");
 
       // If this is a TDZ variable, record that it has been initialized.
@@ -1001,8 +999,7 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
       if (var->getObeysTDZ()) {
         // We don't need to perform a runtime check for TDZ when in the
         // variable's function, since we know whether it has been initialized.
-        if (var->getParent() ==
-            curFunction()->functionScope->getVariableScope()) {
+        if (var->getParent() == curFunction()->curScope->getVariableScope()) {
           if (curFunction()->initializedTDZVars.count(var) == 0) {
             // Report an error or warning using the builder's location.
             assert(
@@ -1056,8 +1053,8 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
 Instruction *ESTreeIRGen::emitResolveScopeInstIfNeeded(
     VariableScope *targetVarScope) {
   auto [startScope, startVarScope] = getResolveScopeStart(
-      curFunction()->functionScope,
-      curFunction()->functionScope->getVariableScope(),
+      curFunction()->curScope,
+      curFunction()->curScope->getVariableScope(),
       targetVarScope);
   if (startVarScope == targetVarScope)
     return startScope;
