@@ -871,6 +871,10 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
   /// Allocate an array of \p n elements of type T in the sandbox heap.
   template <typename T>
   sb::Ptr<T> sbAlloc(size_t n = 1) {
+    // Check for integer overflows
+    static constexpr size_t maxN = UINT32_MAX / sizeof(T);
+    if (n > maxN)
+      abort();
     auto ptr = w2c_hermes_malloc(this, sizeof(T) * n);
     return sb::Ptr<T>(this, ptr, n);
   }
