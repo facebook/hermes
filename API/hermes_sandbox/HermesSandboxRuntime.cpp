@@ -1202,7 +1202,15 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
           alignof(PropNameIDListWrapper) == alignof(SandboxPropNameID),
           "Alignment must match to create a single allocation.");
 
-      /// Allocate the wrapper and the array of props in a single allocation.
+      // Allocate the wrapper and the array of props in a single allocation.
+      static constexpr size_t maxSize =
+          (UINT32_MAX - sizeof(PropNameIDListWrapper)) /
+          sizeof(SandboxPropNameID);
+
+      // Check for integer overflows
+      if (sz > maxSize) {
+        abort();
+      }
       auto alloc = w2c_hermes_malloc(
           &runtime,
           sizeof(PropNameIDListWrapper) + sizeof(SandboxPropNameID) * sz);
