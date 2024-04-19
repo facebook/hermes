@@ -286,6 +286,17 @@ m::runtime::RemoteObject m::runtime::makeRemoteObject(
     if (obj.isFunction(runtime)) {
       result.type = "function";
       result.value = "\"\"";
+      /**
+       * @cdp Runtime.RemoteObject's description property is a string, but in
+       * the case of functions, V8 populates it with the result of toString [1]
+       * and Chrome DevTools uses a series of regexes [2] to extract structured
+       * information about the function.
+       * [1]
+       * https://source.chromium.org/chromium/chromium/src/+/main:v8/src/debug/debug-interface.cc;l=138-174;drc=42debe0b0e6bf90175dd0d121eb0e7dc11a6d29c
+       * [2]
+       * https://github.com/facebookexperimental/rn-chrome-devtools-frontend/blob/9a23d4c7c4c2d1a3d9e913af38d6965f474c4284/front_end/ui/legacy/components/object_ui/ObjectPropertiesSection.ts#L311-L391
+       */
+      result.description = value.toString(runtime).utf8(runtime);
     } else if (obj.isArray(runtime)) {
       auto array = obj.getArray(runtime);
       size_t arrayCount = array.length(runtime);
