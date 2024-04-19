@@ -786,11 +786,9 @@ class ESTreeIRGen {
       ESTree::SuperNode *superNode,
       ESTree::IdentifierNode *property);
 
-  /// Create and return a ResolveScopeInst if \p startScope is not the target
-  /// \p scope. Otherwise, return \p startScope.
-  BaseScopeInst *emitResolveScopeInstIfNeeded(
-      VariableScope *targetVarScope,
-      CreateScopeInst *startScope);
+  /// \return an instruction that is the currently visible scope described by
+  /// \p targetVarScope, emitting a ResolveScopeInst if necessary.
+  Instruction *emitResolveScopeInstIfNeeded(VariableScope *targetVarScope);
 
   /// Generate IR for a member expression in the middle of an optional chain.
   /// \param shortCircuitBB the block to jump to upon short circuiting,

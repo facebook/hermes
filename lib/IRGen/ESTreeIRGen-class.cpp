@@ -108,8 +108,8 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
   if (superClass) {
     auto it = classConstructors_.find(classType->getSuperClassInfo());
     assert(it != classConstructors_.end() && "missing super class constructor");
-    auto *RSI = emitResolveScopeInstIfNeeded(
-        it->second.homeObjectVar->getParent(), curFunction()->functionScope);
+    auto *RSI =
+        emitResolveScopeInstIfNeeded(it->second.homeObjectVar->getParent());
     vtable = Builder.createLoadFrameInst(RSI, it->second.homeObjectVar);
     // TODO: This will be known to be the actual type when we properly use an
     // instruction for class creation, but for now we need an object here

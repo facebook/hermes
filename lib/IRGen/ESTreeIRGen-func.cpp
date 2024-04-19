@@ -929,8 +929,7 @@ void ESTreeIRGen::emitFieldInitCall(flow::ClassType *classType) {
   assert(
       fieldInitFuncVar &&
       "If entry is in classFieldInitInfo_, var should be set");
-  auto *scope = emitResolveScopeInstIfNeeded(
-      fieldInitFuncVar->getParent(), curFunction()->functionScope);
+  auto *scope = emitResolveScopeInstIfNeeded(fieldInitFuncVar->getParent());
   Value *funcVal = Builder.createLoadFrameInst(scope, fieldInitFuncVar);
 
   funcVal->setType(Type::createObject());

@@ -920,8 +920,7 @@ Value *ESTreeIRGen::emitOptionalInitialization(
 Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
   if (auto *var = llvh::dyn_cast<Variable>(from)) {
     Instruction *res;
-    auto *RSI = emitResolveScopeInstIfNeeded(
-        var->getParent(), curFunction()->functionScope);
+    auto *RSI = emitResolveScopeInstIfNeeded(var->getParent());
     if (var->getObeysTDZ()) {
       // We don't need to perform a runtime check for TDZ when in the
       // variable's function, since we know whether it has been initialized.
@@ -981,8 +980,7 @@ Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
 Instruction *
 ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
   if (auto *var = llvh::dyn_cast<Variable>(ptr)) {
-    auto *RSI = emitResolveScopeInstIfNeeded(
-        var->getParent(), curFunction()->functionScope);
+    auto *RSI = emitResolveScopeInstIfNeeded(var->getParent());
     // TODO(T182345760): Move the TDZ tracking and checking into the resolver.
     if (declInit) {
       assert(
@@ -1053,9 +1051,9 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
   }
 }
 
-BaseScopeInst *ESTreeIRGen::emitResolveScopeInstIfNeeded(
-    VariableScope *targetVarScope,
-    CreateScopeInst *startScope) {
+Instruction *ESTreeIRGen::emitResolveScopeInstIfNeeded(
+    VariableScope *targetVarScope) {
+  auto *startScope = curFunction()->functionScope;
   if (startScope->getVariableScope() == targetVarScope)
     return startScope;
   return Builder.createResolveScopeInst(
