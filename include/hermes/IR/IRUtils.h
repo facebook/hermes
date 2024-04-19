@@ -31,6 +31,17 @@ void updateIncomingPhiValues(
 /// skipping past any initial FirstInBlock instructions.
 void movePastFirstInBlock(IRBuilder &builder, BasicBlock *BB);
 
+/// Try walking up the scope chain from \p startScope by traversing the parents
+/// of CreateScopeInsts. If it can obtain the scope described by
+/// \p targetVarScope, return that. Otherwise, walk past as many scope
+/// creation instructions as possible, and return the last scope. This should be
+/// used to ensure that a the start and target VariableScopes of a ResolveScope
+/// are as close as possible.
+std::pair<Instruction *, VariableScope *> getResolveScopeStart(
+    Instruction *startScope,
+    VariableScope *startVarScope,
+    VariableScope *targetVarScope);
+
 } // namespace hermes
 
 #endif

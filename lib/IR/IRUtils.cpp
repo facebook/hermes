@@ -94,4 +94,21 @@ void movePastFirstInBlock(IRBuilder &builder, BasicBlock *BB) {
   builder.setInsertionPoint(&*it);
 }
 
+std::pair<Instruction *, VariableScope *> getResolveScopeStart(
+    Instruction *startScope,
+    VariableScope *startVarScope,
+    VariableScope *targetVarScope) {
+  while (auto *CSI = llvh::dyn_cast<CreateScopeInst>(startScope)) {
+    // We have found the target scope, exit.
+    if (startVarScope == targetVarScope)
+      break;
+
+    // Advance to the parent of the CreateScopeInst. We know that it must be an
+    // instruction, since we cannot resolve past the root scope.
+    startScope = llvh::cast<Instruction>(CSI->getParentScope());
+    startVarScope = startVarScope->getParentScope();
+  }
+  return {startScope, startVarScope};
+}
+
 } // namespace hermes
