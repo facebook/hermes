@@ -8,10 +8,10 @@
 import Fuzzilli
 
 let w2cProfile = Profile(
-    getProcessArguments:  { (randomizingArguments: Bool) -> [String] in
+    processArgs:  { randomize in
       var args = ["--reprl"]
 
-      guard randomizingArguments else { return args }
+      guard randomize else { return args }
 
       if probability(0.5) { args.append("--compile") }
       if probability(0.5) { args.append("--lazy-compilation") }
@@ -40,13 +40,18 @@ let w2cProfile = Profile(
 
     ecmaVersion: ECMAScriptVersion.es6,
 
-    crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)", "fuzzilli('FUZZILLI_CRASH', 2)"],
-
+    startupTests: [
+        ("fuzzilli('FUZZILLI_PRINT', 'test')", .shouldSucceed),
+        ("fuzzilli('FUZZILLI_CRASH', 0)", .shouldCrash),
+        ("fuzzilli('FUZZILLI_CRASH', 1)", .shouldCrash),
+        ("fuzzilli('FUZZILLI_CRASH', 2)", .shouldCrash),
+    ],
     additionalCodeGenerators: [],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
 
     disabledCodeGenerators: ["AsyncArrowFunctionGenerator", "AsyncGeneratorFunctionGenerator", "ClassGenerator", "WithStatementGenerator", "JITFunctionGenerator", "GrowableSharedArrayBufferGenerator"],
+    disabledMutators: [],
 
     additionalBuiltins: [
         "gc"                                             : .function([] => .undefined),
@@ -76,5 +81,9 @@ let w2cProfile = Profile(
         // Not yet implemented
         //"w2c_mutate_value"                               : .function([] => .undefined),
         //"w2c_swap_functions"                               : .function([] => .undefined),
-    ]
+    ],
+
+    additionalObjectGroups: [],
+
+    optionalPostProcessor: nil
 )
