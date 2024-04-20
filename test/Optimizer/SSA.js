@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -hermes-parser -dump-ir %s     -O | %FileCheckOrRegen %s
+// RUN: %hermesc -hermes-parser -dump-ir %s -O | %FileCheckOrRegen --match-full-lines %s
 
 function simple(x, y) {
   var t = 9;
@@ -148,7 +148,7 @@ function badThrow() {
 // CHECK-NEXT:  %10 = TryLoadGlobalPropertyInst (:any) globalObject: object, "j": string
 // CHECK-NEXT:        CondBranchInst %10: any, %BB5, %BB6
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:        ThrowInst 3: number
+// CHECK-NEXT:        ThrowInst 3: number, %BB3
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:        StoreStackInst 19: number, %0: number
 // CHECK-NEXT:        TryEndInst %BB3, %BB2
@@ -178,5 +178,5 @@ function badThrow() {
 // CHECK-NEXT:       ReturnInst %4: number
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       StoreStackInst 100: number, %0: number
-// CHECK-NEXT:       ThrowInst "hello": string
+// CHECK-NEXT:       ThrowInst "hello": string, %BB1
 // CHECK-NEXT:function_end
