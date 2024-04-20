@@ -7,6 +7,8 @@
 
 import Fuzzilli
 
+let TextEncoderConstructor = ILType.object(ofGroup: "TextEncoder", withProperties: ["encoding"], withMethods: ["encodeInto", "encode"])
+
 let hermesProfile = Profile(
     processArgs:  { randomize in
       var args = ["--reprl"]
@@ -65,6 +67,7 @@ let hermesProfile = Profile(
         "HermesInternal.getRuntimeProperties"            : .function([] => .object(ofGroup: "Object", withProperties: ["Snapshot VM", "Bytecode Version", "Builtins Frozen", "VM Experiments", "Build", "GC", "OSS Release Version", "Debugger Enabled", "CommonJS Modules"])),
         "HermesInternal.ttiReached"                      : .function([] => .undefined),
         "HermesInternal.getFunctionLocation"             : .function([.plain(.function())] => .object(ofGroup: "Object", withProperties: ["isNative", "lineNumber", "columnNumber", "fileName"])),
+        "TextEncoder"                                    : TextEncoderConstructor,
 
         // The methods below are disabled since they are not very interesting to fuzz
         // "HermesInternal.hasPromise"                   : .function([] => .boolean),
@@ -72,7 +75,19 @@ let hermesProfile = Profile(
         // "HermesInternal.ttrcReached"                  : .function([] => .undefined),
     ],
 
-    additionalObjectGroups: [],
+    additionalObjectGroups: [
+        ObjectGroup(
+            name: "TextEncoder",
+            instanceType: TextEncoderConstructor,
+            properties: [
+                "encoding"      : .jsString,
+            ],
+            methods: [
+                "encodeInto"    : [.string] => .jsTypedArray("Uint8Array"),
+                //TODO(edq) encode signature should be [.string, .jsTypedArray("Uint8Array")], but currently there seems to be no way to express Uint8Array as a JSType in Fuzzilli
+                "encode"        : [.string, .iterable] => .object(),
+            ]),
+    ],
 
     optionalPostProcessor: nil
 )
