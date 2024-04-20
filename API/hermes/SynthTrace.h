@@ -455,6 +455,8 @@ class SynthTrace {
   /// native code.
   struct CreateObjectRecord : public Record {
     static constexpr RecordType type{RecordType::CreateObject};
+    /// The ObjectID of the object that was created by native function calls
+    /// like Runtime::createObject().
     const ObjectID objID_;
 
     explicit CreateObjectRecord(TimeSinceStart time, ObjectID objID)
@@ -480,12 +482,16 @@ class SynthTrace {
   /// Hermes BigIntPrimitive) is created by the native code.
   struct CreateBigIntRecord : public Record {
     static constexpr RecordType type{RecordType::CreateBigInt};
+    /// The ObjectID of the BigInt that was created by
+    /// Runtime::createBigIntFromInt64() or Runtime::createBigIntFromUint64().
     const ObjectID objID_;
     enum class Method {
       FromInt64,
       FromUint64,
     };
+    /// The method used for creating the BigInt.
     Method method_;
+    /// The value used for creating the BigInt.
     uint64_t bits_;
 
     CreateBigIntRecord(
@@ -512,12 +518,16 @@ class SynthTrace {
     }
   };
 
-  /// A BigIntToString is an event where a jsi::BigInt is converted to a
+  /// A BigIntToStringRecord is an event where a jsi::BigInt is converted to a
   /// string by native code
   struct BigIntToStringRecord : public Record {
     static constexpr RecordType type{RecordType::BigIntToString};
+    /// The ObjectID of the string that was returned from
+    /// Runtime::bigintToString().
     const ObjectID strID_;
+    /// The ObjectID of the BigInt that was passed to Runtime::bigintToString().
     const ObjectID bigintID_;
+    /// The radix used for converting the BigInt to a string.
     int radix_;
 
     BigIntToStringRecord(
@@ -548,8 +558,13 @@ class SynthTrace {
   /// Hermes StringPrimitive) is created by the native code.
   struct CreateStringRecord : public Record {
     static constexpr RecordType type{RecordType::CreateString};
+    /// The ObjectID of the string that was created by
+    /// Runtime::createStringFromAscii() or Runtime::createStringFromUtf8().
     const ObjectID objID_;
+    /// The string that was passed to Runtime::createStringFromAscii() or
+    /// Runtime::createStringFromUtf8() when the string was created.
     std::string chars_;
+    /// Whether the string was created from ASCII (true) or UTF8 (false).
     bool ascii_;
 
     // General UTF-8.
@@ -590,9 +605,18 @@ class SynthTrace {
   /// created by the native code.
   struct CreatePropNameIDRecord : public Record {
     static constexpr RecordType type{RecordType::CreatePropNameID};
+    /// The ObjectID of the PropNameID that was created by
+    /// Runtime::createPropNameIDFromXxx() functions.
     const ObjectID propNameID_;
+    /// The string that was passed to Runtime::createPropNameIDFromAscii() or
+    /// Runtime::createPropNameIDFromUtf8().
     std::string chars_;
+    /// The String for Symbol that was passed to
+    /// Runtime::createPropNameIDFromString() or
+    /// Runtime::createPropNameIDFromSymbol().
     const TraceValue traceValue_{TraceValue::encodeUndefinedValue()};
+    /// Whether the PropNameID was created from ASCII, UTF8, jsi::String
+    /// (TRACEVALUE) or jsi::Symbol (TRACEVALUE).
     enum ValueType { ASCII, UTF8, TRACEVALUE } valueType_;
 
     // General UTF-8.
@@ -653,10 +677,13 @@ class SynthTrace {
 
   struct CreateHostFunctionRecord final : public CreateObjectRecord {
     static constexpr RecordType type{RecordType::CreateHostFunction};
+    /// The ObjectID of the PropNameID that was passed to
+    /// Runtime::createFromHostFunction().
     uint32_t propNameID_;
 #ifdef HERMESVM_API_TRACE_DEBUG
     const std::string functionName_;
 #endif
+    /// The number of parameters that the created host function takes.
     const unsigned paramCount_;
 
     CreateHostFunctionRecord(
@@ -688,12 +715,17 @@ class SynthTrace {
     }
   };
 
+  /// The base struct for GetPropertyRecord and SetPropertyRecord.
   struct GetOrSetPropertyRecord : public Record {
+    /// The ObjectID of the object that was accessed for its property.
     const ObjectID objID_;
+    /// String or PropNameID passed to getProperty/setProperty.
     const TraceValue propID_;
 #ifdef HERMESVM_API_TRACE_DEBUG
     std::string propNameDbg_;
 #endif
+    /// Returned value from getProperty, or the set value passed for
+    /// setProperty.
     const TraceValue value_;
 
     GetOrSetPropertyRecord(
@@ -726,6 +758,7 @@ class SynthTrace {
 
   struct QueueMicrotaskRecord : public Record {
     static constexpr RecordType type{RecordType::QueueMicrotask};
+    /// The ObjectID of the callback function that was queued.
     const ObjectID callbackID_;
 
     QueueMicrotaskRecord(TimeSinceStart time, ObjectID callbackID)
@@ -746,6 +779,7 @@ class SynthTrace {
 
   struct DrainMicrotasksRecord : public Record {
     static constexpr RecordType type{RecordType::DrainMicrotasks};
+    /// maxMicrotasksHint value passed to Runtime::drainMicrotasks() call.
     int maxMicrotasksHint_;
 
     DrainMicrotasksRecord(TimeSinceStart time, int tasksHint = -1)
@@ -795,10 +829,12 @@ class SynthTrace {
   /// it cannot influence the trace.)
   struct HasPropertyRecord final : public Record {
     static constexpr RecordType type{RecordType::HasProperty};
+    /// The ObjectID of the object that was accessed for its property.
     const ObjectID objID_;
 #ifdef HERMESVM_API_TRACE_DEBUG
     std::string propNameDbg_;
 #endif
+    /// The property name that was passed to hasProperty().
     const TraceValue propID_;
 
     HasPropertyRecord(
@@ -833,9 +869,11 @@ class SynthTrace {
 
   struct GetPropertyNamesRecord final : public Record {
     static constexpr RecordType type{RecordType::GetPropertyNames};
+    /// The ObjectID of the object that was accessed for its property.
     const ObjectID objID_;
     // Since getPropertyNames always returns an array, this can be an object id
     // rather than a TraceValue.
+    /// The ObjectID of the array that was returned by getPropertyNames().
     const ObjectID propNamesID_;
 
     explicit GetPropertyNamesRecord(
@@ -862,7 +900,9 @@ class SynthTrace {
   /// length.
   struct CreateArrayRecord final : public Record {
     static constexpr RecordType type{RecordType::CreateArray};
+    /// The ObjectID of the array that was created by the createArray().
     const ObjectID objID_;
+    /// The length of the array that was passed to createArray().
     const size_t length_;
 
     explicit CreateArrayRecord(
@@ -883,8 +923,11 @@ class SynthTrace {
   };
 
   struct ArrayReadOrWriteRecord : public Record {
+    /// The ObjectID of the array that was accessed.
     const ObjectID objID_;
+    /// The index of the element that was accessed in the array.
     const size_t index_;
+    /// The value that was read from or written to the array.
     const TraceValue value_;
 
     explicit ArrayReadOrWriteRecord(
@@ -935,9 +978,10 @@ class SynthTrace {
   };
 
   struct CallRecord : public Record {
-    /// The functionID_ is the id of the function JS object that is called from
-    /// JS.
+    /// The ObjectID of the function JS object that was called from
+    /// JS or native.
     const ObjectID functionID_;
+    /// The value of the this argument passed to the function call.
     const TraceValue thisArg_;
     /// The arguments given to a call (excluding the this parameter),
     /// already JSON stringified.
@@ -1053,8 +1097,14 @@ class SynthTrace {
   };
 
   struct GetOrSetPropertyNativeRecord : public Record {
+    /// The ObjectID of the host object that was being accessed for its
+    /// property.
     const ObjectID hostObjectID_;
+    /// The ObjectID of the PropNameID that was passed to HostObject::get()
+    /// or HostObject::set().
     const ObjectID propNameID_;
+    /// The UTF-8 string of the PropNameID that was passed to HostObject::get()
+    /// or HostObject::set().
     const std::string propName_;
 
     GetOrSetPropertyNativeRecord(
@@ -1117,6 +1167,7 @@ class SynthTrace {
   /// can arbitrarily affect the JS heap during the accessor.
   struct SetPropertyNativeRecord final : public GetOrSetPropertyNativeRecord {
     static constexpr RecordType type{RecordType::SetPropertyNative};
+    /// The value that was passed to HostObject::set() call.
     TraceValue value_;
 
     SetPropertyNativeRecord(
@@ -1162,6 +1213,8 @@ class SynthTrace {
   /// the returned list of property names.
   struct GetNativePropertyNamesRecord : public Record {
     static constexpr RecordType type{RecordType::GetNativePropertyNames};
+    /// The ObjectID of the host object that was being accessed for
+    /// HostObjet::getPropertyNames() call.
     const ObjectID hostObjectID_;
 
     explicit GetNativePropertyNamesRecord(
@@ -1186,6 +1239,9 @@ class SynthTrace {
   /// returned by the GetNativePropertyNames query.
   struct GetNativePropertyNamesReturnRecord final : public Record {
     static constexpr RecordType type{RecordType::GetNativePropertyNamesReturn};
+    // TODO: T183833906 Change this to return a vector of PropNameIDs.
+    /// Returned list of property names that are converted to UTF-8 strings from
+    /// PropNameID.
     const std::vector<std::string> propNames_;
 
     explicit GetNativePropertyNamesReturnRecord(
@@ -1204,7 +1260,10 @@ class SynthTrace {
 
   struct SetExternalMemoryPressureRecord final : public Record {
     static constexpr RecordType type{RecordType::SetExternalMemoryPressure};
+    /// The ObjectID of the object that was passed to
+    /// Runtime::setExternalMemoryPressure() call.
     const ObjectID objID_;
+    /// The value passed to Runtime::setExternalMemoryPressure() call.
     const size_t amount_;
 
     explicit SetExternalMemoryPressureRecord(
