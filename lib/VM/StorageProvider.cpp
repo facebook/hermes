@@ -25,6 +25,36 @@
 #ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
 #pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 #endif
+
+#if (defined(__linux__) || defined(__ANDROID__)) && defined(__aarch64__)
+/* On Linux on ARM64 we most likely have at least 39 bits of virtual address
+ * space https://github.com/torvalds/linux/blob/v6.7/arch/arm64/Kconfig#L1262 If
+ * our mmap hint is above 2**39 it will likely fail. */
+#define MAX_ADDR_HINT 0x37FFFFFFFF
+#elif defined(__APPLE__) && defined(__aarch64__)
+/* On ios/arm64 assume we have at least 39 bits of virtual address space  (
+ * similar to linux on arm64). This should be true for all iOS versions >=14
+ * (https://github.com/golang/go/issues/46860), older versions <14 are
+ * unsupported. Note that the effective addressable space might vary, depending
+ * on apps entitelmnets as well as various other factors, hence we go for a
+ * conservative 39 bit address space limit, which is sufficient for most
+ * applications and should be good enough for this purpose.
+ */
+#define MAX_ADDR_HINT 0x37FFFFFFFF
+#elif (defined(__linux__) || defined(__ANDROID__)) && defined(__amd64__)
+#define MAX_ADDR_HINT 0x3FFFFFFFFFFF
+#elif defined(_WIN64)
+/* On Windows use a 37 bit address space limit as this is the lowest
+ * configuration for Windows Home
+ * https://learn.microsoft.com/en-us/windows/win32/memory/memory-limits-for-windows-releases
+ */
+#define MAX_ADDR_HINT 0x1FFFFFFFFF
+#else
+/* For other non-explicitly listed configuration, be extra conservative and use
+ * a 32 bit address space limit. */
+#define MAX_ADDR_HINT 0xFFFFFFFF
+#endif
+
 namespace hermes {
 namespace vm {
 
@@ -44,8 +74,8 @@ void *getMmapHint() {
   if constexpr (sizeof(uintptr_t) >= 8) {
     // std::random_device() yields an unsigned int, so combine two.
     addr = (addr << 32) | std::random_device()();
-    // Don't use the entire address space, to prevent too much fragmentation.
-    addr &= std::numeric_limits<uintptr_t>::max() >> 18;
+    // Don't use the entire address space, to ensure this is a valid address.
+    addr &= MAX_ADDR_HINT;
   }
   return alignAlloc(reinterpret_cast<void *>(addr));
 }
