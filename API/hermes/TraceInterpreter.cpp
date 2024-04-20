@@ -1114,13 +1114,9 @@ Value TraceInterpreter::execFunction(
             auto propNameID = [&] {
               switch (cpnr.valueType_) {
                 case SynthTrace::CreatePropNameIDRecord::ASCII:
-                  return PropNameID::forAscii(
-                      rt_, cpnr.chars_.data(), cpnr.chars_.size());
+                  return PropNameID::forAscii(rt_, cpnr.chars_);
                 case SynthTrace::CreatePropNameIDRecord::UTF8:
-                  return PropNameID::forUtf8(
-                      rt_,
-                      reinterpret_cast<const uint8_t *>(cpnr.chars_.data()),
-                      cpnr.chars_.size());
+                  return PropNameID::forUtf8(rt_, cpnr.chars_);
                 case SynthTrace::CreatePropNameIDRecord::TRACEVALUE: {
                   auto val = traceValueToJSIValue(
                       rt_, trace_, getJSIValueForUse, cpnr.traceValue_);
