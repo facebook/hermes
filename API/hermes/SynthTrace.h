@@ -210,6 +210,7 @@ class SynthTrace {
     CreateBigInt,
     BigIntToString,
     SetExternalMemoryPressure,
+    Utf8,
   };
 
   /// A Record is one element of a trace.
@@ -1278,6 +1279,36 @@ class SynthTrace {
 
     std::vector<ObjectID> uses() const override {
       return {objID_};
+    }
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+    bool operator==(const Record &that) const override;
+  };
+
+  /// An Utf8Record is an event where a PropNameID or String or Symbol was
+  /// converted to utf8.
+  struct Utf8Record final : public Record {
+    static constexpr RecordType type{RecordType::Utf8};
+    /// PropNameID, String or Symbol passed to utf8() or symbolToString() as an
+    /// argument
+    const TraceValue objID_;
+    /// Returned string from utf8() or symbolToString()
+    const std::string retVal_;
+
+    explicit Utf8Record(
+        TimeSinceStart time,
+        const TraceValue objID,
+        std::string retval)
+        : Record(time), objID_(objID), retVal_(std::move(retval)) {}
+
+    RecordType getType() const override {
+      return type;
+    }
+
+    std::vector<ObjectID> uses() const override {
+      std::vector<ObjectID> vec;
+      pushIfTrackedValue(objID_, vec);
+      return vec;
     }
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;

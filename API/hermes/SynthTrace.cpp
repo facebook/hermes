@@ -539,6 +539,14 @@ bool SynthTrace::SetExternalMemoryPressureRecord::operator==(
   return objID_ == thatCasted.objID_ && amount_ == thatCasted.amount_;
 }
 
+bool SynthTrace::Utf8Record::operator==(const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto &thatCasted = dynamic_cast<const Utf8Record &>(that);
+  return objID_ == thatCasted.objID_ && retVal_ == thatCasted.retVal_;
+}
+
 void SynthTrace::Record::toJSONInternal(JSONEmitter &json) const {
   std::string storage;
   llvh::raw_string_ostream os{storage};
@@ -760,6 +768,12 @@ void SynthTrace::SetExternalMemoryPressureRecord::toJSONInternal(
   json.emitKeyValue("amount", amount_);
 }
 
+void SynthTrace::Utf8Record::toJSONInternal(JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKeyValue("objID", encode(objID_));
+  json.emitKeyValue("retval", retVal_);
+}
+
 const char *SynthTrace::nameFromReleaseUnused(::hermes::vm::ReleaseUnused ru) {
   switch (ru) {
     case ::hermes::vm::ReleaseUnused::kReleaseUnusedNone:
@@ -867,6 +881,7 @@ llvh::raw_ostream &operator<<(
     CASE(CreateBigInt);
     CASE(BigIntToString);
     CASE(SetExternalMemoryPressure);
+    CASE(Utf8);
   }
 #undef CASE
   // This only exists to appease gcc.
@@ -914,6 +929,7 @@ std::istream &operator>>(std::istream &is, SynthTrace::RecordType &type) {
   CASE(CreateBigInt)
   CASE(BigIntToString)
   CASE(SetExternalMemoryPressure)
+  CASE(Utf8);
 #undef CASE
 
   llvm_unreachable(

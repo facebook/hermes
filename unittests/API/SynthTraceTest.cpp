@@ -87,6 +87,66 @@ TEST_F(SynthTraceTest, CreateObject) {
       SynthTrace::CreateObjectRecord(dummyTime, objID), *records[0]);
 }
 
+TEST_F(SynthTraceTest, PropNameIDUtf8) {
+  const std::string ascii = "foo";
+  const jsi::PropNameID name = jsi::PropNameID::forAscii(*rt, ascii);
+  const std::string utf8RetVal = name.utf8(*rt);
+
+  const SynthTrace::ObjectID objId = rt->getUniqueID(name);
+
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(2, records.size());
+  EXPECT_EQ_RECORD(
+      SynthTrace::CreatePropNameIDRecord(
+          dummyTime, objId, ascii.c_str(), ascii.size()),
+      *records[0]);
+  EXPECT_EQ_RECORD(
+      SynthTrace::Utf8Record(
+          dummyTime, SynthTrace::encodePropNameID(objId), utf8RetVal),
+      *records[1]);
+}
+
+TEST_F(SynthTraceTest, StringUtf8) {
+  const std::string ascii = "foo";
+  const jsi::String name = jsi::String::createFromAscii(*rt, ascii);
+  const std::string utf8RetVal = name.utf8(*rt);
+
+  const SynthTrace::ObjectID objId = rt->getUniqueID(name);
+
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(2, records.size());
+  EXPECT_EQ_RECORD(
+      SynthTrace::CreateStringRecord(
+          dummyTime, objId, ascii.c_str(), ascii.size()),
+      *records[0]);
+  EXPECT_EQ_RECORD(
+      SynthTrace::Utf8Record(
+          dummyTime, SynthTrace::encodeString(objId), utf8RetVal),
+      *records[1]);
+}
+
+TEST_F(SynthTraceTest, SymbolToString) {
+  const jsi::Value symbol = rt->global()
+                                .getPropertyAsFunction(*rt, "eval")
+                                .call(*rt, "Symbol('foo')");
+
+  const std::string symbolToStringResult = symbol.asSymbol(*rt).toString(*rt);
+
+  const SynthTrace::ObjectID objId = rt->getUniqueID(symbol.asSymbol(*rt));
+
+  const auto &records = rt->trace().records();
+  // records[0] is createString for "eval"
+  // records[1] is getProperty for "eval"
+  // records[2] is createString for "Symbol('foo')"
+  // records[4] is return from eval
+  // records[5] is symbolToString
+  EXPECT_EQ(6, records.size());
+  EXPECT_EQ_RECORD(
+      SynthTrace::Utf8Record(
+          dummyTime, SynthTrace::encodeSymbol(objId), symbolToStringResult),
+      *records[5]);
+}
+
 TEST_F(SynthTraceTest, CallAndReturn) {
   const std::string code = "function identity(x) { return x; }";
   rt->evaluateJavaScript(
@@ -107,7 +167,7 @@ TEST_F(SynthTraceTest, CallAndReturn) {
   auto ret = func.call(*rt, {std::move(arg)});
   // Make sure that the return value is correct in case there's some bug in
   // the function that was called.
-  ASSERT_EQ(argStr, ret.asString(*rt).utf8(*rt));
+  ASSERT_EQ(argStr, ret.asString(rt->plain()).utf8(rt->plain()));
 
   const auto &records = rt->trace().records();
   // The first two records are for executing the JS for "identity".
@@ -1255,6 +1315,41 @@ TEST_F(SynthTraceReplayTest, BigIntCreate) {
     EXPECT_EQ(uint64BigInt.getUint64(rt), ~0ull);
     EXPECT_EQ(uint64String.utf8(rt), "1777777777777777777777");
   }
+}
+
+/// This test is here to make sure that the replayed string match is happening
+/// during replay.
+TEST_F(SynthTraceReplayTest, PropNameIDUtf8) {
+  {
+    std::string ascii = "foo";
+    auto &rt = *traceRt;
+    jsi::PropNameID name = jsi::PropNameID::forAscii(rt, ascii);
+    std::string ret = name.utf8(rt);
+  }
+  replay();
+}
+
+/// This test is here to make sure that the replayed string match is happening
+/// during replay.
+TEST_F(SynthTraceReplayTest, StringUtf8) {
+  {
+    std::string ascii = "foo";
+    auto &rt = *traceRt;
+    jsi::String name = jsi::String::createFromAscii(rt, ascii);
+    std::string ret = name.utf8(rt);
+  }
+  replay();
+}
+
+/// This test is here to make sure that the replayed string match is happening
+/// during replay.
+TEST_F(SynthTraceReplayTest, SymbolToString) {
+  {
+    auto &rt = *traceRt;
+    jsi::Value symbol = eval(rt, "Symbol('foo')");
+    std::string symbolToStringResult = symbol.asSymbol(rt).toString(rt);
+  }
+  replay();
 }
 
 TEST_F(SynthTraceReplayTest, HostObjectManipulation) {
