@@ -245,9 +245,15 @@ m::runtime::RemoteObject m::runtime::makeRemoteObject(
     }
   } else if (value.isString()) {
     result.type = "string";
-    // result.value is a blob of well-formed JSON. Therefore, we need to add
-    // surrounding quotes to this string in order for it to be valid JSON.
-    result.value = "\"" + value.getString(runtime).utf8(runtime) + "\"";
+
+    // result.value is a blob of well-formed JSON. Therefore, we need to encode
+    // the string as JSON.
+    std::string encodedValue;
+    llvh::raw_string_ostream stream{encodedValue};
+    ::hermes::JSONEmitter json{stream};
+    json.emitValue(value.getString(runtime).utf8(runtime));
+    stream.flush();
+    result.value = std::move(encodedValue);
   } else if (value.isSymbol()) {
     result.type = "symbol";
     auto sym = value.getSymbol(runtime);
