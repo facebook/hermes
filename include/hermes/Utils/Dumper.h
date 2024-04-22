@@ -145,6 +145,17 @@ class Namer {
     }
   }
 
+  /// Restore the function state for the given \p F. In contrast to newFunction,
+  /// this will not invoke nextGeneration on the function state. This function
+  /// is meant to prepare the dumper to retrieve BB/Inst labels. As such, this
+  /// should only be used when in persistent mode, and when the function has
+  /// already been visited.
+  void restoreFunctionState(const Function *F) {
+    assert(persistent_ && "Not in persistent mode");
+    assert(functionMap_.count(F) && "Function hasn't been visited before");
+    curFunctionState_ = functionMap_[F].get();
+  }
+
   void newFunction(const Function *F) {
     if (persistent_) {
       auto [it, inserted] =

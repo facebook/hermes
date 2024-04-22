@@ -42,8 +42,9 @@ IRPrinter::IRPrinter(
       colors_(ctx.getCodeGenerationSettings().colors && os_.has_colors()),
       needEscape_(escape),
       tempNamer_(
-          usePersistent && ctx.getPersistentIRNamer() ? nullptr
-                                                      : new Namer(false)),
+          usePersistent && ctx.getPersistentIRNamer()
+              ? nullptr
+              : new Namer(usePersistent)),
       namer_(tempNamer_ ? *tempNamer_ : *ctx.getPersistentIRNamer()),
       labelAllInsts_(labelAllInsts) {}
 
