@@ -48,13 +48,17 @@ struct ConsoleMessage {
   double timestamp;
   ConsoleAPIType type;
   std::vector<jsi::Value> args;
-  debugger::StackTrace stackTrace{};
+  debugger::StackTrace stackTrace;
 
   ConsoleMessage(
       double timestamp,
       ConsoleAPIType type,
-      std::vector<jsi::Value> args)
-      : timestamp(timestamp), type(type), args(std::move(args)) {}
+      std::vector<jsi::Value> args,
+      debugger::StackTrace stackTrace = {})
+      : timestamp(timestamp),
+        type(type),
+        args(std::move(args)),
+        stackTrace(stackTrace) {}
 };
 
 class ConsoleMessageStorage {

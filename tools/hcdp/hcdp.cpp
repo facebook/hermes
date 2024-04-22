@@ -19,23 +19,32 @@ int main(void) {
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
+#include <hermes/Parser/JSONParser.h>
 #include <hermes/SerialExecutor/SerialExecutor.h>
+#include <hermes/Support/JSONEmitter.h>
 #include <hermes/cdp/CDPAgent.h>
 #include <hermes/cdp/CDPDebugAPI.h>
+#include <hermes/cdp/MessageTypes.h>
 #include <hermes/hermes.h>
 
 #include "IPC.h"
+#include "JSONHelpers.h"
 
 namespace hermes {
 
 namespace fbhermes = ::facebook::hermes;
 namespace cdp = fbhermes::cdp;
+namespace message = fbhermes::cdp::message;
 using namespace facebook::hermes;
-
-constexpr uint32_t kExecutionContextId = 1;
+using namespace facebook;
+using namespace ::hermes::parser;
 
 namespace {
+
+static uint32_t nextExecutionContextId = 1;
+
 /// Manages a runtime executing a script on a thread.
 class RuntimeInstance {
  public:
@@ -48,6 +57,40 @@ class RuntimeInstance {
                                             .withEnableSampleProfiling(true)
                                             .build())) {
     cdpDebugAPI_ = cdp::CDPDebugAPI::create(*runtime_);
+
+    // Install console.log handler
+    HermesRuntime &hermesRt = *runtime_.get();
+    auto console = jsi::Object(hermesRt);
+    auto nameID = jsi::PropNameID::forUtf8(hermesRt, "log");
+    console.setProperty(
+        hermesRt,
+        nameID,
+        jsi::Function::createFromHostFunction(
+            hermesRt,
+            nameID,
+            1,
+            [cdpDebugAPI = cdpDebugAPI_.get(), &hermesRt](
+                jsi::Runtime &runtime,
+                const jsi::Value &,
+                const jsi::Value *argsPtr,
+                size_t count) {
+              std::vector<jsi::Value> args;
+              for (size_t i = 0; i < count; ++i) {
+                args.emplace_back(runtime, argsPtr[i]);
+              }
+              const auto now = std::chrono::system_clock::now();
+              double timestamp =
+                  std::chrono::duration_cast<std::chrono::seconds>(
+                      now.time_since_epoch())
+                      .count();
+              cdpDebugAPI->addConsoleMessage(
+                  {timestamp,
+                   cdp::ConsoleAPIType::kLog,
+                   std::move(args),
+                   hermesRt.getDebugger().captureStackTrace()});
+              return jsi::Value::undefined();
+            }));
+    runtime_->global().setProperty(hermesRt, "console", console);
 
     executor_->add([this,
                     source = std::move(scriptSource),
@@ -86,6 +129,29 @@ class RuntimeInstance {
   std::unique_ptr<fbhermes::HermesRuntime> runtime_;
   std::unique_ptr<cdp::CDPDebugAPI> cdpDebugAPI_;
 };
+
+/// Thread-safe class for storing and later retrieving a message ID
+class SynchronizedMessageId {
+ public:
+  void setId(long long id) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    id_ = id;
+  }
+
+  void clearId() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    id_ = std::nullopt;
+  }
+
+  std::optional<long long> getId() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return id_;
+  }
+
+ private:
+  std::mutex mutex_{};
+  std::optional<long long> id_{};
+};
 } // namespace
 
 /// Read a script from the specified path.
@@ -106,6 +172,11 @@ static void debugScript(std::string scriptSource, std::string scriptUrl) {
       std::make_unique<RuntimeInstance>(
           std::move(scriptSource), std::move(scriptUrl));
 
+  uint32_t executionContextId = nextExecutionContextId++;
+
+  std::shared_ptr<SynchronizedMessageId> runtimeEnableMessageId =
+      std::make_shared<SynchronizedMessageId>();
+
   // Process IPC messages
   std::unordered_map<ClientID, std::unique_ptr<cdp::CDPAgent>> agents;
   while (std::optional<IPCCommand> ipc = receiveIPC()) {
@@ -116,7 +187,7 @@ static void debugScript(std::string scriptSource, std::string scriptUrl) {
         agents.emplace(
             clientID,
             cdp::CDPAgent::create(
-                kExecutionContextId,
+                executionContextId,
                 runtimeInstance->cdpDebugAPI(),
                 [&runtimeInstance](
                     std::function<void(fbhermes::HermesRuntime &)> task) {
@@ -125,7 +196,24 @@ static void debugScript(std::string scriptSource, std::string scriptUrl) {
                   runtimeInstance->addTask(
                       [&runtime, task = std::move(task)]() { task(runtime); });
                 },
-                [clientID](const std::string &message) {
+                [clientID, executionContextId, runtimeEnableMessageId](
+                    const std::string &message) {
+                  // Emit executionContextCreated notification, which is
+                  // required for the Console tab to work.
+                  if (runtimeEnableMessageId->getId().has_value()) {
+                    auto id = getResponseId(message);
+                    if (id.has_value() &&
+                        id.value() == runtimeEnableMessageId->getId().value()) {
+                      message::runtime::ExecutionContextCreatedNotification
+                          note;
+                      message::runtime::ExecutionContextDescription desc;
+                      desc.id = executionContextId;
+                      desc.name = "main";
+                      note.context = std::move(desc);
+                      sendIPC(kMessageIPCType, clientID, note.toJsonStr());
+                      runtimeEnableMessageId->clearId();
+                    }
+                  }
                   // Forward message to the client, via an IPC message.
                   sendIPC(kMessageIPCType, clientID, message);
                 }));
@@ -138,6 +226,13 @@ static void debugScript(std::string scriptSource, std::string scriptUrl) {
           // Received a message for an agent that was previously-destroyed,
           // or one that never existed.
           throw std::runtime_error("No such agent");
+        }
+        std::unique_ptr<message::Request> command =
+            message::Request::fromJson(ipc.value().message);
+        // Save Runtime.enable's message ID so that we could intercept the
+        // response and emit executionContextCreated notification.
+        if (command->method == "Runtime.enable") {
+          runtimeEnableMessageId->setId(command->id);
         }
         agent->second->handleCommand(ipc.value().message);
       } break;
