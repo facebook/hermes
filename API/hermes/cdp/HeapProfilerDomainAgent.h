@@ -34,6 +34,9 @@ class HeapProfilerDomainAgent : public DomainAgent {
   void getObjectByHeapObjectId(
       const m::heapProfiler::GetObjectByHeapObjectIdRequest &req);
 
+  /// Handle HeapProfiler.getObjectByHeapObjectId
+  void getHeapObjectId(const m::heapProfiler::GetHeapObjectIdRequest &req);
+
  private:
   void sendSnapshot(int reqId, bool reportProgress);
 
