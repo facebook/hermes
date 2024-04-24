@@ -11,7 +11,6 @@
 #include <string>
 
 #include <hermes/Parser/JSONParser.h>
-#include <jsi/jsi.h>
 
 namespace facebook {
 namespace hermes {
