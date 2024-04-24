@@ -200,6 +200,10 @@ Literal *hermes::evalBinaryOperator(
         // NaN, so we break out of the switch and go through to there
         break;
       case ValueKind::BinaryAddInstKind:
+        // Cannot mixin BigInt and Number type (NaN)
+        if (leftTy.isBigIntType() || rightTy.isBigIntType())
+          return nullptr;
+
         // If we're trying to add NaN with a string, then we need to perform
         // string concatenation with "NaN" and the string operand
         if (leftStr) {
@@ -221,6 +225,10 @@ Literal *hermes::evalBinaryOperator(
       case ValueKind::BinaryMultiplyInstKind:
       case ValueKind::BinaryDivideInstKind:
       case ValueKind::BinaryModuloInstKind:
+        // Cannot mixin BigInt and Number type (NaN)
+        if (leftTy.isBigIntType() || rightTy.isBigIntType())
+          return nullptr;
+
         // Binary arithmetic operations involving NaN evaluate to  NaN
         return builder.getLiteralNaN();
       case ValueKind::BinaryOrInstKind:
