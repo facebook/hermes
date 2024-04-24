@@ -67,13 +67,25 @@ class SyncConnection {
       std::function<void(const std::string &)> handler,
       std::chrono::milliseconds timeout = std::chrono::milliseconds(2500));
 
-  bool registerCallback();
-  bool unregisterCallback();
+  bool registerCallbacks();
+  bool unregisterCallbacks();
+
+  /// \return True if onUnregister was called in a previous unregisterCallbacks
+  ///     call. A registerCallbacks call will reset the status.
+  bool onUnregisterWasCalled();
 
  private:
+  /// This function is given to the CDPHandler to receive replies in the form of
+  /// CDP messages
   void onReply(const std::string &message);
 
+  /// This function is given to the CDPHandler to be invoked upon
+  /// unregisterCallbacks call
+  void onUnregister();
+
   CDPHandler cdpHandler_;
+
+  bool onUnregisterCalled_ = false;
 
   std::mutex mutex_;
   std::condition_variable hasReply_;
