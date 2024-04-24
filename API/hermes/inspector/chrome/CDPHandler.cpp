@@ -378,6 +378,8 @@ CDPHandler::Impl::Impl(
 CDPHandler::Impl::~Impl() {
   unregisterCallbacks();
 
+  runtimeAdapter_->getRuntime().getDebugger().setEventObserver(nullptr);
+
   // TODO(T161620474): Properly clean up all the other variables being protected
   // by other mutex
 }
