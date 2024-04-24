@@ -124,6 +124,15 @@ function emitRequestParser(stream: Writable, commands: Array<Command>) {
       return std::make_unique<T>(obj);
     }
 
+    #define TRY_ASSIGN(lhs, obj, key) \
+      if (!assign(lhs, obj, key)) {   \
+        return nullptr;               \
+      }
+    #define TRY_ASSIGN_JSON_BLOB(lhs, obj, key) \
+      if (!assignJsonBlob(lhs, obj, key)) {     \
+        return nullptr;                         \
+      }
+
     bool assignJsonBlob(
         optional<std::string> &field,
         const JSONObject *obj,
@@ -178,9 +187,8 @@ function emitRequestParser(stream: Writable, commands: Array<Command>) {
     JSONObject *jsonObj = *parseResult;
 
     std::string method;
-    if (!assign(method, jsonObj, "method")) {
-      return nullptr;
-    }
+    
+    TRY_ASSIGN(method, jsonObj, "method");
 
     auto it = builders.find(method);
     if (it == builders.end()) {
@@ -194,15 +202,21 @@ function emitRequestParser(stream: Writable, commands: Array<Command>) {
   stream.write('\n');
 }
 
-function emitPropAssign(stream: Writable, prop: Array<Property>, objName: string = 'obj') {
+function emitPropAssign(stream: Writable, pointerName: ?string, prop: Array<Property>, objName: string = 'obj') {
   const id = prop.getCppIdentifier();
   const name = prop.name;
   const type = prop.getFullCppType();
-  const assignMethod = type == 'std::optional<JSONBlob>' ? 'assignJsonBlob' : 'assign';
-  stream.write(`if (!${assignMethod}(${id}, ${objName}, "${name}")) {
-    throw std::runtime_error("Failed assign");
+  if (pointerName) {
+    const assignMethod = type == 'std::optional<JSONBlob>' ? 'TRY_ASSIGN_JSON_BLOB' : 'TRY_ASSIGN';
+    stream.write(`${assignMethod}(${pointerName}->${id}, ${objName}, "${name}");
+    `);
+  } else {
+    const assignMethod = type == 'std::optional<JSONBlob>' ? 'assignJsonBlob' : 'assign';
+    stream.write(`if (!${assignMethod}(${id}, ${objName}, "${name}")) {
+      throw std::runtime_error("Failed assign");
+    }
+    `);
   }
-  `);
 }
 
 function emitPropPut(stream: Writable, prop: Array<Property>, propsName: string = 'props'){
@@ -222,10 +236,20 @@ export function emitTypeDef(stream: Writable, type: PropsType) {
   stream.write(`${cppNs}::${cppType}::${cppType}(const JSONObject *obj) {\n`);
 
   for (const prop of props) {
-    emitPropAssign(stream, prop);
+    emitPropAssign(stream, null, prop);
   }
 
   stream.write('}\n\n');
+
+  stream.write(`std::unique_ptr<${cppNs}::${cppType}> ${cppNs}::${cppType}::tryMake(const JSONObject *obj) {
+    std::unique_ptr<${cppNs}::${cppType}> type = std::make_unique<${cppNs}::${cppType}>();
+  `);
+
+  for (const prop of props) {
+    emitPropAssign(stream, "type", prop);
+  }
+
+  stream.write('  return type;\n}\n\n');
 
   // toJsonVal()
   stream.write(`JSONValue *${cppNs}::${cppType}::toJsonVal(JSONFactory &factory) const {
@@ -265,6 +289,27 @@ function emitErrorResponseDef(stream: Writable) {
     }
   }
 
+  std::unique_ptr<ErrorResponse> ErrorResponse::tryMake(const JSONObject *obj) {
+    std::unique_ptr<ErrorResponse> resp = std::make_unique<ErrorResponse>();
+    TRY_ASSIGN(resp->id, obj, "id");
+
+    JSONValue *v = obj->get("error");
+    if (v == nullptr) {
+      return nullptr;
+    }
+    auto convertResult = valueFromJson<JSONObject*>(v);
+    if (!convertResult) {
+      return nullptr;
+    }
+    auto *error = *convertResult;
+
+    TRY_ASSIGN(resp->code, error, "code");
+    TRY_ASSIGN(resp->message, error, "message");
+    TRY_ASSIGN_JSON_BLOB(resp->data, error, "data");
+
+    return resp;
+  }
+
   JSONValue *ErrorResponse::toJsonVal(JSONFactory &factory) const {
     llvh::SmallVector<JSONFactory::Prop, 3> errProps;
     put(errProps, "code", code, factory);
@@ -283,6 +328,12 @@ function emitOkResponseDef(stream: Writable) {
     if (!assign(id, obj, "id")) {
       throw std::runtime_error("Failed assign");
     }
+  }
+
+  std::unique_ptr<OkResponse> OkResponse::tryMake(const JSONObject *obj) {
+    std::unique_ptr<OkResponse> resp = std::make_unique<OkResponse>();
+    TRY_ASSIGN(resp->id, obj, "id");
+    return resp;
   }
 
   JSONValue *OkResponse::toJsonVal(JSONFactory &factory) const {
@@ -308,6 +359,14 @@ UnknownRequest::UnknownRequest(const JSONObject *obj) {
   if (!assignJsonBlob(params, obj, "params")) {
     throw std::runtime_error("Failed assign");
   }
+}
+
+std::unique_ptr<UnknownRequest> UnknownRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<UnknownRequest> req = std::make_unique<UnknownRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+  TRY_ASSIGN_JSON_BLOB(req->params, obj, "params");
+  return req;
 }
 
 JSONValue *UnknownRequest::toJsonVal(JSONFactory &factory) const {
@@ -369,7 +428,7 @@ export function emitRequestDef(stream: Writable, command: Command) {
     }
 
     for (const prop of props) {
-      emitPropAssign(stream, prop, "params");
+      emitPropAssign(stream, null, prop, "params");
     }
 
     if (optionalParams) {
@@ -378,6 +437,47 @@ export function emitRequestDef(stream: Writable, command: Command) {
   }
 
   stream.write('}\n\n');
+
+  stream.write(`std::unique_ptr<${cppNs}::${cppType}> ${cppNs}::${cppType}::tryMake(const JSONObject *obj) {
+    std::unique_ptr<${cppNs}::${cppType}> req = std::make_unique<${cppNs}::${cppType}>();
+    TRY_ASSIGN(req->id, obj, "id");
+    TRY_ASSIGN(req->method, obj, "method");\n\n`);
+
+  if (props.length > 0) {
+    const optionalParams = props.every(p => p.optional);
+    if (optionalParams) {
+      stream.write(`
+        JSONValue *p = obj->get("params");
+        if (p != nullptr) {
+          auto convertResult = valueFromJson<JSONObject*>(p);
+          if (!convertResult) {
+            return nullptr;
+          }
+          auto *params = *convertResult;
+      `);
+    } else {
+      stream.write(`JSONValue *v = obj->get("params");
+      if (v == nullptr) {
+        return nullptr;
+      }
+      auto convertResult = valueFromJson<JSONObject*>(v);
+      if (!convertResult) {
+        return nullptr;
+      }
+      auto *params = *convertResult;
+      `);
+    }
+
+    for (const prop of props) {
+      emitPropAssign(stream, "req", prop, "params");
+    }
+
+    if (optionalParams) {
+      stream.write('}');
+    }
+  }
+
+  stream.write('  return req;\n}\n\n');
 
   // toJsonVal
   stream.write(`JSONValue *${cppNs}::${cppType}::toJsonVal(JSONFactory &factory) const {\n`);
@@ -426,7 +526,7 @@ export function emitResponseDef(stream: Writable, command: Command) {
       throw std::runtime_error("Failed assign");
     }\n\n`);
 
-  const props = command.returns || [];
+  let props = command.returns || [];
   if (props.length > 0) {
     stream.write(`JSONValue *v = obj->get("result");
     if (v == nullptr) {
@@ -440,11 +540,35 @@ export function emitResponseDef(stream: Writable, command: Command) {
     `);
 
     for (const prop of props) {
-      emitPropAssign(stream, prop, "res");
+      emitPropAssign(stream, null, prop, "res");
     }
   }
 
   stream.write('}\n\n');
+
+  stream.write(`std::unique_ptr<${cppNs}::${cppType}> ${cppNs}::${cppType}::tryMake(const JSONObject *obj) {
+    std::unique_ptr<${cppNs}::${cppType}> resp = std::make_unique<${cppNs}::${cppType}>();
+    TRY_ASSIGN(resp->id, obj, "id");\n\n`);
+
+  props = command.returns || [];
+  if (props.length > 0) {
+    stream.write(`JSONValue *v = obj->get("result");
+    if (v == nullptr) {
+      return nullptr;
+    }
+    auto convertResult = valueFromJson<JSONObject*>(v);
+    if (!convertResult) {
+      return nullptr;
+    }
+    auto *res = *convertResult;
+    `);
+
+    for (const prop of props) {
+      emitPropAssign(stream, "resp", prop, "res");
+    }
+  }
+
+  stream.write('  return resp;\n}\n\n');
 
   // toJsonVal
   stream.write(`JSONValue *${cppNs}::${cppType}::toJsonVal(JSONFactory &factory) const {\n`);
@@ -497,11 +621,34 @@ export function emitNotificationDef(stream: Writable, event: Event) {
     `);
 
     for (const prop of props) {
-      emitPropAssign(stream, prop, "params");
+      emitPropAssign(stream, null, prop, "params");
     }
   }
 
   stream.write('}\n\n');
+
+  stream.write(`std::unique_ptr<${cppNs}::${cppType}> ${cppNs}::${cppType}::tryMake(const JSONObject *obj) {
+    std::unique_ptr<${cppNs}::${cppType}> notif = std::make_unique<${cppNs}::${cppType}>();
+    TRY_ASSIGN(notif->method, obj, "method");\n\n`);
+
+  if (props.length > 0) {
+    stream.write(`JSONValue *v = obj->get("params");
+    if (v == nullptr) {
+      return nullptr;
+    }
+    auto convertResult = valueFromJson<JSONObject*>(v);
+    if (!convertResult) {
+      return nullptr;
+    }
+    auto *params = *convertResult;
+    `);
+
+    for (const prop of props) {
+      emitPropAssign(stream, "notif", prop, "params");
+    }
+  }
+
+  stream.write('  return notif;\n}\n\n');
 
   // toJsonVal
   stream.write(`JSONValue *${cppNs}::${cppType}::toJsonVal(JSONFactory &factory) const {\n`);

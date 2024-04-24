@@ -229,6 +229,7 @@ export function emitTypeDecl(stream: Writable, type: PropsType) {
     ${cppType}(${cppType}&&) = default;
     ${cppType}(const ${cppType}&) = delete;
     explicit ${cppType}(const JSONObject *obj);
+    static std::unique_ptr<${cppType}> tryMake(const JSONObject *obj);
     JSONValue *toJsonVal(JSONFactory &factory) const override;
     ${cppType}& operator=(const ${cppType}&) = delete;
     ${cppType}& operator=(${cppType}&&) = default;
@@ -245,6 +246,7 @@ function emitUnknownRequestDecl(stream: Writable) {
   stream.write(`struct UnknownRequest : public Request {
     UnknownRequest();
     explicit UnknownRequest(const JSONObject *obj);
+    static std::unique_ptr<UnknownRequest> tryMake(const JSONObject *obj);
 
     JSONValue *toJsonVal(JSONFactory &factory) const override;
     void accept(RequestHandler &handler) const override;
@@ -262,6 +264,7 @@ export function emitRequestDecl(stream: Writable, command: Command) {
   stream.write(`struct ${cppNs}::${cppType} : public Request {
     ${cppType}();
     explicit ${cppType}(const JSONObject *obj);
+    static std::unique_ptr<${cppType}> tryMake(const JSONObject *obj);
 
     JSONValue *toJsonVal(JSONFactory &factory) const override;
     void accept(RequestHandler &handler) const override;
@@ -276,6 +279,7 @@ function emitErrorResponseDecl(stream: Writable) {
   stream.write(`struct ErrorResponse : public Response {
     ErrorResponse() = default;
     explicit ErrorResponse(const JSONObject *obj);
+    static std::unique_ptr<ErrorResponse> tryMake(const JSONObject *obj);
     JSONValue *toJsonVal(JSONFactory &factory) const override;
 
     int code;
@@ -290,6 +294,7 @@ function emitOkResponseDecl(stream: Writable) {
   stream.write(`struct OkResponse : public Response {
     OkResponse() = default;
     explicit OkResponse(const JSONObject *obj);
+    static std::unique_ptr<OkResponse> tryMake(const JSONObject *obj);
     JSONValue *toJsonVal(JSONFactory &factory) const override;
   };
 
@@ -306,6 +311,7 @@ export function emitResponseDecl(stream: Writable, command: Command) {
   stream.write(`struct ${cppNs}::${cppType} : public Response {
     ${cppType}() = default;
     explicit ${cppType}(const JSONObject *obj);
+    static std::unique_ptr<${cppType}> tryMake(const JSONObject *obj);
     JSONValue *toJsonVal(JSONFactory &factory) const override;
   `);
 
@@ -321,6 +327,7 @@ export function emitNotificationDecl(stream: Writable, event: Event) {
   stream.write(`struct ${cppNs}::${cppType} : public Notification {
     ${cppType}();
     explicit ${cppType}(const JSONObject *obj);
+    static std::unique_ptr<${cppType}> tryMake(const JSONObject *obj);
     JSONValue *toJsonVal(JSONFactory &factory) const override;
   `);
 
