@@ -476,6 +476,49 @@ m::runtime::CallArgument makeObjectIdCallArgument(
 
 } // namespace
 
+// Test that destructing a CDPHandler does not leave the runtime in any bad
+// state.
+TEST(CleanUpTests, testDestructor) {
+  int msgId = 0;
+  AsyncHermesRuntime asyncRuntime;
+  asyncRuntime.executeScriptSync(R"(
+    var a = 0;
+    var console = {
+      log: function(...args){
+        a += 1;
+      }
+    };
+  )");
+  {
+    SyncConnection conn{asyncRuntime};
+    send<m::runtime::EnableRequest>(conn, msgId++);
+    expectExecutionContextCreated(conn);
+    asyncRuntime.executeScriptAsync(R"(console.log("hi");)");
+    JSLexer::Allocator jsonAlloc;
+    JSONFactory factory{jsonAlloc};
+    // Verify that console.log has been intercepted by the handler and emits the
+    // correct CDP event.
+    conn.waitForNotification([&factory](const std::string &str) {
+      auto parsedNote = mustParseStrAsJsonObj(str, factory);
+      message::JSONValue *methodRes = parsedNote->get("method");
+      EXPECT_TRUE(methodRes != nullptr);
+      std::unique_ptr<std::string> method =
+          message::valueFromJson<std::string>(methodRes);
+      EXPECT_TRUE(method != nullptr);
+      EXPECT_EQ(*method, "Runtime.consoleAPICalled");
+    });
+  }
+  // The destructor has been called. Calling any console methods should not
+  // break, and the original console method is still called.
+  asyncRuntime.executeScriptSync(R"(console.log("bye");)");
+  std::shared_ptr<HermesRuntime> rt = asyncRuntime.runtime();
+  jsi::Value a = rt->global().getProperty(*rt, "a");
+  EXPECT_TRUE(a.isNumber());
+  // a should have been incremented to two, since there have been two console
+  // log statements executed.
+  EXPECT_EQ(a.getNumber(), 2);
+}
+
 TEST_F(ConnectionTests, testUnregisteringCallback) {
   asyncRuntime.executeScriptAsync(R"(
     var a = 1 + 2;

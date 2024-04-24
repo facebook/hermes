@@ -81,6 +81,18 @@ class AsyncHermesRuntime {
           facebook::hermes::HermesRuntime::DebugFlags{});
 
   /**
+   * executeScriptSync evaluates JS in the underlying Hermes runtime on a
+   * separate thread. It will block the caller until execution completes. If
+   * this takes longer than \p timeout, an exception will be thrown.
+   */
+  void executeScriptSync(
+      const std::string &script,
+      const std::string &url = "url",
+      facebook::hermes::HermesRuntime::DebugFlags flags =
+          facebook::hermes::HermesRuntime::DebugFlags{},
+      std::chrono::milliseconds timeout = std::chrono::milliseconds(2500));
+
+  /**
    * wait blocks until all previous executeScriptAsync calls finish.
    */
   void wait(
