@@ -45,8 +45,8 @@ bool SyncConnection::registerCallback() {
       std::bind(&SyncConnection::onReply, this, std::placeholders::_1));
 }
 
-void SyncConnection::unregisterCallback() {
-  cdpHandler_.unregisterCallback();
+bool SyncConnection::unregisterCallback() {
+  return cdpHandler_.unregisterCallback();
 }
 
 void SyncConnection::send(const std::string &str) {

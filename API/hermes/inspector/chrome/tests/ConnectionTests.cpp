@@ -485,7 +485,8 @@ TEST_F(ConnectionTests, testUnregisteringCallback) {
   send<m::debugger::EnableRequest>(conn, 1);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
-  conn.unregisterCallback();
+  EXPECT_TRUE(conn.unregisterCallback());
+  EXPECT_FALSE(conn.unregisterCallback());
 
   conn.send(R"({"id": 2, "method": "Debugger.foo"})");
   expectNothing(conn);
