@@ -1832,8 +1832,6 @@ Script CDPHandler::Impl::getScriptFromTopCallFrame() {
 }
 
 debugger::Command CDPHandler::Impl::didPause(debugger::Debugger &debugger) {
-  std::cout << "didPause CDPHandler::Impl: " << (int)getPauseReason()
-            << std::endl;
   processPendingDesiredAttachments();
 
   if (getPauseReason() == debugger::PauseReason::ScriptLoaded) {
@@ -1930,7 +1928,6 @@ debugger::Command CDPHandler::Impl::didPause(debugger::Debugger &debugger) {
         return debugger::Command::eval(evalReq.expression, evalReq.frameIdx);
       }
     }
-    std::cout << "[JFYI] repeating paused loop" << std::endl;
   }
 }
 
