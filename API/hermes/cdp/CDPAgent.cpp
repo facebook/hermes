@@ -9,6 +9,7 @@
 #include "CDPDebugAPI.h"
 #include "ConsoleMessage.h"
 #include "DebuggerDomainAgent.h"
+#include "HeapProfilerDomainAgent.h"
 #include "ProfilerDomainAgent.h"
 #include "RuntimeDomainAgent.h"
 
@@ -145,6 +146,7 @@ class CDPAgentImpl {
     std::unique_ptr<DebuggerDomainAgent> debuggerAgent_;
     std::unique_ptr<RuntimeDomainAgent> runtimeAgent_;
     std::unique_ptr<ProfilerDomainAgent> profilerAgent_;
+    std::unique_ptr<HeapProfilerDomainAgent> heapProfilerAgent_;
 
     std::unique_ptr<DomainState> debuggerAgentState_;
   };
@@ -287,6 +289,8 @@ void CDPAgentImpl::DomainAgents::initialize() {
       consoleMessageDispatcher_);
   profilerAgent_ = std::make_unique<ProfilerDomainAgent>(
       executionContextID_, runtime_, messageCallback_, objTable_);
+  heapProfilerAgent_ = std::make_unique<HeapProfilerDomainAgent>(
+      executionContextID_, messageCallback_, objTable_);
 }
 
 void CDPAgentImpl::DomainAgents::dispose() {
