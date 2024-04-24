@@ -672,9 +672,12 @@ void CDPHandler::Impl::handle(const m::heapProfiler::StopSamplingRequest &req) {
     // exits, so we declare a local factory.
     JSLexer::Allocator alloc;
     JSONFactory factory(alloc);
-    JSONObject *json = parseStrAsJsonObj(stream.str(), factory);
+    std::optional<JSONObject *> json = parseStrAsJsonObj(stream.str(), factory);
+    if (!json) {
+      throw std::runtime_error("Failed to parse string as JSONObject");
+    }
     m::heapProfiler::StopSamplingResponse resp;
-    m::heapProfiler::SamplingHeapProfile profile{json};
+    m::heapProfiler::SamplingHeapProfile profile{*json};
     resp.id = req.id;
     resp.profile = std::move(profile);
     sendResponseToClient(resp);
@@ -770,8 +773,12 @@ void CDPHandler::Impl::handle(const m::profiler::StopRequest &req) {
       // exits, so we declare a local factory.
       JSLexer::Allocator alloc;
       JSONFactory factory(alloc);
-      resp.profile = m::profiler::Profile(
-          parseStrAsJsonObj(std::move(profileStream).str(), factory));
+      std::optional<JSONObject *> json =
+          parseStrAsJsonObj(std::move(profileStream).str(), factory);
+      if (!json) {
+        throw std::runtime_error("Failed to parse string as JSONObject");
+      }
+      resp.profile = m::profiler::Profile{*json};
       sendResponseToClient(resp);
     } catch (const std::exception &) {
       sendResponseToClient(m::makeErrorResponse(

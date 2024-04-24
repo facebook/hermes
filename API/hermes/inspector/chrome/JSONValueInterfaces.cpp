@@ -12,22 +12,29 @@ namespace hermes {
 namespace inspector {
 namespace chrome {
 
-JSONValue *parseStr(const std::string &str, JSONFactory &factory) {
+std::optional<JSONValue *> parseStr(
+    const std::string &str,
+    JSONFactory &factory) {
   ::hermes::SourceErrorManager sm;
   ::hermes::SourceErrorManager::SaveAndSuppressMessages suppress(&sm);
   JSONParser jsonParser(factory, str, sm);
   auto jsonRes = jsonParser.parse();
   if (!jsonRes) {
-    throw std::runtime_error("Invalid JSON");
+    return std::nullopt;
   }
   return *jsonRes;
 }
 
-JSONObject *parseStrAsJsonObj(const std::string &str, JSONFactory &factory) {
-  auto *jsonVal = parseStr(str, factory);
-  auto *jsonObj = llvh::dyn_cast_or_null<JSONObject>(jsonVal);
+std::optional<JSONObject *> parseStrAsJsonObj(
+    const std::string &str,
+    JSONFactory &factory) {
+  std::optional<JSONValue *> jsonVal = parseStr(str, factory);
+  if (!jsonVal) {
+    return std::nullopt;
+  }
+  auto *jsonObj = llvh::dyn_cast_or_null<JSONObject>(jsonVal.value());
   if (!jsonObj) {
-    throw std::runtime_error("JSON value not an object");
+    return std::nullopt;
   }
   return jsonObj;
 }
@@ -40,10 +47,10 @@ std::string jsonValToStr(const JSONValue *v) {
   return std::move(OS.str());
 }
 
-JSONValue *get(const JSONObject *obj, const std::string &key) {
+std::optional<JSONValue *> get(const JSONObject *obj, const std::string &key) {
   JSONValue *v = obj->get(key);
   if (v == nullptr) {
-    throw std::runtime_error("key not found: " + key);
+    return std::nullopt;
   }
   return v;
 }

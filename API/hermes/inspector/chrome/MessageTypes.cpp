@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<8bdb8c171c256400dff60d6d1bf2ad28>>
+// @generated SignedSource<<3c6c6dff0e78fedc13690eedc7fb0207>>
 
 #include "MessageTypes.h"
 
@@ -39,8 +39,11 @@ void putJsonBlob(
     JSONFactory &factory) {
   if (blob.has_value()) {
     JSONString *jsStr = factory.getString(key);
-    JSONValue *jsVal = parseStr(*blob, factory);
-    props.push_back({jsStr, jsVal});
+    std::optional<JSONValue *> jsVal = parseStr(*blob, factory);
+    if (!jsVal) {
+      throw std::runtime_error("Failed to parse string to JSONValue");
+    }
+    props.push_back({jsStr, *jsVal});
   }
 }
 
@@ -101,7 +104,11 @@ std::unique_ptr<Request> Request::fromJsonThrowOnError(const std::string &str) {
 
   JSLexer::Allocator alloc;
   JSONFactory factory(alloc);
-  auto *jsonObj = parseStrAsJsonObj(str, factory);
+  std::optional<JSONObject *> parseResult = parseStrAsJsonObj(str, factory);
+  if (!parseResult) {
+    throw std::runtime_error("Failed to parse string to JSONObject");
+  }
+  JSONObject *jsonObj = *parseResult;
 
   std::string method;
   assign(method, jsonObj, "method");
@@ -586,7 +593,11 @@ debugger::EvaluateOnCallFrameRequest::EvaluateOnCallFrameRequest(
   assign(id, obj, "id");
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(callFrameId, params, "callFrameId");
   assign(expression, params, "expression");
   assign(objectGroup, params, "objectGroup");
@@ -652,7 +663,11 @@ debugger::RemoveBreakpointRequest::RemoveBreakpointRequest(
   assign(id, obj, "id");
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(breakpointId, params, "breakpointId");
 }
 
@@ -715,7 +730,11 @@ debugger::SetBreakpointRequest::SetBreakpointRequest(const JSONObject *obj)
   assign(id, obj, "id");
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(location, params, "location");
   assign(condition, params, "condition");
 }
@@ -749,7 +768,11 @@ debugger::SetBreakpointByUrlRequest::SetBreakpointByUrlRequest(
   assign(id, obj, "id");
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(lineNumber, params, "lineNumber");
   assign(url, params, "url");
   assign(urlRegex, params, "urlRegex");
@@ -792,7 +815,11 @@ debugger::SetBreakpointsActiveRequest::SetBreakpointsActiveRequest(
   assign(id, obj, "id");
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(active, params, "active");
 }
 
@@ -826,7 +853,11 @@ debugger::SetInstrumentationBreakpointRequest::
   assign(id, obj, "id");
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(instrumentation, params, "instrumentation");
 }
 
@@ -859,7 +890,11 @@ debugger::SetPauseOnExceptionsRequest::SetPauseOnExceptionsRequest(
   assign(id, obj, "id");
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(state, params, "state");
 }
 
@@ -972,7 +1007,11 @@ heapProfiler::GetHeapObjectIdRequest::GetHeapObjectIdRequest(
   assign(id, obj, "id");
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(objectId, params, "objectId");
 }
 
@@ -1005,7 +1044,11 @@ heapProfiler::GetObjectByHeapObjectIdRequest::GetObjectByHeapObjectIdRequest(
   assign(id, obj, "id");
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(objectId, params, "objectId");
   assign(objectGroup, params, "objectGroup");
 }
@@ -1270,7 +1313,11 @@ runtime::CallFunctionOnRequest::CallFunctionOnRequest(const JSONObject *obj)
   assign(id, obj, "id");
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(functionDeclaration, params, "functionDeclaration");
   assign(objectId, params, "objectId");
   assign(arguments, params, "arguments");
@@ -1319,7 +1366,11 @@ runtime::CompileScriptRequest::CompileScriptRequest(const JSONObject *obj)
   assign(id, obj, "id");
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(expression, params, "expression");
   assign(sourceURL, params, "sourceURL");
   assign(persistScript, params, "persistScript");
@@ -1393,7 +1444,11 @@ runtime::EvaluateRequest::EvaluateRequest(const JSONObject *obj)
   assign(id, obj, "id");
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(expression, params, "expression");
   assign(objectGroup, params, "objectGroup");
   assign(includeCommandLineAPI, params, "includeCommandLineAPI");
@@ -1459,7 +1514,11 @@ runtime::GetPropertiesRequest::GetPropertiesRequest(const JSONObject *obj)
   assign(id, obj, "id");
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(objectId, params, "objectId");
   assign(ownProperties, params, "ownProperties");
   assign(generatePreview, params, "generatePreview");
@@ -1549,7 +1608,11 @@ void runtime::RunIfWaitingForDebuggerRequest::accept(
 ErrorResponse::ErrorResponse(const JSONObject *obj) {
   assign(id, obj, "id");
 
-  auto *error = valueFromJson<JSONObject *>(get(obj, "error"));
+  JSONValue *v = obj->get("error");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *error = valueFromJson<JSONObject *>(v);
 
   assign(code, error, "code");
   assign(message, error, "message");
@@ -1591,7 +1654,11 @@ debugger::EvaluateOnCallFrameResponse::EvaluateOnCallFrameResponse(
     const JSONObject *obj) {
   assign(id, obj, "id");
 
-  auto *res = valueFromJson<JSONObject *>(get(obj, "result"));
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *res = valueFromJson<JSONObject *>(v);
   assign(result, res, "result");
   assign(exceptionDetails, res, "exceptionDetails");
 }
@@ -1614,7 +1681,11 @@ JSONValue *debugger::EvaluateOnCallFrameResponse::toJsonVal(
 debugger::SetBreakpointResponse::SetBreakpointResponse(const JSONObject *obj) {
   assign(id, obj, "id");
 
-  auto *res = valueFromJson<JSONObject *>(get(obj, "result"));
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *res = valueFromJson<JSONObject *>(v);
   assign(breakpointId, res, "breakpointId");
   assign(actualLocation, res, "actualLocation");
 }
@@ -1638,7 +1709,11 @@ debugger::SetBreakpointByUrlResponse::SetBreakpointByUrlResponse(
     const JSONObject *obj) {
   assign(id, obj, "id");
 
-  auto *res = valueFromJson<JSONObject *>(get(obj, "result"));
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *res = valueFromJson<JSONObject *>(v);
   assign(breakpointId, res, "breakpointId");
   assign(locations, res, "locations");
 }
@@ -1662,7 +1737,11 @@ debugger::SetInstrumentationBreakpointResponse::
     SetInstrumentationBreakpointResponse(const JSONObject *obj) {
   assign(id, obj, "id");
 
-  auto *res = valueFromJson<JSONObject *>(get(obj, "result"));
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *res = valueFromJson<JSONObject *>(v);
   assign(breakpointId, res, "breakpointId");
 }
 
@@ -1684,7 +1763,11 @@ heapProfiler::GetHeapObjectIdResponse::GetHeapObjectIdResponse(
     const JSONObject *obj) {
   assign(id, obj, "id");
 
-  auto *res = valueFromJson<JSONObject *>(get(obj, "result"));
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *res = valueFromJson<JSONObject *>(v);
   assign(heapSnapshotObjectId, res, "heapSnapshotObjectId");
 }
 
@@ -1706,7 +1789,11 @@ heapProfiler::GetObjectByHeapObjectIdResponse::GetObjectByHeapObjectIdResponse(
     const JSONObject *obj) {
   assign(id, obj, "id");
 
-  auto *res = valueFromJson<JSONObject *>(get(obj, "result"));
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *res = valueFromJson<JSONObject *>(v);
   assign(result, res, "result");
 }
 
@@ -1728,7 +1815,11 @@ heapProfiler::StopSamplingResponse::StopSamplingResponse(
     const JSONObject *obj) {
   assign(id, obj, "id");
 
-  auto *res = valueFromJson<JSONObject *>(get(obj, "result"));
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *res = valueFromJson<JSONObject *>(v);
   assign(profile, res, "profile");
 }
 
@@ -1749,7 +1840,11 @@ JSONValue *heapProfiler::StopSamplingResponse::toJsonVal(
 profiler::StopResponse::StopResponse(const JSONObject *obj) {
   assign(id, obj, "id");
 
-  auto *res = valueFromJson<JSONObject *>(get(obj, "result"));
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *res = valueFromJson<JSONObject *>(v);
   assign(profile, res, "profile");
 }
 
@@ -1769,7 +1864,11 @@ JSONValue *profiler::StopResponse::toJsonVal(JSONFactory &factory) const {
 runtime::CallFunctionOnResponse::CallFunctionOnResponse(const JSONObject *obj) {
   assign(id, obj, "id");
 
-  auto *res = valueFromJson<JSONObject *>(get(obj, "result"));
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *res = valueFromJson<JSONObject *>(v);
   assign(result, res, "result");
   assign(exceptionDetails, res, "exceptionDetails");
 }
@@ -1792,7 +1891,11 @@ JSONValue *runtime::CallFunctionOnResponse::toJsonVal(
 runtime::CompileScriptResponse::CompileScriptResponse(const JSONObject *obj) {
   assign(id, obj, "id");
 
-  auto *res = valueFromJson<JSONObject *>(get(obj, "result"));
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *res = valueFromJson<JSONObject *>(v);
   assign(scriptId, res, "scriptId");
   assign(exceptionDetails, res, "exceptionDetails");
 }
@@ -1815,7 +1918,11 @@ JSONValue *runtime::CompileScriptResponse::toJsonVal(
 runtime::EvaluateResponse::EvaluateResponse(const JSONObject *obj) {
   assign(id, obj, "id");
 
-  auto *res = valueFromJson<JSONObject *>(get(obj, "result"));
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *res = valueFromJson<JSONObject *>(v);
   assign(result, res, "result");
   assign(exceptionDetails, res, "exceptionDetails");
 }
@@ -1837,7 +1944,11 @@ JSONValue *runtime::EvaluateResponse::toJsonVal(JSONFactory &factory) const {
 runtime::GetHeapUsageResponse::GetHeapUsageResponse(const JSONObject *obj) {
   assign(id, obj, "id");
 
-  auto *res = valueFromJson<JSONObject *>(get(obj, "result"));
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *res = valueFromJson<JSONObject *>(v);
   assign(usedSize, res, "usedSize");
   assign(totalSize, res, "totalSize");
 }
@@ -1860,7 +1971,11 @@ JSONValue *runtime::GetHeapUsageResponse::toJsonVal(
 runtime::GetPropertiesResponse::GetPropertiesResponse(const JSONObject *obj) {
   assign(id, obj, "id");
 
-  auto *res = valueFromJson<JSONObject *>(get(obj, "result"));
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *res = valueFromJson<JSONObject *>(v);
   assign(result, res, "result");
   assign(internalProperties, res, "internalProperties");
   assign(exceptionDetails, res, "exceptionDetails");
@@ -1886,7 +2001,11 @@ runtime::GlobalLexicalScopeNamesResponse::GlobalLexicalScopeNamesResponse(
     const JSONObject *obj) {
   assign(id, obj, "id");
 
-  auto *res = valueFromJson<JSONObject *>(get(obj, "result"));
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *res = valueFromJson<JSONObject *>(v);
   assign(names, res, "names");
 }
 
@@ -1913,7 +2032,11 @@ debugger::BreakpointResolvedNotification::BreakpointResolvedNotification(
     : Notification("Debugger.breakpointResolved") {
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(breakpointId, params, "breakpointId");
   assign(location, params, "location");
 }
@@ -1940,7 +2063,11 @@ debugger::PausedNotification::PausedNotification(const JSONObject *obj)
     : Notification("Debugger.paused") {
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(callFrames, params, "callFrames");
   assign(reason, params, "reason");
   assignJsonBlob(data, params, "data");
@@ -1988,7 +2115,11 @@ debugger::ScriptParsedNotification::ScriptParsedNotification(
     : Notification("Debugger.scriptParsed") {
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(scriptId, params, "scriptId");
   assign(url, params, "url");
   assign(startLine, params, "startLine");
@@ -2040,7 +2171,11 @@ heapProfiler::AddHeapSnapshotChunkNotification::
     : Notification("HeapProfiler.addHeapSnapshotChunk") {
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(chunk, params, "chunk");
 }
 
@@ -2066,7 +2201,11 @@ heapProfiler::HeapStatsUpdateNotification::HeapStatsUpdateNotification(
     : Notification("HeapProfiler.heapStatsUpdate") {
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(statsUpdate, params, "statsUpdate");
 }
 
@@ -2092,7 +2231,11 @@ heapProfiler::LastSeenObjectIdNotification::LastSeenObjectIdNotification(
     : Notification("HeapProfiler.lastSeenObjectId") {
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(lastSeenObjectId, params, "lastSeenObjectId");
   assign(timestamp, params, "timestamp");
 }
@@ -2121,7 +2264,11 @@ heapProfiler::ReportHeapSnapshotProgressNotification::
     : Notification("HeapProfiler.reportHeapSnapshotProgress") {
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(done, params, "done");
   assign(total, params, "total");
   assign(finished, params, "finished");
@@ -2151,7 +2298,11 @@ runtime::ConsoleAPICalledNotification::ConsoleAPICalledNotification(
     : Notification("Runtime.consoleAPICalled") {
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(type, params, "type");
   assign(args, params, "args");
   assign(executionContextId, params, "executionContextId");
@@ -2186,7 +2337,11 @@ runtime::ExecutionContextCreatedNotification::
     : Notification("Runtime.executionContextCreated") {
   assign(method, obj, "method");
 
-  auto *params = valueFromJson<JSONObject *>(get(obj, "params"));
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    throw std::runtime_error("Key not found in JSONObject");
+  }
+  auto *params = valueFromJson<JSONObject *>(v);
   assign(context, params, "context");
 }
 
