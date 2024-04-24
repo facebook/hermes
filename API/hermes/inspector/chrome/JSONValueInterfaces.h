@@ -34,17 +34,6 @@ std::optional<JSONObject *> parseStrAsJsonObj(
 /// Convert a JSONValue to a string.
 std::string jsonValToStr(const JSONValue *v);
 
-/// get(obj, key) is a wrapper for:
-///   obj[key]
-/// This function will throw if key is not found.
-std::optional<JSONValue *> get(const JSONObject *obj, const std::string &key);
-
-/// safeGet(obj, key) is a wrapper for:
-///   obj[key]
-/// This function will NOT throw if key is not found.
-/// It will just return nullptr.
-JSONValue *safeGet(const JSONObject *obj, const std::string &key);
-
 /// Check if two JSONValues are equal.
 bool jsonValsEQ(const JSONValue *A, const JSONValue *B);
 

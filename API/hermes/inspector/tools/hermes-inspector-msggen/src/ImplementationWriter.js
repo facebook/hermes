@@ -128,7 +128,7 @@ function emitRequestParser(stream: Writable, commands: Array<Command>) {
         optional<std::string> &field,
         const JSONObject *obj,
         const std::string &key) {
-      JSONValue *v = safeGet(obj, key);
+      JSONValue *v = obj->get(key);
       if (v != nullptr) {
         field = jsonValToStr(v);
       } else {
@@ -325,7 +325,7 @@ export function emitRequestDef(stream: Writable, command: Command) {
     const optionalParams = props.every(p => p.optional);
     if (optionalParams) {
       stream.write(`
-        JSONValue *p = safeGet(obj, "params");
+        JSONValue *p = obj->get("params");
         if (p != nullptr) {
           auto *params = valueFromJson<JSONObject*>(p);
       `);

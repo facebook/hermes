@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<3c6c6dff0e78fedc13690eedc7fb0207>>
+// @generated SignedSource<<3f1456a80ae1a6e3d56ed9c70fe27d07>>
 
 #include "MessageTypes.h"
 
@@ -24,7 +24,7 @@ void assignJsonBlob(
     optional<std::string> &field,
     const JSONObject *obj,
     const std::string &key) {
-  JSONValue *v = safeGet(obj, key);
+  JSONValue *v = obj->get(key);
   if (v != nullptr) {
     field = jsonValToStr(v);
   } else {
@@ -697,7 +697,7 @@ debugger::ResumeRequest::ResumeRequest(const JSONObject *obj)
   assign(id, obj, "id");
   assign(method, obj, "method");
 
-  JSONValue *p = safeGet(obj, "params");
+  JSONValue *p = obj->get("params");
   if (p != nullptr) {
     auto *params = valueFromJson<JSONObject *>(p);
     assign(terminateOnResume, params, "terminateOnResume");
@@ -1082,7 +1082,7 @@ heapProfiler::StartSamplingRequest::StartSamplingRequest(const JSONObject *obj)
   assign(id, obj, "id");
   assign(method, obj, "method");
 
-  JSONValue *p = safeGet(obj, "params");
+  JSONValue *p = obj->get("params");
   if (p != nullptr) {
     auto *params = valueFromJson<JSONObject *>(p);
     assign(samplingInterval, params, "samplingInterval");
@@ -1133,7 +1133,7 @@ heapProfiler::StartTrackingHeapObjectsRequest::StartTrackingHeapObjectsRequest(
   assign(id, obj, "id");
   assign(method, obj, "method");
 
-  JSONValue *p = safeGet(obj, "params");
+  JSONValue *p = obj->get("params");
   if (p != nullptr) {
     auto *params = valueFromJson<JSONObject *>(p);
     assign(trackAllocations, params, "trackAllocations");
@@ -1190,7 +1190,7 @@ heapProfiler::StopTrackingHeapObjectsRequest::StopTrackingHeapObjectsRequest(
   assign(id, obj, "id");
   assign(method, obj, "method");
 
-  JSONValue *p = safeGet(obj, "params");
+  JSONValue *p = obj->get("params");
   if (p != nullptr) {
     auto *params = valueFromJson<JSONObject *>(p);
     assign(reportProgress, params, "reportProgress");
@@ -1233,7 +1233,7 @@ heapProfiler::TakeHeapSnapshotRequest::TakeHeapSnapshotRequest(
   assign(id, obj, "id");
   assign(method, obj, "method");
 
-  JSONValue *p = safeGet(obj, "params");
+  JSONValue *p = obj->get("params");
   if (p != nullptr) {
     auto *params = valueFromJson<JSONObject *>(p);
     assign(reportProgress, params, "reportProgress");
@@ -1554,7 +1554,7 @@ runtime::GlobalLexicalScopeNamesRequest::GlobalLexicalScopeNamesRequest(
   assign(id, obj, "id");
   assign(method, obj, "method");
 
-  JSONValue *p = safeGet(obj, "params");
+  JSONValue *p = obj->get("params");
   if (p != nullptr) {
     auto *params = valueFromJson<JSONObject *>(p);
     assign(executionContextId, params, "executionContextId");

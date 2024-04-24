@@ -137,7 +137,7 @@ void assign(T &lhs, const JSONObject *obj, const U &key) {
 
 template <typename T, typename U>
 void assign(optional<T> &lhs, const JSONObject *obj, const U &key) {
-  JSONValue *v = safeGet(obj, key);
+  JSONValue *v = obj->get(key);
   if (v != nullptr) {
     lhs = valueFromJson<T>(v);
   } else {
@@ -147,7 +147,7 @@ void assign(optional<T> &lhs, const JSONObject *obj, const U &key) {
 
 template <typename T, typename U>
 void assign(std::unique_ptr<T> &lhs, const JSONObject *obj, const U &key) {
-  JSONValue *v = safeGet(obj, key);
+  JSONValue *v = obj->get(key);
   if (v != nullptr) {
     lhs = std::make_unique<T>(valueFromJson<T>(v));
   } else {
@@ -160,7 +160,7 @@ void assign(
     std::unique_ptr<T, std::function<void(D *)>> &lhs,
     const JSONObject *obj,
     const U &key) {
-  JSONValue *v = safeGet(obj, key);
+  JSONValue *v = obj->get(key);
   if (v != nullptr) {
     lhs = std::make_unique<T>(valueFromJson<T>(v));
   } else {

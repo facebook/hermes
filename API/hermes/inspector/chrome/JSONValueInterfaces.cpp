@@ -47,18 +47,6 @@ std::string jsonValToStr(const JSONValue *v) {
   return std::move(OS.str());
 }
 
-std::optional<JSONValue *> get(const JSONObject *obj, const std::string &key) {
-  JSONValue *v = obj->get(key);
-  if (v == nullptr) {
-    return std::nullopt;
-  }
-  return v;
-}
-
-JSONValue *safeGet(const JSONObject *obj, const std::string &key) {
-  return obj->get(key);
-}
-
 bool jsonValsEQ(const JSONValue *A, const JSONValue *B) {
   if (A == B) {
     return true;
