@@ -6,11 +6,9 @@
 cmake_minimum_required(VERSION 3.13)
 set(CMAKE_VERBOSE_MAKEFILE on)
 
-set(HERMES_ENABLE_EH ON)
-set(HERMES_ENABLE_RTTI ON)
-set(jsinspector_SRC
-  InspectorInterfaces.cpp
-  )
+add_compile_options(
+        -fexceptions
+        -std=c++17)
 
-add_hermes_library(jsinspector
-  ${jsinspector_SRC})
+file(GLOB jsinspector_SRC CONFIGURE_DEPENDS *.cpp)
+add_library(jsinspector SHARED ${jsinspector_SRC})
