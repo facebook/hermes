@@ -30,11 +30,7 @@ struct Serializable {
   virtual ~Serializable() = default;
   virtual JSONValue *toJsonVal(JSONFactory &factory) const = 0;
 
-  std::string toJsonStr() const {
-    JSLexer::Allocator alloc;
-    JSONFactory factory(alloc);
-    return jsonValToStr(toJsonVal(factory));
-  }
+  std::string toJsonStr() const;
 };
 
 /// Requests are sent from the debugger to the target.
