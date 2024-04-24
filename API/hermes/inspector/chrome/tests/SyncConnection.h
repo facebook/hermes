@@ -20,11 +20,11 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 namespace chrome {
 
 class ExecutorRuntimeAdapter
-    : public facebook::hermes::inspector::RuntimeAdapter {
+    : public facebook::hermes::inspector_modern::RuntimeAdapter {
  public:
   explicit ExecutorRuntimeAdapter(AsyncHermesRuntime &runtime)
       : runtime_(runtime) {}
@@ -95,6 +95,6 @@ class SyncConnection {
 };
 
 } // namespace chrome
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

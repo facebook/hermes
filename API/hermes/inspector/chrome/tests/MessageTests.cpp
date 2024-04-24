@@ -19,7 +19,7 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 namespace chrome {
 namespace message {
 
@@ -1584,6 +1584,6 @@ TEST_F(MessageTests, testResumedNotification) {
 
 } // namespace message
 } // namespace chrome
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

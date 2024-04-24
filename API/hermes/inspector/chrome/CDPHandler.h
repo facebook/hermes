@@ -19,7 +19,7 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 namespace chrome {
 
 using CDPMessageCallbackFunction = std::function<void(const std::string &)>;
@@ -69,7 +69,7 @@ class INSPECTOR_EXPORT CDPHandler {
 };
 
 } // namespace chrome
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook
 

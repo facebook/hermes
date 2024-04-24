@@ -9,7 +9,7 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 
 /**
  * AsyncPauseState is used to track whether we requested an async pause from a
@@ -29,6 +29,6 @@ enum class AsyncPauseState {
   Explicit
 };
 
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

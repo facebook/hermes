@@ -25,7 +25,7 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 
 /**
  * RuntimeAdapter encapsulates a HermesRuntime object. The underlying Hermes
@@ -71,6 +71,6 @@ class INSPECTOR_EXPORT SharedRuntimeAdapter : public RuntimeAdapter {
   std::shared_ptr<HermesRuntime> runtime_;
 };
 
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

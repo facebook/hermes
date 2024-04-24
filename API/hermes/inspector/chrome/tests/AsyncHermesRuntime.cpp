@@ -15,7 +15,7 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 namespace chrome {
 
 AsyncHermesRuntime::AsyncHermesRuntime(bool veryLazy)
@@ -167,6 +167,6 @@ void AsyncHermesRuntime::unregisterForProfilingInExecutor() {
 }
 
 } // namespace chrome
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

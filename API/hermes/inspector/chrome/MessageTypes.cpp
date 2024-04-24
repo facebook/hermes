@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<0b86795a95f79faf9e03980fb2551101>>
+// @generated SignedSource<<a985ad707d80767e77765bf1ec030618>>
 
 #include "MessageTypes.h"
 
@@ -7,7 +7,7 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 namespace chrome {
 namespace message {
 
@@ -2801,6 +2801,6 @@ JSONValue *runtime::ExecutionContextCreatedNotification::toJsonVal(
 
 } // namespace message
 } // namespace chrome
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

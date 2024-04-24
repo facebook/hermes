@@ -12,7 +12,7 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 namespace chrome {
 
 CallbackOStream::CallbackOStream(size_t sz, Fn cb)
@@ -72,6 +72,6 @@ std::string CallbackOStream::StreamBuf::take() {
 }
 
 } // namespace chrome
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

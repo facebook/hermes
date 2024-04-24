@@ -11,7 +11,7 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 namespace chrome {
 
 namespace {
@@ -106,6 +106,6 @@ TEST(RemoteObjectsTableTest, TestReleaseObjectGroup) {
 }
 
 } // namespace chrome
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

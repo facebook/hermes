@@ -111,7 +111,7 @@ static std::string getUrl(const char *path) {
 }
 
 static void runDebuggerLoop(
-    fbhermes::inspector::chrome::CDPHandler &cdpHandler,
+    fbhermes::inspector_modern::chrome::CDPHandler &cdpHandler,
     std::string scriptSource) {
   cdpHandler.registerCallbacks(&sendResponse, {});
 
@@ -128,8 +128,9 @@ static void runScript(const std::string &scriptSource, const std::string &url) {
                                       .withEnableSampleProfiling(true)
                                       .build()));
   auto adapter =
-      std::make_unique<fbhermes::inspector::SharedRuntimeAdapter>(runtime);
-  fbhermes::inspector::chrome::CDPHandler cdpHandler(
+      std::make_unique<fbhermes::inspector_modern::SharedRuntimeAdapter>(
+          runtime);
+  fbhermes::inspector_modern::chrome::CDPHandler cdpHandler(
       std::move(adapter), "hermes-chrome-debug-server");
   std::thread debuggerLoop(runDebuggerLoop, std::ref(cdpHandler), scriptSource);
 

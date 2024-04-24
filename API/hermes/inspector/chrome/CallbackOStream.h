@@ -15,7 +15,7 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 namespace chrome {
 
 /// Subclass of \c std::ostream where flushing is implemented through a
@@ -84,6 +84,6 @@ struct CallbackOStream : public std::ostream {
 };
 
 } // namespace chrome
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

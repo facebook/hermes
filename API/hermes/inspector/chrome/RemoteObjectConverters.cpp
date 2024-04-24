@@ -11,11 +11,11 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 namespace chrome {
 
 namespace h = ::facebook::hermes;
-namespace m = ::facebook::hermes::inspector::chrome::message;
+namespace m = ::facebook::hermes::inspector_modern::chrome::message;
 
 constexpr size_t kMaxPreviewProperties = 10;
 
@@ -302,6 +302,6 @@ m::runtime::RemoteObject m::runtime::makeRemoteObject(
 }
 
 } // namespace chrome
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

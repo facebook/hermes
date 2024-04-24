@@ -9,7 +9,7 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 namespace chrome {
 namespace message {
 
@@ -21,6 +21,6 @@ std::string Serializable::toJsonStr() const {
 
 } // namespace message
 } // namespace chrome
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<119b7394edbf0cff18855b5c87fad402>>
+// @generated SignedSource<<3ebea508f76e06269045891097f89eb5>>
 
 #pragma once
 
@@ -11,7 +11,7 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 namespace chrome {
 namespace message {
 
@@ -1178,6 +1178,6 @@ struct runtime::ExecutionContextCreatedNotification : public Notification {
 
 } // namespace message
 } // namespace chrome
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

@@ -32,14 +32,14 @@
 
 namespace facebook {
 namespace hermes {
-namespace inspector {
+namespace inspector_modern {
 namespace chrome {
 
 using namespace ::hermes::parser;
 
 namespace debugger = ::facebook::hermes::debugger;
-namespace inspector = ::facebook::hermes::inspector;
-namespace m = ::facebook::hermes::inspector::chrome::message;
+namespace inspector_modern = ::facebook::hermes::inspector_modern;
+namespace m = ::facebook::hermes::inspector_modern::chrome::message;
 
 static const char *const kVirtualBreakpointPrefix = "virtualbreakpoint-";
 static const char *const kBeforeScriptWithSourceMapExecution =
@@ -558,7 +558,7 @@ void CDPHandler::Impl::sendSnapshot(
 
     // Size picked to conform to Chrome's own implementation, at the
     // time of writing.
-    inspector::chrome::CallbackOStream cos(
+    inspector_modern::chrome::CallbackOStream cos(
         /* sz */ 100 << 10, [this](std::string s) {
           m::heapProfiler::AddHeapSnapshotChunkNotification note;
           note.chunk = std::move(s);
@@ -2041,6 +2041,6 @@ void CDPHandler::Impl::installConsoleFunction(
 }
 
 } // namespace chrome
-} // namespace inspector
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook

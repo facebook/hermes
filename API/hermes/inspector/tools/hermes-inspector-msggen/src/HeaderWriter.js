@@ -59,7 +59,7 @@ export class HeaderWriter {
 
       namespace facebook {
       namespace hermes {
-      namespace inspector {
+      namespace inspector_modern {
       namespace chrome {
       namespace message {
 
@@ -162,7 +162,7 @@ using JSONBlob = std::string;
     this.stream.write(`
         } // namespace message
         } // namespace chrome
-        } // namespace inspector
+        } // namespace inspector_modern
         } // namespace hermes
         } // namespace facebook
     `);
