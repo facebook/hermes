@@ -69,3 +69,10 @@ print(typeAndValue(BigInt(2) ** BigInt(64)));
 
 print(typeAndValue((-BigInt(2)) ** BigInt(63)));
 // CHECK-NEXT: bigint -8000000000000000
+
+try {
+  // BigInt as exponent should have side effect.
+  var f = function() { 1n ** -1n; }
+  f();
+} catch (err)  { print(err); }
+// CHECK-NEXT: RangeError: Exponent must be positive
