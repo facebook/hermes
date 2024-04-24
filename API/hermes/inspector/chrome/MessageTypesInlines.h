@@ -34,89 +34,97 @@ struct is_vector<std::vector<T>> : std::true_type {};
 
 /// Convert JSONValue to a Serializable type.
 template <typename T>
-typename std::enable_if<std::is_base_of<Serializable, T>::value, T>::type
-valueFromJson(const JSONValue *v) {
+typename std::
+    enable_if<std::is_base_of<Serializable, T>::value, std::unique_ptr<T>>::type
+    valueFromJson(const JSONValue *v) {
   auto res = llvh::dyn_cast_or_null<JSONObject>(v);
   if (!res) {
-    throw std::runtime_error("JSONValue not an object");
+    return nullptr;
   }
-  return T(res);
+  return std::make_unique<T>(res);
 }
 
 /// Convert JSONValue to a bool.
 template <typename T>
-typename std::enable_if<std::is_same<T, bool>::value, T>::type valueFromJson(
-    const JSONValue *v) {
+typename std::enable_if<std::is_same<T, bool>::value, std::unique_ptr<T>>::type
+valueFromJson(const JSONValue *v) {
   auto res = llvh::dyn_cast_or_null<JSONBoolean>(v);
   if (!res) {
-    throw std::runtime_error("JSONValue not a boolean");
+    return nullptr;
   }
-  return res->getValue();
+  return std::make_unique<T>(res->getValue());
 }
 
 /// Convert JSONValue to an int.
 template <typename T>
-typename std::enable_if<std::is_same<T, int>::value, T>::type valueFromJson(
-    const JSONValue *v) {
+typename std::enable_if<std::is_same<T, int>::value, std::unique_ptr<T>>::type
+valueFromJson(const JSONValue *v) {
   auto res = llvh::dyn_cast_or_null<JSONNumber>(v);
   if (!res) {
-    throw std::runtime_error("JSONValue not a number");
+    return nullptr;
   }
-  return res->getValue();
+  return std::make_unique<T>(res->getValue());
 }
 
 /// Convert JSONValue to a double.
 template <typename T>
-typename std::enable_if<std::is_same<T, double>::value, T>::type valueFromJson(
-    const JSONValue *v) {
+typename std::enable_if<std::is_same<T, double>::value, std::unique_ptr<T>>::
+    type
+    valueFromJson(const JSONValue *v) {
   auto res = llvh::dyn_cast_or_null<JSONNumber>(v);
   if (!res) {
-    throw std::runtime_error("JSONValue not a number");
+    return nullptr;
   }
-  return res->getValue();
+  return std::make_unique<T>(res->getValue());
 }
 
 /// Convert JSONValue to a string.
 template <typename T>
-typename std::enable_if<std::is_same<T, std::string>::value, T>::type
-valueFromJson(const JSONValue *v) {
+typename std::
+    enable_if<std::is_same<T, std::string>::value, std::unique_ptr<T>>::type
+    valueFromJson(const JSONValue *v) {
   auto res = llvh::dyn_cast_or_null<JSONString>(v);
   if (!res) {
-    throw std::runtime_error("JSONValue not a string");
+    return nullptr;
   }
-  return res->c_str();
+  return std::make_unique<T>(res->c_str());
 }
 
 /// Convert JSONValue to a vector<T>.
 template <typename T>
-typename std::enable_if<is_vector<T>::value, T>::type valueFromJson(
-    const JSONValue *items) {
+typename std::enable_if<is_vector<T>::value, std::unique_ptr<T>>::type
+valueFromJson(const JSONValue *items) {
   auto *arr = llvh::dyn_cast<JSONArray>(items);
-  T result;
-  result.reserve(arr->size());
+  std::unique_ptr<T> result = std::make_unique<T>();
+  result->reserve(arr->size());
   for (const auto &item : *arr) {
-    result.push_back(valueFromJson<typename T::value_type>(item));
+    auto itemResult = valueFromJson<typename T::value_type>(item);
+    if (!itemResult) {
+      return nullptr;
+    }
+    result->push_back(std::move(*itemResult));
   }
   return result;
 }
 
 /// Convert JSONValue to a JSONObject.
-/// This is really just a checked cast that throws.
 template <typename T>
-typename std::enable_if<std::is_same<T, JSONObject *>::value, T>::type
-valueFromJson(JSONValue *v) {
+typename std::
+    enable_if<std::is_same<T, JSONObject *>::value, std::unique_ptr<T>>::type
+    valueFromJson(JSONValue *v) {
   auto *res = llvh::dyn_cast_or_null<JSONObject>(v);
   if (!res) {
-    throw std::runtime_error("JSONValue not an object");
+    return nullptr;
   }
-  return res;
+  return std::make_unique<T>(res);
 }
 
 /// Pass through JSONValues.
 template <typename T>
-typename std::enable_if<std::is_same<T, JSONValue *>::value, T>::type
-valueFromJson(JSONValue *v) {
-  return v;
+typename std::
+    enable_if<std::is_same<T, JSONValue *>::value, std::unique_ptr<T>>::type
+    valueFromJson(JSONValue *v) {
+  return std::make_unique<T>(v);
 }
 
 /// assign(lhs, obj, key) is a wrapper for:
@@ -127,44 +135,67 @@ valueFromJson(JSONValue *v) {
 /// based on the type of lhs.
 
 template <typename T, typename U>
-void assign(T &lhs, const JSONObject *obj, const U &key) {
+bool assign(T &lhs, const JSONObject *obj, const U &key) {
   JSONValue *v = obj->get(key);
   if (v == nullptr) {
-    throw std::runtime_error("Key not found in JSONObject");
+    return false;
   }
-  lhs = valueFromJson<T>(v);
+  auto convertResult = valueFromJson<T>(v);
+  if (convertResult) {
+    lhs = std::move(*convertResult);
+    return true;
+  }
+  return false;
 }
 
 template <typename T, typename U>
-void assign(optional<T> &lhs, const JSONObject *obj, const U &key) {
+bool assign(optional<T> &lhs, const JSONObject *obj, const U &key) {
   JSONValue *v = obj->get(key);
   if (v != nullptr) {
-    lhs = valueFromJson<T>(v);
+    auto convertResult = valueFromJson<T>(v);
+    if (convertResult) {
+      lhs = std::move(*convertResult);
+      return true;
+    }
+    return false;
   } else {
     lhs.reset();
+    return true;
   }
 }
 
 template <typename T, typename U>
-void assign(std::unique_ptr<T> &lhs, const JSONObject *obj, const U &key) {
+bool assign(std::unique_ptr<T> &lhs, const JSONObject *obj, const U &key) {
   JSONValue *v = obj->get(key);
   if (v != nullptr) {
-    lhs = std::make_unique<T>(valueFromJson<T>(v));
+    auto convertResult = valueFromJson<T>(v);
+    if (convertResult) {
+      lhs = std::move(convertResult);
+      return true;
+    }
+    return false;
   } else {
     lhs.reset();
+    return true;
   }
 }
 
 template <typename T, typename U, typename D>
-void assign(
+bool assign(
     std::unique_ptr<T, std::function<void(D *)>> &lhs,
     const JSONObject *obj,
     const U &key) {
   JSONValue *v = obj->get(key);
   if (v != nullptr) {
-    lhs = std::make_unique<T>(valueFromJson<T>(v));
+    auto convertResult = valueFromJson<T>(v);
+    if (convertResult) {
+      lhs = std::move(convertResult);
+      return true;
+    }
+    return false;
   } else {
     lhs.reset();
+    return true;
   }
 }
 
