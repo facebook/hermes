@@ -460,8 +460,7 @@ void CDPHandler::Impl::emitConsoleAPICalledEvent(ConsoleMessageInfo info) {
   m::runtime::ConsoleAPICalledNotification apiCalledNote;
   apiCalledNote.type = info.level;
   apiCalledNote.timestamp = info.timestamp;
-  // TODO: fix test cases sending invalid context id.
-  // apiCalledNote.executionContextId = kHermesExecutionContextId;
+  apiCalledNote.executionContextId = kHermesExecutionContextId;
 
   size_t argsSize = info.args.size(getRuntime());
   for (size_t index = 0; index < argsSize; ++index) {
