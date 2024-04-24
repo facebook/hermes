@@ -45,7 +45,7 @@ struct Request : public Serializable {
   // on the type of the request.
   virtual void accept(RequestHandler &handler) const = 0;
 
-  int id = 0;
+  long long id = 0;
   std::string method;
 };
 
@@ -53,7 +53,7 @@ struct Request : public Serializable {
 struct Response : public Serializable {
   Response() = default;
 
-  int id = 0;
+  long long id = 0;
 };
 
 /// Notifications are sent from the target to the debugger. This is used to

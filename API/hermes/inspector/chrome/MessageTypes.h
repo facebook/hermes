@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<5380423cf25c27b0659fc97bb68a1676>>
+// @generated SignedSource<<119b7394edbf0cff18855b5c87fad402>>
 
 #pragma once
 
@@ -67,7 +67,7 @@ struct EvaluateResponse;
 struct ExceptionDetails;
 struct ExecutionContextCreatedNotification;
 struct ExecutionContextDescription;
-using ExecutionContextId = int;
+using ExecutionContextId = long long;
 struct GetHeapUsageRequest;
 struct GetHeapUsageResponse;
 struct GetPropertiesRequest;
@@ -215,8 +215,8 @@ struct debugger::Location : public Serializable {
   Location &operator=(Location &&) = default;
 
   runtime::ScriptId scriptId{};
-  int lineNumber{};
-  std::optional<int> columnNumber;
+  long long lineNumber{};
+  std::optional<long long> columnNumber;
 };
 
 struct runtime::PropertyPreview : public Serializable {
@@ -319,8 +319,8 @@ struct runtime::CallFrame : public Serializable {
   std::string functionName;
   runtime::ScriptId scriptId{};
   std::string url;
-  int lineNumber{};
-  int columnNumber{};
+  long long lineNumber{};
+  long long columnNumber{};
 };
 
 struct runtime::StackTrace : public Serializable {
@@ -346,10 +346,10 @@ struct runtime::ExceptionDetails : public Serializable {
   ExceptionDetails &operator=(const ExceptionDetails &) = delete;
   ExceptionDetails &operator=(ExceptionDetails &&) = default;
 
-  int exceptionId{};
+  long long exceptionId{};
   std::string text;
-  int lineNumber{};
-  int columnNumber{};
+  long long lineNumber{};
+  long long columnNumber{};
   std::optional<runtime::ScriptId> scriptId;
   std::optional<std::string> url;
   std::optional<runtime::StackTrace> stackTrace;
@@ -404,7 +404,7 @@ struct heapProfiler::SamplingHeapProfileNode : public Serializable {
 
   runtime::CallFrame callFrame{};
   double selfSize{};
-  int id{};
+  long long id{};
   std::vector<heapProfiler::SamplingHeapProfileNode> children;
 };
 
@@ -420,7 +420,7 @@ struct heapProfiler::SamplingHeapProfileSample : public Serializable {
   SamplingHeapProfileSample &operator=(SamplingHeapProfileSample &&) = default;
 
   double size{};
-  int nodeId{};
+  long long nodeId{};
   double ordinal{};
 };
 
@@ -446,8 +446,8 @@ struct profiler::PositionTickInfo : public Serializable {
   PositionTickInfo &operator=(const PositionTickInfo &) = delete;
   PositionTickInfo &operator=(PositionTickInfo &&) = default;
 
-  int line{};
-  int ticks{};
+  long long line{};
+  long long ticks{};
 };
 
 struct profiler::ProfileNode : public Serializable {
@@ -459,10 +459,10 @@ struct profiler::ProfileNode : public Serializable {
   ProfileNode &operator=(const ProfileNode &) = delete;
   ProfileNode &operator=(ProfileNode &&) = default;
 
-  int id{};
+  long long id{};
   runtime::CallFrame callFrame{};
-  std::optional<int> hitCount;
-  std::optional<std::vector<int>> children;
+  std::optional<long long> hitCount;
+  std::optional<std::vector<long long>> children;
   std::optional<std::string> deoptReason;
   std::optional<std::vector<profiler::PositionTickInfo>> positionTicks;
 };
@@ -479,8 +479,8 @@ struct profiler::Profile : public Serializable {
   std::vector<profiler::ProfileNode> nodes;
   double startTime{};
   double endTime{};
-  std::optional<std::vector<int>> samples;
-  std::optional<std::vector<int>> timeDeltas;
+  std::optional<std::vector<long long>> samples;
+  std::optional<std::vector<long long>> timeDeltas;
 };
 
 struct runtime::CallArgument : public Serializable {
@@ -645,11 +645,11 @@ struct debugger::SetBreakpointByUrlRequest : public Request {
   JSONValue *toJsonVal(JSONFactory &factory) const override;
   void accept(RequestHandler &handler) const override;
 
-  int lineNumber{};
+  long long lineNumber{};
   std::optional<std::string> url;
   std::optional<std::string> urlRegex;
   std::optional<std::string> scriptHash;
-  std::optional<int> columnNumber;
+  std::optional<long long> columnNumber;
   std::optional<std::string> condition;
 };
 
@@ -925,7 +925,7 @@ struct ErrorResponse : public Response {
   static std::unique_ptr<ErrorResponse> tryMake(const JSONObject *obj);
   JSONValue *toJsonVal(JSONFactory &factory) const override;
 
-  int code;
+  long long code;
   std::string message;
   std::optional<JSONBlob> data;
 };
@@ -1101,17 +1101,17 @@ struct debugger::ScriptParsedNotification : public Notification {
 
   runtime::ScriptId scriptId{};
   std::string url;
-  int startLine{};
-  int startColumn{};
-  int endLine{};
-  int endColumn{};
+  long long startLine{};
+  long long startColumn{};
+  long long endLine{};
+  long long endColumn{};
   runtime::ExecutionContextId executionContextId{};
   std::string hash;
   std::optional<JSONBlob> executionContextAuxData;
   std::optional<std::string> sourceMapURL;
   std::optional<bool> hasSourceURL;
   std::optional<bool> isModule;
-  std::optional<int> length;
+  std::optional<long long> length;
 };
 
 struct heapProfiler::AddHeapSnapshotChunkNotification : public Notification {
@@ -1129,7 +1129,7 @@ struct heapProfiler::HeapStatsUpdateNotification : public Notification {
       const JSONObject *obj);
   JSONValue *toJsonVal(JSONFactory &factory) const override;
 
-  std::vector<int> statsUpdate;
+  std::vector<long long> statsUpdate;
 };
 
 struct heapProfiler::LastSeenObjectIdNotification : public Notification {
@@ -1138,7 +1138,7 @@ struct heapProfiler::LastSeenObjectIdNotification : public Notification {
       const JSONObject *obj);
   JSONValue *toJsonVal(JSONFactory &factory) const override;
 
-  int lastSeenObjectId{};
+  long long lastSeenObjectId{};
   double timestamp{};
 };
 
@@ -1149,8 +1149,8 @@ struct heapProfiler::ReportHeapSnapshotProgressNotification
       const JSONObject *obj);
   JSONValue *toJsonVal(JSONFactory &factory) const override;
 
-  int done{};
-  int total{};
+  long long done{};
+  long long total{};
   std::optional<bool> finished;
 };
 

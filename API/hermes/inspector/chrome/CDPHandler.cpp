@@ -345,7 +345,7 @@ class CDPHandler::Impl : public message::RequestHandler,
   bool awaitingDebuggerOnStart_;
   std::condition_variable signal_;
   struct PendingEvalReq {
-    int id;
+    long long id;
     uint32_t frameIdx;
     std::string expression;
     std::optional<std::string> objectGroup;

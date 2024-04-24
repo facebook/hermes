@@ -278,7 +278,7 @@ function emitErrorResponseDecl(stream: Writable) {
     static std::unique_ptr<ErrorResponse> tryMake(const JSONObject *obj);
     JSONValue *toJsonVal(JSONFactory &factory) const override;
 
-    int code;
+    long long code;
     std::string message;
     std::optional<JSONBlob> data;
   };

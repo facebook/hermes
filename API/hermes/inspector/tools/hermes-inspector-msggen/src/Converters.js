@@ -27,7 +27,7 @@ export type JsTypeString =
 const jsTypeMappings = {
   any: 'JSONBlob',
   boolean: 'bool',
-  integer: 'int',
+  integer: 'long long',
   number: 'double',
   object: 'JSONBlob',
   string: 'std::string',
