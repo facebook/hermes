@@ -20,7 +20,6 @@
 #include <unordered_set>
 
 #include <hermes/DebuggerAPI.h>
-#include <hermes/Parser/JSONParser.h>
 #include <hermes/hermes.h>
 #include <hermes/inspector/AsyncPauseState.h>
 #include <hermes/inspector/Exceptions.h>
@@ -663,16 +662,9 @@ void CDPHandler::Impl::handle(const m::heapProfiler::StopSamplingRequest &req) {
   enqueueFunc([this, req]() {
     std::ostringstream stream;
     getRuntime().instrumentation().stopHeapSampling(stream);
-    // We are fine with this JSONObject becoming invalid after this function
-    // exits, so we declare a local factory.
-    JSLexer::Allocator alloc;
-    JSONFactory factory(alloc);
-    std::optional<JSONObject *> json = parseStrAsJsonObj(stream.str(), factory);
-    if (!json) {
-      throw std::runtime_error("Failed to parse string as JSONObject");
-    }
+
     m::heapProfiler::StopSamplingResponse resp;
-    auto profile = m::heapProfiler::SamplingHeapProfile::tryMake(*json);
+    auto profile = m::heapProfiler::makeSamplingHeapProfile(stream.str());
     if (profile == nullptr) {
       throw std::runtime_error("Failed to make SamplingHeapProfile");
     }
@@ -765,18 +757,7 @@ void CDPHandler::Impl::handle(const m::profiler::StopRequest &req) {
     try {
       m::profiler::StopResponse resp;
       resp.id = req.id;
-      // parseJson throws on errors, so make sure we don't crash the app
-      // if somehow the sampling profiler output is borked.
-      // We are fine with resp.profile becoming invalid after this function
-      // exits, so we declare a local factory.
-      JSLexer::Allocator alloc;
-      JSONFactory factory(alloc);
-      std::optional<JSONObject *> json =
-          parseStrAsJsonObj(std::move(profileStream).str(), factory);
-      if (!json) {
-        throw std::runtime_error("Failed to parse string as JSONObject");
-      }
-      auto profile = m::profiler::Profile::tryMake(*json);
+      auto profile = m::profiler::makeProfile(std::move(profileStream).str());
       if (profile == nullptr) {
         throw std::runtime_error("Failed to make Profile");
       }

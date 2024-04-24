@@ -69,6 +69,19 @@ ExceptionDetails makeExceptionDetails(
 
 } // namespace runtime
 
+namespace heapProfiler {
+
+std::unique_ptr<SamplingHeapProfile> makeSamplingHeapProfile(
+    const std::string &value);
+
+} // namespace heapProfiler
+
+namespace profiler {
+
+std::unique_ptr<Profile> makeProfile(const std::string &value);
+
+} // namespace profiler
+
 } // namespace message
 } // namespace chrome
 } // namespace inspector

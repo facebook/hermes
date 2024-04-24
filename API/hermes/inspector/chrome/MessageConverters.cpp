@@ -97,6 +97,34 @@ m::runtime::ExceptionDetails m::runtime::makeExceptionDetails(
   return result;
 }
 
+std::unique_ptr<m::heapProfiler::SamplingHeapProfile>
+m::heapProfiler::makeSamplingHeapProfile(const std::string &value) {
+  // We are fine with this JSONObject becoming invalid after this function
+  // exits, so we declare a local factory.
+  JSLexer::Allocator alloc;
+  JSONFactory factory(alloc);
+  std::optional<JSONObject *> json = parseStrAsJsonObj(value, factory);
+  if (!json) {
+    return nullptr;
+  }
+  return m::heapProfiler::SamplingHeapProfile::tryMake(*json);
+}
+
+std::unique_ptr<m::profiler::Profile> m::profiler::makeProfile(
+    const std::string &value) {
+  // parseJson throws on errors, so make sure we don't crash the app
+  // if somehow the sampling profiler output is borked.
+  // We are fine with resp.profile becoming invalid after this function
+  // exits, so we declare a local factory.
+  JSLexer::Allocator alloc;
+  JSONFactory factory(alloc);
+  std::optional<JSONObject *> json = parseStrAsJsonObj(value, factory);
+  if (!json) {
+    return nullptr;
+  }
+  return m::profiler::Profile::tryMake(*json);
+}
+
 } // namespace chrome
 } // namespace inspector
 } // namespace hermes
