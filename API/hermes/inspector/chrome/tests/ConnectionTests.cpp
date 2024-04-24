@@ -3467,7 +3467,7 @@ TEST_F(ConnectionTests, testInvalidExecutionContext) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
-// TODO: Missing test in CDPAgentTest
+// Also implemented as CDPAgentTest::HeapProfilerSnapshot
 TEST_F(ConnectionTests, heapSnapshot) {
   std::shared_ptr<HermesRuntime> runtime = asyncRuntime.runtime();
   int msgId = 1;

@@ -125,6 +125,11 @@ class CDPAgentTest : public ::testing::Test {
   void expectErrorMessageContaining(
       const std::string &substring,
       long long messageID);
+  /// Expect a sequence of messages conveying a heap snapshot:
+  /// 1 or more notifications containing chunks of the snapshot JSON object
+  /// followed by an OK response to the snapshot request.
+  /// \p messageID specifies the id of the snapshot request.
+  void expectHeapSnapshot(int messageID);
 
   void sendRequest(
       const std::string &method,
@@ -301,6 +306,24 @@ void CDPAgentTest::expectErrorMessageContaining(
     long long messageID) {
   std::string errorMessage = ensureErrorResponse(waitForMessage(), messageID);
   ASSERT_NE(errorMessage.find(substring), std::string::npos);
+}
+
+void CDPAgentTest::expectHeapSnapshot(int messageID) {
+  JSLexer::Allocator jsonAlloc;
+  JSONFactory factory(jsonAlloc);
+
+  // Expect chunk notifications until the snapshot object is complete. Fail if
+  // the object is invalid (e.g. truncated data, excess data, malformed JSON).
+  // There is no indication of how many segments there will be, so just receive
+  // until the object is complete, then expect no more.
+  std::stringstream snapshot;
+  do {
+    auto note = expectNotification("HeapProfiler.addHeapSnapshotChunk");
+    snapshot << jsonScope_.getString(note, {"params", "chunk"});
+  } while (!parseStrAsJsonObj(snapshot.str(), factory).has_value());
+
+  // Expect the snapshot response after all chunks have been received.
+  ensureOkResponse(waitForMessage(), messageID);
 }
 
 jsi::Value CDPAgentTest::shouldStop(
@@ -2987,6 +3010,29 @@ TEST_F(CDPAgentTest, RuntimeValidatesExecutionContextId) {
   req.executionContextId = kTestExecutionContextId_ + 1;
   cdpAgent_->handleCommand(serializeRuntimeCallFunctionOnRequest(req));
   expectErrorMessageContaining(kExecutionContextSubstring, msgId++);
+}
+
+TEST_F(CDPAgentTest, HeapProfilerSnapshot) {
+  auto setStopFlag = llvh::make_scope_exit([this] {
+    // break out of loop
+    stopFlag_.store(true);
+  });
+
+  int msgId = 1;
+
+  scheduleScript(R"(
+      while(!shouldStop());
+  )");
+
+  // Request a heap snapshot and expect it to arrive.
+  sendRequest(
+      "HeapProfiler.takeHeapSnapshot", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("reportProgress", false);
+      });
+  expectHeapSnapshot(msgId);
+
+  // Expect no more chunks are pending.
+  expectNothing();
 }
 
 #endif // HERMES_ENABLE_DEBUGGER
