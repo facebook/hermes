@@ -21,6 +21,7 @@
 #include <hermes/cdp/CDPDebugAPI.h>
 #include <hermes/cdp/JSONValueInterfaces.h>
 #include <hermes/hermes.h>
+#include <jsi/instrumentation.h>
 
 #include <llvh/ADT/ScopeExit.h>
 
@@ -3079,6 +3080,94 @@ TEST_F(CDPAgentTest, HeapProfilerSnapshot) {
 
   // Expect no more chunks are pending.
   expectNothing();
+}
+
+TEST_F(CDPAgentTest, HeapProfilerSnapshotRemoteObject) {
+  int msgId = 1;
+  scheduleScript(R"(
+    storeValue([1, 2, 3]);
+    signalTest();
+  )");
+  waitForTestSignal();
+
+  {
+    // Take a heap snapshot first to assign IDs.
+    sendRequest(
+        "HeapProfiler.takeHeapSnapshot",
+        msgId,
+        [](::hermes::JSONEmitter &json) {
+          json.emitKeyValue("reportProgress", false);
+        });
+    // We don't need to keep the response because we can directly query for
+    // object IDs from the runtime.
+    expectHeapSnapshot(msgId++);
+  }
+
+  const uint64_t globalObjID = runtime_->getUniqueID(runtime_->global());
+  jsi::Value storedValue = takeStoredValue();
+  const uint64_t storedObjID =
+      runtime_->getUniqueID(storedValue.asObject(*runtime_));
+
+  auto testObject = [this, &msgId](
+                        uint64_t objID,
+                        const char *type,
+                        const char *className,
+                        const char *description,
+                        const char *subtype) {
+    // Get the object by its snapshot ID.
+    sendRequest(
+        "HeapProfiler.getObjectByHeapObjectId",
+        msgId,
+        [objID](::hermes::JSONEmitter &json) {
+          json.emitKeyValue("objectId", std::to_string(objID));
+        });
+    auto resp0 = expectResponse(std::nullopt, msgId++);
+    EXPECT_EQ(jsonScope_.getString(resp0, {"result", "result", "type"}), type);
+    EXPECT_EQ(
+        jsonScope_.getString(resp0, {"result", "result", "className"}),
+        className);
+    EXPECT_EQ(
+        jsonScope_.getString(resp0, {"result", "result", "description"}),
+        description);
+    if (subtype) {
+      EXPECT_EQ(
+          jsonScope_.getString(resp0, {"result", "result", "subtype"}),
+          subtype);
+    }
+
+    // Check that fetching the object by heap snapshot ID works.
+    std::string responseObjectID =
+        jsonScope_.getString(resp0, {"result", "result", "objectId"});
+    sendRequest(
+        "HeapProfiler.getHeapObjectId",
+        msgId,
+        [responseObjectID](::hermes::JSONEmitter &json) {
+          json.emitKeyValue("objectId", responseObjectID);
+        });
+    auto resp1 = expectResponse(std::nullopt, msgId++);
+    EXPECT_EQ(
+        atoi(jsonScope_.getString(resp1, {"result", "heapSnapshotObjectId"})
+                 .c_str()),
+        objID);
+  };
+
+  // Test once before a collection.
+  testObject(globalObjID, "object", "Object", "Object", nullptr);
+  testObject(storedObjID, "object", "Array", "Array(3)", "array");
+
+  // Force a collection to move the heap.
+  waitFor<bool>([this](auto promise) {
+    runtimeThread_->add([this, promise]() {
+      runtime_->instrumentation().collectGarbage("test");
+      promise->set_value(true);
+    });
+  });
+
+  // A collection should not disturb the unique ID lookup, and it should be
+  // the same object as before. Note that it won't have the same remote ID,
+  // because Hermes doesn't do uniquing.
+  testObject(globalObjID, "object", "Object", "Object", nullptr);
+  testObject(storedObjID, "object", "Array", "Array(3)", "array");
 }
 
 #endif // HERMES_ENABLE_DEBUGGER
