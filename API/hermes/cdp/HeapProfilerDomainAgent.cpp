@@ -113,6 +113,12 @@ void HeapProfilerDomainAgent::getHeapObjectId(
   }
 }
 
+void HeapProfilerDomainAgent::collectGarbage(
+    const m::heapProfiler::CollectGarbageRequest &req) {
+  runtime_.instrumentation().collectGarbage("inspector");
+  sendResponseToClient(m::makeOkResponse(req.id));
+}
+
 } // namespace cdp
 } // namespace hermes
 } // namespace facebook

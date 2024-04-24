@@ -3227,7 +3227,7 @@ TEST_F(ConnectionTests, getHeapUsage) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
-// TODO: Missing test in CDPAgentTest
+// Also implemented as CDPAgentTest::HeapProfilerCollectGarbage
 TEST_F(ConnectionTests, collectGarbage) {
   int msgId = 1;
 

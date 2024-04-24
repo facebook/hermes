@@ -388,6 +388,9 @@ void CDPAgentImpl::DomainAgents::handleCommand(
   } else if (command->method == "HeapProfiler.getHeapObjectId") {
     heapProfilerAgent_->getHeapObjectId(
         static_cast<m::heapProfiler::GetHeapObjectIdRequest &>(*command));
+  } else if (command->method == "HeapProfiler.collectGarbage") {
+    heapProfilerAgent_->collectGarbage(
+        static_cast<m::heapProfiler::CollectGarbageRequest &>(*command));
   } else {
     messageCallback_(message::makeErrorResponse(
                          command->id,
