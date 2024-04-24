@@ -290,7 +290,7 @@ void CDPAgentImpl::DomainAgents::initialize() {
   profilerAgent_ = std::make_unique<ProfilerDomainAgent>(
       executionContextID_, runtime_, messageCallback_, objTable_);
   heapProfilerAgent_ = std::make_unique<HeapProfilerDomainAgent>(
-      executionContextID_, messageCallback_, objTable_);
+      executionContextID_, runtime_, messageCallback_, objTable_);
 }
 
 void CDPAgentImpl::DomainAgents::dispose() {
@@ -378,6 +378,9 @@ void CDPAgentImpl::DomainAgents::handleCommand(
     profilerAgent_->start(static_cast<m::profiler::StartRequest &>(*command));
   } else if (command->method == "Profiler.stop") {
     profilerAgent_->stop(static_cast<m::profiler::StopRequest &>(*command));
+  } else if (command->method == "HeapProfiler.takeHeapSnapshot") {
+    heapProfilerAgent_->takeHeapSnapshot(
+        static_cast<m::heapProfiler::TakeHeapSnapshotRequest &>(*command));
   } else {
     messageCallback_(message::makeErrorResponse(
                          command->id,

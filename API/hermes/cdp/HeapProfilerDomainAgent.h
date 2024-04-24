@@ -8,6 +8,8 @@
 #ifndef HERMES_CDP_HEAPPROFILERDOMAINAGENT_H
 #define HERMES_CDP_HEAPPROFILERDOMAINAGENT_H
 
+#include <hermes/hermes.h>
+
 #include "DomainAgent.h"
 
 namespace facebook {
@@ -20,9 +22,18 @@ class HeapProfilerDomainAgent : public DomainAgent {
  public:
   HeapProfilerDomainAgent(
       int32_t executionContextID,
+      HermesRuntime &runtime,
       SynchronizedOutboundCallback messageCallback,
       std::shared_ptr<RemoteObjectsTable> objTable);
   ~HeapProfilerDomainAgent() = default;
+
+  /// Handles HeapProfiler.takeHeapSnapshot request
+  void takeHeapSnapshot(const m::heapProfiler::TakeHeapSnapshotRequest &req);
+
+ private:
+  void sendSnapshot(int reqId, bool reportProgress);
+
+  HermesRuntime &runtime_;
 };
 
 } // namespace cdp
