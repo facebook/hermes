@@ -35,8 +35,6 @@ namespace hermes {
 namespace inspector {
 namespace chrome {
 
-using ::facebook::react::ILocalConnection;
-using ::facebook::react::IRemoteConnection;
 using namespace ::hermes::parser;
 
 namespace debugger = ::facebook::hermes::debugger;
@@ -106,9 +104,9 @@ class CDPHandler::Impl : public message::RequestHandler,
   HermesRuntime &getRuntime();
   std::string getTitle() const;
 
-  bool connect(std::unique_ptr<IRemoteConnection> remoteConn);
-  bool disconnect();
-  void sendMessage(std::string str);
+  bool registerCallback(CallbackFunction callback);
+  void unregisterCallback();
+  void handle(std::string str);
 
   /* RequestHandler overrides */
   void handle(const m::UnknownRequest &req) override;
@@ -296,10 +294,6 @@ class CDPHandler::Impl : public message::RequestHandler,
   std::shared_ptr<RuntimeAdapter> runtimeAdapter_;
   std::string title_;
 
-  // connected_ is protected by connectionMutex_.
-  std::mutex connectionMutex_;
-  bool connected_;
-
   // preparedScripts_ stores user-entered scripts that have been prepared for
   // execution, and may be invoked by a later command.
   std::vector<std::shared_ptr<const jsi::PreparedJavaScript>> preparedScripts_;
@@ -317,9 +311,9 @@ class CDPHandler::Impl : public message::RequestHandler,
   std::unordered_map<std::string, std::unordered_set<std::string>>
       virtualBreakpoints_;
 
-  // remoteConn_ is protected by remoteConnMutex_.
-  std::mutex remoteConnMutex_;
-  std::unique_ptr<IRemoteConnection> remoteConn_;
+  // callback_ is protected by callbackMutex_.
+  std::mutex callbackMutex_;
+  CallbackFunction callback_;
 
   // objTable_ is protected by the inspector lock. It should only be accessed
   // when the VM is paused, e.g. in an InspectorObserver callback or in an
@@ -367,8 +361,6 @@ CDPHandler::Impl::Impl(
     bool waitForDebugger)
     : runtimeAdapter_(std::move(adapter)),
       title_(title),
-      connected_(false),
-      remoteConn_(nullptr),
       awaitingDebuggerOnStart_(waitForDebugger) {
   // Install __tickleJs. Do this activity before the call to setEventObserver,
   // so we don't get any didPause callback firings for these.
@@ -380,7 +372,12 @@ CDPHandler::Impl::Impl(
   runtimeAdapter_->getRuntime().getDebugger().setEventObserver(this);
 }
 
-CDPHandler::Impl::~Impl() = default;
+CDPHandler::Impl::~Impl() {
+  unregisterCallback();
+
+  // TODO(T161620474): Properly clean up all the other variables being protected
+  // by other mutex
+}
 
 HermesRuntime &CDPHandler::Impl::getRuntime() {
   return runtimeAdapter_->getRuntime();
@@ -390,37 +387,21 @@ std::string CDPHandler::Impl::getTitle() const {
   return title_;
 }
 
-bool CDPHandler::Impl::connect(std::unique_ptr<IRemoteConnection> remoteConn) {
-  assert(remoteConn);
-  std::lock_guard<std::mutex> lock(connectionMutex_);
+bool CDPHandler::Impl::registerCallback(CallbackFunction callback) {
+  assert(callback);
+  std::lock_guard<std::mutex> lock(callbackMutex_);
 
-  if (connected_) {
+  if (callback_) {
     return false;
   }
 
-  connected_ = true;
-  remoteConn_ = std::move(remoteConn);
-
+  callback_ = callback;
   return true;
 }
 
-bool CDPHandler::Impl::disconnect() {
-  std::lock_guard<std::mutex> lock(connectionMutex_);
-
-  if (!connected_) {
-    return false;
-  }
-
-  connected_ = false;
-
-  // NOTE: Inspector logic used to be quite convoluted here.
-
-  std::lock_guard<std::mutex> remoteConnLock(remoteConnMutex_);
-  auto conn = remoteConn_.release();
-  conn->onDisconnect();
-  delete conn;
-
-  return true;
+void CDPHandler::Impl::unregisterCallback() {
+  std::lock_guard<std::mutex> lock(callbackMutex_);
+  callback_ = nullptr;
 }
 
 static bool isDebuggerRequest(const m::Request &req) {
@@ -429,7 +410,7 @@ static bool isDebuggerRequest(const m::Request &req) {
   return req.method.rfind(kDebuggerMethodPrefix, 0) == 0;
 }
 
-void CDPHandler::Impl::sendMessage(std::string str) {
+void CDPHandler::Impl::handle(std::string str) {
   std::unique_ptr<m::Request> req = m::Request::fromJson(str);
   if (!req) {
     return;
@@ -1543,9 +1524,9 @@ void CDPHandler::Impl::handle(
  */
 
 void CDPHandler::Impl::sendToClient(const std::string &str) {
-  if (remoteConn_) {
-    std::lock_guard<std::mutex> lock(remoteConnMutex_);
-    remoteConn_->onMessage(str);
+  std::lock_guard<std::mutex> lock(callbackMutex_);
+  if (callback_) {
+    callback_(str);
   }
 }
 
@@ -1588,16 +1569,16 @@ std::string CDPHandler::getTitle() const {
   return impl_->getTitle();
 }
 
-bool CDPHandler::connect(std::unique_ptr<IRemoteConnection> remoteConn) {
-  return impl_->connect(std::move(remoteConn));
+bool CDPHandler::registerCallback(CallbackFunction callback) {
+  return impl_->registerCallback(callback);
 }
 
-bool CDPHandler::disconnect() {
-  return impl_->disconnect();
+void CDPHandler::unregisterCallback() {
+  return impl_->unregisterCallback();
 }
 
-void CDPHandler::sendMessage(std::string str) {
-  impl_->sendMessage(std::move(str));
+void CDPHandler::handle(std::string str) {
+  impl_->handle(std::move(str));
 }
 
 bool CDPHandler::Impl::isAwaitingDebuggerOnStart() {

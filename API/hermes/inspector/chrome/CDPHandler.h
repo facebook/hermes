@@ -16,16 +16,16 @@
 
 #include <hermes/hermes.h>
 #include <hermes/inspector/RuntimeAdapter.h>
-#include <hermes/jsinspector/InspectorInterfaces.h>
 
 namespace facebook {
 namespace hermes {
 namespace inspector {
 namespace chrome {
 
+using CallbackFunction = std::function<void(const std::string &)>;
+
 /// CDPHandler processes CDP messages between the client and the debugger.
-/// It performs no networking or connection logic itself. Instead, that logic
-/// is handled by the IRemoteConnection initialized in the connect method.
+/// It performs no networking or connection logic itself.
 class INSPECTOR_EXPORT CDPHandler {
  public:
   /// CDPHandler constructor enables the debugger on the provided runtime. This
@@ -43,18 +43,14 @@ class INSPECTOR_EXPORT CDPHandler {
   /// to users in the CDP frontend (e.g. Chrome DevTools).
   std::string getTitle() const;
 
-  /// connect attaches this CDPHandler to the runtime's debugger. Requests to
-  /// the debugger sent via send(). Replies and notifications from the debugger
-  /// are sent back to the client via IRemoteCDPHandler::onMessage.
-  bool connect(
-      std::unique_ptr<::facebook::react::IRemoteConnection> remoteConn);
+  /// Provide a callback to receive replies and notifications from the debugger.
+  bool registerCallback(CallbackFunction callback);
 
-  /// disconnect disconnects this CDPHandler from the runtime's debugger
-  bool disconnect();
+  /// Unregister any previously registered callback.
+  void unregisterCallback();
 
-  /// sendMessage delivers a JSON-encoded Chrome DevTools Protocol request to
-  /// the debugger.
-  void sendMessage(std::string str);
+  /// Process a JSON-encoded Chrome DevTools Protocol request.
+  void handle(std::string str);
 
  private:
   class Impl;

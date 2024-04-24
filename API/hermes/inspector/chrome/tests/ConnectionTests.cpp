@@ -476,6 +476,23 @@ m::runtime::CallArgument makeObjectIdCallArgument(
 
 } // namespace
 
+TEST_F(ConnectionTests, testUnregisteringCallback) {
+  asyncRuntime.executeScriptAsync(R"(
+    var a = 1 + 2;
+    var b = a / 2;
+  )");
+
+  send<m::debugger::EnableRequest>(conn, 1);
+  expectNotification<m::debugger::ScriptParsedNotification>(conn);
+
+  conn.unregisterCallback();
+
+  conn.send(R"({"id": 2, "method": "Debugger.foo"})");
+  expectNothing(conn);
+
+  EXPECT_TRUE(conn.registerCallback());
+}
+
 TEST_F(ConnectionTests, testRespondsErrorToUnknownRequests) {
   asyncRuntime.executeScriptAsync(R"(
     var a = 1 + 2;
