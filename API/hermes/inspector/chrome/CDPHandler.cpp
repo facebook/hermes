@@ -1828,6 +1828,7 @@ debugger::Command CDPHandler::Impl::didPause(debugger::Debugger &debugger) {
   processPendingFuncs();
 
   if (getPauseReason() == debugger::PauseReason::EvalComplete) {
+    std::lock_guard<std::mutex> lock(mutex_);
     auto evalReq = pendingEvals_.front();
     pendingEvals_.pop();
     auto remoteObjPtr = std::make_shared<m::runtime::RemoteObject>();
@@ -1863,7 +1864,7 @@ debugger::Command CDPHandler::Impl::didPause(debugger::Debugger &debugger) {
   // this case, we should respect the pending eval over giving the debugger a
   // continue command, otherwise this eval would never be serviced.
   {
-    std::unique_lock<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     // There is currently a known issue with returning an eval command when the
     // runtime paused because of a script load. Therefore, we simply don't
     // process any evals if the pause reason is a script load.
