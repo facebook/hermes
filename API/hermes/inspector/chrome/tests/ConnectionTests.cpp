@@ -5,21 +5,22 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <hermes/inspector/chrome/JSONValueInterfaces.h>
-#include <hermes/inspector/chrome/MessageTypesInlines.h>
-#include "SyncConnection.h"
-
 #include <chrono>
 #include <initializer_list>
 #include <iostream>
 #include <limits>
+#include <optional>
 
 #include <gtest/gtest.h>
+
 #include <hermes/DebuggerAPI.h>
 #include <hermes/hermes.h>
+#include <hermes/inspector/chrome/JSONValueInterfaces.h>
 #include <hermes/inspector/chrome/MessageTypes.h>
+#include <hermes/inspector/chrome/MessageTypesInlines.h>
 #include <jsi/instrumentation.h>
-#include <optional>
+
+#include "SyncConnection.h"
 
 namespace facebook {
 namespace hermes {

@@ -5,18 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <gtest/gtest.h>
-
-#include <hermes/inspector/chrome/MessageTypes.h>
-
-#include <hermes/inspector/chrome/JSONValueInterfaces.h>
-#include <hermes/inspector/chrome/MessageTypesInlines.h>
 #include <iostream>
 #include <variant>
-#include "hermes/external/llvh/include/llvh/ADT/SmallVector.h"
 
 #include <folly/dynamic.h>
 #include <folly/json.h>
+#include <gtest/gtest.h>
+
+#include <hermes/external/llvh/include/llvh/ADT/SmallVector.h>
+#include <hermes/inspector/chrome/JSONValueInterfaces.h>
+#include <hermes/inspector/chrome/MessageTypes.h>
+#include <hermes/inspector/chrome/MessageTypesInlines.h>
 
 namespace facebook {
 namespace hermes {

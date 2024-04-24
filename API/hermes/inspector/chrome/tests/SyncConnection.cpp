@@ -7,16 +7,17 @@
 
 #include "SyncConnection.h"
 
-#include <hermes/inspector/chrome/JSONValueInterfaces.h>
 #include <functional>
 #include <stdexcept>
-#include "hermes/include/hermes/Parser/JSONParser.h"
 
 #include <folly/json.h>
 #include <glog/logging.h>
+
+#include <hermes/Parser/JSONParser.h>
 #include <hermes/inspector/RuntimeAdapter.h>
+#include <hermes/inspector/chrome/JSONValueInterfaces.h>
 #include <hermes/inspector/chrome/MessageConverters.h>
-#include <jsinspector/InspectorInterfaces.h>
+#include <hermes/jsinspector/InspectorInterfaces.h>
 
 namespace facebook {
 namespace hermes {

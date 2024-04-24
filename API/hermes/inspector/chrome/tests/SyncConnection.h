@@ -10,12 +10,13 @@
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
+#include <optional>
 #include <queue>
 
 #include <folly/Executor.h>
 #include <hermes/hermes.h>
 #include <hermes/inspector/chrome/CDPHandler.h>
-#include <optional>
+
 #include "AsyncHermesRuntime.h"
 
 namespace facebook {
