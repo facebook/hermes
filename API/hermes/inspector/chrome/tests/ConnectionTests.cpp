@@ -2873,6 +2873,34 @@ TEST_F(ConnectionTests, heapProfilerSampling) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
+TEST_F(ConnectionTests, getHeapUsage) {
+  int msgId = 1;
+
+  send<m::debugger::EnableRequest>(conn, msgId++);
+
+  asyncRuntime.executeScriptAsync(R"(
+    (function main() {
+      var a = [];
+      for (var i = 0; i < 100; i++) {
+        a[i] = new Object;
+      }
+      debugger;
+      print(a); // Keep allocations alive until after the debugger statement.
+    })();
+  )");
+  expectNotification<m::debugger::ScriptParsedNotification>(conn);
+  expectNotification<m::debugger::PausedNotification>(conn);
+
+  m::runtime::GetHeapUsageResponse resp =
+      send<m::runtime::GetHeapUsageRequest, m::runtime::GetHeapUsageResponse>(
+          conn, msgId++);
+  EXPECT_GT(resp.usedSize, 0);
+
+  // Resume and exit
+  send<m::debugger::ResumeRequest>(conn, msgId++);
+  expectNotification<m::debugger::ResumedNotification>(conn);
+}
+
 TEST_F(ConnectionTests, heapSnapshotRemoteObject) {
   std::shared_ptr<HermesRuntime> runtime = asyncRuntime.runtime();
   int msgId = 1;
