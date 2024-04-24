@@ -7,13 +7,13 @@
 
 #pragma once
 
-#include <hermes/inspector/chrome/MessageInterfaces.h>
-
-#include <hermes/inspector/chrome/JSONValueInterfaces.h>
 #include <memory>
 #include <optional>
 #include <type_traits>
-#include "hermes/include/hermes/Parser/JSONParser.h"
+
+#include <hermes/Parser/JSONParser.h>
+#include <hermes/inspector/chrome/JSONValueInterfaces.h>
+#include <hermes/inspector/chrome/MessageInterfaces.h>
 
 namespace facebook {
 namespace hermes {
