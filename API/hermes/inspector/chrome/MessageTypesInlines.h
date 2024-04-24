@@ -41,7 +41,7 @@ typename std::
   if (!res) {
     return nullptr;
   }
-  return std::make_unique<T>(res);
+  return T::tryMake(res);
 }
 
 /// Convert JSONValue to a bool.

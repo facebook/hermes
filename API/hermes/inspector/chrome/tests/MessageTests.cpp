@@ -60,7 +60,7 @@ TEST_F(MessageTests, testDeserializeSomeFieldsInRequest) {
     }
   )",
       factory);
-  debugger::SetBreakpointByUrlRequest req(message);
+  auto req = mustMake<debugger::SetBreakpointByUrlRequest>(message);
 
   EXPECT_EQ(req.toJsonStr(), jsonValToStr(message));
   EXPECT_EQ(req.id, 10);
@@ -111,7 +111,7 @@ TEST_F(MessageTests, testDeserializeAllFieldsInRequest) {
     }
   })",
       factory);
-  debugger::SetBreakpointByUrlRequest req(message);
+  auto req = mustMake<debugger::SetBreakpointByUrlRequest>(message);
 
   EXPECT_EQ(req.id, 1);
   EXPECT_EQ(req.method, "Debugger.setBreakpointByUrl");
@@ -167,7 +167,7 @@ TEST_F(MessageTests, testDeserializeResponse) {
     }
   })",
       factory);
-  debugger::SetBreakpointByUrlResponse resp(message);
+  auto resp = mustMake<debugger::SetBreakpointByUrlResponse>(message);
   EXPECT_EQ(resp.toJsonStr(), jsonValToStr(message));
   EXPECT_EQ(resp.id, 1);
   EXPECT_EQ(resp.breakpointId, "myBreakpointId");
@@ -315,7 +315,7 @@ TEST_F(MessageTests, testDeserializeNotification) {
     }
   })",
       factory);
-  debugger::PausedNotification note(message);
+  auto note = mustMake<debugger::PausedNotification>(message);
 
   EXPECT_EQ(note.method, "Debugger.paused");
   EXPECT_EQ(note.callFrames.size(), 1);
@@ -392,7 +392,7 @@ TEST_F(MessageTests, TestDeserializeAsyncStackTrace) {
     }
   })",
       factory);
-  runtime::StackTrace stack(message);
+  auto stack = mustMake<runtime::StackTrace>(message);
 
   EXPECT_EQ(stack.description, "childStack");
   EXPECT_EQ(stack.callFrames.size(), 0);
@@ -500,7 +500,7 @@ TEST_F(MessageTests, testEnableRequest) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::EnableRequest deserializedReq(messageJSON);
+  auto deserializedReq = mustMake<debugger::EnableRequest>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics
@@ -529,7 +529,7 @@ TEST_F(MessageTests, testDisableRequest) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::DisableRequest deserializedReq(messageJSON);
+  auto deserializedReq = mustMake<debugger::DisableRequest>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics
@@ -562,7 +562,8 @@ TEST_F(MessageTests, testEvaluateOnCallFrameRequestMinimal) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::EvaluateOnCallFrameRequest deserializedReq(messageJSON);
+  auto deserializedReq =
+      mustMake<debugger::EvaluateOnCallFrameRequest>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics
@@ -612,7 +613,8 @@ TEST_F(MessageTests, testEvaluateOnCallFrameRequestFull) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::EvaluateOnCallFrameRequest deserializedReq(messageJSON);
+  auto deserializedReq =
+      mustMake<debugger::EvaluateOnCallFrameRequest>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics, resolvedReq is correct
@@ -673,7 +675,7 @@ TEST_F(MessageTests, testPauseRequest) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::PauseRequest deserializedReq(messageJSON);
+  auto deserializedReq = mustMake<debugger::PauseRequest>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics
@@ -705,7 +707,8 @@ TEST_F(MessageTests, testRemoveBreakpointRequest) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::RemoveBreakpointRequest deserializedReq(messageJSON);
+  auto deserializedReq =
+      mustMake<debugger::RemoveBreakpointRequest>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics
@@ -739,7 +742,7 @@ TEST_F(MessageTests, testResumeRequest) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::ResumeRequest deserializedReq(messageJSON);
+  auto deserializedReq = mustMake<debugger::ResumeRequest>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics
@@ -776,7 +779,7 @@ TEST_F(MessageTests, testSetBreakpointRequestMinimal) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::SetBreakpointRequest deserializedReq(messageJSON);
+  auto deserializedReq = mustMake<debugger::SetBreakpointRequest>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics
@@ -830,7 +833,7 @@ TEST_F(MessageTests, testSetBreakpointRequestFull) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::SetBreakpointRequest deserializedReq(messageJSON);
+  auto deserializedReq = mustMake<debugger::SetBreakpointRequest>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics
@@ -875,7 +878,8 @@ TEST_F(MessageTests, testSetBreakpointByUrlRequestMinimal) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::SetBreakpointByUrlRequest deserializedReq(messageJSON);
+  auto deserializedReq =
+      mustMake<debugger::SetBreakpointByUrlRequest>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics
@@ -918,7 +922,8 @@ TEST_F(MessageTests, testSetBreakpointByUrlRequestFull) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::SetBreakpointByUrlRequest deserializedReq(messageJSON);
+  auto deserializedReq =
+      mustMake<debugger::SetBreakpointByUrlRequest>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics
@@ -966,7 +971,8 @@ TEST_F(MessageTests, testSetBreakpointsActiveRequest) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::SetBreakpointsActiveRequest deserializedReq(messageJSON);
+  auto deserializedReq =
+      mustMake<debugger::SetBreakpointsActiveRequest>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics
@@ -1000,7 +1006,8 @@ TEST_F(MessageTests, testSetInstrumentationBreakpointRequest) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::SetInstrumentationBreakpointRequest deserializedReq(messageJSON);
+  auto deserializedReq =
+      mustMake<debugger::SetInstrumentationBreakpointRequest>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics
@@ -1035,7 +1042,8 @@ TEST_F(MessageTests, testSetPauseOnExceptionsRequest) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::SetPauseOnExceptionsRequest deserializedReq(messageJSON);
+  auto deserializedReq =
+      mustMake<debugger::SetPauseOnExceptionsRequest>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics
@@ -1066,7 +1074,7 @@ TEST_F(MessageTests, testStepIntoRequest) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::StepIntoRequest deserializedReq(messageJSON);
+  auto deserializedReq = mustMake<debugger::StepIntoRequest>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics
@@ -1095,7 +1103,7 @@ TEST_F(MessageTests, testStepOutRequest) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::StepOutRequest deserializedReq(messageJSON);
+  auto deserializedReq = mustMake<debugger::StepOutRequest>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics
@@ -1124,7 +1132,7 @@ TEST_F(MessageTests, testStepOverRequest) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::StepOverRequest deserializedReq(messageJSON);
+  auto deserializedReq = mustMake<debugger::StepOverRequest>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics
@@ -1150,7 +1158,8 @@ TEST_F(MessageTests, testEvaluateOnCallFrameResponseMinimal) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::EvaluateOnCallFrameResponse deserializedReq(messageJSON);
+  auto deserializedReq =
+      mustMake<debugger::EvaluateOnCallFrameResponse>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   EXPECT_FALSE(deserializedReq.result.subtype.has_value());
@@ -1190,7 +1199,8 @@ TEST_F(MessageTests, testEvaluateOnCallFrameResponseFull) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::EvaluateOnCallFrameResponse deserializedReq(messageJSON);
+  auto deserializedReq =
+      mustMake<debugger::EvaluateOnCallFrameResponse>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   EXPECT_TRUE(deserializedReq.result.subtype.has_value());
@@ -1235,7 +1245,8 @@ TEST_F(MessageTests, testSetBreakpointByUrlResponse) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::SetBreakpointByUrlResponse deserializedReq(messageJSON);
+  auto deserializedReq =
+      mustMake<debugger::SetBreakpointByUrlResponse>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics
@@ -1263,7 +1274,7 @@ TEST_F(MessageTests, testSetBreakpointResponse) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::SetBreakpointResponse deserializedReq(messageJSON);
+  auto deserializedReq = mustMake<debugger::SetBreakpointResponse>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics
@@ -1284,7 +1295,8 @@ TEST_F(MessageTests, testSetInstrumentationBreakpointResponse) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::SetInstrumentationBreakpointResponse deserializedReq(messageJSON);
+  auto deserializedReq =
+      mustMake<debugger::SetInstrumentationBreakpointResponse>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics
@@ -1310,7 +1322,8 @@ TEST_F(MessageTests, testBreakpointResolvedNotification) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::BreakpointResolvedNotification deserializedReq(messageJSON);
+  auto deserializedReq =
+      mustMake<debugger::BreakpointResolvedNotification>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics
@@ -1356,7 +1369,7 @@ TEST_F(MessageTests, testPauseNotificationMinimal) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::PausedNotification deserializedReq(messageJSON);
+  auto deserializedReq = mustMake<debugger::PausedNotification>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   EXPECT_FALSE(deserializedReq.callFrames[0].functionLocation.has_value());
@@ -1448,7 +1461,7 @@ TEST_F(MessageTests, testPauseNotificationFull) {
   std::optional<runtime::RemoteObject> returnValue;
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::PausedNotification deserializedReq(messageJSON);
+  auto deserializedReq = mustMake<debugger::PausedNotification>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
   ASSERT_TRUE(jsonValsEQ(deserializedReq.toJsonVal(factory), messageJSON));
 
@@ -1562,7 +1575,7 @@ TEST_F(MessageTests, testResumedNotification) {
 
   // Serialize and Deserialize are inverse functions
   JSONObject *messageJSON = mustParseStrAsJsonObj(message, factory);
-  debugger::ResumedNotification deserializedReq(messageJSON);
+  auto deserializedReq = mustMake<debugger::ResumedNotification>(messageJSON);
   EXPECT_EQ(deserializedReq.toJsonStr(), jsonValToStr(messageJSON));
 
   // Specifics

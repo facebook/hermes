@@ -35,6 +35,13 @@ inline JSONObject *mustParseStrAsJsonObj(
   return obj.value();
 }
 
+template <typename T>
+T mustMake(const JSONObject *obj) {
+  std::unique_ptr<T> instance = T::tryMake(obj);
+  EXPECT_TRUE(instance != nullptr);
+  return std::move(*instance);
+}
+
 namespace message {
 
 inline std::unique_ptr<Request> mustGetRequestFromJson(const std::string &str) {

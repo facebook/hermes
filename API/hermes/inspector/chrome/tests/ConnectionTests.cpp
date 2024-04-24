@@ -63,7 +63,7 @@ ResponseType expectResponse(SyncConnection &conn, int id) {
   conn.waitForResponse([id, &resp](const std::string &str) {
     JSLexer::Allocator jsonAlloc;
     JSONFactory factory(jsonAlloc);
-    resp = ResponseType(mustParseStrAsJsonObj(str, factory));
+    resp = mustMake<ResponseType>(mustParseStrAsJsonObj(str, factory));
     EXPECT_EQ(resp.id, id);
   });
 
@@ -75,18 +75,9 @@ NotificationType expectNotification(SyncConnection &conn) {
   NotificationType note;
 
   conn.waitForNotification([&note](const std::string &str) {
-    std::string parseError;
-
-    try {
-      JSLexer::Allocator jsonAlloc;
-      JSONFactory factory(jsonAlloc);
-      note = NotificationType(mustParseStrAsJsonObj(str, factory));
-    } catch (const std::exception &e) {
-      parseError = e.what();
-      parseError += " (json: " + str + ")";
-    }
-
-    EXPECT_EQ(parseError, "");
+    JSLexer::Allocator jsonAlloc;
+    JSONFactory factory(jsonAlloc);
+    note = mustMake<NotificationType>(mustParseStrAsJsonObj(str, factory));
   });
 
   return note;
@@ -2211,7 +2202,8 @@ TEST_F(ConnectionTests, testConsoleLog) {
       EXPECT_TRUE(method != nullptr);
       if (*method == "Runtime.consoleAPICalled") {
         receivedConsoleNotification = true;
-        auto note = m::runtime::ConsoleAPICalledNotification(parsedNote);
+        auto note =
+            mustMake<m::runtime::ConsoleAPICalledNotification>(parsedNote);
         EXPECT_EQ(note.type, "warning");
         EXPECT_EQ(note.args.size(), 3);
 
@@ -2237,7 +2229,7 @@ TEST_F(ConnectionTests, testConsoleLog) {
              {"__proto__", PropInfo("object")}});
       } else if (*method == "Debugger.paused") {
         receivedPausedNotification = true;
-        auto note = m::debugger::PausedNotification(parsedNote);
+        auto note = mustMake<m::debugger::PausedNotification>(parsedNote);
         EXPECT_EQ(note.reason, "other");
         EXPECT_EQ(note.callFrames.size(), 1);
         EXPECT_EQ(note.callFrames[0].functionName, "global");
@@ -2303,7 +2295,8 @@ TEST_F(ConnectionTests, testConsoleGroup) {
       EXPECT_TRUE(message::assign(method, parsedNote, "method"));
       if (method == "Runtime.consoleAPICalled") {
         if (!receivedGroupStartNotification) {
-          auto note = m::runtime::ConsoleAPICalledNotification(parsedNote);
+          auto note =
+              mustMake<m::runtime::ConsoleAPICalledNotification>(parsedNote);
           EXPECT_EQ(note.type, "startGroup");
           receivedGroupStartNotification = true;
 
@@ -2332,7 +2325,8 @@ TEST_F(ConnectionTests, testConsoleGroup) {
                {"bool2", PropInfo("boolean").setValue("true")},
                {"__proto__", PropInfo("object")}});
         } else {
-          auto note = m::runtime::ConsoleAPICalledNotification(parsedNote);
+          auto note =
+              mustMake<m::runtime::ConsoleAPICalledNotification>(parsedNote);
           EXPECT_EQ(note.type, "endGroup");
           receivedGroupEndNotification = true;
 
@@ -2342,7 +2336,7 @@ TEST_F(ConnectionTests, testConsoleGroup) {
         }
       } else if (method == "Debugger.paused") {
         receivedPausedNotification = true;
-        auto note = m::debugger::PausedNotification(parsedNote);
+        auto note = mustMake<m::debugger::PausedNotification>(parsedNote);
         EXPECT_EQ(note.reason, "other");
         EXPECT_EQ(note.callFrames.size(), 1);
         EXPECT_EQ(note.callFrames[0].functionName, "global");
@@ -2399,7 +2393,8 @@ TEST_F(ConnectionTests, testConsoleBuffer) {
       EXPECT_TRUE(method != nullptr);
       EXPECT_EQ(*method, "Runtime.consoleAPICalled");
 
-      auto note = m::runtime::ConsoleAPICalledNotification(parsedNote);
+      auto note =
+          mustMake<m::runtime::ConsoleAPICalledNotification>(parsedNote);
       EXPECT_EQ(note.args[0].type, "string");
 
       try {

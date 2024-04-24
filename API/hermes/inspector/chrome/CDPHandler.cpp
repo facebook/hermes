@@ -671,9 +671,12 @@ void CDPHandler::Impl::handle(const m::heapProfiler::StopSamplingRequest &req) {
       throw std::runtime_error("Failed to parse string as JSONObject");
     }
     m::heapProfiler::StopSamplingResponse resp;
-    m::heapProfiler::SamplingHeapProfile profile{*json};
+    auto profile = m::heapProfiler::SamplingHeapProfile::tryMake(*json);
+    if (profile == nullptr) {
+      throw std::runtime_error("Failed to make SamplingHeapProfile");
+    }
     resp.id = req.id;
-    resp.profile = std::move(profile);
+    resp.profile = std::move(*profile);
     sendResponseToClient(resp);
   });
 }
@@ -772,7 +775,11 @@ void CDPHandler::Impl::handle(const m::profiler::StopRequest &req) {
       if (!json) {
         throw std::runtime_error("Failed to parse string as JSONObject");
       }
-      resp.profile = m::profiler::Profile{*json};
+      auto profile = m::profiler::Profile::tryMake(*json);
+      if (profile == nullptr) {
+        throw std::runtime_error("Failed to make Profile");
+      }
+      resp.profile = std::move(*profile);
       sendResponseToClient(resp);
     } catch (const std::exception &) {
       sendResponseToClient(m::makeErrorResponse(
