@@ -3144,7 +3144,7 @@ TEST_F(WaitForDebuggerTests, runIfWaitingForDebugger) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
-// TODO: Missing test in CDPAgentTest
+// Also implemented as CDPAgentTest::HeapProfilerSampling
 TEST_F(ConnectionTests, heapProfilerSampling) {
   int msgId = 1;
 
