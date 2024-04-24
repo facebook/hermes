@@ -48,6 +48,12 @@ class HeapProfilerDomainAgent : public DomainAgent {
   void stopTrackingHeapObjects(
       const m::heapProfiler::StopTrackingHeapObjectsRequest &req);
 
+  /// Handle HeapProfiler.startSampling
+  void startSampling(const m::heapProfiler::StartSamplingRequest &req);
+
+  /// Handle HeapProfiler.stopSampling
+  void stopSampling(const m::heapProfiler::StopSamplingRequest &req);
+
  private:
   void sendSnapshot(int reqId, bool reportProgress);
 
@@ -56,6 +62,10 @@ class HeapProfilerDomainAgent : public DomainAgent {
   /// Flag indicating whether this agent is registered to receive heap object
   /// tracking callbacks.
   bool trackingHeapObjectStackTraces_ = false;
+
+  /// Flag indicating whether this agent is currently running a heap sampling
+  /// session.
+  bool samplingHeap_ = false;
 };
 
 } // namespace cdp

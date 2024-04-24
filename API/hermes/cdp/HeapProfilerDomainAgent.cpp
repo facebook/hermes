@@ -18,6 +18,25 @@ namespace facebook {
 namespace hermes {
 namespace cdp {
 
+namespace {
+class NullBuffer : public std::streambuf {
+ public:
+  int overflow(int c) override {
+    // Do nothing with the character, discarding it
+    return c;
+  }
+};
+
+// Stream that discards all writes.
+class NullStream : public std::ostream {
+ public:
+  NullStream() : std::ostream(&nullbuf_) {}
+
+ private:
+  NullBuffer nullbuf_;
+};
+} // namespace
+
 HeapProfilerDomainAgent::HeapProfilerDomainAgent(
     int32_t executionContextID,
     HermesRuntime &runtime,
@@ -29,6 +48,10 @@ HeapProfilerDomainAgent::HeapProfilerDomainAgent(
 HeapProfilerDomainAgent::~HeapProfilerDomainAgent() {
   if (trackingHeapObjectStackTraces_) {
     runtime_.instrumentation().stopTrackingHeapObjectStackTraces();
+  }
+  if (samplingHeap_) {
+    NullStream stream;
+    runtime_.instrumentation().stopHeapSampling(stream);
   }
 }
 
@@ -190,6 +213,42 @@ void HeapProfilerDomainAgent::stopTrackingHeapObjects(
   runtime_.instrumentation().stopTrackingHeapObjectStackTraces();
   trackingHeapObjectStackTraces_ = false;
   sendSnapshot(req.id, req.reportProgress && *req.reportProgress);
+}
+
+void HeapProfilerDomainAgent::startSampling(
+    const m::heapProfiler::StartSamplingRequest &req) {
+  // This is the same default sampling interval that Chrome uses.
+  // https://chromedevtools.github.io/devtools-protocol/tot/HeapProfiler/#method-startSampling
+  constexpr size_t kDefaultSamplingInterval = 1 << 15;
+  const size_t samplingInterval =
+      req.samplingInterval.value_or(kDefaultSamplingInterval);
+  runtime_.instrumentation().startHeapSampling(samplingInterval);
+  samplingHeap_ = true;
+  sendResponseToClient(m::makeOkResponse(req.id));
+}
+
+void HeapProfilerDomainAgent::stopSampling(
+    const m::heapProfiler::StopSamplingRequest &req) {
+  if (!samplingHeap_) {
+    sendResponseToClient(m::makeErrorResponse(
+        req.id, m::ErrorCode::InvalidRequest, "Heap sampling not active"));
+    return;
+  }
+
+  std::ostringstream stream;
+  runtime_.instrumentation().stopHeapSampling(stream);
+  samplingHeap_ = false;
+
+  m::heapProfiler::StopSamplingResponse resp;
+  auto profile = m::heapProfiler::makeSamplingHeapProfile(stream.str());
+  if (profile == nullptr) {
+    sendResponseToClient(m::makeErrorResponse(
+        req.id, m::ErrorCode::InternalError, "Failed to create profile"));
+    return;
+  }
+  resp.id = req.id;
+  resp.profile = std::move(*profile);
+  sendResponseToClient(resp);
 }
 
 } // namespace cdp

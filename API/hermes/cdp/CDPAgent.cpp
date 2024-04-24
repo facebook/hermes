@@ -399,6 +399,12 @@ void CDPAgentImpl::DomainAgents::handleCommand(
     heapProfilerAgent_->stopTrackingHeapObjects(
         static_cast<m::heapProfiler::StopTrackingHeapObjectsRequest &>(
             *command));
+  } else if (command->method == "HeapProfiler.startSampling") {
+    heapProfilerAgent_->startSampling(
+        static_cast<m::heapProfiler::StartSamplingRequest &>(*command));
+  } else if (command->method == "HeapProfiler.stopSampling") {
+    heapProfilerAgent_->stopSampling(
+        static_cast<m::heapProfiler::StopSamplingRequest &>(*command));
   } else {
     messageCallback_(message::makeErrorResponse(
                          command->id,
