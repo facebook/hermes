@@ -381,6 +381,10 @@ void CDPAgentImpl::DomainAgents::handleCommand(
   } else if (command->method == "HeapProfiler.takeHeapSnapshot") {
     heapProfilerAgent_->takeHeapSnapshot(
         static_cast<m::heapProfiler::TakeHeapSnapshotRequest &>(*command));
+  } else if (command->method == "HeapProfiler.getObjectByHeapObjectId") {
+    heapProfilerAgent_->getObjectByHeapObjectId(
+        static_cast<m::heapProfiler::GetObjectByHeapObjectIdRequest &>(
+            *command));
   } else {
     messageCallback_(message::makeErrorResponse(
                          command->id,

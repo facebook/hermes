@@ -9,6 +9,7 @@
 #include "CallbackOStream.h"
 
 #include <hermes/cdp/MessageConverters.h>
+#include <hermes/cdp/RemoteObjectConverters.h>
 #include <jsi/instrumentation.h>
 
 namespace facebook {
@@ -61,6 +62,31 @@ void HeapProfilerDomainAgent::sendSnapshot(int reqId, bool reportProgress) {
     runtime_.instrumentation().createSnapshotToStream(cos);
   }
   sendResponseToClient(m::makeOkResponse(reqId));
+}
+
+void HeapProfilerDomainAgent::getObjectByHeapObjectId(
+    const m::heapProfiler::GetObjectByHeapObjectIdRequest &req) {
+  uint64_t objID = atoi(req.objectId.c_str());
+  jsi::Value val = runtime_.getObjectForID(objID);
+  if (val.isNull()) {
+    sendResponseToClient(m::makeErrorResponse(
+        req.id, m::ErrorCode::ServerError, "Unknown object"));
+    return;
+  }
+
+  std::string group = req.objectGroup.value_or("");
+  m::runtime::RemoteObject remoteObj = m::runtime::makeRemoteObject(
+      runtime_, val, *objTable_, group, false, false);
+  if (remoteObj.type.empty()) {
+    sendResponseToClient(m::makeErrorResponse(
+        req.id, m::ErrorCode::ServerError, "Remote object is not available"));
+    return;
+  }
+
+  m::heapProfiler::GetObjectByHeapObjectIdResponse resp;
+  resp.id = req.id;
+  resp.result = std::move(remoteObj);
+  sendResponseToClient(resp);
 }
 
 } // namespace cdp
