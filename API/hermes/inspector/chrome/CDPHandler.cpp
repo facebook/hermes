@@ -430,27 +430,21 @@ static bool isDebuggerRequest(const m::Request &req) {
 }
 
 void CDPHandler::Impl::sendMessage(std::string str) {
-  m::Request::ParseResult maybeReq = m::Request::fromJson(str);
-
-  // If parsing failed, then the value of ParseResult will be a string
-  // containing the error message. Silently log this error message.
-  if (std::holds_alternative<std::string>(maybeReq)) {
+  std::unique_ptr<m::Request> req = m::Request::fromJson(str);
+  if (!req) {
     return;
   }
 
-  auto &req = std::get<std::unique_ptr<m::Request>>(maybeReq);
-  if (req) {
-    // If the debugger is currently disabled and the incoming method is for
-    // the debugger, then error out to the request immediately here. We make
-    // an exception for Debugger.enable though, otherwise we would never be
-    // able to turn the debugger back on once it's disabled.
-    if (isDebuggerDisabled() && isDebuggerRequest(*req) &&
-        (req->method != kDebuggerEnableMethod)) {
-      sendResponseToClient(m::makeErrorResponse(
-          req->id, m::ErrorCode::ServerError, "Debugger agent is not enabled"));
-    } else {
-      req->accept(*this);
-    }
+  // If the debugger is currently disabled and the incoming method is for
+  // the debugger, then error out to the request immediately here. We make
+  // an exception for Debugger.enable though, otherwise we would never be
+  // able to turn the debugger back on once it's disabled.
+  if (isDebuggerDisabled() && isDebuggerRequest(*req) &&
+      (req->method != kDebuggerEnableMethod)) {
+    sendResponseToClient(m::makeErrorResponse(
+        req->id, m::ErrorCode::ServerError, "Debugger agent is not enabled"));
+  } else {
+    req->accept(*this);
   }
 }
 

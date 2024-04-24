@@ -154,7 +154,7 @@ function emitRequestParser(stream: Writable, commands: Array<Command>) {
 
     } // namespace
 
-    std::unique_ptr<Request> Request::fromJsonThrowOnError(const std::string &str) {
+    std::unique_ptr<Request> Request::fromJson(const std::string &str) {
       static std::unordered_map<std::string, RequestBuilder> builders = {
   `);
 
@@ -172,7 +172,7 @@ function emitRequestParser(stream: Writable, commands: Array<Command>) {
     JSONFactory factory(alloc);
     std::optional<JSONObject *> parseResult = parseStrAsJsonObj(str, factory);
     if (!parseResult) {
-      throw std::runtime_error("Failed to parse string to JSONObject");
+      return nullptr;
     }
     JSONObject *jsonObj = *parseResult;
 
@@ -186,14 +186,6 @@ function emitRequestParser(stream: Writable, commands: Array<Command>) {
 
     auto builder = it->second;
     return builder(jsonObj);
-  }
-
-  Request::ParseResult Request::fromJson(const std::string &str) {
-    try {
-      return Request::fromJsonThrowOnError(str);
-    } catch (const std::exception& e) {
-      return e.what();
-    }
   }\n\n`);
 
   stream.write('\n');
