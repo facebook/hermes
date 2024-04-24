@@ -1739,6 +1739,7 @@ void CDPHandler::Impl::processPendingDesiredExecutions(
   // been set.
   if (pauseReason == debugger::PauseReason::ScriptLoaded) {
     Script info = getScriptFromTopCallFrame();
+    std::lock_guard<std::mutex> lock(virtualBreakpointMutex_);
     // We don't want to pause on files that we should be ignoring.
     if (isAwaitingDebuggerOnStart() ||
         (hasVirtualBreakpoint(kBeforeScriptWithSourceMapExecution) &&
@@ -1752,13 +1753,10 @@ void CDPHandler::Impl::processPendingDesiredExecutions(
         note.reason = "other";
         note.callFrames = m::debugger::makeCallFrames(
             getDebugger().getProgramState(), objTable_, getRuntime());
-        {
-          std::lock_guard<std::mutex> lock(virtualBreakpointMutex_);
-          note.hitBreakpoints = std::vector<m::debugger::BreakpointId>();
-          for (auto &bp :
-               virtualBreakpoints_[kBeforeScriptWithSourceMapExecution]) {
-            note.hitBreakpoints->emplace_back(bp);
-          }
+        note.hitBreakpoints = std::vector<m::debugger::BreakpointId>();
+        for (auto &bp :
+             virtualBreakpoints_[kBeforeScriptWithSourceMapExecution]) {
+          note.hitBreakpoints->emplace_back(bp);
         }
         sendNotificationToClient(note);
       }
