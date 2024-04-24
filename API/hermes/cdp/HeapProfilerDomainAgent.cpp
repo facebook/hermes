@@ -26,6 +26,12 @@ HeapProfilerDomainAgent::HeapProfilerDomainAgent(
     : DomainAgent(executionContextID, messageCallback, objTable),
       runtime_(runtime) {}
 
+HeapProfilerDomainAgent::~HeapProfilerDomainAgent() {
+  if (trackingHeapObjectStackTraces_) {
+    runtime_.instrumentation().stopTrackingHeapObjectStackTraces();
+  }
+}
+
 /// Handles HeapProfiler.takeHeapSnapshot request
 void HeapProfilerDomainAgent::takeHeapSnapshot(
     const m::heapProfiler::TakeHeapSnapshotRequest &req) {
@@ -117,6 +123,73 @@ void HeapProfilerDomainAgent::collectGarbage(
     const m::heapProfiler::CollectGarbageRequest &req) {
   runtime_.instrumentation().collectGarbage("inspector");
   sendResponseToClient(m::makeOkResponse(req.id));
+}
+
+void HeapProfilerDomainAgent::startTrackingHeapObjects(
+    const m::heapProfiler::StartTrackingHeapObjectsRequest &req) {
+  if (trackingHeapObjectStackTraces_) {
+    sendResponseToClient(m::makeErrorResponse(
+        req.id, m::ErrorCode::InvalidRequest, "Already tracking heap objects"));
+    return;
+  }
+
+  // Update state before registering the callback, as it may be invoked
+  // immediately.
+  trackingHeapObjectStackTraces_ = true;
+  sendResponseToClient(m::makeOkResponse(req.id));
+
+  // Register for heap object stack trace callbacks.
+  // NOTE: As with most profiling/tracing operations, the runtime only supports
+  // a single tracking session at a time, so this does not support multiple CDP
+  // agents capturing this trace simultaneously.
+  runtime_.instrumentation().startTrackingHeapObjectStackTraces(
+      [this](
+          uint64_t lastSeenObjectId,
+          std::chrono::microseconds timestamp,
+          std::vector<jsi::Instrumentation::HeapStatsUpdate> stats) {
+        // Send the last object ID notification first.
+        m::heapProfiler::LastSeenObjectIdNotification note;
+        note.lastSeenObjectId = lastSeenObjectId;
+        // The protocol uses milliseconds with a fraction for
+        // microseconds.
+        note.timestamp = static_cast<double>(timestamp.count()) / 1000;
+        sendNotificationToClient(note);
+
+        m::heapProfiler::HeapStatsUpdateNotification heapStatsNote;
+        // Flatten the HeapStatsUpdate list.
+        heapStatsNote.statsUpdate.reserve(stats.size() * 3);
+        for (const jsi::Instrumentation::HeapStatsUpdate &fragment : stats) {
+          // Each triplet is the fragment number, the total count of
+          // objects for the fragment, and the total size of objects
+          // for the fragment.
+          heapStatsNote.statsUpdate.push_back(
+              static_cast<int>(std::get<0>(fragment)));
+          heapStatsNote.statsUpdate.push_back(
+              static_cast<int>(std::get<1>(fragment)));
+          heapStatsNote.statsUpdate.push_back(
+              static_cast<int>(std::get<2>(fragment)));
+        }
+        assert(
+            heapStatsNote.statsUpdate.size() == stats.size() * 3 &&
+            "Should be exactly 3x the stats vector");
+        // TODO: Chunk this if there are too many fragments to
+        // update. Unlikely to be a problem in practice unless
+        // there's a huge amount of allocation and freeing.
+        sendNotificationToClient(heapStatsNote);
+      });
+}
+
+void HeapProfilerDomainAgent::stopTrackingHeapObjects(
+    const m::heapProfiler::StopTrackingHeapObjectsRequest &req) {
+  if (!trackingHeapObjectStackTraces_) {
+    sendResponseToClient(m::makeErrorResponse(
+        req.id, m::ErrorCode::InvalidRequest, "Not tracking heap objects"));
+    return;
+  }
+
+  runtime_.instrumentation().stopTrackingHeapObjectStackTraces();
+  trackingHeapObjectStackTraces_ = false;
+  sendSnapshot(req.id, req.reportProgress && *req.reportProgress);
 }
 
 } // namespace cdp

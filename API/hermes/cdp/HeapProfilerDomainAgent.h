@@ -25,7 +25,7 @@ class HeapProfilerDomainAgent : public DomainAgent {
       HermesRuntime &runtime,
       SynchronizedOutboundCallback messageCallback,
       std::shared_ptr<RemoteObjectsTable> objTable);
-  ~HeapProfilerDomainAgent() = default;
+  ~HeapProfilerDomainAgent();
 
   /// Handles HeapProfiler.takeHeapSnapshot request
   void takeHeapSnapshot(const m::heapProfiler::TakeHeapSnapshotRequest &req);
@@ -40,10 +40,22 @@ class HeapProfilerDomainAgent : public DomainAgent {
   /// Handle HeapProfiler.collectGarbage
   void collectGarbage(const m::heapProfiler::CollectGarbageRequest &req);
 
+  /// Handle HeapProfiler.startTrackingHeapObjects
+  void startTrackingHeapObjects(
+      const m::heapProfiler::StartTrackingHeapObjectsRequest &req);
+
+  /// Handle HeapProfiler.stopTrackingHeapObjects
+  void stopTrackingHeapObjects(
+      const m::heapProfiler::StopTrackingHeapObjectsRequest &req);
+
  private:
   void sendSnapshot(int reqId, bool reportProgress);
 
   HermesRuntime &runtime_;
+
+  /// Flag indicating whether this agent is registered to receive heap object
+  /// tracking callbacks.
+  bool trackingHeapObjectStackTraces_ = false;
 };
 
 } // namespace cdp
