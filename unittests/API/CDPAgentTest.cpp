@@ -159,6 +159,18 @@ class CDPAgentTest : public ::testing::Test {
   void waitForTestSignal(
       std::chrono::milliseconds timeout = std::chrono::milliseconds(2500));
 
+  /// Store a value provided by a test script so it can be later used by a
+  /// test.
+  jsi::Value storeValue(
+      jsi::Runtime &runtime,
+      const jsi::Value &thisVal,
+      const jsi::Value *args,
+      size_t count);
+
+  /// Move the previously stored value out of the storage location and
+  /// return it.
+  jsi::Value takeStoredValue();
+
   std::unordered_map<std::string, std::string> getAndEnsureProps(
       int msgId,
       const std::string &objectId,
@@ -175,6 +187,12 @@ class CDPAgentTest : public ::testing::Test {
   std::mutex testSignalMutex_;
   std::condition_variable testSignalCondition_;
   bool testSignalled_ = false;
+
+  /// Mutex to protect storedValue_, as it is typically written on the runtime
+  /// thread (via the "storeValue" host function), and read from the test
+  /// thread (via "takeStoredValue").
+  std::mutex storedValueMutex_;
+  jsi::Value storedValue_;
 
   std::mutex messageMutex_;
   std::condition_variable hasMessage_;
@@ -223,11 +241,22 @@ void CDPAgentTest::setupRuntimeTestInfra() {
           jsi::PropNameID::forAscii(*runtime_, "signalTest"),
           0,
           std::bind(&CDPAgentTest::signalTest, this, _1, _2, _3, _4)));
+  runtime_->global().setProperty(
+      *runtime_,
+      "storeValue",
+      jsi::Function::createFromHostFunction(
+          *runtime_,
+          jsi::PropNameID::forAscii(*runtime_, "storeValue"),
+          0,
+          std::bind(&CDPAgentTest::storeValue, this, _1, _2, _3, _4)));
 
   cdpDebugAPI_ = CDPDebugAPI::create(*runtime_);
 }
 
 void CDPAgentTest::TearDown() {
+  // Drop reference to value inside the runtime
+  storedValue_ = jsi::Value::undefined();
+
   // CDPAgent can be cleaned up from any thread and at any time without
   // synchronization with the runtime thread.
   cdpAgent_.reset();
@@ -388,6 +417,23 @@ void CDPAgentTest::waitForTestSignal(std::chrono::milliseconds timeout) {
       lock, timeout, [this] { return testSignalled_; });
   EXPECT_TRUE(testSignalled_);
   testSignalled_ = false;
+}
+
+jsi::Value CDPAgentTest::storeValue(
+    jsi::Runtime &runtime,
+    const jsi::Value &thisVal,
+    const jsi::Value *args,
+    size_t count) {
+  if (count > 0) {
+    std::unique_lock<std::mutex> lock(storedValueMutex_);
+    storedValue_ = jsi::Value(runtime, args[0]);
+  }
+  return jsi::Value::undefined();
+}
+
+jsi::Value CDPAgentTest::takeStoredValue() {
+  std::unique_lock<std::mutex> lock(storedValueMutex_);
+  return std::move(storedValue_);
 }
 
 void CDPAgentTest::sendEvalRequest(
