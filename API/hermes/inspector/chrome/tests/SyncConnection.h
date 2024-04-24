@@ -13,7 +13,6 @@
 #include <optional>
 #include <queue>
 
-#include <folly/Executor.h>
 #include <hermes/hermes.h>
 #include <hermes/inspector/chrome/CDPHandler.h>
 

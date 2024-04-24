@@ -16,11 +16,9 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <unordered_set>
 #include "hermes/include/hermes/Parser/JSONParser.h"
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-#pragma clang diagnostic pop
 #include <glog/logging.h>
 #include <hermes/DebuggerAPI.h>
 #include <hermes/hermes.h>

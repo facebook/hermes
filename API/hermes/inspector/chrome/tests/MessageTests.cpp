@@ -8,8 +8,6 @@
 #include <iostream>
 #include <variant>
 
-#include <folly/dynamic.h>
-#include <folly/json.h>
 #include <gtest/gtest.h>
 
 #include <hermes/external/llvh/include/llvh/ADT/SmallVector.h>

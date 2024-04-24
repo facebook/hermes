@@ -12,8 +12,6 @@
 #include <cmath>
 #include <limits>
 
-#include <folly/Conv.h>
-
 namespace facebook {
 namespace hermes {
 namespace inspector {
