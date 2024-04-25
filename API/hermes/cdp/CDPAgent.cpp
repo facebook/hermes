@@ -22,7 +22,7 @@ using namespace facebook::hermes::inspector_modern::chrome;
 /// message handler on the runtime thread. This class also manages the lifetime
 /// of the domain-specific message handlers. Methods on this class can be
 /// called from arbitrary threads.
-class CDPAgentImpl : public std::enable_shared_from_this<CDPAgentImpl> {
+class CDPAgentImpl {
  public:
   CDPAgentImpl(
       HermesRuntime &runtime,
@@ -44,28 +44,27 @@ class CDPAgentImpl : public std::enable_shared_from_this<CDPAgentImpl> {
   /// called with exclusive access to the runtime.
   struct DomainAgents {
     // Create a new collection of domain agents.
-    DomainAgents(OutboundMessageFunc messageCallback);
+    DomainAgents(
+        HermesRuntime &runtime,
+        AsyncDebuggerAPI &asyncDebuggerAPI,
+        OutboundMessageFunc messageCallback);
 
     /// Create the domain handlers and subscribing to any external events.
-    void initialize(HermesRuntime &runtime, AsyncDebuggerAPI &asyncDebuggerAPI);
+    void initialize();
 
     /// Releasing any domain handlers and event subscriptions.
     void dispose();
 
     /// Process a CDP \p command encoded in JSON using the appropriate domain
     /// handler.
-    void handleCommand(
-        HermesRuntime &runtime,
-        AsyncDebuggerAPI &asyncDebuggerAPI,
-        std::shared_ptr<message::Request> command);
+    void handleCommand(std::shared_ptr<message::Request> command);
 
+    HermesRuntime &runtime_;
+    debugger::AsyncDebuggerAPI &asyncDebuggerAPI_;
     OutboundMessageFunc messageCallback_;
 
     // TODO: Add storage for domain-specific handlers
   };
-
-  HermesRuntime &runtime_;
-  debugger::AsyncDebuggerAPI &asyncDebuggerAPI_;
 
   EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback_;
   OutboundMessageFunc messageCallback_;
@@ -79,12 +78,11 @@ CDPAgentImpl::CDPAgentImpl(
     debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
     EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
     OutboundMessageFunc messageCallback)
-    : runtime_(runtime),
-      asyncDebuggerAPI_(asyncDebuggerAPI),
-      enqueueRuntimeTaskCallback_(enqueueRuntimeTaskCallback),
-      messageCallback_(messageCallback),
-      runtimeTaskRunner_(asyncDebuggerAPI, enqueueRuntimeTaskCallback),
-      domainAgents_(std::make_shared<DomainAgents>(messageCallback)) {}
+    : runtimeTaskRunner_(asyncDebuggerAPI, enqueueRuntimeTaskCallback),
+      domainAgents_(std::make_shared<DomainAgents>(
+          runtime,
+          asyncDebuggerAPI,
+          messageCallback)) {}
 
 CDPAgentImpl::~CDPAgentImpl() {
   // Call DomainAgents::dispose on the runtime thread, only keeping a copy of
@@ -105,14 +103,9 @@ CDPAgentImpl::~CDPAgentImpl() {
 
 void CDPAgentImpl::initializeDomainAgents() {
   // Call DomainAgents::initialize on the runtime thread.
-  auto sharedThis = shared_from_this();
-  auto weakThis = std::weak_ptr<CDPAgentImpl>(shared_from_this());
   runtimeTaskRunner_.enqueueTask(
-      [weakThis = std::move(weakThis)](HermesRuntime &) {
-        if (auto strongThis = weakThis.lock()) {
-          strongThis->domainAgents_->initialize(
-              strongThis->runtime_, strongThis->asyncDebuggerAPI_);
-        }
+      [domainAgents = domainAgents_](HermesRuntime &runtime) {
+        domainAgents->initialize();
       });
 }
 
@@ -125,25 +118,22 @@ void CDPAgentImpl::handleCommand(std::string json) {
   }
 
   // Call DomainAgents::handleCommand on the runtime thread.
-  auto weakThis = std::weak_ptr<CDPAgentImpl>(shared_from_this());
   runtimeTaskRunner_.enqueueTask(
-      [weakThis = std::move(weakThis),
+      [domainAgents = domainAgents_,
        command = std::move(command)](HermesRuntime &) {
-        if (auto strongThis = weakThis.lock()) {
-          strongThis->domainAgents_->handleCommand(
-              strongThis->runtime_,
-              strongThis->asyncDebuggerAPI_,
-              std::move(command));
-        }
+        domainAgents->handleCommand(std::move(command));
       });
 }
 
-CDPAgentImpl::DomainAgents::DomainAgents(OutboundMessageFunc messageCallback)
-    : messageCallback_(messageCallback) {}
-
-void CDPAgentImpl::DomainAgents::initialize(
+CDPAgentImpl::DomainAgents::DomainAgents(
     HermesRuntime &runtime,
-    AsyncDebuggerAPI &asyncDebuggerAPI) {
+    AsyncDebuggerAPI &asyncDebuggerAPI,
+    OutboundMessageFunc messageCallback)
+    : runtime_(runtime),
+      asyncDebuggerAPI_(asyncDebuggerAPI),
+      messageCallback_(messageCallback) {}
+
+void CDPAgentImpl::DomainAgents::initialize() {
   // TODO: create domain-specific handlers
 }
 
@@ -152,8 +142,6 @@ void CDPAgentImpl::DomainAgents::dispose() {
 }
 
 void CDPAgentImpl::DomainAgents::handleCommand(
-    HermesRuntime &runtime,
-    AsyncDebuggerAPI &asyncDebuggerAPI,
     std::shared_ptr<message::Request> command) {
   size_t domainLength = command->method.find('.');
   if (domainLength == std::string::npos) {
@@ -189,7 +177,7 @@ CDPAgent::CDPAgent(
     debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
     EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
     OutboundMessageFunc messageCallback)
-    : impl_(std::make_shared<CDPAgentImpl>(
+    : impl_(std::make_unique<CDPAgentImpl>(
           runtime,
           asyncDebuggerAPI,
           enqueueRuntimeTaskCallback,
