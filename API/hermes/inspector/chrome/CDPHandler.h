@@ -46,9 +46,6 @@ class INSPECTOR_EXPORT CDPHandler {
       bool waitForDebugger = false);
   ~CDPHandler();
 
-  /// getRuntime returns the underlying runtime being debugged.
-  HermesRuntime &getRuntime();
-
   /// getTitle returns the name of the friendly name of the runtime that's shown
   /// to users in the CDP frontend (e.g. Chrome DevTools).
   std::string getTitle() const;
