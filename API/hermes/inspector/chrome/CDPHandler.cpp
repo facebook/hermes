@@ -30,6 +30,7 @@
 #include <hermes/inspector/chrome/RemoteObjectsTable.h>
 #include <hermes/inspector/chrome/ThreadSafetyAnalysis.h>
 #include <jsi/instrumentation.h>
+#include <llvh/ADT/MapVector.h>
 #include <llvh/ADT/ScopeExit.h>
 
 namespace facebook {
@@ -208,7 +209,11 @@ class CDPHandlerImpl : public message::RequestHandler,
   // If a client is attached, send notifications for any scripts that the
   // client hasn't been notified about yet.
   void processPendingScriptLoads();
-  Script getScriptFromTopCallFrame();
+  /// Converts the top call frame's SourceLocation into CDPHandler's \p Script
+  /// representation for keeping track of loaded scripts. This function returns
+  /// std::optional because SourceLocation is not guaranteed to be valid if
+  /// debug info wasn't compiled in the first place.
+  std::optional<Script> getScriptFromTopCallFrame();
   debugger::Command didPause(debugger::Debugger &debugger) override;
   /// Wait for more work to arrive. The specified lock (on \p mutex_) will be
   /// temporarily released (by waiting on the condition variable \p signal_),
@@ -239,9 +244,9 @@ class CDPHandlerImpl : public message::RequestHandler,
       hermesLoc.fileName = chromeLoc.url.value();
     } else if (chromeLoc.urlRegex.has_value()) {
       const std::regex regex(chromeLoc.urlRegex.value());
-      for (const auto &[name, _] : loadedScriptIdByName_) {
-        if (std::regex_match(name, regex)) {
-          hermesLoc.fileName = name;
+      for (const auto &[_, script] : loadedScripts_) {
+        if (std::regex_match(script.fileName, regex)) {
+          hermesLoc.fileName = script.fileName;
           break;
         }
       }
@@ -370,8 +375,10 @@ class CDPHandlerImpl : public message::RequestHandler,
 
   Attachment currentAttachment_ = Attachment::None;
   Execution currentExecution_ = Execution::Running;
-  std::unordered_map<int, Script> loadedScripts_;
-  std::unordered_map<std::string, int> loadedScriptIdByName_;
+  /// Stores every script that appeared in the order that they appear in. The
+  /// ordering is important because frontend DevTools groups by the source URL
+  /// and then takes the latest scriptParsed version as the latest version.
+  llvh::MapVector<uint32_t, Script> loadedScripts_;
   bool runtimeEnabled_ = false;
 
   /// Counts the number of console messages discarded when
@@ -1820,11 +1827,11 @@ void CDPHandlerImpl::processPendingDesiredExecutions(
   // We also pause on script loads when the appropriate virtual breakpoint has
   // been set.
   if (pauseReason == debugger::PauseReason::ScriptLoaded) {
-    Script info = getScriptFromTopCallFrame();
+    std::optional<Script> info = getScriptFromTopCallFrame();
     // We don't want to pause on files that we should be ignoring.
     if (isAwaitingDebuggerOnStart() ||
         (hasVirtualBreakpoint(kBeforeScriptWithSourceMapExecution) &&
-         !info.sourceMappingUrl.empty())) {
+         (info && !info->sourceMappingUrl.empty()))) {
       currentExecution_ = Execution::Paused;
       // We should only be sending notifications if a debugger is attached,
       // else there's no one there to receive them. This notification will be
@@ -1865,11 +1872,14 @@ void CDPHandlerImpl::processPendingDesiredExecutions(
 }
 
 void CDPHandlerImpl::processCurrentScriptLoaded() {
-  Script info = getScriptFromTopCallFrame();
-  auto loadedScript = loadedScripts_.find(info.fileId);
-  if (loadedScript == loadedScripts_.end()) {
-    loadedScripts_[info.fileId] = info;
-    loadedScriptIdByName_[info.fileName] = info.fileId;
+  std::optional<Script> info = getScriptFromTopCallFrame();
+  if (!info) {
+    return;
+  }
+
+  auto search = loadedScripts_.find(info->fileId);
+  if (search == loadedScripts_.end()) {
+    loadedScripts_[info->fileId] = *info;
   }
 }
 
@@ -1891,12 +1901,18 @@ void CDPHandlerImpl::processPendingScriptLoads() {
   }
 }
 
-Script CDPHandlerImpl::getScriptFromTopCallFrame() {
+std::optional<Script> CDPHandlerImpl::getScriptFromTopCallFrame() {
   Script info{};
   auto stackTrace = getDebugger().getProgramState().getStackTrace();
 
   if (stackTrace.callFrameCount() > 0) {
     debugger::SourceLocation loc = stackTrace.callFrameForIndex(0).location;
+
+    // Invalid fileId indicates debug info isn't included when compilation took
+    // place. E.g. compiling to bytecode without -g.
+    if (loc.fileId == debugger::kInvalidLocation) {
+      return std::nullopt;
+    }
 
     info.fileId = loc.fileId;
     info.fileName = loc.fileName;

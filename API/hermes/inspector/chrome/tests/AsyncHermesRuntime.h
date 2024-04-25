@@ -92,6 +92,14 @@ class AsyncHermesRuntime {
           facebook::hermes::HermesRuntime::DebugFlags{},
       std::chrono::milliseconds timeout = std::chrono::milliseconds(2500));
 
+  /// Evaluates the given bytecode in the underlying Hermes runtime on a
+  /// separate thread.
+  /// \param bytecode Bytecode compiled with compileJS() API
+  /// \param url Corresponding source URL
+  void evaluateBytecodeAsync(
+      const std::string &bytecode,
+      const std::string &url = "url");
+
   /**
    * wait blocks until all previous executeScriptAsync calls finish.
    */
