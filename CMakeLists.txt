@@ -252,6 +252,9 @@ set(HERMESVM_PLATFORM_LOGGING OFF CACHE BOOL
 set(HERMES_ENABLE_WERROR OFF CACHE BOOL
   "Whether the build should have -Werror enabled")
 
+set(HERMES_THREAD_SAFETY_ANALYSIS OFF CACHE BOOL
+  "Whether to compile with clang's -Wthread-safety")
+
 set(HERMES_ENABLE_WIN10_ICU_FALLBACK ON CACHE BOOL
   "Whether to allow falling back on Win10 ICU")
 

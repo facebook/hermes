@@ -17,6 +17,13 @@ add_hermes_library(hermesapi
   )
 target_include_directories(hermesapi_obj PUBLIC ..)
 
+if(HERMES_THREAD_SAFETY_ANALYSIS)
+  if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    set_property(SOURCE inspector/chrome/CDPHandler.cpp APPEND_STRING PROPERTY
+      COMPILE_FLAGS "-Wthread-safety -Werror=thread-safety-analysis -D_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS")
+  endif()
+endif()
+
 add_hermes_library(hermesapiLean
         ${api_sources}
         LINK_OBJLIBS hermesPublic LINK_LIBS jsi)
