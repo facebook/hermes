@@ -8,6 +8,8 @@
 #ifndef HERMES_ASYNCDEBUGGERAPI_H
 #define HERMES_ASYNCDEBUGGERAPI_H
 
+#ifdef HERMES_ENABLE_DEBUGGER
+
 #include <condition_variable>
 #include <mutex>
 #include <optional>
@@ -162,5 +164,69 @@ class HERMES_EXPORT AsyncDebuggerAPI : private debugger::EventObserver {
 } // namespace debugger
 } // namespace hermes
 } // namespace facebook
+
+#else // !HERMES_ENABLE_DEBUGGER
+
+#include <hermes/DebuggerAPI.h>
+#include <hermes/Public/HermesExport.h>
+#include <hermes/hermes.h>
+
+namespace facebook {
+namespace hermes {
+namespace debugger {
+
+class AsyncDebuggerAPI;
+
+enum class DebuggerEventType {
+  // Informational Events
+  ScriptLoaded, /// A script file was loaded, and the debugger has requested
+  /// pausing after script load.
+  Exception, /// An Exception was thrown.
+  EvalComplete, /// An eval() function finished.
+  Resumed, /// Script execution has resumed.
+
+  // Events Requiring Next Command
+  DebuggerStatement, /// A debugger; statement was hit.
+  Breakpoint, /// A breakpoint was hit.
+  StepFinish, /// A Step operation completed.
+};
+
+using DebuggerEventCallback = std::function<void(
+    HermesRuntime &runtime,
+    AsyncDebuggerAPI &asyncDebugger,
+    DebuggerEventType event)>;
+using DebuggerEventCallbackID = uint32_t;
+constexpr const uint32_t kInvalidDebuggerEventCallbackID = 0;
+using InterruptCallback = std::function<void(HermesRuntime &runtime)>;
+
+class HERMES_EXPORT AsyncDebuggerAPI {
+ public:
+  static std::unique_ptr<AsyncDebuggerAPI> create(HermesRuntime &runtime) {
+    return nullptr;
+  }
+
+  ~AsyncDebuggerAPI() {}
+
+  DebuggerEventCallbackID addDebuggerEventCallback_TS(
+      DebuggerEventCallback callback) {
+    return kInvalidDebuggerEventCallbackID;
+  }
+
+  void removeDebuggerEventCallback_TS(DebuggerEventCallbackID id) {}
+
+  bool isWaitingForCommand() {
+    return false;
+  }
+
+  void setNextCommand(debugger::Command command) {}
+
+  void triggerInterrupt_TS(InterruptCallback callback) {}
+};
+
+} // namespace debugger
+} // namespace hermes
+} // namespace facebook
+
+#endif // !HERMES_ENABLE_DEBUGGER
 
 #endif // HERMES_ASYNCDEBUGGERAPI_H

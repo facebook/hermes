@@ -280,4 +280,20 @@ TEST_F(AsyncDebuggerAPITest, NoDebuggerEventCallbackTest) {
   }));
 }
 
-#endif // HERMES_ENABLE_DEBUGGER
+#else // !HERMES_ENABLE_DEBUGGER
+
+#include <gtest/gtest.h>
+
+#include <hermes/AsyncDebuggerAPI.h>
+
+TEST(AsyncDebuggerAPITest, StubImplementationTest) {
+  auto builder = ::hermes::vm::RuntimeConfig::Builder();
+  std::unique_ptr<facebook::hermes::HermesRuntime> runtime =
+      facebook::hermes::makeHermesRuntime(builder.build());
+  std::unique_ptr<facebook::hermes::debugger::AsyncDebuggerAPI>
+      asyncDebuggerAPI =
+          facebook::hermes::debugger::AsyncDebuggerAPI::create(*runtime);
+  EXPECT_TRUE(asyncDebuggerAPI == nullptr);
+}
+
+#endif // !HERMES_ENABLE_DEBUGGER
