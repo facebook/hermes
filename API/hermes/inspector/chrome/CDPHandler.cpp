@@ -1148,6 +1148,7 @@ void CDPHandlerImpl::handle(const m::runtime::CompileScriptRequest &req) {
     } catch (const facebook::jsi::JSIException &err) {
       resp.exceptionDetails = m::runtime::ExceptionDetails();
       resp.exceptionDetails->text = err.what();
+      sendResponseToClient(resp);
       return;
     }
 
