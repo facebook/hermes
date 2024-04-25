@@ -183,20 +183,6 @@ bool hasSimpleParams(FunctionLikeNode *node) {
   return true;
 }
 
-bool hasParamExpressions(FunctionLikeNode *node) {
-  for (Node &param : getParams(node)) {
-    if (isa<AssignmentPatternNode>(param))
-      return true;
-#if HERMES_PARSE_FLOW
-    if (isa<ComponentParameterNode>(param) &&
-        isa<AssignmentPatternNode>(
-            cast<ComponentParameterNode>(&param)->_local))
-      return false;
-#endif
-  }
-  return false;
-}
-
 bool isGenerator(FunctionLikeNode *node) {
   switch (node->getKind()) {
     default:
