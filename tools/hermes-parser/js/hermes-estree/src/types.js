@@ -192,10 +192,12 @@ export type ESNode =
   | HookDeclaration
   | EnumDeclaration
   | EnumNumberBody
+  | EnumBigIntBody
   | EnumStringBody
   | EnumStringMember
   | EnumDefaultedMember
   | EnumNumberMember
+  | EnumBigIntMember
   | EnumBooleanBody
   | EnumBooleanMember
   | EnumSymbolBody
@@ -1602,7 +1604,12 @@ export interface TypeParameterInstantiation extends BaseNode {
 export interface EnumDeclaration extends BaseNode {
   +type: 'EnumDeclaration';
   +id: Identifier;
-  +body: EnumNumberBody | EnumStringBody | EnumBooleanBody | EnumSymbolBody;
+  +body:
+    | EnumNumberBody
+    | EnumBigIntBody
+    | EnumStringBody
+    | EnumBooleanBody
+    | EnumSymbolBody;
 }
 
 interface BaseEnumBody extends BaseNode {
@@ -1627,6 +1634,23 @@ export interface EnumNumberMember extends BaseNode {
   +init: NumericLiteral;
 
   +parent: EnumNumberBody;
+}
+
+export interface EnumBigIntBody extends BaseInferrableEnumBody {
+  +type: 'EnumBigIntBody';
+  // enum bigint members cannot be defaulted
+  +members: $ReadOnlyArray<EnumBigIntMember>;
+  +explicitType: boolean;
+
+  +parent: EnumDeclaration;
+}
+
+export interface EnumBigIntMember extends BaseNode {
+  +type: 'EnumBigIntMember';
+  +id: Identifier;
+  +init: BigIntLiteral;
+
+  +parent: EnumBigIntBody;
 }
 
 export interface EnumStringBody extends BaseInferrableEnumBody {

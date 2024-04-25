@@ -70,6 +70,7 @@ export function createRemoveNodeMutation(
 const VALID_ENUM_MEMBER_PARENTS: $ReadOnlyArray<string> = [
   'EnumBooleanBody',
   'EnumNumberBody',
+  'EnumBigIntBody',
   'EnumStringBody',
   'EnumSymbolBody',
 ];

@@ -1512,6 +1512,15 @@ function deserializeEnumNumberBody() {
     hasUnknownMembers: this.deserializeBoolean(),
   };
 }
+function deserializeEnumBigIntBody() {
+  return {
+    type: 'EnumBigIntBody',
+    loc: this.addEmptyLoc(),
+    members: this.deserializeNodeList(),
+    explicitType: this.deserializeBoolean(),
+    hasUnknownMembers: this.deserializeBoolean(),
+  };
+}
 function deserializeEnumBooleanBody() {
   return {
     type: 'EnumBooleanBody',
@@ -1547,6 +1556,14 @@ function deserializeEnumStringMember() {
 function deserializeEnumNumberMember() {
   return {
     type: 'EnumNumberMember',
+    loc: this.addEmptyLoc(),
+    id: this.deserializeNode(),
+    init: this.deserializeNode(),
+  };
+}
+function deserializeEnumBigIntMember() {
+  return {
+    type: 'EnumBigIntMember',
     loc: this.addEmptyLoc(),
     id: this.deserializeNode(),
     init: this.deserializeNode(),
@@ -2146,11 +2163,13 @@ module.exports = [
   deserializeEnumDeclaration,
   deserializeEnumStringBody,
   deserializeEnumNumberBody,
+  deserializeEnumBigIntBody,
   deserializeEnumBooleanBody,
   deserializeEnumSymbolBody,
   deserializeEnumDefaultedMember,
   deserializeEnumStringMember,
   deserializeEnumNumberMember,
+  deserializeEnumBigIntMember,
   deserializeEnumBooleanMember,
   deserializeComponentParameter,
   deserializeFlowLast,

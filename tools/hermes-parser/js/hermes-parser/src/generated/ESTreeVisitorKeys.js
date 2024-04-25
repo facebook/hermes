@@ -113,6 +113,8 @@ module.exports = {
   DoWhileStatement: ['body', 'test'],
   EmptyStatement: [],
   EmptyTypeAnnotation: [],
+  EnumBigIntBody: ['members'],
+  EnumBigIntMember: ['id', 'init'],
   EnumBooleanBody: ['members'],
   EnumBooleanMember: ['id', 'init'],
   EnumDeclaration: ['id', 'body'],
