@@ -50,7 +50,10 @@ static const char *const kUserEnteredScriptPrefix = "userScript";
 static const char *const kDebuggerEnableMethod = "Debugger.enable";
 static const char *const kDebuggerMethodPrefix = "Debugger";
 
-static const int kMaxPendingConsoleMessages = 1000;
+/// Controls the max number of message to cached in \p consoleMessageCache_. The
+/// value here is chosen to match what Chromium uses in their CDP
+/// implementation.
+static const int kMaxCachedConsoleMessages = 1000;
 
 struct Script {
   uint32_t fileId{};
@@ -293,9 +296,28 @@ class CDPHandler::Impl : public message::RequestHandler,
       int id,
       std::optional<m::runtime::ExecutionContextId> context);
 
-  // Emit a Runtime.consoleAPICalled event to the debug client.
-  void emitConsoleAPICalledEvent(ConsoleMessageInfo info);
-  void storePendingConsoleMessage(ConsoleMessageInfo info);
+  /// Function to process a console message being logged. It will invoke
+  /// \p sendConsoleAPICalledEventToClient to actually send the CDP message, and
+  /// use \p cacheConsoleMessage to deal with caching the message. The function
+  /// takes ConsoleMessageInfo by-value for the following reasons:
+  /// 1. Ease of use with temporary objects. It can't be a const reference
+  ///    because the data is to be stored into a cache later.
+  /// 2. Need to store data into a cache. See \p cacheConsoleMessage.
+  void handleConsoleAPI(ConsoleMessageInfo info);
+  /// Sends a Runtime.consoleAPICalled CDP event to the debug client. Generally
+  /// code should not directly use this function and should use
+  /// \p handleConsoleAPI. The only place where it makes sense to directly call
+  /// this function is when handling Runtime.enable.
+  void sendConsoleAPICalledEventToClient(const ConsoleMessageInfo &info);
+  /// Stores the provided console message in the cache and handles when the
+  /// cache is full. When storing things in a cache, if a copy is stored instead
+  /// of pointer, then the cache is less likely to have accidental modification
+  /// later. Also, the data's lifetime is correlated to the cache instead of
+  /// something else. In this case, the function takes ConsoleMessageInfo
+  /// by-value to ensure a copy of the data is received or the ownership is
+  /// moved to the function. Since ConsoleMessageInfo has no copy constructor, a
+  /// move will be used.
+  void cacheConsoleMessage(ConsoleMessageInfo info);
   // Install a host function for a particular console method. This takes a
   // reference to the original console object, so calls can still be forwarded
   // to that object.
@@ -354,8 +376,15 @@ class CDPHandler::Impl : public message::RequestHandler,
   std::unordered_map<int, Script> loadedScripts_;
   std::unordered_map<std::string, int> loadedScriptIdByName_;
   bool runtimeEnabled_ = false;
-  int numPendingConsoleMessagesDiscarded_ = 0;
-  std::deque<ConsoleMessageInfo> pendingConsoleMessages_;
+
+  /// Counts the number of console messages discarded when
+  /// \p consoleMessageCache_ is full.
+  int numConsoleMessagesDiscardedFromCache_ = 0;
+  /// Cache for storing console messages. Earlier messages are discarded when
+  /// the cache is full. The choice to use a std::deque is for fast operations
+  /// at the beginning and the end, so that adding to the cache and discarding
+  /// from the cache are fast.
+  std::deque<ConsoleMessageInfo> consoleMessageCache_;
 
   /// \p mutex_ protects all members; any entry point to the CDPHandler from
   /// external code should lock this mutex. The mutex is recursive, as the
@@ -488,13 +517,16 @@ void CDPHandler::Impl::handle(std::string str) {
   }
 }
 
-void CDPHandler::Impl::emitConsoleAPICalledEvent(ConsoleMessageInfo info) {
-  // buffer console messages before devtool connects
-  if (!runtimeEnabled_) {
-    storePendingConsoleMessage(std::move(info));
-    return;
+void CDPHandler::Impl::handleConsoleAPI(ConsoleMessageInfo info) {
+  if (runtimeEnabled_) {
+    sendConsoleAPICalledEventToClient(info);
   }
 
+  cacheConsoleMessage(std::move(info));
+}
+
+void CDPHandler::Impl::sendConsoleAPICalledEventToClient(
+    const ConsoleMessageInfo &info) {
   m::runtime::ConsoleAPICalledNotification apiCalledNote;
   apiCalledNote.type = info.level;
   apiCalledNote.timestamp = info.timestamp;
@@ -514,30 +546,23 @@ void CDPHandler::Impl::emitConsoleAPICalledEvent(ConsoleMessageInfo info) {
   sendNotificationToClient(apiCalledNote);
 }
 
-void CDPHandler::Impl::storePendingConsoleMessage(ConsoleMessageInfo info) {
-  assert(pendingConsoleMessages_.size() <= kMaxPendingConsoleMessages);
+void CDPHandler::Impl::cacheConsoleMessage(ConsoleMessageInfo info) {
+  assert(consoleMessageCache_.size() <= kMaxCachedConsoleMessages);
 
-  // Unfortunately we can't have unlimited buffer space, so there will be
-  // situations when we run out of storage. We could either discard earlier
-  // messages, or discard later messages. What's more useful depends on how the
-  // client's app is written, and whether the useful logs happen earlier or
-  // later.
-  //
-  // Chromium's implementation discards the earlier messages.
-  //
-  // Since this is a new feature for us, opting to match Chromium's behavior for
-  // two reasons:
-  // 1. Provide a consistent behavior between devtool environments
-  // 2. Assuming that Chromium has better insight into which approach is more
-  //    desirable
-  if (pendingConsoleMessages_.size() == kMaxPendingConsoleMessages) {
+  // There will be situations when we run out of storage due to limited cache
+  // space. This message cache is used to collect console messages before the
+  // first devtool connection. The cache is also used if the devtool re-opens
+  // and needs restore the previous context as much as possible. This is why the
+  // cache will discard earlier messages if max storage is reached. Keeping the
+  // most recent messages makes sense when restoring the context.
+  if (consoleMessageCache_.size() == kMaxCachedConsoleMessages) {
     // Increment a counter so we can inform users how many messages were
     // discarded.
-    numPendingConsoleMessagesDiscarded_++;
-    pendingConsoleMessages_.pop_front();
+    numConsoleMessagesDiscardedFromCache_++;
+    consoleMessageCache_.pop_front();
   }
 
-  pendingConsoleMessages_.push_back(std::move(info));
+  consoleMessageCache_.push_back(std::move(info));
 }
 
 double CDPHandler::Impl::currentTimestampMs() {
@@ -1174,28 +1199,25 @@ void CDPHandler::Impl::handle(const m::runtime::EnableRequest &req) {
     note.context.name = "hermes";
     sendNotificationToClient(note);
 
-    if (numPendingConsoleMessagesDiscarded_ != 0) {
+    if (numConsoleMessagesDiscardedFromCache_ != 0) {
       jsi::Runtime &rt = runtime_;
       std::ostringstream oss;
-      oss << "Too many console messages were logged before devtool connected. "
-          << numPendingConsoleMessagesDiscarded_
-          << (numPendingConsoleMessagesDiscarded_ == 1 ? " message was"
-                                                       : " messages were")
+      oss << "Only limited number of console messages can be cached. "
+          << numConsoleMessagesDiscardedFromCache_
+          << (numConsoleMessagesDiscardedFromCache_ == 1 ? " message was"
+                                                         : " messages were")
           << " discarded at the beginning.";
       jsi::Array argsArray(rt, 1);
       argsArray.setValueAtIndex(rt, 0, oss.str());
-      emitConsoleAPICalledEvent(ConsoleMessageInfo{
-          pendingConsoleMessages_.front().timestamp - 0.1,
+      sendConsoleAPICalledEventToClient(ConsoleMessageInfo{
+          consoleMessageCache_.front().timestamp - 0.1,
           "warning",
           std::move(argsArray)});
-
-      numPendingConsoleMessagesDiscarded_ = 0;
     }
 
-    for (auto &msg : pendingConsoleMessages_) {
-      emitConsoleAPICalledEvent(std::move(msg));
+    for (auto &msg : consoleMessageCache_) {
+      sendConsoleAPICalledEventToClient(msg);
     }
-    pendingConsoleMessages_.clear();
   });
 }
 
@@ -2100,7 +2122,7 @@ void CDPHandler::Impl::installConsoleFunction(
                 jsi::Array argsArray(runtime, count);
                 for (size_t index = 0; index < count; ++index)
                   argsArray.setValueAtIndex(runtime, index, args[index]);
-                strongThis->emitConsoleAPICalledEvent(ConsoleMessageInfo{
+                strongThis->handleConsoleAPI(ConsoleMessageInfo{
                     strongThis->currentTimestampMs(),
                     chromeType,
                     std::move(argsArray)});
@@ -2110,7 +2132,7 @@ void CDPHandler::Impl::installConsoleFunction(
               // logging.
               if (count == 0) {
                 // No parameters, throw a blank assertion failed message.
-                strongThis->emitConsoleAPICalledEvent(ConsoleMessageInfo{
+                strongThis->handleConsoleAPI(ConsoleMessageInfo{
                     strongThis->currentTimestampMs(),
                     chromeType,
                     jsi::Array(runtime, 0)});
@@ -2120,7 +2142,7 @@ void CDPHandler::Impl::installConsoleFunction(
                 jsi::Array argsArray(runtime, count - 1);
                 for (size_t index = 1; index < count; ++index)
                   argsArray.setValueAtIndex(runtime, index, args[index]);
-                strongThis->emitConsoleAPICalledEvent(ConsoleMessageInfo{
+                strongThis->handleConsoleAPI(ConsoleMessageInfo{
                     strongThis->currentTimestampMs(),
                     chromeType,
                     std::move(argsArray)});
