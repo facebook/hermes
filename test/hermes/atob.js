@@ -16,6 +16,10 @@ print(atob('0w=='));
 // CHECK-NEXT: Ó
 print(atob('000='));
 // CHECK-NEXT: ÓM
+print(atob('aGVsbG8='));
+// CHECK-NEXT: hello
+print(atob('aGVsbG8'));
+// CHECK-NEXT: hello
 try {
   atob('\u03A9');
 } catch (e) {

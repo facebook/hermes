@@ -133,9 +133,18 @@ OptValue<uint32_t> base64DecodeOutputLength(llvh::ArrayRef<T> str) {
         numPadding++;
       }
     }
-  } else {
-    // The input string should always be divisible by 4.
+  } else if (strLength % 4 == 1) {
+    // If strLength divides by 4 leaving a remainder of 1, then this is for sure
+    // not a valid base64 encoded data because there cannot be 3 '=' padding
+    // characters.
     return llvh::None;
+  } else {
+    // Otherwise, the data could be padded with '=' and still be valid. In this
+    // case, the padding characters are not included, but we need to process as
+    // if they are there.
+    uint32_t simulatedPadding = 4 - (strLength % 4);
+    strLength += simulatedPadding;
+    numPadding += simulatedPadding;
   }
 
   // This shouldn't overflow because the value is guaranteed to be smaller.
@@ -166,7 +175,8 @@ bool base64Decode(llvh::ArrayRef<T> str, StringBuilder &builder) {
       return false;
     }
 
-    if (c == '=') {
+    // Check for '=' in the middle
+    if (LLVM_UNLIKELY(c == '=')) {
       break;
     }
 
