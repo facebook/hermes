@@ -21,6 +21,10 @@ namespace hermes {
 namespace inspector_modern {
 namespace chrome {
 
+/// URL assigned to scripts being executed in the absense of a caller-specified
+/// URL.
+constexpr auto kDefaultUrl = "url";
+
 /**
  * AsyncHermesRuntime is a helper class that runs JS scripts in a Hermes VM on
  * a separate thread. This is useful for tests that want to test running JS
@@ -76,7 +80,7 @@ class AsyncHermesRuntime {
    */
   void executeScriptAsync(
       const std::string &str,
-      const std::string &url = "url",
+      const std::string &url = kDefaultUrl,
       facebook::hermes::HermesRuntime::DebugFlags flags =
           facebook::hermes::HermesRuntime::DebugFlags{});
 
@@ -87,7 +91,7 @@ class AsyncHermesRuntime {
    */
   void executeScriptSync(
       const std::string &script,
-      const std::string &url = "url",
+      const std::string &url = kDefaultUrl,
       facebook::hermes::HermesRuntime::DebugFlags flags =
           facebook::hermes::HermesRuntime::DebugFlags{},
       std::chrono::milliseconds timeout = std::chrono::milliseconds(2500));
