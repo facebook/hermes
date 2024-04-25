@@ -1984,6 +1984,16 @@ debugger::Command CDPHandlerImpl::didPause(debugger::Debugger &debugger) {
     }
   }
 
+  // When we handle a `Debugger.pause` request, we simply call
+  // triggerAsyncPause(). This means that CDPHandler uses
+  // `debugger::AsyncPauseKind::Implicit` for both:
+  // 1) when user wants to pause, and
+  // 2) when CDPHandler wants to temporarily pause and run some code.
+  // The pause reason of didPause() will always be AsyncTriggerImplicit. The
+  // fact there are 2 cases is handled by having
+  // processPendingDesiredExecutions() deal with #1 and set `currentExecution_`
+  // to paused. For case #2, that will be taken care of by the following
+  // if-statement because nothing would have changed `currentExecution_`.
   if (Execution::Running == currentExecution_) {
     return debugger::Command::continueExecution();
   }

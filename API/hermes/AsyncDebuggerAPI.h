@@ -39,6 +39,7 @@ enum class DebuggerEventType {
   DebuggerStatement, /// A debugger; statement was hit.
   Breakpoint, /// A breakpoint was hit.
   StepFinish, /// A Step operation completed.
+  ExplicitPause, /// A pause requested using Explicit AsyncBreak
 };
 
 using DebuggerEventCallback = std::function<void(
@@ -189,6 +190,7 @@ enum class DebuggerEventType {
   DebuggerStatement, /// A debugger; statement was hit.
   Breakpoint, /// A breakpoint was hit.
   StepFinish, /// A Step operation completed.
+  ExplicitPause, /// A pause requested using Explicit AsyncBreak
 };
 
 using DebuggerEventCallback = std::function<void(

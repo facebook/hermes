@@ -107,7 +107,7 @@ debugger::Command AsyncDebuggerAPI::didPause(debugger::Debugger &debugger) {
   debugger::PauseReason pauseReason =
       debugger.getProgramState().getPauseReason();
 
-  if (pauseReason == debugger::PauseReason::AsyncTrigger) {
+  if (pauseReason == debugger::PauseReason::AsyncTriggerImplicit) {
     runInterrupts();
     return debugger::Command::continueExecution();
   }
@@ -140,7 +140,10 @@ debugger::Command AsyncDebuggerAPI::didPause(debugger::Debugger &debugger) {
     case debugger::PauseReason::StepFinish:
       event = DebuggerEventType::StepFinish;
       break;
-    case debugger::PauseReason::AsyncTrigger:
+    case debugger::PauseReason::AsyncTriggerExplicit:
+      event = DebuggerEventType::ExplicitPause;
+      break;
+    case debugger::PauseReason::AsyncTriggerImplicit:
       assert(false && "Should have executed interrupts and returned already");
       break;
   }

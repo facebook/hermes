@@ -150,4 +150,34 @@ TEST_F(DebuggerAPITest, GetLoadedScriptsTest) {
   EXPECT_TRUE(foundTestJs);
 }
 
+TEST_F(DebuggerAPITest, ImplicitAsyncPauseTest) {
+  rt->getDebugger().triggerAsyncPause(AsyncPauseKind::Implicit);
+  eval("var x = 5;");
+  EXPECT_EQ(
+      std::vector<PauseReason>({PauseReason::AsyncTriggerImplicit}),
+      observer.pauseReasons);
+}
+
+TEST_F(DebuggerAPITest, ExplicitAsyncPauseTest) {
+  rt->getDebugger().triggerAsyncPause(AsyncPauseKind::Explicit);
+  eval("var x = 5;");
+  EXPECT_EQ(
+      std::vector<PauseReason>({PauseReason::AsyncTriggerExplicit}),
+      observer.pauseReasons);
+}
+
+TEST_F(DebuggerAPITest, ImplicitAndExplicitAsyncPauseTest) {
+  rt->getDebugger().triggerAsyncPause(AsyncPauseKind::Explicit);
+  rt->getDebugger().triggerAsyncPause(AsyncPauseKind::Implicit);
+  eval("var x = 5;");
+  // Current implementation uses flags to track if Implicit or Explicit has been
+  // requested, so there is no ordering information. This test just demonstrates
+  // that the order the PauseReason gets process could be in different order.
+  EXPECT_EQ(
+      std::vector<PauseReason>(
+          {PauseReason::AsyncTriggerImplicit,
+           PauseReason::AsyncTriggerExplicit}),
+      observer.pauseReasons);
+}
+
 #endif
