@@ -34,7 +34,7 @@ class DebuggerDomainAgent : public DomainAgent {
   DebuggerDomainAgent(
       HermesRuntime &runtime,
       debugger::AsyncDebuggerAPI &asyncDebugger,
-      OutboundMessageFunc messageCallback);
+      SynchronizedOutboundCallback messageCallback);
   ~DebuggerDomainAgent();
 
   /// Handles Debugger.enable request
