@@ -111,9 +111,7 @@ static std::string getUrl(const char *path) {
   return std::string("file://") + absPath;
 }
 
-static void runDebuggerLoop(
-    std::shared_ptr<CDPHandler> cdpHandler,
-    std::string scriptSource) {
+static void runDebuggerLoop(std::shared_ptr<CDPHandler> cdpHandler) {
   cdpHandler->registerCallbacks(&sendResponse, {});
 
   std::string line;
@@ -133,7 +131,7 @@ static void runScript(const std::string &scriptSource, const std::string &url) {
           runtime);
   std::shared_ptr<CDPHandler> cdpHandler =
       CDPHandler::create(std::move(adapter));
-  std::thread debuggerLoop(runDebuggerLoop, std::ref(cdpHandler), scriptSource);
+  std::thread debuggerLoop(runDebuggerLoop, std::ref(cdpHandler));
 
   fbhermes::HermesRuntime::DebugFlags flags{};
   runtime->debugJavaScript(scriptSource, url, flags);
