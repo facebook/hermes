@@ -202,8 +202,8 @@ class CDPHandler::Impl : public message::RequestHandler,
   // Check what script has just finished parsing, and add it to the appropriate
   // data structures. This does not send any notifications.
   void processCurrentScriptLoaded();
-  // Iterate over all the scripts we have already seen as parsed, and
-  // potentially notify the client about them.
+  // If a client is attached, send notifications for any scripts that the
+  // client hasn't been notified about yet.
   void processPendingScriptLoads();
   Script getScriptFromTopCallFrame();
   debugger::Command didPause(debugger::Debugger &debugger) override;
@@ -1654,7 +1654,6 @@ void CDPHandler::Impl::resetScriptsLoaded() {
 }
 
 void CDPHandler::Impl::sendPausedNotificationToClient() {
-  processPendingScriptLoads();
   m::debugger::PausedNotification note;
   note.reason = "other";
   note.callFrames = m::debugger::makeCallFrames(
@@ -1719,6 +1718,13 @@ void CDPHandler::Impl::processPendingDesiredAttachments() {
 
 void CDPHandler::Impl::enableDebugger() {
   getDebugger().setIsDebuggerAttached(true);
+
+  // The debugger just got enabled; inform the client about all scripts.
+  // (i.e. mark all scripts as needing notification, then send all pending
+  // notifications).
+  resetScriptsLoaded();
+  processPendingScriptLoads();
+
   if (currentExecution_ == Execution::Paused) {
     sendPausedNotificationToClient();
   }
@@ -1865,6 +1871,9 @@ debugger::Command CDPHandler::Impl::didPause(debugger::Debugger &debugger) {
     processCurrentScriptLoaded();
   }
 
+  // Although the client was informed about the existing scripts after
+  // connecting, more scripts can start at any time. Notify the client about
+  // any scripts that have appeared since the last didPause.
   processPendingScriptLoads();
 
   processPendingDesiredExecutions(getPauseReason());
