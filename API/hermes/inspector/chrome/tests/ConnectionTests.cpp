@@ -2260,11 +2260,7 @@ TEST_F(ConnectionTests, testConsoleLog) {
 
   EXPECT_EQ(warningNote.args[2].type, "object");
 
-  auto pausedNote = expectNotification<m::debugger::PausedNotification>(conn);
-  EXPECT_EQ(pausedNote.reason, "other");
-  EXPECT_EQ(pausedNote.callFrames.size(), 1);
-  EXPECT_EQ(pausedNote.callFrames[0].functionName, "global");
-  EXPECT_EQ(pausedNote.callFrames[0].location.lineNumber, 6);
+  expectPaused(conn, "other", {{"global", 6, 1}});
 
   // Requesting object properties sends requests and expects response messages
   // with the result, so this must be done after the paused message above has
@@ -2341,11 +2337,7 @@ TEST_F(ConnectionTests, testConsoleGroup) {
   EXPECT_LT(endNote.timestamp, kNewYears3023);
   EXPECT_EQ(endNote.args.size(), 0);
 
-  auto pausedNote = expectNotification<m::debugger::PausedNotification>(conn);
-  EXPECT_EQ(pausedNote.reason, "other");
-  EXPECT_EQ(pausedNote.callFrames.size(), 1);
-  EXPECT_EQ(pausedNote.callFrames[0].functionName, "global");
-  EXPECT_EQ(pausedNote.callFrames[0].location.lineNumber, 9);
+  expectPaused(conn, "other", {{"global", 9, 1}});
 
   // Requesting object properties sends requests and expects response messages
   // with the result, so this must be done after the groupEnd and paused
@@ -2739,7 +2731,7 @@ TEST_F(ConnectionTests, canBreakOnScriptsWithSourceMap) {
   // Continue and verify that the JS code has now executed
   send<m::debugger::ResumeRequest>(conn, msgId++);
   expectNotification<m::debugger::ResumedNotification>(conn);
-  expectNotification<m::debugger::PausedNotification>(conn);
+  expectPaused(conn, "other", {{"global", 1, 1}});
   EXPECT_EQ(asyncRuntime.awaitStoredValue().asNumber(), 42);
 
   // Resume and exit
@@ -2769,7 +2761,7 @@ TEST_F(ConnectionTests, wontStopOnFilesWithoutSourceMaps) {
 
   // Continue and verify that the JS code has now executed without first
   // pausing on the script load.
-  expectNotification<m::debugger::PausedNotification>(conn);
+  expectPaused(conn, "other", {{"global", 1, 1}});
   EXPECT_EQ(asyncRuntime.awaitStoredValue().asNumber(), 42);
 
   // Resume and exit
@@ -2793,7 +2785,7 @@ TEST_F(WaitForDebuggerTests, runIfWaitingForDebugger) {
 
   send<m::debugger::EnableRequest>(conn, ++msgId);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
-  expectNotification<m::debugger::PausedNotification>(conn);
+  expectPaused(conn, "other", {{"global", 1, 1}});
 
   // We should now be paused on load. Verify that we didn't run code.
   ASSERT_FALSE(asyncRuntime.hasStoredValue());
@@ -2803,7 +2795,7 @@ TEST_F(WaitForDebuggerTests, runIfWaitingForDebugger) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 
   // We should immediately hit the 'debugger;' statement
-  expectNotification<m::debugger::PausedNotification>(conn);
+  expectPaused(conn, "other", {{"global", 1, 1}});
   EXPECT_EQ(1, asyncRuntime.awaitStoredValue().asNumber());
 
   // RunIfWaitingForDebuggerResponse should be accepted but have no effect
@@ -2840,7 +2832,7 @@ TEST_F(ConnectionTests, heapProfilerSampling) {
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // We should get a pause before the first statement.
-  expectNotification<m::debugger::PausedNotification>(conn);
+  expectPaused(conn, "other", {{"global", 1, 1}});
 
   {
     m::heapProfiler::StartSamplingRequest req;
@@ -2856,7 +2848,7 @@ TEST_F(ConnectionTests, heapProfilerSampling) {
   // Resume, run the allocations, and once it's paused again, stop them.
   send<m::debugger::ResumeRequest>(conn, msgId++);
   expectNotification<m::debugger::ResumedNotification>(conn);
-  expectNotification<m::debugger::PausedNotification>(conn);
+  expectPaused(conn, "other", {{"global", 12, 1}});
   // Send the stop sampling request, expect the value coming back to be JSON.
   auto resp = send<
       m::heapProfiler::StopSamplingRequest,
@@ -2887,7 +2879,7 @@ TEST_F(ConnectionTests, getHeapUsage) {
     })();
   )");
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
-  expectNotification<m::debugger::PausedNotification>(conn);
+  expectPaused(conn, "other", {{"main", 6, 2}, {"global", 8, 1}});
 
   m::runtime::GetHeapUsageResponse resp =
       send<m::runtime::GetHeapUsageRequest, m::runtime::GetHeapUsageResponse>(
@@ -2916,7 +2908,7 @@ TEST_F(ConnectionTests, collectGarbage) {
     debugger;
   )");
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
-  expectNotification<m::debugger::PausedNotification>(conn);
+  expectPaused(conn, "other", {{"main", 6, 2}, {"global", 8, 1}});
 
   double before =
       send<m::runtime::GetHeapUsageRequest, m::runtime::GetHeapUsageResponse>(
@@ -2928,7 +2920,7 @@ TEST_F(ConnectionTests, collectGarbage) {
   // Move to the next debugger statement
   send<m::debugger::ResumeRequest>(conn, msgId++);
   expectNotification<m::debugger::ResumedNotification>(conn);
-  expectNotification<m::debugger::PausedNotification>(conn);
+  expectPaused(conn, "other", {{"global", 9, 1}});
 
   double after =
       send<m::runtime::GetHeapUsageRequest, m::runtime::GetHeapUsageResponse>(
@@ -2955,7 +2947,7 @@ TEST_F(ConnectionTests, heapSnapshotRemoteObject) {
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
 
   // We should get a pause before the first statement.
-  expectNotification<m::debugger::PausedNotification>(conn);
+  expectPaused(conn, "other", {{"global", 2, 1}});
 
   {
     // Take a heap snapshot first to assign IDs.
@@ -3090,7 +3082,10 @@ TEST_F(ConnectionTests, testGlobalLexicalScopeNames) {
 
   send<m::debugger::EnableRequest>(conn, msgId++);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
-  expectNotification<m::debugger::PausedNotification>(conn);
+  expectPaused(
+      conn,
+      "other",
+      {{"func3", 13, 3}, {"func2", 17, 2}, {"func1", 7, 2}, {"global", 20, 1}});
 
   m::runtime::GlobalLexicalScopeNamesRequest req;
   req.id = msgId;
@@ -3116,7 +3111,7 @@ TEST_F(ConnectionTests, testInvalidExecutionContext) {
 
   asyncRuntime.executeScriptAsync(R"(debugger;)");
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
-  expectNotification<m::debugger::PausedNotification>(conn);
+  expectPaused(conn, "other", {{"global", 0, 1}});
 
   m::runtime::GlobalLexicalScopeNamesRequest req;
   req.id = msgId;
