@@ -3764,6 +3764,8 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumDeclarationFlow(
       optKind = EnumKind::String;
     } else if (checkAndEat(numberIdent_)) {
       optKind = EnumKind::Number;
+    } else if (checkAndEat(bigintIdent_)) {
+      optKind = EnumKind::BigInt;
     } else if (checkAndEat(booleanIdent_)) {
       optKind = EnumKind::Boolean;
     } else if (checkAndEat(symbolIdent_)) {
@@ -3914,6 +3916,12 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumBodyFlow(
           end,
           new (context_) ESTree::EnumNumberBodyNode(
               std::move(members), hasExplicitType, hasUnknownMembers));
+    case EnumKind::BigInt:
+      return setLocation(
+          start,
+          end,
+          new (context_) ESTree::EnumBigIntBodyNode(
+              std::move(members), hasExplicitType, hasUnknownMembers));
     case EnumKind::Boolean:
       return setLocation(
           start,
@@ -3983,12 +3991,20 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumMemberFlow() {
           new (context_) ESTree::NumericLiteralNode(tok_->getNumericLiteral()));
       member = setLocation(
           id, tok_, new (context_) ESTree::EnumNumberMemberNode(id, init));
+    } else if (check(TokenKind::bigint_literal)) {
+      ESTree::Node *init = setLocation(
+          tok_,
+          tok_,
+          new (context_) ESTree::BigIntLiteralNode(tok_->getBigIntLiteral()));
+      member = setLocation(
+          id, tok_, new (context_) ESTree::EnumBigIntMemberNode(id, init));
     } else {
       errorExpected(
           {TokenKind::rw_true,
            TokenKind::rw_false,
            TokenKind::string_literal,
-           TokenKind::numeric_literal},
+           TokenKind::numeric_literal,
+           TokenKind::bigint_literal},
           "in enum member initializer",
           "start of enum member",
           id->getStartLoc());

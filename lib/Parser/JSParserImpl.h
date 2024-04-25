@@ -1335,6 +1335,7 @@ class JSParserImpl {
   enum class EnumKind {
     String,
     Number,
+    BigInt,
     Boolean,
     Symbol,
   };
@@ -1345,6 +1346,8 @@ class JSParserImpl {
         return "string";
       case EnumKind::Number:
         return "number";
+      case EnumKind::BigInt:
+        return "bigint";
       case EnumKind::Boolean:
         return "boolean";
       case EnumKind::Symbol:
@@ -1359,6 +1362,8 @@ class JSParserImpl {
         return EnumKind::String;
       case ESTree::NodeKind::EnumNumberMember:
         return EnumKind::Number;
+      case ESTree::NodeKind::EnumBigIntMember:
+        return EnumKind::BigInt;
       case ESTree::NodeKind::EnumBooleanMember:
         return EnumKind::Boolean;
       default:

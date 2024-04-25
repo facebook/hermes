@@ -1050,6 +1050,11 @@ ESTREE_NODE_3_ARGS(
     NodeBoolean, explicitType, false,
     NodeBoolean, hasUnknownMembers, false)
 ESTREE_NODE_3_ARGS(
+    EnumBigIntBody, Flow,
+    NodeList, members, false,
+    NodeBoolean, explicitType, false,
+    NodeBoolean, hasUnknownMembers, false)
+ESTREE_NODE_3_ARGS(
     EnumBooleanBody, Flow,
     NodeList, members, false,
     NodeBoolean, explicitType, false,
@@ -1068,6 +1073,10 @@ ESTREE_NODE_2_ARGS(
     NodePtr, init, false)
 ESTREE_NODE_2_ARGS(
     EnumNumberMember, Flow,
+    NodePtr, id, false,
+    NodePtr, init, false)
+ESTREE_NODE_2_ARGS(
+    EnumBigIntMember, Flow,
     NodePtr, id, false,
     NodePtr, init, false)
 ESTREE_NODE_2_ARGS(
