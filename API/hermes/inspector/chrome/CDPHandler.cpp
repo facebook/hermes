@@ -21,8 +21,6 @@
 
 #include <hermes/DebuggerAPI.h>
 #include <hermes/hermes.h>
-#include <hermes/inspector/AsyncPauseState.h>
-#include <hermes/inspector/Exceptions.h>
 #include <hermes/inspector/RuntimeAdapter.h>
 #include <hermes/inspector/chrome/CallbackOStream.h>
 #include <hermes/inspector/chrome/MessageConverters.h>
