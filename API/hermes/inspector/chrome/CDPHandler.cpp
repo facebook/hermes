@@ -207,6 +207,7 @@ class CDPHandler::Impl : public message::RequestHandler,
   void processPendingScriptLoads();
   Script getScriptFromTopCallFrame();
   debugger::Command didPause(debugger::Debugger &debugger) override;
+  void waitForAsyncPauseTrigger() TSA_NO_THREAD_SAFETY_ANALYSIS;
 
   template <typename T>
   void setHermesLocation(
@@ -1923,20 +1924,13 @@ debugger::Command CDPHandler::Impl::didPause(debugger::Debugger &debugger) {
   }
 
   while (true) {
-    {
-      std::unique_lock<std::mutex> lock(mutex_);
-      while (pendingEvals_.empty() && pendingDesiredExecutions_.empty() &&
-             pendingDesiredSteps_.empty() && pendingFuncs_.empty() &&
-             pendingDesiredAttachments_.empty()) {
-        signal_.wait(lock);
-      }
-    }
+    waitForAsyncPauseTrigger();
     processPendingDesiredAttachments();
     processPendingDesiredExecutions(
         (debugger::PauseReason)-1); // TOOD: no pause reason here?
     processPendingFuncs();
     {
-      std::unique_lock<std::mutex> lock(mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       if (!pendingDesiredSteps_.empty()) {
         auto pair = pendingDesiredSteps_.front();
         pendingDesiredSteps_.pop();
@@ -1955,6 +1949,15 @@ debugger::Command CDPHandler::Impl::didPause(debugger::Debugger &debugger) {
         return debugger::Command::eval(evalReq.expression, evalReq.frameIdx);
       }
     }
+  }
+}
+
+void CDPHandler::Impl::waitForAsyncPauseTrigger() {
+  std::unique_lock<std::mutex> lock(mutex_);
+  while (pendingEvals_.empty() && pendingDesiredExecutions_.empty() &&
+         pendingDesiredSteps_.empty() && pendingFuncs_.empty() &&
+         pendingDesiredAttachments_.empty()) {
+    signal_.wait(lock);
   }
 }
 
