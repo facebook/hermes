@@ -76,7 +76,11 @@ class HERMES_EXPORT AsyncDebuggerAPI : private debugger::EventObserver {
   /// conditions such as hitting a "debugger;" statement. Can be called from any
   /// thread. If there are no DebuggerEventCallback, then any reason that might
   /// trigger a pause, such as a "debugger;" statement or breakpoints, will not
-  /// actually pause and will simply continue execution.
+  /// actually pause and will simply continue execution. Any caller that adds an
+  /// event callback cannot just be observing events and never call
+  /// \p setNextCommand in any of its code paths. The caller must either expose
+  /// UI enabling human action for controlling the debugger, or it must have
+  /// programmatic logic that controls the debugger via \p setNextCommand.
   DebuggerEventCallbackID addDebuggerEventCallback_TS(
       DebuggerEventCallback callback);
 
