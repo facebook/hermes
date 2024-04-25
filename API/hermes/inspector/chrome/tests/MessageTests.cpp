@@ -10,10 +10,11 @@
 
 #include <gtest/gtest.h>
 
-#include <hermes/external/llvh/include/llvh/ADT/SmallVector.h>
 #include <hermes/inspector/chrome/JSONValueInterfaces.h>
 #include <hermes/inspector/chrome/MessageTypes.h>
 #include <hermes/inspector/chrome/MessageTypesInlines.h>
+
+#include <llvh/ADT/SmallVector.h>
 
 #include "TestHelpers.h"
 
