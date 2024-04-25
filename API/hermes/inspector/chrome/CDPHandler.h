@@ -27,6 +27,17 @@ using OnUnregisterFunction = std::function<void()>;
 
 /// CDPHandler processes CDP messages between the client and the debugger.
 /// It performs no networking or connection logic itself.
+/// The CDP Handler is invoked from multiple threads. The locking strategy is
+/// to acquire the lock at each entry point into the class, and hold it until
+/// the entry function has returned. In practice, these functions fall into 2
+/// categories: public functions invoked by the creator of this instance, and
+/// callbacks invoked by the runtime to report events.
+/// Once the lock is held, most members are safe to use from any thread, with
+/// the notable exception of the runtime (and debugger retrieved from the
+/// runtime). Most runtime methods must only be invoked when running on the
+/// runtime thread, which occurs in the CDP Handler constructor/destructor, and
+/// callbacks from the runtime thread (e.g. host functions, instrumentation
+/// callbacks, and pause callback).
 class INSPECTOR_EXPORT CDPHandler {
   /// Hide the constructor so users can only construct via static create
   /// methods.
