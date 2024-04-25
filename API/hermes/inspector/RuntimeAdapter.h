@@ -36,14 +36,17 @@ class INSPECTOR_EXPORT RuntimeAdapter {
  public:
   virtual ~RuntimeAdapter() = 0;
 
-  /// getRuntime should return the runtime encapsulated by this adapter.
+  /// getRuntime should return the runtime encapsulated by this adapter. The
+  /// CDP Handler will only invoke this function from the runtime thread.
   virtual HermesRuntime &getRuntime() = 0;
 
-  /// tickleJs is a method that subclasses can choose to override to make the
-  /// inspector more responsive. If overridden, it should call the "__tickleJs"
-  /// function. The call should occur with appropriate locking (e.g. via a
-  /// thread-safe runtime instance, or by enqueuing the call on to a dedicated
-  /// JS thread).
+  /// \p tickleJs is a method that subclasses can choose to override to make
+  /// the inspector more responsive. If overridden, it should call the
+  /// \p __tickleJs JavaScript function. Calling JavaScript functions must be
+  /// done on the runtime thread, and \p tickleJs() may be invoked from an
+  /// arbitrary thread. Thus, the call to \p __tickleJs should occur with
+  /// appropriate locking (e.g. via a thread-safe runtime instance, or by
+  /// enqueuing the call on to a dedicated JS thread).
   ///
   /// This makes the inspector more responsive because it gives the inspector
   /// the ability to force the process to enter the Hermes interpreter loop

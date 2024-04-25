@@ -108,7 +108,6 @@ class CDPHandler::Impl : public message::RequestHandler,
       bool waitForDebugger);
   ~Impl() override;
 
-  HermesRuntime &getRuntime();
   std::string getTitle() const;
 
   bool registerCallbacks(
@@ -167,7 +166,7 @@ class CDPHandler::Impl : public message::RequestHandler,
   }
 
   debugger::Debugger &getDebugger() {
-    return runtimeAdapter_->getRuntime().getDebugger();
+    return runtime_.getDebugger();
   }
 
   // Whether we started with pauseOnFirstStatement, and have not yet had a
@@ -304,6 +303,13 @@ class CDPHandler::Impl : public message::RequestHandler,
   double currentTimestampMs();
 
   std::unique_ptr<RuntimeAdapter> runtimeAdapter_;
+  /// Cached reference to the runtime, fetched from the \p RuntimeAdapter. The
+  /// \p RuntimeAdapter implementor is required to keep the runtime alive for
+  /// the duration of the CDP Handler, so we can safely keep this reference.
+  /// The reference is cached here so it can be accessed from arbitrary threads
+  /// inside the CDP Handler without requiring \p RuntimeAdapter::getRuntime
+  /// to support use from arbitrary threads.
+  HermesRuntime &runtime_;
   const std::string title_;
 
   // preparedScripts_ stores user-entered scripts that have been prepared for
@@ -376,28 +382,25 @@ CDPHandler::Impl::Impl(
     const std::string &title,
     bool waitForDebugger)
     : runtimeAdapter_(std::move(adapter)),
+      runtime_(runtimeAdapter_->getRuntime()),
       title_(title),
       awaitingDebuggerOnStart_(waitForDebugger) {
   // Install __tickleJs. Do this activity before the call to setEventObserver,
   // so we don't get any didPause callback firings for these.
   std::string src = "function __tickleJs() { return Math.random(); }";
-  runtimeAdapter_->getRuntime().evaluateJavaScript(
+  runtime_.evaluateJavaScript(
       std::make_shared<jsi::StringBuffer>(src), "__tickleJsHackUrl");
-  runtimeAdapter_->getRuntime().getDebugger().setShouldPauseOnScriptLoad(true);
-  runtimeAdapter_->getRuntime().getDebugger().setEventObserver(this);
+  runtime_.getDebugger().setShouldPauseOnScriptLoad(true);
+  runtime_.getDebugger().setEventObserver(this);
 }
 
 CDPHandler::Impl::~Impl() {
   unregisterCallbacks();
 
-  runtimeAdapter_->getRuntime().getDebugger().setEventObserver(nullptr);
+  runtime_.getDebugger().setEventObserver(nullptr);
 
   // TODO(T161620474): Properly clean up all the other variables being protected
   // by other mutex
-}
-
-HermesRuntime &CDPHandler::Impl::getRuntime() {
-  return runtimeAdapter_->getRuntime();
 }
 
 std::string CDPHandler::Impl::getTitle() const {
@@ -467,11 +470,11 @@ void CDPHandler::Impl::emitConsoleAPICalledEvent(ConsoleMessageInfo info) {
   apiCalledNote.timestamp = info.timestamp;
   apiCalledNote.executionContextId = kHermesExecutionContextId;
 
-  size_t argsSize = info.args.size(getRuntime());
+  size_t argsSize = info.args.size(runtime_);
   for (size_t index = 0; index < argsSize; ++index) {
     apiCalledNote.args.push_back(m::runtime::makeRemoteObject(
-        getRuntime(),
-        info.args.getValueAtIndex(getRuntime(), index),
+        runtime_,
+        info.args.getValueAtIndex(runtime_, index),
         objTable_,
         "ConsoleObjectGroup",
         false,
@@ -555,7 +558,7 @@ void CDPHandler::Impl::sendSnapshot(
     // Stop taking any new traces before sending out the heap
     // snapshot.
     if (stopStackTraceCapture) {
-      getRuntime().instrumentation().stopTrackingHeapObjectStackTraces();
+      runtime_.instrumentation().stopTrackingHeapObjectStackTraces();
     }
 
     if (reportProgress) {
@@ -586,7 +589,7 @@ void CDPHandler::Impl::sendSnapshot(
             return true;
           });
 
-      getRuntime().instrumentation().createSnapshotToStream(cos);
+      runtime_.instrumentation().createSnapshotToStream(cos);
     }
     sendResponseToClient(m::makeOkResponse(reqId));
   });
@@ -606,7 +609,7 @@ void CDPHandler::Impl::handle(
   // TODO: Convert
   enqueueFunc([this, req]() {
     // const auto id = req.id;
-    getRuntime().instrumentation().startTrackingHeapObjectStackTraces(
+    runtime_.instrumentation().startTrackingHeapObjectStackTraces(
         [this](
             uint64_t lastSeenObjectId,
             std::chrono::microseconds timestamp,
@@ -666,7 +669,7 @@ void CDPHandler::Impl::handle(
 
   // TODO: IfEnabled
   enqueueFunc([this, req, samplingInterval]() {
-    getRuntime().instrumentation().startHeapSampling(samplingInterval);
+    runtime_.instrumentation().startHeapSampling(samplingInterval);
     sendResponseToClient(m::makeOkResponse(req.id));
   });
 }
@@ -675,7 +678,7 @@ void CDPHandler::Impl::handle(const m::heapProfiler::StopSamplingRequest &req) {
   // TODO: IfEnabled
   enqueueFunc([this, req]() {
     std::ostringstream stream;
-    getRuntime().instrumentation().stopHeapSampling(stream);
+    runtime_.instrumentation().stopHeapSampling(stream);
 
     m::heapProfiler::StopSamplingResponse resp;
     auto profile = m::heapProfiler::makeSamplingHeapProfile(stream.str());
@@ -691,7 +694,7 @@ void CDPHandler::Impl::handle(const m::heapProfiler::StopSamplingRequest &req) {
 void CDPHandler::Impl::handle(
     const m::heapProfiler::CollectGarbageRequest &req) {
   enqueueFunc([this, req]() {
-    getRuntime().instrumentation().collectGarbage("inspector");
+    runtime_.instrumentation().collectGarbage("inspector");
     sendResponseToClient(m::makeOkResponse(req.id));
   });
 }
@@ -702,14 +705,14 @@ void CDPHandler::Impl::handle(
     uint64_t objID = atoi(req.objectId.c_str());
     std::optional<std::string> group = req.objectGroup;
     auto remoteObjPtr = std::make_shared<m::runtime::RemoteObject>();
-    jsi::Runtime *rt = &getRuntime();
+    jsi::Runtime *rt = &runtime_;
     if (auto *hermesRT = dynamic_cast<HermesRuntime *>(rt)) {
       jsi::Value val = hermesRT->getObjectForID(objID);
       if (val.isNull()) {
         return;
       }
       *remoteObjPtr = m::runtime::makeRemoteObject(
-          getRuntime(), val, objTable_, group.value_or(""), false, false);
+          runtime_, val, objTable_, group.value_or(""), false, false);
     }
     if (!remoteObjPtr->type.empty()) {
       m::heapProfiler::GetObjectByHeapObjectIdResponse resp;
@@ -729,7 +732,7 @@ void CDPHandler::Impl::handle(
     // TODO: de-shared_ptr this
     std::shared_ptr<uint64_t> snapshotID = std::make_shared<uint64_t>(0);
     if (const jsi::Value *valuePtr = objTable_.getValue(req.objectId)) {
-      jsi::Runtime *rt = &getRuntime();
+      jsi::Runtime *rt = &runtime_;
       if (auto *hermesRT = dynamic_cast<HermesRuntime *>(rt)) {
         *snapshotID = hermesRT->getUniqueID(*valuePtr);
       }
@@ -759,7 +762,7 @@ void CDPHandler::Impl::handle(const m::profiler::StartRequest &req) {
 
 void CDPHandler::Impl::handle(const m::profiler::StopRequest &req) {
   enqueueFunc([this, req]() {
-    HermesRuntime *hermesRT = &getRuntime();
+    HermesRuntime *hermesRT = &runtime_;
 
     HermesRuntime::disableSamplingProfiler();
 
@@ -1075,8 +1078,8 @@ void CDPHandler::Impl::handle(const m::runtime::CallFunctionOnRequest &req) {
            }
 
            *remoteObjPtr = m::runtime::makeRemoteObject(
-               getRuntime(),
-               (*sharedRunner)(getRuntime(), objTable_, evalResult),
+               runtime_,
+               (*sharedRunner)(runtime_, objTable_, evalResult),
                objTable_,
                objectGroup,
                byValue,
@@ -1099,7 +1102,7 @@ void CDPHandler::Impl::handle(const m::runtime::CompileScriptRequest &req) {
     auto source = std::make_shared<jsi::StringBuffer>(req.expression);
     std::shared_ptr<const jsi::PreparedJavaScript> preparedScript;
     try {
-      preparedScript = getRuntime().prepareJavaScript(source, req.sourceURL);
+      preparedScript = runtime_.prepareJavaScript(source, req.sourceURL);
     } catch (const facebook::jsi::JSIException &err) {
       resp.exceptionDetails = m::runtime::ExceptionDetails();
       resp.exceptionDetails->text = err.what();
@@ -1136,7 +1139,7 @@ void CDPHandler::Impl::handle(const m::runtime::EnableRequest &req) {
     sendNotificationToClient(note);
 
     if (numPendingConsoleMessagesDiscarded_ != 0) {
-      jsi::Runtime &rt = getRuntime();
+      jsi::Runtime &rt = runtime_;
       std::ostringstream oss;
       oss << "Too many console messages were logged before devtool connected. "
           << numPendingConsoleMessagesDiscarded_
@@ -1367,7 +1370,7 @@ CDPHandler::Impl::makePropsFromScope(
     m::runtime::PropertyDescriptor desc;
     desc.name = varInfo.name;
     desc.value = m::runtime::makeRemoteObject(
-        getRuntime(),
+        runtime_,
         varInfo.value,
         objTable_,
         objectGroup,
@@ -1386,7 +1389,7 @@ CDPHandler::Impl::makePropsFromScope(
     m::runtime::PropertyDescriptor desc;
     desc.name = varInfo.name;
     desc.value = m::runtime::makeRemoteObject(
-        getRuntime(),
+        runtime_,
         varInfo.value,
         objTable_,
         objectGroup,
@@ -1409,7 +1412,7 @@ CDPHandler::Impl::makePropsFromValue(
   std::vector<m::runtime::PropertyDescriptor> result;
 
   if (value.isObject()) {
-    jsi::Runtime &runtime = getRuntime();
+    jsi::Runtime &runtime = runtime_;
     jsi::Object obj = value.getObject(runtime);
 
     // TODO(hypuk): obj.getPropertyNames only returns enumerable properties.
@@ -1472,7 +1475,7 @@ CDPHandler::Impl::makePropsFromValue(
 void CDPHandler::Impl::handle(const m::runtime::GetHeapUsageRequest &req) {
   enqueueFunc([this, req]() {
     // getHeapInfo must be called from the runtime thread.
-    auto heapInfo = getRuntime().instrumentation().getHeapInfo(false);
+    auto heapInfo = runtime_.instrumentation().getHeapInfo(false);
     auto resp = std::make_shared<m::runtime::GetHeapUsageResponse>();
     resp->id = req.id;
     resp->usedSize = heapInfo["hermes_allocatedBytes"];
@@ -1653,7 +1656,7 @@ void CDPHandler::Impl::sendPausedNotificationToClient() {
   m::debugger::PausedNotification note;
   note.reason = "other";
   note.callFrames = m::debugger::makeCallFrames(
-      getDebugger().getProgramState(), objTable_, getRuntime());
+      getDebugger().getProgramState(), objTable_, runtime_);
   sendNotificationToClient(note);
 }
 
@@ -1675,7 +1678,7 @@ void CDPHandler::Impl::sendPauseOnExceptionNotification() {
   m::debugger::PausedNotification note;
   note.reason = "exception";
   note.callFrames = m::debugger::makeCallFrames(
-      getDebugger().getProgramState(), objTable_, getRuntime());
+      getDebugger().getProgramState(), objTable_, runtime_);
   sendNotificationToClient(note);
 }
 
@@ -1786,7 +1789,7 @@ void CDPHandler::Impl::processPendingDesiredExecutions(
         m::debugger::PausedNotification note;
         note.reason = "other";
         note.callFrames = m::debugger::makeCallFrames(
-            getDebugger().getProgramState(), objTable_, getRuntime());
+            getDebugger().getProgramState(), objTable_, runtime_);
         note.hitBreakpoints = std::vector<m::debugger::BreakpointId>();
         for (auto &bp :
              virtualBreakpoints_[kBeforeScriptWithSourceMapExecution]) {
@@ -1890,7 +1893,7 @@ debugger::Command CDPHandler::Impl::didPause(debugger::Debugger &debugger) {
       bool byValue = evalReq.returnByValue.value_or(false);
       bool generatePreview = evalReq.generatePreview.value_or(false);
       *remoteObjPtr = m::runtime::makeRemoteObject(
-          getRuntime(),
+          runtime_,
           evalResult.value,
           objTable_,
           objectGroup,
@@ -1990,7 +1993,7 @@ static bool toBoolean(jsi::Runtime &runtime, const jsi::Value &val) {
 }
 
 void CDPHandler::Impl::installLogHandler() {
-  jsi::Runtime &rt = getRuntime();
+  jsi::Runtime &rt = runtime_;
   auto console = jsi::Object(rt);
   auto val = rt.global().getProperty(rt, "console");
   std::shared_ptr<jsi::Object> originalConsole;
@@ -2022,7 +2025,7 @@ void CDPHandler::Impl::installConsoleFunction(
     std::shared_ptr<jsi::Object> &originalConsole,
     const std::string &name,
     const std::string &chromeTypeDefault) {
-  jsi::Runtime &rt = getRuntime();
+  jsi::Runtime &rt = runtime_;
   auto chromeType = chromeTypeDefault == "" ? name : chromeTypeDefault;
   auto nameID = jsi::PropNameID::forUtf8(rt, name);
   // We cannot capture `this` in the HostFunction, since it may outlive this
