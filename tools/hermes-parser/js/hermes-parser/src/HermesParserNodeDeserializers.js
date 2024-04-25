@@ -1070,6 +1070,7 @@ function deserializeTupleTypeAnnotation() {
     type: 'TupleTypeAnnotation',
     loc: this.addEmptyLoc(),
     types: this.deserializeNodeList(),
+    inexact: this.deserializeBoolean(),
   };
 }
 function deserializeTupleTypeSpreadElement() {

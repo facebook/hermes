@@ -1024,6 +1024,7 @@ export type TupleTypeAnnotationProps = {
   +types: $ReadOnlyArray<
     MaybeDetachedNode<TupleTypeAnnotationType['types'][number]>,
   >,
+  +inexact: TupleTypeAnnotationType['inexact'],
 };
 
 export type TupleTypeLabeledElementProps = {
@@ -3170,6 +3171,7 @@ export function TupleTypeAnnotation(props: {
     {
       type: 'TupleTypeAnnotation',
       types: props.types.map(n => asDetachedNodeForCodeGen(n)),
+      inexact: props.inexact,
     },
   );
   setParentPointersInDirectChildren((node: $FlowFixMe));
