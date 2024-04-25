@@ -1216,7 +1216,10 @@ class JSParserImpl {
   Optional<ESTree::Node *> parsePrimaryTypeAnnotationFlow();
   Optional<ESTree::Node *> parseTypeofTypeAnnotationFlow();
   Optional<ESTree::Node *> parseTupleTypeAnnotationFlow();
-  Optional<ESTree::Node *> parseTupleElementFlow();
+  // \param startsWithDotDotDot whether the element started with '...'
+  Optional<ESTree::Node *> parseTupleElementFlow(
+      SMLoc startLoc,
+      bool startsWithDotDotDot);
   Optional<ESTree::Node *> parseFunctionTypeAnnotationFlow();
   Optional<ESTree::Node *> parseHookTypeAnnotationFlow();
   Optional<ESTree::Node *> parseFunctionOrHookTypeAnnotationFlow(bool hook);

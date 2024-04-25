@@ -2313,15 +2313,31 @@ Optional<ESTree::Node *> JSParserImpl::parseTupleTypeAnnotationFlow() {
   SMLoc start = advance(JSLexer::GrammarContext::Type).Start;
 
   ESTree::NodeList types{};
+  bool inexact = false;
 
   while (!check(TokenKind::r_square)) {
-    auto optType = parseTupleElementFlow();
-    if (!optType)
-      return None;
-    types.push_back(**optType);
+    SMLoc startLoc = tok_->getStartLoc();
+    bool startsWithDotDotDot =
+        checkAndEat(TokenKind::dotdotdot, JSLexer::GrammarContext::Type);
 
-    if (!checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type))
-      break;
+    // ...]
+    if (startsWithDotDotDot && check(TokenKind::r_square)) {
+      inexact = true;
+      // ...,
+    } else if (startsWithDotDotDot && check(TokenKind::comma)) {
+      error(
+          tok_->getSourceRange(),
+          "trailing commas after inexact tuple types are not allowed");
+      advance(JSLexer::GrammarContext::Type);
+    } else {
+      auto optType = parseTupleElementFlow(startLoc, startsWithDotDotDot);
+      if (!optType)
+        return None;
+      types.push_back(**optType);
+
+      if (!checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type))
+        break;
+    }
   }
 
   if (!need(
@@ -2334,12 +2350,13 @@ Optional<ESTree::Node *> JSParserImpl::parseTupleTypeAnnotationFlow() {
   return setLocation(
       start,
       advance(JSLexer::GrammarContext::Type).End,
-      new (context_) ESTree::TupleTypeAnnotationNode(std::move(types), false));
+      new (context_)
+          ESTree::TupleTypeAnnotationNode(std::move(types), inexact));
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseTupleElementFlow() {
-  SMLoc startLoc = tok_->getStartLoc();
-
+Optional<ESTree::Node *> JSParserImpl::parseTupleElementFlow(
+    SMLoc startLoc,
+    bool startsWithDotDotDot) {
   ESTree::Node *label = nullptr;
   ESTree::Node *elementType = nullptr;
   ESTree::Node *variance = nullptr;
@@ -2347,7 +2364,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTupleElementFlow() {
   // ...Identifier : Type
   // ...Type
   // ^
-  if (checkAndEat(TokenKind::dotdotdot, JSLexer::GrammarContext::Type)) {
+  if (startsWithDotDotDot) {
     auto optType = parseTypeAnnotationBeforeColonFlow();
     if (!optType)
       return None;
