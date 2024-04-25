@@ -672,8 +672,6 @@ void CDPHandler::Impl::handle(
           // there's a huge amount of allocation and freeing.
           sendNotificationToClient(heapStatsNote);
         });
-    // At this point we need the equivalent of a setInterval, where
-    // each interval samples the existing
     sendResponseToClient(m::makeOkResponse(req.id));
   });
 }
