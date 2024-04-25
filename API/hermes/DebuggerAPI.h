@@ -206,6 +206,8 @@ class HERMES_EXPORT Debugger {
   /// \return the source map URL for the \p fileId.
   String getSourceMappingUrl(uint32_t fileId) const;
 
+  /// Gets the list of loaded scripts. The order of the scripts in the vector
+  /// will be the same across calls.
   /// \return list of loaded scripts
   std::vector<SourceLocation> getLoadedScripts() const;
 
