@@ -2006,6 +2006,7 @@ TEST_F(ConnectionTests, testRuntimeCallFunctionOnObject) {
 
   send<m::debugger::EnableRequest>(conn, msgId++);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
+  expectPaused(conn, "other", {{"global", 1, 1}});
 
   // create a new Object() that will be used as "this" below.
   m::runtime::RemoteObjectId thisId;
@@ -2137,6 +2138,7 @@ TEST_F(ConnectionTests, testRuntimeCallFunctionOnExecutionContext) {
 
   send<m::debugger::EnableRequest>(conn, msgId++);
   expectNotification<m::debugger::ScriptParsedNotification>(conn);
+  expectPaused(conn, "other", {{"global", 1, 1}});
 
   // globalThisId is the inspector's object Id for globalThis.
   m::runtime::RemoteObjectId globalThisId;
