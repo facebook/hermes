@@ -12,39 +12,131 @@
 #include <gtest/gtest.h>
 
 #include <hermes/AsyncDebuggerAPI.h>
+#include <hermes/CompileJS.h>
 #include <hermes/cdp/CDPAgent.h>
 #include <hermes/hermes.h>
 #include <hermes/inspector/chrome/tests/SerialExecutor.h>
 
 #include "CDPJSONHelpers.h"
 
-using namespace facebook::hermes;
 using namespace facebook::hermes::cdp;
 using namespace facebook::hermes::debugger;
 using namespace facebook::hermes::inspector_modern::chrome;
-using namespace hermes;
+using namespace facebook::hermes;
+using namespace facebook;
+using namespace std::placeholders;
+
+constexpr auto kDefaultUrl = "url";
 
 class CDPAgentTest : public ::testing::Test {
+ public:
+  void handleRuntimeTask(RuntimeTask task) {
+    runtimeThread_->add([this, task]() { task(*runtime_); });
+  }
+
+  void handleResponse(const std::string &message) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    messages_.push(message);
+    hasMessage_.notify_one();
+  }
+
  protected:
   void SetUp() override;
   void TearDown() override;
 
+  void scheduleScript(
+      const std::string &script,
+      const std::string &url = kDefaultUrl,
+      facebook::hermes::HermesRuntime::DebugFlags flags =
+          facebook::hermes::HermesRuntime::DebugFlags{}) {
+    runtimeThread_->add([this, script, url, flags]() {
+      runtime_->debugJavaScript(script, url, flags);
+    });
+  }
+
+  /// waits for the next message of either kind (response or notification)
+  /// from the debugger. returns the message. throws on timeout.
+  std::string waitForMessage(
+      std::chrono::milliseconds timeout = std::chrono::milliseconds(2500));
+
+  void expectNothing();
+
+  void sendAndCheckResponse(const std::string &method, int id);
+
   std::unique_ptr<HermesRuntime> runtime_;
   std::unique_ptr<AsyncDebuggerAPI> asyncDebuggerAPI_;
   std::unique_ptr<SerialExecutor> runtimeThread_;
+  std::unique_ptr<CDPAgent> cdpAgent_;
+
+  std::mutex mutex_;
+  std::condition_variable hasMessage_;
+  std::queue<std::string> messages_;
 };
 
 void CDPAgentTest::SetUp() {
+  runtimeThread_ = std::make_unique<SerialExecutor>();
+
   auto builder = ::hermes::vm::RuntimeConfig::Builder();
   runtime_ = facebook::hermes::makeHermesRuntime(builder.build());
   asyncDebuggerAPI_ = AsyncDebuggerAPI::create(*runtime_);
-  runtimeThread_ = std::make_unique<SerialExecutor>();
+
+  cdpAgent_ = CDPAgent::create(
+      *runtime_,
+      *asyncDebuggerAPI_,
+      std::bind(&CDPAgentTest::handleRuntimeTask, this, _1),
+      std::bind(&CDPAgentTest::handleResponse, this, _1));
 }
 
 void CDPAgentTest::TearDown() {
+  // CDPAgent can be cleaned up from any thread and at any time without
+  // synchronization with the runtime thread.
+  cdpAgent_.reset();
+
+  // Clean up AsyncDebuggerAPI and HermesRuntime on the runtime thread to avoid
+  // tripping TSAN. This ensures all DomainAgents code will run on the runtime
+  // thread if they're being executed by ~AsyncDebuggerAPI(). Technically you
+  // could destroy things on non-runtime thread _IF_ you know for sure that's
+  // ok, but TSAN doesn't know that.
+  runtimeThread_->add([this]() {
+    asyncDebuggerAPI_.reset();
+    runtime_.reset();
+  });
+
   runtimeThread_.reset();
-  asyncDebuggerAPI_.reset();
-  runtime_.reset();
+}
+
+std::string CDPAgentTest::waitForMessage(std::chrono::milliseconds timeout) {
+  std::unique_lock<std::mutex> lock(mutex_);
+
+  bool success = hasMessage_.wait_for(
+      lock, timeout, [this]() -> bool { return !messages_.empty(); });
+
+  if (!success) {
+    throw std::runtime_error("timed out waiting for reply");
+  }
+
+  std::string message = std::move(messages_.front());
+  messages_.pop();
+  return message;
+}
+
+void CDPAgentTest::expectNothing() {
+  try {
+    waitForMessage();
+  } catch (...) {
+    // if no values are received it times out with an exception
+    // so we can say that we've succeeded at seeing nothing
+    return;
+  }
+
+  throw std::runtime_error("received a notification but didn't expect one");
+}
+
+void CDPAgentTest::sendAndCheckResponse(const std::string &method, int id) {
+  std::string json =
+      "{\"id\": " + std::to_string(id) + ", \"method\": \"" + method + "\"}";
+  cdpAgent_->handleCommand(json);
+  ensureOkResponse(waitForMessage(), id);
 }
 
 template <typename T>
@@ -123,7 +215,7 @@ TEST_F(CDPAgentTest, RejectsMalformedMethods) {
   waitFor<bool>([this, &cdpAgent, commandID](auto promise) {
     OutboundMessageFunc handleMessage =
         [promise, commandID](const std::string &message) {
-          ensureErrorResponse(commandID, message);
+          ensureErrorResponse(message, commandID);
           promise->set_value(true);
         };
 
@@ -148,7 +240,7 @@ TEST_F(CDPAgentTest, RejectsUnknownDomains) {
   waitFor<bool>([this, &cdpAgent, commandID](auto promise) {
     OutboundMessageFunc handleMessage =
         [promise, commandID](const std::string &message) {
-          ensureErrorResponse(commandID, message);
+          ensureErrorResponse(message, commandID);
           promise->set_value(true);
         };
 
@@ -165,6 +257,73 @@ TEST_F(CDPAgentTest, RejectsUnknownDomains) {
         R"({"id": )" + std::to_string(commandID) +
         R"(, "method": "FakeDomain.enable"})");
   });
+}
+
+TEST_F(CDPAgentTest, TestScriptsOnEnable) {
+  int msgId = 1;
+
+  // Add a script being run in the VM prior to Debugger.enable
+  scheduleScript("true");
+
+  // Verify that upon enable, we get notification of existing scripts
+  sendAndCheckResponse("Debugger.enable", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+  sendAndCheckResponse("Debugger.disable", msgId++);
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+}
+
+TEST_F(CDPAgentTest, TestScriptsOrdering) {
+  int msgId = 1;
+  std::vector<std::string> notifications;
+
+  const int kNumScriptParsed = 10;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  // Trigger a bunch of scriptParsed notifications to later verify that they get
+  // re-sent in the same order
+  for (int i = 0; i < kNumScriptParsed; i++) {
+    scheduleScript("true");
+    std::string notification = waitForMessage();
+    ensureNotification(notification, "Debugger.scriptParsed");
+    notifications.push_back(notification);
+  }
+
+  // Make sure the same ordering is retained after a disable request
+  sendAndCheckResponse("Debugger.disable", msgId++);
+  sendAndCheckResponse("Debugger.enable", msgId++);
+  for (int i = 0; i < kNumScriptParsed; i++) {
+    std::string notification = waitForMessage();
+    ensureNotification(notification, "Debugger.scriptParsed");
+    EXPECT_EQ(notifications[i], notification);
+  }
+}
+
+TEST_F(CDPAgentTest, TestBytecodeScript) {
+  int msgId = 1;
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  // Compile code without debug info so that the SourceLocation would be
+  // invalid.
+  std::string bytecode;
+  EXPECT_TRUE(::hermes::compileJS(
+      R"(
+    true
+  )",
+      bytecode));
+
+  runtimeThread_->add([this, bytecode]() {
+    runtime_->evaluateJavaScript(
+        std::unique_ptr<jsi::StringBuffer>(new jsi::StringBuffer(bytecode)),
+        "url");
+  });
+
+  // Verify that invalid SourceLocations simply don't trigger scriptParsed
+  // notifications
+  expectNothing();
 }
 
 #endif // HERMES_ENABLE_DEBUGGER

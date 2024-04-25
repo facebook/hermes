@@ -8,10 +8,19 @@
 #ifndef HERMES_UNITTESTS_API_CDPJSONHELPERS_H
 #define HERMES_UNITTESTS_API_CDPJSONHELPERS_H
 
+namespace facebook {
 namespace hermes {
 
-void ensureErrorResponse(int id, const std::string &json);
+void ensureErrorResponse(const std::string &message, int id);
+void ensureOkResponse(const std::string &message, int id);
+
+void ensureResponse(
+    const std::string &message,
+    const std::string &method,
+    int id);
+void ensureNotification(const std::string &message, const std::string &method);
 
 } // namespace hermes
+} // namespace facebook
 
 #endif // HERMES_UNITTESTS_API_CDPJSONHELPERS_H
