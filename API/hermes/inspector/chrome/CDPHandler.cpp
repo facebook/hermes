@@ -565,17 +565,24 @@ void CDPHandler::Impl::sendSnapshot(
       sendNotificationToClient(note);
     }
 
-    // Size picked to conform to Chrome's own implementation, at the
-    // time of writing.
-    inspector_modern::chrome::CallbackOStream cos(
-        /* sz */ 100 << 10, [this](std::string s) {
-          m::heapProfiler::AddHeapSnapshotChunkNotification note;
-          note.chunk = std::move(s);
-          sendNotificationToClient(note);
-          return true;
-        });
+    // The CallbackOStream buffers data and invokes the callback whenever
+    // the chunk size is reached. It can also invoke the callback once more
+    // upon destruction, emitting the final partially-filled chunk. Make sure
+    // the stream goes out of scope and the final chunk is emitted before
+    // sending the OK response.
+    {
+      // Size picked to conform to Chrome's own implementation, at the
+      // time of writing.
+      inspector_modern::chrome::CallbackOStream cos(
+          /* sz */ 100 << 10, [this](std::string s) {
+            m::heapProfiler::AddHeapSnapshotChunkNotification note;
+            note.chunk = std::move(s);
+            sendNotificationToClient(note);
+            return true;
+          });
 
-    getRuntime().instrumentation().createSnapshotToStream(cos);
+      getRuntime().instrumentation().createSnapshotToStream(cos);
+    }
     sendResponseToClient(m::makeOkResponse(reqId));
   });
 }
