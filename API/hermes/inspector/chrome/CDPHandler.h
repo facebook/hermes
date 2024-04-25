@@ -25,6 +25,8 @@ namespace chrome {
 using CDPMessageCallbackFunction = std::function<void(const std::string &)>;
 using OnUnregisterFunction = std::function<void()>;
 
+class CDPHandlerImpl;
+
 /// CDPHandler processes CDP messages between the client and the debugger.
 /// It performs no networking or connection logic itself.
 /// The CDP Handler is invoked from multiple threads. The locking strategy is
@@ -81,8 +83,7 @@ class INSPECTOR_EXPORT CDPHandler {
   void handle(std::string str);
 
  private:
-  class Impl;
-  std::shared_ptr<Impl> impl_;
+  std::shared_ptr<CDPHandlerImpl> impl_;
 };
 
 } // namespace chrome
