@@ -21,7 +21,8 @@ type A = [];
 // CHECK-NEXT:       "typeParameters": null,
 // CHECK-NEXT:       "right": {
 // CHECK-NEXT:         "type": "TupleTypeAnnotation",
-// CHECK-NEXT:         "types": []
+// CHECK-NEXT:         "types": [],
+// CHECK-NEXT:         "inexact": false
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
@@ -52,7 +53,8 @@ type A = [B, C];
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "typeParameters": null
 // CHECK-NEXT:           }
-// CHECK-NEXT:         ]
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "inexact": false
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
@@ -79,7 +81,8 @@ type A = [...B];
 // CHECK-NEXT:               "typeParameters": null
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
-// CHECK-NEXT:         ]
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "inexact": false
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
@@ -109,7 +112,8 @@ type A = [...B: C];
 // CHECK-NEXT:               "typeParameters": null
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
-// CHECK-NEXT:         ]
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "inexact": false
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
@@ -144,7 +148,8 @@ type A = [+B: C];
 // CHECK-NEXT:               "kind": "plus"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
-// CHECK-NEXT:         ]
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "inexact": false
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
@@ -179,7 +184,8 @@ type A = [+B?: C];
 // CHECK-NEXT:               "kind": "plus"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
-// CHECK-NEXT:         ]
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "inexact": false
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
@@ -211,7 +217,8 @@ type A = [B?: C];
 // CHECK-NEXT:             "optional": true,
 // CHECK-NEXT:             "variance": null
 // CHECK-NEXT:           }
-// CHECK-NEXT:         ]
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "inexact": false
 // CHECK-NEXT:       }
 // CHECK-NEXT:     }
 

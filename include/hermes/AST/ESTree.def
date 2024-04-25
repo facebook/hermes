@@ -794,9 +794,10 @@ ESTREE_NODE_2_ARGS(
     QualifiedTypeofIdentifier, Flow,
     NodePtr, qualification, false,
     NodePtr, id, false)
-ESTREE_NODE_1_ARGS(
+ESTREE_NODE_2_ARGS(
     TupleTypeAnnotation, Flow,
-    NodeList, types, false)
+    NodeList, types, false,
+    NodeBoolean, inexact, false)
 ESTREE_NODE_2_ARGS(
     TupleTypeSpreadElement, Flow,
     NodePtr, label, true,
