@@ -30,6 +30,7 @@
 #include <hermes/inspector/chrome/RemoteObjectsTable.h>
 #include <hermes/inspector/chrome/ThreadSafetyAnalysis.h>
 #include <jsi/instrumentation.h>
+#include <llvh/ADT/MapVector.h>
 #include <llvh/ADT/ScopeExit.h>
 
 namespace facebook {
@@ -239,9 +240,9 @@ class CDPHandler::Impl : public message::RequestHandler,
       hermesLoc.fileName = chromeLoc.url.value();
     } else if (chromeLoc.urlRegex.has_value()) {
       const std::regex regex(chromeLoc.urlRegex.value());
-      for (const auto &[name, _] : loadedScriptIdByName_) {
-        if (std::regex_match(name, regex)) {
-          hermesLoc.fileName = name;
+      for (const auto &[_, script] : loadedScripts_) {
+        if (std::regex_match(script.fileName, regex)) {
+          hermesLoc.fileName = script.fileName;
           break;
         }
       }
@@ -370,8 +371,10 @@ class CDPHandler::Impl : public message::RequestHandler,
 
   Attachment currentAttachment_ = Attachment::None;
   Execution currentExecution_ = Execution::Running;
-  std::unordered_map<int, Script> loadedScripts_;
-  std::unordered_map<std::string, int> loadedScriptIdByName_;
+  /// Stores every script that appeared in the order that they appear in. The
+  /// ordering is important because frontend DevTools groups by the source URL
+  /// and then takes the latest scriptParsed version as the latest version.
+  llvh::MapVector<uint32_t, Script> loadedScripts_;
   bool runtimeEnabled_ = false;
 
   /// Counts the number of console messages discarded when
@@ -1869,10 +1872,9 @@ void CDPHandler::Impl::processPendingDesiredExecutions(
 
 void CDPHandler::Impl::processCurrentScriptLoaded() {
   Script info = getScriptFromTopCallFrame();
-  auto loadedScript = loadedScripts_.find(info.fileId);
-  if (loadedScript == loadedScripts_.end()) {
+  auto search = loadedScripts_.find(info.fileId);
+  if (search == loadedScripts_.end()) {
     loadedScripts_[info.fileId] = info;
-    loadedScriptIdByName_[info.fileName] = info.fileId;
   }
 }
 
