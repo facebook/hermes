@@ -55,16 +55,9 @@ class SyncConnection {
   /// sends a message to the debugger
   void send(const std::string &str);
 
-  /// waits for the next response from the debugger. handler is called with the
-  /// response. throws on timeout.
-  void waitForResponse(
-      std::function<void(const std::string &)> handler,
-      std::chrono::milliseconds timeout = std::chrono::milliseconds(2500));
-
-  /// waits for the next notification from the debugger. handler is called with
-  /// the notification. throws on timeout.
-  void waitForNotification(
-      std::function<void(const std::string &)> handler,
+  /// waits for the next message of either kind (response or notification)
+  /// from the debugger. returns the message. throws on timeout.
+  std::string waitForMessage(
       std::chrono::milliseconds timeout = std::chrono::milliseconds(2500));
 
   bool registerCallbacks();
@@ -88,10 +81,8 @@ class SyncConnection {
   bool onUnregisterCalled_ = false;
 
   std::mutex mutex_;
-  std::condition_variable hasReply_;
-  std::queue<std::string> replies_;
-  std::condition_variable hasNotification_;
-  std::queue<std::string> notifications_;
+  std::condition_variable hasMessage_;
+  std::queue<std::string> messages_;
 };
 
 } // namespace chrome

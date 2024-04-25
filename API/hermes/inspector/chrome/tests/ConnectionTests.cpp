@@ -58,29 +58,24 @@ struct ConnectionTests : public ::testing::Test {
 
 template <typename ResponseType>
 ResponseType expectResponse(SyncConnection &conn, int id) {
-  ResponseType resp;
+  const std::string message = conn.waitForMessage();
 
-  conn.waitForResponse([id, &resp](const std::string &str) {
-    JSLexer::Allocator jsonAlloc;
-    JSONFactory factory(jsonAlloc);
-    resp = mustMake<ResponseType>(mustParseStrAsJsonObj(str, factory));
-    EXPECT_EQ(resp.id, id);
-  });
+  JSLexer::Allocator jsonAlloc;
+  JSONFactory factory(jsonAlloc);
+  ResponseType resp =
+      mustMake<ResponseType>(mustParseStrAsJsonObj(message, factory));
+  EXPECT_EQ(resp.id, id);
 
   return resp;
 }
 
 template <typename NotificationType>
 NotificationType expectNotification(SyncConnection &conn) {
-  NotificationType note;
+  const std::string reply = conn.waitForMessage();
 
-  conn.waitForNotification([&note](const std::string &str) {
-    JSLexer::Allocator jsonAlloc;
-    JSONFactory factory(jsonAlloc);
-    note = mustMake<NotificationType>(mustParseStrAsJsonObj(str, factory));
-  });
-
-  return note;
+  JSLexer::Allocator jsonAlloc;
+  JSONFactory factory(jsonAlloc);
+  return mustMake<NotificationType>(mustParseStrAsJsonObj(reply, factory));
 }
 
 class UnexpectedNotificationException : public std::runtime_error {
@@ -90,18 +85,15 @@ class UnexpectedNotificationException : public std::runtime_error {
 };
 
 void expectNothing(SyncConnection &conn) {
-  bool gotSomething = false;
   try {
-    conn.waitForNotification(
-        [&gotSomething](const std::string &str) { gotSomething = true; });
+    conn.waitForMessage();
   } catch (...) {
     // if no values are received it times out with an exception
     // so we can say that we've succeeded at seeing nothing
     return;
   }
-  if (gotSomething) {
-    throw std::runtime_error("received a notification but didn't expect one");
-  }
+
+  throw std::runtime_error("received a notification but didn't expect one");
 }
 
 struct FrameInfo {
@@ -523,15 +515,14 @@ TEST(CleanUpTests, testDestructor) {
     JSONFactory factory{jsonAlloc};
     // Verify that console.log has been intercepted by the handler and emits the
     // correct CDP event.
-    conn.waitForNotification([&factory](const std::string &str) {
-      auto parsedNote = mustParseStrAsJsonObj(str, factory);
-      message::JSONValue *methodRes = parsedNote->get("method");
-      EXPECT_TRUE(methodRes != nullptr);
-      std::unique_ptr<std::string> method =
-          message::valueFromJson<std::string>(methodRes);
-      EXPECT_TRUE(method != nullptr);
-      EXPECT_EQ(*method, "Runtime.consoleAPICalled");
-    });
+    const std::string message = conn.waitForMessage();
+    auto parsedNote = mustParseStrAsJsonObj(message, factory);
+    message::JSONValue *methodRes = parsedNote->get("method");
+    EXPECT_TRUE(methodRes != nullptr);
+    std::unique_ptr<std::string> method =
+        message::valueFromJson<std::string>(methodRes);
+    EXPECT_TRUE(method != nullptr);
+    EXPECT_EQ(*method, "Runtime.consoleAPICalled");
   }
   // The destructor has been called. Calling any console methods should not
   // break, and the original console method is still called.
@@ -2413,39 +2404,34 @@ TEST_F(ConnectionTests, testConsoleBuffer) {
   // Loop for 1 iteration more than kExpectedMaxBufferSize because there is a
   // warning message given when buffer is exceeded
   for (size_t i = 0; i < kExpectedMaxBufferSize + 1; i++) {
-    conn.waitForNotification([this,
-                              kNumLogsToTest,
-                              &receivedWarning,
-                              &received](const std::string &str) {
-      auto parsedNote = mustParseStrAsJsonObj(str, factory);
-      message::JSONValue *methodRes = parsedNote->get("method");
-      EXPECT_TRUE(methodRes != nullptr);
-      std::unique_ptr<std::string> method =
-          message::valueFromJson<std::string>(methodRes);
-      EXPECT_TRUE(method != nullptr);
-      EXPECT_EQ(*method, "Runtime.consoleAPICalled");
+    const std::string message = conn.waitForMessage();
+    auto parsedNote = mustParseStrAsJsonObj(message, factory);
+    message::JSONValue *methodRes = parsedNote->get("method");
+    EXPECT_TRUE(methodRes != nullptr);
+    std::unique_ptr<std::string> method =
+        message::valueFromJson<std::string>(methodRes);
+    EXPECT_TRUE(method != nullptr);
+    EXPECT_EQ(*method, "Runtime.consoleAPICalled");
 
-      auto note =
-          mustMake<m::runtime::ConsoleAPICalledNotification>(parsedNote);
-      EXPECT_EQ(note.args[0].type, "string");
+    auto note = mustMake<m::runtime::ConsoleAPICalledNotification>(parsedNote);
+    EXPECT_EQ(note.args[0].type, "string");
 
-      try {
-        // Verify that the latest kExpectedMaxBufferSize number of logs are
-        // emitted
-        int nthLog = std::stoi(
-            note.args[0].value->substr(1, note.args[0].value->length() - 2));
-        EXPECT_GT(nthLog, kExpectedMaxBufferSize - 1);
-        EXPECT_LT(nthLog, kNumLogsToTest);
-        EXPECT_EQ(note.type, "log");
-        EXPECT_EQ(note.args.size(), 1);
-        received[nthLog % kExpectedMaxBufferSize] = true;
-      } catch (const std::exception &e) {
-        EXPECT_EQ(note.type, "warning");
-        EXPECT_EQ(note.args.size(), 1);
-        EXPECT_NE((*note.args[0].value).find("discarded"), std::string::npos);
-        receivedWarning = true;
-      }
-    });
+    try {
+      // Verify that the latest kExpectedMaxBufferSize number of logs are
+      // emitted
+      int nthLog = std::stoi(
+          note.args[0].value->substr(1, note.args[0].value->length() - 2));
+      EXPECT_GT(nthLog, kExpectedMaxBufferSize - 1);
+      EXPECT_LT(nthLog, kNumLogsToTest);
+      EXPECT_EQ(note.type, "log");
+      EXPECT_EQ(note.args.size(), 1);
+      received[nthLog % kExpectedMaxBufferSize] = true;
+    } catch (const std::exception &e) {
+      EXPECT_EQ(note.type, "warning");
+      EXPECT_EQ(note.args.size(), 1);
+      EXPECT_NE((*note.args[0].value).find("discarded"), std::string::npos);
+      receivedWarning = true;
+    }
   }
 
   expectNothing(conn);
