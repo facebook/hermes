@@ -16,7 +16,9 @@
 #include <hermes/AsyncDebuggerAPI.h>
 #include <hermes/hermes.h>
 #include <hermes/inspector/chrome/tests/SerialExecutor.h>
+#include <jsi/jsi.h>
 
+using namespace facebook::jsi;
 using namespace facebook::hermes;
 using namespace facebook::hermes::debugger;
 using namespace facebook::hermes::inspector_modern::chrome;
@@ -36,6 +38,12 @@ class AsyncDebuggerAPITest : public ::testing::Test {
     runtimeThread_->add([this, script, url, flags]() {
       runtime_->debugJavaScript(script, url, flags);
     });
+  }
+
+  bool evaluateBool(const std::string &script) {
+    Value result = runtime_->evaluateJavaScript(
+        std::unique_ptr<StringBuffer>(new StringBuffer(script)), "url");
+    return result.getBool();
   }
 
   std::unique_ptr<SerialExecutor> runtimeThread_;
@@ -277,6 +285,41 @@ TEST_F(AsyncDebuggerAPITest, NoDebuggerEventCallbackTest) {
   // we're able to.
   EXPECT_TRUE(waitFor<bool>([this](auto promise) {
     runtimeThread_->add([promise]() { promise->set_value(true); });
+  }));
+}
+
+TEST_F(AsyncDebuggerAPITest, IsDebuggerAttachedTest) {
+  // isDebuggerAttached should be false when no DebuggerEventCallback is
+  // registered
+  EXPECT_FALSE(waitFor<bool>([this](auto promise) {
+    runtimeThread_->add([this, promise]() {
+      promise->set_value(evaluateBool("DebuggerInternal.isDebuggerAttached;"));
+    });
+  }));
+
+  // isDebuggerAttached should be true if any DebuggerEventCallback is
+  // registered
+  EXPECT_TRUE(waitFor<bool>([this](auto promise) {
+    eventCallbackID_ = asyncDebuggerAPI_->addDebuggerEventCallback_TS(
+        [promise](
+            HermesRuntime &runtime,
+            AsyncDebuggerAPI &asyncDebugger,
+            DebuggerEventType event) {});
+
+    runtimeThread_->add([this, promise]() {
+      promise->set_value(evaluateBool("DebuggerInternal.isDebuggerAttached;"));
+    });
+  }));
+
+  // After removing the last DebuggerEventCallback, isDebuggerAttached should
+  // become false again.
+  EXPECT_FALSE(waitFor<bool>([this](auto promise) {
+    asyncDebuggerAPI_->removeDebuggerEventCallback_TS(eventCallbackID_);
+    eventCallbackID_ = kInvalidDebuggerEventCallbackID;
+
+    runtimeThread_->add([this, promise]() {
+      promise->set_value(evaluateBool("DebuggerInternal.isDebuggerAttached;"));
+    });
   }));
 }
 

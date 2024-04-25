@@ -188,7 +188,8 @@ class HERMES_EXPORT Debugger {
   /// if the event observer is deallocated before the Debugger.
   void setEventObserver(EventObserver *observer);
 
-  /// Sets the property %isDebuggerAttached in %DebuggerInternal object.
+  /// Sets the property %isDebuggerAttached in %DebuggerInternal object. Can be
+  /// called from any thread.
   void setIsDebuggerAttached(bool isAttached);
 
   /// Asynchronously triggers a pause. This may be called from any thread. This

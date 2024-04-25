@@ -37,6 +37,9 @@ DebuggerEventCallbackID AsyncDebuggerAPI::addDebuggerEventCallback_TS(
   std::lock_guard<std::mutex> lock(mutex_);
   uint32_t id = nextEventCallbackID_++;
   eventCallbacks_.push_back({id, callback});
+
+  runtime_.getDebugger().setIsDebuggerAttached(true);
+
   // Runtime thread might be on hold by didPause. Need to signal to unblock
   // that.
   signal_.notify_one();
@@ -72,6 +75,11 @@ void AsyncDebuggerAPI::removeDebuggerEventCallback_TS(
       break;
     }
   }
+
+  if (eventCallbacks_.empty()) {
+    runtime_.getDebugger().setIsDebuggerAttached(false);
+  }
+
   // Runtime thread might be on hold by didPause. Need to signal to unblock
   // that.
   signal_.notify_one();
