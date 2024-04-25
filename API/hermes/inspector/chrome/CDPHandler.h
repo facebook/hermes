@@ -55,6 +55,10 @@ class INSPECTOR_EXPORT CDPHandler {
   /// on the given \p adapter.
   static std::shared_ptr<CDPHandler> create(
       std::unique_ptr<RuntimeAdapter> adapter,
+      bool waitForDebugger = false);
+  /// Temporarily kept to allow React Native build to still work
+  static std::shared_ptr<CDPHandler> create(
+      std::unique_ptr<RuntimeAdapter> adapter,
       const std::string &title,
       bool waitForDebugger = false);
   ~CDPHandler();
@@ -84,6 +88,7 @@ class INSPECTOR_EXPORT CDPHandler {
 
  private:
   std::shared_ptr<CDPHandlerImpl> impl_;
+  const std::string title_;
 };
 
 } // namespace chrome

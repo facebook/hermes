@@ -105,13 +105,8 @@ class CDPHandlerImpl : public message::RequestHandler,
                        public debugger::EventObserver,
                        public std::enable_shared_from_this<CDPHandlerImpl> {
  public:
-  CDPHandlerImpl(
-      std::unique_ptr<RuntimeAdapter> adapter,
-      const std::string &title,
-      bool waitForDebugger);
+  CDPHandlerImpl(std::unique_ptr<RuntimeAdapter> adapter, bool waitForDebugger);
   ~CDPHandlerImpl() override;
-
-  std::string getTitle() const;
 
   bool registerCallbacks(
       CDPMessageCallbackFunction msgCallback,
@@ -336,7 +331,6 @@ class CDPHandlerImpl : public message::RequestHandler,
   /// inside the CDP Handler without requiring \p RuntimeAdapter::getRuntime
   /// to support use from arbitrary threads.
   HermesRuntime &runtime_;
-  const std::string title_;
 
   // preparedScripts_ stores user-entered scripts that have been prepared for
   // execution, and may be invoked by a later command.
@@ -428,11 +422,9 @@ class CDPHandlerImpl : public message::RequestHandler,
 
 CDPHandlerImpl::CDPHandlerImpl(
     std::unique_ptr<RuntimeAdapter> adapter,
-    const std::string &title,
     bool waitForDebugger)
     : runtimeAdapter_(std::move(adapter)),
       runtime_(runtimeAdapter_->getRuntime()),
-      title_(title),
       awaitingDebuggerOnStart_(waitForDebugger) {
   // Install __tickleJs. Do this activity before the call to setEventObserver,
   // so we don't get any didPause callback firings for these.
@@ -454,13 +446,6 @@ CDPHandlerImpl::~CDPHandlerImpl() {
 
   // TODO(T161620474): Properly clean up all the other variables being protected
   // by other mutex
-}
-
-std::string CDPHandlerImpl::getTitle() const {
-  // This is a public function, but the mutex is not required
-  // as we're just returning member that is unchanged for the
-  // lifetime of this instance.
-  return title_;
 }
 
 bool CDPHandlerImpl::registerCallbacks(
@@ -1641,6 +1626,14 @@ bool CDPHandlerImpl::validateExecutionContext(
  */
 std::shared_ptr<CDPHandler> CDPHandler::create(
     std::unique_ptr<RuntimeAdapter> adapter,
+    bool waitForDebugger) {
+  // Can't use make_shared here since the constructor is private.
+  return std::shared_ptr<CDPHandler>(
+      new CDPHandler(std::move(adapter), "", waitForDebugger));
+}
+
+std::shared_ptr<CDPHandler> CDPHandler::create(
+    std::unique_ptr<RuntimeAdapter> adapter,
     const std::string &title,
     bool waitForDebugger) {
   // Can't use make_shared here since the constructor is private.
@@ -1654,15 +1647,15 @@ CDPHandler::CDPHandler(
     bool waitForDebugger)
     : impl_(std::make_shared<CDPHandlerImpl>(
           std::move(adapter),
-          title,
-          waitForDebugger)) {
+          waitForDebugger)),
+      title_(title) {
   impl_->installLogHandler();
 }
 
 CDPHandler::~CDPHandler() = default;
 
 std::string CDPHandler::getTitle() const {
-  return impl_->getTitle();
+  return title_;
 }
 
 bool CDPHandler::registerCallbacks(
