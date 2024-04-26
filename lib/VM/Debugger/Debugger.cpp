@@ -1335,6 +1335,10 @@ auto Debugger::getLoadedScripts() const -> std::vector<SourceLocation> {
       // Uninitialized module.
       continue;
     }
+    // Only include a RuntimeModule if it's the root module
+    if (runtimeModule.getLazyRootModule() != &runtimeModule) {
+      continue;
+    }
 
     auto *debugInfo = runtimeModule.getBytecode()->getDebugInfo();
     if (!debugInfo) {
