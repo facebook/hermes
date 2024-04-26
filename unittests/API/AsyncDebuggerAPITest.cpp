@@ -62,7 +62,15 @@ void AsyncDebuggerAPITest::SetUp() {
   runtime_ = facebook::hermes::makeHermesRuntime(builder.build());
   asyncDebuggerAPI_ = AsyncDebuggerAPI::create(*runtime_);
 
+#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
+  // Give the runtime thread the same stack size as the main thread. The runtime
+  // thread is the main thread of the HermesRuntime.
+  struct rlimit limit;
+  getrlimit(RLIMIT_STACK, &limit);
+  runtimeThread_ = std::make_unique<SerialExecutor>(limit.rlim_cur);
+#else
   runtimeThread_ = std::make_unique<SerialExecutor>();
+#endif
 
   eventCallbackID_ = kInvalidDebuggerEventCallbackID;
 }

@@ -12,8 +12,30 @@ namespace hermes {
 namespace inspector_modern {
 namespace chrome {
 
-SerialExecutor::SerialExecutor() {
+SerialExecutor::SerialExecutor(size_t stackSize) {
+#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
+  pthread_attr_t attr;
+
+  int ret;
+  ret = pthread_attr_init(&attr);
+  if (ret != 0) {
+    throw std::runtime_error("Failed pthread_attr_init");
+  }
+
+  if (stackSize != 0) {
+    ret = pthread_attr_setstacksize(&attr, stackSize);
+    if (ret != 0) {
+      throw std::runtime_error("Failed pthread_attr_setstacksize");
+    }
+  }
+
+  ret = pthread_create(&tid_, &attr, SerialExecutor::threadMain, this);
+  if (ret != 0) {
+    throw std::runtime_error("Failed pthread_create");
+  }
+#else
   workerThread_ = std::thread([this]() { this->run(); });
+#endif
 }
 
 SerialExecutor::~SerialExecutor() {
@@ -23,7 +45,11 @@ SerialExecutor::~SerialExecutor() {
     shouldStop_ = true;
     wakeUpSig_.notify_one();
   }
+#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
+  pthread_join(tid_, nullptr);
+#else
   workerThread_.join();
+#endif
 }
 
 void SerialExecutor::add(std::function<void()> task) {
@@ -55,6 +81,14 @@ void SerialExecutor::run() {
     tasks_.pop_front();
   }
 }
+
+#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
+void *SerialExecutor::threadMain(void *p) {
+  static_cast<SerialExecutor *>(p)->run();
+  pthread_exit(nullptr);
+  return nullptr;
+}
+#endif
 
 } // namespace chrome
 } // namespace inspector_modern
