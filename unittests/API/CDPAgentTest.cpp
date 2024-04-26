@@ -18,7 +18,6 @@
 #include <hermes/Support/JSONEmitter.h>
 #include <hermes/cdp/CDPAgent.h>
 #include <hermes/cdp/CDPDebugAPI.h>
-#include <hermes/cdp/DomainAgent.h>
 #include <hermes/cdp/JSONValueInterfaces.h>
 #include <hermes/hermes.h>
 #include <hermes/inspector/chrome/tests/SerialExecutor.h>

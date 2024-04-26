@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#ifdef HERMES_ENABLE_DEBUGGER
+
 #include <hermes/DebuggerAPI.h>
 #include <hermes/Support/ErrorHandling.h>
 #include <hermes/cdp/MessageTypesInlines.h>
@@ -326,7 +328,7 @@ m::debugger::BreakpointId ensureSetBreakpointByUrlResponse(
       resp.breakpointId,
       std::to_string(facebook::hermes::debugger::kInvalidBreakpoint));
   EXPECT_EQ(resp.locations.size(), locations.size());
-  for (int i = 0; i < locations.size(); i++) {
+  for (size_t i = 0; i != locations.size(); i++) {
     if (locations[i].scriptId) {
       EXPECT_EQ(resp.locations[i].scriptId, locations[i].scriptId);
     }
@@ -401,3 +403,5 @@ const JSONArray *JSONScope::getArray(
 
 } // namespace hermes
 } // namespace facebook
+
+#endif // HERMES_ENABLE_DEBUGGER
