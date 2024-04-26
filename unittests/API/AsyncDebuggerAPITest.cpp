@@ -276,6 +276,45 @@ TEST_F(AsyncDebuggerAPITest, SetNextCommandTest) {
   EXPECT_EQ(finalEvent, DebuggerEventType::Resumed);
 }
 
+TEST_F(AsyncDebuggerAPITest, NotifyDueToEventCallbacksTest) {
+  scheduleScript("true");
+
+  // Multiple callbacks are registered to make sure AsyncDebuggerAPI doesn't
+  // break out of processInterruptWhilePaused() due to having no callbacks.
+  DebuggerEventCallbackID callbackID =
+      asyncDebuggerAPI_->addDebuggerEventCallback_TS(
+          [](HermesRuntime &runtime,
+             AsyncDebuggerAPI &asyncDebugger,
+             DebuggerEventType event) {});
+
+  EXPECT_TRUE(waitFor<bool>([this](auto promise) {
+    eventCallbackID_ = asyncDebuggerAPI_->addDebuggerEventCallback_TS(
+        [promise](
+            HermesRuntime &runtime,
+            AsyncDebuggerAPI &asyncDebugger,
+            DebuggerEventType event) { promise->set_value(true); });
+    runtime_->getDebugger().triggerAsyncPause(AsyncPauseKind::Explicit);
+  }));
+
+  // At this point, the runtime thread is paused due to Explicit AsyncBreak
+
+  // We're not on the runtime thread, but because we know for sure the runtime
+  // thread is paused at this point it's safe to call
+  // setNextCommand().
+  asyncDebuggerAPI_->setNextCommand(Command::continueExecution());
+
+  EXPECT_TRUE(waitFor<bool>([this](auto promise) {
+    // Schedule something on the runtime thread to confirm that we broke out of
+    // processInterruptWhilePaused() after removing a DebuggerEventCallback
+    runtimeThread_->add([promise]() { promise->set_value(true); });
+    // Removing a DebuggerEventCallback will signal and cause another iteration
+    // of processInterruptWhilePaused()
+    asyncDebuggerAPI_->removeDebuggerEventCallback_TS(eventCallbackID_);
+  }));
+
+  asyncDebuggerAPI_->removeDebuggerEventCallback_TS(callbackID);
+}
+
 TEST_F(AsyncDebuggerAPITest, NoDebuggerEventCallbackTest) {
   scheduleScript("debugger;");
   scheduleScript("debugger;");
