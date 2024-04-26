@@ -19,7 +19,18 @@
 #include <hermes/DebuggerAPI.h>
 #include <hermes/Public/HermesExport.h>
 #include <hermes/hermes.h>
-#include <hermes/inspector/chrome/ThreadSafetyAnalysis.h>
+
+#if defined(__clang__) && (!defined(SWIG)) && \
+    defined(_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS)
+#include <hermes/ThreadSafetyAnalysis.h>
+#else
+#ifndef TSA_GUARDED_BY
+#define TSA_GUARDED_BY(x)
+#endif
+#ifndef TSA_NO_THREAD_SAFETY_ANALYSIS
+#define TSA_NO_THREAD_SAFETY_ANALYSIS
+#endif
+#endif
 
 namespace facebook {
 namespace hermes {
