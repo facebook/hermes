@@ -5,20 +5,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_CDP_REMOTEOBJECTSTABLE_H
-#define HERMES_CDP_REMOTEOBJECTSTABLE_H
+#pragma once
 
 #include <cstdint>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include <hermes/Public/HermesExport.h>
 #include <jsi/jsi.h>
 
 namespace facebook {
 namespace hermes {
-namespace cdp {
+namespace inspector_modern {
+namespace chrome {
 
 /// Well-known object group names
 
@@ -27,14 +26,14 @@ namespace cdp {
  * objects) are placed in the "backtrace" object group. This object group is
  * cleared when the VM resumes.
  */
-HERMES_EXPORT extern const char *BacktraceObjectGroup;
+extern const char *BacktraceObjectGroup;
 
 /**
  * Objects that are created as a result of a console evaluation are placed in
  * the "console" object group. This object group is cleared when the client
  * clears the console.
  */
-HERMES_EXPORT extern const char *ConsoleObjectGroup;
+extern const char *ConsoleObjectGroup;
 
 /**
  * RemoteObjectsTable manages the mapping of string object ids to scope metadata
@@ -48,7 +47,7 @@ HERMES_EXPORT extern const char *ConsoleObjectGroup;
  * `releaseObject("objId")` or `releaseObjectGroup("objGroup")` will remove foo
  * from the table. This matches the behavior of object groups in CDT.
  */
-class HERMES_EXPORT RemoteObjectsTable {
+class RemoteObjectsTable {
  public:
   RemoteObjectsTable();
   ~RemoteObjectsTable();
@@ -119,8 +118,7 @@ class HERMES_EXPORT RemoteObjectsTable {
   std::unordered_map<std::string, std::vector<int64_t>> groupToIds_;
 };
 
-} // namespace cdp
+} // namespace chrome
+} // namespace inspector_modern
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_CDP_REMOTEOBJECTSTABLE_H

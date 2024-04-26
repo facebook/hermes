@@ -80,7 +80,7 @@ class CDPAgentImpl {
     // so this collection is shared amongst them all. No locking is needed,
     // as it's guaranteed that there will never be multiple domain agents
     // running at the same time.
-    std::shared_ptr<RemoteObjectsTable> objTable_;
+    std::shared_ptr<old_cdp::RemoteObjectsTable> objTable_;
 
     std::unique_ptr<DebuggerDomainAgent> debuggerAgent_;
     std::unique_ptr<RuntimeDomainAgent> runtimeAgent_;
@@ -168,7 +168,7 @@ CDPAgentImpl::DomainAgents::DomainAgents(
       runtime_(runtime),
       asyncDebuggerAPI_(asyncDebuggerAPI),
       messageCallback_(std::move(messageCallback)),
-      objTable_(std::make_shared<RemoteObjectsTable>()) {}
+      objTable_(std::make_shared<old_cdp::RemoteObjectsTable>()) {}
 
 void CDPAgentImpl::DomainAgents::initialize() {
   debuggerAgent_ = std::make_unique<DebuggerDomainAgent>(

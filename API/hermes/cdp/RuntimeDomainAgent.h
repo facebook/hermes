@@ -26,7 +26,7 @@ class RuntimeDomainAgent : public DomainAgent {
       int32_t executionContextID,
       HermesRuntime &runtime_,
       SynchronizedOutboundCallback messageCallback,
-      std::shared_ptr<RemoteObjectsTable> objTable);
+      std::shared_ptr<old_cdp::RemoteObjectsTable> objTable);
   ~RuntimeDomainAgent();
 
   /// Handles Runtime.enable request

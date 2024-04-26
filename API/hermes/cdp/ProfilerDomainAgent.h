@@ -25,7 +25,7 @@ class ProfilerDomainAgent : public DomainAgent {
       int32_t executionContextID,
       HermesRuntime &runtime,
       SynchronizedOutboundCallback messageCallback,
-      std::shared_ptr<RemoteObjectsTable> objTable);
+      std::shared_ptr<old_cdp::RemoteObjectsTable> objTable);
   ~ProfilerDomainAgent() = default;
 
   void start(const m::profiler::StartRequest &req);

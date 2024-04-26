@@ -8,8 +8,8 @@
 #pragma once
 
 #include <hermes/DebuggerAPI.h>
-#include <hermes/cdp/RemoteObjectsTable.h>
 #include <hermes/inspector/chrome/MessageTypes.h>
+#include <hermes/inspector/chrome/RemoteObjectsTable.h>
 #include <jsi/jsi.h>
 
 namespace facebook {
@@ -24,13 +24,13 @@ CallFrame makeCallFrame(
     uint32_t callFrameIndex,
     const facebook::hermes::debugger::CallFrameInfo &callFrameInfo,
     const facebook::hermes::debugger::LexicalInfo &lexicalInfo,
-    cdp::RemoteObjectsTable &objTable,
+    facebook::hermes::inspector_modern::chrome::RemoteObjectsTable &objTable,
     jsi::Runtime &runtime,
     const facebook::hermes::debugger::ProgramState &state);
 
 std::vector<CallFrame> makeCallFrames(
     const facebook::hermes::debugger::ProgramState &state,
-    cdp::RemoteObjectsTable &objTable,
+    facebook::hermes::inspector_modern::chrome::RemoteObjectsTable &objTable,
     jsi::Runtime &runtime);
 
 } // namespace debugger
@@ -40,7 +40,7 @@ namespace runtime {
 RemoteObject makeRemoteObject(
     facebook::jsi::Runtime &runtime,
     const facebook::jsi::Value &value,
-    cdp::RemoteObjectsTable &objTable,
+    facebook::hermes::inspector_modern::chrome::RemoteObjectsTable &objTable,
     const std::string &objectGroup,
     bool byValue = false,
     bool generatePreview = false);
