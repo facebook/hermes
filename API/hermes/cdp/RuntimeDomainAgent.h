@@ -22,16 +22,22 @@ namespace m = ::facebook::hermes::inspector_modern::chrome::message;
 /// with exclusive access to the runtime.
 class RuntimeDomainAgent : public DomainAgent {
  public:
-  RuntimeDomainAgent(SynchronizedOutboundCallback messageCallback);
+  RuntimeDomainAgent(
+      HermesRuntime &runtime_,
+      SynchronizedOutboundCallback messageCallback);
   ~RuntimeDomainAgent();
 
   /// Handles Runtime.enable request
   void enable(const m::runtime::EnableRequest &req);
   /// Handles Runtime.disable request
   void disable(const m::runtime::DisableRequest &req);
+  /// Handles Runtime.getHeapUsage request
+  void getHeapUsage(const m::runtime::GetHeapUsageRequest &req);
 
  private:
   bool checkRuntimeEnabled(const m::Request &req);
+
+  HermesRuntime &runtime_;
 
   /// Whether Runtime.enable was received and wasn't disabled by receiving
   /// Runtime.disable

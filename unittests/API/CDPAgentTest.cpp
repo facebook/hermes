@@ -53,7 +53,7 @@ class CDPAgentTest : public ::testing::Test {
   }
 
   void handleResponse(const std::string &message) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(messageMutex_);
     messages_.push(message);
     hasMessage_.notify_one();
   }
@@ -86,6 +86,7 @@ class CDPAgentTest : public ::testing::Test {
 
   void expectNothing();
   JSONObject *expectNotification(const std::string &method);
+  JSONObject *expectResponse(const std::optional<std::string> &method, int id);
 
   void sendParameterlessRequest(const std::string &method, int id);
   void sendAndCheckResponse(const std::string &method, int id);
@@ -96,6 +97,15 @@ class CDPAgentTest : public ::testing::Test {
       const jsi::Value *args,
       size_t count);
 
+  jsi::Value signalTest(
+      jsi::Runtime &runtime,
+      const jsi::Value &thisVal,
+      const jsi::Value *args,
+      size_t count);
+
+  void waitForTestSignal(
+      std::chrono::milliseconds timeout = std::chrono::milliseconds(2500));
+
   std::unique_ptr<HermesRuntime> runtime_;
   std::unique_ptr<AsyncDebuggerAPI> asyncDebuggerAPI_;
   std::unique_ptr<SerialExecutor> runtimeThread_;
@@ -103,7 +113,11 @@ class CDPAgentTest : public ::testing::Test {
 
   std::atomic<bool> stopFlag_{};
 
-  std::mutex mutex_;
+  std::mutex testSignalMutex_;
+  std::condition_variable testSignalCondition_;
+  bool testSignalled_;
+
+  std::mutex messageMutex_;
   std::condition_variable hasMessage_;
   std::queue<std::string> messages_;
 
@@ -124,6 +138,14 @@ void CDPAgentTest::SetUp() {
           jsi::PropNameID::forAscii(*runtime_, "shouldStop"),
           0,
           std::bind(&CDPAgentTest::shouldStop, this, _1, _2, _3, _4)));
+  runtime_->global().setProperty(
+      *runtime_,
+      "signalTest",
+      jsi::Function::createFromHostFunction(
+          *runtime_,
+          jsi::PropNameID::forAscii(*runtime_, "signalTest"),
+          0,
+          std::bind(&CDPAgentTest::signalTest, this, _1, _2, _3, _4)));
 
   asyncDebuggerAPI_ = AsyncDebuggerAPI::create(*runtime_);
 
@@ -161,7 +183,7 @@ void CDPAgentTest::waitForScheduledScripts() {
 std::string CDPAgentTest::waitForMessage(
     std::string context,
     std::chrono::milliseconds timeout) {
-  std::unique_lock<std::mutex> lock(mutex_);
+  std::unique_lock<std::mutex> lock(messageMutex_);
 
   bool success = hasMessage_.wait_for(
       lock, timeout, [this]() -> bool { return !messages_.empty(); });
@@ -196,6 +218,18 @@ JSONObject *CDPAgentTest::expectNotification(const std::string &method) {
   return notification;
 }
 
+JSONObject *CDPAgentTest::expectResponse(
+    const std::optional<std::string> &method,
+    int id) {
+  std::string message = waitForMessage();
+  JSONObject *response = jsonScope_.parseObject(message);
+  if (method) {
+    EXPECT_EQ(jsonScope_.getString(response, {"method"}), *method);
+  }
+  EXPECT_EQ(jsonScope_.getNumber(response, {"id"}), id);
+  return response;
+}
+
 jsi::Value CDPAgentTest::shouldStop(
     jsi::Runtime &runtime,
     const jsi::Value &thisVal,
@@ -219,6 +253,27 @@ void CDPAgentTest::sendParameterlessRequest(const std::string &method, int id) {
 void CDPAgentTest::sendAndCheckResponse(const std::string &method, int id) {
   sendParameterlessRequest(method, id);
   ensureOkResponse(waitForMessage(), id);
+}
+
+jsi::Value CDPAgentTest::signalTest(
+    jsi::Runtime &runtime,
+    const jsi::Value &thisVal,
+    const jsi::Value *args,
+    size_t count) {
+  {
+    std::lock_guard<std::mutex> lock(testSignalMutex_);
+    testSignalled_ = true;
+  }
+  testSignalCondition_.notify_one();
+  return jsi::Value::undefined();
+}
+
+void CDPAgentTest::waitForTestSignal(std::chrono::milliseconds timeout) {
+  std::unique_lock<std::mutex> lock(testSignalMutex_);
+  testSignalCondition_.wait_for(
+      lock, timeout, [this] { return testSignalled_; });
+  EXPECT_TRUE(testSignalled_);
+  testSignalled_ = false;
 }
 
 TEST_F(CDPAgentTest, IssuesStartupTask) {
@@ -701,6 +756,51 @@ TEST_F(CDPAgentTest, RefuseRuntimeOperationsWithoutEnable) {
   // Verify disabling fails before enabling
   sendParameterlessRequest("Runtime.disable", msgId);
   ensureErrorResponse(waitForMessage(), msgId++);
+
+  // GetHeapUsage
+  sendParameterlessRequest("Runtime.getHeapUsage", msgId);
+  ensureErrorResponse(waitForMessage(), msgId++);
+}
+
+TEST_F(CDPAgentTest, GetHeapUsage) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Runtime.enable", msgId++);
+  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
+
+  scheduleScript(R"(
+    // Allocate some objects
+    var a = [];
+    for (var i = 0; i < 100; i++) {
+      a[i] = new Object;
+    }
+
+    // Tell the test the allocation is complete
+    signalTest();
+    // Wait for the test to get heap usage
+    while (!shouldStop()) {}
+
+    // Reference 'a' to keep allocations alive until the test has requested
+    // the heap usage.
+    print(a);
+  )");
+
+  // Wait to reach the sampling point
+  waitForTestSignal();
+
+  // Get heap usage while the script is running
+  sendParameterlessRequest("Runtime.getHeapUsage", msgId);
+
+  // getHeapUsage response does not include the method name
+  auto resp = expectResponse(std::nullopt, msgId++);
+
+  // Some memory should be in use. We don't know how much, but it should be
+  // more than 0.
+  EXPECT_GT(jsonScope_.getNumber(resp, {"result", "usedSize"}), 0);
+  EXPECT_GT(jsonScope_.getNumber(resp, {"result", "totalSize"}), 0);
+
+  // Let the script terminate
+  stopFlag_.store(true);
 }
 
 #endif // HERMES_ENABLE_DEBUGGER

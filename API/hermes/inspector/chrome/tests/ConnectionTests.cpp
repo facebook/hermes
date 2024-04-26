@@ -3150,6 +3150,7 @@ TEST_F(ConnectionTests, heapProfilerSampling) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
+// Also implemented as CDPAgentTest::TestRuntimeGetHeapUsage
 TEST_F(ConnectionTests, getHeapUsage) {
   int msgId = 1;
 
