@@ -91,8 +91,10 @@ class DebuggerDomainAgent : public DomainAgent {
   std::unique_ptr<DebuggerDomainState> getState();
 
   /// Handles Debugger.enable request
+  /// @cdp Debugger.enable If domain is already enabled, will return success.
   void enable(const m::debugger::EnableRequest &req);
   /// Handles Debugger.disable request
+  /// @cdp Debugger.disable If domain is already disabled, will return success.
   void disable(const m::debugger::DisableRequest &req);
 
   /// Handles Debugger.pause request
@@ -123,6 +125,7 @@ class DebuggerDomainAgent : public DomainAgent {
   /// Handles Debugger.removeBreakpoint
   void removeBreakpoint(const m::debugger::RemoveBreakpointRequest &req);
   /// Handles Debugger.setBreakpointsActive
+  /// @cdp Debugger.setBreakpointsActive Allowed even if domain is not enabled.
   void setBreakpointsActive(
       const m::debugger::SetBreakpointsActiveRequest &req);
 
