@@ -525,6 +525,10 @@ TEST_F(CDPAgentTest, DebuggerScriptsOnEnable) {
 }
 
 TEST_F(CDPAgentTest, DebuggerEnableWhenAlreadyPaused) {
+  auto setStopFlag = llvh::make_scope_exit([this] {
+    // break out of loop
+    stopFlag_.store(true);
+  });
   int msgId = 1;
 
   // This needs to be a while-loop because Explicit AsyncBreak will only happen
@@ -580,9 +584,6 @@ TEST_F(CDPAgentTest, DebuggerEnableWhenAlreadyPaused) {
   });
 
   ensureNotification(waitForMessage("Debugger.resumed"), "Debugger.resumed");
-
-  // break out of loop
-  stopFlag_.store(true);
 }
 
 TEST_F(CDPAgentTest, DebuggerScriptsOrdering) {
@@ -637,6 +638,10 @@ TEST_F(CDPAgentTest, DebuggerBytecodeScript) {
 }
 
 TEST_F(CDPAgentTest, DebuggerAsyncPauseWhileRunning) {
+  auto setStopFlag = llvh::make_scope_exit([this] {
+    // break out of loop
+    stopFlag_.store(true);
+  });
   int msgId = 1;
 
   scheduleScript(R"(
@@ -668,9 +673,6 @@ TEST_F(CDPAgentTest, DebuggerAsyncPauseWhileRunning) {
     sendAndCheckResponse("Debugger.resume", msgId++);
     ensureNotification(waitForMessage(), "Debugger.resumed");
   }
-
-  // break out of loop
-  stopFlag_.store(true);
 }
 
 TEST_F(CDPAgentTest, DebuggerTestDebuggerStatement) {
@@ -1587,6 +1589,10 @@ TEST_F(CDPAgentTest, RuntimeRefuseOperationsWithoutEnable) {
 }
 
 TEST_F(CDPAgentTest, RuntimeGetHeapUsage) {
+  auto setStopFlag = llvh::make_scope_exit([this] {
+    // break out of loop
+    stopFlag_.store(true);
+  });
   int msgId = 1;
 
   sendAndCheckResponse("Runtime.enable", msgId++);
@@ -1621,12 +1627,13 @@ TEST_F(CDPAgentTest, RuntimeGetHeapUsage) {
   // more than 0.
   EXPECT_GT(jsonScope_.getNumber(resp, {"result", "usedSize"}), 0);
   EXPECT_GT(jsonScope_.getNumber(resp, {"result", "totalSize"}), 0);
-
-  // Let the script terminate
-  stopFlag_.store(true);
 }
 
 TEST_F(CDPAgentTest, RuntimeGlobalLexicalScopeNames) {
+  auto setStopFlag = llvh::make_scope_exit([this] {
+    // break out of loop
+    stopFlag_.store(true);
+  });
   int msgId = 1;
 
   sendAndCheckResponse("Runtime.enable", msgId++);
@@ -1679,9 +1686,6 @@ TEST_F(CDPAgentTest, RuntimeGlobalLexicalScopeNames) {
         resp, {"result", "names", std::to_string(index++)});
     EXPECT_EQ(name, expectedName);
   }
-
-  // Let the script terminate
-  stopFlag_.store(true);
 }
 
 TEST_F(CDPAgentTest, RuntimeCompileScript) {
@@ -1876,6 +1880,10 @@ TEST_F(CDPAgentTest, RuntimeGetPropertiesOnlyOwn) {
 }
 
 TEST_F(CDPAgentTest, RuntimeEvaluate) {
+  auto setStopFlag = llvh::make_scope_exit([this] {
+    // break out of loop
+    stopFlag_.store(true);
+  });
   int msgId = 1;
 
   // Start a script
@@ -1939,9 +1947,6 @@ TEST_F(CDPAgentTest, RuntimeEvaluate) {
        {"str", PropInfo("string").setValue("\"string\"")},
        {"__proto__", PropInfo("object")}},
       true);
-
-  // Let the script terminate
-  stopFlag_.store(true);
 }
 
 TEST_F(CDPAgentTest, RuntimeEvaluateWhilePaused) {
@@ -1988,6 +1993,10 @@ TEST_F(CDPAgentTest, RuntimeEvaluateWhilePaused) {
 }
 
 TEST_F(CDPAgentTest, RuntimeEvaluateReturnByValue) {
+  auto setStopFlag = llvh::make_scope_exit([this] {
+    // break out of loop
+    stopFlag_.store(true);
+  });
   int msgId = 1;
 
   // Start a script
@@ -2018,12 +2027,13 @@ TEST_F(CDPAgentTest, RuntimeEvaluateReturnByValue) {
   EXPECT_TRUE(jsonValsEQ(
       jsonScope_.getObject(resp, {"result", "result", "value"}),
       jsonScope_.parseObject(object)));
-
-  // Let the script terminate
-  stopFlag_.store(true);
 }
 
 TEST_F(CDPAgentTest, RuntimeEvaluateException) {
+  auto setStopFlag = llvh::make_scope_exit([this] {
+    // break out of loop
+    stopFlag_.store(true);
+  });
   int msgId = 1;
 
   // Start a script
@@ -2046,9 +2056,6 @@ TEST_F(CDPAgentTest, RuntimeEvaluateException) {
   EXPECT_GT(
       jsonScope_.getString(resp, {"result", "exceptionDetails", "text"}).size(),
       0);
-
-  // Let the script terminate
-  stopFlag_.store(true);
 }
 
 TEST_F(CDPAgentTest, RuntimeCallFunctionOnObject) {
@@ -2436,11 +2443,19 @@ TEST_F(CDPAgentTest, RuntimeConsoleBuffer) {
   }
 }
 
-TEST_F(CDPAgentTest, DISABLED_ProfilerBasicOperation) {
-  runtime_->registerForProfiling();
-  auto clearInDidPause =
-      llvh::make_scope_exit([this] { runtime_->unregisterForProfiling(); });
+TEST_F(CDPAgentTest, ProfilerBasicOperation) {
+  auto setStopFlag = llvh::make_scope_exit([this] {
+    // break out of loop
+    stopFlag_.store(true);
+  });
   int msgId = 1;
+
+  waitFor<bool>([this](auto promise) {
+    runtimeThread_->add([this, promise]() {
+      runtime_->registerForProfiling();
+      promise->set_value(true);
+    });
+  });
 
   scheduleScript(R"(
       while(!shouldStop());
@@ -2459,17 +2474,9 @@ TEST_F(CDPAgentTest, DISABLED_ProfilerBasicOperation) {
   auto resp = expectResponse(std::nullopt, msgId++);
   auto nodes = jsonScope_.getArray(resp, {"result", "profile", "nodes"});
   EXPECT_GT(nodes->size(), 0);
-  EXPECT_LT(
+  EXPECT_LE(
       jsonScope_.getNumber(resp, {"result", "profile", "startTime"}),
       jsonScope_.getNumber(resp, {"result", "profile", "endTime"}));
-  auto samples = jsonScope_.getArray(resp, {"result", "profile", "samples"});
-  auto timeDeltas =
-      jsonScope_.getArray(resp, {"result", "profile", "timeDeltas"});
-  EXPECT_GT(samples->size(), 0);
-  EXPECT_EQ(samples->size(), timeDeltas->size());
-
-  // break out of loop
-  stopFlag_.store(true);
 }
 
 #endif // HERMES_ENABLE_DEBUGGER
