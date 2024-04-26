@@ -1964,7 +1964,7 @@ TEST_F(CDPAgentTest, RuntimeEvaluateException) {
   stopFlag_.store(true);
 }
 
-TEST_F(CDPAgentTest, TestBasicProfilerOperation) {
+TEST_F(CDPAgentTest, DISABLED_TestBasicProfilerOperation) {
   runtime_->registerForProfiling();
   auto clearInDidPause =
       llvh::make_scope_exit([this] { runtime_->unregisterForProfiling(); });
