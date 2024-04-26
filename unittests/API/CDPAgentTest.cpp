@@ -2287,4 +2287,82 @@ TEST_F(CDPAgentTest, ConsoleLog) {
        {"__proto__", PropInfo("object")}});
 }
 
+TEST_F(CDPAgentTest, ConsoleBuffer) {
+  int msgId = 1;
+
+  constexpr int kExpectedMaxBufferSize = 1000;
+  constexpr int kNumLogsToTest = kExpectedMaxBufferSize * 2;
+
+  // Generate console messages on the runtime thread
+  waitFor<bool>([this, kNumLogsToTest](auto promise) {
+    runtimeThread_->add([this, promise, kNumLogsToTest]() {
+      for (int i = 0; i < kNumLogsToTest; i++) {
+        jsi::Value value =
+            jsi::String::createFromUtf8(*runtime_, std::to_string(i));
+        std::vector<jsi::Value> args;
+        args.push_back(std::move(value));
+        cdpDebugAPI_->addConsoleMessage(
+            ConsoleMessage{0.0, ConsoleAPIType::kLog, std::move(args)});
+      }
+
+      promise->set_value(true);
+    });
+  });
+
+  bool receivedWarning = false;
+  std::array<bool, kExpectedMaxBufferSize> received;
+
+  // Test for repeated connection by sending Runtime.enable multiple times. It's
+  // expected that the message cache is always kept around and provided to the
+  // frontend each time.
+  for (int numConnect = 0; numConnect < 2; numConnect++) {
+    receivedWarning = false;
+    received.fill(false);
+
+    sendAndCheckResponse("Runtime.enable", msgId++);
+
+    // Loop for 1 iteration more than kExpectedMaxBufferSize because there is a
+    // warning message given when buffer is exceeded
+    for (size_t i = 0; i < kExpectedMaxBufferSize + 1; i++) {
+      auto note = expectNotification("Runtime.consoleAPICalled");
+      EXPECT_EQ(
+          jsonScope_.getString(note, {"params", "args", "0", "type"}),
+          "string");
+
+      size_t argCount = jsonScope_.getArray(note, {"params", "args"})->size();
+      EXPECT_EQ(argCount, 1);
+
+      std::string type = jsonScope_.getString(note, {"params", "type"});
+      std::string value =
+          jsonScope_.getString(note, {"params", "args", "0", "value"});
+      try {
+        // Verify that the latest kExpectedMaxBufferSize number of logs are
+        // emitted
+        int nthLog = std::stoi(value);
+        EXPECT_GT(nthLog, kExpectedMaxBufferSize - 1);
+        EXPECT_LT(nthLog, kNumLogsToTest);
+        EXPECT_EQ(type, "log");
+        received[nthLog % kExpectedMaxBufferSize] = true;
+      } catch (const std::exception &e) {
+        EXPECT_EQ(type, "warning");
+        EXPECT_NE(value.find("discarded"), std::string::npos);
+        receivedWarning = true;
+      }
+    }
+
+    // Make sure no more log messages arrive
+    expectNothing();
+
+    // Ensure everything was expected
+    for (size_t i = 0; i < kExpectedMaxBufferSize; i++) {
+      EXPECT_TRUE(received[i]);
+    }
+    EXPECT_TRUE(receivedWarning);
+
+    // Disable the runtime so it can be enabled again in the next iteration of
+    // the loop
+    sendAndCheckResponse("Runtime.disable", msgId++);
+  }
+}
+
 #endif // HERMES_ENABLE_DEBUGGER
