@@ -74,6 +74,7 @@ class DomainAgent {
       : executionContextID_(executionContextID),
         messageCallback_(messageCallback),
         objTable_(objTable) {}
+  virtual ~DomainAgent() {}
 
   /// Sends the provided string back to the debug client
   void sendToClient(const std::string &str) {

@@ -70,6 +70,14 @@ const JSONObject *getJSONObject(
   return static_cast<const JSONObject *>(value);
 }
 
+const JSONArray *getJSONArray(
+    const JSONValue *value,
+    std::vector<std::string> paths) {
+  value = getJSONValue(value, paths);
+  EXPECT_TRUE(JSONArray::classof(value));
+  return static_cast<const JSONArray *>(value);
+}
+
 template <typename T>
 std::unique_ptr<T> getValue(
     const std::string &message,
@@ -366,6 +374,12 @@ const JSONObject *JSONScope::getObject(
     JSONObject *obj,
     std::vector<std::string> paths) {
   return getJSONObject(obj, paths);
+}
+
+const JSONArray *JSONScope::getArray(
+    JSONObject *obj,
+    std::vector<std::string> paths) {
+  return getJSONArray(obj, paths);
 }
 
 } // namespace hermes

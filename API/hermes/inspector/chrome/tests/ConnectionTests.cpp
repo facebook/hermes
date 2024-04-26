@@ -3314,6 +3314,7 @@ TEST_F(ConnectionTests, heapSnapshotRemoteObject) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
+// Also implemented as CDPAgentTest::TestBasicProfilerOperation
 TEST_F(ConnectionTests, DISABLED_testBasicProfilerOperation) {
   SamplingProfilerRAII spRegistration(asyncRuntime);
   int msgId = 1;
