@@ -8,8 +8,24 @@
 #ifndef HERMES_UNITTESTS_API_CDPJSONHELPERS_H
 #define HERMES_UNITTESTS_API_CDPJSONHELPERS_H
 
+#include <hermes/Parser/JSONParser.h>
+
 namespace facebook {
 namespace hermes {
+
+using namespace ::hermes::parser;
+
+struct JSONScope {
+  JSONScope();
+  ~JSONScope();
+
+  JSONObject *parseObject(const std::string &str);
+  std::string getString(JSONObject *obj, std::vector<std::string> paths);
+  long long getNumber(JSONObject *obj, std::vector<std::string> paths);
+
+  struct Private;
+  std::unique_ptr<Private> private_;
+};
 
 struct FrameInfo {
   FrameInfo(const std::string &functionName, int lineNumber, int scopeCount)

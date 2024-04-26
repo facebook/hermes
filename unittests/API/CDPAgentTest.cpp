@@ -15,6 +15,7 @@
 #include <hermes/CompileJS.h>
 #include <hermes/Support/JSONEmitter.h>
 #include <hermes/cdp/CDPAgent.h>
+#include <hermes/cdp/DomainAgent.h>
 #include <hermes/hermes.h>
 #include <hermes/inspector/chrome/tests/SerialExecutor.h>
 
@@ -84,7 +85,9 @@ class CDPAgentTest : public ::testing::Test {
       std::chrono::milliseconds timeout = std::chrono::milliseconds(2500));
 
   void expectNothing();
+  JSONObject *expectNotification(const std::string &method);
 
+  void sendParameterlessRequest(const std::string &method, int id);
   void sendAndCheckResponse(const std::string &method, int id);
 
   jsi::Value shouldStop(
@@ -105,6 +108,7 @@ class CDPAgentTest : public ::testing::Test {
   std::queue<std::string> messages_;
 
   std::vector<std::string> thrownExceptions_;
+  JSONScope jsonScope_;
 };
 
 void CDPAgentTest::SetUp() {
@@ -185,6 +189,13 @@ void CDPAgentTest::expectNothing() {
       "received a notification but didn't expect one: " + message);
 }
 
+JSONObject *CDPAgentTest::expectNotification(const std::string &method) {
+  std::string message = waitForMessage();
+  JSONObject *notification = jsonScope_.parseObject(message);
+  EXPECT_EQ(jsonScope_.getString(notification, {"method"}), method);
+  return notification;
+}
+
 jsi::Value CDPAgentTest::shouldStop(
     jsi::Runtime &runtime,
     const jsi::Value &thisVal,
@@ -193,7 +204,7 @@ jsi::Value CDPAgentTest::shouldStop(
   return stopFlag_.load() ? jsi::Value(true) : jsi::Value(false);
 }
 
-void CDPAgentTest::sendAndCheckResponse(const std::string &method, int id) {
+void CDPAgentTest::sendParameterlessRequest(const std::string &method, int id) {
   std::string command;
   llvh::raw_string_ostream commandStream{command};
   ::hermes::JSONEmitter json{commandStream};
@@ -203,7 +214,11 @@ void CDPAgentTest::sendAndCheckResponse(const std::string &method, int id) {
   json.closeDict();
   commandStream.flush();
   cdpAgent_->handleCommand(command);
-  ensureOkResponse(waitForMessage(method), id);
+}
+
+void CDPAgentTest::sendAndCheckResponse(const std::string &method, int id) {
+  sendParameterlessRequest(method, id);
+  ensureOkResponse(waitForMessage(), id);
 }
 
 TEST_F(CDPAgentTest, IssuesStartupTask) {
@@ -650,6 +665,42 @@ TEST_F(CDPAgentTest, TestSetPauseOnExceptionsAll) {
   waitForScheduledScripts();
   EXPECT_EQ(thrownExceptions_.size(), 1);
   EXPECT_EQ(thrownExceptions_.back(), "Uncaught exception");
+}
+
+TEST_F(CDPAgentTest, TestRuntimeEnable) {
+  int msgId = 1;
+
+  // Verify enable gets an "OK" response
+  sendAndCheckResponse("Runtime.enable", msgId++);
+
+  // Verify the hard-coded execution context is announced.
+  auto note = expectNotification("Runtime.executionContextCreated");
+  EXPECT_EQ(
+      jsonScope_.getNumber(note, {"params", "context", "id"}),
+      kHermesExecutionContextId);
+  EXPECT_EQ(
+      jsonScope_.getString(note, {"params", "context", "name"}), "hermes");
+
+  // Verify disable gets an "OK" response
+  sendAndCheckResponse("Runtime.disable", msgId++);
+}
+
+TEST_F(CDPAgentTest, RefuseDoubleRuntimeEnable) {
+  int msgId = 1;
+  sendAndCheckResponse("Runtime.enable", msgId++);
+  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
+
+  // Verify enabling a second time fails
+  sendParameterlessRequest("Runtime.enable", msgId);
+  ensureErrorResponse(waitForMessage(), msgId++);
+}
+
+TEST_F(CDPAgentTest, RefuseRuntimeOperationsWithoutEnable) {
+  int msgId = 1;
+
+  // Verify disabling fails before enabling
+  sendParameterlessRequest("Runtime.disable", msgId);
+  ensureErrorResponse(waitForMessage(), msgId++);
 }
 
 #endif // HERMES_ENABLE_DEBUGGER
