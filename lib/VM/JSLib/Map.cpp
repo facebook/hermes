@@ -85,6 +85,12 @@ Handle<JSObject> createMapConstructor(Runtime &runtime) {
       mapPrototypeSet,
       2);
 
+  {
+    auto propValue = runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
+        mapPrototype, runtime, Predefined::getSymbolID(Predefined::set)));
+    runtime.mapPrototypeSet = std::move(propValue);
+  }
+
   defineAccessor(
       runtime,
       mapPrototype,
@@ -105,15 +111,20 @@ Handle<JSObject> createMapConstructor(Runtime &runtime) {
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
-  PseudoHandle<> propValue =
-      runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
-          mapPrototype, runtime, Predefined::getSymbolID(Predefined::entries)));
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      mapPrototype,
-      runtime,
-      Predefined::getSymbolID(Predefined::SymbolIterator),
-      dpf,
-      runtime.makeHandle<NativeFunction>(propValue.get())));
+  {
+    PseudoHandle<> propValue =
+        runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
+            mapPrototype,
+            runtime,
+            Predefined::getSymbolID(Predefined::entries)));
+    runtime.mapPrototypeEntries = std::move(propValue);
+    runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
+        mapPrototype,
+        runtime,
+        Predefined::getSymbolID(Predefined::SymbolIterator),
+        dpf,
+        Handle<NativeFunction>::vmcast(&runtime.mapPrototypeEntries)));
+  }
 
   dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.writable = 0;
@@ -134,6 +145,30 @@ Handle<JSObject> createMapConstructor(Runtime &runtime) {
       CellKind::JSMapKind);
 
   return cons;
+}
+
+/// Populate the Map with the contents of the source Map.
+/// \param target the Map to populate (newly constructed).
+/// \param src the Map to pull the entries from.
+/// \return the newly populated map.
+static ExecutionStatus
+mapFromMapFastPath(Runtime &runtime, Handle<JSMap> target, Handle<JSMap> src) {
+  // TODO: This can be improved further by avoiding any rehashes and the
+  // SmallHermesValue unbox/boxing. We should be able to make an
+  // OrderedHashMap::clone that initializes based on an existing Map
+  // and clones all entries directly somehow.
+  MutableHandle<> keyHandle{runtime};
+  MutableHandle<> valueHandle{runtime};
+  return JSMap::forEachNative(
+      src,
+      runtime,
+      [&target, &keyHandle, &valueHandle](
+          Runtime &runtime, Handle<HashMapEntry> entry) -> ExecutionStatus {
+        keyHandle = entry->key.unboxToHV(runtime);
+        valueHandle = entry->value.unboxToHV(runtime);
+        JSMap::addValue(target, runtime, keyHandle, valueHandle);
+        return ExecutionStatus::RETURNED;
+      });
 }
 
 CallResult<HermesValue>
@@ -165,10 +200,44 @@ mapConstructor(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("Property 'set' for Map is not callable");
   }
 
+  auto iterMethodRes = getMethod(
+      runtime,
+      args.getArgHandle(0),
+      runtime.makeHandle(Predefined::getSymbolID(Predefined::SymbolIterator)));
+  if (LLVM_UNLIKELY(iterMethodRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (!vmisa<Callable>(iterMethodRes->getHermesValue())) {
+    return runtime.raiseTypeError("iterator method is not callable");
+  }
+  auto iterMethod = runtime.makeHandle<Callable>(std::move(*iterMethodRes));
+
+  // Check and run fast path.
+  // If the adder is the default one, we can call JSSet::addValue directly.
+  if (LLVM_LIKELY(
+          adder.getHermesValue().getRaw() ==
+          runtime.mapPrototypeSet.getRaw())) {
+    // If the iterable is a Map with the original iterator,
+    // then we can do for-loop.
+    if (Handle<JSMap> inputMap = args.dyncastArg<JSMap>(0); inputMap &&
+        LLVM_LIKELY(iterMethod.getHermesValue().getRaw() ==
+                    runtime.mapPrototypeEntries.getRaw())) {
+      if (LLVM_UNLIKELY(
+              mapFromMapFastPath(runtime, selfHandle, inputMap) ==
+              ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      return selfHandle.getHermesValue();
+    }
+
+    // TODO: Fast path for JSArray input.
+  }
+
   return addEntriesFromIterable(
       runtime,
       selfHandle,
       args.getArgHandle(0),
+      iterMethod,
       [&runtime, selfHandle, adder](Runtime &, Handle<> key, Handle<> value) {
         return Callable::executeCall2(
                    adder,

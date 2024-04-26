@@ -455,6 +455,8 @@ CallResult<HermesValue> directEval(
 /// \param target the object to which to add the entries
 /// \param iterable iterable which contains pairs of [key, value].
 ///     Must not be undefined or null.
+/// \param method (optional) the Symbol.iterator method of the iterable,
+///   if the caller has already retrieved it.
 /// \param adder the callback for actually adding properties, with signature:
 ///     ExecutionStatus adder(Runtime &runtime, Handle<> key, Handle<> value);
 template <typename AdderCB>
@@ -462,6 +464,7 @@ CallResult<HermesValue> addEntriesFromIterable(
     Runtime &runtime,
     Handle<JSObject> target,
     Handle<> iterable,
+    llvh::Optional<Handle<Callable>> method,
     AdderCB adder) {
   GCScope gcScope{runtime};
   // 2. Assert: iterable is present, and is neither undefined nor null.
@@ -470,7 +473,7 @@ CallResult<HermesValue> addEntriesFromIterable(
       "iterable cannot be undefined or null");
   // 3. Let iteratorRecord be ? GetIterator(iterable).
   CallResult<CheckedIteratorRecord> iterRes =
-      getCheckedIterator(runtime, iterable);
+      getCheckedIterator(runtime, iterable, method);
   if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

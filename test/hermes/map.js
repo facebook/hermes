@@ -49,6 +49,23 @@ print(m.size, m.get(1), m.get(3));
 try { new Map([null]); } catch (e) { print('caught', e.name) }
 // CHECK-NEXT: caught TypeError
 
+var m = new Map([[1,2], [3,4]]);
+var m2 = new Map(m);
+print(m2.size, m2.get(1), m2.get(3));
+// CHECK-NEXT: 2 2 4
+
+var m = new Map([[1,2], [3,4]]);
+m[Symbol.iterator] = function() {
+  return {
+    next() {
+      return { value: undefined, done: true };
+    }
+  }
+}
+var m = new Map(m);
+print(m.size);
+// CHECK-NEXT: 0
+
 var oldSet = Map.prototype.set;
 Map.prototype.set = 123;
 try { new Map([[1,2]]); } catch (e) { print('caught', e.name) }

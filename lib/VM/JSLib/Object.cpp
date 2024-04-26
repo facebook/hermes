@@ -991,6 +991,7 @@ objectFromEntries(void *, Runtime &runtime, NativeArgs args) {
       runtime,
       obj,
       args.getArgHandle(0),
+      /* method */ llvh::None,
       [obj, &runtime](Runtime &, Handle<> key, Handle<> value) {
         const DefinePropertyFlags dpf =
             DefinePropertyFlags::getDefaultNewPropertyFlags();

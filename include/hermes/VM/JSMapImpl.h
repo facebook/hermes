@@ -136,6 +136,28 @@ class JSMapImpl final : public JSObject {
     return ExecutionStatus::RETURNED;
   }
 
+  /// Call the native \p callbackfn for each entry, with \p thisArg as this.
+  /// \param callback: (Runtime &, Handle<HashMapEntry>) -> ExecutionStatus.
+  template <typename CB>
+  static ExecutionStatus
+  forEachNative(Handle<JSMapImpl> self, Runtime &runtime, CB callback) {
+    self->assertInitialized();
+    MutableHandle<HashMapEntry> entry{runtime};
+    GCScopeMarkerRAII marker{runtime};
+    for (entry = self->storage_.getNonNull(runtime)->iteratorNext(runtime);
+         entry;
+         entry = self->storage_.getNonNull(runtime)->iteratorNext(
+             runtime, entry.get())) {
+      marker.flush();
+      if (LLVM_UNLIKELY(
+              callback(runtime, entry) == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+    }
+
+    return ExecutionStatus::RETURNED;
+  }
+
   /// Build the metadata for this map implementation, and store it into \p mb.
   static void MapOrSetBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
