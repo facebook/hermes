@@ -34,6 +34,9 @@ class RuntimeDomainAgent : public DomainAgent {
   void disable(const m::runtime::DisableRequest &req);
   /// Handles Runtime.getHeapUsage request
   void getHeapUsage(const m::runtime::GetHeapUsageRequest &req);
+  /// Handles Runtime.globalLexicalScopeNames request
+  void globalLexicalScopeNames(
+      const m::runtime::GlobalLexicalScopeNamesRequest &req);
 
  private:
   bool checkRuntimeEnabled(const m::Request &req);

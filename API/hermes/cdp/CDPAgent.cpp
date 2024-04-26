@@ -223,6 +223,9 @@ void CDPAgentImpl::DomainAgents::handleCommand(
   } else if (command->method == "Runtime.getHeapUsage") {
     runtimeAgent_->getHeapUsage(
         static_cast<m::runtime::GetHeapUsageRequest &>(*command));
+  } else if (command->method == "Runtime.globalLexicalScopeNames") {
+    runtimeAgent_->globalLexicalScopeNames(
+        static_cast<m::runtime::GlobalLexicalScopeNamesRequest &>(*command));
   } else {
     messageCallback_(message::makeErrorResponse(
                          command->id,

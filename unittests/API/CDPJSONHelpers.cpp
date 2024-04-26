@@ -37,11 +37,18 @@ void ensureOkResponse(const std::string &message, int id) {
 }
 
 template <typename T>
-std::unique_ptr<T> getValue(JSONValue *value, std::vector<std::string> paths) {
+std::unique_ptr<T> getValue(
+    const JSONValue *value,
+    std::vector<std::string> paths) {
   int numPaths = paths.size();
   for (int i = 0; i < numPaths; i++) {
-    EXPECT_TRUE(JSONObject::classof(value));
-    value = static_cast<JSONObject *>(value)->get(paths[i]);
+    if (JSONObject::classof(value)) {
+      value = static_cast<const JSONObject *>(value)->get(paths[i]);
+    } else if (JSONArray::classof(value)) {
+      value = static_cast<const JSONArray *>(value)->at(std::stoi(paths[i]));
+    } else {
+      EXPECT_TRUE(false);
+    }
 
     if (i != numPaths - 1) {
       EXPECT_TRUE(value != nullptr);

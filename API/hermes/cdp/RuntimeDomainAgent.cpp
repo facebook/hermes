@@ -67,6 +67,37 @@ void RuntimeDomainAgent::getHeapUsage(
   sendResponseToClient(resp);
 }
 
+void RuntimeDomainAgent::globalLexicalScopeNames(
+    const m::runtime::GlobalLexicalScopeNamesRequest &req) {
+  if (!checkRuntimeEnabled(req)) {
+    return;
+  }
+
+  const debugger::ProgramState &state =
+      runtime_.getDebugger().getProgramState();
+  const debugger::LexicalInfo &lexicalInfo = state.getLexicalInfo(0);
+  debugger::ScopeDepth scopeCount = lexicalInfo.getScopesCount();
+  if (scopeCount == 0) {
+    return;
+  }
+  const debugger::ScopeDepth globalScopeIndex = scopeCount - 1;
+  uint32_t variableCount =
+      lexicalInfo.getVariablesCountInScope(globalScopeIndex);
+
+  m::runtime::GlobalLexicalScopeNamesResponse resp;
+  resp.id = req.id;
+  resp.names.reserve(variableCount);
+  for (uint32_t i = 0; i < variableCount; i++) {
+    debugger::String name = state.getVariableInfo(0, globalScopeIndex, i).name;
+    // The global scope has some entries prefixed with '?', which
+    // are not valid identifiers.
+    if (!name.empty() && name.front() != '?') {
+      resp.names.push_back(name);
+    }
+  }
+  sendResponseToClient(resp);
+}
+
 bool RuntimeDomainAgent::checkRuntimeEnabled(const m::Request &req) {
   if (!enabled_) {
     sendResponseToClient(m::makeErrorResponse(
