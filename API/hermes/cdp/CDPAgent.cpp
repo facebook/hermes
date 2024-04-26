@@ -41,6 +41,10 @@ class CDPAgentImpl {
   /// Process a CDP command encoded in \p json.
   void handleCommand(std::string json);
 
+  /// Enable the Runtime domain without processing a CDP command or send a CDP
+  /// response.
+  void enableRuntimeDomain();
+
  private:
   /// Collection of domain-specific message handlers. These handlers require
   /// exclusive access to the runtime (whereas the CDP Agent can be used from)
@@ -62,6 +66,10 @@ class CDPAgentImpl {
     /// Process a CDP \p command encoded in JSON using the appropriate domain
     /// handler.
     void handleCommand(std::shared_ptr<message::Request> command);
+
+    /// Enable the Runtime domain without processing a CDP command or send a CDP
+    /// response.
+    void enableRuntimeDomain();
 
    private:
     /// Execution context ID associated with the HermesRuntime. This is used by
@@ -158,6 +166,13 @@ void CDPAgentImpl::handleCommand(std::string json) {
       [domainAgents = domainAgents_,
        command = std::move(command)](HermesRuntime &) {
         domainAgents->handleCommand(std::move(command));
+      });
+}
+
+void CDPAgentImpl::enableRuntimeDomain() {
+  runtimeTaskRunner_.enqueueTask(
+      [domainAgents = domainAgents_](HermesRuntime &) {
+        domainAgents->enableRuntimeDomain();
       });
 }
 
@@ -282,6 +297,10 @@ void CDPAgentImpl::DomainAgents::handleCommand(
   }
 }
 
+void CDPAgentImpl::DomainAgents::enableRuntimeDomain() {
+  runtimeAgent_->enable();
+}
+
 std::unique_ptr<CDPAgent> CDPAgent::create(
     int32_t executionContextID,
     CDPDebugAPI &cdpDebugAPI,
@@ -311,6 +330,10 @@ CDPAgent::~CDPAgent() {}
 
 void CDPAgent::handleCommand(std::string json) {
   impl_->handleCommand(json);
+}
+
+void CDPAgent::enableRuntimeDomain() {
+  impl_->enableRuntimeDomain();
 }
 
 } // namespace cdp

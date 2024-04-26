@@ -276,19 +276,12 @@ RuntimeDomainAgent::~RuntimeDomainAgent() {
   consoleMessageDispatcher_.unsubscribe(consoleMessageRegistration_);
 }
 
-void RuntimeDomainAgent::enable(const m::runtime::EnableRequest &req) {
+void RuntimeDomainAgent::enable() {
   if (enabled_) {
-    // Can't enable twice without disabling
-    sendResponseToClient(m::makeErrorResponse(
-        req.id,
-        m::ErrorCode::InvalidRequest,
-        "Runtime domain already enabled"));
     return;
   }
 
-  // Enable
   enabled_ = true;
-  sendResponseToClient(m::makeOkResponse(req.id));
 
   // Send any buffered console messages.
   size_t numConsoleMessagesDiscardedFromCache =
@@ -315,6 +308,20 @@ void RuntimeDomainAgent::enable(const m::runtime::EnableRequest &req) {
   for (auto &message : consoleMessageStorage_.messages()) {
     consoleAPICalled(message);
   }
+}
+
+void RuntimeDomainAgent::enable(const m::runtime::EnableRequest &req) {
+  if (enabled_) {
+    // Can't enable twice without disabling
+    sendResponseToClient(m::makeErrorResponse(
+        req.id,
+        m::ErrorCode::InvalidRequest,
+        "Runtime domain already enabled"));
+    return;
+  }
+
+  sendResponseToClient(m::makeOkResponse(req.id));
+  enable();
 }
 
 void RuntimeDomainAgent::disable(const m::runtime::DisableRequest &req) {
