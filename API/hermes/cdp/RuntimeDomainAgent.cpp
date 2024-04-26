@@ -385,7 +385,7 @@ void RuntimeDomainAgent::compileScript(
   std::shared_ptr<const jsi::PreparedJavaScript> preparedScript;
   try {
     preparedScript = runtime_.prepareJavaScript(source, req.sourceURL);
-  } catch (const facebook::jsi::JSIException &err) {
+  } catch (const jsi::JSIException &err) {
     resp.exceptionDetails = m::runtime::ExceptionDetails();
     resp.exceptionDetails->text = err.what();
     sendResponseToClient(resp);
@@ -452,11 +452,14 @@ void RuntimeDomainAgent::evaluate(const m::runtime::EvaluateRequest &req) {
     auto remoteObjPtr = m::runtime::makeRemoteObject(
         runtime_, result, *objTable_, objectGroup, byValue, generatePreview);
     resp.result = std::move(remoteObjPtr);
-  } catch (const facebook::jsi::JSError &error) {
+  } catch (const jsi::JSError &error) {
     resp.exceptionDetails = m::runtime::ExceptionDetails();
     resp.exceptionDetails->text = error.getMessage() + "\n" + error.getStack();
     resp.exceptionDetails->exception = m::runtime::makeRemoteObject(
         runtime_, error.value(), *objTable_, objectGroup, false, false);
+  } catch (const jsi::JSIException &err) {
+    resp.exceptionDetails = m::runtime::ExceptionDetails();
+    resp.exceptionDetails->text = err.what();
   }
 
   sendResponseToClient(resp);
@@ -502,7 +505,7 @@ void RuntimeDomainAgent::callFunctionOn(
     evalResult = runtime_.evaluateJavaScript(
         std::unique_ptr<jsi::StringBuffer>(new jsi::StringBuffer(expression)),
         kEvaluatedCodeUrl);
-  } catch (const facebook::jsi::JSError &error) {
+  } catch (const jsi::JSIException &error) {
     sendResponseToClient(m::makeErrorResponse(
         req.id,
         m::ErrorCode::InternalError,
@@ -646,7 +649,7 @@ RuntimeDomainAgent::makePropsFromValue(
             objectGroup,
             false,
             generatePreview);
-      } catch (const jsi::JSError &err) {
+      } catch (const jsi::JSIException &err) {
         // We fetched a property with a getter that threw. Show a placeholder.
         // We could have added additional info, but the UI quickly gets messy.
         desc.value = m::runtime::makeRemoteObject(

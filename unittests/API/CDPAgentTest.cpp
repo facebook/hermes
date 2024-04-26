@@ -2065,6 +2065,18 @@ TEST_F(CDPAgentTest, RuntimeEvaluateException) {
   EXPECT_GT(
       jsonScope_.getString(resp, {"result", "exceptionDetails", "text"}).size(),
       0);
+
+  // Evaluate something that isn't valid JavaScript syntax
+  sendRequest("Runtime.evaluate", msgId, [](::hermes::JSONEmitter &params) {
+    params.emitKeyValue("expression", R"(*ptr));)");
+  });
+  resp = expectResponse(std::nullopt, msgId++);
+
+  // Ensure that we catch parse exception as well
+  EXPECT_NE(
+      jsonScope_.getString(resp, {"result", "exceptionDetails", "text"})
+          .find("Compiling JS failed"),
+      std::string::npos);
 }
 
 TEST_F(CDPAgentTest, RuntimeCallFunctionOnObject) {
