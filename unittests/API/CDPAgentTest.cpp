@@ -1243,4 +1243,42 @@ TEST_F(CDPAgentTest, RuntimeGlobalLexicalScopeNames) {
   stopFlag_.store(true);
 }
 
+TEST_F(CDPAgentTest, RuntimeCompileScript) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Runtime.enable", msgId++);
+  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
+
+  // Compile a valid script
+  sendRequest("Runtime.compileScript", msgId, [](::hermes::JSONEmitter &json) {
+    json.emitKeyValue("persistScript", true);
+    json.emitKeyValue("sourceURL", "none");
+    json.emitKeyValue("expression", "1+1");
+  });
+
+  // Expect success, and a unique identifier for the script
+  auto resp = expectResponse(std::nullopt, msgId++);
+  EXPECT_EQ("userScript0", jsonScope_.getString(resp, {"result", "scriptId"}));
+}
+
+TEST_F(CDPAgentTest, RuntimeCompileScriptParseError) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Runtime.enable", msgId++);
+  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
+
+  // Compile an invalid script
+  sendRequest("Runtime.compileScript", msgId, [](::hermes::JSONEmitter &json) {
+    json.emitKeyValue("persistScript", true);
+    json.emitKeyValue("sourceURL", "none");
+    json.emitKeyValue("expression", "/oops");
+  });
+
+  // Expect it to be rejected with details about the compilation failure
+  auto resp = expectResponse(std::nullopt, msgId++);
+  EXPECT_GT(
+      jsonScope_.getString(resp, {"result", "exceptionDetails", "text"}).size(),
+      0);
+}
+
 #endif // HERMES_ENABLE_DEBUGGER

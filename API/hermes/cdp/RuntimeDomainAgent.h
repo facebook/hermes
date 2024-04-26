@@ -37,6 +37,8 @@ class RuntimeDomainAgent : public DomainAgent {
   /// Handles Runtime.globalLexicalScopeNames request
   void globalLexicalScopeNames(
       const m::runtime::GlobalLexicalScopeNamesRequest &req);
+  /// Handles Runtime.compileScript request
+  void compileScript(const m::runtime::CompileScriptRequest &req);
 
  private:
   bool checkRuntimeEnabled(const m::Request &req);
@@ -46,6 +48,10 @@ class RuntimeDomainAgent : public DomainAgent {
   /// Whether Runtime.enable was received and wasn't disabled by receiving
   /// Runtime.disable
   bool enabled_;
+
+  // preparedScripts_ stores user-entered scripts that have been prepared for
+  // execution, and may be invoked by a later command.
+  std::vector<std::shared_ptr<const jsi::PreparedJavaScript>> preparedScripts_;
 };
 
 } // namespace cdp

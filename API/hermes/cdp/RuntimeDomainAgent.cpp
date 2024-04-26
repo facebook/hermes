@@ -14,6 +14,8 @@ namespace facebook {
 namespace hermes {
 namespace cdp {
 
+static const char *const kUserEnteredScriptIdPrefix = "userScript";
+
 RuntimeDomainAgent::RuntimeDomainAgent(
     int32_t executionContextID,
     HermesRuntime &runtime,
@@ -94,6 +96,35 @@ void RuntimeDomainAgent::globalLexicalScopeNames(
     if (!name.empty() && name.front() != '?') {
       resp.names.push_back(name);
     }
+  }
+  sendResponseToClient(resp);
+}
+
+void RuntimeDomainAgent::compileScript(
+    const m::runtime::CompileScriptRequest &req) {
+  if (!checkRuntimeEnabled(req)) {
+    return;
+  }
+
+  m::runtime::CompileScriptResponse resp;
+  resp.id = req.id;
+
+  auto source = std::make_shared<jsi::StringBuffer>(req.expression);
+  std::shared_ptr<const jsi::PreparedJavaScript> preparedScript;
+  try {
+    preparedScript = runtime_.prepareJavaScript(source, req.sourceURL);
+  } catch (const facebook::jsi::JSIException &err) {
+    resp.exceptionDetails = m::runtime::ExceptionDetails();
+    resp.exceptionDetails->text = err.what();
+    sendResponseToClient(resp);
+    return;
+  }
+
+  if (req.persistScript) {
+    auto scriptId =
+        kUserEnteredScriptIdPrefix + std::to_string(preparedScripts_.size());
+    preparedScripts_.push_back(std::move(preparedScript));
+    resp.scriptId = scriptId;
   }
   sendResponseToClient(resp);
 }

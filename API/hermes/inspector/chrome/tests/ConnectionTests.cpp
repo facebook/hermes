@@ -1657,6 +1657,7 @@ TEST_F(ConnectionTests, testRuntimeEvaluateReturnByValue) {
   asyncRuntime.stop();
 }
 
+// Also implemented as CDPAgentTest::RuntimeCompileScript
 TEST_F(ConnectionTests, testRuntimeCompileScript) {
   int msgId = 1;
 
@@ -1681,6 +1682,7 @@ TEST_F(ConnectionTests, testRuntimeCompileScript) {
   asyncRuntime.stop();
 }
 
+// Also implemented as CDPAgentTest::RuntimeCompileScriptParseError
 TEST_F(ConnectionTests, testRuntimeCompileScriptParseError) {
   int msgId = 1;
 
