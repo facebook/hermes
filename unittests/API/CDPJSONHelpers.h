@@ -20,6 +20,7 @@ struct JSONScope {
   JSONScope();
   ~JSONScope();
 
+  JSONValue *parse(const std::string &str);
   JSONObject *parseObject(const std::string &str);
   std::string getString(JSONObject *obj, std::vector<std::string> paths);
   long long getNumber(JSONObject *obj, std::vector<std::string> paths);
@@ -152,6 +153,12 @@ m::debugger::BreakpointId ensureSetBreakpointByUrlResponse(
 std::unordered_map<std::string, std::string> ensureProps(
     const std::string &message,
     const std::unordered_map<std::string, PropInfo> &infos);
+
+std::string serializeRuntimeCallFunctionOnRequest(
+    const m::runtime::CallFunctionOnRequest &&req);
+m::runtime::GetPropertiesResponse parseRuntimeGetPropertiesResponse(
+    const std::string &json);
+
 } // namespace hermes
 } // namespace facebook
 
