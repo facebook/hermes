@@ -340,7 +340,7 @@ m::debugger::BreakpointId ensureSetBreakpointByUrlResponse(
 }
 
 std::string serializeRuntimeCallFunctionOnRequest(
-    const m::runtime::CallFunctionOnRequest &&req) {
+    const m::runtime::CallFunctionOnRequest &req) {
   return req.toJsonStr();
 }
 
