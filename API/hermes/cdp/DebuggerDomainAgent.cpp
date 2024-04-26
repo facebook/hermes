@@ -85,6 +85,36 @@ void DebuggerDomainAgent::enable(const m::debugger::EnableRequest &req) {
   // The debugger just got enabled; inform the client about all scripts.
   for (auto &srcLoc : runtime_.getDebugger().getLoadedScripts()) {
     sendScriptParsedNotificationToClient(srcLoc);
+
+    // TODO: Add test for this once state persistence is implemented
+    // Notify the client about all breakpoints in this script
+    for (const auto &[cdpBreakpointID, cdpBreakpoint] : cdpBreakpoints_) {
+      for (const HermesBreakpoint &hermesBreakpoint :
+           cdpBreakpoint.hermesBreakpoints) {
+        if (hermesBreakpoint.scriptID == srcLoc.fileId) {
+          // This should have been checked before storing the Hermes
+          // breakpoint in the CDP breakpoint.
+          assert(
+              hermesBreakpoint.breakpointID != debugger::kInvalidBreakpoint &&
+              "Invalid breakpoint");
+          debugger::BreakpointInfo breakpointInfo =
+              runtime_.getDebugger().getBreakpointInfo(
+                  hermesBreakpoint.breakpointID);
+          if (!breakpointInfo.resolved) {
+            // Resolved state changed between breakpoint creation and
+            // notification
+            assert(false && "Previously resolved breakpoint unresolved");
+            continue;
+          }
+
+          m::debugger::BreakpointResolvedNotification resolved;
+          resolved.breakpointId = std::to_string(cdpBreakpointID);
+          resolved.location =
+              m::debugger::makeLocation(breakpointInfo.resolvedLocation);
+          sendNotificationToClient(resolved);
+        }
+      }
+    }
   }
 
   runtime_.getDebugger().setShouldPauseOnScriptLoad(true);
@@ -265,6 +295,50 @@ void DebuggerDomainAgent::setBreakpoint(
   sendResponseToClient(resp);
 }
 
+void DebuggerDomainAgent::setBreakpointByUrl(
+    const m::debugger::SetBreakpointByUrlRequest &req) {
+  if (!checkDebuggerEnabled(req)) {
+    return;
+  }
+
+  // TODO: getLocationByBreakpointRequest(req);
+  // TODO: failure to parse
+  if (!req.url.has_value()) {
+    sendResponseToClient(m::makeErrorResponse(
+        req.id,
+        m::ErrorCode::InvalidRequest,
+        "URL required; regex unsupported"));
+    return;
+  }
+
+  // Create the CDP breakpoint
+  CDPBreakpointDescription description;
+  description.line = req.lineNumber;
+  description.column = req.columnNumber;
+  description.condition = req.condition;
+  const std::string &url = req.url.value();
+  description.url = url;
+  auto [breakpointID, breakpoint] = createCDPBreakpoint(std::move(description));
+
+  // Create the response
+  m::debugger::SetBreakpointByUrlResponse resp;
+  resp.id = req.id;
+  resp.breakpointId = std::to_string(breakpointID);
+
+  // Apply the breakpoint to all matching scripts that are already present,
+  // populating the response with any successful applications.
+  for (auto &srcLoc : runtime_.getDebugger().getLoadedScripts()) {
+    if (srcLoc.fileName == url) {
+      if (std::optional<HermesBreakpointLocation> hermesBreakpoint =
+              applyBreakpoint(breakpoint, srcLoc.fileId)) {
+        resp.locations.emplace_back(
+            m::debugger::makeLocation(hermesBreakpoint.value().location));
+      }
+    }
+  }
+  sendResponseToClient(resp);
+}
+
 void DebuggerDomainAgent::removeBreakpoint(
     const m::debugger::RemoveBreakpointRequest &req) {
   auto cdpID = std::stoull(req.breakpointId);
@@ -344,6 +418,20 @@ void DebuggerDomainAgent::processNewLoadedScript() {
     }
 
     sendScriptParsedNotificationToClient(loc);
+
+    // Apply existing breakpoints to the new script.
+    for (auto &[id, breakpoint] : cdpBreakpoints_) {
+      if (loc.fileName == breakpoint.description.url) {
+        auto breakpointInfo = applyBreakpoint(breakpoint, loc.fileId);
+        if (breakpointInfo) {
+          m::debugger::BreakpointResolvedNotification resolved;
+          resolved.breakpointId = std::to_string(id);
+          resolved.location =
+              m::debugger::makeLocation(breakpointInfo.value().location);
+          sendNotificationToClient(resolved);
+        }
+      }
+    }
   }
 }
 
@@ -410,6 +498,26 @@ DebuggerDomainAgent::createHermesBreakpont(
   }
 
   return HermesBreakpointLocation{breakpointID, info.resolvedLocation};
+}
+
+/// Apply a CDP breakpoint to a script, creating a Hermes breakpoint and
+/// associating it with the specified CDP breakpoint. Returns the newly-
+/// created Hermes breakpoint if successful, nullopt otherwise.
+std::optional<HermesBreakpointLocation> DebuggerDomainAgent::applyBreakpoint(
+    CDPBreakpoint &breakpoint,
+    debugger::ScriptID scriptID) {
+  // Create the Hermes breakpoint
+  std::optional<HermesBreakpointLocation> hermesBreakpoint =
+      createHermesBreakpont(scriptID, breakpoint.description);
+  if (!hermesBreakpoint) {
+    return {};
+  }
+
+  // Associate this Hermes breakpoint with the CDP breakpoint
+  breakpoint.hermesBreakpoints.push_back(
+      HermesBreakpoint{hermesBreakpoint.value().id, scriptID});
+
+  return hermesBreakpoint;
 }
 
 bool DebuggerDomainAgent::checkDebuggerEnabled(const m::Request &req) {

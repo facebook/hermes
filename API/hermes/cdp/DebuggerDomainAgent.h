@@ -111,6 +111,9 @@ class DebuggerDomainAgent : public DomainAgent {
   /// Debugger.setBreakpoint creates a CDP breakpoint that applies to exactly
   /// one script (identified by script ID) that does not survive reloads.
   void setBreakpoint(const m::debugger::SetBreakpointRequest &req);
+  // Debugger.setBreakpointByUrl creates a CDP breakpoint that may apply to
+  // multiple scripts (identified by URL), and survives reloads.
+  void setBreakpointByUrl(const m::debugger::SetBreakpointByUrlRequest &req);
   /// Handles Debugger.removeBreakpoint
   void removeBreakpoint(const m::debugger::RemoveBreakpointRequest &req);
   /// Handles Debugger.setBreakpointsActive
@@ -145,6 +148,10 @@ class DebuggerDomainAgent : public DomainAgent {
   std::optional<HermesBreakpointLocation> createHermesBreakpont(
       debugger::ScriptID scriptID,
       const CDPBreakpointDescription &description);
+
+  std::optional<HermesBreakpointLocation> applyBreakpoint(
+      CDPBreakpoint &breakpoint,
+      debugger::ScriptID scriptID);
 
   bool checkDebuggerEnabled(const m::Request &req);
   bool checkDebuggerPaused(const m::Request &req);

@@ -1004,7 +1004,7 @@ TEST_F(CDPAgentTest, TestSetBreakpointById) {
   commandStream.flush();
   cdpAgent_->handleCommand(command);
 
-  ensureSetBreakpointResponse(waitForMessage(), msgId++, scriptID, 2, 4);
+  ensureSetBreakpointResponse(waitForMessage(), msgId++, {scriptID, 2, 4});
 
   sendAndCheckResponse("Debugger.resume", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
@@ -1013,6 +1013,245 @@ TEST_F(CDPAgentTest, TestSetBreakpointById) {
 
   sendAndCheckResponse("Debugger.resume", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
+TEST_F(CDPAgentTest, TestSetBreakpointByUrl) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    var a = 1 + 2;
+    debugger;      // [1] (line 2) hit debugger statement,
+                   //     set breakpoint on line 5
+    var b = a / 2;
+    var c = a + b; // [2] (line 5) hit breakpoint, step over
+    var d = b - c; // [3] (line 6) resume
+    var e = c * d;
+    var f = 10;
+  )");
+
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+  // [1] (line 2) hit debugger statement, set breakpoint on line 6
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+
+  sendRequest(
+      "Debugger.setBreakpointByUrl", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("url", kDefaultUrl);
+        json.emitKeyValue("lineNumber", 5);
+        json.emitKeyValue("columnNumber", 0);
+      });
+  ensureSetBreakpointByUrlResponse(waitForMessage(), msgId++, {{5}});
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // [2] (line 5) hit breakpoint, step over
+  ensurePaused(waitForMessage(), "other", {{"global", 5, 1}});
+  sendAndCheckResponse("Debugger.stepOver", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // [3] (line 6) resume
+  ensurePaused(waitForMessage(), "other", {{"global", 6, 1}});
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
+TEST_F(CDPAgentTest, TestSetMultiLocationBreakpoint) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(
+      R"(
+        function one() {
+          var a = 1;
+          var b = 2;
+          var c = a + b;
+        }
+  )",
+      "someFile");
+
+  scheduleScript(
+      R"(
+        function two() {
+          var d = 3;
+          var e = 4;
+          var f = d + e;
+        }
+  )",
+      "someFile");
+
+  scheduleScript(
+      R"(
+    debugger; // First break, line 1
+    one();
+    two();
+    debugger; // Last break, line 4
+  )",
+      "doesntMatch");
+
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+  // First break, the first "debugger;"
+  ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
+
+  // Set a breakpoint that applies to two Hermes locations
+  sendRequest(
+      "Debugger.setBreakpointByUrl", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("url", "someFile");
+        json.emitKeyValue("lineNumber", 2);
+        json.emitKeyValue("columnNumber", 0);
+      });
+  ensureSetBreakpointByUrlResponse(waitForMessage(), msgId++, {{2}, {2}});
+
+  // Continue so we can hit the breakpoints...
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Second break, breakpoint in function "one"
+  ensurePaused(waitForMessage(), "other", {{"one", 2, 2}, {"global", 2, 1}});
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Third break, breakpoint in function "two"
+  ensurePaused(waitForMessage(), "other", {{"two", 2, 2}, {"global", 3, 1}});
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Last break, the second "debugger;""
+  ensurePaused(waitForMessage(), "other", {{"global", 4, 1}});
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
+TEST_F(CDPAgentTest, TestDeleteMultiLocationBreakpoint) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(
+      R"(
+        function one() {
+          var a = 1;
+          var b = 2;
+          var c = a + b;
+        }
+  )",
+      "someFile");
+
+  scheduleScript(
+      R"(
+        function two() {
+          var d = 3;
+          var e = 4;
+          var f = d + e;
+        }
+  )",
+      "someFile");
+
+  scheduleScript(
+      R"(
+    debugger; // First break, line 1
+    one();
+    two();
+    debugger; // Last break, line 4
+  )",
+      "doesntMatch");
+
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+  // First break, the first "debugger;"
+  ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
+
+  // Set a breakpoint that applies to two Hermes locations
+  sendRequest(
+      "Debugger.setBreakpointByUrl", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("url", "someFile");
+        json.emitKeyValue("lineNumber", 2);
+        json.emitKeyValue("columnNumber", 0);
+      });
+  auto breakpointId =
+      ensureSetBreakpointByUrlResponse(waitForMessage(), msgId++, {{2}, {2}});
+
+  sendRequest(
+      "Debugger.removeBreakpoint",
+      msgId,
+      [breakpointId](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("breakpointId", breakpointId);
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  // Continue so we can hit the breakpoints...
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Breakpoints that were set and deleted are not hit
+
+  // Last break, the second "debugger;""
+  ensurePaused(waitForMessage(), "other", {{"global", 4, 1}});
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
+TEST_F(CDPAgentTest, TestApplyBreakpointsToNewLoadedScripts) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  // Set a breakpoint that applies to zero Hermes locations
+  sendRequest(
+      "Debugger.setBreakpointByUrl", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("url", "someFile");
+        json.emitKeyValue("lineNumber", 2);
+        json.emitKeyValue("columnNumber", 0);
+      });
+  // Ensure the breakpoint was successfully created
+  ensureSetBreakpointByUrlResponse(waitForMessage(), msgId++, {});
+
+  // Load a script that matches the breakpoint description
+  scheduleScript(
+      R"(
+        var a = 1;
+        var b = 2;
+        var c = a + b;
+  )",
+      "someFile");
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // Ensure the breakpoint was applied
+  auto resolution = expectNotification("Debugger.breakpointResolved");
+  auto resolvedScriptID =
+      jsonScope_.getString(resolution, {"params", "location", "scriptId"});
+  auto resolvedLineNumber =
+      jsonScope_.getNumber(resolution, {"params", "location", "lineNumber"});
+  EXPECT_EQ(resolvedScriptID, scriptID);
+  EXPECT_EQ(resolvedLineNumber, 2);
+
+  // Ensure the breakpoint is hit
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Load a script that doesn't match the breakpoint description
+  scheduleScript(
+      R"(
+        var a = 1;
+        var b = 2;
+        var c = a + b;
+  )",
+      "anotherFile");
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+  // Ensure the breakpoint wasn't applied (i.e. no breakpoint resolved
+  // notification and no breakpoints hit).
+  expectNothing();
 }
 
 TEST_F(CDPAgentTest, TestRemoveBreakpoint) {
