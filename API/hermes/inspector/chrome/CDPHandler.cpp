@@ -26,7 +26,6 @@
 #include <hermes/inspector/chrome/MessageConverters.h>
 #include <hermes/inspector/chrome/RemoteObjectConverters.h>
 #include <hermes/inspector/chrome/RemoteObjectsTable.h>
-#include <hermes/inspector/chrome/ThreadSafetyAnalysis.h>
 #include <jsi/instrumentation.h>
 #include <llvh/ADT/MapVector.h>
 #include <llvh/ADT/ScopeExit.h>
@@ -294,8 +293,7 @@ class CDPHandlerImpl : public message::RequestHandler,
   /// allowing other threads to enqueue work. This requires \p mutex_ to be
   /// locked exactly once before calling, otherwise \p mutex_ won't be fully
   /// released, and the new work being awaited can never arrive.
-  void waitForAsyncPauseTrigger(std::unique_lock<std::recursive_mutex> &lock)
-      TSA_NO_THREAD_SAFETY_ANALYSIS;
+  void waitForAsyncPauseTrigger(std::unique_lock<std::recursive_mutex> &lock);
 
   /// Create a CDP breakpoint with a \p description of where to break, and
   /// (optionally) a \p hermesBreakpointID that has already been applied.
@@ -479,9 +477,9 @@ class CDPHandlerImpl : public message::RequestHandler,
   bool hasVirtualBreakpoint(const std::string &category);
   bool removeVirtualBreakpoint(const std::string &id);
   std::unordered_map<std::string, std::unordered_set<std::string>>
-      virtualBreakpoints_ TSA_GUARDED_BY(mutex_);
+      virtualBreakpoints_;
 
-  CDPMessageCallbackFunction msgCallback_ TSA_GUARDED_BY(mutex_);
+  CDPMessageCallbackFunction msgCallback_;
   OnUnregisterFunction onUnregister_;
 
   // objTable_ is protected by the inspector lock. It should only be accessed
@@ -532,13 +530,10 @@ class CDPHandlerImpl : public message::RequestHandler,
   /// multiple times on the same thread (the runtime thread) without
   /// deadlocking.
   std::recursive_mutex mutex_;
-  std::queue<std::pair<int, Execution>> pendingDesiredExecutions_
-      TSA_GUARDED_BY(mutex_);
-  std::queue<std::pair<int, Attachment>> pendingDesiredAttachments_
-      TSA_GUARDED_BY(mutex_);
-  std::queue<std::pair<int, debugger::StepMode>> pendingDesiredSteps_
-      TSA_GUARDED_BY(mutex_);
-  bool awaitingDebuggerOnStart_ TSA_GUARDED_BY(mutex_);
+  std::queue<std::pair<int, Execution>> pendingDesiredExecutions_;
+  std::queue<std::pair<int, Attachment>> pendingDesiredAttachments_;
+  std::queue<std::pair<int, debugger::StepMode>> pendingDesiredSteps_;
+  bool awaitingDebuggerOnStart_;
   /// \p signal_ is used to allow the runtime thread to await another command
   /// from a non-runtime thread, temporarily releasing \p mutex_ while waiting.
   /// This is a \p condition_variable_any (rather than a \p condition_variable)
@@ -556,9 +551,9 @@ class CDPHandlerImpl : public message::RequestHandler,
         const facebook::hermes::debugger::EvalResult &)>>
         onEvalCompleteCallback;
   };
-  std::queue<PendingEvalReq> pendingEvals_ TSA_GUARDED_BY(mutex_);
+  std::queue<PendingEvalReq> pendingEvals_;
   std::queue<std::function<void(const debugger::ProgramState &state)>>
-      pendingFuncs_ TSA_GUARDED_BY(mutex_);
+      pendingFuncs_;
 };
 
 CDPHandlerImpl::CDPHandlerImpl(
