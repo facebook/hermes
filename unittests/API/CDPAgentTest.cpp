@@ -511,12 +511,18 @@ TEST_F(CDPAgentTest, TestEnableWhenAlreadyPaused) {
             [promise](
                 HermesRuntime &runtime,
                 AsyncDebuggerAPI &asyncDebugger,
-                DebuggerEventType event) { promise->set_value(true); });
+                DebuggerEventType event) {
+              if (event == DebuggerEventType::ExplicitPause) {
+                promise->set_value(true);
+              }
+            });
         runtime_->getDebugger().triggerAsyncPause(AsyncPauseKind::Explicit);
       },
       "wait on explicit pause");
 
-  // At this point, the runtime thread is paused due to Explicit AsyncBreak
+  // At this point, the runtime thread is paused due to Explicit AsyncBreak. Now
+  // we'll test if we can perform Debugger.enable while the runtime is in that
+  // state.
 
   sendAndCheckResponse("Debugger.enable", msgId++);
   ensureNotification(
@@ -529,16 +535,17 @@ TEST_F(CDPAgentTest, TestEnableWhenAlreadyPaused) {
       "other",
       {FrameInfo("global", 0, 1).setLineNumberMax(9)});
 
-  // At this point we know the runtime thread is paused, so it should be safe to
-  // call resumeFromPaused() directly.
-  asyncDebuggerAPI_->resumeFromPaused(AsyncDebugCommand::Continue);
-
   // After removing this callback, AsyncDebuggerAPI will still have another
   // callback registered by CDPAgent. Therefore, JS will not continue by itself.
-  // But because of the resumeFromPaused() in the previous line, removing the
-  // callback should wake up the runtime thread and check that a next command
-  // has been set.
   asyncDebuggerAPI_->removeDebuggerEventCallback_TS(eventCallbackID);
+  // Have to manually resume it:
+  waitFor<bool>([this](auto promise) {
+    asyncDebuggerAPI_->triggerInterrupt_TS(
+        [this, promise](HermesRuntime &runtime) {
+          asyncDebuggerAPI_->resumeFromPaused(AsyncDebugCommand::Continue);
+          promise->set_value(true);
+        });
+  });
 
   ensureNotification(waitForMessage("Debugger.resumed"), "Debugger.resumed");
 
