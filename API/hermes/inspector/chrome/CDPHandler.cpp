@@ -180,7 +180,8 @@ class CDPHandlerImpl : public message::RequestHandler,
   CDPHandlerImpl(
       std::unique_ptr<RuntimeAdapter> adapter,
       bool waitForDebugger,
-      std::shared_ptr<State> state);
+      std::shared_ptr<State> state,
+      const CDPHandlerSessionConfig &sessionConfig);
   ~CDPHandlerImpl() override;
 
   bool registerCallbacks(
@@ -504,7 +505,7 @@ class CDPHandlerImpl : public message::RequestHandler,
   /// ordering is important because frontend DevTools groups by the source URL
   /// and then takes the latest scriptParsed version as the latest version.
   llvh::MapVector<uint32_t, Script> loadedScripts_;
-  bool runtimeEnabled_ = false;
+  bool runtimeEnabled_;
 
   /// Details of each CDP breakpoint that has been created, and not
   /// yet destroyed.
@@ -563,9 +564,11 @@ class CDPHandlerImpl : public message::RequestHandler,
 CDPHandlerImpl::CDPHandlerImpl(
     std::unique_ptr<RuntimeAdapter> adapter,
     bool waitForDebugger,
-    std::shared_ptr<State> state)
+    std::shared_ptr<State> state,
+    const CDPHandlerSessionConfig &sessionConfig)
     : runtimeAdapter_(std::move(adapter)),
       runtime_(runtimeAdapter_->getRuntime()),
+      runtimeEnabled_(sessionConfig.isRuntimeDomainEnabled),
       awaitingDebuggerOnStart_(waitForDebugger) {
   // Install __tickleJs. Do this activity before the call to setEventObserver,
   // so we don't get any didPause callback firings for these.
@@ -616,6 +619,17 @@ bool CDPHandlerImpl::registerCallbacks(
 
   msgCallback_ = msgCallback;
   onUnregister_ = onUnregister;
+
+  if (runtimeEnabled_) {
+    // HACK: Ideally we would do this in the constructor, but registerCallbacks
+    // is the earliest point where we have a connection to the client and can
+    // send any messages that are required by the current session state.
+    m::runtime::ExecutionContextCreatedNotification note;
+    note.context.id = CDPHandlerImpl::kHermesExecutionContextId;
+    note.context.name = "hermes";
+    sendNotificationToClient(note);
+  }
+
   return true;
 }
 
@@ -1825,10 +1839,17 @@ bool CDPHandlerImpl::validateExecutionContext(
 std::shared_ptr<CDPHandler> CDPHandler::create(
     std::unique_ptr<RuntimeAdapter> adapter,
     bool waitForDebugger,
-    std::shared_ptr<State> state) {
+    bool processConsoleAPI,
+    std::shared_ptr<State> state,
+    const CDPHandlerSessionConfig &sessionConfig) {
   // Can't use make_shared here since the constructor is private.
   return std::shared_ptr<CDPHandler>(new CDPHandler(
-      std::move(adapter), "", waitForDebugger, true, std::move(state)));
+      std::move(adapter),
+      "",
+      waitForDebugger,
+      processConsoleAPI,
+      std::move(state),
+      sessionConfig));
 }
 
 std::shared_ptr<CDPHandler> CDPHandler::create(
@@ -1836,14 +1857,16 @@ std::shared_ptr<CDPHandler> CDPHandler::create(
     const std::string &title,
     bool waitForDebugger,
     bool processConsoleAPI,
-    std::shared_ptr<State> state) {
+    std::shared_ptr<State> state,
+    const CDPHandlerSessionConfig &sessionConfig) {
   // Can't use make_shared here since the constructor is private.
   return std::shared_ptr<CDPHandler>(new CDPHandler(
       std::move(adapter),
       title,
       waitForDebugger,
       processConsoleAPI,
-      std::move(state)));
+      std::move(state),
+      sessionConfig));
 }
 
 CDPHandler::CDPHandler(
@@ -1851,11 +1874,13 @@ CDPHandler::CDPHandler(
     const std::string &title,
     bool waitForDebugger,
     bool processConsoleAPI,
-    std::shared_ptr<State> state)
+    std::shared_ptr<State> state,
+    const CDPHandlerSessionConfig &sessionConfig)
     : impl_(std::make_shared<CDPHandlerImpl>(
           std::move(adapter),
           waitForDebugger,
-          std::move(state))),
+          std::move(state),
+          sessionConfig)),
       title_(title) {
   if (processConsoleAPI) {
     impl_->installLogHandler();

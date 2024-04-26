@@ -29,6 +29,11 @@ class CDPHandlerImpl;
 
 struct State;
 
+/// Utility struct to configure the initial state of the CDP session.
+struct INSPECTOR_EXPORT CDPHandlerSessionConfig {
+  bool isRuntimeDomainEnabled{false};
+};
+
 /// CDPHandler processes CDP messages between the client and the debugger.
 /// It performs no networking or connection logic itself.
 /// The CDP Handler is invoked from multiple threads. The locking strategy is
@@ -48,9 +53,10 @@ class INSPECTOR_EXPORT CDPHandler {
   CDPHandler(
       std::unique_ptr<RuntimeAdapter> adapter,
       const std::string &title,
-      bool waitForDebugger = false,
-      bool processConsoleAPI = true,
-      std::shared_ptr<State> state = nullptr);
+      bool waitForDebugger,
+      bool processConsoleAPI,
+      std::shared_ptr<State> state,
+      const CDPHandlerSessionConfig &sessionConfig);
 
  public:
   /// Creating a CDPHandler enables the debugger on the provided runtime. This
@@ -60,14 +66,17 @@ class INSPECTOR_EXPORT CDPHandler {
   static std::shared_ptr<CDPHandler> create(
       std::unique_ptr<RuntimeAdapter> adapter,
       bool waitForDebugger = false,
-      std::shared_ptr<State> state = nullptr);
+      bool processConsoleAPI = true,
+      std::shared_ptr<State> state = nullptr,
+      const CDPHandlerSessionConfig &sessionConfig = {});
   /// Temporarily kept to allow React Native build to still work
   static std::shared_ptr<CDPHandler> create(
       std::unique_ptr<RuntimeAdapter> adapter,
       const std::string &title,
       bool waitForDebugger = false,
       bool processConsoleAPI = true,
-      std::shared_ptr<State> state = nullptr);
+      std::shared_ptr<State> state = nullptr,
+      const CDPHandlerSessionConfig &sessionConfig = {});
   ~CDPHandler();
 
   /// getTitle returns the name of the friendly name of the runtime that's shown
