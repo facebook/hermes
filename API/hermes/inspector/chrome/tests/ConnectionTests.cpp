@@ -652,6 +652,7 @@ TEST_F(ConnectionTests, testRespondsErrorToUnknownRequests) {
   EXPECT_EQ(resp2.code, -32601);
 }
 
+// Also implemented as CDPAgentTest::TestDebuggerStatement
 TEST_F(ConnectionTests, testDebuggerStatement) {
   int msgId = 1;
 

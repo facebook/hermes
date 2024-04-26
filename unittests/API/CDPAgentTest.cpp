@@ -431,4 +431,23 @@ TEST_F(CDPAgentTest, TestAsyncPauseWhileRunning) {
   stopFlag_.store(true);
 }
 
+TEST_F(CDPAgentTest, TestDebuggerStatement) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  // debugger; statement won't work unless Debugger domain is enabled
+  scheduleScript(R"(
+    var a = 1 + 2;
+    debugger;       // [1] (line 2) hit debugger statement, resume
+    var b = a / 2;
+  )");
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+  // [1] (line 2) hit debugger statement, resume
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
 #endif // HERMES_ENABLE_DEBUGGER
