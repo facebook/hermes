@@ -312,8 +312,8 @@ void RuntimeDomainAgent::enable() {
 
 void RuntimeDomainAgent::enable(const m::runtime::EnableRequest &req) {
   // Match V8 behavior of returning success even if domain is already enabled
-  sendResponseToClient(m::makeOkResponse(req.id));
   enable();
+  sendResponseToClient(m::makeOkResponse(req.id));
 }
 
 void RuntimeDomainAgent::disable(const m::runtime::DisableRequest &req) {

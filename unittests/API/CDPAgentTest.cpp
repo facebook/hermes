@@ -528,13 +528,15 @@ TEST_F(CDPAgentTest, DebuggerScriptsOnEnable) {
   scheduleScript("true");
 
   // Verify that upon enable, we get notification of existing scripts
-  sendAndCheckResponse("Debugger.enable", msgId++);
+  sendParameterlessRequest("Debugger.enable", msgId);
   ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+  ensureOkResponse(waitForMessage(), msgId++);
 
   sendAndCheckResponse("Debugger.disable", msgId++);
 
-  sendAndCheckResponse("Debugger.enable", msgId++);
+  sendParameterlessRequest("Debugger.enable", msgId);
   ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+  ensureOkResponse(waitForMessage(), msgId++);
 }
 
 TEST_F(CDPAgentTest, DebuggerEnableWhenAlreadyPaused) {
@@ -573,7 +575,7 @@ TEST_F(CDPAgentTest, DebuggerEnableWhenAlreadyPaused) {
   // we'll test if we can perform Debugger.enable while the runtime is in that
   // state.
 
-  sendAndCheckResponse("Debugger.enable", msgId++);
+  sendParameterlessRequest("Debugger.enable", msgId);
   ensureNotification(
       waitForMessage("Debugger.scriptParsed"), "Debugger.scriptParsed");
 
@@ -583,6 +585,8 @@ TEST_F(CDPAgentTest, DebuggerEnableWhenAlreadyPaused) {
       waitForMessage("paused"),
       "other",
       {FrameInfo("global", 0, 1).setLineNumberMax(9)});
+
+  ensureOkResponse(waitForMessage(), msgId++);
 
   // After removing this callback, AsyncDebuggerAPI will still have another
   // callback registered by CDPAgent. Therefore, JS will not continue by itself.
@@ -618,12 +622,13 @@ TEST_F(CDPAgentTest, DebuggerScriptsOrdering) {
 
   // Make sure the same ordering is retained after a disable request
   sendAndCheckResponse("Debugger.disable", msgId++);
-  sendAndCheckResponse("Debugger.enable", msgId++);
+  sendParameterlessRequest("Debugger.enable", msgId);
   for (int i = 0; i < kNumScriptParsed; i++) {
     std::string notification = waitForMessage();
     ensureNotification(notification, "Debugger.scriptParsed");
     EXPECT_EQ(notifications[i], notification);
   }
+  ensureOkResponse(waitForMessage(), msgId++);
 }
 
 TEST_F(CDPAgentTest, DebuggerBytecodeScript) {
@@ -671,8 +676,9 @@ TEST_F(CDPAgentTest, DebuggerAsyncPauseWhileRunning) {
     var d = -accum;
   )");
 
-  sendAndCheckResponse("Debugger.enable", msgId++);
+  sendParameterlessRequest("Debugger.enable", msgId);
   ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+  ensureOkResponse(waitForMessage(), msgId++);
 
   // send some number of async pauses, make sure that we always stop before
   // the end of the loop on line 9
@@ -2418,7 +2424,7 @@ TEST_F(CDPAgentTest, RuntimeConsoleBuffer) {
     receivedWarning = false;
     received.fill(false);
 
-    sendAndCheckResponse("Runtime.enable", msgId++);
+    sendParameterlessRequest("Runtime.enable", msgId);
 
     // Loop for 1 iteration more than kExpectedMaxBufferSize because there is a
     // warning message given when buffer is exceeded
@@ -2448,6 +2454,8 @@ TEST_F(CDPAgentTest, RuntimeConsoleBuffer) {
         receivedWarning = true;
       }
     }
+
+    ensureOkResponse(waitForMessage(), msgId++);
 
     // Make sure no more log messages arrive
     expectNothing();

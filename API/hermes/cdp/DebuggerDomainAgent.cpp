@@ -111,7 +111,6 @@ void DebuggerDomainAgent::enable(const m::debugger::EnableRequest &req) {
     return;
   }
   enabled_ = true;
-  sendResponseToClient(m::makeOkResponse(req.id));
 
   // The debugger just got enabled; inform the client about all scripts.
   for (auto &srcLoc : runtime_.getDebugger().getLoadedScripts()) {
@@ -163,6 +162,8 @@ void DebuggerDomainAgent::enable(const m::debugger::EnableRequest &req) {
     paused_ = true;
     sendPausedNotificationToClient();
   }
+
+  sendResponseToClient(m::makeOkResponse(req.id));
 }
 
 void DebuggerDomainAgent::disable(const m::debugger::DisableRequest &req) {
