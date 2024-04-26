@@ -25,7 +25,8 @@ class RuntimeDomainAgent : public DomainAgent {
   RuntimeDomainAgent(
       int32_t executionContextID,
       HermesRuntime &runtime_,
-      SynchronizedOutboundCallback messageCallback);
+      SynchronizedOutboundCallback messageCallback,
+      std::shared_ptr<old_cdp::RemoteObjectsTable> objTable);
   ~RuntimeDomainAgent();
 
   /// Handles Runtime.enable request
@@ -39,9 +40,22 @@ class RuntimeDomainAgent : public DomainAgent {
       const m::runtime::GlobalLexicalScopeNamesRequest &req);
   /// Handles Runtime.compileScript request
   void compileScript(const m::runtime::CompileScriptRequest &req);
+  /// Handles Runtime.getProperties request
+  void getProperties(const m::runtime::GetPropertiesRequest &req);
 
  private:
   bool checkRuntimeEnabled(const m::Request &req);
+
+  std::vector<m::runtime::PropertyDescriptor> makePropsFromScope(
+      std::pair<uint32_t, uint32_t> frameAndScopeIndex,
+      const std::string &objectGroup,
+      const debugger::ProgramState &state,
+      bool generatePreview);
+  std::vector<m::runtime::PropertyDescriptor> makePropsFromValue(
+      const jsi::Value &value,
+      const std::string &objectGroup,
+      bool onlyOwnProperties,
+      bool generatePreview);
 
   HermesRuntime &runtime_;
 

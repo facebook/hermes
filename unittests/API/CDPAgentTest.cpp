@@ -117,6 +117,12 @@ class CDPAgentTest : public ::testing::Test {
   void waitForTestSignal(
       std::chrono::milliseconds timeout = std::chrono::milliseconds(2500));
 
+  std::unordered_map<std::string, std::string> getAndEnsureProps(
+      int msgId,
+      const std::string &objectId,
+      const std::unordered_map<std::string, PropInfo> &infos,
+      bool ownProperties = true);
+
   std::unique_ptr<HermesRuntime> runtime_;
   std::unique_ptr<AsyncDebuggerAPI> asyncDebuggerAPI_;
   std::unique_ptr<SerialExecutor> runtimeThread_;
@@ -328,6 +334,21 @@ void CDPAgentTest::sendEvalRequest(
   json.closeDict();
   commandStream.flush();
   cdpAgent_->handleCommand(command);
+}
+
+std::unordered_map<std::string, std::string> CDPAgentTest::getAndEnsureProps(
+    int msgId,
+    const std::string &objectId,
+    const std::unordered_map<std::string, PropInfo> &infos,
+    bool ownProperties) {
+  sendRequest(
+      "Runtime.getProperties",
+      msgId,
+      [objectId, ownProperties](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("objectId", objectId);
+        json.emitKeyValue("ownProperties", ownProperties);
+      });
+  return ensureProps(waitForMessage(), infos);
 }
 
 TEST_F(CDPAgentTest, IssuesStartupTask) {
@@ -1591,6 +1612,163 @@ TEST_F(CDPAgentTest, RuntimeCompileScriptParseError) {
   EXPECT_GT(
       jsonScope_.getString(resp, {"result", "exceptionDetails", "text"}).size(),
       0);
+}
+
+TEST_F(CDPAgentTest, GetProperties) {
+  int msgId = 1;
+  std::vector<std::string> objIds;
+
+  // Start a script
+  sendAndCheckResponse("Runtime.enable", msgId++);
+  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
+  sendAndCheckResponse("Debugger.enable", msgId++);
+  scheduleScript(R"(
+    function foo() {
+      var num = 123;
+      var obj = {
+        "depth": 0,
+        "value": {
+          "a": -1/0,
+          "b": 1/0,
+          "c": Math.sqrt(-2),
+          "d": -0,
+          "e": "e_string"
+        }
+      };
+      var arr = [1, 2, 3];
+      function bar() {
+        var num = 456;
+        var obj = {"depth": 1, "value": {"c": 5, "d": "d_string"}};
+        debugger; // First break location
+      };
+      bar();
+      debugger; // Second break location
+    }
+
+    foo();
+  )");
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+  // Wait for first break location
+  auto pausedNote = ensurePaused(
+      waitForMessage(),
+      "other",
+      {{"bar", 17, 3}, {"foo", 19, 2}, {"global", 23, 1}});
+
+  auto &scopeObj = pausedNote.callFrames.at(1).scopeChain.at(0).object;
+  EXPECT_TRUE(scopeObj.objectId.has_value());
+  std::string scopeObjId = scopeObj.objectId.value();
+  objIds.push_back(scopeObjId);
+
+  auto scopeChildren = getAndEnsureProps(
+      msgId++,
+      scopeObjId,
+      {{"this", PropInfo("undefined")},
+       {"num", PropInfo("number").setValue("123")},
+       {"obj", PropInfo("object")},
+       {"arr", PropInfo("object").setSubtype("array")},
+       {"bar", PropInfo("function")}});
+  EXPECT_EQ(scopeChildren.size(), 3);
+
+  EXPECT_EQ(scopeChildren.count("obj"), 1);
+  std::string objId = scopeChildren.at("obj");
+  objIds.push_back(objId);
+
+  auto objChildren = getAndEnsureProps(
+      msgId++,
+      objId,
+      {{"depth", PropInfo("number").setValue("0")},
+       {"value", PropInfo("object")},
+       {"__proto__", PropInfo("object")}});
+  EXPECT_EQ(objChildren.size(), 2);
+
+  EXPECT_EQ(objChildren.count("value"), 1);
+  std::string valueId = objChildren.at("value");
+  objIds.push_back(valueId);
+
+  auto valueChildren = getAndEnsureProps(
+      msgId++,
+      valueId,
+      {{"a", PropInfo("number").setUnserializableValue("-Infinity")},
+       {"b", PropInfo("number").setUnserializableValue("Infinity")},
+       {"c", PropInfo("number").setUnserializableValue("NaN")},
+       {"d", PropInfo("number").setUnserializableValue("-0")},
+       {"e", PropInfo("string").setValue("\"e_string\"")},
+       {"__proto__", PropInfo("object")}});
+  EXPECT_EQ(valueChildren.size(), 1);
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  ensurePaused(waitForMessage(), "other", {{"foo", 20, 2}, {"global", 23, 1}});
+
+  // all old object ids should be invalid after resuming
+  for (std::string oldObjId : objIds) {
+    getAndEnsureProps(
+        msgId++, oldObjId, std::unordered_map<std::string, PropInfo>{});
+  }
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
+TEST_F(CDPAgentTest, GetPropertiesOnlyOwn) {
+  int msgId = 1;
+
+  // Start a script
+  sendAndCheckResponse("Runtime.enable", msgId++);
+  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
+  sendAndCheckResponse("Debugger.enable", msgId++);
+  scheduleScript(R"(
+    function foo() {
+      var protoObject = {
+        "protoNum": 77
+      };
+      var obj = Object.create(protoObject);
+      obj.num = 42;
+      debugger;
+    }
+    foo();
+  )");
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+  // wait for a pause on debugger statement and get object ID from the local
+  // scope.
+  auto pausedNote = ensurePaused(
+      waitForMessage(), "other", {{"foo", 7, 2}, {"global", 9, 1}});
+  const auto &scopeObject = pausedNote.callFrames.at(0).scopeChain.at(0).object;
+  auto scopeChildren = getAndEnsureProps(
+      msgId++,
+      scopeObject.objectId.value(),
+      {{"this", PropInfo("undefined")},
+       {"obj", PropInfo("object")},
+       {"protoObject", PropInfo("object")}});
+  EXPECT_EQ(scopeChildren.count("obj"), 1);
+  std::string objId = scopeChildren.at("obj");
+
+  // Check that GetProperties request for obj object only have own properties
+  // when onlyOwnProperties = true.
+  getAndEnsureProps(
+      msgId++,
+      objId,
+      {{"num", PropInfo("number").setValue("42")},
+       {"__proto__", PropInfo("object")}},
+      true);
+
+  // Check that GetProperties request for obj object only have all properties
+  // when onlyOwnProperties = false.
+  // __proto__ is not returned here because all properties from proto chain
+  // are already included in the result.
+  getAndEnsureProps(
+      msgId++,
+      objId,
+      {{"num", PropInfo("number").setValue("42")},
+       {"protoNum", PropInfo("number").setValue("77")}},
+      false);
+
+  // resume
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
 }
 
 #endif // HERMES_ENABLE_DEBUGGER

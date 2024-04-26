@@ -15,8 +15,6 @@
 using namespace facebook::hermes::inspector_modern::chrome;
 using namespace hermes::parser;
 
-namespace m = ::facebook::hermes::inspector_modern::chrome::message;
-
 namespace facebook {
 namespace hermes {
 
@@ -122,7 +120,7 @@ void expectCallFrames(
   }
 }
 
-void ensurePaused(
+m::debugger::PausedNotification ensurePaused(
     const std::string &message,
     const std::string &reason,
     const std::vector<FrameInfo> &infos) {
@@ -132,6 +130,65 @@ void ensurePaused(
       mustParseStrAsJsonObj(message, factory));
   EXPECT_EQ(notification.reason, reason);
   expectCallFrames(notification.callFrames, infos);
+  return notification;
+}
+
+std::unordered_map<std::string, std::string> ensureProps(
+    const std::string &message,
+    const std::unordered_map<std::string, PropInfo> &infos) {
+  JSLexer::Allocator allocator;
+  JSONFactory factory(allocator);
+  auto resp = mustMake<m::runtime::GetPropertiesResponse>(
+      mustParseStrAsJsonObj(message, factory));
+
+  std::unordered_map<std::string, std::string> objectIds;
+
+  EXPECT_EQ(resp.result.size(), infos.size());
+
+  for (size_t i = 0; i < resp.result.size(); i++) {
+    m::runtime::PropertyDescriptor &desc = resp.result[i];
+
+    auto infoIt = infos.find(desc.name);
+    EXPECT_FALSE(infoIt == infos.end()) << desc.name;
+
+    if (infoIt != infos.end()) {
+      const PropInfo &info = infoIt->second;
+
+      EXPECT_TRUE(desc.value.has_value());
+
+      m::runtime::RemoteObject &remoteObj = desc.value.value();
+      EXPECT_EQ(remoteObj.type, info.type);
+
+      if (info.subtype.has_value()) {
+        EXPECT_TRUE(remoteObj.subtype.has_value());
+        EXPECT_EQ(remoteObj.subtype.value(), info.subtype.value());
+      }
+
+      if (info.value.has_value()) {
+        EXPECT_TRUE(remoteObj.value.has_value());
+        JSLexer::Allocator jsonAlloc;
+        JSONFactory factory(jsonAlloc);
+        EXPECT_TRUE(jsonValsEQ(
+            mustParseStr(remoteObj.value.value(), factory),
+            mustParseStr(info.value.value(), factory)));
+      }
+
+      if (info.unserializableValue.has_value()) {
+        EXPECT_TRUE(remoteObj.unserializableValue.has_value());
+        EXPECT_EQ(
+            remoteObj.unserializableValue.value(),
+            info.unserializableValue.value());
+      }
+
+      if ((info.type == "object" && info.subtype != "null") ||
+          info.type == "function") {
+        EXPECT_TRUE(remoteObj.objectId.has_value());
+        objectIds[desc.name] = remoteObj.objectId.value();
+      }
+    }
+  }
+
+  return objectIds;
 }
 
 void ensureEvalResponse(

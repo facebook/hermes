@@ -14,7 +14,6 @@
 #include <hermes/AsyncDebuggerAPI.h>
 #include <hermes/hermes.h>
 #include <hermes/inspector/chrome/MessageConverters.h>
-#include <hermes/inspector/chrome/RemoteObjectsTable.h>
 
 #include "DomainAgent.h"
 
@@ -23,7 +22,6 @@ namespace hermes {
 namespace cdp {
 
 namespace m = ::facebook::hermes::inspector_modern::chrome::message;
-namespace old_cdp = ::facebook::hermes::inspector_modern::chrome;
 
 namespace {
 /// Details about a single Hermes breakpoint, implied by a CDP breakpoint.
@@ -81,7 +79,8 @@ class DebuggerDomainAgent : public DomainAgent {
       int32_t executionContextID,
       HermesRuntime &runtime,
       debugger::AsyncDebuggerAPI &asyncDebugger,
-      SynchronizedOutboundCallback messageCallback);
+      SynchronizedOutboundCallback messageCallback,
+      std::shared_ptr<old_cdp::RemoteObjectsTable> objTable_);
   ~DebuggerDomainAgent();
 
   /// Handles Debugger.enable request
@@ -161,8 +160,6 @@ class DebuggerDomainAgent : public DomainAgent {
 
   /// ID for the registered DebuggerEventCallback
   debugger::DebuggerEventCallbackID debuggerEventCallbackId_;
-
-  old_cdp::RemoteObjectsTable objTable_{};
 
   /// Details of each CDP breakpoint that has been created, and not
   /// yet destroyed.
