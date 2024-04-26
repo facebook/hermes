@@ -2220,4 +2220,71 @@ TEST_F(CDPAgentTest, RuntimeCallFunctionOnExecutionContext) {
   sendAndCheckResponse("Debugger.resume", msgId++);
 }
 
+TEST_F(CDPAgentTest, ConsoleLog) {
+  int msgId = 1;
+  constexpr double kTimestamp = 123.0;
+  const std::string kStringValue = "string value";
+
+  // Startup
+  sendAndCheckResponse("Runtime.enable", msgId++);
+
+  // Generate message
+  jsi::String arg0 = jsi::String::createFromAscii(*runtime_, kStringValue);
+
+  jsi::Object arg1 = jsi::Object(*runtime_);
+  arg1.setProperty(*runtime_, "number1", 1);
+  arg1.setProperty(*runtime_, "bool1", false);
+
+  jsi::Object arg2 = jsi::Object(*runtime_);
+  arg2.setProperty(*runtime_, "number2", 2);
+  arg2.setProperty(*runtime_, "bool2", true);
+
+  ConsoleMessage message(
+      kTimestamp, ConsoleAPIType::kWarning, std::vector<jsi::Value>());
+  message.args.reserve(3);
+  message.args.push_back(std::move(arg0));
+  message.args.push_back(std::move(arg1));
+  message.args.push_back(std::move(arg2));
+  cdpDebugAPI_->addConsoleMessage(std::move(message));
+
+  // Validate notification
+  auto note = expectNotification("Runtime.consoleAPICalled");
+
+  EXPECT_EQ(jsonScope_.getNumber(note, {"params", "timestamp"}), kTimestamp);
+  EXPECT_EQ(
+      jsonScope_.getNumber(note, {"params", "executionContextId"}),
+      kTestExecutionContextId);
+  EXPECT_EQ(jsonScope_.getString(note, {"params", "type"}), "warning");
+
+  EXPECT_EQ(jsonScope_.getArray(note, {"params", "args"})->size(), 3);
+
+  EXPECT_EQ(
+      jsonScope_.getString(note, {"params", "args", "0", "type"}), "string");
+  EXPECT_EQ(
+      jsonScope_.getString(note, {"params", "args", "0", "value"}),
+      kStringValue);
+
+  EXPECT_EQ(
+      jsonScope_.getString(note, {"params", "args", "1", "type"}), "object");
+  std::string object1ID =
+      jsonScope_.getString(note, {"params", "args", "1", "objectId"});
+  getAndEnsureProps(
+      msgId++,
+      object1ID,
+      {{"number1", PropInfo("number").setValue("1")},
+       {"bool1", PropInfo("boolean").setValue("false")},
+       {"__proto__", PropInfo("object")}});
+
+  EXPECT_EQ(
+      jsonScope_.getString(note, {"params", "args", "2", "type"}), "object");
+  std::string object2ID =
+      jsonScope_.getString(note, {"params", "args", "2", "objectId"});
+  getAndEnsureProps(
+      msgId++,
+      object2ID,
+      {{"number2", PropInfo("number").setValue("2")},
+       {"bool2", PropInfo("boolean").setValue("true")},
+       {"__proto__", PropInfo("object")}});
+}
+
 #endif // HERMES_ENABLE_DEBUGGER

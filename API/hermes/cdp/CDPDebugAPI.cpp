@@ -18,12 +18,20 @@ std::unique_ptr<CDPDebugAPI> CDPDebugAPI::create(
       new CDPDebugAPI(runtime, maxCachedMessages));
 }
 
-CDPDebugAPI::~CDPDebugAPI() = default;
+CDPDebugAPI::~CDPDebugAPI() {
+  // Destroy async debugger API first, as it flushes the queue of pending
+  // tasks, which may reference other objects.
+  asyncDebuggerAPI_.reset();
+};
 
 CDPDebugAPI::CDPDebugAPI(HermesRuntime &runtime, size_t maxCachedMessages)
     : runtime_(runtime),
       asyncDebuggerAPI_(debugger::AsyncDebuggerAPI::create(runtime)),
       consoleMessageStorage_(maxCachedMessages) {}
+
+void CDPDebugAPI::addConsoleMessage(ConsoleMessage message) {
+  consoleMessageDispatcher_.deliverMessage(message);
+}
 
 } // namespace cdp
 } // namespace hermes

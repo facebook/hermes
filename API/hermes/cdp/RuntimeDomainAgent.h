@@ -8,6 +8,7 @@
 #ifndef HERMES_CDP_RUNTIMEDOMAINAGENT_H
 #define HERMES_CDP_RUNTIMEDOMAINAGENT_H
 
+#include "CDPDebugAPI.h"
 #include "DomainAgent.h"
 
 namespace facebook {
@@ -24,9 +25,10 @@ class RuntimeDomainAgent : public DomainAgent {
  public:
   RuntimeDomainAgent(
       int32_t executionContextID,
-      HermesRuntime &runtime_,
+      HermesRuntime &runtime,
       SynchronizedOutboundCallback messageCallback,
-      std::shared_ptr<RemoteObjectsTable> objTable);
+      std::shared_ptr<RemoteObjectsTable> objTable,
+      ConsoleMessageDispatcher &consoleMessageDispatcher);
   ~RuntimeDomainAgent();
 
   /// Handles Runtime.enable request
@@ -46,6 +48,8 @@ class RuntimeDomainAgent : public DomainAgent {
   void evaluate(const m::runtime::EvaluateRequest &req);
   /// Handles Runtime.callFunctionOn request
   void callFunctionOn(const m::runtime::CallFunctionOnRequest &req);
+  /// Dispatches a Runtime.consoleAPICalled notification
+  void consoleAPICalled(const ConsoleMessage &message);
 
  private:
   bool checkRuntimeEnabled(const m::Request &req);
@@ -62,6 +66,7 @@ class RuntimeDomainAgent : public DomainAgent {
       bool generatePreview);
 
   HermesRuntime &runtime_;
+  ConsoleMessageDispatcher &consoleMessageDispatcher_;
 
   /// Whether Runtime.enable was received and wasn't disabled by receiving
   /// Runtime.disable
@@ -70,6 +75,9 @@ class RuntimeDomainAgent : public DomainAgent {
   // preparedScripts_ stores user-entered scripts that have been prepared for
   // execution, and may be invoked by a later command.
   std::vector<std::shared_ptr<const jsi::PreparedJavaScript>> preparedScripts_;
+
+  /// Console message subscription token, used to unsubscribe during shutdown.
+  ConsoleMessageRegistration consoleMessageRegistration_;
 };
 
 } // namespace cdp

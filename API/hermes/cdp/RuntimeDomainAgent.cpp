@@ -255,15 +255,24 @@ RuntimeDomainAgent::RuntimeDomainAgent(
     int32_t executionContextID,
     HermesRuntime &runtime,
     SynchronizedOutboundCallback messageCallback,
-    std::shared_ptr<RemoteObjectsTable> objTable)
+    std::shared_ptr<RemoteObjectsTable> objTable,
+    ConsoleMessageDispatcher &consoleMessageDispatcher)
     : DomainAgent(
           executionContextID,
           std::move(messageCallback),
           std::move(objTable)),
       runtime_(runtime),
-      enabled_(false) {}
+      consoleMessageDispatcher_(consoleMessageDispatcher),
+      enabled_(false) {
+  consoleMessageRegistration_ = consoleMessageDispatcher_.subscribe(
+      [this](const ConsoleMessage &message) {
+        this->consoleAPICalled(message);
+      });
+}
 
-RuntimeDomainAgent::~RuntimeDomainAgent() {}
+RuntimeDomainAgent::~RuntimeDomainAgent() {
+  consoleMessageDispatcher_.unsubscribe(consoleMessageRegistration_);
+}
 
 void RuntimeDomainAgent::enable(const m::runtime::EnableRequest &req) {
   if (enabled_) {
@@ -628,6 +637,64 @@ RuntimeDomainAgent::makePropsFromValue(
   }
 
   return result;
+}
+
+static std::string consoleMessageTypeName(ConsoleAPIType type) {
+  switch (type) {
+    case ConsoleAPIType::kLog:
+      return "log";
+    case ConsoleAPIType::kDebug:
+      return "debug";
+    case ConsoleAPIType::kInfo:
+      return "info";
+    case ConsoleAPIType::kError:
+      return "error";
+    case ConsoleAPIType::kWarning:
+      return "warning";
+    case ConsoleAPIType::kDir:
+      return "dir";
+    case ConsoleAPIType::kDirXML:
+      return "dirxml";
+    case ConsoleAPIType::kTable:
+      return "table";
+    case ConsoleAPIType::kTrace:
+      return "trace";
+    case ConsoleAPIType::kStartGroup:
+      return "startGroup";
+    case ConsoleAPIType::kStartGroupCollapsed:
+      return "startGroupCollapsed";
+    case ConsoleAPIType::kEndGroup:
+      return "endGroup";
+    case ConsoleAPIType::kClear:
+      return "clear";
+    case ConsoleAPIType::kAssert:
+      return "assert";
+    case ConsoleAPIType::kTimeEnd:
+      return "timeEnd";
+    case ConsoleAPIType::kCount:
+      return "count";
+    default:
+      assert(false && "unknown console API type");
+      return "error";
+  }
+}
+
+void RuntimeDomainAgent::consoleAPICalled(const ConsoleMessage &message) {
+  if (!enabled_) {
+    return;
+  }
+
+  m::runtime::ConsoleAPICalledNotification note;
+  note.type = consoleMessageTypeName(message.type);
+  note.timestamp = message.timestamp;
+  note.executionContextId = executionContextID_;
+
+  for (auto &arg : message.args) {
+    note.args.push_back(m::runtime::makeRemoteObject(
+        runtime_, arg, *objTable_, "ConsoleObjectGroup", false, false));
+  }
+
+  sendNotificationToClient(note);
 }
 
 } // namespace cdp
