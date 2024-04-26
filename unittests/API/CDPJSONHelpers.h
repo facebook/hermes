@@ -11,6 +11,37 @@
 namespace facebook {
 namespace hermes {
 
+struct FrameInfo {
+  FrameInfo(const std::string &functionName, int lineNumber, int scopeCount)
+      : functionName(functionName),
+        lineNumberMin(lineNumber),
+        lineNumberMax(lineNumber),
+        scopeCount(scopeCount),
+        columnNumber(debugger::kInvalidLocation) {}
+
+  FrameInfo &setLineNumberMax(int lineNumberMaxParam) {
+    lineNumberMax = lineNumberMaxParam;
+    return *this;
+  }
+
+  FrameInfo &setScriptId(const std::string &scriptIdParam) {
+    scriptId = scriptIdParam;
+    return *this;
+  }
+
+  FrameInfo &setColumnNumber(int columnNumberParam) {
+    columnNumber = columnNumberParam;
+    return *this;
+  }
+
+  std::string functionName;
+  uint32_t lineNumberMin;
+  uint32_t lineNumberMax;
+  uint32_t scopeCount;
+  uint32_t columnNumber;
+  std::string scriptId;
+};
+
 void ensureErrorResponse(const std::string &message, int id);
 void ensureOkResponse(const std::string &message, int id);
 
@@ -19,6 +50,11 @@ void ensureResponse(
     const std::string &method,
     int id);
 void ensureNotification(const std::string &message, const std::string &method);
+
+void ensurePaused(
+    const std::string &message,
+    const std::string &reason,
+    const std::vector<FrameInfo> &infos);
 
 } // namespace hermes
 } // namespace facebook

@@ -175,6 +175,10 @@ void CDPAgentImpl::DomainAgents::handleCommand(
   } else if (command->method == "Debugger.disable") {
     debuggerAgent_->disable(
         static_cast<m::debugger::DisableRequest &>(*command));
+  } else if (command->method == "Debugger.pause") {
+    debuggerAgent_->pause(static_cast<m::debugger::PauseRequest &>(*command));
+  } else if (command->method == "Debugger.resume") {
+    debuggerAgent_->resume(static_cast<m::debugger::ResumeRequest &>(*command));
   } else {
     messageCallback_(message::makeErrorResponse(
                          command->id,

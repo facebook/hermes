@@ -1404,6 +1404,7 @@ TEST_F(ConnectionTests, testRemoveBreakpoint) {
   EXPECT_EQ(finalValue.asNumber(), 4);
 }
 
+// Also implemented as CDPAgentTest::TestAsyncPauseWhileRunning
 TEST_F(ConnectionTests, testAsyncPauseWhileRunning) {
   int msgId = 1;
 
