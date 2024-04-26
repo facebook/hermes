@@ -128,6 +128,7 @@ void CDPAgentImpl::handleCommand(std::string json) {
   if (!command) {
     // Can't even parse the command to get the command ID, so there's no ID
     // to respond to with an error message.
+    // TODO: return an error message
     return;
   }
 
@@ -188,6 +189,9 @@ void CDPAgentImpl::DomainAgents::handleCommand(
   } else if (command->method == "Debugger.stepOver") {
     debuggerAgent_->stepOver(
         static_cast<m::debugger::StepOverRequest &>(*command));
+  } else if (command->method == "Debugger.setPauseOnExceptions") {
+    debuggerAgent_->setPauseOnExceptions(
+        static_cast<m::debugger::SetPauseOnExceptionsRequest &>(*command));
   } else {
     messageCallback_(message::makeErrorResponse(
                          command->id,

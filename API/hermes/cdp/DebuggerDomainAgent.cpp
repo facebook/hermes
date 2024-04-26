@@ -44,6 +44,8 @@ void DebuggerDomainAgent::handleDebuggerEvent(
       asyncDebugger_.setNextCommand(debugger::Command::continueExecution());
       break;
     case DebuggerEventType::Exception:
+      paused_ = true;
+      sendPauseOnExceptionNotificationToClient();
       break;
     case DebuggerEventType::EvalComplete:
       break;
@@ -172,9 +174,39 @@ void DebuggerDomainAgent::stepOver(const m::debugger::StepOverRequest &req) {
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
+void DebuggerDomainAgent::setPauseOnExceptions(
+    const m::debugger::SetPauseOnExceptionsRequest &req) {
+  debugger::PauseOnThrowMode mode = debugger::PauseOnThrowMode::None;
+
+  if (req.state == "none") {
+    mode = debugger::PauseOnThrowMode::None;
+  } else if (req.state == "all") {
+    mode = debugger::PauseOnThrowMode::All;
+  } else if (req.state == "uncaught") {
+    mode = debugger::PauseOnThrowMode::Uncaught;
+  } else {
+    sendResponseToClient(m::makeErrorResponse(
+        req.id,
+        m::ErrorCode::InvalidRequest,
+        "Unknown pause-on-exception state: " + req.state));
+    return;
+  }
+
+  runtime_.getDebugger().setPauseOnThrowMode(mode);
+  sendResponseToClient(m::makeOkResponse(req.id));
+}
+
 void DebuggerDomainAgent::sendPausedNotificationToClient() {
   m::debugger::PausedNotification note;
   note.reason = "other";
+  note.callFrames = m::debugger::makeCallFrames(
+      runtime_.getDebugger().getProgramState(), objTable_, runtime_);
+  sendNotificationToClient(note);
+}
+
+void DebuggerDomainAgent::sendPauseOnExceptionNotificationToClient() {
+  m::debugger::PausedNotification note;
+  note.reason = "exception";
   note.callFrames = m::debugger::makeCallFrames(
       runtime_.getDebugger().getProgramState(), objTable_, runtime_);
   sendNotificationToClient(note);

@@ -54,6 +54,10 @@ class DebuggerDomainAgent : public DomainAgent {
   // Handles Debugger.stepOver request
   void stepOver(const m::debugger::StepOverRequest &req);
 
+  // Handles Debugger.setPauseOnExceptions
+  void setPauseOnExceptions(
+      const m::debugger::SetPauseOnExceptionsRequest &req);
+
  private:
   /// Fixed execution context ID because Hermes doesn't currently support realms
   /// or Web Workers.
@@ -65,8 +69,12 @@ class DebuggerDomainAgent : public DomainAgent {
       debugger::AsyncDebuggerAPI &asyncDebugger,
       debugger::DebuggerEventType event);
 
-  /// Send a notification to the debug client
+  /// Send a Pause notification to the debug client with "other" being the
+  /// reason
   void sendPausedNotificationToClient();
+  /// Send a Pause notification to the debug client with "exception" being the
+  /// reason
+  void sendPauseOnExceptionNotificationToClient();
   /// Send a Debugger.scriptParsed notification to the debug client
   void sendScriptParsedNotificationToClient(
       const debugger::SourceLocation srcLoc);
