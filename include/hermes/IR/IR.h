@@ -865,6 +865,7 @@ class Parameter : public Value {
 /// This represents a JS function parameter, all of which are optional.
 class JSDynamicParam : public Value {
   friend class Function;
+  friend class IRBuilder;
   JSDynamicParam(const JSDynamicParam &) = delete;
   void operator=(const JSDynamicParam &) = delete;
 
@@ -1879,9 +1880,9 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   void moveBlockToEntry(BasicBlock *newEntry);
 
   /// Add a new JS parameter.
-  JSDynamicParam *addJSDynamicParam(Identifier name);
+  void addJSDynamicParam(JSDynamicParam *param);
   /// Add the "this" JS parameter.
-  JSDynamicParam *addJSThisParam();
+  void addJSThisParam(JSDynamicParam *param);
   /// \return true if JS "this" parameter was added.
   bool jsThisAdded() const {
     return jsThisAdded_;

@@ -616,18 +616,14 @@ void Function::moveBlockToEntry(BasicBlock *newEntry) {
   BasicBlockList.push_front(newEntry);
 }
 
-JSDynamicParam *Function::addJSDynamicParam(Identifier name) {
+void Function::addJSDynamicParam(JSDynamicParam *param) {
   assert(jsDynamicParams_.size() < UINT32_MAX && "Too many parameters");
-  auto *param = new JSDynamicParam(this, name);
   jsDynamicParams_.push_back(param);
-  return param;
 }
-JSDynamicParam *Function::addJSThisParam() {
+void Function::addJSThisParam(JSDynamicParam *param) {
   assert(jsDynamicParams_.empty() && "'this' must be the first js parameter");
-  auto *param =
-      addJSDynamicParam(parent_->getContext().getIdentifier("<this>"));
+  jsDynamicParams_.push_back(param);
   jsThisAdded_ = true;
-  return param;
 }
 
 Module::~Module() {

@@ -136,18 +136,24 @@ GlobalObjectProperty *IRBuilder::createGlobalObjectProperty(
 JSDynamicParam *IRBuilder::createJSDynamicParam(
     Function *parent,
     Identifier name) {
-  return parent->addJSDynamicParam(name);
+  auto *param = new JSDynamicParam(parent, name);
+  parent->addJSDynamicParam(param);
+  return param;
 }
 
 /// Add a new JS parameter to function \p Parent.
 JSDynamicParam *IRBuilder::createJSDynamicParam(
     Function *parent,
     llvh::StringRef name) {
-  return parent->addJSDynamicParam(createIdentifier(name));
+  auto *param = new JSDynamicParam(parent, createIdentifier(name));
+  parent->addJSDynamicParam(param);
+  return param;
 }
 
 JSDynamicParam *IRBuilder::createJSThisParam(Function *parent) {
-  return parent->addJSThisParam();
+  auto *param = new JSDynamicParam(parent, createIdentifier("<this>"));
+  parent->addJSThisParam(param);
+  return param;
 }
 
 Variable *
