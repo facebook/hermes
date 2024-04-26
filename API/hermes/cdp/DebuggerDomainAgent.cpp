@@ -54,8 +54,15 @@ void DebuggerDomainAgent::handleDebuggerEvent(
         sendNotificationToClient(m::debugger::ResumedNotification{});
       }
       break;
-    case DebuggerEventType::DebuggerStatement:
     case DebuggerEventType::Breakpoint:
+      if (breakpointsActive_) {
+        paused_ = true;
+        sendPausedNotificationToClient();
+      } else {
+        asyncDebugger_.resumeFromPaused(AsyncDebugCommand::Continue);
+      }
+      break;
+    case DebuggerEventType::DebuggerStatement:
     case DebuggerEventType::StepFinish:
     case DebuggerEventType::ExplicitPause:
       paused_ = true;
@@ -278,6 +285,15 @@ void DebuggerDomainAgent::removeBreakpoint(
 
   // Remove the CDP breakpoint
   cdpBreakpoints_.erase(cdpBreakpoint);
+  sendResponseToClient(m::makeOkResponse(req.id));
+}
+
+void DebuggerDomainAgent::setBreakpointsActive(
+    const m::debugger::SetBreakpointsActiveRequest &req) {
+  if (!checkDebuggerEnabled(req)) {
+    return;
+  }
+  breakpointsActive_ = req.active;
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 

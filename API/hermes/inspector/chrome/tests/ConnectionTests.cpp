@@ -1110,6 +1110,7 @@ TEST_F(ConnectionTests, testSetBreakpointById) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
+// Also implemented as CDPAgentTest::TestActivateBreakpoints
 TEST_F(ConnectionTests, testActivateBreakpoints) {
   int msgId = 1;
 

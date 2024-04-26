@@ -216,6 +216,9 @@ void CDPAgentImpl::DomainAgents::handleCommand(
   } else if (command->method == "Debugger.removeBreakpoint") {
     debuggerAgent_->removeBreakpoint(
         static_cast<m::debugger::RemoveBreakpointRequest &>(*command));
+  } else if (command->method == "Debugger.setBreakpointsActive") {
+    debuggerAgent_->setBreakpointsActive(
+        static_cast<m::debugger::SetBreakpointsActiveRequest &>(*command));
   } else if (command->method == "Runtime.enable") {
     runtimeAgent_->enable(static_cast<m::runtime::EnableRequest &>(*command));
   } else if (command->method == "Runtime.disable") {
