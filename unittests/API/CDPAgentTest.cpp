@@ -385,7 +385,7 @@ std::unordered_map<std::string, std::string> CDPAgentTest::getAndEnsureProps(
   return ensureProps(waitForMessage(), infos);
 }
 
-TEST_F(CDPAgentTest, IssuesStartupTask) {
+TEST_F(CDPAgentTest, CDPAgentIssuesStartupTask) {
   bool gotTask = false;
   EnqueueRuntimeTaskFunc handleTask = [&gotTask](RuntimeTask task) {
     gotTask = true;
@@ -400,7 +400,7 @@ TEST_F(CDPAgentTest, IssuesStartupTask) {
   ASSERT_TRUE(gotTask);
 }
 
-TEST_F(CDPAgentTest, IssuesShutdownTask) {
+TEST_F(CDPAgentTest, CDPAgentIssuesShutdownTask) {
   bool gotTask = false;
   EnqueueRuntimeTaskFunc handleTask = [&gotTask](RuntimeTask task) {
     gotTask = true;
@@ -420,7 +420,7 @@ TEST_F(CDPAgentTest, IssuesShutdownTask) {
   ASSERT_TRUE(gotTask);
 }
 
-TEST_F(CDPAgentTest, IssuesCommandHandlingTask) {
+TEST_F(CDPAgentTest, CDPAgentIssuesCommandHandlingTask) {
   bool gotTask = false;
   EnqueueRuntimeTaskFunc handleTask = [&gotTask](RuntimeTask task) {
     gotTask = true;
@@ -440,7 +440,7 @@ TEST_F(CDPAgentTest, IssuesCommandHandlingTask) {
   ASSERT_TRUE(gotTask);
 }
 
-TEST_F(CDPAgentTest, RejectsMalformedMethods) {
+TEST_F(CDPAgentTest, CDPAgentRejectsMalformedMethods) {
   int commandID = 1;
   std::unique_ptr<CDPAgent> cdpAgent;
 
@@ -465,7 +465,7 @@ TEST_F(CDPAgentTest, RejectsMalformedMethods) {
   });
 }
 
-TEST_F(CDPAgentTest, RejectsUnknownDomains) {
+TEST_F(CDPAgentTest, CDPAgentRejectsUnknownDomains) {
   int commandID = 1;
   std::unique_ptr<CDPAgent> cdpAgent;
 
@@ -491,7 +491,7 @@ TEST_F(CDPAgentTest, RejectsUnknownDomains) {
   });
 }
 
-TEST_F(CDPAgentTest, TestScriptsOnEnable) {
+TEST_F(CDPAgentTest, DebuggerScriptsOnEnable) {
   int msgId = 1;
 
   // Add a script being run in the VM prior to Debugger.enable
@@ -507,7 +507,7 @@ TEST_F(CDPAgentTest, TestScriptsOnEnable) {
   ensureNotification(waitForMessage(), "Debugger.scriptParsed");
 }
 
-TEST_F(CDPAgentTest, TestEnableWhenAlreadyPaused) {
+TEST_F(CDPAgentTest, DebuggerEnableWhenAlreadyPaused) {
   int msgId = 1;
 
   // This needs to be a while-loop because Explicit AsyncBreak will only happen
@@ -568,7 +568,7 @@ TEST_F(CDPAgentTest, TestEnableWhenAlreadyPaused) {
   stopFlag_.store(true);
 }
 
-TEST_F(CDPAgentTest, TestScriptsOrdering) {
+TEST_F(CDPAgentTest, DebuggerScriptsOrdering) {
   int msgId = 1;
   std::vector<std::string> notifications;
 
@@ -595,7 +595,7 @@ TEST_F(CDPAgentTest, TestScriptsOrdering) {
   }
 }
 
-TEST_F(CDPAgentTest, TestBytecodeScript) {
+TEST_F(CDPAgentTest, DebuggerBytecodeScript) {
   int msgId = 1;
   sendAndCheckResponse("Debugger.enable", msgId++);
 
@@ -619,7 +619,7 @@ TEST_F(CDPAgentTest, TestBytecodeScript) {
   expectNothing();
 }
 
-TEST_F(CDPAgentTest, TestAsyncPauseWhileRunning) {
+TEST_F(CDPAgentTest, DebuggerAsyncPauseWhileRunning) {
   int msgId = 1;
 
   scheduleScript(R"(
@@ -656,7 +656,7 @@ TEST_F(CDPAgentTest, TestAsyncPauseWhileRunning) {
   stopFlag_.store(true);
 }
 
-TEST_F(CDPAgentTest, TestDebuggerStatement) {
+TEST_F(CDPAgentTest, DebuggerTestDebuggerStatement) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -675,7 +675,7 @@ TEST_F(CDPAgentTest, TestDebuggerStatement) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
 
-TEST_F(CDPAgentTest, TestStepOver) {
+TEST_F(CDPAgentTest, DebuggerStepOver) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -711,7 +711,7 @@ TEST_F(CDPAgentTest, TestStepOver) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
 
-TEST_F(CDPAgentTest, TestStepIn) {
+TEST_F(CDPAgentTest, DebuggerStepIn) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -747,7 +747,7 @@ TEST_F(CDPAgentTest, TestStepIn) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
 
-TEST_F(CDPAgentTest, TestStepOut) {
+TEST_F(CDPAgentTest, DebuggerStepOut) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -783,7 +783,7 @@ TEST_F(CDPAgentTest, TestStepOut) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
 
-TEST_F(CDPAgentTest, TestSetPauseOnExceptionsAll) {
+TEST_F(CDPAgentTest, DebuggerSetPauseOnExceptionsAll) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -839,7 +839,7 @@ TEST_F(CDPAgentTest, TestSetPauseOnExceptionsAll) {
   EXPECT_EQ(thrownExceptions_.back(), "Uncaught exception");
 }
 
-TEST_F(CDPAgentTest, TestEvalOnCallFrame) {
+TEST_F(CDPAgentTest, DebuggerEvalOnCallFrame) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -951,7 +951,7 @@ TEST_F(CDPAgentTest, TestEvalOnCallFrame) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
 
-TEST_F(CDPAgentTest, TestEvalOnCallFrameException) {
+TEST_F(CDPAgentTest, DebuggerEvalOnCallFrameException) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -1014,7 +1014,7 @@ TEST_F(CDPAgentTest, TestEvalOnCallFrameException) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
 
-TEST_F(CDPAgentTest, TestSetBreakpointById) {
+TEST_F(CDPAgentTest, DebuggerSetBreakpointById) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -1058,7 +1058,7 @@ TEST_F(CDPAgentTest, TestSetBreakpointById) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
 
-TEST_F(CDPAgentTest, TestSetBreakpointByUrl) {
+TEST_F(CDPAgentTest, DebuggerSetBreakpointByUrl) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -1101,7 +1101,7 @@ TEST_F(CDPAgentTest, TestSetBreakpointByUrl) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
 
-TEST_F(CDPAgentTest, TestSetMultiLocationBreakpoint) {
+TEST_F(CDPAgentTest, DebuggerSetMultiLocationBreakpoint) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -1171,7 +1171,7 @@ TEST_F(CDPAgentTest, TestSetMultiLocationBreakpoint) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
 
-TEST_F(CDPAgentTest, TestDeleteMultiLocationBreakpoint) {
+TEST_F(CDPAgentTest, DebuggerDeleteMultiLocationBreakpoint) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -1242,7 +1242,7 @@ TEST_F(CDPAgentTest, TestDeleteMultiLocationBreakpoint) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
 
-TEST_F(CDPAgentTest, TestApplyBreakpointsToNewLoadedScripts) {
+TEST_F(CDPAgentTest, DebuggerApplyBreakpointsToNewLoadedScripts) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -1297,7 +1297,7 @@ TEST_F(CDPAgentTest, TestApplyBreakpointsToNewLoadedScripts) {
   expectNothing();
 }
 
-TEST_F(CDPAgentTest, TestRemoveBreakpoint) {
+TEST_F(CDPAgentTest, DebuggerRemoveBreakpoint) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -1381,7 +1381,7 @@ TEST_F(CDPAgentTest, TestRemoveBreakpoint) {
   waitForScheduledScripts();
 }
 
-TEST_F(CDPAgentTest, TestRestoreState) {
+TEST_F(CDPAgentTest, DebuggerRestoreState) {
   int msgId = 1;
 
   // First, create a breakpoint that will be persisted.
@@ -1456,7 +1456,7 @@ TEST_F(CDPAgentTest, TestRestoreState) {
   }
 }
 
-TEST_F(CDPAgentTest, TestActivateBreakpoints) {
+TEST_F(CDPAgentTest, DebuggerActivateBreakpoints) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -1529,7 +1529,7 @@ TEST_F(CDPAgentTest, TestActivateBreakpoints) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
 
-TEST_F(CDPAgentTest, TestRuntimeEnable) {
+TEST_F(CDPAgentTest, RuntimeEnableDisable) {
   int msgId = 1;
 
   // Verify enable gets an "OK" response
@@ -1539,7 +1539,7 @@ TEST_F(CDPAgentTest, TestRuntimeEnable) {
   sendAndCheckResponse("Runtime.disable", msgId++);
 }
 
-TEST_F(CDPAgentTest, AllowDoubleRuntimeEnable) {
+TEST_F(CDPAgentTest, RuntimeAllowDoubleEnable) {
   int msgId = 1;
   sendAndCheckResponse("Runtime.enable", msgId++);
 
@@ -1547,7 +1547,7 @@ TEST_F(CDPAgentTest, AllowDoubleRuntimeEnable) {
   sendAndCheckResponse("Runtime.enable", msgId++);
 }
 
-TEST_F(CDPAgentTest, RefuseRuntimeOperationsWithoutEnable) {
+TEST_F(CDPAgentTest, RuntimeRefuseOperationsWithoutEnable) {
   int msgId = 1;
 
   sendAndCheckResponse("Runtime.disable", msgId++);
@@ -1560,7 +1560,7 @@ TEST_F(CDPAgentTest, RefuseRuntimeOperationsWithoutEnable) {
   ensureErrorResponse(waitForMessage(), msgId++);
 }
 
-TEST_F(CDPAgentTest, GetHeapUsage) {
+TEST_F(CDPAgentTest, RuntimeGetHeapUsage) {
   int msgId = 1;
 
   sendAndCheckResponse("Runtime.enable", msgId++);
@@ -1694,7 +1694,7 @@ TEST_F(CDPAgentTest, RuntimeCompileScriptParseError) {
       0);
 }
 
-TEST_F(CDPAgentTest, GetProperties) {
+TEST_F(CDPAgentTest, RuntimeGetProperties) {
   int msgId = 1;
   std::vector<std::string> objIds;
 
@@ -1791,7 +1791,7 @@ TEST_F(CDPAgentTest, GetProperties) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
 
-TEST_F(CDPAgentTest, GetPropertiesOnlyOwn) {
+TEST_F(CDPAgentTest, RuntimeGetPropertiesOnlyOwn) {
   int msgId = 1;
 
   // Start a script
@@ -2022,42 +2022,6 @@ TEST_F(CDPAgentTest, RuntimeEvaluateException) {
       0);
 
   // Let the script terminate
-  stopFlag_.store(true);
-}
-
-TEST_F(CDPAgentTest, DISABLED_TestBasicProfilerOperation) {
-  runtime_->registerForProfiling();
-  auto clearInDidPause =
-      llvh::make_scope_exit([this] { runtime_->unregisterForProfiling(); });
-  int msgId = 1;
-
-  scheduleScript(R"(
-      while(!shouldStop());
-  )");
-
-  // Start the sampling profiler. At this point it is not safe to manipulate the
-  // VM, so...
-  sendAndCheckResponse("Profiler.start", msgId++);
-
-  // Keep the profiler running for a small amount of time to allow for some
-  // samples to be collected.
-  std::this_thread::sleep_for(500ms);
-
-  // Being re-attached to the VM, send the stop sampling profile request.
-  sendParameterlessRequest("Profiler.stop", msgId);
-  auto resp = expectResponse(std::nullopt, msgId++);
-  auto nodes = jsonScope_.getArray(resp, {"result", "profile", "nodes"});
-  EXPECT_GT(nodes->size(), 0);
-  EXPECT_LT(
-      jsonScope_.getNumber(resp, {"result", "profile", "startTime"}),
-      jsonScope_.getNumber(resp, {"result", "profile", "endTime"}));
-  auto samples = jsonScope_.getArray(resp, {"result", "profile", "samples"});
-  auto timeDeltas =
-      jsonScope_.getArray(resp, {"result", "profile", "timeDeltas"});
-  EXPECT_GT(samples->size(), 0);
-  EXPECT_EQ(samples->size(), timeDeltas->size());
-
-  // break out of loop
   stopFlag_.store(true);
 }
 
@@ -2297,7 +2261,7 @@ TEST_F(CDPAgentTest, RuntimeCallFunctionOnExecutionContext) {
   sendAndCheckResponse("Debugger.resume", msgId++);
 }
 
-TEST_F(CDPAgentTest, ConsoleLog) {
+TEST_F(CDPAgentTest, RuntimeConsoleLog) {
   int msgId = 1;
   constexpr double kTimestamp = 123.0;
   const std::string kStringValue = "string value";
@@ -2370,7 +2334,7 @@ TEST_F(CDPAgentTest, ConsoleLog) {
        {"__proto__", PropInfo("object")}});
 }
 
-TEST_F(CDPAgentTest, ConsoleBuffer) {
+TEST_F(CDPAgentTest, RuntimeConsoleBuffer) {
   int msgId = 1;
 
   constexpr int kExpectedMaxBufferSize = 1000;
@@ -2446,6 +2410,42 @@ TEST_F(CDPAgentTest, ConsoleBuffer) {
     // the loop
     sendAndCheckResponse("Runtime.disable", msgId++);
   }
+}
+
+TEST_F(CDPAgentTest, DISABLED_ProfilerBasicOperation) {
+  runtime_->registerForProfiling();
+  auto clearInDidPause =
+      llvh::make_scope_exit([this] { runtime_->unregisterForProfiling(); });
+  int msgId = 1;
+
+  scheduleScript(R"(
+      while(!shouldStop());
+  )");
+
+  // Start the sampling profiler. At this point it is not safe to manipulate the
+  // VM, so...
+  sendAndCheckResponse("Profiler.start", msgId++);
+
+  // Keep the profiler running for a small amount of time to allow for some
+  // samples to be collected.
+  std::this_thread::sleep_for(500ms);
+
+  // Being re-attached to the VM, send the stop sampling profile request.
+  sendParameterlessRequest("Profiler.stop", msgId);
+  auto resp = expectResponse(std::nullopt, msgId++);
+  auto nodes = jsonScope_.getArray(resp, {"result", "profile", "nodes"});
+  EXPECT_GT(nodes->size(), 0);
+  EXPECT_LT(
+      jsonScope_.getNumber(resp, {"result", "profile", "startTime"}),
+      jsonScope_.getNumber(resp, {"result", "profile", "endTime"}));
+  auto samples = jsonScope_.getArray(resp, {"result", "profile", "samples"});
+  auto timeDeltas =
+      jsonScope_.getArray(resp, {"result", "profile", "timeDeltas"});
+  EXPECT_GT(samples->size(), 0);
+  EXPECT_EQ(samples->size(), timeDeltas->size());
+
+  // break out of loop
+  stopFlag_.store(true);
 }
 
 #endif // HERMES_ENABLE_DEBUGGER
