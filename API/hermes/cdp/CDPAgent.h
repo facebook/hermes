@@ -72,7 +72,7 @@ class HERMES_EXPORT CDPAgent {
 
   /// Extract state to be persisted across reloads. This can be called from
   /// arbitrary threads.
-  std::shared_ptr<State> getState();
+  std::unique_ptr<State> getState();
 
  private:
   /// This should be a unique_ptr to provide predictable destruction time lined
