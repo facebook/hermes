@@ -90,7 +90,7 @@ void DebuggerDomainAgent::enable(const m::debugger::EnableRequest &req) {
   }
 
   runtime_.getDebugger().setShouldPauseOnScriptLoad(true);
-  asyncDebugger_.addDebuggerEventCallback_TS(
+  debuggerEventCallbackId_ = asyncDebugger_.addDebuggerEventCallback_TS(
       [this](
           HermesRuntime &runtime,
           AsyncDebuggerAPI &asyncDebugger,
@@ -117,6 +117,7 @@ void DebuggerDomainAgent::disable(const m::debugger::DisableRequest &req) {
   runtime_.getDebugger().deleteAllBreakpoints();
 
   asyncDebugger_.removeDebuggerEventCallback_TS(debuggerEventCallbackId_);
+  debuggerEventCallbackId_ = kInvalidDebuggerEventCallbackID;
   // This doesn't work well if there are other debug clients that also toggle
   // this flag. If we need that functionality, then DebuggerAPI needs to be
   // changed.
