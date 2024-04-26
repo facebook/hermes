@@ -170,11 +170,11 @@ void LowerToStateMachine::convert() {
   // communicates what method was called on the generator: next, return, or
   // throw. For return and throw actions, value will hold the parameter that was
   // passed.
-  auto *actionParam =
-      inner_->addJSDynamicParam(builder_.createIdentifier("action"));
+  auto *actionParam = builder_.createJSDynamicParam(
+      inner_, builder_.createIdentifier("action"));
   actionParam->setType(Type::createUint32());
   auto *valueParam =
-      inner_->addJSDynamicParam(builder_.createIdentifier("value"));
+      builder_.createJSDynamicParam(inner_, builder_.createIdentifier("value"));
   movePastFirstInBlock(builder_, &*inner_->begin());
   auto *loadActionParam = builder_.createLoadParamInst(actionParam);
   auto *loadValueParam = builder_.createLoadParamInst(valueParam);
@@ -255,7 +255,8 @@ void LowerToStateMachine::moveLocalsToOuter() {
           builder_.createLoadParamInst(outer_->getJSDynamicParams()[0]),
           outerVar);
     } else {
-      auto *outerJSParam = outer_->addJSDynamicParam(jsParam->getName());
+      auto *outerJSParam =
+          builder_.createJSDynamicParam(outer_, jsParam->getName());
       builder_.createStoreFrameInst(
           newOuterScope_, builder_.createLoadParamInst(outerJSParam), outerVar);
     }

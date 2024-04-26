@@ -146,6 +146,10 @@ JSDynamicParam *IRBuilder::createJSDynamicParam(
   return parent->addJSDynamicParam(createIdentifier(name));
 }
 
+JSDynamicParam *IRBuilder::createJSThisParam(Function *parent) {
+  return parent->addJSThisParam();
+}
+
 Variable *
 IRBuilder::createVariable(VariableScope *Parent, Identifier Name, Type type) {
   auto *var = new Variable(Parent, Name);

@@ -539,7 +539,7 @@ void ESTreeIRGen::emitFunctionPrologue(
 
   // Always create the "this" parameter. It needs to be created before we
   // initialized the ES5 capture state.
-  JSDynamicParam *thisParam = newFunc->addJSThisParam();
+  JSDynamicParam *thisParam = Builder.createJSThisParam(newFunc);
   if (flow::TypedFunctionType *ftype = llvh::dyn_cast<flow::TypedFunctionType>(
           flowContext_.getNodeTypeOrAny(funcNode)->info);
       ftype && ftype->getThisParam()) {
@@ -775,7 +775,7 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
           param->getSourceRange(), "too many parameters");
       break;
     }
-    auto *jsParam = newFunc->addJSDynamicParam(formalParamName);
+    auto *jsParam = Builder.createJSDynamicParam(newFunc, formalParamName);
     if (flow::TypedFunctionType *ftype =
             llvh::dyn_cast<flow::TypedFunctionType>(
                 flowContext_.getNodeTypeOrAny(funcNode)->info);
@@ -946,7 +946,7 @@ void ESTreeIRGen::emitFieldInitCall(flow::ClassType *classType) {
 void ESTreeIRGen::genDummyFunction(Function *dummy) {
   IRBuilder builder{dummy};
 
-  dummy->addJSThisParam();
+  builder.createJSThisParam(dummy);
   BasicBlock *firstBlock = builder.createBasicBlock(dummy);
   builder.setInsertionBlock(firstBlock);
   builder.createUnreachableInst();
@@ -971,7 +971,7 @@ Function *ESTreeIRGen::genSyntaxErrorFunction(
       },
       sourceRange);
 
-  function->addJSThisParam();
+  Builder.createJSThisParam(function);
   BasicBlock *firstBlock = Builder.createBasicBlock(function);
   Builder.setInsertionBlock(firstBlock);
 

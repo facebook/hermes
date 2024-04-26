@@ -124,6 +124,10 @@ class IRBuilder {
   /// Add a new JS parameter to function \p Parent.
   JSDynamicParam *createJSDynamicParam(Function *parent, llvh::StringRef name);
 
+  /// Add a JS this parameter to function \p Parent. This must be the first
+  /// parameter, and should only be called once per function.
+  JSDynamicParam *createJSThisParam(Function *parent);
+
   /// Add a new variable to scope \p Parent.
   Variable *createVariable(VariableScope *Parent, Identifier Name, Type type);
 
