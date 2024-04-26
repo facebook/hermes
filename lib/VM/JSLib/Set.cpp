@@ -208,8 +208,11 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
       adder.getHermesValue().getRaw() == runtime.setPrototypeAdd.getRaw();
   // If the adder is the default one, we can call JSSet::addValue directly.
   if (LLVM_LIKELY(originalAdd)) {
-    // If the iterable is an array, then we can do for-loop.
-    if (Handle<JSArray> arr = args.dyncastArg<JSArray>(0)) {
+    // If the iterable is an array with unmodified iterator,
+    // then we can do for-loop.
+    if (Handle<JSArray> arr = args.dyncastArg<JSArray>(0); arr &&
+        LLVM_LIKELY(iterMethod.getHermesValue().getRaw() ==
+                    runtime.arrayPrototypeValues.getRaw())) {
       MutableHandle<HermesValue> tmpHandle{runtime};
 
       for (JSArray::size_type i = 0; i < JSArray::getLength(arr.get(), runtime);
