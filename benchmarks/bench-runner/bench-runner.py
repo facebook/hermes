@@ -79,7 +79,8 @@ def main():
         "-l",
         "--label",
         help="extra label for runtime",
-        required=True,
+        required=False,
+        default="",
         action="store",
     )
 
