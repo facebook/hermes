@@ -45,7 +45,7 @@ class HERMES_EXPORT CDPAgent {
       CDPDebugAPI &cdpDebugAPI,
       debugger::EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
       OutboundMessageFunc messageCallback,
-      std::shared_ptr<State> state);
+      std::unique_ptr<State> state);
 
  public:
   /// Create a new CDP Agent. This can be done on an arbitrary thread; the
@@ -55,7 +55,7 @@ class HERMES_EXPORT CDPAgent {
       CDPDebugAPI &cdpDebugAPI,
       debugger::EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
       OutboundMessageFunc messageCallback,
-      std::shared_ptr<State> state = nullptr);
+      std::unique_ptr<State> state = nullptr);
 
   /// Destroy the CDP Agent. This can be done on an arbitrary thread.
   /// It's expected that the integrator will continue to process any runtime
