@@ -18,6 +18,10 @@
 #include <hermes/inspector/chrome/tests/SerialExecutor.h>
 #include <jsi/jsi.h>
 
+#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
+#include <sys/resource.h>
+#endif
+
 using namespace facebook::jsi;
 using namespace facebook::hermes;
 using namespace facebook::hermes::debugger;
