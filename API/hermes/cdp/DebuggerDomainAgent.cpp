@@ -20,7 +20,8 @@ DebuggerDomainAgent::DebuggerDomainAgent(
     HermesRuntime &runtime,
     AsyncDebuggerAPI &asyncDebugger,
     SynchronizedOutboundCallback messageCallback,
-    std::shared_ptr<RemoteObjectsTable> objTable)
+    std::shared_ptr<RemoteObjectsTable> objTable,
+    std::unique_ptr<DebuggerDomainState> state)
     : DomainAgent(
           executionContextID,
           std::move(messageCallback),
@@ -29,7 +30,21 @@ DebuggerDomainAgent::DebuggerDomainAgent(
       asyncDebugger_(asyncDebugger),
       debuggerEventCallbackId_(kInvalidDebuggerEventCallbackID),
       enabled_(false),
-      paused_(false) {}
+      paused_(false) {
+  if (state) {
+    // Load persisted breakpoints. They will be applied to the appropriate
+    // scripts as the script-loaded notifications arrive.
+    for (auto &[id, description] : state->breakpointDescriptions) {
+      cdpBreakpoints_.emplace(id, CDPBreakpoint(description));
+
+      // Ensure we don't re-use persisted breakpoint IDs; advance the ID counter
+      // past any imported breakpoints.
+      if (id >= nextBreakpointID_) {
+        nextBreakpointID_ = id + 1;
+      }
+    }
+  }
+}
 
 DebuggerDomainAgent::~DebuggerDomainAgent() {
   // Also remove DebuggerEventCallback here in case we don't receive a
@@ -74,6 +89,20 @@ void DebuggerDomainAgent::handleDebuggerEvent(
       sendPausedNotificationToClient();
       break;
   }
+}
+
+std::unique_ptr<DebuggerDomainState> DebuggerDomainAgent::getState() {
+  auto state = std::make_unique<DebuggerDomainState>();
+
+  // Persist breakpoints
+  state->breakpointDescriptions.reserve(cdpBreakpoints_.size());
+  for (auto &[id, breakpoint] : cdpBreakpoints_) {
+    if (breakpoint.description.persistable()) {
+      state->breakpointDescriptions[id] = breakpoint.description;
+    }
+  }
+
+  return state;
 }
 
 void DebuggerDomainAgent::enable(const m::debugger::EnableRequest &req) {

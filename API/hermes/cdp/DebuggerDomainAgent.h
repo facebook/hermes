@@ -67,6 +67,11 @@ struct HermesBreakpointLocation {
   debugger::SourceLocation location;
 };
 
+struct DebuggerDomainState {
+  std::unordered_map<CDPBreakpointID, CDPBreakpointDescription>
+      breakpointDescriptions;
+};
+
 /// Handler for the "Debugger" domain of CDP. Accepts events from the runtime,
 /// and CDP requests from the debug client belonging to the "Debugger" domain.
 /// Produces CDP responses and events belonging to the "Debugger" domain. All
@@ -78,8 +83,12 @@ class DebuggerDomainAgent : public DomainAgent {
       HermesRuntime &runtime,
       debugger::AsyncDebuggerAPI &asyncDebugger,
       SynchronizedOutboundCallback messageCallback,
-      std::shared_ptr<RemoteObjectsTable> objTable_);
+      std::shared_ptr<RemoteObjectsTable> objTable_,
+      std::unique_ptr<DebuggerDomainState> state);
   ~DebuggerDomainAgent();
+
+  /// Extract state to be persisted across reloads.
+  std::unique_ptr<DebuggerDomainState> getState();
 
   /// Handles Debugger.enable request
   void enable(const m::debugger::EnableRequest &req);
