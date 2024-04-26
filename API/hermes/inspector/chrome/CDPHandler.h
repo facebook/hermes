@@ -128,7 +128,7 @@ class INSPECTOR_EXPORT CDPHandler {
 
 /// Public-facing wrapper for internal CDP state that can be preserved across
 /// reloads.
-struct State {
+struct INSPECTOR_EXPORT State {
   /// Incomplete type that stores the actual state.
   struct Private;
 
