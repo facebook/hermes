@@ -413,6 +413,89 @@ TEST_F(AsyncDebuggerAPITest, IsDebuggerAttachedTest) {
   }));
 }
 
+TEST_F(AsyncDebuggerAPITest, StopInterruptsAfterNewCommand) {
+  eventCallbackID_ = asyncDebuggerAPI_->addDebuggerEventCallback_TS(
+      [](HermesRuntime &runtime,
+         AsyncDebuggerAPI &asyncDebugger,
+         DebuggerEventType event) {});
+
+  DebuggerEventCallbackID tmpCallbackID = kInvalidDebuggerEventCallbackID;
+
+  // First run some code to get the Runtime to a paused state
+  auto debuggerEvent =
+      waitFor<DebuggerEventType>([this, &tmpCallbackID](auto promise) {
+        tmpCallbackID = asyncDebuggerAPI_->addDebuggerEventCallback_TS(
+            [this, promise, &tmpCallbackID](
+                HermesRuntime &runtime,
+                AsyncDebuggerAPI &asyncDebugger,
+                DebuggerEventType event) {
+              asyncDebuggerAPI_->removeDebuggerEventCallback_TS(tmpCallbackID);
+              promise->set_value(event);
+            });
+
+        scheduleScript(R"(
+          debugger;
+          while (!shouldStop()) {
+          }
+        )");
+      });
+  EXPECT_EQ(debuggerEvent, DebuggerEventType::DebuggerStatement);
+
+  // Once the Runtime is in a paused state, then queue up a bunch of interrupts.
+  int interruptRunCount = 0;
+  int runCountSnapshot = -1;
+  debuggerEvent = waitFor<DebuggerEventType>([this,
+                                              &interruptRunCount,
+                                              &runCountSnapshot,
+                                              &tmpCallbackID](auto promise) {
+    // Add a DebuggerEventCallback to take a snapshot of the interruptRunCount.
+    tmpCallbackID = asyncDebuggerAPI_->addDebuggerEventCallback_TS(
+        [this, promise, &interruptRunCount, &runCountSnapshot, &tmpCallbackID](
+            HermesRuntime &runtime,
+            AsyncDebuggerAPI &asyncDebugger,
+            DebuggerEventType event) {
+          runCountSnapshot = interruptRunCount;
+          asyncDebuggerAPI_->removeDebuggerEventCallback_TS(tmpCallbackID);
+          promise->set_value(event);
+        });
+
+    // Queue up the interrupts inside another interrupt to ensure the queued
+    // interrupts aren't executing right away.
+    asyncDebuggerAPI_->triggerInterrupt_TS([this, &interruptRunCount](
+                                               HermesRuntime &runtime) {
+      asyncDebuggerAPI_->triggerInterrupt_TS(
+          [&interruptRunCount](HermesRuntime &runtime) {
+            interruptRunCount++;
+          });
+      asyncDebuggerAPI_->triggerInterrupt_TS(
+          [&interruptRunCount](HermesRuntime &runtime) {
+            interruptRunCount++;
+          });
+      asyncDebuggerAPI_->triggerInterrupt_TS([this](HermesRuntime &runtime) {
+        asyncDebuggerAPI_->setNextCommand(Command::continueExecution());
+      });
+      asyncDebuggerAPI_->triggerInterrupt_TS(
+          [&interruptRunCount](HermesRuntime &runtime) {
+            interruptRunCount++;
+          });
+    });
+  });
+  EXPECT_EQ(debuggerEvent, DebuggerEventType::Resumed);
+
+  // Expect to have run count = 2 because there are 2 interrupts queued before
+  // the one that sets next command to continue.
+  EXPECT_EQ(runCountSnapshot, 2);
+
+  asyncDebuggerAPI_->removeDebuggerEventCallback_TS(eventCallbackID_);
+
+  // break out of loop
+  stopFlag_.store(true);
+
+  EXPECT_TRUE(waitFor<bool>([this](auto promise) {
+    runtimeThread_->add([promise]() { promise->set_value(true); });
+  }));
+}
+
 #else // !HERMES_ENABLE_DEBUGGER
 
 #include <gtest/gtest.h>
