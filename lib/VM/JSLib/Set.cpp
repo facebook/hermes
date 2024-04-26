@@ -101,6 +101,7 @@ Handle<JSObject> createSetConstructor(Runtime &runtime) {
           setPrototype,
           runtime,
           Predefined::getSymbolID(Predefined::values)))));
+  runtime.setPrototypeValues = propValue.getHermesValue();
   runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
       setPrototype,
       runtime,
@@ -135,6 +136,30 @@ Handle<JSObject> createSetConstructor(Runtime &runtime) {
   return cons;
 }
 
+/// Populate the Set with the contents of the source Set.
+/// \param target the Set to populate (newly constructed).
+/// \param src the Set to pull the entries from.
+/// \return the newly populated Set.
+static ExecutionStatus
+setFromSetFastPath(Runtime &runtime, Handle<JSSet> target, Handle<JSSet> src) {
+  // TODO: This can be improved further by avoiding any rehashes and the
+  // SmallHermesValue unbox/boxing. We should be able to make an
+  // OrderedHashMap::clone that initializes based on an existing Set
+  // and clones all entries directly somehow.
+  MutableHandle<> keyHandle{runtime};
+  MutableHandle<> valueHandle{runtime};
+  return JSSet::forEachNative(
+      src,
+      runtime,
+      [&target, &keyHandle, &valueHandle](
+          Runtime &runtime, Handle<HashMapEntry> entry) -> ExecutionStatus {
+        keyHandle = entry->key.unboxToHV(runtime);
+        valueHandle = entry->value.unboxToHV(runtime);
+        JSSet::addValue(target, runtime, keyHandle, valueHandle);
+        return ExecutionStatus::RETURNED;
+      });
+}
+
 CallResult<HermesValue>
 setConstructor(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope{runtime};
@@ -165,6 +190,18 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
   if (!adder) {
     return runtime.raiseTypeError("Property 'add' for Set is not callable");
   }
+
+  auto iterMethodRes = getMethod(
+      runtime,
+      args.getArgHandle(0),
+      runtime.makeHandle(Predefined::getSymbolID(Predefined::SymbolIterator)));
+  if (LLVM_UNLIKELY(iterMethodRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (!vmisa<Callable>(iterMethodRes->getHermesValue())) {
+    return runtime.raiseTypeError("iterator method is not callable");
+  }
+  auto iterMethod = runtime.makeHandle<Callable>(std::move(*iterMethodRes));
 
   // Fast path
   const bool originalAdd =
@@ -199,9 +236,23 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
 
       return selfHandle.getHermesValue();
     }
+
+    // If the iterable is a Set with an unmodified iterator,
+    // then we can do for-loop.
+    if (Handle<JSSet> inputSet = args.dyncastArg<JSSet>(0); inputSet &&
+        LLVM_LIKELY(iterMethod.getHermesValue().getRaw() ==
+                    runtime.setPrototypeValues.getRaw())) {
+      if (LLVM_UNLIKELY(
+              setFromSetFastPath(runtime, selfHandle, inputSet) ==
+              ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      return selfHandle.getHermesValue();
+    }
   }
   // Slow path
-  auto iterRes = getCheckedIterator(runtime, args.getArgHandle(0));
+  CallResult<CheckedIteratorRecord> iterRes =
+      getCheckedIterator(runtime, args.getArgHandle(0), iterMethod);
   if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

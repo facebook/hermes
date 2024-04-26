@@ -33,6 +33,22 @@ var s = new Set(new Set([1, 2]));
 print(s.has(1), s.has(2), s.has(3));
 // CHECK-NEXT: true true false
 
+var s = new Set(new Set([1, 2]));
+print(s.size, s.has(1), s.has(2));
+// CHECK-NEXT: 2 true true
+
+var s = new Set([1, 2, 3]);
+s[Symbol.iterator] = function() {
+  return {
+    next() {
+      return { value: undefined, done: true };
+    }
+  }
+}
+var s = new Set(s);
+print(s.size);
+// CHECK-NEXT: 0
+
 try {
   Set();
 } catch (e) {
