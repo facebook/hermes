@@ -180,7 +180,9 @@ class CDPHandlerImpl : public message::RequestHandler,
       std::unique_ptr<RuntimeAdapter> adapter,
       bool waitForDebugger,
       std::shared_ptr<State> state,
-      const CDPHandlerSessionConfig &sessionConfig);
+      const CDPHandlerSessionConfig &sessionConfig,
+      std::optional<CDPHandlerExecutionContextDescription>
+          executionContextDescription);
   ~CDPHandlerImpl() override;
 
   bool registerCallbacks(
@@ -396,9 +398,7 @@ class CDPHandlerImpl : public message::RequestHandler,
   }
 
  private:
-  // The execution context id reported back by the ExecutionContextCreated
-  // notification. We only ever expect this execution context id.
-  static constexpr int32_t kHermesExecutionContextId = 1;
+  const CDPHandlerExecutionContextDescription executionContextDescription_;
   std::vector<m::runtime::PropertyDescriptor> makePropsFromScope(
       std::pair<uint32_t, uint32_t> frameAndScopeIndex,
       const std::string &objectGroup,
@@ -556,12 +556,34 @@ class CDPHandlerImpl : public message::RequestHandler,
       pendingFuncs_;
 };
 
+namespace {
+m::runtime::ExecutionContextDescription makeExecutionContextDescription(
+    const CDPHandlerExecutionContextDescription &desc) {
+  m::runtime::ExecutionContextDescription result;
+  result.id = desc.id;
+  result.origin = desc.origin;
+  result.name = desc.name;
+  result.auxData = desc.auxData;
+  return result;
+}
+} // namespace
+
 CDPHandlerImpl::CDPHandlerImpl(
     std::unique_ptr<RuntimeAdapter> adapter,
     bool waitForDebugger,
     std::shared_ptr<State> state,
-    const CDPHandlerSessionConfig &sessionConfig)
-    : runtimeAdapter_(std::move(adapter)),
+    const CDPHandlerSessionConfig &sessionConfig,
+    std::optional<CDPHandlerExecutionContextDescription>
+        executionContextDescription)
+    : executionContextDescription_(executionContextDescription.value_or(
+          CDPHandlerExecutionContextDescription{
+              /* id */ 1,
+              /* origin */ "",
+              /* name */ "hermes",
+              /* auxData */ std::nullopt,
+              /* shouldSendNotifications */ true,
+          })),
+      runtimeAdapter_(std::move(adapter)),
       runtime_(runtimeAdapter_->getRuntime()),
       runtimeEnabled_(sessionConfig.isRuntimeDomainEnabled),
       awaitingDebuggerOnStart_(waitForDebugger) {
@@ -615,13 +637,13 @@ bool CDPHandlerImpl::registerCallbacks(
   msgCallback_ = msgCallback;
   onUnregister_ = onUnregister;
 
-  if (runtimeEnabled_) {
+  if (runtimeEnabled_ && executionContextDescription_.shouldSendNotifications) {
     // HACK: Ideally we would do this in the constructor, but registerCallbacks
     // is the earliest point where we have a connection to the client and can
     // send any messages that are required by the current session state.
     m::runtime::ExecutionContextCreatedNotification note;
-    note.context.id = CDPHandlerImpl::kHermesExecutionContextId;
-    note.context.name = "hermes";
+    note.context =
+        makeExecutionContextDescription(executionContextDescription_);
     sendNotificationToClient(note);
   }
 
@@ -687,7 +709,7 @@ void CDPHandlerImpl::sendConsoleAPICalledEventToClient(
   m::runtime::ConsoleAPICalledNotification apiCalledNote;
   apiCalledNote.type = info.level;
   apiCalledNote.timestamp = info.timestamp;
-  apiCalledNote.executionContextId = kHermesExecutionContextId;
+  apiCalledNote.executionContextId = executionContextDescription_.id;
 
   size_t argsSize = info.args.size(runtime_);
   for (size_t index = 0; index < argsSize; ++index) {
@@ -1238,9 +1260,12 @@ class CallFunctionOnBuilder {
 void CDPHandlerImpl::handle(const m::runtime::CallFunctionOnRequest &req) {
   std::string expression;
   CallFunctionOnRunner runner;
+  const CDPHandlerExecutionContextDescription &context =
+      executionContextDescription_;
 
   auto validateAndParseRequest =
-      [&expression, &runner](const m::runtime::CallFunctionOnRequest &req)
+      [&expression, &runner, &context](
+          const m::runtime::CallFunctionOnRequest &req)
       -> std::optional<std::string> {
     if (req.objectId.has_value() == req.executionContextId.has_value()) {
       return std::string(
@@ -1251,7 +1276,7 @@ void CDPHandlerImpl::handle(const m::runtime::CallFunctionOnRequest &req) {
       assert(
           req.executionContextId &&
           "should not be here if both object id and execution context id are missing");
-      if (*req.executionContextId != kHermesExecutionContextId) {
+      if (*req.executionContextId != context.id) {
         return "unknown execution context id " +
             std::to_string(*req.executionContextId);
       }
@@ -1348,12 +1373,14 @@ void CDPHandlerImpl::handle(const m::runtime::EnableRequest &req) {
     runtimeEnabled_ = true;
     sendResponseToClient(m::makeOkResponse(req.id));
 
-    // Per CDP spec, when reporting is enabled, immediately send an
-    // executionContextCreated event for each existing execution context.
-    m::runtime::ExecutionContextCreatedNotification note;
-    note.context.id = CDPHandlerImpl::kHermesExecutionContextId;
-    note.context.name = "hermes";
-    sendNotificationToClient(note);
+    if (executionContextDescription_.shouldSendNotifications) {
+      // Per CDP spec, when reporting is enabled, immediately send an
+      // executionContextCreated event for each existing execution context.
+      m::runtime::ExecutionContextCreatedNotification note;
+      note.context =
+          makeExecutionContextDescription(executionContextDescription_);
+      sendNotificationToClient(note);
+    }
 
     if (numConsoleMessagesDiscardedFromCache_ != 0) {
       jsi::Runtime &rt = runtime_;
@@ -1820,7 +1847,8 @@ void CDPHandlerImpl::sendNotificationToClient(const m::Notification &note) {
 bool CDPHandlerImpl::validateExecutionContext(
     int id,
     std::optional<m::runtime::ExecutionContextId> context) {
-  if (context.has_value() && context.value() != kHermesExecutionContextId) {
+  if (context.has_value() &&
+      context.value() != executionContextDescription_.id) {
     sendErrorToClient(id, "Invalid execution context");
     return false;
   }
@@ -1836,7 +1864,9 @@ std::shared_ptr<CDPHandler> CDPHandler::create(
     bool waitForDebugger,
     bool processConsoleAPI,
     std::shared_ptr<State> state,
-    const CDPHandlerSessionConfig &sessionConfig) {
+    const CDPHandlerSessionConfig &sessionConfig,
+    std::optional<CDPHandlerExecutionContextDescription>
+        executionContextDescription) {
   // Can't use make_shared here since the constructor is private.
   return std::shared_ptr<CDPHandler>(new CDPHandler(
       std::move(adapter),
@@ -1844,7 +1874,8 @@ std::shared_ptr<CDPHandler> CDPHandler::create(
       waitForDebugger,
       processConsoleAPI,
       std::move(state),
-      sessionConfig));
+      sessionConfig,
+      std::move(executionContextDescription)));
 }
 
 std::shared_ptr<CDPHandler> CDPHandler::create(
@@ -1853,7 +1884,9 @@ std::shared_ptr<CDPHandler> CDPHandler::create(
     bool waitForDebugger,
     bool processConsoleAPI,
     std::shared_ptr<State> state,
-    const CDPHandlerSessionConfig &sessionConfig) {
+    const CDPHandlerSessionConfig &sessionConfig,
+    std::optional<CDPHandlerExecutionContextDescription>
+        executionContextDescription) {
   // Can't use make_shared here since the constructor is private.
   return std::shared_ptr<CDPHandler>(new CDPHandler(
       std::move(adapter),
@@ -1861,7 +1894,8 @@ std::shared_ptr<CDPHandler> CDPHandler::create(
       waitForDebugger,
       processConsoleAPI,
       std::move(state),
-      sessionConfig));
+      sessionConfig,
+      std::move(executionContextDescription)));
 }
 
 CDPHandler::CDPHandler(
@@ -1870,12 +1904,15 @@ CDPHandler::CDPHandler(
     bool waitForDebugger,
     bool processConsoleAPI,
     std::shared_ptr<State> state,
-    const CDPHandlerSessionConfig &sessionConfig)
+    const CDPHandlerSessionConfig &sessionConfig,
+    std::optional<CDPHandlerExecutionContextDescription>
+        executionContextDescription)
     : impl_(std::make_shared<CDPHandlerImpl>(
           std::move(adapter),
           waitForDebugger,
           std::move(state),
-          sessionConfig)),
+          sessionConfig,
+          std::move(executionContextDescription))),
       title_(title) {
   if (processConsoleAPI) {
     impl_->installLogHandler();
@@ -2126,7 +2163,7 @@ void CDPHandlerImpl::processPendingScriptLoads() {
       m::debugger::ScriptParsedNotification note;
       note.scriptId = std::to_string(script.fileId);
       note.url = script.fileName;
-      note.executionContextId = kHermesExecutionContextId;
+      note.executionContextId = executionContextDescription_.id;
       if (!script.sourceMappingUrl.empty()) {
         note.sourceMapURL = script.sourceMappingUrl;
       }
