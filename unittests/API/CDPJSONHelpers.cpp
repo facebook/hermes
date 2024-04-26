@@ -59,7 +59,7 @@ std::unique_ptr<T> getValue(
     std::vector<std::string> paths) {
   value = getJSONValue(value, paths);
   std::unique_ptr<T> target = m::valueFromJson<T>(value);
-  return std::move(target);
+  return target;
 }
 
 const JSONObject *getJSONObject(
