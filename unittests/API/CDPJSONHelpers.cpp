@@ -6,6 +6,7 @@
  */
 
 #include <hermes/DebuggerAPI.h>
+#include <hermes/Support/ErrorHandling.h>
 #include <hermes/inspector/chrome/MessageTypesInlines.h>
 #include <hermes/inspector/chrome/tests/TestHelpers.h>
 
@@ -49,21 +50,7 @@ std::unique_ptr<T> getValue(JSONValue *value, std::vector<std::string> paths) {
       return std::move(target);
     }
   }
-  // Should never reach here
-  EXPECT_TRUE(false);
-  return nullptr;
-}
-
-void ensureResponse(
-    const std::string &message,
-    const std::string &expectedMethod,
-    int expectedID) {
-  JSLexer::Allocator allocator;
-  JSONFactory factory(allocator);
-  JSONObject *obj = mustParseStrAsJsonObj(message, factory);
-
-  EXPECT_EQ(*getValue<std::string>(obj, {"method"}), expectedMethod);
-  EXPECT_EQ(*getValue<double>(obj, {"id"}), expectedID);
+  ::hermes::hermes_fatal("Should never reach here");
 }
 
 void ensureNotification(
@@ -124,6 +111,86 @@ void ensurePaused(
       mustParseStrAsJsonObj(message, factory));
   EXPECT_EQ(notification.reason, reason);
   expectCallFrames(notification.callFrames, infos);
+}
+
+void ensureEvalResponse(
+    const std::string &message,
+    int id,
+    const char *expectedValue) {
+  JSLexer::Allocator allocator;
+  JSONFactory factory(allocator);
+  auto resp = mustMake<m::debugger::EvaluateOnCallFrameResponse>(
+      mustParseStrAsJsonObj(message, factory));
+
+  EXPECT_EQ(resp.id, id);
+  EXPECT_EQ(resp.result.type, "string");
+  // The resp.result.value is a JSON blob, so it contains the surrounding
+  // quotes. We need to add these quotes to the expected string value.
+  EXPECT_EQ(*resp.result.value, "\"" + std::string(expectedValue) + "\"");
+  EXPECT_FALSE(resp.exceptionDetails.has_value());
+}
+
+void ensureEvalResponse(
+    const std::string &message,
+    int id,
+    bool expectedValue) {
+  JSLexer::Allocator allocator;
+  JSONFactory factory(allocator);
+  auto resp = mustMake<m::debugger::EvaluateOnCallFrameResponse>(
+      mustParseStrAsJsonObj(message, factory));
+
+  EXPECT_EQ(resp.id, id);
+  EXPECT_EQ(resp.result.type, "boolean");
+  EXPECT_EQ(((*resp.result.value) == "true" ? true : false), expectedValue);
+  EXPECT_FALSE(resp.exceptionDetails.has_value());
+}
+
+void ensureEvalResponse(const std::string &message, int id, int expectedValue) {
+  JSLexer::Allocator allocator;
+  JSONFactory factory(allocator);
+  auto resp = mustMake<m::debugger::EvaluateOnCallFrameResponse>(
+      mustParseStrAsJsonObj(message, factory));
+
+  EXPECT_EQ(resp.id, id);
+  EXPECT_EQ(resp.result.type, "number");
+  EXPECT_EQ(std::stoi(*resp.result.value), expectedValue);
+  EXPECT_FALSE(resp.exceptionDetails.has_value());
+}
+
+void ensureEvalException(
+    const std::string &message,
+    int id,
+    const std::string &exceptionText,
+    const std::vector<FrameInfo> infos) {
+  JSLexer::Allocator allocator;
+  JSONFactory factory(allocator);
+  auto resp = mustMake<m::debugger::EvaluateOnCallFrameResponse>(
+      mustParseStrAsJsonObj(message, factory));
+
+  EXPECT_EQ(resp.id, id);
+  EXPECT_TRUE(resp.exceptionDetails.has_value());
+
+  m::runtime::ExceptionDetails &details = resp.exceptionDetails.value();
+  EXPECT_EQ(details.text, exceptionText);
+
+  // TODO: Hermes doesn't seem to populate the line number for the exception?
+  EXPECT_EQ(details.lineNumber, 0);
+
+  EXPECT_TRUE(details.stackTrace.has_value());
+
+  m::runtime::StackTrace &stackTrace = details.stackTrace.value();
+  EXPECT_EQ(stackTrace.callFrames.size(), infos.size());
+
+  int i = 0;
+  for (const FrameInfo &info : infos) {
+    const m::runtime::CallFrame &callFrame = stackTrace.callFrames[i];
+
+    EXPECT_GE(callFrame.lineNumber, info.lineNumberMin);
+    EXPECT_LE(callFrame.lineNumber, info.lineNumberMax);
+    EXPECT_EQ(callFrame.functionName, info.functionName);
+
+    i++;
+  }
 }
 
 struct JSONScope::Private {

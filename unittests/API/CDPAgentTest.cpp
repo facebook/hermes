@@ -96,6 +96,7 @@ class CDPAgentTest : public ::testing::Test {
 
   void sendParameterlessRequest(const std::string &method, int id);
   void sendAndCheckResponse(const std::string &method, int id);
+  void sendEvalRequest(int id, int callFrameId, const std::string &expression);
 
   jsi::Value shouldStop(
       jsi::Runtime &runtime,
@@ -289,6 +290,27 @@ void CDPAgentTest::waitForTestSignal(std::chrono::milliseconds timeout) {
       lock, timeout, [this] { return testSignalled_; });
   EXPECT_TRUE(testSignalled_);
   testSignalled_ = false;
+}
+
+void CDPAgentTest::sendEvalRequest(
+    int id,
+    int callFrameId,
+    const std::string &expression) {
+  std::string command;
+  llvh::raw_string_ostream commandStream{command};
+  ::hermes::JSONEmitter json{commandStream};
+  json.openDict();
+  json.emitKeyValue("method", "Debugger.evaluateOnCallFrame");
+  json.emitKeyValue("id", id);
+  json.emitKey("params");
+  json.openDict();
+  json.emitKeyValue("callFrameId", std::to_string(callFrameId));
+  json.emitKeyValue("expression", expression);
+  json.emitKeyValue("generatePreview", true);
+  json.closeDict();
+  json.closeDict();
+  commandStream.flush();
+  cdpAgent_->handleCommand(command);
 }
 
 TEST_F(CDPAgentTest, IssuesStartupTask) {
@@ -755,6 +777,181 @@ TEST_F(CDPAgentTest, TestSetPauseOnExceptionsAll) {
   waitForScheduledScripts();
   EXPECT_EQ(thrownExceptions_.size(), 1);
   EXPECT_EQ(thrownExceptions_.back(), "Uncaught exception");
+}
+
+TEST_F(CDPAgentTest, TestEvalOnCallFrame) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    var globalVar = "omega";
+    var booleanVar = true;
+    var numberVar = 42;
+    var objectVar = {number: 1, bool: false, str: "string"};
+
+    function func1(closure, f1param) { // frame 4
+        var f1v1 = "alpha";
+        var f1v2 = "beta";
+        function func1b() {            // frame 3
+            var f1bv1 = "gamma";
+            function func1c() {        // frame 2
+                var f1cv1 = 19;
+                closure();
+            }
+            func1c();
+        }
+        func1b();
+    }
+
+    function func2() {                 // frame 1
+        var f2v1 = "baker";
+        var f2v2 = "charlie";
+        function func2b() {            // frame 0
+            var f2bv1 = "dog";
+            debugger;                  // [1] (line 25) hit debugger statement
+                                       // [2]           run evals
+                                       // [3]           resume
+            print(globalVar);
+            print(f2bv1);
+        }
+        func2b();
+    }
+
+    func1(func2, "tau");
+  )");
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+  // [1] (line 25) hit debugger statement
+  ensurePaused(
+      waitForMessage(),
+      "other",
+      {{"func2b", 25, 3},
+       {"func2", 31, 2},
+       {"func1c", 13, 4},
+       {"func1b", 15, 3},
+       {"func1", 17, 2},
+       {"global", 34, 1}});
+
+  // [2] run eval statements
+  int frame = 0;
+  sendEvalRequest(msgId + 0, frame, R"("0: " + globalVar)");
+  sendEvalRequest(msgId + 1, frame, R"("1: " + f2bv1)");
+  sendEvalRequest(msgId + 2, frame, R"("2: " + f2v2)");
+  sendEvalRequest(msgId + 3, frame, R"("3: " + f2bv1 + " && " + f2v2)");
+  ensureEvalResponse(waitForMessage(), msgId + 0, "0: omega");
+  ensureEvalResponse(waitForMessage(), msgId + 1, "1: dog");
+  ensureEvalResponse(waitForMessage(), msgId + 2, "2: charlie");
+  ensureEvalResponse(waitForMessage(), msgId + 3, "3: dog && charlie");
+  msgId += 4;
+
+  frame = 1;
+  sendEvalRequest(msgId + 0, frame, R"("4: " + f2v1)");
+  sendEvalRequest(msgId + 1, frame, R"("5: " + f2v2)");
+  sendEvalRequest(msgId + 2, frame, R"(globalVar = "mod by debugger")");
+  ensureEvalResponse(waitForMessage(), msgId + 0, "4: baker");
+  ensureEvalResponse(waitForMessage(), msgId + 1, "5: charlie");
+  ensureEvalResponse(waitForMessage(), msgId + 2, "mod by debugger");
+  msgId += 3;
+
+  frame = 2;
+  sendEvalRequest(msgId + 0, frame, R"("6: " + f1cv1 + f1bv1 + f1v1)");
+  sendEvalRequest(msgId + 1, frame, R"("7: " + globalVar)");
+  ensureEvalResponse(waitForMessage(), msgId + 0, "6: 19gammaalpha");
+  ensureEvalResponse(waitForMessage(), msgId + 1, "7: mod by debugger");
+  msgId += 2;
+
+  // [2.1] run eval statements that return non-string primitive values
+  frame = 0;
+  sendEvalRequest(msgId + 0, frame, "booleanVar");
+  sendEvalRequest(msgId + 1, frame, "numberVar");
+  ensureEvalResponse(waitForMessage(), msgId + 0, true);
+  ensureEvalResponse(waitForMessage(), msgId + 1, 42);
+  msgId += 2;
+
+  /* TODO: This needs Runtime domain capability
+  // [2.2] run eval statement that returns object
+  frame = 0;
+  sendEvalRequest(msgId + 0, frame, "objectVar");
+  ensureEvalResponse(
+      waitForMessage(),
+      msgId + 0,
+      {{"number", PropInfo("number").setValue("1")},
+       {"bool", PropInfo("boolean").setValue("false")},
+       {"str", PropInfo("string").setValue("\"string\"")},
+       {"__proto__", PropInfo("object")}});
+
+  // msgId is increased by 2 because expectEvalResponse will make additional
+  // request with expectProps.
+  msgId += 2;
+  */
+
+  // [3] resume
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
+TEST_F(CDPAgentTest, TestEvalOnCallFrameException) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    var count = 0;
+
+    function eventuallyThrows(x) {
+      if (x <= 0)
+        throw new Error("I frew up.");
+      count++;
+      eventuallyThrows(x-1);
+    }
+
+    function callme() {
+      print("Hello");
+      debugger;          // [1] (line 12) hit debugger statement
+                         // [2]           run evals
+                         // [3]           resume
+      print("Goodbye");
+    }
+
+    callme();
+  )");
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+  // [1] (line 12) hit debugger statement
+  ensurePaused(
+      waitForMessage(), "other", {{"callme", 12, 2}, {"global", 18, 1}});
+
+  // [2] run evals
+  int frame = 0;
+  sendEvalRequest(msgId + 0, frame, "this is not valid javascript");
+  sendEvalRequest(msgId + 1, frame, "eventuallyThrows(5)");
+  sendEvalRequest(msgId + 2, frame, "count");
+
+  ensureEvalException(
+      waitForMessage(), msgId + 0, "SyntaxError: 1:6:';' expected", {});
+  ensureEvalException(
+      waitForMessage(),
+      msgId + 1,
+      "Error: I frew up.",
+      {{"eventuallyThrows", 5, 0},
+       {"eventuallyThrows", 7, 0},
+       {"eventuallyThrows", 7, 0},
+       {"eventuallyThrows", 7, 0},
+       {"eventuallyThrows", 7, 0},
+       {"eventuallyThrows", 7, 0},
+
+       // TODO: unsure why these frames are here, but they're in hdb tests
+       // too. Ask Hermes about if they really should be there.
+       FrameInfo("eval", 0, 0).setLineNumberMax(19),
+       FrameInfo("callme", 12, 2),
+       FrameInfo("global", 0, 0).setLineNumberMax(19)});
+  ensureEvalResponse(waitForMessage(), msgId + 2, 5);
+  msgId += 3;
+
+  // [3] resume
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
 }
 
 TEST_F(CDPAgentTest, TestRuntimeEnable) {

@@ -50,8 +50,8 @@ void DebuggerDomainAgent::handleDebuggerEvent(
       break;
     case DebuggerEventType::Resumed:
       if (paused_) {
-        sendNotificationToClient(m::debugger::ResumedNotification{});
         paused_ = false;
+        sendNotificationToClient(m::debugger::ResumedNotification{});
       }
       break;
     case DebuggerEventType::DebuggerStatement:
@@ -193,6 +193,42 @@ void DebuggerDomainAgent::setPauseOnExceptions(
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
+void DebuggerDomainAgent::evaluateOnCallFrame(
+    const m::debugger::EvaluateOnCallFrameRequest &req) {
+  if (!checkDebuggerPaused(req)) {
+    return;
+  }
+
+  uint32_t frameIndex = (uint32_t)atoi(req.callFrameId.c_str());
+  asyncDebugger_.evalWhilePaused(
+      req.expression,
+      frameIndex,
+      [&req, this](HermesRuntime &runtime, const debugger::EvalResult &result) {
+        m::debugger::EvaluateOnCallFrameResponse resp;
+        resp.id = req.id;
+        if (result.isException) {
+          resp.exceptionDetails =
+              m::runtime::makeExceptionDetails(result.exceptionDetails);
+        } else {
+          auto remoteObjPtr = std::make_shared<m::runtime::RemoteObject>();
+
+          std::string objectGroup = req.objectGroup.value_or("");
+          bool byValue = req.returnByValue.value_or(false);
+          bool generatePreview = req.generatePreview.value_or(false);
+          *remoteObjPtr = m::runtime::makeRemoteObject(
+              runtime_,
+              result.value,
+              objTable_,
+              objectGroup,
+              byValue,
+              generatePreview);
+
+          resp.result = std::move(*remoteObjPtr);
+        }
+        sendResponseToClient(resp);
+      });
+}
+
 void DebuggerDomainAgent::sendPausedNotificationToClient() {
   m::debugger::PausedNotification note;
   note.reason = "other";
@@ -253,10 +289,7 @@ bool DebuggerDomainAgent::checkDebuggerEnabled(const m::Request &req) {
 }
 
 bool DebuggerDomainAgent::checkDebuggerPaused(const m::Request &req) {
-  assert(
-      paused_ &&
-      "isWaitingForCommand() should imply paused_ is true for all cases where checkDebuggerPaused is called");
-  if (!asyncDebugger_.isWaitingForCommand()) {
+  if (!paused_) {
     sendResponseToClient(m::makeErrorResponse(
         req.id, m::ErrorCode::InvalidRequest, "Debugger is not paused"));
     return false;

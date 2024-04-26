@@ -61,16 +61,25 @@ struct FrameInfo {
 void ensureErrorResponse(const std::string &message, int id);
 void ensureOkResponse(const std::string &message, int id);
 
-void ensureResponse(
-    const std::string &message,
-    const std::string &method,
-    int id);
 void ensureNotification(const std::string &message, const std::string &method);
 
 void ensurePaused(
     const std::string &message,
     const std::string &reason,
     const std::vector<FrameInfo> &infos);
+
+void ensureEvalResponse(
+    const std::string &message,
+    int id,
+    const char *expectedValue);
+void ensureEvalResponse(const std::string &message, int id, bool expectedValue);
+void ensureEvalResponse(const std::string &message, int id, int expectedValue);
+
+void ensureEvalException(
+    const std::string &message,
+    int id,
+    const std::string &exceptionText,
+    const std::vector<FrameInfo> infos);
 
 } // namespace hermes
 } // namespace facebook

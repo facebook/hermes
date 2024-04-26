@@ -59,6 +59,8 @@ class DebuggerDomainAgent : public DomainAgent {
   void setPauseOnExceptions(
       const m::debugger::SetPauseOnExceptionsRequest &req);
 
+  void evaluateOnCallFrame(const m::debugger::EvaluateOnCallFrameRequest &req);
+
  private:
   /// Handle an event originating from the runtime.
   void handleDebuggerEvent(
