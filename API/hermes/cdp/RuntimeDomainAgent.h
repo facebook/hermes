@@ -67,6 +67,14 @@ class RuntimeDomainAgent : public DomainAgent {
  private:
   bool checkRuntimeEnabled(const m::Request &req);
 
+  /// Ensure the provided \p executionContextId matches the one
+  /// indicated via the constructor. Returns true if they match.
+  /// Sends an error message with the specified \p commandId
+  /// and returns false otherwise.
+  bool validateExecutionContextId(
+      m::runtime::ExecutionContextId executionContextId,
+      long long commandId);
+
   std::vector<m::runtime::PropertyDescriptor> makePropsFromScope(
       std::pair<uint32_t, uint32_t> frameAndScopeIndex,
       const std::string &objectGroup,

@@ -338,6 +338,11 @@ void RuntimeDomainAgent::globalLexicalScopeNames(
     const m::runtime::GlobalLexicalScopeNamesRequest &req) {
   // Allow this message even if domain is not enabled to match V8 behavior.
 
+  if (req.executionContextId.has_value() &&
+      !validateExecutionContextId(*req.executionContextId, req.id)) {
+    return;
+  }
+
   const debugger::ProgramState &state =
       runtime_.getDebugger().getProgramState();
   const debugger::LexicalInfo &lexicalInfo = state.getLexicalInfo(0);
@@ -366,6 +371,10 @@ void RuntimeDomainAgent::globalLexicalScopeNames(
 void RuntimeDomainAgent::compileScript(
     const m::runtime::CompileScriptRequest &req) {
   if (!checkRuntimeEnabled(req)) {
+    return;
+  }
+  if (req.executionContextId.has_value() &&
+      !validateExecutionContextId(*req.executionContextId, req.id)) {
     return;
   }
 
@@ -420,6 +429,11 @@ void RuntimeDomainAgent::getProperties(
 void RuntimeDomainAgent::evaluate(const m::runtime::EvaluateRequest &req) {
   // Allow this to be used when domain is not enabled to match V8 behavior.
 
+  if (req.contextId.has_value() &&
+      !validateExecutionContextId(*req.contextId, req.id)) {
+    return;
+  }
+
   m::runtime::EvaluateResponse resp;
   resp.id = req.id;
 
@@ -469,12 +483,7 @@ void RuntimeDomainAgent::callFunctionOn(
     assert(
         req.executionContextId &&
         "should not be here if both object id and execution context id are missing");
-    if (*req.executionContextId != executionContextID_) {
-      sendResponseToClient(m::makeErrorResponse(
-          req.id,
-          m::ErrorCode::InvalidRequest,
-          "unknown execution context id " +
-              std::to_string(*req.executionContextId)));
+    if (!validateExecutionContextId(*req.executionContextId, req.id)) {
       return;
     }
   }
@@ -524,6 +533,20 @@ bool RuntimeDomainAgent::checkRuntimeEnabled(const m::Request &req) {
     return false;
   }
   return true;
+}
+
+bool RuntimeDomainAgent::validateExecutionContextId(
+    m::runtime::ExecutionContextId executionContextId,
+    long long commandId) {
+  if (executionContextId == executionContextID_) {
+    return true;
+  }
+
+  sendResponseToClient(m::makeErrorResponse(
+      commandId,
+      m::ErrorCode::InvalidRequest,
+      "Unknown execution context id: " + std::to_string(executionContextId)));
+  return false;
 }
 
 std::vector<m::runtime::PropertyDescriptor>
