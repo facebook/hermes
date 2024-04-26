@@ -42,13 +42,11 @@ void DebuggerDomainAgent::handleDebuggerEvent(
   switch (event) {
     case DebuggerEventType::ScriptLoaded:
       processNewLoadedScript();
-      asyncDebugger_.setNextCommand(debugger::Command::continueExecution());
+      asyncDebugger_.resumeFromPaused(AsyncDebugCommand::Continue);
       break;
     case DebuggerEventType::Exception:
       paused_ = true;
       sendPauseOnExceptionNotificationToClient();
-      break;
-    case DebuggerEventType::EvalComplete:
       break;
     case DebuggerEventType::Resumed:
       if (paused_) {
@@ -142,7 +140,7 @@ void DebuggerDomainAgent::resume(const m::debugger::ResumeRequest &req) {
     return;
   }
 
-  asyncDebugger_.setNextCommand(debugger::Command::continueExecution());
+  asyncDebugger_.resumeFromPaused(AsyncDebugCommand::Continue);
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
@@ -151,8 +149,7 @@ void DebuggerDomainAgent::stepInto(const m::debugger::StepIntoRequest &req) {
     return;
   }
 
-  asyncDebugger_.setNextCommand(
-      debugger::Command::step(debugger::StepMode::Into));
+  asyncDebugger_.resumeFromPaused(AsyncDebugCommand::StepInto);
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
@@ -161,8 +158,7 @@ void DebuggerDomainAgent::stepOut(const m::debugger::StepOutRequest &req) {
     return;
   }
 
-  asyncDebugger_.setNextCommand(
-      debugger::Command::step(debugger::StepMode::Out));
+  asyncDebugger_.resumeFromPaused(AsyncDebugCommand::StepOut);
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
@@ -171,8 +167,7 @@ void DebuggerDomainAgent::stepOver(const m::debugger::StepOverRequest &req) {
     return;
   }
 
-  asyncDebugger_.setNextCommand(
-      debugger::Command::step(debugger::StepMode::Over));
+  asyncDebugger_.resumeFromPaused(AsyncDebugCommand::StepOver);
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 

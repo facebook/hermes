@@ -171,6 +171,10 @@ class HERMES_EXPORT Command {
   /// frame at index \p frameIndex.
   static Command eval(const String &src, uint32_t frameIndex);
 
+  /// \return a boolean whether this Command was constructed using the static
+  /// eval() method
+  bool isEval();
+
  private:
   friend Debugger;
   explicit Command(::hermes::vm::DebugCommand &&);
@@ -404,6 +408,9 @@ class Command {
   }
   static Command eval(const String &src, uint32_t frameIndex) {
     return Command();
+  }
+  bool isEval() {
+    return false;
   }
 
  private:

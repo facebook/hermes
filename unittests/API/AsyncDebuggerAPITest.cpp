@@ -282,7 +282,7 @@ TEST_F(AsyncDebuggerAPITest, DebuggerEventCallbackIsWaitingForCommandTest) {
   EXPECT_TRUE(isWaitingForCommand);
 }
 
-TEST_F(AsyncDebuggerAPITest, SetNextCommandTest) {
+TEST_F(AsyncDebuggerAPITest, ResumeFromPausedTest) {
   std::shared_ptr<std::promise<DebuggerEventType>> sharedPromise;
   eventCallbackID_ = asyncDebuggerAPI_->addDebuggerEventCallback_TS(
       [&sharedPromise](
@@ -309,7 +309,7 @@ TEST_F(AsyncDebuggerAPITest, SetNextCommandTest) {
         // Trigger an interrupt to get on the runtime thread to set the next
         // command
         asyncDebuggerAPI_->triggerInterrupt_TS([this](HermesRuntime &runtime) {
-          asyncDebuggerAPI_->setNextCommand(Command::continueExecution());
+          asyncDebuggerAPI_->resumeFromPaused(AsyncDebugCommand::Continue);
         });
       });
   EXPECT_EQ(finalEvent, DebuggerEventType::Resumed);
@@ -346,8 +346,8 @@ TEST_F(AsyncDebuggerAPITest, NotifyDueToEventCallbacksTest) {
 
   // We're not on the runtime thread, but because we know for sure the runtime
   // thread is paused at this point it's safe to call
-  // setNextCommand().
-  asyncDebuggerAPI_->setNextCommand(Command::continueExecution());
+  // resumeFromPaused().
+  asyncDebuggerAPI_->resumeFromPaused(AsyncDebugCommand::Continue);
   // break out of loop
   stopFlag_.store(true);
 
@@ -472,7 +472,7 @@ TEST_F(AsyncDebuggerAPITest, StopInterruptsAfterNewCommand) {
             interruptRunCount++;
           });
       asyncDebuggerAPI_->triggerInterrupt_TS([this](HermesRuntime &runtime) {
-        asyncDebuggerAPI_->setNextCommand(Command::continueExecution());
+        asyncDebuggerAPI_->resumeFromPaused(AsyncDebugCommand::Continue);
       });
       asyncDebuggerAPI_->triggerInterrupt_TS(
           [&interruptRunCount](HermesRuntime &runtime) {
@@ -494,6 +494,45 @@ TEST_F(AsyncDebuggerAPITest, StopInterruptsAfterNewCommand) {
   EXPECT_TRUE(waitFor<bool>([this](auto promise) {
     runtimeThread_->add([promise]() { promise->set_value(true); });
   }));
+}
+
+TEST_F(AsyncDebuggerAPITest, SetEvalCommandTest) {
+  std::shared_ptr<std::promise<DebuggerEventType>> sharedPromise;
+  eventCallbackID_ = asyncDebuggerAPI_->addDebuggerEventCallback_TS(
+      [&sharedPromise](
+          HermesRuntime &runtime,
+          AsyncDebuggerAPI &asyncDebugger,
+          DebuggerEventType event) { sharedPromise->set_value(event); });
+
+  // Trigger a debugger statement and make sure DebuggerEventCallback gets the
+  // expected event type.
+  auto debuggerEvent =
+      waitFor<DebuggerEventType>([&sharedPromise, this](auto promise) {
+        sharedPromise = promise;
+
+        scheduleScript(R"(
+          const a = 123;
+          debugger;
+        )");
+      });
+  EXPECT_EQ(debuggerEvent, DebuggerEventType::DebuggerStatement);
+
+  // Verify evalWhilePaused() gets executed properly.
+  double value = waitFor<double>([this](auto promise) {
+    asyncDebuggerAPI_->triggerInterrupt_TS(
+        [this, promise](HermesRuntime &runtime) {
+          asyncDebuggerAPI_->evalWhilePaused(
+              "a",
+              0,
+              [promise](
+                  HermesRuntime &runtime, const debugger::EvalResult &result) {
+                EXPECT_TRUE(result.value.isNumber());
+                EXPECT_FALSE(result.isException);
+                promise->set_value(result.value.getNumber());
+              });
+        });
+  });
+  EXPECT_EQ(value, 123);
 }
 
 #else // !HERMES_ENABLE_DEBUGGER
