@@ -59,10 +59,6 @@ class DebuggerDomainAgent : public DomainAgent {
       const m::debugger::SetPauseOnExceptionsRequest &req);
 
  private:
-  /// Fixed execution context ID because Hermes doesn't currently support realms
-  /// or Web Workers.
-  static constexpr int32_t kHermesExecutionContextId = 1;
-
   /// Handle an event originating from the runtime.
   void handleDebuggerEvent(
       HermesRuntime &runtime,
