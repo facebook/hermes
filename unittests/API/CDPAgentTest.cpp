@@ -2270,8 +2270,8 @@ TEST_F(CDPAgentTest, RuntimeConsoleLog) {
   sendAndCheckResponse("Runtime.enable", msgId++);
 
   // Generate message
-  waitFor<bool>([this, kTimestamp, kStringValue](auto promise) {
-    runtimeThread_->add([this, kTimestamp, kStringValue, promise]() {
+  waitFor<bool>([this, timestamp = kTimestamp, kStringValue](auto promise) {
+    runtimeThread_->add([this, timestamp, kStringValue, promise]() {
       jsi::String arg0 = jsi::String::createFromAscii(*runtime_, kStringValue);
 
       jsi::Object arg1 = jsi::Object(*runtime_);
@@ -2283,7 +2283,7 @@ TEST_F(CDPAgentTest, RuntimeConsoleLog) {
       arg2.setProperty(*runtime_, "bool2", true);
 
       ConsoleMessage message(
-          kTimestamp, ConsoleAPIType::kWarning, std::vector<jsi::Value>());
+          timestamp, ConsoleAPIType::kWarning, std::vector<jsi::Value>());
       message.args.reserve(3);
       message.args.push_back(std::move(arg0));
       message.args.push_back(std::move(arg1));
@@ -2341,9 +2341,9 @@ TEST_F(CDPAgentTest, RuntimeConsoleBuffer) {
   constexpr int kNumLogsToTest = kExpectedMaxBufferSize * 2;
 
   // Generate console messages on the runtime thread
-  waitFor<bool>([this, kNumLogsToTest](auto promise) {
-    runtimeThread_->add([this, promise, kNumLogsToTest]() {
-      for (int i = 0; i < kNumLogsToTest; i++) {
+  waitFor<bool>([this, numLogs = kNumLogsToTest](auto promise) {
+    runtimeThread_->add([this, promise, numLogs]() {
+      for (int i = 0; i < numLogs; i++) {
         jsi::Value value =
             jsi::String::createFromUtf8(*runtime_, std::to_string(i));
         std::vector<jsi::Value> args;
