@@ -22,7 +22,7 @@
 #include <sys/resource.h>
 #endif
 
-using namespace facebook::jsi;
+using namespace facebook;
 using namespace facebook::hermes;
 using namespace facebook::hermes::debugger;
 using namespace facebook::hermes::inspector_modern::chrome;
@@ -45,10 +45,19 @@ class AsyncDebuggerAPITest : public ::testing::Test {
   }
 
   bool evaluateBool(const std::string &script) {
-    Value result = runtime_->evaluateJavaScript(
-        std::unique_ptr<StringBuffer>(new StringBuffer(script)), "url");
+    jsi::Value result = runtime_->evaluateJavaScript(
+        std::unique_ptr<jsi::StringBuffer>(new jsi::StringBuffer(script)),
+        "url");
     return result.getBool();
   }
+
+  jsi::Value shouldStop(
+      jsi::Runtime &runtime,
+      const jsi::Value &thisVal,
+      const jsi::Value *args,
+      size_t count);
+
+  std::atomic<bool> stopFlag_{};
 
   std::unique_ptr<SerialExecutor> runtimeThread_;
   std::unique_ptr<HermesRuntime> runtime_;
@@ -64,6 +73,14 @@ void AsyncDebuggerAPITest::SetUp() {
   // between.
   auto builder = ::hermes::vm::RuntimeConfig::Builder();
   runtime_ = facebook::hermes::makeHermesRuntime(builder.build());
+  runtime_->global().setProperty(
+      *runtime_,
+      "shouldStop",
+      jsi::Function::createFromHostFunction(
+          *runtime_,
+          jsi::PropNameID::forAscii(*runtime_, "shouldStop"),
+          0,
+          std::bind(&AsyncDebuggerAPITest::shouldStop, this, _1, _2, _3, _4)));
   asyncDebuggerAPI_ = AsyncDebuggerAPI::create(*runtime_);
 
 #if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
@@ -93,8 +110,18 @@ void AsyncDebuggerAPITest::TearDown() {
   runtime_.reset();
 }
 
+jsi::Value AsyncDebuggerAPITest::shouldStop(
+    jsi::Runtime &runtime,
+    const jsi::Value &thisVal,
+    const jsi::Value *args,
+    size_t count) {
+  return stopFlag_.load() ? jsi::Value(true) : jsi::Value(false);
+}
+
 template <typename T>
-T waitFor(std::function<void(std::shared_ptr<std::promise<T>>)> callback) {
+T waitFor(
+    std::function<void(std::shared_ptr<std::promise<T>>)> callback,
+    const std::string &reason = "unknown") {
   auto promise = std::make_shared<std::promise<T>>();
   auto future = promise->get_future();
 
@@ -102,7 +129,7 @@ T waitFor(std::function<void(std::shared_ptr<std::promise<T>>)> callback) {
 
   auto status = future.wait_for(std::chrono::milliseconds(2500));
   if (status != std::future_status::ready) {
-    throw std::runtime_error("triggerInterrupt didn't get executed");
+    throw std::runtime_error("triggerInterrupt didn't get executed: " + reason);
   }
   return future.get();
 }
@@ -288,8 +315,13 @@ TEST_F(AsyncDebuggerAPITest, SetNextCommandTest) {
   EXPECT_EQ(finalEvent, DebuggerEventType::Resumed);
 }
 
-TEST_F(AsyncDebuggerAPITest, DISABLED_NotifyDueToEventCallbacksTest) {
-  scheduleScript("true");
+TEST_F(AsyncDebuggerAPITest, NotifyDueToEventCallbacksTest) {
+  // This needs to be a while-loop because Explicit AsyncBreak will only happen
+  // while there is JS to run
+  scheduleScript(R"(
+    while (!shouldStop()) {
+    }
+  )");
 
   // Multiple callbacks are registered to make sure AsyncDebuggerAPI doesn't
   // break out of processInterruptWhilePaused() due to having no callbacks.
@@ -299,14 +331,16 @@ TEST_F(AsyncDebuggerAPITest, DISABLED_NotifyDueToEventCallbacksTest) {
              AsyncDebuggerAPI &asyncDebugger,
              DebuggerEventType event) {});
 
-  EXPECT_TRUE(waitFor<bool>([this](auto promise) {
-    eventCallbackID_ = asyncDebuggerAPI_->addDebuggerEventCallback_TS(
-        [promise](
-            HermesRuntime &runtime,
-            AsyncDebuggerAPI &asyncDebugger,
-            DebuggerEventType event) { promise->set_value(true); });
-    runtime_->getDebugger().triggerAsyncPause(AsyncPauseKind::Explicit);
-  }));
+  EXPECT_TRUE(waitFor<bool>(
+      [this](auto promise) {
+        eventCallbackID_ = asyncDebuggerAPI_->addDebuggerEventCallback_TS(
+            [promise](
+                HermesRuntime &runtime,
+                AsyncDebuggerAPI &asyncDebugger,
+                DebuggerEventType event) { promise->set_value(true); });
+        runtime_->getDebugger().triggerAsyncPause(AsyncPauseKind::Explicit);
+      },
+      "wait on explicit pause"));
 
   // At this point, the runtime thread is paused due to Explicit AsyncBreak
 
@@ -314,15 +348,20 @@ TEST_F(AsyncDebuggerAPITest, DISABLED_NotifyDueToEventCallbacksTest) {
   // thread is paused at this point it's safe to call
   // setNextCommand().
   asyncDebuggerAPI_->setNextCommand(Command::continueExecution());
+  // break out of loop
+  stopFlag_.store(true);
 
-  EXPECT_TRUE(waitFor<bool>([this](auto promise) {
-    // Schedule something on the runtime thread to confirm that we broke out of
-    // processInterruptWhilePaused() after removing a DebuggerEventCallback
-    runtimeThread_->add([promise]() { promise->set_value(true); });
-    // Removing a DebuggerEventCallback will signal and cause another iteration
-    // of processInterruptWhilePaused()
-    asyncDebuggerAPI_->removeDebuggerEventCallback_TS(eventCallbackID_);
-  }));
+  EXPECT_TRUE(waitFor<bool>(
+      [this](auto promise) {
+        // Schedule something on the runtime thread to confirm that we broke out
+        // of processInterruptWhilePaused() after removing a
+        // DebuggerEventCallback
+        runtimeThread_->add([promise]() { promise->set_value(true); });
+        // Removing a DebuggerEventCallback will signal and cause another
+        // iteration of processInterruptWhilePaused()
+        asyncDebuggerAPI_->removeDebuggerEventCallback_TS(eventCallbackID_);
+      },
+      "wait on runtime thread freed up"));
 
   asyncDebuggerAPI_->removeDebuggerEventCallback_TS(callbackID);
 }
