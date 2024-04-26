@@ -52,8 +52,7 @@ export class ImplementationWriter {
 
       namespace facebook {
       namespace hermes {
-      namespace inspector_modern {
-      namespace chrome {
+      namespace cdp {
       namespace message {
 
     `);
@@ -105,8 +104,7 @@ export class ImplementationWriter {
   writeEpilogue() {
     this.stream.write(`
       } // namespace message
-      } // namespace chrome
-      } // namespace inspector_modern
+      } // namespace cdp
       } // namespace hermes
       } // namespace facebook
     `);

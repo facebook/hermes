@@ -7,21 +7,20 @@
 
 #include "DebuggerDomainAgent.h"
 
-#include <hermes/inspector/chrome/RemoteObjectConverters.h>
+#include <hermes/cdp/RemoteObjectConverters.h>
 
 namespace facebook {
 namespace hermes {
 namespace cdp {
 
 using namespace facebook::hermes::debugger;
-using namespace facebook::hermes::inspector_modern::chrome;
 
 DebuggerDomainAgent::DebuggerDomainAgent(
     int32_t executionContextID,
     HermesRuntime &runtime,
     AsyncDebuggerAPI &asyncDebugger,
     SynchronizedOutboundCallback messageCallback,
-    std::shared_ptr<old_cdp::RemoteObjectsTable> objTable)
+    std::shared_ptr<RemoteObjectsTable> objTable)
     : DomainAgent(
           executionContextID,
           std::move(messageCallback),

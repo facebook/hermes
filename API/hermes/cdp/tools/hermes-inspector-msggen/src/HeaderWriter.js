@@ -51,16 +51,15 @@ export class HeaderWriter {
 
       #pragma once
 
-      #include <hermes/inspector/chrome/JSONValueInterfaces.h>
-      #include <hermes/inspector/chrome/MessageInterfaces.h>
+      #include <hermes/cdp/JSONValueInterfaces.h>
+      #include <hermes/cdp/MessageInterfaces.h>
 
       #include <optional>
       #include <vector>
 
       namespace facebook {
       namespace hermes {
-      namespace inspector_modern {
-      namespace chrome {
+      namespace cdp {
       namespace message {
 
 template<typename T>
@@ -161,8 +160,7 @@ using JSONBlob = std::string;
   writeEpilogue() {
     this.stream.write(`
         } // namespace message
-        } // namespace chrome
-        } // namespace inspector_modern
+        } // namespace cdp
         } // namespace hermes
         } // namespace facebook
     `);

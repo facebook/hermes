@@ -7,12 +7,12 @@
 
 #include <hermes/DebuggerAPI.h>
 #include <hermes/Support/ErrorHandling.h>
-#include <hermes/inspector/chrome/MessageTypesInlines.h>
-#include <hermes/inspector/chrome/tests/TestHelpers.h>
+#include <hermes/cdp/MessageTypesInlines.h>
 
 #include "CDPJSONHelpers.h"
+#include "CDPTestHelpers.h"
 
-using namespace facebook::hermes::inspector_modern::chrome;
+using namespace facebook::hermes::cdp;
 using namespace hermes::parser;
 
 namespace facebook {

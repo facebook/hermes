@@ -18,8 +18,8 @@
 #include <hermes/Support/JSONEmitter.h>
 #include <hermes/cdp/CDPAgent.h>
 #include <hermes/cdp/DomainAgent.h>
+#include <hermes/cdp/JSONValueInterfaces.h>
 #include <hermes/hermes.h>
-#include <hermes/inspector/chrome/JSONValueInterfaces.h>
 #include <hermes/inspector/chrome/tests/SerialExecutor.h>
 
 #include <llvh/ADT/ScopeExit.h>
@@ -32,7 +32,6 @@
 
 using namespace facebook::hermes::cdp;
 using namespace facebook::hermes::debugger;
-using namespace facebook::hermes::inspector_modern::chrome;
 using namespace facebook::hermes;
 using namespace facebook;
 using namespace std::chrono_literals;
@@ -150,7 +149,8 @@ class CDPAgentTest : public ::testing::Test {
 
   std::unique_ptr<HermesRuntime> runtime_;
   std::unique_ptr<AsyncDebuggerAPI> asyncDebuggerAPI_;
-  std::unique_ptr<SerialExecutor> runtimeThread_;
+  std::unique_ptr<facebook::hermes::inspector_modern::chrome::SerialExecutor>
+      runtimeThread_;
   std::unique_ptr<CDPAgent> cdpAgent_;
 
   std::atomic<bool> stopFlag_{};
@@ -173,9 +173,12 @@ void CDPAgentTest::SetUp() {
   // thread is the main thread of the HermesRuntime.
   struct rlimit limit;
   getrlimit(RLIMIT_STACK, &limit);
-  runtimeThread_ = std::make_unique<SerialExecutor>(limit.rlim_cur);
+  runtimeThread_ = std::make_unique<
+      facebook::hermes::inspector_modern::chrome::SerialExecutor>(
+      limit.rlim_cur);
 #else
-  runtimeThread_ = std::make_unique<SerialExecutor>();
+  runtimeThread_ = std::make_unique<
+      facebook::hermes::inspector_modern::chrome::SerialExecutor>();
 #endif
 
   auto builder = ::hermes::vm::RuntimeConfig::Builder();

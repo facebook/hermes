@@ -9,12 +9,13 @@
 #define HERMES_UNITTESTS_API_CDPJSONHELPERS_H
 
 #include <hermes/Parser/JSONParser.h>
+#include <hermes/cdp/MessageTypes.h>
 
 namespace facebook {
 namespace hermes {
 
 using namespace ::hermes::parser;
-namespace m = ::facebook::hermes::inspector_modern::chrome::message;
+namespace m = ::facebook::hermes::cdp::message;
 
 struct JSONScope {
   JSONScope();

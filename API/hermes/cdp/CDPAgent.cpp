@@ -10,15 +10,14 @@
 #include "ProfilerDomainAgent.h"
 #include "RuntimeDomainAgent.h"
 
-#include <hermes/inspector/chrome/MessageConverters.h>
-#include <hermes/inspector/chrome/MessageTypes.h>
+#include <hermes/cdp/MessageConverters.h>
+#include <hermes/cdp/MessageTypes.h>
 
 namespace facebook {
 namespace hermes {
 namespace cdp {
 
 using namespace facebook::hermes::debugger;
-using namespace facebook::hermes::inspector_modern::chrome;
 
 /// Implementation of the CDP Agent. This class accepts CDP commands from
 /// arbitrary threads and delivers them to the appropriate, domain-specific
@@ -80,7 +79,7 @@ class CDPAgentImpl {
     // so this collection is shared amongst them all. No locking is needed,
     // as it's guaranteed that there will never be multiple domain agents
     // running at the same time.
-    std::shared_ptr<old_cdp::RemoteObjectsTable> objTable_;
+    std::shared_ptr<RemoteObjectsTable> objTable_;
 
     std::unique_ptr<DebuggerDomainAgent> debuggerAgent_;
     std::unique_ptr<RuntimeDomainAgent> runtimeAgent_;
@@ -168,7 +167,7 @@ CDPAgentImpl::DomainAgents::DomainAgents(
       runtime_(runtime),
       asyncDebuggerAPI_(asyncDebuggerAPI),
       messageCallback_(std::move(messageCallback)),
-      objTable_(std::make_shared<old_cdp::RemoteObjectsTable>()) {}
+      objTable_(std::make_shared<RemoteObjectsTable>()) {}
 
 void CDPAgentImpl::DomainAgents::initialize() {
   debuggerAgent_ = std::make_unique<DebuggerDomainAgent>(
