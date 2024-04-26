@@ -91,6 +91,10 @@ bool AsyncDebuggerAPI::isWaitingForCommand() {
   return isWaitingForCommand_;
 }
 
+bool AsyncDebuggerAPI::isPaused() {
+  return inDidPause_;
+}
+
 bool AsyncDebuggerAPI::resumeFromPaused(AsyncDebugCommand command) {
   if (!isWaitingForCommand_) {
     return false;

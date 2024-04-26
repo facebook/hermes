@@ -8,6 +8,8 @@
 #ifndef HERMES_CDP_RUNTIMEDOMAINAGENT_H
 #define HERMES_CDP_RUNTIMEDOMAINAGENT_H
 
+#include <optional>
+
 #include "CDPDebugAPI.h"
 #include "DomainAgent.h"
 
@@ -26,6 +28,7 @@ class RuntimeDomainAgent : public DomainAgent {
   RuntimeDomainAgent(
       int32_t executionContextID,
       HermesRuntime &runtime,
+      debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
       SynchronizedOutboundCallback messageCallback,
       std::shared_ptr<RemoteObjectsTable> objTable,
       ConsoleMessageStorage &consoleMessageStorage,
@@ -75,7 +78,7 @@ class RuntimeDomainAgent : public DomainAgent {
       m::runtime::ExecutionContextId executionContextId,
       long long commandId);
 
-  std::vector<m::runtime::PropertyDescriptor> makePropsFromScope(
+  std::optional<std::vector<m::runtime::PropertyDescriptor>> makePropsFromScope(
       std::pair<uint32_t, uint32_t> frameAndScopeIndex,
       const std::string &objectGroup,
       const debugger::ProgramState &state,
@@ -87,6 +90,7 @@ class RuntimeDomainAgent : public DomainAgent {
       bool generatePreview);
 
   HermesRuntime &runtime_;
+  debugger::AsyncDebuggerAPI &asyncDebuggerAPI_;
   ConsoleMessageStorage &consoleMessageStorage_;
   ConsoleMessageDispatcher &consoleMessageDispatcher_;
 
