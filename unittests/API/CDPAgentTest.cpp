@@ -21,6 +21,10 @@
 
 #include "CDPJSONHelpers.h"
 
+#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
+#include <sys/resource.h>
+#endif
+
 using namespace facebook::hermes::cdp;
 using namespace facebook::hermes::debugger;
 using namespace facebook::hermes::inspector_modern::chrome;
@@ -126,7 +130,15 @@ class CDPAgentTest : public ::testing::Test {
 };
 
 void CDPAgentTest::SetUp() {
+#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
+  // Give the runtime thread the same stack size as the main thread. The runtime
+  // thread is the main thread of the HermesRuntime.
+  struct rlimit limit;
+  getrlimit(RLIMIT_STACK, &limit);
+  runtimeThread_ = std::make_unique<SerialExecutor>(limit.rlim_cur);
+#else
   runtimeThread_ = std::make_unique<SerialExecutor>();
+#endif
 
   auto builder = ::hermes::vm::RuntimeConfig::Builder();
   runtime_ = facebook::hermes::makeHermesRuntime(builder.build());
