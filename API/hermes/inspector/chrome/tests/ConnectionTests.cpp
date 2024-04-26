@@ -2736,7 +2736,7 @@ TEST_F(ConnectionTests, testConsoleBuffer) {
       << "}";
 
   asyncRuntime.executeScriptAsync(oss.str());
-  asyncRuntime.wait();
+  asyncRuntime.wait(std::chrono::milliseconds(3500));
 
   bool receivedWarning = false;
   std::array<bool, kExpectedMaxBufferSize> received;
