@@ -16,6 +16,7 @@ namespace hermes {
 namespace cdp {
 
 static const char *const kUserEnteredScriptIdPrefix = "userScript";
+static const char *const kEvaluatedCodeUrl = "?eval";
 
 RuntimeDomainAgent::RuntimeDomainAgent(
     int32_t executionContextID,
@@ -158,6 +159,39 @@ void RuntimeDomainAgent::getProperties(
     resp.result =
         makePropsFromValue(*valuePtr, objGroup, ownProperties, generatePreview);
   }
+  sendResponseToClient(resp);
+}
+
+void RuntimeDomainAgent::evaluate(const m::runtime::EvaluateRequest &req) {
+  if (!checkRuntimeEnabled(req)) {
+    return;
+  }
+
+  m::runtime::EvaluateResponse resp;
+  resp.id = req.id;
+
+  std::string objectGroup = req.objectGroup.value_or("");
+  try {
+    // Evaluate the expression using the runtime's normal script evaluation
+    // mechanism. This ensures the expression is evaluated in the global scope,
+    // regardless of where the runtime happens to be paused.
+    jsi::Value result = runtime_.evaluateJavaScript(
+        std::unique_ptr<jsi::StringBuffer>(
+            new jsi::StringBuffer(req.expression)),
+        kEvaluatedCodeUrl);
+
+    bool byValue = req.returnByValue.value_or(false);
+    bool generatePreview = req.generatePreview.value_or(false);
+    auto remoteObjPtr = m::runtime::makeRemoteObject(
+        runtime_, result, *objTable_, objectGroup, byValue, generatePreview);
+    resp.result = std::move(remoteObjPtr);
+  } catch (const facebook::jsi::JSError &error) {
+    resp.exceptionDetails = m::runtime::ExceptionDetails();
+    resp.exceptionDetails->text = error.getMessage() + "\n" + error.getStack();
+    resp.exceptionDetails->exception = m::runtime::makeRemoteObject(
+        runtime_, error.value(), *objTable_, objectGroup, false, false);
+  }
+
   sendResponseToClient(resp);
 }
 

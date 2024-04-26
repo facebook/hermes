@@ -17,6 +17,7 @@
 #include <hermes/cdp/CDPAgent.h>
 #include <hermes/cdp/DomainAgent.h>
 #include <hermes/hermes.h>
+#include <hermes/inspector/chrome/JSONValueInterfaces.h>
 #include <hermes/inspector/chrome/tests/SerialExecutor.h>
 
 #include "CDPJSONHelpers.h"
@@ -1776,6 +1777,186 @@ TEST_F(CDPAgentTest, GetPropertiesOnlyOwn) {
   // resume
   sendAndCheckResponse("Debugger.resume", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
+TEST_F(CDPAgentTest, RuntimeEvaluate) {
+  int msgId = 1;
+
+  // Start a script
+  sendAndCheckResponse("Runtime.enable", msgId++);
+  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
+  scheduleScript(R"(
+    var globalVar = "omega";
+    var booleanVar = true;
+    var numberVar = 42;
+    var objectVar = {number: 1, bool: false, str: "string"};
+
+    while(!shouldStop()) {  // [1] (line 6) hit infinite loop
+      var a = 1;            // [2] run evals
+      a++;                  // [3] exit run loop
+    }
+  )");
+
+  // [1] (line 6) hit infinite loop
+
+  // [2] run eval statements
+  sendRequest("Runtime.evaluate", msgId + 0, [](::hermes::JSONEmitter &params) {
+    params.emitKeyValue("expression", R"("0: " + globalVar)");
+  });
+  auto resp0 = expectResponse(std::nullopt, msgId + 0);
+  EXPECT_EQ(
+      jsonScope_.getString(resp0, {"result", "result", "type"}), "string");
+  EXPECT_EQ(
+      jsonScope_.getString(resp0, {"result", "result", "value"}), "0: omega");
+
+  // [2.1] run eval statements that return non-string primitive values
+  sendRequest("Runtime.evaluate", msgId + 1, [](::hermes::JSONEmitter &params) {
+    params.emitKeyValue("expression", "booleanVar");
+  });
+  sendRequest("Runtime.evaluate", msgId + 2, [](::hermes::JSONEmitter &params) {
+    params.emitKeyValue("expression", "numberVar");
+  });
+  auto resp1 = expectResponse(std::nullopt, msgId + 1);
+  EXPECT_EQ(
+      jsonScope_.getString(resp1, {"result", "result", "type"}), "boolean");
+  EXPECT_EQ(jsonScope_.getBoolean(resp1, {"result", "result", "value"}), true);
+  auto resp2 = expectResponse(std::nullopt, msgId + 2);
+  EXPECT_EQ(
+      jsonScope_.getString(resp2, {"result", "result", "type"}), "number");
+  EXPECT_EQ(jsonScope_.getNumber(resp2, {"result", "result", "value"}), 42);
+
+  // [2.2] run eval statement that returns object
+  sendRequest("Runtime.evaluate", msgId + 3, [](::hermes::JSONEmitter &params) {
+    params.emitKeyValue("expression", "objectVar");
+  });
+  auto resp3 = expectResponse(std::nullopt, msgId + 3);
+  EXPECT_EQ(
+      jsonScope_.getString(resp3, {"result", "result", "type"}), "object");
+  EXPECT_EQ(
+      jsonScope_.getString(resp3, {"result", "result", "className"}), "Object");
+  std::string objId =
+      jsonScope_.getString(resp3, {"result", "result", "objectId"});
+  getAndEnsureProps(
+      msgId + 3,
+      objId,
+      {{"number", PropInfo("number").setValue("1")},
+       {"bool", PropInfo("boolean").setValue("false")},
+       {"str", PropInfo("string").setValue("\"string\"")},
+       {"__proto__", PropInfo("object")}},
+      true);
+
+  // Let the script terminate
+  stopFlag_.store(true);
+}
+
+TEST_F(CDPAgentTest, RuntimeEvaluateWhilePaused) {
+  int msgId = 1;
+
+  // Start a script
+  sendAndCheckResponse("Runtime.enable", msgId++);
+  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
+  sendAndCheckResponse("Debugger.enable", msgId++);
+  scheduleScript(R"(
+    var inGlobalScope = 123;
+    (function func() {
+      var inFunctionScope = 456;
+      debugger;
+    })();
+  )");
+  expectNotification("Debugger.scriptParsed");
+
+  auto pausedNote = ensurePaused(
+      waitForMessage(), "other", {{"func", 4, 2}, {"global", 5, 1}});
+
+  // Evaluate the global variable; it should be visible to the runtime
+  // evaluation.
+  sendRequest("Runtime.evaluate", msgId, [](::hermes::JSONEmitter &params) {
+    params.emitKeyValue("expression", "inGlobalScope");
+  });
+  auto resp0 = expectResponse(std::nullopt, msgId++);
+  EXPECT_EQ(
+      jsonScope_.getString(resp0, {"result", "result", "type"}), "number");
+  EXPECT_EQ(jsonScope_.getNumber(resp0, {"result", "result", "value"}), 123);
+
+  // Evaluate the local variable; it should not be visible to the runtime
+  // evaluation.
+  sendRequest("Runtime.evaluate", msgId, [](::hermes::JSONEmitter &params) {
+    params.emitKeyValue("expression", "inFunctionScope");
+  });
+  auto resp1 = expectResponse(std::nullopt, msgId++);
+  EXPECT_GT(
+      jsonScope_.getString(resp1, {"result", "exceptionDetails", "text"})
+          .size(),
+      0);
+
+  // Let the script terminate
+  sendAndCheckResponse("Debugger.resume", msgId++);
+}
+
+TEST_F(CDPAgentTest, RuntimeEvaluateReturnByValue) {
+  int msgId = 1;
+
+  // Start a script
+  sendAndCheckResponse("Runtime.enable", msgId++);
+  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
+  scheduleScript(R"(while(!shouldStop());)");
+
+  // We expect this JSON object to be evaluated and return by value, so
+  // that JSON encoding the result will give the same string.
+  auto object = "{\"key\":[1,\"two\"]}";
+  auto preview =
+      "{\"description\":\"Object\",\"overflow\":false,\"properties\":[{\"name\":\"key\",\"subtype\":\"array\",\"type\":\"object\",\"value\":\"Array(2)\"}],\"type\":\"object\"}";
+
+  sendRequest(
+      "Runtime.evaluate", msgId, [object](::hermes::JSONEmitter &params) {
+        params.emitKeyValue("expression", std::string("(") + object + ")");
+        params.emitKeyValue("returnByValue", true);
+        params.emitKeyValue("generatePreview", true);
+      });
+
+  auto resp = expectResponse(std::nullopt, msgId + 0);
+  EXPECT_EQ(jsonScope_.getString(resp, {"result", "result", "type"}), "object");
+  EXPECT_EQ(
+      jsonScope_.getString(resp, {"result", "result", "preview", "type"}),
+      "object");
+  EXPECT_TRUE(jsonValsEQ(
+      jsonScope_.getObject(resp, {"result", "result", "preview"}),
+      jsonScope_.parseObject(preview)));
+  EXPECT_TRUE(jsonValsEQ(
+      jsonScope_.getObject(resp, {"result", "result", "value"}),
+      jsonScope_.parseObject(object)));
+
+  // Let the script terminate
+  stopFlag_.store(true);
+}
+
+TEST_F(CDPAgentTest, RuntimeEvaluateException) {
+  int msgId = 1;
+
+  // Start a script
+  sendAndCheckResponse("Runtime.enable", msgId++);
+  ensureNotification(waitForMessage(), "Runtime.executionContextCreated");
+  scheduleScript(R"(while(!shouldStop()) {})");
+
+  // Evaluate something that throws
+  sendRequest("Runtime.evaluate", msgId, [](::hermes::JSONEmitter &params) {
+    params.emitKeyValue("expression", R"((undefined)();)");
+  });
+  auto resp = expectResponse(std::nullopt, msgId++);
+
+  // Ensure the exception (remote) object and text were delivered
+  EXPECT_GT(
+      jsonScope_
+          .getString(
+              resp, {"result", "exceptionDetails", "exception", "objectId"})
+          .size(),
+      0);
+  EXPECT_GT(
+      jsonScope_.getString(resp, {"result", "exceptionDetails", "text"}).size(),
+      0);
+
+  // Let the script terminate
+  stopFlag_.store(true);
 }
 
 #endif // HERMES_ENABLE_DEBUGGER

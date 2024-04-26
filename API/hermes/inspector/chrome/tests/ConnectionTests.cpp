@@ -1574,6 +1574,7 @@ TEST_F(ConnectionTests, testRuntimeEnable) {
   expectExecutionContextCreated(conn);
 }
 
+// Also implemented as CDPAgentTest::RuntimeEvaluate
 TEST_F(ConnectionTests, testRuntimeEvaluate) {
   int msgId = 1;
 
@@ -1621,6 +1622,7 @@ TEST_F(ConnectionTests, testRuntimeEvaluate) {
   asyncRuntime.stop();
 }
 
+// Also implemented as CDPAgentTest::RuntimeEvaluateReturnByValue
 TEST_F(ConnectionTests, testRuntimeEvaluateReturnByValue) {
   int msgId = 1;
 
