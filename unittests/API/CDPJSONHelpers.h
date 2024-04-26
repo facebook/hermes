@@ -58,6 +58,11 @@ struct FrameInfo {
   std::string scriptId;
 };
 
+template <typename T>
+std::unique_ptr<T> getValue(
+    const std::string &message,
+    std::vector<std::string> paths);
+
 void ensureErrorResponse(const std::string &message, int id);
 void ensureOkResponse(const std::string &message, int id);
 
@@ -80,6 +85,13 @@ void ensureEvalException(
     int id,
     const std::string &exceptionText,
     const std::vector<FrameInfo> infos);
+
+void ensureSetBreakpointResponse(
+    const std::string &message,
+    int id,
+    const std::string &scriptID,
+    long long lineNumber,
+    long long columnNumber);
 
 } // namespace hermes
 } // namespace facebook

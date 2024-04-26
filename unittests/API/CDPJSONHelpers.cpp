@@ -53,6 +53,20 @@ std::unique_ptr<T> getValue(JSONValue *value, std::vector<std::string> paths) {
   ::hermes::hermes_fatal("Should never reach here");
 }
 
+template <typename T>
+std::unique_ptr<T> getValue(
+    const std::string &message,
+    std::vector<std::string> paths) {
+  JSLexer::Allocator allocator;
+  JSONFactory factory(allocator);
+  JSONObject *obj = mustParseStrAsJsonObj(message, factory);
+
+  return getValue<T>(obj, paths);
+}
+template std::unique_ptr<std::string> getValue(
+    const std::string &message,
+    std::vector<std::string> paths);
+
 void ensureNotification(
     const std::string &message,
     const std::string &expectedMethod) {
@@ -191,6 +205,22 @@ void ensureEvalException(
 
     i++;
   }
+}
+
+void ensureSetBreakpointResponse(
+    const std::string &message,
+    int id,
+    const std::string &scriptID,
+    long long lineNumber,
+    long long columnNumber) {
+  JSLexer::Allocator allocator;
+  JSONFactory factory(allocator);
+  auto resp = mustMake<m::debugger::SetBreakpointResponse>(
+      mustParseStrAsJsonObj(message, factory));
+  EXPECT_EQ(resp.id, id);
+  EXPECT_EQ(resp.actualLocation.scriptId, scriptID);
+  EXPECT_EQ(resp.actualLocation.lineNumber, lineNumber);
+  EXPECT_EQ(resp.actualLocation.columnNumber.value(), columnNumber);
 }
 
 struct JSONScope::Private {

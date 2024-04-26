@@ -1076,6 +1076,7 @@ TEST_F(ConnectionTests, testApplyBreakpointsToLoadedScripts) {
   expectNothing(conn);
 }
 
+// Also implemented as CDPAgentTest::TestSetBreakpointById
 TEST_F(ConnectionTests, testSetBreakpointById) {
   int msgId = 1;
 
@@ -1359,6 +1360,7 @@ TEST_F(ConnectionTests, testSetBreakpointConditional) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
+// Also implemented as CDPAgentTest::TestRemoveBreakpoint
 TEST_F(ConnectionTests, testRemoveBreakpoint) {
   int msgId = 1;
 

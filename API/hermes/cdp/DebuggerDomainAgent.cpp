@@ -55,15 +55,8 @@ void DebuggerDomainAgent::handleDebuggerEvent(
       }
       break;
     case DebuggerEventType::DebuggerStatement:
-      paused_ = true;
-      sendPausedNotificationToClient();
-      break;
     case DebuggerEventType::Breakpoint:
-      break;
     case DebuggerEventType::StepFinish:
-      paused_ = true;
-      sendPausedNotificationToClient();
-      break;
     case DebuggerEventType::ExplicitPause:
       paused_ = true;
       sendPausedNotificationToClient();
@@ -229,6 +222,65 @@ void DebuggerDomainAgent::evaluateOnCallFrame(
       });
 }
 
+void DebuggerDomainAgent::setBreakpoint(
+    const m::debugger::SetBreakpointRequest &req) {
+  CDPBreakpointDescription description;
+  description.line = req.location.lineNumber;
+  description.column = req.location.columnNumber;
+  description.condition = req.location.scriptId;
+
+  auto scriptID = std::stoull(req.location.scriptId);
+
+  // Create the Hermes breakpoint
+  std::optional<HermesBreakpointLocation> hermesBreakpoint =
+      createHermesBreakpont(
+          static_cast<debugger::ScriptID>(scriptID), description);
+  if (!hermesBreakpoint) {
+    sendResponseToClient(m::makeErrorResponse(
+        req.id, m::ErrorCode::ServerError, "Breakpoint creation failed"));
+    return;
+  }
+
+  // Create the CDP breakpoint
+  auto [breakpointID, breakpoint] = createCDPBreakpoint(
+      std::move(description),
+      HermesBreakpoint{
+          hermesBreakpoint.value().id,
+          static_cast<debugger::ScriptID>(scriptID)});
+
+  // Send the response
+  m::debugger::SetBreakpointResponse resp;
+  resp.id = req.id;
+  resp.breakpointId = std::to_string(breakpointID);
+  resp.actualLocation =
+      m::debugger::makeLocation(hermesBreakpoint.value().location);
+
+  sendResponseToClient(resp);
+}
+
+void DebuggerDomainAgent::removeBreakpoint(
+    const m::debugger::RemoveBreakpointRequest &req) {
+  auto cdpID = std::stoull(req.breakpointId);
+  auto cdpBreakpoint = cdpBreakpoints_.find(cdpID);
+  if (cdpBreakpoint == cdpBreakpoints_.end()) {
+    sendResponseToClient(m::makeErrorResponse(
+        req.id,
+        m::ErrorCode::InvalidRequest,
+        "Unknown breakpoint ID: " + req.breakpointId));
+    return;
+  }
+
+  // Remove all the Hermes breakpoints implied by the CDP breakpoint
+  for (HermesBreakpoint hermesBreakpoint :
+       cdpBreakpoint->second.hermesBreakpoints) {
+    runtime_.getDebugger().deleteBreakpoint(hermesBreakpoint.breakpointID);
+  }
+
+  // Remove the CDP breakpoint
+  cdpBreakpoints_.erase(cdpBreakpoint);
+  sendResponseToClient(m::makeOkResponse(req.id));
+}
+
 void DebuggerDomainAgent::sendPausedNotificationToClient() {
   m::debugger::PausedNotification note;
   note.reason = "other";
@@ -277,6 +329,71 @@ void DebuggerDomainAgent::processNewLoadedScript() {
 
     sendScriptParsedNotificationToClient(loc);
   }
+}
+
+/// Create a CDP breakpoint with a \p description of where to break, and
+/// (optionally) a \p hermesBreakpointID that has already been applied.
+/// Returns a pair containing the newly created breakpoint ID and value.
+std::pair<unsigned int, CDPBreakpoint &>
+DebuggerDomainAgent::createCDPBreakpoint(
+    CDPBreakpointDescription &&description,
+    std::optional<HermesBreakpoint> hermesBreakpoint) {
+  unsigned int breakpointID = nextBreakpointID_++;
+  CDPBreakpoint &breakpoint =
+      cdpBreakpoints_.emplace(breakpointID, CDPBreakpoint(description))
+          .first->second;
+
+  if (hermesBreakpoint) {
+    breakpoint.hermesBreakpoints.push_back(hermesBreakpoint.value());
+  }
+
+  return {breakpointID, breakpoint};
+}
+
+/// Attempt to create a breakpoint in the Hermes script identified by
+/// \p scriptID at the location described by \p description.
+std::optional<HermesBreakpointLocation>
+DebuggerDomainAgent::createHermesBreakpont(
+    debugger::ScriptID scriptID,
+    const CDPBreakpointDescription &description) {
+  // Convert the location description to a Hermes location
+  debugger::SourceLocation hermesLoc;
+  hermesLoc.fileId = scriptID;
+  // CDP Locations are 0-based, Hermes lines/columns are 1-based
+  hermesLoc.line = description.line + 1;
+
+  if (description.column.has_value()) {
+    if (description.column.value() == 0) {
+      // TODO: When CDTP sends a column number of 0, we send Hermes a column
+      // number of 1. For some reason, this causes Hermes to not be
+      // able to resolve breakpoints.
+      hermesLoc.column = debugger::kInvalidLocation;
+    } else {
+      hermesLoc.column = description.column.value() + 1;
+    }
+  }
+
+  // Set the breakpoint in Hermes
+  debugger::BreakpointID breakpointID =
+      runtime_.getDebugger().setBreakpoint(hermesLoc);
+  if (breakpointID == debugger::kInvalidBreakpoint) {
+    return {};
+  }
+
+  debugger::BreakpointInfo info =
+      runtime_.getDebugger().getBreakpointInfo(breakpointID);
+  if (!info.resolved) {
+    // Only accept immediately-resolvable breakpoints
+    return {};
+  }
+
+  // Apply any break conditions
+  if (description.condition) {
+    runtime_.getDebugger().setBreakpointCondition(
+        breakpointID, description.condition.value());
+  }
+
+  return HermesBreakpointLocation{breakpointID, info.resolvedLocation};
 }
 
 bool DebuggerDomainAgent::checkDebuggerEnabled(const m::Request &req) {
