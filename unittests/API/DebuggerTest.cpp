@@ -18,10 +18,19 @@ using namespace facebook::hermes::debugger;
 struct TestEventObserver : public debugger::EventObserver {
   std::vector<PauseReason> pauseReasons;
   std::vector<StackTrace> stackTraces;
+  std::vector<LexicalInfo> lexicalInfos;
 
   Command didPause(Debugger &debugger) override {
-    pauseReasons.push_back(debugger.getProgramState().getPauseReason());
-    stackTraces.push_back(debugger.getProgramState().getStackTrace());
+    auto &state = debugger.getProgramState();
+    pauseReasons.push_back(state.getPauseReason());
+    stackTraces.push_back(state.getStackTrace());
+
+    auto &stackTrace = stackTraces.back();
+    uint32_t frameCount = stackTrace.callFrameCount();
+    for (uint32_t i = 0; i < frameCount; i++) {
+      lexicalInfos.push_back(debugger.getProgramState().getLexicalInfo(i));
+    }
+
     return Command::continueExecution();
   }
 };
@@ -34,7 +43,10 @@ struct DebuggerAPITest : public ::testing::Test {
   std::shared_ptr<HermesRuntime> rt;
   TestEventObserver observer;
 
-  DebuggerAPITest() : rt(makeHermesRuntime()) {
+  DebuggerAPITest()
+      : rt(makeHermesRuntime(((hermes::vm::RuntimeConfig::Builder())
+                                  .withEnableBlockScoping(true)
+                                  .build()))) {
     rt->getDebugger().setEventObserver(&observer);
   }
 };
@@ -178,6 +190,31 @@ TEST_F(DebuggerAPITest, ImplicitAndExplicitAsyncPauseTest) {
           {PauseReason::AsyncTriggerImplicit,
            PauseReason::AsyncTriggerExplicit}),
       observer.pauseReasons);
+}
+
+TEST_F(DebuggerAPITest, GetScopes) {
+  // Pause with 4 variables in scope.
+  eval(R"(
+    (function testFunction(one) {
+      let two = 2;
+      if (one > 0) {
+        let three = 3;
+        try {
+          let four = 4;
+          debugger;
+        } catch (err) {}
+      }
+    })(1);
+  )");
+
+  EXPECT_EQ(
+      std::vector<PauseReason>({PauseReason::DebuggerStatement}),
+      observer.pauseReasons);
+
+  EXPECT_GT(observer.lexicalInfos.size(), 0);
+  auto &lexicalInfo = observer.lexicalInfos[0];
+  EXPECT_GT(lexicalInfo.getScopesCount(), 0);
+  EXPECT_EQ(lexicalInfo.getVariablesCountInScope(0), 4);
 }
 
 #endif
