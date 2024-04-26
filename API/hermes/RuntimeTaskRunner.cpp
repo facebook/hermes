@@ -24,11 +24,15 @@ void RuntimeTaskRunner::enqueueTask(RuntimeTask task) {
   // access to the runtime, implying they are never concurrently executed.
   std::shared_ptr<bool> alreadyRan = std::make_shared<bool>(false);
 
-  // Ask the integrator to run the task whenenver JavaScript is not running.
+  // Ask the integrator to run the task whenever JavaScript is not running.
   enqueueRuntimeTask_([alreadyRan, task](HermesRuntime &runtime) {
     if (!*alreadyRan) {
-      task(runtime);
+      // Make sure to set alreadyRan first before executing the RuntimeTask. The
+      // task could potentially trigger interrupts by calling into
+      // HermesRuntime, which might cause the callback queued with
+      // `triggerInterrupt_TS()` to run.
       *alreadyRan = true;
+      task(runtime);
     }
   });
 
@@ -36,8 +40,8 @@ void RuntimeTaskRunner::enqueueTask(RuntimeTask task) {
   // be interrupted.
   debugger_.triggerInterrupt_TS([alreadyRan, task](HermesRuntime &runtime) {
     if (!*alreadyRan) {
-      task(runtime);
       *alreadyRan = true;
+      task(runtime);
     }
   });
 }
