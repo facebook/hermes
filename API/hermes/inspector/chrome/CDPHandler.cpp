@@ -1405,6 +1405,9 @@ void CDPHandlerImpl::handle(const m::runtime::EnableRequest &req) {
 }
 
 void CDPHandlerImpl::handle(const m::runtime::EvaluateRequest &req) {
+  if (!validateExecutionContext(req.id, req.contextId)) {
+    return;
+  }
   {
     pendingEvals_.push(
         {req.id,
