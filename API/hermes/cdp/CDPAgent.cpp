@@ -6,6 +6,8 @@
  */
 
 #include "CDPAgent.h"
+#include "CDPDebugAPI.h"
+#include "ConsoleMessage.h"
 #include "DebuggerDomainAgent.h"
 #include "ProfilerDomainAgent.h"
 #include "RuntimeDomainAgent.h"
@@ -28,8 +30,7 @@ class CDPAgentImpl {
  public:
   CDPAgentImpl(
       int32_t executionContextID,
-      HermesRuntime &runtime,
-      AsyncDebuggerAPI &asyncDebuggerAPI,
+      CDPDebugAPI &cdpDebugAPI,
       EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
       SynchronizedOutboundCallback messageCallback);
   ~CDPAgentImpl();
@@ -49,8 +50,7 @@ class CDPAgentImpl {
     // Create a new collection of domain agents.
     DomainAgents(
         int32_t executionContextID,
-        HermesRuntime &runtime,
-        AsyncDebuggerAPI &asyncDebuggerAPI,
+        CDPDebugAPI &cdpDebugAPI,
         SynchronizedOutboundCallback messageCallback);
 
     /// Create the domain handlers and subscribing to any external events.
@@ -101,16 +101,16 @@ class CDPAgentImpl {
 
 CDPAgentImpl::CDPAgentImpl(
     int32_t executionContextID,
-    HermesRuntime &runtime,
-    debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
+    CDPDebugAPI &cdpDebugAPI,
     EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
     SynchronizedOutboundCallback messageCallback)
     : messageCallback_(std::move(messageCallback)),
-      runtimeTaskRunner_(asyncDebuggerAPI, enqueueRuntimeTaskCallback),
+      runtimeTaskRunner_(
+          cdpDebugAPI.asyncDebuggerAPI(),
+          enqueueRuntimeTaskCallback),
       domainAgents_(std::make_shared<DomainAgents>(
           executionContextID,
-          runtime,
-          asyncDebuggerAPI,
+          cdpDebugAPI,
           messageCallback_)) {}
 
 CDPAgentImpl::~CDPAgentImpl() {
@@ -161,12 +161,11 @@ void CDPAgentImpl::handleCommand(std::string json) {
 
 CDPAgentImpl::DomainAgents::DomainAgents(
     int32_t executionContextID,
-    HermesRuntime &runtime,
-    AsyncDebuggerAPI &asyncDebuggerAPI,
+    CDPDebugAPI &cdpDebugAPI,
     SynchronizedOutboundCallback messageCallback)
     : executionContextID_(executionContextID),
-      runtime_(runtime),
-      asyncDebuggerAPI_(asyncDebuggerAPI),
+      runtime_(cdpDebugAPI.runtime()),
+      asyncDebuggerAPI_(cdpDebugAPI.asyncDebuggerAPI()),
       messageCallback_(std::move(messageCallback)),
       objTable_(std::make_shared<RemoteObjectsTable>()) {}
 
@@ -276,28 +275,24 @@ void CDPAgentImpl::DomainAgents::handleCommand(
 
 std::unique_ptr<CDPAgent> CDPAgent::create(
     int32_t executionContextID,
-    HermesRuntime &runtime,
-    debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
+    CDPDebugAPI &cdpDebugAPI,
     EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
     OutboundMessageFunc messageCallback) {
   return std::unique_ptr<CDPAgent>(new CDPAgent(
       executionContextID,
-      runtime,
-      asyncDebuggerAPI,
+      cdpDebugAPI,
       enqueueRuntimeTaskCallback,
       messageCallback));
 }
 
 CDPAgent::CDPAgent(
     int32_t executionContextID,
-    HermesRuntime &runtime,
-    debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
+    CDPDebugAPI &cdpDebugAPI,
     EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
     OutboundMessageFunc messageCallback)
     : impl_(std::make_unique<CDPAgentImpl>(
           executionContextID,
-          runtime,
-          asyncDebuggerAPI,
+          cdpDebugAPI,
           enqueueRuntimeTaskCallback,
           SynchronizedOutboundCallback(messageCallback))) {
   impl_->initializeDomainAgents();
