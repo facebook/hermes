@@ -143,6 +143,8 @@ void ensureEvalResponse(
     long long id,
     int expectedValue);
 
+std::string ensureObjectEvalResponse(const std::string &message, int id);
+
 void ensureEvalException(
     const std::string &message,
     int id,

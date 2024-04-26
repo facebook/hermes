@@ -261,6 +261,23 @@ void ensureEvalResponse(
   EXPECT_FALSE(resp.exceptionDetails.has_value());
 }
 
+std::string ensureObjectEvalResponse(const std::string &message, int id) {
+  JSLexer::Allocator allocator;
+  JSONFactory factory(allocator);
+  auto resp = mustMake<m::debugger::EvaluateOnCallFrameResponse>(
+      mustParseStrAsJsonObj(message, factory));
+
+  EXPECT_EQ(resp.id, id);
+  EXPECT_EQ(resp.result.type, "object");
+  EXPECT_FALSE(resp.exceptionDetails.has_value());
+
+  EXPECT_TRUE(resp.result.objectId.has_value());
+  EXPECT_TRUE(resp.result.preview.has_value());
+  EXPECT_EQ(resp.result.preview->type, "object");
+
+  return resp.result.objectId.value();
+}
+
 void ensureEvalException(
     const std::string &message,
     int id,
