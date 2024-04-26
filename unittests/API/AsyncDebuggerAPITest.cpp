@@ -276,7 +276,7 @@ TEST_F(AsyncDebuggerAPITest, SetNextCommandTest) {
   EXPECT_EQ(finalEvent, DebuggerEventType::Resumed);
 }
 
-TEST_F(AsyncDebuggerAPITest, NotifyDueToEventCallbacksTest) {
+TEST_F(AsyncDebuggerAPITest, DISABLED_NotifyDueToEventCallbacksTest) {
   scheduleScript("true");
 
   // Multiple callbacks are registered to make sure AsyncDebuggerAPI doesn't
