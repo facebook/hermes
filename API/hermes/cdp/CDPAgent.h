@@ -101,9 +101,13 @@ class HERMES_EXPORT CDPAgent {
   /// arbitrary threads.
   void handleCommand(std::string json);
 
-  /// Enable the Runtime domain without processing a CDP command or send a CDP
-  /// response. This can be called from arbitrary threads.
+  /// Enable the Runtime domain without processing a CDP command or sending a
+  /// CDP response. This can be called from arbitrary threads.
   void enableRuntimeDomain();
+
+  /// Enable the Debugger domain without processing a CDP command or sending a
+  /// CDP response. This can be called from arbitrary threads.
+  void enableDebuggerDomain();
 
   /// Extract state to be persisted across reloads. This can be called from
   /// arbitrary threads.

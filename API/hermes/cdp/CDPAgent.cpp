@@ -63,9 +63,13 @@ class CDPAgentImpl {
   /// Process a CDP command encoded in \p json.
   void handleCommand(std::string json);
 
-  /// Enable the Runtime domain without processing a CDP command or send a CDP
-  /// response.
+  /// Enable the Runtime domain without processing a CDP command or sending a
+  /// CDP response.
   void enableRuntimeDomain();
+
+  /// Enable the Debugger domain without processing a CDP command or sending a
+  /// CDP response.
+  void enableDebuggerDomain();
 
   /// Extract state to be persisted across reloads.
   State getState();
@@ -92,9 +96,13 @@ class CDPAgentImpl {
     /// handler.
     void handleCommand(std::shared_ptr<message::Request> command);
 
-    /// Enable the Runtime domain without processing a CDP command or send a CDP
-    /// response.
+    /// Enable the Runtime domain without processing a CDP command or sending a
+    /// CDP response.
     void enableRuntimeDomain();
+
+    /// Enable the Debugger domain without processing a CDP command or sending a
+    /// CDP response.
+    void enableDebuggerDomain();
 
     /// Get the Debugger domain state to be persisted.
     std::unique_ptr<DebuggerDomainState> getDebuggerDomainState();
@@ -217,6 +225,13 @@ void CDPAgentImpl::enableRuntimeDomain() {
   runtimeTaskRunner_.enqueueTask(
       [domainAgents = domainAgents_](HermesRuntime &) {
         domainAgents->enableRuntimeDomain();
+      });
+}
+
+void CDPAgentImpl::enableDebuggerDomain() {
+  runtimeTaskRunner_.enqueueTask(
+      [domainAgents = domainAgents_](HermesRuntime &) {
+        domainAgents->enableDebuggerDomain();
       });
 }
 
@@ -366,6 +381,11 @@ void CDPAgentImpl::DomainAgents::enableRuntimeDomain() {
   runtimeAgent_->enable();
 }
 
+void CDPAgentImpl::DomainAgents::enableDebuggerDomain() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  debuggerAgent_->enable();
+}
+
 std::unique_ptr<DebuggerDomainState>
 CDPAgentImpl::DomainAgents::getDebuggerDomainState() {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -411,6 +431,10 @@ void CDPAgent::handleCommand(std::string json) {
 
 void CDPAgent::enableRuntimeDomain() {
   impl_->enableRuntimeDomain();
+}
+
+void CDPAgent::enableDebuggerDomain() {
+  impl_->enableDebuggerDomain();
 }
 
 State CDPAgent::getState() {
