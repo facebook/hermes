@@ -27,6 +27,7 @@ using namespace facebook::hermes::inspector_modern::chrome;
 class CDPAgentImpl {
  public:
   CDPAgentImpl(
+      int32_t executionContextID,
       HermesRuntime &runtime,
       AsyncDebuggerAPI &asyncDebuggerAPI,
       EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
@@ -47,6 +48,7 @@ class CDPAgentImpl {
   struct DomainAgents {
     // Create a new collection of domain agents.
     DomainAgents(
+        int32_t executionContextID,
         HermesRuntime &runtime,
         AsyncDebuggerAPI &asyncDebuggerAPI,
         SynchronizedOutboundCallback messageCallback);
@@ -61,6 +63,10 @@ class CDPAgentImpl {
     /// handler.
     void handleCommand(std::shared_ptr<message::Request> command);
 
+    /// Execution context ID associated with the HermesRuntime. This is used by
+    /// domain agents when sending notifications to identify the runtime the
+    /// notification is coming from.
+    int32_t executionContextID_;
     HermesRuntime &runtime_;
     debugger::AsyncDebuggerAPI &asyncDebuggerAPI_;
 
@@ -85,6 +91,7 @@ class CDPAgentImpl {
 };
 
 CDPAgentImpl::CDPAgentImpl(
+    int32_t executionContextID,
     HermesRuntime &runtime,
     debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
     EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
@@ -92,6 +99,7 @@ CDPAgentImpl::CDPAgentImpl(
     : messageCallback_(std::move(messageCallback)),
       runtimeTaskRunner_(asyncDebuggerAPI, enqueueRuntimeTaskCallback),
       domainAgents_(std::make_shared<DomainAgents>(
+          executionContextID,
           runtime,
           asyncDebuggerAPI,
           messageCallback_)) {}
@@ -143,18 +151,20 @@ void CDPAgentImpl::handleCommand(std::string json) {
 }
 
 CDPAgentImpl::DomainAgents::DomainAgents(
+    int32_t executionContextID,
     HermesRuntime &runtime,
     AsyncDebuggerAPI &asyncDebuggerAPI,
     SynchronizedOutboundCallback messageCallback)
-    : runtime_(runtime),
+    : executionContextID_(executionContextID),
+      runtime_(runtime),
       asyncDebuggerAPI_(asyncDebuggerAPI),
       messageCallback_(std::move(messageCallback)) {}
 
 void CDPAgentImpl::DomainAgents::initialize() {
   debuggerAgent_ = std::make_unique<DebuggerDomainAgent>(
-      runtime_, asyncDebuggerAPI_, messageCallback_);
-  runtimeAgent_ =
-      std::make_unique<RuntimeDomainAgent>(runtime_, messageCallback_);
+      executionContextID_, runtime_, asyncDebuggerAPI_, messageCallback_);
+  runtimeAgent_ = std::make_unique<RuntimeDomainAgent>(
+      executionContextID_, runtime_, messageCallback_);
 }
 
 void CDPAgentImpl::DomainAgents::dispose() {
@@ -214,20 +224,27 @@ void CDPAgentImpl::DomainAgents::handleCommand(
 }
 
 std::unique_ptr<CDPAgent> CDPAgent::create(
+    int32_t executionContextID,
     HermesRuntime &runtime,
     debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
     EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
     OutboundMessageFunc messageCallback) {
   return std::unique_ptr<CDPAgent>(new CDPAgent(
-      runtime, asyncDebuggerAPI, enqueueRuntimeTaskCallback, messageCallback));
+      executionContextID,
+      runtime,
+      asyncDebuggerAPI,
+      enqueueRuntimeTaskCallback,
+      messageCallback));
 }
 
 CDPAgent::CDPAgent(
+    int32_t executionContextID,
     HermesRuntime &runtime,
     debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
     EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
     OutboundMessageFunc messageCallback)
     : impl_(std::make_unique<CDPAgentImpl>(
+          executionContextID,
           runtime,
           asyncDebuggerAPI,
           enqueueRuntimeTaskCallback,
