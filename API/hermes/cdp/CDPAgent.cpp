@@ -179,6 +179,15 @@ void CDPAgentImpl::DomainAgents::handleCommand(
     debuggerAgent_->pause(static_cast<m::debugger::PauseRequest &>(*command));
   } else if (command->method == "Debugger.resume") {
     debuggerAgent_->resume(static_cast<m::debugger::ResumeRequest &>(*command));
+  } else if (command->method == "Debugger.stepInto") {
+    debuggerAgent_->stepInto(
+        static_cast<m::debugger::StepIntoRequest &>(*command));
+  } else if (command->method == "Debugger.stepOut") {
+    debuggerAgent_->stepOut(
+        static_cast<m::debugger::StepOutRequest &>(*command));
+  } else if (command->method == "Debugger.stepOver") {
+    debuggerAgent_->stepOver(
+        static_cast<m::debugger::StepOverRequest &>(*command));
   } else {
     messageCallback_(message::makeErrorResponse(
                          command->id,

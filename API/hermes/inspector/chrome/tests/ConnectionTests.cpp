@@ -718,6 +718,7 @@ TEST_F(ConnectionTests, testIsDebuggerAttached) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
+// Also implemented as CDPAgentTest::TestStepOver
 TEST_F(ConnectionTests, testStepOver) {
   int msgId = 1;
 
@@ -750,6 +751,7 @@ TEST_F(ConnectionTests, testStepOver) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
+// Also implemented as CDPAgentTest::TestStepIn
 TEST_F(ConnectionTests, testStepIn) {
   int msgId = 1;
 
@@ -786,6 +788,7 @@ TEST_F(ConnectionTests, testStepIn) {
   expectNotification<m::debugger::ResumedNotification>(conn);
 }
 
+// Also implemented as CDPAgentTest::TestStepOut
 TEST_F(ConnectionTests, testStepOut) {
   int msgId = 1;
 

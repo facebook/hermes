@@ -47,6 +47,13 @@ class DebuggerDomainAgent : public DomainAgent {
   /// Handles Debugger.resume request
   void resume(const m::debugger::ResumeRequest &req);
 
+  // Handles Debugger.stepInto request
+  void stepInto(const m::debugger::StepIntoRequest &req);
+  // Handles Debugger.stepOut request
+  void stepOut(const m::debugger::StepOutRequest &req);
+  // Handles Debugger.stepOver request
+  void stepOver(const m::debugger::StepOverRequest &req);
+
  private:
   /// Fixed execution context ID because Hermes doesn't currently support realms
   /// or Web Workers.
