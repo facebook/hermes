@@ -2229,23 +2229,29 @@ TEST_F(CDPAgentTest, ConsoleLog) {
   sendAndCheckResponse("Runtime.enable", msgId++);
 
   // Generate message
-  jsi::String arg0 = jsi::String::createFromAscii(*runtime_, kStringValue);
+  waitFor<bool>([this, kTimestamp, kStringValue](auto promise) {
+    runtimeThread_->add([this, kTimestamp, kStringValue, promise]() {
+      jsi::String arg0 = jsi::String::createFromAscii(*runtime_, kStringValue);
 
-  jsi::Object arg1 = jsi::Object(*runtime_);
-  arg1.setProperty(*runtime_, "number1", 1);
-  arg1.setProperty(*runtime_, "bool1", false);
+      jsi::Object arg1 = jsi::Object(*runtime_);
+      arg1.setProperty(*runtime_, "number1", 1);
+      arg1.setProperty(*runtime_, "bool1", false);
 
-  jsi::Object arg2 = jsi::Object(*runtime_);
-  arg2.setProperty(*runtime_, "number2", 2);
-  arg2.setProperty(*runtime_, "bool2", true);
+      jsi::Object arg2 = jsi::Object(*runtime_);
+      arg2.setProperty(*runtime_, "number2", 2);
+      arg2.setProperty(*runtime_, "bool2", true);
 
-  ConsoleMessage message(
-      kTimestamp, ConsoleAPIType::kWarning, std::vector<jsi::Value>());
-  message.args.reserve(3);
-  message.args.push_back(std::move(arg0));
-  message.args.push_back(std::move(arg1));
-  message.args.push_back(std::move(arg2));
-  cdpDebugAPI_->addConsoleMessage(std::move(message));
+      ConsoleMessage message(
+          kTimestamp, ConsoleAPIType::kWarning, std::vector<jsi::Value>());
+      message.args.reserve(3);
+      message.args.push_back(std::move(arg0));
+      message.args.push_back(std::move(arg1));
+      message.args.push_back(std::move(arg2));
+      cdpDebugAPI_->addConsoleMessage(std::move(message));
+
+      promise->set_value(true);
+    });
+  });
 
   // Validate notification
   auto note = expectNotification("Runtime.consoleAPICalled");
