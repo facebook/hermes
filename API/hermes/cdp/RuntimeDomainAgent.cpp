@@ -278,12 +278,6 @@ void RuntimeDomainAgent::enable(const m::runtime::EnableRequest &req) {
   // Enable
   enabled_ = true;
   sendResponseToClient(m::makeOkResponse(req.id));
-
-  // Notify the client about the hard-coded Hermes execution context.
-  m::runtime::ExecutionContextCreatedNotification note;
-  note.context.id = kHermesExecutionContextId;
-  note.context.name = "hermes";
-  sendNotificationToClient(note);
 }
 
 void RuntimeDomainAgent::disable(const m::runtime::DisableRequest &req) {
@@ -449,7 +443,7 @@ void RuntimeDomainAgent::callFunctionOn(
     assert(
         req.executionContextId &&
         "should not be here if both object id and execution context id are missing");
-    if (*req.executionContextId != kHermesExecutionContextId) {
+    if (*req.executionContextId != executionContextID_) {
       sendResponseToClient(m::makeErrorResponse(
           req.id,
           m::ErrorCode::InvalidRequest,
