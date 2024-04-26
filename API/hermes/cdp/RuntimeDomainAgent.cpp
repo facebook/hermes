@@ -311,32 +311,20 @@ void RuntimeDomainAgent::enable() {
 }
 
 void RuntimeDomainAgent::enable(const m::runtime::EnableRequest &req) {
-  if (enabled_) {
-    // Can't enable twice without disabling
-    sendResponseToClient(m::makeErrorResponse(
-        req.id,
-        m::ErrorCode::InvalidRequest,
-        "Runtime domain already enabled"));
-    return;
-  }
-
+  // Match V8 behavior of returning success even if domain is already enabled
   sendResponseToClient(m::makeOkResponse(req.id));
   enable();
 }
 
 void RuntimeDomainAgent::disable(const m::runtime::DisableRequest &req) {
-  if (!checkRuntimeEnabled(req)) {
-    return;
-  }
+  // Match V8 behavior of returning success even if domain is already disabled
   enabled_ = false;
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
 void RuntimeDomainAgent::getHeapUsage(
     const m::runtime::GetHeapUsageRequest &req) {
-  if (!checkRuntimeEnabled(req)) {
-    return;
-  }
+  // Allow this message even if domain is not enabled to match V8 behavior.
 
   auto heapInfo = runtime_.instrumentation().getHeapInfo(false);
   m::runtime::GetHeapUsageResponse resp;
@@ -348,9 +336,7 @@ void RuntimeDomainAgent::getHeapUsage(
 
 void RuntimeDomainAgent::globalLexicalScopeNames(
     const m::runtime::GlobalLexicalScopeNamesRequest &req) {
-  if (!checkRuntimeEnabled(req)) {
-    return;
-  }
+  // Allow this message even if domain is not enabled to match V8 behavior.
 
   const debugger::ProgramState &state =
       runtime_.getDebugger().getProgramState();
@@ -408,9 +394,7 @@ void RuntimeDomainAgent::compileScript(
 
 void RuntimeDomainAgent::getProperties(
     const m::runtime::GetPropertiesRequest &req) {
-  if (!checkRuntimeEnabled(req)) {
-    return;
-  }
+  // Allow this to be used when domain is not enabled to match V8 behavior.
 
   bool generatePreview = req.generatePreview.value_or(false);
   bool ownProperties = req.ownProperties.value_or(true);
@@ -434,9 +418,7 @@ void RuntimeDomainAgent::getProperties(
 }
 
 void RuntimeDomainAgent::evaluate(const m::runtime::EvaluateRequest &req) {
-  if (!checkRuntimeEnabled(req)) {
-    return;
-  }
+  // Allow this to be used when domain is not enabled to match V8 behavior.
 
   m::runtime::EvaluateResponse resp;
   resp.id = req.id;

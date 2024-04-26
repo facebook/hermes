@@ -36,21 +36,30 @@ class RuntimeDomainAgent : public DomainAgent {
   /// response. It will still send CDP notifications if needed.
   void enable();
   /// Handles Runtime.enable request
+  /// @cdp Runtime.enable If domain is already enabled, will return success.
   void enable(const m::runtime::EnableRequest &req);
   /// Handles Runtime.disable request
+  /// @cdp Runtime.disable If domain is already disabled, will return success.
   void disable(const m::runtime::DisableRequest &req);
   /// Handles Runtime.getHeapUsage request
+  /// @cdp Runtime.getHeapUsage Allowed even if domain is not enabled.
   void getHeapUsage(const m::runtime::GetHeapUsageRequest &req);
   /// Handles Runtime.globalLexicalScopeNames request
+  /// @cdp Runtime.globalLexicalScopeNames Allowed even if domain is not
+  /// enabled.
   void globalLexicalScopeNames(
       const m::runtime::GlobalLexicalScopeNamesRequest &req);
   /// Handles Runtime.compileScript request
+  /// @cdp Runtime.compileScript Not allowed if domain is not enabled.
   void compileScript(const m::runtime::CompileScriptRequest &req);
   /// Handles Runtime.getProperties request
+  /// @cdp Runtime.getProperties Allowed even if domain is not enabled.
   void getProperties(const m::runtime::GetPropertiesRequest &req);
   /// Handles Runtime.evaluate request
+  /// @cdp Runtime.evaluate Allowed even if domain is not enabled.
   void evaluate(const m::runtime::EvaluateRequest &req);
   /// Handles Runtime.callFunctionOn request
+  /// @cdp Runtime.callFunctionOn Allowed even if domain is not enabled.
   void callFunctionOn(const m::runtime::CallFunctionOnRequest &req);
   /// Dispatches a Runtime.consoleAPICalled notification
   void consoleAPICalled(const ConsoleMessage &message);
