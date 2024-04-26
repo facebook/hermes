@@ -198,9 +198,10 @@ void CDPAgentImpl::initializeDomainAgents(State state) {
 void CDPAgentImpl::handleCommand(std::string json) {
   std::shared_ptr<message::Request> command = message::Request::fromJson(json);
   if (!command) {
-    // Can't even parse the command to get the command ID, so there's no ID
-    // to respond to with an error message.
-    // TODO: return an error message
+    m::ErrorResponse resp;
+    resp.code = static_cast<int>(message::ErrorCode::ParseError);
+    resp.message = "Malformed JSON";
+    messageCallback_(resp.toJsonStr());
     return;
   }
 
