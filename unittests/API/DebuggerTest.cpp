@@ -44,12 +44,9 @@ struct DebuggerAPITest : public ::testing::Test {
   TestEventObserver observer;
 
   DebuggerAPITest()
-      : rt(makeHermesRuntime(
-            ((hermes::vm::RuntimeConfig::Builder())
-                 .withEnableBlockScoping(true)
-                 .withCompilationMode(
-                     hermes::vm::CompilationMode::ForceLazyCompilation)
-                 .build()))) {
+      : rt(makeHermesRuntime(((hermes::vm::RuntimeConfig::Builder())
+                                  .withEnableBlockScoping(true)
+                                  .build()))) {
     rt->getDebugger().setEventObserver(&observer);
   }
 };
@@ -135,11 +132,21 @@ TEST_F(DebuggerAPITest, SingleFrameStackTraceTest) {
 }
 
 TEST_F(DebuggerAPITest, GetLoadedScriptsTest) {
-  auto scripts = rt->getDebugger().getLoadedScripts();
+  // Don't use the member runtime, as we don't want to
+  // trigger the observer on script loads.
+  std::unique_ptr<HermesRuntime> runtime = makeHermesRuntime(
+      ((hermes::vm::RuntimeConfig::Builder())
+           .withCompilationMode(
+               hermes::vm::CompilationMode::ForceLazyCompilation)
+           .build()));
+
+  auto scripts = runtime->getDebugger().getLoadedScripts();
   EXPECT_EQ(scripts.size(), 0);
 
-  eval("var x = 1;");
-  scripts = rt->getDebugger().getLoadedScripts();
+  runtime->global()
+      .getPropertyAsFunction(*runtime, "eval")
+      .call(*runtime, "var x = 1;");
+  scripts = runtime->getDebugger().getLoadedScripts();
   EXPECT_EQ(scripts.size(), 1);
   EXPECT_EQ(scripts[0].line, 1);
   EXPECT_EQ(scripts[0].column, 1);
@@ -151,8 +158,8 @@ TEST_F(DebuggerAPITest, GetLoadedScriptsTest) {
   // compilation in the test setup) to cause multiple runtime modules for this
   // single script, allowing this test to verify we don't get duplicate
   // results.
-  rt->debugJavaScript("(function(){var x = 2;})()", "Test.js", {});
-  scripts = rt->getDebugger().getLoadedScripts();
+  runtime->debugJavaScript("(function(){var x = 2;})()", "Test.js", {});
+  scripts = runtime->getDebugger().getLoadedScripts();
   EXPECT_EQ(scripts.size(), 2);
   for (auto script : scripts) {
     if (script.fileName == "JavaScript") {
