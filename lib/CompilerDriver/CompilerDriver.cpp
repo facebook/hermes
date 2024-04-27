@@ -15,7 +15,6 @@
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/RegAlloc.h"
 #include "hermes/BCGen/SH/SH.h"
-#include "hermes/ConsoleHost/ConsoleHost.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"

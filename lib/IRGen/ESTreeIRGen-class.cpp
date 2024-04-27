@@ -232,7 +232,7 @@ Value *ESTreeIRGen::emitClassAllocation(
   propMap.resize(classType->getFieldNameMap().size());
 
   // Generate code for each field, place it in the propMap.
-  for (const auto it : classType->getFieldNameMap()) {
+  for (const auto &it : classType->getFieldNameMap()) {
     flow::ClassType::FieldLookupEntry entry = it.second;
     const flow::ClassType::Field &field = *entry.getField();
     assert(

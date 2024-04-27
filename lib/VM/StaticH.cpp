@@ -327,6 +327,9 @@ extern "C" void _sh_throw_current(SHRuntime *shr) {
     abort();
   }
   _longjmp(runtime.shCurJmpBuf->buf, 1);
+  // longjmp is not marked as noreturn, so use llvm_unreachable to avoid a
+  // compiler warning that this function doesn't actually seem to be noreturn.
+  llvm_unreachable("longjmp cannot return");
 }
 
 extern "C" void _sh_throw(SHRuntime *shr, SHLegacyValue value) {
