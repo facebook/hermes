@@ -724,7 +724,7 @@ class FlowChecker::ExprVisitor {
 
   enum class UnopKind : uint8_t {
     // clang-format off
-    del, voidOp, typeof, plus, minus, tilde, bang, inc, dec
+    del, voidOp, typeOf, plus, minus, tilde, bang, inc, dec
     // clang-format on
   };
 
@@ -732,7 +732,7 @@ class FlowChecker::ExprVisitor {
     return llvh::StringSwitch<UnopKind>(str)
         .Case("delete", UnopKind::del)
         .Case("void", UnopKind::voidOp)
-        .Case("typeof", UnopKind::typeof)
+        .Case("typeof", UnopKind::typeOf)
         .Case("+", UnopKind::plus)
         .Case("-", UnopKind::minus)
         .Case("~", UnopKind::tilde)
@@ -931,7 +931,7 @@ class FlowChecker::ExprVisitor {
         // clang-format off
         {UnopKind::del, TypeKind::Boolean, llvh::None},
         {UnopKind::voidOp, TypeKind::Void, llvh::None},
-        {UnopKind::typeof, TypeKind::String, llvh::None},
+        {UnopKind::typeOf, TypeKind::String, llvh::None},
         {UnopKind::plus, TypeKind::Number, TypeKind::Number},
         {UnopKind::plus, TypeKind::Number, TypeKind::Any},
         {UnopKind::minus, TypeKind::BigInt, TypeKind::BigInt},
