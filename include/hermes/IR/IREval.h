@@ -59,6 +59,10 @@ bool evalIsTrue(IRBuilder &builder, Literal *operand);
 /// \return true if ToBoolean(operand) is false.
 bool evalIsFalse(IRBuilder &builder, Literal *operand);
 
+// Take a literal and negate it. Currently only supports non-BigInts.
+// Return the negation of a literal number.
+LiteralNumber *negateNumber(IRBuilder &builder, LiteralNumber *operand);
+
 } // namespace hermes
 
 #endif
