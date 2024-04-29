@@ -2689,6 +2689,36 @@ TEST_F(CDPAgentTest, RuntimeConsoleLog) {
        {"__proto__", PropInfo("object")}});
 }
 
+TEST_F(CDPAgentTest, RuntimeConsoleLogJSON) {
+  int msgId = 1;
+  const std::string kStringValue = "{\"number\": 1}";
+
+  // Startup
+  sendAndCheckResponse("Runtime.enable", msgId++);
+
+  // Generate ConsoleAPICalled notification containing a JSON string argument
+  waitFor<bool>([this, kStringValue](auto promise) {
+    runtimeThread_->add([this, promise, kStringValue]() {
+      constexpr double kTimestamp = 123.0;
+      jsi::String arg = jsi::String::createFromAscii(*runtime_, kStringValue);
+      ConsoleMessage message(
+          kTimestamp, ConsoleAPIType::kWarning, std::vector<jsi::Value>());
+      message.args.push_back(std::move(arg));
+      cdpDebugAPI_->addConsoleMessage(std::move(message));
+      promise->set_value(true);
+    });
+  });
+  auto note = expectNotification("Runtime.consoleAPICalled");
+
+  // Ensure the JSON arrived intact
+  EXPECT_EQ(jsonScope_.getArray(note, {"params", "args"})->size(), 1);
+  EXPECT_EQ(
+      jsonScope_.getString(note, {"params", "args", "0", "type"}), "string");
+  EXPECT_EQ(
+      jsonScope_.getString(note, {"params", "args", "0", "value"}),
+      kStringValue);
+}
+
 TEST_F(CDPAgentTest, RuntimeConsoleBuffer) {
   int msgId = 1;
 
