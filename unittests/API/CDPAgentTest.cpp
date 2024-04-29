@@ -1014,6 +1014,42 @@ TEST_F(CDPAgentTest, DebuggerSetPauseOnExceptionsAll) {
   EXPECT_EQ(thrownExceptions_.back(), "Uncaught exception");
 }
 
+TEST_F(CDPAgentTest, DebuggerReportsException) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    debugger; // [1] (line 1) initial pause, set throw on exceptions to 'All'
+    throw new Error('Catch me if you can'); // [2] (line 2) pause on exception
+  )");
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+  // [1] (line 1) initial pause. set throw on exceptions to 'All' then resume.
+  ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
+  sendRequest(
+      "Debugger.setPauseOnExceptions", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("state", "all");
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // [2] line 2, pause on exception, ensure exception details arrived.
+  m::debugger::PausedNotification note =
+      ensurePaused(waitForMessage(), "exception", {{"global", 2, 1}});
+  EXPECT_TRUE(note.data.has_value());
+  JSONObject *data = jsonScope_.parseObject(*note.data);
+  EXPECT_EQ(
+      jsonScope_.getString(data, {"description"}),
+      "Error: Catch me if you can");
+
+  // Let the script finish
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  waitForScheduledScripts();
+}
+
 TEST_F(CDPAgentTest, DebuggerEvalOnCallFrame) {
   int msgId = 1;
 
