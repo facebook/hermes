@@ -171,6 +171,10 @@ class DebuggerDomainAgent : public DomainAgent {
   bool checkDebuggerEnabled(const m::Request &req);
   bool checkDebuggerPaused(const m::Request &req);
 
+  /// Removes any modifications this agent made to Hermes in order to enable
+  /// debugging
+  void cleanUp();
+
   HermesRuntime &runtime_;
   debugger::AsyncDebuggerAPI &asyncDebugger_;
 

@@ -572,6 +572,53 @@ TEST_F(CDPAgentTest, DebuggerAllowDoubleDisable) {
   sendAndCheckResponse("Debugger.disable", msgId++);
 }
 
+TEST_F(CDPAgentTest, DebuggerDestroyWhileEnabled) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    debugger;      // line 1
+    Math.random(); //      2
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
+
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 2);
+        json.closeDict();
+      });
+  ensureSetBreakpointResponse(waitForMessage(), msgId++, {scriptID, 2, 4});
+
+  // Finally, destroy CDPAgent without first disable the Debugger domain. Then
+  // verify things are cleaned up from the HermesRuntime and AsyncDebuggerAPI
+  // properly.
+  cdpAgent_.reset();
+
+  // Queue a job on the runtime queue. The runtime queue was busy paused on the
+  // debugger statement on line 1, but the destruction of CDPAgent should
+  // removeDebuggerEventCallback_TS() and thus free up the runtime queue.
+  waitFor<bool>([this](auto promise) {
+    runtimeThread_->add([this, promise]() {
+      // Verify that breakpoints are cleaned up from HermesRuntime
+      auto breakpoints = runtime_->getDebugger().getBreakpoints();
+      EXPECT_EQ(breakpoints.size(), 0);
+
+      // Verify pause on ScriptLoad state is reset as well
+      EXPECT_FALSE(runtime_->getDebugger().getShouldPauseOnScriptLoad());
+
+      promise->set_value(true);
+    });
+  });
+}
+
 TEST_F(CDPAgentTest, DebuggerScriptsOnEnable) {
   int msgId = 1;
 
@@ -1121,24 +1168,14 @@ TEST_F(CDPAgentTest, DebuggerSetBreakpointById) {
 
   ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
 
-  std::string command;
-  llvh::raw_string_ostream commandStream{command};
-  ::hermes::JSONEmitter json{commandStream};
-  json.openDict();
-  json.emitKeyValue("method", "Debugger.setBreakpoint");
-  json.emitKeyValue("id", msgId);
-  json.emitKey("params");
-  json.openDict();
-  json.emitKey("location");
-  json.openDict();
-  json.emitKeyValue("scriptId", scriptID);
-  json.emitKeyValue("lineNumber", 2);
-  json.closeDict();
-  json.closeDict();
-  json.closeDict();
-  commandStream.flush();
-  cdpAgent_->handleCommand(command);
-
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 2);
+        json.closeDict();
+      });
   ensureSetBreakpointResponse(waitForMessage(), msgId++, {scriptID, 2, 4});
 
   sendAndCheckResponse("Debugger.resume", msgId++);
