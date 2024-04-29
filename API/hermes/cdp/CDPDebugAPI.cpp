@@ -31,6 +31,9 @@ CDPDebugAPI::CDPDebugAPI(HermesRuntime &runtime, size_t maxCachedMessages)
 
 void CDPDebugAPI::addConsoleMessage(ConsoleMessage message) {
   consoleMessageDispatcher_.deliverMessage(message);
+  if (message.type == ConsoleAPIType::kClear) {
+    consoleMessageStorage_.clear();
+  }
   consoleMessageStorage_.addMessage(std::move(message));
 }
 
