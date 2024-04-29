@@ -560,13 +560,28 @@ void RuntimeDomainAgent::callFunctionOn(
 
   m::runtime::CallFunctionOnResponse resp;
   resp.id = req.id;
-  resp.result = m::runtime::makeRemoteObject(
-      runtime_,
-      (runner)(runtime_, *objTable_, evalResult),
-      *objTable_,
-      objectGroup,
-      byValue,
-      generatePreview);
+  try {
+    resp.result = m::runtime::makeRemoteObject(
+        runtime_,
+        (runner)(runtime_, *objTable_, evalResult),
+        *objTable_,
+        objectGroup,
+        byValue,
+        generatePreview);
+  } catch (const jsi::JSError &error) {
+    resp.exceptionDetails = m::runtime::ExceptionDetails();
+    resp.exceptionDetails->text = error.getMessage() + "\n" + error.getStack();
+    resp.exceptionDetails->exception = m::runtime::makeRemoteObject(
+        runtime_,
+        error.value(),
+        *objTable_,
+        objectGroup,
+        false,
+        generatePreview);
+  } catch (const jsi::JSIException &err) {
+    resp.exceptionDetails = m::runtime::ExceptionDetails();
+    resp.exceptionDetails->text = err.what();
+  }
   sendResponseToClient(resp);
 }
 

@@ -2645,6 +2645,32 @@ TEST_F(CDPAgentTest, RuntimeCallFunctionOnExecutionContext) {
   }
 }
 
+TEST_F(CDPAgentTest, RuntimeCallFunctionOnExecutionContextThrowingError) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Runtime.enable", msgId++);
+
+  m::runtime::CallFunctionOnRequest req;
+  req.id = msgId;
+  // This function will throw an error when called, so we expect the inspector
+  // to return a Runtime.ExceptionThrown notification with this message.
+  req.functionDeclaration = "() => {throw new Error('test')}";
+  req.executionContextId = kTestExecutionContextId_;
+  cdpAgent_->handleCommand(serializeRuntimeCallFunctionOnRequest(req));
+
+  auto resp = expectResponse(std::nullopt, msgId++);
+  // Ensure the exception (remote) object and text were delivered
+  EXPECT_GT(
+      jsonScope_
+          .getString(
+              resp, {"result", "exceptionDetails", "exception", "objectId"})
+          .size(),
+      0);
+  EXPECT_GT(
+      jsonScope_.getString(resp, {"result", "exceptionDetails", "text"}).size(),
+      0);
+}
+
 TEST_F(CDPAgentTest, RuntimeConsoleLog) {
   int msgId = 1;
   constexpr double kTimestamp = 123.0;
