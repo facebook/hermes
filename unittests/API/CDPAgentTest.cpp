@@ -575,8 +575,9 @@ TEST_F(CDPAgentTest, DebuggerAllowDoubleDisable) {
 TEST_F(CDPAgentTest, DebuggerScriptsOnEnable) {
   int msgId = 1;
 
-  // Add a script being run in the VM prior to Debugger.enable
-  scheduleScript("true");
+  // Wait for a script to be run in the VM prior to Debugger.enable
+  scheduleScript("signalTest();");
+  waitForTestSignal();
 
   // Verify that upon enable, we get notification of existing scripts
   sendParameterlessRequest("Debugger.enable", msgId);
@@ -600,9 +601,12 @@ TEST_F(CDPAgentTest, DebuggerEnableWhenAlreadyPaused) {
   // This needs to be a while-loop because Explicit AsyncBreak will only happen
   // while there is JS to run
   scheduleScript(R"(
+    signalTest();
     while (!shouldStop()) {
     }
   )");
+  // Wait for the script to start.
+  waitForTestSignal();
 
   // Before Debugger.enable, register another debug client and trigger a pause
   DebuggerEventCallbackID eventCallbackID;
@@ -714,6 +718,7 @@ TEST_F(CDPAgentTest, DebuggerAsyncPauseWhileRunning) {
   int msgId = 1;
 
   scheduleScript(R"(
+    signalTest();
     var accum = 10;
 
     while (!shouldStop()) {
@@ -726,6 +731,8 @@ TEST_F(CDPAgentTest, DebuggerAsyncPauseWhileRunning) {
 
     var d = -accum;
   )");
+  // Wait for the script to start.
+  waitForTestSignal();
 
   sendParameterlessRequest("Debugger.enable", msgId);
   ensureNotification(waitForMessage(), "Debugger.scriptParsed");
