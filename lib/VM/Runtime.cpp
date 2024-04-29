@@ -2161,8 +2161,6 @@ ExecutionStatus Runtime::notifyTimeout() {
   return raiseTimeoutError();
 }
 
-#ifdef HERMES_MEMORY_INSTRUMENTATION
-
 std::pair<const CodeBlock *, const inst::Inst *>
 Runtime::getCurrentInterpreterLocation(const inst::Inst *ip) {
   assert(ip && "IP being null implies we're not currently in the interpreter.");
@@ -2180,6 +2178,8 @@ Runtime::getCurrentInterpreterLocation(const inst::Inst *ip) {
   assert(codeBlock && "Could not find CodeBlock.");
   return {codeBlock, ip};
 }
+
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 
 StackTracesTreeNode *Runtime::getCurrentStackTracesTreeNode(
     const inst::Inst *ip) {

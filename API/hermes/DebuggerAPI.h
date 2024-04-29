@@ -22,6 +22,7 @@ namespace hermes {
 namespace vm {
 class CodeBlock;
 class Debugger;
+class Runtime;
 struct DebugCommand;
 class HermesValue;
 } // namespace vm
@@ -216,6 +217,11 @@ class HERMES_EXPORT Debugger {
   /// \return list of loaded scripts
   std::vector<SourceLocation> getLoadedScripts() const;
 
+  /// Gets the current stack trace.
+  /// \return stack trace with call frames if runtime is in the interpreter
+  /// loop, otherwise return no call frames
+  StackTrace captureStackTrace() const;
+
   /// -- Breakpoint Management --
 
   /// Sets a breakpoint on a given SourceLocation.
@@ -276,10 +282,11 @@ class HERMES_EXPORT Debugger {
 
   explicit Debugger(
       ::facebook::hermes::HermesRuntime *runtime,
-      ::hermes::vm::Debugger *impl);
+      ::hermes::vm::Runtime &vmRuntime);
 
   ::facebook::hermes::HermesRuntime *const runtime_;
   EventObserver *eventObserver_ = nullptr;
+  ::hermes::vm::Runtime &vmRuntime_;
   ::hermes::vm::Debugger *impl_;
   ProgramState state_;
 };
