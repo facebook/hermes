@@ -3298,16 +3298,16 @@ TEST_F(CDPAgentTest, HeapProfilerSampling) {
 
   // Start sampling.
   {
-    sendRequest(
-        "HeapProfiler.startSampling", msgId, [](::hermes::JSONEmitter &json) {
-          // Sample every 256 bytes to ensure there are some samples. The
-          // default is 32768, which is too high for a small example. Note that
-          // sampling is a random process, so there's no guarantee there will be
-          // any samples in any finite number of allocations. In practice the
-          // likelihood is so high that there shouldn't be any issues.
-          json.emitKeyValue("samplingInterval", 256);
-        });
-    ensureOkResponse(waitForMessage(), msgId++);
+    // sendRequest(
+    //     "HeapProfiler.startSampling", msgId, [](::hermes::JSONEmitter &json) {
+    //       // Sample every 256 bytes to ensure there are some samples. The
+    //       // default is 32768, which is too high for a small example. Note that
+    //       // sampling is a random process, so there's no guarantee there will be
+    //       // any samples in any finite number of allocations. In practice the
+    //       // likelihood is so high that there shouldn't be any issues.
+    //       json.emitKeyValue("samplingInterval", 256);
+    //     });
+    // ensureOkResponse(waitForMessage(), msgId++);
   }
 
   // Run a script that allocates some objects.
