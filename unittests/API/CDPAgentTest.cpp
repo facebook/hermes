@@ -129,10 +129,15 @@ class CDPAgentTest : public ::testing::Test {
   void sendRequest(
       const std::string &method,
       int id,
-      const std::function<void(::hermes::JSONEmitter &)> &setParameters = {});
+      const std::function<void(::hermes::JSONEmitter &)> &setParameters = {},
+      CDPAgent *altAgent = nullptr);
   void sendParameterlessRequest(const std::string &method, int id);
   void sendAndCheckResponse(const std::string &method, int id);
-  void sendEvalRequest(int id, int callFrameId, const std::string &expression);
+  void sendEvalRequest(
+      int id,
+      int callFrameId,
+      const std::string &expression,
+      CDPAgent *altAgent = nullptr);
 
   jsi::Value shouldStop(
       jsi::Runtime &runtime,
@@ -309,7 +314,8 @@ jsi::Value CDPAgentTest::shouldStop(
 void CDPAgentTest::sendRequest(
     const std::string &method,
     int id,
-    const std::function<void(::hermes::JSONEmitter &)> &setParameters) {
+    const std::function<void(::hermes::JSONEmitter &)> &setParameters,
+    CDPAgent *altAgent) {
   std::string command;
   llvh::raw_string_ostream commandStream{command};
   ::hermes::JSONEmitter json{commandStream};
@@ -324,7 +330,11 @@ void CDPAgentTest::sendRequest(
   }
   json.closeDict();
   commandStream.flush();
-  cdpAgent_->handleCommand(command);
+  if (altAgent != nullptr) {
+    altAgent->handleCommand(command);
+  } else {
+    cdpAgent_->handleCommand(command);
+  }
 }
 
 void CDPAgentTest::sendParameterlessRequest(const std::string &method, int id) {
@@ -360,7 +370,8 @@ void CDPAgentTest::waitForTestSignal(std::chrono::milliseconds timeout) {
 void CDPAgentTest::sendEvalRequest(
     int id,
     int callFrameId,
-    const std::string &expression) {
+    const std::string &expression,
+    CDPAgent *altAgent) {
   std::string command;
   llvh::raw_string_ostream commandStream{command};
   ::hermes::JSONEmitter json{commandStream};
@@ -375,7 +386,11 @@ void CDPAgentTest::sendEvalRequest(
   json.closeDict();
   json.closeDict();
   commandStream.flush();
-  cdpAgent_->handleCommand(command);
+  if (altAgent != nullptr) {
+    altAgent->handleCommand(command);
+  } else {
+    cdpAgent_->handleCommand(command);
+  }
 }
 
 std::unordered_map<std::string, std::string> CDPAgentTest::getAndEnsureProps(
@@ -1811,6 +1826,60 @@ TEST_F(CDPAgentTest, DebuggerActivateBreakpoints) {
   // Continue and exit
   sendAndCheckResponse("Debugger.resume", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
+TEST_F(CDPAgentTest, DebuggerMultipleCDPAgents) {
+  // Make a second CDPAgent
+  auto secondCDPAgent = CDPAgent::create(
+      kTestExecutionContextId_,
+      *cdpDebugAPI_,
+      std::bind(&CDPAgentTest::handleRuntimeTask, this, _1),
+      std::bind(&CDPAgentTest::handleResponse, this, _1));
+
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  std::array<std::string, 4> secondAgentMethods = {
+      "Debugger.resume",
+      "Debugger.stepOver",
+      "Debugger.stepInto",
+      "Debugger.stepOut",
+  };
+
+  for (const auto &method : secondAgentMethods) {
+    scheduleScript(R"(
+      debugger;      // line 1
+    )");
+    ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+    ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
+
+    // Send a command from the second CDPAgent even though we never enabled the
+    // Debugger domain on the second one.
+    sendRequest(method, msgId, {}, secondCDPAgent.get());
+
+    // Check that the command gets processed successfully
+    ensureOkResponse(waitForMessage(), msgId++);
+
+    // And the debugger resumed
+    ensureNotification(waitForMessage(), "Debugger.resumed");
+  }
+
+  scheduleScript(R"(
+    function level1() {
+      var foo = "bar";
+      debugger;        // line 3
+    }
+    level1();
+  )");
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+  ensurePaused(waitForMessage(), "other", {{"level1", 3, 2}, {"global", 5, 1}});
+
+  // Send a command from the second CDPAgent for evaluateOnCallFrame even though
+  // we never enabled the Debugger domain on the second one.
+  sendEvalRequest(msgId, 0, R"("foo" + foo)", secondCDPAgent.get());
+
+  ensureEvalResponse(waitForMessage(), msgId++, "foobar");
 }
 
 TEST_F(CDPAgentTest, RuntimeEnableDisable) {
