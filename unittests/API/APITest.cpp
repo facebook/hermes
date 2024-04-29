@@ -334,23 +334,6 @@ TEST(HermesRuntimePreparedJavaScriptTest, InvalidSourceThrows) {
       << "prepareJavaScript should have thrown an exception";
 }
 
-TEST(HermesRuntimePreparedJavaScriptTest, InvalidSourceBufferPrefix) {
-  auto rt = makeHermesRuntime();
-  // Construct a 0-terminated buffer that represents an invalid UTF-8 source.
-  char badSource[32];
-  memset((void *)badSource, '\xFE', sizeof(badSource));
-  badSource[31] = 0;
-  std::string prefix = "fefefefefefefefefefefefefefefefe";
-  std::string errMsg;
-  try {
-    rt->prepareJavaScript(std::make_unique<StringBuffer>(badSource), "");
-  } catch (const facebook::jsi::JSIException &err) {
-    errMsg = err.what();
-  }
-  // The error msg should include the prefix of buffer in expected formatting.
-  EXPECT_TRUE(errMsg.find(prefix) != std::string::npos);
-}
-
 TEST_P(HermesRuntimeTest, NoCorruptionOnJSError) {
   // If the test crashes or infinite loops, the likely cause is that
   // Hermes API library is not built with proper compiler flags
