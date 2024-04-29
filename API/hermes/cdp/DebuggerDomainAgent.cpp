@@ -655,7 +655,7 @@ bool DebuggerDomainAgent::checkDebuggerEnabled(const m::Request &req) {
 }
 
 bool DebuggerDomainAgent::checkDebuggerPaused(const m::Request &req) {
-  if (!paused_) {
+  if (!paused_ && !asyncDebugger_.isWaitingForCommand()) {
     sendResponseToClient(m::makeErrorResponse(
         req.id, m::ErrorCode::InvalidRequest, "Debugger is not paused"));
     return false;
