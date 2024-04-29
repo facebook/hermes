@@ -293,7 +293,7 @@ void DebuggerDomainAgent::evaluateOnCallFrame(
           auto remoteObjPtr = std::make_shared<m::runtime::RemoteObject>();
 
           *remoteObjPtr = m::runtime::makeRemoteObject(
-              runtime_,
+              runtime,
               result.value,
               *objTable_,
               objectGroup,
