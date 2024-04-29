@@ -19,7 +19,9 @@ namespace hermes {
 namespace cdp {
 
 static const char *const kUserEnteredScriptIdPrefix = "userScript";
-static const char *const kEvaluatedCodeUrl = "?eval";
+
+// Chrome does not assign a URL to evaluated scripts
+static const char *const kEvaluatedCodeUrl = "";
 
 namespace {
 /// Runtime.CallArguments can have their values specified "inline", or they
