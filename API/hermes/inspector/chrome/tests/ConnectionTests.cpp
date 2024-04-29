@@ -2611,7 +2611,7 @@ TEST_F(ConnectionTests, testConsoleLog) {
     debugger; [1]
     var object1 = {number1: 1, bool1: false};
     var object2 = {number2: 2, bool2: true};
-    console.warn('string value', object1, object2);
+    console.warn('string value', object1, object2, '{"number3": 3}');
 
     debugger; // Hit debugger statement so that we receive console
               // api notification before VM gets destroyed.
@@ -2630,7 +2630,7 @@ TEST_F(ConnectionTests, testConsoleLog) {
   auto warningNote =
       expectNotification<m::runtime::ConsoleAPICalledNotification>(conn);
   EXPECT_EQ(warningNote.type, "warning");
-  EXPECT_EQ(warningNote.args.size(), 3);
+  EXPECT_EQ(warningNote.args.size(), 4);
 
   EXPECT_EQ(warningNote.args[0].type, "string");
   EXPECT_EQ(*warningNote.args[0].value, "\"string value\"");
@@ -2638,6 +2638,10 @@ TEST_F(ConnectionTests, testConsoleLog) {
   EXPECT_EQ(warningNote.args[1].type, "object");
 
   EXPECT_EQ(warningNote.args[2].type, "object");
+
+  EXPECT_EQ(warningNote.args[3].type, "string");
+  // This assertion is equivalent to CDPAgentTest::RuntimeConsoleLogJSON
+  EXPECT_EQ(*warningNote.args[3].value, R"("{\"number3\": 3}")");
 
   expectPaused(conn, "other", {{"global", 6, 1}});
 
