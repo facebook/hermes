@@ -129,7 +129,7 @@ llvh::Optional<uint32_t> Debugger::findJumpTarget(
 #undef DEFINE_JUMP_LONG_VARIANT
 }
 
-void Debugger::breakAtPossibleNextInstructions(InterpreterState &state) {
+void Debugger::breakAtPossibleNextInstructions(const InterpreterState &state) {
   auto nextOffset = state.codeBlock->getNextOffset(state.offset);
   // Set a breakpoint at the next instruction in the code block if this is not
   // the last instruction.
