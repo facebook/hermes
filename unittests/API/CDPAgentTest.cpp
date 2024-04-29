@@ -527,6 +527,33 @@ TEST_F(CDPAgentTest, CDPAgentRejectsUnknownDomains) {
   });
 }
 
+TEST_F(CDPAgentTest, CDPAgentCanReenter) {
+  std::unique_ptr<CDPAgent> cdpAgent;
+
+  waitFor<bool>([this, &cdpAgent](auto promise) {
+    int commandID = 1;
+
+    OutboundMessageFunc handleMessage = [promise,
+                                         &cdpAgent](const std::string &) {
+      // Re-enter the CDP Agent
+      cdpAgent->getState();
+      promise->set_value(true);
+    };
+
+    EnqueueRuntimeTaskFunc handleTask = [this](RuntimeTask task) {
+      runtimeThread_->add([this, task]() { task(*runtime_); });
+    };
+    cdpAgent = CDPAgent::create(
+        kTestExecutionContextId_, *cdpDebugAPI_, handleTask, handleMessage);
+
+    // Send a command that's not handled, triggering a callback with the error
+    // response.
+    cdpAgent->handleCommand(
+        R"({"id": )" + std::to_string(commandID) +
+        R"(, "method": "Unsupported.Message"})");
+  });
+}
+
 TEST_F(CDPAgentTest, DebuggerAllowDoubleEnable) {
   int msgId = 1;
   sendAndCheckResponse("Debugger.enable", msgId++);

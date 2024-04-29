@@ -15,13 +15,15 @@ namespace cdp {
 
 using namespace facebook::hermes::debugger;
 
+static const char *const kBreakpointsKey = "breakpoints";
+
 DebuggerDomainAgent::DebuggerDomainAgent(
     int32_t executionContextID,
     HermesRuntime &runtime,
     AsyncDebuggerAPI &asyncDebugger,
     SynchronizedOutboundCallback messageCallback,
     std::shared_ptr<RemoteObjectsTable> objTable,
-    std::unique_ptr<DebuggerDomainState> state)
+    DomainState &state)
     : DomainAgent(
           executionContextID,
           std::move(messageCallback),
@@ -29,13 +31,25 @@ DebuggerDomainAgent::DebuggerDomainAgent(
       runtime_(runtime),
       asyncDebugger_(asyncDebugger),
       debuggerEventCallbackId_(kInvalidDebuggerEventCallbackID),
+      state_(state),
       enabled_(false),
       paused_(false) {
-  if (state) {
-    // Load persisted breakpoints. They will be applied to the appropriate
-    // scripts as the script-loaded notifications arrive.
-    for (auto &[id, description] : state->breakpointDescriptions) {
-      cdpBreakpoints_.emplace(id, CDPBreakpoint(description));
+  std::unique_ptr<StateValue> value = state_.getCopy({kBreakpointsKey});
+  if (value) {
+    DictionaryStateValue *dict =
+        dynamic_cast<DictionaryStateValue *>(value.get());
+    assert(
+        dict != nullptr &&
+        "Expecting a DictionaryStateValue for the \"breakpoints\" key");
+    for (auto &[key, stateValue] : dict->values) {
+      CDPBreakpointDescription *bpStateValue =
+          dynamic_cast<CDPBreakpointDescription *>(stateValue.get());
+      assert(
+          dict != nullptr &&
+          "Expecting a CDPBreakpointDescription for each breakpoint");
+
+      CDPBreakpointID id = std::stoull(key);
+      cdpBreakpoints_.emplace(id, CDPBreakpoint(*bpStateValue));
 
       // Ensure we don't re-use persisted breakpoint IDs; advance the ID counter
       // past any imported breakpoints.
@@ -89,20 +103,6 @@ void DebuggerDomainAgent::handleDebuggerEvent(
       sendPausedNotificationToClient();
       break;
   }
-}
-
-std::unique_ptr<DebuggerDomainState> DebuggerDomainAgent::getState() {
-  auto state = std::make_unique<DebuggerDomainState>();
-
-  // Persist breakpoints
-  state->breakpointDescriptions.reserve(cdpBreakpoints_.size());
-  for (auto &[id, breakpoint] : cdpBreakpoints_) {
-    if (breakpoint.description.persistable()) {
-      state->breakpointDescriptions[id] = breakpoint.description;
-    }
-  }
-
-  return state;
 }
 
 void DebuggerDomainAgent::enable() {
@@ -407,6 +407,12 @@ void DebuggerDomainAgent::removeBreakpoint(
 
   // Remove the CDP breakpoint
   cdpBreakpoints_.erase(cdpBreakpoint);
+
+  // Get a Transaction, which will be committed when exiting the scope of the
+  // function. All state modifications should be done within this Transaction.
+  DomainState::Transaction transaction = state_.transaction();
+  transaction.remove({kBreakpointsKey, req.breakpointId});
+
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
@@ -498,6 +504,14 @@ DebuggerDomainAgent::createCDPBreakpoint(
 
   if (hermesBreakpoint) {
     breakpoint.hermesBreakpoints.push_back(hermesBreakpoint.value());
+  }
+
+  // Get a Transaction, which will be committed when exiting the scope of the
+  // function. All state modifications should be done within this Transaction.
+  DomainState::Transaction transaction = state_.transaction();
+  if (description.persistable()) {
+    transaction.add(
+        {kBreakpointsKey, std::to_string(breakpointID)}, description);
   }
 
   return {breakpointID, breakpoint};
