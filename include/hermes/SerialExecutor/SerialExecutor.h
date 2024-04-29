@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#pragma once
+#ifndef HERMES_SERIALEXECUTOR_SERIALEXECUTOR_H
+#define HERMES_SERIALEXECUTOR_SERIALEXECUTOR_H
 
 #include <atomic>
 #include <chrono>
@@ -20,10 +21,7 @@
 #include <thread>
 #endif
 
-namespace facebook {
 namespace hermes {
-namespace inspector_modern {
-namespace chrome {
 
 // Simple executor that guarantees serial execution of tasks. If there are
 // remaining tasks in the queue when the SerialExecutor destructs, they will not
@@ -71,7 +69,6 @@ class SerialExecutor {
   /// Push a task to the back of the queue.
   void add(std::function<void()> task);
 };
-} // namespace chrome
-} // namespace inspector_modern
 } // namespace hermes
-} // namespace facebook
+
+#endif // HERMES_SERIALEXECUTOR_SERIALEXECUTOR_H

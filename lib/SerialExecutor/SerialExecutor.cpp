@@ -5,12 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "SerialExecutor.h"
+#include "hermes/SerialExecutor/SerialExecutor.h"
 
-namespace facebook {
 namespace hermes {
-namespace inspector_modern {
-namespace chrome {
 
 SerialExecutor::SerialExecutor(size_t stackSize) {
 #if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
@@ -93,7 +90,4 @@ void *SerialExecutor::threadMain(void *p) {
 }
 #endif
 
-} // namespace chrome
-} // namespace inspector_modern
 } // namespace hermes
-} // namespace facebook

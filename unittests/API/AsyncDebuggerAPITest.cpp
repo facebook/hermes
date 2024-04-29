@@ -14,8 +14,8 @@
 #include <gtest/gtest.h>
 
 #include <hermes/AsyncDebuggerAPI.h>
+#include <hermes/SerialExecutor/SerialExecutor.h>
 #include <hermes/hermes.h>
-#include <hermes/inspector/chrome/tests/SerialExecutor.h>
 #include <jsi/jsi.h>
 
 #if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
@@ -25,7 +25,6 @@
 using namespace facebook;
 using namespace facebook::hermes;
 using namespace facebook::hermes::debugger;
-using namespace facebook::hermes::inspector_modern::chrome;
 
 constexpr auto kDefaultUrl = "url";
 
@@ -59,7 +58,7 @@ class AsyncDebuggerAPITest : public ::testing::Test {
 
   std::atomic<bool> stopFlag_{};
 
-  std::unique_ptr<SerialExecutor> runtimeThread_;
+  std::unique_ptr<::hermes::SerialExecutor> runtimeThread_;
   std::unique_ptr<HermesRuntime> runtime_;
   std::unique_ptr<AsyncDebuggerAPI> asyncDebuggerAPI_;
   DebuggerEventCallbackID eventCallbackID_;
@@ -88,9 +87,9 @@ void AsyncDebuggerAPITest::SetUp() {
   // thread is the main thread of the HermesRuntime.
   struct rlimit limit;
   getrlimit(RLIMIT_STACK, &limit);
-  runtimeThread_ = std::make_unique<SerialExecutor>(limit.rlim_cur);
+  runtimeThread_ = std::make_unique<::hermes::SerialExecutor>(limit.rlim_cur);
 #else
-  runtimeThread_ = std::make_unique<SerialExecutor>();
+  runtimeThread_ = std::make_unique<::hermes::SerialExecutor>();
 #endif
 
   eventCallbackID_ = kInvalidDebuggerEventCallbackID;
