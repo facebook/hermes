@@ -109,6 +109,7 @@ if (!fileExists(scriptPath)) {
   console.error(`Script not found at ${scriptPath}`);
   process.exit(1);
 }
+const script = fs.readFileSync(scriptPath, 'utf8');
 const childProcess = spawn(binaryPath, [scriptPath]);
 
 // Start a websocket that forwards messages between the debug client
@@ -117,6 +118,11 @@ const wss = new WebSocket.Server({ port: port });
 
 let clientIdCounter = 0;
 const clients = {};
+
+function sendMessageToClient(websocket, clientId, message) {
+  websocket.send(message);
+  logResponse(clientId, message);
+}
 
 wss.on('connection', (ws) => {
   // Assign a unique ID to this client
@@ -129,8 +135,16 @@ wss.on('connection', (ws) => {
 
   // Handle commands from the client
   ws.on('message', (message) => {
-    sendMessageIPC(clientId, message);
     logCommand(clientId, message);
+
+    let response = getScriptSourceResponse(message);
+    if (response) {
+      // Have a response; send it.
+      sendMessageToClient(ws, clientId, response);
+    } else {
+      // Don't have a response, ask Hermes CDP to generate one.
+      sendMessageIPC(clientId, message);
+    }
   });
 
   // Handle disconnect
@@ -140,6 +154,38 @@ wss.on('connection', (ws) => {
     delete clients[clientId];
   });
 });
+
+let scriptId = null;
+
+// Remeber the ID of the script being run from the local filesystem.
+function inspectScriptParsed(message) {
+    const json = JSON.parse(message);
+    if (json.method !== 'Debugger.scriptParsed') {
+      return;
+    }
+    scriptId = json?.params?.scriptId;
+}
+
+// Generate a response to a "Debugger.getScriptSource" request.
+function getScriptSourceResponse(message) {
+  const json = JSON.parse(message);
+  if (json.method !== 'Debugger.getScriptSource') {
+    return null;
+  }
+
+  const invalidParamsCode = -32602;
+  const requestedScriptId = json?.params?.scriptId;
+  const response = (scriptId && requestedScriptId === scriptId) ?
+    { id: json.id, result: { scriptSource: script } }
+    :
+    {
+      id: json.id, error: {
+        code: invalidParamsCode,
+        message: `Unknown script: "${requestedScriptId}".`,
+      }
+    };
+  return JSON.stringify(response);
+}
 
 // Forward responses/events from Hermes to the client
 let lineBuffer = '';
@@ -193,8 +239,8 @@ childProcess.stdout.on('data', (data) => {
       throw new Error(`Malformed message: ${message}`);
     }
 
-    clients[clientId].send(message);
-    logResponse(clientId, message);
+    inspectScriptParsed(message);
+    sendMessageToClient(clients[clientId], clientId, message);
   }
 
   // Save any partial line
