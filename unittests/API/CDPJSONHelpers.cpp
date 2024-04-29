@@ -114,7 +114,11 @@ void expectCallFrames(
   for (const FrameInfo &info : infos) {
     const m::debugger::CallFrame &frame = frames[i];
 
-    EXPECT_EQ(frame.callFrameId, std::to_string(i));
+    if (info.callFrameId.has_value()) {
+      EXPECT_EQ(frame.callFrameId, info.callFrameId.value());
+    } else {
+      EXPECT_EQ(frame.callFrameId, std::to_string(i));
+    }
     EXPECT_EQ(frame.functionName, info.functionName);
     EXPECT_GE(frame.location.lineNumber, info.lineNumberMin);
     EXPECT_LE(frame.location.lineNumber, info.lineNumberMax);

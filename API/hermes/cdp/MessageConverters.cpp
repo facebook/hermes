@@ -71,6 +71,26 @@ std::vector<m::runtime::CallFrame> m::runtime::makeCallFrames(
 
   for (size_t i = 0; i < stackTrace.callFrameCount(); i++) {
     h::debugger::CallFrameInfo info = stackTrace.callFrameForIndex(i);
+
+    // @cdp This is not explicitly documented for Runtime.CallFrame in the
+    // protocol spec, but there are different behaviors that Chrome expects in
+    // different situations.
+    //
+    // For the Profiling scenarios, Chrome itself uses Runtime.CallFrame and
+    // just use the functionName field as a display string. So for Profiling,
+    // native frames and internal details are included. However, for any other
+    // situation, Chrome DevTools expects there to be no native frames. This is
+    // filtered out by V8 in StackFrameBuilder as it visits each frame:
+    // https://source.chromium.org/chromium/chromium/src/+/main:v8/src/execution/isolate.cc;l=1439;drc=6a1467666bf8f85bb49fe3d37fce5eba67763061
+    //
+    // This function makeCallFrames() is not used by the Profiling code to
+    // generate Runtime.CallFrame, so we should filter out all non-user
+    // JavaScript frames to match Chrome's expectation.
+    if (info.location.fileId ==
+        ::facebook::hermes::debugger::kInvalidLocation) {
+      continue;
+    }
+
     result.emplace_back(makeCallFrame(info));
   }
 

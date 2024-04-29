@@ -34,8 +34,23 @@ struct JSONScope {
 };
 
 struct FrameInfo {
-  FrameInfo(const std::string &functionName, int lineNumber, int scopeCount)
+  FrameInfo(
+      const std::string &functionName,
+      uint32_t lineNumber,
+      uint32_t scopeCount)
       : functionName(functionName),
+        lineNumberMin(lineNumber),
+        lineNumberMax(lineNumber),
+        scopeCount(scopeCount),
+        columnNumber(debugger::kInvalidLocation) {}
+
+  FrameInfo(
+      const std::string &callFrameId,
+      const std::string &functionName,
+      uint32_t lineNumber,
+      uint32_t scopeCount)
+      : callFrameId(callFrameId),
+        functionName(functionName),
         lineNumberMin(lineNumber),
         lineNumberMax(lineNumber),
         scopeCount(scopeCount),
@@ -56,6 +71,7 @@ struct FrameInfo {
     return *this;
   }
 
+  std::optional<std::string> callFrameId;
   std::string functionName;
   uint32_t lineNumberMin;
   uint32_t lineNumberMax;
