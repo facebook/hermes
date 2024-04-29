@@ -217,11 +217,6 @@ class HERMES_EXPORT Debugger {
   /// \return list of loaded scripts
   std::vector<SourceLocation> getLoadedScripts() const;
 
-  /// Gets the current stack trace.
-  /// \return stack trace with call frames if runtime is in the interpreter
-  /// loop, otherwise return no call frames
-  StackTrace captureStackTrace() const;
-
   /// -- Breakpoint Management --
 
   /// Sets a breakpoint on a given SourceLocation.

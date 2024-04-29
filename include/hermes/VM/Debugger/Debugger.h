@@ -234,10 +234,8 @@ class Debugger {
     return isDebugging_;
   }
 
-  // \return a trace of the current stack, with the top beginning at the
-  // specified \p ipOffset in \p codeBlock (and the remaining locations loaded
-  // from frames).
-  StackTrace getStackTrace(const CodeBlock *codeBlock, uint32_t ipOffset) const;
+  // \return the stack trace for the state given by \p state.
+  StackTrace getStackTrace(InterpreterState state) const;
 
   llvh::Optional<const BreakpointLocation> getBreakpointLocation(
       const inst::Inst *ip) const {
