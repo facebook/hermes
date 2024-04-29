@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<63c1b1e6338c1b2a1f9ea963eddcd340>>
+// @generated SignedSource<<8577199f24d290b5b77422ed340660ad>>
 
 #include "MessageTypes.h"
 
@@ -105,6 +105,8 @@ std::unique_ptr<Request> Request::fromJson(const std::string &str) {
       {"Runtime.callFunctionOn", tryMake<runtime::CallFunctionOnRequest>},
       {"Runtime.compileScript", tryMake<runtime::CompileScriptRequest>},
       {"Runtime.disable", tryMake<runtime::DisableRequest>},
+      {"Runtime.discardConsoleEntries",
+       tryMake<runtime::DiscardConsoleEntriesRequest>},
       {"Runtime.enable", tryMake<runtime::EnableRequest>},
       {"Runtime.evaluate", tryMake<runtime::EvaluateRequest>},
       {"Runtime.getHeapUsage", tryMake<runtime::GetHeapUsageRequest>},
@@ -1648,6 +1650,32 @@ JSONValue *runtime::DisableRequest::toJsonVal(JSONFactory &factory) const {
 }
 
 void runtime::DisableRequest::accept(RequestHandler &handler) const {
+  handler.handle(*this);
+}
+
+runtime::DiscardConsoleEntriesRequest::DiscardConsoleEntriesRequest()
+    : Request("Runtime.discardConsoleEntries") {}
+
+std::unique_ptr<runtime::DiscardConsoleEntriesRequest>
+runtime::DiscardConsoleEntriesRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<runtime::DiscardConsoleEntriesRequest> req =
+      std::make_unique<runtime::DiscardConsoleEntriesRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  return req;
+}
+
+JSONValue *runtime::DiscardConsoleEntriesRequest::toJsonVal(
+    JSONFactory &factory) const {
+  llvh::SmallVector<JSONFactory::Prop, 1> props;
+  put(props, "id", id, factory);
+  put(props, "method", method, factory);
+  return factory.newObject(props.begin(), props.end());
+}
+
+void runtime::DiscardConsoleEntriesRequest::accept(
+    RequestHandler &handler) const {
   handler.handle(*this);
 }
 

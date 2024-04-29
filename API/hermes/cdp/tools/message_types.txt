@@ -33,6 +33,7 @@ Profiler.stop
 Runtime.callFunctionOn
 Runtime.consoleAPICalled
 Runtime.disable
+Runtime.discardConsoleEntries
 Runtime.enable
 Runtime.evaluate
 Runtime.executionContextCreated

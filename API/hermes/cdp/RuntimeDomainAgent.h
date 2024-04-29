@@ -41,6 +41,9 @@ class RuntimeDomainAgent : public DomainAgent {
   /// Handles Runtime.enable request
   /// @cdp Runtime.enable If domain is already enabled, will return success.
   void enable(const m::runtime::EnableRequest &req);
+  /// @cdp Runtime.discardConsoleEntries
+  void discardConsoleEntries(
+      const m::runtime::DiscardConsoleEntriesRequest &req);
   /// Handles Runtime.disable request
   /// @cdp Runtime.disable If domain is already disabled, will return success.
   void disable(const m::runtime::DisableRequest &req);
