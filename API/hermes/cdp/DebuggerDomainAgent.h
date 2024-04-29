@@ -22,6 +22,8 @@ namespace facebook {
 namespace hermes {
 namespace cdp {
 
+enum class PausedNotificationReason;
+
 namespace m = ::facebook::hermes::cdp::message;
 
 /// Details about a single Hermes breakpoint, implied by a CDP breakpoint.
@@ -142,12 +144,8 @@ class DebuggerDomainAgent : public DomainAgent {
       debugger::AsyncDebuggerAPI &asyncDebugger,
       debugger::DebuggerEventType event);
 
-  /// Send a Pause notification to the debug client with "other" being the
-  /// reason
-  void sendPausedNotificationToClient();
-  /// Send a Pause notification to the debug client with "exception" being the
-  /// reason
-  void sendPauseOnExceptionNotificationToClient();
+  /// Send a Debugger.paused notification to the debug client
+  void sendPausedNotificationToClient(PausedNotificationReason reason);
   /// Send a Debugger.scriptParsed notification to the debug client
   void sendScriptParsedNotificationToClient(
       const debugger::SourceLocation srcLoc);
