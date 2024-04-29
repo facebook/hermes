@@ -3,14 +3,32 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+set(NO_EH_RTTI_SOURCES
+  JSONHelpers.cpp
+  ../../API/hermes/cdp/JSONValueInterfaces.cpp
+  ../../API/hermes/cdp/MessageInterfaces.cpp
+  ../../API/hermes/cdp/MessageTypes.cpp
+  )
+
+if (NOT HERMES_ENABLE_EH_RTTI)
+  if (GCC_COMPATIBLE)
+    set_property(SOURCE ${NO_EH_RTTI_SOURCES} APPEND_STRING
+      PROPERTY COMPILE_FLAGS "-fno-exceptions -fno-rtti")
+  elseif (MSVC)
+    set_property(SOURCE ${NO_EH_RTTI_SOURCES} APPEND_STRING
+      PROPERTY COMPILE_FLAGS "/EHs-c- /GR-")
+  endif ()
+endif ()
+
 set(HERMES_ENABLE_EH_RTTI ON)
 add_hermes_tool(hcdp
   hcdp.cpp
   IPC.cpp
+  ${NO_EH_RTTI_SOURCES}
   ${ALL_HEADER_FILES}
   )
 
-target_link_libraries(hcdp hermesSerialExecutor libhermes)
+target_link_libraries(hcdp hermesSerialExecutor libhermes hermesParser)
 
 install(TARGETS hcdp
   RUNTIME DESTINATION bin
