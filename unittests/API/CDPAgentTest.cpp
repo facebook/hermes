@@ -2092,16 +2092,13 @@ TEST_F(CDPAgentTest, RuntimeEvaluate) {
     var booleanVar = true;
     var numberVar = 42;
     var objectVar = {number: 1, bool: false, str: "string"};
-
-    while(!shouldStop()) {  // [1] (line 6) hit infinite loop
-      var a = 1;            // [2] run evals
-      a++;                  // [3] exit run loop
-    }
   )");
+  // Wait for the script to execute
+  waitFor<bool>([this](auto promise) {
+    runtimeThread_->add([promise]() { promise->set_value(true); });
+  });
 
-  // [1] (line 6) hit infinite loop
-
-  // [2] run eval statements
+  // run eval statements
   sendRequest("Runtime.evaluate", msgId + 0, [](::hermes::JSONEmitter &params) {
     params.emitKeyValue("expression", R"("0: " + globalVar)");
   });
@@ -2111,7 +2108,7 @@ TEST_F(CDPAgentTest, RuntimeEvaluate) {
   EXPECT_EQ(
       jsonScope_.getString(resp0, {"result", "result", "value"}), "0: omega");
 
-  // [2.1] run eval statements that return non-string primitive values
+  // run eval statements that return non-string primitive values
   sendRequest("Runtime.evaluate", msgId + 1, [](::hermes::JSONEmitter &params) {
     params.emitKeyValue("expression", "booleanVar");
   });
@@ -2127,7 +2124,7 @@ TEST_F(CDPAgentTest, RuntimeEvaluate) {
       jsonScope_.getString(resp2, {"result", "result", "type"}), "number");
   EXPECT_EQ(jsonScope_.getNumber(resp2, {"result", "result", "value"}), 42);
 
-  // [2.2] run eval statement that returns object
+  // run eval statement that returns object
   sendRequest("Runtime.evaluate", msgId + 3, [](::hermes::JSONEmitter &params) {
     params.emitKeyValue("expression", "objectVar");
   });
@@ -2151,7 +2148,7 @@ TEST_F(CDPAgentTest, RuntimeEvaluate) {
 TEST_F(CDPAgentTest, RuntimeEvaluateWhilePaused) {
   int msgId = 1;
 
-  // Start a script
+  // Start a script that halts on a debugger statement
   sendAndCheckResponse("Runtime.enable", msgId++);
   sendAndCheckResponse("Debugger.enable", msgId++);
   scheduleScript(R"(
@@ -2162,45 +2159,36 @@ TEST_F(CDPAgentTest, RuntimeEvaluateWhilePaused) {
     })();
   )");
   expectNotification("Debugger.scriptParsed");
-
   auto pausedNote = ensurePaused(
       waitForMessage(), "other", {{"func", 4, 2}, {"global", 5, 1}});
 
-  // Evaluate the global variable; it should be visible to the runtime
-  // evaluation.
-  sendRequest("Runtime.evaluate", msgId, [](::hermes::JSONEmitter &params) {
-    params.emitKeyValue("expression", "inGlobalScope");
-  });
-  auto resp0 = expectResponse(std::nullopt, msgId++);
-  EXPECT_EQ(
-      jsonScope_.getString(resp0, {"result", "result", "type"}), "number");
-  EXPECT_EQ(jsonScope_.getNumber(resp0, {"result", "result", "value"}), 123);
-
-  // Evaluate the local variable; it should not be visible to the runtime
-  // evaluation.
-  sendRequest("Runtime.evaluate", msgId, [](::hermes::JSONEmitter &params) {
-    params.emitKeyValue("expression", "inFunctionScope");
-  });
-  auto resp1 = expectResponse(std::nullopt, msgId++);
-  EXPECT_GT(
-      jsonScope_.getString(resp1, {"result", "exceptionDetails", "text"})
-          .size(),
-      0);
+  // Runtime evaluate should not happen while paused.
+  int evaluateMsgId = msgId++;
+  sendRequest(
+      "Runtime.evaluate", evaluateMsgId, [](::hermes::JSONEmitter &params) {
+        params.emitKeyValue("expression", "inGlobalScope");
+      });
+  expectNothing();
 
   // Let the script terminate
-  sendAndCheckResponse("Debugger.resume", msgId++);
+  sendAndCheckResponse("Debugger.resume", msgId);
+  ensureNotification(waitForMessage("Debugger.resumed"), "Debugger.resumed");
+
+  // The eval should then complete, starting with a scriptParsed notification.
+  // Other tests of Runtime.evaluate don't receive the scriptParsed notification
+  // because they don't enable the debugger domain. This test is explicitly
+  // checking the behavior of Runtime.evaluate while paused, so the debugger
+  // domain is enabled.
+  expectNotification("Debugger.scriptParsed");
+  auto resp = expectResponse(std::nullopt, evaluateMsgId);
+  EXPECT_EQ(jsonScope_.getString(resp, {"result", "result", "type"}), "number");
+  EXPECT_EQ(jsonScope_.getNumber(resp, {"result", "result", "value"}), 123);
 }
 
 TEST_F(CDPAgentTest, RuntimeEvaluateReturnByValue) {
-  auto setStopFlag = llvh::make_scope_exit([this] {
-    // break out of loop
-    stopFlag_.store(true);
-  });
   int msgId = 1;
 
-  // Start a script
   sendAndCheckResponse("Runtime.enable", msgId++);
-  scheduleScript(R"(while(!shouldStop());)");
 
   // We expect this JSON object to be evaluated and return by value, so
   // that JSON encoding the result will give the same string.
@@ -2229,15 +2217,9 @@ TEST_F(CDPAgentTest, RuntimeEvaluateReturnByValue) {
 }
 
 TEST_F(CDPAgentTest, RuntimeEvaluateException) {
-  auto setStopFlag = llvh::make_scope_exit([this] {
-    // break out of loop
-    stopFlag_.store(true);
-  });
   int msgId = 1;
 
-  // Start a script
   sendAndCheckResponse("Runtime.enable", msgId++);
-  scheduleScript(R"(while(!shouldStop()) {})");
 
   // Evaluate something that throws
   sendRequest("Runtime.evaluate", msgId, [](::hermes::JSONEmitter &params) {
@@ -2267,6 +2249,41 @@ TEST_F(CDPAgentTest, RuntimeEvaluateException) {
       jsonScope_.getString(resp, {"result", "exceptionDetails", "text"})
           .find("Compiling JS failed"),
       std::string::npos);
+}
+
+TEST_F(CDPAgentTest, RuntimeEvaluateNested) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Runtime.enable", msgId++);
+
+  // Start a long-running expression
+  sendRequest("Runtime.evaluate", msgId + 0, [](::hermes::JSONEmitter &params) {
+    params.emitKeyValue("expression", R"(while(!shouldStop()); 1+1)");
+  });
+  // Expect it to keep running
+  expectNothing();
+
+  // Try to start another expression
+  sendRequest("Runtime.evaluate", msgId + 1, [](::hermes::JSONEmitter &params) {
+    params.emitKeyValue("expression", "2+2");
+  });
+  // Expect it to not be evaluated
+  expectNothing();
+
+  // Let the evaluations terminate
+  stopFlag_.store(true);
+
+  // Expect the first evaluation to complete first
+  auto resp0 = expectResponse(std::nullopt, msgId + 0);
+  EXPECT_EQ(
+      jsonScope_.getString(resp0, {"result", "result", "type"}), "number");
+  EXPECT_EQ(jsonScope_.getNumber(resp0, {"result", "result", "value"}), 2);
+
+  // Expect the second evaluation to complete second
+  auto resp1 = expectResponse(std::nullopt, msgId + 1);
+  EXPECT_EQ(
+      jsonScope_.getString(resp1, {"result", "result", "type"}), "number");
+  EXPECT_EQ(jsonScope_.getNumber(resp1, {"result", "result", "value"}), 4);
 }
 
 TEST_F(CDPAgentTest, RuntimeCallFunctionOnObject) {
@@ -2695,16 +2712,9 @@ TEST_F(CDPAgentTest, ProfilerBasicOperation) {
 }
 
 TEST_F(CDPAgentTest, RuntimeValidatesExecutionContextId) {
-  auto setStopFlag = llvh::make_scope_exit([this] {
-    // break out of loop
-    stopFlag_.store(true);
-  });
-
   int msgId = 1;
 
-  // Start a script
   sendAndCheckResponse("Runtime.enable", msgId++);
-  scheduleScript(R"(while(!shouldStop());)");
 
   constexpr auto kExecutionContextSubstring = "execution context id";
 
