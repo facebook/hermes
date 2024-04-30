@@ -398,6 +398,10 @@ JSONObject *JSONScope::parseObject(const std::string &json) {
   return mustParseStrAsJsonObj(json, private_->factory);
 }
 
+std::optional<JSONObject *> JSONScope::tryParseObject(const std::string &json) {
+  return parseStrAsJsonObj(json, private_->factory);
+}
+
 std::string JSONScope::getString(
     JSONObject *obj,
     std::vector<std::string> paths) {
