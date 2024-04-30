@@ -50,17 +50,25 @@ RemoteObject makeRemoteObject(
     const std::string &objectGroup,
     const cdp::ObjectSerializationOptions &serializationOptions);
 
+RemoteObject makeRemoteObjectForError(
+    facebook::jsi::Runtime &runtime,
+    const facebook::jsi::Value &value,
+    cdp::RemoteObjectsTable &objTable,
+    const std::string &objectGroup);
+
 ExceptionDetails makeExceptionDetails(
     jsi::Runtime &runtime,
-    RemoteObjectsTable &objTable,
-    const std::string &objectGroup,
-    const jsi::JSError &error);
+    const jsi::JSError &error,
+    cdp::RemoteObjectsTable &objTable,
+    const std::string &objectGroup);
 
 ExceptionDetails makeExceptionDetails(const jsi::JSIException &err);
 
-// TODO: Add Runtime&, RemoteObjectsTable etc to this overload
 ExceptionDetails makeExceptionDetails(
-    const facebook::hermes::debugger::ExceptionDetails &details);
+    facebook::jsi::Runtime &runtime,
+    const facebook::hermes::debugger::EvalResult &result,
+    cdp::RemoteObjectsTable &objTable,
+    const std::string &objectGroup);
 
 } // namespace runtime
 

@@ -259,18 +259,26 @@ evaluateAndWrapResult(
     const std::string &objectGroup,
     const ObjectSerializationOptions &serializationOptions,
     Fn &&fn) {
-  jsi::Value result;
+  m::runtime::RemoteObject remoteObj;
   std::optional<m::runtime::ExceptionDetails> exceptionDetails;
   try {
-    result = fn(runtime);
+    jsi::Value result = fn(runtime);
+    remoteObj = m::runtime::makeRemoteObject(
+        runtime, result, objTable, objectGroup, serializationOptions);
   } catch (const jsi::JSError &error) {
     exceptionDetails =
-        m::runtime::makeExceptionDetails(runtime, objTable, objectGroup, error);
+        m::runtime::makeExceptionDetails(runtime, error, objTable, objectGroup);
+    // In V8, @cdp Runtime.evaluate and @cdp Runtime.callFunctionOn populate the
+    // `result` field with the exception value, and some code paths in Chrome
+    // DevTools depend on this.
+    // See
+    // https://github.com/facebookexperimental/rn-chrome-devtools-frontend/blob/35aa264a622e853bb28b4c83a7b5cc3b2a9747bc/front_end/core/sdk/RemoteObject.ts#L574-L592
+    remoteObj = m::runtime::makeRemoteObjectForError(
+        runtime, error.value(), objTable, objectGroup);
   } catch (const jsi::JSIException &err) {
     exceptionDetails = m::runtime::makeExceptionDetails(err);
   }
-  auto remoteObj = m::runtime::makeRemoteObject(
-      runtime, result, objTable, objectGroup, serializationOptions);
+
   return std::make_pair(std::move(remoteObj), std::move(exceptionDetails));
 }
 
