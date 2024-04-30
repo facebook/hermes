@@ -104,13 +104,15 @@ class DoLower {
     for (size_t i = 1, e = SCI->getNumOperands(); i < e; ++i) {
       restOfStrings.push_back(SCI->getOperand(i));
     }
-    return builder_.createCallInst(
+    auto *concatRes = builder_.createCallInst(
         builder_.createLoadPropertyInst(
             builder_.createTryLoadGlobalPropertyInst("HermesInternal"),
             "concat"),
         builder_.getLiteralUndefined(),
         firstString,
         restOfStrings);
+    return builder_.createUnionNarrowTrustedInst(
+        concatRes, Type::createString());
   }
 };
 
