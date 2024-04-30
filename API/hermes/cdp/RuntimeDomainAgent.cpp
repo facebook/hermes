@@ -430,7 +430,8 @@ void RuntimeDomainAgent::getProperties(
     const m::runtime::GetPropertiesRequest &req) {
   // Allow this to be used when domain is not enabled to match V8 behavior.
 
-  bool generatePreview = req.generatePreview.value_or(false);
+  ObjectSerializationOptions serializationOptions;
+  serializationOptions.generatePreview = req.generatePreview.value_or(false);
   bool ownProperties = req.ownProperties.value_or(true);
 
   std::string objGroup = objTable_->getObjectGroup(req.objectId);
@@ -450,7 +451,7 @@ void RuntimeDomainAgent::getProperties(
     const debugger::ProgramState &state =
         runtime_.getDebugger().getProgramState();
     auto result =
-        makePropsFromScope(*scopePtr, objGroup, state, generatePreview);
+        makePropsFromScope(*scopePtr, objGroup, state, serializationOptions);
     if (!result) {
       sendResponseToClient(m::makeErrorResponse(
           req.id,
@@ -461,8 +462,8 @@ void RuntimeDomainAgent::getProperties(
     resp.result = std::move(*result);
 
   } else if (valuePtr != nullptr) {
-    resp.result =
-        makePropsFromValue(*valuePtr, objGroup, ownProperties, generatePreview);
+    resp.result = makePropsFromValue(
+        *valuePtr, objGroup, ownProperties, serializationOptions);
   }
   sendResponseToClient(resp);
 }
@@ -488,16 +489,21 @@ void RuntimeDomainAgent::evaluate(const m::runtime::EvaluateRequest &req) {
             new jsi::StringBuffer(req.expression)),
         kEvaluatedCodeUrl);
 
-    bool byValue = req.returnByValue.value_or(false);
-    bool generatePreview = req.generatePreview.value_or(false);
+    ObjectSerializationOptions serializationOptions;
+    serializationOptions.returnByValue = req.returnByValue.value_or(false);
+    serializationOptions.generatePreview = req.generatePreview.value_or(false);
     auto remoteObjPtr = m::runtime::makeRemoteObject(
-        runtime_, result, *objTable_, objectGroup, byValue, generatePreview);
+        runtime_, result, *objTable_, objectGroup, serializationOptions);
     resp.result = std::move(remoteObjPtr);
   } catch (const jsi::JSError &error) {
     resp.exceptionDetails = m::runtime::ExceptionDetails();
     resp.exceptionDetails->text = error.getMessage() + "\n" + error.getStack();
     resp.exceptionDetails->exception = m::runtime::makeRemoteObject(
-        runtime_, error.value(), *objTable_, objectGroup, false, false);
+        runtime_,
+        error.value(),
+        *objTable_,
+        objectGroup,
+        ObjectSerializationOptions{});
   } catch (const jsi::JSIException &err) {
     resp.exceptionDetails = m::runtime::ExceptionDetails();
     resp.exceptionDetails->text = err.what();
@@ -555,8 +561,9 @@ void RuntimeDomainAgent::callFunctionOn(
   }
 
   auto objectGroup = req.objectGroup.value_or("");
-  auto byValue = req.returnByValue.value_or(false);
-  auto generatePreview = req.generatePreview.value_or(false);
+  ObjectSerializationOptions serializationOptions;
+  serializationOptions.returnByValue = req.returnByValue.value_or(false);
+  serializationOptions.generatePreview = req.generatePreview.value_or(false);
 
   m::runtime::CallFunctionOnResponse resp;
   resp.id = req.id;
@@ -566,18 +573,19 @@ void RuntimeDomainAgent::callFunctionOn(
         (runner)(runtime_, *objTable_, evalResult),
         *objTable_,
         objectGroup,
-        byValue,
-        generatePreview);
+        serializationOptions);
   } catch (const jsi::JSError &error) {
     resp.exceptionDetails = m::runtime::ExceptionDetails();
     resp.exceptionDetails->text = error.getMessage() + "\n" + error.getStack();
+    ObjectSerializationOptions errorSerializationOptions;
+    errorSerializationOptions.generatePreview =
+        serializationOptions.generatePreview;
     resp.exceptionDetails->exception = m::runtime::makeRemoteObject(
         runtime_,
         error.value(),
         *objTable_,
         objectGroup,
-        false,
-        generatePreview);
+        errorSerializationOptions);
   } catch (const jsi::JSIException &err) {
     resp.exceptionDetails = m::runtime::ExceptionDetails();
     resp.exceptionDetails->text = err.what();
@@ -613,7 +621,7 @@ RuntimeDomainAgent::makePropsFromScope(
     std::pair<uint32_t, uint32_t> frameAndScopeIndex,
     const std::string &objectGroup,
     const debugger::ProgramState &state,
-    bool generatePreview) {
+    const ObjectSerializationOptions &serializationOptions) {
   // Chrome represents variables in a scope as properties on a dummy object.
   // We don't instantiate such dummy objects, we just pretended to have one.
   // Chrome has now asked for its properties, so it's time to synthesize
@@ -637,12 +645,7 @@ RuntimeDomainAgent::makePropsFromScope(
     m::runtime::PropertyDescriptor desc;
     desc.name = varInfo.name;
     desc.value = m::runtime::makeRemoteObject(
-        runtime_,
-        varInfo.value,
-        *objTable_,
-        objectGroup,
-        false,
-        generatePreview);
+        runtime_, varInfo.value, *objTable_, objectGroup, serializationOptions);
     // Chrome only shows enumerable properties.
     desc.enumerable = true;
     result.emplace_back(std::move(desc));
@@ -656,12 +659,7 @@ RuntimeDomainAgent::makePropsFromScope(
     m::runtime::PropertyDescriptor desc;
     desc.name = varInfo.name;
     desc.value = m::runtime::makeRemoteObject(
-        runtime_,
-        varInfo.value,
-        *objTable_,
-        objectGroup,
-        false,
-        generatePreview);
+        runtime_, varInfo.value, *objTable_, objectGroup, serializationOptions);
     desc.enumerable = true;
 
     result.emplace_back(std::move(desc));
@@ -675,7 +673,7 @@ RuntimeDomainAgent::makePropsFromValue(
     const jsi::Value &value,
     const std::string &objectGroup,
     bool onlyOwnProperties,
-    bool generatePreview) {
+    const ObjectSerializationOptions &serializationOptions) {
   std::vector<m::runtime::PropertyDescriptor> result;
 
   if (value.isObject()) {
@@ -705,12 +703,7 @@ RuntimeDomainAgent::makePropsFromValue(
         // Chrome instead detects getters and makes you click to invoke.
         jsi::Value propValue = obj.getProperty(runtime, propName);
         desc.value = m::runtime::makeRemoteObject(
-            runtime,
-            propValue,
-            *objTable_,
-            objectGroup,
-            false,
-            generatePreview);
+            runtime, propValue, *objTable_, objectGroup, serializationOptions);
       } catch (const jsi::JSIException &err) {
         // We fetched a property with a getter that threw. Show a placeholder.
         // We could have added additional info, but the UI quickly gets messy.
@@ -719,8 +712,7 @@ RuntimeDomainAgent::makePropsFromValue(
             jsi::String::createFromUtf8(runtime, "(Exception)"),
             *objTable_,
             objectGroup,
-            false,
-            generatePreview);
+            serializationOptions);
       }
 
       result.emplace_back(std::move(desc));
@@ -735,7 +727,7 @@ RuntimeDomainAgent::makePropsFromValue(
         m::runtime::PropertyDescriptor desc;
         desc.name = "__proto__";
         desc.value = m::runtime::makeRemoteObject(
-            runtime, proto, *objTable_, objectGroup, false, generatePreview);
+            runtime, proto, *objTable_, objectGroup, serializationOptions);
         result.emplace_back(std::move(desc));
       }
     }
@@ -801,7 +793,11 @@ void RuntimeDomainAgent::consoleAPICalled(const ConsoleMessage &message) {
 
   for (auto &arg : message.args) {
     note.args.push_back(m::runtime::makeRemoteObject(
-        runtime_, arg, *objTable_, "ConsoleObjectGroup", false, false));
+        runtime_,
+        arg,
+        *objTable_,
+        "ConsoleObjectGroup",
+        ObjectSerializationOptions{}));
   }
 
   sendNotificationToClient(note);

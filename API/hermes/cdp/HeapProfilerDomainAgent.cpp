@@ -107,7 +107,7 @@ void HeapProfilerDomainAgent::getObjectByHeapObjectId(
 
   std::string group = req.objectGroup.value_or("");
   m::runtime::RemoteObject remoteObj = m::runtime::makeRemoteObject(
-      runtime_, val, *objTable_, group, false, false);
+      runtime_, val, *objTable_, group, ObjectSerializationOptions{});
   if (remoteObj.type.empty()) {
     sendResponseToClient(m::makeErrorResponse(
         req.id, m::ErrorCode::ServerError, "Remote object is not available"));
