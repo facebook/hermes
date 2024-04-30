@@ -1373,7 +1373,7 @@ export interface TypePredicate extends BaseNode {
   +type: 'TypePredicate';
   +parameterName: Identifier;
   +typeAnnotation: TypeAnnotationType | null;
-  +asserts: boolean;
+  +kind: null | 'asserts' | 'implies';
 }
 
 export interface FunctionTypeAnnotation extends BaseNode {

@@ -1072,7 +1072,7 @@ describe('TypePredicate', () => {
             "returnType": {
               "type": "TypeAnnotation",
               "typeAnnotation": {
-                "asserts": false,
+                "kind": null,
                 "parameterName": {
                   "name": "x",
                   "optional": false,
