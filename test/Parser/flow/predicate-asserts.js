@@ -45,7 +45,7 @@ function foo(x: mixed): asserts x is number {}
 // CHECK-NEXT:           "typeAnnotation": {
 // CHECK-NEXT:             "type": "NumberTypeAnnotation"
 // CHECK-NEXT:           },
-// CHECK-NEXT:           "asserts": true
+// CHECK-NEXT:           "kind": "asserts"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "generator": false,
@@ -84,7 +84,7 @@ function foo(x: mixed): asserts x {}
 // CHECK-NEXT:             "name": "x"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "typeAnnotation": null,
-// CHECK-NEXT:           "asserts": true
+// CHECK-NEXT:           "kind": "asserts"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "generator": false,
@@ -124,7 +124,7 @@ function foo(x: mixed): asserts x {}
 // CHECK-NEXT:             "typeAnnotation": {
 // CHECK-NEXT:               "type": "NumberTypeAnnotation"
 // CHECK-NEXT:             },
-// CHECK-NEXT:             "asserts": true
+// CHECK-NEXT:             "kind": "asserts"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "expression": true,
@@ -164,7 +164,7 @@ function foo(x: mixed): asserts x {}
 // CHECK-NEXT:               "name": "x"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "typeAnnotation": null,
-// CHECK-NEXT:             "asserts": true
+// CHECK-NEXT:             "kind": "asserts"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "expression": true,
@@ -229,7 +229,7 @@ class C { m(): asserts x is D { return x !== null } }
 // CHECK-NEXT:                     },
 // CHECK-NEXT:                     "typeParameters": null
 // CHECK-NEXT:                   },
-// CHECK-NEXT:                   "asserts": true
+// CHECK-NEXT:                   "kind": "asserts"
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "generator": false,
@@ -292,7 +292,7 @@ class C { m(): asserts x { return x !== null } }
 // CHECK-NEXT:                     "name": "x"
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   "typeAnnotation": null,
-// CHECK-NEXT:                   "asserts": true
+// CHECK-NEXT:                   "kind": "asserts"
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "generator": false,
@@ -339,7 +339,7 @@ type T = (x: mixed) => asserts x is number;
 // CHECK-NEXT:           "typeAnnotation": {
 // CHECK-NEXT:             "type": "NumberTypeAnnotation"
 // CHECK-NEXT:           },
-// CHECK-NEXT:           "asserts": true
+// CHECK-NEXT:           "kind": "asserts"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "rest": null,
 // CHECK-NEXT:         "typeParameters": null
@@ -377,7 +377,7 @@ type T = (x: mixed) => asserts x;
 // CHECK-NEXT:             "name": "x"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "typeAnnotation": null,
-// CHECK-NEXT:           "asserts": true
+// CHECK-NEXT:           "kind": "asserts"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "rest": null,
 // CHECK-NEXT:         "typeParameters": null
