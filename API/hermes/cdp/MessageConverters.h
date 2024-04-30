@@ -62,9 +62,6 @@ CallFrame makeCallFrame(const facebook::hermes::debugger::CallFrameInfo &info);
 std::vector<CallFrame> makeCallFrames(
     const facebook::hermes::debugger::StackTrace &stackTrace);
 
-ExceptionDetails makeExceptionDetails(
-    const facebook::hermes::debugger::ExceptionDetails &details);
-
 } // namespace runtime
 
 namespace heapProfiler {

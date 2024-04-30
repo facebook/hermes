@@ -50,6 +50,18 @@ RemoteObject makeRemoteObject(
     const std::string &objectGroup,
     const cdp::ObjectSerializationOptions &serializationOptions);
 
+ExceptionDetails makeExceptionDetails(
+    jsi::Runtime &runtime,
+    RemoteObjectsTable &objTable,
+    const std::string &objectGroup,
+    const jsi::JSError &error);
+
+ExceptionDetails makeExceptionDetails(const jsi::JSIException &err);
+
+// TODO: Add Runtime&, RemoteObjectsTable etc to this overload
+ExceptionDetails makeExceptionDetails(
+    const facebook::hermes::debugger::ExceptionDetails &details);
+
 } // namespace runtime
 
 } // namespace message

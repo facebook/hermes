@@ -97,20 +97,6 @@ std::vector<m::runtime::CallFrame> m::runtime::makeCallFrames(
   return result;
 }
 
-m::runtime::ExceptionDetails m::runtime::makeExceptionDetails(
-    const h::debugger::ExceptionDetails &details) {
-  m::runtime::ExceptionDetails result;
-
-  result.text = details.text;
-  result.scriptId = std::to_string(details.location.fileId);
-  result.url = details.location.fileName;
-  result.stackTrace = m::runtime::StackTrace();
-  result.stackTrace->callFrames = makeCallFrames(details.getStackTrace());
-  m::setChromeLocation(result, details.location);
-
-  return result;
-}
-
 std::unique_ptr<m::heapProfiler::SamplingHeapProfile>
 m::heapProfiler::makeSamplingHeapProfile(const std::string &value) {
   // We are fine with this JSONObject becoming invalid after this function

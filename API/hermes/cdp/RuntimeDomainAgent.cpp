@@ -251,6 +251,29 @@ class CallFunctionOnBuilder {
   std::optional<m::runtime::ExecutionContextId> executionContextId_;
 };
 
+template <typename Fn>
+std::pair<m::runtime::RemoteObject, std::optional<m::runtime::ExceptionDetails>>
+evaluateAndWrapResult(
+    jsi::Runtime &runtime,
+    RemoteObjectsTable &objTable,
+    const std::string &objectGroup,
+    const ObjectSerializationOptions &serializationOptions,
+    Fn &&fn) {
+  jsi::Value result;
+  std::optional<m::runtime::ExceptionDetails> exceptionDetails;
+  try {
+    result = fn(runtime);
+  } catch (const jsi::JSError &error) {
+    exceptionDetails =
+        m::runtime::makeExceptionDetails(runtime, objTable, objectGroup, error);
+  } catch (const jsi::JSIException &err) {
+    exceptionDetails = m::runtime::makeExceptionDetails(err);
+  }
+  auto remoteObj = m::runtime::makeRemoteObject(
+      runtime, result, objTable, objectGroup, serializationOptions);
+  return std::make_pair(std::move(remoteObj), std::move(exceptionDetails));
+}
+
 } // namespace
 
 RuntimeDomainAgent::RuntimeDomainAgent(
@@ -411,8 +434,7 @@ void RuntimeDomainAgent::compileScript(
   try {
     preparedScript = runtime_.prepareJavaScript(source, req.sourceURL);
   } catch (const jsi::JSIException &err) {
-    resp.exceptionDetails = m::runtime::ExceptionDetails();
-    resp.exceptionDetails->text = err.what();
+    resp.exceptionDetails = m::runtime::makeExceptionDetails(err);
     sendResponseToClient(resp);
     return;
   }
@@ -479,35 +501,23 @@ void RuntimeDomainAgent::evaluate(const m::runtime::EvaluateRequest &req) {
   m::runtime::EvaluateResponse resp;
   resp.id = req.id;
 
-  std::string objectGroup = req.objectGroup.value_or("");
-  try {
-    // Evaluate the expression using the runtime's normal script evaluation
-    // mechanism. This ensures the expression is evaluated in the global scope,
-    // regardless of where the runtime happens to be paused.
-    jsi::Value result = runtime_.evaluateJavaScript(
-        std::unique_ptr<jsi::StringBuffer>(
-            new jsi::StringBuffer(req.expression)),
-        kEvaluatedCodeUrl);
+  ObjectSerializationOptions serializationOptions;
+  serializationOptions.returnByValue = req.returnByValue.value_or(false);
+  serializationOptions.generatePreview = req.generatePreview.value_or(false);
 
-    ObjectSerializationOptions serializationOptions;
-    serializationOptions.returnByValue = req.returnByValue.value_or(false);
-    serializationOptions.generatePreview = req.generatePreview.value_or(false);
-    auto remoteObjPtr = m::runtime::makeRemoteObject(
-        runtime_, result, *objTable_, objectGroup, serializationOptions);
-    resp.result = std::move(remoteObjPtr);
-  } catch (const jsi::JSError &error) {
-    resp.exceptionDetails = m::runtime::ExceptionDetails();
-    resp.exceptionDetails->text = error.getMessage() + "\n" + error.getStack();
-    resp.exceptionDetails->exception = m::runtime::makeRemoteObject(
-        runtime_,
-        error.value(),
-        *objTable_,
-        objectGroup,
-        ObjectSerializationOptions{});
-  } catch (const jsi::JSIException &err) {
-    resp.exceptionDetails = m::runtime::ExceptionDetails();
-    resp.exceptionDetails->text = err.what();
-  }
+  std::string objectGroup = req.objectGroup.value_or("");
+
+  std::tie(resp.result, resp.exceptionDetails) = evaluateAndWrapResult(
+      runtime_,
+      *objTable_,
+      objectGroup,
+      serializationOptions,
+      [&req](jsi::Runtime &runtime) {
+        return runtime.evaluateJavaScript(
+            std::unique_ptr<jsi::StringBuffer>(
+                new jsi::StringBuffer(req.expression)),
+            kEvaluatedCodeUrl);
+      });
 
   sendResponseToClient(resp);
 }
@@ -567,29 +577,15 @@ void RuntimeDomainAgent::callFunctionOn(
 
   m::runtime::CallFunctionOnResponse resp;
   resp.id = req.id;
-  try {
-    resp.result = m::runtime::makeRemoteObject(
-        runtime_,
-        (runner)(runtime_, *objTable_, evalResult),
-        *objTable_,
-        objectGroup,
-        serializationOptions);
-  } catch (const jsi::JSError &error) {
-    resp.exceptionDetails = m::runtime::ExceptionDetails();
-    resp.exceptionDetails->text = error.getMessage() + "\n" + error.getStack();
-    ObjectSerializationOptions errorSerializationOptions;
-    errorSerializationOptions.generatePreview =
-        serializationOptions.generatePreview;
-    resp.exceptionDetails->exception = m::runtime::makeRemoteObject(
-        runtime_,
-        error.value(),
-        *objTable_,
-        objectGroup,
-        errorSerializationOptions);
-  } catch (const jsi::JSIException &err) {
-    resp.exceptionDetails = m::runtime::ExceptionDetails();
-    resp.exceptionDetails->text = err.what();
-  }
+  std::tie(resp.result, resp.exceptionDetails) = evaluateAndWrapResult(
+      runtime_,
+      *objTable_,
+      objectGroup,
+      serializationOptions,
+      [&](jsi::Runtime &runtime) {
+        return runner(runtime, *objTable_, evalResult);
+      });
+
   sendResponseToClient(resp);
 }
 
