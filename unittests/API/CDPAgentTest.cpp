@@ -364,9 +364,6 @@ void CDPAgentTest::expectErrorMessageContaining(
 void CDPAgentTest::expectHeapSnapshot(
     int messageID,
     bool ignoreTrackingNotifications) {
-  JSLexer::Allocator jsonAlloc;
-  JSONFactory factory(jsonAlloc);
-
   // Expect chunk notifications until the snapshot object is complete. Fail if
   // the object is invalid (e.g. truncated data, excess data, malformed JSON).
   // There is no indication of how many segments there will be, so just receive
@@ -383,7 +380,7 @@ void CDPAgentTest::expectHeapSnapshot(
 
     ASSERT_EQ(method, "HeapProfiler.addHeapSnapshotChunk");
     snapshot << jsonScope_.getString(note, {"params", "chunk"});
-  } while (!parseStrAsJsonObj(snapshot.str(), factory).has_value());
+  } while (!jsonScope_.tryParseObject(snapshot.str()).has_value());
 
   // Expect the snapshot response after all chunks have been received.
   ensureOkResponse(waitForMessage(), messageID);
