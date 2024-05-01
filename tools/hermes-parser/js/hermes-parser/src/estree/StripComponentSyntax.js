@@ -9,7 +9,8 @@
  */
 
 /**
- * This transform strips Flow types that are not supported past Babel 7.
+ * This transforms component syntax (https://flow.org/en/docs/react/component-syntax/)
+ * and hook syntax (https://flow.org/en/docs/react/hook-syntax/).
  *
  * It is expected that all transforms create valid ESTree AST output. If
  * the transform requires outputting Babel specific AST nodes then it
