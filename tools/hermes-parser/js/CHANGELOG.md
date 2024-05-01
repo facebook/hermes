@@ -1,3 +1,11 @@
+## 0.21.0
+
+### `hermes-parser`
+* Added support for `as const` expressions
+* Added support for inexact tuple type annotations `[...]`
+* Added support for parsing Flow Enums with bigint members
+* Added support for a one-sided variant to type guards `implies x is T`
+
 ## 0.20.1
 
 ### `hermes-eslint`
