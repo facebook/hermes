@@ -163,223 +163,223 @@ _micros = Category(
     name="micros",
     benchmarks=[
         ResourceBenchmark(
-            "simpleSum", "hvm-bench/simpleSum.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "simpleSum", "micros/simpleSum.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "propAccess", "hvm-bench/propAccess.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "propAccess", "micros/propAccess.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "allocObj", "hvm-bench/allocObj.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "allocObj", "micros/allocObj.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "allocObjLit", "hvm-bench/allocObjLit.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "allocObjLit", "micros/allocObjLit.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "allocNewObj", "hvm-bench/allocNewObj.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "allocNewObj", "micros/allocNewObj.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "allocArray", "hvm-bench/allocArray.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "allocArray", "micros/allocArray.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
             "allocNewArray",
-            "hvm-bench/allocNewArray.js",
+            "micros/allocNewArray.js",
             gcMinHeap="1M",
             gcMaxHeap="1M",
         ),
         ResourceBenchmark(
-            "arrayRead", "hvm-bench/arrayRead.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "arrayRead", "micros/arrayRead.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
             "largeArrayRead",
-            "hvm-bench/largeArrayRead.js",
+            "micros/largeArrayRead.js",
             gcMinHeap="1M",
             gcMaxHeap="1M",
         ),
         ResourceBenchmark(
-            "arrayWrite", "hvm-bench/arrayWrite.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "arrayWrite", "micros/arrayWrite.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
             "largeArrayWrite",
-            "hvm-bench/largeArrayWrite.js",
+            "micros/largeArrayWrite.js",
             gcMinHeap="1M",
             gcMaxHeap="1M",
         ),
         ResourceBenchmark(
             "interp-dispatch",
-            "hvm-bench/interp-dispatch.js",
+            "micros/interp-dispatch.js",
             gcMinHeap="1M",
             gcMaxHeap="1M",
         ),
         ResourceBenchmark(
-            "wb-perf", "hvm-bench/wb-perf.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "wb-perf", "micros/wb-perf.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "arrayReverse", "hvm-bench/arrayReverse.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "arrayReverse", "micros/arrayReverse.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "arrayMap", "hvm-bench/arrayMap.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "arrayMap", "micros/arrayMap.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "arrayIndexOf", "hvm-bench/arrayIndexOf.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "arrayIndexOf", "micros/arrayIndexOf.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
             "arrayLastIndexOf",
-            "hvm-bench/arrayLastIndexOf.js",
+            "micros/arrayLastIndexOf.js",
             gcMinHeap="1M",
             gcMaxHeap="1M",
         ),
         ResourceBenchmark(
-            "arrayEvery", "hvm-bench/arrayEvery.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "arrayEvery", "micros/arrayEvery.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "arraySome", "hvm-bench/arraySome.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "arraySome", "micros/arraySome.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "arrayFill", "hvm-bench/arrayFill.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "arrayFill", "micros/arrayFill.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "arrayFilter", "hvm-bench/arrayFilter.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "arrayFilter", "micros/arrayFilter.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "arrayFind", "hvm-bench/arrayFind.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "arrayFind", "micros/arrayFind.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
             "arrayFindIndex",
-            "hvm-bench/arrayFindIndex.js",
+            "micros/arrayFindIndex.js",
             gcMinHeap="1M",
             gcMaxHeap="1M",
         ),
         ResourceBenchmark(
-            "arrayPop", "hvm-bench/arrayPop.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "arrayPop", "micros/arrayPop.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "arrayReduce", "hvm-bench/arrayReduce.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "arrayReduce", "micros/arrayReduce.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
             "arrayReduceRight",
-            "hvm-bench/arrayReduceRight.js",
+            "micros/arrayReduceRight.js",
             gcMinHeap="1M",
             gcMaxHeap="1M",
         ),
         ResourceBenchmark(
-            "arrayShift", "hvm-bench/arrayShift.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "arrayShift", "micros/arrayShift.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "arrayUnshift", "hvm-bench/arrayUnshift.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "arrayUnshift", "micros/arrayUnshift.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
             "arrayIncludes",
-            "hvm-bench/arrayIncludes.js",
+            "micros/arrayIncludes.js",
             gcMinHeap="1M",
             gcMaxHeap="1M",
         ),
         ResourceBenchmark(
-            "arrayFrom", "hvm-bench/arrayFrom.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "arrayFrom", "micros/arrayFrom.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
             "arrayCopyWithin",
-            "hvm-bench/arrayCopyWithin.js",
+            "micros/arrayCopyWithin.js",
             gcMinHeap="1M",
             gcMaxHeap="1M",
         ),
         ResourceBenchmark(
             "stringFromCharCode",
-            "hvm-bench/stringFromCharCode.js",
+            "micros/stringFromCharCode.js",
             gcMinHeap="1M",
             gcMaxHeap="1M",
         ),
         ResourceBenchmark(
-            "arraySlice", "hvm-bench/arraySlice.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "arraySlice", "micros/arraySlice.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "arraySplice", "hvm-bench/arraySplice.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "arraySplice", "micros/arraySplice.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "arrayOf", "hvm-bench/arrayOf.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "arrayOf", "micros/arrayOf.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "stringCharAt", "hvm-bench/stringCharAt.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "stringCharAt", "micros/stringCharAt.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "stringMatch", "hvm-bench/stringMatch.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "stringMatch", "micros/stringMatch.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "stringSearch", "hvm-bench/stringSearch.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "stringSearch", "micros/stringSearch.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
             "stringStartsWith",
-            "hvm-bench/stringStartsWith.js",
+            "micros/stringStartsWith.js",
             gcMinHeap="1M",
             gcMaxHeap="1M",
         ),
         ResourceBenchmark(
             "stringEndsWith",
-            "hvm-bench/stringEndsWith.js",
+            "micros/stringEndsWith.js",
             gcMinHeap="1M",
             gcMaxHeap="1M",
         ),
         ResourceBenchmark(
             "stringIncludes",
-            "hvm-bench/stringIncludes.js",
+            "micros/stringIncludes.js",
             gcMinHeap="1M",
             gcMaxHeap="1M",
         ),
         ResourceBenchmark(
             "stringIndexOf",
-            "hvm-bench/stringIndexOf.js",
+            "micros/stringIndexOf.js",
             gcMinHeap="1M",
             gcMaxHeap="1M",
         ),
         ResourceBenchmark(
             "stringLastIndexOf",
-            "hvm-bench/stringLastIndexOf.js",
+            "micros/stringLastIndexOf.js",
             gcMinHeap="1M",
             gcMaxHeap="1M",
         ),
         ResourceBenchmark(
-            "stringSplit", "hvm-bench/stringSplit.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "stringSplit", "micros/stringSplit.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "stringSlice", "hvm-bench/stringSlice.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "stringSlice", "micros/stringSlice.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
             "stringPadStart",
-            "hvm-bench/stringPadStart.js",
+            "micros/stringPadStart.js",
             gcMinHeap="1M",
             gcMaxHeap="1M",
         ),
         ResourceBenchmark(
-            "stringPadEnd", "hvm-bench/stringPadEnd.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "stringPadEnd", "micros/stringPadEnd.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "regExpMatch", "hvm-bench/regExpMatch.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "regExpMatch", "micros/regExpMatch.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "regExpSearch", "hvm-bench/regExpSearch.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "regExpSearch", "micros/regExpSearch.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
             "regExpToString",
-            "hvm-bench/regExpToString.js",
+            "micros/regExpToString.js",
             gcMinHeap="1M",
             gcMaxHeap="1M",
         ),
         ResourceBenchmark(
             "stringReplace",
-            "hvm-bench/stringReplace.js",
+            "micros/stringReplace.js",
             gcMinHeap="1M",
             gcMaxHeap="1M",
         ),
         ResourceBenchmark(
             "regExpReplace",
-            "hvm-bench/regExpReplace.js",
+            "micros/regExpReplace.js",
             gcMinHeap="1M",
             gcMaxHeap="1M",
         ),
         ResourceBenchmark(
-            "regExpFlags", "hvm-bench/regExpFlags.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "regExpFlags", "micros/regExpFlags.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
-            "regExpSplit", "hvm-bench/regExpSplit.js", gcMinHeap="1M", gcMaxHeap="1M"
+            "regExpSplit", "micros/regExpSplit.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
     ],
     runByDefault=False,

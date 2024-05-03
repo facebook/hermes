@@ -1,20 +1,23 @@
-**benchmark_runner**
+# benchmark_runner
 
-# Introduction
+## Introduction
 
 bench-runner is a tool to run benchmarks and compare results, between different engines, and between different versions of the same engine.  It is loosely based on gc_bench, but:
 
-- Doesn't try to get detailed GC statistics -- it just uses elapsed time, as reported by the benchmarks themselves.
+- Doesn't try to get detailed GC statistics -- it just uses elapsed time, as reported by the benchmarks themselves. (**NB**: any benchmark run in this framework must report it's time, printing a line of the form "Time: <ms>".  That is, the difference between a Date() created at the start and end of execution.)
 - Does allow the benchmark to be run by multiple different engines.
 - Does allow runs with the same engine, before/after some change, to be compared.
 
-# Basic operation
+## Basic operation
 
-I (ddetlefs) haven't figured out how to run this in python without buck.  So I'll give buck commands.  To run the benchmarks, do something like this (from fbsource):
+To run the benchmarks:
+
 ```
 python3 xplat/static_h/benchmarks/bench-runner/bench-runner.py --hermes -b ~/sworkspace/build_release/bin/hermes --cats v8
 ```
+
 The result of this will be something like:
+
 ```
 Ran each benchmark 1 times
 Runtime:  hermes
@@ -30,7 +33,7 @@ General Stats:
                     v8-splay           139.0  s +-  0.0%
 ```
 
-# Arguments
+## Arguments
 
 bench_runner shares many arguments with gc_bench.
 
@@ -62,19 +65,24 @@ Some arguments are new in bench-runner, or have added options:
 
 - --v8, --v8jitless: as with --hermes, specify that you want to run with v8 (or v8 with the --jitless flag).  Note that this requires a --binary specification; it doesn't have a default for where v8 lives.
 
-# Using bench-merge
+## Using bench-merge
 
 Say you want to compare v8 and hermes at some point in time, or hermes before and after some modification.  Let's consider the latter case.  I built a release build of hermes in the "before" revision, and then ran, from the bench-runner directory:
+
 ```
 python3 bench-runner.py --hermes -b ~/sworkspace/build_release/bin/hermes --cats v8 octane -l before -f json --out ~/tmp/before.json -c 5
 ```
+
 Then I moved to the "after" revision, again built hermes, and ran:
+
 ```
 python3 bench-runner.py --hermes -b ~/sworkspace/build_release/bin/hermes --cats v8 octane -l after -f json --out ~/tmp/after.json  -c 5
 
 python3 bench-merge.py ~/tmp/before.json ~/tmp/after.json > ~/tmp/before-after.txt
 ```
+
 The last output file, before-after.txt, has output like:
+
 ```
                       runner                   benchmark                  Total time                       ratio
 ================================================================================================================
@@ -91,7 +99,7 @@ The last output file, before-after.txt, has output like:
               hermes (after)                     geomean                                                   0.988
 ```
 
-# TBD:
+## TBD:
 
 - Benchmarks must be modified to measure and print their own elapsed time, in a known engine-independent way.  Will add more benchmarks.
 - Add jsc.
