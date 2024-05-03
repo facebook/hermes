@@ -136,6 +136,24 @@ class LowerToStateMachine {
   /// and AllocStackInsts.
   void moveLocalsToOuter();
 
+  /// Terminators need to be handled differently than other instructions
+  /// consuming an AllocStackInst. We cannot insert the IR to do the copying of
+  /// the dummy to the outer variable right after the instruction. No
+  /// instructions are allowed after a terminator. So, we create a new BB per
+  /// successor of the terminator. This new BB does the writeback of the
+  /// dummyAlloc to the outer variable, and then branches to the original
+  /// successor.
+  ///
+  /// \p TI the terminator that is taking in an AllocStackInst.
+  /// \p dummyAlloc the replacement AllocStackInst for TI.
+  /// \p outerVar needs to be updated with the value of dummyAlloc.
+  /// \p seenBefore true if \p TI has been encountered already.
+  void writebackTerminator(
+      TerminatorInst *TI,
+      AllocStackInst *dummyAlloc,
+      Variable *outerVar,
+      bool seenBefore);
+
   /// Lower ResumeGeneratorInst.
   void lowerResumeGenerator(
       LoadParamInst *actionParam,
@@ -342,6 +360,9 @@ void LowerToStateMachine::moveLocalsToOuter() {
     }
   }
 
+  // This enables us to recognize when we encounter a given TerminatorInst user
+  // for the first time.
+  llvh::DenseSet<TerminatorInst *> processedTerminators;
   for (AllocStackInst *ASI : allocStacks) {
     auto *outerVar = builder_.createVariable(
         getParentOuterScope_->getVariableScope(),
@@ -373,10 +394,15 @@ void LowerToStateMachine::moveLocalsToOuter() {
         builder_.createStoreStackInst(
             builder_.createLoadFrameInst(getParentOuterScope_, outerVar),
             dummyAlloc);
-        moveBuilderAfter(user, builder_);
-        auto *writtenStackVal = builder_.createLoadStackInst(dummyAlloc);
-        builder_.createStoreFrameInst(
-            getParentOuterScope_, writtenStackVal, outerVar);
+        if (auto *TI = llvh::dyn_cast<TerminatorInst>(user)) {
+          bool seenBefore = !processedTerminators.insert(TI).second;
+          writebackTerminator(TI, dummyAlloc, outerVar, seenBefore);
+        } else {
+          moveBuilderAfter(user, builder_);
+          auto *writtenStackVal = builder_.createLoadStackInst(dummyAlloc);
+          builder_.createStoreFrameInst(
+              getParentOuterScope_, writtenStackVal, outerVar);
+        }
         user->replaceFirstOperandWith(ASI, dummyAlloc);
       }
     }
@@ -385,6 +411,42 @@ void LowerToStateMachine::moveLocalsToOuter() {
 
   // Clear out the original parameters in inner_, except for 'this'.
   innerFuncParams.resize(1);
+}
+
+void LowerToStateMachine::writebackTerminator(
+    TerminatorInst *TI,
+    AllocStackInst *dummyAlloc,
+    Variable *outerVar,
+    bool seenBefore) {
+  // For a given successor BB, find its replacement BB that performs the
+  // writeback and branches to the original successor.
+  llvh::SmallDenseMap<BasicBlock *, BasicBlock *> replacementBBs;
+  for (size_t i = 0, e = TI->getNumSuccessors(); i < e; ++i) {
+    BasicBlock *origSuccBB = TI->getSuccessor(i);
+    BasicBlock *updateVarBB = origSuccBB;
+    if (!seenBefore) {
+      // First time this terminator is seen, create the blocks.
+      auto &replacementBB = replacementBBs[origSuccBB];
+      if (replacementBB) {
+        // If the same BB in different successor entries, we want to update the
+        // BB used in the terminator for that successor, but we don't need to do
+        // anything else since the replacement BB has already been created and
+        // initialized with the proper IR.
+        TI->setSuccessor(i, replacementBB);
+        continue;
+      }
+      replacementBB = builder_.createBasicBlock(inner_);
+      builder_.setInsertionBlock(replacementBB);
+      builder_.createBranchInst(origSuccBB);
+      TI->setSuccessor(i, replacementBB);
+      updateVarBB = replacementBB;
+      updateIncomingPhiValues(origSuccBB, TI->getParent(), replacementBB);
+    }
+    builder_.setInsertionPoint(&*updateVarBB->begin());
+    auto *writtenStackVal = builder_.createLoadStackInst(dummyAlloc);
+    builder_.createStoreFrameInst(
+        getParentOuterScope_, writtenStackVal, outerVar);
+  }
 }
 
 void LowerToStateMachine::lowerResumeGenerator(

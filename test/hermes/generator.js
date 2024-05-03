@@ -392,3 +392,21 @@ function* saveGeneratorLong() {
 }
 print(saveGeneratorLong().next().value);
 // CHECK-NEXT: 1
+
+// Ensure that Terminators that take in AllocStackInst work correctly.
+function *testForIn(p) {
+  for (prop in p) {
+    yield p[prop];
+  }
+}
+var it = testForIn([1, 2, 3, 4]);
+show(it.next());
+// CHECK-NEXT: 1 | false
+show(it.next());
+// CHECK-NEXT: 2 | false
+show(it.next());
+// CHECK-NEXT: 3 | false
+show(it.next());
+// CHECK-NEXT: 4 | false
+show(it.next());
+// CHECK-NEXT: undefined | true
