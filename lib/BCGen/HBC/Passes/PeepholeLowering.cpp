@@ -111,8 +111,8 @@ class DoLower {
         builder_.getLiteralUndefined(),
         firstString,
         restOfStrings);
-    return builder_.createUnionNarrowTrustedInst(
-        concatRes, Type::createString());
+    concatRes->setType(Type::createString());
+    return concatRes;
   }
 };
 
