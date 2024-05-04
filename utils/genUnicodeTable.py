@@ -6,8 +6,15 @@
 
 # -*- coding: utf-8 -*-
 
-# Generates list of unicode ranges belonging to a set of categories
+# Generates list of unicode ranges belonging to a set of categories, downloading
+# Unicode data files as needed.
+#
 # Usage: genUnicodeTable.py
+#
+# To generate a new UnicodeData.inc file, the output of this script should be
+# passed through clang-format, and then redirected:
+#
+# hermes/utils/genUnicodeTable.py | clang-format > hermes/lib/Platform/Unicode/UnicodeData.inc
 
 import datetime
 from functools import reduce
