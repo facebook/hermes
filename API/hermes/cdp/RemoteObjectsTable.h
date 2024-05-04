@@ -73,6 +73,11 @@ class RemoteObjectsTable {
       ::facebook::jsi::Value value,
       const std::string &objectGroup);
 
+  /// /param objId The object ID.
+  /// /return true if object ID represents a scope in the scope chain of a call
+  /// frame.
+  bool isScopeId(const std::string &objId) const;
+
   /**
    * Retrieves the (frameIndex, scopeIndex) associated with this object id, or
    * nullptr if no mapping exists. The pointer stays valid as long as you only

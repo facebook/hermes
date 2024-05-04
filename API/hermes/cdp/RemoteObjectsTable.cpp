@@ -69,10 +69,15 @@ std::string RemoteObjectsTable::addValue(
   return toObjId(id);
 }
 
+bool RemoteObjectsTable::isScopeId(const std::string &objId) const {
+  int64_t id = toId(objId);
+  return ::isScopeId(id);
+}
+
 const std::pair<uint32_t, uint32_t> *RemoteObjectsTable::getScope(
     const std::string &objId) const {
   int64_t id = toId(objId);
-  if (!isScopeId(id)) {
+  if (!::isScopeId(id)) {
     return nullptr;
   }
 
@@ -111,7 +116,7 @@ std::string RemoteObjectsTable::getObjectGroup(const std::string &objId) const {
 }
 
 void RemoteObjectsTable::releaseObject(int64_t id) {
-  if (isScopeId(id)) {
+  if (::isScopeId(id)) {
     scopes_.erase(id);
   } else if (isValueId(id)) {
     values_.erase(id);
