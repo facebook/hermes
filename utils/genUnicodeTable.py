@@ -137,14 +137,14 @@ struct UnicodeTransformRange {
 
 /// A reference to a string pool entry.
 struct StringPoolRef {
-  unsigned offset:16;
-  unsigned size:16;
+  uint16_t offset;
+  uint16_t size;
 };
 
 /// A reference to a UnicodeRange pool entry.
 struct UnicodeRangePoolRef {
-  unsigned offset:16;
-  unsigned size:16;
+  uint16_t offset;
+  uint16_t size;
 };
 
 /// A reference to a string pool name that maps to a string pool canonical name.
@@ -157,8 +157,8 @@ struct NameMapEntry {
 /// and size.
 struct RangeMapEntry {
   StringPoolRef name;
-  unsigned rangeArrayPoolOffset:16;
-  unsigned rangeArraySize:16;
+  uint16_t rangeArrayPoolOffset;
+  uint16_t rangeArraySize;
 };
 """,
         today=str(datetime.date.today()),
