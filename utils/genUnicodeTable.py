@@ -666,21 +666,62 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
             Alpha   ; Alphabetic
             WSpace  ; White_Space     ; space
         """
+        BINARY_PROPERTY_NAMES = [
+            "ASCII",
+            "ASCII_Hex_Digit",
+            "Alphabetic",
+            "Bidi_Control",
+            "Bidi_Mirrored",
+            "Case_Ignorable",
+            "Cased",
+            "Changes_When_Casefolded",
+            "Changes_When_Casemapped",
+            "Changes_When_Lowercased",
+            "Changes_When_NFKC_Casefolded",
+            "Changes_When_Titlecased",
+            "Changes_When_Uppercased",
+            "Dash",
+            "Default_Ignorable_Code_Point",
+            "Deprecated",
+            "Diacritic",
+            "Emoji",
+            "Emoji_Component",
+            "Emoji_Modifier",
+            "Emoji_Modifier_Base",
+            "Emoji_Presentation",
+            "Extended_Pictographic",
+            "Extender",
+            "Grapheme_Base",
+            "Grapheme_Extend",
+            "Hex_Digit",
+            "IDS_Binary_Operator",
+            "IDS_Trinary_Operator",
+            "ID_Continue",
+            "ID_Start",
+            "Ideographic",
+            "Join_Control",
+            "Logical_Order_Exception",
+            "Lowercase",
+            "Math",
+            "Noncharacter_Code_Point",
+            "Pattern_Syntax",
+            "Pattern_White_Space",
+            "Quotation_Mark",
+            "Radical",
+            "Regional_Indicator",
+            "Sentence_Terminal",
+            "Soft_Dotted",
+            "Terminal_Punctuation",
+            "Unified_Ideograph",
+            "Uppercase",
+            "Variation_Selector",
+            "White_Space",
+            "XID_Continue",
+            "XID_Start",
+        ]
+
         binary_property_aliases = {
-            canonical_name: []
-            for canonical_name in "ASCII ASCII_Hex_Digit Alphabetic Bidi_Control Bidi_Mirrored "
-            "Case_Ignorable Cased Changes_When_Casefolded Changes_When_Casemapped "
-            "Changes_When_Lowercased Changes_When_NFKC_Casefolded "
-            "Changes_When_Titlecased Changes_When_Uppercased Dash "
-            "Default_Ignorable_Code_Point Deprecated Diacritic Emoji "
-            "Emoji_Component Emoji_Modifier Emoji_Modifier_Base Emoji_Presentation "
-            "Extended_Pictographic Extender Grapheme_Base Grapheme_Extend "
-            "Hex_Digit IDS_Binary_Operator IDS_Trinary_Operator ID_Continue "
-            "ID_Start Ideographic Join_Control Logical_Order_Exception Lowercase "
-            "Math Noncharacter_Code_Point Pattern_Syntax Pattern_White_Space "
-            "Quotation_Mark Radical Regional_Indicator Sentence_Terminal "
-            "Soft_Dotted Terminal_Punctuation Unified_Ideograph Uppercase "
-            "Variation_Selector White_Space XID_Continue XID_Start".split()
+            canonical_name: [] for canonical_name in BINARY_PROPERTY_NAMES
         }
 
         for line in UnicodeDataFiles.get_lines("PropertyAliases.txt"):
