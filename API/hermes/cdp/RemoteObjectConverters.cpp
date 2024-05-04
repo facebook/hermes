@@ -183,10 +183,12 @@ m::debugger::CallFrame m::debugger::makeCallFrame(
     result.scopeChain.emplace_back(std::move(scope));
   }
 
-  result.thisObj.type = "object";
-  result.thisObj.objectId = objTable.addValue(
+  result.thisObj = runtime::makeRemoteObject(
+      runtime,
       state.getVariableInfoForThis(callFrameIndex).value,
-      cdp::BacktraceObjectGroup);
+      objTable,
+      cdp::BacktraceObjectGroup,
+      {});
 
   return result;
 }

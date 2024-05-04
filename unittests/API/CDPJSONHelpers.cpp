@@ -143,6 +143,10 @@ void expectCallFrames(
       }
     }
 
+    if (info.thisType.has_value()) {
+      EXPECT_EQ(frame.thisObj.type, info.thisType.value());
+    }
+
     i++;
   }
 }

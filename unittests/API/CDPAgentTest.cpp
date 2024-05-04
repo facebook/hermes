@@ -816,6 +816,29 @@ TEST_F(CDPAgentTest, DebuggerEnableWhenAlreadyPaused) {
   ensureNotification(waitForMessage("Debugger.resumed"), "Debugger.resumed");
 }
 
+TEST_F(CDPAgentTest, DebuggerCallFrameThisType) {
+  int msgId = 1;
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  // Trigger a debugger pause where one of the call frames has an undefined
+  // 'this'
+  scheduleScript(R"(
+    function test() {
+      debugger;           // line 2
+    }
+    test.call(undefined); // line 4 - Call test() with an undefined 'this'
+  )");
+
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+  // Verify that the 'this' RemoteObject is populated correctedly.
+  ensurePaused(
+      waitForMessage(),
+      "other",
+      {FrameInfo("0", "test", 2, 2).setThisType("undefined"),
+       FrameInfo("2", "global", 4, 1).setThisType("object")});
+}
+
 TEST_F(CDPAgentTest, DebuggerScriptsOrdering) {
   int msgId = 1;
   std::vector<std::string> notifications;
