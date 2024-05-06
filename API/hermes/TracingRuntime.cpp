@@ -185,6 +185,12 @@ jsi::Value TracingRuntime::evaluateJavaScript(
   return res;
 }
 
+void TracingRuntime::queueMicrotask(const jsi::Function &callback) {
+  RD::queueMicrotask(callback);
+  trace_.emplace_back<SynthTrace::QueueMicrotaskRecord>(
+      getTimeSinceStart(), getUniqueID(callback));
+}
+
 bool TracingRuntime::drainMicrotasks(int maxMicrotasksHint) {
   auto res = RD::drainMicrotasks(maxMicrotasksHint);
   trace_.emplace_back<SynthTrace::DrainMicrotasksRecord>(

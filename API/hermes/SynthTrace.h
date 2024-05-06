@@ -187,6 +187,7 @@ class SynthTrace {
     CreatePropNameID,
     CreateHostObject,
     CreateHostFunction,
+    QueueMicrotask,
     DrainMicrotasks,
     GetProperty,
     SetProperty,
@@ -721,6 +722,26 @@ class SynthTrace {
     }
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
+  };
+
+  struct QueueMicrotaskRecord : public Record {
+    static constexpr RecordType type{RecordType::QueueMicrotask};
+    const ObjectID callbackID_;
+
+    QueueMicrotaskRecord(TimeSinceStart time, ObjectID callbackID)
+        : Record(time), callbackID_(callbackID) {}
+
+    bool operator==(const Record &that) const final;
+
+    RecordType getType() const override {
+      return type;
+    }
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+
+    std::vector<ObjectID> uses() const override {
+      return {callbackID_};
+    }
   };
 
   struct DrainMicrotasksRecord : public Record {

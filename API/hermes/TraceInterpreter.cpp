@@ -1165,6 +1165,14 @@ Value TraceInterpreter::execFunction(
                 locals);
             break;
           }
+          case RecordType::QueueMicrotask: {
+            const auto &queueRecord =
+                static_cast<const SynthTrace::QueueMicrotaskRecord &>(*rec);
+            jsi::Function callback =
+                getObjForUse(queueRecord.callbackID_).asFunction(rt_);
+            rt_.queueMicrotask(callback);
+            break;
+          }
           case RecordType::DrainMicrotasks: {
             const auto &drainRecord =
                 static_cast<const SynthTrace::DrainMicrotasksRecord &>(*rec);

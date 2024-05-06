@@ -586,6 +586,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::Value evaluateJavaScript(
       const std::shared_ptr<const jsi::Buffer> &buffer,
       const std::string &sourceURL) override;
+  void queueMicrotask(const jsi::Function &callback) override;
   bool drainMicrotasks(int maxMicrotasksHint = -1) override;
   jsi::Object global() override;
 
@@ -1512,6 +1513,17 @@ jsi::Value HermesRuntimeImpl::evaluateJavaScript(
     const std::shared_ptr<const jsi::Buffer> &buffer,
     const std::string &sourceURL) {
   return evaluateJavaScriptWithSourceMap(buffer, nullptr, sourceURL);
+}
+
+void HermesRuntimeImpl::queueMicrotask(const jsi::Function &callback) {
+  if (LLVM_UNLIKELY(!runtime_.hasMicrotaskQueue())) {
+    throw jsi::JSINativeException(
+        "Could not enqueue microtask because they are disabled in this runtime");
+  }
+
+  vm::Handle<vm::Callable> handle =
+      vm::Handle<vm::Callable>::vmcast(&phv(callback));
+  runtime_.enqueueJob(handle.get());
 }
 
 bool HermesRuntimeImpl::drainMicrotasks(int maxMicrotasksHint) {
