@@ -19,7 +19,11 @@ namespace jsi {
 
 std::vector<RuntimeFactory> runtimeGenerators() {
   return {
-      [] { return makeHermesRuntime(); },
+      [] {
+        return makeHermesRuntime(::hermes::vm::RuntimeConfig::Builder()
+                                     .withMicrotaskQueue(true)
+                                     .build());
+      },
       [] { return makeThreadSafeHermesRuntime(); }};
 }
 
