@@ -217,6 +217,13 @@ hermesInternalGetRuntimeProperties(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
+  tmpHandle = HermesValue::encodeBoolValue(true);
+  if (LLVM_UNLIKELY(
+          addProperty(tmpHandle, "Static Hermes") ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
   tmpHandle = HermesValue::encodeBoolValue(runtime.builtinsAreFrozen());
   if (LLVM_UNLIKELY(
           addProperty(tmpHandle, "Builtins Frozen") ==
