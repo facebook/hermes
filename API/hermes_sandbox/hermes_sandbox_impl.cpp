@@ -28,3 +28,8 @@ extern "C" bool test_and_clear_timeout_impl() __attribute__((
 extern "C" bool test_and_clear_wasm_host_timeout() {
   return test_and_clear_timeout_impl();
 }
+
+extern "C" char __global_base;
+extern "C" char *get_global_base() {
+  return &__global_base;
+}

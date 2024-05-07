@@ -82,6 +82,9 @@ void w2c_wasi__snapshot__preview1_proc_exit(struct w2c_wasi__snapshot__preview1*
 /* export: 'memory' */
 wasm_rt_memory_t* w2c_hermes_memory(w2c_hermes* instance);
 
+/* export: 'get_global_base' */
+u32 w2c_hermes_get_global_base(w2c_hermes*);
+
 /* export: 'get_hermes_abi_vtable' */
 u32 w2c_hermes_get_hermes_abi_vtable(w2c_hermes*);
 
