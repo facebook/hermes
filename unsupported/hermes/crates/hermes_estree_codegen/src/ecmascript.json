@@ -1400,6 +1400,26 @@
                     "type": "Vec<FlowTypeAnnotation>"
                 }
             }
+        },
+        "IndexedAccessType": {
+            "fields": {
+                "objectType": {
+                    "type": "FlowTypeAnnotation"
+                },
+                "indexType": {
+                    "type": "FlowTypeAnnotation"
+                }
+            }
+        },
+        "OptionalIndexedAccessType": {
+            "fields": {
+                "objectType": {
+                    "type": "FlowTypeAnnotation"
+                },
+                "indexType": {
+                    "type": "FlowTypeAnnotation"
+                }
+            }
         }
     },
     "enums": {
@@ -1618,7 +1638,9 @@
             "ObjectTypeAnnotation",
             "ObjectTypeProperty",
             "UnionTypeAnnotation",
-            "IntersectionTypeAnnotation"
+            "IntersectionTypeAnnotation",
+            "IndexedAccessType",
+            "OptionalIndexedAccessType"
         ],
         "ObjectTypePropertyType": [
             "ObjectTypeProperty",
