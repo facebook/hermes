@@ -29,3 +29,5 @@ type TypeofTypeAnnotation = typeof Foo;
 type QualifiedTypeofIdentifier = typeof Foo.Bar;
 type QualifiedTypeofIdentifierNested = typeof Foo.Bar.Mark;
 type KeyofTypeAnnotation = keyof T;
+type UnionTypeAnnotation = "a" | "b" | "c";
+type IntersectionTypeAnnotation = "a" & "b" & "c";
