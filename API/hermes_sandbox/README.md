@@ -18,7 +18,7 @@ cmake -S <path to hermes> -B build_wasm_dbg \
   -DIMPORT_HERMESC=build_host/ImportHermesc.cmake \
   -DCMAKE_BUILD_TYPE=Debug -DHERMES_UNICODE_LITE=ON \
   -DCMAKE_CXX_FLAGS=-O2  -DCMAKE_C_FLAGS=-O2 \
-  -DCMAKE_EXE_LINKER_FLAGS="-sALLOW_MEMORY_GROWTH=1 -sSTACK_SIZE=256KB" \
+  -DCMAKE_EXE_LINKER_FLAGS="-sALLOW_MEMORY_GROWTH=1 -sSTACK_SIZE=256KB -sGLOBAL_BASE=16384" \
   -DHERMES_ENABLE_DEBUGGER=OFF -DHERMES_SLOW_DEBUG=OFF \
   -DHERMES_IS_MOBILE_BUILD=ON -G Ninja
 ```
@@ -36,7 +36,7 @@ cmake -S <path to hermes> -B build_wasm_opt \
   -DCMAKE_TOOLCHAIN_FILE=<path to emsdk>/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake \
   -DIMPORT_HERMESC=build_host/ImportHermesc.cmake \
   -DCMAKE_BUILD_TYPE=Release -DHERMES_UNICODE_LITE=ON \
-  -DCMAKE_EXE_LINKER_FLAGS="-sALLOW_MEMORY_GROWTH=1 -sSTACK_SIZE=256KB -g2" \
+  -DCMAKE_EXE_LINKER_FLAGS="-sALLOW_MEMORY_GROWTH=1 -sSTACK_SIZE=256KB -sGLOBAL_BASE=16384 -g2" \
   -DHERMES_ENABLE_DEBUGGER=OFF -DHERMES_IS_MOBILE_BUILD=ON -G Ninja
 
 cmake --build build_wasm_opt --target hermesSandboxImpl \
