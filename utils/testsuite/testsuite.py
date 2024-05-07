@@ -18,7 +18,6 @@ from collections import namedtuple
 from multiprocessing import Pool, Value
 from os import path
 
-
 try:
     import testsuite.esprima_test_runner as esprima
     from testsuite.testsuite_skiplist import (
@@ -43,7 +42,6 @@ except ImportError:
         SKIP_LIST,
         UNSUPPORTED_FEATURES,
     )
-
 
 ## This is a simple script that runs the hermes compiler on
 ## external test suites.  The script expects to find the hermes compiler under
@@ -497,6 +495,86 @@ ESPRIMA_TEST_STATUS_MAP = {
 }
 
 
+def runVM(
+    filename,
+    lazy,
+    binary_path,
+    hvm,
+    fileToRun,
+    strictEnabled,
+    negativePhase,
+    skippedType,
+    skiplisted,
+):
+    """
+    Run the target bytecode, return None if passed, otherwise, return the
+    TestFlag and error string.
+    """
+    try:
+        printVerbose("Running with HBC VM: {}".format(filename))
+        # Run the hermes vm.
+        if lazy:
+            binary = path.join(binary_path, "hermes")
+        else:
+            binary = path.join(binary_path, hvm)
+        disableHandleSanFlag = (
+            ["-gc-sanitize-handles=0"]
+            if fileInSkiplist(filename, HANDLESAN_SKIP_LIST)
+            else []
+        )
+        args = (
+            [binary, fileToRun]
+            + es6_args
+            + extra_run_args
+            + disableHandleSanFlag
+            + useMicrotasksFlag
+        )
+        if lazy:
+            args.append("-lazy")
+            if strictEnabled:
+                args.append("-strict")
+            else:
+                args.append("-non-strict")
+        env = {"LC_ALL": "en_US.UTF-8"}
+        if sys.platform == "linux":
+            env["ICU_DATA"] = binary_path
+        printVerbose(" ".join(args))
+        subprocess.check_output(
+            args, timeout=TIMEOUT_VM, stderr=subprocess.STDOUT, env=env
+        )
+
+        if (not lazy and negativePhase == "runtime") or (lazy and negativePhase != ""):
+            printVerbose("FAIL: Expected execution to throw")
+            return (
+                (skippedType, "", 0) if skiplisted else (TestFlag.EXECUTE_FAILED, "", 0)
+            )
+        else:
+            printVerbose("PASS: Execution completed successfully")
+    except subprocess.CalledProcessError as e:
+        if (not lazy and negativePhase != "runtime") or (lazy and negativePhase == ""):
+            printVerbose(
+                "FAIL: Execution of {} threw unexpected error".format(filename)
+            )
+            printVerbose("Return code: {}".format(e.returncode))
+            if e.output:
+                printVerbose("Output:")
+                errString = e.output.decode("utf-8").strip()
+                printVerbose(textwrap.indent(errString, "\t"))
+            else:
+                printVerbose("No output received from process")
+            return (
+                (skippedType, "", 0)
+                if skiplisted
+                else (TestFlag.EXECUTE_FAILED, errString, 0)
+            )
+        else:
+            printVerbose("PASS: Execution of binary threw an error as expected")
+    except subprocess.TimeoutExpired:
+        printVerbose("FAIL: Execution of binary timed out")
+        return (skippedType, "", 0) if skiplisted else (TestFlag.EXECUTE_TIMEOUT, "", 0)
+    return None
+
+
 def runTest(
     filename,
     tests_home,
@@ -618,12 +696,26 @@ def runTest(
     # Unsuccessful runs are ignored for simplicity.
     max_duration = 0
     for js_source in js_sources:
+        strictEnabled = ".strict" in js_source
         if lazy:
-            run_vm = True
             fileToRun = js_source
             start = time.time()
+            result = runVM(
+                filename,
+                lazy,
+                binary_path,
+                hvm,
+                fileToRun,
+                strictEnabled,
+                negativePhase,
+                skippedType,
+                skiplisted,
+            )
+            max_duration = max(max_duration, time.time() - start)
+            # Test failed or skipped
+            if result:
+                return result
         else:
-            errString = ""
             fileToRun = js_source + ".hbc"
             for optEnabled in (True, False):
                 printVerbose("\nRunning with Hermes...")
@@ -695,81 +787,23 @@ def runTest(
                         else (TestFlag.COMPILE_TIMEOUT, "", 0)
                     )
 
-        # If the compilation succeeded, run the bytecode with the specified VM.
-        if run_vm:
-            try:
-                printVerbose("Running with HBC VM: {}".format(filename))
-                # Run the hermes vm.
-                if lazy:
-                    binary = path.join(binary_path, "hermes")
-                else:
-                    binary = path.join(binary_path, hvm)
-                disableHandleSanFlag = (
-                    ["-gc-sanitize-handles=0"]
-                    if fileInSkiplist(filename, HANDLESAN_SKIP_LIST)
-                    else []
-                )
-                args = (
-                    [binary, fileToRun]
-                    + es6_args
-                    + extra_run_args
-                    + disableHandleSanFlag
-                    + useMicrotasksFlag
-                )
-                if lazy:
-                    args.append("-lazy")
-                    if strictEnabled:
-                        args.append("-strict")
-                    else:
-                        args.append("-non-strict")
-                env = {"LC_ALL": "en_US.UTF-8"}
-                if sys.platform == "linux":
-                    env["ICU_DATA"] = binary_path
-                printVerbose(" ".join(args))
-                subprocess.check_output(
-                    args, timeout=TIMEOUT_VM, stderr=subprocess.STDOUT, env=env
-                )
-
-                if (not lazy and negativePhase == "runtime") or (
-                    lazy and negativePhase != ""
-                ):
-                    printVerbose("FAIL: Expected execution to throw")
-                    return (
-                        (skippedType, "", 0)
-                        if skiplisted
-                        else (TestFlag.EXECUTE_FAILED, "", 0)
+                # If the compilation succeeded, run the bytecode with the specified VM.
+                if run_vm:
+                    result = runVM(
+                        filename,
+                        lazy,
+                        binary_path,
+                        hvm,
+                        fileToRun,
+                        strictEnabled,
+                        negativePhase,
+                        skippedType,
+                        skiplisted,
                     )
-                else:
-                    printVerbose("PASS: Execution completed successfully")
-            except subprocess.CalledProcessError as e:
-                if (not lazy and negativePhase != "runtime") or (
-                    lazy and negativePhase == ""
-                ):
-                    printVerbose(
-                        "FAIL: Execution of {} threw unexpected error".format(filename)
-                    )
-                    printVerbose("Return code: {}".format(e.returncode))
-                    if e.output:
-                        printVerbose("Output:")
-                        errString = e.output.decode("utf-8").strip()
-                        printVerbose(textwrap.indent(errString, "\t"))
-                    else:
-                        printVerbose("No output received from process")
-                    return (
-                        (skippedType, "", 0)
-                        if skiplisted
-                        else (TestFlag.EXECUTE_FAILED, errString, 0)
-                    )
-                else:
-                    printVerbose("PASS: Execution of binary threw an error as expected")
-            except subprocess.TimeoutExpired:
-                printVerbose("FAIL: Execution of binary timed out")
-                return (
-                    (skippedType, "", 0)
-                    if skiplisted
-                    else (TestFlag.EXECUTE_TIMEOUT, "", 0)
-                )
-        max_duration = max(max_duration, time.time() - start)
+                    # Test failed or skipped
+                    if result:
+                        return result
+                max_duration = max(max_duration, time.time() - start)
 
     if skiplisted:
         # If the test was skiplisted, but it passed successfully, consider that
