@@ -102,3 +102,6 @@ print(typeAndValue(-BigInt("0xffffffffffffffff") + BigInt(-1)));
 function numberPlusBigInt() {
   return (1+(BigInt(2)+BigInt(0)));
 }
+
+try { 11n + NaN; } catch (err) { print(err); }
+// CHECK-NEXT: TypeError: Cannot convert NaN to BigInt

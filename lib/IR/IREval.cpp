@@ -216,6 +216,10 @@ Literal *hermes::evalBinaryOperator(
           return builder.getLiteralString(result.str());
         }
 
+        // Cannot mixin BigInt and Number type (NaN)
+        if (leftTy.isBigIntType() || rightTy.isBigIntType())
+          return nullptr;
+
         // None of the operands are strings, so the expression evaluates
         // to NaN
         return builder.getLiteralNaN();
@@ -223,6 +227,9 @@ Literal *hermes::evalBinaryOperator(
       case OpKind::MultiplyKind:
       case OpKind::DivideKind:
       case OpKind::ModuloKind:
+        // Cannot mixin BigInt and Number type (NaN)
+        if (leftTy.isBigIntType() || rightTy.isBigIntType())
+          return nullptr;
         // Binary arithmetic operations involving NaN evaluate to  NaN
         return builder.getLiteralNaN();
       case OpKind::OrKind:
