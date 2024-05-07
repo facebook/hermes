@@ -180,7 +180,7 @@ class CDPAgentTest : public ::testing::Test {
   /// return it.
   jsi::Value takeStoredValue();
 
-  std::unordered_map<std::string, std::string> getAndEnsureProps(
+  m::runtime::GetPropertiesResponse getAndEnsureProps(
       int msgId,
       const std::string &objectId,
       const std::unordered_map<std::string, PropInfo> &infos,
@@ -493,7 +493,7 @@ void CDPAgentTest::sendEvalRequest(
   }
 }
 
-std::unordered_map<std::string, std::string> CDPAgentTest::getAndEnsureProps(
+m::runtime::GetPropertiesResponse CDPAgentTest::getAndEnsureProps(
     int msgId,
     const std::string &objectId,
     const std::unordered_map<std::string, PropInfo> &infos,
@@ -2235,7 +2235,7 @@ TEST_F(CDPAgentTest, RuntimeGetProperties) {
   std::string scopeObjId = scopeObj.objectId.value();
   objIds.push_back(scopeObjId);
 
-  auto scopeChildren = getAndEnsureProps(
+  auto scopeChildrenResp = getAndEnsureProps(
       msgId++,
       scopeObjId,
       {{"this", PropInfo("undefined")},
@@ -2243,22 +2243,26 @@ TEST_F(CDPAgentTest, RuntimeGetProperties) {
        {"obj", PropInfo("object")},
        {"arr", PropInfo("object").setSubtype("array")},
        {"bar", PropInfo("function")}});
-  EXPECT_EQ(scopeChildren.size(), 3);
+  auto scopeChildren = indexProps(scopeChildrenResp.result);
+  EXPECT_EQ(scopeChildren.size(), 5);
 
   EXPECT_EQ(scopeChildren.count("obj"), 1);
-  std::string objId = scopeChildren.at("obj");
+  const auto &obj = scopeChildren.at("obj");
+  std::string objId = obj.value.value().objectId.value();
   objIds.push_back(objId);
 
-  auto objChildren = getAndEnsureProps(
+  auto objChildrenResp = getAndEnsureProps(
       msgId++,
       objId,
       {{"depth", PropInfo("number").setValue("0")},
        {"value", PropInfo("object")},
        {"__proto__", PropInfo("object")}});
-  EXPECT_EQ(objChildren.size(), 2);
+  auto objChildren = indexProps(objChildrenResp.result);
+  EXPECT_EQ(objChildren.size(), 3);
 
-  EXPECT_EQ(objChildren.count("value"), 1);
-  std::string valueId = objChildren.at("value");
+  ASSERT_EQ(objChildren.count("value"), 1);
+  const auto &value = objChildren.at("value");
+  std::string valueId = value.value.value().objectId.value();
   objIds.push_back(valueId);
 
   auto valueChildren = getAndEnsureProps(
@@ -2270,7 +2274,7 @@ TEST_F(CDPAgentTest, RuntimeGetProperties) {
        {"d", PropInfo("number").setUnserializableValue("-0")},
        {"e", PropInfo("string").setValue("\"e_string\"")},
        {"__proto__", PropInfo("object")}});
-  EXPECT_EQ(valueChildren.size(), 1);
+  EXPECT_EQ(valueChildren.result.size(), 6);
 
   sendAndCheckResponse("Debugger.resume", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
@@ -2311,14 +2315,16 @@ TEST_F(CDPAgentTest, RuntimeGetPropertiesOnlyOwn) {
   auto pausedNote = ensurePaused(
       waitForMessage(), "other", {{"foo", 7, 2}, {"global", 9, 1}});
   const auto &scopeObject = pausedNote.callFrames.at(0).scopeChain.at(0).object;
-  auto scopeChildren = getAndEnsureProps(
+  auto scopeChildrenResp = getAndEnsureProps(
       msgId++,
       scopeObject.objectId.value(),
       {{"this", PropInfo("undefined")},
        {"obj", PropInfo("object")},
        {"protoObject", PropInfo("object")}});
+  auto scopeChildren = indexProps(scopeChildrenResp.result);
   EXPECT_EQ(scopeChildren.count("obj"), 1);
-  std::string objId = scopeChildren.at("obj");
+  const auto &obj = scopeChildren.at("obj");
+  std::string objId = obj.value.value().objectId.value();
 
   // Check that GetProperties request for obj object only have own properties
   // when onlyOwnProperties = true.
@@ -2630,14 +2636,16 @@ TEST_F(CDPAgentTest, RuntimeCallFunctionOnObject) {
   /// runtime::RemoteObjectId for the "self_ref" property (which must exist).
   auto verifyObjShape = [&](const m::runtime::RemoteObjectId &objId)
       -> std::optional<std::string> {
-    auto objProps = getAndEnsureProps(msgId++, objId, expectedPropInfos);
+    auto objPropsResponse =
+        getAndEnsureProps(msgId++, objId, expectedPropInfos);
+    auto objProps = indexProps(objPropsResponse.result);
     EXPECT_TRUE(objProps.count("__proto__"));
     auto objPropIt = objProps.find("self_ref");
     if (objPropIt == objProps.end()) {
       EXPECT_TRUE(false) << "missing \"self_ref\" property.";
       return {};
     }
-    return objPropIt->second;
+    return objPropIt->second.value.value().objectId.value();
   };
 
   // Verify that thisId has the correct shape.

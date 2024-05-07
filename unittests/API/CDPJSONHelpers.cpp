@@ -164,15 +164,13 @@ m::debugger::PausedNotification ensurePaused(
   return notification;
 }
 
-std::unordered_map<std::string, std::string> ensureProps(
+m::runtime::GetPropertiesResponse ensureProps(
     const std::string &message,
     const std::unordered_map<std::string, PropInfo> &infos) {
   JSLexer::Allocator allocator;
   JSONFactory factory(allocator);
   auto resp = mustMake<m::runtime::GetPropertiesResponse>(
       mustParseStrAsJsonObj(message, factory));
-
-  std::unordered_map<std::string, std::string> objectIds;
 
   EXPECT_EQ(resp.result.size(), infos.size());
 
@@ -214,12 +212,24 @@ std::unordered_map<std::string, std::string> ensureProps(
       if ((info.type == "object" && info.subtype != "null") ||
           info.type == "function") {
         EXPECT_TRUE(remoteObj.objectId.has_value());
-        objectIds[desc.name] = remoteObj.objectId.value();
       }
     }
   }
 
-  return objectIds;
+  return resp;
+}
+
+std::unordered_map<std::string, m::runtime::PropertyDescriptor> indexProps(
+    const std::vector<m::runtime::PropertyDescriptor> &props) {
+  JSLexer::Allocator allocator;
+  JSONFactory factory(allocator);
+  std::unordered_map<std::string, m::runtime::PropertyDescriptor> indexedProps;
+  for (const auto &prop : props) {
+    EXPECT_FALSE(indexedProps.count(prop.name))
+        << "Duplicate property name: " << prop.name;
+    indexedProps[prop.name] = clone(prop, factory);
+  }
+  return indexedProps;
 }
 
 void ensureEvalResponse(

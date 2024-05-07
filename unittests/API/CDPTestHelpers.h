@@ -42,6 +42,11 @@ T mustMake(const JSONObject *obj) {
   return std::move(*instance);
 }
 
+template <typename T>
+T clone(const T &t, JSONFactory &factory) {
+  return mustMake<T>(mustParseStrAsJsonObj(t.toJsonStr(), factory));
+}
+
 namespace message {
 
 inline std::unique_ptr<Request> mustGetRequestFromJson(const std::string &str) {
