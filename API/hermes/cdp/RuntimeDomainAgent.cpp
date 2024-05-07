@@ -6,6 +6,7 @@
  */
 
 #include <sstream>
+#include <unordered_set>
 
 #include <hermes/cdp/MessageConverters.h>
 #include <hermes/cdp/RemoteObjectConverters.h>
@@ -315,6 +316,55 @@ evaluateAndWrapResult(
   return std::make_pair(std::move(remoteObj), std::move(exceptionDetails));
 }
 
+/// A grow-only unordered set of jsi::PropNameID (String / Symbol).
+/// Must not outlive the \c jsi::Runtime reference provided to the constructor.
+class JSIPropNameIDSet {
+ public:
+  explicit JSIPropNameIDSet(jsi::Runtime &rt);
+
+  /// Inserts a PropNameID into the set.
+  /// \return true if the name was not already in the set.
+  bool insert(jsi::PropNameID &&name);
+
+ private:
+  class Hash {
+   public:
+    explicit Hash(jsi::Runtime &rt) : runtime_(rt) {}
+    size_t operator()(const jsi::PropNameID &name) const {
+      return std::hash<std::string>{}(name.utf8(runtime_));
+    }
+
+   private:
+    jsi::Runtime &runtime_;
+  };
+
+  class IsEqual {
+   public:
+    explicit IsEqual(jsi::Runtime &rt) : runtime_(rt) {}
+    bool operator()(const jsi::PropNameID &lhs, const jsi::PropNameID &rhs)
+        const {
+      return jsi::PropNameID::compare(runtime_, lhs, rhs);
+    }
+
+   private:
+    jsi::Runtime &runtime_;
+  };
+
+  jsi::Runtime &runtime_;
+  std::unordered_set<jsi::PropNameID, Hash, IsEqual> names_;
+};
+
+JSIPropNameIDSet::JSIPropNameIDSet(jsi::Runtime &rt)
+    : runtime_(rt),
+      names_(
+          /* bucket_count */ 32,
+          Hash(runtime_),
+          IsEqual(runtime_)) {}
+
+bool JSIPropNameIDSet::insert(jsi::PropNameID &&name) {
+  return names_.insert(std::move(name)).second;
+}
+
 } // namespace
 
 RuntimeDomainAgent::RuntimeDomainAgent(
@@ -333,7 +383,8 @@ RuntimeDomainAgent::RuntimeDomainAgent(
       asyncDebuggerAPI_(asyncDebuggerAPI),
       consoleMessageStorage_(consoleMessageStorage),
       consoleMessageDispatcher_(consoleMessageDispatcher),
-      enabled_(false) {
+      enabled_(false),
+      helpers_(runtime_) {
   consoleMessageRegistration_ = consoleMessageDispatcher_.subscribe(
       [this](const ConsoleMessage &message) {
         this->consoleAPICalled(message);
@@ -495,7 +546,7 @@ void RuntimeDomainAgent::getProperties(
 
   ObjectSerializationOptions serializationOptions;
   serializationOptions.generatePreview = req.generatePreview.value_or(false);
-  bool ownProperties = req.ownProperties.value_or(true);
+  bool ownProperties = req.ownProperties.value_or(false);
 
   std::string objGroup = objTable_->getObjectGroup(req.objectId);
   auto scopePtr = objTable_->getScope(req.objectId);
@@ -503,30 +554,42 @@ void RuntimeDomainAgent::getProperties(
 
   m::runtime::GetPropertiesResponse resp;
   resp.id = req.id;
-  if (scopePtr != nullptr) {
-    if (!asyncDebuggerAPI_.isPaused()) {
-      sendResponseToClient(m::makeErrorResponse(
-          req.id,
-          m::ErrorCode::InvalidRequest,
-          "Cannot get scope properties unless execution is paused"));
-      return;
-    }
-    const debugger::ProgramState &state =
-        runtime_.getDebugger().getProgramState();
-    auto result =
-        makePropsFromScope(*scopePtr, objGroup, state, serializationOptions);
-    if (!result) {
-      sendResponseToClient(m::makeErrorResponse(
-          req.id,
-          m::ErrorCode::InvalidRequest,
-          "Could not inspect specified scope"));
-      return;
-    }
-    resp.result = std::move(*result);
+  try {
+    if (scopePtr != nullptr) {
+      if (!asyncDebuggerAPI_.isPaused()) {
+        sendResponseToClient(m::makeErrorResponse(
+            req.id,
+            m::ErrorCode::InvalidRequest,
+            "Cannot get scope properties unless execution is paused"));
+        return;
+      }
+      const debugger::ProgramState &state =
+          runtime_.getDebugger().getProgramState();
+      auto result =
+          makePropsFromScope(*scopePtr, objGroup, state, serializationOptions);
+      if (!result) {
+        sendResponseToClient(m::makeErrorResponse(
+            req.id,
+            m::ErrorCode::InvalidRequest,
+            "Could not inspect specified scope"));
+        return;
+      }
+      resp.result = std::move(*result);
 
-  } else if (valuePtr != nullptr) {
-    resp.result = makePropsFromValue(
-        *valuePtr, objGroup, ownProperties, serializationOptions);
+    } else if (valuePtr != nullptr) {
+      resp.result = makePropsFromValue(
+          *valuePtr, objGroup, ownProperties, serializationOptions);
+      auto internalProps =
+          makeInternalPropsFromValue(*valuePtr, objGroup, serializationOptions);
+      if (internalProps.size()) {
+        resp.internalProperties = std::move(internalProps);
+      }
+    }
+  } catch (const jsi::JSError &error) {
+    resp.exceptionDetails =
+        m::runtime::makeExceptionDetails(runtime_, error, *objTable_, objGroup);
+  } catch (const jsi::JSIException &err) {
+    resp.exceptionDetails = m::runtime::makeExceptionDetails(err);
   }
   sendResponseToClient(resp);
 }
@@ -685,6 +748,9 @@ RuntimeDomainAgent::makePropsFromScope(
         runtime_, varInfo.value, *objTable_, objectGroup, serializationOptions);
     // Chrome only shows enumerable properties.
     desc.enumerable = true;
+    desc.configurable = true;
+    desc.writable = true;
+    desc.isOwn = true;
     result.emplace_back(std::move(desc));
   }
 
@@ -698,6 +764,9 @@ RuntimeDomainAgent::makePropsFromScope(
     desc.value = m::runtime::makeRemoteObject(
         runtime_, varInfo.value, *objTable_, objectGroup, serializationOptions);
     desc.enumerable = true;
+    desc.configurable = true;
+    desc.writable = true;
+    desc.isOwn = true;
 
     result.emplace_back(std::move(desc));
   }
@@ -715,61 +784,150 @@ RuntimeDomainAgent::makePropsFromValue(
 
   if (value.isObject()) {
     jsi::Runtime &runtime = runtime_;
-    jsi::Object obj = value.getObject(runtime);
 
-    // TODO(hypuk): obj.getPropertyNames only returns enumerable properties.
-    jsi::Array propNames = onlyOwnProperties
-        ? runtime.global()
-              .getPropertyAsObject(runtime, "Object")
-              .getPropertyAsFunction(runtime, "getOwnPropertyNames")
-              .call(runtime, obj)
-              .getObject(runtime)
-              .getArray(runtime)
-        : obj.getPropertyNames(runtime);
-
-    size_t propCount = propNames.length(runtime);
-    for (size_t i = 0; i < propCount; i++) {
-      jsi::String propName =
-          propNames.getValueAtIndex(runtime, i).getString(runtime);
-
-      m::runtime::PropertyDescriptor desc;
-      desc.name = propName.utf8(runtime);
-
-      try {
-        // Currently, we fetch the property even if it runs code.
-        // Chrome instead detects getters and makes you click to invoke.
-        jsi::Value propValue = obj.getProperty(runtime, propName);
-        desc.value = m::runtime::makeRemoteObject(
-            runtime, propValue, *objTable_, objectGroup, serializationOptions);
-      } catch (const jsi::JSIException &err) {
-        // We fetched a property with a getter that threw. Show a placeholder.
-        // We could have added additional info, but the UI quickly gets messy.
-        desc.value = m::runtime::makeRemoteObject(
-            runtime,
-            jsi::String::createFromUtf8(runtime, "(Exception)"),
-            *objTable_,
-            objectGroup,
-            serializationOptions);
+    jsi::Value current{runtime, value};
+    bool isOwn = true;
+    // Keep track of the properties we've emitted so far to avoid duplicates
+    // in the case of prototype shadowing.
+    JSIPropNameIDSet emittedPropIDs(runtime);
+    // Walk up the prototype chain.
+    do {
+      jsi::Object obj = current.getObject(runtime);
+      std::array<jsi::Array, 2> propArrays{
+          helpers_.objectGetOwnPropertyNames.call(runtime, obj)
+              .asObject(runtime)
+              .asArray(runtime),
+          helpers_.objectGetOwnPropertySymbols.call(runtime, obj)
+              .asObject(runtime)
+              .asArray(runtime)};
+      // Loop through all own property descriptors and convert them to CDP
+      // format.
+      for (auto &propArray : propArrays) {
+        size_t propCount = propArray.length(runtime);
+        for (size_t i = 0; i < propCount; i++) {
+          m::runtime::PropertyDescriptor desc;
+          desc.isOwn = isOwn;
+          jsi::Value propNameOrSymbol = propArray.getValueAtIndex(runtime, i);
+          if (propNameOrSymbol.isString()) {
+            auto propName = propNameOrSymbol.getString(runtime);
+            if (
+                // Short-circuit the shadowing check if we're emitting only
+                // own properties.
+                !onlyOwnProperties &&
+                !emittedPropIDs.insert(
+                    jsi::PropNameID::forString(runtime, propName))) {
+              // This property has already been emitted somewhere down the
+              // prototype chain.
+              continue;
+            }
+            desc.name = propName.utf8(runtime);
+          } else if (propNameOrSymbol.isSymbol()) {
+            auto propSymbol = propNameOrSymbol.getSymbol(runtime);
+            if (
+                // Short-circuit the shadowing check if we're emitting only
+                // own properties.
+                !onlyOwnProperties &&
+                !emittedPropIDs.insert(
+                    jsi::PropNameID::forSymbol(runtime, propSymbol))) {
+              // This property has already been emitted somewhere down the
+              // prototype chain.
+              continue;
+            }
+            desc.name = propSymbol.toString(runtime);
+            desc.symbol = m::runtime::makeRemoteObject(
+                runtime,
+                propNameOrSymbol,
+                *objTable_,
+                objectGroup,
+                serializationOptions);
+          } else {
+            assert(false && "unexpected non-string non-symbol property key");
+          }
+          try {
+            jsi::Object descriptor = helpers_.objectGetOwnPropertyDescriptor
+                                         .call(runtime, obj, propNameOrSymbol)
+                                         .asObject(runtime);
+            desc.enumerable =
+                descriptor.getProperty(runtime, "enumerable").asBool();
+            desc.configurable =
+                descriptor.getProperty(runtime, "configurable").asBool();
+            if (descriptor.hasProperty(runtime, "value")) {
+              desc.value = m::runtime::makeRemoteObject(
+                  runtime,
+                  descriptor.getProperty(runtime, "value"),
+                  *objTable_,
+                  objectGroup,
+                  serializationOptions);
+            }
+            if (descriptor.hasProperty(runtime, "get")) {
+              desc.get = m::runtime::makeRemoteObject(
+                  runtime,
+                  descriptor.getProperty(runtime, "get"),
+                  *objTable_,
+                  objectGroup,
+                  serializationOptions);
+            }
+            if (descriptor.hasProperty(runtime, "set")) {
+              desc.set = m::runtime::makeRemoteObject(
+                  runtime,
+                  descriptor.getProperty(runtime, "set"),
+                  *objTable_,
+                  objectGroup,
+                  serializationOptions);
+            }
+            if (descriptor.hasProperty(runtime, "writable")) {
+              desc.writable =
+                  descriptor.getProperty(runtime, "writable").asBool();
+            }
+          } catch (const jsi::JSError &err) {
+            desc.wasThrown = true;
+            desc.value = m::runtime::makeRemoteObjectForError(
+                runtime, err.value(), *objTable_, objectGroup);
+          } catch (const jsi::JSIException &err) {
+            desc.wasThrown = true;
+            desc.value = m::runtime::makeRemoteObject(
+                runtime,
+                jsi::String::createFromUtf8(runtime, "(Exception)"),
+                *objTable_,
+                objectGroup,
+                ObjectSerializationOptions{});
+          }
+          result.emplace_back(std::move(desc));
+        }
       }
-
-      result.emplace_back(std::move(desc));
-    }
-
-    if (onlyOwnProperties) {
-      jsi::Value proto = runtime.global()
-                             .getPropertyAsObject(runtime, "Object")
-                             .getPropertyAsFunction(runtime, "getPrototypeOf")
-                             .call(runtime, obj);
-      if (!proto.isNull()) {
-        m::runtime::PropertyDescriptor desc;
-        desc.name = "__proto__";
-        desc.value = m::runtime::makeRemoteObject(
-            runtime, proto, *objTable_, objectGroup, serializationOptions);
-        result.emplace_back(std::move(desc));
+      if (onlyOwnProperties) {
+        // The client requested own properties only, so stop walking up the
+        // prototype chain.
+        break;
       }
-    }
+      current = helpers_.objectGetPrototypeOf.call(runtime, obj);
+      isOwn = false;
+    } while (current.isObject());
   }
 
+  return result;
+}
+
+std::vector<m::runtime::InternalPropertyDescriptor>
+RuntimeDomainAgent::makeInternalPropsFromValue(
+    const jsi::Value &value,
+    const std::string &objectGroup,
+    const ObjectSerializationOptions &serializationOptions) {
+  std::vector<m::runtime::InternalPropertyDescriptor> result;
+  if (value.isObject()) {
+    jsi::Runtime &runtime = runtime_;
+
+    jsi::Object obj = value.getObject(runtime);
+
+    jsi::Value proto = helpers_.objectGetPrototypeOf.call(runtime, obj);
+    if (!proto.isNull()) {
+      m::runtime::InternalPropertyDescriptor desc;
+      desc.name = "[[Prototype]]";
+      desc.value = m::runtime::makeRemoteObject(
+          runtime, proto, *objTable_, objectGroup, serializationOptions);
+      result.emplace_back(std::move(desc));
+    }
+  }
   return result;
 }
 
@@ -839,6 +997,26 @@ void RuntimeDomainAgent::consoleAPICalled(const ConsoleMessage &message) {
 
   sendNotificationToClient(note);
 }
+
+RuntimeDomainAgent::Helpers::Helpers(jsi::Runtime &runtime)
+    : // TODO(moti): The best place to read and cache these helpers is in
+      // CDPDebugAPI, before user code ever runs.
+      objectGetOwnPropertySymbols(
+          runtime.global()
+              .getPropertyAsObject(runtime, "Object")
+              .getPropertyAsFunction(runtime, "getOwnPropertySymbols")),
+      objectGetOwnPropertyNames(
+          runtime.global()
+              .getPropertyAsObject(runtime, "Object")
+              .getPropertyAsFunction(runtime, "getOwnPropertyNames")),
+      objectGetOwnPropertyDescriptor(
+          runtime.global()
+              .getPropertyAsObject(runtime, "Object")
+              .getPropertyAsFunction(runtime, "getOwnPropertyDescriptor")),
+      objectGetPrototypeOf(
+          runtime.global()
+              .getPropertyAsObject(runtime, "Object")
+              .getPropertyAsFunction(runtime, "getPrototypeOf")) {}
 
 } // namespace cdp
 } // namespace hermes

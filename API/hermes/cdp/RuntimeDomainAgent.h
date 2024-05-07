@@ -72,6 +72,15 @@ class RuntimeDomainAgent : public DomainAgent {
   void consoleAPICalled(const ConsoleMessage &message);
 
  private:
+  struct Helpers {
+    jsi::Function objectGetOwnPropertySymbols;
+    jsi::Function objectGetOwnPropertyNames;
+    jsi::Function objectGetOwnPropertyDescriptor;
+    jsi::Function objectGetPrototypeOf;
+
+    explicit Helpers(jsi::Runtime &runtime);
+  };
+
   bool checkRuntimeEnabled(const m::Request &req);
 
   /// Ensure the provided \p executionContextId matches the one
@@ -92,6 +101,11 @@ class RuntimeDomainAgent : public DomainAgent {
       const std::string &objectGroup,
       bool onlyOwnProperties,
       const ObjectSerializationOptions &serializationOptions);
+  std::vector<m::runtime::InternalPropertyDescriptor>
+  makeInternalPropsFromValue(
+      const jsi::Value &value,
+      const std::string &objectGroup,
+      const ObjectSerializationOptions &serializationOptions);
 
   HermesRuntime &runtime_;
   debugger::AsyncDebuggerAPI &asyncDebuggerAPI_;
@@ -108,6 +122,9 @@ class RuntimeDomainAgent : public DomainAgent {
 
   /// Console message subscription token, used to unsubscribe during shutdown.
   ConsoleMessageRegistration consoleMessageRegistration_;
+
+  /// Cached helper JS functions used by agent methods.
+  const Helpers helpers_;
 };
 
 } // namespace cdp
