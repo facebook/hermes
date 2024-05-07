@@ -181,6 +181,7 @@ BinaryOperatorInst::getBinarySideEffect(Type leftTy, Type rightTy, OpKind op) {
     case OpKind::UnsignedRightShiftKind:
     case OpKind::DivideKind:
     case OpKind::ModuloKind:
+    case OpKind::ExponentiationKind:
       // We can only reason about primitive types.
       if (!leftTy.isPrimitive() || !rightTy.isPrimitive())
         break;
@@ -188,6 +189,7 @@ BinaryOperatorInst::getBinarySideEffect(Type leftTy, Type rightTy, OpKind op) {
       // for one of the following reasons:
       // - BigInt doesn't have unsigned right shift.
       // - BigInt division by zero.
+      // - BigInt as exponent can't be negative
       if (leftTy.canBeBigInt() || rightTy.canBeBigInt())
         return SideEffectKind::Unknown;
       // We have primitive operands that are not BigInt.
@@ -209,7 +211,6 @@ BinaryOperatorInst::getBinarySideEffect(Type leftTy, Type rightTy, OpKind op) {
     case OpKind::OrKind:
     case OpKind::XorKind:
     case OpKind::AndKind:
-    case OpKind::ExponentiationKind:
       // We can only reason about primitive types.
       if (!leftTy.isPrimitive() || !rightTy.isPrimitive())
         break;
