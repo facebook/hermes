@@ -25,7 +25,6 @@ module.name_mapper='^hermes-transform$' -> '<PROJECT_ROOT>/hermes-transform/src/
 module.name_mapper='^prettier-plugin-hermes-parser$' -> '<PROJECT_ROOT>/prettier-plugin-hermes-parser/src/index.js'
 
 experimental.component_syntax=parsing
-experimental.global_find_ref=true
 enums=true
 casting_syntax=both
 
