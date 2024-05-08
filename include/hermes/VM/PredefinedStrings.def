@@ -492,6 +492,11 @@ STR(written, "written")
 STR(encoding, "encoding")
 STR(utf8, "utf-8")
 
+// Symbol for the test262 testsuite.
+STR(test262, "$262")
+STR(alert, "alert")
+STR(evalScript, "evalScript")
+
 #ifdef HERMES_ENABLE_INTL
 // TODO T65916424: Consider how we can move these out of the
 // predefined strings table.

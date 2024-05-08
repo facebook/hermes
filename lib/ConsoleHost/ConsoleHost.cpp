@@ -154,6 +154,105 @@ clearTimeout(void *ctx, vm::Runtime &runtime, vm::NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
+/// The test262 testsuite requires below harness symbols:
+/// - $262, with properties:
+///     - global, alias to globalThis
+///     - evalScript, alias to eval
+///     - detachArrayBuffer, alias to HermesInternal.detachArrayBuffer (if it
+///       exists)
+/// - alert, alias to print
+void initTest262Harness(vm::Runtime &runtime) {
+  vm::Handle<vm::JSObject> test262Obj =
+      runtime.makeHandle(vm::JSObject::create(runtime));
+
+  vm::DefinePropertyFlags constantDPF =
+      vm::DefinePropertyFlags::getDefaultNewPropertyFlags();
+  constantDPF.enumerable = 0;
+  constantDPF.writable = 0;
+  constantDPF.configurable = 0;
+
+  // Define $262.global
+  auto global = runtime.getGlobal();
+  runtime.ignoreAllocationFailure(vm::JSObject::defineOwnProperty(
+      test262Obj,
+      runtime,
+      vm::Predefined::getSymbolID(vm::Predefined::global),
+      constantDPF,
+      global));
+
+  /// Try to get defined property on given JSObject \p selfHandle. If it does
+  /// not exist, return None.
+  auto tryGetDefinedProperty =
+      [&runtime](
+          vm::Handle<vm::JSObject> selfHandle,
+          vm::SymbolID name) -> llvh::Optional<vm::Handle<>> {
+    auto propRes = vm::JSObject::getNamed_RJS(selfHandle, runtime, name);
+    if (propRes == vm::ExecutionStatus::EXCEPTION) {
+      runtime.printException(
+          llvh::outs(), runtime.makeHandle(runtime.getThrownValue()));
+      return llvh::None;
+    }
+
+    // It may not really exist, e.g., HermesInternal.detachArrayBuffer.
+    if (propRes.getValue()->isUndefined()) {
+      return llvh::None;
+    }
+
+    return runtime.makeHandle(std::move(*propRes));
+  };
+
+  /// Try to copy the defined property \p srcName on \p srcSelfHandle to
+  /// \p tgtSelfHandle with given name \p tgtName. If \p srcName does not exist,
+  /// do nothing.
+  auto tryCopyProperty = [&runtime, &constantDPF, &tryGetDefinedProperty](
+                             vm::Handle<vm::JSObject> srcSelfHandle,
+                             vm::SymbolID srcName,
+                             vm::Handle<vm::JSObject> tgtSelfHandle,
+                             vm::SymbolID tgtName) {
+    auto prop = tryGetDefinedProperty(srcSelfHandle, srcName);
+    if (!prop)
+      return;
+
+    runtime.ignoreAllocationFailure(vm::JSObject::defineOwnProperty(
+        tgtSelfHandle, runtime, tgtName, constantDPF, *prop));
+  };
+
+  // Define $262.evalScript
+  tryCopyProperty(
+      global,
+      vm::Predefined::getSymbolID(vm::Predefined::eval),
+      test262Obj,
+      vm::Predefined::getSymbolID(vm::Predefined::evalScript));
+
+  // Define $262.detachArrayBuffer
+  auto prop = tryGetDefinedProperty(
+      global, vm::Predefined::getSymbolID(vm::Predefined::HermesInternal));
+  if (prop) {
+    vm::Handle<vm::JSObject> hermesInternalObj =
+        vm::Handle<vm::JSObject>::vmcast(*prop);
+    tryCopyProperty(
+        hermesInternalObj,
+        vm::Predefined::getSymbolID(vm::Predefined::detachArrayBuffer),
+        test262Obj,
+        vm::Predefined::getSymbolID(vm::Predefined::detachArrayBuffer));
+  }
+
+  // Define global object $262
+  runtime.ignoreAllocationFailure(vm::JSObject::defineOwnProperty(
+      global,
+      runtime,
+      vm::Predefined::getSymbolID(vm::Predefined::test262),
+      constantDPF,
+      test262Obj));
+
+  // Define global function alert()
+  tryCopyProperty(
+      global,
+      vm::Predefined::getSymbolID(vm::Predefined::print),
+      global,
+      vm::Predefined::getSymbolID(vm::Predefined::alert));
+}
+
 void installConsoleBindings(
     vm::Runtime &runtime,
     ConsoleHostContext &ctx,
@@ -227,6 +326,8 @@ void installConsoleBindings(
       setTimeout,
       &ctx,
       1);
+
+  initTest262Harness(runtime);
 }
 
 // If a function body might throw C++ exceptions other than
