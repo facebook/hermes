@@ -95,10 +95,10 @@ struct Sampler {
   bool sampleStacks();
 
   /// Timer loop thread main routine.
-  void timerLoop();
+  void timerLoop(double meanHzFreq);
 
   /// Implementation of SamplingProfiler::enable/disable.
-  bool enable();
+  bool enable(double meanHzFreq);
   bool disable();
 
   /// \return true if the sampling profiler is enabled, false otherwise.

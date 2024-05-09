@@ -261,7 +261,7 @@ class SamplingProfiler {
   static void dumpChromeTraceGlobal(llvh::raw_ostream &OS);
 
   /// Enable and start profiling.
-  static bool enable();
+  static bool enable(double meanHzFreq = 100);
 
   /// Disable and stop profiling.
   static bool disable();

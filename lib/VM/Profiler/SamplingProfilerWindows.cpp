@@ -37,7 +37,7 @@ struct SamplingProfilerWindows : SamplingProfiler {
 
 #if defined(HERMESVM_ENABLE_LOOM)
     fbloom_profilo_api()->fbloom_register_enable_for_loom_callback(
-        FBLoomTracerType::JAVASCRIPT, enable);
+        FBLoomTracerType::JAVASCRIPT, []() { return enable(); });
     fbloom_profilo_api()->fbloom_register_disable_for_loom_callback(
         FBLoomTracerType::JAVASCRIPT, disable);
     loomDataPushEnabled_ = true;

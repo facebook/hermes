@@ -1095,9 +1095,9 @@ std::pair<const uint8_t *, size_t> HermesRuntime::getBytecodeEpilogue(
   return std::make_pair(epi.data(), epi.size());
 }
 
-void HermesRuntime::enableSamplingProfiler() {
+void HermesRuntime::enableSamplingProfiler(double meanHzFreq) {
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
-  ::hermes::vm::SamplingProfiler::enable();
+  ::hermes::vm::SamplingProfiler::enable(meanHzFreq);
 #else
   throwHermesNotCompiledWithSamplingProfilerSupport();
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
