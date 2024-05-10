@@ -184,6 +184,60 @@ void SemanticResolver::visit(
   resolveIdentifier(identifier, false);
 }
 
+void SemanticResolver::visit(ESTree::VariableDeclarationNode *node) {
+  visitESTreeChildren(*this, node);
+
+  // ES5Catch, var
+  //          -> valid, special case ES10 B.3.5
+  // let, var
+  //          -> always invalid
+  // Ordinarily, we check this in validateAndDeclareIdentifier, but if the
+  // declarations are in a nested scope like x or y here:
+  //
+  // function f() {
+  //   { let x; var x; }
+  //   { let y; { var y; } }
+  // }
+  //
+  // then the var has been hoisted to the function-level scope by
+  // DeclCollector and we aren't able to detect that both declarations are
+  // actually in the same scope and conflict.
+  // Only perform this check for nested scopes, because the var will have
+  // been hoisted into a different scope.
+  if (node->_kind == kw_.identVar &&
+      curScope_ != curScope_->parentFunction->getFunctionScope()) {
+    llvh::SmallVector<ESTree::IdentifierNode *, 2> idents;
+    extractIdentsFromDecl(node, idents);
+    // Check every identifier declared as a 'var'.
+    for (ESTree::IdentifierNode *ident : idents) {
+      const Binding prevName = bindingTable_.lookup(ident->_name);
+
+      if (!prevName.isValid()) {
+        // No existing declaration, move on.
+        continue;
+      }
+      if (prevName.decl->scope ==
+          prevName.decl->scope->parentFunction->getFunctionScope()) {
+        // If the previous declaration is in the function scope, the error would
+        // have been reported when validating declarations in the function
+        // scope.
+        continue;
+      }
+
+      // Report an error if the var is trying to override a let-like.
+      const Decl::Kind prevKind = prevName.decl->kind;
+      if (Decl::isKindLetLike(prevKind) && prevKind != Decl::Kind::ES5Catch) {
+        sm_.error(
+            ident->getSourceRange(),
+            llvh::Twine("Identifier '") + ident->_name->str() +
+                "' is already declared");
+        if (prevName.ident)
+          sm_.note(prevName.ident->getSourceRange(), "previous declaration");
+      }
+    }
+  }
+}
+
 void SemanticResolver::visit(
     ESTree::BinaryExpressionNode *node,
     ESTree::Node **ppNode) {
@@ -1445,6 +1499,7 @@ void SemanticResolver::validateAndDeclareIdentifier(
     //
     // ES5Catch, var
     //          -> valid, special case ES10 B.3.5, but we can't catch it here.
+    //             See visit(VariableDeclarationNode *)
     // var|scopedFunction, var|scopedFunction
     //          -> always valid
     // let, var

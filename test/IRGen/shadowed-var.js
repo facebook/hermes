@@ -17,7 +17,8 @@ function foo(a = 5) {
 function bar() {
     try {
         something();
-    } catch ([e = 10]) {
+    } catch (e) {
+        // Shadowing ES5 catch variable not declared with destructuring is OK.
         var e = 10;
     }
 }

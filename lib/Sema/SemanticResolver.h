@@ -164,6 +164,8 @@ class SemanticResolver
 
   void visit(ESTree::IdentifierNode *identifier, ESTree::Node *parent);
 
+  void visit(ESTree::VariableDeclarationNode *node);
+
   void visit(ESTree::BinaryExpressionNode *node, ESTree::Node **ppNode);
   void visit(ESTree::AssignmentExpressionNode *assignment);
   void visit(ESTree::UpdateExpressionNode *node);
