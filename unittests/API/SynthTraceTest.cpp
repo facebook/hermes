@@ -1160,6 +1160,23 @@ struct SynthTraceReplayTest : public SynthTraceRuntimeTest {
   }
 };
 
+TEST_F(SynthTraceReplayTest, MultiUseOfSameObjectAtSameRecord) {
+  {
+    auto &rt = *traceRt;
+
+    eval(rt, R""""(
+function foo(a, b, c){
+  print(a, b, c);
+}
+)"""");
+
+    auto obj = jsi::Object(rt);
+    rt.global().getPropertyAsFunction(rt, "foo").call(rt, obj, obj, obj);
+  }
+  replay();
+  {}
+}
+
 TEST_F(SynthTraceReplayTest, CreateObjectReplay) {
   {
     auto &rt = *traceRt;
