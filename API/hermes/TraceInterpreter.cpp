@@ -21,6 +21,20 @@
 #include <set>
 #include <sstream>
 
+#define TRACE_EXPECT_EQ(expected, actual)                                 \
+  do {                                                                    \
+    if (options_.verificationEnabled && (expected) != (actual)) {         \
+      std::cerr << "Expected: " << (expected) << ", Actual: " << (actual) \
+                << std::endl;                                             \
+      std::cerr << "Synth Trace Verification failed at record "           \
+                << nextExecIndex_ - 1 << std::endl;                       \
+      abort();                                                            \
+    }                                                                     \
+    assert((expected) == (actual));                                       \
+  } while (0)
+
+#define TRACE_EXPECT_TRUE(actual) TRACE_EXPECT_EQ(true, actual)
+
 using namespace hermes::parser;
 using namespace facebook::jsi;
 
@@ -149,7 +163,6 @@ static std::string mergeGCStats(const std::vector<std::string> &repGCStats) {
   return *valueAndStats[median].second;
 }
 
-#ifndef NDEBUG
 bool isDoubleEqual(double a, double b) {
   // Bitwise comparison to avoid issues with infinity and NaN.
   if (memcmp(&a, &b, sizeof(double)) == 0)
@@ -168,37 +181,34 @@ bool isDoubleEqual(double a, double b) {
   return std::abs(a - b) <= ep;
 }
 
+} // namespace
+
 /// Assert that \p val seen at replay matches the recorded \p traceValue
-void assertMatch(const SynthTrace::TraceValue &traceValue, const Value &val) {
+void TraceInterpreter::assertMatch(
+    const SynthTrace::TraceValue &traceValue,
+    const Value &val) const {
   if (traceValue.isUndefined()) {
-    assert(val.isUndefined() && "type mismatch between trace and replay");
+    TRACE_EXPECT_TRUE(val.isUndefined());
   } else if (traceValue.isNull()) {
-    assert(val.isNull() && "type mismatch between trace and replay");
+    TRACE_EXPECT_TRUE(val.isNull());
   } else if (traceValue.isBool()) {
-    assert(val.isBool() && "type mismatch between trace and replay");
-    assert(
-        val.getBool() == traceValue.getBool() &&
-        "value mismatch between trace and replay");
+    TRACE_EXPECT_TRUE(val.isBool());
+    TRACE_EXPECT_EQ(traceValue.getBool(), val.getBool());
   } else if (traceValue.isNumber()) {
-    assert(val.isNumber() && "type mismatch between trace and replay");
+    TRACE_EXPECT_TRUE(val.isNumber());
     double valNum = val.getNumber();
     double traceValueNum = traceValue.getNumber();
-    assert(
-        isDoubleEqual(valNum, traceValueNum) &&
-        "value mismatch between trace and replay");
+    TRACE_EXPECT_TRUE(isDoubleEqual(valNum, traceValueNum));
   } else if (traceValue.isString()) {
-    assert(val.isString() && "type mismatch between trace and replay");
+    TRACE_EXPECT_TRUE(val.isString());
   } else if (traceValue.isObject()) {
-    assert(val.isObject() && "type mismatch between trace and replay");
+    TRACE_EXPECT_TRUE(val.isObject());
   } else if (traceValue.isSymbol()) {
-    assert(val.isSymbol() && "type mismatch between trace and replay");
+    TRACE_EXPECT_TRUE(val.isSymbol());
   } else if (traceValue.isBigInt()) {
-    assert(val.isBigInt() && "type mismatch between trace and replay");
+    TRACE_EXPECT_TRUE(val.isBigInt());
   }
 }
-#endif
-
-} // namespace
 
 TraceInterpreter::TraceInterpreter(
     jsi::Runtime &rt,
@@ -728,13 +738,13 @@ void TraceInterpreter::executeRecords() {
           switch (cbr.method_) {
             case SynthTrace::CreateBigIntRecord::Method::FromInt64:
               bigint = BigInt::fromInt64(rt_, static_cast<int64_t>(cbr.bits_));
-              assert(
-                  bigint.asBigInt(rt_).getInt64(rt_) ==
-                  static_cast<int64_t>(cbr.bits_));
+              TRACE_EXPECT_EQ(
+                  static_cast<int64_t>(cbr.bits_),
+                  bigint.asBigInt(rt_).getInt64(rt_));
               break;
             case SynthTrace::CreateBigIntRecord::Method::FromUint64:
               bigint = BigInt::fromUint64(rt_, cbr.bits_);
-              assert(bigint.asBigInt(rt_).getUint64(rt_) == cbr.bits_);
+              TRACE_EXPECT_EQ(cbr.bits_, bigint.asBigInt(rt_).getUint64(rt_));
               break;
           }
           addToObjectMap(cbr.objID_, std::move(bigint), currentExecIndex);
@@ -761,7 +771,7 @@ void TraceInterpreter::executeRecords() {
                 reinterpret_cast<const uint8_t *>(csr.chars_.data()),
                 csr.chars_.size());
           }
-          assert(str.asString(rt_).utf8(rt_) == csr.chars_);
+          TRACE_EXPECT_EQ(csr.chars_, str.asString(rt_).utf8(rt_));
           addToObjectMap(csr.objID_, std::move(str), currentExecIndex);
           break;
         }
@@ -1028,16 +1038,16 @@ void TraceInterpreter::executeRecords() {
             const auto &val = getJSIValueForUse(record.objID_.getUID());
             [[maybe_unused]] std::string replayedStr =
                 val.getString(rt_).utf8(rt_);
-            assert(replayedStr == record.retVal_);
+            TRACE_EXPECT_EQ(record.retVal_, replayedStr);
           } else if (record.objID_.isPropNameID()) {
             auto propNameID = getPropNameIDForUse(record.objID_.getUID());
             [[maybe_unused]] std::string replayedStr = propNameID.utf8(rt_);
-            assert(replayedStr == record.retVal_);
+            TRACE_EXPECT_EQ(record.retVal_, replayedStr);
           } else if (record.objID_.isSymbol()) {
             jsi::Value val = getJSIValueForUse(record.objID_.getUID());
             [[maybe_unused]] std::string replayedStr =
                 val.asSymbol(rt_).toString(rt_);
-            assert(replayedStr == record.retVal_);
+            TRACE_EXPECT_EQ(record.retVal_, replayedStr);
           }
           break;
         }
@@ -1122,12 +1132,11 @@ void TraceInterpreter::ifObjectAddToObjectMap(
     jsi::Value &&val,
     uint64_t defIndex,
     bool isThis) {
-#ifndef NDEBUG
   // TODO(T84791675): Include 'this' once all traces are correctly recording it.
   if (!isThis) {
     assertMatch(traceValue, val);
   }
-#endif
+
   if (traceValue.isUID()) {
     addToObjectMap(traceValue.getUID(), std::move(val), defIndex);
   }

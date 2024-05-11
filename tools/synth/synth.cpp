@@ -80,6 +80,11 @@ static opt<bool> UseTraceConfig(
          "means start from the default config."),
     init(true));
 
+static opt<bool> UseVerification(
+    "verification",
+    desc("Replay the trace with verification enabled."),
+    init(false));
+
 static opt<std::string> Trace(
     "trace",
     desc(
@@ -219,6 +224,7 @@ int main(int argc, char **argv) {
     // These are not config parameters: just set them according to the
     // runtime flag.
     options.useTraceConfig = cl::UseTraceConfig;
+    options.verificationEnabled = cl::UseVerification;
     options.reps = cl::Reps;
     options.marker = cl::Marker;
     options.action = cl::Action;
