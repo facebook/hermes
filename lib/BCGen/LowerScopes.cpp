@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/IR/Analysis.h"
+#include "hermes/BCGen/LowerScopes.h"
+
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/Instrs.h"
