@@ -789,15 +789,15 @@ void Module::dump(llvh::raw_ostream &os) const {
 }
 
 LiteralNumber *Module::getLiteralNumber(double value) {
-  return literalNumbers_.getOrEmplaceWithNew(value).first;
+  return literalNumbers_.getOrEmplace(value).first;
 }
 
 LiteralBigInt *Module::getLiteralBigInt(UniqueString *value) {
-  return literalBigInts_.getOrEmplaceWithNew(value).first;
+  return literalBigInts_.getOrEmplace(value).first;
 }
 
 LiteralString *Module::getLiteralString(Identifier value) {
-  return literalStrings_.getOrEmplaceWithNew(value).first;
+  return literalStrings_.getOrEmplace(value).first;
 }
 
 LiteralBool *Module::getLiteralBool(bool value) {
@@ -809,23 +809,22 @@ LiteralBool *Module::getLiteralBool(bool value) {
 GlobalObjectProperty *Module::addGlobalProperty(
     Identifier name,
     bool declared) {
-  auto *res =
-      globalProperties_.getOrEmplaceWithNew(getLiteralString(name)).first;
+  auto *res = globalProperties_.getOrEmplace(getLiteralString(name)).first;
   res->orDeclared(declared);
   return res;
 }
 
 LiteralIRType *Module::getLiteralIRType(Type value) {
-  return literalIRTypes_.getOrEmplaceWithNew(value).first;
+  return literalIRTypes_.getOrEmplace(value).first;
 }
 
 LiteralNativeSignature *Module::getLiteralNativeSignature(
     NativeSignature *data) {
-  return nativeSignatures_.getOrEmplaceWithNew(data).first;
+  return nativeSignatures_.getOrEmplace(data).first;
 }
 
 LiteralNativeExtern *Module::getLiteralNativeExtern(NativeExtern *data) {
-  return nativeExterns_.getOrEmplaceWithNew(data).first;
+  return nativeExterns_.getOrEmplace(data).first;
 }
 
 void Type::print(llvh::raw_ostream &OS) const {

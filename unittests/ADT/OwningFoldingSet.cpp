@@ -27,13 +27,13 @@ class TestNode : public llvh::FoldingSetNode {
 
 TEST(OwningFoldingSet, SmokeTest) {
   hermes::OwningFoldingSet<TestNode> set{};
-  auto [node, ins] = set.getOrEmplaceWithNew(42);
+  auto [node, ins] = set.getOrEmplace(42);
   EXPECT_TRUE(ins);
   EXPECT_EQ(42, node->data_);
-  auto res = set.getOrEmplaceWithNew(42);
+  auto res = set.getOrEmplace(42);
   EXPECT_FALSE(res.second);
   EXPECT_EQ(node, res.first);
-  res = set.getOrEmplaceWithNew(43);
+  res = set.getOrEmplace(43);
   EXPECT_TRUE(res.second);
   EXPECT_NE(node, res.first);
 }
