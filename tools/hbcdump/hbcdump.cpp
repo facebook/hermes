@@ -9,8 +9,8 @@
 #include "ProfileAnalyzer.h"
 
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
-#include "hermes/Public/Buffer.h"
 #include "hermes/SourceMap/SourceMapParser.h"
+#include "hermes/Support/Buffer.h"
 #include "hermes/Support/MemoryBuffer.h"
 
 #include "llvh/ADT/SmallVector.h"

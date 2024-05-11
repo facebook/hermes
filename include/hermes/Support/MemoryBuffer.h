@@ -8,7 +8,7 @@
 #ifndef HERMES_SUPPORT_MEMORYBUFFER_H
 #define HERMES_SUPPORT_MEMORYBUFFER_H
 
-#include "hermes/Public/Buffer.h"
+#include "hermes/Support/Buffer.h"
 #include "llvh/Support/MemoryBuffer.h"
 
 namespace hermes {
