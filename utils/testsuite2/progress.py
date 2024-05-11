@@ -320,13 +320,14 @@ class ProgressBar:
 
 from dataclasses import dataclass
 
+from utils import TestResultCode
+
 
 @dataclass
 class TestCaseResult(object):
     # Test name
     test_name: str
-    # Whether the test failed
-    is_failure: bool
+    code: TestResultCode
     # A short message
     msg: str = ""
     # Output details of this test run
@@ -348,7 +349,8 @@ class TestingProgressDisplay(object):
 
         self.progressBar.update(float(self.completed) / self.numTests, test.test_name)
 
-        shouldShow = test.is_failure or self.verbose
+        is_failure = test.code.is_failure
+        shouldShow = is_failure or self.verbose
         if not shouldShow:
             return
 
@@ -361,8 +363,8 @@ class TestingProgressDisplay(object):
         )
 
         # Show the test failure output, if requested.
-        if test.is_failure or self.verbose:
-            if test.is_failure:
+        if shouldShow:
+            if is_failure:
                 print("%s TEST '%s' FAILED %s" % ("*" * 20, test.test_name, "*" * 20))
             print(test.output)
             print("*" * 20)
@@ -373,9 +375,9 @@ class TestingProgressDisplay(object):
 
 def test_progress_display():
     test_results = [
-        TestCaseResult("test1", False),
-        TestCaseResult("test2", True, "FAIL", "Parse failure"),
-    ] + [TestCaseResult(f"test{i}", False) for i in range(3, 30)]
+        TestCaseResult("test1", TestResultCode.TEST_PASSED),
+        TestCaseResult("test2", TestResultCode.EXECUTE_FAILED, "FAIL", "Parse failure"),
+    ] + [TestCaseResult(f"test{i}", TestResultCode.TEST_PASSED) for i in range(3, 30)]
     tc = TerminalController()
     header = f"-- Testing: {len(test_results)} tests --"
     p = ProgressBar(tc, header)

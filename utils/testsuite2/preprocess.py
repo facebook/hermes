@@ -77,7 +77,6 @@ def generate_mjsunit_source(content: str, suite: str) -> TestCase:
     """
     Perform preprocessing on a given mjsunit test file.
     """
-    from string import Template
 
     # The content of this string is prepended to the test files and is used to
     # provide the basic test built-ins.
@@ -183,8 +182,9 @@ function v8pragma_NopSentinel() {
         "%_StringCharCodeAt": "v8pragma_StringCharCodeAt",
     }
 
-    content_template = Template(content)
-    content = content_template.safe_substitute(v8_pragmas, flags=[])
+    for pragma, replacement in v8_pragmas.items():
+        content = content.replace(pragma, replacement)
+
     mjsunit_path = os.path.join(suite, "mjsunit.js")
     full_src = ""
     with open(mjsunit_path, "rb") as f:
