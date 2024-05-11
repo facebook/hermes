@@ -7,10 +7,8 @@ import json
 from enum import Enum, unique
 from typing import List, Optional, Pattern, Union
 
-from progress import TestCaseResult
-
 from typing_defs import PathT, SkippedPathItem, SkippedPathsOrFeaturesDict
-from utils import TestResultCode
+from utils import TestCaseResult, TestResultCode
 
 
 @unique

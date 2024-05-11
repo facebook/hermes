@@ -3,10 +3,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from __future__ import annotations
+
 import os
 import sys
+from dataclasses import dataclass
 from enum import auto, Enum, unique
-from typing import List, Optional
+from typing import List
 
 from typing_defs import PathT
 
@@ -16,7 +19,6 @@ class TestResultCode(Enum):
     TEST_PASSED = auto()
     TEST_SKIPPED = auto()
     TEST_PERMANENTLY_SKIPPED = auto()
-    TEST_UNEXPECTED_PASSED = auto()
     COMPILE_FAILED = auto()
     COMPILE_TIMEOUT = auto()
     EXECUTE_FAILED = auto()
@@ -30,6 +32,17 @@ class TestResultCode(Enum):
             and self != TestResultCode.TEST_SKIPPED
             and self != TestResultCode.TEST_PERMANENTLY_SKIPPED
         )
+
+
+@dataclass
+class TestCaseResult(object):
+    # Test name
+    test_name: str
+    code: TestResultCode
+    # A short message
+    msg: str = ""
+    # Output details of this test run
+    output: str = ""
 
 
 # Colors for stdout.
@@ -83,14 +96,3 @@ def check_hermes_exe(binary_path: PathT) -> None:
     if not os.path.isfile(hermes_exe):
         print(f"{hermes_exe} not found.")
         sys.exit(1)
-
-
-def get_suite(filepath: PathT) -> Optional[PathT]:
-    """Get testsuite path for given filepath"""
-    suite = None
-    # Try all possible test suites to see which one we're in.
-    for s in ["test262", "mjsunit", "CVEs", "esprima", "flow"]:
-        if (s + "/") in filepath:
-            suite = filepath[: filepath.find(s) + len(s)]
-            break
-    return suite

@@ -14,22 +14,45 @@ from typing_defs import OptNegative, PathT
 
 
 class StrictMode(Flag):
-    NoStrict = auto()
-    Strict = auto()
-    All = NoStrict | Strict
+    NO_STRICT = auto()
+    STRICT = auto()
+    ALL = NO_STRICT | STRICT
 
 
 @dataclass
 class TestCase:
     """
     Source code and all metadata provided in a test262 test case.
+    For details about these metadata, see
+    https://chromium.googlesource.com/external/github.com/tc39/test262/+/HEAD/CONTRIBUTING.md
     """
 
     source: str
+    """Preprocessed source code."""
     includes: List[str] = field(default_factory=list)
-    strict_mode: StrictMode = StrictMode.NoStrict
+    """
+    A list of files in the test262/harness/ directory that needs to be 
+    included to run the test. The content of these included files has been
+    prepended to the source field.
+    """
+    strict_mode: StrictMode = StrictMode.NO_STRICT
+    """Run the test in strict or/and non-strict mode."""
     flags: List[str] = field(default_factory=list)
+    """
+    Flags specified in the test262 frontmatter, possible values are:
+    onlyStrict, noStrict, module, raw, async, generated, CanBlockIsFalse,
+    CanBlockIsTrue, non-deterministic.
+    """
     negative: OptNegative = None
+    """
+    This means the test is expected to throw an error of given type. The two
+    fields are (if not None):
+    - phase, potential values are:
+        - parse, meaning that the test must throw before execution
+        - resolution, throw when performing ES2015 module resolution
+        - runtime, thrown when executed the bytecode
+    - type, the concrete error type
+    """
     features: List[str] = field(default_factory=list)
 
 
@@ -41,11 +64,11 @@ def generate_test262_source(content: str, suite: PathT, filepath: PathT) -> Test
     test = parseTestRecord(content, filepath)
 
     flags = test.get("flags", [])
-    strict_mode = StrictMode.All
+    strict_mode = StrictMode.ALL
     if "onlyStrict" in flags:
-        strict_mode = StrictMode.Strict
+        strict_mode = StrictMode.STRICT
     elif "noStrict" in flags or "raw" in flags:
-        strict_mode = StrictMode.NoStrict
+        strict_mode = StrictMode.NO_STRICT
 
     negative = test.get("negative", None)
 
@@ -191,10 +214,15 @@ function v8pragma_NopSentinel() {
         full_src += f.read().decode("utf-8") + "\n"
     full_src += v8_harness
     full_src += content
-    return TestCase(source=full_src, strict_mode=StrictMode.NoStrict)
+    return TestCase(source=full_src, strict_mode=StrictMode.NO_STRICT)
 
 
 def generate_source(content: str, suite: str, filepath: str) -> TestCase:
+    """
+    Preprocess the test code for different testsuites, return the preprocessed
+    source and metadata for it (e.g., strict mode, flags).
+    """
+
     if "test262" in suite:
         return generate_test262_source(content, suite, filepath)
     if "mjsunit" in suite:
