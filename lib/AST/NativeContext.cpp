@@ -114,7 +114,7 @@ NativeContext::~NativeContext() = default;
 NativeSignature *NativeContext::getSignature(
     NativeCType result,
     llvh::ArrayRef<NativeCType> params) {
-  return signatures_.getOrEmplaceWithNew(result, params).first;
+  return signatures_.getOrEmplace(result, params).first;
 }
 
 NativeExtern *NativeContext::getExtern(

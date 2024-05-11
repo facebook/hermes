@@ -12,8 +12,22 @@
 
 namespace hermes {
 
+/// Default creator for elements in the OwningFoldingSet, which constructs
+/// elements with new.
+template <typename T>
+class OwningFoldingSetDefaultCreator {
+ public:
+  template <typename... Args>
+  static T *create(Args &&...args) {
+    return new T(std::forward<Args>(args)...);
+  }
+};
+
 /// A FoldingSet that owns its entries and deletes them when it is destroyed.
-template <typename T, class Deleter = std::default_delete<T>>
+template <
+    typename T,
+    typename Creator = OwningFoldingSetDefaultCreator<T>,
+    class Deleter = std::default_delete<T>>
 class OwningFoldingSet {
   llvh::FoldingSet<T> set_;
 
@@ -57,12 +71,12 @@ class OwningFoldingSet {
   /// for types where the constructor parameters can be passed to a static
   /// method \c T::Profile() in the same order.
   /// The new node is created using
-  /// <code>new T(std::forward<Args>(args)...)</code>.
+  /// <code>Creator::create(std::forward<Args>(args)...)</code>.
   ///
   /// \return a pair of the pointer to the node and a boolean indicating whether
   ///     a new node was inserted.
   template <typename... Args>
-  std::pair<T *, bool> getOrEmplaceWithNew(Args &&...args) {
+  std::pair<T *, bool> getOrEmplace(Args &&...args) {
     llvh::FoldingSetNodeID ID;
     T::Profile(ID, std::forward<Args>(args)...);
     void *insertPos = nullptr;
@@ -70,7 +84,8 @@ class OwningFoldingSet {
       return {v, false};
     return {
         InsertNode(
-            std::unique_ptr<T, Deleter>(new T(std::forward<Args>(args)...)),
+            std::unique_ptr<T, Deleter>(
+                Creator::create(std::forward<Args>(args)...)),
             insertPos),
         true};
   }

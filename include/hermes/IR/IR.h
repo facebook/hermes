@@ -825,6 +825,18 @@ class Value {
   }
 };
 
+/// Utility class to create elements that are subclasses of Value in the
+/// folding set. This is necessary because calling new on a type requires
+/// access to its deleter when exceptions are enabled, but the deleter of
+/// Value is private.
+template <typename T>
+struct ValueCreator {
+  template <typename... Args>
+  static T *create(Args &&...args) {
+    return new T(std::forward<Args>(args)...);
+  }
+};
+
 /// Deleter for Values.
 struct ValueDeleter {
   void operator()(Value *V) {
@@ -2206,13 +2218,16 @@ class Module : public Value {
 
   // Uniqued values.
 
-  OwningFoldingSet<LiteralNumber, ValueDeleter> literalNumbers_{};
-  OwningFoldingSet<LiteralBigInt, ValueDeleter> literalBigInts_{};
-  OwningFoldingSet<LiteralString, ValueDeleter> literalStrings_{};
-  OwningFoldingSet<GlobalObjectProperty, ValueDeleter> globalProperties_{};
-  OwningFoldingSet<LiteralIRType, ValueDeleter> literalIRTypes_{};
-  OwningFoldingSet<LiteralNativeSignature, ValueDeleter> nativeSignatures_{};
-  OwningFoldingSet<LiteralNativeExtern, ValueDeleter> nativeExterns_{};
+  template <typename T>
+  using ValueOFS = OwningFoldingSet<T, ValueCreator<T>, ValueDeleter>;
+
+  ValueOFS<LiteralNumber> literalNumbers_{};
+  ValueOFS<LiteralBigInt> literalBigInts_{};
+  ValueOFS<LiteralString> literalStrings_{};
+  ValueOFS<GlobalObjectProperty> globalProperties_{};
+  ValueOFS<LiteralIRType> literalIRTypes_{};
+  ValueOFS<LiteralNativeSignature> nativeSignatures_{};
+  ValueOFS<LiteralNativeExtern> nativeExterns_{};
 
   /// Map from an identifier to a number indicating how many times it has been
   /// used. This allows to construct unique internal names derived from regular
