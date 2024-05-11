@@ -84,6 +84,120 @@ async def run(
     return None
 
 
+async def compile_with_args(
+    test_name: str,
+    expect_compile_failure: bool,
+    hermesc_exe: PathT,
+    args: List[str],
+) -> Optional[TestCaseResult]:
+    """
+    Run hermesc with given arguments.
+
+    Returns:
+    None, if the compilation is successful, or the compilation throws as
+        expected.
+    TestCaseResult, if the compilation fails (and it's not expected).
+    """
+
+    proc = await create_subprocess_exec(
+        hermesc_exe,
+        *args,
+        stderr=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+    )
+    stdout, stderr = (None, None)
+    try:
+        (stdout, stderr) = await wait_for(proc.communicate(), timeout=TIMEOUT_COMPILER)
+    except TimeoutError:
+        msg = f"FAIL: Compilation timed out, args: {args}"
+        proc.kill()
+        return TestCaseResult(test_name, TestResultCode.COMPILE_TIMEOUT, msg)
+
+    output = ""
+    if stdout:
+        output += f"stdout:\n {stdout.decode('utf-8')}"
+    if stderr:
+        output += f"stderr:\n {stderr.decode('utf-8')}"
+
+    # Check if the compilation succeeded.
+    if proc.returncode:
+        # If compilation failed and it's not expected, consider it a failure.
+        if not expect_compile_failure:
+            msg = f"FAIL: Compilation failed with command: {args}"
+            return TestCaseResult(test_name, TestResultCode.COMPILE_FAILED, msg, output)
+    else:
+        # If the compliation succeeded but a compilation failure is expected,
+        # it's also considered a failure.
+        if expect_compile_failure:
+            msg = "FAIL: Compilation failure expected on with Hermes"
+            return TestCaseResult(test_name, TestResultCode.COMPILE_FAILED, msg, output)
+
+    return None
+
+
+async def compile_and_run_single(
+    test_name: str,
+    js_source_file: PathT,
+    strict_mode: StrictMode,
+    binary_directory: PathT,
+    negative: OptNegative,
+    disable_handle_san: bool,
+    extra_compile_vm_args: Optional[ExtraCompileVMArgs] = None,
+) -> Optional[TestCaseResult]:
+    """
+    Compile and run the given source file, return None if it's passed,
+    otherwise, return the corresponding TestCaseResult.
+    """
+
+    base_file_name = os.path.basename(js_source_file)
+    file_to_run = f"{js_source_file}.out"
+    args = [
+        str(js_source_file),
+        "-test262",
+        "-emit-binary",
+        "-fno-static-builtins",
+        "-out",
+        file_to_run,
+    ]
+
+    if extra_compile_vm_args:
+        args += extra_compile_vm_args.compile_args
+
+    if StrictMode.STRICT in strict_mode:
+        args.append("-strict")
+    else:
+        args.append("-non-strict")
+
+    expected_failure_phase = negative["phase"] if negative else ""
+    # Whether compilation is expected to fail.
+    expect_compile_failure = expected_failure_phase == "parse"
+    hermesc_exe = os.path.join(binary_directory, "hermesc")
+
+    # For now, always run without optimization.
+    opt_level = "-O0"
+    # If compiling failed (not as expected), return the result immediately.
+    if unexpected_compile_result := await compile_with_args(
+        test_name, expect_compile_failure, hermesc_exe, args + [opt_level]
+    ):
+        return unexpected_compile_result
+
+    # If compilation failure is not expected, we should have the bytecode
+    # ready to run.
+    if not expect_compile_failure:
+        # If run failed (not as expected), return it immediately
+        if run_result := await run(
+            test_name,
+            base_file_name,
+            binary_directory,
+            file_to_run,
+            expected_failure_phase,
+            disable_handle_san,
+            extra_compile_vm_args,
+        ):
+            return run_result
+    return None
+
+
 async def compile_and_run(
     test_name: str,
     js_source_files: List[PathT],
@@ -97,78 +211,19 @@ async def compile_and_run(
     Run the generated source files with async subprocess and return the
     result.
     """
+
     for js_source_file in js_source_files:
-        run_vm = True
-        base_file_name = os.path.basename(js_source_file)
-        file_to_run = f"{js_source_file}.out"
-        args = [
-            str(js_source_file),
-            "-test262",
-            "-emit-binary",
-            "-fno-static-builtins",
-            "-out",
-            file_to_run,
-        ]
-
-        if extra_compile_vm_args:
-            args += extra_compile_vm_args.compile_args
-
-        args.append("-O0")
-        if StrictMode.STRICT in strict_mode:
-            args.append("-strict")
-        else:
-            args.append("-non-strict")
-
-        expected_failure_phase = negative["phase"] if negative else ""
-        hermesc_exe = os.path.join(binary_directory, "hermesc")
-        proc = await create_subprocess_exec(
-            hermesc_exe, *args, stderr=subprocess.PIPE, stdout=subprocess.PIPE
-        )
-        stdout, stderr = (None, None)
-        try:
-            (stdout, stderr) = await wait_for(
-                proc.communicate(), timeout=TIMEOUT_COMPILER
-            )
-        except TimeoutError:
-            msg = f"FAIL: Compilation timed out on {js_source_file}"
-            proc.kill()
-            return TestCaseResult(test_name, TestResultCode.COMPILE_TIMEOUT, msg)
-
-        output = ""
-        if stdout:
-            output += f"stdout:\n {stdout.decode('utf-8')}"
-        if stderr:
-            output += f"stderr:\n {stderr.decode('utf-8')}"
-
-        # Check if the compilation succeeded
-        # There is no CalledProcessError in asyncio, so explicitly check the
-        # return code.
-        if proc.returncode:
-            run_vm = False
-            if expected_failure_phase != "parse":
-                msg = f"FAIL: Compiling failed with command: {args}"
-                return TestCaseResult(
-                    test_name, TestResultCode.COMPILE_FAILED, msg, output
-                )
-        else:
-            if expected_failure_phase == "parse":
-                msg = f"FAIL: Compilation failure expected on {base_file_name} with Hermes"
-                return TestCaseResult(
-                    test_name, TestResultCode.COMPILE_FAILED, msg, output
-                )
-
-        if run_vm:
-            # If run failed, return it immediately
-            if run_result := await run(
-                test_name,
-                base_file_name,
-                binary_directory,
-                file_to_run,
-                expected_failure_phase,
-                disable_handle_san,
-                extra_compile_vm_args,
-            ):
-                return run_result
+        # If any file is not passed, return the result immediately.
+        if unexpected_result := await compile_and_run_single(
+            test_name,
+            js_source_file,
+            strict_mode,
+            binary_directory,
+            negative,
+            disable_handle_san,
+            extra_compile_vm_args,
+        ):
+            return unexpected_result
 
     # All files in js_source_files passed
     return TestCaseResult(test_name, TestResultCode.TEST_PASSED)
