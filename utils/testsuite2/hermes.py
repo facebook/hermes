@@ -71,7 +71,12 @@ async def run(
 
     # Check if the run succeeded
     if proc.returncode:
-        if expected_failure_phase == "" or expected_failure_phase != "runtime":
+        # Negative return code means that the subprocess is terminated with a
+        # system signal. See more details in compile_and_run().
+        if proc.returncode < 0:
+            msg = f"FAIL: Execution terminated with {proc.returncode}"
+            return TestCaseResult(test_name, TestResultCode.EXECUTE_FAILED, msg, output)
+        elif expected_failure_phase == "" or expected_failure_phase != "runtime":
             msg = f"FAIL: Execution of {base_file_name} threw unexpected error"
             return TestCaseResult(test_name, TestResultCode.EXECUTE_FAILED, msg, output)
         else:
@@ -121,6 +126,24 @@ async def compile_with_args(
 
     # Check if the compilation succeeded.
     if proc.returncode:
+        run_vm = False
+        # Negative return code means that the subprocess is terminated
+        # by a system signal (e.g., -11 for SIGSEGV).
+        # Hermes may exit with return code:
+        # - 0 for success
+        # - 1-8 for compiler failure (represented in the CompileStatus
+        #   enum)
+        # - -1 (converted to 255) in HVM when failed to open file
+        # - 1 for all other failures (e.g., used in hermes_fatal())
+        # We want to treat terminated exeuction differently to capture
+        # bugs like memory corruption.
+        if proc.returncode < 0:
+            msg = f"FAIL: Execution terminated with {proc.returncode}"
+            return (
+                TestCaseResult(test_name, TestResultCode.COMPILE_FAILED, msg, output),
+                False,
+            )
+
         # If compilation failed and it's not expected, consider it a failure.
         if not expect_compile_failure:
             msg = f"FAIL: Compilation failed with command: {args}"
