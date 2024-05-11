@@ -518,6 +518,11 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
             timeFromStart, SynthTrace::decode(objId->str()), retval->c_str());
         break;
       }
+      case RecordType::Global: {
+        trace.emplace_back<SynthTrace::GlobalRecord>(
+            timeFromStart, objID->getValue());
+        break;
+      }
     }
   }
   return trace;

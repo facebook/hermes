@@ -198,6 +198,13 @@ bool TracingRuntime::drainMicrotasks(int maxMicrotasksHint) {
   return res;
 };
 
+jsi::Object TracingRuntime::global() {
+  auto obj = RD::global();
+  trace_.emplace_back<SynthTrace::GlobalRecord>(
+      getTimeSinceStart(), getUniqueID(obj));
+  return obj;
+}
+
 jsi::Object TracingRuntime::createObject() {
   auto obj = RD::createObject();
   trace_.emplace_back<SynthTrace::CreateObjectRecord>(

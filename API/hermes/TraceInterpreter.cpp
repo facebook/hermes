@@ -1051,6 +1051,12 @@ void TraceInterpreter::executeRecords() {
           }
           break;
         }
+        case RecordType::Global: {
+          const auto &record =
+              static_cast<const SynthTrace::GlobalRecord &>(*rec);
+          addToObjectMap(record.objID_, rt_.global(), currentExecIndex);
+          break;
+        }
       }
     } catch (const std::exception &e) {
       crashOnException(e, currentExecIndex);
