@@ -22,6 +22,10 @@
       ],
       "comment": "Uses 'with'"
     },
+    {
+      "paths": ["CVEs/CVE-2017-2446.js"],
+      "comment": ["Use special function properties such as '.caller'."]
+    },
     "test262/test/language/identifiers/vals-rus-alpha-lower-via-escape-hex4.js",
     "test262/test/language/identifiers/vals-rus-alpha-upper-via-escape-hex4.js",
     "test262/test/language/white-space/mongolian-vowel-separator.js",

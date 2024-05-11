@@ -84,7 +84,7 @@ def generate_test262_source(content: str, suite: PathT, filepath: PathT) -> Test
             include_path = os.path.join(suite, "harness", include)
             with open(include_path, "rb") as f:
                 full_src += f.read().decode("utf-8") + "\n"
-    full_src += content
+    full_src += test["src"]
 
     return TestCase(
         source=full_src,
@@ -219,15 +219,32 @@ function v8pragma_NopSentinel() {
     return TestCase(source=full_src, strict_mode=StrictMode.NO_STRICT)
 
 
-def generate_source(content: str, suite: str, filepath: str) -> TestCase:
+def generate_cves_source(content: str, test_name: str) -> TestCase:
+    """
+    Read potential metadata in CVEs tests (currently only negative field).
+    """
+
+    # Unlike test262, we don't want to print warnings of missing
+    # header and frontmatter since most tests under CVEs do not have them.
+    test = parseTestRecord(content, test_name, False)
+    # A few CVEs tests use the same style metadata as test262
+    negative = test.get("negative", None)
+    return TestCase(
+        source=test["src"], strict_mode=StrictMode.NO_STRICT, negative=negative
+    )
+
+
+def generate_source(content: str, suite: str, test_name: str) -> TestCase:
     """
     Preprocess the test code for different testsuites, return the preprocessed
     source and metadata for it (e.g., strict mode, flags).
     """
 
     if "test262" in suite:
-        return generate_test262_source(content, suite, filepath)
+        return generate_test262_source(content, suite, test_name)
     if "mjsunit" in suite:
         return generate_mjsunit_source(content, suite)
+    if "CVEs" in suite:
+        return generate_cves_source(content, test_name)
 
     raise NotImplementedError("Other test suite not supported yet")

@@ -59,7 +59,7 @@ class Suite(ABC):
         elif "mjsunit/" in path:
             return MjsunitSuite(get_suite_directory("mjsunit"))
         elif "CVEs/" in path:
-            pass
+            return CvesSuite(get_suite_directory("CVEs"))
         elif "esprima/" in path:
             return EsprimaAstCheckSuite(get_suite_directory("esprima"))
         elif "flow/" in path:
@@ -107,6 +107,11 @@ class Suite(ABC):
 
 
 class Test262Suite(Suite):
+    """
+    Support running test262 testsuite. This is also used as base for the CVEs
+    testsuite since a few tests there use the same style frontmatter as test262.
+    """
+
     @property
     def name(self) -> str:
         return "test262"
@@ -212,7 +217,22 @@ class Test262Suite(Suite):
         )
 
 
+class CvesSuite(Test262Suite):
+    """
+    Support running the CVE testsuite.
+    """
+
+    @property
+    def name(self) -> str:
+        return "CVEs"
+
+
 class MjsunitSuite(Suite):
+    """
+    Support running mjsunit testsuite. This can be used to run any testsuite
+    that requires running source directly and checking compiler/runtime error.
+    """
+
     @property
     def name(self) -> str:
         return "mjsunit"

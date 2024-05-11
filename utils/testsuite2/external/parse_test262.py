@@ -68,7 +68,12 @@ def findAttrs(src: str) -> tuple[Optional[str], Optional[str]]:
     return (match.group(0), match.group(1).strip())
 
 
-def parseTestRecord(src: str, test_name: str) -> dict:
+def print_verbose(s: str, verbose: bool) -> None:
+    if verbose:
+        print(s)
+
+
+def parseTestRecord(src: str, test_name: str, verbose: bool = True) -> dict:
     # Find the license block.
     header = findLicense(src)
 
@@ -77,7 +82,7 @@ def parseTestRecord(src: str, test_name: str) -> dict:
 
     # YAML frontmatter is required for all tests.
     if frontmatter is None:
-        print(f"Missing frontmatter: {test_name}")
+        print_verbose(f"Missing frontmatter: {test_name}", verbose)
 
     # The license shuold be placed before the frontmatter and there shouldn't be
     # any extra content between the license and the frontmatter.
@@ -85,7 +90,7 @@ def parseTestRecord(src: str, test_name: str) -> dict:
         headerIdx = src.index(header)
         frontmatterIdx = src.index(frontmatter)
         if headerIdx > frontmatterIdx:
-            print(f"Unexpected license after frontmatter: {test_name}")
+            print_verbose(f"Unexpected license after frontmatter: {test_name}", verbose)
 
         # Search for any extra test content, but ignore whitespace only or comment lines.
         extra = src[headerIdx + len(header) : frontmatterIdx]
@@ -93,8 +98,9 @@ def parseTestRecord(src: str, test_name: str) -> dict:
             line.strip() and not line.lstrip().startswith("//")
             for line in extra.split("\n")
         ):
-            print(
-                f"Unexpected test content between license and frontmatter: {test_name}"
+            print_verbose(
+                f"Unexpected test content between license and frontmatter: {test_name}",
+                verbose,
             )
 
     # Remove the license and YAML parts from the actual test content.
@@ -113,9 +119,9 @@ def parseTestRecord(src: str, test_name: str) -> dict:
     # Report if the license block is missing in non-generated tests.
     if (
         header is None
-        and "generated" not in testRecord["flags"]
+        and "generated" not in testRecord.get("flags", "")
         and "hashbang" not in test_name
     ):
-        print(f"No license found in: {test_name}")
+        print_verbose(f"No license found in: {test_name}", verbose)
 
     return testRecord
