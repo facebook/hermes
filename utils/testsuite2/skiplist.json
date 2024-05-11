@@ -1803,6 +1803,8 @@
         "flow/class_properties/migrated_0026.js",
         "flow/class_properties/static_annotated_no_types.js",
         "flow/class_properties/static_with_params_no_types.js",
+        "flow/private_class_properties/getter_duplicate.js",
+        "flow/private_class_properties/setter_duplicate.js",
         "flow/components/component_error.js",
         "flow/enums/declare-enum-option-off.js",
         "flow/nullish_coalescing/missing-plugin.js",
