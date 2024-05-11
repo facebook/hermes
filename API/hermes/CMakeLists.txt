@@ -7,10 +7,6 @@
 add_hermes_library(compileJS CompileJS.cpp LINK_LIBS hermesPublic hermesHBCBackend)
 
 if(HERMES_ENABLE_DEBUGGER)
-  if(HERMES_ENABLE_TOOLS AND NOT WIN32)
-    add_subdirectory(inspector/chrome/cli)
-  endif()
-
   # Some inspector sources need to be built without RTTI because they consume
   # internal data structures compiled without RTTI.
   set(INSPECTOR_NO_EH_RTTI_SOURCES
