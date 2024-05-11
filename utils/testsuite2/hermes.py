@@ -5,6 +5,7 @@
 
 import os
 import sys
+import tempfile
 from asyncio import create_subprocess_exec, subprocess, TimeoutError, wait_for
 from dataclasses import dataclass, field
 from typing import List, Optional
@@ -171,3 +172,92 @@ async def compile_and_run(
 
     # All files in js_source_files passed
     return TestCaseResult(test_name, TestResultCode.TEST_PASSED)
+
+
+async def run_hermes_simple(
+    hermes_exe: PathT, test_name: str, args: List[str]
+) -> TestCaseResult:
+    """
+    Simply invoke hermes on a JS file with given arguments and return the
+    output. This is unlike the above `compile_and_run()` function, which does
+    various checking such as compilation failure and runtim failure.
+    """
+    proc = await create_subprocess_exec(
+        hermes_exe,
+        *args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    stdout, stderr = (None, None)
+    try:
+        (stdout, stderr) = await wait_for(proc.communicate(), timeout=TIMEOUT_COMPILER)
+    except TimeoutError:
+        proc.kill()
+        msg = "FAIL: Hermes timeout"
+        details = f"Command: {' '.join(args)}"
+        return TestCaseResult(test_name, TestResultCode.COMPILE_TIMEOUT, msg, details)
+
+    if proc.returncode:
+        msg = "FAIL: Hermes failed to run"
+        details = f"Command: {' '.join(args)}\n"
+        details += f"Return code: {proc.returncode}\n"
+        details += f"stdout:\n {stdout.decode('utf-8')}"
+        details += f"stderr:\n {stderr.decode('utf-8')}"
+        return TestCaseResult(test_name, TestResultCode.TEST_FAILED, msg, details)
+
+    # Return the evaluated output (could be JS execution result or dumped AST).
+    return TestCaseResult(
+        test_name, TestResultCode.TEST_PASSED, "PASS: ", stdout.decode("utf-8").strip()
+    )
+
+
+async def generate_ast(
+    test_name: str,
+    test_file: PathT,
+    binary_path: PathT,
+    is_flow: bool,
+    transformed: bool,
+) -> TestCaseResult:
+    """
+    Generate the AST for given source file.
+
+    Returns:
+    (TestResultCode.TEST_PASSED, JSON) if success.
+    (TestResultCode.TEST_FAILED, message) if Hermes failed.
+    (TestResultCode.COMPILE_TIMEOUT, message) if Hermes timeout.
+    """
+    args = []
+    if is_flow:
+        args.append("-parse-flow")
+        args.append("-Xparse-component-syntax")
+        args.append("-parse-jsx")
+        args.append("-Xinclude-empty-ast-nodes")
+    elif "JSX" in test_file:
+        args.append("--parse-jsx")
+    args.append("-dump-transformed-ast" if transformed else "-dump-ast")
+    hermes_exe = os.path.join(binary_path, "hermes")
+
+    # ".source.js" files has the format of "var source = \"...\";", and
+    # the value of the 'source' variable should be the input to the parser.
+    # So we evaluate the source with Hermes first and then parse the output.
+    if test_file.endswith(".source.js"):
+        with open(test_file, "rb") as f, tempfile.NamedTemporaryFile() as to_evaluate:
+            # append to the original source to print the 'source' variable.
+            for line in f:
+                to_evaluate.write(line)
+            to_evaluate.write(b"print(source);")
+            to_evaluate.flush()
+            with tempfile.NamedTemporaryFile() as evaluated:
+                # evaluate the source to get the actual test input.
+                eval_args = [to_evaluate.name]
+                result = await run_hermes_simple(hermes_exe, test_name, eval_args)
+                if result.code != TestResultCode.TEST_PASSED:
+                    return result
+                # get rid of the newline added by print().
+                evaluated.write(result.output.encode("utf-8"))
+                evaluated.flush()
+                # run the test through Hermes parser.
+                return await run_hermes_simple(
+                    hermes_exe, test_name, args + [evaluated.name]
+                )
+    return await run_hermes_simple(hermes_exe, test_name, args + [test_file])
