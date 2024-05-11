@@ -158,6 +158,7 @@ async def run_test(
     work_dir: PathT,
     binary_path: PathT,
     skipped_paths_features: SkippedPathsOrFeatures,
+    test_skiplist: bool,
 ) -> TestCaseResult:
     """
     Load and preprocess the test file, check if it's skipped. If not, run
@@ -189,16 +190,17 @@ async def run_test(
     base_name_no_ext = os.path.splitext(base_name)[0]
 
     # Check if we need to skip this test due to unsupported features.
-    for f in test_case.features:
-        if skip_result := skipped_paths_features.try_skip(
-            f,
-            [
-                SkipCategory.UNSUPPORTED_FEATURES,
-                SkipCategory.PERMANENT_UNSUPPORTED_FEATURES,
-            ],
-            rel_test_path,
-        ):
-            return skip_result
+    if not test_skiplist:
+        for f in test_case.features:
+            if skip_result := skipped_paths_features.try_skip(
+                f,
+                [
+                    SkipCategory.UNSUPPORTED_FEATURES,
+                    SkipCategory.PERMANENT_UNSUPPORTED_FEATURES,
+                ],
+                rel_test_path,
+            ):
+                return skip_result
 
     tmp_dir: PathT = os.path.join(
         work_dir, os.path.dirname(os.path.relpath(test_file, tests_home))
@@ -308,6 +310,8 @@ async def run(
     skipped_paths_features: SkippedPathsOrFeatures,
     work_dir: PathT,
     n_jobs: int,
+    test_skiplist: bool,
+    test_intl: bool,
     verbose: bool,
 ) -> None:
     """
@@ -351,20 +355,22 @@ async def run(
         rel_test_path = os.path.relpath(test_file, suite_path)
 
         # Check if this file should be skipped.
-        if test_result := skipped_paths_features.try_skip(
-            test_file,
-            [SkipCategory.SKIP_LIST, SkipCategory.PERMANENT_SKIP_LIST],
-            rel_test_path,
-        ):
-            pd.update(test_result)
-            stats[test_result.code] += 1
-            continue
-        elif test_result := skipped_paths_features.try_skip(
-            test_file, [SkipCategory.INTL_TESTS], rel_test_path
-        ):
-            pd.update(test_result)
-            stats[TestResultCode.TEST_SKIPPED] += 1
-            continue
+        if not test_skiplist:
+            if test_result := skipped_paths_features.try_skip(
+                test_file,
+                [SkipCategory.SKIP_LIST, SkipCategory.PERMANENT_SKIP_LIST],
+                rel_test_path,
+            ):
+                pd.update(test_result)
+                stats[test_result.code] += 1
+                continue
+        if not test_intl:
+            if test_result := skipped_paths_features.try_skip(
+                test_file, [SkipCategory.INTL_TESTS], rel_test_path
+            ):
+                pd.update(test_result)
+                stats[TestResultCode.TEST_SKIPPED] += 1
+                continue
 
         tasks.append(
             run_test(
@@ -374,6 +380,7 @@ async def run(
                 work_dir,
                 binary_path,
                 skipped_paths_features,
+                test_skiplist,
             )
         )
 

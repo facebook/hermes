@@ -44,6 +44,18 @@ def create_parser():
         help="Number of tests to run simultaneously, default is number of logical CPUs",
     )
     test262_parser.add_argument(
+        "--test-skiplist",
+        dest="test_skiplist",
+        action="store_true",
+        help="Run tests in the skiplist and remove them from the list if passed",
+    )
+    test262_parser.add_argument(
+        "--test-intl",
+        dest="test_intl",
+        action="store_true",
+        help="Run supported Intl tests",
+    )
+    test262_parser.add_argument(
         "--work-dir",
         dest="work_dir",
         default=None,
@@ -101,6 +113,8 @@ async def main():
             skipped_paths_features,
             work_dir,
             args.n_jobs,
+            args.test_skiplist,
+            args.test_intl,
             args.verbose,
         )
 
