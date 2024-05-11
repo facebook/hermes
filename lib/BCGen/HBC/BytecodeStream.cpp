@@ -12,7 +12,7 @@
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/BCGen/HBC/DebugInfo.h"
 #include "hermes/BCGen/HBC/StreamVector.h"
-#include "hermes/Public/Buffer.h"
+#include "hermes/Support/Buffer.h"
 
 namespace hermes {
 namespace hbc {

@@ -10,7 +10,7 @@
 
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/BCGen/HBC/BytecodeInstructionGenerator.h"
-#include "hermes/Public/Buffer.h"
+#include "hermes/Support/Buffer.h"
 
 #include <memory>
 #include <vector>

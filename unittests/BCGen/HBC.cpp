@@ -16,8 +16,8 @@
 #include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
-#include "hermes/Public/Buffer.h"
 #include "hermes/SourceMap/SourceMapGenerator.h"
+#include "hermes/Support/Buffer.h"
 
 #include "TestHelpers.h"
 
