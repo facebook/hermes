@@ -1240,21 +1240,28 @@ class SynthTrace {
   /// returned by the GetNativePropertyNames query.
   struct GetNativePropertyNamesReturnRecord final : public Record {
     static constexpr RecordType type{RecordType::GetNativePropertyNamesReturn};
-    // TODO: T183833906 Change this to return a vector of PropNameIDs.
-    /// Returned list of property names that are converted to UTF-8 strings from
-    /// PropNameID.
-    const std::vector<std::string> propNames_;
+
+    /// Returned list of property names
+    const std::vector<TraceValue> propNameIDs_;
 
     explicit GetNativePropertyNamesReturnRecord(
         TimeSinceStart time,
-        const std::vector<std::string> &propNames)
-        : Record(time), propNames_(propNames) {}
+        const std::vector<TraceValue> &propNameIDs)
+        : Record(time), propNameIDs_(propNameIDs) {}
 
     RecordType getType() const override {
       return type;
     }
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
+
+    std::vector<ObjectID> uses() const override {
+      auto uses = Record::uses();
+      for (const auto &val : propNameIDs_) {
+        pushIfTrackedValue(val, uses);
+      }
+      return uses;
+    }
 
     bool operator==(const Record &that) const override;
   };

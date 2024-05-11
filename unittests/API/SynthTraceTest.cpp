@@ -1416,6 +1416,82 @@ TEST_F(SynthTraceReplayTest, SymbolToString) {
   replay();
 }
 
+/// We were converting to std::string from String and Symbol using utf8
+/// conversion when we trace GetPropertyNames call. With that, we couldn't
+/// properly replay it if the original string contained non-reversible UTF16
+/// characters. This test is to make sure that we can replay it properly.
+TEST_F(SynthTraceReplayTest, HostObjectGetPropertyNamesWithUtf16) {
+  // HostObject for testing.
+  class TestHostObject : public jsi::HostObject {
+    jsi::Value string_;
+
+   public:
+    TestHostObject(jsi::Value string) : string_(std::move(string)) {}
+
+    std::vector<jsi::PropNameID> getPropertyNames(jsi::Runtime &rt) override {
+      std::vector<jsi::PropNameID> ret;
+      ret.push_back(jsi::PropNameID::forString(rt, string_.getString(rt)));
+      return ret;
+    }
+  };
+
+  //
+  // Tracing
+  //
+  {
+    auto &rt = *traceRt;
+
+    eval(rt, "");
+    const jsi::Value str = eval(rt, R"(
+      var str = "\uDC00";
+      str;
+    )");
+    ASSERT_TRUE(str.isString());
+
+    auto o = jsi::Object::createFromHostObject(
+        rt, std::make_shared<TestHostObject>(jsi::Value(rt, str)));
+
+    // Put "o" in global scope.
+    rt.global().setProperty(rt, "o", o);
+
+    // Store the result of Object.getOwnPropertyNames(o) to "props" so that we
+    // can use for verification
+    eval(rt, "var props = Object.getOwnPropertyNames(o);");
+
+    // Below verification is rather checking that TestHostObject is working as
+    // expected.
+    auto props = eval(rt, "props;");
+    ASSERT_TRUE(props.isObject());
+    ASSERT_TRUE(props.asObject(rt).isArray(rt));
+    auto propsArray = props.asObject(rt).asArray(rt);
+    for (size_t i = 0; i < propsArray.size(rt); ++i) {
+      auto prop = propsArray.getValueAtIndex(rt, i);
+      ASSERT_TRUE(prop.isString());
+      ASSERT_TRUE(
+          jsi::String::strictEquals(rt, prop.getString(rt), str.getString(rt)));
+    }
+  }
+  replay();
+  {
+    auto &rt = *replayRt;
+
+    // We replayed the code above, that means we should have "str" and "props"
+    // in global scope.
+    auto str = eval(rt, "str;");
+    auto props = eval(rt, "props;");
+    EXPECT_TRUE(str.isString());
+    EXPECT_TRUE(props.isObject());
+    EXPECT_TRUE(props.asObject(rt).isArray(rt));
+    auto propsArray = props.asObject(rt).asArray(rt);
+    for (size_t i = 0; i < propsArray.size(rt); ++i) {
+      auto prop = propsArray.getValueAtIndex(rt, i);
+      EXPECT_TRUE(prop.isString());
+      EXPECT_TRUE(
+          jsi::String::strictEquals(rt, prop.getString(rt), str.getString(rt)));
+    }
+  }
+}
+
 TEST_F(SynthTraceReplayTest, HostObjectManipulation) {
   // HostObject for testing.
   // It allows to set either number or string property.

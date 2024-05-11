@@ -280,14 +280,16 @@ jsi::Object TracingRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
         ::hermes::hermes_fatal(
             "Exception happened in native code during trace");
       }
-      std::vector<std::string> names;
-      names.reserve(props.size());
+
+      std::vector<SynthTrace::TraceValue> propNameIDs;
+      propNameIDs.reserve(props.size());
       for (const jsi::PropNameID &prop : props) {
-        names.emplace_back(prop.utf8(rt));
+        propNameIDs.emplace_back(
+            SynthTrace::encodePropNameID(trt.getUniqueID(prop)));
       }
 
       trt.trace_.emplace_back<SynthTrace::GetNativePropertyNamesReturnRecord>(
-          trt.getTimeSinceStart(), names);
+          trt.getTimeSinceStart(), propNameIDs);
       return props;
     }
 
