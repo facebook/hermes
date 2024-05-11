@@ -14,7 +14,7 @@ namespace hermes {
 
 /// A FoldingSet that owns its entries and deletes them when it is destroyed.
 template <typename T, class Deleter = std::default_delete<T>>
-class OwningFoldingSet : Deleter {
+class OwningFoldingSet {
   llvh::FoldingSet<T> set_;
 
  public:
@@ -33,8 +33,9 @@ class OwningFoldingSet : Deleter {
     for (T &entry : set_)
       toDelete.push_back(&entry);
     set_.clear();
+    Deleter deleter;
     for (T *entry : toDelete)
-      Deleter::operator()(entry);
+      deleter(entry);
   }
 
   /// FindNodeOrInsertPos - Look up the node specified by ID.  If it exists,
