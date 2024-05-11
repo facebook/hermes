@@ -11,6 +11,7 @@ import shutil
 import tempfile
 from typing import Optional
 
+import skiplist
 import test262
 
 N_DEFAULT_CPU = 10
@@ -90,9 +91,17 @@ async def main():
             shutil.rmtree(work_dir)
         os.makedirs(work_dir, exist_ok=False)
 
+    skip_list_cfg_path = os.path.join(os.path.dirname(__file__), "skiplist.json")
+    skipped_paths_features = skiplist.SkippedPathsOrFeatures(skip_list_cfg_path)
+
     if args.subcommand == "test262":
         await test262.run(
-            args.paths, args.binary_path, work_dir, args.n_jobs, args.verbose
+            args.paths,
+            args.binary_path,
+            skipped_paths_features,
+            work_dir,
+            args.n_jobs,
+            args.verbose,
         )
 
 
