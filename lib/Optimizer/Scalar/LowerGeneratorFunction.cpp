@@ -316,9 +316,8 @@ void LowerToStateMachine::moveLocalsToOuter() {
         // transferred the parameters of the inner function to the outer
         // function. So we should also transfer copyRestArgs to the outer
         // function.
-        auto builtinIdx =
-            llvh::cast<LiteralNumber>(CBI->getCallee())->getValue();
-        if (builtinIdx == BuiltinMethod::HermesBuiltin_copyRestArgs) {
+        if (CBI->getBuiltinIndex() ==
+            BuiltinMethod::HermesBuiltin_copyRestArgs) {
           Variable *outerRestArgs = builder_.createVariable(
               getParentOuterScope_->getVariableScope(),
               CBI->getName(),
