@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional
 
-from hermes import compile_and_run
+from hermes import compile_and_run, ExtraCompileVMArgs
 from preprocess import generate_source, StrictMode
 from skiplist import SkipCategory, SkippedPathsOrFeatures
 from typing_defs import PathT
@@ -54,7 +54,7 @@ class Suite(ABC):
         if "test262/" in path:
             return Test262Suite(get_suite_directory("test262"))
         elif "mjsunit/" in path:
-            pass
+            return MjsunitSuite(get_suite_directory("mjsunit"))
         elif "CVEs/" in path:
             pass
         elif "esprima/" in path:
@@ -205,6 +205,49 @@ class Test262Suite(Suite):
             args.binary_directory,
             test_case.negative,
             disable_handle_san,
+        )
+
+
+class MjsunitSuite(Suite):
+    @property
+    def name(self) -> str:
+        return "mjsunit"
+
+    async def run_test(self, args: TestRunArgs) -> TestCaseResult:
+        # Compute a temporary path to store preprocessed test code.
+        base_name = os.path.basename(args.test_file)
+        base_name_no_ext = os.path.splitext(base_name)[0]
+        tmp_dir: PathT = os.path.join(
+            args.work_dir,
+            os.path.dirname(os.path.relpath(args.test_file, args.tests_home)),
+        )
+        os.makedirs(tmp_dir, exist_ok=True)
+        js_source = os.path.join(tmp_dir, f"{base_name_no_ext}_generated.js")
+
+        # Read the original test source, preprocess it and save the preprocessed
+        # code to the temporary path.
+        with open(args.test_file, "rb") as reader:
+            content = reader.read().decode("utf-8")
+        full_test_name = self.get_full_test_name(args.test_file)
+        test_case = generate_source(content, self.directory, full_test_name)
+        with open(js_source, "wb") as writer:
+            writer.write(test_case.source.encode("utf-8"))
+
+        # Run Hermes on the generated temporary JS file.
+        disable_handle_san = args.skipped_paths_features.should_skip_cat(
+            args.test_file, SkipCategory.HANDLESAN_SKIP_LIST
+        )
+        extra_compile_vm_args = ExtraCompileVMArgs(
+            compile_args=["-Xes6-class", "-Xenable-tdz"]
+        )
+        return await compile_and_run(
+            full_test_name,
+            [js_source],
+            test_case.strict_mode,
+            args.binary_directory,
+            test_case.negative,
+            disable_handle_san,
+            extra_compile_vm_args,
         )
 
 

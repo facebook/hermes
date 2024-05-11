@@ -203,6 +203,8 @@ function v8pragma_NopSentinel() {
         "%IsConcurrentRecompilationSupported": "builtin_false",
         "%_StringCharFromCode": "v8pragma_StringCharFromCode",
         "%_StringCharCodeAt": "v8pragma_StringCharCodeAt",
+        "%AbortJS": "throw new Error",
+        "%EnqueueMicrotask": "queueMicrotask",
     }
 
     for pragma, replacement in v8_pragmas.items():
