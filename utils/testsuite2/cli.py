@@ -99,6 +99,7 @@ def print_stats(stats: dict):
         + stats[TestResultCode.COMPILE_TIMEOUT]
         + stats[TestResultCode.EXECUTE_FAILED]
         + stats[TestResultCode.EXECUTE_TIMEOUT]
+        + stats[TestResultCode.TEST_FAILED]
     )
     executed = (
         sum(stats.values())
@@ -134,6 +135,7 @@ def print_stats(stats: dict):
     print("| Compile timeout      | {:>8} |".format(stats[TestResultCode.COMPILE_TIMEOUT]))
     print("| Execute fail         | {:>8} |".format(stats[TestResultCode.EXECUTE_FAILED]))
     print("| Execute timeout      | {:>8} |".format(stats[TestResultCode.EXECUTE_TIMEOUT]))
+    print("| Other                | {:>8} |".format(stats[TestResultCode.TEST_FAILED]))
     print("-----------------------------------")
     # fmt: on
 
@@ -152,6 +154,7 @@ def print_failed_tests(tests: dict):
     print_test_list(TestResultCode.COMPILE_TIMEOUT, "Compile timeout:")
     print_test_list(TestResultCode.EXECUTE_FAILED, "Execute failed:")
     print_test_list(TestResultCode.EXECUTE_TIMEOUT, "Execute timeout:")
+    print_test_list(TestResultCode.TEST_FAILED, "Other test failure:")
 
 
 async def run(

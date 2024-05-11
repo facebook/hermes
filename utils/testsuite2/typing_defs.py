@@ -3,7 +3,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import List, Optional, TypedDict, Union
+from __future__ import annotations
+
+from typing import Dict, List, Optional, TypedDict, Union
 
 
 # PathT = Union[str, bytes, os.PathLike]
@@ -42,3 +44,8 @@ class SkippedPathsOrFeaturesDict(TypedDict):
     unsupported_features: List[str]
     permant_unsupported_features: List[str]
     intl_tests: List[SkippedPathItem]
+
+
+# Use | with Python 3.10+
+# This is a recursive type, requiring support of type checker.
+JSON = Union[int, float, str, bool, List["JSON"], Dict[str, "JSON"], None]

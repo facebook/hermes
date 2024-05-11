@@ -17,6 +17,8 @@ from typing_defs import PathT
 @unique
 class TestResultCode(Enum):
     TEST_PASSED = auto()
+    TEST_FAILED = auto()
+    """Only use TEST_FAILED for unclassified failure, e.g., JSON error."""
     TEST_SKIPPED = auto()
     TEST_PERMANENTLY_SKIPPED = auto()
     COMPILE_FAILED = auto()
