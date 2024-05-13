@@ -126,7 +126,6 @@ async def compile_with_args(
 
     # Check if the compilation succeeded.
     if proc.returncode:
-        run_vm = False
         # Negative return code means that the subprocess is terminated
         # by a system signal (e.g., -11 for SIGSEGV).
         # Hermes may exit with return code:
@@ -139,10 +138,7 @@ async def compile_with_args(
         # bugs like memory corruption.
         if proc.returncode < 0:
             msg = f"FAIL: Execution terminated with {proc.returncode}"
-            return (
-                TestCaseResult(test_name, TestResultCode.COMPILE_FAILED, msg, output),
-                False,
-            )
+            return TestCaseResult(test_name, TestResultCode.COMPILE_FAILED, msg, output)
 
         # If compilation failed and it's not expected, consider it a failure.
         if not expect_compile_failure:
