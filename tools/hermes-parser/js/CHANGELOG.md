@@ -1,3 +1,8 @@
+## 0.21.1
+
+### `flow-api-translator`
+* Added support for translating `React.AbstractComponent` with 3 type arguments into TS. The third type argument containing render type information will be ignored.
+
 ## 0.21.0
 
 ### `hermes-parser`
