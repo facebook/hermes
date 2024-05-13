@@ -825,18 +825,6 @@ class Value {
   }
 };
 
-/// Utility class to create elements that are subclasses of Value in the
-/// folding set. This is necessary because calling new on a type requires
-/// access to its deleter when exceptions are enabled, but the deleter of
-/// Value is private.
-template <typename T>
-struct ValueCreator {
-  template <typename... Args>
-  static T *create(Args &&...args) {
-    return new T(std::forward<Args>(args)...);
-  }
-};
-
 /// Deleter for Values.
 struct ValueDeleter {
   void operator()(Value *V) {
@@ -2217,6 +2205,18 @@ class Module : public Value {
   EmptySentinel emptySentinel_{};
 
   // Uniqued values.
+
+  /// Utility class to create elements that are subclasses of Value in the
+  /// folding set. This is necessary because calling new on a type requires
+  /// access to its deleter when exceptions are enabled, but the deleter of
+  /// Value is private.
+  template <typename T>
+  struct ValueCreator {
+    template <typename... Args>
+    static T *create(Args &&...args) {
+      return new T(std::forward<Args>(args)...);
+    }
+  };
 
   template <typename T>
   using ValueOFS = OwningFoldingSet<T, ValueCreator<T>, ValueDeleter>;
