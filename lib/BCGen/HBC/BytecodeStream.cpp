@@ -83,10 +83,6 @@ class BytecodeSerializer {
 
   void serializeDebugInfo(BytecodeModule &BM);
 
-  void serializeLiteralValueBuffer(BytecodeModule &BM);
-
-  void serializeObjectKeysBuffer(BytecodeModule &BM);
-
   void serializeExceptionHandlerTable(BytecodeFunction &BF);
 
   void serializeDebugOffsets(BytecodeFunction &BF);
@@ -270,14 +266,6 @@ void BytecodeSerializer::serializeExceptionHandlerTable(BytecodeFunction &BF) {
 }
 
 // ========================= Buffers ==========================
-void BytecodeSerializer::serializeLiteralValueBuffer(BytecodeModule &BM) {
-  writeBinaryArray(BM.getLiteralValueBuffer());
-}
-
-void BytecodeSerializer::serializeObjectKeysBuffer(BytecodeModule &BM) {
-  writeBinaryArray(BM.getObjectKeyBuffer());
-}
-
 void BytecodeSerializer::serializeDebugOffsets(BytecodeFunction &BF) {
   if (!BF.getHeader().flags.hasDebugInfo) {
     return;
